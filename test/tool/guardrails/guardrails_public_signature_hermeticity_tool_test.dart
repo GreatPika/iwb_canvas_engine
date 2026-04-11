@@ -2,6 +2,7 @@
 library;
 
 // INV:INV-ENG-PUBLIC-SIGNATURE-HERMETICITY
+// INV:INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -60,6 +61,23 @@ final class _SceneControllerSceneOwnerState {}
     );
 
     test(
+      'allows exported runtime owner types on interactive capability surfaces',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeCanonicalPublicExportScaffold(sandbox);
+          writeInteractiveArchitectureSupportScaffold(sandbox);
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
       'rejects exported constructor parameter typed from internal path',
       () async {
         final sandbox = await createGuardrailsSandbox();
@@ -98,6 +116,65 @@ class SceneControllerSelection {
               '/lib/src/interactive/internal/internal_selection_runtime.dart',
             ),
           );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test('rejects exported mutable core type in contract signature', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeCanonicalPublicExportScaffold(sandbox);
+        writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+abstract class Foo {
+  Scene get scene;
+}
+
+class Scene {}
+''');
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(result.stderr.toString(), contains('public contract violation'));
+        expect(result.stderr.toString(), contains('Scene'));
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'rejects exported mutable runtime owner type outside interactive surfaces',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeCanonicalPublicExportScaffold(sandbox);
+          writeInteractiveArchitectureSupportScaffold(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/interactive/scene_controller.dart',
+            '''
+class SceneController {
+  const SceneController();
+}
+''',
+          );
+          writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+import '../interactive/scene_controller.dart';
+
+abstract class Foo {
+  SceneController get controller;
+}
+''');
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains('public contract violation'),
+          );
+          expect(result.stderr.toString(), contains('SceneController'));
         } finally {
           sandbox.deleteSync(recursive: true);
         }

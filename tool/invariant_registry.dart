@@ -190,19 +190,20 @@ const List<Invariant> invariants = <Invariant>[
     title:
         'exported public contract and runtime signatures do not expose mutable core or runtime owner types',
     primaryProof: PrimaryProof(
-      path: 'test/tool/guardrails/guardrails_mutable_type_leaks_tool_test.dart',
+      path:
+          'test/tool/guardrails/guardrails_public_signature_hermeticity_tool_test.dart',
     ),
     toolProof: ToolProof(
       enforcementPath: 'tool/check_guardrails.dart',
       regressionPath:
-          'test/tool/guardrails/guardrails_mutable_type_leaks_tool_test.dart',
+          'test/tool/guardrails/guardrails_public_signature_hermeticity_tool_test.dart',
     ),
   ),
   Invariant(
     id: 'INV-ENG-PUBLIC-SIGNATURE-HERMETICITY',
     scope: 'engine-api',
     title:
-        'exported public signatures do not expose internal or non-exported helper types',
+        'exported public signatures do not expose internal, non-exported, or forbidden mutable boundary types',
     primaryProof: PrimaryProof(
       path:
           'test/tool/guardrails/guardrails_public_signature_hermeticity_tool_test.dart',

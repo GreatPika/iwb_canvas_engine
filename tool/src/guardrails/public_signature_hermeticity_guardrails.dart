@@ -93,6 +93,9 @@ GuardrailViolation? _scanResolvedLibraryForHermeticity({
   required ExportedLibrarySurface surface,
   required Map<String, Set<String>> publicVisibleTypeOwners,
 }) {
+  final forbiddenPublicTypeNames = _forbiddenPublicTypeNamesForLibrary(
+    repoRelPath: surface.repoRelPath,
+  );
   final exportedElements = _collectExportedElements(
     library: resolved.element,
     surface: surface,
@@ -103,6 +106,7 @@ GuardrailViolation? _scanResolvedLibraryForHermeticity({
       element: element,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     );
     if (leak == null) {
       continue;
@@ -120,9 +124,14 @@ GuardrailViolation? _scanResolvedLibraryForHermeticity({
     return GuardrailViolation(
       filePath: filePath,
       line: line,
-      message:
-          'public signature hermeticity violation: exported public signature '
-          'must not expose ${leak.typeName} from ${leak.ownerRepoRelPath}.',
+      message: switch (leak.kind) {
+        _SignatureLeakKind.hermeticity =>
+          'public signature hermeticity violation: exported public '
+              'signature must not expose ${leak.typeName} '
+              'from ${leak.ownerRepoRelPath}.',
+        _SignatureLeakKind.forbiddenPublicType =>
+          '${leak.message} (${leak.typeName}).',
+      },
     );
   }
 
@@ -209,11 +218,13 @@ _SignatureLeak? _findLeakInExportedElement({
   required Element element,
   required GuardrailContext context,
   required Map<String, Set<String>> publicVisibleTypeOwners,
+  required Set<String> forbiddenPublicTypeNames,
 }) {
   final signatureLeak = _findLeakInElementSignature(
     element: element,
     context: context,
     publicVisibleTypeOwners: publicVisibleTypeOwners,
+    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
   );
   if (signatureLeak != null) {
     return signatureLeak;
@@ -224,11 +235,13 @@ _SignatureLeak? _findLeakInExportedElement({
       element: element,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     ),
     ExtensionElement() => _findLeakInInstanceMembers(
       element: element,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     ),
     _ => null,
   };
@@ -238,27 +251,32 @@ _SignatureLeak? _findLeakInElementSignature({
   required Element element,
   required GuardrailContext context,
   required Map<String, Set<String>> publicVisibleTypeOwners,
+  required Set<String> forbiddenPublicTypeNames,
 }) {
   return switch (element) {
     InterfaceElement() => _findLeakInInterfaceSignature(
       element: element,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     ),
     ExtensionElement() => _findLeakInExtensionSignature(
       element: element,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     ),
     TypeAliasElement() => _findLeakInTypeAliasSignature(
       element: element,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     ),
     ExecutableElement() => _findLeakInExecutableSignature(
       element: element,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     ),
     TopLevelVariableElement() || FieldElement() => _findLeakInType(
       type: switch (element) {
@@ -269,6 +287,7 @@ _SignatureLeak? _findLeakInElementSignature({
       sourceElement: element,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     ),
     _ => null,
   };
@@ -278,11 +297,13 @@ _SignatureLeak? _findLeakInInterfaceSignature({
   required InterfaceElement element,
   required GuardrailContext context,
   required Map<String, Set<String>> publicVisibleTypeOwners,
+  required Set<String> forbiddenPublicTypeNames,
 }) {
   final typeParameterLeak = _findLeakInTypeParameterBounds(
     element: element,
     context: context,
     publicVisibleTypeOwners: publicVisibleTypeOwners,
+    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
   );
   if (typeParameterLeak != null) {
     return typeParameterLeak;
@@ -294,6 +315,7 @@ _SignatureLeak? _findLeakInInterfaceSignature({
       sourceElement: representation,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     );
     if (representationLeak != null) {
       return representationLeak;
@@ -311,6 +333,7 @@ _SignatureLeak? _findLeakInInterfaceSignature({
     sourceElement: element,
     context: context,
     publicVisibleTypeOwners: publicVisibleTypeOwners,
+    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
   );
 }
 
@@ -318,11 +341,13 @@ _SignatureLeak? _findLeakInExtensionSignature({
   required ExtensionElement element,
   required GuardrailContext context,
   required Map<String, Set<String>> publicVisibleTypeOwners,
+  required Set<String> forbiddenPublicTypeNames,
 }) {
   final typeParameterLeak = _findLeakInTypeParameterBounds(
     element: element,
     context: context,
     publicVisibleTypeOwners: publicVisibleTypeOwners,
+    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
   );
   if (typeParameterLeak != null) {
     return typeParameterLeak;
@@ -333,6 +358,7 @@ _SignatureLeak? _findLeakInExtensionSignature({
     sourceElement: element,
     context: context,
     publicVisibleTypeOwners: publicVisibleTypeOwners,
+    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
   );
 }
 
@@ -340,11 +366,13 @@ _SignatureLeak? _findLeakInTypeAliasSignature({
   required TypeAliasElement element,
   required GuardrailContext context,
   required Map<String, Set<String>> publicVisibleTypeOwners,
+  required Set<String> forbiddenPublicTypeNames,
 }) {
   final typeParameterLeak = _findLeakInTypeParameterBounds(
     element: element,
     context: context,
     publicVisibleTypeOwners: publicVisibleTypeOwners,
+    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
   );
   if (typeParameterLeak != null) {
     return typeParameterLeak;
@@ -355,6 +383,7 @@ _SignatureLeak? _findLeakInTypeAliasSignature({
     sourceElement: element,
     context: context,
     publicVisibleTypeOwners: publicVisibleTypeOwners,
+    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
   );
 }
 
@@ -362,6 +391,7 @@ _SignatureLeak? _findLeakInInterfaceMembers({
   required InterfaceElement element,
   required GuardrailContext context,
   required Map<String, Set<String>> publicVisibleTypeOwners,
+  required Set<String> forbiddenPublicTypeNames,
 }) {
   for (final constructor in element.constructors) {
     if (!_isPublicConstructor(constructor)) {
@@ -371,6 +401,7 @@ _SignatureLeak? _findLeakInInterfaceMembers({
       element: constructor,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     );
     if (leak != null) {
       return leak;
@@ -381,6 +412,7 @@ _SignatureLeak? _findLeakInInterfaceMembers({
     element: element,
     context: context,
     publicVisibleTypeOwners: publicVisibleTypeOwners,
+    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
   );
 }
 
@@ -388,6 +420,7 @@ _SignatureLeak? _findLeakInInstanceMembers({
   required InstanceElement element,
   required GuardrailContext context,
   required Map<String, Set<String>> publicVisibleTypeOwners,
+  required Set<String> forbiddenPublicTypeNames,
 }) {
   for (final field in element.fields) {
     if (field.isSynthetic || !_isPublicNamedElement(field)) {
@@ -398,6 +431,7 @@ _SignatureLeak? _findLeakInInstanceMembers({
       sourceElement: field,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     );
     if (leak != null) {
       return leak;
@@ -412,6 +446,7 @@ _SignatureLeak? _findLeakInInstanceMembers({
       element: getter,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     );
     if (leak != null) {
       return leak;
@@ -426,6 +461,7 @@ _SignatureLeak? _findLeakInInstanceMembers({
       element: setter,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     );
     if (leak != null) {
       return leak;
@@ -440,6 +476,7 @@ _SignatureLeak? _findLeakInInstanceMembers({
       element: method,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     );
     if (leak != null) {
       return leak;
@@ -470,6 +507,7 @@ _SignatureLeak? _findLeakInTypeParameterBounds({
   required TypeParameterizedElement element,
   required GuardrailContext context,
   required Map<String, Set<String>> publicVisibleTypeOwners,
+  required Set<String> forbiddenPublicTypeNames,
 }) {
   for (final typeParameter in element.typeParameters) {
     final leak = _findLeakInType(
@@ -477,6 +515,7 @@ _SignatureLeak? _findLeakInTypeParameterBounds({
       sourceElement: typeParameter,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     );
     if (leak != null) {
       return leak;
@@ -489,11 +528,13 @@ _SignatureLeak? _findLeakInExecutableSignature({
   required ExecutableElement element,
   required GuardrailContext context,
   required Map<String, Set<String>> publicVisibleTypeOwners,
+  required Set<String> forbiddenPublicTypeNames,
 }) {
   final typeParameterLeak = _findLeakInTypeParameterBounds(
     element: element,
     context: context,
     publicVisibleTypeOwners: publicVisibleTypeOwners,
+    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
   );
   if (typeParameterLeak != null) {
     return typeParameterLeak;
@@ -505,6 +546,7 @@ _SignatureLeak? _findLeakInExecutableSignature({
       sourceElement: element,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     );
     if (returnTypeLeak != null) {
       return returnTypeLeak;
@@ -517,6 +559,7 @@ _SignatureLeak? _findLeakInExecutableSignature({
       sourceElement: parameter,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     );
     if (leak != null) {
       return leak;
@@ -531,6 +574,7 @@ _SignatureLeak? _firstLeakInTypes({
   required Element sourceElement,
   required GuardrailContext context,
   required Map<String, Set<String>> publicVisibleTypeOwners,
+  required Set<String> forbiddenPublicTypeNames,
 }) {
   for (final type in types) {
     final leak = _findLeakInType(
@@ -538,6 +582,7 @@ _SignatureLeak? _firstLeakInTypes({
       sourceElement: sourceElement,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     );
     if (leak != null) {
       return leak;
@@ -559,6 +604,7 @@ _SignatureLeak? _findLeakInType({
   required Element sourceElement,
   required GuardrailContext context,
   required Map<String, Set<String>> publicVisibleTypeOwners,
+  required Set<String> forbiddenPublicTypeNames,
 }) {
   if (type == null) {
     return null;
@@ -569,6 +615,7 @@ _SignatureLeak? _findLeakInType({
     sourceElement: sourceElement,
     context: context,
     publicVisibleTypeOwners: publicVisibleTypeOwners,
+    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
   );
   if (aliasLeak != null) {
     return aliasLeak;
@@ -579,6 +626,7 @@ _SignatureLeak? _findLeakInType({
     sourceElement: sourceElement,
     context: context,
     publicVisibleTypeOwners: publicVisibleTypeOwners,
+    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
   );
   if (elementLeak != null) {
     return elementLeak;
@@ -591,6 +639,7 @@ _SignatureLeak? _findLeakInType({
         sourceElement: sourceElement,
         context: context,
         publicVisibleTypeOwners: publicVisibleTypeOwners,
+        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
       );
       if (leak != null) {
         return leak;
@@ -604,6 +653,7 @@ _SignatureLeak? _findLeakInType({
       sourceElement: sourceElement,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     );
     if (returnTypeLeak != null) {
       return returnTypeLeak;
@@ -614,6 +664,7 @@ _SignatureLeak? _findLeakInType({
         sourceElement: sourceElement,
         context: context,
         publicVisibleTypeOwners: publicVisibleTypeOwners,
+        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
       );
       if (leak != null) {
         return leak;
@@ -625,6 +676,7 @@ _SignatureLeak? _findLeakInType({
         sourceElement: sourceElement,
         context: context,
         publicVisibleTypeOwners: publicVisibleTypeOwners,
+        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
       );
       if (leak != null) {
         return leak;
@@ -639,6 +691,7 @@ _SignatureLeak? _findLeakInType({
         sourceElement: sourceElement,
         context: context,
         publicVisibleTypeOwners: publicVisibleTypeOwners,
+        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
       );
       if (leak != null) {
         return leak;
@@ -650,6 +703,7 @@ _SignatureLeak? _findLeakInType({
         sourceElement: sourceElement,
         context: context,
         publicVisibleTypeOwners: publicVisibleTypeOwners,
+        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
       );
       if (leak != null) {
         return leak;
@@ -663,6 +717,7 @@ _SignatureLeak? _findLeakInType({
       sourceElement: sourceElement,
       context: context,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
+      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     );
   }
 
@@ -674,7 +729,16 @@ _SignatureLeak? _classifyElementLeak({
   required Element sourceElement,
   required GuardrailContext context,
   required Map<String, Set<String>> publicVisibleTypeOwners,
+  required Set<String> forbiddenPublicTypeNames,
 }) {
+  final elementName = element?.displayName ?? '<unnamed>';
+  if (forbiddenPublicTypeNames.contains(elementName)) {
+    return _SignatureLeak.forbiddenPublicType(
+      sourceElement: sourceElement,
+      typeName: elementName,
+    );
+  }
+
   final ownerRepoRelPath = _repoRelForElement(
     element: element,
     context: context,
@@ -685,8 +749,11 @@ _SignatureLeak? _classifyElementLeak({
   if (ownerRepoRelPath.contains('/internal/')) {
     return _SignatureLeak(
       sourceElement: sourceElement,
-      typeName: element?.displayName ?? '<unnamed>',
+      typeName: elementName,
       ownerRepoRelPath: ownerRepoRelPath,
+      message:
+          'public signature hermeticity violation: exported public '
+          'signature must not expose $elementName from $ownerRepoRelPath.',
     );
   }
   if (ownerRepoRelPath.startsWith('/lib/src/') &&
@@ -697,11 +764,25 @@ _SignatureLeak? _classifyElementLeak({
       )) {
     return _SignatureLeak(
       sourceElement: sourceElement,
-      typeName: element?.displayName ?? '<unnamed>',
+      typeName: elementName,
       ownerRepoRelPath: ownerRepoRelPath,
+      message:
+          'public signature hermeticity violation: exported public '
+          'signature must not expose $elementName from $ownerRepoRelPath.',
     );
   }
   return null;
+}
+
+Set<String> _forbiddenPublicTypeNamesForLibrary({required String repoRelPath}) {
+  return switch (repoRelPath) {
+    '/lib/src/interactive/scene_controller.dart' ||
+    '/lib/src/interactive/scene_controller_interaction.dart' ||
+    '/lib/src/interactive/scene_controller_selection.dart' ||
+    '/lib/src/interactive/scene_controller_scene.dart' ||
+    '/lib/src/view/scene_view_interactive.dart' => mutableCoreTypeNames,
+    _ => mutableContractTypeNames,
+  };
 }
 
 String? _repoRelForElement({
@@ -760,10 +841,24 @@ final class _SignatureLeak {
   const _SignatureLeak({
     required this.sourceElement,
     required this.typeName,
-    required this.ownerRepoRelPath,
-  });
+    required this.message,
+    this.ownerRepoRelPath,
+  }) : kind = _SignatureLeakKind.hermeticity;
+
+  const _SignatureLeak.forbiddenPublicType({
+    required this.sourceElement,
+    required this.typeName,
+  }) : kind = _SignatureLeakKind.forbiddenPublicType,
+       ownerRepoRelPath = null,
+       message =
+           'public contract violation: exported API must not expose '
+           'mutable core or runtime owner types.';
 
   final Element sourceElement;
   final String typeName;
-  final String ownerRepoRelPath;
+  final String? ownerRepoRelPath;
+  final String message;
+  final _SignatureLeakKind kind;
 }
+
+enum _SignatureLeakKind { hermeticity, forbiddenPublicType }
