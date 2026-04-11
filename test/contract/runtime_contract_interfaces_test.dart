@@ -81,6 +81,9 @@ void main() {
 
         expect(session.pendingTapFlushTimestampMs, isNull);
         expect(() => session.detach(), returnsNormally);
+        expect(controller.interaction, isA<SceneControllerInteraction>());
+        expect(controller.selection, isA<SceneControllerSelection>());
+        expect(controller.scene, isA<SceneControllerScene>());
         expect(runtime, isA<SceneViewRuntime>());
         expect(runtime.renderState, isA<SceneViewRenderState>());
         expect(controller, isNot(isA<SceneViewRenderState>()));

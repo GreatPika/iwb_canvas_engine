@@ -324,17 +324,17 @@ final class CapabilityGuardSpec {
 const List<CapabilityGuardSpec> _capabilityGuardSpecs = <CapabilityGuardSpec>[
   CapabilityGuardSpec(
     relativePath: 'scene_controller_interaction.dart',
-    className: 'SceneControllerInteraction',
+    className: 'SceneControllerInteractionOwner',
     primaryGuardCall: '_access.runtime.ensurePublicSideEffectAllowed',
   ),
   CapabilityGuardSpec(
     relativePath: 'scene_controller_scene.dart',
-    className: 'SceneControllerScene',
+    className: 'SceneControllerSceneOwner',
     primaryGuardCall: 'ensurePublicSideEffectAllowed',
   ),
   CapabilityGuardSpec(
     relativePath: 'scene_controller_selection.dart',
-    className: 'SceneControllerSelection',
+    className: 'SceneControllerSelectionOwner',
     primaryGuardCall: '_runtime.ensurePublicSideEffectAllowed',
   ),
 ];
@@ -934,9 +934,9 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
         source: graphSource,
         filePath: _interactiveFilePosixPath(context, ownerGraphFile),
         requiredTokens: const <String>[
-          'SceneControllerInteraction(',
-          'SceneControllerSelection(',
-          'SceneControllerScene(',
+          'SceneControllerInteractionOwner(',
+          'SceneControllerSelectionOwner(',
+          'SceneControllerSceneOwner(',
           'SceneControllerSceneViewRuntime(',
           'SceneControllerInternalAccessRegistration(',
           'registerSceneControllerInternalAccess(',

@@ -163,6 +163,9 @@ types, and exported signatures become mechanically hermetic against
   non-exported helper type.
 - Public top-level functions and typedefs exported from the public entrypoint
   whose signature resolves to an internal or non-exported helper type.
+- Exported class-like declarations, including extension types, whose
+  representation types, supertype clauses, type-parameter bounds, or public
+  members expose internal or non-exported helper types.
 
 ### 6.6 Allowed Forms That Do Not Count as Violations
 - Exported public signatures that reference SDK, Flutter framework, or other
@@ -177,8 +180,9 @@ types, and exported signatures become mechanically hermetic against
 - The hermeticity guardrail must resolve the actual exported surface from
   `lib/iwb_canvas_engine.dart` rather than scanning arbitrary `lib/src/**`
   files without export context.
-- Signature analysis must use resolved Dart element/type information rather
-  than string matching on source text.
+- Signature analysis must use resolved Dart element/type information as the
+  source of truth for exported API shapes, with source offsets used only for
+  diagnostics.
 - A signature type counts as allowed only if it resolves to:
   - a Dart SDK type;
   - a Flutter/framework type;
@@ -225,7 +229,7 @@ types, and exported signatures become mechanically hermetic against
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Internalize capability-owner assembly
+### Slice 1. [x] Internalize capability-owner assembly
 
 #### Slice Contract
 `SceneController` continues to expose working interaction, selection, and
@@ -273,7 +277,7 @@ construction is removed from those public contracts.
 - Diagnostic output from the temporary-package negative scenario proving the
   public construction failure point.
 
-### Slice 2. [ ] Enforce hermetic public signatures and publish the contract
+### Slice 2. [x] Enforce hermetic public signatures and publish the contract
 
 #### Slice Contract
 The repository mechanically rejects exported public signatures that leak
@@ -312,6 +316,8 @@ the controller-owned capability-owner contract.
 - An exported public constructor with an `internal/**` parameter type fails the
   guardrail.
 - An exported public method, getter, setter, or typedef whose signature uses a
+  non-exported helper type fails the guardrail.
+- An exported extension type whose representation or public members use a
   non-exported helper type fails the guardrail.
 
 #### Closure Evidence

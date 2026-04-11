@@ -204,7 +204,7 @@ void _registerCapabilityGuardViolationTests() {
           sandbox,
           'lib/src/interactive/scene_controller_interaction.dart',
           '''
-class SceneControllerInteraction {
+class SceneControllerInteractionOwner {
   void handlePointer() {
     print('missing guard');
   }
@@ -219,7 +219,7 @@ class SceneControllerInteraction {
           diagnostic(
             category: 'interactive API',
             detail:
-                'public SceneControllerInteraction entrypoints must guard '
+                'public SceneControllerInteractionOwner entrypoints must guard '
                 'resolver purity with '
                 '_access.runtime.ensurePublicSideEffectAllowed',
           ),
@@ -258,7 +258,7 @@ class SceneControllerInteraction {
         sandbox,
         'lib/src/interactive/scene_controller_scene.dart',
         '''
-class SceneControllerScene {
+class SceneControllerSceneOwner {
   void write(Object fn) {
     print('missing guard');
   }
@@ -273,7 +273,7 @@ class SceneControllerScene {
         diagnostic(
           category: 'interactive API',
           detail:
-              'public SceneControllerScene entrypoints must guard '
+              'public SceneControllerSceneOwner entrypoints must guard '
               'resolver purity with ensurePublicSideEffectAllowed',
         ),
       );
@@ -1985,9 +1985,14 @@ class InteractiveRuntime {
         '''
 import '../contract/snapshot.dart';
 
-class SceneControllerInteraction {
+abstract interface class SceneControllerInteraction {
+  SceneSnapshot get snapshot;
+}
+
+class SceneControllerInteractionOwner implements SceneControllerInteraction {
   final _access = _Access();
 
+  @override
   SceneSnapshot get snapshot => _access.snapshot;
 }
 

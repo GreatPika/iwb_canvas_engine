@@ -364,6 +364,12 @@ Ownership decisions for the target state:
   public gesture policy or route gesture-local requests, but they must not
   retain parallel committed-mutation semantics beside
   `SceneControllerMutationBoundary`.
+- `SceneControllerInteraction`, `SceneControllerSelection`, and
+  `SceneControllerScene` stay public as controller-owned capability contracts,
+  but their assembly remains internal to the `SceneController` graph. Public
+  signatures exported through `lib/iwb_canvas_engine.dart` must stay hermetic
+  against `internal/**` and helper types that are not themselves exported by
+  the public entrypoint.
 - During an active move/draw gesture, public `controller.selection.*`
   mutations plus deny-listed `controller.scene.*` mutations are rejected before
   committed state changes; only `setCameraOffset(...)` and `replaceScene(...)`

@@ -4,6 +4,13 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- `SceneControllerInteraction`, `SceneControllerSelection`, and
+  `SceneControllerScene` now stay controller-owned public capability contracts
+  only. Public callers obtain them from `SceneController`, while direct public
+  construction is no longer part of the supported surface.
+- `tool/check_guardrails.dart` now enforces public signature hermeticity for
+  `lib/iwb_canvas_engine.dart`, rejecting exported signatures that leak
+  `internal/**` or non-exported helper types.
 - Repository verification now uses the shell-first
   `tool/run_verification_preset.dart` contract with registry-backed drift
   checks in `tool/check_verification_contract.dart`, `VERIFICATION.md` is no

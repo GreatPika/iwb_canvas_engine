@@ -1845,7 +1845,7 @@ class _OverlayTestController extends SceneController {
   SceneControllerInteraction get interaction => _interaction;
 }
 
-class _OverlayTestInteraction extends SceneControllerInteraction {
+class _OverlayTestInteraction extends SceneControllerInteractionOwner {
   _OverlayTestInteraction(super.access, this.controller);
 
   final _OverlayTestController controller;

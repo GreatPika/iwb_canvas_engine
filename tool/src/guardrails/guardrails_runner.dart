@@ -6,6 +6,7 @@ import 'controller_api_guardrails.dart';
 import 'interactive_api_guardrails.dart';
 import 'model_architecture_guardrails.dart';
 import 'mutable_type_leak_guardrails.dart';
+import 'public_signature_hermeticity_guardrails.dart';
 import 'public_surface_guardrails.dart';
 
 Future<void> runGuardrailsTool() async {
@@ -22,6 +23,12 @@ Future<void> runGuardrailsTool() async {
       exportedSurfaces: publicSurfaceResult.exportedSurfaces,
     );
     _failIfNeeded(mutableTypeViolations);
+
+    final hermeticityViolations = await runPublicSignatureHermeticityGuardrails(
+      context: context,
+      exportedSurfaces: publicSurfaceResult.exportedSurfaces,
+    );
+    _failIfNeeded(hermeticityViolations);
 
     final interactiveViolations = await runInteractiveApiGuardrails(
       context: context,

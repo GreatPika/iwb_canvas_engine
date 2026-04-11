@@ -183,9 +183,9 @@ void main() {
       ),
     );
 
-    expect(graphSource, contains('SceneControllerInteraction('));
-    expect(graphSource, contains('SceneControllerSelection('));
-    expect(graphSource, contains('SceneControllerScene('));
+    expect(graphSource, contains('SceneControllerInteractionOwner('));
+    expect(graphSource, contains('SceneControllerSelectionOwner('));
+    expect(graphSource, contains('SceneControllerSceneOwner('));
     expect(graphSource, contains('SceneControllerSceneViewRuntime('));
     expect(graphSource, contains('SceneControllerInternalAccessRegistration('));
     expect(

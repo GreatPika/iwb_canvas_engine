@@ -107,17 +107,17 @@ SceneControllerGraph _assembleSceneControllerGraph(
     clearSelectionState: selectionMutations.clearSelection,
     clearSelectionOnDrawModeEnter: request.clearSelectionOnDrawModeEnter,
   );
-  final interaction = SceneControllerInteraction(interactionAccess);
+  final interaction = SceneControllerInteractionOwner(interactionAccess);
 
   return (
     interactionRuntime: interactionRuntime,
     interactionAccess: interactionAccess,
     interaction: interaction,
-    selection: SceneControllerSelection(
+    selection: SceneControllerSelectionOwner(
       runtime: interactionRuntime,
       mutations: selectionMutations,
     ),
-    scene: SceneControllerScene(
+    scene: SceneControllerSceneOwner(
       ensurePublicSideEffectAllowed:
           interactionRuntime.ensurePublicSideEffectAllowed,
       mutations: sceneMutations,

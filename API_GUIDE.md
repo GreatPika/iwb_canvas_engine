@@ -158,6 +158,8 @@ Public runtime surface:
 - `SceneControllerInteraction`, `SceneControllerSelection`, and
   `SceneControllerScene` are capability owners exposed through
   `controller.interaction`, `controller.selection`, and `controller.scene`
+- those capability-owner types are public controller-owned contracts, not a
+  separate direct-construction assembly surface
 - `SceneView` is the public interactive widget export
 
 Migration note:

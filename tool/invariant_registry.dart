@@ -199,6 +199,21 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-PUBLIC-SIGNATURE-HERMETICITY',
+    scope: 'engine-api',
+    title:
+        'exported public signatures do not expose internal or non-exported helper types',
+    primaryProof: PrimaryProof(
+      path:
+          'test/tool/guardrails/guardrails_public_signature_hermeticity_tool_test.dart',
+    ),
+    toolProof: ToolProof(
+      enforcementPath: 'tool/check_guardrails.dart',
+      regressionPath:
+          'test/tool/guardrails/guardrails_public_signature_hermeticity_tool_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-TXN-WRITER-LIFETIME',
     scope: 'engine-controller',
     title:

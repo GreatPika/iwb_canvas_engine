@@ -242,6 +242,10 @@ class _CanvasScreenState extends State<CanvasScreen> {
   entrypoints on `SceneControllerInteraction`. `SceneView`-routed input uses an
   internal tokenized session path instead of sending session-owned provenance
   back through the public facade.
+- `SceneControllerInteraction`, `SceneControllerSelection`, and
+  `SceneControllerScene` are controller-owned capability contracts. Obtain them
+  from `controller.interaction`, `controller.selection`, and `controller.scene`
+  rather than constructing them directly.
 - `SceneView` runtime swaps are atomic: replacement pointer sessions are
   created before install, failed replacement creation surfaces to the owner,
   and render/input ownership stays on the last installed runtime until a later

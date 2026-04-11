@@ -408,7 +408,8 @@ class _ThrowingInteractionController extends SceneController {
   SceneControllerInteraction get interaction => _interaction;
 }
 
-class _ThrowingSessionTransportInteraction extends SceneControllerInteraction {
+class _ThrowingSessionTransportInteraction
+    extends SceneControllerInteractionOwner {
   _ThrowingSessionTransportInteraction(super.access);
 
   @override

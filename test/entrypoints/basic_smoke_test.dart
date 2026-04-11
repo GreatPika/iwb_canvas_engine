@@ -24,6 +24,9 @@ void main() {
 
       addTearDown(controller.dispose);
 
+      expect(controller.interaction, isA<SceneControllerInteraction>());
+      expect(controller.selection, isA<SceneControllerSelection>());
+      expect(controller.scene, isA<SceneControllerScene>());
       expect(Transform2D.identity.translation, Offset.zero);
       expect(PathFillRule.evenOdd.name, 'evenOdd');
       expect(CanvasMode.move, CanvasMode.move);
@@ -40,6 +43,7 @@ void main() {
         expect(txn.snapshot.layers.single.id, 'layer-api-0');
         return null;
       });
+      controller.selection.clearSelection();
     },
   );
 

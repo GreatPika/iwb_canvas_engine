@@ -31,6 +31,12 @@ class GuardrailContext {
   final AnalysisContextCollection _analysisCollection;
   final Map<String, ParsedUnitResult> _parsedUnitCache =
       <String, ParsedUnitResult>{};
+  final Map<String, Future<ResolvedUnitResult?>> _resolvedUnitCache =
+      <String, Future<ResolvedUnitResult?>>{};
+  final Map<String, Future<ResolvedLibraryResult?>> _resolvedLibraryCache =
+      <String, Future<ResolvedLibraryResult?>>{};
+  final Map<String, Future<SomeLibraryElementResult>> _libraryByUriCache =
+      <String, Future<SomeLibraryElementResult>>{};
 
   Object getParsedUnitResult(String absPath) {
     final cached = _parsedUnitCache[absPath];
@@ -43,5 +49,55 @@ class GuardrailContext {
       _parsedUnitCache[absPath] = result;
     }
     return result;
+  }
+
+  Future<ResolvedUnitResult?> getResolvedUnitResult(String absPath) {
+    final cached = _resolvedUnitCache[absPath];
+    if (cached != null) {
+      return cached;
+    }
+    final future = _resolveUnit(absPath);
+    _resolvedUnitCache[absPath] = future;
+    return future;
+  }
+
+  Future<ResolvedUnitResult?> _resolveUnit(String absPath) async {
+    final context = _analysisCollection.contextFor(absPath);
+    final result = await context.currentSession.getResolvedUnit(absPath);
+    return result is ResolvedUnitResult ? result : null;
+  }
+
+  Future<ResolvedLibraryResult?> getResolvedLibraryResult(String absPath) {
+    final cached = _resolvedLibraryCache[absPath];
+    if (cached != null) {
+      return cached;
+    }
+    final future = _resolveLibrary(absPath);
+    _resolvedLibraryCache[absPath] = future;
+    return future;
+  }
+
+  Future<ResolvedLibraryResult?> _resolveLibrary(String absPath) async {
+    final context = _analysisCollection.contextFor(absPath);
+    final result = await context.currentSession.getResolvedLibrary(absPath);
+    return result is ResolvedLibraryResult ? result : null;
+  }
+
+  Future<SomeLibraryElementResult> getLibraryByUriResult(String uri) {
+    final cached = _libraryByUriCache[uri];
+    if (cached != null) {
+      return cached;
+    }
+    final future = _resolveLibraryByUri(uri);
+    _libraryByUriCache[uri] = future;
+    return future;
+  }
+
+  Future<SomeLibraryElementResult> _resolveLibraryByUri(String uri) async {
+    final entrypointPath =
+        '${root.absolute.path}${Platform.pathSeparator}lib'
+        '${Platform.pathSeparator}iwb_canvas_engine.dart';
+    final context = _analysisCollection.contextFor(entrypointPath);
+    return context.currentSession.getLibraryByUri(uri);
   }
 }

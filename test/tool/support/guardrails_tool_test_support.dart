@@ -114,17 +114,28 @@ final class SceneStoreControllerCommittedMutationAccess
     sandbox,
     'lib/src/interactive/scene_controller_interaction.dart',
     '''
-class SceneControllerInteraction {
+abstract interface class SceneControllerInteraction {
+  void handlePointer(Object input);
+
+  void handleDoubleTap();
+
+  set mode(int value);
+}
+
+class SceneControllerInteractionOwner implements SceneControllerInteraction {
   final _access = _Access();
 
+  @override
   void handlePointer(Object input) {
     _access.runtime.ensurePublicSideEffectAllowed('handlePointer');
   }
 
+  @override
   void handleDoubleTap() {
     _access.runtime.ensurePublicSideEffectAllowed('handleDoubleTap');
   }
 
+  @override
   set mode(int value) {
     _access.runtime.ensurePublicSideEffectAllowed('mode');
   }
@@ -146,25 +157,42 @@ class _RuntimeAccess {
     sandbox,
     'lib/src/interactive/scene_controller_selection.dart',
     '''
-class SceneControllerSelection {
+abstract interface class SceneControllerSelection {
+  void setSelection(Object nodeIds);
+
+  void toggleSelection(Object nodeId);
+
+  void clearSelection();
+
+  void selectAll();
+
+  void rotateSelection();
+}
+
+class SceneControllerSelectionOwner implements SceneControllerSelection {
   final _runtime = _Runtime();
 
+  @override
   void setSelection(Object nodeIds) {
     _runtime.ensurePublicSideEffectAllowed('setSelection');
   }
 
+  @override
   void toggleSelection(Object nodeId) {
     _runtime.ensurePublicSideEffectAllowed('toggleSelection');
   }
 
+  @override
   void clearSelection() {
     _runtime.ensurePublicSideEffectAllowed('clearSelection');
   }
 
+  @override
   void selectAll() {
     _runtime.ensurePublicSideEffectAllowed('selectAll');
   }
 
+  @override
   void rotateSelection() {
     _runtime.ensurePublicSideEffectAllowed('rotateSelection');
   }
@@ -186,14 +214,22 @@ class _Runtime {
     sandbox,
     'lib/src/interactive/scene_controller_scene.dart',
     '''
-class SceneControllerScene {
+abstract interface class SceneControllerScene {
+  void write(Object fn);
+
+  void clearScene();
+}
+
+class SceneControllerSceneOwner implements SceneControllerScene {
   final void Function(String operation, {bool allowAfterDispose})
   ensurePublicSideEffectAllowed = _ensure;
 
+  @override
   void write(Object fn) {
     ensurePublicSideEffectAllowed('write');
   }
 
+  @override
   void clearScene() {
     ensurePublicSideEffectAllowed('clearScene');
   }
@@ -919,12 +955,17 @@ final class SceneControllerSceneViewRenderState {
     '''
 class SceneControllerInteraction {}
 
-class SceneControllerSelection {
-  SceneControllerSelection({required Object runtime, required Object mutations});
+class SceneControllerInteractionOwner extends SceneControllerInteraction {}
+
+class SceneControllerSelectionOwner {
+  SceneControllerSelectionOwner({
+    required Object runtime,
+    required Object mutations,
+  });
 }
 
-class SceneControllerScene {
-  SceneControllerScene({
+class SceneControllerSceneOwner {
+  SceneControllerSceneOwner({
     required Object ensurePublicSideEffectAllowed,
     required Object mutations,
   });
@@ -951,12 +992,12 @@ Object createSceneControllerGraph(Object request) {
   final interactionRuntime = _InteractionRuntime();
   SceneControllerInternalAccessRegistration();
   registerSceneControllerInternalAccess(Object(), Object());
-  SceneControllerInteraction();
-  SceneControllerSelection(
+  SceneControllerInteractionOwner();
+  SceneControllerSelectionOwner(
     runtime: interactionRuntime,
     mutations: interactionRuntime.mutationBoundary,
   );
-  SceneControllerScene(
+  SceneControllerSceneOwner(
     ensurePublicSideEffectAllowed:
         interactionRuntime.ensurePublicSideEffectAllowed,
     mutations: interactionRuntime.mutationBoundary,
