@@ -363,6 +363,16 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-PUBLIC-LISTENER-REPAINT-INDEPENDENCE',
+    scope: 'engine-runtime',
+    title:
+        'interactive public listener delivery stays aligned with public state changes regardless of whether internal repaint routes through the scene or overlay channel',
+    primaryProof: PrimaryProof(
+      path:
+          'test/interactive/core/scene_controller_public_listener_contract_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-INTERACTIVE-HANDLE-POINTER-NON-REENTRANT',
     scope: 'engine-runtime',
     title:

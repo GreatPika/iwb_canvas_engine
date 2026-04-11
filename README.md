@@ -229,7 +229,10 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - explicit duplicate `NodeSpec.id` in `addNode(...)` or `writeNodeInsert(...)`
   throws `ArgumentError`.
 - `actions`, `editTextRequests`, and `ChangeNotifier` updates are asynchronous;
-  listener notifications are microtask-deferred and coalesced.
+  listener notifications are microtask-deferred and coalesced. For interactive
+  state, those public listener updates stay independent from the internal
+  scene/overlay repaint split, so overlay-only marquee/preview changes still
+  notify `SceneController` listeners.
 - `setPointerSettings(...)` is applied live by `SceneView`; active gestures keep
   their current settings until `up` or `cancel`, and parallel raw host pointers
   do not force an early reset of routed pointer tracking. Settings are treated

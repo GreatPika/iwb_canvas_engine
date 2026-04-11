@@ -718,6 +718,9 @@ Guardrails:
   `notifyListeners()` synchronously
 - listener notifications are scheduled in a microtask
 - multiple writes in one event-loop tick are coalesced into one listener update
+- public interactive `ChangeNotifier` delivery follows public state changes
+  rather than the internal repaint route; overlay-only interactive updates
+  still notify `SceneController` listeners even though scene repaint stays idle
 - `actions` and `editTextRequests` are asynchronous streams
 - relative ordering between stream delivery and repaint notifications is not a
   public contract
@@ -987,7 +990,8 @@ Parameters:
   internal render-state family while routing repaint through separate channels:
   scene repaint stays on `SceneViewRenderState`, overlay repaint stays on
   `overlayRepaintListenable`, and marquee plus draw previews stay live without
-  widget rebuild glue
+  widget rebuild glue; this internal split does not change the public
+  `SceneController` listener contract for those interactive state changes
 - lets `ScenePainter` consume controller-owned ordered viewport candidates
   before expensive frame resolution, preserving background/content paint order
   and selected move-preview visibility without reopening a full content scan

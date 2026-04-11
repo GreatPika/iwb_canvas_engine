@@ -395,7 +395,10 @@ Ownership decisions for the target state:
   through one controller-owned internal render-state family with split repaint
   channels. `SceneViewRenderState` remains the scene repaint owner for the main
   painter, `overlayRepaintListenable` owns overlay repaints, and marquee
-  rendering stays outside the base scene painter.
+  rendering stays outside the base scene painter. Public
+  `SceneController.addListener(...)` delivery stays channel-agnostic: public
+  interactive state changes still notify listeners even when the change repaints
+  only the overlay path.
 - `ScenePainter` keeps frame ownership and selection ownership separate:
   the frame owner first consumes controller-owned ordered viewport paint
   candidates through a raw viewport query, then resolves preview delta plus
