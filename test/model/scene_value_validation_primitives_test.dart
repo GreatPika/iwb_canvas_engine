@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_data_exception.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_validation_diagnostics.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
@@ -13,6 +14,11 @@ import 'package:iwb_canvas_engine/src/model/scene_value_validation_palette_grid.
         sceneValidateCameraOffsetValue,
         sceneValidateGridCellSizeValue,
         sceneValidatePaletteFields;
+import 'package:iwb_canvas_engine/src/model/scene_value_validation_support.dart'
+    show
+        sceneMessageFromArgumentError,
+        sceneValidateArgumentBoundary,
+        sceneValidationThrowSceneDataException;
 
 void main() {
   group('scene value validation primitives', () {
@@ -374,6 +380,150 @@ void main() {
             ),
           ),
         );
+      },
+    );
+
+    test(
+      'sceneValidateGridCellSizeValue reports non-finite values with explicit diagnostic args',
+      () {
+        expect(
+          () => sceneValidateGridCellSizeValue(
+            cellSize: double.infinity,
+            isEnabled: false,
+            field: 'background.grid',
+            onError: _throwFailure,
+            requirePositiveCellSize: false,
+            requireEnabledMinCellSize: false,
+          ),
+          throwsA(
+            predicate(
+              (error) =>
+                  error is _ValidationFailure &&
+                  error.field == 'background.grid.cellSize' &&
+                  error.diagnostic?.template == 'fieldMustBeFinite' &&
+                  error.diagnostic?.args['fieldName'] ==
+                      'background.grid.cellSize',
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'sceneValidatePaletteFields reports non-finite gridSizes through positive bounded size helper',
+      () {
+        expect(
+          () => sceneValidatePaletteFields(
+            penColors: const <Color>[Color(0xFF000000)],
+            backgroundColors: const <Color>[Color(0xFFFFFFFF)],
+            gridSizes: const <double>[double.infinity],
+            field: 'palette',
+            onError: _throwFailure,
+          ),
+          throwsA(
+            predicate(
+              (error) =>
+                  error is _ValidationFailure &&
+                  error.field == 'palette.gridSizes[0]' &&
+                  error.diagnostic?.template == 'fieldMustBeFinite' &&
+                  error.diagnostic?.args['fieldName'] == 'palette.gridSizes[0]',
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'sceneValidateArgumentBoundary lowers plain ArgumentError messages and preserves fallback field',
+      () {
+        expect(
+          () => sceneValidateArgumentBoundary(
+            field: 'fallbackField',
+            value: 1,
+            onError: _throwFailure,
+            validate: () {
+              throw ArgumentError.value(1, null, 'Must be a number.');
+            },
+          ),
+          throwsA(
+            predicate(
+              (error) =>
+                  error is _ValidationFailure &&
+                  error.field == 'fallbackField' &&
+                  error.message == 'must be a number.' &&
+                  error.diagnostic == null,
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'sceneValidationThrowSceneDataException supports diagnostic and plain-message paths',
+      () {
+        expect(
+          () => sceneValidationThrowSceneDataException(
+            value: const Transform2D(a: 1, b: 0, c: 0, d: 0, tx: 0, ty: 0),
+            field: 'transform',
+            diagnostic: SceneDataDiagnosticDescriptor.fieldMustBeInvertible(),
+          ),
+          throwsA(
+            predicate(
+              (error) =>
+                  error is SceneDataException &&
+                  error.path == 'transform' &&
+                  error.details['template'] == 'fieldMustBeInvertible',
+            ),
+          ),
+        );
+
+        expect(
+          () => sceneValidationThrowSceneDataException(
+            value: 1,
+            field: 'count',
+            message: 'must be valid.',
+          ),
+          throwsA(
+            predicate(
+              (error) =>
+                  error is SceneDataException &&
+                  error.path == 'count' &&
+                  error.message == 'Field count must be valid.',
+            ),
+          ),
+        );
+
+        final finiteFromPath = SceneDataDiagnosticDescriptor.fieldMustBeFinite()
+            .toException(path: 'node.localA.dx');
+        expect(finiteFromPath.path, 'node.localA.dx');
+        expect(finiteFromPath.details['template'], 'fieldMustBeFinite');
+        expect(finiteFromPath.details['fieldName'], 'dx');
+        expect(finiteFromPath.message, 'Field dx must be finite.');
+
+        final finiteFromIndexedPath =
+            SceneDataDiagnosticDescriptor.fieldMustBeFinite().toException(
+              path: 'gridSizes[0]',
+            );
+        expect(finiteFromIndexedPath.path, 'gridSizes[0]');
+        expect(finiteFromIndexedPath.details['template'], 'fieldMustBeFinite');
+        expect(finiteFromIndexedPath.details['fieldName'], 'gridSizes');
+        expect(
+          finiteFromIndexedPath.message,
+          'Field gridSizes must be finite.',
+        );
+      },
+    );
+
+    test(
+      'sceneMessageFromArgumentError preserves lowercase strings and default fallback',
+      () {
+        expect(
+          sceneMessageFromArgumentError(
+            ArgumentError.value(1, 'count', 'must already be lowercase.'),
+          ),
+          'must already be lowercase.',
+        );
+        expect(sceneMessageFromArgumentError(ArgumentError()), 'is invalid.');
       },
     );
   });

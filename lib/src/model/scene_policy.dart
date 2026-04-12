@@ -10,6 +10,7 @@ import '../core/text_layout.dart';
 import 'scene_import_draft.dart';
 import 'scene_import_draft_from_snapshot.dart';
 import 'scene_value_validation.dart';
+import 'scene_value_validation_support.dart' as validation_support;
 
 typedef ScenePolicySnapshotFromScene = SceneSnapshot Function(Scene scene);
 typedef ScenePolicySceneFromImportDraft =
@@ -57,7 +58,7 @@ abstract final class ScenePolicy {
   }) {
     sceneValidateSceneValues(
       rawScene,
-      onError: _sceneValidationError,
+      onError: validation_support.sceneValidationThrowSceneDataException,
       requirePositiveGridCellSize: true,
       requireEnabledMinGridCellSize: true,
     );
@@ -71,7 +72,7 @@ abstract final class ScenePolicy {
 SceneImportDraft _validateStructurallyValidImportDraft(SceneImportDraft draft) {
   sceneValidateImportDraftValues(
     draft,
-    onError: _snapshotValidationError,
+    onError: validation_support.sceneValidationThrowSceneDataException,
     requirePositiveGridCellSize: true,
     requireEnabledMinGridCellSize: true,
   );
@@ -260,40 +261,6 @@ void _validateInRange(
     path: path,
     min: min,
     max: max,
-    source: value,
-  );
-}
-
-Never _snapshotValidationError({
-  required Object? value,
-  required String field,
-  String? message,
-  SceneDataDiagnosticDescriptor? diagnostic,
-}) {
-  if (diagnostic != null) {
-    throw diagnostic.toException(path: field, source: value);
-  }
-  throw SceneDataException(
-    code: SceneDataErrorCode.invalidValue,
-    path: field,
-    message: message == null ? null : 'Field $field $message',
-    source: value,
-  );
-}
-
-Never _sceneValidationError({
-  required Object? value,
-  required String field,
-  String? message,
-  SceneDataDiagnosticDescriptor? diagnostic,
-}) {
-  if (diagnostic != null) {
-    throw diagnostic.toException(path: field, source: value);
-  }
-  throw SceneDataException(
-    code: SceneDataErrorCode.invalidValue,
-    path: field,
-    message: message == null ? null : 'Field $field $message',
     source: value,
   );
 }

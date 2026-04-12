@@ -179,20 +179,16 @@ void main() {
     () {
       for (final scenario
           in <
-            ({
-              String field,
-              List<Object?> jsonValues,
-              SceneSnapshot snapshot,
-            })
+            ({String field, List<Object?> jsonValues, SceneSnapshot snapshot})
           >[
             (
               field: 'penColors',
               jsonValues: <Object?>[
                 for (var i = 0; i < kMaxPaletteItems + 1; i++) '#FF000000',
               ],
-          snapshot: materializeSceneSnapshot(
-            SceneSnapshotBacking(
-              palette: ScenePaletteSnapshotBacking(
+              snapshot: materializeSceneSnapshot(
+                SceneSnapshotBacking(
+                  palette: ScenePaletteSnapshotBacking(
                     penColors: <Color>[
                       for (var i = 0; i < kMaxPaletteItems + 1; i++)
                         const Color(0xFF000000),
@@ -204,16 +200,16 @@ void main() {
                     ),
                   ],
                 ),
-          ),
-        ),
+              ),
+            ),
             (
               field: 'backgroundColors',
               jsonValues: <Object?>[
                 for (var i = 0; i < kMaxPaletteItems + 1; i++) '#FFFFFFFF',
               ],
-          snapshot: materializeSceneSnapshot(
-            SceneSnapshotBacking(
-              palette: ScenePaletteSnapshotBacking(
+              snapshot: materializeSceneSnapshot(
+                SceneSnapshotBacking(
+                  palette: ScenePaletteSnapshotBacking(
                     backgroundColors: <Color>[
                       for (var i = 0; i < kMaxPaletteItems + 1; i++)
                         const Color(0xFFFFFFFF),
@@ -225,16 +221,16 @@ void main() {
                     ),
                   ],
                 ),
-          ),
-        ),
+              ),
+            ),
             (
               field: 'gridSizes',
               jsonValues: <Object?>[
                 for (var i = 0; i < kMaxPaletteItems + 1; i++) i + 1,
               ],
-          snapshot: materializeSceneSnapshot(
-            SceneSnapshotBacking(
-              palette: ScenePaletteSnapshotBacking(
+              snapshot: materializeSceneSnapshot(
+                SceneSnapshotBacking(
+                  palette: ScenePaletteSnapshotBacking(
                     gridSizes: <double>[
                       for (var i = 0; i < kMaxPaletteItems + 1; i++) i + 1,
                     ],
@@ -245,8 +241,8 @@ void main() {
                     ),
                   ],
                 ),
-          ),
-        ),
+              ),
+            ),
           ]) {
         final raw = minimalSceneJson();
         (raw['palette'] as Map<String, Object?>)[scenario.field] =

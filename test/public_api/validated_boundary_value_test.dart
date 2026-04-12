@@ -598,6 +598,19 @@ void main() {
       expect(outOfRangeFallback.message, 'Field value is out of range.');
     });
 
+    test('diagnostic factory covers invertible errors', () {
+      final invertible = SceneDataException.fieldMustBeInvertible(
+        path: 'transform',
+      );
+
+      expect(invertible.path, 'transform');
+      expect(invertible.details['template'], 'fieldMustBeInvertible');
+      expect(
+        invertible.message,
+        'Field transform must be invertible (non-singular).',
+      );
+    });
+
     test('details sanitization keeps immutable json-like previews', () {
       final deepList = <Object?>[
         <Object?>[
@@ -1239,72 +1252,69 @@ void main() {
       );
     });
 
-    test(
-      'decodeScene rejects integer unsafe revisions and numeric boundaries',
-      () {
-        final unsafeRevisionScene = _minimalSceneJson();
-        final unsafeRevisionNode = _singleNodeJson(unsafeRevisionScene);
-        unsafeRevisionNode['instanceRevision'] = 9007199254740992;
+    test('decodeScene rejects integer unsafe revisions and numeric boundaries', () {
+      final unsafeRevisionScene = _minimalSceneJson();
+      final unsafeRevisionNode = _singleNodeJson(unsafeRevisionScene);
+      unsafeRevisionNode['instanceRevision'] = 9007199254740992;
 
-        expect(
-          () => decodeScene(unsafeRevisionScene),
-          throwsA(
-            predicate(
-              (error) =>
-                  error is SceneDataException &&
-                  error.path == 'layers[0].nodes[0].instanceRevision' &&
-                  error.details['template'] == 'fieldMustBeSafeInteger' &&
-                  error.details['limit'] == 9007199254740991 &&
-                  error.message ==
-                      'Field layers[0].nodes[0].instanceRevision must be a safe integer within +/-9007199254740991.',
-            ),
+      expect(
+        () => decodeScene(unsafeRevisionScene),
+        throwsA(
+          predicate(
+            (error) =>
+                error is SceneDataException &&
+                error.path == 'layers[0].nodes[0].instanceRevision' &&
+                error.details['template'] == 'fieldMustBeSafeInteger' &&
+                error.details['limit'] == 9007199254740991 &&
+                error.message ==
+                    'Field layers[0].nodes[0].instanceRevision must be a safe integer within +/-9007199254740991.',
           ),
-        );
+        ),
+      );
 
-        final negativeStrokeWidth = _minimalSceneJson();
-        _singleNodeJson(negativeStrokeWidth)['strokeWidth'] = -1;
-        expect(
-          () => decodeScene(negativeStrokeWidth),
-          throwsA(
-            predicate(
-              (error) =>
-                  error is SceneDataException &&
-                  error.path == 'layers[0].nodes[0].strokeWidth' &&
-                  error.message ==
-                      'Field layers[0].nodes[0].strokeWidth must be >= 0.',
-            ),
+      final negativeStrokeWidth = _minimalSceneJson();
+      _singleNodeJson(negativeStrokeWidth)['strokeWidth'] = -1;
+      expect(
+        () => decodeScene(negativeStrokeWidth),
+        throwsA(
+          predicate(
+            (error) =>
+                error is SceneDataException &&
+                error.path == 'layers[0].nodes[0].strokeWidth' &&
+                error.message ==
+                    'Field layers[0].nodes[0].strokeWidth must be >= 0.',
           ),
-        );
+        ),
+      );
 
-        final nonFiniteLinePoint = _minimalSceneJson();
-        nonFiniteLinePoint['layers'] = <Object?>[
-          <String, Object?>{
-            'id': 'layer-0',
-            'nodes': <Object?>[
-              <String, Object?>{
-                ..._baseNodeJson(id: 'node-0', type: 'line'),
-                'localA': <String, Object?>{'x': double.infinity, 'y': 0},
-                'localB': const <String, Object?>{'x': 1, 'y': 1},
-                'thickness': 1,
-                'color': '#FF000000',
-              },
-            ],
-          },
-        ];
-        expect(
-          () => decodeScene(nonFiniteLinePoint),
-          throwsA(
-            predicate(
-              (error) =>
-                  error is SceneDataException &&
-                  error.path == 'layers[0].nodes[0].localA' &&
-                  error.message ==
-                      'Field layers[0].nodes[0].localA coordinates must be finite.',
-            ),
+      final nonFiniteLinePoint = _minimalSceneJson();
+      nonFiniteLinePoint['layers'] = <Object?>[
+        <String, Object?>{
+          'id': 'layer-0',
+          'nodes': <Object?>[
+            <String, Object?>{
+              ..._baseNodeJson(id: 'node-0', type: 'line'),
+              'localA': <String, Object?>{'x': double.infinity, 'y': 0},
+              'localB': const <String, Object?>{'x': 1, 'y': 1},
+              'thickness': 1,
+              'color': '#FF000000',
+            },
+          ],
+        },
+      ];
+      expect(
+        () => decodeScene(nonFiniteLinePoint),
+        throwsA(
+          predicate(
+            (error) =>
+                error is SceneDataException &&
+                error.path == 'layers[0].nodes[0].localA' &&
+                error.message ==
+                    'Field layers[0].nodes[0].localA coordinates must be finite.',
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
   });
 }
 

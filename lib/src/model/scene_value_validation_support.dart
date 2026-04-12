@@ -1,3 +1,4 @@
+import '../contract/scene_validation_diagnostics.dart';
 import '../contract/scene_data_exception.dart';
 
 typedef SceneValidationField<T> = ({T value, String field});
@@ -73,6 +74,23 @@ Never sceneValidationFail({
     field: field,
     message: message,
     diagnostic: diagnostic,
+  );
+}
+
+Never sceneValidationThrowSceneDataException({
+  required Object? value,
+  required String field,
+  String? message,
+  SceneDataDiagnosticDescriptor? diagnostic,
+}) {
+  if (diagnostic != null) {
+    throw diagnostic.toException(path: field, source: value);
+  }
+  throw SceneDataException(
+    code: SceneDataErrorCode.invalidValue,
+    path: field,
+    message: message == null ? null : 'Field $field $message',
+    source: value,
   );
 }
 

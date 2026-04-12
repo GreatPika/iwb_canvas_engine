@@ -690,6 +690,50 @@ void main() {
     );
   });
 
+  test('txnInsertNodeInScene rejects node overflow before layer mutation', () {
+    final scene = Scene(
+      layers: <ContentLayer>[ContentLayer(id: 'layer-auto-overflow')],
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[
+          for (var i = 0; i < kMaxNodesPerScene; i++)
+            RectNode(id: 'node-$i', size: const Size(1, 1)),
+        ],
+      ),
+    );
+    final locator = txnBuildNodeLocator(scene);
+    final backgroundLayer = scene.backgroundLayer;
+    if (backgroundLayer == null) {
+      fail('Expected populated background layer for node-budget test.');
+    }
+    final beforeNodeIds = backgroundLayer.nodes
+        .map((node) => node.id)
+        .toList(growable: false);
+
+    expect(
+      () => txnInsertNodeInScene(
+        scene: scene,
+        nodeLocator: locator,
+        node: RectNode(id: 'overflow', size: const Size(2, 2)),
+        layerIndex: 0,
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes' &&
+              e.details['template'] == 'maxNodes',
+        ),
+      ),
+    );
+    expect(scene.layers.single.nodes, isEmpty);
+    expect(
+      backgroundLayer.nodes.map((node) => node.id).toList(growable: false),
+      beforeNodeIds,
+    );
+    expect(locator.containsKey('overflow'), isFalse);
+  });
+
   test('find/locator/erase utilities handle dedicated background layer', () {
     final scene = Scene(
       backgroundLayer: BackgroundLayer(
@@ -1009,6 +1053,41 @@ void main() {
     expect(emptyScene.layers.single.id, 'layer-0');
     expect(emptyScene.layers.last, isA<ContentLayer>());
   });
+
+  test(
+    'txnInsertContentLayerInScene rejects overflow before scene mutation',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          for (var i = 0; i < kMaxContentLayersPerScene; i++)
+            ContentLayer(id: 'layer-$i'),
+        ],
+      );
+      final beforeLayerIds = scene.layers
+          .map((layer) => layer.id)
+          .toList(growable: false);
+
+      expect(
+        () => txnInsertContentLayerInScene(
+          scene: scene,
+          layerId: 'layer-overflow',
+        ),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers' &&
+                e.details['template'] == 'maxItems',
+          ),
+        ),
+      );
+      expect(
+        scene.layers.map((layer) => layer.id).toList(growable: false),
+        beforeLayerIds,
+      );
+    },
+  );
 
   test('find content layer index resolves known and missing layer ids', () {
     final scene = Scene(

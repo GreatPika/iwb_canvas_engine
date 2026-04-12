@@ -34,6 +34,10 @@ storage.
   limit of `33554432` characters before parsing.
 - Boundary failures expose stable `SceneDataException.code`, `path`, and
   immutable `details`; `message` remains a derived human-readable summary.
+- The package entrypoint exports the stable error surface
+  `SceneDataException` / `SceneDataErrorCode`; internal diagnostic adapters
+  used to assemble those errors remain under `src/**` and are not part of the
+  supported package API.
 - Collection-limit failures for palette lists and stroke points, optional
   image `naturalSize` child-field failures, and parsed color/enum literals
   all follow the same details-first boundary contract across builder/decode

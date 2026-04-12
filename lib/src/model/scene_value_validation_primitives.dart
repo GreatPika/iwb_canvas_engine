@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import '../contract/scene_data_exception.dart';
+import '../contract/scene_validation_diagnostics.dart';
 import '../contract/transform2d.dart';
 import '../contract/validated/finite_offset_value.dart';
 import '../contract/validated/non_negative_finite_double_value.dart';

@@ -53,15 +53,10 @@ extension TxnWorkspaceContext on TxnContext {
       }
       return index;
     }
-
-    final scene = txnEnsureMutableScene();
-    if (scene.layers.isEmpty) {
-      final generatedId = txnNextLayerId();
-      scene.layers.add(ContentLayer(id: generatedId));
-      _derivedState.invalidateLayerIdIndex();
-      return 0;
-    }
-    return scene.layers.length - 1;
+    return _workspace.resolveInsertLayerIndex(
+      ctx: this,
+      derivedState: _derivedState,
+    );
   }
 
   void txnAdoptScene(Scene scene) {
@@ -75,6 +70,22 @@ extension _TxnWorkspaceSceneOps on _TxnWorkspace {
   Scene get workingScene => _mutableScene ?? _baseScene;
 
   Scene sceneForCommit() => _mutableScene ?? _baseScene;
+
+  int resolveInsertLayerIndex({
+    required TxnContext ctx,
+    required _TxnDerivedState derivedState,
+  }) {
+    final scene = ensureMutableScene(ctx._debugStats);
+    final previousLayerCount = scene.layers.length;
+    final resolvedIndex = txnResolveInsertLayerIndex(
+      scene: scene,
+      nextLayerId: ctx.txnNextLayerId,
+    );
+    if (scene.layers.length != previousLayerCount) {
+      derivedState.invalidateLayerIdIndex();
+    }
+    return resolvedIndex;
+  }
 
   Scene ensureMutableScene(_TxnDebugStats debugStats) {
     final existing = _mutableScene;
@@ -103,12 +114,11 @@ extension _TxnWorkspaceSceneOps on _TxnWorkspace {
     }
 
     final scene = ensureMutableScene(ctx._debugStats);
-    final targetIndex = index ?? scene.layers.length;
-    if (targetIndex < 0 || targetIndex > scene.layers.length) {
-      throw RangeError.range(targetIndex, 0, scene.layers.length, 'index');
-    }
-
-    scene.layers.insert(targetIndex, ContentLayer(id: layerId));
+    final targetIndex = txnInsertContentLayerInScene(
+      scene: scene,
+      layerId: layerId,
+      insertIndex: index,
+    );
     if (targetIndex < scene.layers.length - 1) {
       txnShiftNodeLocatorLayersFrom(
         nodeLocator: derivedState.ensureMutableNodeLocator(ctx._debugStats),

@@ -244,7 +244,7 @@ backstop before the committed store is updated.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Centralize runtime structural scene budgets
+### Slice 1. [x] Centralize runtime structural scene budgets
 
 #### Slice Contract
 All content-layer creation and node insertion paths enforce scene layer/node

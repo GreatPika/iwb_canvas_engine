@@ -139,11 +139,19 @@ cat path/to/repro_snippet.dart | dart run tool/run_temp_pkg_test.dart --stdin
 - serialization:
   - `encodeScene`
   - `encodeSceneToJson`
-  - `decodeScene`
+- `decodeScene`
 - `decodeSceneFromJson`
 - `schemaVersionWrite`
 - `schemaVersionsRead`
-  - `SceneDataException`
+- `SceneDataException`
+- `SceneDataErrorCode`
+
+Error-contract boundary note:
+
+- the stable package error surface is `SceneDataException` plus
+  `SceneDataErrorCode`
+- internal validation descriptors and argument adapters stay under `src/**`
+  and are not part of the supported package entrypoint contract
 
 JSON string boundary note:
 

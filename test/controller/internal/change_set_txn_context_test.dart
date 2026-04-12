@@ -2,8 +2,11 @@ import 'dart:collection';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_data_exception.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
+    show kMaxContentLayersPerScene, kMaxNodesPerScene;
 import 'package:iwb_canvas_engine/src/controller/change_set.dart';
 import 'package:iwb_canvas_engine/src/controller/store.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
@@ -747,6 +750,86 @@ void main() {
       isTrue,
     );
   });
+
+  test(
+    'TxnContext txnEnsureContentLayer rejects layer overflow before mutation',
+    () {
+      final baseScene = Scene(
+        layers: <ContentLayer>[
+          for (var i = 0; i < kMaxContentLayersPerScene; i++)
+            ContentLayer(id: 'layer-$i'),
+        ],
+      );
+      final ctx = TxnContext(
+        baseScene: baseScene,
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: const <NodeId>{},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+
+      expect(
+        () => ctx.txnEnsureContentLayer('layer-overflow'),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers' &&
+                e.details['template'] == 'maxItems',
+          ),
+        ),
+      );
+      expect(ctx.workingScene.layers.length, kMaxContentLayersPerScene);
+      expect(ctx.txnHasLayerId('layer-overflow'), isFalse);
+    },
+  );
+
+  test(
+    'TxnContext insert-layer bootstrap rejects node overflow before layer mutation',
+    () {
+      final baseScene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[
+            for (var i = 0; i < kMaxNodesPerScene; i++)
+              RectNode(id: 'node-$i', size: const Size(1, 1)),
+          ],
+        ),
+      );
+      final ctx = TxnContext(
+        baseScene: baseScene,
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: <NodeId>{
+          for (var i = 0; i < kMaxNodesPerScene; i++) 'node-$i',
+        },
+        nodeIdSeed: kMaxNodesPerScene + 1,
+        nextInstanceRevision: 1,
+      );
+
+      final targetLayerIndex = ctx.txnResolveInsertLayerIndex(layerId: null);
+      expect(targetLayerIndex, 0);
+
+      expect(
+        () => txnInsertNodeInScene(
+          scene: ctx.txnEnsureMutableScene(),
+          nodeLocator: ctx.txnEnsureMutableNodeLocator(),
+          node: RectNode(id: 'overflow', size: const Size(2, 2)),
+          layerIndex: targetLayerIndex,
+        ),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers[0].nodes' &&
+                e.details['template'] == 'maxNodes',
+          ),
+        ),
+      );
+      expect(ctx.workingScene.layers.single.nodes, isEmpty);
+      expect(ctx.txnFindNodeById('overflow'), isNull);
+    },
+  );
 
   test(
     'TxnContext resolves mutable nodes with one layer clone and per-node COW',

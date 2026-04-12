@@ -4,6 +4,10 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Breaking: The package entrypoint now exposes only the stable public scene
+  error contract `SceneDataException` and `SceneDataErrorCode`. Internal
+  diagnostic descriptor / validation adapter types remain available only under
+  `src/**` and are no longer part of the supported package import surface.
 - Scene boundary diagnostics are now aligned across parsed JSON import,
   typed snapshot import, and public builder entrypoints for palette item
   limits, stroke point limits, optional image `naturalSize`, and parsed

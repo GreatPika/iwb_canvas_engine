@@ -1,7 +1,28 @@
 import '../contract/ids.dart' show LayerId;
+import '../contract/scene_structure_validation.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import 'document_locator.dart' as locator;
+
+int txnInsertContentLayerInScene({
+  required Scene scene,
+  required LayerId layerId,
+  int? insertIndex,
+}) {
+  sceneRequireContentLayerLimit(scene.layers.length + 1);
+  final resolvedInsertIndex = insertIndex ?? scene.layers.length;
+  if (resolvedInsertIndex < 0 || resolvedInsertIndex > scene.layers.length) {
+    throw RangeError.range(
+      resolvedInsertIndex,
+      0,
+      scene.layers.length,
+      'insertIndex',
+    );
+  }
+
+  scene.layers.insert(resolvedInsertIndex, ContentLayer(id: layerId));
+  return resolvedInsertIndex;
+}
 
 bool txnInsertNodeInScene({
   required Scene scene,
@@ -32,6 +53,10 @@ bool txnInsertNodeInScene({
       'insertIndex',
     );
   }
+  sceneConsumeNodeBudget(
+    totalNodeCount: nodeLocator.length,
+    path: 'layers[$layerIndex].nodes',
+  );
 
   if (insertedNodeIndex == targetLayer.nodes.length) {
     targetLayer.nodes.add(node);
@@ -65,8 +90,7 @@ int txnResolveInsertLayerIndex({
   }
   if (scene.layers.isEmpty) {
     final generatedId = nextLayerId == null ? 'layer-0' : nextLayerId();
-    scene.layers.add(ContentLayer(id: generatedId));
-    return 0;
+    return txnInsertContentLayerInScene(scene: scene, layerId: generatedId);
   }
   return scene.layers.length - 1;
 }

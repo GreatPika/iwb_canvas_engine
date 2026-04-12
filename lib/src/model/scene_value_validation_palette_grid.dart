@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../contract/scene_contract_limits.dart';
+import '../contract/scene_validation_diagnostics.dart';
 import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
 import '../core/scene_limits.dart';

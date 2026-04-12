@@ -3,6 +3,8 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
+import 'package:iwb_canvas_engine/src/contract/scene_validation_diagnostics.dart'
+    show SceneDataDiagnosticDescriptor;
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart'
     show sceneCoordMax, sceneSizeMax;

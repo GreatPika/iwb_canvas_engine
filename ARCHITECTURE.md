@@ -687,6 +687,10 @@ most important architectural rules are:
   immutable containers while preserving stable `code`, `path`, and immutable
   `details`; `message` is a derived user-facing rendering owned by
   `scene_data_exception.dart`.
+- Structured validation descriptors and `ArgumentError` adapters used to build
+  those public errors stay under `contract/**` without package-barrel export;
+  they are implementation detail plumbing, not part of the package entrypoint
+  surface.
 - `scene_data_exception.dart` is also the single template owner for the
   touched scene-boundary diagnostics: palette/stroke collection limits,
   optional image `naturalSize` child failures, and parsed color/enum literal

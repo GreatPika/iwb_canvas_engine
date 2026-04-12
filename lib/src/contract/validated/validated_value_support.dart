@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:path_drawing/path_drawing.dart';
 
+import '../scene_validation_diagnostics.dart';
 import '../scene_data_exception.dart';
 import '../scene_contract_limits.dart';
 

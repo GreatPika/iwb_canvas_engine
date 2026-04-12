@@ -139,6 +139,18 @@ bool txnInsertNodeInScene({
   );
 }
 
+int txnInsertContentLayerInScene({
+  required Scene scene,
+  required LayerId layerId,
+  int? insertIndex,
+}) {
+  return document_scene_insert.txnInsertContentLayerInScene(
+    scene: scene,
+    layerId: layerId,
+    insertIndex: insertIndex,
+  );
+}
+
 SceneNode? txnEraseNodeFromScene({
   required Scene scene,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
