@@ -8,6 +8,15 @@ import '../model/scene_value_validation.dart' as scene_value_validation;
 import 'change_set.dart';
 import 'committed_store_state.dart';
 
+typedef _CriticalRuntimeValidationScope = ({
+  bool validateFullScene,
+  bool validateStructuralSurface,
+  bool validateCamera,
+  bool validateGrid,
+  bool validatePalette,
+  Set<NodeId> trackedNodeIds,
+});
+
 List<String> txnCollectStoreInvariantViolations(CommittedStoreState state) {
   final violations = <String>[];
   violations.addAll(
@@ -178,54 +187,97 @@ List<String> _txnCollectCriticalRuntimeSceneValidityInvariantViolations({
   required ChangeSet? changeSet,
   required Scene? previousScene,
 }) {
-  if (changeSet == null) {
-    return _txnCollectRuntimeSceneValidityInvariantViolations(state.scene);
+  final scope = _txnBuildCriticalRuntimeValidationScope(
+    changeSet: changeSet,
+    previousScene: previousScene,
+    scene: state.scene,
+  );
+  return _txnCollectCriticalRuntimeSceneValidityViolationsForScope(
+    scene: state.scene,
+    nodeLocator: state.nodeLocator,
+    scope: scope,
+  );
+}
+
+_CriticalRuntimeValidationScope _txnBuildCriticalRuntimeValidationScope({
+  required ChangeSet? changeSet,
+  required Scene? previousScene,
+  required Scene scene,
+}) {
+  if (changeSet == null || changeSet.documentReplaced) {
+    return (
+      validateFullScene: true,
+      validateStructuralSurface: false,
+      validateCamera: false,
+      validateGrid: false,
+      validatePalette: false,
+      trackedNodeIds: const <NodeId>{},
+    );
   }
-  if (changeSet.documentReplaced) {
-    return _txnCollectRuntimeSceneValidityInvariantViolations(state.scene);
+
+  return (
+    validateFullScene: false,
+    validateStructuralSurface: changeSet.structuralChanged,
+    validateCamera: _txnDidCriticalCameraChange(previousScene, scene),
+    validateGrid: _txnDidCriticalGridChange(previousScene, scene),
+    validatePalette: _txnDidCriticalPaletteChange(previousScene, scene),
+    trackedNodeIds: <NodeId>{
+      ...changeSet.addedNodeIds,
+      ...changeSet.updatedNodeIds,
+    },
+  );
+}
+
+List<String> _txnCollectCriticalRuntimeSceneValidityViolationsForScope({
+  required Scene scene,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required _CriticalRuntimeValidationScope scope,
+}) {
+  if (scope.validateFullScene) {
+    return _txnCollectRuntimeSceneValidityInvariantViolations(scene);
   }
 
   final violations = <String>[];
 
-  if (changeSet.structuralChanged) {
+  if (scope.validateStructuralSurface) {
     violations.addAll(
       scene_value_validation.sceneCollectRuntimeStructuralSurfaceViolations(
-        state.scene,
+        scene,
       ),
     );
   }
 
-  if (_txnDidCriticalCameraChange(previousScene, state.scene)) {
+  if (scope.validateCamera) {
     violations.addAll(
       scene_value_validation.sceneCollectRuntimeCameraOffsetViolations(
-        value: state.scene.camera.offset,
+        value: scene.camera.offset,
       ),
     );
   }
 
-  if (_txnDidCriticalGridChange(previousScene, state.scene)) {
+  if (scope.validateGrid) {
     violations.addAll(
       scene_value_validation.sceneCollectRuntimeGridViolations(
-        state.scene.background.grid,
+        scene.background.grid,
         requirePositiveCellSize: true,
         requireEnabledMinCellSize: true,
       ),
     );
   }
 
-  if (_txnDidCriticalPaletteChange(previousScene, state.scene)) {
+  if (scope.validatePalette) {
     violations.addAll(
       scene_value_validation.sceneCollectRuntimePaletteViolations(
-        state.scene.palette,
+        scene.palette,
       ),
     );
   }
 
   violations.addAll(
     _txnCollectCriticalTrackedNodeViolations(
-      scene: state.scene,
-      nodeLocator: state.nodeLocator,
-      nodeIds: <NodeId>{...changeSet.addedNodeIds, ...changeSet.updatedNodeIds},
+      scene: scene,
+      nodeLocator: nodeLocator,
+      nodeIds: scope.trackedNodeIds,
     ),
   );
 

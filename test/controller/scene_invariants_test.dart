@@ -205,6 +205,29 @@ void main() {
     );
   }
 
+  List<String> txnCollectCriticalStoreInvariantViolations({
+    required Scene scene,
+    required int commitRevision,
+    required int previousCommitRevision,
+    Scene? previousScene,
+    ChangeSet? changeSet,
+  }) {
+    return scene_invariants.txnCollectCriticalStoreInvariantViolations(
+      state: committedStoreState(
+        scene: scene,
+        selectedNodeIds: const <NodeId>{},
+        allNodeIds: txnCollectNodeIds(scene),
+        nodeLocator: txnBuildNodeLocator(scene),
+        idGeneratorState: state(),
+        commitRevision: commitRevision,
+      ),
+      commitRevision: commitRevision,
+      previousCommitRevision: previousCommitRevision,
+      previousScene: previousScene,
+      changeSet: changeSet,
+    );
+  }
+
   test('returns no violations for valid committed store', () {
     final scene = sceneFixture(gridEnabled: true, gridCellSize: 16);
     final violations = txnCollectStoreInvariantViolations(
@@ -737,6 +760,33 @@ void main() {
     },
   );
 
+  test('critical runtime invariant check skips unchanged palette surface', () {
+    final previousScene = sceneFixture(
+      palette: rawPaletteFixture(
+        penColors: const <Color>[],
+        backgroundColors: const <Color>[Color(0xFFFFFFFF)],
+        gridSizes: const <double>[16],
+      ),
+    );
+    final scene = sceneFixture(
+      palette: rawPaletteFixture(
+        penColors: const <Color>[],
+        backgroundColors: const <Color>[Color(0xFFFFFFFF)],
+        gridSizes: const <double>[16],
+      ),
+    );
+
+    final violations = txnCollectCriticalStoreInvariantViolations(
+      scene: scene,
+      commitRevision: 1,
+      previousCommitRevision: 0,
+      previousScene: previousScene,
+      changeSet: ChangeSet(),
+    );
+
+    expect(violations, isNot(contains('palette.penColors must not be empty.')));
+  });
+
   test(
     'critical runtime invariant check revalidates changed structural layer ids',
     () {
@@ -752,6 +802,30 @@ void main() {
           previousCommitRevision: -1,
           previousScene: previousScene,
           changeSet: ChangeSet()..structuralChanged = true,
+        ),
+        throwsStateError,
+      );
+    },
+  );
+
+  test(
+    'critical runtime invariant check revalidates full scene for document replacement',
+    () {
+      final invalidScene = sceneFixture(
+        palette: rawPaletteFixture(
+          penColors: const <Color>[],
+          backgroundColors: const <Color>[Color(0xFFFFFFFF)],
+          gridSizes: const <double>[16],
+        ),
+      );
+
+      expect(
+        () => assertCriticalTxnStoreInvariants(
+          scene: invalidScene,
+          commitRevision: 1,
+          previousCommitRevision: 0,
+          previousScene: invalidScene,
+          changeSet: ChangeSet()..documentReplaced = true,
         ),
         throwsStateError,
       );
@@ -834,6 +908,58 @@ void main() {
       );
     },
   );
+
+  test('critical runtime invariant check validates only tracked node ids', () {
+    final invalidNode = _RawTransformRectNode(
+      id: 'bad-node',
+      rawTransform: const Transform2D(
+        a: double.infinity,
+        b: 0,
+        c: 0,
+        d: 1,
+        tx: 0,
+        ty: 0,
+      ),
+    );
+    final previousScene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(id: 'layer-auto-node', nodes: <SceneNode>[invalidNode]),
+      ],
+    );
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-node',
+          nodes: <SceneNode>[
+            _RawTransformRectNode(
+              id: 'bad-node',
+              rawTransform: const Transform2D(
+                a: double.infinity,
+                b: 0,
+                c: 0,
+                d: 1,
+                tx: 0,
+                ty: 0,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final violations = txnCollectCriticalStoreInvariantViolations(
+      scene: scene,
+      commitRevision: 1,
+      previousCommitRevision: 0,
+      previousScene: previousScene,
+      changeSet: ChangeSet(),
+    );
+
+    expect(
+      violations,
+      isNot(contains('layers[0].nodes[0].transform.a must be finite.')),
+    );
+  });
 
   test(
     'critical runtime invariant check throws for invalid content layer id',

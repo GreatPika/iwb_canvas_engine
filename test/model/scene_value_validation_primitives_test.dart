@@ -9,6 +9,8 @@ import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/model/scene_value_validation.dart';
+import 'package:iwb_canvas_engine/src/model/scene_value_validation_scene.dart'
+    as scene_value_validation_scene;
 import 'package:iwb_canvas_engine/src/model/scene_value_validation_palette_grid.dart'
     show
         sceneValidateCameraOffsetValue,
@@ -339,6 +341,42 @@ void main() {
         );
       },
     );
+
+    test('sceneValidateSceneValues rejects blank runtime layer id', () {
+      expect(
+        () => sceneValidateSceneValues(
+          Scene(
+            layers: <ContentLayer>[ContentLayer(id: '', nodes: <SceneNode>[])],
+          ),
+          onError: _throwFailure,
+          requirePositiveGridCellSize: true,
+          requireEnabledMinGridCellSize: true,
+        ),
+        throwsA(
+          predicate(
+            (error) =>
+                error is _ValidationFailure &&
+                error.field == 'layers[0].id' &&
+                error.message == 'Field layers[0].id must not be empty.',
+          ),
+        ),
+      );
+    });
+
+    test('sceneCollectRuntimeSceneValueViolations skips runtime layer ids', () {
+      final scene = Scene(
+        layers: <ContentLayer>[ContentLayer(id: '', nodes: <SceneNode>[])],
+      );
+
+      final violations = scene_value_validation_scene
+          .sceneCollectRuntimeSceneValueViolations(
+            scene,
+            requirePositiveGridCellSize: true,
+            requireEnabledMinGridCellSize: true,
+          );
+
+      expect(violations, isNot(contains('layers[0].id must not be empty.')));
+    });
 
     test(
       'sceneCollectRuntimeSceneValidityViolations rejects blank runtime layer id',
