@@ -5,8 +5,9 @@ language: english
 ## 1. Change Mandate
 This change seals runtime scene validity so structural scene limits and
 constrained runtime node fields are enforced by canonical owners before commit,
-and any remaining bypass is rejected by one pre-commit runtime validation
-backstop before the committed store is updated.
+and any remaining bypass on the pending runtime scene surface is rejected by
+one canonical pre-commit validation backstop before the committed store is
+updated.
 
 ## 2. Change Boundary
 
@@ -33,6 +34,7 @@ backstop before the committed store is updated.
 
 ### Implementation Files
 - `lib/src/contract/scene_structure_validation.dart`
+- `lib/src/contract/runtime_node_value_validation.dart`
 - `lib/src/controller/txn_workspace.dart`
 - `lib/src/controller/scene_invariants.dart`
 - `lib/src/core/scene_node.dart`
@@ -65,6 +67,7 @@ backstop before the committed store is updated.
 - `lib/src/core/{scene_node,box_nodes,vector_nodes,path_node,text_node_layout_state}.dart`
 - `lib/src/model/document_scene_insert.dart`
 - `lib/src/model/scene_value_validation*.dart`
+- `lib/src/contract/runtime_node_value_validation.dart`
 - `lib/src/contract/internal/node_boundary_schema.dart`
 - `tool/src/guardrails/*.dart`
 - `test/controller/**/*.dart`
@@ -95,7 +98,7 @@ backstop before the committed store is updated.
 
 1. This step must not introduce a third validation contract. Field-local
    eager runtime validation reuses the canonical helpers exported through
-   `lib/src/contract/internal/node_boundary_schema.dart`, while the
+   `lib/src/contract/runtime_node_value_validation.dart`, while the
    pre-commit backstop reuses the canonical runtime graph validators under
    `lib/src/model/scene_value_validation*.dart` together with
    `lib/src/contract/scene_structure_validation.dart`.
@@ -108,16 +111,20 @@ backstop before the committed store is updated.
 4. The existing committed-store invariant gate in
    `lib/src/controller/scene_invariants.dart` remains the owner that blocks
    invalid runtime scenes before `_applyCommittedStore(...)` runs.
-5. Constrained mutable runtime node fields must not remain as bare public
+5. Critical pre-commit validation in release builds must remain change-scoped
+   for ordinary tracked commits. Full-scene runtime validation is allowed only
+   when the document is replaced or in the existing debug/profile full
+   invariant sweep.
+6. Constrained mutable runtime node fields must not remain as bare public
    mutable storage after this step. They must mutate through validated
    setters or dedicated owner methods.
-6. `StrokeNode.replacePoints(...)` remains the sole owner of stroke point-list
+7. `StrokeNode.replacePoints(...)` remains the sole owner of stroke point-list
    mutation; this step must not add a raw mutable points setter.
-7. Defensive sanitization in rendering, hit-testing, text layout, and
+8. Defensive sanitization in rendering, hit-testing, text layout, and
    `PathNode.buildLocalPath()` remains fallback behavior for foreign or
    deliberately bypassed invalid state; it does not define the validity of
    ordinary committed runtime scenes.
-8. Public documentation and changelog updates ship in the same change as the
+9. Public documentation and changelog updates ship in the same change as the
    runtime validity enforcement changes.
 
 ## 5. Result Requirements
@@ -125,9 +132,11 @@ backstop before the committed store is updated.
 1. No ordinary runtime mutation path can create a scene whose content-layer
    count exceeds `kMaxContentLayersPerScene` or whose total node count exceeds
    `kMaxNodesPerScene` and still reach the committed store.
-2. The committed-store precheck rejects any runtime scene whose metadata,
-   structure, or constrained node fields violate the canonical runtime scene
-   validation contract, even when the state was produced by a direct bypass.
+2. The committed-store precheck reuses the canonical runtime validators on the
+   changed runtime scene surface and rejects any commit candidate whose
+   changed metadata, structure, or constrained node fields violate the runtime
+   scene validation contract before store apply; `debug` and `profile` still
+   run the full committed-store sweep.
 3. Ordinary runtime writes to the constrained fields listed in this contract
    fail fast at the owner boundary instead of relying on later render/layout
    sanitization or snapshot/export rejection.
@@ -149,7 +158,7 @@ backstop before the committed store is updated.
   `lib/src/model/scene_value_validation*.dart` instead of creating a second
   runtime-scene traversal contract.
 - Reuse the existing field-level validators exported through
-  `lib/src/contract/internal/node_boundary_schema.dart` instead of
+  `lib/src/contract/runtime_node_value_validation.dart` instead of
   reimplementing numeric/string/transform validation directly inside core
   node owners.
 - Keep the controller commit hook in the existing invariant gate path; do not
@@ -293,12 +302,13 @@ budgets through one model-owned structural contract before mutation is applied.
 - Regression tests proving that runtime overflow now fails on mutation rather
   than only on export.
 
-### Slice 2. [ ] Add a canonical pre-commit runtime validation backstop
+### Slice 2. [x] Add a canonical pre-commit runtime validation backstop
 
 #### Slice Contract
-The committed-store invariant gate rejects any invalid runtime scene before the
-store is updated, using canonical runtime graph validation plus structural
-scene validation instead of snapshot roundtrips.
+The committed-store invariant gate rejects invalid runtime commit candidates
+before the store is updated, reusing canonical runtime graph validation on the
+changed scene surface for ordinary tracked commits and whole-scene validation
+for document replacement instead of snapshot roundtrips.
 
 #### Change
 - Extend `lib/src/controller/scene_invariants.dart` so committed-scene
@@ -312,6 +322,10 @@ scene validation instead of snapshot roundtrips.
 - Keep the owner site in the existing pre-commit invariant gate path used by
   `lib/src/controller/scene_controller_commit_execution.dart`; do not add a
   second commit-time rejection seam.
+- Keep the critical release-path check change-scoped for ordinary tracked
+  commits. Whole-scene runtime validation is allowed only when the document is
+  replaced, while the existing full committed-store sweep remains in
+  `debug`/`profile`.
 - Preserve the existing index, selection, revision, and controller metadata
   invariant checks in `scene_invariants.dart`; this slice adds the canonical
   runtime-scene backstop instead of replacing unrelated invariant families.
@@ -343,7 +357,7 @@ scene validation instead of snapshot roundtrips.
 - Failing commit regression tests proving rejection occurs before the store
   apply path.
 
-### Slice 3. [ ] Convert constrained runtime node writes to validated owners
+### Slice 3. [x] Convert constrained runtime node writes to validated owners
 
 #### Slice Contract
 Ordinary runtime writes to constrained mutable node fields fail fast through
@@ -359,7 +373,7 @@ semantics because they already write through those owners.
   `lib/src/core/path_node.dart`, and
   `lib/src/core/text_node_layout_state.dart`.
 - Reuse the canonical field validators exported through
-  `lib/src/contract/internal/node_boundary_schema.dart`; do not duplicate
+  `lib/src/contract/runtime_node_value_validation.dart`; do not duplicate
   numeric, transform, string, or size rules in `core/**`.
 - Cover the following constrained runtime fields exactly in this slice:
   `transform`, `hitPadding`, `imageId`, `size`, `naturalSize`, `text`,
@@ -399,7 +413,7 @@ semantics because they already write through those owners.
 - Regression tests demonstrating fail-fast owner writes for the touched
   constrained fields.
 
-### Slice 4. [ ] Lock the runtime validity contract in invariants, guardrails, and docs
+### Slice 4. [x] Lock the runtime validity contract in invariants, guardrails, and docs
 
 #### Slice Contract
 Repository-local invariants, guardrails, and published docs describe one

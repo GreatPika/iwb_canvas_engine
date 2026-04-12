@@ -4,6 +4,11 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Runtime scene validity ownership now closes before commit: content-layer and
+  total-node budget overflows fail at model mutation owners, constrained
+  runtime node fields validate eagerly on owner writes, and the controller
+  commit gate revalidates the changed runtime scene surface before store apply
+  while `debug`/`profile` keep the full invariant sweep.
 - Breaking: The package entrypoint now exposes only the stable public scene
   error contract `SceneDataException` and `SceneDataErrorCode`. Internal
   diagnostic descriptor / validation adapter types remain available only under

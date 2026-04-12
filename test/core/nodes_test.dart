@@ -79,8 +79,11 @@ void main() {
     expect(rect.scaleX, closeTo(2, 1e-6));
     expect(rect.scaleY, closeTo(-3, 1e-6));
 
-    rect.transform = const Transform2D(a: 0.1, b: 0, c: -1, d: 0, tx: 0, ty: 0);
+    rect.transform = const Transform2D(a: 0, b: 1, c: -1, d: 0, tx: 0, ty: 0);
     expect(rect.rotationDeg, closeTo(90, 1e-6));
+
+    rect.transform = Transform2D.trs(rotationDeg: 30, scaleX: 1, scaleY: 4);
+    expect(rect.rotationDeg, closeTo(30, 1e-6));
   });
 
   test('convenience setters reject non-TRS or non-finite transforms', () {
@@ -91,52 +94,129 @@ void main() {
     expect(() => rect.scaleX = 1, throwsStateError);
     expect(() => rect.scaleY = 1, throwsStateError);
 
-    rect.transform = const Transform2D(
-      a: double.nan,
-      b: 0,
-      c: 0,
-      d: 1,
-      tx: 0,
-      ty: 0,
-    );
-    expect(() => rect.rotationDeg = 1, throwsStateError);
-  });
-
-  test('convenience getters assert on non-finite transform components', () {
-    final rect = RectNode(id: 'r', size: const Size(10, 10))
-      ..transform = const Transform2D(
+    final nonFiniteRect = _RawTransformRectNode(
+      rawTransform: const Transform2D(
         a: double.nan,
         b: 0,
         c: 0,
         d: 1,
         tx: 0,
         ty: 0,
-      );
+      ),
+    );
+    expect(() => nonFiniteRect.rotationDeg = 1, throwsStateError);
+  });
+
+  test('convenience getters assert on non-finite transform components', () {
+    final rect = _RawTransformRectNode(
+      rawTransform: const Transform2D(
+        a: double.nan,
+        b: 0,
+        c: 0,
+        d: 1,
+        tx: 0,
+        ty: 0,
+      ),
+    );
 
     expect(() => rect.rotationDeg, throwsA(isA<AssertionError>()));
   });
 
-  test('boundsWorld falls back to Rect.zero for invalid transform bounds', () {
+  test('runtime node owners reject invalid constrained assignments', () {
+    final rect = RectNode(id: 'rect', size: const Size(10, 10));
+    expect(
+      () => rect.transform = const Transform2D(
+        a: 1,
+        b: 2,
+        c: 2,
+        d: 4,
+        tx: 0,
+        ty: 0,
+      ),
+      throwsArgumentError,
+    );
+    expect(() => rect.hitPadding = -1, throwsArgumentError);
+    expect(() => rect.strokeWidth = double.nan, throwsArgumentError);
+
+    final image = ImageNode(
+      id: 'image',
+      imageId: 'image://1',
+      size: const Size(10, 10),
+    );
+    expect(
+      () => image.imageId = 'x' * (kMaxImageIdLength + 1),
+      throwsArgumentError,
+    );
+    expect(() => image.size = const Size(-1, 10), throwsArgumentError);
+    expect(
+      () => image.naturalSize = const Size(10, double.infinity),
+      throwsArgumentError,
+    );
+
+    final text = TextNode(
+      id: 'text',
+      text: 'hello',
+      color: const Color(0xFF000000),
+    );
+    final originalBounds = text.localBounds;
+    text.text = 'hello world';
+    text.fontSize = 32;
+    text.fontFamily = 'Mono';
+    text.maxWidth = 120;
+    text.lineHeight = 1.5;
+    expect(text.localBounds, isNot(originalBounds));
+    expect(() => text.fontSize = 0, throwsArgumentError);
+    expect(() => text.fontFamily = '', throwsArgumentError);
+    expect(() => text.maxWidth = 0, throwsArgumentError);
+    expect(() => text.lineHeight = 0, throwsArgumentError);
+
     final line = LineNode(
-      id: 'l',
-      start: const Offset(double.nan, 0),
-      end: const Offset(1, 1),
+      id: 'line',
+      start: const Offset(0, 0),
+      end: const Offset(10, 0),
       thickness: 1,
       color: const Color(0xFF000000),
     );
-    expect(line.boundsWorld, Rect.zero);
+    expect(
+      () => line.start = const Offset(double.infinity, 0),
+      throwsArgumentError,
+    );
+    expect(() => line.end = const Offset(0, double.nan), throwsArgumentError);
+    expect(() => line.thickness = 0, throwsArgumentError);
 
-    line.start = const Offset(0, 0);
-    line.end = const Offset(10, 0);
-    line.transform = const Transform2D(
-      a: 1,
-      b: 0,
-      c: 0,
-      d: 1,
-      tx: double.infinity,
-      ty: 0,
+    final stroke = StrokeNode(
+      id: 'stroke',
+      points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+      thickness: 1,
+      color: const Color(0xFF000000),
+    );
+    expect(() => stroke.thickness = -1, throwsArgumentError);
+
+    final path = PathNode(id: 'path', svgPathData: 'M0 0 L10 10');
+    expect(() => path.strokeWidth = -1, throwsArgumentError);
+    expect(() => path.svgPathData = '', throwsArgumentError);
+    expect(() => path.svgPathData = 'not svg', throwsArgumentError);
+  });
+
+  test('boundsWorld falls back to Rect.zero for invalid transform bounds', () {
+    final line = _RawLineNode(
+      rawStart: const Offset(double.nan, 0),
+      rawEnd: const Offset(1, 1),
+      rawThickness: 1,
     );
     expect(line.boundsWorld, Rect.zero);
+
+    final translated = _RawTransformRectNode(
+      rawTransform: const Transform2D(
+        a: 1,
+        b: 0,
+        c: 0,
+        d: 1,
+        tx: double.infinity,
+        ty: 0,
+      ),
+    );
+    expect(translated.boundsWorld, Rect.zero);
   });
 
   test('topLeftWorld helpers are AABB-based and honor ui epsilon', () {
@@ -246,12 +326,10 @@ void main() {
       );
       expect(wrongTransformLine.normalizeToLocalCenter, throwsStateError);
 
-      final badLine = LineNode(
-        id: 'l2',
-        start: const Offset(double.infinity, 0),
-        end: const Offset(1, 1),
-        thickness: 1,
-        color: const Color(0xFF000000),
+      final badLine = _RawLineNode(
+        rawStart: const Offset(double.infinity, 0),
+        rawEnd: const Offset(1, 1),
+        rawThickness: 1,
       );
       expect(badLine.normalizeToLocalCenter, throwsStateError);
     },
@@ -368,12 +446,17 @@ void main() {
     pathNode.svgPathData = pathNode.svgPathData;
     expect(pathNode.buildLocalPath(), isNotNull);
 
-    pathNode.svgPathData = '';
+    expect(() => pathNode.svgPathData = '', throwsArgumentError);
+    pathNode.svgPathData = 'M0 0';
     expect(pathNode.buildLocalPath(), isNull);
     expect(pathNode.localBounds, Rect.zero);
 
-    pathNode.svgPathData = 'M0 0';
-    expect(pathNode.buildLocalPath(), isNull);
+    final emptyPath = _RawSvgPathNode(rawSvgPathData: '');
+    expect(emptyPath.buildLocalPath(), isNull);
+    expect(emptyPath.localBounds, Rect.zero);
+
+    final zeroMetricPath = _RawSvgPathNode(rawSvgPathData: 'M0 0');
+    expect(zeroMetricPath.buildLocalPath(), isNull);
   });
 
   test('path node diagnostics capture failures for invalid path data', () {
@@ -381,39 +464,39 @@ void main() {
     PathNode.enableBuildLocalPathDiagnostics = true;
     addTearDown(() => PathNode.enableBuildLocalPathDiagnostics = previous);
 
-    final pathNode = PathNode(id: 'p', svgPathData: 'this is not svg');
+    final pathNode = _RawSvgPathNode(rawSvgPathData: 'this is not svg');
     expect(pathNode.buildLocalPath(), isNull);
     expect(pathNode.debugLastBuildLocalPathFailureReason, isNotNull);
     expect(pathNode.debugLastBuildLocalPathException, isNotNull);
     expect(pathNode.debugLastBuildLocalPathStackTrace, isNotNull);
 
-    pathNode.svgPathData = 'M0 0 L10 0 L10 10 Z';
-    expect(pathNode.buildLocalPath(), isNotNull);
-    expect(pathNode.debugLastBuildLocalPathFailureReason, isNull);
-    expect(pathNode.debugLastBuildLocalPathException, isNull);
-    expect(pathNode.debugLastBuildLocalPathStackTrace, isNull);
+    final validPath = PathNode(id: 'valid', svgPathData: 'M0 0 L10 0 L10 10 Z');
+    expect(validPath.buildLocalPath(), isNotNull);
+    expect(validPath.debugLastBuildLocalPathFailureReason, isNull);
+    expect(validPath.debugLastBuildLocalPathException, isNull);
+    expect(validPath.debugLastBuildLocalPathStackTrace, isNull);
   });
 
   test(
     'line/stroke/rect local bounds sanitize invalid thickness and points',
     () {
-      final line = LineNode(
-        id: 'l',
-        start: const Offset(0, 0),
-        end: const Offset(2, 0),
-        thickness: -10,
-        color: const Color(0xFF000000),
+      final line = _RawLineNode(
+        rawStart: const Offset(0, 0),
+        rawEnd: const Offset(2, 0),
+        rawThickness: -10,
       );
       expect(line.localBounds, const Rect.fromLTRB(0, 0, 2, 0));
 
-      line.start = const Offset(double.nan, 0);
-      expect(line.localBounds, Rect.zero);
+      final invalidLine = _RawLineNode(
+        rawStart: const Offset(double.nan, 0),
+        rawEnd: const Offset(2, 0),
+        rawThickness: 1,
+      );
+      expect(invalidLine.localBounds, Rect.zero);
 
-      final stroke = StrokeNode(
-        id: 's',
-        points: const <Offset>[Offset(0, 0), Offset(4, 0)],
-        thickness: -1,
-        color: const Color(0xFF000000),
+      final stroke = _RawStrokeNode(
+        rawPoints: const <Offset>[Offset(0, 0), Offset(4, 0)],
+        rawThickness: -1,
       );
       expect(stroke.localBounds, const Rect.fromLTRB(0, 0, 4, 0));
 
@@ -426,4 +509,79 @@ void main() {
       expect(rect.localBounds.width, closeTo(14, 1e-9));
     },
   );
+}
+
+final class _RawTransformRectNode extends RectNode {
+  _RawTransformRectNode({required Transform2D rawTransform})
+    : _rawTransform = rawTransform,
+      super(id: 'raw-rect', size: const Size(10, 10));
+
+  final Transform2D _rawTransform;
+
+  @override
+  Transform2D get transform => _rawTransform;
+}
+
+final class _RawLineNode extends LineNode {
+  _RawLineNode({
+    required Offset rawStart,
+    required Offset rawEnd,
+    required double rawThickness,
+  }) : _rawStart = rawStart,
+       _rawEnd = rawEnd,
+       _rawThickness = rawThickness,
+       super(
+         id: 'raw-line',
+         start: const Offset(0, 0),
+         end: const Offset(1, 1),
+         thickness: 1,
+         color: const Color(0xFF000000),
+       );
+
+  final Offset _rawStart;
+  final Offset _rawEnd;
+  final double _rawThickness;
+
+  @override
+  Offset get start => _rawStart;
+
+  @override
+  Offset get end => _rawEnd;
+
+  @override
+  double get thickness => _rawThickness;
+}
+
+final class _RawStrokeNode extends StrokeNode {
+  _RawStrokeNode({
+    required List<Offset> rawPoints,
+    required double rawThickness,
+  }) : _rawPoints = List<Offset>.unmodifiable(rawPoints),
+       _rawThickness = rawThickness,
+       super(
+         id: 'raw-stroke',
+         points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+         thickness: 1,
+         color: const Color(0xFF000000),
+       );
+
+  final List<Offset> _rawPoints;
+  final double _rawThickness;
+
+  @override
+  List<Offset> get points => _rawPoints;
+
+  @override
+  double get thickness => _rawThickness;
+}
+
+final class _RawSvgPathNode extends PathNode {
+  _RawSvgPathNode({required String rawSvgPathData})
+    : _rawSvgPathData = rawSvgPathData,
+      super(id: 'raw-path', svgPathData: 'M0 0 L10 10');
+
+  final String _rawSvgPathData;
+
+  @override
+  String get svgPathData => _rawSvgPathData;
 }

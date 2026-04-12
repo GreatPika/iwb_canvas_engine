@@ -94,6 +94,33 @@ Never sceneValidationThrowSceneDataException({
   );
 }
 
+void sceneCollectSceneDataViolation({
+  required List<String> violations,
+  required void Function() validate,
+}) {
+  try {
+    validate();
+  } on SceneDataException catch (error) {
+    violations.add(sceneFormatSceneDataViolation(error));
+  }
+}
+
+String sceneFormatSceneDataViolation(SceneDataException error) {
+  final path = error.path;
+  final message = error.message;
+  if (path == null || path.isEmpty) {
+    return message;
+  }
+  final fieldPrefix = 'Field $path ';
+  if (message.startsWith(fieldPrefix)) {
+    return '$path ${message.substring(fieldPrefix.length)}';
+  }
+  if (message.startsWith(path)) {
+    return message;
+  }
+  return '$path $message';
+}
+
 String sceneMessageFromArgumentError(ArgumentError error) {
   final message = error.message;
   if (message is String && message.isNotEmpty) {

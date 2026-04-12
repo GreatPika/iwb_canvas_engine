@@ -59,10 +59,10 @@ void main() {
   });
 
   test('candidate bounds inflate sanitized world bounds', () {
-    final node = RectNode(
+    final node = _RawTransformRectNode(
       id: 'r',
       size: const Size(10, 10),
-      transform: const Transform2D(
+      rawTransform: const Transform2D(
         a: 1,
         b: 0,
         c: 0,
@@ -80,10 +80,10 @@ void main() {
       ..hitPadding = 0;
     expect(hitTestNode(const Offset(10, 10), rect), isTrue);
 
-    final singularRect = RectNode(
+    final singularRect = _RawTransformRectNode(
       id: 'rect2',
       size: const Size(10, 10),
-      transform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 5, ty: 5),
+      rawTransform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 5, ty: 5),
     );
     expect(hitTestNode(const Offset(5, 5), singularRect), isTrue);
 
@@ -96,13 +96,13 @@ void main() {
     )..position = const Offset(20, 20);
     expect(hitTestNode(const Offset(20, 20), line), isTrue);
 
-    final singularLine = LineNode(
+    final singularLine = _RawTransformLineNode(
       id: 'line2',
       start: const Offset(0, 0),
       end: const Offset(1, 0),
       thickness: 1,
       color: const Color(0xFF000000),
-      transform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 30, ty: 30),
+      rawTransform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 30, ty: 30),
     );
     expect(hitTestNode(const Offset(30, 30), singularLine), isTrue);
 
@@ -122,12 +122,12 @@ void main() {
     )..position = const Offset(50, 50);
     expect(hitTestNode(const Offset(50, 50), singlePointStroke), isTrue);
 
-    final singularStroke = StrokeNode(
+    final singularStroke = _RawTransformStrokeNode(
       id: 'stroke-singular',
       points: const <Offset>[Offset(0, 0), Offset(2, 0)],
       thickness: 2,
       color: const Color(0xFF000000),
-      transform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 60, ty: 60),
+      rawTransform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 60, ty: 60),
     );
     expect(hitTestNode(const Offset(60, 60), singularStroke), isTrue);
 
@@ -175,12 +175,12 @@ void main() {
     );
     expect(hitTestNode(Offset.zero, noStroke), isFalse);
 
-    final singular = PathNode(
+    final singular = _RawTransformPathNode(
       id: 'p4',
       svgPathData: 'M0 0 H10',
       strokeColor: const Color(0xFF000000),
       strokeWidth: 2,
-      transform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0),
+      rawTransform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0),
     );
     expect(hitTestNode(Offset.zero, singular), isTrue);
     expect(hitTestNode(const Offset(10, 0), singular), isFalse);
@@ -295,4 +295,63 @@ void main() {
       expect(hitTestTopNode(scene, const Offset(500, 500)), isNull);
     },
   );
+}
+
+final class _RawTransformRectNode extends RectNode {
+  _RawTransformRectNode({
+    required super.id,
+    required super.size,
+    required Transform2D rawTransform,
+  }) : _rawTransform = rawTransform;
+
+  final Transform2D _rawTransform;
+
+  @override
+  Transform2D get transform => _rawTransform;
+}
+
+final class _RawTransformLineNode extends LineNode {
+  _RawTransformLineNode({
+    required super.id,
+    required super.start,
+    required super.end,
+    required super.thickness,
+    required super.color,
+    required Transform2D rawTransform,
+  }) : _rawTransform = rawTransform;
+
+  final Transform2D _rawTransform;
+
+  @override
+  Transform2D get transform => _rawTransform;
+}
+
+final class _RawTransformStrokeNode extends StrokeNode {
+  _RawTransformStrokeNode({
+    required super.id,
+    required super.points,
+    required super.thickness,
+    required super.color,
+    required Transform2D rawTransform,
+  }) : _rawTransform = rawTransform;
+
+  final Transform2D _rawTransform;
+
+  @override
+  Transform2D get transform => _rawTransform;
+}
+
+final class _RawTransformPathNode extends PathNode {
+  _RawTransformPathNode({
+    required super.id,
+    required super.svgPathData,
+    super.strokeColor,
+    super.strokeWidth,
+    required Transform2D rawTransform,
+  }) : _rawTransform = rawTransform;
+
+  final Transform2D _rawTransform;
+
+  @override
+  Transform2D get transform => _rawTransform;
 }

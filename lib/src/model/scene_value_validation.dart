@@ -1,7 +1,9 @@
 import 'dart:ui';
 
+import '../contract/scene_structure_validation.dart';
 import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
+import '../contract/scene_validation_diagnostics.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import 'scene_import_draft.dart';
@@ -13,6 +15,126 @@ import 'scene_value_validation_scene.dart' as scene_validation;
 
 typedef SceneValidationErrorReporter =
     validation_support.SceneValidationErrorReporter;
+
+Never sceneValidationThrowSceneDataException({
+  required Object? value,
+  required String field,
+  String? message,
+  SceneDataDiagnosticDescriptor? diagnostic,
+}) => validation_support.sceneValidationThrowSceneDataException(
+  value: value,
+  field: field,
+  message: message,
+  diagnostic: diagnostic,
+);
+
+List<String> sceneCollectRuntimeSceneValidityViolations(Scene scene) {
+  final violations = <String>[];
+
+  violations.addAll(sceneCollectRuntimeStructuralSurfaceViolations(scene));
+  violations.addAll(
+    scene_validation.sceneCollectRuntimeSceneValueViolations(
+      scene,
+      requirePositiveGridCellSize: true,
+      requireEnabledMinGridCellSize: true,
+    ),
+  );
+
+  return violations;
+}
+
+List<String> sceneCollectRuntimeStructuralSurfaceViolations(Scene scene) {
+  final violations = <String>[];
+
+  violations.addAll(sceneCollectRuntimeSceneStructureViolations(scene));
+  violations.addAll(
+    scene_validation.sceneCollectRuntimeContentLayerIdViolations(scene),
+  );
+
+  return violations;
+}
+
+List<String> sceneCollectRuntimeSceneStructureViolations(Scene scene) {
+  final structureErrors =
+      sceneCollectSceneStructureErrors<ContentLayer, SceneNode>(
+        layers: scene.layers,
+        backgroundNodes: scene.backgroundLayer?.nodes ?? const <SceneNode>[],
+        layerIdOf: (layer) => layer.id,
+        nodesOf: (layer) => layer.nodes,
+        nodeIdOf: (node) => node.id,
+      );
+  return structureErrors
+      .map(validation_support.sceneFormatSceneDataViolation)
+      .toList(growable: false);
+}
+
+List<String> sceneCollectRuntimeCameraOffsetViolations({
+  required Offset value,
+  String field = 'camera.offset',
+}) {
+  final violations = <String>[];
+  validation_support.sceneCollectSceneDataViolation(
+    violations: violations,
+    validate: () => palette_grid_validation.sceneValidateCameraOffsetValue(
+      value,
+      field: field,
+      onError: validation_support.sceneValidationThrowSceneDataException,
+    ),
+  );
+  return violations;
+}
+
+List<String> sceneCollectRuntimeGridViolations(
+  GridSettings grid, {
+  String field = 'background.grid',
+  required bool requirePositiveCellSize,
+  required bool requireEnabledMinCellSize,
+}) {
+  final violations = <String>[];
+  validation_support.sceneCollectSceneDataViolation(
+    violations: violations,
+    validate: () => palette_grid_validation.sceneValidateGrid(
+      grid,
+      field: field,
+      onError: validation_support.sceneValidationThrowSceneDataException,
+      requirePositiveCellSize: requirePositiveCellSize,
+      requireEnabledMinCellSize: requireEnabledMinCellSize,
+    ),
+  );
+  return violations;
+}
+
+List<String> sceneCollectRuntimePaletteViolations(
+  ScenePalette palette, {
+  String field = 'palette',
+}) {
+  final violations = <String>[];
+  validation_support.sceneCollectSceneDataViolation(
+    violations: violations,
+    validate: () => palette_grid_validation.sceneValidatePalette(
+      palette,
+      field: field,
+      onError: validation_support.sceneValidationThrowSceneDataException,
+    ),
+  );
+  return violations;
+}
+
+List<String> sceneCollectRuntimeNodeViolations(
+  SceneNode node, {
+  required String field,
+}) {
+  final violations = <String>[];
+  validation_support.sceneCollectSceneDataViolation(
+    violations: violations,
+    validate: () => node_validation.sceneValidateNode(
+      node,
+      field: field,
+      onError: validation_support.sceneValidationThrowSceneDataException,
+    ),
+  );
+  return violations;
+}
 
 void sceneValidateFiniteDouble(
   double value, {

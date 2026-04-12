@@ -295,12 +295,35 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER',
+    scope: 'engine-controller',
+    title:
+        'runtime content-layer and node-budget enforcement stays model-owned, and controller code must not reintroduce direct scene.layers add/insert ownership',
+    primaryProof: PrimaryProof(
+      path: 'test/controller/internal/change_set_txn_context_test.dart',
+    ),
+    toolProof: ToolProof(
+      enforcementPath: 'tool/check_guardrails.dart',
+      regressionPath:
+          'test/tool/guardrails/guardrails_model_architecture_tool_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-COMMITTED-STORE-METADATA-CONTRACT',
     scope: 'engine-controller',
     title:
         'committed-store invariant sweeps enforce the shared runtime scene metadata contract for camera, grid, and palette values',
     primaryProof: PrimaryProof(
       path: 'test/controller/scene_invariants_test.dart',
+    ),
+  ),
+  Invariant(
+    id: 'INV-ENG-RUNTIME-SCENE-VALIDITY-BACKSTOP',
+    scope: 'engine-controller',
+    title:
+        'the committed-store invariant gate rejects invalid runtime scene candidates before store apply, while the release critical path stays scoped to changed runtime surfaces',
+    primaryProof: PrimaryProof(
+      path: 'test/controller/core/scene_controller_commit_failures_test.dart',
     ),
   ),
   Invariant(
@@ -316,6 +339,18 @@ const List<Invariant> invariants = <Invariant>[
     title:
         'runtime palette state is replacement-only: Scene.palette stays replaceable, while ScenePalette defensively copies and freezes nested lists after construction',
     primaryProof: PrimaryProof(path: 'test/model/document_model_test.dart'),
+  ),
+  Invariant(
+    id: 'INV-ENG-RUNTIME-NODE-VALUE-OWNERS',
+    scope: 'engine-core',
+    title:
+        'constrained runtime node fields mutate only through validated owners, and patch-based writes inherit the same boundary contract',
+    primaryProof: PrimaryProof(path: 'test/model/document_model_test.dart'),
+    toolProof: ToolProof(
+      enforcementPath: 'tool/check_guardrails.dart',
+      regressionPath:
+          'test/tool/guardrails/guardrails_model_architecture_tool_test.dart',
+    ),
   ),
   Invariant(
     id: 'INV-ENG-DISPOSE-FAIL-FAST',

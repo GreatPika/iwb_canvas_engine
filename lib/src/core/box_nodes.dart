@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../contract/ids.dart';
+import '../contract/runtime_node_value_validation.dart';
 import '../contract/transform2d.dart';
 import 'local_bounds_policy.dart';
 import 'numeric_tolerance.dart' show kUiEpsilonSquared;
@@ -11,9 +12,9 @@ import 'text_node_layout_state.dart';
 class ImageNode extends SceneNode {
   ImageNode({
     required super.id,
-    required this.imageId,
-    required this.size,
-    this.naturalSize,
+    required String imageId,
+    required Size size,
+    Size? naturalSize,
     super.instanceRevision,
     super.hitPadding,
     super.transform,
@@ -23,7 +24,11 @@ class ImageNode extends SceneNode {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  }) : super(type: NodeType.image);
+  }) : super(type: NodeType.image) {
+    this.imageId = imageId;
+    this.size = size;
+    this.naturalSize = naturalSize;
+  }
 
   /// Creates an image node positioned by its axis-aligned world top-left corner.
   ///
@@ -63,9 +68,25 @@ class ImageNode extends SceneNode {
     );
   }
 
-  String imageId;
-  Size size;
-  Size? naturalSize;
+  String get imageId => _imageId;
+  late String _imageId;
+  set imageId(String value) {
+    _imageId = validateImageIdValue(value, name: 'imageId');
+  }
+
+  Size get size => _size;
+  late Size _size;
+  set size(Size value) {
+    _size = validateNonNegativeSize(value, name: 'size');
+  }
+
+  Size? get naturalSize => _naturalSize;
+  Size? _naturalSize;
+  set naturalSize(Size? value) {
+    _naturalSize = value == null
+        ? null
+        : validateNonNegativeSize(value, name: 'naturalSize');
+  }
 
   /// Axis-aligned world top-left corner of this node's bounds.
   ///
@@ -220,10 +241,10 @@ class TextNode extends SceneNode {
 class RectNode extends SceneNode {
   RectNode({
     required super.id,
-    required this.size,
+    required Size size,
     this.fillColor,
     this.strokeColor,
-    this.strokeWidth = 1,
+    double strokeWidth = 1,
     super.instanceRevision,
     super.hitPadding,
     super.transform,
@@ -233,7 +254,10 @@ class RectNode extends SceneNode {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  }) : super(type: NodeType.rect);
+  }) : super(type: NodeType.rect) {
+    this.size = size;
+    this.strokeWidth = strokeWidth;
+  }
 
   /// Creates a rect node positioned by its axis-aligned world top-left corner.
   ///
@@ -275,10 +299,22 @@ class RectNode extends SceneNode {
     );
   }
 
-  Size size;
+  Size get size => _size;
+  late Size _size;
+  set size(Size value) {
+    _size = validateNonNegativeSize(value, name: 'size');
+  }
+
   Color? fillColor;
   Color? strokeColor;
-  double strokeWidth;
+  double get strokeWidth => _strokeWidth;
+  late double _strokeWidth;
+  set strokeWidth(double value) {
+    _strokeWidth = validateNonNegativeFiniteDoubleValue(
+      value,
+      name: 'strokeWidth',
+    );
+  }
 
   /// Axis-aligned world top-left corner of this node's bounds.
   ///

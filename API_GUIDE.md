@@ -444,6 +444,12 @@ Public write-boundary values validate eagerly at construction time:
 - palette `gridSizes` follow the same finite positive bounded numeric contract
   as background-grid `cellSize`, and palette lists must stay non-empty and
   bounded by the shared item-count limit
+- ordinary runtime scene writes enforce content-layer and total-node budgets at
+  the model-owned mutation point, so oversized layer/node additions throw
+  before the scene mutates
+- constrained runtime node owner writes for transforms, hit padding, image
+  placement, text layout inputs, vector geometry, path data, and stroke widths
+  are reject-only and throw `ArgumentError` at assignment time
 - import/snapshot validation uses the same scene-metadata envelope, so invalid
   camera/grid/palette payloads fail with `SceneDataException` before runtime
   materialization
@@ -455,6 +461,13 @@ Public write-boundary values validate eagerly at construction time:
 ## 5. Runtime controller
 
 `SceneController` is the primary runtime entrypoint.
+
+Critical commit note:
+
+- before store apply, the controller revalidates the changed runtime scene
+  surface in all build modes using the canonical runtime validators
+- `debug` and `profile` also keep the full committed-store invariant sweep as a
+  broader backstop
 
 ### 5.1 Construction
 

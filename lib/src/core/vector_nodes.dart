@@ -2,6 +2,7 @@ import 'dart:collection';
 import 'dart:ui';
 
 import '../contract/ids.dart';
+import '../contract/runtime_node_value_validation.dart';
 import '../contract/scene_model_invariants.dart';
 import '../contract/transform2d.dart';
 import 'geometry.dart';
@@ -13,7 +14,7 @@ class StrokeNode extends SceneNode {
     required super.id,
     required List<Offset> points,
     int pointsRevision = 0,
-    required this.thickness,
+    required double thickness,
     required this.color,
     super.instanceRevision,
     super.hitPadding,
@@ -25,6 +26,7 @@ class StrokeNode extends SceneNode {
     super.isDeletable,
     super.isTransformable,
   }) : super(type: NodeType.stroke) {
+    this.thickness = thickness;
     validateStrokePointCount(points.length, name: 'points', source: points);
     _mutableGeometry = _StrokeMutableGeometryOwner(
       points,
@@ -84,7 +86,12 @@ class StrokeNode extends SceneNode {
   ///
   /// This is used by renderer caches to validate path freshness in O(1).
   int get pointsRevision => _mutableGeometry.pointsRevision;
-  double thickness;
+  double get thickness => _thickness;
+  late double _thickness;
+  set thickness(double value) {
+    _thickness = validatePositiveFiniteDoubleValue(value, name: 'thickness');
+  }
+
   Color color;
 
   @override
@@ -182,9 +189,9 @@ final class _StrokeMutableGeometryOwner {
 class LineNode extends SceneNode {
   LineNode({
     required super.id,
-    required this.start,
-    required this.end,
-    required this.thickness,
+    required Offset start,
+    required Offset end,
+    required double thickness,
     required this.color,
     super.instanceRevision,
     super.hitPadding,
@@ -195,7 +202,11 @@ class LineNode extends SceneNode {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  }) : super(type: NodeType.line);
+  }) : super(type: NodeType.line) {
+    this.start = start;
+    this.end = end;
+    this.thickness = thickness;
+  }
 
   factory LineNode.fromWorldSegment({
     required NodeId id,
@@ -233,11 +244,25 @@ class LineNode extends SceneNode {
   }
 
   /// Local-space start point.
-  Offset start;
+  Offset get start => _start;
+  late Offset _start;
+  set start(Offset value) {
+    _start = validateFiniteOffsetValue(value, name: 'start');
+  }
 
   /// Local-space end point.
-  Offset end;
-  double thickness;
+  Offset get end => _end;
+  late Offset _end;
+  set end(Offset value) {
+    _end = validateFiniteOffsetValue(value, name: 'end');
+  }
+
+  double get thickness => _thickness;
+  late double _thickness;
+  set thickness(double value) {
+    _thickness = validatePositiveFiniteDoubleValue(value, name: 'thickness');
+  }
+
   Color color;
 
   @override

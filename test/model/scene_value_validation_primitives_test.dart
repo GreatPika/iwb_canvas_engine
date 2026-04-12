@@ -15,10 +15,7 @@ import 'package:iwb_canvas_engine/src/model/scene_value_validation_palette_grid.
         sceneValidateGridCellSizeValue,
         sceneValidatePaletteFields;
 import 'package:iwb_canvas_engine/src/model/scene_value_validation_support.dart'
-    show
-        sceneMessageFromArgumentError,
-        sceneValidateArgumentBoundary,
-        sceneValidationThrowSceneDataException;
+    show sceneMessageFromArgumentError, sceneValidateArgumentBoundary;
 
 void main() {
   group('scene value validation primitives', () {
@@ -174,12 +171,11 @@ void main() {
       () {
         expect(
           () => sceneValidateNode(
-            LineNode(
+            _RawLineNode(
               id: 'line-0',
-              start: const Offset(double.infinity, 0),
-              end: const Offset(1, 1),
-              thickness: 1,
-              color: const Color(0xFF000000),
+              rawStart: const Offset(double.infinity, 0),
+              rawEnd: const Offset(1, 1),
+              rawThickness: 1,
             ),
             field: 'node',
             onError: _throwFailure,
@@ -285,6 +281,295 @@ void main() {
         }, returnsNormally);
       },
     );
+
+    test(
+      'sceneCollectRuntimeSceneValidityViolations collects canonical runtime scene failures',
+      () {
+        final scene = Scene(
+          camera: Camera(offset: const Offset(1, 2)),
+          background: Background(
+            grid: _RawGridSettings(isEnabled: true, cellSize: 0.5),
+          ),
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-a',
+              nodes: <SceneNode>[
+                _RawRectNode(
+                  id: 'dup',
+                  transform: const Transform2D(
+                    a: double.infinity,
+                    b: 0,
+                    c: 0,
+                    d: 1,
+                    tx: 0,
+                    ty: 0,
+                  ),
+                  hitPadding: 0,
+                  opacity: 1,
+                  size: const Size(4, 5),
+                  strokeWidth: 0,
+                ),
+              ],
+            ),
+            ContentLayer(
+              id: 'layer-a',
+              nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(6, 7))],
+            ),
+          ],
+        );
+        final violations = sceneCollectRuntimeSceneValidityViolations(scene);
+
+        expect(
+          violations,
+          contains('layers[1].id must be unique across content layers.'),
+        );
+        expect(
+          violations,
+          contains('layers[1].nodes[0].id Must be unique across scene layers.'),
+        );
+        expect(
+          violations,
+          contains(
+            'background.grid.cellSize must be >= 1.0 when background.grid.enabled is true.',
+          ),
+        );
+        expect(
+          violations,
+          contains('layers[0].nodes[0].transform.a must be finite.'),
+        );
+      },
+    );
+
+    test(
+      'sceneCollectRuntimeSceneValidityViolations rejects blank runtime layer id',
+      () {
+        final scene = Scene(
+          layers: <ContentLayer>[ContentLayer(id: '', nodes: <SceneNode>[])],
+        );
+
+        final violations = sceneCollectRuntimeSceneValidityViolations(scene);
+        final layerIdViolations = violations
+            .where((message) => message == 'layers[0].id must not be empty.')
+            .toList();
+
+        expect(violations, contains('layers[0].id must not be empty.'));
+        expect(layerIdViolations, hasLength(1));
+      },
+    );
+
+    test(
+      'sceneCollectRuntimeStructuralSurfaceViolations includes runtime layer ids',
+      () {
+        final scene = Scene(
+          layers: <ContentLayer>[ContentLayer(id: '', nodes: <SceneNode>[])],
+        );
+
+        final violations = sceneCollectRuntimeStructuralSurfaceViolations(
+          scene,
+        );
+
+        expect(violations, contains('layers[0].id must not be empty.'));
+      },
+    );
+
+    test(
+      'sceneCollectRuntimeSceneValidityViolations reports invalid runtime node id once',
+      () {
+        final scene = Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-a',
+              nodes: <SceneNode>[RectNode(id: '', size: const Size(4, 5))],
+            ),
+          ],
+        );
+
+        final violations = sceneCollectRuntimeSceneValidityViolations(scene);
+        final nodeIdViolations = violations
+            .where(
+              (message) =>
+                  message == 'layers[0].nodes[0].id must not be empty.',
+            )
+            .toList();
+
+        expect(nodeIdViolations, hasLength(1));
+      },
+    );
+
+    test(
+      'sceneCollectRuntimeSceneValidityViolations collects every structural violation',
+      () {
+        final scene = Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-a',
+              nodes: <SceneNode>[
+                RectNode(id: 'dup-node', size: const Size(4, 5)),
+              ],
+            ),
+            ContentLayer(
+              id: 'layer-a',
+              nodes: <SceneNode>[
+                RectNode(id: 'dup-node', size: const Size(6, 7)),
+              ],
+            ),
+          ],
+        );
+
+        final violations = sceneCollectRuntimeSceneValidityViolations(scene);
+
+        expect(
+          violations,
+          containsAll(<String>[
+            'layers[1].id must be unique across content layers.',
+            'layers[1].nodes[0].id Must be unique across scene layers.',
+          ]),
+        );
+      },
+    );
+
+    test(
+      'sceneCollectRuntimeSceneValidityViolations reports max-node overflow once across layers',
+      () {
+        final scene = Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-a',
+              nodes: <SceneNode>[
+                for (var index = 0; index < kMaxNodesPerScene; index++)
+                  RectNode(id: 'node-$index', size: const Size(4, 5)),
+              ],
+            ),
+            ContentLayer(
+              id: 'layer-b',
+              nodes: <SceneNode>[
+                RectNode(id: 'node-overflow', size: const Size(6, 7)),
+                RectNode(id: 'node-overflow-2', size: const Size(8, 9)),
+              ],
+            ),
+          ],
+        );
+
+        final violations = sceneCollectRuntimeSceneValidityViolations(scene);
+        final overflowViolations = violations
+            .where(
+              (message) => message.contains(
+                'Scene must contain at most $kMaxNodesPerScene nodes.',
+              ),
+            )
+            .toList();
+
+        expect(overflowViolations, hasLength(1));
+      },
+    );
+
+    test(
+      'sceneCollectRuntimeSceneValidityViolations keeps canonical first failure per step',
+      () {
+        final scene = Scene(
+          palette: _RawScenePalette(
+            penColors: const <Color>[],
+            backgroundColors: const <Color>[],
+            gridSizes: const <double>[0, double.infinity],
+          ),
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-a',
+              nodes: <SceneNode>[
+                _RawRectNode(
+                  id: 'bad-rect',
+                  transform: const Transform2D(
+                    a: 0,
+                    b: 0,
+                    c: 0,
+                    d: 0,
+                    tx: 0,
+                    ty: 0,
+                  ),
+                  hitPadding: -1,
+                  opacity: 2,
+                  size: const Size(-2, -3),
+                  strokeWidth: -4,
+                ),
+              ],
+            ),
+          ],
+        );
+
+        final violations = sceneCollectRuntimeSceneValidityViolations(scene);
+
+        expect(violations, contains('palette.penColors must not be empty.'));
+        expect(
+          violations,
+          contains(
+            'layers[0].nodes[0].transform must be invertible (non-singular).',
+          ),
+        );
+        expect(
+          violations,
+          isNot(contains('palette.backgroundColors must not be empty.')),
+        );
+        expect(
+          violations,
+          isNot(contains('layers[0].nodes[0].hitPadding must be >= 0.')),
+        );
+      },
+    );
+
+    test(
+      'sceneCollectRuntimeSceneValidityViolations rejects mismatched runtime node subtype',
+      () {
+        final scene = Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-a',
+              nodes: <SceneNode>[_MismatchedRectTypeNode(id: 'bad-node')],
+            ),
+          ],
+        );
+        final violations = sceneCollectRuntimeSceneValidityViolations(scene);
+
+        expect(
+          violations,
+          contains(
+            'layers[0].nodes[0].type must match the concrete runtime node subtype for rect.',
+          ),
+        );
+      },
+    );
+
+    test(
+      'sceneCollectRuntimePaletteViolations reports canonical palette failures',
+      () {
+        final violations = sceneCollectRuntimePaletteViolations(
+          _RawScenePalette(
+            penColors: const <Color>[],
+            backgroundColors: const <Color>[Color(0xFFFFFFFF)],
+            gridSizes: const <double>[16],
+          ),
+        );
+
+        expect(violations, contains('palette.penColors must not be empty.'));
+      },
+    );
+
+    test('sceneValidateCameraOffsetValue rejects non-finite offsets', () {
+      expect(
+        () => sceneValidateCameraOffsetValue(
+          const Offset(double.infinity, 0),
+          field: 'camera.offset',
+          onError: _throwFailure,
+        ),
+        throwsA(
+          predicate(
+            (error) =>
+                error is _ValidationFailure &&
+                error.field == 'camera.offset.dx' &&
+                error.message == 'Field camera.offset.dx must be finite.',
+          ),
+        ),
+      );
+    });
 
     test(
       'scene metadata helper functions distinguish finite errors from range overflow',
@@ -559,4 +844,118 @@ class _ValidationFailure {
   final String field;
   final String message;
   final SceneDataDiagnosticDescriptor? diagnostic;
+}
+
+final class _RawGridSettings extends GridSettings {
+  _RawGridSettings({required bool isEnabled, required double cellSize})
+    : _isEnabled = isEnabled,
+      _cellSize = cellSize,
+      super();
+
+  final bool _isEnabled;
+  final double _cellSize;
+
+  @override
+  bool get isEnabled => _isEnabled;
+
+  @override
+  double get cellSize => _cellSize;
+}
+
+final class _RawScenePalette extends ScenePalette {
+  _RawScenePalette({
+    required List<Color> penColors,
+    required List<Color> backgroundColors,
+    required List<double> gridSizes,
+  }) : _penColors = penColors,
+       _backgroundColors = backgroundColors,
+       _gridSizes = gridSizes,
+       super();
+
+  final List<Color> _penColors;
+  final List<Color> _backgroundColors;
+  final List<double> _gridSizes;
+
+  @override
+  List<Color> get penColors => _penColors;
+
+  @override
+  List<Color> get backgroundColors => _backgroundColors;
+
+  @override
+  List<double> get gridSizes => _gridSizes;
+}
+
+final class _RawRectNode extends RectNode {
+  _RawRectNode({
+    required super.id,
+    required Transform2D transform,
+    required double hitPadding,
+    required double opacity,
+    required Size size,
+    required double strokeWidth,
+  }) : _transform = transform,
+       _hitPadding = hitPadding,
+       _opacity = opacity,
+       _size = size,
+       _strokeWidth = strokeWidth,
+       super(size: const Size(1, 1));
+
+  final Transform2D _transform;
+  final double _hitPadding;
+  final double _opacity;
+  final Size _size;
+  final double _strokeWidth;
+
+  @override
+  Transform2D get transform => _transform;
+
+  @override
+  double get hitPadding => _hitPadding;
+
+  @override
+  double get opacity => _opacity;
+
+  @override
+  Size get size => _size;
+
+  @override
+  double get strokeWidth => _strokeWidth;
+}
+
+final class _RawLineNode extends LineNode {
+  _RawLineNode({
+    required super.id,
+    required Offset rawStart,
+    required Offset rawEnd,
+    required double rawThickness,
+  }) : _rawStart = rawStart,
+       _rawEnd = rawEnd,
+       _rawThickness = rawThickness,
+       super(
+         start: const Offset(0, 0),
+         end: const Offset(1, 1),
+         thickness: 1,
+         color: const Color(0xFF000000),
+       );
+
+  final Offset _rawStart;
+  final Offset _rawEnd;
+  final double _rawThickness;
+
+  @override
+  Offset get start => _rawStart;
+
+  @override
+  Offset get end => _rawEnd;
+
+  @override
+  double get thickness => _rawThickness;
+}
+
+final class _MismatchedRectTypeNode extends SceneNode {
+  _MismatchedRectTypeNode({required super.id}) : super(type: NodeType.rect);
+
+  @override
+  Rect get localBounds => Rect.zero;
 }

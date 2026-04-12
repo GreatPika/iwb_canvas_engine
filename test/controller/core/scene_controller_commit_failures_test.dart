@@ -2,8 +2,23 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart'
+    show kMaxContentLayersPerScene;
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/controller/change_set.dart';
+import 'package:iwb_canvas_engine/src/controller/committed_store_state.dart';
+import 'package:iwb_canvas_engine/src/controller/internal/repaint_flag.dart';
+import 'package:iwb_canvas_engine/src/controller/internal/signals_buffer.dart';
+import 'package:iwb_canvas_engine/src/controller/internal/spatial_index_cache.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_controller_commit_debug.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_controller_commit_execution.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_controller_commit_plan.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/store.dart';
+import 'package:iwb_canvas_engine/src/core/nodes.dart';
+import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/model/document.dart';
+import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
 // INV:INV-ENG-EPOCH-INVALIDATION
@@ -13,6 +28,7 @@ import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 // INV:INV-ENG-TXN-WRITER-LIFETIME
 // INV:INV-ENG-TEXT-SIZE-DERIVED
 // INV:INV-ENG-DISPOSE-FAIL-FAST
+// INV:INV-ENG-RUNTIME-SCENE-VALIDITY-BACKSTOP
 
 void main() {
   SceneSnapshot duplicateNodeSnapshotFromInternalBypass() {
@@ -333,6 +349,121 @@ void main() {
     },
   );
 
+  test(
+    'commit plan rejects invalid runtime node state before applying committed store',
+    () {
+      final store = SceneStore(
+        sceneDoc: txnSceneFromSnapshot(twoRectSnapshot()),
+      );
+      final originalScene = store.sceneDoc;
+      final originalCommitRevision = store.commitRevision;
+      final invalidScene = txnCloneScene(store.sceneDoc);
+      invalidScene.layers.single.nodes[0] = _RawTransformRectNode(
+        id: 'r1',
+        rawTransform: const Transform2D(
+          a: double.infinity,
+          b: 0,
+          c: 0,
+          d: 1,
+          tx: 0,
+          ty: 0,
+        ),
+      );
+
+      final plan = ControllerStateCommitPlan(
+        changeSet: ChangeSet()
+          ..txnMarkBoundsChanged()
+          ..txnTrackUpdated('r1'),
+        initialPhases: const <String>[],
+        committedStoreState: CommittedStoreState(
+          scene: invalidScene,
+          selectedNodeIds: store.selectedNodeIds,
+          allNodeIds: txnCollectNodeIds(invalidScene),
+          nodeLocator: txnBuildNodeLocator(invalidScene),
+          idGeneratorState: store.idGeneratorState,
+          revisionState: store.revisionState,
+          controllerEpoch: store.controllerEpoch,
+          structuralRevision: store.structuralRevision,
+          boundsRevision: store.boundsRevision + 1,
+          visualRevision: store.visualRevision + 1,
+          commitRevision: store.commitRevision + 1,
+        ),
+      );
+
+      expect(
+        () => executeControllerCommitPlan(
+          plan: plan,
+          context: SceneControllerCommitExecutionContext(
+            store: store,
+            signalsBuffer: SignalsBuffer(),
+            repaintFlag: RepaintFlag(),
+            spatialIndexCache: SpatialIndexCache(),
+            debugState: SceneControllerCommitDebugState(),
+          ),
+        ),
+        throwsStateError,
+      );
+
+      expect(identical(store.sceneDoc, originalScene), isTrue);
+      expect(store.commitRevision, originalCommitRevision);
+    },
+  );
+
+  test(
+    'commit plan rejects structural overflow before applying committed store',
+    () {
+      final store = SceneStore(
+        sceneDoc: txnSceneFromSnapshot(twoRectSnapshot()),
+      );
+      final originalScene = store.sceneDoc;
+      final originalCommitRevision = store.commitRevision;
+      final invalidScene = txnCloneScene(store.sceneDoc);
+      invalidScene.layers.add(ContentLayer(id: 'layer-overflow'));
+      for (
+        var index = invalidScene.layers.length;
+        index <= kMaxContentLayersPerScene;
+        index++
+      ) {
+        invalidScene.layers.add(ContentLayer(id: 'layer-overflow-$index'));
+      }
+
+      final plan = ControllerStateCommitPlan(
+        changeSet: ChangeSet()..structuralChanged = true,
+        initialPhases: const <String>[],
+        committedStoreState: CommittedStoreState(
+          scene: invalidScene,
+          selectedNodeIds: store.selectedNodeIds,
+          allNodeIds: txnCollectNodeIds(invalidScene),
+          nodeLocator: txnBuildNodeLocator(invalidScene),
+          idGeneratorState: store.idGeneratorState,
+          revisionState: store.revisionState,
+          controllerEpoch: store.controllerEpoch,
+          structuralRevision: store.structuralRevision + 1,
+          boundsRevision: store.boundsRevision,
+          visualRevision: store.visualRevision + 1,
+          commitRevision: store.commitRevision + 1,
+        ),
+      );
+
+      expect(
+        () => executeControllerCommitPlan(
+          plan: plan,
+          context: SceneControllerCommitExecutionContext(
+            store: store,
+            signalsBuffer: SignalsBuffer(),
+            repaintFlag: RepaintFlag(),
+            spatialIndexCache: SpatialIndexCache(),
+            debugState: SceneControllerCommitDebugState(),
+          ),
+        ),
+        throwsStateError,
+      );
+
+      expect(identical(store.sceneDoc, originalScene), isTrue);
+      expect(store.commitRevision, originalCommitRevision);
+    },
+  );
+
   test('initialSnapshot rejects malformed snapshots with SceneDataException', () {
     final malformedCases =
         <({SceneSnapshot snapshot, String field, String expectedMessage})>[
@@ -484,4 +615,15 @@ void main() {
       expect(notifications, 0);
     },
   );
+}
+
+final class _RawTransformRectNode extends RectNode {
+  _RawTransformRectNode({required super.id, required Transform2D rawTransform})
+    : _rawTransform = rawTransform,
+      super(size: const Size(10, 10));
+
+  final Transform2D _rawTransform;
+
+  @override
+  Transform2D get transform => _rawTransform;
 }

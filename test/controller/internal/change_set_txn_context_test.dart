@@ -14,6 +14,7 @@ import 'package:iwb_canvas_engine/src/model/document.dart';
 import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
 // INV:INV-ENG-TXN-COPY-ON-WRITE
+// INV:INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER
 
 class _LayerDropTxnContext extends TxnContext {
   _LayerDropTxnContext({

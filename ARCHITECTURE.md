@@ -156,6 +156,10 @@ Ownership decisions for the target state:
   trusted field assembly.
 - `contract/internal/node_boundary_schema.dart` is the canonical internal
   schema import surface, but it is barrel-only.
+- `contract/runtime_node_value_validation.dart` is the allowed runtime-owner
+  import surface for constrained node write validation under `core/**`. It
+  reuses the shared schema-common validators without reopening
+  `core -> contract/internal/**` imports.
 - `contract/internal/node_boundary_schema_common.dart` owns shared schema field
   definitions plus truly cross-direction primitive validators.
 - `contract/internal/node_boundary_schema_patch.dart`,
@@ -193,8 +197,10 @@ Ownership decisions for the target state:
   owners through the barrel and do not re-own schema validation locally.
 - Downstream non-contract production code may import only the canonical
   internal surfaces `contract/internal/node_boundary_schema.dart` and
-  `contract/internal/snapshot_fast_path.dart`; it must not bypass them and
-  import lower-level contract owner modules directly.
+  `contract/internal/snapshot_fast_path.dart`, plus
+  `contract/runtime_node_value_validation.dart` for constrained runtime node
+  writes. It must not bypass those surfaces and import lower-level contract
+  owner modules directly.
 
 ## Model owner graph
 
@@ -251,7 +257,8 @@ Ownership decisions for the target state:
   `ScenePolicy` remains the import/runtime orchestration owner for scene-level
   validation closure, and `contract/scene_structure_validation.dart` owns the
   shared duplicate/count document-structure policy reused by public snapshot
-  construction and model import validation.
+  construction, model import validation, and runtime layer/node mutation
+  owners.
 - `model/document.dart` is the canonical downstream transaction facade.
   Locator, scene-insert, patch, scene-edit, and selection/grid ownership stay
   in `document_{locator,scene_insert,node_patch,scene_edit,selection}.dart`
@@ -647,8 +654,15 @@ most important architectural rules are:
   same successful commit.
 - Buffered effects are discarded if a transaction fails.
 - Runtime invariant enforcement is two-tiered:
-  - critical commit checks run in all build modes;
+  - critical commit checks run in all build modes and stay change-scoped for
+    ordinary tracked commits, reusing canonical runtime validators on the
+    changed scene surface before store apply;
+  - document replacement and the full committed-store sweep may validate the
+    whole scene;
   - the full committed-store sweep remains enabled in `debug` and `profile`.
+- Constrained mutable runtime node fields are validated at the owner boundary
+  on assignment. The critical commit gate is the backstop for deliberate
+  bypasses rather than the primary validation owner.
 
 ## Serialization boundary
 

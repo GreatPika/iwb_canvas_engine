@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/dart/element/element.dart';
 
 import '../guardrail_support/guardrail_ast_utils.dart';
 import '../guardrail_support/guardrail_context.dart';
@@ -57,6 +59,58 @@ const Set<String> _restrictedModelOwnerModules = <String>{
   '/lib/src/model/scene_value_validation_top_level.dart',
 };
 
+const Set<String> _guardedRuntimeNodeOwnerFiles = <String>{
+  '/lib/src/core/scene_node.dart',
+  '/lib/src/core/box_nodes.dart',
+  '/lib/src/core/vector_nodes.dart',
+  '/lib/src/core/path_node.dart',
+  '/lib/src/core/text_node_layout_state.dart',
+};
+
+const Map<String, Set<String>>
+_guardedRuntimeOwnerClassesByFile = <String, Set<String>>{
+  '/lib/src/core/scene_node.dart': <String>{'SceneNode'},
+  '/lib/src/core/box_nodes.dart': <String>{'ImageNode', 'TextNode', 'RectNode'},
+  '/lib/src/core/vector_nodes.dart': <String>{'StrokeNode', 'LineNode'},
+  '/lib/src/core/path_node.dart': <String>{'PathNode'},
+  '/lib/src/core/text_node_layout_state.dart': <String>{'TextNodeLayoutState'},
+};
+
+const Set<String> _guardedRuntimeNodeMutableFields = <String>{
+  'transform',
+  'hitPadding',
+  'imageId',
+  'size',
+  'naturalSize',
+  'text',
+  'fontSize',
+  'fontFamily',
+  'maxWidth',
+  'lineHeight',
+  'start',
+  'end',
+  'thickness',
+  'strokeWidth',
+  'svgPathData',
+};
+
+const Set<String> _guardedSceneLayersMutationMethods = <String>{
+  'add',
+  'insert',
+  'remove',
+  'removeAt',
+  'removeLast',
+  'removeRange',
+  'removeWhere',
+  'retainWhere',
+  'clear',
+  'fillRange',
+  'replaceRange',
+  'setAll',
+  'sort',
+  'shuffle',
+};
+
 Future<List<GuardrailViolation>> runModelArchitectureGuardrails({
   required GuardrailContext context,
 }) async {
@@ -80,6 +134,37 @@ Future<List<GuardrailViolation>> runModelArchitectureGuardrails({
   if (removedResidualViolation != null) {
     violations.add(removedResidualViolation);
     return violations;
+  }
+
+  final controllerFiles = _collectDartFiles(
+    Directory(
+      '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+      'src${Platform.pathSeparator}controller',
+    ),
+  );
+  for (final file in controllerFiles) {
+    final violation = await _checkControllerStructuralMutationGuardrail(
+      context,
+      file,
+    );
+    if (violation != null) {
+      violations.add(violation);
+      return violations;
+    }
+  }
+
+  final coreFiles = _collectDartFiles(
+    Directory(
+      '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+      'src${Platform.pathSeparator}core',
+    ),
+  );
+  for (final file in coreFiles) {
+    final violation = _checkRuntimeNodeOwnerFieldGuardrail(context, file);
+    if (violation != null) {
+      violations.add(violation);
+      return violations;
+    }
   }
 
   final libFiles = _collectDartFiles(
@@ -153,6 +238,79 @@ GuardrailViolation? _checkModelFile(GuardrailContext context, File file) {
                 'directly and must not import scene_builder.dart.',
           );
         }
+      }
+    }
+  }
+
+  return null;
+}
+
+Future<GuardrailViolation?> _checkControllerStructuralMutationGuardrail(
+  GuardrailContext context,
+  File file,
+) async {
+  final filePosixPath = _repoRelPath(context, file);
+  if (!filePosixPath.startsWith('/lib/src/controller/')) {
+    return null;
+  }
+
+  final resolved = await context.getResolvedUnitResult(file.absolute.path);
+  if (resolved == null) {
+    return null;
+  }
+  final visitor = _ControllerLayerMutationVisitor(context: context);
+  resolved.unit.accept(visitor);
+
+  final violation = visitor.firstViolation;
+  if (violation == null) {
+    return null;
+  }
+  return GuardrailViolation(
+    filePath: filePosixPath,
+    line: resolved.lineInfo.getLocation(violation.offset).lineNumber,
+    message:
+        'model architecture violation: controller code must not mutate '
+        'scene.layers directly via ${violation.operationLabel}; use the '
+        'model-owned layer insertion helpers instead.',
+  );
+}
+
+GuardrailViolation? _checkRuntimeNodeOwnerFieldGuardrail(
+  GuardrailContext context,
+  File file,
+) {
+  final filePosixPath = _repoRelPath(context, file);
+  if (!_guardedRuntimeNodeOwnerFiles.contains(filePosixPath)) {
+    return null;
+  }
+
+  final parsed = _parseUnit(
+    context: context,
+    file: file,
+    filePosixPath: filePosixPath,
+  );
+  final guardedClasses =
+      _guardedRuntimeOwnerClassesByFile[filePosixPath] ?? const <String>{};
+
+  for (final declaration
+      in parsed.unit.declarations.whereType<ClassDeclaration>()) {
+    if (!guardedClasses.contains(declaration.name.lexeme)) {
+      continue;
+    }
+    for (final member in declaration.members.whereType<FieldDeclaration>()) {
+      for (final variable in member.fields.variables) {
+        final fieldName = variable.name.lexeme;
+        if (!_guardedRuntimeNodeMutableFields.contains(fieldName)) {
+          continue;
+        }
+        return GuardrailViolation(
+          filePath: filePosixPath,
+          line: lineForOffset(parsed, variable.name.offset),
+          message:
+              'model architecture violation: constrained runtime field '
+              '$fieldName must not be stored as a direct core-owner field; '
+              'keep it behind a validated getter/setter owner surface.',
+        );
       }
     }
   }
@@ -265,4 +423,129 @@ Never _onModelGuardrailParseFailure({
           'guardrail analysis (result: $resultType).',
     ),
   );
+}
+
+final class _ControllerLayerMutationVisitor extends RecursiveAstVisitor<void> {
+  _ControllerLayerMutationVisitor({required this.context});
+
+  final GuardrailContext context;
+  _ControllerLayerMutationOccurrence? firstViolation;
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    firstViolation ??= _matchControllerLayerMutation(node, context: context);
+    if (firstViolation != null) {
+      return;
+    }
+    super.visitMethodInvocation(node);
+  }
+
+  @override
+  void visitAssignmentExpression(AssignmentExpression node) {
+    firstViolation ??= _matchControllerLayerAssignment(node, context: context);
+    if (firstViolation != null) {
+      return;
+    }
+    super.visitAssignmentExpression(node);
+  }
+}
+
+_ControllerLayerMutationOccurrence? _matchControllerLayerMutation(
+  MethodInvocation node, {
+  required GuardrailContext context,
+}
+) {
+  final methodName = node.methodName.name;
+  if (!_guardedSceneLayersMutationMethods.contains(methodName)) {
+    return null;
+  }
+  final target =
+      node.target ?? node.thisOrAncestorOfType<CascadeExpression>()?.target;
+  if (target == null || !_isSceneLayersAccess(target, context: context)) {
+    return null;
+  }
+  return _ControllerLayerMutationOccurrence(
+    operationLabel: '.$methodName(...)',
+    offset: node.methodName.offset,
+  );
+}
+
+_ControllerLayerMutationOccurrence? _matchControllerLayerAssignment(
+  AssignmentExpression node, {
+  required GuardrailContext context,
+}
+) {
+  final leftHandSide = node.leftHandSide;
+  if (leftHandSide is! IndexExpression) {
+    return null;
+  }
+  final target = leftHandSide.target;
+  if (target == null || !_isSceneLayersAccess(target, context: context)) {
+    return null;
+  }
+  return _ControllerLayerMutationOccurrence(
+    operationLabel: '[]=',
+    offset: node.operator.offset,
+  );
+}
+
+bool _isSceneLayersAccess(
+  Expression expression, {
+  required GuardrailContext context,
+}) {
+  final unwrapped = switch (expression) {
+    ParenthesizedExpression(:final expression) => expression,
+    _ => expression,
+  };
+  final receiver = switch (unwrapped) {
+    PropertyAccess(:final target, :final propertyName)
+        when target != null && propertyName.name == 'layers' => target,
+    PrefixedIdentifier(:final prefix, :final identifier)
+        when identifier.name == 'layers' => prefix,
+    _ => null,
+  };
+  if (receiver == null) {
+    return false;
+  }
+
+  final type = receiver.staticType;
+  final element = type?.element;
+  if (element == null || element.displayName != 'Scene') {
+    return false;
+  }
+
+  return _repoRelForElement(element: element, context: context) ==
+      '/lib/src/core/scene.dart';
+}
+
+String? _repoRelForElement({
+  required Element? element,
+  required GuardrailContext context,
+}) {
+  if (element == null) {
+    return null;
+  }
+  final source = element.firstFragment.libraryFragment?.source;
+  if (source == null) {
+    return null;
+  }
+  final absPosixPath = toPosixPath(source.fullName);
+  if (!absPosixPath.startsWith('${context.rootAbsPosixPath}/')) {
+    return null;
+  }
+  final repoRelPath = toRepoRelPosixPath(
+    absPosixPath: absPosixPath,
+    rootAbsPosixPath: context.rootAbsPosixPath,
+  );
+  return repoRelPath.startsWith('/lib/') ? repoRelPath : null;
+}
+
+final class _ControllerLayerMutationOccurrence {
+  const _ControllerLayerMutationOccurrence({
+    required this.operationLabel,
+    required this.offset,
+  });
+
+  final String operationLabel;
+  final int offset;
 }

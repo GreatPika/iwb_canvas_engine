@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../core/scene.dart';
+import 'change_set.dart';
 import 'committed_store_state.dart';
 import 'internal/repaint_flag.dart';
 import 'internal/signal_event.dart';
@@ -82,6 +84,8 @@ SceneControllerWriteCommitResult _executeEffectsOnlyPlan({
     _assertStoreInvariantsCandidate(
       state: committedStoreState,
       previousCommitRevision: context.store.commitRevision,
+      previousScene: context.store.sceneDoc,
+      changeSet: plan.changeSet,
       beforeInvariantPrecheckHook:
           context.debugState.beforeInvariantPrecheckHook,
     );
@@ -105,6 +109,8 @@ SceneControllerWriteCommitResult _executeStatePlan({
   _assertStoreInvariantsCandidate(
     state: committedStoreState,
     previousCommitRevision: context.store.commitRevision,
+    previousScene: context.store.sceneDoc,
+    changeSet: plan.changeSet,
     beforeInvariantPrecheckHook: context.debugState.beforeInvariantPrecheckHook,
   );
 
@@ -136,12 +142,16 @@ SceneControllerWriteCommitResult _executeStatePlan({
 void _assertStoreInvariantsCandidate({
   required CommittedStoreState state,
   required int previousCommitRevision,
+  required Scene previousScene,
+  required ChangeSet changeSet,
   required void Function()? beforeInvariantPrecheckHook,
 }) {
   assertCriticalTxnStoreInvariants(
     state: state,
     commitRevision: state.commitRevision,
     previousCommitRevision: previousCommitRevision,
+    changeSet: changeSet,
+    previousScene: previousScene,
   );
   if (!kDebugMode && !kProfileMode) {
     return;

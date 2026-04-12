@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../contract/ids.dart';
+import '../contract/runtime_node_value_validation.dart';
 import '../contract/transform_tolerance.dart'
     show isNearSingular2x2, kEpsilon, norm1_2x2;
 import '../contract/transform2d.dart';
@@ -21,7 +22,7 @@ abstract class SceneNode {
     required this.id,
     required this.type,
     this.instanceRevision = 1,
-    this.hitPadding = 0,
+    double hitPadding = 0,
     Transform2D? transform,
     double opacity = 1,
     this.isVisible = true,
@@ -29,7 +30,7 @@ abstract class SceneNode {
     this.isLocked = false,
     this.isDeletable = true,
     this.isTransformable = true,
-  }) : transform = transform ?? Transform2D.identity {
+  }) {
     if (instanceRevision < 1) {
       throw ArgumentError.value(
         instanceRevision,
@@ -37,6 +38,8 @@ abstract class SceneNode {
         'must be >= 1',
       );
     }
+    this.hitPadding = hitPadding;
+    this.transform = transform ?? Transform2D.identity;
     this.opacity = opacity;
   }
 
@@ -52,7 +55,14 @@ abstract class SceneNode {
   /// Runtime behavior: non-finite values are sanitized by hit-testing/bounds
   /// computations and rendering to avoid crashes; JSON serialization rejects
   /// invalid values.
-  double hitPadding;
+  double get hitPadding => _hitPadding;
+  late double _hitPadding;
+  set hitPadding(double value) {
+    _hitPadding = validateNonNegativeFiniteDoubleValue(
+      value,
+      name: 'hitPadding',
+    );
+  }
 
   /// Node opacity in the range `[0,1]`.
   ///
@@ -80,7 +90,11 @@ abstract class SceneNode {
   bool isTransformable;
 
   /// Local-to-world node transform.
-  Transform2D transform;
+  Transform2D get transform => _transform;
+  late Transform2D _transform;
+  set transform(Transform2D value) {
+    _transform = validateFiniteInvertibleTransform2D(value, name: 'transform');
+  }
 
   /// Translation component of [transform].
   Offset get position => transform.translation;

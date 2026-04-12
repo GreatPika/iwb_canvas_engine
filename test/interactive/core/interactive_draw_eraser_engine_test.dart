@@ -21,13 +21,13 @@ void main() {
   });
 
   test('eraser fallback handles singular line transform with single point', () {
-    final line = LineNode(
+    final line = _RawTransformLineNode(
       id: 'line',
       start: const Offset(-20, 0),
       end: const Offset(20, 0),
       thickness: 2,
       color: const Color(0xFF000000),
-      transform: const Transform2D(a: 1, b: 2, c: 2, d: 4, tx: 120, ty: 80),
+      rawTransform: const Transform2D(a: 1, b: 2, c: 2, d: 4, tx: 120, ty: 80),
     );
     final candidate = SceneSpatialCandidate(
       layerIndex: 0,
@@ -60,12 +60,12 @@ void main() {
   });
 
   test('eraser fallback handles singular stroke transform with segment', () {
-    final stroke = StrokeNode(
+    final stroke = _RawTransformStrokeNode(
       id: 'stroke',
       points: const <Offset>[Offset(-15, 0), Offset(15, 0)],
       thickness: 2,
       color: const Color(0xFF000000),
-      transform: const Transform2D(a: 1, b: 2, c: 2, d: 4, tx: 180, ty: 80),
+      rawTransform: const Transform2D(a: 1, b: 2, c: 2, d: 4, tx: 180, ty: 80),
     );
     final candidate = SceneSpatialCandidate(
       layerIndex: 0,
@@ -136,4 +136,35 @@ void main() {
     expect(erased, isEmpty);
     expect(removedIds, isEmpty);
   });
+}
+
+final class _RawTransformLineNode extends LineNode {
+  _RawTransformLineNode({
+    required super.id,
+    required super.start,
+    required super.end,
+    required super.thickness,
+    required super.color,
+    required Transform2D rawTransform,
+  }) : _rawTransform = rawTransform;
+
+  final Transform2D _rawTransform;
+
+  @override
+  Transform2D get transform => _rawTransform;
+}
+
+final class _RawTransformStrokeNode extends StrokeNode {
+  _RawTransformStrokeNode({
+    required super.id,
+    required super.points,
+    required super.thickness,
+    required super.color,
+    required Transform2D rawTransform,
+  }) : _rawTransform = rawTransform;
+
+  final Transform2D _rawTransform;
+
+  @override
+  Transform2D get transform => _rawTransform;
 }

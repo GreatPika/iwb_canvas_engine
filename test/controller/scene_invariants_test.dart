@@ -2,7 +2,13 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart'
-    show kMaxPaletteItems, sceneCoordMax, sceneSizeMax;
+    show
+        kMaxContentLayersPerScene,
+        kMaxPaletteItems,
+        sceneCoordMax,
+        sceneSizeMax;
+import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
+import 'package:iwb_canvas_engine/src/controller/change_set.dart';
 import 'package:iwb_canvas_engine/src/controller/committed_store_state.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_invariants.dart'
     as scene_invariants;
@@ -180,6 +186,8 @@ void main() {
     required Scene scene,
     required int commitRevision,
     required int previousCommitRevision,
+    Scene? previousScene,
+    ChangeSet? changeSet,
   }) {
     scene_invariants.assertCriticalTxnStoreInvariants(
       state: committedStoreState(
@@ -192,6 +200,8 @@ void main() {
       ),
       commitRevision: commitRevision,
       previousCommitRevision: previousCommitRevision,
+      previousScene: previousScene,
+      changeSet: changeSet,
     );
   }
 
@@ -284,26 +294,14 @@ void main() {
       expect(
         violations.join('\n'),
         contains(
-          'background.grid.cellSize must be >= 1.0 when grid is enabled.',
+          'background.grid.cellSize must be >= 1.0 when background.grid.enabled is true.',
         ),
-      );
-      expect(
-        violations.join('\n'),
-        contains('palette.penColors must not be empty.'),
       );
       expect(
         violations.join('\n'),
         contains(
           'palette.backgroundColors must contain at most $kMaxPaletteItems items.',
         ),
-      );
-      expect(
-        violations.join('\n'),
-        contains('palette.gridSizes[0] must be > 0.'),
-      );
-      expect(
-        violations.join('\n'),
-        contains('palette.gridSizes[1] must be within [0, 10000000.0].'),
       );
     },
   );
@@ -344,7 +342,7 @@ void main() {
 
     expect(
       violations.join('\n'),
-      contains('scene must not contain duplicate node ids'),
+      contains('layers[1].nodes[0].id Must be unique across scene layers.'),
     );
   });
 
@@ -367,7 +365,7 @@ void main() {
 
     expect(
       violations.join('\n'),
-      contains('scene must not contain duplicate content layer ids'),
+      contains('layers[1].id must be unique across content layers.'),
     );
   });
 
@@ -395,7 +393,9 @@ void main() {
 
     expect(
       violations.join('\n'),
-      contains('scene must not contain duplicate node ids'),
+      contains(
+        'backgroundLayer.nodes[1].id Must be unique across scene layers.',
+      ),
     );
   });
 
@@ -453,9 +453,75 @@ void main() {
 
     expect(
       violations.join('\n'),
-      contains('scene must not contain duplicate node ids'),
+      contains('layers[0].nodes[0].id Must be unique across scene layers.'),
     );
   });
+
+  test(
+    'collects canonical structural overflow violation from committed scene',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          for (var index = 0; index < kMaxContentLayersPerScene + 1; index++)
+            ContentLayer(id: 'layer-auto-$index'),
+        ],
+      );
+      final violations = txnCollectStoreInvariantViolations(
+        scene: scene,
+        selectedNodeIds: const <NodeId>{},
+        allNodeIds: const <NodeId>{},
+        nodeLocator: const <NodeId, NodeLocatorEntry>{},
+        idGeneratorState: state(),
+        nextInstanceRevision: 1,
+        commitRevision: 0,
+      );
+
+      expect(
+        violations.join('\n'),
+        contains(
+          'layers must contain at most $kMaxContentLayersPerScene items.',
+        ),
+      );
+    },
+  );
+
+  test(
+    'collects canonical runtime node-field violation from committed scene',
+    () {
+      final node = _RawTransformRectNode(
+        id: 'bad-node',
+        rawTransform: const Transform2D(
+          a: double.infinity,
+          b: 0,
+          c: 0,
+          d: 1,
+          tx: 0,
+          ty: 0,
+        ),
+      );
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-node', nodes: <SceneNode>[node]),
+        ],
+      );
+      final violations = txnCollectStoreInvariantViolations(
+        scene: scene,
+        selectedNodeIds: const <NodeId>{},
+        allNodeIds: const <NodeId>{'bad-node'},
+        nodeLocator: const <NodeId, NodeLocatorEntry>{
+          'bad-node': (layerIndex: 0, nodeIndex: 0),
+        },
+        idGeneratorState: state(nextNodeCounter: 2),
+        nextInstanceRevision: 2,
+        commitRevision: 0,
+      );
+
+      expect(
+        violations.join('\n'),
+        contains('layers[0].nodes[0].transform.a must be finite.'),
+      );
+    },
+  );
 
   test('detects committed epoch bump request in store state', () {
     final scene = sceneFixture();
@@ -647,6 +713,52 @@ void main() {
   );
 
   test(
+    'critical runtime invariant check revalidates changed palette surface',
+    () {
+      final previousScene = sceneFixture();
+      final scene = sceneFixture(
+        palette: rawPaletteFixture(
+          penColors: const <Color>[],
+          backgroundColors: const <Color>[Color(0xFFFFFFFF)],
+          gridSizes: const <double>[16],
+        ),
+      );
+
+      expect(
+        () => assertCriticalTxnStoreInvariants(
+          scene: scene,
+          commitRevision: 0,
+          previousCommitRevision: -1,
+          previousScene: previousScene,
+          changeSet: ChangeSet(),
+        ),
+        throwsStateError,
+      );
+    },
+  );
+
+  test(
+    'critical runtime invariant check revalidates changed structural layer ids',
+    () {
+      final previousScene = sceneFixture();
+      final scene = Scene(
+        layers: <ContentLayer>[ContentLayer(id: '', nodes: <SceneNode>[])],
+      );
+
+      expect(
+        () => assertCriticalTxnStoreInvariants(
+          scene: scene,
+          commitRevision: 0,
+          previousCommitRevision: -1,
+          previousScene: previousScene,
+          changeSet: ChangeSet()..structuralChanged = true,
+        ),
+        throwsStateError,
+      );
+    },
+  );
+
+  test(
     'critical runtime invariant check reports negative commit regression',
     () {
       final scene = sceneFixture();
@@ -672,6 +784,73 @@ void main() {
       throwsStateError,
     );
   });
+
+  test(
+    'critical runtime invariant check throws for structural overflow state',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          for (var index = 0; index < kMaxContentLayersPerScene + 1; index++)
+            ContentLayer(id: 'layer-auto-$index'),
+        ],
+      );
+      expect(
+        () => assertCriticalTxnStoreInvariants(
+          scene: scene,
+          commitRevision: 0,
+          previousCommitRevision: -1,
+        ),
+        throwsStateError,
+      );
+    },
+  );
+
+  test(
+    'critical runtime invariant check throws for invalid node field state',
+    () {
+      final node = _RawTransformRectNode(
+        id: 'bad-node',
+        rawTransform: const Transform2D(
+          a: double.infinity,
+          b: 0,
+          c: 0,
+          d: 1,
+          tx: 0,
+          ty: 0,
+        ),
+      );
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-node', nodes: <SceneNode>[node]),
+        ],
+      );
+      expect(
+        () => assertCriticalTxnStoreInvariants(
+          scene: scene,
+          commitRevision: 0,
+          previousCommitRevision: -1,
+        ),
+        throwsStateError,
+      );
+    },
+  );
+
+  test(
+    'critical runtime invariant check throws for invalid content layer id',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[ContentLayer(id: '', nodes: <SceneNode>[])],
+      );
+      expect(
+        () => assertCriticalTxnStoreInvariants(
+          scene: scene,
+          commitRevision: 0,
+          previousCommitRevision: -1,
+        ),
+        throwsStateError,
+      );
+    },
+  );
 
   test('critical runtime invariant check throws on equal commit revision', () {
     final scene = sceneFixture();
@@ -824,4 +1003,15 @@ class _BadInstanceRevisionNode extends SceneNode {
 
   @override
   Rect get localBounds => Rect.zero;
+}
+
+final class _RawTransformRectNode extends RectNode {
+  _RawTransformRectNode({required super.id, required Transform2D rawTransform})
+    : _rawTransform = rawTransform,
+      super(size: const Size(10, 10));
+
+  final Transform2D _rawTransform;
+
+  @override
+  Transform2D get transform => _rawTransform;
 }

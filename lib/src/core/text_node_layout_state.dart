@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../contract/runtime_node_value_validation.dart';
 import 'text_layout.dart';
 
 /// Caches measured text bounds for a text node's layout inputs.
@@ -15,16 +16,25 @@ final class TextNodeLayoutState {
     required String? fontFamily,
     required double? maxWidth,
     required double? lineHeight,
-  }) : _text = text,
-       _fontSize = fontSize,
+  }) : _text = validateTextContentValue(text, name: 'text'),
+       _fontSize = validatePositiveFiniteDoubleValue(
+         fontSize,
+         name: 'fontSize',
+       ),
        _align = align,
        _textDirection = textDirection,
        _isBold = isBold,
        _isItalic = isItalic,
        _isUnderline = isUnderline,
-       _fontFamily = fontFamily,
-       _maxWidth = maxWidth,
-       _lineHeight = lineHeight;
+       _fontFamily = fontFamily == null
+           ? null
+           : validateFontFamilyValue(fontFamily, name: 'fontFamily'),
+       _maxWidth = maxWidth == null
+           ? null
+           : validatePositiveFiniteDoubleValue(maxWidth, name: 'maxWidth'),
+       _lineHeight = lineHeight == null
+           ? null
+           : validatePositiveFiniteDoubleValue(lineHeight, name: 'lineHeight');
 
   String _text;
   double _fontSize;
@@ -39,16 +49,19 @@ final class TextNodeLayoutState {
   Size? _derivedSizeCache;
 
   String get text => _text;
-  set text(String value) => _setValue(
+  set text(String value) => _setValidatedValue(
     currentValue: _text,
     nextValue: value,
+    validate: (nextValue) => validateTextContentValue(nextValue, name: 'text'),
     assign: (nextValue) => _text = nextValue,
   );
 
   double get fontSize => _fontSize;
-  set fontSize(double value) => _setValue(
+  set fontSize(double value) => _setValidatedValue(
     currentValue: _fontSize,
     nextValue: value,
+    validate: (nextValue) =>
+        validatePositiveFiniteDoubleValue(nextValue, name: 'fontSize'),
     assign: (nextValue) => _fontSize = nextValue,
   );
 
@@ -88,23 +101,32 @@ final class TextNodeLayoutState {
   );
 
   String? get fontFamily => _fontFamily;
-  set fontFamily(String? value) => _setValue(
+  set fontFamily(String? value) => _setValidatedValue(
     currentValue: _fontFamily,
     nextValue: value,
+    validate: (nextValue) => nextValue == null
+        ? null
+        : validateFontFamilyValue(nextValue, name: 'fontFamily'),
     assign: (nextValue) => _fontFamily = nextValue,
   );
 
   double? get maxWidth => _maxWidth;
-  set maxWidth(double? value) => _setValue(
+  set maxWidth(double? value) => _setValidatedValue(
     currentValue: _maxWidth,
     nextValue: value,
+    validate: (nextValue) => nextValue == null
+        ? null
+        : validatePositiveFiniteDoubleValue(nextValue, name: 'maxWidth'),
     assign: (nextValue) => _maxWidth = nextValue,
   );
 
   double? get lineHeight => _lineHeight;
-  set lineHeight(double? value) => _setValue(
+  set lineHeight(double? value) => _setValidatedValue(
     currentValue: _lineHeight,
     nextValue: value,
+    validate: (nextValue) => nextValue == null
+        ? null
+        : validatePositiveFiniteDoubleValue(nextValue, name: 'lineHeight'),
     assign: (nextValue) => _lineHeight = nextValue,
   );
 
@@ -140,5 +162,19 @@ final class TextNodeLayoutState {
     }
     assign(nextValue);
     _derivedSizeCache = null;
+  }
+
+  void _setValidatedValue<T>({
+    required T currentValue,
+    required T nextValue,
+    required T Function(T nextValue) validate,
+    required void Function(T nextValue) assign,
+  }) {
+    final validatedValue = validate(nextValue);
+    _setValue(
+      currentValue: currentValue,
+      nextValue: validatedValue,
+      assign: assign,
+    );
   }
 }

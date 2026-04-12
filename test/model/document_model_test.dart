@@ -11,6 +11,7 @@ import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
 // INV:INV-ENG-TEXT-SIZE-DERIVED
+// INV:INV-ENG-RUNTIME-NODE-VALUE-OWNERS
 
 void main() {
   SceneSnapshot duplicateNodeSnapshotFromInternalBypass() {
@@ -1683,6 +1684,56 @@ void main() {
     expect(path.svgPathData, 'M0 0 L5 5');
     expect(path.strokeColor, isNull);
     expect(path.fillRule, PathFillRule.evenOdd);
+  });
+
+  test('runtime node owners reject invalid constrained write values', () {
+    final image = ImageNode(
+      id: 'img-owner',
+      imageId: 'image://1',
+      size: const Size(10, 10),
+    );
+    expect(
+      () => image.imageId = 'x' * (kMaxImageIdLength + 1),
+      throwsA(predicate((e) => e is ArgumentError && e.name == 'imageId')),
+    );
+    expect(
+      () => image.naturalSize = const Size(10, double.infinity),
+      throwsA(
+        predicate((e) => e is ArgumentError && e.name == 'naturalSize.height'),
+      ),
+    );
+
+    final text = TextNode(
+      id: 'txt-owner',
+      text: 'hello',
+      color: const Color(0xFF000000),
+    );
+    expect(
+      () => text.fontSize = 0,
+      throwsA(predicate((e) => e is ArgumentError && e.name == 'fontSize')),
+    );
+    expect(
+      () => text.maxWidth = 0,
+      throwsA(predicate((e) => e is ArgumentError && e.name == 'maxWidth')),
+    );
+
+    final line = LineNode(
+      id: 'line-owner',
+      start: const Offset(0, 0),
+      end: const Offset(1, 1),
+      thickness: 1,
+      color: const Color(0xFF000000),
+    );
+    expect(
+      () => line.start = const Offset(double.infinity, 0),
+      throwsA(predicate((e) => e is ArgumentError && e.name == 'start.dx')),
+    );
+
+    final path = PathNode(id: 'path-owner', svgPathData: 'M0 0 L1 1');
+    expect(
+      () => path.svgPathData = 'not-a-path',
+      throwsA(predicate((e) => e is ArgumentError && e.name == 'svgPathData')),
+    );
   });
 
   test('node patch validates id, patch type and nullability constraints', () {

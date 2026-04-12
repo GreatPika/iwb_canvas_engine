@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 import 'dart:ui';
 
 import '../contract/path_fill_rule.dart';
+import '../contract/runtime_node_value_validation.dart';
 import 'geometry.dart';
 import 'local_bounds_policy.dart';
 import 'scene_node.dart';
@@ -21,7 +22,7 @@ class PathNode extends SceneNode {
     required String svgPathData,
     this.fillColor,
     this.strokeColor,
-    this.strokeWidth = 1,
+    double strokeWidth = 1,
     PathFillRule fillRule = PathFillRule.nonZero,
     super.instanceRevision,
     super.hitPadding,
@@ -32,13 +33,28 @@ class PathNode extends SceneNode {
     super.isLocked,
     super.isDeletable,
     super.isTransformable,
-  }) : _svgPathData = svgPathData,
+  }) : _strokeWidth = validateNonNegativeFiniteDoubleValue(
+         strokeWidth,
+         name: 'strokeWidth',
+       ),
+       _svgPathData = validateSvgPathDataValue(
+         svgPathData,
+         name: 'svgPathData',
+       ),
        _fillRule = fillRule,
        super(type: NodeType.path);
 
   Color? fillColor;
   Color? strokeColor;
-  double strokeWidth;
+  double get strokeWidth => _strokeWidth;
+  late double _strokeWidth;
+  set strokeWidth(double value) {
+    _strokeWidth = validateNonNegativeFiniteDoubleValue(
+      value,
+      name: 'strokeWidth',
+    );
+  }
+
   String _svgPathData;
   PathFillRule _fillRule;
 
@@ -68,8 +84,9 @@ class PathNode extends SceneNode {
 
   String get svgPathData => _svgPathData;
   set svgPathData(String value) {
-    if (_svgPathData == value) return;
-    _svgPathData = value;
+    final validated = validateSvgPathDataValue(value, name: 'svgPathData');
+    if (_svgPathData == validated) return;
+    _svgPathData = validated;
     _localPathCache.invalidate();
   }
 
@@ -89,8 +106,8 @@ class PathNode extends SceneNode {
   /// callers cannot accidentally mutate internal cache state.
   Path? buildLocalPath() => _localPathCache.buildLocalPath(
     _PathNodeCacheRequest(
-      svgPathData: _svgPathData,
-      fillRule: _fillRule,
+      svgPathData: svgPathData,
+      fillRule: fillRule,
       diagnosticsEnabled: enableBuildLocalPathDiagnostics,
       assertionsEnabled: _assertionsEnabled,
     ),
@@ -99,8 +116,8 @@ class PathNode extends SceneNode {
   @override
   Rect get localBounds => _localPathCache.resolveLocalBounds(
     request: _PathNodeCacheRequest(
-      svgPathData: _svgPathData,
-      fillRule: _fillRule,
+      svgPathData: svgPathData,
+      fillRule: fillRule,
       diagnosticsEnabled: enableBuildLocalPathDiagnostics,
       assertionsEnabled: _assertionsEnabled,
     ),

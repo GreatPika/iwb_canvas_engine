@@ -160,42 +160,51 @@ void _sceneValidateRuntimeNodeTypeFields(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  switch (node.type) {
-    case NodeType.image:
+  switch ((node.type, node)) {
+    case (NodeType.image, ImageNode image):
       image_validation.sceneValidateImageNode(
-        node as ImageNode,
+        image,
         field: field,
         onError: onError,
       );
-    case NodeType.text:
+    case (NodeType.text, TextNode text):
       text_validation.sceneValidateTextNode(
-        node as TextNode,
+        text,
         field: field,
         onError: onError,
       );
-    case NodeType.stroke:
+    case (NodeType.stroke, StrokeNode stroke):
       stroke_validation.sceneValidateStrokeNode(
-        node as StrokeNode,
+        stroke,
         field: field,
         onError: onError,
       );
-    case NodeType.line:
+    case (NodeType.line, LineNode line):
       line_validation.sceneValidateLineNode(
-        node as LineNode,
+        line,
         field: field,
         onError: onError,
       );
-    case NodeType.rect:
+    case (NodeType.rect, RectNode rect):
       rect_validation.sceneValidateRectNode(
-        node as RectNode,
+        rect,
         field: field,
         onError: onError,
       );
-    case NodeType.path:
+    case (NodeType.path, PathNode path):
       path_validation.sceneValidatePathNode(
-        node as PathNode,
+        path,
         field: field,
         onError: onError,
+      );
+    case _:
+      sceneValidationFail(
+        onError: onError,
+        value: node.type,
+        field: '$field.type',
+        message:
+            'must match the concrete runtime node subtype for '
+            '${node.type.name}.',
       );
   }
 }

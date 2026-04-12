@@ -220,6 +220,16 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - runtime `Scene.palette` is replacement-only at the object level; a
   `ScenePalette` defensively copies and freezes its nested lists, so palette
   presets cannot be mutated in place after construction.
+- ordinary runtime scene writes enforce content-layer and total-node budgets at
+  the model mutation owner, so oversized layer/node additions fail before the
+  scene mutates instead of only at snapshot/export boundaries.
+- constrained runtime node fields such as transforms, hit padding, image/text
+  layout inputs, vector geometry, path data, and stroke widths are reject-only
+  at owner boundaries; invalid assignments throw `ArgumentError` instead of
+  relying on later render/layout sanitization.
+- controller commits run a critical changed-surface runtime validity backstop
+  in every build mode before store apply, while `debug` and `profile` keep the
+  full committed-store invariant sweep.
 - Boundary helpers such as `parseNodeId(...)`, `parseLayerId(...)`, and
   validated value types including `ImageIdValue` keep external payload checks
   aligned with import/build rules. Runtime-generated ids are internal engine

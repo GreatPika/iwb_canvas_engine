@@ -9,6 +9,8 @@ import '../support/tool_process_test_support.dart';
 void main() {
   group('tool/check_guardrails.dart', () {
     // INV:INV-ENG-MODEL-ARCHITECTURE-BOUNDARY
+    // INV:INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER
+    // INV:INV-ENG-RUNTIME-NODE-VALUE-OWNERS
     test('rejects part directives under lib/src/model', () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -329,6 +331,220 @@ void decodeScene() {}
                   'canonical model facades instead of importing or '
                   're-exporting internal owner module '
                   'scene_from_import_draft.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test('rejects controller direct scene.layers.add ownership', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeSandboxFile(sandbox, 'lib/src/controller/scene_runtime.dart', '''
+import '../core/scene.dart';
+
+class _SceneRuntime {
+  void _touch(Scene scene) {
+    scene.layers.add(Object());
+  }
+}
+''');
+        writeSandboxFile(sandbox, 'lib/src/core/scene.dart', '''
+class Scene {
+  final List<Object> layers = <Object>[];
+}
+''');
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'model architecture',
+            detail:
+                'controller code must not mutate scene.layers directly via .add(...)',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects controller direct scene.layers.removeAt ownership', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeSandboxFile(sandbox, 'lib/src/controller/scene_runtime.dart', '''
+import '../core/scene.dart';
+
+class _SceneRuntime {
+  void _touch(Scene scene) {
+    scene.layers.removeAt(0);
+  }
+}
+''');
+        writeSandboxFile(sandbox, 'lib/src/core/scene.dart', '''
+class Scene {
+  final List<Object> layers = <Object>[];
+}
+''');
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'model architecture',
+            detail:
+                'controller code must not mutate scene.layers directly via .removeAt(...)',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'rejects controller direct scene.layers index assignment ownership',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(sandbox, 'lib/src/controller/scene_runtime.dart', '''
+import '../core/scene.dart';
+
+class _SceneRuntime {
+  void _touch(Scene scene) {
+    scene.layers[0] = Object();
+  }
+}
+''');
+          writeSandboxFile(sandbox, 'lib/src/core/scene.dart', '''
+class Scene {
+  final List<Object> layers = <Object>[];
+}
+''');
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'controller code must not mutate scene.layers directly via []=',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test('rejects cascaded direct scene.layers mutations', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeSandboxFile(sandbox, 'lib/src/controller/scene_runtime.dart', '''
+import '../core/scene.dart';
+
+class _SceneRuntime {
+  void _touch(Scene scene) {
+    scene.layers
+      ..clear()
+      ..add(Object());
+  }
+}
+''');
+        writeSandboxFile(sandbox, 'lib/src/core/scene.dart', '''
+class Scene {
+  final List<Object> layers = <Object>[];
+}
+''');
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'model architecture',
+            detail:
+                'controller code must not mutate scene.layers directly via .clear(...)',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('allows local layers collections inside controller code', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeSandboxFile(sandbox, 'lib/src/controller/scene_runtime.dart', '''
+class _SceneRuntime {
+  void _touch() {
+    final layers = <Object>[];
+    layers.add(Object());
+    layers.insert(0, Object());
+  }
+}
+''');
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0);
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('allows non-scene layers fields inside controller code', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeSandboxFile(sandbox, 'lib/src/controller/scene_runtime.dart', '''
+class WidgetState {
+  final List<Object> layers = <Object>[];
+}
+
+class _SceneRuntime {
+  void _touch(WidgetState widget) {
+    widget.layers.add(Object());
+    widget.layers.insert(0, Object());
+  }
+}
+''');
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0);
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'rejects constrained runtime owner fields as direct core storage',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(sandbox, 'lib/src/core/scene_node.dart', '''
+class SceneNode {
+  double hitPadding = 0;
+}
+''');
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'constrained runtime field hitPadding must not be stored as a direct core-owner field',
             ),
           );
         } finally {

@@ -1,13 +1,11 @@
-import 'dart:ui';
-
 import '../core/id_generator.dart';
 import '../core/nodes.dart';
 import '../core/revision_policy.dart';
 import '../core/scene.dart';
-import '../contract/ids.dart' show LayerId;
-import '../contract/scene_model_invariants.dart';
 import '../model/document.dart';
 import '../model/document_clone.dart';
+import '../model/scene_value_validation.dart' as scene_value_validation;
+import 'change_set.dart';
 import 'committed_store_state.dart';
 
 List<String> txnCollectStoreInvariantViolations(CommittedStoreState state) {
@@ -19,7 +17,6 @@ List<String> txnCollectStoreInvariantViolations(CommittedStoreState state) {
       nodeLocator: state.nodeLocator,
     ),
   );
-  violations.addAll(_txnCollectSceneIdentityInvariantViolations(state.scene));
   violations.addAll(
     _txnCollectSelectionInvariantViolations(
       scene: state.scene,
@@ -43,7 +40,9 @@ List<String> txnCollectStoreInvariantViolations(CommittedStoreState state) {
   violations.addAll(
     _txnCollectCommitRevisionInvariantViolations(state.commitRevision),
   );
-  violations.addAll(_txnCollectSceneNumericInvariantViolations(state.scene));
+  violations.addAll(
+    _txnCollectRuntimeSceneValidityInvariantViolations(state.scene),
+  );
   return violations;
 }
 
@@ -51,6 +50,8 @@ List<String> txnCollectCriticalStoreInvariantViolations({
   required CommittedStoreState state,
   required int commitRevision,
   required int previousCommitRevision,
+  ChangeSet? changeSet,
+  Scene? previousScene,
 }) {
   final violations = <String>[];
   if (commitRevision <= previousCommitRevision) {
@@ -62,7 +63,13 @@ List<String> txnCollectCriticalStoreInvariantViolations({
   violations.addAll(
     _txnCollectCommitRevisionInvariantViolations(commitRevision),
   );
-  violations.addAll(_txnCollectSceneNumericInvariantViolations(state.scene));
+  violations.addAll(
+    _txnCollectCriticalRuntimeSceneValidityInvariantViolations(
+      state: state,
+      changeSet: changeSet,
+      previousScene: previousScene,
+    ),
+  );
   return violations;
 }
 
@@ -79,11 +86,15 @@ void assertCriticalTxnStoreInvariants({
   required CommittedStoreState state,
   required int commitRevision,
   required int previousCommitRevision,
+  ChangeSet? changeSet,
+  Scene? previousScene,
 }) {
   final violations = txnCollectCriticalStoreInvariantViolations(
     state: state,
     commitRevision: commitRevision,
     previousCommitRevision: previousCommitRevision,
+    changeSet: changeSet,
+    previousScene: previousScene,
   );
   if (violations.isNotEmpty) {
     throw StateError(
@@ -156,25 +167,145 @@ List<String> _txnCollectSceneIndexInvariantViolations({
   return violations;
 }
 
-List<String> _txnCollectSceneIdentityInvariantViolations(Scene scene) {
+List<String> _txnCollectRuntimeSceneValidityInvariantViolations(Scene scene) {
+  return scene_value_validation.sceneCollectRuntimeSceneValidityViolations(
+    scene,
+  );
+}
+
+List<String> _txnCollectCriticalRuntimeSceneValidityInvariantViolations({
+  required CommittedStoreState state,
+  required ChangeSet? changeSet,
+  required Scene? previousScene,
+}) {
+  if (changeSet == null) {
+    return _txnCollectRuntimeSceneValidityInvariantViolations(state.scene);
+  }
+  if (changeSet.documentReplaced) {
+    return _txnCollectRuntimeSceneValidityInvariantViolations(state.scene);
+  }
+
   final violations = <String>[];
 
-  final duplicateNodeIds = _txnCollectDuplicateNodeIds(scene);
-  if (duplicateNodeIds.isNotEmpty) {
-    violations.add(
-      'scene must not contain duplicate node ids. duplicates=$duplicateNodeIds',
+  if (changeSet.structuralChanged) {
+    violations.addAll(
+      scene_value_validation.sceneCollectRuntimeStructuralSurfaceViolations(
+        state.scene,
+      ),
     );
   }
 
-  final duplicateLayerIds = _txnCollectDuplicateLayerIds(scene);
-  if (duplicateLayerIds.isNotEmpty) {
-    violations.add(
-      'scene must not contain duplicate content layer ids. '
-      'duplicates=$duplicateLayerIds',
+  if (_txnDidCriticalCameraChange(previousScene, state.scene)) {
+    violations.addAll(
+      scene_value_validation.sceneCollectRuntimeCameraOffsetViolations(
+        value: state.scene.camera.offset,
+      ),
     );
   }
+
+  if (_txnDidCriticalGridChange(previousScene, state.scene)) {
+    violations.addAll(
+      scene_value_validation.sceneCollectRuntimeGridViolations(
+        state.scene.background.grid,
+        requirePositiveCellSize: true,
+        requireEnabledMinCellSize: true,
+      ),
+    );
+  }
+
+  if (_txnDidCriticalPaletteChange(previousScene, state.scene)) {
+    violations.addAll(
+      scene_value_validation.sceneCollectRuntimePaletteViolations(
+        state.scene.palette,
+      ),
+    );
+  }
+
+  violations.addAll(
+    _txnCollectCriticalTrackedNodeViolations(
+      scene: state.scene,
+      nodeLocator: state.nodeLocator,
+      nodeIds: <NodeId>{...changeSet.addedNodeIds, ...changeSet.updatedNodeIds},
+    ),
+  );
 
   return violations;
+}
+
+List<String> _txnCollectCriticalTrackedNodeViolations({
+  required Scene scene,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required Set<NodeId> nodeIds,
+}) {
+  if (nodeIds.isEmpty) {
+    return const <String>[];
+  }
+
+  final orderedNodeIds = nodeIds.toList(growable: false)..sort();
+  final violations = <String>[];
+  for (final nodeId in orderedNodeIds) {
+    final found = txnFindNodeByLocator(
+      scene: scene,
+      nodeLocator: nodeLocator,
+      nodeId: nodeId,
+    );
+    if (found == null) {
+      continue;
+    }
+    final fieldPrefix = found.layerIndex == -1
+        ? 'backgroundLayer.nodes[${found.nodeIndex}]'
+        : 'layers[${found.layerIndex}].nodes[${found.nodeIndex}]';
+    violations.addAll(
+      scene_value_validation.sceneCollectRuntimeNodeViolations(
+        found.node,
+        field: fieldPrefix,
+      ),
+    );
+  }
+  return violations;
+}
+
+bool _txnDidCriticalCameraChange(Scene? previousScene, Scene scene) {
+  if (previousScene == null) {
+    return true;
+  }
+  return previousScene.camera.offset != scene.camera.offset;
+}
+
+bool _txnDidCriticalGridChange(Scene? previousScene, Scene scene) {
+  if (previousScene == null) {
+    return true;
+  }
+  final previousGrid = previousScene.background.grid;
+  final nextGrid = scene.background.grid;
+  return previousGrid.isEnabled != nextGrid.isEnabled ||
+      previousGrid.cellSize != nextGrid.cellSize;
+}
+
+bool _txnDidCriticalPaletteChange(Scene? previousScene, Scene scene) {
+  if (previousScene == null) {
+    return true;
+  }
+  final previousPalette = previousScene.palette;
+  final nextPalette = scene.palette;
+  return !_txnListEquals(previousPalette.penColors, nextPalette.penColors) ||
+      !_txnListEquals(
+        previousPalette.backgroundColors,
+        nextPalette.backgroundColors,
+      ) ||
+      !_txnListEquals(previousPalette.gridSizes, nextPalette.gridSizes);
+}
+
+bool _txnListEquals<T>(List<T> left, List<T> right) {
+  if (left.length != right.length) {
+    return false;
+  }
+  for (var index = 0; index < left.length; index++) {
+    if (left[index] != right[index]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 List<String> _txnCollectSelectionInvariantViolations({
@@ -270,163 +401,4 @@ List<String> _txnCollectCommitRevisionInvariantViolations(int commitRevision) {
     return const <String>['commitRevision must be non-negative.'];
   }
   return const <String>[];
-}
-
-List<String> _txnCollectSceneNumericInvariantViolations(Scene scene) {
-  final violations = <String>[];
-
-  _txnCollectSceneCoordinateViolations(
-    scene.camera.offset,
-    field: 'camera.offset',
-    violations: violations,
-  );
-  _txnCollectGridViolations(
-    scene.background.grid,
-    field: 'background.grid',
-    violations: violations,
-  );
-  _txnCollectPaletteViolations(
-    scene.palette,
-    field: 'palette',
-    violations: violations,
-  );
-
-  return violations;
-}
-
-void _txnCollectSceneCoordinateViolations(
-  Offset value, {
-  required String field,
-  required List<String> violations,
-}) {
-  _txnCollectCoordinateComponentViolation(
-    value.dx,
-    field: '$field.dx',
-    violations: violations,
-  );
-  _txnCollectCoordinateComponentViolation(
-    value.dy,
-    field: '$field.dy',
-    violations: violations,
-  );
-}
-
-void _txnCollectCoordinateComponentViolation(
-  double value, {
-  required String field,
-  required List<String> violations,
-}) {
-  final message = sceneCoordinateViolationMessage(value);
-  if (message == null) {
-    return;
-  }
-  violations.add('$field $message');
-}
-
-void _txnCollectGridViolations(
-  GridSettings grid, {
-  required String field,
-  required List<String> violations,
-}) {
-  final cellSizeField = '$field.cellSize';
-  _txnCollectPositiveBoundedSizeViolation(
-    grid.cellSize,
-    field: cellSizeField,
-    violations: violations,
-  );
-  if (!grid.isEnabled) {
-    return;
-  }
-  final message = sceneEnabledGridCellSizeViolationMessage(grid.cellSize);
-  if (message == null) {
-    return;
-  }
-  violations.add('$cellSizeField $message');
-}
-
-void _txnCollectPaletteViolations(
-  ScenePalette palette, {
-  required String field,
-  required List<String> violations,
-}) {
-  _txnCollectPaletteListViolations(
-    palette.penColors,
-    field: '$field.penColors',
-    violations: violations,
-  );
-  _txnCollectPaletteListViolations(
-    palette.backgroundColors,
-    field: '$field.backgroundColors',
-    violations: violations,
-  );
-  _txnCollectPaletteListViolations(
-    palette.gridSizes,
-    field: '$field.gridSizes',
-    violations: violations,
-  );
-  for (var index = 0; index < palette.gridSizes.length; index++) {
-    _txnCollectPositiveBoundedSizeViolation(
-      palette.gridSizes[index],
-      field: '$field.gridSizes[$index]',
-      violations: violations,
-    );
-  }
-}
-
-void _txnCollectPaletteListViolations<T>(
-  List<T> values, {
-  required String field,
-  required List<String> violations,
-}) {
-  final countMessage = scenePaletteItemCountViolationMessage(values.length);
-  if (countMessage != null) {
-    violations.add('$field $countMessage');
-  }
-  if (values.isEmpty) {
-    violations.add('$field must not be empty.');
-  }
-}
-
-void _txnCollectPositiveBoundedSizeViolation(
-  double value, {
-  required String field,
-  required List<String> violations,
-}) {
-  final message = scenePositiveBoundedSizeViolationMessage(value);
-  if (message == null) {
-    return;
-  }
-  violations.add('$field $message');
-}
-
-Set<NodeId> _txnCollectDuplicateNodeIds(Scene scene) {
-  final seen = <NodeId>{};
-  final duplicates = <NodeId>{};
-  final backgroundLayer = scene.backgroundLayer;
-  if (backgroundLayer != null) {
-    for (final node in backgroundLayer.nodes) {
-      if (!seen.add(node.id)) {
-        duplicates.add(node.id);
-      }
-    }
-  }
-  for (final layer in scene.layers) {
-    for (final node in layer.nodes) {
-      if (!seen.add(node.id)) {
-        duplicates.add(node.id);
-      }
-    }
-  }
-  return duplicates;
-}
-
-Set<LayerId> _txnCollectDuplicateLayerIds(Scene scene) {
-  final seen = <LayerId>{};
-  final duplicates = <LayerId>{};
-  for (final layer in scene.layers) {
-    if (!seen.add(layer.id)) {
-      duplicates.add(layer.id);
-    }
-  }
-  return duplicates;
 }
