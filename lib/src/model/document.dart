@@ -151,6 +151,18 @@ int txnInsertContentLayerInScene({
   );
 }
 
+void txnReplaceContentLayerInScene({
+  required Scene scene,
+  required int layerIndex,
+  required ContentLayer layer,
+}) {
+  document_scene_insert.txnReplaceContentLayerInScene(
+    scene: scene,
+    layerIndex: layerIndex,
+    layer: layer,
+  );
+}
+
 SceneNode? txnEraseNodeFromScene({
   required Scene scene,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,

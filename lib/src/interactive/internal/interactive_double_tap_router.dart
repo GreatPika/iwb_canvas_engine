@@ -3,7 +3,6 @@ import 'dart:ui';
 import '../../core/action_events.dart';
 import '../../core/geometry.dart';
 import '../../core/interaction_types.dart';
-import '../../core/nodes.dart' show TextNode;
 import '../../contract/snapshot.dart';
 
 class InteractiveDoubleTapRouterCallbacks {
@@ -17,7 +16,7 @@ class InteractiveDoubleTapRouterCallbacks {
 
   final CanvasMode Function() readMode;
   final SceneSnapshot Function() readSnapshot;
-  final Object? Function(Offset scenePoint) hitTestTopNode;
+  final NodeSnapshot? Function(Offset scenePoint) hitTestTopNode;
   final int Function(int? hintTimestampMs) resolveTimestampMs;
   final void Function(EditTextRequested request) emitEditTextRequested;
 }
@@ -37,7 +36,7 @@ class InteractiveDoubleTapRouter {
       callbacks.readSnapshot().camera.offset,
     );
     final hit = callbacks.hitTestTopNode(scenePoint);
-    if (hit is! TextNode) {
+    if (hit is! TextNodeSnapshot) {
       return;
     }
 

@@ -453,8 +453,7 @@ final class _ControllerLayerMutationVisitor extends RecursiveAstVisitor<void> {
 _ControllerLayerMutationOccurrence? _matchControllerLayerMutation(
   MethodInvocation node, {
   required GuardrailContext context,
-}
-) {
+}) {
   final methodName = node.methodName.name;
   if (!_guardedSceneLayersMutationMethods.contains(methodName)) {
     return null;
@@ -473,8 +472,7 @@ _ControllerLayerMutationOccurrence? _matchControllerLayerMutation(
 _ControllerLayerMutationOccurrence? _matchControllerLayerAssignment(
   AssignmentExpression node, {
   required GuardrailContext context,
-}
-) {
+}) {
   final leftHandSide = node.leftHandSide;
   if (leftHandSide is! IndexExpression) {
     return null;
@@ -499,9 +497,11 @@ bool _isSceneLayersAccess(
   };
   final receiver = switch (unwrapped) {
     PropertyAccess(:final target, :final propertyName)
-        when target != null && propertyName.name == 'layers' => target,
+        when target != null && propertyName.name == 'layers' =>
+      target,
     PrefixedIdentifier(:final prefix, :final identifier)
-        when identifier.name == 'layers' => prefix,
+        when identifier.name == 'layers' =>
+      prefix,
     _ => null,
   };
   if (receiver == null) {

@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import '../../core/nodes.dart' show SceneNode;
 import '../../core/scene_limits.dart';
 import '../../core/scene_spatial_index.dart';
 import '../../contract/snapshot.dart';
@@ -12,15 +11,15 @@ class InteractiveDrawEraserEngineCallbacks {
   const InteractiveDrawEraserEngineCallbacks({
     required this.onOverlayStateChanged,
     required this.querySpatialCandidates,
-    required this.resolveSpatialCandidateNode,
+    required this.resolveSpatialCandidateSnapshot,
     required this.commitEraseNodes,
   });
 
   final VoidCallback onOverlayStateChanged;
   final List<SceneSpatialCandidate> Function(Rect bounds)
   querySpatialCandidates;
-  final SceneNode? Function(SceneSpatialCandidate candidate)
-  resolveSpatialCandidateNode;
+  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  resolveSpatialCandidateSnapshot;
   final int Function(Iterable<NodeId> ids) commitEraseNodes;
 }
 
@@ -36,7 +35,8 @@ class InteractiveDrawEraserEngine {
       InteractiveDrawEraserTargets(
         callbacks: InteractiveDrawEraserTargetsCallbacks(
           querySpatialCandidates: callbacks.querySpatialCandidates,
-          resolveSpatialCandidateNode: callbacks.resolveSpatialCandidateNode,
+          resolveSpatialCandidateSnapshot:
+              callbacks.resolveSpatialCandidateSnapshot,
           onSpatialQuery: _incrementSpatialQueryCount,
         ),
       );

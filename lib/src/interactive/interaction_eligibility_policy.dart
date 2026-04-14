@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import '../core/nodes.dart' show SceneNode;
 import '../contract/snapshot.dart';
 import '../core/node_geometry.dart';
 
@@ -33,25 +32,6 @@ bool canCommitMove(NodeSnapshot node) {
 /// Pure interactive preflight policy for delete eligibility.
 bool canDelete(NodeSnapshot node) {
   return _canDeleteFlag(isDeletable: node.isDeletable);
-}
-
-bool canDeleteSceneNode(SceneNode node) {
-  return _canDeleteFlag(isDeletable: node.isDeletable);
-}
-
-bool canSelectSceneNode(SceneNode node) {
-  return _canSelectFlags(
-    isVisible: node.isVisible,
-    isSelectable: node.isSelectable,
-  );
-}
-
-bool canPreviewMoveSceneNode(SceneNode node) {
-  return canSelectSceneNode(node) &&
-      _canTransformFlags(
-        isTransformable: node.isTransformable,
-        isLocked: node.isLocked,
-      );
 }
 
 List<NodeSnapshot> selectedNodesInSnapshotOrder({
@@ -125,10 +105,15 @@ List<NodeId> deletableSelectedNodeIdsInSnapshot({
 Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> nodes) {
   Rect? bounds;
   for (final nodeSnapshot in nodes) {
-    final boundsWorld = nodeSnapshotBoundsWorld(nodeSnapshot);
+    final boundsWorld = _snapshotBoundsWorld(nodeSnapshot);
     bounds = bounds == null ? boundsWorld : bounds.expandToInclude(boundsWorld);
   }
   return bounds?.center ?? Offset.zero;
+}
+
+Rect _snapshotBoundsWorld(NodeSnapshot node) {
+  requireNodeSnapshotGeometrySupport(node);
+  return nodeSnapshotBoundsWorld(node);
 }
 
 bool _canSelectFlags({required bool isVisible, required bool isSelectable}) {

@@ -54,6 +54,20 @@ Rect nodeSnapshotBoundsWorld(NodeSnapshot node) {
   return isFiniteRect(bounds) ? bounds : Rect.zero;
 }
 
+void requireNodeSnapshotGeometrySupport(NodeSnapshot node) {
+  switch (node) {
+    case ImageNodeSnapshot():
+    case TextNodeSnapshot():
+    case RectNodeSnapshot():
+    case LineNodeSnapshot():
+    case StrokeNodeSnapshot():
+    case PathNodeSnapshot():
+      return;
+    default:
+      throw StateError('Unsupported snapshot node type: ${node.runtimeType}');
+  }
+}
+
 bool nodeGeometryHitTest(Offset point, SceneNode node) {
   if (!_isHitTestEligible(
     point,

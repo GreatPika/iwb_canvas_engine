@@ -3,7 +3,6 @@ import 'dart:ui' hide Scene;
 import 'package:flutter/foundation.dart';
 
 import '../contract/scene_render_state.dart';
-import '../core/nodes.dart' show SceneNode;
 import '../core/scene.dart' show Scene;
 import '../core/scene_spatial_index.dart';
 import '../model/document.dart';
@@ -110,10 +109,6 @@ class SceneStoreController extends ChangeNotifier implements SceneRenderState {
 }
 
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
-  List<SceneNode> backgroundLayerNodes() {
-    return _store.sceneDoc.backgroundLayer?.nodes ?? const <SceneNode>[];
-  }
-
   List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) {
     return _commitRuntime.spatialIndexCache.writeQueryCandidates(
       scene: _store.sceneDoc,
@@ -124,63 +119,33 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   }
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate,
-  ) {
+    SceneSpatialCandidate candidate, {
+    SceneSnapshot? snapshotOverride,
+  }) {
     if (candidate.layerIndex < 0) {
       return null;
     }
     return _resolveSnapshotAtLocation(
+      snapshot: snapshotOverride ?? snapshot,
       nodeId: candidate.nodeId,
       layerIndex: candidate.layerIndex,
       nodeIndex: candidate.nodeIndex,
     )?.node;
   }
 
-  SceneNode? resolveSpatialCandidateNode(SceneSpatialCandidate candidate) {
-    if (!_isCurrentRuntimeCandidateLocation(candidate)) {
-      return null;
-    }
-    final layer = _store.sceneDoc.layers[candidate.layerIndex];
-    return layer.nodes[candidate.nodeIndex];
-  }
-
   ({NodeSnapshot node, int layerIndex, int nodeIndex})? resolveSnapshotNodeById(
-    NodeId nodeId,
-  ) {
+    NodeId nodeId, {
+    SceneSnapshot? snapshotOverride,
+  }) {
     final location = _store.nodeLocator[nodeId];
     if (location == null) {
       return null;
     }
     return _resolveSnapshotAtLocation(
+      snapshot: snapshotOverride ?? snapshot,
       nodeId: nodeId,
       layerIndex: location.layerIndex,
       nodeIndex: location.nodeIndex,
-    );
-  }
-
-  bool _isCurrentRuntimeCandidateLocation(SceneSpatialCandidate candidate) {
-    final layerIndex = candidate.layerIndex;
-    if (layerIndex < 0 || layerIndex >= _store.sceneDoc.layers.length) {
-      return false;
-    }
-
-    final layer = _store.sceneDoc.layers[layerIndex];
-    final nodeIndex = candidate.nodeIndex;
-    if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
-      return false;
-    }
-
-    final node = layer.nodes[nodeIndex];
-    return node.id == candidate.nodeId;
-  }
-
-  ({SceneNode node, int layerIndex, int nodeIndex})? resolveNodeById(
-    NodeId nodeId,
-  ) {
-    return txnFindNodeByLocator(
-      scene: _store.sceneDoc,
-      nodeLocator: _store.nodeLocator,
-      nodeId: nodeId,
     );
   }
 
@@ -209,11 +174,11 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
 
   ({NodeSnapshot node, int layerIndex, int nodeIndex})?
   _resolveSnapshotAtLocation({
+    required SceneSnapshot snapshot,
     required NodeId nodeId,
     required int layerIndex,
     required int nodeIndex,
   }) {
-    final snapshot = this.snapshot;
     if (layerIndex == -1) {
       final backgroundNodes = snapshot.backgroundLayer.nodes;
       if (nodeIndex < 0 || nodeIndex >= backgroundNodes.length) {

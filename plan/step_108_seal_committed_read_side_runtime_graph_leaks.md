@@ -425,7 +425,7 @@ resolution behavior fixed by section 4.
   locked in section 4, even if the temporary runtime bridge still exists for
   downstream compilation.
 
-### Slice 3. [ ] Migrate interactive committed reads to the exact snapshot surface
+### Slice 3. [x] Migrate interactive committed reads to the exact snapshot surface
 
 #### Slice Contract
 All controller-owned interactive committed read paths consume the exact

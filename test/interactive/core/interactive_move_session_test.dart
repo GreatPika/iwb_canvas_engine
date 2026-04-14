@@ -21,7 +21,7 @@ void main() {
       readSnapshot: SceneSnapshot.new,
       readSelectedNodeIds: () => const <NodeId>{},
       querySpatialCandidates: (_) => const <SceneSpatialCandidate>[],
-      resolveSpatialCandidateNode: (_) => null,
+      resolveSpatialCandidateSnapshot: (_) => null,
       writeSelectionReplace: (_) {},
       writeSelectionClear: () {},
       commitMoveSelection: (_) =>

@@ -245,7 +245,7 @@ void main() {
   );
 
   test(
-    'controller-owned render state clips background enumeration to runtime node count',
+    'controller-owned render state enumerates committed snapshot background nodes',
     () {
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
@@ -296,7 +296,10 @@ void main() {
           .map((node) => node.id)
           .toList(growable: false);
 
-      expect(candidateIds, const <NodeId>['runtime-background-node']);
+      expect(candidateIds, const <NodeId>[
+        'runtime-background-node',
+        'snapshot-only-background-node',
+      ]);
     },
   );
 
@@ -540,7 +543,7 @@ void main() {
   );
 
   test(
-    'controller-owned render state drops selected background supplements when snapshot background node is stale',
+    'controller-owned render state resolves selected background supplements from the active frame snapshot',
     () {
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(

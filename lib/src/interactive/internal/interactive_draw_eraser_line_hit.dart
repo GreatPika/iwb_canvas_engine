@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import '../../core/geometry.dart';
-import '../../core/nodes.dart' show LineNode;
+import '../../contract/snapshot.dart';
 import 'interactive_draw_eraser_projection.dart';
 import 'interactive_geometry.dart';
 
@@ -14,7 +14,7 @@ class InteractiveDrawEraserLineHit {
 
   bool hitsProjectedLine(
     InteractiveDrawProjectedEraser projected,
-    LineNode line,
+    LineNodeSnapshot line,
   ) {
     if (_singleLocalPointHitsLine(projected, line)) return true;
     return _localEraserSegmentsHitLine(projected, line);
@@ -22,7 +22,7 @@ class InteractiveDrawEraserLineHit {
 
   bool _singleLocalPointHitsLine(
     InteractiveDrawProjectedEraser projected,
-    LineNode line,
+    LineNodeSnapshot line,
   ) {
     if (projected.points.length != 1) return false;
     return distanceSquaredPointToSegment(
@@ -35,7 +35,7 @@ class InteractiveDrawEraserLineHit {
 
   bool _localEraserSegmentsHitLine(
     InteractiveDrawProjectedEraser projected,
-    LineNode line,
+    LineNodeSnapshot line,
   ) {
     final lineBounds = Rect.fromPoints(line.start, line.end);
     final eraserBatches = buildSegmentBatches(

@@ -9,7 +9,6 @@ import '../../controller/scene_store_controller.dart';
 import '../../core/geometry.dart';
 import '../../core/node_geometry.dart';
 import '../../core/numeric_clamp.dart';
-import '../../core/scene_node.dart';
 import '../scene_controller_interaction.dart';
 import 'scene_controller_interaction_runtime.dart';
 import 'scene_controller_pointer_session.dart';
@@ -161,27 +160,19 @@ final class SceneControllerSceneViewRenderState
     final contentCandidates =
         <({NodeSnapshot node, int layerIndex, int nodeIndex})>[];
 
-    final runtimeBackgroundNodes = _storeController.backgroundLayerNodes();
     final snapshotBackgroundNodes = snapshot.backgroundLayer.nodes;
-    final backgroundCount =
-        runtimeBackgroundNodes.length < snapshotBackgroundNodes.length
-        ? runtimeBackgroundNodes.length
-        : snapshotBackgroundNodes.length;
-    for (var nodeIndex = 0; nodeIndex < backgroundCount; nodeIndex++) {
-      final runtimeNode = runtimeBackgroundNodes[nodeIndex];
+    for (
+      var nodeIndex = 0;
+      nodeIndex < snapshotBackgroundNodes.length;
+      nodeIndex++
+    ) {
       final snapshotNode = snapshotBackgroundNodes[nodeIndex];
-      if (!_matchesSnapshotNode(
-        runtimeNode: runtimeNode,
-        snapshot: snapshotNode,
-      )) {
-        continue;
-      }
       final previewDelta = _previewDeltaForNode(
         previewResolver,
-        runtimeNode.id,
+        snapshotNode.id,
       );
-      final candidateBounds = nodeGeometryCandidateBoundsWorld(
-        runtimeNode,
+      final candidateBounds = _snapshotGeometryCandidateBoundsWorld(
+        snapshotNode,
       ).shift(previewDelta);
       if (!isFiniteRect(candidateBounds) ||
           !query.viewportRect.overlaps(candidateBounds)) {
@@ -198,16 +189,9 @@ final class SceneControllerSceneViewRenderState
     )) {
       final snapshotNode = _storeController.resolveSpatialCandidateSnapshot(
         candidate,
+        snapshotOverride: snapshot,
       );
       if (snapshotNode == null || !acceptedNodeIds.add(snapshotNode.id)) {
-        continue;
-      }
-      final currentSnapshotNode = _resolveSnapshotNode(
-        snapshot: snapshot,
-        layerIndex: candidate.layerIndex,
-        nodeIndex: candidate.nodeIndex,
-      );
-      if (!identical(currentSnapshotNode, snapshotNode)) {
         continue;
       }
       contentCandidates.add((
@@ -219,39 +203,32 @@ final class SceneControllerSceneViewRenderState
 
     for (final nodeId in selectedNodeIds) {
       final previewDelta = _previewDeltaForNode(previewResolver, nodeId);
-      final resolvedNode = _storeController.resolveNodeById(nodeId);
+      final resolvedNode = _storeController.resolveSnapshotNodeById(
+        nodeId,
+        snapshotOverride: snapshot,
+      );
       if (resolvedNode == null || acceptedNodeIds.contains(nodeId)) {
         continue;
       }
-      final candidateBounds = nodeGeometryCandidateBoundsWorld(
+      final candidateBounds = _snapshotGeometryCandidateBoundsWorld(
         resolvedNode.node,
       ).shift(previewDelta);
       if (!isFiniteRect(candidateBounds) ||
           !query.visibilityRect.overlaps(candidateBounds)) {
         continue;
       }
-      final snapshotNode = _resolveSnapshotNode(
-        snapshot: snapshot,
-        layerIndex: resolvedNode.layerIndex,
-        nodeIndex: resolvedNode.nodeIndex,
-      );
-      if (snapshotNode == null ||
-          !_matchesSnapshotNode(
-            runtimeNode: resolvedNode.node,
-            snapshot: snapshotNode,
-          ) ||
-          !acceptedNodeIds.add(nodeId)) {
+      if (!acceptedNodeIds.add(nodeId)) {
         continue;
       }
       if (resolvedNode.layerIndex < 0) {
         backgroundCandidates.add((
-          node: snapshotNode,
+          node: resolvedNode.node,
           nodeIndex: resolvedNode.nodeIndex,
         ));
         continue;
       }
       contentCandidates.add((
-        node: snapshotNode,
+        node: resolvedNode.node,
         layerIndex: resolvedNode.layerIndex,
         nodeIndex: resolvedNode.nodeIndex,
       ));
@@ -338,27 +315,6 @@ final class SceneControllerOverlayRepaintChannel extends ChangeNotifier {
   }
 }
 
-NodeSnapshot? _resolveSnapshotNode({
-  required SceneSnapshot snapshot,
-  required int layerIndex,
-  required int nodeIndex,
-}) {
-  if (layerIndex == -1) {
-    if (nodeIndex < 0 || nodeIndex >= snapshot.backgroundLayer.nodes.length) {
-      return null;
-    }
-    return snapshot.backgroundLayer.nodes[nodeIndex];
-  }
-  if (layerIndex < 0 || layerIndex >= snapshot.layers.length) {
-    return null;
-  }
-  final layer = snapshot.layers[layerIndex];
-  if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
-    return null;
-  }
-  return layer.nodes[nodeIndex];
-}
-
 Offset _previewDeltaForNode(
   Offset Function(NodeId nodeId) previewResolver,
   NodeId nodeId,
@@ -366,24 +322,7 @@ Offset _previewDeltaForNode(
   return sanitizeFiniteOffset(previewResolver(nodeId));
 }
 
-bool _matchesSnapshotNode({
-  required SceneNode runtimeNode,
-  required NodeSnapshot snapshot,
-}) {
-  return runtimeNode.id == snapshot.id &&
-      runtimeNode.type == _snapshotNodeType(snapshot);
-}
-
-NodeType _snapshotNodeType(NodeSnapshot snapshot) {
-  return switch (snapshot) {
-    ImageNodeSnapshot() => NodeType.image,
-    TextNodeSnapshot() => NodeType.text,
-    StrokeNodeSnapshot() => NodeType.stroke,
-    LineNodeSnapshot() => NodeType.line,
-    RectNodeSnapshot() => NodeType.rect,
-    PathNodeSnapshot() => NodeType.path,
-    _ => throw StateError(
-      'Unsupported snapshot node type: ${snapshot.runtimeType}',
-    ),
-  };
+Rect _snapshotGeometryCandidateBoundsWorld(NodeSnapshot node) {
+  requireNodeSnapshotGeometrySupport(node);
+  return nodeSnapshotGeometryCandidateBoundsWorld(node);
 }

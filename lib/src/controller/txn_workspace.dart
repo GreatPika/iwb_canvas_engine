@@ -219,7 +219,11 @@ extension _TxnWorkspaceNodeOps on _TxnWorkspace {
     }
 
     final cloned = txnCloneContentLayerShallow(current);
-    scene.layers[layerIndex] = cloned;
+    txnReplaceContentLayerInScene(
+      scene: scene,
+      layerIndex: layerIndex,
+      layer: cloned,
+    );
     _clonedLayerIds.add(cloned.id);
     ctx._debugStats.layerShallowClones = ctx._debugStats.layerShallowClones + 1;
     return cloned;

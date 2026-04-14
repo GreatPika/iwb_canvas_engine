@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../../core/hit_test.dart';
-import '../../core/nodes.dart' show LineNode, SceneNode, StrokeNode;
 import '../../core/scene_spatial_index.dart';
 import '../../contract/snapshot.dart';
 import '../interaction_eligibility_policy.dart'
@@ -12,14 +11,14 @@ import 'interactive_geometry.dart';
 class InteractiveDrawEraserTargetsCallbacks {
   const InteractiveDrawEraserTargetsCallbacks({
     required this.querySpatialCandidates,
-    required this.resolveSpatialCandidateNode,
+    required this.resolveSpatialCandidateSnapshot,
     required this.onSpatialQuery,
   });
 
   final List<SceneSpatialCandidate> Function(Rect bounds)
   querySpatialCandidates;
-  final SceneNode? Function(SceneSpatialCandidate candidate)
-  resolveSpatialCandidateNode;
+  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  resolveSpatialCandidateSnapshot;
   final void Function() onSpatialQuery;
 }
 
@@ -32,7 +31,7 @@ class InteractiveDrawEraserTarget {
 
   final int layerIndex;
   final int nodeIndex;
-  final SceneNode node;
+  final NodeSnapshot node;
 }
 
 class InteractiveDrawEraserTargets {
@@ -104,10 +103,10 @@ class InteractiveDrawEraserTargets {
     Map<NodeId, InteractiveDrawEraserTarget> byId,
     SceneSpatialCandidate candidate,
   ) {
-    final node = callbacks.resolveSpatialCandidateNode(candidate);
+    final node = callbacks.resolveSpatialCandidateSnapshot(candidate);
     if (node == null) return;
-    if (node is! StrokeNode && node is! LineNode) return;
-    if (!interaction_eligibility_policy.canDeleteSceneNode(node)) return;
+    if (node is! StrokeNodeSnapshot && node is! LineNodeSnapshot) return;
+    if (!interaction_eligibility_policy.canDelete(node)) return;
     byId[node.id] = InteractiveDrawEraserTarget(
       layerIndex: candidate.layerIndex,
       nodeIndex: candidate.nodeIndex,

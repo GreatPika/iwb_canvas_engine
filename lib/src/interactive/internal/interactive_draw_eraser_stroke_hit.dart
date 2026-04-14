@@ -1,5 +1,5 @@
+import '../../contract/snapshot.dart';
 import '../../core/geometry.dart';
-import '../../core/nodes.dart' show StrokeNode;
 import 'interactive_draw_eraser_projection.dart';
 import 'interactive_geometry.dart';
 
@@ -13,7 +13,7 @@ class InteractiveDrawEraserStrokeHit {
 
   bool hitsProjectedStroke(
     InteractiveDrawProjectedEraser projected,
-    StrokeNode stroke,
+    StrokeNodeSnapshot stroke,
   ) {
     if (stroke.points.isEmpty) return false;
     if (_strokeSinglePointHit(projected, stroke)) return true;
@@ -23,7 +23,7 @@ class InteractiveDrawEraserStrokeHit {
 
   bool _strokeSinglePointHit(
     InteractiveDrawProjectedEraser projected,
-    StrokeNode stroke,
+    StrokeNodeSnapshot stroke,
   ) {
     if (stroke.points.length != 1) return false;
     final point = stroke.points.first;
@@ -39,7 +39,7 @@ class InteractiveDrawEraserStrokeHit {
 
   bool _singleEraserPointHitsStroke(
     InteractiveDrawProjectedEraser projected,
-    StrokeNode stroke,
+    StrokeNodeSnapshot stroke,
   ) {
     if (projected.points.length != 1) return false;
     final eraserPoint = projected.points.first;
@@ -58,7 +58,7 @@ class InteractiveDrawEraserStrokeHit {
 
   bool _eraserSegmentsHitStroke(
     InteractiveDrawProjectedEraser projected,
-    StrokeNode stroke,
+    StrokeNodeSnapshot stroke,
   ) {
     final eraserBatches = buildSegmentBatches(
       projected.points,
@@ -84,7 +84,7 @@ class InteractiveDrawEraserStrokeHit {
 
   bool _eraserBatchHitsStrokeBatches(
     InteractiveDrawProjectedEraser projected,
-    StrokeNode stroke,
+    StrokeNodeSnapshot stroke,
     SegmentBatch eraserBatch,
     List<SegmentBatch> strokeBatches,
   ) {
@@ -110,7 +110,7 @@ class InteractiveDrawEraserStrokeHit {
 
   bool _segmentBatchPairHitsStroke(
     InteractiveDrawProjectedEraser projected,
-    StrokeNode stroke,
+    StrokeNodeSnapshot stroke,
     SegmentBatch eraserBatch,
     SegmentBatch strokeBatch,
   ) {
@@ -128,7 +128,7 @@ class InteractiveDrawEraserStrokeHit {
 
   bool _eraserSegmentHitsStrokeBatch(
     InteractiveDrawProjectedEraser projected,
-    StrokeNode stroke,
+    StrokeNodeSnapshot stroke,
     int eraserSegmentIndex,
     SegmentBatch strokeBatch,
   ) {

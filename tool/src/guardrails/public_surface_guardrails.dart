@@ -286,6 +286,16 @@ Future<PublicSurfaceGuardrailResult> runPublicSurfaceGuardrails({
       violations: violations,
     );
   }
+  validateExportedApiScanPolicies(
+    exportedFiles: exportedSurfaces.keys.toSet(),
+    violations: violations,
+  );
+  if (violations.isNotEmpty) {
+    return PublicSurfaceGuardrailResult(
+      exportedSurfaces: exportedSurfaces,
+      violations: violations,
+    );
+  }
 
   _checkExportedApiImports(
     context: context,
@@ -309,6 +319,9 @@ void validateExportedApiScanPolicies({
   required Set<String> exportedFiles,
   required List<GuardrailViolation> violations,
 }) {
+  if (exportedFiles.isEmpty) {
+    return;
+  }
   final policyKeys = nonContractExportedApiScanPolicies.keys.toSet();
   final nonContractExportSet = exportedFiles
       .where((path) => !path.startsWith('/lib/src/contract/'))

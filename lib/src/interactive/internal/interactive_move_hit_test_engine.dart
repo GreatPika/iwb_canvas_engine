@@ -1,9 +1,9 @@
 import 'dart:ui';
 
 import '../../core/hit_test.dart';
-import '../../core/nodes.dart' show SceneNode;
+import '../../core/node_geometry.dart';
 import '../../core/scene_spatial_index.dart';
-import '../../contract/ids.dart';
+import '../../contract/snapshot.dart';
 import '../interaction_eligibility_policy.dart'
     as interaction_eligibility_policy;
 import 'interactive_move_callbacks.dart';
@@ -31,11 +31,11 @@ final class InteractiveMoveHitTestEngine {
           });
 
     for (final candidate in candidates) {
-      final node = callbacks.resolveSpatialCandidateNode(candidate);
+      final node = callbacks.resolveSpatialCandidateSnapshot(candidate);
       if (node == null) {
         continue;
       }
-      if (!interaction_eligibility_policy.canSelectSceneNode(node)) {
+      if (!interaction_eligibility_policy.canSelect(node)) {
         continue;
       }
       if (!effectiveNodeBoundsWorld(node).overlaps(rect)) {
@@ -47,15 +47,15 @@ final class InteractiveMoveHitTestEngine {
     return ids;
   }
 
-  SceneNode? hitTestTopNode(Offset scenePoint) {
+  NodeSnapshot? hitTestTopNode(Offset scenePoint) {
     final candidates = _queryHitTestCandidates(scenePoint);
 
     for (final candidate in candidates) {
-      final node = callbacks.resolveSpatialCandidateNode(candidate);
+      final node = callbacks.resolveSpatialCandidateSnapshot(candidate);
       if (node == null) {
         continue;
       }
-      if (!interaction_eligibility_policy.canSelectSceneNode(node)) {
+      if (!interaction_eligibility_policy.canSelect(node)) {
         continue;
       }
       if (_hitTestNodeWithMovePreview(scenePoint, node)) {
@@ -66,9 +66,9 @@ final class InteractiveMoveHitTestEngine {
     return null;
   }
 
-  Rect effectiveNodeBoundsWorld(SceneNode node) {
+  Rect effectiveNodeBoundsWorld(NodeSnapshot node) {
     final delta = previewState.deltaForNode(node.id);
-    return node.boundsWorld.shift(delta);
+    return nodeSnapshotBoundsWorld(node).shift(delta);
   }
 
   List<SceneSpatialCandidate> _queryHitTestCandidates(Offset scenePoint) {
@@ -99,11 +99,11 @@ final class InteractiveMoveHitTestEngine {
     return candidates;
   }
 
-  bool _hitTestNodeWithMovePreview(Offset scenePoint, SceneNode node) {
+  bool _hitTestNodeWithMovePreview(Offset scenePoint, NodeSnapshot node) {
     final delta = previewState.deltaForNode(node.id);
     if (delta == Offset.zero) {
-      return hitTestNode(scenePoint, node);
+      return hitTestNodeSnapshot(scenePoint, node);
     }
-    return hitTestNode(scenePoint - delta, node);
+    return hitTestNodeSnapshot(scenePoint - delta, node);
   }
 }

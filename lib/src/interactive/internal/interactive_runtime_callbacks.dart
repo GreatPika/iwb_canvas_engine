@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import '../../core/interaction_types.dart';
-import '../../core/nodes.dart' show SceneNode;
 import '../../core/scene_spatial_index.dart';
 import '../../contract/snapshot.dart';
 import 'interactive_draw_style.dart';
@@ -18,7 +17,7 @@ class InteractiveRuntimeCallbacks {
     required this.readDragStartSlop,
     required this.readDrawStyle,
     required this.querySpatialCandidates,
-    required this.resolveSpatialCandidateNode,
+    required this.resolveSpatialCandidateSnapshot,
     required this.writeSelectionReplace,
     required this.writeSelectionClear,
     required this.commitMoveSelection,
@@ -37,8 +36,8 @@ class InteractiveRuntimeCallbacks {
   final InteractiveDrawStyle Function() readDrawStyle;
   final List<SceneSpatialCandidate> Function(Rect bounds)
   querySpatialCandidates;
-  final SceneNode? Function(SceneSpatialCandidate candidate)
-  resolveSpatialCandidateNode;
+  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  resolveSpatialCandidateSnapshot;
   final void Function(Iterable<NodeId> nodeIds) writeSelectionReplace;
   final void Function() writeSelectionClear;
   final MoveCommitSelectionResult Function(Offset proposedDelta)

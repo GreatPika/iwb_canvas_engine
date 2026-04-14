@@ -1112,6 +1112,48 @@ void main() {
     );
   });
 
+  test(
+    'txnReplaceContentLayerInScene validates index and replaces in place',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-20'),
+          ContentLayer(id: 'layer-auto-21'),
+        ],
+      );
+      final replacement = ContentLayer(
+        id: 'layer-auto-21',
+        nodes: <SceneNode>[
+          RectNode(id: 'replaced-node', size: const Size(2, 2)),
+        ],
+      );
+
+      txnReplaceContentLayerInScene(
+        scene: scene,
+        layerIndex: 1,
+        layer: replacement,
+      );
+
+      expect(scene.layers[1], same(replacement));
+      expect(
+        () => txnReplaceContentLayerInScene(
+          scene: scene,
+          layerIndex: -1,
+          layer: replacement,
+        ),
+        throwsRangeError,
+      );
+      expect(
+        () => txnReplaceContentLayerInScene(
+          scene: scene,
+          layerIndex: scene.layers.length,
+          layer: replacement,
+        ),
+        throwsRangeError,
+      );
+    },
+  );
+
   test('selection/grid helpers enforce transaction invariants', () {
     final scene = Scene(
       backgroundLayer: BackgroundLayer(

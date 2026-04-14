@@ -147,7 +147,14 @@ void _registerDuplicateExportCombinatorViolationTests() {
                 "export 'src/contract/snapshot.dart' hide Scene;\n",
           ),
         );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/core/scene.dart',
+          'class Scene {}\n',
+        );
         writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+import '../core/scene.dart';
+
 abstract class Foo {
   Scene get scene;
 }
@@ -157,9 +164,11 @@ abstract class Foo {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          diagnostic(
-            category: 'public contract',
-            detail: 'exported API must not expose mutable core types',
+          allOf(
+            contains('public contract violation:'),
+            contains(
+              'exported API must not expose mutable core or runtime owner types',
+            ),
           ),
         );
       } finally {
@@ -186,7 +195,14 @@ abstract class Foo {
             "export 'src/contract/snapshot.dart' show Scene hide Scene;\n",
           ),
         );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/core/scene.dart',
+          'class Scene {}\n',
+        );
         writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+import '../core/scene.dart';
+
 abstract class Foo {
   Scene get scene;
 }

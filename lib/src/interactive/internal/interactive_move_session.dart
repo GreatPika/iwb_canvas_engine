@@ -1,8 +1,7 @@
 import 'dart:ui';
 
 import '../../contract/pointer_input.dart';
-import '../../core/nodes.dart' show SceneNode;
-import '../../contract/ids.dart';
+import '../../contract/snapshot.dart';
 import 'interactive_move_commit_coordinator.dart';
 import 'interactive_move_callbacks.dart';
 import 'interactive_move_gesture_state.dart';
@@ -40,7 +39,7 @@ class InteractiveMoveSession {
 
   Rect? get selectionRect => _gestureState.selectionRect;
 
-  SceneNode? hitTestTopNode(Offset scenePoint) {
+  NodeSnapshot? hitTestTopNode(Offset scenePoint) {
     return _hitTestEngine.hitTestTopNode(scenePoint);
   }
 

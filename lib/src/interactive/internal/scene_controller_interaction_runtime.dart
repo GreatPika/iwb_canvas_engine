@@ -381,8 +381,8 @@ InteractiveRuntime _createInteractiveRuntime(
       readDragStartSlop: request.readDragStartSlop,
       readDrawStyle: request.readDrawStyle,
       querySpatialCandidates: request.storeController.querySpatialCandidates,
-      resolveSpatialCandidateNode:
-          request.storeController.resolveSpatialCandidateNode,
+      resolveSpatialCandidateSnapshot:
+          request.storeController.resolveSpatialCandidateSnapshot,
       writeSelectionReplace: mutationBoundary.setSelection,
       writeSelectionClear: mutationBoundary.clearSelection,
       commitMoveSelection: mutationBoundary.commitMoveSelection,

@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import '../../core/action_events.dart';
-import '../../core/nodes.dart' show SceneNode;
 import '../../core/scene_spatial_index.dart';
 import '../../contract/snapshot.dart';
 
@@ -12,7 +11,7 @@ class InteractiveDrawCoordinatorCallbacks {
     required this.commitDrawStroke,
     required this.commitDrawLineFromWorldSegment,
     required this.querySpatialCandidates,
-    required this.resolveSpatialCandidateNode,
+    required this.resolveSpatialCandidateSnapshot,
     required this.commitEraseNodes,
   });
 
@@ -41,7 +40,7 @@ class InteractiveDrawCoordinatorCallbacks {
   commitDrawLineFromWorldSegment;
   final List<SceneSpatialCandidate> Function(Rect bounds)
   querySpatialCandidates;
-  final SceneNode? Function(SceneSpatialCandidate candidate)
-  resolveSpatialCandidateNode;
+  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  resolveSpatialCandidateSnapshot;
   final int Function(Iterable<NodeId> ids) commitEraseNodes;
 }

@@ -1,9 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
-import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/interactive_draw_eraser_engine.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/interactive_draw_eraser_projection.dart';
 
@@ -33,7 +34,7 @@ void main() {
       nodeId: line.id,
       layerIndex: 0,
       nodeIndex: 0,
-      candidateBoundsWorld: line.boundsWorld,
+      candidateBoundsWorld: nodeSnapshotBoundsWorld(line),
     );
     final removedIds = <String>[];
 
@@ -41,7 +42,8 @@ void main() {
       callbacks: InteractiveDrawEraserEngineCallbacks(
         onOverlayStateChanged: () {},
         querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
-        resolveSpatialCandidateNode: (c) => c.nodeId == line.id ? line : null,
+        resolveSpatialCandidateSnapshot: (c) =>
+            c.nodeId == line.id ? line : null,
         commitEraseNodes: (ids) {
           removedIds.addAll(ids);
           return ids.length;
@@ -71,7 +73,7 @@ void main() {
       nodeId: stroke.id,
       layerIndex: 0,
       nodeIndex: 0,
-      candidateBoundsWorld: stroke.boundsWorld,
+      candidateBoundsWorld: nodeSnapshotBoundsWorld(stroke),
     );
     final removedIds = <String>[];
 
@@ -79,7 +81,7 @@ void main() {
       callbacks: InteractiveDrawEraserEngineCallbacks(
         onOverlayStateChanged: () {},
         querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
-        resolveSpatialCandidateNode: (c) =>
+        resolveSpatialCandidateSnapshot: (c) =>
             c.nodeId == stroke.id ? stroke : null,
         commitEraseNodes: (ids) {
           removedIds.addAll(ids);
@@ -100,19 +102,20 @@ void main() {
   });
 
   test('eraser keeps undeletable nodes even when geometry matches', () {
-    final line = LineNode(
+    final line = LineNodeSnapshot(
       id: 'line',
       start: const Offset(-20, 0),
       end: const Offset(20, 0),
       thickness: 2,
       color: const Color(0xFF000000),
       isDeletable: false,
-    )..position = const Offset(120, 80);
+      transform: Transform2D.translation(const Offset(120, 80)),
+    );
     final candidate = SceneSpatialCandidate(
       nodeId: line.id,
       layerIndex: 0,
       nodeIndex: 0,
-      candidateBoundsWorld: line.boundsWorld,
+      candidateBoundsWorld: nodeSnapshotBoundsWorld(line),
     );
     final removedIds = <String>[];
 
@@ -120,7 +123,8 @@ void main() {
       callbacks: InteractiveDrawEraserEngineCallbacks(
         onOverlayStateChanged: () {},
         querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
-        resolveSpatialCandidateNode: (c) => c.nodeId == line.id ? line : null,
+        resolveSpatialCandidateSnapshot: (c) =>
+            c.nodeId == line.id ? line : null,
         commitEraseNodes: (ids) {
           removedIds.addAll(ids);
           return ids.length;
@@ -139,7 +143,7 @@ void main() {
   });
 }
 
-final class _RawTransformLineNode extends LineNode {
+final class _RawTransformLineNode extends LineNodeSnapshot {
   _RawTransformLineNode({
     required super.id,
     required super.start,
@@ -155,7 +159,7 @@ final class _RawTransformLineNode extends LineNode {
   Transform2D get transform => _rawTransform;
 }
 
-final class _RawTransformStrokeNode extends StrokeNode {
+final class _RawTransformStrokeNode extends StrokeNodeSnapshot {
   _RawTransformStrokeNode({
     required super.id,
     required super.points,

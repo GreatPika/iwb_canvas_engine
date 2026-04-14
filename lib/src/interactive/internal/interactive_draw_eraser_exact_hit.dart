@@ -1,7 +1,8 @@
 import 'dart:ui';
 
 import '../../core/geometry.dart';
-import '../../core/nodes.dart' show LineNode, SceneNode, StrokeNode;
+import '../../core/node_geometry.dart';
+import '../../contract/snapshot.dart';
 import '../../contract/transform2d.dart';
 import 'interactive_draw_eraser_line_hit.dart';
 import 'interactive_draw_eraser_projection.dart';
@@ -31,13 +32,13 @@ class InteractiveDrawEraserExactHit {
 
   bool hitsNode(
     List<Offset> eraserPoints,
-    SceneNode node, {
+    NodeSnapshot node, {
     required double eraserThickness,
   }) {
-    if (node is LineNode) {
+    if (node is LineNodeSnapshot) {
       return _hitsLine(eraserPoints, node, eraserThickness: eraserThickness);
     }
-    if (node is StrokeNode) {
+    if (node is StrokeNodeSnapshot) {
       return _hitsStroke(eraserPoints, node, eraserThickness: eraserThickness);
     }
     return false;
@@ -45,7 +46,7 @@ class InteractiveDrawEraserExactHit {
 
   bool _hitsLine(
     List<Offset> eraserPoints,
-    LineNode line, {
+    LineNodeSnapshot line, {
     required double eraserThickness,
   }) {
     final projected = _projectEraserToLocal(
@@ -57,7 +58,7 @@ class InteractiveDrawEraserExactHit {
     if (projected == null) {
       return _fallbackWorldBoundsHit(
         eraserPoints,
-        boundsWorld: line.boundsWorld,
+        boundsWorld: nodeSnapshotBoundsWorld(line),
         eraserThickness: eraserThickness,
       );
     }
@@ -66,7 +67,7 @@ class InteractiveDrawEraserExactHit {
 
   bool _hitsStroke(
     List<Offset> eraserPoints,
-    StrokeNode stroke, {
+    StrokeNodeSnapshot stroke, {
     required double eraserThickness,
   }) {
     final projected = _projectEraserToLocal(
@@ -78,7 +79,7 @@ class InteractiveDrawEraserExactHit {
     if (projected == null) {
       return _fallbackWorldBoundsHit(
         eraserPoints,
-        boundsWorld: stroke.boundsWorld,
+        boundsWorld: nodeSnapshotBoundsWorld(stroke),
         eraserThickness: eraserThickness,
       );
     }

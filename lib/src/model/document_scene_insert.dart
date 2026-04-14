@@ -24,6 +24,23 @@ int txnInsertContentLayerInScene({
   return resolvedInsertIndex;
 }
 
+void txnReplaceContentLayerInScene({
+  required Scene scene,
+  required int layerIndex,
+  required ContentLayer layer,
+}) {
+  if (layerIndex < 0 || layerIndex >= scene.layers.length) {
+    throw RangeError.range(
+      layerIndex,
+      0,
+      scene.layers.length - 1,
+      'layerIndex',
+    );
+  }
+
+  scene.layers[layerIndex] = layer;
+}
+
 bool txnInsertNodeInScene({
   required Scene scene,
   required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,

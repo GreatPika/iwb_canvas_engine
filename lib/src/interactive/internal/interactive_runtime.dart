@@ -23,7 +23,8 @@ class InteractiveRuntime {
         readSnapshot: callbacks.readSnapshot,
         readSelectedNodeIds: callbacks.readSelectedNodeIds,
         querySpatialCandidates: callbacks.querySpatialCandidates,
-        resolveSpatialCandidateNode: callbacks.resolveSpatialCandidateNode,
+        resolveSpatialCandidateSnapshot:
+            callbacks.resolveSpatialCandidateSnapshot,
         writeSelectionReplace: callbacks.writeSelectionReplace,
         writeSelectionClear: callbacks.writeSelectionClear,
         commitMoveSelection: callbacks.commitMoveSelection,
@@ -38,7 +39,8 @@ class InteractiveRuntime {
         commitDrawLineFromWorldSegment:
             callbacks.commitDrawLineFromWorldSegment,
         querySpatialCandidates: callbacks.querySpatialCandidates,
-        resolveSpatialCandidateNode: callbacks.resolveSpatialCandidateNode,
+        resolveSpatialCandidateSnapshot:
+            callbacks.resolveSpatialCandidateSnapshot,
         commitEraseNodes: callbacks.commitEraseNodes,
       ),
     );

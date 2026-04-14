@@ -95,6 +95,17 @@ void main() {
       );
       expect(nodeSnapshotGeometryHitTest(const Offset(30, 10), stroke), isTrue);
 
+      final line = LineNodeSnapshot(
+        id: 'line-snapshot',
+        start: const Offset(-5, 0),
+        end: const Offset(5, 0),
+        thickness: 2,
+        color: const Color(0xFF000000),
+        transform: Transform2D.translation(const Offset(45, 10)),
+      );
+      expect(nodeSnapshotGeometryHitTest(const Offset(45, 10), line), isTrue);
+      expect(nodeSnapshotGeometryHitTest(const Offset(45, 18), line), isFalse);
+
       final path = PathNodeSnapshot(
         id: 'path-snapshot',
         svgPathData: 'M0 0 H12 V12 H0 Z',
