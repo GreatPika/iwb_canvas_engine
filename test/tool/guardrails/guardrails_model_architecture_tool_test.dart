@@ -365,7 +365,8 @@ class Scene {
           diagnostic(
             category: 'model architecture',
             detail:
-                'controller code must not mutate scene.layers directly via .add(...)',
+                'controller code must not mutate scene.layers directly via .add(...); '
+                'use model-owned scene layer mutation helpers instead.',
           ),
         );
       } finally {
@@ -399,7 +400,8 @@ class Scene {
           diagnostic(
             category: 'model architecture',
             detail:
-                'controller code must not mutate scene.layers directly via .removeAt(...)',
+                'controller code must not mutate scene.layers directly via '
+                '.removeAt(...); use model-owned scene layer mutation helpers instead.',
           ),
         );
       } finally {
@@ -435,7 +437,8 @@ class Scene {
             diagnostic(
               category: 'model architecture',
               detail:
-                  'controller code must not mutate scene.layers directly via []=',
+                  'controller code must not mutate scene.layers directly via '
+                  '[]=; use model-owned scene layer mutation helpers instead.',
             ),
           );
         } finally {
@@ -472,13 +475,57 @@ class Scene {
           diagnostic(
             category: 'model architecture',
             detail:
-                'controller code must not mutate scene.layers directly via .clear(...)',
+                'controller code must not mutate scene.layers directly via '
+                '.clear(...); use model-owned scene layer mutation helpers instead.',
           ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test(
+      'allows controller scene layer mutation through document facade helper',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(sandbox, 'lib/src/controller/scene_runtime.dart', '''
+import '../core/scene.dart';
+import '../model/document.dart';
+
+class _SceneRuntime {
+  void _touch(Scene scene) {
+    txnReplaceContentLayerInScene(
+      scene: scene,
+      layerIndex: 0,
+      layer: Object(),
+    );
+  }
+}
+''');
+          writeSandboxFile(sandbox, 'lib/src/core/scene.dart', '''
+class Scene {
+  final List<Object> layers = <Object>[];
+}
+''');
+          writeSandboxFile(sandbox, 'lib/src/model/document.dart', '''
+import '../core/scene.dart';
+
+void txnReplaceContentLayerInScene({
+  required Scene scene,
+  required int layerIndex,
+  required Object layer,
+}) {}
+''');
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0);
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test('allows local layers collections inside controller code', () async {
       final sandbox = await createGuardrailsSandbox();

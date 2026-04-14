@@ -270,8 +270,8 @@ Future<GuardrailViolation?> _checkControllerStructuralMutationGuardrail(
     line: resolved.lineInfo.getLocation(violation.offset).lineNumber,
     message:
         'model architecture violation: controller code must not mutate '
-        'scene.layers directly via ${violation.operationLabel}; use the '
-        'model-owned layer insertion helpers instead.',
+        'scene.layers directly via ${violation.operationLabel}; use '
+        'model-owned scene layer mutation helpers instead.',
   );
 }
 
