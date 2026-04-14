@@ -196,17 +196,18 @@ final class SceneControllerSceneViewRenderState
     for (final candidate in _storeController.querySpatialCandidates(
       query.viewportRect,
     )) {
-      final snapshotNode = _resolveSnapshotNode(
+      final snapshotNode = _storeController.resolveSpatialCandidateSnapshot(
+        candidate,
+      );
+      if (snapshotNode == null || !acceptedNodeIds.add(snapshotNode.id)) {
+        continue;
+      }
+      final currentSnapshotNode = _resolveSnapshotNode(
         snapshot: snapshot,
         layerIndex: candidate.layerIndex,
         nodeIndex: candidate.nodeIndex,
       );
-      if (snapshotNode == null ||
-          !_matchesSnapshotNode(
-            runtimeNode: candidate.node,
-            snapshot: snapshotNode,
-          ) ||
-          !acceptedNodeIds.add(snapshotNode.id)) {
+      if (!identical(currentSnapshotNode, snapshotNode)) {
         continue;
       }
       contentCandidates.add((

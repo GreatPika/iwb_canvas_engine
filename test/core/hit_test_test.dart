@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/core/hit_test.dart';
 import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
@@ -73,6 +74,33 @@ void main() {
     );
     expect(nodeHitTestCandidateBoundsWorld(node), Rect.zero.inflate(kHitSlop));
   });
+
+  test(
+    'snapshot hit-test facade delegates to shared snapshot geometry owner',
+    () {
+      final rect = RectNodeSnapshot(
+        id: 'rect-snapshot',
+        size: const Size(20, 20),
+        transform: Transform2D.translation(const Offset(10, 10)),
+      );
+      expect(hitTestNodeSnapshot(const Offset(10, 10), rect), isTrue);
+      expect(hitTestNodeSnapshot(const Offset(50, 50), rect), isFalse);
+      expect(
+        nodeSnapshotHitTestCandidateBoundsWorld(rect),
+        nodeSnapshotGeometryCandidateBoundsWorld(rect),
+      );
+
+      final path = PathNodeSnapshot(
+        id: 'path-snapshot',
+        svgPathData: 'M0 0 H10 V10 H0 Z',
+        fillColor: const Color(0xFF00FF00),
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: 2,
+        transform: Transform2D.translation(const Offset(40, 10)),
+      );
+      expect(hitTestNodeSnapshot(const Offset(40, 10), path), isTrue);
+    },
+  );
 
   test('hitTestNode handles basic node types and guards', () {
     final rect = RectNode(id: 'rect', size: const Size(20, 20))

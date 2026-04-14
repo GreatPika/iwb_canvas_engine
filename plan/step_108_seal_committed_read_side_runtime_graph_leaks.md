@@ -336,7 +336,7 @@ surface.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Establish shared snapshot geometry and hit-testing
+### Slice 1. [x] Establish shared snapshot geometry and hit-testing
 
 #### Slice Contract
 Shared core geometry and hit-test owners can compute committed read-side
@@ -373,7 +373,7 @@ values for rect, image, text, line, stroke, and path nodes.
 - Shared core geometry tests and parity tests stay green with direct
   `NodeSnapshot` input support.
 
-### Slice 2. [ ] Introduce exact snapshot-backed controller read helpers
+### Slice 2. [x] Introduce exact snapshot-backed controller read helpers
 
 #### Slice Contract
 The committed controller read boundary exposes one exact snapshot-backed

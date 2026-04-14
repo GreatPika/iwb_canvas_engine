@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../contract/snapshot.dart';
 import 'geometry.dart';
 import 'node_geometry.dart';
 import 'nodes.dart';
@@ -21,6 +22,16 @@ Rect nodeHitTestCandidateBoundsWorld(
   double additionalScenePadding = 0,
 }) {
   return nodeGeometryCandidateBoundsWorld(
+    node,
+    additionalScenePadding: additionalScenePadding,
+  );
+}
+
+Rect nodeSnapshotHitTestCandidateBoundsWorld(
+  NodeSnapshot node, {
+  double additionalScenePadding = 0,
+}) {
+  return nodeSnapshotGeometryCandidateBoundsWorld(
     node,
     additionalScenePadding: additionalScenePadding,
   );
@@ -77,6 +88,11 @@ bool hitTestStroke(
 /// Returns true if [point] hits [node] in scene coordinates.
 bool hitTestNode(Offset point, SceneNode node) {
   return nodeGeometryHitTest(point, node);
+}
+
+/// Returns true if [point] hits [node] snapshot in scene coordinates.
+bool hitTestNodeSnapshot(Offset point, NodeSnapshot node) {
+  return nodeSnapshotGeometryHitTest(point, node);
 }
 
 /// Returns the top-most node hit by [point], or null.

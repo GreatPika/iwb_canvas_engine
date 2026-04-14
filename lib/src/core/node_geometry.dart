@@ -1,10 +1,17 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
 import 'geometry.dart';
+import 'local_bounds_policy.dart'
+    show
+        centeredRectLocalBounds,
+        strokeAwareCenteredRectLocalBounds,
+        strokeAwareLocalBounds;
 import 'nodes.dart';
 import 'numeric_clamp.dart';
+import 'text_layout.dart';
 
 const double kNodeGeometryHitSlop = 4.0;
 const int kMaxStrokeHitSamplesPerMetric = 2048;
@@ -22,55 +29,188 @@ Rect nodeGeometryCandidateBoundsWorld(
 }) {
   final bounds = node.boundsWorld;
   if (!isFiniteRect(bounds)) return Rect.zero;
-  final padding = _nodeScenePadding(
-    node: node,
+  final padding = _geometryScenePadding(
+    hitPadding: node.hitPadding,
     additionalScenePadding: additionalScenePadding,
   );
   return padding <= 0 ? bounds : bounds.inflate(padding);
 }
 
+Rect nodeSnapshotGeometryCandidateBoundsWorld(
+  NodeSnapshot node, {
+  double additionalScenePadding = 0,
+}) {
+  final bounds = _snapshotBoundsWorld(node);
+  if (!isFiniteRect(bounds)) return Rect.zero;
+  final padding = _geometryScenePadding(
+    hitPadding: node.hitPadding,
+    additionalScenePadding: additionalScenePadding,
+  );
+  return padding <= 0 ? bounds : bounds.inflate(padding);
+}
+
+Rect nodeSnapshotBoundsWorld(NodeSnapshot node) {
+  final bounds = _snapshotBoundsWorld(node);
+  return isFiniteRect(bounds) ? bounds : Rect.zero;
+}
+
 bool nodeGeometryHitTest(Offset point, SceneNode node) {
-  if (!_isNodeHitTestEligible(point, node)) {
+  if (!_isHitTestEligible(
+    point,
+    isVisible: node.isVisible,
+    isSelectable: node.isSelectable,
+    transform: node.transform,
+  )) {
     return false;
   }
   return switch (node.type) {
-    NodeType.image ||
-    NodeType.text ||
-    NodeType.rect => _hitTestBoxNode(point, node),
-    NodeType.path => _hitTestPathNode(point, node as PathNode),
-    NodeType.line => _hitTestLineNode(point, node as LineNode),
-    NodeType.stroke => _hitTestStrokeNode(point, node as StrokeNode),
+    NodeType.image || NodeType.text || NodeType.rect => _hitTestBoxGeometry(
+      point: point,
+      transform: node.transform,
+      localBounds: node.localBounds,
+      candidateBoundsWorld: nodeGeometryCandidateBoundsWorld(node),
+      scenePadding: _geometryScenePadding(hitPadding: node.hitPadding),
+    ),
+    NodeType.path => _hitTestPathGeometry(
+      point: point,
+      transform: node.transform,
+      localPath: (node as PathNode).buildLocalPath(),
+      candidateBoundsWorld: nodeGeometryCandidateBoundsWorld(node),
+      hasFill: node.fillColor != null,
+      strokeRadiusLocal: _pathStrokeRadiusLocal(
+        strokeColor: node.strokeColor,
+        strokeWidth: node.strokeWidth,
+        inverse: node.transform.invert(),
+        scenePadding: _geometryScenePadding(hitPadding: node.hitPadding),
+      ),
+    ),
+    NodeType.line => _hitTestWorldStrokeGeometry(
+      point: point,
+      transform: (node as LineNode).transform,
+      baseThickness: node.thickness,
+      candidateBoundsWorld: nodeGeometryCandidateBoundsWorld(node),
+      scenePadding: _geometryScenePadding(hitPadding: node.hitPadding),
+      hitTest: (worldRadius) => _hitTestWorldSegment(
+        point,
+        _worldSegment(node.transform, node.start, node.end),
+        worldRadius,
+      ),
+    ),
+    NodeType.stroke => _hitTestWorldStrokeGeometry(
+      point: point,
+      transform: (node as StrokeNode).transform,
+      baseThickness: node.thickness,
+      candidateBoundsWorld: nodeGeometryCandidateBoundsWorld(node),
+      scenePadding: _geometryScenePadding(hitPadding: node.hitPadding),
+      hitTest: (worldRadius) => _hitTestTransformedPolyline(
+        point: point,
+        transform: node.transform,
+        points: node.points,
+        worldRadius: worldRadius,
+      ),
+    ),
   };
 }
 
-bool _isNodeHitTestEligible(Offset point, SceneNode node) {
-  return point.dx.isFinite &&
-      point.dy.isFinite &&
-      node.isVisible &&
-      node.isSelectable &&
-      node.transform.isFinite;
+bool nodeSnapshotGeometryHitTest(Offset point, NodeSnapshot node) {
+  if (!_isHitTestEligible(
+    point,
+    isVisible: node.isVisible,
+    isSelectable: node.isSelectable,
+    transform: node.transform,
+  )) {
+    return false;
+  }
+  return switch (node) {
+    ImageNodeSnapshot() ||
+    TextNodeSnapshot() ||
+    RectNodeSnapshot() => _hitTestBoxGeometry(
+      point: point,
+      transform: node.transform,
+      localBounds: _snapshotLocalBounds(node),
+      candidateBoundsWorld: nodeSnapshotGeometryCandidateBoundsWorld(node),
+      scenePadding: _geometryScenePadding(hitPadding: node.hitPadding),
+    ),
+    PathNodeSnapshot() => _hitTestPathGeometry(
+      point: point,
+      transform: node.transform,
+      localPath: _snapshotLocalPath(node),
+      candidateBoundsWorld: nodeSnapshotGeometryCandidateBoundsWorld(node),
+      hasFill: node.fillColor != null,
+      strokeRadiusLocal: _pathStrokeRadiusLocal(
+        strokeColor: node.strokeColor,
+        strokeWidth: node.strokeWidth,
+        inverse: node.transform.invert(),
+        scenePadding: _geometryScenePadding(hitPadding: node.hitPadding),
+      ),
+    ),
+    LineNodeSnapshot() => _hitTestWorldStrokeGeometry(
+      point: point,
+      transform: node.transform,
+      baseThickness: node.thickness,
+      candidateBoundsWorld: nodeSnapshotGeometryCandidateBoundsWorld(node),
+      scenePadding: _geometryScenePadding(hitPadding: node.hitPadding),
+      hitTest: (worldRadius) => _hitTestWorldSegment(
+        point,
+        _worldSegment(node.transform, node.start, node.end),
+        worldRadius,
+      ),
+    ),
+    StrokeNodeSnapshot() => _hitTestWorldStrokeGeometry(
+      point: point,
+      transform: node.transform,
+      baseThickness: node.thickness,
+      candidateBoundsWorld: nodeSnapshotGeometryCandidateBoundsWorld(node),
+      scenePadding: _geometryScenePadding(hitPadding: node.hitPadding),
+      hitTest: (worldRadius) => _hitTestTransformedPolyline(
+        point: point,
+        transform: node.transform,
+        points: node.points,
+        worldRadius: worldRadius,
+      ),
+    ),
+    _ => false,
+  };
 }
 
-double _nodeScenePadding({
-  required SceneNode node,
+bool _isHitTestEligible(
+  Offset point, {
+  required bool isVisible,
+  required bool isSelectable,
+  required Transform2D transform,
+}) {
+  return point.dx.isFinite &&
+      point.dy.isFinite &&
+      isVisible &&
+      isSelectable &&
+      transform.isFinite;
+}
+
+double _geometryScenePadding({
+  required double hitPadding,
   double additionalScenePadding = 0,
 }) {
-  final baseHitPadding = clampNonNegativeFinite(node.hitPadding);
+  final baseHitPadding = clampNonNegativeFinite(hitPadding);
   final extraPadding = clampNonNegativeFinite(additionalScenePadding);
   return baseHitPadding + kNodeGeometryHitSlop + extraPadding;
 }
 
-bool _hitTestBoxNode(Offset point, SceneNode node) {
-  final inverse = node.transform.invert();
+bool _hitTestBoxGeometry({
+  required Offset point,
+  required Transform2D transform,
+  required Rect localBounds,
+  required Rect candidateBoundsWorld,
+  required double scenePadding,
+}) {
+  final inverse = transform.invert();
   if (inverse == null) {
-    return nodeGeometryCandidateBoundsWorld(node).contains(point);
+    return candidateBoundsWorld.contains(point);
   }
   final localPoint = inverse.applyToPoint(point);
-  final paddingScene = _nodeScenePadding(node: node);
   final bounds = _inflateLocalBoundsForScenePadding(
-    node.localBounds,
+    localBounds,
     inverse,
-    paddingScene,
+    scenePadding,
   );
   return bounds.contains(localPoint);
 }
@@ -92,90 +232,63 @@ Rect _inflateLocalBoundsForScenePadding(
   );
 }
 
-bool _hitTestPathNode(Offset point, PathNode node) {
-  final localPath = node.buildLocalPath();
+bool _hitTestPathGeometry({
+  required Offset point,
+  required Transform2D transform,
+  required Path? localPath,
+  required Rect candidateBoundsWorld,
+  required bool hasFill,
+  required double strokeRadiusLocal,
+}) {
   if (localPath == null) return false;
-
-  final candidateBounds = nodeGeometryCandidateBoundsWorld(node);
-  if (!candidateBounds.contains(point)) return false;
-
-  final inverse = node.transform.invert();
+  if (!candidateBoundsWorld.contains(point)) return false;
+  final inverse = transform.invert();
   if (inverse == null) {
     return true;
   }
-
   final localPoint = inverse.applyToPoint(point);
-  if (_pathContainsFill(node, localPath, localPoint)) {
+  if (hasFill && localPath.contains(localPoint)) {
     return true;
   }
-
-  final strokeRadiusLocal = _pathStrokeRadiusLocal(node, inverse);
   if (strokeRadiusLocal <= 0) {
     return false;
   }
   return _hitTestPathStrokePrecise(localPath, localPoint, strokeRadiusLocal);
 }
 
-bool _pathContainsFill(PathNode node, Path localPath, Offset localPoint) {
-  return node.fillColor != null && localPath.contains(localPoint);
-}
-
-double _pathStrokeRadiusLocal(PathNode node, Transform2D inverse) {
-  if (node.strokeColor == null) {
+double _pathStrokeRadiusLocal({
+  required Color? strokeColor,
+  required double strokeWidth,
+  required Transform2D? inverse,
+  required double scenePadding,
+}) {
+  if (strokeColor == null || inverse == null) {
     return 0;
   }
-  final baseStrokeWidth = clampNonNegativeFinite(node.strokeWidth);
+  final baseStrokeWidth = clampNonNegativeFinite(strokeWidth);
   if (baseStrokeWidth <= 0) {
     return 0;
   }
-  final paddingLocal = _sceneScalarToLocalMax(
-    inverse,
-    _nodeScenePadding(node: node),
-  );
+  final paddingLocal = _sceneScalarToLocalMax(inverse, scenePadding);
   return baseStrokeWidth / 2 + paddingLocal;
 }
 
-bool _hitTestLineNode(Offset point, LineNode node) {
-  return _hitTestWorldStrokeNode(
-    point,
-    node,
-    node.thickness,
-    (worldRadius) => _hitTestWorldSegment(
-      point,
-      _worldSegment(node.transform, node.start, node.end),
-      worldRadius,
-    ),
-  );
-}
-
-bool _hitTestStrokeNode(Offset point, StrokeNode node) {
-  return _hitTestWorldStrokeNode(
-    point,
-    node,
-    node.thickness,
-    (worldRadius) => _hitTestTransformedPolyline(
-      point: point,
-      transform: node.transform,
-      points: node.points,
-      worldRadius: worldRadius,
-    ),
-  );
-}
-
-bool _hitTestWorldStrokeNode(
-  Offset point,
-  SceneNode node,
-  double baseThickness,
-  bool Function(double worldRadius) hitTest,
-) {
-  if (node.transform.invert() == null) {
-    return nodeGeometryCandidateBoundsWorld(node).contains(point);
+bool _hitTestWorldStrokeGeometry({
+  required Offset point,
+  required Transform2D transform,
+  required double baseThickness,
+  required Rect candidateBoundsWorld,
+  required double scenePadding,
+  required bool Function(double worldRadius) hitTest,
+}) {
+  if (transform.invert() == null) {
+    return candidateBoundsWorld.contains(point);
   }
   return hitTest(
     _worldStrokeRadius(
-      transform: node.transform,
+      transform: transform,
       baseThickness: baseThickness,
-      scenePadding: _nodeScenePadding(node: node),
+      scenePadding: scenePadding,
     ),
   );
 }
@@ -301,6 +414,59 @@ bool _hitTestPathMetrics(
     }
   }
   return false;
+}
+
+Rect _snapshotBoundsWorld(NodeSnapshot node) {
+  return node.transform.applyToRect(_snapshotLocalBounds(node));
+}
+
+Rect _snapshotLocalBounds(NodeSnapshot node) {
+  return switch (node) {
+    ImageNodeSnapshot(:final size) => centeredRectLocalBounds(size),
+    TextNodeSnapshot() => centeredRectLocalBounds(
+      TextLayoutRequest.forSnapshot(node).measure(),
+    ),
+    RectNodeSnapshot(:final size, :final strokeColor, :final strokeWidth) =>
+      strokeAwareCenteredRectLocalBounds(
+        size: size,
+        strokeColor: strokeColor,
+        strokeWidth: strokeWidth,
+      ),
+    StrokeNodeSnapshot(:final points, :final thickness) => strokeLocalBounds(
+      points: points,
+      thickness: thickness,
+    ),
+    LineNodeSnapshot(:final start, :final end, :final thickness) =>
+      lineLocalBounds(start: start, end: end, thickness: thickness),
+    PathNodeSnapshot(
+      :final svgPathData,
+      :final fillRule,
+      :final strokeColor,
+      :final strokeWidth,
+    ) =>
+      strokeAwareLocalBounds(
+        baseBounds:
+            buildCenteredSvgPathGeometry(
+              svgPathData,
+              fillType: fillRule == PathFillRule.evenOdd
+                  ? PathFillType.evenOdd
+                  : PathFillType.nonZero,
+            )?.localBounds ??
+            Rect.zero,
+        strokeColor: strokeColor,
+        strokeWidth: strokeWidth,
+      ),
+    _ => Rect.zero,
+  };
+}
+
+Path? _snapshotLocalPath(PathNodeSnapshot node) {
+  return buildCenteredSvgPathGeometry(
+    node.svgPathData,
+    fillType: node.fillRule == PathFillRule.evenOdd
+        ? PathFillType.evenOdd
+        : PathFillType.nonZero,
+  )?.localPath;
 }
 
 bool _hitTestMetricStroke(

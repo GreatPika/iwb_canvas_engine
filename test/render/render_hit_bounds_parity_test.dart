@@ -51,6 +51,13 @@ void main() {
         ),
         returnsNormally,
       );
+      expect(
+        () => _expectRectClose(
+          nodeSnapshotHitTestCandidateBoundsWorld(snapshot),
+          renderBounds.inflate(snapshot.hitPadding + kHitSlop),
+        ),
+        returnsNormally,
+      );
     },
   );
 
@@ -86,6 +93,13 @@ void main() {
       expect(
         () => _expectRectClose(
           nodeHitTestCandidateBoundsWorld(coreNode),
+          renderBounds.inflate(snapshot.hitPadding + kHitSlop),
+        ),
+        returnsNormally,
+      );
+      expect(
+        () => _expectRectClose(
+          nodeSnapshotHitTestCandidateBoundsWorld(snapshot),
           renderBounds.inflate(snapshot.hitPadding + kHitSlop),
         ),
         returnsNormally,
@@ -136,6 +150,13 @@ void main() {
         ),
         returnsNormally,
       );
+      expect(
+        () => _expectRectClose(
+          nodeSnapshotHitTestCandidateBoundsWorld(snapshot),
+          renderBounds.inflate(snapshot.hitPadding + kHitSlop),
+        ),
+        returnsNormally,
+      );
     },
   );
 
@@ -169,6 +190,13 @@ void main() {
       expect(
         () => _expectRectClose(
           nodeHitTestCandidateBoundsWorld(coreNode),
+          renderBounds.inflate(snapshot.hitPadding + kHitSlop),
+        ),
+        returnsNormally,
+      );
+      expect(
+        () => _expectRectClose(
+          nodeSnapshotHitTestCandidateBoundsWorld(snapshot),
           renderBounds.inflate(snapshot.hitPadding + kHitSlop),
         ),
         returnsNormally,

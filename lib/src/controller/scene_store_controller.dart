@@ -123,27 +123,55 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
     );
   }
 
+  NodeSnapshot? resolveSpatialCandidateSnapshot(
+    SceneSpatialCandidate candidate,
+  ) {
+    if (candidate.layerIndex < 0) {
+      return null;
+    }
+    return _resolveSnapshotAtLocation(
+      nodeId: candidate.nodeId,
+      layerIndex: candidate.layerIndex,
+      nodeIndex: candidate.nodeIndex,
+    )?.node;
+  }
+
   SceneNode? resolveSpatialCandidateNode(SceneSpatialCandidate candidate) {
+    if (!_isCurrentRuntimeCandidateLocation(candidate)) {
+      return null;
+    }
+    final layer = _store.sceneDoc.layers[candidate.layerIndex];
+    return layer.nodes[candidate.nodeIndex];
+  }
+
+  ({NodeSnapshot node, int layerIndex, int nodeIndex})? resolveSnapshotNodeById(
+    NodeId nodeId,
+  ) {
+    final location = _store.nodeLocator[nodeId];
+    if (location == null) {
+      return null;
+    }
+    return _resolveSnapshotAtLocation(
+      nodeId: nodeId,
+      layerIndex: location.layerIndex,
+      nodeIndex: location.nodeIndex,
+    );
+  }
+
+  bool _isCurrentRuntimeCandidateLocation(SceneSpatialCandidate candidate) {
     final layerIndex = candidate.layerIndex;
     if (layerIndex < 0 || layerIndex >= _store.sceneDoc.layers.length) {
-      return null;
+      return false;
     }
 
     final layer = _store.sceneDoc.layers[layerIndex];
     final nodeIndex = candidate.nodeIndex;
     if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
-      return null;
+      return false;
     }
 
     final node = layer.nodes[nodeIndex];
-    if (identical(node, candidate.node)) {
-      return node;
-    }
-
-    if (node.id != candidate.node.id || node.type != candidate.node.type) {
-      return null;
-    }
-    return node;
+    return node.id == candidate.nodeId;
   }
 
   ({SceneNode node, int layerIndex, int nodeIndex})? resolveNodeById(
@@ -177,5 +205,37 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
 
   Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) {
     return centerWorldForNodeSnapshotsMaterialized(snapshots);
+  }
+
+  ({NodeSnapshot node, int layerIndex, int nodeIndex})?
+  _resolveSnapshotAtLocation({
+    required NodeId nodeId,
+    required int layerIndex,
+    required int nodeIndex,
+  }) {
+    final snapshot = this.snapshot;
+    if (layerIndex == -1) {
+      final backgroundNodes = snapshot.backgroundLayer.nodes;
+      if (nodeIndex < 0 || nodeIndex >= backgroundNodes.length) {
+        return null;
+      }
+      final node = backgroundNodes[nodeIndex];
+      if (node.id != nodeId) {
+        return null;
+      }
+      return (node: node, layerIndex: -1, nodeIndex: nodeIndex);
+    }
+    if (layerIndex < 0 || layerIndex >= snapshot.layers.length) {
+      return null;
+    }
+    final layer = snapshot.layers[layerIndex];
+    if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
+      return null;
+    }
+    final node = layer.nodes[nodeIndex];
+    if (node.id != nodeId) {
+      return null;
+    }
+    return (node: node, layerIndex: layerIndex, nodeIndex: nodeIndex);
   }
 }

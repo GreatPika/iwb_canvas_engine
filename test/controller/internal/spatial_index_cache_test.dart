@@ -160,7 +160,7 @@ void main() {
         controllerEpoch: 0,
       );
       expect(
-        rebuiltAfterMalformedAdd.map((candidate) => candidate.node.id),
+        rebuiltAfterMalformedAdd.map((candidate) => candidate.nodeId),
         <NodeId>['r1'],
       );
       expect(slice.debugBuildCount, 2);
@@ -339,7 +339,7 @@ void main() {
         controllerEpoch: 0,
       );
 
-      expect(movedCandidates.map((candidate) => candidate.node.id), <NodeId>[
+      expect(movedCandidates.map((candidate) => candidate.nodeId), <NodeId>[
         'r1',
       ]);
       expect(oldCandidates, isEmpty);
@@ -370,7 +370,7 @@ void main() {
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
       );
-      expect(initialCandidates.map((candidate) => candidate.node.id), <NodeId>[
+      expect(initialCandidates.map((candidate) => candidate.nodeId), <NodeId>[
         'r1',
       ]);
       expect(slice.debugBuildCount, 1);
@@ -426,7 +426,7 @@ void main() {
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
       );
-      expect(stillOldAtOrigin.map((candidate) => candidate.node.id), <NodeId>[
+      expect(stillOldAtOrigin.map((candidate) => candidate.nodeId), <NodeId>[
         'r1',
       ]);
       expect(noMovedCandidates, isEmpty);

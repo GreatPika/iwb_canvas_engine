@@ -100,7 +100,7 @@ void main() {
 
     expect(index.debugLargeCandidateCount, 1);
     expect(index.debugCellCount, 0);
-    expect(candidates.map((candidate) => candidate.node.id), <NodeId>['huge']);
+    expect(candidates.map((candidate) => candidate.nodeId), <NodeId>['huge']);
   });
 
   test(
@@ -130,8 +130,8 @@ void main() {
       final first = index.query(queryRect);
       final second = index.query(queryRect);
 
-      expect(first.map((candidate) => candidate.node.id), <NodeId>['oor']);
-      expect(second.map((candidate) => candidate.node.id), <NodeId>['oor']);
+      expect(first.map((candidate) => candidate.nodeId), <NodeId>['oor']);
+      expect(second.map((candidate) => candidate.nodeId), <NodeId>['oor']);
       expect(index.debugFallbackQueryCount, 2);
       expect(index.debugCellCount, 0);
       expect(index.debugLargeCandidateCount, 0);
@@ -163,7 +163,7 @@ void main() {
 
     expect(index.debugLargeCandidateCount, 0);
     expect(index.debugCellCount, greaterThan(0));
-    expect(candidates.map((candidate) => candidate.node.id), <NodeId>[
+    expect(candidates.map((candidate) => candidate.nodeId), <NodeId>[
       'regular',
     ]);
   });
@@ -206,14 +206,14 @@ void main() {
     expect(exact1024Index.debugLargeCandidateCount, 0);
     expect(exact1024Index.debugCellCount, greaterThan(0));
     expect(
-      exact1024Index.query(const Rect.fromLTWH(0, 0, 10, 10)).single.node.id,
+      exact1024Index.query(const Rect.fromLTWH(0, 0, 10, 10)).single.nodeId,
       'exact-1024',
     );
 
     expect(over1024Index.debugLargeCandidateCount, 1);
     expect(over1024Index.debugCellCount, 0);
     expect(
-      over1024Index.query(const Rect.fromLTWH(0, 0, 10, 10)).single.node.id,
+      over1024Index.query(const Rect.fromLTWH(0, 0, 10, 10)).single.nodeId,
       'over-1024',
     );
   });
@@ -233,7 +233,7 @@ void main() {
       const Rect.fromLTWH(-128000, -12800, 256000, 25600),
     );
 
-    final ids = candidates.map((candidate) => candidate.node.id).toSet();
+    final ids = candidates.map((candidate) => candidate.nodeId).toSet();
     expect(index.debugFallbackQueryCount, 1);
     expect(ids, contains('inside'));
     expect(ids, isNot(contains('outside')));
@@ -350,10 +350,10 @@ void main() {
         const Rect.fromLTWH(100, 0, 20, 20),
       );
 
-      expect(sourceAtOld.map((candidate) => candidate.node.id), <NodeId>['r1']);
+      expect(sourceAtOld.map((candidate) => candidate.nodeId), <NodeId>['r1']);
       expect(sourceAtMoved, isEmpty);
       expect(candidateAtOld, isEmpty);
-      expect(candidateAtMoved.map((candidate) => candidate.node.id), <NodeId>[
+      expect(candidateAtMoved.map((candidate) => candidate.nodeId), <NodeId>[
         'r1',
       ]);
     },
@@ -423,11 +423,10 @@ void main() {
     final rebuiltCandidates = rebuilt.query(queryRect);
 
     expect(applied, isTrue);
-    expect(
-      incrementalCandidates.map((candidate) => candidate.node.id),
-      <NodeId>[movedNode.id],
-    );
-    expect(rebuiltCandidates.map((candidate) => candidate.node.id), <NodeId>[
+    expect(incrementalCandidates.map((candidate) => candidate.nodeId), <NodeId>[
+      movedNode.id,
+    ]);
+    expect(rebuiltCandidates.map((candidate) => candidate.nodeId), <NodeId>[
       movedNode.id,
     ]);
     expect(

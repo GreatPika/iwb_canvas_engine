@@ -1,6 +1,7 @@
 import 'dart:ui' hide Scene;
 
 import '../contract/snapshot.dart';
+import '../core/node_geometry.dart';
 import '../core/revision_policy.dart';
 import '../core/scene.dart' show Scene;
 import '../model/document.dart';
@@ -34,7 +35,7 @@ PreparedSceneReplacement materializeSceneReplacement({
 }
 
 Rect boundsWorldForNodeSnapshot(NodeSnapshot snapshot) {
-  return txnNodeFromSnapshot(snapshot).boundsWorld;
+  return nodeSnapshotBoundsWorld(snapshot);
 }
 
 Offset centerWorldForNodeSnapshotsMaterialized(

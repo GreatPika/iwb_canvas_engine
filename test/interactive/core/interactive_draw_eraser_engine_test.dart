@@ -30,9 +30,9 @@ void main() {
       rawTransform: const Transform2D(a: 1, b: 2, c: 2, d: 4, tx: 120, ty: 80),
     );
     final candidate = SceneSpatialCandidate(
+      nodeId: line.id,
       layerIndex: 0,
       nodeIndex: 0,
-      node: line,
       candidateBoundsWorld: line.boundsWorld,
     );
     final removedIds = <String>[];
@@ -41,7 +41,7 @@ void main() {
       callbacks: InteractiveDrawEraserEngineCallbacks(
         onOverlayStateChanged: () {},
         querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
-        resolveSpatialCandidateNode: (c) => c.node,
+        resolveSpatialCandidateNode: (c) => c.nodeId == line.id ? line : null,
         commitEraseNodes: (ids) {
           removedIds.addAll(ids);
           return ids.length;
@@ -68,9 +68,9 @@ void main() {
       rawTransform: const Transform2D(a: 1, b: 2, c: 2, d: 4, tx: 180, ty: 80),
     );
     final candidate = SceneSpatialCandidate(
+      nodeId: stroke.id,
       layerIndex: 0,
       nodeIndex: 0,
-      node: stroke,
       candidateBoundsWorld: stroke.boundsWorld,
     );
     final removedIds = <String>[];
@@ -79,7 +79,8 @@ void main() {
       callbacks: InteractiveDrawEraserEngineCallbacks(
         onOverlayStateChanged: () {},
         querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
-        resolveSpatialCandidateNode: (c) => c.node,
+        resolveSpatialCandidateNode: (c) =>
+            c.nodeId == stroke.id ? stroke : null,
         commitEraseNodes: (ids) {
           removedIds.addAll(ids);
           return ids.length;
@@ -108,9 +109,9 @@ void main() {
       isDeletable: false,
     )..position = const Offset(120, 80);
     final candidate = SceneSpatialCandidate(
+      nodeId: line.id,
       layerIndex: 0,
       nodeIndex: 0,
-      node: line,
       candidateBoundsWorld: line.boundsWorld,
     );
     final removedIds = <String>[];
@@ -119,7 +120,7 @@ void main() {
       callbacks: InteractiveDrawEraserEngineCallbacks(
         onOverlayStateChanged: () {},
         querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
-        resolveSpatialCandidateNode: (c) => c.node,
+        resolveSpatialCandidateNode: (c) => c.nodeId == line.id ? line : null,
         commitEraseNodes: (ids) {
           removedIds.addAll(ids);
           return ids.length;

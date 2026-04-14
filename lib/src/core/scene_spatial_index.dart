@@ -22,15 +22,15 @@ typedef _ResolvedSpatialNode = ({
 /// Scene node candidate returned by [SceneSpatialIndex.query].
 class SceneSpatialCandidate {
   const SceneSpatialCandidate({
+    required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.node,
     required this.candidateBoundsWorld,
   });
 
+  final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final SceneNode node;
   final Rect candidateBoundsWorld;
 }
 
@@ -348,9 +348,9 @@ List<SceneSpatialCandidate> _queryLinear(Scene scene, Rect worldRect) {
     }
     out.add(
       SceneSpatialCandidate(
+        nodeId: resolved.node.id,
         layerIndex: resolved.layerIndex,
         nodeIndex: resolved.nodeIndex,
-        node: resolved.node,
         candidateBoundsWorld: candidateBounds,
       ),
     );
@@ -408,9 +408,9 @@ List<SceneSpatialCandidate> _resolveCandidates(
     if (resolved == null) continue;
     out.add(
       SceneSpatialCandidate(
+        nodeId: resolved.node.id,
         layerIndex: resolved.layerIndex,
         nodeIndex: resolved.nodeIndex,
-        node: resolved.node,
         candidateBoundsWorld: entry.candidateBoundsWorld,
       ),
     );

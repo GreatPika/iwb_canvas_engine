@@ -75,7 +75,7 @@ final class InteractiveMoveHitTestEngine {
     final probe = Rect.fromLTWH(scenePoint.dx, scenePoint.dy, 0, 0);
     final byNodeId = <NodeId, SceneSpatialCandidate>{};
     for (final candidate in callbacks.querySpatialCandidates(probe)) {
-      byNodeId[candidate.node.id] = candidate;
+      byNodeId[candidate.nodeId] = candidate;
     }
     if (previewState.hasTranslation) {
       final shiftedProbe = Rect.fromLTWH(
@@ -85,7 +85,7 @@ final class InteractiveMoveHitTestEngine {
         0,
       );
       for (final candidate in callbacks.querySpatialCandidates(shiftedProbe)) {
-        byNodeId[candidate.node.id] = candidate;
+        byNodeId[candidate.nodeId] = candidate;
       }
     }
     final candidates = byNodeId.values.toList(growable: true)

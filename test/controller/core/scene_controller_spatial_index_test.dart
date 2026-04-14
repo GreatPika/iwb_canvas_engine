@@ -67,7 +67,7 @@ void main() {
       final moved = controller.querySpatialCandidates(
         const Rect.fromLTWH(100, 0, 0, 0),
       );
-      expect(moved.map((candidate) => candidate.node.id), contains('r1'));
+      expect(moved.map((candidate) => candidate.nodeId), contains('r1'));
       expect(controller.debug.spatialIndexBuildCount, 1);
       expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
       expect(controller.debug.nodeIdSetMaterializations, 0);
@@ -97,9 +97,9 @@ void main() {
     final afterQuery = controller.querySpatialCandidates(
       const Rect.fromLTWH(30, 0, 0, 0),
     );
-    expect(afterQuery.map((candidate) => candidate.node.id), contains('r1'));
+    expect(afterQuery.map((candidate) => candidate.nodeId), contains('r1'));
     expect(
-      afterQuery.map((candidate) => candidate.node.id),
+      afterQuery.map((candidate) => candidate.nodeId),
       isNot(contains('r2')),
     );
     expect(controller.debug.spatialIndexBuildCount, 1);
@@ -124,7 +124,7 @@ void main() {
     final initial = controller.querySpatialCandidates(
       const Rect.fromLTWH(0, 0, 10, 10),
     );
-    expect(initial.map((candidate) => candidate.node.id), <NodeId>['huge']);
+    expect(initial.map((candidate) => candidate.nodeId), <NodeId>['huge']);
     expect(controller.debug.spatialIndexBuildCount, 1);
 
     controller.write<void>((writer) {
@@ -140,7 +140,7 @@ void main() {
     final movedProbe = controller.querySpatialCandidates(
       const Rect.fromLTWH(2e6, 0, 10, 10),
     );
-    expect(movedProbe.map((candidate) => candidate.node.id), <NodeId>['huge']);
+    expect(movedProbe.map((candidate) => candidate.nodeId), <NodeId>['huge']);
     expect(controller.debug.spatialIndexBuildCount, 1);
     expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
   });
@@ -171,7 +171,7 @@ void main() {
     final afterQuery = controller.querySpatialCandidates(
       const Rect.fromLTWH(0, 0, 0, 0),
     );
-    expect(afterQuery.map((candidate) => candidate.node.id), <NodeId>['fresh']);
+    expect(afterQuery.map((candidate) => candidate.nodeId), <NodeId>['fresh']);
     expect(controller.debug.spatialIndexBuildCount, 2);
     expect(controller.debug.spatialIndexIncrementalApplyCount, 0);
   });
@@ -191,7 +191,7 @@ void main() {
       Set<NodeId> queryIds(Rect probe) {
         return controller
             .querySpatialCandidates(probe)
-            .map((candidate) => candidate.node.id)
+            .map((candidate) => candidate.nodeId)
             .toSet();
       }
 
@@ -333,7 +333,7 @@ void main() {
         const Rect.fromLTWH(0, 0, 0, 0),
       );
       final byId = <NodeId, SceneSpatialCandidate>{
-        for (final candidate in candidates) candidate.node.id: candidate,
+        for (final candidate in candidates) candidate.nodeId: candidate,
       };
       expect(byId.containsKey('r1'), isTrue);
       expect(byId.containsKey('r2'), isFalse);
@@ -342,8 +342,14 @@ void main() {
       expect(byId['r1']!.nodeIndex, 0);
       expect(byId['r3']!.layerIndex, 0);
       expect(byId['r3']!.nodeIndex, 1);
-      expect(controller.resolveSpatialCandidateNode(byId['r1']!), isNotNull);
-      expect(controller.resolveSpatialCandidateNode(byId['r3']!), isNotNull);
+      expect(
+        controller.resolveSpatialCandidateSnapshot(byId['r1']!),
+        isNotNull,
+      );
+      expect(
+        controller.resolveSpatialCandidateSnapshot(byId['r3']!),
+        isNotNull,
+      );
       expect(controller.debug.spatialIndexBuildCount, 1);
       expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
     },
@@ -383,7 +389,7 @@ void main() {
 
       final afterFirstDraw = controller.querySpatialCandidates(firstBandProbe);
       expect(
-        afterFirstDraw.map((candidate) => candidate.node.id).toSet().length,
+        afterFirstDraw.map((candidate) => candidate.nodeId).toSet().length,
         batchSize,
       );
       expect(controller.debug.spatialIndexBuildCount, 1);
@@ -397,7 +403,7 @@ void main() {
 
       final afterErase = controller.querySpatialCandidates(firstBandProbe);
       final afterEraseIds = afterErase
-          .map((candidate) => candidate.node.id)
+          .map((candidate) => candidate.nodeId)
           .toSet();
       expect(afterEraseIds.length, batchSize ~/ 2);
       expect(afterEraseIds.contains('a0'), isFalse);
@@ -419,7 +425,7 @@ void main() {
 
       final afterSecondDraw = controller.querySpatialCandidates(allBandsProbe);
       final idsAfterSecondDraw = afterSecondDraw
-          .map((candidate) => candidate.node.id)
+          .map((candidate) => candidate.nodeId)
           .toSet();
       expect(idsAfterSecondDraw.length, batchSize + batchSize ~/ 2);
       expect(idsAfterSecondDraw.contains('b0'), isTrue);
