@@ -92,7 +92,8 @@ void main() {
       ).readAsStringSync();
       final createBody = _extractMethodBody(
         source: source,
-        methodStart: 'ScenePainterPaintFrame create(Size size)',
+        methodStart:
+            'ScenePainterPaintFrame create(Size size, SceneViewFrameRead frameRead)',
       );
       final body = _extractMethodBody(
         source: source,
@@ -106,7 +107,7 @@ void main() {
       );
       expect(
         createBody,
-        contains('hasSelectedNodes: renderState.selectedNodeIds.isNotEmpty,'),
+        contains('hasSelectedNodes: frameRead.selectedNodeIds.isNotEmpty,'),
       );
       expect(createBody, contains('final rawViewRect = Rect.fromLTWH('));
       expect(
@@ -114,8 +115,11 @@ void main() {
         contains('final viewRect = visibilityBudget.applyTo(rawViewRect);'),
       );
       expect(createBody, contains('renderState.enumeratePaintCandidates('));
+      expect(createBody, contains('frameRead,'));
+      expect(createBody, contains('renderState.enumeratePaintCandidates('));
       expect(createBody, contains('viewportRect: rawViewRect,'));
       expect(createBody, contains('visibilityRect: viewRect,'));
+      expect(createBody, contains('selectedIds: frameRead.selectedNodeIds,'));
       expect(
         createBody,
         contains('paintCandidates: List<NodeSnapshot>.unmodifiable('),
@@ -132,6 +136,15 @@ void main() {
       expect(body, isNot(contains('_buildPathNode')));
     },
   );
+
+  test('scene painter captures one atomic frame read before shell paint', () {
+    final source = File('lib/src/render/scene_painter.dart').readAsStringSync();
+
+    expect(
+      source,
+      contains('_shell.paint(canvas, size, controller.captureFrameRead());'),
+    );
+  });
 
   test(
     'node renderer consumes ordered frame paint candidates instead of snapshot scans',

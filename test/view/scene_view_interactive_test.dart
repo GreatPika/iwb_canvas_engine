@@ -14,12 +14,11 @@ import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_inte
 import 'package:iwb_canvas_engine/src/interactive/internal/pointer_session_token.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_pointer_session.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller_interaction.dart';
+import 'package:iwb_canvas_engine/src/core/scene_snapshot_paint_candidates.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive_overlay_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_runtime_host.dart';
-
-import '../support/committed_scene_view_render_state.dart';
 
 // INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
 // INV:INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES
@@ -2122,14 +2121,24 @@ class _StaticSceneViewRenderState extends ChangeNotifier
       (_) => Offset.zero;
 
   @override
+  SceneViewFrameRead captureFrameRead() {
+    return SceneViewFrameRead(
+      snapshot: _snapshot,
+      selectedNodeIds: selectedNodeIds,
+      previewDeltaResolver: previewDeltaResolver,
+    );
+  }
+
+  @override
   Iterable<NodeSnapshot> enumeratePaintCandidates(
+    SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   ) {
     return enumerateSnapshotPaintCandidates(
-      snapshot: _snapshot,
+      snapshot: frameRead.snapshot,
       query: query,
-      selectedNodeIds: selectedNodeIds,
-      previewDeltaResolver: previewDeltaResolver,
+      selectedNodeIds: frameRead.selectedNodeIds,
+      previewDeltaResolver: frameRead.previewDeltaResolver,
     );
   }
 

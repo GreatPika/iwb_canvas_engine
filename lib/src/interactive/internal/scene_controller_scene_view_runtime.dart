@@ -9,6 +9,7 @@ import '../../controller/scene_store_controller.dart';
 import '../../core/geometry.dart';
 import '../../core/node_geometry.dart';
 import '../../core/numeric_clamp.dart';
+import '../../core/scene_snapshot_paint_candidates.dart';
 import '../scene_controller_interaction.dart';
 import 'scene_controller_interaction_runtime.dart';
 import 'scene_controller_pointer_session.dart';
@@ -149,12 +150,43 @@ final class SceneControllerSceneViewRenderState
       _readPreviewDeltaResolver();
 
   @override
+  SceneViewFrameRead captureFrameRead() {
+    return SceneViewFrameRead(
+      snapshot: _readSnapshot(),
+      selectedNodeIds: _readSelectedNodeIds(),
+      previewDeltaResolver: _readPreviewDeltaResolver(),
+    );
+  }
+
+  @override
   Iterable<NodeSnapshot> enumeratePaintCandidates(
+    SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   ) sync* {
-    final snapshot = _readSnapshot();
-    final selectedNodeIds = _readSelectedNodeIds();
-    final previewResolver = _readPreviewDeltaResolver();
+    final snapshot = frameRead.snapshot;
+    if (!identical(snapshot, _storeController.snapshot)) {
+      yield* enumerateSnapshotPaintCandidates(
+        snapshot: frameRead.snapshot,
+        query: query,
+        selectedNodeIds: frameRead.selectedNodeIds,
+        previewDeltaResolver: frameRead.previewDeltaResolver,
+      );
+      return;
+    }
+    yield* _enumerateCommittedSnapshotPaintCandidates(
+      snapshot: snapshot,
+      query: query,
+      selectedNodeIds: frameRead.selectedNodeIds,
+      previewResolver: frameRead.previewDeltaResolver,
+    );
+  }
+
+  Iterable<NodeSnapshot> _enumerateCommittedSnapshotPaintCandidates({
+    required SceneSnapshot snapshot,
+    required ScenePaintCandidateQuery query,
+    required Set<NodeId> selectedNodeIds,
+    required Offset Function(NodeId nodeId) previewResolver,
+  }) sync* {
     final acceptedNodeIds = <NodeId>{};
     final backgroundCandidates = <({NodeSnapshot node, int nodeIndex})>[];
     final contentCandidates =
@@ -189,7 +221,6 @@ final class SceneControllerSceneViewRenderState
     )) {
       final snapshotNode = _storeController.resolveSpatialCandidateSnapshot(
         candidate,
-        snapshotOverride: snapshot,
       );
       if (snapshotNode == null || !acceptedNodeIds.add(snapshotNode.id)) {
         continue;
@@ -203,10 +234,7 @@ final class SceneControllerSceneViewRenderState
 
     for (final nodeId in selectedNodeIds) {
       final previewDelta = _previewDeltaForNode(previewResolver, nodeId);
-      final resolvedNode = _storeController.resolveSnapshotNodeById(
-        nodeId,
-        snapshotOverride: snapshot,
-      );
+      final resolvedNode = _storeController.resolveSnapshotNodeById(nodeId);
       if (resolvedNode == null || acceptedNodeIds.contains(nodeId)) {
         continue;
       }

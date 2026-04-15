@@ -38,7 +38,17 @@ class _CapturedWorldRectRenderState extends ChangeNotifier
   Offset get cameraOffset => camera;
 
   @override
+  SceneViewFrameRead captureFrameRead() {
+    return SceneViewFrameRead(
+      snapshot: snapshot,
+      selectedNodeIds: selectedNodeIds,
+      previewDeltaResolver: previewDeltaResolver,
+    );
+  }
+
+  @override
   Iterable<NodeSnapshot> enumeratePaintCandidates(
+    SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   ) {
     lastEnumeratedQuery = query;
@@ -228,6 +238,7 @@ void main() {
 
       final candidateIds = renderState
           .enumeratePaintCandidates(
+            renderState.captureFrameRead(),
             const ScenePaintCandidateQuery(
               viewportRect: Rect.fromLTWH(0, 0, 120, 100),
               visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
@@ -245,7 +256,7 @@ void main() {
   );
 
   test(
-    'controller-owned render state enumerates committed snapshot background nodes',
+    'controller-owned render state enumerates background nodes from the active frame snapshot',
     () {
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
@@ -288,6 +299,7 @@ void main() {
 
       final candidateIds = renderState
           .enumeratePaintCandidates(
+            renderState.captureFrameRead(),
             const ScenePaintCandidateQuery(
               viewportRect: Rect.fromLTWH(0, 0, 120, 100),
               visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
@@ -299,6 +311,186 @@ void main() {
       expect(candidateIds, const <NodeId>[
         'runtime-background-node',
         'snapshot-only-background-node',
+      ]);
+    },
+  );
+
+  test(
+    'controller-owned render state captures selected ids and preview resolver into one frame read',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+        ),
+      );
+      addTearDown(controller.dispose);
+      final frameSnapshot = SceneSnapshot(
+        camera: CameraSnapshot(offset: const Offset(12, 8)),
+        background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+      );
+      final renderState = _controllerOwnedRenderState(
+        controller,
+        selectedNodeIds: const <NodeId>{'captured-node'},
+        previewDeltaResolver: (nodeId) {
+          if (nodeId == 'captured-node') {
+            return const Offset(3, 4);
+          }
+          return Offset.zero;
+        },
+        snapshotOverride: frameSnapshot,
+      );
+
+      expect(renderState.selectedNodeIds, const <NodeId>{'captured-node'});
+      expect(renderState.cameraOffset, const Offset(12, 8));
+      expect(
+        renderState.previewDeltaResolver('captured-node'),
+        const Offset(3, 4),
+      );
+
+      final frameRead = renderState.captureFrameRead();
+
+      expect(frameRead.snapshot, same(frameSnapshot));
+      expect(frameRead.selectedNodeIds, const <NodeId>{'captured-node'});
+      expect(frameRead.cameraOffset, const Offset(12, 8));
+      expect(
+        frameRead.previewDeltaResolver('captured-node'),
+        const Offset(3, 4),
+      );
+    },
+  );
+
+  test(
+    'controller-owned render state resolves ordinary content candidates from the active frame snapshot',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'committed-layer',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'committed-visible-node',
+                  size: const Size(24, 24),
+                  fillColor: const Color(0xFF1E88E5),
+                  transform: Transform2D.translation(const Offset(20, 20)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _controllerOwnedRenderState(
+        controller,
+        snapshotOverride: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'frame-layer',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'frame-visible-node',
+                  size: const Size(24, 24),
+                  fillColor: const Color(0xFFE53935),
+                  transform: Transform2D.translation(const Offset(60, 20)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      final candidateIds = renderState
+          .enumeratePaintCandidates(
+            renderState.captureFrameRead(),
+            const ScenePaintCandidateQuery(
+              viewportRect: Rect.fromLTWH(0, 0, 120, 100),
+              visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
+            ),
+          )
+          .map((node) => node.id)
+          .toList(growable: false);
+
+      expect(candidateIds, const <NodeId>['frame-visible-node']);
+    },
+  );
+
+  test(
+    'controller-owned render state resolves selected content supplements from the active frame snapshot',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'committed-layer',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'stale-visible-node',
+                  size: const Size(24, 24),
+                  fillColor: const Color(0xFF1E88E5),
+                  transform: Transform2D.translation(const Offset(20, 20)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _controllerOwnedRenderState(
+        controller,
+        selectedNodeIds: const <NodeId>{'frame-selected-edge-node'},
+        snapshotOverride: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'frame-layer-0',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'frame-visible-node-a',
+                  size: const Size(10, 10),
+                  fillColor: const Color(0xFF43A047),
+                  transform: Transform2D.translation(const Offset(15, 15)),
+                ),
+                RectNodeSnapshot(
+                  id: 'frame-selected-edge-node',
+                  size: const Size(10, 10),
+                  fillColor: const Color(0xFFE53935),
+                  transform: Transform2D.translation(const Offset(-10, 15)),
+                ),
+              ],
+            ),
+            ContentLayerSnapshot(
+              id: 'frame-layer-1',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'frame-visible-node-b',
+                  size: const Size(10, 10),
+                  fillColor: const Color(0xFF6D4C41),
+                  transform: Transform2D.translation(const Offset(20, 15)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      final candidateIds = renderState
+          .enumeratePaintCandidates(
+            renderState.captureFrameRead(),
+            const ScenePaintCandidateQuery(
+              viewportRect: Rect.fromLTWH(0, 0, 30, 30),
+              visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
+            ),
+          )
+          .map((node) => node.id)
+          .toList(growable: false);
+
+      expect(candidateIds, const <NodeId>[
+        'frame-visible-node-a',
+        'frame-selected-edge-node',
+        'frame-visible-node-b',
       ]);
     },
   );
@@ -341,7 +533,10 @@ void main() {
       final textNode =
           controller.snapshot.layers.single.nodes.single as TextNodeSnapshot;
 
-      final resolved = frameOwner.resolveNodePaintData(textNode);
+      final resolved = frameOwner.resolveNodePaintData(
+        textNode,
+        renderState.captureFrameRead(),
+      );
 
       expect(resolved.node, same(textNode));
       expect(resolved.textLayout, isNotNull);
@@ -383,7 +578,10 @@ void main() {
         selectionStrokeWidth: 4,
       );
 
-      final frame = frameOwner.create(const Size(100, 60));
+      final frame = frameOwner.create(
+        const Size(100, 60),
+        renderState.captureFrameRead(),
+      );
 
       expect(frame.viewRect, const Rect.fromLTWH(11, 7, 102, 62));
       expect(
@@ -424,7 +622,10 @@ void main() {
         selectionStrokeWidth: 4,
       );
 
-      final frame = frameOwner.create(const Size(100, 60));
+      final frame = frameOwner.create(
+        const Size(100, 60),
+        renderState.captureFrameRead(),
+      );
 
       expect(frame.viewRect, const Rect.fromLTWH(8, 4, 108, 68));
       expect(
@@ -481,6 +682,7 @@ void main() {
 
       final candidateIds = renderState
           .enumeratePaintCandidates(
+            renderState.captureFrameRead(),
             const ScenePaintCandidateQuery(
               viewportRect: Rect.fromLTWH(0, 0, 30, 30),
               visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
@@ -530,6 +732,7 @@ void main() {
 
       final candidateIds = renderState
           .enumeratePaintCandidates(
+            renderState.captureFrameRead(),
             const ScenePaintCandidateQuery(
               viewportRect: Rect.fromLTWH(0, 0, 30, 30),
               visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
@@ -564,6 +767,60 @@ void main() {
       addTearDown(controller.dispose);
       final renderState = _controllerOwnedRenderState(
         controller,
+        selectedNodeIds: const <NodeId>{'frame-background-edge-node'},
+        snapshotOverride: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(
+                id: 'frame-background-edge-node',
+                size: const Size(10, 10),
+                fillColor: const Color(0xFF000000),
+                strokeWidth: 0,
+                transform: Transform2D.translation(const Offset(-10, 15)),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final candidateIds = renderState
+          .enumeratePaintCandidates(
+            renderState.captureFrameRead(),
+            const ScenePaintCandidateQuery(
+              viewportRect: Rect.fromLTWH(0, 0, 30, 30),
+              visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
+            ),
+          )
+          .map((node) => node.id)
+          .toList(growable: false);
+
+      expect(candidateIds, const <NodeId>['frame-background-edge-node']);
+    },
+  );
+
+  test(
+    'controller-owned render state drops stale selected background supplements when the active frame snapshot omits them',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(
+                id: 'stale-background-edge-node',
+                size: const Size(10, 10),
+                fillColor: const Color(0xFF000000),
+                strokeWidth: 0,
+                transform: Transform2D.translation(const Offset(-10, 15)),
+              ),
+            ],
+          ),
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _controllerOwnedRenderState(
+        controller,
         selectedNodeIds: const <NodeId>{'stale-background-edge-node'},
         snapshotOverride: SceneSnapshot(
           background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
@@ -572,6 +829,7 @@ void main() {
 
       final candidateIds = renderState
           .enumeratePaintCandidates(
+            renderState.captureFrameRead(),
             const ScenePaintCandidateQuery(
               viewportRect: Rect.fromLTWH(0, 0, 30, 30),
               visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
@@ -618,6 +876,7 @@ void main() {
       expect(
         () => renderState
             .enumeratePaintCandidates(
+              renderState.captureFrameRead(),
               const ScenePaintCandidateQuery(
                 viewportRect: Rect.fromLTWH(0, 0, 120, 100),
                 visibilityRect: Rect.fromLTWH(0, 0, 120, 100),

@@ -836,6 +836,168 @@ class InteractiveMoveSessionCallbacks {
   );
 
   test(
+    'rejects interactive callback querySpatialCandidates signature drift',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/interactive_move_callbacks.dart',
+          '''
+import '../../contract/snapshot.dart';
+import '../../core/scene_spatial_index.dart';
+
+class InteractiveMoveSessionCallbacks {
+  const InteractiveMoveSessionCallbacks({
+    required this.onPublicStateChanged,
+    required this.onSceneStateChanged,
+    required this.onOverlayStateChanged,
+    required this.readSnapshot,
+    required this.readSelectedNodeIds,
+    required this.querySpatialCandidates,
+    required this.resolveSpatialCandidateSnapshot,
+    required this.writeSelectionReplace,
+    required this.writeSelectionClear,
+    required this.commitMoveSelection,
+    required this.emitAction,
+  });
+
+  final Object onPublicStateChanged;
+  final Object onSceneStateChanged;
+  final Object onOverlayStateChanged;
+  final Object readSnapshot;
+  final Object readSelectedNodeIds;
+  final List<SceneSpatialCandidate> Function(Object bounds)
+  querySpatialCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  resolveSpatialCandidateSnapshot;
+  final Object writeSelectionReplace;
+  final Object writeSelectionClear;
+  final Object commitMoveSelection;
+  final Object emitAction;
+}
+''',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer() {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'committed read callback '
+                '"InteractiveMoveSessionCallbacks.querySpatialCandidates" '
+                'must keep the exact sealed signature',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects interactive callback resolveSpatialCandidateSnapshot extra parameters',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/interactive_draw_coordinator_callbacks.dart',
+          '''
+import '../../contract/snapshot.dart';
+import '../../core/scene_spatial_index.dart';
+
+class InteractiveDrawCoordinatorCallbacks {
+  const InteractiveDrawCoordinatorCallbacks({
+    required this.onOverlayStateChanged,
+    required this.emitAction,
+    required this.commitDrawStroke,
+    required this.commitDrawLineFromWorldSegment,
+    required this.querySpatialCandidates,
+    required this.resolveSpatialCandidateSnapshot,
+    required this.commitEraseNodes,
+  });
+
+  final Object onOverlayStateChanged;
+  final Object emitAction;
+  final Object commitDrawStroke;
+  final Object commitDrawLineFromWorldSegment;
+  final List<SceneSpatialCandidate> Function(Rect bounds)
+  querySpatialCandidates;
+  final NodeSnapshot? Function(
+    SceneSpatialCandidate candidate, {
+    Object? snapshotOverride,
+  })
+  resolveSpatialCandidateSnapshot;
+  final Object commitEraseNodes;
+}
+''',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer() {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'committed read callback '
+                '"InteractiveDrawCoordinatorCallbacks.'
+                'resolveSpatialCandidateSnapshot" must keep the exact sealed '
+                'signature',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
     'rejects missing interactive committed read callback owner class',
     () async {
       final sandbox = await createGuardrailsSandbox();

@@ -25,6 +25,21 @@ class ScenePaintCandidateQuery {
   int get hashCode => Object.hash(viewportRect, visibilityRect);
 }
 
+/// Atomic frame read captured once and reused across the scene paint pipeline.
+final class SceneViewFrameRead {
+  SceneViewFrameRead({
+    required this.snapshot,
+    required Set<NodeId> selectedNodeIds,
+    required this.previewDeltaResolver,
+  }) : selectedNodeIds = Set<NodeId>.unmodifiable(selectedNodeIds);
+
+  final SceneSnapshot snapshot;
+  final Set<NodeId> selectedNodeIds;
+  final Offset Function(NodeId nodeId) previewDeltaResolver;
+
+  Offset get cameraOffset => snapshot.camera.offset;
+}
+
 /// Internal read-side contract shared by the main painter and overlay painter.
 abstract interface class SceneViewRenderState implements SceneRenderState {
   int get controllerEpoch;
@@ -32,7 +47,9 @@ abstract interface class SceneViewRenderState implements SceneRenderState {
   Rect? get selectionRect;
   Offset get cameraOffset;
   Offset Function(NodeId nodeId) get previewDeltaResolver;
+  SceneViewFrameRead captureFrameRead();
   Iterable<NodeSnapshot> enumeratePaintCandidates(
+    SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   );
 

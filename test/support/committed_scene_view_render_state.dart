@@ -1,10 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_snapshot_materializer.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
+import 'package:iwb_canvas_engine/src/core/scene_snapshot_paint_candidates.dart';
 
 class CommittedSceneViewRenderState extends ChangeNotifier
     implements SceneViewRenderState {
@@ -65,14 +65,24 @@ class CommittedSceneViewRenderState extends ChangeNotifier
       _previewDeltaResolver;
 
   @override
+  SceneViewFrameRead captureFrameRead() {
+    return SceneViewFrameRead(
+      snapshot: snapshot,
+      selectedNodeIds: selectedNodeIds,
+      previewDeltaResolver: previewDeltaResolver,
+    );
+  }
+
+  @override
   Iterable<NodeSnapshot> enumeratePaintCandidates(
+    SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   ) {
     return enumerateSnapshotPaintCandidates(
-      snapshot: snapshot,
+      snapshot: frameRead.snapshot,
       query: query,
-      selectedNodeIds: selectedNodeIds,
-      previewDeltaResolver: previewDeltaResolver,
+      selectedNodeIds: frameRead.selectedNodeIds,
+      previewDeltaResolver: frameRead.previewDeltaResolver,
     );
   }
 
@@ -129,64 +139,3 @@ class CommittedSceneViewRenderState extends ChangeNotifier
 }
 
 Offset _zeroPreviewDelta(NodeId _) => Offset.zero;
-
-Iterable<NodeSnapshot> enumerateSnapshotPaintCandidates({
-  required SceneSnapshot snapshot,
-  required ScenePaintCandidateQuery query,
-  required Set<NodeId> selectedNodeIds,
-  required Offset Function(NodeId nodeId) previewDeltaResolver,
-}) sync* {
-  for (final node in snapshot.backgroundLayer.nodes) {
-    if (_snapshotNodeOverlapsQuery(
-      node: node,
-      query: query,
-      selectedNodeIds: selectedNodeIds,
-      previewDeltaResolver: previewDeltaResolver,
-    )) {
-      yield node;
-    }
-  }
-  for (final layer in snapshot.layers) {
-    for (final node in layer.nodes) {
-      if (_snapshotNodeOverlapsQuery(
-        node: node,
-        query: query,
-        selectedNodeIds: selectedNodeIds,
-        previewDeltaResolver: previewDeltaResolver,
-      )) {
-        yield node;
-      }
-    }
-  }
-}
-
-bool _snapshotNodeOverlapsQuery({
-  required NodeSnapshot node,
-  required ScenePaintCandidateQuery query,
-  required Set<NodeId> selectedNodeIds,
-  required Offset Function(NodeId nodeId) previewDeltaResolver,
-}) {
-  final previewDelta = _safePreviewDelta(previewDeltaResolver(node.id));
-  final candidateBounds = boundsWorldForNodeSnapshot(node).shift(previewDelta);
-  if (!_isFiniteRect(candidateBounds)) {
-    return false;
-  }
-  final visibilityRect = selectedNodeIds.contains(node.id)
-      ? query.visibilityRect
-      : query.viewportRect;
-  return visibilityRect.overlaps(candidateBounds);
-}
-
-Offset _safePreviewDelta(Offset value) {
-  if (!value.dx.isFinite || !value.dy.isFinite) {
-    return Offset.zero;
-  }
-  return value;
-}
-
-bool _isFiniteRect(Rect rect) {
-  return rect.left.isFinite &&
-      rect.top.isFinite &&
-      rect.right.isFinite &&
-      rect.bottom.isFinite;
-}

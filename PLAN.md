@@ -21,3 +21,4 @@ roadmap can be updated without mixing execution contracts.
 - [x] [Step 106. Align scene boundary diagnostic contracts across import paths](plan/step_106_scene_boundary_diagnostic_contract_alignment.md)
 - [x] [Step 107. Seal runtime scene validity ownership before commit](plan/step_107_runtime_scene_validity_ownership.md)
 - [x] [Step 108. Seal committed read-side runtime graph leaks](plan/step_108_seal_committed_read_side_runtime_graph_leaks.md)
+- [x] [Step 109. Restore frame-authoritative render snapshot resolution](plan/step_109_restore_frame_authoritative_render_snapshot_resolution.md)

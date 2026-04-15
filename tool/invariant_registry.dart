@@ -707,7 +707,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION',
     scope: 'engine-structure',
     title:
-        'ScenePainterFrameOwner owns one render-local visibility budget, keeps ordinary controller candidate enumeration viewport-first, supplements only selected edge nodes through the budgeted visibility rect, and resolves preview delta plus one canonical ResolvedTextLayout plus geometry only for those candidates before render-local consumers apply final culling',
+        'ScenePainter captures one atomic frame read, keeps one frame snapshot authority, uses controller-owned viewport-first candidate enumeration only while the active frame snapshot matches the committed controller snapshot, supplements only selected edge nodes through the budgeted visibility rect, and resolves preview delta plus one canonical ResolvedTextLayout plus geometry only for those frame-authoritative candidates before render-local consumers apply final culling',
     primaryProof: PrimaryProof(
       path: 'test/render/scene_painter_frame_contract_test.dart',
     ),

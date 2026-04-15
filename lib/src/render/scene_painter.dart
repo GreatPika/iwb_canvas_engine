@@ -63,7 +63,7 @@ class ScenePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    _shell.paint(canvas, size, controller.snapshot);
+    _shell.paint(canvas, size, controller.captureFrameRead());
   }
 
   @override

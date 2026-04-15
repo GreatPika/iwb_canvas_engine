@@ -43,16 +43,16 @@ class ScenePainterFrameOwner {
   final Color selectionColor;
   final double selectionStrokeWidth;
 
-  ScenePainterPaintFrame create(Size size) {
+  ScenePainterPaintFrame create(Size size, SceneViewFrameRead frameRead) {
     final selectionStyle = ScenePainterSelectionStyle(
       color: selectionColor,
       haloWidth: clampNonNegativeFinite(selectionStrokeWidth),
     );
     final visibilityBudget = ScenePainterVisibilityBudget(
-      hasSelectedNodes: renderState.selectedNodeIds.isNotEmpty,
+      hasSelectedNodes: frameRead.selectedNodeIds.isNotEmpty,
       selectionStyle: selectionStyle,
     );
-    final cameraOffset = sanitizeFiniteOffset(renderState.cameraOffset);
+    final cameraOffset = sanitizeFiniteOffset(frameRead.cameraOffset);
     final rawViewRect = Rect.fromLTWH(
       cameraOffset.dx,
       cameraOffset.dy,
@@ -65,32 +65,36 @@ class ScenePainterFrameOwner {
       viewRect: viewRect,
       paintCandidates: List<NodeSnapshot>.unmodifiable(
         renderState.enumeratePaintCandidates(
+          frameRead,
           ScenePaintCandidateQuery(
             viewportRect: rawViewRect,
             visibilityRect: viewRect,
           ),
         ),
       ),
-      selectedIds: renderState.selectedNodeIds,
+      selectedIds: frameRead.selectedNodeIds,
       selectionStyle: selectionStyle,
     );
   }
 
-  ScenePainterResolvedNodePaintData resolveNodePaintData(NodeSnapshot node) {
+  ScenePainterResolvedNodePaintData resolveNodePaintData(
+    NodeSnapshot node,
+    SceneViewFrameRead frameRead,
+  ) {
     final textLayout = switch (node) {
       TextNodeSnapshot textNode => _resolveTextLayout(textNode),
       _ => null,
     };
     return ScenePainterResolvedNodePaintData(
       node: node,
-      previewDelta: _nodePreviewOffset(node.id),
+      previewDelta: _nodePreviewOffset(node.id, frameRead),
       geometry: geometryCache.get(node, resolvedTextLayout: textLayout),
       textLayout: textLayout,
     );
   }
 
-  Offset _nodePreviewOffset(NodeId nodeId) {
-    return sanitizeFiniteOffset(renderState.previewDeltaResolver(nodeId));
+  Offset _nodePreviewOffset(NodeId nodeId, SceneViewFrameRead frameRead) {
+    return sanitizeFiniteOffset(frameRead.previewDeltaResolver(nodeId));
   }
 
   ResolvedTextLayout _resolveTextLayout(TextNodeSnapshot node) {

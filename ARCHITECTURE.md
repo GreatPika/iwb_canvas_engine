@@ -445,7 +445,12 @@ Ownership decisions for the target state:
   and hands it to both geometry sizing and text paint, while selection
   rendering consumes only resolved `worldBounds` / `localPath` through
   focused render-local helpers instead of reopening geometry lookup or
-  scanning all content nodes.
+  scanning all content nodes. The frame snapshot is the only node authority
+  for a frame: `ScenePainter` captures one atomic frame read before shell
+  paint, and if the active `SceneViewRenderState.snapshot` diverges from the
+  committed controller snapshot, candidate enumeration and selected-node
+  supplements fall back to that active frame snapshot instead of mixing two
+  snapshot sources inside one frame.
   This contract is pinned by `INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION`.
 - `ScenePainter` keeps node-family rendering separate from frame ownership:
   rect/path, line/stroke, and text/image rendering consume only

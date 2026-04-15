@@ -60,12 +60,7 @@ const Set<String> _committedReadSideHelperNames = <String>{
 };
 
 const Set<String> _allowedSceneStoreControllerSpatialAccessPublicMemberNames =
-    <String>{
-      ..._committedReadSideHelperNames,
-      'writeReplaceScene',
-      'prepareSceneReplacement',
-      'writePreparedSceneReplacement',
-    };
+    _committedReadSideHelperNames;
 
 const Set<String> _bannedCommittedReadSideHelperNames = <String>{
   'backgroundLayerNodes',
@@ -477,6 +472,12 @@ Future<GuardrailViolation?> _checkControllerReadHelperHermeticity(
   if (resolved == null) {
     return null;
   }
+  final parsed = parseUnitOrFail(
+    context: context,
+    absPath: controllerFile.path,
+    filePathForDiag: '/lib/src/controller/scene_store_controller.dart',
+    onFailure: _onParseFailure,
+  );
   final extensionElement = _firstExtensionNamed(
     resolved.element.extensions,
     'SceneStoreControllerSpatialAccess',
@@ -491,16 +492,55 @@ Future<GuardrailViolation?> _checkControllerReadHelperHermeticity(
           'scene_store_controller.dart',
     );
   }
+  final extensionDeclaration = _firstExtensionDeclarationNamed(
+    parsed.unit.declarations,
+    'SceneStoreControllerSpatialAccess',
+  );
+  if (extensionDeclaration == null) {
+    return GuardrailViolation(
+      filePath: '/lib/src/controller/scene_store_controller.dart',
+      line: 1,
+      message:
+          'controller API violation: sealed helper surface owner '
+          '"SceneStoreControllerSpatialAccess" is required in '
+          'scene_store_controller.dart',
+    );
+  }
+  if (extensionDeclaration.onClause?.extendedType.toSource() !=
+      'SceneStoreController') {
+    return GuardrailViolation(
+      filePath: '/lib/src/controller/scene_store_controller.dart',
+      line: lineForOffset(parsed, extensionDeclaration.name?.offset ?? 0),
+      message:
+          'controller API violation: sealed helper surface owner '
+          '"SceneStoreControllerSpatialAccess" must extend '
+          'SceneStoreController.',
+    );
+  }
+  final astMethodsByName = <String, MethodDeclaration>{
+    for (final member in extensionDeclaration.members)
+      if (member is MethodDeclaration &&
+          member.name.lexeme.isNotEmpty &&
+          isPublicName(member.name.lexeme))
+        member.name.lexeme: member,
+  };
 
   final publicMembers = <ExecutableElement>[
     ...extensionElement.methods.where(
-      (method) => isPublicName(method.displayName),
+      (method) =>
+          method.displayName.isNotEmpty && isPublicName(method.displayName),
     ),
     ...extensionElement.getters.where(
-      (getter) => !getter.isSynthetic && isPublicName(getter.displayName),
+      (getter) =>
+          !getter.isSynthetic &&
+          getter.displayName.isNotEmpty &&
+          isPublicName(getter.displayName),
     ),
     ...extensionElement.setters.where(
-      (setter) => !setter.isSynthetic && isPublicName(setter.displayName),
+      (setter) =>
+          !setter.isSynthetic &&
+          setter.displayName.isNotEmpty &&
+          isPublicName(setter.displayName),
     ),
   ];
 
@@ -533,6 +573,15 @@ Future<GuardrailViolation?> _checkControllerReadHelperHermeticity(
       forbiddenTypes: committedReadForbiddenTypeSpecs,
     );
     if (leak == null) {
+      final signatureViolation = _astCommittedReadHelperSignatureViolation(
+        memberName: member.displayName,
+        astMember: astMethodsByName[member.displayName],
+        context: context,
+        sourceElement: member,
+      );
+      if (signatureViolation != null) {
+        return signatureViolation;
+      }
       continue;
     }
     return _committedReadSideViolation(
@@ -564,6 +613,82 @@ Future<GuardrailViolation?> _checkControllerReadHelperHermeticity(
     );
   }
 
+  return null;
+}
+
+GuardrailViolation? _astCommittedReadHelperSignatureViolation({
+  required String memberName,
+  required MethodDeclaration? astMember,
+  required GuardrailContext context,
+  required Element sourceElement,
+}) {
+  final expected = switch (memberName) {
+    'querySpatialCandidates' => (
+      returnType: 'List<SceneSpatialCandidate>',
+      parameterType: 'Rect',
+      parameterName: 'worldBounds',
+    ),
+    'resolveSpatialCandidateSnapshot' => (
+      returnType: 'NodeSnapshot?',
+      parameterType: 'SceneSpatialCandidate',
+      parameterName: 'candidate',
+    ),
+    'resolveSnapshotNodeById' => (
+      returnType: '({NodeSnapshot node, int layerIndex, int nodeIndex})?',
+      parameterType: 'NodeId',
+      parameterName: 'nodeId',
+    ),
+    'centerWorldForNodeSnapshots' => (
+      returnType: 'Offset',
+      parameterType: 'Iterable<NodeSnapshot>',
+      parameterName: 'snapshots',
+    ),
+    _ => null,
+  };
+  if (expected == null) {
+    return null;
+  }
+  if (astMember == null || astMember.typeParameters != null) {
+    return _committedReadSideViolation(
+      context: context,
+      sourceElement: sourceElement,
+      detail:
+          'committed read helper "$memberName" must keep the exact sealed '
+          'signature.',
+    );
+  }
+  if (astMember.returnType?.toSource() != expected.returnType) {
+    return _committedReadSideViolation(
+      context: context,
+      sourceElement: sourceElement,
+      detail:
+          'committed read helper "$memberName" must keep the exact sealed '
+          'signature.',
+    );
+  }
+  final parameters =
+      astMember.parameters?.parameters ?? const <FormalParameter>[];
+  if (parameters.length != 1) {
+    return _committedReadSideViolation(
+      context: context,
+      sourceElement: sourceElement,
+      detail:
+          'committed read helper "$memberName" must keep the exact sealed '
+          'signature.',
+    );
+  }
+  final parameter = parameters.single;
+  if (parameter is! SimpleFormalParameter ||
+      parameter.name?.lexeme != expected.parameterName ||
+      parameter.type?.toSource() != expected.parameterType) {
+    return _committedReadSideViolation(
+      context: context,
+      sourceElement: sourceElement,
+      detail:
+          'committed read helper "$memberName" must keep the exact sealed '
+          'signature.',
+    );
+  }
   return null;
 }
 
@@ -700,6 +825,19 @@ ExtensionElement? _firstExtensionNamed(
   for (final element in extensions) {
     if (element.displayName == name) {
       return element;
+    }
+  }
+  return null;
+}
+
+ExtensionDeclaration? _firstExtensionDeclarationNamed(
+  Iterable<CompilationUnitMember> declarations,
+  String name,
+) {
+  for (final declaration in declarations) {
+    if (declaration is ExtensionDeclaration &&
+        declaration.name?.lexeme == name) {
+      return declaration;
     }
   }
   return null;

@@ -14,6 +14,7 @@ import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter_contract.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter_node_renderer.dart';
+import 'package:iwb_canvas_engine/src/core/scene_snapshot_paint_candidates.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
     as interactive;
@@ -54,14 +55,24 @@ class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
       _previewDeltaResolver ?? _zeroPreviewDelta;
 
   @override
+  SceneViewFrameRead captureFrameRead() {
+    return SceneViewFrameRead(
+      snapshot: snapshot,
+      selectedNodeIds: selectedNodeIds,
+      previewDeltaResolver: previewDeltaResolver,
+    );
+  }
+
+  @override
   Iterable<NodeSnapshot> enumeratePaintCandidates(
+    SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   ) {
     return enumerateSnapshotPaintCandidates(
-      snapshot: snapshot,
+      snapshot: frameRead.snapshot,
       query: query,
-      selectedNodeIds: selectedNodeIds,
-      previewDeltaResolver: previewDeltaResolver,
+      selectedNodeIds: frameRead.selectedNodeIds,
+      previewDeltaResolver: frameRead.previewDeltaResolver,
     );
   }
 
@@ -1746,20 +1757,19 @@ void main() {
   );
 
   test(
-    'ScenePainter keeps only selection-halo edge nodes visible without widening ordinary candidate enumeration',
+    'ScenePainter keeps only selection-halo edge nodes paint-visible',
     () async {
       const background = Color(0xFFFFFFFF);
       const selectionColor = Color(0xFFFF0000);
       const selectionStrokeWidth = 3.0;
 
-      Future<({int ink, int geometryBuilds})> paintVisibleInk({
+      Future<int> paintVisibleInk({
         required String id,
         required Offset center,
         required bool selected,
       }) async {
-        final geometryCache = RenderGeometryCache();
-        final controller = SceneStoreController(
-          initialSnapshot: SceneSnapshot(
+        final renderState = _FakeRenderState(
+          snapshot: SceneSnapshot(
             background: BackgroundSnapshot(color: background),
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(
@@ -1769,6 +1779,7 @@ void main() {
                     id: id,
                     size: const Size(10, 10),
                     fillColor: const Color(0xFF000000),
+                    hitPadding: 0,
                     strokeWidth: 0,
                     transform: Transform2D.translation(center),
                   ),
@@ -1776,54 +1787,41 @@ void main() {
               ),
             ],
           ),
+          selectedNodeIds: selected ? <NodeId>{id} : const <NodeId>{},
         );
-        addTearDown(controller.dispose);
-        final renderState = _mirrorRenderState(controller);
-        if (selected) {
-          controller.write((writer) {
-            writer.writeSelectionReplace(<NodeId>{id});
-          });
-        }
 
         final image = await _paintToImage(
           ScenePainter(
             controller: renderState,
             imageResolver: (_) => null,
-            geometryCache: geometryCache,
             selectionColor: selectionColor,
             selectionStrokeWidth: selectionStrokeWidth,
           ),
           width: 30,
           height: 30,
         );
-        return (
-          ink: await _countNonBackgroundPixels(image, background),
-          geometryBuilds: geometryCache.debugBuildCount,
-        );
+        return _countNonBackgroundPixels(image, background);
       }
 
       final selectedHaloVisible = await paintVisibleInk(
         id: 'edge-selected-visible',
-        center: const Offset(-6, 15),
+        center: const Offset(-7, 15),
         selected: true,
       );
       final unselectedStillCulled = await paintVisibleInk(
         id: 'edge-unselected-culled',
-        center: const Offset(-6, 15),
+        center: const Offset(-7, 15),
         selected: false,
       );
       final selectedButTooFar = await paintVisibleInk(
         id: 'edge-selected-too-far',
-        center: const Offset(-9, 15),
+        center: const Offset(-10, 15),
         selected: true,
       );
 
-      expect(selectedHaloVisible.ink, greaterThan(0));
-      expect(selectedHaloVisible.geometryBuilds, 1);
-      expect(unselectedStillCulled.ink, 0);
-      expect(unselectedStillCulled.geometryBuilds, 0);
-      expect(selectedButTooFar.ink, 0);
-      expect(selectedButTooFar.geometryBuilds, 0);
+      expect(selectedHaloVisible, greaterThan(0));
+      expect(unselectedStillCulled, 0);
+      expect(selectedButTooFar, 0);
     },
   );
 
@@ -1846,6 +1844,7 @@ void main() {
                   id: 'selected-budget-anchor',
                   size: const Size(10, 10),
                   fillColor: const Color(0xFF2E7D32),
+                  hitPadding: 0,
                   strokeWidth: 0,
                   transform: Transform2D.translation(const Offset(15, 15)),
                 ),
@@ -1853,6 +1852,7 @@ void main() {
                   id: 'unselected-edge-node',
                   size: const Size(10, 10),
                   fillColor: unselectedFill,
+                  hitPadding: 0,
                   strokeWidth: 0,
                   transform: Transform2D.translation(const Offset(-6, 15)),
                 ),

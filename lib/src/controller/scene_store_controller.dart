@@ -119,14 +119,13 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   }
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate, {
-    SceneSnapshot? snapshotOverride,
-  }) {
+    SceneSpatialCandidate candidate,
+  ) {
     if (candidate.layerIndex < 0) {
       return null;
     }
-    return _resolveSnapshotAtLocation(
-      snapshot: snapshotOverride ?? snapshot,
+    return _resolveSnapshotAtLocationInSnapshot(
+      snapshot: snapshot,
       nodeId: candidate.nodeId,
       layerIndex: candidate.layerIndex,
       nodeIndex: candidate.nodeIndex,
@@ -134,21 +133,27 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   }
 
   ({NodeSnapshot node, int layerIndex, int nodeIndex})? resolveSnapshotNodeById(
-    NodeId nodeId, {
-    SceneSnapshot? snapshotOverride,
-  }) {
+    NodeId nodeId,
+  ) {
     final location = _store.nodeLocator[nodeId];
     if (location == null) {
       return null;
     }
-    return _resolveSnapshotAtLocation(
-      snapshot: snapshotOverride ?? snapshot,
+    return _resolveSnapshotAtLocationInSnapshot(
+      snapshot: snapshot,
       nodeId: nodeId,
       layerIndex: location.layerIndex,
       nodeIndex: location.nodeIndex,
     );
   }
 
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) {
+    return centerWorldForNodeSnapshotsMaterialized(snapshots);
+  }
+}
+
+extension SceneStoreControllerCommittedSceneReplacementAccess
+    on SceneStoreController {
   void writeReplaceScene(SceneSnapshot snapshot) {
     write<void>((writer) {
       writer.writeDocumentReplace(snapshot);
@@ -167,40 +172,36 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
       writer.writePreparedDocumentReplace(replacement);
     });
   }
+}
 
-  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) {
-    return centerWorldForNodeSnapshotsMaterialized(snapshots);
-  }
-
-  ({NodeSnapshot node, int layerIndex, int nodeIndex})?
-  _resolveSnapshotAtLocation({
-    required SceneSnapshot snapshot,
-    required NodeId nodeId,
-    required int layerIndex,
-    required int nodeIndex,
-  }) {
-    if (layerIndex == -1) {
-      final backgroundNodes = snapshot.backgroundLayer.nodes;
-      if (nodeIndex < 0 || nodeIndex >= backgroundNodes.length) {
-        return null;
-      }
-      final node = backgroundNodes[nodeIndex];
-      if (node.id != nodeId) {
-        return null;
-      }
-      return (node: node, layerIndex: -1, nodeIndex: nodeIndex);
-    }
-    if (layerIndex < 0 || layerIndex >= snapshot.layers.length) {
+({NodeSnapshot node, int layerIndex, int nodeIndex})?
+_resolveSnapshotAtLocationInSnapshot({
+  required SceneSnapshot snapshot,
+  required NodeId nodeId,
+  required int layerIndex,
+  required int nodeIndex,
+}) {
+  if (layerIndex == -1) {
+    final backgroundNodes = snapshot.backgroundLayer.nodes;
+    if (nodeIndex < 0 || nodeIndex >= backgroundNodes.length) {
       return null;
     }
-    final layer = snapshot.layers[layerIndex];
-    if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
-      return null;
-    }
-    final node = layer.nodes[nodeIndex];
+    final node = backgroundNodes[nodeIndex];
     if (node.id != nodeId) {
       return null;
     }
-    return (node: node, layerIndex: layerIndex, nodeIndex: nodeIndex);
+    return (node: node, layerIndex: -1, nodeIndex: nodeIndex);
   }
+  if (layerIndex < 0 || layerIndex >= snapshot.layers.length) {
+    return null;
+  }
+  final layer = snapshot.layers[layerIndex];
+  if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) {
+    return null;
+  }
+  final node = layer.nodes[nodeIndex];
+  if (node.id != nodeId) {
+    return null;
+  }
+  return (node: node, layerIndex: layerIndex, nodeIndex: nodeIndex);
 }

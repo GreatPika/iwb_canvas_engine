@@ -1110,25 +1110,24 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
       const <SceneSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate, {
-    SceneSnapshot? snapshotOverride,
-  }) => null;
+    SceneSpatialCandidate candidate,
+  ) => null;
 
   ({NodeSnapshot node, int layerIndex, int nodeIndex})?
-  resolveSnapshotNodeById(
-    NodeId nodeId, {
-    SceneSnapshot? snapshotOverride,
-  }) => null;
+  resolveSnapshotNodeById(NodeId nodeId) => null;
 
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
+      Offset();
+}
+
+extension SceneStoreControllerCommittedSceneReplacementAccess
+    on SceneStoreController {
   void writeReplaceScene(SceneSnapshot snapshot) {}
 
   PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) =>
       PreparedSceneReplacement();
 
   void writePreparedSceneReplacement(PreparedSceneReplacement replacement) {}
-
-  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
-      Offset();
 }
 ''',
   );

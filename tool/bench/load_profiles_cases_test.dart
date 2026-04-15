@@ -392,20 +392,30 @@ class _BenchmarkControllerRenderState extends ChangeNotifier
       _benchmarkZeroPreviewDelta;
 
   @override
+  SceneViewFrameRead captureFrameRead() {
+    return SceneViewFrameRead(
+      snapshot: snapshot,
+      selectedNodeIds: selectedNodeIds,
+      previewDeltaResolver: previewDeltaResolver,
+    );
+  }
+
+  @override
   Iterable<NodeSnapshot> enumeratePaintCandidates(
+    SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   ) sync* {
-    for (final node in snapshot.backgroundLayer.nodes) {
-      final candidateRect = selectedNodeIds.contains(node.id)
+    for (final node in frameRead.snapshot.backgroundLayer.nodes) {
+      final candidateRect = frameRead.selectedNodeIds.contains(node.id)
           ? query.visibilityRect
           : query.viewportRect;
       if (_benchmarkCandidateOverlaps(node, candidateRect)) {
         yield node;
       }
     }
-    for (final layer in snapshot.layers) {
+    for (final layer in frameRead.snapshot.layers) {
       for (final node in layer.nodes) {
-        final candidateRect = selectedNodeIds.contains(node.id)
+        final candidateRect = frameRead.selectedNodeIds.contains(node.id)
             ? query.visibilityRect
             : query.viewportRect;
         if (_benchmarkCandidateOverlaps(node, candidateRect)) {

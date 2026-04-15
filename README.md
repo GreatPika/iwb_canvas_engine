@@ -203,6 +203,13 @@ class _CanvasScreenState extends State<CanvasScreen> {
   via `querySpatialCandidates(...)`,
   `resolveSpatialCandidateSnapshot(...)`, and
   `resolveSnapshotNodeById(...)`.
+- Render output is frame-authoritative: if a `SceneViewRenderState` exposes an
+  active frame snapshot that differs from the committed controller snapshot,
+  candidate enumeration and selected-node supplements resolve against that
+  active frame snapshot. `ScenePainter` captures that frame read once and
+  reuses it across background paint plus candidate enumeration plus preview
+  geometry, while the controller-owned spatial-index path remains the normal
+  fast path only when both snapshots are identical.
 - Snapshot-backed committed node resolution uses one fixed stale predicate:
   a cached locator stays valid only while the current committed snapshot still
   contains the same `nodeId` at the same `[layerIndex][nodeIndex]` position.

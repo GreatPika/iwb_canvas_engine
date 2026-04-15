@@ -191,6 +191,13 @@ Committed read-side note:
   `centerWorldForNodeSnapshots(...)`
 - interactive committed read paths consume immutable `NodeSnapshot` values
   from that surface rather than runtime-node helpers
+- render output is frame-authoritative: when `SceneViewRenderState.snapshot`
+  diverges from `SceneStoreController.snapshot`, ordinary paint candidates and
+  selected-node supplements resolve against the active frame snapshot instead
+  of the committed controller snapshot; `ScenePainter` captures that frame
+  read once and reuses it across background paint plus candidate enumeration
+  plus preview geometry, and the controller-owned spatial-index path remains
+  the normal fast path only when both snapshots are identical
 - snapshot-backed node resolution is stale unless the current committed
   snapshot still contains the same `nodeId` at the same
   `[layerIndex][nodeIndex]` location; candidate bounds are coarse query data

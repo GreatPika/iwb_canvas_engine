@@ -321,25 +321,24 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
       const <SceneSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate, {
-    SceneSnapshot? snapshotOverride,
-  }) => null;
+    SceneSpatialCandidate candidate,
+  ) => null;
 
   ({NodeSnapshot node, int layerIndex, int nodeIndex})?
-  resolveSnapshotNodeById(
-    NodeId nodeId, {
-    SceneSnapshot? snapshotOverride,
-  }) => null;
+  resolveSnapshotNodeById(NodeId nodeId) => null;
 
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
+      Offset();
+}
+
+extension SceneStoreControllerCommittedSceneReplacementAccess
+    on SceneStoreController {
   void writeReplaceScene(SceneSnapshot snapshot) {}
 
   PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) =>
       PreparedSceneReplacement();
 
   void writePreparedSceneReplacement(PreparedSceneReplacement replacement) {}
-
-  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
-      Offset();
 }
 ''',
           );
@@ -398,6 +397,7 @@ import '../core/scene_spatial_index.dart';
 class Offset {}
 class SceneSnapshot {}
 class PreparedSceneReplacement {}
+Scene? inspectUiScene() => null;
 
 class SceneStoreController {
   final int controllerEpoch = 0;
@@ -405,26 +405,16 @@ class SceneStoreController {
 
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
   List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
-      const <SceneSpatialCandidate>[];
+      inspectUiScene() == null
+          ? const <SceneSpatialCandidate>[]
+          : const <SceneSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate, {
-    Scene? uiScene,
-    SceneSnapshot? snapshotOverride,
-  }) => null;
+    SceneSpatialCandidate candidate,
+  ) => null;
 
   ({NodeSnapshot node, int layerIndex, int nodeIndex})?
-  resolveSnapshotNodeById(
-    NodeId nodeId, {
-    SceneSnapshot? snapshotOverride,
-  }) => null;
-
-  void writeReplaceScene(SceneSnapshot snapshot) {}
-
-  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) =>
-      PreparedSceneReplacement();
-
-  void writePreparedSceneReplacement(PreparedSceneReplacement replacement) {}
+  resolveSnapshotNodeById(NodeId nodeId) => null;
 
   Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
       Offset();
@@ -497,9 +487,8 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
       const <SceneSpatialCandidate>[];
 
   LeakedNode? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate, {
-    SceneSnapshot? snapshotOverride,
-  }) => null;
+    SceneSpatialCandidate candidate,
+  ) => null;
 }
 ''',
           );
@@ -575,22 +564,11 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
       const <SceneSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate, {
-    SceneSnapshot? snapshotOverride,
-  }) => null;
+    SceneSpatialCandidate candidate,
+  ) => null;
 
   ({NodeSnapshot node, int layerIndex, int nodeIndex})?
-  resolveSnapshotNodeById(
-    NodeId nodeId, {
-    SceneSnapshot? snapshotOverride,
-  }) => null;
-
-  void writeReplaceScene(SceneSnapshot snapshot) {}
-
-  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) =>
-      PreparedSceneReplacement();
-
-  void writePreparedSceneReplacement(PreparedSceneReplacement replacement) {}
+  resolveSnapshotNodeById(NodeId nodeId) => null;
 
   NodeSnapshot? leakedNodeHelper(NodeId nodeId) => null;
 
@@ -878,16 +856,10 @@ class SceneStoreController {
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
   List<Object> querySpatialCandidates(Object worldBounds) => const <Object>[];
 
-  NodeSnapshot? resolveSpatialCandidateSnapshot(
-    Object candidate, {
-    SceneSnapshot? snapshotOverride,
-  }) => null;
+  NodeSnapshot? resolveSpatialCandidateSnapshot(Object candidate) => null;
 
   ({NodeSnapshot node, int layerIndex, int nodeIndex})?
-  resolveSnapshotNodeById(
-    NodeId nodeId, {
-    SceneSnapshot? snapshotOverride,
-  }) => null;
+  resolveSnapshotNodeById(NodeId nodeId) => null;
 
   Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
       Offset();
@@ -1016,6 +988,86 @@ class SceneStoreController {
     );
 
     test(
+      'rejects sealed SceneStoreControllerSpatialAccess declared on wrong owner type',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+typedef NodeId = String;
+
+class NodeSnapshot {
+  const NodeSnapshot({required this.id});
+
+  final NodeId id;
+}
+''');
+          writeSandboxFile(sandbox, 'lib/src/core/scene_spatial_index.dart', '''
+import '../contract/snapshot.dart';
+
+class Rect {}
+class Offset {}
+
+class SceneSpatialCandidate {
+  const SceneSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.candidateBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect candidateBoundsWorld;
+}
+''');
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_store_controller.dart',
+            '''
+import '../contract/snapshot.dart';
+import '../core/scene_spatial_index.dart';
+
+class SceneStoreController {
+  final int controllerEpoch = 0;
+}
+
+extension SceneStoreControllerSpatialAccess on Object {
+  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
+      const <SceneSpatialCandidate>[];
+
+  NodeSnapshot? resolveSpatialCandidateSnapshot(
+    SceneSpatialCandidate candidate,
+  ) => null;
+
+  ({NodeSnapshot node, int layerIndex, int nodeIndex})?
+  resolveSnapshotNodeById(NodeId nodeId) => null;
+
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
+      Offset();
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'controller API',
+              detail:
+                  'sealed helper surface owner '
+                  '"SceneStoreControllerSpatialAccess" must extend '
+                  'SceneStoreController',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
       'rejects committed spatial payload constructor leaking runtime scene node',
       () async {
         final sandbox = await createGuardrailsSandbox();
@@ -1076,13 +1128,10 @@ class SceneStoreController {
     );
 
     test(
-      'rejects committed controller mutator exposing runtime scene type',
+      'rejects scene replacement helper left on sealed spatial access surface',
       () async {
         final sandbox = await createGuardrailsSandbox();
         try {
-          writeSandboxFile(sandbox, 'lib/src/core/scene.dart', '''
-class Scene {}
-''');
           writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
 typedef NodeId = String;
 
@@ -1117,12 +1166,10 @@ class SceneSpatialCandidate {
             'lib/src/controller/scene_store_controller.dart',
             '''
 import '../contract/snapshot.dart';
-import '../core/scene.dart';
 import '../core/scene_spatial_index.dart';
 
 class Offset {}
 class SceneSnapshot {}
-class PreparedSceneReplacement {}
 
 class SceneStoreController {
   final int controllerEpoch = 0;
@@ -1139,12 +1186,7 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   ({NodeSnapshot node, int layerIndex, int nodeIndex})?
   resolveSnapshotNodeById(NodeId nodeId) => null;
 
-  void writeReplaceScene(Scene scene) {}
-
-  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) =>
-      PreparedSceneReplacement();
-
-  void writePreparedSceneReplacement(PreparedSceneReplacement replacement) {}
+  void writeReplaceScene(SceneSnapshot snapshot) {}
 
   Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
       Offset();
@@ -1159,8 +1201,92 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
             diagnostic(
               category: 'controller API',
               detail:
-                  'committed controller surface member "writeReplaceScene" '
-                  'must not expose live runtime scene-graph types (Scene)',
+                  'SceneStoreControllerSpatialAccess public member '
+                  '"writeReplaceScene" must not extend the sealed helper '
+                  'surface',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects committed read helper carrying extra snapshot override parameter',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+typedef NodeId = String;
+
+class NodeSnapshot {
+  const NodeSnapshot({required this.id});
+
+  final NodeId id;
+}
+''');
+          writeSandboxFile(sandbox, 'lib/src/core/scene_spatial_index.dart', '''
+import '../contract/snapshot.dart';
+
+class Rect {}
+class Offset {}
+
+class SceneSpatialCandidate {
+  const SceneSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.candidateBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect candidateBoundsWorld;
+}
+''');
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_store_controller.dart',
+            '''
+import '../contract/snapshot.dart';
+import '../core/scene_spatial_index.dart';
+
+class Offset {}
+class SceneSnapshot {}
+
+class SceneStoreController {
+  final int controllerEpoch = 0;
+}
+
+extension SceneStoreControllerSpatialAccess on SceneStoreController {
+  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
+      const <SceneSpatialCandidate>[];
+
+  NodeSnapshot? resolveSpatialCandidateSnapshot(
+    SceneSpatialCandidate candidate, {
+    SceneSnapshot? snapshotOverride,
+  }) => null;
+
+  ({NodeSnapshot node, int layerIndex, int nodeIndex})?
+  resolveSnapshotNodeById(NodeId nodeId) => null;
+
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
+      Offset();
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'controller API',
+              detail:
+                  'committed read helper "resolveSpatialCandidateSnapshot" '
+                  'must keep the exact sealed signature',
             ),
           );
         } finally {

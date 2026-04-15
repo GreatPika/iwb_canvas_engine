@@ -8,6 +8,15 @@ All notable changes to `iwb_canvas_engine` are documented here.
   `Scene` / `SceneNode` objects stay write-private, controller and interactive
   committed reads resolve immutable snapshot-backed node data only, and
   guardrails now reject reintroducing runtime-node leaks across that boundary.
+- Render-frame snapshot resolution is now frame-authoritative. If
+  `SceneViewRenderState.snapshot` diverges from the committed controller
+  snapshot, ordinary paint candidates and selected-node supplements resolve
+  against the active frame snapshot instead of mixing committed-only nodes
+  into that frame. `ScenePainter` now captures one atomic frame read before
+  shell paint so background paint, candidate enumeration, and preview
+  geometry share one authority, while the controller-owned viewport-first
+  spatial-index path remains the normal fast path when both snapshots are
+  identical.
 - Runtime scene validity ownership now closes before commit: content-layer and
   total-node budget overflows fail at model mutation owners, constrained
   runtime node fields validate eagerly on owner writes, and the controller

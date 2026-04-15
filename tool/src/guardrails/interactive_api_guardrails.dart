@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/type.dart';
 
 import '../guardrail_support/guardrail_ast_utils.dart';
 import '../guardrail_support/guardrail_context.dart';
@@ -669,11 +670,30 @@ Future<GuardrailViolation?> _checkCommittedReadSideCallbackHermeticity(
     if (resolved == null) {
       continue;
     }
+    final parsed = parseUnitOrFail(
+      context: context,
+      absPath: file.path,
+      filePathForDiag: '/lib/src/interactive/${target.relativePath}',
+      onFailure: _onInteractiveParseFailure,
+    );
     final callbackClass = _findResolvedClassByName(
       resolved.element.classes,
       target.className,
     );
     if (callbackClass == null) {
+      return GuardrailViolation(
+        filePath: '/lib/src/interactive/${target.relativePath}',
+        line: 1,
+        message:
+            'interactive API violation: committed read callback owner '
+            '"${target.className}" is required in ${target.relativePath}.',
+      );
+    }
+    final callbackClassDeclaration = _findClassDeclarationByName(
+      parsed.unit.declarations,
+      target.className,
+    );
+    if (callbackClassDeclaration == null) {
       return GuardrailViolation(
         filePath: '/lib/src/interactive/${target.relativePath}',
         line: 1,
@@ -702,6 +722,14 @@ Future<GuardrailViolation?> _checkCommittedReadSideCallbackHermeticity(
                 '${field.displayName}" must not extend the sealed callback '
                 'surface.',
           );
+        }
+        final signatureViolation = _interactiveExactFieldSignatureViolation(
+          target: target,
+          field: field,
+          context: context,
+        );
+        if (signatureViolation != null) {
+          return signatureViolation;
         }
         continue;
       }
@@ -838,6 +866,58 @@ GuardrailViolation? _interactiveCallbackConstructorViolation(
   return null;
 }
 
+GuardrailViolation? _interactiveExactFieldSignatureViolation({
+  required _InteractiveCommittedReadCallbackTarget target,
+  required FieldElement field,
+  required GuardrailContext context,
+}) {
+  final expected = target.exactCommittedReadFieldSignatures[field.displayName];
+  if (expected == null) {
+    return null;
+  }
+  final type = field.type;
+  if (type is! FunctionType) {
+    return _interactiveCommittedReadViolation(
+      context: context,
+      sourceElement: field,
+      detail:
+          'committed read callback "${target.className}.${field.displayName}" '
+          'must keep the exact sealed signature.',
+    );
+  }
+  if (type.returnType.getDisplayString() != expected.returnType) {
+    return _interactiveCommittedReadViolation(
+      context: context,
+      sourceElement: field,
+      detail:
+          'committed read callback "${target.className}.${field.displayName}" '
+          'must keep the exact sealed signature.',
+    );
+  }
+  final parameters = type.formalParameters;
+  if (parameters.length != 1) {
+    return _interactiveCommittedReadViolation(
+      context: context,
+      sourceElement: field,
+      detail:
+          'committed read callback "${target.className}.${field.displayName}" '
+          'must keep the exact sealed signature.',
+    );
+  }
+  final parameter = parameters.single;
+  if (!parameter.isRequiredPositional ||
+      parameter.type.getDisplayString() != expected.parameterType) {
+    return _interactiveCommittedReadViolation(
+      context: context,
+      sourceElement: field,
+      detail:
+          'committed read callback "${target.className}.${field.displayName}" '
+          'must keep the exact sealed signature.',
+    );
+  }
+  return null;
+}
+
 const List<_InteractiveCommittedReadCallbackTarget>
 _interactiveCommittedReadCallbackTargets =
     <_InteractiveCommittedReadCallbackTarget>[
@@ -862,6 +942,17 @@ _interactiveCommittedReadCallbackTargets =
           'commitDrawLineFromWorldSegment',
           'commitEraseNodes',
         },
+        exactCommittedReadFieldSignatures:
+            <String, _CommittedReadFieldSignature>{
+              'querySpatialCandidates': _CommittedReadFieldSignature(
+                returnType: 'List<SceneSpatialCandidate>',
+                parameterType: 'Rect',
+              ),
+              'resolveSpatialCandidateSnapshot': _CommittedReadFieldSignature(
+                returnType: 'NodeSnapshot?',
+                parameterType: 'SceneSpatialCandidate',
+              ),
+            },
       ),
       _InteractiveCommittedReadCallbackTarget(
         relativePath: 'internal/interactive_move_callbacks.dart',
@@ -879,6 +970,17 @@ _interactiveCommittedReadCallbackTargets =
           'commitMoveSelection',
           'emitAction',
         },
+        exactCommittedReadFieldSignatures:
+            <String, _CommittedReadFieldSignature>{
+              'querySpatialCandidates': _CommittedReadFieldSignature(
+                returnType: 'List<SceneSpatialCandidate>',
+                parameterType: 'Rect',
+              ),
+              'resolveSpatialCandidateSnapshot': _CommittedReadFieldSignature(
+                returnType: 'NodeSnapshot?',
+                parameterType: 'SceneSpatialCandidate',
+              ),
+            },
       ),
       _InteractiveCommittedReadCallbackTarget(
         relativePath: 'internal/interactive_draw_coordinator_callbacks.dart',
@@ -892,6 +994,17 @@ _interactiveCommittedReadCallbackTargets =
           'resolveSpatialCandidateSnapshot',
           'commitEraseNodes',
         },
+        exactCommittedReadFieldSignatures:
+            <String, _CommittedReadFieldSignature>{
+              'querySpatialCandidates': _CommittedReadFieldSignature(
+                returnType: 'List<SceneSpatialCandidate>',
+                parameterType: 'Rect',
+              ),
+              'resolveSpatialCandidateSnapshot': _CommittedReadFieldSignature(
+                returnType: 'NodeSnapshot?',
+                parameterType: 'SceneSpatialCandidate',
+              ),
+            },
       ),
       _InteractiveCommittedReadCallbackTarget(
         relativePath: 'internal/interactive_draw_eraser_engine.dart',
@@ -902,6 +1015,17 @@ _interactiveCommittedReadCallbackTargets =
           'resolveSpatialCandidateSnapshot',
           'commitEraseNodes',
         },
+        exactCommittedReadFieldSignatures:
+            <String, _CommittedReadFieldSignature>{
+              'querySpatialCandidates': _CommittedReadFieldSignature(
+                returnType: 'List<SceneSpatialCandidate>',
+                parameterType: 'Rect',
+              ),
+              'resolveSpatialCandidateSnapshot': _CommittedReadFieldSignature(
+                returnType: 'NodeSnapshot?',
+                parameterType: 'SceneSpatialCandidate',
+              ),
+            },
       ),
       _InteractiveCommittedReadCallbackTarget(
         relativePath: 'internal/interactive_draw_eraser_targets.dart',
@@ -911,6 +1035,17 @@ _interactiveCommittedReadCallbackTargets =
           'resolveSpatialCandidateSnapshot',
           'onSpatialQuery',
         },
+        exactCommittedReadFieldSignatures:
+            <String, _CommittedReadFieldSignature>{
+              'querySpatialCandidates': _CommittedReadFieldSignature(
+                returnType: 'List<SceneSpatialCandidate>',
+                parameterType: 'Rect',
+              ),
+              'resolveSpatialCandidateSnapshot': _CommittedReadFieldSignature(
+                returnType: 'NodeSnapshot?',
+                parameterType: 'SceneSpatialCandidate',
+              ),
+            },
       ),
     ];
 
@@ -919,11 +1054,24 @@ class _InteractiveCommittedReadCallbackTarget {
     required this.relativePath,
     required this.className,
     required this.allowedPublicFieldNames,
+    required this.exactCommittedReadFieldSignatures,
   });
 
   final String relativePath;
   final String className;
   final Set<String> allowedPublicFieldNames;
+  final Map<String, _CommittedReadFieldSignature>
+  exactCommittedReadFieldSignatures;
+}
+
+class _CommittedReadFieldSignature {
+  const _CommittedReadFieldSignature({
+    required this.returnType,
+    required this.parameterType,
+  });
+
+  final String returnType;
+  final String parameterType;
 }
 
 bool _isPublicConstructor(ConstructorElement constructor) {
@@ -947,6 +1095,19 @@ ClassElement? _findResolvedClassByName(
   for (final element in classes) {
     if (element.displayName == className) {
       return element;
+    }
+  }
+  return null;
+}
+
+ClassDeclaration? _findClassDeclarationByName(
+  NodeList<CompilationUnitMember> declarations,
+  String className,
+) {
+  for (final declaration in declarations) {
+    if (declaration is ClassDeclaration &&
+        declaration.name.lexeme == className) {
+      return declaration;
     }
   }
   return null;
