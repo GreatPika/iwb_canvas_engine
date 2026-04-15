@@ -119,8 +119,11 @@ prepared runtime payload no longer escapes non-controller-private boundaries.
    `SceneControllerSceneMutations.replaceScene(...)` remain thin routing
    shells over that owner and must not re-own preparation logic.
 6. The final non-controller-private replace-scene surface is fixed:
-   - `SceneStoreControllerCommittedSceneReplacementAccess` keeps only
-     `writeReplaceScene(SceneSnapshot snapshot)`.
+   - `SceneStoreController` keeps exactly one non-controller-private
+     single-phase `writeReplaceScene(SceneSnapshot snapshot)` convenience
+     entrypoint. It may live either directly on `SceneStoreController` or on a
+     dedicated extension over `SceneStoreController`, but guardrails must not
+     require one specific declaration form.
    - `SceneControllerCommittedMutationAccess` exposes
      `replaceScene(SceneSnapshot snapshot, {required VoidCallback beforeApply})`
      and does not expose `PreparedSceneReplacement`,
@@ -185,7 +188,9 @@ prepared runtime payload no longer escapes non-controller-private boundaries.
   immutable snapshot backing in this step.
 - Keep `SceneStoreController.writeReplaceScene(SceneSnapshot snapshot)` as the
   direct controller/test convenience entrypoint; do not reopen the supported
-  public scene capability contract.
+  public scene capability contract. Guardrails may enforce this through either
+  a class member or a dedicated extension method as long as the callable
+  surface remains `storeController.writeReplaceScene(snapshot)`.
 - Keep replace-scene interruption semantics anchored in the interactive scene
   mutation path. The new non-controller-private method surface must preserve
   “prepare once before interrupt, then apply” rather than moving validation

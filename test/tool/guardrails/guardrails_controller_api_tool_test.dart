@@ -1,13 +1,1135 @@
 @Tags(['tool'])
 library;
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/guardrails_tool_test_support.dart';
 import '../support/tool_process_test_support.dart';
 
+typedef _PreparedReplaceSceneAttackCase = ({
+  String name,
+  String filePath,
+  String source,
+});
+
+void _writePreparedReplaceSceneBoundarySupportScaffold(Directory sandbox) {
+  writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+typedef NodeId = String;
+typedef LayerId = String;
+
+class SceneSnapshot {}
+class ClearSceneResult {}
+class NodeSnapshot {}
+''');
+  writeSandboxFile(
+    sandbox,
+    'lib/src/contract/scene_write_txn.dart',
+    'class SceneWriteTxn {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/contract/transform2d.dart',
+    'class Transform2D {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/contract/node_spec.dart',
+    'class NodeSpec {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/contract/node_patch.dart',
+    'class NodePatch {}\n',
+  );
+  writeSandboxFile(sandbox, 'lib/src/contract/scene_render_state.dart', '''
+import 'snapshot.dart';
+
+abstract interface class SceneRenderState {
+  SceneSnapshot get snapshot;
+  Set<NodeId> get selectedNodeIds;
+}
+''');
+  writeSandboxFile(
+    sandbox,
+    'lib/src/controller/scene_controller_commit_runtime.dart',
+    '''
+class SceneControllerCommittedWrite<T> {
+  const SceneControllerCommittedWrite();
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/controller/scene_controller_commit_debug.dart',
+    '''
+class SceneStoreControllerDebugAccess {
+  const SceneStoreControllerDebugAccess();
+}
+''',
+  );
+  _writeSceneStoreControllerPreparedReplaceSupportScaffold(sandbox);
+  writeSandboxFile(
+    sandbox,
+    'lib/src/controller/scene_writer.dart',
+    _sceneWriterFixture(),
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/controller/scene_store_controller.dart',
+    _sceneStoreControllerFixture(),
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/controller/scene_controller_committed_mutation_access.dart',
+    _committedMutationAccessFixture(),
+  );
+}
+
+void _writeSceneStoreControllerPreparedReplaceSupportScaffold(
+  Directory sandbox,
+) {
+  writeSandboxFile(sandbox, 'lib/src/core/scene_spatial_index.dart', '''
+import 'dart:ui';
+
+class SceneSpatialCandidate {
+  const SceneSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.candidateBoundsWorld,
+  });
+
+  final String nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect candidateBoundsWorld;
+}
+''');
+}
+
+String _committedMutationAccessFixture({
+  String extraTopLevel = '',
+  String extraInterfaceMembers = '',
+  String extraAdapterMembers = '',
+  String interfaceReplaceSceneDeclaration = '''
+  void replaceScene(
+    SceneSnapshot snapshot, {
+    required VoidCallback beforeApply,
+  });
+''',
+  String adapterReplaceSceneDeclaration = '''
+  @override
+  void replaceScene(
+    SceneSnapshot snapshot, {
+    required VoidCallback beforeApply,
+  }) {}
+''',
+}) {
+  return '''
+import 'dart:ui';
+
+import '../contract/node_patch.dart';
+import '../contract/node_spec.dart';
+import '../contract/scene_write_txn.dart';
+import '../contract/snapshot.dart';
+import '../contract/transform2d.dart';
+import 'scene_store_controller.dart';
+
+typedef SceneControllerCommittedMutationWriteResult<T> = ({
+  T value,
+  bool didChangeRenderState,
+});
+
+$extraTopLevel
+
+abstract interface class SceneControllerCommittedMutationAccess {
+  T write<T>(T Function(SceneWriteTxn writer) fn);
+
+  SceneControllerCommittedMutationWriteResult<T> writeExact<T>(
+    T Function(SceneWriteTxn writer) fn,
+  );
+
+  NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex});
+
+  bool ensureLayer(LayerId layerId, {int? index});
+
+  bool patchNode(NodePatch patch);
+
+  bool removeNode(NodeId id);
+
+  bool setBackgroundColor(Color value);
+
+  bool setGridEnabled(bool value);
+
+  bool setGridCellSize(double value);
+
+  bool setCameraOffset(Offset value);
+
+  ClearSceneResult clearSceneExactResult();
+
+${interfaceReplaceSceneDeclaration.trimRight()}
+
+  void requestRepaint();
+
+  bool replaceSelection(Iterable<NodeId> nodeIds);
+
+  bool toggleSelection(NodeId nodeId);
+
+  bool clearSelection();
+
+  ({int selectedCount, bool changed}) selectAll({bool onlySelectable = true});
+
+  int deleteSelection();
+
+  int transformSelection(Transform2D delta);
+
+  NodeId commitDrawStroke({
+    required List<Offset> points,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  });
+
+  NodeId commitDrawLineFromWorldSegment({
+    required Offset start,
+    required Offset end,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  });
+
+  int commitEraseNodes(Iterable<NodeId> ids);
+
+  SceneSnapshot get snapshot;
+
+  Set<NodeId> get selectedNodeIds;
+
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots);
+
+$extraInterfaceMembers
+}
+
+final class SceneStoreControllerCommittedMutationAccess
+    implements SceneControllerCommittedMutationAccess {
+  SceneStoreControllerCommittedMutationAccess(this._storeController);
+
+  final SceneStoreController _storeController;
+
+  @override
+  T write<T>(T Function(SceneWriteTxn writer) fn) => throw UnimplementedError();
+
+  @override
+  SceneControllerCommittedMutationWriteResult<T> writeExact<T>(
+    T Function(SceneWriteTxn writer) fn,
+  ) => throw UnimplementedError();
+
+  @override
+  NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex}) => 'id';
+
+  @override
+  bool ensureLayer(LayerId layerId, {int? index}) => true;
+
+  @override
+  bool patchNode(NodePatch patch) => true;
+
+  @override
+  bool removeNode(NodeId id) => true;
+
+  @override
+  bool setBackgroundColor(Color value) => true;
+
+  @override
+  bool setGridEnabled(bool value) => true;
+
+  @override
+  bool setGridCellSize(double value) => true;
+
+  @override
+  bool setCameraOffset(Offset value) => true;
+
+  @override
+  ClearSceneResult clearSceneExactResult() => ClearSceneResult();
+
+${adapterReplaceSceneDeclaration.trimRight()}
+
+  @override
+  void requestRepaint() {}
+
+  @override
+  bool replaceSelection(Iterable<NodeId> nodeIds) => true;
+
+  @override
+  bool toggleSelection(NodeId nodeId) => true;
+
+  @override
+  bool clearSelection() => true;
+
+  @override
+  ({int selectedCount, bool changed}) selectAll({bool onlySelectable = true}) =>
+      (selectedCount: 0, changed: false);
+
+  @override
+  int deleteSelection() => 0;
+
+  @override
+  int transformSelection(Transform2D delta) => 0;
+
+  @override
+  NodeId commitDrawStroke({
+    required List<Offset> points,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  }) => 'id';
+
+  @override
+  NodeId commitDrawLineFromWorldSegment({
+    required Offset start,
+    required Offset end,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  }) => 'id';
+
+  @override
+  int commitEraseNodes(Iterable<NodeId> ids) => 0;
+
+  @override
+  SceneSnapshot get snapshot => SceneSnapshot();
+
+  @override
+  Set<NodeId> get selectedNodeIds => <NodeId>{};
+
+  @override
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
+      Offset.zero;
+
+$extraAdapterMembers
+}
+''';
+}
+
+String _sceneStoreControllerFixture({
+  String classDeclaration =
+      'class SceneStoreController extends _ChangeNotifier '
+      'implements SceneRenderState {',
+  bool includeCommittedReplacementExtension = true,
+  String extraTopLevel = '',
+  String extraClassMembers = '',
+  String spatialAccessMembers = '''
+  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
+      const <SceneSpatialCandidate>[];
+
+  NodeSnapshot? resolveSpatialCandidateSnapshot(
+    SceneSpatialCandidate candidate,
+  ) => null;
+
+  ({NodeSnapshot node, int layerIndex, int nodeIndex})? resolveSnapshotNodeById(
+    NodeId nodeId,
+  ) => null;
+
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
+      Offset.zero;
+''',
+  String extraExtensionMembers = '',
+  String writeReplaceSceneDeclaration = '''
+  void writeReplaceScene(SceneSnapshot snapshot) {
+    writeWithSceneWriter<void>((writer) {
+      writer.writeDocumentReplace(snapshot);
+    });
+  }
+''',
+}) {
+  return '''
+import 'dart:ui';
+
+import '../contract/scene_render_state.dart';
+import '../contract/scene_write_txn.dart';
+import '../contract/snapshot.dart';
+import '../core/scene_spatial_index.dart';
+import 'scene_controller_commit_debug.dart';
+import 'scene_controller_commit_runtime.dart';
+import 'scene_writer.dart';
+
+class _CommittedSignal {}
+class _SceneCommands {}
+class _MoveCommands {}
+class _DrawCommands {}
+class _ChangeNotifier {
+  void notifyListeners() {}
+  void dispose() {}
+}
+
+$classDeclaration
+  final String? textFontFamilyByDefault = null;
+  final commands = _SceneCommands();
+  final move = _MoveCommands();
+  final draw = _DrawCommands();
+
+  SceneSnapshot get snapshot => SceneSnapshot();
+  Set<String> get selectedNodeIds => <String>{};
+  int get controllerEpoch => 0;
+  int get structuralRevision => 0;
+  int get boundsRevision => 0;
+  int get visualRevision => 0;
+  Stream<_CommittedSignal> get signals => const Stream<_CommittedSignal>.empty();
+  SceneStoreControllerDebugAccess get debug => const SceneStoreControllerDebugAccess();
+
+  T write<T>(T Function(SceneWriteTxn txn) fn) => throw UnimplementedError();
+  SceneControllerCommittedWrite<T> writeCommitted<T>(
+    T Function(SceneWriteTxn txn) fn,
+  ) => const SceneControllerCommittedWrite<T>();
+  T writeWithSceneWriter<T>(T Function(SceneWriter writer) fn) =>
+      fn(SceneWriter());
+  SceneControllerCommittedWrite<T> writeWithSceneWriterCommitted<T>(
+    T Function(SceneWriter writer) fn,
+  ) => const SceneControllerCommittedWrite<T>();
+  void requestRepaint() {}
+  void dispose() {}
+
+$extraClassMembers
+}
+
+$extraTopLevel
+
+extension SceneStoreControllerSpatialAccess on SceneStoreController {
+${spatialAccessMembers.trimRight()}
+}
+
+${includeCommittedReplacementExtension ? '''
+extension SceneStoreControllerCommittedSceneReplacementAccess
+    on SceneStoreController {
+${writeReplaceSceneDeclaration.trimRight()}
+
+$extraExtensionMembers
+}
+''' : ''}
+''';
+}
+
+String _sceneWriterFixture({
+  String extraTopLevel = '',
+  String extraMembers = '',
+  String writeDocumentReplaceDeclaration = '''
+  void writeDocumentReplace(
+    SceneSnapshot snapshot, {
+    void Function()? beforeApply,
+  }) {}
+''',
+}) {
+  return '''
+import 'dart:ui';
+
+import '../contract/node_patch.dart';
+import '../contract/node_spec.dart';
+import '../contract/snapshot.dart';
+import '../contract/transform2d.dart';
+
+class SceneWriter {
+  SceneSnapshot get snapshot => SceneSnapshot();
+  Set<String> get selectedNodeIds => <String>{};
+
+  String writeNodeInsert(NodeSpec spec, {String? layerId, int? insertIndex}) =>
+      'id';
+  bool writeLayerEnsure(String layerId, {int? index}) => true;
+  bool writeNodeErase(String nodeId) => true;
+  bool writeNodePatch(NodePatch patch) => true;
+  bool writeNodeTransformSet(String id, Transform2D transform) => true;
+  bool writeSelectionReplace(Iterable<String> ids) => true;
+  bool writeSelectionToggle(String id) => true;
+  bool writeSelectionClear() => true;
+  int writeSelectionSelectAll({bool onlySelectable = true}) => 0;
+  int writeSelectionTranslate(Offset delta) => 0;
+  int writeSelectionTransform(Transform2D delta) => 0;
+  int writeDeleteSelection() => 0;
+  List<String> writeClearSceneKeepBackground() => const <String>[];
+  ClearSceneResult writeClearSceneKeepBackgroundResult() => ClearSceneResult();
+  void writeCameraOffset(Offset offset) {}
+  void writeGridEnable(bool enabled) {}
+  void writeGridCellSize(double cellSize) {}
+  void writeBackgroundColor(Color color) {}
+${writeDocumentReplaceDeclaration.trimRight()}
+  void writeSignalEnqueue({
+    required String type,
+    Iterable<String> nodeIds = const <String>[],
+    Map<String, Object?>? payload,
+  }) {}
+  Object get runtime => Object();
+
+$extraMembers
+}
+
+$extraTopLevel
+''';
+}
+
+void _registerPreparedReplaceSceneBoundaryAttackTests() {
+  final cases = <_PreparedReplaceSceneAttackCase>[
+    (
+      name:
+          'rejects committed mutation access interface prepareScenePayload helper',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraInterfaceMembers:
+            '  Object prepareScenePayload(SceneSnapshot snapshot);\n',
+      ),
+    ),
+    (
+      name:
+          'rejects committed mutation access interface stageSceneReplacement helper',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraInterfaceMembers:
+            '  Object stageSceneReplacement(SceneSnapshot snapshot);\n',
+      ),
+    ),
+    (
+      name:
+          'rejects committed mutation access interface applySceneReplacement helper',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraInterfaceMembers:
+            '  void applySceneReplacement(Object payload);\n',
+      ),
+    ),
+    (
+      name:
+          'rejects committed mutation access top-level sceneReplacementPayload getter',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraTopLevel: 'Object get sceneReplacementPayload => Object();\n',
+      ),
+    ),
+    (
+      name:
+          'rejects committed mutation access top-level preparedScenePayload field',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraTopLevel: 'final Object preparedScenePayload = Object();\n',
+      ),
+    ),
+    (
+      name:
+          'rejects committed mutation access top-level prepareScenePayload function',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraTopLevel:
+            'Object prepareScenePayload(SceneSnapshot snapshot) => snapshot;\n',
+      ),
+    ),
+    (
+      name:
+          'rejects committed mutation access top-level PreparedScenePayloadBridge class',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraTopLevel: 'final class PreparedScenePayloadBridge {}\n',
+      ),
+    ),
+    (
+      name: 'rejects committed mutation access top-level neutral bridge helper',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraTopLevel: 'Object handoff(Object value) => value;\n',
+      ),
+    ),
+    (
+      name: 'rejects committed mutation access unnamed extension helper',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraTopLevel: '''
+extension on SceneStoreController {
+  Object handoff(Object value) => value;
+}
+''',
+      ),
+    ),
+    (
+      name:
+          'rejects committed mutation access exact PreparedSceneReplacement type leak',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraTopLevel: 'class PreparedSceneReplacement {}\n',
+      ),
+    ),
+    (
+      name:
+          'rejects committed mutation access private PreparedSceneReplacement type leak',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraTopLevel: 'class _PreparedSceneReplacement {}\n',
+      ),
+    ),
+    (
+      name:
+          'rejects committed mutation access adapter stageSceneReplacement helper',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraAdapterMembers:
+            '  Object stageSceneReplacement(SceneSnapshot snapshot) => snapshot;\n',
+      ),
+    ),
+    (
+      name:
+          'rejects committed mutation access adapter applySceneReplacement helper',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraAdapterMembers:
+            '  void applySceneReplacement(Object payload) {}\n',
+      ),
+    ),
+    (
+      name:
+          'rejects committed mutation access adapter private applySceneReplacement helper',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraAdapterMembers:
+            '  void _applySceneReplacement(Object payload) {}\n',
+      ),
+    ),
+    (
+      name: 'rejects committed mutation access SceneReplacementPayload typedef',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraTopLevel: 'typedef SceneReplacementPayload = Object;\n',
+      ),
+    ),
+    (
+      name:
+          'rejects committed mutation access preparedScenePayload getter on adapter',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraAdapterMembers: '  Object get preparedScenePayload => Object();\n',
+      ),
+    ),
+    (
+      name: 'rejects committed mutation access adapter neutral bridge method',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraAdapterMembers: '  Object handoff(Object value) => value;\n',
+      ),
+    ),
+    (
+      name: 'rejects committed mutation access interface neutral bridge method',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraInterfaceMembers: '  Object handoff(Object value);\n',
+      ),
+    ),
+    (
+      name: 'rejects committed mutation access interface explicit constructor',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraInterfaceMembers:
+            '  SceneControllerCommittedMutationAccess.named();\n',
+      ),
+    ),
+    (
+      name:
+          'rejects committed mutation access interface replaceScene signature drift',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        interfaceReplaceSceneDeclaration: '''
+  void replaceScene(
+    SceneSnapshot snapshot, {
+    required Object beforeApply,
+  });
+''',
+      ),
+    ),
+    (
+      name:
+          'rejects committed mutation access adapter replaceScene return drift',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        adapterReplaceSceneDeclaration: '''
+  @override
+  bool replaceScene(
+    SceneSnapshot snapshot, {
+    required VoidCallback beforeApply,
+  }) => true;
+''',
+      ),
+    ),
+    (
+      name: 'rejects scene store extension prepareScenePayload helper',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraExtensionMembers:
+            '  Object prepareScenePayload(SceneSnapshot snapshot) => snapshot;\n',
+      ),
+    ),
+    (
+      name: 'rejects scene store extension stageSceneReplacement helper',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraExtensionMembers:
+            '  Object stageSceneReplacement(SceneSnapshot snapshot) => snapshot;\n',
+      ),
+    ),
+    (
+      name: 'rejects scene store extension applySceneReplacement helper',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraExtensionMembers:
+            '  void applySceneReplacement(Object payload) {}\n',
+      ),
+    ),
+    (
+      name: 'rejects scene store extension sceneReplacementPayload getter',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraExtensionMembers:
+            '  Object get sceneReplacementPayload => Object();\n',
+      ),
+    ),
+    (
+      name: 'rejects scene store extension sceneReplacementPayload setter',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraExtensionMembers:
+            '  set sceneReplacementPayload(Object value) {}\n',
+      ),
+    ),
+    (
+      name:
+          'rejects scene store extension exact prepareSceneReplacement helper',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraExtensionMembers:
+            '  Object prepareSceneReplacement(SceneSnapshot snapshot) => snapshot;\n',
+      ),
+    ),
+    (
+      name:
+          'rejects scene store extension private prepareSceneReplacement helper',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraExtensionMembers:
+            '  Object _prepareSceneReplacement(SceneSnapshot snapshot) => snapshot;\n',
+      ),
+    ),
+    (
+      name:
+          'rejects scene store extension reference to prepareSceneReplacement helper',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        writeReplaceSceneDeclaration: '''
+  void writeReplaceScene(SceneSnapshot snapshot) {
+    prepareSceneReplacement(snapshot);
+  }
+''',
+      ),
+    ),
+    (
+      name:
+          'rejects scene store extension reference to adoptPreparedSceneReplacement helper',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        writeReplaceSceneDeclaration: '''
+  void writeReplaceScene(SceneSnapshot snapshot) {
+    adoptPreparedSceneReplacement(snapshot);
+  }
+''',
+      ),
+    ),
+    (
+      name: 'rejects scene store top-level PreparedScenePayloadBridge class',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraTopLevel: 'final class PreparedScenePayloadBridge {}\n',
+      ),
+    ),
+    (
+      name: 'rejects scene store top-level neutral bridge class',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraTopLevel: 'final class BridgeSurface {}\n',
+      ),
+    ),
+    (
+      name: 'rejects scene store SceneReplacementPayload typedef',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraTopLevel: 'typedef SceneReplacementPayload = Object;\n',
+      ),
+    ),
+    (
+      name: 'rejects scene store top-level prepareScenePayload function',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraTopLevel:
+            'Object prepareScenePayload(SceneSnapshot snapshot) => snapshot;\n',
+      ),
+    ),
+    (
+      name: 'rejects scene store extension adoptScenePayload helper',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraExtensionMembers:
+            '  Object adoptScenePayload(Object payload) => payload;\n',
+      ),
+    ),
+    (
+      name: 'rejects scene store class neutral bridge method',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraClassMembers: '\n  Object handoff(Object value) => value;\n',
+      ),
+    ),
+    (
+      name: 'rejects scene store setter on sealed snapshot getter surface',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraClassMembers: '\n  set snapshot(SceneSnapshot value) {}\n',
+      ),
+    ),
+    (
+      name: 'rejects scene store named constructor on sealed boundary owner',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraClassMembers: '\n  SceneStoreController.named();\n',
+      ),
+    ),
+    (
+      name: 'rejects scene store writeReplaceScene signature drift',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        writeReplaceSceneDeclaration: '''
+  bool writeReplaceScene(SceneSnapshot snapshot) => true;
+''',
+      ),
+    ),
+    (
+      name:
+          'rejects scene store class writeReplaceScene signature drift without dedicated extension',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        includeCommittedReplacementExtension: false,
+        extraClassMembers: '''
+
+  bool writeReplaceScene(SceneSnapshot snapshot) => true;
+''',
+      ),
+    ),
+    (
+      name:
+          'rejects duplicate scene store writeReplaceScene entrypoints on class and extension',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        extraClassMembers: '''
+
+  void writeReplaceScene(SceneSnapshot snapshot) {
+    writeWithSceneWriter<void>((writer) {
+      writer.writeDocumentReplace(snapshot);
+    });
+  }
+''',
+      ),
+    ),
+    (
+      name:
+          'rejects scene store local private preparedScenePayload variable inside writeReplaceScene',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        writeReplaceSceneDeclaration: '''
+  void writeReplaceScene(SceneSnapshot snapshot) {
+    final _preparedScenePayload = snapshot;
+  }
+''',
+      ),
+    ),
+    (
+      name:
+          'rejects scene store snake_case prepared_scene_payload variable inside writeReplaceScene',
+      filePath: 'lib/src/controller/scene_store_controller.dart',
+      source: _sceneStoreControllerFixture(
+        writeReplaceSceneDeclaration: '''
+  void writeReplaceScene(SceneSnapshot snapshot) {
+    final prepared_scene_payload = snapshot;
+  }
+''',
+      ),
+    ),
+    (
+      name: 'rejects scene writer exact writePreparedDocumentReplace helper',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraMembers:
+            '  void writePreparedDocumentReplace(Object payload) {}\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer prepareScenePayload helper',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraMembers:
+            '  Object prepareScenePayload(SceneSnapshot snapshot) => snapshot;\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer applySceneReplacement helper',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraMembers: '  void applySceneReplacement(Object payload) {}\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer stageSceneReplacement helper',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraMembers:
+            '  Object stageSceneReplacement(SceneSnapshot snapshot) => snapshot;\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer sceneReplacementPayload getter',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraMembers: '  Object get sceneReplacementPayload => Object();\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer sceneReplacementPayload setter',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraMembers: '  set sceneReplacementPayload(Object value) {}\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer preparedScenePayload field',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraMembers: '  final Object preparedScenePayload = Object();\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer private preparedScenePayload field',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraMembers: '  final Object _preparedScenePayload = Object();\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer private applySceneReplacement helper',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraMembers: '  void _applySceneReplacement(Object payload) {}\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer snake_case prepared_scene_payload field',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraMembers: '  final Object prepared_scene_payload = Object();\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer forbidden parameter name reuse',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraMembers: '  void _handoff(Object preparedScenePayload) {}\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer neutral bridge method',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraMembers: '  Object handoff(Object value) => value;\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer setter on sealed snapshot getter surface',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraMembers: '  set snapshot(SceneSnapshot value) {}\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer unnamed extension helper',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraTopLevel: '''
+extension on SceneWriter {
+  Object handoff(Object value) => value;
+}
+''',
+      ),
+    ),
+    (
+      name: 'rejects scene writer named constructor on sealed boundary owner',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(extraMembers: '  SceneWriter.named();\n'),
+    ),
+    (
+      name: 'rejects scene writer top-level PreparedScenePayloadBridge class',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraTopLevel: 'final class PreparedScenePayloadBridge {}\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer top-level prepareScenePayload function',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraTopLevel:
+            'Object prepareScenePayload(SceneSnapshot snapshot) => snapshot;\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer SceneReplacementPayload typedef',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        extraTopLevel: 'typedef SceneReplacementPayload = Object;\n',
+      ),
+    ),
+    (
+      name: 'rejects scene writer writeDocumentReplace signature drift',
+      filePath: 'lib/src/controller/scene_writer.dart',
+      source: _sceneWriterFixture(
+        writeDocumentReplaceDeclaration: '''
+  void writeDocumentReplace(
+    SceneSnapshot snapshot, {
+    required Object beforeApply,
+  }) {}
+''',
+      ),
+    ),
+  ];
+
+  for (final attackCase in cases) {
+    test(attackCase.name, () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
+        if (attackCase.filePath ==
+            'lib/src/controller/scene_store_controller.dart') {
+          _writeSceneStoreControllerPreparedReplaceSupportScaffold(sandbox);
+        }
+        writeSandboxFile(sandbox, attackCase.filePath, attackCase.source);
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(result.stderr.toString(), contains('controller API violation:'));
+        expect(
+          result.stderr.toString(),
+          anyOf(
+            contains('prepared replace-scene'),
+            contains('must be routed through write*/txn* transaction API'),
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+  }
+
+  test(
+    'allows SceneStoreController.writeReplaceScene on sealed class surface without dedicated extension',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/controller/scene_store_controller.dart',
+          _sceneStoreControllerFixture(
+            includeCommittedReplacementExtension: false,
+            extraClassMembers: '''
+
+  void writeReplaceScene(SceneSnapshot snapshot) {
+    writeWithSceneWriter<void>((writer) {
+      writer.writeDocumentReplace(snapshot);
+    });
+  }
+''',
+          ),
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'allows prepared replace-scene tokens in comments inside boundary files',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/controller/scene_writer.dart',
+          _sceneWriterFixture(
+            extraTopLevel:
+                '// writePreparedDocumentReplace PreparedSceneReplacement\n',
+          ),
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'allows prepared replace-scene tokens in string literals inside boundary files',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
+        _writeSceneStoreControllerPreparedReplaceSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/controller/scene_store_controller.dart',
+          _sceneStoreControllerFixture(
+            extraTopLevel:
+                "const String _note = 'PreparedSceneReplacement prepareSceneReplacement writePreparedSceneReplacement';\n",
+          ),
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+}
+
 void main() {
   group('tool/check_guardrails.dart', () {
+    _registerPreparedReplaceSceneBoundaryAttackTests();
     // INV:INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY
     // INV:INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE
     test(
@@ -15,22 +1137,20 @@ void main() {
       () async {
         final sandbox = await createGuardrailsSandbox();
         try {
+          _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
           writeSandboxFile(
             sandbox,
             'lib/src/controller/scene_store_controller.dart',
-            '''
-import '../contract/scene_render_state.dart';
-
-class SceneStoreController implements SceneRenderState {
-  final int controllerEpoch = 0;
-
-  SceneRenderState? currentState;
-}
-''',
+            _sceneStoreControllerFixture(
+              classDeclaration:
+                  'class SceneStoreController extends _ChangeNotifier '
+                  'implements SceneRenderState {',
+              extraClassMembers: '\n  SceneRenderState? _currentState;\n',
+            ),
           );
 
           final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-          expect(result.exitCode, 0);
+          expect(result.exitCode, 0, reason: result.stderr.toString());
         } finally {
           sandbox.deleteSync(recursive: true);
         }
@@ -108,15 +1228,7 @@ class SceneStoreController implements SceneViewRenderState {
       () async {
         final sandbox = await createGuardrailsSandbox();
         try {
-          writeSandboxFile(
-            sandbox,
-            'lib/src/controller/scene_store_controller.dart',
-            '''
-class SceneStoreController {
-  final int controllerEpoch = 0;
-}
-''',
-          );
+          _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
           writeSandboxFile(
             sandbox,
             'lib/src/controller/controller_private_mutation_bridge.dart',
@@ -143,7 +1255,7 @@ final class SceneStoreControllerCommittedMutationAccess
           );
 
           final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-          expect(result.exitCode, 0);
+          expect(result.exitCode, 0, reason: result.stderr.toString());
         } finally {
           sandbox.deleteSync(recursive: true);
         }
@@ -273,70 +1385,7 @@ List<String>? sceneWriterWriteSelectionReplaceResult(Object writer, Set<String> 
       () async {
         final sandbox = await createGuardrailsSandbox();
         try {
-          writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
-typedef NodeId = String;
-
-class NodeSnapshot {
-  const NodeSnapshot({required this.id});
-
-  final NodeId id;
-}
-''');
-          writeSandboxFile(sandbox, 'lib/src/core/scene_spatial_index.dart', '''
-import '../contract/snapshot.dart';
-
-class Rect {}
-class Offset {}
-
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
-    required this.nodeId,
-    required this.layerIndex,
-    required this.nodeIndex,
-    required this.candidateBoundsWorld,
-  });
-
-  final NodeId nodeId;
-  final int layerIndex;
-  final int nodeIndex;
-  final Rect candidateBoundsWorld;
-}
-''');
-          writeSandboxFile(
-            sandbox,
-            'lib/src/controller/scene_store_controller.dart',
-            '''
-import '../contract/snapshot.dart';
-import '../core/scene_spatial_index.dart';
-
-class Offset {}
-class SceneSnapshot {}
-
-class SceneStoreController {
-  final int controllerEpoch = 0;
-}
-
-extension SceneStoreControllerSpatialAccess on SceneStoreController {
-  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
-      const <SceneSpatialCandidate>[];
-
-  NodeSnapshot? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate,
-  ) => null;
-
-  ({NodeSnapshot node, int layerIndex, int nodeIndex})?
-  resolveSnapshotNodeById(NodeId nodeId) => null;
-
-  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
-      Offset();
-}
-
-extension SceneStoreControllerCommittedSceneReplacementAccess
-    on SceneStoreController {
-  void writeReplaceScene(SceneSnapshot snapshot) {}
-}
-''',
-          );
+          _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
 
           final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
           expect(result.exitCode, 0, reason: result.stderr.toString());
@@ -351,55 +1400,15 @@ extension SceneStoreControllerCommittedSceneReplacementAccess
       () async {
         final sandbox = await createGuardrailsSandbox();
         try {
-          writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
-typedef NodeId = String;
-
-class NodeSnapshot {
-  const NodeSnapshot({required this.id});
-
-  final NodeId id;
-}
-''');
-          writeSandboxFile(sandbox, 'lib/src/core/scene_spatial_index.dart', '''
-import '../contract/snapshot.dart';
-
-class Rect {}
-class Offset {}
-
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
-    required this.nodeId,
-    required this.layerIndex,
-    required this.nodeIndex,
-    required this.candidateBoundsWorld,
-  });
-
-  final NodeId nodeId;
-  final int layerIndex;
-  final int nodeIndex;
-  final Rect candidateBoundsWorld;
-}
-''');
+          _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
           writeSandboxFile(
             sandbox,
             'lib/src/controller/scene_store_controller.dart',
-            '''
-import 'dart:ui' show Scene;
-
-import '../contract/snapshot.dart';
-import '../core/scene_spatial_index.dart';
-
-class Offset {}
-class SceneSnapshot {}
-Scene? inspectUiScene() => null;
-
-class SceneStoreController {
-  final int controllerEpoch = 0;
-}
-
-extension SceneStoreControllerSpatialAccess on SceneStoreController {
+            _sceneStoreControllerFixture(
+              extraTopLevel: 'Scene? _inspectUiScene() => null;\n',
+              spatialAccessMembers: '''
   List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
-      inspectUiScene() == null
+      _inspectUiScene() == null
           ? const <SceneSpatialCandidate>[]
           : const <SceneSpatialCandidate>[];
 
@@ -407,13 +1416,14 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
     SceneSpatialCandidate candidate,
   ) => null;
 
-  ({NodeSnapshot node, int layerIndex, int nodeIndex})?
-  resolveSnapshotNodeById(NodeId nodeId) => null;
+  ({NodeSnapshot node, int layerIndex, int nodeIndex})? resolveSnapshotNodeById(
+    NodeId nodeId,
+  ) => null;
 
   Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
-      Offset();
-}
+      Offset.zero;
 ''',
+            ),
           );
 
           final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -1441,41 +2451,26 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
     );
 
     test(
-      'rejects prepared replace-scene payload surface outside controller-private files',
+      'rejects prepared replace-scene payload surface on sealed scene-store boundary',
       () async {
         final sandbox = await createGuardrailsSandbox();
         try {
+          _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
           writeSandboxFile(
             sandbox,
             'lib/src/controller/scene_store_controller.dart',
-            '''
-import '../contract/snapshot.dart';
-
-class SceneSnapshot {}
-class PreparedSceneReplacement {}
-
-class SceneStoreController {
-  final int controllerEpoch = 0;
-}
-
-extension SceneStoreControllerCommittedSceneReplacementAccess
-    on SceneStoreController {
-  void writeReplaceScene(SceneSnapshot snapshot) {}
-
+            _sceneStoreControllerFixture(
+              extraTopLevel: 'class PreparedSceneReplacement {}\n',
+              extraExtensionMembers: '''
   PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) =>
       PreparedSceneReplacement();
-}
 ''',
+            ),
           );
 
           final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
           expect(result.exitCode, isNonZero);
-          expect(
-            result.stderr.toString(),
-            contains(
-              'prepared replace-scene payloads must stay controller-private',
-            ),
-          );
+          expect(result.stderr.toString(), contains('prepared replace-scene'));
         } finally {
           sandbox.deleteSync(recursive: true);
         }
