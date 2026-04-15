@@ -573,6 +573,13 @@ GuardrailViolation? _checkMutationOwnerPolicy({
 
   final statements = body.block.statements;
   if (statements.length <= policyIndex) {
+    if (_isAllowedReplaceSceneInterruptForwarding(
+      methodName: methodName,
+      policyCall: policyCall,
+      body: body,
+    )) {
+      return null;
+    }
     return _capabilityGuardViolation(
       filePath: filePath,
       line: lineFor(member.offset),
@@ -586,6 +593,13 @@ GuardrailViolation? _checkMutationOwnerPolicy({
     statements[policyIndex],
   );
   if (actualCall != policyCall) {
+    if (_isAllowedReplaceSceneInterruptForwarding(
+      methodName: methodName,
+      policyCall: policyCall,
+      body: body,
+    )) {
+      return null;
+    }
     return _capabilityGuardViolation(
       filePath: filePath,
       line: lineFor(statements[policyIndex].offset),
@@ -595,6 +609,20 @@ GuardrailViolation? _checkMutationOwnerPolicy({
     );
   }
   return null;
+}
+
+bool _isAllowedReplaceSceneInterruptForwarding({
+  required String methodName,
+  required String policyCall,
+  required BlockFunctionBody body,
+}) {
+  if (methodName != 'replaceScene' ||
+      policyCall != interruptForExternalMutationCall) {
+    return false;
+  }
+  return body.toSource().contains(
+    'interruptBeforeApply: interruptForExternalMutation',
+  );
 }
 
 String? _qualifiedInvocationNameFromStatement(Statement statement) {
@@ -1625,11 +1653,11 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           'if (!mutationAccess.clearSelection()) {',
           'mutationAccess.deleteSelection();',
           'mutationAccess.transformSelection(delta);',
-          'mutationAccess.prepareSceneReplacement(snapshot);',
+          'mutationAccess.replaceScene(',
           'mutationAccess.commitDrawStroke(',
           'mutationAccess.commitDrawLineFromWorldSegment(',
           'mutationAccess.commitEraseNodes(ids);',
-          'mutationAccess.writePreparedSceneReplacement(replacement);',
+          'mutationAccess.replaceScene(snapshot, beforeApply: interruptBeforeApply);',
         ],
         bannedTokens: const <String>[
           "import '../../controller/scene_store_controller.dart';",
@@ -1640,6 +1668,8 @@ GuardrailViolation? _checkInteractiveBoundaryShape(GuardrailContext context) {
           'storeController.writePreparedSceneReplacement(',
           'storeController.requestRepaint();',
           'storeController.writeReplaceScene(snapshot);',
+          'mutationAccess.prepareSceneReplacement(',
+          'mutationAccess.writePreparedSceneReplacement(',
           'txnSceneFromSnapshot(',
         ],
         message:

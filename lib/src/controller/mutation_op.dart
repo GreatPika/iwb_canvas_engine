@@ -90,9 +90,10 @@ final class ClearSceneKeepBackgroundOp
 }
 
 final class ReplaceSceneOp extends StructuralDocumentMutationOp<Object?> {
-  const ReplaceSceneOp(this.replacement);
+  const ReplaceSceneOp(this.replacement, this.owner);
 
   final PreparedSceneReplacement replacement;
+  final PreparedSceneReplacementOwner owner;
 }
 
 final class SetBackgroundColorOp extends SceneSettingsMutationOp<Object?> {

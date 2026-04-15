@@ -323,14 +323,16 @@ Ownership decisions for the target state:
    candidate-query ownership stay inside `InteractiveDrawEraserEngine` and its
    focused helpers instead of returning to the coordinator or the runtime.
 6. `SceneStoreController` performs transactional writes and finalizes a canonical
-   immutable `SceneSnapshot`. It also owns prepared replace-scene materialization,
-   so `replaceScene(...)` validates/imports runtime scene data exactly once
-   before any active-gesture reset and the apply path adopts the prepared
-   payload without a second snapshot import. On the read side it remains a
-   committed-store `SceneRenderState`; the full `SceneViewRenderState` contract
-   is assembled only on the controller-owned interactive runtime path. Live
-   runtime `Scene` / `SceneNode` graph objects stay write-private: committed
-   reads expose only `querySpatialCandidates(...)`,
+   immutable `SceneSnapshot`. Controller-private replace-scene preparation now
+   stays sealed behind the committed mutation path: public callers still use
+   only `replaceScene(SceneSnapshot snapshot)`, preflight validation/import runs
+   exactly once before any active-gesture reset, and apply adopts the prepared
+   runtime payload without a second snapshot import. Prepared replace-scene
+   payloads do not cross controller, interactive, or writer boundary surfaces.
+   On the read side it remains a committed-store `SceneRenderState`; the full
+   `SceneViewRenderState` contract is assembled only on the controller-owned
+   interactive runtime path. Live runtime `Scene` / `SceneNode` graph objects
+   stay write-private: committed reads expose only `querySpatialCandidates(...)`,
    `resolveSpatialCandidateSnapshot(...)`,
    `resolveSnapshotNodeById(...)`, and
    `centerWorldForNodeSnapshots(...)` over immutable snapshots.

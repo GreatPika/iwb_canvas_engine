@@ -8,6 +8,7 @@ import '../support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_guardrails.dart', () {
+    // INV:INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY
     // INV:INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE
     test(
       'allows SceneStoreController to stay on SceneRenderState without full view render-state import',
@@ -310,7 +311,6 @@ import '../core/scene_spatial_index.dart';
 
 class Offset {}
 class SceneSnapshot {}
-class PreparedSceneReplacement {}
 
 class SceneStoreController {
   final int controllerEpoch = 0;
@@ -334,11 +334,6 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
 extension SceneStoreControllerCommittedSceneReplacementAccess
     on SceneStoreController {
   void writeReplaceScene(SceneSnapshot snapshot) {}
-
-  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) =>
-      PreparedSceneReplacement();
-
-  void writePreparedSceneReplacement(PreparedSceneReplacement replacement) {}
 }
 ''',
           );
@@ -396,7 +391,6 @@ import '../core/scene_spatial_index.dart';
 
 class Offset {}
 class SceneSnapshot {}
-class PreparedSceneReplacement {}
 Scene? inspectUiScene() => null;
 
 class SceneStoreController {
@@ -553,7 +547,6 @@ import '../core/scene_spatial_index.dart';
 
 class Offset {}
 class SceneSnapshot {}
-class PreparedSceneReplacement {}
 
 class SceneStoreController {
   final int controllerEpoch = 0;
@@ -1439,6 +1432,48 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
               detail:
                   'committed read helper "querySpatialCandidates" must not '
                   'expose live runtime scene-graph types (SceneNode)',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects prepared replace-scene payload surface outside controller-private files',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_store_controller.dart',
+            '''
+import '../contract/snapshot.dart';
+
+class SceneSnapshot {}
+class PreparedSceneReplacement {}
+
+class SceneStoreController {
+  final int controllerEpoch = 0;
+}
+
+extension SceneStoreControllerCommittedSceneReplacementAccess
+    on SceneStoreController {
+  void writeReplaceScene(SceneSnapshot snapshot) {}
+
+  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) =>
+      PreparedSceneReplacement();
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains(
+              'prepared replace-scene payloads must stay controller-private',
             ),
           );
         } finally {

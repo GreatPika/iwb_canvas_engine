@@ -116,6 +116,9 @@ void main() {
           ),
         ],
       ),
+      beforeApply: () {
+        expect(ctx.workingScene.layers.single.nodes.single.id, 'gen-n-test-1');
+      },
     );
     expect(ctx.workingScene.layers.single.nodes.single.id, 'fresh');
     expect(ctx.workingSelection, isEmpty);
@@ -146,15 +149,13 @@ void main() {
       writerSource,
       contains('sceneWriterWriteClearSceneKeepBackgroundResult(this);'),
     );
-    expect(
-      writerSource,
-      contains('sceneWriterWriteDocumentReplace(this, snapshot);'),
-    );
+    expect(writerSource, contains('sceneWriterWriteDocumentReplace('));
     expect(writerSource, contains('sceneWriterWriteSignalEnqueue('));
 
     expect(writerSource, isNot(contains('txnNormalizeSelection(')));
     expect(writerSource, isNot(contains('BufferedSignal(')));
     expect(writerSource, isNot(contains('ReplaceSceneOp(')));
+    expect(writerSource, isNot(contains('writePreparedDocumentReplace(')));
     expect(writerSource, isNot(contains('DeleteNodesBulkOp.borrowed')));
 
     expect(selectionOwnerSource, contains('ReplaceSelectionOp(ids)'));

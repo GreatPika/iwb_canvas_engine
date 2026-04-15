@@ -739,6 +739,7 @@ void main() {
         nextInstanceRevision: 1,
       );
       final executor = MutationExecutor();
+      final owner = createPreparedSceneReplacementOwner();
 
       final result = executeWithPreparedCommit(
         executor,
@@ -756,7 +757,9 @@ void main() {
               ],
             ),
             nextInstanceRevisionSeed: ctx.nextInstanceRevision,
+            owner: owner,
           ),
+          owner,
         ),
       );
 
@@ -770,6 +773,113 @@ void main() {
       final committed = candidate as MutationCommitCandidate;
       expect(committed.selection, isEmpty);
       expect(committed.allNodeIds, const <NodeId>{'fresh'});
+    },
+  );
+
+  test(
+    'MutationExecutor rejects prepared scene replacement from foreign owner',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-foreign-owner',
+              nodes: <SceneNode>[RectNode(id: 'old', size: const Size(1, 1))],
+            ),
+          ],
+        ),
+        workingSelection: const <NodeId>{},
+        baseAllNodeIds: const <NodeId>{'old'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final executor = MutationExecutor();
+      final preparingOwner = createPreparedSceneReplacementOwner();
+      final foreignOwner = createPreparedSceneReplacementOwner();
+
+      expect(
+        () => executor.execute(
+          ctx,
+          ReplaceSceneOp(
+            materializeSceneReplacement(
+              snapshot: SceneSnapshot(
+                layers: <ContentLayerSnapshot>[
+                  ContentLayerSnapshot(
+                    id: 'layer-auto-foreign-owner-next',
+                    nodes: <NodeSnapshot>[
+                      RectNodeSnapshot(id: 'fresh', size: const Size(2, 2)),
+                    ],
+                  ),
+                ],
+              ),
+              nextInstanceRevisionSeed: ctx.nextInstanceRevision,
+              owner: preparingOwner,
+            ),
+            foreignOwner,
+          ),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'Prepared scene replacement owner mismatch.',
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
+    'MutationExecutor rejects prepared scene replacement reuse by same owner',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-consumed-owner',
+              nodes: <SceneNode>[RectNode(id: 'old', size: const Size(1, 1))],
+            ),
+          ],
+        ),
+        workingSelection: const <NodeId>{},
+        baseAllNodeIds: const <NodeId>{'old'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final executor = MutationExecutor();
+      final owner = createPreparedSceneReplacementOwner();
+      final replacement = materializeSceneReplacement(
+        snapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-consumed-owner-next',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(id: 'fresh', size: const Size(2, 2)),
+              ],
+            ),
+          ],
+        ),
+        nextInstanceRevisionSeed: ctx.nextInstanceRevision,
+        owner: owner,
+      );
+
+      final firstResult = executor.execute(
+        ctx,
+        ReplaceSceneOp(replacement, owner),
+      );
+      expect(firstResult.changed, isTrue);
+      expect(ctx.workingScene.layers.single.nodes.single.id, 'fresh');
+
+      expect(
+        () => executor.execute(ctx, ReplaceSceneOp(replacement, owner)),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'Prepared scene replacement was already consumed.',
+          ),
+        ),
+      );
     },
   );
 

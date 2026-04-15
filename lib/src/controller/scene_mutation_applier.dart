@@ -20,7 +20,11 @@ MutationApplyResult<Object?> executeStructuralDocumentMutationOp(
       index: index,
     ),
     ClearSceneKeepBackgroundOp() => _clearSceneKeepBackground(ctx),
-    ReplaceSceneOp(:final replacement) => _replaceScene(ctx, replacement),
+    ReplaceSceneOp(:final replacement, :final owner) => _replaceScene(
+      ctx,
+      replacement,
+      owner,
+    ),
   };
 }
 
@@ -109,10 +113,14 @@ MutationApplyResult<ClearSceneResult> _clearSceneKeepBackground(
 MutationApplyResult<Object?> _replaceScene(
   TxnContext ctx,
   PreparedSceneReplacement replacement,
+  PreparedSceneReplacementOwner owner,
 ) {
   final hadSelection = ctx.workingSelection.isNotEmpty;
-  ctx.txnAdoptScene(replacement.scene);
-  ctx.nextInstanceRevision = replacement.nextInstanceRevision;
+  adoptPreparedSceneReplacement(
+    ctx: ctx,
+    replacement: replacement,
+    owner: owner,
+  );
   ctx.workingSelection.clear();
   ctx.changeSet.txnMarkDocumentReplaced();
   if (hadSelection) {

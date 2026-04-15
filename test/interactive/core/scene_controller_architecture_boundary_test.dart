@@ -360,10 +360,7 @@ void main() {
       mutationBoundarySource,
       contains('mutationAccess.transformSelection(delta);'),
     );
-    expect(
-      mutationBoundarySource,
-      contains('mutationAccess.prepareSceneReplacement(snapshot);'),
-    );
+    expect(mutationBoundarySource, contains('mutationAccess.replaceScene('));
     expect(
       mutationBoundarySource,
       contains('mutationAccess.commitDrawStroke('),
@@ -378,7 +375,9 @@ void main() {
     );
     expect(
       mutationBoundarySource,
-      contains('mutationAccess.writePreparedSceneReplacement(replacement);'),
+      contains(
+        'mutationAccess.replaceScene(snapshot, beforeApply: interruptBeforeApply);',
+      ),
     );
     expect(mutationBoundarySource, isNot(contains('SceneStoreController')));
     expect(
@@ -411,6 +410,7 @@ void main() {
       mutationAccessSource,
       contains('bool replaceSelection(Iterable<NodeId> nodeIds);'),
     );
+    expect(mutationAccessSource, contains('void replaceScene('));
     expect(
       mutationAccessSource,
       contains(
@@ -420,6 +420,10 @@ void main() {
 
     expect(sceneMutationsSource, contains('mutations.setGridCellSize(value);'));
     expect(sceneMutationsSource, contains('interruptForExternalMutation();'));
+    expect(
+      sceneMutationsSource,
+      contains('interruptBeforeApply: interruptForExternalMutation,'),
+    );
     expect(
       selectionMutationsSource,
       contains('mutations.setSelection(nodeIds);'),

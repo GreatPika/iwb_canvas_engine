@@ -185,6 +185,20 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY',
+    scope: 'engine-controller',
+    title:
+        'prepared replace-scene payloads stay controller-private, while controller and interactive replace-scene boundaries expose only single-verb snapshot entrypoints',
+    primaryProof: PrimaryProof(
+      path: 'test/tool/guardrails/guardrails_controller_api_tool_test.dart',
+    ),
+    toolProof: ToolProof(
+      enforcementPath: 'tool/check_guardrails.dart',
+      regressionPath:
+          'test/tool/guardrails/guardrails_interactive_api_tool_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES',
     scope: 'engine-api',
     title:

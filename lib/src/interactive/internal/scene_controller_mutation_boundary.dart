@@ -8,7 +8,6 @@ import '../../contract/snapshot.dart';
 import '../../contract/transform2d.dart';
 import '../../core/action_events.dart';
 import '../../controller/scene_controller_committed_mutation_access.dart';
-import '../../controller/scene_snapshot_materializer.dart';
 import '../interaction_eligibility_policy.dart'
     as interaction_eligibility_policy;
 import 'interactive_move_callbacks.dart';
@@ -164,12 +163,11 @@ final class SceneControllerMutationBoundary {
     );
   }
 
-  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) {
-    return mutationAccess.prepareSceneReplacement(snapshot);
-  }
-
-  void replaceScene(PreparedSceneReplacement replacement) {
-    mutationAccess.writePreparedSceneReplacement(replacement);
+  void replaceScene(
+    SceneSnapshot snapshot, {
+    required VoidCallback interruptBeforeApply,
+  }) {
+    mutationAccess.replaceScene(snapshot, beforeApply: interruptBeforeApply);
     callbacks.clearPointerNormalizationState();
     _scheduleSceneAndOverlayCommit();
   }

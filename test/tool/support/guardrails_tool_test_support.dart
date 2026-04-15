@@ -63,9 +63,7 @@ abstract interface class SceneControllerCommittedMutationAccess {
 
   int transformSelection(Object delta);
 
-  Object prepareSceneReplacement(Object snapshot);
-
-  void writePreparedSceneReplacement(Object replacement);
+  void replaceScene(Object snapshot, {required Object beforeApply});
 
   Object commitDrawStroke(Object payload);
 
@@ -78,6 +76,8 @@ abstract interface class SceneControllerCommittedMutationAccess {
 
 final class SceneStoreControllerCommittedMutationAccess
     implements SceneControllerCommittedMutationAccess {
+  final int controllerEpoch = 0;
+
   @override
   bool replaceSelection(Object nodeIds) => true;
 
@@ -91,10 +91,7 @@ final class SceneStoreControllerCommittedMutationAccess
   int transformSelection(Object delta) => 0;
 
   @override
-  Object prepareSceneReplacement(Object snapshot) => snapshot;
-
-  @override
-  void writePreparedSceneReplacement(Object replacement) {}
+  void replaceScene(Object snapshot, {required Object beforeApply}) {}
 
   @override
   Object commitDrawStroke(Object payload) => payload;
@@ -321,13 +318,8 @@ class SceneControllerMutationBoundary {
     mutationAccess.transformSelection(delta);
   }
 
-  Object prepareSceneReplacement(Object snapshot) {
-    return mutationAccess.prepareSceneReplacement(snapshot);
-  }
-
-  void replaceScene(Object snapshot) {
-    final replacement = mutationAccess.prepareSceneReplacement(snapshot);
-    mutationAccess.writePreparedSceneReplacement(replacement);
+  void replaceScene(Object snapshot, {required Object interruptBeforeApply}) {
+    mutationAccess.replaceScene(snapshot, beforeApply: interruptBeforeApply);
   }
 
   Object commitMoveSelection(Object proposedDelta) => proposedDelta;
@@ -1099,7 +1091,6 @@ import '../core/scene_spatial_index.dart';
 
 class Offset {}
 class SceneSnapshot {}
-class PreparedSceneReplacement {}
 
 class SceneStoreController {
   final int controllerEpoch = 0;
@@ -1123,11 +1114,6 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
 extension SceneStoreControllerCommittedSceneReplacementAccess
     on SceneStoreController {
   void writeReplaceScene(SceneSnapshot snapshot) {}
-
-  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) =>
-      PreparedSceneReplacement();
-
-  void writePreparedSceneReplacement(PreparedSceneReplacement replacement) {}
 }
 ''',
   );
@@ -1300,9 +1286,10 @@ if (_isSameOffset(value)) {
 interruptForExternalMutation();
 ''',
   String replaceSceneBody = '''
-final replacement = mutations.prepareSceneReplacement(snapshot);
-interruptForExternalMutation();
-mutations.replaceScene(replacement);
+mutations.replaceScene(
+  snapshot,
+  interruptBeforeApply: interruptForExternalMutation,
+);
 ''',
 }) {
   return _mutationOwnerFixture(

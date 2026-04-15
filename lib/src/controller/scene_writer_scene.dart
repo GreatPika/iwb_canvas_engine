@@ -1,8 +1,7 @@
 import 'dart:ui';
 
-import 'scene_snapshot_materializer.dart';
-import 'scene_writer.dart';
 import 'mutation_op.dart';
+import 'scene_writer.dart';
 import 'scene_writer_types.dart';
 
 bool sceneWriterWriteCameraOffsetChanged(SceneWriter writer, Offset offset) {
@@ -23,17 +22,10 @@ bool sceneWriterWriteBackgroundColorChanged(SceneWriter writer, Color color) {
 
 void sceneWriterWriteDocumentReplace(
   SceneWriter writer,
-  SceneSnapshot snapshot,
-) {
-  final replacement = writer.runtime.prepareSceneReplacement(snapshot);
-  sceneWriterWritePreparedDocumentReplace(writer, replacement);
-}
-
-void sceneWriterWritePreparedDocumentReplace(
-  SceneWriter writer,
-  PreparedSceneReplacement replacement,
-) {
-  writer.runtime.execute(ReplaceSceneOp(replacement));
+  SceneSnapshot snapshot, {
+  VoidCallback? beforeApply,
+}) {
+  writer.runtime.writeReplaceScene(snapshot, beforeApply: beforeApply);
 }
 
 ClearSceneResult sceneWriterWriteClearSceneKeepBackgroundResult(

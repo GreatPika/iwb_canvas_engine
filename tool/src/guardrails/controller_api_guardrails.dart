@@ -128,6 +128,10 @@ ControllerFileResult _checkControllerFile(GuardrailContext context, File file) {
           parsed: parsed,
           filePosixPath: filePosixPath,
         ) ??
+        _preparedReplaceSceneBoundaryViolation(
+          parsed: parsed,
+          filePosixPath: filePosixPath,
+        ) ??
         _mutatingSymbolViolation(
           collector: collector,
           parsed: parsed,
@@ -216,6 +220,13 @@ GuardrailViolation? _replaceSceneEpochViolation({
   required ParsedUnitResult parsed,
   required String filePosixPath,
 }) {
+  const exemptFiles = <String>{
+    '/lib/src/controller/scene_controller_committed_mutation_access.dart',
+    '/lib/src/controller/scene_writer_runtime.dart',
+  };
+  if (exemptFiles.contains(filePosixPath)) {
+    return null;
+  }
   final replaceSceneOccurrence = collector.occurrences.firstWhere(
     (occurrence) => occurrence.name == 'replaceScene',
     orElse: () => const ControllerSymbolOccurrence(name: '', offset: -1),
@@ -254,6 +265,47 @@ GuardrailViolation? _mutatingSymbolViolation({
             'must be routed through write*/txn* transaction API',
       );
     }
+  }
+  return null;
+}
+
+GuardrailViolation? _preparedReplaceSceneBoundaryViolation({
+  required ParsedUnitResult parsed,
+  required String filePosixPath,
+}) {
+  final bannedTokensByFile = <String, List<String>>{
+    '/lib/src/controller/scene_controller_committed_mutation_access.dart':
+        const <String>[
+          'PreparedSceneReplacement',
+          'prepareSceneReplacement',
+          'writePreparedSceneReplacement',
+        ],
+    '/lib/src/controller/scene_store_controller.dart': const <String>[
+      'PreparedSceneReplacement',
+      'prepareSceneReplacement',
+      'writePreparedSceneReplacement',
+    ],
+    '/lib/src/controller/scene_writer.dart': const <String>[
+      'PreparedSceneReplacement',
+      'writePreparedDocumentReplace',
+    ],
+  };
+  final bannedTokens = bannedTokensByFile[filePosixPath];
+  if (bannedTokens == null) {
+    return null;
+  }
+  final source = parsed.content;
+  for (final token in bannedTokens) {
+    if (!source.contains(token)) {
+      continue;
+    }
+    return GuardrailViolation(
+      filePath: filePosixPath,
+      line: 1,
+      message:
+          'controller API violation: prepared replace-scene payloads must '
+          'stay controller-private and must not appear in $filePosixPath',
+    );
   }
   return null;
 }

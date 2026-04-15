@@ -677,6 +677,11 @@ Active-gesture mutation exclusivity:
   mutations that may reset the active gesture instead of being denied
 - `setCameraOffset(...)` keeps its existing finite/no-op preflight before any
   reset, and `replaceScene(...)` keeps snapshot validation before any reset
+- `replaceScene(SceneSnapshot snapshot)` is the only supported scene
+  replacement boundary. The controller may prepare a runtime replacement
+  payload before the reset callback runs, but that payload stays
+  controller-private and is adopted exactly once on apply rather than being
+  exposed as a public two-phase contract
 
 Transform and document helpers:
 
@@ -710,6 +715,9 @@ Clear rules:
 - a clear action can be structural-only, even if no node ids were removed
 - `replaceScene(...)` validates the snapshot boundary and throws
   `SceneDataException` for malformed input
+- `replaceScene(...)` does not expose any prepared payload API; callers pass
+  one `SceneSnapshot` and the controller owns the internal prepare-then-apply
+  sequence
 
 ### 5.5 Low-level input hooks
 

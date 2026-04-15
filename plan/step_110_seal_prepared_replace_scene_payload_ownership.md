@@ -305,7 +305,7 @@ prepared runtime payload no longer escapes non-controller-private boundaries.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Harden prepared payload implementation and apply ownership
+### Slice 1. [x] Harden prepared payload implementation and apply ownership
 
 #### Slice Contract
 `PreparedSceneReplacement` becomes opaque and can be applied only through one
@@ -351,7 +351,7 @@ controller-owned helper that validates owner identity before adoption.
   owner-token validation.
 - Replace-scene apply runs only through the canonical prepared-payload helper.
 
-### Slice 2. [ ] Remove prepared payload from non-controller-private surfaces
+### Slice 2. [x] Remove prepared payload from non-controller-private surfaces
 
 #### Slice Contract
 Prepared replace-scene payloads no longer cross committed mutation access,
@@ -419,7 +419,7 @@ replace-scene extension, or writer surfaces.
 - No non-controller-private replace-scene signature still mentions
   `PreparedSceneReplacement`.
 
-### Slice 3. [ ] Guardrail prepared replace-scene boundary hermeticity
+### Slice 3. [x] Guardrail prepared replace-scene boundary hermeticity
 
 #### Slice Contract
 Repository-local tooling fails when prepared replace-scene payloads or their
@@ -466,7 +466,7 @@ two-phase verbs reappear above controller-private ownership.
 - The invariant registry contains the new prepared replace-scene hermeticity
   rule with matching proof surfaces.
 
-### Slice 4. [ ] Publish the sealed prepared replace-scene ownership contract
+### Slice 4. [x] Publish the sealed prepared replace-scene ownership contract
 
 #### Slice Contract
 Repository documentation describes one non-contradictory rule: `replaceScene`

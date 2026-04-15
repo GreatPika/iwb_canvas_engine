@@ -297,6 +297,10 @@ class _CanvasScreenState extends State<CanvasScreen> {
   routed-session `detach()` clears only matching session-owned state, and
   `dispose()` remains destructive teardown rather than an alias of those
   interruption paths.
+- `replaceScene(SceneSnapshot snapshot)` is the only supported public
+  scene-replacement verb. The controller may prepare a runtime payload before
+  the gesture interrupt runs, but that prepared payload stays controller-private
+  and does not cross the public or interactive boundary.
 - Pending two-tap line state keeps its captured line style on the read side as
   well as the write side: `pendingLineColor` / `pendingLineThickness` reflect
   the pending commit style, while mutable `drawColor` / `lineThickness` remain

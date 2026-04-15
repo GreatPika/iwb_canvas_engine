@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../contract/snapshot.dart';
 import 'mutation_executor.dart';
 import 'mutation_op.dart';
@@ -15,6 +17,8 @@ final class SceneWriterRuntime {
   final TxnContext ctx;
   final MutationExecutor mutationExecutor;
   final void Function(BufferedSignal signal) txnSignalSink;
+  final PreparedSceneReplacementOwner _sceneReplacementOwner =
+      createPreparedSceneReplacementOwner();
 
   MutationApplyResult<TValue> execute<TValue extends Object?>(
     TypedMutationOp<TValue> op,
@@ -28,7 +32,14 @@ final class SceneWriterRuntime {
     return materializeSceneReplacement(
       snapshot: snapshot,
       nextInstanceRevisionSeed: ctx.nextInstanceRevision,
+      owner: _sceneReplacementOwner,
     );
+  }
+
+  void writeReplaceScene(SceneSnapshot snapshot, {VoidCallback? beforeApply}) {
+    final replacement = prepareSceneReplacement(snapshot);
+    beforeApply?.call();
+    execute(ReplaceSceneOp(replacement, _sceneReplacementOwner));
   }
 
   void ensureTxnActive() {

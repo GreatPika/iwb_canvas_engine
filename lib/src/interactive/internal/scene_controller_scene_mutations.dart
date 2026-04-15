@@ -72,9 +72,10 @@ final class SceneControllerSceneMutations {
   }
 
   void replaceScene(SceneSnapshot snapshot) {
-    final replacement = mutations.prepareSceneReplacement(snapshot);
-    interruptForExternalMutation();
-    mutations.replaceScene(replacement);
+    mutations.replaceScene(
+      snapshot,
+      interruptBeforeApply: interruptForExternalMutation,
+    );
   }
 
   void notifySceneChanged() {

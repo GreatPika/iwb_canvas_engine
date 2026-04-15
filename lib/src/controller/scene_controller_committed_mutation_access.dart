@@ -6,7 +6,6 @@ import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
 import 'scene_controller_commit_runtime.dart';
-import 'scene_snapshot_materializer.dart';
 import 'scene_store_controller.dart';
 
 typedef SceneControllerCommittedMutationWriteResult<T> = ({
@@ -39,9 +38,10 @@ abstract interface class SceneControllerCommittedMutationAccess {
 
   ClearSceneResult clearSceneExactResult();
 
-  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot);
-
-  void writePreparedSceneReplacement(PreparedSceneReplacement replacement);
+  void replaceScene(
+    SceneSnapshot snapshot, {
+    required VoidCallback beforeApply,
+  });
 
   void requestRepaint();
 
@@ -155,13 +155,13 @@ final class SceneStoreControllerCommittedMutationAccess
   }
 
   @override
-  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) {
-    return _storeController.prepareSceneReplacement(snapshot);
-  }
-
-  @override
-  void writePreparedSceneReplacement(PreparedSceneReplacement replacement) {
-    _storeController.writePreparedSceneReplacement(replacement);
+  void replaceScene(
+    SceneSnapshot snapshot, {
+    required VoidCallback beforeApply,
+  }) {
+    _storeController.writeWithSceneWriter<void>((writer) {
+      writer.writeDocumentReplace(snapshot, beforeApply: beforeApply);
+    });
   }
 
   @override

@@ -4,6 +4,12 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Prepared replace-scene payloads are now sealed as controller-private
+  implementation detail. Public and interactive callers still use only
+  `replaceScene(SceneSnapshot snapshot)`, preflight validation/import happens
+  exactly once before any external-mutation interrupt, and guardrails now
+  reject reintroducing prepared replace-scene payload APIs above
+  controller-private code.
 - Committed read-side runtime graph leaks are now sealed. Live runtime
   `Scene` / `SceneNode` objects stay write-private, controller and interactive
   committed reads resolve immutable snapshot-backed node data only, and

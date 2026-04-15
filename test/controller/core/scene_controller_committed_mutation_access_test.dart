@@ -145,7 +145,8 @@ void main() {
       expect(clearResult.didStructuralClear, isTrue);
       expect(clearResult.removedNodeIds, <NodeId>[lineId]);
 
-      final replacement = access.prepareSceneReplacement(
+      var beforeApplyCalls = 0;
+      access.replaceScene(
         SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -156,8 +157,12 @@ void main() {
             ),
           ],
         ),
+        beforeApply: () {
+          beforeApplyCalls = beforeApplyCalls + 1;
+          expect(controller.snapshot.layers, isEmpty);
+        },
       );
-      access.writePreparedSceneReplacement(replacement);
+      expect(beforeApplyCalls, 1);
       expect(controller.snapshot.layers.single.nodes.single.id, 'fresh');
 
       var notifications = 0;

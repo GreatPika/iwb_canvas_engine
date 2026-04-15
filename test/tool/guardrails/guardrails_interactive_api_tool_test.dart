@@ -1280,6 +1280,7 @@ void _registerInteractiveDisposeGuardTests() {
 }
 
 void _registerInteractiveArchitectureGuardrailTests() {
+  // INV:INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY
   test('accepts final interactive boundary shape', () async {
     final sandbox = await createGuardrailsSandbox();
     try {

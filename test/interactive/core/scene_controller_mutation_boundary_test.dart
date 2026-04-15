@@ -163,8 +163,15 @@ void main() {
           ),
         ],
       );
-      final prepared = boundary.prepareSceneReplacement(replacement);
-      boundary.replaceScene(prepared);
+      var interruptCalls = 0;
+      boundary.replaceScene(
+        replacement,
+        interruptBeforeApply: () {
+          interruptCalls = interruptCalls + 1;
+          expect(controller.snapshot.layers, isEmpty);
+        },
+      );
+      expect(interruptCalls, 1);
       expect(clearPointerNormalizationCalls, 1);
       expect(controller.snapshot.layers.single.nodes.single.id, 'fresh');
 

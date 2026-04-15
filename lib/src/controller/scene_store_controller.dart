@@ -155,21 +155,8 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
 extension SceneStoreControllerCommittedSceneReplacementAccess
     on SceneStoreController {
   void writeReplaceScene(SceneSnapshot snapshot) {
-    write<void>((writer) {
-      writer.writeDocumentReplace(snapshot);
-    });
-  }
-
-  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) {
-    return materializeSceneReplacement(
-      snapshot: snapshot,
-      nextInstanceRevisionSeed: _store.nextInstanceRevision,
-    );
-  }
-
-  void writePreparedSceneReplacement(PreparedSceneReplacement replacement) {
     writeWithSceneWriter<void>((writer) {
-      writer.writePreparedDocumentReplace(replacement);
+      writer.writeDocumentReplace(snapshot);
     });
   }
 }
