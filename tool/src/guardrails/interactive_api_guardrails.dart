@@ -2,10 +2,12 @@ import 'dart:io';
 
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/element/element.dart';
 
 import '../guardrail_support/guardrail_ast_utils.dart';
 import '../guardrail_support/guardrail_context.dart';
 import '../guardrail_support/guardrail_path_utils.dart';
+import 'committed_read_side_hermeticity_support.dart';
 import 'interactive_mutation_guard_contract.dart';
 import 'public_surface_guardrails.dart';
 
@@ -44,6 +46,13 @@ Future<List<GuardrailViolation>> runInteractiveApiGuardrails({
   final mutationOwnerViolation = _checkMutationOwnerPolicies(context);
   if (mutationOwnerViolation != null) {
     violations.add(mutationOwnerViolation);
+    return violations;
+  }
+
+  final committedReadSideViolation =
+      await _checkCommittedReadSideCallbackHermeticity(context);
+  if (committedReadSideViolation != null) {
+    violations.add(committedReadSideViolation);
     return violations;
   }
 
@@ -623,11 +632,348 @@ String? _qualifiedTargetName(Expression expression) {
   };
 }
 
+Future<GuardrailViolation?> _checkCommittedReadSideCallbackHermeticity(
+  GuardrailContext context,
+) async {
+  final callbackFiles = <_InteractiveCommittedReadCallbackTarget, File>{
+    for (final target in _interactiveCommittedReadCallbackTargets)
+      target: _interactiveSupportFile(context, target.relativePath),
+  };
+  final hasAnyCallbackFile = callbackFiles.values.any(
+    (file) => file.existsSync(),
+  );
+  if (!hasAnyCallbackFile) {
+    return GuardrailViolation(
+      filePath: '/lib/src/interactive/internal',
+      line: 1,
+      message:
+          'interactive API violation: committed read callback files are '
+          'required for the interactive committed read surface.',
+    );
+  }
+
+  for (final entry in callbackFiles.entries) {
+    final target = entry.key;
+    final file = entry.value;
+    if (!file.existsSync()) {
+      return GuardrailViolation(
+        filePath: '/lib/src/interactive/${target.relativePath}',
+        line: 1,
+        message:
+            'interactive API violation: committed read callback file '
+            '${target.relativePath} is required for "${target.className}".',
+      );
+    }
+
+    final resolved = await context.getResolvedLibraryResult(file.path);
+    if (resolved == null) {
+      continue;
+    }
+    final callbackClass = _findResolvedClassByName(
+      resolved.element.classes,
+      target.className,
+    );
+    if (callbackClass == null) {
+      return GuardrailViolation(
+        filePath: '/lib/src/interactive/${target.relativePath}',
+        line: 1,
+        message:
+            'interactive API violation: committed read callback owner '
+            '"${target.className}" is required in ${target.relativePath}.',
+      );
+    }
+
+    for (final field in callbackClass.fields.where(
+      (field) => !field.isSynthetic && isPublicName(field.displayName),
+    )) {
+      final leak = findForbiddenResolvedTypeLeak(
+        type: field.type,
+        sourceElement: field,
+        context: context,
+        forbiddenTypes: committedReadForbiddenTypeSpecs,
+      );
+      if (leak == null) {
+        if (!target.allowedPublicFieldNames.contains(field.displayName)) {
+          return _interactiveCommittedReadViolation(
+            context: context,
+            sourceElement: field,
+            detail:
+                'committed read callback "${target.className}.'
+                '${field.displayName}" must not extend the sealed callback '
+                'surface.',
+          );
+        }
+        continue;
+      }
+      return _interactiveCommittedReadViolation(
+        context: context,
+        sourceElement: field,
+        detail:
+            'committed read callback "${target.className}.${field.displayName}" '
+            'must not expose live runtime scene-graph types '
+            '(${leak.forbiddenTypeName}).',
+      );
+    }
+
+    final publicFieldNames = callbackClass.fields
+        .where((field) => !field.isSynthetic && isPublicName(field.displayName))
+        .map((field) => field.displayName)
+        .toSet();
+    for (final requiredFieldName in target.allowedPublicFieldNames) {
+      if (publicFieldNames.contains(requiredFieldName)) {
+        continue;
+      }
+      return _interactiveCommittedReadViolation(
+        context: context,
+        sourceElement: callbackClass,
+        detail:
+            'committed read callback "${target.className}" must keep required '
+            'field "$requiredFieldName" on the sealed callback surface.',
+      );
+    }
+
+    for (final constructor in callbackClass.constructors) {
+      final violation = _interactiveCallbackConstructorViolation(
+        constructor,
+        target: target,
+        context: context,
+      );
+      if (violation != null) {
+        return violation;
+      }
+    }
+
+    for (final getter in callbackClass.getters.where(
+      (getter) => !getter.isSynthetic && isPublicName(getter.displayName),
+    )) {
+      return _interactiveCommittedReadViolation(
+        context: context,
+        sourceElement: getter,
+        detail:
+            'committed read callback "${target.className}.${getter.displayName}" '
+            'must not add custom public accessors outside the sealed '
+            'callback surface.',
+      );
+    }
+
+    for (final setter in callbackClass.setters.where(
+      (setter) => !setter.isSynthetic && isPublicName(setter.displayName),
+    )) {
+      return _interactiveCommittedReadViolation(
+        context: context,
+        sourceElement: setter,
+        detail:
+            'committed read callback "${target.className}.${setter.displayName}" '
+            'must not add custom public accessors outside the sealed '
+            'callback surface.',
+      );
+    }
+
+    for (final method in callbackClass.methods.where(
+      (method) => isPublicName(method.displayName),
+    )) {
+      return _interactiveCommittedReadViolation(
+        context: context,
+        sourceElement: method,
+        detail:
+            'committed read callback "${target.className}.${method.displayName}" '
+            'must not add public methods outside the sealed callback surface.',
+      );
+    }
+  }
+  return null;
+}
+
+GuardrailViolation? _interactiveCallbackConstructorViolation(
+  ConstructorElement constructor, {
+  required _InteractiveCommittedReadCallbackTarget target,
+  required GuardrailContext context,
+}) {
+  if (!_isPublicConstructor(constructor)) {
+    return null;
+  }
+
+  final constructorName = _normalizedConstructorName(constructor);
+  if (constructorName.isNotEmpty) {
+    return _interactiveCommittedReadViolation(
+      context: context,
+      sourceElement: constructor,
+      detail:
+          'committed read callback "${target.className}.$constructorName" '
+          'must not add public named constructors outside the sealed '
+          'callback surface.',
+    );
+  }
+
+  final leak = findForbiddenExecutableSignatureLeak(
+    element: constructor,
+    context: context,
+    forbiddenTypes: committedReadForbiddenTypeSpecs,
+  );
+  if (leak != null) {
+    return _interactiveCommittedReadViolation(
+      context: context,
+      sourceElement: leak.sourceElement,
+      detail:
+          'committed read callback constructor for "${target.className}" must '
+          'not expose live runtime scene-graph types '
+          '(${leak.forbiddenTypeName}).',
+    );
+  }
+
+  for (final parameter in constructor.formalParameters) {
+    if (target.allowedPublicFieldNames.contains(parameter.displayName)) {
+      continue;
+    }
+    return _interactiveCommittedReadViolation(
+      context: context,
+      sourceElement: parameter,
+      detail:
+          'committed read callback constructor for "${target.className}" must '
+          'not extend the sealed callback surface with parameter '
+          '"${parameter.displayName}".',
+    );
+  }
+
+  return null;
+}
+
+const List<_InteractiveCommittedReadCallbackTarget>
+_interactiveCommittedReadCallbackTargets =
+    <_InteractiveCommittedReadCallbackTarget>[
+      _InteractiveCommittedReadCallbackTarget(
+        relativePath: 'internal/interactive_runtime_callbacks.dart',
+        className: 'InteractiveRuntimeCallbacks',
+        allowedPublicFieldNames: <String>{
+          'schedulePublicNotify',
+          'scheduleSceneNotify',
+          'scheduleOverlayNotify',
+          'readSnapshot',
+          'readSelectedNodeIds',
+          'readMode',
+          'readDragStartSlop',
+          'readDrawStyle',
+          'querySpatialCandidates',
+          'resolveSpatialCandidateSnapshot',
+          'writeSelectionReplace',
+          'writeSelectionClear',
+          'commitMoveSelection',
+          'commitDrawStroke',
+          'commitDrawLineFromWorldSegment',
+          'commitEraseNodes',
+        },
+      ),
+      _InteractiveCommittedReadCallbackTarget(
+        relativePath: 'internal/interactive_move_callbacks.dart',
+        className: 'InteractiveMoveSessionCallbacks',
+        allowedPublicFieldNames: <String>{
+          'onPublicStateChanged',
+          'onSceneStateChanged',
+          'onOverlayStateChanged',
+          'readSnapshot',
+          'readSelectedNodeIds',
+          'querySpatialCandidates',
+          'resolveSpatialCandidateSnapshot',
+          'writeSelectionReplace',
+          'writeSelectionClear',
+          'commitMoveSelection',
+          'emitAction',
+        },
+      ),
+      _InteractiveCommittedReadCallbackTarget(
+        relativePath: 'internal/interactive_draw_coordinator_callbacks.dart',
+        className: 'InteractiveDrawCoordinatorCallbacks',
+        allowedPublicFieldNames: <String>{
+          'onOverlayStateChanged',
+          'emitAction',
+          'commitDrawStroke',
+          'commitDrawLineFromWorldSegment',
+          'querySpatialCandidates',
+          'resolveSpatialCandidateSnapshot',
+          'commitEraseNodes',
+        },
+      ),
+      _InteractiveCommittedReadCallbackTarget(
+        relativePath: 'internal/interactive_draw_eraser_engine.dart',
+        className: 'InteractiveDrawEraserEngineCallbacks',
+        allowedPublicFieldNames: <String>{
+          'onOverlayStateChanged',
+          'querySpatialCandidates',
+          'resolveSpatialCandidateSnapshot',
+          'commitEraseNodes',
+        },
+      ),
+      _InteractiveCommittedReadCallbackTarget(
+        relativePath: 'internal/interactive_draw_eraser_targets.dart',
+        className: 'InteractiveDrawEraserTargetsCallbacks',
+        allowedPublicFieldNames: <String>{
+          'querySpatialCandidates',
+          'resolveSpatialCandidateSnapshot',
+          'onSpatialQuery',
+        },
+      ),
+    ];
+
+class _InteractiveCommittedReadCallbackTarget {
+  const _InteractiveCommittedReadCallbackTarget({
+    required this.relativePath,
+    required this.className,
+    required this.allowedPublicFieldNames,
+  });
+
+  final String relativePath;
+  final String className;
+  final Set<String> allowedPublicFieldNames;
+}
+
+bool _isPublicConstructor(ConstructorElement constructor) {
+  final typeName = constructor.enclosingElement.displayName;
+  if (typeName.isEmpty || !isPublicName(typeName)) {
+    return false;
+  }
+  final constructorName = _normalizedConstructorName(constructor);
+  return constructorName.isEmpty || isPublicName(constructorName);
+}
+
+String _normalizedConstructorName(ConstructorElement constructor) {
+  final constructorName = constructor.name ?? '';
+  return constructorName == 'new' ? '' : constructorName;
+}
+
+ClassElement? _findResolvedClassByName(
+  Iterable<ClassElement> classes,
+  String className,
+) {
+  for (final element in classes) {
+    if (element.displayName == className) {
+      return element;
+    }
+  }
+  return null;
+}
+
 GuardrailViolation _capabilityGuardViolation({
   required String filePath,
   required int line,
   required String detail,
 }) {
+  return GuardrailViolation(
+    filePath: filePath,
+    line: line,
+    message: 'interactive API violation: $detail',
+  );
+}
+
+GuardrailViolation? _interactiveCommittedReadViolation({
+  required GuardrailContext context,
+  required Element sourceElement,
+  required String detail,
+}) {
+  final filePath = repoRelForElement(element: sourceElement, context: context);
+  final line = lineForElement(sourceElement);
+  if (filePath == null || line == null) {
+    return null;
+  }
   return GuardrailViolation(
     filePath: filePath,
     line: line,

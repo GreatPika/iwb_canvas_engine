@@ -445,6 +445,24 @@ class InteractiveDrawCoordinator {
     'lib/src/interactive/internal/interactive_draw_eraser_engine.dart',
     '''
 import 'interactive_draw_eraser_exact_hit.dart';
+import '../../contract/snapshot.dart';
+import '../../core/scene_spatial_index.dart';
+
+class InteractiveDrawEraserEngineCallbacks {
+  const InteractiveDrawEraserEngineCallbacks({
+    required this.onOverlayStateChanged,
+    required this.querySpatialCandidates,
+    required this.resolveSpatialCandidateSnapshot,
+    required this.commitEraseNodes,
+  });
+
+  final Object onOverlayStateChanged;
+  final List<SceneSpatialCandidate> Function(Rect bounds)
+  querySpatialCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  resolveSpatialCandidateSnapshot;
+  final Object commitEraseNodes;
+}
 
 class InteractiveDrawEraserEngine {
   final InteractiveDrawEraserExactHit _exactHit = InteractiveDrawEraserExactHit();
@@ -1030,6 +1048,226 @@ void sceneControllerInternalSetBeforePointerDispatchHook(
   Object controller,
   Object? hook,
 ) {}
+''',
+  );
+  writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+typedef NodeId = String;
+
+class SceneSnapshot {
+  const SceneSnapshot({this.backgroundLayer = const BackgroundLayerSnapshot()});
+
+  final BackgroundLayerSnapshot backgroundLayer;
+}
+
+class BackgroundLayerSnapshot {
+  const BackgroundLayerSnapshot({this.nodes = const <NodeSnapshot>[]});
+
+  final List<NodeSnapshot> nodes;
+}
+
+class NodeSnapshot {
+  const NodeSnapshot({required this.id});
+
+  final NodeId id;
+}
+''');
+  writeSandboxFile(sandbox, 'lib/src/core/scene_spatial_index.dart', '''
+import '../contract/snapshot.dart';
+
+class Rect {}
+
+class SceneSpatialCandidate {
+  const SceneSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.candidateBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect candidateBoundsWorld;
+}
+''');
+  writeSandboxFile(
+    sandbox,
+    'lib/src/controller/scene_store_controller.dart',
+    '''
+import '../contract/snapshot.dart';
+import '../core/scene_spatial_index.dart';
+
+class Offset {}
+class SceneSnapshot {}
+class PreparedSceneReplacement {}
+
+class SceneStoreController {
+  final int controllerEpoch = 0;
+}
+
+extension SceneStoreControllerSpatialAccess on SceneStoreController {
+  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
+      const <SceneSpatialCandidate>[];
+
+  NodeSnapshot? resolveSpatialCandidateSnapshot(
+    SceneSpatialCandidate candidate, {
+    SceneSnapshot? snapshotOverride,
+  }) => null;
+
+  ({NodeSnapshot node, int layerIndex, int nodeIndex})?
+  resolveSnapshotNodeById(
+    NodeId nodeId, {
+    SceneSnapshot? snapshotOverride,
+  }) => null;
+
+  void writeReplaceScene(SceneSnapshot snapshot) {}
+
+  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) =>
+      PreparedSceneReplacement();
+
+  void writePreparedSceneReplacement(PreparedSceneReplacement replacement) {}
+
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
+      Offset();
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_runtime_callbacks.dart',
+    '''
+import '../../contract/snapshot.dart';
+import '../../core/scene_spatial_index.dart';
+
+class InteractiveRuntimeCallbacks {
+  const InteractiveRuntimeCallbacks({
+    required this.schedulePublicNotify,
+    required this.scheduleSceneNotify,
+    required this.scheduleOverlayNotify,
+    required this.readSnapshot,
+    required this.readSelectedNodeIds,
+    required this.readMode,
+    required this.readDragStartSlop,
+    required this.readDrawStyle,
+    required this.querySpatialCandidates,
+    required this.resolveSpatialCandidateSnapshot,
+    required this.writeSelectionReplace,
+    required this.writeSelectionClear,
+    required this.commitMoveSelection,
+    required this.commitDrawStroke,
+    required this.commitDrawLineFromWorldSegment,
+    required this.commitEraseNodes,
+  });
+
+  final Object schedulePublicNotify;
+  final Object scheduleSceneNotify;
+  final Object scheduleOverlayNotify;
+  final Object readSnapshot;
+  final Object readSelectedNodeIds;
+  final Object readMode;
+  final Object readDragStartSlop;
+  final Object readDrawStyle;
+  final List<SceneSpatialCandidate> Function(Rect bounds)
+  querySpatialCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  resolveSpatialCandidateSnapshot;
+  final Object writeSelectionReplace;
+  final Object writeSelectionClear;
+  final Object commitMoveSelection;
+  final Object commitDrawStroke;
+  final Object commitDrawLineFromWorldSegment;
+  final Object commitEraseNodes;
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_move_callbacks.dart',
+    '''
+import '../../contract/snapshot.dart';
+import '../../core/scene_spatial_index.dart';
+
+class InteractiveMoveSessionCallbacks {
+  const InteractiveMoveSessionCallbacks({
+    required this.onPublicStateChanged,
+    required this.onSceneStateChanged,
+    required this.onOverlayStateChanged,
+    required this.readSnapshot,
+    required this.readSelectedNodeIds,
+    required this.querySpatialCandidates,
+    required this.resolveSpatialCandidateSnapshot,
+    required this.writeSelectionReplace,
+    required this.writeSelectionClear,
+    required this.commitMoveSelection,
+    required this.emitAction,
+  });
+
+  final Object onPublicStateChanged;
+  final Object onSceneStateChanged;
+  final Object onOverlayStateChanged;
+  final Object readSnapshot;
+  final Object readSelectedNodeIds;
+  final List<SceneSpatialCandidate> Function(Rect bounds)
+  querySpatialCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  resolveSpatialCandidateSnapshot;
+  final Object writeSelectionReplace;
+  final Object writeSelectionClear;
+  final Object commitMoveSelection;
+  final Object emitAction;
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_draw_coordinator_callbacks.dart',
+    '''
+import '../../contract/snapshot.dart';
+import '../../core/scene_spatial_index.dart';
+
+class InteractiveDrawCoordinatorCallbacks {
+  const InteractiveDrawCoordinatorCallbacks({
+    required this.onOverlayStateChanged,
+    required this.emitAction,
+    required this.commitDrawStroke,
+    required this.commitDrawLineFromWorldSegment,
+    required this.querySpatialCandidates,
+    required this.resolveSpatialCandidateSnapshot,
+    required this.commitEraseNodes,
+  });
+
+  final Object onOverlayStateChanged;
+  final Object emitAction;
+  final Object commitDrawStroke;
+  final Object commitDrawLineFromWorldSegment;
+  final List<SceneSpatialCandidate> Function(Rect bounds)
+  querySpatialCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  resolveSpatialCandidateSnapshot;
+  final Object commitEraseNodes;
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/interactive/internal/interactive_draw_eraser_targets.dart',
+    '''
+import '../../contract/snapshot.dart';
+import '../../core/scene_spatial_index.dart';
+
+class InteractiveDrawEraserTargetsCallbacks {
+  const InteractiveDrawEraserTargetsCallbacks({
+    required this.querySpatialCandidates,
+    required this.resolveSpatialCandidateSnapshot,
+    required this.onSpatialQuery,
+  });
+
+  final List<SceneSpatialCandidate> Function(Rect bounds)
+  querySpatialCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  resolveSpatialCandidateSnapshot;
+  final Object onSpatialQuery;
+}
 ''',
   );
 }

@@ -197,6 +197,17 @@ class _CanvasScreenState extends State<CanvasScreen> {
   import and parsed JSON decode may normalize through internal draft/import
   owners, but callers still only construct, pass, and receive public
   snapshots; raw malformed snapshot or metadata assembly stays internal-only.
+- The committed read side is snapshot-backed and write-private: live runtime
+  `Scene` / `SceneNode` objects do not leave the write subsystem. Controller
+  and interactive committed reads resolve immutable `NodeSnapshot` data only,
+  via `querySpatialCandidates(...)`,
+  `resolveSpatialCandidateSnapshot(...)`, and
+  `resolveSnapshotNodeById(...)`.
+- Snapshot-backed committed node resolution uses one fixed stale predicate:
+  a cached locator stays valid only while the current committed snapshot still
+  contains the same `nodeId` at the same `[layerIndex][nodeIndex]` position.
+  Candidate bounds are coarse query data only and are not part of freshness
+  checks.
 - Scene metadata uses one shared eager contract across public constructors,
   runtime setters/owners, typed import, and JSON decode. `CameraSnapshot` /
   `Camera.offset` reject non-finite or out-of-range offsets, `GridSnapshot` /

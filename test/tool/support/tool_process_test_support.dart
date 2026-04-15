@@ -6,11 +6,12 @@ Future<Directory> createToolSandbox({
   bool includeAnalyzer = true,
 }) async {
   final sandbox = await Directory.systemTemp.createTemp(tempPrefix);
+  final sdkConstraint = _currentPackageSdkConstraint();
 
   final pubspec = StringBuffer()
     ..writeln('name: iwb_canvas_engine')
     ..writeln('environment:')
-    ..writeln('  sdk: ">=3.0.0 <4.0.0"');
+    ..writeln("  sdk: '$sdkConstraint'");
   if (includeAnalyzer) {
     pubspec
       ..writeln('dev_dependencies:')
@@ -24,6 +25,33 @@ Future<Directory> createToolSandbox({
   }
 
   return sandbox;
+}
+
+String _currentPackageSdkConstraint() {
+  final pubspecFile = File('${Directory.current.path}/pubspec.yaml');
+  if (!pubspecFile.existsSync()) {
+    throw StateError('Repository pubspec.yaml is required for tool sandbox.');
+  }
+
+  final match = RegExp(
+    r'^\s*sdk:\s*([^\r\n#]+?)\s*$',
+    multiLine: true,
+  ).firstMatch(pubspecFile.readAsStringSync());
+  if (match == null) {
+    throw StateError(
+      'Repository pubspec.yaml must define environment.sdk for tool sandboxes.',
+    );
+  }
+
+  final rawConstraint = match.group(1);
+  if (rawConstraint == null) {
+    throw StateError(
+      'Repository pubspec.yaml environment.sdk must include a constraint value.',
+    );
+  }
+
+  final constraint = rawConstraint.trim();
+  return constraint.replaceAll('"', '').replaceAll("'", '');
 }
 
 void writeSandboxFile(Directory root, String relativePath, String content) {

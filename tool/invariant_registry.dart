@@ -944,4 +944,18 @@ const List<Invariant> invariants = <Invariant>[
       path: 'test/serialization/scene_codec_validation_test.dart',
     ),
   ),
+  Invariant(
+    id: 'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY',
+    scope: 'engine-controller',
+    title:
+        'committed read-side controller and interactive callback contracts expose immutable snapshots instead of live runtime scene graph types',
+    primaryProof: PrimaryProof(
+      path: 'test/tool/guardrails/guardrails_controller_api_tool_test.dart',
+    ),
+    toolProof: ToolProof(
+      enforcementPath: 'tool/check_guardrails.dart',
+      regressionPath:
+          'test/tool/guardrails/guardrails_controller_api_tool_test.dart',
+    ),
+  ),
 ];

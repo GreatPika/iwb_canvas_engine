@@ -496,7 +496,7 @@ runtime helper surface is deleted.
 - The pre-existing runtime helper surface is deleted; no legacy committed
   runtime-node fallback remains at step closure.
 
-### Slice 4. [ ] Guardrail committed read-side hermeticity
+### Slice 4. [x] Guardrail committed read-side hermeticity
 
 #### Slice Contract
 Repository-local tooling fails when controller or interactive committed
@@ -546,7 +546,7 @@ boundary.
 - The invariant registry contains the new committed read-side hermeticity
   rule with matching proof surfaces.
 
-### Slice 5. [ ] Publish the sealed committed read-side contract
+### Slice 5. [x] Publish the sealed committed read-side contract
 
 #### Slice Contract
 Repository documentation describes one non-contradictory rule for committed

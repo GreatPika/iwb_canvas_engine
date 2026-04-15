@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/dart/element/element.dart';
 
 import '../guardrail_support/guardrail_ast_utils.dart';
 import '../guardrail_support/guardrail_context.dart';
 import '../guardrail_support/guardrail_path_utils.dart';
+import 'committed_read_side_hermeticity_support.dart';
 import 'public_surface_guardrails.dart';
 
 Future<List<GuardrailViolation>> runControllerApiGuardrails({
@@ -14,10 +16,6 @@ Future<List<GuardrailViolation>> runControllerApiGuardrails({
 }) async {
   final violations = <GuardrailViolation>[];
   final dartFiles = _controllerDartFiles(context);
-  if (dartFiles.isEmpty) {
-    return violations;
-  }
-
   var hasControllerEpoch = false;
   for (final file in dartFiles) {
     final fileResult = _checkControllerFile(context, file);
@@ -26,6 +24,18 @@ Future<List<GuardrailViolation>> runControllerApiGuardrails({
       violations.add(violation);
       return violations;
     }
+  }
+
+  final committedReadSideViolation = await _checkCommittedReadSideHermeticity(
+    context,
+  );
+  if (committedReadSideViolation != null) {
+    violations.add(committedReadSideViolation);
+    return violations;
+  }
+
+  if (dartFiles.isEmpty) {
+    return violations;
   }
 
   if (!hasControllerEpoch) {
@@ -41,6 +51,34 @@ Future<List<GuardrailViolation>> runControllerApiGuardrails({
   }
   return violations;
 }
+
+const Set<String> _committedReadSideHelperNames = <String>{
+  'querySpatialCandidates',
+  'resolveSpatialCandidateSnapshot',
+  'resolveSnapshotNodeById',
+  'centerWorldForNodeSnapshots',
+};
+
+const Set<String> _allowedSceneStoreControllerSpatialAccessPublicMemberNames =
+    <String>{
+      ..._committedReadSideHelperNames,
+      'writeReplaceScene',
+      'prepareSceneReplacement',
+      'writePreparedSceneReplacement',
+    };
+
+const Set<String> _bannedCommittedReadSideHelperNames = <String>{
+  'backgroundLayerNodes',
+  'resolveSpatialCandidateNode',
+  'resolveNodeById',
+};
+
+const Set<String> _allowedSceneSpatialCandidateFieldNames = <String>{
+  'nodeId',
+  'layerIndex',
+  'nodeIndex',
+  'candidateBoundsWorld',
+};
 
 List<File> _controllerDartFiles(GuardrailContext context) {
   final controllerDir = Directory(
@@ -223,6 +261,465 @@ GuardrailViolation? _mutatingSymbolViolation({
     }
   }
   return null;
+}
+
+Future<GuardrailViolation?> _checkCommittedReadSideHermeticity(
+  GuardrailContext context,
+) async {
+  final surfacePresence = _committedReadSideSurfacePresence(context);
+  if (!surfacePresence.hasAny) {
+    return null;
+  }
+  final missingSurfaceViolation = _missingCommittedReadSideSurfaceViolation(
+    surfacePresence,
+  );
+  if (missingSurfaceViolation != null) {
+    return missingSurfaceViolation;
+  }
+  if (!surfacePresence.hasSpatialFile) {
+    return null;
+  }
+  final spatialCandidateViolation = await _checkSpatialCandidateHermeticity(
+    context,
+  );
+  if (spatialCandidateViolation != null) {
+    return spatialCandidateViolation;
+  }
+  return _checkControllerReadHelperHermeticity(context);
+}
+
+_CommittedReadSideSurfacePresence _committedReadSideSurfacePresence(
+  GuardrailContext context,
+) {
+  final controllerFile = _sceneStoreControllerFile(context);
+  final spatialFile = _sceneSpatialIndexFile(context);
+  return _CommittedReadSideSurfacePresence(
+    hasControllerFile: controllerFile.existsSync(),
+    hasSpatialFile: spatialFile.existsSync(),
+    controllerDeclaresCommittedReadSurface:
+        controllerFile.existsSync() &&
+        _controllerFileDeclaresCommittedReadSurface(controllerFile),
+  );
+}
+
+GuardrailViolation? _missingCommittedReadSideSurfaceViolation(
+  _CommittedReadSideSurfacePresence presence,
+) {
+  if (presence.hasSpatialFile && !presence.hasControllerFile) {
+    return GuardrailViolation(
+      filePath: '/lib/src/controller/scene_store_controller.dart',
+      line: 1,
+      message:
+          'controller API violation: committed read helper owner file '
+          'scene_store_controller.dart is required when '
+          'scene_spatial_index.dart exists.',
+    );
+  }
+  if (presence.controllerDeclaresCommittedReadSurface &&
+      !presence.hasSpatialFile) {
+    return GuardrailViolation(
+      filePath: '/lib/src/core/scene_spatial_index.dart',
+      line: 1,
+      message:
+          'controller API violation: committed spatial payload file '
+          'scene_spatial_index.dart is required when committed read helpers '
+          'exist.',
+    );
+  }
+  return null;
+}
+
+Future<GuardrailViolation?> _checkSpatialCandidateHermeticity(
+  GuardrailContext context,
+) async {
+  final spatialFile = _sceneSpatialIndexFile(context);
+  if (!spatialFile.existsSync()) {
+    return GuardrailViolation(
+      filePath: '/lib/src/core/scene_spatial_index.dart',
+      line: 1,
+      message:
+          'controller API violation: committed spatial payload file '
+          'scene_spatial_index.dart is required.',
+    );
+  }
+
+  final resolved = await context.getResolvedLibraryResult(spatialFile.path);
+  if (resolved == null) {
+    return null;
+  }
+  final spatialCandidate = _firstClassNamed(
+    resolved.element.classes,
+    'SceneSpatialCandidate',
+  );
+  if (spatialCandidate == null) {
+    return GuardrailViolation(
+      filePath: '/lib/src/core/scene_spatial_index.dart',
+      line: 1,
+      message:
+          'controller API violation: committed spatial payload owner '
+          '"SceneSpatialCandidate" is required in scene_spatial_index.dart',
+    );
+  }
+
+  for (final field in spatialCandidate.fields.where(
+    (field) => !field.isSynthetic && isPublicName(field.displayName),
+  )) {
+    final leak = findForbiddenResolvedTypeLeak(
+      type: field.type,
+      sourceElement: field,
+      context: context,
+      forbiddenTypes: committedReadForbiddenTypeSpecs,
+    );
+    if (leak == null) {
+      if (!_allowedSceneSpatialCandidateFieldNames.contains(
+        field.displayName,
+      )) {
+        return _committedReadSideViolation(
+          context: context,
+          sourceElement: field,
+          detail:
+              'committed spatial payload "${spatialCandidate.displayName}.'
+              '${field.displayName}" must not extend the sealed locator-only '
+              'field surface.',
+        );
+      }
+      continue;
+    }
+    return _committedReadSideViolation(
+      context: context,
+      sourceElement: field,
+      detail:
+          'committed spatial payload "${spatialCandidate.displayName}.'
+          '${field.displayName}" must not expose live runtime scene-graph '
+          'types (${leak.forbiddenTypeName}).',
+    );
+  }
+
+  final publicFieldNames = spatialCandidate.fields
+      .where((field) => !field.isSynthetic && isPublicName(field.displayName))
+      .map((field) => field.displayName)
+      .toSet();
+  for (final requiredFieldName in _allowedSceneSpatialCandidateFieldNames) {
+    if (publicFieldNames.contains(requiredFieldName)) {
+      continue;
+    }
+    return _committedReadSideViolation(
+      context: context,
+      sourceElement: spatialCandidate,
+      detail:
+          'committed spatial payload "${spatialCandidate.displayName}" must '
+          'keep required locator field "$requiredFieldName" on the sealed '
+          'surface.',
+    );
+  }
+
+  for (final constructor in spatialCandidate.constructors) {
+    final violation = _spatialCandidateConstructorViolation(
+      constructor,
+      context: context,
+    );
+    if (violation != null) {
+      return violation;
+    }
+  }
+
+  for (final getter in spatialCandidate.getters.where(
+    (getter) => !getter.isSynthetic && isPublicName(getter.displayName),
+  )) {
+    return _committedReadSideViolation(
+      context: context,
+      sourceElement: getter,
+      detail:
+          'committed spatial payload "${spatialCandidate.displayName}."'
+          '${getter.displayName}" must not add custom public accessors '
+          'outside the sealed locator-only field surface.',
+    );
+  }
+
+  for (final setter in spatialCandidate.setters.where(
+    (setter) => !setter.isSynthetic && isPublicName(setter.displayName),
+  )) {
+    return _committedReadSideViolation(
+      context: context,
+      sourceElement: setter,
+      detail:
+          'committed spatial payload "${spatialCandidate.displayName}."'
+          '${setter.displayName}" must not add custom public accessors '
+          'outside the sealed locator-only field surface.',
+    );
+  }
+
+  for (final method in spatialCandidate.methods.where(
+    (method) => isPublicName(method.displayName),
+  )) {
+    return _committedReadSideViolation(
+      context: context,
+      sourceElement: method,
+      detail:
+          'committed spatial payload "${spatialCandidate.displayName}."'
+          '${method.displayName}" must not add public methods outside the '
+          'sealed locator-only field surface.',
+    );
+  }
+
+  return null;
+}
+
+Future<GuardrailViolation?> _checkControllerReadHelperHermeticity(
+  GuardrailContext context,
+) async {
+  final controllerFile = _sceneStoreControllerFile(context);
+  if (!controllerFile.existsSync()) {
+    return null;
+  }
+
+  final resolved = await context.getResolvedLibraryResult(controllerFile.path);
+  if (resolved == null) {
+    return null;
+  }
+  final extensionElement = _firstExtensionNamed(
+    resolved.element.extensions,
+    'SceneStoreControllerSpatialAccess',
+  );
+  if (extensionElement == null) {
+    return GuardrailViolation(
+      filePath: '/lib/src/controller/scene_store_controller.dart',
+      line: 1,
+      message:
+          'controller API violation: sealed helper surface owner '
+          '"SceneStoreControllerSpatialAccess" is required in '
+          'scene_store_controller.dart',
+    );
+  }
+
+  final publicMembers = <ExecutableElement>[
+    ...extensionElement.methods.where(
+      (method) => isPublicName(method.displayName),
+    ),
+    ...extensionElement.getters.where(
+      (getter) => !getter.isSynthetic && isPublicName(getter.displayName),
+    ),
+    ...extensionElement.setters.where(
+      (setter) => !setter.isSynthetic && isPublicName(setter.displayName),
+    ),
+  ];
+
+  for (final member in publicMembers) {
+    if (_bannedCommittedReadSideHelperNames.contains(member.displayName)) {
+      return _committedReadSideViolation(
+        context: context,
+        sourceElement: member,
+        detail:
+            'legacy committed read helper "${member.displayName}" must not '
+            'remain on SceneStoreController.',
+      );
+    }
+    if (!_allowedSceneStoreControllerSpatialAccessPublicMemberNames.contains(
+      member.displayName,
+    )) {
+      return _committedReadSideViolation(
+        context: context,
+        sourceElement: member,
+        detail:
+            'SceneStoreControllerSpatialAccess public member '
+            '"${member.displayName}" must not extend the sealed helper '
+            'surface.',
+      );
+    }
+
+    final leak = findForbiddenExecutableSignatureLeak(
+      element: member,
+      context: context,
+      forbiddenTypes: committedReadForbiddenTypeSpecs,
+    );
+    if (leak == null) {
+      continue;
+    }
+    return _committedReadSideViolation(
+      context: context,
+      sourceElement: member,
+      detail: _committedReadSideHelperNames.contains(member.displayName)
+          ? 'committed read helper "${member.displayName}" must not expose '
+                'live runtime scene-graph types '
+                '(${leak.forbiddenTypeName}).'
+          : 'committed controller surface member "${member.displayName}" '
+                'must not expose live runtime scene-graph types '
+                '(${leak.forbiddenTypeName}).',
+    );
+  }
+
+  final publicMemberNames = publicMembers
+      .map((member) => member.displayName)
+      .toSet();
+  for (final requiredHelperName in _committedReadSideHelperNames) {
+    if (publicMemberNames.contains(requiredHelperName)) {
+      continue;
+    }
+    return _committedReadSideViolation(
+      context: context,
+      sourceElement: extensionElement,
+      detail:
+          'SceneStoreControllerSpatialAccess must keep committed read helper '
+          '"$requiredHelperName" on the sealed helper surface.',
+    );
+  }
+
+  return null;
+}
+
+final class _CommittedReadSideSurfacePresence {
+  const _CommittedReadSideSurfacePresence({
+    required this.hasControllerFile,
+    required this.hasSpatialFile,
+    required this.controllerDeclaresCommittedReadSurface,
+  });
+
+  final bool hasControllerFile;
+  final bool hasSpatialFile;
+  final bool controllerDeclaresCommittedReadSurface;
+
+  bool get hasAny => hasControllerFile || hasSpatialFile;
+}
+
+bool _controllerFileDeclaresCommittedReadSurface(File controllerFile) {
+  final source = controllerFile.readAsStringSync();
+  if (source.contains('SceneStoreControllerSpatialAccess')) {
+    return true;
+  }
+
+  for (final token in <String>{
+    ..._committedReadSideHelperNames,
+    ..._allowedSceneStoreControllerSpatialAccessPublicMemberNames,
+    ..._bannedCommittedReadSideHelperNames,
+  }) {
+    if (source.contains(token)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+File _sceneStoreControllerFile(GuardrailContext context) {
+  return File(
+    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'src${Platform.pathSeparator}controller${Platform.pathSeparator}'
+    'scene_store_controller.dart',
+  );
+}
+
+File _sceneSpatialIndexFile(GuardrailContext context) {
+  return File(
+    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
+    'src${Platform.pathSeparator}core${Platform.pathSeparator}'
+    'scene_spatial_index.dart',
+  );
+}
+
+GuardrailViolation? _spatialCandidateConstructorViolation(
+  ConstructorElement constructor, {
+  required GuardrailContext context,
+}) {
+  if (!_isPublicConstructor(constructor)) {
+    return null;
+  }
+
+  final constructorName = _normalizedConstructorName(constructor);
+  if (constructorName.isNotEmpty) {
+    return _committedReadSideViolation(
+      context: context,
+      sourceElement: constructor,
+      detail:
+          'committed spatial payload "SceneSpatialCandidate.$constructorName" '
+          'must not add public named constructors outside the sealed '
+          'locator-only field surface.',
+    );
+  }
+
+  final leak = findForbiddenExecutableSignatureLeak(
+    element: constructor,
+    context: context,
+    forbiddenTypes: committedReadForbiddenTypeSpecs,
+  );
+  if (leak != null) {
+    return _committedReadSideViolation(
+      context: context,
+      sourceElement: leak.sourceElement,
+      detail:
+          'committed spatial payload constructor for "SceneSpatialCandidate" '
+          'must not expose live runtime scene-graph types '
+          '(${leak.forbiddenTypeName}).',
+    );
+  }
+
+  for (final parameter in constructor.formalParameters) {
+    if (_allowedSceneSpatialCandidateFieldNames.contains(
+      parameter.displayName,
+    )) {
+      continue;
+    }
+    return _committedReadSideViolation(
+      context: context,
+      sourceElement: parameter,
+      detail:
+          'committed spatial payload constructor for "SceneSpatialCandidate" '
+          'must not extend the sealed locator-only field surface with '
+          'parameter "${parameter.displayName}".',
+    );
+  }
+
+  return null;
+}
+
+bool _isPublicConstructor(ConstructorElement constructor) {
+  final typeName = constructor.enclosingElement.displayName;
+  if (typeName.isEmpty || !isPublicName(typeName)) {
+    return false;
+  }
+  final constructorName = _normalizedConstructorName(constructor);
+  return constructorName.isEmpty || isPublicName(constructorName);
+}
+
+String _normalizedConstructorName(ConstructorElement constructor) {
+  final constructorName = constructor.name ?? '';
+  return constructorName == 'new' ? '' : constructorName;
+}
+
+ClassElement? _firstClassNamed(Iterable<ClassElement> classes, String name) {
+  for (final element in classes) {
+    if (element.displayName == name) {
+      return element;
+    }
+  }
+  return null;
+}
+
+ExtensionElement? _firstExtensionNamed(
+  Iterable<ExtensionElement> extensions,
+  String name,
+) {
+  for (final element in extensions) {
+    if (element.displayName == name) {
+      return element;
+    }
+  }
+  return null;
+}
+
+GuardrailViolation? _committedReadSideViolation({
+  required GuardrailContext context,
+  required Element sourceElement,
+  required String detail,
+}) {
+  final filePath = repoRelForElement(element: sourceElement, context: context);
+  final line = lineForElement(sourceElement);
+  if (filePath == null || line == null) {
+    return null;
+  }
+  return GuardrailViolation(
+    filePath: filePath,
+    line: line,
+    message: 'controller API violation: $detail',
+  );
 }
 
 Never _onParseFailure({

@@ -12,5 +12,6 @@ import 'src/guardrails/guardrails_runner.dart';
 // INV:INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY
 // INV:INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER
 // INV:INV-ENG-RUNTIME-NODE-VALUE-OWNERS
+// INV:INV-ENG-COMMITTED-READ-SIDE-HERMETICITY
 
 Future<void> main(List<String> _) => runGuardrailsTool();

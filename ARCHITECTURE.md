@@ -328,7 +328,12 @@ Ownership decisions for the target state:
    before any active-gesture reset and the apply path adopts the prepared
    payload without a second snapshot import. On the read side it remains a
    committed-store `SceneRenderState`; the full `SceneViewRenderState` contract
-   is assembled only on the controller-owned interactive runtime path.
+   is assembled only on the controller-owned interactive runtime path. Live
+   runtime `Scene` / `SceneNode` graph objects stay write-private: committed
+   reads expose only `querySpatialCandidates(...)`,
+   `resolveSpatialCandidateSnapshot(...)`,
+   `resolveSnapshotNodeById(...)`, and
+   `centerWorldForNodeSnapshots(...)` over immutable snapshots.
 7. `ScenePainter` renders the committed snapshot plus any ephemeral preview
    state owned by the interactive controller. Background-grid draw semantics
    have one render-local owner in `render/scene_grid_renderer.dart`; painter
@@ -340,6 +345,14 @@ Ownership decisions for the target state:
 ## State ownership model
 
 - The committed `SceneSnapshot` is the single source of truth.
+- Committed read-side runtime graph objects are write-private. Controller and
+  interactive read paths may cache locators, but they must resolve committed
+  nodes back through immutable snapshots rather than exposing live runtime
+  `SceneNode` instances or owned runtime node collections.
+- Snapshot-backed committed resolution uses one stale predicate: a locator is
+  valid only while the current committed snapshot still contains the same
+  `nodeId` at the same `[layerIndex][nodeIndex]` position. Coarse candidate
+  bounds are query data only and must not participate in freshness checks.
 - Committed-store invariant sweeps must reuse the shared runtime scene metadata
   contract for camera, grid, and palette values so raw/internal bypassed state
   is surfaced before controller code treats it as canonical.
@@ -371,6 +384,12 @@ Ownership decisions for the target state:
   public gesture policy or route gesture-local requests, but they must not
   retain parallel committed-mutation semantics beside
   `SceneControllerMutationBoundary`.
+- `InteractiveRuntimeCallbacks`,
+  `InteractiveMoveSessionCallbacks`, and
+  `InteractiveDrawCoordinatorCallbacks` consume snapshot-backed committed read
+  contracts only. They may query coarse spatial candidates and resolve
+  `NodeSnapshot` values, but they must not reintroduce runtime-node helper
+  contracts across the committed read boundary.
 - `SceneControllerInteraction`, `SceneControllerSelection`, and
   `SceneControllerScene` stay public as controller-owned capability contracts,
   but their assembly remains internal to the `SceneController` graph. Public

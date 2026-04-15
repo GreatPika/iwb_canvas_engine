@@ -180,6 +180,22 @@ Migration note:
   render-state family with split scene/overlay repaint channels instead of
   mixing snapshot reads with overlay/widget-side preview state
 
+Committed read-side note:
+
+- live runtime `Scene` / `SceneNode` objects are write-private and are not a
+  supported committed read contract outside the write subsystem
+- controller-owned committed reads use one snapshot-backed helper surface:
+  `querySpatialCandidates(...)`,
+  `resolveSpatialCandidateSnapshot(...)`,
+  `resolveSnapshotNodeById(...)`, and
+  `centerWorldForNodeSnapshots(...)`
+- interactive committed read paths consume immutable `NodeSnapshot` values
+  from that surface rather than runtime-node helpers
+- snapshot-backed node resolution is stale unless the current committed
+  snapshot still contains the same `nodeId` at the same
+  `[layerIndex][nodeIndex]` location; candidate bounds are coarse query data
+  only and are not part of freshness
+
 ## 3. Scene model
 
 ### 3.1 Root snapshot

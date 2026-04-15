@@ -4,6 +4,10 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Committed read-side runtime graph leaks are now sealed. Live runtime
+  `Scene` / `SceneNode` objects stay write-private, controller and interactive
+  committed reads resolve immutable snapshot-backed node data only, and
+  guardrails now reject reintroducing runtime-node leaks across that boundary.
 - Runtime scene validity ownership now closes before commit: content-layer and
   total-node budget overflows fail at model mutation owners, constrained
   runtime node fields validate eagerly on owner writes, and the controller
