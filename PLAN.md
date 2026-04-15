@@ -22,3 +22,4 @@ roadmap can be updated without mixing execution contracts.
 - [x] [Step 107. Seal runtime scene validity ownership before commit](plan/step_107_runtime_scene_validity_ownership.md)
 - [x] [Step 108. Seal committed read-side runtime graph leaks](plan/step_108_seal_committed_read_side_runtime_graph_leaks.md)
 - [x] [Step 109. Restore frame-authoritative render snapshot resolution](plan/step_109_restore_frame_authoritative_render_snapshot_resolution.md)
+- [ ] [Step 110. Seal prepared replace-scene payload ownership](plan/step_110_seal_prepared_replace_scene_payload_ownership.md)
