@@ -24,3 +24,4 @@ roadmap can be updated without mixing execution contracts.
 - [x] [Step 109. Restore frame-authoritative render snapshot resolution](plan/step_109_restore_frame_authoritative_render_snapshot_resolution.md)
 - [x] [Step 110. Seal prepared replace-scene payload ownership](plan/step_110_seal_prepared_replace_scene_payload_ownership.md)
 - [x] [Step 111. Lift replace-scene orchestration ownership to committed mutation access](plan/step_111_lift_replace_scene_orchestration_ownership_to_committed_mutation_access.md)
+- [ ] [Step 112. Fix zero-preview move gesture scene notification contract](plan/step_112_fix_zero_preview_move_gesture_scene_notification_contract.md)
