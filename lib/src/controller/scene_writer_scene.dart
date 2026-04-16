@@ -22,10 +22,14 @@ bool sceneWriterWriteBackgroundColorChanged(SceneWriter writer, Color color) {
 
 void sceneWriterWriteDocumentReplace(
   SceneWriter writer,
-  SceneSnapshot snapshot, {
-  VoidCallback? beforeApply,
-}) {
-  writer.runtime.writeReplaceScene(snapshot, beforeApply: beforeApply);
+  SceneSnapshot snapshot,
+) {
+  writer.runtime.writeStagedDocumentReplace(
+    snapshot,
+    stageCommit: (writeDocumentReplaceNow) {
+      writeDocumentReplaceNow();
+    },
+  );
 }
 
 ClearSceneResult sceneWriterWriteClearSceneKeepBackgroundResult(

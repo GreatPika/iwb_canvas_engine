@@ -50,33 +50,146 @@ class Store {
 }
 
 void writeInteractiveArchitectureSupportScaffold(Directory sandbox) {
+  writeSandboxFile(sandbox, 'lib/src/contract/node_patch.dart', '''
+class NodePatch {}
+''');
+  writeSandboxFile(sandbox, 'lib/src/contract/node_spec.dart', '''
+typedef NodeId = String;
+typedef LayerId = String;
+
+class NodeSpec {}
+''');
+  writeSandboxFile(sandbox, 'lib/src/contract/scene_write_txn.dart', '''
+class SceneWriteTxn {}
+''');
+  writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+typedef NodeId = String;
+typedef LayerId = String;
+
+class SceneSnapshot {}
+
+class NodeSnapshot {}
+
+class ClearSceneResult {}
+''');
+  writeSandboxFile(sandbox, 'lib/src/contract/transform2d.dart', '''
+class Transform2D {}
+''');
   writeSandboxFile(
     sandbox,
     'lib/src/controller/scene_controller_committed_mutation_access.dart',
     '''
+import 'dart:ui';
+
+import '../contract/node_patch.dart';
+import '../contract/node_spec.dart';
+import '../contract/scene_write_txn.dart';
+import '../contract/snapshot.dart';
+import '../contract/transform2d.dart';
+
+typedef SceneControllerCommittedMutationWriteResult<T> = ({
+  T value,
+  bool didChangeRenderState,
+});
+
 abstract interface class SceneControllerCommittedMutationAccess {
+  T write<T>(T Function(SceneWriteTxn writer) fn);
+
+  SceneControllerCommittedMutationWriteResult<T> writeExact<T>(
+    T Function(SceneWriteTxn writer) fn,
+  );
+
+  NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex});
+
+  bool ensureLayer(LayerId layerId, {int? index});
+
+  bool patchNode(NodePatch patch);
+
+  bool removeNode(NodeId id);
+
+  bool setBackgroundColor(Color value);
+
+  bool setGridEnabled(bool value);
+
+  bool setGridCellSize(double value);
+
+  bool setCameraOffset(Offset value);
+
   bool replaceSelection(Object nodeIds);
 
   bool clearSelection();
 
+  bool toggleSelection(NodeId nodeId);
+
+  ({int selectedCount, bool changed}) selectAll({bool onlySelectable = true});
+
   int deleteSelection();
 
-  int transformSelection(Object delta);
+  int transformSelection(Transform2D delta);
 
-  void replaceScene(Object snapshot, {required Object beforeApply});
+  void replaceScene(SceneSnapshot snapshot, {required VoidCallback beforeApply});
 
-  Object commitDrawStroke(Object payload);
+  NodeId commitDrawStroke({
+    required List<Offset> points,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  });
 
-  Object commitDrawLineFromWorldSegment(Object payload);
+  NodeId commitDrawLineFromWorldSegment({
+    required Offset start,
+    required Offset end,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  });
 
-  int commitEraseNodes(Object ids);
+  int commitEraseNodes(Iterable<NodeId> ids);
 
-  Object clearSceneExactResult();
+  ClearSceneResult clearSceneExactResult();
+
+  void requestRepaint();
+
+  SceneSnapshot get snapshot;
+
+  Set<NodeId> get selectedNodeIds;
+
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots);
 }
 
 final class SceneStoreControllerCommittedMutationAccess
     implements SceneControllerCommittedMutationAccess {
-  final int controllerEpoch = 0;
+  @override
+  T write<T>(T Function(SceneWriteTxn writer) fn) => fn(SceneWriteTxn());
+
+  @override
+  SceneControllerCommittedMutationWriteResult<T> writeExact<T>(
+    T Function(SceneWriteTxn writer) fn,
+  ) => (value: fn(SceneWriteTxn()), didChangeRenderState: true);
+
+  @override
+  NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex}) => 'id';
+
+  @override
+  bool ensureLayer(LayerId layerId, {int? index}) => true;
+
+  @override
+  bool patchNode(NodePatch patch) => true;
+
+  @override
+  bool removeNode(NodeId id) => true;
+
+  @override
+  bool setBackgroundColor(Color value) => true;
+
+  @override
+  bool setGridEnabled(bool value) => true;
+
+  @override
+  bool setGridCellSize(double value) => true;
+
+  @override
+  bool setCameraOffset(Offset value) => true;
 
   @override
   bool replaceSelection(Object nodeIds) => true;
@@ -85,25 +198,59 @@ final class SceneStoreControllerCommittedMutationAccess
   bool clearSelection() => true;
 
   @override
+  bool toggleSelection(NodeId nodeId) => true;
+
+  @override
+  ({int selectedCount, bool changed}) selectAll({bool onlySelectable = true}) =>
+      (selectedCount: 0, changed: true);
+
+  @override
   int deleteSelection() => 0;
 
   @override
-  int transformSelection(Object delta) => 0;
+  int transformSelection(Transform2D delta) => 0;
 
   @override
-  void replaceScene(Object snapshot, {required Object beforeApply}) {}
+  void replaceScene(
+    SceneSnapshot snapshot, {
+    required VoidCallback beforeApply,
+  }) {}
 
   @override
-  Object commitDrawStroke(Object payload) => payload;
+  NodeId commitDrawStroke({
+    required List<Offset> points,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  }) => 'id';
 
   @override
-  Object commitDrawLineFromWorldSegment(Object payload) => payload;
+  NodeId commitDrawLineFromWorldSegment({
+    required Offset start,
+    required Offset end,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  }) => 'id';
 
   @override
-  int commitEraseNodes(Object ids) => 0;
+  int commitEraseNodes(Iterable<NodeId> ids) => 0;
 
   @override
-  Object clearSceneExactResult() => Object();
+  ClearSceneResult clearSceneExactResult() => ClearSceneResult();
+
+  @override
+  void requestRepaint() {}
+
+  @override
+  SceneSnapshot get snapshot => SceneSnapshot();
+
+  @override
+  Set<NodeId> get selectedNodeIds => <NodeId>{};
+
+  @override
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
+      const Offset();
 }
 ''',
   );
@@ -1043,7 +1190,7 @@ void sceneControllerInternalSetBeforePointerDispatchHook(
 ''',
   );
   writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
-typedef NodeId = String;
+import 'node_spec.dart';
 
 class SceneSnapshot {
   const SceneSnapshot({this.backgroundLayer = const BackgroundLayerSnapshot()});
@@ -1064,6 +1211,7 @@ class NodeSnapshot {
 }
 ''');
   writeSandboxFile(sandbox, 'lib/src/core/scene_spatial_index.dart', '''
+import '../contract/node_spec.dart';
 import '../contract/snapshot.dart';
 
 class Rect {}
@@ -1084,16 +1232,125 @@ class SceneSpatialCandidate {
 ''');
   writeSandboxFile(
     sandbox,
+    'lib/src/controller/scene_controller_commit_runtime.dart',
+    '''
+class SceneControllerCommittedWrite<T> {
+  const SceneControllerCommittedWrite();
+}
+''',
+  );
+  writeSandboxFile(sandbox, 'lib/src/controller/scene_writer.dart', '''
+import 'dart:ui';
+
+import '../contract/node_patch.dart';
+import '../contract/node_spec.dart';
+import '../contract/snapshot.dart';
+import '../contract/transform2d.dart';
+
+class SceneWriter {
+  SceneSnapshot get snapshot => const SceneSnapshot();
+
+  Set<NodeId> get selectedNodeIds => <NodeId>{};
+
+  Object get runtime => Object();
+
+  NodeId writeNodeInsert(NodeSpec spec, {LayerId? layerId, int? insertIndex}) =>
+      'id';
+
+  bool writeLayerEnsure(LayerId layerId, {int? index}) => true;
+
+  bool writeNodeErase(NodeId nodeId) => true;
+
+  bool writeNodePatch(NodePatch patch) => true;
+
+  bool writeNodeTransformSet(NodeId id, Transform2D transform) => true;
+
+  bool writeSelectionReplace(Iterable<NodeId> ids) => true;
+
+  bool writeSelectionToggle(NodeId id) => true;
+
+  bool writeSelectionClear() => true;
+
+  int writeSelectionSelectAll({bool onlySelectable = true}) => 0;
+
+  int writeSelectionTranslate(Offset delta) => 0;
+
+  int writeSelectionTransform(Transform2D delta) => 0;
+
+  int writeDeleteSelection() => 0;
+
+  List<NodeId> writeClearSceneKeepBackground() => const <NodeId>[];
+
+  ClearSceneResult writeClearSceneKeepBackgroundResult() => ClearSceneResult();
+
+  void writeCameraOffset(Offset offset) {}
+
+  void writeGridEnable(bool enabled) {}
+
+  void writeGridCellSize(double cellSize) {}
+
+  void writeBackgroundColor(Color color) {}
+
+  void writeDocumentReplace(SceneSnapshot snapshot) {}
+
+  void writeSignalEnqueue({
+    required String type,
+    Iterable<NodeId> nodeIds = const <NodeId>[],
+    Map<String, Object?>? payload,
+  }) {}
+}
+''');
+  writeSandboxFile(
+    sandbox,
     'lib/src/controller/scene_store_controller.dart',
     '''
+import 'dart:ui';
+
+import '../contract/node_spec.dart';
+import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
 import '../core/scene_spatial_index.dart';
-
-class Offset {}
-class SceneSnapshot {}
+import 'scene_controller_commit_runtime.dart';
+import 'scene_writer.dart';
 
 class SceneStoreController {
-  final int controllerEpoch = 0;
+  final String? textFontFamilyByDefault = null;
+  final Object commands = Object();
+  final Object move = Object();
+  final Object draw = Object();
+
+  SceneSnapshot get snapshot => const SceneSnapshot();
+
+  Set<NodeId> get selectedNodeIds => <NodeId>{};
+
+  int get controllerEpoch => 0;
+
+  int get structuralRevision => 0;
+
+  int get boundsRevision => 0;
+
+  int get visualRevision => 0;
+
+  Object get signals => Object();
+
+  Object get debug => Object();
+
+  T write<T>(T Function(SceneWriteTxn txn) fn) => fn(SceneWriteTxn());
+
+  SceneControllerCommittedWrite<T> writeCommitted<T>(
+    T Function(SceneWriteTxn txn) fn,
+  ) => const SceneControllerCommittedWrite<T>();
+
+  T writeWithSceneWriter<T>(T Function(SceneWriter writer) fn) =>
+      fn(SceneWriter());
+
+  SceneControllerCommittedWrite<T> writeWithSceneWriterCommitted<T>(
+    T Function(SceneWriter writer) fn,
+  ) => const SceneControllerCommittedWrite<T>();
+
+  void requestRepaint() {}
+
+  void dispose() {}
 }
 
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
@@ -1108,7 +1365,7 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   resolveSnapshotNodeById(NodeId nodeId) => null;
 
   Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
-      Offset();
+      Offset.zero;
 }
 
 extension SceneStoreControllerCommittedSceneReplacementAccess

@@ -324,11 +324,13 @@ Ownership decisions for the target state:
    focused helpers instead of returning to the coordinator or the runtime.
 6. `SceneStoreController` performs transactional writes and finalizes a canonical
    immutable `SceneSnapshot`. Controller-private replace-scene preparation now
-   stays sealed behind the committed mutation path: public callers still use
-   only `replaceScene(SceneSnapshot snapshot)`, preflight validation/import runs
-   exactly once before any active-gesture reset, and apply adopts the prepared
-   runtime payload without a second snapshot import. Prepared replace-scene
-   payloads do not cross controller, interactive, or writer boundary surfaces.
+   stays sealed behind the committed mutation path: committed mutation access
+   owns the exact `prepare once -> beforeApply once -> apply` sequence, public
+   callers still use only `replaceScene(SceneSnapshot snapshot)`, preflight
+   validation/import runs exactly once before any active-gesture reset, and
+   apply adopts the prepared runtime payload without a second snapshot import.
+   Prepared replace-scene payloads do not cross controller, interactive, or
+   writer boundary surfaces.
    On the read side it remains a committed-store `SceneRenderState`; the full
    `SceneViewRenderState` contract is assembled only on the controller-owned
    interactive runtime path. Live runtime `Scene` / `SceneNode` graph objects

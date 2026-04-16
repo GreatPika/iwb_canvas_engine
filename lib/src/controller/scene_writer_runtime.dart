@@ -27,19 +27,19 @@ final class SceneWriterRuntime {
     return mutationExecutor.execute(ctx, op);
   }
 
-  PreparedSceneReplacement prepareSceneReplacement(SceneSnapshot snapshot) {
+  void writeStagedDocumentReplace(
+    SceneSnapshot snapshot, {
+    required void Function(VoidCallback writeDocumentReplaceNow) stageCommit,
+  }) {
     ensureTxnActive();
-    return materializeSceneReplacement(
+    final replacement = materializeSceneReplacement(
       snapshot: snapshot,
       nextInstanceRevisionSeed: ctx.nextInstanceRevision,
       owner: _sceneReplacementOwner,
     );
-  }
-
-  void writeReplaceScene(SceneSnapshot snapshot, {VoidCallback? beforeApply}) {
-    final replacement = prepareSceneReplacement(snapshot);
-    beforeApply?.call();
-    execute(ReplaceSceneOp(replacement, _sceneReplacementOwner));
+    stageCommit(() {
+      execute(ReplaceSceneOp(replacement, _sceneReplacementOwner));
+    });
   }
 
   void ensureTxnActive() {

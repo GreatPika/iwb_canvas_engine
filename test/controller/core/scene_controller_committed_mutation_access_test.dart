@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -172,6 +173,39 @@ void main() {
       access.requestRepaint();
       await pumpEventQueue();
       expect(notifications, greaterThan(0));
+    },
+  );
+
+  test(
+    'replaceScene ownership stays on committed mutation access instead of writer runtime',
+    () {
+      final mutationAccessSource = File(
+        'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      ).readAsStringSync();
+      final writerRuntimeSource = File(
+        'lib/src/controller/scene_writer_runtime.dart',
+      ).readAsStringSync();
+
+      expect(
+        mutationAccessSource,
+        contains('writer.runtime.writeStagedDocumentReplace('),
+      );
+      expect(mutationAccessSource, contains('beforeApply();'));
+      expect(mutationAccessSource, contains('writeDocumentReplaceNow();'));
+
+      expect(writerRuntimeSource, contains('void writeStagedDocumentReplace('));
+      expect(
+        writerRuntimeSource,
+        contains(
+          'required void Function(VoidCallback writeDocumentReplaceNow)',
+        ),
+      );
+      expect(writerRuntimeSource, isNot(contains('void writeReplaceScene(')));
+      expect(
+        writerRuntimeSource,
+        isNot(contains('PreparedSceneReplacement prepareSceneReplacement(')),
+      );
+      expect(writerRuntimeSource, isNot(contains('beforeApply?.call();')));
     },
   );
 }

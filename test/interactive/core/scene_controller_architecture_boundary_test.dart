@@ -417,6 +417,22 @@ void main() {
         'return _storeController.commands.writeSelectionSelectAllExactResult(',
       ),
     );
+    expect(
+      mutationAccessSource,
+      contains('writer.runtime.writeStagedDocumentReplace('),
+    );
+    expect(mutationAccessSource, contains('beforeApply();'));
+    expect(mutationAccessSource, contains('writeDocumentReplaceNow();'));
+
+    final writerRuntimeSource = _read(
+      'lib/src/controller/scene_writer_runtime.dart',
+    );
+    expect(writerRuntimeSource, contains('void writeStagedDocumentReplace('));
+    expect(writerRuntimeSource, isNot(contains('void writeReplaceScene(')));
+    expect(
+      writerRuntimeSource,
+      isNot(contains('PreparedSceneReplacement prepareSceneReplacement(')),
+    );
 
     expect(sceneMutationsSource, contains('mutations.setGridCellSize(value);'));
     expect(sceneMutationsSource, contains('interruptForExternalMutation();'));

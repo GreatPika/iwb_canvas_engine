@@ -160,7 +160,13 @@ final class SceneStoreControllerCommittedMutationAccess
     required VoidCallback beforeApply,
   }) {
     _storeController.writeWithSceneWriter<void>((writer) {
-      writer.writeDocumentReplace(snapshot, beforeApply: beforeApply);
+      writer.runtime.writeStagedDocumentReplace(
+        snapshot,
+        stageCommit: (writeDocumentReplaceNow) {
+          beforeApply();
+          writeDocumentReplaceNow();
+        },
+      );
     });
   }
 

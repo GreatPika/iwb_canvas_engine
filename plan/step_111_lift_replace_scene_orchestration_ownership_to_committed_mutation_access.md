@@ -237,7 +237,7 @@ the writer boundary, and guardrail/test support all state one consistent rule.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Move Replace-Scene Sequencing Ownership
+### Slice 1. [x] Move Replace-Scene Sequencing Ownership
 
 #### Slice Contract
 `SceneControllerCommittedMutationAccess.replaceScene(...)` becomes the unique
@@ -262,7 +262,7 @@ boundary-level owner of `prepare once -> beforeApply once -> apply`, while
 - `flutter test test/controller/core/scene_controller_committed_mutation_access_test.dart`
 - `flutter test test/interactive/core/scene_controller_architecture_boundary_test.dart`
 
-### Slice 2. [ ] Restore Single-Phase Writer Surface
+### Slice 2. [x] Restore Single-Phase Writer Surface
 
 #### Slice Contract
 `SceneWriter` and writer-local scene helpers expose replace-scene as a true
@@ -281,7 +281,7 @@ single-phase writer operation with no boundary-level interruption callback.
 #### Verification
 - `flutter test test/controller/internal/scene_writer_test.dart`
 
-### Slice 3. [ ] Pin Guardrails And Scaffold Parity
+### Slice 3. [x] Pin Guardrails And Scaffold Parity
 
 #### Slice Contract
 Repository-local guardrails, acceptance scaffolds, and source-of-truth wording

@@ -350,15 +350,11 @@ class SceneSnapshot {
       try {
         writeCanonicalPublicExportScaffold(sandbox);
         writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
         writeSandboxFile(
           sandbox,
           'lib/src/contract/internal/snapshot_boundary_impl.dart',
           'Object internalBackingOf(Object value) => value;\n',
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/controller/scene_writer.dart',
-          'class SceneWriter { void writeSignalEnqueue({required String type}) {} }\n',
         );
 
         final result = await runSandboxTool(sandbox, 'check_guardrails.dart');

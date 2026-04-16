@@ -412,12 +412,8 @@ $extraExtensionMembers
 String _sceneWriterFixture({
   String extraTopLevel = '',
   String extraMembers = '',
-  String writeDocumentReplaceDeclaration = '''
-  void writeDocumentReplace(
-    SceneSnapshot snapshot, {
-    void Function()? beforeApply,
-  }) {}
-''',
+  String writeDocumentReplaceDeclaration =
+      '  void writeDocumentReplace(SceneSnapshot snapshot) {}\n',
 }) {
   return '''
 import 'dart:ui';
@@ -1012,7 +1008,7 @@ extension on SceneWriter {
         writeDocumentReplaceDeclaration: '''
   void writeDocumentReplace(
     SceneSnapshot snapshot, {
-    required Object beforeApply,
+    void Function()? beforeApply,
   }) {}
 ''',
       ),

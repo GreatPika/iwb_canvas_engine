@@ -102,11 +102,8 @@ class SceneWriter {
     sceneWriterWriteBackgroundColorChanged(this, color);
   }
 
-  void writeDocumentReplace(
-    SceneSnapshot snapshot, {
-    void Function()? beforeApply,
-  }) {
-    sceneWriterWriteDocumentReplace(this, snapshot, beforeApply: beforeApply);
+  void writeDocumentReplace(SceneSnapshot snapshot) {
+    sceneWriterWriteDocumentReplace(this, snapshot);
   }
 
   void writeSignalEnqueue({

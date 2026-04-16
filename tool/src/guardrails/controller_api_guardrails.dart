@@ -1871,7 +1871,7 @@ GuardrailViolation? _writeDocumentReplaceSignatureViolation({
     );
   }
   final parameters = member.parameters?.parameters ?? const <FormalParameter>[];
-  if (parameters.length != 2) {
+  if (parameters.length != 1) {
     return _preparedReplaceSceneSignatureError(
       filePath: filePath,
       line: lineForOffset(parsed, member.offset),
@@ -1880,18 +1880,10 @@ GuardrailViolation? _writeDocumentReplaceSignatureViolation({
           'signature for the prepared replace-scene boundary.',
     );
   }
-  final snapshotParam = parameters.first;
-  final beforeApplyParam = parameters.last;
+  final snapshotParam = parameters.single;
   if (snapshotParam is! SimpleFormalParameter ||
       snapshotParam.name?.lexeme != 'snapshot' ||
-      snapshotParam.type?.toSource() != 'SceneSnapshot' ||
-      beforeApplyParam is! DefaultFormalParameter ||
-      beforeApplyParam.isRequiredNamed ||
-      beforeApplyParam.parameter is! SimpleFormalParameter ||
-      (beforeApplyParam.parameter as SimpleFormalParameter).name?.lexeme !=
-          'beforeApply' ||
-      (beforeApplyParam.parameter as SimpleFormalParameter).type?.toSource() !=
-          'void Function()?') {
+      snapshotParam.type?.toSource() != 'SceneSnapshot') {
     return _preparedReplaceSceneSignatureError(
       filePath: filePath,
       line: lineForOffset(parsed, member.offset),
