@@ -1,12 +1,14 @@
 import 'dart:io';
 
-import '../guardrail_support/guardrail_context.dart';
-import 'contract_architecture_guardrails.dart';
-import 'controller_api_guardrails.dart';
-import 'interactive_api_guardrails.dart';
-import 'model_architecture_guardrails.dart';
-import 'public_signature_hermeticity_guardrails.dart';
-import 'public_surface_guardrails.dart';
+import 'support/guardrail_context.dart';
+import 'core/guardrail_runner_support.dart';
+import 'core/guardrail_violation.dart';
+import 'rules/contract/contract_architecture_rules.dart';
+import 'rules/controller/write_only_mutation_rules.dart';
+import 'rules/interactive/mutation_boundary_rules.dart';
+import 'rules/model/model_architecture_rules.dart';
+import 'rules/public/public_signature_rules.dart';
+import 'rules/public/public_surface_rules.dart';
 
 Future<void> runGuardrailsTool() async {
   final context = GuardrailContext.forCurrentDirectory();
@@ -15,36 +17,32 @@ Future<void> runGuardrailsTool() async {
     final publicSurfaceResult = await runPublicSurfaceGuardrails(
       context: context,
     );
-    _failIfNeeded(publicSurfaceResult.violations);
+    failOnFirstViolation(publicSurfaceResult.violations);
 
     final hermeticityViolations = await runPublicSignatureHermeticityGuardrails(
       context: context,
       exportedSurfaces: publicSurfaceResult.exportedSurfaces,
     );
-    _failIfNeeded(hermeticityViolations);
+    failOnFirstViolation(hermeticityViolations);
 
     final interactiveViolations = await runInteractiveApiGuardrails(
       context: context,
     );
-    _failIfNeeded(interactiveViolations);
+    failOnFirstViolation(interactiveViolations);
 
     final controllerViolations = await runControllerApiGuardrails(
       context: context,
     );
-    _failIfNeeded(controllerViolations);
+    failOnFirstViolation(controllerViolations);
 
     final modelArchitectureViolations = await runModelArchitectureGuardrails(
       context: context,
     );
-    _failIfNeeded(modelArchitectureViolations);
+    failOnFirstViolation(modelArchitectureViolations);
 
     final contractArchitectureViolations =
         await runContractArchitectureGuardrails(context: context);
-    _failIfNeeded(contractArchitectureViolations);
-  } on _GuardrailFailure catch (failure) {
-    stderr.writeln('FAIL: guardrails');
-    stderr.writeln('- ${failure.violation}');
-    exit(1);
+    failOnFirstViolation(contractArchitectureViolations);
   } on GuardrailToolFailure catch (failure) {
     stderr.writeln('FAIL: guardrails');
     stderr.writeln('- ${failure.violation}');
@@ -52,17 +50,4 @@ Future<void> runGuardrailsTool() async {
   }
 
   stdout.writeln('OK: guardrails');
-}
-
-void _failIfNeeded(List<GuardrailViolation> violations) {
-  if (violations.isEmpty) {
-    return;
-  }
-  throw _GuardrailFailure(violations.first);
-}
-
-class _GuardrailFailure implements Exception {
-  const _GuardrailFailure(this.violation);
-
-  final GuardrailViolation violation;
 }

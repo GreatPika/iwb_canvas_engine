@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../../tool/src/guardrails/interactive_mutation_guard_contract.dart';
+import '../../../tool/src/guardrails/rules/interactive/committed_read_callback_rules.dart';
 import 'public_entrypoint_contract.dart';
 import 'tool_process_test_support.dart';
 

@@ -1,8 +1,8 @@
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
-import '../guardrail_support/guardrail_ast_utils.dart';
-import '../guardrail_support/guardrail_path_utils.dart';
+import '../guardrails/support/guardrail_ast_utils.dart';
+import '../guardrails/support/guardrail_path_utils.dart';
 import '../layer_guardrails.dart';
 import 'import_boundary_policy.dart';
 import 'public_export_boundary_resolver.dart';

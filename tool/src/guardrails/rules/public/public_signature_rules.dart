@@ -4,9 +4,11 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 
-import '../guardrail_support/guardrail_context.dart';
-import '../guardrail_support/guardrail_path_utils.dart';
-import 'public_surface_guardrails.dart';
+import '../../support/guardrail_context.dart';
+import '../../support/guardrail_path_utils.dart';
+import '../../core/guardrail_element_utils.dart' as element_utils;
+import '../../core/guardrail_violation.dart';
+import 'public_surface_rules.dart';
 
 Future<List<GuardrailViolation>> runPublicSignatureHermeticityGuardrails({
   required GuardrailContext context,
@@ -99,7 +101,7 @@ GuardrailViolation? _scanResolvedLibraryForHermeticity({
   final exportedElements = _collectExportedElements(
     library: resolved.element,
     surface: surface,
-  )..sort(_compareElementsBySourceOrder);
+  )..sort(element_utils.compareElementsBySourceOrder);
 
   for (final element in exportedElements) {
     final leak = _findLeakInExportedElement(
@@ -116,7 +118,7 @@ GuardrailViolation? _scanResolvedLibraryForHermeticity({
       element: leak.sourceElement,
       context: context,
     );
-    final line = _lineForElement(leak.sourceElement);
+    final line = element_utils.lineForElement(leak.sourceElement);
     if (filePath == null || line == null) {
       continue;
     }
@@ -178,16 +180,6 @@ List<Element> _collectExportedElements({
           _exportsNamedElement(element, surface: surface),
     ),
   ];
-}
-
-int _compareElementsBySourceOrder(Element left, Element right) {
-  final leftPath = left.firstFragment.libraryFragment?.source.fullName ?? '';
-  final rightPath = right.firstFragment.libraryFragment?.source.fullName ?? '';
-  final pathCompare = leftPath.compareTo(rightPath);
-  if (pathCompare != 0) {
-    return pathCompare;
-  }
-  return left.firstFragment.offset.compareTo(right.firstFragment.offset);
 }
 
 bool _exportsNamedElement(
@@ -486,22 +478,11 @@ _SignatureLeak? _findLeakInInstanceMembers({
   return null;
 }
 
-bool _isPublicNamedElement(Element element) {
-  final name = element.displayName;
-  return name.isNotEmpty && isPublicName(name);
-}
+bool _isPublicNamedElement(Element element) =>
+    element_utils.isPublicNamedElement(element);
 
-bool _isPublicConstructor(ConstructorElement element) {
-  final typeName = element.enclosingElement.displayName;
-  if (typeName.isEmpty || !isPublicName(typeName)) {
-    return false;
-  }
-
-  final constructorName = element.name;
-  return constructorName == null ||
-      constructorName.isEmpty ||
-      isPublicName(constructorName);
-}
+bool _isPublicConstructor(ConstructorElement element) =>
+    element_utils.isPublicConstructor(element);
 
 _SignatureLeak? _findLeakInTypeParameterBounds({
   required TypeParameterizedElement element,
@@ -589,14 +570,6 @@ _SignatureLeak? _firstLeakInTypes({
     }
   }
   return null;
-}
-
-int? _lineForElement(Element element) {
-  final lineInfo = element.firstFragment.libraryFragment?.lineInfo;
-  if (lineInfo == null) {
-    return null;
-  }
-  return lineInfo.getLocation(element.firstFragment.offset).lineNumber;
 }
 
 _SignatureLeak? _findLeakInType({
@@ -789,31 +762,11 @@ String? _repoRelForElement({
   required Element? element,
   required GuardrailContext context,
 }) {
-  if (element == null) {
-    return null;
-  }
-  final source = element.firstFragment.libraryFragment?.source;
-  if (source == null) {
-    return null;
-  }
-  if (source.uri.scheme == 'dart') {
-    return null;
-  }
-  if (source.uri.scheme == 'package') {
-    final segments = source.uri.pathSegments;
-    if (segments.isNotEmpty && segments.first != context.packageName) {
-      return null;
-    }
-  }
-  final absPosixPath = toPosixPath(source.fullName);
-  if (!absPosixPath.startsWith('${context.rootAbsPosixPath}/')) {
-    return null;
-  }
-  final repoRelPath = toRepoRelPosixPath(
-    absPosixPath: absPosixPath,
-    rootAbsPosixPath: context.rootAbsPosixPath,
+  return element_utils.repoRelPathForElement(
+    element: element,
+    context: context,
+    requireLibPrefix: true,
   );
-  return repoRelPath.startsWith('/lib/') ? repoRelPath : null;
 }
 
 bool _isVisibleThroughPublicEntrypoint({

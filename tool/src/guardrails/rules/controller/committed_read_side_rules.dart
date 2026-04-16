@@ -1,8 +1,8 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 
-import '../guardrail_support/guardrail_context.dart';
-import '../guardrail_support/guardrail_path_utils.dart';
+import '../../support/guardrail_context.dart';
+import '../../core/guardrail_element_utils.dart' as element_utils;
 
 final class ForbiddenResolvedTypeLeak {
   const ForbiddenResolvedTypeLeak({
@@ -301,36 +301,15 @@ String directTypeLeakName({
 }
 
 int? lineForElement(Element element) {
-  final lineInfo = element.firstFragment.libraryFragment?.lineInfo;
-  if (lineInfo == null) {
-    return null;
-  }
-  return lineInfo.getLocation(element.firstFragment.offset).lineNumber;
+  return element_utils.lineForElement(element);
 }
 
 String? repoRelForElement({
   required Element? element,
   required GuardrailContext context,
 }) {
-  if (element == null) {
-    return null;
-  }
-  final source = element.firstFragment.libraryFragment?.source;
-  if (source == null || source.uri.scheme == 'dart') {
-    return null;
-  }
-  if (source.uri.scheme == 'package') {
-    final segments = source.uri.pathSegments;
-    if (segments.isNotEmpty && segments.first != context.packageName) {
-      return null;
-    }
-  }
-  final absPosixPath = toPosixPath(source.fullName);
-  if (!absPosixPath.startsWith('${context.rootAbsPosixPath}/')) {
-    return null;
-  }
-  return toRepoRelPosixPath(
-    absPosixPath: absPosixPath,
-    rootAbsPosixPath: context.rootAbsPosixPath,
+  return element_utils.repoRelPathForElement(
+    element: element,
+    context: context,
   );
 }

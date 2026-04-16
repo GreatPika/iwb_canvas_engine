@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:analyzer/dart/ast/ast.dart';
 
-import '../guardrail_support/guardrail_ast_utils.dart';
-import '../guardrail_support/guardrail_context.dart';
-import '../guardrail_support/guardrail_path_utils.dart';
+import '../guardrails/support/guardrail_ast_utils.dart';
+import '../guardrails/support/guardrail_context.dart';
+import '../guardrails/support/guardrail_path_utils.dart';
 import 'import_boundary_policy.dart';
 
 class BoundaryTarget {

@@ -3,31 +3,11 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
-import '../guardrail_support/guardrail_ast_utils.dart';
-import '../guardrail_support/guardrail_context.dart';
-import '../guardrail_support/guardrail_path_utils.dart';
-import '../layer_guardrails.dart';
-
-class GuardrailViolation {
-  GuardrailViolation({
-    required this.filePath,
-    required this.line,
-    required this.message,
-  });
-
-  final String filePath;
-  final int line;
-  final String message;
-
-  @override
-  String toString() => '$filePath:$line: $message';
-}
-
-class GuardrailToolFailure implements Exception {
-  const GuardrailToolFailure(this.violation);
-
-  final GuardrailViolation violation;
-}
+import '../../support/guardrail_ast_utils.dart';
+import '../../support/guardrail_context.dart';
+import '../../support/guardrail_path_utils.dart';
+import '../../core/guardrail_violation.dart';
+import '../../../layer_guardrails.dart';
 
 enum ExportedApiScanMode { fullScan, targetedSkip }
 
@@ -329,8 +309,6 @@ void validateExportedApiScanPolicies({
   _addMissingPolicyViolation(nonContractExportSet, policyKeys, violations);
   _addStalePolicyViolation(nonContractExportSet, policyKeys, violations);
 }
-
-bool isPublicName(String name) => !name.startsWith('_');
 
 bool shouldScanDeclaration({
   required CompilationUnitMember declaration,
