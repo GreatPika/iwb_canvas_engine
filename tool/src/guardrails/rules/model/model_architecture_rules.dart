@@ -2,10 +2,9 @@ import 'dart:io';
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:analyzer/dart/element/element.dart';
 
 import '../../support/guardrail_context.dart';
-import '../../support/guardrail_path_utils.dart';
+import '../../core/guardrail_element_utils.dart' as element_utils;
 import '../../core/guardrail_violation.dart';
 import '../../core/guardrail_runner_support.dart';
 
@@ -119,17 +118,17 @@ Future<List<GuardrailViolation>> runModelArchitectureGuardrails({
 }) async {
   final violations = <GuardrailViolation>[];
 
-  final modelFiles = collectSortedDartFiles(
-    Directory(
-      '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}model',
-    ),
+  final modelFiles = collectSortedLibSrcDartFiles(
+    context,
+    relativePath: 'model',
   );
-  for (final file in modelFiles) {
-    final violation = _checkModelFile(context, file);
-    if (violation != null) {
-      violations.add(violation);
-      return violations;
-    }
+  final modelFileViolation = firstViolationInFiles(
+    modelFiles,
+    (file) => _checkModelFile(context, file),
+  );
+  if (modelFileViolation != null) {
+    violations.add(modelFileViolation);
+    return violations;
   }
 
   final removedResidualViolation = checkRemovedResidualFiles(
@@ -144,82 +143,63 @@ Future<List<GuardrailViolation>> runModelArchitectureGuardrails({
     return violations;
   }
 
-  final controllerFiles = collectSortedDartFiles(
-    Directory(
-      '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}controller',
-    ),
+  final controllerFiles = collectSortedLibSrcDartFiles(
+    context,
+    relativePath: 'controller',
   );
-  for (final file in controllerFiles) {
-    final violation = await _checkControllerStructuralMutationGuardrail(
-      context,
-      file,
-    );
-    if (violation != null) {
-      violations.add(violation);
-      return violations;
-    }
+  final controllerViolation = await firstAsyncViolationInFiles(
+    controllerFiles,
+    (file) => _checkControllerStructuralMutationGuardrail(context, file),
+  );
+  if (controllerViolation != null) {
+    violations.add(controllerViolation);
+    return violations;
   }
 
-  final coreFiles = collectSortedDartFiles(
-    Directory(
-      '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}core',
-    ),
+  final coreFiles = collectSortedLibSrcDartFiles(context, relativePath: 'core');
+  final runtimeOwnerViolation = firstViolationInFiles(
+    coreFiles,
+    (file) => _checkRuntimeNodeOwnerFieldGuardrail(context, file),
   );
-  for (final file in coreFiles) {
-    final violation = _checkRuntimeNodeOwnerFieldGuardrail(context, file);
-    if (violation != null) {
-      violations.add(violation);
-      return violations;
-    }
+  if (runtimeOwnerViolation != null) {
+    violations.add(runtimeOwnerViolation);
+    return violations;
   }
 
-  final libFiles = collectSortedDartFiles(
-    Directory(
-      '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src',
-    ),
+  final libFiles = collectSortedLibSrcDartFiles(context);
+  final directiveViolation = firstViolationInFiles(
+    libFiles,
+    (file) => _checkNonModelDirectiveBoundaries(context, file),
   );
-  for (final file in libFiles) {
-    final violation = _checkNonModelDirectiveBoundaries(context, file);
-    if (violation != null) {
-      violations.add(violation);
-      return violations;
-    }
+  if (directiveViolation != null) {
+    violations.add(directiveViolation);
+    return violations;
   }
 
   return violations;
 }
 
 GuardrailViolation? _checkModelFile(GuardrailContext context, File file) {
-  final filePosixPath = repoRelPathForFile(context, file);
-  final parsed = parseGuardrailUnitOrThrow(
+  return checkOwnedLayerFile(
     context: context,
     file: file,
-    filePosixPath: filePosixPath,
     failureFormatter: _formatModelParseFailure,
-  );
-
-  final partViolation = checkPartDirectiveBan(
-    parsed: parsed,
-    filePosixPath: filePosixPath,
-    violationMessage:
+    partDirectiveBanMessage:
         'model architecture violation: lib/src/model/** must stay part-free after final architecture closure.',
-  );
-  if (partViolation != null) {
-    return partViolation;
-  }
-
-  if (filePosixPath != '/lib/src/model/document.dart') {
-    return null;
-  }
-
-  return checkDirectiveBoundaryViolation(
-    context: context,
-    parsed: parsed,
-    filePosixPath: filePosixPath,
-    isForbiddenTarget: (target) =>
-        target == '/lib/src/model/scene_builder.dart',
-    messageForTarget: (_) =>
-        'model architecture violation: document.dart must consume scene_from_snapshot.dart / scene_snapshot_from_scene.dart directly and must not import scene_builder.dart.',
+    extraCheck: (parsed, filePosixPath) {
+      if (filePosixPath != '/lib/src/model/document.dart') {
+        return null;
+      }
+      return checkDirectiveBoundaryViolation(
+        context: context,
+        parsed: parsed,
+        filePosixPath: filePosixPath,
+        isForbiddenTarget: (target) =>
+            target == '/lib/src/model/scene_builder.dart',
+        messageForTarget: (_) =>
+            'model architecture violation: document.dart must consume scene_from_snapshot.dart / scene_snapshot_from_scene.dart directly and must not import scene_builder.dart.',
+      );
+    },
   );
 }
 
@@ -297,23 +277,11 @@ GuardrailViolation? _checkNonModelDirectiveBoundaries(
   GuardrailContext context,
   File file,
 ) {
-  final filePosixPath = repoRelPathForFile(context, file);
-  if (!filePosixPath.startsWith('/lib/src/') ||
-      filePosixPath.startsWith('/lib/src/model/')) {
-    return null;
-  }
-
-  final parsed = parseGuardrailUnitOrThrow(
+  return checkExternalDirectiveBoundaryFile(
     context: context,
     file: file,
-    filePosixPath: filePosixPath,
+    ownedPathPrefix: '/lib/src/model/',
     failureFormatter: _formatModelParseFailure,
-  );
-
-  return checkDirectiveBoundaryViolation(
-    context: context,
-    parsed: parsed,
-    filePosixPath: filePosixPath,
     isForbiddenTarget: _restrictedModelOwnerModules.contains,
     messageForTarget: (target) =>
         'model architecture violation: non-model code must use the canonical model facades instead of importing or re-exporting internal owner module ${target.substring('/lib/src/model/'.length)}.',
@@ -416,30 +384,12 @@ bool _isSceneLayersAccess(
     return false;
   }
 
-  return _repoRelForElement(element: element, context: context) ==
+  return element_utils.repoRelPathForElement(
+        element: element,
+        context: context,
+        requireLibPrefix: true,
+      ) ==
       '/lib/src/core/scene.dart';
-}
-
-String? _repoRelForElement({
-  required Element? element,
-  required GuardrailContext context,
-}) {
-  if (element == null) {
-    return null;
-  }
-  final source = element.firstFragment.libraryFragment?.source;
-  if (source == null) {
-    return null;
-  }
-  final absPosixPath = toPosixPath(source.fullName);
-  if (!absPosixPath.startsWith('${context.rootAbsPosixPath}/')) {
-    return null;
-  }
-  final repoRelPath = toRepoRelPosixPath(
-    absPosixPath: absPosixPath,
-    rootAbsPosixPath: context.rootAbsPosixPath,
-  );
-  return repoRelPath.startsWith('/lib/') ? repoRelPath : null;
 }
 
 final class _ControllerLayerMutationOccurrence {

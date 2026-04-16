@@ -8,11 +8,15 @@ Scope: `tool/src/guardrails/**`
 ```text
 tool/src/guardrails/
   core/
+    element_violation_builder.dart
     guardrail_rule.dart
     guardrail_violation.dart
     guardrail_rule_metadata.dart
     guardrail_runner_support.dart
     guardrail_element_utils.dart
+    public_constructor_surface_support.dart
+    resolved_type_leak_traversal.dart
+    signature_leak_support.dart
   rules/
     public/
       public_surface_rules.dart
@@ -42,17 +46,17 @@ tool/src/guardrails/
 
 ## Snapshot (Fresh Scan)
 
-- Files scanned: **23**
-- Total LOC: **8266**
+- Files scanned: **27**
+- Total LOC: **8283**
 - Largest files:
-  - `rules/interactive/mutation_boundary_rules.dart`: **1187**
-  - `rules/controller/prepared_replace_boundary_rules.dart`: **1086**
-  - `rules/public/public_surface_rules.dart`: **1074**
-  - `rules/controller/write_only_mutation_rules.dart`: **1072**
-  - `rules/interactive/boundary_shape_token_rules.dart`: **878**
+  - `rules/interactive/mutation_boundary_rules.dart`: **1154**
+  - `rules/controller/prepared_replace_boundary_rules.dart`: **1136**
+  - `rules/public/public_surface_rules.dart`: **1071**
+  - `rules/controller/write_only_mutation_rules.dart`: **1045**
+  - `rules/interactive/boundary_shape_token_rules.dart`: **874**
 
 Source commands:
-- `dart run tool/analysis/find_similar_clones.dart --clusters --top 60 tool/src/guardrails`
+- `dart run tool/analysis/find_similar_clones.dart --clusters --top 40 tool/src/guardrails`
 - `dcm calculate-metrics --report-all tool/src/guardrails`
 
 ## Invariant-to-Rule Map
@@ -62,14 +66,14 @@ Source commands:
 - `INV-ENG-SAFE-TXN-API` -> `rules/public/public_surface_rules.dart`
 - `INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES` -> `rules/public/public_surface_rules.dart` + `rules/public/public_signature_rules.dart`
 - `INV-ENG-PUBLIC-SIGNATURE-HERMETICITY` -> `rules/public/public_signature_rules.dart`
-- `INV-ENG-INTERACTIVE-RESOLVER-PURITY` -> `rules/interactive/mutation_boundary_rules.dart`
+- `INV-ENG-INTERACTIVE-RESOLVER-PURITY` -> `rules/interactive/resolver_purity_rules.dart` + `rules/interactive/mutation_boundary_rules.dart`
 - `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY` -> `rules/interactive/mutation_boundary_rules.dart` + `rules/interactive/committed_read_callback_rules.dart`
 - `INV-ENG-MODEL-ARCHITECTURE-BOUNDARY` -> `rules/model/model_architecture_rules.dart`
 - `INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY` -> `rules/contract/contract_architecture_rules.dart`
 - `INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER` -> `rules/model/model_architecture_rules.dart`
 - `INV-ENG-RUNTIME-NODE-VALUE-OWNERS` -> `rules/model/model_architecture_rules.dart`
 - `INV-ENG-COMMITTED-READ-SIDE-HERMETICITY` -> `rules/controller/write_only_mutation_rules.dart` + `rules/interactive/mutation_boundary_rules.dart` + `rules/controller/committed_read_side_rules.dart`
-- `INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY` -> `rules/controller/write_only_mutation_rules.dart` + `rules/interactive/mutation_boundary_rules.dart`
+- `INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY` -> `rules/controller/write_only_mutation_rules.dart` + `rules/controller/prepared_replace_boundary_rules.dart`
 
 ## Runner Entrypoints (Explicit)
 
@@ -90,6 +94,10 @@ even if they are utility/thin wrappers and not primary invariant owners:
 - `core/guardrail_rule_metadata.dart` (rule metadata value object)
 - `core/guardrail_runner_support.dart` (shared parse/scan/fail-fast support)
 - `core/guardrail_violation.dart` (violation/tool failure primitives)
+- `core/element_violation_builder.dart` (shared element-backed violation construction)
+- `core/public_constructor_surface_support.dart` (shared public-constructor surface validation)
+- `core/resolved_type_leak_traversal.dart` (shared recursive resolved-type traversal)
+- `core/signature_leak_support.dart` (shared signature leak detection helpers)
 - `rules/public/entrypoint_layout_rules.dart` (layout-check adapter to `layer_guardrails`)
 - `rules/controller/view_render_state_boundary_rules.dart` (view/render-state boundary constants)
 - `rules/model/runtime_owner_rules.dart` (runtime-owner scope model)
@@ -99,30 +107,38 @@ even if they are utility/thin wrappers and not primary invariant owners:
 
 ## Clone Clusters (Top Risk)
 
-1. Shared type/signature leak traversal remains duplicated across:
+1. Public signature family still contains the largest semantic-overlap cluster:
 - `rules/public/public_signature_rules.dart`
 - `rules/controller/committed_read_side_rules.dart`
+- plus shared support in `core/resolved_type_leak_traversal.dart`
+- plus shared support in `core/signature_leak_support.dart`
 
-2. Prepared-replace boundary checks are still triple-shaped clones in:
+2. Prepared-replace boundary checks are still triple-shaped structural siblings in:
 - `_checkCommittedMutationAccessPreparedReplaceBoundary`
 - `_checkSceneStorePreparedReplaceBoundary`
 - `_checkSceneWriterPreparedReplaceBoundary`
 (all in `rules/controller/prepared_replace_boundary_rules.dart`)
 
-3. Violation builders are still exact clones across rule families:
-- controller/interative prepared-read violations
-
-4. Interactive rule family keeps strong structural overlap in:
+3. Interactive mutation family still has strong internal overlap in:
 - `_checkCapabilityEntrypoints`
 - `_checkMutationOwnerPolicies`
 
+4. Contract/model architecture families now share common support, but top-level runners still mirror each other:
+- `runContractArchitectureGuardrails`
+- `runModelArchitectureGuardrails`
+
+5. Constructor-surface checks were partially unified via `core/public_constructor_surface_support.dart`,
+but two outer rule wrappers still remain similar by message shape.
+
 ## Metrics Hotspots (HIGH/VERY HIGH counts)
 
-- `rules/interactive/resolver_purity_rules.dart`: **14** (2 very high, 12 high)
-- `rules/controller/prepared_replace_boundary_rules.dart`: **12** (3 very high, 9 high)
-- `rules/interactive/mutation_boundary_rules.dart`: **12** (2 very high, 10 high)
-- `rules/controller/write_only_mutation_rules.dart`: **9** (3 very high, 6 high)
-- `rules/public/public_signature_rules.dart`: **7** (1 very high, 6 high)
+- `rules/interactive/resolver_purity_rules.dart`: **13**
+- `rules/controller/prepared_replace_boundary_rules.dart`: **13**
+- `rules/interactive/mutation_boundary_rules.dart`: **11**
+- `rules/controller/write_only_mutation_rules.dart`: **8**
+- `rules/public/public_signature_rules.dart`: **7**
+- `core/resolved_type_leak_traversal.dart`: **4**
+- `core/guardrail_runner_support.dart`: **3**
 
 Notable very-high functions:
 - `rules/interactive/boundary_shape_token_rules.dart`:
@@ -132,11 +148,12 @@ Notable very-high functions:
 - `rules/controller/write_only_mutation_rules.dart`:
   - `_checkControllerReadHelperHermeticity` (CC 26, SLOC 145)
 - `rules/controller/prepared_replace_boundary_rules.dart`:
-  - `_checkSceneStorePreparedReplaceBoundary` (SLOC 160)
-  - `_checkCommittedMutationAccessPreparedReplaceBoundary` (SLOC 136)
-  - `_replaceSceneSignatureViolation` (CC 21)
+  - `_checkSceneStorePreparedReplaceBoundary`
+  - `_checkCommittedMutationAccessPreparedReplaceBoundary`
 - `rules/public/public_signature_rules.dart`:
-  - `_findLeakInType` (SLOC 109)
+  - `_findLeakInType`
+- `core/resolved_type_leak_traversal.dart`:
+  - `findFirstResolvedTypeLeak`
 
 ## Reliability Buckets
 
@@ -164,8 +181,14 @@ Notable very-high functions:
 - Shared primitives/support moved to `core/` + `support/`.
 
 3. **Remove explicit clones and repeated templates**: **IN PROGRESS**
-- Some utility duplication already removed (`guardrail_element_utils.dart`, `guardrail_runner_support.dart`).
-- Major clones still present in controller-prepared-replace and public-signature/committed-read traversal.
+- Removed in this pass:
+  - shared resolved-type traversal
+  - shared signature leak helpers
+  - shared element-backed violation builder
+  - shared public-constructor surface validator
+  - shared architecture-file parse/part/directive helpers
+- Clone clusters reduced from **19 -> 8** across the current refactor campaign.
+- Major remaining clones are now structural siblings, not broad copy-paste utility duplication.
 
 4. **Migrate fragile token checks to AST/resolved**: **NOT STARTED**
 - Main target remains `interactive/boundary_shape_token_rules.dart`.
@@ -179,18 +202,21 @@ Notable very-high functions:
 ## Next Cutting Queue (Recommended)
 
 1. Extract shared resolved-type traversal engine for:
-- `rules/public/public_signature_rules.dart`
-- `rules/controller/committed_read_side_rules.dart`
+   Status: **DONE**
 
 2. Template the prepared-replace boundary checks into one parameterized checker:
-- currently 3 near-duplicate check flows in `rules/controller/prepared_replace_boundary_rules.dart`
+   Status: **PARTIAL**
+   - common owner/surface/signature scaffolding already extracted
+   - remaining duplication is mostly file-specific policy logic
 
 3. Collapse duplicate violation builders into a shared helper module.
+   Status: **DONE**
 
 4. Start AST migration of interactive token-heavy rules after steps 1-3.
+   Status: **NEXT**
 
 ## Verification Snapshot
 
 - `dart analyze tool/src/guardrails` -> `No issues found!`
-- `dart analyze tool/src` -> `No issues found!`
-- `dart run tool/check_guardrails.dart` -> `OK: guardrails`
+- `dart run tool/analysis/find_similar_clones.dart --clusters --top 40 tool/src/guardrails` -> `Found clone clusters: 8`
+- `dcm calculate-metrics --report-all tool/src/guardrails` -> refreshed on 2026-04-16

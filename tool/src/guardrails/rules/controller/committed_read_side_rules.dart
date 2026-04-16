@@ -1,8 +1,10 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 
-import '../../support/guardrail_context.dart';
 import '../../core/guardrail_element_utils.dart' as element_utils;
+import '../../core/resolved_type_leak_traversal.dart';
+import '../../core/signature_leak_support.dart';
+import '../../support/guardrail_context.dart';
 
 final class ForbiddenResolvedTypeLeak {
   const ForbiddenResolvedTypeLeak({
@@ -42,116 +44,24 @@ ForbiddenResolvedTypeLeak? findForbiddenResolvedTypeLeak({
   required GuardrailContext context,
   required List<ForbiddenResolvedTypeSpec> forbiddenTypes,
 }) {
-  if (type == null) {
-    return null;
-  }
-
-  final elementLeak = _forbiddenTypeLeakForElement(
-    element: type.element,
-    sourceElement: sourceElement,
-    context: context,
-    forbiddenTypes: forbiddenTypes,
+  return findFirstResolvedTypeLeak<ForbiddenResolvedTypeLeak>(
+    rootType: type,
+    classifyType: (candidateType) {
+      return _forbiddenTypeLeakForElement(
+        element: candidateType.element,
+        sourceElement: sourceElement,
+        context: context,
+        forbiddenTypes: forbiddenTypes,
+      );
+    },
+    expandAlias: (candidateType) {
+      final aliasElement = candidateType.alias?.element;
+      if (aliasElement is! TypeAliasElement) {
+        return null;
+      }
+      return aliasElement.aliasedType;
+    },
   );
-  if (elementLeak != null) {
-    return elementLeak;
-  }
-
-  final aliasElement = type.alias?.element;
-  if (aliasElement is TypeAliasElement) {
-    final aliasLeak = findForbiddenResolvedTypeLeak(
-      type: aliasElement.aliasedType,
-      sourceElement: sourceElement,
-      context: context,
-      forbiddenTypes: forbiddenTypes,
-    );
-    if (aliasLeak != null) {
-      return aliasLeak;
-    }
-  }
-
-  if (type is ParameterizedType) {
-    for (final argument in type.typeArguments) {
-      final leak = findForbiddenResolvedTypeLeak(
-        type: argument,
-        sourceElement: sourceElement,
-        context: context,
-        forbiddenTypes: forbiddenTypes,
-      );
-      if (leak != null) {
-        return leak;
-      }
-    }
-  }
-
-  if (type is FunctionType) {
-    final returnTypeLeak = findForbiddenResolvedTypeLeak(
-      type: type.returnType,
-      sourceElement: sourceElement,
-      context: context,
-      forbiddenTypes: forbiddenTypes,
-    );
-    if (returnTypeLeak != null) {
-      return returnTypeLeak;
-    }
-    for (final parameter in type.formalParameters) {
-      final leak = findForbiddenResolvedTypeLeak(
-        type: parameter.type,
-        sourceElement: sourceElement,
-        context: context,
-        forbiddenTypes: forbiddenTypes,
-      );
-      if (leak != null) {
-        return leak;
-      }
-    }
-    for (final typeParameter in type.typeParameters) {
-      final leak = findForbiddenResolvedTypeLeak(
-        type: typeParameter.bound,
-        sourceElement: sourceElement,
-        context: context,
-        forbiddenTypes: forbiddenTypes,
-      );
-      if (leak != null) {
-        return leak;
-      }
-    }
-  }
-
-  if (type is RecordType) {
-    for (final field in type.positionalFields) {
-      final leak = findForbiddenResolvedTypeLeak(
-        type: field.type,
-        sourceElement: sourceElement,
-        context: context,
-        forbiddenTypes: forbiddenTypes,
-      );
-      if (leak != null) {
-        return leak;
-      }
-    }
-    for (final field in type.namedFields) {
-      final leak = findForbiddenResolvedTypeLeak(
-        type: field.type,
-        sourceElement: sourceElement,
-        context: context,
-        forbiddenTypes: forbiddenTypes,
-      );
-      if (leak != null) {
-        return leak;
-      }
-    }
-  }
-
-  if (type is TypeParameterType) {
-    return findForbiddenResolvedTypeLeak(
-      type: type.bound,
-      sourceElement: sourceElement,
-      context: context,
-      forbiddenTypes: forbiddenTypes,
-    );
-  }
-
-  return null;
 }
 
 ForbiddenResolvedTypeLeak? findForbiddenExecutableSignatureLeak({
@@ -159,40 +69,17 @@ ForbiddenResolvedTypeLeak? findForbiddenExecutableSignatureLeak({
   required GuardrailContext context,
   required List<ForbiddenResolvedTypeSpec> forbiddenTypes,
 }) {
-  final typeParameterLeak = findForbiddenTypeParameterBoundLeak(
-    typeParameterizedElement: element,
-    context: context,
-    forbiddenTypes: forbiddenTypes,
+  return findExecutableSignatureLeak<ForbiddenResolvedTypeLeak>(
+    element: element,
+    findTypeLeak: ({required type, required sourceElement}) {
+      return findForbiddenResolvedTypeLeak(
+        type: type,
+        sourceElement: sourceElement,
+        context: context,
+        forbiddenTypes: forbiddenTypes,
+      );
+    },
   );
-  if (typeParameterLeak != null) {
-    return typeParameterLeak;
-  }
-
-  if (element is! ConstructorElement) {
-    final returnTypeLeak = findForbiddenResolvedTypeLeak(
-      type: element.returnType,
-      sourceElement: element,
-      context: context,
-      forbiddenTypes: forbiddenTypes,
-    );
-    if (returnTypeLeak != null) {
-      return returnTypeLeak;
-    }
-  }
-
-  for (final parameter in element.formalParameters) {
-    final leak = findForbiddenResolvedTypeLeak(
-      type: parameter.type,
-      sourceElement: parameter,
-      context: context,
-      forbiddenTypes: forbiddenTypes,
-    );
-    if (leak != null) {
-      return leak;
-    }
-  }
-
-  return null;
 }
 
 ForbiddenResolvedTypeLeak? findForbiddenTypeParameterBoundLeak({
@@ -200,18 +87,17 @@ ForbiddenResolvedTypeLeak? findForbiddenTypeParameterBoundLeak({
   required GuardrailContext context,
   required List<ForbiddenResolvedTypeSpec> forbiddenTypes,
 }) {
-  for (final typeParameter in typeParameterizedElement.typeParameters) {
-    final leak = findForbiddenResolvedTypeLeak(
-      type: typeParameter.bound,
-      sourceElement: typeParameter,
-      context: context,
-      forbiddenTypes: forbiddenTypes,
-    );
-    if (leak != null) {
-      return leak;
-    }
-  }
-  return null;
+  return findTypeParameterBoundLeak<ForbiddenResolvedTypeLeak>(
+    element: typeParameterizedElement,
+    findTypeLeak: ({required type, required sourceElement}) {
+      return findForbiddenResolvedTypeLeak(
+        type: type,
+        sourceElement: sourceElement,
+        context: context,
+        forbiddenTypes: forbiddenTypes,
+      );
+    },
+  );
 }
 
 ForbiddenResolvedTypeLeak? _forbiddenTypeLeakForElement({

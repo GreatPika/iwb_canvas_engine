@@ -8,6 +8,9 @@ import 'package:analyzer/dart/element/element.dart';
 import '../../support/guardrail_ast_utils.dart';
 import '../../support/guardrail_context.dart';
 import '../../support/guardrail_path_utils.dart';
+import '../../core/element_violation_builder.dart';
+import '../../core/guardrail_runner_support.dart';
+import '../../core/public_constructor_surface_support.dart';
 import 'committed_read_side_rules.dart';
 import '../../core/guardrail_element_utils.dart' as element_utils;
 import '../../core/guardrail_violation.dart';
@@ -86,21 +89,7 @@ const Set<String> _allowedSceneSpatialCandidateFieldNames = <String>{
 };
 
 List<File> _controllerDartFiles(GuardrailContext context) {
-  final controllerDir = Directory(
-    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
-    'src${Platform.pathSeparator}controller',
-  );
-  if (!controllerDir.existsSync()) {
-    return const <File>[];
-  }
-  final dartFiles =
-      controllerDir
-          .listSync(recursive: true, followLinks: false)
-          .whereType<File>()
-          .where((file) => file.path.endsWith('.dart'))
-          .toList(growable: false)
-        ..sort((a, b) => a.path.compareTo(b.path));
-  return dartFiles;
+  return collectSortedLibSrcDartFiles(context, relativePath: 'controller');
 }
 
 ControllerFileResult _checkControllerFile(GuardrailContext context, File file) {
@@ -151,13 +140,10 @@ GuardrailViolation? _sceneViewRenderStateImportViolation({
   required ParsedUnitResult parsed,
   required String filePosixPath,
 }) {
-  final importOccurrence = collector.sceneViewRenderStateImport;
-  if (importOccurrence == null) {
-    return null;
-  }
-  return GuardrailViolation(
-    filePath: filePosixPath,
-    line: lineForOffset(parsed, importOccurrence.offset),
+  return _controllerSymbolOccurrenceViolation(
+    occurrence: collector.sceneViewRenderStateImport,
+    parsed: parsed,
+    filePosixPath: filePosixPath,
     message:
         'controller API violation: controller layer must not import '
         'scene_view_render_state.dart',
@@ -169,16 +155,29 @@ GuardrailViolation? _sceneStoreControllerViewRenderStateViolation({
   required ParsedUnitResult parsed,
   required String filePosixPath,
 }) {
-  final occurrence = collector.sceneStoreControllerViewRenderStateOccurrence;
+  return _controllerSymbolOccurrenceViolation(
+    occurrence: collector.sceneStoreControllerViewRenderStateOccurrence,
+    parsed: parsed,
+    filePosixPath: filePosixPath,
+    message:
+        'controller API violation: SceneStoreController must not implement '
+        'SceneViewRenderState',
+  );
+}
+
+GuardrailViolation? _controllerSymbolOccurrenceViolation({
+  required ControllerSymbolOccurrence? occurrence,
+  required ParsedUnitResult parsed,
+  required String filePosixPath,
+  required String message,
+}) {
   if (occurrence == null) {
     return null;
   }
   return GuardrailViolation(
     filePath: filePosixPath,
     line: lineForOffset(parsed, occurrence.offset),
-    message:
-        'controller API violation: SceneStoreController must not implement '
-        'SceneViewRenderState',
+    message: message,
   );
 }
 
@@ -742,74 +741,53 @@ bool _controllerFileDeclaresCommittedReadSurface(File controllerFile) {
 }
 
 File _sceneStoreControllerFile(GuardrailContext context) {
-  return File(
-    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
-    'src${Platform.pathSeparator}controller${Platform.pathSeparator}'
-    'scene_store_controller.dart',
+  return libSrcFile(
+    context,
+    relativePath: 'controller/scene_store_controller.dart',
   );
 }
 
 File _sceneSpatialIndexFile(GuardrailContext context) {
-  return File(
-    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
-    'src${Platform.pathSeparator}core${Platform.pathSeparator}'
-    'scene_spatial_index.dart',
-  );
+  return libSrcFile(context, relativePath: 'core/scene_spatial_index.dart');
 }
 
 GuardrailViolation? _spatialCandidateConstructorViolation(
   ConstructorElement constructor, {
   required GuardrailContext context,
 }) {
-  if (!element_utils.isPublicConstructor(constructor)) {
-    return null;
-  }
-
   final constructorName = element_utils.normalizedConstructorName(constructor);
-  if (constructorName.isNotEmpty) {
-    return _committedReadSideViolation(
-      context: context,
-      sourceElement: constructor,
-      detail:
-          'committed spatial payload "SceneSpatialCandidate.$constructorName" '
-          'must not add public named constructors outside the sealed '
-          'locator-only field surface.',
-    );
-  }
-
-  final leak = findForbiddenExecutableSignatureLeak(
-    element: constructor,
+  return validatePublicConstructorSurface(
+    constructor: constructor,
     context: context,
-    forbiddenTypes: committedReadForbiddenTypeSpecs,
+    allowedParameterNames: _allowedSceneSpatialCandidateFieldNames,
+    findForbiddenSignatureLeak: (constructor) {
+      final leak = findForbiddenExecutableSignatureLeak(
+        element: constructor,
+        context: context,
+        forbiddenTypes: committedReadForbiddenTypeSpecs,
+      );
+      if (leak == null) {
+        return null;
+      }
+      return (
+        forbiddenTypeName: leak.forbiddenTypeName,
+        sourceElement: leak.sourceElement,
+      );
+    },
+    buildViolation: _committedReadSideViolation,
+    namedConstructorDetail:
+        'committed spatial payload "SceneSpatialCandidate.$constructorName" '
+        'must not add public named constructors outside the sealed '
+        'locator-only field surface.',
+    forbiddenTypeDetail: (forbiddenTypeName) =>
+        'committed spatial payload constructor for "SceneSpatialCandidate" '
+        'must not expose live runtime scene-graph types '
+        '($forbiddenTypeName).',
+    extraParameterDetail: (parameterName) =>
+        'committed spatial payload constructor for "SceneSpatialCandidate" '
+        'must not extend the sealed locator-only field surface with '
+        'parameter "$parameterName".',
   );
-  if (leak != null) {
-    return _committedReadSideViolation(
-      context: context,
-      sourceElement: leak.sourceElement,
-      detail:
-          'committed spatial payload constructor for "SceneSpatialCandidate" '
-          'must not expose live runtime scene-graph types '
-          '(${leak.forbiddenTypeName}).',
-    );
-  }
-
-  for (final parameter in constructor.formalParameters) {
-    if (_allowedSceneSpatialCandidateFieldNames.contains(
-      parameter.displayName,
-    )) {
-      continue;
-    }
-    return _committedReadSideViolation(
-      context: context,
-      sourceElement: parameter,
-      detail:
-          'committed spatial payload constructor for "SceneSpatialCandidate" '
-          'must not extend the sealed locator-only field surface with '
-          'parameter "${parameter.displayName}".',
-    );
-  }
-
-  return null;
 }
 
 ClassElement? _firstClassNamed(Iterable<ClassElement> classes, String name) {
@@ -851,14 +829,9 @@ GuardrailViolation? _committedReadSideViolation({
   required Element sourceElement,
   required String detail,
 }) {
-  final filePath = repoRelForElement(element: sourceElement, context: context);
-  final line = lineForElement(sourceElement);
-  if (filePath == null || line == null) {
-    return null;
-  }
-  return GuardrailViolation(
-    filePath: filePath,
-    line: line,
+  return buildElementGuardrailViolation(
+    context: context,
+    sourceElement: sourceElement,
     message: 'controller API violation: $detail',
   );
 }

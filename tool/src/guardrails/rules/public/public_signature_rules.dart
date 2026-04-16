@@ -7,6 +7,8 @@ import 'package:analyzer/dart/element/type.dart';
 import '../../support/guardrail_context.dart';
 import '../../support/guardrail_path_utils.dart';
 import '../../core/guardrail_element_utils.dart' as element_utils;
+import '../../core/resolved_type_leak_traversal.dart';
+import '../../core/signature_leak_support.dart';
 import '../../core/guardrail_violation.dart';
 import 'public_surface_rules.dart';
 
@@ -264,11 +266,17 @@ _SignatureLeak? _findLeakInElementSignature({
       publicVisibleTypeOwners: publicVisibleTypeOwners,
       forbiddenPublicTypeNames: forbiddenPublicTypeNames,
     ),
-    ExecutableElement() => _findLeakInExecutableSignature(
+    ExecutableElement() => findExecutableSignatureLeak<_SignatureLeak>(
       element: element,
-      context: context,
-      publicVisibleTypeOwners: publicVisibleTypeOwners,
-      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+      findTypeLeak: ({required type, required sourceElement}) {
+        return _findLeakInType(
+          type: type,
+          sourceElement: sourceElement,
+          context: context,
+          publicVisibleTypeOwners: publicVisibleTypeOwners,
+          forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+        );
+      },
     ),
     TopLevelVariableElement() || FieldElement() => _findLeakInType(
       type: switch (element) {
@@ -291,11 +299,17 @@ _SignatureLeak? _findLeakInInterfaceSignature({
   required Map<String, Set<String>> publicVisibleTypeOwners,
   required Set<String> forbiddenPublicTypeNames,
 }) {
-  final typeParameterLeak = _findLeakInTypeParameterBounds(
+  final typeParameterLeak = findTypeParameterBoundLeak<_SignatureLeak>(
     element: element,
-    context: context,
-    publicVisibleTypeOwners: publicVisibleTypeOwners,
-    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+    findTypeLeak: ({required type, required sourceElement}) {
+      return _findLeakInType(
+        type: type,
+        sourceElement: sourceElement,
+        context: context,
+        publicVisibleTypeOwners: publicVisibleTypeOwners,
+        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+      );
+    },
   );
   if (typeParameterLeak != null) {
     return typeParameterLeak;
@@ -335,11 +349,17 @@ _SignatureLeak? _findLeakInExtensionSignature({
   required Map<String, Set<String>> publicVisibleTypeOwners,
   required Set<String> forbiddenPublicTypeNames,
 }) {
-  final typeParameterLeak = _findLeakInTypeParameterBounds(
+  final typeParameterLeak = findTypeParameterBoundLeak<_SignatureLeak>(
     element: element,
-    context: context,
-    publicVisibleTypeOwners: publicVisibleTypeOwners,
-    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+    findTypeLeak: ({required type, required sourceElement}) {
+      return _findLeakInType(
+        type: type,
+        sourceElement: sourceElement,
+        context: context,
+        publicVisibleTypeOwners: publicVisibleTypeOwners,
+        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+      );
+    },
   );
   if (typeParameterLeak != null) {
     return typeParameterLeak;
@@ -360,11 +380,17 @@ _SignatureLeak? _findLeakInTypeAliasSignature({
   required Map<String, Set<String>> publicVisibleTypeOwners,
   required Set<String> forbiddenPublicTypeNames,
 }) {
-  final typeParameterLeak = _findLeakInTypeParameterBounds(
+  final typeParameterLeak = findTypeParameterBoundLeak<_SignatureLeak>(
     element: element,
-    context: context,
-    publicVisibleTypeOwners: publicVisibleTypeOwners,
-    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+    findTypeLeak: ({required type, required sourceElement}) {
+      return _findLeakInType(
+        type: type,
+        sourceElement: sourceElement,
+        context: context,
+        publicVisibleTypeOwners: publicVisibleTypeOwners,
+        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+      );
+    },
   );
   if (typeParameterLeak != null) {
     return typeParameterLeak;
@@ -389,11 +415,17 @@ _SignatureLeak? _findLeakInInterfaceMembers({
     if (!_isPublicConstructor(constructor)) {
       continue;
     }
-    final leak = _findLeakInExecutableSignature(
+    final leak = findExecutableSignatureLeak<_SignatureLeak>(
       element: constructor,
-      context: context,
-      publicVisibleTypeOwners: publicVisibleTypeOwners,
-      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+      findTypeLeak: ({required type, required sourceElement}) {
+        return _findLeakInType(
+          type: type,
+          sourceElement: sourceElement,
+          context: context,
+          publicVisibleTypeOwners: publicVisibleTypeOwners,
+          forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+        );
+      },
     );
     if (leak != null) {
       return leak;
@@ -434,11 +466,17 @@ _SignatureLeak? _findLeakInInstanceMembers({
     if (getter.isSynthetic || !_isPublicNamedElement(getter)) {
       continue;
     }
-    final leak = _findLeakInExecutableSignature(
+    final leak = findExecutableSignatureLeak<_SignatureLeak>(
       element: getter,
-      context: context,
-      publicVisibleTypeOwners: publicVisibleTypeOwners,
-      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+      findTypeLeak: ({required type, required sourceElement}) {
+        return _findLeakInType(
+          type: type,
+          sourceElement: sourceElement,
+          context: context,
+          publicVisibleTypeOwners: publicVisibleTypeOwners,
+          forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+        );
+      },
     );
     if (leak != null) {
       return leak;
@@ -449,11 +487,17 @@ _SignatureLeak? _findLeakInInstanceMembers({
     if (setter.isSynthetic || !_isPublicNamedElement(setter)) {
       continue;
     }
-    final leak = _findLeakInExecutableSignature(
+    final leak = findExecutableSignatureLeak<_SignatureLeak>(
       element: setter,
-      context: context,
-      publicVisibleTypeOwners: publicVisibleTypeOwners,
-      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+      findTypeLeak: ({required type, required sourceElement}) {
+        return _findLeakInType(
+          type: type,
+          sourceElement: sourceElement,
+          context: context,
+          publicVisibleTypeOwners: publicVisibleTypeOwners,
+          forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+        );
+      },
     );
     if (leak != null) {
       return leak;
@@ -464,11 +508,17 @@ _SignatureLeak? _findLeakInInstanceMembers({
     if (!_isPublicNamedElement(method)) {
       continue;
     }
-    final leak = _findLeakInExecutableSignature(
+    final leak = findExecutableSignatureLeak<_SignatureLeak>(
       element: method,
-      context: context,
-      publicVisibleTypeOwners: publicVisibleTypeOwners,
-      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+      findTypeLeak: ({required type, required sourceElement}) {
+        return _findLeakInType(
+          type: type,
+          sourceElement: sourceElement,
+          context: context,
+          publicVisibleTypeOwners: publicVisibleTypeOwners,
+          forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+        );
+      },
     );
     if (leak != null) {
       return leak;
@@ -483,72 +533,6 @@ bool _isPublicNamedElement(Element element) =>
 
 bool _isPublicConstructor(ConstructorElement element) =>
     element_utils.isPublicConstructor(element);
-
-_SignatureLeak? _findLeakInTypeParameterBounds({
-  required TypeParameterizedElement element,
-  required GuardrailContext context,
-  required Map<String, Set<String>> publicVisibleTypeOwners,
-  required Set<String> forbiddenPublicTypeNames,
-}) {
-  for (final typeParameter in element.typeParameters) {
-    final leak = _findLeakInType(
-      type: typeParameter.bound,
-      sourceElement: typeParameter,
-      context: context,
-      publicVisibleTypeOwners: publicVisibleTypeOwners,
-      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
-    );
-    if (leak != null) {
-      return leak;
-    }
-  }
-  return null;
-}
-
-_SignatureLeak? _findLeakInExecutableSignature({
-  required ExecutableElement element,
-  required GuardrailContext context,
-  required Map<String, Set<String>> publicVisibleTypeOwners,
-  required Set<String> forbiddenPublicTypeNames,
-}) {
-  final typeParameterLeak = _findLeakInTypeParameterBounds(
-    element: element,
-    context: context,
-    publicVisibleTypeOwners: publicVisibleTypeOwners,
-    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
-  );
-  if (typeParameterLeak != null) {
-    return typeParameterLeak;
-  }
-
-  if (element is! ConstructorElement) {
-    final returnTypeLeak = _findLeakInType(
-      type: element.returnType,
-      sourceElement: element,
-      context: context,
-      publicVisibleTypeOwners: publicVisibleTypeOwners,
-      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
-    );
-    if (returnTypeLeak != null) {
-      return returnTypeLeak;
-    }
-  }
-
-  for (final parameter in element.formalParameters) {
-    final leak = _findLeakInType(
-      type: parameter.type,
-      sourceElement: parameter,
-      context: context,
-      publicVisibleTypeOwners: publicVisibleTypeOwners,
-      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
-    );
-    if (leak != null) {
-      return leak;
-    }
-  }
-
-  return null;
-}
 
 _SignatureLeak? _firstLeakInTypes({
   required Iterable<DartType?> types,
@@ -579,122 +563,29 @@ _SignatureLeak? _findLeakInType({
   required Map<String, Set<String>> publicVisibleTypeOwners,
   required Set<String> forbiddenPublicTypeNames,
 }) {
-  if (type == null) {
-    return null;
-  }
+  return findFirstResolvedTypeLeak<_SignatureLeak>(
+    rootType: type,
+    classifyType: (candidateType) {
+      final aliasLeak = _classifyElementLeak(
+        element: candidateType.alias?.element,
+        sourceElement: sourceElement,
+        context: context,
+        publicVisibleTypeOwners: publicVisibleTypeOwners,
+        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+      );
+      if (aliasLeak != null) {
+        return aliasLeak;
+      }
 
-  final aliasLeak = _classifyElementLeak(
-    element: type.alias?.element,
-    sourceElement: sourceElement,
-    context: context,
-    publicVisibleTypeOwners: publicVisibleTypeOwners,
-    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+      return _classifyElementLeak(
+        element: candidateType.element,
+        sourceElement: sourceElement,
+        context: context,
+        publicVisibleTypeOwners: publicVisibleTypeOwners,
+        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+      );
+    },
   );
-  if (aliasLeak != null) {
-    return aliasLeak;
-  }
-
-  final elementLeak = _classifyElementLeak(
-    element: type.element,
-    sourceElement: sourceElement,
-    context: context,
-    publicVisibleTypeOwners: publicVisibleTypeOwners,
-    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
-  );
-  if (elementLeak != null) {
-    return elementLeak;
-  }
-
-  if (type is ParameterizedType) {
-    for (final argument in type.typeArguments) {
-      final leak = _findLeakInType(
-        type: argument,
-        sourceElement: sourceElement,
-        context: context,
-        publicVisibleTypeOwners: publicVisibleTypeOwners,
-        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
-      );
-      if (leak != null) {
-        return leak;
-      }
-    }
-  }
-
-  if (type is FunctionType) {
-    final returnTypeLeak = _findLeakInType(
-      type: type.returnType,
-      sourceElement: sourceElement,
-      context: context,
-      publicVisibleTypeOwners: publicVisibleTypeOwners,
-      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
-    );
-    if (returnTypeLeak != null) {
-      return returnTypeLeak;
-    }
-    for (final parameter in type.formalParameters) {
-      final leak = _findLeakInType(
-        type: parameter.type,
-        sourceElement: sourceElement,
-        context: context,
-        publicVisibleTypeOwners: publicVisibleTypeOwners,
-        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
-      );
-      if (leak != null) {
-        return leak;
-      }
-    }
-    for (final typeParameter in type.typeParameters) {
-      final leak = _findLeakInType(
-        type: typeParameter.bound,
-        sourceElement: sourceElement,
-        context: context,
-        publicVisibleTypeOwners: publicVisibleTypeOwners,
-        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
-      );
-      if (leak != null) {
-        return leak;
-      }
-    }
-  }
-
-  if (type is RecordType) {
-    for (final field in type.positionalFields) {
-      final leak = _findLeakInType(
-        type: field.type,
-        sourceElement: sourceElement,
-        context: context,
-        publicVisibleTypeOwners: publicVisibleTypeOwners,
-        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
-      );
-      if (leak != null) {
-        return leak;
-      }
-    }
-    for (final field in type.namedFields) {
-      final leak = _findLeakInType(
-        type: field.type,
-        sourceElement: sourceElement,
-        context: context,
-        publicVisibleTypeOwners: publicVisibleTypeOwners,
-        forbiddenPublicTypeNames: forbiddenPublicTypeNames,
-      );
-      if (leak != null) {
-        return leak;
-      }
-    }
-  }
-
-  if (type is TypeParameterType) {
-    return _findLeakInType(
-      type: type.bound,
-      sourceElement: sourceElement,
-      context: context,
-      publicVisibleTypeOwners: publicVisibleTypeOwners,
-      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
-    );
-  }
-
-  return null;
 }
 
 _SignatureLeak? _classifyElementLeak({

@@ -29,6 +29,61 @@ List<File> collectSortedDartFiles(Directory directory) {
   return files;
 }
 
+Directory libSrcDirectory(GuardrailContext context, {String? relativePath}) {
+  final baseSegments = <String>[context.root.path, 'lib', 'src'];
+  if (relativePath != null && relativePath.isNotEmpty) {
+    baseSegments.addAll(relativePath.split('/'));
+  }
+  return Directory(baseSegments.join(Platform.pathSeparator));
+}
+
+File libSrcFile(GuardrailContext context, {required String relativePath}) {
+  final segments = relativePath.split('/');
+  final fileName = segments.removeLast();
+  final parent = libSrcDirectory(
+    context,
+    relativePath: segments.isEmpty ? null : segments.join('/'),
+  );
+  return File('${parent.path}${Platform.pathSeparator}$fileName');
+}
+
+List<File> collectSortedLibSrcDartFiles(
+  GuardrailContext context, {
+  String? relativePath,
+}) {
+  return collectSortedDartFiles(
+    libSrcDirectory(context, relativePath: relativePath),
+  );
+}
+
+GuardrailViolation? firstViolationInFiles(
+  Iterable<File> files,
+  GuardrailViolation? Function(File file) checkFile,
+) {
+  for (final file in files) {
+    final violation = checkFile(file);
+    if (violation != null) {
+      return violation;
+    }
+  }
+
+  return null;
+}
+
+Future<GuardrailViolation?> firstAsyncViolationInFiles(
+  Iterable<File> files,
+  Future<GuardrailViolation?> Function(File file) checkFile,
+) async {
+  for (final file in files) {
+    final violation = await checkFile(file);
+    if (violation != null) {
+      return violation;
+    }
+  }
+
+  return null;
+}
+
 String repoRelPathForFile(GuardrailContext context, File file) {
   return toRepoRelPosixPath(
     absPosixPath: toPosixPath(file.absolute.path),
@@ -58,6 +113,64 @@ ParsedUnitResult parseGuardrailUnitOrThrow({
         ),
       );
     },
+  );
+}
+
+GuardrailViolation? checkOwnedLayerFile({
+  required GuardrailContext context,
+  required File file,
+  required GuardrailParseFailureFormatter failureFormatter,
+  required String partDirectiveBanMessage,
+  GuardrailViolation? Function(ParsedUnitResult parsed, String filePosixPath)?
+  extraCheck,
+}) {
+  final filePosixPath = repoRelPathForFile(context, file);
+  final parsed = parseGuardrailUnitOrThrow(
+    context: context,
+    file: file,
+    filePosixPath: filePosixPath,
+    failureFormatter: failureFormatter,
+  );
+
+  final partViolation = checkPartDirectiveBan(
+    parsed: parsed,
+    filePosixPath: filePosixPath,
+    violationMessage: partDirectiveBanMessage,
+  );
+  if (partViolation != null) {
+    return partViolation;
+  }
+
+  return extraCheck?.call(parsed, filePosixPath);
+}
+
+GuardrailViolation? checkExternalDirectiveBoundaryFile({
+  required GuardrailContext context,
+  required File file,
+  required String ownedPathPrefix,
+  required GuardrailParseFailureFormatter failureFormatter,
+  required bool Function(String targetRepoRelPath) isForbiddenTarget,
+  required String Function(String targetRepoRelPath) messageForTarget,
+}) {
+  final filePosixPath = repoRelPathForFile(context, file);
+  if (!filePosixPath.startsWith('/lib/src/') ||
+      filePosixPath.startsWith(ownedPathPrefix)) {
+    return null;
+  }
+
+  final parsed = parseGuardrailUnitOrThrow(
+    context: context,
+    file: file,
+    filePosixPath: filePosixPath,
+    failureFormatter: failureFormatter,
+  );
+
+  return checkDirectiveBoundaryViolation(
+    context: context,
+    parsed: parsed,
+    filePosixPath: filePosixPath,
+    isForbiddenTarget: isForbiddenTarget,
+    messageForTarget: messageForTarget,
   );
 }
 

@@ -8,6 +8,10 @@ import 'package:analyzer/dart/element/type.dart';
 import '../../support/guardrail_ast_utils.dart';
 import '../../support/guardrail_context.dart';
 import '../../support/guardrail_path_utils.dart';
+import '../../core/element_violation_builder.dart';
+import '../../core/public_constructor_surface_support.dart';
+import '../../core/guardrail_runner_support.dart';
+import '../../core/guardrail_element_utils.dart' as element_utils;
 import '../controller/committed_read_side_rules.dart';
 import '../../core/guardrail_violation.dart';
 import 'committed_read_callback_rules.dart';
@@ -68,11 +72,7 @@ Future<List<GuardrailViolation>> runInteractiveApiGuardrails({
 }
 
 File _interactiveFile(GuardrailContext context) {
-  return File(
-    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
-    'src${Platform.pathSeparator}interactive${Platform.pathSeparator}'
-    'scene_controller.dart',
-  );
+  return libSrcFile(context, relativePath: 'interactive/scene_controller.dart');
 }
 
 String _interactiveFilePosixPath(GuardrailContext context, File file) {
@@ -848,53 +848,39 @@ GuardrailViolation? _interactiveCallbackConstructorViolation(
   required _InteractiveCommittedReadCallbackTarget target,
   required GuardrailContext context,
 }) {
-  if (!_isPublicConstructor(constructor)) {
-    return null;
-  }
-
-  final constructorName = _normalizedConstructorName(constructor);
-  if (constructorName.isNotEmpty) {
-    return _interactiveCommittedReadViolation(
-      context: context,
-      sourceElement: constructor,
-      detail:
-          'committed read callback "${target.className}.$constructorName" '
-          'must not add public named constructors outside the sealed '
-          'callback surface.',
-    );
-  }
-
-  final leak = findForbiddenExecutableSignatureLeak(
-    element: constructor,
+  final constructorName = element_utils.normalizedConstructorName(constructor);
+  return validatePublicConstructorSurface(
+    constructor: constructor,
     context: context,
-    forbiddenTypes: committedReadForbiddenTypeSpecs,
+    allowedParameterNames: target.allowedPublicFieldNames,
+    findForbiddenSignatureLeak: (constructor) {
+      final leak = findForbiddenExecutableSignatureLeak(
+        element: constructor,
+        context: context,
+        forbiddenTypes: committedReadForbiddenTypeSpecs,
+      );
+      if (leak == null) {
+        return null;
+      }
+      return (
+        forbiddenTypeName: leak.forbiddenTypeName,
+        sourceElement: leak.sourceElement,
+      );
+    },
+    buildViolation: _interactiveCommittedReadViolation,
+    namedConstructorDetail:
+        'committed read callback "${target.className}.$constructorName" '
+        'must not add public named constructors outside the sealed '
+        'callback surface.',
+    forbiddenTypeDetail: (forbiddenTypeName) =>
+        'committed read callback constructor for "${target.className}" must '
+        'not expose live runtime scene-graph types '
+        '($forbiddenTypeName).',
+    extraParameterDetail: (parameterName) =>
+        'committed read callback constructor for "${target.className}" must '
+        'not extend the sealed callback surface with parameter '
+        '"$parameterName".',
   );
-  if (leak != null) {
-    return _interactiveCommittedReadViolation(
-      context: context,
-      sourceElement: leak.sourceElement,
-      detail:
-          'committed read callback constructor for "${target.className}" must '
-          'not expose live runtime scene-graph types '
-          '(${leak.forbiddenTypeName}).',
-    );
-  }
-
-  for (final parameter in constructor.formalParameters) {
-    if (target.allowedPublicFieldNames.contains(parameter.displayName)) {
-      continue;
-    }
-    return _interactiveCommittedReadViolation(
-      context: context,
-      sourceElement: parameter,
-      detail:
-          'committed read callback constructor for "${target.className}" must '
-          'not extend the sealed callback surface with parameter '
-          '"${parameter.displayName}".',
-    );
-  }
-
-  return null;
 }
 
 GuardrailViolation? _interactiveExactFieldSignatureViolation({
@@ -1105,20 +1091,6 @@ class _CommittedReadFieldSignature {
   final String parameterType;
 }
 
-bool _isPublicConstructor(ConstructorElement constructor) {
-  final typeName = constructor.enclosingElement.displayName;
-  if (typeName.isEmpty || !isPublicName(typeName)) {
-    return false;
-  }
-  final constructorName = _normalizedConstructorName(constructor);
-  return constructorName.isEmpty || isPublicName(constructorName);
-}
-
-String _normalizedConstructorName(ConstructorElement constructor) {
-  final constructorName = constructor.name ?? '';
-  return constructorName == 'new' ? '' : constructorName;
-}
-
 ClassElement? _findResolvedClassByName(
   Iterable<ClassElement> classes,
   String className,
@@ -1161,14 +1133,9 @@ GuardrailViolation? _interactiveCommittedReadViolation({
   required Element sourceElement,
   required String detail,
 }) {
-  final filePath = repoRelForElement(element: sourceElement, context: context);
-  final line = lineForElement(sourceElement);
-  if (filePath == null || line == null) {
-    return null;
-  }
-  return GuardrailViolation(
-    filePath: filePath,
-    line: line,
+  return buildElementGuardrailViolation(
+    context: context,
+    sourceElement: sourceElement,
     message: 'interactive API violation: $detail',
   );
 }

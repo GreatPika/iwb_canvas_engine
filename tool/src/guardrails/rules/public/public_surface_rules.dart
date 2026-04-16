@@ -6,6 +6,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import '../../support/guardrail_ast_utils.dart';
 import '../../support/guardrail_context.dart';
 import '../../support/guardrail_path_utils.dart';
+import '../../core/guardrail_runner_support.dart';
 import '../../core/guardrail_violation.dart';
 import '../../../layer_guardrails.dart';
 
@@ -869,11 +870,7 @@ int? _firstInvalidRootDeclarationOffset(ParsedUnitResult parsed) {
 }
 
 File _sceneWriteTxnFile(GuardrailContext context) {
-  return File(
-    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
-    'src${Platform.pathSeparator}contract${Platform.pathSeparator}'
-    'scene_write_txn.dart',
-  );
+  return libSrcFile(context, relativePath: 'contract/scene_write_txn.dart');
 }
 
 String _sceneWriteTxnFilePosixPath(GuardrailContext context, File file) {

@@ -27,17 +27,17 @@ Future<List<GuardrailViolation>> runContractArchitectureGuardrails({
 }) async {
   final violations = <GuardrailViolation>[];
 
-  final contractFiles = collectSortedDartFiles(
-    Directory(
-      '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src${Platform.pathSeparator}contract',
-    ),
+  final contractFiles = collectSortedLibSrcDartFiles(
+    context,
+    relativePath: 'contract',
   );
-  for (final file in contractFiles) {
-    final violation = _checkContractFile(context, file);
-    if (violation != null) {
-      violations.add(violation);
-      return violations;
-    }
+  final contractFileViolation = firstViolationInFiles(
+    contractFiles,
+    (file) => _checkContractFile(context, file),
+  );
+  if (contractFileViolation != null) {
+    violations.add(contractFileViolation);
+    return violations;
   }
 
   final removedResidualViolation = checkRemovedResidualFiles(
@@ -52,35 +52,25 @@ Future<List<GuardrailViolation>> runContractArchitectureGuardrails({
     return violations;
   }
 
-  final libFiles = collectSortedDartFiles(
-    Directory(
-      '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}src',
-    ),
+  final libFiles = collectSortedLibSrcDartFiles(context);
+  final directiveViolation = firstViolationInFiles(
+    libFiles,
+    (file) => _checkNonContractDirectiveBoundaries(context, file),
   );
-  for (final file in libFiles) {
-    final violation = _checkNonContractDirectiveBoundaries(context, file);
-    if (violation != null) {
-      violations.add(violation);
-      return violations;
-    }
+  if (directiveViolation != null) {
+    violations.add(directiveViolation);
+    return violations;
   }
 
   return violations;
 }
 
 GuardrailViolation? _checkContractFile(GuardrailContext context, File file) {
-  final filePosixPath = repoRelPathForFile(context, file);
-  final parsed = parseGuardrailUnitOrThrow(
+  return checkOwnedLayerFile(
     context: context,
     file: file,
-    filePosixPath: filePosixPath,
     failureFormatter: _formatContractParseFailure,
-  );
-
-  return checkPartDirectiveBan(
-    parsed: parsed,
-    filePosixPath: filePosixPath,
-    violationMessage:
+    partDirectiveBanMessage:
         'contract architecture violation: lib/src/contract/** must stay part-free after final architecture closure.',
   );
 }
@@ -89,23 +79,11 @@ GuardrailViolation? _checkNonContractDirectiveBoundaries(
   GuardrailContext context,
   File file,
 ) {
-  final filePosixPath = repoRelPathForFile(context, file);
-  if (!filePosixPath.startsWith('/lib/src/') ||
-      filePosixPath.startsWith(_contractPathPrefix)) {
-    return null;
-  }
-
-  final parsed = parseGuardrailUnitOrThrow(
+  return checkExternalDirectiveBoundaryFile(
     context: context,
     file: file,
-    filePosixPath: filePosixPath,
+    ownedPathPrefix: _contractPathPrefix,
     failureFormatter: _formatContractParseFailure,
-  );
-
-  return checkDirectiveBoundaryViolation(
-    context: context,
-    parsed: parsed,
-    filePosixPath: filePosixPath,
     isForbiddenTarget: (target) =>
         target.startsWith(_contractInternalDir) &&
         !_allowedContractInternalSurfaces.contains(target),

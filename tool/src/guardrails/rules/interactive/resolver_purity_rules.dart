@@ -283,51 +283,13 @@ _extractMethodBodyScope({
   required String methodStart,
   int searchStartOffset = 0,
 }) {
-  final startIndex = _findMaskedTokenOffset(
+  return _extractDelimitedBodyScope(
+    source: source,
     maskedSource: maskedSource,
-    token: methodStart,
-    startOffset: searchStartOffset,
+    startToken: methodStart,
+    searchStartOffset: searchStartOffset,
+    resultOffsetBase: 0,
   );
-  if (startIndex < 0) {
-    return null;
-  }
-
-  var bodyStart = -1;
-  var parenDepth = 0;
-  for (var i = startIndex; i < maskedSource.length; i++) {
-    final char = maskedSource[i];
-    if (char == '(') {
-      parenDepth += 1;
-    } else if (char == ')') {
-      if (parenDepth > 0) {
-        parenDepth -= 1;
-      }
-    } else if (char == '{' && parenDepth == 0) {
-      bodyStart = i;
-      break;
-    }
-  }
-  if (bodyStart < 0) {
-    return null;
-  }
-
-  var depth = 1;
-  for (var i = bodyStart + 1; i < maskedSource.length; i++) {
-    final char = maskedSource[i];
-    if (char == '{') {
-      depth += 1;
-    } else if (char == '}') {
-      depth -= 1;
-      if (depth == 0) {
-        return (
-          body: source.substring(bodyStart + 1, i),
-          maskedBody: maskedSource.substring(bodyStart + 1, i),
-          bodyStartOffset: bodyStart + 1,
-        );
-      }
-    }
-  }
-  return null;
 }
 
 ({String body, String maskedBody, int bodyStartOffset})?
@@ -337,9 +299,26 @@ _extractBlockBodyScope({
   required String blockStart,
   required int bodyStartOffset,
 }) {
+  return _extractDelimitedBodyScope(
+    source: source,
+    maskedSource: maskedSource,
+    startToken: blockStart,
+    resultOffsetBase: bodyStartOffset,
+  );
+}
+
+({String body, String maskedBody, int bodyStartOffset})?
+_extractDelimitedBodyScope({
+  required String source,
+  required String maskedSource,
+  required String startToken,
+  required int resultOffsetBase,
+  int searchStartOffset = 0,
+}) {
   final startIndex = _findMaskedTokenOffset(
     maskedSource: maskedSource,
-    token: blockStart,
+    token: startToken,
+    startOffset: searchStartOffset,
   );
   if (startIndex < 0) {
     return null;
@@ -375,7 +354,7 @@ _extractBlockBodyScope({
         return (
           body: source.substring(blockBodyStart + 1, i),
           maskedBody: maskedSource.substring(blockBodyStart + 1, i),
-          bodyStartOffset: bodyStartOffset + blockBodyStart + 1,
+          bodyStartOffset: resultOffsetBase + blockBodyStart + 1,
         );
       }
     }

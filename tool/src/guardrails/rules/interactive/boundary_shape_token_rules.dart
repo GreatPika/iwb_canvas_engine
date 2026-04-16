@@ -870,9 +870,5 @@ GuardrailViolation? _missingInteractiveOwnerViolation(
 }
 
 File _interactiveSupportFile(GuardrailContext context, String relativePath) {
-  return File(
-    '${context.root.path}${Platform.pathSeparator}lib${Platform.pathSeparator}'
-    'src${Platform.pathSeparator}interactive${Platform.pathSeparator}'
-    '${relativePath.replaceAll('/', Platform.pathSeparator)}',
-  );
+  return libSrcFile(context, relativePath: 'interactive/$relativePath');
 }
