@@ -775,6 +775,9 @@ Guardrails:
 - public interactive `ChangeNotifier` delivery follows public state changes
   rather than the internal repaint route; overlay-only interactive updates
   still notify `SceneController` listeners even though scene repaint stays idle
+- selected-node move taps without drag are no-op gestures for public listener
+  and repaint purposes; non-zero move previews still notify through the scene
+  channel
 - `actions` and `editTextRequests` are asynchronous streams
 - relative ordering between stream delivery and repaint notifications is not a
   public contract
@@ -922,6 +925,9 @@ Contract:
 - move preview and move commit use the same move admissibility owner, so
   selectable-but-non-previewable nodes may still become selected on `down` but
   never start move preview or move commit
+- selected-node move taps without drag do not create a preview translation and
+  therefore do not notify public listeners or repaint channels; non-zero move
+  previews still repaint through the scene channel
 - pointer `cancel` clears preview state without committing and restores the
   baseline selection if that gesture changed selection locally before terminal
   completion

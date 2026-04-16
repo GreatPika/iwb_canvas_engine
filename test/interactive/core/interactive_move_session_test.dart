@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/action_events.dart';
 import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
+import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/interactive_gesture_machine.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/interactive_move_callbacks.dart';
@@ -13,20 +14,38 @@ void main() {
     required VoidCallback onPublicStateChanged,
     required VoidCallback onSceneStateChanged,
     required VoidCallback onOverlayStateChanged,
+    SceneSnapshot Function()? readSnapshot,
+    Set<NodeId> Function()? readSelectedNodeIds,
+    List<SceneSpatialCandidate> Function(Rect bounds)? querySpatialCandidates,
+    NodeSnapshot? Function(SceneSpatialCandidate candidate)?
+    resolveSpatialCandidateSnapshot,
+    MoveCommitSelectionResult Function(Offset proposedDelta)?
+    commitMoveSelection,
+    void Function(
+      ActionType actionType,
+      List<NodeId> nodeIds,
+      int timestampMs, {
+      Map<String, Object?>? payload,
+    })?
+    emitAction,
   }) {
     return InteractiveMoveSessionCallbacks(
       onPublicStateChanged: onPublicStateChanged,
       onSceneStateChanged: onSceneStateChanged,
       onOverlayStateChanged: onOverlayStateChanged,
-      readSnapshot: SceneSnapshot.new,
-      readSelectedNodeIds: () => const <NodeId>{},
-      querySpatialCandidates: (_) => const <SceneSpatialCandidate>[],
-      resolveSpatialCandidateSnapshot: (_) => null,
+      readSnapshot: readSnapshot ?? SceneSnapshot.new,
+      readSelectedNodeIds: readSelectedNodeIds ?? () => const <NodeId>{},
+      querySpatialCandidates:
+          querySpatialCandidates ?? (_) => const <SceneSpatialCandidate>[],
+      resolveSpatialCandidateSnapshot:
+          resolveSpatialCandidateSnapshot ?? (_) => null,
       writeSelectionReplace: (_) {},
       writeSelectionClear: () {},
-      commitMoveSelection: (_) =>
-          (appliedDelta: Offset.zero, movedIds: const <NodeId>[]),
+      commitMoveSelection:
+          commitMoveSelection ??
+          (_) => (appliedDelta: Offset.zero, movedIds: const <NodeId>[]),
       emitAction:
+          emitAction ??
           (
             ActionType actionType,
             List<NodeId> nodeIds,
@@ -85,6 +104,141 @@ void main() {
 
       expect(stateChanges, 2);
       expect(session.selectionRect, isNull);
+    });
+
+    group('move preview scene notifications', () {
+      const nodeId = 'node';
+      final rect = RectNodeSnapshot(
+        id: nodeId,
+        size: const Size(20, 20),
+        strokeColor: const Color(0xFF000000),
+      );
+      final snapshot = SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(id: 'layer', nodes: <NodeSnapshot>[rect]),
+        ],
+      );
+      const candidate = SceneSpatialCandidate(
+        nodeId: nodeId,
+        layerIndex: 0,
+        nodeIndex: 0,
+        candidateBoundsWorld: Rect.fromLTWH(0, 0, 20, 20),
+      );
+
+      InteractiveMoveSession buildMoveSession({
+        required VoidCallback onSceneStateChanged,
+        required MoveCommitSelectionResult Function(Offset proposedDelta)
+        commitMoveSelection,
+        required void Function(
+          ActionType actionType,
+          List<NodeId> nodeIds,
+          int timestampMs, {
+          Map<String, Object?>? payload,
+        })
+        emitAction,
+      }) {
+        return InteractiveMoveSession(
+          callbacks: buildCallbacks(
+            onPublicStateChanged: () {},
+            onSceneStateChanged: onSceneStateChanged,
+            onOverlayStateChanged: () {},
+            readSnapshot: () => snapshot,
+            readSelectedNodeIds: () => const <NodeId>{nodeId},
+            querySpatialCandidates: (_) => const <SceneSpatialCandidate>[
+              candidate,
+            ],
+            resolveSpatialCandidateSnapshot: (_) => rect,
+            commitMoveSelection: commitMoveSelection,
+            emitAction: emitAction,
+          ),
+        );
+      }
+
+      test('selected-node move tap emits no scene callback or action', () {
+        var sceneChanges = 0;
+        var commitCalls = 0;
+        var emittedActions = 0;
+        final session = buildMoveSession(
+          onSceneStateChanged: () {
+            sceneChanges += 1;
+          },
+          commitMoveSelection: (_) {
+            commitCalls += 1;
+            return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
+          },
+          emitAction: (_, _, _, {payload}) {
+            emittedActions += 1;
+          },
+        );
+        addTearDown(session.dispose);
+
+        session.handlePointer(
+          const PointerSample(
+            pointerId: 1,
+            position: Offset(10, 10),
+            timestampMs: 1,
+            phase: PointerPhase.down,
+            kind: PointerDeviceKind.touch,
+          ),
+          const Offset(10, 10),
+          dragStartSlop: 8,
+        );
+        session.handlePointer(
+          const PointerSample(
+            pointerId: 1,
+            position: Offset(10, 10),
+            timestampMs: 2,
+            phase: PointerPhase.up,
+            kind: PointerDeviceKind.touch,
+          ),
+          const Offset(10, 10),
+          dragStartSlop: 8,
+        );
+
+        expect(sceneChanges, 0);
+        expect(commitCalls, 0);
+        expect(emittedActions, 0);
+        expect(session.movePreviewDeltaForNode(nodeId), Offset.zero);
+      });
+
+      test('selected-node move drag emits scene callback from move only', () {
+        var sceneChanges = 0;
+        final session = buildMoveSession(
+          onSceneStateChanged: () {
+            sceneChanges += 1;
+          },
+          commitMoveSelection: (proposedDelta) =>
+              (appliedDelta: proposedDelta, movedIds: const <NodeId>[nodeId]),
+          emitAction: (_, _, _, {payload}) {},
+        );
+        addTearDown(session.dispose);
+
+        session.handlePointer(
+          const PointerSample(
+            pointerId: 1,
+            position: Offset(10, 10),
+            timestampMs: 1,
+            phase: PointerPhase.down,
+            kind: PointerDeviceKind.touch,
+          ),
+          const Offset(10, 10),
+          dragStartSlop: 1,
+        );
+        session.handlePointer(
+          const PointerSample(
+            pointerId: 1,
+            position: Offset(16, 10),
+            timestampMs: 2,
+            phase: PointerPhase.move,
+            kind: PointerDeviceKind.touch,
+          ),
+          const Offset(16, 10),
+          dragStartSlop: 1,
+        );
+
+        expect(sceneChanges, 1);
+        expect(session.movePreviewDeltaForNode(nodeId), const Offset(6, 0));
+      });
     });
   });
 }

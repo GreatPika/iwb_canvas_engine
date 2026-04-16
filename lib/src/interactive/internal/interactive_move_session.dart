@@ -77,9 +77,7 @@ class InteractiveMoveSession {
   }) {
     switch (sample.phase) {
       case PointerPhase.down:
-        if (_moveHandleDown(scenePoint)) {
-          callbacks.onSceneStateChanged();
-        }
+        _moveHandleDown(scenePoint);
       case PointerPhase.move:
         final change = _moveHandleMove(
           scenePoint,
@@ -110,7 +108,7 @@ class InteractiveMoveSession {
     }
   }
 
-  bool _moveHandleDown(Offset scenePoint) {
+  void _moveHandleDown(Offset scenePoint) {
     _beginGesture(scenePoint);
 
     final hit = _hitTestEngine.hitTestTopNode(scenePoint);
@@ -119,18 +117,18 @@ class InteractiveMoveSession {
         ..setTarget(InteractiveMoveDragTarget.marquee)
         ..setPendingClearSelection(true);
       callbacks.onPublicStateChanged();
-      return false;
+      return;
     }
 
     _selectionCoordinator.selectHitNodeIfNeeded(hit.id);
     final previewNodeIds = _selectionCoordinator.resolvePreviewNodeIds();
     if (previewNodeIds.contains(hit.id)) {
       _gestureState.setTarget(InteractiveMoveDragTarget.move);
-      return _previewState.start(previewNodeIds);
+      _previewState.start(previewNodeIds);
+      return;
     }
 
     _gestureState.setTarget(InteractiveMoveDragTarget.none);
-    return false;
   }
 
   ({bool scene, bool overlay}) _moveHandleMove(
@@ -216,7 +214,7 @@ class InteractiveMoveSession {
 
   ({bool scene, bool overlay}) _resetGestureStateForTerminal() {
     final didChange = (
-      scene: _previewState.isActive,
+      scene: _previewState.hasSceneEffect,
       overlay: _gestureState.selectionRect != null,
     );
     resetGestureState();

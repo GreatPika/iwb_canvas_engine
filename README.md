@@ -268,7 +268,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
   listener notifications are microtask-deferred and coalesced. For interactive
   state, those public listener updates stay independent from the internal
   scene/overlay repaint split, so overlay-only marquee/preview changes still
-  notify `SceneController` listeners.
+  notify `SceneController` listeners. Selected-node move taps without drag are
+  no-op gestures for public listener and repaint purposes; non-zero move
+  previews still notify listeners and repaint through the scene channel.
 - `setPointerSettings(...)` is applied live by `SceneView`; active gestures keep
   their current settings until `up` or `cancel`, and parallel raw host pointers
   do not force an early reset of routed pointer tracking. Settings are treated
@@ -337,7 +339,8 @@ class _CanvasScreenState extends State<CanvasScreen> {
   share one internal eligibility policy: selectable-but-non-movable nodes can
   still become the selection target, but they do not start move preview, and
   pointer `cancel` restores the gesture baseline selection after any temporary
-  move-local selection change.
+  move-local selection change. Selected-node move taps without drag do not
+  create a move-preview scene effect, so they do not notify or repaint.
 - `SceneView` main-painter and overlay reads now share one controller-owned
   internal render-state family with split repaint ownership: the main painter
   listens to the scene channel, the interactive overlay listens to

@@ -308,7 +308,10 @@ Ownership decisions for the target state:
    `InteractiveGestureRouter` for active pointer/family orchestration,
    `InteractiveDoubleTapRouter` for text double-tap routing,
    `InteractiveMoveSession` for move preview/commit ownership, and
-   `InteractiveDrawCoordinator` for draw-family orchestration. It also keeps
+   `InteractiveDrawCoordinator` for draw-family orchestration.
+   `InteractiveMovePreviewState` owns move-preview scene-effect semantics:
+   move gesture ownership is not a repaint signal, and only non-zero preview
+   translation marks a move gesture as scene-affecting. It also keeps
    interaction-config interruption, external-mutation interruption,
    pointer-session detachment, and destructive dispose as distinct lifecycle
    reasons instead of one shared reset path.
@@ -362,6 +365,11 @@ Ownership decisions for the target state:
   is surfaced before controller code treats it as canonical.
 - Preview state for move/draw gestures is intentionally ephemeral and does not
   mutate committed scene data until commit on `up`.
+- Move preview effect is separate from move gesture ownership:
+  `InteractiveMovePreviewState` owns the accumulated translation, and move
+  gesture ownership is not a repaint signal. Selected-node move taps without
+  drag have no scene effect; non-zero move previews still notify through the
+  scene repaint channel.
 - Draw-style capture is single-owner state: active preview reads come from the
   gesture-start style, and pending two-tap line reads expose the same captured
   color/thickness that the eventual line commit will use rather than live
@@ -434,7 +442,9 @@ Ownership decisions for the target state:
   rendering stays outside the base scene painter. Public
   `SceneController.addListener(...)` delivery stays channel-agnostic: public
   interactive state changes still notify listeners even when the change repaints
-  only the overlay path.
+  only the overlay path. Move gesture ownership is not a repaint signal:
+  selected-node move taps without drag do not notify or repaint, while non-zero
+  move previews still use the scene channel.
 - `ScenePainter` keeps frame ownership and selection ownership separate:
   the frame owner first consumes controller-owned ordered viewport paint
   candidates through a raw viewport query, then resolves preview delta plus

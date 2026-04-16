@@ -4,6 +4,9 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Fixed move-mode listener/repaint noise: selected-node move taps without drag no longer trigger scene repaint.
+  They also no longer trigger public scene-change listener activity, while
+  non-zero move previews still repaint and notify through the scene channel.
 - Prepared replace-scene payloads are now sealed as controller-private
   implementation detail. Public and interactive callers still use only
   `replaceScene(SceneSnapshot snapshot)`, preflight validation/import happens

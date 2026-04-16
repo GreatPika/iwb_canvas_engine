@@ -130,6 +130,12 @@ void main() {
     final eraserStrokeHitSource = _read(
       'lib/src/interactive/internal/interactive_draw_eraser_stroke_hit.dart',
     );
+    final movePreviewStateSource = _read(
+      'lib/src/interactive/internal/interactive_move_preview_state.dart',
+    );
+    final moveSessionSource = _read(
+      'lib/src/interactive/internal/interactive_move_session.dart',
+    );
 
     expect(
       File(
@@ -458,6 +464,21 @@ void main() {
       contains("import 'interactive_event_dispatcher.dart';"),
     );
     expect(runtimeSource, contains("import 'interactive_move_session.dart';"));
+    expect(
+      movePreviewStateSource,
+      contains('bool get hasSceneEffect => hasTranslation;'),
+    );
+    expect(movePreviewStateSource, isNot(contains('bool get isActive')));
+    expect(
+      movePreviewStateSource,
+      isNot(contains('bool start(Set<NodeId> nodeIds)')),
+    );
+    expect(moveSessionSource, contains('_previewState.hasSceneEffect'));
+    expect(moveSessionSource, isNot(contains('_previewState.isActive')));
+    expect(
+      moveSessionSource,
+      isNot(contains('if (_moveHandleDown(scenePoint))')),
+    );
     expect(
       runtimeSource,
       contains('void handlePublicPointer(CanvasPointerInput input)'),

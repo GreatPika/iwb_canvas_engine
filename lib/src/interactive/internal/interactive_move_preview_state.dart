@@ -7,9 +7,9 @@ final class InteractiveMovePreviewState {
   Offset _delta = Offset.zero;
   Set<NodeId> _nodeIds = <NodeId>{};
 
-  bool get isActive => _active;
   bool get hasTranslation =>
       _active && _nodeIds.isNotEmpty && _delta != Offset.zero;
+  bool get hasSceneEffect => hasTranslation;
   Offset get delta => _delta;
 
   Offset deltaForNode(NodeId nodeId) {
@@ -19,11 +19,10 @@ final class InteractiveMovePreviewState {
     return _delta;
   }
 
-  bool start(Set<NodeId> nodeIds) {
+  void start(Set<NodeId> nodeIds) {
     _active = true;
     _delta = Offset.zero;
     _nodeIds = Set<NodeId>.from(nodeIds);
-    return true;
   }
 
   bool advance(Offset scenePoint, Offset lastScenePoint) {

@@ -132,4 +132,56 @@ void main() {
       expect(moveOverlayRepaints, 0);
     },
   );
+
+  test(
+    'zero-preview move tap does not notify public or repaint channels',
+    () async {
+      final controller = SceneController(
+        initialSnapshot: rectSnapshot(),
+        dragStartSlop: 0.001,
+      );
+      addTearDown(controller.dispose);
+      controller.selection.setSelection(const <String>{'rect-1'});
+      await pumpEventQueue();
+
+      final renderState = interactive
+          .sceneControllerViewRuntimeOf(controller)
+          .renderState;
+      var publicNotifications = 0;
+      var sceneRepaints = 0;
+      var overlayRepaints = 0;
+      controller.addListener(() {
+        publicNotifications += 1;
+      });
+      renderState.addListener(() {
+        sceneRepaints += 1;
+      });
+      renderState.overlayRepaintListenable.addListener(() {
+        overlayRepaints += 1;
+      });
+
+      controller.interaction.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(4, 4),
+          timestampMs: 1,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+      controller.interaction.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(4, 4),
+          timestampMs: 2,
+          phase: CanvasPointerPhase.up,
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(controller.previewDeltaResolver('rect-1'), Offset.zero);
+      expect(publicNotifications, 0);
+      expect(sceneRepaints, 0);
+      expect(overlayRepaints, 0);
+    },
+  );
 }

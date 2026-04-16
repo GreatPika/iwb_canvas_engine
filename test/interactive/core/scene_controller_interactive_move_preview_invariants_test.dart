@@ -11,6 +11,24 @@ import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart';
 import '../test_support/interactive_controller_fixtures.dart';
 
 void main() {
+  SceneController buildSelectedRectController({int layerOffset = 0}) {
+    final rect = RectNode(id: 'node', size: const Size(40, 20))
+      ..position = const Offset(80, 80);
+    final controller = controllerFromScene(
+      Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-${layerOffset}a'),
+          ContentLayer(
+            id: 'layer-auto-${layerOffset}b',
+            nodes: <SceneNode>[rect],
+          ),
+        ],
+      ),
+    );
+    controller.selection.setSelection(const <NodeId>{'node'});
+    return controller;
+  }
+
   group('SceneController unit', () {
     test('hit-test uses preview-shifted geometry during move drag', () async {
       final text = TextNode(
@@ -79,7 +97,7 @@ void main() {
       expect(requests.single.position, movedPoint);
     });
 
-    test('move cancel keeps document unchanged and clears preview', () {
+    test('move cancel keeps document unchanged and clears preview', () async {
       // INV:INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP
       // INV:INV-ENG-INTERACTIVE-CANCEL-STATE-RESET
       final rect = RectNode(id: 'node', size: const Size(40, 20))
@@ -97,6 +115,11 @@ void main() {
       controller.selection.setSelection(const <NodeId>{'node'});
       final beforeNode =
           nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
+      final renderState = sceneControllerViewRuntimeOf(controller).renderState;
+      var sceneRepaints = 0;
+      renderState.addListener(() {
+        sceneRepaints += 1;
+      });
 
       controller.interaction.handlePointer(
         sampleInput(
@@ -117,6 +140,8 @@ void main() {
       final duringMove =
           nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
       expect(duringMove.transform.tx, closeTo(beforeNode.transform.tx, 1e-6));
+      await pumpEventQueue();
+      expect(sceneRepaints, 1);
 
       controller.interaction.handlePointer(
         sampleInput(
@@ -132,7 +157,112 @@ void main() {
       expect(afterCancel.transform.tx, closeTo(beforeNode.transform.tx, 1e-6));
       expect(afterCancel.transform.ty, closeTo(beforeNode.transform.ty, 1e-6));
       expect(controller.interaction.selectionRect, isNull);
+      await pumpEventQueue();
+      expect(sceneRepaints, 2);
     });
+
+    test(
+      'zero-preview move terminal paths do not schedule scene repaint',
+      () async {
+        Future<int> countSceneRepaintsFor(
+          int caseId,
+          String reason,
+          Future<void> Function(SceneController controller) finishGesture,
+        ) async {
+          final controller = buildSelectedRectController(layerOffset: caseId);
+          addTearDown(controller.dispose);
+          await pumpEventQueue();
+
+          final renderState = sceneControllerViewRuntimeOf(
+            controller,
+          ).renderState;
+          var sceneRepaints = 0;
+          renderState.addListener(() {
+            sceneRepaints += 1;
+          });
+
+          controller.interaction.handlePointer(
+            sampleInput(
+              pointerId: 1,
+              position: const Offset(80, 80),
+              timestampMs: 1,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          await finishGesture(controller);
+          await pumpEventQueue();
+
+          expect(
+            controller.previewDeltaResolver('node'),
+            Offset.zero,
+            reason: reason,
+          );
+          return sceneRepaints;
+        }
+
+        expect(
+          await countSceneRepaintsFor(1, 'up', (controller) async {
+            controller.interaction.handlePointer(
+              sampleInput(
+                pointerId: 1,
+                position: const Offset(80, 80),
+                timestampMs: 2,
+                phase: CanvasPointerPhase.up,
+              ),
+            );
+          }),
+          0,
+        );
+        expect(
+          await countSceneRepaintsFor(2, 'cancel', (controller) async {
+            controller.interaction.handlePointer(
+              sampleInput(
+                pointerId: 1,
+                position: const Offset(80, 80),
+                timestampMs: 2,
+                phase: CanvasPointerPhase.cancel,
+              ),
+            );
+          }),
+          0,
+        );
+        expect(
+          await countSceneRepaintsFor(3, 'interrupt', (controller) async {
+            controller.interaction.setMode(CanvasMode.draw);
+          }),
+          0,
+        );
+        final detachController = buildSelectedRectController(layerOffset: 4);
+        addTearDown(detachController.dispose);
+        await pumpEventQueue();
+        final detachRenderState = sceneControllerViewRuntimeOf(
+          detachController,
+        ).renderState;
+        var detachSceneRepaints = 0;
+        detachRenderState.addListener(() {
+          detachSceneRepaints += 1;
+        });
+        final session = sceneControllerViewRuntimeOf(detachController)
+            .createPointerSession(
+              isMounted: () => true,
+              hasLiveRawPointers: () => false,
+            );
+        session.handleRoutedSample(
+          const PointerSample(
+            pointerId: 2,
+            position: Offset(80, 80),
+            timestampMs: 1,
+            phase: PointerPhase.down,
+            kind: PointerDeviceKind.touch,
+          ),
+          shouldTrackSignals: false,
+        );
+        session.dispose();
+        await pumpEventQueue();
+        expect(detachController.previewDeltaResolver('node'), Offset.zero);
+        expect(detachSceneRepaints, 0);
+      },
+    );
 
     test(
       'move cancel restores baseline selection after marquee changed it',

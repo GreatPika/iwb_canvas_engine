@@ -210,7 +210,7 @@ signals.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Split Move Preview Activity From Scene Effect
+### Slice 1. [x] Split Move Preview Activity From Scene Effect
 
 #### Slice Contract
 Move preview internals expose scene-effect semantics that are independent from
@@ -250,7 +250,7 @@ gesture activation state.
 - Unit assertions showing zero-preview path does not emit scene callback,
   commit, or action.
 
-### Slice 2. [ ] Normalize Terminal Scene Signaling For Zero-Preview Gestures
+### Slice 2. [x] Normalize Terminal Scene Signaling For Zero-Preview Gestures
 
 #### Slice Contract
 Terminalization paths report scene change only when move preview produced a real
@@ -285,7 +285,7 @@ translation.
 - Assertions proving all listed zero-preview terminal paths do not mark scene
   changed.
 
-### Slice 3. [ ] Enforce Move Preview Effect Ownership Structurally
+### Slice 3. [x] Enforce Move Preview Effect Ownership Structurally
 
 #### Slice Contract
 Repository-local structural tests reject the activation-as-scene-signal forms
@@ -324,7 +324,7 @@ that caused this bug class.
 - Structural assertions fail if preview activation is reintroduced as a scene
   notification input.
 
-### Slice 4. [ ] Lock Public Listener/Repaint Contract For Zero-Preview Move Tap
+### Slice 4. [x] Lock Public Listener/Repaint Contract For Zero-Preview Move Tap
 
 #### Slice Contract
 Public and scene repaint channels remain silent for zero-preview move tap
@@ -362,7 +362,7 @@ gestures and still fire for real preview movement.
 - Green run of listed verification.
 - Listener/repaint counters proving zero-preview no-notify behavior.
 
-### Slice 5. [ ] Update Public And Architecture Documentation
+### Slice 5. [x] Update Public And Architecture Documentation
 
 #### Slice Contract
 Repository source-of-truth documentation describes zero-preview move taps as
