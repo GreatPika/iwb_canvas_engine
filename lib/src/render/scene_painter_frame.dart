@@ -63,7 +63,7 @@ class ScenePainterFrameOwner {
     return ScenePainterPaintFrame(
       cameraOffset: cameraOffset,
       viewRect: viewRect,
-      paintCandidates: List<NodeSnapshot>.unmodifiable(
+      paintCandidates: List<ScenePaintCandidate>.unmodifiable(
         renderState.enumeratePaintCandidates(
           frameRead,
           ScenePaintCandidateQuery(

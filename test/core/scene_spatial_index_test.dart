@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
+import 'package:iwb_canvas_engine/src/core/hit_test.dart';
 import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
@@ -96,7 +97,9 @@ void main() {
     );
 
     final index = SceneSpatialIndex.build(scene);
-    final candidates = index.query(const Rect.fromLTWH(0, 0, 10, 10));
+    final candidates = index.queryHitTestCandidates(
+      const Rect.fromLTWH(0, 0, 10, 10),
+    );
 
     expect(index.debugLargeCandidateCount, 1);
     expect(index.debugCellCount, 0);
@@ -127,8 +130,8 @@ void main() {
       final index = SceneSpatialIndex.build(scene);
       expect(index.isValid, isFalse);
 
-      final first = index.query(queryRect);
-      final second = index.query(queryRect);
+      final first = index.queryHitTestCandidates(queryRect);
+      final second = index.queryHitTestCandidates(queryRect);
 
       expect(first.map((candidate) => candidate.nodeId), <NodeId>['oor']);
       expect(second.map((candidate) => candidate.nodeId), <NodeId>['oor']);
@@ -144,7 +147,7 @@ void main() {
     );
     final index = SceneSpatialIndex.build(scene);
 
-    final candidates = index.query(
+    final candidates = index.queryHitTestCandidates(
       Rect.fromLTWH(sceneCoordMax + 10, sceneCoordMax + 10, 20, 20),
     );
 
@@ -159,7 +162,9 @@ void main() {
     );
 
     final index = SceneSpatialIndex.build(scene);
-    final candidates = index.query(const Rect.fromLTWH(0, 0, 10, 10));
+    final candidates = index.queryHitTestCandidates(
+      const Rect.fromLTWH(0, 0, 10, 10),
+    );
 
     expect(index.debugLargeCandidateCount, 0);
     expect(index.debugCellCount, greaterThan(0));
@@ -184,12 +189,45 @@ void main() {
     );
 
     final index = SceneSpatialIndex.build(scene);
-    final candidate = index.query(const Rect.fromLTWH(0, 0, 40, 40)).single;
+    final hitTestCandidate = index
+        .queryHitTestCandidates(const Rect.fromLTWH(0, 0, 40, 40))
+        .single;
+    final paintCandidate = index
+        .queryPaintCandidates(const Rect.fromLTWH(0, 0, 40, 40))
+        .single;
 
     expect(
-      candidate.candidateBoundsWorld,
-      nodeGeometryCandidateBoundsWorld(line),
+      hitTestCandidate.hitTestBoundsWorld,
+      nodeHitTestCandidateBoundsWorld(line),
     );
+    expect(paintCandidate.paintBoundsWorld, nodePaintBoundsWorld(line));
+  });
+
+  test('paint query excludes hit-test-only overlap ring', () {
+    final line = LineNode(
+      id: 'line-hit-only-ring',
+      start: const Offset(-10, 0),
+      end: const Offset(10, 0),
+      thickness: 4,
+      color: const Color(0xFF000000),
+      hitPadding: 20,
+    )..position = const Offset(15, 12);
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(id: 'layer-hit-only-ring', nodes: <SceneNode>[line]),
+      ],
+    );
+
+    final index = SceneSpatialIndex.build(scene);
+    final ringProbe = const Rect.fromLTWH(35, 10, 2, 4);
+
+    expect(
+      index
+          .queryHitTestCandidates(ringProbe)
+          .map((candidate) => candidate.nodeId),
+      <NodeId>['line-hit-only-ring'],
+    );
+    expect(index.queryPaintCandidates(ringProbe), isEmpty);
   });
 
   test('boundary: 1024 cells stays grid, 1025 cells goes large', () {
@@ -206,14 +244,20 @@ void main() {
     expect(exact1024Index.debugLargeCandidateCount, 0);
     expect(exact1024Index.debugCellCount, greaterThan(0));
     expect(
-      exact1024Index.query(const Rect.fromLTWH(0, 0, 10, 10)).single.nodeId,
+      exact1024Index
+          .queryHitTestCandidates(const Rect.fromLTWH(0, 0, 10, 10))
+          .single
+          .nodeId,
       'exact-1024',
     );
 
     expect(over1024Index.debugLargeCandidateCount, 1);
-    expect(over1024Index.debugCellCount, 0);
+    expect(over1024Index.debugCellCount, greaterThan(0));
     expect(
-      over1024Index.query(const Rect.fromLTWH(0, 0, 10, 10)).single.nodeId,
+      over1024Index
+          .queryHitTestCandidates(const Rect.fromLTWH(0, 0, 10, 10))
+          .single
+          .nodeId,
       'over-1024',
     );
   });
@@ -229,7 +273,7 @@ void main() {
     );
 
     final index = SceneSpatialIndex.build(scene);
-    final candidates = index.query(
+    final candidates = index.queryHitTestCandidates(
       const Rect.fromLTWH(-128000, -12800, 256000, 25600),
     );
 
@@ -239,6 +283,54 @@ void main() {
     expect(ids, isNot(contains('outside')));
   });
 
+  test('invalid paint index serves repeated linear fallback queries', () {
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-paint-invalid',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'oor-paint',
+              size: const Size(10, 10),
+              transform: Transform2D.translation(
+                Offset(sceneCoordMax + 500, 0),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+    final queryRect = Rect.fromLTWH(sceneCoordMax + 450, -20, 100, 40);
+
+    final index = SceneSpatialIndex.build(scene);
+    expect(index.isValid, isFalse);
+
+    final first = index.queryPaintCandidates(queryRect);
+    final second = index.queryPaintCandidates(queryRect);
+
+    expect(first.map((candidate) => candidate.nodeId), <NodeId>['oor-paint']);
+    expect(second.map((candidate) => candidate.nodeId), <NodeId>['oor-paint']);
+    expect(index.debugFallbackQueryCount, 2);
+  });
+
+  test(
+    'out-of-range paint query falls back linearly without invalidating index',
+    () {
+      final scene = sceneWithRect(
+        RectNode(id: 'paint-regular', size: const Size(100, 100)),
+      );
+      final index = SceneSpatialIndex.build(scene);
+
+      final candidates = index.queryPaintCandidates(
+        Rect.fromLTWH(sceneCoordMax + 10, sceneCoordMax + 10, 20, 20),
+      );
+
+      expect(candidates, isEmpty);
+      expect(index.isValid, isTrue);
+      expect(index.debugFallbackQueryCount, 1);
+    },
+  );
+
   test(
     'query catches locator lookup errors and switches to invalid fallback',
     () {
@@ -246,9 +338,10 @@ void main() {
         RectNode(id: 'r1', size: const Size(100, 100)),
       );
       final index = SceneSpatialIndex.build(scene);
-      final throwingLookup = _ThrowingLookupMap<NodeId, SpatialNodeLocation>({
-        'r1': (layerIndex: 0, nodeIndex: 0),
-      });
+      final throwingLookup =
+          _ThrowingLookupMap<NodeId, SceneSpatialCandidateLocation>({
+            'r1': (layerIndex: 0, nodeIndex: 0),
+          });
 
       final applied = index.applyIncremental(
         scene: scene,
@@ -256,13 +349,48 @@ void main() {
         changeSet: const SceneSpatialIndexChangeSet(
           addedNodeIds: <NodeId>{},
           removedNodeIds: <NodeId>{},
-          hitGeometryChangedIds: <NodeId>{},
+          spatialGeometryChangedIds: <NodeId>{},
         ),
       );
       expect(applied, isTrue);
 
-      final candidates = index.query(const Rect.fromLTWH(0, 0, 20, 20));
+      final candidates = index.queryHitTestCandidates(
+        const Rect.fromLTWH(0, 0, 20, 20),
+      );
       expect(candidates, isNotEmpty);
+      expect(index.isValid, isFalse);
+    },
+  );
+
+  test(
+    'paint query catches locator lookup errors and switches to invalid fallback',
+    () {
+      final scene = sceneWithRect(
+        RectNode(id: 'paint-r1', size: const Size(100, 100)),
+      );
+      final index = SceneSpatialIndex.build(scene);
+      final throwingLookup =
+          _ThrowingLookupMap<NodeId, SceneSpatialCandidateLocation>({
+            'paint-r1': (layerIndex: 0, nodeIndex: 0),
+          });
+
+      final applied = index.applyIncremental(
+        scene: scene,
+        nodeLocator: throwingLookup,
+        changeSet: const SceneSpatialIndexChangeSet(
+          addedNodeIds: <NodeId>{},
+          removedNodeIds: <NodeId>{},
+          spatialGeometryChangedIds: <NodeId>{},
+        ),
+      );
+      expect(applied, isTrue);
+
+      final candidates = index.queryPaintCandidates(
+        const Rect.fromLTWH(0, 0, 20, 20),
+      );
+      expect(candidates.map((candidate) => candidate.nodeId), <NodeId>[
+        'paint-r1',
+      ]);
       expect(index.isValid, isFalse);
     },
   );
@@ -275,7 +403,7 @@ void main() {
       );
       final index = SceneSpatialIndex.build(scene);
       final throwingContainsKey =
-          _ThrowingContainsKeyMap<NodeId, SpatialNodeLocation>({
+          _ThrowingContainsKeyMap<NodeId, SceneSpatialCandidateLocation>({
             'r1': (layerIndex: 0, nodeIndex: 0),
           });
 
@@ -285,7 +413,7 @@ void main() {
         changeSet: const SceneSpatialIndexChangeSet(
           addedNodeIds: <NodeId>{},
           removedNodeIds: <NodeId>{},
-          hitGeometryChangedIds: <NodeId>{'r1'},
+          spatialGeometryChangedIds: <NodeId>{'r1'},
         ),
       );
 
@@ -300,7 +428,7 @@ void main() {
       final sourceScene = sceneWithRect(
         RectNode(id: 'r1', size: const Size(10, 10)),
       );
-      final sourceLocator = <NodeId, SpatialNodeLocation>{
+      final sourceLocator = <NodeId, SceneSpatialCandidateLocation>{
         'r1': (layerIndex: 0, nodeIndex: 0),
       };
       final sourceIndex = SceneSpatialIndex.build(
@@ -322,7 +450,7 @@ void main() {
           ),
         ],
       );
-      final movedLocator = <NodeId, SpatialNodeLocation>{
+      final movedLocator = <NodeId, SceneSpatialCandidateLocation>{
         'r1': (layerIndex: 0, nodeIndex: 0),
       };
 
@@ -336,17 +464,21 @@ void main() {
         changeSet: const SceneSpatialIndexChangeSet(
           addedNodeIds: <NodeId>{},
           removedNodeIds: <NodeId>{},
-          hitGeometryChangedIds: <NodeId>{'r1'},
+          spatialGeometryChangedIds: <NodeId>{'r1'},
         ),
       );
       expect(applied, isTrue);
 
-      final sourceAtOld = sourceIndex.query(const Rect.fromLTWH(0, 0, 20, 20));
-      final sourceAtMoved = sourceIndex.query(
+      final sourceAtOld = sourceIndex.queryHitTestCandidates(
+        const Rect.fromLTWH(0, 0, 20, 20),
+      );
+      final sourceAtMoved = sourceIndex.queryHitTestCandidates(
         const Rect.fromLTWH(100, 0, 20, 20),
       );
-      final candidateAtOld = candidate.query(const Rect.fromLTWH(0, 0, 20, 20));
-      final candidateAtMoved = candidate.query(
+      final candidateAtOld = candidate.queryHitTestCandidates(
+        const Rect.fromLTWH(0, 0, 20, 20),
+      );
+      final candidateAtMoved = candidate.queryHitTestCandidates(
         const Rect.fromLTWH(100, 0, 20, 20),
       );
 
@@ -362,7 +494,7 @@ void main() {
   test('build catches scene iteration errors and marks index invalid', () {
     final index = SceneSpatialIndex.build(
       _ThrowingLayersScene(),
-      nodeLocator: const <NodeId, SpatialNodeLocation>{},
+      nodeLocator: const <NodeId, SceneSpatialCandidateLocation>{},
     );
     expect(index.isValid, isFalse);
   });
@@ -380,7 +512,7 @@ void main() {
         ContentLayer(id: 'layer-auto-parity', nodes: <SceneNode>[originalNode]),
       ],
     );
-    final originalLocator = <NodeId, SpatialNodeLocation>{
+    final originalLocator = <NodeId, SceneSpatialCandidateLocation>{
       originalNode.id: (layerIndex: 0, nodeIndex: 0),
     };
     final incremental = SceneSpatialIndex.build(
@@ -400,7 +532,7 @@ void main() {
         ContentLayer(id: 'layer-auto-parity', nodes: <SceneNode>[movedNode]),
       ],
     );
-    final movedLocator = <NodeId, SpatialNodeLocation>{
+    final movedLocator = <NodeId, SceneSpatialCandidateLocation>{
       movedNode.id: (layerIndex: 0, nodeIndex: 0),
     };
 
@@ -410,7 +542,7 @@ void main() {
       changeSet: SceneSpatialIndexChangeSet(
         addedNodeIds: const <NodeId>{},
         removedNodeIds: const <NodeId>{},
-        hitGeometryChangedIds: <NodeId>{movedNode.id},
+        spatialGeometryChangedIds: <NodeId>{movedNode.id},
       ),
     );
     final rebuilt = SceneSpatialIndex.build(
@@ -419,8 +551,8 @@ void main() {
     );
     final queryRect = const Rect.fromLTWH(40, 0, 100, 60);
 
-    final incrementalCandidates = incremental.query(queryRect);
-    final rebuiltCandidates = rebuilt.query(queryRect);
+    final incrementalCandidates = incremental.queryHitTestCandidates(queryRect);
+    final rebuiltCandidates = rebuilt.queryHitTestCandidates(queryRect);
 
     expect(applied, isTrue);
     expect(incrementalCandidates.map((candidate) => candidate.nodeId), <NodeId>[
@@ -430,12 +562,12 @@ void main() {
       movedNode.id,
     ]);
     expect(
-      incrementalCandidates.single.candidateBoundsWorld,
-      rebuiltCandidates.single.candidateBoundsWorld,
+      incrementalCandidates.single.hitTestBoundsWorld,
+      rebuiltCandidates.single.hitTestBoundsWorld,
     );
     expect(
-      rebuiltCandidates.single.candidateBoundsWorld,
-      nodeGeometryCandidateBoundsWorld(movedNode),
+      rebuiltCandidates.single.hitTestBoundsWorld,
+      nodeHitTestCandidateBoundsWorld(movedNode),
     );
   });
 }

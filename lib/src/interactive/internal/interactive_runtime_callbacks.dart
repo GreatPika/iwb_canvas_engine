@@ -16,7 +16,7 @@ class InteractiveRuntimeCallbacks {
     required this.readMode,
     required this.readDragStartSlop,
     required this.readDrawStyle,
-    required this.querySpatialCandidates,
+    required this.queryHitTestCandidates,
     required this.resolveSpatialCandidateSnapshot,
     required this.writeSelectionReplace,
     required this.writeSelectionClear,
@@ -34,9 +34,9 @@ class InteractiveRuntimeCallbacks {
   final CanvasMode Function() readMode;
   final double Function() readDragStartSlop;
   final InteractiveDrawStyle Function() readDrawStyle;
-  final List<SceneSpatialCandidate> Function(Rect bounds)
-  querySpatialCandidates;
-  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  final List<SceneHitTestSpatialCandidate> Function(Rect bounds)
+  queryHitTestCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidateReference candidate)
   resolveSpatialCandidateSnapshot;
   final void Function(Iterable<NodeId> nodeIds) writeSelectionReplace;
   final void Function() writeSelectionClear;

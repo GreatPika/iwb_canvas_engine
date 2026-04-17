@@ -23,6 +23,26 @@ constraints that keep the public API stable.
 The package is an engine. It does not own app UI, persistence, collaboration, or
 undo/redo policy.
 
+## Render admission boundary
+
+Rendering and hit-testing share scene ownership but do not share one neutral
+spatial-admission contract.
+
+- `SceneSpatialIndex` owns content-layer coarse lookup and stores separate
+  hit-test bounds and paint bounds for the same committed node location.
+- Interactive read-side flows consume hit-test candidates and resolve snapshot
+  data by sealed location only.
+- Render read-side flows consume paint candidates that carry paint bounds only.
+  `ScenePainterNodeRenderer` must cull by those paint bounds before geometry or
+  text-layout resolution.
+- Controller-backed paint enumeration stays owned by
+  `SceneControllerSceneViewRenderState`. It merges viewport-first ordinary
+  candidates with selected-node supplements while preserving original
+  background/content order and deduplicating each node once per frame.
+- If the active frame snapshot diverges from the committed controller snapshot,
+  the render path falls back to active-frame candidate enumeration instead of
+  mixing committed and frame-local sources.
+
 ## Module layout
 
 Current repository layout:

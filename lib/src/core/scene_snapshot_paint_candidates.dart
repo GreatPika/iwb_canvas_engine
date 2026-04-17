@@ -6,7 +6,7 @@ import 'geometry.dart';
 import 'node_geometry.dart';
 import 'numeric_clamp.dart';
 
-Iterable<NodeSnapshot> enumerateSnapshotPaintCandidates({
+Iterable<ScenePaintCandidate> enumerateSnapshotPaintCandidates({
   required SceneSnapshot snapshot,
   required ScenePaintCandidateQuery query,
   required Set<NodeId> selectedNodeIds,
@@ -19,7 +19,13 @@ Iterable<NodeSnapshot> enumerateSnapshotPaintCandidates({
       selectedNodeIds: selectedNodeIds,
       previewDeltaResolver: previewDeltaResolver,
     )) {
-      yield node;
+      yield ScenePaintCandidate(
+        node: node,
+        paintBoundsWorld: _snapshotPaintBoundsWorld(
+          node: node,
+          previewDeltaResolver: previewDeltaResolver,
+        ),
+      );
     }
   }
   for (final layer in snapshot.layers) {
@@ -30,7 +36,13 @@ Iterable<NodeSnapshot> enumerateSnapshotPaintCandidates({
         selectedNodeIds: selectedNodeIds,
         previewDeltaResolver: previewDeltaResolver,
       )) {
-        yield node;
+        yield ScenePaintCandidate(
+          node: node,
+          paintBoundsWorld: _snapshotPaintBoundsWorld(
+            node: node,
+            previewDeltaResolver: previewDeltaResolver,
+          ),
+        );
       }
     }
   }
@@ -42,16 +54,24 @@ bool _snapshotNodeOverlapsQuery({
   required Set<NodeId> selectedNodeIds,
   required Offset Function(NodeId nodeId) previewDeltaResolver,
 }) {
-  final previewDelta = sanitizeFiniteOffset(previewDeltaResolver(node.id));
-  requireNodeSnapshotGeometrySupport(node);
-  final candidateBounds = nodeSnapshotGeometryCandidateBoundsWorld(
-    node,
-  ).shift(previewDelta);
-  if (!isFiniteRect(candidateBounds)) {
+  final paintBounds = _snapshotPaintBoundsWorld(
+    node: node,
+    previewDeltaResolver: previewDeltaResolver,
+  );
+  if (!isFiniteRect(paintBounds)) {
     return false;
   }
   final visibilityRect = selectedNodeIds.contains(node.id)
       ? query.visibilityRect
       : query.viewportRect;
-  return visibilityRect.overlaps(candidateBounds);
+  return visibilityRect.overlaps(paintBounds);
+}
+
+Rect _snapshotPaintBoundsWorld({
+  required NodeSnapshot node,
+  required Offset Function(NodeId nodeId) previewDeltaResolver,
+}) {
+  requireNodeSnapshotGeometrySupport(node);
+  final previewDelta = sanitizeFiniteOffset(previewDeltaResolver(node.id));
+  return nodeSnapshotPaintBoundsWorld(node).shift(previewDelta);
 }

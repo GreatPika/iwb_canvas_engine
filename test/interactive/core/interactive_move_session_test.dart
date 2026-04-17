@@ -16,8 +16,9 @@ void main() {
     required VoidCallback onOverlayStateChanged,
     SceneSnapshot Function()? readSnapshot,
     Set<NodeId> Function()? readSelectedNodeIds,
-    List<SceneSpatialCandidate> Function(Rect bounds)? querySpatialCandidates,
-    NodeSnapshot? Function(SceneSpatialCandidate candidate)?
+    List<SceneHitTestSpatialCandidate> Function(Rect bounds)?
+    queryHitTestCandidates,
+    NodeSnapshot? Function(SceneSpatialCandidateReference candidate)?
     resolveSpatialCandidateSnapshot,
     MoveCommitSelectionResult Function(Offset proposedDelta)?
     commitMoveSelection,
@@ -35,8 +36,9 @@ void main() {
       onOverlayStateChanged: onOverlayStateChanged,
       readSnapshot: readSnapshot ?? SceneSnapshot.new,
       readSelectedNodeIds: readSelectedNodeIds ?? () => const <NodeId>{},
-      querySpatialCandidates:
-          querySpatialCandidates ?? (_) => const <SceneSpatialCandidate>[],
+      queryHitTestCandidates:
+          queryHitTestCandidates ??
+          (_) => const <SceneHitTestSpatialCandidate>[],
       resolveSpatialCandidateSnapshot:
           resolveSpatialCandidateSnapshot ?? (_) => null,
       writeSelectionReplace: (_) {},
@@ -118,11 +120,11 @@ void main() {
           ContentLayerSnapshot(id: 'layer', nodes: <NodeSnapshot>[rect]),
         ],
       );
-      const candidate = SceneSpatialCandidate(
+      const candidate = SceneHitTestSpatialCandidate(
         nodeId: nodeId,
         layerIndex: 0,
         nodeIndex: 0,
-        candidateBoundsWorld: Rect.fromLTWH(0, 0, 20, 20),
+        hitTestBoundsWorld: Rect.fromLTWH(0, 0, 20, 20),
       );
 
       InteractiveMoveSession buildMoveSession({
@@ -144,10 +146,14 @@ void main() {
             onOverlayStateChanged: () {},
             readSnapshot: () => snapshot,
             readSelectedNodeIds: () => const <NodeId>{nodeId},
-            querySpatialCandidates: (_) => const <SceneSpatialCandidate>[
+            queryHitTestCandidates: (_) => const <SceneHitTestSpatialCandidate>[
               candidate,
             ],
-            resolveSpatialCandidateSnapshot: (_) => rect,
+            resolveSpatialCandidateSnapshot: (location) =>
+                location.layerIndex == candidate.layerIndex &&
+                    location.nodeIndex == candidate.nodeIndex
+                ? rect
+                : null,
             commitMoveSelection: commitMoveSelection,
             emitAction: emitAction,
           ),

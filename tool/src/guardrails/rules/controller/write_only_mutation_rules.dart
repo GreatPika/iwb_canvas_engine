@@ -66,7 +66,8 @@ Future<List<GuardrailViolation>> runControllerApiGuardrails({
 }
 
 const Set<String> _committedReadSideHelperNames = <String>{
-  'querySpatialCandidates',
+  'queryHitTestCandidates',
+  'queryPaintCandidates',
   'resolveSpatialCandidateSnapshot',
   'resolveSnapshotNodeById',
   'centerWorldForNodeSnapshots',
@@ -81,11 +82,18 @@ const Set<String> _bannedCommittedReadSideHelperNames = <String>{
   'resolveNodeById',
 };
 
-const Set<String> _allowedSceneSpatialCandidateFieldNames = <String>{
+const Set<String> _allowedSceneHitTestSpatialCandidateFieldNames = <String>{
   'nodeId',
   'layerIndex',
   'nodeIndex',
-  'candidateBoundsWorld',
+  'hitTestBoundsWorld',
+};
+
+const Set<String> _allowedScenePaintSpatialCandidateFieldNames = <String>{
+  'nodeId',
+  'layerIndex',
+  'nodeIndex',
+  'paintBoundsWorld',
 };
 
 List<File> _controllerDartFiles(GuardrailContext context) {
@@ -358,21 +366,82 @@ Future<GuardrailViolation?> _checkSpatialCandidateHermeticity(
   if (resolved == null) {
     return null;
   }
-  final spatialCandidate = _firstClassNamed(
-    resolved.element.classes,
-    'SceneSpatialCandidate',
+  final locationPresent = spatialFile.readAsStringSync().contains(
+    'typedef SceneSpatialCandidateLocation',
   );
-  if (spatialCandidate == null) {
+  final referencePresent = spatialFile.readAsStringSync().contains(
+    'typedef SceneSpatialCandidateReference',
+  );
+  if (!locationPresent) {
     return GuardrailViolation(
       filePath: '/lib/src/core/scene_spatial_index.dart',
       line: 1,
       message:
           'controller API violation: committed spatial payload owner '
-          '"SceneSpatialCandidate" is required in scene_spatial_index.dart',
+          '"SceneSpatialCandidateLocation" is required in '
+          'scene_spatial_index.dart',
+    );
+  }
+  if (!referencePresent) {
+    return GuardrailViolation(
+      filePath: '/lib/src/core/scene_spatial_index.dart',
+      line: 1,
+      message:
+          'controller API violation: committed spatial payload owner '
+          '"SceneSpatialCandidateReference" is required in '
+          'scene_spatial_index.dart',
+    );
+  }
+  final hitTestCandidate = _firstClassNamed(
+    resolved.element.classes,
+    'SceneHitTestSpatialCandidate',
+  );
+  if (hitTestCandidate == null) {
+    return GuardrailViolation(
+      filePath: '/lib/src/core/scene_spatial_index.dart',
+      line: 1,
+      message:
+          'controller API violation: committed spatial payload owner '
+          '"SceneHitTestSpatialCandidate" is required in '
+          'scene_spatial_index.dart',
+    );
+  }
+  final paintCandidate = _firstClassNamed(
+    resolved.element.classes,
+    'ScenePaintSpatialCandidate',
+  );
+  if (paintCandidate == null) {
+    return GuardrailViolation(
+      filePath: '/lib/src/core/scene_spatial_index.dart',
+      line: 1,
+      message:
+          'controller API violation: committed spatial payload owner '
+          '"ScenePaintSpatialCandidate" is required in '
+          'scene_spatial_index.dart',
     );
   }
 
-  for (final field in spatialCandidate.fields.where(
+  final hitTestViolation = _sealedSpatialPayloadViolation(
+    context: context,
+    payloadOwner: hitTestCandidate,
+    allowedFieldNames: _allowedSceneHitTestSpatialCandidateFieldNames,
+  );
+  if (hitTestViolation != null) {
+    return hitTestViolation;
+  }
+  return _sealedSpatialPayloadViolation(
+    context: context,
+    payloadOwner: paintCandidate,
+    allowedFieldNames: _allowedScenePaintSpatialCandidateFieldNames,
+  );
+}
+
+GuardrailViolation? _sealedSpatialPayloadViolation({
+  required GuardrailContext context,
+  required ClassElement payloadOwner,
+  required Set<String> allowedFieldNames,
+}) {
+  for (final field in payloadOwner.fields.where(
     (field) => !field.isSynthetic && isPublicName(field.displayName),
   )) {
     final leak = findForbiddenResolvedTypeLeak(
@@ -382,14 +451,12 @@ Future<GuardrailViolation?> _checkSpatialCandidateHermeticity(
       forbiddenTypes: committedReadForbiddenTypeSpecs,
     );
     if (leak == null) {
-      if (!_allowedSceneSpatialCandidateFieldNames.contains(
-        field.displayName,
-      )) {
+      if (!allowedFieldNames.contains(field.displayName)) {
         return _committedReadSideViolation(
           context: context,
           sourceElement: field,
           detail:
-              'committed spatial payload "${spatialCandidate.displayName}.'
+              'committed spatial payload "${payloadOwner.displayName}.'
               '${field.displayName}" must not extend the sealed locator-only '
               'field surface.',
         );
@@ -400,74 +467,76 @@ Future<GuardrailViolation?> _checkSpatialCandidateHermeticity(
       context: context,
       sourceElement: field,
       detail:
-          'committed spatial payload "${spatialCandidate.displayName}.'
+          'committed spatial payload "${payloadOwner.displayName}.'
           '${field.displayName}" must not expose live runtime scene-graph '
           'types (${leak.forbiddenTypeName}).',
     );
   }
 
-  final publicFieldNames = spatialCandidate.fields
+  final publicFieldNames = payloadOwner.fields
       .where((field) => !field.isSynthetic && isPublicName(field.displayName))
       .map((field) => field.displayName)
       .toSet();
-  for (final requiredFieldName in _allowedSceneSpatialCandidateFieldNames) {
+  for (final requiredFieldName in allowedFieldNames) {
     if (publicFieldNames.contains(requiredFieldName)) {
       continue;
     }
     return _committedReadSideViolation(
       context: context,
-      sourceElement: spatialCandidate,
+      sourceElement: payloadOwner,
       detail:
-          'committed spatial payload "${spatialCandidate.displayName}" must '
+          'committed spatial payload "${payloadOwner.displayName}" must '
           'keep required locator field "$requiredFieldName" on the sealed '
           'surface.',
     );
   }
 
-  for (final constructor in spatialCandidate.constructors) {
+  for (final constructor in payloadOwner.constructors) {
     final violation = _spatialCandidateConstructorViolation(
       constructor,
       context: context,
+      payloadOwnerName: payloadOwner.displayName,
+      allowedParameterNames: allowedFieldNames,
     );
     if (violation != null) {
       return violation;
     }
   }
 
-  for (final getter in spatialCandidate.getters.where(
+  for (final getter in payloadOwner.getters.where(
     (getter) => !getter.isSynthetic && isPublicName(getter.displayName),
   )) {
     return _committedReadSideViolation(
       context: context,
       sourceElement: getter,
       detail:
-          'committed spatial payload "${spatialCandidate.displayName}."'
+          'committed spatial payload "${payloadOwner.displayName}."'
           '${getter.displayName}" must not add custom public accessors '
           'outside the sealed locator-only field surface.',
     );
   }
 
-  for (final setter in spatialCandidate.setters.where(
+  for (final setter in payloadOwner.setters.where(
     (setter) => !setter.isSynthetic && isPublicName(setter.displayName),
   )) {
     return _committedReadSideViolation(
       context: context,
       sourceElement: setter,
       detail:
-          'committed spatial payload "${spatialCandidate.displayName}."'
+          'committed spatial payload "${payloadOwner.displayName}."'
           '${setter.displayName}" must not add custom public accessors '
           'outside the sealed locator-only field surface.',
     );
   }
 
-  for (final method in spatialCandidate.methods.where(
+  for (final method in payloadOwner.methods.where(
     (method) => isPublicName(method.displayName),
   )) {
     return _committedReadSideViolation(
       context: context,
       sourceElement: method,
       detail:
-          'committed spatial payload "${spatialCandidate.displayName}."'
+          'committed spatial payload "${payloadOwner.displayName}."'
           '${method.displayName}" must not add public methods outside the '
           'sealed locator-only field surface.',
     );
@@ -639,14 +708,19 @@ GuardrailViolation? _astCommittedReadHelperSignatureViolation({
   required Element sourceElement,
 }) {
   final expected = switch (memberName) {
-    'querySpatialCandidates' => (
-      returnType: 'List<SceneSpatialCandidate>',
+    'queryHitTestCandidates' => (
+      returnType: 'List<SceneHitTestSpatialCandidate>',
+      parameterType: 'Rect',
+      parameterName: 'worldBounds',
+    ),
+    'queryPaintCandidates' => (
+      returnType: 'List<ScenePaintSpatialCandidate>',
       parameterType: 'Rect',
       parameterName: 'worldBounds',
     ),
     'resolveSpatialCandidateSnapshot' => (
       returnType: 'NodeSnapshot?',
-      parameterType: 'SceneSpatialCandidate',
+      parameterType: 'SceneSpatialCandidateReference',
       parameterName: 'candidate',
     ),
     'resolveSnapshotNodeById' => (
@@ -754,12 +828,14 @@ File _sceneSpatialIndexFile(GuardrailContext context) {
 GuardrailViolation? _spatialCandidateConstructorViolation(
   ConstructorElement constructor, {
   required GuardrailContext context,
+  required String payloadOwnerName,
+  required Set<String> allowedParameterNames,
 }) {
   final constructorName = element_utils.normalizedConstructorName(constructor);
   return validatePublicConstructorSurface(
     constructor: constructor,
     context: context,
-    allowedParameterNames: _allowedSceneSpatialCandidateFieldNames,
+    allowedParameterNames: allowedParameterNames,
     findForbiddenSignatureLeak: (constructor) {
       final leak = findForbiddenExecutableSignatureLeak(
         element: constructor,
@@ -776,15 +852,15 @@ GuardrailViolation? _spatialCandidateConstructorViolation(
     },
     buildViolation: _committedReadSideViolation,
     namedConstructorDetail:
-        'committed spatial payload "SceneSpatialCandidate.$constructorName" '
+        'committed spatial payload "$payloadOwnerName.$constructorName" '
         'must not add public named constructors outside the sealed '
         'locator-only field surface.',
     forbiddenTypeDetail: (forbiddenTypeName) =>
-        'committed spatial payload constructor for "SceneSpatialCandidate" '
+        'committed spatial payload constructor for "$payloadOwnerName" '
         'must not expose live runtime scene-graph types '
         '($forbiddenTypeName).',
     extraParameterDetail: (parameterName) =>
-        'committed spatial payload constructor for "SceneSpatialCandidate" '
+        'committed spatial payload constructor for "$payloadOwnerName" '
         'must not extend the sealed locator-only field surface with '
         'parameter "$parameterName".',
   );

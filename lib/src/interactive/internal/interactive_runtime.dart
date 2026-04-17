@@ -22,7 +22,7 @@ class InteractiveRuntime {
         onOverlayStateChanged: _notifyPublicAndOverlay,
         readSnapshot: callbacks.readSnapshot,
         readSelectedNodeIds: callbacks.readSelectedNodeIds,
-        querySpatialCandidates: callbacks.querySpatialCandidates,
+        queryHitTestCandidates: callbacks.queryHitTestCandidates,
         resolveSpatialCandidateSnapshot:
             callbacks.resolveSpatialCandidateSnapshot,
         writeSelectionReplace: callbacks.writeSelectionReplace,
@@ -38,7 +38,7 @@ class InteractiveRuntime {
         commitDrawStroke: callbacks.commitDrawStroke,
         commitDrawLineFromWorldSegment:
             callbacks.commitDrawLineFromWorldSegment,
-        querySpatialCandidates: callbacks.querySpatialCandidates,
+        queryHitTestCandidates: callbacks.queryHitTestCandidates,
         resolveSpatialCandidateSnapshot:
             callbacks.resolveSpatialCandidateSnapshot,
         commitEraseNodes: callbacks.commitEraseNodes,

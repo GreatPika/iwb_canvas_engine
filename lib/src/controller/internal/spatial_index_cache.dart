@@ -21,9 +21,9 @@ class SpatialIndexCache {
   int get debugBuildCount => _debugBuildCount;
   int get debugIncrementalApplyCount => _debugIncrementalApplyCount;
 
-  List<SceneSpatialCandidate> writeQueryCandidates({
+  List<SceneHitTestSpatialCandidate> writeQueryHitTestCandidates({
     required Scene scene,
-    required Map<NodeId, SpatialNodeLocation> nodeLocator,
+    required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
     required Rect worldBounds,
     required int controllerEpoch,
   }) {
@@ -33,13 +33,35 @@ class SpatialIndexCache {
       _indexEpoch = controllerEpoch;
       _debugBuildCount = _debugBuildCount + 1;
     }
-    // ignore: avoid-non-null-assertion, build above guarantees _index
-    return _index!.query(worldBounds);
+    final index = _index;
+    if (index == null) {
+      return const <SceneHitTestSpatialCandidate>[];
+    }
+    return index.queryHitTestCandidates(worldBounds);
+  }
+
+  List<ScenePaintSpatialCandidate> writeQueryPaintCandidates({
+    required Scene scene,
+    required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
+    required Rect worldBounds,
+    required int controllerEpoch,
+  }) {
+    final needsBuild = _index == null || _indexEpoch != controllerEpoch;
+    if (needsBuild) {
+      _index = SceneSpatialIndex.build(scene, nodeLocator: nodeLocator);
+      _indexEpoch = controllerEpoch;
+      _debugBuildCount = _debugBuildCount + 1;
+    }
+    final index = _index;
+    if (index == null) {
+      return const <ScenePaintSpatialCandidate>[];
+    }
+    return index.queryPaintCandidates(worldBounds);
   }
 
   void writeHandleCommit({
     required Scene scene,
-    required Map<NodeId, SpatialNodeLocation> nodeLocator,
+    required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
     required ChangeSet changeSet,
     required int controllerEpoch,
   }) {
@@ -54,7 +76,7 @@ class SpatialIndexCache {
 
   Object writePrepareCommit({
     required Scene scene,
-    required Map<NodeId, SpatialNodeLocation> nodeLocator,
+    required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
     required ChangeSet changeSet,
     required int controllerEpoch,
   }) {
@@ -129,7 +151,7 @@ class SpatialIndexCache {
 
   _PreparedSpatialIndexCommit _prepareFallbackRebuild({
     required Scene scene,
-    required Map<NodeId, SpatialNodeLocation> nodeLocator,
+    required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
     required int controllerEpoch,
   }) {
     debugBeforeFallbackRebuildHook?.call();
@@ -171,13 +193,13 @@ bool _hasSpatialChange(ChangeSet changeSet) {
       changeSet.boundsChanged ||
       changeSet.addedNodeIds.isNotEmpty ||
       changeSet.removedNodeIds.isNotEmpty ||
-      changeSet.hitGeometryChangedIds.isNotEmpty;
+      changeSet.spatialGeometryChangedIds.isNotEmpty;
 }
 
 bool _hasIncrementalDelta(ChangeSet changeSet) {
   return changeSet.addedNodeIds.isNotEmpty ||
       changeSet.removedNodeIds.isNotEmpty ||
-      changeSet.hitGeometryChangedIds.isNotEmpty;
+      changeSet.spatialGeometryChangedIds.isNotEmpty;
 }
 
 _PreparedSpatialIndexCommit? _prepareIncrementalCommit(
@@ -196,7 +218,7 @@ _PreparedSpatialIndexCommit? _prepareIncrementalCommit(
       changeSet: SceneSpatialIndexChangeSet(
         addedNodeIds: args.changeSet.addedNodeIds,
         removedNodeIds: args.changeSet.removedNodeIds,
-        hitGeometryChangedIds: args.changeSet.hitGeometryChangedIds,
+        spatialGeometryChangedIds: args.changeSet.spatialGeometryChangedIds,
       ),
     );
     if (!applied) {
@@ -224,7 +246,7 @@ class _IncrementalPrepareArgs {
   final SceneSpatialIndex? index;
   final void Function()? beforePrepareHook;
   final Scene scene;
-  final Map<NodeId, SpatialNodeLocation> nodeLocator;
+  final Map<NodeId, SceneSpatialCandidateLocation> nodeLocator;
   final ChangeSet changeSet;
   final int controllerEpoch;
 }

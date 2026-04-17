@@ -26,7 +26,7 @@ void main() {
     final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    final beforeQuery = controller.querySpatialCandidates(
+    final beforeQuery = controller.queryHitTestCandidates(
       const Rect.fromLTWH(0, 0, 0, 0),
     );
     expect(beforeQuery, isNotEmpty);
@@ -37,7 +37,7 @@ void main() {
       writer.writeSelectionTranslate(const Offset(80, 0));
     });
 
-    final afterQuery = controller.querySpatialCandidates(
+    final afterQuery = controller.queryHitTestCandidates(
       const Rect.fromLTWH(80, 0, 0, 0),
     );
     expect(afterQuery, isNotEmpty);
@@ -53,7 +53,7 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0));
+      controller.queryHitTestCandidates(const Rect.fromLTWH(0, 0, 0, 0));
       expect(controller.debug.spatialIndexBuildCount, 1);
 
       controller.write<void>((writer) {
@@ -64,7 +64,7 @@ void main() {
         expect(changed, isTrue);
       });
 
-      final moved = controller.querySpatialCandidates(
+      final moved = controller.queryHitTestCandidates(
         const Rect.fromLTWH(100, 0, 0, 0),
       );
       expect(moved.map((candidate) => candidate.nodeId), contains('r1'));
@@ -79,7 +79,7 @@ void main() {
     final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    final beforeQuery = controller.querySpatialCandidates(
+    final beforeQuery = controller.queryHitTestCandidates(
       const Rect.fromLTWH(30, 0, 0, 0),
     );
     expect(beforeQuery, isEmpty);
@@ -94,7 +94,7 @@ void main() {
       );
     });
 
-    final afterQuery = controller.querySpatialCandidates(
+    final afterQuery = controller.queryHitTestCandidates(
       const Rect.fromLTWH(30, 0, 0, 0),
     );
     expect(afterQuery.map((candidate) => candidate.nodeId), contains('r1'));
@@ -121,7 +121,7 @@ void main() {
     );
     addTearDown(controller.dispose);
 
-    final initial = controller.querySpatialCandidates(
+    final initial = controller.queryHitTestCandidates(
       const Rect.fromLTWH(0, 0, 10, 10),
     );
     expect(initial.map((candidate) => candidate.nodeId), <NodeId>['huge']);
@@ -132,12 +132,12 @@ void main() {
       writer.writeSelectionTranslate(const Offset(2e6, 0));
     });
 
-    final oldProbe = controller.querySpatialCandidates(
+    final oldProbe = controller.queryHitTestCandidates(
       const Rect.fromLTWH(0, 0, 10, 10),
     );
     expect(oldProbe, isEmpty);
 
-    final movedProbe = controller.querySpatialCandidates(
+    final movedProbe = controller.queryHitTestCandidates(
       const Rect.fromLTWH(2e6, 0, 10, 10),
     );
     expect(movedProbe.map((candidate) => candidate.nodeId), <NodeId>['huge']);
@@ -149,7 +149,7 @@ void main() {
     final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    final beforeQuery = controller.querySpatialCandidates(
+    final beforeQuery = controller.queryHitTestCandidates(
       const Rect.fromLTWH(0, 0, 0, 0),
     );
     expect(beforeQuery, isNotEmpty);
@@ -168,7 +168,7 @@ void main() {
       ),
     );
 
-    final afterQuery = controller.querySpatialCandidates(
+    final afterQuery = controller.queryHitTestCandidates(
       const Rect.fromLTWH(0, 0, 0, 0),
     );
     expect(afterQuery.map((candidate) => candidate.nodeId), <NodeId>['fresh']);
@@ -190,7 +190,7 @@ void main() {
 
       Set<NodeId> queryIds(Rect probe) {
         return controller
-            .querySpatialCandidates(probe)
+            .queryHitTestCandidates(probe)
             .map((candidate) => candidate.nodeId)
             .toSet();
       }
@@ -322,17 +322,17 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0));
+      controller.queryHitTestCandidates(const Rect.fromLTWH(0, 0, 0, 0));
       expect(controller.debug.spatialIndexBuildCount, 1);
 
       controller.write<void>((writer) {
         writer.writeNodeErase('r2');
       });
 
-      final candidates = controller.querySpatialCandidates(
+      final candidates = controller.queryHitTestCandidates(
         const Rect.fromLTWH(0, 0, 0, 0),
       );
-      final byId = <NodeId, SceneSpatialCandidate>{
+      final byId = <NodeId, SceneHitTestSpatialCandidate>{
         for (final candidate in candidates) candidate.nodeId: candidate,
       };
       expect(byId.containsKey('r1'), isTrue);
@@ -343,11 +343,19 @@ void main() {
       expect(byId['r3']!.layerIndex, 0);
       expect(byId['r3']!.nodeIndex, 1);
       expect(
-        controller.resolveSpatialCandidateSnapshot(byId['r1']!),
+        controller.resolveSpatialCandidateSnapshot((
+          nodeId: byId['r1']!.nodeId,
+          layerIndex: byId['r1']!.layerIndex,
+          nodeIndex: byId['r1']!.nodeIndex,
+        )),
         isNotNull,
       );
       expect(
-        controller.resolveSpatialCandidateSnapshot(byId['r3']!),
+        controller.resolveSpatialCandidateSnapshot((
+          nodeId: byId['r3']!.nodeId,
+          layerIndex: byId['r3']!.layerIndex,
+          nodeIndex: byId['r3']!.nodeIndex,
+        )),
         isNotNull,
       );
       expect(controller.debug.spatialIndexBuildCount, 1);
@@ -371,7 +379,7 @@ void main() {
       final firstBandProbe = Rect.fromLTWH(-32, -32, batchSize * 16 + 64, 64);
       final allBandsProbe = Rect.fromLTWH(-32, -32, batchSize * 16 + 64, 128);
 
-      controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 1, 1));
+      controller.queryHitTestCandidates(const Rect.fromLTWH(0, 0, 1, 1));
       expect(controller.debug.spatialIndexBuildCount, 1);
       expect(controller.debug.spatialIndexIncrementalApplyCount, 0);
 
@@ -387,7 +395,7 @@ void main() {
         }
       });
 
-      final afterFirstDraw = controller.querySpatialCandidates(firstBandProbe);
+      final afterFirstDraw = controller.queryHitTestCandidates(firstBandProbe);
       expect(
         afterFirstDraw.map((candidate) => candidate.nodeId).toSet().length,
         batchSize,
@@ -401,7 +409,7 @@ void main() {
         }
       });
 
-      final afterErase = controller.querySpatialCandidates(firstBandProbe);
+      final afterErase = controller.queryHitTestCandidates(firstBandProbe);
       final afterEraseIds = afterErase
           .map((candidate) => candidate.nodeId)
           .toSet();
@@ -423,7 +431,7 @@ void main() {
         }
       });
 
-      final afterSecondDraw = controller.querySpatialCandidates(allBandsProbe);
+      final afterSecondDraw = controller.queryHitTestCandidates(allBandsProbe);
       final idsAfterSecondDraw = afterSecondDraw
           .map((candidate) => candidate.nodeId)
           .toSet();
@@ -434,7 +442,7 @@ void main() {
       expect(controller.debug.spatialIndexBuildCount, 1);
       expect(controller.debug.spatialIndexIncrementalApplyCount, 3);
 
-      final repeatedQuery = controller.querySpatialCandidates(allBandsProbe);
+      final repeatedQuery = controller.queryHitTestCandidates(allBandsProbe);
       expect(repeatedQuery.length, afterSecondDraw.length);
       expect(controller.debug.spatialIndexBuildCount, 1);
       expect(controller.debug.spatialIndexIncrementalApplyCount, 3);

@@ -40,7 +40,7 @@ void main() {
 
     expect(controller.boundsRevision, beforeBounds);
     expect(controller.debug.lastChangeSet.boundsChanged, isFalse);
-    expect(controller.debug.lastChangeSet.hitGeometryChangedIds, isEmpty);
+    expect(controller.debug.lastChangeSet.spatialGeometryChangedIds, isEmpty);
     expect(controller.debug.sceneShallowClones, 0);
     expect(controller.debug.layerShallowClones, 0);
     expect(controller.debug.nodeClones, 0);
@@ -87,7 +87,7 @@ void main() {
       expect(controller.boundsRevision, beforeBoundsRevision + 1);
       expect(controller.debug.lastChangeSet.boundsChanged, isTrue);
       expect(
-        controller.debug.lastChangeSet.hitGeometryChangedIds,
+        controller.debug.lastChangeSet.spatialGeometryChangedIds,
         contains('t1'),
       );
     },
@@ -174,7 +174,7 @@ void main() {
 
     expect(controller.boundsRevision, beforeBoundsRevision);
     expect(controller.debug.lastChangeSet.boundsChanged, isFalse);
-    expect(controller.debug.lastChangeSet.hitGeometryChangedIds, isEmpty);
+    expect(controller.debug.lastChangeSet.spatialGeometryChangedIds, isEmpty);
   });
 
   test('camera offset write does not clone layers or nodes', () {

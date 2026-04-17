@@ -109,8 +109,17 @@ class SceneStoreController extends ChangeNotifier implements SceneRenderState {
 }
 
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
-  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) {
-    return _commitRuntime.spatialIndexCache.writeQueryCandidates(
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) {
+    return _commitRuntime.spatialIndexCache.writeQueryHitTestCandidates(
+      scene: _store.sceneDoc,
+      nodeLocator: _store.nodeLocator,
+      worldBounds: worldBounds,
+      controllerEpoch: _store.controllerEpoch,
+    );
+  }
+
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) {
+    return _commitRuntime.spatialIndexCache.writeQueryPaintCandidates(
       scene: _store.sceneDoc,
       nodeLocator: _store.nodeLocator,
       worldBounds: worldBounds,
@@ -119,7 +128,7 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   }
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate,
+    SceneSpatialCandidateReference candidate,
   ) {
     if (candidate.layerIndex < 0) {
       return null;

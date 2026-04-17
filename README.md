@@ -19,6 +19,10 @@ storage.
 
 - Deterministic scene rendering with a dedicated boundary `backgroundLayer`
   plus ordered content `layers`.
+- Separate spatial admission for hit-testing and paint. Coarse hit-testing
+  still respects hit padding and `kHitSlop`, while paint admission uses paint
+  bounds only and preserves original background/content order even when a
+  selected edge node is admitted only through the widened visibility rect.
 - `SceneController` as the public interactive runtime root, with capability
   owners exposed through `controller.interaction`, `controller.selection`, and
   `controller.scene`, plus `SceneView` as the public interactive widget.

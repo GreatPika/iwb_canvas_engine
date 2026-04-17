@@ -950,7 +950,7 @@ _interactiveCommittedReadCallbackTargets =
           'readMode',
           'readDragStartSlop',
           'readDrawStyle',
-          'querySpatialCandidates',
+          'queryHitTestCandidates',
           'resolveSpatialCandidateSnapshot',
           'writeSelectionReplace',
           'writeSelectionClear',
@@ -961,13 +961,14 @@ _interactiveCommittedReadCallbackTargets =
         },
         exactCommittedReadFieldSignatures:
             <String, _CommittedReadFieldSignature>{
-              'querySpatialCandidates': _CommittedReadFieldSignature(
-                returnType: 'List<SceneSpatialCandidate>',
+              'queryHitTestCandidates': _CommittedReadFieldSignature(
+                returnType: 'List<SceneHitTestSpatialCandidate>',
                 parameterType: 'Rect',
               ),
               'resolveSpatialCandidateSnapshot': _CommittedReadFieldSignature(
                 returnType: 'NodeSnapshot?',
-                parameterType: 'SceneSpatialCandidate',
+                parameterType:
+                    '({int layerIndex, String nodeId, int nodeIndex})',
               ),
             },
       ),
@@ -980,7 +981,7 @@ _interactiveCommittedReadCallbackTargets =
           'onOverlayStateChanged',
           'readSnapshot',
           'readSelectedNodeIds',
-          'querySpatialCandidates',
+          'queryHitTestCandidates',
           'resolveSpatialCandidateSnapshot',
           'writeSelectionReplace',
           'writeSelectionClear',
@@ -989,13 +990,14 @@ _interactiveCommittedReadCallbackTargets =
         },
         exactCommittedReadFieldSignatures:
             <String, _CommittedReadFieldSignature>{
-              'querySpatialCandidates': _CommittedReadFieldSignature(
-                returnType: 'List<SceneSpatialCandidate>',
+              'queryHitTestCandidates': _CommittedReadFieldSignature(
+                returnType: 'List<SceneHitTestSpatialCandidate>',
                 parameterType: 'Rect',
               ),
               'resolveSpatialCandidateSnapshot': _CommittedReadFieldSignature(
                 returnType: 'NodeSnapshot?',
-                parameterType: 'SceneSpatialCandidate',
+                parameterType:
+                    '({int layerIndex, String nodeId, int nodeIndex})',
               ),
             },
       ),
@@ -1007,19 +1009,20 @@ _interactiveCommittedReadCallbackTargets =
           'emitAction',
           'commitDrawStroke',
           'commitDrawLineFromWorldSegment',
-          'querySpatialCandidates',
+          'queryHitTestCandidates',
           'resolveSpatialCandidateSnapshot',
           'commitEraseNodes',
         },
         exactCommittedReadFieldSignatures:
             <String, _CommittedReadFieldSignature>{
-              'querySpatialCandidates': _CommittedReadFieldSignature(
-                returnType: 'List<SceneSpatialCandidate>',
+              'queryHitTestCandidates': _CommittedReadFieldSignature(
+                returnType: 'List<SceneHitTestSpatialCandidate>',
                 parameterType: 'Rect',
               ),
               'resolveSpatialCandidateSnapshot': _CommittedReadFieldSignature(
                 returnType: 'NodeSnapshot?',
-                parameterType: 'SceneSpatialCandidate',
+                parameterType:
+                    '({int layerIndex, String nodeId, int nodeIndex})',
               ),
             },
       ),
@@ -1028,19 +1031,20 @@ _interactiveCommittedReadCallbackTargets =
         className: 'InteractiveDrawEraserEngineCallbacks',
         allowedPublicFieldNames: <String>{
           'onOverlayStateChanged',
-          'querySpatialCandidates',
+          'queryHitTestCandidates',
           'resolveSpatialCandidateSnapshot',
           'commitEraseNodes',
         },
         exactCommittedReadFieldSignatures:
             <String, _CommittedReadFieldSignature>{
-              'querySpatialCandidates': _CommittedReadFieldSignature(
-                returnType: 'List<SceneSpatialCandidate>',
+              'queryHitTestCandidates': _CommittedReadFieldSignature(
+                returnType: 'List<SceneHitTestSpatialCandidate>',
                 parameterType: 'Rect',
               ),
               'resolveSpatialCandidateSnapshot': _CommittedReadFieldSignature(
                 returnType: 'NodeSnapshot?',
-                parameterType: 'SceneSpatialCandidate',
+                parameterType:
+                    '({int layerIndex, String nodeId, int nodeIndex})',
               ),
             },
       ),
@@ -1048,19 +1052,20 @@ _interactiveCommittedReadCallbackTargets =
         relativePath: 'internal/interactive_draw_eraser_targets.dart',
         className: 'InteractiveDrawEraserTargetsCallbacks',
         allowedPublicFieldNames: <String>{
-          'querySpatialCandidates',
+          'queryHitTestCandidates',
           'resolveSpatialCandidateSnapshot',
           'onSpatialQuery',
         },
         exactCommittedReadFieldSignatures:
             <String, _CommittedReadFieldSignature>{
-              'querySpatialCandidates': _CommittedReadFieldSignature(
-                returnType: 'List<SceneSpatialCandidate>',
+              'queryHitTestCandidates': _CommittedReadFieldSignature(
+                returnType: 'List<SceneHitTestSpatialCandidate>',
                 parameterType: 'Rect',
               ),
               'resolveSpatialCandidateSnapshot': _CommittedReadFieldSignature(
                 returnType: 'NodeSnapshot?',
-                parameterType: 'SceneSpatialCandidate',
+                parameterType:
+                    '({int layerIndex, String nodeId, int nodeIndex})',
               ),
             },
       ),

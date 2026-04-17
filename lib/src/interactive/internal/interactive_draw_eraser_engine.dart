@@ -10,15 +10,15 @@ import 'interactive_draw_path_buffer.dart';
 class InteractiveDrawEraserEngineCallbacks {
   const InteractiveDrawEraserEngineCallbacks({
     required this.onOverlayStateChanged,
-    required this.querySpatialCandidates,
+    required this.queryHitTestCandidates,
     required this.resolveSpatialCandidateSnapshot,
     required this.commitEraseNodes,
   });
 
   final VoidCallback onOverlayStateChanged;
-  final List<SceneSpatialCandidate> Function(Rect bounds)
-  querySpatialCandidates;
-  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  final List<SceneHitTestSpatialCandidate> Function(Rect bounds)
+  queryHitTestCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidateReference candidate)
   resolveSpatialCandidateSnapshot;
   final int Function(Iterable<NodeId> ids) commitEraseNodes;
 }
@@ -34,7 +34,7 @@ class InteractiveDrawEraserEngine {
   late final InteractiveDrawEraserTargets _targets =
       InteractiveDrawEraserTargets(
         callbacks: InteractiveDrawEraserTargetsCallbacks(
-          querySpatialCandidates: callbacks.querySpatialCandidates,
+          queryHitTestCandidates: callbacks.queryHitTestCandidates,
           resolveSpatialCandidateSnapshot:
               callbacks.resolveSpatialCandidateSnapshot,
           onSpatialQuery: _incrementSpatialQueryCount,

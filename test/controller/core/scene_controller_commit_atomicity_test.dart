@@ -109,7 +109,7 @@ void main() {
       );
       expect(controller.snapshot.layers.last.nodes, isEmpty);
       expect(
-        controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 20, 20)),
+        controller.queryHitTestCandidates(const Rect.fromLTWH(0, 0, 20, 20)),
         isEmpty,
       );
       expect(controller.debug.lastCommitPhases, const <String>[

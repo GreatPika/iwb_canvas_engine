@@ -30,20 +30,25 @@ void main() {
       color: const Color(0xFF000000),
       rawTransform: const Transform2D(a: 1, b: 2, c: 2, d: 4, tx: 120, ty: 80),
     );
-    final candidate = SceneSpatialCandidate(
+    final candidate = SceneHitTestSpatialCandidate(
       nodeId: line.id,
       layerIndex: 0,
       nodeIndex: 0,
-      candidateBoundsWorld: nodeSnapshotBoundsWorld(line),
+      hitTestBoundsWorld: nodeSnapshotBoundsWorld(line),
     );
     final removedIds = <String>[];
 
     final engine = InteractiveDrawEraserEngine(
       callbacks: InteractiveDrawEraserEngineCallbacks(
         onOverlayStateChanged: () {},
-        querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
-        resolveSpatialCandidateSnapshot: (c) =>
-            c.nodeId == line.id ? line : null,
+        queryHitTestCandidates: (_) => <SceneHitTestSpatialCandidate>[
+          candidate,
+        ],
+        resolveSpatialCandidateSnapshot: (location) =>
+            location.layerIndex == candidate.layerIndex &&
+                location.nodeIndex == candidate.nodeIndex
+            ? line
+            : null,
         commitEraseNodes: (ids) {
           removedIds.addAll(ids);
           return ids.length;
@@ -69,20 +74,25 @@ void main() {
       color: const Color(0xFF000000),
       rawTransform: const Transform2D(a: 1, b: 2, c: 2, d: 4, tx: 180, ty: 80),
     );
-    final candidate = SceneSpatialCandidate(
+    final candidate = SceneHitTestSpatialCandidate(
       nodeId: stroke.id,
       layerIndex: 0,
       nodeIndex: 0,
-      candidateBoundsWorld: nodeSnapshotBoundsWorld(stroke),
+      hitTestBoundsWorld: nodeSnapshotBoundsWorld(stroke),
     );
     final removedIds = <String>[];
 
     final engine = InteractiveDrawEraserEngine(
       callbacks: InteractiveDrawEraserEngineCallbacks(
         onOverlayStateChanged: () {},
-        querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
-        resolveSpatialCandidateSnapshot: (c) =>
-            c.nodeId == stroke.id ? stroke : null,
+        queryHitTestCandidates: (_) => <SceneHitTestSpatialCandidate>[
+          candidate,
+        ],
+        resolveSpatialCandidateSnapshot: (location) =>
+            location.layerIndex == candidate.layerIndex &&
+                location.nodeIndex == candidate.nodeIndex
+            ? stroke
+            : null,
         commitEraseNodes: (ids) {
           removedIds.addAll(ids);
           return ids.length;
@@ -111,20 +121,25 @@ void main() {
       isDeletable: false,
       transform: Transform2D.translation(const Offset(120, 80)),
     );
-    final candidate = SceneSpatialCandidate(
+    final candidate = SceneHitTestSpatialCandidate(
       nodeId: line.id,
       layerIndex: 0,
       nodeIndex: 0,
-      candidateBoundsWorld: nodeSnapshotBoundsWorld(line),
+      hitTestBoundsWorld: nodeSnapshotBoundsWorld(line),
     );
     final removedIds = <String>[];
 
     final engine = InteractiveDrawEraserEngine(
       callbacks: InteractiveDrawEraserEngineCallbacks(
         onOverlayStateChanged: () {},
-        querySpatialCandidates: (_) => <SceneSpatialCandidate>[candidate],
-        resolveSpatialCandidateSnapshot: (c) =>
-            c.nodeId == line.id ? line : null,
+        queryHitTestCandidates: (_) => <SceneHitTestSpatialCandidate>[
+          candidate,
+        ],
+        resolveSpatialCandidateSnapshot: (location) =>
+            location.layerIndex == candidate.layerIndex &&
+                location.nodeIndex == candidate.nodeIndex
+            ? line
+            : null,
         commitEraseNodes: (ids) {
           removedIds.addAll(ids);
           return ids.length;

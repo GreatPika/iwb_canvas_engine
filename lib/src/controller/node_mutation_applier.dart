@@ -250,7 +250,7 @@ void trackUpdatedNodeGeometry(
   if (beforeCandidate != afterCandidate) {
     ctx.changeSet
       ..txnMarkBoundsChanged()
-      ..txnTrackHitGeometryChanged(nodeId);
+      ..txnTrackSpatialGeometryChanged(nodeId);
   } else {
     ctx.changeSet.txnMarkVisualChanged();
   }

@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
 // INV:INV-ENG-ID-INDEX-FROM-SCENE
@@ -30,14 +29,16 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      final candidates = controller.querySpatialCandidates(
+      final candidates = controller.queryHitTestCandidates(
         const Rect.fromLTWH(0, 0, 0, 0),
       );
       expect(candidates, isNotEmpty);
 
-      final resolved = controller.resolveSpatialCandidateSnapshot(
-        candidates.first,
-      );
+      final resolved = controller.resolveSpatialCandidateSnapshot((
+        nodeId: candidates.first.nodeId,
+        layerIndex: candidates.first.layerIndex,
+        nodeIndex: candidates.first.nodeIndex,
+      ));
       expect(resolved, isNotNull);
       expect(resolved?.id, candidates.first.nodeId);
     },
@@ -60,15 +61,10 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      final backgroundCandidate = SceneSpatialCandidate(
+      const backgroundCandidate = (
         nodeId: 'bg-node',
         layerIndex: -1,
         nodeIndex: 0,
-        candidateBoundsWorld: Rect.fromCenter(
-          center: Offset.zero,
-          width: 10,
-          height: 10,
-        ),
       );
       expect(
         controller.resolveSpatialCandidateSnapshot(backgroundCandidate),
@@ -81,26 +77,8 @@ void main() {
     final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    final outOfRangeLayer = SceneSpatialCandidate(
-      nodeId: 'fake',
-      layerIndex: 99,
-      nodeIndex: 0,
-      candidateBoundsWorld: Rect.fromCenter(
-        center: Offset.zero,
-        width: 4,
-        height: 4,
-      ),
-    );
-    final outOfRangeNode = SceneSpatialCandidate(
-      nodeId: 'fake',
-      layerIndex: 0,
-      nodeIndex: 99,
-      candidateBoundsWorld: Rect.fromCenter(
-        center: Offset.zero,
-        width: 4,
-        height: 4,
-      ),
-    );
+    const outOfRangeLayer = (nodeId: 'r1', layerIndex: 99, nodeIndex: 0);
+    const outOfRangeNode = (nodeId: 'r1', layerIndex: 0, nodeIndex: 99);
 
     expect(controller.resolveSpatialCandidateSnapshot(outOfRangeLayer), isNull);
     expect(controller.resolveSpatialCandidateSnapshot(outOfRangeNode), isNull);
@@ -115,7 +93,7 @@ void main() {
       addTearDown(controller.dispose);
 
       final stale = controller
-          .querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0))
+          .queryHitTestCandidates(const Rect.fromLTWH(0, 0, 0, 0))
           .first;
 
       controller.writeReplaceScene(
@@ -132,7 +110,14 @@ void main() {
         ),
       );
 
-      expect(controller.resolveSpatialCandidateSnapshot(stale), isNull);
+      expect(
+        controller.resolveSpatialCandidateSnapshot((
+          nodeId: stale.nodeId,
+          layerIndex: stale.layerIndex,
+          nodeIndex: stale.nodeIndex,
+        )),
+        isNull,
+      );
     },
   );
 
@@ -145,14 +130,18 @@ void main() {
       addTearDown(controller.dispose);
 
       final candidate = controller
-          .querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0))
+          .queryHitTestCandidates(const Rect.fromLTWH(0, 0, 0, 0))
           .first;
 
       controller.write<void>((writer) {
         writer.writeSelectionReplace(const <NodeId>{'r1'});
       });
 
-      final resolved = controller.resolveSpatialCandidateSnapshot(candidate);
+      final resolved = controller.resolveSpatialCandidateSnapshot((
+        nodeId: candidate.nodeId,
+        layerIndex: candidate.layerIndex,
+        nodeIndex: candidate.nodeIndex,
+      ));
       expect(resolved, isNotNull);
       if (resolved == null) {
         fail('Expected spatial candidate resolution to return selected node.');
@@ -237,14 +226,11 @@ void main() {
 
       expect(controller.resolveSnapshotNodeById('stale')?.nodeIndex, 1);
       expect(
-        controller.resolveSpatialCandidateSnapshot(
-          const SceneSpatialCandidate(
-            nodeId: 'stale',
-            layerIndex: 0,
-            nodeIndex: 0,
-            candidateBoundsWorld: Rect.zero,
-          ),
-        ),
+        controller.resolveSpatialCandidateSnapshot(const (
+          nodeId: 'stale',
+          layerIndex: 0,
+          nodeIndex: 0,
+        )),
         isNull,
       );
     },

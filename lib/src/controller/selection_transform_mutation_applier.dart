@@ -77,7 +77,7 @@ MutationApplyResult<int> _translateSelection(TxnContext ctx, Offset delta) {
   for (final nodeId in moved) {
     ctx.changeSet
       ..txnTrackUpdated(nodeId)
-      ..txnTrackHitGeometryChanged(nodeId);
+      ..txnTrackSpatialGeometryChanged(nodeId);
   }
   ctx.changeSet.txnMarkBoundsChanged();
   return MutationApplyResult<int>(value: moved.length, changed: true);

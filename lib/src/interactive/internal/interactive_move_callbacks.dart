@@ -16,7 +16,7 @@ class InteractiveMoveSessionCallbacks {
     required this.onOverlayStateChanged,
     required this.readSnapshot,
     required this.readSelectedNodeIds,
-    required this.querySpatialCandidates,
+    required this.queryHitTestCandidates,
     required this.resolveSpatialCandidateSnapshot,
     required this.writeSelectionReplace,
     required this.writeSelectionClear,
@@ -29,9 +29,9 @@ class InteractiveMoveSessionCallbacks {
   final VoidCallback onOverlayStateChanged;
   final SceneSnapshot Function() readSnapshot;
   final Set<NodeId> Function() readSelectedNodeIds;
-  final List<SceneSpatialCandidate> Function(Rect bounds)
-  querySpatialCandidates;
-  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  final List<SceneHitTestSpatialCandidate> Function(Rect bounds)
+  queryHitTestCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidateReference candidate)
   resolveSpatialCandidateSnapshot;
   final void Function(Iterable<NodeId> nodeIds) writeSelectionReplace;
   final void Function() writeSelectionClear;

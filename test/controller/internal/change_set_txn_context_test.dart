@@ -98,16 +98,16 @@ void main() {
 
     changeSet.txnTrackUpdated('n2');
     expect(changeSet.updatedNodeIds, <NodeId>{'n2'});
-    changeSet.txnTrackHitGeometryChanged('n2');
-    expect(changeSet.hitGeometryChangedIds, <NodeId>{'n2'});
+    changeSet.txnTrackSpatialGeometryChanged('n2');
+    expect(changeSet.spatialGeometryChangedIds, <NodeId>{'n2'});
     changeSet.txnTrackAdded('n2');
     expect(changeSet.updatedNodeIds, isEmpty);
-    expect(changeSet.hitGeometryChangedIds, isEmpty);
+    expect(changeSet.spatialGeometryChangedIds, isEmpty);
 
-    changeSet.txnTrackHitGeometryChanged('n3');
-    expect(changeSet.hitGeometryChangedIds, <NodeId>{'n3'});
+    changeSet.txnTrackSpatialGeometryChanged('n3');
+    expect(changeSet.spatialGeometryChangedIds, <NodeId>{'n3'});
     changeSet.txnTrackRemoved('n3');
-    expect(changeSet.hitGeometryChangedIds, isEmpty);
+    expect(changeSet.spatialGeometryChangedIds, isEmpty);
 
     changeSet.txnMarkDocumentReplaced();
     expect(changeSet.documentReplaced, isTrue);
@@ -117,7 +117,10 @@ void main() {
     final clone = changeSet.txnClone();
     expect(clone.documentReplaced, changeSet.documentReplaced);
     expect(clone.addedNodeIds, changeSet.addedNodeIds);
-    expect(clone.hitGeometryChangedIds, changeSet.hitGeometryChangedIds);
+    expect(
+      clone.spatialGeometryChangedIds,
+      changeSet.spatialGeometryChangedIds,
+    );
     expect(clone, isNot(same(changeSet)));
   });
 
@@ -570,7 +573,7 @@ void main() {
     expect(changeSet.addedNodeIds, isA<HashSet<NodeId>>());
     expect(changeSet.removedNodeIds, isA<HashSet<NodeId>>());
     expect(changeSet.updatedNodeIds, isA<HashSet<NodeId>>());
-    expect(changeSet.hitGeometryChangedIds, isA<HashSet<NodeId>>());
+    expect(changeSet.spatialGeometryChangedIds, isA<HashSet<NodeId>>());
 
     expect(changeSet.addedNodeIds, <NodeId>{'n1', 'n2', 'n3'});
     expect(changeSet.removedNodeIds, isEmpty);

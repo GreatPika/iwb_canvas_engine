@@ -721,7 +721,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION',
     scope: 'engine-structure',
     title:
-        'ScenePainter captures one atomic frame read, keeps one frame snapshot authority, uses controller-owned viewport-first candidate enumeration only while the active frame snapshot matches the committed controller snapshot, supplements only selected edge nodes through the budgeted visibility rect, and resolves preview delta plus one canonical ResolvedTextLayout plus geometry only for those frame-authoritative candidates before render-local consumers apply final culling',
+        'ScenePainter captures one atomic frame read, keeps one frame snapshot authority, uses controller-owned viewport-first ordinary paint admission only while the active frame snapshot matches the committed controller snapshot, widens admission only for selected-node supplements, preserves background/content paint order regardless of supplement source, deduplicates node emission once per frame, culls by paint bounds before render resolution, and falls back to active-frame enumeration when the committed snapshot diverges',
     primaryProof: PrimaryProof(
       path: 'test/render/scene_painter_frame_contract_test.dart',
     ),

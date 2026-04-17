@@ -93,18 +93,39 @@ void _writeSceneStoreControllerPreparedReplaceSupportScaffold(
   writeSandboxFile(sandbox, 'lib/src/core/scene_spatial_index.dart', '''
 import 'dart:ui';
 
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.candidateBoundsWorld,
+    required this.hitTestBoundsWorld,
   });
 
   final String nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect candidateBoundsWorld;
+  final Rect hitTestBoundsWorld;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final String nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
 }
 ''');
 }
@@ -319,11 +340,14 @@ String _sceneStoreControllerFixture({
   String extraTopLevel = '',
   String extraClassMembers = '',
   String spatialAccessMembers = '''
-  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
-      const <SceneSpatialCandidate>[];
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
+      const <SceneHitTestSpatialCandidate>[];
+
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
+      const <ScenePaintSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate,
+    SceneSpatialCandidateReference candidate,
   ) => null;
 
   ({NodeSnapshot node, int layerIndex, int nodeIndex})? resolveSnapshotNodeById(
@@ -1403,13 +1427,16 @@ List<String>? sceneWriterWriteSelectionReplaceResult(Object writer, Set<String> 
             _sceneStoreControllerFixture(
               extraTopLevel: 'Scene? _inspectUiScene() => null;\n',
               spatialAccessMembers: '''
-  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
       _inspectUiScene() == null
-          ? const <SceneSpatialCandidate>[]
-          : const <SceneSpatialCandidate>[];
+          ? const <SceneHitTestSpatialCandidate>[]
+          : const <SceneHitTestSpatialCandidate>[];
+
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
+      const <ScenePaintSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate,
+    SceneSpatialCandidateReference candidate,
   ) => null;
 
   ({NodeSnapshot node, int layerIndex, int nodeIndex})? resolveSnapshotNodeById(
@@ -1452,18 +1479,39 @@ import '../contract/snapshot.dart';
 
 class Rect {}
 
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.candidateBoundsWorld,
+    required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect candidateBoundsWorld;
+  final Rect hitTestBoundsWorld;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
 }
 ''');
           writeSandboxFile(
@@ -1483,11 +1531,14 @@ class SceneStoreController {
 }
 
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
-  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
-      const <SceneSpatialCandidate>[];
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
+      const <SceneHitTestSpatialCandidate>[];
+
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
+      const <ScenePaintSpatialCandidate>[];
 
   LeakedNode? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate,
+    SceneSpatialCandidateReference candidate,
   ) => null;
 }
 ''',
@@ -1530,18 +1581,39 @@ import '../contract/snapshot.dart';
 class Rect {}
 class Offset {}
 
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.candidateBoundsWorld,
+    required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect candidateBoundsWorld;
+  final Rect hitTestBoundsWorld;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
 }
 ''');
           writeSandboxFile(
@@ -1559,11 +1631,14 @@ class SceneStoreController {
 }
 
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
-  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
-      const <SceneSpatialCandidate>[];
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
+      const <SceneHitTestSpatialCandidate>[];
+
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
+      const <ScenePaintSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate,
+    SceneSpatialCandidateReference candidate,
   ) => null;
 
   ({NodeSnapshot node, int layerIndex, int nodeIndex})?
@@ -1622,18 +1697,39 @@ import '../contract/snapshot.dart';
 
 class Rect {}
 
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.candidateBoundsWorld,
+    required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect candidateBoundsWorld;
+  final Rect hitTestBoundsWorld;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
 }
 ''');
           writeSandboxFile(
@@ -1648,11 +1744,14 @@ class SceneStoreController {
 }
 
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
-  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
-      const <SceneSpatialCandidate>[];
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
+      const <SceneHitTestSpatialCandidate>[];
+
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
+      const <ScenePaintSpatialCandidate>[];
 
   StrokeNode? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate,
+    SceneSpatialCandidateReference candidate,
   ) => null;
 }
 ''',
@@ -1688,20 +1787,41 @@ import '../contract/snapshot.dart';
 
 class Rect {}
 
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.candidateBoundsWorld,
+    required this.hitTestBoundsWorld,
     required this.structuralRevision,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect candidateBoundsWorld;
+  final Rect hitTestBoundsWorld;
   final int structuralRevision;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
 }
 ''');
           writeSandboxFile(
@@ -1722,7 +1842,7 @@ class SceneStoreController {
               category: 'controller API',
               detail:
                   'committed spatial payload '
-                  '"SceneSpatialCandidate.structuralRevision" must not extend '
+                  '"SceneHitTestSpatialCandidate.structuralRevision" must not extend '
                   'the sealed locator-only field surface',
             ),
           );
@@ -1749,20 +1869,41 @@ import 'scene_node.dart';
 
 class Rect {}
 
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.candidateBoundsWorld,
+    required this.hitTestBoundsWorld,
     required this.leaked,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect candidateBoundsWorld;
+  final Rect hitTestBoundsWorld;
   final ({SceneNode node}) leaked;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
 }
 ''');
           writeSandboxFile(
@@ -1782,7 +1923,7 @@ class SceneStoreController {
             diagnostic(
               category: 'controller API',
               detail:
-                  'committed spatial payload "SceneSpatialCandidate.leaked" '
+                  'committed spatial payload "SceneHitTestSpatialCandidate.leaked" '
                   'must not expose live runtime scene-graph types (SceneNode)',
             ),
           );
@@ -1800,6 +1941,13 @@ typedef NodeId = String;
 ''');
         writeSandboxFile(sandbox, 'lib/src/core/scene_spatial_index.dart', '''
 class Rect {}
+
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
 ''');
         writeSandboxFile(
           sandbox,
@@ -1818,7 +1966,7 @@ class SceneStoreController {
           diagnostic(
             category: 'controller API',
             detail:
-                'committed spatial payload owner "SceneSpatialCandidate" '
+                'committed spatial payload owner "SceneHitTestSpatialCandidate" '
                 'is required in scene_spatial_index.dart',
           ),
         );
@@ -1853,7 +2001,7 @@ class SceneStoreController {
 }
 
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
-  List<Object> querySpatialCandidates(Object worldBounds) => const <Object>[];
+  List<Object> queryHitTestCandidates(Object worldBounds) => const <Object>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(Object candidate) => null;
 
@@ -1893,18 +2041,39 @@ import '../contract/snapshot.dart';
 
 class Rect {}
 
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.candidateBoundsWorld,
+    required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect candidateBoundsWorld;
+  final Rect hitTestBoundsWorld;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
 }
 ''');
 
@@ -1944,18 +2113,39 @@ import '../contract/snapshot.dart';
 
 class Rect {}
 
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.candidateBoundsWorld,
+    required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect candidateBoundsWorld;
+  final Rect hitTestBoundsWorld;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
 }
 ''');
           writeSandboxFile(
@@ -2006,18 +2196,39 @@ import '../contract/snapshot.dart';
 class Rect {}
 class Offset {}
 
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.candidateBoundsWorld,
+    required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect candidateBoundsWorld;
+  final Rect hitTestBoundsWorld;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
 }
 ''');
           writeSandboxFile(
@@ -2032,11 +2243,14 @@ class SceneStoreController {
 }
 
 extension SceneStoreControllerSpatialAccess on Object {
-  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
-      const <SceneSpatialCandidate>[];
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
+      const <SceneHitTestSpatialCandidate>[];
+
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
+      const <ScenePaintSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate,
+    SceneSpatialCandidateReference candidate,
   ) => null;
 
   ({NodeSnapshot node, int layerIndex, int nodeIndex})?
@@ -2083,19 +2297,40 @@ import 'scene_node.dart';
 
 class Rect {}
 
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.candidateBoundsWorld,
+    required this.hitTestBoundsWorld,
     required SceneNode leakedNode,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect candidateBoundsWorld;
+  final Rect hitTestBoundsWorld;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
 }
 ''');
           writeSandboxFile(
@@ -2116,7 +2351,7 @@ class SceneStoreController {
               category: 'controller API',
               detail:
                   'committed spatial payload constructor for '
-                  '"SceneSpatialCandidate" must not expose live runtime '
+                  '"SceneHitTestSpatialCandidate" must not expose live runtime '
                   'scene-graph types (SceneNode)',
             ),
           );
@@ -2146,18 +2381,39 @@ import '../contract/snapshot.dart';
 class Rect {}
 class Offset {}
 
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.candidateBoundsWorld,
+    required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect candidateBoundsWorld;
+  final Rect hitTestBoundsWorld;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
 }
 ''');
           writeSandboxFile(
@@ -2175,11 +2431,14 @@ class SceneStoreController {
 }
 
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
-  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
-      const <SceneSpatialCandidate>[];
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
+      const <SceneHitTestSpatialCandidate>[];
+
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
+      const <ScenePaintSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate,
+    SceneSpatialCandidateReference candidate,
   ) => null;
 
   ({NodeSnapshot node, int layerIndex, int nodeIndex})?
@@ -2231,18 +2490,39 @@ import '../contract/snapshot.dart';
 class Rect {}
 class Offset {}
 
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.candidateBoundsWorld,
+    required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect candidateBoundsWorld;
+  final Rect hitTestBoundsWorld;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
 }
 ''');
           writeSandboxFile(
@@ -2260,11 +2540,14 @@ class SceneStoreController {
 }
 
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
-  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
-      const <SceneSpatialCandidate>[];
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
+      const <SceneHitTestSpatialCandidate>[];
+
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
+      const <ScenePaintSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate, {
+    SceneSpatialCandidateReference candidate, {
     SceneSnapshot? snapshotOverride,
   }) => null;
 
@@ -2310,18 +2593,39 @@ import '../contract/snapshot.dart';
 
 class Rect {}
 
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.candidateBoundsWorld,
+    required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect candidateBoundsWorld;
+  final Rect hitTestBoundsWorld;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
 }
 ''');
           writeSandboxFile(
@@ -2345,11 +2649,14 @@ class SceneStoreController {
 }
 
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
-  List<SceneSpatialCandidate> querySpatialCandidates(Rect worldBounds) =>
-      const <SceneSpatialCandidate>[];
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
+      const <SceneHitTestSpatialCandidate>[];
+
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
+      const <ScenePaintSpatialCandidate>[];
 
   LeakedNode? resolveSpatialCandidateSnapshot(
-    SceneSpatialCandidate candidate,
+    SceneSpatialCandidateReference candidate,
   ) => null;
 
   ({LeakedNode node, int layerIndex, int nodeIndex})? resolveSnapshotNodeById(
@@ -2396,18 +2703,39 @@ import '../contract/snapshot.dart';
 
 class Rect {}
 
-class SceneSpatialCandidate {
-  const SceneSpatialCandidate({
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.candidateBoundsWorld,
+    required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect candidateBoundsWorld;
+  final Rect hitTestBoundsWorld;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final NodeId nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
 }
 ''');
           writeSandboxFile(
@@ -2422,9 +2750,9 @@ class SceneStoreController {
 }
 
 extension SceneStoreControllerSpatialAccess on SceneStoreController {
-  List<SceneSpatialCandidate> querySpatialCandidates<T extends SceneNode>(
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates<T extends SceneNode>(
     Rect worldBounds,
-  ) => const <SceneSpatialCandidate>[];
+  ) => const <SceneHitTestSpatialCandidate>[];
 }
 ''',
           );
@@ -2436,7 +2764,7 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
             diagnostic(
               category: 'controller API',
               detail:
-                  'committed read helper "querySpatialCandidates" must not '
+                  'committed read helper "queryHitTestCandidates" must not '
                   'expose live runtime scene-graph types (SceneNode)',
             ),
           );

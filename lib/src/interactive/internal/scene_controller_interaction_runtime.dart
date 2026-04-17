@@ -380,7 +380,7 @@ InteractiveRuntime _createInteractiveRuntime(
       readMode: request.readMode,
       readDragStartSlop: request.readDragStartSlop,
       readDrawStyle: request.readDrawStyle,
-      querySpatialCandidates: request.storeController.querySpatialCandidates,
+      queryHitTestCandidates: request.storeController.queryHitTestCandidates,
       resolveSpatialCandidateSnapshot:
           request.storeController.resolveSpatialCandidateSnapshot,
       writeSelectionReplace: mutationBoundary.setSelection,

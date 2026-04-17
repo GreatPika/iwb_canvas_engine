@@ -611,7 +611,7 @@ class InteractiveMoveSessionCallbacks {
     required this.onOverlayStateChanged,
     required this.readSnapshot,
     required this.readSelectedNodeIds,
-    required this.querySpatialCandidates,
+    required this.queryHitTestCandidates,
     required this.resolveSpatialCandidateSnapshot,
     required this.writeSelectionReplace,
     required this.writeSelectionClear,
@@ -624,9 +624,9 @@ class InteractiveMoveSessionCallbacks {
   final Object onOverlayStateChanged;
   final Object readSnapshot;
   final Object readSelectedNodeIds;
-  final List<SceneSpatialCandidate> Function(Rect bounds)
-  querySpatialCandidates;
-  final LeakedNode? Function(SceneSpatialCandidate candidate)
+  final List<SceneHitTestSpatialCandidate> Function(Rect bounds)
+  queryHitTestCandidates;
+  final LeakedNode? Function(SceneSpatialCandidateReference candidate)
   resolveSpatialCandidateSnapshot;
   final Object writeSelectionReplace;
   final Object writeSelectionClear;
@@ -698,14 +698,14 @@ import '../../core/scene_spatial_index.dart';
 
 class InteractiveDrawEraserTargetsCallbacks {
   const InteractiveDrawEraserTargetsCallbacks({
-    required this.querySpatialCandidates,
+    required this.queryHitTestCandidates,
     required this.resolveSpatialCandidateSnapshot,
     required this.onSpatialQuery,
   });
 
-  final List<SceneSpatialCandidate> Function(Rect bounds)
-  querySpatialCandidates;
-  final StrokeNode? Function(SceneSpatialCandidate candidate)
+  final List<SceneHitTestSpatialCandidate> Function(Rect bounds)
+  queryHitTestCandidates;
+  final StrokeNode? Function(SceneSpatialCandidateReference candidate)
   resolveSpatialCandidateSnapshot;
   final Object onSpatialQuery;
 }
@@ -771,7 +771,7 @@ class InteractiveMoveSessionCallbacks {
     required this.onOverlayStateChanged,
     required this.readSnapshot,
     required this.readSelectedNodeIds,
-    required this.querySpatialCandidates,
+    required this.queryHitTestCandidates,
     required this.resolveSpatialCandidateSnapshot,
     required this.writeSelectionReplace,
     required this.writeSelectionClear,
@@ -785,9 +785,9 @@ class InteractiveMoveSessionCallbacks {
   final Object onOverlayStateChanged;
   final Object readSnapshot;
   final Object readSelectedNodeIds;
-  final List<SceneSpatialCandidate> Function(Rect bounds)
-  querySpatialCandidates;
-  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  final List<SceneHitTestSpatialCandidate> Function(Rect bounds)
+  queryHitTestCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidateReference candidate)
   resolveSpatialCandidateSnapshot;
   final Object writeSelectionReplace;
   final Object writeSelectionClear;
@@ -836,7 +836,7 @@ class InteractiveMoveSessionCallbacks {
   );
 
   test(
-    'rejects interactive callback querySpatialCandidates signature drift',
+    'rejects interactive callback queryHitTestCandidates signature drift',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -856,7 +856,7 @@ class InteractiveMoveSessionCallbacks {
     required this.onOverlayStateChanged,
     required this.readSnapshot,
     required this.readSelectedNodeIds,
-    required this.querySpatialCandidates,
+    required this.queryHitTestCandidates,
     required this.resolveSpatialCandidateSnapshot,
     required this.writeSelectionReplace,
     required this.writeSelectionClear,
@@ -869,9 +869,9 @@ class InteractiveMoveSessionCallbacks {
   final Object onOverlayStateChanged;
   final Object readSnapshot;
   final Object readSelectedNodeIds;
-  final List<SceneSpatialCandidate> Function(Object bounds)
-  querySpatialCandidates;
-  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  final List<SceneHitTestSpatialCandidate> Function(Object bounds)
+  queryHitTestCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidateReference candidate)
   resolveSpatialCandidateSnapshot;
   final Object writeSelectionReplace;
   final Object writeSelectionClear;
@@ -908,7 +908,7 @@ class InteractiveMoveSessionCallbacks {
             category: 'interactive API',
             detail:
                 'committed read callback '
-                '"InteractiveMoveSessionCallbacks.querySpatialCandidates" '
+                '"InteractiveMoveSessionCallbacks.queryHitTestCandidates" '
                 'must keep the exact sealed signature',
           ),
         );
@@ -938,7 +938,7 @@ class InteractiveDrawCoordinatorCallbacks {
     required this.emitAction,
     required this.commitDrawStroke,
     required this.commitDrawLineFromWorldSegment,
-    required this.querySpatialCandidates,
+    required this.queryHitTestCandidates,
     required this.resolveSpatialCandidateSnapshot,
     required this.commitEraseNodes,
   });
@@ -947,10 +947,10 @@ class InteractiveDrawCoordinatorCallbacks {
   final Object emitAction;
   final Object commitDrawStroke;
   final Object commitDrawLineFromWorldSegment;
-  final List<SceneSpatialCandidate> Function(Rect bounds)
-  querySpatialCandidates;
+  final List<SceneHitTestSpatialCandidate> Function(Rect bounds)
+  queryHitTestCandidates;
   final NodeSnapshot? Function(
-    SceneSpatialCandidate candidate, {
+    SceneHitTestSpatialCandidate candidate, {
     Object? snapshotOverride,
   })
   resolveSpatialCandidateSnapshot;
@@ -1177,7 +1177,7 @@ class InteractiveMoveSessionCallbacks {
     required this.onOverlayStateChanged,
     required this.readSnapshot,
     required this.readSelectedNodeIds,
-    required this.querySpatialCandidates,
+    required this.queryHitTestCandidates,
     required this.resolveSpatialCandidateSnapshot,
     required this.writeSelectionReplace,
     required this.writeSelectionClear,
@@ -1191,9 +1191,9 @@ class InteractiveMoveSessionCallbacks {
   final Object onOverlayStateChanged;
   final Object readSnapshot;
   final Object readSelectedNodeIds;
-  final List<SceneSpatialCandidate> Function(Rect bounds)
-  querySpatialCandidates;
-  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  final List<SceneHitTestSpatialCandidate> Function(Rect bounds)
+  queryHitTestCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidateReference candidate)
   resolveSpatialCandidateSnapshot;
   final Object writeSelectionReplace;
   final Object writeSelectionClear;
@@ -3540,15 +3540,15 @@ import '../../core/scene_spatial_index.dart';
 class InteractiveDrawEraserEngineCallbacks {
   const InteractiveDrawEraserEngineCallbacks({
     required this.onOverlayStateChanged,
-    required this.querySpatialCandidates,
+    required this.queryHitTestCandidates,
     required this.resolveSpatialCandidateSnapshot,
     required this.commitEraseNodes,
   });
 
   final Object onOverlayStateChanged;
-  final List<SceneSpatialCandidate> Function(Rect bounds)
-  querySpatialCandidates;
-  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  final List<SceneHitTestSpatialCandidate> Function(Rect bounds)
+  queryHitTestCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidateReference candidate)
   resolveSpatialCandidateSnapshot;
   final Object commitEraseNodes;
 }

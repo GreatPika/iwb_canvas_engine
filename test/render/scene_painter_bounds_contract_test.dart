@@ -122,7 +122,7 @@ void main() {
       expect(createBody, contains('selectedIds: frameRead.selectedNodeIds,'));
       expect(
         createBody,
-        contains('paintCandidates: List<NodeSnapshot>.unmodifiable('),
+        contains('paintCandidates: List<ScenePaintCandidate>.unmodifiable('),
       );
       expect(source, isNot(contains('scenePainterCullPadding')));
       expect(body, contains('final textLayout = switch (node) {'));
@@ -162,6 +162,14 @@ void main() {
       expect(
         body,
         contains('final nodeViewRect = frame.visibilityRectForNode('),
+      );
+      expect(
+        body,
+        contains('candidate.paintBoundsWorld.overlaps(nodeViewRect)'),
+      );
+      expect(
+        body,
+        contains('final resolvedNode = resolveNodePaintData(node);'),
       );
       expect(
         body,

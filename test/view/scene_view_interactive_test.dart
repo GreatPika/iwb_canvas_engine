@@ -2130,7 +2130,7 @@ class _StaticSceneViewRenderState extends ChangeNotifier
   }
 
   @override
-  Iterable<NodeSnapshot> enumeratePaintCandidates(
+  Iterable<ScenePaintCandidate> enumeratePaintCandidates(
     SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   ) {

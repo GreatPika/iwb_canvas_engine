@@ -4,6 +4,12 @@ All notable changes to `iwb_canvas_engine` are documented here.
 
 ## Unreleased
 
+- Fixed render-path over-admission by separating hit-test and paint spatial
+  admission. Hit-testing still uses hit-padding plus `kHitSlop`, while paint
+  admission now uses paint bounds only, culls before render-geometry or text
+  layout resolution, and preserves original background/content order even when
+  selected-node supplements are admitted only through the widened visibility
+  rect.
 - Fixed move-mode listener/repaint noise: selected-node move taps without drag no longer trigger scene repaint.
   They also no longer trigger public scene-change listener activity, while
   non-zero move previews still repaint and notify through the scene channel.

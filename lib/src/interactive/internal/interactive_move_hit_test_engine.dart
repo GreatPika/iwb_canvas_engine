@@ -21,7 +21,7 @@ final class InteractiveMoveHitTestEngine {
   Set<NodeId> nodesIntersecting(Rect rect) {
     final ids = <NodeId>{};
     final candidates =
-        callbacks.querySpatialCandidates(rect).toList(growable: true)
+        callbacks.queryHitTestCandidates(rect).toList(growable: true)
           ..sort((left, right) {
             final byLayer = left.layerIndex.compareTo(right.layerIndex);
             if (byLayer != 0) {
@@ -31,7 +31,11 @@ final class InteractiveMoveHitTestEngine {
           });
 
     for (final candidate in candidates) {
-      final node = callbacks.resolveSpatialCandidateSnapshot(candidate);
+      final node = callbacks.resolveSpatialCandidateSnapshot((
+        nodeId: candidate.nodeId,
+        layerIndex: candidate.layerIndex,
+        nodeIndex: candidate.nodeIndex,
+      ));
       if (node == null) {
         continue;
       }
@@ -51,7 +55,11 @@ final class InteractiveMoveHitTestEngine {
     final candidates = _queryHitTestCandidates(scenePoint);
 
     for (final candidate in candidates) {
-      final node = callbacks.resolveSpatialCandidateSnapshot(candidate);
+      final node = callbacks.resolveSpatialCandidateSnapshot((
+        nodeId: candidate.nodeId,
+        layerIndex: candidate.layerIndex,
+        nodeIndex: candidate.nodeIndex,
+      ));
       if (node == null) {
         continue;
       }
@@ -71,10 +79,12 @@ final class InteractiveMoveHitTestEngine {
     return nodeSnapshotBoundsWorld(node).shift(delta);
   }
 
-  List<SceneSpatialCandidate> _queryHitTestCandidates(Offset scenePoint) {
+  List<SceneHitTestSpatialCandidate> _queryHitTestCandidates(
+    Offset scenePoint,
+  ) {
     final probe = Rect.fromLTWH(scenePoint.dx, scenePoint.dy, 0, 0);
-    final byNodeId = <NodeId, SceneSpatialCandidate>{};
-    for (final candidate in callbacks.querySpatialCandidates(probe)) {
+    final byNodeId = <NodeId, SceneHitTestSpatialCandidate>{};
+    for (final candidate in callbacks.queryHitTestCandidates(probe)) {
       byNodeId[candidate.nodeId] = candidate;
     }
     if (previewState.hasTranslation) {
@@ -84,7 +94,7 @@ final class InteractiveMoveHitTestEngine {
         0,
         0,
       );
-      for (final candidate in callbacks.querySpatialCandidates(shiftedProbe)) {
+      for (final candidate in callbacks.queryHitTestCandidates(shiftedProbe)) {
         byNodeId[candidate.nodeId] = candidate;
       }
     }

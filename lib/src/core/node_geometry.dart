@@ -36,6 +36,11 @@ Rect nodeGeometryCandidateBoundsWorld(
   return padding <= 0 ? bounds : bounds.inflate(padding);
 }
 
+Rect nodePaintBoundsWorld(SceneNode node) {
+  final bounds = node.boundsWorld;
+  return isFiniteRect(bounds) ? bounds : Rect.zero;
+}
+
 Rect nodeSnapshotGeometryCandidateBoundsWorld(
   NodeSnapshot node, {
   double additionalScenePadding = 0,
@@ -47,6 +52,11 @@ Rect nodeSnapshotGeometryCandidateBoundsWorld(
     additionalScenePadding: additionalScenePadding,
   );
   return padding <= 0 ? bounds : bounds.inflate(padding);
+}
+
+Rect nodeSnapshotPaintBoundsWorld(NodeSnapshot node) {
+  final bounds = _snapshotBoundsWorld(node);
+  return isFiniteRect(bounds) ? bounds : Rect.zero;
 }
 
 Rect nodeSnapshotBoundsWorld(NodeSnapshot node) {

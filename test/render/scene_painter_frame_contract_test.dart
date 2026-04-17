@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
+import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
     as interactive;
@@ -31,7 +32,7 @@ class _CapturedWorldRectRenderState extends ChangeNotifier
   final SceneSnapshot snapshot;
 
   final Offset camera;
-  final List<NodeSnapshot> paintCandidates;
+  final List<ScenePaintCandidate> paintCandidates;
   ScenePaintCandidateQuery? lastEnumeratedQuery;
 
   @override
@@ -47,7 +48,7 @@ class _CapturedWorldRectRenderState extends ChangeNotifier
   }
 
   @override
-  Iterable<NodeSnapshot> enumeratePaintCandidates(
+  Iterable<ScenePaintCandidate> enumeratePaintCandidates(
     SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   ) {
@@ -244,7 +245,7 @@ void main() {
               visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
             ),
           )
-          .map((node) => node.id)
+          .map((candidate) => candidate.node.id)
           .toList(growable: false);
 
       expect(candidateIds, const <NodeId>[
@@ -305,7 +306,7 @@ void main() {
               visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
             ),
           )
-          .map((node) => node.id)
+          .map((candidate) => candidate.node.id)
           .toList(growable: false);
 
       expect(candidateIds, const <NodeId>[
@@ -409,7 +410,7 @@ void main() {
               visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
             ),
           )
-          .map((node) => node.id)
+          .map((candidate) => candidate.node.id)
           .toList(growable: false);
 
       expect(candidateIds, const <NodeId>['frame-visible-node']);
@@ -484,7 +485,7 @@ void main() {
               visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
             ),
           )
-          .map((node) => node.id)
+          .map((candidate) => candidate.node.id)
           .toList(growable: false);
 
       expect(candidateIds, const <NodeId>[
@@ -567,7 +568,12 @@ void main() {
           camera: CameraSnapshot(offset: Offset(12, 8)),
           background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
         ),
-        paintCandidates: <NodeSnapshot>[candidate],
+        paintCandidates: <ScenePaintCandidate>[
+          ScenePaintCandidate(
+            node: candidate,
+            paintBoundsWorld: nodeSnapshotBoundsWorld(candidate),
+          ),
+        ],
         camera: const Offset(12, 8),
       );
       final frameOwner = ScenePainterFrameOwner(
@@ -592,7 +598,7 @@ void main() {
         ),
       );
       expect(frame.paintCandidates, hasLength(1));
-      expect(frame.paintCandidates.single, same(candidate));
+      expect(frame.paintCandidates.single.node, same(candidate));
     },
   );
 
@@ -610,7 +616,12 @@ void main() {
           camera: CameraSnapshot(offset: Offset(12, 8)),
           background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
         ),
-        paintCandidates: <NodeSnapshot>[candidate],
+        paintCandidates: <ScenePaintCandidate>[
+          ScenePaintCandidate(
+            node: candidate,
+            paintBoundsWorld: nodeSnapshotBoundsWorld(candidate),
+          ),
+        ],
         camera: const Offset(12, 8),
         selectedNodeIds: const <NodeId>{'captured-selected-world-rect'},
       );
@@ -688,7 +699,7 @@ void main() {
               visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
             ),
           )
-          .map((node) => node.id)
+          .map((candidate) => candidate.node.id)
           .toList(growable: false);
 
       expect(candidateIds, const <NodeId>[
@@ -738,7 +749,7 @@ void main() {
               visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
             ),
           )
-          .map((node) => node.id)
+          .map((candidate) => candidate.node.id)
           .toList(growable: false);
 
       expect(candidateIds, const <NodeId>['selected-background-edge-node']);
@@ -792,7 +803,7 @@ void main() {
               visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
             ),
           )
-          .map((node) => node.id)
+          .map((candidate) => candidate.node.id)
           .toList(growable: false);
 
       expect(candidateIds, const <NodeId>['frame-background-edge-node']);
@@ -835,7 +846,7 @@ void main() {
               visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
             ),
           )
-          .map((node) => node.id)
+          .map((candidate) => candidate.node.id)
           .toList(growable: false);
 
       expect(candidateIds, isEmpty);

@@ -66,7 +66,7 @@ void main() {
         'r1': (layerIndex: 0, nodeIndex: 0),
       };
 
-      final first = slice.writeQueryCandidates(
+      final first = slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
@@ -76,7 +76,7 @@ void main() {
       expect(slice.debugBuildCount, 1);
       expect(slice.debugIncrementalApplyCount, 0);
 
-      slice.writeQueryCandidates(
+      slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
@@ -91,7 +91,7 @@ void main() {
         changeSet: noChange,
         controllerEpoch: 0,
       );
-      slice.writeQueryCandidates(
+      slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
@@ -120,21 +120,21 @@ void main() {
       final movedChange = ChangeSet()
         ..txnMarkBoundsChanged()
         ..txnTrackUpdated('r1')
-        ..txnTrackHitGeometryChanged('r1');
+        ..txnTrackSpatialGeometryChanged('r1');
       slice.writeHandleCommit(
         scene: movedScene,
         nodeLocator: movedLocator,
         changeSet: movedChange,
         controllerEpoch: 0,
       );
-      final movedCandidates = slice.writeQueryCandidates(
+      final movedCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
       );
       expect(movedCandidates, isNotEmpty);
-      final oldCandidatesAfterMove = slice.writeQueryCandidates(
+      final oldCandidatesAfterMove = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
@@ -153,7 +153,7 @@ void main() {
         changeSet: malformedAdded,
         controllerEpoch: 0,
       );
-      final rebuiltAfterMalformedAdd = slice.writeQueryCandidates(
+      final rebuiltAfterMalformedAdd = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
@@ -172,7 +172,7 @@ void main() {
         changeSet: malformedBoundsOnly,
         controllerEpoch: 0,
       );
-      slice.writeQueryCandidates(
+      slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
@@ -186,7 +186,7 @@ void main() {
         changeSet: noChange,
         controllerEpoch: 1,
       );
-      slice.writeQueryCandidates(
+      slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
@@ -201,7 +201,7 @@ void main() {
         changeSet: gridOnly,
         controllerEpoch: 1,
       );
-      slice.writeQueryCandidates(
+      slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
@@ -229,7 +229,7 @@ void main() {
         'r1': (layerIndex: 0, nodeIndex: 0),
       };
       final outOfRangeBounds = Rect.fromLTWH(sceneCoordMax + 450, -20, 100, 40);
-      final invalidFirst = slice.writeQueryCandidates(
+      final invalidFirst = slice.writeQueryHitTestCandidates(
         scene: outOfRangeScene,
         nodeLocator: outOfRangeLocator,
         worldBounds: outOfRangeBounds,
@@ -241,7 +241,7 @@ void main() {
       final outOfRangeChange = ChangeSet()
         ..txnMarkBoundsChanged()
         ..txnTrackUpdated('r1')
-        ..txnTrackHitGeometryChanged('r1');
+        ..txnTrackSpatialGeometryChanged('r1');
       slice.writeHandleCommit(
         scene: outOfRangeScene,
         nodeLocator: outOfRangeLocator,
@@ -249,7 +249,7 @@ void main() {
         controllerEpoch: 2,
       );
       // INV:INV-ENG-SPATIAL-INDEX-REBUILD-ON-INVALID
-      final invalidSecond = slice.writeQueryCandidates(
+      final invalidSecond = slice.writeQueryHitTestCandidates(
         scene: outOfRangeScene,
         nodeLocator: outOfRangeLocator,
         worldBounds: outOfRangeBounds,
@@ -258,7 +258,7 @@ void main() {
       expect(invalidSecond, isNotEmpty);
       expect(slice.debugBuildCount, 6);
 
-      final invalidThird = slice.writeQueryCandidates(
+      final invalidThird = slice.writeQueryHitTestCandidates(
         scene: outOfRangeScene,
         nodeLocator: outOfRangeLocator,
         worldBounds: outOfRangeBounds,
@@ -285,7 +285,7 @@ void main() {
         'r1': (layerIndex: 0, nodeIndex: 0),
       };
 
-      slice.writeQueryCandidates(
+      slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
@@ -314,7 +314,7 @@ void main() {
       final movedChange = ChangeSet()
         ..txnMarkBoundsChanged()
         ..txnTrackUpdated('r1')
-        ..txnTrackHitGeometryChanged('r1');
+        ..txnTrackSpatialGeometryChanged('r1');
 
       slice.debugBeforeIncrementalPrepareHook = () {
         throw StateError('forced incremental prepare failure');
@@ -326,13 +326,13 @@ void main() {
         controllerEpoch: 0,
       );
 
-      final movedCandidates = slice.writeQueryCandidates(
+      final movedCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
       );
-      final oldCandidates = slice.writeQueryCandidates(
+      final oldCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
@@ -364,7 +364,7 @@ void main() {
         'r1': (layerIndex: 0, nodeIndex: 0),
       };
 
-      final initialCandidates = slice.writeQueryCandidates(
+      final initialCandidates = slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
@@ -395,7 +395,7 @@ void main() {
       final movedChange = ChangeSet()
         ..txnMarkBoundsChanged()
         ..txnTrackUpdated('r1')
-        ..txnTrackHitGeometryChanged('r1');
+        ..txnTrackSpatialGeometryChanged('r1');
 
       slice.debugBeforeIncrementalPrepareHook = () {
         throw StateError('forced incremental prepare failure');
@@ -414,13 +414,13 @@ void main() {
         throwsStateError,
       );
 
-      final stillOldAtOrigin = slice.writeQueryCandidates(
+      final stillOldAtOrigin = slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
       );
-      final noMovedCandidates = slice.writeQueryCandidates(
+      final noMovedCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),

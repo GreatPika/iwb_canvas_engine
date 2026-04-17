@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../contract/scene_view_render_state.dart';
 import '../contract/snapshot.dart';
 import '../core/text_layout.dart';
 import 'render_geometry_cache.dart';
@@ -25,7 +26,7 @@ class ScenePainterPaintFrame {
 
   final Offset cameraOffset;
   final Rect viewRect;
-  final List<NodeSnapshot> paintCandidates;
+  final List<ScenePaintCandidate> paintCandidates;
   final Set<NodeId> selectedIds;
   final ScenePainterSelectionStyle selectionStyle;
   final List<ScenePainterResolvedNodePaintData> selectedNodes =

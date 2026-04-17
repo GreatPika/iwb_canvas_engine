@@ -669,7 +669,7 @@ void main() {
         final eraserEngine = InteractiveDrawEraserEngine(
           callbacks: InteractiveDrawEraserEngineCallbacks(
             onOverlayStateChanged: () {},
-            querySpatialCandidates: (_) => const <Never>[],
+            queryHitTestCandidates: (_) => const <Never>[],
             resolveSpatialCandidateSnapshot: (_) => null,
             commitEraseNodes: (_) => 0,
           ),

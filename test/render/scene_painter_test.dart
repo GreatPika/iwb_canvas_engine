@@ -9,6 +9,7 @@ import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_data_exception.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
+import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
@@ -64,7 +65,7 @@ class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
   }
 
   @override
-  Iterable<NodeSnapshot> enumeratePaintCandidates(
+  Iterable<ScenePaintCandidate> enumeratePaintCandidates(
     SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   ) {
@@ -436,7 +437,12 @@ void main() {
           frame: ScenePainterPaintFrame(
             cameraOffset: Offset.zero,
             viewRect: const Rect.fromLTWH(-20, -20, 40, 40),
-            paintCandidates: <NodeSnapshot>[textNode],
+            paintCandidates: <ScenePaintCandidate>[
+              ScenePaintCandidate(
+                node: textNode,
+                paintBoundsWorld: nodeSnapshotBoundsWorld(textNode),
+              ),
+            ],
             selectedIds: const <NodeId>{},
             selectionStyle: const ScenePainterSelectionStyle(
               color: Color(0xFF1565C0),

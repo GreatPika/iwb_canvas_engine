@@ -10,14 +10,14 @@ import 'interactive_geometry.dart';
 
 class InteractiveDrawEraserTargetsCallbacks {
   const InteractiveDrawEraserTargetsCallbacks({
-    required this.querySpatialCandidates,
+    required this.queryHitTestCandidates,
     required this.resolveSpatialCandidateSnapshot,
     required this.onSpatialQuery,
   });
 
-  final List<SceneSpatialCandidate> Function(Rect bounds)
-  querySpatialCandidates;
-  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  final List<SceneHitTestSpatialCandidate> Function(Rect bounds)
+  queryHitTestCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidateReference candidate)
   resolveSpatialCandidateSnapshot;
   final void Function() onSpatialQuery;
 }
@@ -101,9 +101,13 @@ class InteractiveDrawEraserTargets {
 
   void _addTargetIfDeletable(
     Map<NodeId, InteractiveDrawEraserTarget> byId,
-    SceneSpatialCandidate candidate,
+    SceneHitTestSpatialCandidate candidate,
   ) {
-    final node = callbacks.resolveSpatialCandidateSnapshot(candidate);
+    final node = callbacks.resolveSpatialCandidateSnapshot((
+      nodeId: candidate.nodeId,
+      layerIndex: candidate.layerIndex,
+      nodeIndex: candidate.nodeIndex,
+    ));
     if (node == null) return;
     if (node is! StrokeNodeSnapshot && node is! LineNodeSnapshot) return;
     if (!interaction_eligibility_policy.canDelete(node)) return;
@@ -114,8 +118,8 @@ class InteractiveDrawEraserTargets {
     );
   }
 
-  List<SceneSpatialCandidate> _querySpatialCandidates(Rect bounds) {
+  List<SceneHitTestSpatialCandidate> _querySpatialCandidates(Rect bounds) {
     callbacks.onSpatialQuery();
-    return callbacks.querySpatialCandidates(bounds);
+    return callbacks.queryHitTestCandidates(bounds);
   }
 }

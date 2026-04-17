@@ -34,7 +34,7 @@ class InteractiveDrawCoordinator {
     _eraserEngine = InteractiveDrawEraserEngine(
       callbacks: InteractiveDrawEraserEngineCallbacks(
         onOverlayStateChanged: callbacks.onOverlayStateChanged,
-        querySpatialCandidates: callbacks.querySpatialCandidates,
+        queryHitTestCandidates: callbacks.queryHitTestCandidates,
         resolveSpatialCandidateSnapshot:
             callbacks.resolveSpatialCandidateSnapshot,
         commitEraseNodes: callbacks.commitEraseNodes,

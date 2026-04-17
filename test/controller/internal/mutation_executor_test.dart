@@ -523,7 +523,7 @@ void main() {
         delta.multiply(existingTransform).toJsonMap(),
       );
       expect(result.changeSet.updatedNodeIds, const <NodeId>{'r1'});
-      expect(result.changeSet.hitGeometryChangedIds, const <NodeId>{'r1'});
+      expect(result.changeSet.spatialGeometryChangedIds, const <NodeId>{'r1'});
       expect(result.changeSet.boundsChanged, isTrue);
     },
   );

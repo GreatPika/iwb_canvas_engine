@@ -10,7 +10,7 @@ class InteractiveDrawCoordinatorCallbacks {
     required this.emitAction,
     required this.commitDrawStroke,
     required this.commitDrawLineFromWorldSegment,
-    required this.querySpatialCandidates,
+    required this.queryHitTestCandidates,
     required this.resolveSpatialCandidateSnapshot,
     required this.commitEraseNodes,
   });
@@ -38,9 +38,9 @@ class InteractiveDrawCoordinatorCallbacks {
     required double opacity,
   })
   commitDrawLineFromWorldSegment;
-  final List<SceneSpatialCandidate> Function(Rect bounds)
-  querySpatialCandidates;
-  final NodeSnapshot? Function(SceneSpatialCandidate candidate)
+  final List<SceneHitTestSpatialCandidate> Function(Rect bounds)
+  queryHitTestCandidates;
+  final NodeSnapshot? Function(SceneSpatialCandidateReference candidate)
   resolveSpatialCandidateSnapshot;
   final int Function(Iterable<NodeId> ids) commitEraseNodes;
 }

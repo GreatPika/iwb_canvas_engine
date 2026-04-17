@@ -36,14 +36,19 @@ app UI, product workflows, or backend logic.
 ## Verification
 
 After any code change, run `dart run tool/run_verification_preset.dart run --preset required_code_change --changed-paths-file=<path-or->` and provide every modified, added, renamed, or deleted repository-relative path as one line from that file or from stdin.
-- Do not run `tool/**` verification when no files under `tool/**` changed.
+- Run targeted tool-test verification only for tool-impacting changes or when
+  debugging a tool failure; otherwise rely on the required preset's resolved
+  plan.
 - For new production files under `lib/**`, run `dcm calculate-metrics` and keep
   them green against the current thresholds.
 - Run `dcm calculate-metrics` for legacy files only when adding a large new
   unit, substantially rewriting a hotspot, or validating a suspected metric
   regression.
-- Do not run package tests with plain `dart test` in this repository. Use the
-  verification preset or `flutter test` for the owned surface.
+- Do not run package tests directly with plain `dart test` in this repository.
+  Use the verification preset or `flutter test` for production/package-owned
+  surfaces. For `test/tool/**`, use `dart run tool/run_tool_tests.dart` or the
+  verification preset; that repository wrapper owns its internal `dart test`
+  invocation.
 - Coverage is shell-only. After a failed coverage gate, prefer
   `dart run tool/check_coverage.dart --json` for machine-first triage, add
   `--uncovered-branches` when branch diagnostics matter, and add
@@ -55,7 +60,7 @@ After any code change, run `dart run tool/run_verification_preset.dart run --pre
   boundary, use `dart run tool/run_temp_pkg_test.dart`. Do not hand-assemble
   ad hoc `/tmp` test packages or run manual import/path wiring when this tool
   fits the task.
-- Run heavyweight Flutter invocations sequentially. Do not run
+- Run heavyweight verification commands sequentially. Do not run
   `flutter test --coverage ...` in parallel with
   `dart run tool/run_tool_tests.dart`.
 - Documentation-only changes do not require the full Flutter pipeline unless

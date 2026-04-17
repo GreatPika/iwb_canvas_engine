@@ -25,6 +25,16 @@ class ScenePaintCandidateQuery {
   int get hashCode => Object.hash(viewportRect, visibilityRect);
 }
 
+class ScenePaintCandidate {
+  const ScenePaintCandidate({
+    required this.node,
+    required this.paintBoundsWorld,
+  });
+
+  final NodeSnapshot node;
+  final Rect paintBoundsWorld;
+}
+
 /// Atomic frame read captured once and reused across the scene paint pipeline.
 final class SceneViewFrameRead {
   SceneViewFrameRead({
@@ -48,7 +58,7 @@ abstract interface class SceneViewRenderState implements SceneRenderState {
   Offset get cameraOffset;
   Offset Function(NodeId nodeId) get previewDeltaResolver;
   SceneViewFrameRead captureFrameRead();
-  Iterable<NodeSnapshot> enumeratePaintCandidates(
+  Iterable<ScenePaintCandidate> enumeratePaintCandidates(
     SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   );

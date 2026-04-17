@@ -228,7 +228,7 @@
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Split Spatial Candidate Roles
+### Slice 1. [x] Split Spatial Candidate Roles
 
 #### Slice Contract
 
@@ -273,7 +273,7 @@ Committed read-side callers consume separate hit-test and paint spatial candidat
 - Green run of the listed verifications.
 - Test assertion showing the same node is admitted by hit-test query and rejected by paint query for a hit-test-only ring probe.
 
-### Slice 2. [ ] Introduce Paint Candidate Carrier and Pre-Resolution Cull
+### Slice 2. [x] Introduce Paint Candidate Carrier and Pre-Resolution Cull
 
 #### Slice Contract
 
@@ -315,7 +315,7 @@ Render-path paint enumeration produces `ScenePaintCandidate` values and `ScenePa
 - Green run of the listed verifications.
 - Regression test output proving zero render-geometry and text-layout builds for hit-test-only ring paint frames.
 
-### Slice 3. [ ] Restore Ordered Controller-Backed Paint Enumeration
+### Slice 3. [x] Restore Ordered Controller-Backed Paint Enumeration
 
 #### Slice Contract
 
@@ -357,7 +357,7 @@ Render-path paint enumeration produces `ScenePaintCandidate` values and `ScenePa
 - Green run of the listed verifications.
 - Regression tests that fail when selected background supplements are appended to the content stream.
 
-### Slice 4. [ ] Seal the Boundary with Invariants and Documentation
+### Slice 4. [x] Seal the Boundary with Invariants and Documentation
 
 #### Slice Contract
 

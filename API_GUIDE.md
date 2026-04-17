@@ -46,6 +46,22 @@ The package is not designed as a pure Dart engine. Public contract types rely
 on Flutter-oriented primitives (`dart:ui`), and `SceneRenderState` uses
 `Listenable` from `package:flutter/foundation.dart`.
 
+## Render and hit-test admission
+
+The runtime now treats hit-test admission and paint admission as separate
+internal contracts.
+
+- Hit-testing, eraser lookup, and move hit-test lookup still use coarse bounds
+  that include node hit padding plus `kHitSlop`.
+- Paint admission uses paint bounds only. Off-viewport hit padding no longer
+  forces render-geometry or text-layout resolution.
+- Ordinary paint admission stays viewport-first on the raw viewport query.
+  Active selection widens only the selected-node supplement path and does not
+  widen ordinary unselected admission.
+- Selected-node supplements keep the same background/content order they would
+  have had through the ordinary path, and a node is emitted at most once per
+  paint frame.
+
 ## Repository coverage triage workflow
 
 Repository coverage enforcement stays on `dart run tool/check_coverage.dart`

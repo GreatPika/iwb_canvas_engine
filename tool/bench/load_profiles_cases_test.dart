@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_snapshot_materializer.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
+import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
@@ -112,7 +113,7 @@ Map<String, Object?> _runNodeScaleCase({
   final targetId = 'n${nodeCount ~/ 2}';
 
   try {
-    controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 1, 1));
+    controller.queryHitTestCandidates(const Rect.fromLTWH(0, 0, 1, 1));
 
     final patchMetric = _measureOperation(
       iterations: iterations,
@@ -138,7 +139,7 @@ Map<String, Object?> _runNodeScaleCase({
             Transform2D.translation(Offset((i + 1).toDouble(), 0)),
           );
         });
-        controller.querySpatialCandidates(
+        controller.queryHitTestCandidates(
           Rect.fromLTWH((i + 1).toDouble(), 0, 1, 1),
         );
       },
@@ -206,7 +207,7 @@ Map<String, Object?> _runStrokeScaleCase({
   final pointsB = _linearPoints(count: pointsPerStroke, y: 5);
 
   try {
-    controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 1, 1));
+    controller.queryHitTestCandidates(const Rect.fromLTWH(0, 0, 1, 1));
 
     final thicknessMetric = _measureOperation(
       iterations: iterations,
@@ -401,7 +402,7 @@ class _BenchmarkControllerRenderState extends ChangeNotifier
   }
 
   @override
-  Iterable<NodeSnapshot> enumeratePaintCandidates(
+  Iterable<ScenePaintCandidate> enumeratePaintCandidates(
     SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   ) sync* {
@@ -410,7 +411,10 @@ class _BenchmarkControllerRenderState extends ChangeNotifier
           ? query.visibilityRect
           : query.viewportRect;
       if (_benchmarkCandidateOverlaps(node, candidateRect)) {
-        yield node;
+        yield ScenePaintCandidate(
+          node: node,
+          paintBoundsWorld: nodeSnapshotBoundsWorld(node),
+        );
       }
     }
     for (final layer in frameRead.snapshot.layers) {
@@ -419,7 +423,10 @@ class _BenchmarkControllerRenderState extends ChangeNotifier
             ? query.visibilityRect
             : query.viewportRect;
         if (_benchmarkCandidateOverlaps(node, candidateRect)) {
-          yield node;
+          yield ScenePaintCandidate(
+            node: node,
+            paintBoundsWorld: nodeSnapshotBoundsWorld(node),
+          );
         }
       }
     }
@@ -484,7 +491,7 @@ Map<String, Object?> _runHugeBoundsMetric({required int iterations}) {
     final queryMetric = _measureOperation(
       iterations: iterations,
       run: (_) {
-        controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 10, 10));
+        controller.queryHitTestCandidates(const Rect.fromLTWH(0, 0, 10, 10));
       },
     );
 
@@ -497,7 +504,7 @@ Map<String, Object?> _runHugeBoundsMetric({required int iterations}) {
             Offset(1000000 * (i + 1).toDouble(), 0),
           );
         });
-        controller.querySpatialCandidates(
+        controller.queryHitTestCandidates(
           Rect.fromLTWH(1000000 * (i + 1).toDouble(), 0, 10, 10),
         );
       },
@@ -538,7 +545,7 @@ Map<String, Object?> _runHugeRectSelectMetric({
     return _measureOperation(
       iterations: iterations,
       run: (_) {
-        controller.querySpatialCandidates(
+        controller.queryHitTestCandidates(
           const Rect.fromLTWH(-128000, -12800, 256000, 25600),
         );
       },
@@ -588,7 +595,7 @@ Map<String, Object?> _runVeryLongPathMetric({
     final queryMetric = _measureOperation(
       iterations: iterations,
       run: (_) {
-        controller.querySpatialCandidates(
+        controller.queryHitTestCandidates(
           const Rect.fromLTWH(0, 0, 100000, 100),
         );
       },
