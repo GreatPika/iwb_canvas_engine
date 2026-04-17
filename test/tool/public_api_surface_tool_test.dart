@@ -5,7 +5,9 @@ library;
 
 import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
+
+import '../../tool/check_public_api_surface.dart' as public_api_surface_tool;
 
 void main() {
   group('tool/check_public_api_surface.dart', () {
@@ -217,9 +219,10 @@ void _writeFile(Directory root, String relativePath, String content) {
 }
 
 Future<ProcessResult> _runTool(Directory sandbox, List<String> args) {
-  return Process.run('dart', <String>[
-    'run',
-    'tool/check_public_api_surface.dart',
-    ...args,
-  ], workingDirectory: sandbox.path);
+  return public_api_surface_tool
+      .runPublicApiSurfaceTool(args, root: sandbox)
+      .then(
+        (result) =>
+            ProcessResult(0, result.exitCode, result.stdout, result.stderr),
+      );
 }

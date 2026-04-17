@@ -14,13 +14,17 @@ class GuardrailContext {
   }) : _analysisCollection = analysisCollection;
 
   factory GuardrailContext.forCurrentDirectory() {
-    final root = Directory.current;
+    return GuardrailContext.forDirectory(Directory.current);
+  }
+
+  factory GuardrailContext.forDirectory(Directory root) {
+    final absoluteRoot = Directory(root.absolute.path);
     return GuardrailContext._(
-      root: root,
-      rootAbsPosixPath: toPosixPath(root.absolute.path),
-      packageName: readPackageNameOrFallback(root),
+      root: absoluteRoot,
+      rootAbsPosixPath: toPosixPath(absoluteRoot.path),
+      packageName: readPackageNameOrFallback(absoluteRoot),
       analysisCollection: AnalysisContextCollection(
-        includedPaths: <String>[root.absolute.path],
+        includedPaths: <String>[absoluteRoot.path],
       ),
     );
   }
@@ -35,8 +39,10 @@ class GuardrailContext {
       <String, Future<ResolvedUnitResult?>>{};
   final Map<String, Future<ResolvedLibraryResult?>> _resolvedLibraryCache =
       <String, Future<ResolvedLibraryResult?>>{};
-  final Map<String, Future<SomeLibraryElementResult>> _libraryByUriCache =
-      <String, Future<SomeLibraryElementResult>>{};
+
+  String get publicEntrypointAbsPath =>
+      '${root.absolute.path}${Platform.pathSeparator}lib'
+      '${Platform.pathSeparator}iwb_canvas_engine.dart';
 
   Object getParsedUnitResult(String absPath) {
     final cached = _parsedUnitCache[absPath];
@@ -81,23 +87,5 @@ class GuardrailContext {
     final context = _analysisCollection.contextFor(absPath);
     final result = await context.currentSession.getResolvedLibrary(absPath);
     return result is ResolvedLibraryResult ? result : null;
-  }
-
-  Future<SomeLibraryElementResult> getLibraryByUriResult(String uri) {
-    final cached = _libraryByUriCache[uri];
-    if (cached != null) {
-      return cached;
-    }
-    final future = _resolveLibraryByUri(uri);
-    _libraryByUriCache[uri] = future;
-    return future;
-  }
-
-  Future<SomeLibraryElementResult> _resolveLibraryByUri(String uri) async {
-    final entrypointPath =
-        '${root.absolute.path}${Platform.pathSeparator}lib'
-        '${Platform.pathSeparator}iwb_canvas_engine.dart';
-    final context = _analysisCollection.contextFor(entrypointPath);
-    return context.currentSession.getLibraryByUri(uri);
   }
 }

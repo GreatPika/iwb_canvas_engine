@@ -4,7 +4,9 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
+
+import '../../tool/check_coverage.dart' as coverage_tool;
 
 void main() {
   group('tool/check_coverage.dart', () {
@@ -833,11 +835,14 @@ Future<ProcessResult> _runTool(
   String toolFileName, {
   List<String> args = const <String>[],
 }) {
-  return Process.run('dart', <String>[
-    'run',
-    'tool/$toolFileName',
-    ...args,
-  ], workingDirectory: sandbox.path);
+  if (toolFileName != 'check_coverage.dart') {
+    throw ArgumentError.value(toolFileName, 'toolFileName');
+  }
+
+  final result = coverage_tool.runCoverageTool(args, root: sandbox);
+  return Future<ProcessResult>.value(
+    ProcessResult(0, result.exitCode, result.stdout, result.stderr),
+  );
 }
 
 Future<void> _initializeGitRepository(Directory sandbox) async {

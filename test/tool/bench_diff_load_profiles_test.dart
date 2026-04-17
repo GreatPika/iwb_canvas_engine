@@ -4,7 +4,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import '../../tool/bench/load_profile_policy.dart';
 import '../../tool/bench/diff_load_profiles.dart' as bench_diff;
 

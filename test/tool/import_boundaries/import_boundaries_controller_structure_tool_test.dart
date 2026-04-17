@@ -1,7 +1,7 @@
 @Tags(['tool'])
 library;
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 import '../support/guardrails_tool_test_support.dart';
 import '../support/tool_process_test_support.dart';

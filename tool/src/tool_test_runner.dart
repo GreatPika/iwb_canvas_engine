@@ -5,11 +5,13 @@ import 'dart:io';
 const String toolTestRunnerUsage = '''
 Usage: dart run tool/run_tool_tests.dart [--jobs=N] [test/tool/path_test.dart ...]
 
-Runs tool tests file-by-file with limited parallelism.
+Runs tool tests file-by-file with limited parallelism via dart test.
 
 Options:
-  --jobs=N   Maximum number of concurrent flutter test processes.
+  --jobs=N   Maximum number of concurrent dart test processes.
 ''';
+
+const String _toolTestDartExecutableEnv = 'IWB_TOOL_TEST_RUNNER_DART';
 
 Future<List<String>> discoverToolTestFiles({String root = 'test/tool'}) async {
   final files = <String>[];
@@ -111,9 +113,9 @@ Future<ToolTestResult> runSingleToolTestProcess(String testFile) {
 
 Future<ToolTestResult> _runSingleToolTest(String testFile) async {
   final watch = Stopwatch()..start();
-  final process = await Process.start('flutter', <String>[
+  final process = await Process.start(_toolTestDartExecutable(), <String>[
     'test',
-    '--no-pub',
+    '--reporter=compact',
     testFile,
   ]);
 
@@ -135,6 +137,14 @@ Future<ToolTestResult> _runSingleToolTest(String testFile) async {
     stdout: output,
     stderr: error,
   );
+}
+
+String _toolTestDartExecutable() {
+  final override = Platform.environment[_toolTestDartExecutableEnv]?.trim();
+  if (override == null || override.isEmpty) {
+    return Platform.resolvedExecutable;
+  }
+  return override;
 }
 
 Never _failConfig(String message) {

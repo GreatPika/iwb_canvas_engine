@@ -4,7 +4,7 @@ library;
 // INV:INV-ENG-PUBLIC-SIGNATURE-HERMETICITY
 // INV:INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 import '../support/guardrails_tool_test_support.dart';
 import '../support/public_entrypoint_contract.dart';

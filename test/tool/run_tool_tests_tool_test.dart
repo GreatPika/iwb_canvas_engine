@@ -3,7 +3,7 @@ library;
 
 import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 import '../../tool/src/tool_test_runner.dart';
 import 'support/tool_process_test_support.dart';
@@ -117,7 +117,7 @@ void main() {
       );
       try {
         _writeToolTest(sandbox, 'test/tool/passing_tool_test.dart');
-        _writeFlutterStub(sandbox, '''
+        _writeToolTestDartStub(sandbox, '''
 #!/bin/sh
 echo "passing child stdout"
 echo "passing child stderr" 1>&2
@@ -157,7 +157,7 @@ exit 0
       );
       try {
         _writeToolTest(sandbox, 'test/tool/failing_tool_test.dart');
-        _writeFlutterStub(sandbox, '''
+        _writeToolTestDartStub(sandbox, '''
 #!/bin/sh
 echo "failing child stdout"
 echo "failing child stderr" 1>&2
@@ -198,7 +198,7 @@ void _writeToolTest(Directory root, String relativePath) {
 @Tags(['tool'])
 library;
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('stub', () {
@@ -208,16 +208,15 @@ void main() {
 ''');
 }
 
-void _writeFlutterStub(Directory root, String content) {
+void _writeToolTestDartStub(Directory root, String content) {
   final binDir = Directory('${root.path}/bin')..createSync(recursive: true);
-  final flutter = File('${binDir.path}/flutter');
-  flutter.writeAsStringSync(content);
-  Process.runSync('chmod', <String>['+x', flutter.path]);
+  final stub = File('${binDir.path}/tool_test_dart');
+  stub.writeAsStringSync(content);
+  Process.runSync('chmod', <String>['+x', stub.path]);
 }
 
 Map<String, String> _sandboxEnvironment(Directory sandbox) {
-  final currentPath = Platform.environment['PATH'] ?? '';
   return <String, String>{
-    'PATH': '${sandbox.path}/bin${Platform.isWindows ? ';' : ':'}$currentPath',
+    'IWB_TOOL_TEST_RUNNER_DART': '${sandbox.path}/bin/tool_test_dart',
   };
 }

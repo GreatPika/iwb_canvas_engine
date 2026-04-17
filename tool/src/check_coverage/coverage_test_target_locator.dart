@@ -4,6 +4,9 @@ import '../verification_contract/verification_contract_registry.dart';
 import 'coverage_models.dart';
 
 class CoverageTestTargetLocator {
+  CoverageTestTargetLocator({String cwd = '.'}) : _cwd = cwd;
+
+  final String _cwd;
   List<String>? _allTestFilesCache;
 
   TestTargetResolution resolve(String sourcePath) {
@@ -56,7 +59,7 @@ class CoverageTestTargetLocator {
       _allTestFilesCache ??= _collectAllTestFiles();
 
   List<String> _collectAllTestFiles() {
-    final root = Directory('test');
+    final root = Directory('$_cwd${Platform.pathSeparator}test');
     if (!root.existsSync()) {
       return const <String>[];
     }
@@ -65,7 +68,13 @@ class CoverageTestTargetLocator {
       if (entity is! File || !entity.path.endsWith('_test.dart')) {
         continue;
       }
-      files.add(entity.path.replaceAll('\\', '/'));
+      final normalized = entity.path.replaceAll('\\', '/');
+      final rootPrefix = '${_cwd.replaceAll('\\', '/')}/';
+      files.add(
+        normalized.startsWith(rootPrefix)
+            ? normalized.substring(rootPrefix.length)
+            : normalized,
+      );
     }
     files.sort();
     return List<String>.unmodifiable(files);

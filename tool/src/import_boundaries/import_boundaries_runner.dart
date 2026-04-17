@@ -4,35 +4,53 @@ import '../guardrails/support/guardrail_ast_utils.dart';
 import '../guardrails/support/guardrail_context.dart';
 import '../guardrails/support/guardrail_path_utils.dart';
 import '../layer_guardrails.dart';
+import '../tool_command_result.dart';
 import 'directive_boundary_checker.dart';
 import 'import_boundary_policy.dart';
 import 'public_export_boundary_resolver.dart';
 
-Future<void> runImportBoundariesTool() async {
-  final runner = ImportBoundariesRunner();
-  if (!runner.hasSourceRoot) {
-    stderr.writeln('No lib/src directory found. Nothing to check.');
-    exit(0);
-  }
+ToolCommandResult evaluateImportBoundariesTool({Directory? root}) {
+  final runner = ImportBoundariesRunner(root: root);
+  try {
+    if (!runner.hasSourceRoot) {
+      return const ToolCommandResult(
+        exitCode: 0,
+        stderr: 'No lib/src directory found. Nothing to check.\n',
+      );
+    }
 
-  final violations = runner.collectViolations();
-  if (violations.isEmpty) {
-    stdout.writeln('OK: import boundaries');
-    exit(0);
-  }
+    final violations = runner.collectViolations();
+    if (violations.isEmpty) {
+      return const ToolCommandResult(
+        exitCode: 0,
+        stdout: 'OK: import boundaries\n',
+      );
+    }
 
-  stderr.writeln('FAIL: import boundary violations (${violations.length})');
-  for (final violation in violations) {
-    stderr.writeln('- $violation');
+    final stderrBuffer = StringBuffer()
+      ..writeln('FAIL: import boundary violations (${violations.length})');
+    for (final violation in violations) {
+      stderrBuffer.writeln('- $violation');
+    }
+    return ToolCommandResult(exitCode: 1, stderr: stderrBuffer.toString());
+  } on StateError catch (error) {
+    return ToolCommandResult(exitCode: 1, stderr: error.message.toString());
   }
-  exit(1);
+}
+
+Future<void> runImportBoundariesTool({Directory? root}) async {
+  final result = evaluateImportBoundariesTool(root: root);
+  writeToolCommandResult(result);
+  exitCode = result.exitCode;
 }
 
 class ImportBoundariesRunner {
-  ImportBoundariesRunner()
-    : context = GuardrailContext.forCurrentDirectory(),
+  ImportBoundariesRunner({Directory? root})
+    : context = GuardrailContext.forDirectory(
+        Directory((root ?? Directory.current).absolute.path),
+      ),
       srcRoot = Directory(
-        '${Directory.current.path}${Platform.pathSeparator}lib'
+        '${Directory((root ?? Directory.current).absolute.path).path}${Platform.pathSeparator}lib'
         '${Platform.pathSeparator}src',
       );
 
@@ -152,11 +170,10 @@ class ImportBoundariesRunner {
     required String filePathForDiag,
     required String resultType,
   }) {
-    stderr.writeln('FAIL: import boundary violations (1)');
-    stderr.writeln(
+    throw StateError(
+      'FAIL: import boundary violations (1)\n'
       '- $filePathForDiag:1: tool failure: unable to parse Dart unit '
-      '(result: $resultType) (parse: $filePathForDiag)',
+      '(result: $resultType) (parse: $filePathForDiag)\n',
     );
-    exit(1);
   }
 }

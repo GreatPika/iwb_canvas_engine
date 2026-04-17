@@ -6,6 +6,7 @@ import 'src/check_coverage/coverage_lcov_parser.dart';
 import 'src/check_coverage/coverage_machine_report.dart';
 import 'src/check_coverage/coverage_models.dart';
 import 'src/check_coverage/coverage_test_target_locator.dart';
+import 'src/tool_command_result.dart';
 
 const _excludedDeclarationOnlyFromLcov = <String>{
   'lib/src/core/tool_defaults.dart',
@@ -21,19 +22,27 @@ const _excludedDeclarationOnlyFromLcov = <String>{
   'lib/src/interactive/internal/interactive_draw_style.dart',
 };
 
-File requireLcovFile() {
-  final lcovFile = File('coverage/lcov.info');
+File requireLcovFile({
+  required Directory root,
+  required StringSink stderrSink,
+}) {
+  final lcovFile = File(
+    '${root.path}${Platform.pathSeparator}coverage'
+    '${Platform.pathSeparator}lcov.info',
+  );
   if (!lcovFile.existsSync()) {
-    stderr.writeln(
+    stderrSink.writeln(
       'coverage/lcov.info not found. Run: flutter test --coverage',
     );
-    exitCode = 2;
     throw StateError('missing lcov.info');
   }
   return lcovFile;
 }
 
-CoverageOptions parseOptions(List<String> args) {
+CoverageOptions parseOptions(
+  List<String> args, {
+  required StringSink stderrSink,
+}) {
   var json = false;
   var includeUncoveredBranches = false;
   var changedOnly = false;
@@ -52,8 +61,7 @@ CoverageOptions parseOptions(List<String> args) {
       continue;
     }
 
-    stderr.writeln('Unknown argument: $arg');
-    exitCode = 64;
+    stderrSink.writeln('Unknown argument: $arg');
     throw ArgumentError.value(arg, 'arg', 'Unsupported flag');
   }
 
@@ -66,46 +74,52 @@ CoverageOptions parseOptions(List<String> args) {
 
 List<String> collectMissingFromLcov(
   Set<String> libSrcFiles,
-  Map<String, FileCoverage> all,
-) {
+  Map<String, FileCoverage> all, {
+  required String cwd,
+}) {
   final missing = libSrcFiles
       .where(
         (path) =>
             !_excludedDeclarationOnlyFromLcov.contains(path) &&
             !all.containsKey(path) &&
-            !_isExportOnlyUnit(path),
+            !_isExportOnlyUnit(path, cwd: cwd),
       )
       .toList();
   missing.sort();
   return missing;
 }
 
-bool reportMissingFromLcov(List<String> missingFromLcov) {
+bool reportMissingFromLcovToSink(
+  List<String> missingFromLcov, {
+  required StringSink stderrSink,
+}) {
   if (missingFromLcov.isEmpty) {
     return false;
   }
 
-  stderr.writeln(
+  stderrSink.writeln(
     'FAIL: ${missingFromLcov.length} lib/src/** file(s) are missing from coverage/lcov.info.',
   );
-  stderr.writeln('These files are not covered at all (no lcov record):');
+  stderrSink.writeln('These files are not covered at all (no lcov record):');
   for (final path in missingFromLcov) {
-    stderr.writeln('  $path');
+    stderrSink.writeln('  $path');
   }
-  exitCode = 1;
   return true;
 }
 
-bool reportMissedLines(List<FileCoverage> entries) {
+bool reportMissedLinesToSink(
+  List<FileCoverage> entries, {
+  required StringSink stdoutSink,
+}) {
   var totalLf = 0;
   var totalLh = 0;
   final missed = <String>[];
 
-  stdout.writeln('Coverage report for lib/src/**');
+  stdoutSink.writeln('Coverage report for lib/src/**');
   for (final file in entries) {
     totalLf += file.effectiveLf;
     totalLh += file.effectiveLh;
-    stdout.writeln(
+    stdoutSink.writeln(
       '  ${formatPercent(file.effectiveLh, file.effectiveLf)}  '
       '${file.effectiveLh}/${file.effectiveLf}  ${file.path}',
     );
@@ -115,22 +129,24 @@ bool reportMissedLines(List<FileCoverage> entries) {
     }
   }
 
-  stdout.writeln(
+  stdoutSink.writeln(
     'TOTAL: ${formatPercent(totalLh, totalLf)}  $totalLh/$totalLf',
   );
   if (missed.isEmpty) {
     return false;
   }
 
-  stdout.writeln('MISSED LINES (${missed.length}):');
+  stdoutSink.writeln('MISSED LINES (${missed.length}):');
   for (final item in missed) {
-    stdout.writeln('  $item');
+    stdoutSink.writeln('  $item');
   }
-  exitCode = 1;
   return true;
 }
 
-bool reportMissedBranches(List<FileCoverage> entries) {
+bool reportMissedBranchesToSink(
+  List<FileCoverage> entries, {
+  required StringSink stdoutSink,
+}) {
   final missed = <String>[];
   for (final file in entries) {
     final branches = collectUncoveredBranchesForFile(file);
@@ -145,11 +161,10 @@ bool reportMissedBranches(List<FileCoverage> entries) {
     return false;
   }
 
-  stdout.writeln('MISSED BRANCHES (${missed.length}):');
+  stdoutSink.writeln('MISSED BRANCHES (${missed.length}):');
   for (final item in missed) {
-    stdout.writeln('  $item');
+    stdoutSink.writeln('  $item');
   }
-  exitCode = 1;
   return true;
 }
 
@@ -161,8 +176,8 @@ String formatPercent(int lh, int lf) {
   return '${pct.toStringAsFixed(2)}%';
 }
 
-bool _isExportOnlyUnit(String repoRelativePath) {
-  final file = File(repoRelativePath);
+bool _isExportOnlyUnit(String repoRelativePath, {required String cwd}) {
+  final file = File('$cwd${Platform.pathSeparator}$repoRelativePath');
   if (!file.existsSync()) {
     return false;
   }
@@ -220,14 +235,14 @@ class _ChangedFileSelection {
   final List<String> warnings;
 }
 
-_ChangedFileSelection _resolveChangedFileSelection() {
+_ChangedFileSelection _resolveChangedFileSelection({required String cwd}) {
   final result = Process.runSync('git', <String>[
     'status',
     '--porcelain=v1',
     '--untracked-files=all',
     '--',
     'lib/src',
-  ]);
+  ], workingDirectory: cwd);
   if (result.exitCode != 0) {
     return const _ChangedFileSelection(
       paths: <String>{},
@@ -321,15 +336,18 @@ DeclarationCoverageGap _attachTargets(
   );
 }
 
-void main(List<String> args) {
+ToolCommandResult runCoverageTool(List<String> args, {Directory? root}) {
+  final stdoutBuffer = StringBuffer();
+  final stderrBuffer = StringBuffer();
+
   late final CoverageOptions options;
   try {
-    options = parseOptions(args);
+    options = parseOptions(args, stderrSink: stderrBuffer);
   } on ArgumentError {
-    return;
+    return ToolCommandResult(exitCode: 64, stderr: stderrBuffer.toString());
   }
 
-  final cwd = Directory.current.path;
+  final cwd = (root ?? Directory.current).absolute.path;
   final allLibSrcFiles = collectLibSrcDartFiles(cwd: cwd);
   final warnings = <String>[];
   var changedOnlyApplied = false;
@@ -337,7 +355,7 @@ void main(List<String> args) {
   var selectedLibSrcFiles = allLibSrcFiles;
 
   if (options.changedOnly) {
-    final selection = _resolveChangedFileSelection();
+    final selection = _resolveChangedFileSelection(cwd: cwd);
     warnings.addAll(selection.warnings);
     changedOnlyApplied = selection.applied;
     if (selection.applied) {
@@ -350,16 +368,16 @@ void main(List<String> args) {
 
   late final File lcovFile;
   try {
-    lcovFile = requireLcovFile();
+    lcovFile = requireLcovFile(root: Directory(cwd), stderrSink: stderrBuffer);
   } on StateError {
-    return;
+    return ToolCommandResult(exitCode: 2, stderr: stderrBuffer.toString());
   }
 
   final allCoverage = parseLcov(lcovFile.readAsStringSync(), cwd: cwd);
   final allEntries = collectLibSrcEntries(allCoverage);
   if (allEntries.isEmpty) {
     if (options.json) {
-      stdout.writeln(
+      stdoutBuffer.writeln(
         const JsonEncoder.withIndent('  ').convert(<String, Object>{
           'gaps': const <Object>[],
           'warnings': warnings,
@@ -369,10 +387,13 @@ void main(List<String> args) {
         }),
       );
     } else {
-      stderr.writeln('No coverage entries found for lib/src/**.');
+      stderrBuffer.writeln('No coverage entries found for lib/src/**.');
     }
-    exitCode = 2;
-    return;
+    return ToolCommandResult(
+      exitCode: 2,
+      stdout: stdoutBuffer.toString(),
+      stderr: stderrBuffer.toString(),
+    );
   }
 
   final entries = changedOnlyApplied
@@ -394,6 +415,7 @@ void main(List<String> args) {
   final missingFromLcov = collectMissingFromLcov(
     selectedLibSrcFiles,
     coverageIndex,
+    cwd: cwd,
   );
 
   if (options.json) {
@@ -404,8 +426,8 @@ void main(List<String> args) {
       );
     }
 
-    final declarationLocator = CoverageDeclarationLocator();
-    final testTargetLocator = CoverageTestTargetLocator();
+    final declarationLocator = CoverageDeclarationLocator(cwd: cwd);
+    final testTargetLocator = CoverageTestTargetLocator(cwd: cwd);
     final report = buildCoverageMachineReport(
       gaps: _buildMachineGaps(
         missingFromLcov: missingFromLcov,
@@ -418,26 +440,58 @@ void main(List<String> args) {
       branchDataAvailable: branchDataAvailable,
       changedOnlyApplied: changedOnlyApplied,
     );
-    stdout.writeln(const JsonEncoder.withIndent('  ').convert(report.toJson()));
-    exitCode = report.gaps.isEmpty ? 0 : 1;
-    return;
+    stdoutBuffer.writeln(
+      const JsonEncoder.withIndent('  ').convert(report.toJson()),
+    );
+    return ToolCommandResult(
+      exitCode: report.gaps.isEmpty ? 0 : 1,
+      stdout: stdoutBuffer.toString(),
+      stderr: stderrBuffer.toString(),
+    );
   }
 
-  if (_reportMissingThenReturn(missingFromLcov)) {
-    return;
+  if (_reportMissingThenReturn(missingFromLcov, stderrSink: stderrBuffer)) {
+    return ToolCommandResult(
+      exitCode: 1,
+      stdout: stdoutBuffer.toString(),
+      stderr: stderrBuffer.toString(),
+    );
   }
-  if (reportMissedLines(entries)) {
-    return;
+  if (reportMissedLinesToSink(entries, stdoutSink: stdoutBuffer)) {
+    return ToolCommandResult(
+      exitCode: 1,
+      stdout: stdoutBuffer.toString(),
+      stderr: stderrBuffer.toString(),
+    );
   }
-  if (options.includeUncoveredBranches && reportMissedBranches(entries)) {
-    return;
+  if (options.includeUncoveredBranches &&
+      reportMissedBranchesToSink(entries, stdoutSink: stdoutBuffer)) {
+    return ToolCommandResult(
+      exitCode: 1,
+      stdout: stdoutBuffer.toString(),
+      stderr: stderrBuffer.toString(),
+    );
   }
 
-  stdout.writeln('OK: 100% line coverage for lib/src/**');
+  stdoutBuffer.writeln('OK: 100% line coverage for lib/src/**');
+  return ToolCommandResult(
+    exitCode: 0,
+    stdout: stdoutBuffer.toString(),
+    stderr: stderrBuffer.toString(),
+  );
 }
 
-bool _reportMissingThenReturn(List<String> missingFromLcov) {
-  if (!reportMissingFromLcov(missingFromLcov)) {
+void main(List<String> args) {
+  final result = runCoverageTool(args);
+  writeToolCommandResult(result);
+  exitCode = result.exitCode;
+}
+
+bool _reportMissingThenReturn(
+  List<String> missingFromLcov, {
+  required StringSink stderrSink,
+}) {
+  if (!reportMissingFromLcovToSink(missingFromLcov, stderrSink: stderrSink)) {
     return false;
   }
   return true;

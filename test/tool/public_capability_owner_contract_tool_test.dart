@@ -3,7 +3,7 @@ library;
 
 import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('tool/run_temp_pkg_test.dart capability-owner contract', () {

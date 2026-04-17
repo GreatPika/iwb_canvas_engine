@@ -1,7 +1,7 @@
 @Tags(['tool'])
 library;
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 import '../../tool/bench/load_profile_policy.dart';
 import '../../tool/bench/run_load_profiles.dart' as run_load_profiles;

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 import '../../../tool/src/guardrails/rules/interactive/committed_read_callback_rules.dart';
 import 'public_entrypoint_contract.dart';

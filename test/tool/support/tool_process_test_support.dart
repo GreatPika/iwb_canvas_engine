@@ -1,5 +1,8 @@
 import 'dart:io';
 
+import '../../../tool/src/guardrails/guardrails_runner.dart';
+import '../../../tool/src/import_boundaries/import_boundaries_runner.dart';
+
 Future<Directory> createToolSandbox({
   required String tempPrefix,
   required List<String> toolFiles,
@@ -67,6 +70,17 @@ Future<ProcessResult> runSandboxTool(
   Map<String, String>? environment,
   String? stdinText,
 }) async {
+  final inProcessResult = await _runInProcessToolIfSupported(
+    sandbox,
+    toolFileName,
+    args: args,
+    environment: environment,
+    stdinText: stdinText,
+  );
+  if (inProcessResult != null) {
+    return inProcessResult;
+  }
+
   if (stdinText == null) {
     return Process.run(
       'dart',
@@ -93,6 +107,37 @@ Future<ProcessResult> runSandboxTool(
       .join();
   final exitCode = await process.exitCode;
   return ProcessResult(process.pid, exitCode, stdout, stderr);
+}
+
+Future<ProcessResult?> _runInProcessToolIfSupported(
+  Directory sandbox,
+  String toolFileName, {
+  required List<String> args,
+  required Map<String, String>? environment,
+  required String? stdinText,
+}) async {
+  // Keep the fast path narrow and explicit: only analyzer-heavy tools that
+  // accept an alternate root run in-process. Everything else keeps the real
+  // subprocess boundary so behavior stays aligned with production CLIs.
+  if (environment != null || stdinText != null) {
+    return null;
+  }
+  if (args.isNotEmpty) {
+    return null;
+  }
+
+  final result = switch (toolFileName) {
+    'check_guardrails.dart' => await evaluateGuardrailsTool(root: sandbox),
+    'check_import_boundaries.dart' => evaluateImportBoundariesTool(
+      root: sandbox,
+    ),
+    _ => null,
+  };
+  if (result == null) {
+    return null;
+  }
+
+  return ProcessResult(0, result.exitCode, result.stdout, result.stderr);
 }
 
 void _copyPath(String from, String to) {

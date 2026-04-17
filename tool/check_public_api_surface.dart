@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 
+import 'src/tool_command_result.dart';
+
 // Invariants enforced by this tool:
 // INV:INV-G-PUBLIC-ENTRYPOINTS
 
@@ -10,12 +12,20 @@ const String _defaultGoldenPath = '/tool/goldens/public_api_symbols.txt';
 const String _publicEntrypointUri =
     'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-Future<void> main(List<String> args) async {
+Future<ToolCommandResult> runPublicApiSurfaceTool(
+  List<String> args, {
+  Directory? root,
+}) async {
   final updateGolden = args.contains('--update');
-  final root = Directory.current;
-  final symbols = await _collectExportedSymbols(root: root);
+  final workingRoot = root ?? Directory.current;
+  late final List<String> symbols;
+  try {
+    symbols = await _collectExportedSymbols(root: workingRoot);
+  } on _PublicApiSurfaceFailure catch (error) {
+    return ToolCommandResult(exitCode: error.exitCode, stderr: error.message);
+  }
   final goldenFile = File(
-    '${root.path}${Platform.pathSeparator}tool'
+    '${workingRoot.path}${Platform.pathSeparator}tool'
     '${Platform.pathSeparator}goldens'
     '${Platform.pathSeparator}public_api_symbols.txt',
   );
@@ -23,46 +33,46 @@ Future<void> main(List<String> args) async {
   if (updateGolden) {
     goldenFile.parent.createSync(recursive: true);
     goldenFile.writeAsStringSync('${symbols.join('\n')}\n');
-    stdout.writeln(
-      'Updated ${_defaultGoldenPath.substring(1)} '
-      'with ${symbols.length} public symbols.',
+    return ToolCommandResult(
+      exitCode: 0,
+      stdout:
+          'Updated ${_defaultGoldenPath.substring(1)} '
+          'with ${symbols.length} public symbols.\n',
     );
-    return;
   }
 
   if (!goldenFile.existsSync()) {
-    stderr.writeln(
-      'FAIL: public API surface golden is missing: '
-      '${_defaultGoldenPath.substring(1)}',
+    return ToolCommandResult(
+      exitCode: 1,
+      stderr:
+          'FAIL: public API surface golden is missing: '
+          '${_defaultGoldenPath.substring(1)}\n'
+          'Run `dart run tool/check_public_api_surface.dart --update` to create it.\n',
     );
-    stderr.writeln(
-      'Run `dart run tool/check_public_api_surface.dart --update` to create it.',
-    );
-    exit(1);
   }
 
   final expected = _readGoldenSymbols(goldenFile);
   final expectedSet = expected.toSet();
   if (expected.length != expectedSet.length) {
-    stderr.writeln(
-      'FAIL: public API golden has duplicate symbol entries. '
-      'Regenerate with --update.',
+    return const ToolCommandResult(
+      exitCode: 1,
+      stderr:
+          'FAIL: public API golden has duplicate symbol entries. '
+          'Regenerate with --update.\n',
     );
-    exit(1);
   }
   final sortedExpected = expected.toList(growable: false)..sort();
   final sortedMismatchIndex = _firstMismatchIndex(expected, sortedExpected);
   if (sortedMismatchIndex != -1) {
-    stderr.writeln('FAIL: public API golden must be sorted lexicographically.');
-    stderr.writeln(
-      'First out-of-order symbol at index ${sortedMismatchIndex + 1}: '
-      '"${expected[sortedMismatchIndex]}" (expected '
-      '"${sortedExpected[sortedMismatchIndex]}").',
+    return ToolCommandResult(
+      exitCode: 1,
+      stderr:
+          'FAIL: public API golden must be sorted lexicographically.\n'
+          'First out-of-order symbol at index ${sortedMismatchIndex + 1}: '
+          '"${expected[sortedMismatchIndex]}" (expected '
+          '"${sortedExpected[sortedMismatchIndex]}").\n'
+          'Run `dart run tool/check_public_api_surface.dart --update` to regenerate.\n',
     );
-    stderr.writeln(
-      'Run `dart run tool/check_public_api_surface.dart --update` to regenerate.',
-    );
-    exit(1);
   }
 
   final actualSet = symbols.toSet();
@@ -71,42 +81,51 @@ Future<void> main(List<String> args) async {
   final removed = expectedSet.difference(actualSet).toList()..sort();
 
   if (added.isNotEmpty || removed.isNotEmpty) {
-    stderr.writeln('FAIL: public API surface changed.');
+    final stderrBuffer = StringBuffer()
+      ..writeln('FAIL: public API surface changed.');
     if (added.isNotEmpty) {
-      stderr.writeln('Added symbols (${added.length}):');
+      stderrBuffer.writeln('Added symbols (${added.length}):');
       for (final symbol in added) {
-        stderr.writeln('  + $symbol');
+        stderrBuffer.writeln('  + $symbol');
       }
     }
     if (removed.isNotEmpty) {
-      stderr.writeln('Removed symbols (${removed.length}):');
+      stderrBuffer.writeln('Removed symbols (${removed.length}):');
       for (final symbol in removed) {
-        stderr.writeln('  - $symbol');
+        stderrBuffer.writeln('  - $symbol');
       }
     }
-    stderr.writeln(
+    stderrBuffer.writeln(
       'If this is intentional, run '
       '`dart run tool/check_public_api_surface.dart --update` '
       'and commit the golden file.',
     );
-    exit(1);
+    return ToolCommandResult(exitCode: 1, stderr: stderrBuffer.toString());
   }
 
   final orderMismatchIndex = _firstMismatchIndex(expected, symbols);
   if (orderMismatchIndex != -1) {
-    stderr.writeln('FAIL: public API surface order mismatch.');
-    stderr.writeln(
-      'First mismatch at index ${orderMismatchIndex + 1}: '
-      'golden="${_symbolAt(expected, orderMismatchIndex)}", '
-      'actual="${_symbolAt(symbols, orderMismatchIndex)}".',
+    return ToolCommandResult(
+      exitCode: 1,
+      stderr:
+          'FAIL: public API surface order mismatch.\n'
+          'First mismatch at index ${orderMismatchIndex + 1}: '
+          'golden="${_symbolAt(expected, orderMismatchIndex)}", '
+          'actual="${_symbolAt(symbols, orderMismatchIndex)}".\n'
+          'Run `dart run tool/check_public_api_surface.dart --update` to regenerate.\n',
     );
-    stderr.writeln(
-      'Run `dart run tool/check_public_api_surface.dart --update` to regenerate.',
-    );
-    exit(1);
   }
 
-  stdout.writeln('Public API surface OK (${symbols.length} symbols).');
+  return ToolCommandResult(
+    exitCode: 0,
+    stdout: 'Public API surface OK (${symbols.length} symbols).\n',
+  );
+}
+
+Future<void> main(List<String> args) async {
+  final result = await runPublicApiSurfaceTool(args);
+  writeToolCommandResult(result);
+  exitCode = result.exitCode;
 }
 
 List<String> _readGoldenSymbols(File goldenFile) {
@@ -128,15 +147,16 @@ Future<List<String>> _collectExportedSymbols({required Directory root}) async {
   );
   final context = collection.contextFor(entrypointPath);
   final session = context.currentSession;
-  final result = await session.getLibraryByUri(_publicEntrypointUri);
+  final result = await session.getResolvedLibrary(entrypointPath);
 
-  if (result is! LibraryElementResult) {
-    stderr.writeln(
-      'FAIL: unable to resolve public entrypoint library by URI: '
-      '$_publicEntrypointUri '
-      '(result: ${result.runtimeType})',
+  if (result is! ResolvedLibraryResult) {
+    throw _PublicApiSurfaceFailure(
+      exitCode: 1,
+      message:
+          'FAIL: unable to resolve public entrypoint library by URI: '
+          '$_publicEntrypointUri '
+          '(result: ${result.runtimeType})\n',
     );
-    exit(1);
   }
 
   final names =
@@ -146,6 +166,16 @@ Future<List<String>> _collectExportedSymbols({required Directory root}) async {
           .toList(growable: false)
         ..sort();
   return names;
+}
+
+class _PublicApiSurfaceFailure implements Exception {
+  const _PublicApiSurfaceFailure({
+    required this.exitCode,
+    required this.message,
+  });
+
+  final int exitCode;
+  final String message;
 }
 
 int _firstMismatchIndex(List<String> left, List<String> right) {

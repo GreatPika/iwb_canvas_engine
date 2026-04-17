@@ -9,9 +9,10 @@ import 'rules/interactive/mutation_boundary_rules.dart';
 import 'rules/model/model_architecture_rules.dart';
 import 'rules/public/public_signature_rules.dart';
 import 'rules/public/public_surface_rules.dart';
+import '../tool_command_result.dart';
 
-Future<void> runGuardrailsTool() async {
-  final context = GuardrailContext.forCurrentDirectory();
+Future<ToolCommandResult> evaluateGuardrailsTool({Directory? root}) async {
+  final context = GuardrailContext.forDirectory(root ?? Directory.current);
 
   try {
     final publicSurfaceResult = await runPublicSurfaceGuardrails(
@@ -44,10 +45,17 @@ Future<void> runGuardrailsTool() async {
         await runContractArchitectureGuardrails(context: context);
     failOnFirstViolation(contractArchitectureViolations);
   } on GuardrailToolFailure catch (failure) {
-    stderr.writeln('FAIL: guardrails');
-    stderr.writeln('- ${failure.violation}');
-    exit(1);
+    return ToolCommandResult(
+      exitCode: 1,
+      stderr: 'FAIL: guardrails\n- ${failure.violation}\n',
+    );
   }
 
-  stdout.writeln('OK: guardrails');
+  return const ToolCommandResult(exitCode: 0, stdout: 'OK: guardrails\n');
+}
+
+Future<void> runGuardrailsTool({Directory? root}) async {
+  final result = await evaluateGuardrailsTool(root: root);
+  writeToolCommandResult(result);
+  exitCode = result.exitCode;
 }

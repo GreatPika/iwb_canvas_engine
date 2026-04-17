@@ -4,7 +4,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 import 'support/tool_process_test_support.dart';
 
@@ -444,7 +444,7 @@ void _writeCanonicalToolTestFile(
 @Tags(['tool'])
 library;
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('ok', () {
@@ -456,15 +456,15 @@ void main() {
 
 void _writeFakeExecutables(Directory sandbox) {
   final binDir = Directory('${sandbox.path}/bin')..createSync(recursive: true);
-  final flutter = File('${binDir.path}/flutter');
-  flutter.writeAsStringSync('''
+  final toolTestDart = File('${binDir.path}/tool_test_dart');
+  toolTestDart.writeAsStringSync('''
 #!/bin/sh
 if [ "\$1" = "test" ]; then
   echo "fake child stdout"
 fi
 exit 0
 ''');
-  Process.runSync('chmod', <String>['+x', flutter.path]);
+  Process.runSync('chmod', <String>['+x', toolTestDart.path]);
 }
 
 void _writeFailingShell(Directory sandbox) {
@@ -483,5 +483,6 @@ Map<String, String> _sandboxEnvironment(Directory sandbox) {
   final currentPath = Platform.environment['PATH'] ?? '';
   return <String, String>{
     'PATH': '${sandbox.path}/bin${Platform.isWindows ? ';' : ':'}$currentPath',
+    'IWB_TOOL_TEST_RUNNER_DART': '${sandbox.path}/bin/tool_test_dart',
   };
 }

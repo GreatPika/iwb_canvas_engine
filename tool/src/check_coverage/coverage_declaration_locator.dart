@@ -8,6 +8,9 @@ import 'package:analyzer/source/line_info.dart';
 import 'coverage_models.dart';
 
 class CoverageDeclarationLocator {
+  CoverageDeclarationLocator({String cwd = '.'}) : _cwd = cwd;
+
+  final String _cwd;
   final Map<String, _ParsedSource?> _cache = <String, _ParsedSource?>{};
 
   List<DeclarationCoverageGap> locateExecutableGaps({
@@ -152,13 +155,13 @@ class CoverageDeclarationLocator {
   }
 
   _ParsedSource? _parse(String path) {
-    final file = File(path);
+    final file = File('$_cwd${Platform.pathSeparator}$path');
     if (!file.existsSync()) {
       return null;
     }
     final content = file.readAsStringSync();
     final parsed = parseString(
-      path: path,
+      path: file.path,
       content: content,
       throwIfDiagnostics: false,
     );

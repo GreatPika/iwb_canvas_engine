@@ -47,17 +47,17 @@ Future<List<GuardrailViolation>> runPublicSignatureHermeticityGuardrails({
 Future<Map<String, Set<String>>> _loadPublicVisibleTypeOwners(
   GuardrailContext context,
 ) async {
-  final result = await context.getLibraryByUriResult(
-    'package:${context.packageName}/iwb_canvas_engine.dart',
+  final result = await context.getResolvedLibraryResult(
+    context.publicEntrypointAbsPath,
   );
-  if (result is! LibraryElementResult) {
+  if (result == null) {
     throw GuardrailToolFailure(
       GuardrailViolation(
         filePath: '/lib/iwb_canvas_engine.dart',
         line: 1,
         message:
             'tool failure: unable to resolve public entrypoint library '
-            '(result: ${result.runtimeType})',
+            '(result: null)',
       ),
     );
   }

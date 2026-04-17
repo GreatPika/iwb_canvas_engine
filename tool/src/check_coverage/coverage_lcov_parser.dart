@@ -24,7 +24,7 @@ String normalizeRepoPath(String path, String cwd) {
 }
 
 Set<String> collectLibSrcDartFiles({required String cwd}) {
-  final srcRoot = Directory('lib/src');
+  final srcRoot = Directory('$cwd${Platform.pathSeparator}lib/src');
   if (!srcRoot.existsSync()) {
     return <String>{};
   }
