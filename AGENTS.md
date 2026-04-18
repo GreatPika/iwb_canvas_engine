@@ -17,6 +17,10 @@ app UI, product workflows, or backend logic.
 - After completing a plan step, update the corresponding checkbox entries in
   `PLAN.md` and any linked step document so finished items are
   marked done in the same change.
+- If a step contract conflicts with the current code, guardrails, tests, or
+  repository-local boundary enforcement, stop implementation, report the exact
+  contradiction with file-level evidence, and resolve the contract or
+  enforcement before continuing. Do not silently reinterpret the plan.
 
 ## Documentation hygiene
 

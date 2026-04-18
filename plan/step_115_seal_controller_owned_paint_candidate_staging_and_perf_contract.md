@@ -32,7 +32,261 @@ and is enforced through repository-local performance contracts.
 - Geometry-cache, text-layout-cache, or stroke-path-cache redesign outside the
   changes required to consume the prepared paint plan.
 
-## 3. File Map and Analysis Areas
+## 3. Surrounding Code Review
+
+### Inspected Artifacts
+
+- `lib/src/interactive/internal/scene_controller_scene_view_runtime.dart` —
+  owns `captureFrameRead()` and the committed `preparePaintPlan(...)` branch;
+  this is the live entrypoint that decides between committed staging and
+  divergent snapshot fallback.
+- `lib/src/contract/scene_view_render_state.dart` — defines
+  `SceneViewFrameRead`, `ScenePreparedPaintPlan`, and the internal read-side
+  render contract; this is the existing carrier boundary for atomic render
+  inputs.
+- `lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart` —
+  current committed stage owner for ordinary candidate staging, selected
+  supplement staging, linear merge, and stage-local debug counters.
+- `lib/src/interactive/internal/scene_controller_selected_paint_order_cache.dart` —
+  current selected-order cache owner; today it still rebuilds by
+  recompute-and-compare instead of an explicit committed invalidation key.
+- `lib/src/controller/store.dart` — committed controller state owner for the
+  selection set and monotonic revision counters.
+- `lib/src/controller/committed_store_state.dart` — commit-pipeline snapshot of
+  controller-owned state applied after a successful committed write.
+- `lib/src/controller/scene_controller_commit_plan.dart` —
+  controller-owned commit planning path where committed revision changes are
+  derived from `ChangeSet`.
+- `lib/src/controller/scene_controller_commit_execution.dart` — single apply
+  path that commits planned controller-owned state into `SceneStore`.
+- `lib/src/controller/scene_store_controller.dart` — sealed controller facade
+  plus the already sealed `SceneStoreControllerSpatialAccess` helper surface;
+  this is the nearby seam that must not be widened for Slice 3.5.
+- `lib/src/controller/scene_controller_commit_debug.dart` — existing debug-only
+  seam; it proves a `debug` path exists but is the wrong production owner for
+  revision delivery.
+- `lib/src/controller/scene_controller_committed_mutation_access.dart` —
+  repository precedent for a sealed single-owner access boundary; it is valid
+  for committed mutation orchestration but is the wrong owner for committed
+  read-side revision delivery.
+- `ARCHITECTURE.md` — repository source of truth for the render admission
+  boundary, controller/read-side ownership split, and divergent snapshot
+  fallback invariants.
+- `test/render/scene_painter_frame_contract_test.dart` — behavioral coverage
+  for controller-owned render-state integration and frame-read capture.
+- `test/render/scene_painter_bounds_contract_test.dart` — structural and
+  behavioral coverage for paint-plan ownership and render-side consumption.
+- `test/controller/core/scene_controller_commit_atomicity_test.dart` —
+  behavioral coverage for commit atomicity and revision monotonicity.
+- `test/interactive/core/scene_controller_architecture_boundary_test.dart` —
+  structural test that pins render-state/stage/cache ownership and forbids
+  architecture drift in the committed paint path.
+- `tool/src/guardrails/rules/controller/write_only_mutation_rules.dart` —
+  guardrail that seals `SceneStoreControllerSpatialAccess` to its exact helper
+  surface.
+- `tool/src/guardrails/rules/controller/prepared_replace_boundary_rules.dart` —
+  guardrail that seals `SceneStoreController` public members to the allowed
+  controller facade surface.
+- `test/tool/guardrails/guardrails_controller_api_tool_test.dart` —
+  repository-owned regression coverage proving controller-layer import and
+  surface widening violations fail mechanically.
+
+### Current Entry Path
+
+- `ScenePainter` captures one `SceneViewFrameRead`, then calls
+  `SceneViewRenderState.preparePaintPlan(...)`.
+- On the committed path,
+  `SceneControllerSceneViewRenderState.preparePaintPlan(...)` delegates to
+  `SceneControllerPaintCandidateStage.prepareCommittedPaintPlan(...)`.
+- On the divergent path,
+  `SceneControllerSceneViewRenderState.preparePaintPlan(...)` falls back to
+  `enumerateSnapshotPaintCandidates(...)` against the captured frame snapshot.
+
+### Current Owner
+
+- Committed render-side orchestration lives in
+  `lib/src/interactive/internal/scene_controller_scene_view_runtime.dart`.
+- Committed candidate staging lives in
+  `lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart`.
+- Committed revision and selection-membership state live under
+  `lib/src/controller/**`.
+
+### Adjacent Abstractions
+
+- `SceneSpatialIndex` — shared committed paint-query owner for ordinary
+  candidate admission and canonical ordinary order.
+- `SceneControllerSelectedPaintOrderCache` — committed selected-order token
+  owner for supplement ordering.
+- `SceneStoreControllerSpatialAccess` — sealed helper surface for committed
+  read-side spatial queries and snapshot resolution.
+- `SceneControllerCommittedMutationAccess` — sealed committed mutation adapter
+  pattern that is adjacent in shape but not the owner of committed read-side
+  invalidation delivery.
+
+### Existing Tests
+
+- `test/render/scene_painter_frame_contract_test.dart` — proves the render
+  path consumes controller-owned paint plans and reuses one captured frame
+  read.
+- `test/render/scene_painter_bounds_contract_test.dart` — proves render-side
+  staging ownership and forbids painter-side candidate enumeration drift.
+- `test/controller/core/scene_controller_commit_atomicity_test.dart` — proves
+  committed writes stay atomic and revisions do not drift on no-op or failed
+  paths.
+- `test/core/scene_spatial_index_test.dart` — proves canonical ordinary paint
+  order now lives in `SceneSpatialIndex`.
+- `test/interactive/core/scene_controller_architecture_boundary_test.dart` —
+  proves committed staging, render-state boundaries, and selected-order cache
+  ownership are mechanically enforced.
+- `test/tool/guardrails/guardrails_controller_api_tool_test.dart` — proves
+  sealed controller-surface and sealed committed read-helper drift fail
+  mechanically.
+- `test/tool/bench_run_load_profiles_test.dart` and
+  `test/tool/bench_diff_load_profiles_test.dart` — prove benchmark taxonomy
+  and metric-schema drift fail in-repo.
+- `test/tool/verification_contract_tool_test.dart` — proves workflow-contract
+  drift for `.github/workflows/ci.yaml` and
+  `.github/workflows/perf_nightly.yaml` fails in-repo.
+
+### Analogous Implementation Path
+
+- `lib/src/contract/scene_view_render_state.dart` plus
+  `lib/src/interactive/internal/scene_controller_scene_view_runtime.dart` —
+  the repository already uses `SceneViewFrameRead` as the single atomic carrier
+  for committed render-side inputs such as `snapshot`, `selectedNodeIds`, and
+  preview resolution. Extending that existing atomic carrier is the closest
+  valid local precedent for Slice 3.5.
+
+### Governing Repository Rules
+
+- `ARCHITECTURE.md` — render read-side flows consume committed paint
+  candidates through the read-side runtime boundary and keep divergent fallback
+  snapshot-authoritative.
+- `tool/src/guardrails/rules/controller/prepared_replace_boundary_rules.dart` —
+  `SceneStoreController` public member surface is sealed and must not widen for
+  local convenience getters.
+- `tool/src/guardrails/rules/controller/write_only_mutation_rules.dart` —
+  `SceneStoreControllerSpatialAccess` helper surface is sealed to the exact
+  committed read-side helper set.
+- `test/tool/guardrails/guardrails_controller_api_tool_test.dart` — controller
+  layer must not import `scene_view_render_state.dart`, and
+  `SceneStoreController` must not implement `SceneViewRenderState`.
+- `tool/check_verification_contract.dart` and
+  `test/tool/verification_contract_tool_test.dart` — workflow ownership for
+  `.github/workflows/ci.yaml` and `.github/workflows/perf_nightly.yaml`
+  already has repository-local mechanical verification.
+
+### Rejected Misleading Local Patterns
+
+- `lib/src/controller/scene_store_controller.dart` convenience getter growth
+  outside one exact `selectionRevision` getter — wrong owner shape and
+  mechanically blocked by sealed controller-surface guardrails.
+- `SceneStoreControllerSpatialAccess` helper extension growth — wrong seam and
+  mechanically blocked by sealed helper-surface guardrails.
+- `lib/src/controller/scene_controller_commit_debug.dart` as a production read
+  path — wrong seam because `debug`-named access is test/debug-owned, not a
+  production dependency boundary.
+- `lib/src/controller/scene_controller_committed_mutation_access.dart`-style
+  secondary adapter for read-side revision delivery — wrong owner because it
+  duplicates access ownership for one committed paint path.
+- Live `selectionRevision` reads after frame capture — wrong level because
+  they can mix stale frame snapshot state with newer committed selection
+  membership and break atomicity.
+
+## 4. Architecture
+
+### 4A. Locked Architectural Form
+
+#### Problem Ownership Level
+
+- Interactive read-side orchestration boundary between committed controller
+  state and the committed render pipeline.
+
+#### Selected Architectural Form
+
+- Controller-owned committed state owns one monotonic `selectionRevision`.
+- The only permitted delivery seam from controller-owned committed state into
+  frame capture is one exact internal `SceneStoreController.selectionRevision`
+  getter on the already existing controller facade that committed render-state
+  code already depends on.
+- `SceneControllerSceneViewRenderState.captureFrameRead()` atomically captures
+  that committed `selectionRevision` from `SceneStoreController` into
+  `SceneViewFrameRead` together with
+  `snapshot`, `selectedNodeIds`, and the preview resolver.
+- `SceneControllerPaintCandidateStage` and
+  `SceneControllerSelectedPaintOrderCache` consume only the frame-captured
+  `selectionRevision` plus committed `structuralRevision` on the committed
+  paint path.
+
+#### Owning Layer or Module
+
+- State ownership lives in `lib/src/controller/**`.
+- Atomic render-side capture and committed-path consumption live in
+  `lib/src/contract/scene_view_render_state.dart` and
+  `lib/src/interactive/internal/**`.
+
+#### Dependency Direction
+
+- `controller -> contract -> interactive/internal -> render`.
+- Controller-owned state may feed the contract carrier, and interactive
+  committed staging may consume the captured carrier.
+- The committed selection-revision read path must stay on the already existing
+  `SceneControllerSceneViewRenderState -> SceneStoreController` dependency and
+  must widen that sealed controller surface only by one exact
+  `selectionRevision` getter rather than by a new helper surface, graph
+  closure chain, or secondary access owner.
+- Reverse edges are forbidden: controller code must not import
+  `scene_view_render_state.dart`, and committed render-side code must not pull
+  live revision state back through controller debug/helper/adapters after frame
+  capture.
+
+#### State and Data Ownership
+
+- `selectionRevision` lives in committed controller state and is mutated only
+  by the committed write pipeline when selection membership changes.
+- `SceneViewFrameRead` owns the per-frame captured revision value passed into
+  the committed paint path.
+- `SceneControllerSelectedPaintOrderCache` owns only ordered selected-node
+  tokens keyed by `(selectionRevision, structuralRevision)`.
+
+#### Entry and Exit Boundaries
+
+- `selectionRevision` enters the architecture at commit planning/execution
+  under `lib/src/controller/**`.
+- It exits controller-owned state only through one exact internal
+  `SceneStoreController.selectionRevision` getter and is consumed only during
+  `SceneControllerSceneViewRenderState.captureFrameRead()`.
+- The committed paint path consumes it only through
+  `SceneViewFrameRead -> SceneControllerSceneViewRenderState.preparePaintPlan(...) -> SceneControllerPaintCandidateStage.prepareCommittedPaintPlan(...)`.
+
+#### Permitted Extension Seam
+
+- The only permitted seam for Slice 3.5 is one exact internal
+  `SceneStoreController.selectionRevision` getter plus the internal
+  `SceneViewFrameRead` carrier and the committed branch of
+  `SceneControllerSceneViewRenderState.captureFrameRead()` and
+  `preparePaintPlan(...)`.
+
+#### Rejected Alternatives
+
+- Helper-extension delivery or any controller-surface growth beyond one exact
+  internal `SceneStoreController.selectionRevision` getter — rejected because
+  it expands the sealed controller/read-helper surfaces beyond the one
+  controller-owned revision read that this slice needs.
+- `debug` access or a second read adapter/access owner — rejected because it
+  either depends on a debug-named production seam or duplicates access
+  ownership for one committed paint path.
+
+#### Why This Level Is Correct
+
+- The bug is an atomicity bug in the committed render read boundary, not a
+  missing convenience seam on the controller facade.
+- Capturing `selectionRevision` into the already existing frame-read carrier
+  fixes the bug once at the correct level, preserves one committed paint owner,
+  respects repository guardrails, and avoids introducing a second read owner or
+  a production dependency on debug access.
+
+## 5. File Map
 
 ### Implementation Files
 
@@ -46,6 +300,8 @@ and is enforced through repository-local performance contracts.
 - `lib/src/controller/scene_controller_commit_runtime.dart`
 - `lib/src/controller/scene_store_controller.dart`
 - `lib/src/controller/store.dart`
+- `lib/src/interactive/scene_controller.dart`
+- `lib/src/interactive/internal/scene_controller_graph.dart`
 - `lib/src/interactive/internal/scene_controller_scene_view_runtime.dart`
 - `lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart`
 - `lib/src/interactive/internal/scene_controller_selected_paint_order_cache.dart`
@@ -55,6 +311,8 @@ and is enforced through repository-local performance contracts.
 - `tool/bench/load_profile_policy.dart`
 - `tool/bench/load_profiles_cases_test.dart`
 - `tool/bench/diff_load_profiles.dart`
+- `tool/check_verification_contract.dart`
+- `tool/src/verification_contract/**`
 - `.github/workflows/ci.yaml`
 - `.github/workflows/perf_nightly.yaml`
 - `tool/invariant_registry.dart`
@@ -74,11 +332,13 @@ and is enforced through repository-local performance contracts.
 - `test/render/scene_painter_bounds_contract_test.dart`
 - `test/render/scene_painter_test.dart`
 - `test/interactive/core/scene_controller_architecture_boundary_test.dart`
+- `test/tool/guardrails/guardrails_controller_api_tool_test.dart`
 - `test/tool/bench_run_load_profiles_test.dart`
 - `test/tool/bench_diff_load_profiles_test.dart`
+- `test/tool/verification_contract_tool_test.dart`
 - `tool/bench/load_profiles_cases_test.dart`
 
-### Fixture and Supporting Data Files
+### Fixtures and Supporting Data
 
 - `tool/invariant_registry.dart`
 - `README.md`
@@ -103,22 +363,15 @@ and is enforced through repository-local performance contracts.
 - `test/interactive/core/**`
 - `test/tool/**`
 
-### Outside the Change Boundary
-
-- Any files outside the listed zones.
-- An exception is allowed only for a targeted change without which a specific
-  slice and its verification cannot be closed.
-
-### File Change Rule
+### File Rules
 
 - Every modified implementation file must be tied to a specific slice.
 - Every new or modified test must be tied to a specific verification.
 - Every new or modified fixture must be tied to a specific verification.
-- Every newly proposed file or directory name must comply with the global
-  `AGENTS.md` section `### File naming`.
-- Untied changes are considered out of scope for the change.
+- Every proposed path must follow the global `File naming`.
+- Untied changes are out of scope.
 
-## 4. Locked Decisions
+## 6. Locked Decisions
 
 1. Committed paint-candidate staging after this step is controller-owned.
    Painter-side modules consume prepared staged data and do not own repair-sort
@@ -159,24 +412,35 @@ and is enforced through repository-local performance contracts.
     locator, or equivalent `(layerIndex, nodeIndex)` order records. It does not
     store retained cross-frame candidate lists, filtered supplement lists, or
     prepared paint plans.
-13. Slice 3.5 closes only with one controller-internal invalidation key shape:
-    committed selection-membership invalidation is owned by an internal
-    monotonic `selectionRevision` carried in committed controller state. The
+13. Slice 3.5 closes only with one invalidation-key shape for committed
+    selected-order caching: committed selection-membership invalidation is
+    owned by an internal monotonic `selectionRevision` carried in committed
+    controller state and atomically captured into `SceneViewFrameRead`. The
     selected-order cache must not infer invalidation from selected-set object
-    identity, frame-read identity, or recompute-and-compare fallback logic.
-14. `selectionRevision` remains internal to `lib/src/controller/**` and
-    `lib/src/interactive/internal/**` for this step. Slice 3.5 must not add a
-    new public package getter, a new public render-state field, or a second
+    identity, live controller reads after frame capture, frame-read identity,
+    or recompute-and-compare fallback logic.
+14. `selectionRevision` remains internal to `lib/src/controller/**`,
+    `lib/src/interactive/internal/**`, and `lib/src/contract/**` for this
+    step. Slice 3.5 must not add a new public package getter, must not route
+    production reads through a `debug` seam, and must not introduce a second
     selection-membership revision owner outside committed controller state.
-15. Slice 3.5 closes only with one delivery path for committed render-state
-    consumers: `SceneStoreController` exposes one internal
-    `selectionRevision` getter under `src/**`, and
-    `SceneControllerSceneViewRenderState` forwards that exact value to
-    `SceneControllerPaintCandidateStage`. No alternate callback seam,
-    frame-read field, controller-graph indirection, or secondary access owner
-    is allowed for `selectionRevision` delivery in this step.
+15. Slice 3.5 closes only with one production delivery form for committed
+    render-state consumers: one exact internal
+    `SceneStoreController.selectionRevision` getter is allowed on the sealed
+    controller facade, `SceneControllerSceneViewRenderState.captureFrameRead()`
+    captures that committed `selectionRevision` into `SceneViewFrameRead`, and
+    the committed branch consumes only that captured value when calling
+    `SceneControllerPaintCandidateStage`. No live post-capture read,
+    `debug`-named access, helper extension, graph/runtime callback transport,
+    or secondary adapter/access owner is allowed for `selectionRevision`
+    delivery in this step.
+16. Architecture-relevant slices close only with both behavioral and
+    structural verification. `test/interactive/core/scene_controller_architecture_boundary_test.dart`
+    is required structural verification for slices 1 through 3.5, and the
+    benchmark/tool tests plus workflow verification checks are required
+    structural verification for Slice 4.
 
-## 5. Result Requirements
+## 7. Result Requirements
 
 1. Committed scene paint frames consume one controller-owned prepared
    paint-plan object instead of constructing a defensive unmodifiable candidate
@@ -227,17 +491,17 @@ and is enforced through repository-local performance contracts.
     `SceneControllerSelectedPaintOrderCache`; changing either input rebuilds it
     exactly once.
 14. After Slice 3.5 closes, repeated committed frames with unchanged
-    `selectionRevision` and unchanged `structuralRevision` perform zero
-    selected-order-token recomputation: they do not iterate selected ids, do
-    not resolve selected order locations, and do not sort selected-order
-    tokens.
+    frame-read-captured `selectionRevision` and unchanged `structuralRevision`
+    perform zero selected-order-token recomputation: they do not iterate
+    selected ids, do not resolve selected order locations, and do not sort
+    selected-order tokens.
 15. Checked-in benchmark baselines for `smoke` and `full` intentionally match
     the finalized contract shape, required case set, required operations, and
     metric schema after Slice 4 closes.
 
-## 6. Implementation Specification
+## 8. Implementation Rules
 
-### 6.1 Analysis Scope
+### Analysis Scope
 
 - Inspect all current committed paint-path call sites of
   `enumeratePaintCandidates(...)`, `ScenePainterPaintFrame.paintCandidates`,
@@ -256,7 +520,7 @@ and is enforced through repository-local performance contracts.
   `tool/bench/baselines/load_profiles_full_baseline.json` before changing perf
   taxonomy or metric semantics.
 
-### 6.2 Target Verification Units
+### Target Verification Units
 
 - `flutter test test/controller/core/scene_controller_commit_atomicity_test.dart`
 - `flutter test test/render/scene_painter_frame_contract_test.dart`
@@ -268,15 +532,21 @@ and is enforced through repository-local performance contracts.
 - `flutter test test/interactive/core/scene_controller_architecture_boundary_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/bench_run_load_profiles_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/bench_diff_load_profiles_test.dart`
+- `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart`
+- `dart run tool/run_tool_tests.dart test/tool/verification_contract_tool_test.dart`
+- `dart run tool/check_verification_contract.dart`
 - `flutter test tool/bench/load_profiles_cases_test.dart`
 - `dart run tool/check_invariant_coverage.dart`
 - `dart run tool/run_verification_preset.dart run --preset required_code_change --changed-paths-file=<path-or->`
 
-### 6.3 Protected States, Data, or Structures
+### Protected States, Data, or Structures
 
 - `SceneViewFrameRead` remains the single atomic frame-read capture reused
   across background paint, candidate staging, preview resolution, and node
   paint.
+- `SceneViewFrameRead` becomes the only production handoff allowed to carry
+  committed `selectionRevision` from committed controller state into the
+  committed paint path.
 - `ScenePainterVisibilityBudget` remains render-local and continues to define
   `viewportRect` vs `visibilityRect` semantics.
 - Divergent active-frame fallback remains the only owner allowed to enumerate
@@ -299,7 +569,7 @@ and is enforced through repository-local performance contracts.
 - Hit-test admission remains independent from committed paint-candidate
   staging.
 
-### 6.4 Allowed Semantic Change Zones
+### Allowed Semantic Change Zones
 
 - Internal read-side paint-plan contract shape.
 - Controller-owned committed paint-candidate stage ownership.
@@ -309,26 +579,7 @@ and is enforced through repository-local performance contracts.
 - Invariant wording, architecture wording, and release-ready documentation for
   the sealed paint-staging contract.
 
-### 6.5 Recognition Forms That Must Be Supported Within This Change
-
-- ordinary committed viewport candidate;
-- selected-node supplement admitted only through `visibilityRect`;
-- divergent active-frame snapshot fallback candidate;
-- `selection_path_candidate_staging` benchmark case;
-- `selection_path_painter_only` benchmark case;
-- `selection_path_end_to_end_paint` benchmark case.
-
-### 6.6 Allowed Forms That Do Not Count as Violations
-
-- Divergent frame-snapshot enumeration may continue to linearly enumerate
-  arbitrary snapshots through `enumerateSnapshotPaintCandidates(...)`.
-- Selected-node supplements may continue to compute preview-adjusted paint
-  bounds after ordered node-location resolution.
-- Hit-test query ordering and hit-test query payload semantics may remain
-  unchanged.
-- Smoke profiles keep non-percentile latency and RSS metrics only.
-
-### 6.7 Requirements for Resolution of Links and Structural Analysis
+### Structural Enforcement
 
 - Structural tests proving Slice 1 must inspect
   `ScenePainterFrameOwner.create(...)` and reject
@@ -340,11 +591,7 @@ and is enforced through repository-local performance contracts.
   `scene_controller_scene_view_runtime.dart`, require one exact
   `SceneControllerPaintCandidateStage.prepareCommittedPaintPlan(...)` call on
   every committed-frame execution, and reject committed prepared-plan assembly
-  outside
-  `scene_controller_paint_candidate_stage.dart`.
-- Structural tests proving Slice 3 must inspect the committed staging owner and
-  reject a committed fast-path global `.sort(` on the final ordinary-plus-
-  supplement candidate sequence.
+  outside `scene_controller_paint_candidate_stage.dart`.
 - Structural tests proving Slice 2 must inspect the shared paint-query source
   and reject full-scene traversal or retained paint-entry topology caches for
   ordinary paint order. Candidate-bounded ordering of admitted spatial ids by
@@ -353,6 +600,9 @@ and is enforced through repository-local performance contracts.
   `spatial_index_cache.dart`, `scene_store_controller.dart`, and
   `scene_controller_paint_candidate_stage.dart` after
   `queryPaintCandidates(...)`.
+- Structural tests proving Slice 3 must inspect the committed staging owner and
+  reject a committed fast-path global `.sort(` on the final ordinary-plus-
+  supplement candidate sequence.
 - Structural tests proving Slice 3 must reject selected-order derivation or
   selected-supplement sorting outside
   `scene_controller_selected_paint_order_cache.dart`.
@@ -360,14 +610,21 @@ and is enforced through repository-local performance contracts.
   selected candidate lists, filtered supplement lists, or prepared plans inside
   `scene_controller_selected_paint_order_cache.dart`.
 - Structural tests proving Slice 3.5 must require one committed
-  `selectionRevision` owner in controller state and must reject selected-order
-  cache invalidation based on selected-set object identity or recompute-and-
-  compare fallback logic.
-- Structural tests proving Slice 3.5 must require the exact
-  `SceneStoreController.selectionRevision` internal getter delivery path into
-  `SceneControllerSceneViewRenderState` and `SceneControllerPaintCandidateStage`
-  and must reject alternate callback seams, frame-read delivery, or secondary
-  access owners for `selectionRevision`.
+  `selectionRevision` owner in controller state, one atomic capture into
+  `SceneViewFrameRead`, and must reject selected-order cache invalidation
+  based on selected-set object identity, live post-capture reads, or
+  recompute-and-compare fallback logic.
+- Structural tests proving Slice 3.5 must allow exactly one sealed-surface
+  expansion on `scene_store_controller.dart`: internal
+  `SceneStoreController.selectionRevision`, with guardrails/tool tests updated
+  to permit that getter and no other controller/helper growth.
+- Structural tests proving Slice 3.5 must require the exact frame-read
+  delivery path into `SceneControllerSceneViewRenderState` and
+  `SceneControllerPaintCandidateStage` and must reject `debug`-named access,
+  helper-extension delivery, graph/runtime callback transport, secondary
+  access owners, or any live `_storeController.selectionRevision` read outside
+  `SceneControllerSceneViewRenderState.captureFrameRead()` for
+  `selectionRevision`.
 - Structural tests proving Slice 3.5 must require
   `SceneControllerSelectedPaintOrderCache` fast-return when
   `selectionRevision` and `structuralRevision` are unchanged, before any
@@ -391,6 +648,9 @@ and is enforced through repository-local performance contracts.
   `selection_path_painter_only`,
   `selection_path_candidate_staging`, or
   `selection_path_end_to_end_paint`.
+- Workflow verification tests must reject moving the smoke benchmark run out of
+  `.github/workflows/ci.yaml` or moving the full benchmark run out of
+  `.github/workflows/perf_nightly.yaml`.
 - Metric-schema tests must reject publishing percentile metrics from smoke
   policy.
 - Structural tests proving the memoization boundary must reject any retained
@@ -401,7 +661,28 @@ and is enforced through repository-local performance contracts.
   `scene_controller_paint_candidate_stage.dart`, and
   `scene_controller_selected_paint_order_cache.dart`.
 
-### 6.8 Prohibited
+### Required Test Strategy
+
+- Behavioral tests must cover committed paint-plan ownership, canonical
+  ordinary ordering, ordered supplement merge, selection-invalidation
+  behavior, and benchmark-case semantics.
+- Architecture-relevant slices must run
+  `test/interactive/core/scene_controller_architecture_boundary_test.dart` as
+  structural verification for boundary drift.
+- Slice 3.5 must also run
+  `test/tool/guardrails/guardrails_controller_api_tool_test.dart` so sealed
+  controller-surface and sealed helper-surface drift are caught mechanically.
+- Benchmark and tooling slices must run the benchmark tool tests plus
+  invariant coverage plus workflow verification checks as structural
+  verification for taxonomy, metric-schema, workflow, and documentation drift.
+- Negative scenarios must be executable and must prove forbidden fallback
+  shapes fail mechanically, not just by prose review.
+- Slice order is fixed: prepared-plan ownership closes before shared ordering,
+  shared ordering closes before ordered supplement merge, ordered supplement
+  merge closes before committed selection-membership invalidation, and perf
+  tooling/docs close only after runtime slices are green.
+
+### Prohibited
 
 - Do not keep painter-side defensive candidate copying in the committed hot
   path after Slice 1 closes.
@@ -416,15 +697,13 @@ and is enforced through repository-local performance contracts.
   candidate lists, filtered supplement lists, or prepared paint plans outside
   `scene_controller_selected_paint_order_cache.dart` after Slice 3 closes.
 - Do not implement Slice 3.5 by using selected-set object identity,
-  frame-read identity, `commitRevision`, `controllerEpoch`, or
-  recompute-and-compare token rebuilding as the committed selected-order cache
-  invalidation key.
-- Do not implement Slice 3.5 by introducing a `readSelectionRevision`
-  callback, a `SceneViewFrameRead.selectionRevision` field, a controller-graph
-  forwarding seam, or any other `selectionRevision` delivery path besides the
-  exact internal `SceneStoreController.selectionRevision` getter consumed by
-  `SceneControllerSceneViewRenderState` and
-  `SceneControllerPaintCandidateStage`.
+  frame-read identity, `commitRevision`, `controllerEpoch`, live
+  post-capture controller reads, or recompute-and-compare token rebuilding as
+  the committed selected-order cache invalidation key.
+- Do not implement Slice 3.5 by widening `SceneStoreController` public or
+  sealed surface, by extending `SceneStoreControllerSpatialAccess`, by routing
+  production reads through `SceneStoreController.debug`, or by introducing a
+  secondary adapter/access owner for `selectionRevision`.
 - Do not add a second committed selection-membership revision owner outside
   controller-owned committed state.
 - Do not retain any cross-frame prepared plans, ordinary candidate sequences,
@@ -442,31 +721,32 @@ and is enforced through repository-local performance contracts.
   cache owner in this step.
 - Do not publish percentile metrics from smoke policy.
 
-## 7. Execution Rules
+### Optional: Recognition Forms That Must Be Supported
 
-1. One slice closes one new verifiable change contract.
-2. Every slice must have its own verification.
-3. A slice is considered closed only in the change where its verification
-   exists and its run is green.
-4. Preparatory changes alone do not count as a closed slice.
-5. The next slice is forbidden until the previous slice is closed.
-6. If a slice closes a failure scenario, diagnostic output confirming the
-   trigger point must be attached.
-7. If a slice changes an analysis rule, negative and positive scenarios must
-   be covered where applicable to the subject of the change.
-8. Scope expansion is forbidden until the mandatory slices are closed.
-9. The plan must be detailed enough that the implementing agent has no
-   material branch in how to execute a slice.
-10. Every newly proposed file or directory name must comply with the global
-    `AGENTS.md` section `### File naming` before the slice is considered
-    valid.
-11. Slice order is fixed: prepared-plan ownership closes before shared
-    ordering, shared ordering closes before ordered supplement merge,
-    ordered supplement merge closes before committed selection-membership
-    invalidation, and perf tooling/docs close only after the runtime slices are
-    green.
+- ordinary committed viewport candidate;
+- selected-node supplement admitted only through `visibilityRect`;
+- divergent active-frame snapshot fallback candidate;
+- `selection_path_candidate_staging` benchmark case;
+- `selection_path_painter_only` benchmark case;
+- `selection_path_end_to_end_paint` benchmark case.
 
-## 8. Vertical Slices
+### Optional: Allowed Forms That Are Not Violations
+
+- Divergent frame-snapshot enumeration may continue to linearly enumerate
+  arbitrary snapshots through `enumerateSnapshotPaintCandidates(...)`.
+- Selected-node supplements may continue to compute preview-adjusted paint
+  bounds after ordered node-location resolution.
+- Hit-test query ordering and hit-test query payload semantics may remain
+  unchanged.
+- Smoke profiles keep non-percentile latency and RSS metrics only.
+
+## 9. Vertical Slices
+
+Rules:
+- one slice closes one new verifiable result;
+- every slice must have behavioral verification;
+- every architecture-relevant slice must have structural verification;
+- preparatory edits alone do not close a slice.
 
 ### Slice 1. [x] Establish the controller-owned prepared paint-plan boundary
 
@@ -503,11 +783,14 @@ painter-side modules stop owning defensive candidate packaging.
 - Keep the Slice 1 committed stage allowed to use the current repair-order
   strategy so this slice changes ownership and copy behavior only.
 
-#### Verification
+#### Behavioral Verification
 
 - `flutter test test/render/scene_painter_frame_contract_test.dart`
 - `flutter test test/render/scene_painter_bounds_contract_test.dart`
 - `flutter test test/render/scene_painter_test.dart`
+
+#### Structural Verification
+
 - `flutter test test/interactive/core/scene_controller_architecture_boundary_test.dart`
 
 #### Positive Scenarios
@@ -576,11 +859,14 @@ queries.
   `SceneControllerPaintCandidateStage` must not repair-sort, re-bucket, or
   reorder ordinary committed query results after `queryPaintCandidates(...)`.
 
-#### Verification
+#### Behavioral Verification
 
 - `flutter test test/core/scene_spatial_index_test.dart`
 - `flutter test test/controller/internal/spatial_index_cache_test.dart`
 - `flutter test test/controller/core/scene_controller_spatial_candidate_resolution_test.dart`
+
+#### Structural Verification
+
 - `flutter test test/interactive/core/scene_controller_architecture_boundary_test.dart`
 
 #### Positive Scenarios
@@ -653,10 +939,13 @@ repair sort.
   node-location order do not rebuild the selected-order cache, while changing
   either input rebuilds it exactly once.
 
-#### Verification
+#### Behavioral Verification
 
 - `flutter test test/render/scene_painter_frame_contract_test.dart`
 - `flutter test test/render/scene_painter_bounds_contract_test.dart`
+
+#### Structural Verification
+
 - `flutter test test/interactive/core/scene_controller_architecture_boundary_test.dart`
 
 #### Positive Scenarios
@@ -692,13 +981,14 @@ repair sort.
   selected-order cache and that each invalidating change rebuilds it exactly
   once.
 
-### Slice 3.5. [ ] Seal committed selected-order invalidation on internal selectionRevision
+### Slice 3.5. [ ] Seal committed selected-order invalidation on atomically captured selectionRevision
 
 #### Slice Contract
 
 Committed selected-order caching is invalidated only by one controller-owned
-committed `selectionRevision` plus committed `structuralRevision`, and stable
-committed frames perform zero selected-order recomputation work.
+committed `selectionRevision` plus committed `structuralRevision`, with
+`selectionRevision` captured atomically inside `SceneViewFrameRead`, and
+stable committed frames perform zero selected-order recomputation work.
 
 #### Change
 
@@ -707,14 +997,31 @@ committed frames perform zero selected-order recomputation work.
 - Thread that exact `selectionRevision` through
   `lib/src/controller/committed_store_state.dart`,
   `lib/src/controller/scene_controller_commit_plan.dart`,
-  `lib/src/controller/scene_controller_commit_execution.dart`, and
-  `lib/src/controller/scene_store_controller.dart` as controller-owned
-  committed state only.
-- Expose `selectionRevision` to committed render-state consumers only through
-  one internal getter on `SceneStoreController` under `src/**`.
-- `SceneControllerSceneViewRenderState` must read that exact internal
-  `SceneStoreController.selectionRevision` getter on the committed branch and
-  pass it directly to `SceneControllerPaintCandidateStage`.
+  and `lib/src/controller/scene_controller_commit_execution.dart` as
+  controller-owned committed state only.
+- Add one exact internal `selectionRevision` getter to
+  `lib/src/controller/scene_store_controller.dart`. This is the only allowed
+  sealed-surface expansion for Slice 3.5.
+- Update
+  `tool/src/guardrails/rules/controller/prepared_replace_boundary_rules.dart`
+  and `test/tool/guardrails/guardrails_controller_api_tool_test.dart` so that
+  exact getter is allowed and any other `SceneStoreController` or
+  `SceneStoreControllerSpatialAccess` growth still fails mechanically.
+- Extend `SceneViewFrameRead` in
+  `lib/src/contract/scene_view_render_state.dart` with one internal
+  `selectionRevision` field so committed frame capture keeps selection
+  membership invalidation atomic with `snapshot`, `selectedNodeIds`, and the
+  preview resolver.
+- `SceneControllerSceneViewRenderState.captureFrameRead()` in
+  `lib/src/interactive/internal/scene_controller_scene_view_runtime.dart`
+  must be the only production boundary allowed to capture committed
+  `selectionRevision`, and it must capture that value from
+  `SceneStoreController.selectionRevision` in the same frame-read object as
+  `snapshot` and `selectedNodeIds`.
+- `SceneControllerSceneViewRenderState.preparePaintPlan(...)` and
+  `SceneControllerPaintCandidateStage.prepareCommittedPaintPlan(...)` must use
+  only `frameRead.selectionRevision` on the committed branch. They must not
+  read a live `selectionRevision` after frame capture.
 - Increment `selectionRevision` exactly when committed selection membership
   changes. It must not change for bounds-only, visual-only, structural-only,
   signal-only, repaint-only, no-op, rollback, or failed-write paths unless
@@ -730,25 +1037,27 @@ committed frames perform zero selected-order recomputation work.
 - `SceneControllerSelectedPaintOrderCache` must rebuild ordered selected tokens
   exactly once when `selectionRevision` changes and exactly once when
   `structuralRevision` changes while `selectionRevision` is stable.
-- `SceneControllerPaintCandidateStage` and
-  `SceneControllerSceneViewRenderState` must consume the controller-owned
-  `selectionRevision` signal only through committed controller state wiring.
-  They must not infer invalidation from selected-set object identity,
-  `SceneViewFrameRead` identity, `commitRevision`, `controllerEpoch`, or
-  recompute-and-compare behavior, and they must not introduce any alternate
-  delivery seam for `selectionRevision`.
+- Slice 3.5 must not widen the sealed `SceneStoreController` surface beyond
+  that one exact `selectionRevision` getter, must not extend
+  `SceneStoreControllerSpatialAccess`, must not route production reads through
+  `SceneStoreController.debug`, and must not introduce a secondary
+  adapter/access owner for `selectionRevision`.
 - Add deterministic test-only debug counters that separately prove cache
   rebuilds and stable fast-return hits.
 - Slice 3.5 must not widen the public package surface. No new public getter,
-  public render-state field, or public API contract is allowed for
+  public API contract, or public `SceneViewRenderState` member is allowed for
   `selectionRevision` in this step.
 
-#### Verification
+#### Behavioral Verification
 
 - `flutter test test/controller/core/scene_controller_commit_atomicity_test.dart`
 - `flutter test test/render/scene_painter_frame_contract_test.dart`
 - `flutter test test/render/scene_painter_bounds_contract_test.dart`
+
+#### Structural Verification
+
 - `flutter test test/interactive/core/scene_controller_architecture_boundary_test.dart`
+- `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart`
 
 #### Positive Scenarios
 
@@ -768,9 +1077,13 @@ committed frames perform zero selected-order recomputation work.
   recompute-and-compare logic.
 - Stable committed frames must not call the selected-order location resolver.
 - The selected-order cache must not use selected-set object identity,
-  frame-read identity, `commitRevision`, or `controllerEpoch` as an
+  frame-read identity, `commitRevision`, `controllerEpoch`, or live
+  post-capture controller reads as an
   invalidation key.
-- `selectionRevision` must not leak into the public package surface.
+- `selectionRevision` must not leak into the public package surface, a
+  `debug`-named production path, `SceneStoreControllerSpatialAccess`, or any
+  widened `SceneStoreController` API surface beyond the one exact sanctioned
+  getter.
 
 #### Closure Evidence
 
@@ -781,9 +1094,13 @@ committed frames perform zero selected-order recomputation work.
 - Counter-backed assertions proving stable committed frames hit selected-order
   cache fast-return without selected-id iteration, order resolution, or token
   sorting.
-- Structural assertions proving `selectionRevision` stays controller-internal
-  and selected-order invalidation does not fall back to identity heuristics or
-  recompute-and-compare logic.
+- Structural assertions proving `selectionRevision` stays controller-owned,
+  is delivered to the committed paint path only through the
+  exact `SceneStoreController.selectionRevision` getter plus
+  `SceneViewFrameRead`, with no live `_storeController.selectionRevision` read
+  outside `captureFrameRead()`, and
+  selected-order invalidation does not fall back to identity heuristics,
+  post-capture live reads, or recompute-and-compare logic.
 
 ### Slice 4. [ ] Seal the performance contract, benchmark taxonomy, and release documentation
 
@@ -835,6 +1152,12 @@ misleading percentile metrics.
 - Update `test/tool/bench_run_load_profiles_test.dart` and
   `test/tool/bench_diff_load_profiles_test.dart` so benchmark taxonomy and
   metric-schema drift fail in-repo.
+- Update `tool/check_verification_contract.dart`,
+  `tool/src/verification_contract/**`, and
+  `test/tool/verification_contract_tool_test.dart` so workflow verification
+  also rejects moving the smoke benchmark run out of
+  `.github/workflows/ci.yaml` or moving the full benchmark run out of
+  `.github/workflows/perf_nightly.yaml`.
 - Keep `.github/workflows/ci.yaml` as the smoke-profile PR perf gate and keep
   `.github/workflows/perf_nightly.yaml` as the full-profile schedule/manual
   perf gate. If workflow edits are required, they must preserve that exact
@@ -843,11 +1166,16 @@ misleading percentile metrics.
   `ARCHITECTURE.md`, `CHANGELOG.md`, this step document, and `PLAN.md` only
   after slices 1 through 3.5 are closed.
 
-#### Verification
+#### Behavioral Verification
+
+- `flutter test tool/bench/load_profiles_cases_test.dart`
+
+#### Structural Verification
 
 - `dart run tool/run_tool_tests.dart test/tool/bench_run_load_profiles_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/bench_diff_load_profiles_test.dart`
-- `flutter test tool/bench/load_profiles_cases_test.dart`
+- `dart run tool/run_tool_tests.dart test/tool/verification_contract_tool_test.dart`
+- `dart run tool/check_verification_contract.dart`
 - `dart run tool/check_invariant_coverage.dart`
 
 #### Positive Scenarios
@@ -891,12 +1219,15 @@ misleading percentile metrics.
   wiring drift are rejected in-repo.
 - Tool-test diagnostics proving required case-set or diff-surface omissions are
   rejected in-repo, including omitted or renamed required operations.
+- Workflow-verification diagnostics proving the smoke benchmark remains on
+  `.github/workflows/ci.yaml` and the full benchmark remains on
+  `.github/workflows/perf_nightly.yaml`.
 - Updated or explicitly revalidated
   `tool/bench/baselines/load_profiles_smoke_baseline.json` and
   `tool/bench/baselines/load_profiles_full_baseline.json`, plus a short
   before/after summary of the finalized required-case metrics they encode.
 
-## 9. Final Verification
+## 10. Final Verification
 
 - `flutter test test/controller/core/scene_controller_commit_atomicity_test.dart`
 - `flutter test test/render/scene_painter_frame_contract_test.dart`
@@ -908,14 +1239,21 @@ misleading percentile metrics.
 - `flutter test test/interactive/core/scene_controller_architecture_boundary_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/bench_run_load_profiles_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/bench_diff_load_profiles_test.dart`
+- `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart`
+- `dart run tool/run_tool_tests.dart test/tool/verification_contract_tool_test.dart`
+- `dart run tool/check_verification_contract.dart`
 - `flutter test tool/bench/load_profiles_cases_test.dart`
 - `dart run tool/check_invariant_coverage.dart`
 - `dart run tool/run_verification_preset.dart run --preset required_code_change --changed-paths-file=<path-or->`
 
-## 10. Acceptance Criteria
+## 11. Acceptance Criteria
 
+- The change mandate is satisfied.
+- The surrounding code review records actual repository evidence.
+- The architectural form is explicit, justified, and locked at the correct
+  level.
+- No material architectural choice remains to the implementing agent.
 - Result requirements are satisfied.
-- Implementation specification is satisfied.
-- Execution rules are satisfied.
+- Implementation rules are satisfied.
 - Mandatory slices are closed.
 - Final verification has passed.
