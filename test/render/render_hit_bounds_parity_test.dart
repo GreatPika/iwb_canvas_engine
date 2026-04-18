@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/src/core/hit_test.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
+import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 
 // INV:INV-ENG-RENDER-HIT-BOUNDS-PARITY
 
@@ -16,7 +17,119 @@ void _expectRectClose(Rect actual, Rect expected, {double epsilon = 1e-9}) {
   expect((actual.bottom - expected.bottom).abs(), lessThanOrEqualTo(epsilon));
 }
 
+void _expectTextParity(TextNodeSnapshot snapshot) {
+  final cache = RenderGeometryCache();
+  final renderBounds = cache
+      .get(
+        snapshot,
+        resolvedTextLayout: TextLayoutRequest.forRenderSnapshot(
+          snapshot,
+        ).resolve(),
+      )
+      .worldBounds;
+
+  final coreNode = TextNode(
+    id: snapshot.id,
+    text: snapshot.text,
+    fontSize: snapshot.fontSize,
+    color: snapshot.color,
+    align: snapshot.align,
+    textDirection: snapshot.textDirection,
+    isBold: snapshot.isBold,
+    isItalic: snapshot.isItalic,
+    isUnderline: snapshot.isUnderline,
+    fontFamily: snapshot.fontFamily,
+    maxWidth: snapshot.maxWidth,
+    lineHeight: snapshot.lineHeight,
+    hitPadding: snapshot.hitPadding,
+    transform: snapshot.transform,
+    opacity: snapshot.opacity,
+    isVisible: snapshot.isVisible,
+    isSelectable: snapshot.isSelectable,
+    isLocked: snapshot.isLocked,
+    isDeletable: snapshot.isDeletable,
+    isTransformable: snapshot.isTransformable,
+  );
+
+  expect(
+    () => _expectRectClose(coreNode.boundsWorld, renderBounds),
+    returnsNormally,
+  );
+  expect(
+    () => _expectRectClose(
+      nodeHitTestCandidateBoundsWorld(coreNode),
+      renderBounds.inflate(snapshot.hitPadding + kHitSlop),
+    ),
+    returnsNormally,
+  );
+  expect(
+    () => _expectRectClose(
+      nodeSnapshotHitTestCandidateBoundsWorld(snapshot),
+      renderBounds.inflate(snapshot.hitPadding + kHitSlop),
+    ),
+    returnsNormally,
+  );
+}
+
 void main() {
+  test(
+    'text hit candidate bounds are derived from the same render worldBounds',
+    () {
+      expect(
+        () => _expectTextParity(
+          TextNodeSnapshot(
+            id: 'text-parity-basic',
+            text: 'Parity text',
+            fontSize: 18,
+            color: const Color(0xFF000000),
+            textDirection: TextDirection.ltr,
+            hitPadding: 2,
+            transform: const Transform2D(
+              a: 1.1,
+              b: 0.15,
+              c: 0.05,
+              d: 0.9,
+              tx: 32,
+              ty: 18,
+            ),
+          ),
+        ),
+        returnsNormally,
+      );
+    },
+  );
+
+  test(
+    'multiline text hit candidate bounds stay aligned with render geometry',
+    () {
+      expect(
+        () => _expectTextParity(
+          TextNodeSnapshot(
+            id: 'text-parity-wrapped',
+            text: 'שלום world\nwrapped text sample',
+            fontSize: 22,
+            color: const Color(0xFF1A237E),
+            align: TextAlign.right,
+            textDirection: TextDirection.rtl,
+            isBold: true,
+            maxWidth: 96,
+            lineHeight: 30,
+            hitPadding: 3.5,
+            transform: const Transform2D(
+              a: 0.95,
+              b: 0.1,
+              c: -0.08,
+              d: 1.05,
+              tx: -24,
+              ty: 44,
+            ),
+          ),
+        ),
+        returnsNormally,
+      );
+    },
+  );
+
   test(
     'rect hit candidate bounds are derived from the same render worldBounds',
     () {
