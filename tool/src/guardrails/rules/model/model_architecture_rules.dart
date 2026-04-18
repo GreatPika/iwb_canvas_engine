@@ -54,7 +54,7 @@ const Set<String> _restrictedModelOwnerModules = <String>{
   '/lib/src/model/scene_value_validation_palette_grid.dart',
   '/lib/src/model/scene_value_validation_primitives.dart',
   '/lib/src/model/scene_value_validation_support.dart',
-  '/lib/src/model/scene_value_validation_top_level.dart',
+  '/lib/src/model/scene_value_validation_scene.dart',
 };
 
 const Set<String> _guardedRuntimeNodeOwnerFiles = <String>{

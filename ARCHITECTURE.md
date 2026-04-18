@@ -1,807 +1,238 @@
 # Architecture Overview
 
-This document describes the current mainline architecture of
-`iwb_canvas_engine`. It focuses on system shape, data flow, invariants, and the
-constraints that keep the public API stable.
-
-## Goals
-
-- Keep scene state in one place.
-- Expose stable public contracts around immutable snapshots and safe writes.
-- Separate product UI concerns from engine/runtime concerns.
+This document describes the current checked-in architecture of
+`iwb_canvas_engine` using only repository-backed facts: public exports,
+current source layout, executable interfaces, and repository-local
+enforcement.
 
 ## System boundary
 
-- Public entrypoint: `package:iwb_canvas_engine/iwb_canvas_engine.dart`
-- Supported public surface: exactly the exports declared by
-  `lib/iwb_canvas_engine.dart`
-- Current serialization contract: write `schemaVersion = 7`, read `{7}`
-- Public interactive runtime root: `SceneController`
-- Public interactive widget: `SceneView`
-- Public write boundary: `SceneWriteTxn`
+- Supported public entrypoint:
+  `package:iwb_canvas_engine/iwb_canvas_engine.dart`
+- Supported public surface:
+  exactly the symbols exported from `lib/iwb_canvas_engine.dart`
+- Current JSON contract:
+  write `schemaVersion = 7`, read `{7}`
+- Public interactive runtime root:
+  `SceneController`
+- Public interactive widget:
+  `SceneView` / `SceneViewInteractive`
+- Public non-controller import boundary:
+  `SceneBuilder`
+- Public write boundary:
+  `SceneWriteTxn`
 
-The package is an engine. It does not own app UI, persistence, collaboration, or
-undo/redo policy.
+The package owns scene modeling, rendering, input handling, and JSON
+serialization. It does not own app UI, persistence, sync, backend logic, or
+product workflows.
 
-## Render admission boundary
+## Public surface
 
-Rendering and hit-testing share scene ownership but do not share one neutral
-spatial-admission contract.
+`lib/iwb_canvas_engine.dart` currently exports:
 
-- `SceneSpatialIndex` owns content-layer coarse lookup and stores separate
-  hit-test bounds and paint bounds for the same committed node location.
-  Paint admission includes committed `backgroundLayer` nodes on the shared
-  paint path; hit-test admission remains content-only.
-- Interactive read-side flows consume hit-test candidates and resolve snapshot
-  data by sealed location only.
-- Render read-side flows consume paint candidates that carry paint bounds only.
-  `ScenePainterNodeRenderer` must cull by those paint bounds before geometry or
-  text-layout resolution.
-- Controller paint query helpers and paired snapshot resolution form one closed
-  committed read surface: if the committed paint query returns a candidate
-  shape, `resolveSpatialCandidateSnapshot(...)` must resolve that current
-  candidate or reject it as stale/out-of-range.
-- Controller-backed paint enumeration stays owned by
-  `SceneControllerSceneViewRenderState`. It merges viewport-first ordinary
-  candidates with selected-node supplements while preserving original
-  background/content order and deduplicating each node once per frame.
-- Selected-node supplement order is cached only by committed
-  `(selectionRevision, structuralRevision)`. `selectionRevision` remains
-  controller-owned state, is captured atomically into `SceneViewFrameRead`,
-  and is not read live again on the committed render path.
-- If the active frame snapshot diverges from the committed controller snapshot,
-  the render path falls back to active-frame candidate enumeration instead of
-  mixing committed and frame-local sources.
+- contract types for snapshots, specs, patches, patch fields, transforms,
+  pointer input, validated values, render-state reads, and transactional
+  writes
+- `SceneBuilder`
+- `SceneController`, `SceneControllerInteraction`,
+  `SceneControllerSelection`, and `SceneControllerScene`
+- `SceneView` / `SceneViewInteractive`
+- scene JSON codec entrypoints:
+  `decodeScene`, `decodeSceneFromJson`, `encodeScene`, `encodeSceneToJson`,
+  `schemaVersionWrite`, and `schemaVersionsRead`
+- action event types:
+  `ActionCommitted`, `ActionCommittedDelta`, `ActionType`,
+  and `EditTextRequested`
 
-## Module layout
+Imports from `package:iwb_canvas_engine/src/**` are internal package details,
+not a supported integration contract.
+
+## Repository layout
 
 Current repository layout:
 
 ```text
 lib/
-  iwb_canvas_engine.dart
+  iwb_canvas_engine.dart          // public exports for the package API
   src/
-    contract/       // stable API contracts and contract-facing value types
-      validated/    // boundary value objects and id/revision parsing rules
-    core/           // primitives, defaults, math, event types
-    controller/     // committed store, command execution, transactional writes
-    interactive/    // public controller facade and gesture orchestration
-    model/          // conversions between internal document and public snapshot
-    render/         // painter and render-cache implementations
-    serialization/  // JSON codec and validation boundary
-    view/           // Flutter widget that wires input + painting
+    contract/                     // snapshot/spec/patch, pointer, transform, render-state contracts
+      internal/                   // non-exported contract helpers used from src/**
+      validated/                  // validated value types re-exported via validated.dart
+    controller/                   // SceneStoreController, commit runtime, scene writer, mutation appliers
+      commands/                   // draw/move/scene command entrypoints
+      internal/                   // controller support files not exported from the package barrel
+    core/                         // Scene, SceneNode, geometry, hit-test, spatial index, text layout
+    interactive/                  // SceneController and public capability-owner surfaces
+      internal/                   // interactive runtime, gesture, draw, selection, pointer-session files
+    model/                        // SceneBuilder, document mutations, import draft, snapshot mapping
+    render/                       // ScenePainter and render pipeline owners
+      cache/                      // scene text/path/static-layer cache files
+    serialization/                // scene_codec.dart and codec guards
+    view/                         // SceneViewInteractive, runtime host, render surface, pointer host/router
 ```
 
-Repository tooling layout relevant to verification:
+Repository tooling layout relevant to enforcement and verification:
 
 ```text
 tool/
-  check_coverage.dart              // CLI orchestration and exit-code ownership
-  run_temp_pkg_test.dart           // temporary package repro runner
-  src/check_coverage/              // LCOV parsing, declaration clustering,
-                                   // test-target resolution, machine report
-  src/temp_pkg_test/               // temp package assembly and CLI parsing
+  analysis/                       // analysis scripts such as find_similar_clones.dart
+    src/                          // support files for tool/analysis/**
+  bench/                          // benchmark runners, policies, baselines, and benchmark tests
+    baselines/                    // checked-in benchmark baseline JSON
+  check_coverage.dart             // coverage checker entrypoint
+  check_guardrails.dart           // guardrail runner entrypoint
+  check_import_boundaries.dart    // import-boundary checker entrypoint
+  check_invariant_coverage.dart   // invariant coverage checker entrypoint
+  check_public_api_surface.dart   // public API surface checker entrypoint
+  check_verification_contract.dart // AGENTS/CI verification contract checker entrypoint
+  goldens/                        // golden files used by tool checks
+  invariant_registry.dart         // invariant registry consumed by tooling
+  run_temp_pkg_test.dart          // temporary package test runner entrypoint
+  run_tool_tests.dart             // tool test runner entrypoint
+  run_verification_preset.dart    // verification preset resolve/run entrypoint
+  src/
+    check_coverage/               // coverage parser/report support
+    guardrails/                   // guardrail runner implementation
+      core/                       // shared guardrail infrastructure
+      rules/                      // guardrail rule sets
+      support/                    // guardrail support code
+    import_boundaries/            // import-boundary implementation
+    temp_pkg_test/                // temp package runner support
+    verification_contract/        // verification registry, resolver, runner, report models
+  windows/                        // Windows installer script for the example app
 ```
 
-`tool/check_coverage.dart` remains the single top-level coverage gate
-entrypoint. Machine-first coverage triage logic now lives under
-`tool/src/check_coverage/**` so LCOV parsing, analyzer-based declaration
-location, test-target resolution, and machine report assembly do not collapse
-back into one mixed-responsibility CLI file.
+## Runtime components
 
-`tool/run_temp_pkg_test.dart` is the canonical repro entrypoint when a runtime
-or listener contract needs a clean package boundary. It owns deterministic
-temporary Flutter package assembly so ad hoc `/tmp` directory creation and
-manual import/path wiring do not become a second undocumented workflow.
+The current runtime boundary is split across these checked-in interfaces and
+implementations:
 
-## Layer ownership note (ADR)
+- `SceneController` is the public interactive facade.
+  It owns a `SceneStoreController`, exposes `snapshot`, `selectedNodeIds`,
+  `controllerEpoch`, capability owners (`interaction`, `selection`, `scene`),
+  and host-facing streams (`actions`, `editTextRequests`).
+- `SceneStoreController` implements `SceneRenderState`.
+  It owns the committed store, transactional writes, committed snapshot
+  materialization, committed selected ids, and committed spatial query helpers
+  such as `queryHitTestCandidates(...)`, `queryPaintCandidates(...)`,
+  `resolveSpatialCandidateSnapshot(...)`, and `resolveSnapshotNodeById(...)`.
+- `SceneViewRuntime` is the view/runtime seam.
+  It exposes a `SceneViewRenderState` plus `createPointerSession(...)`.
+- `SceneViewRenderState` extends `SceneRenderState`.
+  It exposes `captureFrameRead()`, `preparePaintPlan(...)`,
+  overlay repaint listenable, selection rectangle, preview delta reads, and
+  active line/stroke preview reads.
+- `SceneControllerSceneViewRuntime` is the checked-in bridge from
+  `SceneController` to `SceneViewRuntime`.
+  Its render-state implementation is
+  `SceneControllerSceneViewRenderState`.
+- `ScenePainter` is the scene painter.
+  It is a `CustomPainter` that repaints from a `SceneViewRenderState` and
+  paints from one captured `SceneViewFrameRead`.
+- `SceneBuilder` is the checked-in non-controller import boundary.
+  It exposes `buildFromSnapshot(...)` and `buildFromJson(...)`.
+- `scene_codec.dart` is the checked-in public JSON boundary.
+  It exposes `decodeScene`, `decodeSceneFromJson`, `encodeScene`,
+  `encodeSceneToJson`, plus internal document codec helpers that are not
+  exported from the package barrel.
 
-- Public API is defined only by exports from
-  `lib/iwb_canvas_engine.dart`.
-- `src/**` remains internal package structure rather than a supported external
-  import contract.
-- `src/contract/validated.dart` is part of the supported public API because it
-  is exported by the package barrel; no separate compat or advanced entrypoint
-  exists for it.
-- `contract/` is the low-level layer for stable API contracts and
-  shared contract-facing value types.
-- `contract/pointer_input.dart` owns routed pointer boundary value types
-  (`PointerPhase`, `PointerSample`, `PointerInputSettings`) and pointer
-  settings validation; `core/` consumes that boundary instead of owning a
-  second copy.
-- `contract/validated/**` is the single contract-facing home for boundary value
-  parsing/generation rules; `model/` and `serialization/` consume it rather
-  than re-owning those rules independently.
-- The `lib/src` dependency graph is explicit and acyclic.
+## Runtime flow
 
-Current dependency DAG:
+The checked-in runtime flow is:
 
-- `contract -> none`
-- `core -> contract`
-- `model -> core + contract`
-- `serialization -> model + core + contract`
-- `controller -> model + core + contract`
-- `interactive -> controller + model + core + contract`
-- `render -> model + core + contract`
-- `view -> interactive + controller + render + model + core + contract`
+1. `SceneViewInteractive` adapts a `SceneController` into a
+   `SceneViewRuntimeHost` by calling `sceneControllerViewRuntimeOf(controller)`.
+2. `SceneViewRuntimeHost` owns the mounted runtime instance, installs a
+   `SceneViewPointerSession`, routes raw Flutter pointer events through
+   `SceneViewInteractivePointerHost`, and renders:
+   - `SceneViewInteractiveOverlayPainter` as `foregroundPainter`
+   - `SceneViewRenderSurface` as the scene paint surface
+3. `SceneViewRenderSurface` consumes `SceneViewRenderState`.
+   `ScenePainter` also consumes `SceneViewRenderState`.
+4. `SceneControllerSceneViewRenderState.captureFrameRead()` captures one atomic
+   `SceneViewFrameRead` containing:
+   - `snapshot`
+   - `selectedNodeIds`
+   - `selectionRevision`
+   - `previewDeltaResolver`
+5. `SceneControllerSceneViewRenderState.preparePaintPlan(...)` chooses between:
+   - committed candidate staging from `SceneStoreController` when the captured
+     frame snapshot is identical to the committed store snapshot
+   - snapshot-local candidate enumeration when the captured frame snapshot is
+     not identical to the committed store snapshot
+6. `ScenePainter` paints from the captured frame read and the prepared paint
+   plan. It does not read a second snapshot for the same frame.
 
-Ownership decisions for the target state:
+## Serialization and import boundaries
 
-- `SceneBuilder` is not part of `contract/`; it belongs to `model/`.
-- Parsed-map normalization for `SceneBuilder.buildFromJson(...)` stays in the
-  `model/` layer via a model-local guard; `model/` must not import
-  `serialization/` to reuse transport wrappers.
-- `SceneBuilder` is a thin model-local import facade: orchestration remains in
-  `model/scene_builder.dart`, parsed-map require/decode ownership lives in
-  explicit `model/scene_builder_json_require.dart`,
-  `model/scene_builder_decode_json.dart`,
-  `model/scene_builder_decode_scene.dart`,
-  `model/scene_builder_decode_scene_metadata.dart`,
-  `model/scene_builder_decode_layers.dart`,
-  `model/scene_builder_decode_node_common.dart`,
-  `model/scene_builder_decode_node_family.dart`, and family-local decode
-  owners, and shared typed-snapshot adapters/runtime import live in
-  `model/scene_import_draft_from_snapshot.dart`,
-  `model/scene_from_import_draft.dart`, and
-  `model/scene_from_snapshot.dart`.
-- `document.dart` remains the downstream transaction facade, but it consumes
-  focused model-local owners for locator, scene-edit, patch, and
-  selection/grid work, and it consumes `scene_from_snapshot.dart` and
-  `scene_snapshot_from_scene.dart` directly for runtime import/export instead
-  of depending on `scene_builder.dart`.
-- `Transform2D` is part of the supported contract language and lives in
-  `contract/` as a contract-facing value type; its file move does not change
-  the public symbol name.
-- `PathFillRule` is part of the supported contract language and lives in
-  `contract/path_fill_rule.dart`; `core/nodes.dart` is a consumer rather than
-  the long-term owner of that enum.
-- `contract/transform_tolerance.dart` is the single internal source of truth
-  for the near-singular 2x2 criterion used by `contract/transform2d.dart` and
-  downstream `core/` consumers; `contract/` must not import
-  `core/numeric_tolerance.dart`.
-- Runtime orchestration and owner-specific facades do not move into
-  `contract/`.
-- `contract/` is low-level but not pure Dart: contract types intentionally use
-  `dart:ui`, and `SceneRenderState` depends on Flutter `Listenable`.
+Current checked-in boundaries are:
 
-## Contract owner graph
+- `SceneBuilder.buildFromSnapshot(...)`:
+  typed snapshot validation and canonicalization
+- `SceneBuilder.buildFromJson(...)`:
+  parsed-map validation and canonicalization
+- `decodeSceneFromJson(...)`:
+  string JSON boundary
+- `decodeScene(...)`:
+  parsed-map decode boundary
+- `encodeScene(...)`:
+  snapshot-to-map boundary
+- `encodeSceneToJson(...)`:
+  snapshot-to-string boundary
 
-- The final `contract` layer is fully part-free. Structural closure is pinned
-  mechanically by `tool/check_guardrails.dart` and
-  `INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY`; `part` / `part of` must not return
-  anywhere under `lib/src/contract/**`.
-- `contract/node_patch.dart`, `contract/node_spec.dart`, and
-  `contract/snapshot.dart` remain the public immutable boundary owners and keep
-  validation at the public constructor boundary.
-- Exported public contract and runtime signatures must not expose mutable core
-  model owners or mutable controller/runtime owners directly; the supported
-  public API stays on immutable boundary types and explicit facade contracts.
-  This contract is pinned by `INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES`.
-- `contract/node_spec.dart` and `contract/node_patch.dart` are thin public
-  wrappers over immutable internal backing graphs. Trusted spec/patch storage
-  and public wrapper materialization no longer live inside the public files.
-- `contract/snapshot.dart` is part-free and stays the only supported public
-  snapshot surface, but scene/layer/palette/node snapshots are now thin public
-  wrappers over immutable internal backing objects rather than owners of
-  trusted field assembly.
-- `contract/internal/node_boundary_schema.dart` is the canonical internal
-  schema import surface, but it is barrel-only.
-- `contract/runtime_node_value_validation.dart` is the allowed runtime-owner
-  import surface for constrained node write validation under `core/**`. It
-  reuses the shared schema-common validators without reopening
-  `core -> contract/internal/**` imports.
-- `contract/internal/node_boundary_schema_common.dart` owns shared schema field
-  definitions plus truly cross-direction primitive validators.
-- `contract/internal/node_boundary_schema_patch.dart`,
-  `contract/internal/node_boundary_schema_spec.dart`, and
-  `contract/internal/node_boundary_schema_snapshot.dart` own direction-local
-  validation and validated-field rehydration for patch, spec, and snapshot
-  flows respectively.
-- `contract/internal/snapshot_backing.dart` owns the immutable internal
-  snapshot backing graph for scene, layer, palette, and node snapshot state.
-- `contract/internal/snapshot_materialization.dart` owns public wrapper
-  materialization plus the internal compatibility helpers used by contract
-  tests and malformed-snapshot failure injection.
-- Validated snapshot materialization must preserve the original top-level
-  `SceneSnapshotBacking` carrier; metadata revalidation belongs on the backing
-  path before wrapper materialization rather than by rebuilding plain public
-  snapshot wrappers.
-- Public snapshot/spec/patch files do not expose backing getters or
-  `materialize(...)` members. Backing identity and wrapper materialization stay
-  on internal helper paths under `contract/internal/**`.
-- `contract/internal/snapshot_fast_path.dart` is the canonical internal
-  snapshot construction import surface; downstream code uses it instead of
-  importing privileged construction from `contract/snapshot.dart`.
-- `contract/internal/node_spec_backing.dart` and
-  `contract/internal/node_patch_backing.dart` own the immutable internal
-  `NodeSpec` / `NodePatch` family backing graphs.
-- `contract/internal/node_spec_materialization.dart` and
-  `contract/internal/node_patch_materialization.dart` own public wrapper
-  materialization plus the validated compatibility helpers used by
-  contract-local fast-path tests.
-- `contract/internal/node_spec_fast_path.dart` and
-  `contract/internal/node_patch_fast_path.dart` are thin canonical barrels for
-  contract-local validated construction; they export backing/materialization
-  owners and must not grow back into mixed implementation buckets.
-- Downstream `model/` and `serialization/` code consume those internal schema
-  owners through the barrel and do not re-own schema validation locally.
-- Downstream non-contract production code may import only the canonical
-  internal surfaces `contract/internal/node_boundary_schema.dart` and
-  `contract/internal/snapshot_fast_path.dart`, plus
-  `contract/runtime_node_value_validation.dart` for constrained runtime node
-  writes. It must not bypass those surfaces and import lower-level contract
-  owner modules directly.
+`scene_codec.dart` also contains `encodeSceneDocument(...)` and
+`decodeSceneDocument(...)`, but those functions are internal to `src/**` and
+are not exported from the supported package entrypoint.
 
-## Model owner graph
+## Enforced architectural rules
 
-- Public `SceneBuilder` surface lives in `model/scene_builder_api.dart`; the
-  exported static API is the supported non-controller import boundary.
-- `model/scene_builder.dart` is the thin internal import facade only. It may
-  orchestrate `scene_builder_decode_json.dart`,
-  `scene_builder_decode_scene.dart`,
-  `scene_builder_decode_node_common.dart`,
-  `scene_builder_decode_node_family.dart`,
-  the family-local `scene_builder_decode_{image,text,stroke,line,rect,path}.dart`
-  owners,
-  `scene_builder_json_parse.dart`,
-  `scene_builder_json_require.dart`,
-  `scene_import_draft.dart`,
-  `scene_import_draft_from_snapshot.dart`,
-  `scene_from_import_draft.dart`,
-  `scene_from_snapshot.dart`, and
-  `scene_snapshot_from_scene.dart`, but downstream non-model code must not
-  re-own those internals.
-- `model/scene_document_codec.dart` is the canonical runtime document codec
-  facade for downstream non-model serialization. It owns internal `Scene`
-  decode and encode-canonicalization entrypoints so non-model code does not
-  import `scene_builder.dart`, `scene_from_snapshot.dart`, or
-  `scene_policy.dart` directly.
-- `model/scene_from_snapshot.dart` and
-  `model/scene_snapshot_from_scene.dart` are the shared typed-adapter/export
-  owners. `document.dart` consumes them directly; it must not recover a
-  `document.dart -> scene_builder.dart` dependency.
-- `model/scene_import_draft.dart` is the single model-owned pre-canonical
-  import carrier. Typed `SceneSnapshot` import and parsed-map decode both
-  normalize into this draft before scene-level policy validation closes.
-- `SceneImportDraft` remains internal-only. Ordinary public callers construct
-  `SceneSnapshot`, while raw decode and malformed-draft assembly stay explicit
-  through `SceneImportDraft.fromBacking(...)`.
-- `model/scene_from_import_draft.dart` is the runtime materializer from a
-  validated draft to mutable `Scene`; public `SceneSnapshot` is not used as
-  the scene-level working container during import.
-- Producer-side import/decode work targets the internal snapshot
-  backing/materialization graph and materializes public snapshot wrappers only
-  at explicit public return edges.
-- `model/scene_node_boundary_mapping.dart` is the canonical node-boundary
-  mapping facade. The removed residual support file
-  `scene_node_boundary_mapping_support.dart` must not return. Family-local
-  mapping owners stay in the
-  `scene_node_boundary_mapping_*.dart` files and must not be imported directly
-  by downstream non-model code; downstream entry uses document/codec facades
-  instead of importing `scene_node_boundary_mapping.dart` directly. Mapping and
-  JSON decode owners build `NodeSnapshotBacking` values first and only
-  materialize public node snapshots at explicit edges.
-- `model/scene_value_validation.dart` is the canonical validation facade.
-  Focused validation owners stay in
-  `scene_value_validation_{node,palette_grid,primitives,support,top_level}.dart`,
-  `ScenePolicy` remains the import/runtime orchestration owner for scene-level
-  validation closure, and `contract/scene_structure_validation.dart` owns the
-  shared duplicate/count document-structure policy reused by public snapshot
-  construction, model import validation, and runtime layer/node mutation
-  owners.
-- `model/document.dart` is the canonical downstream transaction facade.
-  Locator, scene-insert, patch, scene-edit, and selection/grid ownership stay
-  in `document_{locator,scene_insert,node_patch,scene_edit,selection}.dart`
-  instead of returning to `document.dart`.
-- `model/document_node_patch.dart` is the canonical patch dispatcher or
-  validation facade. Shared patch-field application lives in
-  `document_node_patch_common.dart`, and family-local runtime patch ownership
-  lives in `document_node_patch_{image,text,stroke,line,rect,path}.dart`.
-- `model/document_clone.dart` remains a separate focused helper for clone and
-  adopt flows; it is not part of the step 40-43 facade/internal-owner split.
+The repository contains mechanical enforcement for important architectural
+constraints:
 
-## Runtime data flow
+- `tool/check_public_api_surface.dart`
+  checks the exported symbol set of `lib/iwb_canvas_engine.dart` against
+  `tool/goldens/public_api_symbols.txt`
+- `tool/check_import_boundaries.dart`
+  enforces import-boundary and layer-boundary rules
+- `tool/check_guardrails.dart`
+  enforces structural guardrails, including public-surface hermeticity,
+  controller/read-write boundaries, interactive boundaries, model architecture,
+  contract architecture, and committed read-side restrictions
+- `tool/check_invariant_coverage.dart`
+  checks invariant registry coverage against declared proof surfaces
+- `tool/check_verification_contract.dart`
+  checks that `AGENTS.md` and CI stay aligned with the verification registry
 
-1. `SceneView` receives Flutter pointer input and normalizes it into public
-   `CanvasPointerInput`, while its view-local pointer router owns raw Flutter
-   pointer lifetimes and routed runtime `pointerId` allocation. The closed
-   local seam around `scene_view_interactive.dart`,
-   `scene_view_runtime_host.dart`, and
-   `scene_view_interactive_pointer_host.dart` may consume only the assembled
-   `SceneViewRuntime` boundary. The public shell in
-   `scene_view_interactive.dart` is the only production `view/**` file allowed
-   to adapt `SceneController`; the rest of `view/**` consumes only
-   `SceneViewRenderState` and `SceneViewPointerSession`, and must not import
-   `interactive/internal/**`. The dedicated controller-owned pointer-session
-   owner consumes routed samples, owns tap/double-tap recognition, deferred
-   tap flushing, live `PointerInputSettings` adoption, and controller-change
-   reaction, keeps invalid terminal host forwarding on the same
-   controller-side path as direct pointer input, treats `detach()` as the
-   terminal controller-unbind step that releases controller-owned
-   listener/token resources before any later idempotent `dispose()`, and keeps
-   runtime replacement atomic by creating replacement pointer sessions before
-   install so failed swaps propagate to the owner while the last installed
-   runtime remains the active render/input owner.
-2. `SceneController` is the public interactive facade. It validates
-   public inputs, keeps host-facing mode/tool/selection semantics, owns the
-   snapshot-based eligibility policy used by controller-side transform/delete
-   preflight and by move-mode hit-test/preview/commit shaping, keeps public
-   scene/selection capability facades thin, keeps
-   `SceneControllerInteraction.handlePointer(...)` /
-   `handleDoubleTap(...)` as manual/public hooks only, restores move-local
-   baseline selection on pointer `cancel`, and delegates manual boundary input,
-   session-routed tokenized input, and external-mutation gesture policy to the
-   controller-private `InteractiveRuntime`.
-3. `InteractiveRuntime` is the controller-private boundary runtime. It owns the
-   final interactive owner graph beneath the facade:
-   `InteractivePointerNormalizer` for terminal pointer normalization,
-   `InteractiveGestureRouter` for active pointer/family orchestration,
-   `InteractiveDoubleTapRouter` for text double-tap routing,
-   `InteractiveMoveSession` for move preview/commit ownership, and
-   `InteractiveDrawCoordinator` for draw-family orchestration.
-   `InteractiveMovePreviewState` owns move-preview scene-effect semantics:
-   move gesture ownership is not a repaint signal, and only non-zero preview
-   translation marks a move gesture as scene-affecting. It also keeps
-   interaction-config interruption, external-mutation interruption,
-   pointer-session detachment, and destructive dispose as distinct lifecycle
-   reasons instead of one shared reset path.
-4. `InteractiveEventDispatcher` is the interactive event/timeline owner. It
-   keeps monotonic timestamp sequencing plus `actions` /
-   `editTextRequests` stream delivery outside `InteractiveRuntime`.
-5. `InteractiveDrawCoordinator` remains a draw-family orchestrator only. It
-   routes into `InteractiveDrawLineEngine`,
-   `InteractiveDrawStrokeEngine`,
-   `InteractiveDrawEraserEngine`, and
-   `InteractiveDrawTerminalRouter`; precise eraser hit geometry and coarse
-   candidate-query ownership stay inside `InteractiveDrawEraserEngine` and its
-   focused helpers instead of returning to the coordinator or the runtime.
-6. `SceneStoreController` performs transactional writes and finalizes a canonical
-   immutable `SceneSnapshot`. Controller-private replace-scene preparation now
-   stays sealed behind the committed mutation path: committed mutation access
-   owns the exact `prepare once -> beforeApply once -> apply` sequence, public
-   callers still use only `replaceScene(SceneSnapshot snapshot)`, preflight
-   validation/import runs exactly once before any active-gesture reset, and
-   apply adopts the prepared runtime payload without a second snapshot import.
-   Prepared replace-scene payloads do not cross controller, interactive, or
-   writer boundary surfaces.
-   On the read side it remains a committed-store `SceneRenderState`; the full
-   `SceneViewRenderState` contract is assembled only on the controller-owned
-   interactive runtime path. Live runtime `Scene` / `SceneNode` graph objects
-   stay write-private: committed reads expose only `querySpatialCandidates(...)`,
-   `resolveSpatialCandidateSnapshot(...)`,
-   `resolveSnapshotNodeById(...)`, and
-   `centerWorldForNodeSnapshots(...)` over immutable snapshots.
-7. `ScenePainter` renders the committed snapshot plus any ephemeral preview
-   state owned by the interactive controller. Background-grid draw semantics
-   have one render-local owner in `render/scene_grid_renderer.dart`; painter
-   and static cache consume the same plan instead of maintaining parallel grid
-   math.
-8. `actions` and `editTextRequests` expose asynchronous integration boundaries
-   back to the host app.
+Canonical invariant ids live in `tool/invariant_registry.dart`.
 
-## State ownership model
+## Stable facts worth preserving
 
-- The committed `SceneSnapshot` is the single source of truth.
-- Committed read-side runtime graph objects are write-private. Controller and
-  interactive read paths may cache locators, but they must resolve committed
-  nodes back through immutable snapshots rather than exposing live runtime
-  `SceneNode` instances or owned runtime node collections.
-- Snapshot-backed committed resolution uses one stale predicate: a locator is
-  valid only while the current committed snapshot still contains the same
-  `nodeId` at the same `[layerIndex][nodeIndex]` position. Coarse candidate
-  bounds are query data only and must not participate in freshness checks.
-- Committed-store invariant sweeps must reuse the shared runtime scene metadata
-  contract for camera, grid, and palette values so raw/internal bypassed state
-  is surfaced before controller code treats it as canonical.
-- Preview state for move/draw gestures is intentionally ephemeral and does not
-  mutate committed scene data until commit on `up`.
-- Move preview effect is separate from move gesture ownership:
-  `InteractiveMovePreviewState` owns the accumulated translation, and move
-  gesture ownership is not a repaint signal. Selected-node move taps without
-  drag have no scene effect; non-zero move previews still notify through the
-  scene repaint channel.
-- Draw-style capture is single-owner state: active preview reads come from the
-  gesture-start style, and pending two-tap line reads expose the same captured
-  color/thickness that the eventual line commit will use rather than live
-  mutable draw config.
-- Pending two-tap line state remains draw-local latent state inside the line
-  engine and retains owner provenance, so a different source may replace a
-  pending line but cannot complete or clear another source's pending commit.
-- Active gesture identity is controller-owned; move/draw helpers do not own a
-  competing pointer lock.
-- `SceneControllerMutationBoundary` is the only interactive owner allowed to
-  perform committed scene/selection writes from public scene/selection
-  capability surfaces and gesture-local selection flows. For `clearScene(...)`,
-  the boundary is only the interactive adapter: structural clear ownership
-  stays in `controller/commands/scene_commands.dart`, and the boundary adds the
-  interactive `ActionType.clear` projection without re-owning the write path.
-  Draw-family commits (`stroke`, `line`, `erase`) follow the same rule and may
-  not bypass the boundary through direct runtime wiring. The boundary depends
-  only on the controller-private
-  `SceneControllerCommittedMutationAccess` seam, while
-  `SceneStoreController` remains the concrete owner beneath that bridge.
-  This contract is pinned by `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY`.
-- `SceneControllerSelectionMutations`, `SceneControllerSceneMutations`, and
-  `InteractiveSelectionActions` are thin routing shells only. They may enforce
-  public gesture policy or route gesture-local requests, but they must not
-  retain parallel committed-mutation semantics beside
-  `SceneControllerMutationBoundary`.
-- `InteractiveRuntimeCallbacks`,
-  `InteractiveMoveSessionCallbacks`, and
-  `InteractiveDrawCoordinatorCallbacks` consume snapshot-backed committed read
-  contracts only. They may query coarse spatial candidates and resolve
-  `NodeSnapshot` values, but they must not reintroduce runtime-node helper
-  contracts across the committed read boundary.
-- `SceneControllerInteraction`, `SceneControllerSelection`, and
-  `SceneControllerScene` stay public as controller-owned capability contracts,
-  but their assembly remains internal to the `SceneController` graph. Public
-  signatures exported through `lib/iwb_canvas_engine.dart` must stay hermetic
-  against `internal/**` and helper types that are not themselves exported by
-  the public entrypoint.
-- During an active move/draw gesture, public `controller.selection.*`
-  mutations plus deny-listed `controller.scene.*` mutations are rejected before
-  committed state changes; only `setCameraOffset(...)` and `replaceScene(...)`
-  may interrupt the active gesture for external mutation, and only after their
-  existing preflight proves the boundary mutation will proceed. Mode/tool
-  changes use a separate interaction-config interruption path, pointer-session
-  detachment releases only matching session-owned state, and `dispose()` stays
-  destructive teardown.
-- Interactive admissibility has one owner per boundary: snapshot-based
-  transform/delete preflight and move-mode preview/commit shaping live under
-  `interactive/`, while marquee inclusion and move hit-testing reuse the same
-  owner contract for selection admissibility. `controller/mutation_executor.dart`
-  keeps write guards as commit-time
-  defensive barriers and does not import interactive-layer policy code.
-- Move-session cancel semantics are local to the move owner: pointer `cancel`
-  clears ephemeral preview/marquee state and restores the gesture baseline
-  selection when that gesture changed selection before terminal completion.
-- Interactive owner boundaries are structurally pinned:
-  `SceneController` stays a facade over runtime/event/selection
-  owners,
-  `InteractiveRuntime` stays a boundary orchestrator rather than an event or
-  draw-local geometry owner,
-  and `InteractiveDrawCoordinator` stays a draw-family router rather than an
-  eraser geometry/query owner.
-- View-side render-cache lifecycle and `ScenePainter` assembly have one shared
-  owner in the internal render-surface boundary; `SceneViewInteractive` remains
-  the public interactive shell around that boundary, keeps pointer host and
-  overlay ownership outside it, and routes both the main painter and overlay
-  through one controller-owned internal render-state family with split repaint
-  channels. `SceneViewRenderState` remains the scene repaint owner for the main
-  painter, `overlayRepaintListenable` owns overlay repaints, and marquee
-  rendering stays outside the base scene painter. Public
-  `SceneController.addListener(...)` delivery stays channel-agnostic: public
-  interactive state changes still notify listeners even when the change repaints
-  only the overlay path. Move gesture ownership is not a repaint signal:
-  selected-node move taps without drag do not notify or repaint, while non-zero
-  move previews still use the scene channel.
-- `ScenePainter` keeps frame ownership and selection ownership separate:
-  the frame owner first consumes controller-owned ordered viewport paint
-  candidates through a raw viewport query, then resolves preview delta plus
-  geometry only for those candidates. `ScenePainterVisibilityBudget` stays
-  render-local on the frame path, but it does not widen ordinary candidate
-  enumeration: the base outset is `1.0`, active selection contributes only
-  its outward halo extent, and that budgeted visibility rect is consumed by
-  selected-node supplement plus final culling. Overlay-only marquee / preview
-  state does not affect the base scene visibility contract. For text nodes,
-  that same frame owner also resolves one canonical `ResolvedTextLayout`
-  payload through `SceneTextLayoutCache` or the shared uncached core resolver
-  and hands it to both geometry sizing and text paint, while selection
-  rendering consumes only resolved `worldBounds` / `localPath` through
-  focused render-local helpers instead of reopening geometry lookup or
-  scanning all content nodes. The frame snapshot is the only node authority
-  for a frame: `ScenePainter` captures one atomic frame read before shell
-  paint, and if the active `SceneViewRenderState.snapshot` diverges from the
-  committed controller snapshot, candidate enumeration and selected-node
-  supplements fall back to that active frame snapshot instead of mixing two
-  snapshot sources inside one frame.
-  This contract is pinned by `INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION`.
-- `ScenePainter` keeps node-family rendering separate from frame ownership:
-  rect/path, line/stroke, and text/image rendering consume only
-  frame-resolved node data through focused render-local helpers instead of one
-  mixed node-render owner. Text renderers do not own `SceneTextLayoutCache`
-  and do not allocate a second `TextPainter` path after frame resolution.
-- `ScenePainter` is a thin public shell over explicit private painter-local
-  modules; `ScenePainterShell` is orchestration-only and sequences frame,
-  background, node, and selection owners without owning cache/grid assembly,
-  while frame, node-render, selection, and shared draw helpers communicate
-  through imported contracts instead of library `part` coupling. This contract
-  is pinned by `INV-ENG-SCENE-PAINTER-MODULE-BOUNDARY`.
-- Background-grid semantics are stateless and render-local: one shared owner
-  computes drawable eligibility, density bucketing, camera shift, and line
-  emission; `SceneStaticLayerCache` owns only picture lifecycle and key reuse
-  around that shared grid plan.
-- All committed mutations go through `write(...)` or higher-level controller
-  methods that delegate to the same write path.
-- Public API never exposes mutable internal scene objects.
-- Runtime revision allocation is store-owned. The store keeps one composite
-  invalidation identity from `controllerEpoch` plus node `instanceRevision`;
-  commits never derive the next revision by scanning scene data.
-- When the runtime revision counter reaches the safe-int ceiling, allocation
-  resets the next revision to `1` and the commit must bump `controllerEpoch`.
-  If the epoch cannot be bumped safely, the commit fails fast.
+These points are directly backed by code or repository-local enforcement:
 
-## Core owner graph
+- the package has one supported public entrypoint:
+  `lib/iwb_canvas_engine.dart`
+- `SceneStoreController` is consumable as `SceneRenderState`, not as the full
+  `SceneViewRenderState` view contract
+- full view render-state assembly happens on the controller-owned view runtime
+  path, not on the committed store facade
+- `SceneViewFrameRead` is the frame snapshot carrier consumed by the scene
+  paint pipeline
+- `SceneWriteTxn` is the public write seam; the writer/runtime implementation
+  stays internal under `controller/**`
+- `SceneViewRuntime` and `SceneViewPointerSession` are explicit seams between
+  the Flutter view host and the controller-owned interactive runtime
+- public JSON APIs are exported only from `scene_codec.dart`; internal document
+  codec helpers remain under `src/**`
 
-- `core/` remains the low-level owner for primitives, defaults, math, and
-  event types; it depends only on `contract/`.
-- `core/nodes.dart` is the canonical mutable-node facade for downstream
-  consumers; it re-exports focused file-local owner modules rather than
-  hand-owning mutable node implementations.
-- `SceneNode` lives in `core/scene_node.dart` and remains the common mutable
-  shell for `transform`, opacity, and bounds semantics.
-  `SceneNode.transform` stays the single source of truth for mutable node
-  transforms, `_SceneNodeTransformConvenience` remains file-local there, and
-  runtime `opacity` writes are reject-only instead of clamp-normalized.
-- `GridSettings` lives in `core/scene.dart` and owns the runtime validity
-  envelope for background-grid writes: `cellSize` must stay finite and `> 0`,
-  and enabling the grid is reject-only when `cellSize < 1.0`.
-- Box-family mutable nodes live in `core/box_nodes.dart`, which keeps
-  `_BoxNodePlacementOwner` as the file-local owner for top-left/AABB placement
-  semantics.
-- Stroke/line mutable nodes live in `core/vector_nodes.dart`, which keeps
-  `_VectorNodeGeometryOwner` as the file-local owner for stroke/line
-  world-local normalization and mutable geometry revision behavior.
-  `StrokeNode.points` is a read-only runtime view; `StrokeNode.replacePoints`
-  is the canonical write owner for stroke geometry validation and
-  `pointsRevision` monotonicity. Public snapshot/JSON boundaries transport
-  stroke geometry and scalar document data only; runtime `pointsRevision`
-  stays inside the runtime owner.
-- `PathNode` lives in `core/path_node.dart`, which keeps
-  `_PathNodeLocalPathCacheOwner` as the file-local owner for local-path cache
-  invalidation and diagnostics.
-- Leaf support ownership stays isolated outside `nodes.dart`:
-  `core/text_layout.dart` owns derived text measurement,
-  `core/action_events.dart` owns immutable action payload freezing and parsing,
-  and `core/id_generator.dart` owns runtime generated-id allocation state.
-- Shared runtime geometry ownership does not move back into mutable node files:
-  `core/node_geometry.dart` remains the shared render/hit-test geometry owner,
-  and `core/scene_spatial_index.dart` remains the spatial-query owner.
+## Verification
 
-## Core invariants
+For code changes, the repository-local source of truth is
+`tool/run_verification_preset.dart` together with:
 
-Canonical invariant definitions live in `tool/invariant_registry.dart`. The
-most important architectural rules are:
+- `tool/src/verification_contract/verification_contract_registry.dart`
+- `AGENTS.md`
+- `.github/workflows/ci.yaml`
 
-- `write(...)` is synchronous-only; returning a `Future` is a contract error.
-- `SceneWriteTxn` is valid only inside the active write callback.
-- `model/` stays structurally part-free; final model architecture is pinned by
-  guardrails so `document.dart` cannot re-import `scene_builder.dart` and
-  downstream non-model code cannot bypass canonical model facades for focused
-  owner modules such as `scene_builder.dart`,
-  `scene_node_boundary_mapping.dart`,
-  `document_node_patch.dart`,
-  `scene_policy.dart`, and the step 40-48 internal owners through direct
-  imports or re-exports; the removed residual file
-  `scene_node_boundary_mapping_support.dart` is also guardrailed against
-  reintroduction.
-- Snapshot/JSON boundaries keep `backgroundLayer` distinct from ordered content
-  `layers`; mutable runtime `Scene.backgroundLayer` may remain `null` until a
-  write path materializes it.
-- Content layers are addressed by stable `LayerId`; z-order is defined only by
-  list order.
-- Text bounds are derived from text layout inputs and do not cross runtime,
-  snapshot, or JSON boundaries as stored `size` data.
-- Import/decode range policy still validates derived text bounds against scene
-  size limits even though text size is no longer stored on typed or JSON
-  boundaries.
-- Text layout semantics are model-owned: text nodes carry explicit
-  `textDirection`, the current schema requires it during decode, and
-  render/layout paths consume the node contract instead of a separate
-  view-owned fallback. Public text creation is strict-explicit for direction,
-  and the public patch boundary exposes direction mutation for existing text
-  nodes instead of relying on a compatibility fallback.
-- Boundary validation has one source of truth per rule: limits come from
-  `contract/scene_contract_limits.dart`, shared scene-metadata and
-  stroke/palette invariants live in `contract/scene_model_invariants.dart`,
-  boundary value parsing/generation lives in `contract/validated/**`, and
-  model/serialization layers reuse those rules instead of re-owning late-only
-  copies.
-- Public snapshot/spec/patch constructors enforce those primitive boundary
-  rules eagerly; `contract/owned_collections.dart` is the single structural
-  owner for immutable collection payload ownership; internal decode/runtime
-  producers use contract-local fast paths so already validated data does not
-  pay the same constructor boundary twice or fork collection semantics.
-- Boundary fallback/backing seam helpers are intentionally hermetic: they
-  accept only the built-in concrete public boundary types and fail fast with
-  `StateError` for unsupported subtypes, including user-defined subclasses of
-  known `NodeSpec`, `NodePatch`, `NodeSnapshot`, and scene snapshot wrapper
-  families.
-- Transactional write/model paths consume those already validated contract
-  objects and own only runtime/stateful semantics such as target existence,
-  type compatibility, live-scene duplicate checks, index/range checks,
-  canonicalization, and derived-value recomputation.
-- Generated-id policy is internal runtime ownership in
-  `src/core/id_generator.dart`; public boundary code validates only explicit
-  ids and must not depend on a generated-id string format.
-- Selection normalization drops only missing, background, or invisible ids;
-  explicit non-selectable ids remain stable.
-- Listener notifications are microtask-deferred and coalesced.
-- `actions` and `editTextRequests` are asynchronous; their relative ordering
-  against repaint notifications is intentionally not a public contract.
-- `PointerInputSettings` is a value object. `SceneView` does not own
-  applied-versus-pending settings state; the controller-owned pointer-semantics
-  owner applies updates only after the raw-pointer router becomes idle, keeps
-  pending updates last-write-wins, and preserves the current settings for live
-  routed pointers until terminal release.
-- Routed pointer samples/phases and pointer-settings validation are contract
-  owners. `PointerInputTracker` is an orchestration-only core owner over two
-  focused pointer-local state owners: active down/slop state and deferred
-  tap-window/double-tap lifecycle. Hosts consume one tracker contract without
-  reopening those internal state machines in `view/` or `interactive/`.
-- `debugSceneViewInteractive*`, `debugSceneViewRuntimeHost*`, and
-  `debugSceneViewRenderCachesOf(...)` are deliberate stable test probes for
-  `test/view/**`; they expose mounted host/render-surface diagnostics and keep
-  fail-fast `StateError` behavior outside those boundaries.
-- After `dispose()`, mutating or effectful public entrypoints fail fast with
-  `StateError`.
-
-## Transaction and signal model
-
-- `SceneStoreController` is the thin public controller facade. It owns public
-  lifecycle, exposes the committed store and streams, and delegates commit
-  orchestration to the controller-private `SceneControllerCommitRuntime`
-  instead of re-owning transaction assembly in `scene_store_controller.dart`. This
-  split is pinned by `INV-ENG-CONTROLLER-COMMIT-RUNTIME-BOUNDARY`.
-- `SceneStoreController` is not a production owner of the full
-  `SceneViewRenderState` contract. It remains consumable as committed
-  `SceneRenderState`, while the assembled controller-owned runtime path is the
-  only production source of full view render-state fields such as selection
-  marquee, preview deltas, and active line/stroke previews. This split is
-  pinned by `INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE`.
-- `SceneControllerCommitRuntime` is the controller-private orchestration owner
-  for transactional writes. It assembles `TxnContext`, `SceneWriter`,
-  `MutationExecutor`, commit preparation, and post-commit publication without
-  widening the public facade boundary.
-- High-level methods such as `addNode`, `patchNode`, `clearScene`, and
-  transform commands all route through the same transactional core.
-- Scene-mutating runtime intents are modeled as internal `MutationOp` values
-  and executed by `MutationExecutor`; `SceneWriteTxn` stays the public write
-  seam, while `SceneStoreController` remains the owner of commit/store/signal
-  lifecycle.
-- Transaction finalization is controller-private and pre-commit-plan:
-  `MutationExecutor` applies post-mutation selection finalization before
-  control returns to the write callback, while
-  `scene_controller_commit_plan.dart` remains read-only and derives phases and
-  commit data only from already-finalized transaction state. This contract is
-  pinned by `INV-ENG-TXN-FINALIZED-BEFORE-COMMIT-PLAN`.
-- Private mutation execution ownership follows the typed mutation families in
-  `mutation_op.dart`: structural and scene-setting mutations live in
-  `scene_mutation_applier.dart`, node-local mutations live in
-  `node_mutation_applier.dart`, and selection transform mutations live in
-  `selection_transform_mutation_applier.dart`.
-- The controller-private transaction substrate is split by owner:
-  `TxnContext` remains the transaction root, while private workspace and
-  derived-state owners live in `txn_workspace.dart` and
-  `txn_derived_state.dart`; `SceneControllerCommitRuntime` consumes that
-  substrate without reopening the public controller facade boundary.
-- Public callers receive a dedicated `SceneWriteTxn` adapter that exposes only
-  the supported write surface. `SceneWriter` remains the internal writer owner
-  for command/runtime code and is a thin shell over writer-local controller
-  modules:
-  This contract is pinned by `INV-ENG-SCENE-WRITE-TXN-ADAPTER-BOUNDARY`.
-  `scene_writer_nodes.dart`,
-  `scene_writer_selection.dart`,
-  `scene_writer_scene.dart`,
-  `scene_writer_signals.dart`, and
-  `scene_writer_command_results.dart`.
-  `scene_writer_runtime.dart` owns the shared transaction runtime handle used
-  by those modules, while committed-signal enqueue stays internal to
-  `SceneWriter` / `scene_writer_signals.dart` instead of expanding the public
-  `SceneWriteTxn` contract.
-- Final measured controller closure baseline after steps 29-31 is:
-  `6 HIGH` metric entries limited to accepted seams in
-  `mutation_op.dart`,
-  `scene_store_controller.dart`,
-  `scene_controller_commit_runtime.dart`, and
-  `scene_writer.dart`,
-  plus `1` remaining clone pair between
-  `draw_commands.dart::writeEraseNodes` and
-  `scene_commands.dart::writeDeleteSelection`.
-- Final measured interactive closure baseline after steps 32-34 is:
-  `7 HIGH/VERY HIGH` metric entries and `5` remaining clone pairs across
-  `lib/src/interactive`.
-  No remaining `HIGH/VERY HIGH` entry belongs to
-  `interactive_runtime.dart` or `interactive_draw_coordinator.dart`.
-  The remaining metric hotspots are limited to:
-  public facade breadth in `scene_controller.dart`,
-  the focused eraser-local owner `interactive_draw_eraser_engine.dart`,
-  and the focused action owner `interactive_draw_action_emitter.dart`.
-  The remaining clone pairs are structural repeats in
-  `interaction_eligibility_policy.dart`,
-  `interactive_draw_eraser_engine.dart`,
-  `interactive_move_hit_test_engine.dart`,
-  `interactive_gesture_router.dart`,
-  and constructor wiring between
-  `interactive_draw_coordinator.dart` and `interactive_runtime.dart`;
-  they are documented residuals rather than hidden debt and were not reduced
-  with wrapper layers or ownership drift.
-- Successful commits finalize store state before publishing signals or repaint
-  notifications.
-- Committed signals are emitted before repaint listener notification for the
-  same successful commit.
-- Buffered effects are discarded if a transaction fails.
-- Runtime invariant enforcement is two-tiered:
-  - critical commit checks run in all build modes and stay change-scoped for
-    ordinary tracked commits, reusing canonical runtime validators on the
-    changed scene surface before store apply;
-  - document replacement and the full committed-store sweep may validate the
-    whole scene;
-  - the full committed-store sweep remains enabled in `debug` and `profile`.
-- Constrained mutable runtime node fields are validated at the owner boundary
-  on assignment. The critical commit gate is the backstop for deliberate
-  bypasses rather than the primary validation owner.
-
-## Serialization boundary
-
-- Public JSON APIs accept `Map<String, dynamic>` or JSON strings.
-- `decodeSceneFromJson(...)` rejects raw JSON strings longer than `33554432`
-  characters before parser allocation.
-- Decode/import canonicalizes missing `backgroundLayer` to an empty dedicated
-  layer before returning a `SceneSnapshot`.
-- Mutable runtime `Scene` keeps `backgroundLayer` nullable as an internal
-  shape; local write paths materialize it on demand instead of maintaining a
-  second canonical runtime model.
-- Mutable runtime `Scene.palette` is a replaceable scene-level reference to an
-  immutable `ScenePalette` value object. Palette constructor inputs are
-  defensively copied into unmodifiable lists, so runtime palette state does
-  not expose mutable nested list ownership after validation.
-- Scene metadata now has one lower-layer contract across public constructors,
-  runtime owners, and decode/import validation: camera offsets are finite and
-  in range, grid sizes are finite positive bounded values, enabled grids
-  require `cellSize >= 1.0`, and palette lists stay non-empty and bounded.
-- Raw malformed scene metadata remains available only through explicit
-  internal backing/materialization paths under `contract/internal/**`; ordinary
-  public and runtime APIs do not expose raw invalid metadata containers.
-- Decode/import and runtime replacement paths validate structure and numeric
-  constraints and throw `SceneDataException` on malformed input.
-- `contract/scene_structure_validation.dart` is the single owner for shared
-  public scene-document structure rules: duplicate node ids, duplicate
-  content-layer ids, and scene-wide node/layer limits are enforced there for
-  both ordinary public `SceneSnapshot(...)` construction and model import.
-- `ScenePolicy` remains the owner of import/runtime orchestration and
-  scene-level numeric range enforcement; it consumes the shared structural
-  validator instead of re-owning duplicate/count logic privately.
-- `imageId` follows the same validated boundary-owner policy on decode/import,
-  snapshot/spec/patch validation, and runtime scene validation.
-- Encode/decode/build boundaries sanitize oversized `SceneDataException.source`
-  payloads into compact previews and snapshot small structured payloads into
-  immutable containers while preserving stable `code`, `path`, and immutable
-  `details`; `message` is a derived user-facing rendering owned by
-  `scene_data_exception.dart`.
-- Structured validation descriptors and `ArgumentError` adapters used to build
-  those public errors stay under `contract/**` without package-barrel export;
-  they are implementation detail plumbing, not part of the package entrypoint
-  surface.
-- `scene_data_exception.dart` is also the single template owner for the
-  touched scene-boundary diagnostics: palette/stroke collection limits,
-  optional image `naturalSize` child failures, and parsed color/enum literal
-  failures carry their machine-readable meaning in `details` instead of in
-  branch-owned message text.
-- `scene_codec.dart` is a thin boundary adapter: string decode uses
-  serialization-local guards, parsed-map decode delegates to the model-owned
-  parsed-map guard, and snapshot/runtime encode entrypoints reuse the shared
-  codec error factory instead of owning parallel transport mappings.
-- JSON payload limits are enforced to keep import cost bounded.
-- Guardrails cover both collection sizes (layers, nodes, points, palette item
-  lists) and string lengths (for example node ids, layer ids, text/image ids,
-  and path payloads).
-
-## Performance model
-
-- Transactions use copy-on-write: only touched scene parts are cloned.
-- Hot-path node lookup uses committed indexes instead of repeated linear scans.
-- Spatial queries use a bounded spatial index with a bounded fallback path for
-  oversized queries.
-- Render caches are owned by `SceneView` and reset on controller
-  epoch/document changes.
-- Stroke and path rendering use revision-based cache keys to avoid stale reuse
-  after node-id reuse or geometry changes.
-- Input and hit-testing guardrails cap worst-case work for long strokes and
-  large queries.
-
-## Non-goals
-
-- Product-specific UI and workflows outside the canvas engine.
-- Network synchronization or backend protocols.
-- App-owned persistence and undo/redo history.
+Documentation-only changes do not automatically imply that the full Flutter
+pipeline is needed; use the repository-local verification contract in
+`AGENTS.md`.

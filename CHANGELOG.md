@@ -25,7 +25,7 @@ All notable changes to `iwb_canvas_engine` are documented here.
   committed reads resolve immutable snapshot-backed node data only, and
   guardrails now reject reintroducing runtime-node leaks across that boundary.
 - Render-frame snapshot resolution is now frame-authoritative. If
-  `SceneViewRenderState.snapshot` diverges from the committed controller
+  `SceneViewFrameRead.snapshot` diverges from the committed controller
   snapshot, ordinary paint candidates and selected-node supplements resolve
   against the active frame snapshot instead of mixing committed-only nodes
   into that frame. `ScenePainter` now captures one atomic frame read before
@@ -223,9 +223,6 @@ All notable changes to `iwb_canvas_engine` are documented here.
 - `SceneControllerInteraction.snapshot` was removed from the public runtime
   surface. Integrations must read committed render-state from
   `controller.snapshot` instead of `controller.interaction.snapshot`.
-- JSON schema `5` is no longer supported. The engine now writes and reads only
-  `schemaVersion = 6`, and text nodes must include explicit `textDirection`
-  during decode instead of relying on legacy view-context fallback semantics.
 - `ScenePainter` and `SceneViewRenderSurface` no longer accept a
   painter-level `textDirection` override. Text layout and `TextAlign.start` /
   `TextAlign.end` semantics are now fully owned by per-node
@@ -317,7 +314,7 @@ All notable changes to `iwb_canvas_engine` are documented here.
   `model -> serialization` dependency.
 - `scene_codec.dart` now adopts the unified boundary contract across
   `decodeSceneFromJson(...)`, `decodeScene(...)`, `encodeScene(...)`, and
-  `encodeSceneDocument(...)`, keeping builder/decode/encode parity anchored on
+  `encodeSceneToJson(...)`, keeping builder/decode/encode parity anchored on
   stable `SceneDataException.code` / `path` / `details`.
 - Clarified step `5.1` `backgroundLayer` policy: mutable runtime `Scene`
   keeps `backgroundLayer` nullable, while snapshot/JSON boundaries continue to

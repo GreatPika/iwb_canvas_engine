@@ -124,7 +124,9 @@ cat path/to/repro_snippet.dart | dart run tool/run_temp_pkg_test.dart --stdin
   - `ClearSceneResult`
 - runtime:
   - `SceneController`
-  - `SceneController`
+  - `SceneControllerInteraction`
+  - `SceneControllerSelection`
+  - `SceneControllerScene`
   - `SceneView`
   - `SceneViewInteractive`
   - `SceneRenderState`
@@ -212,8 +214,9 @@ Committed read-side note:
   `backgroundLayer` candidates returned by the shared paint admission path
 - interactive committed read paths consume immutable `NodeSnapshot` values
   from that surface rather than runtime-node helpers
-- render output is frame-authoritative: when `SceneViewRenderState.snapshot`
-  diverges from `SceneStoreController.snapshot`, ordinary paint candidates and
+- render output is frame-authoritative: when the captured
+  `SceneViewFrameRead.snapshot` diverges from `SceneStoreController.snapshot`,
+  ordinary paint candidates and
   selected-node supplements resolve against the active frame snapshot instead
   of the committed controller snapshot; `ScenePainter` captures that frame
   read once and reuses it across background paint plus candidate enumeration
@@ -1201,8 +1204,8 @@ controller.
 - typed snapshot import, parsed-map decode, and controller
   `initialSnapshot`/replace-scene admission all reuse the same model-internal
   draft/import spine before canonical public snapshot output is materialized
-- `encodeScene(...)` and `encodeSceneDocument(...)` are the snapshot/runtime
-  encode boundaries:
+- `encodeScene(...)` and `encodeSceneToJson(...)` are the public encode
+  boundaries:
   - they preserve policy-owned validation diagnostics and route unexpected
     transport failures through the same `SceneDataException` invalid-json
     factory used by the other codec entrypoints
@@ -1250,7 +1253,7 @@ controller.
   numeric-range owner
 - for the same scene defect, `SceneBuilder.buildFromSnapshot(...)`,
   `SceneBuilder.buildFromJson(...)`, `decodeScene(...)`,
-  `decodeSceneFromJson(...)`, `encodeScene(...)`, `encodeSceneDocument(...)`,
+  `decodeSceneFromJson(...)`, `encodeScene(...)`, `encodeSceneToJson(...)`,
   and runtime scene canonicalization return the same deterministic
   `SceneDataException.code`, `path`, and `details`
 - scene-level error contract:

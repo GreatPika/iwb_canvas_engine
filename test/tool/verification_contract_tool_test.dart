@@ -175,7 +175,7 @@ void _writeCanonicalAgents(Directory sandbox) {
 
 ## Verification
 
-After any code change, run `dart run tool/run_verification_preset.dart run --preset required_code_change --changed-paths-file=<path-or->` and provide every modified, added, renamed, or deleted repository-relative path as one line from that file or from stdin.
+After any code change, run `dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=<path-or->` and provide every modified, added, renamed, or deleted repository-relative path as one line from that file or from stdin.
 - Documentation-only changes do not require the full Flutter pipeline unless
   the task also changes code, tooling contracts, or executable examples.
 ''');
