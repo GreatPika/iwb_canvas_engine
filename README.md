@@ -3,137 +3,57 @@
 [![pub package](https://img.shields.io/pub/v/iwb_canvas_engine.svg)](https://pub.dev/packages/iwb_canvas_engine)
 [![CI](https://github.com/GreatPika/iwb_canvas_engine/actions/workflows/ci.yaml/badge.svg)](https://github.com/GreatPika/iwb_canvas_engine/actions/workflows/ci.yaml)
 
-`iwb_canvas_engine` is a Flutter canvas engine for whiteboard-style products. It
-provides an immutable scene model, rendering, interactive input handling, and
-JSON serialization. It does not include app UI, persistence, or undo/redo
-storage.
+`iwb_canvas_engine` is a Flutter-first canvas engine for whiteboard-style
+products. It provides an immutable scene document model, a controller + widget
+runtime, transactional scene mutations, and JSON import/export.
 
-- Current package version: `5.1.0`
-- Single public import: `package:iwb_canvas_engine/iwb_canvas_engine.dart`
-- JSON contract: write `schemaVersion = 7`, read `{7}`
-- Demo: https://greatpika.github.io/iwb_canvas_engine/demo/
-- Hosted API docs: https://greatpika.github.io/iwb_canvas_engine/api/
-- Full integration reference: `API_GUIDE.md`
+This README describes the checked-in main branch. For published release history
+and unreleased mainline changes, see [CHANGELOG.md](CHANGELOG.md).
 
-## What it provides
+## What the package includes
 
-- Deterministic scene rendering with a dedicated boundary `backgroundLayer`
-  plus ordered content `layers`.
-- Separate spatial admission for hit-testing and paint. Coarse hit-testing
-  still respects hit padding and `kHitSlop`, while paint admission uses paint
-  bounds only. Committed paint admission now uses one shared spatial path for
-  `backgroundLayer` plus content layers, while hit-testing remains
-  content-only, and paint order still preserves original background/content
-  order even when a selected edge node is admitted only through the widened
-  visibility rect.
-- `SceneController` as the public interactive runtime root, with capability
-  owners exposed through `controller.interaction`, `controller.selection`, and
-  `controller.scene`, plus `SceneView` as the public interactive widget.
-- Transactional write API via `SceneWriteTxn` for supported scene, selection,
-  and document mutations.
-- Explicit path fill-rule contract via `PathFillRule`.
-- JSON import/export with strict validation and canonicalization.
-- Parsed-map import via `SceneBuilder.buildFromJson(...)` with the same stable
-  `SceneDataException.code` / `path` / `details` contract used by
-  `decodeScene(...)`.
-- Bounded JSON import guardrails for layers/nodes/points/path data plus string
-  and palette payload sizes, including a raw `decodeSceneFromJson(...)` input
-  limit of `33554432` characters before parsing.
-- Boundary failures expose stable `SceneDataException.code`, `path`, and
-  immutable `details`; `message` remains a derived human-readable summary.
-- The package entrypoint exports the stable error surface
-  `SceneDataException` / `SceneDataErrorCode`; internal diagnostic adapters
-  used to assemble those errors remain under `src/**` and are not part of the
-  supported package API.
-- Collection-limit failures for palette lists and stroke points, optional
-  image `naturalSize` child-field failures, and parsed color/enum literals
-  all follow the same details-first boundary contract across builder/decode
-  entrypoints.
-- Public validated boundary value types such as `NodeIdValue`,
-  `LayerIdValue`, `ImageIdValue`, `FiniteOffsetValue`, and `OpacityValue` for
-  pre-validating external inputs before snapshot/spec construction and for
-  keeping decode/build boundary rules aligned with the exported contract.
+- Immutable scene documents built around `SceneSnapshot`, content layers, a
+  dedicated `backgroundLayer`, and typed node families.
+- A public runtime rooted at `SceneController`, with controller-owned
+  capabilities exposed through `controller.scene`, `controller.selection`, and
+  `controller.interaction`.
+- A ready-to-use Flutter widget, `SceneView`, for rendering and interactive
+  pointer routing.
+- Transactional scene edits through `SceneWriteTxn`.
+- Strict import/export and canonicalization through `SceneBuilder`,
+  `encodeScene*`, and `decodeScene*`.
+- A stable machine-readable error contract through `SceneDataException` and
+  `SceneDataErrorCode`.
 
-## What it does not provide
+## What the package does not include
 
-- Toolbars, dialogs, side panels, or product-specific UI.
-- Storage, sync, or backend collaboration.
-- App-level history management.
+- Toolbars, dialogs, inspectors, or other product-specific UI.
+- Persistence, sync, collaboration, or backend logic.
+- App-level undo/redo storage.
 
-## Install
+## Requirements
+
+- Dart: `^3.10.4`
+- Flutter: `>=3.38.0`
+
+This package is not a pure Dart engine. Public contract types use Flutter and
+`dart:ui` primitives.
+
+## Installation
 
 ```sh
 flutter pub add iwb_canvas_engine
 ```
 
-## Developer tooling
+## Supported import
 
-This repository uses the external DCM CLI for additional static analysis on top
-of `flutter analyze`.
-
-1. Install DCM for your platform by following the official guide:
-   [Installation](https://dcm.dev/docs/getting-started/for-developers/installation/).
-2. Run the repository checks:
-
-```sh
-dcm analyze .
-flutter analyze
+```dart
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 ```
 
-In CI, DCM is installed with the official GitHub Action before the static
-checks job runs.
-
-For coverage-gap diagnostics after `flutter test --coverage`, use the
-machine-first coverage report instead of manual repository searches:
-
-```sh
-dart run tool/check_coverage.dart --json
-dart run tool/check_coverage.dart --json --uncovered-branches
-dart run tool/check_coverage.dart --json --uncovered-branches --changed-only
-```
-
-The JSON payload keeps the existing `lib/src/**` coverage gate semantics while
-returning one flat `gaps` collection. Each gap carries the source path,
-enclosing declaration or file-scope fallback, compact declaration range,
-missed lines and optional branch records, a compact source snippet, candidate
-test paths, and the preferred verification step id when a repository scope can
-be resolved deterministically. Use `--changed-only` to restrict triage to
-changed `lib/src/**` files from the current git worktree.
-
-For minimal runtime/listener repros that need a clean package boundary, use the
-temporary package runner instead of hand-assembling `/tmp` test directories:
-
-```sh
-dart run tool/run_temp_pkg_test.dart --snippet-file=path/to/repro_snippet.dart
-dart run tool/run_temp_pkg_test.dart --test-file=path/to/full_repro_test.dart
-cat path/to/repro_snippet.dart | dart run tool/run_temp_pkg_test.dart --stdin
-```
-
-`--snippet-file` and `--stdin` wrap the snippet with standard
-`flutter_test`, `flutter/widgets.dart`, and package imports before running it
-inside a temporary Flutter package that depends on the current repository via
-`path:`.
-
-For clone-hunting during refactors, use the development-only analyzer script:
-
-```sh
-dart run tool/analysis/find_similar_clones.dart . 60 30 5 4 0.55 12
-```
-
-Use `dart run tool/analysis/find_similar_clones.dart --help` for the full
-argument list and additional examples. Useful variants:
-
-```sh
-dart run tool/analysis/find_similar_clones.dart --exclude-main test 60 30 5 4 0.70 10
-dart run tool/analysis/find_similar_clones.dart --json --top 20 lib 50 30 5 4 0.55 12
-```
-
-Repository perf gates stay split by intent:
-
-- `smoke` runs from `.github/workflows/ci.yaml`, tracks the required benchmark
-  case set, and publishes only avg/min/max metrics.
-- `full` runs from `.github/workflows/perf_nightly.yaml` and keeps the heavier
-  percentile-bearing nightly benchmark contract.
+Do not import from `package:iwb_canvas_engine/src/**`. Everything under
+`src/**` is internal implementation detail and is not a supported integration
+contract.
 
 ## Quick start
 
@@ -154,6 +74,7 @@ class _CanvasScreenState extends State<CanvasScreen> {
   @override
   void initState() {
     super.initState();
+
     controller = SceneController(
       initialSnapshot: SceneSnapshot(
         layers: [ContentLayerSnapshot(id: 'layer-0')],
@@ -182,211 +103,53 @@ class _CanvasScreenState extends State<CanvasScreen> {
 }
 ```
 
-## Runtime contracts worth knowing
+## Core concepts
 
-- Text runtime and snapshot bounds are derived from text layout inputs.
-  `TextNode`, `TextNodeSnapshot`, `TextNodeSpec`, and `TextNodePatch` do not
-  expose writable text `size`, and schema-version-7 JSON rejects text payloads
-  that still contain `size`. Import/decode also rejects text whose derived
-  bounds exceed scene size limits. On the render read-side, one canonical
-  resolved text-layout payload now feeds both text geometry sizing and text
-  paint, so the engine does not keep parallel layout owners for those paths.
-- Runtime stroke geometry is hermetic: `StrokeNode.points` is a read-only view,
-  direct list mutation is unsupported, and whole-geometry updates go through
-  `StrokeNode.replacePoints(...)`, which preserves `pointsRevision` no-op
-  semantics and rejects non-finite or oversized point lists. Public stroke
-  snapshots and JSON carry only document geometry/scalar data; runtime
-  `pointsRevision` does not cross the public boundary.
-- `TextNode`, `TextNodeSnapshot`, and serialized text payloads carry explicit
-  `textDirection`. Public `TextNodeSpec` / `TextNodeSnapshot` creation requires
-  explicit direction, `TextNodePatch` can update it for existing text nodes,
-  and JSON payloads without it are rejected by the current schema.
-- Public snapshot/node/spec/patch constructors validate boundary ids and
-  numeric values eagerly and are runtime constructors rather than `const`
-  entry points. Ordinary public `SceneSnapshot(...)` construction also rejects
-  duplicate node ids, duplicate content-layer ids, and scene-wide
-  layer/node-count overflow before a malformed public snapshot can escape the
-  boundary.
-- `SceneSnapshot` is the canonical public document boundary. Typed snapshot
-  import and parsed JSON decode may normalize through internal draft/import
-  owners, but callers still only construct, pass, and receive public
-  snapshots; raw malformed snapshot or metadata assembly stays internal-only.
-- The committed read side is snapshot-backed and write-private: live runtime
-  `Scene` / `SceneNode` objects do not leave the write subsystem. Controller
-  and interactive committed reads resolve immutable `NodeSnapshot` data only,
-  via committed spatial query helpers plus
-  `resolveSpatialCandidateSnapshot(...)`, and
-  `resolveSnapshotNodeById(...)`. Paint-side committed queries include
-  `backgroundLayer` only on the shared paint path; hit-test queries stay
-  content-only.
-- Render output is frame-authoritative: if a `SceneViewRenderState` exposes an
-  active frame snapshot that differs from the committed controller snapshot,
-  candidate enumeration and selected-node supplements resolve against that
-  active frame snapshot. `ScenePainter` captures that frame read once and
-  reuses it across background paint plus candidate enumeration plus preview
-  geometry, while the controller-owned spatial-index path remains the normal
-  fast path only when both snapshots are identical. Stable committed frames
-  now reuse selected-node supplement ordering through one controller-owned
-  `selectionRevision` captured atomically with that frame read.
-- Snapshot-backed committed node resolution uses one fixed stale predicate:
-  a cached locator stays valid only while the current committed snapshot still
-  contains the same `nodeId` at the same `[layerIndex][nodeIndex]` position.
-  Candidate bounds are coarse query data only and are not part of freshness
-  checks.
-- Scene metadata uses one shared eager contract across public constructors,
-  runtime setters/owners, typed import, and JSON decode. `CameraSnapshot` /
-  `Camera.offset` reject non-finite or out-of-range offsets, `GridSnapshot` /
-  `GridSettings` require finite positive bounded `cellSize` values, enabling a
-  grid still requires `cellSize >= 1.0`, and palette lists must stay non-empty,
-  bounded, and use finite positive bounded `gridSizes`.
-- Internal snapshot/spec/patch backing identity and materialization helpers
-  live only under `lib/src/contract/internal/**`; they are package internals,
-  not supported public API.
-- runtime `Scene.backgroundLayer` may be absent internally, while snapshot/JSON
-  boundaries canonicalize it to a dedicated layer distinct from content
-  `layers`; content writes use `LayerId`.
-- runtime `SceneNode.opacity` is reject-only: assignments must be finite and
-  stay within `[0, 1]`, otherwise the write throws `ArgumentError`.
-- runtime `Background.grid` is reject-only: `GridSettings.cellSize` must stay
-  finite and `> 0`, and enabling the grid requires
-  `cellSize >= 1.0` instead of silently clamping or repairing the value later.
-- snapshot/JSON import uses the same enabled-grid minimum, so invalid payloads
-  fail at the import boundary with `SceneDataException` instead of later during
-  runtime materialization.
-- runtime `Scene.palette` is replacement-only at the object level; a
-  `ScenePalette` defensively copies and freezes its nested lists, so palette
-  presets cannot be mutated in place after construction.
-- ordinary runtime scene writes enforce content-layer and total-node budgets at
-  the model mutation owner, so oversized layer/node additions fail before the
-  scene mutates instead of only at snapshot/export boundaries.
-- constrained runtime node fields such as transforms, hit padding, image/text
-  layout inputs, vector geometry, path data, and stroke widths are reject-only
-  at owner boundaries; invalid assignments throw `ArgumentError` instead of
-  relying on later render/layout sanitization.
-- controller commits run a critical changed-surface runtime validity backstop
-  in every build mode before store apply, while `debug` and `profile` keep the
-  full committed-store invariant sweep.
-- Boundary helpers such as `parseNodeId(...)`, `parseLayerId(...)`, and
-  validated value types including `ImageIdValue` keep external payload checks
-  aligned with import/build rules. Runtime-generated ids are internal engine
-  details rather than a public compatibility promise. See `API_GUIDE.md` for
-  the full list.
-- For import/build/encode failures, compare `SceneDataException` instances by
-  `code` / `path` / `details`; this parity is shared by
-  `SceneBuilder.buildFromJson(...)`, `decodeScene(...)`,
-  `decodeSceneFromJson(...)`, `encodeScene(...)`, and
-  `encodeSceneToJson(...)`. Treat `message` as user-facing text rather than
-  the primary machine contract.
-- `ensureLayer(...)` and `writeLayerEnsure(...)` are the supported APIs for
-  explicit content-layer creation.
-- `write(...)` is synchronous-only. Returning a `Future` throws `StateError`.
-- explicit duplicate `NodeSpec.id` in `addNode(...)` or `writeNodeInsert(...)`
-  throws `ArgumentError`.
-- `actions`, `editTextRequests`, and `ChangeNotifier` updates are asynchronous;
-  listener notifications are microtask-deferred and coalesced. For interactive
-  state, those public listener updates stay independent from the internal
-  scene/overlay repaint split, so overlay-only marquee/preview changes still
-  notify `SceneController` listeners. Selected-node move taps without drag are
-  no-op gestures for public listener and repaint purposes; non-zero move
-  previews still notify listeners and repaint through the scene channel.
-- `setPointerSettings(...)` is applied live by `SceneView`; active gestures keep
-  their current settings until `up` or `cancel`, and parallel raw host pointers
-  do not force an early reset of routed pointer tracking. Settings are treated
-  as a value object, and while raw pointers remain live a controller-owned
-  pointer-semantics owner keeps only the last pending update until router idle.
-- Public `handlePointer(...)` / `handleDoubleTap(...)` hooks remain manual-only
-  entrypoints on `SceneControllerInteraction`. `SceneView`-routed input uses an
-  internal tokenized session path instead of sending session-owned provenance
-  back through the public facade.
-- `SceneControllerInteraction`, `SceneControllerSelection`, and
-  `SceneControllerScene` are controller-owned capability contracts. Obtain them
-  from `controller.interaction`, `controller.selection`, and `controller.scene`
-  rather than constructing them directly.
-- `SceneView` runtime swaps are atomic: replacement pointer sessions are
-  created before install, failed replacement creation surfaces to the owner,
-  and render/input ownership stays on the last installed runtime until a later
-  rebuild succeeds. Session `detach()` is the terminal controller-unbind step:
-  it releases controller-owned listener/token resources immediately and turns
-  later session callbacks into local no-ops before the final idempotent
-  `dispose()`.
-- `SceneController` keeps one controller-owned active gesture owner:
-  parallel `pointerId`s are ignored until the owner ends, and
-  mode/tool changes interrupt for interaction-config changes,
-  `replaceScene(...)` / `setCameraOffset(...)` interrupt for external
-  mutations only after preflight confirms the boundary transition will proceed,
-  routed-session `detach()` clears only matching session-owned state, and
-  `dispose()` remains destructive teardown rather than an alias of those
-  interruption paths.
-- `replaceScene(SceneSnapshot snapshot)` is the only supported public
-  scene-replacement verb. The controller may prepare a runtime payload before
-  the gesture interrupt runs, but that prepared payload stays controller-private
-  and does not cross the public or interactive boundary.
-- Pending two-tap line state keeps its captured line style on the read side as
-  well as the write side: `pendingLineColor` / `pendingLineThickness` reflect
-  the pending commit style, while mutable `drawColor` / `lineThickness` remain
-  configuration for the next gesture. Pending line ownership remains draw-local,
-  so one owner source may replace but not complete another owner source's
-  pending commit.
-- Public scene/selection mutations are gesture-exclusive while an active
-  move/draw gesture is in progress. `scene.write(...)`,
-  `setBackgroundColor(...)`, `setGridEnabled(...)`, `setGridCellSize(...)`,
-  `addNode(...)`, `ensureLayer(...)`, `patchNode(...)`, `removeNode(...)`,
-  `clearScene(...)`, `setSelection(...)`, `toggleSelection(...)`,
-  `clearSelection()`, `selectAll(...)`, `rotateSelection(...)`,
-  `flipSelectionVertical(...)`, `flipSelectionHorizontal(...)`, and
-  `deleteSelection(...)` throw `StateError` until terminal `up` or `cancel`.
-- Transaction-scoped reads are finalized before commit planning: after any
-  successful node or structural mutation inside `write(...)`,
-  `SceneWriteTxn.selectedNodeIds` and `SceneWriteTxn.snapshot` already expose
-  the state that would commit if the callback returned immediately. Patching a
-  selected visible node to `isSelectable: false` keeps it explicitly selected
-  and does not create a false selection delta.
-- Background grid rendering now has one internal owner in
-  `src/render/scene_grid_renderer.dart`: direct painter draw and static-cache
-  recording share the same drawable predicate, density bucketing, camera-shift
-  math, and bounded anti-flap policy without any cross-frame mutable grid
-  state.
-- Interactive transform/delete preflight is snapshot-based and shared:
-  controller-side rotate/flip/delete entrypoints use one internal eligibility
-  policy owner, while write-layer guards remain defensive commit barriers.
-- Interactive committed writes have one owner: stroke, line, erase, move,
-  and selection commits all route through `SceneControllerMutationBoundary`
-  instead of mixing direct `storeController.draw.*` bypasses into the runtime
-  callback graph.
-- Move-mode hit-testing, marquee selection, move preview, and move commit now
-  share one internal eligibility policy: selectable-but-non-movable nodes can
-  still become the selection target, but they do not start move preview, and
-  pointer `cancel` restores the gesture baseline selection after any temporary
-  move-local selection change. Selected-node move taps without drag do not
-  create a move-preview scene effect, so they do not notify or repaint.
-- `SceneView` main-painter and overlay reads now share one controller-owned
-  internal render-state family with split repaint ownership: the main painter
-  listens to the scene channel, the interactive overlay listens to
-  `overlayRepaintListenable`, and marquee rendering lives fully in the overlay
-  painter. Live marquee/preview state therefore updates without widget-field
-  snapshots or helper-based read-side seams at the view boundary, while the
-  main painter still consumes controller-enumerated ordered viewport
-  candidates so cold paints do not resolve off-viewport content geometry and
-  selected move previews can still pull nodes into frame. One render-local
-  `ScenePainterVisibilityBudget` now widens only the frame visibility rect and
-  the selected-node supplement path: ordinary candidate enumeration stays
-  viewport-first, the base budget stays at `1.0`, and active selection adds
-  only the outward halo extent so selected edge nodes remain visible without
-  reintroducing unselected off-viewport work.
-- `handlePointer(...)` treats non-finite `down`/`move` as no-op admission
-  failures. For non-finite terminal `up`/`cancel`, the controller preserves the
-  original terminal phase only when the same `pointerId` already has a cached
-  finite position; otherwise the terminal sample stays a no-op. Explicit
-  `dragStartSlop` uses the same finite `>= 0` contract in both the constructor
-  and `setDragStartSlop(...)`.
+- `SceneSnapshot` is the immutable document boundary exchanged with app code.
+- Public scene data has two layer families: one dedicated `backgroundLayer`
+  plus ordered content `layers`.
+- Supported node families are image, text, stroke, line, rect, and path.
+- Use `NodeSpec` to create nodes and `NodePatch` + `PatchField` to apply
+  partial updates.
+- Use `SceneController` for runtime ownership, `SceneView` for the Flutter host
+  surface, and `SceneBuilder` / `encodeScene*` / `decodeScene*` for import and
+  serialization.
+- Use `SceneDataException.code`, `path`, and `details` as the stable
+  machine-readable failure contract when scene or JSON data is invalid.
 
-## Where to look next
+## Serialization and validation
 
-- `API_GUIDE.md` for public API details, validation rules, and migration notes.
-- `ARCHITECTURE.md` for module layout, runtime data flow, and invariants.
-- `CHANGELOG.md` for release history and unreleased changes.
-- `example/README.md` for the demo app scope.
+- Current mainline JSON write version: `schemaVersion = 7`
+- Current mainline JSON read set: `{7}`
+- `SceneBuilder.buildFromSnapshot(...)` and `SceneBuilder.buildFromJson(...)`
+  validate and canonicalize data without requiring a controller.
+- `encodeScene(...)` / `encodeSceneToJson(...)` validate before serializing.
+- `decodeScene(...)` / `decodeSceneFromJson(...)` validate before returning a
+  `SceneSnapshot`.
+- Text nodes use derived bounds. Current schema payloads require explicit
+  `textDirection` and must not include legacy stored text `size` metadata.
+
+## Common integration points
+
+- Listen to `controller.actions` for committed action events that can feed your
+  app-level history or analytics.
+- Listen to `controller.editTextRequests` to open app-owned text editing UI.
+- Pass `imageResolver` to `SceneView` when the scene contains image nodes.
+- Call `controller.scene.notifySceneChanged()` when host-owned visual resources
+  change without a scene mutation, for example when an image backing store is
+  refreshed.
+
+## Documentation
+
+- [API_GUIDE.md](API_GUIDE.md) — public API reference and integration rules.
+- [ARCHITECTURE.md](ARCHITECTURE.md) — repository architecture, invariants, and
+  ownership boundaries.
+- [CHANGELOG.md](CHANGELOG.md) — published release history plus current
+  unreleased changes.
+- [example/README.md](example/README.md) — example app scope and run
+  instructions.
+- Hosted package docs: https://greatpika.github.io/iwb_canvas_engine/
 
 ## License
 
-MIT. See `LICENSE`.
+MIT. See [LICENSE](LICENSE).
