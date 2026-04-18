@@ -39,7 +39,13 @@ and is enforced through repository-local performance contracts.
 - `lib/src/contract/scene_view_render_state.dart`
 - `lib/src/core/scene_spatial_index.dart`
 - `lib/src/controller/internal/spatial_index_cache.dart`
+- `lib/src/controller/committed_store_state.dart`
+- `lib/src/controller/change_set.dart`
+- `lib/src/controller/scene_controller_commit_execution.dart`
+- `lib/src/controller/scene_controller_commit_plan.dart`
+- `lib/src/controller/scene_controller_commit_runtime.dart`
 - `lib/src/controller/scene_store_controller.dart`
+- `lib/src/controller/store.dart`
 - `lib/src/interactive/internal/scene_controller_scene_view_runtime.dart`
 - `lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart`
 - `lib/src/interactive/internal/scene_controller_selected_paint_order_cache.dart`
@@ -63,6 +69,7 @@ and is enforced through repository-local performance contracts.
 - `test/core/scene_spatial_index_test.dart`
 - `test/controller/internal/spatial_index_cache_test.dart`
 - `test/controller/core/scene_controller_spatial_candidate_resolution_test.dart`
+- `test/controller/core/scene_controller_commit_atomicity_test.dart`
 - `test/render/scene_painter_frame_contract_test.dart`
 - `test/render/scene_painter_bounds_contract_test.dart`
 - `test/render/scene_painter_test.dart`
@@ -152,6 +159,22 @@ and is enforced through repository-local performance contracts.
     locator, or equivalent `(layerIndex, nodeIndex)` order records. It does not
     store retained cross-frame candidate lists, filtered supplement lists, or
     prepared paint plans.
+13. Slice 3.5 closes only with one controller-internal invalidation key shape:
+    committed selection-membership invalidation is owned by an internal
+    monotonic `selectionRevision` carried in committed controller state. The
+    selected-order cache must not infer invalidation from selected-set object
+    identity, frame-read identity, or recompute-and-compare fallback logic.
+14. `selectionRevision` remains internal to `lib/src/controller/**` and
+    `lib/src/interactive/internal/**` for this step. Slice 3.5 must not add a
+    new public package getter, a new public render-state field, or a second
+    selection-membership revision owner outside committed controller state.
+15. Slice 3.5 closes only with one delivery path for committed render-state
+    consumers: `SceneStoreController` exposes one internal
+    `selectionRevision` getter under `src/**`, and
+    `SceneControllerSceneViewRenderState` forwards that exact value to
+    `SceneControllerPaintCandidateStage`. No alternate callback seam,
+    frame-read field, controller-graph indirection, or secondary access owner
+    is allowed for `selectionRevision` delivery in this step.
 
 ## 5. Result Requirements
 
@@ -203,7 +226,12 @@ and is enforced through repository-local performance contracts.
     committed node-location order do not rebuild
     `SceneControllerSelectedPaintOrderCache`; changing either input rebuilds it
     exactly once.
-14. Checked-in benchmark baselines for `smoke` and `full` intentionally match
+14. After Slice 3.5 closes, repeated committed frames with unchanged
+    `selectionRevision` and unchanged `structuralRevision` perform zero
+    selected-order-token recomputation: they do not iterate selected ids, do
+    not resolve selected order locations, and do not sort selected-order
+    tokens.
+15. Checked-in benchmark baselines for `smoke` and `full` intentionally match
     the finalized contract shape, required case set, required operations, and
     metric schema after Slice 4 closes.
 
@@ -230,6 +258,7 @@ and is enforced through repository-local performance contracts.
 
 ### 6.2 Target Verification Units
 
+- `flutter test test/controller/core/scene_controller_commit_atomicity_test.dart`
 - `flutter test test/render/scene_painter_frame_contract_test.dart`
 - `flutter test test/render/scene_painter_bounds_contract_test.dart`
 - `flutter test test/render/scene_painter_test.dart`
@@ -258,6 +287,9 @@ and is enforced through repository-local performance contracts.
 - `SceneControllerSelectedPaintOrderCache` keeps only committed selected-node
   order records and does not retain committed-frame supplement lists or
   prepared paint plans across frames.
+- Committed selection-membership invalidation belongs to controller-owned
+  committed state, not to painter-side code, frame-read identity, or
+  selected-set object identity heuristics.
 - No committed paint-path owner outside test-only counters, including
   `scene_controller_scene_view_runtime.dart`, may retain cross-frame prepared
   plans, candidate sequences, supplement lists, or other committed staging
@@ -327,6 +359,19 @@ and is enforced through repository-local performance contracts.
 - Structural tests proving Slice 3 must reject retaining any cross-frame
   selected candidate lists, filtered supplement lists, or prepared plans inside
   `scene_controller_selected_paint_order_cache.dart`.
+- Structural tests proving Slice 3.5 must require one committed
+  `selectionRevision` owner in controller state and must reject selected-order
+  cache invalidation based on selected-set object identity or recompute-and-
+  compare fallback logic.
+- Structural tests proving Slice 3.5 must require the exact
+  `SceneStoreController.selectionRevision` internal getter delivery path into
+  `SceneControllerSceneViewRenderState` and `SceneControllerPaintCandidateStage`
+  and must reject alternate callback seams, frame-read delivery, or secondary
+  access owners for `selectionRevision`.
+- Structural tests proving Slice 3.5 must require
+  `SceneControllerSelectedPaintOrderCache` fast-return when
+  `selectionRevision` and `structuralRevision` are unchanged, before any
+  selected-id iteration, order-resolution callback, or token sorting begins.
 - Benchmark ownership tests must distinguish the exact cases
   `selection_path_painter_only`,
   `selection_path_candidate_staging`, and
@@ -370,6 +415,18 @@ and is enforced through repository-local performance contracts.
 - Do not derive canonical selected order or retain any cross-frame selected
   candidate lists, filtered supplement lists, or prepared paint plans outside
   `scene_controller_selected_paint_order_cache.dart` after Slice 3 closes.
+- Do not implement Slice 3.5 by using selected-set object identity,
+  frame-read identity, `commitRevision`, `controllerEpoch`, or
+  recompute-and-compare token rebuilding as the committed selected-order cache
+  invalidation key.
+- Do not implement Slice 3.5 by introducing a `readSelectionRevision`
+  callback, a `SceneViewFrameRead.selectionRevision` field, a controller-graph
+  forwarding seam, or any other `selectionRevision` delivery path besides the
+  exact internal `SceneStoreController.selectionRevision` getter consumed by
+  `SceneControllerSceneViewRenderState` and
+  `SceneControllerPaintCandidateStage`.
+- Do not add a second committed selection-membership revision owner outside
+  controller-owned committed state.
 - Do not retain any cross-frame prepared plans, ordinary candidate sequences,
   filtered supplement lists, or other committed-frame staging artifacts inside
   any committed paint-path owner outside test-only counters, including
@@ -404,8 +461,10 @@ and is enforced through repository-local performance contracts.
     `AGENTS.md` section `### File naming` before the slice is considered
     valid.
 11. Slice order is fixed: prepared-plan ownership closes before shared
-    ordering, shared ordering closes before ordered supplement merge, and perf
-    tooling/docs close only after the runtime slices are green.
+    ordering, shared ordering closes before ordered supplement merge,
+    ordered supplement merge closes before committed selection-membership
+    invalidation, and perf tooling/docs close only after the runtime slices are
+    green.
 
 ## 8. Vertical Slices
 
@@ -633,6 +692,99 @@ repair sort.
   selected-order cache and that each invalidating change rebuilds it exactly
   once.
 
+### Slice 3.5. [ ] Seal committed selected-order invalidation on internal selectionRevision
+
+#### Slice Contract
+
+Committed selected-order caching is invalidated only by one controller-owned
+committed `selectionRevision` plus committed `structuralRevision`, and stable
+committed frames perform zero selected-order recomputation work.
+
+#### Change
+
+- Add one internal monotonic `selectionRevision` field to committed controller
+  state in `lib/src/controller/store.dart`.
+- Thread that exact `selectionRevision` through
+  `lib/src/controller/committed_store_state.dart`,
+  `lib/src/controller/scene_controller_commit_plan.dart`,
+  `lib/src/controller/scene_controller_commit_execution.dart`, and
+  `lib/src/controller/scene_store_controller.dart` as controller-owned
+  committed state only.
+- Expose `selectionRevision` to committed render-state consumers only through
+  one internal getter on `SceneStoreController` under `src/**`.
+- `SceneControllerSceneViewRenderState` must read that exact internal
+  `SceneStoreController.selectionRevision` getter on the committed branch and
+  pass it directly to `SceneControllerPaintCandidateStage`.
+- Increment `selectionRevision` exactly when committed selection membership
+  changes. It must not change for bounds-only, visual-only, structural-only,
+  signal-only, repaint-only, no-op, rollback, or failed-write paths unless
+  committed selection membership also changes.
+- `SceneControllerSelectedPaintOrderCache` in
+  `lib/src/interactive/internal/scene_controller_selected_paint_order_cache.dart`
+  must use only `(selectionRevision, structuralRevision)` as its invalidation
+  key for committed selected-order tokens.
+- `SceneControllerSelectedPaintOrderCache` must return its cached ordered-token
+  result immediately when both revisions are unchanged. That fast-return must
+  happen before selected-id iteration, before any order-resolution callback,
+  and before any token sorting.
+- `SceneControllerSelectedPaintOrderCache` must rebuild ordered selected tokens
+  exactly once when `selectionRevision` changes and exactly once when
+  `structuralRevision` changes while `selectionRevision` is stable.
+- `SceneControllerPaintCandidateStage` and
+  `SceneControllerSceneViewRenderState` must consume the controller-owned
+  `selectionRevision` signal only through committed controller state wiring.
+  They must not infer invalidation from selected-set object identity,
+  `SceneViewFrameRead` identity, `commitRevision`, `controllerEpoch`, or
+  recompute-and-compare behavior, and they must not introduce any alternate
+  delivery seam for `selectionRevision`.
+- Add deterministic test-only debug counters that separately prove cache
+  rebuilds and stable fast-return hits.
+- Slice 3.5 must not widen the public package surface. No new public getter,
+  public render-state field, or public API contract is allowed for
+  `selectionRevision` in this step.
+
+#### Verification
+
+- `flutter test test/controller/core/scene_controller_commit_atomicity_test.dart`
+- `flutter test test/render/scene_painter_frame_contract_test.dart`
+- `flutter test test/render/scene_painter_bounds_contract_test.dart`
+- `flutter test test/interactive/core/scene_controller_architecture_boundary_test.dart`
+
+#### Positive Scenarios
+
+- A committed selection mutation increments `selectionRevision` exactly once.
+- A committed structural mutation that preserves selection membership leaves
+  `selectionRevision` unchanged and still invalidates selected-order caching
+  through `structuralRevision`.
+- Repeated committed frames with unchanged `selectionRevision` and unchanged
+  `structuralRevision` hit the selected-order cache fast-return path and do not
+  iterate selected ids.
+- A committed frame after selection replacement rebuilds ordered selected tokens
+  exactly once.
+
+#### Negative Scenarios
+
+- Stable committed frames must not rebuild selected-order tokens through
+  recompute-and-compare logic.
+- Stable committed frames must not call the selected-order location resolver.
+- The selected-order cache must not use selected-set object identity,
+  frame-read identity, `commitRevision`, or `controllerEpoch` as an
+  invalidation key.
+- `selectionRevision` must not leak into the public package surface.
+
+#### Closure Evidence
+
+- Green run of the listed verifications.
+- Controller-level assertions proving `selectionRevision` monotonicity and
+  exact increment semantics for selection-changing versus non-selection
+  commits.
+- Counter-backed assertions proving stable committed frames hit selected-order
+  cache fast-return without selected-id iteration, order resolution, or token
+  sorting.
+- Structural assertions proving `selectionRevision` stays controller-internal
+  and selected-order invalidation does not fall back to identity heuristics or
+  recompute-and-compare logic.
+
 ### Slice 4. [ ] Seal the performance contract, benchmark taxonomy, and release documentation
 
 #### Slice Contract
@@ -669,7 +821,7 @@ misleading percentile metrics.
   `selection_path_end_to_end_paint` with their exact operations must remain in
   the required case set and comparison output for both `smoke` and `full`
   profiles.
-- After slices 1 through 3 close, regenerate `smoke` and `full` benchmark
+- After slices 1 through 3.5 close, regenerate `smoke` and `full` benchmark
   reports against the finalized runtime contract and intentionally refresh
   `tool/bench/baselines/load_profiles_smoke_baseline.json` and
   `tool/bench/baselines/load_profiles_full_baseline.json` to that finalized
@@ -689,7 +841,7 @@ misleading percentile metrics.
   split.
 - Update `tool/invariant_registry.dart`, `README.md`, `API_GUIDE.md`,
   `ARCHITECTURE.md`, `CHANGELOG.md`, this step document, and `PLAN.md` only
-  after slices 1 through 3 are closed.
+  after slices 1 through 3.5 are closed.
 
 #### Verification
 
@@ -746,6 +898,7 @@ misleading percentile metrics.
 
 ## 9. Final Verification
 
+- `flutter test test/controller/core/scene_controller_commit_atomicity_test.dart`
 - `flutter test test/render/scene_painter_frame_contract_test.dart`
 - `flutter test test/render/scene_painter_bounds_contract_test.dart`
 - `flutter test test/render/scene_painter_test.dart`
