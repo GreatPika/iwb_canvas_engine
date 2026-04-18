@@ -114,16 +114,17 @@ void main() {
         createBody,
         contains('final viewRect = visibilityBudget.applyTo(rawViewRect);'),
       );
-      expect(createBody, contains('renderState.enumeratePaintCandidates('));
+      expect(createBody, contains('paintPlan: renderState.preparePaintPlan('));
       expect(createBody, contains('frameRead,'));
-      expect(createBody, contains('renderState.enumeratePaintCandidates('));
+      expect(createBody, contains('paintPlan: renderState.preparePaintPlan('));
       expect(createBody, contains('viewportRect: rawViewRect,'));
       expect(createBody, contains('visibilityRect: viewRect,'));
       expect(createBody, contains('selectedIds: frameRead.selectedNodeIds,'));
       expect(
         createBody,
-        contains('paintCandidates: List<ScenePaintCandidate>.unmodifiable('),
+        isNot(contains('List<ScenePaintCandidate>.unmodifiable(')),
       );
+      expect(createBody, contains('paintPlan: renderState.preparePaintPlan('));
       expect(source, isNot(contains('scenePainterCullPadding')));
       expect(body, contains('final textLayout = switch (node) {'));
       expect(
@@ -158,7 +159,8 @@ void main() {
       );
 
       expect(source, contains('class ScenePainterNodeRenderer'));
-      expect(source, contains('nodes: frame.paintCandidates,'));
+      expect(source, contains('frame.paintPlan.candidateCount'));
+      expect(source, contains('frame.paintPlan.candidateAt(index)'));
       expect(
         body,
         contains('final nodeViewRect = frame.visibilityRectForNode('),
@@ -194,44 +196,57 @@ void main() {
   );
 
   test('committed paint enumeration uses scoped shared spatial query', () {
-    final source = File(
+    final runtimeSource = File(
       'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
     ).readAsStringSync();
-    final body = _extractMethodBody(
-      source: source,
-      methodStart:
-          'Iterable<ScenePaintCandidate> _enumerateCommittedSnapshotPaintCandidates({',
+    final stageSource = File(
+      'lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart',
+    ).readAsStringSync();
+    final runtimeBody = _extractMethodBody(
+      source: runtimeSource,
+      methodStart: 'ScenePreparedPaintPlan preparePaintPlan(',
     );
-    final supplementsStart = body.indexOf(
-      'for (final nodeId in selectedNodeIds)',
-    );
-    if (supplementsStart < 0) {
-      fail('Expected selected supplement loop in committed paint enumeration.');
-    }
-    final ordinaryCommittedBody = body.substring(0, supplementsStart);
-
     expect(
-      body,
+      runtimeBody,
+      contains('return _paintCandidateStage.prepareCommittedPaintPlan('),
+    );
+    expect(runtimeBody, isNot(contains('queryPaintCandidates(')));
+
+    final stageBody = _extractMethodBody(
+      source: stageSource,
+      methodStart: 'ScenePreparedPaintPlan prepareCommittedPaintPlan({',
+    );
+    final ordinaryBody = _extractMethodBody(
+      source: stageSource,
+      methodStart: 'void _stageOrdinaryCandidates({',
+    );
+    final supplementBody = _extractMethodBody(
+      source: stageSource,
+      methodStart: 'void _stageSelectedSupplements({',
+    );
+
+    expect(stageBody, contains('_stageOrdinaryCandidates('));
+    expect(stageBody, contains('_stageSelectedSupplements('));
+    expect(supplementBody, contains('for (final nodeId in selectedNodeIds)'));
+    expect(
+      ordinaryBody,
       contains(
         'scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,',
       ),
     );
+    expect(ordinaryBody, contains('_store.resolveSpatialCandidateSnapshot(('));
     expect(
-      body,
-      contains('_storeController.resolveSpatialCandidateSnapshot(('),
+      ordinaryBody,
+      contains('paintBoundsWorld: candidate.paintBoundsWorld,'),
     );
-    expect(body, contains('paintBoundsWorld: candidate.paintBoundsWorld,'));
-    expect(body, isNot(contains('snapshot.backgroundLayer.nodes')));
-    expect(body, isNot(contains('resolveSnapshotNodeById(candidate.nodeId)')));
+    expect(stageSource, isNot(contains('snapshot.backgroundLayer.nodes')));
     expect(
-      ordinaryCommittedBody,
-      isNot(contains('_snapshotPaintBoundsWorld(')),
+      stageSource,
+      isNot(contains('resolveSnapshotNodeById(candidate.nodeId)')),
     );
-    expect(
-      ordinaryCommittedBody,
-      isNot(contains('nodeSnapshotPaintBoundsWorld(')),
-    );
-    expect(ordinaryCommittedBody, isNot(contains('nodePaintBoundsWorld(')));
+    expect(ordinaryBody, isNot(contains('_snapshotPaintBoundsWorld(')));
+    expect(ordinaryBody, isNot(contains('nodeSnapshotPaintBoundsWorld(')));
+    expect(ordinaryBody, isNot(contains('nodePaintBoundsWorld(')));
   });
 
   test('selection rendering uses resolved frame data for box selections', () {

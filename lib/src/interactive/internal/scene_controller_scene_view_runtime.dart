@@ -6,13 +6,10 @@ import '../../contract/scene_view_render_state.dart';
 import '../../contract/scene_view_runtime.dart';
 import '../../contract/snapshot.dart';
 import '../../controller/scene_store_controller.dart';
-import '../../core/geometry.dart';
-import '../../core/node_geometry.dart';
-import '../../core/numeric_clamp.dart';
-import '../../core/scene_spatial_index.dart';
 import '../../core/scene_snapshot_paint_candidates.dart';
 import '../scene_controller_interaction.dart';
 import 'scene_controller_interaction_runtime.dart';
+import 'scene_controller_paint_candidate_stage.dart';
 import 'scene_controller_pointer_session.dart';
 
 final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
@@ -99,6 +96,9 @@ final class SceneControllerSceneViewRenderState
     required Offset Function(NodeId nodeId) Function() readPreviewDeltaResolver,
     required SceneControllerInteraction Function() readInteraction,
   }) : _storeController = storeController,
+       _paintCandidateStage = SceneControllerPaintCandidateStage(
+         store: storeController,
+       ),
        _readSnapshot = readSnapshot,
        _readSelectedNodeIds = readSelectedNodeIds,
        _readControllerEpoch = readControllerEpoch,
@@ -106,6 +106,7 @@ final class SceneControllerSceneViewRenderState
        _readInteraction = readInteraction;
 
   final SceneStoreController _storeController;
+  final SceneControllerPaintCandidateStage _paintCandidateStage;
   final SceneControllerSceneRepaintChannel _sceneRepaintChannel =
       SceneControllerSceneRepaintChannel();
   final SceneControllerOverlayRepaintChannel _overlayRepaintChannel =
@@ -160,95 +161,26 @@ final class SceneControllerSceneViewRenderState
   }
 
   @override
-  Iterable<ScenePaintCandidate> enumeratePaintCandidates(
+  ScenePreparedPaintPlan preparePaintPlan(
     SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
-  ) sync* {
+  ) {
     final snapshot = frameRead.snapshot;
     if (!identical(snapshot, _storeController.snapshot)) {
-      yield* enumerateSnapshotPaintCandidates(
-        snapshot: frameRead.snapshot,
-        query: query,
-        selectedNodeIds: frameRead.selectedNodeIds,
-        previewDeltaResolver: frameRead.previewDeltaResolver,
+      return ScenePreparedPaintCandidateList(
+        enumerateSnapshotPaintCandidates(
+          snapshot: frameRead.snapshot,
+          query: query,
+          selectedNodeIds: frameRead.selectedNodeIds,
+          previewDeltaResolver: frameRead.previewDeltaResolver,
+        ),
       );
-      return;
     }
-    yield* _enumerateCommittedSnapshotPaintCandidates(
+    return _paintCandidateStage.prepareCommittedPaintPlan(
       query: query,
       selectedNodeIds: frameRead.selectedNodeIds,
       previewResolver: frameRead.previewDeltaResolver,
     );
-  }
-
-  Iterable<ScenePaintCandidate> _enumerateCommittedSnapshotPaintCandidates({
-    required ScenePaintCandidateQuery query,
-    required Set<NodeId> selectedNodeIds,
-    required Offset Function(NodeId nodeId) previewResolver,
-  }) sync* {
-    final acceptedNodeIds = <NodeId>{};
-    final orderedCandidates =
-        <({ScenePaintCandidate candidate, int layerIndex, int nodeIndex})>[];
-
-    for (final candidate in _storeController.queryPaintCandidates(
-      query.viewportRect,
-      scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
-    )) {
-      final resolvedNode = _storeController.resolveSpatialCandidateSnapshot((
-        nodeId: candidate.nodeId,
-        layerIndex: candidate.layerIndex,
-        nodeIndex: candidate.nodeIndex,
-      ));
-      if (resolvedNode == null || !acceptedNodeIds.add(resolvedNode.id)) {
-        continue;
-      }
-      orderedCandidates.add((
-        candidate: ScenePaintCandidate(
-          node: resolvedNode,
-          paintBoundsWorld: candidate.paintBoundsWorld,
-        ),
-        layerIndex: candidate.layerIndex,
-        nodeIndex: candidate.nodeIndex,
-      ));
-    }
-
-    for (final nodeId in selectedNodeIds) {
-      final resolvedNode = _storeController.resolveSnapshotNodeById(nodeId);
-      if (resolvedNode == null || acceptedNodeIds.contains(nodeId)) {
-        continue;
-      }
-      final paintBounds = _snapshotPaintBoundsWorld(
-        node: resolvedNode.node,
-        previewResolver: previewResolver,
-      );
-      if (!isFiniteRect(paintBounds) ||
-          !query.visibilityRect.overlaps(paintBounds)) {
-        continue;
-      }
-      if (!acceptedNodeIds.add(nodeId)) {
-        continue;
-      }
-      orderedCandidates.add((
-        candidate: ScenePaintCandidate(
-          node: resolvedNode.node,
-          paintBoundsWorld: paintBounds,
-        ),
-        layerIndex: resolvedNode.layerIndex,
-        nodeIndex: resolvedNode.nodeIndex,
-      ));
-    }
-
-    orderedCandidates.sort((a, b) {
-      final layerOrder = a.layerIndex.compareTo(b.layerIndex);
-      if (layerOrder != 0) {
-        return layerOrder;
-      }
-      return a.nodeIndex.compareTo(b.nodeIndex);
-    });
-
-    for (final candidate in orderedCandidates) {
-      yield candidate.candidate;
-    }
   }
 
   @override
@@ -313,21 +245,4 @@ final class SceneControllerOverlayRepaintChannel extends ChangeNotifier {
   void scheduleNotify() {
     notifyListeners();
   }
-}
-
-Offset _previewDeltaForNode(
-  Offset Function(NodeId nodeId) previewResolver,
-  NodeId nodeId,
-) {
-  return sanitizeFiniteOffset(previewResolver(nodeId));
-}
-
-Rect _snapshotPaintBoundsWorld({
-  required NodeSnapshot node,
-  required Offset Function(NodeId nodeId) previewResolver,
-}) {
-  requireNodeSnapshotGeometrySupport(node);
-  return nodeSnapshotPaintBoundsWorld(
-    node,
-  ).shift(_previewDeltaForNode(previewResolver, node.id));
 }

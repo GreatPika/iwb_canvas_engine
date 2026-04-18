@@ -3,7 +3,6 @@ import 'dart:ui';
 
 import 'package:flutter/rendering.dart';
 
-import '../contract/scene_view_render_state.dart';
 import '../contract/snapshot.dart';
 import '../core/text_layout.dart';
 import '../core/numeric_clamp.dart';
@@ -34,7 +33,6 @@ class ScenePainterNodeRenderer {
   }) {
     _drawVisibleNodes(
       canvas: canvas,
-      nodes: frame.paintCandidates,
       frame: frame,
       resolveNodePaintData: resolveNodePaintData,
     );
@@ -42,7 +40,6 @@ class ScenePainterNodeRenderer {
 
   void _drawVisibleNodes({
     required Canvas canvas,
-    required Iterable<ScenePaintCandidate> nodes,
     required ScenePainterPaintFrame frame,
     required ScenePainterResolvedNodePaintData Function(NodeSnapshot node)
     resolveNodePaintData,
@@ -52,7 +49,8 @@ class ScenePainterNodeRenderer {
       cameraOffset: frame.cameraOffset,
       transformBuffer: _transformBuffer,
     );
-    for (final candidate in nodes) {
+    for (var index = 0; index < frame.paintPlan.candidateCount; index += 1) {
+      final candidate = frame.paintPlan.candidateAt(index);
       final node = candidate.node;
       if (!node.isVisible) {
         continue;

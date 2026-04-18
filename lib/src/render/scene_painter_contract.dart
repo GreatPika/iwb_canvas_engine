@@ -19,14 +19,14 @@ class ScenePainterPaintFrame {
   ScenePainterPaintFrame({
     required this.cameraOffset,
     required this.viewRect,
-    required this.paintCandidates,
+    required this.paintPlan,
     required this.selectedIds,
     required this.selectionStyle,
   });
 
   final Offset cameraOffset;
   final Rect viewRect;
-  final List<ScenePaintCandidate> paintCandidates;
+  final ScenePreparedPaintPlan paintPlan;
   final Set<NodeId> selectedIds;
   final ScenePainterSelectionStyle selectionStyle;
   final List<ScenePainterResolvedNodePaintData> selectedNodes =

@@ -61,6 +61,9 @@ void main() {
     final viewRuntimeSource = _read(
       'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
     );
+    final paintCandidateStageSource = _read(
+      'lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart',
+    );
     final pointerSessionSource = _read(
       'lib/src/interactive/internal/scene_controller_pointer_session.dart',
     );
@@ -272,52 +275,62 @@ void main() {
       ),
     );
     expect(viewRuntimeSource, contains('snapshot => _readSnapshot()'));
-    final committedPaintBody = _extractMethodBody(
+    final preparePaintPlanBody = _extractMethodBody(
       source: viewRuntimeSource,
-      methodStart:
-          'Iterable<ScenePaintCandidate> _enumerateCommittedSnapshotPaintCandidates({',
-    );
-    final supplementsStart = committedPaintBody.indexOf(
-      'for (final nodeId in selectedNodeIds)',
-    );
-    if (supplementsStart < 0) {
-      fail('Expected selected supplement loop in committed paint enumeration.');
-    }
-    final ordinaryCommittedBody = committedPaintBody.substring(
-      0,
-      supplementsStart,
+      methodStart: 'ScenePreparedPaintPlan preparePaintPlan(',
     );
     expect(
-      committedPaintBody,
+      preparePaintPlanBody,
+      contains('return _paintCandidateStage.prepareCommittedPaintPlan('),
+    );
+    expect(
+      preparePaintPlanBody,
+      contains('return ScenePreparedPaintCandidateList('),
+    );
+    expect(preparePaintPlanBody, isNot(contains('queryPaintCandidates(')));
+    expect(
+      preparePaintPlanBody,
+      isNot(contains('resolveSpatialCandidateSnapshot((')),
+    );
+    expect(preparePaintPlanBody, isNot(contains('resolveSnapshotNodeById(')));
+
+    final stageBody = _extractMethodBody(
+      source: paintCandidateStageSource,
+      methodStart: 'ScenePreparedPaintPlan prepareCommittedPaintPlan({',
+    );
+    final ordinaryBody = _extractMethodBody(
+      source: paintCandidateStageSource,
+      methodStart: 'void _stageOrdinaryCandidates({',
+    );
+    final supplementBody = _extractMethodBody(
+      source: paintCandidateStageSource,
+      methodStart: 'void _stageSelectedSupplements({',
+    );
+    expect(stageBody, contains('_stageOrdinaryCandidates('));
+    expect(stageBody, contains('_stageSelectedSupplements('));
+    expect(supplementBody, contains('for (final nodeId in selectedNodeIds)'));
+    expect(
+      ordinaryBody,
       contains(
         'scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,',
       ),
     );
+    expect(ordinaryBody, contains('_store.resolveSpatialCandidateSnapshot(('));
     expect(
-      committedPaintBody,
-      contains('_storeController.resolveSpatialCandidateSnapshot(('),
-    );
-    expect(
-      committedPaintBody,
+      ordinaryBody,
       contains('paintBoundsWorld: candidate.paintBoundsWorld,'),
     );
     expect(
-      committedPaintBody,
+      paintCandidateStageSource,
       isNot(contains('snapshot.backgroundLayer.nodes')),
     );
     expect(
-      committedPaintBody,
+      paintCandidateStageSource,
       isNot(contains('resolveSnapshotNodeById(candidate.nodeId)')),
     );
-    expect(
-      ordinaryCommittedBody,
-      isNot(contains('_snapshotPaintBoundsWorld(')),
-    );
-    expect(
-      ordinaryCommittedBody,
-      isNot(contains('nodeSnapshotPaintBoundsWorld(')),
-    );
-    expect(ordinaryCommittedBody, isNot(contains('nodePaintBoundsWorld(')));
+    expect(ordinaryBody, isNot(contains('_snapshotPaintBoundsWorld(')));
+    expect(ordinaryBody, isNot(contains('nodeSnapshotPaintBoundsWorld(')));
+    expect(ordinaryBody, isNot(contains('nodePaintBoundsWorld(')));
 
     expect(viewRuntimeSource, isNot(contains('BackgroundSpatialIndex')));
     expect(viewRuntimeSource, isNot(contains('SceneBackgroundSpatialIndex')));

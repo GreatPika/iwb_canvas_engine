@@ -65,15 +65,17 @@ class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
   }
 
   @override
-  Iterable<ScenePaintCandidate> enumeratePaintCandidates(
+  ScenePreparedPaintPlan preparePaintPlan(
     SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   ) {
-    return enumerateSnapshotPaintCandidates(
-      snapshot: frameRead.snapshot,
-      query: query,
-      selectedNodeIds: frameRead.selectedNodeIds,
-      previewDeltaResolver: frameRead.previewDeltaResolver,
+    return ScenePreparedPaintCandidateList(
+      enumerateSnapshotPaintCandidates(
+        snapshot: frameRead.snapshot,
+        query: query,
+        selectedNodeIds: frameRead.selectedNodeIds,
+        previewDeltaResolver: frameRead.previewDeltaResolver,
+      ),
     );
   }
 
@@ -437,12 +439,12 @@ void main() {
           frame: ScenePainterPaintFrame(
             cameraOffset: Offset.zero,
             viewRect: const Rect.fromLTWH(-20, -20, 40, 40),
-            paintCandidates: <ScenePaintCandidate>[
+            paintPlan: ScenePreparedPaintCandidateList(<ScenePaintCandidate>[
               ScenePaintCandidate(
                 node: textNode,
                 paintBoundsWorld: nodeSnapshotBoundsWorld(textNode),
               ),
-            ],
+            ]),
             selectedIds: const <NodeId>{},
             selectionStyle: const ScenePainterSelectionStyle(
               color: Color(0xFF1565C0),

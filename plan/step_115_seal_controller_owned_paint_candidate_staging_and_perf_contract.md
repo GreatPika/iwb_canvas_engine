@@ -407,7 +407,7 @@ and is enforced through repository-local performance contracts.
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Establish the controller-owned prepared paint-plan boundary
+### Slice 1. [x] Establish the controller-owned prepared paint-plan boundary
 
 #### Slice Contract
 

@@ -2130,15 +2130,17 @@ class _StaticSceneViewRenderState extends ChangeNotifier
   }
 
   @override
-  Iterable<ScenePaintCandidate> enumeratePaintCandidates(
+  ScenePreparedPaintPlan preparePaintPlan(
     SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   ) {
-    return enumerateSnapshotPaintCandidates(
-      snapshot: frameRead.snapshot,
-      query: query,
-      selectedNodeIds: frameRead.selectedNodeIds,
-      previewDeltaResolver: frameRead.previewDeltaResolver,
+    return ScenePreparedPaintCandidateList(
+      enumerateSnapshotPaintCandidates(
+        snapshot: frameRead.snapshot,
+        query: query,
+        selectedNodeIds: frameRead.selectedNodeIds,
+        previewDeltaResolver: frameRead.previewDeltaResolver,
+      ),
     );
   }
 

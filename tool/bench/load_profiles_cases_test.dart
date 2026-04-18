@@ -424,8 +424,8 @@ Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
       iterations: iterations,
       run: (_) {
         renderState
-            .enumeratePaintCandidates(renderState.captureFrameRead(), query)
-            .length;
+            .preparePaintPlan(renderState.captureFrameRead(), query)
+            .candidateCount;
       },
     );
 
@@ -491,34 +491,13 @@ class _BenchmarkControllerRenderState extends ChangeNotifier
   }
 
   @override
-  Iterable<ScenePaintCandidate> enumeratePaintCandidates(
+  ScenePreparedPaintPlan preparePaintPlan(
     SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
-  ) sync* {
-    for (final node in frameRead.snapshot.backgroundLayer.nodes) {
-      final candidateRect = frameRead.selectedNodeIds.contains(node.id)
-          ? query.visibilityRect
-          : query.viewportRect;
-      if (_benchmarkCandidateOverlaps(node, candidateRect)) {
-        yield ScenePaintCandidate(
-          node: node,
-          paintBoundsWorld: nodeSnapshotBoundsWorld(node),
-        );
-      }
-    }
-    for (final layer in frameRead.snapshot.layers) {
-      for (final node in layer.nodes) {
-        final candidateRect = frameRead.selectedNodeIds.contains(node.id)
-            ? query.visibilityRect
-            : query.viewportRect;
-        if (_benchmarkCandidateOverlaps(node, candidateRect)) {
-          yield ScenePaintCandidate(
-            node: node,
-            paintBoundsWorld: nodeSnapshotBoundsWorld(node),
-          );
-        }
-      }
-    }
+  ) {
+    return ScenePreparedPaintCandidateList(
+      _benchmarkPaintCandidates(frameRead, query),
+    );
   }
 
   @override
@@ -559,6 +538,36 @@ class _BenchmarkControllerRenderState extends ChangeNotifier
 }
 
 Offset _benchmarkZeroPreviewDelta(NodeId _) => Offset.zero;
+
+Iterable<ScenePaintCandidate> _benchmarkPaintCandidates(
+  SceneViewFrameRead frameRead,
+  ScenePaintCandidateQuery query,
+) sync* {
+  for (final node in frameRead.snapshot.backgroundLayer.nodes) {
+    final candidateRect = frameRead.selectedNodeIds.contains(node.id)
+        ? query.visibilityRect
+        : query.viewportRect;
+    if (_benchmarkCandidateOverlaps(node, candidateRect)) {
+      yield ScenePaintCandidate(
+        node: node,
+        paintBoundsWorld: nodeSnapshotBoundsWorld(node),
+      );
+    }
+  }
+  for (final layer in frameRead.snapshot.layers) {
+    for (final node in layer.nodes) {
+      final candidateRect = frameRead.selectedNodeIds.contains(node.id)
+          ? query.visibilityRect
+          : query.viewportRect;
+      if (_benchmarkCandidateOverlaps(node, candidateRect)) {
+        yield ScenePaintCandidate(
+          node: node,
+          paintBoundsWorld: nodeSnapshotBoundsWorld(node),
+        );
+      }
+    }
+  }
+}
 
 bool _benchmarkCandidateOverlaps(NodeSnapshot node, Rect worldRect) {
   return worldRect.overlaps(boundsWorldForNodeSnapshot(node));

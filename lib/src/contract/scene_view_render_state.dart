@@ -35,6 +35,24 @@ class ScenePaintCandidate {
   final Rect paintBoundsWorld;
 }
 
+abstract interface class ScenePreparedPaintPlan {
+  int get candidateCount;
+  ScenePaintCandidate candidateAt(int index);
+}
+
+final class ScenePreparedPaintCandidateList implements ScenePreparedPaintPlan {
+  ScenePreparedPaintCandidateList(Iterable<ScenePaintCandidate> candidates)
+    : _candidates = List<ScenePaintCandidate>.unmodifiable(candidates);
+
+  final List<ScenePaintCandidate> _candidates;
+
+  @override
+  int get candidateCount => _candidates.length;
+
+  @override
+  ScenePaintCandidate candidateAt(int index) => _candidates[index];
+}
+
 /// Atomic frame read captured once and reused across the scene paint pipeline.
 final class SceneViewFrameRead {
   SceneViewFrameRead({
@@ -58,7 +76,7 @@ abstract interface class SceneViewRenderState implements SceneRenderState {
   Offset get cameraOffset;
   Offset Function(NodeId nodeId) get previewDeltaResolver;
   SceneViewFrameRead captureFrameRead();
-  Iterable<ScenePaintCandidate> enumeratePaintCandidates(
+  ScenePreparedPaintPlan preparePaintPlan(
     SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   );

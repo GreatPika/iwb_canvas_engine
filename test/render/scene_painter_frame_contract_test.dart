@@ -48,12 +48,12 @@ class _CapturedWorldRectRenderState extends ChangeNotifier
   }
 
   @override
-  Iterable<ScenePaintCandidate> enumeratePaintCandidates(
+  ScenePreparedPaintPlan preparePaintPlan(
     SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   ) {
     lastEnumeratedQuery = query;
-    return paintCandidates;
+    return ScenePreparedPaintCandidateList(paintCandidates);
   }
 
   @override
@@ -118,6 +118,14 @@ SceneViewRenderState _controllerOwnedRenderState(
   );
   addTearDown(renderState.dispose);
   return renderState;
+}
+
+List<NodeId> _candidateIds(ScenePreparedPaintPlan plan) {
+  return List<NodeId>.generate(
+    plan.candidateCount,
+    (index) => plan.candidateAt(index).node.id,
+    growable: false,
+  );
 }
 
 void main() {
@@ -237,18 +245,15 @@ void main() {
         },
       );
 
-      final candidateIds = renderState
-          .enumeratePaintCandidates(
-            renderState.captureFrameRead(),
-            const ScenePaintCandidateQuery(
-              viewportRect: Rect.fromLTWH(0, 0, 120, 100),
-              visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
-            ),
-          )
-          .map((candidate) => candidate.node.id)
-          .toList(growable: false);
+      final candidateIds = renderState.preparePaintPlan(
+        renderState.captureFrameRead(),
+        const ScenePaintCandidateQuery(
+          viewportRect: Rect.fromLTWH(0, 0, 120, 100),
+          visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
+        ),
+      );
 
-      expect(candidateIds, const <NodeId>[
+      expect(_candidateIds(candidateIds), const <NodeId>[
         'bg-candidate',
         'previewed-candidate',
         'visible-candidate',
@@ -298,18 +303,15 @@ void main() {
         ),
       );
 
-      final candidateIds = renderState
-          .enumeratePaintCandidates(
-            renderState.captureFrameRead(),
-            const ScenePaintCandidateQuery(
-              viewportRect: Rect.fromLTWH(0, 0, 120, 100),
-              visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
-            ),
-          )
-          .map((candidate) => candidate.node.id)
-          .toList(growable: false);
+      final candidateIds = renderState.preparePaintPlan(
+        renderState.captureFrameRead(),
+        const ScenePaintCandidateQuery(
+          viewportRect: Rect.fromLTWH(0, 0, 120, 100),
+          visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
+        ),
+      );
 
-      expect(candidateIds, const <NodeId>[
+      expect(_candidateIds(candidateIds), const <NodeId>[
         'runtime-background-node',
         'snapshot-only-background-node',
       ]);
@@ -402,18 +404,15 @@ void main() {
         ),
       );
 
-      final candidateIds = renderState
-          .enumeratePaintCandidates(
-            renderState.captureFrameRead(),
-            const ScenePaintCandidateQuery(
-              viewportRect: Rect.fromLTWH(0, 0, 120, 100),
-              visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
-            ),
-          )
-          .map((candidate) => candidate.node.id)
-          .toList(growable: false);
+      final candidateIds = renderState.preparePaintPlan(
+        renderState.captureFrameRead(),
+        const ScenePaintCandidateQuery(
+          viewportRect: Rect.fromLTWH(0, 0, 120, 100),
+          visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
+        ),
+      );
 
-      expect(candidateIds, const <NodeId>['frame-visible-node']);
+      expect(_candidateIds(candidateIds), const <NodeId>['frame-visible-node']);
     },
   );
 
@@ -477,18 +476,15 @@ void main() {
         ),
       );
 
-      final candidateIds = renderState
-          .enumeratePaintCandidates(
-            renderState.captureFrameRead(),
-            const ScenePaintCandidateQuery(
-              viewportRect: Rect.fromLTWH(0, 0, 30, 30),
-              visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
-            ),
-          )
-          .map((candidate) => candidate.node.id)
-          .toList(growable: false);
+      final candidateIds = renderState.preparePaintPlan(
+        renderState.captureFrameRead(),
+        const ScenePaintCandidateQuery(
+          viewportRect: Rect.fromLTWH(0, 0, 30, 30),
+          visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
+        ),
+      );
 
-      expect(candidateIds, const <NodeId>[
+      expect(_candidateIds(candidateIds), const <NodeId>[
         'frame-visible-node-a',
         'frame-selected-edge-node',
         'frame-visible-node-b',
@@ -597,8 +593,8 @@ void main() {
           visibilityRect: Rect.fromLTWH(11, 7, 102, 62),
         ),
       );
-      expect(frame.paintCandidates, hasLength(1));
-      expect(frame.paintCandidates.single.node, same(candidate));
+      expect(frame.paintPlan.candidateCount, 1);
+      expect(frame.paintPlan.candidateAt(0).node, same(candidate));
     },
   );
 
@@ -691,18 +687,15 @@ void main() {
         selectedNodeIds: const <NodeId>{'selected-edge-node'},
       );
 
-      final candidateIds = renderState
-          .enumeratePaintCandidates(
-            renderState.captureFrameRead(),
-            const ScenePaintCandidateQuery(
-              viewportRect: Rect.fromLTWH(0, 0, 30, 30),
-              visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
-            ),
-          )
-          .map((candidate) => candidate.node.id)
-          .toList(growable: false);
+      final candidateIds = renderState.preparePaintPlan(
+        renderState.captureFrameRead(),
+        const ScenePaintCandidateQuery(
+          viewportRect: Rect.fromLTWH(0, 0, 30, 30),
+          visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
+        ),
+      );
 
-      expect(candidateIds, const <NodeId>[
+      expect(_candidateIds(candidateIds), const <NodeId>[
         'visible-viewport-node',
         'selected-edge-node',
       ]);
@@ -741,18 +734,17 @@ void main() {
         selectedNodeIds: const <NodeId>{'selected-background-edge-node'},
       );
 
-      final candidateIds = renderState
-          .enumeratePaintCandidates(
-            renderState.captureFrameRead(),
-            const ScenePaintCandidateQuery(
-              viewportRect: Rect.fromLTWH(0, 0, 30, 30),
-              visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
-            ),
-          )
-          .map((candidate) => candidate.node.id)
-          .toList(growable: false);
+      final candidateIds = renderState.preparePaintPlan(
+        renderState.captureFrameRead(),
+        const ScenePaintCandidateQuery(
+          viewportRect: Rect.fromLTWH(0, 0, 30, 30),
+          visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
+        ),
+      );
 
-      expect(candidateIds, const <NodeId>['selected-background-edge-node']);
+      expect(_candidateIds(candidateIds), const <NodeId>[
+        'selected-background-edge-node',
+      ]);
     },
   );
 
@@ -795,18 +787,17 @@ void main() {
         ),
       );
 
-      final candidateIds = renderState
-          .enumeratePaintCandidates(
-            renderState.captureFrameRead(),
-            const ScenePaintCandidateQuery(
-              viewportRect: Rect.fromLTWH(0, 0, 30, 30),
-              visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
-            ),
-          )
-          .map((candidate) => candidate.node.id)
-          .toList(growable: false);
+      final candidateIds = renderState.preparePaintPlan(
+        renderState.captureFrameRead(),
+        const ScenePaintCandidateQuery(
+          viewportRect: Rect.fromLTWH(0, 0, 30, 30),
+          visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
+        ),
+      );
 
-      expect(candidateIds, const <NodeId>['frame-background-edge-node']);
+      expect(_candidateIds(candidateIds), const <NodeId>[
+        'frame-background-edge-node',
+      ]);
     },
   );
 
@@ -838,18 +829,15 @@ void main() {
         ),
       );
 
-      final candidateIds = renderState
-          .enumeratePaintCandidates(
-            renderState.captureFrameRead(),
-            const ScenePaintCandidateQuery(
-              viewportRect: Rect.fromLTWH(0, 0, 30, 30),
-              visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
-            ),
-          )
-          .map((candidate) => candidate.node.id)
-          .toList(growable: false);
+      final candidateIds = renderState.preparePaintPlan(
+        renderState.captureFrameRead(),
+        const ScenePaintCandidateQuery(
+          viewportRect: Rect.fromLTWH(0, 0, 30, 30),
+          visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
+        ),
+      );
 
-      expect(candidateIds, isEmpty);
+      expect(_candidateIds(candidateIds), isEmpty);
     },
   );
 
@@ -886,14 +874,14 @@ void main() {
 
       expect(
         () => renderState
-            .enumeratePaintCandidates(
+            .preparePaintPlan(
               renderState.captureFrameRead(),
               const ScenePaintCandidateQuery(
                 viewportRect: Rect.fromLTWH(0, 0, 120, 100),
                 visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
               ),
             )
-            .toList(growable: false),
+            .candidateCount,
         throwsA(
           isA<StateError>().having(
             (error) => error.message,
