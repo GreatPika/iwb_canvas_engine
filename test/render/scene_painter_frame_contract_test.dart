@@ -7,7 +7,9 @@ import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_paint_candidate_stage.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_selected_paint_order_cache.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
     as interactive;
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
@@ -745,6 +747,194 @@ void main() {
       expect(_candidateIds(candidateIds), const <NodeId>[
         'selected-background-edge-node',
       ]);
+    },
+  );
+
+  test(
+    'controller-owned stage merges ordered selected supplements without Set-order dependence',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(
+                id: 'selected-background-first',
+                size: const Size(10, 10),
+                fillColor: const Color(0xFF000000),
+                strokeWidth: 0,
+                transform: Transform2D.translation(const Offset(-10, 15)),
+              ),
+              RectNodeSnapshot(
+                id: 'selected-background-second',
+                size: const Size(10, 10),
+                fillColor: const Color(0xFF000000),
+                strokeWidth: 0,
+                transform: Transform2D.translation(const Offset(-10, 15)),
+              ),
+            ],
+          ),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-ordered-supplements',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'selected-content-first',
+                  size: const Size(10, 10),
+                  fillColor: const Color(0xFF000000),
+                  strokeWidth: 0,
+                  transform: Transform2D.translation(const Offset(-10, 15)),
+                ),
+                RectNodeSnapshot(
+                  id: 'ordinary-selected-content',
+                  size: const Size(10, 10),
+                  fillColor: const Color(0xFF000000),
+                  strokeWidth: 0,
+                  transform: Transform2D.translation(const Offset(15, 15)),
+                ),
+                RectNodeSnapshot(
+                  id: 'selected-content-second',
+                  size: const Size(10, 10),
+                  fillColor: const Color(0xFF000000),
+                  strokeWidth: 0,
+                  transform: Transform2D.translation(const Offset(-10, 15)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      final stage = SceneControllerPaintCandidateStage(store: controller);
+
+      final plan = stage.prepareCommittedPaintPlan(
+        query: const ScenePaintCandidateQuery(
+          viewportRect: Rect.fromLTWH(0, 0, 30, 30),
+          visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
+        ),
+        selectedNodeIds: const <NodeId>{
+          'selected-content-second',
+          'ordinary-selected-content',
+          'selected-background-second',
+          'selected-content-first',
+          'selected-background-first',
+        },
+        previewResolver: (_) => Offset.zero,
+      );
+
+      expect(_candidateIds(plan), const <NodeId>[
+        'selected-background-first',
+        'selected-background-second',
+        'selected-content-first',
+        'ordinary-selected-content',
+        'selected-content-second',
+      ]);
+      expect(
+        _candidateIds(plan).where((id) => id == 'ordinary-selected-content'),
+        hasLength(1),
+      );
+      expect(stage.debugCommittedFastPathGlobalSortAvoidanceCount, 1);
+    },
+  );
+
+  test('selected paint order tokens use value equality', () {
+    const token = SceneControllerSelectedPaintOrderToken(
+      nodeId: 'selected-token',
+      layerIndex: 1,
+      nodeIndex: 2,
+    );
+    const sameToken = SceneControllerSelectedPaintOrderToken(
+      nodeId: 'selected-token',
+      layerIndex: 1,
+      nodeIndex: 2,
+    );
+    const differentToken = SceneControllerSelectedPaintOrderToken(
+      nodeId: 'selected-token',
+      layerIndex: 1,
+      nodeIndex: 3,
+    );
+
+    expect(token, sameToken);
+    expect(token.hashCode, sameToken.hashCode);
+    expect(token, isNot(differentToken));
+  });
+
+  test(
+    'controller-owned stage reuses buffers and rebuilds selected order only for invalidating inputs',
+    () {
+      SceneSnapshot snapshotWithOrder(List<NodeId> nodeIds) {
+        return SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-selected-order-cache',
+              nodes: <NodeSnapshot>[
+                for (final nodeId in nodeIds)
+                  RectNodeSnapshot(
+                    id: nodeId,
+                    size: const Size(10, 10),
+                    fillColor: const Color(0xFF000000),
+                    strokeWidth: 0,
+                    transform: Transform2D.translation(const Offset(-10, 15)),
+                  ),
+              ],
+            ),
+          ],
+        );
+      }
+
+      final controller = SceneStoreController(
+        initialSnapshot: snapshotWithOrder(const <NodeId>['a', 'b']),
+      );
+      addTearDown(controller.dispose);
+      final stage = SceneControllerPaintCandidateStage(store: controller);
+      const query = ScenePaintCandidateQuery(
+        viewportRect: Rect.fromLTWH(40, 40, 10, 10),
+        visibilityRect: Rect.fromLTWH(-8, -8, 46, 46),
+      );
+
+      stage.prepareCommittedPaintPlan(
+        query: query,
+        selectedNodeIds: const <NodeId>{'a'},
+        previewResolver: (_) => Offset.zero,
+      );
+      expect(stage.debugSelectedOrderCacheRebuildCount, 1);
+      expect(stage.debugStageBufferReuseCount, 0);
+      expect(stage.debugCommittedFastPathGlobalSortAvoidanceCount, 1);
+
+      stage.prepareCommittedPaintPlan(
+        query: query,
+        selectedNodeIds: const <NodeId>{'a'},
+        previewResolver: (_) => Offset.zero,
+      );
+      expect(stage.debugSelectedOrderCacheRebuildCount, 1);
+      expect(stage.debugStageBufferReuseCount, 1);
+      expect(stage.debugCommittedFastPathGlobalSortAvoidanceCount, 2);
+
+      stage.prepareCommittedPaintPlan(
+        query: query,
+        selectedNodeIds: const <NodeId>{'a', 'b'},
+        previewResolver: (_) => Offset.zero,
+      );
+      expect(stage.debugSelectedOrderCacheRebuildCount, 2);
+      expect(stage.debugStageBufferReuseCount, 2);
+
+      stage.prepareCommittedPaintPlan(
+        query: query,
+        selectedNodeIds: const <NodeId>{'b', 'a'},
+        previewResolver: (_) => Offset.zero,
+      );
+      expect(stage.debugSelectedOrderCacheRebuildCount, 2);
+      expect(stage.debugStageBufferReuseCount, 3);
+
+      controller.writeReplaceScene(snapshotWithOrder(const <NodeId>['b', 'a']));
+      stage.prepareCommittedPaintPlan(
+        query: query,
+        selectedNodeIds: const <NodeId>{'a', 'b'},
+        previewResolver: (_) => Offset.zero,
+      );
+      expect(stage.debugSelectedOrderCacheRebuildCount, 3);
+      expect(stage.debugStageBufferReuseCount, 4);
     },
   );
 

@@ -227,7 +227,16 @@ void main() {
 
     expect(stageBody, contains('_stageOrdinaryCandidates('));
     expect(stageBody, contains('_stageSelectedSupplements('));
-    expect(supplementBody, contains('for (final nodeId in selectedNodeIds)'));
+    expect(
+      supplementBody,
+      contains('_selectedOrderCache.orderedSelectedTokens('),
+    );
+    expect(supplementBody, contains('for (final token in selectedTokens)'));
+    expect(
+      supplementBody,
+      isNot(contains('for (final nodeId in selectedNodeIds)')),
+    );
+    expect(supplementBody, isNot(contains('.sort(')));
     expect(
       ordinaryBody,
       contains(
@@ -247,6 +256,7 @@ void main() {
     expect(ordinaryBody, isNot(contains('_snapshotPaintBoundsWorld(')));
     expect(ordinaryBody, isNot(contains('nodeSnapshotPaintBoundsWorld(')));
     expect(ordinaryBody, isNot(contains('nodePaintBoundsWorld(')));
+    expect(stageBody, isNot(contains('.sort(')));
   });
 
   test('selection rendering uses resolved frame data for box selections', () {

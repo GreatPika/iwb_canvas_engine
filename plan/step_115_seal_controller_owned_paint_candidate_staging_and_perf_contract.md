@@ -558,7 +558,7 @@ queries.
 - Structural assertions proving no caller-side ordinary-order repair survives
   above `SceneSpatialIndex`.
 
-### Slice 3. [ ] Replace global repair sorting with ordered supplement merge
+### Slice 3. [x] Replace global repair sorting with ordered supplement merge
 
 #### Slice Contract
 

@@ -64,6 +64,9 @@ void main() {
     final paintCandidateStageSource = _read(
       'lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart',
     );
+    final selectedPaintOrderCacheSource = _read(
+      'lib/src/interactive/internal/scene_controller_selected_paint_order_cache.dart',
+    );
     final sceneSpatialIndexSource = _read(
       'lib/src/core/scene_spatial_index.dart',
     );
@@ -317,7 +320,40 @@ void main() {
     );
     expect(stageBody, contains('_stageOrdinaryCandidates('));
     expect(stageBody, contains('_stageSelectedSupplements('));
-    expect(supplementBody, contains('for (final nodeId in selectedNodeIds)'));
+    expect(stageBody, contains('_mergeOrderedCandidates(buffers)'));
+    expect(stageBody, isNot(contains('.sort(')));
+    expect(
+      supplementBody,
+      contains('_selectedOrderCache.orderedSelectedTokens('),
+    );
+    expect(supplementBody, contains('for (final token in selectedTokens)'));
+    expect(
+      supplementBody,
+      isNot(contains('for (final nodeId in selectedNodeIds)')),
+    );
+    expect(supplementBody, isNot(contains('.sort(')));
+    expect(
+      paintCandidateStageSource,
+      contains('SceneControllerSelectedPaintOrderCache _selectedOrderCache'),
+    );
+    expect(
+      selectedPaintOrderCacheSource,
+      contains('final class SceneControllerSelectedPaintOrderCache'),
+    );
+    expect(
+      selectedPaintOrderCacheSource,
+      contains('SceneControllerSelectedPaintOrderToken'),
+    );
+    expect(selectedPaintOrderCacheSource, contains('nextTokens.sort('));
+    expect(
+      selectedPaintOrderCacheSource,
+      isNot(contains('ScenePaintCandidate')),
+    );
+    expect(
+      selectedPaintOrderCacheSource,
+      isNot(contains('ScenePreparedPaintPlan')),
+    );
+    expect(selectedPaintOrderCacheSource, isNot(contains('paintBoundsWorld')));
     expect(
       ordinaryBody,
       contains(
