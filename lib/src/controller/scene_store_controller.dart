@@ -64,6 +64,7 @@ class SceneStoreController extends ChangeNotifier implements SceneRenderState {
 
   int get controllerEpoch => _store.controllerEpoch;
   int get structuralRevision => _store.structuralRevision;
+  int get selectionRevision => _store.selectionRevision;
   int get boundsRevision => _store.boundsRevision;
   int get visualRevision => _store.visualRevision;
 

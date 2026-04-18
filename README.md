@@ -128,6 +128,13 @@ dart run tool/analysis/find_similar_clones.dart --exclude-main test 60 30 5 4 0.
 dart run tool/analysis/find_similar_clones.dart --json --top 20 lib 50 30 5 4 0.55 12
 ```
 
+Repository perf gates stay split by intent:
+
+- `smoke` runs from `.github/workflows/ci.yaml`, tracks the required benchmark
+  case set, and publishes only avg/min/max metrics.
+- `full` runs from `.github/workflows/perf_nightly.yaml` and keeps the heavier
+  percentile-bearing nightly benchmark contract.
+
 ## Quick start
 
 ```dart
@@ -218,7 +225,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
   active frame snapshot. `ScenePainter` captures that frame read once and
   reuses it across background paint plus candidate enumeration plus preview
   geometry, while the controller-owned spatial-index path remains the normal
-  fast path only when both snapshots are identical.
+  fast path only when both snapshots are identical. Stable committed frames
+  now reuse selected-node supplement ordering through one controller-owned
+  `selectionRevision` captured atomically with that frame read.
 - Snapshot-backed committed node resolution uses one fixed stale predicate:
   a cached locator stays valid only while the current committed snapshot still
   contains the same `nodeId` at the same `[layerIndex][nodeIndex]` position.

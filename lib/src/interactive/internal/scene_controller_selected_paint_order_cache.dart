@@ -29,14 +29,26 @@ final class SceneControllerSelectedPaintOrderToken {
 final class SceneControllerSelectedPaintOrderCache {
   List<SceneControllerSelectedPaintOrderToken> _orderedTokens =
       const <SceneControllerSelectedPaintOrderToken>[];
+  int? _selectionRevision;
+  int? _structuralRevision;
   int _debugRebuildCount = 0;
+  int _debugFastReturnCount = 0;
 
   int get debugRebuildCount => _debugRebuildCount;
+  int get debugFastReturnCount => _debugFastReturnCount;
 
   List<SceneControllerSelectedPaintOrderToken> orderedSelectedTokens({
+    required int selectionRevision,
+    required int structuralRevision,
     required Set<NodeId> selectedNodeIds,
     required SceneControllerSelectedPaintOrderResolver resolveOrder,
   }) {
+    if (_selectionRevision == selectionRevision &&
+        _structuralRevision == structuralRevision) {
+      _debugFastReturnCount += 1;
+      return _orderedTokens;
+    }
+
     final nextTokens = <SceneControllerSelectedPaintOrderToken>[];
     for (final nodeId in selectedNodeIds) {
       final order = resolveOrder(nodeId);
@@ -53,13 +65,11 @@ final class SceneControllerSelectedPaintOrderCache {
     }
     nextTokens.sort(_compareSelectedPaintOrderTokens);
 
-    if (_sameOrderedTokens(_orderedTokens, nextTokens)) {
-      return _orderedTokens;
-    }
-
     _orderedTokens = List<SceneControllerSelectedPaintOrderToken>.unmodifiable(
       nextTokens,
     );
+    _selectionRevision = selectionRevision;
+    _structuralRevision = structuralRevision;
     _debugRebuildCount += 1;
     return _orderedTokens;
   }
@@ -75,19 +85,4 @@ int _compareSelectedPaintOrderTokens(
   }
   final nodeOrder = a.nodeIndex.compareTo(b.nodeIndex);
   return nodeOrder != 0 ? nodeOrder : a.nodeId.compareTo(b.nodeId);
-}
-
-bool _sameOrderedTokens(
-  List<SceneControllerSelectedPaintOrderToken> a,
-  List<SceneControllerSelectedPaintOrderToken> b,
-) {
-  if (a.length != b.length) {
-    return false;
-  }
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) {
-      return false;
-    }
-  }
-  return true;
 }

@@ -255,6 +255,7 @@ void _assertPostConditions({
       ),
       controllerEpoch: controller.controllerEpoch,
       structuralRevision: controller.structuralRevision,
+      selectionRevision: controller.selectionRevision,
       boundsRevision: controller.boundsRevision,
       visualRevision: controller.visualRevision,
       commitRevision: controller.debug.currentCommitRevision,

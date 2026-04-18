@@ -2125,6 +2125,7 @@ class _StaticSceneViewRenderState extends ChangeNotifier
     return SceneViewFrameRead(
       snapshot: _snapshot,
       selectedNodeIds: selectedNodeIds,
+      selectionRevision: 0,
       previewDeltaResolver: previewDeltaResolver,
     );
   }

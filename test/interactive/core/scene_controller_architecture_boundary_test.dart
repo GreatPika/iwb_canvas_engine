@@ -287,6 +287,14 @@ void main() {
       ),
     );
     expect(viewRuntimeSource, contains('snapshot => _readSnapshot()'));
+    final captureFrameReadBody = _extractMethodBody(
+      source: viewRuntimeSource,
+      methodStart: 'SceneViewFrameRead captureFrameRead()',
+    );
+    expect(
+      captureFrameReadBody,
+      contains('selectionRevision: _storeController.selectionRevision,'),
+    );
     final preparePaintPlanBody = _extractMethodBody(
       source: viewRuntimeSource,
       methodStart: 'ScenePreparedPaintPlan preparePaintPlan(',
@@ -305,6 +313,10 @@ void main() {
       isNot(contains('resolveSpatialCandidateSnapshot((')),
     );
     expect(preparePaintPlanBody, isNot(contains('resolveSnapshotNodeById(')));
+    expect(
+      preparePaintPlanBody,
+      isNot(contains('_storeController.selectionRevision')),
+    );
 
     final stageBody = _extractMethodBody(
       source: paintCandidateStageSource,
@@ -326,6 +338,8 @@ void main() {
       supplementBody,
       contains('_selectedOrderCache.orderedSelectedTokens('),
     );
+    expect(supplementBody, contains('selectionRevision: selectionRevision,'));
+    expect(supplementBody, contains('structuralRevision: structuralRevision,'));
     expect(supplementBody, contains('for (final token in selectedTokens)'));
     expect(
       supplementBody,
@@ -344,7 +358,15 @@ void main() {
       selectedPaintOrderCacheSource,
       contains('SceneControllerSelectedPaintOrderToken'),
     );
+    expect(
+      selectedPaintOrderCacheSource,
+      contains('_selectionRevision == selectionRevision'),
+    );
     expect(selectedPaintOrderCacheSource, contains('nextTokens.sort('));
+    expect(
+      selectedPaintOrderCacheSource,
+      isNot(contains('_sameOrderedTokens')),
+    );
     expect(
       selectedPaintOrderCacheSource,
       isNot(contains('ScenePaintCandidate')),

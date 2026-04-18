@@ -1,6 +1,7 @@
 import 'verification_contract_models.dart';
 
 const String requiredCodeChangePreset = 'required_code_change';
+const String perfNightlyWorkflowPath = '.github/workflows/perf_nightly.yaml';
 
 const List<String> verificationScopes = <String>[
   'core',
@@ -74,6 +75,24 @@ const List<VerificationRunExpectation> ciWorkflowRunExpectations =
         command:
             'dart run tool/run_tool_tests.dart '
             '--jobs="$ciToolTestJobsExpression"',
+      ),
+    ];
+
+const List<VerificationRunExpectation> perfNightlyWorkflowRunExpectations =
+    <VerificationRunExpectation>[
+      VerificationRunExpectation(command: 'flutter pub get'),
+      VerificationRunExpectation(
+        command:
+            'dart run tool/bench/run_load_profiles.dart '
+            '--profile=full --output=build/bench/load_profiles_full.json',
+      ),
+      VerificationRunExpectation(
+        command:
+            'dart run tool/bench/diff_load_profiles.dart '
+            '--profile=full '
+            '--baseline=tool/bench/baselines/load_profiles_full_baseline.json '
+            '--current=build/bench/load_profiles_full.json '
+            '--output=build/bench/load_profiles_full_diff.json',
       ),
     ];
 

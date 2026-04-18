@@ -124,6 +124,7 @@ void main() {
           ),
       controllerEpoch: controllerEpoch,
       structuralRevision: 0,
+      selectionRevision: 0,
       boundsRevision: 0,
       visualRevision: 0,
       commitRevision: commitRevision,

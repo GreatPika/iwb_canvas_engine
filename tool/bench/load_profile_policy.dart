@@ -1,4 +1,4 @@
-const List<String> loadProfileRequiredMetricKeys = <String>[
+const List<String> _fullLoadProfileRequiredMetricKeys = <String>[
   'avgUs',
   'minUs',
   'p95Us',
@@ -6,6 +6,15 @@ const List<String> loadProfileRequiredMetricKeys = <String>[
   'avgRssDeltaBytes',
   'minRssDeltaBytes',
   'p95RssDeltaBytes',
+  'maxRssDeltaBytes',
+];
+
+const List<String> _smokeLoadProfileRequiredMetricKeys = <String>[
+  'avgUs',
+  'minUs',
+  'maxUs',
+  'avgRssDeltaBytes',
+  'minRssDeltaBytes',
   'maxRssDeltaBytes',
 ];
 
@@ -22,9 +31,14 @@ const List<String> _strokeCaseRequiredOperations = <String>[
   'toggle_selection',
 ];
 
-const List<String> _selectionPathRequiredOperations = <String>[
+const List<String> _selectionPathPaintRequiredOperations = <String>[
   'paint_no_selection',
   'paint_with_selection',
+];
+
+const List<String> _selectionPathStagingRequiredOperations = <String>[
+  'stage_no_selection',
+  'stage_with_selection',
 ];
 
 const List<String> _backgroundLayerPaintAdmissionRequiredOperations = <String>[
@@ -58,14 +72,9 @@ const Map<String, LoadProfilePolicy> _loadProfilePolicies =
         worstCaseIterations: 2,
         maxRegressionPctByMetric: <String, double>{
           'avgUs': 35,
-          'p95Us': 45,
           'avgRssDeltaBytes': 150,
-          'p95RssDeltaBytes': 200,
         },
-        maxAbsoluteValueByMetric: <String, double>{
-          'avgRssDeltaBytes': 1048576,
-          'p95RssDeltaBytes': 2097152,
-        },
+        maxAbsoluteValueByMetric: <String, double>{'avgRssDeltaBytes': 1048576},
       ),
       'full': LoadProfilePolicy(
         profile: 'full',
@@ -174,11 +183,16 @@ class LoadProfilePolicy {
   final int worstCaseIterations;
   final Map<String, double> maxRegressionPctByMetric;
   final Map<String, double> maxAbsoluteValueByMetric;
+  List<String> get requiredMetricKeys => profile == 'smoke'
+      ? _smokeLoadProfileRequiredMetricKeys
+      : _fullLoadProfileRequiredMetricKeys;
 
   List<String> get requiredCaseNames => <String>[
     ...nodeCases.map((c) => c.name),
     ...strokeCases.map((c) => c.name),
-    selectionPathCaseName,
+    selectionPathPainterOnlyCaseName,
+    selectionPathCandidateStagingCaseName,
+    selectionPathEndToEndPaintCaseName,
     backgroundLayerPaintAdmissionCaseName,
     worstCaseName,
   ];
@@ -190,8 +204,12 @@ class LoadProfilePolicy {
     if (strokeCases.any((c) => c.name == caseName)) {
       return _strokeCaseRequiredOperations;
     }
-    if (caseName == selectionPathCaseName) {
-      return _selectionPathRequiredOperations;
+    if (caseName == selectionPathPainterOnlyCaseName ||
+        caseName == selectionPathEndToEndPaintCaseName) {
+      return _selectionPathPaintRequiredOperations;
+    }
+    if (caseName == selectionPathCandidateStagingCaseName) {
+      return _selectionPathStagingRequiredOperations;
     }
     if (caseName == backgroundLayerPaintAdmissionCaseName) {
       return _backgroundLayerPaintAdmissionRequiredOperations;
@@ -223,7 +241,11 @@ class LoadProfileStrokeCase {
   String get name => 'strokes_${strokeCount}_pts_$pointsPerStroke';
 }
 
-const String selectionPathCaseName = 'selection_path_metrics';
+const String selectionPathPainterOnlyCaseName = 'selection_path_painter_only';
+const String selectionPathCandidateStagingCaseName =
+    'selection_path_candidate_staging';
+const String selectionPathEndToEndPaintCaseName =
+    'selection_path_end_to_end_paint';
 const String backgroundLayerPaintAdmissionCaseName =
     'background_layer_paint_admission';
 const String worstCaseName = 'worst_case';

@@ -231,6 +231,8 @@ void main() {
       supplementBody,
       contains('_selectedOrderCache.orderedSelectedTokens('),
     );
+    expect(supplementBody, contains('selectionRevision: selectionRevision,'));
+    expect(supplementBody, contains('structuralRevision: structuralRevision,'));
     expect(supplementBody, contains('for (final token in selectedTokens)'));
     expect(
       supplementBody,

@@ -24,6 +24,7 @@ class SceneStore {
 
   int controllerEpoch = 0;
   int structuralRevision = 0;
+  int selectionRevision = 0;
   int boundsRevision = 0;
   int visualRevision = 0;
   int commitRevision = 0;

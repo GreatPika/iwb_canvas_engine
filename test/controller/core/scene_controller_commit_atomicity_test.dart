@@ -214,6 +214,7 @@ void main() {
 
     final beforeCommit = controller.debug.currentCommitRevision;
     final beforeStructural = controller.structuralRevision;
+    final beforeSelection = controller.selectionRevision;
     final beforeBounds = controller.boundsRevision;
     final beforeVisual = controller.visualRevision;
 
@@ -226,6 +227,7 @@ void main() {
 
     expect(controller.debug.currentCommitRevision, beforeCommit);
     expect(controller.structuralRevision, beforeStructural);
+    expect(controller.selectionRevision, beforeSelection);
     expect(controller.boundsRevision, beforeBounds);
     expect(controller.visualRevision, beforeVisual);
     expect(notifications, 0);
@@ -266,12 +268,14 @@ void main() {
     });
     final afterBounds = controller.selectedNodeIds;
     expect(identical(before, afterBounds), isTrue);
+    expect(controller.selectionRevision, 1);
 
     controller.writeWithSceneWriter<void>((writer) {
       writer.writeSignalEnqueue(type: 'signals-only.selection-view');
     });
     final afterSignals = controller.selectedNodeIds;
     expect(identical(afterBounds, afterSignals), isTrue);
+    expect(controller.selectionRevision, 1);
   });
 
   test('selectedNodeIds view identity changes after selection mutation', () {
@@ -286,7 +290,45 @@ void main() {
 
     expect(identical(before, after), isFalse);
     expect(after, const <NodeId>{'r1'});
+    expect(controller.selectionRevision, 1);
   });
+
+  test(
+    'selectionRevision increments only for committed selection membership changes',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      expect(controller.selectionRevision, 0);
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+      });
+      expect(controller.selectionRevision, 1);
+
+      controller.write<void>((writer) {
+        writer.writeSelectionTranslate(const Offset(5, 0));
+      });
+      expect(controller.selectionRevision, 1);
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r2'});
+      });
+      expect(controller.selectionRevision, 2);
+
+      controller.write<void>((writer) {
+        writer.writeNodePatch(
+          RectNodePatch(
+            id: 'r2',
+            fillColor: PatchField<Color>.value(const Color(0xFF00FF00)),
+          ),
+        );
+      });
+      expect(controller.selectionRevision, 2);
+    },
+  );
 
   test('snapshot cache survives selection-only and signals-only commits', () {
     final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());

@@ -34,6 +34,10 @@ final class SceneControllerPaintCandidateStage {
       _selectedOrderCache.debugRebuildCount;
 
   @visibleForTesting
+  int get debugSelectedOrderCacheFastReturnCount =>
+      _selectedOrderCache.debugFastReturnCount;
+
+  @visibleForTesting
   int get debugStageBufferReuseCount => _debugStageBufferReuseCount;
 
   @visibleForTesting
@@ -43,6 +47,7 @@ final class SceneControllerPaintCandidateStage {
   ScenePreparedPaintPlan prepareCommittedPaintPlan({
     required ScenePaintCandidateQuery query,
     required Set<NodeId> selectedNodeIds,
+    required int selectionRevision,
     required Offset Function(NodeId nodeId) previewResolver,
   }) {
     final buffers = _buffers;
@@ -59,6 +64,8 @@ final class SceneControllerPaintCandidateStage {
     _stageSelectedSupplements(
       buffers: buffers,
       selectedNodeIds: selectedNodeIds,
+      selectionRevision: selectionRevision,
+      structuralRevision: _store.structuralRevision,
       visibilityRect: query.visibilityRect,
       previewResolver: previewResolver,
     );
@@ -100,10 +107,14 @@ final class SceneControllerPaintCandidateStage {
   void _stageSelectedSupplements({
     required _PaintCandidateStageBuffers buffers,
     required Set<NodeId> selectedNodeIds,
+    required int selectionRevision,
+    required int structuralRevision,
     required Rect visibilityRect,
     required Offset Function(NodeId nodeId) previewResolver,
   }) {
     final selectedTokens = _selectedOrderCache.orderedSelectedTokens(
+      selectionRevision: selectionRevision,
+      structuralRevision: structuralRevision,
       selectedNodeIds: selectedNodeIds,
       resolveOrder: (nodeId) {
         final resolvedNode = _store.resolveSnapshotNodeById(nodeId);

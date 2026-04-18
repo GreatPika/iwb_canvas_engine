@@ -4,11 +4,13 @@ import 'src/verification_contract/verification_contract_registry.dart';
 
 const String _agentsPath = 'AGENTS.md';
 const String _ciWorkflowPath = '.github/workflows/ci.yaml';
+const String _perfNightlyWorkflowPath = perfNightlyWorkflowPath;
 
 Future<void> main(List<String> _) async {
   final failures = <String>[
     ..._checkAgents(File(_agentsPath)),
     ..._checkCiWorkflow(File(_ciWorkflowPath)),
+    ..._checkPerfNightlyWorkflow(File(_perfNightlyWorkflowPath)),
   ];
 
   if (failures.isNotEmpty) {
@@ -87,6 +89,28 @@ Iterable<String> _checkCiWorkflow(File file) sync* {
   }
   if (extraTriggers.isNotEmpty) {
     yield 'Unexpected $_ciWorkflowPath tool_tests entries: ${extraTriggers.join(', ')}';
+  }
+}
+
+Iterable<String> _checkPerfNightlyWorkflow(File file) sync* {
+  if (!file.existsSync()) {
+    yield 'Missing $_perfNightlyWorkflowPath.';
+    return;
+  }
+
+  final content = file.readAsStringSync();
+  final runEntries = _parseRunEntries(content);
+  final expectedRuns = <String>{
+    for (final entry in perfNightlyWorkflowRunExpectations)
+      '${entry.cwd}|${entry.command}',
+  };
+  final actualRuns = <String>{
+    for (final entry in runEntries) '${entry.cwd}|${entry.command}',
+  };
+  final missingRuns = expectedRuns.difference(actualRuns).toList()..sort();
+
+  for (final run in missingRuns) {
+    yield '$_perfNightlyWorkflowPath is missing expected run entry `$run`.';
   }
 }
 

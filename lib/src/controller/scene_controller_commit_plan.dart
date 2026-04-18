@@ -52,6 +52,8 @@ ControllerCommitPlan buildControllerCommitPlan({
       ),
       structuralRevision:
           store.structuralRevision + (changeSet.structuralChanged ? 1 : 0),
+      selectionRevision:
+          store.selectionRevision + (changeSet.selectionChanged ? 1 : 0),
       boundsRevision: store.boundsRevision + (changeSet.boundsChanged ? 1 : 0),
       visualRevision: store.visualRevision + 1,
       commitRevision: store.commitRevision + 1,

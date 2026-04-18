@@ -15,6 +15,7 @@ final class CommittedStoreState {
     required this.revisionState,
     required this.controllerEpoch,
     required this.structuralRevision,
+    required this.selectionRevision,
     required this.boundsRevision,
     required this.visualRevision,
     required this.commitRevision,
@@ -26,6 +27,7 @@ final class CommittedStoreState {
     required RevisionAllocatorState revisionState,
     required int controllerEpoch,
     required int structuralRevision,
+    required int selectionRevision,
     required int boundsRevision,
     required int visualRevision,
     required int commitRevision,
@@ -39,6 +41,7 @@ final class CommittedStoreState {
       revisionState: revisionState,
       controllerEpoch: controllerEpoch,
       structuralRevision: structuralRevision,
+      selectionRevision: selectionRevision,
       boundsRevision: boundsRevision,
       visualRevision: visualRevision,
       commitRevision: commitRevision,
@@ -53,6 +56,7 @@ final class CommittedStoreState {
   final RevisionAllocatorState revisionState;
   final int controllerEpoch;
   final int structuralRevision;
+  final int selectionRevision;
   final int boundsRevision;
   final int visualRevision;
   final int commitRevision;

@@ -33,6 +33,14 @@ All notable changes to `iwb_canvas_engine` are documented here.
   geometry share one authority, while the controller-owned viewport-first
   spatial-index path remains the normal fast path when both snapshots are
   identical.
+- Committed paint staging now seals selected-node supplement invalidation on a
+  controller-owned `selectionRevision` captured into `SceneViewFrameRead`.
+  Stable committed frames reuse ordered selected tokens without selected-id
+  iteration, location resolution, or token sorting.
+- Benchmark taxonomy now splits selection-path coverage into
+  `selection_path_painter_only`, `selection_path_candidate_staging`, and
+  `selection_path_end_to_end_paint`. The smoke profile reports avg/min/max
+  only, while the full nightly profile keeps percentile metrics.
 - Runtime scene validity ownership now closes before commit: content-layer and
   total-node budget overflows fail at model mutation owners, constrained
   runtime node fields validate eagerly on owner writes, and the controller

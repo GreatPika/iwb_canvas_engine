@@ -219,6 +219,10 @@ Committed read-side note:
   read once and reuses it across background paint plus candidate enumeration
   plus preview geometry, and the controller-owned spatial-index path remains
   the normal fast path only when both snapshots are identical
+- committed selected-node supplement ordering invalidates only on the
+  controller-owned `(selectionRevision, structuralRevision)` pair; the render
+  path captures `selectionRevision` inside `SceneViewFrameRead` instead of
+  performing a live post-capture invalidation read
 - snapshot-backed node resolution is stale unless the current committed
   snapshot still contains the same `nodeId` at the same
   `[layerIndex][nodeIndex]` location; candidate bounds are coarse query data
@@ -1076,6 +1080,10 @@ Parameters:
 - lets `ScenePainter` consume controller-owned ordered viewport candidates
   before expensive frame resolution, preserving background/content paint order
   and selected move-preview visibility without reopening a full content scan
+- repository perf tooling now separates `selection_path_painter_only`,
+  `selection_path_candidate_staging`, and `selection_path_end_to_end_paint`;
+  smoke reports only avg/min/max metrics, while full remains the
+  percentile-bearing nightly profile
 - keeps text layout resolution on one frame-local path: `SceneTextLayoutCache`
   stores canonical resolved text-layout payloads, `ScenePainterFrameOwner`
   resolves them once per text candidate, and geometry plus paint both consume

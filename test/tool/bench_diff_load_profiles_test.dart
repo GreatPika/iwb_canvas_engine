@@ -41,7 +41,7 @@ void main() {
         expect(firstOutput['profile'], 'smoke');
 
         final summary = firstOutput['summary'] as Map<String, Object?>;
-        expect(summary['comparedCases'], 5);
+        expect(summary['comparedCases'], 7);
         expect(summary['missingInBaseline'], isEmpty);
         expect(summary['missingInCurrent'], isEmpty);
 
@@ -54,13 +54,13 @@ void main() {
           (item) => item['operation'] == 'single_node_patch',
         );
         final metrics = operation0['metrics'] as List<Object?>;
-        final p95 =
+        final avg =
             metrics.firstWhere((m) {
-                  return (m as Map<String, Object?>)['metric'] == 'p95Us';
+                  return (m as Map<String, Object?>)['metric'] == 'avgUs';
                 })
                 as Map<String, Object?>;
-        expect((p95['deltaAbsUs'] as num).toDouble(), 10);
-        expect((p95['deltaPct'] as num).toDouble(), 8.333);
+        expect((avg['deltaAbsUs'] as num).toDouble(), 10);
+        expect((avg['deltaPct'] as num).toDouble(), 10);
       } finally {
         sandbox.deleteSync(recursive: true);
       }
@@ -228,7 +228,9 @@ void main() {
         expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
-          contains('single_node_patch.p95Us must be a finite number'),
+          contains(
+            'single_node_patch.avgRssDeltaBytes must be a finite number',
+          ),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -403,10 +405,7 @@ void main() {
               'single_stroke_patch_points': _metrics(100, 100, 100, 100),
               'toggle_selection': _metrics(100, 100, 100, 100),
             }),
-            _caseMetrics(selectionPathCaseName, <String, Map<String, num>>{
-              'paint_no_selection': _metrics(100, 100, 100, 100),
-              'paint_with_selection': _metrics(100, 100, 100, 100),
-            }),
+            ..._smokeSelectionPathCases(_metrics(100, 100, 100, 100)),
             _caseMetrics(
               backgroundLayerPaintAdmissionCaseName,
               <String, Map<String, num>>{
@@ -433,10 +432,7 @@ void main() {
               'single_stroke_patch_points': _metrics(100, 100, 100, 100),
               'toggle_selection': _metrics(100, 100, 100, 100),
             }),
-            _caseMetrics(selectionPathCaseName, <String, Map<String, num>>{
-              'paint_no_selection': _metrics(100, 100, 100, 100),
-              'paint_with_selection': _metrics(100, 100, 100, 100),
-            }),
+            ..._smokeSelectionPathCases(_metrics(100, 100, 100, 100)),
             _caseMetrics(
               backgroundLayerPaintAdmissionCaseName,
               <String, Map<String, num>>{
@@ -528,18 +524,32 @@ void main() {
       expect(output['status'], 'fail');
       final summary = output['summary'] as Map<String, Object?>;
       expect(summary['missingRequiredInBaseline'], <String>[
-        selectionPathCaseName,
+        selectionPathCandidateStagingCaseName,
+        selectionPathEndToEndPaintCaseName,
+        selectionPathPainterOnlyCaseName,
       ]);
       expect(summary['missingRequiredInCurrent'], <String>[
-        selectionPathCaseName,
+        selectionPathCandidateStagingCaseName,
+        selectionPathEndToEndPaintCaseName,
+        selectionPathPainterOnlyCaseName,
       ]);
       expect(
         output['failures'],
-        contains('missing required cases in baseline: $selectionPathCaseName'),
+        contains(
+          'missing required cases in baseline: '
+          '$selectionPathCandidateStagingCaseName, '
+          '$selectionPathEndToEndPaintCaseName, '
+          '$selectionPathPainterOnlyCaseName',
+        ),
       );
       expect(
         output['failures'],
-        contains('missing required cases in current: $selectionPathCaseName'),
+        contains(
+          'missing required cases in current: '
+          '$selectionPathCandidateStagingCaseName, '
+          '$selectionPathEndToEndPaintCaseName, '
+          '$selectionPathPainterOnlyCaseName',
+        ),
       );
     });
 
@@ -816,28 +826,45 @@ Map<String, Object?> _fullSmokeReport({
     profile: 'smoke',
     cases: <Map<String, Object?>>[
       _caseMetrics('nodes_10000', <String, Map<String, num>>{
-        'single_node_patch': regressedMetrics,
-        'single_node_transform': stableMetrics,
-        'toggle_selection': stableMetrics,
-        'move_selection': stableMetrics,
+        'single_node_patch': _smokeMetricLeaf(regressedMetrics),
+        'single_node_transform': _smokeMetricLeaf(stableMetrics),
+        'toggle_selection': _smokeMetricLeaf(stableMetrics),
+        'move_selection': _smokeMetricLeaf(stableMetrics),
       }),
       _caseMetrics('strokes_1000_pts_256', <String, Map<String, num>>{
-        'single_stroke_patch_thickness': stableMetrics,
-        'single_stroke_patch_points': stableMetrics,
-        'toggle_selection': stableMetrics,
+        'single_stroke_patch_thickness': _smokeMetricLeaf(stableMetrics),
+        'single_stroke_patch_points': _smokeMetricLeaf(stableMetrics),
+        'toggle_selection': _smokeMetricLeaf(stableMetrics),
       }),
-      _caseMetrics(selectionPathCaseName, <String, Map<String, num>>{
-        'paint_no_selection': stableMetrics,
-        'paint_with_selection': stableMetrics,
+      _caseMetrics(selectionPathPainterOnlyCaseName, <String, Map<String, num>>{
+        'paint_no_selection': _smokeMetricLeaf(stableMetrics),
+        'paint_with_selection': _smokeMetricLeaf(stableMetrics),
       }),
+      _caseMetrics(
+        selectionPathCandidateStagingCaseName,
+        <String, Map<String, num>>{
+          'stage_no_selection': _smokeMetricLeaf(stableMetrics),
+          'stage_with_selection': _smokeMetricLeaf(stableMetrics),
+        },
+      ),
+      _caseMetrics(
+        selectionPathEndToEndPaintCaseName,
+        <String, Map<String, num>>{
+          'paint_no_selection': _smokeMetricLeaf(stableMetrics),
+          'paint_with_selection': _smokeMetricLeaf(stableMetrics),
+        },
+      ),
       _caseMetrics(
         backgroundLayerPaintAdmissionCaseName,
         <String, Map<String, num>>{
-          'enumerate_small_viewport': stableMetrics,
-          'paint_small_viewport': stableMetrics,
+          'enumerate_small_viewport': _smokeMetricLeaf(stableMetrics),
+          'paint_small_viewport': _smokeMetricLeaf(stableMetrics),
         },
       ),
-      _caseMetrics(worstCaseName, _worstCaseMetrics(stableMetrics)),
+      _caseMetrics(
+        worstCaseName,
+        _worstCaseMetrics(_smokeMetricLeaf(stableMetrics)),
+      ),
     ],
   );
 }
@@ -850,30 +877,79 @@ Map<String, Object?> _fullSmokeReportWithNodePatchMetrics({
     profile: 'smoke',
     cases: <Map<String, Object?>>[
       _caseMetrics('nodes_10000', <String, Map<String, num>>{
-        'single_node_patch': singleNodePatchMetrics,
-        'single_node_transform': stableMetrics,
-        'toggle_selection': stableMetrics,
-        'move_selection': stableMetrics,
+        'single_node_patch': _smokeMetricLeaf(singleNodePatchMetrics),
+        'single_node_transform': _smokeMetricLeaf(stableMetrics),
+        'toggle_selection': _smokeMetricLeaf(stableMetrics),
+        'move_selection': _smokeMetricLeaf(stableMetrics),
       }),
       _caseMetrics('strokes_1000_pts_256', <String, Map<String, num>>{
-        'single_stroke_patch_thickness': stableMetrics,
-        'single_stroke_patch_points': stableMetrics,
-        'toggle_selection': stableMetrics,
+        'single_stroke_patch_thickness': _smokeMetricLeaf(stableMetrics),
+        'single_stroke_patch_points': _smokeMetricLeaf(stableMetrics),
+        'toggle_selection': _smokeMetricLeaf(stableMetrics),
       }),
-      _caseMetrics(selectionPathCaseName, <String, Map<String, num>>{
-        'paint_no_selection': stableMetrics,
-        'paint_with_selection': stableMetrics,
+      _caseMetrics(selectionPathPainterOnlyCaseName, <String, Map<String, num>>{
+        'paint_no_selection': _smokeMetricLeaf(stableMetrics),
+        'paint_with_selection': _smokeMetricLeaf(stableMetrics),
       }),
+      _caseMetrics(
+        selectionPathCandidateStagingCaseName,
+        <String, Map<String, num>>{
+          'stage_no_selection': _smokeMetricLeaf(stableMetrics),
+          'stage_with_selection': _smokeMetricLeaf(stableMetrics),
+        },
+      ),
+      _caseMetrics(
+        selectionPathEndToEndPaintCaseName,
+        <String, Map<String, num>>{
+          'paint_no_selection': _smokeMetricLeaf(stableMetrics),
+          'paint_with_selection': _smokeMetricLeaf(stableMetrics),
+        },
+      ),
       _caseMetrics(
         backgroundLayerPaintAdmissionCaseName,
         <String, Map<String, num>>{
-          'enumerate_small_viewport': stableMetrics,
-          'paint_small_viewport': stableMetrics,
+          'enumerate_small_viewport': _smokeMetricLeaf(stableMetrics),
+          'paint_small_viewport': _smokeMetricLeaf(stableMetrics),
         },
       ),
-      _caseMetrics(worstCaseName, _worstCaseMetrics(stableMetrics)),
+      _caseMetrics(
+        worstCaseName,
+        _worstCaseMetrics(_smokeMetricLeaf(stableMetrics)),
+      ),
     ],
   );
+}
+
+Map<String, num> _smokeMetricLeaf(Map<String, num> metrics) {
+  return <String, num>{
+    'avgUs': metrics['avgUs']!,
+    'minUs': metrics['minUs']!,
+    'maxUs': metrics['maxUs']!,
+    'avgRssDeltaBytes': metrics['avgRssDeltaBytes']!,
+    'minRssDeltaBytes': metrics['minRssDeltaBytes']!,
+    'maxRssDeltaBytes': metrics['maxRssDeltaBytes']!,
+  };
+}
+
+List<Map<String, Object?>> _smokeSelectionPathCases(Map<String, num> metrics) {
+  final leaf = _smokeMetricLeaf(metrics);
+  return <Map<String, Object?>>[
+    _caseMetrics(selectionPathPainterOnlyCaseName, <String, Map<String, num>>{
+      'paint_no_selection': leaf,
+      'paint_with_selection': leaf,
+    }),
+    _caseMetrics(
+      selectionPathCandidateStagingCaseName,
+      <String, Map<String, num>>{
+        'stage_no_selection': leaf,
+        'stage_with_selection': leaf,
+      },
+    ),
+    _caseMetrics(selectionPathEndToEndPaintCaseName, <String, Map<String, num>>{
+      'paint_no_selection': leaf,
+      'paint_with_selection': leaf,
+    }),
+  ];
 }
 
 Map<String, Object?> _worstCaseMetrics(Map<String, num> stableMetrics) {

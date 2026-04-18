@@ -81,7 +81,12 @@ void main() {
 
       expect(
         issues,
-        contains('missing required benchmark cases: $selectionPathCaseName'),
+        contains(
+          'missing required benchmark cases: '
+          '$selectionPathCandidateStagingCaseName, '
+          '$selectionPathEndToEndPaintCaseName, '
+          '$selectionPathPainterOnlyCaseName',
+        ),
       );
     });
 
@@ -94,7 +99,7 @@ void main() {
           <String, Object?>{'name': 'nodes_10000'},
           <String, Object?>{'name': 'nodes_10000'},
           <String, Object?>{'name': 'strokes_1000_pts_256'},
-          <String, Object?>{'name': selectionPathCaseName},
+          <String, Object?>{'name': selectionPathPainterOnlyCaseName},
           <String, Object?>{'name': worstCaseName},
           <String, Object?>{'name': 'unexpected_case'},
         ],
@@ -137,6 +142,51 @@ void main() {
           source,
           contains('load profile background-layer-paint profile=\$profile'),
         );
+      },
+    );
+
+    test(
+      'selection-path staging benchmarks keep production committed staging and painter-only isolation',
+      () {
+        final source = File(
+          'tool/bench/load_profiles_cases_test.dart',
+        ).readAsStringSync();
+        final stagingBody = _extractMethodBody(
+          source: source,
+          methodStart:
+              'Map<String, Object?> _runSelectionPathCandidateStagingCase({',
+        );
+        final endToEndBody = _extractMethodBody(
+          source: source,
+          methodStart:
+              'Map<String, Object?> _runSelectionPathEndToEndPaintCase({',
+        );
+        final painterOnlyBody = _extractMethodBody(
+          source: source,
+          methodStart:
+              'Map<String, Object?> _runSelectionPathPainterOnlyCase({',
+        );
+
+        expect(stagingBody, contains('_createProductionBenchmarkRenderState('));
+        expect(
+          stagingBody,
+          contains(
+            'renderState.preparePaintPlan(renderState.captureFrameRead(), query);',
+          ),
+        );
+        expect(
+          stagingBody,
+          isNot(contains('_BenchmarkControllerRenderState(')),
+        );
+        expect(stagingBody, isNot(contains('_benchmarkPaintCandidates(')));
+
+        expect(
+          endToEndBody,
+          contains('_createProductionBenchmarkRenderState('),
+        );
+        expect(endToEndBody, contains('_paintScene(painter, canvasSize);'));
+
+        expect(painterOnlyBody, contains('_BenchmarkControllerRenderState('));
       },
     );
   });

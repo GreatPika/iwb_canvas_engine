@@ -106,6 +106,7 @@ Map<String, Object?> buildDiffReport({
         caseName: caseName,
         baseline: baselineCase,
         current: currentCase,
+        metricKeys: policy.requiredMetricKeys,
         requiredOperations: policy.requiredOperationsForCase(caseName),
         maxRegressionPctByMetric: policy.maxRegressionPctByMetric,
         maxAbsoluteValueByMetric: policy.maxAbsoluteValueByMetric,
@@ -221,6 +222,7 @@ Map<String, Object?> _diffCase({
   required String caseName,
   required _CaseReport baseline,
   required _CaseReport current,
+  required List<String> metricKeys,
   required List<String> requiredOperations,
   required Map<String, double> maxRegressionPctByMetric,
   required Map<String, double> maxAbsoluteValueByMetric,
@@ -247,7 +249,7 @@ Map<String, Object?> _diffCase({
     }
 
     final metricDiffs = <Map<String, Object?>>[];
-    for (final metricKey in loadProfileRequiredMetricKeys) {
+    for (final metricKey in metricKeys) {
       final baselineValue = baselineMetrics[metricKey]!;
       final currentValue = currentMetrics[metricKey]!;
       final deltaAbsUs = currentValue - baselineValue;
@@ -383,6 +385,7 @@ _Report _readReportFromObject(
     );
   }
 
+  final policy = _requirePolicy(profile);
   final rawCases = decoded['cases'];
   if (rawCases is! List) {
     throw _DiffToolInputException(
@@ -413,6 +416,7 @@ _Report _readReportFromObject(
     final metricsByOperation = <String, Map<String, double>>{};
     _collectMetricLeaves(
       root: rawMetrics,
+      metricKeys: policy.requiredMetricKeys,
       pathPrefix: '',
       sourcePath: '$sourcePath#cases[$i]',
       sink: metricsByOperation,
@@ -554,14 +558,15 @@ class _DiffToolInputException implements Exception {
 
 void _collectMetricLeaves({
   required Map<String, Object?> root,
+  required List<String> metricKeys,
   required String pathPrefix,
   required String sourcePath,
   required Map<String, Map<String, double>> sink,
 }) {
-  final hasAnyRequiredKey = loadProfileRequiredMetricKeys.any(root.containsKey);
+  final hasAnyRequiredKey = metricKeys.any(root.containsKey);
   if (hasAnyRequiredKey) {
     final metricValues = <String, double>{};
-    for (final metricKey in loadProfileRequiredMetricKeys) {
+    for (final metricKey in metricKeys) {
       final raw = root[metricKey];
       if (raw is! num || !raw.isFinite) {
         final metricPath = pathPrefix.isEmpty
@@ -595,6 +600,7 @@ void _collectMetricLeaves({
     final childPath = pathPrefix.isEmpty ? key : '$pathPrefix.$key';
     _collectMetricLeaves(
       root: child,
+      metricKeys: metricKeys,
       pathPrefix: childPath,
       sourcePath: sourcePath,
       sink: sink,

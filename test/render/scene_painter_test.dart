@@ -60,6 +60,7 @@ class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
     return SceneViewFrameRead(
       snapshot: snapshot,
       selectedNodeIds: selectedNodeIds,
+      selectionRevision: 0,
       previewDeltaResolver: previewDeltaResolver,
     );
   }

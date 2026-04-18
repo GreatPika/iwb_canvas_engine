@@ -404,6 +404,7 @@ $classDeclaration
   Set<String> get selectedNodeIds => <String>{};
   int get controllerEpoch => 0;
   int get structuralRevision => 0;
+  int get selectionRevision => 0;
   int get boundsRevision => 0;
   int get visualRevision => 0;
   Stream<_CommittedSignal> get signals => const Stream<_CommittedSignal>.empty();

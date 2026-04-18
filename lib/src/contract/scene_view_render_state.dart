@@ -58,11 +58,13 @@ final class SceneViewFrameRead {
   SceneViewFrameRead({
     required this.snapshot,
     required Set<NodeId> selectedNodeIds,
+    required this.selectionRevision,
     required this.previewDeltaResolver,
   }) : selectedNodeIds = Set<NodeId>.unmodifiable(selectedNodeIds);
 
   final SceneSnapshot snapshot;
   final Set<NodeId> selectedNodeIds;
+  final int selectionRevision;
   final Offset Function(NodeId nodeId) previewDeltaResolver;
 
   Offset get cameraOffset => snapshot.camera.offset;

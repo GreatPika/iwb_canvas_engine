@@ -77,6 +77,7 @@ SceneControllerWriteCommitResult _executeEffectsOnlyPlan({
       revisionState: context.store.revisionState,
       controllerEpoch: context.store.controllerEpoch,
       structuralRevision: context.store.structuralRevision,
+      selectionRevision: context.store.selectionRevision,
       boundsRevision: context.store.boundsRevision,
       visualRevision: context.store.visualRevision,
       commitRevision: plan.nextCommitRevision,
@@ -175,6 +176,7 @@ void _applyCommittedStore({
   store.revisionState = committedStoreState.revisionState;
   store.controllerEpoch = committedStoreState.controllerEpoch;
   store.structuralRevision = committedStoreState.structuralRevision;
+  store.selectionRevision = committedStoreState.selectionRevision;
   store.boundsRevision = committedStoreState.boundsRevision;
   store.visualRevision = committedStoreState.visualRevision;
   store.commitRevision = committedStoreState.commitRevision;

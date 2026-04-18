@@ -173,6 +173,7 @@ const Set<String> _allowedSceneStoreControllerPublicMemberNames = <String>{
   'getter:selectedNodeIds',
   'getter:controllerEpoch',
   'getter:structuralRevision',
+  'getter:selectionRevision',
   'getter:boundsRevision',
   'getter:visualRevision',
   'getter:signals',

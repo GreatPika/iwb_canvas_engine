@@ -45,6 +45,7 @@ class _CapturedWorldRectRenderState extends ChangeNotifier
     return SceneViewFrameRead(
       snapshot: snapshot,
       selectedNodeIds: selectedNodeIds,
+      selectionRevision: 0,
       previewDeltaResolver: previewDeltaResolver,
     );
   }
@@ -356,6 +357,7 @@ void main() {
 
       expect(frameRead.snapshot, same(frameSnapshot));
       expect(frameRead.selectedNodeIds, const <NodeId>{'captured-node'});
+      expect(frameRead.selectionRevision, 0);
       expect(frameRead.cameraOffset, const Offset(12, 8));
       expect(
         frameRead.previewDeltaResolver('captured-node'),
@@ -819,6 +821,7 @@ void main() {
           'selected-content-first',
           'selected-background-first',
         },
+        selectionRevision: 1,
         previewResolver: (_) => Offset.zero,
       );
 
@@ -860,6 +863,44 @@ void main() {
   });
 
   test(
+    'selected paint order cache fast-return skips selected-id iteration and order resolution',
+    () {
+      final cache = SceneControllerSelectedPaintOrderCache();
+      var resolveCalls = 0;
+
+      cache.orderedSelectedTokens(
+        selectionRevision: 7,
+        structuralRevision: 11,
+        selectedNodeIds: const <NodeId>{'a', 'b'},
+        resolveOrder: (nodeId) {
+          resolveCalls += 1;
+          return nodeId == 'a'
+              ? (layerIndex: 0, nodeIndex: 0)
+              : (layerIndex: 0, nodeIndex: 1);
+        },
+      );
+
+      final callsAfterBuild = resolveCalls;
+      final tokens = cache.orderedSelectedTokens(
+        selectionRevision: 7,
+        structuralRevision: 11,
+        selectedNodeIds: const <NodeId>{'c'},
+        resolveOrder: (_) {
+          fail('stable revisions must not resolve selected-order locations');
+        },
+      );
+
+      expect(resolveCalls, callsAfterBuild);
+      expect(cache.debugRebuildCount, 1);
+      expect(cache.debugFastReturnCount, 1);
+      expect(
+        tokens.map((token) => token.nodeId).toList(growable: false),
+        const <NodeId>['a', 'b'],
+      );
+    },
+  );
+
+  test(
     'controller-owned stage reuses buffers and rebuilds selected order only for invalidating inputs',
     () {
       SceneSnapshot snapshotWithOrder(List<NodeId> nodeIds) {
@@ -896,44 +937,54 @@ void main() {
       stage.prepareCommittedPaintPlan(
         query: query,
         selectedNodeIds: const <NodeId>{'a'},
+        selectionRevision: 1,
         previewResolver: (_) => Offset.zero,
       );
       expect(stage.debugSelectedOrderCacheRebuildCount, 1);
+      expect(stage.debugSelectedOrderCacheFastReturnCount, 0);
       expect(stage.debugStageBufferReuseCount, 0);
       expect(stage.debugCommittedFastPathGlobalSortAvoidanceCount, 1);
 
       stage.prepareCommittedPaintPlan(
         query: query,
         selectedNodeIds: const <NodeId>{'a'},
+        selectionRevision: 1,
         previewResolver: (_) => Offset.zero,
       );
       expect(stage.debugSelectedOrderCacheRebuildCount, 1);
+      expect(stage.debugSelectedOrderCacheFastReturnCount, 1);
       expect(stage.debugStageBufferReuseCount, 1);
       expect(stage.debugCommittedFastPathGlobalSortAvoidanceCount, 2);
 
       stage.prepareCommittedPaintPlan(
         query: query,
         selectedNodeIds: const <NodeId>{'a', 'b'},
+        selectionRevision: 2,
         previewResolver: (_) => Offset.zero,
       );
       expect(stage.debugSelectedOrderCacheRebuildCount, 2);
+      expect(stage.debugSelectedOrderCacheFastReturnCount, 1);
       expect(stage.debugStageBufferReuseCount, 2);
 
       stage.prepareCommittedPaintPlan(
         query: query,
         selectedNodeIds: const <NodeId>{'b', 'a'},
+        selectionRevision: 2,
         previewResolver: (_) => Offset.zero,
       );
       expect(stage.debugSelectedOrderCacheRebuildCount, 2);
+      expect(stage.debugSelectedOrderCacheFastReturnCount, 2);
       expect(stage.debugStageBufferReuseCount, 3);
 
       controller.writeReplaceScene(snapshotWithOrder(const <NodeId>['b', 'a']));
       stage.prepareCommittedPaintPlan(
         query: query,
         selectedNodeIds: const <NodeId>{'a', 'b'},
+        selectionRevision: 2,
         previewResolver: (_) => Offset.zero,
       );
       expect(stage.debugSelectedOrderCacheRebuildCount, 3);
+      expect(stage.debugSelectedOrderCacheFastReturnCount, 2);
       expect(stage.debugStageBufferReuseCount, 4);
     },
   );

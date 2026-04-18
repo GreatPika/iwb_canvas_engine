@@ -156,6 +156,7 @@ final class SceneControllerSceneViewRenderState
     return SceneViewFrameRead(
       snapshot: _readSnapshot(),
       selectedNodeIds: _readSelectedNodeIds(),
+      selectionRevision: _storeController.selectionRevision,
       previewDeltaResolver: _readPreviewDeltaResolver(),
     );
   }
@@ -179,6 +180,7 @@ final class SceneControllerSceneViewRenderState
     return _paintCandidateStage.prepareCommittedPaintPlan(
       query: query,
       selectedNodeIds: frameRead.selectedNodeIds,
+      selectionRevision: frameRead.selectionRevision,
       previewResolver: frameRead.previewDeltaResolver,
     );
   }

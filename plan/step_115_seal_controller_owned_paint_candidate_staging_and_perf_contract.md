@@ -981,7 +981,7 @@ repair sort.
   selected-order cache and that each invalidating change rebuilds it exactly
   once.
 
-### Slice 3.5. [ ] Seal committed selected-order invalidation on atomically captured selectionRevision
+### Slice 3.5. [x] Seal committed selected-order invalidation on atomically captured selectionRevision
 
 #### Slice Contract
 
@@ -1102,7 +1102,7 @@ stable committed frames perform zero selected-order recomputation work.
   selected-order invalidation does not fall back to identity heuristics,
   post-capture live reads, or recompute-and-compare logic.
 
-### Slice 4. [ ] Seal the performance contract, benchmark taxonomy, and release documentation
+### Slice 4. [x] Seal the performance contract, benchmark taxonomy, and release documentation
 
 #### Slice Contract
 

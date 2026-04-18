@@ -69,6 +69,7 @@ class CommittedSceneViewRenderState extends ChangeNotifier
     return SceneViewFrameRead(
       snapshot: snapshot,
       selectedNodeIds: selectedNodeIds,
+      selectionRevision: 0,
       previewDeltaResolver: previewDeltaResolver,
     );
   }

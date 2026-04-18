@@ -45,6 +45,10 @@ spatial-admission contract.
   `SceneControllerSceneViewRenderState`. It merges viewport-first ordinary
   candidates with selected-node supplements while preserving original
   background/content order and deduplicating each node once per frame.
+- Selected-node supplement order is cached only by committed
+  `(selectionRevision, structuralRevision)`. `selectionRevision` remains
+  controller-owned state, is captured atomically into `SceneViewFrameRead`,
+  and is not read live again on the committed render path.
 - If the active frame snapshot diverges from the committed controller snapshot,
   the render path falls back to active-frame candidate enumeration instead of
   mixing committed and frame-local sources.

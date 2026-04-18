@@ -14,6 +14,7 @@ void main() {
       try {
         _writeCanonicalAgents(sandbox);
         _writeCanonicalCiWorkflow(sandbox);
+        _writeCanonicalPerfNightlyWorkflow(sandbox);
 
         final result = await runSandboxTool(
           sandbox,
@@ -31,6 +32,7 @@ void main() {
       final sandbox = await _createSandbox();
       try {
         _writeCanonicalCiWorkflow(sandbox);
+        _writeCanonicalPerfNightlyWorkflow(sandbox);
         writeSandboxFile(sandbox, 'AGENTS.md', '''
 # Product boundary
 
@@ -62,6 +64,7 @@ Run something else.
           sandbox,
           removeRun: 'dart run tool/check_verification_contract.dart',
         );
+        _writeCanonicalPerfNightlyWorkflow(sandbox);
 
         final result = await runSandboxTool(
           sandbox,
@@ -91,6 +94,7 @@ Run something else.
             'tool/extra.dart',
           ],
         );
+        _writeCanonicalPerfNightlyWorkflow(sandbox);
 
         final result = await runSandboxTool(
           sandbox,
@@ -102,6 +106,35 @@ Run something else.
           result.stderr.toString(),
           contains(
             'Unexpected .github/workflows/ci.yaml tool_tests entries: tool/extra.dart',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('fails when perf nightly run surface drifts', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeCanonicalAgents(sandbox);
+        _writeCanonicalCiWorkflow(sandbox);
+        _writeCanonicalPerfNightlyWorkflow(
+          sandbox,
+          removeRun:
+              'dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json',
+        );
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_verification_contract.dart',
+        );
+
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            'missing expected run entry '
+            '`.|dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json`',
           ),
         );
       } finally {
@@ -217,5 +250,30 @@ ${(triggerEntries ?? _canonicalTriggerEntries).map((entry) => "              - '
     steps:
       - name: Tool tests
         run: ${runEntries.contains('dart run tool/run_tool_tests.dart --jobs="$_toolTestJobsExpr"') ? 'dart run tool/run_tool_tests.dart --jobs="$_toolTestJobsExpr"' : 'echo missing'}
+''');
+}
+
+void _writeCanonicalPerfNightlyWorkflow(
+  Directory sandbox, {
+  String? removeRun,
+}) {
+  final runEntries = <String>[
+    'flutter pub get',
+    'dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json',
+    'dart run tool/bench/diff_load_profiles.dart --profile=full --baseline=tool/bench/baselines/load_profiles_full_baseline.json --current=build/bench/load_profiles_full.json --output=build/bench/load_profiles_full_diff.json',
+  ].where((entry) => entry != removeRun).toList(growable: false);
+
+  writeSandboxFile(sandbox, '.github/workflows/perf_nightly.yaml', '''
+name: Perf Nightly
+
+jobs:
+  perf:
+    steps:
+      - name: Pub get
+        run: ${runEntries[0]}
+      - name: Load profiles (full)
+        run: ${runEntries.contains('dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json') ? 'dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json' : runEntries[0]}
+      - name: Diff full benchmark report vs baseline
+        run: ${runEntries.contains('dart run tool/bench/diff_load_profiles.dart --profile=full --baseline=tool/bench/baselines/load_profiles_full_baseline.json --current=build/bench/load_profiles_full.json --output=build/bench/load_profiles_full_diff.json') ? 'dart run tool/bench/diff_load_profiles.dart --profile=full --baseline=tool/bench/baselines/load_profiles_full_baseline.json --current=build/bench/load_profiles_full.json --output=build/bench/load_profiles_full_diff.json' : runEntries.last}
 ''');
 }
