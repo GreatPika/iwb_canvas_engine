@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -717,14 +718,18 @@ List<ScenePaintSpatialCandidate> _resolvePaintCandidates(
   required ScenePaintSpatialQueryScope scope,
 }) {
   final out = <ScenePaintSpatialCandidate>[];
-  for (final nodeId in candidateIds) {
+  for (final nodeId in _orderedPaintCandidateIds(index, candidateIds)) {
     final entry = index._paintEntriesById[nodeId];
-    if (entry == null) continue;
+    if (entry == null) {
+      continue;
+    }
     if (!_rectsIntersectInclusive(entry.paintBoundsWorld, worldRect)) {
       continue;
     }
     final resolved = _resolveSpatialNodeById(index, nodeId);
-    if (resolved == null) continue;
+    if (resolved == null) {
+      continue;
+    }
     if (scope == ScenePaintSpatialQueryScope.contentLayersOnly &&
         resolved.layerIndex < 0) {
       continue;
@@ -739,6 +744,35 @@ List<ScenePaintSpatialCandidate> _resolvePaintCandidates(
     );
   }
   return out.toList(growable: false);
+}
+
+Set<NodeId> _orderedPaintCandidateIds(
+  SceneSpatialIndex index,
+  Set<NodeId> candidateIds,
+) {
+  final orderedIds = SplayTreeSet<NodeId>(
+    (a, b) => _comparePaintCandidateIds(index, a, b),
+  );
+  orderedIds.addAll(candidateIds);
+  return orderedIds;
+}
+
+int _comparePaintCandidateIds(SceneSpatialIndex index, NodeId a, NodeId b) {
+  if (a == b) {
+    return 0;
+  }
+  final aLocation = index._nodeLocator[a];
+  final bLocation = index._nodeLocator[b];
+  final aLayerIndex = aLocation?.layerIndex ?? 0x3fffffff;
+  final bLayerIndex = bLocation?.layerIndex ?? 0x3fffffff;
+  final layerComparison = aLayerIndex.compareTo(bLayerIndex);
+  if (layerComparison != 0) {
+    return layerComparison;
+  }
+  final aNodeIndex = aLocation?.nodeIndex ?? 0x3fffffff;
+  final bNodeIndex = bLocation?.nodeIndex ?? 0x3fffffff;
+  final nodeComparison = aNodeIndex.compareTo(bNodeIndex);
+  return nodeComparison != 0 ? nodeComparison : a.compareTo(b);
 }
 
 bool _hasNoIncrementalChanges(SceneSpatialIndexChangeSet changeSet) {

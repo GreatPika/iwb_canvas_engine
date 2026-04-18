@@ -314,8 +314,9 @@ and is enforced through repository-local performance contracts.
   reject a committed fast-path global `.sort(` on the final ordinary-plus-
   supplement candidate sequence.
 - Structural tests proving Slice 2 must inspect the shared paint-query source
-  and reject a query-level global repair sort over unordered ordinary paint
-  candidates.
+  and reject full-scene traversal or retained paint-entry topology caches for
+  ordinary paint order. Candidate-bounded ordering of admitted spatial ids by
+  the current committed node locator is allowed inside `SceneSpatialIndex`.
 - Structural tests proving Slice 2 must reject ordinary-order repair in
   `spatial_index_cache.dart`, `scene_store_controller.dart`, and
   `scene_controller_paint_candidate_stage.dart` after
@@ -361,9 +362,10 @@ and is enforced through repository-local performance contracts.
   path after Slice 1 closes.
 - Do not leave canonical ordinary ordering as a caller-side repair step after
   Slice 2 closes.
-- Do not satisfy Slice 2 by collecting unordered ordinary paint candidates and
-  performing a query-level global repair sort inside the shared paint-query
-  source.
+- Do not satisfy Slice 2 by materializing unordered ordinary paint candidates
+  and performing a final query-result repair sort inside or above the shared
+  paint-query source. Ordering admitted spatial ids by the current committed
+  node locator before candidate materialization is the intended bounded path.
 - Do not keep a committed fast-path global repair sort after Slice 3 closes.
 - Do not derive canonical selected order or retain any cross-frame selected
   candidate lists, filtered supplement lists, or prepared paint plans outside
@@ -475,12 +477,14 @@ painter-side modules stop owning defensive candidate packaging.
 - Structural assertion proving no second committed prepared-plan reuse owner
   exists in the committed branch outside the stage owner.
 
-### Slice 2. [ ] Promote canonical ordinary paint order into the shared paint-query source
+### Slice 2. [x] Promote canonical ordinary paint order into the shared paint-query source
 
 #### Slice Contract
 
 Ordinary committed paint candidates returned by the shared paint-query source
-already follow canonical scene order for background and content nodes.
+already follow canonical scene order for background and content nodes while
+preserving candidate-bounded spatial-query cost for grid-backed viewport
+queries.
 
 #### Change
 
@@ -491,6 +495,15 @@ already follow canonical scene order for background and content nodes.
 - Slice 2 must derive ordinary paint order inside the shared paint-query owner
   itself. It is not allowed to leave unordered ordinary query output in place
   and repair the order with a final query-result sort.
+- The grid-backed fast path must not restore order by traversing every
+  committed scene node after spatial admission has already produced the
+  candidate set; order restoration must stay bounded to admitted spatial
+  candidates and use the current committed node locator as the single topology
+  source of truth.
+- `SceneSpatialIndex` owns ordered paint-query output, but it must not create a
+  second retained paint-order cache. Paint cells and entries own spatial
+  admission data only; current `(layerIndex, nodeIndex)` order comes from the
+  committed node locator already bound to the index.
 - Preserve current `ScenePaintSpatialQueryScope` semantics and preserve
   identical background/content order semantics under both grid-backed and
   linear-fallback paint queries.
@@ -522,6 +535,12 @@ already follow canonical scene order for background and content nodes.
 
 - The ordinary committed paint-query source is not allowed to return candidates
   in cell-collection order.
+- The ordinary committed paint-query source is not allowed to perform a full
+  committed-scene traversal only to restore grid-backed candidate order.
+- Incremental insertions or removals before retained nodes must not leave
+  retained paint candidates ordered by stale pre-commit locations.
+- The spatial index must not duplicate committed topology by storing a second
+  retained `(layerIndex, nodeIndex)` order cache in paint spatial entries.
 - Hit-test query behavior does not change as a side effect of the paint-order
   work.
 - No layer above `SceneSpatialIndex` repairs ordinary committed paint order
@@ -532,6 +551,10 @@ already follow canonical scene order for background and content nodes.
 - Green run of the listed verifications.
 - Regression assertions proving canonical ordinary ordering at the shared
   paint-query source.
+- Regression assertions proving grid-backed ordinary paint order does not
+  require traversing noncandidate scene layers.
+- Regression assertions proving retained paint candidates follow the current
+  node locator after incremental structural commits.
 - Structural assertions proving no caller-side ordinary-order repair survives
   above `SceneSpatialIndex`.
 

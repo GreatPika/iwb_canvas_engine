@@ -70,6 +70,19 @@ class _ThrowingLayersScene extends Scene {
   List<ContentLayer> get layers => throw StateError('layers failed');
 }
 
+class _CountingLayersScene extends Scene {
+  _CountingLayersScene(this._layers);
+
+  final List<ContentLayer> _layers;
+  int layerReadCount = 0;
+
+  @override
+  List<ContentLayer> get layers {
+    layerReadCount = layerReadCount + 1;
+    return _layers;
+  }
+}
+
 void main() {
   Scene sceneWithRect(RectNode node) {
     return Scene(
@@ -279,6 +292,116 @@ void main() {
   });
 
   test(
+    'paint query emits background before content in canonical scene order',
+    () {
+      final scene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'bg-right',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(710, 10)),
+            ),
+          ],
+        ),
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-canonical-bg-content',
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'fg-left',
+                size: const Size(20, 20),
+                transform: Transform2D.translation(const Offset(10, 10)),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final index = SceneSpatialIndex.build(scene);
+      final candidates = index.queryPaintCandidates(
+        const Rect.fromLTWH(0, 0, 760, 40),
+        scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+      );
+
+      expect(candidates.map((candidate) => candidate.nodeId), <NodeId>[
+        'bg-right',
+        'fg-left',
+      ]);
+    },
+  );
+
+  test('grid-backed paint query emits content in scene order', () {
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-canonical-content',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'first-right',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(710, 10)),
+            ),
+            RectNode(
+              id: 'second-left',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(10, 10)),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final index = SceneSpatialIndex.build(scene);
+    final candidates = index.queryPaintCandidates(
+      const Rect.fromLTWH(0, 0, 760, 40),
+    );
+
+    expect(candidates.map((candidate) => candidate.nodeId), <NodeId>[
+      'first-right',
+      'second-left',
+    ]);
+  });
+
+  test('grid-backed paint query does not traverse noncandidate layers', () {
+    final layers = <ContentLayer>[
+      ContentLayer(
+        id: 'layer-visible',
+        nodes: <SceneNode>[
+          RectNode(
+            id: 'visible',
+            size: const Size(20, 20),
+            transform: Transform2D.translation(const Offset(10, 10)),
+          ),
+        ],
+      ),
+      for (var i = 0; i < 64; i++)
+        ContentLayer(
+          id: 'layer-offscreen-$i',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'offscreen-$i',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(Offset(10000 + i * 100, 10)),
+            ),
+          ],
+        ),
+    ];
+    final scene = _CountingLayersScene(layers);
+    final index = SceneSpatialIndex.build(scene);
+    scene.layerReadCount = 0;
+
+    final candidates = index.queryPaintCandidates(
+      const Rect.fromLTWH(0, 0, 40, 40),
+    );
+
+    expect(candidates.map((candidate) => candidate.nodeId), <NodeId>[
+      'visible',
+    ]);
+    expect(scene.layerReadCount, lessThan(10));
+  });
+
+  test(
     'build without explicit locator still resolves background paint scope',
     () {
       final scene = Scene(
@@ -380,6 +503,50 @@ void main() {
     expect(index.debugFallbackQueryCount, 1);
     expect(ids, contains('inside-paint'));
     expect(ids, isNot(contains('outside-paint')));
+  });
+
+  test('huge paint query keeps canonical scene order', () {
+    final scene = Scene(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[
+          RectNode(
+            id: 'bg-huge-right',
+            size: const Size(20, 20),
+            transform: Transform2D.translation(const Offset(710, 10)),
+          ),
+        ],
+      ),
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-huge-order',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'fg-huge-right',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(970, 10)),
+            ),
+            RectNode(
+              id: 'fg-huge-left',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(10, 10)),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final index = SceneSpatialIndex.build(scene);
+    final candidates = index.queryPaintCandidates(
+      const Rect.fromLTWH(-128000, -12800, 256000, 25600),
+      scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+    );
+
+    expect(index.debugFallbackQueryCount, 1);
+    expect(candidates.map((candidate) => candidate.nodeId), <NodeId>[
+      'bg-huge-right',
+      'fg-huge-right',
+      'fg-huge-left',
+    ]);
   });
 
   test('invalid paint index serves repeated linear fallback queries', () {
@@ -637,6 +804,226 @@ void main() {
       ]);
     },
   );
+
+  test('incremental update resolves background paint nodes by locator', () {
+    final originalScene = Scene(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[
+          RectNode(
+            id: 'bg-incremental',
+            size: const Size(10, 10),
+            transform: Transform2D.translation(const Offset(10, 10)),
+          ),
+        ],
+      ),
+    );
+    final originalLocator = <NodeId, SceneSpatialCandidateLocation>{
+      'bg-incremental': (layerIndex: -1, nodeIndex: 0),
+    };
+    final index = SceneSpatialIndex.build(
+      originalScene,
+      nodeLocator: originalLocator,
+    );
+
+    final movedScene = Scene(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[
+          RectNode(
+            id: 'bg-incremental',
+            size: const Size(10, 10),
+            transform: Transform2D.translation(const Offset(80, 10)),
+          ),
+        ],
+      ),
+    );
+    final movedLocator = <NodeId, SceneSpatialCandidateLocation>{
+      'bg-incremental': (layerIndex: -1, nodeIndex: 0),
+    };
+
+    final applied = index.applyIncremental(
+      scene: movedScene,
+      nodeLocator: movedLocator,
+      changeSet: const SceneSpatialIndexChangeSet(
+        addedNodeIds: <NodeId>{},
+        removedNodeIds: <NodeId>{},
+        spatialGeometryChangedIds: <NodeId>{'bg-incremental'},
+      ),
+    );
+
+    final atOldLocation = index.queryPaintCandidates(
+      const Rect.fromLTWH(0, 0, 30, 30),
+      scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+    );
+    final atNewLocation = index.queryPaintCandidates(
+      const Rect.fromLTWH(60, 0, 40, 30),
+      scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+    );
+
+    expect(applied, isTrue);
+    expect(atOldLocation, isEmpty);
+    expect(atNewLocation.map((candidate) => candidate.nodeId), <NodeId>[
+      'bg-incremental',
+    ]);
+  });
+
+  test('incremental insert orders paint candidates from current locator', () {
+    final originalScene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-insert-order',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'a-first',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(40, 10)),
+            ),
+            RectNode(
+              id: 'b-second',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(70, 10)),
+            ),
+          ],
+        ),
+      ],
+    );
+    final originalLocator = <NodeId, SceneSpatialCandidateLocation>{
+      'a-first': (layerIndex: 0, nodeIndex: 0),
+      'b-second': (layerIndex: 0, nodeIndex: 1),
+    };
+    final index = SceneSpatialIndex.build(
+      originalScene,
+      nodeLocator: originalLocator,
+    );
+
+    final updatedScene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-insert-order',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'z-inserted',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(10, 10)),
+            ),
+            RectNode(
+              id: 'a-first',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(40, 10)),
+            ),
+            RectNode(
+              id: 'b-second',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(70, 10)),
+            ),
+          ],
+        ),
+      ],
+    );
+    final updatedLocator = <NodeId, SceneSpatialCandidateLocation>{
+      'z-inserted': (layerIndex: 0, nodeIndex: 0),
+      'a-first': (layerIndex: 0, nodeIndex: 1),
+      'b-second': (layerIndex: 0, nodeIndex: 2),
+    };
+
+    final applied = index.applyIncremental(
+      scene: updatedScene,
+      nodeLocator: updatedLocator,
+      changeSet: const SceneSpatialIndexChangeSet(
+        addedNodeIds: <NodeId>{'z-inserted'},
+        removedNodeIds: <NodeId>{},
+        spatialGeometryChangedIds: <NodeId>{},
+      ),
+    );
+    final candidates = index.queryPaintCandidates(
+      const Rect.fromLTWH(0, 0, 100, 40),
+    );
+
+    expect(applied, isTrue);
+    expect(candidates.map((candidate) => candidate.nodeId), <NodeId>[
+      'z-inserted',
+      'a-first',
+      'b-second',
+    ]);
+  });
+
+  test('incremental removal orders paint candidates from current locator', () {
+    final originalScene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-remove-order',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'z-removed',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(10, 10)),
+            ),
+            RectNode(
+              id: 'a-first',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(70, 10)),
+            ),
+            RectNode(
+              id: 'b-second',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(40, 10)),
+            ),
+          ],
+        ),
+      ],
+    );
+    final originalLocator = <NodeId, SceneSpatialCandidateLocation>{
+      'z-removed': (layerIndex: 0, nodeIndex: 0),
+      'a-first': (layerIndex: 0, nodeIndex: 1),
+      'b-second': (layerIndex: 0, nodeIndex: 2),
+    };
+    final index = SceneSpatialIndex.build(
+      originalScene,
+      nodeLocator: originalLocator,
+    );
+
+    final updatedScene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-remove-order',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'a-first',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(70, 10)),
+            ),
+            RectNode(
+              id: 'b-second',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(40, 10)),
+            ),
+          ],
+        ),
+      ],
+    );
+    final updatedLocator = <NodeId, SceneSpatialCandidateLocation>{
+      'a-first': (layerIndex: 0, nodeIndex: 0),
+      'b-second': (layerIndex: 0, nodeIndex: 1),
+    };
+
+    final applied = index.applyIncremental(
+      scene: updatedScene,
+      nodeLocator: updatedLocator,
+      changeSet: const SceneSpatialIndexChangeSet(
+        addedNodeIds: <NodeId>{},
+        removedNodeIds: <NodeId>{'z-removed'},
+        spatialGeometryChangedIds: <NodeId>{},
+      ),
+    );
+    final candidates = index.queryPaintCandidates(
+      const Rect.fromLTWH(0, 0, 100, 40),
+    );
+
+    expect(applied, isTrue);
+    expect(candidates.map((candidate) => candidate.nodeId), <NodeId>[
+      'a-first',
+      'b-second',
+    ]);
+  });
 
   test('build catches scene iteration errors and marks index invalid', () {
     final index = SceneSpatialIndex.build(

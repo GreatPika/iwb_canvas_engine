@@ -436,6 +436,94 @@ void main() {
     },
   );
 
+  test('paint order follows current locator after incremental insertion', () {
+    final cache = SpatialIndexCache();
+    final originalScene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-paint-order',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'a-first',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(40, 10)),
+            ),
+            RectNode(
+              id: 'b-second',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(70, 10)),
+            ),
+          ],
+        ),
+      ],
+    );
+    final originalLocator = <NodeId, SceneSpatialCandidateLocation>{
+      'a-first': (layerIndex: 0, nodeIndex: 0),
+      'b-second': (layerIndex: 0, nodeIndex: 1),
+    };
+
+    cache.writeQueryPaintCandidates(
+      scene: originalScene,
+      nodeLocator: originalLocator,
+      worldBounds: const Rect.fromLTWH(0, 0, 100, 40),
+      controllerEpoch: 0,
+    );
+
+    final updatedScene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-paint-order',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'z-inserted',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(10, 10)),
+            ),
+            RectNode(
+              id: 'a-first',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(40, 10)),
+            ),
+            RectNode(
+              id: 'b-second',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(70, 10)),
+            ),
+          ],
+        ),
+      ],
+    );
+    final updatedLocator = <NodeId, SceneSpatialCandidateLocation>{
+      'z-inserted': (layerIndex: 0, nodeIndex: 0),
+      'a-first': (layerIndex: 0, nodeIndex: 1),
+      'b-second': (layerIndex: 0, nodeIndex: 2),
+    };
+    final changeSet = ChangeSet()
+      ..txnMarkStructuralChanged()
+      ..txnTrackAdded('z-inserted');
+
+    cache.writeHandleCommit(
+      scene: updatedScene,
+      nodeLocator: updatedLocator,
+      changeSet: changeSet,
+      controllerEpoch: 0,
+    );
+    final candidates = cache.writeQueryPaintCandidates(
+      scene: updatedScene,
+      nodeLocator: updatedLocator,
+      worldBounds: const Rect.fromLTWH(0, 0, 100, 40),
+      controllerEpoch: 0,
+    );
+
+    expect(cache.debugBuildCount, 1);
+    expect(cache.debugIncrementalApplyCount, 1);
+    expect(candidates.map((candidate) => candidate.nodeId), <NodeId>[
+      'z-inserted',
+      'a-first',
+      'b-second',
+    ]);
+  });
+
   test('writeQueryPaintCandidates threads scoped background paint queries', () {
     final cache = SpatialIndexCache();
     final scene = Scene(

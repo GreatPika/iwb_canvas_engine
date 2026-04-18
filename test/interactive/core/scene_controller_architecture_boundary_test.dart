@@ -64,6 +64,15 @@ void main() {
     final paintCandidateStageSource = _read(
       'lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart',
     );
+    final sceneSpatialIndexSource = _read(
+      'lib/src/core/scene_spatial_index.dart',
+    );
+    final spatialIndexCacheSource = _read(
+      'lib/src/controller/internal/spatial_index_cache.dart',
+    );
+    final sceneStoreControllerSource = _read(
+      'lib/src/controller/scene_store_controller.dart',
+    );
     final pointerSessionSource = _read(
       'lib/src/interactive/internal/scene_controller_pointer_session.dart',
     );
@@ -331,6 +340,44 @@ void main() {
     expect(ordinaryBody, isNot(contains('_snapshotPaintBoundsWorld(')));
     expect(ordinaryBody, isNot(contains('nodeSnapshotPaintBoundsWorld(')));
     expect(ordinaryBody, isNot(contains('nodePaintBoundsWorld(')));
+    expect(ordinaryBody, isNot(contains('.sort(')));
+
+    final cachePaintQueryBody = _extractMethodBody(
+      source: spatialIndexCacheSource,
+      methodStart:
+          'List<ScenePaintSpatialCandidate> writeQueryPaintCandidates({',
+    );
+    final storePaintQueryBody = _extractMethodBody(
+      source: sceneStoreControllerSource,
+      methodStart: 'List<ScenePaintSpatialCandidate> queryPaintCandidates(',
+    );
+    expect(cachePaintQueryBody, contains('return index.queryPaintCandidates('));
+    expect(storePaintQueryBody, contains('return _commitRuntime'));
+    expect(cachePaintQueryBody, isNot(contains('.sort(')));
+    expect(cachePaintQueryBody, isNot(contains('..sort(')));
+    expect(storePaintQueryBody, isNot(contains('.sort(')));
+    expect(storePaintQueryBody, isNot(contains('..sort(')));
+
+    final spatialPaintResolveBody = _extractMethodBody(
+      source: sceneSpatialIndexSource,
+      methodStart: 'List<ScenePaintSpatialCandidate> _resolvePaintCandidates(',
+    );
+    final spatialPaintOrderBody = _extractMethodBody(
+      source: sceneSpatialIndexSource,
+      methodStart: 'int _comparePaintCandidateIds(',
+    );
+    final paintSpatialEntryBody = _extractMethodBody(
+      source: sceneSpatialIndexSource,
+      methodStart: 'class _PaintSpatialEntry {',
+    );
+    expect(
+      spatialPaintResolveBody,
+      contains('_orderedPaintCandidateIds(index, candidateIds)'),
+    );
+    expect(spatialPaintResolveBody, isNot(contains('_visitResolved')));
+    expect(spatialPaintOrderBody, contains('index._nodeLocator'));
+    expect(paintSpatialEntryBody, isNot(contains('int layerIndex')));
+    expect(paintSpatialEntryBody, isNot(contains('int nodeIndex')));
 
     expect(viewRuntimeSource, isNot(contains('BackgroundSpatialIndex')));
     expect(viewRuntimeSource, isNot(contains('SceneBackgroundSpatialIndex')));
