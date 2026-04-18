@@ -315,7 +315,7 @@ as the sole source of truth.
 
 ## 9. Vertical Slices
 
-### Slice 1. [ ] Recompute committed selection invalidation at commit boundary
+### Slice 1. [x] Recompute committed selection invalidation at commit boundary
 
 #### Slice Contract
 
@@ -371,7 +371,7 @@ instead of trusting `changeSet.selectionChanged` alone.
 - Selection transform/translate commit that changes geometry but not
   membership.
 
-### Slice 2. [ ] Enforce committed selection/revision alignment mechanically
+### Slice 2. [x] Enforce committed selection/revision alignment mechanically
 
 #### Slice Contract
 

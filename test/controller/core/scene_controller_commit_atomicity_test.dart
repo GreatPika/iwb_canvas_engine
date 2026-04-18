@@ -15,6 +15,7 @@ import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 // INV:INV-ENG-TEXT-SIZE-DERIVED
 // INV:INV-ENG-DISPOSE-FAIL-FAST
 // INV:INV-ENG-NO-EXTERNAL-MUTATION
+// INV:INV-ENG-COMMITTED-SELECTION-REVISION-ALIGNMENT
 
 void main() {
   SceneSnapshot twoRectSnapshot() {
@@ -327,6 +328,31 @@ void main() {
         );
       });
       expect(controller.selectionRevision, 2);
+    },
+  );
+
+  test(
+    'post-apply selection normalization bumps selectionRevision when committed membership changes',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+      });
+
+      final beforeSelection = controller.selectedNodeIds;
+      final beforeSelectionRevision = controller.selectionRevision;
+
+      controller.write<void>((writer) {
+        expect(writer.writeNodeErase('r1'), isTrue);
+      });
+
+      expect(beforeSelection, const <NodeId>{'r1'});
+      expect(controller.selectedNodeIds, isEmpty);
+      expect(controller.selectionRevision, beforeSelectionRevision + 1);
     },
   );
 

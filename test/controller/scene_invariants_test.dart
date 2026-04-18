@@ -26,6 +26,7 @@ import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 // INV:INV-G-SELECTION-NORMALIZED
 // INV:INV-G-GRID-ENABLE-CELL-SIZE-RELATION
 // INV:INV-ENG-COMMITTED-STORE-METADATA-CONTRACT
+// INV:INV-ENG-COMMITTED-SELECTION-REVISION-ALIGNMENT
 
 void main() {
   Scene sceneFixture({
@@ -109,6 +110,10 @@ void main() {
     int controllerEpoch = 0,
     RevisionAllocatorState? revisionState,
     int nextInstanceRevision = 1,
+    int structuralRevision = 0,
+    int selectionRevision = 0,
+    int boundsRevision = 0,
+    int visualRevision = 0,
     required int commitRevision,
   }) {
     return CommittedStoreState(
@@ -123,10 +128,10 @@ void main() {
             nextInstanceRevision: nextInstanceRevision,
           ),
       controllerEpoch: controllerEpoch,
-      structuralRevision: 0,
-      selectionRevision: 0,
-      boundsRevision: 0,
-      visualRevision: 0,
+      structuralRevision: structuralRevision,
+      selectionRevision: selectionRevision,
+      boundsRevision: boundsRevision,
+      visualRevision: visualRevision,
       commitRevision: commitRevision,
     );
   }
@@ -140,6 +145,10 @@ void main() {
     int controllerEpoch = 0,
     RevisionAllocatorState? revisionState,
     int nextInstanceRevision = 1,
+    int structuralRevision = 0,
+    int selectionRevision = 0,
+    int boundsRevision = 0,
+    int visualRevision = 0,
     required int commitRevision,
   }) {
     return scene_invariants.txnCollectStoreInvariantViolations(
@@ -152,6 +161,10 @@ void main() {
         controllerEpoch: controllerEpoch,
         revisionState: revisionState,
         nextInstanceRevision: nextInstanceRevision,
+        structuralRevision: structuralRevision,
+        selectionRevision: selectionRevision,
+        boundsRevision: boundsRevision,
+        visualRevision: visualRevision,
         commitRevision: commitRevision,
       ),
     );
@@ -166,6 +179,10 @@ void main() {
     int controllerEpoch = 0,
     RevisionAllocatorState? revisionState,
     int nextInstanceRevision = 1,
+    int structuralRevision = 0,
+    int selectionRevision = 0,
+    int boundsRevision = 0,
+    int visualRevision = 0,
     required int commitRevision,
   }) {
     scene_invariants.debugAssertTxnStoreInvariants(
@@ -178,6 +195,10 @@ void main() {
         controllerEpoch: controllerEpoch,
         revisionState: revisionState,
         nextInstanceRevision: nextInstanceRevision,
+        structuralRevision: structuralRevision,
+        selectionRevision: selectionRevision,
+        boundsRevision: boundsRevision,
+        visualRevision: visualRevision,
         commitRevision: commitRevision,
       ),
     );
@@ -185,22 +206,29 @@ void main() {
 
   void assertCriticalTxnStoreInvariants({
     required Scene scene,
+    Set<NodeId> selectedNodeIds = const <NodeId>{},
+    int selectionRevision = 0,
     required int commitRevision,
     required int previousCommitRevision,
+    Set<NodeId>? previousSelectedNodeIds,
+    int? previousSelectionRevision,
     Scene? previousScene,
     ChangeSet? changeSet,
   }) {
     scene_invariants.assertCriticalTxnStoreInvariants(
       state: committedStoreState(
         scene: scene,
-        selectedNodeIds: const <NodeId>{},
+        selectedNodeIds: selectedNodeIds,
         allNodeIds: txnCollectNodeIds(scene),
         nodeLocator: txnBuildNodeLocator(scene),
         idGeneratorState: state(),
+        selectionRevision: selectionRevision,
         commitRevision: commitRevision,
       ),
       commitRevision: commitRevision,
       previousCommitRevision: previousCommitRevision,
+      previousSelectedNodeIds: previousSelectedNodeIds,
+      previousSelectionRevision: previousSelectionRevision,
       previousScene: previousScene,
       changeSet: changeSet,
     );
@@ -208,22 +236,29 @@ void main() {
 
   List<String> txnCollectCriticalStoreInvariantViolations({
     required Scene scene,
+    Set<NodeId> selectedNodeIds = const <NodeId>{},
+    int selectionRevision = 0,
     required int commitRevision,
     required int previousCommitRevision,
+    Set<NodeId>? previousSelectedNodeIds,
+    int? previousSelectionRevision,
     Scene? previousScene,
     ChangeSet? changeSet,
   }) {
     return scene_invariants.txnCollectCriticalStoreInvariantViolations(
       state: committedStoreState(
         scene: scene,
-        selectedNodeIds: const <NodeId>{},
+        selectedNodeIds: selectedNodeIds,
         allNodeIds: txnCollectNodeIds(scene),
         nodeLocator: txnBuildNodeLocator(scene),
         idGeneratorState: state(),
+        selectionRevision: selectionRevision,
         commitRevision: commitRevision,
       ),
       commitRevision: commitRevision,
       previousCommitRevision: previousCommitRevision,
+      previousSelectedNodeIds: previousSelectedNodeIds,
+      previousSelectionRevision: previousSelectionRevision,
       previousScene: previousScene,
       changeSet: changeSet,
     );
@@ -1000,6 +1035,77 @@ void main() {
           scene: scene,
           commitRevision: 4,
           previousCommitRevision: 3,
+        ),
+        returnsNormally,
+      );
+    },
+  );
+
+  test(
+    'critical invariant fails when committed selection membership changes without revision bump',
+    () {
+      final scene = sceneFixture();
+
+      final violations = txnCollectCriticalStoreInvariantViolations(
+        scene: scene,
+        selectedNodeIds: const <NodeId>{'node-1'},
+        selectionRevision: 2,
+        commitRevision: 3,
+        previousCommitRevision: 2,
+        previousSelectedNodeIds: const <NodeId>{},
+        previousSelectionRevision: 2,
+        previousScene: scene,
+        changeSet: ChangeSet(),
+      );
+
+      expect(
+        violations.join('\n'),
+        contains(
+          'selectionRevision must increment exactly once when committed '
+          'selection membership changes',
+        ),
+      );
+    },
+  );
+
+  test(
+    'critical invariant fails when committed selection membership is stable but revision bumps',
+    () {
+      final scene = sceneFixture();
+
+      expect(
+        () => assertCriticalTxnStoreInvariants(
+          scene: scene,
+          selectedNodeIds: const <NodeId>{'node-1'},
+          selectionRevision: 3,
+          commitRevision: 4,
+          previousCommitRevision: 3,
+          previousSelectedNodeIds: const <NodeId>{'node-1'},
+          previousSelectionRevision: 2,
+          previousScene: scene,
+          changeSet: ChangeSet(),
+        ),
+        throwsStateError,
+      );
+    },
+  );
+
+  test(
+    'critical invariant passes when committed selection membership and revision stay aligned',
+    () {
+      final scene = sceneFixture();
+
+      expect(
+        () => assertCriticalTxnStoreInvariants(
+          scene: scene,
+          selectedNodeIds: const <NodeId>{'node-1'},
+          selectionRevision: 3,
+          commitRevision: 4,
+          previousCommitRevision: 3,
+          previousSelectedNodeIds: const <NodeId>{},
+          previousSelectionRevision: 2,
+          previousScene: scene,
+          changeSet: ChangeSet(),
         ),
         returnsNormally,
       );

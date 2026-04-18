@@ -246,6 +246,15 @@ const List<Invariant> invariants = <Invariant>[
     ),
   ),
   Invariant(
+    id: 'INV-ENG-COMMITTED-SELECTION-REVISION-ALIGNMENT',
+    scope: 'engine-controller',
+    title:
+        'committed selectionRevision changes only when committed selection membership changes, and both remain aligned at the controller commit boundary',
+    primaryProof: PrimaryProof(
+      path: 'test/controller/scene_invariants_test.dart',
+    ),
+  ),
+  Invariant(
     id: 'INV-ENG-TXN-FINALIZED-BEFORE-COMMIT-PLAN',
     scope: 'engine-controller',
     title:

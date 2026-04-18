@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../core/nodes.dart';
 import '../core/scene.dart';
 import 'change_set.dart';
 import 'committed_store_state.dart';
@@ -85,6 +86,8 @@ SceneControllerWriteCommitResult _executeEffectsOnlyPlan({
     _assertStoreInvariantsCandidate(
       state: committedStoreState,
       previousCommitRevision: context.store.commitRevision,
+      previousSelectedNodeIds: context.store.selectedNodeIds,
+      previousSelectionRevision: context.store.selectionRevision,
       previousScene: context.store.sceneDoc,
       changeSet: plan.changeSet,
       beforeInvariantPrecheckHook:
@@ -110,6 +113,8 @@ SceneControllerWriteCommitResult _executeStatePlan({
   _assertStoreInvariantsCandidate(
     state: committedStoreState,
     previousCommitRevision: context.store.commitRevision,
+    previousSelectedNodeIds: context.store.selectedNodeIds,
+    previousSelectionRevision: context.store.selectionRevision,
     previousScene: context.store.sceneDoc,
     changeSet: plan.changeSet,
     beforeInvariantPrecheckHook: context.debugState.beforeInvariantPrecheckHook,
@@ -143,6 +148,8 @@ SceneControllerWriteCommitResult _executeStatePlan({
 void _assertStoreInvariantsCandidate({
   required CommittedStoreState state,
   required int previousCommitRevision,
+  required Set<NodeId> previousSelectedNodeIds,
+  required int previousSelectionRevision,
   required Scene previousScene,
   required ChangeSet changeSet,
   required void Function()? beforeInvariantPrecheckHook,
@@ -151,6 +158,8 @@ void _assertStoreInvariantsCandidate({
     state: state,
     commitRevision: state.commitRevision,
     previousCommitRevision: previousCommitRevision,
+    previousSelectedNodeIds: previousSelectedNodeIds,
+    previousSelectionRevision: previousSelectionRevision,
     changeSet: changeSet,
     previousScene: previousScene,
   );

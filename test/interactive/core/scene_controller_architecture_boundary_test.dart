@@ -50,6 +50,7 @@ void main() {
   // INV:INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY
   // INV:INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY
   // INV:INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY
+  // INV:INV-ENG-COMMITTED-SELECTION-REVISION-ALIGNMENT
   test('SceneController architecture boundary remains structurally split', () {
     final facadeSource = _read('lib/src/interactive/scene_controller.dart');
     final interactionSource = _read(
@@ -75,6 +76,9 @@ void main() {
     );
     final sceneStoreControllerSource = _read(
       'lib/src/controller/scene_store_controller.dart',
+    );
+    final commitPlanSource = _read(
+      'lib/src/controller/scene_controller_commit_plan.dart',
     );
     final pointerSessionSource = _read(
       'lib/src/interactive/internal/scene_controller_pointer_session.dart',
@@ -361,6 +365,30 @@ void main() {
     expect(
       selectedPaintOrderCacheSource,
       contains('_selectionRevision == selectionRevision'),
+    );
+    expect(
+      commitPlanSource,
+      contains(
+        'final selectionMembershipChanged = !_committedSelectionEquals(',
+      ),
+    );
+    expect(
+      commitPlanSource,
+      contains('final committedSelection = selectionMembershipChanged'),
+    );
+    expect(
+      commitPlanSource,
+      contains(
+        'store.selectionRevision + (selectionMembershipChanged ? 1 : 0)',
+      ),
+    );
+    expect(
+      commitPlanSource,
+      isNot(
+        contains(
+          'store.selectionRevision + (changeSet.selectionChanged ? 1 : 0)',
+        ),
+      ),
     );
     expect(selectedPaintOrderCacheSource, contains('nextTokens.sort('));
     expect(

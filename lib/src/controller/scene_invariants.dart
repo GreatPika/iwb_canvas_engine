@@ -59,6 +59,8 @@ List<String> txnCollectCriticalStoreInvariantViolations({
   required CommittedStoreState state,
   required int commitRevision,
   required int previousCommitRevision,
+  Set<NodeId>? previousSelectedNodeIds,
+  int? previousSelectionRevision,
   ChangeSet? changeSet,
   Scene? previousScene,
 }) {
@@ -71,6 +73,14 @@ List<String> txnCollectCriticalStoreInvariantViolations({
   }
   violations.addAll(
     _txnCollectCommitRevisionInvariantViolations(commitRevision),
+  );
+  violations.addAll(
+    _txnCollectCommittedSelectionRevisionInvariantViolations(
+      selectedNodeIds: state.selectedNodeIds,
+      selectionRevision: state.selectionRevision,
+      previousSelectedNodeIds: previousSelectedNodeIds,
+      previousSelectionRevision: previousSelectionRevision,
+    ),
   );
   violations.addAll(
     _txnCollectCriticalRuntimeSceneValidityInvariantViolations(
@@ -95,6 +105,8 @@ void assertCriticalTxnStoreInvariants({
   required CommittedStoreState state,
   required int commitRevision,
   required int previousCommitRevision,
+  Set<NodeId>? previousSelectedNodeIds,
+  int? previousSelectionRevision,
   ChangeSet? changeSet,
   Scene? previousScene,
 }) {
@@ -102,6 +114,8 @@ void assertCriticalTxnStoreInvariants({
     state: state,
     commitRevision: commitRevision,
     previousCommitRevision: previousCommitRevision,
+    previousSelectedNodeIds: previousSelectedNodeIds,
+    previousSelectionRevision: previousSelectionRevision,
     changeSet: changeSet,
     previousScene: previousScene,
   );
@@ -180,6 +194,44 @@ List<String> _txnCollectRuntimeSceneValidityInvariantViolations(Scene scene) {
   return scene_value_validation.sceneCollectRuntimeSceneValidityViolations(
     scene,
   );
+}
+
+List<String> _txnCollectCommittedSelectionRevisionInvariantViolations({
+  required Set<NodeId> selectedNodeIds,
+  required int selectionRevision,
+  required Set<NodeId>? previousSelectedNodeIds,
+  required int? previousSelectionRevision,
+}) {
+  if (previousSelectedNodeIds == null || previousSelectionRevision == null) {
+    return const <String>[];
+  }
+
+  final selectionMembershipChanged = !_txnSetsEqual(
+    previousSelectedNodeIds,
+    selectedNodeIds,
+  );
+  final selectionRevisionDelta = selectionRevision - previousSelectionRevision;
+
+  if (selectionMembershipChanged && selectionRevisionDelta != 1) {
+    return <String>[
+      'selectionRevision must increment exactly once when committed '
+          'selection membership changes. '
+          'actual=$selectionRevision previous=$previousSelectionRevision '
+          'selectedNodeIds=$selectedNodeIds '
+          'previousSelectedNodeIds=$previousSelectedNodeIds',
+    ];
+  }
+
+  if (!selectionMembershipChanged && selectionRevisionDelta != 0) {
+    return <String>[
+      'selectionRevision must stay stable when committed selection '
+          'membership is unchanged. '
+          'actual=$selectionRevision previous=$previousSelectionRevision '
+          'selectedNodeIds=$selectedNodeIds',
+    ];
+  }
+
+  return const <String>[];
 }
 
 List<String> _txnCollectCriticalRuntimeSceneValidityInvariantViolations({

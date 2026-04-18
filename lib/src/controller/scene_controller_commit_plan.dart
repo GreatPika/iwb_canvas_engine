@@ -1,4 +1,5 @@
 import 'committed_store_state.dart';
+import '../core/nodes.dart';
 import '../core/revision_policy.dart';
 import 'change_set.dart';
 import 'mutation_commit_preparer.dart';
@@ -31,7 +32,11 @@ ControllerCommitPlan buildControllerCommitPlan({
     );
   }
 
-  final committedSelection = changeSet.selectionChanged
+  final selectionMembershipChanged = !_committedSelectionEquals(
+    store.selectedNodeIds,
+    commitCandidate.selection,
+  );
+  final committedSelection = selectionMembershipChanged
       ? commitCandidate.selection
       : store.selectedNodeIds;
   final committedRevisionState = resolvedCommittedRevisionAllocatorState(
@@ -53,7 +58,7 @@ ControllerCommitPlan buildControllerCommitPlan({
       structuralRevision:
           store.structuralRevision + (changeSet.structuralChanged ? 1 : 0),
       selectionRevision:
-          store.selectionRevision + (changeSet.selectionChanged ? 1 : 0),
+          store.selectionRevision + (selectionMembershipChanged ? 1 : 0),
       boundsRevision: store.boundsRevision + (changeSet.boundsChanged ? 1 : 0),
       visualRevision: store.visualRevision + 1,
       commitRevision: store.commitRevision + 1,
@@ -65,6 +70,10 @@ bool _requiresSelectionCommitPhase(ChangeSet changeSet) {
   return changeSet.selectionChanged ||
       changeSet.structuralChanged ||
       changeSet.documentReplaced;
+}
+
+bool _committedSelectionEquals(Set<NodeId> left, Set<NodeId> right) {
+  return left.length == right.length && left.containsAll(right);
 }
 
 List<String> resolveControllerCommitPhases({
