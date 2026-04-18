@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain ARCHITECTURE.md"
+  short_description: "Keep the architecture document concise, normative, and synced with code."
+  default_prompt: "Audit and update ARCHITECTURE.md after architecture-affecting repository changes."
