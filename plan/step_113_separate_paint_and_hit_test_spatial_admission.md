@@ -4,6 +4,23 @@
 
 - This change fixes render-path over-admission by separating paint admission from hit-test admission while preserving the existing paint order for background nodes, content nodes, and selected-node supplements.
 
+### Historical Continuation Note
+
+- This step remains the closure point for the role split between hit-test
+  admission and paint admission, the role-aware spatial API names, and the
+  viewport-first paint-order contract introduced here.
+- Its step-local restriction that background nodes stay outside
+  `SceneSpatialIndex` applies only to Step 113 closure.
+- Step 114
+  (`plan/step_114_include_background_layer_in_paint_spatial_index.md`) later
+  extended only the committed paint-admission path so background nodes can be
+  returned by `queryPaintCandidates(...)` under the scoped
+  `backgroundAndContentLayers` contract, while hit-test admission remains
+  content-only.
+- When this document says background nodes remain a dedicated snapshot
+  boundary or must not move into `SceneSpatialIndex`, read that as historical
+  Step 113 scope, not as the final cross-step contract after Step 114.
+
 ## 2. Change Boundary
 
 ### Included in the Change

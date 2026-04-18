@@ -8,6 +8,22 @@ graph objects never leave the write subsystem, and all controller-owned
 interactive read paths consume one exact snapshot-backed node-resolution
 surface.
 
+### Historical Supersession Note
+- This step remains closed for the committed read-side runtime-leak seal and
+  the snapshot-only resolution rule.
+- Its original exact neutral spatial-query surface
+  (`SceneSpatialCandidate`, `querySpatialCandidates(...)`) was superseded by
+  Step 113 (`plan/step_113_separate_paint_and_hit_test_spatial_admission.md`),
+  which replaced it with the role-aware split surface
+  `SceneSpatialCandidateLocation`,
+  `SceneHitTestSpatialCandidate`,
+  `ScenePaintSpatialCandidate`,
+  `queryHitTestCandidates(...)`,
+  and `queryPaintCandidates(...)`.
+- When this document refers to the old neutral spatial-query names, treat that
+  wording as historical closure evidence for Step 108 only, not as the
+  current exact API contract.
+
 ## 2. Change Boundary
 
 ### Included in the Change
@@ -131,23 +147,33 @@ surface.
    requested id. The resolution path must not fall back to a snapshot scan.
    Background-layer resolution uses the same helper and returns
    `layerIndex == -1`.
-5. The exact `SceneStoreControllerSpatialAccess` read surface after this step
-   is fixed to:
+5. Historical closure note: Step 108 originally fixed the exact
+   `SceneStoreControllerSpatialAccess` read surface to
    `querySpatialCandidates(Rect worldBounds) -> List<SceneSpatialCandidate>`,
    `resolveSpatialCandidateSnapshot(SceneSpatialCandidate candidate) -> NodeSnapshot?`,
    `resolveSnapshotNodeById(NodeId nodeId) -> ({NodeSnapshot node, int layerIndex, int nodeIndex})?`,
    and `centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) -> Offset`.
-   `backgroundLayerNodes()`, `resolveSpatialCandidateNode(...)`, and
-   `resolveNodeById(...)` must not remain after this step.
+   Step 113 later superseded only the neutral spatial-query portion of that
+   exact surface with the role-aware split
+   `queryHitTestCandidates(...) -> List<SceneHitTestSpatialCandidate>`,
+   `queryPaintCandidates(...) -> List<ScenePaintSpatialCandidate>`, and
+   `resolveSpatialCandidateSnapshot(SceneSpatialCandidateLocation candidate) -> NodeSnapshot?`.
+   The still-active requirement from this step is that the committed
+   controller read surface stays snapshot-backed and must not reintroduce
+   `backgroundLayerNodes()`, `resolveSpatialCandidateNode(...)`,
+   `resolveNodeById(...)`, or any runtime-node read helper.
 6. Background-layer committed read-side access after this step is fixed to the
    immutable controller snapshot only. No replacement background runtime-node
    helper is allowed.
-7. The exact interactive committed read callback shape after this step is
-   fixed. `InteractiveRuntimeCallbacks`,
+7. The interactive committed read callback rule from this step remains active:
+   `InteractiveRuntimeCallbacks`,
    `InteractiveMoveSessionCallbacks`, and
-   `InteractiveDrawCoordinatorCallbacks` must expose
+   `InteractiveDrawCoordinatorCallbacks` must expose a snapshot resolver and
+   must not expose a runtime-node resolver under any name. The original
+   Step 108 exact parameter type
    `resolveSpatialCandidateSnapshot(SceneSpatialCandidate candidate) -> NodeSnapshot?`
-   and must not expose a runtime-node resolver under any name.
+   was superseded by Step 113 with the role-aware location payload
+   `resolveSpatialCandidateSnapshot(SceneSpatialCandidateLocation candidate) -> NodeSnapshot?`.
 8. `InteractiveMoveHitTestEngine.hitTestTopNode(...)` and
    `InteractiveMoveSession.hitTestTopNode(...)` must return
    `NodeSnapshot?`. `InteractiveDoubleTapRouter` must recognize editable text
