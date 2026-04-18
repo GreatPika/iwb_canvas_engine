@@ -30,11 +30,17 @@ spatial-admission contract.
 
 - `SceneSpatialIndex` owns content-layer coarse lookup and stores separate
   hit-test bounds and paint bounds for the same committed node location.
+  Paint admission includes committed `backgroundLayer` nodes on the shared
+  paint path; hit-test admission remains content-only.
 - Interactive read-side flows consume hit-test candidates and resolve snapshot
   data by sealed location only.
 - Render read-side flows consume paint candidates that carry paint bounds only.
   `ScenePainterNodeRenderer` must cull by those paint bounds before geometry or
   text-layout resolution.
+- Controller paint query helpers and paired snapshot resolution form one closed
+  committed read surface: if the committed paint query returns a candidate
+  shape, `resolveSpatialCandidateSnapshot(...)` must resolve that current
+  candidate or reject it as stale/out-of-range.
 - Controller-backed paint enumeration stays owned by
   `SceneControllerSceneViewRenderState`. It merges viewport-first ordinary
   candidates with selected-node supplements while preserving original

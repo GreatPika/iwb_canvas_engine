@@ -962,7 +962,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY',
     scope: 'engine-controller',
     title:
-        'committed read-side controller and interactive callback contracts expose immutable snapshots instead of live runtime scene graph types',
+        'committed read-side controller and interactive callback contracts expose immutable snapshots instead of live runtime scene graph types, shared paint admission includes backgroundLayer, hit-test admission stays content-only, and every committed query candidate shape is resolvable through the paired snapshot helper surface',
     primaryProof: PrimaryProof(
       path: 'test/tool/guardrails/guardrails_controller_api_tool_test.dart',
     ),

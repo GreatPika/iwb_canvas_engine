@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
 import 'package:iwb_canvas_engine/src/core/id_generator.dart';
+import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
 import 'package:iwb_canvas_engine/src/controller/change_set.dart';
 import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
@@ -434,4 +435,61 @@ void main() {
       expect(slice.debugIncrementalApplyCount, 0);
     },
   );
+
+  test('writeQueryPaintCandidates threads scoped background paint queries', () {
+    final cache = SpatialIndexCache();
+    final scene = Scene(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[
+          RectNode(
+            id: 'bg',
+            size: const Size(10, 10),
+            transform: Transform2D.translation(const Offset(5, 5)),
+          ),
+        ],
+      ),
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-scope',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'fg',
+              size: const Size(10, 10),
+              transform: Transform2D.translation(const Offset(5, 5)),
+            ),
+          ],
+        ),
+      ],
+    );
+    final nodeLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
+      'bg': (layerIndex: -1, nodeIndex: 0),
+      'fg': (layerIndex: 0, nodeIndex: 0),
+    };
+
+    expect(
+      cache
+          .writeQueryPaintCandidates(
+            scene: scene,
+            nodeLocator: nodeLocator,
+            worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+            controllerEpoch: 0,
+          )
+          .map((candidate) => candidate.nodeId),
+      <NodeId>['fg'],
+    );
+
+    expect(
+      cache
+          .writeQueryPaintCandidates(
+            scene: scene,
+            nodeLocator: nodeLocator,
+            worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+            controllerEpoch: 0,
+            scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+          )
+          .map((candidate) => candidate.nodeId)
+          .toSet(),
+      <NodeId>{'bg', 'fg'},
+    );
+  });
 }

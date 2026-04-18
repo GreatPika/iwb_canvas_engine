@@ -118,21 +118,23 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
     );
   }
 
-  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) {
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.contentLayersOnly,
+  }) {
     return _commitRuntime.spatialIndexCache.writeQueryPaintCandidates(
       scene: _store.sceneDoc,
       nodeLocator: _store.nodeLocator,
       worldBounds: worldBounds,
       controllerEpoch: _store.controllerEpoch,
+      scope: scope,
     );
   }
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
     SceneSpatialCandidateReference candidate,
   ) {
-    if (candidate.layerIndex < 0) {
-      return null;
-    }
     return _resolveSnapshotAtLocationInSnapshot(
       snapshot: snapshot,
       nodeId: candidate.nodeId,

@@ -26,4 +26,4 @@ roadmap can be updated without mixing execution contracts.
 - [x] [Step 111. Lift replace-scene orchestration ownership to committed mutation access](plan/step_111_lift_replace_scene_orchestration_ownership_to_committed_mutation_access.md)
 - [x] [Step 112. Fix zero-preview move gesture scene notification contract](plan/step_112_fix_zero_preview_move_gesture_scene_notification_contract.md)
 - [x] [Step 113. Separate paint and hit-test spatial admission](plan/step_113_separate_paint_and_hit_test_spatial_admission.md)
-- [ ] [Step 114. Include `backgroundLayer` in shared paint spatial admission](plan/step_114_include_background_layer_in_paint_spatial_index.md)
+- [x] [Step 114. Include `backgroundLayer` in shared paint spatial admission](plan/step_114_include_background_layer_in_paint_spatial_index.md)

@@ -9,6 +9,7 @@ import '../../controller/scene_store_controller.dart';
 import '../../core/geometry.dart';
 import '../../core/node_geometry.dart';
 import '../../core/numeric_clamp.dart';
+import '../../core/scene_spatial_index.dart';
 import '../../core/scene_snapshot_paint_candidates.dart';
 import '../scene_controller_interaction.dart';
 import 'scene_controller_interaction_runtime.dart';
@@ -174,7 +175,6 @@ final class SceneControllerSceneViewRenderState
       return;
     }
     yield* _enumerateCommittedSnapshotPaintCandidates(
-      snapshot: snapshot,
       query: query,
       selectedNodeIds: frameRead.selectedNodeIds,
       previewResolver: frameRead.previewDeltaResolver,
@@ -182,56 +182,29 @@ final class SceneControllerSceneViewRenderState
   }
 
   Iterable<ScenePaintCandidate> _enumerateCommittedSnapshotPaintCandidates({
-    required SceneSnapshot snapshot,
     required ScenePaintCandidateQuery query,
     required Set<NodeId> selectedNodeIds,
     required Offset Function(NodeId nodeId) previewResolver,
   }) sync* {
     final acceptedNodeIds = <NodeId>{};
-    final backgroundCandidates =
-        <({ScenePaintCandidate candidate, int nodeIndex})>[];
-    final contentCandidates =
+    final orderedCandidates =
         <({ScenePaintCandidate candidate, int layerIndex, int nodeIndex})>[];
-
-    final snapshotBackgroundNodes = snapshot.backgroundLayer.nodes;
-    for (
-      var nodeIndex = 0;
-      nodeIndex < snapshotBackgroundNodes.length;
-      nodeIndex++
-    ) {
-      final snapshotNode = snapshotBackgroundNodes[nodeIndex];
-      final paintBounds = _snapshotPaintBoundsWorld(
-        node: snapshotNode,
-        previewResolver: previewResolver,
-      );
-      if (!isFiniteRect(paintBounds) ||
-          !query.viewportRect.overlaps(paintBounds)) {
-        continue;
-      }
-      if (!acceptedNodeIds.add(snapshotNode.id)) {
-        continue;
-      }
-      backgroundCandidates.add((
-        candidate: ScenePaintCandidate(
-          node: snapshotNode,
-          paintBoundsWorld: paintBounds,
-        ),
-        nodeIndex: nodeIndex,
-      ));
-    }
 
     for (final candidate in _storeController.queryPaintCandidates(
       query.viewportRect,
+      scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
     )) {
-      final resolvedNode = _storeController.resolveSnapshotNodeById(
-        candidate.nodeId,
-      );
-      if (resolvedNode == null || !acceptedNodeIds.add(resolvedNode.node.id)) {
+      final resolvedNode = _storeController.resolveSpatialCandidateSnapshot((
+        nodeId: candidate.nodeId,
+        layerIndex: candidate.layerIndex,
+        nodeIndex: candidate.nodeIndex,
+      ));
+      if (resolvedNode == null || !acceptedNodeIds.add(resolvedNode.id)) {
         continue;
       }
-      contentCandidates.add((
+      orderedCandidates.add((
         candidate: ScenePaintCandidate(
-          node: resolvedNode.node,
+          node: resolvedNode,
           paintBoundsWorld: candidate.paintBoundsWorld,
         ),
         layerIndex: candidate.layerIndex,
@@ -255,17 +228,7 @@ final class SceneControllerSceneViewRenderState
       if (!acceptedNodeIds.add(nodeId)) {
         continue;
       }
-      if (resolvedNode.layerIndex < 0) {
-        backgroundCandidates.add((
-          candidate: ScenePaintCandidate(
-            node: resolvedNode.node,
-            paintBoundsWorld: paintBounds,
-          ),
-          nodeIndex: resolvedNode.nodeIndex,
-        ));
-        continue;
-      }
-      contentCandidates.add((
+      orderedCandidates.add((
         candidate: ScenePaintCandidate(
           node: resolvedNode.node,
           paintBoundsWorld: paintBounds,
@@ -275,8 +238,7 @@ final class SceneControllerSceneViewRenderState
       ));
     }
 
-    backgroundCandidates.sort((a, b) => a.nodeIndex.compareTo(b.nodeIndex));
-    contentCandidates.sort((a, b) {
+    orderedCandidates.sort((a, b) {
       final layerOrder = a.layerIndex.compareTo(b.layerIndex);
       if (layerOrder != 0) {
         return layerOrder;
@@ -284,10 +246,7 @@ final class SceneControllerSceneViewRenderState
       return a.nodeIndex.compareTo(b.nodeIndex);
     });
 
-    for (final candidate in backgroundCandidates) {
-      yield candidate.candidate;
-    }
-    for (final candidate in contentCandidates) {
+    for (final candidate in orderedCandidates) {
       yield candidate.candidate;
     }
   }

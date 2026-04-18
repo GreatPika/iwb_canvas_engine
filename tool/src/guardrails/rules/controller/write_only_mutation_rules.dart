@@ -710,28 +710,116 @@ GuardrailViolation? _astCommittedReadHelperSignatureViolation({
   final expected = switch (memberName) {
     'queryHitTestCandidates' => (
       returnType: 'List<SceneHitTestSpatialCandidate>',
-      parameterType: 'Rect',
-      parameterName: 'worldBounds',
+      parameters:
+          <
+            ({
+              String type,
+              String name,
+              bool isNamed,
+              bool isRequiredNamed,
+              String? defaultValueSource,
+            })
+          >[
+            (
+              type: 'Rect',
+              name: 'worldBounds',
+              isNamed: false,
+              isRequiredNamed: false,
+              defaultValueSource: null,
+            ),
+          ],
     ),
     'queryPaintCandidates' => (
       returnType: 'List<ScenePaintSpatialCandidate>',
-      parameterType: 'Rect',
-      parameterName: 'worldBounds',
+      parameters:
+          <
+            ({
+              String type,
+              String name,
+              bool isNamed,
+              bool isRequiredNamed,
+              String? defaultValueSource,
+            })
+          >[
+            (
+              type: 'Rect',
+              name: 'worldBounds',
+              isNamed: false,
+              isRequiredNamed: false,
+              defaultValueSource: null,
+            ),
+            (
+              type: 'ScenePaintSpatialQueryScope',
+              name: 'scope',
+              isNamed: true,
+              isRequiredNamed: false,
+              defaultValueSource:
+                  'ScenePaintSpatialQueryScope.contentLayersOnly',
+            ),
+          ],
     ),
     'resolveSpatialCandidateSnapshot' => (
       returnType: 'NodeSnapshot?',
-      parameterType: 'SceneSpatialCandidateReference',
-      parameterName: 'candidate',
+      parameters:
+          <
+            ({
+              String type,
+              String name,
+              bool isNamed,
+              bool isRequiredNamed,
+              String? defaultValueSource,
+            })
+          >[
+            (
+              type: 'SceneSpatialCandidateReference',
+              name: 'candidate',
+              isNamed: false,
+              isRequiredNamed: false,
+              defaultValueSource: null,
+            ),
+          ],
     ),
     'resolveSnapshotNodeById' => (
       returnType: '({NodeSnapshot node, int layerIndex, int nodeIndex})?',
-      parameterType: 'NodeId',
-      parameterName: 'nodeId',
+      parameters:
+          <
+            ({
+              String type,
+              String name,
+              bool isNamed,
+              bool isRequiredNamed,
+              String? defaultValueSource,
+            })
+          >[
+            (
+              type: 'NodeId',
+              name: 'nodeId',
+              isNamed: false,
+              isRequiredNamed: false,
+              defaultValueSource: null,
+            ),
+          ],
     ),
     'centerWorldForNodeSnapshots' => (
       returnType: 'Offset',
-      parameterType: 'Iterable<NodeSnapshot>',
-      parameterName: 'snapshots',
+      parameters:
+          <
+            ({
+              String type,
+              String name,
+              bool isNamed,
+              bool isRequiredNamed,
+              String? defaultValueSource,
+            })
+          >[
+            (
+              type: 'Iterable<NodeSnapshot>',
+              name: 'snapshots',
+              isNamed: false,
+              isRequiredNamed: false,
+              defaultValueSource: null,
+            ),
+          ],
     ),
     _ => null,
   };
@@ -758,7 +846,7 @@ GuardrailViolation? _astCommittedReadHelperSignatureViolation({
   }
   final parameters =
       astMember.parameters?.parameters ?? const <FormalParameter>[];
-  if (parameters.length != 1) {
+  if (parameters.length != expected.parameters.length) {
     return _committedReadSideViolation(
       context: context,
       sourceElement: sourceElement,
@@ -767,19 +855,59 @@ GuardrailViolation? _astCommittedReadHelperSignatureViolation({
           'signature.',
     );
   }
-  final parameter = parameters.single;
-  if (parameter is! SimpleFormalParameter ||
-      parameter.name?.lexeme != expected.parameterName ||
-      parameter.type?.toSource() != expected.parameterType) {
-    return _committedReadSideViolation(
-      context: context,
-      sourceElement: sourceElement,
-      detail:
-          'committed read helper "$memberName" must keep the exact sealed '
-          'signature.',
-    );
+  for (var i = 0; i < parameters.length; i++) {
+    final parameter = parameters[i];
+    final expectedParameter = expected.parameters[i];
+    if (!_matchesSealedCommittedReadParameter(
+      parameter,
+      type: expectedParameter.type,
+      name: expectedParameter.name,
+      isNamed: expectedParameter.isNamed,
+      isRequiredNamed: expectedParameter.isRequiredNamed,
+      defaultValueSource: expectedParameter.defaultValueSource,
+    )) {
+      return _committedReadSideViolation(
+        context: context,
+        sourceElement: sourceElement,
+        detail:
+            'committed read helper "$memberName" must keep the exact sealed '
+            'signature.',
+      );
+    }
   }
   return null;
+}
+
+bool _matchesSealedCommittedReadParameter(
+  FormalParameter parameter, {
+  required String type,
+  required String name,
+  required bool isNamed,
+  required bool isRequiredNamed,
+  required String? defaultValueSource,
+}) {
+  if (!isNamed) {
+    return parameter is SimpleFormalParameter &&
+        parameter.name?.lexeme == name &&
+        parameter.type?.toSource() == type &&
+        parameter.isPositional;
+  }
+
+  if (parameter is! DefaultFormalParameter) {
+    return false;
+  }
+  final inner = parameter.parameter;
+  if (inner is! SimpleFormalParameter) {
+    return false;
+  }
+  if (inner.name?.lexeme != name || inner.type?.toSource() != type) {
+    return false;
+  }
+  if (!parameter.isNamed || parameter.isRequiredNamed != isRequiredNamed) {
+    return false;
+  }
+  final actualDefault = parameter.defaultValue?.toSource();
+  return actualDefault == defaultValueSource;
 }
 
 final class _CommittedReadSideSurfacePresence {

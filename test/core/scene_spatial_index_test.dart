@@ -230,6 +230,81 @@ void main() {
     expect(index.queryPaintCandidates(ringProbe), isEmpty);
   });
 
+  test('paint scope includes background while hit-test stays content-only', () {
+    final scene = Scene(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[
+          RectNode(
+            id: 'bg',
+            size: const Size(20, 20),
+            transform: Transform2D.translation(const Offset(10, 10)),
+          ),
+        ],
+      ),
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-scope',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'fg',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(10, 10)),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final index = SceneSpatialIndex.build(scene);
+    final query = const Rect.fromLTWH(0, 0, 40, 40);
+
+    expect(
+      index.queryPaintCandidates(query).map((candidate) => candidate.nodeId),
+      <NodeId>['fg'],
+    );
+    expect(
+      index
+          .queryPaintCandidates(
+            query,
+            scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+          )
+          .map((candidate) => candidate.nodeId)
+          .toSet(),
+      <NodeId>{'bg', 'fg'},
+    );
+    expect(
+      index.queryHitTestCandidates(query).map((candidate) => candidate.nodeId),
+      <NodeId>['fg'],
+    );
+  });
+
+  test(
+    'build without explicit locator still resolves background paint scope',
+    () {
+      final scene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'bg-auto-locator',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(10, 10)),
+            ),
+          ],
+        ),
+      );
+
+      final index = SceneSpatialIndex.build(scene);
+      final candidates = index.queryPaintCandidates(
+        const Rect.fromLTWH(0, 0, 40, 40),
+        scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+      );
+
+      expect(candidates.map((candidate) => candidate.nodeId), <NodeId>[
+        'bg-auto-locator',
+      ]);
+    },
+  );
+
   test('boundary: 1024 cells stays grid, 1025 cells goes large', () {
     final exact1024Scene = sceneWithRect(
       rectCoveringCells(id: 'exact-1024', width: 8183, height: 8183),
@@ -283,6 +358,30 @@ void main() {
     expect(ids, isNot(contains('outside')));
   });
 
+  test('huge paint query switches to fallback candidate scan', () {
+    final inside = RectNode(id: 'inside-paint', size: const Size(10, 10));
+    final outside = RectNode(id: 'outside-paint', size: const Size(10, 10))
+      ..position = const Offset(9999990, 9999990);
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-paint-huge',
+          nodes: <SceneNode>[inside, outside],
+        ),
+      ],
+    );
+
+    final index = SceneSpatialIndex.build(scene);
+    final candidates = index.queryPaintCandidates(
+      const Rect.fromLTWH(-128000, -12800, 256000, 25600),
+    );
+
+    final ids = candidates.map((candidate) => candidate.nodeId).toSet();
+    expect(index.debugFallbackQueryCount, 1);
+    expect(ids, contains('inside-paint'));
+    expect(ids, isNot(contains('outside-paint')));
+  });
+
   test('invalid paint index serves repeated linear fallback queries', () {
     final scene = Scene(
       layers: <ContentLayer>[
@@ -312,6 +411,54 @@ void main() {
     expect(second.map((candidate) => candidate.nodeId), <NodeId>['oor-paint']);
     expect(index.debugFallbackQueryCount, 2);
   });
+
+  test(
+    'background-only paint failure keeps content hit-test fast path available',
+    () {
+      final scene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'bg-oor',
+              size: const Size(10, 10),
+              transform: Transform2D.translation(
+                Offset(sceneCoordMax + 500, 0),
+              ),
+            ),
+          ],
+        ),
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-content-fast-path',
+            nodes: <SceneNode>[
+              RectNode(id: 'fg-fast', size: const Size(10, 10)),
+            ],
+          ),
+        ],
+      );
+
+      final index = SceneSpatialIndex.build(scene);
+
+      expect(index.isValid, isFalse);
+      expect(
+        index
+            .queryHitTestCandidates(const Rect.fromLTWH(0, 0, 20, 20))
+            .map((candidate) => candidate.nodeId),
+        <NodeId>['fg-fast'],
+      );
+      expect(index.debugFallbackQueryCount, 0);
+      expect(
+        index
+            .queryPaintCandidates(
+              Rect.fromLTWH(sceneCoordMax + 450, -20, 100, 40),
+              scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+            )
+            .map((candidate) => candidate.nodeId),
+        <NodeId>['bg-oor'],
+      );
+      expect(index.debugFallbackQueryCount, 1);
+    },
+  );
 
   test(
     'out-of-range paint query falls back linearly without invalidating index',

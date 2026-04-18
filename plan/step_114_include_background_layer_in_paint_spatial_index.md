@@ -332,7 +332,7 @@
 
 ## 8. Vertical Slices
 
-### Slice 1. [ ] Add Background-Heavy Measurement Closure
+### Slice 1. [x] Add Background-Heavy Measurement Closure
 
 #### Slice Contract
 
@@ -400,7 +400,7 @@ part of the required load-profile policy for every supported profile.
 - `IWB_BENCH_RESULT` output includes
   `"name":"background_layer_paint_admission"` during the benchmark test run.
 
-### Slice 2. [ ] Add Scoped Background Paint Admission Inside SceneSpatialIndex
+### Slice 2. [x] Add Scoped Background Paint Admission Inside SceneSpatialIndex
 
 #### Slice Contract
 
@@ -515,7 +515,7 @@ hit-test fast paths.
 - Regression assertions proving scope-gated background paint admission and
   hit-test fast-path survival under a background-only paint failure.
 
-### Slice 3. [ ] Thread Scope Through Controller and Close the Committed Resolver Surface
+### Slice 3. [x] Thread Scope Through Controller and Close the Committed Resolver Surface
 
 #### Slice Contract
 
@@ -571,7 +571,7 @@ paired committed resolver.
 - Regression assertions proving the controller query/resolve surface is closed
   for background candidates.
 
-### Slice 4. [ ] Replace the Committed Linear Background Scan in the Renderer Fast Path
+### Slice 4. [x] Replace the Committed Linear Background Scan in the Renderer Fast Path
 
 #### Slice Contract
 
@@ -650,7 +650,7 @@ resolver, without linearly scanning ordinary background nodes.
   `candidate.paintBoundsWorld` instead of recomputing ordinary committed paint
   bounds.
 
-### Slice 5. [ ] Tighten Guardrails and Release Documentation
+### Slice 5. [x] Tighten Guardrails and Release Documentation
 
 #### Slice Contract
 

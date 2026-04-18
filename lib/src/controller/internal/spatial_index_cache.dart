@@ -45,6 +45,8 @@ class SpatialIndexCache {
     required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
     required Rect worldBounds,
     required int controllerEpoch,
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.contentLayersOnly,
   }) {
     final needsBuild = _index == null || _indexEpoch != controllerEpoch;
     if (needsBuild) {
@@ -56,7 +58,7 @@ class SpatialIndexCache {
     if (index == null) {
       return const <ScenePaintSpatialCandidate>[];
     }
-    return index.queryPaintCandidates(worldBounds);
+    return index.queryPaintCandidates(worldBounds, scope: scope);
   }
 
   void writeHandleCommit({

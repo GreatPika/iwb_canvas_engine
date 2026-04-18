@@ -1223,6 +1223,11 @@ typedef SceneSpatialCandidateReference = ({
   int nodeIndex,
 });
 
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
+
 class SceneHitTestSpatialCandidate {
   const SceneHitTestSpatialCandidate({
     required this.nodeId,
@@ -1378,8 +1383,11 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
       const <SceneHitTestSpatialCandidate>[];
 
-  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
-      const <ScenePaintSpatialCandidate>[];
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.contentLayersOnly,
+  }) => const <ScenePaintSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
     SceneSpatialCandidateReference candidate,

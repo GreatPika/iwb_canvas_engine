@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
+import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
 
 // INV:INV-ENG-ID-INDEX-FROM-SCENE
 
@@ -45,7 +46,7 @@ void main() {
   );
 
   test(
-    'resolveSpatialCandidateSnapshot rejects candidate from background locator',
+    'resolveSpatialCandidateSnapshot accepts current background paint candidate',
     () {
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
@@ -61,13 +62,118 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      const backgroundCandidate = (
-        nodeId: 'bg-node',
-        layerIndex: -1,
-        nodeIndex: 0,
+      final backgroundCandidate = controller
+          .queryPaintCandidates(
+            const Rect.fromLTWH(0, 0, 20, 20),
+            scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+          )
+          .single;
+      final resolved = controller.resolveSpatialCandidateSnapshot((
+        nodeId: backgroundCandidate.nodeId,
+        layerIndex: backgroundCandidate.layerIndex,
+        nodeIndex: backgroundCandidate.nodeIndex,
+      ));
+
+      expect(backgroundCandidate.layerIndex, -1);
+      expect(resolved, isNotNull);
+      expect(resolved?.id, 'bg-node');
+    },
+  );
+
+  test('queryPaintCandidates remains content-only by default', () {
+    final controller = SceneStoreController(
+      initialSnapshot: SceneSnapshot(
+        backgroundLayer: BackgroundLayerSnapshot(
+          nodes: <NodeSnapshot>[
+            RectNodeSnapshot(id: 'bg-node', size: Size(10, 10)),
+          ],
+        ),
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-1',
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'fg-node', size: Size(10, 10)),
+            ],
+          ),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    expect(
+      controller
+          .queryPaintCandidates(const Rect.fromLTWH(0, 0, 20, 20))
+          .map((candidate) => candidate.nodeId),
+      <NodeId>['fg-node'],
+    );
+    expect(
+      controller
+          .queryPaintCandidates(
+            const Rect.fromLTWH(0, 0, 20, 20),
+            scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+          )
+          .map((candidate) => candidate.nodeId)
+          .toSet(),
+      <NodeId>{'bg-node', 'fg-node'},
+    );
+  });
+
+  test(
+    'resolveSpatialCandidateSnapshot rejects stale background candidate',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'bg-node', size: Size(10, 10)),
+            ],
+          ),
+        ),
       );
+      addTearDown(controller.dispose);
+
+      final stale = controller
+          .queryPaintCandidates(
+            const Rect.fromLTWH(0, 0, 20, 20),
+            scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+          )
+          .single;
+
+      controller.writeReplaceScene(
+        SceneSnapshot(backgroundLayer: BackgroundLayerSnapshot()),
+      );
+
       expect(
-        controller.resolveSpatialCandidateSnapshot(backgroundCandidate),
+        controller.resolveSpatialCandidateSnapshot((
+          nodeId: stale.nodeId,
+          layerIndex: stale.layerIndex,
+          nodeIndex: stale.nodeIndex,
+        )),
+        isNull,
+      );
+    },
+  );
+
+  test(
+    'resolveSpatialCandidateSnapshot rejects out-of-range background candidate',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'bg-node', size: Size(10, 10)),
+            ],
+          ),
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      expect(
+        controller.resolveSpatialCandidateSnapshot(const (
+          nodeId: 'bg-node',
+          layerIndex: -1,
+          nodeIndex: 99,
+        )),
         isNull,
       );
     },

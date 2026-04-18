@@ -193,6 +193,47 @@ void main() {
     },
   );
 
+  test('committed paint enumeration uses scoped shared spatial query', () {
+    final source = File(
+      'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
+    ).readAsStringSync();
+    final body = _extractMethodBody(
+      source: source,
+      methodStart:
+          'Iterable<ScenePaintCandidate> _enumerateCommittedSnapshotPaintCandidates({',
+    );
+    final supplementsStart = body.indexOf(
+      'for (final nodeId in selectedNodeIds)',
+    );
+    if (supplementsStart < 0) {
+      fail('Expected selected supplement loop in committed paint enumeration.');
+    }
+    final ordinaryCommittedBody = body.substring(0, supplementsStart);
+
+    expect(
+      body,
+      contains(
+        'scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,',
+      ),
+    );
+    expect(
+      body,
+      contains('_storeController.resolveSpatialCandidateSnapshot(('),
+    );
+    expect(body, contains('paintBoundsWorld: candidate.paintBoundsWorld,'));
+    expect(body, isNot(contains('snapshot.backgroundLayer.nodes')));
+    expect(body, isNot(contains('resolveSnapshotNodeById(candidate.nodeId)')));
+    expect(
+      ordinaryCommittedBody,
+      isNot(contains('_snapshotPaintBoundsWorld(')),
+    );
+    expect(
+      ordinaryCommittedBody,
+      isNot(contains('nodeSnapshotPaintBoundsWorld(')),
+    );
+    expect(ordinaryCommittedBody, isNot(contains('nodePaintBoundsWorld(')));
+  });
+
   test('selection rendering uses resolved frame data for box selections', () {
     final source = File(
       'lib/src/render/scene_painter_selection.dart',

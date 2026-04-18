@@ -272,6 +272,58 @@ void main() {
       ),
     );
     expect(viewRuntimeSource, contains('snapshot => _readSnapshot()'));
+    final committedPaintBody = _extractMethodBody(
+      source: viewRuntimeSource,
+      methodStart:
+          'Iterable<ScenePaintCandidate> _enumerateCommittedSnapshotPaintCandidates({',
+    );
+    final supplementsStart = committedPaintBody.indexOf(
+      'for (final nodeId in selectedNodeIds)',
+    );
+    if (supplementsStart < 0) {
+      fail('Expected selected supplement loop in committed paint enumeration.');
+    }
+    final ordinaryCommittedBody = committedPaintBody.substring(
+      0,
+      supplementsStart,
+    );
+    expect(
+      committedPaintBody,
+      contains(
+        'scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,',
+      ),
+    );
+    expect(
+      committedPaintBody,
+      contains('_storeController.resolveSpatialCandidateSnapshot(('),
+    );
+    expect(
+      committedPaintBody,
+      contains('paintBoundsWorld: candidate.paintBoundsWorld,'),
+    );
+    expect(
+      committedPaintBody,
+      isNot(contains('snapshot.backgroundLayer.nodes')),
+    );
+    expect(
+      committedPaintBody,
+      isNot(contains('resolveSnapshotNodeById(candidate.nodeId)')),
+    );
+    expect(
+      ordinaryCommittedBody,
+      isNot(contains('_snapshotPaintBoundsWorld(')),
+    );
+    expect(
+      ordinaryCommittedBody,
+      isNot(contains('nodeSnapshotPaintBoundsWorld(')),
+    );
+    expect(ordinaryCommittedBody, isNot(contains('nodePaintBoundsWorld(')));
+
+    expect(viewRuntimeSource, isNot(contains('BackgroundSpatialIndex')));
+    expect(viewRuntimeSource, isNot(contains('SceneBackgroundSpatialIndex')));
+    expect(viewRuntimeSource, isNot(contains('BackgroundPaintCandidateCache')));
+    expect(viewRuntimeSource, isNot(contains('_backgroundPaintCells')));
+    expect(viewRuntimeSource, isNot(contains('_backgroundLargePaintNodeIds')));
 
     expect(
       pointerSessionTokenSource,

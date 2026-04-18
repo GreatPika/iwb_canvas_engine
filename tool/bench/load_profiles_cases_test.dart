@@ -10,6 +10,9 @@ import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
+import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
+    as interactive;
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 import 'load_profile_policy.dart';
@@ -60,6 +63,22 @@ void main() {
       _emitResult(
         profile: profile,
         name: selectionPathCaseName,
+        metrics: metrics,
+      );
+    },
+    timeout: const Timeout(Duration(minutes: 10)),
+  );
+
+  test(
+    'load profile background-layer-paint profile=$profile',
+    () {
+      final metrics = _runBackgroundLayerPaintAdmissionCase(
+        backgroundNodeCount: policy.nodeCases.last.nodeCount,
+        iterations: policy.nodeIterations,
+      );
+      _emitResult(
+        profile: profile,
+        name: backgroundLayerPaintAdmissionCaseName,
         metrics: metrics,
       );
     },
@@ -358,6 +377,76 @@ Map<String, Object?> _runSelectionPathMetricsCase({
     };
   } finally {
     renderState.dispose();
+    controller.dispose();
+  }
+}
+
+Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
+  required int backgroundNodeCount,
+  required int iterations,
+}) {
+  final snapshot = SceneSnapshot(
+    backgroundLayer: BackgroundLayerSnapshot(
+      nodes: <NodeSnapshot>[
+        for (var i = 0; i < backgroundNodeCount; i++)
+          RectNodeSnapshot(
+            id: 'bg$i',
+            size: const Size(8, 8),
+            transform: Transform2D.translation(
+              Offset((i % 500) * 32.0, (i ~/ 500) * 32.0),
+            ),
+          ),
+      ],
+    ),
+  );
+  final controller = SceneStoreController(initialSnapshot: snapshot);
+  final interactionController = interactive.SceneController();
+  final renderState = SceneControllerSceneViewRenderState(
+    storeController: controller,
+    readSnapshot: () => controller.snapshot,
+    readSelectedNodeIds: () => controller.selectedNodeIds,
+    readControllerEpoch: () => controller.controllerEpoch,
+    readPreviewDeltaResolver: () => _benchmarkZeroPreviewDelta,
+    readInteraction: () => interactionController.interaction,
+  );
+  final painter = ScenePainter(
+    controller: renderState,
+    imageResolver: (_) => null,
+  );
+  const query = ScenePaintCandidateQuery(
+    viewportRect: Rect.fromLTWH(0, 0, 240, 160),
+    visibilityRect: Rect.fromLTWH(-1, -1, 242, 162),
+  );
+  const canvasSize = Size(240, 160);
+
+  try {
+    final enumerateMetric = _measureOperation(
+      iterations: iterations,
+      run: (_) {
+        renderState
+            .enumeratePaintCandidates(renderState.captureFrameRead(), query)
+            .length;
+      },
+    );
+
+    final paintMetric = _measureOperation(
+      iterations: iterations,
+      run: (_) {
+        _paintScene(painter, canvasSize);
+      },
+    );
+
+    return <String, Object?>{
+      'backgroundNodeCount': backgroundNodeCount,
+      'iterations': iterations,
+      'metrics': <String, Object?>{
+        'enumerate_small_viewport': enumerateMetric,
+        'paint_small_viewport': paintMetric,
+      },
+    };
+  } finally {
+    renderState.dispose();
+    interactionController.dispose();
     controller.dispose();
   }
 }

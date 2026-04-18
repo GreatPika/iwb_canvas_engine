@@ -21,8 +21,11 @@ storage.
   plus ordered content `layers`.
 - Separate spatial admission for hit-testing and paint. Coarse hit-testing
   still respects hit padding and `kHitSlop`, while paint admission uses paint
-  bounds only and preserves original background/content order even when a
-  selected edge node is admitted only through the widened visibility rect.
+  bounds only. Committed paint admission now uses one shared spatial path for
+  `backgroundLayer` plus content layers, while hit-testing remains
+  content-only, and paint order still preserves original background/content
+  order even when a selected edge node is admitted only through the widened
+  visibility rect.
 - `SceneController` as the public interactive runtime root, with capability
   owners exposed through `controller.interaction`, `controller.selection`, and
   `controller.scene`, plus `SceneView` as the public interactive widget.
@@ -204,9 +207,11 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - The committed read side is snapshot-backed and write-private: live runtime
   `Scene` / `SceneNode` objects do not leave the write subsystem. Controller
   and interactive committed reads resolve immutable `NodeSnapshot` data only,
-  via `querySpatialCandidates(...)`,
+  via committed spatial query helpers plus
   `resolveSpatialCandidateSnapshot(...)`, and
-  `resolveSnapshotNodeById(...)`.
+  `resolveSnapshotNodeById(...)`. Paint-side committed queries include
+  `backgroundLayer` only on the shared paint path; hit-test queries stay
+  content-only.
 - Render output is frame-authoritative: if a `SceneViewRenderState` exposes an
   active frame snapshot that differs from the committed controller snapshot,
   candidate enumeration and selected-node supplements resolve against that

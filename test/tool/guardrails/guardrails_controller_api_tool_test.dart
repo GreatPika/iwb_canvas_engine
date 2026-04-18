@@ -100,6 +100,11 @@ typedef SceneSpatialCandidateReference = ({
   int nodeIndex,
 });
 
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
+
 class SceneHitTestSpatialCandidate {
   const SceneHitTestSpatialCandidate({
     required this.nodeId,
@@ -343,8 +348,11 @@ String _sceneStoreControllerFixture({
   List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
       const <SceneHitTestSpatialCandidate>[];
 
-  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
-      const <ScenePaintSpatialCandidate>[];
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.contentLayersOnly,
+  }) => const <ScenePaintSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
     SceneSpatialCandidateReference candidate,
@@ -1432,8 +1440,11 @@ List<String>? sceneWriterWriteSelectionReplaceResult(Object writer, Set<String> 
           ? const <SceneHitTestSpatialCandidate>[]
           : const <SceneHitTestSpatialCandidate>[];
 
-  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
-      const <ScenePaintSpatialCandidate>[];
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.contentLayersOnly,
+  }) => const <ScenePaintSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
     SceneSpatialCandidateReference candidate,
@@ -1486,6 +1497,11 @@ typedef SceneSpatialCandidateReference = ({
   int nodeIndex,
 });
 
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
+
 class SceneHitTestSpatialCandidate {
   const SceneHitTestSpatialCandidate({
     required this.nodeId,
@@ -1534,8 +1550,11 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
       const <SceneHitTestSpatialCandidate>[];
 
-  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
-      const <ScenePaintSpatialCandidate>[];
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.contentLayersOnly,
+  }) => const <ScenePaintSpatialCandidate>[];
 
   LeakedNode? resolveSpatialCandidateSnapshot(
     SceneSpatialCandidateReference candidate,
@@ -1588,6 +1607,11 @@ typedef SceneSpatialCandidateReference = ({
   int nodeIndex,
 });
 
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
+
 class SceneHitTestSpatialCandidate {
   const SceneHitTestSpatialCandidate({
     required this.nodeId,
@@ -1634,8 +1658,11 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
       const <SceneHitTestSpatialCandidate>[];
 
-  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
-      const <ScenePaintSpatialCandidate>[];
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.contentLayersOnly,
+  }) => const <ScenePaintSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
     SceneSpatialCandidateReference candidate,
@@ -1704,6 +1731,11 @@ typedef SceneSpatialCandidateReference = ({
   int nodeIndex,
 });
 
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
+
 class SceneHitTestSpatialCandidate {
   const SceneHitTestSpatialCandidate({
     required this.nodeId,
@@ -1747,8 +1779,11 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
       const <SceneHitTestSpatialCandidate>[];
 
-  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
-      const <ScenePaintSpatialCandidate>[];
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.contentLayersOnly,
+  }) => const <ScenePaintSpatialCandidate>[];
 
   StrokeNode? resolveSpatialCandidateSnapshot(
     SceneSpatialCandidateReference candidate,
@@ -1793,6 +1828,11 @@ typedef SceneSpatialCandidateReference = ({
   int layerIndex,
   int nodeIndex,
 });
+
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
 
 class SceneHitTestSpatialCandidate {
   const SceneHitTestSpatialCandidate({
@@ -1876,6 +1916,11 @@ typedef SceneSpatialCandidateReference = ({
   int nodeIndex,
 });
 
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
+
 class SceneHitTestSpatialCandidate {
   const SceneHitTestSpatialCandidate({
     required this.nodeId,
@@ -1948,6 +1993,11 @@ typedef SceneSpatialCandidateReference = ({
   int layerIndex,
   int nodeIndex,
 });
+
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
 ''');
         writeSandboxFile(
           sandbox,
@@ -2048,6 +2098,11 @@ typedef SceneSpatialCandidateReference = ({
   int nodeIndex,
 });
 
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
+
 class SceneHitTestSpatialCandidate {
   const SceneHitTestSpatialCandidate({
     required this.nodeId,
@@ -2119,6 +2174,11 @@ typedef SceneSpatialCandidateReference = ({
   int layerIndex,
   int nodeIndex,
 });
+
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
 
 class SceneHitTestSpatialCandidate {
   const SceneHitTestSpatialCandidate({
@@ -2203,6 +2263,11 @@ typedef SceneSpatialCandidateReference = ({
   int nodeIndex,
 });
 
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
+
 class SceneHitTestSpatialCandidate {
   const SceneHitTestSpatialCandidate({
     required this.nodeId,
@@ -2246,8 +2311,11 @@ extension SceneStoreControllerSpatialAccess on Object {
   List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
       const <SceneHitTestSpatialCandidate>[];
 
-  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
-      const <ScenePaintSpatialCandidate>[];
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.contentLayersOnly,
+  }) => const <ScenePaintSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
     SceneSpatialCandidateReference candidate,
@@ -2303,6 +2371,11 @@ typedef SceneSpatialCandidateReference = ({
   int layerIndex,
   int nodeIndex,
 });
+
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
 
 class SceneHitTestSpatialCandidate {
   const SceneHitTestSpatialCandidate({
@@ -2434,8 +2507,11 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
       const <SceneHitTestSpatialCandidate>[];
 
-  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
-      const <ScenePaintSpatialCandidate>[];
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.contentLayersOnly,
+  }) => const <ScenePaintSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
     SceneSpatialCandidateReference candidate,
@@ -2543,8 +2619,11 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
       const <SceneHitTestSpatialCandidate>[];
 
-  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
-      const <ScenePaintSpatialCandidate>[];
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.contentLayersOnly,
+  }) => const <ScenePaintSpatialCandidate>[];
 
   NodeSnapshot? resolveSpatialCandidateSnapshot(
     SceneSpatialCandidateReference candidate, {
@@ -2576,6 +2655,151 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
         }
       },
     );
+
+    test(
+      'rejects queryPaintCandidates scope promoted to required named',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_store_controller.dart',
+            _sceneStoreControllerFixture(
+              spatialAccessMembers: '''
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
+      const <SceneHitTestSpatialCandidate>[];
+
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    required ScenePaintSpatialQueryScope scope,
+  }) => const <ScenePaintSpatialCandidate>[];
+
+  NodeSnapshot? resolveSpatialCandidateSnapshot(
+    SceneSpatialCandidateReference candidate,
+  ) => null;
+
+  ({NodeSnapshot node, int layerIndex, int nodeIndex})? resolveSnapshotNodeById(
+    NodeId nodeId,
+  ) => null;
+
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
+      Offset.zero;
+''',
+            ),
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'controller API',
+              detail:
+                  'committed read helper "queryPaintCandidates" '
+                  'must keep the exact sealed signature',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test('rejects queryPaintCandidates scope default removal', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/controller/scene_store_controller.dart',
+          _sceneStoreControllerFixture(
+            spatialAccessMembers: '''
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
+      const <SceneHitTestSpatialCandidate>[];
+
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    ScenePaintSpatialQueryScope scope,
+  }) => const <ScenePaintSpatialCandidate>[];
+
+  NodeSnapshot? resolveSpatialCandidateSnapshot(
+    SceneSpatialCandidateReference candidate,
+  ) => null;
+
+  ({NodeSnapshot node, int layerIndex, int nodeIndex})? resolveSnapshotNodeById(
+    NodeId nodeId,
+  ) => null;
+
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
+      Offset.zero;
+''',
+          ),
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'controller API',
+            detail:
+                'committed read helper "queryPaintCandidates" '
+                'must keep the exact sealed signature',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects queryPaintCandidates scope default change', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/controller/scene_store_controller.dart',
+          _sceneStoreControllerFixture(
+            spatialAccessMembers: '''
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
+      const <SceneHitTestSpatialCandidate>[];
+
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+  }) => const <ScenePaintSpatialCandidate>[];
+
+  NodeSnapshot? resolveSpatialCandidateSnapshot(
+    SceneSpatialCandidateReference candidate,
+  ) => null;
+
+  ({NodeSnapshot node, int layerIndex, int nodeIndex})? resolveSnapshotNodeById(
+    NodeId nodeId,
+  ) => null;
+
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
+      Offset.zero;
+''',
+          ),
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'controller API',
+            detail:
+                'committed read helper "queryPaintCandidates" '
+                'must keep the exact sealed signature',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
 
     test(
       'rejects committed read helper exposing runtime scene node via extension type',
@@ -2652,8 +2876,11 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
       const <SceneHitTestSpatialCandidate>[];
 
-  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldBounds) =>
-      const <ScenePaintSpatialCandidate>[];
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.contentLayersOnly,
+  }) => const <ScenePaintSpatialCandidate>[];
 
   LeakedNode? resolveSpatialCandidateSnapshot(
     SceneSpatialCandidateReference candidate,

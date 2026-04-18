@@ -41,7 +41,7 @@ void main() {
         expect(firstOutput['profile'], 'smoke');
 
         final summary = firstOutput['summary'] as Map<String, Object?>;
-        expect(summary['comparedCases'], 4);
+        expect(summary['comparedCases'], 5);
         expect(summary['missingInBaseline'], isEmpty);
         expect(summary['missingInCurrent'], isEmpty);
 
@@ -408,6 +408,13 @@ void main() {
               'paint_with_selection': _metrics(100, 100, 100, 100),
             }),
             _caseMetrics(
+              backgroundLayerPaintAdmissionCaseName,
+              <String, Map<String, num>>{
+                'enumerate_small_viewport': _metrics(100, 100, 100, 100),
+                'paint_small_viewport': _metrics(100, 100, 100, 100),
+              },
+            ),
+            _caseMetrics(
               worstCaseName,
               _worstCaseMetrics(_metrics(100, 100, 100, 100)),
             ),
@@ -430,6 +437,13 @@ void main() {
               'paint_no_selection': _metrics(100, 100, 100, 100),
               'paint_with_selection': _metrics(100, 100, 100, 100),
             }),
+            _caseMetrics(
+              backgroundLayerPaintAdmissionCaseName,
+              <String, Map<String, num>>{
+                'enumerate_small_viewport': _metrics(100, 100, 100, 100),
+                'paint_small_viewport': _metrics(100, 100, 100, 100),
+              },
+            ),
             _caseMetrics(
               worstCaseName,
               _worstCaseMetrics(_metrics(100, 100, 100, 100)),
@@ -467,6 +481,13 @@ void main() {
               'toggle_selection': _metrics(100, 100, 100, 100),
             }),
             _caseMetrics(
+              backgroundLayerPaintAdmissionCaseName,
+              <String, Map<String, num>>{
+                'enumerate_small_viewport': _metrics(100, 100, 100, 100),
+                'paint_small_viewport': _metrics(100, 100, 100, 100),
+              },
+            ),
+            _caseMetrics(
               worstCaseName,
               _worstCaseMetrics(_metrics(100, 100, 100, 100)),
             ),
@@ -486,6 +507,13 @@ void main() {
               'single_stroke_patch_points': _metrics(100, 100, 100, 100),
               'toggle_selection': _metrics(100, 100, 100, 100),
             }),
+            _caseMetrics(
+              backgroundLayerPaintAdmissionCaseName,
+              <String, Map<String, num>>{
+                'enumerate_small_viewport': _metrics(100, 100, 100, 100),
+                'paint_small_viewport': _metrics(100, 100, 100, 100),
+              },
+            ),
             _caseMetrics(
               worstCaseName,
               _worstCaseMetrics(_metrics(100, 100, 100, 100)),
@@ -802,6 +830,13 @@ Map<String, Object?> _fullSmokeReport({
         'paint_no_selection': stableMetrics,
         'paint_with_selection': stableMetrics,
       }),
+      _caseMetrics(
+        backgroundLayerPaintAdmissionCaseName,
+        <String, Map<String, num>>{
+          'enumerate_small_viewport': stableMetrics,
+          'paint_small_viewport': stableMetrics,
+        },
+      ),
       _caseMetrics(worstCaseName, _worstCaseMetrics(stableMetrics)),
     ],
   );
@@ -829,6 +864,13 @@ Map<String, Object?> _fullSmokeReportWithNodePatchMetrics({
         'paint_no_selection': stableMetrics,
         'paint_with_selection': stableMetrics,
       }),
+      _caseMetrics(
+        backgroundLayerPaintAdmissionCaseName,
+        <String, Map<String, num>>{
+          'enumerate_small_viewport': stableMetrics,
+          'paint_small_viewport': stableMetrics,
+        },
+      ),
       _caseMetrics(worstCaseName, _worstCaseMetrics(stableMetrics)),
     ],
   );

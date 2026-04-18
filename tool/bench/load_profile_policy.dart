@@ -27,6 +27,11 @@ const List<String> _selectionPathRequiredOperations = <String>[
   'paint_with_selection',
 ];
 
+const List<String> _backgroundLayerPaintAdmissionRequiredOperations = <String>[
+  'enumerate_small_viewport',
+  'paint_small_viewport',
+];
+
 const List<String> _worstCaseRequiredOperations = <String>[
   'huge_bounds.query',
   'huge_bounds.move_selection',
@@ -174,6 +179,7 @@ class LoadProfilePolicy {
     ...nodeCases.map((c) => c.name),
     ...strokeCases.map((c) => c.name),
     selectionPathCaseName,
+    backgroundLayerPaintAdmissionCaseName,
     worstCaseName,
   ];
 
@@ -186,6 +192,9 @@ class LoadProfilePolicy {
     }
     if (caseName == selectionPathCaseName) {
       return _selectionPathRequiredOperations;
+    }
+    if (caseName == backgroundLayerPaintAdmissionCaseName) {
+      return _backgroundLayerPaintAdmissionRequiredOperations;
     }
     if (caseName == worstCaseName) {
       return _worstCaseRequiredOperations;
@@ -215,4 +224,6 @@ class LoadProfileStrokeCase {
 }
 
 const String selectionPathCaseName = 'selection_path_metrics';
+const String backgroundLayerPaintAdmissionCaseName =
+    'background_layer_paint_admission';
 const String worstCaseName = 'worst_case';

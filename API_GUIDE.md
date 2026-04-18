@@ -55,6 +55,9 @@ internal contracts.
   that include node hit padding plus `kHitSlop`.
 - Paint admission uses paint bounds only. Off-viewport hit padding no longer
   forces render-geometry or text-layout resolution.
+- Committed paint admission uses one shared spatial-query path for
+  `backgroundLayer` plus content layers. Hit-testing remains content-only even
+  when background paint admission is enabled on that committed path.
 - Ordinary paint admission stays viewport-first on the raw viewport query.
   Active selection widens only the selected-node supplement path and does not
   widen ordinary unselected admission.
@@ -201,10 +204,12 @@ Committed read-side note:
 - live runtime `Scene` / `SceneNode` objects are write-private and are not a
   supported committed read contract outside the write subsystem
 - controller-owned committed reads use one snapshot-backed helper surface:
-  `querySpatialCandidates(...)`,
+  paint and hit-test spatial query helpers,
   `resolveSpatialCandidateSnapshot(...)`,
   `resolveSnapshotNodeById(...)`, and
   `centerWorldForNodeSnapshots(...)`
+- the committed paint query/resolve pair is closed for both content and
+  `backgroundLayer` candidates returned by the shared paint admission path
 - interactive committed read paths consume immutable `NodeSnapshot` values
   from that surface rather than runtime-node helpers
 - render output is frame-authoritative: when `SceneViewRenderState.snapshot`

@@ -25,6 +25,11 @@ typedef _ResolvedSpatialNode = ({
   int nodeIndex,
 });
 
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
+
 class SceneHitTestSpatialCandidate {
   const SceneHitTestSpatialCandidate({
     required this.nodeId,
@@ -86,11 +91,16 @@ class SceneSpatialIndex {
   final double _cellSize;
   final Map<_CellKey, Set<NodeId>> _hitTestCells = <_CellKey, Set<NodeId>>{};
   final Map<_CellKey, Set<NodeId>> _paintCells = <_CellKey, Set<NodeId>>{};
-  final Map<NodeId, _SpatialEntry> _entriesById = <NodeId, _SpatialEntry>{};
+  final Map<NodeId, _HitTestSpatialEntry> _hitTestEntriesById =
+      <NodeId, _HitTestSpatialEntry>{};
+  final Map<NodeId, _PaintSpatialEntry> _paintEntriesById =
+      <NodeId, _PaintSpatialEntry>{};
   final Set<NodeId> _largeHitTestNodeIds = <NodeId>{};
   final Set<NodeId> _largePaintNodeIds = <NodeId>{};
-  int _debugFallbackQueryCount = 0;
-  bool _isValid = true;
+  int _debugHitTestFallbackQueryCount = 0;
+  int _debugPaintFallbackQueryCount = 0;
+  bool _isHitTestValid = true;
+  bool _isPaintValid = true;
 
   Scene? _scene;
   Map<NodeId, SceneSpatialCandidateLocation> _nodeLocator =
@@ -100,15 +110,20 @@ class SceneSpatialIndex {
       <NodeId>{..._largeHitTestNodeIds, ..._largePaintNodeIds}.length;
   int get debugCellCount =>
       <_CellKey>{..._hitTestCells.keys, ..._paintCells.keys}.length;
-  int get debugFallbackQueryCount => _debugFallbackQueryCount;
-  bool get isValid => _isValid;
+  int get debugFallbackQueryCount =>
+      _debugHitTestFallbackQueryCount + _debugPaintFallbackQueryCount;
+  bool get isValid => _isHitTestValid && _isPaintValid;
 
   List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldRect) {
     return _querySceneSpatialIndexHitTest(this, worldRect);
   }
 
-  List<ScenePaintSpatialCandidate> queryPaintCandidates(Rect worldRect) {
-    return _querySceneSpatialIndexPaint(this, worldRect);
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldRect, {
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.contentLayersOnly,
+  }) {
+    return _querySceneSpatialIndexPaint(this, worldRect, scope: scope);
   }
 
   bool applyIncremental({
@@ -143,12 +158,12 @@ List<SceneHitTestSpatialCandidate> _querySceneSpatialIndexHitTest(
   if (!isFiniteRect(worldRect)) return const <SceneHitTestSpatialCandidate>[];
   final scene = index._scene;
   if (scene == null) return const <SceneHitTestSpatialCandidate>[];
-  if (!index._isValid) {
+  if (!index._isHitTestValid) {
     return _queryLinearFallbackHitTest(index, scene, worldRect);
   }
 
   try {
-    if (index._entriesById.isEmpty) {
+    if (index._hitTestEntriesById.isEmpty) {
       return const <SceneHitTestSpatialCandidate>[];
     }
     final candidateIds = _queryCandidateIds(
@@ -156,43 +171,59 @@ List<SceneHitTestSpatialCandidate> _querySceneSpatialIndexHitTest(
       worldRect,
       cells: index._hitTestCells,
       largeNodeIds: index._largeHitTestNodeIds,
+      incrementFallbackCount: () {
+        index._debugHitTestFallbackQueryCount =
+            index._debugHitTestFallbackQueryCount + 1;
+      },
     );
     if (candidateIds == null) {
       return _queryLinearFallbackHitTest(index, scene, worldRect);
     }
     return _resolveHitTestCandidates(index, candidateIds, worldRect);
   } catch (_) {
-    _markSpatialIndexInvalid(index);
+    _markHitTestInvalid(index);
     return _queryLinearFallbackHitTest(index, scene, worldRect);
   }
 }
 
 List<ScenePaintSpatialCandidate> _querySceneSpatialIndexPaint(
   SceneSpatialIndex index,
-  Rect worldRect,
-) {
+  Rect worldRect, {
+  required ScenePaintSpatialQueryScope scope,
+}) {
   if (!isFiniteRect(worldRect)) return const <ScenePaintSpatialCandidate>[];
   final scene = index._scene;
   if (scene == null) return const <ScenePaintSpatialCandidate>[];
-  if (!index._isValid) {
-    return _queryLinearFallbackPaint(index, scene, worldRect);
+  if (!index._isPaintValid) {
+    return _queryLinearFallbackPaint(index, scene, worldRect, scope: scope);
   }
 
   try {
-    if (index._entriesById.isEmpty) return const <ScenePaintSpatialCandidate>[];
+    if (index._paintEntriesById.isEmpty) {
+      return const <ScenePaintSpatialCandidate>[];
+    }
     final candidateIds = _queryCandidateIds(
       index,
       worldRect,
       cells: index._paintCells,
       largeNodeIds: index._largePaintNodeIds,
+      incrementFallbackCount: () {
+        index._debugPaintFallbackQueryCount =
+            index._debugPaintFallbackQueryCount + 1;
+      },
     );
     if (candidateIds == null) {
-      return _queryLinearFallbackPaint(index, scene, worldRect);
+      return _queryLinearFallbackPaint(index, scene, worldRect, scope: scope);
     }
-    return _resolvePaintCandidates(index, candidateIds, worldRect);
+    return _resolvePaintCandidates(
+      index,
+      candidateIds,
+      worldRect,
+      scope: scope,
+    );
   } catch (_) {
-    _markSpatialIndexInvalid(index);
-    return _queryLinearFallbackPaint(index, scene, worldRect);
+    _markPaintInvalid(index);
+    return _queryLinearFallbackPaint(index, scene, worldRect, scope: scope);
   }
 }
 
@@ -203,9 +234,6 @@ bool _applySceneSpatialIndexIncremental(
   required SceneSpatialIndexChangeSet changeSet,
 }) {
   _bindSpatialIndexState(index, scene: scene, nodeLocator: nodeLocator);
-  if (!index._isValid) {
-    return false;
-  }
   if (_hasNoIncrementalChanges(changeSet)) {
     return true;
   }
@@ -214,7 +242,8 @@ bool _applySceneSpatialIndexIncremental(
     _removeEntries(index, changeSet.removedNodeIds);
     return _applyIncrementalUpserts(index, changeSet);
   } catch (_) {
-    _markSpatialIndexInvalid(index);
+    _markHitTestInvalid(index);
+    _markPaintInvalid(index);
     return false;
   }
 }
@@ -225,8 +254,11 @@ SceneSpatialIndex _cloneSceneSpatialIndex(
   required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
 }) {
   final clone = SceneSpatialIndex._(source._cellSize);
-  clone._isValid = source._isValid;
-  clone._debugFallbackQueryCount = source._debugFallbackQueryCount;
+  clone._isHitTestValid = source._isHitTestValid;
+  clone._isPaintValid = source._isPaintValid;
+  clone._debugHitTestFallbackQueryCount =
+      source._debugHitTestFallbackQueryCount;
+  clone._debugPaintFallbackQueryCount = source._debugPaintFallbackQueryCount;
   _bindSpatialIndexState(clone, scene: scene, nodeLocator: nodeLocator);
 
   for (final entry in source._hitTestCells.entries) {
@@ -235,8 +267,11 @@ SceneSpatialIndex _cloneSceneSpatialIndex(
   for (final entry in source._paintCells.entries) {
     clone._paintCells[entry.key] = <NodeId>{...entry.value};
   }
-  for (final entry in source._entriesById.entries) {
-    clone._entriesById[entry.key] = entry.value._clone();
+  for (final entry in source._hitTestEntriesById.entries) {
+    clone._hitTestEntriesById[entry.key] = entry.value._clone();
+  }
+  for (final entry in source._paintEntriesById.entries) {
+    clone._paintEntriesById[entry.key] = entry.value._clone();
   }
   clone._largeHitTestNodeIds.addAll(source._largeHitTestNodeIds);
   clone._largePaintNodeIds.addAll(source._largePaintNodeIds);
@@ -249,16 +284,29 @@ void _rebuildSpatialIndex(
   required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
 }) {
   _bindSpatialIndexState(index, scene: scene, nodeLocator: nodeLocator);
-  index._isValid = true;
-  _clearSpatialIndexData(index);
+  index._isHitTestValid = true;
+  index._isPaintValid = true;
+  _clearHitTestData(index);
+  _clearPaintData(index);
+
   try {
-    _visitResolvedNodes(scene, (resolved) {
-      if (!_upsertResolvedSpatialNode(index, resolved: resolved)) {
+    _visitResolvedContentNodes(scene, (resolved) {
+      if (!_upsertResolvedHitTestNode(index, resolved: resolved)) {
         throw const _SceneSpatialIndexTraversalAbort();
       }
     });
   } catch (_) {
-    _markSpatialIndexInvalid(index);
+    _markHitTestInvalid(index);
+  }
+
+  try {
+    _visitResolvedPaintableNodes(scene, (resolved) {
+      if (!_upsertResolvedPaintNode(index, resolved: resolved)) {
+        throw const _SceneSpatialIndexTraversalAbort();
+      }
+    });
+  } catch (_) {
+    _markPaintInvalid(index);
   }
 }
 
@@ -276,15 +324,19 @@ bool _upsertNodeById(SceneSpatialIndex index, NodeId nodeId) {
   if (resolved == null) {
     return false;
   }
-  return _upsertResolvedSpatialNode(index, resolved: resolved);
+  final hitTestApplied = resolved.layerIndex >= 0
+      ? _upsertResolvedHitTestNode(index, resolved: resolved)
+      : true;
+  final paintApplied = _upsertResolvedPaintNode(index, resolved: resolved);
+  return hitTestApplied && paintApplied;
 }
 
-bool _upsertResolvedSpatialNode(
+bool _upsertResolvedHitTestNode(
   SceneSpatialIndex index, {
   required _ResolvedSpatialNode resolved,
 }) {
   final nodeId = resolved.node.id;
-  _removeSpatialEntry(index, nodeId);
+  _removeHitTestSpatialEntry(index, nodeId);
   final scene = index._scene;
   if (scene == null) return true;
   if (resolved.layerIndex < 0 || resolved.layerIndex >= scene.layers.length) {
@@ -296,41 +348,98 @@ bool _upsertResolvedSpatialNode(
   }
 
   final hitTestBounds = nodeHitTestCandidateBoundsWorld(resolved.node);
-  final paintBounds = nodePaintBoundsWorld(resolved.node);
-  if (!isFiniteRect(hitTestBounds) || !isFiniteRect(paintBounds)) {
+  if (!isFiniteRect(hitTestBounds)) {
     return true;
   }
 
-  final entry = _SpatialEntry(
+  final entry = _HitTestSpatialEntry(
     nodeId: nodeId,
     hitTestBoundsWorld: hitTestBounds,
-    paintBoundsWorld: paintBounds,
   );
-  index._entriesById[nodeId] = entry;
-  if (_placeSpatialEntry(index, entry)) {
+  index._hitTestEntriesById[nodeId] = entry;
+  if (_placeHitTestSpatialEntry(index, entry)) {
     return true;
   }
-  index._entriesById.remove(nodeId);
+  index._hitTestEntriesById.remove(nodeId);
   return false;
 }
 
-bool _placeSpatialEntry(SceneSpatialIndex index, _SpatialEntry entry) {
+bool _upsertResolvedPaintNode(
+  SceneSpatialIndex index, {
+  required _ResolvedSpatialNode resolved,
+}) {
+  final nodeId = resolved.node.id;
+  _removePaintSpatialEntry(index, nodeId);
+  final scene = index._scene;
+  if (scene == null) return true;
+  if (!_isResolvedPaintNodeInScene(scene, resolved)) {
+    return true;
+  }
+
+  final paintBounds = nodePaintBoundsWorld(resolved.node);
+  if (!isFiniteRect(paintBounds)) {
+    return true;
+  }
+
+  final entry = _PaintSpatialEntry(
+    nodeId: nodeId,
+    paintBoundsWorld: paintBounds,
+  );
+  index._paintEntriesById[nodeId] = entry;
+  if (_placePaintSpatialEntry(index, entry)) {
+    return true;
+  }
+  index._paintEntriesById.remove(nodeId);
+  return false;
+}
+
+bool _isResolvedPaintNodeInScene(Scene scene, _ResolvedSpatialNode resolved) {
+  if (resolved.layerIndex == -1) {
+    final backgroundNodes = scene.backgroundLayer?.nodes;
+    if (backgroundNodes == null) {
+      return false;
+    }
+    return resolved.nodeIndex >= 0 &&
+        resolved.nodeIndex < backgroundNodes.length;
+  }
+  if (resolved.layerIndex < 0 || resolved.layerIndex >= scene.layers.length) {
+    return false;
+  }
+  return resolved.nodeIndex >= 0 &&
+      resolved.nodeIndex < scene.layers[resolved.layerIndex].nodes.length;
+}
+
+bool _placeHitTestSpatialEntry(
+  SceneSpatialIndex index,
+  _HitTestSpatialEntry entry,
+) {
   final hitSpan = _tryCellSpanForRect(index, entry.hitTestBoundsWorld);
-  final paintSpan = _tryCellSpanForRect(index, entry.paintBoundsWorld);
-  if (hitSpan == null || paintSpan == null) {
-    _markSpatialIndexInvalid(index);
+  if (hitSpan == null) {
+    _markHitTestInvalid(index);
     return false;
   }
   _placeRoleSpatialEntry(
-    entry: entry,
+    nodeId: entry.nodeId,
     span: hitSpan,
     cells: index._hitTestCells,
     largeNodeIds: index._largeHitTestNodeIds,
     coveredCells: entry.hitTestCoveredCells,
     markLarge: () => entry.isLargeHitTest = true,
   );
+  return true;
+}
+
+bool _placePaintSpatialEntry(
+  SceneSpatialIndex index,
+  _PaintSpatialEntry entry,
+) {
+  final paintSpan = _tryCellSpanForRect(index, entry.paintBoundsWorld);
+  if (paintSpan == null) {
+    _markPaintInvalid(index);
+    return false;
+  }
   _placeRoleSpatialEntry(
-    entry: entry,
+    nodeId: entry.nodeId,
     span: paintSpan,
     cells: index._paintCells,
     largeNodeIds: index._largePaintNodeIds,
@@ -341,7 +450,7 @@ bool _placeSpatialEntry(SceneSpatialIndex index, _SpatialEntry entry) {
 }
 
 void _placeRoleSpatialEntry({
-  required _SpatialEntry entry,
+  required NodeId nodeId,
   required _CellSpan span,
   required Map<_CellKey, Set<NodeId>> cells,
   required Set<NodeId> largeNodeIds,
@@ -350,7 +459,7 @@ void _placeRoleSpatialEntry({
 }) {
   if (_isLargeSpan(span, maxCells: kMaxCellsPerNode)) {
     markLarge();
-    largeNodeIds.add(entry.nodeId);
+    largeNodeIds.add(nodeId);
     return;
   }
 
@@ -358,16 +467,22 @@ void _placeRoleSpatialEntry({
     for (var y = span.startY; y <= span.endY; y++) {
       final key = _CellKey(x, y);
       final cell = cells.putIfAbsent(key, () => <NodeId>{});
-      cell.add(entry.nodeId);
+      cell.add(nodeId);
       coveredCells.add(key);
     }
   }
 }
 
-void _removeSpatialEntry(SceneSpatialIndex index, NodeId nodeId) {
-  final entry = index._entriesById.remove(nodeId);
-  if (entry == null) return;
+void _removeEntries(SceneSpatialIndex index, Set<NodeId> nodeIds) {
+  for (final nodeId in nodeIds) {
+    _removeHitTestSpatialEntry(index, nodeId);
+    _removePaintSpatialEntry(index, nodeId);
+  }
+}
 
+void _removeHitTestSpatialEntry(SceneSpatialIndex index, NodeId nodeId) {
+  final entry = index._hitTestEntriesById.remove(nodeId);
+  if (entry == null) return;
   _removeRoleSpatialEntry(
     nodeId: nodeId,
     cells: index._hitTestCells,
@@ -375,6 +490,11 @@ void _removeSpatialEntry(SceneSpatialIndex index, NodeId nodeId) {
     coveredCells: entry.hitTestCoveredCells,
     isLarge: entry.isLargeHitTest,
   );
+}
+
+void _removePaintSpatialEntry(SceneSpatialIndex index, NodeId nodeId) {
+  final entry = index._paintEntriesById.remove(nodeId);
+  if (entry == null) return;
   _removeRoleSpatialEntry(
     nodeId: nodeId,
     cells: index._paintCells,
@@ -415,10 +535,17 @@ _ResolvedSpatialNode? _resolveSpatialNodeById(
   final location = index._nodeLocator[nodeId];
   if (location == null) return null;
   final layerIndex = location.layerIndex;
-  if (layerIndex == -1) return null;
+  final nodeIndex = location.nodeIndex;
+  if (layerIndex == -1) {
+    final backgroundNodes = scene.backgroundLayer?.nodes;
+    if (backgroundNodes == null) return null;
+    if (nodeIndex < 0 || nodeIndex >= backgroundNodes.length) return null;
+    final node = backgroundNodes[nodeIndex];
+    if (node.id != nodeId) return null;
+    return (node: node, layerIndex: -1, nodeIndex: nodeIndex);
+  }
   if (layerIndex < 0 || layerIndex >= scene.layers.length) return null;
   final layer = scene.layers[layerIndex];
-  final nodeIndex = location.nodeIndex;
   if (nodeIndex < 0 || nodeIndex >= layer.nodes.length) return null;
   final node = layer.nodes[nodeIndex];
   if (node.id != nodeId) return null;
@@ -453,7 +580,7 @@ List<SceneHitTestSpatialCandidate> _queryLinearHitTest(
   Rect worldRect,
 ) {
   final out = <SceneHitTestSpatialCandidate>[];
-  _visitResolvedNodes(scene, (resolved) {
+  _visitResolvedContentNodes(scene, (resolved) {
     final hitTestBounds = nodeHitTestCandidateBoundsWorld(resolved.node);
     if (!isFiniteRect(hitTestBounds)) {
       return;
@@ -475,10 +602,14 @@ List<SceneHitTestSpatialCandidate> _queryLinearHitTest(
 
 List<ScenePaintSpatialCandidate> _queryLinearPaint(
   Scene scene,
-  Rect worldRect,
-) {
+  Rect worldRect, {
+  required ScenePaintSpatialQueryScope scope,
+}) {
   final out = <ScenePaintSpatialCandidate>[];
-  _visitResolvedNodes(scene, (resolved) {
+  final visit = scope == ScenePaintSpatialQueryScope.backgroundAndContentLayers
+      ? _visitResolvedPaintableNodes
+      : _visitResolvedContentNodes;
+  visit(scene, (resolved) {
     final paintBounds = nodePaintBoundsWorld(resolved.node);
     if (!isFiniteRect(paintBounds)) {
       return;
@@ -503,17 +634,19 @@ List<SceneHitTestSpatialCandidate> _queryLinearFallbackHitTest(
   Scene scene,
   Rect worldRect,
 ) {
-  index._debugFallbackQueryCount = index._debugFallbackQueryCount + 1;
+  index._debugHitTestFallbackQueryCount =
+      index._debugHitTestFallbackQueryCount + 1;
   return _queryLinearHitTest(scene, worldRect);
 }
 
 List<ScenePaintSpatialCandidate> _queryLinearFallbackPaint(
   SceneSpatialIndex index,
   Scene scene,
-  Rect worldRect,
-) {
-  index._debugFallbackQueryCount = index._debugFallbackQueryCount + 1;
-  return _queryLinearPaint(scene, worldRect);
+  Rect worldRect, {
+  required ScenePaintSpatialQueryScope scope,
+}) {
+  index._debugPaintFallbackQueryCount = index._debugPaintFallbackQueryCount + 1;
+  return _queryLinearPaint(scene, worldRect, scope: scope);
 }
 
 Set<NodeId>? _queryCandidateIds(
@@ -521,13 +654,14 @@ Set<NodeId>? _queryCandidateIds(
   Rect worldRect, {
   required Map<_CellKey, Set<NodeId>> cells,
   required Set<NodeId> largeNodeIds,
+  required void Function() incrementFallbackCount,
 }) {
   final span = _tryCellSpanForRect(index, worldRect);
   if (span == null) {
     return null;
   }
   if (_isLargeSpan(span, maxCells: kMaxQueryCells)) {
-    index._debugFallbackQueryCount = index._debugFallbackQueryCount + 1;
+    incrementFallbackCount();
     return <NodeId>{...cells.values.expand((value) => value), ...largeNodeIds};
   }
   return _collectGridCandidateIds(cells, largeNodeIds, span);
@@ -557,13 +691,13 @@ List<SceneHitTestSpatialCandidate> _resolveHitTestCandidates(
 ) {
   final out = <SceneHitTestSpatialCandidate>[];
   for (final nodeId in candidateIds) {
-    final entry = index._entriesById[nodeId];
+    final entry = index._hitTestEntriesById[nodeId];
     if (entry == null) continue;
     if (!_rectsIntersectInclusive(entry.hitTestBoundsWorld, worldRect)) {
       continue;
     }
     final resolved = _resolveSpatialNodeById(index, nodeId);
-    if (resolved == null) continue;
+    if (resolved == null || resolved.layerIndex < 0) continue;
     out.add(
       SceneHitTestSpatialCandidate(
         nodeId: resolved.node.id,
@@ -579,17 +713,22 @@ List<SceneHitTestSpatialCandidate> _resolveHitTestCandidates(
 List<ScenePaintSpatialCandidate> _resolvePaintCandidates(
   SceneSpatialIndex index,
   Set<NodeId> candidateIds,
-  Rect worldRect,
-) {
+  Rect worldRect, {
+  required ScenePaintSpatialQueryScope scope,
+}) {
   final out = <ScenePaintSpatialCandidate>[];
   for (final nodeId in candidateIds) {
-    final entry = index._entriesById[nodeId];
+    final entry = index._paintEntriesById[nodeId];
     if (entry == null) continue;
     if (!_rectsIntersectInclusive(entry.paintBoundsWorld, worldRect)) {
       continue;
     }
     final resolved = _resolveSpatialNodeById(index, nodeId);
     if (resolved == null) continue;
+    if (scope == ScenePaintSpatialQueryScope.contentLayersOnly &&
+        resolved.layerIndex < 0) {
+      continue;
+    }
     out.add(
       ScenePaintSpatialCandidate(
         nodeId: resolved.node.id,
@@ -606,12 +745,6 @@ bool _hasNoIncrementalChanges(SceneSpatialIndexChangeSet changeSet) {
   return changeSet.addedNodeIds.isEmpty &&
       changeSet.removedNodeIds.isEmpty &&
       changeSet.spatialGeometryChangedIds.isEmpty;
-}
-
-void _removeEntries(SceneSpatialIndex index, Set<NodeId> nodeIds) {
-  for (final nodeId in nodeIds) {
-    _removeSpatialEntry(index, nodeId);
-  }
 }
 
 bool _applyIncrementalUpserts(
@@ -645,7 +778,8 @@ bool _refreshChangedNodeIds(
     if (!index._nodeLocator.containsKey(nodeId)) {
       return false;
     }
-    _removeSpatialEntry(index, nodeId);
+    _removeHitTestSpatialEntry(index, nodeId);
+    _removePaintSpatialEntry(index, nodeId);
     if (!_upsertNodeById(index, nodeId)) {
       return false;
     }
@@ -657,17 +791,27 @@ bool _isCoordinateInIndexBounds(double value) {
   return value >= sceneCoordMin && value <= sceneCoordMax;
 }
 
-void _markSpatialIndexInvalid(SceneSpatialIndex index) {
-  if (!index._isValid) return;
-  index._isValid = false;
-  _clearSpatialIndexData(index);
+void _markHitTestInvalid(SceneSpatialIndex index) {
+  if (!index._isHitTestValid) return;
+  index._isHitTestValid = false;
+  _clearHitTestData(index);
 }
 
-void _clearSpatialIndexData(SceneSpatialIndex index) {
+void _markPaintInvalid(SceneSpatialIndex index) {
+  if (!index._isPaintValid) return;
+  index._isPaintValid = false;
+  _clearPaintData(index);
+}
+
+void _clearHitTestData(SceneSpatialIndex index) {
+  index._hitTestEntriesById.clear();
   index._hitTestCells.clear();
-  index._paintCells.clear();
-  index._entriesById.clear();
   index._largeHitTestNodeIds.clear();
+}
+
+void _clearPaintData(SceneSpatialIndex index) {
+  index._paintEntriesById.clear();
+  index._paintCells.clear();
   index._largePaintNodeIds.clear();
 }
 
@@ -679,30 +823,42 @@ bool _isLargeSpan(_CellSpan span, {required int maxCells}) {
   return dx * dy > maxCells;
 }
 
-class _SpatialEntry {
-  _SpatialEntry({
+class _HitTestSpatialEntry {
+  _HitTestSpatialEntry({
     required this.nodeId,
     required this.hitTestBoundsWorld,
-    required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final Rect hitTestBoundsWorld;
-  final Rect paintBoundsWorld;
   final Set<_CellKey> hitTestCoveredCells = <_CellKey>{};
-  final Set<_CellKey> paintCoveredCells = <_CellKey>{};
   bool isLargeHitTest = false;
-  bool isLargePaint = false;
 
-  _SpatialEntry _clone() {
-    final clone = _SpatialEntry(
+  _HitTestSpatialEntry _clone() {
+    final clone = _HitTestSpatialEntry(
       nodeId: nodeId,
       hitTestBoundsWorld: hitTestBoundsWorld,
-      paintBoundsWorld: paintBoundsWorld,
     );
     clone.hitTestCoveredCells.addAll(hitTestCoveredCells);
-    clone.paintCoveredCells.addAll(paintCoveredCells);
     clone.isLargeHitTest = isLargeHitTest;
+    return clone;
+  }
+}
+
+class _PaintSpatialEntry {
+  _PaintSpatialEntry({required this.nodeId, required this.paintBoundsWorld});
+
+  final NodeId nodeId;
+  final Rect paintBoundsWorld;
+  final Set<_CellKey> paintCoveredCells = <_CellKey>{};
+  bool isLargePaint = false;
+
+  _PaintSpatialEntry _clone() {
+    final clone = _PaintSpatialEntry(
+      nodeId: nodeId,
+      paintBoundsWorld: paintBoundsWorld,
+    );
+    clone.paintCoveredCells.addAll(paintCoveredCells);
     clone.isLargePaint = isLargePaint;
     return clone;
   }
@@ -725,7 +881,7 @@ class _CellKey {
 
 Map<NodeId, SceneSpatialCandidateLocation> _buildNodeLocator(Scene scene) {
   final out = <NodeId, SceneSpatialCandidateLocation>{};
-  _visitResolvedNodes(scene, (resolved) {
+  _visitResolvedPaintableNodes(scene, (resolved) {
     out[resolved.node.id] = (
       layerIndex: resolved.layerIndex,
       nodeIndex: resolved.nodeIndex,
@@ -734,7 +890,7 @@ Map<NodeId, SceneSpatialCandidateLocation> _buildNodeLocator(Scene scene) {
   return out;
 }
 
-void _visitResolvedNodes(
+void _visitResolvedContentNodes(
   Scene scene,
   void Function(_ResolvedSpatialNode resolved) visit,
 ) {
@@ -748,6 +904,23 @@ void _visitResolvedNodes(
       ));
     }
   }
+}
+
+void _visitResolvedPaintableNodes(
+  Scene scene,
+  void Function(_ResolvedSpatialNode resolved) visit,
+) {
+  final backgroundNodes = scene.backgroundLayer?.nodes;
+  if (backgroundNodes != null) {
+    for (var nodeIndex = 0; nodeIndex < backgroundNodes.length; nodeIndex++) {
+      visit((
+        node: backgroundNodes[nodeIndex],
+        layerIndex: -1,
+        nodeIndex: nodeIndex,
+      ));
+    }
+  }
+  _visitResolvedContentNodes(scene, visit);
 }
 
 bool _rectsIntersectInclusive(Rect a, Rect b) {
