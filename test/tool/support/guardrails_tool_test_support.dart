@@ -256,102 +256,35 @@ final class SceneStoreControllerCommittedMutationAccess
   );
   writeSandboxFile(
     sandbox,
+    'lib/src/interactive/internal/scene_controller_interaction_access.dart',
+    '''
+import 'scene_controller_interaction_runtime.dart';
+
+abstract interface class SceneControllerInteractionAccess {
+  SceneControllerInteractionRuntime get runtime;
+}
+
+final class SceneControllerInteractionContext
+    implements SceneControllerInteractionAccess {
+  const SceneControllerInteractionContext({required this.runtime});
+
+  @override
+  final SceneControllerInteractionRuntime runtime;
+}
+''',
+  );
+  writeSandboxFile(
+    sandbox,
     'lib/src/interactive/scene_controller_interaction.dart',
     '''
-abstract interface class SceneControllerInteraction {
-  void handlePointer(Object input);
-
-  void handleDoubleTap();
-
-  set mode(int value);
-}
-
-class SceneControllerInteractionOwner implements SceneControllerInteraction {
-  final _access = _Access();
-
-  @override
-  void handlePointer(Object input) {
-    _access.runtime.ensurePublicSideEffectAllowed('handlePointer');
-  }
-
-  @override
-  void handleDoubleTap() {
-    _access.runtime.ensurePublicSideEffectAllowed('handleDoubleTap');
-  }
-
-  @override
-  set mode(int value) {
-    _access.runtime.ensurePublicSideEffectAllowed('mode');
-  }
-}
-
-class _Access {
-  final runtime = _RuntimeAccess();
-}
-
-class _RuntimeAccess {
-  void ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
+class SceneControllerInteractionOwner {}
 ''',
   );
   writeSandboxFile(
     sandbox,
     'lib/src/interactive/scene_controller_selection.dart',
     '''
-abstract interface class SceneControllerSelection {
-  void setSelection(Object nodeIds);
-
-  void toggleSelection(Object nodeId);
-
-  void clearSelection();
-
-  void selectAll();
-
-  void rotateSelection();
-}
-
-class SceneControllerSelectionOwner implements SceneControllerSelection {
-  final _runtime = _Runtime();
-
-  @override
-  void setSelection(Object nodeIds) {
-    _runtime.ensurePublicSideEffectAllowed('setSelection');
-  }
-
-  @override
-  void toggleSelection(Object nodeId) {
-    _runtime.ensurePublicSideEffectAllowed('toggleSelection');
-  }
-
-  @override
-  void clearSelection() {
-    _runtime.ensurePublicSideEffectAllowed('clearSelection');
-  }
-
-  @override
-  void selectAll() {
-    _runtime.ensurePublicSideEffectAllowed('selectAll');
-  }
-
-  @override
-  void rotateSelection() {
-    _runtime.ensurePublicSideEffectAllowed('rotateSelection');
-  }
-}
-
-class _Runtime {
-  void ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-
-  void ensureExternalMutationAllowed(String operation) {}
-
-  void interruptForExternalMutation() {}
-}
+class SceneControllerSelectionOwner {}
 ''',
   );
   writeSandboxFile(
@@ -365,8 +298,10 @@ abstract interface class SceneControllerScene {
 }
 
 class SceneControllerSceneOwner implements SceneControllerScene {
+  SceneControllerSceneOwner(this.ensurePublicSideEffectAllowed);
+
   final void Function(String operation, {bool allowAfterDispose})
-  ensurePublicSideEffectAllowed = _ensure;
+  ensurePublicSideEffectAllowed;
 
   @override
   void write(Object fn) {
@@ -788,6 +723,11 @@ class SceneControllerInteractionRuntimeRequest {
 
 class SceneControllerInteractionRuntime {
   final mutationBoundary = SceneControllerMutationBoundary();
+
+  void ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
 
   void ensureExternalMutationAllowed(String operation) {}
 

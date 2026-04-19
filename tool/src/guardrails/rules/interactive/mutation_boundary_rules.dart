@@ -18,6 +18,7 @@ import 'committed_read_callback_rules.dart';
 import 'resolver_purity_rules.dart';
 
 part 'boundary_shape_token_rules.dart';
+part 'resolved_entrypoint_guard_rules.dart';
 
 Future<List<GuardrailViolation>> runInteractiveApiGuardrails({
   required GuardrailContext context,
@@ -35,17 +36,17 @@ Future<List<GuardrailViolation>> runInteractiveApiGuardrails({
     return violations;
   }
 
-  final rootViolation = _checkRootEntrypoints(
-    interactiveClass,
+  final rootViolation = await _checkRootEntrypoints(
+    context,
+    file: file,
     filePath: filePosixPath,
-    lineFor: (offset) => lineForOffset(parsed, offset),
   );
   if (rootViolation != null) {
     violations.add(rootViolation);
     return violations;
   }
 
-  final capabilityViolation = _checkCapabilityEntrypoints(context);
+  final capabilityViolation = await _checkCapabilityEntrypoints(context);
   if (capabilityViolation != null) {
     violations.add(capabilityViolation);
     return violations;
@@ -107,22 +108,6 @@ ClassDeclaration? _findInteractiveClass(
   return null;
 }
 
-class EnsureCallInfo {
-  const EnsureCallInfo({required this.hasAllowAfterDispose});
-
-  final bool hasAllowAfterDispose;
-}
-
-class InteractiveGuardContext {
-  const InteractiveGuardContext({
-    required this.firstStatement,
-    required this.expressionStatement,
-  });
-
-  final Statement firstStatement;
-  final ExpressionStatement expressionStatement;
-}
-
 String? _publicEntrypointName(ClassMember member) {
   if (member is! MethodDeclaration) {
     return null;
@@ -138,101 +123,6 @@ String? _publicEntrypointName(ClassMember member) {
     return null;
   }
   return name;
-}
-
-GuardrailViolation? _checkRootEntrypoints(
-  ClassDeclaration interactiveClass, {
-  required String filePath,
-  required int Function(int offset) lineFor,
-}) {
-  for (final member in interactiveClass.members) {
-    final name = _publicEntrypointName(member);
-    if (name == null) {
-      continue;
-    }
-    final violation = _checkInteractiveEntrypointGuard(
-      member: member as MethodDeclaration,
-      name: name,
-      filePath: filePath,
-      lineFor: lineFor,
-    );
-    if (violation != null) {
-      return violation;
-    }
-  }
-  return null;
-}
-
-GuardrailViolation? _checkInteractiveEntrypointGuard({
-  required MethodDeclaration member,
-  required String name,
-  required String filePath,
-  required int Function(int offset) lineFor,
-}) {
-  final guardContext = _interactiveGuardContext(
-    member: member,
-    filePath: filePath,
-    lineFor: lineFor,
-  );
-  final violation = _guardContextViolation(guardContext);
-  if (violation != null) {
-    return violation;
-  }
-  if (guardContext is! InteractiveGuardContext) {
-    return null;
-  }
-
-  final ensureCallInfo = _ensureCallInfoFromExpression(
-    guardContext.expressionStatement.expression,
-  );
-  return _validateEnsureCall(
-    ensureCallInfo: ensureCallInfo,
-    name: name,
-    filePath: filePath,
-    line: lineFor(guardContext.firstStatement.offset),
-  );
-}
-
-Object? _interactiveGuardContext({
-  required MethodDeclaration member,
-  required String filePath,
-  required int Function(int offset) lineFor,
-}) {
-  final body = member.body;
-  if (body is! BlockFunctionBody) {
-    return _GuardViolation(
-      GuardrailViolation(
-        filePath: filePath,
-        line: lineFor(member.offset),
-        message:
-            'interactive API violation: public SceneController '
-            'entrypoint "${member.name.lexeme}" must use a block body guarded '
-            'by _ensurePublicSideEffectAllowed(...).',
-      ),
-    );
-  }
-  final statements = body.block.statements;
-  if (statements.isEmpty) {
-    return _GuardViolation(
-      _interactiveGuardViolation(
-        filePath: filePath,
-        line: lineFor(member.offset),
-      ),
-    );
-  }
-  final firstStatement = statements.first;
-  if (firstStatement is! ExpressionStatement) {
-    return _GuardViolation(
-      _interactiveGuardViolation(
-        filePath: filePath,
-        line: lineFor(firstStatement.offset),
-      ),
-    );
-  }
-  return InteractiveGuardContext(
-    firstStatement: firstStatement,
-    expressionStatement: firstStatement,
-  );
 }
 
 EnsureCallInfo? _ensureCallInfoFromExpression(Expression expression) {
@@ -274,19 +164,6 @@ GuardrailViolation _interactiveGuardViolation({
         'entrypoints must guard resolver purity with '
         '_ensurePublicSideEffectAllowed(...).',
   );
-}
-
-class _GuardViolation {
-  const _GuardViolation(this.violation);
-
-  final GuardrailViolation violation;
-}
-
-GuardrailViolation? _guardContextViolation(Object? guardContext) {
-  if (guardContext case _GuardViolation(:final violation)) {
-    return violation;
-  }
-  return null;
 }
 
 GuardrailViolation? _validateEnsureCall({
@@ -351,57 +228,6 @@ const List<CapabilityGuardSpec> _capabilityGuardSpecs = <CapabilityGuardSpec>[
     primaryGuardCall: '_runtime.ensurePublicSideEffectAllowed',
   ),
 ];
-
-GuardrailViolation? _checkCapabilityEntrypoints(GuardrailContext context) {
-  for (final spec in _capabilityGuardSpecs) {
-    final file = _interactiveSupportFile(context, spec.relativePath);
-    if (!file.existsSync()) {
-      return GuardrailViolation(
-        filePath: _interactiveFilePosixPath(context, _interactiveFile(context)),
-        line: 1,
-        message:
-            'interactive API violation: missing required capability owner '
-            '${spec.className} at ${_interactiveFilePosixPath(context, file)}.',
-      );
-    }
-
-    final filePath = _interactiveFilePosixPath(context, file);
-    final parsed = _parseInteractiveFile(context, file, filePath);
-    final capabilityClass = _findClassByName(
-      parsed.unit.declarations,
-      spec.className,
-    );
-    if (capabilityClass == null) {
-      return GuardrailViolation(
-        filePath: filePath,
-        line: 1,
-        message:
-            'interactive API violation: ${spec.className} must remain the '
-            'canonical capability owner in $filePath.',
-      );
-    }
-
-    for (final member in capabilityClass.members) {
-      final name = _publicEntrypointName(member);
-      if (name == null) {
-        continue;
-      }
-      final violation = _checkCapabilityEntrypointGuard(
-        member: member as MethodDeclaration,
-        filePath: filePath,
-        lineFor: (offset) => lineForOffset(parsed, offset),
-        className: spec.className,
-        name: name,
-        primaryGuardCall: spec.primaryGuardCall,
-        secondaryGuardCall: spec.secondaryGuardCallsByMethod[name],
-      );
-      if (violation != null) {
-        return violation;
-      }
-    }
-  }
-  return null;
-}
 
 GuardrailViolation? _checkMutationOwnerPolicies(GuardrailContext context) {
   for (final spec in mutationOwnerGuardSpecs) {
@@ -482,74 +308,6 @@ MethodDeclaration? _findMethodByName(
     if (member is MethodDeclaration && member.name.lexeme == name) {
       return member;
     }
-  }
-  return null;
-}
-
-GuardrailViolation? _checkCapabilityEntrypointGuard({
-  required MethodDeclaration member,
-  required String filePath,
-  required int Function(int offset) lineFor,
-  required String className,
-  required String name,
-  required String primaryGuardCall,
-  required String? secondaryGuardCall,
-}) {
-  final body = member.body;
-  if (body is! BlockFunctionBody) {
-    return _capabilityGuardViolation(
-      filePath: filePath,
-      line: lineFor(member.offset),
-      detail:
-          'public $className entrypoints must use a block body guarded by '
-          '$primaryGuardCall(...).',
-    );
-  }
-
-  final statements = body.block.statements;
-  if (statements.isEmpty) {
-    return _capabilityGuardViolation(
-      filePath: filePath,
-      line: lineFor(member.offset),
-      detail:
-          'public $className entrypoints must guard resolver purity with '
-          '$primaryGuardCall(...).',
-    );
-  }
-
-  final firstCall = _qualifiedInvocationNameFromStatement(statements.first);
-  if (firstCall != primaryGuardCall) {
-    return _capabilityGuardViolation(
-      filePath: filePath,
-      line: lineFor(statements.first.offset),
-      detail:
-          'public $className entrypoints must guard resolver purity with '
-          '$primaryGuardCall(...).',
-    );
-  }
-
-  if (secondaryGuardCall == null) {
-    return null;
-  }
-  if (statements.length < 2) {
-    return _capabilityGuardViolation(
-      filePath: filePath,
-      line: lineFor(statements.first.offset),
-      detail:
-          '$className.$name must guard active-gesture exclusivity with '
-          '$secondaryGuardCall(...).',
-    );
-  }
-
-  final secondCall = _qualifiedInvocationNameFromStatement(statements[1]);
-  if (secondCall != secondaryGuardCall) {
-    return _capabilityGuardViolation(
-      filePath: filePath,
-      line: lineFor(statements[1].offset),
-      detail:
-          '$className.$name must guard active-gesture exclusivity with '
-          '$secondaryGuardCall(...).',
-    );
   }
   return null;
 }

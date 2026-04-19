@@ -134,6 +134,45 @@ void _registerInteractiveAcceptanceTests() {
       sandbox.deleteSync(recursive: true);
     }
   });
+
+  test(
+    'accepts harmless local scaffolding before SceneController purity guard',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(int value) {
+    final shouldReturn = value < 0;
+    if (shouldReturn) {
+      return;
+    }
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
 }
 
 void _registerInteractiveGuardViolationTests() {
@@ -172,9 +211,125 @@ void _registerInteractiveGuardViolationTests() {
       }
     },
   );
+
+  test(
+    'rejects public interactive method when graph interaction happens before guard',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer() {
+    sceneControllerGraphActions(_graph);
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+''',
+          ),
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'public SceneController entrypoints must guard '
+                'resolver purity with _ensurePublicSideEffectAllowed',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
 }
 
 void _registerCapabilityGuardViolationTests() {
+  test(
+    'accepts scene owner purity guard after harmless local scaffolding',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller_scene.dart',
+          '''
+abstract interface class SceneControllerScene {
+  void write(Object fn);
+
+  void clearScene();
+}
+
+class SceneControllerSceneOwner implements SceneControllerScene {
+  final void Function(String operation, {bool allowAfterDispose})
+  ensurePublicSideEffectAllowed = _ensure;
+  final _mutations = _Mutations();
+
+  @override
+  void write(Object fn) {
+    final shouldReturn = fn is Never;
+    if (shouldReturn) {
+      return;
+    }
+    ensurePublicSideEffectAllowed('write');
+    _mutations.write(fn);
+  }
+
+  @override
+  void clearScene() {
+    ensurePublicSideEffectAllowed('clearScene');
+    _mutations.clearScene();
+  }
+}
+
+class _Mutations {
+  void write(Object fn) {}
+
+  void clearScene() {}
+}
+
+void _ensure(
+  String operation, {
+  bool allowAfterDispose = false,
+}) {}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
   test(
     'rejects public interaction method without resolver purity guard',
     () async {
@@ -223,6 +378,80 @@ class SceneControllerInteractionOwner {
                 'public SceneControllerInteractionOwner entrypoints must guard '
                 'resolver purity with '
                 '_access.runtime.ensurePublicSideEffectAllowed',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects scene owner delegate call before resolver purity guard',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller_scene.dart',
+          '''
+abstract interface class SceneControllerScene {
+  void write(Object fn);
+}
+
+class SceneControllerSceneOwner implements SceneControllerScene {
+  final void Function(String operation, {bool allowAfterDispose})
+  ensurePublicSideEffectAllowed = _ensure;
+  final _mutations = _Mutations();
+
+  @override
+  void write(Object fn) {
+    _mutations.write(fn);
+    ensurePublicSideEffectAllowed('write');
+  }
+}
+
+class _Mutations {
+  void write(Object fn) {}
+}
+
+void _ensure(
+  String operation, {
+  bool allowAfterDispose = false,
+}) {}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'public SceneControllerSceneOwner entrypoints must guard '
+                'resolver purity with ensurePublicSideEffectAllowed',
           ),
         );
       } finally {

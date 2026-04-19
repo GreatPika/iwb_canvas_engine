@@ -66,7 +66,7 @@ Source commands:
 - `INV-ENG-SAFE-TXN-API` -> `rules/public/public_surface_rules.dart`
 - `INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES` -> `rules/public/public_surface_rules.dart` + `rules/public/public_signature_rules.dart`
 - `INV-ENG-PUBLIC-SIGNATURE-HERMETICITY` -> `rules/public/public_signature_rules.dart`
-- `INV-ENG-INTERACTIVE-RESOLVER-PURITY` -> `rules/interactive/resolver_purity_rules.dart` + `rules/interactive/mutation_boundary_rules.dart`
+- `INV-ENG-INTERACTIVE-RESOLVER-PURITY` -> `rules/interactive/mutation_boundary_rules.dart` (resolved root/capability entrypoint purity) + `rules/interactive/resolver_purity_rules.dart` (legacy helper path still consumed by token-backed interactive boundary checks)
 - `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY` -> `rules/interactive/mutation_boundary_rules.dart` + `rules/interactive/committed_read_callback_rules.dart`
 - `INV-ENG-MODEL-ARCHITECTURE-BOUNDARY` -> `rules/model/model_architecture_rules.dart`
 - `INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY` -> `rules/contract/contract_architecture_rules.dart`
@@ -166,10 +166,14 @@ Notable very-high functions:
   - `rules/contract/contract_architecture_rules.dart`
   - `rules/public/public_surface_rules.dart`
 
+- **Mixed reliability**
+  - `rules/interactive/mutation_boundary_rules.dart`
+    - root and capability resolver-purity checks now use resolved AST entrypoint analysis
+    - mutation-owner and some adjacent interactive checks still rely on lexical/source-order constraints
+
 - **Low-Medium reliability (token/source-order heavy)**
   - `rules/interactive/boundary_shape_token_rules.dart`
   - `rules/interactive/resolver_purity_rules.dart`
-  - parts of `rules/interactive/mutation_boundary_rules.dart`
 
 ## 6-Step Plan Status
 

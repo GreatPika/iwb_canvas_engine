@@ -30,7 +30,7 @@ roadmap can be updated without mixing execution contracts.
 - [x] [Step 115. Seal controller-owned paint candidate staging and performance contract](plan/step_115_seal_controller_owned_paint_candidate_staging_and_perf_contract.md)
 - [x] [Step 116. Harden committed selection invalidation ownership](plan/step_116_harden_committed_selection_invalidation_ownership.md)
 - [x] [Step 117. Refactor `example/lib/main.dart` into feature-scoped MVVM layers](plan/step_117_refactor_example_main_into_feature_mvvm_layers.md)
-- [ ] [Step 118. Migrate interactive resolver-purity guardrails to resolved AST entrypoint analysis](plan/step_118_migrate_interactive_resolver_purity_guardrails_to_resolved_entrypoint_analysis.md)
+- [x] [Step 118. Migrate interactive resolver-purity guardrails to resolved AST entrypoint analysis](plan/step_118_migrate_interactive_resolver_purity_guardrails_to_resolved_entrypoint_analysis.md)
 - [ ] [Step 119. Migrate interactive mutation-owner guardrails to resolved pre-effect sequencing analysis](plan/step_119_migrate_interactive_mutation_owner_guardrails_to_resolved_pre_effect_analysis.md)
 - [ ] [Step 120. Replace interactive boundary-shape token guardrails with resolved architecture-boundary rules](plan/step_120_replace_interactive_boundary_shape_token_guardrails_with_resolved_architecture_boundary_rules.md)
 - [ ] [Step 121. Replace controller lexical write-only mutation guardrails with resolved semantics](plan/step_121_replace_controller_lexical_write_only_mutation_guardrails_with_resolved_semantics.md)

@@ -200,7 +200,7 @@ This change migrates interactive root and capability resolver-purity guardrails 
 
 ## 9. Vertical Slices
 
-### Slice 1. [ ] Resolved root `SceneController` purity analysis
+### Slice 1. [x] Resolved root `SceneController` purity analysis
 
 #### Slice Contract
 `_checkRootEntrypoints(...)` accepts and rejects `SceneController` public entrypoints from resolved guard-target and pre-effect analysis rather than statement-slot matching.
@@ -235,7 +235,7 @@ This change migrates interactive root and capability resolver-purity guardrails 
 - Green run of the listed structural verification.
 - Tool diagnostics point at the offending declaration line for missing and late guards.
 
-### Slice 2. [ ] Resolved capability-owner purity analysis
+### Slice 2. [x] Resolved capability-owner purity analysis
 
 #### Slice Contract
 `_checkCapabilityEntrypoints(...)` accepts and rejects capability-owner entrypoints from resolved guard targets, including function-typed field invocation on `SceneControllerSceneOwner`.
@@ -269,7 +269,7 @@ This change migrates interactive root and capability resolver-purity guardrails 
 - Green run of the listed structural verification.
 - Tool diagnostics distinguish the offending capability owner and method.
 
-### Slice 3. [ ] Tool regression surface matches the semantic purity contract
+### Slice 3. [x] Tool regression surface matches the semantic purity contract
 
 #### Slice Contract
 Interactive tool regressions and repository documentation describe resolver purity as a semantic resolved-AST rule, not as a token/source-order rule.
