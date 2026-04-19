@@ -9,7 +9,7 @@ This change migrates interactive mutation-owner guardrails from positional/token
 The end state for steps 119 through 126 is one symmetric guardrail architecture: rule families prove semantics through resolved analysis instead of token/lexical heuristics, repeated proof mechanics live in explicit shared support seams, runner ordering and shared state are declared through one inventory, and tool-test scaffolds plus their verification enforcement use canonical owned support seams.
 
 ### This Step's Role in the Chain
-This step moves the interactive mutation-owner family onto the target resolved sequence-and-routing form and leaves cross-family shared-engine extraction, declarative runner inventory, and normalized tool-test scaffolds to steps 123 through 126.
+This step moves the interactive mutation-owner family onto the target resolved sequence-and-routing form, leaves architecture-level mutation-boundary placement/bypass categories to step 120, and leaves cross-family shared-engine extraction, declarative runner inventory, and normalized tool-test scaffolds to steps 123 through 126.
 
 ## 2. Change Boundary
 
@@ -17,12 +17,12 @@ This step moves the interactive mutation-owner family onto the target resolved s
 - Replace statement-slot and source-text mutation-owner checks in `tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart` with resolved semantic sequence and routing checks for `SceneControllerSelectionMutations` and `SceneControllerSceneMutations`.
 - Introduce a dedicated interactive mutation-owner guard part file under the existing interactive runner so mutation-owner proof stops accumulating inline inside `mutation_boundary_rules.dart`.
 - Refactor `tool/src/guardrails/rules/interactive/committed_read_callback_rules.dart` so mutation-owner policy data becomes a thin semantic descriptor table for method surface and required sequence/routing contracts instead of statement slots or boundary-helper semantics.
-- Update `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` and `test/tool/support/guardrails_tool_test_support.dart` so tool regressions cover canonical allowed forms, forbidden sequence drift, forbidden routing drift, and forbidden callback-forwarding drift from the new proof model.
+- Update `test/tool/guardrails/guardrails_interactive_api_tool_test.dart`, and update `test/tool/support/guardrails_tool_test_support.dart` only as the canonical fixture owner consumed by that suite, so tool regressions cover canonical allowed forms, forbidden sequence drift, forbidden routing drift, and forbidden callback-forwarding drift from the new proof model.
 - Update `doc/guardrails_state_map.md` so the mutation-owner family is recorded as resolved sequence/routing proof rather than positional token matching.
 
 ### Not Included in the Change
 - Root and capability resolver-purity migration from step 118.
-- Interactive architecture-boundary migration from step 120.
+- Interactive architecture-boundary migration from step 120, including architecture-level mutation-boundary placement and direct-boundary-bypass categories.
 - Controller-layer lexical migration from step 121.
 - Cross-domain extraction of shared guardrail engines across interactive/controller/public families; this step leaves a reusable local proof seam inside the interactive family only.
 - Runtime behavior changes in `lib/src/interactive/internal/**`.
@@ -154,13 +154,14 @@ This step moves the interactive mutation-owner family onto the target resolved s
 1. Step 119 introduces `interactive_mutation_owner_guard_rules.dart` as the mutation-owner semantic proof owner and removes inline mutation-owner proof growth from `mutation_boundary_rules.dart` beyond runner wiring.
 2. `MutationOwnerPolicySpec` stops encoding statement slots and must not encode boundary-helper allowlists, callback alias behavior, or helper-level runtime semantics.
 3. Selection and scene mutation owners must be enforced through one shared local semantic event model inside `interactive_mutation_owner_guard_rules.dart`; step 119 must not create separate proof engines for selection and scene owners.
-4. `setCameraOffset(...)` and `replaceScene(...)` may remain special forms, but only as narrow local sequence/routing validators or narrow descriptor flags layered on the same event model and routing validators.
+4. `setCameraOffset(...)` and `replaceScene(...)` remain explicit special forms in this step, implemented only as narrow local sequence/routing validators or narrow descriptor flags layered on the same event model and routing validators.
 5. `replaceScene(...)` callback-forwarding proof accepts only direct owned callback expressions such as `interruptForExternalMutation` or `this.interruptForExternalMutation`; local variable aliases and reassignment-based forwarding are not supported forms in this step.
 6. `SceneControllerSelectionMutations` methods remain valid only when `ensureExternalMutationAllowed(...)` resolves before the first effectful boundary route.
 7. `SceneControllerSceneMutations.write`, `setBackgroundColor`, `setGridEnabled`, `setGridCellSize`, `addNode`, `ensureLayer`, `patchNode`, `removeNode`, and `clearScene` remain valid only when `ensureExternalMutationAllowed(...)` resolves before the first effectful boundary route.
 8. `SceneControllerSceneMutations.setCameraOffset(...)` remains valid only when the canonical current preflight form is preserved and `interruptForExternalMutation()` resolves before the effectful camera-offset apply route.
 9. `notifySceneChanged()` remains outside the mutation-owner descriptor table in this step.
 10. This step must leave an interactive-local sequence/routing proof seam that later consolidation can absorb; it must not claim to complete cross-domain guardrail symmetry by itself.
+11. Architecture-level mutation-boundary placement/bypass categories, including direct boundary bypass, remain exclusively owned by step 120 and must not be re-proved here.
 
 ## 7. Result Requirements
 
@@ -181,13 +182,12 @@ This step moves the interactive mutation-owner family onto the target resolved s
 
 ### Target Verification Units
 - `test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
-- `test/tool/support/guardrails_tool_test_support.dart`
 - `test/interactive/core/scene_controller_mutation_boundary_test.dart`
 - `dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=<path-or->`
 
 ### Protected States, Data, or Structures
 - `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY` runtime ownership split.
-- Direct mutation-owner routing over `SceneControllerMutationBoundary`.
+- Canonical local mutation-owner sequencing before the first effectful route into `SceneControllerMutationBoundary`.
 - The current canonical `setCameraOffset(...)` and `replaceScene(...)` runtime forms.
 - The step-118 interactive family shape where resolved sequence scanning is local to the family and does not depend on raw source matching.
 
@@ -203,12 +203,13 @@ This step moves the interactive mutation-owner family onto the target resolved s
 - Model mutation-owner proof as semantic events and resolved routing, not as raw statement positions.
 - Keep descriptor data thin; helper-level runtime semantics must not be expressed as policy-table allowlists.
 - Validate `replaceScene(...)` forwarding through resolved direct callback routing only; do not add callback alias/dataflow tracking.
+- Keep architecture-level mutation-boundary placement/bypass proof out of this step; those categories stay owned by step 120.
 - Keep diagnostics emitted through `GuardrailViolation`; do not add a second checker or tool entrypoint.
 
 ### Required Test Strategy
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
 - `flutter test test/interactive/core/scene_controller_mutation_boundary_test.dart`
-- Negative structural scenarios for a missing exclusivity guard, a late exclusivity guard, a late interrupt in `setCameraOffset(...)`, wrong `replaceScene(...)` callback forwarding, local alias callback forwarding, reassigned alias callback forwarding, and direct boundary bypass.
+- Negative structural scenarios for a missing exclusivity guard, a late exclusivity guard, a late interrupt in `setCameraOffset(...)`, wrong `replaceScene(...)` callback forwarding, local alias callback forwarding, and reassigned alias callback forwarding.
 - Positive structural scenarios for harmless local prelude before the required guard, the current canonical `setCameraOffset(...)` preflight, and direct `replaceScene(..., interruptBeforeApply: interruptForExternalMutation)` forwarding.
 
 ### Prohibited
@@ -217,6 +218,7 @@ This step moves the interactive mutation-owner family onto the target resolved s
 - Boundary-helper allowlists or helper-level runtime semantics stored in `MutationOwnerPolicySpec`.
 - Separate bespoke walkers for selection owners and scene owners.
 - Runtime code changes that move ownership away from `SceneControllerMutationBoundary`.
+- Re-proving architecture-level mutation-boundary placement or direct-bypass categories owned by step 120.
 - Presenting this step as full cross-domain guardrail symmetry or full proof-engine consolidation.
 
 ### Optional: Recognition Forms That Must Be Supported
