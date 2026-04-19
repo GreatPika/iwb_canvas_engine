@@ -29,4 +29,4 @@ roadmap can be updated without mixing execution contracts.
 - [x] [Step 114. Include `backgroundLayer` in shared paint spatial admission](plan/step_114_include_background_layer_in_paint_spatial_index.md)
 - [x] [Step 115. Seal controller-owned paint candidate staging and performance contract](plan/step_115_seal_controller_owned_paint_candidate_staging_and_perf_contract.md)
 - [x] [Step 116. Harden committed selection invalidation ownership](plan/step_116_harden_committed_selection_invalidation_ownership.md)
-- [ ] [Step_117_refactor_example_main_into_feature_mvvm_layers.md](plan/step_117_refactor_example_main_into_feature_mvvm_layers.md)
+- [x] [Step_117_refactor_example_main_into_feature_mvvm_layers.md](plan/step_117_refactor_example_main_into_feature_mvvm_layers.md)

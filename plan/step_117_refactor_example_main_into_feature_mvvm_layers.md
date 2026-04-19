@@ -446,7 +446,7 @@ This change refactors `example/lib/main.dart` into a feature-scoped MVVM example
 
 ## 9. Vertical Slices
 
-### Slice 1. [ ] Establish the composition root and feature view-model boundary
+### Slice 1. [x] Establish the composition root and feature view-model boundary
 
 #### Slice Contract
 
@@ -501,7 +501,7 @@ surface.
 - no remaining controller-creation or controller-mutation owner tokens in
   `example/lib/main.dart`.
 
-### Slice 2. [ ] Move inline text editing and selected-text commands to the view-model/view boundary
+### Slice 2. [x] Move inline text editing and selected-text commands to the view-model/view boundary
 
 #### Slice Contract
 
@@ -559,7 +559,7 @@ view model, while widget-local text-field objects stay in the view.
 - green run of the listed structural verifications;
 - no remaining text-edit mutation logic in feature widget files.
 
-### Slice 3. [ ] Extract asset loading, JSON orchestration, and sample-node insertion out of widgets
+### Slice 3. [x] Extract asset loading, JSON orchestration, and sample-node insertion out of widgets
 
 #### Slice Contract
 
@@ -614,7 +614,7 @@ and are owned by the service/view-model boundary.
 - green run of the listed structural verifications;
 - no remaining asset-loading or codec-owner logic in widget files.
 
-### Slice 4. [ ] Split the feature UI into region widgets and lock drift mechanically
+### Slice 4. [x] Split the feature UI into region widgets and lock drift mechanically
 
 #### Slice Contract
 
