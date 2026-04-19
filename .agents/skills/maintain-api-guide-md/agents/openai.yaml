@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain API_GUIDE.md"
+  short_description: "Keep the public integration guide aligned with exported symbols, runtime semantics, and schema rules."
+  default_prompt: "Audit and update API_GUIDE.md so it matches the current public API surface, runtime behavior, serialization contract, and migration guidance."

@@ -1,6 +1,6 @@
 ---
 name: maintain-architecture-md
-description: Maintain `ARCHITECTURE.md` for `iwb_canvas_engine`. Use when creating, updating, auditing, or reviewing the architecture document; when changes affect the package boundary, public barrel exports, schema versions, layer DAG, runtime seams, rendering or interaction ownership, execution flows, invariants, or architecture guardrails. Keep the document concise, normative, and synchronized with checked-in code, tools, and tests. Do not use this skill for README, API guide, changelog, roadmap, or style-only documentation edits.
+description: Maintain `ARCHITECTURE.md`. Use when creating, updating, auditing, or reviewing the architecture document; when changes affect the package boundary, public barrel exports, schema versions, layer DAG, runtime seams, rendering or interaction ownership, execution flows, invariants, or architecture guardrails.
 ---
 
 # Maintain ARCHITECTURE.md
