@@ -3,19 +3,27 @@ language: english
 # Change Contract
 
 ## 1. Change Mandate
-This change closes the resolved-guardrail proof surface by moving interactive resolver-purity primary proof back to runtime and by adding analyzer-backed self-guard regressions that prevent the migrated weak rule families from reintroducing raw source-token scanning.
+This change closes the pre-consolidation resolved-guardrail proof surface by moving interactive resolver-purity primary proof back to runtime and by adding analyzer-backed self-guard regressions over the actual migrated rule owners from steps 118 through 121, with an explicit extension seam that later consolidation steps must keep extending.
+
+### Program End State
+The end state for steps 119 through 126 is one symmetric guardrail architecture: rule families prove semantics through resolved analysis instead of token/lexical heuristics, repeated proof mechanics live in explicit shared support seams, runner ordering and shared state are declared through one inventory, and tool-test scaffolds plus their verification enforcement use canonical owned support seams.
+
+### This Step's Role in the Chain
+This step does not finish symmetry by itself; it locks the pre-consolidation proof surface and establishes the self-guard seam that steps 123 and 124 must extend while steps 125 and 126 finish orchestration and test-layer symmetry.
 
 ## 2. Change Boundary
 
 ### Included in the Change
 - `tool/invariant_registry.dart` updates that repoint `INV-ENG-INTERACTIVE-RESOLVER-PURITY` primary proof to the existing runtime proof surface.
-- A new analyzer-backed tool test that guards the migrated weak rule files against reintroducing `readAsStringSync`, `toSource()`, `requireSourceTokens`, `requireTokenOrder`, and the deleted `resolver_purity_rules.dart` dependency.
+- A new analyzer-backed tool test that guards the actual migrated rule owners from steps 118 through 121 against reintroducing `readAsStringSync`, `toSource()`, `requireSourceTokens`, `requireTokenOrder`, and the deleted `resolver_purity_rules.dart` dependency.
+- One explicit covered-file inventory or equivalent local target list inside the self-guard layer so later consolidation steps can extend the same anti-regression seam when new shared proof-support modules land.
 - `doc/guardrails_state_map.md` updates that record the new targeted meta-control for the migrated files and the corrected proof-surface ownership for interactive resolver purity.
 
 ### Not Included in the Change
 - Broad clone/metrics policy for all guardrails; this step adds targeted self-guard regressions over the migrated weak families, not repository-wide clone governance.
 - Additional runtime behavior changes in `lib/src/interactive/**`.
 - Additional architecture-boundary migration beyond the rule families covered by steps 118 through 121.
+- Shared proof-support extraction, declarative runner inventory work, and manifest-based scaffold normalization; those are locked separately in steps 123 through 126.
 - CI workflow edits; the new tool test stays under existing tool-test execution.
 
 ## 3. Surrounding Code Review
@@ -24,13 +32,16 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 - `tool/invariant_registry.dart` — `INV-ENG-INTERACTIVE-RESOLVER-PURITY` currently declares `scope: 'engine-runtime'` but points both `primaryProof.path` and `toolProof.regressionPath` at `test/tool/guardrails/guardrails_interactive_api_tool_test.dart`; this is the current proof-surface mismatch.
 - `test/interactive/core/scene_controller_interactive_actions_effects_test.dart` — already contains runtime `INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY` cases proving that public interactive entrypoints invoked from `moveCommitDeltaResolver` throw before commit completes and gesture state is cleared.
 - `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` — current structural regression path for interactive guardrails; it remains the correct `toolProof.regressionPath` after the proof-surface fix.
-- `tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart` — migrated interactive rule owner that must not reintroduce raw source-token scanning after steps 118 through 120.
-- `tool/src/guardrails/rules/interactive/interactive_architecture_boundary_rules.dart` — semantic replacement for the retired boundary-shape token family and a direct candidate for self-guard regression.
+- `tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart` — retained interactive runner/part host for the resolved interactive guardrail family; even after step 118 through 120 move logic into part files, this host remains an active anti-regression seam.
+- `tool/src/guardrails/rules/interactive/resolved_entrypoint_guard_rules.dart` — actual rule owner for the step-118 resolved entrypoint migration and a required self-guard target.
+- `tool/src/guardrails/rules/interactive/interactive_mutation_owner_guard_rules.dart` — actual rule owner introduced by step 119 and a required self-guard target.
+- `tool/src/guardrails/rules/interactive/interactive_architecture_boundary_rules.dart` — semantic replacement for the retired boundary-shape token family and a required self-guard target after step 120.
 - `tool/src/guardrails/rules/controller/write_only_mutation_rules.dart` — migrated controller rule owner that must not reintroduce the deleted lexical/source-body heuristics after step 121.
 - `doc/guardrails_state_map.md` — currently reports meta-control for guardrails itself as `NOT STARTED`; after the migrated files are covered by a dedicated self-guard test, that statement must become more precise.
 - `tool/check_invariant_coverage.dart` — repository tool that verifies invariant ids, proof-path shape, and explicit marker coverage.
 - `tool/check_verification_contract.dart` — repository tool that verifies the documented verification contract; no workflow change is expected in this step.
 - `AGENTS.md` — confirms that invariant definitions belong in `tool/invariant_registry.dart` and that code changes must finish through the required verification preset.
+- `plan/step_123_extract_shared_resolved_surface_contract_support_for_guardrails.md`, `plan/step_124_extract_shared_semantic_sequence_and_routing_support_for_guardrails.md`, and `plan/step_126_normalize_guardrail_tool_test_scaffolds_around_canonical_manifests.md` — downstream consolidation steps that will introduce new symmetry-enabling seams and therefore need a clear extension path from this self-guard step.
 
 ### Current Entry Path
 - Proof metadata: `tool/invariant_registry.dart`.
@@ -40,7 +51,7 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 
 ### Current Owner
 - Proof-surface ownership is split between `tool/invariant_registry.dart` and the existing runtime/tool tests.
-- There is no dedicated self-guard test for the migrated weak guardrail files yet.
+- There is no dedicated self-guard test for the actual migrated rule owners from steps 118 through 121 yet.
 
 ### Adjacent Abstractions
 - `tool/check_guardrails.dart` — enforcement entrypoint for tool-side guardrails; unchanged in this step.
@@ -72,7 +83,7 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 - Verification metadata ownership plus targeted analyzer-backed self-guard regression.
 
 #### Selected Architectural Form
-- Keep proof metadata in `tool/invariant_registry.dart`, keep runtime and tool proof in their current test files, and add one dedicated analyzer-backed tool test that asserts the migrated weak rule files do not use banned raw source-token APIs or the deleted token helper dependency.
+- Keep proof metadata in `tool/invariant_registry.dart`, keep runtime and tool proof in their current test files, and add one dedicated analyzer-backed tool test that asserts the actual migrated rule owners from steps 118 through 121 do not use banned raw source-token APIs or the deleted token helper dependency.
 
 #### Owning Layer or Module
 - Proof metadata: `tool/invariant_registry.dart`.
@@ -86,7 +97,8 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 #### State and Data Ownership
 - No runtime state changes.
 - Invariant proof ownership stays in the registry.
-- Banned implementation-pattern policy for the migrated weak files lives only in the dedicated self-guard test.
+- Banned implementation-pattern policy for the migrated rule owners lives only in the dedicated self-guard test.
+- The explicit covered-file inventory for this self-guard also lives in the dedicated test layer and must remain extendable by later consolidation steps.
 
 #### Entry and Exit Boundaries
 - Entry: `tool/invariant_registry.dart` and the migrated weak rule files under `tool/src/guardrails/rules/**`.
@@ -94,6 +106,7 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 
 #### Permitted Extension Seam
 - One new test file at `test/tool/guardrails/guardrails_guardrail_implementation_tool_test.dart`.
+- One explicit local covered-file inventory inside that test file or its adjacent support, which later steps must extend when they add new shared proof-support seams.
 
 #### Rejected Alternatives
 - Add a new production tool entrypoint for self-guarding the guardrail implementation — rejected because existing tool-test infrastructure already owns this verification surface.
@@ -101,7 +114,7 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 
 #### Why This Level Is Correct
 - Proof-surface ownership already lives in the invariant registry, and the regression belongs in the existing tool-test layer. This keeps metadata, runtime proof, tool proof, and self-guard each in the repository location that already owns that responsibility.
-- This step protects the resolved/non-token direction after the weak-family migrations, but it is intentionally a targeted anti-regression layer rather than a claim that all remaining resolved proof duplication is already consolidated.
+- This step protects the resolved/non-token direction after the weak-family migrations, but it is intentionally a targeted anti-regression layer rather than a claim that all remaining resolved proof duplication is already consolidated. The contract therefore has to cover the real migrated owners now and leave an explicit extension seam for the shared-support steps that follow.
 
 ## 5. File Map
 
@@ -116,6 +129,8 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 - `test/interactive/core/scene_controller_interactive_actions_effects_test.dart`
 - `test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
 - `tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart`
+- `tool/src/guardrails/rules/interactive/resolved_entrypoint_guard_rules.dart`
+- `tool/src/guardrails/rules/interactive/interactive_mutation_owner_guard_rules.dart`
 - `tool/src/guardrails/rules/interactive/interactive_architecture_boundary_rules.dart`
 - `tool/src/guardrails/rules/controller/write_only_mutation_rules.dart`
 
@@ -130,24 +145,26 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 1. `INV-ENG-INTERACTIVE-RESOLVER-PURITY.primaryProof.path` moves to `test/interactive/core/scene_controller_interactive_actions_effects_test.dart`.
 2. `INV-ENG-INTERACTIVE-RESOLVER-PURITY.toolProof.enforcementPath` remains `tool/check_guardrails.dart`, and `toolProof.regressionPath` remains `test/tool/guardrails/guardrails_interactive_api_tool_test.dart`.
 3. The new self-guard test is analyzer-backed. It does not scan raw file text for banned substrings.
-4. The self-guard test covers the migrated weak rule owners only: `tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart`, `tool/src/guardrails/rules/interactive/interactive_architecture_boundary_rules.dart`, and `tool/src/guardrails/rules/controller/write_only_mutation_rules.dart`.
+4. The self-guard test covers the actual migrated rule owners from steps 118 through 121 plus the retained interactive host file: `tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart`, `tool/src/guardrails/rules/interactive/resolved_entrypoint_guard_rules.dart`, `tool/src/guardrails/rules/interactive/interactive_mutation_owner_guard_rules.dart`, `tool/src/guardrails/rules/interactive/interactive_architecture_boundary_rules.dart`, and `tool/src/guardrails/rules/controller/write_only_mutation_rules.dart`.
 5. The self-guard test fails on reintroduction of `File.readAsStringSync`, `AstNode.toSource()`, `requireSourceTokens`, `requireTokenOrder`, or any dependency on `resolver_purity_rules.dart` inside the covered migrated rule files.
-6. `doc/guardrails_state_map.md` must record targeted self-guard coverage for the migrated weak files and must not claim that repository-wide clone/metrics meta-control is complete.
-7. This step records and protects the migrated direction, but it does not count as full guardrail implementation symmetry or full consolidation of repeated resolved proof shapes; repository documentation must leave that distinction explicit.
+6. The self-guard layer must keep its covered-file inventory explicit and extendable so later steps 123 and 124 can extend the same anti-regression seam for new shared guardrail-core support, while later steps 125 and 126 must add equally explicit anti-regression coverage in their own owning layer when the new seam no longer lives inside guardrail implementation files.
+7. `doc/guardrails_state_map.md` must record targeted self-guard coverage for the migrated rule owners and must not claim that repository-wide clone/metrics meta-control is complete.
+8. This step records and protects the migrated direction, but it does not count as full guardrail implementation symmetry or full consolidation of repeated resolved proof shapes; repository documentation must leave that distinction explicit.
 
 ## 7. Result Requirements
 
 1. `INV-ENG-INTERACTIVE-RESOLVER-PURITY` declares a runtime primary proof and a tool regression proof that match the actual repository evidence.
-2. The migrated weak rule files have a mechanical analyzer-backed regression that fails when raw source-token APIs or the deleted helper dependency return.
-3. Repository documentation records targeted meta-control for the migrated weak files without overstating broader guardrails governance.
-4. `tool/check_invariant_coverage.dart` passes with the updated proof metadata.
-5. Repository documentation explicitly distinguishes “protected against raw token-regression” from “fully consolidated/symmetric guardrail implementation”.
+2. The actual migrated rule owners from steps 118 through 121 plus the retained `mutation_boundary_rules.dart` host file have a mechanical analyzer-backed regression that fails when raw source-token APIs or the deleted helper dependency return.
+3. The self-guard coverage list is explicit, no migrated owner from steps 118 through 121 is omitted, and later consolidation steps have a locked anti-regression handoff: shared guardrail-core seams extend this self-guard, while non-rule seams add their own explicit structural regressions in the owning layer.
+4. Repository documentation records targeted meta-control for the migrated rule owners without overstating broader guardrails governance.
+5. `tool/check_invariant_coverage.dart` passes with the updated proof metadata.
+6. Repository documentation explicitly distinguishes “protected against raw token-regression” from “fully consolidated/symmetric guardrail implementation”.
 
 ## 8. Implementation Rules
 
 ### Analysis Scope
 - Limit metadata changes to the proof-surface correction for `INV-ENG-INTERACTIVE-RESOLVER-PURITY`.
-- Limit self-guard coverage to the migrated weak rule files from steps 118 through 121.
+- Limit initial self-guard coverage to the actual migrated rule owners from steps 118 through 121 plus the retained `mutation_boundary_rules.dart` host file, while leaving the same self-guard seam explicitly extendable by steps 123 and 124 and leaving a clear anti-regression handoff for steps 125 and 126.
 - Do not add a new production tool command.
 
 ### Target Verification Units
@@ -159,7 +176,7 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 ### Protected States, Data, or Structures
 - Runtime proof ownership for `INV-ENG-INTERACTIVE-RESOLVER-PURITY`.
 - Tool regression ownership for `INV-ENG-INTERACTIVE-RESOLVER-PURITY`.
-- The semantic, non-token implementation form of the migrated weak guardrail files.
+- The semantic, non-token implementation form of the actual migrated rule owners from steps 118 through 121 plus the retained interactive host file.
 
 ### Allowed Semantic Change Zones
 - Proof metadata in `tool/invariant_registry.dart`.
@@ -169,6 +186,7 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 ### Structural Enforcement
 - The self-guard test must parse the covered rule files with analyzer APIs and inspect invocations/imports/identifiers semantically.
 - The self-guard test must fail on the banned implementation APIs and the deleted helper dependency listed in the locked decisions.
+- The self-guard test must name the covered owners explicitly and must be structured so later steps can extend the same target list rather than creating parallel self-guard suites for new shared seams.
 - Keep self-guard coverage inside `test/tool/guardrails/**` so the existing repository tool-test execution owns it.
 - `doc/guardrails_state_map.md` must describe this step as targeted anti-regression over migrated weak files, not as completion of broader guardrail symmetry or clone governance.
 
@@ -177,7 +195,7 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
 - `flutter test test/interactive/core/scene_controller_interactive_actions_effects_test.dart`
 - `dart run tool/check_invariant_coverage.dart`
-- Negative self-guard scenarios for `readAsStringSync`, `toSource()`, `requireSourceTokens`, `requireTokenOrder`, and `resolver_purity_rules.dart` dependency reintroduction.
+- Negative self-guard scenarios for `readAsStringSync`, `toSource()`, `requireSourceTokens`, `requireTokenOrder`, and `resolver_purity_rules.dart` dependency reintroduction across `resolved_entrypoint_guard_rules.dart`, `interactive_mutation_owner_guard_rules.dart`, `interactive_architecture_boundary_rules.dart`, and `write_only_mutation_rules.dart`.
 
 ### Prohibited
 - Tool-only primary proof for `INV-ENG-INTERACTIVE-RESOLVER-PURITY`.
@@ -240,7 +258,7 @@ A dedicated analyzer-backed tool test fails when the migrated weak rule files re
 #### Change
 - Add `test/tool/guardrails/guardrails_guardrail_implementation_tool_test.dart`.
 - Parse the covered migrated rule files with analyzer APIs and assert absence of `File.readAsStringSync`, `AstNode.toSource()`, `requireSourceTokens`, `requireTokenOrder`, and any import/reference to `resolver_purity_rules.dart`.
-- Keep the test scoped to the covered migrated weak files named in the locked decisions.
+- Keep the test scoped to the covered migrated rule owners named in the locked decisions and make their covered-file inventory explicit so later steps can extend it.
 
 #### Behavioral Verification
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_guardrail_implementation_tool_test.dart`
@@ -252,7 +270,7 @@ A dedicated analyzer-backed tool test fails when the migrated weak rule files re
 - None.
 
 #### Positive Scenarios
-- The current migrated weak rule files pass the self-guard.
+- The current migrated rule owners pass the self-guard.
 - Diagnostic strings or path strings that are not used for raw source proof do not fail the self-guard.
 
 #### Negative Scenarios

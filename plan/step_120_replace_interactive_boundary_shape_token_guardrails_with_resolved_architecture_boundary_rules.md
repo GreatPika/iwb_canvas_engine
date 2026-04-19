@@ -3,7 +3,13 @@ language: english
 # Change Contract
 
 ## 1. Change Mandate
-This change replaces interactive boundary-shape token guardrails with resolved architecture-boundary rules and converts the primary interactive architecture proof test to analyzer-backed structure assertions.
+This change replaces interactive boundary-shape token guardrails with resolved architecture-boundary rules and converts the existing interactive architecture proof test to analyzer-backed structure assertions while preserving the repository’s current invariant-registry proof ownership and the file’s existing marker coverage.
+
+### Program End State
+The end state for steps 119 through 126 is one symmetric guardrail architecture: rule families prove semantics through resolved analysis instead of token/lexical heuristics, repeated proof mechanics live in explicit shared support seams, runner ordering and shared state are declared through one inventory, and tool-test scaffolds plus their verification enforcement use canonical owned support seams.
+
+### This Step's Role in the Chain
+This step moves the interactive architecture-boundary family onto the target resolved structural form and leaves cross-family shared-engine extraction, declarative runner inventory, and normalized tool-test scaffolds to steps 123 through 126.
 
 ## 2. Change Boundary
 
@@ -16,7 +22,7 @@ This change replaces interactive boundary-shape token guardrails with resolved a
 
 ### Not Included in the Change
 - Root/capability resolver-purity migration from step 118.
-- Mutation-owner sequencing migration from step 119.
+- Mutation-owner sequence/routing proof from step 119, including `ensureExternalMutationAllowed(...)` / `interruptForExternalMutation()` ordering and direct `replaceScene(...)` callback-forwarding validation.
 - Controller-layer lexical guardrail migration from step 121.
 - Runtime feature changes in `lib/src/interactive/**`, `lib/src/view/**`, or `lib/src/contract/scene_view_runtime.dart`.
 
@@ -56,7 +62,7 @@ This change replaces interactive boundary-shape token guardrails with resolved a
 - `sceneControllerViewRuntimeOf(...)` — the only supported facade-to-view bridge.
 
 ### Existing Tests
-- `test/interactive/core/scene_controller_architecture_boundary_test.dart` — current structure witness for the interactive owner split.
+- `test/interactive/core/scene_controller_architecture_boundary_test.dart` — current analyzer-hostile structure witness for the interactive owner split; it is the primary proof file for `INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY` and `INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY`, and it also carries additional `// INV:` markers that this step must not silently reinterpret as primary-proof ownership.
 - `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` — current structural regression harness for interactive guardrails.
 
 ### Analogous Implementation Path
@@ -66,13 +72,14 @@ This change replaces interactive boundary-shape token guardrails with resolved a
 
 ### Governing Repository Rules
 - `AGENTS.md` — code changes must end with `dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=<path-or->`.
-- `AGENTS.md` — invariant metadata already points `INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY` and `INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY` at `test/interactive/core/scene_controller_architecture_boundary_test.dart`; the test remains the primary proof surface and cannot be dropped.
+- `AGENTS.md` — invariant metadata in `tool/invariant_registry.dart` is the source of truth for primary-proof ownership; this step must not silently reassign pointer-semantics or committed-selection-revision primary proofs just because `scene_controller_architecture_boundary_test.dart` currently contains extra `// INV:` markers.
 - `doc/guardrails_state_map.md` — the repository already names this family as the main AST migration target and explicitly distinguishes it from the resolved high-reliability families.
 
 ### Rejected Misleading Local Patterns
 - Exact source-token requirements in `boundary_shape_token_rules.dart` — wrong seam, because they overfit concrete file text, exact import spellings, and statement order instead of semantic owner relationships.
 - The current `_extractMethodBody(...)` + `contains(...)` pattern in `scene_controller_architecture_boundary_test.dart` — wrong proof level, because it repeats the same string fragility in the primary proof file.
 - Reusing `tool/check_guardrails.dart` as the only architecture witness — wrong proof shape, because the invariant registry already expects an independent primary proof file under `test/interactive/core`.
+- Re-homing step-119 mutation-owner sequence/routing proof into this step’s architecture rule or primary proof test — wrong owner, because sequence/order/forwarding stays with `interactive_mutation_owner_guard_rules.dart` while this step owns only architecture-level boundary placement and bypass constraints.
 
 ## 4. Architecture
 
@@ -152,18 +159,23 @@ This change replaces interactive boundary-shape token guardrails with resolved a
 5. `SceneController` remains the interactive facade and graph owner, must keep `sceneControllerViewRuntimeOf(...)` as the facade-to-view bridge, and must not implement `SceneViewRenderState`.
 6. `createSceneControllerGraph(...)` remains the assembly owner for `SceneControllerInteractionOwner`, `SceneControllerSelectionOwner`, `SceneControllerSceneOwner`, and `SceneControllerSceneViewRuntime`; view-layer files do not reassemble those owners.
 7. `SceneControllerSceneViewRuntime` remains the `SceneViewRuntime` adapter owner, `SceneControllerPointerSession` remains the `SceneViewPointerSession` owner, `SceneViewRuntimeHost` remains the active-runtime and pointer-host owner, and `SceneViewRenderSurface` remains render-state-only.
-8. Event and draw-family owners remain structurally split: `InteractiveEventDispatcher`, `InteractiveDrawCoordinator`, `InteractiveDrawEraserEngine`, `InteractiveDrawEraserExactHit`, `InteractiveDrawEraserLineHit`, `InteractiveDrawProjectedEraser`, `InteractiveDrawEraserStrokeHit`, and `InteractiveSelectionActions` stay independent owners proved from declarations and allowed dependency boundaries, not from exact source text.
-9. `test/interactive/core/scene_controller_architecture_boundary_test.dart` remains the primary proof file for `INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY` and `INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY`, but it must stop using `File.readAsStringSync()`, `_extractMethodBody(...)`, `contains(...)`, or raw `indexOf(...)` for architectural assertions.
-10. The semantic replacement must be decomposed by boundary category inside `interactive_architecture_boundary_rules.dart` (owner presence, dependency boundary, graph assembly, deleted seam absence, facade/view split). Replacing the token monolith with a single analyzer-backed mega-function is forbidden.
-11. Where `guardrail_runner_support.dart` or existing element/path helpers already fit the needed proof shape, the step must reuse them instead of re-implementing equivalent local scans.
+8. The semantic replacement must cover the complete currently enforced owner/category surface from `boundary_shape_token_rules.dart`: facade, graph assembly, runtime contract, interaction runtime/access/config, mutation-owner shells and boundary, internal-access registration, interaction eligibility policy, scene-view runtime/render-state adapter, pointer session/token, pointer-host/runtime-host/render-surface split, event/draw owner families, draw style, and deleted residual seams.
+9. Event and draw-family owners remain structurally split: `InteractiveEventDispatcher`, `InteractiveDrawCoordinator`, `InteractiveDrawEraserEngine`, `InteractiveDrawEraserExactHit`, `InteractiveDrawEraserLineHit`, `InteractiveDrawProjectedEraser`, `InteractiveDrawEraserStrokeHit`, `InteractiveSelectionActions`, and `InteractiveDrawStyle` stay independent owners proved from declarations and allowed dependency boundaries, not from exact source text.
+10. Within the mutation-owner/boundary area, this step owns only architecture-level placement and bypass categories inherited from `boundary_shape_token_rules.dart`: interaction-runtime callback routing through `SceneControllerMutationBoundary`, selection/scene mutation-owner and `InteractiveSelectionActions` delegation through `SceneControllerMutationBoundary`, and `SceneControllerMutationBoundary` remaining the canonical scene/selection write owner.
+11. Mutation-owner local sequence/routing contracts stay exclusively owned by step 119 and `interactive_mutation_owner_guard_rules.dart`; this step and the primary proof test must not duplicate `ensureExternalMutationAllowed(...)` / `interruptForExternalMutation()` order checks or direct callback-forwarding checks.
+12. `test/interactive/core/scene_controller_architecture_boundary_test.dart` remains the primary proof file for `INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY` and `INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY`; this step must not silently reassign primary-proof ownership for `INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY` or `INV-ENG-COMMITTED-SELECTION-REVISION-ALIGNMENT`, even though the file currently carries additional `// INV:` markers.
+13. The semantic replacement must be decomposed by boundary category inside `interactive_architecture_boundary_rules.dart` (owner presence, dependency boundary, graph assembly, pointer/runtime split, facade/view split, deleted seam absence). Replacing the token monolith with a single analyzer-backed mega-function is forbidden.
+14. Where `guardrail_runner_support.dart` or existing element/path helpers already fit the needed proof shape, the step must reuse them instead of re-implementing equivalent local scans.
 
 ## 7. Result Requirements
 
 1. No interactive architecture-boundary enforcement path depends on `requireSourceTokens`, `requireTokenOrder`, raw file-source `readAsStringSync()`, `_extractMethodBody(...)`, or method-body substring matching.
-2. The interactive guardrail still fails when canonical facade/view/runtime/pointer-session owners disappear, when deleted seams reappear, or when the controller/view/render split is reopened.
-3. The primary interactive architecture proof test becomes analyzer-backed and remains independent from `tool/check_guardrails.dart`.
-4. `doc/guardrails_state_map.md` reflects the renamed architecture rule file, the removal of `resolver_purity_rules.dart`, and the fact that this family no longer owns token/source-order proof.
-5. The semantic replacement is organized as small boundary-category checks over shared local specs/helpers rather than as a new monolithic analyzer pass.
+2. Every owner/category currently enforced by `boundary_shape_token_rules.dart` is re-homed into semantic rule logic or the migrated analyzer-backed primary proof; no token-only category is left behind.
+3. The interactive guardrail still fails when canonical facade/view/runtime/pointer-session owners disappear, when deleted seams reappear, when pointer/runtime ownership is collapsed, or when the controller/view/render split is reopened.
+4. The interactive architecture proof test becomes analyzer-backed, remains independent from `tool/check_guardrails.dart`, and continues to discharge the interactive architecture/render-state proof ownership it already has today without silently rewriting invariant-registry ownership for other invariants.
+5. `doc/guardrails_state_map.md` reflects the renamed architecture rule file, the removal of `resolver_purity_rules.dart`, and the fact that this family no longer owns token/source-order proof.
+6. Mutation-owner local sequence/routing proof is not duplicated or re-homed here; step 120 owns only the architecture-level mutation-boundary placement/bypass categories listed in the locked decisions.
+7. The semantic replacement is organized as small boundary-category checks over shared local specs/helpers rather than as a new monolithic analyzer pass.
 
 ## 8. Implementation Rules
 
@@ -194,14 +206,16 @@ This change replaces interactive boundary-shape token guardrails with resolved a
 - Resolve declaration presence, interface implementation, constructor targets, and top-level function targets from analyzer results rather than from file text.
 - Resolve graph assembly by analyzer-backed constructor/top-level invocation targets, not by searching for names in raw source.
 - Keep deleted seam absence as repository-file existence checks.
+- Cover the complete owner/category surface currently encoded in `boundary_shape_token_rules.dart`; omitting runtime, pointer, eligibility-policy, mutation-shell, or draw-family categories is not allowed.
+- For mutation-owner-related files, limit this step to architecture-level boundary placement and bypass proof; local guard/interrupt ordering and direct callback-forwarding remain step-119 concerns and must not be re-proved here.
 - Organize the new rule as category-scoped checks over shared local spec data rather than one flat procedure that mixes every owner split inline.
 - Reuse existing support/helpers before adding new local traversal code with the same proof shape.
 
 ### Required Test Strategy
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
 - `flutter test test/interactive/core/scene_controller_architecture_boundary_test.dart`
-- Negative structural scenarios for reintroduced deleted seams, missing canonical owners, a view file that depends on concrete `SceneController`, and a render surface that consumes concrete controller state.
-- Positive structural scenarios for the current facade/graph/runtime/view arrangement and the current pointer-session ownership split.
+- Negative structural scenarios for reintroduced deleted seams, missing canonical owners, a view file that depends on concrete `SceneController`, a render surface that consumes concrete controller state, pointer-host/runtime ownership drift, mutation-owner direct store/controller bypass, and interaction-eligibility policy leaking back to forbidden model/runtime seams.
+- Positive structural scenarios for the current facade/graph/runtime/view arrangement, the current pointer-session ownership split, the current internal-access registration path, and the current event/draw-family owner split.
 
 ### Prohibited
 - Keeping `boundary_shape_token_rules.dart` after this migration.
@@ -237,7 +251,7 @@ Interactive architecture boundary violations are emitted from semantic rule logi
 
 #### Change
 - Create `interactive_architecture_boundary_rules.dart` as the `part of 'mutation_boundary_rules.dart';` owner for the migrated architecture rule family.
-- Port each currently enforced owner-split category from `boundary_shape_token_rules.dart` into semantic checks over declarations, interfaces, resolved constructor targets, and dependency directives.
+- Port the complete currently enforced owner/category surface from `boundary_shape_token_rules.dart` into semantic checks over declarations, interfaces, resolved constructor targets, and dependency directives.
 - Rewire `runInteractiveApiGuardrails(...)` to call the new semantic rule and stop referencing the retired token rule file.
 - Introduce local owner-family and boundary-category specs so migrated categories share proof scaffolding instead of landing as unrelated inline checks.
 
@@ -246,7 +260,7 @@ Interactive architecture boundary violations are emitted from semantic rule logi
 - Tool sandbox scenario that passes with the current canonical interactive/view/runtime owner split.
 
 #### Structural Verification
-- Tool sandbox scenarios that fail when a canonical owner disappears or when a deleted residual seam file is reintroduced.
+- Tool sandbox scenarios that fail when a canonical owner disappears, when pointer/runtime ownership drifts, when mutation shells or selection actions bypass the boundary owner, or when a deleted residual seam file is reintroduced.
 
 #### Fixtures Used
 - `test/tool/support/guardrails_tool_test_support.dart`
