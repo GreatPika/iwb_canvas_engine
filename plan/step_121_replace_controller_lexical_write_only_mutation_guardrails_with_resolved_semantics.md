@@ -94,6 +94,7 @@ This change replaces controller-layer lexical write-only mutation guardrails wit
 
 #### Permitted Extension Seam
 - Private resolved helper functions inside `tool/src/guardrails/rules/controller/write_only_mutation_rules.dart`.
+- Private shared controller-surface, interface-identity, and routing helpers/specs inside `write_only_mutation_rules.dart` when they remove repeated proof shape across more than one migrated check.
 
 #### Rejected Alternatives
 - Port the existing name-prefix and file-cooccurrence heuristics to different string lists — rejected because the rule would remain lexical and would keep reinforcing the wrong architectural form.
@@ -136,6 +137,8 @@ This change replaces controller-layer lexical write-only mutation guardrails wit
 5. Spatial candidate payload ownership in `scene_spatial_index.dart` is determined from resolved type aliases and classes, not from `readAsStringSync().contains(...)`.
 6. Interface and type checks for `SceneStoreController implements SceneViewRenderState` and `SceneStoreControllerCommittedMutationAccess implements SceneControllerCommittedMutationAccess` must use resolved interface identity, not `toSource()` equality.
 7. Controller tool regressions must explicitly allow mutating-looking names that do not resolve to a forbidden controller mutation sink or forbidden public boundary.
+8. Where the migrated controller checks share the same proof shape (owner/member surface, interface identity, exact signature, resolved routing), the step must extract one shared local helper/spec in `write_only_mutation_rules.dart` instead of landing separate bespoke scans for each category.
+9. This step must not duplicate behavior already structurally owned by `prepared_replace_boundary_rules.dart` or by runtime tests merely to make `write_only_mutation_rules.dart` look self-sufficient.
 
 ## 7. Result Requirements
 
@@ -144,6 +147,7 @@ This change replaces controller-layer lexical write-only mutation guardrails wit
 3. Unrelated mutating-looking names such as `clearSelectionCache()` or `replaceScene()` no longer fail the controller guardrail solely because of their spelling.
 4. Controller tool regressions cover both semantic failures and allowed look-alike names.
 5. `doc/guardrails_state_map.md` records the removal of the lexical heuristics from this controller rule family.
+6. Repeated controller proof shapes inside the migrated rule are factored into shared local helpers/specs rather than three unrelated mini-checker forms.
 
 ## 8. Implementation Rules
 
@@ -168,12 +172,14 @@ This change replaces controller-layer lexical write-only mutation guardrails wit
 - Controller guardrail logic for the migrated checks.
 - Controller tool-test scenarios and fixtures.
 - Documentation that records the migrated proof surface.
+- Shared local helper/spec extraction inside `write_only_mutation_rules.dart` for repeated resolved proof shapes.
 
 ### Structural Enforcement
 - Resolve library members from analyzer results rather than from raw source scans.
 - Resolve constructor targets and `SceneWriterRuntime.execute(...)` invocations for canonical selection writer helpers.
 - Resolve interface identity from analyzer elements rather than from `toSource()` output.
 - Remove the name-prefix and file-cooccurrence heuristics instead of translating them into new lexical rules.
+- Prefer spec-driven owner/member/signature/routing helpers when the same proof shape appears across more than one migrated controller check.
 
 ### Required Test Strategy
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart`
@@ -187,6 +193,7 @@ This change replaces controller-layer lexical write-only mutation guardrails wit
 - File-level `replaceScene` / `controllerEpoch` cooccurrence checks.
 - Raw source scans in the migrated controller rule paths.
 - `toSource()` equality for interface or type proof in this rule file.
+- Landing separate bespoke controller proof walkers for repeated shapes that can be expressed through one shared local helper/spec.
 
 ### Optional: Recognition Forms That Must Be Supported
 - `writer.runtime.execute(ReplaceSelectionOp(...))`
@@ -216,6 +223,7 @@ Canonical selection-writer helpers are accepted and rejected from resolved op-ro
 - Replace `_sceneWriterSelectionBypassViolation(...)` with a resolved check that each canonical selection-writer helper invokes `writer.runtime.execute(...)` with the expected op constructor target.
 - Keep the current canonical function set unchanged.
 - Remove any dependency on `workingSelection` or `changeSet` source-text matching for those functions.
+- Reuse the same routing-proof helper shape for every canonical selection writer helper instead of embedding per-helper special logic.
 
 #### Behavioral Verification
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart`
@@ -248,6 +256,7 @@ Committed read-side surface presence and spatial payload-owner presence are vali
 - Replace `_controllerFileDeclaresCommittedReadSurface(...)` and the lexical spatial-type presence checks with resolved library/member discovery.
 - Replace `toSource()`-based interface checks in `ControllerSymbolCollector` with resolved interface identity checks.
 - Preserve the existing violation categories and owner files.
+- Factor repeated owner/member/signature checks into shared local helper/spec forms rather than separate controller-surface and spatial-surface ad hoc loops.
 
 #### Behavioral Verification
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart`

@@ -102,6 +102,7 @@ The shared canonical capability-owner contract is the minimal guard-bearing subs
 #### Permitted Extension Seam
 - Add or adjust private helper functions inside `guardrails_interactive_resolved_entrypoint_guard_tool_test.dart` for neutral capability shells.
 - Add explicit canonical-scaffold regression coverage in `guardrails_interactive_api_tool_test.dart`.
+- Add small shared canonical fixture primitives in `guardrails_tool_test_support.dart` only when they are repository-default shapes consumed by more than one interactive guardrail suite.
 
 #### Rejected Alternatives
 - Keep the shared scaffold neutral and rely on specialized suites to cover the missing guard-bearing owners — rejected because other suites already consume the shared scaffold as the default interactive fixture.
@@ -144,6 +145,7 @@ The shared canonical capability-owner contract is the minimal guard-bearing subs
 6. The broad interactive API suite must validate canonical interactive scaffolds and adjacent interactive guardrails only.
 7. This step changes only test/support ownership and regression coverage; it does not change production guardrail semantics.
 8. Verification closes through tool-test execution plus the required verification preset; no ad hoc `dart test` entrypoint is allowed.
+9. Shared support may centralize canonical fixture primitives and manifests, but it must not become a second scenario-builder layer for suite-local neutralized owners or one-off semantic regressions.
 
 ## 7. Result Requirements
 
@@ -174,11 +176,13 @@ The shared canonical capability-owner contract is the minimal guard-bearing subs
 - Shared sandbox fixture content for interactive owners.
 - Tool-test case placement between the two interactive guardrail suites.
 - Explicit scaffold-canonicality regressions.
+- Small shared canonical fixture primitives that reduce duplication across multiple interactive guardrail suites without exporting suite-local neutralization.
 
 ### Structural Enforcement
 - Add an explicit regression in the broad interactive API suite that proves the shared interactive scaffold still emits guard-bearing capability owners instead of neutral shells.
 - Keep neutral capability-owner helpers private to `guardrails_interactive_resolved_entrypoint_guard_tool_test.dart` so their use cannot spread through shared support.
 - The broad interactive API suite must not retain the four semantic pre-guard tests named in section 3 once this step closes.
+- Prefer shared canonical fixture primitives over copying canonical owner snippets across suites, but keep neutralized or scenario-specific fixture composition private to the focused suite that needs it.
 
 ### Required Test Strategy
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart`

@@ -90,6 +90,7 @@ This change migrates interactive mutation-owner guardrails from statement-index 
 
 #### Permitted Extension Seam
 - Private helper functions in `mutation_boundary_rules.dart` that classify resolved invocations and the first boundary effect for a method body.
+- Private semantic policy descriptors and statement/event classifiers in `mutation_boundary_rules.dart` that can be reused across both selection and scene mutation owners.
 
 #### Rejected Alternatives
 - Keep statement-slot policy and only resolve the statement at that slot — rejected because the rule would still be brittle under harmless preflight edits.
@@ -132,6 +133,8 @@ This change migrates interactive mutation-owner guardrails from statement-index 
 5. `SceneControllerSceneMutations.replaceScene(...)` keeps its current special form: compliance is satisfied only by a resolved `mutations.replaceScene(snapshot, interruptBeforeApply: interruptForExternalMutation)` call. Raw source text matching of the named argument is forbidden.
 6. `notifySceneChanged()` stays outside this mutation-owner policy table in this step.
 7. Tool fixtures stop encoding required statement slots and start encoding semantic allowed and disallowed pre-effect forms.
+8. `MutationOwnerPolicySpec` (or its replacement) must describe semantic event expectations such as guard kind, interrupt kind, boundary-effect kind, allowed preflight calls, and callback-forwarding requirements; it must not fall back to method-specific positional booleans or ad hoc slot metadata.
+9. The migrated sequencing proof must use one semantic event-classification path for both selection and scene mutation owners. `setCameraOffset(...)` and `replaceScene(...)` may remain special cases, but only as narrow policy data or narrowly injected validators, not as separate duplicated AST walkers.
 
 ## 7. Result Requirements
 
@@ -140,6 +143,7 @@ This change migrates interactive mutation-owner guardrails from statement-index 
 3. `setCameraOffset(...)` and `replaceScene(...)` remain accepted in their current semantic forms without forcing an exact statement slot.
 4. Tool regressions cover valid preflight, invalid late guard/interrupt, invalid replace-scene forwarding, and direct boundary bypass.
 5. `doc/guardrails_state_map.md` no longer describes the migrated mutation-owner path as token/source-order backed.
+6. Selection-owner and scene-owner sequencing share one semantic classification model; special cases remain explicit policy, not a second proof engine.
 
 ## 8. Implementation Rules
 
@@ -164,12 +168,14 @@ This change migrates interactive mutation-owner guardrails from statement-index 
 - Tool-side mutation-owner sequencing analysis.
 - Interactive tool-test fixtures and scenarios.
 - Reliability notes in `doc/guardrails_state_map.md`.
+- Private semantic event/spec helpers that serve both mutation-owner families.
 
 ### Structural Enforcement
 - Classify calls by resolved target owner: exclusivity callback, interrupt callback, allowed preflight call, or `SceneControllerMutationBoundary` effect.
 - Inspect named arguments of the `mutations.replaceScene(...)` call from AST and resolve the callback expression to the `interruptForExternalMutation` callback element.
 - Use AST statement order only after each call is classified semantically.
 - Keep diagnostics emitted through `GuardrailViolation`; do not add a second checker or a second policy table.
+- Prefer one reusable statement-to-semantic-event classifier and one sequencing evaluator for both owner families; model `setCameraOffset(...)` and `replaceScene(...)` as policy data or narrow validators rather than separate bespoke scanners.
 
 ### Required Test Strategy
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
@@ -182,6 +188,7 @@ This change migrates interactive mutation-owner guardrails from statement-index 
 - `body.toSource()` or source-substring matching for `replaceScene(...)` forwarding.
 - Runtime code changes that move ownership away from `SceneControllerMutationBoundary`.
 - Fixture logic that hardcodes a required statement slot instead of semantic sequencing.
+- Separate duplicated AST walks for selection and scene mutation owners when one shared semantic classifier can express the difference.
 
 ### Optional: Recognition Forms That Must Be Supported
 - Direct `ensureExternalMutationAllowed(...)` invocation before a boundary delegate.
@@ -210,6 +217,7 @@ The mutation-owner policy table describes semantic sequencing expectations inste
 - Refactor `MutationOwnerPolicySpec` and the `selectionMutationOwnerPolicies` table so policy metadata names the required semantic guard kind instead of a numeric statement index.
 - Replace the selection-owner branch of `_checkMutationOwnerPolicy(...)` with resolved detection of `ensureExternalMutationAllowed(...)` before the first boundary effect.
 - Preserve current diagnostics at the `interactive API violation` level while shifting proof from syntax slot to semantic sequencing.
+- Keep the selection-owner implementation on the same semantic event-classification path that the scene-owner branch will use later in the step.
 
 #### Behavioral Verification
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
@@ -243,6 +251,7 @@ Scene mutation owners accept the current semantic special forms for `setCameraOf
 - Refactor `sceneMutationOwnerPolicies` so `setCameraOffset(...)` and `replaceScene(...)` are represented as semantic special cases.
 - Replace `_isAllowedReplaceSceneInterruptForwarding(...)` with AST/resolved inspection of the named `interruptBeforeApply` argument.
 - Replace the scene-owner branch of `_checkMutationOwnerPolicy(...)` with resolved sequencing that permits the locked `setCameraOffset(...)` preflight and requires the resolved interrupt before the first effectful camera-offset apply.
+- Keep the scene-owner branch on the same core event-classification and sequencing helper path as selection owners, with special behavior expressed only through policy/validator hooks.
 
 #### Behavioral Verification
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart`

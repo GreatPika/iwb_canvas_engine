@@ -101,6 +101,7 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 
 #### Why This Level Is Correct
 - Proof-surface ownership already lives in the invariant registry, and the regression belongs in the existing tool-test layer. This keeps metadata, runtime proof, tool proof, and self-guard each in the repository location that already owns that responsibility.
+- This step protects the resolved/non-token direction after the weak-family migrations, but it is intentionally a targeted anti-regression layer rather than a claim that all remaining resolved proof duplication is already consolidated.
 
 ## 5. File Map
 
@@ -132,6 +133,7 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 4. The self-guard test covers the migrated weak rule owners only: `tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart`, `tool/src/guardrails/rules/interactive/interactive_architecture_boundary_rules.dart`, and `tool/src/guardrails/rules/controller/write_only_mutation_rules.dart`.
 5. The self-guard test fails on reintroduction of `File.readAsStringSync`, `AstNode.toSource()`, `requireSourceTokens`, `requireTokenOrder`, or any dependency on `resolver_purity_rules.dart` inside the covered migrated rule files.
 6. `doc/guardrails_state_map.md` must record targeted self-guard coverage for the migrated weak files and must not claim that repository-wide clone/metrics meta-control is complete.
+7. This step records and protects the migrated direction, but it does not count as full guardrail implementation symmetry or full consolidation of repeated resolved proof shapes; repository documentation must leave that distinction explicit.
 
 ## 7. Result Requirements
 
@@ -139,6 +141,7 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 2. The migrated weak rule files have a mechanical analyzer-backed regression that fails when raw source-token APIs or the deleted helper dependency return.
 3. Repository documentation records targeted meta-control for the migrated weak files without overstating broader guardrails governance.
 4. `tool/check_invariant_coverage.dart` passes with the updated proof metadata.
+5. Repository documentation explicitly distinguishes “protected against raw token-regression” from “fully consolidated/symmetric guardrail implementation”.
 
 ## 8. Implementation Rules
 
@@ -167,6 +170,7 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 - The self-guard test must parse the covered rule files with analyzer APIs and inspect invocations/imports/identifiers semantically.
 - The self-guard test must fail on the banned implementation APIs and the deleted helper dependency listed in the locked decisions.
 - Keep self-guard coverage inside `test/tool/guardrails/**` so the existing repository tool-test execution owns it.
+- `doc/guardrails_state_map.md` must describe this step as targeted anti-regression over migrated weak files, not as completion of broader guardrail symmetry or clone governance.
 
 ### Required Test Strategy
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_guardrail_implementation_tool_test.dart`
@@ -180,6 +184,7 @@ This change closes the resolved-guardrail proof surface by moving interactive re
 - Grep-style raw text scanning in the new self-guard test.
 - Expanding this step into repository-wide clone/metrics governance.
 - Production-code changes that reintroduce the deleted token helper.
+- Treating targeted self-guard coverage as evidence that overall guardrail implementation symmetry or duplication control is complete.
 
 ### Optional: Recognition Forms That Must Be Supported
 - Analyzer-backed detection of `File.readAsStringSync` invocations.

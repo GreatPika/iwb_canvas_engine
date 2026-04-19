@@ -105,6 +105,7 @@ This change replaces interactive boundary-shape token guardrails with resolved a
 #### Permitted Extension Seam
 - One new part file at `tool/src/guardrails/rules/interactive/interactive_architecture_boundary_rules.dart`.
 - Private analyzer helper code remains local to `test/interactive/core/scene_controller_architecture_boundary_test.dart`.
+- Private owner-family spec objects and boundary-category helpers may live inside `interactive_architecture_boundary_rules.dart` when they remove repeated proof shape without exporting a new generic framework.
 
 #### Rejected Alternatives
 - Keep the old filename `boundary_shape_token_rules.dart` after removing token logic — rejected because the file name would become misleading about the proof owner.
@@ -153,6 +154,8 @@ This change replaces interactive boundary-shape token guardrails with resolved a
 7. `SceneControllerSceneViewRuntime` remains the `SceneViewRuntime` adapter owner, `SceneControllerPointerSession` remains the `SceneViewPointerSession` owner, `SceneViewRuntimeHost` remains the active-runtime and pointer-host owner, and `SceneViewRenderSurface` remains render-state-only.
 8. Event and draw-family owners remain structurally split: `InteractiveEventDispatcher`, `InteractiveDrawCoordinator`, `InteractiveDrawEraserEngine`, `InteractiveDrawEraserExactHit`, `InteractiveDrawEraserLineHit`, `InteractiveDrawProjectedEraser`, `InteractiveDrawEraserStrokeHit`, and `InteractiveSelectionActions` stay independent owners proved from declarations and allowed dependency boundaries, not from exact source text.
 9. `test/interactive/core/scene_controller_architecture_boundary_test.dart` remains the primary proof file for `INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY` and `INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY`, but it must stop using `File.readAsStringSync()`, `_extractMethodBody(...)`, `contains(...)`, or raw `indexOf(...)` for architectural assertions.
+10. The semantic replacement must be decomposed by boundary category inside `interactive_architecture_boundary_rules.dart` (owner presence, dependency boundary, graph assembly, deleted seam absence, facade/view split). Replacing the token monolith with a single analyzer-backed mega-function is forbidden.
+11. Where `guardrail_runner_support.dart` or existing element/path helpers already fit the needed proof shape, the step must reuse them instead of re-implementing equivalent local scans.
 
 ## 7. Result Requirements
 
@@ -160,6 +163,7 @@ This change replaces interactive boundary-shape token guardrails with resolved a
 2. The interactive guardrail still fails when canonical facade/view/runtime/pointer-session owners disappear, when deleted seams reappear, or when the controller/view/render split is reopened.
 3. The primary interactive architecture proof test becomes analyzer-backed and remains independent from `tool/check_guardrails.dart`.
 4. `doc/guardrails_state_map.md` reflects the renamed architecture rule file, the removal of `resolver_purity_rules.dart`, and the fact that this family no longer owns token/source-order proof.
+5. The semantic replacement is organized as small boundary-category checks over shared local specs/helpers rather than as a new monolithic analyzer pass.
 
 ## 8. Implementation Rules
 
@@ -183,12 +187,15 @@ This change replaces interactive boundary-shape token guardrails with resolved a
 - Interactive architecture proof test implementation.
 - Interactive tool-test fixtures and diagnostics that reflect the migrated rule family.
 - Documentation of guardrail state for this family.
+- Local owner-family and boundary-category specs/helpers inside `interactive_architecture_boundary_rules.dart`.
 
 ### Structural Enforcement
 - Use `checkOwnedLayerFile(...)`, `checkDirectiveBoundaryViolation(...)`, and `checkExternalDirectiveBoundaryFile(...)` for file-level dependency and layer constraints where those helpers already fit the locked form.
 - Resolve declaration presence, interface implementation, constructor targets, and top-level function targets from analyzer results rather than from file text.
 - Resolve graph assembly by analyzer-backed constructor/top-level invocation targets, not by searching for names in raw source.
 - Keep deleted seam absence as repository-file existence checks.
+- Organize the new rule as category-scoped checks over shared local spec data rather than one flat procedure that mixes every owner split inline.
+- Reuse existing support/helpers before adding new local traversal code with the same proof shape.
 
 ### Required Test Strategy
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
@@ -202,6 +209,7 @@ This change replaces interactive boundary-shape token guardrails with resolved a
 - Importing tool rule implementations into the primary-proof test file.
 - Raw source token or substring matching in the new architecture rule or in the migrated primary-proof test.
 - Requiring exact statement order or exact import text as the architecture proof.
+- A single analyzer-backed mega-function that encodes all interactive architecture categories inline after the token monolith is retired.
 
 ### Optional: Recognition Forms That Must Be Supported
 - `SceneControllerSceneViewRuntime implements SceneViewRuntime`.
@@ -231,6 +239,7 @@ Interactive architecture boundary violations are emitted from semantic rule logi
 - Create `interactive_architecture_boundary_rules.dart` as the `part of 'mutation_boundary_rules.dart';` owner for the migrated architecture rule family.
 - Port each currently enforced owner-split category from `boundary_shape_token_rules.dart` into semantic checks over declarations, interfaces, resolved constructor targets, and dependency directives.
 - Rewire `runInteractiveApiGuardrails(...)` to call the new semantic rule and stop referencing the retired token rule file.
+- Introduce local owner-family and boundary-category specs so migrated categories share proof scaffolding instead of landing as unrelated inline checks.
 
 #### Behavioral Verification
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
