@@ -277,14 +277,64 @@ final class SceneControllerInteractionContext
     sandbox,
     'lib/src/interactive/scene_controller_interaction.dart',
     '''
-class SceneControllerInteractionOwner {}
+import 'internal/scene_controller_interaction_access.dart';
+import 'internal/scene_controller_interaction_runtime.dart';
+
+class SceneControllerInteractionOwner {
+  final _access = _CanonicalInteractionOwnerAccess();
+
+  void handlePointer(Object input) {
+    _access.runtime.ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _access.runtime.ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  set mode(int value) {
+    _access.runtime.ensurePublicSideEffectAllowed('mode');
+  }
+}
+
+final class _CanonicalInteractionOwnerAccess
+    implements SceneControllerInteractionAccess {
+  @override
+  final SceneControllerInteractionRuntime runtime =
+      SceneControllerInteractionRuntime();
+}
 ''',
   );
   writeSandboxFile(
     sandbox,
     'lib/src/interactive/scene_controller_selection.dart',
     '''
-class SceneControllerSelectionOwner {}
+import 'internal/scene_controller_interaction_runtime.dart';
+
+class SceneControllerSelectionOwner {
+  SceneControllerSelectionOwner(this._runtime);
+
+  final SceneControllerInteractionRuntime _runtime;
+
+  void setSelection(Object nodeIds) {
+    _runtime.ensurePublicSideEffectAllowed('setSelection');
+  }
+
+  void toggleSelection(Object nodeId) {
+    _runtime.ensurePublicSideEffectAllowed('toggleSelection');
+  }
+
+  void clearSelection() {
+    _runtime.ensurePublicSideEffectAllowed('clearSelection');
+  }
+
+  void selectAll() {
+    _runtime.ensurePublicSideEffectAllowed('selectAll');
+  }
+
+  void rotateSelection() {
+    _runtime.ensurePublicSideEffectAllowed('rotateSelection');
+  }
+}
 ''',
   );
   writeSandboxFile(
@@ -1055,17 +1105,11 @@ class SceneControllerInteraction {}
 class SceneControllerInteractionOwner extends SceneControllerInteraction {}
 
 class SceneControllerSelectionOwner {
-  SceneControllerSelectionOwner({
-    required Object runtime,
-    required Object mutations,
-  });
+  SceneControllerSelectionOwner(Object runtime);
 }
 
 class SceneControllerSceneOwner {
-  SceneControllerSceneOwner({
-    required Object ensurePublicSideEffectAllowed,
-    required Object mutations,
-  });
+  SceneControllerSceneOwner(Object ensurePublicSideEffectAllowed);
 }
 
 class _InteractionRuntime {
@@ -1090,14 +1134,9 @@ Object createSceneControllerGraph(Object request) {
   SceneControllerInternalAccessRegistration();
   registerSceneControllerInternalAccess(Object(), Object());
   SceneControllerInteractionOwner();
-  SceneControllerSelectionOwner(
-    runtime: interactionRuntime,
-    mutations: interactionRuntime.mutationBoundary,
-  );
+  SceneControllerSelectionOwner(interactionRuntime);
   SceneControllerSceneOwner(
-    ensurePublicSideEffectAllowed:
-        interactionRuntime.ensurePublicSideEffectAllowed,
-    mutations: interactionRuntime.mutationBoundary,
+    interactionRuntime.ensurePublicSideEffectAllowed,
   );
   return _Graph();
 }

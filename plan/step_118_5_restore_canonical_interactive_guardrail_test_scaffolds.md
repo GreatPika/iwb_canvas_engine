@@ -9,6 +9,7 @@ This change restores the minimal canonical guard-bearing interactive test scaffo
 
 ### Included in the Change
 - `test/tool/support/guardrails_tool_test_support.dart` changes that restore the minimal canonical guard-bearing capability-owner contract used by shared interactive tool suites.
+- `test/tool/support/guardrails_tool_test_support.dart` cleanup that keeps graph-local capability-owner stubs constructor-compatible with the shared canonical fixture shape so the shared sandbox does not drift into contradictory owner forms.
 - `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` changes that keep the general interactive tool suite on shared canonical fixtures only.
 - `test/tool/guardrails/guardrails_interactive_resolved_entrypoint_guard_tool_test.dart` changes that own the neutral capability shells and the resolved-entrypoint-specific regression cases locally.
 - Tool-test additions that make drift back to neutral shared capability owners mechanically visible.
@@ -45,6 +46,7 @@ This change restores the minimal canonical guard-bearing interactive test scaffo
 - `writeCanonicalPublicExportScaffold(...)` in `test/tool/support/guardrails_tool_test_support.dart` — existing shared canonical scaffold precedent in the same support module.
 - `_writeNeutralCapabilityOwners(...)` in `test/tool/guardrails/guardrails_interactive_resolved_entrypoint_guard_tool_test.dart` — existing narrow specialization seam that should stay local.
 - `writeMinimalControllerStore(...)` in `test/tool/support/guardrails_tool_test_support.dart` — shared low-level sandbox dependency that is neutral and still belongs in support.
+- `lib/src/interactive/internal/scene_controller_graph.dart` sandbox stub emitted by `writeInteractiveArchitectureSupportScaffold(...)` — graph-local constructor seam that must stay compatible with the shared canonical capability-owner fixture shape.
 
 ### Existing Tests
 - `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` — broad interactive guardrail regression surface.
@@ -199,13 +201,14 @@ The shared canonical capability-owner contract is the minimal guard-bearing subs
 
 ## 9. Vertical Slices
 
-### Slice 1. [ ] Shared interactive scaffold is canonical again
+### Slice 1. [x] Shared interactive scaffold is canonical again
 
 #### Slice Contract
 `writeInteractiveArchitectureSupportScaffold(...)` emits guard-bearing canonical default capability-owner fixtures, and a dedicated regression makes drift back to neutral shells mechanically visible.
 
 #### Change
 - Update `test/tool/support/guardrails_tool_test_support.dart` so the default generated `SceneControllerInteractionOwner`, `SceneControllerSelectionOwner`, and `SceneControllerSceneOwner` exactly match the minimal guard-bearing subset locked in section 4A.
+- Align the graph-local `SceneControllerSelectionOwner` and `SceneControllerSceneOwner` sandbox stubs with the constructor shape of the shared canonical capability-owner fixtures so the shared scaffold does not carry contradictory owner forms.
 - Add a focused regression in `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` that proves the shared scaffold still generates canonical guard-bearing capability owners rather than empty shells.
 
 #### Behavioral Verification
@@ -218,6 +221,7 @@ The shared canonical capability-owner contract is the minimal guard-bearing subs
 #### Positive Scenarios
 - A sandbox built from `writeInteractiveArchitectureSupportScaffold(...)` exposes all three capability owners with canonical guard-bearing entrypoints.
 - The shared scaffold exposes only the locked minimal public entrypoints and helper seams required for those guard-bearing owners.
+- The graph-local owner stubs inside the shared scaffold remain constructor-compatible with the canonical capability-owner fixture shape.
 - The broad interactive API suite still passes against the shared scaffold without local neutralization.
 
 #### Negative Scenarios
@@ -229,7 +233,7 @@ The shared canonical capability-owner contract is the minimal guard-bearing subs
 - Green run of the listed structural verification.
 - Shared support no longer contains neutral default capability-owner shells.
 
-### Slice 2. [ ] Resolved-entrypoint regressions own their neutral fixtures locally
+### Slice 2. [x] Resolved-entrypoint regressions own their neutral fixtures locally
 
 #### Slice Contract
 All resolved-entrypoint semantic pre-guard regressions live in `guardrails_interactive_resolved_entrypoint_guard_tool_test.dart`, and that suite owns the neutral capability-owner helpers privately.
