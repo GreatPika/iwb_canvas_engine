@@ -18,6 +18,7 @@ import 'committed_read_callback_rules.dart';
 import 'resolver_purity_rules.dart';
 
 part 'boundary_shape_token_rules.dart';
+part 'interactive_mutation_owner_guard_rules.dart';
 part 'resolved_entrypoint_guard_rules.dart';
 
 Future<List<GuardrailViolation>> runInteractiveApiGuardrails({
@@ -52,7 +53,7 @@ Future<List<GuardrailViolation>> runInteractiveApiGuardrails({
     return violations;
   }
 
-  final mutationOwnerViolation = _checkMutationOwnerPolicies(context);
+  final mutationOwnerViolation = await _checkMutationOwnerPolicies(context);
   if (mutationOwnerViolation != null) {
     violations.add(mutationOwnerViolation);
     return violations;
@@ -229,64 +230,6 @@ const List<CapabilityGuardSpec> _capabilityGuardSpecs = <CapabilityGuardSpec>[
   ),
 ];
 
-GuardrailViolation? _checkMutationOwnerPolicies(GuardrailContext context) {
-  for (final spec in mutationOwnerGuardSpecs) {
-    final file = _interactiveSupportFile(context, spec.relativePath);
-    if (!file.existsSync()) {
-      return GuardrailViolation(
-        filePath: _interactiveFilePosixPath(context, _interactiveFile(context)),
-        line: 1,
-        message:
-            'interactive API violation: missing required mutation owner '
-            '${spec.className} at ${_interactiveFilePosixPath(context, file)}.',
-      );
-    }
-
-    final filePath = _interactiveFilePosixPath(context, file);
-    final parsed = _parseInteractiveFile(context, file, filePath);
-    final ownerClass = _findClassByName(
-      parsed.unit.declarations,
-      spec.className,
-    );
-    if (ownerClass == null) {
-      return GuardrailViolation(
-        filePath: filePath,
-        line: 1,
-        message:
-            'interactive API violation: ${spec.className} must remain the '
-            'canonical mutation owner in $filePath.',
-      );
-    }
-
-    for (final policy in spec.policies) {
-      final member = _findMethodByName(ownerClass.members, policy.methodName);
-      if (member == null) {
-        return GuardrailViolation(
-          filePath: filePath,
-          line: 1,
-          message:
-              'interactive API violation: '
-              '${spec.className}.${policy.methodName} '
-              'must remain part of the canonical mutation-owner surface.',
-        );
-      }
-      final violation = _checkMutationOwnerPolicy(
-        member: member,
-        filePath: filePath,
-        lineFor: (offset) => lineForOffset(parsed, offset),
-        className: spec.className,
-        methodName: policy.methodName,
-        policyCall: policy.policyCall,
-        policyIndex: policy.policyIndex,
-      );
-      if (violation != null) {
-        return violation;
-      }
-    }
-  }
-  return null;
-}
-
 ClassDeclaration? _findClassByName(
   NodeList<CompilationUnitMember> declarations,
   String className,
@@ -310,80 +253,6 @@ MethodDeclaration? _findMethodByName(
     }
   }
   return null;
-}
-
-GuardrailViolation? _checkMutationOwnerPolicy({
-  required MethodDeclaration member,
-  required String filePath,
-  required int Function(int offset) lineFor,
-  required String className,
-  required String methodName,
-  required String policyCall,
-  required int policyIndex,
-}) {
-  final body = member.body;
-  if (body is! BlockFunctionBody) {
-    return _capabilityGuardViolation(
-      filePath: filePath,
-      line: lineFor(member.offset),
-      detail:
-          '$className.$methodName must guard active-gesture exclusivity with '
-          '$policyCall(...).',
-    );
-  }
-
-  final statements = body.block.statements;
-  if (statements.length <= policyIndex) {
-    if (_isAllowedReplaceSceneInterruptForwarding(
-      methodName: methodName,
-      policyCall: policyCall,
-      body: body,
-    )) {
-      return null;
-    }
-    return _capabilityGuardViolation(
-      filePath: filePath,
-      line: lineFor(member.offset),
-      detail:
-          '$className.$methodName must guard active-gesture exclusivity with '
-          '$policyCall(...).',
-    );
-  }
-
-  final actualCall = _qualifiedInvocationNameFromStatement(
-    statements[policyIndex],
-  );
-  if (actualCall != policyCall) {
-    if (_isAllowedReplaceSceneInterruptForwarding(
-      methodName: methodName,
-      policyCall: policyCall,
-      body: body,
-    )) {
-      return null;
-    }
-    return _capabilityGuardViolation(
-      filePath: filePath,
-      line: lineFor(statements[policyIndex].offset),
-      detail:
-          '$className.$methodName must guard active-gesture exclusivity with '
-          '$policyCall(...).',
-    );
-  }
-  return null;
-}
-
-bool _isAllowedReplaceSceneInterruptForwarding({
-  required String methodName,
-  required String policyCall,
-  required BlockFunctionBody body,
-}) {
-  if (methodName != 'replaceScene' ||
-      policyCall != interruptForExternalMutationCall) {
-    return false;
-  }
-  return body.toSource().contains(
-    'interruptBeforeApply: interruptForExternalMutation',
-  );
 }
 
 String? _qualifiedInvocationNameFromStatement(Statement statement) {

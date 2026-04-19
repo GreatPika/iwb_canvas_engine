@@ -779,7 +779,8 @@ class SceneControllerInteractionRuntime {
     bool allowAfterDispose = false,
   }) {}
 
-  void ensureExternalMutationAllowed(String operation) {}
+  final void Function(String operation) ensureExternalMutationAllowed =
+      (String operation) {};
 
   void interruptForInteractionConfigChange() {}
 
@@ -1526,32 +1527,89 @@ class InteractiveDrawEraserTargetsCallbacks {
 }
 
 String interactiveSelectionMutationsFixture({
-  String setSelectionBody = "ensureExternalMutationAllowed('setSelection');",
+  String setSelectionBody = '''
+ensureExternalMutationAllowed('setSelection');
+mutations.setSelection(nodeIds);
+''',
 }) {
   return _mutationOwnerFixture(
     className: 'SceneControllerSelectionMutations',
     policies: selectionMutationOwnerPolicies,
     bodyOverrides: <String, String>{'setSelection': setSelectionBody},
     helperMethods: '''
-  final mutations = Object();
+  final mutations = _SelectionMutationsBoundary();
 
   void ensureExternalMutationAllowed(String operation) {}
 
-  void _touchMutationBoundary() {
-    mutations.toString();
+  void toggleSelection(Object nodeId) {
+    ensureExternalMutationAllowed('toggleSelection');
+    mutations.toggleSelection(nodeId);
   }
+
+  void clearSelection() {
+    ensureExternalMutationAllowed('clearSelection');
+    mutations.clearSelection();
+  }
+
+  void selectAll() {
+    ensureExternalMutationAllowed('selectAll');
+    mutations.selectAll();
+  }
+
+  void rotateSelection() {
+    ensureExternalMutationAllowed('rotateSelection');
+    mutations.rotateSelection();
+  }
+
+  void flipSelectionVertical() {
+    ensureExternalMutationAllowed('flipSelectionVertical');
+    mutations.flipSelectionVertical();
+  }
+
+  void flipSelectionHorizontal() {
+    ensureExternalMutationAllowed('flipSelectionHorizontal');
+    mutations.flipSelectionHorizontal();
+  }
+
+  void deleteSelection() {
+    ensureExternalMutationAllowed('deleteSelection');
+    mutations.deleteSelection();
+  }
+}
+
+class _SelectionMutationsBoundary {
+  void setSelection(Object nodeIds) {}
+
+  void toggleSelection(Object nodeId) {}
+
+  void clearSelection() {}
+
+  void selectAll() {}
+
+  void rotateSelection() {}
+
+  void flipSelectionVertical() {}
+
+  void flipSelectionHorizontal() {}
+
+  void deleteSelection() {}
+}
 ''',
   );
 }
 
 String interactiveSceneMutationsFixture({
-  String writeBody = "ensureExternalMutationAllowed('write');",
+  String writeBody = '''
+ensureExternalMutationAllowed('write');
+mutations.write(fn);
+''',
   String setCameraOffsetBody = '''
-_requireFiniteOffset(value);
-if (_isSameOffset(value)) {
+mutations.validateCameraOffset(value);
+if (!mutations.shouldApplyCameraOffset(value)) {
   return;
 }
 interruptForExternalMutation();
+mutations.setCameraOffset(value);
 ''',
   String replaceSceneBody = '''
 mutations.replaceScene(
@@ -1571,17 +1629,42 @@ mutations.replaceScene(
     helperMethods: '''
   final mutations = _Mutations();
 
-  void ensureExternalMutationAllowed(String operation) {}
+  final void Function(String operation) ensureExternalMutationAllowed =
+      (String operation) {};
 
-  void interruptForExternalMutation() {}
+  final void Function() interruptForExternalMutation = () {};
+}
 
-  void _requireFiniteOffset(Object value) {}
+class _Mutations {
+  void write(Object fn) {}
 
-  bool _isSameOffset(Object value) => false;
+  void setBackgroundColor(Object value) {}
 
-  void _touchMutationBoundary() {
-    mutations.toString();
-  }
+  void setGridEnabled(bool value) {}
+
+  void setGridCellSize(double value) {}
+
+  void addNode(Object node) {}
+
+  void ensureLayer(Object layerId) {}
+
+  void patchNode(Object patch) {}
+
+  void removeNode(Object nodeId) {}
+
+  void clearScene() {}
+
+  void validateCameraOffset(Object value) {}
+
+  bool shouldApplyCameraOffset(Object value) => true;
+
+  void setCameraOffset(Object value) {}
+
+  void replaceScene(
+    Object snapshot, {
+    required Object interruptBeforeApply,
+  }) {}
+}
 ''',
   );
 }
@@ -1626,7 +1709,28 @@ $normalizedBody
 }
 
 String _defaultMutationBody(MutationOwnerPolicySpec policy) {
-  return "${policy.policyCall}('${policy.methodName}');";
+  final guardCall = "${policy.requiredGuard}('${policy.methodName}');";
+  return switch (policy.methodName) {
+    'setSelection' => '$guardCall\nmutations.setSelection(nodeIds);',
+    'toggleSelection' => '$guardCall\nmutations.toggleSelection(nodeId);',
+    'clearSelection' => '$guardCall\nmutations.clearSelection();',
+    'selectAll' => '$guardCall\nmutations.selectAll();',
+    'rotateSelection' => '$guardCall\nmutations.rotateSelection();',
+    'flipSelectionVertical' => '$guardCall\nmutations.flipSelectionVertical();',
+    'flipSelectionHorizontal' =>
+      '$guardCall\nmutations.flipSelectionHorizontal();',
+    'deleteSelection' => '$guardCall\nmutations.deleteSelection();',
+    'write' => '$guardCall\nmutations.write(fn);',
+    'setBackgroundColor' => '$guardCall\nmutations.setBackgroundColor(value);',
+    'setGridEnabled' => '$guardCall\nmutations.setGridEnabled(value);',
+    'setGridCellSize' => '$guardCall\nmutations.setGridCellSize(value);',
+    'addNode' => '$guardCall\nmutations.addNode(node);',
+    'ensureLayer' => '$guardCall\nmutations.ensureLayer(layerId);',
+    'patchNode' => '$guardCall\nmutations.patchNode(patch);',
+    'removeNode' => '$guardCall\nmutations.removeNode(nodeId);',
+    'clearScene' => '$guardCall\nmutations.clearScene();',
+    _ => guardCall,
+  };
 }
 
 String _mutationMethodReturnType() {

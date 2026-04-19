@@ -241,7 +241,7 @@ This step moves the interactive mutation-owner family onto the target resolved s
 
 ## 9. Vertical Slices
 
-### Slice 1. [ ] Category-scoped mutation-owner proof owner and thin descriptors
+### Slice 1. [x] Category-scoped mutation-owner proof owner and thin descriptors
 
 #### Slice Contract
 Interactive mutation-owner proof lives in a dedicated semantic part file and is configured by thin semantic descriptors rather than statement slots or helper-behavior policy.
@@ -275,7 +275,7 @@ Interactive mutation-owner proof lives in a dedicated semantic part file and is 
 - Green run of the listed structural verifications.
 - Mutation-owner proof no longer expands inline in `mutation_boundary_rules.dart`.
 
-### Slice 2. [ ] Shared local semantic event model covers selection and scene mutation owners
+### Slice 2. [x] Shared local semantic event model covers selection and scene mutation owners
 
 #### Slice Contract
 Selection-owner and scene-owner mutation methods are enforced through one shared local semantic event model rather than separate bespoke walkers.
@@ -310,7 +310,7 @@ Selection-owner and scene-owner mutation methods are enforced through one shared
 - Green run of the listed structural verifications.
 - Selection and standard scene mutation methods are covered by the same local event model.
 
-### Slice 3. [ ] Special-form routing for `replaceScene(...)` and `setCameraOffset(...)` stays narrow
+### Slice 3. [x] Special-form routing for `replaceScene(...)` and `setCameraOffset(...)` stays narrow
 
 #### Slice Contract
 `replaceScene(...)` and `setCameraOffset(...)` remain accepted only through narrow local sequence/routing validators layered on the shared event model, without alias-flow or policy-owned helper semantics.
@@ -348,7 +348,7 @@ Selection-owner and scene-owner mutation methods are enforced through one shared
 - Green run of the listed structural verifications.
 - Special forms are covered without policy-owned helper semantics or alias/dataflow tracking.
 
-### Slice 4. [ ] Fixtures and documentation reflect the sequence/routing proof family honestly
+### Slice 4. [x] Fixtures and documentation reflect the sequence/routing proof family honestly
 
 #### Slice Contract
 Interactive mutation-owner fixtures and repository documentation describe the family as resolved sequence/routing proof and do not overstate full symmetry/consolidation.

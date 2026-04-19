@@ -1,6 +1,6 @@
 # Guardrails State Map
 
-Generated: 2026-04-16
+Generated: 2026-04-20
 Scope: `tool/src/guardrails/**`
 
 ## Current Layout
@@ -30,6 +30,7 @@ tool/src/guardrails/
     interactive/
       resolver_purity_rules.dart
       mutation_boundary_rules.dart
+      interactive_mutation_owner_guard_rules.dart
       committed_read_callback_rules.dart
       boundary_shape_token_rules.dart
     model/
@@ -67,7 +68,7 @@ Source commands:
 - `INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES` -> `rules/public/public_surface_rules.dart` + `rules/public/public_signature_rules.dart`
 - `INV-ENG-PUBLIC-SIGNATURE-HERMETICITY` -> `rules/public/public_signature_rules.dart`
 - `INV-ENG-INTERACTIVE-RESOLVER-PURITY` -> `rules/interactive/mutation_boundary_rules.dart` (resolved root/capability entrypoint purity) + `rules/interactive/resolver_purity_rules.dart` (legacy helper path still consumed by token-backed interactive boundary checks)
-- `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY` -> `rules/interactive/mutation_boundary_rules.dart` + `rules/interactive/committed_read_callback_rules.dart`
+- `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY` -> `rules/interactive/mutation_boundary_rules.dart` + `rules/interactive/interactive_mutation_owner_guard_rules.dart` (resolved sequence/routing proof for mutation owners) + `rules/interactive/committed_read_callback_rules.dart` (thin descriptor table)
 - `INV-ENG-MODEL-ARCHITECTURE-BOUNDARY` -> `rules/model/model_architecture_rules.dart`
 - `INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY` -> `rules/contract/contract_architecture_rules.dart`
 - `INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER` -> `rules/model/model_architecture_rules.dart`
@@ -119,9 +120,10 @@ even if they are utility/thin wrappers and not primary invariant owners:
 - `_checkSceneWriterPreparedReplaceBoundary`
 (all in `rules/controller/prepared_replace_boundary_rules.dart`)
 
-3. Interactive mutation family still has strong internal overlap in:
+3. Interactive mutation family still has one notable local pairing in:
 - `_checkCapabilityEntrypoints`
 - `_checkMutationOwnerPolicies`
+- mutation-owner semantics now live in `rules/interactive/interactive_mutation_owner_guard_rules.dart` with a local event model and narrow special-form validators, but broader cross-family consolidation is still pending
 
 4. Contract/model architecture families now share common support, but top-level runners still mirror each other:
 - `runContractArchitectureGuardrails`
@@ -168,8 +170,12 @@ Notable very-high functions:
 
 - **Mixed reliability**
   - `rules/interactive/mutation_boundary_rules.dart`
-    - root and capability resolver-purity checks now use resolved AST entrypoint analysis
-    - mutation-owner and some adjacent interactive checks still rely on lexical/source-order constraints
+    - runner wiring plus committed-read callback checks still sit beside older interactive support seams
+    - token-heavy boundary-shape enforcement still lives in the same family via `rules/interactive/boundary_shape_token_rules.dart`
+  - `rules/interactive/interactive_mutation_owner_guard_rules.dart`
+    - mutation-owner enforcement now uses resolved sequence/routing proof
+    - standard selection/scene methods share one local semantic event model
+    - `setCameraOffset(...)` and `replaceScene(...)` remain narrow special-form validators inside the same local proof family
 
 - **Low-Medium reliability (token/source-order heavy)**
   - `rules/interactive/boundary_shape_token_rules.dart`
@@ -194,8 +200,9 @@ Notable very-high functions:
 - Clone clusters reduced from **19 -> 8** across the current refactor campaign.
 - Major remaining clones are now structural siblings, not broad copy-paste utility duplication.
 
-4. **Migrate fragile token checks to AST/resolved**: **NOT STARTED**
-- Main target remains `interactive/boundary_shape_token_rules.dart`.
+4. **Migrate fragile token checks to AST/resolved**: **IN PROGRESS**
+- Mutation-owner guardrails now use resolved sequence/routing proof.
+- Main remaining token-heavy target is `interactive/boundary_shape_token_rules.dart`.
 
 5. **Decide what to merge/delete**: **NOT STARTED**
 - Decision postponed until step 3 and step 4 reduce accidental overlap.
@@ -216,8 +223,10 @@ Notable very-high functions:
 3. Collapse duplicate violation builders into a shared helper module.
    Status: **DONE**
 
-4. Start AST migration of interactive token-heavy rules after steps 1-3.
+4. Continue AST migration of remaining interactive token-heavy rules.
    Status: **NEXT**
+   - mutation-owner guardrails are already on resolved sequence/routing proof
+   - remaining focus stays on `interactive/boundary_shape_token_rules.dart`
 
 ## Verification Snapshot
 
