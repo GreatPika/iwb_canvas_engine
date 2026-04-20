@@ -46,7 +46,7 @@ This step moves the interactive architecture-boundary family onto the target res
 - `lib/src/view/scene_view_render_surface.dart` — render-state-only surface that must remain free of concrete controller ownership.
 - `lib/src/interactive/internal/interactive_event_dispatcher.dart`, `interactive_draw_coordinator.dart`, `interactive_draw_eraser_engine.dart`, `interactive_draw_eraser_exact_hit.dart`, `interactive_draw_eraser_line_hit.dart`, `interactive_draw_eraser_projection.dart`, `interactive_draw_eraser_stroke_hit.dart`, and `interactive_selection_actions.dart` — current split owner families that the token rule enforces by exact file text today.
 - `test/interactive/core/scene_controller_architecture_boundary_test.dart` — current primary proof file for `INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY`; it is entirely string-backed today.
-- `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` — current tool regression harness for deleted residual seams and interactive structure drift.
+- `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` plus `test/tool/guardrails/interactive_api/**` — current tool regression harness for deleted residual seams and interactive structure drift; the suite now executes from the existing top-level test file and is physically decomposed into semantic `part` files under `interactive_api/**`.
 - `doc/guardrails_state_map.md` — records `boundary_shape_token_rules.dart` as the main AST-migration target and still lists `resolver_purity_rules.dart` as a low-medium reliability rule owner.
 
 ### Current Entry Path
@@ -63,7 +63,7 @@ This step moves the interactive architecture-boundary family onto the target res
 
 ### Existing Tests
 - `test/interactive/core/scene_controller_architecture_boundary_test.dart` — current analyzer-hostile structure witness for the interactive owner split; it is the primary proof file for `INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY` and `INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY`, and it also carries additional `// INV:` markers that this step must not silently reinterpret as primary-proof ownership.
-- `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` — current structural regression harness for interactive guardrails.
+- `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` — current structural regression harness for interactive guardrails; supporting scenarios now live in `test/tool/guardrails/interactive_api/**` `part` files under the same executable proof surface.
 
 ### Analogous Implementation Path
 - `tool/src/guardrails/rules/model/model_architecture_rules.dart` — structural subtree checks built from parsed/resolved files.

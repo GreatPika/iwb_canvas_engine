@@ -34,7 +34,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 ### Inspected Artifacts
 - `test/tool/support/guardrails_tool_test_support.dart` — current monolithic guardrail sandbox support file at 1672 lines; it mixes canonical fixture text, sandbox writers, interactive/controller/public support scaffolds, and mutation fixture builders in one file.
 - `test/tool/import_boundaries/import_boundaries_controller_structure_tool_test.dart`, `import_boundaries_layer_dag_tool_test.dart`, `import_boundaries_external_packages_tool_test.dart`, and `import_boundaries_layout_tool_test.dart` — all currently import `guardrails_tool_test_support.dart`; they prove the file is already a broader tool-test seam via `createImportBoundariesSandbox()` and shared `diagnostic(...)` matcher usage, not a guardrail-only helper.
-- `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` — current interactive guardrail suite at 3704 lines; repeatedly writes the same sandbox scaffolds and keeps its own `_sceneControllerFixture(...)` builder inline.
+- `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` plus `test/tool/guardrails/interactive_api/**` — current interactive guardrail suite is now physically decomposed into one executable entrypoint with `part` files grouped by semantic interactive guardrail families, but the suite still owns canonical sandbox scaffolds inline and remains a primary normalization target for this step.
 - `test/tool/guardrails/guardrails_controller_api_tool_test.dart` — current controller guardrail suite at 3032 lines; keeps its own `_committedMutationAccessFixture(...)` builder inline and repeats large canonical support scaffolds.
 - `test/tool/guardrails/guardrails_interactive_resolved_entrypoint_guard_tool_test.dart` — current focused interactive suite at 1135 lines; still duplicates `_sceneControllerFixture(...)` rather than consuming one canonical manifest source.
 - `test/tool/guardrails/guardrails_public_surface_tool_test.dart` and `guardrails_public_signature_hermeticity_tool_test.dart` — both depend on shared interactive architecture support scaffolds from `guardrails_tool_test_support.dart`, which means public guardrail suites are also coupled to the same mixed support owner.
@@ -60,6 +60,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 
 ### Existing Tests
 - `test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
+- `test/tool/guardrails/interactive_api/**`
 - `test/tool/guardrails/guardrails_controller_api_tool_test.dart`
 - `test/tool/guardrails/guardrails_interactive_resolved_entrypoint_guard_tool_test.dart`
 - `test/tool/guardrails/guardrails_public_surface_tool_test.dart`
@@ -157,6 +158,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 - `test/tool/support/tool_diagnostic_matchers.dart`
 - `test/tool/support/guardrails_tool_test_support.dart` (delete)
 - `test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
+- `test/tool/guardrails/interactive_api/**`
 - `test/tool/guardrails/guardrails_controller_api_tool_test.dart`
 - `test/tool/guardrails/guardrails_interactive_resolved_entrypoint_guard_tool_test.dart`
 - `test/tool/guardrails/guardrails_public_surface_tool_test.dart`
@@ -268,7 +270,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 - Canonical scaffolds used by more than one suite must live under `test/tool/support/`, not inline in a test suite.
 - Test suites must express per-case overrides against manifests instead of redefining the whole canonical scaffold shape.
 - Keep canonical fixture data auditable as plain support code and manifests; do not hide it behind opaque template expansion.
-- `guardrails_fixture_manifest_support_tool_test.dart` must parse the affected suite/support files and fail when canonical scaffold source or canonical manifest ownership for the shared interactive scene-controller shape, the shared controller committed-mutation/prepared-replace shape, or the shared public scaffold shape reappears outside `guardrail_fixture_manifest.dart` / `guardrail_fixture_writer.dart`, regardless of helper naming, or when `guardrails_tool_test_support.dart` exists again.
+- `guardrails_fixture_manifest_support_tool_test.dart` must parse the affected suite/support files and fail when canonical scaffold source or canonical manifest ownership for the shared interactive scene-controller shape, the shared controller committed-mutation/prepared-replace shape, or the shared public scaffold shape reappears outside `guardrail_fixture_manifest.dart` / `guardrail_fixture_writer.dart`, regardless of helper naming, including drift inside `test/tool/guardrails/interactive_api/**`, or when `guardrails_tool_test_support.dart` exists again.
 - Import-boundaries suites must consume `import_boundaries_sandbox_support.dart` and `tool_diagnostic_matchers.dart`; recreating `createImportBoundariesSandbox()` or generic `diagnostic(...)` in a guardrail-named file is forbidden.
 - `verification_contract_tool_test.dart` and `dart run tool/check_verification_contract.dart` must fail if the verification-contract registry or `.github/workflows/ci.yaml` still references `test/tool/support/guardrails_tool_test_support.dart` or omits any successor support path that this step makes authoritative.
 - Every guardrail suite that imported `guardrails_tool_test_support.dart` before this step must be named in at least one vertical slice and in final verification; file-map presence alone is not acceptance evidence.
@@ -304,7 +306,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 ### Slice 1. [ ] Canonical manifest/writer support replaces duplicated interactive scene-controller fixture builders
 
 #### Slice Contract
-Interactive scene-controller canonical scaffolds are owned by manifest/writer support under `test/tool/support/` instead of duplicated inline builders.
+Interactive scene-controller canonical scaffolds are owned by manifest/writer support under `test/tool/support/` instead of duplicated inline builders across the executable suite entrypoint or any `test/tool/guardrails/interactive_api/**` `part` file.
 
 #### Change
 - Add `guardrail_fixture_manifest.dart` and `guardrail_fixture_writer.dart`.
