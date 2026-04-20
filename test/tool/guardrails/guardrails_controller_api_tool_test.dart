@@ -815,6 +815,15 @@ extension on SceneStoreController {
     ),
     (
       name:
+          'rejects committed mutation access interface explicit unnamed constructor',
+      filePath:
+          'lib/src/controller/scene_controller_committed_mutation_access.dart',
+      source: _committedMutationAccessFixture(
+        extraInterfaceMembers: '  SceneControllerCommittedMutationAccess();\n',
+      ),
+    ),
+    (
+      name:
           'rejects committed mutation access interface replaceScene signature drift',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',

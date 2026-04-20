@@ -14,17 +14,20 @@ Future<GuardrailViolation?> _checkInteractiveViewRuntimeBoundary(
     file: file,
     filePath: filePath,
   );
-  final runtimeClass = _findClassByName(
+  final runtimeClass = findClassDeclarationByName(
     resolved.unit.declarations,
     'SceneControllerSceneViewRuntime',
   );
-  final renderStateClass = _findClassByName(
+  final renderStateClass = findClassDeclarationByName(
     resolved.unit.declarations,
     'SceneControllerSceneViewRenderState',
   );
   final createPointerSession = runtimeClass == null
       ? null
-      : _findMethodByName(runtimeClass.members, 'createPointerSession');
+      : findMethodDeclarationByName(
+          runtimeClass.members,
+          'createPointerSession',
+        );
   final interactionRuntimeFilePath = _repoRelPath(
     context,
     _interactiveArchitectureFile(
@@ -41,8 +44,11 @@ Future<GuardrailViolation?> _checkInteractiveViewRuntimeBoundary(
   );
   if (runtimeClass == null ||
       renderStateClass == null ||
-      !_classImplements(runtimeClass, 'SceneViewRuntime') ||
-      !_classImplements(renderStateClass, 'SceneViewRenderState') ||
+      !classImplementsNamedInterface(runtimeClass, 'SceneViewRuntime') ||
+      !classImplementsNamedInterface(
+        renderStateClass,
+        'SceneViewRenderState',
+      ) ||
       createPointerSession == null ||
       !_methodReturnsInterfaceType(
         createPointerSession,
@@ -119,19 +125,22 @@ Future<GuardrailViolation?> _checkPointerSessionBoundary(
     file: file,
     filePath: filePath,
   );
-  final pointerSessionClass = _findClassByName(
+  final pointerSessionClass = findClassDeclarationByName(
     resolved.unit.declarations,
     'SceneControllerPointerSession',
   );
   final detachMethod = pointerSessionClass == null
       ? null
-      : _findMethodByName(pointerSessionClass.members, 'detach');
+      : findMethodDeclarationByName(pointerSessionClass.members, 'detach');
   final disposeMethod = pointerSessionClass == null
       ? null
-      : _findMethodByName(pointerSessionClass.members, 'dispose');
+      : findMethodDeclarationByName(pointerSessionClass.members, 'dispose');
   final implementsSession =
       pointerSessionClass != null &&
-      _classImplements(pointerSessionClass, 'SceneViewPointerSession');
+      classImplementsNamedInterface(
+        pointerSessionClass,
+        'SceneViewPointerSession',
+      );
   final hasTracker = _unitContainsIdentifier(
     resolved.unit,
     'PointerInputTracker',

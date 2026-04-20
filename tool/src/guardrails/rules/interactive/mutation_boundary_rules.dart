@@ -10,7 +10,7 @@ import '../../support/guardrail_ast_utils.dart';
 import '../../support/guardrail_context.dart';
 import '../../support/guardrail_path_utils.dart';
 import '../../core/element_violation_builder.dart';
-import '../../core/public_constructor_surface_support.dart';
+import '../../core/resolved_surface_contract_support.dart';
 import '../../core/guardrail_runner_support.dart';
 import '../../core/guardrail_element_utils.dart' as element_utils;
 import '../controller/committed_read_side_rules.dart';

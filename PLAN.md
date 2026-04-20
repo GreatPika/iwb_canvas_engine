@@ -36,7 +36,7 @@ roadmap can be updated without mixing execution contracts.
 - [x] [Step 120. Replace interactive boundary-shape token guardrails with resolved architecture-boundary rules](plan/step_120_replace_interactive_boundary_shape_token_guardrails_with_resolved_architecture_boundary_rules.md)
 - [x] [Step 121. Replace controller lexical write-only mutation guardrails with resolved semantics](plan/step_121_replace_controller_lexical_write_only_mutation_guardrails_with_resolved_semantics.md)
 - [x] [Step 122. Establish extensible resolved guardrail proof-surface and self-guard regressions](plan/step_122_close_resolved_guardrail_proof_surface_and_self_guard_regressions.md)
-- [ ] [Step 123. Extract shared resolved surface-contract support for guardrails](plan/step_123_extract_shared_resolved_surface_contract_support_for_guardrails.md)
+- [x] [Step 123. Extract shared resolved surface-contract support for guardrails](plan/step_123_extract_shared_resolved_surface_contract_support_for_guardrails.md)
 - [ ] [Step 124. Extract shared semantic sequence-and-routing support for guardrails](plan/step_124_extract_shared_semantic_sequence_and_routing_support_for_guardrails.md)
 - [ ] [Step 125. Register guardrail rules declaratively and reduce runner/state-map drift](plan/step_125_register_guardrail_rules_declaratively_and_reduce_runner_state_map_drift.md)
 - [ ] [Step 126. Normalize guardrail tool-test scaffolds around canonical manifests](plan/step_126_normalize_guardrail_tool_test_scaffolds_around_canonical_manifests.md)

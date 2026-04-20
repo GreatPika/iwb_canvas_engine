@@ -15,13 +15,13 @@ Future<GuardrailViolation?> _checkSceneViewInteractiveBoundary(
     file: file,
     filePath: filePath,
   );
-  final interactiveClass = _findClassByName(
+  final interactiveClass = findClassDeclarationByName(
     resolved.unit.declarations,
     'SceneViewInteractive',
   );
   final buildMethod = interactiveClass == null
       ? null
-      : _findMethodByName(interactiveClass.members, 'build');
+      : findMethodDeclarationByName(interactiveClass.members, 'build');
   final controllerFilePath = _repoRelPath(
     context,
     _interactiveArchitectureFile(context, 'scene_controller.dart'),
@@ -88,23 +88,23 @@ Future<GuardrailViolation?> _checkRenderSurfaceBoundary(
     file: file,
     filePath: filePath,
   );
-  final widgetClass = _findClassByName(
+  final widgetClass = findClassDeclarationByName(
     resolved.unit.declarations,
     'SceneViewRenderSurface',
   );
-  final stateClass = _findClassByName(
+  final stateClass = findClassDeclarationByName(
     resolved.unit.declarations,
     'SceneViewRenderSurfaceState',
   );
   final initState = stateClass == null
       ? null
-      : _findMethodByName(stateClass.members, 'initState');
+      : findMethodDeclarationByName(stateClass.members, 'initState');
   final didUpdateWidget = stateClass == null
       ? null
-      : _findMethodByName(stateClass.members, 'didUpdateWidget');
+      : findMethodDeclarationByName(stateClass.members, 'didUpdateWidget');
   final disposeMethod = stateClass == null
       ? null
-      : _findMethodByName(stateClass.members, 'dispose');
+      : findMethodDeclarationByName(stateClass.members, 'dispose');
   final renderStateFilePaths = <String>{
     _repoRelPath(
       context,
@@ -129,7 +129,7 @@ Future<GuardrailViolation?> _checkRenderSurfaceBoundary(
           _hasImport(parsed, '../contract/scene_view_runtime.dart')) ||
       widgetClass == null ||
       stateClass == null ||
-      !_classHasOnlyUnnamedConstructor(widgetClass) ||
+      !classHasOnlyUnnamedConstructor(widgetClass) ||
       _hasForbiddenImports(parsed, <String>{
         '../interactive/scene_controller.dart',
         '../controller/scene_store_controller.dart',

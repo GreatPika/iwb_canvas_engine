@@ -11,7 +11,7 @@ Future<GuardrailViolation?> _checkInteractiveFacadeBoundary(
     file: file,
     filePath: filePath,
   );
-  final interactiveClass = _findClassByName(
+  final interactiveClass = findClassDeclarationByName(
     resolved.unit.declarations,
     'SceneController',
   );
@@ -43,7 +43,7 @@ Future<GuardrailViolation?> _checkInteractiveFacadeBoundary(
           'facade over the assembled controller graph.',
     );
   }
-  if (_classImplements(interactiveClass, 'SceneViewRenderState')) {
+  if (classImplementsNamedInterface(interactiveClass, 'SceneViewRenderState')) {
     return GuardrailViolation(
       filePath: filePath,
       line: _lineForResolvedOffset(resolved, interactiveClass.offset),

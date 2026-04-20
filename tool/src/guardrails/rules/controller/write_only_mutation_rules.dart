@@ -11,7 +11,7 @@ import '../../support/guardrail_context.dart';
 import '../../support/guardrail_path_utils.dart';
 import '../../core/element_violation_builder.dart';
 import '../../core/guardrail_runner_support.dart';
-import '../../core/public_constructor_surface_support.dart';
+import '../../core/resolved_surface_contract_support.dart';
 import 'committed_read_side_rules.dart';
 import '../../core/guardrail_element_utils.dart' as element_utils;
 import '../../core/guardrail_violation.dart';
@@ -1280,11 +1280,13 @@ bool _matchesSelectionRoutingInvocation({
     return false;
   }
   final constructor = opExpression.constructorName.element;
-  return _matchesElementIdentity(
-    element: constructor?.enclosingElement,
-    repoRelPath: '/lib/src/controller/mutation_op.dart',
-    typeName: spec.opTypeName,
+  return matchesTypeIdentity(
     context: context,
+    element: constructor?.enclosingElement,
+    spec: SurfaceContractTypeIdentitySpec(
+      repoRelPath: '/lib/src/controller/mutation_op.dart',
+      typeName: spec.opTypeName,
+    ),
   );
 }
 
@@ -1295,11 +1297,13 @@ bool _implementsForbiddenType({
   required String forbiddenTypeName,
 }) {
   return typeOwner.interfaces.any(
-    (interfaceType) => _matchesElementIdentity(
-      element: interfaceType.element,
-      repoRelPath: forbiddenRepoRelPath,
-      typeName: forbiddenTypeName,
+    (interfaceType) => matchesTypeIdentity(
       context: context,
+      element: interfaceType.element,
+      spec: SurfaceContractTypeIdentitySpec(
+        repoRelPath: forbiddenRepoRelPath,
+        typeName: forbiddenTypeName,
+      ),
     ),
   );
 }
@@ -1310,11 +1314,13 @@ bool _hasDeclaredExtensionTarget({
   required String targetRepoRelPath,
   required String targetTypeName,
 }) {
-  return _matchesElementIdentity(
-    element: extensionElement.extendedType.element,
-    repoRelPath: targetRepoRelPath,
-    typeName: targetTypeName,
+  return matchesTypeIdentity(
     context: context,
+    element: extensionElement.extendedType.element,
+    spec: SurfaceContractTypeIdentitySpec(
+      repoRelPath: targetRepoRelPath,
+      typeName: targetTypeName,
+    ),
   );
 }
 

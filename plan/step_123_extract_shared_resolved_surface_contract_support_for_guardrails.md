@@ -202,7 +202,7 @@ This step is the first cross-family consolidation pass: it turns migrated local 
 
 ## 9. Vertical Slices
 
-### Slice 1. [ ] Shared resolved surface-contract support replaces constructor-only support
+### Slice 1. [x] Shared resolved surface-contract support replaces constructor-only support
 
 #### Slice Contract
 One shared core module owns constructor policy and broader resolved surface-contract validation mechanics.
@@ -233,7 +233,7 @@ One shared core module owns constructor policy and broader resolved surface-cont
 - Green run of the listed structural verification.
 - `public_constructor_surface_support.dart` is retired.
 
-### Slice 2. [ ] Prepared-replace surface contracts use shared core support
+### Slice 2. [x] Prepared-replace surface contracts use shared core support
 
 #### Slice Contract
 Prepared-replace boundary owner/member/signature/constructor checks consume shared resolved surface-contract support instead of local repeated mechanics.
@@ -262,7 +262,7 @@ Prepared-replace boundary owner/member/signature/constructor checks consume shar
 - Green run of the listed structural verification.
 - Prepared-replace boundary checks no longer reimplement shared surface-contract mechanics inline.
 
-### Slice 3. [ ] Controller and interactive rule families converge on the shared surface-contract seam
+### Slice 3. [x] Controller and interactive rule families converge on the shared surface-contract seam
 
 #### Slice Contract
 Controller write-only surface checks and interactive constructor-surface checks use the same shared resolved surface-contract support seam.

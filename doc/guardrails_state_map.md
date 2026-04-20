@@ -14,7 +14,7 @@ tool/src/guardrails/
     guardrail_rule_metadata.dart
     guardrail_runner_support.dart
     guardrail_element_utils.dart
-    public_constructor_surface_support.dart
+    resolved_surface_contract_support.dart
     resolved_type_leak_traversal.dart
     signature_leak_support.dart
   rules/
@@ -102,7 +102,7 @@ even if they are utility/thin wrappers and not primary invariant owners:
 - `core/guardrail_runner_support.dart` (shared parse/scan/fail-fast support)
 - `core/guardrail_violation.dart` (violation/tool failure primitives)
 - `core/element_violation_builder.dart` (shared element-backed violation construction)
-- `core/public_constructor_surface_support.dart` (shared public-constructor surface validation)
+- `core/resolved_surface_contract_support.dart` (shared resolved surface-contract validation for top-level/member/constructor/interface/signature proof)
 - `core/resolved_type_leak_traversal.dart` (shared recursive resolved-type traversal)
 - `core/signature_leak_support.dart` (shared signature leak detection helpers)
 - `rules/public/entrypoint_layout_rules.dart` (layout-check adapter to `layer_guardrails`)
@@ -137,8 +137,10 @@ even if they are utility/thin wrappers and not primary invariant owners:
 - `runContractArchitectureGuardrails`
 - `runModelArchitectureGuardrails`
 
-5. Constructor-surface checks were partially unified via `core/public_constructor_surface_support.dart`,
-but two outer rule wrappers still remain similar by message shape.
+5. Resolved surface-contract mechanics now converge through
+`core/resolved_surface_contract_support.dart`, but interactive architecture and
+mutation-owner families still keep some family-local structural proof around
+their semantic checks.
 
 ## Metrics Hotspots (HIGH/VERY HIGH counts)
 
@@ -204,7 +206,7 @@ Notable very-high functions:
   - shared resolved-type traversal
   - shared signature leak helpers
   - shared element-backed violation builder
-  - shared public-constructor surface validator
+  - shared resolved surface-contract validator
   - shared architecture-file parse/part/directive helpers
 - Clone clusters reduced from **19 -> 8** across the current refactor campaign.
 - Major remaining clones are now structural siblings, not broad copy-paste utility duplication.

@@ -101,22 +101,6 @@ bool _classOrInterfaceOwnsGetter(ParsedUnitResult parsed, String getterName) {
   return false;
 }
 
-bool _hasClassLikeDeclaration(
-  ParsedUnitResult parsed,
-  String className, {
-  required bool requireInterface,
-}) {
-  final classDeclaration = _findClassDeclaration(parsed.unit, className);
-  if (classDeclaration == null) {
-    return false;
-  }
-  if (!requireInterface) {
-    return true;
-  }
-  return classDeclaration.abstractKeyword != null &&
-      classDeclaration.interfaceKeyword != null;
-}
-
 MethodDeclaration? _findClassMethodDeclaration(
   ParsedUnitResult parsed,
   String className,
@@ -175,16 +159,6 @@ MethodDeclaration? _findExtensionMethodOnType(
   return null;
 }
 
-bool _classImplements(ClassDeclaration declaration, String interfaceName) {
-  final implementsClause = declaration.implementsClause;
-  if (implementsClause == null) {
-    return false;
-  }
-  return implementsClause.interfaces.any(
-    (type) => type.name.lexeme == interfaceName,
-  );
-}
-
 bool _classHasFieldNamed(ClassDeclaration declaration, String fieldName) {
   for (final field in declaration.members.whereType<FieldDeclaration>()) {
     for (final variable in field.fields.variables) {
@@ -202,14 +176,6 @@ bool _classIsFinal(ClassDeclaration declaration) {
   return source.startsWith('final class ') ||
       source.startsWith('base final class ') ||
       source.startsWith('sealed final class ');
-}
-
-bool _classHasOnlyUnnamedConstructor(ClassDeclaration declaration) {
-  final constructors = declaration.members.whereType<ConstructorDeclaration>();
-  if (constructors.isEmpty) {
-    return false;
-  }
-  return constructors.every((constructor) => constructor.name == null);
 }
 
 bool _classHasFieldTypeFromAllowedFiles(

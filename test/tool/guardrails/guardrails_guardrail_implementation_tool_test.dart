@@ -17,6 +17,8 @@ void main() {
       expect(
         coveredResolvedGuardrailSelfGuardFiles,
         orderedEquals(<String>[
+          'tool/src/guardrails/core/resolved_surface_contract_support.dart',
+          'tool/src/guardrails/rules/controller/prepared_replace_boundary_rules.dart',
           'tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart',
           'tool/src/guardrails/rules/interactive/resolved_entrypoint_guard_rules.dart',
           'tool/src/guardrails/rules/interactive/interactive_mutation_owner_guard_rules.dart',
@@ -171,15 +173,203 @@ const String path = 'resolver_purity_rules.dart';
 ''');
       expect(violations, isEmpty);
     });
+
+    test('surface-contract support ownership stays single and explicit', () {
+      final repoRoot = Directory.current.absolute;
+      final coreDir = Directory(
+        '${repoRoot.path}${Platform.pathSeparator}'
+        'tool${Platform.pathSeparator}src${Platform.pathSeparator}'
+        'guardrails${Platform.pathSeparator}core',
+      );
+      final surfaceSupportFiles =
+          coreDir
+              .listSync()
+              .whereType<File>()
+              .map((file) => file.path.replaceAll('\\', '/'))
+              .where((path) => path.endsWith('surface_contract_support.dart'))
+              .toList(growable: false)
+            ..sort();
+      expect(
+        surfaceSupportFiles,
+        orderedEquals(<String>[
+          '${repoRoot.path.replaceAll('\\', '/')}/tool/src/guardrails/core/resolved_surface_contract_support.dart',
+        ]),
+      );
+      expect(
+        File(
+          '${repoRoot.path}${Platform.pathSeparator}'
+          'tool${Platform.pathSeparator}src${Platform.pathSeparator}'
+          'guardrails${Platform.pathSeparator}core${Platform.pathSeparator}'
+          'public_constructor_surface_support.dart',
+        ).existsSync(),
+        isFalse,
+      );
+    });
+
+    test('shared surface-contract seam stays wired into intended consumers', () {
+      final repoRoot = Directory.current.absolute;
+      for (final repoRelativePath in _surfaceContractImportOwners) {
+        final content = File(
+          '${repoRoot.path}${Platform.pathSeparator}$repoRelativePath',
+        ).readAsStringSync();
+        expect(
+          content,
+          contains('resolved_surface_contract_support.dart'),
+          reason:
+              '$repoRelativePath must keep importing the shared surface-contract seam.',
+        );
+      }
+
+      for (final entry in _surfaceContractApiConsumers.entries) {
+        final content = File(
+          '${repoRoot.path}${Platform.pathSeparator}${entry.key}',
+        ).readAsStringSync();
+        for (final helperName in entry.value) {
+          expect(
+            content,
+            contains(helperName),
+            reason:
+                '${entry.key} must consume $helperName from the shared surface-contract seam.',
+          );
+        }
+      }
+
+      for (final repoRelativePath in _surfaceContractGuardedFiles) {
+        final content = File(
+          '${repoRoot.path}${Platform.pathSeparator}$repoRelativePath',
+        ).readAsStringSync();
+        for (final bannedName in _bannedParallelSurfaceHelpers) {
+          expect(
+            content,
+            isNot(contains(bannedName)),
+            reason:
+                '$repoRelativePath must not reintroduce local parallel helper $bannedName.',
+          );
+        }
+      }
+
+      for (final repoRelativePath
+          in _interactiveSurfaceContractDirectConsumers) {
+        final content = File(
+          '${repoRoot.path}${Platform.pathSeparator}$repoRelativePath',
+        ).readAsStringSync();
+        expect(
+          content,
+          isNot(contains('_classImplements(')),
+          reason:
+              '$repoRelativePath must not route interface proof through a family-local helper.',
+        );
+        expect(
+          content,
+          isNot(contains('_classHasOnlyUnnamedConstructor(')),
+          reason:
+              '$repoRelativePath must not route constructor proof through a family-local helper.',
+        );
+        expect(
+          content,
+          isNot(contains('_hasClassLikeDeclaration(')),
+          reason:
+              '$repoRelativePath must not route owner-surface proof through a family-local helper.',
+        );
+        expect(
+          content,
+          isNot(contains('_findClassMethodDeclaration(')),
+          reason:
+              '$repoRelativePath must not route member-surface proof through a family-local helper.',
+        );
+        expect(
+          content,
+          isNot(contains('_classOwnsMethod(')),
+          reason:
+              '$repoRelativePath must not route member-surface proof through a family-local helper.',
+        );
+        expect(
+          content,
+          isNot(contains('_findClassByName(')),
+          reason:
+              '$repoRelativePath must not route owner lookup through a family-local helper.',
+        );
+        expect(
+          content,
+          isNot(contains('_findMethodByName(')),
+          reason:
+              '$repoRelativePath must not route member lookup through a family-local helper.',
+        );
+      }
+    });
   });
 }
 
 const List<String> coveredResolvedGuardrailSelfGuardFiles = <String>[
+  'tool/src/guardrails/core/resolved_surface_contract_support.dart',
+  'tool/src/guardrails/rules/controller/prepared_replace_boundary_rules.dart',
   'tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart',
   'tool/src/guardrails/rules/interactive/resolved_entrypoint_guard_rules.dart',
   'tool/src/guardrails/rules/interactive/interactive_mutation_owner_guard_rules.dart',
   'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_rules.dart',
   'tool/src/guardrails/rules/controller/write_only_mutation_rules.dart',
+];
+
+const List<String> _surfaceContractImportOwners = <String>[
+  'tool/src/guardrails/rules/controller/write_only_mutation_rules.dart',
+  'tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart',
+];
+
+const Map<String, List<String>>
+_surfaceContractApiConsumers = <String, List<String>>{
+  'tool/src/guardrails/rules/controller/prepared_replace_boundary_rules.dart':
+      <String>[
+        'validateExactPublicTopLevelSurface',
+        'validateExactPublicMemberSurface',
+        'validateExactImplementedInterfaces',
+        'validateExactMethodSignature',
+      ],
+  'tool/src/guardrails/rules/interactive/interactive_mutation_owner_guard_rules.dart':
+      <String>['findClassDeclarationByName', 'findMethodDeclarationByName'],
+  'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_view_rules.dart':
+      <String>[
+        'hasClassLikeDeclaration',
+        'findClassMethodDeclarationInParsedUnit',
+        'classOwnsMethod',
+      ],
+  'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_facade_rules.dart':
+      <String>['findClassDeclarationByName', 'classImplementsNamedInterface'],
+  'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_view_surface_rules.dart':
+      <String>[
+        'findClassDeclarationByName',
+        'findMethodDeclarationByName',
+        'classHasOnlyUnnamedConstructor',
+      ],
+  'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_pointer_rules.dart':
+      <String>[
+        'findClassDeclarationByName',
+        'findMethodDeclarationByName',
+        'classImplementsNamedInterface',
+      ],
+};
+
+const List<String> _surfaceContractGuardedFiles = <String>[
+  'tool/src/guardrails/rules/controller/prepared_replace_boundary_rules.dart',
+  'tool/src/guardrails/rules/controller/write_only_mutation_rules.dart',
+  'tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart',
+  'tool/src/guardrails/rules/interactive/interactive_mutation_owner_guard_rules.dart',
+  'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_rules.dart',
+];
+
+const List<String> _interactiveSurfaceContractDirectConsumers = <String>[
+  'tool/src/guardrails/rules/interactive/interactive_mutation_owner_guard_rules.dart',
+  'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_view_rules.dart',
+  'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_facade_rules.dart',
+  'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_view_surface_rules.dart',
+  'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_pointer_rules.dart',
+];
+
+const List<String> _bannedParallelSurfaceHelpers = <String>[
+  '_publicTopLevelSurfaceViolation',
+  '_publicMemberSurfaceViolation',
+  '_singleUnnamedPublicConstructorViolation',
+  '_explicitPublicConstructorViolation',
+  '_preparedReplaceMethodSignatureViolation',
 ];
 
 List<_SelfGuardViolation> _collectSnippetViolations(String content) {

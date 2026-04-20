@@ -20,32 +20,6 @@ final class _PreparedReplaceClassOwner {
   final ClassDeclaration declaration;
 }
 
-final class _PreparedReplaceParameterSpec {
-  const _PreparedReplaceParameterSpec.simple({
-    required this.name,
-    required this.typeSource,
-  }) : isRequiredNamed = false;
-
-  const _PreparedReplaceParameterSpec.requiredNamed({
-    required this.name,
-    required this.typeSource,
-  }) : isRequiredNamed = true;
-
-  final String name;
-  final String typeSource;
-  final bool isRequiredNamed;
-}
-
-final class _PreparedReplaceMethodSignatureSpec {
-  const _PreparedReplaceMethodSignatureSpec({
-    required this.detail,
-    this.parameters = const <_PreparedReplaceParameterSpec>[],
-  });
-
-  final String detail;
-  final List<_PreparedReplaceParameterSpec> parameters;
-}
-
 enum _PreparedReplaceConstructorPolicy {
   none,
   forbidExplicitPublicConstructors,
@@ -55,8 +29,7 @@ enum _PreparedReplaceConstructorPolicy {
 typedef _PreparedReplaceOwnerDeclarationValidator =
     GuardrailViolation? Function({
       required _PreparedReplaceClassOwner owner,
-      required ParsedUnitResult parsed,
-      required String filePath,
+      required GuardrailContext context,
     });
 
 Future<GuardrailViolation?> _checkPreparedReplaceSceneBoundaryHermeticity(
@@ -222,12 +195,18 @@ GuardrailViolation? _checkPreparedReplacePrelude({
   required String filePath,
   required _PreparedReplacePreludeSpec spec,
 }) {
-  final topLevelViolation = _publicTopLevelSurfaceViolation(
+  final topLevelViolation = validateExactPublicTopLevelSurface(
     context: context,
-    filePath: filePath,
     library: resolved.element,
     allowedNames: spec.allowedTopLevelNames,
     requiredNames: spec.requiredTopLevelNames,
+    buildViolation: _controllerPreparedReplaceViolation,
+    unexpectedDetail: (unexpectedName) =>
+        'prepared replace-scene boundary surface in $filePath must not add '
+        'public top-level declaration "$unexpectedName".',
+    missingDetail: (requiredName) =>
+        'prepared replace-scene boundary surface in $filePath must keep '
+        'public top-level declaration "$requiredName".',
   );
   if (topLevelViolation != null) {
     return topLevelViolation;
@@ -297,8 +276,7 @@ _checkPreparedReplaceClassOwnerSpec({
 
   final declarationViolation = validateDeclaration?.call(
     owner: owner,
-    parsed: parsed,
-    filePath: filePath,
+    context: context,
   );
   if (declarationViolation != null) {
     return (owner: owner, violation: declarationViolation);
@@ -307,40 +285,49 @@ _checkPreparedReplaceClassOwnerSpec({
   final constructorViolation = switch (constructorPolicy) {
     _PreparedReplaceConstructorPolicy.none => null,
     _PreparedReplaceConstructorPolicy.forbidExplicitPublicConstructors =>
-      _explicitPublicConstructorViolation(
-        parsed: parsed,
-        declaration: owner.declaration,
-        filePath: filePath,
-        ownerName: ownerName,
-      ),
-    _PreparedReplaceConstructorPolicy.requireSingleUnnamedPublicConstructor =>
-      _singleUnnamedPublicConstructorViolation(
+      validateNoExplicitPublicConstructors(
         context: context,
         owner: owner.element,
-        ownerName: ownerName,
+        buildViolation: _controllerPreparedReplaceViolation,
+        detail:
+            '$ownerName must not add explicit public constructors on the '
+            'prepared replace-scene boundary surface.',
+      ),
+    _PreparedReplaceConstructorPolicy.requireSingleUnnamedPublicConstructor =>
+      validateSingleUnnamedPublicConstructor(
+        context: context,
+        owner: owner.element,
+        buildViolation: _controllerPreparedReplaceViolation,
+        detail:
+            '$ownerName must keep exactly one unnamed public constructor on '
+            'the prepared replace-scene boundary surface.',
       ),
   };
   if (constructorViolation != null) {
     return (owner: owner, violation: constructorViolation);
   }
 
-  final memberViolation = _publicMemberSurfaceViolation(
+  final memberViolation = validateExactPublicMemberSurface(
     context: context,
     owner: owner.element,
     allowedNames: allowedNames,
     requiredNames: requiredNames,
-    detailPrefix: detailPrefix,
+    buildViolation: _controllerPreparedReplaceViolation,
+    unexpectedDetail: (member) =>
+        '$detailPrefix must not add ${describePublicMemberSurface(member)}.',
+    missingDetail: (requiredKey) =>
+        '$detailPrefix must keep ${describePublicMemberSurfaceKey(requiredKey)}.',
   );
   return (owner: owner, violation: memberViolation);
 }
 
-_PreparedReplaceMethodSignatureSpec _snapshotOnlyPreparedReplaceMethodSpec(
+SurfaceContractMethodSignatureSpec _snapshotOnlyPreparedReplaceMethodSpec(
   String detail,
 ) {
-  return _PreparedReplaceMethodSignatureSpec(
+  return SurfaceContractMethodSignatureSpec(
     detail: detail,
-    parameters: const <_PreparedReplaceParameterSpec>[
-      _PreparedReplaceParameterSpec.simple(
+    parameters: const <SurfaceContractParameterSpec>[
+      SurfaceContractParameterSpec.positional(
         name: 'snapshot',
         typeSource: 'SceneSnapshot',
       ),
@@ -348,16 +335,16 @@ _PreparedReplaceMethodSignatureSpec _snapshotOnlyPreparedReplaceMethodSpec(
   );
 }
 
-_PreparedReplaceMethodSignatureSpec
+SurfaceContractMethodSignatureSpec
 _snapshotBeforeApplyPreparedReplaceMethodSpec(String detail) {
-  return _PreparedReplaceMethodSignatureSpec(
+  return SurfaceContractMethodSignatureSpec(
     detail: detail,
-    parameters: const <_PreparedReplaceParameterSpec>[
-      _PreparedReplaceParameterSpec.simple(
+    parameters: const <SurfaceContractParameterSpec>[
+      SurfaceContractParameterSpec.positional(
         name: 'snapshot',
         typeSource: 'SceneSnapshot',
       ),
-      _PreparedReplaceParameterSpec.requiredNamed(
+      SurfaceContractParameterSpec.requiredNamed(
         name: 'beforeApply',
         typeSource: 'VoidCallback',
       ),
@@ -396,17 +383,16 @@ GuardrailViolation? _checkCommittedMutationAccessPreparedReplaceBoundary({
         'SceneControllerCommittedMutationAccess public member surface',
     constructorPolicy:
         _PreparedReplaceConstructorPolicy.forbidExplicitPublicConstructors,
-    validateDeclaration: ({required owner, required parsed, required filePath}) {
-      if (owner.declaration.abstractKeyword != null &&
-          owner.declaration.interfaceKeyword != null) {
+    validateDeclaration: ({required owner, required context}) {
+      if (owner.element.isAbstract && owner.element.isInterface) {
         return null;
       }
-      return GuardrailViolation(
-        filePath: filePath,
-        line: lineForOffset(parsed, owner.declaration.name.offset),
-        message:
-            'controller API violation: SceneControllerCommittedMutationAccess '
-            'must remain an abstract interface class.',
+      return _controllerPreparedReplaceViolation(
+        context: context,
+        sourceElement: owner.element,
+        detail:
+            'SceneControllerCommittedMutationAccess must remain an abstract '
+            'interface class.',
       );
     },
   );
@@ -428,20 +414,31 @@ GuardrailViolation? _checkCommittedMutationAccessPreparedReplaceBoundary({
     detailPrefix:
         'prepared replace-scene boundary owner '
         'SceneStoreControllerCommittedMutationAccess public member surface',
-    validateDeclaration: ({required owner, required parsed, required filePath}) {
-      if (owner.declaration.finalKeyword != null &&
-          owner.declaration.implementsClause?.interfaces.length == 1 &&
-          owner.declaration.implementsClause?.interfaces.single.toSource() ==
-              'SceneControllerCommittedMutationAccess') {
+    validateDeclaration: ({required owner, required context}) {
+      final interfaceViolation = validateExactImplementedInterfaces(
+        context: context,
+        owner: owner.element,
+        exactInterfaces: const <SurfaceContractTypeIdentitySpec>[
+          SurfaceContractTypeIdentitySpec(
+            repoRelPath:
+                '/lib/src/controller/scene_controller_committed_mutation_access.dart',
+            typeName: 'SceneControllerCommittedMutationAccess',
+          ),
+        ],
+        buildViolation: _controllerPreparedReplaceViolation,
+        detail:
+            'SceneStoreControllerCommittedMutationAccess must remain a final '
+            'adapter implementing SceneControllerCommittedMutationAccess.',
+      );
+      if (owner.element.isFinal && interfaceViolation == null) {
         return null;
       }
-      return GuardrailViolation(
-        filePath: filePath,
-        line: lineForOffset(parsed, owner.declaration.name.offset),
-        message:
-            'controller API violation: SceneStoreControllerCommittedMutationAccess '
-            'must remain a final adapter implementing '
-            'SceneControllerCommittedMutationAccess.',
+      return _controllerPreparedReplaceViolation(
+        context: context,
+        sourceElement: owner.element,
+        detail:
+            'SceneStoreControllerCommittedMutationAccess must remain a final '
+            'adapter implementing SceneControllerCommittedMutationAccess.',
       );
     },
   );
@@ -457,7 +454,7 @@ GuardrailViolation? _checkCommittedMutationAccessPreparedReplaceBoundary({
     interfaceOwner.declaration.members,
     'replaceScene',
   );
-  final interfaceSignatureViolation = _preparedReplaceMethodSignatureViolation(
+  final interfaceSignatureViolation = validateExactMethodSignature(
     parsed: parsed,
     member: interfaceReplaceScene,
     filePath: filePath,
@@ -474,7 +471,7 @@ GuardrailViolation? _checkCommittedMutationAccessPreparedReplaceBoundary({
     adapterOwner.declaration.members,
     'replaceScene',
   );
-  return _preparedReplaceMethodSignatureViolation(
+  return validateExactMethodSignature(
     parsed: parsed,
     member: adapterReplaceScene,
     filePath: filePath,
@@ -551,7 +548,7 @@ GuardrailViolation? _checkSceneStorePreparedReplaceBoundary({
     'writeReplaceScene',
   );
   if (classWriteReplaceScene != null) {
-    final classSignatureViolation = _preparedReplaceMethodSignatureViolation(
+    final classSignatureViolation = validateExactMethodSignature(
       parsed: parsed,
       member: classWriteReplaceScene,
       filePath: filePath,
@@ -598,8 +595,14 @@ GuardrailViolation? _checkSceneStorePreparedReplaceBoundary({
           'SceneStoreControllerCommittedSceneReplacementAccess.',
     );
   }
-  if (committedExtensionDeclaration.onClause?.extendedType.toSource() !=
-      'SceneStoreController') {
+  if (!matchesTypeIdentity(
+    context: context,
+    element: committedExtensionElement.extendedType.element,
+    spec: const SurfaceContractTypeIdentitySpec(
+      repoRelPath: '/lib/src/controller/scene_store_controller.dart',
+      typeName: 'SceneStoreController',
+    ),
+  )) {
     return GuardrailViolation(
       filePath: filePath,
       line: lineForOffset(
@@ -612,14 +615,19 @@ GuardrailViolation? _checkSceneStorePreparedReplaceBoundary({
           'SceneStoreController.',
     );
   }
-  final extensionMemberViolation = _publicMemberSurfaceViolation(
+  final extensionMemberViolation = validateExactPublicMemberSurface(
     context: context,
     owner: committedExtensionElement,
     allowedNames: const <String>{'method:writeReplaceScene'},
-    detailPrefix:
+    buildViolation: _controllerPreparedReplaceViolation,
+    unexpectedDetail: (member) =>
         'prepared replace-scene boundary owner '
         'SceneStoreControllerCommittedSceneReplacementAccess public member '
-        'surface',
+        'surface must not add ${describePublicMemberSurface(member)}.',
+    missingDetail: (requiredKey) =>
+        'prepared replace-scene boundary owner '
+        'SceneStoreControllerCommittedSceneReplacementAccess public member '
+        'surface must keep ${describePublicMemberSurfaceKey(requiredKey)}.',
   );
   if (extensionMemberViolation != null) {
     return extensionMemberViolation;
@@ -629,7 +637,7 @@ GuardrailViolation? _checkSceneStorePreparedReplaceBoundary({
     committedExtensionDeclaration.members,
     'writeReplaceScene',
   );
-  return _preparedReplaceMethodSignatureViolation(
+  return validateExactMethodSignature(
     parsed: parsed,
     member: writeReplaceScene,
     filePath: filePath,
@@ -682,7 +690,7 @@ GuardrailViolation? _checkSceneWriterPreparedReplaceBoundary({
     writerOwner.declaration.members,
     'writeDocumentReplace',
   );
-  return _preparedReplaceMethodSignatureViolation(
+  return validateExactMethodSignature(
     parsed: parsed,
     member: writeDocumentReplace,
     filePath: filePath,
@@ -782,170 +790,6 @@ bool _looksLikePreparedReplaceSceneBoundaryIdentifier(String lexeme) {
   return RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$').hasMatch(lexeme);
 }
 
-GuardrailViolation? _publicTopLevelSurfaceViolation({
-  required GuardrailContext context,
-  required String filePath,
-  required LibraryElement library,
-  required Set<String> allowedNames,
-  Set<String>? requiredNames,
-}) {
-  final publicElements = _publicTopLevelElements(library)
-    ..sort(element_utils.compareElementsBySourceOrder);
-  for (final element in publicElements) {
-    if (allowedNames.contains(element.displayName)) {
-      continue;
-    }
-    return _controllerPreparedReplaceViolation(
-      context: context,
-      sourceElement: element,
-      detail:
-          'prepared replace-scene boundary surface in $filePath must not add '
-          'public top-level declaration "${element.displayName}".',
-    );
-  }
-
-  final effectiveRequiredNames = requiredNames ?? allowedNames;
-  for (final requiredName in effectiveRequiredNames) {
-    final present = publicElements.any(
-      (element) => element.displayName == requiredName,
-    );
-    if (present) {
-      continue;
-    }
-    return GuardrailViolation(
-      filePath: filePath,
-      line: 1,
-      message:
-          'controller API violation: prepared replace-scene boundary surface '
-          'in $filePath must keep public top-level declaration '
-          '"$requiredName".',
-    );
-  }
-  return null;
-}
-
-List<Element> _publicTopLevelElements(LibraryElement library) {
-  return <Element>[
-    ...library.classes.where(element_utils.isPublicNamedElement),
-    ...library.enums.where(element_utils.isPublicNamedElement),
-    ...library.mixins.where(element_utils.isPublicNamedElement),
-    ...library.extensions.where(element_utils.isPublicNamedElement),
-    ...library.extensionTypes.where(element_utils.isPublicNamedElement),
-    ...library.typeAliases.where(element_utils.isPublicNamedElement),
-    ...library.topLevelFunctions.where(element_utils.isPublicNamedElement),
-    ...library.topLevelVariables.where(element_utils.isPublicNamedElement),
-    ...library.getters.where(
-      (element) =>
-          !element.isSynthetic && element_utils.isPublicNamedElement(element),
-    ),
-    ...library.setters.where(
-      (element) =>
-          !element.isSynthetic && element_utils.isPublicNamedElement(element),
-    ),
-  ];
-}
-
-String _publicMemberSurfaceKey(Element member) {
-  final name = member.displayName;
-  if (member is FieldElement) {
-    return 'field:$name';
-  }
-  if (member is PropertyAccessorElement) {
-    return member is SetterElement ? 'setter:$name' : 'getter:$name';
-  }
-  if (member is MethodElement) {
-    return 'method:$name';
-  }
-  return 'member:$name';
-}
-
-String _publicMemberSurfaceDescription(Element member) {
-  if (member is FieldElement) {
-    return 'public field "${member.displayName}"';
-  }
-  if (member is PropertyAccessorElement) {
-    return member is SetterElement
-        ? 'public setter "${member.displayName}"'
-        : 'public getter "${member.displayName}"';
-  }
-  if (member is MethodElement) {
-    return 'public method "${member.displayName}"';
-  }
-  return 'public member "${member.displayName}"';
-}
-
-String _publicMemberSurfaceDescriptionForKey(String key) {
-  final parts = key.split(':');
-  if (parts.length != 2) {
-    return 'public member "$key"';
-  }
-  final kind = parts.first;
-  final name = parts.last;
-  return switch (kind) {
-    'field' => 'public field "$name"',
-    'getter' => 'public getter "$name"',
-    'setter' => 'public setter "$name"',
-    'method' => 'public method "$name"',
-    _ => 'public member "$name"',
-  };
-}
-
-GuardrailViolation? _publicMemberSurfaceViolation({
-  required GuardrailContext context,
-  required InstanceElement owner,
-  required Set<String> allowedNames,
-  required String detailPrefix,
-  Set<String>? requiredNames,
-}) {
-  final publicMembers = _publicInstanceMembers(owner)
-    ..sort(element_utils.compareElementsBySourceOrder);
-  for (final member in publicMembers) {
-    final memberKey = _publicMemberSurfaceKey(member);
-    if (allowedNames.contains(memberKey)) {
-      continue;
-    }
-    return _controllerPreparedReplaceViolation(
-      context: context,
-      sourceElement: member,
-      detail:
-          '$detailPrefix must not add ${_publicMemberSurfaceDescription(member)}.',
-    );
-  }
-
-  final publicMemberNames = publicMembers.map(_publicMemberSurfaceKey).toSet();
-  final effectiveRequiredNames = requiredNames ?? allowedNames;
-  for (final requiredName in effectiveRequiredNames) {
-    if (publicMemberNames.contains(requiredName)) {
-      continue;
-    }
-    return _controllerPreparedReplaceViolation(
-      context: context,
-      sourceElement: owner,
-      detail:
-          '$detailPrefix must keep ${_publicMemberSurfaceDescriptionForKey(requiredName)}.',
-    );
-  }
-  return null;
-}
-
-List<Element> _publicInstanceMembers(InstanceElement owner) {
-  return <Element>[
-    ...owner.fields.where(
-      (field) =>
-          !field.isSynthetic && element_utils.isPublicNamedElement(field),
-    ),
-    ...owner.getters.where(
-      (getter) =>
-          !getter.isSynthetic && element_utils.isPublicNamedElement(getter),
-    ),
-    ...owner.setters.where(
-      (setter) =>
-          !setter.isSynthetic && element_utils.isPublicNamedElement(setter),
-    ),
-    ...owner.methods.where(element_utils.isPublicNamedElement),
-  ];
-}
-
 GuardrailViolation? _unnamedExtensionSurfaceViolation({
   required ParsedUnitResult parsed,
   required String filePath,
@@ -962,132 +806,6 @@ GuardrailViolation? _unnamedExtensionSurfaceViolation({
     }
   }
   return null;
-}
-
-GuardrailViolation? _explicitPublicConstructorViolation({
-  required ParsedUnitResult parsed,
-  required ClassDeclaration declaration,
-  required String filePath,
-  required String ownerName,
-}) {
-  for (final member in declaration.members) {
-    if (member is! ConstructorDeclaration) {
-      continue;
-    }
-    final constructorName = member.name?.lexeme ?? '';
-    if (constructorName.isNotEmpty && !isPublicName(constructorName)) {
-      continue;
-    }
-    return GuardrailViolation(
-      filePath: filePath,
-      line: lineForOffset(parsed, member.offset),
-      message:
-          'controller API violation: $ownerName must not add explicit public '
-          'constructors on the prepared replace-scene boundary surface.',
-    );
-  }
-  return null;
-}
-
-GuardrailViolation? _singleUnnamedPublicConstructorViolation({
-  required GuardrailContext context,
-  required InterfaceElement owner,
-  required String ownerName,
-}) {
-  final publicConstructors =
-      owner.constructors
-          .where(element_utils.isPublicConstructor)
-          .toList(growable: false)
-        ..sort(element_utils.compareElementsBySourceOrder);
-  if (publicConstructors.length != 1 ||
-      element_utils
-          .normalizedConstructorName(publicConstructors.single)
-          .isNotEmpty) {
-    return _controllerPreparedReplaceViolation(
-      context: context,
-      sourceElement: publicConstructors.isEmpty
-          ? owner
-          : publicConstructors.first,
-      detail:
-          '$ownerName must keep exactly one unnamed public constructor on the '
-          'prepared replace-scene boundary surface.',
-    );
-  }
-  return null;
-}
-
-GuardrailViolation? _preparedReplaceMethodSignatureViolation({
-  required ParsedUnitResult parsed,
-  required MethodDeclaration? member,
-  required String filePath,
-  required _PreparedReplaceMethodSignatureSpec spec,
-}) {
-  if (member == null ||
-      member.returnType?.toSource() != 'void' ||
-      member.typeParameters != null) {
-    return _preparedReplaceSceneSignatureError(
-      filePath: filePath,
-      line: member == null ? 1 : lineForOffset(parsed, member.offset),
-      detail: spec.detail,
-    );
-  }
-
-  final parameters = member.parameters?.parameters ?? const <FormalParameter>[];
-  if (parameters.length != spec.parameters.length) {
-    return _preparedReplaceSceneSignatureError(
-      filePath: filePath,
-      line: lineForOffset(parsed, member.offset),
-      detail: spec.detail,
-    );
-  }
-
-  for (var index = 0; index < parameters.length; index++) {
-    if (!_matchesPreparedReplaceParameter(
-      parameters[index],
-      spec.parameters[index],
-    )) {
-      return _preparedReplaceSceneSignatureError(
-        filePath: filePath,
-        line: lineForOffset(parsed, member.offset),
-        detail: spec.detail,
-      );
-    }
-  }
-
-  return null;
-}
-
-bool _matchesPreparedReplaceParameter(
-  FormalParameter actual,
-  _PreparedReplaceParameterSpec expected,
-) {
-  if (!expected.isRequiredNamed) {
-    return actual is SimpleFormalParameter &&
-        actual.name?.lexeme == expected.name &&
-        actual.type?.toSource() == expected.typeSource;
-  }
-
-  if (actual is! DefaultFormalParameter ||
-      actual.isRequiredNamed != true ||
-      actual.parameter is! SimpleFormalParameter) {
-    return false;
-  }
-
-  final wrappedParameter = actual.parameter as SimpleFormalParameter;
-  return wrappedParameter.name?.lexeme == expected.name &&
-      wrappedParameter.type?.toSource() == expected.typeSource;
-}
-
-GuardrailViolation _preparedReplaceSceneSignatureError({
-  required String filePath,
-  required int line,
-  required String detail,
-}) {
-  return GuardrailViolation(
-    filePath: filePath,
-    line: line,
-    message: 'controller API violation: $detail',
-  );
 }
 
 GuardrailViolation? _controllerPreparedReplaceViolation({

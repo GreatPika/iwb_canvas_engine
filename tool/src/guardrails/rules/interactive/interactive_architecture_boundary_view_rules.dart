@@ -8,22 +8,22 @@ GuardrailViolation? _checkSceneViewRuntimeContract(GuardrailContext context) {
   final filePath = _repoRelPath(context, file);
   final parsed = _parseArchitectureUnit(context, file);
   final source = file.readAsStringSync();
-  final createPointerSession = _findClassMethodDeclaration(
+  final createPointerSession = findClassMethodDeclarationInParsedUnit(
     parsed,
     'SceneViewRuntime',
     'createPointerSession',
   );
-  final detachMethod = _findClassMethodDeclaration(
+  final detachMethod = findClassMethodDeclarationInParsedUnit(
     parsed,
     'SceneViewPointerSession',
     'detach',
   );
-  if (!_hasClassLikeDeclaration(
+  if (!hasClassLikeDeclaration(
         parsed,
         'SceneViewRuntime',
         requireInterface: true,
       ) ||
-      !_hasClassLikeDeclaration(
+      !hasClassLikeDeclaration(
         parsed,
         'SceneViewPointerSession',
         requireInterface: true,
@@ -42,8 +42,8 @@ GuardrailViolation? _checkSceneViewRuntimeContract(GuardrailContext context) {
         r'SceneViewPointerSession\s+createPointerSession\s*\(',
       ).hasMatch(source) ||
       !RegExp(r'void\s+detach\s*\(').hasMatch(source) ||
-      _classOwnsMethod(parsed, 'SceneViewRuntime', 'handleControllerChanged') ||
-      _classOwnsMethod(parsed, 'SceneViewRuntime', 'updateController')) {
+      classOwnsMethod(parsed, 'SceneViewRuntime', 'handleControllerChanged') ||
+      classOwnsMethod(parsed, 'SceneViewRuntime', 'updateController')) {
     return GuardrailViolation(
       filePath: filePath,
       line: 1,

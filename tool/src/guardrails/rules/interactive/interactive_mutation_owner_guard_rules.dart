@@ -21,7 +21,7 @@ Future<GuardrailViolation?> _checkMutationOwnerPolicies(
       file: file,
       filePath: filePath,
     );
-    final ownerClass = _findClassByName(
+    final ownerClass = findClassDeclarationByName(
       resolved.unit.declarations,
       spec.className,
     );
@@ -36,7 +36,10 @@ Future<GuardrailViolation?> _checkMutationOwnerPolicies(
     }
 
     for (final policy in spec.policies) {
-      final member = _findMethodByName(ownerClass.members, policy.methodName);
+      final member = findMethodDeclarationByName(
+        ownerClass.members,
+        policy.methodName,
+      );
       if (member == null) {
         return GuardrailViolation(
           filePath: filePath,
