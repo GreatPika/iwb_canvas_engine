@@ -280,7 +280,9 @@ final class SceneControllerInteractionContext
 import 'internal/scene_controller_interaction_access.dart';
 import 'internal/scene_controller_interaction_runtime.dart';
 
-class SceneControllerInteractionOwner {
+abstract interface class SceneControllerInteraction {}
+
+class SceneControllerInteractionOwner implements SceneControllerInteraction {
   final _access = _CanonicalInteractionOwnerAccess();
 
   void handlePointer(Object input) {
@@ -309,30 +311,41 @@ final class _CanonicalInteractionOwnerAccess
     'lib/src/interactive/scene_controller_selection.dart',
     '''
 import 'internal/scene_controller_interaction_runtime.dart';
+import 'internal/scene_controller_selection_mutations.dart';
 
 class SceneControllerSelectionOwner {
-  SceneControllerSelectionOwner(this._runtime);
+  SceneControllerSelectionOwner({
+    required SceneControllerInteractionRuntime runtime,
+    required SceneControllerSelectionMutations mutations,
+  }) : _runtime = runtime,
+       _mutations = mutations;
 
   final SceneControllerInteractionRuntime _runtime;
+  final SceneControllerSelectionMutations _mutations;
 
   void setSelection(Object nodeIds) {
     _runtime.ensurePublicSideEffectAllowed('setSelection');
+    _mutations.setSelection(nodeIds);
   }
 
   void toggleSelection(Object nodeId) {
     _runtime.ensurePublicSideEffectAllowed('toggleSelection');
+    _mutations.toggleSelection(nodeId);
   }
 
   void clearSelection() {
     _runtime.ensurePublicSideEffectAllowed('clearSelection');
+    _mutations.clearSelection();
   }
 
   void selectAll() {
     _runtime.ensurePublicSideEffectAllowed('selectAll');
+    _mutations.selectAll();
   }
 
   void rotateSelection() {
     _runtime.ensurePublicSideEffectAllowed('rotateSelection');
+    _mutations.rotateSelection();
   }
 }
 ''',
@@ -341,6 +354,8 @@ class SceneControllerSelectionOwner {
     sandbox,
     'lib/src/interactive/scene_controller_scene.dart',
     '''
+import 'internal/scene_controller_scene_mutations.dart';
+
 abstract interface class SceneControllerScene {
   void write(Object fn);
 
@@ -348,19 +363,25 @@ abstract interface class SceneControllerScene {
 }
 
 class SceneControllerSceneOwner implements SceneControllerScene {
-  SceneControllerSceneOwner(this.ensurePublicSideEffectAllowed);
+  SceneControllerSceneOwner({
+    required this.ensurePublicSideEffectAllowed,
+    required SceneControllerSceneMutations mutations,
+  }) : _mutations = mutations;
 
   final void Function(String operation, {bool allowAfterDispose})
   ensurePublicSideEffectAllowed;
+  final SceneControllerSceneMutations _mutations;
 
   @override
   void write(Object fn) {
     ensurePublicSideEffectAllowed('write');
+    _mutations.write(fn);
   }
 
   @override
   void clearScene() {
     ensurePublicSideEffectAllowed('clearScene');
+    _mutations.clearScene();
   }
 }
 
@@ -400,16 +421,16 @@ class InteractiveEventDispatcher {
     sandbox,
     'lib/src/interactive/internal/interactive_selection_actions.dart',
     '''
+import 'scene_controller_mutation_boundary.dart';
+
 class InteractiveSelectionActions {
-  final mutations = Object();
+  InteractiveSelectionActions({required this.mutations});
+
+  final SceneControllerMutationBoundary mutations;
 
   Object commitMoveSelection(Object proposedDelta) {
     return mutations.commitMoveSelection(proposedDelta);
   }
-}
-
-class _Mutations {
-  Object commitMoveSelection(Object proposedDelta) => proposedDelta;
 }
 ''',
   );
@@ -492,24 +513,17 @@ import 'interactive_move_session.dart';
 import 'interactive_pointer_normalizer.dart';
 import 'interactive_gesture_router.dart';
 import 'interactive_double_tap_router.dart';
+import 'interactive_runtime_callbacks.dart';
 import 'pointer_session_token.dart';
-import 'scene_controller_mutation_boundary.dart';
 
 class InteractiveRuntime {
-  InteractiveRuntime({required this.events});
+  InteractiveRuntime({
+    required this.callbacks,
+    InteractiveEventDispatcher? events,
+  }) : events = events ?? InteractiveEventDispatcher();
 
   final InteractiveEventDispatcher events;
-  final mutationBoundary = SceneControllerMutationBoundary();
-
-  void wireSelectionCallbacks() {
-    // writeSelectionReplace: mutationBoundary.setSelection,
-    // writeSelectionClear: mutationBoundary.clearSelection,
-    // commitMoveSelection: mutationBoundary.commitMoveSelection,
-    // commitDrawStroke: mutationBoundary.commitDrawStroke,
-    // commitDrawLineFromWorldSegment:
-    //     mutationBoundary.commitDrawLineFromWorldSegment,
-    // commitEraseNodes: mutationBoundary.commitEraseNodes,
-  }
+  final InteractiveRuntimeCallbacks callbacks;
 
   void handlePublicPointer(CanvasPointerInput input) {}
 
@@ -560,6 +574,12 @@ import 'interactive_draw_stroke_engine.dart';
 import 'interactive_draw_terminal_router.dart';
 
 class InteractiveDrawCoordinator {
+  final InteractiveDrawStrokeEngine _strokeEngine = InteractiveDrawStrokeEngine();
+  final InteractiveDrawLineEngine _lineEngine = InteractiveDrawLineEngine();
+  final InteractiveDrawEraserEngine _eraserEngine = InteractiveDrawEraserEngine();
+  final InteractiveDrawTerminalRouter _terminalRouter =
+      InteractiveDrawTerminalRouter();
+
   void handlePointer(Object sample) {}
 }
 ''',
@@ -569,6 +589,7 @@ class InteractiveDrawCoordinator {
     'lib/src/interactive/internal/interactive_draw_eraser_engine.dart',
     '''
 import 'interactive_draw_eraser_exact_hit.dart';
+import 'interactive_draw_eraser_targets.dart';
 import '../../contract/snapshot.dart';
 import '../../core/scene_spatial_index.dart';
 
@@ -589,6 +610,7 @@ class InteractiveDrawEraserEngineCallbacks {
 }
 
 class InteractiveDrawEraserEngine {
+  final InteractiveDrawEraserTargets _targets = InteractiveDrawEraserTargets();
   final InteractiveDrawEraserExactHit _exactHit = InteractiveDrawEraserExactHit();
 
   bool erase(Object points, Object node) => _exactHit.hitsNode(points, node);
@@ -731,23 +753,40 @@ typedef InteractiveDrawStyle = ({
     'class SceneControllerInteractionConfig {}\n',
   );
   writeSandboxFile(sandbox, 'lib/src/contract/scene_view_runtime.dart', '''
+import 'canvas_pointer_input.dart';
+
 abstract interface class SceneViewRuntime {
-  Object get renderState;
+  SceneViewRenderState get renderState;
 
   SceneViewPointerSession createPointerSession({
-    required Object isMounted,
-    required Object hasLiveRawPointers,
+    required bool Function() isMounted,
+    required bool Function() hasLiveRawPointers,
   });
 }
 
+abstract interface class SceneViewRenderState {
+  void addListener(Object listener);
+
+  void removeListener(Object listener);
+}
+
 abstract interface class SceneViewPointerSession {
-  Object? get pendingTapFlushTimestampMs;
+  int? get pendingTapFlushTimestampMs;
 
   void detach();
 
-  void handleRoutedSample(Object sample);
+  void handleRoutedSample(
+    Object sample, {
+    required bool shouldTrackSignals,
+  });
 
-  void handleInvalidTerminalSample(Object input);
+  void handleInvalidTerminalSample({
+    required CanvasPointerInput input,
+    required int pointerId,
+    required int referenceTimestampMs,
+  });
+
+  void handleRawPointerRelease({required bool isIdleAfterRelease});
 
   void dispose();
 }
@@ -760,6 +799,8 @@ import 'dart:ui';
 
 import '../contract/canvas_pointer_input.dart';
 import '../../controller/scene_controller_committed_mutation_access.dart';
+import 'interactive_runtime.dart';
+import 'interactive_selection_actions.dart';
 import 'pointer_session_token.dart';
 import 'scene_controller_mutation_boundary.dart';
 
@@ -772,7 +813,15 @@ class SceneControllerInteractionRuntimeRequest {
 }
 
 class SceneControllerInteractionRuntime {
-  final mutationBoundary = SceneControllerMutationBoundary();
+  SceneControllerInteractionRuntime._({
+    required this.mutationBoundary,
+    required this.selectionActions,
+    required this.runtime,
+  });
+
+  final SceneControllerMutationBoundary mutationBoundary;
+  final InteractiveSelectionActions selectionActions;
+  final InteractiveRuntime runtime;
 
   void ensurePublicSideEffectAllowed(
     String operation, {
@@ -785,16 +834,6 @@ class SceneControllerInteractionRuntime {
   void interruptForInteractionConfigChange() {}
 
   void interruptForExternalMutation() {}
-
-  void wireSelectionCallbacks() {
-    // writeSelectionReplace: mutationBoundary.setSelection,
-    // writeSelectionClear: mutationBoundary.clearSelection,
-    // commitMoveSelection: mutationBoundary.commitMoveSelection,
-    // commitDrawStroke: mutationBoundary.commitDrawStroke,
-    // commitDrawLineFromWorldSegment:
-    //     mutationBoundary.commitDrawLineFromWorldSegment,
-    // commitEraseNodes: mutationBoundary.commitEraseNodes,
-  }
 
   PointerSessionToken createPointerSessionToken() => PointerSessionToken();
 
@@ -830,23 +869,62 @@ class SceneControllerInteractionRuntime {
 
 SceneControllerMutationBoundary wireRuntime(
   SceneControllerInteractionRuntimeRequest request,
+) => _createMutationBoundary(request);
+
+SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
+  required SceneControllerInteractionRuntimeRequest request,
+}) {
+  final mutationBoundary = _createMutationBoundary(request);
+  final selectionActions = _createSelectionActions(mutationBoundary);
+  final interactiveRuntime = _createInteractiveRuntime(
+    request,
+    mutationBoundary: mutationBoundary,
+  );
+  return SceneControllerInteractionRuntime._(
+    mutationBoundary: mutationBoundary,
+    selectionActions: selectionActions,
+    runtime: interactiveRuntime,
+  );
+}
+
+SceneControllerMutationBoundary _createMutationBoundary(
+  SceneControllerInteractionRuntimeRequest request,
 ) {
-  return SceneControllerMutationBoundary()
-    // mutationAccess: request.mutationAccess,
-    ;
+  return SceneControllerMutationBoundary(
+    mutationAccess: request.mutationAccess,
+  );
+}
+
+InteractiveSelectionActions _createSelectionActions(
+  SceneControllerMutationBoundary mutationBoundary,
+) {
+  return InteractiveSelectionActions(mutations: mutationBoundary);
+}
+
+InteractiveRuntime _createInteractiveRuntime(
+  SceneControllerInteractionRuntimeRequest request, {
+  required SceneControllerMutationBoundary mutationBoundary,
+}) {
+  return InteractiveRuntime(
+    callbacks: InteractiveRuntimeCallbacks(
+      writeSelectionReplace: mutationBoundary.setSelection,
+      writeSelectionClear: mutationBoundary.clearSelection,
+      commitMoveSelection: mutationBoundary.commitMoveSelection,
+      commitDrawStroke: mutationBoundary.commitDrawStroke,
+      commitDrawLineFromWorldSegment:
+          mutationBoundary.commitDrawLineFromWorldSegment,
+      commitEraseNodes: mutationBoundary.commitEraseNodes,
+    ),
+  );
 }
 ''',
-  );
-  writeSandboxFile(
-    sandbox,
-    'lib/src/interactive/internal/scene_controller_interaction_access.dart',
-    'class SceneControllerInteractionContext {}\n',
   );
   writeSandboxFile(
     sandbox,
     'lib/src/view/scene_view_interactive_pointer_host.dart',
     '''
 import '../contract/scene_view_runtime.dart';
+import 'scene_view_pointer_router.dart';
 
 class SceneViewInteractivePointerHost {
   SceneViewInteractivePointerHost({
@@ -875,7 +953,7 @@ class _SceneViewInteractivePointerRuntime {
     required SceneViewPointerSession pointerSession,
   }) : _pointerSession = pointerSession;
 
-  final _pointerRouter = _PointerRouter();
+  final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
   SceneViewPointerSession _pointerSession;
 
   int get debugLiveRawPointerCount => 0;
@@ -895,18 +973,25 @@ class _SceneViewInteractivePointerRuntime {
     _pointerSession.dispose();
   }
 }
-
-class _PointerRouter {
-  void reset() {}
-}
 ''',
   );
+  writeSandboxFile(sandbox, 'lib/src/view/scene_view_pointer_router.dart', '''
+class SceneViewPointerRouter {
+  int get liveRawPointerCount => 0;
+
+  void reset() {}
+}
+''');
   writeSandboxFile(sandbox, 'lib/src/view/scene_view_interactive.dart', '''
 import '../interactive/scene_controller.dart';
 import 'scene_view_runtime_host.dart';
 
 class SceneViewInteractive {
-  Object build(SceneController controller) {
+  SceneViewInteractive({required this.controller});
+
+  final SceneController controller;
+
+  Object build(Object context) {
     return SceneViewRuntimeHost(
       runtime: sceneControllerViewRuntimeOf(controller),
     );
@@ -914,6 +999,10 @@ class SceneViewInteractive {
 }
 ''');
   writeSandboxFile(sandbox, 'lib/src/view/scene_view_runtime_host.dart', '''
+import '../contract/scene_view_runtime.dart';
+import 'scene_view_interactive_pointer_host.dart';
+import 'scene_view_render_surface.dart';
+
 class SceneViewRuntimeHost extends StatefulWidget {
   final SceneViewRuntime runtime;
 
@@ -921,15 +1010,16 @@ class SceneViewRuntimeHost extends StatefulWidget {
 }
 
 class _SceneViewRuntimeHostState {
-  final SceneViewInteractivePointerHost _pointerHost =
-      SceneViewInteractivePointerHost();
+  late final SceneViewInteractivePointerHost _pointerHost;
   late SceneViewRuntime _activeRuntime;
 
   void initState() {
     _activeRuntime = widget.runtime;
-    _activeRuntime.createPointerSession(
-      isMounted: Object(),
-      hasLiveRawPointers: Object(),
+    _pointerHost = SceneViewInteractivePointerHost(
+      pointerSession: _activeRuntime.createPointerSession(
+        isMounted: () => true,
+        hasLiveRawPointers: () => false,
+      ),
     );
   }
 
@@ -948,48 +1038,71 @@ class _SceneViewRuntimeHostState {
     return SceneViewRenderSurface(renderState: renderState);
   }
 
-  Object _createReplacementPointerSession(SceneViewRuntime runtime) {
+  SceneViewPointerSession _createReplacementPointerSession(
+    SceneViewRuntime runtime,
+  ) {
     return runtime.createPointerSession(
-      isMounted: Object(),
-      hasLiveRawPointers: Object(),
+      isMounted: () => true,
+      hasLiveRawPointers: () => false,
     );
   }
 }
 
 class StatefulWidget {}
-
-class SceneViewInteractivePointerHost {
-  void replacePointerSession(Object session) {}
-}
-
-class SceneViewRenderSurface {
-  SceneViewRenderSurface({
-    required Object renderState,
-  });
-}
 ''');
   writeSandboxFile(sandbox, 'lib/src/view/scene_view_render_surface.dart', '''
-class SceneViewRenderState {}
+import '../contract/scene_view_runtime.dart';
 
 class SceneViewRenderSurface {
   SceneViewRenderSurface({
     required SceneViewRenderState renderState,
-  });
+  }) : _renderState = renderState;
+
+  final SceneViewRenderState _renderState;
+
+  State<SceneViewRenderSurface> createState() => SceneViewRenderSurfaceState();
+}
+
+class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
+  void initState() {
+    widget._renderState.addListener(_handleControllerChanged);
+  }
+
+  void didUpdateWidget(SceneViewRenderSurface oldWidget) {
+    oldWidget._renderState.removeListener(_handleControllerChanged);
+    widget._renderState.addListener(_handleControllerChanged);
+  }
+
+  void dispose() {
+    widget._renderState.removeListener(_handleControllerChanged);
+  }
+
+  Object build(Object context) => Object();
+
+  void _handleControllerChanged() {}
+}
+
+class State<T> {
+  T get widget => throw UnimplementedError();
 }
 ''');
   writeSandboxFile(
     sandbox,
     'lib/src/interactive/internal/scene_controller_pointer_session.dart',
     '''
+import '../../contract/canvas_pointer_input.dart';
+import '../../contract/scene_view_runtime.dart';
+import 'pointer_session_token.dart';
+
 class PointerInputTracker {}
 
-class PointerSessionToken {}
-
-class SceneControllerPointerSession {
+class SceneControllerPointerSession implements SceneViewPointerSession {
   SceneControllerPointerSession({
     required PointerSessionToken token,
     required void Function(PointerSessionToken token) detachPointerSession,
     required void Function(PointerSessionToken token) releasePointerSessionToken,
+    required void Function() handlePointerFromSession,
+    required void Function() handleDoubleTapFromSession,
   }) : _token = token;
 
   final PointerSessionToken _token;
@@ -997,6 +1110,9 @@ class SceneControllerPointerSession {
 
   final _ownerListenable = _OwnerListenable();
   final _PendingTapFlushScheduler scheduler = _PendingTapFlushScheduler();
+
+  @override
+  int? get pendingTapFlushTimestampMs => null;
 
   void createTracker() {
     PointerInputTracker();
@@ -1011,12 +1127,30 @@ class SceneControllerPointerSession {
     _handleDoubleTapFromSession(token);
   }
 
+  @override
   void detach() {
     _detachPointerSession(_token);
     _releaseOwnedResources();
   }
 
-  void dispose(PointerSessionToken token) {
+  @override
+  void handleRoutedSample(
+    Object sample, {
+    required bool shouldTrackSignals,
+  }) {}
+
+  @override
+  void handleInvalidTerminalSample({
+    required CanvasPointerInput input,
+    required int pointerId,
+    required int referenceTimestampMs,
+  }) {}
+
+  @override
+  void handleRawPointerRelease({required bool isIdleAfterRelease}) {}
+
+  @override
+  void dispose() {
     scheduler.dispose();
   }
 
@@ -1059,41 +1193,48 @@ class _OwnerListenable {
     sandbox,
     'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
     '''
-final class SceneControllerSceneViewRuntime {
+import '../../contract/scene_view_runtime.dart';
+import '../scene_controller_interaction.dart';
+import 'scene_controller_pointer_session.dart';
+import 'pointer_session_token.dart';
+import 'scene_controller_interaction_runtime.dart';
+
+final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
   SceneControllerSceneViewRuntime({
     Object? ensurePublicSideEffectAllowed,
   });
 
+  @override
   final renderState = SceneControllerSceneViewRenderState();
-  final _interactionRuntime = _InteractionRuntime();
+  final _interactionRuntime = SceneControllerInteractionRuntime();
 
-  Object createPointerSession({
-    required Object isMounted,
-    required Object hasLiveRawPointers,
+  @override
+  SceneViewPointerSession createPointerSession({
+    required bool Function() isMounted,
+    required bool Function() hasLiveRawPointers,
   }) {
-    createPointerSessionToken();
     return SceneControllerPointerSession(
-      token: createPointerSessionToken(),
+      token: _interactionRuntime.createPointerSessionToken(),
       detachPointerSession:
           _interactionRuntime.detachPointerSession,
       releasePointerSessionToken:
           _interactionRuntime.releasePointerSessionToken,
-      // handlePointerFromSession: _interactionRuntime.handlePointerFromSession,
+      handlePointerFromSession:
+          _interactionRuntime.handlePointerFromSession,
+      handleDoubleTapFromSession:
+          _interactionRuntime.handleDoubleTapFromSession,
     );
   }
-
-  Object createPointerSessionToken() => Object();
 }
 
-class SceneControllerInteraction {}
-class _InteractionRuntime {
-  void detachPointerSession() {}
-  void releasePointerSessionToken() {}
-  void handlePointerFromSession() {}
-}
-
-final class SceneControllerSceneViewRenderState {
+final class SceneControllerSceneViewRenderState implements SceneViewRenderState {
   SceneControllerInteraction get _interaction => SceneControllerInteraction();
+
+  @override
+  void addListener(Object listener) {}
+
+  @override
+  void removeListener(Object listener) {}
 }
 ''',
   );
@@ -1101,45 +1242,64 @@ final class SceneControllerSceneViewRenderState {
     sandbox,
     'lib/src/interactive/internal/scene_controller_graph.dart',
     '''
-class SceneControllerInteraction {}
-
-class SceneControllerInteractionOwner extends SceneControllerInteraction {}
-
-class SceneControllerSelectionOwner {
-  SceneControllerSelectionOwner(Object runtime);
-}
-
-class SceneControllerSceneOwner {
-  SceneControllerSceneOwner(Object ensurePublicSideEffectAllowed);
-}
-
-class _InteractionRuntime {
-  final mutationBoundary = Object();
-
-  void ensurePublicSideEffectAllowed(String operation) {}
-}
+import '../../controller/scene_controller_committed_mutation_access.dart';
+import '../scene_controller_interaction.dart';
+import '../scene_controller_scene.dart';
+import '../scene_controller_selection.dart';
+import 'scene_controller_internal_access.dart';
+import 'scene_controller_interaction_runtime.dart';
+import 'scene_controller_scene_mutations.dart';
+import 'scene_controller_selection_mutations.dart';
+import 'scene_controller_scene_view_runtime.dart';
 
 class SceneControllerGraphRequest {}
 
-class SceneControllerInternalAccessRegistration {}
-
 class _Graph {
-  final sceneViewRuntime = SceneControllerSceneViewRuntime(
-    ensurePublicSideEffectAllowed:
-        _InteractionRuntime().ensurePublicSideEffectAllowed,
-  );
+  _Graph({
+    required this.sceneViewRuntime,
+    required this.internalAccessRegistration,
+  });
+
+  final SceneControllerSceneViewRuntime sceneViewRuntime;
+  final SceneControllerInternalAccessRegistration internalAccessRegistration;
 }
 
 Object createSceneControllerGraph(Object request) {
-  final interactionRuntime = _InteractionRuntime();
-  SceneControllerInternalAccessRegistration();
-  registerSceneControllerInternalAccess(Object(), Object());
-  SceneControllerInteractionOwner();
-  SceneControllerSelectionOwner(interactionRuntime);
-  SceneControllerSceneOwner(
-    interactionRuntime.ensurePublicSideEffectAllowed,
+  final graph = _assembleSceneControllerGraph(request);
+  registerSceneControllerInternalAccess(Object(), graph.internalAccessRegistration);
+  return graph;
+}
+
+_Graph _assembleSceneControllerGraph(Object request) {
+  final interactionRuntime = createSceneControllerInteractionRuntime(
+    request: SceneControllerInteractionRuntimeRequest(
+      mutationAccess: SceneStoreControllerCommittedMutationAccess(),
+    ),
   );
-  return _Graph();
+  final selectionMutations = SceneControllerSelectionMutations();
+  final sceneMutations = SceneControllerSceneMutations();
+  final interaction = SceneControllerInteractionOwner(
+    SceneControllerInteractionContext(runtime: interactionRuntime),
+  );
+  final selection = SceneControllerSelectionOwner(
+    runtime: interactionRuntime,
+    mutations: selectionMutations,
+  );
+  final scene = SceneControllerSceneOwner(
+    ensurePublicSideEffectAllowed:
+        interactionRuntime.ensurePublicSideEffectAllowed,
+    mutations: sceneMutations,
+  );
+  interaction.toString();
+  selection.toString();
+  scene.toString();
+  return _Graph(
+    sceneViewRuntime: SceneControllerSceneViewRuntime(
+      ensurePublicSideEffectAllowed:
+          interactionRuntime.ensurePublicSideEffectAllowed,
+    ),
+    internalAccessRegistration: SceneControllerInternalAccessRegistration(),
+  );
 }
 
 Object sceneControllerGraphActions(Object graph) => Object();
@@ -1151,10 +1311,14 @@ Object sceneControllerGraphEditTextRequests(Object graph) => Object();
     sandbox,
     'lib/src/interactive/internal/scene_controller_internal_access.dart',
     '''
+class SceneControllerInternalAccessRegistration {}
+
 void registerSceneControllerInternalAccess(
   Object controller,
   Object registration,
 ) {}
+
+void unregisterSceneControllerInternalAccess(Object controller) {}
 
 int sceneControllerInternalEpoch(Object controller) => 0;
 
@@ -1522,6 +1686,8 @@ class InteractiveDrawEraserTargetsCallbacks {
   resolveSpatialCandidateSnapshot;
   final Object onSpatialQuery;
 }
+
+class InteractiveDrawEraserTargets {}
 ''',
   );
 }

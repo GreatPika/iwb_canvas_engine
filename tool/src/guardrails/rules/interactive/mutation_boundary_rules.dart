@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 
@@ -15,9 +16,19 @@ import '../../core/guardrail_element_utils.dart' as element_utils;
 import '../controller/committed_read_side_rules.dart';
 import '../../core/guardrail_violation.dart';
 import 'committed_read_callback_rules.dart';
-import 'resolver_purity_rules.dart';
 
-part 'boundary_shape_token_rules.dart';
+part 'interactive_architecture_boundary_rules.dart';
+part 'interactive_architecture_boundary_structure_rules.dart';
+part 'interactive_architecture_boundary_facade_rules.dart';
+part 'interactive_architecture_boundary_graph_rules.dart';
+part 'interactive_architecture_boundary_view_rules.dart';
+part 'interactive_architecture_boundary_pointer_rules.dart';
+part 'interactive_architecture_boundary_mutation_rules.dart';
+part 'interactive_architecture_boundary_draw_rules.dart';
+part 'interactive_architecture_boundary_file_support.dart';
+part 'interactive_architecture_boundary_matcher_support.dart';
+part 'interactive_architecture_boundary_flow_support.dart';
+part 'interactive_architecture_boundary_collector_support.dart';
 part 'interactive_mutation_owner_guard_rules.dart';
 part 'resolved_entrypoint_guard_rules.dart';
 
@@ -66,7 +77,9 @@ Future<List<GuardrailViolation>> runInteractiveApiGuardrails({
     return violations;
   }
 
-  final boundaryViolation = _checkInteractiveBoundaryShape(context);
+  final boundaryViolation = await _checkInteractiveArchitectureBoundary(
+    context,
+  );
   if (boundaryViolation != null) {
     violations.add(boundaryViolation);
   }

@@ -1959,7 +1959,7 @@ void _registerInteractiveArchitectureGuardrailTests() {
   });
 
   test(
-    'rejects pointer host when runtime replace ordering regresses behind wrapper',
+    'accepts facade-to-view runtime bridge with render-state-only view surface',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -1984,97 +1984,37 @@ void _registerInteractiveArchitectureGuardrailTests() {
 ''',
           ),
         );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects facade that skips canonical createSceneControllerGraph assembly',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
         writeSandboxFile(
           sandbox,
-          'lib/src/view/scene_view_interactive_pointer_host.dart',
+          'lib/src/interactive/scene_controller.dart',
           '''
 import '../contract/scene_view_runtime.dart';
+import 'internal/scene_controller_graph.dart';
 
-class SceneViewInteractivePointerHost {
-  SceneViewInteractivePointerHost({
-    required SceneViewPointerSession pointerSession,
-  }) : _runtime = _SceneViewInteractivePointerRuntime(
-         pointerSession: pointerSession,
-       );
+class SceneController {
+  SceneController() : _graph = Object();
 
-  final _SceneViewInteractivePointerRuntime _runtime;
+  final dynamic _graph;
 
-  int get debugLiveRawPointerCount => _runtime.debugLiveRawPointerCount;
-  int? get debugPendingTapFlushTimestampMs =>
-      _runtime.debugPendingTapFlushTimestampMs;
+  Object get actions => sceneControllerGraphActions(_graph);
+  Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);
 
-  void replacePointerSession(SceneViewPointerSession pointerSession) {
-    _runtime.replacePointerSession(pointerSession);
-  }
-
-  void dispose() {
-    _runtime.dispose();
-  }
-}
-
-class _SceneViewInteractivePointerRuntime {
-  _SceneViewInteractivePointerRuntime({
-    required SceneViewPointerSession pointerSession,
-  }) : _pointerSession = pointerSession;
-
-  final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
-  SceneViewPointerSession _pointerSession;
-
-  int get debugLiveRawPointerCount => _pointerRouter.liveRawPointerCount;
-  int? get debugPendingTapFlushTimestampMs =>
-      _pointerSession.pendingTapFlushTimestampMs;
-
-  void replacePointerSession(SceneViewPointerSession next) {
-    final current = _pointerSession;
-    current.dispose();
-    current.detach();
-    _pointerRouter.reset();
-    _pointerSession = next;
-  }
-
-  void dispose() {
-    _pointerSession.detach();
-    _pointerSession.dispose();
-  }
-}
-
-class SceneViewPointerRouter {
-  int get liveRawPointerCount => 0;
-
-  void reset() {}
-}
-''',
-        );
-
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          diagnostic(
-            category: 'interactive API',
-            detail:
-                'SceneViewInteractivePointerHost must detach old sessions '
-                'before dispose and router reset',
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    },
-  );
-
-  test(
-    'rejects runtime host when didUpdateWidget ordering regresses behind other session creation sites',
-    () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeMinimalControllerStore(sandbox);
-        writeInteractiveArchitectureSupportScaffold(sandbox);
-        writeSandboxFile(
-          sandbox,
-          'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
-            methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
   }
@@ -2086,77 +2026,15 @@ class SceneViewPointerRouter {
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-''',
-          ),
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/view/scene_view_runtime_host.dart',
-          '''
-class SceneViewRuntimeHost extends StatefulWidget {
-  final SceneViewRuntime runtime;
 
-  SceneViewRuntimeHost({required this.runtime});
+  void _ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
 }
 
-class _SceneViewRuntimeHostState {
-  final SceneViewInteractivePointerHost _pointerHost =
-      SceneViewInteractivePointerHost();
-  late SceneViewRuntime _activeRuntime;
-
-  void initState() {
-    _activeRuntime = widget.runtime;
-    _activeRuntime.createPointerSession(
-      isMounted: Object(),
-      hasLiveRawPointers: Object(),
-    );
-  }
-
-  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
-    if (_activeRuntime == widget.runtime) {
-      return;
-    }
-    _activeRuntime = widget.runtime;
-    final nextPointerSession = _createReplacementPointerSession(
-      widget.runtime,
-    );
-    _pointerHost.replacePointerSession(nextPointerSession);
-  }
-
-  Object build() {
-    final renderState = _activeRuntime.renderState;
-    return SceneViewRenderSurface(renderState: renderState);
-  }
-
-  Object _createReplacementPointerSession(SceneViewRuntime runtime) {
-    return runtime.createPointerSession(
-      isMounted: Object(),
-      hasLiveRawPointers: Object(),
-    );
-  }
-}
-
-class StatefulWidget {}
-
-class SceneViewRuntime {
-  Object get renderState => Object();
-
-  Object createPointerSession({
-    required Object isMounted,
-    required Object hasLiveRawPointers,
-  }) {
-    return Object();
-  }
-}
-
-class SceneViewInteractivePointerHost {
-  void replacePointerSession(Object session) {}
-}
-
-class SceneViewRenderSurface {
-  SceneViewRenderSurface({
-    required Object renderState,
-  });
+SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
+  return controller._graph.sceneViewRuntime;
 }
 ''',
         );
@@ -2168,10 +2046,8 @@ class SceneViewRenderSurface {
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneViewRuntimeHost must create replacement sessions '
-                'before install, propagate failed swaps to the owner, '
-                'compare updates against the installed runtime, and switch '
-                'the active runtime only after install succeeds',
+                'SceneController must remain a thin facade over '
+                'the assembled controller graph',
           ),
         );
       } finally {
@@ -2181,7 +2057,7 @@ class SceneViewRenderSurface {
   );
 
   test(
-    'rejects runtime host when replacement install is hidden behind a conditional block',
+    'rejects facade that routes graph assembly through local createSceneControllerGraph shadow',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -2190,233 +2066,18 @@ class SceneViewRenderSurface {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
-            methods: '''
-  void handlePointer(Object input) {
-    _ensurePublicSideEffectAllowed('handlePointer');
-  }
-
-  void handleDoubleTap() {
-    _ensurePublicSideEffectAllowed('handleDoubleTap');
-  }
-
-  void dispose() {
-    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
-  }
-''',
-          ),
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/view/scene_view_runtime_host.dart',
-          '''
-class SceneViewRuntimeHost extends StatefulWidget {
-  final SceneViewRuntime runtime;
-
-  SceneViewRuntimeHost({required this.runtime});
-}
-
-class _SceneViewRuntimeHostState {
-  final SceneViewInteractivePointerHost _pointerHost =
-      SceneViewInteractivePointerHost();
-  late SceneViewRuntime _activeRuntime;
-
-  void initState() {
-    _activeRuntime = widget.runtime;
-    _activeRuntime.createPointerSession(
-      isMounted: Object(),
-      hasLiveRawPointers: Object(),
-    );
-  }
-
-  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
-    if (_activeRuntime == widget.runtime) {
-      return;
-    }
-    final nextPointerSession = _createReplacementPointerSession(
-      widget.runtime,
-    );
-    if (oldWidget == widget) {
-      _pointerHost.replacePointerSession(nextPointerSession);
-    }
-    _activeRuntime = widget.runtime;
-  }
-
-  Object build() {
-    final renderState = _activeRuntime.renderState;
-    return SceneViewRenderSurface(renderState: renderState);
-  }
-
-  Object _createReplacementPointerSession(SceneViewRuntime runtime) {
-    return runtime.createPointerSession(
-      isMounted: Object(),
-      hasLiveRawPointers: Object(),
-    );
-  }
-}
-
-class StatefulWidget {}
-
-class SceneViewRuntime {
-  Object get renderState => Object();
-
-  Object createPointerSession({
-    required Object isMounted,
-    required Object hasLiveRawPointers,
-  }) {
-    return Object();
-  }
-}
-
-class SceneViewInteractivePointerHost {
-  void replacePointerSession(Object session) {}
-}
-
-class SceneViewRenderSurface {
-  SceneViewRenderSurface({
-    required Object renderState,
-  });
-}
-''',
-        );
-
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          diagnostic(
-            category: 'interactive API',
-            detail:
-                'SceneViewRuntimeHost must create replacement sessions '
-                'before install, propagate failed swaps to the owner, '
-                'compare updates against the installed runtime, and switch '
-                'the active runtime only after install succeeds',
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    },
-  );
-
-  test(
-    'rejects pointer host when comments mimic ordered lifecycle tokens',
-    () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeMinimalControllerStore(sandbox);
-        writeInteractiveArchitectureSupportScaffold(sandbox);
-        writeSandboxFile(
-          sandbox,
-          'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
-            methods: '''
-  void handlePointer(Object input) {
-    _ensurePublicSideEffectAllowed('handlePointer');
-  }
-
-  void handleDoubleTap() {
-    _ensurePublicSideEffectAllowed('handleDoubleTap');
-  }
-
-  void dispose() {
-    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
-  }
-''',
-          ),
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/view/scene_view_interactive_pointer_host.dart',
           '''
 import '../contract/scene_view_runtime.dart';
+import 'internal/scene_controller_graph.dart';
 
-class SceneViewInteractivePointerHost {
-  SceneViewInteractivePointerHost({
-    required SceneViewPointerSession pointerSession,
-  }) : _runtime = _SceneViewInteractivePointerRuntime(
-         pointerSession: pointerSession,
-       );
-
-  final _SceneViewInteractivePointerRuntime _runtime;
-
-  int get debugLiveRawPointerCount => _runtime.debugLiveRawPointerCount;
-  int? get debugPendingTapFlushTimestampMs =>
-      _runtime.debugPendingTapFlushTimestampMs;
-
-  void replacePointerSession(SceneViewPointerSession pointerSession) {
-    _runtime.replacePointerSession(pointerSession);
-  }
-
-  void dispose() {
-    _runtime.dispose();
-  }
-}
-
-class _SceneViewInteractivePointerRuntime {
-  _SceneViewInteractivePointerRuntime({
-    required SceneViewPointerSession pointerSession,
-  }) : _pointerSession = pointerSession;
-
-  final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
-  SceneViewPointerSession _pointerSession;
-
-  int get debugLiveRawPointerCount => _pointerRouter.liveRawPointerCount;
-  int? get debugPendingTapFlushTimestampMs =>
-      _pointerSession.pendingTapFlushTimestampMs;
-
-  void replacePointerSession(SceneViewPointerSession next) {
-    final current = _pointerSession;
-    // current.detach();
-    current.dispose();
-    current.detach();
-    _pointerRouter.reset();
-    _pointerSession = next;
-  }
-
-  void dispose() {
-    _pointerSession.detach();
-    _pointerSession.dispose();
-  }
-}
-
-class SceneViewPointerRouter {
-  int get liveRawPointerCount => 0;
-
-  void reset() {}
-}
-''',
-        );
-
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          diagnostic(
-            category: 'interactive API',
-            detail:
-                'SceneViewInteractivePointerHost must detach old sessions '
-                'before dispose and router reset',
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    },
+class SceneController {
+  final dynamic _graph = createSceneControllerGraph(
+    SceneControllerGraphRequest(),
   );
 
-  test(
-    'rejects runtime host when string literals mimic ordered update tokens',
-    () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeMinimalControllerStore(sandbox);
-        writeInteractiveArchitectureSupportScaffold(sandbox);
-        writeSandboxFile(
-          sandbox,
-          'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
-            methods: '''
+  Object get actions => sceneControllerGraphActions(_graph);
+  Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);
+
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
   }
@@ -2428,78 +2089,17 @@ class SceneViewPointerRouter {
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-''',
-          ),
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/view/scene_view_runtime_host.dart',
-          '''
-class SceneViewRuntimeHost extends StatefulWidget {
-  final SceneViewRuntime runtime;
 
-  SceneViewRuntimeHost({required this.runtime});
+  void _ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
 }
 
-class _SceneViewRuntimeHostState {
-  final SceneViewInteractivePointerHost _pointerHost =
-      SceneViewInteractivePointerHost();
-  late SceneViewRuntime _activeRuntime;
+Object createSceneControllerGraph(Object request) => Object();
 
-  void initState() {
-    _activeRuntime = widget.runtime;
-    _activeRuntime.createPointerSession(
-      isMounted: Object(),
-      hasLiveRawPointers: Object(),
-    );
-  }
-
-  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
-    if (_activeRuntime == widget.runtime) {
-      return;
-    }
-    const marker = '_pointerHost.replacePointerSession(nextPointerSession);';
-    _activeRuntime = widget.runtime;
-    final nextPointerSession = _createReplacementPointerSession(
-      widget.runtime,
-    );
-    _pointerHost.replacePointerSession(nextPointerSession);
-  }
-
-  Object build() {
-    final renderState = _activeRuntime.renderState;
-    return SceneViewRenderSurface(renderState: renderState);
-  }
-
-  Object _createReplacementPointerSession(SceneViewRuntime runtime) {
-    return runtime.createPointerSession(
-      isMounted: Object(),
-      hasLiveRawPointers: Object(),
-    );
-  }
-}
-
-class StatefulWidget {}
-
-class SceneViewRuntime {
-  Object get renderState => Object();
-
-  Object createPointerSession({
-    required Object isMounted,
-    required Object hasLiveRawPointers,
-  }) {
-    return Object();
-  }
-}
-
-class SceneViewInteractivePointerHost {
-  void replacePointerSession(Object session) {}
-}
-
-class SceneViewRenderSurface {
-  SceneViewRenderSurface({
-    required Object renderState,
-  });
+SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
+  return controller._graph.sceneViewRuntime;
 }
 ''',
         );
@@ -2511,10 +2111,8 @@ class SceneViewRenderSurface {
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneViewRuntimeHost must create replacement sessions '
-                'before install, propagate failed swaps to the owner, '
-                'compare updates against the installed runtime, and switch '
-                'the active runtime only after install succeeds',
+                'SceneController must remain a thin facade over '
+                'the assembled controller graph',
           ),
         );
       } finally {
@@ -2524,7 +2122,7 @@ class SceneViewRenderSurface {
   );
 
   test(
-    'rejects pointer host when nested blocks mimic ordered lifecycle tokens',
+    'rejects facade that builds graph with local SceneControllerGraphRequest shadow',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -2533,83 +2131,40 @@ class SceneViewRenderSurface {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
-            methods: '''
-  void handlePointer(Object input) {
-    _ensurePublicSideEffectAllowed('handlePointer');
-  }
-
-  void handleDoubleTap() {
-    _ensurePublicSideEffectAllowed('handleDoubleTap');
-  }
-
-  void dispose() {
-    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
-  }
-''',
-          ),
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/view/scene_view_interactive_pointer_host.dart',
           '''
 import '../contract/scene_view_runtime.dart';
+import 'internal/scene_controller_graph.dart';
 
-class SceneViewInteractivePointerHost {
-  SceneViewInteractivePointerHost({
-    required SceneViewPointerSession pointerSession,
-  }) : _runtime = _SceneViewInteractivePointerRuntime(
-         pointerSession: pointerSession,
-       );
+class SceneController {
+  final dynamic _graph = createSceneControllerGraph(
+    SceneControllerGraphRequest(),
+  );
 
-  final _SceneViewInteractivePointerRuntime _runtime;
+  Object get actions => sceneControllerGraphActions(_graph);
+  Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);
 
-  int get debugLiveRawPointerCount => _runtime.debugLiveRawPointerCount;
-  int? get debugPendingTapFlushTimestampMs =>
-      _runtime.debugPendingTapFlushTimestampMs;
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
 
-  void replacePointerSession(SceneViewPointerSession pointerSession) {
-    _runtime.replacePointerSession(pointerSession);
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
   }
 
   void dispose() {
-    _runtime.dispose();
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
+
+  void _ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
 }
 
-class _SceneViewInteractivePointerRuntime {
-  _SceneViewInteractivePointerRuntime({
-    required SceneViewPointerSession pointerSession,
-  }) : _pointerSession = pointerSession;
+class SceneControllerGraphRequest {}
 
-  final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
-  SceneViewPointerSession _pointerSession;
-
-  int get debugLiveRawPointerCount => _pointerRouter.liveRawPointerCount;
-  int? get debugPendingTapFlushTimestampMs =>
-      _pointerSession.pendingTapFlushTimestampMs;
-
-  void replacePointerSession(SceneViewPointerSession next) {
-    final current = _pointerSession;
-    if (next == current) {
-      current.detach();
-    }
-    current.dispose();
-    current.detach();
-    _pointerRouter.reset();
-    _pointerSession = next;
-  }
-
-  void dispose() {
-    _pointerSession.detach();
-    _pointerSession.dispose();
-  }
-}
-
-class SceneViewPointerRouter {
-  int get liveRawPointerCount => 0;
-
-  void reset() {}
+SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
+  return controller._graph.sceneViewRuntime;
 }
 ''',
         );
@@ -2621,8 +2176,8 @@ class SceneViewPointerRouter {
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneViewInteractivePointerHost must detach old sessions '
-                'before dispose and router reset',
+                'SceneController must remain a thin facade over '
+                'the assembled controller graph',
           ),
         );
       } finally {
@@ -2632,7 +2187,7 @@ class SceneViewPointerRouter {
   );
 
   test(
-    'rejects runtime host when nested blocks mimic ordered update tokens',
+    'rejects facade that routes graph assembly through imported shadow owners',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -2640,9 +2195,80 @@ class SceneViewPointerRouter {
         writeInteractiveArchitectureSupportScaffold(sandbox);
         writeSandboxFile(
           sandbox,
+          'lib/src/interactive/internal/scene_controller_graph_shadow.dart',
+          '''
+class SceneControllerGraphRequest {}
+
+Object createSceneControllerGraph(Object request) => Object();
+''',
+        );
+        writeSandboxFile(
+          sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
-            methods: '''
+          '''
+import '../contract/scene_view_runtime.dart';
+import 'internal/scene_controller_graph.dart';
+import 'internal/scene_controller_graph_shadow.dart' as shadow;
+
+class SceneController {
+  final dynamic _graph = shadow.createSceneControllerGraph(
+    shadow.SceneControllerGraphRequest(),
+  );
+
+  Object get actions => sceneControllerGraphActions(_graph);
+  Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);
+
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+
+  void _ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+}
+
+SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
+  return controller._graph.sceneViewRuntime;
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneController must remain a thin facade over '
+                'the assembled controller graph',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test('rejects graph assembly that declares local owner shadows', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
   }
@@ -2655,108 +2281,96 @@ class SceneViewPointerRouter {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
 ''',
-          ),
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/view/scene_view_runtime_host.dart',
-          '''
-class SceneViewRuntimeHost extends StatefulWidget {
-  final SceneViewRuntime runtime;
-
-  SceneViewRuntimeHost({required this.runtime});
-}
-
-class _SceneViewRuntimeHostState {
-  final SceneViewInteractivePointerHost _pointerHost =
-      SceneViewInteractivePointerHost();
-  late SceneViewRuntime _activeRuntime;
-
-  void initState() {
-    _activeRuntime = widget.runtime;
-    _activeRuntime.createPointerSession(
-      isMounted: Object(),
-      hasLiveRawPointers: Object(),
-    );
-  }
-
-  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
-    if (_activeRuntime == widget.runtime) {
-      return;
-    }
-    _activeRuntime = widget.runtime;
-    if (oldWidget == widget) {
-      final nextPointerSession = _createReplacementPointerSession(
-        widget.runtime,
+        ),
       );
-      _pointerHost.replacePointerSession(nextPointerSession);
-      return;
-    }
-    final nextPointerSession = _createReplacementPointerSession(
-      widget.runtime,
-    );
-    _pointerHost.replacePointerSession(nextPointerSession);
-  }
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/internal/scene_controller_graph.dart',
+        '''
+import 'scene_controller_internal_access.dart';
+import 'scene_controller_scene_view_runtime.dart';
 
-  Object build() {
-    final renderState = _activeRuntime.renderState;
-    return SceneViewRenderSurface(renderState: renderState);
-  }
+class SceneControllerInteractionOwner {}
 
-  Object _createReplacementPointerSession(SceneViewRuntime runtime) {
-    return runtime.createPointerSession(
-      isMounted: Object(),
-      hasLiveRawPointers: Object(),
-    );
-  }
+class SceneControllerSelectionOwner {
+  SceneControllerSelectionOwner(Object runtime);
 }
 
-class StatefulWidget {}
-
-class SceneViewRuntime {
-  Object get renderState => Object();
-
-  Object createPointerSession({
-    required Object isMounted,
-    required Object hasLiveRawPointers,
-  }) {
-    return Object();
-  }
+class SceneControllerSceneOwner {
+  SceneControllerSceneOwner(Object ensurePublicSideEffectAllowed);
 }
 
-class SceneViewInteractivePointerHost {
-  void replacePointerSession(Object session) {}
-}
+class SceneControllerGraphRequest {}
 
-class SceneViewRenderSurface {
-  SceneViewRenderSurface({
-    required Object renderState,
+class SceneControllerSceneViewRuntime {
+  SceneControllerSceneViewRuntime({
+    Object? ensurePublicSideEffectAllowed,
   });
 }
-''',
-        );
 
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          diagnostic(
-            category: 'interactive API',
-            detail:
-                'SceneViewRuntimeHost must create replacement sessions '
-                'before install, propagate failed swaps to the owner, '
-                'compare updates against the installed runtime, and switch '
-                'the active runtime only after install succeeds',
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    },
+class _InteractionRuntime {
+  void ensurePublicSideEffectAllowed(String operation) {}
+}
+
+class _Graph {
+  _Graph({
+    required this.sceneViewRuntime,
+    required this.internalAccessRegistration,
+  });
+
+  final SceneControllerSceneViewRuntime sceneViewRuntime;
+  final SceneControllerInternalAccessRegistration internalAccessRegistration;
+}
+
+Object createSceneControllerGraph(Object request) {
+  final graph = _assembleSceneControllerGraph(request);
+  registerSceneControllerInternalAccess(Object(), graph.internalAccessRegistration);
+  return graph;
+}
+
+_Graph _assembleSceneControllerGraph(Object request) {
+  final interactionRuntime = _InteractionRuntime();
+  final interaction = SceneControllerInteractionOwner();
+  final selection = SceneControllerSelectionOwner(interactionRuntime);
+  final scene = SceneControllerSceneOwner(
+    interactionRuntime.ensurePublicSideEffectAllowed,
   );
+  interaction.toString();
+  selection.toString();
+  scene.toString();
+  return _Graph(
+    sceneViewRuntime: SceneControllerSceneViewRuntime(
+      ensurePublicSideEffectAllowed:
+          interactionRuntime.ensurePublicSideEffectAllowed,
+    ),
+    internalAccessRegistration: SceneControllerInternalAccessRegistration(),
+  );
+}
+
+Object sceneControllerGraphActions(Object graph) => Object();
+
+Object sceneControllerGraphEditTextRequests(Object graph) => Object();
+''',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'SceneController graph must assemble view runtime and '
+              'internal access outside the facade',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
 
   test(
-    'rejects pointer host when comments mimic private runtime scope selectors',
+    'rejects facade when SceneController becomes SceneViewRenderState',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -2765,8 +2379,20 @@ class SceneViewRenderSurface {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
-            methods: '''
+          '''
+import '../contract/scene_view_runtime.dart';
+import 'internal/scene_controller_graph.dart';
+
+class SceneController implements SceneViewRenderState {
+  SceneController() {
+    _graph = createSceneControllerGraph(SceneControllerGraphRequest());
+  }
+
+  late final dynamic _graph;
+
+  Object get actions => sceneControllerGraphActions(_graph);
+  Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);
+
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
   }
@@ -2778,76 +2404,15 @@ class SceneViewRenderSurface {
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-''',
-          ),
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/view/scene_view_interactive_pointer_host.dart',
-          '''
-import '../contract/scene_view_runtime.dart';
 
-class SceneViewInteractivePointerHost {
-  // class _SceneViewInteractivePointerRuntime {
-  //   void replacePointerSession(SceneViewPointerSession next) {
-  //     final current = _pointerSession;
-  //     current.detach();
-  //     current.dispose();
-  //     _pointerRouter.reset();
-  //     _pointerSession = next;
-  //   }
-  // }
-  SceneViewInteractivePointerHost({
-    required SceneViewPointerSession pointerSession,
-  }) : _runtime = _SceneViewInteractivePointerRuntime(
-         pointerSession: pointerSession,
-       );
-
-  final _SceneViewInteractivePointerRuntime _runtime;
-
-  int get debugLiveRawPointerCount => _runtime.debugLiveRawPointerCount;
-  int? get debugPendingTapFlushTimestampMs =>
-      _runtime.debugPendingTapFlushTimestampMs;
-
-  void replacePointerSession(SceneViewPointerSession pointerSession) {
-    _runtime.replacePointerSession(pointerSession);
-  }
-
-  void dispose() {
-    _runtime.dispose();
-  }
+  void _ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
 }
 
-class _SceneViewInteractivePointerRuntime {
-  _SceneViewInteractivePointerRuntime({
-    required SceneViewPointerSession pointerSession,
-  }) : _pointerSession = pointerSession;
-
-  final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
-  SceneViewPointerSession _pointerSession;
-
-  int get debugLiveRawPointerCount => _pointerRouter.liveRawPointerCount;
-  int? get debugPendingTapFlushTimestampMs =>
-      _pointerSession.pendingTapFlushTimestampMs;
-
-  void replacePointerSession(SceneViewPointerSession next) {
-    final current = _pointerSession;
-    current.dispose();
-    current.detach();
-    _pointerRouter.reset();
-    _pointerSession = next;
-  }
-
-  void dispose() {
-    _pointerSession.detach();
-    _pointerSession.dispose();
-  }
-}
-
-class SceneViewPointerRouter {
-  int get liveRawPointerCount => 0;
-
-  void reset() {}
+SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
+  return controller._graph.sceneViewRuntime;
 }
 ''',
         );
@@ -2859,8 +2424,8 @@ class SceneViewPointerRouter {
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneViewInteractivePointerHost must detach old sessions '
-                'before dispose and router reset',
+                'SceneController must remain a thin facade over '
+                'the assembled controller graph',
           ),
         );
       } finally {
@@ -2870,7 +2435,7 @@ class SceneViewPointerRouter {
   );
 
   test(
-    'rejects runtime host when string literals mimic block scope selectors',
+    'rejects runtime host that stops owning replacement pointer-session creation',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -2906,40 +2471,22 @@ class SceneViewRuntimeHost extends StatefulWidget {
 }
 
 class _SceneViewRuntimeHostState {
-  final SceneViewInteractivePointerHost _pointerHost =
-      SceneViewInteractivePointerHost();
+  late final SceneViewInteractivePointerHost _pointerHost;
   late SceneViewRuntime _activeRuntime;
 
   void initState() {
     _activeRuntime = widget.runtime;
-    _activeRuntime.createPointerSession(
-      isMounted: Object(),
-      hasLiveRawPointers: Object(),
+    _pointerHost = SceneViewInteractivePointerHost(
+      pointerSession: _activeRuntime.createPointerSession(
+        isMounted: () => true,
+        hasLiveRawPointers: () => false,
+      ),
     );
-  }
-
-  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
-    const marker = 'if (_activeRuntime == widget.runtime) {';
-    if (_activeRuntime == widget.runtime) {
-      return;
-    }
-    _activeRuntime = widget.runtime;
-    final nextPointerSession = _createReplacementPointerSession(
-      widget.runtime,
-    );
-    _pointerHost.replacePointerSession(nextPointerSession);
   }
 
   Object build() {
     final renderState = _activeRuntime.renderState;
     return SceneViewRenderSurface(renderState: renderState);
-  }
-
-  Object _createReplacementPointerSession(SceneViewRuntime runtime) {
-    return runtime.createPointerSession(
-      isMounted: Object(),
-      hasLiveRawPointers: Object(),
-    );
   }
 }
 
@@ -2948,16 +2495,18 @@ class StatefulWidget {}
 class SceneViewRuntime {
   Object get renderState => Object();
 
-  Object createPointerSession({
-    required Object isMounted,
-    required Object hasLiveRawPointers,
+  SceneViewPointerSession createPointerSession({
+    required bool Function() isMounted,
+    required bool Function() hasLiveRawPointers,
   }) {
-    return Object();
+    return SceneViewPointerSession();
   }
 }
 
+class SceneViewPointerSession {}
+
 class SceneViewInteractivePointerHost {
-  void replacePointerSession(Object session) {}
+  SceneViewInteractivePointerHost({required SceneViewPointerSession pointerSession});
 }
 
 class SceneViewRenderSurface {
@@ -2975,10 +2524,8 @@ class SceneViewRenderSurface {
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneViewRuntimeHost must create replacement sessions '
-                'before install, propagate failed swaps to the owner, '
-                'compare updates against the installed runtime, and switch '
-                'the active runtime only after install succeeds',
+                'SceneViewRuntimeHost must remain the active-runtime and '
+                'pointer-host owner for the view boundary',
           ),
         );
       } finally {
@@ -2988,7 +2535,7 @@ class SceneViewRenderSurface {
   );
 
   test(
-    'reports pointer host order violations with file-relative line numbers',
+    'rejects runtime host that depends on concrete SceneController',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -3013,8 +2560,530 @@ class SceneViewRenderSurface {
 ''',
           ),
         );
-        final pointerHostSource = '''
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_runtime_host.dart',
+          '''
 import '../contract/scene_view_runtime.dart';
+import '../interactive/scene_controller.dart';
+
+class SceneViewRuntimeHost extends StatefulWidget {
+  final SceneViewRuntime runtime;
+  final SceneController controller;
+
+  SceneViewRuntimeHost({
+    required this.runtime,
+    required this.controller,
+  });
+}
+
+class _SceneViewRuntimeHostState {
+  late final SceneViewInteractivePointerHost _pointerHost;
+  late SceneViewRuntime _activeRuntime;
+
+  void initState() {
+    _activeRuntime = widget.runtime;
+    _pointerHost = SceneViewInteractivePointerHost(
+      pointerSession: _activeRuntime.createPointerSession(
+        isMounted: () => true,
+        hasLiveRawPointers: () => false,
+      ),
+    );
+  }
+
+  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
+    final nextPointerSession = _createReplacementPointerSession(widget.runtime);
+    _pointerHost.replacePointerSession(nextPointerSession);
+    _activeRuntime = widget.runtime;
+  }
+
+  Object build() {
+    final renderState = widget.controller;
+    return SceneViewRenderSurface(renderState: renderState);
+  }
+
+  SceneViewPointerSession _createReplacementPointerSession(
+    SceneViewRuntime runtime,
+  ) {
+    return runtime.createPointerSession(
+      isMounted: () => true,
+      hasLiveRawPointers: () => false,
+    );
+  }
+}
+
+class StatefulWidget {}
+
+class SceneViewInteractivePointerHost {
+  SceneViewInteractivePointerHost({
+    required SceneViewPointerSession pointerSession,
+  });
+
+  void replacePointerSession(SceneViewPointerSession session) {}
+}
+
+class SceneViewRenderSurface {
+  SceneViewRenderSurface({
+    required Object renderState,
+  });
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewRuntimeHost must remain the active-runtime and '
+                'pointer-host owner for the view boundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects runtime host that keeps replacement swap on stale runtime',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_runtime_host.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+import 'scene_view_interactive_pointer_host.dart';
+import 'scene_view_render_surface.dart';
+
+class SceneViewRuntimeHost extends StatefulWidget {
+  final SceneViewRuntime runtime;
+
+  SceneViewRuntimeHost({required this.runtime});
+}
+
+class _SceneViewRuntimeHostState {
+  late final SceneViewInteractivePointerHost _pointerHost;
+  late SceneViewRuntime _activeRuntime;
+
+  void initState() {
+    _activeRuntime = widget.runtime;
+    _pointerHost = SceneViewInteractivePointerHost(
+      pointerSession: _activeRuntime.createPointerSession(
+        isMounted: () => true,
+        hasLiveRawPointers: () => false,
+      ),
+    );
+  }
+
+  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
+    final nextPointerSession = _createReplacementPointerSession(_activeRuntime);
+    _pointerHost.replacePointerSession(nextPointerSession);
+  }
+
+  Object build() {
+    final renderState = _activeRuntime.renderState;
+    return SceneViewRenderSurface(renderState: renderState);
+  }
+
+  SceneViewPointerSession _createReplacementPointerSession(
+    SceneViewRuntime runtime,
+  ) {
+    return runtime.createPointerSession(
+      isMounted: () => true,
+      hasLiveRawPointers: () => false,
+    );
+  }
+}
+
+class StatefulWidget {}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewRuntimeHost must remain the active-runtime and '
+                'pointer-host owner for the view boundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects runtime host that renders SceneViewRenderSurface from non-active runtime render state',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_runtime_host.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+import 'scene_view_interactive_pointer_host.dart';
+import 'scene_view_render_surface.dart';
+
+class SceneViewRuntimeHost extends StatefulWidget {
+  final SceneViewRuntime runtime;
+
+  SceneViewRuntimeHost({required this.runtime});
+}
+
+class _SceneViewRuntimeHostState {
+  late final SceneViewInteractivePointerHost _pointerHost;
+  late SceneViewRuntime _activeRuntime;
+  late SceneViewRuntime _staleRuntime;
+
+  void initState() {
+    _activeRuntime = widget.runtime;
+    _staleRuntime = widget.runtime;
+    _pointerHost = SceneViewInteractivePointerHost(
+      pointerSession: _activeRuntime.createPointerSession(
+        isMounted: () => true,
+        hasLiveRawPointers: () => false,
+      ),
+    );
+  }
+
+  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_activeRuntime == widget.runtime) {
+      return;
+    }
+    final nextPointerSession = _createReplacementPointerSession(widget.runtime);
+    _pointerHost.replacePointerSession(nextPointerSession);
+    _activeRuntime = widget.runtime;
+  }
+
+  Object build() {
+    final renderState = _staleRuntime.renderState;
+    return SceneViewRenderSurface(renderState: renderState);
+  }
+
+  SceneViewPointerSession _createReplacementPointerSession(
+    SceneViewRuntime runtime,
+  ) {
+    return runtime.createPointerSession(
+      isMounted: () => true,
+      hasLiveRawPointers: () => false,
+    );
+  }
+}
+
+class StatefulWidget {}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewRuntimeHost must remain the active-runtime and '
+                'pointer-host owner for the view boundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects runtime host that switches active runtime before pointer-session swap',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_runtime_host.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+import 'scene_view_interactive_pointer_host.dart';
+import 'scene_view_render_surface.dart';
+
+class SceneViewRuntimeHost extends StatefulWidget {
+  final SceneViewRuntime runtime;
+
+  SceneViewRuntimeHost({required this.runtime});
+}
+
+class _SceneViewRuntimeHostState {
+  late final SceneViewInteractivePointerHost _pointerHost;
+  late SceneViewRuntime _activeRuntime;
+
+  void initState() {
+    _activeRuntime = widget.runtime;
+    _pointerHost = SceneViewInteractivePointerHost(
+      pointerSession: _activeRuntime.createPointerSession(
+        isMounted: () => true,
+        hasLiveRawPointers: () => false,
+      ),
+    );
+  }
+
+  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_activeRuntime == widget.runtime) {
+      return;
+    }
+    final nextPointerSession = _createReplacementPointerSession(widget.runtime);
+    _activeRuntime = widget.runtime;
+    _pointerHost.replacePointerSession(nextPointerSession);
+  }
+
+  Object build() {
+    final renderState = _activeRuntime.renderState;
+    return SceneViewRenderSurface(renderState: renderState);
+  }
+
+  SceneViewPointerSession _createReplacementPointerSession(
+    SceneViewRuntime runtime,
+  ) {
+    return runtime.createPointerSession(
+      isMounted: () => true,
+      hasLiveRawPointers: () => false,
+    );
+  }
+}
+
+class StatefulWidget {}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewRuntimeHost must remain the active-runtime and '
+                'pointer-host owner for the view boundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects runtime host that declares local pointer host shadow',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_runtime_host.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+import 'scene_view_interactive_pointer_host.dart';
+import 'scene_view_render_surface.dart';
+
+class SceneViewRuntimeHost extends StatefulWidget {
+  final SceneViewRuntime runtime;
+
+  SceneViewRuntimeHost({required this.runtime});
+}
+
+class _SceneViewRuntimeHostState {
+  late final SceneViewInteractivePointerHost _pointerHost;
+  late SceneViewRuntime _activeRuntime;
+
+  void initState() {
+    _activeRuntime = widget.runtime;
+    _pointerHost = SceneViewInteractivePointerHost(
+      pointerSession: _activeRuntime.createPointerSession(
+        isMounted: () => true,
+        hasLiveRawPointers: () => false,
+      ),
+    );
+  }
+
+  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_activeRuntime == widget.runtime) {
+      return;
+    }
+    final nextPointerSession = _createReplacementPointerSession(widget.runtime);
+    _pointerHost.replacePointerSession(nextPointerSession);
+    _activeRuntime = widget.runtime;
+  }
+
+  Object build() {
+    final renderState = _activeRuntime.renderState;
+    return SceneViewRenderSurface(renderState: renderState);
+  }
+
+  SceneViewPointerSession _createReplacementPointerSession(
+    SceneViewRuntime runtime,
+  ) {
+    return runtime.createPointerSession(
+      isMounted: () => true,
+      hasLiveRawPointers: () => false,
+    );
+  }
+}
+
+class StatefulWidget {}
+
+class SceneViewInteractivePointerHost {
+  SceneViewInteractivePointerHost({
+    required SceneViewPointerSession pointerSession,
+  });
+
+  void replacePointerSession(SceneViewPointerSession session) {}
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewRuntimeHost must remain the active-runtime and '
+                'pointer-host owner for the view boundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects pointer host that installs next session before releasing current',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_interactive_pointer_host.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+import 'scene_view_pointer_router.dart';
 
 class SceneViewInteractivePointerHost {
   SceneViewInteractivePointerHost({
@@ -3046,16 +3115,16 @@ class _SceneViewInteractivePointerRuntime {
   final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
   SceneViewPointerSession _pointerSession;
 
-  int get debugLiveRawPointerCount => _pointerRouter.liveRawPointerCount;
+  int get debugLiveRawPointerCount => 0;
   int? get debugPendingTapFlushTimestampMs =>
       _pointerSession.pendingTapFlushTimestampMs;
 
   void replacePointerSession(SceneViewPointerSession next) {
     final current = _pointerSession;
-    current.dispose();
-    current.detach();
-    _pointerRouter.reset();
     _pointerSession = next;
+    current.detach();
+    current.dispose();
+    _pointerRouter.reset();
   }
 
   void dispose() {
@@ -3063,44 +3132,813 @@ class _SceneViewInteractivePointerRuntime {
     _pointerSession.dispose();
   }
 }
-
-class SceneViewPointerRouter {
-  int get liveRawPointerCount => 0;
-
-  void reset() {}
-}
-''';
-        writeSandboxFile(
-          sandbox,
-          'lib/src/view/scene_view_interactive_pointer_host.dart',
-          pointerHostSource,
+''',
         );
 
         final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        final expectedLine =
-            '\n'
-                .allMatches(
-                  pointerHostSource.substring(
-                    0,
-                    pointerHostSource.indexOf('_pointerRouter.reset();'),
-                  ),
-                )
-                .length +
-            1;
         expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          contains(
-            'lib/src/view/scene_view_interactive_pointer_host.dart:$expectedLine:',
-          ),
-        );
         expect(
           result.stderr.toString(),
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneViewInteractivePointerHost must detach old sessions '
-                'before dispose and router reset',
+                'SceneViewInteractivePointerHost must remain a raw '
+                'routing/lifecycle shell over pointer sessions',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'accepts runtime host render-state bridge routed through owner-local getter',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_runtime_host.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+import 'scene_view_interactive_pointer_host.dart';
+import 'scene_view_render_surface.dart';
+
+class SceneViewRuntimeHost extends StatefulWidget {
+  final SceneViewRuntime runtime;
+
+  SceneViewRuntimeHost({required this.runtime});
+}
+
+class _SceneViewRuntimeHostState {
+  late final SceneViewInteractivePointerHost _pointerHost;
+  late SceneViewRuntime _activeRuntime;
+
+  SceneViewRenderState get _renderStateForBuild => _activeRuntime.renderState;
+
+  void initState() {
+    _activeRuntime = widget.runtime;
+    _pointerHost = SceneViewInteractivePointerHost(
+      pointerSession: _activeRuntime.createPointerSession(
+        isMounted: () => true,
+        hasLiveRawPointers: () => false,
+      ),
+    );
+  }
+
+  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_activeRuntime == widget.runtime) {
+      return;
+    }
+    final nextPointerSession = _createReplacementPointerSession(widget.runtime);
+    _pointerHost.replacePointerSession(nextPointerSession);
+    _activeRuntime = widget.runtime;
+  }
+
+  Object build() {
+    return SceneViewRenderSurface(renderState: _renderStateForBuild);
+  }
+
+  SceneViewPointerSession _createReplacementPointerSession(
+    SceneViewRuntime runtime,
+  ) {
+    return runtime.createPointerSession(
+      isMounted: () => true,
+      hasLiveRawPointers: () => false,
+    );
+  }
+}
+
+class StatefulWidget {}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects SceneViewInteractive bridge routed through local runtime host shadow',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_interactive.dart',
+          '''
+import '../interactive/scene_controller.dart';
+import 'scene_view_runtime_host.dart';
+
+class SceneViewInteractive {
+  SceneViewInteractive({required this.controller});
+
+  final SceneController controller;
+
+  Object build(Object context) {
+    return SceneViewRuntimeHost(
+      runtime: sceneControllerViewRuntimeOf(controller),
+    );
+  }
+}
+
+class SceneViewRuntimeHost {
+  SceneViewRuntimeHost({required Object runtime});
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewInteractive must remain a thin public shell over '
+                'SceneViewRuntimeHost',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'accepts SceneViewInteractive bridge routed through owner-local getter',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_interactive.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+import '../interactive/scene_controller.dart';
+import 'scene_view_runtime_host.dart';
+
+class SceneViewInteractive {
+  SceneViewInteractive({required this.controller});
+
+  final SceneController controller;
+
+  SceneViewRuntime get _runtime => sceneControllerViewRuntimeOf(controller);
+
+  Object build(Object context) {
+    return SceneViewRuntimeHost(runtime: _runtime);
+  }
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects render surface that takes concrete SceneController owner',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_render_surface.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+import '../interactive/scene_controller.dart';
+
+class SceneViewRenderSurface {
+  SceneViewRenderSurface({
+    required SceneController renderState,
+  }) : _renderState = renderState;
+
+  final SceneController _renderState;
+
+  State<SceneViewRenderSurface> createState() => SceneViewRenderSurfaceState();
+}
+
+class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
+  void initState() {
+    widget._renderState.addListener(_handleControllerChanged);
+  }
+
+  void didUpdateWidget(SceneViewRenderSurface oldWidget) {
+    oldWidget._renderState.removeListener(_handleControllerChanged);
+    widget._renderState.addListener(_handleControllerChanged);
+  }
+
+  void dispose() {
+    widget._renderState.removeListener(_handleControllerChanged);
+  }
+
+  Object build(Object context) => Object();
+
+  void _handleControllerChanged() {}
+}
+
+class State<T> {
+  T get widget => throw UnimplementedError();
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewRenderSurface must remain a render-state-only view '
+                'surface',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects render surface that shadows the SceneViewRenderState contract locally',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_render_surface.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+
+class SceneViewRenderState {
+  void addListener(Object listener) {}
+
+  void removeListener(Object listener) {}
+}
+
+class SceneViewRenderSurface {
+  SceneViewRenderSurface({
+    required SceneViewRenderState renderState,
+  }) : _renderState = renderState;
+
+  final SceneViewRenderState _renderState;
+
+  State<SceneViewRenderSurface> createState() => SceneViewRenderSurfaceState();
+}
+
+class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
+  void initState() {
+    widget._renderState.addListener(_handleControllerChanged);
+  }
+
+  void didUpdateWidget(SceneViewRenderSurface oldWidget) {
+    oldWidget._renderState.removeListener(_handleControllerChanged);
+    widget._renderState.addListener(_handleControllerChanged);
+  }
+
+  void dispose() {
+    widget._renderState.removeListener(_handleControllerChanged);
+  }
+
+  Object build(Object context) => Object();
+
+  void _handleControllerChanged() {}
+}
+
+class State<T> {
+  T get widget => throw UnimplementedError();
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewRenderSurface must remain a render-state-only view '
+                'surface',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects render surface that subscribes listeners outside widget renderState',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_render_surface.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+
+class SceneViewRenderSurface {
+  SceneViewRenderSurface({
+    required SceneViewRenderState renderState,
+  }) : _renderState = renderState;
+
+  final SceneViewRenderState _renderState;
+  final SceneViewRenderState _otherRenderState = SceneControllerSceneViewRenderState();
+}
+
+class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
+  void initState() {
+    super.initState();
+    widget._otherRenderState.addListener(_handleControllerChanged);
+  }
+
+  void didUpdateWidget(SceneViewRenderSurface oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    oldWidget._otherRenderState.removeListener(_handleControllerChanged);
+    widget._otherRenderState.addListener(_handleControllerChanged);
+  }
+
+  void dispose() {
+    widget._otherRenderState.removeListener(_handleControllerChanged);
+  }
+
+  Object build(Object context) => Object();
+
+  void _handleControllerChanged() {}
+}
+
+class SceneControllerSceneViewRenderState implements SceneViewRenderState {
+  @override
+  void addListener(Object listener) {}
+
+  @override
+  void removeListener(Object listener) {}
+}
+
+class State<T> {
+  T get widget => throw UnimplementedError();
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewRenderSurface must remain a render-state-only '
+                'view surface',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects scene view runtime that shadows SceneControllerPointerSession locally',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
+          '''
+import '../../contract/scene_view_runtime.dart';
+import 'scene_controller_pointer_session.dart';
+import 'pointer_session_token.dart';
+
+final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
+  SceneControllerSceneViewRuntime({
+    Object? ensurePublicSideEffectAllowed,
+  });
+
+  @override
+  final renderState = SceneControllerSceneViewRenderState();
+  final _interactionRuntime = SceneControllerInteractionRuntime();
+
+  @override
+  SceneViewPointerSession createPointerSession({
+    required bool Function() isMounted,
+    required bool Function() hasLiveRawPointers,
+  }) {
+    return SceneControllerPointerSession(
+      token: _interactionRuntime.createPointerSessionToken(),
+      detachPointerSession: _interactionRuntime.detachPointerSession,
+      releasePointerSessionToken: _interactionRuntime.releasePointerSessionToken,
+      handlePointerFromSession: _interactionRuntime.handlePointerFromSession,
+      handleDoubleTapFromSession:
+          _interactionRuntime.handleDoubleTapFromSession,
+    );
+  }
+}
+
+class SceneControllerPointerSession implements SceneViewPointerSession {
+  SceneControllerPointerSession({
+    required Object token,
+    required Object detachPointerSession,
+    required Object releasePointerSessionToken,
+    required Object handlePointerFromSession,
+    required Object handleDoubleTapFromSession,
+  });
+}
+
+class SceneControllerInteractionRuntime {
+  PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void detachPointerSession(Object token) {}
+
+  void releasePointerSessionToken(Object token) {}
+
+  void handlePointerFromSession() {}
+
+  void handleDoubleTapFromSession() {}
+}
+
+class SceneControllerSceneViewRenderState implements SceneViewRenderState {
+  @override
+  void addListener(Object listener) {}
+
+  @override
+  void removeListener(Object listener) {}
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerSceneViewRuntime must own the render-state '
+                'adapter and pointer-session factory',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects scene view runtime that mints pointer-session tokens outside interaction runtime',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
+          '''
+import '../../contract/scene_view_runtime.dart';
+import 'scene_controller_pointer_session.dart';
+import 'pointer_session_token.dart';
+
+final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
+  SceneControllerSceneViewRuntime({
+    Object? ensurePublicSideEffectAllowed,
+  });
+
+  @override
+  final renderState = SceneControllerSceneViewRenderState();
+  final _interactionRuntime = SceneControllerInteractionRuntime();
+
+  @override
+  SceneViewPointerSession createPointerSession({
+    required bool Function() isMounted,
+    required bool Function() hasLiveRawPointers,
+  }) {
+    return SceneControllerPointerSession(
+      token: PointerSessionToken(),
+      detachPointerSession: _interactionRuntime.detachPointerSession,
+      releasePointerSessionToken: _interactionRuntime.releasePointerSessionToken,
+      handlePointerFromSession: _interactionRuntime.handlePointerFromSession,
+      handleDoubleTapFromSession:
+          _interactionRuntime.handleDoubleTapFromSession,
+    );
+  }
+}
+
+class SceneControllerInteractionRuntime {
+  PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void detachPointerSession(Object token) {}
+
+  void releasePointerSessionToken(Object token) {}
+
+  void handlePointerFromSession() {}
+
+  void handleDoubleTapFromSession() {}
+}
+
+class SceneControllerSceneViewRenderState implements SceneViewRenderState {
+  @override
+  void addListener(Object listener) {}
+
+  @override
+  void removeListener(Object listener) {}
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerSceneViewRuntime must own the render-state '
+                'adapter and pointer-session factory',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects scene view runtime that routes pointer-session callbacks through local wrappers',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
+          '''
+import '../../contract/scene_view_runtime.dart';
+import 'scene_controller_pointer_session.dart';
+import 'pointer_session_token.dart';
+
+final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
+  SceneControllerSceneViewRuntime({
+    Object? ensurePublicSideEffectAllowed,
+  });
+
+  @override
+  final renderState = SceneControllerSceneViewRenderState();
+  final _interactionRuntime = SceneControllerInteractionRuntime();
+
+  @override
+  SceneViewPointerSession createPointerSession({
+    required bool Function() isMounted,
+    required bool Function() hasLiveRawPointers,
+  }) {
+    return SceneControllerPointerSession(
+      token: _interactionRuntime.createPointerSessionToken(),
+      detachPointerSession: detachPointerSession,
+      releasePointerSessionToken: releasePointerSessionToken,
+      handlePointerFromSession: handlePointerFromSession,
+      handleDoubleTapFromSession: handleDoubleTapFromSession,
+    );
+  }
+
+  void detachPointerSession(Object token) {}
+
+  void releasePointerSessionToken(Object token) {}
+
+  void handlePointerFromSession() {}
+
+  void handleDoubleTapFromSession() {}
+}
+
+class SceneControllerInteractionRuntime {
+  PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void detachPointerSession(Object token) {}
+
+  void releasePointerSessionToken(Object token) {}
+
+  void handlePointerFromSession() {}
+
+  void handleDoubleTapFromSession() {}
+}
+
+class SceneControllerSceneViewRenderState implements SceneViewRenderState {
+  @override
+  void addListener(Object listener) {}
+
+  @override
+  void removeListener(Object listener) {}
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerSceneViewRuntime must own the render-state '
+                'adapter and pointer-session factory',
           ),
         );
       } finally {
@@ -3654,6 +4492,172 @@ class _Core {
   });
 
   test(
+    'rejects selection mutation owner store controller write bypass outside mutation boundary',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_selection_mutations.dart',
+          '''
+class SceneControllerSelectionMutations {
+  final mutations = Object();
+
+  void setSelection(Object nodeIds) {
+    ensureExternalMutationAllowed('setSelection');
+    storeController.commands.writeSelectionReplace(nodeIds);
+  }
+
+  void toggleSelection(Object nodeId) {
+    ensureExternalMutationAllowed('toggleSelection');
+    mutations.toString();
+  }
+
+  void clearSelection() {
+    ensureExternalMutationAllowed('clearSelection');
+    mutations.toString();
+  }
+
+  void selectAll() {
+    ensureExternalMutationAllowed('selectAll');
+    mutations.toString();
+  }
+
+  void rotateSelection() {
+    ensureExternalMutationAllowed('rotateSelection');
+    mutations.toString();
+  }
+
+  void flipSelectionVertical() {
+    ensureExternalMutationAllowed('flipSelectionVertical');
+    mutations.toString();
+  }
+
+  void flipSelectionHorizontal() {
+    ensureExternalMutationAllowed('flipSelectionHorizontal');
+    mutations.toString();
+  }
+
+  void deleteSelection() {
+    ensureExternalMutationAllowed('deleteSelection');
+    mutations.toString();
+  }
+
+  void ensureExternalMutationAllowed(String operation) {}
+
+  final storeController = _StoreController();
+}
+
+class _StoreController {
+  final commands = _Commands();
+}
+
+class _Commands {
+  void writeSelectionReplace(Object nodeIds) {}
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerSelectionMutations must delegate committed '
+                'selection writes through SceneControllerMutationBoundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects selection actions core write bypass outside mutation boundary',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/interactive_selection_actions.dart',
+          '''
+class InteractiveSelectionActions {
+  void rotateSelection() {
+    core.write('rotateSelection');
+  }
+
+  final core = _Core();
+}
+
+class _Core {
+  void write(Object operation) {}
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'InteractiveSelectionActions must remain a thin routing shell '
+                'over SceneControllerMutationBoundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
     'rejects runtime selection callbacks that bypass mutation boundary',
     () async {
       final sandbox = await createGuardrailsSandbox();
@@ -3683,15 +4687,173 @@ class _Core {
           sandbox,
           'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
           '''
+import 'pointer_session_token.dart';
 import 'scene_controller_mutation_boundary.dart';
 
 class SceneControllerInteractionRuntime {
   void ensurePublicSideEffectAllowed(String operation) {}
 
+  PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void detachPointerSession(PointerSessionToken token) {}
+
+  void releasePointerSessionToken(PointerSessionToken token) {}
+
+  void handlePointerFromSession() {}
+
+  void handleDoubleTapFromSession() {}
+
   void wireRuntime(Object request, Object mutationBoundary) {
     request.storeController.commands.writeSelectionReplace;
     request.storeController.draw.writeDrawStroke;
   }
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerInteractionRuntime must route committed '
+                'selection/draw callbacks through '
+                'SceneControllerMutationBoundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects runtime assembly without canonical mutation boundary routing',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
+          '''
+import 'dart:ui';
+
+import '../contract/canvas_pointer_input.dart';
+import '../../controller/scene_controller_committed_mutation_access.dart';
+import 'interactive_selection_actions.dart';
+import 'pointer_session_token.dart';
+import 'scene_controller_mutation_boundary.dart';
+
+class SceneControllerInteractionRuntimeRequest {
+  SceneControllerInteractionRuntimeRequest({
+    required this.mutationAccess,
+  });
+
+  final SceneControllerCommittedMutationAccess mutationAccess;
+}
+
+class SceneControllerInteractionRuntime {
+  SceneControllerInteractionRuntime._({
+    required this.mutationBoundary,
+    required this.selectionActions,
+    required this.runtime,
+  });
+
+  final SceneControllerMutationBoundary mutationBoundary;
+  final InteractiveSelectionActions selectionActions;
+  final InteractiveRuntime runtime;
+
+  void ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+
+  PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void detachPointerSession(PointerSessionToken token) {}
+
+  void releasePointerSessionToken(PointerSessionToken token) {}
+
+  void handlePublicPointer(CanvasPointerInput input) {}
+
+  void handlePublicDoubleTap({required Offset position, int? timestampMs}) {}
+
+  void handlePointerFromSession(
+    CanvasPointerInput input, {
+    required PointerSessionToken token,
+  }) {}
+
+  void handleDoubleTapFromSession({
+    required Offset position,
+    int? timestampMs,
+    required PointerSessionToken token,
+  }) {}
+}
+
+class InteractiveRuntime {
+  InteractiveRuntime({required Object callbacks});
+}
+
+SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
+  required SceneControllerInteractionRuntimeRequest request,
+}) {
+  final mutationBoundary = _createMutationBoundary(request);
+  final selectionActions = _createSelectionActions(mutationBoundary);
+  final interactiveRuntime = _createInteractiveRuntime(
+    request,
+    mutationBoundary: mutationBoundary,
+  );
+  return SceneControllerInteractionRuntime._(
+    mutationBoundary: mutationBoundary,
+    selectionActions: selectionActions,
+    runtime: interactiveRuntime,
+  );
+}
+
+SceneControllerMutationBoundary _createMutationBoundary(
+  SceneControllerInteractionRuntimeRequest request,
+) {
+  return SceneControllerMutationBoundary(
+    mutationAccess: request.mutationAccess,
+  );
+}
+
+InteractiveSelectionActions _createSelectionActions(
+  SceneControllerMutationBoundary mutationBoundary,
+) {
+  return InteractiveSelectionActions(mutations: mutationBoundary);
+}
+
+InteractiveRuntime _createInteractiveRuntime(
+  SceneControllerInteractionRuntimeRequest request, {
+  required SceneControllerMutationBoundary mutationBoundary,
+}) {
+  return InteractiveRuntime(
+    callbacks: Object(),
+  );
 }
 ''',
         );
@@ -4216,6 +5378,64 @@ class InteractiveDrawEraserEngine {
       sandbox.deleteSync(recursive: true);
     }
   });
+
+  test(
+    'rejects internal access seam that drops canonical accessor surface',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_internal_access.dart',
+          '''
+class SceneControllerInternalAccessRegistration {}
+
+void registerSceneControllerInternalAccess(
+  Object controller,
+  Object registration,
+) {}
+
+void unregisterSceneControllerInternalAccess(Object controller) {}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'internal interactive test/debug access must remain outside '
+                'SceneController',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
 
   test('rejects missing required split-owner file', () async {
     final sandbox = await createGuardrailsSandbox();

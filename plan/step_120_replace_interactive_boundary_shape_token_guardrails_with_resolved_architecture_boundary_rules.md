@@ -110,9 +110,11 @@ This step moves the interactive architecture-boundary family onto the target res
 - Exit: `GuardrailViolation` diagnostics from `runInteractiveApiGuardrails(...)` and analyzer-backed failing assertions in `scene_controller_architecture_boundary_test.dart`.
 
 #### Permitted Extension Seam
-- One new part file at `tool/src/guardrails/rules/interactive/interactive_architecture_boundary_rules.dart`.
+- `tool/src/guardrails/rules/interactive/interactive_architecture_boundary_rules.dart` remains the rule-family entrypoint and orchestration owner.
+- Category-scoped private `part` files under `tool/src/guardrails/rules/interactive/` are allowed for the step-120 boundary groups when they preserve one clear reason to change per file.
+- One private shared-support `part` file under `tool/src/guardrails/rules/interactive/` is allowed for resolved-AST matcher/helpers that would otherwise force every category back into one monolithic file.
 - Private analyzer helper code remains local to `test/interactive/core/scene_controller_architecture_boundary_test.dart`.
-- Private owner-family spec objects and boundary-category helpers may live inside `interactive_architecture_boundary_rules.dart` when they remove repeated proof shape without exporting a new generic framework.
+- Private owner-family spec objects and boundary-category helpers may live inside `interactive_architecture_boundary_rules.dart` only when they are small orchestration data. Category-local checks and generic matcher libraries should not accumulate there once the file stops being cohesive.
 
 #### Rejected Alternatives
 - Keep the old filename `boundary_shape_token_rules.dart` after removing token logic — rejected because the file name would become misleading about the proof owner.
@@ -166,6 +168,8 @@ This step moves the interactive architecture-boundary family onto the target res
 12. `test/interactive/core/scene_controller_architecture_boundary_test.dart` remains the primary proof file for `INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY` and `INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY`; this step must not silently reassign primary-proof ownership for `INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY` or `INV-ENG-COMMITTED-SELECTION-REVISION-ALIGNMENT`, even though the file currently carries additional `// INV:` markers.
 13. The semantic replacement must be decomposed by boundary category inside `interactive_architecture_boundary_rules.dart` (owner presence, dependency boundary, graph assembly, pointer/runtime split, facade/view split, deleted seam absence). Replacing the token monolith with a single analyzer-backed mega-function is forbidden.
 14. Where `guardrail_runner_support.dart` or existing element/path helpers already fit the needed proof shape, the step must reuse them instead of re-implementing equivalent local scans.
+15. Step 120 must not end in one monolithic architecture-rule file that mixes rule orchestration, all boundary categories, and the full resolved-matcher helper library. `interactive_architecture_boundary_rules.dart` stays as the entrypoint, but the implementation must be split into category-scoped `part` files plus a shared support `part` once the family no longer fits a cohesive single file.
+16. The required decomposition shape for this step is: entrypoint/orchestration, owner-and-residual-seam checks, facade/graph/runtime-view checks, pointer/session/host checks, dependency-and-mutation-boundary checks, draw-family checks, and shared resolved-boundary support. Adjacent categories may share a file only when the resulting file still has one clear reason to change.
 
 ## 7. Result Requirements
 
@@ -176,6 +180,7 @@ This step moves the interactive architecture-boundary family onto the target res
 5. `doc/guardrails_state_map.md` reflects the renamed architecture rule file, the removal of `resolver_purity_rules.dart`, and the fact that this family no longer owns token/source-order proof.
 6. Mutation-owner local sequence/routing proof is not duplicated or re-homed here; step 120 owns only the architecture-level mutation-boundary placement/bypass categories listed in the locked decisions.
 7. The semantic replacement is organized as small boundary-category checks over shared local specs/helpers rather than as a new monolithic analyzer pass.
+8. The semantic replacement remains workable at the file level: category checks live in category files, and reusable resolved matcher/support code does not stay embedded in the same file as every boundary rule.
 
 ## 8. Implementation Rules
 
@@ -199,7 +204,8 @@ This step moves the interactive architecture-boundary family onto the target res
 - Interactive architecture proof test implementation.
 - Interactive tool-test fixtures and diagnostics that reflect the migrated rule family.
 - Documentation of guardrail state for this family.
-- Local owner-family and boundary-category specs/helpers inside `interactive_architecture_boundary_rules.dart`.
+- Local owner-family and orchestration specs inside `interactive_architecture_boundary_rules.dart`.
+- Category-scoped boundary-rule `part` files and one shared resolved-boundary support `part`.
 
 ### Structural Enforcement
 - Use `checkOwnedLayerFile(...)`, `checkDirectiveBoundaryViolation(...)`, and `checkExternalDirectiveBoundaryFile(...)` for file-level dependency and layer constraints where those helpers already fit the locked form.
@@ -209,6 +215,7 @@ This step moves the interactive architecture-boundary family onto the target res
 - Cover the complete owner/category surface currently encoded in `boundary_shape_token_rules.dart`; omitting runtime, pointer, eligibility-policy, mutation-shell, or draw-family categories is not allowed.
 - For mutation-owner-related files, limit this step to architecture-level boundary placement and bypass proof; local guard/interrupt ordering and direct callback-forwarding remain step-119 concerns and must not be re-proved here.
 - Organize the new rule as category-scoped checks over shared local spec data rather than one flat procedure that mixes every owner split inline.
+- Keep the entrypoint file small enough to read as the family map: it should orchestrate categories, define small shared specs/constants, and delegate detailed checks plus generic matcher support into focused sibling `part` files.
 - Reuse existing support/helpers before adding new local traversal code with the same proof shape.
 
 ### Required Test Strategy
@@ -244,7 +251,7 @@ This step moves the interactive architecture-boundary family onto the target res
 
 ## 9. Vertical Slices
 
-### Slice 1. [ ] Semantic interactive architecture rule family replaces token-boundary checks
+### Slice 1. [x] Semantic interactive architecture rule family replaces token-boundary checks
 
 #### Slice Contract
 Interactive architecture boundary violations are emitted from semantic rule logic in `interactive_architecture_boundary_rules.dart`, not from `boundary_shape_token_rules.dart` token checks.
@@ -278,7 +285,7 @@ Interactive architecture boundary violations are emitted from semantic rule logi
 - Green run of the listed structural verification.
 - No call site in `mutation_boundary_rules.dart` references `boundary_shape_token_rules.dart` after the new rule is wired.
 
-### Slice 2. [ ] Semantic view/runtime/render-surface boundary proof
+### Slice 2. [x] Semantic view/runtime/render-surface boundary proof
 
 #### Slice Contract
 The migrated tool rule proves the locked facade/graph/view-runtime/render-surface split from analyzer-backed owner relationships and dependency boundaries.
