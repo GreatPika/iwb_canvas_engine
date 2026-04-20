@@ -220,7 +220,7 @@ This step does not finish symmetry by itself; it locks the pre-consolidation pro
 
 ## 9. Vertical Slices
 
-### Slice 1. [ ] Runtime primary proof ownership is restored for interactive resolver purity
+### Slice 1. [x] Runtime primary proof ownership is restored for interactive resolver purity
 
 #### Slice Contract
 `INV-ENG-INTERACTIVE-RESOLVER-PURITY` declares a runtime primary proof and keeps the interactive tool test as tool regression proof.
@@ -250,7 +250,7 @@ This step does not finish symmetry by itself; it locks the pre-consolidation pro
 - Green run of the listed structural verification.
 - `tool/invariant_registry.dart` reflects the corrected proof ownership.
 
-### Slice 2. [ ] Analyzer-backed self-guard protects the migrated weak rule files
+### Slice 2. [x] Analyzer-backed self-guard protects the migrated weak rule files
 
 #### Slice Contract
 A dedicated analyzer-backed tool test fails when the migrated weak rule files reintroduce banned raw source-token APIs or the deleted helper dependency.
@@ -284,7 +284,7 @@ A dedicated analyzer-backed tool test fails when the migrated weak rule files re
 - Green run of the listed structural verification.
 - The self-guard diagnostics identify the offending file and banned API.
 
-### Slice 3. [ ] Documentation records the corrected proof surface and targeted meta-control honestly
+### Slice 3. [x] Documentation records the corrected proof surface and targeted meta-control honestly
 
 #### Slice Contract
 Repository documentation records runtime primary proof for interactive resolver purity and targeted self-guard coverage for the migrated weak files without claiming repository-wide meta-control completion.

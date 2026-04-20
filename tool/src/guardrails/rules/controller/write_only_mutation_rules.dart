@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 
@@ -794,7 +795,9 @@ GuardrailViolation? _astCommittedReadHelperSignatureViolation({
           'signature.',
     );
   }
-  if (astMember.returnType?.toSource() != expected.returnType) {
+  final returnType = astMember.returnType;
+  if (returnType == null ||
+      _nodeSourceText(returnType) != expected.returnType) {
     return _committedReadSideViolation(
       context: context,
       sourceElement: sourceElement,
@@ -846,9 +849,13 @@ bool _matchesSealedCommittedReadParameter(
   required String? defaultValueSource,
 }) {
   if (!isNamed) {
-    return parameter is SimpleFormalParameter &&
-        parameter.name?.lexeme == name &&
-        parameter.type?.toSource() == type &&
+    if (parameter is! SimpleFormalParameter) {
+      return false;
+    }
+    final parameterType = parameter.type;
+    return parameter.name?.lexeme == name &&
+        parameterType != null &&
+        _nodeSourceText(parameterType) == type &&
         parameter.isPositional;
   }
 
@@ -859,15 +866,73 @@ bool _matchesSealedCommittedReadParameter(
   if (inner is! SimpleFormalParameter) {
     return false;
   }
-  if (inner.name?.lexeme != name || inner.type?.toSource() != type) {
+  final innerType = inner.type;
+  if (inner.name?.lexeme != name ||
+      innerType == null ||
+      _nodeSourceText(innerType) != type) {
     return false;
   }
   if (!parameter.isNamed || parameter.isRequiredNamed != isRequiredNamed) {
     return false;
   }
-  final actualDefault = parameter.defaultValue?.toSource();
+  final defaultValue = parameter.defaultValue;
+  final actualDefault = defaultValue == null
+      ? null
+      : _nodeSourceText(defaultValue);
   return actualDefault == defaultValueSource;
 }
+
+String _nodeSourceText(AstNode node) {
+  final buffer = StringBuffer();
+  Token? previous;
+  var token = node.beginToken;
+  while (true) {
+    if (previous != null && _needsSpaceBetweenTokens(previous, token)) {
+      buffer.write(' ');
+    }
+    buffer.write(token.lexeme);
+    if (identical(token, node.endToken)) {
+      break;
+    }
+    previous = token;
+    final nextToken = token.next;
+    if (nextToken == null) {
+      break;
+    }
+    token = nextToken;
+  }
+  return buffer.toString();
+}
+
+bool _needsSpaceBetweenTokens(Token previous, Token next) {
+  final previousLexeme = previous.lexeme;
+  final nextLexeme = next.lexeme;
+  if (previousLexeme == ',' || previousLexeme == ':') {
+    return true;
+  }
+  if (_noTrailingSpaceTokenLexemes.contains(previousLexeme) ||
+      _noLeadingSpaceTokenLexemes.contains(nextLexeme)) {
+    return false;
+  }
+  return _isWordLikeTokenLexeme(previousLexeme) &&
+      _isWordLikeTokenLexeme(nextLexeme);
+}
+
+bool _isWordLikeTokenLexeme(String lexeme) {
+  return RegExp(r'^[A-Za-z0-9_$]+$').hasMatch(lexeme);
+}
+
+const Set<String> _noTrailingSpaceTokenLexemes = <String>{'(', '{', '<', '.'};
+
+const Set<String> _noLeadingSpaceTokenLexemes = <String>{
+  ',',
+  ')',
+  '}',
+  '>',
+  '?',
+  '.',
+  ';',
+};
 
 final class _CommittedReadSideSurfacePresence {
   const _CommittedReadSideSurfacePresence({

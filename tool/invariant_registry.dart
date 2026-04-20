@@ -529,7 +529,8 @@ const List<Invariant> invariants = <Invariant>[
     title:
         'moveCommitDeltaResolver cannot call public stateful/effectful interactive controller entrypoints',
     primaryProof: PrimaryProof(
-      path: 'test/tool/guardrails/guardrails_interactive_api_tool_test.dart',
+      path:
+          'test/interactive/core/scene_controller_interactive_actions_effects_test.dart',
     ),
     toolProof: ToolProof(
       enforcementPath: 'tool/check_guardrails.dart',

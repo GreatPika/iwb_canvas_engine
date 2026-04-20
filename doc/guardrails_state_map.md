@@ -78,6 +78,10 @@ Source commands:
 Controller note:
 - `rules/controller/write_only_mutation_rules.dart` no longer uses name-prefix or `replaceScene`/`controllerEpoch` lexical heuristics; the active proof surface is resolved selection-op routing, resolved committed-read owner/member discovery, resolved spatial payload-owner discovery, and resolved render-state leak detection.
 
+Proof ownership note:
+- `INV-ENG-INTERACTIVE-RESOLVER-PURITY` now keeps its runtime primary proof in `test/interactive/core/scene_controller_interactive_actions_effects_test.dart`.
+- `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` remains the tool-side regression proof for `tool/check_guardrails.dart`, not the runtime primary proof.
+
 ## Runner Entrypoints (Explicit)
 
 - `runPublicSurfaceGuardrails`
@@ -213,8 +217,9 @@ Notable very-high functions:
 5. **Decide what to merge/delete**: **NOT STARTED**
 - Decision postponed until step 3 and step 4 reduce accidental overlap.
 
-6. **Meta-control for guardrails itself**: **NOT STARTED**
-- No guardrails-specific clone/metrics gates enforced yet.
+6. **Meta-control for guardrails itself**: **TARGETED SELF-GUARD ACTIVE**
+- `test/tool/guardrails/guardrails_guardrail_implementation_tool_test.dart` now protects the migrated weak rule owners from steps 118 through 121 plus the retained interactive host file against reintroducing `readAsStringSync`, `toSource()`, `requireSourceTokens`, `requireTokenOrder`, or `resolver_purity_rules.dart`.
+- This is intentionally narrower than repository-wide clone/metrics governance; broader guardrails meta-control is still outstanding.
 
 ## Next Cutting Queue (Recommended)
 
@@ -232,10 +237,12 @@ Notable very-high functions:
 4. Continue AST migration of remaining non-interactive token-heavy rules.
    Status: **NEXT**
    - interactive architecture, mutation-owner families, and controller write-only mutation enforcement are already on resolved/semantic proof
-   - next remaining focus is the resolved guardrail proof-surface/self-guard follow-up in Step 122
+   - resolved guardrail proof-surface ownership and targeted self-guard follow-up are now closed by Step 122
+   - next remaining focus is shared proof-support extraction and runner/scaffold consolidation in steps 123 through 126
 
 ## Verification Snapshot
 
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart` -> passed
+- `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_guardrail_implementation_tool_test.dart` -> passed
 - `flutter test test/interactive/core/scene_controller_architecture_boundary_test.dart` -> passed
 - `dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=/tmp/step120_changed_paths.txt` -> passed
