@@ -351,7 +351,7 @@ The migrated tool rule proves the locked facade/graph/view-runtime/render-surfac
 - Green run of the listed structural verification.
 - The test file contains no raw source-text architecture assertions after migration.
 
-### Slice 4. [ ] Token helpers are retired and repository state map is updated
+### Slice 4. [x] Token helpers are retired and repository state map is updated
 
 #### Slice Contract
 The old token-helper files are removed, and repository documentation names the semantic architecture rule as the active owner.

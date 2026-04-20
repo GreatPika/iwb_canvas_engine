@@ -33,7 +33,7 @@ roadmap can be updated without mixing execution contracts.
 - [x] [Step 118. Migrate interactive resolver-purity guardrails to resolved AST entrypoint analysis](plan/step_118_migrate_interactive_resolver_purity_guardrails_to_resolved_entrypoint_analysis.md)
 - [x] [Step 118.5. Restore canonical interactive guardrail test scaffolds](plan/step_118_5_restore_canonical_interactive_guardrail_test_scaffolds.md)
 - [x] [Step 119. Migrate interactive mutation-owner guardrails to resolved sequence-and-routing analysis](plan/step_119_migrate_interactive_mutation_owner_guardrails_to_resolved_pre_effect_analysis.md)
-- [ ] [Step 120. Replace interactive boundary-shape token guardrails with resolved architecture-boundary rules](plan/step_120_replace_interactive_boundary_shape_token_guardrails_with_resolved_architecture_boundary_rules.md)
+- [x] [Step 120. Replace interactive boundary-shape token guardrails with resolved architecture-boundary rules](plan/step_120_replace_interactive_boundary_shape_token_guardrails_with_resolved_architecture_boundary_rules.md)
 - [ ] [Step 121. Replace controller lexical write-only mutation guardrails with resolved semantics](plan/step_121_replace_controller_lexical_write_only_mutation_guardrails_with_resolved_semantics.md)
 - [ ] [Step 122. Establish extensible resolved guardrail proof-surface and self-guard regressions](plan/step_122_close_resolved_guardrail_proof_surface_and_self_guard_regressions.md)
 - [ ] [Step 123. Extract shared resolved surface-contract support for guardrails](plan/step_123_extract_shared_resolved_surface_contract_support_for_guardrails.md)
