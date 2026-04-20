@@ -1,5 +1,5 @@
 ---
-name: maintain-changelog-md
+name: changelog-sync
 description: Maintain `CHANGELOG.md`. Use when adding unreleased entries, normalizing changelog wording, cutting a release section, or auditing whether the changelog matches current user-visible package changes.
 ---
 

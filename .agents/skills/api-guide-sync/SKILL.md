@@ -1,5 +1,5 @@
 ---
-name: maintain-api-guide-md
+name: api-guide-sync
 description: Maintain `API_GUIDE.md`. Use when creating, updating, auditing, or reviewing the public API guide; when changes affect the supported import surface, exported symbols, document model, runtime behavior, `SceneView`, transactions, schema/serialization contract, error model, or migration guidance.
 ---
 

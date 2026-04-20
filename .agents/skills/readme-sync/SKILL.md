@@ -1,5 +1,5 @@
 ---
-name: maintain-readme-md
+name: readme-sync
 description: Maintain `README.md`. Use when creating, updating, auditing, or reviewing the package landing page; when changes affect package scope, requirements, installation, supported imports, quick start, common integration points, hosted-doc links, or other first-contact user documentation.
 ---
 

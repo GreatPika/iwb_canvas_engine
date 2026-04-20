@@ -1,5 +1,5 @@
 ---
-name: maintain-architecture-md
+name: architecture-sync
 description: Maintain `ARCHITECTURE.md`. Use when creating, updating, auditing, or reviewing the architecture document; when changes affect the package boundary, public barrel exports, schema versions, layer DAG, runtime seams, rendering or interaction ownership, execution flows, invariants, or architecture guardrails.
 ---
 
