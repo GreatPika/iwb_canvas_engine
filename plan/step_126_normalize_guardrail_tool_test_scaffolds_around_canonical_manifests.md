@@ -16,7 +16,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 ### Included in the Change
 - Introduce canonical manifest-based fixture support under `test/tool/support/` for guardrail sandbox source trees.
 - Split oversized mixed-responsibility tool-test support into one guardrail manifest owner, one guardrail writer owner, one guardrail sandbox/bootstrap helper owner, one import-boundaries sandbox helper owner, and one shared diagnostic-matcher owner so canonical fixture data, sandbox creation, and stderr matcher helpers stop accumulating in one file.
-- Migrate every active guardrail suite that currently imports `guardrails_tool_test_support.dart` to the new support split, including the interactive, controller, public, contract, model, and layout/entrypoint suites.
+- Migrate every active guardrail suite that currently imports `guardrails_tool_test_support.dart` to the new support split, including the interactive, controller, public, contract, model, layout/entrypoint, and rule-inventory suites.
 - Migrate the current import-boundaries suites that import `guardrails_tool_test_support.dart` onto the dedicated non-guardrail successor seam before deleting the old file.
 - Delete `test/tool/support/guardrails_tool_test_support.dart` after its responsibilities are moved into the locked manifest/writer/bootstrap split.
 - Add one dedicated structural regression that makes duplicate-builder drift and manifest-ownership drift mechanically visible.
@@ -39,6 +39,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 - `test/tool/guardrails/guardrails_interactive_resolved_entrypoint_guard_tool_test.dart` — current focused interactive suite at 1135 lines; still duplicates `_sceneControllerFixture(...)` rather than consuming one canonical manifest source.
 - `test/tool/guardrails/guardrails_public_surface_tool_test.dart` and `guardrails_public_signature_hermeticity_tool_test.dart` — both depend on shared interactive architecture support scaffolds from `guardrails_tool_test_support.dart`, which means public guardrail suites are also coupled to the same mixed support owner.
 - `test/tool/guardrails/guardrails_contract_architecture_tool_test.dart`, `guardrails_model_architecture_tool_test.dart`, and `guardrails_layout_and_entrypoints_tool_test.dart` — all currently import `guardrails_tool_test_support.dart`; the contract/model suites depend on `createGuardrailsSandbox()`, `writeMinimalControllerStore()`, and `diagnostic(...)`, while the layout suite depends on `createGuardrailsSandbox()`, `writeMinimalControllerStore()`, and `writeCanonicalPublicExportScaffold(...)`, so these suites must receive explicit successor seams in this step rather than being left as implicit fallout from deleting the old file.
+- `test/tool/guardrails/guardrails_rule_inventory_tool_test.dart` — current declarative-inventory suite still imports `guardrails_tool_test_support.dart` for `createGuardrailsSandbox()`, `writeCanonicalPublicExportScaffold(...)`, and `writeMinimalControllerStore(...)`; because this suite proves runner/inventory contracts, omitting it from the migration would leave a hidden legacy seam consumer behind even if every other guardrail suite moved.
 - `test/tool/support/tool_process_test_support.dart` — current stable owner of sandbox creation and tool-process execution; this should remain the execution seam and not be replaced.
 - `test/tool/support/public_entrypoint_contract.dart` — current focused support precedent showing that small, responsibility-specific support files already exist and work well in this layer.
 - `tool/src/verification_contract/verification_contract_registry.dart` — the repository-local verification contract currently treats `test/tool/support/guardrails_tool_test_support.dart` as an explicit trigger entry, so deleting the file without updating the registry would contradict existing enforcement.
@@ -68,6 +69,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 - `test/tool/guardrails/guardrails_contract_architecture_tool_test.dart`
 - `test/tool/guardrails/guardrails_model_architecture_tool_test.dart`
 - `test/tool/guardrails/guardrails_layout_and_entrypoints_tool_test.dart`
+- `test/tool/guardrails/guardrails_rule_inventory_tool_test.dart`
 - `test/tool/import_boundaries/import_boundaries_controller_structure_tool_test.dart`
 - `test/tool/import_boundaries/import_boundaries_layer_dag_tool_test.dart`
 - `test/tool/import_boundaries/import_boundaries_external_packages_tool_test.dart`
@@ -166,6 +168,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 - `test/tool/guardrails/guardrails_contract_architecture_tool_test.dart`
 - `test/tool/guardrails/guardrails_model_architecture_tool_test.dart`
 - `test/tool/guardrails/guardrails_layout_and_entrypoints_tool_test.dart`
+- `test/tool/guardrails/guardrails_rule_inventory_tool_test.dart`
 - `test/tool/import_boundaries/import_boundaries_controller_structure_tool_test.dart`
 - `test/tool/import_boundaries/import_boundaries_layer_dag_tool_test.dart`
 - `test/tool/import_boundaries/import_boundaries_external_packages_tool_test.dart`
@@ -183,6 +186,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 - `test/tool/guardrails/guardrails_contract_architecture_tool_test.dart`
 - `test/tool/guardrails/guardrails_model_architecture_tool_test.dart`
 - `test/tool/guardrails/guardrails_layout_and_entrypoints_tool_test.dart`
+- `test/tool/guardrails/guardrails_rule_inventory_tool_test.dart`
 - `test/tool/import_boundaries/import_boundaries_controller_structure_tool_test.dart`
 - `test/tool/import_boundaries/import_boundaries_layer_dag_tool_test.dart`
 - `test/tool/import_boundaries/import_boundaries_external_packages_tool_test.dart`
@@ -214,6 +218,8 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 8. `verification_contract_registry.dart`, `verification_contract_tool_test.dart`, and `.github/workflows/ci.yaml` must replace the deleted support-file path with the explicit successor support-path set from this step.
 9. `test/tool/guardrails/guardrails_fixture_manifest_support_tool_test.dart` must mechanically fail when canonical scaffold ownership drifts back into suites, whether that drift reuses old helper names or returns under renamed suite-local builders/manifests, or when `guardrails_tool_test_support.dart` returns.
 10. Every pre-step guardrail-suite importer of `guardrails_tool_test_support.dart` must be assigned to an explicit vertical slice and to an explicit final-verification command; listing a suite only in the file map or required test strategy is not sufficient.
+11. Canonical scaffold migration must copy the currently authoritative source literally from the repository owner that already defines it; this step must not reconstruct interactive, controller, or public canonical source trees from memory, partial paraphrase, or failing-test backfill.
+12. `guardrails_tool_test_support.dart` may exist only as the temporary migration carrier while successor owners are being introduced; it must not be deleted until every code consumer, verification-contract inventory entry, and CI trigger entry has moved to the explicit successor seams.
 
 ## 7. Result Requirements
 
@@ -224,6 +230,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 5. `verification_contract_registry.dart`, `verification_contract_tool_test.dart`, and `.github/workflows/ci.yaml` enumerate the successor support paths and no longer reference the deleted support file.
 6. `guardrails_fixture_manifest_support_tool_test.dart` mechanically fails when duplicate canonical scaffold ownership or misplaced manifest ownership return, even if the duplicated builders/manifests use new names.
 7. Adding a new guardrail sandbox scenario no longer requires copying a large canonical fixture builder into another test suite.
+8. `guardrails_rule_inventory_tool_test.dart` uses the same successor seam as the other guardrail suites and is not left on the deleted legacy support file.
 
 ## 8. Implementation Rules
 
@@ -241,6 +248,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 - `test/tool/guardrails/guardrails_contract_architecture_tool_test.dart`
 - `test/tool/guardrails/guardrails_model_architecture_tool_test.dart`
 - `test/tool/guardrails/guardrails_layout_and_entrypoints_tool_test.dart`
+- `test/tool/guardrails/guardrails_rule_inventory_tool_test.dart`
 - `test/tool/import_boundaries/import_boundaries_controller_structure_tool_test.dart`
 - `test/tool/import_boundaries/import_boundaries_layer_dag_tool_test.dart`
 - `test/tool/import_boundaries/import_boundaries_external_packages_tool_test.dart`
@@ -266,6 +274,14 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 - Test-suite use of canonical manifests/writers.
 - Documentation of the normalized support seam where needed.
 
+### Required Execution Order
+1. Introduce the new support owners and move the canonical interactive scaffold onto the manifest/writer seam first.
+2. Move the canonical controller committed-mutation/prepared-replace scaffold onto the same manifest/writer seam second.
+3. Migrate the remaining guardrail consumers of canonical scaffolds and sandbox/bootstrap helpers, including the public-facing, layout, contract, model, and rule-inventory suites.
+4. Migrate import-boundaries consumers onto `import_boundaries_sandbox_support.dart` plus `tool_diagnostic_matchers.dart`.
+5. Update `verification_contract_registry.dart`, `test/tool/verification_contract_tool_test.dart`, and `.github/workflows/ci.yaml` to the successor support-path inventory.
+6. Delete `guardrails_tool_test_support.dart` only after steps 1 through 5 are complete and `rg "guardrails_tool_test_support.dart"` finds no remaining code or enforcement references outside the structural regression that intentionally forbids its return.
+
 ### Structural Enforcement
 - Canonical scaffolds used by more than one suite must live under `test/tool/support/`, not inline in a test suite.
 - Test suites must express per-case overrides against manifests instead of redefining the whole canonical scaffold shape.
@@ -284,6 +300,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_contract_architecture_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_model_architecture_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_layout_and_entrypoints_tool_test.dart`
+- `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_rule_inventory_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/import_boundaries/import_boundaries_controller_structure_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/import_boundaries/import_boundaries_layer_dag_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/import_boundaries/import_boundaries_external_packages_tool_test.dart`
@@ -300,6 +317,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 - Leaving duplicated canonical fixture builders inline in more than one suite when manifest support covers the same shape.
 - Replacing explicit support code with opaque string-template generation.
 - Deleting the legacy support file without migrating the import-boundaries helpers and verification-contract trigger inventory to the locked successor seams.
+- Reconstructing canonical scaffold files by approximation instead of literally transferring the authoritative repository-owned scaffold source into the manifest layer before switching consumers.
 
 ## 9. Vertical Slices
 
@@ -317,7 +335,7 @@ Interactive scene-controller canonical scaffolds are owned by manifest/writer su
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_resolved_entrypoint_guard_tool_test.dart`
 
 #### Structural Verification
-- `guardrails_fixture_manifest_support_tool_test.dart` must fail if interactive suites regain ownership of the canonical interactive scene-controller scaffold shape outside the manifest layer, regardless of helper naming, or if `guardrails_tool_test_support.dart` returns.
+- `guardrails_fixture_manifest_support_tool_test.dart` must fail if interactive suites regain ownership of the canonical interactive scene-controller scaffold shape outside the manifest layer, regardless of helper naming.
 
 #### Fixtures Used
 - `test/tool/support/guardrail_fixture_manifest.dart`
@@ -364,22 +382,24 @@ Canonical controller guardrail scaffolds use the same manifest/writer seam inste
 - Green run of the listed structural verification.
 - Canonical controller scaffold ownership lives in the manifest layer.
 
-### Slice 3. [ ] Shared public-facing suites consume the normalized scaffold seam and the old mixed support file stays deleted
+### Slice 3. [ ] Shared public-facing and rule-inventory suites consume the normalized scaffold seam while the legacy seam remains migration-only
 
 #### Slice Contract
-Shared public-facing guardrail suites consume the normalized scaffold seam, and `guardrails_tool_test_support.dart` stays deleted.
+Shared public-facing and rule-inventory guardrail suites consume the normalized scaffold seam, and `guardrails_tool_test_support.dart` is reduced to migration-only responsibilities while downstream consumers are still being switched.
 
 #### Change
 - Migrate shared public-facing suites that consume interactive architecture support scaffolds onto the normalized manifest/writer seam.
-- Add `guardrails_sandbox_support.dart` for guardrail-specific bootstrap helpers and delete `guardrails_tool_test_support.dart` after canonical fixture ownership moves out and all surviving shared helpers have explicit successor owners.
+- Migrate `guardrails_rule_inventory_tool_test.dart` onto the same explicit successor seam used by other guardrail suites.
+- Add `guardrails_sandbox_support.dart` for guardrail-specific bootstrap helpers, but do not delete `guardrails_tool_test_support.dart` in this slice; deletion is reserved for the final migration slice after every remaining consumer and enforcement entry has moved.
 
 #### Behavioral Verification
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_public_surface_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_public_signature_hermeticity_tool_test.dart`
+- `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_rule_inventory_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_fixture_manifest_support_tool_test.dart`
 
 #### Structural Verification
-- `guardrails_fixture_manifest_support_tool_test.dart` must fail if canonical scaffold ownership is again split between suites and support files or if `guardrails_tool_test_support.dart` exists.
+- `guardrails_fixture_manifest_support_tool_test.dart` must fail if canonical scaffold ownership is again split between suites and support files, or if `guardrails_public_surface_tool_test.dart`, `guardrails_public_signature_hermeticity_tool_test.dart`, or `guardrails_rule_inventory_tool_test.dart` still import `guardrails_tool_test_support.dart`.
 
 #### Fixtures Used
 - `test/tool/support/guardrail_fixture_manifest.dart`
@@ -388,14 +408,15 @@ Shared public-facing guardrail suites consume the normalized scaffold seam, and 
 
 #### Positive Scenarios
 - Public-facing suites continue to pass with the normalized scaffold seam.
+- The rule-inventory suite continues to prove runner/inventory contracts while using the same successor support ownership as other guardrail suites.
 
 #### Negative Scenarios
-- `guardrails_tool_test_support.dart` no longer exists and cannot return as the default dumping ground for unrelated canonical scaffolds.
+- The rule-inventory suite cannot remain as a hidden consumer of the legacy mixed support seam after the other guardrail suites migrate.
 
 #### Closure Evidence
 - Green run of the listed behavioral verifications.
 - Green run of the listed structural verification.
-- `guardrails_public_surface_tool_test.dart` and `guardrails_public_signature_hermeticity_tool_test.dart` no longer import `guardrails_tool_test_support.dart`.
+- `guardrails_public_surface_tool_test.dart`, `guardrails_public_signature_hermeticity_tool_test.dart`, and `guardrails_rule_inventory_tool_test.dart` no longer import `guardrails_tool_test_support.dart`.
 
 ### Slice 4. [ ] Remaining guardrail architecture/layout suites adopt explicit successor seams
 
@@ -434,15 +455,16 @@ Deleting `guardrails_tool_test_support.dart` no longer breaks the remaining guar
 - Green run of the listed structural verification.
 - Every pre-step contract/model/layout guardrail-suite importer of `guardrails_tool_test_support.dart` now imports only its locked successor seams.
 
-### Slice 5. [ ] Import-boundaries and verification-contract consumers adopt the explicit successor support seams
+### Slice 5. [ ] Import-boundaries, verification-contract enforcement, and legacy-file retirement close together
 
 #### Slice Contract
-Deleting `guardrails_tool_test_support.dart` no longer breaks non-guardrail tool suites or repository-local verification enforcement because both move to explicit successor seams.
+Deleting `guardrails_tool_test_support.dart` no longer breaks non-guardrail tool suites or repository-local verification enforcement because both move to explicit successor seams first, and the legacy file is removed only after no runtime or enforcement consumer remains.
 
 #### Change
 - Add `import_boundaries_sandbox_support.dart` and `tool_diagnostic_matchers.dart`.
 - Migrate import-boundaries suites off `guardrails_tool_test_support.dart`.
 - Update `verification_contract_registry.dart`, `verification_contract_tool_test.dart`, and `.github/workflows/ci.yaml` so the deleted support-file path is replaced by the authoritative successor support-path inventory.
+- Delete `guardrails_tool_test_support.dart` only after every guardrail suite, every import-boundaries suite, `verification_contract_registry.dart`, `test/tool/verification_contract_tool_test.dart`, and `.github/workflows/ci.yaml` have already moved off the legacy path.
 
 #### Behavioral Verification
 - `dart run tool/run_tool_tests.dart test/tool/import_boundaries/import_boundaries_controller_structure_tool_test.dart`
@@ -469,6 +491,7 @@ Deleting `guardrails_tool_test_support.dart` no longer breaks non-guardrail tool
 #### Negative Scenarios
 - A stale `test/tool/support/guardrails_tool_test_support.dart` trigger entry in the verification-contract registry fails.
 - Reintroducing `createImportBoundariesSandbox()` in a guardrail-named support file is not allowed.
+- Deleting the legacy file before code consumers or enforcement entries are switched is not allowed.
 
 #### Closure Evidence
 - Green run of the listed behavioral verifications.
@@ -482,6 +505,7 @@ Deleting `guardrails_tool_test_support.dart` no longer breaks non-guardrail tool
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_resolved_entrypoint_guard_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_public_surface_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_public_signature_hermeticity_tool_test.dart`
+- `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_rule_inventory_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_contract_architecture_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_model_architecture_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_layout_and_entrypoints_tool_test.dart`
