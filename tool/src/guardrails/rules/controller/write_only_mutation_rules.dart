@@ -12,6 +12,7 @@ import '../../support/guardrail_path_utils.dart';
 import '../../core/element_violation_builder.dart';
 import '../../core/guardrail_runner_support.dart';
 import '../../core/resolved_surface_contract_support.dart';
+import '../../core/semantic_sequence_routing_support.dart';
 import 'committed_read_side_rules.dart';
 import '../../core/guardrail_element_utils.dart' as element_utils;
 import '../../core/guardrail_violation.dart';
@@ -1213,40 +1214,18 @@ _SelectionRoutingAnalysis _analyzeSelectionRouting({
   required FunctionDeclaration function,
   required _SelectionWriterRoutingSpec spec,
 }) {
-  var foundCanonicalRoute = false;
-  var foundForbiddenDirectSelectionMutation = false;
-  function.functionExpression.body.accept(
-    _SelectionRoutingCollector(
-      onMethodInvocation: (invocation) {
-        if (!foundCanonicalRoute) {
-          foundCanonicalRoute = _matchesSelectionRoutingInvocation(
-            context: context,
-            invocation: invocation,
-            spec: spec,
-          );
-        }
-      },
-      onPropertyAccess: (propertyAccess) {
-        if (foundForbiddenDirectSelectionMutation) {
-          return;
-        }
-        foundForbiddenDirectSelectionMutation = _isForbiddenSelectionSinkAccess(
-          propertyAccess.propertyName,
-        );
-      },
-      onPrefixedIdentifier: (identifier) {
-        if (foundForbiddenDirectSelectionMutation) {
-          return;
-        }
-        foundForbiddenDirectSelectionMutation = _isForbiddenSelectionSinkAccess(
-          identifier.identifier,
-        );
-      },
+  final analysis = analyzeDirectInvocationRouting(
+    root: function.functionExpression.body,
+    isCanonicalRoute: (invocation) => _matchesSelectionRoutingInvocation(
+      context: context,
+      invocation: invocation,
+      spec: spec,
     ),
+    isForbiddenSinkAccess: _isForbiddenSelectionSinkAccess,
   );
   return _SelectionRoutingAnalysis(
-    hasCanonicalRoute: foundCanonicalRoute,
-    hasForbiddenDirectSelectionMutation: foundForbiddenDirectSelectionMutation,
+    hasCanonicalRoute: analysis.hasCanonicalRoute,
+    hasForbiddenDirectSelectionMutation: analysis.hasForbiddenSinkAccess,
   );
 }
 
@@ -1407,36 +1386,6 @@ Iterable<String> _memberSurfaceNamesForExtensionOwner(
     (setter) => !setter.isSynthetic && isPublicName(setter.displayName),
   )) {
     yield* _prefixedSurfaceNameVariants(setter, 'setter');
-  }
-}
-
-final class _SelectionRoutingCollector extends RecursiveAstVisitor<void> {
-  _SelectionRoutingCollector({
-    required this.onMethodInvocation,
-    required this.onPropertyAccess,
-    required this.onPrefixedIdentifier,
-  });
-
-  final void Function(MethodInvocation invocation) onMethodInvocation;
-  final void Function(PropertyAccess propertyAccess) onPropertyAccess;
-  final void Function(PrefixedIdentifier identifier) onPrefixedIdentifier;
-
-  @override
-  void visitMethodInvocation(MethodInvocation node) {
-    onMethodInvocation(node);
-    super.visitMethodInvocation(node);
-  }
-
-  @override
-  void visitPropertyAccess(PropertyAccess node) {
-    onPropertyAccess(node);
-    super.visitPropertyAccess(node);
-  }
-
-  @override
-  void visitPrefixedIdentifier(PrefixedIdentifier node) {
-    onPrefixedIdentifier(node);
-    super.visitPrefixedIdentifier(node);
   }
 }
 

@@ -11,6 +11,7 @@ import '../../support/guardrail_context.dart';
 import '../../support/guardrail_path_utils.dart';
 import '../../core/element_violation_builder.dart';
 import '../../core/resolved_surface_contract_support.dart';
+import '../../core/semantic_sequence_routing_support.dart';
 import '../../core/guardrail_runner_support.dart';
 import '../../core/guardrail_element_utils.dart' as element_utils;
 import '../controller/committed_read_side_rules.dart';
@@ -40,7 +41,6 @@ part 'interactive_architecture_boundary_expression_support.dart';
 part 'interactive_architecture_boundary_collector_support.dart';
 part 'interactive_committed_read_callback_guard_rules.dart';
 part 'interactive_mutation_owner_guard_rules.dart';
-part 'interactive_mutation_owner_sequence_support.dart';
 part 'resolved_entrypoint_guard_rules.dart';
 part 'resolved_entrypoint_guard_support.dart';
 

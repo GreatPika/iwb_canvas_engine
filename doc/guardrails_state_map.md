@@ -15,6 +15,7 @@ tool/src/guardrails/
     guardrail_runner_support.dart
     guardrail_element_utils.dart
     resolved_surface_contract_support.dart
+    semantic_sequence_routing_support.dart
     resolved_type_leak_traversal.dart
     signature_leak_support.dart
   rules/
@@ -47,13 +48,13 @@ tool/src/guardrails/
 ## Snapshot (Fresh Scan)
 
 - Files scanned: **51**
-- Total LOC: **12389**
+- Total LOC: **12782**
 - Largest files:
-  - `rules/controller/write_only_mutation_rules.dart`: **1249**
-  - `rules/controller/prepared_replace_boundary_rules.dart`: **1147**
+  - `rules/controller/write_only_mutation_rules.dart`: **1432**
   - `rules/public/public_surface_rules.dart`: **1071**
+  - `rules/controller/prepared_replace_boundary_rules.dart`: **865**
   - `rules/public/public_signature_rules.dart`: **708**
-  - `rules/interactive/interactive_architecture_boundary_flow_support.dart`: **542**
+  - `rules/interactive/interactive_mutation_owner_guard_rules.dart`: **557**
 
 Source commands:
 - `dart run tool/analysis/find_similar_clones.dart --clusters --top 40 tool/src/guardrails`
@@ -67,7 +68,7 @@ Source commands:
 - `INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES` -> `rules/public/public_surface_rules.dart` + `rules/public/public_signature_rules.dart`
 - `INV-ENG-PUBLIC-SIGNATURE-HERMETICITY` -> `rules/public/public_signature_rules.dart`
 - `INV-ENG-INTERACTIVE-RESOLVER-PURITY` -> `rules/interactive/mutation_boundary_rules.dart` + `rules/interactive/resolved_entrypoint_guard_rules.dart` (resolved root/capability entrypoint purity)
-- `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY` -> `rules/interactive/mutation_boundary_rules.dart` + `rules/interactive/interactive_architecture_boundary_rules.dart` (semantic architecture-boundary proof) + `rules/interactive/interactive_mutation_owner_guard_rules.dart` (resolved sequence/routing proof for mutation owners) + `rules/interactive/committed_read_callback_rules.dart` (thin descriptor table)
+- `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY` -> `rules/interactive/mutation_boundary_rules.dart` + `rules/interactive/interactive_architecture_boundary_rules.dart` (semantic architecture-boundary proof) + `core/semantic_sequence_routing_support.dart` (shared sequence/routing proof engine used by interactive mutation-owner and entrypoint checks) + `rules/interactive/interactive_mutation_owner_guard_rules.dart` (mutation-owner policy classifiers) + `rules/interactive/committed_read_callback_rules.dart` (thin descriptor table)
 - `INV-ENG-MODEL-ARCHITECTURE-BOUNDARY` -> `rules/model/model_architecture_rules.dart`
 - `INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY` -> `rules/contract/contract_architecture_rules.dart`
 - `INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER` -> `rules/model/model_architecture_rules.dart`
@@ -103,6 +104,7 @@ even if they are utility/thin wrappers and not primary invariant owners:
 - `core/guardrail_violation.dart` (violation/tool failure primitives)
 - `core/element_violation_builder.dart` (shared element-backed violation construction)
 - `core/resolved_surface_contract_support.dart` (shared resolved surface-contract validation for top-level/member/constructor/interface/signature proof)
+- `core/semantic_sequence_routing_support.dart` (shared semantic sequence, prelude, and direct invocation-routing proof)
 - `core/resolved_type_leak_traversal.dart` (shared recursive resolved-type traversal)
 - `core/signature_leak_support.dart` (shared signature leak detection helpers)
 - `rules/public/entrypoint_layout_rules.dart` (layout-check adapter to `layer_guardrails`)
@@ -128,19 +130,19 @@ even if they are utility/thin wrappers and not primary invariant owners:
 - `_checkSceneWriterPreparedReplaceBoundary`
 (all in `rules/controller/prepared_replace_boundary_rules.dart`)
 
-3. Interactive mutation family still has one notable local pairing in:
-- `_checkCapabilityEntrypoints`
-- `_checkMutationOwnerPolicies`
-- mutation-owner semantics now live in `rules/interactive/interactive_mutation_owner_guard_rules.dart` with a local event model and narrow special-form validators, but broader cross-family consolidation is still pending
+3. Interactive mutation family now routes repeated prelude/order/routing mechanics through:
+- `core/semantic_sequence_routing_support.dart`
+- local interactive policy classifiers still live in `rules/interactive/interactive_mutation_owner_guard_rules.dart`
+- controller selection-writer routing also consumes the same shared invocation-routing seam
 
 4. Contract/model architecture families now share common support, but top-level runners still mirror each other:
 - `runContractArchitectureGuardrails`
 - `runModelArchitectureGuardrails`
 
-5. Resolved surface-contract mechanics now converge through
-`core/resolved_surface_contract_support.dart`, but interactive architecture and
-mutation-owner families still keep some family-local structural proof around
-their semantic checks.
+5. Resolved surface-contract and semantic sequence/routing mechanics now
+converge through `core/resolved_surface_contract_support.dart` and
+`core/semantic_sequence_routing_support.dart`, while interactive architecture
+still keeps family-local structural proof around its remaining semantic checks.
 
 ## Metrics Hotspots (HIGH/VERY HIGH counts)
 
@@ -184,9 +186,8 @@ Notable very-high functions:
     - architecture-boundary enforcement now lives in semantic category-scoped parts
     - deleted seams are still checked as explicit file-absence facts, not as source tokens
   - `rules/interactive/interactive_mutation_owner_guard_rules.dart`
-    - mutation-owner enforcement now uses resolved sequence/routing proof
-    - standard selection/scene methods share one local semantic event model
-    - `setCameraOffset(...)` and `replaceScene(...)` remain narrow special-form validators inside the same local proof family
+    - mutation-owner enforcement now classifies local policy into the shared semantic sequence/routing seam
+    - `setCameraOffset(...)` and `replaceScene(...)` remain narrow special-form validators
 
 - **Retired token/source-order seams**
   - `rules/interactive/boundary_shape_token_rules.dart` (deleted in step 120)
@@ -207,12 +208,14 @@ Notable very-high functions:
   - shared signature leak helpers
   - shared element-backed violation builder
   - shared resolved surface-contract validator
+  - shared semantic sequence/routing validator
   - shared architecture-file parse/part/directive helpers
 - Clone clusters reduced from **19 -> 8** across the current refactor campaign.
 - Major remaining clones are now structural siblings, not broad copy-paste utility duplication.
 
 4. **Migrate fragile token checks to AST/resolved**: **STEP-120 DONE FOR INTERACTIVE FAMILY**
 - Mutation-owner guardrails now use resolved sequence/routing proof.
+- Entrypoint purity, mutation-owner ordering, and controller selection routing now share the same core sequence/routing seam.
 - Interactive architecture-boundary guardrails now use semantic category-scoped analysis via `interactive_architecture_boundary_rules.dart`.
 - The legacy `boundary_shape_token_rules.dart` and `resolver_purity_rules.dart` helpers are retired.
 

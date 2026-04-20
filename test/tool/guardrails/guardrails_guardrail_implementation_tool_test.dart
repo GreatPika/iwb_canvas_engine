@@ -18,6 +18,7 @@ void main() {
         coveredResolvedGuardrailSelfGuardFiles,
         orderedEquals(<String>[
           'tool/src/guardrails/core/resolved_surface_contract_support.dart',
+          'tool/src/guardrails/core/semantic_sequence_routing_support.dart',
           'tool/src/guardrails/rules/controller/prepared_replace_boundary_rules.dart',
           'tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart',
           'tool/src/guardrails/rules/interactive/resolved_entrypoint_guard_rules.dart',
@@ -297,11 +298,116 @@ const String path = 'resolver_purity_rules.dart';
         );
       }
     });
+
+    test(
+      'semantic sequence/routing support ownership stays single and explicit',
+      () {
+        final repoRoot = Directory.current.absolute;
+        final coreDir = Directory(
+          '${repoRoot.path}${Platform.pathSeparator}'
+          'tool${Platform.pathSeparator}src${Platform.pathSeparator}'
+          'guardrails${Platform.pathSeparator}core',
+        );
+        final supportFiles =
+            coreDir
+                .listSync()
+                .whereType<File>()
+                .map((file) => file.path.replaceAll('\\', '/'))
+                .where(
+                  (path) =>
+                      path.endsWith('semantic_sequence_routing_support.dart'),
+                )
+                .toList(growable: false)
+              ..sort();
+        expect(
+          supportFiles,
+          orderedEquals(<String>[
+            '${repoRoot.path.replaceAll('\\', '/')}/tool/src/guardrails/core/semantic_sequence_routing_support.dart',
+          ]),
+        );
+        expect(
+          File(
+            '${repoRoot.path}${Platform.pathSeparator}'
+            'tool${Platform.pathSeparator}src${Platform.pathSeparator}'
+            'guardrails${Platform.pathSeparator}rules${Platform.pathSeparator}'
+            'interactive${Platform.pathSeparator}'
+            'interactive_mutation_owner_sequence_support.dart',
+          ).existsSync(),
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'shared semantic sequence/routing seam stays wired into intended consumers',
+      () {
+        final repoRoot = Directory.current.absolute;
+        for (final repoRelativePath in _semanticSequenceImportOwners) {
+          final content = File(
+            '${repoRoot.path}${Platform.pathSeparator}$repoRelativePath',
+          ).readAsStringSync();
+          expect(
+            content,
+            contains('semantic_sequence_routing_support.dart'),
+            reason:
+                '$repoRelativePath must keep importing the shared semantic sequence/routing seam.',
+          );
+        }
+
+        for (final entry in _semanticSequenceApiConsumers.entries) {
+          final content = File(
+            '${repoRoot.path}${Platform.pathSeparator}${entry.key}',
+          ).readAsStringSync();
+          for (final helperName in entry.value) {
+            expect(
+              content,
+              contains(helperName),
+              reason:
+                  '${entry.key} must consume $helperName from the shared semantic sequence/routing seam.',
+            );
+          }
+        }
+
+        for (final repoRelativePath in _semanticSequenceGuardedFiles) {
+          final content = File(
+            '${repoRoot.path}${Platform.pathSeparator}$repoRelativePath',
+          ).readAsStringSync();
+          for (final bannedName in _bannedParallelSequenceHelpers) {
+            expect(
+              content,
+              isNot(contains(bannedName)),
+              reason:
+                  '$repoRelativePath must not reintroduce local parallel sequence/routing helper $bannedName.',
+            );
+          }
+        }
+
+        for (final repoRelativePath
+            in _semanticSequenceRoutingDirectConsumers) {
+          final content = File(
+            '${repoRoot.path}${Platform.pathSeparator}$repoRelativePath',
+          ).readAsStringSync();
+          expect(
+            content,
+            isNot(contains('interruptAlias')),
+            reason:
+                '$repoRelativePath must not expand direct routing proof to alias forwarding.',
+          );
+          expect(
+            content,
+            isNot(contains('_SelectionRoutingCollector(')),
+            reason:
+                '$repoRelativePath must not reintroduce a family-local invocation routing collector.',
+          );
+        }
+      },
+    );
   });
 }
 
 const List<String> coveredResolvedGuardrailSelfGuardFiles = <String>[
   'tool/src/guardrails/core/resolved_surface_contract_support.dart',
+  'tool/src/guardrails/core/semantic_sequence_routing_support.dart',
   'tool/src/guardrails/rules/controller/prepared_replace_boundary_rules.dart',
   'tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart',
   'tool/src/guardrails/rules/interactive/resolved_entrypoint_guard_rules.dart',
@@ -314,6 +420,26 @@ const List<String> _surfaceContractImportOwners = <String>[
   'tool/src/guardrails/rules/controller/write_only_mutation_rules.dart',
   'tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart',
 ];
+
+const List<String> _semanticSequenceImportOwners = <String>[
+  'tool/src/guardrails/rules/controller/write_only_mutation_rules.dart',
+  'tool/src/guardrails/rules/interactive/mutation_boundary_rules.dart',
+];
+
+const Map<String, List<String>>
+_semanticSequenceApiConsumers = <String, List<String>>{
+  'tool/src/guardrails/rules/interactive/resolved_entrypoint_guard_rules.dart':
+      <String>['scanEntrypointGuard'],
+  'tool/src/guardrails/rules/interactive/interactive_mutation_owner_guard_rules.dart':
+      <String>[
+        'evaluateRequiredGuardSequence',
+        'isAllowedPurePreludeStatement',
+        'extractStatementExpression',
+        'hasNamedArgumentMatching',
+      ],
+  'tool/src/guardrails/rules/controller/write_only_mutation_rules.dart':
+      <String>['analyzeDirectInvocationRouting'],
+};
 
 const Map<String, List<String>>
 _surfaceContractApiConsumers = <String, List<String>>{
@@ -356,6 +482,17 @@ const List<String> _surfaceContractGuardedFiles = <String>[
   'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_rules.dart',
 ];
 
+const List<String> _semanticSequenceGuardedFiles = <String>[
+  'tool/src/guardrails/rules/controller/write_only_mutation_rules.dart',
+  'tool/src/guardrails/rules/interactive/resolved_entrypoint_guard_rules.dart',
+  'tool/src/guardrails/rules/interactive/interactive_mutation_owner_guard_rules.dart',
+];
+
+const List<String> _semanticSequenceRoutingDirectConsumers = <String>[
+  'tool/src/guardrails/rules/controller/write_only_mutation_rules.dart',
+  'tool/src/guardrails/rules/interactive/interactive_mutation_owner_guard_rules.dart',
+];
+
 const List<String> _interactiveSurfaceContractDirectConsumers = <String>[
   'tool/src/guardrails/rules/interactive/interactive_mutation_owner_guard_rules.dart',
   'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_view_rules.dart',
@@ -370,6 +507,13 @@ const List<String> _bannedParallelSurfaceHelpers = <String>[
   '_singleUnnamedPublicConstructorViolation',
   '_explicitPublicConstructorViolation',
   '_preparedReplaceMethodSignatureViolation',
+];
+
+const List<String> _bannedParallelSequenceHelpers = <String>[
+  '_scanEntrypointGuard',
+  '_evaluateMutationOwnerGuardedSequence',
+  '_evaluateSetCameraOffsetSequence',
+  '_SelectionRoutingCollector',
 ];
 
 List<_SelfGuardViolation> _collectSnippetViolations(String content) {

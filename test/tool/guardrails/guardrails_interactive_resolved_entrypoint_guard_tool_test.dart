@@ -479,6 +479,44 @@ ${scenario.prelude}
       }
     },
   );
+
+  test(
+    'rejects root entrypoint when guard is returned instead of invoked as a statement',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        _writeNeutralCapabilityOwners(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: _canonicalControllerMethods(
+              handlePointerSignature: '()',
+              handlePointerBody: '''
+    return _ensurePublicSideEffectAllowed('handlePointer');
+''',
+            ),
+          ),
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'public SceneController entrypoints must guard '
+                'resolver purity with _ensurePublicSideEffectAllowed',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
 }
 
 void _registerResolvedCapabilityGuardRegressionTests() {
@@ -897,6 +935,60 @@ void _ensure(
             detail:
                 'public SceneControllerSceneOwner entrypoints must guard '
                 'resolver purity with ensurePublicSideEffectAllowed',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects capability entrypoint when guard is returned instead of invoked as a statement',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        _writeNeutralCapabilityOwners(
+          sandbox,
+          exceptRelativePath:
+              'lib/src/interactive/scene_controller_interaction.dart',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _canonicalCapabilityControllerFixture(),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller_interaction.dart',
+          '''
+import 'internal/scene_controller_interaction_runtime.dart';
+
+class SceneControllerInteractionOwner {
+  final _access = _Access();
+
+  void handlePointer() {
+    return _access.runtime.ensurePublicSideEffectAllowed('handlePointer');
+  }
+}
+
+class _Access {
+  final runtime = SceneControllerInteractionRuntime();
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'public SceneControllerInteractionOwner entrypoints must guard '
+                'resolver purity with _access.runtime.ensurePublicSideEffectAllowed',
           ),
         );
       } finally {

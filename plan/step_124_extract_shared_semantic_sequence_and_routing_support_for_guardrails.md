@@ -202,7 +202,7 @@ This step is the second cross-family consolidation pass: it turns migrated local
 
 ## 9. Vertical Slices
 
-### Slice 1. [ ] Shared sequence/routing support subsumes interactive entrypoint guard mechanics
+### Slice 1. [x] Shared sequence/routing support subsumes interactive entrypoint guard mechanics
 
 #### Slice Contract
 Interactive entrypoint guard scanning uses shared sequence/routing support for pure-prelude and required-guard evaluation.
@@ -231,7 +231,7 @@ Interactive entrypoint guard scanning uses shared sequence/routing support for p
 - Green run of the listed structural verification.
 - `_scanEntrypointGuard(...)` no longer owns its own duplicated sequence engine.
 
-### Slice 2. [ ] Interactive mutation-owner sequence/routing converges on shared support
+### Slice 2. [x] Interactive mutation-owner sequence/routing converges on shared support
 
 #### Slice Contract
 Interactive mutation-owner sequence/routing proof uses the same shared mechanics as interactive entrypoint guard scanning while preserving the step-119 direct-routing contract.
@@ -260,7 +260,7 @@ Interactive mutation-owner sequence/routing proof uses the same shared mechanics
 - Green run of the listed structural verification.
 - Interactive mutation-owner proof no longer owns a family-local duplicate order/routing engine.
 
-### Slice 3. [ ] Controller canonical routing uses the shared invocation-routing seam
+### Slice 3. [x] Controller canonical routing uses the shared invocation-routing seam
 
 #### Slice Contract
 Controller canonical selection-writer routing uses the shared direct invocation-routing seam where the proof shape matches interactive direct-route validation.

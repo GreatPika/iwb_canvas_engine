@@ -5,40 +5,10 @@ const String _sceneControllerFilePath =
 const String _interactionRuntimeFilePath =
     '/lib/src/interactive/internal/scene_controller_interaction_runtime.dart';
 
-const Set<String> _boolBinaryOperators = <String>{'&&', '||'};
-const Set<String> _comparisonBinaryOperators = <String>{
-  '==',
-  '!=',
-  '<',
-  '<=',
-  '>',
-  '>=',
-};
-const Set<String> _numericBinaryOperators = <String>{
-  '+',
-  '-',
-  '*',
-  '/',
-  '~/',
-  '%',
-};
-
 class EnsureCallInfo {
   const EnsureCallInfo({required this.hasAllowAfterDispose});
 
   final bool hasAllowAfterDispose;
-}
-
-final class _EntrypointGuardScanResult {
-  const _EntrypointGuardScanResult({
-    required this.ensureCallInfo,
-    required this.guardLine,
-    required this.violation,
-  });
-
-  final EnsureCallInfo? ensureCallInfo;
-  final int? guardLine;
-  final GuardrailViolation? violation;
 }
 
 Future<GuardrailViolation?> _checkRootEntrypoints(
@@ -82,15 +52,18 @@ GuardrailViolation? _checkInteractiveEntrypointGuard({
   required String filePath,
   required int Function(int offset) lineFor,
 }) {
-  final scan = _scanEntrypointGuard(
+  final scan = scanEntrypointGuard<EnsureCallInfo>(
     body: member.body,
-    filePath: filePath,
     lineFor: lineFor,
     missingGuardViolation: (line) =>
         _interactiveGuardViolation(filePath: filePath, line: line),
-    missingBlockBodyDetail:
-        'public SceneController entrypoint "${member.name.lexeme}" must use '
-        'a block body guarded by _ensurePublicSideEffectAllowed(...).',
+    missingBlockBodyViolation: (line) => _capabilityGuardViolation(
+      filePath: filePath,
+      line: line,
+      detail:
+          'public SceneController entrypoint "${member.name.lexeme}" must use '
+          'a block body guarded by _ensurePublicSideEffectAllowed(...).',
+    ),
     resolveGuardInfo: (expression) =>
         _resolveRootEnsureCallInfo(expression: expression, context: context),
   );
@@ -99,7 +72,7 @@ GuardrailViolation? _checkInteractiveEntrypointGuard({
   }
 
   return _validateEnsureCall(
-    ensureCallInfo: scan.ensureCallInfo,
+    ensureCallInfo: scan.guardInfo,
     name: name,
     filePath: filePath,
     line: scan.guardLine ?? lineFor(member.offset),
@@ -193,9 +166,8 @@ GuardrailViolation? _checkCapabilityEntrypointGuard({
   required String primaryGuardCall,
   required String? secondaryGuardCall,
 }) {
-  final scan = _scanEntrypointGuard(
+  final scan = scanEntrypointGuard<EnsureCallInfo>(
     body: member.body,
-    filePath: filePath,
     lineFor: lineFor,
     missingGuardViolation: (line) => _capabilityGuardViolation(
       filePath: filePath,
@@ -204,9 +176,13 @@ GuardrailViolation? _checkCapabilityEntrypointGuard({
           'public $className entrypoints must guard resolver purity with '
           '$primaryGuardCall(...).',
     ),
-    missingBlockBodyDetail:
-        'public $className entrypoints must use a block body guarded by '
-        '$primaryGuardCall(...).',
+    missingBlockBodyViolation: (line) => _capabilityGuardViolation(
+      filePath: filePath,
+      line: line,
+      detail:
+          'public $className entrypoints must use a block body guarded by '
+          '$primaryGuardCall(...).',
+    ),
     resolveGuardInfo: (expression) => _resolveCapabilityEnsureCallInfo(
       expression: expression,
       context: context,
