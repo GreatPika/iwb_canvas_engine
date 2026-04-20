@@ -211,7 +211,7 @@ This step makes the orchestration layer match the symmetric proof architecture b
 
 ## 9. Vertical Slices
 
-### Slice 1. [ ] Declarative guardrail stage inventory replaces direct runner wiring and locks the public-surface handoff
+### Slice 1. [x] Declarative guardrail stage inventory replaces direct runner wiring and locks the public-surface handoff
 
 #### Slice Contract
 The guardrails tool evaluates an explicit ordered inventory of `GuardrailRule` stages instead of hardcoded direct family calls, and the current `public surface -> public signature` handoff is made explicit in runner state.

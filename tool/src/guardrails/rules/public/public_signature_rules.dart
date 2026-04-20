@@ -7,10 +7,29 @@ import 'package:analyzer/dart/element/type.dart';
 import '../../support/guardrail_context.dart';
 import '../../support/guardrail_path_utils.dart';
 import '../../core/guardrail_element_utils.dart' as element_utils;
+import '../../core/guardrail_rule.dart';
+import '../../core/guardrail_rule_metadata.dart';
+import '../../core/guardrail_run_state.dart';
 import '../../core/resolved_type_leak_traversal.dart';
 import '../../core/signature_leak_support.dart';
 import '../../core/guardrail_violation.dart';
 import 'public_surface_rules.dart';
+
+final GuardrailRule publicSignatureGuardrailRule = GuardrailRule(
+  metadata: const GuardrailRuleMetadata(
+    id: 'public-signature',
+    invariantIds: <String>[
+      'INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES',
+      'INV-ENG-PUBLIC-SIGNATURE-HERMETICITY',
+    ],
+    area: 'public',
+    description:
+        'Checks resolved exported signatures against hidden, internal, and '
+        'mutable type leaks.',
+    readsStateArtifacts: <String>[GuardrailRunState.exportedSurfacesArtifact],
+  ),
+  run: _runPublicSignatureGuardrailRule,
+);
 
 Future<List<GuardrailViolation>> runPublicSignatureHermeticityGuardrails({
   required GuardrailContext context,
@@ -42,6 +61,20 @@ Future<List<GuardrailViolation>> runPublicSignatureHermeticityGuardrails({
   }
 
   return violations;
+}
+
+Future<List<GuardrailViolation>> _runPublicSignatureGuardrailRule(
+  GuardrailContext context,
+  GuardrailRunState state,
+) {
+  return runPublicSignatureHermeticityGuardrails(
+    context: context,
+    exportedSurfaces: state
+        .requireArtifact<Map<String, ExportedLibrarySurface>>(
+          artifactId: GuardrailRunState.exportedSurfacesArtifact,
+          readerRuleId: publicSignatureGuardrailRule.metadata.id,
+        ),
+  );
 }
 
 Future<Map<String, Set<String>>> _loadPublicVisibleTypeOwners(

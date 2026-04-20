@@ -10,6 +10,9 @@ import '../../support/guardrail_ast_utils.dart';
 import '../../support/guardrail_context.dart';
 import '../../support/guardrail_path_utils.dart';
 import '../../core/element_violation_builder.dart';
+import '../../core/guardrail_rule.dart';
+import '../../core/guardrail_rule_metadata.dart';
+import '../../core/guardrail_run_state.dart';
 import '../../core/guardrail_runner_support.dart';
 import '../../core/resolved_surface_contract_support.dart';
 import '../../core/semantic_sequence_routing_support.dart';
@@ -18,6 +21,23 @@ import '../../core/guardrail_element_utils.dart' as element_utils;
 import '../../core/guardrail_violation.dart';
 
 part 'prepared_replace_boundary_rules.dart';
+
+final GuardrailRule controllerApiGuardrailRule = GuardrailRule(
+  metadata: const GuardrailRuleMetadata(
+    id: 'controller-api',
+    invariantIds: <String>[
+      'INV-ENG-WRITE-ONLY-MUTATION',
+      'INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE',
+      'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY',
+      'INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY',
+    ],
+    area: 'controller',
+    description:
+        'Enforces controller write-only mutation routing and committed-read '
+        'boundary ownership.',
+  ),
+  run: _runControllerApiGuardrailRule,
+);
 
 Future<List<GuardrailViolation>> runControllerApiGuardrails({
   required GuardrailContext context,
@@ -65,6 +85,13 @@ Future<List<GuardrailViolation>> runControllerApiGuardrails({
     );
   }
   return violations;
+}
+
+Future<List<GuardrailViolation>> _runControllerApiGuardrailRule(
+  GuardrailContext context,
+  GuardrailRunState state,
+) {
+  return runControllerApiGuardrails(context: context);
 }
 
 const Set<String> _committedReadSideHelperNames = <String>{

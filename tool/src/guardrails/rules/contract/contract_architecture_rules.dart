@@ -1,8 +1,23 @@
 import 'dart:io';
 
 import '../../support/guardrail_context.dart';
+import '../../core/guardrail_rule.dart';
+import '../../core/guardrail_rule_metadata.dart';
+import '../../core/guardrail_run_state.dart';
 import '../../core/guardrail_violation.dart';
 import '../../core/guardrail_runner_support.dart';
+
+final GuardrailRule contractArchitectureGuardrailRule = GuardrailRule(
+  metadata: const GuardrailRuleMetadata(
+    id: 'contract-architecture',
+    invariantIds: <String>['INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY'],
+    area: 'contract',
+    description:
+        'Protects contract-layer file ownership and internal surface import '
+        'boundaries.',
+  ),
+  run: _runContractArchitectureGuardrailRule,
+);
 
 const String _contractInternalDir = '/lib/src/contract/internal/';
 const String _contractPathPrefix = '/lib/src/contract/';
@@ -63,6 +78,13 @@ Future<List<GuardrailViolation>> runContractArchitectureGuardrails({
   }
 
   return violations;
+}
+
+Future<List<GuardrailViolation>> _runContractArchitectureGuardrailRule(
+  GuardrailContext context,
+  GuardrailRunState state,
+) {
+  return runContractArchitectureGuardrails(context: context);
 }
 
 GuardrailViolation? _checkContractFile(GuardrailContext context, File file) {

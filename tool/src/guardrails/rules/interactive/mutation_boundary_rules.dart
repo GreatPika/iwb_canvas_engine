@@ -10,6 +10,9 @@ import '../../support/guardrail_ast_utils.dart';
 import '../../support/guardrail_context.dart';
 import '../../support/guardrail_path_utils.dart';
 import '../../core/element_violation_builder.dart';
+import '../../core/guardrail_rule.dart';
+import '../../core/guardrail_rule_metadata.dart';
+import '../../core/guardrail_run_state.dart';
 import '../../core/resolved_surface_contract_support.dart';
 import '../../core/semantic_sequence_routing_support.dart';
 import '../../core/guardrail_runner_support.dart';
@@ -43,6 +46,23 @@ part 'interactive_committed_read_callback_guard_rules.dart';
 part 'interactive_mutation_owner_guard_rules.dart';
 part 'resolved_entrypoint_guard_rules.dart';
 part 'resolved_entrypoint_guard_support.dart';
+
+final GuardrailRule interactiveApiGuardrailRule = GuardrailRule(
+  metadata: const GuardrailRuleMetadata(
+    id: 'interactive-api',
+    invariantIds: <String>[
+      'INV-ENG-INTERACTIVE-RESOLVER-PURITY',
+      'INV-ENG-INTERACTIVE-MUTATION-BOUNDARY',
+      'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY',
+      'INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY',
+    ],
+    area: 'interactive',
+    description:
+        'Validates interactive entrypoint purity, mutation ownership, '
+        'committed-read callbacks, and architecture boundaries.',
+  ),
+  run: _runInteractiveApiGuardrailRule,
+);
 
 Future<List<GuardrailViolation>> runInteractiveApiGuardrails({
   required GuardrailContext context,
@@ -96,6 +116,13 @@ Future<List<GuardrailViolation>> runInteractiveApiGuardrails({
     violations.add(boundaryViolation);
   }
   return violations;
+}
+
+Future<List<GuardrailViolation>> _runInteractiveApiGuardrailRule(
+  GuardrailContext context,
+  GuardrailRunState state,
+) {
+  return runInteractiveApiGuardrails(context: context);
 }
 
 File _interactiveFile(GuardrailContext context) {

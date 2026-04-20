@@ -1,9 +1,13 @@
 import '../support/guardrail_context.dart';
+import 'guardrail_run_state.dart';
 import 'guardrail_rule_metadata.dart';
 import 'guardrail_violation.dart';
 
 typedef GuardrailRuleRun =
-    Future<List<GuardrailViolation>> Function(GuardrailContext context);
+    Future<List<GuardrailViolation>> Function(
+      GuardrailContext context,
+      GuardrailRunState state,
+    );
 
 final class GuardrailRule {
   const GuardrailRule({required this.metadata, required this.run});

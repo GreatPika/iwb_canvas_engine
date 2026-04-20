@@ -1,49 +1,26 @@
 import 'dart:io';
 
 import 'support/guardrail_context.dart';
+import 'core/guardrail_rule.dart';
+import 'core/guardrail_run_state.dart';
 import 'core/guardrail_runner_support.dart';
 import 'core/guardrail_violation.dart';
-import 'rules/contract/contract_architecture_rules.dart';
-import 'rules/controller/write_only_mutation_rules.dart';
-import 'rules/interactive/mutation_boundary_rules.dart';
-import 'rules/model/model_architecture_rules.dart';
-import 'rules/public/public_signature_rules.dart';
-import 'rules/public/public_surface_rules.dart';
+import 'guardrail_rule_inventory.dart';
 import '../tool_command_result.dart';
 
 Future<ToolCommandResult> evaluateGuardrailsTool({Directory? root}) async {
   final context = GuardrailContext.forDirectory(root ?? Directory.current);
+  final state = GuardrailRunState();
 
   try {
-    final publicSurfaceResult = await runPublicSurfaceGuardrails(
-      context: context,
-    );
-    failOnFirstViolation(publicSurfaceResult.violations);
-
-    final hermeticityViolations = await runPublicSignatureHermeticityGuardrails(
-      context: context,
-      exportedSurfaces: publicSurfaceResult.exportedSurfaces,
-    );
-    failOnFirstViolation(hermeticityViolations);
-
-    final interactiveViolations = await runInteractiveApiGuardrails(
-      context: context,
-    );
-    failOnFirstViolation(interactiveViolations);
-
-    final controllerViolations = await runControllerApiGuardrails(
-      context: context,
-    );
-    failOnFirstViolation(controllerViolations);
-
-    final modelArchitectureViolations = await runModelArchitectureGuardrails(
-      context: context,
-    );
-    failOnFirstViolation(modelArchitectureViolations);
-
-    final contractArchitectureViolations =
-        await runContractArchitectureGuardrails(context: context);
-    failOnFirstViolation(contractArchitectureViolations);
+    for (final rule in guardrailRuleInventory) {
+      final violations = await _runRule(
+        rule: rule,
+        context: context,
+        state: state,
+      );
+      failOnFirstViolation(violations);
+    }
   } on GuardrailToolFailure catch (failure) {
     return ToolCommandResult(
       exitCode: 1,
@@ -58,4 +35,15 @@ Future<void> runGuardrailsTool({Directory? root}) async {
   final result = await evaluateGuardrailsTool(root: root);
   writeToolCommandResult(result);
   exitCode = result.exitCode;
+}
+
+Future<List<GuardrailViolation>> _runRule({
+  required GuardrailRule rule,
+  required GuardrailContext context,
+  required GuardrailRunState state,
+}) {
+  return state.runWithRuleContract(
+    metadata: rule.metadata,
+    action: () => rule.run(context, state),
+  );
 }

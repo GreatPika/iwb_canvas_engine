@@ -1,6 +1,6 @@
 # Guardrails State Map
 
-Generated: 2026-04-20
+Generated: 2026-04-21
 Scope: `tool/src/guardrails/**`
 
 ## Current Layout
@@ -10,6 +10,7 @@ tool/src/guardrails/
   core/
     element_violation_builder.dart
     guardrail_rule.dart
+    guardrail_run_state.dart
     guardrail_violation.dart
     guardrail_rule_metadata.dart
     guardrail_runner_support.dart
@@ -42,6 +43,7 @@ tool/src/guardrails/
     guardrail_ast_utils.dart
     guardrail_context.dart
     guardrail_path_utils.dart
+  guardrail_rule_inventory.dart
   guardrails_runner.dart
 ```
 
@@ -62,19 +64,19 @@ Source commands:
 
 ## Invariant-to-Rule Map
 
-- `INV-ENG-WRITE-ONLY-MUTATION` -> `rules/controller/write_only_mutation_rules.dart`
-- `INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE` -> `rules/controller/write_only_mutation_rules.dart`
-- `INV-ENG-SAFE-TXN-API` -> `rules/public/public_surface_rules.dart`
-- `INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES` -> `rules/public/public_surface_rules.dart` + `rules/public/public_signature_rules.dart`
-- `INV-ENG-PUBLIC-SIGNATURE-HERMETICITY` -> `rules/public/public_signature_rules.dart`
-- `INV-ENG-INTERACTIVE-RESOLVER-PURITY` -> `rules/interactive/mutation_boundary_rules.dart` + `rules/interactive/resolved_entrypoint_guard_rules.dart` (resolved root/capability entrypoint purity)
-- `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY` -> `rules/interactive/mutation_boundary_rules.dart` + `rules/interactive/interactive_architecture_boundary_rules.dart` (semantic architecture-boundary proof) + `core/semantic_sequence_routing_support.dart` (shared sequence/routing proof engine used by interactive mutation-owner and entrypoint checks) + `rules/interactive/interactive_mutation_owner_guard_rules.dart` (mutation-owner policy classifiers) + `rules/interactive/committed_read_callback_rules.dart` (thin descriptor table)
-- `INV-ENG-MODEL-ARCHITECTURE-BOUNDARY` -> `rules/model/model_architecture_rules.dart`
-- `INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY` -> `rules/contract/contract_architecture_rules.dart`
-- `INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER` -> `rules/model/model_architecture_rules.dart`
-- `INV-ENG-RUNTIME-NODE-VALUE-OWNERS` -> `rules/model/model_architecture_rules.dart`
-- `INV-ENG-COMMITTED-READ-SIDE-HERMETICITY` -> `rules/controller/write_only_mutation_rules.dart` + `rules/interactive/mutation_boundary_rules.dart` + `rules/controller/committed_read_side_rules.dart`
-- `INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY` -> `rules/controller/write_only_mutation_rules.dart` + `rules/controller/prepared_replace_boundary_rules.dart`
+- `INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY` -> `contract-architecture`
+- `INV-ENG-COMMITTED-READ-SIDE-HERMETICITY` -> `controller-api`, `interactive-api`
+- `INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE` -> `controller-api`
+- `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY` -> `interactive-api`
+- `INV-ENG-INTERACTIVE-RESOLVER-PURITY` -> `interactive-api`
+- `INV-ENG-MODEL-ARCHITECTURE-BOUNDARY` -> `model-architecture`
+- `INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY` -> `controller-api`, `interactive-api`
+- `INV-ENG-PUBLIC-SIGNATURE-HERMETICITY` -> `public-signature`
+- `INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES` -> `public-signature`, `public-surface`
+- `INV-ENG-RUNTIME-NODE-VALUE-OWNERS` -> `model-architecture`
+- `INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER` -> `model-architecture`
+- `INV-ENG-SAFE-TXN-API` -> `public-surface`
+- `INV-ENG-WRITE-ONLY-MUTATION` -> `controller-api`
 
 Controller note:
 - `rules/controller/write_only_mutation_rules.dart` no longer uses name-prefix or `replaceScene`/`controllerEpoch` lexical heuristics; the active proof surface is resolved selection-op routing, resolved committed-read owner/member discovery, resolved spatial payload-owner discovery, and resolved render-state leak detection.
@@ -83,14 +85,14 @@ Proof ownership note:
 - `INV-ENG-INTERACTIVE-RESOLVER-PURITY` now keeps its runtime primary proof in `test/interactive/core/scene_controller_interactive_actions_effects_test.dart`.
 - `test/tool/guardrails/guardrails_interactive_api_tool_test.dart` remains the tool-side regression proof for `tool/check_guardrails.dart`, not the runtime primary proof.
 
-## Runner Entrypoints (Explicit)
+## Declarative Runner Inventory
 
-- `runPublicSurfaceGuardrails`
-- `runPublicSignatureHermeticityGuardrails`
-- `runInteractiveApiGuardrails`
-- `runControllerApiGuardrails`
-- `runModelArchitectureGuardrails`
-- `runContractArchitectureGuardrails`
+- `public-surface` | area=`public` | file=`rules/public/public_surface_rules.dart` | invariants=`INV-ENG-SAFE-TXN-API, INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES` | reads=`none` | writes=`exportedSurfaces`
+- `public-signature` | area=`public` | file=`rules/public/public_signature_rules.dart` | invariants=`INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES, INV-ENG-PUBLIC-SIGNATURE-HERMETICITY` | reads=`exportedSurfaces` | writes=`none`
+- `interactive-api` | area=`interactive` | file=`rules/interactive/mutation_boundary_rules.dart` | invariants=`INV-ENG-INTERACTIVE-RESOLVER-PURITY, INV-ENG-INTERACTIVE-MUTATION-BOUNDARY, INV-ENG-COMMITTED-READ-SIDE-HERMETICITY, INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY` | reads=`none` | writes=`none`
+- `controller-api` | area=`controller` | file=`rules/controller/write_only_mutation_rules.dart` | invariants=`INV-ENG-WRITE-ONLY-MUTATION, INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE, INV-ENG-COMMITTED-READ-SIDE-HERMETICITY, INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY` | reads=`none` | writes=`none`
+- `model-architecture` | area=`model` | file=`rules/model/model_architecture_rules.dart` | invariants=`INV-ENG-MODEL-ARCHITECTURE-BOUNDARY, INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER, INV-ENG-RUNTIME-NODE-VALUE-OWNERS` | reads=`none` | writes=`none`
+- `contract-architecture` | area=`contract` | file=`rules/contract/contract_architecture_rules.dart` | invariants=`INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY` | reads=`none` | writes=`none`
 
 ## Explicit Module Coverage (Completeness)
 

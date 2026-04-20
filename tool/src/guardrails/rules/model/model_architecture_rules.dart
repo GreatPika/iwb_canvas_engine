@@ -5,8 +5,27 @@ import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../../support/guardrail_context.dart';
 import '../../core/guardrail_element_utils.dart' as element_utils;
+import '../../core/guardrail_rule.dart';
+import '../../core/guardrail_rule_metadata.dart';
+import '../../core/guardrail_run_state.dart';
 import '../../core/guardrail_violation.dart';
 import '../../core/guardrail_runner_support.dart';
+
+final GuardrailRule modelArchitectureGuardrailRule = GuardrailRule(
+  metadata: const GuardrailRuleMetadata(
+    id: 'model-architecture',
+    invariantIds: <String>[
+      'INV-ENG-MODEL-ARCHITECTURE-BOUNDARY',
+      'INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER',
+      'INV-ENG-RUNTIME-NODE-VALUE-OWNERS',
+    ],
+    area: 'model',
+    description:
+        'Checks model-layer file ownership, runtime owner boundaries, and '
+        'mutation restrictions.',
+  ),
+  run: _runModelArchitectureGuardrailRule,
+);
 
 const Set<String> _restrictedModelOwnerModules = <String>{
   '/lib/src/model/document_locator.dart',
@@ -177,6 +196,13 @@ Future<List<GuardrailViolation>> runModelArchitectureGuardrails({
   }
 
   return violations;
+}
+
+Future<List<GuardrailViolation>> _runModelArchitectureGuardrailRule(
+  GuardrailContext context,
+  GuardrailRunState state,
+) {
+  return runModelArchitectureGuardrails(context: context);
 }
 
 GuardrailViolation? _checkModelFile(GuardrailContext context, File file) {

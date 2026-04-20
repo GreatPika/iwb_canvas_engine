@@ -6,9 +6,28 @@ import 'package:analyzer/dart/ast/ast.dart';
 import '../../support/guardrail_ast_utils.dart';
 import '../../support/guardrail_context.dart';
 import '../../support/guardrail_path_utils.dart';
+import '../../core/guardrail_rule.dart';
+import '../../core/guardrail_rule_metadata.dart';
+import '../../core/guardrail_run_state.dart';
 import '../../core/guardrail_runner_support.dart';
 import '../../core/guardrail_violation.dart';
 import '../../../layer_guardrails.dart';
+
+final GuardrailRule publicSurfaceGuardrailRule = GuardrailRule(
+  metadata: const GuardrailRuleMetadata(
+    id: 'public-surface',
+    invariantIds: <String>[
+      'INV-ENG-SAFE-TXN-API',
+      'INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES',
+    ],
+    area: 'public',
+    description:
+        'Scans exported public surfaces for mutable API leaks and transaction '
+        'escape hatches.',
+    writesStateArtifacts: <String>[GuardrailRunState.exportedSurfacesArtifact],
+  ),
+  run: _runPublicSurfaceGuardrailRule,
+);
 
 enum ExportedApiScanMode { fullScan, targetedSkip }
 
@@ -294,6 +313,18 @@ Future<PublicSurfaceGuardrailResult> runPublicSurfaceGuardrails({
     exportedSurfaces: exportedSurfaces,
     violations: violations,
   );
+}
+
+Future<List<GuardrailViolation>> _runPublicSurfaceGuardrailRule(
+  GuardrailContext context,
+  GuardrailRunState state,
+) async {
+  final result = await runPublicSurfaceGuardrails(context: context);
+  state.writeArtifact(
+    artifactId: GuardrailRunState.exportedSurfacesArtifact,
+    value: result.exportedSurfaces,
+  );
+  return result.violations;
 }
 
 void validateExportedApiScanPolicies({
