@@ -220,7 +220,7 @@ This step moves the weak controller write-only family onto the target resolved s
 
 ## 9. Vertical Slices
 
-### Slice 1. [ ] Resolved canonical selection-writer routing
+### Slice 1. [x] Resolved canonical selection-writer routing
 
 #### Slice Contract
 Canonical selection-writer helpers are accepted and rejected from resolved op-routing analysis instead of source-body substring checks.
@@ -253,7 +253,7 @@ Canonical selection-writer helpers are accepted and rejected from resolved op-ro
 - Green run of the listed structural verification.
 - Diagnostics identify the offending helper rather than a body substring.
 
-### Slice 2. [ ] Resolved committed read-side and spatial payload-owner surface checks
+### Slice 2. [x] Resolved committed read-side and spatial payload-owner surface checks
 
 #### Slice Contract
 Committed read-side surface presence and spatial payload-owner presence are validated from resolved declarations rather than from file text.
@@ -288,7 +288,7 @@ Committed read-side surface presence and spatial payload-owner presence are vali
 - Green run of the listed structural verification.
 - Diagnostics identify missing or leaked resolved owners rather than missing source tokens.
 
-### Slice 3. [ ] False-positive lexical heuristics are removed and replaced by semantic regressions
+### Slice 3. [x] False-positive lexical heuristics are removed and replaced by semantic regressions
 
 #### Slice Contract
 The controller guardrail no longer fails on mutating-looking names alone, and tool regressions prove that only real forbidden sinks or boundary leaks remain violations.

@@ -75,6 +75,9 @@ Source commands:
 - `INV-ENG-COMMITTED-READ-SIDE-HERMETICITY` -> `rules/controller/write_only_mutation_rules.dart` + `rules/interactive/mutation_boundary_rules.dart` + `rules/controller/committed_read_side_rules.dart`
 - `INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY` -> `rules/controller/write_only_mutation_rules.dart` + `rules/controller/prepared_replace_boundary_rules.dart`
 
+Controller note:
+- `rules/controller/write_only_mutation_rules.dart` no longer uses name-prefix or `replaceScene`/`controllerEpoch` lexical heuristics; the active proof surface is resolved selection-op routing, resolved committed-read owner/member discovery, resolved spatial payload-owner discovery, and resolved render-state leak detection.
+
 ## Runner Entrypoints (Explicit)
 
 - `runPublicSurfaceGuardrails`
@@ -228,8 +231,8 @@ Notable very-high functions:
 
 4. Continue AST migration of remaining non-interactive token-heavy rules.
    Status: **NEXT**
-   - interactive architecture and mutation-owner families are already on resolved/semantic proof
-   - next remaining focus is controller lexical mutation enforcement in `controller/write_only_mutation_rules.dart`
+   - interactive architecture, mutation-owner families, and controller write-only mutation enforcement are already on resolved/semantic proof
+   - next remaining focus is the resolved guardrail proof-surface/self-guard follow-up in Step 122
 
 ## Verification Snapshot
 

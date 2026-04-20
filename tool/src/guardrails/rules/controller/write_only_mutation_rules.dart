@@ -24,7 +24,7 @@ Future<List<GuardrailViolation>> runControllerApiGuardrails({
   final dartFiles = _controllerDartFiles(context);
   var hasControllerEpoch = false;
   for (final file in dartFiles) {
-    final fileResult = _checkControllerFile(context, file);
+    final fileResult = await _checkControllerFile(context, file);
     hasControllerEpoch = hasControllerEpoch || fileResult.hasControllerEpoch;
     if (fileResult.violation case final violation?) {
       violations.add(violation);
@@ -100,7 +100,10 @@ List<File> _controllerDartFiles(GuardrailContext context) {
   return collectSortedLibSrcDartFiles(context, relativePath: 'controller');
 }
 
-ControllerFileResult _checkControllerFile(GuardrailContext context, File file) {
+Future<ControllerFileResult> _checkControllerFile(
+  GuardrailContext context,
+  File file,
+) async {
   final filePosixPath = toRepoRelPosixPath(
     absPosixPath: toPosixPath(file.absolute.path),
     rootAbsPosixPath: context.rootAbsPosixPath,
@@ -111,45 +114,35 @@ ControllerFileResult _checkControllerFile(GuardrailContext context, File file) {
     filePathForDiag: filePosixPath,
     onFailure: _onParseFailure,
   );
-  final collector = ControllerSymbolCollector();
-  parsed.unit.accept(collector);
+  final resolved = await context.getResolvedUnitResult(file.absolute.path);
+  final inspection = _inspectControllerFile(parsed);
   return ControllerFileResult(
-    hasControllerEpoch: collector.hasControllerEpoch,
+    hasControllerEpoch: inspection.hasControllerEpoch,
     violation:
         _sceneViewRenderStateImportViolation(
-          collector: collector,
+          inspection: inspection,
           parsed: parsed,
           filePosixPath: filePosixPath,
         ) ??
         _sceneStoreControllerViewRenderStateViolation(
-          collector: collector,
-          parsed: parsed,
-          filePosixPath: filePosixPath,
+          context: context,
+          resolved: resolved,
         ) ??
-        _sceneWriterSelectionBypassViolation(
-          parsed: parsed,
-          filePosixPath: filePosixPath,
-        ) ??
-        _replaceSceneEpochViolation(
-          collector: collector,
-          parsed: parsed,
-          filePosixPath: filePosixPath,
-        ) ??
-        _mutatingSymbolViolation(
-          collector: collector,
-          parsed: parsed,
+        _sceneWriterSelectionRoutingViolation(
+          context: context,
+          resolved: resolved,
           filePosixPath: filePosixPath,
         ),
   );
 }
 
 GuardrailViolation? _sceneViewRenderStateImportViolation({
-  required ControllerSymbolCollector collector,
+  required _ControllerFileInspection inspection,
   required ParsedUnitResult parsed,
   required String filePosixPath,
 }) {
   return _controllerSymbolOccurrenceViolation(
-    occurrence: collector.sceneViewRenderStateImport,
+    occurrence: inspection.sceneViewRenderStateImport,
     parsed: parsed,
     filePosixPath: filePosixPath,
     message:
@@ -159,14 +152,30 @@ GuardrailViolation? _sceneViewRenderStateImportViolation({
 }
 
 GuardrailViolation? _sceneStoreControllerViewRenderStateViolation({
-  required ControllerSymbolCollector collector,
-  required ParsedUnitResult parsed,
-  required String filePosixPath,
+  required GuardrailContext context,
+  required ResolvedUnitResult? resolved,
 }) {
-  return _controllerSymbolOccurrenceViolation(
-    occurrence: collector.sceneStoreControllerViewRenderStateOccurrence,
-    parsed: parsed,
-    filePosixPath: filePosixPath,
+  if (resolved == null) {
+    return null;
+  }
+  final controller = _firstClassNamed(
+    resolved.libraryElement.classes,
+    'SceneStoreController',
+  );
+  if (controller == null) {
+    return null;
+  }
+  if (!_implementsForbiddenType(
+    typeOwner: controller,
+    context: context,
+    forbiddenRepoRelPath: '/lib/src/contract/scene_view_render_state.dart',
+    forbiddenTypeName: 'SceneViewRenderState',
+  )) {
+    return null;
+  }
+  return buildElementGuardrailViolation(
+    context: context,
+    sourceElement: controller,
     message:
         'controller API violation: SceneStoreController must not implement '
         'SceneViewRenderState',
@@ -189,95 +198,48 @@ GuardrailViolation? _controllerSymbolOccurrenceViolation({
   );
 }
 
-GuardrailViolation? _sceneWriterSelectionBypassViolation({
-  required ParsedUnitResult parsed,
+GuardrailViolation? _sceneWriterSelectionRoutingViolation({
+  required GuardrailContext context,
+  required ResolvedUnitResult? resolved,
   required String filePosixPath,
 }) {
-  if (filePosixPath != '/lib/src/controller/scene_writer_selection.dart') {
+  if (filePosixPath != '/lib/src/controller/scene_writer_selection.dart' ||
+      resolved == null) {
     return null;
   }
 
-  const guardedFunctions = <String>{
-    'sceneWriterWriteSelectionReplaceResult',
-    'sceneWriterWriteSelectionToggle',
-    'sceneWriterWriteSelectionClear',
-    'sceneWriterWriteSelectionSelectAllResult',
+  final functionsByName = <String, FunctionDeclaration>{
+    for (final declaration in resolved.unit.declarations)
+      if (declaration is FunctionDeclaration)
+        declaration.name.lexeme: declaration,
   };
-  for (final declaration in parsed.unit.declarations) {
-    if (declaration case FunctionDeclaration(
-      name: final name,
-      functionExpression: final expression,
-    )) {
-      if (!guardedFunctions.contains(name.lexeme)) {
-        continue;
-      }
-      final bodySource = expression.body.toSource();
-      if (bodySource.contains('workingSelection') ||
-          bodySource.contains('changeSet')) {
-        return GuardrailViolation(
-          filePath: filePosixPath,
-          line: lineForOffset(parsed, name.offset),
-          message:
-              'controller API violation: selection writer entrypoints must '
-              'route through canonical selection-state mutation ops instead '
-              'of touching workingSelection/changeSet directly',
-        );
-      }
-    }
-  }
-  return null;
-}
-
-GuardrailViolation? _replaceSceneEpochViolation({
-  required ControllerSymbolCollector collector,
-  required ParsedUnitResult parsed,
-  required String filePosixPath,
-}) {
-  const exemptFiles = <String>{
-    '/lib/src/controller/scene_controller_committed_mutation_access.dart',
-    '/lib/src/controller/scene_writer_runtime.dart',
-  };
-  if (exemptFiles.contains(filePosixPath)) {
-    return null;
-  }
-  final replaceSceneOccurrence = collector.occurrences.firstWhere(
-    (occurrence) => occurrence.name == 'replaceScene',
-    orElse: () => const ControllerSymbolOccurrence(name: '', offset: -1),
-  );
-  if (replaceSceneOccurrence.offset == -1 || collector.hasControllerEpoch) {
-    return null;
-  }
-  return GuardrailViolation(
-    filePath: filePosixPath,
-    line: lineForOffset(parsed, replaceSceneOccurrence.offset),
-    message:
-        'controller API violation: replaceScene-like entrypoints '
-        'must preserve epoch invalidation '
-        '(missing controllerEpoch usage in file)',
-  );
-}
-
-GuardrailViolation? _mutatingSymbolViolation({
-  required ControllerSymbolCollector collector,
-  required ParsedUnitResult parsed,
-  required String filePosixPath,
-}) {
-  for (final occurrence in collector.occurrences) {
-    if (_isAllowedControllerOccurrence(occurrence.name)) {
-      continue;
-    }
-    if (collector.allowsWhitelistedMutatingOccurrence(occurrence)) {
-      continue;
-    }
-    if (_looksMutatingSymbol(occurrence.name)) {
+  for (final spec in _selectionWriterRoutingSpecs) {
+    final function = functionsByName[spec.functionName];
+    if (function == null) {
       return GuardrailViolation(
         filePath: filePosixPath,
-        line: lineForOffset(parsed, occurrence.offset),
+        line: 1,
         message:
-            'controller API violation: mutating symbol "${occurrence.name}" '
-            'must be routed through write*/txn* transaction API',
+            'controller API violation: selection writer entrypoint '
+            '"${spec.functionName}" must route through canonical '
+            '${spec.opTypeName} execution.',
       );
     }
+    if (_hasCanonicalSelectionRouting(
+      context: context,
+      function: function,
+      spec: spec,
+    )) {
+      continue;
+    }
+    return GuardrailViolation(
+      filePath: filePosixPath,
+      line: resolved.lineInfo.getLocation(function.name.offset).lineNumber,
+      message:
+          'controller API violation: selection writer entrypoint '
+          '"${spec.functionName}" must route through canonical '
+          '${spec.opTypeName} execution.',
+    );
   }
   return null;
 }
@@ -285,7 +247,7 @@ GuardrailViolation? _mutatingSymbolViolation({
 Future<GuardrailViolation?> _checkCommittedReadSideHermeticity(
   GuardrailContext context,
 ) async {
-  final surfacePresence = _committedReadSideSurfacePresence(context);
+  final surfacePresence = await _committedReadSideSurfacePresence(context);
   if (!surfacePresence.hasAny) {
     return null;
   }
@@ -307,17 +269,22 @@ Future<GuardrailViolation?> _checkCommittedReadSideHermeticity(
   return _checkControllerReadHelperHermeticity(context);
 }
 
-_CommittedReadSideSurfacePresence _committedReadSideSurfacePresence(
+Future<_CommittedReadSideSurfacePresence> _committedReadSideSurfacePresence(
   GuardrailContext context,
-) {
+) async {
   final controllerFile = _sceneStoreControllerFile(context);
   final spatialFile = _sceneSpatialIndexFile(context);
+  final controllerDeclaresCommittedReadSurface = controllerFile.existsSync()
+      ? await _controllerFileDeclaresCommittedReadSurface(
+          context,
+          controllerFile,
+        )
+      : false;
   return _CommittedReadSideSurfacePresence(
     hasControllerFile: controllerFile.existsSync(),
     hasSpatialFile: spatialFile.existsSync(),
     controllerDeclaresCommittedReadSurface:
-        controllerFile.existsSync() &&
-        _controllerFileDeclaresCommittedReadSurface(controllerFile),
+        controllerDeclaresCommittedReadSurface,
   );
 }
 
@@ -366,30 +333,16 @@ Future<GuardrailViolation?> _checkSpatialCandidateHermeticity(
   if (resolved == null) {
     return null;
   }
-  final locationPresent = spatialFile.readAsStringSync().contains(
-    'typedef SceneSpatialCandidateLocation',
-  );
-  final referencePresent = spatialFile.readAsStringSync().contains(
-    'typedef SceneSpatialCandidateReference',
-  );
-  if (!locationPresent) {
+  for (final aliasName in _requiredSpatialPayloadAliasNames) {
+    if (_firstTypeAliasNamed(resolved.element.typeAliases, aliasName) != null) {
+      continue;
+    }
     return GuardrailViolation(
       filePath: '/lib/src/core/scene_spatial_index.dart',
       line: 1,
       message:
           'controller API violation: committed spatial payload owner '
-          '"SceneSpatialCandidateLocation" is required in '
-          'scene_spatial_index.dart',
-    );
-  }
-  if (!referencePresent) {
-    return GuardrailViolation(
-      filePath: '/lib/src/core/scene_spatial_index.dart',
-      line: 1,
-      message:
-          'controller API violation: committed spatial payload owner '
-          '"SceneSpatialCandidateReference" is required in '
-          'scene_spatial_index.dart',
+          '"$aliasName" is required in scene_spatial_index.dart',
     );
   }
   final hitTestCandidate = _firstClassNamed(
@@ -591,8 +544,12 @@ Future<GuardrailViolation?> _checkControllerReadHelperHermeticity(
           'scene_store_controller.dart',
     );
   }
-  if (extensionDeclaration.onClause?.extendedType.toSource() !=
-      'SceneStoreController') {
+  if (!_hasDeclaredExtensionTarget(
+    extensionElement: extensionElement,
+    context: context,
+    targetRepoRelPath: '/lib/src/controller/scene_store_controller.dart',
+    targetTypeName: 'SceneStoreController',
+  )) {
     return GuardrailViolation(
       filePath: '/lib/src/controller/scene_store_controller.dart',
       line: lineForOffset(parsed, extensionDeclaration.name?.offset ?? 0),
@@ -924,22 +881,29 @@ final class _CommittedReadSideSurfacePresence {
   bool get hasAny => hasControllerFile || hasSpatialFile;
 }
 
-bool _controllerFileDeclaresCommittedReadSurface(File controllerFile) {
-  final source = controllerFile.readAsStringSync();
-  if (source.contains('SceneStoreControllerSpatialAccess')) {
+Future<bool> _controllerFileDeclaresCommittedReadSurface(
+  GuardrailContext context,
+  File controllerFile,
+) async {
+  final resolved = await context.getResolvedLibraryResult(controllerFile.path);
+  if (resolved == null) {
+    return false;
+  }
+  final extension = _firstExtensionNamed(
+    resolved.element.extensions,
+    'SceneStoreControllerSpatialAccess',
+  );
+  if (extension != null) {
     return true;
   }
-
-  for (final token in <String>{
-    ..._committedReadSideHelperNames,
-    ..._allowedSceneStoreControllerSpatialAccessPublicMemberNames,
-    ..._bannedCommittedReadSideHelperNames,
-  }) {
-    if (source.contains(token)) {
-      return true;
-    }
-  }
-  return false;
+  return _libraryDeclaresAnyNamedSurface(
+    resolved.element,
+    names: <String>{
+      ..._committedReadSideHelperNames,
+      ..._allowedSceneStoreControllerSpatialAccessPublicMemberNames,
+      ..._bannedCommittedReadSideHelperNames,
+    },
+  );
 }
 
 File _sceneStoreControllerFile(GuardrailContext context) {
@@ -996,6 +960,18 @@ GuardrailViolation? _spatialCandidateConstructorViolation(
 
 ClassElement? _firstClassNamed(Iterable<ClassElement> classes, String name) {
   for (final element in classes) {
+    if (element.displayName == name) {
+      return element;
+    }
+  }
+  return null;
+}
+
+TypeAliasElement? _firstTypeAliasNamed(
+  Iterable<TypeAliasElement> typeAliases,
+  String name,
+) {
+  for (final element in typeAliases) {
     if (element.displayName == name) {
       return element;
     }
@@ -1060,22 +1036,35 @@ class ControllerSymbolOccurrence {
   final int offset;
 }
 
-class ControllerSymbolCollector extends RecursiveAstVisitor<void> {
-  final List<ControllerSymbolOccurrence> occurrences =
-      <ControllerSymbolOccurrence>[];
-  final List<ControllerAllowedMutatingRange> _allowedMutatingRanges =
-      <ControllerAllowedMutatingRange>[];
+final class _ControllerFileInspection {
+  const _ControllerFileInspection({
+    required this.hasControllerEpoch,
+    required this.sceneViewRenderStateImport,
+  });
+
+  final bool hasControllerEpoch;
+  final ControllerSymbolOccurrence? sceneViewRenderStateImport;
+}
+
+_ControllerFileInspection _inspectControllerFile(ParsedUnitResult parsed) {
+  final collector = _ControllerSyntaxCollector();
+  parsed.unit.accept(collector);
+  return _ControllerFileInspection(
+    hasControllerEpoch: collector.hasControllerEpoch,
+    sceneViewRenderStateImport: collector.sceneViewRenderStateImport,
+  );
+}
+
+final class _ControllerSyntaxCollector extends RecursiveAstVisitor<void> {
   bool hasControllerEpoch = false;
   ControllerSymbolOccurrence? sceneViewRenderStateImport;
-  ControllerSymbolOccurrence? sceneStoreControllerViewRenderStateOccurrence;
 
-  bool allowsWhitelistedMutatingOccurrence(
-    ControllerSymbolOccurrence occurrence,
-  ) {
-    return _allowedMutatingRanges.any(
-      (range) =>
-          occurrence.offset >= range.start && occurrence.offset < range.end,
-    );
+  @override
+  void visitMethodDeclaration(MethodDeclaration node) {
+    if (node.name.lexeme == 'controllerEpoch') {
+      hasControllerEpoch = true;
+    }
+    super.visitMethodDeclaration(node);
   }
 
   @override
@@ -1088,27 +1077,6 @@ class ControllerSymbolCollector extends RecursiveAstVisitor<void> {
       );
     }
     super.visitImportDirective(node);
-  }
-
-  @override
-  void visitClassDeclaration(ClassDeclaration node) {
-    if (node.name.lexeme == 'SceneStoreController' &&
-        node.implementsClause?.interfaces.any(
-              (type) => type.toSource() == 'SceneViewRenderState',
-            ) ==
-            true) {
-      sceneStoreControllerViewRenderStateOccurrence =
-          ControllerSymbolOccurrence(
-            name: node.name.lexeme,
-            offset: node.name.offset,
-          );
-    }
-    if (_isCommittedMutationBridgeDeclaration(node)) {
-      _allowedMutatingRanges.add(
-        ControllerAllowedMutatingRange(start: node.offset, end: node.end),
-      );
-    }
-    super.visitClassDeclaration(node);
   }
 
   @override
@@ -1126,124 +1094,230 @@ class ControllerSymbolCollector extends RecursiveAstVisitor<void> {
     }
     super.visitSimpleIdentifier(node);
   }
+}
 
-  @override
-  void visitMethodDeclaration(MethodDeclaration node) {
-    if (node.name.lexeme == 'controllerEpoch') {
-      hasControllerEpoch = true;
-    }
-    occurrences.add(
-      ControllerSymbolOccurrence(
-        name: node.name.lexeme,
-        offset: node.name.offset,
-      ),
-    );
-    super.visitMethodDeclaration(node);
-  }
+const Set<String> _requiredSpatialPayloadAliasNames = <String>{
+  'SceneSpatialCandidateLocation',
+  'SceneSpatialCandidateReference',
+};
 
-  @override
-  void visitFunctionDeclaration(FunctionDeclaration node) {
-    occurrences.add(
-      ControllerSymbolOccurrence(
-        name: node.name.lexeme,
-        offset: node.name.offset,
+final class _SelectionWriterRoutingSpec {
+  const _SelectionWriterRoutingSpec({
+    required this.functionName,
+    required this.opTypeName,
+  });
+
+  final String functionName;
+  final String opTypeName;
+}
+
+const List<_SelectionWriterRoutingSpec> _selectionWriterRoutingSpecs =
+    <_SelectionWriterRoutingSpec>[
+      _SelectionWriterRoutingSpec(
+        functionName: 'sceneWriterWriteSelectionReplaceResult',
+        opTypeName: 'ReplaceSelectionOp',
       ),
-    );
-    super.visitFunctionDeclaration(node);
+      _SelectionWriterRoutingSpec(
+        functionName: 'sceneWriterWriteSelectionToggle',
+        opTypeName: 'ToggleSelectionOp',
+      ),
+      _SelectionWriterRoutingSpec(
+        functionName: 'sceneWriterWriteSelectionClear',
+        opTypeName: 'ClearSelectionOp',
+      ),
+      _SelectionWriterRoutingSpec(
+        functionName: 'sceneWriterWriteSelectionSelectAllResult',
+        opTypeName: 'SelectAllSelectionOp',
+      ),
+    ];
+
+bool _hasCanonicalSelectionRouting({
+  required GuardrailContext context,
+  required FunctionDeclaration function,
+  required _SelectionWriterRoutingSpec spec,
+}) {
+  var foundCanonicalRoute = false;
+  function.functionExpression.body.accept(
+    _SelectionRoutingCollector(
+      onMethodInvocation: (invocation) {
+        if (foundCanonicalRoute) {
+          return;
+        }
+        foundCanonicalRoute = _matchesSelectionRoutingInvocation(
+          context: context,
+          invocation: invocation,
+          spec: spec,
+        );
+      },
+    ),
+  );
+  return foundCanonicalRoute;
+}
+
+bool _matchesSelectionRoutingInvocation({
+  required GuardrailContext context,
+  required MethodInvocation invocation,
+  required _SelectionWriterRoutingSpec spec,
+}) {
+  if (invocation.methodName.name != 'execute') {
+    return false;
   }
+  final methodElement = invocation.methodName.element;
+  if (methodElement is! MethodElement ||
+      !_matchesElementIdentity(
+        element: methodElement.enclosingElement,
+        repoRelPath: '/lib/src/controller/scene_writer_runtime.dart',
+        typeName: 'SceneWriterRuntime',
+        context: context,
+      )) {
+    return false;
+  }
+  final arguments = invocation.argumentList.arguments;
+  if (arguments.length != 1) {
+    return false;
+  }
+  final opExpression = switch (arguments.single) {
+    NamedExpression(:final expression) => expression.unParenthesized,
+    _ => arguments.single.unParenthesized,
+  };
+  if (opExpression is! InstanceCreationExpression) {
+    return false;
+  }
+  final constructor = opExpression.constructorName.element;
+  return _matchesElementIdentity(
+    element: constructor?.enclosingElement,
+    repoRelPath: '/lib/src/controller/mutation_op.dart',
+    typeName: spec.opTypeName,
+    context: context,
+  );
+}
+
+bool _implementsForbiddenType({
+  required InterfaceElement typeOwner,
+  required GuardrailContext context,
+  required String forbiddenRepoRelPath,
+  required String forbiddenTypeName,
+}) {
+  return typeOwner.interfaces.any(
+    (interfaceType) => _matchesElementIdentity(
+      element: interfaceType.element,
+      repoRelPath: forbiddenRepoRelPath,
+      typeName: forbiddenTypeName,
+      context: context,
+    ),
+  );
+}
+
+bool _hasDeclaredExtensionTarget({
+  required ExtensionElement extensionElement,
+  required GuardrailContext context,
+  required String targetRepoRelPath,
+  required String targetTypeName,
+}) {
+  return _matchesElementIdentity(
+    element: extensionElement.extendedType.element,
+    repoRelPath: targetRepoRelPath,
+    typeName: targetTypeName,
+    context: context,
+  );
+}
+
+bool _matchesElementIdentity({
+  required Element? element,
+  required String repoRelPath,
+  required String typeName,
+  required GuardrailContext context,
+}) {
+  if (element == null || element.displayName != typeName) {
+    return false;
+  }
+  return element_utils.repoRelPathForElement(
+        element: element,
+        context: context,
+      ) ==
+      repoRelPath;
+}
+
+bool _libraryDeclaresAnyNamedSurface(
+  LibraryElement library, {
+  required Set<String> names,
+}) {
+  final declaredSurfaceNames = <String>{
+    ...library.classes.map((element) => element.displayName),
+    ...library.extensions.map((element) => element.displayName),
+    ...library.typeAliases.map((element) => element.displayName),
+    ...library.topLevelFunctions.map((element) => element.displayName),
+    ...library.topLevelVariables
+        .where((element) => !element.isSynthetic)
+        .map((element) => 'field:${element.displayName}'),
+    ...library.getters
+        .where((element) => !element.isSynthetic)
+        .map((element) => 'getter:${element.displayName}'),
+    ...library.setters
+        .where((element) => !element.isSynthetic)
+        .map((element) => 'setter:${element.displayName}'),
+    ...library.classes.expand(_memberSurfaceNamesForInterfaceOwner),
+    ...library.extensions.expand(_memberSurfaceNamesForExtensionOwner),
+  };
+  return names.any(declaredSurfaceNames.contains);
+}
+
+Iterable<String> _memberSurfaceNamesForInterfaceOwner(
+  InterfaceElement owner,
+) sync* {
+  for (final field in owner.fields.where(
+    (field) => !field.isSynthetic && isPublicName(field.displayName),
+  )) {
+    yield 'field:${field.displayName}';
+  }
+  for (final method in owner.methods.where(
+    (method) => isPublicName(method.displayName),
+  )) {
+    yield 'method:${method.displayName}';
+  }
+  for (final getter in owner.getters.where(
+    (getter) => !getter.isSynthetic && isPublicName(getter.displayName),
+  )) {
+    yield 'getter:${getter.displayName}';
+  }
+  for (final setter in owner.setters.where(
+    (setter) => !setter.isSynthetic && isPublicName(setter.displayName),
+  )) {
+    yield 'setter:${setter.displayName}';
+  }
+}
+
+Iterable<String> _memberSurfaceNamesForExtensionOwner(
+  ExtensionElement owner,
+) sync* {
+  for (final method in owner.methods.where(
+    (method) => isPublicName(method.displayName),
+  )) {
+    yield 'method:${method.displayName}';
+    yield method.displayName;
+  }
+  for (final getter in owner.getters.where(
+    (getter) => !getter.isSynthetic && isPublicName(getter.displayName),
+  )) {
+    yield 'getter:${getter.displayName}';
+    yield getter.displayName;
+  }
+  for (final setter in owner.setters.where(
+    (setter) => !setter.isSynthetic && isPublicName(setter.displayName),
+  )) {
+    yield 'setter:${setter.displayName}';
+    yield setter.displayName;
+  }
+}
+
+final class _SelectionRoutingCollector extends RecursiveAstVisitor<void> {
+  _SelectionRoutingCollector({required this.onMethodInvocation});
+
+  final void Function(MethodInvocation invocation) onMethodInvocation;
 
   @override
   void visitMethodInvocation(MethodInvocation node) {
-    if (node.target == null && !node.isCascaded) {
-      occurrences.add(
-        ControllerSymbolOccurrence(
-          name: node.methodName.name,
-          offset: node.methodName.offset,
-        ),
-      );
-    }
+    onMethodInvocation(node);
     super.visitMethodInvocation(node);
   }
-
-  @override
-  void visitFunctionExpressionInvocation(FunctionExpressionInvocation node) {
-    final function = node.function;
-    if (function is SimpleIdentifier) {
-      occurrences.add(
-        ControllerSymbolOccurrence(
-          name: function.name,
-          offset: function.offset,
-        ),
-      );
-    }
-    super.visitFunctionExpressionInvocation(node);
-  }
-}
-
-class ControllerAllowedMutatingRange {
-  const ControllerAllowedMutatingRange({
-    required this.start,
-    required this.end,
-  });
-
-  final int start;
-  final int end;
-}
-
-bool _isCommittedMutationBridgeDeclaration(ClassDeclaration node) {
-  return _isCommittedMutationAccessInterface(node) ||
-      _isCommittedMutationAccessAdapter(node);
-}
-
-bool _isCommittedMutationAccessInterface(ClassDeclaration node) {
-  return node.name.lexeme == 'SceneControllerCommittedMutationAccess' &&
-      node.abstractKeyword != null &&
-      node.interfaceKeyword != null;
-}
-
-bool _isCommittedMutationAccessAdapter(ClassDeclaration node) {
-  if (node.name.lexeme != 'SceneStoreControllerCommittedMutationAccess' ||
-      node.finalKeyword == null) {
-    return false;
-  }
-  final interfaces = node.implementsClause?.interfaces;
-  if (interfaces == null || interfaces.length != 1) {
-    return false;
-  }
-  return interfaces.single.toSource() ==
-      'SceneControllerCommittedMutationAccess';
-}
-
-bool _looksMutatingSymbol(String symbol) {
-  const prefixes = <String>[
-    'add',
-    'remove',
-    'delete',
-    'clear',
-    'replace',
-    'update',
-    'set',
-    'move',
-    'insert',
-    'mutate',
-    'commit',
-    'apply',
-  ];
-  return prefixes.any(symbol.startsWith);
-}
-
-bool _isAllowedControllerOccurrence(String symbol) {
-  if (const <String>{
-    'if',
-    'for',
-    'while',
-    'switch',
-    'assert',
-    'return',
-    'super',
-    'this',
-  }.contains(symbol)) {
-    return true;
-  }
-  return const <String>['write', 'txn'].any(symbol.startsWith);
 }

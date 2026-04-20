@@ -494,6 +494,146 @@ $extraTopLevel
 ''';
 }
 
+void _writeSelectionWriterRoutingSupportScaffold(Directory sandbox) {
+  writeSandboxFile(
+    sandbox,
+    'lib/src/controller/scene_writer_support.dart',
+    'typedef NodeId = String;\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/controller/scene_writer_types.dart',
+    '// selection routing test support\n',
+  );
+  writeSandboxFile(sandbox, 'lib/src/controller/mutation_op.dart', '''
+import 'scene_writer_support.dart';
+
+final class ReplaceSelectionOp {
+  ReplaceSelectionOp(Iterable<NodeId> ids);
+}
+
+final class ToggleSelectionOp {
+  ToggleSelectionOp(NodeId id);
+}
+
+final class ClearSelectionOp {
+  const ClearSelectionOp();
+}
+
+final class SelectAllSelectionOp {
+  const SelectAllSelectionOp({this.onlySelectable = true});
+
+  final bool onlySelectable;
+}
+''');
+  writeSandboxFile(sandbox, 'lib/src/controller/scene_writer_runtime.dart', '''
+import 'mutation_op.dart';
+import 'scene_writer_support.dart';
+
+final class SceneWriterRuntime {
+  final _TxnContext ctx = _TxnContext();
+
+  MutationApplyResult<TValue> execute<TValue extends Object?>(Object op) =>
+      throw UnimplementedError();
+}
+
+final class MutationApplyResult<TValue extends Object?> {
+  const MutationApplyResult(this.value);
+
+  final TValue value;
+}
+
+final class _TxnContext {
+  final Set<NodeId> workingSelection = <NodeId>{};
+  final Object changeSet = Object();
+}
+''');
+  writeSandboxFile(sandbox, 'lib/src/controller/scene_writer.dart', '''
+import 'dart:ui';
+
+import '../contract/node_patch.dart';
+import '../contract/node_spec.dart';
+import '../contract/snapshot.dart';
+import '../contract/transform2d.dart';
+import 'scene_writer_runtime.dart';
+
+final class SceneWriter {
+  SceneSnapshot get snapshot => SceneSnapshot();
+  Set<String> get selectedNodeIds => <String>{};
+
+  String writeNodeInsert(NodeSpec spec, {String? layerId, int? insertIndex}) =>
+      'id';
+  bool writeLayerEnsure(String layerId, {int? index}) => true;
+  bool writeNodeErase(String nodeId) => true;
+  bool writeNodePatch(NodePatch patch) => true;
+  bool writeNodeTransformSet(String id, Transform2D transform) => true;
+  bool writeSelectionReplace(Iterable<String> ids) => true;
+  bool writeSelectionToggle(String id) => true;
+  bool writeSelectionClear() => true;
+  int writeSelectionSelectAll({bool onlySelectable = true}) => 0;
+  int writeSelectionTranslate(Offset delta) => 0;
+  int writeSelectionTransform(Transform2D delta) => 0;
+  int writeDeleteSelection() => 0;
+  List<String> writeClearSceneKeepBackground() => const <String>[];
+  ClearSceneResult writeClearSceneKeepBackgroundResult() => ClearSceneResult();
+  void writeCameraOffset(Offset offset) {}
+  void writeGridEnable(bool enabled) {}
+  void writeGridCellSize(double cellSize) {}
+  void writeBackgroundColor(Color color) {}
+  void writeDocumentReplace(SceneSnapshot snapshot) {}
+  void writeSignalEnqueue({
+    required String type,
+    Iterable<String> nodeIds = const <String>[],
+    Map<String, Object?>? payload,
+  }) {}
+
+  SceneWriterRuntime get runtime => SceneWriterRuntime();
+}
+''');
+}
+
+String _sceneWriterSelectionFixture({
+  required String replaceSelectionBody,
+  String toggleBody =
+      'return writer.runtime.execute(ToggleSelectionOp(id)).value;',
+  String clearBody =
+      'return writer.runtime.execute(const ClearSelectionOp()).value;',
+  String selectAllBody = '''
+return writer.runtime
+    .execute(SelectAllSelectionOp(onlySelectable: onlySelectable))
+    .value;
+''',
+}) {
+  return '''
+import 'mutation_op.dart';
+import 'scene_writer.dart';
+import 'scene_writer_support.dart';
+import 'scene_writer_types.dart';
+
+List<NodeId>? sceneWriterWriteSelectionReplaceResult(
+  SceneWriter writer,
+  Iterable<NodeId> ids,
+) {
+  ${replaceSelectionBody.trim()}
+}
+
+bool sceneWriterWriteSelectionToggle(SceneWriter writer, NodeId id) {
+  ${toggleBody.trim()}
+}
+
+bool sceneWriterWriteSelectionClear(SceneWriter writer) {
+  ${clearBody.trim()}
+}
+
+({int selectedCount, bool changed}) sceneWriterWriteSelectionSelectAllResult(
+  SceneWriter writer, {
+  bool onlySelectable = true,
+}) {
+  ${selectAllBody.trim()}
+}
+''';
+}
+
 void _registerPreparedReplaceSceneBoundaryAttackTests() {
   final cases = <_PreparedReplaceSceneAttackCase>[
     (
@@ -1227,8 +1367,22 @@ class SceneStoreController {
         try {
           writeSandboxFile(
             sandbox,
+            'lib/src/contract/scene_view_render_state.dart',
+            'abstract interface class SceneViewRenderState {}\n',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/view_state_alias.dart',
+            '''
+export 'scene_view_render_state.dart';
+''',
+          );
+          writeSandboxFile(
+            sandbox,
             'lib/src/controller/scene_store_controller.dart',
             '''
+import '../contract/view_state_alias.dart';
+
 class SceneStoreController implements SceneViewRenderState {
   final int controllerEpoch = 0;
 }
@@ -1292,19 +1446,11 @@ final class SceneStoreControllerCommittedMutationAccess
     );
 
     test(
-      'rejects extra mutating symbol outside whitelisted mutation bridge declarations',
+      'allows mutating-looking helper names outside forbidden controller boundaries',
       () async {
         final sandbox = await createGuardrailsSandbox();
         try {
-          writeSandboxFile(
-            sandbox,
-            'lib/src/controller/scene_store_controller.dart',
-            '''
-class SceneStoreController {
-  final int controllerEpoch = 0;
-}
-''',
-          );
+          _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
           writeSandboxFile(
             sandbox,
             'lib/src/controller/controller_private_mutation_bridge.dart',
@@ -1328,26 +1474,19 @@ void clearSelectionCache() {}
           );
 
           final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-          expect(result.exitCode, isNonZero);
-          expect(
-            result.stderr.toString(),
-            diagnostic(
-              category: 'controller API',
-              detail:
-                  'mutating symbol "clearSelectionCache" must be routed through '
-                  'write*/txn* transaction API',
-            ),
-          );
+          expect(result.exitCode, 0, reason: result.stderr.toString());
         } finally {
           sandbox.deleteSync(recursive: true);
         }
       },
     );
 
-    test('rejects mutating symbol outside write/txn prefixes', () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeSandboxFile(sandbox, 'lib/src/controller/store.dart', '''
+    test(
+      'allows unrelated replaceScene spelling without forbidden sink',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeSandboxFile(sandbox, 'lib/src/controller/store.dart', '''
 class Store {
   int controllerEpoch = 0;
 
@@ -1355,39 +1494,57 @@ class Store {
 }
 ''');
 
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          diagnostic(
-            category: 'controller API',
-            detail:
-                'mutating symbol "replaceScene" must be routed through '
-                'write*/txn* transaction API',
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'accepts canonical selection writer routing through resolved mutation ops',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          _writeSelectionWriterRoutingSupportScaffold(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_writer_selection.dart',
+            _sceneWriterSelectionFixture(
+              replaceSelectionBody:
+                  'return writer.runtime.execute(ReplaceSelectionOp(ids)).value;',
+            ),
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test(
       'rejects direct selection writer mutation bypass outside canonical ops',
       () async {
         final sandbox = await createGuardrailsSandbox();
         try {
+          writeMinimalControllerStore(sandbox);
+          _writeSelectionWriterRoutingSupportScaffold(sandbox);
           writeSandboxFile(
             sandbox,
             'lib/src/controller/scene_writer_selection.dart',
-            '''
-List<String>? sceneWriterWriteSelectionReplaceResult(Object writer, Set<String> ids) {
-  final ctx = writer.runtime.ctx;
-  ctx.workingSelection
-    ..clear()
-    ..addAll(ids);
-  return ids.toList();
-}
+            _sceneWriterSelectionFixture(
+              replaceSelectionBody: '''
+final ctx = writer.runtime.ctx;
+ctx.workingSelection
+  ..clear()
+  ..addAll(ids);
+return ids.toList();
 ''',
+            ),
           );
 
           final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -1397,9 +1554,43 @@ List<String>? sceneWriterWriteSelectionReplaceResult(Object writer, Set<String> 
             diagnostic(
               category: 'controller API',
               detail:
-                  'selection writer entrypoints must route through canonical '
-                  'selection-state mutation ops instead of touching '
-                  'workingSelection/changeSet directly',
+                  'selection writer entrypoint '
+                  '"sceneWriterWriteSelectionReplaceResult" must route through '
+                  'canonical ReplaceSelectionOp execution',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects canonical selection helper routed through wrong op type',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          _writeSelectionWriterRoutingSupportScaffold(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_writer_selection.dart',
+            _sceneWriterSelectionFixture(
+              replaceSelectionBody:
+                  'return writer.runtime.execute(ToggleSelectionOp(\'id\')).value;',
+            ),
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'controller API',
+              detail:
+                  'selection writer entrypoint '
+                  '"sceneWriterWriteSelectionReplaceResult" must route through '
+                  'canonical ReplaceSelectionOp execution',
             ),
           );
         } finally {
@@ -1971,6 +2162,136 @@ class SceneStoreController {
               detail:
                   'committed spatial payload "SceneHitTestSpatialCandidate.leaked" '
                   'must not expose live runtime scene-graph types (SceneNode)',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects missing SceneSpatialCandidateLocation typedef owner',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
+          writeSandboxFile(sandbox, 'lib/src/core/scene_spatial_index.dart', '''
+import 'dart:ui';
+
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.hitTestBoundsWorld,
+  });
+
+  final String nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect hitTestBoundsWorld;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final String nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
+}
+''');
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'controller API',
+              detail:
+                  'committed spatial payload owner '
+                  '"SceneSpatialCandidateLocation" is required in '
+                  'scene_spatial_index.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects missing SceneSpatialCandidateReference typedef owner',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          _writePreparedReplaceSceneBoundarySupportScaffold(sandbox);
+          writeSandboxFile(sandbox, 'lib/src/core/scene_spatial_index.dart', '''
+import 'dart:ui';
+
+typedef SceneSpatialCandidateLocation = ({int layerIndex, int nodeIndex});
+
+enum ScenePaintSpatialQueryScope {
+  contentLayersOnly,
+  backgroundAndContentLayers,
+}
+
+class SceneHitTestSpatialCandidate {
+  const SceneHitTestSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.hitTestBoundsWorld,
+  });
+
+  final String nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect hitTestBoundsWorld;
+}
+
+class ScenePaintSpatialCandidate {
+  const ScenePaintSpatialCandidate({
+    required this.nodeId,
+    required this.layerIndex,
+    required this.nodeIndex,
+    required this.paintBoundsWorld,
+  });
+
+  final String nodeId;
+  final int layerIndex;
+  final int nodeIndex;
+  final Rect paintBoundsWorld;
+}
+''');
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'controller API',
+              detail:
+                  'committed spatial payload owner '
+                  '"SceneSpatialCandidateReference" is required in '
+                  'scene_spatial_index.dart',
             ),
           );
         } finally {
