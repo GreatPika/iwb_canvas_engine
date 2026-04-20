@@ -1599,6 +1599,44 @@ return ids.toList();
       },
     );
 
+    test(
+      'rejects canonical selection route followed by direct sink mutation',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          _writeSelectionWriterRoutingSupportScaffold(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_writer_selection.dart',
+            _sceneWriterSelectionFixture(
+              replaceSelectionBody: '''
+final selectedIds =
+    writer.runtime.execute(ReplaceSelectionOp(ids)).value;
+writer.runtime.ctx.workingSelection.clear();
+return selectedIds;
+''',
+            ),
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'controller API',
+              detail:
+                  'selection writer entrypoint '
+                  '"sceneWriterWriteSelectionReplaceResult" must route through '
+                  'canonical ReplaceSelectionOp execution',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
     // INV:INV-ENG-COMMITTED-READ-SIDE-HERMETICITY
     test(
       'accepts snapshot-only committed read-side controller helpers',
@@ -2401,6 +2439,81 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test(
+      'rejects missing committed spatial payload file for class-owned helpers',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+typedef NodeId = String;
+
+class NodeSnapshot {
+  const NodeSnapshot({required this.id});
+
+  final NodeId id;
+}
+''');
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_store_controller.dart',
+            '''
+import '../contract/snapshot.dart';
+
+class Offset {}
+class Rect {}
+enum ScenePaintSpatialQueryScope { contentLayersOnly }
+typedef SceneSpatialCandidateReference = ({
+  String nodeId,
+  int layerIndex,
+  int nodeIndex,
+});
+
+class SceneHitTestSpatialCandidate {}
+class ScenePaintSpatialCandidate {}
+
+class SceneStoreController {
+  final int controllerEpoch = 0;
+
+  List<SceneHitTestSpatialCandidate> queryHitTestCandidates(Rect worldBounds) =>
+      const <SceneHitTestSpatialCandidate>[];
+
+  List<ScenePaintSpatialCandidate> queryPaintCandidates(
+    Rect worldBounds, {
+    ScenePaintSpatialQueryScope scope =
+        ScenePaintSpatialQueryScope.contentLayersOnly,
+  }) => const <ScenePaintSpatialCandidate>[];
+
+  NodeSnapshot? resolveSpatialCandidateSnapshot(
+    SceneSpatialCandidateReference candidate,
+  ) => null;
+
+  ({NodeSnapshot node, int layerIndex, int nodeIndex})? resolveSnapshotNodeById(
+    NodeId nodeId,
+  ) => null;
+
+  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
+      Offset();
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'controller API',
+              detail:
+                  'committed spatial payload file scene_spatial_index.dart is '
+                  'required when committed read helpers exist',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test('rejects missing committed read helper owner file', () async {
       final sandbox = await createGuardrailsSandbox();

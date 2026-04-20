@@ -225,11 +225,13 @@ GuardrailViolation? _sceneWriterSelectionRoutingViolation({
             '${spec.opTypeName} execution.',
       );
     }
-    if (_hasCanonicalSelectionRouting(
+    final routingAnalysis = _analyzeSelectionRouting(
       context: context,
       function: function,
       spec: spec,
-    )) {
+    );
+    if (routingAnalysis.hasCanonicalRoute &&
+        !routingAnalysis.hasForbiddenDirectSelectionMutation) {
       continue;
     }
     return GuardrailViolation(
@@ -1131,27 +1133,56 @@ const List<_SelectionWriterRoutingSpec> _selectionWriterRoutingSpecs =
       ),
     ];
 
-bool _hasCanonicalSelectionRouting({
+final class _SelectionRoutingAnalysis {
+  const _SelectionRoutingAnalysis({
+    required this.hasCanonicalRoute,
+    required this.hasForbiddenDirectSelectionMutation,
+  });
+
+  final bool hasCanonicalRoute;
+  final bool hasForbiddenDirectSelectionMutation;
+}
+
+_SelectionRoutingAnalysis _analyzeSelectionRouting({
   required GuardrailContext context,
   required FunctionDeclaration function,
   required _SelectionWriterRoutingSpec spec,
 }) {
   var foundCanonicalRoute = false;
+  var foundForbiddenDirectSelectionMutation = false;
   function.functionExpression.body.accept(
     _SelectionRoutingCollector(
       onMethodInvocation: (invocation) {
-        if (foundCanonicalRoute) {
+        if (!foundCanonicalRoute) {
+          foundCanonicalRoute = _matchesSelectionRoutingInvocation(
+            context: context,
+            invocation: invocation,
+            spec: spec,
+          );
+        }
+      },
+      onPropertyAccess: (propertyAccess) {
+        if (foundForbiddenDirectSelectionMutation) {
           return;
         }
-        foundCanonicalRoute = _matchesSelectionRoutingInvocation(
-          context: context,
-          invocation: invocation,
-          spec: spec,
+        foundForbiddenDirectSelectionMutation = _isForbiddenSelectionSinkAccess(
+          propertyAccess.propertyName,
+        );
+      },
+      onPrefixedIdentifier: (identifier) {
+        if (foundForbiddenDirectSelectionMutation) {
+          return;
+        }
+        foundForbiddenDirectSelectionMutation = _isForbiddenSelectionSinkAccess(
+          identifier.identifier,
         );
       },
     ),
   );
-  return foundCanonicalRoute;
+  return _SelectionRoutingAnalysis(
+    hasCanonicalRoute: foundCanonicalRoute,
+    hasForbiddenDirectSelectionMutation: foundForbiddenDirectSelectionMutation,
+  );
 }
 
 bool _matchesSelectionRoutingInvocation({
@@ -1242,24 +1273,25 @@ bool _libraryDeclaresAnyNamedSurface(
   LibraryElement library, {
   required Set<String> names,
 }) {
+  final normalizedNames = _normalizedSurfaceNames(names);
   final declaredSurfaceNames = <String>{
-    ...library.classes.map((element) => element.displayName),
-    ...library.extensions.map((element) => element.displayName),
-    ...library.typeAliases.map((element) => element.displayName),
-    ...library.topLevelFunctions.map((element) => element.displayName),
+    ...library.classes.expand(_surfaceNameVariants),
+    ...library.extensions.expand(_surfaceNameVariants),
+    ...library.typeAliases.expand(_surfaceNameVariants),
+    ...library.topLevelFunctions.expand(_surfaceNameVariants),
     ...library.topLevelVariables
         .where((element) => !element.isSynthetic)
-        .map((element) => 'field:${element.displayName}'),
+        .expand((element) => _prefixedSurfaceNameVariants(element, 'field')),
     ...library.getters
         .where((element) => !element.isSynthetic)
-        .map((element) => 'getter:${element.displayName}'),
+        .expand((element) => _prefixedSurfaceNameVariants(element, 'getter')),
     ...library.setters
         .where((element) => !element.isSynthetic)
-        .map((element) => 'setter:${element.displayName}'),
+        .expand((element) => _prefixedSurfaceNameVariants(element, 'setter')),
     ...library.classes.expand(_memberSurfaceNamesForInterfaceOwner),
     ...library.extensions.expand(_memberSurfaceNamesForExtensionOwner),
   };
-  return names.any(declaredSurfaceNames.contains);
+  return normalizedNames.any(declaredSurfaceNames.contains);
 }
 
 Iterable<String> _memberSurfaceNamesForInterfaceOwner(
@@ -1268,22 +1300,22 @@ Iterable<String> _memberSurfaceNamesForInterfaceOwner(
   for (final field in owner.fields.where(
     (field) => !field.isSynthetic && isPublicName(field.displayName),
   )) {
-    yield 'field:${field.displayName}';
+    yield* _prefixedSurfaceNameVariants(field, 'field');
   }
   for (final method in owner.methods.where(
     (method) => isPublicName(method.displayName),
   )) {
-    yield 'method:${method.displayName}';
+    yield* _prefixedSurfaceNameVariants(method, 'method');
   }
   for (final getter in owner.getters.where(
     (getter) => !getter.isSynthetic && isPublicName(getter.displayName),
   )) {
-    yield 'getter:${getter.displayName}';
+    yield* _prefixedSurfaceNameVariants(getter, 'getter');
   }
   for (final setter in owner.setters.where(
     (setter) => !setter.isSynthetic && isPublicName(setter.displayName),
   )) {
-    yield 'setter:${setter.displayName}';
+    yield* _prefixedSurfaceNameVariants(setter, 'setter');
   }
 }
 
@@ -1293,31 +1325,88 @@ Iterable<String> _memberSurfaceNamesForExtensionOwner(
   for (final method in owner.methods.where(
     (method) => isPublicName(method.displayName),
   )) {
-    yield 'method:${method.displayName}';
-    yield method.displayName;
+    yield* _prefixedSurfaceNameVariants(method, 'method');
   }
   for (final getter in owner.getters.where(
     (getter) => !getter.isSynthetic && isPublicName(getter.displayName),
   )) {
-    yield 'getter:${getter.displayName}';
-    yield getter.displayName;
+    yield* _prefixedSurfaceNameVariants(getter, 'getter');
   }
   for (final setter in owner.setters.where(
     (setter) => !setter.isSynthetic && isPublicName(setter.displayName),
   )) {
-    yield 'setter:${setter.displayName}';
-    yield setter.displayName;
+    yield* _prefixedSurfaceNameVariants(setter, 'setter');
   }
 }
 
 final class _SelectionRoutingCollector extends RecursiveAstVisitor<void> {
-  _SelectionRoutingCollector({required this.onMethodInvocation});
+  _SelectionRoutingCollector({
+    required this.onMethodInvocation,
+    required this.onPropertyAccess,
+    required this.onPrefixedIdentifier,
+  });
 
   final void Function(MethodInvocation invocation) onMethodInvocation;
+  final void Function(PropertyAccess propertyAccess) onPropertyAccess;
+  final void Function(PrefixedIdentifier identifier) onPrefixedIdentifier;
 
   @override
   void visitMethodInvocation(MethodInvocation node) {
     onMethodInvocation(node);
     super.visitMethodInvocation(node);
   }
+
+  @override
+  void visitPropertyAccess(PropertyAccess node) {
+    onPropertyAccess(node);
+    super.visitPropertyAccess(node);
+  }
+
+  @override
+  void visitPrefixedIdentifier(PrefixedIdentifier node) {
+    onPrefixedIdentifier(node);
+    super.visitPrefixedIdentifier(node);
+  }
+}
+
+bool _isForbiddenSelectionSinkAccess(SimpleIdentifier identifier) {
+  return const <String>{
+    'workingSelection',
+    'changeSet',
+  }.contains(identifier.name);
+}
+
+Set<String> _normalizedSurfaceNames(Set<String> names) {
+  return <String>{
+    for (final name in names) ..._surfaceNameVariantsFromRaw(name),
+  };
+}
+
+Iterable<String> _surfaceNameVariants(Element element) sync* {
+  final name = element.displayName;
+  if (name.isEmpty) {
+    return;
+  }
+  yield name;
+}
+
+Iterable<String> _prefixedSurfaceNameVariants(
+  Element element,
+  String prefix,
+) sync* {
+  final name = element.displayName;
+  if (name.isEmpty) {
+    return;
+  }
+  yield '$prefix:$name';
+  yield name;
+}
+
+Iterable<String> _surfaceNameVariantsFromRaw(String name) sync* {
+  yield name;
+  final separatorIndex = name.indexOf(':');
+  if (separatorIndex <= 0 || separatorIndex == name.length - 1) {
+    return;
+  }
+  yield name.substring(separatorIndex + 1);
 }
