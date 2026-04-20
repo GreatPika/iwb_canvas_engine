@@ -318,7 +318,7 @@ The migrated tool rule proves the locked facade/graph/view-runtime/render-surfac
 - Green run of the listed structural verification.
 - Diagnostics identify the violated owner or dependency boundary instead of a missing source token.
 
-### Slice 3. [ ] Analyzer-backed primary architecture proof test
+### Slice 3. [x] Analyzer-backed primary architecture proof test
 
 #### Slice Contract
 `test/interactive/core/scene_controller_architecture_boundary_test.dart` proves the interactive architecture boundary from analyzer-backed structure assertions and no longer depends on raw file text.
