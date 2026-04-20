@@ -30,6 +30,34 @@ Future<GuardrailViolation?> _checkInteractiveInteractionRuntimeBoundary(
     resolved.unit.declarations,
     '_createInteractiveRuntime',
   );
+  final interactionRuntimeClass = _findClassByName(
+    resolved.unit.declarations,
+    'SceneControllerInteractionRuntime',
+  );
+  final handlePointerFromSession =
+      _findExtensionMethodOnType(
+        resolved.unit,
+        'SceneControllerInteractionRuntime',
+        'handlePointerFromSession',
+      ) ??
+      (interactionRuntimeClass == null
+          ? null
+          : _findMethodByName(
+              interactionRuntimeClass.members,
+              'handlePointerFromSession',
+            ));
+  final handleDoubleTapFromSession =
+      _findExtensionMethodOnType(
+        resolved.unit,
+        'SceneControllerInteractionRuntime',
+        'handleDoubleTapFromSession',
+      ) ??
+      (interactionRuntimeClass == null
+          ? null
+          : _findMethodByName(
+              interactionRuntimeClass.members,
+              'handleDoubleTapFromSession',
+            ));
   final mutationBoundaryFilePath = _repoRelPath(
     context,
     _interactiveArchitectureFile(
@@ -53,6 +81,78 @@ Future<GuardrailViolation?> _checkInteractiveInteractionRuntimeBoundary(
       createMutationBoundary == null ||
       createSelectionActions == null ||
       createInteractiveRuntime == null ||
+      handlePointerFromSession == null ||
+      handleDoubleTapFromSession == null ||
+      !_methodContainsOrderedStatementsWithForbiddenOutsideSequence(
+        handlePointerFromSession,
+        orderedMatchers: <bool Function(Statement)>[
+          (statement) => _statementInvokesLocalMethod(
+            statement,
+            methodName: '_ensureKnownPointerSessionToken',
+          ),
+          (statement) => _statementInvokesOwnedMethod(
+            statement,
+            context: context,
+            filePath: null,
+            ownerName: 'InteractiveRuntime',
+            methodName: 'handlePointerFromSession',
+            targetSegments: <String>['runtime'],
+          ),
+        ],
+        forbiddenBeforeCompletion: <bool Function(Statement)>[
+          (statement) => _statementInvokesOwnedMethod(
+            statement,
+            context: context,
+            filePath: null,
+            ownerName: 'InteractiveRuntime',
+            methodName: 'handlePointerFromSession',
+          ),
+        ],
+        forbiddenAfterCompletion: <bool Function(Statement)>[
+          (statement) => _statementInvokesOwnedMethod(
+            statement,
+            context: context,
+            filePath: null,
+            ownerName: 'InteractiveRuntime',
+            methodName: 'handlePointerFromSession',
+          ),
+        ],
+      ) ||
+      !_methodContainsOrderedStatementsWithForbiddenOutsideSequence(
+        handleDoubleTapFromSession,
+        orderedMatchers: <bool Function(Statement)>[
+          (statement) => _statementInvokesLocalMethod(
+            statement,
+            methodName: '_ensureKnownPointerSessionToken',
+          ),
+          (statement) => _statementInvokesOwnedMethod(
+            statement,
+            context: context,
+            filePath: null,
+            ownerName: 'InteractiveRuntime',
+            methodName: 'handleDoubleTapFromSession',
+            targetSegments: <String>['runtime'],
+          ),
+        ],
+        forbiddenBeforeCompletion: <bool Function(Statement)>[
+          (statement) => _statementInvokesOwnedMethod(
+            statement,
+            context: context,
+            filePath: null,
+            ownerName: 'InteractiveRuntime',
+            methodName: 'handleDoubleTapFromSession',
+          ),
+        ],
+        forbiddenAfterCompletion: <bool Function(Statement)>[
+          (statement) => _statementInvokesOwnedMethod(
+            statement,
+            context: context,
+            filePath: null,
+            ownerName: 'InteractiveRuntime',
+            methodName: 'handleDoubleTapFromSession',
+          ),
+        ],
+      ) ||
       !_functionInvokesOwnedTopLevelFunction(
         createRuntime,
         context: context,
@@ -168,7 +268,8 @@ GuardrailViolation? _checkEligibilityPolicyBoundary(GuardrailContext context) {
   );
   final filePath = _repoRelPath(context, file);
   final parsed = _parseArchitectureUnit(context, file);
-  if (_hasImport(parsed, '../model/document.dart') ||
+  if (!_unitContainsIdentifier(parsed.unit, '_snapshotBoundsWorld') ||
+      _hasImport(parsed, '../model/document.dart') ||
       _unitContainsIdentifier(parsed.unit, 'txnNodeFromSnapshot')) {
     return GuardrailViolation(
       filePath: filePath,
@@ -190,7 +291,14 @@ Future<GuardrailViolation?> _checkSceneMutationShellBoundary(
   );
   final filePath = _repoRelPath(context, file);
   final parsed = _parseArchitectureUnit(context, file);
-  if (_unitContainsIdentifier(parsed.unit, 'storeController') ||
+  final ownerClass = _findClassDeclaration(
+    parsed.unit,
+    'SceneControllerSceneMutations',
+  );
+  if (ownerClass == null ||
+      !_classHasFieldNamed(ownerClass, 'mutations') ||
+      !_unitContainsQualifiedPrefix(parsed.unit, <String>['mutations']) ||
+      _unitContainsIdentifier(parsed.unit, 'storeController') ||
       _unitContainsQualifiedPrefix(parsed.unit, <String>['core', 'write'])) {
     return GuardrailViolation(
       filePath: filePath,
@@ -213,7 +321,14 @@ Future<GuardrailViolation?> _checkSelectionMutationShellBoundary(
   );
   final filePath = _repoRelPath(context, file);
   final parsed = _parseArchitectureUnit(context, file);
-  if (_unitContainsIdentifier(parsed.unit, 'storeController')) {
+  final ownerClass = _findClassDeclaration(
+    parsed.unit,
+    'SceneControllerSelectionMutations',
+  );
+  if (ownerClass == null ||
+      !_classHasFieldNamed(ownerClass, 'mutations') ||
+      !_unitContainsQualifiedPrefix(parsed.unit, <String>['mutations']) ||
+      _unitContainsIdentifier(parsed.unit, 'storeController')) {
     return GuardrailViolation(
       filePath: filePath,
       line: 1,
@@ -235,7 +350,15 @@ Future<GuardrailViolation?> _checkSelectionActionsBoundary(
   );
   final filePath = _repoRelPath(context, file);
   final parsed = _parseArchitectureUnit(context, file);
-  if (_unitContainsQualifiedPrefix(parsed.unit, <String>['core', 'write'])) {
+  final ownerClass = _findClassDeclaration(
+    parsed.unit,
+    'InteractiveSelectionActions',
+  );
+  if (ownerClass == null ||
+      !_classHasFieldNamed(ownerClass, 'mutations') ||
+      !_unitContainsQualifiedPrefix(parsed.unit, <String>['mutations']) ||
+      _unitContainsQualifiedPrefix(parsed.unit, <String>['core', 'write']) ||
+      _unitContainsQualifiedPrefix(parsed.unit, <String>['core', 'commands'])) {
     return GuardrailViolation(
       filePath: filePath,
       line: 1,
@@ -256,8 +379,61 @@ Future<GuardrailViolation?> _checkMutationBoundaryOwner(
   );
   final filePath = _repoRelPath(context, file);
   final parsed = _parseArchitectureUnit(context, file);
-  if (_hasImport(parsed, '../../controller/scene_store_controller.dart') ||
+  final ownerClass = _findClassDeclaration(
+    parsed.unit,
+    'SceneControllerMutationBoundary',
+  );
+  final replaceSceneMethod = ownerClass == null
+      ? null
+      : _findMethodByName(ownerClass.members, 'replaceScene');
+  if (ownerClass == null ||
+      replaceSceneMethod == null ||
+      _hasImport(parsed, '../../controller/scene_store_controller.dart') ||
       _unitContainsIdentifier(parsed.unit, 'storeController') ||
+      !_unitContainsQualifiedPrefix(parsed.unit, <String>[
+        'mutationAccess',
+        'clearSceneExactResult',
+      ]) ||
+      !_unitContainsQualifiedPrefix(parsed.unit, <String>[
+        'mutationAccess',
+        'replaceSelection',
+      ]) ||
+      !_unitContainsQualifiedPrefix(parsed.unit, <String>[
+        'mutationAccess',
+        'clearSelection',
+      ]) ||
+      !_unitContainsQualifiedPrefix(parsed.unit, <String>[
+        'mutationAccess',
+        'deleteSelection',
+      ]) ||
+      !_unitContainsQualifiedPrefix(parsed.unit, <String>[
+        'mutationAccess',
+        'replaceScene',
+      ]) ||
+      !_unitContainsQualifiedPrefix(parsed.unit, <String>[
+        'mutationAccess',
+        'commitDrawStroke',
+      ]) ||
+      !_unitContainsQualifiedPrefix(parsed.unit, <String>[
+        'mutationAccess',
+        'commitDrawLineFromWorldSegment',
+      ]) ||
+      !_unitContainsQualifiedPrefix(parsed.unit, <String>[
+        'mutationAccess',
+        'commitEraseNodes',
+      ]) ||
+      !_unitContainsQualifiedPrefix(parsed.unit, <String>[
+        'mutationAccess',
+        'requestRepaint',
+      ]) ||
+      !_methodInvokesMethodOnQualifiedTargetWithNamedArg(
+        replaceSceneMethod,
+        targetSegments: const <String>['mutationAccess'],
+        methodName: 'replaceScene',
+        argName: 'beforeApply',
+        expressionSegments: const <String>['interruptBeforeApply'],
+      ) ||
+      _unitContainsIdentifier(parsed.unit, 'txnSceneFromSnapshot') ||
       _unitContainsQualifiedPrefix(parsed.unit, <String>[
         'mutationAccess',
         'prepareSceneReplacement',

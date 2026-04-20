@@ -22,6 +22,23 @@ bool _methodHasParameterType(
   return false;
 }
 
+bool _methodHasNoParameters(MethodDeclaration method) {
+  return method.parameters?.parameters.isEmpty ?? true;
+}
+
+bool _methodReturnsVoid(MethodDeclaration method) {
+  return method.returnType is NamedType &&
+      (method.returnType as NamedType).name.lexeme == 'void';
+}
+
+bool _methodHasReturnTypeName(
+  MethodDeclaration method, {
+  required String typeName,
+}) {
+  final returnType = method.returnType;
+  return returnType is NamedType && returnType.name.lexeme == typeName;
+}
+
 String? _formalParameterName(FormalParameter parameter) {
   return switch (parameter) {
     SimpleFormalParameter(:final name?) => name.lexeme,
@@ -95,6 +112,40 @@ bool _methodInvokesMethodOnQualifiedTarget(
           found = true;
         }
       },
+    ),
+  );
+  return found;
+}
+
+bool _methodInvokesMethodOnQualifiedTargetWithNamedArg(
+  MethodDeclaration method, {
+  required List<String> targetSegments,
+  required String methodName,
+  required String argName,
+  required List<String> expressionSegments,
+}) {
+  var found = false;
+  method.body.accept(
+    _ResolvedInvocationCollector(
+      onMethodInvocation: (candidate) {
+        if (_expressionToQualifiedName(candidate.target) !=
+                targetSegments.join('.') ||
+            candidate.methodName.name != methodName) {
+          return;
+        }
+        for (final argument in candidate.argumentList.arguments) {
+          if (argument is! NamedExpression ||
+              argument.name.label.name != argName) {
+            continue;
+          }
+          if (_expressionToQualifiedName(argument.expression) ==
+              expressionSegments.join('.')) {
+            found = true;
+          }
+        }
+      },
+      onFunctionInvocation: (_) {},
+      onInstanceCreation: (_) {},
     ),
   );
   return found;

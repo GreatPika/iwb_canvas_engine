@@ -76,6 +76,25 @@ Future<GuardrailViolation?> _checkInteractiveFacadeBoundary(
           'facade over the assembled controller graph.',
     );
   }
+  if (_unitContainsIdentifier(parsed.unit, 'createPointerSemanticsBridge') ||
+      _unitContainsIdentifier(parsed.unit, 'StreamController') ||
+      _unitContainsIdentifier(parsed.unit, '_timestampCursorMs') ||
+      _unitContainsQualifiedPrefix(parsed.unit, <String>[
+        '_runtime',
+        'handlePointer',
+      ]) ||
+      _unitContainsQualifiedPrefix(parsed.unit, <String>[
+        '_runtime',
+        'handleDoubleTap',
+      ])) {
+    return GuardrailViolation(
+      filePath: filePath,
+      line: 1,
+      message:
+          'interactive API violation: SceneController must remain a thin '
+          'facade over the assembled controller graph.',
+    );
+  }
   final usesCanonicalGraphInitialization =
       (_classFieldInitializerInvokesOwnedTopLevelFunction(
             interactiveClass,

@@ -7,6 +7,17 @@ GuardrailViolation? _checkSceneViewRuntimeContract(GuardrailContext context) {
   );
   final filePath = _repoRelPath(context, file);
   final parsed = _parseArchitectureUnit(context, file);
+  final source = file.readAsStringSync();
+  final createPointerSession = _findClassMethodDeclaration(
+    parsed,
+    'SceneViewRuntime',
+    'createPointerSession',
+  );
+  final detachMethod = _findClassMethodDeclaration(
+    parsed,
+    'SceneViewPointerSession',
+    'detach',
+  );
   if (!_hasClassLikeDeclaration(
         parsed,
         'SceneViewRuntime',
@@ -17,8 +28,20 @@ GuardrailViolation? _checkSceneViewRuntimeContract(GuardrailContext context) {
         'SceneViewPointerSession',
         requireInterface: true,
       ) ||
-      !_classOwnsMethod(parsed, 'SceneViewPointerSession', 'detach') ||
-      !_classOwnsMethod(parsed, 'SceneViewRuntime', 'createPointerSession') ||
+      createPointerSession == null ||
+      createPointerSession.isGetter ||
+      !_methodHasReturnTypeName(
+        createPointerSession,
+        typeName: 'SceneViewPointerSession',
+      ) ||
+      detachMethod == null ||
+      detachMethod.isGetter ||
+      !_methodReturnsVoid(detachMethod) ||
+      !_methodHasNoParameters(detachMethod) ||
+      !RegExp(
+        r'SceneViewPointerSession\s+createPointerSession\s*\(',
+      ).hasMatch(source) ||
+      !RegExp(r'void\s+detach\s*\(').hasMatch(source) ||
       _classOwnsMethod(parsed, 'SceneViewRuntime', 'handleControllerChanged') ||
       _classOwnsMethod(parsed, 'SceneViewRuntime', 'updateController')) {
     return GuardrailViolation(
@@ -152,15 +175,55 @@ Future<GuardrailViolation?> _checkRuntimeHostBoundary(
         ownerName: 'SceneViewInteractivePointerHost',
         methodName: 'replacePointerSession',
       ) ||
-      !_methodContainsOrderedStatements(
+      !_methodContainsOrderedStatementsWithForbiddenOutsideSequence(
         didUpdateWidget,
-        <bool Function(Statement)>[
-          (statement) => _statementDeclaresVariableFromOwnedMethod(
+        orderedMatchers: <bool Function(Statement)>[
+          (statement) => _statementIsEarlyReturnIfQualifiedEquality(
+            statement,
+            leftSegments: const <String>['_activeRuntime'],
+            rightSegments: const <String>['widget', 'runtime'],
+          ),
+          (statement) => _statementDeclaresVariableNamedFromOwnedMethodWithArgs(
+            statement,
+            variableName: 'nextPointerSession',
+            context: context,
+            filePath: filePath,
+            ownerName: '_SceneViewRuntimeHostState',
+            methodName: '_createReplacementPointerSession',
+            argSegments: <String>['widget', 'runtime'],
+          ),
+          (statement) => _statementInvokesOwnedMethodWithArgs(
+            statement,
+            context: context,
+            filePath: pointerHostFilePath,
+            ownerName: 'SceneViewInteractivePointerHost',
+            methodName: 'replacePointerSession',
+            argSegments: <String>['nextPointerSession'],
+            targetSegments: <String>['_pointerHost'],
+          ),
+          (statement) => _statementAssignsFieldFromOwnedGetter(
+            statement,
+            fieldName: '_activeRuntime',
+            rhsSegments: <String>['widget', 'runtime'],
+          ),
+        ],
+        forbiddenBeforeCompletion: <bool Function(Statement)>[
+          (statement) => _statementInvokesOwnedMethodWithArgs(
             statement,
             context: context,
             filePath: filePath,
             ownerName: '_SceneViewRuntimeHostState',
             methodName: '_createReplacementPointerSession',
+            argSegments: <String>['widget', 'runtime'],
+          ),
+          (statement) => _statementDeclaresVariableNamedFromOwnedMethodWithArgs(
+            statement,
+            variableName: 'nextPointerSession',
+            context: context,
+            filePath: filePath,
+            ownerName: '_SceneViewRuntimeHostState',
+            methodName: '_createReplacementPointerSession',
+            argSegments: <String>['widget', 'runtime'],
           ),
           (statement) => _statementInvokesOwnedMethod(
             statement,
@@ -169,10 +232,22 @@ Future<GuardrailViolation?> _checkRuntimeHostBoundary(
             ownerName: 'SceneViewInteractivePointerHost',
             methodName: 'replacePointerSession',
           ),
-          (statement) => _statementAssignsFieldFromOwnedGetter(
+          (statement) => _statementAssignsFieldNamed(
             statement,
             fieldName: '_activeRuntime',
-            rhsSegments: <String>['widget', 'runtime'],
+          ),
+        ],
+        forbiddenAfterCompletion: <bool Function(Statement)>[
+          (statement) => _statementInvokesOwnedMethod(
+            statement,
+            context: context,
+            filePath: pointerHostFilePath,
+            ownerName: 'SceneViewInteractivePointerHost',
+            methodName: 'replacePointerSession',
+          ),
+          (statement) => _statementAssignsFieldNamed(
+            statement,
+            fieldName: '_activeRuntime',
           ),
         ],
       ) ||
@@ -181,6 +256,11 @@ Future<GuardrailViolation?> _checkRuntimeHostBoundary(
         fieldName: '_activeRuntime',
         rhsSegments: <String>['widget', 'runtime'],
       ) ||
+      _unitContainsIdentifier(resolved.unit, '_requestedRuntime') ||
+      _unitContainsQualifiedPrefix(resolved.unit, <String>[
+        'FlutterError',
+        'reportError',
+      ]) ||
       !_methodCreatesOwnedType(
         buildMethod,
         context: context,
@@ -213,6 +293,7 @@ Future<GuardrailViolation?> _checkSceneViewInteractiveBoundary(
   );
   final filePath = _repoRelPath(context, file);
   final parsed = _parseArchitectureUnit(context, file);
+  final source = file.readAsStringSync();
   final resolved = await _resolveInteractiveUnitOrFail(
     context: context,
     file: file,
@@ -263,7 +344,9 @@ Future<GuardrailViolation?> _checkSceneViewInteractiveBoundary(
         functionFilePath: controllerFilePath,
         functionName: 'sceneControllerViewRuntimeOf',
         functionArgSegments: const <String>['controller'],
-      )) {
+      ) ||
+      _methodCreatesTypeNamed(buildMethod, typeName: 'Listener') ||
+      RegExp(r'(?<![A-Za-z0-9_])Listener\s*\(').hasMatch(source)) {
     return GuardrailViolation(
       filePath: filePath,
       line: 1,
@@ -330,6 +413,11 @@ Future<GuardrailViolation?> _checkRenderSurfaceBoundary(
           _hasImport(parsed, '../contract/scene_view_runtime.dart')) ||
       widgetClass == null ||
       stateClass == null ||
+      !_classHasOnlyUnnamedConstructor(widgetClass) ||
+      _hasForbiddenImports(parsed, <String>{
+        '../interactive/scene_controller.dart',
+        '../controller/scene_store_controller.dart',
+      }) ||
       _classHasFieldTypeFromAllowedFiles(
         widgetClass,
         context: context,

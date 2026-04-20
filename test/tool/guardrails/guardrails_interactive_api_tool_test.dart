@@ -2743,6 +2743,206 @@ class StatefulWidget {}
   );
 
   test(
+    'rejects runtime host that creates replacement session before runtime equality short circuit',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_runtime_host.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+import 'scene_view_interactive_pointer_host.dart';
+import 'scene_view_render_surface.dart';
+
+class SceneViewRuntimeHost extends StatefulWidget {
+  final SceneViewRuntime runtime;
+
+  SceneViewRuntimeHost({required this.runtime});
+}
+
+class _SceneViewRuntimeHostState {
+  late final SceneViewInteractivePointerHost _pointerHost;
+  late SceneViewRuntime _activeRuntime;
+
+  void initState() {
+    _activeRuntime = widget.runtime;
+    _pointerHost = SceneViewInteractivePointerHost(
+      pointerSession: _activeRuntime.createPointerSession(
+        isMounted: () => true,
+        hasLiveRawPointers: () => false,
+      ),
+    );
+  }
+
+  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
+    final nextPointerSession = _createReplacementPointerSession(widget.runtime);
+    if (_activeRuntime == widget.runtime) {
+      return;
+    }
+    _pointerHost.replacePointerSession(nextPointerSession);
+    _activeRuntime = widget.runtime;
+  }
+
+  Object build() {
+    final renderState = _activeRuntime.renderState;
+    return SceneViewRenderSurface(renderState: renderState);
+  }
+
+  SceneViewPointerSession _createReplacementPointerSession(
+    SceneViewRuntime runtime,
+  ) {
+    return runtime.createPointerSession(
+      isMounted: () => true,
+      hasLiveRawPointers: () => false,
+    );
+  }
+}
+
+class StatefulWidget {}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewRuntimeHost must remain the active-runtime and '
+                'pointer-host owner for the view boundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects runtime host that prefetched replacement session before equality short circuit under another local name',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_runtime_host.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+import 'scene_view_interactive_pointer_host.dart';
+import 'scene_view_render_surface.dart';
+
+class SceneViewRuntimeHost extends StatefulWidget {
+  final SceneViewRuntime runtime;
+
+  SceneViewRuntimeHost({required this.runtime});
+}
+
+class _SceneViewRuntimeHostState {
+  late final SceneViewInteractivePointerHost _pointerHost;
+  late SceneViewRuntime _activeRuntime;
+
+  void initState() {
+    _activeRuntime = widget.runtime;
+    _pointerHost = SceneViewInteractivePointerHost(
+      pointerSession: _activeRuntime.createPointerSession(
+        isMounted: () => true,
+        hasLiveRawPointers: () => false,
+      ),
+    );
+  }
+
+  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
+    final prefetched = _createReplacementPointerSession(widget.runtime);
+    if (_activeRuntime == widget.runtime) {
+      return;
+    }
+    final nextPointerSession = _createReplacementPointerSession(widget.runtime);
+    _pointerHost.replacePointerSession(nextPointerSession);
+    _activeRuntime = widget.runtime;
+    prefetched.dispose();
+  }
+
+  Object build() {
+    final renderState = _activeRuntime.renderState;
+    return SceneViewRenderSurface(renderState: renderState);
+  }
+
+  SceneViewPointerSession _createReplacementPointerSession(
+    SceneViewRuntime runtime,
+  ) {
+    return runtime.createPointerSession(
+      isMounted: () => true,
+      hasLiveRawPointers: () => false,
+    );
+  }
+}
+
+class StatefulWidget {}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewRuntimeHost must remain the active-runtime and '
+                'pointer-host owner for the view boundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
     'rejects runtime host that renders SceneViewRenderSurface from non-active runtime render state',
     () async {
       final sandbox = await createGuardrailsSandbox();
@@ -3131,6 +3331,257 @@ class _SceneViewInteractivePointerRuntime {
     _pointerSession.detach();
     _pointerSession.dispose();
   }
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewInteractivePointerHost must remain a raw '
+                'routing/lifecycle shell over pointer sessions',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects pointer host that installs a non-next session after releasing current',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_interactive_pointer_host.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+import 'scene_view_pointer_router.dart';
+
+class SceneViewInteractivePointerHost {
+  SceneViewInteractivePointerHost({
+    required SceneViewPointerSession pointerSession,
+  }) : _runtime = _SceneViewInteractivePointerRuntime(
+         pointerSession: pointerSession,
+       );
+
+  final _SceneViewInteractivePointerRuntime _runtime;
+
+  int get debugLiveRawPointerCount => _runtime.debugLiveRawPointerCount;
+  int? get debugPendingTapFlushTimestampMs =>
+      _runtime.debugPendingTapFlushTimestampMs;
+
+  void replacePointerSession(SceneViewPointerSession pointerSession) {
+    _runtime.replacePointerSession(pointerSession);
+  }
+
+  void dispose() {
+    _runtime.dispose();
+  }
+}
+
+class _SceneViewInteractivePointerRuntime {
+  _SceneViewInteractivePointerRuntime({
+    required SceneViewPointerSession pointerSession,
+  }) : _pointerSession = pointerSession;
+
+  final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
+  final SceneViewPointerSession _sentinel = _DisposedSceneViewPointerSession();
+  SceneViewPointerSession _pointerSession;
+
+  int get debugLiveRawPointerCount => 0;
+  int? get debugPendingTapFlushTimestampMs =>
+      _pointerSession.pendingTapFlushTimestampMs;
+
+  void replacePointerSession(SceneViewPointerSession next) {
+    final current = _pointerSession;
+    current.detach();
+    current.dispose();
+    _pointerRouter.reset();
+    _pointerSession = _sentinel;
+  }
+
+  void dispose() {
+    _pointerSession.detach();
+    _pointerSession.dispose();
+  }
+}
+
+class _DisposedSceneViewPointerSession implements SceneViewPointerSession {
+  @override
+  int? get pendingTapFlushTimestampMs => null;
+
+  @override
+  void detach() {}
+
+  @override
+  void dispose() {}
+
+  @override
+  void handleInvalidTerminalSample({
+    required Object input,
+    required int pointerId,
+    required int referenceTimestampMs,
+  }) {}
+
+  @override
+  void handleRawPointerRelease({required bool isIdleAfterRelease}) {}
+
+  @override
+  void handleRoutedSample(Object sample, {required bool shouldTrackSignals}) {}
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewInteractivePointerHost must remain a raw '
+                'routing/lifecycle shell over pointer sessions',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects pointer host that overwrites next session after canonical install',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_interactive_pointer_host.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+import 'scene_view_pointer_router.dart';
+
+class SceneViewInteractivePointerHost {
+  SceneViewInteractivePointerHost({
+    required SceneViewPointerSession pointerSession,
+  }) : _runtime = _SceneViewInteractivePointerRuntime(
+         pointerSession: pointerSession,
+       );
+
+  final _SceneViewInteractivePointerRuntime _runtime;
+
+  int get debugLiveRawPointerCount => _runtime.debugLiveRawPointerCount;
+  int? get debugPendingTapFlushTimestampMs =>
+      _runtime.debugPendingTapFlushTimestampMs;
+
+  void replacePointerSession(SceneViewPointerSession pointerSession) {
+    _runtime.replacePointerSession(pointerSession);
+  }
+
+  void dispose() {
+    _runtime.dispose();
+  }
+}
+
+class _SceneViewInteractivePointerRuntime {
+  _SceneViewInteractivePointerRuntime({
+    required SceneViewPointerSession pointerSession,
+  }) : _pointerSession = pointerSession;
+
+  final SceneViewPointerRouter _pointerRouter = SceneViewPointerRouter();
+  final SceneViewPointerSession _sentinel = _DisposedSceneViewPointerSession();
+  SceneViewPointerSession _pointerSession;
+
+  int get debugLiveRawPointerCount => 0;
+  int? get debugPendingTapFlushTimestampMs =>
+      _pointerSession.pendingTapFlushTimestampMs;
+
+  void replacePointerSession(SceneViewPointerSession next) {
+    final current = _pointerSession;
+    current.detach();
+    current.dispose();
+    _pointerRouter.reset();
+    _pointerSession = next;
+    _pointerSession = _sentinel;
+  }
+
+  void dispose() {
+    _pointerSession.detach();
+    _pointerSession.dispose();
+  }
+}
+
+class _DisposedSceneViewPointerSession implements SceneViewPointerSession {
+  @override
+  int? get pendingTapFlushTimestampMs => null;
+
+  @override
+  void detach() {}
+
+  @override
+  void dispose() {}
+
+  @override
+  void handleInvalidTerminalSample({
+    required Object input,
+    required int pointerId,
+    required int referenceTimestampMs,
+  }) {}
+
+  @override
+  void handleRawPointerRelease({required bool isIdleAfterRelease}) {}
+
+  @override
+  void handleRoutedSample(Object sample, {required bool shouldTrackSignals}) {}
 }
 ''',
         );
@@ -5481,4 +5932,1473 @@ void unregisterSceneControllerInternalAccess(Object controller) {}
       sandbox.deleteSync(recursive: true);
     }
   });
+
+  test('rejects SceneViewRuntime contract getter drift', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  set mode(int value) {
+    _ensurePublicSideEffectAllowed('mode');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+      writeSandboxFile(sandbox, 'lib/src/contract/scene_view_runtime.dart', '''
+abstract interface class SceneViewRuntime {
+  SceneViewRenderState get renderState;
+
+  SceneViewPointerSession get createPointerSession;
+}
+
+abstract interface class SceneViewRenderState {
+  void addListener(Object listener);
+
+  void removeListener(Object listener);
+}
+
+abstract interface class SceneViewPointerSession {
+  int get detach;
+
+  void dispose();
+}
+''');
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'SceneViewRuntime must remain the single internal '
+              'runtime/session contract for view core',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+
+  test('rejects runtime session callbacks without token validation', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  set mode(int value) {
+    _ensurePublicSideEffectAllowed('mode');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
+        '''
+import 'dart:ui';
+
+import '../contract/canvas_pointer_input.dart';
+import '../../controller/scene_controller_committed_mutation_access.dart';
+import 'interactive_selection_actions.dart';
+import 'interactive_runtime.dart';
+import 'pointer_session_token.dart';
+import 'scene_controller_mutation_boundary.dart';
+
+final class SceneControllerInteractionRuntime {
+  SceneControllerInteractionRuntime._({
+    required this.mutationBoundary,
+    required this.selectionActions,
+    required this.runtime,
+  });
+
+  final SceneControllerMutationBoundary mutationBoundary;
+  final InteractiveSelectionActions selectionActions;
+  final InteractiveRuntime runtime;
+
+  void ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+}
+
+final class SceneControllerInteractionRuntimeRequest {
+  const SceneControllerInteractionRuntimeRequest({
+    required this.mutationAccess,
+  });
+
+  final SceneControllerCommittedMutationAccess mutationAccess;
+}
+
+SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
+  required SceneControllerInteractionRuntimeRequest request,
+}) {
+  final mutationBoundary = _createMutationBoundary(request);
+  final selectionActions = _createSelectionActions(mutationBoundary);
+  final interactiveRuntime = _createInteractiveRuntime(
+    request,
+    mutationBoundary: mutationBoundary,
+  );
+  return SceneControllerInteractionRuntime._(
+    mutationBoundary: mutationBoundary,
+    selectionActions: selectionActions,
+    runtime: interactiveRuntime,
+  );
+}
+
+extension SceneControllerInteractionRuntimeMutationApi
+    on SceneControllerInteractionRuntime {
+  PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void detachPointerSession(PointerSessionToken token) {}
+
+  void releasePointerSessionToken(PointerSessionToken token) {}
+
+  void handlePublicPointer(CanvasPointerInput input) {}
+
+  void handlePublicDoubleTap({required Offset position, int? timestampMs}) {}
+
+  void handlePointerFromSession(
+    CanvasPointerInput input, {
+    required PointerSessionToken token,
+  }) {
+    runtime.handlePointerFromSession(input, token: token);
+  }
+
+  void handleDoubleTapFromSession({
+    required Offset position,
+    int? timestampMs,
+    required PointerSessionToken token,
+  }) {
+    runtime.handleDoubleTapFromSession(
+      position: position,
+      timestampMs: timestampMs,
+      token: token,
+    );
+  }
+}
+
+SceneControllerMutationBoundary _createMutationBoundary(
+  SceneControllerInteractionRuntimeRequest request,
+) {
+  return SceneControllerMutationBoundary(
+    mutationAccess: request.mutationAccess,
+  );
+}
+
+InteractiveSelectionActions _createSelectionActions(
+  SceneControllerMutationBoundary mutationBoundary,
+) {
+  return InteractiveSelectionActions(mutations: mutationBoundary);
+}
+
+InteractiveRuntime _createInteractiveRuntime(
+  SceneControllerInteractionRuntimeRequest request, {
+  required SceneControllerMutationBoundary mutationBoundary,
+}) {
+  return InteractiveRuntime(
+    callbacks: InteractiveRuntimeCallbacks(
+      writeSelectionReplace: mutationBoundary.setSelection,
+      writeSelectionClear: mutationBoundary.clearSelection,
+      commitMoveSelection: mutationBoundary.commitMoveSelection,
+      commitDrawStroke: mutationBoundary.commitDrawStroke,
+      commitDrawLineFromWorldSegment:
+          mutationBoundary.commitDrawLineFromWorldSegment,
+      commitEraseNodes: mutationBoundary.commitEraseNodes,
+    ),
+  );
+}
+''',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'SceneControllerInteractionRuntime must route committed '
+              'selection/draw callbacks through SceneControllerMutationBoundary',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+
+  test(
+    'rejects runtime session callbacks when an unguarded callback appears before a later guarded one',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  set mode(int value) {
+    _ensurePublicSideEffectAllowed('mode');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
+          '''
+import 'dart:ui';
+
+import '../contract/canvas_pointer_input.dart';
+import '../../controller/scene_controller_committed_mutation_access.dart';
+import 'interactive_selection_actions.dart';
+import 'interactive_runtime.dart';
+import 'pointer_session_token.dart';
+import 'scene_controller_mutation_boundary.dart';
+
+final class SceneControllerInteractionRuntime {
+  SceneControllerInteractionRuntime._({
+    required this.mutationBoundary,
+    required this.selectionActions,
+    required this.runtime,
+  });
+
+  final SceneControllerMutationBoundary mutationBoundary;
+  final InteractiveSelectionActions selectionActions;
+  final InteractiveRuntime runtime;
+
+  void ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+
+  void _ensureKnownPointerSessionToken(PointerSessionToken token) {}
+}
+
+final class SceneControllerInteractionRuntimeRequest {
+  const SceneControllerInteractionRuntimeRequest({
+    required this.mutationAccess,
+  });
+
+  final SceneControllerCommittedMutationAccess mutationAccess;
+}
+
+SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
+  required SceneControllerInteractionRuntimeRequest request,
+}) {
+  final mutationBoundary = _createMutationBoundary(request);
+  final selectionActions = _createSelectionActions(mutationBoundary);
+  final interactiveRuntime = _createInteractiveRuntime(
+    request,
+    mutationBoundary: mutationBoundary,
+  );
+  return SceneControllerInteractionRuntime._(
+    mutationBoundary: mutationBoundary,
+    selectionActions: selectionActions,
+    runtime: interactiveRuntime,
+  );
+}
+
+extension SceneControllerInteractionRuntimeMutationApi
+    on SceneControllerInteractionRuntime {
+  PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void detachPointerSession(PointerSessionToken token) {}
+
+  void releasePointerSessionToken(PointerSessionToken token) {}
+
+  void handlePublicPointer(CanvasPointerInput input) {}
+
+  void handlePublicDoubleTap({required Offset position, int? timestampMs}) {}
+
+  void handlePointerFromSession(
+    CanvasPointerInput input, {
+    required PointerSessionToken token,
+  }) {
+    runtime.handlePointerFromSession(input, token: token);
+    _ensureKnownPointerSessionToken(token);
+    runtime.handlePointerFromSession(input, token: token);
+  }
+
+  void handleDoubleTapFromSession({
+    required Offset position,
+    int? timestampMs,
+    required PointerSessionToken token,
+  }) {
+    runtime.handleDoubleTapFromSession(
+      position: position,
+      timestampMs: timestampMs,
+      token: token,
+    );
+    _ensureKnownPointerSessionToken(token);
+    runtime.handleDoubleTapFromSession(
+      position: position,
+      timestampMs: timestampMs,
+      token: token,
+    );
+  }
+}
+
+SceneControllerMutationBoundary _createMutationBoundary(
+  SceneControllerInteractionRuntimeRequest request,
+) {
+  return SceneControllerMutationBoundary(
+    mutationAccess: request.mutationAccess,
+  );
+}
+
+InteractiveSelectionActions _createSelectionActions(
+  SceneControllerMutationBoundary mutationBoundary,
+) {
+  return InteractiveSelectionActions(mutations: mutationBoundary);
+}
+
+InteractiveRuntime _createInteractiveRuntime(
+  SceneControllerInteractionRuntimeRequest request, {
+  required SceneControllerMutationBoundary mutationBoundary,
+}) {
+  return InteractiveRuntime(
+    callbacks: InteractiveRuntimeCallbacks(
+      writeSelectionReplace: mutationBoundary.setSelection,
+      writeSelectionClear: mutationBoundary.clearSelection,
+      commitMoveSelection: mutationBoundary.commitMoveSelection,
+      commitDrawStroke: mutationBoundary.commitDrawStroke,
+      commitDrawLineFromWorldSegment:
+          mutationBoundary.commitDrawLineFromWorldSegment,
+      commitEraseNodes: mutationBoundary.commitEraseNodes,
+    ),
+  );
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerInteractionRuntime must route committed '
+                'selection/draw callbacks through SceneControllerMutationBoundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects runtime session callbacks when an unguarded callback appears after a guarded one',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  set mode(int value) {
+    _ensurePublicSideEffectAllowed('mode');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
+          '''
+import 'dart:ui';
+
+import '../contract/canvas_pointer_input.dart';
+import '../../controller/scene_controller_committed_mutation_access.dart';
+import 'interactive_selection_actions.dart';
+import 'interactive_runtime.dart';
+import 'pointer_session_token.dart';
+import 'scene_controller_mutation_boundary.dart';
+
+final class SceneControllerInteractionRuntime {
+  SceneControllerInteractionRuntime._({
+    required this.mutationBoundary,
+    required this.selectionActions,
+    required this.runtime,
+  });
+
+  final SceneControllerMutationBoundary mutationBoundary;
+  final InteractiveSelectionActions selectionActions;
+  final InteractiveRuntime runtime;
+
+  void ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+
+  void _ensureKnownPointerSessionToken(PointerSessionToken token) {}
+}
+
+final class SceneControllerInteractionRuntimeRequest {
+  const SceneControllerInteractionRuntimeRequest({
+    required this.mutationAccess,
+  });
+
+  final SceneControllerCommittedMutationAccess mutationAccess;
+}
+
+SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
+  required SceneControllerInteractionRuntimeRequest request,
+}) {
+  final mutationBoundary = _createMutationBoundary(request);
+  final selectionActions = _createSelectionActions(mutationBoundary);
+  final interactiveRuntime = _createInteractiveRuntime(
+    request,
+    mutationBoundary: mutationBoundary,
+  );
+  return SceneControllerInteractionRuntime._(
+    mutationBoundary: mutationBoundary,
+    selectionActions: selectionActions,
+    runtime: interactiveRuntime,
+  );
+}
+
+extension SceneControllerInteractionRuntimeMutationApi
+    on SceneControllerInteractionRuntime {
+  PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void detachPointerSession(PointerSessionToken token) {}
+
+  void releasePointerSessionToken(PointerSessionToken token) {}
+
+  void handlePublicPointer(CanvasPointerInput input) {}
+
+  void handlePublicDoubleTap({required Offset position, int? timestampMs}) {}
+
+  void handlePointerFromSession(
+    CanvasPointerInput input, {
+    required PointerSessionToken token,
+  }) {
+    _ensureKnownPointerSessionToken(token);
+    runtime.handlePointerFromSession(input, token: token);
+    runtime.handlePointerFromSession(input, token: token);
+  }
+
+  void handleDoubleTapFromSession({
+    required Offset position,
+    int? timestampMs,
+    required PointerSessionToken token,
+  }) {
+    _ensureKnownPointerSessionToken(token);
+    runtime.handleDoubleTapFromSession(
+      position: position,
+      timestampMs: timestampMs,
+      token: token,
+    );
+    runtime.handleDoubleTapFromSession(
+      position: position,
+      timestampMs: timestampMs,
+      token: token,
+    );
+  }
+}
+
+SceneControllerMutationBoundary _createMutationBoundary(
+  SceneControllerInteractionRuntimeRequest request,
+) {
+  return SceneControllerMutationBoundary(
+    mutationAccess: request.mutationAccess,
+  );
+}
+
+InteractiveSelectionActions _createSelectionActions(
+  SceneControllerMutationBoundary mutationBoundary,
+) {
+  return InteractiveSelectionActions(mutations: mutationBoundary);
+}
+
+InteractiveRuntime _createInteractiveRuntime(
+  SceneControllerInteractionRuntimeRequest request, {
+  required SceneControllerMutationBoundary mutationBoundary,
+}) {
+  return InteractiveRuntime(
+    callbacks: InteractiveRuntimeCallbacks(
+      writeSelectionReplace: mutationBoundary.setSelection,
+      writeSelectionClear: mutationBoundary.clearSelection,
+      commitMoveSelection: mutationBoundary.commitMoveSelection,
+      commitDrawStroke: mutationBoundary.commitDrawStroke,
+      commitDrawLineFromWorldSegment:
+          mutationBoundary.commitDrawLineFromWorldSegment,
+      commitEraseNodes: mutationBoundary.commitEraseNodes,
+    ),
+  );
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerInteractionRuntime must route committed '
+                'selection/draw callbacks through SceneControllerMutationBoundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects runtime session callbacks routed through runtime alias without token validation',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  set mode(int value) {
+    _ensurePublicSideEffectAllowed('mode');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
+          '''
+import 'dart:ui';
+
+import '../contract/canvas_pointer_input.dart';
+import '../../controller/scene_controller_committed_mutation_access.dart';
+import 'interactive_selection_actions.dart';
+import 'interactive_runtime.dart';
+import 'pointer_session_token.dart';
+import 'scene_controller_mutation_boundary.dart';
+
+final class SceneControllerInteractionRuntime {
+  SceneControllerInteractionRuntime._({
+    required this.mutationBoundary,
+    required this.selectionActions,
+    required this.runtime,
+  });
+
+  final SceneControllerMutationBoundary mutationBoundary;
+  final InteractiveSelectionActions selectionActions;
+  final InteractiveRuntime runtime;
+
+  void ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {}
+
+  void _ensureKnownPointerSessionToken(PointerSessionToken token) {}
+}
+
+final class SceneControllerInteractionRuntimeRequest {
+  const SceneControllerInteractionRuntimeRequest({
+    required this.mutationAccess,
+  });
+
+  final SceneControllerCommittedMutationAccess mutationAccess;
+}
+
+SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
+  required SceneControllerInteractionRuntimeRequest request,
+}) {
+  final mutationBoundary = _createMutationBoundary(request);
+  final selectionActions = _createSelectionActions(mutationBoundary);
+  final interactiveRuntime = _createInteractiveRuntime(
+    request,
+    mutationBoundary: mutationBoundary,
+  );
+  return SceneControllerInteractionRuntime._(
+    mutationBoundary: mutationBoundary,
+    selectionActions: selectionActions,
+    runtime: interactiveRuntime,
+  );
+}
+
+extension SceneControllerInteractionRuntimeMutationApi
+    on SceneControllerInteractionRuntime {
+  PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void detachPointerSession(PointerSessionToken token) {}
+
+  void releasePointerSessionToken(PointerSessionToken token) {}
+
+  void handlePublicPointer(CanvasPointerInput input) {}
+
+  void handlePublicDoubleTap({required Offset position, int? timestampMs}) {}
+
+  void handlePointerFromSession(
+    CanvasPointerInput input, {
+    required PointerSessionToken token,
+  }) {
+    final rt = runtime;
+    rt.handlePointerFromSession(input, token: token);
+    _ensureKnownPointerSessionToken(token);
+    runtime.handlePointerFromSession(input, token: token);
+  }
+
+  void handleDoubleTapFromSession({
+    required Offset position,
+    int? timestampMs,
+    required PointerSessionToken token,
+  }) {
+    final rt = runtime;
+    rt.handleDoubleTapFromSession(
+      position: position,
+      timestampMs: timestampMs,
+      token: token,
+    );
+    _ensureKnownPointerSessionToken(token);
+    runtime.handleDoubleTapFromSession(
+      position: position,
+      timestampMs: timestampMs,
+      token: token,
+    );
+  }
+}
+
+SceneControllerMutationBoundary _createMutationBoundary(
+  SceneControllerInteractionRuntimeRequest request,
+) {
+  return SceneControllerMutationBoundary(
+    mutationAccess: request.mutationAccess,
+  );
+}
+
+InteractiveSelectionActions _createSelectionActions(
+  SceneControllerMutationBoundary mutationBoundary,
+) {
+  return InteractiveSelectionActions(mutations: mutationBoundary);
+}
+
+InteractiveRuntime _createInteractiveRuntime(
+  SceneControllerInteractionRuntimeRequest request, {
+  required SceneControllerMutationBoundary mutationBoundary,
+}) {
+  return InteractiveRuntime(
+    callbacks: InteractiveRuntimeCallbacks(
+      writeSelectionReplace: mutationBoundary.setSelection,
+      writeSelectionClear: mutationBoundary.clearSelection,
+      commitMoveSelection: mutationBoundary.commitMoveSelection,
+      commitDrawStroke: mutationBoundary.commitDrawStroke,
+      commitDrawLineFromWorldSegment:
+          mutationBoundary.commitDrawLineFromWorldSegment,
+      commitEraseNodes: mutationBoundary.commitEraseNodes,
+    ),
+  );
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerInteractionRuntime must route committed '
+                'selection/draw callbacks through SceneControllerMutationBoundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test('rejects pointer session that skips owned resource release', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/internal/scene_controller_pointer_session.dart',
+        '''
+import 'dart:ui';
+
+import '../../contract/canvas_pointer_input.dart';
+import '../../contract/pointer_input.dart';
+import '../../contract/scene_view_runtime.dart';
+import '../../core/pointer_input_tracker.dart';
+import 'pointer_session_token.dart';
+
+final class SceneControllerPointerSession implements SceneViewPointerSession {
+  SceneControllerPointerSession({
+    required Listenable ownerListenable,
+    required PointerSessionToken token,
+    required void Function(PointerSessionToken token) detachPointerSession,
+    required void Function(PointerSessionToken token)
+    releasePointerSessionToken,
+  }) : _ownerListenable = ownerListenable,
+       _token = token,
+       _detachPointerSession = detachPointerSession,
+       _releasePointerSessionToken = releasePointerSessionToken,
+       _pointerTracker = PointerInputTracker(settings: const PointerInputSettings()),
+       _ownerListener = _handleOwnerChanged {
+    _ownerListenable.addListener(_ownerListener);
+  }
+
+  final Listenable _ownerListenable;
+  final PointerSessionToken _token;
+  final void Function(PointerSessionToken token) _detachPointerSession;
+  final void Function(PointerSessionToken token) _releasePointerSessionToken;
+  final _PendingTapFlushScheduler _pendingTapFlushScheduler =
+      _PendingTapFlushScheduler();
+  final PointerInputTracker _pointerTracker;
+  late final VoidCallback _ownerListener;
+
+  @override
+  int? get pendingTapFlushTimestampMs => null;
+
+  @override
+  void detach() {
+    _detachPointerSession(_token);
+  }
+
+  @override
+  void dispose() {
+    detach();
+    _pendingTapFlushScheduler.dispose();
+  }
+
+  @override
+  void handleRoutedSample(
+    PointerSample sample, {
+    required bool shouldTrackSignals,
+  }) {}
+
+  @override
+  void handleInvalidTerminalSample({
+    required CanvasPointerInput input,
+    required int pointerId,
+    required int referenceTimestampMs,
+  }) {}
+
+  @override
+  void handleRawPointerRelease({required bool isIdleAfterRelease}) {}
+
+  void _handleOwnerChanged() {}
+}
+
+class _PendingTapFlushScheduler {
+  void dispose() {}
+}
+''',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'pointer session must stay owned by SceneControllerPointerSession',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+
+  test(
+    'rejects mutation boundary replaceScene without beforeApply hook',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_mutation_boundary.dart',
+          '''
+class SceneControllerMutationBoundary {
+  const SceneControllerMutationBoundary({required this.mutationAccess});
+
+  final _MutationAccess mutationAccess;
+
+  void clearScene() {
+    mutationAccess.clearSceneExactResult();
+  }
+
+  void setSelection(Object nodeIds) {
+    mutationAccess.replaceSelection(nodeIds);
+  }
+
+  void clearSelection() {
+    mutationAccess.clearSelection();
+  }
+
+  void deleteSelection() {
+    mutationAccess.deleteSelection();
+  }
+
+  void replaceScene(Object snapshot, {required Object interruptBeforeApply}) {
+    mutationAccess.replaceScene(snapshot);
+  }
+
+  Object commitMoveSelection(Object proposedDelta) => proposedDelta;
+
+  Object commitDrawStroke(Object payload) {
+    return mutationAccess.commitDrawStroke(payload);
+  }
+
+  Object commitDrawLineFromWorldSegment(Object payload) {
+    return mutationAccess.commitDrawLineFromWorldSegment(payload);
+  }
+
+  int commitEraseNodes(Object ids) {
+    return mutationAccess.commitEraseNodes(ids);
+  }
+
+  void notifySceneChanged() {
+    mutationAccess.requestRepaint();
+  }
+}
+
+class _MutationAccess {
+  void clearSceneExactResult() {}
+  void replaceSelection(Object nodeIds) {}
+  void clearSelection() {}
+  void deleteSelection() {}
+  void replaceScene(Object snapshot) {}
+  Object commitDrawStroke(Object payload) => payload;
+  Object commitDrawLineFromWorldSegment(Object payload) => payload;
+  int commitEraseNodes(Object ids) => 0;
+  void requestRepaint() {}
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerMutationBoundary must remain the canonical '
+                'scene/selection write owner',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test('rejects facade that re-owns runtime event state', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          extraImports: "import 'dart:async';",
+          extraMembers: '''
+  final StreamController<Object> _actions = StreamController<Object>.broadcast();
+  final dynamic _runtime = Object();
+  int _timestampCursorMs = 0;
+''',
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+    _runtime.handlePointer(input);
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+    _runtime.handleDoubleTap();
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'SceneController must remain a thin facade over '
+              'the assembled controller graph',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+
+  test(
+    'rejects interactive runtime that drops split public/session entrypoints',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/interactive_runtime.dart',
+          '''
+import 'interactive_draw_coordinator.dart';
+import 'interactive_event_dispatcher.dart';
+import 'interactive_move_session.dart';
+import 'interactive_pointer_normalizer.dart';
+import 'interactive_gesture_router.dart';
+import 'interactive_double_tap_router.dart';
+
+class InteractiveRuntime {}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'InteractiveRuntime must keep event timeline and draw-local '
+                'geometry outside the boundary runtime',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test('rejects SceneViewInteractive wrapper Listener shell', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+      writeSandboxFile(sandbox, 'lib/src/view/scene_view_interactive.dart', '''
+import 'package:flutter/widgets.dart';
+
+import '../interactive/scene_controller.dart';
+import 'scene_view_runtime_host.dart';
+
+class SceneViewInteractive extends StatelessWidget {
+  const SceneViewInteractive({required this.controller, super.key});
+
+  final SceneController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) {},
+      child: SceneViewRuntimeHost(
+        runtime: sceneControllerViewRuntimeOf(controller),
+      ),
+    );
+  }
+}
+''');
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'SceneViewInteractive must remain a thin public shell over '
+              'SceneViewRuntimeHost',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+
+  test(
+    'rejects render surface with extra named constructor entrypoint',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_render_surface.dart',
+          '''
+import '../contract/scene_view_render_state.dart';
+
+class SceneViewRenderSurface {
+  SceneViewRenderSurface({required SceneViewRenderState renderState})
+    : _renderState = renderState;
+
+  SceneViewRenderSurface.interactive({required SceneViewRenderState renderState})
+    : _renderState = renderState;
+
+  final SceneViewRenderState _renderState;
+
+  SceneViewRenderSurfaceState createState() => SceneViewRenderSurfaceState();
+}
+
+class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
+  void initState() {
+    widget._renderState.addListener(_handleControllerChanged);
+  }
+
+  void didUpdateWidget(SceneViewRenderSurface oldWidget) {
+    oldWidget._renderState.removeListener(_handleControllerChanged);
+    widget._renderState.addListener(_handleControllerChanged);
+  }
+
+  void dispose() {
+    widget._renderState.removeListener(_handleControllerChanged);
+  }
+
+  void _handleControllerChanged() {}
+}
+
+class State<T> {
+  T get widget => throw UnimplementedError();
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewRenderSurface must remain a render-state-only '
+                'view surface',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test('rejects PointerSessionToken with exposed payload field', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  set mode(int value) {
+    _ensurePublicSideEffectAllowed('mode');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/internal/pointer_session_token.dart',
+        '''
+class PointerSessionToken {
+  const PointerSessionToken(this.id);
+
+  final int id;
+}
+''',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'PointerSessionToken must remain an opaque internal nominal token',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+
+  test(
+    'rejects PointerSessionToken with exposed payload field under another name',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  set mode(int value) {
+    _ensurePublicSideEffectAllowed('mode');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/pointer_session_token.dart',
+          '''
+final class PointerSessionToken {
+  const PointerSessionToken(this.rawValue);
+
+  final int rawValue;
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'PointerSessionToken must remain an opaque internal nominal token',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test('rejects event dispatcher that re-owns eraser geometry helper', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        _sceneControllerFixture(
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  set mode(int value) {
+    _ensurePublicSideEffectAllowed('mode');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/internal/interactive_event_dispatcher.dart',
+        '''
+import 'dart:async';
+
+class InteractiveEventDispatcher {
+  final StreamController<Object> _actions = StreamController<Object>.broadcast();
+  final StreamController<Object> _editTextRequests =
+      StreamController<Object>.broadcast();
+
+  int resolveTimestampMs(int? value) => value ?? 0;
+
+  void emitAction(Object type, List<Object> nodeIds, int timestampMs) {}
+
+  void emitEditTextRequested(Object request) {}
+
+  bool _eraserHitsLine() => false;
+}
+''',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'InteractiveEventDispatcher must remain the event timeline owner',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+
+  test(
+    'rejects projected eraser contract that drops thresholdSquared',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          _sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  set mode(int value) {
+    _ensurePublicSideEffectAllowed('mode');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/interactive_draw_eraser_projection.dart',
+          '''
+import 'dart:ui';
+
+typedef InteractiveDrawProjectedEraser = ({
+  List<Offset> points,
+  double threshold,
+});
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'InteractiveDrawProjectedEraser must remain the shared '
+                'projection contract',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
 }

@@ -123,14 +123,120 @@ Future<GuardrailViolation?> _checkPointerSessionBoundary(
     resolved.unit.declarations,
     'SceneControllerPointerSession',
   );
+  final detachMethod = pointerSessionClass == null
+      ? null
+      : _findMethodByName(pointerSessionClass.members, 'detach');
+  final disposeMethod = pointerSessionClass == null
+      ? null
+      : _findMethodByName(pointerSessionClass.members, 'dispose');
+  final implementsSession =
+      pointerSessionClass != null &&
+      _classImplements(pointerSessionClass, 'SceneViewPointerSession');
+  final hasTracker = _unitContainsIdentifier(
+    resolved.unit,
+    'PointerInputTracker',
+  );
+  final hasScheduler = _unitContainsIdentifier(
+    resolved.unit,
+    '_PendingTapFlushScheduler',
+  );
+  final hasReleaseOwnedResources = _unitContainsIdentifier(
+    resolved.unit,
+    '_releaseOwnedResources',
+  );
+  final hasAddListener = _unitContainsQualifiedPrefix(resolved.unit, <String>[
+    '_ownerListenable',
+    'addListener',
+  ]);
+  final hasRemoveListener = _unitContainsQualifiedPrefix(
+    resolved.unit,
+    <String>['_ownerListenable', 'removeListener'],
+  );
+  final hasReleaseToken = _unitContainsIdentifier(
+    resolved.unit,
+    '_releasePointerSessionToken',
+  );
+  final detachFlow =
+      detachMethod != null &&
+      _methodContainsOrderedStatementsBeforeAnyForbidden(
+        detachMethod,
+        orderedMatchers: <bool Function(Statement)>[
+          (statement) => _statementInvokesLocalMethod(
+            statement,
+            methodName: '_detachPointerSession',
+          ),
+          (statement) => _statementInvokesLocalMethod(
+            statement,
+            methodName: '_releaseOwnedResources',
+          ),
+        ],
+        forbiddenBeforeCompletion: <bool Function(Statement)>[
+          (statement) => _statementInvokesLocalMethod(
+            statement,
+            methodName: '_releaseOwnedResources',
+          ),
+        ],
+      );
+  final disposeFlow =
+      disposeMethod != null &&
+      _methodContainsOrderedStatementsBeforeAnyForbidden(
+        disposeMethod,
+        orderedMatchers: <bool Function(Statement)>[
+          (statement) =>
+              _statementInvokesLocalMethod(statement, methodName: 'detach'),
+          (statement) => _statementInvokesLocalMethod(
+            statement,
+            methodName: 'dispose',
+            targetSegments: <String>['_pendingTapFlushScheduler'],
+          ),
+        ],
+        forbiddenBeforeCompletion: <bool Function(Statement)>[
+          (statement) => _statementInvokesLocalMethod(
+            statement,
+            methodName: 'dispose',
+            targetSegments: <String>['_pendingTapFlushScheduler'],
+          ),
+        ],
+      );
+  final hasInteractionLeak = _unitContainsIdentifier(
+    resolved.unit,
+    'SceneControllerInteraction',
+  );
+  final hasReadInteractionLeak = _unitContainsIdentifier(
+    resolved.unit,
+    '_readInteraction',
+  );
+  final hasRuntimeTypeLeak = _unitContainsIdentifier(
+    resolved.unit,
+    'runtimeType',
+  );
+  final hasOwnerField =
+      pointerSessionClass != null &&
+      _classHasFieldNamed(pointerSessionClass, 'owner');
+  final hasSessionField =
+      pointerSessionClass != null &&
+      _classHasFieldNamed(pointerSessionClass, 'session');
+  final hasContextField =
+      pointerSessionClass != null &&
+      _classHasFieldNamed(pointerSessionClass, 'context');
   if (pointerSessionClass == null ||
-      !_classImplements(pointerSessionClass, 'SceneViewPointerSession') ||
-      _unitContainsIdentifier(resolved.unit, 'SceneControllerInteraction') ||
-      _unitContainsIdentifier(resolved.unit, '_readInteraction') ||
-      _unitContainsIdentifier(resolved.unit, 'runtimeType') ||
-      _classHasFieldNamed(pointerSessionClass, 'owner') ||
-      _classHasFieldNamed(pointerSessionClass, 'session') ||
-      _classHasFieldNamed(pointerSessionClass, 'context')) {
+      !implementsSession ||
+      detachMethod == null ||
+      disposeMethod == null ||
+      !hasTracker ||
+      !hasScheduler ||
+      !hasReleaseOwnedResources ||
+      !hasAddListener ||
+      !hasRemoveListener ||
+      !hasReleaseToken ||
+      !detachFlow ||
+      !disposeFlow ||
+      hasInteractionLeak ||
+      hasReadInteractionLeak ||
+      hasRuntimeTypeLeak ||
+      hasOwnerField ||
+      hasSessionField ||
+      hasContextField) {
     return GuardrailViolation(
       filePath: filePath,
       line: 1,
@@ -151,8 +257,16 @@ GuardrailViolation? _checkPointerSessionTokenBoundary(
   );
   final filePath = _repoRelPath(context, file);
   final parsed = _parseArchitectureUnit(context, file);
+  final source = file.readAsStringSync();
   final tokenClass = _findClassDeclaration(parsed.unit, 'PointerSessionToken');
   if (tokenClass == null ||
+      !_classIsFinal(tokenClass) ||
+      !RegExp(r'final\s+class\s+PointerSessionToken\b').hasMatch(source) ||
+      tokenClass.members.whereType<FieldDeclaration>().any(
+        (field) => field.fields.variables.any(
+          (variable) => !variable.name.lexeme.startsWith('_'),
+        ),
+      ) ||
       _classOwnsMethodDeclaration(tokenClass, '==') ||
       _classOwnsGetterOrMethod(tokenClass, 'hashCode') ||
       _classOwnsMethodDeclaration(tokenClass, 'toJson')) {
@@ -219,15 +333,16 @@ Future<GuardrailViolation?> _checkPointerHostBoundary(
         ownerName: 'SceneViewPointerRouter',
         methodName: 'reset',
       ) ||
-      !_methodContainsOrderedStatements(
+      !_methodContainsOrderedStatementsWithForbiddenOutsideSequence(
         replaceMethod,
-        <bool Function(Statement)>[
+        orderedMatchers: <bool Function(Statement)>[
           (statement) => _statementInvokesOwnedMethod(
             statement,
             context: context,
             filePath: null,
             ownerName: 'SceneViewPointerSession',
             methodName: 'detach',
+            targetSegments: <String>['current'],
           ),
           (statement) => _statementInvokesOwnedMethod(
             statement,
@@ -235,6 +350,7 @@ Future<GuardrailViolation?> _checkPointerHostBoundary(
             filePath: null,
             ownerName: 'SceneViewPointerSession',
             methodName: 'dispose',
+            targetSegments: <String>['current'],
           ),
           (statement) => _statementInvokesOwnedMethod(
             statement,
@@ -243,6 +359,19 @@ Future<GuardrailViolation?> _checkPointerHostBoundary(
             ownerName: 'SceneViewPointerRouter',
             methodName: 'reset',
           ),
+          (statement) => _statementAssignsFieldFromQualifiedName(
+            statement,
+            fieldName: '_pointerSession',
+            rhsSegments: <String>['next'],
+          ),
+        ],
+        forbiddenBeforeCompletion: <bool Function(Statement)>[
+          (statement) => _statementAssignsFieldNamed(
+            statement,
+            fieldName: '_pointerSession',
+          ),
+        ],
+        forbiddenAfterCompletion: <bool Function(Statement)>[
           (statement) => _statementAssignsFieldNamed(
             statement,
             fieldName: '_pointerSession',
@@ -272,6 +401,7 @@ Future<GuardrailViolation?> _checkPointerHostBoundary(
             filePath: null,
             ownerName: 'SceneViewPointerSession',
             methodName: 'detach',
+            targetSegments: <String>['_pointerSession'],
           ),
           (statement) => _statementInvokesOwnedMethod(
             statement,
@@ -279,6 +409,7 @@ Future<GuardrailViolation?> _checkPointerHostBoundary(
             filePath: null,
             ownerName: 'SceneViewPointerSession',
             methodName: 'dispose',
+            targetSegments: <String>['_pointerSession'],
           ),
         ],
       ) ||

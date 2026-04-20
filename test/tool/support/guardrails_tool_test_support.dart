@@ -488,6 +488,10 @@ class SceneControllerMutationBoundary {
   int commitEraseNodes(Object ids) {
     return mutationAccess.commitEraseNodes(ids);
   }
+
+  void requestRepaint() {
+    mutationAccess.requestRepaint();
+  }
 }
 ''',
   );
@@ -497,7 +501,10 @@ class SceneControllerMutationBoundary {
     '''
 Object _snapshotBoundsWorld(Object node) => node;
 
-bool canSelect(Object node) => true;
+bool canSelect(Object node) {
+  _snapshotBoundsWorld(node);
+  return true;
+}
 ''',
   );
   writeSandboxFile(
@@ -854,6 +861,7 @@ class SceneControllerInteractionRuntime {
     required PointerSessionToken token,
   }) {
     _ensureKnownPointerSessionToken(token);
+    runtime.handlePointerFromSession(input, token: token);
   }
 
   void handleDoubleTapFromSession({
@@ -862,6 +870,11 @@ class SceneControllerInteractionRuntime {
     required PointerSessionToken token,
   }) {
     _ensureKnownPointerSessionToken(token);
+    runtime.handleDoubleTapFromSession(
+      position: position,
+      timestampMs: timestampMs,
+      token: token,
+    );
   }
 
   void _ensureKnownPointerSessionToken(PointerSessionToken token) {}
@@ -1109,7 +1122,8 @@ class SceneControllerPointerSession implements SceneViewPointerSession {
   final Object _ownerListener = Object();
 
   final _ownerListenable = _OwnerListenable();
-  final _PendingTapFlushScheduler scheduler = _PendingTapFlushScheduler();
+  final _PendingTapFlushScheduler _pendingTapFlushScheduler =
+      _PendingTapFlushScheduler();
 
   @override
   int? get pendingTapFlushTimestampMs => null;
@@ -1151,7 +1165,8 @@ class SceneControllerPointerSession implements SceneViewPointerSession {
 
   @override
   void dispose() {
-    scheduler.dispose();
+    detach();
+    _pendingTapFlushScheduler.dispose();
   }
 
   void _releaseOwnedResources() {

@@ -147,18 +147,29 @@ bool _hasClassLikeDeclaration(
       classDeclaration.interfaceKeyword != null;
 }
 
-bool _classOwnsMethod(
+MethodDeclaration? _findClassMethodDeclaration(
   ParsedUnitResult parsed,
   String className,
   String methodName,
 ) {
   final declaration = _findClassDeclaration(parsed.unit, className);
   if (declaration == null) {
-    return false;
+    return null;
   }
-  return declaration.members.whereType<MethodDeclaration>().any(
-    (method) => method.name.lexeme == methodName,
-  );
+  for (final method in declaration.members.whereType<MethodDeclaration>()) {
+    if (method.name.lexeme == methodName) {
+      return method;
+    }
+  }
+  return null;
+}
+
+bool _classOwnsMethod(
+  ParsedUnitResult parsed,
+  String className,
+  String methodName,
+) {
+  return _findClassMethodDeclaration(parsed, className, methodName) != null;
 }
 
 ClassDeclaration? _findClassDeclaration(
@@ -168,6 +179,27 @@ ClassDeclaration? _findClassDeclaration(
   for (final declaration in unit.declarations.whereType<ClassDeclaration>()) {
     if (declaration.name.lexeme == className) {
       return declaration;
+    }
+  }
+  return null;
+}
+
+MethodDeclaration? _findExtensionMethodOnType(
+  CompilationUnit unit,
+  String extendedTypeName,
+  String methodName,
+) {
+  for (final declaration
+      in unit.declarations.whereType<ExtensionDeclaration>()) {
+    final extendedType = declaration.onClause?.extendedType;
+    if (extendedType is! NamedType ||
+        extendedType.name.lexeme != extendedTypeName) {
+      continue;
+    }
+    for (final member in declaration.members.whereType<MethodDeclaration>()) {
+      if (member.name.lexeme == methodName) {
+        return member;
+      }
     }
   }
   return null;
@@ -193,6 +225,21 @@ bool _classHasFieldNamed(ClassDeclaration declaration, String fieldName) {
     }
   }
   return false;
+}
+
+bool _classIsFinal(ClassDeclaration declaration) {
+  final source = declaration.toSource().trimLeft();
+  return source.startsWith('final class ') ||
+      source.startsWith('base final class ') ||
+      source.startsWith('sealed final class ');
+}
+
+bool _classHasOnlyUnnamedConstructor(ClassDeclaration declaration) {
+  final constructors = declaration.members.whereType<ConstructorDeclaration>();
+  if (constructors.isEmpty) {
+    return false;
+  }
+  return constructors.every((constructor) => constructor.name == null);
 }
 
 bool _classHasFieldTypeFromAllowedFiles(
@@ -254,7 +301,13 @@ bool _unitContainsIdentifier(CompilationUnit unit, String identifier) {
       },
     ),
   );
-  return found;
+  if (found) {
+    return true;
+  }
+  final pattern = RegExp(
+    '(?<![A-Za-z0-9_])${RegExp.escape(identifier)}(?![A-Za-z0-9_])',
+  );
+  return pattern.hasMatch(unit.toSource());
 }
 
 bool _unitContainsQualifiedPrefix(CompilationUnit unit, List<String> segments) {

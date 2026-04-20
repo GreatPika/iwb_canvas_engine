@@ -11,6 +11,19 @@ Future<GuardrailViolation?> _checkInteractiveRuntimeBoundary(
   final parsed = _parseArchitectureUnit(context, file);
   final runtimeClass = _findClassDeclaration(parsed.unit, 'InteractiveRuntime');
   if (runtimeClass == null ||
+      !_hasImport(parsed, 'interactive_draw_coordinator.dart') ||
+      !_hasImport(parsed, 'interactive_event_dispatcher.dart') ||
+      !_hasImport(parsed, 'interactive_move_session.dart') ||
+      !_hasImport(parsed, 'interactive_pointer_normalizer.dart') ||
+      !_hasImport(parsed, 'interactive_gesture_router.dart') ||
+      !_hasImport(parsed, 'interactive_double_tap_router.dart') ||
+      !_classOwnsMethodDeclaration(runtimeClass, 'handlePublicPointer') ||
+      !_classOwnsMethodDeclaration(runtimeClass, 'handlePublicDoubleTap') ||
+      !_classOwnsMethodDeclaration(runtimeClass, 'handlePointerFromSession') ||
+      !_classOwnsMethodDeclaration(
+        runtimeClass,
+        'handleDoubleTapFromSession',
+      ) ||
       _classOwnsMethodDeclaration(runtimeClass, 'handlePointer') ||
       _classOwnsMethodDeclaration(runtimeClass, 'handleDoubleTap') ||
       _classHasFieldNamed(runtimeClass, '_timestampCursorMs') ||
@@ -46,6 +59,7 @@ GuardrailViolation? _checkEventDispatcherBoundary(GuardrailContext context) {
       !_classOwnsMethodDeclaration(dispatcherClass, 'resolveTimestampMs') ||
       !_classOwnsMethodDeclaration(dispatcherClass, 'emitAction') ||
       !_classOwnsMethodDeclaration(dispatcherClass, 'emitEditTextRequested') ||
+      _classOwnsMethodDeclaration(dispatcherClass, '_eraserHitsLine') ||
       _unitContainsIdentifier(parsed.unit, 'InteractiveDrawCoordinator') ||
       _unitContainsIdentifier(parsed.unit, 'SceneControllerMutationBoundary')) {
     return GuardrailViolation(
@@ -80,6 +94,15 @@ GuardrailViolation? _checkDrawCoordinatorBoundary(GuardrailContext context) {
       !_unitContainsIdentifier(
         coordinatorParsed.unit,
         'InteractiveDrawStrokeEngine',
+      ) ||
+      _unitContainsIdentifier(coordinatorParsed.unit, '_eraserHitsStroke') ||
+      _unitContainsIdentifier(
+        coordinatorParsed.unit,
+        '_localEraserSegmentsHitLine',
+      ) ||
+      _unitContainsIdentifier(
+        coordinatorParsed.unit,
+        '_eraserSegmentHitsStrokeBatch',
       ) ||
       _classOwnsMethod(
         coordinatorParsed,
@@ -121,6 +144,16 @@ GuardrailViolation? _checkDrawEraserEngineBoundary(GuardrailContext context) {
       !_unitContainsIdentifier(
         eraserParsed.unit,
         'InteractiveDrawEraserTargets',
+      ) ||
+      !_unitContainsIdentifier(eraserParsed.unit, '_exactHit') ||
+      _unitContainsIdentifier(eraserParsed.unit, '_fallbackWorldBoundsHit') ||
+      _unitContainsIdentifier(
+        eraserParsed.unit,
+        '_localEraserSegmentsHitLine',
+      ) ||
+      _unitContainsIdentifier(
+        eraserParsed.unit,
+        '_eraserSegmentHitsStrokeBatch',
       ) ||
       _classOwnsMethod(
         eraserParsed,
@@ -166,6 +199,10 @@ GuardrailViolation? _checkDrawExactHitBoundary(GuardrailContext context) {
       !_classOwnsMethod(parsed, 'InteractiveDrawEraserExactHit', 'hitsNode') ||
       !_unitContainsIdentifier(parsed.unit, 'InteractiveDrawEraserLineHit') ||
       !_unitContainsIdentifier(parsed.unit, 'InteractiveDrawEraserStrokeHit') ||
+      !_unitContainsIdentifier(parsed.unit, '_projectEraserToLocal') ||
+      !_unitContainsIdentifier(parsed.unit, '_fallbackWorldBoundsHit') ||
+      _unitContainsIdentifier(parsed.unit, '_localEraserSegmentsHitLine') ||
+      _unitContainsIdentifier(parsed.unit, '_eraserSegmentHitsStrokeBatch') ||
       _unitContainsIdentifier(parsed.unit, 'queryHitTestCandidates') ||
       _unitContainsIdentifier(parsed.unit, 'commitEraseNodes')) {
     return GuardrailViolation(
@@ -191,6 +228,8 @@ GuardrailViolation? _checkDrawLineHitBoundary(GuardrailContext context) {
         'InteractiveDrawEraserLineHit',
         'hitsProjectedLine',
       ) ||
+      !_unitContainsIdentifier(parsed.unit, '_localEraserSegmentsHitLine') ||
+      !_unitContainsIdentifier(parsed.unit, 'onPreciseSegmentCheck') ||
       _unitContainsIdentifier(parsed.unit, 'StrokeNodeSnapshot') ||
       _unitContainsIdentifier(parsed.unit, 'InteractiveDrawEraserStrokeHit')) {
     return GuardrailViolation(
@@ -216,6 +255,8 @@ GuardrailViolation? _checkDrawStrokeHitBoundary(GuardrailContext context) {
         'InteractiveDrawEraserStrokeHit',
         'hitsProjectedStroke',
       ) ||
+      !_unitContainsIdentifier(parsed.unit, '_eraserSegmentHitsStrokeBatch') ||
+      !_unitContainsIdentifier(parsed.unit, 'onPreciseSegmentCheck') ||
       _unitContainsIdentifier(parsed.unit, 'LineNodeSnapshot') ||
       _unitContainsIdentifier(parsed.unit, 'InteractiveDrawEraserLineHit')) {
     return GuardrailViolation(
@@ -237,6 +278,9 @@ GuardrailViolation? _checkDrawProjectionBoundary(GuardrailContext context) {
   final filePath = _repoRelPath(context, file);
   final parsed = _parseArchitectureUnit(context, file);
   if (!_hasTopLevelOwner(parsed, 'InteractiveDrawProjectedEraser') ||
+      !_unitContainsIdentifier(parsed.unit, 'points') ||
+      !_unitContainsIdentifier(parsed.unit, 'threshold') ||
+      !_unitContainsIdentifier(parsed.unit, 'thresholdSquared') ||
       _unitContainsIdentifier(parsed.unit, 'hitsProjectedLine') ||
       _unitContainsIdentifier(parsed.unit, 'hitsProjectedStroke')) {
     return GuardrailViolation(
@@ -258,6 +302,9 @@ GuardrailViolation? _checkDrawStyleBoundary(GuardrailContext context) {
   final filePath = _repoRelPath(context, file);
   final parsed = _parseArchitectureUnit(context, file);
   if (!_hasTopLevelOwner(parsed, 'InteractiveDrawStyle') ||
+      !_unitContainsIdentifier(parsed.unit, 'drawTool') ||
+      !_unitContainsIdentifier(parsed.unit, 'drawColor') ||
+      !_unitContainsIdentifier(parsed.unit, 'lineThickness') ||
       _unitContainsIdentifier(parsed.unit, 'InteractiveDrawCoordinator') ||
       _unitContainsIdentifier(parsed.unit, 'SceneControllerMutationBoundary')) {
     return GuardrailViolation(
