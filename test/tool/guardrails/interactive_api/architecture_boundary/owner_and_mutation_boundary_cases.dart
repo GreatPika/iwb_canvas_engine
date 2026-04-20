@@ -11,7 +11,7 @@ void _registerInteractiveArchitectureBoundaryOwnerAndMutationBoundaryTests() {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -136,7 +136,7 @@ class _DisposedSceneViewPointerSession implements SceneViewPointerSession {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -262,7 +262,7 @@ class _DisposedSceneViewPointerSession implements SceneViewPointerSession {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -354,7 +354,7 @@ class StatefulWidget {}
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -422,7 +422,7 @@ class SceneViewRuntimeHost {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -478,7 +478,7 @@ class SceneViewInteractive {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');

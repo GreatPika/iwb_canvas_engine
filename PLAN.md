@@ -39,4 +39,4 @@ roadmap can be updated without mixing execution contracts.
 - [x] [Step 123. Extract shared resolved surface-contract support for guardrails](plan/step_123_extract_shared_resolved_surface_contract_support_for_guardrails.md)
 - [x] [Step 124. Extract shared semantic sequence-and-routing support for guardrails](plan/step_124_extract_shared_semantic_sequence_and_routing_support_for_guardrails.md)
 - [x] [Step 125. Register guardrail rules declaratively and reduce runner/state-map drift](plan/step_125_register_guardrail_rules_declaratively_and_reduce_runner_state_map_drift.md)
-- [ ] [Step 126. Normalize guardrail tool-test scaffolds around canonical manifests](plan/step_126_normalize_guardrail_tool_test_scaffolds_around_canonical_manifests.md)
+- [x] [Step 126. Normalize guardrail tool-test scaffolds around canonical manifests](plan/step_126_normalize_guardrail_tool_test_scaffolds_around_canonical_manifests.md)

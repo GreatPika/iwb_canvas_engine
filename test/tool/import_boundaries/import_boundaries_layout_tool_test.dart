@@ -3,7 +3,7 @@ library;
 
 import 'package:test/test.dart';
 
-import '../support/guardrails_tool_test_support.dart';
+import '../support/import_boundaries_sandbox_support.dart';
 import '../support/tool_process_test_support.dart';
 
 void main() {

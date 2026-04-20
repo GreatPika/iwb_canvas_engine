@@ -5,7 +5,9 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-import '../support/guardrails_tool_test_support.dart';
+import '../support/guardrail_fixture_writer.dart';
+import '../support/guardrails_sandbox_support.dart';
+import '../support/tool_diagnostic_matchers.dart';
 import '../support/tool_process_test_support.dart';
 
 void main() {
@@ -14,42 +16,6 @@ void main() {
     _registerResolvedCapabilityGuardRegressionTests();
     _registerResolvedEntrypointAcceptanceTests();
   });
-}
-
-String _sceneControllerFixture({
-  required String methods,
-  String extraImports = '',
-  String extraMembers = '',
-  String extraDeclarations = '',
-}) {
-  return '''
-import '../contract/scene_view_runtime.dart';
-import 'internal/scene_controller_graph.dart';
-$extraImports
-
-class SceneController {
-  final Object _graph = createSceneControllerGraph(
-    SceneControllerGraphRequest(),
-  );
-$extraMembers
-
-  Object get actions => sceneControllerGraphActions(_graph);
-  Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);
-
-$methods
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
-
-SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
-  return controller._graph.sceneViewRuntime;
-}
-
-$extraDeclarations
-''';
 }
 
 String _canonicalControllerMethods({
@@ -72,7 +38,7 @@ $handlePointerBody
 }
 
 String _canonicalCapabilityControllerFixture() {
-  return _sceneControllerFixture(
+  return sceneControllerFixture(
     methods: _canonicalControllerMethods(
       handlePointerSignature: '(Object input)',
       handlePointerBody: "    _ensurePublicSideEffectAllowed('handlePointer');",
@@ -410,7 +376,7 @@ class _IndexProbe {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             extraMembers: scenario.extraMembers,
             extraDeclarations: scenario.extraDeclarations,
             methods: _canonicalControllerMethods(
@@ -452,7 +418,7 @@ ${scenario.prelude}
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: _canonicalControllerMethods(
               handlePointerSignature: '()',
               handlePointerBody: '''
@@ -491,7 +457,7 @@ ${scenario.prelude}
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: _canonicalControllerMethods(
               handlePointerSignature: '()',
               handlePointerBody: '''
@@ -1010,7 +976,7 @@ void _registerResolvedEntrypointAcceptanceTests() {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: _canonicalControllerMethods(
               handlePointerSignature: '(int value)',
               handlePointerBody: '''
@@ -1043,7 +1009,7 @@ void _registerResolvedEntrypointAcceptanceTests() {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: _canonicalControllerMethods(
               handlePointerSignature: '(int? timestampMs)',
               handlePointerBody: '''

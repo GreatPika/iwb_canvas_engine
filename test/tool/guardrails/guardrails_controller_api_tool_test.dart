@@ -5,7 +5,9 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-import '../support/guardrails_tool_test_support.dart';
+import '../support/guardrail_fixture_writer.dart';
+import '../support/guardrails_sandbox_support.dart';
+import '../support/tool_diagnostic_matchers.dart';
 import '../support/tool_process_test_support.dart';
 
 typedef _PreparedReplaceSceneAttackCase = ({
@@ -83,7 +85,7 @@ class SceneStoreControllerDebugAccess {
   writeSandboxFile(
     sandbox,
     'lib/src/controller/scene_controller_committed_mutation_access.dart',
-    _committedMutationAccessFixture(),
+    committedMutationAccessFixture(),
   );
 }
 
@@ -133,208 +135,6 @@ class ScenePaintSpatialCandidate {
   final Rect paintBoundsWorld;
 }
 ''');
-}
-
-String _committedMutationAccessFixture({
-  String extraTopLevel = '',
-  String extraInterfaceMembers = '',
-  String extraAdapterMembers = '',
-  String interfaceReplaceSceneDeclaration = '''
-  void replaceScene(
-    SceneSnapshot snapshot, {
-    required VoidCallback beforeApply,
-  });
-''',
-  String adapterReplaceSceneDeclaration = '''
-  @override
-  void replaceScene(
-    SceneSnapshot snapshot, {
-    required VoidCallback beforeApply,
-  }) {}
-''',
-}) {
-  return '''
-import 'dart:ui';
-
-import '../contract/node_patch.dart';
-import '../contract/node_spec.dart';
-import '../contract/scene_write_txn.dart';
-import '../contract/snapshot.dart';
-import '../contract/transform2d.dart';
-import 'scene_store_controller.dart';
-
-typedef SceneControllerCommittedMutationWriteResult<T> = ({
-  T value,
-  bool didChangeRenderState,
-});
-
-$extraTopLevel
-
-abstract interface class SceneControllerCommittedMutationAccess {
-  T write<T>(T Function(SceneWriteTxn writer) fn);
-
-  SceneControllerCommittedMutationWriteResult<T> writeExact<T>(
-    T Function(SceneWriteTxn writer) fn,
-  );
-
-  NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex});
-
-  bool ensureLayer(LayerId layerId, {int? index});
-
-  bool patchNode(NodePatch patch);
-
-  bool removeNode(NodeId id);
-
-  bool setBackgroundColor(Color value);
-
-  bool setGridEnabled(bool value);
-
-  bool setGridCellSize(double value);
-
-  bool setCameraOffset(Offset value);
-
-  ClearSceneResult clearSceneExactResult();
-
-${interfaceReplaceSceneDeclaration.trimRight()}
-
-  void requestRepaint();
-
-  bool replaceSelection(Iterable<NodeId> nodeIds);
-
-  bool toggleSelection(NodeId nodeId);
-
-  bool clearSelection();
-
-  ({int selectedCount, bool changed}) selectAll({bool onlySelectable = true});
-
-  int deleteSelection();
-
-  int transformSelection(Transform2D delta);
-
-  NodeId commitDrawStroke({
-    required List<Offset> points,
-    required double thickness,
-    required Color color,
-    required double opacity,
-  });
-
-  NodeId commitDrawLineFromWorldSegment({
-    required Offset start,
-    required Offset end,
-    required double thickness,
-    required Color color,
-    required double opacity,
-  });
-
-  int commitEraseNodes(Iterable<NodeId> ids);
-
-  SceneSnapshot get snapshot;
-
-  Set<NodeId> get selectedNodeIds;
-
-  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots);
-
-$extraInterfaceMembers
-}
-
-final class SceneStoreControllerCommittedMutationAccess
-    implements SceneControllerCommittedMutationAccess {
-  SceneStoreControllerCommittedMutationAccess(this._storeController);
-
-  final SceneStoreController _storeController;
-
-  @override
-  T write<T>(T Function(SceneWriteTxn writer) fn) => throw UnimplementedError();
-
-  @override
-  SceneControllerCommittedMutationWriteResult<T> writeExact<T>(
-    T Function(SceneWriteTxn writer) fn,
-  ) => throw UnimplementedError();
-
-  @override
-  NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex}) => 'id';
-
-  @override
-  bool ensureLayer(LayerId layerId, {int? index}) => true;
-
-  @override
-  bool patchNode(NodePatch patch) => true;
-
-  @override
-  bool removeNode(NodeId id) => true;
-
-  @override
-  bool setBackgroundColor(Color value) => true;
-
-  @override
-  bool setGridEnabled(bool value) => true;
-
-  @override
-  bool setGridCellSize(double value) => true;
-
-  @override
-  bool setCameraOffset(Offset value) => true;
-
-  @override
-  ClearSceneResult clearSceneExactResult() => ClearSceneResult();
-
-${adapterReplaceSceneDeclaration.trimRight()}
-
-  @override
-  void requestRepaint() {}
-
-  @override
-  bool replaceSelection(Iterable<NodeId> nodeIds) => true;
-
-  @override
-  bool toggleSelection(NodeId nodeId) => true;
-
-  @override
-  bool clearSelection() => true;
-
-  @override
-  ({int selectedCount, bool changed}) selectAll({bool onlySelectable = true}) =>
-      (selectedCount: 0, changed: false);
-
-  @override
-  int deleteSelection() => 0;
-
-  @override
-  int transformSelection(Transform2D delta) => 0;
-
-  @override
-  NodeId commitDrawStroke({
-    required List<Offset> points,
-    required double thickness,
-    required Color color,
-    required double opacity,
-  }) => 'id';
-
-  @override
-  NodeId commitDrawLineFromWorldSegment({
-    required Offset start,
-    required Offset end,
-    required double thickness,
-    required Color color,
-    required double opacity,
-  }) => 'id';
-
-  @override
-  int commitEraseNodes(Iterable<NodeId> ids) => 0;
-
-  @override
-  SceneSnapshot get snapshot => SceneSnapshot();
-
-  @override
-  Set<NodeId> get selectedNodeIds => <NodeId>{};
-
-  @override
-  Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) =>
-      Offset.zero;
-
-$extraAdapterMembers
-}
-''';
 }
 
 String _sceneStoreControllerFixture({
@@ -641,7 +441,7 @@ void _registerPreparedReplaceSceneBoundaryAttackTests() {
           'rejects committed mutation access interface prepareScenePayload helper',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraInterfaceMembers:
             '  Object prepareScenePayload(SceneSnapshot snapshot);\n',
       ),
@@ -651,7 +451,7 @@ void _registerPreparedReplaceSceneBoundaryAttackTests() {
           'rejects committed mutation access interface stageSceneReplacement helper',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraInterfaceMembers:
             '  Object stageSceneReplacement(SceneSnapshot snapshot);\n',
       ),
@@ -661,7 +461,7 @@ void _registerPreparedReplaceSceneBoundaryAttackTests() {
           'rejects committed mutation access interface applySceneReplacement helper',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraInterfaceMembers:
             '  void applySceneReplacement(Object payload);\n',
       ),
@@ -671,7 +471,7 @@ void _registerPreparedReplaceSceneBoundaryAttackTests() {
           'rejects committed mutation access top-level sceneReplacementPayload getter',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraTopLevel: 'Object get sceneReplacementPayload => Object();\n',
       ),
     ),
@@ -680,7 +480,7 @@ void _registerPreparedReplaceSceneBoundaryAttackTests() {
           'rejects committed mutation access top-level preparedScenePayload field',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraTopLevel: 'final Object preparedScenePayload = Object();\n',
       ),
     ),
@@ -689,7 +489,7 @@ void _registerPreparedReplaceSceneBoundaryAttackTests() {
           'rejects committed mutation access top-level prepareScenePayload function',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraTopLevel:
             'Object prepareScenePayload(SceneSnapshot snapshot) => snapshot;\n',
       ),
@@ -699,7 +499,7 @@ void _registerPreparedReplaceSceneBoundaryAttackTests() {
           'rejects committed mutation access top-level PreparedScenePayloadBridge class',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraTopLevel: 'final class PreparedScenePayloadBridge {}\n',
       ),
     ),
@@ -707,7 +507,7 @@ void _registerPreparedReplaceSceneBoundaryAttackTests() {
       name: 'rejects committed mutation access top-level neutral bridge helper',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraTopLevel: 'Object handoff(Object value) => value;\n',
       ),
     ),
@@ -715,7 +515,7 @@ void _registerPreparedReplaceSceneBoundaryAttackTests() {
       name: 'rejects committed mutation access unnamed extension helper',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraTopLevel: '''
 extension on SceneStoreController {
   Object handoff(Object value) => value;
@@ -728,7 +528,7 @@ extension on SceneStoreController {
           'rejects committed mutation access exact PreparedSceneReplacement type leak',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraTopLevel: 'class PreparedSceneReplacement {}\n',
       ),
     ),
@@ -737,7 +537,7 @@ extension on SceneStoreController {
           'rejects committed mutation access private PreparedSceneReplacement type leak',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraTopLevel: 'class _PreparedSceneReplacement {}\n',
       ),
     ),
@@ -746,7 +546,7 @@ extension on SceneStoreController {
           'rejects committed mutation access adapter stageSceneReplacement helper',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraAdapterMembers:
             '  Object stageSceneReplacement(SceneSnapshot snapshot) => snapshot;\n',
       ),
@@ -756,7 +556,7 @@ extension on SceneStoreController {
           'rejects committed mutation access adapter applySceneReplacement helper',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraAdapterMembers:
             '  void applySceneReplacement(Object payload) {}\n',
       ),
@@ -766,7 +566,7 @@ extension on SceneStoreController {
           'rejects committed mutation access adapter private applySceneReplacement helper',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraAdapterMembers:
             '  void _applySceneReplacement(Object payload) {}\n',
       ),
@@ -775,7 +575,7 @@ extension on SceneStoreController {
       name: 'rejects committed mutation access SceneReplacementPayload typedef',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraTopLevel: 'typedef SceneReplacementPayload = Object;\n',
       ),
     ),
@@ -784,7 +584,7 @@ extension on SceneStoreController {
           'rejects committed mutation access preparedScenePayload getter on adapter',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraAdapterMembers: '  Object get preparedScenePayload => Object();\n',
       ),
     ),
@@ -792,7 +592,7 @@ extension on SceneStoreController {
       name: 'rejects committed mutation access adapter neutral bridge method',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraAdapterMembers: '  Object handoff(Object value) => value;\n',
       ),
     ),
@@ -800,7 +600,7 @@ extension on SceneStoreController {
       name: 'rejects committed mutation access interface neutral bridge method',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraInterfaceMembers: '  Object handoff(Object value);\n',
       ),
     ),
@@ -808,7 +608,7 @@ extension on SceneStoreController {
       name: 'rejects committed mutation access interface explicit constructor',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraInterfaceMembers:
             '  SceneControllerCommittedMutationAccess.named();\n',
       ),
@@ -818,7 +618,7 @@ extension on SceneStoreController {
           'rejects committed mutation access interface explicit unnamed constructor',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         extraInterfaceMembers: '  SceneControllerCommittedMutationAccess();\n',
       ),
     ),
@@ -827,7 +627,7 @@ extension on SceneStoreController {
           'rejects committed mutation access interface replaceScene signature drift',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         interfaceReplaceSceneDeclaration: '''
   void replaceScene(
     SceneSnapshot snapshot, {
@@ -841,7 +641,7 @@ extension on SceneStoreController {
           'rejects committed mutation access adapter replaceScene return drift',
       filePath:
           'lib/src/controller/scene_controller_committed_mutation_access.dart',
-      source: _committedMutationAccessFixture(
+      source: committedMutationAccessFixture(
         adapterReplaceSceneDeclaration: '''
   @override
   bool replaceScene(

@@ -5,7 +5,9 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-import '../support/guardrails_tool_test_support.dart';
+import '../support/guardrail_fixture_writer.dart';
+import '../support/guardrails_sandbox_support.dart';
+import '../support/tool_diagnostic_matchers.dart';
 import '../support/tool_process_test_support.dart';
 
 part 'interactive_api/resolver_purity/scene_controller_entrypoint_cases.dart';
@@ -35,37 +37,4 @@ void main() {
     _registerInteractiveArchitectureGuardrailTests();
     _registerCommittedReadSideHermeticityTests();
   });
-}
-
-String _sceneControllerFixture({
-  required String methods,
-  String extraImports = '',
-  String extraMembers = '',
-}) {
-  return '''
-import '../contract/scene_view_runtime.dart';
-import 'internal/scene_controller_graph.dart';
-$extraImports
-
-class SceneController {
-  final Object _graph = createSceneControllerGraph(
-    SceneControllerGraphRequest(),
-  );
-$extraMembers
-
-  Object get actions => sceneControllerGraphActions(_graph);
-  Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);
-
-$methods
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
-
-SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
-  return controller._graph.sceneViewRuntime;
-}
-''';
 }

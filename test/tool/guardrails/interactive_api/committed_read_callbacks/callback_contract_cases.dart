@@ -9,7 +9,7 @@ void _registerCommittedReadSideHermeticityTests() {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer() {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -86,7 +86,7 @@ class InteractiveMoveSessionCallbacks {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer() {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -162,7 +162,7 @@ class InteractiveDrawEraserTargetsCallbacks {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer() {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -248,7 +248,7 @@ class InteractiveMoveSessionCallbacks {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer() {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -331,7 +331,7 @@ class InteractiveMoveSessionCallbacks {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer() {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -409,7 +409,7 @@ class InteractiveDrawCoordinatorCallbacks {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer() {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -462,7 +462,7 @@ class InteractiveDrawEraserEngine {}
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer() {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -510,7 +510,7 @@ class InteractiveDrawEraserEngine {}
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer() {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -566,7 +566,7 @@ class InteractiveDrawEraserEngine {}
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer() {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -653,7 +653,7 @@ class InteractiveMoveSessionCallbacks {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer() {
     _ensurePublicSideEffectAllowed('handlePointer');

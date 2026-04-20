@@ -321,7 +321,7 @@ This step closes the chain at the test/support layer: it makes fixture ownership
 
 ## 9. Vertical Slices
 
-### Slice 1. [ ] Canonical manifest/writer support replaces duplicated interactive scene-controller fixture builders
+### Slice 1. [x] Canonical manifest/writer support replaces duplicated interactive scene-controller fixture builders
 
 #### Slice Contract
 Interactive scene-controller canonical scaffolds are owned by manifest/writer support under `test/tool/support/` instead of duplicated inline builders across the executable suite entrypoint or any `test/tool/guardrails/interactive_api/**` `part` file.
@@ -352,7 +352,7 @@ Interactive scene-controller canonical scaffolds are owned by manifest/writer su
 - Green run of the listed structural verification.
 - Duplicated inline `_sceneControllerFixture(...)` ownership is removed for canonical cases.
 
-### Slice 2. [ ] Controller committed-mutation and prepared-replace scaffolds converge on the manifest seam
+### Slice 2. [x] Controller committed-mutation and prepared-replace scaffolds converge on the manifest seam
 
 #### Slice Contract
 Canonical controller guardrail scaffolds use the same manifest/writer seam instead of suite-local large builders.
@@ -382,7 +382,7 @@ Canonical controller guardrail scaffolds use the same manifest/writer seam inste
 - Green run of the listed structural verification.
 - Canonical controller scaffold ownership lives in the manifest layer.
 
-### Slice 3. [ ] Shared public-facing and rule-inventory suites consume the normalized scaffold seam while the legacy seam remains migration-only
+### Slice 3. [x] Shared public-facing and rule-inventory suites consume the normalized scaffold seam while the legacy seam remains migration-only
 
 #### Slice Contract
 Shared public-facing and rule-inventory guardrail suites consume the normalized scaffold seam, and `guardrails_tool_test_support.dart` is reduced to migration-only responsibilities while downstream consumers are still being switched.
@@ -418,7 +418,7 @@ Shared public-facing and rule-inventory guardrail suites consume the normalized 
 - Green run of the listed structural verification.
 - `guardrails_public_surface_tool_test.dart`, `guardrails_public_signature_hermeticity_tool_test.dart`, and `guardrails_rule_inventory_tool_test.dart` no longer import `guardrails_tool_test_support.dart`.
 
-### Slice 4. [ ] Remaining guardrail architecture/layout suites adopt explicit successor seams
+### Slice 4. [x] Remaining guardrail architecture/layout suites adopt explicit successor seams
 
 #### Slice Contract
 Deleting `guardrails_tool_test_support.dart` no longer breaks the remaining guardrail architecture/layout suites because each migrates to an explicit successor seam instead of relying on implicit fallout from the file deletion.
@@ -455,7 +455,7 @@ Deleting `guardrails_tool_test_support.dart` no longer breaks the remaining guar
 - Green run of the listed structural verification.
 - Every pre-step contract/model/layout guardrail-suite importer of `guardrails_tool_test_support.dart` now imports only its locked successor seams.
 
-### Slice 5. [ ] Import-boundaries, verification-contract enforcement, and legacy-file retirement close together
+### Slice 5. [x] Import-boundaries, verification-contract enforcement, and legacy-file retirement close together
 
 #### Slice Contract
 Deleting `guardrails_tool_test_support.dart` no longer breaks non-guardrail tool suites or repository-local verification enforcement because both move to explicit successor seams first, and the legacy file is removed only after no runtime or enforcement consumer remains.

@@ -10,7 +10,7 @@ void _registerInteractiveArchitectureBoundaryViewAndGraphTests() {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -44,7 +44,7 @@ void _registerInteractiveArchitectureBoundaryViewAndGraphTests() {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -79,18 +79,13 @@ void _registerInteractiveArchitectureBoundaryViewAndGraphTests() {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          '''
-import '../contract/scene_view_runtime.dart';
-import 'internal/scene_controller_graph.dart';
-
-class SceneController {
+          sceneControllerFixture(
+            graphMembers: '''
   SceneController() : _graph = Object();
 
   final dynamic _graph;
-
-  Object get actions => sceneControllerGraphActions(_graph);
-  Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);
-
+''',
+            methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
   }
@@ -102,17 +97,8 @@ class SceneController {
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
-
-SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
-  return controller._graph.sceneViewRuntime;
-}
 ''',
+          ),
         );
 
         final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -142,18 +128,13 @@ SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          '''
-import '../contract/scene_view_runtime.dart';
-import 'internal/scene_controller_graph.dart';
-
-class SceneController {
+          sceneControllerFixture(
+            graphMembers: '''
   final dynamic _graph = createSceneControllerGraph(
     SceneControllerGraphRequest(),
   );
-
-  Object get actions => sceneControllerGraphActions(_graph);
-  Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);
-
+''',
+            methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
   }
@@ -165,19 +146,10 @@ class SceneController {
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
-
-Object createSceneControllerGraph(Object request) => Object();
-
-SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
-  return controller._graph.sceneViewRuntime;
-}
 ''',
+            extraDeclarations:
+                '\nObject createSceneControllerGraph(Object request) => Object();\n',
+          ),
         );
 
         final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -207,18 +179,13 @@ SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          '''
-import '../contract/scene_view_runtime.dart';
-import 'internal/scene_controller_graph.dart';
-
-class SceneController {
+          sceneControllerFixture(
+            graphMembers: '''
   final dynamic _graph = createSceneControllerGraph(
     SceneControllerGraphRequest(),
   );
-
-  Object get actions => sceneControllerGraphActions(_graph);
-  Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);
-
+''',
+            methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
   }
@@ -230,19 +197,9 @@ class SceneController {
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
-
-class SceneControllerGraphRequest {}
-
-SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
-  return controller._graph.sceneViewRuntime;
-}
 ''',
+            extraDeclarations: '\nclass SceneControllerGraphRequest {}\n',
+          ),
         );
 
         final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -281,19 +238,15 @@ Object createSceneControllerGraph(Object request) => Object();
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          '''
-import '../contract/scene_view_runtime.dart';
-import 'internal/scene_controller_graph.dart';
-import 'internal/scene_controller_graph_shadow.dart' as shadow;
-
-class SceneController {
+          sceneControllerFixture(
+            extraImports:
+                "import 'internal/scene_controller_graph_shadow.dart' as shadow;",
+            graphMembers: '''
   final dynamic _graph = shadow.createSceneControllerGraph(
     shadow.SceneControllerGraphRequest(),
   );
-
-  Object get actions => sceneControllerGraphActions(_graph);
-  Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);
-
+''',
+            methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
   }
@@ -305,17 +258,8 @@ class SceneController {
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
-
-SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
-  return controller._graph.sceneViewRuntime;
-}
 ''',
+          ),
         );
 
         final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -343,7 +287,7 @@ SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -455,20 +399,17 @@ Object sceneControllerGraphEditTextRequests(Object graph) => Object();
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          '''
-import '../contract/scene_view_runtime.dart';
-import 'internal/scene_controller_graph.dart';
-
-class SceneController implements SceneViewRenderState {
+          sceneControllerFixture(
+            classDeclaration:
+                'class SceneController implements SceneViewRenderState {',
+            graphMembers: '''
   SceneController() {
     _graph = createSceneControllerGraph(SceneControllerGraphRequest());
   }
 
   late final dynamic _graph;
-
-  Object get actions => sceneControllerGraphActions(_graph);
-  Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);
-
+''',
+            methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
   }
@@ -480,17 +421,8 @@ class SceneController implements SceneViewRenderState {
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
-
-  void _ensurePublicSideEffectAllowed(
-    String operation, {
-    bool allowAfterDispose = false,
-  }) {}
-}
-
-SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
-  return controller._graph.sceneViewRuntime;
-}
 ''',
+          ),
         );
 
         final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -520,7 +452,7 @@ SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller) {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');

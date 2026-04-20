@@ -11,7 +11,7 @@ void _registerInteractiveDisposeGuardTests() {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose');

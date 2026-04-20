@@ -11,7 +11,7 @@ void _registerInteractiveArchitectureBoundaryPointerHostAndPublicShellTests() {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -187,7 +187,7 @@ InteractiveRuntime _createInteractiveRuntime(
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -304,7 +304,7 @@ class _PendingTapFlushScheduler {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -407,7 +407,7 @@ class _MutationAccess {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           extraImports: "import 'dart:async';",
           extraMembers: '''
   final StreamController<Object> _actions = StreamController<Object>.broadcast();
@@ -458,7 +458,7 @@ class _MutationAccess {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -514,7 +514,7 @@ class InteractiveRuntime {}
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -579,7 +579,7 @@ class SceneViewInteractive extends StatelessWidget {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -661,7 +661,7 @@ class State<T> {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -718,7 +718,7 @@ class PointerSessionToken {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -774,7 +774,7 @@ final class PointerSessionToken {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -841,7 +841,7 @@ class InteractiveEventDispatcher {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');

@@ -11,7 +11,7 @@ void _registerInteractiveArchitectureBoundaryViewSurfaceAndRuntimeTests() {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -101,7 +101,7 @@ class State<T> {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -194,7 +194,7 @@ class State<T> {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -302,7 +302,7 @@ class SceneControllerSceneViewRenderState implements SceneViewRenderState {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -400,7 +400,7 @@ class SceneControllerSceneViewRenderState implements SceneViewRenderState {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -505,7 +505,7 @@ class SceneControllerSceneViewRenderState implements SceneViewRenderState {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -578,7 +578,7 @@ class _OwnerListenable {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -639,7 +639,7 @@ class InteractiveRuntime {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -685,7 +685,7 @@ class InteractiveRuntime {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');

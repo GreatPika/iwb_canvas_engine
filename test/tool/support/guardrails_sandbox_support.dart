@@ -1,38 +1,13 @@
 import 'dart:io';
 
-import 'package:test/test.dart';
-
 import '../../../tool/src/guardrails/rules/interactive/committed_read_callback_rules.dart';
-import 'public_entrypoint_contract.dart';
 import 'tool_process_test_support.dart';
-
-Matcher diagnostic({required String category, required String detail}) {
-  return allOf(contains('$category violation:'), contains(detail));
-}
 
 Future<Directory> createGuardrailsSandbox() {
   return createToolSandbox(
     tempPrefix: 'iwb_canvas_engine_guardrails_tool_test_',
     toolFiles: const <String>['tool/check_guardrails.dart', 'tool/src'],
   );
-}
-
-Future<Directory> createImportBoundariesSandbox() {
-  return createToolSandbox(
-    tempPrefix: 'iwb_canvas_engine_import_boundaries_tool_test_',
-    toolFiles: const <String>['tool/check_import_boundaries.dart', 'tool/src'],
-  );
-}
-
-void writeCanonicalPublicExportScaffold(Directory sandbox) {
-  writeSandboxFile(
-    sandbox,
-    'lib/iwb_canvas_engine.dart',
-    canonicalPublicEntrypoint(),
-  );
-  for (final filePath in canonicalPublicExportFiles) {
-    writeSandboxFile(sandbox, filePath, '// stub\n');
-  }
 }
 
 void writeMinimalControllerStore(Directory sandbox) {

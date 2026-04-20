@@ -11,7 +11,7 @@ void _registerInteractiveArchitectureBoundaryRuntimeAndDrawOwnershipTests() {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -134,7 +134,7 @@ class _Draw {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -203,7 +203,7 @@ class InteractiveRuntime {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -260,7 +260,7 @@ class InteractiveDrawCoordinator {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -331,7 +331,7 @@ class InteractiveDrawEraserEngine {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -387,7 +387,7 @@ void unregisterSceneControllerInternalAccess(Object controller) {}
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -432,7 +432,7 @@ void unregisterSceneControllerInternalAccess(Object controller) {}
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');

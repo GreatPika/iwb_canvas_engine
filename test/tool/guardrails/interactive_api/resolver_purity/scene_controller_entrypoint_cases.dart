@@ -12,7 +12,7 @@ void _registerInteractiveAcceptanceTests() {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             extraMembers: '\n  int get value => 1;\n',
             methods: '''
   void handlePointer() {
@@ -50,7 +50,7 @@ void _registerInteractiveAcceptanceTests() {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(
     int value,
@@ -90,7 +90,7 @@ void _registerInteractiveAcceptanceTests() {
       writeSandboxFile(
         sandbox,
         'lib/src/interactive/scene_controller.dart',
-        _sceneControllerFixture(
+        sceneControllerFixture(
           methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
@@ -174,7 +174,7 @@ void _registerInteractiveGuardViolationTests() {
         writeSandboxFile(
           sandbox,
           'lib/src/interactive/scene_controller.dart',
-          _sceneControllerFixture(
+          sceneControllerFixture(
             methods: '''
   void handlePointer() {
     print('missing guard');
