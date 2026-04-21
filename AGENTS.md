@@ -25,10 +25,11 @@ app UI, product workflows, or backend logic.
 ## Documentation hygiene
 
 - Public behavior changes must update:
-  - `README.md`
-  - `API_GUIDE.md`
-  - `ARCHITECTURE.md` when invariants, architecture, or module ownership change
-  - `CHANGELOG.md`
+  - `README.md` using `$readme-sync`
+  - `API_GUIDE.md` using `$api-guide-sync`
+  - `ARCHITECTURE.md` using `$architecture-sync` when invariants, architecture, or module ownership change
+  - `CHANGELOG.md` using `$changelog-sync`
+- Use `$change-contract` when adding a new step to `PLAN.md` or drafting a new step contract.
 - Documentation should stay release-ready: concise, current, and free of stale
   implementation detail.
 
