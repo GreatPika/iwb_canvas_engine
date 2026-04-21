@@ -8,26 +8,27 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 import '../test_support/interactive_controller_fixtures.dart';
 
 void main() {
-  group('SceneControllerInteractive unit', () {
+  group('SceneController unit', () {
     group('after dispose fail-fast matrix', () {
       // INV:INV-ENG-DISPOSE-FAIL-FAST
       final cases = <DisposeMatrixCase>[
         DisposeMatrixCase(
           name: 'setMode',
-          call: (controller) => controller.setMode(CanvasMode.draw),
+          call: (controller) => controller.interaction.setMode(CanvasMode.draw),
         ),
         DisposeMatrixCase(
           name: 'setDrawTool',
-          call: (controller) => controller.setDrawTool(DrawTool.line),
+          call: (controller) =>
+              controller.interaction.setDrawTool(DrawTool.line),
         ),
         DisposeMatrixCase(
           name: 'setDrawColor',
           call: (controller) =>
-              controller.setDrawColor(const Color(0xFF123456)),
+              controller.interaction.setDrawColor(const Color(0xFF123456)),
         ),
         DisposeMatrixCase(
           name: 'setPointerSettings',
-          call: (controller) => controller.setPointerSettings(
+          call: (controller) => controller.interaction.setPointerSettings(
             const PointerInputSettings(
               tapSlop: 9,
               doubleTapSlop: 18,
@@ -37,106 +38,109 @@ void main() {
         ),
         DisposeMatrixCase(
           name: 'setDragStartSlop',
-          call: (controller) => controller.setDragStartSlop(9),
+          call: (controller) => controller.interaction.setDragStartSlop(9),
         ),
         DisposeMatrixCase(
           name: 'set penThickness',
-          call: (controller) => controller.penThickness = 2,
+          call: (controller) => controller.interaction.penThickness = 2,
         ),
         DisposeMatrixCase(
           name: 'set highlighterThickness',
-          call: (controller) => controller.highlighterThickness = 3,
+          call: (controller) => controller.interaction.highlighterThickness = 3,
         ),
         DisposeMatrixCase(
           name: 'set lineThickness',
-          call: (controller) => controller.lineThickness = 4,
+          call: (controller) => controller.interaction.lineThickness = 4,
         ),
         DisposeMatrixCase(
           name: 'set eraserThickness',
-          call: (controller) => controller.eraserThickness = 5,
+          call: (controller) => controller.interaction.eraserThickness = 5,
         ),
         DisposeMatrixCase(
           name: 'set highlighterOpacity',
-          call: (controller) => controller.highlighterOpacity = 0.5,
+          call: (controller) => controller.interaction.highlighterOpacity = 0.5,
         ),
         DisposeMatrixCase(
           name: 'setBackgroundColor',
           call: (controller) =>
-              controller.setBackgroundColor(const Color(0xFF010203)),
+              controller.scene.setBackgroundColor(const Color(0xFF010203)),
         ),
         DisposeMatrixCase(
           name: 'setGridEnabled',
-          call: (controller) => controller.setGridEnabled(true),
+          call: (controller) => controller.scene.setGridEnabled(true),
         ),
         DisposeMatrixCase(
           name: 'setGridCellSize',
-          call: (controller) => controller.setGridCellSize(16),
+          call: (controller) => controller.scene.setGridCellSize(16),
         ),
         DisposeMatrixCase(
           name: 'setCameraOffset',
-          call: (controller) => controller.setCameraOffset(const Offset(4, 5)),
+          call: (controller) =>
+              controller.scene.setCameraOffset(const Offset(4, 5)),
         ),
         DisposeMatrixCase(
           name: 'addNode',
-          call: (controller) => controller.addNode(
+          call: (controller) => controller.scene.addNode(
             RectNodeSpec(id: 'added', size: const Size(10, 10)),
           ),
         ),
         DisposeMatrixCase(
           name: 'patchNode',
-          call: (controller) => controller.patchNode(
-            const RectNodePatch(
-              id: 'a',
-              size: PatchField<Size>.value(Size(30, 20)),
-            ),
+          call: (controller) => controller.scene.patchNode(
+            RectNodePatch(id: 'a', size: PatchField<Size>.value(Size(30, 20))),
           ),
         ),
         DisposeMatrixCase(
           name: 'removeNode',
-          call: (controller) => controller.removeNode('a'),
+          call: (controller) => controller.scene.removeNode('a'),
         ),
         DisposeMatrixCase(
           name: 'setSelection',
-          call: (controller) => controller.setSelection(const <NodeId>{'a'}),
+          call: (controller) =>
+              controller.selection.setSelection(const <NodeId>{'a'}),
         ),
         DisposeMatrixCase(
           name: 'toggleSelection',
-          call: (controller) => controller.toggleSelection('a'),
+          call: (controller) => controller.selection.toggleSelection('a'),
         ),
         DisposeMatrixCase(
           name: 'clearSelection',
-          call: (controller) => controller.clearSelection(),
+          call: (controller) => controller.selection.clearSelection(),
         ),
         DisposeMatrixCase(
           name: 'selectAll',
-          call: (controller) => controller.selectAll(onlySelectable: true),
+          call: (controller) =>
+              controller.selection.selectAll(onlySelectable: true),
         ),
         DisposeMatrixCase(
           name: 'rotateSelection',
-          call: (controller) =>
-              controller.rotateSelection(clockwise: true, timestampMs: 10),
+          call: (controller) => controller.selection.rotateSelection(
+            clockwise: true,
+            timestampMs: 10,
+          ),
         ),
         DisposeMatrixCase(
           name: 'flipSelectionVertical',
           call: (controller) =>
-              controller.flipSelectionVertical(timestampMs: 11),
+              controller.selection.flipSelectionVertical(timestampMs: 11),
         ),
         DisposeMatrixCase(
           name: 'flipSelectionHorizontal',
           call: (controller) =>
-              controller.flipSelectionHorizontal(timestampMs: 12),
+              controller.selection.flipSelectionHorizontal(timestampMs: 12),
         ),
         DisposeMatrixCase(
           name: 'deleteSelection',
-          call: (controller) => controller.deleteSelection(timestampMs: 13),
+          call: (controller) =>
+              controller.selection.deleteSelection(timestampMs: 13),
         ),
         DisposeMatrixCase(
           name: 'clearScene',
-          call: (controller) => controller.clearScene(timestampMs: 14),
+          call: (controller) => controller.scene.clearScene(timestampMs: 14),
         ),
         DisposeMatrixCase(
           name: 'replaceScene',
-          call: (controller) => controller.replaceScene(
+          call: (controller) => controller.scene.replaceScene(
             SceneSnapshot(
               layers: <ContentLayerSnapshot>[
                 ContentLayerSnapshot(id: 'layer-auto-0'),
@@ -152,17 +156,17 @@ void main() {
         ),
         DisposeMatrixCase(
           name: 'notifySceneChanged',
-          call: (controller) => controller.notifySceneChanged(),
+          call: (controller) => controller.scene.notifySceneChanged(),
         ),
         DisposeMatrixCase(
           name: 'write',
-          call: (controller) => controller.write<void>((writer) {
+          call: (controller) => controller.scene.write<void>((writer) {
             writer.writeSelectionClear();
           }),
         ),
         DisposeMatrixCase(
           name: 'handlePointer',
-          call: (controller) => controller.handlePointer(
+          call: (controller) => controller.interaction.handlePointer(
             sampleInput(
               pointerId: 42,
               position: const Offset(60, 60),
@@ -173,8 +177,9 @@ void main() {
         ),
         DisposeMatrixCase(
           name: 'handleDoubleTap',
-          call: (controller) =>
-              controller.handleDoubleTap(position: const Offset(60, 60)),
+          call: (controller) => controller.interaction.handleDoubleTap(
+            position: const Offset(60, 60),
+          ),
         ),
       ];
 
@@ -189,7 +194,6 @@ void main() {
             final textNode = TextNode(
               id: 'text',
               text: 'hello',
-              size: const Size(30, 20),
               color: const Color(0xFF000000),
             )..position = const Offset(60, 60);
             final controller = controllerFromScene(
@@ -204,7 +208,7 @@ void main() {
               ),
             );
 
-            controller.setSelection(const <NodeId>{'a', 'b'});
+            controller.selection.setSelection(const <NodeId>{'a', 'b'});
             final before = captureStableState(controller);
 
             final actions = <ActionCommitted>[];
@@ -234,7 +238,7 @@ void main() {
     });
 
     testWidgets('pending two-tap line expires after timeout', (tester) async {
-      final controller = SceneControllerInteractive(
+      final controller = SceneController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-2'),
@@ -244,9 +248,9 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.line);
-      controller.handlePointer(
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.line);
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(10, 10),
@@ -254,7 +258,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(10, 10),
@@ -263,9 +267,9 @@ void main() {
         ),
       );
 
-      expect(controller.hasPendingLineStart, isTrue);
+      expect(controller.interaction.hasPendingLineStart, isTrue);
       await tester.pump(const Duration(seconds: 11));
-      expect(controller.hasPendingLineStart, isFalse);
+      expect(controller.interaction.hasPendingLineStart, isFalse);
     });
 
     test(
@@ -285,13 +289,13 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.setSelection(const <String>{'n'});
+        controller.selection.setSelection(const <String>{'n'});
         expect(controller.selectedNodeIds, isNotEmpty);
-        controller.setMode(CanvasMode.draw);
+        controller.interaction.setMode(CanvasMode.draw);
         expect(controller.selectedNodeIds, isEmpty);
 
-        controller.setDrawTool(DrawTool.pen);
-        controller.handlePointer(
+        controller.interaction.setDrawTool(DrawTool.pen);
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(10, 10),
@@ -299,20 +303,26 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        expect(controller.activeStrokePreviewColor, controller.drawColor);
-
-        controller.setBackgroundColor(const Color(0xFF010203));
-        expect(controller.snapshot.background.color, const Color(0xFF010203));
-
-        controller.setCameraOffset(const Offset(3, 4));
-        expect(controller.snapshot.camera.offset, const Offset(3, 4));
+        expect(
+          controller.interaction.activeStrokePreviewColor,
+          controller.interaction.drawColor,
+        );
 
         expect(
-          controller.patchNode(
-            const RectNodePatch(
-              id: 'n',
-              size: PatchField<Size>.value(Size(20, 10)),
-            ),
+          () => controller.scene.setBackgroundColor(const Color(0xFF010203)),
+          throwsStateError,
+        );
+
+        controller.scene.setCameraOffset(const Offset(3, 4));
+        expect(controller.snapshot.camera.offset, const Offset(3, 4));
+        expect(controller.interaction.hasActiveStrokePreview, isFalse);
+
+        controller.scene.setBackgroundColor(const Color(0xFF010203));
+        expect(controller.snapshot.background.color, const Color(0xFF010203));
+
+        expect(
+          controller.scene.patchNode(
+            RectNodePatch(id: 'n', size: PatchField<Size>.value(Size(20, 10))),
           ),
           isTrue,
         );
@@ -357,10 +367,10 @@ void main() {
         final sub = controller.actions.listen(actions.add);
         addTearDown(sub.cancel);
 
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.eraser);
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.eraser);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 10,
             position: const Offset(10, 20),
@@ -368,7 +378,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 10,
             position: const Offset(30, 20),
@@ -376,7 +386,7 @@ void main() {
             phase: CanvasPointerPhase.move,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 10,
             position: const Offset(30, 20),
@@ -388,7 +398,7 @@ void main() {
         await pumpEventQueue();
         expect(actions.any((a) => a.type == ActionType.erase), isTrue);
 
-        controller.replaceScene(
+        controller.scene.replaceScene(
           SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-4'),
@@ -410,9 +420,9 @@ void main() {
             ],
           ),
         );
-        controller.setMode(CanvasMode.move);
+        controller.interaction.setMode(CanvasMode.move);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 20,
             position: const Offset(0, 0),
@@ -420,7 +430,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 20,
             position: const Offset(80, 80),
@@ -428,7 +438,7 @@ void main() {
             phase: CanvasPointerPhase.move,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 20,
             position: const Offset(80, 80),
@@ -437,7 +447,7 @@ void main() {
           ),
         );
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 21,
             position: const Offset(50, 50),
@@ -445,7 +455,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 21,
             position: const Offset(50, 50),

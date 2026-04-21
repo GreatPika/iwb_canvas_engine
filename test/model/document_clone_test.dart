@@ -1,9 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/path_fill_rule.dart';
+import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
-import 'package:iwb_canvas_engine/src/core/transform2d.dart';
 import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
 void main() {
@@ -34,7 +35,6 @@ void main() {
             TextNode(
               id: 'node-2',
               text: 'hello',
-              size: const Size(10, 5),
               fontSize: 12,
               color: const Color(0xFF111111),
               align: TextAlign.right,
@@ -96,6 +96,9 @@ void main() {
 
   test('txnCloneSceneShallow copies scene shell and shares layers/nodes', () {
     final source = sourceScene();
+    source.backgroundLayer = BackgroundLayer(
+      nodes: <SceneNode>[RectNode(id: 'bg-shell', size: const Size(20, 20))],
+    );
 
     final clone = txnCloneSceneShallow(source);
 
@@ -108,6 +111,7 @@ void main() {
       identical(clone.layers[1].nodes[0], source.layers[1].nodes[0]),
       isTrue,
     );
+    expect(clone.backgroundLayer, same(source.backgroundLayer));
 
     expect(clone.camera, isNot(same(source.camera)));
     expect(clone.background, isNot(same(source.background)));
@@ -135,36 +139,61 @@ void main() {
     },
   );
 
-  test('txnCloneScene deep clones scene, layers, nodes and mutable lists', () {
-    final source = sourceScene();
-    final sourceStrokeBeforeClone = source.layers[1].nodes[2] as StrokeNode;
-    sourceStrokeBeforeClone.points[0] = const Offset(-1, -1);
-    final clone = txnCloneScene(source);
+  test(
+    'txnCloneScene deep clones scene, layers, nodes and palette ownership',
+    () {
+      final source = sourceScene();
+      final sourceStrokeBeforeClone = source.layers[1].nodes[2] as StrokeNode;
+      sourceStrokeBeforeClone.replacePoints(const <Offset>[
+        Offset(-1, -1),
+        Offset(3, 4),
+      ]);
+      final clone = txnCloneScene(source);
 
-    expect(clone, isNot(same(source)));
-    expect(clone.layers, isNot(same(source.layers)));
-    expect(clone.layers.length, source.layers.length);
-    expect(clone.camera.offset, source.camera.offset);
-    expect(clone.background.grid.cellSize, 12);
-    expect(clone.palette.penColors, source.palette.penColors);
+      expect(clone, isNot(same(source)));
+      expect(clone.layers, isNot(same(source.layers)));
+      expect(clone.layers.length, source.layers.length);
+      expect(clone.camera.offset, source.camera.offset);
+      expect(clone.background.grid.cellSize, 12);
+      expect(clone.palette, isNot(same(source.palette)));
+      expect(clone.palette.penColors, isNot(same(source.palette.penColors)));
+      expect(clone.palette.penColors, source.palette.penColors);
+      expect(
+        () => clone.palette.penColors.add(const Color(0xFF999999)),
+        throwsUnsupportedError,
+      );
 
-    final sourceNode = source.layers[1].nodes[2] as StrokeNode;
-    final cloneNode = clone.layers[1].nodes[2] as StrokeNode;
-    expect(cloneNode, isNot(same(sourceNode)));
-    expect(cloneNode.points, isNot(same(sourceNode.points)));
-    expect(cloneNode.points, sourceNode.points);
-    expect(cloneNode.instanceRevision, sourceNode.instanceRevision);
-    expect(cloneNode.pointsRevision, sourceNode.pointsRevision);
-    expect(cloneNode.pointsRevision, greaterThan(0));
+      final sourceNode = source.layers[1].nodes[2] as StrokeNode;
+      final cloneNode = clone.layers[1].nodes[2] as StrokeNode;
+      expect(cloneNode, isNot(same(sourceNode)));
+      expect(cloneNode.points, isNot(same(sourceNode.points)));
+      expect(cloneNode.points, sourceNode.points);
+      expect(cloneNode.instanceRevision, sourceNode.instanceRevision);
+      expect(cloneNode.pointsRevision, sourceNode.pointsRevision);
+      expect(cloneNode.pointsRevision, greaterThan(0));
 
-    cloneNode.points.add(const Offset(99, 99));
-    expect(sourceNode.points.length, 2);
+      cloneNode.replacePoints(const <Offset>[
+        Offset(-1, -1),
+        Offset(3, 4),
+        Offset(99, 99),
+      ]);
+      expect(sourceNode.points.length, 2);
 
-    final cloneRect = clone.layers[1].nodes[4] as RectNode;
-    cloneRect.size = const Size(100, 200);
-    final sourceRect = source.layers[1].nodes[4] as RectNode;
-    expect(sourceRect.size, const Size(4, 6));
-  });
+      final cloneRect = clone.layers[1].nodes[4] as RectNode;
+      cloneRect.size = const Size(100, 200);
+      final sourceRect = source.layers[1].nodes[4] as RectNode;
+      expect(sourceRect.size, const Size(4, 6));
+
+      source.palette = ScenePalette(
+        penColors: <Color>[const Color(0xFF123456)],
+        backgroundColors: <Color>[const Color(0xFF654321)],
+        gridSizes: <double>[48],
+      );
+      expect(clone.palette.penColors, <Color>[const Color(0xFF000001)]);
+      expect(clone.palette.backgroundColors, <Color>[const Color(0xFF000002)]);
+      expect(clone.palette.gridSizes, <double>[12, 24]);
+    },
+  );
 
   test('txnCloneContentLayer and txnCloneNode keep node type fidelity', () {
     final source = sourceScene();
@@ -190,31 +219,53 @@ void main() {
         RectNode(id: 'bg-node-2', size: const Size(10, 10)),
       ],
     );
+    final sourceBackgroundLayer = source.backgroundLayer;
+    if (sourceBackgroundLayer == null) {
+      fail('Expected source background layer.');
+    }
 
-    final shallow = txnCloneBackgroundLayerShallow(source.backgroundLayer!);
-    final deep = txnCloneBackgroundLayer(source.backgroundLayer!);
+    final shallowSceneClone = txnCloneSceneShallow(source);
+    final shallow = txnCloneBackgroundLayerShallow(sourceBackgroundLayer);
+    final deep = txnCloneBackgroundLayer(sourceBackgroundLayer);
     final sceneClone = txnCloneScene(source);
 
-    expect(shallow, isNot(same(source.backgroundLayer)));
-    expect(shallow.nodes, isNot(same(source.backgroundLayer!.nodes)));
+    expect(shallowSceneClone.backgroundLayer, same(sourceBackgroundLayer));
+    final shallowSceneBackgroundLayer = shallowSceneClone.backgroundLayer;
+    if (shallowSceneBackgroundLayer == null) {
+      fail('Expected shallow scene clone background layer.');
+    }
     expect(
-      identical(shallow.nodes.first, source.backgroundLayer!.nodes.first),
+      identical(
+        shallowSceneBackgroundLayer.nodes.first,
+        sourceBackgroundLayer.nodes.first,
+      ),
       isTrue,
     );
 
-    expect(deep, isNot(same(source.backgroundLayer)));
-    expect(deep.nodes, isNot(same(source.backgroundLayer!.nodes)));
+    expect(shallow, isNot(same(sourceBackgroundLayer)));
+    expect(shallow.nodes, isNot(same(sourceBackgroundLayer.nodes)));
     expect(
-      identical(deep.nodes.first, source.backgroundLayer!.nodes.first),
+      identical(shallow.nodes.first, sourceBackgroundLayer.nodes.first),
+      isTrue,
+    );
+
+    expect(deep, isNot(same(sourceBackgroundLayer)));
+    expect(deep.nodes, isNot(same(sourceBackgroundLayer.nodes)));
+    expect(
+      identical(deep.nodes.first, sourceBackgroundLayer.nodes.first),
       isFalse,
     );
 
     expect(sceneClone.backgroundLayer, isNotNull);
-    expect(sceneClone.backgroundLayer, isNot(same(source.backgroundLayer)));
+    expect(sceneClone.backgroundLayer, isNot(same(sourceBackgroundLayer)));
+    final clonedBackgroundLayer = sceneClone.backgroundLayer;
+    if (clonedBackgroundLayer == null) {
+      fail('Expected scene clone background layer.');
+    }
     expect(
       identical(
-        sceneClone.backgroundLayer!.nodes.first,
-        source.backgroundLayer!.nodes.first,
+        clonedBackgroundLayer.nodes.first,
+        sourceBackgroundLayer.nodes.first,
       ),
       isFalse,
     );
@@ -241,47 +292,4 @@ void main() {
     final ids = txnCollectLayerIds(sourceScene());
     expect(ids, {'layer-auto-0', 'layer-auto-1'});
   });
-
-  test(
-    'txnInitialNodeIdSeed finds max numeric node-* id and ignores invalid ids',
-    () {
-      final scene = sourceScene();
-      scene.layers[1].nodes.add(
-        RectNode(id: 'node-10', size: const Size(1, 1)),
-      );
-      scene.layers[1].nodes.add(
-        RectNode(id: 'node--1', size: const Size(1, 1)),
-      );
-      scene.layers[1].nodes.add(
-        RectNode(id: 'node-abc', size: const Size(1, 1)),
-      );
-      scene.layers[1].nodes.add(RectNode(id: 'node-', size: const Size(1, 1)));
-      scene.layers[1].nodes.add(
-        RectNode(id: 'plain-id', size: const Size(1, 1)),
-      );
-
-      expect(txnInitialNodeIdSeed(scene), 11);
-      expect(txnInitialNodeIdSeed(Scene()), 0);
-    },
-  );
-
-  test(
-    'txnInitialNodeInstanceRevisionSeed finds max instanceRevision and keeps min 1',
-    () {
-      final scene = Scene(
-        layers: <ContentLayer>[
-          ContentLayer(
-            id: 'layer-auto-4',
-            nodes: <SceneNode>[
-              RectNode(id: 'a', size: const Size(1, 1), instanceRevision: 3),
-              RectNode(id: 'b', size: const Size(1, 1), instanceRevision: 10),
-            ],
-          ),
-        ],
-      );
-
-      expect(txnInitialNodeInstanceRevisionSeed(scene), 11);
-      expect(txnInitialNodeInstanceRevisionSeed(Scene()), 1);
-    },
-  );
 }

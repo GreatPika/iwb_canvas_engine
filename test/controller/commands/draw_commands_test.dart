@@ -3,17 +3,17 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
-import '../../utils/scene_invariants.dart';
+import '../support/scene_snapshot_invariant_assertions.dart';
 
-SceneControllerCore buildController() {
-  return SceneControllerCore(
+SceneStoreController buildController() {
+  return SceneStoreController(
     initialSnapshot: SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
           id: 'layer-auto-0',
-          nodes: const <NodeSnapshot>[
+          nodes: <NodeSnapshot>[
             RectNodeSnapshot(id: 'base', size: Size(20, 10)),
           ],
         ),
@@ -22,7 +22,7 @@ SceneControllerCore buildController() {
   );
 }
 
-void assertControllerInvariants(SceneControllerCore controller) {
+void assertControllerInvariants(SceneStoreController controller) {
   assertSceneInvariants(
     controller.snapshot,
     selectedNodeIds: controller.selectedNodeIds,
@@ -46,8 +46,7 @@ void main() {
       color: const Color(0xFF000000),
     );
     final lineId = controller.draw.writeDrawLine(
-      start: const Offset(0, 0),
-      end: const Offset(0, 10),
+      segment: (start: const Offset(0, 0), end: const Offset(0, 10)),
       thickness: 3,
       color: const Color(0xFF111111),
     );
@@ -117,6 +116,28 @@ void main() {
     assertControllerInvariants(controller);
   });
 
+  test('draw erase no-op emits no signal and keeps commit revision', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    final initialRevision = controller.debug.currentCommitRevision;
+    final signalTypes = <String>[];
+    final sub = controller.signals.listen((signal) {
+      signalTypes.add(signal.type);
+    });
+    addTearDown(sub.cancel);
+
+    final removedCount = controller.draw.writeEraseNodes(const <NodeId>{
+      'missing',
+    });
+    await pumpEventQueue();
+
+    expect(removedCount, 0);
+    expect(signalTypes, isNot(contains('draw.erase')));
+    expect(controller.debug.currentCommitRevision, initialRevision);
+    assertControllerInvariants(controller);
+  });
+
   test('draw stroke resamples when exceeds max points', () async {
     final controller = buildController();
     addTearDown(controller.dispose);
@@ -155,14 +176,39 @@ void main() {
 
     expect(
       () => controller.draw.writeDrawLine(
-        start: const Offset(0, 0),
-        end: const Offset(10, 10),
+        segment: (start: const Offset(0, 0), end: const Offset(10, 10)),
         thickness: 0,
         color: const Color(0xFF000000),
       ),
       throwsArgumentError,
     );
     await pumpEventQueue();
+    assertControllerInvariants(controller);
+  });
+
+  test('draw line from world segment keeps centered local geometry', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    final lineId = controller.draw.writeDrawLineFromWorldSegment(
+      start: const Offset(10, 20),
+      end: const Offset(50, 40),
+      thickness: 3,
+      color: const Color(0xFF112233),
+    );
+    await pumpEventQueue();
+
+    final line = controller.snapshot.layers
+        .expand((layer) => layer.nodes)
+        .whereType<LineNodeSnapshot>()
+        .firstWhere((node) => node.id == lineId);
+
+    expect(line.start, const Offset(-20, -10));
+    expect(line.end, const Offset(20, 10));
+    expect(line.transform.tx, 30);
+    expect(line.transform.ty, 30);
+    expect(line.transform.applyToPoint(line.start), const Offset(10, 20));
+    expect(line.transform.applyToPoint(line.end), const Offset(50, 40));
     assertControllerInvariants(controller);
   });
 }

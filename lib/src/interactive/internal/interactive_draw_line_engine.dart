@@ -3,17 +3,49 @@ import 'dart:ui';
 
 import '../../core/action_events.dart';
 import '../../core/input_sampling.dart';
-import '../../core/interaction_types.dart';
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
+import 'interactive_draw_action_emitter.dart';
+import 'interactive_draw_style.dart';
+import 'pointer_session_token.dart';
+
+typedef InteractiveDrawLineUp = ({
+  int timestampMs,
+  Offset scenePoint,
+  Offset? downScene,
+  bool moved,
+  double dragStartSlop,
+  InteractiveDrawStyle? capturedStyle,
+  PointerSessionToken? sessionToken,
+});
+
+final class _PendingLineState {
+  _PendingLineState({
+    required this.start,
+    required this.timestampMs,
+    required this.capturedStyle,
+    required this.sessionToken,
+    required this.timeoutTimer,
+  });
+
+  final Offset start;
+  final int timestampMs;
+  final InteractiveDrawStyle capturedStyle;
+  final PointerSessionToken? sessionToken;
+  final Timer timeoutTimer;
+
+  void dispose() {
+    timeoutTimer.cancel();
+  }
+}
 
 class InteractiveDrawLineEngineCallbacks {
   const InteractiveDrawLineEngineCallbacks({
-    required this.onStateChanged,
+    required this.onOverlayStateChanged,
     required this.emitAction,
-    required this.writeDrawLineFromWorldSegment,
+    required this.commitDrawLineFromWorldSegment,
   });
 
-  final VoidCallback onStateChanged;
+  final VoidCallback onOverlayStateChanged;
   final void Function(
     ActionType type,
     List<NodeId> nodeIds,
@@ -21,27 +53,34 @@ class InteractiveDrawLineEngineCallbacks {
     Map<String, Object?>? payload,
   })
   emitAction;
-  final NodeId Function({required Offset start, required Offset end})
-  writeDrawLineFromWorldSegment;
+  final NodeId Function({
+    required Offset start,
+    required Offset end,
+    required double thickness,
+    required Color color,
+    required double opacity,
+  })
+  commitDrawLineFromWorldSegment;
 }
 
 class InteractiveDrawLineEngine {
   InteractiveDrawLineEngine({required this.callbacks});
 
   final InteractiveDrawLineEngineCallbacks callbacks;
+  late final InteractiveDrawActionEmitter _actionEmitter =
+      InteractiveDrawActionEmitter(emitAction: callbacks.emitAction);
 
   Offset? _activeLinePreviewStart;
   Offset? _activeLinePreviewEnd;
 
-  Offset? _pendingLineStart;
-  int? _pendingLineTimestampMs;
-  Timer? _pendingLineTimer;
+  _PendingLineState? _pendingLine;
 
   static const Duration _pendingLineTimeout = Duration(seconds: 10);
 
-  Offset? get pendingLineStart => _pendingLineStart;
-  int? get pendingLineTimestampMs => _pendingLineTimestampMs;
-  bool get hasPendingLineStart => _pendingLineStart != null;
+  Offset? get pendingLineStart => _pendingLine?.start;
+  int? get pendingLineTimestampMs => _pendingLine?.timestampMs;
+  bool get hasPendingLineStart => _pendingLine != null;
+  InteractiveDrawStyle? get pendingLineStyle => _pendingLine?.capturedStyle;
 
   Offset? get activeLinePreviewStart => _activeLinePreviewStart;
   Offset? get activeLinePreviewEnd => _activeLinePreviewEnd;
@@ -50,13 +89,30 @@ class InteractiveDrawLineEngine {
     _setActiveLinePreview(null, null);
   }
 
-  void clearPendingLine() {
-    _setPendingLineStart(null, null);
+  void resetOwnedState() {
+    resetGestureState();
+    _clearPendingLine();
+  }
+
+  void _clearPendingLine() {
+    _setPendingLine(null);
+  }
+
+  bool clearPendingLineOwnedBy(PointerSessionToken? sessionToken) {
+    final pendingLine = _pendingLine;
+    if (pendingLine == null || pendingLine.sessionToken != sessionToken) {
+      return false;
+    }
+    _clearPendingLine();
+    return true;
+  }
+
+  bool detachPendingLine(PointerSessionToken token) {
+    return clearPendingLineOwnedBy(token);
   }
 
   void dispose() {
-    _pendingLineTimer?.cancel();
-    _pendingLineTimer = null;
+    resetOwnedState();
   }
 
   void handleDown() {
@@ -67,6 +123,7 @@ class InteractiveDrawLineEngine {
     Offset scenePoint, {
     required Offset? downScene,
     required bool moved,
+    required PointerSessionToken? sessionToken,
     required double dragStartSlop,
   }) {
     if (downScene == null) return moved;
@@ -74,67 +131,91 @@ class InteractiveDrawLineEngine {
       return moved;
     }
     final didMove = true;
-    if (_pendingLineStart != null) {
-      clearPendingLine();
-    }
+    clearPendingLineOwnedBy(sessionToken);
     _setActiveLinePreview(downScene, scenePoint);
-    callbacks.onStateChanged();
     return didMove;
   }
 
-  void commitOnUp(
-    int timestampMs,
-    Offset scenePoint, {
-    required Offset? downScene,
-    required bool moved,
-    required DrawTool drawTool,
-    required Color drawColor,
-    required double lineThickness,
-    required double dragStartSlop,
-  }) {
-    final down = downScene;
-    if (down == null) return;
+  void commitOnUp(InteractiveDrawLineUp interaction) {
+    final down = interaction.downScene;
+    final capturedStyle = interaction.capturedStyle;
+    if (down == null || capturedStyle == null) return;
 
-    final isTap = isDistanceAtMost(down, scenePoint, dragStartSlop);
-    if (!isTap || moved) {
-      final lineId = callbacks.writeDrawLineFromWorldSegment(
-        start: down,
-        end: scenePoint,
-      );
-      callbacks.emitAction(
-        ActionType.drawLine,
-        <NodeId>[lineId],
-        timestampMs,
-        payload: <String, Object?>{
-          'tool': drawTool.name,
-          'color': drawColor.toARGB32(),
-          'thickness': lineThickness,
-        },
-      );
-      clearPendingLine();
-      return;
-    }
-
-    if (_pendingLineStart == null) {
-      _setPendingLineStart(scenePoint, timestampMs);
-      return;
-    }
-
-    final start = _pendingLineStart!;
-    clearPendingLine();
-    final lineId = callbacks.writeDrawLineFromWorldSegment(
-      start: start,
-      end: scenePoint,
+    final isTap = isDistanceAtMost(
+      down,
+      interaction.scenePoint,
+      interaction.dragStartSlop,
     );
-    callbacks.emitAction(
-      ActionType.drawLine,
-      <NodeId>[lineId],
-      timestampMs,
-      payload: <String, Object?>{
-        'tool': drawTool.name,
-        'color': drawColor.toARGB32(),
-        'thickness': lineThickness,
-      },
+    if (!isTap || interaction.moved) {
+      _commitDraggedLine(interaction, down: down, style: capturedStyle);
+      return;
+    }
+
+    final pendingLine = _pendingLine;
+    if (pendingLine == null) {
+      _setPendingLine(
+        _createPendingLine(
+          start: interaction.scenePoint,
+          timestampMs: interaction.timestampMs,
+          capturedStyle: capturedStyle,
+          sessionToken: interaction.sessionToken,
+        ),
+      );
+      return;
+    }
+
+    if (pendingLine.sessionToken != interaction.sessionToken) {
+      _setPendingLine(
+        _createPendingLine(
+          start: interaction.scenePoint,
+          timestampMs: interaction.timestampMs,
+          capturedStyle: capturedStyle,
+          sessionToken: interaction.sessionToken,
+        ),
+      );
+      return;
+    }
+
+    _clearPendingLine();
+    _emitLineCommit(
+      timestampMs: interaction.timestampMs,
+      start: pendingLine.start,
+      end: interaction.scenePoint,
+      style: pendingLine.capturedStyle,
+    );
+  }
+
+  void _commitDraggedLine(
+    InteractiveDrawLineUp interaction, {
+    required Offset down,
+    required InteractiveDrawStyle style,
+  }) {
+    _emitLineCommit(
+      timestampMs: interaction.timestampMs,
+      start: down,
+      end: interaction.scenePoint,
+      style: style,
+    );
+    clearPendingLineOwnedBy(interaction.sessionToken);
+  }
+
+  void _emitLineCommit({
+    required int timestampMs,
+    required Offset start,
+    required Offset end,
+    required InteractiveDrawStyle style,
+  }) {
+    final lineId = callbacks.commitDrawLineFromWorldSegment(
+      start: start,
+      end: end,
+      thickness: style.lineThickness,
+      color: style.drawColor,
+      opacity: 1,
+    );
+    _actionEmitter.emitLineCommit(
+      nodeId: lineId,
+      timestampMs: timestampMs,
+      style: style,
     );
   }
 
@@ -144,20 +225,37 @@ class InteractiveDrawLineEngine {
     }
     _activeLinePreviewStart = start;
     _activeLinePreviewEnd = end;
-    callbacks.onStateChanged();
+    callbacks.onOverlayStateChanged();
   }
 
-  void _setPendingLineStart(Offset? start, int? timestampMs) {
-    if (_pendingLineStart == start && _pendingLineTimestampMs == timestampMs) {
+  _PendingLineState _createPendingLine({
+    required Offset start,
+    required int timestampMs,
+    required InteractiveDrawStyle capturedStyle,
+    required PointerSessionToken? sessionToken,
+  }) {
+    late final _PendingLineState pendingLine;
+    final timeoutTimer = Timer(_pendingLineTimeout, () {
+      if (identical(_pendingLine, pendingLine)) {
+        _clearPendingLine();
+      }
+    });
+    pendingLine = _PendingLineState(
+      start: start,
+      timestampMs: timestampMs,
+      capturedStyle: capturedStyle,
+      sessionToken: sessionToken,
+      timeoutTimer: timeoutTimer,
+    );
+    return pendingLine;
+  }
+
+  void _setPendingLine(_PendingLineState? pendingLine) {
+    if (_pendingLine == pendingLine) {
       return;
     }
-    _pendingLineTimer?.cancel();
-    _pendingLineTimer = null;
-    _pendingLineStart = start;
-    _pendingLineTimestampMs = timestampMs;
-    if (_pendingLineStart != null) {
-      _pendingLineTimer = Timer(_pendingLineTimeout, clearPendingLine);
-    }
-    callbacks.onStateChanged();
+    _pendingLine?.dispose();
+    _pendingLine = pendingLine;
+    callbacks.onOverlayStateChanged();
   }
 }

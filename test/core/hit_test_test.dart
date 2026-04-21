@@ -1,10 +1,12 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
+import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/core/hit_test.dart';
+import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
-import 'package:iwb_canvas_engine/src/core/transform2d.dart';
 
 // INV:INV-G-LAYER-Z-ORDER-BY-LIST
 
@@ -44,7 +46,7 @@ void main() {
         const Offset(0, 0),
         const <Offset>[Offset(0, 0)],
         2,
-        hitPadding: 1,
+        options: const StrokeHitOptions(hitPadding: 1),
       ),
       isTrue,
     );
@@ -58,10 +60,10 @@ void main() {
   });
 
   test('candidate bounds inflate sanitized world bounds', () {
-    final node = RectNode(
+    final node = _RawTransformRectNode(
       id: 'r',
       size: const Size(10, 10),
-      transform: const Transform2D(
+      rawTransform: const Transform2D(
         a: 1,
         b: 0,
         c: 0,
@@ -73,16 +75,43 @@ void main() {
     expect(nodeHitTestCandidateBoundsWorld(node), Rect.zero.inflate(kHitSlop));
   });
 
+  test(
+    'snapshot hit-test facade delegates to shared snapshot geometry owner',
+    () {
+      final rect = RectNodeSnapshot(
+        id: 'rect-snapshot',
+        size: const Size(20, 20),
+        transform: Transform2D.translation(const Offset(10, 10)),
+      );
+      expect(hitTestNodeSnapshot(const Offset(10, 10), rect), isTrue);
+      expect(hitTestNodeSnapshot(const Offset(50, 50), rect), isFalse);
+      expect(
+        nodeSnapshotHitTestCandidateBoundsWorld(rect),
+        nodeSnapshotGeometryCandidateBoundsWorld(rect),
+      );
+
+      final path = PathNodeSnapshot(
+        id: 'path-snapshot',
+        svgPathData: 'M0 0 H10 V10 H0 Z',
+        fillColor: const Color(0xFF00FF00),
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: 2,
+        transform: Transform2D.translation(const Offset(40, 10)),
+      );
+      expect(hitTestNodeSnapshot(const Offset(40, 10), path), isTrue);
+    },
+  );
+
   test('hitTestNode handles basic node types and guards', () {
     final rect = RectNode(id: 'rect', size: const Size(20, 20))
       ..position = const Offset(10, 10)
       ..hitPadding = 0;
     expect(hitTestNode(const Offset(10, 10), rect), isTrue);
 
-    final singularRect = RectNode(
+    final singularRect = _RawTransformRectNode(
       id: 'rect2',
       size: const Size(10, 10),
-      transform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 5, ty: 5),
+      rawTransform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 5, ty: 5),
     );
     expect(hitTestNode(const Offset(5, 5), singularRect), isTrue);
 
@@ -95,13 +124,13 @@ void main() {
     )..position = const Offset(20, 20);
     expect(hitTestNode(const Offset(20, 20), line), isTrue);
 
-    final singularLine = LineNode(
+    final singularLine = _RawTransformLineNode(
       id: 'line2',
       start: const Offset(0, 0),
       end: const Offset(1, 0),
       thickness: 1,
       color: const Color(0xFF000000),
-      transform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 30, ty: 30),
+      rawTransform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 30, ty: 30),
     );
     expect(hitTestNode(const Offset(30, 30), singularLine), isTrue);
 
@@ -121,12 +150,12 @@ void main() {
     )..position = const Offset(50, 50);
     expect(hitTestNode(const Offset(50, 50), singlePointStroke), isTrue);
 
-    final singularStroke = StrokeNode(
+    final singularStroke = _RawTransformStrokeNode(
       id: 'stroke-singular',
       points: const <Offset>[Offset(0, 0), Offset(2, 0)],
       thickness: 2,
       color: const Color(0xFF000000),
-      transform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 60, ty: 60),
+      rawTransform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 60, ty: 60),
     );
     expect(hitTestNode(const Offset(60, 60), singularStroke), isTrue);
 
@@ -138,12 +167,8 @@ void main() {
     );
     expect(hitTestNode(Offset.zero, emptyStroke), isFalse);
 
-    final text = TextNode(
-      id: 'text',
-      text: 'x',
-      size: const Size(20, 10),
-      color: const Color(0xFF000000),
-    )..position = const Offset(70, 70);
+    final text = TextNode(id: 'text', text: 'x', color: const Color(0xFF000000))
+      ..position = const Offset(70, 70);
     expect(hitTestNode(const Offset(70, 70), text), isTrue);
 
     text.isVisible = false;
@@ -178,12 +203,12 @@ void main() {
     );
     expect(hitTestNode(Offset.zero, noStroke), isFalse);
 
-    final singular = PathNode(
+    final singular = _RawTransformPathNode(
       id: 'p4',
       svgPathData: 'M0 0 H10',
       strokeColor: const Color(0xFF000000),
       strokeWidth: 2,
-      transform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0),
+      rawTransform: const Transform2D(a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0),
     );
     expect(hitTestNode(Offset.zero, singular), isTrue);
     expect(hitTestNode(const Offset(10, 0), singular), isFalse);
@@ -231,6 +256,51 @@ void main() {
     expect(hitTestNode(const Offset(4990, 30), longMetricPath), isFalse);
   });
 
+  test('hitTestNode stays aligned with shared runtime geometry owner', () {
+    final nodes = <SceneNode>[
+      RectNode(id: 'rect-owner', size: const Size(20, 20))
+        ..position = const Offset(10, 10),
+      LineNode(
+        id: 'line-owner',
+        start: const Offset(-5, 0),
+        end: const Offset(5, 0),
+        thickness: 2,
+        color: const Color(0xFF000000),
+      )..position = const Offset(30, 10),
+      StrokeNode(
+        id: 'stroke-owner',
+        points: const <Offset>[Offset(-5, 0), Offset(5, 0)],
+        thickness: 2,
+        color: const Color(0xFF000000),
+      )..position = const Offset(50, 10),
+      PathNode(
+        id: 'path-owner',
+        svgPathData: 'M0 0 H10 V10 H0 Z',
+        fillColor: const Color(0xFF00FF00),
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: 2,
+        transform: Transform2D.translation(const Offset(70, 10)),
+      ),
+    ];
+    final hitPoints = <Offset>[
+      const Offset(10, 10),
+      const Offset(30, 10),
+      const Offset(50, 10),
+      const Offset(70, 10),
+    ];
+
+    for (var i = 0; i < nodes.length; i++) {
+      expect(
+        hitTestNode(hitPoints[i], nodes[i]),
+        nodeGeometryHitTest(hitPoints[i], nodes[i]),
+      );
+      expect(
+        nodeHitTestCandidateBoundsWorld(nodes[i]),
+        nodeGeometryCandidateBoundsWorld(nodes[i]),
+      );
+    }
+  });
+
   test(
     'hitTestTopNode resolves top-most selectable node and skips background',
     () {
@@ -253,4 +323,63 @@ void main() {
       expect(hitTestTopNode(scene, const Offset(500, 500)), isNull);
     },
   );
+}
+
+final class _RawTransformRectNode extends RectNode {
+  _RawTransformRectNode({
+    required super.id,
+    required super.size,
+    required Transform2D rawTransform,
+  }) : _rawTransform = rawTransform;
+
+  final Transform2D _rawTransform;
+
+  @override
+  Transform2D get transform => _rawTransform;
+}
+
+final class _RawTransformLineNode extends LineNode {
+  _RawTransformLineNode({
+    required super.id,
+    required super.start,
+    required super.end,
+    required super.thickness,
+    required super.color,
+    required Transform2D rawTransform,
+  }) : _rawTransform = rawTransform;
+
+  final Transform2D _rawTransform;
+
+  @override
+  Transform2D get transform => _rawTransform;
+}
+
+final class _RawTransformStrokeNode extends StrokeNode {
+  _RawTransformStrokeNode({
+    required super.id,
+    required super.points,
+    required super.thickness,
+    required super.color,
+    required Transform2D rawTransform,
+  }) : _rawTransform = rawTransform;
+
+  final Transform2D _rawTransform;
+
+  @override
+  Transform2D get transform => _rawTransform;
+}
+
+final class _RawTransformPathNode extends PathNode {
+  _RawTransformPathNode({
+    required super.id,
+    required super.svgPathData,
+    super.strokeColor,
+    super.strokeWidth,
+    required Transform2D rawTransform,
+  }) : _rawTransform = rawTransform;
+
+  final Transform2D _rawTransform;
+
+  @override
+  Transform2D get transform => _rawTransform;
 }

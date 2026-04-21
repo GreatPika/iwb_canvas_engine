@@ -2,13 +2,44 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
+import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
+    show kMaxContentLayersPerScene, kMaxImageIdLength, kMaxNodesPerScene;
 import 'package:iwb_canvas_engine/src/model/document.dart';
 
 // INV:INV-ENG-TEXT-SIZE-DERIVED
+// INV:INV-ENG-RUNTIME-NODE-VALUE-OWNERS
 
 void main() {
+  SceneSnapshot duplicateNodeSnapshotFromInternalBypass() {
+    return materializeSceneSnapshot(
+      sceneSnapshotBackingFromValidated(
+        layers: <ContentLayerSnapshotBacking>[
+          contentLayerSnapshotBackingFromValidated(
+            id: 'layer-auto-5',
+            nodes: <NodeSnapshotBacking>[
+              nodeSnapshotBackingOf(
+                RectNodeSnapshot(id: 'dup', size: const Size(1, 1)),
+              ),
+            ],
+          ),
+          contentLayerSnapshotBackingFromValidated(
+            id: 'layer-auto-6',
+            nodes: <NodeSnapshotBacking>[
+              nodeSnapshotBackingOf(
+                RectNodeSnapshot(id: 'dup', size: const Size(2, 2)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // INV:INV-ENG-PALETTE-RUNTIME-VALUE-OWNER
   Scene sceneWithAllNodeTypes() {
     return Scene(
       layers: <ContentLayer>[
@@ -27,7 +58,6 @@ void main() {
             TextNode(
               id: 'txt',
               text: 'hello',
-              size: const Size(30, 12),
               fontSize: 14,
               color: const Color(0xFF123456),
               align: TextAlign.center,
@@ -99,7 +129,7 @@ void main() {
   test('scene <-> snapshot conversion preserves node variants', () {
     final scene = sceneWithAllNodeTypes();
     final stroke = scene.layers[1].nodes[2] as StrokeNode;
-    stroke.points[0] = const Offset(-1, -1);
+    stroke.replacePoints(const <Offset>[Offset(-1, -1), Offset(3, 4)]);
     final snapshot = txnSceneToSnapshot(scene);
     final restored = txnSceneFromSnapshot(snapshot);
 
@@ -117,72 +147,117 @@ void main() {
     expect(nodes[5], isA<PathNode>());
     expect((nodes[5] as PathNode).fillRule, PathFillRule.evenOdd);
     expect(
-      (snapshot.layers[1].nodes[2] as StrokeNodeSnapshot).pointsRevision,
-      1,
+      (snapshot.layers[1].nodes[2] as StrokeNodeSnapshot).points,
+      const <Offset>[Offset(-1, -1), Offset(3, 4)],
     );
-    expect((nodes[2] as StrokeNode).pointsRevision, 1);
+    expect((nodes[2] as StrokeNode).pointsRevision, 0);
   });
 
-  test('txnSceneFromSnapshot rejects negative stroke pointsRevision', () {
-    expect(
-      () => txnSceneFromSnapshot(
-        SceneSnapshot(
+  test('txnNodeToSnapshot delegates node conversion through shared owner', () {
+    final node = RectNode(
+      id: 'rect-direct',
+      size: const Size(12, 9),
+      fillColor: const Color(0xFFEEEEEE),
+      strokeColor: const Color(0xFF222222),
+      strokeWidth: 1.5,
+      opacity: 0.5,
+      hitPadding: 0.3,
+    );
+
+    final snapshot = txnNodeToSnapshot(node);
+
+    expect(snapshot, isA<RectNodeSnapshot>());
+    final rectSnapshot = snapshot as RectNodeSnapshot;
+    expect(rectSnapshot.id, 'rect-direct');
+    expect(rectSnapshot.size, const Size(12, 9));
+    expect(rectSnapshot.fillColor, const Color(0xFFEEEEEE));
+    expect(rectSnapshot.strokeColor, const Color(0xFF222222));
+    expect(rectSnapshot.strokeWidth, 1.5);
+    expect(rectSnapshot.opacity, 0.5);
+    expect(rectSnapshot.hitPadding, 0.3);
+  });
+
+  test(
+    'txnSceneFromSnapshot materializes runtime stroke revision from defaults',
+    () {
+      final scene = txnSceneFromSnapshot(
+        sceneSnapshotFromValidated(
           layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(
+            contentLayerSnapshotFromValidated(
               id: 'layer-auto-0',
               nodes: <NodeSnapshot>[
-                StrokeNodeSnapshot(
-                  id: 's',
-                  points: const <Offset>[Offset(0, 0), Offset(1, 1)],
-                  pointsRevision: -1,
-                  thickness: 1,
-                  color: const Color(0xFF000000),
+                strokeNodeSnapshotFromValidated(
+                  common: nodeSnapshotCommonFieldsFromValidated(id: 's'),
+                  fields: (
+                    points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+                    thickness: 1,
+                    color: const Color(0xFF000000),
+                  ),
                 ),
               ],
             ),
           ],
         ),
-      ),
-      throwsA(
-        predicate(
-          (e) =>
-              e is SceneDataException &&
-              e.code == SceneDataErrorCode.invalidValue &&
-              e.path == 'layers[0].nodes[0].pointsRevision' &&
-              e.message ==
-                  'Field layers[0].nodes[0].pointsRevision must be >= 0.',
+      );
+
+      final stroke = scene.layers.single.nodes.single as StrokeNode;
+      expect(stroke.points, const <Offset>[Offset(0, 0), Offset(1, 1)]);
+      expect(stroke.pointsRevision, 0);
+    },
+  );
+
+  test(
+    'txnSceneFromSnapshot rejects enabled grid cellSize below the import minimum',
+    () {
+      expect(
+        () => txnSceneFromSnapshot(
+          materializeSceneSnapshot(
+            SceneSnapshotBacking(
+              background: const BackgroundSnapshotBacking(
+                grid: GridSnapshotBacking(isEnabled: true, cellSize: 0.5),
+              ),
+            ),
+          ),
         ),
-      ),
-    );
-  });
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'background.grid.cellSize' &&
+                e.message ==
+                    'Field background.grid.cellSize must be >= 1.0 when background.grid.enabled is true.',
+          ),
+        ),
+      );
+    },
+  );
 
   test('txnSceneFromSnapshot preserves dedicated background layer', () {
     final scene = txnSceneFromSnapshot(
       SceneSnapshot(
         backgroundLayer: BackgroundLayerSnapshot(
-          nodes: const <NodeSnapshot>[
-            RectNodeSnapshot(id: 'bg', size: Size(1, 1)),
-          ],
+          nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'bg', size: Size(1, 1))],
         ),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-1',
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
-            ],
+            nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'n1', size: Size(1, 1))],
           ),
           ContentLayerSnapshot(
             id: 'layer-auto-2',
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(id: 'n2', size: Size(1, 1)),
-            ],
+            nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'n2', size: Size(1, 1))],
           ),
         ],
       ),
     );
 
     expect(scene.backgroundLayer, isNotNull);
-    expect(scene.backgroundLayer!.nodes.single.id, 'bg');
+    final backgroundLayer = scene.backgroundLayer;
+    if (backgroundLayer == null) {
+      fail('Expected canonical background layer.');
+    }
+    expect(backgroundLayer.nodes.single.id, 'bg');
     expect(scene.layers.length, 2);
     expect(scene.layers[0].nodes.single.id, 'n1');
     expect(scene.layers[1].nodes.single.id, 'n2');
@@ -195,9 +270,7 @@ void main() {
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-3',
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
-            ],
+            nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'n1', size: Size(1, 1))],
           ),
         ],
       ),
@@ -205,7 +278,71 @@ void main() {
 
     expect(scene.layers.length, 1);
     expect(scene.backgroundLayer, isNotNull);
-    expect(scene.backgroundLayer!.nodes, isEmpty);
+    final backgroundLayer = scene.backgroundLayer;
+    if (backgroundLayer == null) {
+      fail('Expected canonical background layer.');
+    }
+    expect(backgroundLayer.nodes, isEmpty);
+  });
+
+  test(
+    'runtime ScenePalette freezes constructor lists and supports replacement',
+    () {
+      final sourcePenColors = <Color>[const Color(0xFF111111)];
+      final sourceBackgroundColors = <Color>[const Color(0xFFEEEEEE)];
+      final sourceGridSizes = <double>[8, 16];
+      final palette = ScenePalette(
+        penColors: sourcePenColors,
+        backgroundColors: sourceBackgroundColors,
+        gridSizes: sourceGridSizes,
+      );
+      final scene = Scene(palette: palette);
+
+      sourcePenColors.add(const Color(0xFF222222));
+      sourceBackgroundColors.add(const Color(0xFFDDDDDD));
+      sourceGridSizes.add(24);
+
+      expect(scene.palette.penColors, <Color>[const Color(0xFF111111)]);
+      expect(scene.palette.backgroundColors, <Color>[const Color(0xFFEEEEEE)]);
+      expect(scene.palette.gridSizes, <double>[8, 16]);
+      expect(
+        () => scene.palette.penColors.add(const Color(0xFF333333)),
+        throwsUnsupportedError,
+      );
+      expect(
+        () => scene.palette.backgroundColors.add(const Color(0xFFCCCCCC)),
+        throwsUnsupportedError,
+      );
+      expect(() => scene.palette.gridSizes.add(32), throwsUnsupportedError);
+
+      scene.palette = ScenePalette(
+        penColors: <Color>[const Color(0xFFABCDEF)],
+        backgroundColors: <Color>[const Color(0xFFFEDCBA)],
+        gridSizes: <double>[32],
+      );
+
+      expect(scene.palette.penColors, <Color>[const Color(0xFFABCDEF)]);
+      expect(scene.palette.backgroundColors, <Color>[const Color(0xFFFEDCBA)]);
+      expect(scene.palette.gridSizes, <double>[32]);
+    },
+  );
+
+  test('txnSceneToSnapshot canonicalizes null runtime background layer', () {
+    // INV:INV-SER-TYPED-LAYER-SPLIT
+    // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
+    final snapshot = txnSceneToSnapshot(
+      Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-3a',
+            nodes: <SceneNode>[RectNode(id: 'n1', size: const Size(1, 1))],
+          ),
+        ],
+      ),
+    );
+
+    expect(snapshot.backgroundLayer.nodes, isEmpty);
+    expect(snapshot.layers.single.nodes.single.id, 'n1');
   });
 
   test(
@@ -217,7 +354,7 @@ void main() {
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-4',
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
               ],
             ),
@@ -230,32 +367,114 @@ void main() {
 
       expect(exported.backgroundLayer.nodes, isEmpty);
       expect(reimported.backgroundLayer, isNotNull);
-      expect(reimported.backgroundLayer!.nodes, isEmpty);
+      final reimportedBackgroundLayer = reimported.backgroundLayer;
+      if (reimportedBackgroundLayer == null) {
+        fail('Expected canonical background layer after reimport.');
+      }
+      expect(reimportedBackgroundLayer.nodes, isEmpty);
       expect(reimported.layers.length, 1);
       expect(reimported.layers[0].nodes.single.id, 'n1');
     },
   );
 
-  test('txnSceneFromSnapshot rejects duplicate node ids with field path', () {
+  test('txnSceneToSnapshot rejects duplicate node ids with field path', () {
     expect(
-      () => txnSceneFromSnapshot(
-        SceneSnapshot(
-          layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(
-              id: 'layer-auto-5',
-              nodes: const <NodeSnapshot>[
-                RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
-              ],
-            ),
-            ContentLayerSnapshot(
-              id: 'layer-auto-6',
-              nodes: const <NodeSnapshot>[
-                RectNodeSnapshot(id: 'dup', size: Size(2, 2)),
-              ],
+      () => txnSceneToSnapshot(
+        Scene(
+          backgroundLayer: BackgroundLayer(
+            nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(1, 1))],
+          ),
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-runtime-dup',
+              nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(2, 2))],
             ),
           ],
         ),
       ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.duplicateNodeId &&
+              e.path == 'layers[0].nodes[0].id' &&
+              e.message == 'Must be unique across scene layers.',
+        ),
+      ),
+    );
+  });
+
+  test('txnSceneToSnapshot rejects duplicate layer ids with field path', () {
+    expect(
+      () => txnSceneToSnapshot(
+        Scene(
+          layers: <ContentLayer>[
+            ContentLayer(id: 'layer-auto-dup'),
+            ContentLayer(id: 'layer-auto-dup'),
+          ],
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.duplicateLayerId &&
+              e.path == 'layers[1].id' &&
+              e.details['template'] == 'duplicateLayerId',
+        ),
+      ),
+    );
+  });
+
+  test('txnSceneToSnapshot rejects content-layer overflow with field path', () {
+    expect(
+      () => txnSceneToSnapshot(
+        Scene(
+          layers: <ContentLayer>[
+            for (var i = 0; i < kMaxContentLayersPerScene + 1; i++)
+              ContentLayer(id: 'layer-runtime-$i'),
+          ],
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers' &&
+              e.details['template'] == 'maxItems',
+        ),
+      ),
+    );
+  });
+
+  test('txnSceneToSnapshot rejects node overflow with field path', () {
+    expect(
+      () => txnSceneToSnapshot(
+        Scene(
+          backgroundLayer: BackgroundLayer(
+            nodes: <SceneNode>[
+              for (var i = 0; i < kMaxNodesPerScene + 1; i++)
+                RectNode(id: 'node-runtime-$i', size: const Size(1, 1)),
+            ],
+          ),
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'backgroundLayer.nodes' &&
+              e.details['template'] == 'maxNodes',
+        ),
+      ),
+    );
+  });
+
+  test('txnSceneFromSnapshot rejects duplicate node ids with field path', () {
+    expect(
+      () => txnSceneFromSnapshot(duplicateNodeSnapshotFromInternalBypass()),
       throwsA(
         predicate(
           (e) =>
@@ -271,21 +490,28 @@ void main() {
   test('txnSceneFromSnapshot rejects non-finite transform values', () {
     expect(
       () => txnSceneFromSnapshot(
-        SceneSnapshot(
+        sceneSnapshotFromValidated(
           layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(
+            contentLayerSnapshotFromValidated(
               id: 'layer-auto-7',
-              nodes: const <NodeSnapshot>[
-                RectNodeSnapshot(
-                  id: 'r1',
-                  size: Size(1, 1),
-                  transform: Transform2D(
-                    a: double.nan,
-                    b: 0,
-                    c: 0,
-                    d: 1,
-                    tx: 0,
-                    ty: 0,
+              nodes: <NodeSnapshot>[
+                rectNodeSnapshotFromValidated(
+                  common: nodeSnapshotCommonFieldsFromValidated(
+                    id: 'r1',
+                    transform: const Transform2D(
+                      a: double.nan,
+                      b: 0,
+                      c: 0,
+                      d: 1,
+                      tx: 0,
+                      ty: 0,
+                    ),
+                  ),
+                  fields: (
+                    size: const Size(1, 1),
+                    fillColor: null,
+                    strokeColor: null,
+                    strokeWidth: 0,
                   ),
                 ),
               ],
@@ -312,7 +538,10 @@ void main() {
 
     final found = txnFindNodeById(scene, 'txt');
     expect(found, isNotNull);
-    expect(found!.layerIndex, 1);
+    if (found == null) {
+      fail('Expected locator result for txt.');
+    }
+    expect(found.layerIndex, 1);
     expect(found.nodeIndex, 1);
     expect(txnFindNodeById(scene, 'missing'), isNull);
     final foundByLocator = txnFindNodeByLocator(
@@ -321,7 +550,10 @@ void main() {
       nodeId: 'txt',
     );
     expect(foundByLocator, isNotNull);
-    expect(foundByLocator!.layerIndex, 1);
+    if (foundByLocator == null) {
+      fail('Expected node locator entry for txt.');
+    }
+    expect(foundByLocator.layerIndex, 1);
     expect(foundByLocator.nodeIndex, 1);
     expect(
       txnFindNodeByLocator(
@@ -345,7 +577,10 @@ void main() {
       nodeId: 'new',
     );
     expect(insertedFound, isNotNull);
-    expect(insertedFound!.layerIndex, 1);
+    if (insertedFound == null) {
+      fail('Expected inserted node locator entry.');
+    }
+    expect(insertedFound.layerIndex, 1);
     expect(insertedFound.nodeIndex, scene.layers[1].nodes.length - 1);
 
     final erased = txnEraseNodeFromScene(
@@ -358,6 +593,22 @@ void main() {
       txnEraseNodeFromScene(scene: scene, nodeLocator: locator, nodeId: 'new'),
       isNull,
     );
+  });
+
+  test('txnShiftNodeLocatorLayersFrom shifts only content-layer entries', () {
+    final locator = <NodeId, NodeLocatorEntry>{
+      'bg': (layerIndex: -1, nodeIndex: 0),
+      'a': (layerIndex: 0, nodeIndex: 0),
+      'b': (layerIndex: 1, nodeIndex: 0),
+      'c': (layerIndex: 2, nodeIndex: 3),
+    };
+
+    txnShiftNodeLocatorLayersFrom(nodeLocator: locator, startLayerIndex: 1);
+
+    expect(locator['bg'], (layerIndex: -1, nodeIndex: 0));
+    expect(locator['a'], (layerIndex: 0, nodeIndex: 0));
+    expect(locator['b'], (layerIndex: 2, nodeIndex: 0));
+    expect(locator['c'], (layerIndex: 3, nodeIndex: 3));
   });
 
   test('txnInsertNodeInScene rejects duplicate node ids', () {
@@ -440,6 +691,50 @@ void main() {
     );
   });
 
+  test('txnInsertNodeInScene rejects node overflow before layer mutation', () {
+    final scene = Scene(
+      layers: <ContentLayer>[ContentLayer(id: 'layer-auto-overflow')],
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[
+          for (var i = 0; i < kMaxNodesPerScene; i++)
+            RectNode(id: 'node-$i', size: const Size(1, 1)),
+        ],
+      ),
+    );
+    final locator = txnBuildNodeLocator(scene);
+    final backgroundLayer = scene.backgroundLayer;
+    if (backgroundLayer == null) {
+      fail('Expected populated background layer for node-budget test.');
+    }
+    final beforeNodeIds = backgroundLayer.nodes
+        .map((node) => node.id)
+        .toList(growable: false);
+
+    expect(
+      () => txnInsertNodeInScene(
+        scene: scene,
+        nodeLocator: locator,
+        node: RectNode(id: 'overflow', size: const Size(2, 2)),
+        layerIndex: 0,
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes' &&
+              e.details['template'] == 'maxNodes',
+        ),
+      ),
+    );
+    expect(scene.layers.single.nodes, isEmpty);
+    expect(
+      backgroundLayer.nodes.map((node) => node.id).toList(growable: false),
+      beforeNodeIds,
+    );
+    expect(locator.containsKey('overflow'), isFalse);
+  });
+
   test('find/locator/erase utilities handle dedicated background layer', () {
     final scene = Scene(
       backgroundLayer: BackgroundLayer(
@@ -459,7 +754,10 @@ void main() {
 
     final bgFound = txnFindNodeById(scene, 'bg-a');
     expect(bgFound, isNotNull);
-    expect(bgFound!.layerIndex, -1);
+    if (bgFound == null) {
+      fail('Expected background node lookup result.');
+    }
+    expect(bgFound.layerIndex, -1);
     expect(bgFound.nodeIndex, 0);
 
     final bgByLocator = txnFindNodeByLocator(
@@ -468,7 +766,10 @@ void main() {
       nodeId: 'bg-b',
     );
     expect(bgByLocator, isNotNull);
-    expect(bgByLocator!.layerIndex, -1);
+    if (bgByLocator == null) {
+      fail('Expected background locator result.');
+    }
+    expect(bgByLocator.layerIndex, -1);
     expect(bgByLocator.nodeIndex, 1);
 
     final wrongIndexLocator = <NodeId, NodeLocatorEntry>{
@@ -540,6 +841,187 @@ void main() {
   });
 
   test(
+    'txnEraseNodesFromScene removes deletable content nodes in deterministic scene order',
+    () {
+      final scene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
+        ),
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-13a',
+            nodes: <SceneNode>[
+              RectNode(id: 'a', size: const Size(1, 1)),
+              RectNode(
+                id: 'locked',
+                size: const Size(1, 1),
+                isDeletable: false,
+              ),
+            ],
+          ),
+          ContentLayer(
+            id: 'layer-auto-13b',
+            nodes: <SceneNode>[
+              RectNode(id: 'b', size: const Size(1, 1)),
+              RectNode(id: 'c', size: const Size(1, 1)),
+            ],
+          ),
+        ],
+      );
+      final locator = txnBuildNodeLocator(scene);
+
+      final removed = txnEraseNodesFromScene(
+        scene: scene,
+        nodeLocator: locator,
+        nodeIds: const <NodeId>{'c', 'bg', 'a', 'missing', 'locked'},
+      );
+
+      expect(removed, const <NodeId>['a', 'c']);
+      expect(() => removed.add('late'), throwsUnsupportedError);
+      expect(
+        scene.layers[0].nodes.map((node) => node.id).toList(growable: false),
+        const <NodeId>['locked'],
+      );
+      expect(
+        scene.layers[1].nodes.map((node) => node.id).toList(growable: false),
+        const <NodeId>['b'],
+      );
+      expect(locator['bg'], (layerIndex: -1, nodeIndex: 0));
+      expect(locator['locked'], (layerIndex: 0, nodeIndex: 0));
+      expect(locator['b'], (layerIndex: 1, nodeIndex: 0));
+    },
+  );
+
+  test(
+    'txnErasePreparedNodesFromScene removes prepared targets without scene rescan',
+    () {
+      final scene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[
+            RectNode(id: 'bg-a', size: const Size(1, 1)),
+            RectNode(id: 'bg-b', size: const Size(1, 1)),
+          ],
+        ),
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-13aa',
+            nodes: <SceneNode>[
+              RectNode(id: 'a', size: const Size(1, 1)),
+              RectNode(id: 'b', size: const Size(1, 1)),
+            ],
+          ),
+          ContentLayer(
+            id: 'layer-auto-13ab',
+            nodes: <SceneNode>[
+              RectNode(id: 'c', size: const Size(1, 1)),
+              RectNode(id: 'd', size: const Size(1, 1)),
+            ],
+          ),
+        ],
+      );
+      final locator = txnBuildNodeLocator(scene);
+
+      final removed = txnErasePreparedNodesFromScene(
+        scene: scene,
+        nodeLocator: locator,
+        removalsByLayer: <int, List<PreparedNodeRemoval>>{
+          1: <PreparedNodeRemoval>[(nodeId: 'd', nodeIndex: 1)],
+          -1: <PreparedNodeRemoval>[(nodeId: 'bg-a', nodeIndex: 0)],
+          0: <PreparedNodeRemoval>[(nodeId: 'b', nodeIndex: 1)],
+        },
+      );
+
+      expect(removed, const <NodeId>['bg-a', 'b', 'd']);
+      expect(() => removed.add('late'), throwsUnsupportedError);
+      expect(
+        scene.backgroundLayer?.nodes
+            .map((node) => node.id)
+            .toList(growable: false),
+        const <NodeId>['bg-b'],
+      );
+      expect(
+        scene.layers[0].nodes.map((node) => node.id).toList(growable: false),
+        const <NodeId>['a'],
+      );
+      expect(
+        scene.layers[1].nodes.map((node) => node.id).toList(growable: false),
+        const <NodeId>['c'],
+      );
+      expect(locator['bg-b'], (layerIndex: -1, nodeIndex: 0));
+      expect(locator['a'], (layerIndex: 0, nodeIndex: 0));
+      expect(locator['c'], (layerIndex: 1, nodeIndex: 0));
+    },
+  );
+
+  test(
+    'txnErasePreparedNodesFromScene asserts on duplicate prepared removals',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-13ac',
+            nodes: <SceneNode>[
+              RectNode(id: 'a', size: const Size(1, 1)),
+              RectNode(id: 'b', size: const Size(1, 1)),
+              RectNode(id: 'c', size: const Size(1, 1)),
+            ],
+          ),
+        ],
+      );
+      final locator = txnBuildNodeLocator(scene);
+
+      expect(
+        () => txnErasePreparedNodesFromScene(
+          scene: scene,
+          nodeLocator: locator,
+          removalsByLayer: <int, List<PreparedNodeRemoval>>{
+            0: <PreparedNodeRemoval>[
+              (nodeId: 'b', nodeIndex: 1),
+              (nodeId: 'b', nodeIndex: 1),
+            ],
+          },
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    },
+  );
+
+  test(
+    'txnClearSceneKeepBackground removes content layers and marks structural-only clear',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-13c'),
+          ContentLayer(
+            id: 'layer-auto-13d',
+            nodes: <SceneNode>[RectNode(id: 'a', size: const Size(1, 1))],
+          ),
+        ],
+      );
+      final locator = txnBuildNodeLocator(scene);
+
+      final cleared = txnClearSceneKeepBackground(
+        scene: scene,
+        nodeLocator: locator,
+      );
+
+      expect(cleared.didStructuralClear, isTrue);
+      expect(cleared.removedNodeIds, const <NodeId>['a']);
+      expect(() => cleared.removedNodeIds.add('late'), throwsUnsupportedError);
+      expect(scene.layers, isEmpty);
+      expect(scene.backgroundLayer, isNotNull);
+      expect(locator, isEmpty);
+
+      final noop = txnClearSceneKeepBackground(
+        scene: scene,
+        nodeLocator: locator,
+      );
+      expect(noop.didStructuralClear, isFalse);
+      expect(noop.removedNodeIds, isEmpty);
+    },
+  );
+
+  test(
     'resolve layer index validates layerId and uses last layer by default',
     () {
       final scene = Scene(
@@ -573,6 +1055,105 @@ void main() {
     expect(emptyScene.layers.last, isA<ContentLayer>());
   });
 
+  test(
+    'txnInsertContentLayerInScene rejects overflow before scene mutation',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          for (var i = 0; i < kMaxContentLayersPerScene; i++)
+            ContentLayer(id: 'layer-$i'),
+        ],
+      );
+      final beforeLayerIds = scene.layers
+          .map((layer) => layer.id)
+          .toList(growable: false);
+
+      expect(
+        () => txnInsertContentLayerInScene(
+          scene: scene,
+          layerId: 'layer-overflow',
+        ),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers' &&
+                e.details['template'] == 'maxItems',
+          ),
+        ),
+      );
+      expect(
+        scene.layers.map((layer) => layer.id).toList(growable: false),
+        beforeLayerIds,
+      );
+    },
+  );
+
+  test('find content layer index resolves known and missing layer ids', () {
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(id: 'layer-auto-20'),
+        ContentLayer(id: 'layer-auto-21'),
+      ],
+    );
+
+    expect(
+      txnFindContentLayerIndexById(scene: scene, layerId: 'layer-auto-20'),
+      0,
+    );
+    expect(
+      txnFindContentLayerIndexById(scene: scene, layerId: 'layer-auto-21'),
+      1,
+    );
+    expect(
+      txnFindContentLayerIndexById(scene: scene, layerId: 'layer-auto-missing'),
+      isNull,
+    );
+  });
+
+  test(
+    'txnReplaceContentLayerInScene validates index and replaces in place',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-20'),
+          ContentLayer(id: 'layer-auto-21'),
+        ],
+      );
+      final replacement = ContentLayer(
+        id: 'layer-auto-21',
+        nodes: <SceneNode>[
+          RectNode(id: 'replaced-node', size: const Size(2, 2)),
+        ],
+      );
+
+      txnReplaceContentLayerInScene(
+        scene: scene,
+        layerIndex: 1,
+        layer: replacement,
+      );
+
+      expect(scene.layers[1], same(replacement));
+      expect(
+        () => txnReplaceContentLayerInScene(
+          scene: scene,
+          layerIndex: -1,
+          layer: replacement,
+        ),
+        throwsRangeError,
+      );
+      expect(
+        () => txnReplaceContentLayerInScene(
+          scene: scene,
+          layerIndex: scene.layers.length,
+          layer: replacement,
+        ),
+        throwsRangeError,
+      );
+    },
+  );
+
   test('selection/grid helpers enforce transaction invariants', () {
     final scene = Scene(
       backgroundLayer: BackgroundLayer(
@@ -594,9 +1175,7 @@ void main() {
           ],
         ),
       ],
-      background: Background(
-        grid: GridSettings(isEnabled: true, cellSize: 0.2),
-      ),
+      background: Background(grid: GridSettings(isEnabled: true, cellSize: 1)),
     );
 
     final normalized = txnNormalizeSelection(
@@ -621,12 +1200,23 @@ void main() {
     );
     expect(moved, <NodeId>{'ok'});
 
-    final ok = txnFindNodeById(scene, 'ok')!.node as RectNode;
+    final okEntry = txnFindNodeById(scene, 'ok');
+    if (okEntry == null) {
+      fail('Expected translated node lookup result.');
+    }
+    final ok = okEntry.node as RectNode;
     expect(ok.transform.tx, 10);
 
-    expect(txnNormalizeGrid(scene), isTrue);
-    expect(scene.background.grid.cellSize, 1.0);
-    expect(txnNormalizeGrid(scene), isFalse);
+    final grid = scene.background.grid;
+    expect(() => grid.cellSize = 0, throwsArgumentError);
+    expect(() => grid.cellSize = double.nan, throwsArgumentError);
+    grid.isEnabled = false;
+    grid.cellSize = 0.5;
+    expect(grid.cellSize, 0.5);
+    expect(() => grid.isEnabled = true, throwsArgumentError);
+    grid.cellSize = 2;
+    grid.isEnabled = true;
+    expect(grid.isEnabled, isTrue);
   });
 
   test('node-from-spec maps all variants and fallback id behavior', () {
@@ -644,6 +1234,7 @@ void main() {
         maxWidth: 20,
         lineHeight: 1.5,
         color: const Color(0xFF000000),
+        textDirection: TextDirection.ltr,
       ),
       fallbackId: 'auto-2',
     );
@@ -717,7 +1308,7 @@ void main() {
       int allocate() => nextInstanceRevision++;
 
       final preserved = txnNodeFromSnapshot(
-        const RectNodeSnapshot(
+        RectNodeSnapshot(
           id: 'preserved',
           instanceRevision: 7,
           size: Size(1, 1),
@@ -725,7 +1316,7 @@ void main() {
         nextInstanceRevision: allocate,
       );
       final allocated = txnNodeFromSnapshot(
-        const RectNodeSnapshot(id: 'allocated', size: Size(1, 1)),
+        RectNodeSnapshot(id: 'allocated', size: Size(1, 1)),
         nextInstanceRevision: allocate,
       );
 
@@ -745,7 +1336,7 @@ void main() {
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-8',
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 RectNodeSnapshot(id: 'a', size: Size(1, 1)),
                 RectNodeSnapshot(
                   id: 'b',
@@ -759,8 +1350,13 @@ void main() {
         nextInstanceRevision: allocate,
       );
 
-      final nodeA = txnFindNodeById(scene, 'a')!.node;
-      final nodeB = txnFindNodeById(scene, 'b')!.node;
+      final nodeAEntry = txnFindNodeById(scene, 'a');
+      final nodeBEntry = txnFindNodeById(scene, 'b');
+      if (nodeAEntry == null || nodeBEntry == null) {
+        fail('Expected both nodes to exist after revision normalization.');
+      }
+      final nodeA = nodeAEntry.node;
+      final nodeB = nodeBEntry.node;
       expect(nodeA.instanceRevision, 20);
       expect(nodeB.instanceRevision, 9);
     },
@@ -773,55 +1369,81 @@ void main() {
                 text: 'Derived size',
                 fontSize: 20,
                 color: const Color(0xFF000000),
+                textDirection: TextDirection.ltr,
               ),
               fallbackId: 'auto-text',
             )
             as TextNode;
 
-    expect(node.size.width, greaterThan(0));
-    expect(node.size.height, greaterThan(0));
+    expect(node.localBounds.width, greaterThan(0));
+    expect(node.localBounds.height, greaterThan(0));
   });
 
-  test('text node from snapshot recomputes stale serialized size', () {
+  test('text node from snapshot derives bounds from layout inputs', () {
     final node =
         txnNodeFromSnapshot(
-              const TextNodeSnapshot(
+              TextNodeSnapshot(
                 id: 'text-stale',
                 text: 'Derived size',
-                size: Size(1, 1),
                 fontSize: 24,
                 color: Color(0xFF000000),
+                textDirection: TextDirection.ltr,
               ),
             )
             as TextNode;
 
-    expect(node.size, isNot(const Size(1, 1)));
-    expect(node.size.width, greaterThan(1));
-    expect(node.size.height, greaterThan(1));
+    expect(node.localBounds.width, greaterThan(1));
+    expect(node.localBounds.height, greaterThan(1));
   });
 
-  test('text node patch touching layout re-derives size', () {
+  test('text node patch touching layout re-derives bounds', () {
     final text = TextNode(
       id: 'text-layout-patch',
       text: 'Derived size',
-      size: const Size(1, 1),
       fontSize: 24,
       color: const Color(0xFF000000),
     );
+    final beforeHeight = text.localBounds.height;
 
     final changed = txnApplyNodePatch(
       text,
-      const TextNodePatch(
+      TextNodePatch(
         id: 'text-layout-patch',
         fontSize: PatchField<double>.value(28),
       ),
     );
 
     expect(changed, isTrue);
-    expect(text.size, isNot(const Size(1, 1)));
-    expect(text.size.width, greaterThan(1));
-    expect(text.size.height, greaterThan(1));
+    expect(text.localBounds.width, greaterThan(1));
+    expect(text.localBounds.height, greaterThan(beforeHeight));
   });
+
+  test(
+    'textDirection patch updates text node and keeps derived bounds valid',
+    () {
+      final text = TextNode(
+        id: 'text-direction-patch',
+        text: 'abc אבג',
+        fontSize: 24,
+        color: const Color(0xFF000000),
+        textDirection: TextDirection.ltr,
+        align: TextAlign.start,
+      );
+
+      final changed = txnApplyNodePatch(
+        text,
+        TextNodePatch(
+          id: 'text-direction-patch',
+          textDirection: PatchField<TextDirection>.value(TextDirection.rtl),
+        ),
+      );
+
+      expect(changed, isTrue);
+      expect(text.textDirection, TextDirection.rtl);
+      expect(text.localBounds.width, greaterThan(1));
+      expect(text.localBounds.height, greaterThan(1));
+    },
+  );
 
   test('text node patch without layout fields keeps derived size', () {
     final text =
@@ -830,79 +1452,90 @@ void main() {
                 text: 'Stable derived size',
                 fontSize: 20,
                 color: const Color(0xFF000000),
+                textDirection: TextDirection.ltr,
               ),
               fallbackId: 'text-non-layout-patch',
             )
             as TextNode;
-    final sizeBefore = text.size;
+    final sizeBefore = text.localBounds.size;
 
     final changed = txnApplyNodePatch(
       text,
-      const TextNodePatch(
+      TextNodePatch(
         id: 'text-non-layout-patch',
         color: PatchField<Color>.value(Color(0xFF123456)),
       ),
     );
 
     expect(changed, isTrue);
-    expect(text.size, sizeBefore);
+    expect(text.localBounds.size, sizeBefore);
   });
 
   test('node-from-spec rejects invalid numeric fields with field path', () {
-    final invalidCases = <({NodeSpec spec, String field, String message})>[
-      (
-        spec: RectNodeSpec(size: const Size(1, 1), opacity: 1.1),
-        field: 'spec.opacity',
-        message: 'Must be within [0,1].',
-      ),
-      (
-        spec: RectNodeSpec(
-          size: const Size(1, 1),
-          transform: const Transform2D(
-            a: double.nan,
-            b: 0,
-            c: 0,
-            d: 1,
-            tx: 0,
-            ty: 0,
+    final invalidCases =
+        <({NodeSpec Function() create, String field, String message})>[
+          (
+            create: () => RectNodeSpec(size: const Size(1, 1), opacity: 1.1),
+            field: 'opacity',
+            message: 'Must be within [0,1].',
           ),
-        ),
-        field: 'spec.transform.a',
-        message: 'Must be finite.',
-      ),
-      (
-        spec: TextNodeSpec(
-          text: 't',
-          fontSize: 0,
-          color: const Color(0xFF000000),
-        ),
-        field: 'spec.fontSize',
-        message: 'Must be > 0.',
-      ),
-      (
-        spec: StrokeNodeSpec(
-          points: <Offset>[const Offset(double.infinity, 0)],
-          thickness: 1,
-          color: const Color(0xFF000000),
-        ),
-        field: 'spec.points[0].dx',
-        message: 'Must be finite.',
-      ),
-      (
-        spec: RectNodeSpec(size: const Size(1, 1), strokeWidth: -1),
-        field: 'spec.strokeWidth',
-        message: 'Must be >= 0.',
-      ),
-      (
-        spec: PathNodeSpec(svgPathData: 'not-a-path'),
-        field: 'spec.svgPathData',
-        message: 'Must be valid SVG path data.',
-      ),
-    ];
+          (
+            create: () => RectNodeSpec(
+              size: const Size(1, 1),
+              transform: const Transform2D(
+                a: double.nan,
+                b: 0,
+                c: 0,
+                d: 1,
+                tx: 0,
+                ty: 0,
+              ),
+            ),
+            field: 'transform.a',
+            message: 'Must be finite.',
+          ),
+          (
+            create: () => TextNodeSpec(
+              text: 't',
+              fontSize: 0,
+              color: const Color(0xFF000000),
+              textDirection: TextDirection.ltr,
+            ),
+            field: 'fontSize',
+            message: 'Must be > 0.',
+          ),
+          (
+            create: () => StrokeNodeSpec(
+              points: <Offset>[const Offset(double.infinity, 0)],
+              thickness: 1,
+              color: const Color(0xFF000000),
+            ),
+            field: 'points[0].dx',
+            message: 'Must be finite.',
+          ),
+          (
+            create: () => ImageNodeSpec(
+              imageId: 'x' * (kMaxImageIdLength + 1),
+              size: const Size(1, 1),
+            ),
+            field: 'imageId',
+            message: 'Length must be <= $kMaxImageIdLength characters.',
+          ),
+          (
+            create: () => RectNodeSpec(size: const Size(1, 1), strokeWidth: -1),
+            field: 'strokeWidth',
+            message: 'Must be >= 0.',
+          ),
+          (
+            create: () => PathNodeSpec(svgPathData: 'not-a-path'),
+            field: 'svgPathData',
+            message: 'Must be valid SVG path data.',
+          ),
+        ];
 
     for (final invalid in invalidCases) {
       expect(
-        () => txnNodeFromSpec(invalid.spec, fallbackId: 'auto-id'),
+        invalid.create,
         throwsA(
           predicate(
             (e) =>
@@ -920,7 +1553,7 @@ void main() {
     expect(
       txnApplyNodePatch(
         image,
-        const ImageNodePatch(
+        ImageNodePatch(
           id: 'img',
           common: CommonNodePatch(
             opacity: PatchField<double>.value(0.5),
@@ -947,16 +1580,11 @@ void main() {
     expect(image.isDeletable, isFalse);
     expect(image.isTransformable, isFalse);
 
-    final text = TextNode(
-      id: 'txt',
-      text: 'x',
-      size: const Size(1, 1),
-      color: const Color(0xFF000000),
-    );
+    final text = TextNode(id: 'txt', text: 'x', color: const Color(0xFF000000));
     expect(
       txnApplyNodePatch(
         text,
-        const TextNodePatch(
+        TextNodePatch(
           id: 'txt',
           text: PatchField<String>.value('y'),
           fontSize: PatchField<double>.value(18),
@@ -982,30 +1610,29 @@ void main() {
       thickness: 1,
       color: const Color(0xFF000000),
     );
+    final sourcePatchPoints = <Offset>[const Offset(2, 2), const Offset(3, 3)];
     final strokeRevisionBeforePatch = stroke.pointsRevision;
     expect(
       txnApplyNodePatch(
         stroke,
-        const StrokeNodePatch(
+        StrokeNodePatch(
           id: 'str',
-          points: PatchField<List<Offset>>.value(<Offset>[
-            Offset(2, 2),
-            Offset(3, 3),
-          ]),
+          points: PatchField<List<Offset>>.value(sourcePatchPoints),
           thickness: PatchField<double>.value(4),
           color: PatchField<Color>.value(Color(0xFF333333)),
         ),
       ),
       isTrue,
     );
+    sourcePatchPoints[1] = const Offset(30, 30);
     expect(stroke.points, <Offset>[const Offset(2, 2), const Offset(3, 3)]);
-    expect(stroke.pointsRevision, greaterThan(strokeRevisionBeforePatch));
+    expect(stroke.pointsRevision, strokeRevisionBeforePatch + 1);
 
     final strokeRevisionAfterGeometryPatch = stroke.pointsRevision;
     expect(
       txnApplyNodePatch(
         stroke,
-        const StrokeNodePatch(
+        StrokeNodePatch(
           id: 'str',
           color: PatchField<Color>.value(Color(0xFF222222)),
         ),
@@ -1013,6 +1640,23 @@ void main() {
       isTrue,
     );
     expect(stroke.pointsRevision, strokeRevisionAfterGeometryPatch);
+
+    final strokePointsBeforeNoop = stroke.points;
+    expect(
+      txnApplyNodePatch(
+        stroke,
+        StrokeNodePatch(
+          id: 'str',
+          points: PatchField<List<Offset>>.value(<Offset>[
+            const Offset(2, 2),
+            const Offset(3, 3),
+          ]),
+        ),
+      ),
+      isFalse,
+    );
+    expect(stroke.pointsRevision, strokeRevisionAfterGeometryPatch);
+    expect(identical(stroke.points, strokePointsBeforeNoop), isTrue);
 
     final line = LineNode(
       id: 'lin',
@@ -1024,7 +1668,7 @@ void main() {
     expect(
       txnApplyNodePatch(
         line,
-        const LineNodePatch(
+        LineNodePatch(
           id: 'lin',
           start: PatchField<Offset>.value(Offset(2, 0)),
           end: PatchField<Offset>.value(Offset(5, 1)),
@@ -1046,7 +1690,7 @@ void main() {
     expect(
       txnApplyNodePatch(
         rect,
-        const RectNodePatch(
+        RectNodePatch(
           id: 'rec',
           size: PatchField<Size>.value(Size(6, 7)),
           fillColor: PatchField<Color?>.nullValue(),
@@ -1068,7 +1712,7 @@ void main() {
     expect(
       txnApplyNodePatch(
         path,
-        const PathNodePatch(
+        PathNodePatch(
           id: 'pth',
           svgPathData: PatchField<String>.value('M0 0 L5 5'),
           fillColor: PatchField<Color?>.value(Color(0xFF111111)),
@@ -1084,24 +1728,74 @@ void main() {
     expect(path.fillRule, PathFillRule.evenOdd);
   });
 
+  test('runtime node owners reject invalid constrained write values', () {
+    final image = ImageNode(
+      id: 'img-owner',
+      imageId: 'image://1',
+      size: const Size(10, 10),
+    );
+    expect(
+      () => image.imageId = 'x' * (kMaxImageIdLength + 1),
+      throwsA(predicate((e) => e is ArgumentError && e.name == 'imageId')),
+    );
+    expect(
+      () => image.naturalSize = const Size(10, double.infinity),
+      throwsA(
+        predicate((e) => e is ArgumentError && e.name == 'naturalSize.height'),
+      ),
+    );
+
+    final text = TextNode(
+      id: 'txt-owner',
+      text: 'hello',
+      color: const Color(0xFF000000),
+    );
+    expect(
+      () => text.fontSize = 0,
+      throwsA(predicate((e) => e is ArgumentError && e.name == 'fontSize')),
+    );
+    expect(
+      () => text.maxWidth = 0,
+      throwsA(predicate((e) => e is ArgumentError && e.name == 'maxWidth')),
+    );
+
+    final line = LineNode(
+      id: 'line-owner',
+      start: const Offset(0, 0),
+      end: const Offset(1, 1),
+      thickness: 1,
+      color: const Color(0xFF000000),
+    );
+    expect(
+      () => line.start = const Offset(double.infinity, 0),
+      throwsA(predicate((e) => e is ArgumentError && e.name == 'start.dx')),
+    );
+
+    final path = PathNode(id: 'path-owner', svgPathData: 'M0 0 L1 1');
+    expect(
+      () => path.svgPathData = 'not-a-path',
+      throwsA(predicate((e) => e is ArgumentError && e.name == 'svgPathData')),
+    );
+  });
+
   test('node patch validates id, patch type and nullability constraints', () {
     final rectNoop = RectNode(id: 'x', size: const Size(1, 1));
-    expect(txnApplyNodePatch(rectNoop, const RectNodePatch(id: 'x')), isFalse);
+    expect(txnApplyNodePatch(rectNoop, RectNodePatch(id: 'x')), isFalse);
 
     final rect = RectNode(id: 'r1', size: const Size(1, 1));
     expect(
-      () => txnApplyNodePatch(rect, const RectNodePatch(id: 'other')),
+      () => txnApplyNodePatch(rect, RectNodePatch(id: 'other')),
       throwsArgumentError,
     );
     expect(
       () => txnApplyNodePatch(
         rect,
-        const RectNodePatch(id: 'r1', size: PatchField<Size>.nullValue()),
+        RectNodePatch(id: 'r1', size: PatchField<Size>.nullValue()),
       ),
       throwsArgumentError,
     );
     expect(
-      () => txnApplyNodePatch(rect, const PathNodePatch(id: 'r1')),
+      () => txnApplyNodePatch(rect, PathNodePatch(id: 'r1')),
       throwsArgumentError,
     );
 
@@ -1114,10 +1808,7 @@ void main() {
     expect(
       () => txnApplyNodePatch(
         stroke,
-        const StrokeNodePatch(
-          id: 's1',
-          points: PatchField<List<Offset>>.nullValue(),
-        ),
+        StrokeNodePatch(id: 's1', points: PatchField<List<Offset>>.nullValue()),
       ),
       throwsArgumentError,
     );
@@ -1128,42 +1819,60 @@ void main() {
     () {
       final rect = RectNode(id: 'r1', size: const Size(1, 1));
 
-      expect(txnApplyNodePatch(rect, const RectNodePatch(id: 'r1')), isFalse);
+      expect(txnApplyNodePatch(rect, RectNodePatch(id: 'r1')), isFalse);
 
-      final invalidCases = <({NodePatch patch, String field, String message})>[
-        (
-          patch: const RectNodePatch(
-            id: 'r1',
-            common: CommonNodePatch(opacity: PatchField<double>.value(1.1)),
-          ),
-          field: 'patch.common.opacity',
-          message: 'Must be within [0,1].',
-        ),
-        (
-          patch: const RectNodePatch(
-            id: 'r1',
-            common: CommonNodePatch(
-              transform: PatchField<Transform2D>.value(
-                Transform2D(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0),
+      final invalidCases =
+          <({NodePatch Function() create, String field, String message})>[
+            (
+              create: () => RectNodePatch(
+                id: 'r1',
+                common: CommonNodePatch(opacity: PatchField<double>.value(1.1)),
               ),
+              field: 'opacity',
+              message: 'Must be within [0,1].',
             ),
-          ),
-          field: 'patch.common.transform.tx',
-          message: 'Must be finite.',
-        ),
-        (
-          patch: const RectNodePatch(
-            id: 'r1',
-            size: PatchField<Size>.nullValue(),
-          ),
-          field: 'patch.size',
-          message: 'PatchField.nullValue() is invalid for non-nullable field.',
-        ),
-      ];
+            (
+              create: () => RectNodePatch(
+                id: 'r1',
+                common: CommonNodePatch(
+                  transform: PatchField<Transform2D>.value(
+                    Transform2D(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0),
+                  ),
+                ),
+              ),
+              field: 'transform.tx',
+              message: 'Must be finite.',
+            ),
+            (
+              create: () =>
+                  RectNodePatch(id: 'r1', size: PatchField<Size>.nullValue()),
+              field: 'size',
+              message:
+                  'PatchField.nullValue() is invalid for non-nullable field.',
+            ),
+            (
+              create: () => RectNodePatch(
+                id: 'r1',
+                common: CommonNodePatch(
+                  hitPadding: PatchField<double>.value(-1),
+                ),
+              ),
+              field: 'hitPadding',
+              message: 'Must be >= 0.',
+            ),
+            (
+              create: () => RectNodePatch(
+                id: 'r1',
+                strokeWidth: PatchField<double>.value(-1),
+              ),
+              field: 'strokeWidth',
+              message: 'Must be >= 0.',
+            ),
+          ];
 
       for (final invalid in invalidCases) {
         expect(
-          () => txnApplyNodePatch(rect, invalid.patch),
+          invalid.create,
           throwsA(
             predicate(
               (e) =>
@@ -1176,4 +1885,63 @@ void main() {
       }
     },
   );
+
+  test('node patch rejects invalid image and text boundary values', () {
+    expect(
+      () => ImageNodePatch(
+        id: 'img-boundary',
+        imageId: PatchField<String>.value('x' * (kMaxImageIdLength + 1)),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is ArgumentError &&
+              e.name == 'imageId' &&
+              e.message == 'Length must be <= $kMaxImageIdLength characters.',
+        ),
+      ),
+    );
+
+    final invalidCases =
+        <({NodePatch Function() create, String field, String message})>[
+          (
+            create: () => TextNodePatch(
+              id: 'text-boundary',
+              fontSize: PatchField<double>.value(0),
+            ),
+            field: 'fontSize',
+            message: 'Must be > 0.',
+          ),
+          (
+            create: () => TextNodePatch(
+              id: 'text-boundary',
+              maxWidth: PatchField<double?>.value(0),
+            ),
+            field: 'maxWidth',
+            message: 'Must be > 0.',
+          ),
+          (
+            create: () => TextNodePatch(
+              id: 'text-boundary',
+              lineHeight: PatchField<double?>.value(0),
+            ),
+            field: 'lineHeight',
+            message: 'Must be > 0.',
+          ),
+        ];
+
+    for (final invalid in invalidCases) {
+      expect(
+        invalid.create,
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.name == invalid.field &&
+                e.message == invalid.message,
+          ),
+        ),
+      );
+    }
+  });
 }

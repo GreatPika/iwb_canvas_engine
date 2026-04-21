@@ -2,9 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/core/nodes.dart' show RectNode;
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 
 // INV:INV-ENG-ID-INDEX-FROM-SCENE
 
@@ -15,35 +14,44 @@ void main() {
         ContentLayerSnapshot(
           id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
-            const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
+            RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
+            RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
           ],
         ),
       ],
     );
   }
 
-  test('resolveSpatialCandidateNode accepts valid foreground candidate', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
-    addTearDown(controller.dispose);
+  test(
+    'resolveSpatialCandidateSnapshot accepts valid foreground candidate',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
 
-    final candidates = controller.querySpatialCandidates(
-      const Rect.fromLTWH(0, 0, 0, 0),
-    );
-    expect(candidates, isNotEmpty);
+      final candidates = controller.queryHitTestCandidates(
+        const Rect.fromLTWH(0, 0, 0, 0),
+      );
+      expect(candidates, isNotEmpty);
 
-    final resolved = controller.resolveSpatialCandidateNode(candidates.first);
-    expect(resolved, isNotNull);
-    expect(identical(resolved, candidates.first.node), isTrue);
-  });
+      final resolved = controller.resolveSpatialCandidateSnapshot((
+        nodeId: candidates.first.nodeId,
+        layerIndex: candidates.first.layerIndex,
+        nodeIndex: candidates.first.nodeIndex,
+      ));
+      expect(resolved, isNotNull);
+      expect(resolved?.id, candidates.first.nodeId);
+    },
+  );
 
   test(
-    'resolveSpatialCandidateNode rejects candidate from background locator',
+    'resolveSpatialCandidateSnapshot accepts current background paint candidate',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           backgroundLayer: BackgroundLayerSnapshot(
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               RectNodeSnapshot(id: 'bg-node', size: Size(10, 10)),
             ],
           ),
@@ -54,52 +62,144 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      final backgroundNode = RectNode(id: 'bg-node', size: const Size(10, 10));
-      final backgroundCandidate = SceneSpatialCandidate(
-        layerIndex: -1,
-        nodeIndex: 0,
-        node: backgroundNode,
-        candidateBoundsWorld: backgroundNode.boundsWorld,
+      final backgroundCandidate = controller
+          .queryPaintCandidates(
+            const Rect.fromLTWH(0, 0, 20, 20),
+            scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+          )
+          .single;
+      final resolved = controller.resolveSpatialCandidateSnapshot((
+        nodeId: backgroundCandidate.nodeId,
+        layerIndex: backgroundCandidate.layerIndex,
+        nodeIndex: backgroundCandidate.nodeIndex,
+      ));
+
+      expect(backgroundCandidate.layerIndex, -1);
+      expect(resolved, isNotNull);
+      expect(resolved?.id, 'bg-node');
+    },
+  );
+
+  test('queryPaintCandidates remains content-only by default', () {
+    final controller = SceneStoreController(
+      initialSnapshot: SceneSnapshot(
+        backgroundLayer: BackgroundLayerSnapshot(
+          nodes: <NodeSnapshot>[
+            RectNodeSnapshot(id: 'bg-node', size: Size(10, 10)),
+          ],
+        ),
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-1',
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'fg-node', size: Size(10, 10)),
+            ],
+          ),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    expect(
+      controller
+          .queryPaintCandidates(const Rect.fromLTWH(0, 0, 20, 20))
+          .map((candidate) => candidate.nodeId),
+      <NodeId>['fg-node'],
+    );
+    expect(
+      controller
+          .queryPaintCandidates(
+            const Rect.fromLTWH(0, 0, 20, 20),
+            scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+          )
+          .map((candidate) => candidate.nodeId)
+          .toSet(),
+      <NodeId>{'bg-node', 'fg-node'},
+    );
+  });
+
+  test(
+    'resolveSpatialCandidateSnapshot rejects stale background candidate',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'bg-node', size: Size(10, 10)),
+            ],
+          ),
+        ),
       );
+      addTearDown(controller.dispose);
+
+      final stale = controller
+          .queryPaintCandidates(
+            const Rect.fromLTWH(0, 0, 20, 20),
+            scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+          )
+          .single;
+
+      controller.writeReplaceScene(
+        SceneSnapshot(backgroundLayer: BackgroundLayerSnapshot()),
+      );
+
       expect(
-        controller.resolveSpatialCandidateNode(backgroundCandidate),
+        controller.resolveSpatialCandidateSnapshot((
+          nodeId: stale.nodeId,
+          layerIndex: stale.layerIndex,
+          nodeIndex: stale.nodeIndex,
+        )),
         isNull,
       );
     },
   );
 
-  test('resolveSpatialCandidateNode rejects out-of-range indices', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+  test(
+    'resolveSpatialCandidateSnapshot rejects out-of-range background candidate',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'bg-node', size: Size(10, 10)),
+            ],
+          ),
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      expect(
+        controller.resolveSpatialCandidateSnapshot(const (
+          nodeId: 'bg-node',
+          layerIndex: -1,
+          nodeIndex: 99,
+        )),
+        isNull,
+      );
+    },
+  );
+
+  test('resolveSpatialCandidateSnapshot rejects out-of-range indices', () {
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    final node = RectNode(id: 'fake', size: const Size(4, 4));
-    final outOfRangeLayer = SceneSpatialCandidate(
-      layerIndex: 99,
-      nodeIndex: 0,
-      node: node,
-      candidateBoundsWorld: node.boundsWorld,
-    );
-    final outOfRangeNode = SceneSpatialCandidate(
-      layerIndex: 0,
-      nodeIndex: 99,
-      node: node,
-      candidateBoundsWorld: node.boundsWorld,
-    );
+    const outOfRangeLayer = (nodeId: 'r1', layerIndex: 99, nodeIndex: 0);
+    const outOfRangeNode = (nodeId: 'r1', layerIndex: 0, nodeIndex: 99);
 
-    expect(controller.resolveSpatialCandidateNode(outOfRangeLayer), isNull);
-    expect(controller.resolveSpatialCandidateNode(outOfRangeNode), isNull);
+    expect(controller.resolveSpatialCandidateSnapshot(outOfRangeLayer), isNull);
+    expect(controller.resolveSpatialCandidateSnapshot(outOfRangeNode), isNull);
   });
 
   test(
-    'resolveSpatialCandidateNode rejects stale identity after replaceScene',
+    'resolveSpatialCandidateSnapshot rejects stale identity after replaceScene',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
 
       final stale = controller
-          .querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0))
+          .queryHitTestCandidates(const Rect.fromLTWH(0, 0, 0, 0))
           .first;
 
       controller.writeReplaceScene(
@@ -107,7 +207,7 @@ void main() {
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-2',
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 RectNodeSnapshot(id: 'fresh-1', size: Size(10, 10)),
                 RectNodeSnapshot(id: 'fresh-2', size: Size(12, 12)),
               ],
@@ -116,30 +216,129 @@ void main() {
         ),
       );
 
-      expect(controller.resolveSpatialCandidateNode(stale), isNull);
+      expect(
+        controller.resolveSpatialCandidateSnapshot((
+          nodeId: stale.nodeId,
+          layerIndex: stale.layerIndex,
+          nodeIndex: stale.nodeIndex,
+        )),
+        isNull,
+      );
     },
   );
 
   test(
-    'resolveSpatialCandidateNode accepts non-geometry clone after selection write',
+    'resolveSpatialCandidateSnapshot accepts non-geometry clone after selection write',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
 
       final candidate = controller
-          .querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0))
+          .queryHitTestCandidates(const Rect.fromLTWH(0, 0, 0, 0))
           .first;
 
       controller.write<void>((writer) {
         writer.writeSelectionReplace(const <NodeId>{'r1'});
       });
 
-      final resolved = controller.resolveSpatialCandidateNode(candidate);
+      final resolved = controller.resolveSpatialCandidateSnapshot((
+        nodeId: candidate.nodeId,
+        layerIndex: candidate.layerIndex,
+        nodeIndex: candidate.nodeIndex,
+      ));
       expect(resolved, isNotNull);
-      expect(resolved!.id, candidate.node.id);
-      expect(resolved.type, candidate.node.type);
+      if (resolved == null) {
+        fail('Expected spatial candidate resolution to return selected node.');
+      }
+      expect(resolved.id, candidate.nodeId);
+      expect(resolved, isA<RectNodeSnapshot>());
+    },
+  );
+
+  test(
+    'resolveSnapshotNodeById accepts valid content locator and validates id at location',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final resolved = controller.resolveSnapshotNodeById('r2');
+
+      expect(resolved, isNotNull);
+      expect(resolved?.layerIndex, 0);
+      expect(resolved?.nodeIndex, 1);
+      expect(resolved?.node.id, 'r2');
+    },
+  );
+
+  test(
+    'resolveSnapshotNodeById supports background locator with layerIndex -1',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'bg-node', size: Size(10, 10)),
+            ],
+          ),
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final resolved = controller.resolveSnapshotNodeById('bg-node');
+
+      expect(resolved, isNotNull);
+      expect(resolved?.layerIndex, -1);
+      expect(resolved?.nodeIndex, 0);
+      expect(resolved?.node.id, 'bg-node');
+    },
+  );
+
+  test(
+    'resolveSnapshotNodeById rejects stale locator after replaceScene without snapshot scan fallback',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-0',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(id: 'stale', size: Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      expect(controller.resolveSnapshotNodeById('stale'), isNotNull);
+
+      controller.writeReplaceScene(
+        SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-1',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(id: 'fresh', size: Size(10, 10)),
+                RectNodeSnapshot(id: 'stale', size: Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      expect(controller.resolveSnapshotNodeById('stale')?.nodeIndex, 1);
+      expect(
+        controller.resolveSpatialCandidateSnapshot(const (
+          nodeId: 'stale',
+          layerIndex: 0,
+          nodeIndex: 0,
+        )),
+        isNull,
+      );
     },
   );
 }

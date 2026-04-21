@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
 // INV:INV-ENG-ID-INDEX-FROM-SCENE
 
@@ -14,8 +14,8 @@ void main() {
         ContentLayerSnapshot(
           id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
-            const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
+            RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
+            RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
           ],
         ),
       ],
@@ -23,38 +23,38 @@ void main() {
   }
 
   test('spatial index updates incrementally on bounds revision change', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    final beforeQuery = controller.querySpatialCandidates(
+    final beforeQuery = controller.queryHitTestCandidates(
       const Rect.fromLTWH(0, 0, 0, 0),
     );
     expect(beforeQuery, isNotEmpty);
-    expect(controller.debugSpatialIndexBuildCount, 1);
+    expect(controller.debug.spatialIndexBuildCount, 1);
 
     controller.write<void>((writer) {
       writer.writeSelectionReplace(const <NodeId>{'r1'});
       writer.writeSelectionTranslate(const Offset(80, 0));
     });
 
-    final afterQuery = controller.querySpatialCandidates(
+    final afterQuery = controller.queryHitTestCandidates(
       const Rect.fromLTWH(80, 0, 0, 0),
     );
     expect(afterQuery, isNotEmpty);
-    expect(controller.debugSpatialIndexBuildCount, 1);
-    expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+    expect(controller.debug.spatialIndexBuildCount, 1);
+    expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
   });
 
   test(
     'single-node transform stays incremental without full materialization',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
 
-      controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0));
-      expect(controller.debugSpatialIndexBuildCount, 1);
+      controller.queryHitTestCandidates(const Rect.fromLTWH(0, 0, 0, 0));
+      expect(controller.debug.spatialIndexBuildCount, 1);
 
       controller.write<void>((writer) {
         final changed = writer.writeNodeTransformSet(
@@ -64,55 +64,55 @@ void main() {
         expect(changed, isTrue);
       });
 
-      final moved = controller.querySpatialCandidates(
+      final moved = controller.queryHitTestCandidates(
         const Rect.fromLTWH(100, 0, 0, 0),
       );
-      expect(moved.map((candidate) => candidate.node.id), contains('r1'));
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
-      expect(controller.debugNodeIdSetMaterializations, 0);
-      expect(controller.debugNodeLocatorMaterializations, 0);
+      expect(moved.map((candidate) => candidate.nodeId), contains('r1'));
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
+      expect(controller.debug.nodeIdSetMaterializations, 0);
+      expect(controller.debug.nodeLocatorMaterializations, 0);
     },
   );
 
   test('spatial index updates incrementally on hitPadding change', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    final beforeQuery = controller.querySpatialCandidates(
+    final beforeQuery = controller.queryHitTestCandidates(
       const Rect.fromLTWH(30, 0, 0, 0),
     );
     expect(beforeQuery, isEmpty);
-    expect(controller.debugSpatialIndexBuildCount, 1);
+    expect(controller.debug.spatialIndexBuildCount, 1);
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
-        const RectNodePatch(
+        RectNodePatch(
           id: 'r1',
           common: CommonNodePatch(hitPadding: PatchField<double>.value(22)),
         ),
       );
     });
 
-    final afterQuery = controller.querySpatialCandidates(
+    final afterQuery = controller.queryHitTestCandidates(
       const Rect.fromLTWH(30, 0, 0, 0),
     );
-    expect(afterQuery.map((candidate) => candidate.node.id), contains('r1'));
+    expect(afterQuery.map((candidate) => candidate.nodeId), contains('r1'));
     expect(
-      afterQuery.map((candidate) => candidate.node.id),
+      afterQuery.map((candidate) => candidate.nodeId),
       isNot(contains('r2')),
     );
-    expect(controller.debugSpatialIndexBuildCount, 1);
-    expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+    expect(controller.debug.spatialIndexBuildCount, 1);
+    expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
   });
 
   test('spatial index handles huge node and updates incrementally', () {
-    final controller = SceneControllerCore(
+    final controller = SceneStoreController(
       initialSnapshot: SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-1',
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               RectNodeSnapshot(id: 'huge', size: Size(10000, 10000)),
             ],
           ),
@@ -121,46 +121,46 @@ void main() {
     );
     addTearDown(controller.dispose);
 
-    final initial = controller.querySpatialCandidates(
+    final initial = controller.queryHitTestCandidates(
       const Rect.fromLTWH(0, 0, 10, 10),
     );
-    expect(initial.map((candidate) => candidate.node.id), <NodeId>['huge']);
-    expect(controller.debugSpatialIndexBuildCount, 1);
+    expect(initial.map((candidate) => candidate.nodeId), <NodeId>['huge']);
+    expect(controller.debug.spatialIndexBuildCount, 1);
 
     controller.write<void>((writer) {
       writer.writeSelectionReplace(const <NodeId>{'huge'});
       writer.writeSelectionTranslate(const Offset(2e6, 0));
     });
 
-    final oldProbe = controller.querySpatialCandidates(
+    final oldProbe = controller.queryHitTestCandidates(
       const Rect.fromLTWH(0, 0, 10, 10),
     );
     expect(oldProbe, isEmpty);
 
-    final movedProbe = controller.querySpatialCandidates(
+    final movedProbe = controller.queryHitTestCandidates(
       const Rect.fromLTWH(2e6, 0, 10, 10),
     );
-    expect(movedProbe.map((candidate) => candidate.node.id), <NodeId>['huge']);
-    expect(controller.debugSpatialIndexBuildCount, 1);
-    expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+    expect(movedProbe.map((candidate) => candidate.nodeId), <NodeId>['huge']);
+    expect(controller.debug.spatialIndexBuildCount, 1);
+    expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
   });
 
   test('spatial index invalidates and rebuilds after replaceScene', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    final beforeQuery = controller.querySpatialCandidates(
+    final beforeQuery = controller.queryHitTestCandidates(
       const Rect.fromLTWH(0, 0, 0, 0),
     );
     expect(beforeQuery, isNotEmpty);
-    expect(controller.debugSpatialIndexBuildCount, 1);
+    expect(controller.debug.spatialIndexBuildCount, 1);
 
     controller.writeReplaceScene(
       SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-2',
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               RectNodeSnapshot(id: 'fresh', size: Size(10, 10)),
             ],
           ),
@@ -168,18 +168,18 @@ void main() {
       ),
     );
 
-    final afterQuery = controller.querySpatialCandidates(
+    final afterQuery = controller.queryHitTestCandidates(
       const Rect.fromLTWH(0, 0, 0, 0),
     );
-    expect(afterQuery.map((candidate) => candidate.node.id), <NodeId>['fresh']);
-    expect(controller.debugSpatialIndexBuildCount, 2);
-    expect(controller.debugSpatialIndexIncrementalApplyCount, 0);
+    expect(afterQuery.map((candidate) => candidate.nodeId), <NodeId>['fresh']);
+    expect(controller.debug.spatialIndexBuildCount, 2);
+    expect(controller.debug.spatialIndexIncrementalApplyCount, 0);
   });
 
   test(
     'spatial index stays consistent across insert-move-erase-replace-move',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-3'),
@@ -190,8 +190,8 @@ void main() {
 
       Set<NodeId> queryIds(Rect probe) {
         return controller
-            .querySpatialCandidates(probe)
-            .map((candidate) => candidate.node.id)
+            .queryHitTestCandidates(probe)
+            .map((candidate) => candidate.nodeId)
             .toSet();
       }
 
@@ -221,8 +221,8 @@ void main() {
         expectedPresent: const <NodeId>{},
         expectedAbsent: const <NodeId>{'r1', 'fresh'},
       );
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 0);
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 0);
 
       controller.write<void>((writer) {
         writer.writeNodeInsert(
@@ -259,7 +259,7 @@ void main() {
         expectedAbsent: const <NodeId>{'r1', 'fresh'},
       );
 
-      final buildCountBeforeReplace = controller.debugSpatialIndexBuildCount;
+      final buildCountBeforeReplace = controller.debug.spatialIndexBuildCount;
       controller.writeReplaceScene(
         SceneSnapshot(
           layers: <ContentLayerSnapshot>[
@@ -282,7 +282,7 @@ void main() {
         expectedAbsent: const <NodeId>{'r1'},
       );
       expect(
-        controller.debugSpatialIndexBuildCount,
+        controller.debug.spatialIndexBuildCount,
         buildCountBeforeReplace + 1,
       );
 
@@ -306,12 +306,12 @@ void main() {
   test(
     'spatial index keeps candidate indices after erase in middle of layer',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-5',
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
                 RectNodeSnapshot(id: 'r2', size: Size(10, 10)),
                 RectNodeSnapshot(id: 'r3', size: Size(10, 10)),
@@ -322,18 +322,18 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 0, 0));
-      expect(controller.debugSpatialIndexBuildCount, 1);
+      controller.queryHitTestCandidates(const Rect.fromLTWH(0, 0, 0, 0));
+      expect(controller.debug.spatialIndexBuildCount, 1);
 
       controller.write<void>((writer) {
         writer.writeNodeErase('r2');
       });
 
-      final candidates = controller.querySpatialCandidates(
+      final candidates = controller.queryHitTestCandidates(
         const Rect.fromLTWH(0, 0, 0, 0),
       );
-      final byId = <NodeId, SceneSpatialCandidate>{
-        for (final candidate in candidates) candidate.node.id: candidate,
+      final byId = <NodeId, SceneHitTestSpatialCandidate>{
+        for (final candidate in candidates) candidate.nodeId: candidate,
       };
       expect(byId.containsKey('r1'), isTrue);
       expect(byId.containsKey('r2'), isFalse);
@@ -342,17 +342,31 @@ void main() {
       expect(byId['r1']!.nodeIndex, 0);
       expect(byId['r3']!.layerIndex, 0);
       expect(byId['r3']!.nodeIndex, 1);
-      expect(controller.resolveSpatialCandidateNode(byId['r1']!), isNotNull);
-      expect(controller.resolveSpatialCandidateNode(byId['r3']!), isNotNull);
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+      expect(
+        controller.resolveSpatialCandidateSnapshot((
+          nodeId: byId['r1']!.nodeId,
+          layerIndex: byId['r1']!.layerIndex,
+          nodeIndex: byId['r1']!.nodeIndex,
+        )),
+        isNotNull,
+      );
+      expect(
+        controller.resolveSpatialCandidateSnapshot((
+          nodeId: byId['r3']!.nodeId,
+          layerIndex: byId['r3']!.layerIndex,
+          nodeIndex: byId['r3']!.nodeIndex,
+        )),
+        isNotNull,
+      );
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
     },
   );
 
   test(
     'spatial index stays incremental across bulk draw-erase-redraw cycle',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-6'),
@@ -365,9 +379,9 @@ void main() {
       final firstBandProbe = Rect.fromLTWH(-32, -32, batchSize * 16 + 64, 64);
       final allBandsProbe = Rect.fromLTWH(-32, -32, batchSize * 16 + 64, 128);
 
-      controller.querySpatialCandidates(const Rect.fromLTWH(0, 0, 1, 1));
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 0);
+      controller.queryHitTestCandidates(const Rect.fromLTWH(0, 0, 1, 1));
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 0);
 
       controller.write<void>((writer) {
         for (var i = 0; i < batchSize; i++) {
@@ -381,13 +395,13 @@ void main() {
         }
       });
 
-      final afterFirstDraw = controller.querySpatialCandidates(firstBandProbe);
+      final afterFirstDraw = controller.queryHitTestCandidates(firstBandProbe);
       expect(
-        afterFirstDraw.map((candidate) => candidate.node.id).toSet().length,
+        afterFirstDraw.map((candidate) => candidate.nodeId).toSet().length,
         batchSize,
       );
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 1);
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
 
       controller.write<void>((writer) {
         for (var i = 0; i < batchSize; i += 2) {
@@ -395,15 +409,15 @@ void main() {
         }
       });
 
-      final afterErase = controller.querySpatialCandidates(firstBandProbe);
+      final afterErase = controller.queryHitTestCandidates(firstBandProbe);
       final afterEraseIds = afterErase
-          .map((candidate) => candidate.node.id)
+          .map((candidate) => candidate.nodeId)
           .toSet();
       expect(afterEraseIds.length, batchSize ~/ 2);
       expect(afterEraseIds.contains('a0'), isFalse);
       expect(afterEraseIds.contains('a1'), isTrue);
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 2);
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 2);
 
       controller.write<void>((writer) {
         for (var i = 0; i < batchSize; i++) {
@@ -417,21 +431,21 @@ void main() {
         }
       });
 
-      final afterSecondDraw = controller.querySpatialCandidates(allBandsProbe);
+      final afterSecondDraw = controller.queryHitTestCandidates(allBandsProbe);
       final idsAfterSecondDraw = afterSecondDraw
-          .map((candidate) => candidate.node.id)
+          .map((candidate) => candidate.nodeId)
           .toSet();
       expect(idsAfterSecondDraw.length, batchSize + batchSize ~/ 2);
       expect(idsAfterSecondDraw.contains('b0'), isTrue);
       expect(idsAfterSecondDraw.contains('a1'), isTrue);
       expect(idsAfterSecondDraw.contains('a0'), isFalse);
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 3);
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 3);
 
-      final repeatedQuery = controller.querySpatialCandidates(allBandsProbe);
+      final repeatedQuery = controller.queryHitTestCandidates(allBandsProbe);
       expect(repeatedQuery.length, afterSecondDraw.length);
-      expect(controller.debugSpatialIndexBuildCount, 1);
-      expect(controller.debugSpatialIndexIncrementalApplyCount, 3);
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 3);
     },
   );
 }

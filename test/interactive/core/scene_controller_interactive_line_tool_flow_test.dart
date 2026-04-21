@@ -1,12 +1,16 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
+import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart';
 
 import '../test_support/interactive_controller_fixtures.dart';
 
 void main() {
-  group('SceneControllerInteractive unit', () {
+  group('SceneController unit', () {
     test('line tool supports drag flow and two-tap pending flow', () async {
-      final controller = SceneControllerInteractive(
+      final controller = SceneController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-0'),
@@ -20,11 +24,11 @@ void main() {
       final sub = controller.actions.listen(actions.add);
       addTearDown(sub.cancel);
 
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.line);
-      controller.setDragStartSlop(0.001);
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.line);
+      controller.interaction.setDragStartSlop(0.001);
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(20, 20),
@@ -32,8 +36,8 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      expect(controller.hasActiveLinePreview, isFalse);
-      controller.handlePointer(
+      expect(controller.interaction.hasActiveLinePreview, isFalse);
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(50, 20),
@@ -41,10 +45,13 @@ void main() {
           phase: CanvasPointerPhase.move,
         ),
       );
-      expect(controller.hasActiveLinePreview, isTrue);
-      expect(controller.activeLinePreviewStart, const Offset(20, 20));
-      expect(controller.activeLinePreviewEnd, const Offset(50, 20));
-      controller.handlePointer(
+      expect(controller.interaction.hasActiveLinePreview, isTrue);
+      expect(
+        controller.interaction.activeLinePreviewStart,
+        const Offset(20, 20),
+      );
+      expect(controller.interaction.activeLinePreviewEnd, const Offset(50, 20));
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(60, 20),
@@ -52,8 +59,8 @@ void main() {
           phase: CanvasPointerPhase.up,
         ),
       );
-      expect(controller.hasActiveLinePreview, isFalse);
-      expect(controller.hasPendingLineStart, isFalse);
+      expect(controller.interaction.hasActiveLinePreview, isFalse);
+      expect(controller.interaction.hasPendingLineStart, isFalse);
 
       final dragLine = controller.snapshot.layers
           .expand((layer) => layer.nodes)
@@ -72,7 +79,7 @@ void main() {
         const Offset(60, 20),
       );
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 2,
           position: const Offset(100, 100),
@@ -80,7 +87,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 2,
           position: const Offset(100, 100),
@@ -88,10 +95,10 @@ void main() {
           phase: CanvasPointerPhase.up,
         ),
       );
-      expect(controller.hasPendingLineStart, isTrue);
-      expect(controller.pendingLineTimestampMs, 31);
+      expect(controller.interaction.hasPendingLineStart, isTrue);
+      expect(controller.interaction.pendingLineTimestampMs, 31);
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 20,
           position: const Offset(220, 220),
@@ -99,7 +106,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 20,
           position: const Offset(280, 220),
@@ -107,10 +114,16 @@ void main() {
           phase: CanvasPointerPhase.move,
         ),
       );
-      expect(controller.hasActiveLinePreview, isTrue);
-      expect(controller.activeLinePreviewStart, const Offset(220, 220));
-      expect(controller.activeLinePreviewEnd, const Offset(280, 220));
-      controller.handlePointer(
+      expect(controller.interaction.hasActiveLinePreview, isTrue);
+      expect(
+        controller.interaction.activeLinePreviewStart,
+        const Offset(220, 220),
+      );
+      expect(
+        controller.interaction.activeLinePreviewEnd,
+        const Offset(280, 220),
+      );
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 20,
           position: const Offset(280, 220),
@@ -118,7 +131,7 @@ void main() {
           phase: CanvasPointerPhase.up,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 3,
           position: const Offset(130, 130),
@@ -126,7 +139,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 3,
           position: const Offset(130, 130),
@@ -134,7 +147,7 @@ void main() {
           phase: CanvasPointerPhase.up,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 4,
           position: const Offset(150, 150),
@@ -142,7 +155,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 4,
           position: const Offset(150, 150),
@@ -150,8 +163,8 @@ void main() {
           phase: CanvasPointerPhase.up,
         ),
       );
-      controller.setDrawTool(DrawTool.pen);
-      expect(controller.hasPendingLineStart, isFalse);
+      controller.interaction.setDrawTool(DrawTool.pen);
+      expect(controller.interaction.hasPendingLineStart, isFalse);
 
       await pumpEventQueue();
       expect(
@@ -171,17 +184,333 @@ void main() {
         isTrue,
       );
 
-      controller.setMode(CanvasMode.move);
-      controller.toggleSelection('missing');
-      controller.clearSelection();
-      controller.selectAll(onlySelectable: false);
+      controller.interaction.setMode(CanvasMode.move);
+      controller.selection.toggleSelection('missing');
+      controller.selection.clearSelection();
+      controller.selection.selectAll(onlySelectable: false);
       expect(controller.selectedNodeIds, isNotEmpty);
+    });
+
+    test(
+      'line preview and pending commit keep captured style and do not cross owners',
+      () {
+        // INV:INV-ENG-INTERACTIVE-DRAW-STYLE-SNAPSHOT
+        final controller = SceneController(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(id: 'layer-auto-20'),
+              ContentLayerSnapshot(id: 'layer-auto-21'),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.line);
+        controller.interaction.lineThickness = 5;
+        controller.interaction.setDrawColor(const Color(0xFF224466));
+        controller.interaction.setDragStartSlop(0.001);
+
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(20, 20),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(40, 20),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.move,
+          ),
+        );
+
+        controller.interaction.lineThickness = 11;
+        controller.interaction.setDrawColor(const Color(0xFFAA3300));
+
+        expect(controller.interaction.hasActiveLinePreview, isTrue);
+        expect(controller.interaction.activeLinePreviewThickness, 5);
+        expect(
+          controller.interaction.activeLinePreviewColor,
+          const Color(0xFF224466),
+        );
+
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 1,
+            position: const Offset(50, 20),
+            timestampMs: 3,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        controller.interaction.lineThickness = 7;
+        controller.interaction.setDrawColor(const Color(0xFF0055AA));
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 2,
+            position: const Offset(100, 100),
+            timestampMs: 10,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 2,
+            position: const Offset(100, 100),
+            timestampMs: 11,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        controller.interaction.lineThickness = 13;
+        controller.interaction.setDrawColor(const Color(0xFFAA0055));
+        expect(
+          controller.interaction.pendingLineColor,
+          const Color(0xFF0055AA),
+        );
+        expect(controller.interaction.pendingLineThickness, 7);
+        final session = sceneControllerViewRuntimeOf(controller)
+            .createPointerSession(
+              isMounted: () => true,
+              hasLiveRawPointers: () => false,
+            );
+        addTearDown(session.dispose);
+        session.handleRoutedSample(
+          const PointerSample(
+            pointerId: 3,
+            position: Offset(140, 140),
+            timestampMs: 12,
+            phase: PointerPhase.down,
+            kind: PointerDeviceKind.touch,
+          ),
+          shouldTrackSignals: false,
+        );
+        session.handleRoutedSample(
+          const PointerSample(
+            pointerId: 3,
+            position: Offset(140, 140),
+            timestampMs: 13,
+            phase: PointerPhase.up,
+            kind: PointerDeviceKind.touch,
+          ),
+          shouldTrackSignals: false,
+        );
+
+        expect(controller.interaction.hasPendingLineStart, isTrue);
+        expect(controller.interaction.pendingLineStart, const Offset(140, 140));
+        expect(controller.interaction.pendingLineTimestampMs, 13);
+        expect(
+          controller.interaction.pendingLineColor,
+          const Color(0xFFAA0055),
+        );
+        expect(controller.interaction.pendingLineThickness, 13);
+
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 4,
+            position: const Offset(180, 180),
+            timestampMs: 14,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 4,
+            position: const Offset(180, 180),
+            timestampMs: 15,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        expect(controller.interaction.hasPendingLineStart, isTrue);
+        expect(controller.interaction.pendingLineStart, const Offset(180, 180));
+        expect(controller.interaction.pendingLineTimestampMs, 15);
+        expect(
+          controller.interaction.pendingLineColor,
+          const Color(0xFFAA0055),
+        );
+        expect(controller.interaction.pendingLineThickness, 13);
+
+        controller.interaction.lineThickness = 19;
+        controller.interaction.setDrawColor(const Color(0xFF00AA55));
+        expect(
+          controller.interaction.pendingLineColor,
+          const Color(0xFFAA0055),
+        );
+        expect(controller.interaction.pendingLineThickness, 13);
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 5,
+            position: const Offset(220, 220),
+            timestampMs: 16,
+            phase: CanvasPointerPhase.down,
+          ),
+        );
+        controller.interaction.handlePointer(
+          sampleInput(
+            pointerId: 5,
+            position: const Offset(220, 220),
+            timestampMs: 17,
+            phase: CanvasPointerPhase.up,
+          ),
+        );
+
+        final lines = controller.snapshot.layers
+            .expand((layer) => layer.nodes)
+            .whereType<LineNodeSnapshot>()
+            .toList();
+        expect(lines, hasLength(2));
+        expect(controller.interaction.pendingLineColor, isNull);
+        expect(controller.interaction.pendingLineThickness, isNull);
+
+        final draggedLine = lines.firstWhere(
+          (line) =>
+              line.transform.applyToPoint(line.start) == const Offset(20, 20) &&
+              line.transform.applyToPoint(line.end) == const Offset(50, 20),
+        );
+        expect(draggedLine.thickness, 5);
+        expect(draggedLine.color, const Color(0xFF224466));
+
+        final tappedLine = lines.firstWhere(
+          (line) =>
+              line.transform.applyToPoint(line.start) ==
+                  const Offset(180, 180) &&
+              line.transform.applyToPoint(line.end) == const Offset(220, 220),
+        );
+        expect(tappedLine.thickness, 13);
+        expect(tappedLine.color, const Color(0xFFAA0055));
+      },
+    );
+
+    test('foreign drag commit preserves pending line for its owner', () {
+      final controller = SceneController(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(id: 'layer-auto-30'),
+            ContentLayerSnapshot(id: 'layer-auto-31'),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.line);
+      controller.interaction.setDragStartSlop(0.001);
+
+      final session = sceneControllerViewRuntimeOf(controller)
+          .createPointerSession(
+            isMounted: () => true,
+            hasLiveRawPointers: () => false,
+          );
+      addTearDown(session.dispose);
+      session.handleRoutedSample(
+        const PointerSample(
+          pointerId: 10,
+          position: Offset(40, 40),
+          timestampMs: 1,
+          phase: PointerPhase.down,
+          kind: PointerDeviceKind.touch,
+        ),
+        shouldTrackSignals: false,
+      );
+      session.handleRoutedSample(
+        const PointerSample(
+          pointerId: 10,
+          position: Offset(40, 40),
+          timestampMs: 2,
+          phase: PointerPhase.up,
+          kind: PointerDeviceKind.touch,
+        ),
+        shouldTrackSignals: false,
+      );
+
+      expect(controller.interaction.pendingLineStart, const Offset(40, 40));
+      expect(controller.interaction.pendingLineTimestampMs, 2);
+
+      controller.interaction.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(100, 100),
+          timestampMs: 3,
+          phase: CanvasPointerPhase.down,
+        ),
+      );
+      controller.interaction.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(130, 100),
+          timestampMs: 4,
+          phase: CanvasPointerPhase.move,
+        ),
+      );
+      controller.interaction.handlePointer(
+        sampleInput(
+          pointerId: 1,
+          position: const Offset(150, 100),
+          timestampMs: 5,
+          phase: CanvasPointerPhase.up,
+        ),
+      );
+
+      expect(controller.interaction.hasPendingLineStart, isTrue);
+      expect(controller.interaction.pendingLineStart, const Offset(40, 40));
+      expect(controller.interaction.pendingLineTimestampMs, 2);
+
+      session.handleRoutedSample(
+        const PointerSample(
+          pointerId: 11,
+          position: Offset(80, 80),
+          timestampMs: 6,
+          phase: PointerPhase.down,
+          kind: PointerDeviceKind.touch,
+        ),
+        shouldTrackSignals: false,
+      );
+      session.handleRoutedSample(
+        const PointerSample(
+          pointerId: 11,
+          position: Offset(80, 80),
+          timestampMs: 7,
+          phase: PointerPhase.up,
+          kind: PointerDeviceKind.touch,
+        ),
+        shouldTrackSignals: false,
+      );
+
+      final lines = controller.snapshot.layers
+          .expand((layer) => layer.nodes)
+          .whereType<LineNodeSnapshot>()
+          .toList();
+      expect(lines, hasLength(2));
+
+      expect(controller.interaction.hasPendingLineStart, isFalse);
+      expect(
+        lines.any(
+          (line) =>
+              line.transform.applyToPoint(line.start) ==
+                  const Offset(100, 100) &&
+              line.transform.applyToPoint(line.end) == const Offset(150, 100),
+        ),
+        isTrue,
+      );
+      expect(
+        lines.any(
+          (line) =>
+              line.transform.applyToPoint(line.start) == const Offset(40, 40) &&
+              line.transform.applyToPoint(line.end) == const Offset(80, 80),
+        ),
+        isTrue,
+      );
     });
 
     test(
       'pen commit adds up-point and eraser single point hits stroke segment',
       () {
-        final controller = SceneControllerInteractive(
+        final controller = SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-2'),
@@ -191,10 +520,10 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.pen);
-        controller.penThickness = 2;
-        controller.handlePointer(
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.pen);
+        controller.interaction.penThickness = 2;
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(10, 10),
@@ -202,7 +531,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(13, 10),
@@ -217,9 +546,9 @@ void main() {
             .single;
         expect(strokeSnap.points.length, 2);
 
-        controller.setDrawTool(DrawTool.eraser);
-        controller.eraserThickness = 20;
-        controller.handlePointer(
+        controller.interaction.setDrawTool(DrawTool.eraser);
+        controller.interaction.eraserThickness = 20;
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(11, 10),
@@ -227,7 +556,7 @@ void main() {
             phase: CanvasPointerPhase.down,
           ),
         );
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 2,
             position: const Offset(11, 10),

@@ -2,9 +2,12 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 
 // INV:INV-ENG-TXN-WRITER-LIFETIME
+// INV:INV-ENG-WRITE-PROTOCOL
+// INV:INV-ENG-TXN-FINALIZED-BEFORE-COMMIT-PLAN
 
 void main() {
   SceneSnapshot twoRectSnapshot() {
@@ -13,8 +16,8 @@ void main() {
         ContentLayerSnapshot(
           id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
-            const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
+            RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
+            RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
           ],
         ),
       ],
@@ -22,7 +25,7 @@ void main() {
   }
 
   test('nested write throws and does not commit', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     expect(
@@ -33,17 +36,38 @@ void main() {
     );
   });
 
+  test(
+    'writeWithSceneWriterCommitted preserves no-op and commit semantics',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final noOp = controller.writeWithSceneWriterCommitted<void>((_) {});
+      expect(noOp.commitResult.needsNotify, isFalse);
+
+      final committed = controller.writeWithSceneWriterCommitted<void>((
+        writer,
+      ) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+      });
+      expect(committed.commitResult.needsNotify, isTrue);
+      expect(controller.selectedNodeIds, const <NodeId>{'r1'});
+    },
+  );
+
   test('pre-context failure does not lock future writes', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    controller.debugBeforeTxnContextCreateHook = () {
+    controller.debug.beforeTxnContextCreateHook = () {
       throw StateError('forced pre-context failure');
     };
 
     expect(() => controller.write<void>((_) {}), throwsStateError);
 
-    controller.debugBeforeTxnContextCreateHook = null;
+    controller.debug.beforeTxnContextCreateHook = null;
     expect(
       () => controller.write<void>((writer) {
         writer.writeSelectionReplace(const <NodeId>{'r1'});
@@ -51,18 +75,18 @@ void main() {
       returnsNormally,
     );
     expect(controller.selectedNodeIds, const <NodeId>{'r1'});
-    expect(controller.debugCommitRevision, 1);
+    expect(controller.debug.currentCommitRevision, 1);
   });
 
   test(
     'async write callback fails fast and rolls back state/effects',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
 
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeSelection = controller.selectedNodeIds;
 
       final emitted = <String>[];
@@ -79,13 +103,12 @@ void main() {
       expect(
         () => controller.write<Future<void>>((writer) async {
           writer.writeSelectionReplace(const <NodeId>{'r1'});
-          writer.writeSignalEnqueue(type: 'must.rollback');
         }),
         throwsStateError,
       );
       await pumpEventQueue(times: 2);
 
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.selectedNodeIds, beforeSelection);
       expect(emitted, isEmpty);
       expect(notifications, 0);
@@ -93,9 +116,44 @@ void main() {
   );
 
   test(
+    'dispose during active write fails fast and does not poison later writes',
+    () async {
+      final controller = SceneStoreController(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final signals = <String>[];
+      final sub = controller.signals.listen((signal) {
+        signals.add(signal.type);
+      });
+      addTearDown(sub.cancel);
+
+      controller.writeWithSceneWriter<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+        expect(() => controller.dispose(), throwsStateError);
+        writer.writeSignalEnqueue(type: 'commit.survived');
+      });
+      await pumpEventQueue(times: 2);
+
+      expect(controller.selectedNodeIds, const <NodeId>{'r1'});
+      expect(controller.debug.currentCommitRevision, 1);
+      expect(signals, const <String>['commit.survived']);
+
+      controller.writeWithSceneWriter<void>((writer) {
+        writer.writeSignalEnqueue(type: 'second.commit');
+      });
+      await pumpEventQueue(times: 2);
+
+      expect(controller.debug.currentCommitRevision, 2);
+      expect(signals, const <String>['commit.survived', 'second.commit']);
+    },
+  );
+
+  test(
     'stale txn handle after commit throws and does not emit effects',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -115,11 +173,15 @@ void main() {
       controller.write<void>((writer) {
         staleTxn = writer;
         writer.writeSelectionReplace(const <NodeId>{'r1'});
+      });
+      late final SceneWriter staleWriter;
+      controller.writeWithSceneWriter<void>((writer) {
+        staleWriter = writer;
         writer.writeSignalEnqueue(type: 'initial.commit');
       });
       await pumpEventQueue(times: 2);
 
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeEpoch = controller.controllerEpoch;
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
@@ -132,12 +194,12 @@ void main() {
         throwsStateError,
       );
       expect(
-        () => staleTxn.writeSignalEnqueue(type: 'stale.signal'),
+        () => staleWriter.writeSignalEnqueue(type: 'stale.signal'),
         throwsStateError,
       );
       await pumpEventQueue(times: 2);
 
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.controllerEpoch, beforeEpoch);
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
@@ -156,12 +218,12 @@ void main() {
   test(
     'stale txn handle after rollback throws and keeps state unchanged',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
 
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeEpoch = controller.controllerEpoch;
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
@@ -185,7 +247,6 @@ void main() {
         () => controller.write<void>((writer) {
           staleTxn = writer;
           writer.writeSelectionReplace(const <NodeId>{'r1'});
-          writer.writeSignalEnqueue(type: 'will.rollback');
           throw StateError('rollback');
         }),
         throwsStateError,
@@ -198,7 +259,7 @@ void main() {
       expect(() => staleTxn.writeNodeErase('r1'), throwsStateError);
       await pumpEventQueue(times: 2);
 
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.controllerEpoch, beforeEpoch);
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
@@ -215,7 +276,7 @@ void main() {
   );
 
   test('normal write still works after stale txn handle rejection', () async {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final emitted = <String>[];
@@ -227,24 +288,35 @@ void main() {
     late final SceneWriteTxn staleTxn;
     controller.write<void>((writer) {
       staleTxn = writer;
+    });
+    late final SceneWriter staleWriter;
+    controller.writeWithSceneWriter<void>((writer) {
+      staleWriter = writer;
       writer.writeSignalEnqueue(type: 'first');
     });
 
-    expect(() => staleTxn.writeSignalEnqueue(type: 'stale'), throwsStateError);
+    expect(
+      () => staleTxn.writeSelectionReplace(const <NodeId>{'r1'}),
+      throwsStateError,
+    );
+    expect(
+      () => staleWriter.writeSignalEnqueue(type: 'stale'),
+      throwsStateError,
+    );
 
-    controller.write<void>((writer) {
+    controller.writeWithSceneWriter<void>((writer) {
       writer.writeSignalEnqueue(type: 'follow-up');
     });
     await pumpEventQueue(times: 2);
 
     expect(emitted, const <String>['first', 'follow-up']);
-    expect(controller.debugCommitRevision, 2);
+    expect(controller.debug.currentCommitRevision, 2);
   });
 
   test(
     'controller commit handles 1000 mixed selection operations and stays correct',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -290,31 +362,60 @@ void main() {
       };
       expect(controller.selectedNodeIds, expectedSelection);
       expect(remainingNodeIds.containsAll(controller.selectedNodeIds), isTrue);
-      expect(controller.debugLastChangeSet.selectionChanged, isTrue);
-      expect(controller.debugLastChangeSet.structuralChanged, isTrue);
-      expect(controller.debugCommitRevision, 1);
+      expect(controller.debug.lastChangeSet.selectionChanged, isTrue);
+      expect(controller.debug.lastChangeSet.structuralChanged, isTrue);
+      expect(controller.debug.currentCommitRevision, 1);
     },
   );
 
-  test('commit normalization marks selection/grid changes when normalized', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+  test('commit normalizes selection without repairing invalid grid state', () {
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
       writer.writeSelectionReplace(const <NodeId>{'r1'});
       writer.writeNodePatch(
-        const RectNodePatch(
+        RectNodePatch(
           id: 'r1',
           common: CommonNodePatch(isVisible: PatchField<bool>.value(false)),
         ),
       );
-      writer.writeGridEnable(true);
-      writer.writeGridCellSize(0.1);
+      expect(writer.selectedNodeIds, isEmpty);
     });
 
     expect(controller.selectedNodeIds, isEmpty);
-    expect(controller.snapshot.background.grid.cellSize, 1.0);
-    expect(controller.debugLastChangeSet.selectionChanged, isTrue);
-    expect(controller.debugLastChangeSet.gridChanged, isTrue);
+    expect(controller.snapshot.background.grid.cellSize, 10);
+    expect(controller.debug.lastChangeSet.selectionChanged, isTrue);
+    expect(controller.debug.lastChangeSet.gridChanged, isFalse);
   });
+
+  test(
+    'document replace exposes finalized selection before write callback returns',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+        writer.writeDocumentReplace(
+          SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(
+                id: 'layer-auto-next',
+                nodes: <NodeSnapshot>[
+                  RectNodeSnapshot(id: 'fresh', size: Size(6, 6)),
+                ],
+              ),
+            ],
+          ),
+        );
+        expect(writer.selectedNodeIds, isEmpty);
+      });
+
+      expect(controller.selectedNodeIds, isEmpty);
+      expect(controller.snapshot.layers.single.nodes.single.id, 'fresh');
+    },
+  );
 }

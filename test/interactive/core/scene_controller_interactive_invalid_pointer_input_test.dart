@@ -8,13 +8,13 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 import '../test_support/interactive_controller_fixtures.dart';
 
 void main() {
-  group('SceneControllerInteractive unit', () {
+  group('SceneController unit', () {
     group('interactive hardening: invalid pointer data', () {
       test(
-        'invalid pointer coordinates are ignored without side effects',
+        'invalid down/move coordinates are ignored without side effects',
         () async {
           // INV:INV-ENG-INTERACTIVE-POINTER-FINITE
-          final controller = SceneControllerInteractive(
+          final controller = SceneController(
             initialSnapshot: SceneSnapshot(
               layers: <ContentLayerSnapshot>[
                 ContentLayerSnapshot(id: 'layer-auto-0'),
@@ -23,8 +23,8 @@ void main() {
             ),
           );
           addTearDown(controller.dispose);
-          controller.setMode(CanvasMode.draw);
-          controller.setDrawTool(DrawTool.pen);
+          controller.interaction.setMode(CanvasMode.draw);
+          controller.interaction.setDrawTool(DrawTool.pen);
 
           final actions = <ActionCommitted>[];
           final edits = <EditTextRequested>[];
@@ -36,7 +36,7 @@ void main() {
           final beforeSnapshot = controller.snapshot;
 
           expect(
-            () => controller.handlePointer(
+            () => controller.interaction.handlePointer(
               const CanvasPointerInput(
                 pointerId: 1,
                 position: Offset(double.nan, 0),
@@ -47,7 +47,7 @@ void main() {
             returnsNormally,
           );
           expect(
-            () => controller.handlePointer(
+            () => controller.interaction.handlePointer(
               const CanvasPointerInput(
                 pointerId: 1,
                 position: Offset(double.infinity, 1),
@@ -59,11 +59,11 @@ void main() {
           );
           expect(controller.snapshot, same(beforeSnapshot));
           expect(controller.selectedNodeIds, isEmpty);
-          expect(controller.hasActiveStrokePreview, isFalse);
-          expect(controller.hasActiveLinePreview, isFalse);
-          expect(controller.hasPendingLineStart, isFalse);
+          expect(controller.interaction.hasActiveStrokePreview, isFalse);
+          expect(controller.interaction.hasActiveLinePreview, isFalse);
+          expect(controller.interaction.hasPendingLineStart, isFalse);
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             const CanvasPointerInput(
               pointerId: 1,
               position: Offset(10, 10),
@@ -71,7 +71,7 @@ void main() {
               kind: PointerDeviceKind.touch,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             const CanvasPointerInput(
               pointerId: 1,
               position: Offset(20, 20),
@@ -89,10 +89,10 @@ void main() {
       );
 
       test(
-        'invalid up/cancel coordinates are ignored and gesture can recover',
+        'invalid terminal coordinates preserve terminal phase via last finite position',
         () async {
           // INV:INV-ENG-INTERACTIVE-POINTER-FINITE
-          final controller = SceneControllerInteractive(
+          final controller = SceneController(
             initialSnapshot: SceneSnapshot(
               layers: <ContentLayerSnapshot>[
                 ContentLayerSnapshot(id: 'layer-auto-2'),
@@ -101,39 +101,44 @@ void main() {
             ),
           );
           addTearDown(controller.dispose);
-          controller.setMode(CanvasMode.draw);
-          controller.setDrawTool(DrawTool.pen);
+          controller.interaction.setMode(CanvasMode.draw);
+          controller.interaction.setDrawTool(DrawTool.pen);
 
           final actions = <ActionCommitted>[];
           final actionSub = controller.actions.listen(actions.add);
           addTearDown(actionSub.cancel);
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             const CanvasPointerInput(
               pointerId: 1,
               position: Offset(10, 10),
+              timestampMs: 10,
               phase: CanvasPointerPhase.down,
               kind: PointerDeviceKind.touch,
             ),
           );
-          expect(controller.hasActiveStrokePreview, isTrue);
+          expect(controller.interaction.hasActiveStrokePreview, isTrue);
 
           expect(
-            () => controller.handlePointer(
+            () => controller.interaction.handlePointer(
               const CanvasPointerInput(
                 pointerId: 1,
                 position: Offset(double.nan, 20),
+                timestampMs: 5,
                 phase: CanvasPointerPhase.up,
                 kind: PointerDeviceKind.touch,
               ),
             ),
             returnsNormally,
           );
+          expect(controller.interaction.hasActiveStrokePreview, isFalse);
+          expect(controller.interaction.activeStrokePreviewPoints, isEmpty);
           expect(
-            () => controller.handlePointer(
+            () => controller.interaction.handlePointer(
               const CanvasPointerInput(
                 pointerId: 1,
                 position: Offset(20, double.infinity),
+                timestampMs: 4,
                 phase: CanvasPointerPhase.cancel,
                 kind: PointerDeviceKind.touch,
               ),
@@ -142,40 +147,89 @@ void main() {
           );
 
           await pumpEventQueue();
-          expect(actions, isEmpty);
-          expect(controller.hasActiveStrokePreview, isTrue);
+          expect(actions, hasLength(1));
+          expect(actions.single.type, ActionType.drawStroke);
+          expect(actions.single.timestampMs, 11);
 
-          controller.handlePointer(
-            const CanvasPointerInput(
-              pointerId: 1,
-              position: Offset(10, 10),
-              phase: CanvasPointerPhase.cancel,
-              kind: PointerDeviceKind.touch,
-            ),
-          );
-          expect(controller.hasActiveStrokePreview, isFalse);
-          expect(controller.activeStrokePreviewPoints, isEmpty);
-
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             const CanvasPointerInput(
               pointerId: 2,
               position: Offset(30, 30),
+              timestampMs: 9,
               phase: CanvasPointerPhase.down,
               kind: PointerDeviceKind.touch,
             ),
           );
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             const CanvasPointerInput(
               pointerId: 2,
               position: Offset(40, 30),
+              timestampMs: 11,
               phase: CanvasPointerPhase.up,
               kind: PointerDeviceKind.touch,
             ),
           );
 
           await pumpEventQueue();
-          expect(actions, hasLength(1));
-          expect(actions.single.type, ActionType.drawStroke);
+          expect(actions, hasLength(2));
+          expect(actions.last.type, ActionType.drawStroke);
+          expect(actions.last.timestampMs, 13);
+        },
+      );
+
+      test(
+        'invalid terminal coordinates without cached finite position stay no-op',
+        () async {
+          // INV:INV-ENG-INTERACTIVE-POINTER-FINITE
+          final controller = SceneController(
+            initialSnapshot: SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(id: 'layer-auto-8'),
+                ContentLayerSnapshot(id: 'layer-auto-9'),
+              ],
+            ),
+          );
+          addTearDown(controller.dispose);
+          controller.interaction.setMode(CanvasMode.draw);
+          controller.interaction.setDrawTool(DrawTool.pen);
+
+          final actions = <ActionCommitted>[];
+          final actionSub = controller.actions.listen(actions.add);
+          addTearDown(actionSub.cancel);
+
+          controller.interaction.handlePointer(
+            const CanvasPointerInput(
+              pointerId: 3,
+              position: Offset(15, 15),
+              timestampMs: 20,
+              phase: CanvasPointerPhase.down,
+              kind: PointerDeviceKind.touch,
+            ),
+          );
+          controller.scene.replaceScene(
+            SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(id: 'layer-auto-10'),
+                ContentLayerSnapshot(id: 'layer-auto-11'),
+              ],
+            ),
+          );
+
+          expect(
+            () => controller.interaction.handlePointer(
+              const CanvasPointerInput(
+                pointerId: 3,
+                position: Offset(double.nan, 15),
+                timestampMs: 21,
+                phase: CanvasPointerPhase.up,
+                kind: PointerDeviceKind.touch,
+              ),
+            ),
+            returnsNormally,
+          );
+
+          await pumpEventQueue();
+          expect(actions, isEmpty);
         },
       );
 
@@ -184,7 +238,6 @@ void main() {
         final text = TextNode(
           id: 'text',
           text: 'note',
-          size: const Size(80, 30),
           color: const Color(0xFF000000),
         )..position = const Offset(100, 100);
         final controller = controllerFromScene(
@@ -202,21 +255,21 @@ void main() {
         addTearDown(sub.cancel);
 
         expect(
-          () => controller.handleDoubleTap(
+          () => controller.interaction.handleDoubleTap(
             position: const Offset(double.nan, 100),
             timestampMs: 10,
           ),
           returnsNormally,
         );
         expect(
-          () => controller.handleDoubleTap(
+          () => controller.interaction.handleDoubleTap(
             position: const Offset(100, double.infinity),
             timestampMs: 11,
           ),
           returnsNormally,
         );
 
-        controller.handleDoubleTap(
+        controller.interaction.handleDoubleTap(
           position: const Offset(100, 100),
           timestampMs: 12,
         );
@@ -234,7 +287,6 @@ void main() {
         final text = TextNode(
           id: 'text',
           text: 'note',
-          size: const Size(80, 30),
           color: const Color(0xFF000000),
         )..position = const Offset(100, 100);
         final rect = RectNode(id: 'rect', size: const Size(80, 30))
@@ -253,18 +305,18 @@ void main() {
         final sub = controller.editTextRequests.listen(requests.add);
         addTearDown(sub.cancel);
 
-        controller.setMode(CanvasMode.draw);
-        controller.handleDoubleTap(
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.handleDoubleTap(
           position: const Offset(100, 100),
           timestampMs: 10,
         );
 
-        controller.setMode(CanvasMode.move);
-        controller.handleDoubleTap(
+        controller.interaction.setMode(CanvasMode.move);
+        controller.interaction.handleDoubleTap(
           position: const Offset(200, 100),
           timestampMs: 12,
         );
-        controller.handleDoubleTap(
+        controller.interaction.handleDoubleTap(
           position: const Offset(100, 100),
           timestampMs: 13,
         );
@@ -281,7 +333,6 @@ void main() {
       final text = TextNode(
         id: 'text',
         text: 'note',
-        size: const Size(80, 30),
         color: const Color(0xFF000000),
       )..position = const Offset(100, 100);
       final controller = controllerFromScene(
@@ -298,7 +349,7 @@ void main() {
       final sub = controller.editTextRequests.listen(requests.add);
       addTearDown(sub.cancel);
 
-      controller.handleDoubleTap(
+      controller.interaction.handleDoubleTap(
         position: const Offset(100, 100),
         timestampMs: 10,
       );

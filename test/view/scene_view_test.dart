@@ -1,10 +1,17 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
-import 'package:iwb_canvas_engine/src/public/snapshot.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
-import 'package:iwb_canvas_engine/src/view/scene_view.dart';
+import 'package:iwb_canvas_engine/src/view/scene_view_render_surface.dart';
+
+import '../support/committed_scene_view_render_state.dart';
+
+// INV:INV-ENG-VIEW-RENDER-SURFACE-DEBUG-PROBES
 
 SceneSnapshot _snapshot({required double strokeY, required String text}) {
   return SceneSnapshot(
@@ -15,20 +22,19 @@ SceneSnapshot _snapshot({required double strokeY, required String text}) {
           TextNodeSnapshot(
             id: 'txt',
             text: text,
-            size: const Size(80, 24),
             color: const Color(0xFF000000),
+            textDirection: TextDirection.ltr,
           ),
           StrokeNodeSnapshot(
             id: 'stroke',
             points: <Offset>[Offset(8, strokeY), Offset(72, strokeY)],
-            pointsRevision: strokeY.abs().round(),
             thickness: 3,
             color: const Color(0xFF000000),
           ),
         ],
       ),
     ],
-    background: const BackgroundSnapshot(
+    background: BackgroundSnapshot(
       grid: GridSnapshot(isEnabled: true, cellSize: 12),
     ),
   );
@@ -44,13 +50,12 @@ SceneSnapshot _churnSnapshot({required int pairCount, required String prefix}) {
             TextNodeSnapshot(
               id: '$prefix-text-$i',
               text: '$prefix-$i',
-              size: const Size(80, 24),
               color: const Color(0xFF000000),
+              textDirection: TextDirection.ltr,
             ),
             StrokeNodeSnapshot(
               id: '$prefix-stroke-$i',
               points: <Offset>[Offset(8, i * 4), Offset(72, i * 4)],
-              pointsRevision: i,
               thickness: 3,
               color: const Color(0xFF000000),
             ),
@@ -61,14 +66,116 @@ SceneSnapshot _churnSnapshot({required int pairCount, required String prefix}) {
   );
 }
 
+Widget _coreHost({
+  required SceneViewRenderState renderState,
+  ui.Image? Function(String imageId)? imageResolver,
+  SceneStaticLayerCache? staticLayerCache,
+  SceneTextLayoutCache? textLayoutCache,
+  SceneStrokePathCache? strokePathCache,
+  ScenePathMetricsCache? pathMetricsCache,
+  RenderGeometryCache? geometryCache,
+  double width = 80,
+  double height = 80,
+}) {
+  return Directionality(
+    textDirection: TextDirection.ltr,
+    child: SizedBox(
+      width: width,
+      height: height,
+      child: SceneViewRenderSurface(
+        renderState: renderState,
+        imageResolver: imageResolver,
+        staticLayerCache: staticLayerCache,
+        textLayoutCache: textLayoutCache,
+        strokePathCache: strokePathCache,
+        pathMetricsCache: pathMetricsCache,
+        geometryCache: geometryCache,
+      ),
+    ),
+  );
+}
+
+CommittedSceneViewRenderState _mirrorRenderState(
+  SceneStoreController controller,
+) {
+  final renderState = CommittedSceneViewRenderState.mirror(controller);
+  addTearDown(renderState.dispose);
+  return renderState;
+}
+
 void main() {
-  testWidgets('SceneViewCore clears all render caches on epoch change', (
+  testWidgets('debugSceneViewRenderCachesOf supports descendant contexts', (
+    tester,
+  ) async {
+    // INV:INV-ENG-VIEW-RENDER-SURFACE-DEBUG-PROBES
+    final controller = SceneStoreController(
+      initialSnapshot: _snapshot(strokeY: 10, text: 'ctx'),
+    );
+    final staticLayerCache = SceneStaticLayerCache();
+    final textLayoutCache = SceneTextLayoutCache();
+    final strokePathCache = SceneStrokePathCache();
+    final pathMetricsCache = ScenePathMetricsCache();
+    final geometryCache = RenderGeometryCache();
+    final renderState = _mirrorRenderState(controller);
+    addTearDown(controller.dispose);
+    addTearDown(staticLayerCache.dispose);
+
+    await tester.pumpWidget(
+      _coreHost(
+        renderState: renderState,
+        imageResolver: (_) => null,
+        staticLayerCache: staticLayerCache,
+        textLayoutCache: textLayoutCache,
+        strokePathCache: strokePathCache,
+        pathMetricsCache: pathMetricsCache,
+        geometryCache: geometryCache,
+      ),
+    );
+    await tester.pump();
+
+    final descendantContext = tester.element(find.byType(CustomPaint));
+    final renderCaches = debugSceneViewRenderCachesOf(descendantContext);
+
+    expect(renderCaches.staticLayerCache, same(staticLayerCache));
+    expect(renderCaches.textLayoutCache, same(textLayoutCache));
+    expect(renderCaches.strokePathCache, same(strokePathCache));
+    expect(renderCaches.pathMetricsCache, same(pathMetricsCache));
+    expect(renderCaches.geometryCache, same(geometryCache));
+  });
+
+  testWidgets(
+    'debugSceneViewRenderCachesOf throws without SceneViewRenderSurface',
+    (tester) async {
+      // INV:INV-ENG-VIEW-RENDER-SURFACE-DEBUG-PROBES
+      await tester.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(width: 40, height: 40),
+        ),
+      );
+
+      expect(
+        () =>
+            debugSceneViewRenderCachesOf(tester.element(find.byType(SizedBox))),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'No SceneViewRenderSurface state found for the provided BuildContext.',
+          ),
+        ),
+      );
+    },
+  );
+
+  testWidgets('core render surface clears all render caches on epoch change', (
     tester,
   ) async {
     // INV:INV-ENG-EPOCH-INVALIDATION
-    final controller = SceneControllerCore(
+    final controller = SceneStoreController(
       initialSnapshot: _snapshot(strokeY: 20, text: 'A'),
     );
+    final renderState = _mirrorRenderState(controller);
     addTearDown(controller.dispose);
 
     final textCache = SceneTextLayoutCache(maxEntries: 8);
@@ -77,20 +184,15 @@ void main() {
     final geometryCache = RenderGeometryCache(maxEntries: 8);
 
     await tester.pumpWidget(
-      Directionality(
-        textDirection: TextDirection.ltr,
-        child: SizedBox(
-          width: 96,
-          height: 96,
-          child: SceneViewCore(
-            controller: controller,
-            imageResolver: (_) => null,
-            textLayoutCache: textCache,
-            strokePathCache: strokeCache,
-            staticLayerCache: staticCache,
-            geometryCache: geometryCache,
-          ),
-        ),
+      _coreHost(
+        renderState: renderState,
+        width: 96,
+        height: 96,
+        imageResolver: (_) => null,
+        textLayoutCache: textCache,
+        strokePathCache: strokeCache,
+        staticLayerCache: staticCache,
+        geometryCache: geometryCache,
       ),
     );
     await tester.pump();
@@ -114,15 +216,17 @@ void main() {
     expect(geometryCache.debugHitCount, 0);
   });
 
-  testWidgets('SceneViewCore clears caches when controller is replaced', (
+  testWidgets('core render surface clears caches when controller is replaced', (
     tester,
   ) async {
-    final controllerA = SceneControllerCore(
+    final controllerA = SceneStoreController(
       initialSnapshot: _snapshot(strokeY: 16, text: 'A'),
     );
-    final controllerB = SceneControllerCore(
+    final controllerB = SceneStoreController(
       initialSnapshot: _snapshot(strokeY: 16, text: 'A'),
     );
+    final renderStateA = _mirrorRenderState(controllerA);
+    final renderStateB = _mirrorRenderState(controllerB);
     addTearDown(controllerA.dispose);
     addTearDown(controllerB.dispose);
 
@@ -132,20 +236,15 @@ void main() {
     final geometryCache = RenderGeometryCache(maxEntries: 8);
 
     await tester.pumpWidget(
-      Directionality(
-        textDirection: TextDirection.ltr,
-        child: SizedBox(
-          width: 96,
-          height: 96,
-          child: SceneViewCore(
-            controller: controllerA,
-            imageResolver: (_) => null,
-            textLayoutCache: textCache,
-            strokePathCache: strokeCache,
-            staticLayerCache: staticCache,
-            geometryCache: geometryCache,
-          ),
-        ),
+      _coreHost(
+        renderState: renderStateA,
+        width: 96,
+        height: 96,
+        imageResolver: (_) => null,
+        textLayoutCache: textCache,
+        strokePathCache: strokeCache,
+        staticLayerCache: staticCache,
+        geometryCache: geometryCache,
       ),
     );
     await tester.pump();
@@ -156,20 +255,15 @@ void main() {
     expect(geometryCache.debugHitCount, 0);
 
     await tester.pumpWidget(
-      Directionality(
-        textDirection: TextDirection.ltr,
-        child: SizedBox(
-          width: 96,
-          height: 96,
-          child: SceneViewCore(
-            controller: controllerB,
-            imageResolver: (_) => null,
-            textLayoutCache: textCache,
-            strokePathCache: strokeCache,
-            staticLayerCache: staticCache,
-            geometryCache: geometryCache,
-          ),
-        ),
+      _coreHost(
+        renderState: renderStateB,
+        width: 96,
+        height: 96,
+        imageResolver: (_) => null,
+        textLayoutCache: textCache,
+        strokePathCache: strokeCache,
+        staticLayerCache: staticCache,
+        geometryCache: geometryCache,
       ),
     );
     await tester.pump();
@@ -184,35 +278,42 @@ void main() {
   });
 
   testWidgets(
-    'SceneViewCore syncs owned/external caches and exposes debug getters',
+    'core render surface syncs owned/external caches and exposes debug getters',
     (tester) async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: _snapshot(strokeY: 12, text: 'sync'),
       );
+      final renderState = _mirrorRenderState(controller);
       addTearDown(controller.dispose);
 
-      await tester.pumpWidget(
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: SizedBox(
-            width: 80,
-            height: 80,
-            child: SceneViewCore(controller: controller),
-          ),
-        ),
-      );
+      await tester.pumpWidget(_coreHost(renderState: renderState));
       await tester.pump();
 
-      final state = tester.state(find.byType(SceneViewCore)) as dynamic;
-      expect(state.debugStaticLayerCache, isA<SceneStaticLayerCache>());
-      expect(state.debugTextLayoutCache, isA<SceneTextLayoutCache>());
-      expect(state.debugStrokePathCache, isA<SceneStrokePathCache>());
-      expect(state.debugPathMetricsCache, isA<ScenePathMetricsCache>());
-      expect(state.debugGeometryCache, isA<RenderGeometryCache>());
-
       final customPaint = tester.widget<CustomPaint>(find.byType(CustomPaint));
-      final painter = customPaint.painter! as ScenePainter;
-      expect(painter.imageResolver('missing'), isNull);
+      final painter = customPaint.painter;
+      if (painter == null) {
+        fail('Expected ScenePainter.');
+      }
+      final renderCaches = debugSceneViewRenderCachesOf(
+        tester.element(find.byType(SceneViewRenderSurface)),
+      );
+      final scenePainter = painter as ScenePainter;
+      expect(scenePainter.staticLayerCache, isA<SceneStaticLayerCache>());
+      expect(scenePainter.textLayoutCache, isA<SceneTextLayoutCache>());
+      expect(scenePainter.strokePathCache, isA<SceneStrokePathCache>());
+      expect(scenePainter.pathMetricsCache, isA<ScenePathMetricsCache>());
+      expect(
+        renderCaches.staticLayerCache,
+        same(scenePainter.staticLayerCache),
+      );
+      expect(renderCaches.textLayoutCache, same(scenePainter.textLayoutCache));
+      expect(renderCaches.strokePathCache, same(scenePainter.strokePathCache));
+      expect(
+        renderCaches.pathMetricsCache,
+        same(scenePainter.pathMetricsCache),
+      );
+      expect(renderCaches.geometryCache, isA<RenderGeometryCache>());
+      expect(scenePainter.imageResolver('missing'), isNull);
 
       final extStaticA = SceneStaticLayerCache();
       final extTextA = SceneTextLayoutCache(maxEntries: 4);
@@ -221,20 +322,13 @@ void main() {
       final extGeometryA = RenderGeometryCache(maxEntries: 4);
 
       await tester.pumpWidget(
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: SizedBox(
-            width: 80,
-            height: 80,
-            child: SceneViewCore(
-              controller: controller,
-              staticLayerCache: extStaticA,
-              textLayoutCache: extTextA,
-              strokePathCache: extStrokeA,
-              pathMetricsCache: extPathA,
-              geometryCache: extGeometryA,
-            ),
-          ),
+        _coreHost(
+          renderState: renderState,
+          staticLayerCache: extStaticA,
+          textLayoutCache: extTextA,
+          strokePathCache: extStrokeA,
+          pathMetricsCache: extPathA,
+          geometryCache: extGeometryA,
         ),
       );
       await tester.pump();
@@ -246,50 +340,45 @@ void main() {
       final extGeometryB = RenderGeometryCache(maxEntries: 4);
 
       await tester.pumpWidget(
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: SizedBox(
-            width: 80,
-            height: 80,
-            child: SceneViewCore(
-              controller: controller,
-              staticLayerCache: extStaticB,
-              textLayoutCache: extTextB,
-              strokePathCache: extStrokeB,
-              pathMetricsCache: extPathB,
-              geometryCache: extGeometryB,
-            ),
-          ),
+        _coreHost(
+          renderState: renderState,
+          staticLayerCache: extStaticB,
+          textLayoutCache: extTextB,
+          strokePathCache: extStrokeB,
+          pathMetricsCache: extPathB,
+          geometryCache: extGeometryB,
         ),
       );
       await tester.pump();
-      expect(extGeometryB.debugSize, greaterThan(0));
+      final extRenderCaches = debugSceneViewRenderCachesOf(
+        tester.element(find.byType(SceneViewRenderSurface)),
+      );
+      expect(extRenderCaches.staticLayerCache, same(extStaticB));
+      expect(extRenderCaches.textLayoutCache, same(extTextB));
+      expect(extRenderCaches.strokePathCache, same(extStrokeB));
+      expect(extRenderCaches.pathMetricsCache, same(extPathB));
+      expect(extRenderCaches.geometryCache, same(extGeometryB));
+      expect(extRenderCaches.geometryCache, isNot(same(extGeometryA)));
 
-      await tester.pumpWidget(
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: SizedBox(
-            width: 80,
-            height: 80,
-            child: SceneViewCore(controller: controller),
-          ),
-        ),
-      );
+      await tester.pumpWidget(_coreHost(renderState: renderState));
       await tester.pump();
-      expect(extGeometryB.debugSize, greaterThan(0));
+      final ownedRenderCaches = debugSceneViewRenderCachesOf(
+        tester.element(find.byType(SceneViewRenderSurface)),
+      );
+      expect(ownedRenderCaches.geometryCache, isNot(same(extGeometryB)));
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
-      expect(extGeometryB.debugSize, greaterThan(0));
     },
   );
 
   testWidgets(
-    'SceneViewCore replaceScene clears stale cache tails after heavy churn',
+    'core render surface replaceScene clears stale cache tails after heavy churn',
     (tester) async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: _churnSnapshot(pairCount: 24, prefix: 'old'),
       );
+      final renderState = _mirrorRenderState(controller);
       addTearDown(controller.dispose);
 
       final textCache = SceneTextLayoutCache(maxEntries: 256);
@@ -299,21 +388,16 @@ void main() {
       final geometryCache = RenderGeometryCache(maxEntries: 256);
 
       await tester.pumpWidget(
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: SizedBox(
-            width: 96,
-            height: 96,
-            child: SceneViewCore(
-              controller: controller,
-              imageResolver: (_) => null,
-              textLayoutCache: textCache,
-              strokePathCache: strokeCache,
-              pathMetricsCache: pathMetricsCache,
-              staticLayerCache: staticCache,
-              geometryCache: geometryCache,
-            ),
-          ),
+        _coreHost(
+          renderState: renderState,
+          width: 96,
+          height: 96,
+          imageResolver: (_) => null,
+          textLayoutCache: textCache,
+          strokePathCache: strokeCache,
+          pathMetricsCache: pathMetricsCache,
+          staticLayerCache: staticCache,
+          geometryCache: geometryCache,
         ),
       );
       await tester.pump();

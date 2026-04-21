@@ -4,9 +4,13 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_model_invariants.dart';
+import 'package:iwb_canvas_engine/src/controller/committed_store_state.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_invariants.dart';
+import 'package:iwb_canvas_engine/src/core/revision_policy.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart' show Scene;
+import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
 import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
@@ -20,10 +24,11 @@ void main() {
   for (final seed in scenarioSeeds) {
     test('randomized transactional scenario keeps invariants (seed=$seed)', () {
       final random = math.Random(seed);
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: _initialSnapshot(),
       );
       addTearDown(controller.dispose);
+      expect(scenarioSteps, greaterThan(0));
 
       for (var step = 0; step < scenarioSteps; step++) {
         final operation = _runRandomOperation(
@@ -64,7 +69,7 @@ enum _RandomOperation {
 }
 
 String _runRandomOperation({
-  required SceneControllerCore controller,
+  required SceneStoreController controller,
   required math.Random random,
   required int seed,
   required int step,
@@ -207,7 +212,7 @@ String _runRandomOperation({
 }
 
 void _assertPostConditions({
-  required SceneControllerCore controller,
+  required SceneStoreController controller,
   required int seed,
   required int step,
   required String operation,
@@ -239,14 +244,22 @@ void _assertPostConditions({
   );
 
   final violations = txnCollectStoreInvariantViolations(
-    scene: scene,
-    selectedNodeIds: controller.selectedNodeIds,
-    allNodeIds: txnCollectNodeIds(scene),
-    nodeLocator: txnBuildNodeLocator(scene),
-    nodeIdSeed: txnInitialNodeIdSeed(scene),
-    layerIdSeed: txnInitialLayerIdSeed(scene),
-    nextInstanceRevision: txnInitialNodeInstanceRevisionSeed(scene),
-    commitRevision: controller.debugCommitRevision,
+    CommittedStoreState(
+      scene: scene,
+      selectedNodeIds: controller.selectedNodeIds,
+      allNodeIds: txnCollectNodeIds(scene),
+      nodeLocator: txnBuildNodeLocator(scene),
+      idGeneratorState: controller.debug.idGeneratorState,
+      revisionState: createInitialRevisionAllocatorState(
+        nextInstanceRevision: 1,
+      ),
+      controllerEpoch: controller.controllerEpoch,
+      structuralRevision: controller.structuralRevision,
+      selectionRevision: controller.selectionRevision,
+      boundsRevision: controller.boundsRevision,
+      visualRevision: controller.visualRevision,
+      commitRevision: controller.debug.currentCommitRevision,
+    ),
   );
   expect(
     violations,
@@ -260,7 +273,7 @@ SceneSnapshot _initialSnapshot() {
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
         id: 'layer-auto-0',
-        nodes: const <NodeSnapshot>[
+        nodes: <NodeSnapshot>[
           RectNodeSnapshot(id: 'seed-r1', size: Size(10, 10)),
           RectNodeSnapshot(id: 'seed-r2', size: Size(12, 12)),
         ],
@@ -457,6 +470,8 @@ NodePatch _typeSpecificPatchForNode(NodeSnapshot node, math.Random random) {
           random.nextBool() ? null : _randomSize(random),
         ),
       );
+    default:
+      throw StateError('Unsupported NodeSnapshot subtype: ${node.runtimeType}');
   }
 }
 
@@ -488,6 +503,8 @@ NodePatch _commonPatchForNode({
       return TextNodePatch(id: node.id, common: common);
     case ImageNodeSnapshot():
       return ImageNodePatch(id: node.id, common: common);
+    default:
+      throw StateError('Unsupported NodeSnapshot subtype: ${node.runtimeType}');
   }
 }
 
@@ -578,7 +595,7 @@ void _assertFiniteSnapshotNumbers({
   required String context,
 }) {
   expect(
-    _isFiniteOffset(snapshot.camera.offset),
+    _isValidSceneCameraOffset(snapshot.camera.offset),
     isTrue,
     reason: '$context camera.offset',
   );
@@ -623,9 +640,7 @@ void _assertFiniteSnapshotNumbers({
           );
         case StrokeNodeSnapshot():
           expect(
-            node.thickness.isFinite &&
-                node.thickness > 0 &&
-                node.pointsRevision >= 0,
+            node.thickness.isFinite && node.thickness > 0,
             isTrue,
             reason: '$nodeCtx stroke',
           );
@@ -652,8 +667,9 @@ void _assertFiniteSnapshotNumbers({
             reason: '$nodeCtx line',
           );
         case TextNodeSnapshot():
+          final derivedSize = TextLayoutRequest.forSnapshot(node).measure();
           expect(
-            _isFiniteSize(node.size) &&
+            _isFiniteSize(derivedSize) &&
                 node.fontSize.isFinite &&
                 node.fontSize > 0,
             isTrue,
@@ -695,6 +711,15 @@ void _assertFiniteSnapshotNumbers({
 }
 
 bool _isFiniteOffset(Offset value) => value.dx.isFinite && value.dy.isFinite;
+
+bool _isValidSceneCameraOffset(Offset value) {
+  try {
+    validateSceneCameraOffset(value, name: 'camera.offset');
+    return true;
+  } on ArgumentError {
+    return false;
+  }
+}
 
 bool _isFiniteSize(Size value) =>
     value.width.isFinite &&

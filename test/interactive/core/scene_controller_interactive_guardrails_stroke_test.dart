@@ -1,13 +1,15 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 import '../test_support/interactive_controller_fixtures.dart';
 
 void main() {
-  group('SceneControllerInteractive unit', () {
+  group('SceneController unit', () {
     group('interactive hardening: long gesture guardrails (stroke)', () {
       test('pen commit caps very long stroke and preserves endpoints', () {
-        final controller = SceneControllerInteractive(
+        final controller = SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-0'),
@@ -17,12 +19,12 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.pen);
-        controller.penThickness = 2;
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.pen);
+        controller.interaction.penThickness = 2;
 
         const totalRawPoints = 20050;
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(0, 0),
@@ -31,7 +33,7 @@ void main() {
           ),
         );
         for (var i = 1; i < totalRawPoints - 1; i++) {
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: Offset(i.toDouble(), 0),
@@ -40,7 +42,7 @@ void main() {
             ),
           );
         }
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: Offset((totalRawPoints - 1).toDouble(), 0),
@@ -63,7 +65,7 @@ void main() {
 
       test('pen preview buffer is soft-capped during long move', () {
         // INV:INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP
-        final controller = SceneControllerInteractive(
+        final controller = SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-2'),
@@ -73,10 +75,10 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.pen);
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.pen);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(0, 0),
@@ -86,7 +88,7 @@ void main() {
         );
 
         for (var i = 1; i <= 26000; i++) {
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: Offset(i.toDouble(), 0),
@@ -96,16 +98,16 @@ void main() {
           );
         }
 
-        expect(controller.hasActiveStrokePreview, isTrue);
+        expect(controller.interaction.hasActiveStrokePreview, isTrue);
         expect(
-          controller.activeStrokePreviewPoints.length,
+          controller.interaction.activeStrokePreviewPoints.length,
           lessThanOrEqualTo(interactiveStrokePointsSoftLimit),
         );
       });
 
       test('soft-capped stroke preview keeps endpoints after pruning', () {
         // INV:INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP
-        final controller = SceneControllerInteractive(
+        final controller = SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-4'),
@@ -115,10 +117,10 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        controller.setMode(CanvasMode.draw);
-        controller.setDrawTool(DrawTool.pen);
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.pen);
 
-        controller.handlePointer(
+        controller.interaction.handlePointer(
           sampleInput(
             pointerId: 1,
             position: const Offset(0, 0),
@@ -129,7 +131,7 @@ void main() {
 
         const latestPoint = Offset(26000, 0);
         for (var i = 1; i <= latestPoint.dx; i++) {
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: Offset(i.toDouble(), 0),
@@ -139,16 +141,22 @@ void main() {
           );
         }
 
-        expect(controller.activeStrokePreviewPoints, isNotEmpty);
-        expect(controller.activeStrokePreviewPoints.first, const Offset(0, 0));
-        expect(controller.activeStrokePreviewPoints.last, latestPoint);
+        expect(controller.interaction.activeStrokePreviewPoints, isNotEmpty);
+        expect(
+          controller.interaction.activeStrokePreviewPoints.first,
+          const Offset(0, 0),
+        );
+        expect(
+          controller.interaction.activeStrokePreviewPoints.last,
+          latestPoint,
+        );
       });
 
       test(
         'highlighter long preview and commit keep soft-limit and endpoints',
         () async {
           // INV:INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP
-          final controller = SceneControllerInteractive(
+          final controller = SceneController(
             initialSnapshot: SceneSnapshot(
               layers: <ContentLayerSnapshot>[
                 ContentLayerSnapshot(id: 'layer-auto-6'),
@@ -158,17 +166,17 @@ void main() {
           );
           addTearDown(controller.dispose);
 
-          controller.setMode(CanvasMode.draw);
-          controller.setDrawTool(DrawTool.highlighter);
-          controller.highlighterThickness = 7;
-          controller.highlighterOpacity = 0.35;
+          controller.interaction.setMode(CanvasMode.draw);
+          controller.interaction.setDrawTool(DrawTool.highlighter);
+          controller.interaction.highlighterThickness = 7;
+          controller.interaction.highlighterOpacity = 0.35;
 
           final actions = <ActionCommitted>[];
           final sub = controller.actions.listen(actions.add);
           addTearDown(sub.cancel);
 
           const latestPoint = Offset(26000, 0);
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: const Offset(0, 0),
@@ -177,7 +185,7 @@ void main() {
             ),
           );
           for (var i = 1; i <= latestPoint.dx; i++) {
-            controller.handlePointer(
+            controller.interaction.handlePointer(
               sampleInput(
                 pointerId: 1,
                 position: Offset(i.toDouble(), 0),
@@ -187,16 +195,19 @@ void main() {
             );
           }
           expect(
-            controller.activeStrokePreviewPoints.length,
+            controller.interaction.activeStrokePreviewPoints.length,
             lessThanOrEqualTo(interactiveStrokePointsSoftLimit),
           );
           expect(
-            controller.activeStrokePreviewPoints.first,
+            controller.interaction.activeStrokePreviewPoints.first,
             const Offset(0, 0),
           );
-          expect(controller.activeStrokePreviewPoints.last, latestPoint);
+          expect(
+            controller.interaction.activeStrokePreviewPoints.last,
+            latestPoint,
+          );
 
-          controller.handlePointer(
+          controller.interaction.handlePointer(
             sampleInput(
               pointerId: 1,
               position: latestPoint,
@@ -221,9 +232,79 @@ void main() {
         },
       );
 
+      test(
+        'active stroke preview and commit keep captured style after config edits',
+        () {
+          final controller = SceneController(
+            initialSnapshot: SceneSnapshot(
+              layers: <ContentLayerSnapshot>[
+                ContentLayerSnapshot(id: 'layer-auto-12'),
+                ContentLayerSnapshot(id: 'layer-auto-13'),
+              ],
+            ),
+          );
+          addTearDown(controller.dispose);
+
+          controller.interaction.setMode(CanvasMode.draw);
+          controller.interaction.setDrawTool(DrawTool.highlighter);
+          controller.interaction.highlighterThickness = 8;
+          controller.interaction.highlighterOpacity = 0.3;
+          controller.interaction.setDrawColor(const Color(0xFF336699));
+
+          controller.interaction.handlePointer(
+            sampleInput(
+              pointerId: 1,
+              position: const Offset(10, 10),
+              timestampMs: 1,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          controller.interaction.handlePointer(
+            sampleInput(
+              pointerId: 1,
+              position: const Offset(16, 10),
+              timestampMs: 2,
+              phase: CanvasPointerPhase.move,
+            ),
+          );
+
+          controller.interaction.highlighterThickness = 17;
+          controller.interaction.highlighterOpacity = 0.65;
+          controller.interaction.setDrawColor(const Color(0xFFCC5500));
+
+          expect(controller.interaction.hasActiveStrokePreview, isTrue);
+          expect(controller.interaction.activeStrokePreviewThickness, 8);
+          expect(
+            controller.interaction.activeStrokePreviewOpacity,
+            closeTo(0.3, 1e-6),
+          );
+          expect(
+            controller.interaction.activeStrokePreviewColor,
+            const Color(0xFF336699),
+          );
+
+          controller.interaction.handlePointer(
+            sampleInput(
+              pointerId: 1,
+              position: const Offset(20, 10),
+              timestampMs: 3,
+              phase: CanvasPointerPhase.up,
+            ),
+          );
+
+          final strokeSnap = controller.snapshot.layers
+              .expand((layer) => layer.nodes)
+              .whereType<StrokeNodeSnapshot>()
+              .single;
+          expect(strokeSnap.thickness, 8);
+          expect(strokeSnap.opacity, closeTo(0.3, 1e-6));
+          expect(strokeSnap.color, const Color(0xFF336699));
+        },
+      );
+
       test('invalid soft-limit config throws ArgumentError', () {
         // INV:INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP
-        final controller = SceneControllerInteractive(
+        final controller = SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-8'),
@@ -263,11 +344,35 @@ void main() {
           throwsArgumentError,
         );
       });
+
+      test('inactive highlighter preview getters fall back to live config', () {
+        final controller = SceneController(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(id: 'layer-auto-14'),
+              ContentLayerSnapshot(id: 'layer-auto-15'),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.highlighter);
+        controller.interaction.highlighterThickness = 12;
+        controller.interaction.highlighterOpacity = 0.45;
+
+        expect(controller.interaction.hasActiveStrokePreview, isFalse);
+        expect(controller.interaction.activeStrokePreviewThickness, 12);
+        expect(
+          controller.interaction.activeStrokePreviewOpacity,
+          closeTo(0.45, 1e-6),
+        );
+      });
     });
 
     test('stroke preview is available during drag and clears on up', () {
       // INV:INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP
-      final controller = SceneControllerInteractive(
+      final controller = SceneController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(id: 'layer-auto-10'),
@@ -277,12 +382,12 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      controller.setMode(CanvasMode.draw);
-      controller.setDrawTool(DrawTool.highlighter);
-      controller.highlighterThickness = 8;
-      controller.highlighterOpacity = 0.3;
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.highlighter);
+      controller.interaction.highlighterThickness = 8;
+      controller.interaction.highlighterOpacity = 0.3;
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(10, 10),
@@ -290,14 +395,14 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      expect(controller.hasActiveStrokePreview, isTrue);
-      expect(controller.activeStrokePreviewPoints, const <Offset>[
+      expect(controller.interaction.hasActiveStrokePreview, isTrue);
+      expect(controller.interaction.activeStrokePreviewPoints, const <Offset>[
         Offset(10, 10),
       ]);
-      expect(controller.activeStrokePreviewThickness, 8);
-      expect(controller.activeStrokePreviewOpacity, 0.3);
+      expect(controller.interaction.activeStrokePreviewThickness, 8);
+      expect(controller.interaction.activeStrokePreviewOpacity, 0.3);
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(14, 10),
@@ -305,9 +410,9 @@ void main() {
           phase: CanvasPointerPhase.move,
         ),
       );
-      expect(controller.activeStrokePreviewPoints.length, 2);
+      expect(controller.interaction.activeStrokePreviewPoints.length, 2);
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         sampleInput(
           pointerId: 1,
           position: const Offset(14, 10),
@@ -315,8 +420,8 @@ void main() {
           phase: CanvasPointerPhase.up,
         ),
       );
-      expect(controller.hasActiveStrokePreview, isFalse);
-      expect(controller.activeStrokePreviewPoints, isEmpty);
+      expect(controller.interaction.hasActiveStrokePreview, isFalse);
+      expect(controller.interaction.activeStrokePreviewPoints, isEmpty);
     });
   });
 }

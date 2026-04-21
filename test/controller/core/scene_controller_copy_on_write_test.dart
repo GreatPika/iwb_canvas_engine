@@ -2,7 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
+import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 
 // INV:INV-ENG-TXN-COPY-ON-WRITE
 // INV:INV-ENG-TEXT-SIZE-DERIVED
@@ -14,8 +15,8 @@ void main() {
         ContentLayerSnapshot(
           id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
-            const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
+            RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
+            RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
           ],
         ),
       ],
@@ -23,14 +24,14 @@ void main() {
   }
 
   test('no-op hitPadding patch does not bump bounds revision', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final beforeBounds = controller.boundsRevision;
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
-        const RectNodePatch(
+        RectNodePatch(
           id: 'r1',
           common: CommonNodePatch(hitPadding: PatchField<double>.value(0)),
         ),
@@ -38,28 +39,28 @@ void main() {
     });
 
     expect(controller.boundsRevision, beforeBounds);
-    expect(controller.debugLastChangeSet.boundsChanged, isFalse);
-    expect(controller.debugLastChangeSet.hitGeometryChangedIds, isEmpty);
-    expect(controller.debugSceneShallowClones, 0);
-    expect(controller.debugLayerShallowClones, 0);
-    expect(controller.debugNodeClones, 0);
+    expect(controller.debug.lastChangeSet.boundsChanged, isFalse);
+    expect(controller.debug.lastChangeSet.spatialGeometryChangedIds, isEmpty);
+    expect(controller.debug.sceneShallowClones, 0);
+    expect(controller.debug.layerShallowClones, 0);
+    expect(controller.debug.nodeClones, 0);
   });
 
   test(
-    'text layout patch recomputes derived size and bumps bounds revision',
+    'text layout patch recomputes derived bounds and bumps bounds revision',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-1',
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 TextNodeSnapshot(
                   id: 't1',
                   text: 'hello',
-                  size: Size(1, 1),
                   fontSize: 12,
                   color: Color(0xFF000000),
+                  textDirection: TextDirection.ltr,
                 ),
               ],
             ),
@@ -70,40 +71,88 @@ void main() {
 
       final beforeNode =
           controller.snapshot.layers.first.nodes.single as TextNodeSnapshot;
-      final beforeSize = beforeNode.size;
+      final beforeSize = TextLayoutRequest.forSnapshot(beforeNode).measure();
       final beforeBoundsRevision = controller.boundsRevision;
 
       controller.write<void>((writer) {
         writer.writeNodePatch(
-          const TextNodePatch(id: 't1', fontSize: PatchField<double>.value(36)),
+          TextNodePatch(id: 't1', fontSize: PatchField<double>.value(36)),
         );
       });
 
       final afterNode =
           controller.snapshot.layers.first.nodes.single as TextNodeSnapshot;
-      expect(afterNode.size.height, greaterThan(beforeSize.height));
+      final afterSize = TextLayoutRequest.forSnapshot(afterNode).measure();
+      expect(afterSize.height, greaterThan(beforeSize.height));
       expect(controller.boundsRevision, beforeBoundsRevision + 1);
-      expect(controller.debugLastChangeSet.boundsChanged, isTrue);
+      expect(controller.debug.lastChangeSet.boundsChanged, isTrue);
       expect(
-        controller.debugLastChangeSet.hitGeometryChangedIds,
+        controller.debug.lastChangeSet.spatialGeometryChangedIds,
         contains('t1'),
       );
     },
   );
 
+  test(
+    'textDirection patch updates snapshot through controller write path',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-1b',
+              nodes: <NodeSnapshot>[
+                TextNodeSnapshot(
+                  id: 't-dir',
+                  text: 'abc אבג',
+                  fontSize: 24,
+                  color: const Color(0xFF000000),
+                  textDirection: TextDirection.ltr,
+                  align: TextAlign.start,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final beforeNode =
+          controller.snapshot.layers.first.nodes.single as TextNodeSnapshot;
+
+      controller.write<void>((writer) {
+        writer.writeNodePatch(
+          TextNodePatch(
+            id: 't-dir',
+            textDirection: PatchField<TextDirection>.value(TextDirection.rtl),
+          ),
+        );
+      });
+
+      final afterNode =
+          controller.snapshot.layers.first.nodes.single as TextNodeSnapshot;
+      expect(beforeNode.textDirection, TextDirection.ltr);
+      expect(afterNode.textDirection, TextDirection.rtl);
+      expect(
+        TextLayoutRequest.forSnapshot(afterNode).measure().width,
+        greaterThan(0),
+      );
+    },
+  );
+
   test('text visual-only patch keeps bounds revision unchanged', () {
-    final controller = SceneControllerCore(
+    final controller = SceneStoreController(
       initialSnapshot: SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-2',
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               TextNodeSnapshot(
                 id: 't1',
                 text: 'hello',
-                size: Size(80, 24),
                 fontSize: 24,
                 color: Color(0xFF000000),
+                textDirection: TextDirection.ltr,
               ),
             ],
           ),
@@ -116,7 +165,7 @@ void main() {
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
-        const TextNodePatch(
+        TextNodePatch(
           id: 't1',
           color: PatchField<Color>.value(Color(0xFF00AA00)),
         ),
@@ -124,141 +173,151 @@ void main() {
     });
 
     expect(controller.boundsRevision, beforeBoundsRevision);
-    expect(controller.debugLastChangeSet.boundsChanged, isFalse);
-    expect(controller.debugLastChangeSet.hitGeometryChangedIds, isEmpty);
+    expect(controller.debug.lastChangeSet.boundsChanged, isFalse);
+    expect(controller.debug.lastChangeSet.spatialGeometryChangedIds, isEmpty);
   });
 
   test('camera offset write does not clone layers or nodes', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
       writer.writeCameraOffset(const Offset(20, 10));
     });
 
-    expect(controller.debugSceneShallowClones, 1);
-    expect(controller.debugLayerShallowClones, 0);
-    expect(controller.debugNodeClones, 0);
+    expect(controller.debug.sceneShallowClones, 1);
+    expect(controller.debug.layerShallowClones, 0);
+    expect(controller.debug.nodeClones, 0);
   });
 
   test('single node patch clones exactly one layer and one node', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
-        const RectNodePatch(id: 'r1', strokeWidth: PatchField<double>.value(2)),
+        RectNodePatch(id: 'r1', strokeWidth: PatchField<double>.value(2)),
       );
     });
 
-    expect(controller.debugSceneShallowClones, 1);
-    expect(controller.debugLayerShallowClones, 1);
-    expect(controller.debugNodeClones, 1);
+    expect(controller.debug.sceneShallowClones, 1);
+    expect(controller.debug.layerShallowClones, 1);
+    expect(controller.debug.nodeClones, 1);
   });
 
   test('opacity patch commit does not materialize allNodeIds', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
-        const RectNodePatch(
+        RectNodePatch(
           id: 'r1',
           common: CommonNodePatch(opacity: PatchField<double>.value(0.5)),
         ),
       );
     });
 
-    expect(controller.debugNodeIdSetMaterializations, 0);
-    expect(controller.debugNodeLocatorMaterializations, 0);
+    expect(controller.debug.nodeIdSetMaterializations, 0);
+    expect(controller.debug.nodeLocatorMaterializations, 0);
   });
 
   test('structural commit materializes allNodeIds once', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
       writer.writeNodeInsert(RectNodeSpec(size: const Size(8, 8)));
     });
 
-    expect(controller.debugNodeIdSetMaterializations, 1);
-    expect(controller.debugNodeLocatorMaterializations, 1);
+    expect(controller.debug.nodeIdSetMaterializations, 1);
+    expect(controller.debug.nodeLocatorMaterializations, 1);
   });
 
-  test('node id seed stays monotonic after deleting max node-* id', () {
-    final controller = SceneControllerCore(
-      initialSnapshot: SceneSnapshot(
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
-            id: 'layer-auto-3',
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(id: 'node-1', size: Size(10, 10)),
-              RectNodeSnapshot(id: 'node-9', size: Size(12, 12)),
-            ],
-          ),
-        ],
-      ),
-    );
-    addTearDown(controller.dispose);
-
-    controller.write<void>((writer) {
-      writer.writeNodeErase('node-9');
-    });
-
-    late final NodeId generatedId;
-    controller.write<void>((writer) {
-      generatedId = writer.writeNodeInsert(
-        RectNodeSpec(size: const Size(6, 6)),
+  test(
+    'node allocation stays runtime-owned after deleting explicit max id',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-3',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(id: 'node-1', size: Size(10, 10)),
+                RectNodeSnapshot(id: 'node-9', size: Size(12, 12)),
+              ],
+            ),
+          ],
+        ),
       );
-    });
+      addTearDown(controller.dispose);
 
-    expect(generatedId, 'node-10');
-  });
+      controller.write<void>((writer) {
+        writer.writeNodeErase('node-9');
+      });
 
-  test('nextInstanceRevision stays monotonic across replaceScene', () {
-    final controller = SceneControllerCore(
-      initialSnapshot: SceneSnapshot(
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
-            id: 'layer-auto-4',
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(
-                id: 'high',
-                instanceRevision: 100,
-                size: Size(10, 10),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-    addTearDown(controller.dispose);
+      late final NodeId generatedId;
+      controller.write<void>((writer) {
+        generatedId = writer.writeNodeInsert(
+          RectNodeSpec(size: const Size(6, 6)),
+        );
+      });
 
-    controller.writeReplaceScene(
-      SceneSnapshot(
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
-            id: 'layer-auto-5',
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(
-                id: 'low',
-                instanceRevision: 3,
-                size: Size(10, 10),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+      expect(generatedId, startsWith('gen-n-'));
+      expect(generatedId, isNot(anyOf('node-1', 'node-9')));
+    },
+  );
 
-    late final NodeId insertedId;
-    controller.write<void>((writer) {
-      insertedId = writer.writeNodeInsert(RectNodeSpec(size: const Size(4, 4)));
-    });
+  test(
+    'replaceScene keeps runtime revision allocator independent from snapshot max',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-4',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'high',
+                  instanceRevision: 100,
+                  size: Size(10, 10),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
 
-    final inserted = controller.snapshot.layers
-        .expand((layer) => layer.nodes)
-        .firstWhere((node) => node.id == insertedId);
-    expect(inserted.instanceRevision, greaterThanOrEqualTo(101));
-  });
+      controller.writeReplaceScene(
+        SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-5',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'low',
+                  instanceRevision: 3,
+                  size: Size(10, 10),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      late final NodeId insertedId;
+      controller.write<void>((writer) {
+        insertedId = writer.writeNodeInsert(
+          RectNodeSpec(size: const Size(4, 4)),
+        );
+      });
+
+      final inserted = controller.snapshot.layers
+          .expand((layer) => layer.nodes)
+          .firstWhere((node) => node.id == insertedId);
+      expect(controller.controllerEpoch, 1);
+      expect(inserted.instanceRevision, 1);
+    },
+  );
 }

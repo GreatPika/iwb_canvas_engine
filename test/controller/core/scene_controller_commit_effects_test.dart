@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
 // INV:INV-ENG-EPOCH-INVALIDATION
@@ -20,8 +20,8 @@ void main() {
         ContentLayerSnapshot(
           id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
-            const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
+            RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
+            RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
           ],
         ),
       ],
@@ -29,30 +29,30 @@ void main() {
   }
 
   test('changeset tracks added removed and updated node ids', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
       writer.writeNodeInsert(RectNodeSpec(id: 'r3', size: const Size(8, 8)));
       writer.writeNodePatch(
-        const RectNodePatch(id: 'r1', strokeWidth: PatchField<double>.value(2)),
+        RectNodePatch(id: 'r1', strokeWidth: PatchField<double>.value(2)),
       );
       writer.writeNodeErase('r2');
     });
 
-    final changes = controller.debugLastChangeSet;
+    final changes = controller.debug.lastChangeSet;
     expect(changes.addedNodeIds, <NodeId>{'r3'});
     expect(changes.removedNodeIds, <NodeId>{'r2'});
     expect(changes.updatedNodeIds, <NodeId>{'r1'});
   });
 
   test('boundsChanged is auto-detected for transform patch', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
-        const RectNodePatch(
+        RectNodePatch(
           id: 'r1',
           common: CommonNodePatch(
             transform: PatchField<Transform2D>.value(
@@ -63,12 +63,12 @@ void main() {
       );
     });
 
-    expect(controller.debugLastChangeSet.boundsChanged, isTrue);
+    expect(controller.debug.lastChangeSet.boundsChanged, isTrue);
     expect(controller.boundsRevision, 1);
   });
 
   test('node patch changing isSelectable keeps explicitly selected ids', () {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     controller.write<void>((writer) {
@@ -78,7 +78,7 @@ void main() {
 
     controller.write<void>((writer) {
       writer.writeNodePatch(
-        const RectNodePatch(
+        RectNodePatch(
           id: 'r1',
           common: CommonNodePatch(isSelectable: PatchField<bool>.value(false)),
         ),
@@ -86,18 +86,18 @@ void main() {
     });
 
     expect(controller.selectedNodeIds, const <NodeId>{'r1'});
-    expect(controller.debugLastChangeSet.selectionChanged, isTrue);
+    expect(controller.debug.lastChangeSet.selectionChanged, isFalse);
   });
 
   test(
     'selectAll with onlySelectable false preserves non-selectable ids after commit',
     () {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-1',
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 RectNodeSnapshot(id: 'selectable', size: Size(10, 10)),
                 RectNodeSnapshot(
                   id: 'nonsel',
@@ -123,7 +123,7 @@ void main() {
   test(
     'writeReplaceScene increments epoch clears selection and has no action signal',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -146,7 +146,7 @@ void main() {
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
               id: 'layer-auto-2',
-              nodes: const <NodeSnapshot>[
+              nodes: <NodeSnapshot>[
                 RectNodeSnapshot(id: 'fresh', size: Size(4, 4)),
               ],
             ),
@@ -158,7 +158,7 @@ void main() {
       expect(controller.controllerEpoch, 1);
       expect(controller.selectedNodeIds, isEmpty);
       expect(controller.snapshot.layers.first.nodes.single.id, 'fresh');
-      expect(controller.debugLastChangeSet.documentReplaced, isTrue);
+      expect(controller.debug.lastChangeSet.documentReplaced, isTrue);
       expect(notifications, 1);
       expect(signals, isEmpty);
     },

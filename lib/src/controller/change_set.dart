@@ -14,7 +14,7 @@ class ChangeSet {
   final Set<NodeId> addedNodeIds = HashSet<NodeId>();
   final Set<NodeId> removedNodeIds = HashSet<NodeId>();
   final Set<NodeId> updatedNodeIds = HashSet<NodeId>();
-  final Set<NodeId> hitGeometryChangedIds = HashSet<NodeId>();
+  final Set<NodeId> spatialGeometryChangedIds = HashSet<NodeId>();
 
   bool get txnHasAnyChange =>
       documentReplaced ||
@@ -62,14 +62,14 @@ class ChangeSet {
     addedNodeIds.add(nodeId);
     removedNodeIds.remove(nodeId);
     updatedNodeIds.remove(nodeId);
-    hitGeometryChangedIds.remove(nodeId);
+    spatialGeometryChangedIds.remove(nodeId);
   }
 
   void txnTrackRemoved(NodeId nodeId) {
     removedNodeIds.add(nodeId);
     addedNodeIds.remove(nodeId);
     updatedNodeIds.remove(nodeId);
-    hitGeometryChangedIds.remove(nodeId);
+    spatialGeometryChangedIds.remove(nodeId);
   }
 
   void txnTrackUpdated(NodeId nodeId) {
@@ -78,10 +78,10 @@ class ChangeSet {
     updatedNodeIds.add(nodeId);
   }
 
-  void txnTrackHitGeometryChanged(NodeId nodeId) {
+  void txnTrackSpatialGeometryChanged(NodeId nodeId) {
     if (addedNodeIds.contains(nodeId)) return;
     if (removedNodeIds.contains(nodeId)) return;
-    hitGeometryChangedIds.add(nodeId);
+    spatialGeometryChangedIds.add(nodeId);
   }
 
   ChangeSet txnClone() {
@@ -95,7 +95,7 @@ class ChangeSet {
     out.addedNodeIds.addAll(addedNodeIds);
     out.removedNodeIds.addAll(removedNodeIds);
     out.updatedNodeIds.addAll(updatedNodeIds);
-    out.hitGeometryChangedIds.addAll(hitGeometryChangedIds);
+    out.spatialGeometryChangedIds.addAll(spatialGeometryChangedIds);
     return out;
   }
 }

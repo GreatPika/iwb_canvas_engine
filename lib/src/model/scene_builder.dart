@@ -1,71 +1,72 @@
-import 'dart:math' as math;
-import 'dart:ui';
-
-import '../core/background_layer_invariants.dart';
-import '../core/nodes.dart';
 import '../core/scene.dart';
-import '../core/scene_limits.dart';
-import '../core/text_layout.dart';
-import '../core/transform2d.dart';
-import '../public/scene_data_exception.dart';
-import '../public/snapshot.dart' hide NodeId;
-import 'scene_value_validation.dart';
-
-part 'scene_builder_json_require.part.dart';
-part 'scene_builder_decode_json.part.dart';
-part 'scene_builder_scene_from_snapshot.part.dart';
-part 'scene_builder_snapshot_from_scene.part.dart';
-part 'scene_builder_canonicalize_validate.part.dart';
+import '../contract/scene_data_exception.dart';
+import '../contract/snapshot.dart';
+import 'scene_builder_decode_json.dart';
+import 'scene_from_import_draft.dart';
+import 'scene_import_draft.dart';
+import 'scene_import_draft_from_snapshot.dart';
+import 'scene_policy.dart';
+import 'scene_snapshot_from_scene.dart';
 
 Scene sceneBuildFromSnapshot(
   SceneSnapshot rawSnapshot, {
   int Function()? nextInstanceRevision,
 }) {
-  final canonicalSnapshot = sceneCanonicalizeAndValidateSnapshot(rawSnapshot);
-  return _sceneFromSnapshot(
-    canonicalSnapshot,
+  return sceneImportFromDraft(
+    sceneImportDraftFromSnapshot(rawSnapshot),
     nextInstanceRevision: nextInstanceRevision,
   );
 }
 
 Scene sceneBuildFromJsonMap(Map<String, Object?> rawJson) {
   try {
-    final rawSnapshot = _decodeSnapshotFromJson(rawJson);
-    return sceneBuildFromSnapshot(rawSnapshot);
+    final rawDraft = sceneBuilderDecodeImportDraftFromJson(rawJson);
+    return sceneImportFromDraft(rawDraft);
   } on SceneDataException {
     rethrow;
   } catch (error) {
-    throw SceneDataException(
-      code: SceneDataErrorCode.invalidJson,
-      message: 'Invalid scene JSON payload.',
-      source: error,
-    );
+    throw SceneDataException.invalidJsonPayload(source: error);
   }
 }
 
+Scene sceneBuildFromDynamicJsonMap(Map<String, dynamic> rawJson) {
+  return _guardBuild(rawJson, sceneBuildFromJsonMap);
+}
+
 SceneSnapshot sceneCanonicalizeAndValidateSnapshot(SceneSnapshot rawSnapshot) {
-  final canonicalSnapshot = canonicalizeBackgroundLayerSnapshot(rawSnapshot);
-  _validateStructuralInvariants(canonicalSnapshot);
-  sceneValidateSnapshotValues(
-    canonicalSnapshot,
-    onError: _snapshotValidationError,
-    requirePositiveGridCellSize: true,
+  final rawDraft = sceneImportDraftFromSnapshot(rawSnapshot);
+  return sceneSnapshotFromValidatedImportDraft(
+    ScenePolicy.validateImportDraft(rawDraft),
   );
-  _validateSnapshotRanges(canonicalSnapshot);
-  return canonicalSnapshot;
 }
 
 Scene sceneCanonicalizeAndValidateScene(Scene rawScene) {
-  sceneValidateSceneValues(
+  return ScenePolicy.validateRuntimeScene(
     rawScene,
-    onError: _sceneValidationError,
-    requirePositiveGridCellSize: true,
+    snapshotFromScene: sceneSnapshotFromScene,
+    sceneFromImportDraft: sceneFromImportDraft,
   );
-  final rawSnapshot = _snapshotFromScene(rawScene);
-  final canonicalSnapshot = sceneCanonicalizeAndValidateSnapshot(rawSnapshot);
-  return _sceneFromSnapshot(canonicalSnapshot);
 }
 
 Scene sceneValidateCore(Scene scene) {
-  return sceneCanonicalizeAndValidateScene(scene);
+  return ScenePolicy.validateEncodeScene(
+    scene,
+    snapshotFromScene: sceneSnapshotFromScene,
+    sceneFromImportDraft: sceneFromImportDraft,
+  );
+}
+
+T _guardBuild<T>(
+  Map<String, dynamic> rawJson,
+  T Function(Map<String, Object?> raw) build,
+) {
+  try {
+    return build(Map<String, Object?>.from(rawJson));
+  } on SceneDataException {
+    rethrow;
+  } on FormatException catch (error) {
+    throw SceneDataException.invalidJsonPayload(source: error);
+  } catch (error) {
+    throw SceneDataException.invalidJsonPayload(source: error);
+  }
 }

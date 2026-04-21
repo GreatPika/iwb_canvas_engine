@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
 
 // INV:INV-ENG-SIGNALS-AFTER-COMMIT
@@ -14,8 +14,8 @@ void main() {
         ContentLayerSnapshot(
           id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
-            const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
+            RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
+            RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
           ],
         ),
       ],
@@ -23,7 +23,7 @@ void main() {
   }
 
   test('signals are emitted only after successful commit', () async {
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final emitted = <String>[];
@@ -33,7 +33,7 @@ void main() {
     addTearDown(sub.cancel);
 
     expect(
-      () => controller.write<void>((writer) {
+      () => controller.writeWithSceneWriter<void>((writer) {
         writer.writeSignalEnqueue(type: 'will.rollback');
         throw StateError('fail');
       }),
@@ -42,7 +42,7 @@ void main() {
 
     expect(emitted, isEmpty);
 
-    controller.write<void>((writer) {
+    controller.writeWithSceneWriter<void>((writer) {
       writer.writeSignalEnqueue(type: 'committed');
     });
     await pumpEventQueue();
@@ -53,7 +53,7 @@ void main() {
   test(
     'signals are delivered before repaint listeners for same commit',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -67,7 +67,7 @@ void main() {
         observed.add('notify');
       });
 
-      controller.write<void>((writer) {
+      controller.writeWithSceneWriter<void>((writer) {
         writer.writeSelectionReplace(const <NodeId>{'r1'});
         writer.writeSignalEnqueue(type: 'ordered');
       });
@@ -80,7 +80,7 @@ void main() {
   test(
     'signals stay ordered before notify in signals-plus-repaint commit',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -94,7 +94,7 @@ void main() {
         observed.add('notify');
       });
 
-      controller.write<void>((writer) {
+      controller.writeWithSceneWriter<void>((writer) {
         writer.writeSignalEnqueue(type: 'signal.with.repaint');
         controller.requestRepaint();
       });
@@ -107,7 +107,7 @@ void main() {
   test(
     'signal listener observes committed state and can trigger follow-up write',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -119,11 +119,11 @@ void main() {
         observed.add((
           type: signal.type,
           signalRevision: signal.commitRevision,
-          storeRevision: controller.debugCommitRevision,
+          storeRevision: controller.debug.currentCommitRevision,
         ));
         if (signal.type == 'first') {
           try {
-            controller.write<void>((writer) {
+            controller.writeWithSceneWriter<void>((writer) {
               writer.writeSignalEnqueue(type: 'second');
             });
           } catch (error) {
@@ -133,7 +133,7 @@ void main() {
       });
       addTearDown(sub.cancel);
 
-      controller.write<void>((writer) {
+      controller.writeWithSceneWriter<void>((writer) {
         writer.writeSignalEnqueue(type: 'first');
       });
       await pumpEventQueue(times: 2);
@@ -149,14 +149,14 @@ void main() {
             .toList(growable: false),
         everyElement(isTrue),
       );
-      expect(controller.debugCommitRevision, 2);
+      expect(controller.debug.currentCommitRevision, 2);
     },
   );
 
   test(
     'change listener can trigger follow-up write without nested write error',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -188,7 +188,7 @@ void main() {
 
   test('committed signals expose immutable payload and nodeIds', () async {
     // INV:INV-ENG-EVENTS-IMMUTABLE
-    final controller = SceneControllerCore(initialSnapshot: twoRectSnapshot());
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
     final emitted = <CommittedSignal>[];
@@ -200,7 +200,7 @@ void main() {
       'nested': <String, Object?>{'value': 1},
       'items': <Object?>[1, 2],
     };
-    controller.write<void>((writer) {
+    controller.writeWithSceneWriter<void>((writer) {
       writer.writeSignalEnqueue(
         type: 'immutable',
         nodeIds: nodeIds,
@@ -215,11 +215,15 @@ void main() {
 
     final signal = emitted.single;
     expect(signal.nodeIds, const <NodeId>['r1']);
-    expect((signal.payload!['nested']! as Map<String, Object?>)['value'], 1);
-    expect(signal.payload!['items'], const <Object?>[1, 2]);
+    final payloadSnapshot = signal.payload;
+    if (payloadSnapshot == null) {
+      fail('Expected emitted signal payload.');
+    }
+    expect((payloadSnapshot['nested'] as Map<String, Object?>)['value'], 1);
+    expect(payloadSnapshot['items'], const <Object?>[1, 2]);
     expect(() => signal.nodeIds.add('x'), throwsUnsupportedError);
     expect(
-      () => (signal.payload!['nested'] as Map<Object?, Object?>)['value'] = 7,
+      () => (payloadSnapshot['nested'] as Map<Object?, Object?>)['value'] = 7,
       throwsUnsupportedError,
     );
   });

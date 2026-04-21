@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../../core/input_sampling.dart';
+
 class SegmentBatch {
   const SegmentBatch({
     required this.startSegment,
@@ -11,17 +13,6 @@ class SegmentBatch {
   final int startSegment;
   final int endSegmentExclusive;
   final Rect bounds;
-}
-
-List<Offset> resamplePointsToLimit(List<Offset> points, {required int limit}) {
-  if (points.length <= limit) {
-    return points;
-  }
-  final sourceCount = points.length;
-  return List<Offset>.generate(limit, (i) {
-    final sourceIndex = (i * (sourceCount - 1)) ~/ (limit - 1);
-    return points[sourceIndex];
-  }, growable: false);
 }
 
 // Active gesture buffers are intentionally separate from committed scene state
@@ -138,13 +129,4 @@ bool rectsCanBeWithinDistance(Rect left, Rect right, double distance) {
       ? left.top - right.bottom
       : 0.0;
   return dx * dx + dy * dy <= safeDistance * safeDistance;
-}
-
-double maxSingularValue2x2(double a, double b, double c, double d) {
-  final t = a * a + b * b + c * c + d * d;
-  final det = a * d - b * c;
-  final discSquared = t * t - 4 * det * det;
-  final disc = math.sqrt(math.max(0, discSquared));
-  final lambdaMax = (t + disc) / 2;
-  return math.sqrt(math.max(0, lambdaMax));
 }

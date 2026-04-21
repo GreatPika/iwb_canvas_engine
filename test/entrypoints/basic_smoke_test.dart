@@ -11,13 +11,49 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test(
+    'iwb_canvas_engine.dart exports representative symbols across layers',
+    () {
+      final scene = SceneSnapshot(
+        layers: <ContentLayerSnapshot>[ContentLayerSnapshot(id: 'layer-api-0')],
+      );
+      final json = encodeSceneToJson(scene);
+      final canonicalFromSnapshot = SceneBuilder.buildFromSnapshot(scene);
+      final canonicalFromJson = SceneBuilder.buildFromJson(encodeScene(scene));
+      final controller = SceneController(initialSnapshot: scene);
+
+      addTearDown(controller.dispose);
+
+      expect(controller.interaction, isA<SceneControllerInteraction>());
+      expect(controller.selection, isA<SceneControllerSelection>());
+      expect(controller.scene, isA<SceneControllerScene>());
+      expect(Transform2D.identity.translation, Offset.zero);
+      expect(PathFillRule.evenOdd.name, 'evenOdd');
+      expect(CanvasMode.move, CanvasMode.move);
+      expect(DrawTool.pen, DrawTool.pen);
+      expect(parseNodeId('node-api-0'), 'node-api-0');
+      expect(parseLayerId('layer-api-0'), 'layer-api-0');
+      expect(json, contains('"schemaVersion":$schemaVersionWrite'));
+      expect(decodeSceneFromJson(json).layers.single.id, 'layer-api-0');
+      expect(canonicalFromSnapshot.layers.single.id, 'layer-api-0');
+      expect(canonicalFromJson.layers.single.id, 'layer-api-0');
+
+      controller.scene.write((txn) {
+        expect(txn, isA<SceneWriteTxn>());
+        expect(txn.snapshot.layers.single.id, 'layer-api-0');
+        return null;
+      });
+      controller.selection.clearSelection();
+    },
+  );
+
   test('iwb_canvas_engine.dart exports immutable snapshots/specs/patches', () {
     final scene = SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
           id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(id: 'rect-1', size: Size(40, 20)),
+            RectNodeSnapshot(id: 'rect-1', size: Size(40, 20)),
           ],
         ),
       ],
@@ -25,7 +61,7 @@ void main() {
 
     expect(scene.layers.single.nodes.single.id, 'rect-1');
 
-    const patch = RectNodePatch(
+    final patch = RectNodePatch(
       id: 'rect-1',
       size: PatchField<Size>.value(Size(50, 30)),
     );
@@ -38,7 +74,7 @@ void main() {
         ContentLayerSnapshot(
           id: 'layer-auto-1',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(id: 'rect-json-1', size: Size(2, 3)),
+            RectNodeSnapshot(id: 'rect-json-1', size: Size(2, 3)),
           ],
         ),
       ],
@@ -80,6 +116,15 @@ void main() {
     expect(inputWithoutTimestamp.timestampMs, isNull);
   });
 
+  test('iwb_canvas_engine.dart exports validated boundary values', () {
+    expect(NodeIdValue.parse('node-public-1').value, 'node-public-1');
+    expect(LayerIdValue.parse('layer-public-2').value, 'layer-public-2');
+    expect(
+      FiniteOffsetValue.of(const Offset(12, 24)).value,
+      const Offset(12, 24),
+    );
+  });
+
   test('advanced.dart entrypoint is removed', () {
     expect(File('lib/advanced.dart').existsSync(), isFalse);
   });
@@ -104,7 +149,7 @@ void main() {
       );
       await tester.pump();
 
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         const CanvasPointerInput(
           pointerId: 1,
           position: Offset(32, 32),
@@ -112,7 +157,7 @@ void main() {
           kind: PointerDeviceKind.touch,
         ),
       );
-      controller.handlePointer(
+      controller.interaction.handlePointer(
         const CanvasPointerInput(
           pointerId: 1,
           position: Offset(40, 40),

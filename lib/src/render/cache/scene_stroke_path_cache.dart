@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
 
 int _requirePositiveCacheEntries(int maxEntries) {
   if (maxEntries <= 0) {
@@ -33,8 +33,16 @@ class SceneStrokePathCache {
   @visibleForTesting
   int get debugSize => _entries.length;
 
+  /// Owner-level invalidation for controller epoch/document boundaries.
+  ///
+  /// Keys stay scoped to `(nodeId, instanceRevision)` and local stroke inputs;
+  /// `epoch` is intentionally not part of this cache key.
   void clear() => _entries.clear();
 
+  /// Returns a borrowed render path for [node].
+  ///
+  /// Degenerate 0/1-point cases stay uncached and callers must treat cached
+  /// paths as read-only render payload.
   Path getOrBuild(StrokeNodeSnapshot node) {
     if (node.points.isEmpty) {
       return Path();
@@ -49,16 +57,18 @@ class SceneStrokePathCache {
       instanceRevision: node.instanceRevision,
     );
     final cached = _entries.remove(key);
-    if (cached != null && cached.pointsRevision == node.pointsRevision) {
+    if (cached != null && identical(cached.points, node.points)) {
       _entries[key] = cached;
       _debugHitCount += 1;
       return cached.path;
     }
 
-    final path = _buildStrokePath(node.points);
+    final path = buildStrokePath(node.points);
     _entries[key] = _StrokePathEntry(
       path: path,
-      pointsRevision: node.pointsRevision,
+      // Equivalent public stroke snapshots share one canonical immutable points
+      // owner, so identity is an exact O(1) freshness check here.
+      points: node.points,
     );
     _debugBuildCount += 1;
     _evictIfNeeded();
@@ -74,10 +84,10 @@ class SceneStrokePathCache {
 }
 
 class _StrokePathEntry {
-  const _StrokePathEntry({required this.path, required this.pointsRevision});
+  const _StrokePathEntry({required this.path, required this.points});
 
   final Path path;
-  final int pointsRevision;
+  final List<Offset> points;
 }
 
 class _NodeInstanceKey {
@@ -100,7 +110,7 @@ class _NodeInstanceKey {
   int get hashCode => Object.hash(nodeId, instanceRevision);
 }
 
-Path _buildStrokePath(List<Offset> points) {
+Path buildStrokePath(List<Offset> points) {
   final path = Path()..fillType = PathFillType.nonZero;
   final first = points.first;
   path.moveTo(first.dx, first.dy);

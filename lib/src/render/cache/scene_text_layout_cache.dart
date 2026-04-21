@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
 import '../../core/text_layout.dart';
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
 
 int _requirePositiveCacheEntries(int maxEntries) {
   if (maxEntries <= 0) {
@@ -18,8 +18,8 @@ class SceneTextLayoutCache {
     : maxEntries = _requirePositiveCacheEntries(maxEntries);
 
   final int maxEntries;
-  final LinkedHashMap<_TextLayoutKey, TextPainter> _entries =
-      LinkedHashMap<_TextLayoutKey, TextPainter>();
+  final LinkedHashMap<_TextLayoutKey, ResolvedTextLayout> _entries =
+      LinkedHashMap<_TextLayoutKey, ResolvedTextLayout>();
 
   int _debugBuildCount = 0;
   int _debugHitCount = 0;
@@ -36,26 +36,26 @@ class SceneTextLayoutCache {
 
   void clear() => _entries.clear();
 
-  TextPainter getOrBuild({
-    required TextNodeSnapshot node,
-    required TextStyle textStyle,
-    required double? maxWidth,
-    TextDirection textDirection = TextDirection.ltr,
-  }) {
-    final safeFontSize = normalizeTextLayoutFontSize(node.fontSize);
-    final safeLineHeight = normalizeTextLayoutLineHeight(node.lineHeight);
+  /// Returns a render-ready [ResolvedTextLayout] derived only from [node] and
+  /// node-owned layout semantics.
+  ///
+  /// The cache owns `TextStyle` and normalized width derivation so callers
+  /// cannot provide a second source of truth for the cached object.
+  ResolvedTextLayout getOrBuild({required TextNodeSnapshot node}) {
+    final request = _createTextLayoutRequest(node);
+    final textStyle = request.buildTextStyle();
     final key = _TextLayoutKey(
-      text: node.text,
-      fontSize: safeFontSize,
-      fontFamily: node.fontFamily,
-      isBold: node.isBold,
-      isItalic: node.isItalic,
-      isUnderline: node.isUnderline,
-      align: node.align,
-      lineHeight: safeLineHeight,
-      maxWidth: normalizeTextLayoutMaxWidth(maxWidth),
+      text: request.text,
+      fontSize: request.normalizedFontSize,
+      fontFamily: request.fontFamily,
+      isBold: request.isBold,
+      isItalic: request.isItalic,
+      isUnderline: request.isUnderline,
+      align: request.textAlign,
+      lineHeight: request.normalizedLineHeight,
+      maxWidth: request.normalizedMaxWidth,
       color: textStyle.color ?? const Color(0xFF000000),
-      textDirection: textDirection,
+      textDirection: request.textDirection,
     );
 
     final cached = _entries.remove(key);
@@ -65,21 +65,11 @@ class SceneTextLayoutCache {
       return cached;
     }
 
-    final textPainter = TextPainter(
-      text: TextSpan(text: node.text, style: textStyle),
-      textAlign: node.align,
-      textDirection: textDirection,
-      maxLines: null,
-    );
-    if (key.maxWidth == null) {
-      textPainter.layout();
-    } else {
-      textPainter.layout(maxWidth: key.maxWidth!);
-    }
-    _entries[key] = textPainter;
+    final resolvedTextLayout = request.resolve();
+    _entries[key] = resolvedTextLayout;
     _debugBuildCount += 1;
     _evictIfNeeded();
-    return textPainter;
+    return resolvedTextLayout;
   }
 
   void _evictIfNeeded() {
@@ -103,7 +93,19 @@ class _TextLayoutKey {
     required this.maxWidth,
     required this.color,
     required this.textDirection,
-  });
+  }) : _signature = (
+         text: text,
+         fontSize: fontSize,
+         fontFamily: fontFamily,
+         isBold: isBold,
+         isItalic: isItalic,
+         isUnderline: isUnderline,
+         align: align,
+         lineHeight: lineHeight,
+         maxWidth: maxWidth,
+         color: color,
+         textDirection: textDirection,
+       );
 
   final String text;
   final double fontSize;
@@ -116,35 +118,29 @@ class _TextLayoutKey {
   final double? maxWidth;
   final Color color;
   final TextDirection textDirection;
+  final ({
+    TextAlign align,
+    Color color,
+    String? fontFamily,
+    double fontSize,
+    bool isBold,
+    bool isItalic,
+    bool isUnderline,
+    double? lineHeight,
+    double? maxWidth,
+    String text,
+    TextDirection textDirection,
+  })
+  _signature;
 
   @override
-  bool operator ==(Object other) {
-    return other is _TextLayoutKey &&
-        other.text == text &&
-        other.fontSize == fontSize &&
-        other.fontFamily == fontFamily &&
-        other.isBold == isBold &&
-        other.isItalic == isItalic &&
-        other.isUnderline == isUnderline &&
-        other.align == align &&
-        other.lineHeight == lineHeight &&
-        other.maxWidth == maxWidth &&
-        other.color == color &&
-        other.textDirection == textDirection;
-  }
+  bool operator ==(Object other) =>
+      other is _TextLayoutKey && other._signature == _signature;
 
   @override
-  int get hashCode => Object.hash(
-    text,
-    fontSize,
-    fontFamily,
-    isBold,
-    isItalic,
-    isUnderline,
-    align,
-    lineHeight,
-    maxWidth,
-    color,
-    textDirection,
-  );
+  int get hashCode => _signature.hashCode;
+}
+
+TextLayoutRequest _createTextLayoutRequest(TextNodeSnapshot node) {
+  return TextLayoutRequest.forRenderSnapshot(node);
 }

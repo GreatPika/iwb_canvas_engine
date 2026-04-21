@@ -2,14 +2,19 @@ import 'dart:collection';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_data_exception.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
+    show kMaxContentLayersPerScene, kMaxNodesPerScene;
 import 'package:iwb_canvas_engine/src/controller/change_set.dart';
 import 'package:iwb_canvas_engine/src/controller/store.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 import 'package:iwb_canvas_engine/src/model/document.dart';
+import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
 // INV:INV-ENG-TXN-COPY-ON-WRITE
+// INV:INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER
 
 class _LayerDropTxnContext extends TxnContext {
   _LayerDropTxnContext({
@@ -93,16 +98,16 @@ void main() {
 
     changeSet.txnTrackUpdated('n2');
     expect(changeSet.updatedNodeIds, <NodeId>{'n2'});
-    changeSet.txnTrackHitGeometryChanged('n2');
-    expect(changeSet.hitGeometryChangedIds, <NodeId>{'n2'});
+    changeSet.txnTrackSpatialGeometryChanged('n2');
+    expect(changeSet.spatialGeometryChangedIds, <NodeId>{'n2'});
     changeSet.txnTrackAdded('n2');
     expect(changeSet.updatedNodeIds, isEmpty);
-    expect(changeSet.hitGeometryChangedIds, isEmpty);
+    expect(changeSet.spatialGeometryChangedIds, isEmpty);
 
-    changeSet.txnTrackHitGeometryChanged('n3');
-    expect(changeSet.hitGeometryChangedIds, <NodeId>{'n3'});
+    changeSet.txnTrackSpatialGeometryChanged('n3');
+    expect(changeSet.spatialGeometryChangedIds, <NodeId>{'n3'});
     changeSet.txnTrackRemoved('n3');
-    expect(changeSet.hitGeometryChangedIds, isEmpty);
+    expect(changeSet.spatialGeometryChangedIds, isEmpty);
 
     changeSet.txnMarkDocumentReplaced();
     expect(changeSet.documentReplaced, isTrue);
@@ -112,7 +117,10 @@ void main() {
     final clone = changeSet.txnClone();
     expect(clone.documentReplaced, changeSet.documentReplaced);
     expect(clone.addedNodeIds, changeSet.addedNodeIds);
-    expect(clone.hitGeometryChangedIds, changeSet.hitGeometryChangedIds);
+    expect(
+      clone.spatialGeometryChangedIds,
+      changeSet.spatialGeometryChangedIds,
+    );
     expect(clone, isNot(same(changeSet)));
   });
 
@@ -166,9 +174,36 @@ void main() {
         'manual': (layerIndex: 0, nodeIndex: 1),
       },
     );
-    expect(ctx.nodeIdSeed, 8);
-    expect(ctx.nextInstanceRevision, 2);
+    expect(ctx.nodeIdSeed, 1);
+    expect(ctx.nextInstanceRevision, 1);
   });
+
+  test(
+    'TxnContext default allocator state starts fresh and seed setters proxy idGeneratorState',
+    () {
+      final scene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[RectNode(id: 'node-2', size: const Size(1, 1))],
+        ),
+        layers: <ContentLayer>[ContentLayer(id: 'layer-4')],
+      );
+      final ctx = TxnContext(
+        baseScene: scene,
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: txnCollectNodeIds(scene),
+        nextInstanceRevision: 1,
+      );
+
+      expect(ctx.nodeIdSeed, 1);
+      expect(ctx.layerIdSeed, 1);
+
+      ctx.nodeIdSeed = 11;
+      ctx.layerIdSeed = 13;
+
+      expect(ctx.idGeneratorState.nextNodeCounter, 11);
+      expect(ctx.idGeneratorState.nextLayerCounter, 13);
+    },
+  );
 
   test('TxnContext keeps nextInstanceRevision monotonic on adopt', () {
     final ctx = TxnContext(
@@ -210,8 +245,8 @@ void main() {
 
     final next = ctx.txnNextLayerId();
 
-    expect(next, 'layer-2');
-    expect(ctx.layerIdSeed, 3);
+    expect(next, 'gen-l-test-1');
+    expect(ctx.layerIdSeed, 2);
   });
 
   test('TxnContext materializes layerId index lazily', () {
@@ -250,6 +285,26 @@ void main() {
     for (var i = 0; i < 1000; i++) {
       expect(ctx.txnFindContentLayerIndexById('layer-auto-20'), 0);
       expect(ctx.txnFindContentLayerIndexById('layer-auto-21'), 1);
+    }
+    expect(ctx.debugLayerIdIndexMaterializations, 1);
+  });
+
+  test('TxnContext does not rebuild layerId index for repeated misses', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-22'),
+          ContentLayer(id: 'layer-auto-23'),
+        ],
+      ),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: const <NodeId>{},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+
+    for (var i = 0; i < 1000; i++) {
+      expect(ctx.txnFindContentLayerIndexById('layer-auto-missing'), isNull);
     }
     expect(ctx.debugLayerIdIndexMaterializations, 1);
   });
@@ -304,7 +359,7 @@ void main() {
   });
 
   test(
-    'TxnContext ensureContentLayer shifts node locator, cloned indexes and layer seed',
+    'TxnContext ensureContentLayer shifts node locator, preserves cloned layer identity and layer seed',
     () {
       final ctx = TxnContext(
         baseScene: Scene(
@@ -333,7 +388,7 @@ void main() {
         <String>['layer-auto-60', 'layer-10', 'layer-auto-61'],
       );
       expect(ctx.txnFindNodeById('tail')?.layerIndex, 2);
-      expect(ctx.layerIdSeed, 11);
+      expect(ctx.layerIdSeed, 1);
       final resolvedTail = ctx.txnResolveMutableNode('tail');
       expect(resolvedTail.node.id, 'tail');
       expect(resolvedTail.layerIndex, 2);
@@ -437,6 +492,39 @@ void main() {
     },
   );
 
+  test(
+    'TxnContext rebuildNodeLocator materializes once from current working scene',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[ContentLayer(id: 'layer-auto-3b')],
+        ),
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: const <NodeId>{},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+
+      ctx.txnEnsureContentLayer('layer-extra');
+      ctx.txnEnsureMutableScene().layers[1].nodes.add(
+        RectNode(id: 'rebuilt', size: const Size(1, 1)),
+      );
+
+      expect(ctx.debugNodeLocatorMaterializations, 0);
+
+      ctx.txnRebuildNodeLocatorFromWorkingScene();
+
+      expect(ctx.debugNodeLocatorMaterializations, 1);
+      expect(
+        ctx.debugNodeLocatorView(structuralChanged: false),
+        containsPair('rebuilt', (layerIndex: 1, nodeIndex: 0)),
+      );
+
+      ctx.txnRebuildNodeLocatorFromWorkingScene();
+      expect(ctx.debugNodeLocatorMaterializations, 1);
+    },
+  );
+
   test('TxnContext keeps workingSelection hash-based and mutable in place', () {
     final inputSelection = <NodeId>{'a', 'b'};
     final ctx = TxnContext(
@@ -485,7 +573,7 @@ void main() {
     expect(changeSet.addedNodeIds, isA<HashSet<NodeId>>());
     expect(changeSet.removedNodeIds, isA<HashSet<NodeId>>());
     expect(changeSet.updatedNodeIds, isA<HashSet<NodeId>>());
-    expect(changeSet.hitGeometryChangedIds, isA<HashSet<NodeId>>());
+    expect(changeSet.spatialGeometryChangedIds, isA<HashSet<NodeId>>());
 
     expect(changeSet.addedNodeIds, <NodeId>{'n1', 'n2', 'n3'});
     expect(changeSet.removedNodeIds, isEmpty);
@@ -574,13 +662,40 @@ void main() {
       'node-9': (layerIndex: 0, nodeIndex: 1),
       'custom': (layerIndex: 0, nodeIndex: 2),
     });
-    expect(storeWithSelection.nodeIdSeed, 10);
-    expect(storeWithSelection.nextInstanceRevision, 2);
+    expect(storeWithSelection.nodeIdSeed, 1);
+    expect(storeWithSelection.nextInstanceRevision, 1);
 
     final storeWithoutSelection = SceneStore(sceneDoc: Scene());
     expect(storeWithoutSelection.selectedNodeIds, isEmpty);
-    expect(storeWithoutSelection.nodeIdSeed, 0);
+    expect(storeWithoutSelection.nodeIdSeed, 1);
     expect(storeWithoutSelection.nextInstanceRevision, 1);
+  });
+
+  test('SceneStore proxy setters update owned allocator state', () {
+    final store = SceneStore(sceneDoc: Scene());
+
+    store.nextInstanceRevision = 9;
+    store.nodeIdSeed = 11;
+    store.layerIdSeed = 13;
+
+    expect(store.nextInstanceRevision, 9);
+    expect(store.idGeneratorState.nextNodeCounter, 11);
+    expect(store.layerIdSeed, 13);
+    expect(store.idGeneratorState.nextLayerCounter, 13);
+    expect(() => store.nextInstanceRevision = 0, throwsArgumentError);
+  });
+
+  test('TxnContext nextInstanceRevision setter validates revision range', () {
+    final ctx = TxnContext(
+      baseScene: Scene(),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: const <NodeId>{},
+      nextInstanceRevision: 1,
+    );
+
+    ctx.nextInstanceRevision = 3;
+    expect(ctx.nextInstanceRevision, 3);
+    expect(() => ctx.nextInstanceRevision = 0, throwsArgumentError);
   });
 
   test('TxnContext scene-for-commit uses base scene until first mutation', () {
@@ -639,6 +754,86 @@ void main() {
       isTrue,
     );
   });
+
+  test(
+    'TxnContext txnEnsureContentLayer rejects layer overflow before mutation',
+    () {
+      final baseScene = Scene(
+        layers: <ContentLayer>[
+          for (var i = 0; i < kMaxContentLayersPerScene; i++)
+            ContentLayer(id: 'layer-$i'),
+        ],
+      );
+      final ctx = TxnContext(
+        baseScene: baseScene,
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: const <NodeId>{},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+
+      expect(
+        () => ctx.txnEnsureContentLayer('layer-overflow'),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers' &&
+                e.details['template'] == 'maxItems',
+          ),
+        ),
+      );
+      expect(ctx.workingScene.layers.length, kMaxContentLayersPerScene);
+      expect(ctx.txnHasLayerId('layer-overflow'), isFalse);
+    },
+  );
+
+  test(
+    'TxnContext insert-layer bootstrap rejects node overflow before layer mutation',
+    () {
+      final baseScene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[
+            for (var i = 0; i < kMaxNodesPerScene; i++)
+              RectNode(id: 'node-$i', size: const Size(1, 1)),
+          ],
+        ),
+      );
+      final ctx = TxnContext(
+        baseScene: baseScene,
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: <NodeId>{
+          for (var i = 0; i < kMaxNodesPerScene; i++) 'node-$i',
+        },
+        nodeIdSeed: kMaxNodesPerScene + 1,
+        nextInstanceRevision: 1,
+      );
+
+      final targetLayerIndex = ctx.txnResolveInsertLayerIndex(layerId: null);
+      expect(targetLayerIndex, 0);
+
+      expect(
+        () => txnInsertNodeInScene(
+          scene: ctx.txnEnsureMutableScene(),
+          nodeLocator: ctx.txnEnsureMutableNodeLocator(),
+          node: RectNode(id: 'overflow', size: const Size(2, 2)),
+          layerIndex: targetLayerIndex,
+        ),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers[0].nodes' &&
+                e.details['template'] == 'maxNodes',
+          ),
+        ),
+      );
+      expect(ctx.workingScene.layers.single.nodes, isEmpty);
+      expect(ctx.txnFindNodeById('overflow'), isNull);
+    },
+  );
 
   test(
     'TxnContext resolves mutable nodes with one layer clone and per-node COW',
@@ -794,7 +989,10 @@ void main() {
       ),
       layers: <ContentLayer>[ContentLayer(id: 'layer-auto-12')],
     );
-    final baseBackground = baseScene.backgroundLayer!;
+    final baseBackground = baseScene.backgroundLayer;
+    if (baseBackground == null) {
+      fail('Expected base scene background layer.');
+    }
     final ctx = TxnContext(
       baseScene: baseScene,
       workingSelection: <NodeId>{},
@@ -816,6 +1014,27 @@ void main() {
     expect(resolved.node, isA<RectNode>());
     expect(identical(resolved.node, baseBackground.nodes.first), isFalse);
   });
+
+  test(
+    'TxnContext ensureMutableBackgroundLayer creates missing background layer',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[ContentLayer(id: 'layer-auto-12b')],
+        ),
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: const <NodeId>{},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+
+      final mutable = ctx.txnEnsureMutableBackgroundLayer();
+
+      expect(identical(ctx.workingScene.backgroundLayer, mutable), isTrue);
+      expect(mutable.nodes, isEmpty);
+      expect(ctx.debugLayerShallowClones, 1);
+    },
+  );
 
   test(
     'TxnContext background ensureMutable respects externally replaced layer identity',

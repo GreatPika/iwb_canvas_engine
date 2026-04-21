@@ -1,202 +1,498 @@
+import 'dart:convert';
 import 'dart:io';
 
-class _FileCoverage {
-  _FileCoverage(this.path);
+import 'src/check_coverage/coverage_declaration_locator.dart';
+import 'src/check_coverage/coverage_lcov_parser.dart';
+import 'src/check_coverage/coverage_machine_report.dart';
+import 'src/check_coverage/coverage_models.dart';
+import 'src/check_coverage/coverage_test_target_locator.dart';
+import 'src/tool_command_result.dart';
 
-  final String path;
-  int? lf;
-  int? lh;
-  final Set<int> instrumentedLines = <int>{};
-  final Set<int> hitLines = <int>{};
-  final Set<int> missedLines = <int>{};
+const _excludedDeclarationOnlyFromLcov = <String>{
+  'lib/src/core/tool_defaults.dart',
+  'lib/src/core/grid_safety_limits.dart',
+  'lib/src/core/interaction_types.dart',
+  'lib/src/core/scene_limits.dart',
+  'lib/src/contract/path_fill_rule.dart',
+  'lib/src/contract/scene_defaults.dart',
+  'lib/src/contract/scene_render_state.dart',
+  'lib/src/contract/scene_view_runtime.dart',
+  'lib/src/contract/scene_view_render_state.dart',
+  'lib/src/interactive/internal/interactive_draw_eraser_projection.dart',
+  'lib/src/interactive/internal/interactive_draw_style.dart',
+};
 
-  int get effectiveLf => lf ?? instrumentedLines.length;
-  int get effectiveLh => lh ?? hitLines.length;
+File requireLcovFile({
+  required Directory root,
+  required StringSink stderrSink,
+}) {
+  final lcovFile = File(
+    '${root.path}${Platform.pathSeparator}coverage'
+    '${Platform.pathSeparator}lcov.info',
+  );
+  if (!lcovFile.existsSync()) {
+    stderrSink.writeln(
+      'coverage/lcov.info not found. Run: flutter test --coverage',
+    );
+    throw StateError('missing lcov.info');
+  }
+  return lcovFile;
 }
 
-String _toPosixPath(String path) => path.replaceAll('\\', '/');
+CoverageOptions parseOptions(
+  List<String> args, {
+  required StringSink stderrSink,
+}) {
+  var json = false;
+  var includeUncoveredBranches = false;
+  var changedOnly = false;
 
-Set<String> _collectLibSrcDartFiles({required String cwd}) {
-  final srcRoot = Directory('lib/src');
-  if (!srcRoot.existsSync()) {
-    return <String>{};
-  }
-
-  final files = <String>{};
-  for (final entity in srcRoot.listSync(recursive: true, followLinks: false)) {
-    if (entity is! File || !entity.path.endsWith('.dart')) {
+  for (final arg in args) {
+    if (arg == '--json') {
+      json = true;
       continue;
     }
-    files.add(_normalizePath(_toPosixPath(entity.path), cwd));
+    if (arg == '--uncovered-branches') {
+      includeUncoveredBranches = true;
+      continue;
+    }
+    if (arg == '--changed-only') {
+      changedOnly = true;
+      continue;
+    }
+
+    stderrSink.writeln('Unknown argument: $arg');
+    throw ArgumentError.value(arg, 'arg', 'Unsupported flag');
   }
-  return files;
+
+  return CoverageOptions(
+    json: json,
+    includeUncoveredBranches: includeUncoveredBranches,
+    changedOnly: changedOnly,
+  );
 }
 
-String _normalizePath(String path, String cwd) {
-  var p = path.replaceAll('\\', '/');
-  final libSrcIndex = p.lastIndexOf('lib/src/');
-  if (libSrcIndex != -1) {
-    return p.substring(libSrcIndex);
-  }
-
-  try {
-    final absolute = File(p).absolute.path.replaceAll('\\', '/');
-    final cwdNormalized = cwd.replaceAll('\\', '/');
-    if (absolute.startsWith('$cwdNormalized/')) {
-      return absolute.substring(cwdNormalized.length + 1);
-    }
-    return absolute;
-  } catch (_) {
-    return p;
-  }
+List<String> collectMissingFromLcov(
+  Set<String> libSrcFiles,
+  Map<String, FileCoverage> all, {
+  required String cwd,
+}) {
+  final missing = libSrcFiles
+      .where(
+        (path) =>
+            !_excludedDeclarationOnlyFromLcov.contains(path) &&
+            !all.containsKey(path) &&
+            !_isExportOnlyUnit(path, cwd: cwd),
+      )
+      .toList();
+  missing.sort();
+  return missing;
 }
 
-Map<String, _FileCoverage> _parseLcov(String content, {required String cwd}) {
-  final byFile = <String, _FileCoverage>{};
-  _FileCoverage? current;
+bool reportMissingFromLcovToSink(
+  List<String> missingFromLcov, {
+  required StringSink stderrSink,
+}) {
+  if (missingFromLcov.isEmpty) {
+    return false;
+  }
 
-  for (final rawLine in content.split('\n')) {
-    final line = rawLine.trimRight();
-    if (line.startsWith('SF:')) {
-      final normalized = _normalizePath(line.substring(3), cwd);
-      current = byFile.putIfAbsent(normalized, () => _FileCoverage(normalized));
-      continue;
-    }
-    if (current == null) continue;
+  stderrSink.writeln(
+    'FAIL: ${missingFromLcov.length} lib/src/** file(s) are missing from coverage/lcov.info.',
+  );
+  stderrSink.writeln('These files are not covered at all (no lcov record):');
+  for (final path in missingFromLcov) {
+    stderrSink.writeln('  $path');
+  }
+  return true;
+}
 
-    if (line.startsWith('DA:')) {
-      final parts = line.substring(3).split(',');
-      if (parts.length < 2) continue;
-      final lineNo = int.tryParse(parts[0]);
-      final hits = int.tryParse(parts[1]);
-      if (lineNo == null || hits == null) continue;
-      current.instrumentedLines.add(lineNo);
-      if (hits > 0) {
-        current.hitLines.add(lineNo);
-        current.missedLines.remove(lineNo);
-      } else {
-        if (current.hitLines.contains(lineNo)) continue;
-        current.missedLines.add(lineNo);
-      }
-      continue;
-    }
+bool reportMissedLinesToSink(
+  List<FileCoverage> entries, {
+  required StringSink stdoutSink,
+}) {
+  var totalLf = 0;
+  var totalLh = 0;
+  final missed = <String>[];
 
-    if (line.startsWith('LF:')) {
-      current.lf = int.tryParse(line.substring(3));
-      continue;
-    }
-    if (line.startsWith('LH:')) {
-      current.lh = int.tryParse(line.substring(3));
-      continue;
+  stdoutSink.writeln('Coverage report for lib/src/**');
+  for (final file in entries) {
+    totalLf += file.effectiveLf;
+    totalLh += file.effectiveLh;
+    stdoutSink.writeln(
+      '  ${formatPercent(file.effectiveLh, file.effectiveLf)}  '
+      '${file.effectiveLh}/${file.effectiveLf}  ${file.path}',
+    );
+    final lines = file.missedLines.toList()..sort();
+    for (final lineNo in lines) {
+      missed.add('${file.path}:$lineNo');
     }
   }
 
-  return byFile;
+  stdoutSink.writeln(
+    'TOTAL: ${formatPercent(totalLh, totalLf)}  $totalLh/$totalLf',
+  );
+  if (missed.isEmpty) {
+    return false;
+  }
+
+  stdoutSink.writeln('MISSED LINES (${missed.length}):');
+  for (final item in missed) {
+    stdoutSink.writeln('  $item');
+  }
+  return true;
 }
 
-String _formatPercent(int lh, int lf) {
-  if (lf == 0) return '100.00%';
+bool reportMissedBranchesToSink(
+  List<FileCoverage> entries, {
+  required StringSink stdoutSink,
+}) {
+  final missed = <String>[];
+  for (final file in entries) {
+    final branches = collectUncoveredBranchesForFile(file);
+    for (final branch in branches) {
+      missed.add(
+        '${file.path}:${branch.line} block=${branch.block} branch=${branch.branch} taken=${branch.takenRaw}',
+      );
+    }
+  }
+
+  if (missed.isEmpty) {
+    return false;
+  }
+
+  stdoutSink.writeln('MISSED BRANCHES (${missed.length}):');
+  for (final item in missed) {
+    stdoutSink.writeln('  $item');
+  }
+  return true;
+}
+
+String formatPercent(int lh, int lf) {
+  if (lf == 0) {
+    return '100.00%';
+  }
   final pct = (lh / lf) * 100.0;
   return '${pct.toStringAsFixed(2)}%';
 }
 
-void main(List<String> args) {
-  final cwd = Directory.current.path;
-  // Declaration-only Dart units may not be emitted by VM lcov as SF records.
-  // Keep this list minimal and limited to const/enum/interface/typedef files.
-  const excludedFromLcov = <String>{
-    'lib/src/core/defaults.dart',
-    'lib/src/core/grid_safety_limits.dart',
-    'lib/src/core/interaction_types.dart',
-    'lib/src/core/scene_limits.dart',
-    'lib/src/model/scene_value_validation.dart',
-    'lib/src/public/scene_render_state.dart',
-    'lib/src/public/scene_write_txn.dart',
-  };
-  final libSrcFiles = _collectLibSrcDartFiles(cwd: cwd);
-  final lcovFile = File('coverage/lcov.info');
-  if (!lcovFile.existsSync()) {
-    stderr.writeln(
-      'coverage/lcov.info not found. Run: flutter test --coverage',
-    );
-    exitCode = 2;
-    return;
+bool _isExportOnlyUnit(String repoRelativePath, {required String cwd}) {
+  final file = File('$cwd${Platform.pathSeparator}$repoRelativePath');
+  if (!file.existsSync()) {
+    return false;
   }
 
-  final content = lcovFile.readAsStringSync();
-  final all = _parseLcov(content, cwd: cwd);
-  final missingFromLcov =
-      libSrcFiles
-          .where(
-            (path) =>
-                !excludedFromLcov.contains(path) && !all.containsKey(path),
-          )
-          .toList()
-        ..sort();
-  final entries = <_FileCoverage>[];
-  for (final entry in all.entries) {
-    final path = entry.key;
-    if (path.startsWith('lib/src/')) {
-      entries.add(entry.value);
+  final meaningfulLines = <String>[];
+  for (final rawLine in file.readAsLinesSync()) {
+    final trimmed = rawLine.trim();
+    if (trimmed.isEmpty) {
+      continue;
     }
-  }
-
-  entries.sort((a, b) => a.path.compareTo(b.path));
-
-  if (entries.isEmpty) {
-    stderr.writeln('No coverage entries found for lib/src/**.');
-    exitCode = 2;
-    return;
-  }
-
-  if (missingFromLcov.isNotEmpty) {
-    stderr.writeln(
-      'FAIL: ${missingFromLcov.length} lib/src/** file(s) are missing from coverage/lcov.info.',
-    );
-    stderr.writeln('These files are not covered at all (no lcov record):');
-    for (final path in missingFromLcov) {
-      stderr.writeln('  $path');
+    if (trimmed.startsWith('//') ||
+        trimmed.startsWith('/*') ||
+        trimmed.startsWith('*') ||
+        trimmed.startsWith('*/')) {
+      continue;
     }
-    exitCode = 1;
-    return;
+    meaningfulLines.add(trimmed);
   }
 
-  var totalLf = 0;
-  var totalLh = 0;
-  var hasMisses = false;
-  final missed = <String>[];
+  if (meaningfulLines.isEmpty) {
+    return false;
+  }
 
-  stdout.writeln('Coverage report for lib/src/**');
-
-  for (final file in entries) {
-    final lf = file.effectiveLf;
-    final lh = file.effectiveLh;
-    totalLf += lf;
-    totalLh += lh;
-    final pct = _formatPercent(lh, lf);
-    stdout.writeln('  $pct  $lh/$lf  ${file.path}');
-
-    if (lh != lf) {
-      hasMisses = true;
-      final lines = file.missedLines.toList()..sort();
-      for (final lineNo in lines) {
-        missed.add('${file.path}:$lineNo');
+  var sawExport = false;
+  var awaitingExportTerminator = false;
+  for (final line in meaningfulLines) {
+    if (awaitingExportTerminator) {
+      if (line.endsWith(';')) {
+        awaitingExportTerminator = false;
       }
+      continue;
+    }
+
+    if (!line.startsWith('export ')) {
+      return false;
+    }
+    sawExport = true;
+    if (!line.endsWith(';')) {
+      awaitingExportTerminator = true;
     }
   }
 
-  stdout.writeln(
-    'TOTAL: ${_formatPercent(totalLh, totalLf)}  $totalLh/$totalLf',
+  return sawExport && !awaitingExportTerminator;
+}
+
+class _ChangedFileSelection {
+  const _ChangedFileSelection({
+    required this.paths,
+    required this.applied,
+    required this.warnings,
+  });
+
+  final Set<String> paths;
+  final bool applied;
+  final List<String> warnings;
+}
+
+_ChangedFileSelection _resolveChangedFileSelection({required String cwd}) {
+  final result = Process.runSync('git', <String>[
+    'status',
+    '--porcelain=v1',
+    '--untracked-files=all',
+    '--',
+    'lib/src',
+  ], workingDirectory: cwd);
+  if (result.exitCode != 0) {
+    return const _ChangedFileSelection(
+      paths: <String>{},
+      applied: false,
+      warnings: <String>[
+        'git status metadata is unavailable; changed-only coverage filtering was skipped.',
+      ],
+    );
+  }
+
+  final changedPaths = <String>{};
+  for (final rawLine in result.stdout.toString().split(RegExp(r'\r?\n'))) {
+    if (rawLine.isEmpty) {
+      continue;
+    }
+    final line = rawLine.length > 3 ? rawLine.substring(3) : rawLine.trim();
+    final normalized = line.replaceAll('\\', '/');
+    if (normalized.contains(' -> ')) {
+      final parts = normalized.split(' -> ');
+      if (parts.length == 2) {
+        changedPaths.add(parts.last);
+      }
+      continue;
+    }
+    changedPaths.add(normalized);
+  }
+
+  return _ChangedFileSelection(
+    paths: changedPaths.where((path) => path.startsWith('lib/src/')).toSet(),
+    applied: true,
+    warnings: const <String>[],
+  );
+}
+
+List<DeclarationCoverageGap> _buildMachineGaps({
+  required List<String> missingFromLcov,
+  required List<FileCoverage> entries,
+  required bool includeUncoveredBranches,
+  required CoverageDeclarationLocator declarationLocator,
+  required CoverageTestTargetLocator testTargetLocator,
+}) {
+  final gaps = <DeclarationCoverageGap>[];
+
+  for (final path in missingFromLcov) {
+    gaps.add(
+      _attachTargets(
+        declarationLocator.locateMissingFileGap(path),
+        testTargetLocator,
+      ),
+    );
+  }
+
+  for (final entry in entries) {
+    final missedLineNumbers = entry.missedLines.toList()..sort();
+    final missedBranches = includeUncoveredBranches
+        ? collectUncoveredBranchesForFile(entry)
+        : const <BranchCoverage>[];
+    if (missedLineNumbers.isEmpty && missedBranches.isEmpty) {
+      continue;
+    }
+
+    final located = declarationLocator.locateExecutableGaps(
+      path: entry.path,
+      missedLines: missedLineNumbers,
+      missedBranches: missedBranches,
+    );
+    for (final gap in located) {
+      gaps.add(_attachTargets(gap, testTargetLocator));
+    }
+  }
+
+  return gaps;
+}
+
+DeclarationCoverageGap _attachTargets(
+  DeclarationCoverageGap gap,
+  CoverageTestTargetLocator locator,
+) {
+  final resolved = locator.resolve(gap.path);
+  return DeclarationCoverageGap(
+    kind: gap.kind,
+    path: gap.path,
+    symbol: gap.symbol,
+    scope: gap.scope,
+    range: gap.range,
+    missedLines: gap.missedLines,
+    missedBranches: gap.missedBranches,
+    snippet: gap.snippet,
+    testTargets: resolved.testTargets,
+    preferredVerificationScope: resolved.preferredVerificationScope,
+  );
+}
+
+ToolCommandResult runCoverageTool(List<String> args, {Directory? root}) {
+  final stdoutBuffer = StringBuffer();
+  final stderrBuffer = StringBuffer();
+
+  late final CoverageOptions options;
+  try {
+    options = parseOptions(args, stderrSink: stderrBuffer);
+  } on ArgumentError {
+    return ToolCommandResult(exitCode: 64, stderr: stderrBuffer.toString());
+  }
+
+  final cwd = (root ?? Directory.current).absolute.path;
+  final allLibSrcFiles = collectLibSrcDartFiles(cwd: cwd);
+  final warnings = <String>[];
+  var changedOnlyApplied = false;
+  Set<String>? selectedChangedPaths;
+  var selectedLibSrcFiles = allLibSrcFiles;
+
+  if (options.changedOnly) {
+    final selection = _resolveChangedFileSelection(cwd: cwd);
+    warnings.addAll(selection.warnings);
+    changedOnlyApplied = selection.applied;
+    if (selection.applied) {
+      selectedChangedPaths = selection.paths;
+      selectedLibSrcFiles = allLibSrcFiles
+          .where((path) => selection.paths.contains(path))
+          .toSet();
+    }
+  }
+
+  late final File lcovFile;
+  try {
+    lcovFile = requireLcovFile(root: Directory(cwd), stderrSink: stderrBuffer);
+  } on StateError {
+    return ToolCommandResult(exitCode: 2, stderr: stderrBuffer.toString());
+  }
+
+  final allCoverage = parseLcov(lcovFile.readAsStringSync(), cwd: cwd);
+  final allEntries = collectLibSrcEntries(allCoverage);
+  if (allEntries.isEmpty) {
+    if (options.json) {
+      stdoutBuffer.writeln(
+        const JsonEncoder.withIndent('  ').convert(<String, Object>{
+          'gaps': const <Object>[],
+          'warnings': warnings,
+          'branchDataAvailable': false,
+          'changedOnlyApplied': changedOnlyApplied,
+          'error': 'No coverage entries found for lib/src/**.',
+        }),
+      );
+    } else {
+      stderrBuffer.writeln('No coverage entries found for lib/src/**.');
+    }
+    return ToolCommandResult(
+      exitCode: 2,
+      stdout: stdoutBuffer.toString(),
+      stderr: stderrBuffer.toString(),
+    );
+  }
+
+  final entries = changedOnlyApplied
+      ? () {
+          final changedPaths = selectedChangedPaths;
+          if (changedPaths == null) {
+            throw StateError(
+              'changedOnlyApplied requires selectedChangedPaths to be present.',
+            );
+          }
+          return allEntries
+              .where((entry) => changedPaths.contains(entry.path))
+              .toList();
+        }()
+      : allEntries;
+  final coverageIndex = <String, FileCoverage>{
+    for (final entry in entries) entry.path: entry,
+  };
+  final missingFromLcov = collectMissingFromLcov(
+    selectedLibSrcFiles,
+    coverageIndex,
+    cwd: cwd,
   );
 
-  if (hasMisses) {
-    stdout.writeln('MISSED LINES (${missed.length}):');
-    for (final item in missed) {
-      stdout.writeln('  $item');
+  if (options.json) {
+    final branchDataAvailable = hasBranchData(entries);
+    if (options.includeUncoveredBranches && !branchDataAvailable) {
+      warnings.add(
+        'coverage/lcov.info does not contain BRDA entries; uncovered branch diagnostics are unavailable.',
+      );
     }
-    exitCode = 1;
-    return;
+
+    final declarationLocator = CoverageDeclarationLocator(cwd: cwd);
+    final testTargetLocator = CoverageTestTargetLocator(cwd: cwd);
+    final report = buildCoverageMachineReport(
+      gaps: _buildMachineGaps(
+        missingFromLcov: missingFromLcov,
+        entries: entries,
+        includeUncoveredBranches: options.includeUncoveredBranches,
+        declarationLocator: declarationLocator,
+        testTargetLocator: testTargetLocator,
+      ),
+      warnings: warnings,
+      branchDataAvailable: branchDataAvailable,
+      changedOnlyApplied: changedOnlyApplied,
+    );
+    stdoutBuffer.writeln(
+      const JsonEncoder.withIndent('  ').convert(report.toJson()),
+    );
+    return ToolCommandResult(
+      exitCode: report.gaps.isEmpty ? 0 : 1,
+      stdout: stdoutBuffer.toString(),
+      stderr: stderrBuffer.toString(),
+    );
   }
 
-  stdout.writeln('OK: 100% line coverage for lib/src/**');
+  if (_reportMissingThenReturn(missingFromLcov, stderrSink: stderrBuffer)) {
+    return ToolCommandResult(
+      exitCode: 1,
+      stdout: stdoutBuffer.toString(),
+      stderr: stderrBuffer.toString(),
+    );
+  }
+  if (reportMissedLinesToSink(entries, stdoutSink: stdoutBuffer)) {
+    return ToolCommandResult(
+      exitCode: 1,
+      stdout: stdoutBuffer.toString(),
+      stderr: stderrBuffer.toString(),
+    );
+  }
+  if (options.includeUncoveredBranches &&
+      reportMissedBranchesToSink(entries, stdoutSink: stdoutBuffer)) {
+    return ToolCommandResult(
+      exitCode: 1,
+      stdout: stdoutBuffer.toString(),
+      stderr: stderrBuffer.toString(),
+    );
+  }
+
+  stdoutBuffer.writeln('OK: 100% line coverage for lib/src/**');
+  return ToolCommandResult(
+    exitCode: 0,
+    stdout: stdoutBuffer.toString(),
+    stderr: stderrBuffer.toString(),
+  );
+}
+
+void main(List<String> args) {
+  final result = runCoverageTool(args);
+  writeToolCommandResult(result);
+  exitCode = result.exitCode;
+}
+
+bool _reportMissingThenReturn(
+  List<String> missingFromLcov, {
+  required StringSink stderrSink,
+}) {
+  if (!reportMissingFromLcovToSink(missingFromLcov, stderrSink: stderrSink)) {
+    return false;
+  }
+  return true;
 }

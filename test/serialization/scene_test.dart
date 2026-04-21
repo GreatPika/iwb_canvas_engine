@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/core/text_layout.dart';
 
 void main() {
   test('encode -> decode -> encode is stable', () {
@@ -41,7 +40,7 @@ void main() {
     );
     expect(
       () => scene.layers.first.nodes.add(
-        const RectNodeSnapshot(id: 'extra', size: Size(1, 1)),
+        RectNodeSnapshot(id: 'extra', size: Size(1, 1)),
       ),
       throwsUnsupportedError,
     );
@@ -55,73 +54,76 @@ void main() {
     'decodeScene accepts JSON without instanceRevision and re-encodes with it',
     () {
       final encoded = encodeScene(_buildScene());
-      final layers = encoded['layers'] as List<dynamic>;
-      final layer = layers[1] as Map<String, dynamic>;
-      final nodes = layer['nodes'] as List<dynamic>;
-      final firstNode = nodes.first as Map<String, dynamic>;
+      final layers = encoded['layers'] as List<Object?>;
+      final layer = layers[1] as Map<String, Object?>;
+      final nodes = layer['nodes'] as List<Object?>;
+      final firstNode = nodes.first as Map<String, Object?>;
       firstNode.remove('instanceRevision');
 
       final decoded = decodeScene(encoded);
       final reEncoded = encodeScene(decoded);
-      final reEncodedLayers = reEncoded['layers'] as List<dynamic>;
-      final reEncodedLayer = reEncodedLayers[1] as Map<String, dynamic>;
-      final reEncodedNodes = reEncodedLayer['nodes'] as List<dynamic>;
-      final reEncodedFirstNode = reEncodedNodes.first as Map<String, dynamic>;
+      final reEncodedLayers = reEncoded['layers'] as List<Object?>;
+      final reEncodedLayer = reEncodedLayers[1] as Map<String, Object?>;
+      final reEncodedNodes = reEncodedLayer['nodes'] as List<Object?>;
+      final reEncodedFirstNode = reEncodedNodes.first as Map<String, Object?>;
 
       expect(reEncodedFirstNode['instanceRevision'], isA<int>());
       expect(reEncodedFirstNode['instanceRevision'], greaterThanOrEqualTo(1));
     },
   );
 
-  test('decodeScene recomputes derived text size from content', () {
+  test('decodeScene rejects legacy text size in schemaVersion 7', () {
     final encoded = encodeScene(_buildScene());
     final textNode =
-        (encoded['layers'] as List<dynamic>)[1]['nodes'][1]
-            as Map<String, dynamic>;
-    textNode['text'] = 'Auto-derived size from decode';
-    textNode['fontSize'] = 28.0;
-    textNode['size'] = <String, dynamic>{'w': 1.0, 'h': 1.0};
-    textNode['maxWidth'] = null;
+        ((encoded['layers'] as List<Object?>)[1]
+                as Map<String, Object?>)['nodes']
+            as List<Object?>;
+    final textNodeMap = textNode[1] as Map<String, Object?>;
+    textNodeMap['text'] = 'Auto-derived size from decode';
+    textNodeMap['fontSize'] = 28.0;
+    textNodeMap['size'] = <String, Object?>{'w': 1.0, 'h': 1.0};
+    textNodeMap['textDirection'] = 'rtl';
+    textNodeMap['maxWidth'] = null;
 
-    final decoded = decodeScene(encoded);
-    final decodedText = decoded.layers[1].nodes[1] as TextNodeSnapshot;
-    final expectedSize = measureTextLayoutSize(
-      text: decodedText.text,
-      textStyle: buildTextStyleForTextLayout(
-        color: decodedText.color,
-        fontSize: decodedText.fontSize,
-        isBold: decodedText.isBold,
-        isItalic: decodedText.isItalic,
-        isUnderline: decodedText.isUnderline,
-        fontFamily: decodedText.fontFamily,
-        lineHeight: decodedText.lineHeight,
+    expect(
+      () => decodeScene(encoded),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[1].nodes[1].size',
+        ),
       ),
-      textAlign: decodedText.align,
-      maxWidth: decodedText.maxWidth,
     );
+  });
 
-    expect(decodedText.size, expectedSize);
-    expect(decodedText.size, isNot(const Size(1, 1)));
+  test('decodeScene rejects text payloads without textDirection', () {
+    final encoded = encodeScene(_buildScene());
+    final textNode =
+        ((encoded['layers'] as List<Object?>)[1]
+                as Map<String, Object?>)['nodes']
+            as List<Object?>;
+    final textNodeMap = textNode[1] as Map<String, Object?>;
+    textNodeMap.remove('textDirection');
+
+    expect(
+      () => decodeScene(encoded),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.missingField &&
+              e.path == 'layers[1].nodes[1].textDirection' &&
+              e.message ==
+                  'Missing required field layers[1].nodes[1].textDirection.',
+        ),
+      ),
+    );
   });
 }
 
 SceneSnapshot _buildScene() {
-  final textStyle = buildTextStyleForTextLayout(
-    color: const Color(0xFF112233),
-    fontSize: 24,
-    isBold: true,
-    isItalic: false,
-    isUnderline: true,
-    fontFamily: 'Roboto',
-    lineHeight: 1.2,
-  );
-  final derivedTextSize = measureTextLayoutSize(
-    text: 'Hello',
-    textStyle: textStyle,
-    textAlign: TextAlign.center,
-    maxWidth: 200,
-  );
-
   return SceneSnapshot(
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(id: 'layer-auto-1'),
@@ -149,10 +151,10 @@ SceneSnapshot _buildScene() {
           TextNodeSnapshot(
             id: 'text-1',
             text: 'Hello',
-            size: derivedTextSize,
             fontSize: 24,
             color: const Color(0xFF112233),
             align: TextAlign.center,
+            textDirection: TextDirection.rtl,
             isBold: true,
             isItalic: false,
             isUnderline: true,
@@ -179,7 +181,7 @@ SceneSnapshot _buildScene() {
             color: Color(0xFF000000),
             opacity: 0.4,
           ),
-          const LineNodeSnapshot(
+          LineNodeSnapshot(
             id: 'line-1',
             start: Offset(5, 5),
             end: Offset(15, 15),
@@ -206,8 +208,8 @@ SceneSnapshot _buildScene() {
         ],
       ),
     ],
-    camera: const CameraSnapshot(offset: Offset(7, -3)),
-    background: const BackgroundSnapshot(
+    camera: CameraSnapshot(offset: Offset(7, -3)),
+    background: BackgroundSnapshot(
       color: Color(0xFFFFFFFF),
       grid: GridSnapshot(
         isEnabled: true,

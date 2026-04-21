@@ -1,7 +1,7 @@
 import 'dart:ui';
 
-import 'transform2d.dart';
-import '../public/snapshot.dart';
+import '../contract/transform2d.dart';
+import '../contract/snapshot.dart';
 import 'immutable_collections.dart';
 
 /// Discrete actions emitted by interactive controllers for app-level undo/redo.
@@ -97,22 +97,14 @@ class EditTextRequested {
   final Offset position;
 }
 
-extension ActionCommittedDelta on ActionCommitted {
-  /// Parses `payload.delta` into a [Transform2D] when present and valid.
-  ///
-  /// Returns `null` if payload does not contain a valid delta map.
-  Transform2D? tryTransformDelta() {
-    final payload = this.payload;
-    if (payload == null) return null;
-    final delta = payload['delta'];
-    if (delta is! Map) return null;
+class _ActionPayloadReader {
+  const _ActionPayloadReader(this.payload);
 
-    final map = <String, Object?>{};
-    for (final entry in delta.entries) {
-      final key = entry.key;
-      if (key is! String) return null;
-      map[key] = entry.value;
-    }
+  final Map<String, Object?>? payload;
+
+  Transform2D? tryTransformDelta() {
+    final map = _tryMap('delta');
+    if (map == null) return null;
 
     try {
       return Transform2D.fromJsonMap(map);
@@ -121,65 +113,84 @@ extension ActionCommittedDelta on ActionCommitted {
     }
   }
 
+  ({int sourceLayerIndex, int targetLayerIndex})? tryMoveLayerIndices() {
+    final source = tryInt('sourceLayerIndex');
+    final target = tryInt('targetLayerIndex');
+    if (source == null || target == null) return null;
+    return (sourceLayerIndex: source, targetLayerIndex: target);
+  }
+
+  ({String tool, int colorArgb, double thickness})? tryDrawStyle() {
+    final tool = tryString('tool');
+    final colorArgb = tryInt('color');
+    final thickness = tryDouble('thickness');
+    if (tool == null || colorArgb == null || thickness == null) return null;
+    return (tool: tool, colorArgb: colorArgb, thickness: thickness);
+  }
+
+  double? tryEraserThickness() => tryDouble('eraserThickness');
+
+  int? tryInt(String key) => _coerceInt(payload?[key]);
+
+  double? tryDouble(String key) {
+    final value = payload?[key];
+    return value is num ? value.toDouble() : null;
+  }
+
+  String? tryString(String key) {
+    final value = payload?[key];
+    return value is String ? value : null;
+  }
+
+  Map<String, Object?>? _tryMap(String key) {
+    final value = payload?[key];
+    if (value is! Map) return null;
+
+    final map = <String, Object?>{};
+    for (final entry in value.entries) {
+      final entryKey = entry.key;
+      if (entryKey is! String) return null;
+      map[entryKey] = entry.value;
+    }
+    return map;
+  }
+}
+
+extension ActionCommittedDelta on ActionCommitted {
+  /// Parses `payload.delta` into a [Transform2D] when present and valid.
+  ///
+  /// Returns `null` if payload does not contain a valid delta map.
+  Transform2D? tryTransformDelta() {
+    return _ActionPayloadReader(payload).tryTransformDelta();
+  }
+
   /// Parses layer move metadata from the action payload.
   ///
   /// Expected schema: `{sourceLayerIndex: int, targetLayerIndex: int}`.
   ({int sourceLayerIndex, int targetLayerIndex})? tryMoveLayerIndices() {
-    final payload = this.payload;
-    if (payload == null) return null;
-
-    int? tryInt(Object? value) {
-      if (value is int) return value;
-      if (value is num) {
-        final asInt = value.toInt();
-        if (value == asInt) return asInt;
-      }
-      return null;
-    }
-
-    final source = tryInt(payload['sourceLayerIndex']);
-    final target = tryInt(payload['targetLayerIndex']);
-    if (source == null || target == null) return null;
-    return (sourceLayerIndex: source, targetLayerIndex: target);
+    return _ActionPayloadReader(payload).tryMoveLayerIndices();
   }
 
   /// Parses common draw style metadata from the action payload.
   ///
   /// Expected schema: `{tool: String, color: int, thickness: double}`.
   ({String tool, int colorArgb, double thickness})? tryDrawStyle() {
-    final payload = this.payload;
-    if (payload == null) return null;
-
-    int? tryInt(Object? value) {
-      if (value is int) return value;
-      if (value is num) {
-        final asInt = value.toInt();
-        if (value == asInt) return asInt;
-      }
-      return null;
-    }
-
-    double? tryDouble(Object? value) {
-      if (value is num) return value.toDouble();
-      return null;
-    }
-
-    final tool = payload['tool'];
-    if (tool is! String) return null;
-    final colorArgb = tryInt(payload['color']);
-    final thickness = tryDouble(payload['thickness']);
-    if (colorArgb == null || thickness == null) return null;
-    return (tool: tool, colorArgb: colorArgb, thickness: thickness);
+    return _ActionPayloadReader(payload).tryDrawStyle();
   }
 
   /// Parses eraser metadata from the action payload.
   ///
   /// Expected schema: `{eraserThickness: double}`.
   double? tryEraserThickness() {
-    final payload = this.payload;
-    if (payload == null) return null;
-    final thickness = payload['eraserThickness'];
-    if (thickness is num) return thickness.toDouble();
-    return null;
+    return _ActionPayloadReader(payload).tryEraserThickness();
   }
+}
+
+int? _coerceInt(Object? value) {
+  if (value is int) return value;
+  if (value is num) {
+    final asInt = value.toInt();
+    if (value == asInt) return asInt;
+  }
+  return null;
 }

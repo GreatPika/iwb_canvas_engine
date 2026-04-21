@@ -1,95 +1,71 @@
 import 'dart:ui';
 
-import '../../core/action_events.dart';
-import '../../core/hit_test.dart';
-import '../../core/input_sampling.dart';
-import '../../core/nodes.dart' show SceneNode;
-import '../../core/pointer_input.dart';
-import '../../core/scene_spatial_index.dart';
-import '../../core/transform2d.dart';
-import '../../public/snapshot.dart';
-
-typedef MoveCommitSelectionResult = ({
-  Offset appliedDelta,
-  List<NodeId> movedIds,
-});
-
-class InteractiveMoveSessionCallbacks {
-  const InteractiveMoveSessionCallbacks({
-    required this.onStateChanged,
-    required this.readSelectedNodeIds,
-    required this.querySpatialCandidates,
-    required this.resolveSpatialCandidateNode,
-    required this.writeSelectionReplace,
-    required this.writeSelectionClear,
-    required this.commitMoveSelection,
-    required this.emitAction,
-  });
-
-  final VoidCallback onStateChanged;
-  final Set<NodeId> Function() readSelectedNodeIds;
-  final List<SceneSpatialCandidate> Function(Rect bounds)
-  querySpatialCandidates;
-  final SceneNode? Function(SceneSpatialCandidate candidate)
-  resolveSpatialCandidateNode;
-  final void Function(Iterable<NodeId> nodeIds) writeSelectionReplace;
-  final void Function() writeSelectionClear;
-  final MoveCommitSelectionResult Function(Offset proposedDelta)
-  commitMoveSelection;
-  final void Function(
-    ActionType type,
-    List<NodeId> nodeIds,
-    int timestampMs, {
-    Map<String, Object?>? payload,
-  })
-  emitAction;
-}
+import '../../contract/pointer_input.dart';
+import '../../contract/snapshot.dart';
+import 'interactive_move_commit_coordinator.dart';
+import 'interactive_move_callbacks.dart';
+import 'interactive_move_gesture_state.dart';
+import 'interactive_move_hit_test_engine.dart';
+import 'interactive_move_preview_state.dart';
+import 'interactive_move_selection_coordinator.dart';
 
 class InteractiveMoveSession {
-  InteractiveMoveSession({required this.callbacks});
+  InteractiveMoveSession({required this.callbacks}) {
+    final previewState = InteractiveMovePreviewState();
+    _previewState = previewState;
+    final hitTestEngine = InteractiveMoveHitTestEngine(
+      callbacks: callbacks,
+      previewState: previewState,
+    );
+    _hitTestEngine = hitTestEngine;
+    _selectionCoordinator = InteractiveMoveSelectionCoordinator(
+      callbacks: callbacks,
+      hitTestEngine: hitTestEngine,
+    );
+    _commitCoordinator = InteractiveMoveCommitCoordinator(
+      callbacks: callbacks,
+      previewState: previewState,
+      selectionCoordinator: _selectionCoordinator,
+    );
+  }
 
   final InteractiveMoveSessionCallbacks callbacks;
+  late final InteractiveMovePreviewState _previewState;
+  late final InteractiveMoveHitTestEngine _hitTestEngine;
+  late final InteractiveMoveSelectionCoordinator _selectionCoordinator;
+  late final InteractiveMoveCommitCoordinator _commitCoordinator;
+  final InteractiveMoveGestureState _gestureState =
+      InteractiveMoveGestureState();
 
-  Rect? _selectionRect;
+  Rect? get selectionRect => _gestureState.selectionRect;
 
-  int? _moveActivePointerId;
-  Offset? _movePointerDownScene;
-  Offset? _moveLastScene;
-  _MoveDragTarget _moveTarget = _MoveDragTarget.none;
-  bool _moveDragStarted = false;
-  bool _movePendingClearSelection = false;
-  Set<NodeId> _moveMarqueeBaseline = <NodeId>{};
-  bool _movePreviewActive = false;
-  Offset _movePreviewDelta = Offset.zero;
-  Set<NodeId> _movePreviewNodeIds = <NodeId>{};
-
-  Rect? get selectionRect => _selectionRect;
-
-  SceneNode? hitTestTopNode(Offset scenePoint) {
-    return _hitTestTopNode(scenePoint);
+  NodeSnapshot? hitTestTopNode(Offset scenePoint) {
+    return _hitTestEngine.hitTestTopNode(scenePoint);
   }
 
   Offset movePreviewDeltaForNode(NodeId nodeId) {
-    if (!_hasMovePreviewTranslation) return Offset.zero;
-    if (!_movePreviewNodeIds.contains(nodeId)) return Offset.zero;
-    return _movePreviewDelta;
+    return _previewState.deltaForNode(nodeId);
   }
 
   void setSelectionRect(Rect? value) {
-    if (_selectionRect == value) return;
-    _selectionRect = value;
-    callbacks.onStateChanged();
+    if (!_gestureState.setSelectionRect(value)) {
+      return;
+    }
+    callbacks.onOverlayStateChanged();
   }
 
   void resetGestureState() {
-    _moveActivePointerId = null;
-    _movePointerDownScene = null;
-    _moveLastScene = null;
-    _moveTarget = _MoveDragTarget.none;
-    _moveDragStarted = false;
-    _movePendingClearSelection = false;
-    _moveMarqueeBaseline = <NodeId>{};
-    _clearMovePreview();
+    _gestureState.reset();
+    _selectionCoordinator.reset();
+    _previewState.clear();
+  }
+
+  ({bool scene, bool overlay}) interruptGesture() {
+    return _restoreAndClearGestureState();
+  }
+
+  ({bool scene, bool overlay}) detachOwningSession() {
+    return _restoreAndClearGestureState();
   }
 
   void dispose() {}
@@ -99,241 +75,154 @@ class InteractiveMoveSession {
     Offset scenePoint, {
     required double dragStartSlop,
   }) {
-    if (_moveActivePointerId != null &&
-        _moveActivePointerId != sample.pointerId) {
-      return;
-    }
-
     switch (sample.phase) {
       case PointerPhase.down:
-        _moveHandleDown(sample, scenePoint);
-        break;
+        _moveHandleDown(scenePoint);
       case PointerPhase.move:
-        _moveHandleMove(sample, scenePoint, dragStartSlop: dragStartSlop);
-        break;
+        final change = _moveHandleMove(
+          scenePoint,
+          dragStartSlop: dragStartSlop,
+        );
+        if (change.scene) {
+          callbacks.onSceneStateChanged();
+        }
+        if (change.overlay) {
+          callbacks.onOverlayStateChanged();
+        }
       case PointerPhase.up:
-        _moveHandleUp(sample, scenePoint);
-        break;
+        final change = _moveHandleUp(sample);
+        if (change.scene) {
+          callbacks.onSceneStateChanged();
+        }
+        if (change.overlay) {
+          callbacks.onOverlayStateChanged();
+        }
       case PointerPhase.cancel:
-        resetGestureState();
-        setSelectionRect(null);
-        callbacks.onStateChanged();
-        break;
+        final change = _moveHandleCancel();
+        if (change.scene) {
+          callbacks.onSceneStateChanged();
+        }
+        if (change.overlay) {
+          callbacks.onOverlayStateChanged();
+        }
     }
   }
 
-  void _moveHandleDown(PointerSample sample, Offset scenePoint) {
-    _moveActivePointerId = sample.pointerId;
-    _movePointerDownScene = scenePoint;
-    _moveLastScene = scenePoint;
-    _moveDragStarted = false;
-    _movePendingClearSelection = false;
-    _moveMarqueeBaseline = Set<NodeId>.from(callbacks.readSelectedNodeIds());
+  void _moveHandleDown(Offset scenePoint) {
+    _beginGesture(scenePoint);
 
-    final hit = _hitTestTopNode(scenePoint);
-    if (hit != null) {
-      _moveTarget = _MoveDragTarget.move;
-      Set<NodeId> previewNodeIds = callbacks.readSelectedNodeIds();
-      if (!previewNodeIds.contains(hit.id)) {
-        callbacks.writeSelectionReplace(<NodeId>{hit.id});
-        previewNodeIds = <NodeId>{hit.id};
-      }
-      _startMovePreview(previewNodeIds);
-      callbacks.onStateChanged();
+    final hit = _hitTestEngine.hitTestTopNode(scenePoint);
+    if (hit == null) {
+      _gestureState
+        ..setTarget(InteractiveMoveDragTarget.marquee)
+        ..setPendingClearSelection(true);
+      callbacks.onPublicStateChanged();
       return;
     }
 
-    _moveTarget = _MoveDragTarget.marquee;
-    _movePendingClearSelection = true;
-    _clearMovePreview();
-    callbacks.onStateChanged();
+    _selectionCoordinator.selectHitNodeIfNeeded(hit.id);
+    final previewNodeIds = _selectionCoordinator.resolvePreviewNodeIds();
+    if (previewNodeIds.contains(hit.id)) {
+      _gestureState.setTarget(InteractiveMoveDragTarget.move);
+      _previewState.start(previewNodeIds);
+      return;
+    }
+
+    _gestureState.setTarget(InteractiveMoveDragTarget.none);
   }
 
-  void _moveHandleMove(
-    PointerSample sample,
+  ({bool scene, bool overlay}) _moveHandleMove(
     Offset scenePoint, {
     required double dragStartSlop,
   }) {
-    if (_moveActivePointerId != sample.pointerId) return;
-    if (_movePointerDownScene == null || _moveLastScene == null) return;
-
-    final didStartDrag =
-        !_moveDragStarted &&
-        isDistanceGreaterThan(
-          _movePointerDownScene!,
-          scenePoint,
-          dragStartSlop,
-        );
-
-    if (didStartDrag) {
-      _moveDragStarted = true;
-      if (_moveTarget == _MoveDragTarget.marquee &&
-          _movePendingClearSelection) {
-        callbacks.writeSelectionClear();
-        _movePendingClearSelection = false;
-      }
+    final moveLastScene = _gestureState.lastScene;
+    if (moveLastScene == null) {
+      return (scene: false, overlay: false);
     }
 
-    if (!_moveDragStarted) return;
-
-    if (_moveTarget == _MoveDragTarget.move) {
-      final deltaStep = scenePoint - _moveLastScene!;
-      if (deltaStep == Offset.zero) return;
-      _movePreviewDelta = _movePreviewDelta + deltaStep;
-      _moveLastScene = scenePoint;
-      callbacks.onStateChanged();
-      return;
+    final didStartDrag = _gestureState.tryStartDrag(
+      scenePoint,
+      dragStartSlop: dragStartSlop,
+    );
+    if (!didStartDrag) {
+      return (scene: false, overlay: false);
     }
 
-    if (_moveTarget == _MoveDragTarget.marquee) {
-      setSelectionRect(Rect.fromPoints(_movePointerDownScene!, scenePoint));
+    if (_gestureState.target == InteractiveMoveDragTarget.marquee &&
+        _gestureState.pendingClearSelection) {
+      _selectionCoordinator.writeSelectionClearIfChanged();
+      _gestureState.setPendingClearSelection(false);
     }
+
+    return switch (_gestureState.target) {
+      InteractiveMoveDragTarget.move => (
+        scene: _advanceMovePreview(scenePoint, moveLastScene),
+        overlay: false,
+      ),
+      InteractiveMoveDragTarget.marquee => (
+        scene: false,
+        overlay: _updateSelectionRect(scenePoint),
+      ),
+      InteractiveMoveDragTarget.none => (scene: false, overlay: false),
+    };
   }
 
-  void _moveHandleUp(PointerSample sample, Offset scenePoint) {
-    if (_moveActivePointerId != sample.pointerId) return;
-
+  ({bool scene, bool overlay}) _moveHandleUp(PointerSample sample) {
+    var change = (scene: false, overlay: false);
     try {
-      if (_moveTarget == _MoveDragTarget.move) {
-        final proposedDelta = _movePreviewDelta;
-        if (_moveDragStarted && proposedDelta != Offset.zero) {
-          final moveCommit = callbacks.commitMoveSelection(proposedDelta);
-          if (moveCommit.appliedDelta != Offset.zero &&
-              moveCommit.movedIds.isNotEmpty) {
-            final delta = Transform2D.translation(moveCommit.appliedDelta);
-            callbacks.emitAction(
-              ActionType.transform,
-              moveCommit.movedIds,
-              sample.timestampMs,
-              payload: <String, Object?>{'delta': delta.toJsonMap()},
-            );
-          }
-        }
-      } else if (_moveTarget == _MoveDragTarget.marquee) {
-        if (_moveDragStarted && _selectionRect != null) {
-          _commitMarquee(sample.timestampMs);
-        } else if (_movePendingClearSelection) {
-          callbacks.writeSelectionClear();
-        }
-      }
+      _commitMoveGesture(sample);
     } finally {
-      resetGestureState();
-      setSelectionRect(null);
-      callbacks.onStateChanged();
+      change = _resetGestureStateForTerminal();
     }
+    return change;
   }
 
-  void _commitMarquee(int timestampMs) {
-    final rect = _selectionRect;
-    if (rect == null) return;
+  ({bool scene, bool overlay}) _moveHandleCancel() {
+    return _restoreAndClearGestureState();
+  }
 
-    final selected = _nodesIntersecting(rect);
-    callbacks.writeSelectionReplace(selected);
+  void _beginGesture(Offset scenePoint) {
+    _gestureState.begin(scenePoint);
+    _selectionCoordinator.beginGesture();
+    _previewState.clear();
+  }
 
-    final currentSelection = callbacks.readSelectedNodeIds();
-    final didChange =
-        _moveMarqueeBaseline.length != currentSelection.length ||
-        !_moveMarqueeBaseline.containsAll(currentSelection);
-    if (didChange) {
-      callbacks.emitAction(
-        ActionType.selectMarquee,
-        currentSelection.toList(growable: false),
-        timestampMs,
-      );
+  bool _advanceMovePreview(Offset scenePoint, Offset moveLastScene) {
+    final moved = _previewState.advance(scenePoint, moveLastScene);
+    if (!moved) {
+      return false;
     }
+    _gestureState.setLastScene(scenePoint);
+    return true;
   }
 
-  Set<NodeId> _nodesIntersecting(Rect rect) {
-    final ids = <NodeId>{};
-    final candidates =
-        callbacks.querySpatialCandidates(rect).toList(growable: true)
-          ..sort((left, right) {
-            final byLayer = left.layerIndex.compareTo(right.layerIndex);
-            if (byLayer != 0) return byLayer;
-            return left.nodeIndex.compareTo(right.nodeIndex);
-          });
-
-    for (final candidate in candidates) {
-      final node = callbacks.resolveSpatialCandidateNode(candidate);
-      if (node == null) continue;
-      if (!node.isVisible || !node.isSelectable) continue;
-      if (!_effectiveNodeBoundsWorld(node).overlaps(rect)) continue;
-      ids.add(node.id);
+  bool _updateSelectionRect(Offset scenePoint) {
+    final movePointerDownScene = _gestureState.pointerDownScene;
+    if (movePointerDownScene == null) {
+      return false;
     }
-
-    return ids;
+    return _setSelectionRect(Rect.fromPoints(movePointerDownScene, scenePoint));
   }
 
-  SceneNode? _hitTestTopNode(Offset scenePoint) {
-    final candidates = _queryHitTestCandidates(scenePoint);
-
-    for (final candidate in candidates) {
-      final node = callbacks.resolveSpatialCandidateNode(candidate);
-      if (node == null) continue;
-      if (!node.isVisible || !node.isSelectable) continue;
-      if (_hitTestNodeWithMovePreview(scenePoint, node)) {
-        return node;
-      }
-    }
-
-    return null;
+  void _commitMoveGesture(PointerSample sample) {
+    _commitCoordinator.commit(sample, gestureState: _gestureState);
   }
 
-  List<SceneSpatialCandidate> _queryHitTestCandidates(Offset scenePoint) {
-    final probe = Rect.fromLTWH(scenePoint.dx, scenePoint.dy, 0, 0);
-    final byNodeId = <NodeId, SceneSpatialCandidate>{};
-    for (final candidate in callbacks.querySpatialCandidates(probe)) {
-      byNodeId[candidate.node.id] = candidate;
-    }
-    if (_hasMovePreviewTranslation) {
-      final shiftedProbe = Rect.fromLTWH(
-        scenePoint.dx - _movePreviewDelta.dx,
-        scenePoint.dy - _movePreviewDelta.dy,
-        0,
-        0,
-      );
-      for (final candidate in callbacks.querySpatialCandidates(shiftedProbe)) {
-        byNodeId[candidate.node.id] = candidate;
-      }
-    }
-    final candidates = byNodeId.values.toList(growable: true)
-      ..sort((left, right) {
-        final byLayer = right.layerIndex.compareTo(left.layerIndex);
-        if (byLayer != 0) return byLayer;
-        return right.nodeIndex.compareTo(left.nodeIndex);
-      });
-    return candidates;
+  bool _setSelectionRect(Rect? value) {
+    return _gestureState.setSelectionRect(value);
   }
 
-  void _startMovePreview(Set<NodeId> nodeIds) {
-    _movePreviewActive = true;
-    _movePreviewDelta = Offset.zero;
-    _movePreviewNodeIds = Set<NodeId>.from(nodeIds);
+  ({bool scene, bool overlay}) _resetGestureStateForTerminal() {
+    final didChange = (
+      scene: _previewState.hasSceneEffect,
+      overlay: _gestureState.selectionRect != null,
+    );
+    resetGestureState();
+    return didChange;
   }
 
-  void _clearMovePreview() {
-    _movePreviewActive = false;
-    _movePreviewDelta = Offset.zero;
-    _movePreviewNodeIds = <NodeId>{};
-  }
-
-  bool get _hasMovePreviewTranslation =>
-      _movePreviewActive &&
-      _movePreviewNodeIds.isNotEmpty &&
-      _movePreviewDelta != Offset.zero;
-
-  Rect _effectiveNodeBoundsWorld(SceneNode node) {
-    final delta = movePreviewDeltaForNode(node.id);
-    return node.boundsWorld.shift(delta);
-  }
-
-  bool _hitTestNodeWithMovePreview(Offset scenePoint, SceneNode node) {
-    final delta = movePreviewDeltaForNode(node.id);
-    if (delta == Offset.zero) {
-      return hitTestNode(scenePoint, node);
-    }
-    return hitTestNode(scenePoint - delta, node);
+  ({bool scene, bool overlay}) _restoreAndClearGestureState() {
+    _commitCoordinator.commitCancelRestore();
+    return _resetGestureStateForTerminal();
   }
 }
-
-enum _MoveDragTarget { none, move, marquee }

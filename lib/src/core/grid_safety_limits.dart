@@ -4,8 +4,7 @@
 /// paint workload and frame stalls.
 library;
 
-/// Minimum allowed grid cell size in scene/world units when the grid is on.
-const double kMinGridCellSize = 1.0;
+export '../contract/scene_contract_limits.dart' show kMinGridCellSize;
 
 /// Maximum number of grid lines per axis that may be painted in one frame.
 ///

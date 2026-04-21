@@ -2,17 +2,17 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
-import '../../utils/scene_invariants.dart';
+import '../support/scene_snapshot_invariant_assertions.dart';
 
-SceneControllerCore buildController() {
-  return SceneControllerCore(
+SceneStoreController buildController() {
+  return SceneStoreController(
     initialSnapshot: SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
           id: 'layer-auto-0',
-          nodes: const <NodeSnapshot>[
+          nodes: <NodeSnapshot>[
             RectNodeSnapshot(id: 'base', size: Size(20, 10)),
           ],
         ),
@@ -21,7 +21,7 @@ SceneControllerCore buildController() {
   );
 }
 
-void assertControllerInvariants(SceneControllerCore controller) {
+void assertControllerInvariants(SceneStoreController controller) {
   assertSceneInvariants(
     controller.snapshot,
     selectedNodeIds: controller.selectedNodeIds,

@@ -3,9 +3,17 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/background_layer_invariants.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
-import 'package:iwb_canvas_engine/src/public/snapshot.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 
 void main() {
+  test('Scene runtime may keep background layer absent', () {
+    final scene = Scene(
+      layers: <ContentLayer>[ContentLayer(id: 'layer-auto-1')],
+    );
+
+    expect(scene.backgroundLayer, isNull);
+  });
+
   test('ensureBackgroundLayer creates background layer when missing', () {
     final scene = Scene(
       layers: <ContentLayer>[ContentLayer(id: 'layer-auto-2')],
@@ -30,45 +38,18 @@ void main() {
     expect(identical(scene.backgroundLayer, existing), isTrue);
   });
 
-  test(
-    'canonicalizeBackgroundLayerSnapshot adds empty background layer when missing',
-    () {
-      final snapshot = SceneSnapshot(
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
-            id: 'layer-auto-0',
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(id: 'n1', size: Size(1, 1)),
-            ],
-          ),
-        ],
-      );
-
-      final canonical = canonicalizeBackgroundLayerSnapshot(snapshot);
-
-      expect(canonical.backgroundLayer.nodes, isEmpty);
-      expect(canonical.layers.single.nodes.single.id, 'n1');
-    },
-  );
-
-  test(
-    'canonicalizeBackgroundLayerSnapshot keeps identity when already canonical',
-    () {
-      final snapshot = SceneSnapshot(
-        backgroundLayer: BackgroundLayerSnapshot(
-          nodes: const <NodeSnapshot>[
-            RectNodeSnapshot(id: 'bg', size: Size(1, 1)),
-          ],
+  test('SceneSnapshot provides empty background layer when omitted', () {
+    // INV:INV-SER-CANONICAL-BACKGROUND-LAYER
+    final snapshot = SceneSnapshot(
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
+          id: 'layer-auto-0',
+          nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'n1', size: Size(1, 1))],
         ),
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(id: 'layer-auto-1'),
-        ],
-      );
+      ],
+    );
 
-      final canonical = canonicalizeBackgroundLayerSnapshot(snapshot);
-
-      expect(identical(canonical, snapshot), isTrue);
-      expect(canonical.backgroundLayer.nodes.single.id, 'bg');
-    },
-  );
+    expect(snapshot.backgroundLayer.nodes, isEmpty);
+    expect(snapshot.layers.single.nodes.single.id, 'n1');
+  });
 }

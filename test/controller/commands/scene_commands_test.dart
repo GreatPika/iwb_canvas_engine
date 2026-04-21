@@ -3,24 +3,27 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/commands/scene_commands.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_writer_runtime.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
+import 'package:iwb_canvas_engine/src/core/id_generator.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 
-import '../../utils/scene_invariants.dart';
+import '../support/scene_snapshot_invariant_assertions.dart';
 
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
 // INV:INV-ENG-SIGNALS-AFTER-COMMIT
 
-SceneControllerCore buildController() {
-  return SceneControllerCore(
+SceneStoreController buildController() {
+  return SceneStoreController(
     initialSnapshot: SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
           id: 'layer-auto-0',
-          nodes: const <NodeSnapshot>[
+          nodes: <NodeSnapshot>[
             RectNodeSnapshot(id: 'base', size: Size(20, 10)),
           ],
         ),
@@ -29,7 +32,7 @@ SceneControllerCore buildController() {
   );
 }
 
-void assertControllerInvariants(SceneControllerCore controller) {
+void assertControllerInvariants(SceneStoreController controller) {
   assertSceneInvariants(
     controller.snapshot,
     selectedNodeIds: controller.selectedNodeIds,
@@ -47,11 +50,20 @@ void main() {
         ),
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{},
-        nodeIdSeed: 0,
+        idGeneratorState: createIdGeneratorStateForTesting(
+          nextNodeCounter: 1,
+          nextLayerCounter: 1,
+        ),
         nextInstanceRevision: 1,
       );
-      T writeRunner<T>(T Function(SceneWriteTxn writer) fn) {
-        final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
+      T writeRunner<T>(T Function(SceneWriter writer) fn) {
+        final writer = SceneWriter(
+          SceneWriterRuntime(
+            ctx: ctx,
+            mutationExecutor: MutationExecutor(),
+            txnSignalSink: bufferedSignals.add,
+          ),
+        );
         return fn(writer);
       }
 
@@ -69,17 +81,23 @@ void main() {
   test('writeClearScene no-op does not emit scene.cleared', () {
     final bufferedSignals = <BufferedSignal>[];
     final ctx = TxnContext(
-      baseScene: Scene(
-        backgroundLayer: BackgroundLayer(),
-        layers: <ContentLayer>[ContentLayer(id: 'layer-auto-2')],
-      ),
+      baseScene: Scene(backgroundLayer: BackgroundLayer()),
       workingSelection: <NodeId>{},
       baseAllNodeIds: <NodeId>{},
-      nodeIdSeed: 0,
+      idGeneratorState: createIdGeneratorStateForTesting(
+        nextNodeCounter: 1,
+        nextLayerCounter: 1,
+      ),
       nextInstanceRevision: 1,
     );
-    T writeRunner<T>(T Function(SceneWriteTxn writer) fn) {
-      final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
+    T writeRunner<T>(T Function(SceneWriter writer) fn) {
+      final writer = SceneWriter(
+        SceneWriterRuntime(
+          ctx: ctx,
+          mutationExecutor: MutationExecutor(),
+          txnSignalSink: bufferedSignals.add,
+        ),
+      );
       return fn(writer);
     }
 
@@ -89,6 +107,42 @@ void main() {
 
     expect(removedCount, 0);
     expect(bufferedSignals, isEmpty);
+  });
+
+  test('writeClearSceneExactResult preserves structural clear metadata', () {
+    final bufferedSignals = <BufferedSignal>[];
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[ContentLayer(id: 'layer-auto-1')],
+      ),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: <NodeId>{},
+      idGeneratorState: createIdGeneratorStateForTesting(
+        nextNodeCounter: 1,
+        nextLayerCounter: 1,
+      ),
+      nextInstanceRevision: 1,
+    );
+    T writeRunner<T>(T Function(SceneWriter writer) fn) {
+      final writer = SceneWriter(
+        SceneWriterRuntime(
+          ctx: ctx,
+          mutationExecutor: MutationExecutor(),
+          txnSignalSink: bufferedSignals.add,
+        ),
+      );
+      return fn(writer);
+    }
+
+    final commands = SceneCommands(writeRunner);
+
+    final clearResult = commands.writeClearSceneExactResult();
+
+    expect(clearResult.didStructuralClear, isTrue);
+    expect(clearResult.removedNodeIds, isEmpty);
+    expect(bufferedSignals, hasLength(1));
+    expect(bufferedSignals.single.type, 'scene.cleared');
+    expect(bufferedSignals.single.nodeIds, isEmpty);
   });
 
   test('scene commands route structural updates through write', () async {
@@ -145,6 +199,22 @@ void main() {
     assertControllerInvariants(controller);
   });
 
+  test('add node with duplicate explicit id throws ArgumentError', () async {
+    final controller = buildController();
+    addTearDown(controller.dispose);
+
+    expect(
+      () => controller.commands.writeAddNode(
+        RectNodeSpec(id: 'base', size: const Size(8, 8)),
+      ),
+      throwsA(
+        isA<ArgumentError>().having((error) => error.name, 'name', 'spec.id'),
+      ),
+    );
+    await pumpEventQueue();
+    assertControllerInvariants(controller);
+  });
+
   test('add node forwards insertIndex into target layer ordering', () async {
     final controller = buildController();
     addTearDown(controller.dispose);
@@ -177,16 +247,10 @@ void main() {
       addTearDown(sub.cancel);
 
       final patchMissing = controller.commands.writePatchNode(
-        const RectNodePatch(
-          id: 'missing',
-          strokeWidth: PatchField<double>.value(2),
-        ),
+        RectNodePatch(id: 'missing', strokeWidth: PatchField<double>.value(2)),
       );
       final patchExisting = controller.commands.writePatchNode(
-        const RectNodePatch(
-          id: 'base',
-          strokeWidth: PatchField<double>.value(3),
-        ),
+        RectNodePatch(id: 'base', strokeWidth: PatchField<double>.value(3)),
       );
       final deleteMissing = controller.commands.writeDeleteNode('missing');
       final deleteExisting = controller.commands.writeDeleteNode('base');
@@ -306,7 +370,7 @@ void main() {
       expect(controller.selectedNodeIds, const <NodeId>{'base'});
 
       controller.commands.writePatchNode(
-        const RectNodePatch(
+        RectNodePatch(
           id: 'base',
           common: CommonNodePatch(isSelectable: PatchField<bool>.value(false)),
         ),
@@ -352,6 +416,34 @@ void main() {
     assertControllerInvariants(controller);
   });
 
+  test(
+    'selection replace empty input keeps no-op semantics and emits no signal',
+    () async {
+      final controller = buildController();
+      addTearDown(controller.dispose);
+
+      var replacedSignals = 0;
+      final sub = controller.signals.listen((signal) {
+        if (signal.type == 'selection.replaced') {
+          replacedSignals = replacedSignals + 1;
+        }
+      });
+      addTearDown(sub.cancel);
+
+      controller.commands.writeSelectionReplace(const <NodeId>{'base'});
+      await pumpEventQueue();
+      expect(controller.selectedNodeIds, const <NodeId>{'base'});
+      expect(replacedSignals, 1);
+
+      controller.commands.writeSelectionReplace(const <NodeId>{});
+      await pumpEventQueue();
+
+      expect(controller.selectedNodeIds, const <NodeId>{'base'});
+      expect(replacedSignals, 1);
+      assertControllerInvariants(controller);
+    },
+  );
+
   test('selection signal ids equal committed selection', () async {
     final controller = buildController();
     addTearDown(controller.dispose);
@@ -373,7 +465,11 @@ void main() {
     expect(replacedIds, isNotNull);
     expect(replacedIds, const <NodeId>['base']);
     expect(controller.selectedNodeIds, const <NodeId>{'base'});
-    expect(controller.selectedNodeIds, equals(replacedIds!.toSet()));
+    final sortedReplacedIds = replacedIds;
+    if (sortedReplacedIds == null) {
+      fail('Expected selection.replaced signal.');
+    }
+    expect(controller.selectedNodeIds, equals(sortedReplacedIds.toSet()));
     assertControllerInvariants(controller);
   });
 
@@ -405,22 +501,24 @@ void main() {
     await pumpEventQueue();
 
     expect(replacedIds, const <NodeId>['a-node', 'base', 'z-node']);
-    expect(controller.selectedNodeIds, equals(replacedIds!.toSet()));
+    final sortedReplacedIds = replacedIds;
+    if (sortedReplacedIds == null) {
+      fail('Expected selection.replaced signal.');
+    }
+    expect(controller.selectedNodeIds, equals(sortedReplacedIds.toSet()));
     assertControllerInvariants(controller);
   });
 
   test('selection replace filters invisible or background nodes', () async {
-    final controller = SceneControllerCore(
+    final controller = SceneStoreController(
       initialSnapshot: SceneSnapshot(
         backgroundLayer: BackgroundLayerSnapshot(
-          nodes: const <NodeSnapshot>[
-            RectNodeSnapshot(id: 'bg', size: Size(20, 10)),
-          ],
+          nodes: <NodeSnapshot>[RectNodeSnapshot(id: 'bg', size: Size(20, 10))],
         ),
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-1',
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               RectNodeSnapshot(id: 'visible', size: Size(20, 10)),
               RectNodeSnapshot(
                 id: 'hidden',
@@ -501,12 +599,105 @@ void main() {
   });
 
   test(
+    'selection delete no-op emits no signal and keeps commit revision',
+    () async {
+      final controller = buildController();
+      addTearDown(controller.dispose);
+
+      final initialRevision = controller.debug.currentCommitRevision;
+      final signalTypes = <String>[];
+      final sub = controller.signals.listen((signal) {
+        signalTypes.add(signal.type);
+      });
+      addTearDown(sub.cancel);
+
+      final deleted = controller.commands.writeDeleteSelection();
+      await pumpEventQueue();
+
+      expect(deleted, 0);
+      expect(signalTypes, isNot(contains('selection.deleted')));
+      expect(controller.debug.currentCommitRevision, initialRevision);
+      assertControllerInvariants(controller);
+    },
+  );
+
+  test(
+    'selection delete removes only deletable selected nodes across command path',
+    () async {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'bg', size: Size(20, 10)),
+            ],
+          ),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-1',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'locked',
+                  size: Size(20, 10),
+                  isDeletable: false,
+                ),
+                RectNodeSnapshot(id: 'free', size: Size(20, 10)),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final deletedSignals = <List<NodeId>>[];
+      final sub = controller.signals.listen((signal) {
+        if (signal.type == 'selection.deleted') {
+          deletedSignals.add(signal.nodeIds);
+        }
+      });
+      addTearDown(sub.cancel);
+
+      controller.commands.writeSelectionReplace(const <NodeId>{
+        'bg',
+        'locked',
+        'free',
+        'missing',
+      });
+      await pumpEventQueue();
+      expect(controller.selectedNodeIds, const <NodeId>{'locked', 'free'});
+
+      final deleted = controller.commands.writeDeleteSelection();
+      await pumpEventQueue();
+
+      expect(deleted, 1);
+      expect(deletedSignals, const <List<NodeId>>[
+        <NodeId>['free'],
+      ]);
+      expect(controller.selectedNodeIds, const <NodeId>{'locked'});
+      expect(
+        controller.snapshot.layers.single.nodes
+            .map((node) => node.id)
+            .toList(growable: false),
+        const <NodeId>['locked'],
+      );
+
+      final noOpDelete = controller.commands.writeDeleteSelection();
+      await pumpEventQueue();
+
+      expect(noOpDelete, 0);
+      expect(deletedSignals, const <List<NodeId>>[
+        <NodeId>['free'],
+      ]);
+      assertControllerInvariants(controller);
+    },
+  );
+
+  test(
     'no-op background/grid/camera setters emit no signal and keep commit revision',
     () async {
       final controller = buildController();
       addTearDown(controller.dispose);
 
-      final initialRevision = controller.debugCommitRevision;
+      final initialRevision = controller.debug.currentCommitRevision;
       final snapshot = controller.snapshot;
       final signalTypes = <String>[];
       final sub = controller.signals.listen((signal) {
@@ -534,7 +725,7 @@ void main() {
           )
           .toList(growable: false);
       expect(trackedSignalTypes, isEmpty);
-      expect(controller.debugCommitRevision, initialRevision);
+      expect(controller.debug.currentCommitRevision, initialRevision);
       assertControllerInvariants(controller);
     },
   );
@@ -545,7 +736,7 @@ void main() {
       final controller = buildController();
       addTearDown(controller.dispose);
 
-      final initialRevision = controller.debugCommitRevision;
+      final initialRevision = controller.debug.currentCommitRevision;
       final signalTypes = <String>[];
       final sub = controller.signals.listen((signal) {
         signalTypes.add(signal.type);
@@ -567,7 +758,7 @@ void main() {
           'camera.updated',
         ]),
       );
-      expect(controller.debugCommitRevision, initialRevision + 4);
+      expect(controller.debug.currentCommitRevision, initialRevision + 4);
       assertControllerInvariants(controller);
     },
   );

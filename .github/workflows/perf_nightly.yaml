@@ -33,7 +33,12 @@ jobs:
           IWB_FUZZ_SEEDS: 11,29,47,71,89,107,131,149
           IWB_FUZZ_STEPS: 800
           IWB_FUZZ_BASE_SEED: 11
-        run: flutter test test/controller/scene_controller_randomized_txn_test.dart
+        run: |
+          JOBS="$(getconf _NPROCESSORS_ONLN)"
+          if [ "$JOBS" -gt 1 ]; then
+            JOBS=$((JOBS - 1))
+          fi
+          flutter test test/controller/scene_controller_randomized_txn_test.dart --no-pub -j "$JOBS"
 
       - name: Load profiles (full)
         run: dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json
@@ -45,28 +50,9 @@ jobs:
           name: load-profiles-full
           path: build/bench/load_profiles_full.json
 
-      - name: Diff full benchmark report vs baseline (Phase A, non-blocking)
+      - name: Diff full benchmark report vs baseline
         if: always()
-        run: |
-          BASELINE=tool/bench/baselines/load_profiles_full_baseline.json
-          CURRENT=build/bench/load_profiles_full.json
-          OUTPUT=build/bench/load_profiles_full_diff.json
-          if [ -f "$BASELINE" ] && [ -f "$CURRENT" ]; then
-            dart run tool/bench/diff_load_profiles.dart \
-              --profile=full \
-              --baseline="$BASELINE" \
-              --current="$CURRENT" \
-              --output="$OUTPUT" || true
-          else
-            mkdir -p build/bench
-            cat > "$OUTPUT" <<'JSON'
-          {
-            "profile": "full",
-            "status": "skipped",
-            "reason": "baseline_or_current_report_missing"
-          }
-          JSON
-          fi
+        run: dart run tool/bench/diff_load_profiles.dart --profile=full --baseline=tool/bench/baselines/load_profiles_full_baseline.json --current=build/bench/load_profiles_full.json --output=build/bench/load_profiles_full_diff.json
 
       - name: Upload full benchmark diff artifact
         if: always()

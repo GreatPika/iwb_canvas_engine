@@ -5,8 +5,12 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
+import 'package:iwb_canvas_engine/src/core/id_generator.dart';
+import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
 import 'package:iwb_canvas_engine/src/controller/change_set.dart';
+import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_writer_runtime.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/spatial_index_cache.dart';
 
@@ -25,10 +29,19 @@ void main() {
         ),
         workingSelection: <NodeId>{},
         baseAllNodeIds: <NodeId>{},
-        nodeIdSeed: 0,
+        idGeneratorState: createIdGeneratorStateForTesting(
+          nextNodeCounter: 1,
+          nextLayerCounter: 1,
+        ),
         nextInstanceRevision: 1,
       );
-      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+      final writer = SceneWriter(
+        SceneWriterRuntime(
+          ctx: ctx,
+          mutationExecutor: MutationExecutor(),
+          txnSignalSink: (_) {},
+        ),
+      );
 
       final clearResult = writer.writeClearSceneKeepBackgroundResult();
       expect(clearResult.removedNodeIds, isEmpty);
@@ -54,7 +67,7 @@ void main() {
         'r1': (layerIndex: 0, nodeIndex: 0),
       };
 
-      final first = slice.writeQueryCandidates(
+      final first = slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
@@ -64,7 +77,7 @@ void main() {
       expect(slice.debugBuildCount, 1);
       expect(slice.debugIncrementalApplyCount, 0);
 
-      slice.writeQueryCandidates(
+      slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
@@ -79,7 +92,7 @@ void main() {
         changeSet: noChange,
         controllerEpoch: 0,
       );
-      slice.writeQueryCandidates(
+      slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
@@ -108,21 +121,21 @@ void main() {
       final movedChange = ChangeSet()
         ..txnMarkBoundsChanged()
         ..txnTrackUpdated('r1')
-        ..txnTrackHitGeometryChanged('r1');
+        ..txnTrackSpatialGeometryChanged('r1');
       slice.writeHandleCommit(
         scene: movedScene,
         nodeLocator: movedLocator,
         changeSet: movedChange,
         controllerEpoch: 0,
       );
-      final movedCandidates = slice.writeQueryCandidates(
+      final movedCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
       );
       expect(movedCandidates, isNotEmpty);
-      final oldCandidatesAfterMove = slice.writeQueryCandidates(
+      final oldCandidatesAfterMove = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
@@ -141,14 +154,14 @@ void main() {
         changeSet: malformedAdded,
         controllerEpoch: 0,
       );
-      final rebuiltAfterMalformedAdd = slice.writeQueryCandidates(
+      final rebuiltAfterMalformedAdd = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
       );
       expect(
-        rebuiltAfterMalformedAdd.map((candidate) => candidate.node.id),
+        rebuiltAfterMalformedAdd.map((candidate) => candidate.nodeId),
         <NodeId>['r1'],
       );
       expect(slice.debugBuildCount, 2);
@@ -160,7 +173,7 @@ void main() {
         changeSet: malformedBoundsOnly,
         controllerEpoch: 0,
       );
-      slice.writeQueryCandidates(
+      slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
@@ -174,7 +187,7 @@ void main() {
         changeSet: noChange,
         controllerEpoch: 1,
       );
-      slice.writeQueryCandidates(
+      slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
@@ -189,7 +202,7 @@ void main() {
         changeSet: gridOnly,
         controllerEpoch: 1,
       );
-      slice.writeQueryCandidates(
+      slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
@@ -217,7 +230,7 @@ void main() {
         'r1': (layerIndex: 0, nodeIndex: 0),
       };
       final outOfRangeBounds = Rect.fromLTWH(sceneCoordMax + 450, -20, 100, 40);
-      final invalidFirst = slice.writeQueryCandidates(
+      final invalidFirst = slice.writeQueryHitTestCandidates(
         scene: outOfRangeScene,
         nodeLocator: outOfRangeLocator,
         worldBounds: outOfRangeBounds,
@@ -229,7 +242,7 @@ void main() {
       final outOfRangeChange = ChangeSet()
         ..txnMarkBoundsChanged()
         ..txnTrackUpdated('r1')
-        ..txnTrackHitGeometryChanged('r1');
+        ..txnTrackSpatialGeometryChanged('r1');
       slice.writeHandleCommit(
         scene: outOfRangeScene,
         nodeLocator: outOfRangeLocator,
@@ -237,7 +250,7 @@ void main() {
         controllerEpoch: 2,
       );
       // INV:INV-ENG-SPATIAL-INDEX-REBUILD-ON-INVALID
-      final invalidSecond = slice.writeQueryCandidates(
+      final invalidSecond = slice.writeQueryHitTestCandidates(
         scene: outOfRangeScene,
         nodeLocator: outOfRangeLocator,
         worldBounds: outOfRangeBounds,
@@ -246,7 +259,7 @@ void main() {
       expect(invalidSecond, isNotEmpty);
       expect(slice.debugBuildCount, 6);
 
-      final invalidThird = slice.writeQueryCandidates(
+      final invalidThird = slice.writeQueryHitTestCandidates(
         scene: outOfRangeScene,
         nodeLocator: outOfRangeLocator,
         worldBounds: outOfRangeBounds,
@@ -273,7 +286,7 @@ void main() {
         'r1': (layerIndex: 0, nodeIndex: 0),
       };
 
-      slice.writeQueryCandidates(
+      slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
@@ -302,7 +315,7 @@ void main() {
       final movedChange = ChangeSet()
         ..txnMarkBoundsChanged()
         ..txnTrackUpdated('r1')
-        ..txnTrackHitGeometryChanged('r1');
+        ..txnTrackSpatialGeometryChanged('r1');
 
       slice.debugBeforeIncrementalPrepareHook = () {
         throw StateError('forced incremental prepare failure');
@@ -314,20 +327,20 @@ void main() {
         controllerEpoch: 0,
       );
 
-      final movedCandidates = slice.writeQueryCandidates(
+      final movedCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
       );
-      final oldCandidates = slice.writeQueryCandidates(
+      final oldCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
       );
 
-      expect(movedCandidates.map((candidate) => candidate.node.id), <NodeId>[
+      expect(movedCandidates.map((candidate) => candidate.nodeId), <NodeId>[
         'r1',
       ]);
       expect(oldCandidates, isEmpty);
@@ -352,13 +365,13 @@ void main() {
         'r1': (layerIndex: 0, nodeIndex: 0),
       };
 
-      final initialCandidates = slice.writeQueryCandidates(
+      final initialCandidates = slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
       );
-      expect(initialCandidates.map((candidate) => candidate.node.id), <NodeId>[
+      expect(initialCandidates.map((candidate) => candidate.nodeId), <NodeId>[
         'r1',
       ]);
       expect(slice.debugBuildCount, 1);
@@ -383,7 +396,7 @@ void main() {
       final movedChange = ChangeSet()
         ..txnMarkBoundsChanged()
         ..txnTrackUpdated('r1')
-        ..txnTrackHitGeometryChanged('r1');
+        ..txnTrackSpatialGeometryChanged('r1');
 
       slice.debugBeforeIncrementalPrepareHook = () {
         throw StateError('forced incremental prepare failure');
@@ -402,19 +415,19 @@ void main() {
         throwsStateError,
       );
 
-      final stillOldAtOrigin = slice.writeQueryCandidates(
+      final stillOldAtOrigin = slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
       );
-      final noMovedCandidates = slice.writeQueryCandidates(
+      final noMovedCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
       );
-      expect(stillOldAtOrigin.map((candidate) => candidate.node.id), <NodeId>[
+      expect(stillOldAtOrigin.map((candidate) => candidate.nodeId), <NodeId>[
         'r1',
       ]);
       expect(noMovedCandidates, isEmpty);
@@ -422,4 +435,149 @@ void main() {
       expect(slice.debugIncrementalApplyCount, 0);
     },
   );
+
+  test('paint order follows current locator after incremental insertion', () {
+    final cache = SpatialIndexCache();
+    final originalScene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-paint-order',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'a-first',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(40, 10)),
+            ),
+            RectNode(
+              id: 'b-second',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(70, 10)),
+            ),
+          ],
+        ),
+      ],
+    );
+    final originalLocator = <NodeId, SceneSpatialCandidateLocation>{
+      'a-first': (layerIndex: 0, nodeIndex: 0),
+      'b-second': (layerIndex: 0, nodeIndex: 1),
+    };
+
+    cache.writeQueryPaintCandidates(
+      scene: originalScene,
+      nodeLocator: originalLocator,
+      worldBounds: const Rect.fromLTWH(0, 0, 100, 40),
+      controllerEpoch: 0,
+    );
+
+    final updatedScene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-paint-order',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'z-inserted',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(10, 10)),
+            ),
+            RectNode(
+              id: 'a-first',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(40, 10)),
+            ),
+            RectNode(
+              id: 'b-second',
+              size: const Size(20, 20),
+              transform: Transform2D.translation(const Offset(70, 10)),
+            ),
+          ],
+        ),
+      ],
+    );
+    final updatedLocator = <NodeId, SceneSpatialCandidateLocation>{
+      'z-inserted': (layerIndex: 0, nodeIndex: 0),
+      'a-first': (layerIndex: 0, nodeIndex: 1),
+      'b-second': (layerIndex: 0, nodeIndex: 2),
+    };
+    final changeSet = ChangeSet()
+      ..txnMarkStructuralChanged()
+      ..txnTrackAdded('z-inserted');
+
+    cache.writeHandleCommit(
+      scene: updatedScene,
+      nodeLocator: updatedLocator,
+      changeSet: changeSet,
+      controllerEpoch: 0,
+    );
+    final candidates = cache.writeQueryPaintCandidates(
+      scene: updatedScene,
+      nodeLocator: updatedLocator,
+      worldBounds: const Rect.fromLTWH(0, 0, 100, 40),
+      controllerEpoch: 0,
+    );
+
+    expect(cache.debugBuildCount, 1);
+    expect(cache.debugIncrementalApplyCount, 1);
+    expect(candidates.map((candidate) => candidate.nodeId), <NodeId>[
+      'z-inserted',
+      'a-first',
+      'b-second',
+    ]);
+  });
+
+  test('writeQueryPaintCandidates threads scoped background paint queries', () {
+    final cache = SpatialIndexCache();
+    final scene = Scene(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[
+          RectNode(
+            id: 'bg',
+            size: const Size(10, 10),
+            transform: Transform2D.translation(const Offset(5, 5)),
+          ),
+        ],
+      ),
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-auto-scope',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'fg',
+              size: const Size(10, 10),
+              transform: Transform2D.translation(const Offset(5, 5)),
+            ),
+          ],
+        ),
+      ],
+    );
+    final nodeLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
+      'bg': (layerIndex: -1, nodeIndex: 0),
+      'fg': (layerIndex: 0, nodeIndex: 0),
+    };
+
+    expect(
+      cache
+          .writeQueryPaintCandidates(
+            scene: scene,
+            nodeLocator: nodeLocator,
+            worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+            controllerEpoch: 0,
+          )
+          .map((candidate) => candidate.nodeId),
+      <NodeId>['fg'],
+    );
+
+    expect(
+      cache
+          .writeQueryPaintCandidates(
+            scene: scene,
+            nodeLocator: nodeLocator,
+            worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+            controllerEpoch: 0,
+            scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+          )
+          .map((candidate) => candidate.nodeId)
+          .toSet(),
+      <NodeId>{'bg', 'fg'},
+    );
+  });
 }

@@ -2,7 +2,23 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
+import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart'
+    show kMaxContentLayersPerScene;
+import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/controller/change_set.dart';
+import 'package:iwb_canvas_engine/src/controller/committed_store_state.dart';
+import 'package:iwb_canvas_engine/src/controller/internal/repaint_flag.dart';
+import 'package:iwb_canvas_engine/src/controller/internal/signals_buffer.dart';
+import 'package:iwb_canvas_engine/src/controller/internal/spatial_index_cache.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_controller_commit_debug.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_controller_commit_execution.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_controller_commit_plan.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
+import 'package:iwb_canvas_engine/src/controller/store.dart';
+import 'package:iwb_canvas_engine/src/core/nodes.dart';
+import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/model/document.dart';
+import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
 // INV:INV-ENG-EPOCH-INVALIDATION
@@ -12,16 +28,41 @@ import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
 // INV:INV-ENG-TXN-WRITER-LIFETIME
 // INV:INV-ENG-TEXT-SIZE-DERIVED
 // INV:INV-ENG-DISPOSE-FAIL-FAST
+// INV:INV-ENG-RUNTIME-SCENE-VALIDITY-BACKSTOP
 
 void main() {
+  SceneSnapshot duplicateNodeSnapshotFromInternalBypass() {
+    return materializeSceneSnapshot(
+      sceneSnapshotBackingFromValidated(
+        backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
+          nodes: <NodeSnapshotBacking>[
+            nodeSnapshotBackingOf(
+              RectNodeSnapshot(id: 'dup', size: const Size(1, 1)),
+            ),
+          ],
+        ),
+        layers: <ContentLayerSnapshotBacking>[
+          contentLayerSnapshotBackingFromValidated(
+            id: 'layer-auto-1',
+            nodes: <NodeSnapshotBacking>[
+              nodeSnapshotBackingOf(
+                RectNodeSnapshot(id: 'dup', size: const Size(2, 2)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   SceneSnapshot twoRectSnapshot() {
     return SceneSnapshot(
       layers: <ContentLayerSnapshot>[
         ContentLayerSnapshot(
           id: 'layer-auto-0',
           nodes: <NodeSnapshot>[
-            const RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
-            const RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
+            RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
+            RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
           ],
         ),
       ],
@@ -31,7 +72,7 @@ void main() {
   test(
     'write rollback keeps scene/revisions unchanged and emits no signals',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -52,7 +93,7 @@ void main() {
       });
 
       expect(
-        () => controller.write<void>((writer) {
+        () => controller.writeWithSceneWriter<void>((writer) {
           writer.writeSelectionReplace(const <NodeId>{'r1'});
           writer.writeSignalEnqueue(type: 'selection.changed');
           throw StateError('rollback');
@@ -78,12 +119,12 @@ void main() {
   test(
     'write rollback discards repaint request and emits no external effects',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
 
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeSnapshot = controller.snapshot;
 
       final signals = <Object>[];
@@ -96,7 +137,7 @@ void main() {
       });
 
       expect(
-        () => controller.write<void>((writer) {
+        () => controller.writeWithSceneWriter<void>((writer) {
           writer.writeSelectionReplace(const <NodeId>{'r1'});
           writer.writeSignalEnqueue(type: 'will.rollback');
           controller.requestRepaint();
@@ -106,7 +147,7 @@ void main() {
       );
       await pumpEventQueue(times: 2);
 
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.selectedNodeIds, isEmpty);
       expect(controller.snapshot.layers.length, beforeSnapshot.layers.length);
       expect(signals, isEmpty);
@@ -114,10 +155,39 @@ void main() {
     },
   );
 
+  test('debug hook accessors proxy runtime debug state', () {
+    final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
+    addTearDown(controller.dispose);
+
+    expect(controller.debug.beforeInvariantPrecheckHook, isNull);
+    expect(controller.debug.beforeSpatialPrepareCommitHook, isNull);
+    expect(controller.debug.beforeTxnContextCreateHook, isNull);
+
+    void invariantHook() {}
+    void spatialHook() {}
+    void txnCreateHook() {}
+
+    controller.debug.beforeInvariantPrecheckHook = invariantHook;
+    controller.debug.beforeSpatialPrepareCommitHook = spatialHook;
+    controller.debug.beforeTxnContextCreateHook = txnCreateHook;
+
+    expect(controller.debug.beforeInvariantPrecheckHook, same(invariantHook));
+    expect(controller.debug.beforeSpatialPrepareCommitHook, same(spatialHook));
+    expect(controller.debug.beforeTxnContextCreateHook, same(txnCreateHook));
+
+    controller.debug.beforeInvariantPrecheckHook = null;
+    controller.debug.beforeSpatialPrepareCommitHook = null;
+    controller.debug.beforeTxnContextCreateHook = null;
+
+    expect(controller.debug.beforeInvariantPrecheckHook, isNull);
+    expect(controller.debug.beforeSpatialPrepareCommitHook, isNull);
+    expect(controller.debug.beforeTxnContextCreateHook, isNull);
+  });
+
   test(
     'invariant pre-check failure in state-change branch keeps store and effects unchanged',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -127,7 +197,7 @@ void main() {
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
       final beforeVisual = controller.visualRevision;
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeSelection = controller.selectedNodeIds;
 
       final signals = <Object>[];
@@ -139,12 +209,12 @@ void main() {
         notifications = notifications + 1;
       });
 
-      controller.debugBeforeInvariantPrecheckHook = () {
+      controller.debug.beforeInvariantPrecheckHook = () {
         throw StateError('forced invariant pre-check failure');
       };
 
       expect(
-        () => controller.write<void>((writer) {
+        () => controller.writeWithSceneWriter<void>((writer) {
           writer.writeSelectionReplace(const <NodeId>{'r1'});
           writer.writeSelectionTranslate(const Offset(10, 0));
           writer.writeSignalEnqueue(type: 'will.not.emit');
@@ -167,7 +237,7 @@ void main() {
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
       expect(controller.visualRevision, beforeVisual);
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.selectedNodeIds, beforeSelection);
       expect(signals, isEmpty);
       expect(notifications, 0);
@@ -177,7 +247,7 @@ void main() {
   test(
     'spatial prepare failure in state-change branch keeps store and effects unchanged',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -187,7 +257,7 @@ void main() {
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
       final beforeVisual = controller.visualRevision;
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeSelection = controller.selectedNodeIds;
 
       final signals = <Object>[];
@@ -199,12 +269,12 @@ void main() {
         notifications = notifications + 1;
       });
 
-      controller.debugBeforeSpatialPrepareCommitHook = () {
+      controller.debug.beforeSpatialPrepareCommitHook = () {
         throw StateError('forced spatial prepare failure');
       };
 
       expect(
-        () => controller.write<void>((writer) {
+        () => controller.writeWithSceneWriter<void>((writer) {
           writer.writeSelectionReplace(const <NodeId>{'r1'});
           writer.writeSelectionTranslate(const Offset(10, 0));
           writer.writeSignalEnqueue(type: 'will.not.emit');
@@ -227,7 +297,7 @@ void main() {
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
       expect(controller.visualRevision, beforeVisual);
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.selectedNodeIds, beforeSelection);
       expect(signals, isEmpty);
       expect(notifications, 0);
@@ -237,12 +307,12 @@ void main() {
   test(
     'invariant pre-check failure in signals-only branch keeps commit and effects unchanged',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
 
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeEpoch = controller.controllerEpoch;
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
@@ -257,19 +327,19 @@ void main() {
         notifications = notifications + 1;
       });
 
-      controller.debugBeforeInvariantPrecheckHook = () {
+      controller.debug.beforeInvariantPrecheckHook = () {
         throw StateError('forced invariant pre-check failure');
       };
 
       expect(
-        () => controller.write<void>((writer) {
+        () => controller.writeWithSceneWriter<void>((writer) {
           writer.writeSignalEnqueue(type: 'signals-only.fail');
         }),
         throwsStateError,
       );
       await pumpEventQueue(times: 2);
 
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.controllerEpoch, beforeEpoch);
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
@@ -279,35 +349,147 @@ void main() {
     },
   );
 
+  test(
+    'commit plan rejects invalid runtime node state before applying committed store',
+    () {
+      final store = SceneStore(
+        sceneDoc: txnSceneFromSnapshot(twoRectSnapshot()),
+      );
+      final originalScene = store.sceneDoc;
+      final originalCommitRevision = store.commitRevision;
+      final invalidScene = txnCloneScene(store.sceneDoc);
+      invalidScene.layers.single.nodes[0] = _RawTransformRectNode(
+        id: 'r1',
+        rawTransform: const Transform2D(
+          a: double.infinity,
+          b: 0,
+          c: 0,
+          d: 1,
+          tx: 0,
+          ty: 0,
+        ),
+      );
+
+      final plan = ControllerStateCommitPlan(
+        changeSet: ChangeSet()
+          ..txnMarkBoundsChanged()
+          ..txnTrackUpdated('r1'),
+        initialPhases: const <String>[],
+        committedStoreState: CommittedStoreState(
+          scene: invalidScene,
+          selectedNodeIds: store.selectedNodeIds,
+          allNodeIds: txnCollectNodeIds(invalidScene),
+          nodeLocator: txnBuildNodeLocator(invalidScene),
+          idGeneratorState: store.idGeneratorState,
+          revisionState: store.revisionState,
+          controllerEpoch: store.controllerEpoch,
+          structuralRevision: store.structuralRevision,
+          selectionRevision: store.selectionRevision,
+          boundsRevision: store.boundsRevision + 1,
+          visualRevision: store.visualRevision + 1,
+          commitRevision: store.commitRevision + 1,
+        ),
+      );
+
+      expect(
+        () => executeControllerCommitPlan(
+          plan: plan,
+          context: SceneControllerCommitExecutionContext(
+            store: store,
+            signalsBuffer: SignalsBuffer(),
+            repaintFlag: RepaintFlag(),
+            spatialIndexCache: SpatialIndexCache(),
+            debugState: SceneControllerCommitDebugState(),
+          ),
+        ),
+        throwsStateError,
+      );
+
+      expect(identical(store.sceneDoc, originalScene), isTrue);
+      expect(store.commitRevision, originalCommitRevision);
+    },
+  );
+
+  test(
+    'commit plan rejects structural overflow before applying committed store',
+    () {
+      final store = SceneStore(
+        sceneDoc: txnSceneFromSnapshot(twoRectSnapshot()),
+      );
+      final originalScene = store.sceneDoc;
+      final originalCommitRevision = store.commitRevision;
+      final invalidScene = txnCloneScene(store.sceneDoc);
+      invalidScene.layers.add(ContentLayer(id: 'layer-overflow'));
+      for (
+        var index = invalidScene.layers.length;
+        index <= kMaxContentLayersPerScene;
+        index++
+      ) {
+        invalidScene.layers.add(ContentLayer(id: 'layer-overflow-$index'));
+      }
+
+      final plan = ControllerStateCommitPlan(
+        changeSet: ChangeSet()..structuralChanged = true,
+        initialPhases: const <String>[],
+        committedStoreState: CommittedStoreState(
+          scene: invalidScene,
+          selectedNodeIds: store.selectedNodeIds,
+          allNodeIds: txnCollectNodeIds(invalidScene),
+          nodeLocator: txnBuildNodeLocator(invalidScene),
+          idGeneratorState: store.idGeneratorState,
+          revisionState: store.revisionState,
+          controllerEpoch: store.controllerEpoch,
+          structuralRevision: store.structuralRevision + 1,
+          selectionRevision: store.selectionRevision,
+          boundsRevision: store.boundsRevision,
+          visualRevision: store.visualRevision + 1,
+          commitRevision: store.commitRevision + 1,
+        ),
+      );
+
+      expect(
+        () => executeControllerCommitPlan(
+          plan: plan,
+          context: SceneControllerCommitExecutionContext(
+            store: store,
+            signalsBuffer: SignalsBuffer(),
+            repaintFlag: RepaintFlag(),
+            spatialIndexCache: SpatialIndexCache(),
+            debugState: SceneControllerCommitDebugState(),
+          ),
+        ),
+        throwsStateError,
+      );
+
+      expect(identical(store.sceneDoc, originalScene), isTrue);
+      expect(store.commitRevision, originalCommitRevision);
+    },
+  );
+
   test('initialSnapshot rejects malformed snapshots with SceneDataException', () {
     final malformedCases =
         <({SceneSnapshot snapshot, String field, String expectedMessage})>[
           (
-            snapshot: SceneSnapshot(
-              backgroundLayer: BackgroundLayerSnapshot(
-                nodes: const <NodeSnapshot>[
-                  RectNodeSnapshot(id: 'dup', size: Size(1, 1)),
-                ],
-              ),
-              layers: <ContentLayerSnapshot>[
-                ContentLayerSnapshot(
-                  id: 'layer-auto-1',
-                  nodes: const <NodeSnapshot>[
-                    RectNodeSnapshot(id: 'dup', size: Size(2, 2)),
-                  ],
-                ),
-              ],
-            ),
+            snapshot: duplicateNodeSnapshotFromInternalBypass(),
             field: 'layers[0].nodes[0].id',
             expectedMessage: 'Must be unique across scene layers.',
           ),
           (
-            snapshot: SceneSnapshot(
+            snapshot: sceneSnapshotFromValidated(
               layers: <ContentLayerSnapshot>[
-                ContentLayerSnapshot(
+                contentLayerSnapshotFromValidated(
                   id: 'layer-auto-2',
-                  nodes: const <NodeSnapshot>[
-                    PathNodeSnapshot(id: 'p1', svgPathData: 'not-a-path'),
+                  nodes: <NodeSnapshot>[
+                    pathNodeSnapshotFromValidated(
+                      common: nodeSnapshotCommonFieldsFromValidated(id: 'p1'),
+                      fields: (
+                        svgPathData: 'not-a-path',
+                        fillColor: null,
+                        strokeColor: null,
+                        strokeWidth: 0,
+                        fillRule: PathFillRule.nonZero,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -317,8 +499,12 @@ void main() {
                 'Field layers[0].nodes[0].svgPathData must be valid SVG path data.',
           ),
           (
-            snapshot: SceneSnapshot(
-              palette: ScenePaletteSnapshot(penColors: const <Color>[]),
+            snapshot: materializeSceneSnapshot(
+              SceneSnapshotBacking(
+                palette: ScenePaletteSnapshotBacking(
+                  penColors: const <Color>[],
+                ),
+              ),
             ),
             field: 'palette.penColors',
             expectedMessage: 'Field palette.penColors must not be empty.',
@@ -327,7 +513,7 @@ void main() {
 
     for (final malformed in malformedCases) {
       expect(
-        () => SceneControllerCore(initialSnapshot: malformed.snapshot),
+        () => SceneStoreController(initialSnapshot: malformed.snapshot),
         throwsA(
           predicate(
             (e) =>
@@ -343,7 +529,7 @@ void main() {
   test(
     'writeReplaceScene rejects malformed snapshot without state changes or effects',
     () async {
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: twoRectSnapshot(),
       );
       addTearDown(controller.dispose);
@@ -357,7 +543,7 @@ void main() {
       final beforeStructural = controller.structuralRevision;
       final beforeBounds = controller.boundsRevision;
       final beforeVisual = controller.visualRevision;
-      final beforeCommit = controller.debugCommitRevision;
+      final beforeCommit = controller.debug.currentCommitRevision;
       final beforeSelection = controller.selectedNodeIds;
 
       final signals = <Object>[];
@@ -369,21 +555,28 @@ void main() {
         notifications = notifications + 1;
       });
 
-      final malformed = SceneSnapshot(
+      final malformed = sceneSnapshotFromValidated(
         layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
+          contentLayerSnapshotFromValidated(
             id: 'layer-auto-3',
-            nodes: const <NodeSnapshot>[
-              RectNodeSnapshot(
-                id: 'bad',
-                size: Size(10, 10),
-                transform: Transform2D(
-                  a: double.infinity,
-                  b: 0,
-                  c: 0,
-                  d: 1,
-                  tx: 0,
-                  ty: 0,
+            nodes: <NodeSnapshot>[
+              rectNodeSnapshotFromValidated(
+                common: nodeSnapshotCommonFieldsFromValidated(
+                  id: 'bad',
+                  transform: const Transform2D(
+                    a: double.infinity,
+                    b: 0,
+                    c: 0,
+                    d: 1,
+                    tx: 0,
+                    ty: 0,
+                  ),
+                ),
+                fields: (
+                  size: const Size(10, 10),
+                  fillColor: null,
+                  strokeColor: null,
+                  strokeWidth: 0,
                 ),
               ),
             ],
@@ -418,10 +611,21 @@ void main() {
       expect(controller.structuralRevision, beforeStructural);
       expect(controller.boundsRevision, beforeBounds);
       expect(controller.visualRevision, beforeVisual);
-      expect(controller.debugCommitRevision, beforeCommit);
+      expect(controller.debug.currentCommitRevision, beforeCommit);
       expect(controller.selectedNodeIds, beforeSelection);
       expect(signals, isEmpty);
       expect(notifications, 0);
     },
   );
+}
+
+final class _RawTransformRectNode extends RectNode {
+  _RawTransformRectNode({required super.id, required Transform2D rawTransform})
+    : _rawTransform = rawTransform,
+      super(size: const Size(10, 10));
+
+  final Transform2D _rawTransform;
+
+  @override
+  Transform2D get transform => _rawTransform;
 }

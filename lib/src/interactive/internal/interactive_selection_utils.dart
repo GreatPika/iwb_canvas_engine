@@ -1,47 +1,32 @@
 import 'dart:ui';
 
-import '../../model/document.dart';
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
+import '../interaction_eligibility_policy.dart' as eligibility_policy;
 
+// Transitional compatibility wrappers for move/draw session code paths.
+// Step 11.3 moves ownership of interactive admissibility to
+// interaction_eligibility_policy.dart; session-local adoption stays with 11.4
+// and 11.5.
 List<NodeSnapshot> selectedTransformableNodesInSnapshotOrder({
   required SceneSnapshot snapshot,
   required Set<NodeId> selected,
 }) {
-  if (selected.isEmpty) return const <NodeSnapshot>[];
-
-  final nodes = <NodeSnapshot>[];
-  for (final layer in snapshot.layers) {
-    for (final node in layer.nodes) {
-      if (!selected.contains(node.id)) continue;
-      if (!node.isTransformable || node.isLocked) continue;
-      nodes.add(node);
-    }
-  }
-  return nodes;
+  return eligibility_policy.selectedTransformableNodesInSnapshotOrder(
+    snapshot: snapshot,
+    selected: selected,
+  );
 }
 
 List<NodeId> deletableSelectedNodeIdsInSnapshot({
   required SceneSnapshot snapshot,
   required Set<NodeId> selected,
 }) {
-  if (selected.isEmpty) return const <NodeId>[];
-
-  final ids = <NodeId>[];
-  for (final layer in snapshot.layers) {
-    for (final node in layer.nodes) {
-      if (!selected.contains(node.id)) continue;
-      if (!node.isDeletable) continue;
-      ids.add(node.id);
-    }
-  }
-  return ids;
+  return eligibility_policy.deletableSelectedNodeIdsInSnapshot(
+    snapshot: snapshot,
+    selected: selected,
+  );
 }
 
 Offset centerWorldForNodeSnapshots(List<NodeSnapshot> nodes) {
-  Rect? bounds;
-  for (final nodeSnapshot in nodes) {
-    final boundsWorld = txnNodeFromSnapshot(nodeSnapshot).boundsWorld;
-    bounds = bounds == null ? boundsWorld : bounds.expandToInclude(boundsWorld);
-  }
-  return bounds?.center ?? Offset.zero;
+  return eligibility_policy.centerWorldForNodeSnapshots(nodes);
 }

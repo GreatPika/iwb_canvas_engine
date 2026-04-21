@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import '../../core/action_events.dart';
-import '../../public/snapshot.dart';
+import '../../contract/snapshot.dart';
 
 class InteractiveEventDispatcher {
   final StreamController<ActionCommitted> _actions =
@@ -10,10 +12,20 @@ class InteractiveEventDispatcher {
       StreamController<EditTextRequested>.broadcast();
 
   int _actionCounter = 0;
+  int _timestampCursorMs = -1;
   bool _isDisposed = false;
 
   Stream<ActionCommitted> get actions => _actions.stream;
   Stream<EditTextRequested> get editTextRequests => _editTextRequests.stream;
+
+  int resolveTimestampMs(int? hintTimestampMs) {
+    final next = _timestampCursorMs + 1;
+    final resolved = hintTimestampMs == null || hintTimestampMs < next
+        ? next
+        : hintTimestampMs;
+    _timestampCursorMs = resolved;
+    return resolved;
+  }
 
   void emitAction(
     ActionType type,
@@ -45,3 +57,41 @@ class InteractiveEventDispatcher {
     _editTextRequests.close();
   }
 }
+
+class InteractiveNotifyScheduler {
+  InteractiveNotifyScheduler({required this.notifyListeners});
+
+  final VoidCallback notifyListeners;
+
+  bool _notifyScheduled = false;
+  bool _notifyPending = false;
+  bool _isDisposed = false;
+
+  void schedule() {
+    if (_isDisposed) {
+      return;
+    }
+    _notifyPending = true;
+    if (_notifyScheduled) {
+      return;
+    }
+    _notifyScheduled = true;
+
+    scheduleMicrotask(() {
+      _notifyScheduled = false;
+      if (_isDisposed || !_notifyPending) {
+        return;
+      }
+      _notifyPending = false;
+      notifyListeners();
+    });
+  }
+
+  void dispose() {
+    _isDisposed = true;
+    _notifyPending = false;
+    _notifyScheduled = false;
+  }
+}
+
+typedef InteractiveRepaintChange = ({bool scene, bool overlay});

@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+// INV:INV-ENG-SCENE-PAINTER-MODULE-BOUNDARY
+
 String _extractMethodBody({
   required String source,
   required String methodStart,
@@ -45,60 +47,236 @@ String _extractMethodBody({
 }
 
 void main() {
-  test(
-    '_nodeBoundsWorld delegates world bounds to RenderGeometryCache only',
-    () {
-      final source = File(
-        'lib/src/render/scene_painter.dart',
-      ).readAsStringSync();
-      final body = _extractMethodBody(
-        source: source,
-        methodStart: 'Rect _nodeBoundsWorld(',
-      );
+  test('scene painter modules no longer use part coupling', () {
+    final painterModules = Directory('lib/src/render')
+        .listSync()
+        .whereType<File>()
+        .where((file) => file.path.contains('scene_painter'))
+        .where((file) => file.path.endsWith('.dart'));
 
-      expect(
-        body,
-        contains('final bounds = _geometryCache.get(node).worldBounds;'),
-      );
-      expect(body, isNot(contains('parseSvgPathData')));
-      expect(body, isNot(contains('buildLocalPath')));
-      expect(body, isNot(contains('_buildPathNode')));
-      expect(body, isNot(contains('getBounds(')));
-    },
-  );
-
-  test('_drawPathNode reads localPath from RenderGeometryCache only', () {
-    final source = File('lib/src/render/scene_painter.dart').readAsStringSync();
-    final body = _extractMethodBody(
-      source: source,
-      methodStart: 'void _drawPathNode(',
+    final partDirective = RegExp(
+      "^part 'scene_painter_|^part of 'scene_painter",
+      multiLine: true,
     );
 
-    expect(
-      body,
-      contains('final localPath = _geometryCache.get(node).localPath;'),
-    );
-    expect(body, isNot(contains('parseSvgPathData')));
-    expect(body, isNot(contains('buildLocalPath')));
-    expect(body, isNot(contains('_buildPathNode')));
+    for (final module in painterModules) {
+      final source = module.readAsStringSync();
+      expect(partDirective.hasMatch(source), isFalse, reason: module.path);
+    }
+  });
+
+  test('scene painter shell stays orchestration-only', () {
+    final shellSource = File(
+      'lib/src/render/scene_painter_shell.dart',
+    ).readAsStringSync();
+    final backgroundSource = File(
+      'lib/src/render/scene_painter_background.dart',
+    ).readAsStringSync();
+
+    expect(shellSource, contains('class ScenePainterShell'));
+    expect(shellSource, contains('backgroundOwner.paint('));
+    expect(shellSource, isNot(contains('cache/scene_')));
+    expect(shellSource, isNot(contains('render_geometry_cache.dart')));
+    expect(shellSource, isNot(contains('scene_grid_renderer.dart')));
+    expect(shellSource, isNot(contains('ScenePainterFrameOwner(')));
+    expect(shellSource, isNot(contains('ScenePainterNodeRenderer(')));
+    expect(shellSource, isNot(contains('ScenePainterSelectionRenderer(')));
+    expect(backgroundSource, contains('class ScenePainterBackgroundOwner'));
   });
 
   test(
-    '_drawSelectionForNode uses worldBounds-based selection for box nodes',
+    'frame owner resolves viewport-first paint candidates, per-node visibility rects, and shared text layout before geometry lookup',
     () {
       final source = File(
-        'lib/src/render/scene_painter.dart',
+        'lib/src/render/scene_painter_frame.dart',
+      ).readAsStringSync();
+      final createBody = _extractMethodBody(
+        source: source,
+        methodStart:
+            'ScenePainterPaintFrame create(Size size, SceneViewFrameRead frameRead)',
+      );
+      final body = _extractMethodBody(
+        source: source,
+        methodStart: 'ScenePainterResolvedNodePaintData resolveNodePaintData(',
+      );
+
+      expect(source, contains('class ScenePainterVisibilityBudget'));
+      expect(
+        createBody,
+        contains('final visibilityBudget = ScenePainterVisibilityBudget('),
+      );
+      expect(
+        createBody,
+        contains('hasSelectedNodes: frameRead.selectedNodeIds.isNotEmpty,'),
+      );
+      expect(createBody, contains('final rawViewRect = Rect.fromLTWH('));
+      expect(
+        createBody,
+        contains('final viewRect = visibilityBudget.applyTo(rawViewRect);'),
+      );
+      expect(createBody, contains('paintPlan: renderState.preparePaintPlan('));
+      expect(createBody, contains('frameRead,'));
+      expect(createBody, contains('paintPlan: renderState.preparePaintPlan('));
+      expect(createBody, contains('viewportRect: rawViewRect,'));
+      expect(createBody, contains('visibilityRect: viewRect,'));
+      expect(createBody, contains('selectedIds: frameRead.selectedNodeIds,'));
+      expect(
+        createBody,
+        isNot(contains('List<ScenePaintCandidate>.unmodifiable(')),
+      );
+      expect(createBody, contains('paintPlan: renderState.preparePaintPlan('));
+      expect(source, isNot(contains('scenePainterCullPadding')));
+      expect(body, contains('final textLayout = switch (node) {'));
+      expect(
+        body,
+        contains('geometryCache.get(node, resolvedTextLayout: textLayout)'),
+      );
+      expect(body, contains('textLayout: textLayout,'));
+      expect(body, isNot(contains('parseSvgPathData')));
+      expect(body, isNot(contains('buildLocalPath')));
+      expect(body, isNot(contains('_buildPathNode')));
+    },
+  );
+
+  test('scene painter captures one atomic frame read before shell paint', () {
+    final source = File('lib/src/render/scene_painter.dart').readAsStringSync();
+
+    expect(
+      source,
+      contains('_shell.paint(canvas, size, controller.captureFrameRead());'),
+    );
+  });
+
+  test(
+    'node renderer consumes ordered frame paint candidates instead of snapshot scans',
+    () {
+      final source = File(
+        'lib/src/render/scene_painter_node_renderer.dart',
       ).readAsStringSync();
       final body = _extractMethodBody(
         source: source,
-        methodStart: 'void _drawSelectionForNode(',
+        methodStart: 'void _drawVisibleNodes(',
       );
 
-      expect(body, contains('case ImageNodeSnapshot image:'));
-      expect(body, contains('case TextNodeSnapshot text:'));
-      expect(body, contains('case RectNodeSnapshot rect:'));
-      expect(body, contains('_drawWorldBoundsSelection('));
-      expect(body, isNot(contains('_drawBoxSelection(')));
+      expect(source, contains('class ScenePainterNodeRenderer'));
+      expect(source, contains('frame.paintPlan.candidateCount'));
+      expect(source, contains('frame.paintPlan.candidateAt(index)'));
+      expect(
+        body,
+        contains('final nodeViewRect = frame.visibilityRectForNode('),
+      );
+      expect(
+        body,
+        contains('candidate.paintBoundsWorld.overlaps(nodeViewRect)'),
+      );
+      expect(
+        body,
+        contains('final resolvedNode = resolveNodePaintData(node);'),
+      );
+      expect(
+        body,
+        contains('_canPaintNodeInFrame(resolvedNode, nodeViewRect)'),
+      );
+      expect(
+        source,
+        isNot(contains('_canPaintNodeInFrame(resolvedNode, frame.viewRect)')),
+      );
+      expect(source, isNot(contains('snapshot.backgroundLayer.nodes')));
+      expect(source, isNot(contains('for (final layer in snapshot.layers)')));
+      expect(source, contains('Path? localPath'));
+      expect(source, isNot(contains('SceneTextLayoutCache')));
+      expect(source, isNot(contains('buildSceneTextPainter(')));
+      final pathBody = _extractMethodBody(
+        source: source,
+        methodStart: 'void _drawPathNode(',
+      );
+
+      expect(pathBody, isNot(contains('_geometryCache.get(')));
     },
   );
+
+  test('committed paint enumeration uses scoped shared spatial query', () {
+    final runtimeSource = File(
+      'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
+    ).readAsStringSync();
+    final stageSource = File(
+      'lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart',
+    ).readAsStringSync();
+    final runtimeBody = _extractMethodBody(
+      source: runtimeSource,
+      methodStart: 'ScenePreparedPaintPlan preparePaintPlan(',
+    );
+    expect(
+      runtimeBody,
+      contains('return _paintCandidateStage.prepareCommittedPaintPlan('),
+    );
+    expect(runtimeBody, isNot(contains('queryPaintCandidates(')));
+
+    final stageBody = _extractMethodBody(
+      source: stageSource,
+      methodStart: 'ScenePreparedPaintPlan prepareCommittedPaintPlan({',
+    );
+    final ordinaryBody = _extractMethodBody(
+      source: stageSource,
+      methodStart: 'void _stageOrdinaryCandidates({',
+    );
+    final supplementBody = _extractMethodBody(
+      source: stageSource,
+      methodStart: 'void _stageSelectedSupplements({',
+    );
+
+    expect(stageBody, contains('_stageOrdinaryCandidates('));
+    expect(stageBody, contains('_stageSelectedSupplements('));
+    expect(
+      supplementBody,
+      contains('_selectedOrderCache.orderedSelectedTokens('),
+    );
+    expect(supplementBody, contains('selectionRevision: selectionRevision,'));
+    expect(supplementBody, contains('structuralRevision: structuralRevision,'));
+    expect(supplementBody, contains('for (final token in selectedTokens)'));
+    expect(
+      supplementBody,
+      isNot(contains('for (final nodeId in selectedNodeIds)')),
+    );
+    expect(supplementBody, isNot(contains('.sort(')));
+    expect(
+      ordinaryBody,
+      contains(
+        'scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,',
+      ),
+    );
+    expect(ordinaryBody, contains('_store.resolveSpatialCandidateSnapshot(('));
+    expect(
+      ordinaryBody,
+      contains('paintBoundsWorld: candidate.paintBoundsWorld,'),
+    );
+    expect(stageSource, isNot(contains('snapshot.backgroundLayer.nodes')));
+    expect(
+      stageSource,
+      isNot(contains('resolveSnapshotNodeById(candidate.nodeId)')),
+    );
+    expect(ordinaryBody, isNot(contains('_snapshotPaintBoundsWorld(')));
+    expect(ordinaryBody, isNot(contains('nodeSnapshotPaintBoundsWorld(')));
+    expect(ordinaryBody, isNot(contains('nodePaintBoundsWorld(')));
+    expect(stageBody, isNot(contains('.sort(')));
+  });
+
+  test('selection rendering uses resolved frame data for box selections', () {
+    final source = File(
+      'lib/src/render/scene_painter_selection.dart',
+    ).readAsStringSync();
+    expect(source, contains('class ScenePainterSelectionRenderer'));
+    final body = _extractMethodBody(
+      source: source,
+      methodStart: 'void _drawSelectionForNode(',
+    );
+
+    expect(body, contains('case ImageNodeSnapshot():'));
+    expect(body, contains('case TextNodeSnapshot():'));
+    expect(body, contains('case RectNodeSnapshot():'));
+    expect(body, contains('_drawWorldBoundsSelection('));
+    expect(body, isNot(contains('_drawBoxSelection(')));
+    expect(body, isNot(contains('_nodePreviewOffset(')));
+    expect(body, isNot(contains('geometryCache.get(')));
+  });
 }

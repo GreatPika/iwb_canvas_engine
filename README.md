@@ -3,38 +3,57 @@
 [![pub package](https://img.shields.io/pub/v/iwb_canvas_engine.svg)](https://pub.dev/packages/iwb_canvas_engine)
 [![CI](https://github.com/GreatPika/iwb_canvas_engine/actions/workflows/ci.yaml/badge.svg)](https://github.com/GreatPika/iwb_canvas_engine/actions/workflows/ci.yaml)
 
-`iwb_canvas_engine` is a Flutter canvas engine for whiteboard-style products. It
-provides an immutable scene model, rendering, interactive input handling, and
-JSON serialization. It does not include app UI, persistence, or undo/redo
-storage.
+`iwb_canvas_engine` is a Flutter-first canvas engine for whiteboard-style
+products. It provides an immutable scene document model, a controller + widget
+runtime, transactional scene mutations, and JSON import/export.
 
-- Current package version: `5.0.1`
-- Single public import: `package:iwb_canvas_engine/iwb_canvas_engine.dart`
-- JSON contract: write `schemaVersion = 5`, read `{5}`
-- Demo: https://greatpika.github.io/iwb_canvas_engine/demo/
-- Hosted API docs: https://greatpika.github.io/iwb_canvas_engine/api/
-- Full integration reference: `API_GUIDE.md`
+This README describes the checked-in main branch. For published release history
+and unreleased mainline changes, see [CHANGELOG.md](CHANGELOG.md).
 
-## What it provides
+## What the package includes
 
-- Deterministic scene rendering with a dedicated `backgroundLayer` plus ordered
-  content `layers`.
-- Public runtime aliases `SceneController` and `SceneView` for move, select,
-  draw, and edit flows.
-- Transactional write API via `SceneWriteTxn`.
-- JSON import/export with strict validation and canonicalization.
+- Immutable scene documents built around `SceneSnapshot`, content layers, a
+  dedicated `backgroundLayer`, and typed node families.
+- A public runtime rooted at `SceneController`, with controller-owned
+  capabilities exposed through `controller.scene`, `controller.selection`, and
+  `controller.interaction`.
+- A ready-to-use Flutter widget, `SceneView`, for rendering and interactive
+  pointer routing.
+- Transactional scene edits through `SceneWriteTxn`.
+- Strict import/export and canonicalization through `SceneBuilder`,
+  `encodeScene*`, and `decodeScene*`.
+- A stable machine-readable error contract through `SceneDataException` and
+  `SceneDataErrorCode`.
 
-## What it does not provide
+## What the package does not include
 
-- Toolbars, dialogs, side panels, or product-specific UI.
-- Storage, sync, or backend collaboration.
-- App-level history management.
+- Toolbars, dialogs, inspectors, or other product-specific UI.
+- Persistence, sync, collaboration, or backend logic.
+- App-level undo/redo storage.
 
-## Install
+## Requirements
+
+- Dart: `^3.10.4`
+- Flutter: `>=3.38.0`
+
+This package is not a pure Dart engine. Public contract types use Flutter and
+`dart:ui` primitives.
+
+## Installation
 
 ```sh
 flutter pub add iwb_canvas_engine
 ```
+
+## Supported import
+
+```dart
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+```
+
+Do not import from `package:iwb_canvas_engine/src/**`. Everything under
+`src/**` is internal implementation detail and is not a supported integration
+contract.
 
 ## Quick start
 
@@ -55,13 +74,14 @@ class _CanvasScreenState extends State<CanvasScreen> {
   @override
   void initState() {
     super.initState();
+
     controller = SceneController(
       initialSnapshot: SceneSnapshot(
         layers: [ContentLayerSnapshot(id: 'layer-0')],
       ),
     );
 
-    controller.addNode(
+    controller.scene.addNode(
       RectNodeSpec(
         id: 'rect-1',
         size: const Size(160, 100),
@@ -83,27 +103,53 @@ class _CanvasScreenState extends State<CanvasScreen> {
 }
 ```
 
-## Runtime contracts worth knowing
+## Core concepts
 
-- `TextNode.size` is derived metadata. Public `TextNodeSpec` and
-  `TextNodePatch` do not expose writable `size`.
-- `backgroundLayer` is always distinct from content `layers`; content writes use
-  `LayerId`.
-- `ensureLayer(...)` and `writeLayerEnsure(...)` are the supported APIs for
-  explicit content-layer creation.
-- `write(...)` is synchronous-only. Returning a `Future` throws `StateError`.
-- `actions`, `editTextRequests`, and `ChangeNotifier` updates are asynchronous;
-  listener notifications are microtask-deferred and coalesced.
-- `setPointerSettings(...)` is applied live by `SceneView`; active gestures keep
-  their current settings until `up` or `cancel`.
+- `SceneSnapshot` is the immutable document boundary exchanged with app code.
+- Public scene data has two layer families: one dedicated `backgroundLayer`
+  plus ordered content `layers`.
+- Supported node families are image, text, stroke, line, rect, and path.
+- Use `NodeSpec` to create nodes and `NodePatch` + `PatchField` to apply
+  partial updates.
+- Use `SceneController` for runtime ownership, `SceneView` for the Flutter host
+  surface, and `SceneBuilder` / `encodeScene*` / `decodeScene*` for import and
+  serialization.
+- Use `SceneDataException.code`, `path`, and `details` as the stable
+  machine-readable failure contract when scene or JSON data is invalid.
 
-## Where to look next
+## Serialization and validation
 
-- `API_GUIDE.md` for public API details, validation rules, and migration notes.
-- `ARCHITECTURE.md` for module layout, runtime data flow, and invariants.
-- `CHANGELOG.md` for release history and unreleased changes.
-- `example/README.md` for the demo app scope.
+- Current mainline JSON write version: `schemaVersion = 7`
+- Current mainline JSON read set: `{7}`
+- `SceneBuilder.buildFromSnapshot(...)` and `SceneBuilder.buildFromJson(...)`
+  validate and canonicalize data without requiring a controller.
+- `encodeScene(...)` / `encodeSceneToJson(...)` validate before serializing.
+- `decodeScene(...)` / `decodeSceneFromJson(...)` validate before returning a
+  `SceneSnapshot`.
+- Text nodes use derived bounds. Current schema payloads require explicit
+  `textDirection` and must not include legacy stored text `size` metadata.
+
+## Common integration points
+
+- Listen to `controller.actions` for committed action events that can feed your
+  app-level history or analytics.
+- Listen to `controller.editTextRequests` to open app-owned text editing UI.
+- Pass `imageResolver` to `SceneView` when the scene contains image nodes.
+- Call `controller.scene.notifySceneChanged()` when host-owned visual resources
+  change without a scene mutation, for example when an image backing store is
+  refreshed.
+
+## Documentation
+
+- [API_GUIDE.md](API_GUIDE.md) — public API reference and integration rules.
+- [ARCHITECTURE.md](ARCHITECTURE.md) — repository architecture, invariants, and
+  ownership boundaries.
+- [CHANGELOG.md](CHANGELOG.md) — published release history plus current
+  unreleased changes.
+- [example/README.md](example/README.md) — example app scope and run
+  instructions.
+- Hosted package docs: https://greatpika.github.io/iwb_canvas_engine/
 
 ## License
 
-MIT. See `LICENSE`.
+MIT. See [LICENSE](LICENSE).

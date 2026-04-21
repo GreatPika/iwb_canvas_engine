@@ -1,0 +1,4 @@
+interface:
+  display_name: "README Sync"
+  short_description: "Keep the package landing page concise and aligned with the checked-in public contract."
+  default_prompt: "Audit and update README.md so it matches the current package scope, supported import, quick start, and onboarding surface."

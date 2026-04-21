@@ -1,11 +1,15 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_controller.dart';
-import 'package:iwb_canvas_engine/src/core/transform2d.dart';
-import 'package:iwb_canvas_engine/src/public/node_patch.dart';
-import 'package:iwb_canvas_engine/src/public/patch_field.dart';
-import 'package:iwb_canvas_engine/src/public/snapshot.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/node_patch.dart';
+import 'package:iwb_canvas_engine/src/contract/patch_field.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
+import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
+import 'package:iwb_canvas_engine/src/core/text_layout.dart';
+import 'package:iwb_canvas_engine/src/render/render_geometry_builder.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 
 // INV:INV-ENG-RENDER-GEOMETRY-KEY-STABLE
@@ -15,9 +19,26 @@ void main() {
     expect(() => RenderGeometryCache(maxEntries: -1), throwsArgumentError);
   });
 
+  test(
+    'render geometry builder consumes resolved text layout payloads only',
+    () {
+      final source = File(
+        'lib/src/render/render_geometry_builder.dart',
+      ).readAsStringSync();
+
+      expect(source, contains('ResolvedTextLayout? resolvedTextLayout'));
+      expect(
+        source,
+        contains('centeredRectLocalBounds(resolvedTextLayout.measuredSize)'),
+      );
+      expect(source, isNot(contains('_measureTextNodeSnapshot')));
+      expect(source, isNot(contains('.measure()')));
+    },
+  );
+
   test('RenderGeometryCache reuses entry for unchanged node geometry', () {
     final cache = RenderGeometryCache();
-    const node = RectNodeSnapshot(
+    final node = RectNodeSnapshot(
       id: 'rect-1',
       size: Size(20, 10),
       strokeColor: Color(0xFF000000),
@@ -33,16 +54,58 @@ void main() {
     expect(cache.debugSize, 1);
   });
 
+  test('RenderGeometryCache requires resolved text layout for text nodes', () {
+    final cache = RenderGeometryCache();
+    final node = _textNode();
+
+    expect(
+      () => cache.get(node),
+      throwsA(
+        isA<ArgumentError>().having(
+          (error) => error.name,
+          'name',
+          'resolvedTextLayout',
+        ),
+      ),
+    );
+  });
+
+  test('RenderGeometryCache text geometry uses provided resolved layout', () {
+    final cache = RenderGeometryCache();
+    final node = _textNode(
+      transform: Transform2D.translation(const Offset(40, 30)),
+      maxWidth: 90,
+    );
+    final resolvedTextLayout = TextLayoutRequest.forRenderSnapshot(
+      node,
+    ).resolve();
+
+    final entry = cache.get(node, resolvedTextLayout: resolvedTextLayout);
+    final expectedLocalBounds = Rect.fromCenter(
+      center: Offset.zero,
+      width: resolvedTextLayout.measuredSize.width,
+      height: resolvedTextLayout.measuredSize.height,
+    );
+
+    expect(entry.localBounds, expectedLocalBounds);
+    expect(
+      entry.worldBounds,
+      Transform2D.translation(
+        const Offset(40, 30),
+      ).applyToRect(expectedLocalBounds),
+    );
+  });
+
   test(
     'RenderGeometryCache treats same id with different instanceRevision as different entries',
     () {
       final cache = RenderGeometryCache();
-      const oldNode = RectNodeSnapshot(
+      final oldNode = RectNodeSnapshot(
         id: 'reuse-id',
         instanceRevision: 1,
         size: Size(20, 10),
       );
-      const newNode = RectNodeSnapshot(
+      final newNode = RectNodeSnapshot(
         id: 'reuse-id',
         instanceRevision: 2,
         size: Size(20, 10),
@@ -61,52 +124,94 @@ void main() {
   );
 
   test(
-    'RenderGeometryCache hits for equivalent stroke snapshots with stable revision/scalars',
+    'RenderGeometryCache invalidateAll forces rebuild after revision reuse across documents',
     () {
       final cache = RenderGeometryCache();
+      final node = RectNodeSnapshot(
+        id: 'reuse-id',
+        instanceRevision: 1,
+        size: const Size(20, 10),
+      );
+
+      final beforeBoundary = cache.get(node);
+      cache.invalidateAll();
+      final afterBoundary = cache.get(node);
+
+      expect(identical(beforeBoundary, afterBoundary), isFalse);
+      expect(cache.debugBuildCount, 2);
+      expect(cache.debugHitCount, 0);
+      expect(cache.debugSize, 1);
+    },
+  );
+
+  test('RenderGeometryCache hits for equivalent public stroke geometry', () {
+    final cache = RenderGeometryCache();
+    final strokeA = StrokeNodeSnapshot(
+      id: 'stroke-eq',
+      instanceRevision: 7,
+      points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
+      thickness: 3,
+      color: const Color(0xFF000000),
+    );
+    final strokeA2 = StrokeNodeSnapshot(
+      id: 'stroke-eq',
+      instanceRevision: 7,
+      points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
+      thickness: 3,
+      color: const Color(0xFF000000),
+    );
+
+    final entryA = cache.get(strokeA);
+    final entryA2 = cache.get(strokeA2);
+
+    expect(identical(strokeA.points, strokeA2.points), isTrue);
+    expect(identical(entryA, entryA2), isTrue);
+    expect(cache.debugBuildCount, 1);
+    expect(cache.debugHitCount, 1);
+  });
+
+  test(
+    'stroke validity keys stay value-based across equivalent public snapshots',
+    () {
       final strokeA = StrokeNodeSnapshot(
-        id: 'stroke-eq',
+        id: 'stroke-key',
         instanceRevision: 7,
         points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
-        pointsRevision: 11,
         thickness: 3,
         color: const Color(0xFF000000),
       );
-      final strokeA2 = StrokeNodeSnapshot(
-        id: 'stroke-eq',
+      final strokeB = StrokeNodeSnapshot(
+        id: 'stroke-key',
         instanceRevision: 7,
         points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
-        pointsRevision: 11,
         thickness: 3,
-        color: const Color(0xFF000000),
+        color: const Color(0xFF112233),
       );
 
-      final entryA = cache.get(strokeA);
-      final entryA2 = cache.get(strokeA2);
+      final keyA = buildRenderGeometryValidityKey(strokeA);
+      final keyB = buildRenderGeometryValidityKey(strokeB);
 
-      expect(identical(entryA, entryA2), isTrue);
-      expect(cache.debugBuildCount, 1);
-      expect(cache.debugHitCount, 1);
+      expect(identical(strokeA.points, strokeB.points), isTrue);
+      expect(keyA, keyB);
+      expect(keyA.hashCode, keyB.hashCode);
     },
   );
 
   test(
-    'RenderGeometryCache rebuilds stroke entry when pointsRevision changes',
+    'RenderGeometryCache rebuilds stroke entry when stroke points change',
     () {
       final cache = RenderGeometryCache();
       final strokeA = StrokeNodeSnapshot(
         id: 'stroke-rev',
         instanceRevision: 9,
         points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
-        pointsRevision: 11,
         thickness: 3,
         color: const Color(0xFF000000),
       );
       final strokeChanged = StrokeNodeSnapshot(
         id: 'stroke-rev',
         instanceRevision: 9,
-        points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
-        pointsRevision: 12,
+        points: const <Offset>[Offset(0, 0), Offset(10, 8), Offset(20, 5)],
         thickness: 3,
         color: const Color(0xFF000000),
       );
@@ -120,11 +225,35 @@ void main() {
     },
   );
 
+  test('RenderGeometryCache rebuilds stroke entry when thickness changes', () {
+    final cache = RenderGeometryCache();
+    final strokeA = StrokeNodeSnapshot(
+      id: 'stroke-thickness',
+      instanceRevision: 10,
+      points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
+      thickness: 3,
+      color: const Color(0xFF000000),
+    );
+    final strokeChanged = StrokeNodeSnapshot(
+      id: 'stroke-thickness',
+      instanceRevision: 10,
+      points: const <Offset>[Offset(0, 0), Offset(10, 5), Offset(20, 5)],
+      thickness: 6,
+      color: const Color(0xFF000000),
+    );
+
+    final entryA = cache.get(strokeA);
+    final entryChanged = cache.get(strokeChanged);
+
+    expect(identical(entryA, entryChanged), isFalse);
+    expect(cache.debugBuildCount, 2);
+    expect(cache.debugHitCount, 0);
+  });
+
   test(
     'RenderGeometryCache keeps hit for unchanged stroke across unrelated controller commit',
     () {
-      // pointsRevision monotonicity itself is asserted in scene_controller_test.
-      final controller = SceneControllerCore(
+      final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
           layers: <ContentLayerSnapshot>[
             ContentLayerSnapshot(
@@ -133,11 +262,10 @@ void main() {
                 StrokeNodeSnapshot(
                   id: 's',
                   points: const <Offset>[Offset(0, 0), Offset(10, 0)],
-                  pointsRevision: 3,
                   thickness: 2,
                   color: const Color(0xFF000000),
                 ),
-                const RectNodeSnapshot(id: 'r', size: Size(10, 10)),
+                RectNodeSnapshot(id: 'r', size: Size(10, 10)),
               ],
             ),
           ],
@@ -152,10 +280,7 @@ void main() {
 
       controller.write<void>((writer) {
         writer.writeNodePatch(
-          const RectNodePatch(
-            id: 'r',
-            size: PatchField<Size>.value(Size(20, 20)),
-          ),
+          RectNodePatch(id: 'r', size: PatchField<Size>.value(Size(20, 20))),
         );
       });
 
@@ -170,8 +295,8 @@ void main() {
 
   test('RenderGeometryCache rebuilds when path geometry key changes', () {
     final cache = RenderGeometryCache();
-    const nodeA = PathNodeSnapshot(id: 'path-1', svgPathData: 'M0 0 H10');
-    const nodeB = PathNodeSnapshot(id: 'path-1', svgPathData: 'M0 0 H20');
+    final nodeA = PathNodeSnapshot(id: 'path-1', svgPathData: 'M0 0 H10');
+    final nodeB = PathNodeSnapshot(id: 'path-1', svgPathData: 'M0 0 H20');
 
     final entryA = cache.get(nodeA);
     final entryB = cache.get(nodeB);
@@ -183,13 +308,13 @@ void main() {
 
   test('RenderGeometryCache rect bounds include stroke only when enabled', () {
     final cache = RenderGeometryCache();
-    const withStroke = RectNodeSnapshot(
+    final withStroke = RectNodeSnapshot(
       id: 'rect-with-stroke',
       size: Size(10, 6),
       strokeColor: Color(0xFF000000),
       strokeWidth: 4,
     );
-    const noStroke = RectNodeSnapshot(
+    final noStroke = RectNodeSnapshot(
       id: 'rect-no-stroke',
       size: Size(10, 6),
       strokeWidth: 4,
@@ -204,13 +329,13 @@ void main() {
 
   test('RenderGeometryCache path bounds include stroke only when enabled', () {
     final cache = RenderGeometryCache();
-    const withStroke = PathNodeSnapshot(
+    final withStroke = PathNodeSnapshot(
       id: 'path-with-stroke',
       svgPathData: 'M0 0 H10 V10 H0 Z',
       strokeColor: Color(0xFF000000),
       strokeWidth: 4,
     );
-    const noStroke = PathNodeSnapshot(
+    final noStroke = PathNodeSnapshot(
       id: 'path-no-stroke',
       svgPathData: 'M0 0 H10 V10 H0 Z',
       strokeWidth: 4,
@@ -227,12 +352,12 @@ void main() {
     'RenderGeometryCache ignores strokeWidth key changes when stroke is disabled',
     () {
       final cache = RenderGeometryCache();
-      const nodeA = PathNodeSnapshot(
+      final nodeA = PathNodeSnapshot(
         id: 'path-disabled-stroke',
         svgPathData: 'M0 0 H10 V10 H0 Z',
         strokeWidth: 1,
       );
-      const nodeB = PathNodeSnapshot(
+      final nodeB = PathNodeSnapshot(
         id: 'path-disabled-stroke',
         svgPathData: 'M0 0 H10 V10 H0 Z',
         strokeWidth: 64,
@@ -250,12 +375,12 @@ void main() {
 
   test('RenderGeometryCache rebuilds when path stroke enablement changes', () {
     final cache = RenderGeometryCache();
-    const nodeWithoutStroke = PathNodeSnapshot(
+    final nodeWithoutStroke = PathNodeSnapshot(
       id: 'path-enable-stroke',
       svgPathData: 'M0 0 H10 V10 H0 Z',
       strokeWidth: 4,
     );
-    const nodeWithStroke = PathNodeSnapshot(
+    final nodeWithStroke = PathNodeSnapshot(
       id: 'path-enable-stroke',
       svgPathData: 'M0 0 H10 V10 H0 Z',
       strokeColor: Color(0xFF000000),
@@ -274,7 +399,7 @@ void main() {
 
   test('RenderGeometryCache builds centered path and world bounds', () {
     final cache = RenderGeometryCache();
-    const node = PathNodeSnapshot(
+    final node = PathNodeSnapshot(
       id: 'path-centered',
       svgPathData: 'M0 0 H10 V10 H0 Z',
       strokeColor: Color(0xFF000000),
@@ -293,7 +418,16 @@ void main() {
     'RenderGeometryCache returns safe zero bounds for invalid path data',
     () {
       final cache = RenderGeometryCache();
-      const node = PathNodeSnapshot(id: 'path-invalid', svgPathData: 'invalid');
+      final node = pathNodeSnapshotFromValidated(
+        common: nodeSnapshotCommonFieldsFromValidated(id: 'path-invalid'),
+        fields: (
+          svgPathData: 'invalid',
+          fillColor: null,
+          strokeColor: null,
+          strokeWidth: 0,
+          fillRule: PathFillRule.nonZero,
+        ),
+      );
 
       final entry = cache.get(node);
 
@@ -307,10 +441,17 @@ void main() {
     'RenderGeometryCache returns zero world bounds for non-finite transform',
     () {
       final cache = RenderGeometryCache();
-      final node = RectNodeSnapshot(
-        id: 'rect-non-finite-transform',
-        size: const Size(10, 10),
-        transform: Transform2D(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0),
+      final node = rectNodeSnapshotFromValidated(
+        common: nodeSnapshotCommonFieldsFromValidated(
+          id: 'rect-non-finite-transform',
+          transform: Transform2D(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0),
+        ),
+        fields: (
+          size: const Size(10, 10),
+          fillColor: null,
+          strokeColor: null,
+          strokeWidth: 0,
+        ),
       );
 
       final entry = cache.get(node);
@@ -320,9 +461,29 @@ void main() {
     },
   );
 
+  test(
+    'RenderGeometryCache keeps degenerate finite line geometry world bounds',
+    () {
+      final cache = RenderGeometryCache();
+      final degenerateLine = LineNodeSnapshot(
+        id: 'line-degenerate',
+        start: const Offset(0, 0),
+        end: const Offset(0, 0),
+        thickness: 4,
+        color: const Color(0xFF000000),
+        transform: Transform2D.translation(const Offset(12, 8)),
+      );
+
+      final degenerateEntry = cache.get(degenerateLine);
+
+      expect(degenerateEntry.localBounds, const Rect.fromLTRB(-2, -2, 2, 2));
+      expect(degenerateEntry.worldBounds, const Rect.fromLTRB(10, 6, 14, 10));
+    },
+  );
+
   test('RenderGeometryCache invalidateAll clears cached entries', () {
     final cache = RenderGeometryCache();
-    const node = ImageNodeSnapshot(
+    final node = ImageNodeSnapshot(
       id: 'image-1',
       imageId: 'img',
       size: Size(20, 20),
@@ -340,9 +501,9 @@ void main() {
 
   test('RenderGeometryCache evicts least recently used entry', () {
     final cache = RenderGeometryCache(maxEntries: 2);
-    const nodeA = RectNodeSnapshot(id: 'rect-a', size: Size(8, 8));
-    const nodeB = RectNodeSnapshot(id: 'rect-b', size: Size(8, 8));
-    const nodeC = RectNodeSnapshot(id: 'rect-c', size: Size(8, 8));
+    final nodeA = RectNodeSnapshot(id: 'rect-a', size: Size(8, 8));
+    final nodeB = RectNodeSnapshot(id: 'rect-b', size: Size(8, 8));
+    final nodeC = RectNodeSnapshot(id: 'rect-c', size: Size(8, 8));
 
     cache.get(nodeA);
     cache.get(nodeB);
@@ -359,9 +520,9 @@ void main() {
     'RenderGeometryCache cache hit refreshes recency and keeps entry in cache',
     () {
       final cache = RenderGeometryCache(maxEntries: 2);
-      const nodeA = RectNodeSnapshot(id: 'rect-a', size: Size(8, 8));
-      const nodeB = RectNodeSnapshot(id: 'rect-b', size: Size(8, 8));
-      const nodeC = RectNodeSnapshot(id: 'rect-c', size: Size(8, 8));
+      final nodeA = RectNodeSnapshot(id: 'rect-a', size: Size(8, 8));
+      final nodeB = RectNodeSnapshot(id: 'rect-b', size: Size(8, 8));
+      final nodeC = RectNodeSnapshot(id: 'rect-c', size: Size(8, 8));
 
       cache.get(nodeA);
       cache.get(nodeB);
@@ -390,4 +551,19 @@ void main() {
     expect(cache.debugBuildCount, 5000);
     expect(cache.debugEvictCount, 4936);
   });
+}
+
+TextNodeSnapshot _textNode({
+  Transform2D transform = Transform2D.identity,
+  double? maxWidth,
+}) {
+  return TextNodeSnapshot(
+    id: 'text-geometry',
+    text: 'cache',
+    fontSize: 14,
+    color: const Color(0xFF000000),
+    textDirection: TextDirection.ltr,
+    transform: transform,
+    maxWidth: maxWidth,
+  );
 }

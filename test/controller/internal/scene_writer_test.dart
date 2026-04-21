@@ -1,16 +1,36 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_writer_command_results.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_writer_runtime.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/signal_event.dart';
 
 // INV:INV-ENG-WRITE-NUMERIC-GUARDS
 
 void main() {
+  SceneWriter newWriter(
+    TxnContext ctx, {
+    required void Function(BufferedSignal signal) txnSignalSink,
+    String? textFontFamilyByDefault,
+  }) {
+    return SceneWriter(
+      SceneWriterRuntime(
+        ctx: ctx,
+        mutationExecutor: MutationExecutor(
+          textFontFamilyByDefault: textFontFamilyByDefault,
+        ),
+        txnSignalSink: txnSignalSink,
+      ),
+    );
+  }
+
   test('SceneWriter handles write operations and updates changeset', () {
     final bufferedSignals = <BufferedSignal>[];
     final ctx = TxnContext(
@@ -27,7 +47,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
+    final writer = newWriter(ctx, txnSignalSink: bufferedSignals.add);
 
     expect(writer.snapshot.layers.single.nodes.single.id, 'r1');
     expect(writer.selectedNodeIds, <NodeId>{'r1'});
@@ -36,21 +56,23 @@ void main() {
       () => writer.writeNodeInsert(
         RectNodeSpec(id: 'r1', size: const Size(1, 1)),
       ),
-      throwsStateError,
+      throwsA(
+        isA<ArgumentError>().having((error) => error.name, 'name', 'spec.id'),
+      ),
     );
 
     final generatedId = writer.writeNodeInsert(
       RectNodeSpec(size: const Size(2, 2)),
     );
-    expect(generatedId, 'node-0');
+    expect(generatedId, 'gen-n-test-1');
     expect(ctx.changeSet.structuralChanged, isTrue);
-    expect(ctx.changeSet.addedNodeIds, contains('node-0'));
+    expect(ctx.changeSet.addedNodeIds, contains('gen-n-test-1'));
 
-    expect(writer.writeNodePatch(const RectNodePatch(id: 'missing')), isFalse);
-    expect(writer.writeNodePatch(const RectNodePatch(id: 'r1')), isFalse);
+    expect(writer.writeNodePatch(RectNodePatch(id: 'missing')), isFalse);
+    expect(writer.writeNodePatch(RectNodePatch(id: 'r1')), isFalse);
     expect(
       writer.writeNodePatch(
-        const RectNodePatch(id: 'r1', strokeWidth: PatchField<double>.value(2)),
+        RectNodePatch(id: 'r1', strokeWidth: PatchField<double>.value(2)),
       ),
       isTrue,
     );
@@ -62,10 +84,10 @@ void main() {
     expect(ctx.workingSelection, isNot(contains('r1')));
     expect(ctx.changeSet.selectionChanged, isTrue);
 
-    writer.writeSelectionReplace(<NodeId>{'node-0'});
-    writer.writeSelectionReplace(<NodeId>{'node-0'});
-    writer.writeSelectionToggle('node-0');
-    writer.writeSelectionToggle('node-0');
+    writer.writeSelectionReplace(<NodeId>{'gen-n-test-1'});
+    writer.writeSelectionReplace(<NodeId>{'gen-n-test-1'});
+    writer.writeSelectionToggle('gen-n-test-1');
+    writer.writeSelectionToggle('gen-n-test-1');
 
     expect(writer.writeSelectionTranslate(Offset.zero), 0);
     expect(writer.writeSelectionTranslate(const Offset(5, 0)), 1);
@@ -79,7 +101,7 @@ void main() {
 
     writer.writeSignalEnqueue(
       type: 'custom.signal',
-      nodeIds: <NodeId>{'node-0'},
+      nodeIds: <NodeId>{'gen-n-test-1'},
     );
     expect(bufferedSignals.single.type, 'custom.signal');
 
@@ -88,7 +110,7 @@ void main() {
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
             id: 'layer-auto-0',
-            nodes: const <NodeSnapshot>[
+            nodes: <NodeSnapshot>[
               RectNodeSnapshot(id: 'fresh', size: Size(1, 1)),
             ],
           ),
@@ -98,6 +120,55 @@ void main() {
     expect(ctx.workingScene.layers.single.nodes.single.id, 'fresh');
     expect(ctx.workingSelection, isEmpty);
     expect(ctx.changeSet.documentReplaced, isTrue);
+  });
+
+  test('SceneWriter stays a thin shell over writer-local owners', () {
+    final writerSource = File(
+      'lib/src/controller/scene_writer.dart',
+    ).readAsStringSync();
+    final selectionOwnerSource = File(
+      'lib/src/controller/scene_writer_selection.dart',
+    ).readAsStringSync();
+
+    expect(writerSource, contains("import 'scene_writer_nodes.dart';"));
+    expect(writerSource, contains("import 'scene_writer_scene.dart';"));
+    expect(writerSource, contains("import 'scene_writer_selection.dart';"));
+    expect(writerSource, contains("import 'scene_writer_signals.dart';"));
+    expect(writerSource, contains("import 'scene_writer_runtime.dart';"));
+
+    expect(
+      writerSource,
+      contains('sceneWriterWriteSelectionReplaceResult(this, ids) != null;'),
+    );
+    expect(writerSource, contains('sceneWriterWriteSelectionSelectAllResult('));
+    expect(writerSource, contains('sceneWriterWriteDeleteSelectionResult('));
+    expect(
+      writerSource,
+      contains('sceneWriterWriteClearSceneKeepBackgroundResult(this);'),
+    );
+    expect(writerSource, contains('sceneWriterWriteDocumentReplace('));
+    expect(writerSource, contains('sceneWriterWriteSignalEnqueue('));
+    expect(
+      writerSource,
+      contains('void writeDocumentReplace(SceneSnapshot snapshot) {'),
+    );
+
+    expect(writerSource, isNot(contains('txnNormalizeSelection(')));
+    expect(writerSource, isNot(contains('BufferedSignal(')));
+    expect(writerSource, isNot(contains('ReplaceSceneOp(')));
+    expect(writerSource, isNot(contains('writePreparedDocumentReplace(')));
+    expect(writerSource, isNot(contains('DeleteNodesBulkOp.borrowed')));
+    expect(writerSource, isNot(contains('beforeApply')));
+
+    expect(selectionOwnerSource, contains('ReplaceSelectionOp(ids)'));
+    expect(selectionOwnerSource, contains('ToggleSelectionOp(id)'));
+    expect(selectionOwnerSource, contains('const ClearSelectionOp()'));
+    expect(
+      selectionOwnerSource,
+      contains('SelectAllSelectionOp(onlySelectable: onlySelectable)'),
+    );
+    expect(selectionOwnerSource, isNot(contains('txnNormalizeSelection(')));
+    expect(selectionOwnerSource, isNot(contains('txnMarkSelectionChanged(')));
   });
 
   test(
@@ -121,7 +192,7 @@ void main() {
         nodeIdSeed: 0,
         nextInstanceRevision: 1,
       );
-      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
       final selectionRef = ctx.workingSelection;
 
       writer.writeSelectionToggle('r3');
@@ -141,6 +212,59 @@ void main() {
     },
   );
 
+  test('SceneWriter selectedNodeIds exposes immutable transaction view', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-2b',
+            nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
+          ),
+        ],
+      ),
+      workingSelection: <NodeId>{'r1'},
+      baseAllNodeIds: const <NodeId>{'r1'},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
+
+    expect(() => writer.selectedNodeIds.add('other'), throwsUnsupportedError);
+    expect(writer.selectedNodeIds, const <NodeId>{'r1'});
+  });
+
+  test('SceneWriter selectedNodeIds reuses stable transaction view', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-2c',
+            nodes: <SceneNode>[
+              RectNode(id: 'r1', size: const Size(10, 10)),
+              RectNode(id: 'r2', size: const Size(10, 10)),
+            ],
+          ),
+        ],
+      ),
+      workingSelection: <NodeId>{'r1'},
+      baseAllNodeIds: const <NodeId>{'r1', 'r2'},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
+
+    final first = writer.selectedNodeIds;
+    final second = writer.selectedNodeIds;
+
+    expect(identical(first, second), isTrue);
+
+    writer.writeSelectionToggle('r2');
+
+    final afterToggle = writer.selectedNodeIds;
+    expect(identical(first, afterToggle), isTrue);
+    expect(afterToggle, const <NodeId>{'r1', 'r2'});
+  });
+
   test(
     'SceneWriter selection hot-path keeps in-place set on 1000 toggle/replace/erase ops',
     () {
@@ -159,7 +283,7 @@ void main() {
         nodeIdSeed: 1000,
         nextInstanceRevision: 1,
       );
-      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
       final selectionRef = ctx.workingSelection;
       final expected = <NodeId>{};
 
@@ -190,6 +314,76 @@ void main() {
     },
   );
 
+  test(
+    'SceneWriter finalizes selection during node visibility and selectability patches',
+    () {
+      final hiddenCtx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-post-apply',
+              nodes: <SceneNode>[
+                RectNode(id: 'visible', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'visible'},
+        baseAllNodeIds: const <NodeId>{'visible'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final hiddenWriter = newWriter(hiddenCtx, txnSignalSink: (_) {});
+
+      expect(
+        hiddenWriter.writeNodePatch(
+          RectNodePatch(
+            id: 'visible',
+            common: CommonNodePatch(isVisible: PatchField<bool>.value(false)),
+          ),
+        ),
+        isTrue,
+      );
+      expect(hiddenWriter.selectedNodeIds, isEmpty);
+      expect(hiddenCtx.changeSet.selectionChanged, isTrue);
+
+      final nonSelectableCtx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-post-apply-2',
+              nodes: <SceneNode>[
+                RectNode(id: 'visible', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'visible'},
+        baseAllNodeIds: const <NodeId>{'visible'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final nonSelectableWriter = newWriter(
+        nonSelectableCtx,
+        txnSignalSink: (_) {},
+      );
+
+      expect(
+        nonSelectableWriter.writeNodePatch(
+          RectNodePatch(
+            id: 'visible',
+            common: CommonNodePatch(
+              isSelectable: PatchField<bool>.value(false),
+            ),
+          ),
+        ),
+        isTrue,
+      );
+      expect(nonSelectableWriter.selectedNodeIds, const <NodeId>{'visible'});
+      expect(nonSelectableCtx.changeSet.selectionChanged, isFalse);
+    },
+  );
+
   test('SceneWriter writeNodeInsert resolves target layer by layerId', () {
     final baseScene = Scene(
       layers: <ContentLayer>[
@@ -204,7 +398,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     final insertedId = writer.writeNodeInsert(
       RectNodeSpec(id: 'n-target', size: const Size(3, 3)),
@@ -229,13 +423,13 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final emptyWriter = SceneWriter(emptyCtx, txnSignalSink: (_) {});
+    final emptyWriter = newWriter(emptyCtx, txnSignalSink: (_) {});
     final autoInsertedId = emptyWriter.writeNodeInsert(
       RectNodeSpec(id: 'first', size: const Size(2, 2)),
     );
     expect(autoInsertedId, 'first');
     expect(emptyCtx.workingScene.layers, hasLength(1));
-    expect(emptyCtx.workingScene.layers.single.id, 'layer-0');
+    expect(emptyCtx.workingScene.layers.single.id, 'gen-l-test-1');
     expect(emptyCtx.workingScene.layers.single.nodes.single.id, 'first');
   });
 
@@ -259,7 +453,7 @@ void main() {
         nodeIdSeed: 0,
         nextInstanceRevision: 1,
       );
-      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
 
       writer.writeNodeInsert(
         RectNodeSpec(id: 'middle', size: const Size(2, 2)),
@@ -301,7 +495,7 @@ void main() {
         nodeIdSeed: 0,
         nextInstanceRevision: 1,
       );
-      final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
 
       expect(writer.writeLayerEnsure('inserted', index: 1), isTrue);
       expect(writer.writeLayerEnsure('inserted', index: 0), isFalse);
@@ -333,7 +527,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(
+    final writer = newWriter(
       ctx,
       txnSignalSink: (_) {},
       textFontFamilyByDefault: 'Mono',
@@ -344,6 +538,7 @@ void main() {
         id: 'default-font',
         text: 'hello',
         color: const Color(0xFF111111),
+        textDirection: TextDirection.ltr,
       ),
     );
     writer.writeNodeInsert(
@@ -351,6 +546,7 @@ void main() {
         id: 'explicit-font',
         text: 'world',
         color: const Color(0xFF111111),
+        textDirection: TextDirection.ltr,
         fontFamily: 'Serif',
       ),
     );
@@ -386,12 +582,12 @@ void main() {
       nextInstanceRevision: 1,
     );
     final bufferedSignals = <BufferedSignal>[];
-    final writer = SceneWriter(ctx, txnSignalSink: bufferedSignals.add);
+    final writer = newWriter(ctx, txnSignalSink: bufferedSignals.add);
 
     final generatedId = writer.writeNodeInsert(
       RectNodeSpec(size: const Size(2, 2)),
     );
-    expect(generatedId, 'node-2');
+    expect(generatedId, 'gen-n-test-2');
     expect(ctx.txnHasNodeId('rect-1'), isTrue);
     expect(ctx.txnHasNodeId('locked'), isTrue);
 
@@ -413,9 +609,89 @@ void main() {
 
     final selectAll = writer.writeSelectionSelectAll();
     expect(selectAll, 2);
-    expect(writer.selectedNodeIds, const <NodeId>{'rect-1', 'node-2'});
+    expect(writer.selectedNodeIds, const <NodeId>{'rect-1', 'gen-n-test-2'});
     expect(writer.writeSelectionSelectAll(), 0);
   });
+
+  test(
+    'SceneWriter selection replace keeps current selection on empty normalized input',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          backgroundLayer: BackgroundLayer(
+            nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(4, 4))],
+          ),
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-4b',
+              nodes: <SceneNode>[
+                RectNode(id: 'visible', size: const Size(10, 10)),
+                RectNode(
+                  id: 'hidden',
+                  size: const Size(10, 10),
+                  isVisible: false,
+                ),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'visible'},
+        baseAllNodeIds: const <NodeId>{'bg', 'visible', 'hidden'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
+
+      expect(writer.writeSelectionReplace(const <NodeId>{}), isFalse);
+      expect(
+        writer.writeSelectionReplace(const <NodeId>{'missing', 'bg', 'hidden'}),
+        isFalse,
+      );
+      expect(writer.selectedNodeIds, const <NodeId>{'visible'});
+    },
+  );
+
+  test(
+    'SceneWriter writeSelectionReplaceResult returns sorted committed ids for internal commands',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-4c',
+              nodes: <SceneNode>[
+                RectNode(id: 'z-node', size: const Size(10, 10)),
+                RectNode(id: 'a-node', size: const Size(10, 10)),
+                RectNode(id: 'base', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'base'},
+        baseAllNodeIds: const <NodeId>{'z-node', 'a-node', 'base'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
+
+      final changedIds = sceneWriterWriteSelectionReplaceExactResult(
+        writer,
+        const <NodeId>{'z-node', 'a-node', 'base'},
+      );
+      final noChange = sceneWriterWriteSelectionReplaceExactResult(
+        writer,
+        const <NodeId>{'base', 'a-node', 'z-node'},
+      );
+
+      expect(changedIds, const <NodeId>['a-node', 'base', 'z-node']);
+      expect(noChange, isNull);
+      expect(writer.selectedNodeIds, const <NodeId>{
+        'z-node',
+        'a-node',
+        'base',
+      });
+    },
+  );
 
   test('SceneWriter writeNodeErase respects deletable layer policy', () {
     // INV:INV-ENG-WRITE-NUMERIC-GUARDS
@@ -440,13 +716,77 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     expect(writer.writeNodeErase('locked'), isFalse);
     expect(writer.writeNodeErase('free'), isTrue);
   });
 
-  test('SceneWriter rejects non-finite grid/camera values', () {
+  test(
+    'SceneWriter writeDeleteNodesResult returns sorted committed ids for internal commands',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-5a',
+              nodes: <SceneNode>[
+                RectNode(id: 'z-node', size: const Size(10, 10)),
+                RectNode(
+                  id: 'locked',
+                  size: const Size(10, 10),
+                  isDeletable: false,
+                ),
+                RectNode(id: 'a-node', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'z-node'},
+        baseAllNodeIds: const <NodeId>{'z-node', 'locked', 'a-node'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
+
+      final removedIds = sceneWriterWriteDeleteNodesResult(
+        writer,
+        const <NodeId>{'z-node', 'locked', 'a-node', 'missing'},
+      );
+
+      expect(removedIds, const <NodeId>['a-node', 'z-node']);
+      expect(ctx.workingSelection, isEmpty);
+    },
+  );
+
+  test('SceneWriter mutation hot path avoids commit-state materialization', () {
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-5b',
+            nodes: <SceneNode>[
+              for (var i = 0; i < 8; i++)
+                RectNode(id: 'n$i', size: const Size(10, 10)),
+            ],
+          ),
+        ],
+      ),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: <NodeId>{for (var i = 0; i < 8; i++) 'n$i'},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
+
+    for (var i = 0; i < 8; i++) {
+      expect(writer.writeNodeErase('n$i'), isTrue);
+    }
+
+    expect(ctx.debugNodeIdSetMaterializations, 0);
+  });
+
+  test('SceneWriter rejects invalid grid/camera values', () {
     // INV:INV-ENG-WRITE-NUMERIC-GUARDS
     final ctx = TxnContext(
       baseScene: Scene(),
@@ -455,10 +795,17 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     expect(() => writer.writeGridCellSize(double.nan), throwsArgumentError);
     expect(() => writer.writeGridCellSize(0), throwsArgumentError);
+    expect(() => writer.writeGridEnable(true), isNot(throwsException));
+    expect(() => writer.writeGridCellSize(0.5), throwsArgumentError);
+    writer.writeGridEnable(false);
+    expect(() => writer.writeGridCellSize(0.5), isNot(throwsException));
+    expect(() => writer.writeGridEnable(true), throwsArgumentError);
+    writer.writeGridCellSize(2);
+    expect(() => writer.writeGridEnable(true), isNot(throwsException));
     expect(
       () => writer.writeCameraOffset(const Offset(double.infinity, 0)),
       throwsArgumentError,
@@ -485,7 +832,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     expect(
       () => writer.writeNodeTransformSet(
@@ -519,6 +866,116 @@ void main() {
     );
   });
 
+  test('writeSelectionTransform composes delta before existing transform', () {
+    final existingTransform = Transform2D.rotationDeg(90);
+    final delta = Transform2D.translation(const Offset(5, 7));
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-6',
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'r1',
+                size: const Size(10, 10),
+                transform: existingTransform,
+              ),
+            ],
+          ),
+        ],
+      ),
+      workingSelection: <NodeId>{'r1'},
+      baseAllNodeIds: <NodeId>{'r1'},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
+
+    final affected = writer.writeSelectionTransform(delta);
+    final updated = ctx.workingScene.layers.single.nodes.single as RectNode;
+    final expected = delta.multiply(existingTransform);
+    final reverseOrder = existingTransform.multiply(delta);
+
+    expect(affected, 1);
+    expect(updated.transform.toJsonMap(), expected.toJsonMap());
+    expect(updated.transform.toJsonMap(), isNot(reverseOrder.toJsonMap()));
+  });
+
+  test(
+    'writeSelectionSelectAllResult keeps exact changed semantics for empty selection result',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-6b',
+              nodes: <SceneNode>[
+                RectNode(
+                  id: 'locked',
+                  size: const Size(10, 10),
+                  isSelectable: false,
+                ),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'locked'},
+        baseAllNodeIds: const <NodeId>{'locked'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
+
+      final changedToEmpty = sceneWriterWriteSelectionSelectAllExactResult(
+        writer,
+      );
+      final stableEmpty = sceneWriterWriteSelectionSelectAllExactResult(writer);
+
+      expect(changedToEmpty, (selectedCount: 0, changed: true));
+      expect(stableEmpty, (selectedCount: 0, changed: false));
+      expect(writer.selectedNodeIds, isEmpty);
+    },
+  );
+
+  test('stroke no-op point patch keeps point list identity and revision', () {
+    final stroke = StrokeNode(
+      id: 's1',
+      points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+    final ctx = TxnContext(
+      baseScene: Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-6c', nodes: <SceneNode>[stroke]),
+        ],
+      ),
+      workingSelection: const <NodeId>{},
+      baseAllNodeIds: const <NodeId>{'s1'},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
+    final pointsBefore = stroke.points;
+    final revisionBefore = stroke.pointsRevision;
+
+    final changed = writer.writeNodePatch(
+      StrokeNodePatch(
+        id: 's1',
+        points: PatchField<List<Offset>>.value(<Offset>[
+          const Offset(0, 0),
+          const Offset(1, 1),
+        ]),
+      ),
+    );
+
+    final updated = ctx.workingScene.layers.single.nodes.single as StrokeNode;
+    expect(changed, isFalse);
+    expect(updated.pointsRevision, revisionBefore);
+    expect(identical(updated.points, pointsBefore), isTrue);
+    expect(ctx.changeSet.txnHasAnyChange, isFalse);
+  });
+
   test('writeNodeTransformSet marks visual change when bounds stay same', () {
     final ctx = TxnContext(
       baseScene: Scene(
@@ -542,7 +999,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     final changed = writer.writeNodeTransformSet(
       'line-static',
@@ -552,6 +1009,33 @@ void main() {
     expect(changed, isTrue);
     expect(ctx.changeSet.boundsChanged, isFalse);
     expect(ctx.changeSet.visualChanged, isTrue);
+  });
+
+  test('writeOwnedSignalEnqueue keeps single immutability boundary', () {
+    final bufferedSignals = <BufferedSignal>[];
+    final ctx = TxnContext(
+      baseScene: Scene(),
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: const <NodeId>{},
+      nodeIdSeed: 0,
+      nextInstanceRevision: 1,
+    );
+    final writer = newWriter(ctx, txnSignalSink: bufferedSignals.add);
+    final nodeIds = <NodeId>['a', 'b'];
+
+    sceneWriterWriteOwnedSignalExactEnqueue(
+      writer,
+      type: 'owned.signal',
+      nodeIds: nodeIds,
+    );
+    nodeIds.add('c');
+
+    expect(bufferedSignals.single.type, 'owned.signal');
+    expect(bufferedSignals.single.nodeIds, const <NodeId>['a', 'b']);
+    expect(
+      () => bufferedSignals.single.nodeIds.add('d'),
+      throwsUnsupportedError,
+    );
   });
 
   test('SceneWriter covers clear/delete/mark helpers', () {
@@ -577,7 +1061,7 @@ void main() {
       nodeIdSeed: 0,
       nextInstanceRevision: 1,
     );
-    final writer = SceneWriter(ctx, txnSignalSink: (_) {});
+    final writer = newWriter(ctx, txnSignalSink: (_) {});
 
     expect(writer.writeDeleteSelection(), 1);
     expect(
@@ -603,6 +1087,7 @@ void main() {
   });
 
   test('ClearSceneResult exposes immutable removedNodeIds snapshot', () {
+    // INV:INV-ENG-CLEAR-SCENE-RESULT-REMOVED-NODE-IDS-IMMUTABLE
     final result = ClearSceneResult(
       removedNodeIds: <NodeId>['a'],
       didStructuralClear: true,
@@ -612,7 +1097,34 @@ void main() {
     expect(result.removedNodeIds, <NodeId>['a']);
   });
 
+  test(
+    'writeClearSceneKeepBackground returns immutable removedNodeIds snapshot',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-9b',
+              nodes: <SceneNode>[RectNode(id: 'gone', size: const Size(1, 1))],
+            ),
+          ],
+        ),
+        workingSelection: const <NodeId>{},
+        baseAllNodeIds: const <NodeId>{'gone'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
+
+      final removedNodeIds = writer.writeClearSceneKeepBackground();
+
+      expect(removedNodeIds, const <NodeId>['gone']);
+      expect(() => removedNodeIds.add('other'), throwsUnsupportedError);
+    },
+  );
+
   test('ClearSceneResult defensively copies removedNodeIds source', () {
+    // INV:INV-ENG-CLEAR-SCENE-RESULT-REMOVED-NODE-IDS-IMMUTABLE
     final source = <NodeId>['a'];
     final result = ClearSceneResult(
       removedNodeIds: source,

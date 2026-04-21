@@ -1,9 +1,23 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/core/action_events.dart';
 
 // INV:INV-ENG-EVENTS-IMMUTABLE
 
 void main() {
+  test('action event parsing stays isolated in core leaf support owner', () {
+    final source = File('lib/src/core/action_events.dart').readAsStringSync();
+
+    expect(source, contains('class _ActionPayloadReader'));
+    expect(source, contains('payload: freezePayloadMap(payload),'));
+    expect(source, contains('tryMoveLayerIndices()'));
+    expect(source, contains('tryDrawStyle()'));
+    expect(source, isNot(contains('TextPainter(')));
+    expect(source, isNot(contains('recomputeDerivedTextSize(')));
+    expect(source, isNot(contains('_GeneratedIdAllocator')));
+  });
+
   group('ActionCommitted parsers', () {
     test('tryTransformDelta parses valid matrix payload', () {
       final action = ActionCommitted(
@@ -25,7 +39,10 @@ void main() {
 
       final delta = action.tryTransformDelta();
       expect(delta, isNotNull);
-      expect(delta!.tx, 10);
+      if (delta == null) {
+        fail('Expected transform delta for valid payload.');
+      }
+      expect(delta.tx, 10);
       expect(delta.ty, -5);
     });
 
@@ -83,7 +100,10 @@ void main() {
       );
       final indices = ok.tryMoveLayerIndices();
       expect(indices, isNotNull);
-      expect(indices!.sourceLayerIndex, 1);
+      if (indices == null) {
+        fail('Expected move layer indices for valid payload.');
+      }
+      expect(indices.sourceLayerIndex, 1);
       expect(indices.targetLayerIndex, 3);
 
       final bad = ActionCommitted(
@@ -113,7 +133,10 @@ void main() {
       );
       final style = ok.tryDrawStyle();
       expect(style, isNotNull);
-      expect(style!.tool, 'line');
+      if (style == null) {
+        fail('Expected draw style for valid payload.');
+      }
+      expect(style.tool, 'line');
       expect(style.colorArgb, 0xFF112233);
       expect(style.thickness, 2.0);
 
@@ -205,15 +228,19 @@ void main() {
     (payload['tags'] as Set<String>).add('b');
 
     expect(action.nodeIds, const <String>['n1']);
-    expect((action.payload!['nested'] as Map<String, Object?>)['value'], 1);
-    expect(action.payload!['tags'], const <String>{'a'});
+    final frozenPayload = action.payload;
+    if (frozenPayload == null) {
+      fail('Expected payload to remain available.');
+    }
+    expect((frozenPayload['nested'] as Map<String, Object?>)['value'], 1);
+    expect(frozenPayload['tags'], const <String>{'a'});
     expect(() => action.nodeIds.add('x'), throwsUnsupportedError);
     expect(
-      () => (action.payload!['nested'] as Map<Object?, Object?>)['value'] = 3,
+      () => (frozenPayload['nested'] as Map<Object?, Object?>)['value'] = 3,
       throwsUnsupportedError,
     );
     expect(
-      () => (action.payload!['tags'] as Set<Object?>).add('c'),
+      () => (frozenPayload['tags'] as Set<Object?>).add('c'),
       throwsUnsupportedError,
     );
   });

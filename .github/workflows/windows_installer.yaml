@@ -1,0 +1,77 @@
+name: Windows Installer
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: windows-installer-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.38.9"
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Example pub get
+        working-directory: example
+        run: flutter pub get
+
+      - name: Build Windows release
+        working-directory: example
+        run: flutter build windows --release
+
+      - name: Resolve installer metadata
+        id: metadata
+        shell: pwsh
+        run: |
+          $pubspec = Get-Content pubspec.yaml -Raw
+          if ($pubspec -notmatch '(?m)^version:\s*([0-9A-Za-z\.\+\-]+)\s*$') {
+            throw "Could not resolve package version from pubspec.yaml"
+          }
+
+          $packageVersion = $Matches[1]
+          $installerVersion = $packageVersion.Split('+')[0]
+          $safeVersion = $packageVersion -replace '[^0-9A-Za-z\.\-]+', '-'
+          $outputDir = Join-Path $env:GITHUB_WORKSPACE 'build\installer'
+
+          "package_version=$packageVersion" >> $env:GITHUB_OUTPUT
+          "installer_version=$installerVersion" >> $env:GITHUB_OUTPUT
+          "safe_version=$safeVersion" >> $env:GITHUB_OUTPUT
+          "output_dir=$outputDir" >> $env:GITHUB_OUTPUT
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path '${{ steps.metadata.outputs.output_dir }}' | Out-Null
+
+          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' `
+            '/DMyAppVersion=${{ steps.metadata.outputs.installer_version }}' `
+            '/DMyOutputDir=${{ steps.metadata.outputs.output_dir }}' `
+            '/DMyOutputBaseFilename=iwb_canvas_engine_example_setup_${{ steps.metadata.outputs.safe_version }}' `
+            '/DMySourceDir=${{ github.workspace }}\example\build\windows\x64\runner\Release' `
+            '.\tool\windows\example_installer.iss'
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer-${{ steps.metadata.outputs.safe_version }}
+          path: ${{ steps.metadata.outputs.output_dir }}/*.exe
+          if-no-files-found: error

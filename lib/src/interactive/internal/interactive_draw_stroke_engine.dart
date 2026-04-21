@@ -1,21 +1,22 @@
-import 'dart:collection';
 import 'dart:ui';
 
 import '../../core/action_events.dart';
 import '../../core/input_sampling.dart';
 import '../../core/interaction_types.dart';
 import '../../core/scene_limits.dart';
-import '../../public/snapshot.dart';
-import 'interactive_geometry.dart';
+import '../../contract/snapshot.dart';
+import 'interactive_draw_action_emitter.dart';
+import 'interactive_draw_path_buffer.dart';
+import 'interactive_draw_style.dart';
 
 class InteractiveDrawStrokeEngineCallbacks {
   const InteractiveDrawStrokeEngineCallbacks({
-    required this.onStateChanged,
+    required this.onOverlayStateChanged,
     required this.emitAction,
-    required this.writeDrawStroke,
+    required this.commitDrawStroke,
   });
 
-  final VoidCallback onStateChanged;
+  final VoidCallback onOverlayStateChanged;
   final void Function(
     ActionType type,
     List<NodeId> nodeIds,
@@ -29,91 +30,68 @@ class InteractiveDrawStrokeEngineCallbacks {
     required Color color,
     required double opacity,
   })
-  writeDrawStroke;
+  commitDrawStroke;
 }
 
 class InteractiveDrawStrokeEngine {
   InteractiveDrawStrokeEngine({required this.callbacks});
 
   final InteractiveDrawStrokeEngineCallbacks callbacks;
+  late final InteractiveDrawActionEmitter _actionEmitter =
+      InteractiveDrawActionEmitter(emitAction: callbacks.emitAction);
 
-  final List<Offset> _activeStrokePoints = <Offset>[];
-  late final UnmodifiableListView<Offset> _activeStrokePointsView =
-      UnmodifiableListView<Offset>(_activeStrokePoints);
+  final InteractiveDrawPathBuffer _pathBuffer = InteractiveDrawPathBuffer(
+    softLimit: kInteractiveStrokePointsSoftLimit,
+    trimTo: kInteractiveStrokePointsTrimTo,
+  );
 
-  List<Offset> get activeStrokePreviewPoints => _activeStrokePointsView;
-  bool get hasActiveStrokePoints => _activeStrokePoints.isNotEmpty;
+  List<Offset> get activeStrokePreviewPoints => _pathBuffer.points;
+  bool get hasActiveStrokePoints => _pathBuffer.isNotEmpty;
 
   void resetGestureState() {
-    _activeStrokePoints.clear();
+    _pathBuffer.clear();
   }
 
   void handleDown(Offset scenePoint) {
-    _activeStrokePoints
-      ..clear()
-      ..add(scenePoint);
+    _pathBuffer.start(scenePoint);
   }
 
   void handleMove(Offset scenePoint) {
-    if (_activeStrokePoints.isEmpty) return;
-    if (!isDistanceAtLeast(
-      _activeStrokePoints.last,
-      scenePoint,
-      kInputDecimationMinStepScene,
-    )) {
-      return;
-    }
-    _activeStrokePoints.add(scenePoint);
-    enforceGestureBufferSoftLimit(
-      _activeStrokePoints,
-      softLimit: kInteractiveStrokePointsSoftLimit,
-      trimTo: kInteractiveStrokePointsTrimTo,
-    );
-    callbacks.onStateChanged();
+    if (!_pathBuffer.appendMovePoint(scenePoint)) return;
+    callbacks.onOverlayStateChanged();
   }
 
   void commitOnUp(
     int timestampMs,
     Offset scenePoint, {
-    required DrawTool drawTool,
-    required Color drawColor,
-    required double penThickness,
-    required double highlighterThickness,
-    required double highlighterOpacity,
+    required InteractiveDrawStyle style,
   }) {
-    if (_activeStrokePoints.isEmpty) return;
-    if (isDistanceGreaterThan(_activeStrokePoints.last, scenePoint, 0)) {
-      _activeStrokePoints.add(scenePoint);
-    }
+    if (_pathBuffer.isEmpty) return;
+    _pathBuffer.appendTerminalPoint(scenePoint);
 
     final committedPoints = resamplePointsToLimit(
-      _activeStrokePoints,
+      _pathBuffer.points,
       limit: kMaxStrokePointsPerNode,
     );
-    final strokeId = callbacks.writeDrawStroke(
+    final isHighlighter = style.drawTool == DrawTool.highlighter;
+    final thickness = isHighlighter
+        ? style.highlighterThickness
+        : style.penThickness;
+    final strokeId = callbacks.commitDrawStroke(
       points: committedPoints,
-      thickness: drawTool == DrawTool.highlighter
-          ? highlighterThickness
-          : penThickness,
-      color: drawColor,
-      opacity: drawTool == DrawTool.highlighter ? highlighterOpacity : 1,
+      thickness: thickness,
+      color: style.drawColor,
+      opacity: isHighlighter ? style.highlighterOpacity : 1,
     );
 
-    callbacks.emitAction(
-      drawTool == DrawTool.highlighter
-          ? ActionType.drawHighlighter
-          : ActionType.drawStroke,
-      <NodeId>[strokeId],
-      timestampMs,
-      payload: <String, Object?>{
-        'tool': drawTool.name,
-        'color': drawColor.toARGB32(),
-        'thickness': drawTool == DrawTool.highlighter
-            ? highlighterThickness
-            : penThickness,
-      },
+    _actionEmitter.emitStrokeCommit(
+      nodeId: strokeId,
+      timestampMs: timestampMs,
+      style: style,
+      isHighlighter: isHighlighter,
+      thickness: thickness,
     );
 
-    _activeStrokePoints.clear();
+    _pathBuffer.clear();
   }
 }

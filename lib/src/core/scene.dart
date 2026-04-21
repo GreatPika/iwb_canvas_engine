@@ -1,15 +1,20 @@
 import 'dart:ui';
 
-import 'defaults.dart';
+import '../contract/ids.dart' show LayerId;
+import '../contract/scene_model_invariants.dart';
+import '../contract/scene_defaults.dart';
 import 'nodes.dart';
-import '../public/snapshot.dart' show LayerId;
 
 /// A mutable scene graph used by the canvas engine.
 ///
-/// The scene is organized into optional [backgroundLayer] and ordered content
-/// [layers], with a [camera] offset and background visual settings. Nodes are
-/// stored with local geometry and positioned into scene/world coordinates via
-/// [SceneNode.transform].
+/// Runtime scenes may keep [backgroundLayer] absent as an internal shape until
+/// a write path needs to materialize it. Snapshot/JSON boundaries canonicalize
+/// the same concept into a dedicated always-present background layer, so this
+/// nullable field is a runtime detail rather than a competing source of truth.
+///
+/// Content [layers] stay ordered, with a [camera] offset and background visual
+/// settings. Nodes are stored with local geometry and positioned into
+/// scene/world coordinates via [SceneNode.transform].
 class Scene {
   Scene({
     List<ContentLayer>? layers,
@@ -30,7 +35,11 @@ class Scene {
   /// original list after construction does not affect this scene.
   final List<ContentLayer> layers;
 
-  /// Optional background layer rendered below all content layers.
+  /// Optional runtime background layer rendered below all content layers.
+  ///
+  /// Runtime code may leave this `null` until a mutation path explicitly needs
+  /// background nodes. Snapshot and JSON boundaries canonicalize the same state
+  /// into a dedicated non-null background layer.
   BackgroundLayer? backgroundLayer;
 
   Camera camera;
@@ -39,6 +48,9 @@ class Scene {
 }
 
 /// A dedicated background node layer.
+///
+/// Runtime scenes may materialize this layer lazily; typed and JSON boundaries
+/// always treat it as a dedicated single layer below content layers.
 class BackgroundLayer {
   BackgroundLayer({List<SceneNode>? nodes})
     : nodes = nodes == null ? <SceneNode>[] : List<SceneNode>.from(nodes);
@@ -69,15 +81,21 @@ class ContentLayer {
 
 /// Viewport state for converting between view and scene coordinates.
 class Camera {
-  Camera({Offset? offset}) : offset = offset ?? Offset.zero;
+  Camera({Offset? offset})
+    : _offset = validateSceneCameraOffset(
+        offset ?? Offset.zero,
+        name: 'offset',
+      );
 
   /// Camera pan in scene/world coordinates.
   ///
-  /// Expected to have finite components.
-  ///
-  /// Runtime behavior: rendering and hit-testing sanitize non-finite components
-  /// to `0` to avoid crashes; JSON serialization rejects invalid values.
-  Offset offset;
+  /// Runtime behavior: rendering and hit-testing still keep defensive
+  /// sanitation, but canonical runtime state rejects invalid offsets eagerly.
+  Offset get offset => _offset;
+  Offset _offset;
+  set offset(Offset value) {
+    _offset = validateSceneCameraOffset(value, name: 'offset');
+  }
 }
 
 /// Background visual settings: solid [color] and optional [grid].
@@ -92,19 +110,36 @@ class Background {
 
 /// Grid rendering configuration.
 class GridSettings {
-  GridSettings({this.isEnabled = false, double? cellSize, Color? color})
-    : cellSize = cellSize ?? SceneDefaults.gridSizes.first,
+  GridSettings({bool isEnabled = false, double? cellSize, Color? color})
+    : _isEnabled = isEnabled,
+      _cellSize = validateSceneGridCellSize(
+        cellSize ?? SceneDefaults.gridSizes.first,
+        name: 'cellSize',
+        isEnabled: isEnabled,
+      ),
       color = color ?? SceneDefaults.gridColor;
 
-  bool isEnabled;
+  bool get isEnabled => _isEnabled;
+  bool _isEnabled;
+  set isEnabled(bool value) {
+    validateSceneGridCellSize(_cellSize, name: 'cellSize', isEnabled: value);
+    _isEnabled = value;
+  }
 
   /// Grid cell size in scene/world units.
   ///
-  /// Expected to be finite and `> 0` when [isEnabled] is true.
-  ///
-  /// Runtime behavior: rendering treats non-finite or non-positive values as
-  /// "grid disabled"; JSON serialization rejects invalid values.
-  double cellSize;
+  /// Runtime behavior: invalid values throw at assignment and enabling the
+  /// grid also requires `cellSize >= kMinGridCellSize`.
+  double get cellSize => _cellSize;
+  double _cellSize;
+  set cellSize(double value) {
+    _cellSize = validateSceneGridCellSize(
+      value,
+      name: 'cellSize',
+      isEnabled: _isEnabled,
+    );
+  }
+
   Color color;
 }
 
@@ -114,12 +149,23 @@ class ScenePalette {
     List<Color>? penColors,
     List<Color>? backgroundColors,
     List<double>? gridSizes,
-  }) : penColors = List<Color>.from(penColors ?? SceneDefaults.penColors),
-       backgroundColors = List<Color>.from(
-         backgroundColors ?? SceneDefaults.backgroundColors,
+  }) : penColors = validateScenePaletteColorList(
+         penColors ?? SceneDefaults.penColors,
+         name: 'penColors',
        ),
-       gridSizes = List<double>.from(gridSizes ?? SceneDefaults.gridSizes);
+       backgroundColors = validateScenePaletteColorList(
+         backgroundColors ?? SceneDefaults.backgroundColors,
+         name: 'backgroundColors',
+       ),
+       gridSizes = validateScenePaletteGridSizeList(
+         gridSizes ?? SceneDefaults.gridSizes,
+         name: 'gridSizes',
+       );
 
+  /// Immutable runtime palette presets.
+  ///
+  /// Constructor inputs are defensively copied and frozen, so runtime palette
+  /// updates use replacement-only semantics at the [Scene.palette] field.
   final List<Color> penColors;
   final List<Color> backgroundColors;
   final List<double> gridSizes;
