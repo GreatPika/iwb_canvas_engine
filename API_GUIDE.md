@@ -35,8 +35,14 @@ Package scope:
 ### Document model
 
 - `SceneSnapshot`
-- `BackgroundLayerSnapshot`
-- `ContentLayerSnapshot`
+- Scene snapshot value types:
+  - `CameraSnapshot`
+  - `BackgroundSnapshot`
+  - `GridSnapshot`
+  - `ScenePaletteSnapshot`
+- Layer snapshots:
+  - `BackgroundLayerSnapshot`
+  - `ContentLayerSnapshot`
 - `NodeSnapshot` and concrete variants:
   - `ImageNodeSnapshot`
   - `TextNodeSnapshot`
