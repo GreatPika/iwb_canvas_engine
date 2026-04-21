@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'invariant_registry.dart';
+import 'src/verification_contract/verification_contract_registry.dart';
 
 final RegExp _invRef = RegExp(r'\bINV:([A-Z0-9_-]+)\b');
 final RegExp _explicitInvariantMarkerLine = RegExp(
@@ -9,9 +10,13 @@ final RegExp _explicitInvariantMarkerLine = RegExp(
 final RegExp _canonicalInvariantId = RegExp(
   r'^INV-(G|ENG|SER)-[A-Z0-9]+(?:-[A-Z0-9]+)*$',
 );
-final RegExp _primaryProofPathPattern = RegExp(r'^test/.+_test\.dart$');
-final RegExp _toolEnforcementPathPattern = RegExp(r'^tool/[^/]+\.dart$');
-final RegExp _toolRegressionPathPattern = RegExp(r'^test/tool/.+_test\.dart$');
+final RegExp _requiredTestProofPathPattern = RegExp(
+  r'^(test|example/test)/.+_test\.dart$',
+);
+final RegExp _requiredToolProofPathPattern = RegExp(r'^tool/[^/]+\.dart$');
+final RegExp _regressionProofPathPattern = RegExp(
+  r'^(test|example/test)/.+_test\.dart$',
+);
 
 class _Finding {
   _Finding(this.file, this.line, this.message);
@@ -32,10 +37,15 @@ class _RegistryContract {
 }
 
 class _DeclaredProofSurface {
-  const _DeclaredProofSurface({required this.label, required this.path});
+  const _DeclaredProofSurface({
+    required this.label,
+    required this.path,
+    this.stepId,
+  });
 
   final String label;
   final String path;
+  final String? stepId;
 }
 
 class _CoverageReport {
@@ -111,6 +121,49 @@ String _toRepoRelPosixPath({
   return abs.substring(rootPrefix.length);
 }
 
+bool _isRequiredProofReachableByStep({
+  required String path,
+  required String stepId,
+}) {
+  switch (stepId) {
+    case 'import_boundaries':
+      return path == 'tool/check_import_boundaries.dart';
+    case 'public_api_surface':
+      return path == 'tool/check_public_api_surface.dart';
+    case 'guardrails':
+      return path == 'tool/check_guardrails.dart';
+    case 'invariant_coverage':
+      return path == 'tool/check_invariant_coverage.dart';
+    case 'verification_contract':
+      return path == 'tool/check_verification_contract.dart';
+    case 'scope_core':
+      return path.startsWith('test/core/');
+    case 'scope_model_contract':
+      return path.startsWith('test/model/') ||
+          path.startsWith('test/serialization/') ||
+          path.startsWith('test/contract/') ||
+          path.startsWith('test/public_api/') ||
+          path.startsWith('test/entrypoints/');
+    case 'scope_controller_internal':
+      return path.startsWith('test/controller/internal/');
+    case 'scope_controller':
+      return path.startsWith('test/controller/core/') ||
+          path.startsWith('test/controller/commands/') ||
+          path == 'test/controller/scene_controller_randomized_txn_test.dart' ||
+          path == 'test/controller/scene_invariants_test.dart' ||
+          path ==
+              'test/controller/scene_snapshot_invariant_assertions_test.dart';
+    case 'scope_render_view':
+      return path.startsWith('test/render/') || path.startsWith('test/view/');
+    case 'scope_interactive':
+      return path.startsWith('test/interactive/');
+    case 'scope_example':
+      return path.startsWith('example/test/');
+    default:
+      return false;
+  }
+}
+
 void _fail(String header, List<String> details) {
   stderr.writeln('FAIL: $header');
   for (final detail in details) {
@@ -143,6 +196,8 @@ void _validateProofPath({
 _RegistryContract _readRegistryContract() {
   final knownIds = <String>{};
   final issues = <String>[];
+  final requiredPreset = requiredCodeChangePresetDefinition;
+  final requiredStepIds = requiredPreset.stepIds.toSet();
 
   for (final invariant in invariants) {
     if (!knownIds.add(invariant.id)) {
@@ -151,34 +206,67 @@ _RegistryContract _readRegistryContract() {
     if (!_isCanonicalInvariantId(invariant.id)) {
       issues.add('non-canonical invariant id ${invariant.id}');
     }
-    _validateProofPath(
-      issues: issues,
-      invariantId: invariant.id,
-      label: 'primaryProof.path',
-      path: invariant.primaryProof.path,
-      pattern: _primaryProofPathPattern,
-      expectedShape: 'test/**/*_test.dart',
-    );
-    final toolProof = invariant.toolProof;
-    if (toolProof == null) {
-      continue;
+    if (invariant.requiredProofs.isEmpty) {
+      issues.add('${invariant.id} requiredProofs must not be empty');
     }
-    _validateProofPath(
-      issues: issues,
-      invariantId: invariant.id,
-      label: 'toolProof.enforcementPath',
-      path: toolProof.enforcementPath,
-      pattern: _toolEnforcementPathPattern,
-      expectedShape: 'top-level tool/*.dart',
-    );
-    _validateProofPath(
-      issues: issues,
-      invariantId: invariant.id,
-      label: 'toolProof.regressionPath',
-      path: toolProof.regressionPath,
-      pattern: _toolRegressionPathPattern,
-      expectedShape: 'test/tool/**/*_test.dart',
-    );
+    for (var index = 0; index < invariant.requiredProofs.length; index++) {
+      final proof = invariant.requiredProofs[index];
+      final label = 'requiredProofs[$index].path';
+      final path = proof.path;
+      if (path.startsWith('tool/')) {
+        _validateProofPath(
+          issues: issues,
+          invariantId: invariant.id,
+          label: label,
+          path: path,
+          pattern: _requiredToolProofPathPattern,
+          expectedShape: 'top-level tool/*.dart',
+        );
+      } else {
+        _validateProofPath(
+          issues: issues,
+          invariantId: invariant.id,
+          label: label,
+          path: path,
+          pattern: _requiredTestProofPathPattern,
+          expectedShape: 'test/**/*_test.dart or top-level tool/*.dart',
+        );
+      }
+      if (proof.stepId.isEmpty) {
+        issues.add('${invariant.id} requiredProofs[$index].stepId is required');
+        continue;
+      }
+      if (!verificationSteps.containsKey(proof.stepId)) {
+        issues.add(
+          '${invariant.id} requiredProofs[$index].stepId must reference '
+          'a known verification step: ${proof.stepId}',
+        );
+        continue;
+      }
+      if (!requiredStepIds.contains(proof.stepId)) {
+        issues.add(
+          '${invariant.id} requiredProofs[$index].stepId must be reachable '
+          'from $requiredCodeChangePreset: ${proof.stepId}',
+        );
+        continue;
+      }
+      if (!_isRequiredProofReachableByStep(path: path, stepId: proof.stepId)) {
+        issues.add(
+          '${invariant.id} requiredProofs[$index] must be reachable by '
+          '${proof.stepId}: $path',
+        );
+      }
+    }
+    for (var index = 0; index < invariant.regressionProofs.length; index++) {
+      _validateProofPath(
+        issues: issues,
+        invariantId: invariant.id,
+        label: 'regressionProofs[$index].path',
+        path: invariant.regressionProofs[index].path,
+        pattern: _regressionProofPathPattern,
+        expectedShape: 'test/**/*_test.dart',
+      );
+    }
   }
 
   return _RegistryContract(knownIds: knownIds, issues: issues);
@@ -188,6 +276,7 @@ List<Directory> _scanRoots() {
   return <Directory>[
     Directory('tool'),
     Directory('test'),
+    Directory('example/test'),
   ].where((entry) => entry.existsSync()).toList(growable: false);
 }
 
@@ -345,26 +434,19 @@ void _failOnReferenceFindings(_ScanResult scanResult) {
 Iterable<_DeclaredProofSurface> _declaredProofSurfaces(
   Invariant invariant,
 ) sync* {
-  final primaryPath = invariant.primaryProof.path;
-  if (primaryPath != null && primaryPath.isNotEmpty) {
-    yield _DeclaredProofSurface(label: 'primaryProof', path: primaryPath);
-  }
-  final toolProof = invariant.toolProof;
-  if (toolProof == null) {
-    return;
-  }
-  final enforcementPath = toolProof.enforcementPath;
-  if (enforcementPath != null && enforcementPath.isNotEmpty) {
+  for (var index = 0; index < invariant.requiredProofs.length; index++) {
+    final proof = invariant.requiredProofs[index];
     yield _DeclaredProofSurface(
-      label: 'toolProof.enforcementPath',
-      path: enforcementPath,
+      label: 'requiredProofs[$index]',
+      path: proof.path,
+      stepId: proof.stepId,
     );
   }
-  final regressionPath = toolProof.regressionPath;
-  if (regressionPath != null && regressionPath.isNotEmpty) {
+  for (var index = 0; index < invariant.regressionProofs.length; index++) {
+    final proof = invariant.regressionProofs[index];
     yield _DeclaredProofSurface(
-      label: 'toolProof.regressionPath',
-      path: regressionPath,
+      label: 'regressionProofs[$index]',
+      path: proof.path,
     );
   }
 }
@@ -413,26 +495,19 @@ Map<String, Set<String>> _collectExpectedGuardrailsClaims() {
   final expectedByFile = <String, Set<String>>{};
 
   for (final invariant in invariants) {
-    final toolProof = invariant.toolProof;
-    final enforcementPath = toolProof?.enforcementPath;
-    if (enforcementPath == _guardrailsEnforcementPath) {
-      expectedByFile
-          .putIfAbsent(_guardrailsEnforcementPath, () => <String>{})
-          .add(invariant.id);
+    for (final proof in invariant.requiredProofs) {
+      if (_isGuardrailsClaimSurface(proof.path)) {
+        expectedByFile
+            .putIfAbsent(proof.path, () => <String>{})
+            .add(invariant.id);
+      }
     }
-
-    final primaryPath = invariant.primaryProof.path;
-    if (primaryPath != null && _isGuardrailsClaimSurface(primaryPath)) {
-      expectedByFile
-          .putIfAbsent(primaryPath, () => <String>{})
-          .add(invariant.id);
-    }
-
-    final regressionPath = toolProof?.regressionPath;
-    if (regressionPath != null && _isGuardrailsClaimSurface(regressionPath)) {
-      expectedByFile
-          .putIfAbsent(regressionPath, () => <String>{})
-          .add(invariant.id);
+    for (final proof in invariant.regressionProofs) {
+      if (_isGuardrailsClaimSurface(proof.path)) {
+        expectedByFile
+            .putIfAbsent(proof.path, () => <String>{})
+            .add(invariant.id);
+      }
     }
   }
 
@@ -493,7 +568,7 @@ void _failOnCoverageGaps(_CoverageReport coverageReport) {
     stderr.writeln('- $entry');
   }
   stderr.writeln(
-    'Declare canonical primaryProof/toolProof surfaces in '
+    'Declare canonical requiredProofs/regressionProofs surfaces in '
     'tool/invariant_registry.dart and keep matching // INV:<id> markers '
     'in every declared proof file.',
   );

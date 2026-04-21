@@ -1,16 +1,15 @@
 import 'dart:io';
 
+import 'src/verification_contract/verification_contract_models.dart';
 import 'src/verification_contract/verification_contract_registry.dart';
-
-const String _agentsPath = 'AGENTS.md';
-const String _ciWorkflowPath = '.github/workflows/ci.yaml';
-const String _perfNightlyWorkflowPath = perfNightlyWorkflowPath;
 
 Future<void> main(List<String> _) async {
   final failures = <String>[
-    ..._checkAgents(File(_agentsPath)),
-    ..._checkCiWorkflow(File(_ciWorkflowPath)),
-    ..._checkPerfNightlyWorkflow(File(_perfNightlyWorkflowPath)),
+    ..._checkWorkflow(File(ciWorkflowPath), ciWorkflowDefinition),
+    ..._checkWorkflow(
+      File(perfNightlyWorkflowPath),
+      perfNightlyWorkflowDefinition,
+    ),
   ];
 
   if (failures.isNotEmpty) {
@@ -29,44 +28,19 @@ Future<void> main(List<String> _) async {
   );
 }
 
-Iterable<String> _checkAgents(File file) sync* {
+Iterable<String> _checkWorkflow(
+  File file,
+  VerificationWorkflowDefinition workflow,
+) sync* {
   if (!file.existsSync()) {
-    yield 'Missing $_agentsPath.';
-    return;
-  }
-
-  final content = file.readAsStringSync();
-  if (content.contains('VERIFICATION.md')) {
-    yield '$_agentsPath still references VERIFICATION.md.';
-  }
-
-  final verificationSection = _extractSection(content, '## Verification');
-  if (verificationSection == null) {
-    yield 'Failed to find `## Verification` section in $_agentsPath.';
-    return;
-  }
-
-  final normalizedSection = _normalizeMarkdownText(verificationSection);
-  final normalizedExpected = _normalizeMarkdownText(
-    agentsVerificationInstruction,
-  );
-  if (!normalizedSection.startsWith(normalizedExpected)) {
-    yield 'Verification instruction drifted in $_agentsPath.';
-  }
-}
-
-Iterable<String> _checkCiWorkflow(File file) sync* {
-  if (!file.existsSync()) {
-    yield 'Missing $_ciWorkflowPath.';
+    yield 'Missing ${workflow.path}.';
     return;
   }
 
   final content = file.readAsStringSync();
   final runEntries = _parseRunEntries(content);
-  final triggerEntries = _parseToolTestEntries(content);
-
   final expectedRuns = <String>{
-    for (final entry in ciWorkflowRunExpectations)
+    for (final entry in workflow.runExpectations)
       '${entry.cwd}|${entry.command}',
   };
   final actualRuns = <String>{
@@ -74,68 +48,25 @@ Iterable<String> _checkCiWorkflow(File file) sync* {
   };
 
   final missingRuns = expectedRuns.difference(actualRuns).toList()..sort();
-  final extraTriggers =
-      triggerEntries.difference(toolTestTriggerEntries.toSet()).toList()
-        ..sort();
-  final missingTriggers =
-      toolTestTriggerEntries.toSet().difference(triggerEntries).toList()
-        ..sort();
 
   for (final run in missingRuns) {
-    yield '$_ciWorkflowPath is missing expected run entry `$run`.';
-  }
-  if (missingTriggers.isNotEmpty) {
-    yield 'Entries missing from $_ciWorkflowPath tool_tests: ${missingTriggers.join(', ')}';
-  }
-  if (extraTriggers.isNotEmpty) {
-    yield 'Unexpected $_ciWorkflowPath tool_tests entries: ${extraTriggers.join(', ')}';
-  }
-}
-
-Iterable<String> _checkPerfNightlyWorkflow(File file) sync* {
-  if (!file.existsSync()) {
-    yield 'Missing $_perfNightlyWorkflowPath.';
-    return;
+    yield '${workflow.path} is missing expected run entry `$run`.';
   }
 
-  final content = file.readAsStringSync();
-  final runEntries = _parseRunEntries(content);
-  final expectedRuns = <String>{
-    for (final entry in perfNightlyWorkflowRunExpectations)
-      '${entry.cwd}|${entry.command}',
-  };
-  final actualRuns = <String>{
-    for (final entry in runEntries) '${entry.cwd}|${entry.command}',
-  };
-  final missingRuns = expectedRuns.difference(actualRuns).toList()..sort();
-
-  for (final run in missingRuns) {
-    yield '$_perfNightlyWorkflowPath is missing expected run entry `$run`.';
-  }
-}
-
-String? _extractSection(String content, String heading) {
-  final lines = content.split('\n');
-  final startIndex = lines.indexOf(heading);
-  if (startIndex == -1) {
-    return null;
-  }
-
-  final buffer = StringBuffer();
-  for (final line in lines.skip(startIndex + 1)) {
-    if (line.startsWith('## ')) {
-      break;
+  for (final filterEntry in workflow.changeFilters.entries) {
+    final actualEntries = _parseFilterEntries(content, filterEntry.key);
+    final expectedEntries = filterEntry.value.toSet();
+    final extraEntries = actualEntries.difference(expectedEntries).toList()
+      ..sort();
+    final missingEntries = expectedEntries.difference(actualEntries).toList()
+      ..sort();
+    if (missingEntries.isNotEmpty) {
+      yield 'Entries missing from ${workflow.path} ${filterEntry.key}: ${missingEntries.join(', ')}';
     }
-    if (buffer.isNotEmpty) {
-      buffer.writeln();
+    if (extraEntries.isNotEmpty) {
+      yield 'Unexpected ${workflow.path} ${filterEntry.key} entries: ${extraEntries.join(', ')}';
     }
-    buffer.write(line);
   }
-  return buffer.toString().trim();
-}
-
-String _normalizeMarkdownText(String value) {
-  return value.split(RegExp(r'\s+')).where((part) => part.isNotEmpty).join(' ');
 }
 
 List<_WorkflowRunEntry> _parseRunEntries(String content) {
@@ -168,24 +99,24 @@ List<_WorkflowRunEntry> _parseRunEntries(String content) {
   return entries;
 }
 
-Set<String> _parseToolTestEntries(String content) {
+Set<String> _parseFilterEntries(String content, String filterName) {
   final lines = content.split('\n');
-  var toolTestsIndent = -1;
+  var filterIndent = -1;
   final entries = <String>{};
 
   for (final line in lines) {
     final trimmed = line.trimLeft();
     final indent = line.length - trimmed.length;
-    if (toolTestsIndent == -1) {
-      if (trimmed == 'tool_tests:') {
-        toolTestsIndent = indent;
+    if (filterIndent == -1) {
+      if (trimmed == '$filterName:') {
+        filterIndent = indent;
       }
       continue;
     }
     if (trimmed.isEmpty) {
       continue;
     }
-    if (indent <= toolTestsIndent) {
+    if (indent <= filterIndent) {
       break;
     }
     if (!trimmed.startsWith('- ')) {

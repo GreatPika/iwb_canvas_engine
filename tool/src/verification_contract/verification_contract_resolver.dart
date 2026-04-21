@@ -137,10 +137,12 @@ ResolvedVerificationPlan _resolvePreset(VerificationInvocation invocation) {
     );
   }
 
+  final requiredPreset = requiredCodeChangePresetDefinition;
   final steps = <ResolvedVerificationStep>[
-    for (final stepId in requiredCodeChangeStepIds)
+    for (final stepId in requiredPreset.stepIds)
       _resolvedStep(stepId, reason: 'preset:$requiredCodeChangePreset'),
-    if (_shouldRunToolTests(changedPaths))
+    if (requiredPreset.runsToolTestsOnMatchingChanges &&
+        _shouldRunToolTests(changedPaths))
       _resolvedStep(
         'tool_tests',
         reason: 'preset:$requiredCodeChangePreset:tool_tests',
@@ -163,11 +165,11 @@ ResolvedVerificationPlan _resolveScopes(VerificationInvocation invocation) {
   }
   final requestedScopes = _normalizeUnique(invocation.scopes);
   final selectedScopes = <String>[
-    for (final scope in verificationScopes)
+    for (final scope in verificationGraph.scopeIds)
       if (requestedScopes.contains(scope)) scope,
   ];
   final unknownScopes = requestedScopes
-      .where((scope) => !verificationScopeStepIds.containsKey(scope))
+      .where((scope) => verificationGraph.scopeStepIdForScope(scope) == null)
       .toList();
   if (unknownScopes.isNotEmpty) {
     _failUsage('Unknown --scope value: ${unknownScopes.first}');
@@ -178,7 +180,7 @@ ResolvedVerificationPlan _resolveScopes(VerificationInvocation invocation) {
     selectors: selectedScopes,
     steps: <ResolvedVerificationStep>[
       for (final scope in selectedScopes)
-        _resolvedStep(verificationScopeStepIds[scope]!, reason: 'scope:$scope'),
+        _resolvedStep(_scopeStepId(scope), reason: 'scope:$scope'),
     ],
   );
 }
@@ -222,7 +224,7 @@ ResolvedVerificationPlan _resolveToolTestFiles(
     validatedFiles.add(file);
   }
 
-  final command = StringBuffer(verificationSteps['tool_tests']!.command);
+  final command = StringBuffer(_stepDefinition('tool_tests').command);
   for (final file in validatedFiles) {
     command.write(' $file');
   }
@@ -264,14 +266,31 @@ bool shouldRunToolTestsForChangedPaths(List<String> changedPaths) {
 }
 
 bool _shouldRunToolTests(List<String> changedPaths) {
+  final triggers = toolTestTriggerEntries;
   for (final changedPath in changedPaths) {
-    for (final trigger in toolTestTriggerEntries) {
+    for (final trigger in triggers) {
       if (_matchesTrigger(changedPath, trigger)) {
         return true;
       }
     }
   }
   return false;
+}
+
+String _scopeStepId(String scope) {
+  final stepId = verificationGraph.scopeStepIdForScope(scope);
+  if (stepId == null) {
+    throw StateError('Unknown verification scope id: $scope');
+  }
+  return stepId;
+}
+
+VerificationStepDefinition _stepDefinition(String stepId) {
+  final definition = verificationSteps[stepId];
+  if (definition == null) {
+    throw StateError('Unknown verification step id: $stepId');
+  }
+  return definition;
 }
 
 bool _matchesTrigger(String path, String trigger) {

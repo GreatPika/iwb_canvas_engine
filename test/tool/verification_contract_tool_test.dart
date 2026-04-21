@@ -9,31 +9,38 @@ import 'support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_verification_contract.dart', () {
-    test('passes when AGENTS and CI stay aligned with the registry', () async {
-      final sandbox = await _createSandbox();
-      try {
-        _writeCanonicalAgents(sandbox);
-        _writeCanonicalCiWorkflow(sandbox);
-        _writeCanonicalPerfNightlyWorkflow(sandbox);
+    test(
+      'passes when workflows stay aligned with the registry graph',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeCanonicalCiWorkflow(sandbox);
+          _writeCanonicalPerfNightlyWorkflow(sandbox);
 
-        final result = await runSandboxTool(
-          sandbox,
-          'check_verification_contract.dart',
-        );
+          final result = await runSandboxTool(
+            sandbox,
+            'check_verification_contract.dart',
+          );
 
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-        expect(result.stdout.toString(), contains('Verification contract OK'));
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+          expect(
+            result.stdout.toString(),
+            contains('Verification contract OK'),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
 
-    test('fails when AGENTS verification instruction drifts', () async {
-      final sandbox = await _createSandbox();
-      try {
-        _writeCanonicalCiWorkflow(sandbox);
-        _writeCanonicalPerfNightlyWorkflow(sandbox);
-        writeSandboxFile(sandbox, 'AGENTS.md', '''
+    test(
+      'ignores AGENTS.md because it is outside the executable contract',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeCanonicalCiWorkflow(sandbox);
+          _writeCanonicalPerfNightlyWorkflow(sandbox);
+          writeSandboxFile(sandbox, 'AGENTS.md', '''
 # Product boundary
 
 ## Verification
@@ -41,25 +48,21 @@ void main() {
 Run something else.
 ''');
 
-        final result = await runSandboxTool(
-          sandbox,
-          'check_verification_contract.dart',
-        );
+          final result = await runSandboxTool(
+            sandbox,
+            'check_verification_contract.dart',
+          );
 
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          contains('Verification instruction drifted in AGENTS.md.'),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test('fails when CI run surface drifts', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeCanonicalAgents(sandbox);
         _writeCanonicalCiWorkflow(
           sandbox,
           removeRun: 'dart run tool/check_verification_contract.dart',
@@ -86,7 +89,6 @@ Run something else.
     test('fails when CI tool-test trigger surface drifts', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeCanonicalAgents(sandbox);
         _writeCanonicalCiWorkflow(
           sandbox,
           triggerEntries: <String>[
@@ -116,7 +118,6 @@ Run something else.
     test('fails when perf nightly run surface drifts', () async {
       final sandbox = await _createSandbox();
       try {
-        _writeCanonicalAgents(sandbox);
         _writeCanonicalCiWorkflow(sandbox);
         _writeCanonicalPerfNightlyWorkflow(
           sandbox,
@@ -171,18 +172,6 @@ Future<Directory> _createSandbox() {
     ],
     includeAnalyzer: false,
   );
-}
-
-void _writeCanonicalAgents(Directory sandbox) {
-  writeSandboxFile(sandbox, 'AGENTS.md', '''
-# Product boundary
-
-## Verification
-
-After any code change, run `dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=<path-or->` and provide every modified, added, renamed, or deleted repository-relative path as one line from that file or from stdin.
-- Documentation-only changes do not require the full Flutter pipeline unless
-  the task also changes code, tooling contracts, or executable examples.
-''');
 }
 
 void _writeCanonicalCiWorkflow(

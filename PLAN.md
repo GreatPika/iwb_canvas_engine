@@ -17,4 +17,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 
 ## Step Files
 
-- [ ] [Step 1. Executable Verification Proof Architecture](plan/step_1_executable_verification_proof_architecture.md)
+- [x] [Step 1. Executable Verification Proof Architecture](plan/step_1_executable_verification_proof_architecture.md)

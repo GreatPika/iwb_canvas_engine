@@ -117,25 +117,25 @@ class CoverageTestTargetLocator {
 
   String? _preferredVerificationScope(String sourcePath) {
     if (sourcePath.startsWith('lib/src/core/')) {
-      return verificationScopeStepIds['core'];
+      return verificationGraph.scopeStepIdForScope('core');
     }
     if (sourcePath.startsWith('lib/src/controller/internal/')) {
-      return verificationScopeStepIds['controller_internal'];
+      return verificationGraph.scopeStepIdForScope('controller_internal');
     }
     if (sourcePath.startsWith('lib/src/controller/')) {
-      return verificationScopeStepIds['controller'];
+      return verificationGraph.scopeStepIdForScope('controller');
     }
     if (sourcePath.startsWith('lib/src/interactive/')) {
-      return verificationScopeStepIds['interactive'];
+      return verificationGraph.scopeStepIdForScope('interactive');
     }
     if (sourcePath.startsWith('lib/src/render/') ||
         sourcePath.startsWith('lib/src/view/')) {
-      return verificationScopeStepIds['render_view'];
+      return verificationGraph.scopeStepIdForScope('render_view');
     }
     if (sourcePath.startsWith('lib/src/contract/') ||
         sourcePath.startsWith('lib/src/model/') ||
         sourcePath.startsWith('lib/src/serialization/')) {
-      return verificationScopeStepIds['model_contract'];
+      return verificationGraph.scopeStepIdForScope('model_contract');
     }
     return null;
   }

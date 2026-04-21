@@ -40,6 +40,71 @@ class VerificationRunExpectation {
   final String cwd;
 }
 
+class VerificationScopeDefinition {
+  const VerificationScopeDefinition({required this.id, required this.stepId});
+
+  final String id;
+  final String stepId;
+}
+
+class VerificationPresetDefinition {
+  const VerificationPresetDefinition({
+    required this.id,
+    required this.stepIds,
+    this.runsToolTestsOnMatchingChanges = false,
+  });
+
+  final String id;
+  final List<String> stepIds;
+  final bool runsToolTestsOnMatchingChanges;
+}
+
+class VerificationWorkflowDefinition {
+  const VerificationWorkflowDefinition({
+    required this.path,
+    required this.runExpectations,
+    this.changeFilters = const <String, List<String>>{},
+  });
+
+  final String path;
+  final List<VerificationRunExpectation> runExpectations;
+  final Map<String, List<String>> changeFilters;
+}
+
+class VerificationGraph {
+  const VerificationGraph({
+    required this.steps,
+    required this.scopes,
+    required this.presets,
+    required this.workflows,
+  });
+
+  final Map<String, VerificationStepDefinition> steps;
+  final List<VerificationScopeDefinition> scopes;
+  final Map<String, VerificationPresetDefinition> presets;
+  final Map<String, VerificationWorkflowDefinition> workflows;
+
+  List<String> get scopeIds =>
+      List<String>.unmodifiable(scopes.map((scope) => scope.id));
+
+  Map<String, String> get scopeStepIds => Map<String, String>.unmodifiable(
+    <String, String>{for (final scope in scopes) scope.id: scope.stepId},
+  );
+
+  String? scopeStepIdForScope(String scopeId) {
+    for (final scope in scopes) {
+      if (scope.id == scopeId) {
+        return scope.stepId;
+      }
+    }
+    return null;
+  }
+
+  VerificationPresetDefinition? preset(String presetId) => presets[presetId];
+
+  VerificationWorkflowDefinition? workflow(String path) => workflows[path];
+}
+
 class ResolvedVerificationStep {
   const ResolvedVerificationStep({
     required this.id,

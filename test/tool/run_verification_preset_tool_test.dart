@@ -10,40 +10,89 @@ import 'support/tool_process_test_support.dart';
 
 void main() {
   group('tool/run_verification_preset.dart', () {
-    test('resolve returns the required preset machine plan', () async {
-      final sandbox = await _createSandbox();
-      try {
-        _writeCanonicalToolTestFile(sandbox);
+    test('registry keeps the verification graph as the only owner data', () {
+      final content = File(
+        '${Directory.current.path}/tool/src/verification_contract/verification_contract_registry.dart',
+      ).readAsStringSync();
 
-        final result = await runSandboxTool(
-          sandbox,
-          'run_verification_preset.dart',
-          args: const <String>[
-            'resolve',
-            '--format=json',
-            '--preset=required_code_change',
-            '--changed-paths-file=-',
-          ],
-          stdinText: 'tool/run_verification_preset.dart\n',
-        );
-
-        expect(result.exitCode, 0, reason: result.stderr.toString());
-        final payload =
-            jsonDecode(result.stdout.toString()) as Map<String, Object?>;
-        expect(payload.keys, <String>['mode', 'selectors', 'steps']);
-        expect(payload['mode'], 'preset');
-        expect(payload['selectors'], <Object?>['required_code_change']);
-        final steps = List<Map<String, Object?>>.from(
-          (payload['steps'] as List<Object?>?) ?? const <Object?>[],
-        );
-        expect(steps.first['id'], 'format_check');
-        expect(steps.last['id'], 'tool_tests');
-        expect(steps.last['kind'], 'tool_tests');
-        expect(steps.last['reason'], 'preset:required_code_change:tool_tests');
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
+      expect(content, contains('final VerificationGraph verificationGraph ='));
+      expect(
+        content,
+        isNot(contains('const List<String> toolTestTriggerEntries =')),
+      );
+      expect(
+        content,
+        isNot(contains('const Map<String, String> verificationScopeStepIds =')),
+      );
+      expect(
+        content,
+        isNot(contains('const List<String> requiredCodeChangeStepIds =')),
+      );
     });
+
+    test(
+      'resolve returns the full ordered required preset machine plan',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeCanonicalToolTestFile(sandbox);
+
+          final result = await runSandboxTool(
+            sandbox,
+            'run_verification_preset.dart',
+            args: const <String>[
+              'resolve',
+              '--format=json',
+              '--preset=required_code_change',
+              '--changed-paths-file=-',
+            ],
+            stdinText: 'tool/run_verification_preset.dart\n',
+          );
+
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+          final payload =
+              jsonDecode(result.stdout.toString()) as Map<String, Object?>;
+          expect(payload.keys, <String>['mode', 'selectors', 'steps']);
+          expect(payload['mode'], 'preset');
+          expect(payload['selectors'], <Object?>['required_code_change']);
+          final steps = List<Map<String, Object?>>.from(
+            (payload['steps'] as List<Object?>?) ?? const <Object?>[],
+          );
+          expect(
+            steps.map((step) => step['id']).toList(growable: false),
+            <Object?>[
+              'format_check',
+              'analyze',
+              'example_analyze',
+              'dcm_analyze',
+              'verification_contract',
+              'import_boundaries',
+              'public_api_surface',
+              'guardrails',
+              'invariant_coverage',
+              'scope_core',
+              'scope_model_contract',
+              'scope_controller_internal',
+              'scope_controller',
+              'scope_render_view',
+              'scope_interactive',
+              'scope_example',
+              'coverage',
+              'coverage_check',
+              'tool_tests',
+            ],
+          );
+          expect(steps.last['id'], 'tool_tests');
+          expect(steps.last['kind'], 'tool_tests');
+          expect(
+            steps.last['reason'],
+            'preset:required_code_change:tool_tests',
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test(
       'resolve deduplicates and orders explicit scopes canonically',

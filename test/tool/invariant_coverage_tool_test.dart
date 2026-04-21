@@ -9,116 +9,107 @@ import 'support/tool_process_test_support.dart';
 
 void main() {
   group('tool/check_invariant_coverage.dart', () {
-    test(
-      'passes when registry primaryProof points to matching marker',
-      () async {
-        final sandbox = await _createSandbox();
-        try {
-          _writeRegistry(sandbox, '''
+    test('invariant registry uses required/regression proof roles', () {
+      final content = File(
+        '${Directory.current.path}/tool/invariant_registry.dart',
+      ).readAsStringSync();
+
+      expect(content, contains('requiredProofs'));
+      expect(content, contains('regressionProofs'));
+      expect(content, isNot(contains('primaryProof')));
+      expect(content, isNot(contains('toolProof')));
+    });
+
+    test('passes when required proof points to matching marker', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeRegistry(sandbox, '''
 const List<Invariant> invariants = <Invariant>[
   Invariant(
     id: 'INV-ENG-SAMPLE-CONTRACT',
     scope: 'sample',
     title: 'sample invariant',
-    primaryProof: PrimaryProof(path: 'test/sample_test.dart'),
+    requiredProofs: <RequiredProof>[
+      RequiredProof(path: 'test/core/sample_test.dart', stepId: 'scope_core'),
+    ],
   ),
 ];
 ''');
-          writeSandboxFile(sandbox, 'test/sample_test.dart', '''
+        writeSandboxFile(sandbox, 'test/core/sample_test.dart', '''
 void main() {
   ${_invMarker('INV-ENG-SAMPLE-CONTRACT')}
 }
 ''');
 
-          final result = await runSandboxTool(
-            sandbox,
-            'check_invariant_coverage.dart',
-          );
+        final result = await runSandboxTool(
+          sandbox,
+          'check_invariant_coverage.dart',
+        );
 
-          expect(result.exitCode, 0, reason: result.stderr.toString());
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
-    );
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('passes when required proof uses the example scope surface', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeRegistry(sandbox, '''
+const List<Invariant> invariants = <Invariant>[
+  Invariant(
+    id: 'INV-ENG-EXAMPLE-CONTRACT',
+    scope: 'sample',
+    title: 'example invariant',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(
+        path: 'example/test/example_surface_test.dart',
+        stepId: 'scope_example',
+      ),
+    ],
+  ),
+];
+''');
+        writeSandboxFile(sandbox, 'example/test/example_surface_test.dart', '''
+void main() {
+  ${_invMarker('INV-ENG-EXAMPLE-CONTRACT')}
+}
+''');
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_invariant_coverage.dart',
+        );
+
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
 
     test(
-      'passes when tool-backed invariant declares primary and tool proofs',
+      'passes when required tool proof and regression proof both match markers',
       () async {
         final sandbox = await _createSandbox();
         try {
           _writeRegistry(sandbox, '''
 const List<Invariant> invariants = <Invariant>[
   Invariant(
-    id: 'INV-ENG-SAMPLE-CONTRACT',
+    id: 'INV-ENG-GUARDRAILS-CONTRACT',
     scope: 'sample',
-    title: 'sample invariant',
-    primaryProof: PrimaryProof(path: 'test/tool/sample_tool_test.dart'),
-    toolProof: ToolProof(
-      enforcementPath: 'tool/check_sample.dart',
-      regressionPath: 'test/tool/sample_tool_test.dart',
-    ),
+    title: 'sample guardrails invariant',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(path: 'tool/check_guardrails.dart', stepId: 'guardrails'),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(path: 'test/tool/guardrails/guardrails_sample_tool_test.dart'),
+    ],
   ),
 ];
-''');
-          writeSandboxFile(sandbox, 'tool/check_sample.dart', '''
-void main() {
-  ${_invMarker('INV-ENG-SAMPLE-CONTRACT')}
-}
-''');
-          writeSandboxFile(sandbox, 'test/tool/sample_tool_test.dart', '''
-void main() {
-  ${_invMarker('INV-ENG-SAMPLE-CONTRACT')}
-}
-''');
-
-          final result = await runSandboxTool(
-            sandbox,
-            'check_invariant_coverage.dart',
-          );
-
-          expect(result.exitCode, 0, reason: result.stderr.toString());
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
-    );
-
-    test(
-      'passes when guardrails claim surfaces exactly match the registry-backed contour',
-      () async {
-        final sandbox = await _createSandbox();
-        try {
-          _writeRegistry(sandbox, '''
-const List<Invariant> invariants = <Invariant>[
-  Invariant(
-    id: 'INV-ENG-GUARDRAILS-TOOL',
-    scope: 'sample',
-    title: 'guardrails tool invariant',
-    primaryProof: PrimaryProof(path: 'test/sample_test.dart'),
-    toolProof: ToolProof(
-      enforcementPath: 'tool/check_guardrails.dart',
-      regressionPath: 'test/tool/guardrails/guardrails_sample_tool_test.dart',
-    ),
-  ),
-  Invariant(
-    id: 'INV-ENG-GUARDRAILS-PRIMARY',
-    scope: 'sample',
-    title: 'guardrails primary invariant',
-    primaryProof: PrimaryProof(
-      path: 'test/tool/guardrails/guardrails_sample_tool_test.dart',
-    ),
-  ),
-];
-''');
-          writeSandboxFile(sandbox, 'test/sample_test.dart', '''
-void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
-}
 ''');
           writeSandboxFile(sandbox, 'tool/check_guardrails.dart', '''
 void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
+  ${_invMarker('INV-ENG-GUARDRAILS-CONTRACT')}
 }
 ''');
           writeSandboxFile(
@@ -126,8 +117,7 @@ void main() {
             'test/tool/guardrails/guardrails_sample_tool_test.dart',
             '''
 void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
-  ${_invMarker('INV-ENG-GUARDRAILS-PRIMARY')}
+  ${_invMarker('INV-ENG-GUARDRAILS-CONTRACT')}
 }
 ''',
           );
@@ -144,54 +134,26 @@ void main() {
       },
     );
 
-    test('rejects overclaimed marker in tool/check_guardrails.dart', () async {
+    test('rejects required proof step outside required_code_change', () async {
       final sandbox = await _createSandbox();
       try {
         _writeRegistry(sandbox, '''
 const List<Invariant> invariants = <Invariant>[
   Invariant(
-    id: 'INV-ENG-GUARDRAILS-TOOL',
+    id: 'INV-ENG-SAMPLE-CONTRACT',
     scope: 'sample',
-    title: 'guardrails tool invariant',
-    primaryProof: PrimaryProof(path: 'test/sample_test.dart'),
-    toolProof: ToolProof(
-      enforcementPath: 'tool/check_guardrails.dart',
-      regressionPath: 'test/tool/guardrails/guardrails_sample_tool_test.dart',
-    ),
-  ),
-  Invariant(
-    id: 'INV-ENG-NON-GUARDRAILS',
-    scope: 'sample',
-    title: 'non-guardrails invariant',
-    primaryProof: PrimaryProof(path: 'test/other_test.dart'),
+    title: 'sample invariant',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(path: 'test/core/sample_test.dart', stepId: 'tool_tests'),
+    ],
   ),
 ];
 ''');
-        writeSandboxFile(sandbox, 'test/sample_test.dart', '''
+        writeSandboxFile(sandbox, 'test/core/sample_test.dart', '''
 void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
+  ${_invMarker('INV-ENG-SAMPLE-CONTRACT')}
 }
 ''');
-        writeSandboxFile(sandbox, 'test/other_test.dart', '''
-void main() {
-  ${_invMarker('INV-ENG-NON-GUARDRAILS')}
-}
-''');
-        writeSandboxFile(sandbox, 'tool/check_guardrails.dart', '''
-void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
-  ${_invMarker('INV-ENG-NON-GUARDRAILS')}
-}
-''');
-        writeSandboxFile(
-          sandbox,
-          'test/tool/guardrails/guardrails_sample_tool_test.dart',
-          '''
-void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
-}
-''',
-        );
 
         final result = await runSandboxTool(
           sandbox,
@@ -202,8 +164,8 @@ void main() {
         expect(
           result.stderr.toString(),
           contains(
-            'tool/check_guardrails.dart overclaims guardrails invariant '
-            '${_markerText('INV-ENG-NON-GUARDRAILS')}',
+            'INV-ENG-SAMPLE-CONTRACT requiredProofs[0].stepId must be reachable '
+            'from required_code_change: tool_tests',
           ),
         );
       } finally {
@@ -212,61 +174,30 @@ void main() {
     });
 
     test(
-      'rejects overclaimed marker in guardrails regression test file',
+      'rejects required proof path that is not reachable by its step',
       () async {
         final sandbox = await _createSandbox();
         try {
           _writeRegistry(sandbox, '''
 const List<Invariant> invariants = <Invariant>[
   Invariant(
-    id: 'INV-ENG-GUARDRAILS-TOOL',
+    id: 'INV-ENG-SAMPLE-CONTRACT',
     scope: 'sample',
-    title: 'guardrails tool invariant',
-    primaryProof: PrimaryProof(path: 'test/sample_test.dart'),
-    toolProof: ToolProof(
-      enforcementPath: 'tool/check_guardrails.dart',
-      regressionPath: 'test/tool/guardrails/guardrails_sample_tool_test.dart',
-    ),
-  ),
-  Invariant(
-    id: 'INV-ENG-OTHER-GUARDRAILS',
-    scope: 'sample',
-    title: 'other guardrails invariant',
-    primaryProof: PrimaryProof(
-      path: 'test/tool/guardrails/guardrails_other_tool_test.dart',
-    ),
+    title: 'sample invariant',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(
+        path: 'test/public_api/sample_test.dart',
+        stepId: 'scope_core',
+      ),
+    ],
   ),
 ];
 ''');
-          writeSandboxFile(sandbox, 'test/sample_test.dart', '''
+          writeSandboxFile(sandbox, 'test/public_api/sample_test.dart', '''
 void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
+  ${_invMarker('INV-ENG-SAMPLE-CONTRACT')}
 }
 ''');
-          writeSandboxFile(
-            sandbox,
-            'test/tool/guardrails/guardrails_other_tool_test.dart',
-            '''
-void main() {
-  ${_invMarker('INV-ENG-OTHER-GUARDRAILS')}
-}
-''',
-          );
-          writeSandboxFile(sandbox, 'tool/check_guardrails.dart', '''
-void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
-}
-''');
-          writeSandboxFile(
-            sandbox,
-            'test/tool/guardrails/guardrails_sample_tool_test.dart',
-            '''
-void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
-  ${_invMarker('INV-ENG-OTHER-GUARDRAILS')}
-}
-''',
-          );
 
           final result = await runSandboxTool(
             sandbox,
@@ -277,9 +208,8 @@ void main() {
           expect(
             result.stderr.toString(),
             contains(
-              'test/tool/guardrails/guardrails_sample_tool_test.dart '
-              'overclaims guardrails invariant '
-              '${_markerText('INV-ENG-OTHER-GUARDRAILS')}',
+              'INV-ENG-SAMPLE-CONTRACT requiredProofs[0] must be reachable by '
+              'scope_core: test/public_api/sample_test.dart',
             ),
           );
         } finally {
@@ -288,49 +218,71 @@ void main() {
       },
     );
 
-    test('rejects missing guardrails marker for a declared file', () async {
+    test('rejects unknown required proof step ids', () async {
       final sandbox = await _createSandbox();
       try {
         _writeRegistry(sandbox, '''
 const List<Invariant> invariants = <Invariant>[
   Invariant(
-    id: 'INV-ENG-GUARDRAILS-TOOL',
+    id: 'INV-ENG-SAMPLE-CONTRACT',
     scope: 'sample',
-    title: 'guardrails tool invariant',
-    primaryProof: PrimaryProof(path: 'test/sample_test.dart'),
-    toolProof: ToolProof(
-      enforcementPath: 'tool/check_guardrails.dart',
-      regressionPath: 'test/tool/guardrails/guardrails_sample_tool_test.dart',
-    ),
-  ),
-  Invariant(
-    id: 'INV-ENG-GUARDRAILS-PRIMARY',
-    scope: 'sample',
-    title: 'guardrails primary invariant',
-    primaryProof: PrimaryProof(
-      path: 'test/tool/guardrails/guardrails_sample_tool_test.dart',
-    ),
+    title: 'sample invariant',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(path: 'test/core/sample_test.dart', stepId: 'unknown_step'),
+    ],
   ),
 ];
 ''');
-        writeSandboxFile(sandbox, 'test/sample_test.dart', '''
+        writeSandboxFile(sandbox, 'test/core/sample_test.dart', '''
 void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
+  ${_invMarker('INV-ENG-SAMPLE-CONTRACT')}
 }
+''');
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_invariant_coverage.dart',
+        );
+
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            'INV-ENG-SAMPLE-CONTRACT requiredProofs[0].stepId must reference a known verification step: unknown_step',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects missing explicit marker in regression proof file', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeRegistry(sandbox, '''
+const List<Invariant> invariants = <Invariant>[
+  Invariant(
+    id: 'INV-ENG-GUARDRAILS-CONTRACT',
+    scope: 'sample',
+    title: 'sample guardrails invariant',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(path: 'tool/check_guardrails.dart', stepId: 'guardrails'),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(path: 'test/tool/guardrails/guardrails_sample_tool_test.dart'),
+    ],
+  ),
+];
 ''');
         writeSandboxFile(sandbox, 'tool/check_guardrails.dart', '''
 void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
+  ${_invMarker('INV-ENG-GUARDRAILS-CONTRACT')}
 }
 ''');
         writeSandboxFile(
           sandbox,
           'test/tool/guardrails/guardrails_sample_tool_test.dart',
-          '''
-void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
-}
-''',
+          'void main() {}\n',
         );
 
         final result = await runSandboxTool(
@@ -342,8 +294,8 @@ void main() {
         expect(
           result.stderr.toString(),
           contains(
-            'INV-ENG-GUARDRAILS-PRIMARY is missing explicit proof marker in '
-            'primaryProof '
+            'INV-ENG-GUARDRAILS-CONTRACT is missing explicit proof marker in '
+            'regressionProofs[0] '
             'test/tool/guardrails/guardrails_sample_tool_test.dart',
           ),
         );
@@ -353,100 +305,42 @@ void main() {
     });
 
     test(
-      'preserves missing-file diagnostics before guardrails claim-honesty checks',
+      'rejects overclaimed guardrails marker outside declared contour',
       () async {
         final sandbox = await _createSandbox();
         try {
           _writeRegistry(sandbox, '''
 const List<Invariant> invariants = <Invariant>[
   Invariant(
-    id: 'INV-ENG-GUARDRAILS-TOOL',
+    id: 'INV-ENG-GUARDRAILS-CONTRACT',
     scope: 'sample',
-    title: 'guardrails tool invariant',
-    primaryProof: PrimaryProof(path: 'test/sample_test.dart'),
-    toolProof: ToolProof(
-      enforcementPath: 'tool/check_guardrails.dart',
-      regressionPath: 'test/tool/guardrails/guardrails_sample_tool_test.dart',
-    ),
+    title: 'sample guardrails invariant',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(path: 'tool/check_guardrails.dart', stepId: 'guardrails'),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(path: 'test/tool/guardrails/guardrails_sample_tool_test.dart'),
+    ],
+  ),
+  Invariant(
+    id: 'INV-ENG-OTHER-CONTRACT',
+    scope: 'sample',
+    title: 'other invariant',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(path: 'test/core/other_test.dart', stepId: 'scope_core'),
+    ],
   ),
 ];
 ''');
-          writeSandboxFile(sandbox, 'test/sample_test.dart', '''
-void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
-}
-''');
           writeSandboxFile(sandbox, 'tool/check_guardrails.dart', '''
 void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
+  ${_invMarker('INV-ENG-GUARDRAILS-CONTRACT')}
+  ${_invMarker('INV-ENG-OTHER-CONTRACT')}
 }
 ''');
-
-          final result = await runSandboxTool(
-            sandbox,
-            'check_invariant_coverage.dart',
-          );
-
-          expect(result.exitCode, isNonZero);
-          expect(
-            result.stderr.toString(),
-            contains(
-              'INV-ENG-GUARDRAILS-TOOL toolProof.regressionPath missing: '
-              'test/tool/guardrails/guardrails_sample_tool_test.dart',
-            ),
-          );
-          expect(
-            result.stderr.toString(),
-            isNot(
-              contains(
-                'guardrails claim surfaces must match the registry-backed contour',
-              ),
-            ),
-          );
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
-    );
-
-    test(
-      'allows navigation-only invariant refs in guardrails test files',
-      () async {
-        final sandbox = await _createSandbox();
-        try {
-          _writeRegistry(sandbox, '''
-const List<Invariant> invariants = <Invariant>[
-  Invariant(
-    id: 'INV-ENG-GUARDRAILS-TOOL',
-    scope: 'sample',
-    title: 'guardrails tool invariant',
-    primaryProof: PrimaryProof(path: 'test/sample_test.dart'),
-    toolProof: ToolProof(
-      enforcementPath: 'tool/check_guardrails.dart',
-      regressionPath: 'test/tool/guardrails/guardrails_sample_tool_test.dart',
-    ),
-  ),
-  Invariant(
-    id: 'INV-ENG-NAVIGATION-ONLY',
-    scope: 'sample',
-    title: 'navigation-only invariant',
-    primaryProof: PrimaryProof(path: 'test/navigation_test.dart'),
-  ),
-];
-''');
-          writeSandboxFile(sandbox, 'test/sample_test.dart', '''
+          writeSandboxFile(sandbox, 'test/core/other_test.dart', '''
 void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
-}
-''');
-          writeSandboxFile(sandbox, 'test/navigation_test.dart', '''
-void main() {
-  ${_invMarker('INV-ENG-NAVIGATION-ONLY')}
-}
-''');
-          writeSandboxFile(sandbox, 'tool/check_guardrails.dart', '''
-void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
+  ${_invMarker('INV-ENG-OTHER-CONTRACT')}
 }
 ''');
           writeSandboxFile(
@@ -454,12 +348,7 @@ void main() {
             'test/tool/guardrails/guardrails_sample_tool_test.dart',
             '''
 void main() {
-  ${_invMarker('INV-ENG-GUARDRAILS-TOOL')}
-  // docs mention ${_markerText('INV-ENG-NAVIGATION-ONLY')}
-  final expected = '${_markerText('INV-ENG-NAVIGATION-ONLY')}';
-  if (expected.isEmpty) {
-    throw StateError('unreachable');
-  }
+  ${_invMarker('INV-ENG-GUARDRAILS-CONTRACT')}
 }
 ''',
           );
@@ -469,50 +358,12 @@ void main() {
             'check_invariant_coverage.dart',
           );
 
-          expect(result.exitCode, 0, reason: result.stderr.toString());
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
-    );
-
-    test(
-      'rejects comment-only marker outside the declared proof surface',
-      () async {
-        final sandbox = await _createSandbox();
-        try {
-          _writeRegistry(sandbox, '''
-const List<Invariant> invariants = <Invariant>[
-  Invariant(
-    id: 'INV-ENG-SAMPLE-CONTRACT',
-    scope: 'sample',
-    title: 'sample invariant',
-    primaryProof: PrimaryProof(path: 'test/declared_proof_test.dart'),
-  ),
-];
-''');
-          writeSandboxFile(sandbox, 'test/comment_only_test.dart', '''
-void main() {
-  ${_invMarker('INV-ENG-SAMPLE-CONTRACT')}
-}
-''');
-          writeSandboxFile(
-            sandbox,
-            'test/declared_proof_test.dart',
-            'void main() {}\n',
-          );
-
-          final result = await runSandboxTool(
-            sandbox,
-            'check_invariant_coverage.dart',
-          );
-
           expect(result.exitCode, isNonZero);
           expect(
             result.stderr.toString(),
             contains(
-              'INV-ENG-SAMPLE-CONTRACT is missing explicit proof marker in '
-              'primaryProof test/declared_proof_test.dart',
+              'tool/check_guardrails.dart overclaims guardrails invariant '
+              '${_markerText('INV-ENG-OTHER-CONTRACT')}',
             ),
           );
         } finally {
@@ -521,50 +372,7 @@ void main() {
       },
     );
 
-    test(
-      'rejects navigation-only invariant refs inside a declared proof file',
-      () async {
-        final sandbox = await _createSandbox();
-        try {
-          _writeRegistry(sandbox, '''
-const List<Invariant> invariants = <Invariant>[
-  Invariant(
-    id: 'INV-ENG-SAMPLE-CONTRACT',
-    scope: 'sample',
-    title: 'sample invariant',
-    primaryProof: PrimaryProof(path: 'test/declared_proof_test.dart'),
-  ),
-];
-''');
-          writeSandboxFile(sandbox, 'test/declared_proof_test.dart', '''
-void main() {
-  final note = '${_markerText('INV-ENG-SAMPLE-CONTRACT')}';
-  if (note.isEmpty) {
-    throw StateError('unreachable');
-  }
-}
-''');
-
-          final result = await runSandboxTool(
-            sandbox,
-            'check_invariant_coverage.dart',
-          );
-
-          expect(result.exitCode, isNonZero);
-          expect(
-            result.stderr.toString(),
-            contains(
-              'INV-ENG-SAMPLE-CONTRACT is missing explicit proof marker in '
-              'primaryProof test/declared_proof_test.dart',
-            ),
-          );
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
-    );
-
-    test('rejects invalid primary and tool proof path shapes', () async {
+    test('rejects invalid required and regression proof path shapes', () async {
       final sandbox = await _createSandbox();
       try {
         _writeRegistry(sandbox, '''
@@ -573,11 +381,13 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-SAMPLE-CONTRACT',
     scope: 'sample',
     title: 'sample invariant',
-    primaryProof: PrimaryProof(path: 'tool/check_sample.dart'),
-    toolProof: ToolProof(
-      enforcementPath: 'tool/src/check_sample.dart',
-      regressionPath: 'test/sample_test.dart',
-    ),
+    requiredProofs: <RequiredProof>[
+      RequiredProof(path: 'tool/src/check_sample.dart', stepId: 'guardrails'),
+      RequiredProof(path: 'lib/src/sample.dart', stepId: 'scope_core'),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(path: 'tool/sample_test.dart'),
+    ],
   ),
 ];
 ''');
@@ -591,140 +401,23 @@ const List<Invariant> invariants = <Invariant>[
         expect(
           result.stderr.toString(),
           contains(
-            'INV-ENG-SAMPLE-CONTRACT primaryProof.path must match '
-            'test/**/*_test.dart: tool/check_sample.dart',
-          ),
-        );
-        expect(
-          result.stderr.toString(),
-          contains(
-            'INV-ENG-SAMPLE-CONTRACT toolProof.enforcementPath must match '
+            'INV-ENG-SAMPLE-CONTRACT requiredProofs[0].path must match '
             'top-level tool/*.dart: tool/src/check_sample.dart',
           ),
         );
         expect(
           result.stderr.toString(),
           contains(
-            'INV-ENG-SAMPLE-CONTRACT toolProof.regressionPath must match '
-            'test/tool/**/*_test.dart: test/sample_test.dart',
+            'INV-ENG-SAMPLE-CONTRACT requiredProofs[1].path must match '
+            'test/**/*_test.dart or top-level tool/*.dart: lib/src/sample.dart',
           ),
         );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test('rejects declared toolProof without tool regression path', () async {
-      final sandbox = await _createSandbox();
-      try {
-        _writeRegistry(sandbox, '''
-const List<Invariant> invariants = <Invariant>[
-  Invariant(
-    id: 'INV-ENG-SAMPLE-CONTRACT',
-    scope: 'sample',
-    title: 'sample invariant',
-    primaryProof: PrimaryProof(path: 'test/sample_test.dart'),
-    toolProof: ToolProof(enforcementPath: 'tool/check_sample.dart'),
-  ),
-];
-''');
-        writeSandboxFile(sandbox, 'test/sample_test.dart', '''
-void main() {
-  ${_invMarker('INV-ENG-SAMPLE-CONTRACT')}
-}
-''');
-        writeSandboxFile(sandbox, 'tool/check_sample.dart', '''
-void main() {
-  ${_invMarker('INV-ENG-SAMPLE-CONTRACT')}
-}
-''');
-
-        final result = await runSandboxTool(
-          sandbox,
-          'check_invariant_coverage.dart',
-        );
-
-        expect(result.exitCode, isNonZero);
         expect(
           result.stderr.toString(),
           contains(
-            'INV-ENG-SAMPLE-CONTRACT toolProof.regressionPath is required',
+            'INV-ENG-SAMPLE-CONTRACT regressionProofs[0].path must match '
+            'test/**/*_test.dart: tool/sample_test.dart',
           ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    });
-
-    test(
-      'reports coverage by invariant when one invariant misses multiple tool proofs',
-      () async {
-        final sandbox = await _createSandbox();
-        try {
-          _writeRegistry(sandbox, '''
-const List<Invariant> invariants = <Invariant>[
-  Invariant(
-    id: 'INV-ENG-SAMPLE-CONTRACT',
-    scope: 'sample',
-    title: 'sample invariant',
-    primaryProof: PrimaryProof(path: 'test/sample_test.dart'),
-    toolProof: ToolProof(
-      enforcementPath: 'tool/check_sample.dart',
-      regressionPath: 'test/tool/sample_tool_test.dart',
-    ),
-  ),
-];
-''');
-          writeSandboxFile(sandbox, 'test/sample_test.dart', '''
-void main() {
-  ${_invMarker('INV-ENG-SAMPLE-CONTRACT')}
-}
-''');
-
-          final result = await runSandboxTool(
-            sandbox,
-            'check_invariant_coverage.dart',
-          );
-
-          expect(result.exitCode, isNonZero);
-          expect(
-            result.stderr.toString(),
-            contains('FAIL: invariant proof coverage 0.0% (0/1). Missing:'),
-          );
-        } finally {
-          sandbox.deleteSync(recursive: true);
-        }
-      },
-    );
-
-    test('rejects non-canonical invariant ids with underscores', () async {
-      final sandbox = await _createSandbox();
-      try {
-        _writeRegistry(sandbox, '''
-const List<Invariant> invariants = <Invariant>[
-  Invariant(
-    id: 'INV-ENG-BAD_ID',
-    scope: 'sample',
-    title: 'bad invariant',
-    primaryProof: PrimaryProof(path: 'test/sample_test.dart'),
-  ),
-];
-''');
-        writeSandboxFile(sandbox, 'test/sample_test.dart', '''
-void main() {
-  ${_invMarker('INV-ENG-BAD_ID')}
-}
-''');
-
-        final result = await runSandboxTool(
-          sandbox,
-          'check_invariant_coverage.dart',
-        );
-
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          contains('non-canonical invariant id INV-ENG-BAD_ID'),
         );
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -739,6 +432,7 @@ Future<Directory> _createSandbox() {
     toolFiles: const <String>[
       'tool/check_invariant_coverage.dart',
       'tool/invariant_registry.dart',
+      'tool/src/verification_contract',
     ],
     includeAnalyzer: false,
   );
@@ -753,28 +447,28 @@ class Invariant {
     required this.id,
     required this.scope,
     required this.title,
-    required this.primaryProof,
-    this.toolProof,
+    required this.requiredProofs,
+    this.regressionProofs = const <RegressionProof>[],
   });
 
   final String id;
   final String scope;
   final String title;
-  final PrimaryProof primaryProof;
-  final ToolProof? toolProof;
+  final List<RequiredProof> requiredProofs;
+  final List<RegressionProof> regressionProofs;
 }
 
-class PrimaryProof {
-  const PrimaryProof({this.path});
+class RequiredProof {
+  const RequiredProof({required this.path, required this.stepId});
 
-  final String? path;
+  final String path;
+  final String stepId;
 }
 
-class ToolProof {
-  const ToolProof({this.enforcementPath, this.regressionPath});
+class RegressionProof {
+  const RegressionProof({required this.path});
 
-  final String? enforcementPath;
-  final String? regressionPath;
+  final String path;
 }
 
 $invariantsBody

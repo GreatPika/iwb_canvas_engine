@@ -611,7 +611,10 @@ important for architectural reasoning.
   matches the committed snapshot
 - overlay repaint ownership stays separate from the main scene render surface
 
-Canonical invariant ids and proof surfaces live in `tool/invariant_registry.dart`.
+Canonical invariant ids plus required-versus-regression proof declarations live
+in `tool/invariant_registry.dart`. Executable verification steps, presets,
+trigger filters, scope ids, and workflow expectations live in
+`tool/src/verification_contract/verification_contract_registry.dart`.
 
 ## 10. Mechanical enforcement
 
@@ -630,9 +633,10 @@ alone.
   mutation boundaries, contract/model architecture boundaries, and other
   structural rules.
 - `tool/check_invariant_coverage.dart`  
-  Checks that invariant ids and proof surfaces stay aligned.
+  Checks that invariant ids, required/regression proof surfaces, and required
+  verification-step reachability stay aligned.
 - `tool/check_verification_contract.dart`  
-  Checks the alignment between verification registry, `AGENTS.md`, and CI
+  Checks hand-authored workflow YAML against the graph-owned verification
   contract.
 
 ### Contributor rule

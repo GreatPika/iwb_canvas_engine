@@ -20,6 +20,15 @@ import '../support/tool_process_test_support.dart';
 
 void main() {
   group('guardrail rule inventory', () {
+    test('temporary markdown state map is fully retired', () {
+      expect(
+        File(
+          '${Directory.current.path}/doc/guardrails_state_map.md',
+        ).existsSync(),
+        isFalse,
+      );
+    });
+
     test('inventory rule ids stay unique and invariant ids resolve', () {
       final validation = validateInventory(
         inventory: guardrailRuleInventory,
@@ -82,24 +91,123 @@ void main() {
       },
     );
 
-    test('doc inventory and invariant map stay aligned with code', () {
-      final content = File(
-        '${Directory.current.path}/doc/guardrails_state_map.md',
-      ).readAsStringSync();
-      final documentedInventory = parseDocumentedInventory(content);
-      final documentedInvariantMap = parseDocumentedInvariantMap(content);
-
-      expect(
-        documentedInventory,
-        orderedEquals(
-          guardrailRuleInventory.map(_documentedEntryForRule).toList(),
-        ),
-      );
-      expect(
-        documentedInvariantMap,
-        equals(_expectedInvariantMap(guardrailRuleInventory)),
-      );
-    });
+    test(
+      'code-owned inventory projection stays aligned with rule metadata',
+      () {
+        expect(
+          guardrailRuleInventory.map(_inventoryEntryForRule).toList(),
+          orderedEquals(<InventoryRuleEntry>[
+            const InventoryRuleEntry(
+              id: 'public-surface',
+              area: 'public',
+              file: 'rules/public/public_surface_rules.dart',
+              invariants: <String>[
+                'INV-ENG-SAFE-TXN-API',
+                'INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES',
+              ],
+              reads: <String>[],
+              writes: <String>[GuardrailRunState.exportedSurfacesArtifact],
+            ),
+            const InventoryRuleEntry(
+              id: 'public-signature',
+              area: 'public',
+              file: 'rules/public/public_signature_rules.dart',
+              invariants: <String>[
+                'INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES',
+                'INV-ENG-PUBLIC-SIGNATURE-HERMETICITY',
+              ],
+              reads: <String>[GuardrailRunState.exportedSurfacesArtifact],
+              writes: <String>[],
+            ),
+            const InventoryRuleEntry(
+              id: 'interactive-api',
+              area: 'interactive',
+              file: 'rules/interactive/mutation_boundary_rules.dart',
+              invariants: <String>[
+                'INV-ENG-INTERACTIVE-RESOLVER-PURITY',
+                'INV-ENG-INTERACTIVE-MUTATION-BOUNDARY',
+                'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY',
+                'INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY',
+              ],
+              reads: <String>[],
+              writes: <String>[],
+            ),
+            const InventoryRuleEntry(
+              id: 'controller-api',
+              area: 'controller',
+              file: 'rules/controller/write_only_mutation_rules.dart',
+              invariants: <String>[
+                'INV-ENG-WRITE-ONLY-MUTATION',
+                'INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE',
+                'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY',
+                'INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY',
+              ],
+              reads: <String>[],
+              writes: <String>[],
+            ),
+            const InventoryRuleEntry(
+              id: 'model-architecture',
+              area: 'model',
+              file: 'rules/model/model_architecture_rules.dart',
+              invariants: <String>[
+                'INV-ENG-MODEL-ARCHITECTURE-BOUNDARY',
+                'INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER',
+                'INV-ENG-RUNTIME-NODE-VALUE-OWNERS',
+              ],
+              reads: <String>[],
+              writes: <String>[],
+            ),
+            const InventoryRuleEntry(
+              id: 'contract-architecture',
+              area: 'contract',
+              file: 'rules/contract/contract_architecture_rules.dart',
+              invariants: <String>['INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY'],
+              reads: <String>[],
+              writes: <String>[],
+            ),
+          ]),
+        );
+        expect(
+          _expectedInvariantMap(guardrailRuleInventory),
+          equals(<String, List<String>>{
+            'INV-ENG-SAFE-TXN-API': <String>['public-surface'],
+            'INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES': <String>[
+              'public-signature',
+              'public-surface',
+            ],
+            'INV-ENG-PUBLIC-SIGNATURE-HERMETICITY': <String>[
+              'public-signature',
+            ],
+            'INV-ENG-INTERACTIVE-RESOLVER-PURITY': <String>['interactive-api'],
+            'INV-ENG-INTERACTIVE-MUTATION-BOUNDARY': <String>[
+              'interactive-api',
+            ],
+            'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY': <String>[
+              'controller-api',
+              'interactive-api',
+            ],
+            'INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY': <String>[
+              'controller-api',
+              'interactive-api',
+            ],
+            'INV-ENG-WRITE-ONLY-MUTATION': <String>['controller-api'],
+            'INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE': <String>[
+              'controller-api',
+            ],
+            'INV-ENG-MODEL-ARCHITECTURE-BOUNDARY': <String>[
+              'model-architecture',
+            ],
+            'INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER': <String>[
+              'model-architecture',
+            ],
+            'INV-ENG-RUNTIME-NODE-VALUE-OWNERS': <String>['model-architecture'],
+            'INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY': <String>[
+              'contract-architecture',
+            ],
+          }),
+        );
+      },
+    );
 
     test('exportedSurfaces handoff stays single-writer and single-reader', () {
       final exportedSurfacesWriters = guardrailRuleInventory
@@ -325,35 +433,6 @@ part 'rogue.part.dart';
         orderedEquals(<String>['INV-ENG-NOT-REAL']),
       );
     });
-
-    test(
-      'doc drift is rejected when documented inventory omits a state read',
-      () {
-        const content = '''
-## Declarative Runner Inventory
-- `public-signature` | area=`public` | file=`rules/public/public_signature_rules.dart` | invariants=`INV-ENG-PUBLIC-SIGNATURE-HERMETICITY` | reads=`none` | writes=`none`
-
-## Invariant-to-Rule Map
-- `INV-ENG-PUBLIC-SIGNATURE-HERMETICITY` -> `public-signature`
-''';
-
-        expect(
-          parseDocumentedInventory(content),
-          isNot(
-            orderedEquals(<DocumentedRuleEntry>[
-              const DocumentedRuleEntry(
-                id: 'public-signature',
-                area: 'public',
-                file: 'rules/public/public_signature_rules.dart',
-                invariants: <String>['INV-ENG-PUBLIC-SIGNATURE-HERMETICITY'],
-                reads: <String>[GuardrailRunState.exportedSurfacesArtifact],
-                writes: <String>[],
-              ),
-            ]),
-          ),
-        );
-      },
-    );
   });
 }
 
@@ -391,44 +470,6 @@ InventoryValidation validateInventory({
   );
 }
 
-List<DocumentedRuleEntry> parseDocumentedInventory(String content) {
-  final section = _sectionBody(content, 'Declarative Runner Inventory');
-  final matches = RegExp(
-    r"- `([^`]+)` \| area=`([^`]+)` \| file=`([^`]+)` \| invariants=`([^`]*)` \| reads=`([^`]*)` \| writes=`([^`]*)`",
-    multiLine: true,
-  ).allMatches(section);
-  return matches
-      .map(
-        (match) => DocumentedRuleEntry(
-          id: _requireGroup(match, 1),
-          area: _requireGroup(match, 2),
-          file: _requireGroup(match, 3),
-          invariants: _splitList(_requireGroup(match, 4)),
-          reads: _splitList(_requireGroup(match, 5)),
-          writes: _splitList(_requireGroup(match, 6)),
-        ),
-      )
-      .toList(growable: false);
-}
-
-Map<String, List<String>> parseDocumentedInvariantMap(String content) {
-  final section = _sectionBody(content, 'Invariant-to-Rule Map');
-  final matches = RegExp(
-    r"- `([^`]+)` -> `([^`]+)`(?:, `([^`]+)`)?(?:, `([^`]+)`)?",
-    multiLine: true,
-  ).allMatches(section);
-  final result = <String, List<String>>{};
-  for (final match in matches) {
-    final rules = <String?>[
-      match.group(2),
-      match.group(3),
-      match.group(4),
-    ].whereType<String>().toList(growable: false)..sort();
-    result[_requireGroup(match, 1)] = rules;
-  }
-  return result;
-}
-
 List<String> _parseToolInvariantIds(String content) {
   return (RegExp(r'^// INV:([A-Z0-9-]+)$', multiLine: true)
       .allMatches(content)
@@ -445,8 +486,8 @@ List<String> _inventoryInvariantIds(List<GuardrailRule> inventory) {
   return ids.toList(growable: false)..sort();
 }
 
-DocumentedRuleEntry _documentedEntryForRule(GuardrailRule rule) {
-  return DocumentedRuleEntry(
+InventoryRuleEntry _inventoryEntryForRule(GuardrailRule rule) {
+  return InventoryRuleEntry(
     id: rule.metadata.id,
     area: rule.metadata.area,
     file: _requireRuleFile(rule.metadata.id),
@@ -467,25 +508,6 @@ Map<String, List<String>> _expectedInvariantMap(List<GuardrailRule> inventory) {
     entry.value.sort();
   }
   return result;
-}
-
-List<String> _splitList(String raw) {
-  if (raw == 'none' || raw.isEmpty) {
-    return const <String>[];
-  }
-  return raw.split(', ').toList(growable: false);
-}
-
-String _sectionBody(String content, String title) {
-  final pattern = RegExp(
-    '^## $title\\n([\\s\\S]*?)(?=^## |\\z)',
-    multiLine: true,
-  );
-  final match = pattern.firstMatch(content);
-  if (match == null) {
-    fail('Missing section: $title');
-  }
-  return _requireGroup(match, 1);
 }
 
 GuardrailRule _testRule({
@@ -522,8 +544,8 @@ final class InventoryValidation {
   final List<String> unknownInvariantIds;
 }
 
-final class DocumentedRuleEntry {
-  const DocumentedRuleEntry({
+final class InventoryRuleEntry {
+  const InventoryRuleEntry({
     required this.id,
     required this.area,
     required this.file,
@@ -541,7 +563,7 @@ final class DocumentedRuleEntry {
 
   @override
   bool operator ==(Object other) {
-    return other is DocumentedRuleEntry &&
+    return other is InventoryRuleEntry &&
         id == other.id &&
         area == other.area &&
         file == other.file &&

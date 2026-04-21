@@ -276,7 +276,7 @@ This change migrates repository verification to an executable two-owner proof ar
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Retire Markdown Machine Inputs
+### Slice 1. [x] Retire Markdown Machine Inputs
 
 #### Slice Contract
 
@@ -317,7 +317,7 @@ Start by adding one failing verification-contract test that proves `check_verifi
 - New markdown-retirement regressions fail before the change and pass after the retirement.
 - Existing executable workflow and guardrail inventory regressions remain green.
 
-### Slice 2. [ ] Unify Executable Verification Graph Ownership
+### Slice 2. [x] Unify Executable Verification Graph Ownership
 
 #### Slice Contract
 
@@ -359,7 +359,7 @@ Start by adding one failing resolver test that locks the full ordered `required_
 - New graph-owner regressions fail before the change and pass after migration.
 - Existing resolver, workflow, and coverage regressions remain green.
 
-### Slice 3. [ ] Enforce Role-Based Invariant Proof Reachability
+### Slice 3. [x] Enforce Role-Based Invariant Proof Reachability
 
 #### Slice Contract
 
