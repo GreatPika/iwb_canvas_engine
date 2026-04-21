@@ -140,7 +140,7 @@ typedef MoveCommitDeltaResolver = Object? Function(
             expect(result.stderr.toString(), contains(invalidDirectCase.kind));
             expect(
               result.stderr.toString(),
-              contains('callback typedef parameter types'),
+              contains('callback parameter types'),
             );
           } finally {
             sandbox.deleteSync(recursive: true);
@@ -183,7 +183,7 @@ typedef MoveCommitDeltaResolver = Object? Function(
             expect(result.stderr.toString(), contains(invalidAliasCase.kind));
             expect(
               result.stderr.toString(),
-              contains('callback typedef parameter types'),
+              contains('callback parameter types'),
             );
           } finally {
             sandbox.deleteSync(recursive: true);
@@ -225,7 +225,7 @@ typedef MoveCommitDeltaResolver = Object? Function(
             expect(result.stderr.toString(), contains(invalidRecordCase.kind));
             expect(
               result.stderr.toString(),
-              contains('callback typedef parameter types'),
+              contains('callback parameter types'),
             );
           } finally {
             sandbox.deleteSync(recursive: true);
@@ -271,7 +271,7 @@ typedef MoveCommitDeltaResolver = Object? Function(
             );
             expect(
               result.stderr.toString(),
-              contains('callback typedef parameter types'),
+              contains('callback parameter types'),
             );
           } finally {
             sandbox.deleteSync(recursive: true);
@@ -279,6 +279,43 @@ typedef MoveCommitDeltaResolver = Object? Function(
         },
       );
     }
+
+    test(
+      'rejects exported public method with callback parameter exposing raw collections',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeCanonicalPublicExportScaffold(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/interactive/scene_controller_interaction.dart',
+            '''
+class SceneControllerInteraction {
+  const SceneControllerInteraction();
+
+  void registerMoveCommitCallback(
+    void Function(List<String> movedNodes) callback,
+  ) {}
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains('public signature hermeticity violation'),
+          );
+          expect(result.stderr.toString(), contains('List'));
+          expect(
+            result.stderr.toString(),
+            contains('callback parameter types'),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
 
     test(
       'rejects exported constructor parameter typed from internal path',

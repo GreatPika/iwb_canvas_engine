@@ -436,13 +436,6 @@ _SignatureLeak? _findLeakInTypeAliasSignature({
     return typeParameterLeak;
   }
 
-  final rawCollectionCallbackLeak = _findRawCollectionCallbackParameterTypeLeak(
-    element: element,
-  );
-  if (rawCollectionCallbackLeak != null) {
-    return rawCollectionCallbackLeak;
-  }
-
   return _findLeakInType(
     type: element.aliasedType,
     sourceElement: element,
@@ -575,15 +568,16 @@ _SignatureLeak? _findLeakInInstanceMembers({
   return null;
 }
 
-_SignatureLeak? _findRawCollectionCallbackParameterTypeLeak({
-  required TypeAliasElement element,
+_SignatureLeak? _findRawCollectionCallbackTypeLeak({
+  required DartType? type,
+  required Element sourceElement,
 }) {
-  final aliasedType = element.aliasedType;
-  if (aliasedType is! FunctionType) {
+  final callbackType = _asCallbackFunctionType(type);
+  if (callbackType == null) {
     return null;
   }
 
-  for (final parameter in aliasedType.formalParameters) {
+  for (final parameter in callbackType.formalParameters) {
     final collectionTypeName = _findForbiddenSdkCollectionTypeName(
       parameter.type,
     );
@@ -591,9 +585,27 @@ _SignatureLeak? _findRawCollectionCallbackParameterTypeLeak({
       continue;
     }
     return _SignatureLeak.rawCollectionCallbackParameter(
-      sourceElement: element,
+      sourceElement: sourceElement,
       typeName: collectionTypeName,
     );
+  }
+
+  return null;
+}
+
+FunctionType? _asCallbackFunctionType(DartType? type) {
+  final visited = <DartType>{};
+  DartType? current = type;
+
+  while (current != null && visited.add(current)) {
+    if (current is FunctionType) {
+      return current;
+    }
+
+    final aliasElement = current.alias?.element;
+    current = aliasElement is TypeAliasElement
+        ? aliasElement.aliasedType
+        : null;
   }
 
   return null;
@@ -656,6 +668,14 @@ _SignatureLeak? _findLeakInType({
   required Map<String, Set<String>> publicVisibleTypeOwners,
   required Set<String> forbiddenPublicTypeNames,
 }) {
+  final rawCollectionCallbackLeak = _findRawCollectionCallbackTypeLeak(
+    type: type,
+    sourceElement: sourceElement,
+  );
+  if (rawCollectionCallbackLeak != null) {
+    return rawCollectionCallbackLeak;
+  }
+
   return findFirstResolvedTypeLeak<_SignatureLeak>(
     rootType: type,
     classifyType: (candidateType) {
@@ -798,7 +818,7 @@ final class _SignatureLeak {
        ownerRepoRelPath = null,
        message =
            'public signature hermeticity violation: exported callback '
-           'typedef parameter types must not expose raw SDK collection '
+           'parameter types must not expose raw SDK collection '
            'types such as $typeName anywhere in the callback parameter '
            'shape.';
 
