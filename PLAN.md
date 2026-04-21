@@ -19,3 +19,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 
 - [x] [Step 1. Executable Verification Proof Architecture](plan/step_1_executable_verification_proof_architecture.md)
 - [x] [Step 2. Transaction Runtime Owned Read Boundary](plan/step_2_transaction_runtime_owned_read_boundary.md)
+- [ ] [Step 3. Interactive Move Commit Request Boundary](plan/step_3_interactive_move_commit_request_boundary.md)
