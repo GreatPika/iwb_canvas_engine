@@ -140,6 +140,16 @@ void main() {
       writerSource,
       contains('sceneWriterWriteSelectionReplaceResult(this, ids) != null;'),
     );
+    expect(
+      writerSource,
+      contains('SceneSnapshot get snapshot => _runtime.readSnapshot();'),
+    );
+    expect(
+      writerSource,
+      contains(
+        'Set<NodeId> get selectedNodeIds => _runtime.readSelectedNodeIds();',
+      ),
+    );
     expect(writerSource, contains('sceneWriterWriteSelectionSelectAllResult('));
     expect(writerSource, contains('sceneWriterWriteDeleteSelectionResult('));
     expect(
@@ -154,6 +164,12 @@ void main() {
     );
 
     expect(writerSource, isNot(contains('txnNormalizeSelection(')));
+    expect(writerSource, isNot(contains('_selectedNodeIdsView')));
+    expect(
+      writerSource,
+      isNot(contains('txnSceneToSnapshot(_runtime.ctx.workingScene)')),
+    );
+    expect(writerSource, isNot(contains('UnmodifiableSetView<NodeId>(')));
     expect(writerSource, isNot(contains('BufferedSignal(')));
     expect(writerSource, isNot(contains('ReplaceSceneOp(')));
     expect(writerSource, isNot(contains('writePreparedDocumentReplace(')));
@@ -233,7 +249,7 @@ void main() {
     expect(writer.selectedNodeIds, const <NodeId>{'r1'});
   });
 
-  test('SceneWriter selectedNodeIds reuses stable transaction view', () {
+  test('SceneWriter selectedNodeIds returns detached immutable values', () {
     final ctx = TxnContext(
       baseScene: Scene(
         layers: <ContentLayer>[
@@ -256,14 +272,50 @@ void main() {
     final first = writer.selectedNodeIds;
     final second = writer.selectedNodeIds;
 
-    expect(identical(first, second), isTrue);
+    expect(identical(first, second), isFalse);
 
     writer.writeSelectionToggle('r2');
 
     final afterToggle = writer.selectedNodeIds;
-    expect(identical(first, afterToggle), isTrue);
+    expect(identical(first, afterToggle), isFalse);
+    expect(first, const <NodeId>{'r1'});
     expect(afterToggle, const <NodeId>{'r1', 'r2'});
   });
+
+  test(
+    'SceneWriter rejects new reads after close and keeps issued values usable',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-auto-2d',
+              nodes: <SceneNode>[
+                RectNode(id: 'r1', size: const Size(10, 10)),
+                RectNode(id: 'r2', size: const Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'r1'},
+        baseAllNodeIds: const <NodeId>{'r1', 'r2'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final writer = newWriter(ctx, txnSignalSink: (_) {});
+
+      final issuedSnapshot = writer.snapshot;
+      final issuedSelection = writer.selectedNodeIds;
+      writer.writeSelectionToggle('r2');
+
+      ctx.txnClose();
+
+      expect(() => writer.snapshot, throwsStateError);
+      expect(() => writer.selectedNodeIds, throwsStateError);
+      expect(issuedSnapshot.layers.single.nodes.length, 2);
+      expect(issuedSelection, const <NodeId>{'r1'});
+    },
+  );
 
   test(
     'SceneWriter selection hot-path keeps in-place set on 1000 toggle/replace/erase ops',

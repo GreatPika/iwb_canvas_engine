@@ -114,4 +114,46 @@ void main() {
     expect(ctx.workingScene.layers.single.id, 'layer-replaced');
     expect(ctx.workingScene.layers.single.nodes.single.id, 'fresh');
   });
+
+  test(
+    'SceneWriteTxnPublicAdapter rejects new reads after close and keeps issued values detached',
+    () {
+      final ctx = TxnContext(
+        baseScene: Scene(
+          layers: <ContentLayer>[
+            ContentLayer(
+              id: 'layer-1',
+              nodes: <SceneNode>[
+                RectNode(id: 'r1', size: const Size(10, 10)),
+                RectNode(id: 'r2', size: const Size(12, 12)),
+              ],
+            ),
+          ],
+        ),
+        workingSelection: <NodeId>{'r1'},
+        baseAllNodeIds: <NodeId>{'r1', 'r2'},
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+      final adapter = newAdapter(ctx, txnSignalSink: (_) {});
+
+      final issuedSnapshot = adapter.snapshot;
+      final issuedSelection = adapter.selectedNodeIds;
+      adapter.writeSelectionToggle('r2');
+
+      expect(
+        issuedSnapshot.layers.single.nodes.map((node) => node.id).toList(),
+        <String>['r1', 'r2'],
+      );
+      expect(issuedSelection, const <NodeId>{'r1'});
+      expect(adapter.selectedNodeIds, const <NodeId>{'r1', 'r2'});
+
+      ctx.txnClose();
+
+      expect(() => adapter.snapshot, throwsStateError);
+      expect(() => adapter.selectedNodeIds, throwsStateError);
+      expect(issuedSnapshot.layers.single.nodes.length, 2);
+      expect(issuedSelection, const <NodeId>{'r1'});
+    },
+  );
 }

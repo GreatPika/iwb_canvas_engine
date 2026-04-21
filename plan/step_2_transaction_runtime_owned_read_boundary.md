@@ -388,7 +388,7 @@ repository structure and inspected evidence.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Runtime-Owned Transaction Read Boundary
+### Slice 1. [x] Runtime-Owned Transaction Read Boundary
 
 #### Slice Contract
 
@@ -444,7 +444,7 @@ repository structure and inspected evidence.
 - source inspection proves `SceneWriter` no longer exposes transaction read
   aliases backed by mutable `TxnContext` state
 
-### Slice 2. [ ] Contract and Proof Alignment
+### Slice 2. [x] Contract and Proof Alignment
 
 #### Slice Contract
 

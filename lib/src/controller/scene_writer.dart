@@ -1,4 +1,3 @@
-import 'dart:collection';
 import 'dart:ui';
 
 import 'scene_writer_nodes.dart';
@@ -9,18 +8,13 @@ import 'scene_writer_types.dart';
 import 'scene_writer_runtime.dart';
 
 class SceneWriter {
-  SceneWriter(SceneWriterRuntime runtime)
-    : _runtime = runtime,
-      _selectedNodeIdsView = UnmodifiableSetView<NodeId>(
-        runtime.ctx.workingSelection,
-      );
+  SceneWriter(SceneWriterRuntime runtime) : _runtime = runtime;
 
   final SceneWriterRuntime _runtime;
-  final UnmodifiableSetView<NodeId> _selectedNodeIdsView;
 
-  SceneSnapshot get snapshot => txnSceneToSnapshot(_runtime.ctx.workingScene);
+  SceneSnapshot get snapshot => _runtime.readSnapshot();
 
-  Set<NodeId> get selectedNodeIds => _selectedNodeIdsView;
+  Set<NodeId> get selectedNodeIds => _runtime.readSelectedNodeIds();
 
   NodeId writeNodeInsert(NodeSpec spec, {LayerId? layerId, int? insertIndex}) {
     return sceneWriterWriteNodeInsert(

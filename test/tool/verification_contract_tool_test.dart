@@ -556,8 +556,10 @@ flutter test test/controller/scene_controller_randomized_txn_test.dart --no-pub 
     fuzzRun,
     'dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json',
     'dart run tool/bench/diff_load_profiles.dart --profile=full --baseline=tool/bench/baselines/load_profiles_full_baseline.json --current=build/bench/load_profiles_full.json --output=build/bench/load_profiles_full_diff.json',
-    if (extraRun != null) extraRun,
-  ].where((entry) => entry != removeRun).toList(growable: false);
+  ].where((entry) => entry != removeRun).toList();
+  if (extraRun != null && extraRun != removeRun) {
+    runEntries.add(extraRun);
+  }
 
   writeSandboxFile(sandbox, '.github/workflows/perf_nightly.yaml', '''
 name: Perf Nightly

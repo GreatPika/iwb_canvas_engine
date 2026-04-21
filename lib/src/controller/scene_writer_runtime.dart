@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../contract/snapshot.dart';
+import '../model/document.dart';
 import 'mutation_executor.dart';
 import 'mutation_op.dart';
 import 'scene_snapshot_materializer.dart';
@@ -25,6 +26,16 @@ final class SceneWriterRuntime {
   ) {
     ensureTxnActive();
     return mutationExecutor.execute(ctx, op);
+  }
+
+  SceneSnapshot readSnapshot() {
+    ensureTxnActive();
+    return txnSceneToSnapshot(ctx.workingScene);
+  }
+
+  Set<NodeId> readSelectedNodeIds() {
+    ensureTxnActive();
+    return Set<NodeId>.unmodifiable(ctx.workingSelection);
   }
 
   void writeStagedDocumentReplace(

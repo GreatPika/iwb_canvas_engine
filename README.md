@@ -114,6 +114,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Use `SceneController` for runtime ownership, `SceneView` for the Flutter host
   surface, and `SceneBuilder` / `encodeScene*` / `decodeScene*` for import and
   serialization.
+- `SceneWriteTxn` reads are callback-scoped: after the write callback closes,
+  new `snapshot` and `selectedNodeIds` reads throw, while values captured
+  inside the callback stay usable as immutable snapshots.
 - Use `SceneDataException.code`, `path`, and `details` as the stable
   machine-readable failure contract when scene or JSON data is invalid.
 

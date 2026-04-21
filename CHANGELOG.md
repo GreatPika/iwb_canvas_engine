@@ -43,6 +43,9 @@ in changes that have not yet been published to pub.dev.
 - Finalized transaction state before commit planning. Inside `write(...)`,
   `SceneWriteTxn.snapshot` and `selectedNodeIds` now reflect the post-mutation
   state.
+- Tightened `SceneWriteTxn` lifetime semantics so new `snapshot` and
+  `selectedNodeIds` reads throw after callback close, while values captured
+  during the callback remain detached immutable snapshots.
 - Switched several runtime numeric boundaries, including node opacity and grid
   cell size, to reject invalid writes immediately instead of repairing them
   later.

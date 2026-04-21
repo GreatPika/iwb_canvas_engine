@@ -351,6 +351,10 @@ This is the transactional write runner. It is responsible for:
 - closing the transaction after the callback
 - handing the finalized transaction to commit planning
 
+It closes handle lifetime at the callback boundary: any new transaction-handle
+read after close must fail, while immutable values already materialized during
+the callback remain usable.
+
 #### `TxnContext`
 
 `TxnContext` is the copy-on-write workspace. It carries:
@@ -497,7 +501,9 @@ Architectural consequences:
 
 - nested writes are forbidden
 - async write callbacks are forbidden
-- transaction-owned mutable runtime state does not leak after callback close
+- transaction-owned mutable runtime state does not leak after callback close;
+  transaction reads cross the boundary through runtime-owned helpers that
+  return detached immutable values and reject stale handles
 - snapshot materialization happens from the committed store boundary, not from
   escaped runtime state
 

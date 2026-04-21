@@ -193,6 +193,10 @@ void main() {
         () => staleTxn.writeSelectionReplace(const <NodeId>{'r2'}),
         throwsStateError,
       );
+      expect(() => staleTxn.snapshot, throwsStateError);
+      expect(() => staleTxn.selectedNodeIds, throwsStateError);
+      expect(() => staleWriter.snapshot, throwsStateError);
+      expect(() => staleWriter.selectedNodeIds, throwsStateError);
       expect(
         () => staleWriter.writeSignalEnqueue(type: 'stale.signal'),
         throwsStateError,
@@ -256,6 +260,8 @@ void main() {
         () => staleTxn.writeSelectionReplace(const <NodeId>{'r2'}),
         throwsStateError,
       );
+      expect(() => staleTxn.snapshot, throwsStateError);
+      expect(() => staleTxn.selectedNodeIds, throwsStateError);
       expect(() => staleTxn.writeNodeErase('r1'), throwsStateError);
       await pumpEventQueue(times: 2);
 
@@ -272,6 +278,115 @@ void main() {
       );
       expect(emitted, isEmpty);
       expect(notifications, 0);
+    },
+  );
+
+  test(
+    'stale SceneWriter after rollback throws and keeps state unchanged',
+    () async {
+      final controller = SceneStoreController(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      final beforeCommit = controller.debug.currentCommitRevision;
+      final beforeEpoch = controller.controllerEpoch;
+      final beforeStructural = controller.structuralRevision;
+      final beforeBounds = controller.boundsRevision;
+      final beforeVisual = controller.visualRevision;
+      final beforeSelection = controller.selectedNodeIds;
+      final beforeSnapshot = controller.snapshot;
+
+      final emitted = <String>[];
+      final sub = controller.signals.listen((signal) {
+        emitted.add(signal.type);
+      });
+      addTearDown(sub.cancel);
+
+      var notifications = 0;
+      controller.addListener(() {
+        notifications = notifications + 1;
+      });
+
+      late final SceneWriter staleWriter;
+      expect(
+        () => controller.writeWithSceneWriter<void>((writer) {
+          staleWriter = writer;
+          writer.writeSelectionReplace(const <NodeId>{'r1'});
+          throw StateError('rollback');
+        }),
+        throwsStateError,
+      );
+
+      expect(() => staleWriter.snapshot, throwsStateError);
+      expect(() => staleWriter.selectedNodeIds, throwsStateError);
+      expect(
+        () => staleWriter.writeSignalEnqueue(type: 'stale.signal'),
+        throwsStateError,
+      );
+      await pumpEventQueue(times: 2);
+
+      expect(controller.debug.currentCommitRevision, beforeCommit);
+      expect(controller.controllerEpoch, beforeEpoch);
+      expect(controller.structuralRevision, beforeStructural);
+      expect(controller.boundsRevision, beforeBounds);
+      expect(controller.visualRevision, beforeVisual);
+      expect(controller.selectedNodeIds, beforeSelection);
+      expect(controller.snapshot.layers.length, beforeSnapshot.layers.length);
+      expect(
+        controller.snapshot.layers.first.nodes.map((node) => node.id).toList(),
+        beforeSnapshot.layers.first.nodes.map((node) => node.id).toList(),
+      );
+      expect(emitted, isEmpty);
+      expect(notifications, 0);
+    },
+  );
+
+  test(
+    'issued txn read values remain usable after commit while new reads fail',
+    () async {
+      final controller = SceneStoreController(
+        initialSnapshot: twoRectSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      late final SceneWriteTxn staleTxn;
+      late final SceneWriter staleWriter;
+      late final SceneSnapshot issuedTxnSnapshot;
+      late final Set<NodeId> issuedTxnSelection;
+      late final SceneSnapshot issuedWriterSnapshot;
+      late final Set<NodeId> issuedWriterSelection;
+
+      controller.write<void>((writer) {
+        staleTxn = writer;
+        issuedTxnSnapshot = writer.snapshot;
+        issuedTxnSelection = writer.selectedNodeIds;
+        writer.writeSelectionReplace(const <NodeId>{'r2'});
+      });
+      controller.writeWithSceneWriter<void>((writer) {
+        staleWriter = writer;
+        issuedWriterSnapshot = writer.snapshot;
+        issuedWriterSelection = writer.selectedNodeIds;
+        writer.writeSelectionReplace(const <NodeId>{'r1'});
+      });
+      await pumpEventQueue(times: 2);
+
+      expect(() => staleTxn.snapshot, throwsStateError);
+      expect(() => staleTxn.selectedNodeIds, throwsStateError);
+      expect(() => staleWriter.snapshot, throwsStateError);
+      expect(() => staleWriter.selectedNodeIds, throwsStateError);
+
+      expect(
+        issuedTxnSnapshot.layers.first.nodes.map((node) => node.id).toList(),
+        <String>['r1', 'r2'],
+      );
+      expect(issuedTxnSelection, isEmpty);
+      expect(
+        issuedWriterSnapshot.layers.first.nodes.map((node) => node.id).toList(),
+        <String>['r1', 'r2'],
+      );
+      expect(issuedWriterSelection, const <NodeId>{'r2'});
+      expect(controller.selectedNodeIds, const <NodeId>{'r1'});
     },
   );
 

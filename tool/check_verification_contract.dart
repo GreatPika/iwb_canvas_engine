@@ -210,10 +210,14 @@ Map<String, Set<String>> _parseNestedFilterDocument(
     if (name == null || value is! YamlList) {
       continue;
     }
-    parsed[name] = <String>{
-      for (final item in value.nodes)
-        if (_stringFromYaml(item) case final filterEntry?) filterEntry,
-    };
+    final filters = <String>{};
+    for (final item in value.nodes) {
+      final filterEntry = _stringFromYaml(item);
+      if (filterEntry != null) {
+        filters.add(filterEntry);
+      }
+    }
+    parsed[name] = filters;
   }
   return parsed;
 }

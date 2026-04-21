@@ -393,6 +393,8 @@ Transaction rules:
 
 - The callback is synchronous-only. Returning a `Future` is a contract error.
 - A `SceneWriteTxn` handle is valid only inside the active callback.
+- Any new `txn.snapshot` or `txn.selectedNodeIds` read after callback close
+  throws `StateError`.
 - After each successful transaction mutation, `txn.snapshot` and
   `txn.selectedNodeIds` already reflect the finalized state that would commit if
   the callback returned immediately.
@@ -426,6 +428,9 @@ Available transaction verbs:
 Important transaction notes:
 
 - `layerId` addresses content layers only, never `backgroundLayer`.
+- `txn.selectedNodeIds` is a detached immutable selection snapshot for that
+  read. Values captured while the transaction is active remain usable after the
+  callback closes, but the transaction handle itself expires.
 - `writeSelectionTransform(...)` uses pre-multiply semantics:
   `nextTransform = delta.multiply(existingTransform)`.
 - `ClearSceneResult.removedNodeIds` is an immutable snapshot detached from the

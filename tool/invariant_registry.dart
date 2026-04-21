@@ -270,7 +270,7 @@ const List<Invariant> invariants = <Invariant>[
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path:
-            'test/controller/core/scene_controller_commit_atomicity_test.dart',
+            'test/controller/core/scene_controller_writer_lifecycle_test.dart',
         stepId: 'scope_controller',
       ),
     ],
