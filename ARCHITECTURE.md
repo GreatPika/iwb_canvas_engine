@@ -740,14 +740,16 @@ A serialization change usually requires coordinated updates to:
 
 ## 12. Decision records
 
-At the time of writing, most architectural rationale is encoded in code,
-comments, tests, and invariant definitions rather than in a dedicated ADR
-directory.
+Most checked-in architectural rationale is still encoded in code, comments,
+tests, and invariant definitions.
 
-For future cross-cutting architecture decisions, add a small decision record
-alongside the codebase (for example under `docs/adr/`) and link it from this
-document. This keeps “why” separate from “what” without overloading the code
-or tests.
+The target-form rationale for future runtime simplification is recorded in:
+
+- `docs/adr/0001_target_engine_architecture.md`
+- `docs/adr/0002_post_target_optimization_scope.md`
+
+This keeps `ARCHITECTURE.md` focused on the checked-in architecture while ADRs
+carry “why” and “where we are intentionally going” for cross-cutting changes.
 
 ## 13. Summary
 
