@@ -64,11 +64,13 @@ class VerificationWorkflowDefinition {
     required this.path,
     required this.runExpectations,
     this.changeFilters = const <String, List<String>>{},
+    this.ownsEntireExecutableRunSurface = false,
   });
 
   final String path;
   final List<VerificationRunExpectation> runExpectations;
   final Map<String, List<String>> changeFilters;
+  final bool ownsEntireExecutableRunSurface;
 }
 
 class VerificationGraph {

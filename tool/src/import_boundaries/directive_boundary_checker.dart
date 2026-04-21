@@ -213,71 +213,29 @@ class DirectiveBoundaryChecker {
       return;
     }
 
-    switch (surface.kind) {
-      case ImportBoundarySurfaceKind.internal:
-        if (surface.targetLayer == fileLayer) {
-          return;
-        }
-        _addViolation(
-          line: lineNo,
-          directive: directiveKind,
-          target: boundaryTarget.diagnosticTarget,
-          message:
-              'cross-layer internal boundary violation: '
-              '${layerLabel(fileLayer)}/** must not $directiveKind '
-              '${layerLabel(surface.targetLayer)}/internal/** '
-              '($resolvedRepoRelPosix)',
-        );
-        return;
-      case ImportBoundarySurfaceKind.bridge:
-        final bridge = surface.bridge;
-        if (bridge == null) {
-          _addViolation(
-            line: lineNo,
-            directive: directiveKind,
-            target: boundaryTarget.diagnosticTarget,
-            message:
-                'tool failure: missing bridge descriptor for '
-                '$resolvedRepoRelPosix',
-          );
-          return;
-        }
-        if (bridge.allowsImporter(fileLayer)) {
-          return;
-        }
-        final allowedLayers = <String>[
-          layerLabel(bridge.ownerLayer),
-          ...bridge.friendLayers.map(layerLabel),
-        ].join(', ');
-        _addViolation(
-          line: lineNo,
-          directive: directiveKind,
-          target: boundaryTarget.diagnosticTarget,
-          message:
-              'bridge boundary violation: ${layerLabel(fileLayer)}/** must '
-              'not $directiveKind '
-              '${bridge.repoRelPosixPath.substring('/lib/src/'.length)} '
-              '(allowed layers: $allowedLayers)',
-        );
-        return;
-      case ImportBoundarySurfaceKind.public:
-        if (isAllowedLayerDependency(
-          from: fileLayer,
-          to: surface.targetLayer,
-        )) {
-          return;
-        }
-        _addViolation(
-          line: lineNo,
-          directive: directiveKind,
-          target: boundaryTarget.diagnosticTarget,
-          message:
-              'layer DAG violation: ${layerLabel(fileLayer)}/** must not '
-              '$directiveKind ${layerLabel(surface.targetLayer)}/** '
-              '($resolvedRepoRelPosix)',
-        );
-        return;
+    if (_enforceSharedResolvedBoundaryRestrictions(
+      directiveKind: directiveKind,
+      lineNo: lineNo,
+      boundaryTarget: boundaryTarget,
+      resolvedRepoRelPosix: resolvedRepoRelPosix,
+      surface: surface,
+    )) {
+      return;
     }
+
+    if (isAllowedLayerDependency(from: fileLayer, to: surface.targetLayer)) {
+      return;
+    }
+
+    _addViolation(
+      line: lineNo,
+      directive: directiveKind,
+      target: boundaryTarget.diagnosticTarget,
+      message:
+          'layer DAG violation: ${layerLabel(fileLayer)}/** must not '
+          '$directiveKind ${layerLabel(surface.targetLayer)}/** '
+          '($resolvedRepoRelPosix)',
+    );
   }
 
   void _enforceControllerStructurePolicy(
@@ -309,7 +267,14 @@ class DirectiveBoundaryChecker {
       boundaryTarget,
       resolvedRepoRelPosix,
     );
-    if (hasSpecificViolation || _isAllowedControllerTarget(boundaryTarget)) {
+    if (hasSpecificViolation ||
+        _checkControllerResolvedBoundaryRestrictions(
+          directiveKind: directiveKind,
+          lineNo: lineNo,
+          boundaryTarget: boundaryTarget,
+          resolvedRepoRelPosix: resolvedRepoRelPosix,
+        ) ||
+        _isAllowedControllerTarget(boundaryTarget)) {
       return;
     }
 
@@ -469,6 +434,89 @@ class DirectiveBoundaryChecker {
       repoRelPosixPath: resolvedRepoRelPosix,
     );
     return true;
+  }
+
+  bool _checkControllerResolvedBoundaryRestrictions({
+    required String directiveKind,
+    required int lineNo,
+    required BoundaryTarget boundaryTarget,
+    required String? resolvedRepoRelPosix,
+  }) {
+    if (resolvedRepoRelPosix == null) {
+      return false;
+    }
+
+    final surface = classifyResolvedImportBoundarySurface(resolvedRepoRelPosix);
+    if (surface == null) {
+      return false;
+    }
+
+    return _enforceSharedResolvedBoundaryRestrictions(
+      directiveKind: directiveKind,
+      lineNo: lineNo,
+      boundaryTarget: boundaryTarget,
+      resolvedRepoRelPosix: resolvedRepoRelPosix,
+      surface: surface,
+    );
+  }
+
+  bool _enforceSharedResolvedBoundaryRestrictions({
+    required String directiveKind,
+    required int lineNo,
+    required BoundaryTarget boundaryTarget,
+    required String resolvedRepoRelPosix,
+    required ResolvedImportBoundarySurface surface,
+  }) {
+    switch (surface.kind) {
+      case ImportBoundarySurfaceKind.public:
+        return false;
+      case ImportBoundarySurfaceKind.internal:
+        if (surface.targetLayer == fileLayer) {
+          return false;
+        }
+        _addViolation(
+          line: lineNo,
+          directive: directiveKind,
+          target: boundaryTarget.diagnosticTarget,
+          message:
+              'cross-layer internal boundary violation: '
+              '${layerLabel(fileLayer)}/** must not $directiveKind '
+              '${layerLabel(surface.targetLayer)}/internal/** '
+              '($resolvedRepoRelPosix)',
+        );
+        return true;
+      case ImportBoundarySurfaceKind.bridge:
+        final bridge = surface.bridge;
+        if (bridge == null) {
+          _addViolation(
+            line: lineNo,
+            directive: directiveKind,
+            target: boundaryTarget.diagnosticTarget,
+            message:
+                'tool failure: missing bridge descriptor for '
+                '$resolvedRepoRelPosix',
+          );
+          return true;
+        }
+        if (bridge.allowsImporter(fileLayer)) {
+          return false;
+        }
+        final allowedLayers = <String>[
+          layerLabel(bridge.ownerLayer),
+          ...bridge.friendLayers.map(layerLabel),
+        ].join(', ');
+        _addViolation(
+          line: lineNo,
+          directive: directiveKind,
+          target: boundaryTarget.diagnosticTarget,
+          message:
+              'bridge boundary violation: ${layerLabel(fileLayer)}/** must '
+              'not $directiveKind '
+              '${bridge.repoRelPosixPath.substring('/lib/src/'.length)} '
+              '(allowed layers: $allowedLayers)',
+        );
+        return true;
+    }
   }
 
   bool _isAllowedControllerTarget(BoundaryTarget boundaryTarget) {

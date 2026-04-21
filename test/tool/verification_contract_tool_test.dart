@@ -142,8 +142,281 @@ Run something else.
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test(
+      'fails when perf nightly owned run surface grows unexpectedly',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeCanonicalCiWorkflow(sandbox);
+          _writeCanonicalPerfNightlyWorkflow(sandbox, extraRun: 'echo drift');
+
+          final result = await runSandboxTool(
+            sandbox,
+            'check_verification_contract.dart',
+          );
+
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains(
+              '.github/workflows/perf_nightly.yaml has unexpected executable run entry `.|echo drift`',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test('fails when perf nightly duplicates an owned run entry', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeCanonicalCiWorkflow(sandbox);
+        _writeCanonicalPerfNightlyWorkflow(
+          sandbox,
+          extraRun: 'flutter pub get',
+        );
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_verification_contract.dart',
+        );
+
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            '.github/workflows/perf_nightly.yaml has unexpected executable run entry `.|flutter pub get`',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+      'accepts perf nightly folded block run syntax for equivalent command',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeCanonicalCiWorkflow(sandbox);
+          _writeCanonicalPerfNightlyWorkflow(
+            sandbox,
+            loadProfilesRunHeader: '>-',
+            loadProfilesRunBody:
+                'dart run tool/bench/run_load_profiles.dart --profile=full\n'
+                '--output=build/bench/load_profiles_full.json',
+          );
+
+          final result = await runSandboxTool(
+            sandbox,
+            'check_verification_contract.dart',
+          );
+
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'accepts perf nightly literal keep block syntax for equivalent command',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeCanonicalCiWorkflow(sandbox);
+          _writeCanonicalPerfNightlyWorkflow(sandbox, fuzzRunHeader: '|+');
+
+          final result = await runSandboxTool(
+            sandbox,
+            'check_verification_contract.dart',
+          );
+
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test('reports invalid workflow yaml without crashing', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeCanonicalCiWorkflow(sandbox);
+        writeSandboxFile(sandbox, '.github/workflows/perf_nightly.yaml', '''
+name: Perf Nightly
+
+jobs:
+  perf:
+    steps:
+      - name: Broken
+        run: [unterminated
+''');
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_verification_contract.dart',
+        );
+
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains('FAIL: verification contract drift detected.'),
+        );
+        expect(
+          result.stderr.toString(),
+          contains('.github/workflows/perf_nightly.yaml contains invalid YAML'),
+        );
+        expect(
+          result.stderr.toString(),
+          isNot(contains('Unhandled exception')),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    for (final scenario in _yamlCompatibilityScenarios) {
+      test('accepts ${scenario.name}', () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeCanonicalCiWorkflow(sandbox);
+          _writeCanonicalPerfNightlyWorkflow(sandbox);
+          scenario.mutate(sandbox);
+
+          final result = await runSandboxTool(
+            sandbox,
+            'check_verification_contract.dart',
+          );
+
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      });
+    }
   });
 }
+
+final List<_YamlCompatibilityScenario>
+_yamlCompatibilityScenarios = <_YamlCompatibilityScenario>[
+  _YamlCompatibilityScenario(
+    name: 'single-quoted run scalar',
+    mutate: (sandbox) {
+      _replaceInSandboxFile(
+        sandbox,
+        '.github/workflows/perf_nightly.yaml',
+        'run: flutter pub get',
+        "run: 'flutter pub get'",
+      );
+    },
+  ),
+  _YamlCompatibilityScenario(
+    name: 'double-quoted run scalar',
+    mutate: (sandbox) {
+      _replaceInSandboxFile(
+        sandbox,
+        '.github/workflows/perf_nightly.yaml',
+        'run: flutter pub get',
+        'run: "flutter pub get"',
+      );
+    },
+  ),
+  _YamlCompatibilityScenario(
+    name: 'single-quoted working-directory scalar',
+    mutate: (sandbox) {
+      _replaceInSandboxFile(
+        sandbox,
+        '.github/workflows/ci.yaml',
+        'working-directory: example',
+        "working-directory: 'example'",
+      );
+    },
+  ),
+  _YamlCompatibilityScenario(
+    name: 'double-quoted working-directory scalar',
+    mutate: (sandbox) {
+      _replaceInSandboxFile(
+        sandbox,
+        '.github/workflows/ci.yaml',
+        'working-directory: example',
+        'working-directory: "example"',
+      );
+    },
+  ),
+  _YamlCompatibilityScenario(
+    name: 'plain run scalar with trailing comment',
+    mutate: (sandbox) {
+      _replaceInSandboxFile(
+        sandbox,
+        '.github/workflows/perf_nightly.yaml',
+        'run: flutter pub get',
+        'run: flutter pub get # keep cache warm',
+      );
+    },
+  ),
+  _YamlCompatibilityScenario(
+    name: 'working-directory scalar with trailing comment',
+    mutate: (sandbox) {
+      _replaceInSandboxFile(
+        sandbox,
+        '.github/workflows/ci.yaml',
+        'working-directory: example',
+        'working-directory: example # example package',
+      );
+    },
+  ),
+  _YamlCompatibilityScenario(
+    name: 'literal block header with trailing comment',
+    mutate: (sandbox) {
+      _replaceInSandboxFile(
+        sandbox,
+        '.github/workflows/perf_nightly.yaml',
+        'run: |',
+        'run: | # nightly fuzz',
+      );
+    },
+  ),
+  _YamlCompatibilityScenario(
+    name: 'folded block header with trailing comment',
+    mutate: (sandbox) {
+      _replaceInSandboxFile(
+        sandbox,
+        '.github/workflows/perf_nightly.yaml',
+        'run: dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json',
+        'run: >- # folded equivalent\n'
+            '          dart run tool/bench/run_load_profiles.dart --profile=full\n'
+            '          --output=build/bench/load_profiles_full.json',
+      );
+    },
+  ),
+  _YamlCompatibilityScenario(
+    name: 'folded block header with explicit indentation indicator',
+    mutate: (sandbox) {
+      _replaceInSandboxFile(
+        sandbox,
+        '.github/workflows/perf_nightly.yaml',
+        'run: dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json',
+        'run: >2-\n'
+            '          dart run tool/bench/run_load_profiles.dart --profile=full\n'
+            '          --output=build/bench/load_profiles_full.json',
+      );
+    },
+  ),
+  _YamlCompatibilityScenario(
+    name: 'double-quoted run scalar with trailing comment',
+    mutate: (sandbox) {
+      _replaceInSandboxFile(
+        sandbox,
+        '.github/workflows/perf_nightly.yaml',
+        'run: flutter pub get',
+        'run: "flutter pub get" # pinned for readability',
+      );
+    },
+  ),
+];
 
 const List<String> _canonicalTriggerEntries = <String>[
   'lib/iwb_canvas_engine.dart',
@@ -172,6 +445,23 @@ Future<Directory> _createSandbox() {
     ],
     includeAnalyzer: false,
   );
+}
+
+void _replaceInSandboxFile(
+  Directory sandbox,
+  String relativePath,
+  String oldText,
+  String newText,
+) {
+  final file = File('${sandbox.path}/$relativePath');
+  final original = file.readAsStringSync();
+  final updated = original.replaceFirst(oldText, newText);
+  expect(
+    updated,
+    isNot(equals(original)),
+    reason: 'Expected to update $relativePath',
+  );
+  file.writeAsStringSync(updated);
 }
 
 void _writeCanonicalCiWorkflow(
@@ -249,11 +539,24 @@ ${(triggerEntries ?? _canonicalTriggerEntries).map((entry) => "              - '
 void _writeCanonicalPerfNightlyWorkflow(
   Directory sandbox, {
   String? removeRun,
+  String? extraRun,
+  String fuzzRunHeader = '|',
+  String loadProfilesRunHeader = '',
+  String? loadProfilesRunBody,
 }) {
+  const fuzzRun = '''
+JOBS="\$(getconf _NPROCESSORS_ONLN)"
+if [ "\$JOBS" -gt 1 ]; then
+  JOBS=\$((JOBS - 1))
+fi
+flutter test test/controller/scene_controller_randomized_txn_test.dart --no-pub -j "\$JOBS"
+''';
   final runEntries = <String>[
     'flutter pub get',
+    fuzzRun,
     'dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json',
     'dart run tool/bench/diff_load_profiles.dart --profile=full --baseline=tool/bench/baselines/load_profiles_full_baseline.json --current=build/bench/load_profiles_full.json --output=build/bench/load_profiles_full_diff.json',
+    if (extraRun != null) extraRun,
   ].where((entry) => entry != removeRun).toList(growable: false);
 
   writeSandboxFile(sandbox, '.github/workflows/perf_nightly.yaml', '''
@@ -264,9 +567,23 @@ jobs:
     steps:
       - name: Pub get
         run: ${runEntries[0]}
+      - name: Randomized txn fuzz (nightly profile)
+        run: $fuzzRunHeader
+${runEntries.contains(fuzzRun) ? fuzzRun.split('\n').map((line) => '          $line').join('\n') : '          ${runEntries[0]}'}
       - name: Load profiles (full)
-        run: ${runEntries.contains('dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json') ? 'dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json' : runEntries[0]}
+${loadProfilesRunBody != null ? '        run: $loadProfilesRunHeader\n${loadProfilesRunBody.split('\n').map((line) => '          $line').join('\n')}' : '        run: ${runEntries.contains('dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json') ? 'dart run tool/bench/run_load_profiles.dart --profile=full --output=build/bench/load_profiles_full.json' : runEntries[0]}'}
       - name: Diff full benchmark report vs baseline
         run: ${runEntries.contains('dart run tool/bench/diff_load_profiles.dart --profile=full --baseline=tool/bench/baselines/load_profiles_full_baseline.json --current=build/bench/load_profiles_full.json --output=build/bench/load_profiles_full_diff.json') ? 'dart run tool/bench/diff_load_profiles.dart --profile=full --baseline=tool/bench/baselines/load_profiles_full_baseline.json --current=build/bench/load_profiles_full.json --output=build/bench/load_profiles_full_diff.json' : runEntries.last}
+${extraRun == null ? '' : '''
+      - name: Unexpected extra run
+        run: ${runEntries.last}
+'''}
 ''');
+}
+
+class _YamlCompatibilityScenario {
+  const _YamlCompatibilityScenario({required this.name, required this.mutate});
+
+  final String name;
+  final void Function(Directory sandbox) mutate;
 }

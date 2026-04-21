@@ -7,6 +7,12 @@ const String toolTestFilterName = 'tool_tests';
 
 const String ciToolTestJobsExpression = r'${{ steps.test-jobs.outputs.jobs }}';
 const String ciCoverageJobsExpression = r'${{ steps.test-jobs.outputs.jobs }}';
+const String perfNightlyFuzzCommand =
+    'JOBS="\$(getconf _NPROCESSORS_ONLN)"\n'
+    'if [ "\$JOBS" -gt 1 ]; then\n'
+    '  JOBS=\$((JOBS - 1))\n'
+    'fi\n'
+    'flutter test test/controller/scene_controller_randomized_txn_test.dart --no-pub -j "\$JOBS"';
 
 final VerificationGraph verificationGraph = VerificationGraph(
   steps: const <String, VerificationStepDefinition>{
@@ -227,6 +233,7 @@ final VerificationGraph verificationGraph = VerificationGraph(
       path: perfNightlyWorkflowPath,
       runExpectations: <VerificationRunExpectation>[
         VerificationRunExpectation(command: 'flutter pub get'),
+        VerificationRunExpectation(command: perfNightlyFuzzCommand),
         VerificationRunExpectation(
           command:
               'dart run tool/bench/run_load_profiles.dart '
@@ -241,6 +248,7 @@ final VerificationGraph verificationGraph = VerificationGraph(
               '--output=build/bench/load_profiles_full_diff.json',
         ),
       ],
+      ownsEntireExecutableRunSurface: true,
     ),
   },
 );

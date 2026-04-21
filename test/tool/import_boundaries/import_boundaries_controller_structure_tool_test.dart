@@ -1,11 +1,26 @@
 @Tags(['tool'])
 library;
 
+import 'dart:io';
+
 import 'package:test/test.dart';
 
 import '../support/import_boundaries_sandbox_support.dart';
 import '../support/tool_diagnostic_matchers.dart';
 import '../support/tool_process_test_support.dart';
+
+void _writeContractBridgeSurfaces(Directory sandbox) {
+  writeSandboxFile(
+    sandbox,
+    'lib/src/contract/internal/node_boundary_schema.dart',
+    'class NodeBoundarySchema {}\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'lib/src/contract/internal/snapshot_fast_path.dart',
+    'class SnapshotFastPath {}\n',
+  );
+}
 
 void main() {
   group('tool/check_import_boundaries.dart', () {
@@ -252,5 +267,141 @@ part
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test(
+      'rejects internal -> non-bridge contract/internal target as cross-layer internal boundary violation',
+      () async {
+        final sandbox = await createImportBoundariesSandbox();
+        try {
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/internal/unlisted_internal.dart',
+            'class UnlistedInternal {}\n',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/internal/b.dart',
+            "import 'package:iwb_canvas_engine/src/contract/internal/unlisted_internal.dart';\n",
+          );
+
+          final result = await runSandboxTool(
+            sandbox,
+            'check_import_boundaries.dart',
+          );
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains('cross-layer internal boundary violation:'),
+          );
+          expect(
+            result.stderr.toString(),
+            contains('controller/** must not import contract/internal/**'),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects internal -> contract bridge target as bridge boundary violation',
+      () async {
+        final sandbox = await createImportBoundariesSandbox();
+        try {
+          _writeContractBridgeSurfaces(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/internal/b.dart',
+            "import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';\n",
+          );
+
+          final result = await runSandboxTool(
+            sandbox,
+            'check_import_boundaries.dart',
+          );
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains('bridge boundary violation:'),
+          );
+          expect(
+            result.stderr.toString(),
+            contains(
+              'controller/** must not import contract/internal/snapshot_fast_path.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects commands -> non-bridge contract/internal target as cross-layer internal boundary violation',
+      () async {
+        final sandbox = await createImportBoundariesSandbox();
+        try {
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/internal/unlisted_internal.dart',
+            'class UnlistedInternal {}\n',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/commands/a/a.dart',
+            "import 'package:iwb_canvas_engine/src/contract/internal/unlisted_internal.dart';\n",
+          );
+
+          final result = await runSandboxTool(
+            sandbox,
+            'check_import_boundaries.dart',
+          );
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains('cross-layer internal boundary violation:'),
+          );
+          expect(
+            result.stderr.toString(),
+            contains('controller/** must not import contract/internal/**'),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects commands -> contract bridge target as bridge boundary violation',
+      () async {
+        final sandbox = await createImportBoundariesSandbox();
+        try {
+          _writeContractBridgeSurfaces(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/commands/a/a.dart',
+            "import 'package:iwb_canvas_engine/src/contract/internal/node_boundary_schema.dart';\n",
+          );
+
+          final result = await runSandboxTool(
+            sandbox,
+            'check_import_boundaries.dart',
+          );
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains('bridge boundary violation:'),
+          );
+          expect(
+            result.stderr.toString(),
+            contains(
+              'controller/** must not import contract/internal/node_boundary_schema.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
   });
 }

@@ -14,11 +14,11 @@ Future<Directory> createToolSandbox({
   final pubspec = StringBuffer()
     ..writeln('name: iwb_canvas_engine')
     ..writeln('environment:')
-    ..writeln("  sdk: '$sdkConstraint'");
+    ..writeln("  sdk: '$sdkConstraint'")
+    ..writeln('dev_dependencies:')
+    ..writeln('  yaml: ^3.1.3');
   if (includeAnalyzer) {
-    pubspec
-      ..writeln('dev_dependencies:')
-      ..writeln('  analyzer: ^8.4.0');
+    pubspec.writeln('  analyzer: ^8.4.0');
   }
   writeSandboxFile(sandbox, 'pubspec.yaml', pubspec.toString());
 
