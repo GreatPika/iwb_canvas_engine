@@ -33,7 +33,6 @@ class SceneController extends ChangeNotifier {
         readSnapshot: () => snapshot,
         readSelectedNodeIds: () => selectedNodeIds,
         readControllerEpoch: () => controllerEpoch,
-        readPreviewDeltaResolver: () => previewDeltaResolver,
         pointerSettings: pointerSettings,
         dragStartSlop: dragStartSlop,
         clearSelectionOnDrawModeEnter: clearSelectionOnDrawModeEnter,

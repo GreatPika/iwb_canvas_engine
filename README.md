@@ -136,6 +136,10 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
 - Listen to `controller.actions` for committed action events that can feed your
   app-level history or analytics.
+- Use `controller.previewDeltaResolver(nodeId)` for live move-preview reads in
+  host code. `SceneView` captures its own frozen frame-preview snapshot before
+  main-scene paint, so controller side effects during paint do not change the
+  frame that is already being rendered.
 - Pass `moveCommitDeltaResolver` to `SceneController` when app code must clamp
   or remap committed drag deltas. The resolver receives a
   `MoveCommitDeltaRequest` with immutable `movedNodes`.

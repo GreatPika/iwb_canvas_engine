@@ -7,7 +7,6 @@ import '../../contract/snapshot.dart';
 import '../../controller/scene_store_controller.dart';
 import '../../core/geometry.dart';
 import '../../core/node_geometry.dart';
-import '../../core/numeric_clamp.dart';
 import '../../core/scene_spatial_index.dart';
 import 'scene_controller_selected_paint_order_cache.dart';
 
@@ -48,7 +47,7 @@ final class SceneControllerPaintCandidateStage {
     required ScenePaintCandidateQuery query,
     required Set<NodeId> selectedNodeIds,
     required int selectionRevision,
-    required Offset Function(NodeId nodeId) previewResolver,
+    required SceneViewFramePreview preview,
   }) {
     final buffers = _buffers;
     if (_hasUsedBuffers) {
@@ -67,7 +66,7 @@ final class SceneControllerPaintCandidateStage {
       selectionRevision: selectionRevision,
       structuralRevision: _store.structuralRevision,
       visibilityRect: query.visibilityRect,
-      previewResolver: previewResolver,
+      preview: preview,
     );
 
     _mergeOrderedCandidates(buffers);
@@ -110,7 +109,7 @@ final class SceneControllerPaintCandidateStage {
     required int selectionRevision,
     required int structuralRevision,
     required Rect visibilityRect,
-    required Offset Function(NodeId nodeId) previewResolver,
+    required SceneViewFramePreview preview,
   }) {
     final selectedTokens = _selectedOrderCache.orderedSelectedTokens(
       selectionRevision: selectionRevision,
@@ -136,7 +135,7 @@ final class SceneControllerPaintCandidateStage {
       }
       final paintBounds = _snapshotPaintBoundsWorld(
         node: resolvedNode.node,
-        previewResolver: previewResolver,
+        preview: preview,
       );
       if (!isFiniteRect(paintBounds) || !visibilityRect.overlaps(paintBounds)) {
         continue;
@@ -215,9 +214,9 @@ int _compareSceneOrder(_OrderedPaintCandidate a, _OrderedPaintCandidate b) {
 
 Rect _snapshotPaintBoundsWorld({
   required NodeSnapshot node,
-  required Offset Function(NodeId nodeId) previewResolver,
+  required SceneViewFramePreview preview,
 }) {
   requireNodeSnapshotGeometrySupport(node);
-  final previewDelta = sanitizeFiniteOffset(previewResolver(node.id));
+  final previewDelta = preview.deltaForNode(node.id);
   return nodeSnapshotPaintBoundsWorld(node).shift(previewDelta);
 }

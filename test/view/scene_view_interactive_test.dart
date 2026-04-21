@@ -2117,16 +2117,12 @@ class _StaticSceneViewRenderState extends ChangeNotifier
   Offset get cameraOffset => _snapshot.camera.offset;
 
   @override
-  Offset Function(NodeId nodeId) get previewDeltaResolver =>
-      (_) => Offset.zero;
-
-  @override
   SceneViewFrameRead captureFrameRead() {
     return SceneViewFrameRead(
       snapshot: _snapshot,
       selectedNodeIds: selectedNodeIds,
       selectionRevision: 0,
-      previewDeltaResolver: previewDeltaResolver,
+      preview: const SceneViewFramePreview.empty(),
     );
   }
 
@@ -2140,7 +2136,7 @@ class _StaticSceneViewRenderState extends ChangeNotifier
         snapshot: frameRead.snapshot,
         query: query,
         selectedNodeIds: frameRead.selectedNodeIds,
-        previewDeltaResolver: frameRead.previewDeltaResolver,
+        preview: frameRead.preview,
       ),
     );
   }

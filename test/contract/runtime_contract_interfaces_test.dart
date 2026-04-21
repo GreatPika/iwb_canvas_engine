@@ -343,6 +343,64 @@ void main() {
       },
     );
 
+    test(
+      'interactive SceneController previewDeltaResolver stays live across mode changes',
+      () async {
+        final controller = interactive.SceneController(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(
+                id: 'layer-live-preview',
+                nodes: <NodeSnapshot>[
+                  RectNodeSnapshot(
+                    id: 'rect-live-preview',
+                    size: const Size(10, 12),
+                    strokeColor: const Color(0xFF000000),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          dragStartSlop: 0.001,
+        );
+        addTearDown(controller.dispose);
+        controller.selection.setSelection(const <String>{'rect-live-preview'});
+        await pumpEventQueue();
+
+        controller.interaction.handlePointer(
+          const CanvasPointerInput(
+            pointerId: 1,
+            position: Offset(4, 4),
+            timestampMs: 1,
+            phase: CanvasPointerPhase.down,
+            kind: PointerDeviceKind.touch,
+          ),
+        );
+        controller.interaction.handlePointer(
+          const CanvasPointerInput(
+            pointerId: 1,
+            position: Offset(20, 4),
+            timestampMs: 2,
+            phase: CanvasPointerPhase.move,
+            kind: PointerDeviceKind.touch,
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(
+          controller.previewDeltaResolver('rect-live-preview'),
+          isNot(Offset.zero),
+        );
+
+        controller.interaction.setMode(CanvasMode.draw);
+
+        expect(
+          controller.previewDeltaResolver('rect-live-preview'),
+          Offset.zero,
+        );
+      },
+    );
+
     test('pointer phase codec converts between canvas and internal phases', () {
       expect(
         canvasPointerPhaseFromPointerPhase(PointerPhase.down),

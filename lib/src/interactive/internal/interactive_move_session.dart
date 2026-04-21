@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../contract/pointer_input.dart';
+import '../../contract/scene_view_render_state.dart';
 import '../../contract/snapshot.dart';
 import 'interactive_move_commit_coordinator.dart';
 import 'interactive_move_callbacks.dart';
@@ -45,6 +46,10 @@ class InteractiveMoveSession {
 
   Offset movePreviewDeltaForNode(NodeId nodeId) {
     return _previewState.deltaForNode(nodeId);
+  }
+
+  SceneViewFramePreview captureFramePreview() {
+    return _previewState.captureFramePreview();
   }
 
   void setSelectionRect(Rect? value) {

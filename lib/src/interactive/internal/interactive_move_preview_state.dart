@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../contract/ids.dart';
+import '../../contract/scene_view_render_state.dart';
 
 final class InteractiveMovePreviewState {
   bool _active = false;
@@ -17,6 +18,16 @@ final class InteractiveMovePreviewState {
       return Offset.zero;
     }
     return _delta;
+  }
+
+  SceneViewFramePreview captureFramePreview() {
+    if (!_active || _nodeIds.isEmpty) {
+      return const SceneViewFramePreview.empty();
+    }
+    return SceneViewFramePreview.captureNodeOffsets(
+      nodeIds: _nodeIds,
+      deltaForNode: deltaForNode,
+    );
   }
 
   void start(Set<NodeId> nodeIds) {

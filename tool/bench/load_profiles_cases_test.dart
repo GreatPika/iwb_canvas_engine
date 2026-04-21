@@ -578,12 +578,16 @@ Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
   );
   final controller = SceneStoreController(initialSnapshot: snapshot);
   final interactionController = interactive.SceneController();
+  SceneSnapshot readSnapshot() => controller.snapshot;
   final renderState = SceneControllerSceneViewRenderState(
     storeController: controller,
-    readSnapshot: () => controller.snapshot,
+    readSnapshot: readSnapshot,
     readSelectedNodeIds: () => controller.selectedNodeIds,
     readControllerEpoch: () => controller.controllerEpoch,
-    readPreviewDeltaResolver: () => _benchmarkZeroPreviewDelta,
+    captureFramePreview: () => SceneViewFramePreview.captureSnapshot(
+      snapshot: readSnapshot(),
+      deltaForNode: _benchmarkZeroPreviewDelta,
+    ),
     readInteraction: () => interactionController.interaction,
   );
   final painter = ScenePainter(
@@ -660,12 +664,16 @@ SceneControllerSceneViewRenderState _createProductionBenchmarkRenderState({
   required SceneStoreController controller,
   required interactive.SceneController interactionController,
 }) {
+  SceneSnapshot readSnapshot() => controller.snapshot;
   return SceneControllerSceneViewRenderState(
     storeController: controller,
-    readSnapshot: () => controller.snapshot,
+    readSnapshot: readSnapshot,
     readSelectedNodeIds: () => controller.selectedNodeIds,
     readControllerEpoch: () => controller.controllerEpoch,
-    readPreviewDeltaResolver: () => _benchmarkZeroPreviewDelta,
+    captureFramePreview: () => SceneViewFramePreview.captureSnapshot(
+      snapshot: readSnapshot(),
+      deltaForNode: _benchmarkZeroPreviewDelta,
+    ),
     readInteraction: () => interactionController.interaction,
   );
 }
@@ -697,16 +705,15 @@ class _BenchmarkControllerRenderState extends ChangeNotifier
   Offset get cameraOffset => snapshot.camera.offset;
 
   @override
-  Offset Function(NodeId nodeId) get previewDeltaResolver =>
-      _benchmarkZeroPreviewDelta;
-
-  @override
   SceneViewFrameRead captureFrameRead() {
     return SceneViewFrameRead(
       snapshot: snapshot,
       selectedNodeIds: selectedNodeIds,
       selectionRevision: 0,
-      previewDeltaResolver: previewDeltaResolver,
+      preview: SceneViewFramePreview.captureSnapshot(
+        snapshot: snapshot,
+        deltaForNode: _benchmarkZeroPreviewDelta,
+      ),
     );
   }
 

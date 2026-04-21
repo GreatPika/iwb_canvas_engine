@@ -61,6 +61,9 @@ in changes that have not yet been published to pub.dev.
 - Fixed paint over-admission by separating paint admission from hit-test
   admission. Hit-testing still honors hit padding, while paint admission now
   uses paint bounds only.
+- Fixed main-scene move-preview rendering so one captured frame keeps a frozen
+  preview snapshot across paint admission and late node resolution, even when
+  app `imageResolver` callbacks mutate controller state mid-paint.
 - Fixed move-mode listener/repaint noise so selected-node taps without drag no
   longer emit scene-change notifications or repaint churn.
 - Fixed frame rendering to resolve candidates against the active frame snapshot

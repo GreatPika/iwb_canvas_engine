@@ -92,7 +92,7 @@ class ScenePainterFrameOwner {
   }
 
   Offset _nodePreviewOffset(NodeId nodeId, SceneViewFrameRead frameRead) {
-    return sanitizeFiniteOffset(frameRead.previewDeltaResolver(nodeId));
+    return frameRead.preview.deltaForNode(nodeId);
   }
 
   ResolvedTextLayout _resolveTextLayout(TextNodeSnapshot node) {

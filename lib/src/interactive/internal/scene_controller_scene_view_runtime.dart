@@ -21,7 +21,7 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
     required SceneSnapshot Function() readSnapshot,
     required Set<NodeId> Function() readSelectedNodeIds,
     required int Function() readControllerEpoch,
-    required Offset Function(NodeId nodeId) Function() readPreviewDeltaResolver,
+    required SceneViewFramePreview Function() captureFramePreview,
     required SceneControllerInteraction Function() readInteraction,
     required SceneControllerInteractionRuntime Function()
     readInteractionRuntime,
@@ -34,7 +34,7 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
          readSnapshot: readSnapshot,
          readSelectedNodeIds: readSelectedNodeIds,
          readControllerEpoch: readControllerEpoch,
-         readPreviewDeltaResolver: readPreviewDeltaResolver,
+         captureFramePreview: captureFramePreview,
          readInteraction: readInteraction,
        );
 
@@ -93,7 +93,7 @@ final class SceneControllerSceneViewRenderState
     required SceneSnapshot Function() readSnapshot,
     required Set<NodeId> Function() readSelectedNodeIds,
     required int Function() readControllerEpoch,
-    required Offset Function(NodeId nodeId) Function() readPreviewDeltaResolver,
+    required SceneViewFramePreview Function() captureFramePreview,
     required SceneControllerInteraction Function() readInteraction,
   }) : _storeController = storeController,
        _paintCandidateStage = SceneControllerPaintCandidateStage(
@@ -102,7 +102,7 @@ final class SceneControllerSceneViewRenderState
        _readSnapshot = readSnapshot,
        _readSelectedNodeIds = readSelectedNodeIds,
        _readControllerEpoch = readControllerEpoch,
-       _readPreviewDeltaResolver = readPreviewDeltaResolver,
+       _captureFramePreview = captureFramePreview,
        _readInteraction = readInteraction;
 
   final SceneStoreController _storeController;
@@ -114,7 +114,7 @@ final class SceneControllerSceneViewRenderState
   final SceneSnapshot Function() _readSnapshot;
   final Set<NodeId> Function() _readSelectedNodeIds;
   final int Function() _readControllerEpoch;
-  final Offset Function(NodeId nodeId) Function() _readPreviewDeltaResolver;
+  final SceneViewFramePreview Function() _captureFramePreview;
   final SceneControllerInteraction Function() _readInteraction;
 
   SceneControllerInteraction get _interaction => _readInteraction();
@@ -148,16 +148,12 @@ final class SceneControllerSceneViewRenderState
   Offset get cameraOffset => snapshot.camera.offset;
 
   @override
-  Offset Function(NodeId nodeId) get previewDeltaResolver =>
-      _readPreviewDeltaResolver();
-
-  @override
   SceneViewFrameRead captureFrameRead() {
     return SceneViewFrameRead(
       snapshot: _readSnapshot(),
       selectedNodeIds: _readSelectedNodeIds(),
       selectionRevision: _storeController.selectionRevision,
-      previewDeltaResolver: _readPreviewDeltaResolver(),
+      preview: _captureFramePreview(),
     );
   }
 
@@ -173,7 +169,7 @@ final class SceneControllerSceneViewRenderState
           snapshot: frameRead.snapshot,
           query: query,
           selectedNodeIds: frameRead.selectedNodeIds,
-          previewDeltaResolver: frameRead.previewDeltaResolver,
+          preview: frameRead.preview,
         ),
       );
     }
@@ -181,7 +177,7 @@ final class SceneControllerSceneViewRenderState
       query: query,
       selectedNodeIds: frameRead.selectedNodeIds,
       selectionRevision: frameRead.selectionRevision,
-      previewResolver: frameRead.previewDeltaResolver,
+      preview: frameRead.preview,
     );
   }
 

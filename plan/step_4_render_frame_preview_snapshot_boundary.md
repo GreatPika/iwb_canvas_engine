@@ -581,7 +581,7 @@ the requested bug-fix scope lock the owner, seam, and dependency direction.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Lock Mid-Frame Preview Invalidation at the Render Boundary
+### Slice 1. [x] Lock Mid-Frame Preview Invalidation at the Render Boundary
 
 #### Slice Contract
 
@@ -635,7 +635,7 @@ current contract before changing owner-side implementation.
 - the new repro fails against the live render seam before implementation and
   becomes green once the frame-owned snapshot seam is in place
 
-### Slice 2. [ ] Replace the Live Render Preview Seam with SceneViewFramePreview
+### Slice 2. [x] Replace the Live Render Preview Seam with SceneViewFramePreview
 
 #### Slice Contract
 
@@ -704,7 +704,7 @@ and retire the live preview seam from the render contract.
 - render behavior tests are green, the live render seam is retired, and the
   structural render tests fail if a live callback returns to the frame seam
 
-### Slice 3. [ ] Sync Invariants and Documentation to Frozen Frame Semantics
+### Slice 3. [x] Sync Invariants and Documentation to Frozen Frame Semantics
 
 #### Slice Contract
 

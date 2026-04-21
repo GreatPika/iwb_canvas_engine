@@ -46,7 +46,7 @@ class _CapturedWorldRectRenderState extends ChangeNotifier
       snapshot: snapshot,
       selectedNodeIds: selectedNodeIds,
       selectionRevision: 0,
-      previewDeltaResolver: previewDeltaResolver,
+      preview: const SceneViewFramePreview.empty(),
     );
   }
 
@@ -67,10 +67,6 @@ class _CapturedWorldRectRenderState extends ChangeNotifier
 
   @override
   Rect? get selectionRect => null;
-
-  @override
-  Offset Function(NodeId nodeId) get previewDeltaResolver =>
-      (_) => Offset.zero;
 
   @override
   bool get hasActiveStrokePreview => false;
@@ -111,12 +107,16 @@ SceneViewRenderState _controllerOwnedRenderState(
 }) {
   final interactionController = interactive.SceneController();
   addTearDown(interactionController.dispose);
+  SceneSnapshot readSnapshot() => snapshotOverride ?? controller.snapshot;
   final renderState = SceneControllerSceneViewRenderState(
     storeController: controller,
-    readSnapshot: () => snapshotOverride ?? controller.snapshot,
+    readSnapshot: readSnapshot,
     readSelectedNodeIds: () => selectedNodeIds,
     readControllerEpoch: () => controller.controllerEpoch,
-    readPreviewDeltaResolver: () => previewDeltaResolver ?? (_) => Offset.zero,
+    captureFramePreview: () => SceneViewFramePreview.captureSnapshot(
+      snapshot: readSnapshot(),
+      deltaForNode: previewDeltaResolver ?? (_) => Offset.zero,
+    ),
     readInteraction: () => interactionController.interaction,
   );
   addTearDown(renderState.dispose);
@@ -322,7 +322,7 @@ void main() {
   );
 
   test(
-    'controller-owned render state captures selected ids and preview resolver into one frame read',
+    'controller-owned render state captures selected ids and frame preview into one frame read',
     () {
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
@@ -333,6 +333,18 @@ void main() {
       final frameSnapshot = SceneSnapshot(
         camera: CameraSnapshot(offset: const Offset(12, 8)),
         background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'captured-layer',
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(
+                id: 'captured-node',
+                size: const Size(10, 10),
+                fillColor: const Color(0xFF000000),
+              ),
+            ],
+          ),
+        ],
       );
       final renderState = _controllerOwnedRenderState(
         controller,
@@ -348,11 +360,6 @@ void main() {
 
       expect(renderState.selectedNodeIds, const <NodeId>{'captured-node'});
       expect(renderState.cameraOffset, const Offset(12, 8));
-      expect(
-        renderState.previewDeltaResolver('captured-node'),
-        const Offset(3, 4),
-      );
-
       final frameRead = renderState.captureFrameRead();
 
       expect(frameRead.snapshot, same(frameSnapshot));
@@ -360,7 +367,7 @@ void main() {
       expect(frameRead.selectionRevision, 0);
       expect(frameRead.cameraOffset, const Offset(12, 8));
       expect(
-        frameRead.previewDeltaResolver('captured-node'),
+        frameRead.preview.deltaForNode('captured-node'),
         const Offset(3, 4),
       );
     },
@@ -417,6 +424,88 @@ void main() {
       );
 
       expect(_candidateIds(candidateIds), const <NodeId>['frame-visible-node']);
+    },
+  );
+
+  test(
+    'controller-owned render state keeps preview supplement admission aligned across committed and snapshot-local paths',
+    () {
+      const query = ScenePaintCandidateQuery(
+        viewportRect: Rect.fromLTWH(0, 0, 120, 100),
+        visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
+      );
+      final frameSnapshot = SceneSnapshot(
+        background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'frame-preview-parity',
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(
+                id: 'previewed-selected-node',
+                size: const Size(20, 20),
+                fillColor: const Color(0xFFE53935),
+                transform: Transform2D.translation(const Offset(160, 20)),
+              ),
+              RectNodeSnapshot(
+                id: 'always-visible-node',
+                size: const Size(20, 20),
+                fillColor: const Color(0xFF43A047),
+                transform: Transform2D.translation(const Offset(40, 20)),
+              ),
+            ],
+          ),
+        ],
+      );
+      final committedController = SceneStoreController(
+        initialSnapshot: frameSnapshot,
+      );
+      addTearDown(committedController.dispose);
+      final snapshotLocalController = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+        ),
+      );
+      addTearDown(snapshotLocalController.dispose);
+
+      final committedRenderState = _controllerOwnedRenderState(
+        committedController,
+        selectedNodeIds: const <NodeId>{'previewed-selected-node'},
+        previewDeltaResolver: (nodeId) {
+          if (nodeId == 'previewed-selected-node') {
+            return const Offset(-120, 0);
+          }
+          return Offset.zero;
+        },
+      );
+      final snapshotLocalRenderState = _controllerOwnedRenderState(
+        snapshotLocalController,
+        selectedNodeIds: const <NodeId>{'previewed-selected-node'},
+        previewDeltaResolver: (nodeId) {
+          if (nodeId == 'previewed-selected-node') {
+            return const Offset(-120, 0);
+          }
+          return Offset.zero;
+        },
+        snapshotOverride: frameSnapshot,
+      );
+
+      final committedPlan = committedRenderState.preparePaintPlan(
+        committedRenderState.captureFrameRead(),
+        query,
+      );
+      final snapshotLocalPlan = snapshotLocalRenderState.preparePaintPlan(
+        snapshotLocalRenderState.captureFrameRead(),
+        query,
+      );
+
+      expect(_candidateIds(committedPlan), const <NodeId>[
+        'previewed-selected-node',
+        'always-visible-node',
+      ]);
+      expect(_candidateIds(snapshotLocalPlan), const <NodeId>[
+        'previewed-selected-node',
+        'always-visible-node',
+      ]);
     },
   );
 
@@ -822,7 +911,7 @@ void main() {
           'selected-background-first',
         },
         selectionRevision: 1,
-        previewResolver: (_) => Offset.zero,
+        preview: const SceneViewFramePreview.empty(),
       );
 
       expect(_candidateIds(plan), const <NodeId>[
@@ -938,7 +1027,7 @@ void main() {
         query: query,
         selectedNodeIds: const <NodeId>{'a'},
         selectionRevision: 1,
-        previewResolver: (_) => Offset.zero,
+        preview: const SceneViewFramePreview.empty(),
       );
       expect(stage.debugSelectedOrderCacheRebuildCount, 1);
       expect(stage.debugSelectedOrderCacheFastReturnCount, 0);
@@ -949,7 +1038,7 @@ void main() {
         query: query,
         selectedNodeIds: const <NodeId>{'a'},
         selectionRevision: 1,
-        previewResolver: (_) => Offset.zero,
+        preview: const SceneViewFramePreview.empty(),
       );
       expect(stage.debugSelectedOrderCacheRebuildCount, 1);
       expect(stage.debugSelectedOrderCacheFastReturnCount, 1);
@@ -960,7 +1049,7 @@ void main() {
         query: query,
         selectedNodeIds: const <NodeId>{'a', 'b'},
         selectionRevision: 2,
-        previewResolver: (_) => Offset.zero,
+        preview: const SceneViewFramePreview.empty(),
       );
       expect(stage.debugSelectedOrderCacheRebuildCount, 2);
       expect(stage.debugSelectedOrderCacheFastReturnCount, 1);
@@ -970,7 +1059,7 @@ void main() {
         query: query,
         selectedNodeIds: const <NodeId>{'b', 'a'},
         selectionRevision: 2,
-        previewResolver: (_) => Offset.zero,
+        preview: const SceneViewFramePreview.empty(),
       );
       expect(stage.debugSelectedOrderCacheRebuildCount, 2);
       expect(stage.debugSelectedOrderCacheFastReturnCount, 2);
@@ -981,7 +1070,7 @@ void main() {
         query: query,
         selectedNodeIds: const <NodeId>{'a', 'b'},
         selectionRevision: 2,
-        previewResolver: (_) => Offset.zero,
+        preview: const SceneViewFramePreview.empty(),
       );
       expect(stage.debugSelectedOrderCacheRebuildCount, 3);
       expect(stage.debugSelectedOrderCacheFastReturnCount, 2);

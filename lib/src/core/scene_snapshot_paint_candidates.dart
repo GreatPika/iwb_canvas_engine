@@ -4,26 +4,25 @@ import '../contract/scene_view_render_state.dart';
 import '../contract/snapshot.dart';
 import 'geometry.dart';
 import 'node_geometry.dart';
-import 'numeric_clamp.dart';
 
 Iterable<ScenePaintCandidate> enumerateSnapshotPaintCandidates({
   required SceneSnapshot snapshot,
   required ScenePaintCandidateQuery query,
   required Set<NodeId> selectedNodeIds,
-  required Offset Function(NodeId nodeId) previewDeltaResolver,
+  required SceneViewFramePreview preview,
 }) sync* {
   for (final node in snapshot.backgroundLayer.nodes) {
     if (_snapshotNodeOverlapsQuery(
       node: node,
       query: query,
       selectedNodeIds: selectedNodeIds,
-      previewDeltaResolver: previewDeltaResolver,
+      preview: preview,
     )) {
       yield ScenePaintCandidate(
         node: node,
         paintBoundsWorld: _snapshotPaintBoundsWorld(
           node: node,
-          previewDeltaResolver: previewDeltaResolver,
+          preview: preview,
         ),
       );
     }
@@ -34,13 +33,13 @@ Iterable<ScenePaintCandidate> enumerateSnapshotPaintCandidates({
         node: node,
         query: query,
         selectedNodeIds: selectedNodeIds,
-        previewDeltaResolver: previewDeltaResolver,
+        preview: preview,
       )) {
         yield ScenePaintCandidate(
           node: node,
           paintBoundsWorld: _snapshotPaintBoundsWorld(
             node: node,
-            previewDeltaResolver: previewDeltaResolver,
+            preview: preview,
           ),
         );
       }
@@ -52,12 +51,9 @@ bool _snapshotNodeOverlapsQuery({
   required NodeSnapshot node,
   required ScenePaintCandidateQuery query,
   required Set<NodeId> selectedNodeIds,
-  required Offset Function(NodeId nodeId) previewDeltaResolver,
+  required SceneViewFramePreview preview,
 }) {
-  final paintBounds = _snapshotPaintBoundsWorld(
-    node: node,
-    previewDeltaResolver: previewDeltaResolver,
-  );
+  final paintBounds = _snapshotPaintBoundsWorld(node: node, preview: preview);
   if (!isFiniteRect(paintBounds)) {
     return false;
   }
@@ -69,9 +65,9 @@ bool _snapshotNodeOverlapsQuery({
 
 Rect _snapshotPaintBoundsWorld({
   required NodeSnapshot node,
-  required Offset Function(NodeId nodeId) previewDeltaResolver,
+  required SceneViewFramePreview preview,
 }) {
   requireNodeSnapshotGeometrySupport(node);
-  final previewDelta = sanitizeFiniteOffset(previewDeltaResolver(node.id));
+  final previewDelta = preview.deltaForNode(node.id);
   return nodeSnapshotPaintBoundsWorld(node).shift(previewDelta);
 }

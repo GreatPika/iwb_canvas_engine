@@ -36,7 +36,6 @@ final class SceneControllerGraphRequest {
     required this.readSnapshot,
     required this.readSelectedNodeIds,
     required this.readControllerEpoch,
-    required this.readPreviewDeltaResolver,
     required this.pointerSettings,
     required this.dragStartSlop,
     required this.clearSelectionOnDrawModeEnter,
@@ -49,7 +48,6 @@ final class SceneControllerGraphRequest {
   final SceneSnapshot Function() readSnapshot;
   final Set<NodeId> Function() readSelectedNodeIds;
   final int Function() readControllerEpoch;
-  final Offset Function(NodeId nodeId) Function() readPreviewDeltaResolver;
   final PointerInputSettings? pointerSettings;
   final double? dragStartSlop;
   final bool clearSelectionOnDrawModeEnter;
@@ -83,8 +81,8 @@ SceneControllerGraph _assembleSceneControllerGraph(
     readSnapshot: request.readSnapshot,
     readSelectedNodeIds: request.readSelectedNodeIds,
     readControllerEpoch: request.readControllerEpoch,
-    readPreviewDeltaResolver: request.readPreviewDeltaResolver,
     readInteraction: () => request.owner.interaction,
+    captureFramePreview: () => interactionRuntime.captureFramePreview(),
     readInteractionRuntime: () => interactionRuntime,
   );
   interactionRuntime = _createInteractionRuntime(

@@ -71,7 +71,8 @@ The current architecture is built around six goals.
 4. **Transactional mutation.** Supported mutations go through a transactional
    write boundary and commit atomically.
 5. **Frame-authoritative rendering.** The paint pipeline renders from one
-   atomic frame read rather than mixing multiple read snapshots in one frame.
+   atomic frame read with one frozen frame-preview authority rather than
+   mixing multiple read snapshots or live preview answers in one frame.
 6. **Strict boundary validation.** Import, build, and serialization paths
    validate and canonicalize data, and failures use a stable
    `SceneDataException` contract.
@@ -423,7 +424,7 @@ the overlay. It adds to the committed store contract:
 - `captureFrameRead()`
 - `preparePaintPlan(...)`
 - overlay repaint listenable
-- preview and selection reads
+- live selection reads plus frame-preview capture for main-scene paint
 - controller epoch / selection revision carriage for render invalidation
 
 ### 7.5 Rendering
@@ -543,7 +544,7 @@ Typical frame flow:
    enumeration strategy
 4. the painter resolves node paint data from that frame authority
 5. background, nodes, and selection visuals are painted from the same captured
-   frame
+   frame and the same frozen frame-preview snapshot
 6. overlay rendering listens through the separate overlay repaint channel
 
 There are two paint-admission modes:
@@ -619,9 +620,12 @@ important for architectural reasoning.
 - interactive callback contracts expose immutable request/value boundaries, and
   exported callback typedef parameter shapes must not expose raw
   `List` / `Map` / `Set` types anywhere inside the callback parameter graph
-- the render pipeline paints from one atomic frame read
+- the render pipeline paints from one atomic frame read and one frozen
+  frame-preview snapshot
 - committed fast-path paint admission is used only when the frame snapshot
   matches the committed snapshot
+- the public `SceneController.previewDeltaResolver` stays live and distinct
+  from the frame-captured render preview seam
 - overlay repaint ownership stays separate from the main scene render surface
 
 Canonical invariant ids plus required-versus-regression proof declarations live

@@ -5,6 +5,44 @@ import 'package:flutter/foundation.dart';
 import 'scene_render_state.dart';
 import 'snapshot.dart';
 
+final class SceneViewFramePreview {
+  const SceneViewFramePreview.empty() : _nodeOffsets = const <NodeId, Offset>{};
+
+  SceneViewFramePreview._(Map<NodeId, Offset> nodeOffsets)
+    : _nodeOffsets = Map<NodeId, Offset>.unmodifiable(nodeOffsets);
+
+  factory SceneViewFramePreview.captureNodeOffsets({
+    required Iterable<NodeId> nodeIds,
+    required Offset Function(NodeId nodeId) deltaForNode,
+  }) {
+    final nodeOffsets = <NodeId, Offset>{};
+    for (final nodeId in nodeIds) {
+      final delta = _sanitizeFramePreviewOffset(deltaForNode(nodeId));
+      if (delta == Offset.zero) {
+        continue;
+      }
+      nodeOffsets[nodeId] = delta;
+    }
+    return SceneViewFramePreview._(nodeOffsets);
+  }
+
+  factory SceneViewFramePreview.captureSnapshot({
+    required SceneSnapshot snapshot,
+    required Offset Function(NodeId nodeId) deltaForNode,
+  }) {
+    return SceneViewFramePreview.captureNodeOffsets(
+      nodeIds: _snapshotNodeIds(snapshot),
+      deltaForNode: deltaForNode,
+    );
+  }
+
+  final Map<NodeId, Offset> _nodeOffsets;
+
+  Offset deltaForNode(NodeId nodeId) {
+    return _sanitizeFramePreviewOffset(_nodeOffsets[nodeId] ?? Offset.zero);
+  }
+}
+
 class ScenePaintCandidateQuery {
   const ScenePaintCandidateQuery({
     required this.viewportRect,
@@ -59,13 +97,13 @@ final class SceneViewFrameRead {
     required this.snapshot,
     required Set<NodeId> selectedNodeIds,
     required this.selectionRevision,
-    required this.previewDeltaResolver,
+    required this.preview,
   }) : selectedNodeIds = Set<NodeId>.unmodifiable(selectedNodeIds);
 
   final SceneSnapshot snapshot;
   final Set<NodeId> selectedNodeIds;
   final int selectionRevision;
-  final Offset Function(NodeId nodeId) previewDeltaResolver;
+  final SceneViewFramePreview preview;
 
   Offset get cameraOffset => snapshot.camera.offset;
 }
@@ -76,7 +114,6 @@ abstract interface class SceneViewRenderState implements SceneRenderState {
   Listenable get overlayRepaintListenable;
   Rect? get selectionRect;
   Offset get cameraOffset;
-  Offset Function(NodeId nodeId) get previewDeltaResolver;
   SceneViewFrameRead captureFrameRead();
   ScenePreparedPaintPlan preparePaintPlan(
     SceneViewFrameRead frameRead,
@@ -94,4 +131,22 @@ abstract interface class SceneViewRenderState implements SceneRenderState {
   Offset? get activeLinePreviewEnd;
   double get activeLinePreviewThickness;
   Color get activeLinePreviewColor;
+}
+
+Iterable<NodeId> _snapshotNodeIds(SceneSnapshot snapshot) sync* {
+  for (final node in snapshot.backgroundLayer.nodes) {
+    yield node.id;
+  }
+  for (final layer in snapshot.layers) {
+    for (final node in layer.nodes) {
+      yield node.id;
+    }
+  }
+}
+
+Offset _sanitizeFramePreviewOffset(Offset value) {
+  if (!value.dx.isFinite || !value.dy.isFinite) {
+    return Offset.zero;
+  }
+  return value;
 }

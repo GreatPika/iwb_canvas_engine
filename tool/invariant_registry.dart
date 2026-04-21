@@ -933,12 +933,19 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION',
     scope: 'engine-structure',
     title:
-        'ScenePainter captures one atomic frame read, keeps one frame snapshot authority, carries controller-owned selectionRevision invalidation with that frame read, uses controller-owned viewport-first ordinary paint admission only while the active frame snapshot matches the committed controller snapshot, widens admission only for selected-node supplements, preserves background/content paint order regardless of supplement source, deduplicates node emission once per frame, culls by paint bounds before render resolution, and falls back to active-frame enumeration when the committed snapshot diverges',
+        'ScenePainter captures one atomic frame read, keeps one frame snapshot authority plus one frozen frame-preview authority distinct from the live public controller preview seam, carries controller-owned selectionRevision invalidation with that frame read, uses controller-owned viewport-first ordinary paint admission only while the active frame snapshot matches the committed controller snapshot, widens admission only for selected-node supplements, preserves background/content paint order regardless of supplement source, deduplicates node emission once per frame, culls by paint bounds before render resolution, and falls back to active-frame enumeration when the committed snapshot diverges',
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path: 'test/render/scene_painter_frame_contract_test.dart',
         stepId: 'scope_render_view',
       ),
+      RequiredProof(
+        path: 'test/render/scene_painter_bounds_contract_test.dart',
+        stepId: 'scope_render_view',
+      ),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(path: 'test/render/scene_painter_test.dart'),
     ],
   ),
   Invariant(

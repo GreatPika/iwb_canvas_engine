@@ -137,6 +137,8 @@ void main() {
         );
 
         expect(body, contains('SceneControllerSceneViewRenderState('));
+        expect(body, contains('captureFramePreview: () =>'));
+        expect(body, contains('SceneViewFramePreview.captureSnapshot('));
         expect(body, isNot(contains('_BenchmarkControllerRenderState(')));
         expect(
           source,
@@ -187,6 +189,11 @@ void main() {
         expect(endToEndBody, contains('_paintScene(painter, canvasSize);'));
 
         expect(painterOnlyBody, contains('_BenchmarkControllerRenderState('));
+        expect(
+          source,
+          contains('preview: SceneViewFramePreview.captureSnapshot('),
+        );
+        expect(source, isNot(contains('readPreviewDeltaResolver')));
       },
     );
   });

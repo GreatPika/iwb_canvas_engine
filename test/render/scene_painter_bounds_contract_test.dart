@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 // INV:INV-ENG-SCENE-PAINTER-MODULE-BOUNDARY
+// INV:INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION
 
 String _extractMethodBody({
   required String source,
@@ -260,6 +261,51 @@ void main() {
     expect(ordinaryBody, isNot(contains('nodePaintBoundsWorld(')));
     expect(stageBody, isNot(contains('.sort(')));
   });
+
+  test(
+    'frame preview contract stays frozen across capture, admission, and late node resolution',
+    () {
+      final contractSource = File(
+        'lib/src/contract/scene_view_render_state.dart',
+      ).readAsStringSync();
+      final runtimeSource = File(
+        'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
+      ).readAsStringSync();
+      final frameSource = File(
+        'lib/src/render/scene_painter_frame.dart',
+      ).readAsStringSync();
+
+      expect(contractSource, contains('final class SceneViewFramePreview'));
+      expect(contractSource, contains('required this.preview,'));
+      expect(
+        contractSource,
+        isNot(
+          contains(
+            'final Offset Function(NodeId nodeId) previewDeltaResolver;',
+          ),
+        ),
+      );
+      expect(
+        contractSource,
+        isNot(
+          contains('Offset Function(NodeId nodeId) get previewDeltaResolver;'),
+        ),
+      );
+
+      expect(
+        runtimeSource,
+        contains(
+          'required SceneViewFramePreview Function() captureFramePreview,',
+        ),
+      );
+      expect(runtimeSource, contains('preview: _captureFramePreview(),'));
+      expect(runtimeSource, contains('preview: frameRead.preview,'));
+      expect(runtimeSource, isNot(contains('readPreviewDeltaResolver')));
+
+      expect(frameSource, contains('frameRead.preview.deltaForNode(nodeId)'));
+      expect(frameSource, isNot(contains('frameRead.previewDeltaResolver(')));
+    },
+  );
 
   test('selection rendering uses resolved frame data for box selections', () {
     final source = File(

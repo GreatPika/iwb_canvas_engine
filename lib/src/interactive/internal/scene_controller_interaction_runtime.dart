@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../../contract/canvas_pointer_input.dart';
+import '../../contract/scene_view_render_state.dart';
 import '../../contract/snapshot.dart';
 import '../../controller/scene_controller_committed_mutation_access.dart';
 import '../../controller/scene_store_controller.dart';
@@ -263,6 +264,10 @@ extension SceneControllerInteractionRuntimeMutationApi
 
   Offset previewDeltaForNode(NodeId nodeId) {
     return runtime.debugMoveSession.movePreviewDeltaForNode(nodeId);
+  }
+
+  SceneViewFramePreview captureFramePreview() {
+    return runtime.debugMoveSession.captureFramePreview();
   }
 
   void setBeforePointerDispatchHook(VoidCallback? hook) {

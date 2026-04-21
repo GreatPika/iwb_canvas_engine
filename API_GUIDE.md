@@ -266,6 +266,14 @@ Primary read-only state and integration hooks:
 - `editTextRequests`
 - `interaction`, `selection`, and `scene`
 
+Runtime preview rule:
+
+- `previewDeltaResolver(nodeId)` is a live public read of the current
+  move-preview offset for that node.
+- `SceneView` captures a frozen per-frame preview snapshot before main-scene
+  paint starts. Public controller side effects during `imageResolver` or other
+  app callbacks do not change the preview used by the already captured frame.
+
 Lifecycle rule:
 
 - Call `dispose()` when the controller is no longer used.

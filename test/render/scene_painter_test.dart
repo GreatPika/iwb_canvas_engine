@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' as iwb;
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
@@ -21,6 +22,8 @@ import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
     as interactive;
 
 import '../support/committed_scene_view_render_state.dart';
+
+// INV:INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION
 
 class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
   _FakeRenderState({
@@ -52,16 +55,16 @@ class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
   Set<NodeId> get selectedNodeIds => _selectedNodeIds;
 
   @override
-  Offset Function(NodeId nodeId) get previewDeltaResolver =>
-      _previewDeltaResolver ?? _zeroPreviewDelta;
-
-  @override
   SceneViewFrameRead captureFrameRead() {
+    final previewDeltaResolver = _previewDeltaResolver ?? _zeroPreviewDelta;
     return SceneViewFrameRead(
       snapshot: snapshot,
       selectedNodeIds: selectedNodeIds,
       selectionRevision: 0,
-      previewDeltaResolver: previewDeltaResolver,
+      preview: SceneViewFramePreview.captureSnapshot(
+        snapshot: snapshot,
+        deltaForNode: previewDeltaResolver,
+      ),
     );
   }
 
@@ -75,7 +78,7 @@ class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
         snapshot: frameRead.snapshot,
         query: query,
         selectedNodeIds: frameRead.selectedNodeIds,
-        previewDeltaResolver: frameRead.previewDeltaResolver,
+        preview: frameRead.preview,
       ),
     );
   }
@@ -139,12 +142,16 @@ SceneViewRenderState _controllerOwnedRenderState(
 }) {
   final interactionController = interactive.SceneController();
   addTearDown(interactionController.dispose);
+  SceneSnapshot readSnapshot() => controller.snapshot;
   final renderState = SceneControllerSceneViewRenderState(
     storeController: controller,
-    readSnapshot: () => controller.snapshot,
+    readSnapshot: readSnapshot,
     readSelectedNodeIds: () => selectedNodeIds ?? controller.selectedNodeIds,
     readControllerEpoch: () => controller.controllerEpoch,
-    readPreviewDeltaResolver: () => previewDeltaResolver ?? _zeroPreviewDelta,
+    captureFramePreview: () => SceneViewFramePreview.captureSnapshot(
+      snapshot: readSnapshot(),
+      deltaForNode: previewDeltaResolver ?? _zeroPreviewDelta,
+    ),
     readInteraction: () => interactionController.interaction,
   );
   addTearDown(renderState.dispose);
@@ -2037,6 +2044,100 @@ void main() {
         greaterThan(0),
       );
       expect(await _pixelColor(image, 20, 30), const Color(0xFF000000));
+    },
+  );
+
+  test(
+    'ScenePainter keeps one selected preview snapshot when imageResolver clears live preview mid-frame',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final controller = interactive.SceneController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: background),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-reentrant-preview',
+              nodes: <NodeSnapshot>[
+                ImageNodeSnapshot(
+                  id: 'preview-image',
+                  imageId: 'img',
+                  size: const Size(12, 12),
+                  transform: Transform2D.translation(const Offset(20, 20)),
+                ),
+                RectNodeSnapshot(
+                  id: 'preview-rect',
+                  size: const Size(12, 12),
+                  fillColor: const Color(0xFFE53935),
+                  strokeWidth: 0,
+                  transform: Transform2D.translation(const Offset(60, 20)),
+                ),
+              ],
+            ),
+          ],
+        ),
+        dragStartSlop: 0.001,
+      );
+      addTearDown(controller.dispose);
+
+      controller.selection.setSelection(const <String>{
+        'preview-image',
+        'preview-rect',
+      });
+      await pumpEventQueue();
+
+      controller.interaction.handlePointer(
+        const iwb.CanvasPointerInput(
+          pointerId: 1,
+          position: Offset(20, 20),
+          timestampMs: 1,
+          phase: iwb.CanvasPointerPhase.down,
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      controller.interaction.handlePointer(
+        const iwb.CanvasPointerInput(
+          pointerId: 1,
+          position: Offset(50, 20),
+          timestampMs: 2,
+          phase: iwb.CanvasPointerPhase.move,
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(
+        controller.previewDeltaResolver('preview-rect'),
+        const Offset(30, 0),
+      );
+
+      final renderState = interactive
+          .sceneControllerViewRuntimeOf(controller)
+          .renderState;
+      final image = await _solidImage(const Color(0xFF000000));
+      var invalidatedPreview = false;
+
+      final painted = await _paintToImage(
+        ScenePainter(
+          controller: renderState,
+          imageResolver: (id) {
+            if (id != 'img') {
+              return null;
+            }
+            if (!invalidatedPreview) {
+              invalidatedPreview = true;
+              controller.interaction.setMode(iwb.CanvasMode.draw);
+            }
+            return image;
+          },
+        ),
+        width: 120,
+        height: 60,
+      );
+
+      expect(invalidatedPreview, isTrue);
+      expect(await _pixelColor(painted, 90, 20), const Color(0xFFE53935));
+      expect(await _pixelColor(painted, 60, 20), background);
+      expect(controller.previewDeltaResolver('preview-rect'), Offset.zero);
     },
   );
 }

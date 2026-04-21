@@ -61,16 +61,15 @@ class CommittedSceneViewRenderState extends ChangeNotifier
   Offset get cameraOffset => snapshot.camera.offset;
 
   @override
-  Offset Function(NodeId nodeId) get previewDeltaResolver =>
-      _previewDeltaResolver;
-
-  @override
   SceneViewFrameRead captureFrameRead() {
     return SceneViewFrameRead(
       snapshot: snapshot,
       selectedNodeIds: selectedNodeIds,
       selectionRevision: 0,
-      previewDeltaResolver: previewDeltaResolver,
+      preview: SceneViewFramePreview.captureSnapshot(
+        snapshot: snapshot,
+        deltaForNode: _previewDeltaResolver,
+      ),
     );
   }
 
@@ -84,7 +83,7 @@ class CommittedSceneViewRenderState extends ChangeNotifier
         snapshot: frameRead.snapshot,
         query: query,
         selectedNodeIds: frameRead.selectedNodeIds,
-        previewDeltaResolver: frameRead.previewDeltaResolver,
+        preview: frameRead.preview,
       ),
     );
   }
