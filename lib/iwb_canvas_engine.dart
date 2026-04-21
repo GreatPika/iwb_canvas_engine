@@ -20,7 +20,10 @@ export 'src/contract/pointer_input.dart' show PointerInputSettings;
 export 'src/contract/transform2d.dart' show Transform2D;
 export 'src/interactive/scene_controller.dart' show SceneController;
 export 'src/interactive/scene_controller_interaction.dart'
-    show MoveCommitDeltaResolver, SceneControllerInteraction;
+    show
+        MoveCommitDeltaRequest,
+        MoveCommitDeltaResolver,
+        SceneControllerInteraction;
 export 'src/interactive/scene_controller_selection.dart'
     show SceneControllerSelection;
 export 'src/interactive/scene_controller_scene.dart' show SceneControllerScene;

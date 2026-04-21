@@ -15,6 +15,12 @@ import '../../core/signature_leak_support.dart';
 import '../../core/guardrail_violation.dart';
 import 'public_surface_rules.dart';
 
+const Set<String> _forbiddenCallbackCollectionTypeNames = <String>{
+  'List',
+  'Map',
+  'Set',
+};
+
 final GuardrailRule publicSignatureGuardrailRule = GuardrailRule(
   metadata: const GuardrailRuleMetadata(
     id: 'public-signature',
@@ -168,6 +174,7 @@ GuardrailViolation? _scanResolvedLibraryForHermeticity({
               'from ${leak.ownerRepoRelPath}.',
         _SignatureLeakKind.forbiddenPublicType =>
           '${leak.message} (${leak.typeName}).',
+        _SignatureLeakKind.rawCollectionCallbackParameter => leak.message,
       },
     );
   }
@@ -429,6 +436,13 @@ _SignatureLeak? _findLeakInTypeAliasSignature({
     return typeParameterLeak;
   }
 
+  final rawCollectionCallbackLeak = _findRawCollectionCallbackParameterTypeLeak(
+    element: element,
+  );
+  if (rawCollectionCallbackLeak != null) {
+    return rawCollectionCallbackLeak;
+  }
+
   return _findLeakInType(
     type: element.aliasedType,
     sourceElement: element,
@@ -558,6 +572,52 @@ _SignatureLeak? _findLeakInInstanceMembers({
     }
   }
 
+  return null;
+}
+
+_SignatureLeak? _findRawCollectionCallbackParameterTypeLeak({
+  required TypeAliasElement element,
+}) {
+  final aliasedType = element.aliasedType;
+  if (aliasedType is! FunctionType) {
+    return null;
+  }
+
+  for (final parameter in aliasedType.formalParameters) {
+    final collectionTypeName = _findForbiddenSdkCollectionTypeName(
+      parameter.type,
+    );
+    if (collectionTypeName == null) {
+      continue;
+    }
+    return _SignatureLeak.rawCollectionCallbackParameter(
+      sourceElement: element,
+      typeName: collectionTypeName,
+    );
+  }
+
+  return null;
+}
+
+String? _findForbiddenSdkCollectionTypeName(DartType type) =>
+    findFirstResolvedTypeLeak<String>(
+      rootType: type,
+      classifyType: _classifyForbiddenSdkCollectionTypeName,
+      expandAlias: (candidateType) {
+        final aliasElement = candidateType.alias?.element;
+        if (aliasElement is! TypeAliasElement) {
+          return null;
+        }
+        return aliasElement.aliasedType;
+      },
+    );
+
+String? _classifyForbiddenSdkCollectionTypeName(DartType type) {
+  if (type case InterfaceType(:final element)
+      when element.library.isDartCore &&
+          _forbiddenCallbackCollectionTypeNames.contains(element.name)) {
+    return element.name;
+  }
   return null;
 }
 
@@ -731,6 +791,17 @@ final class _SignatureLeak {
            'public contract violation: exported API must not expose '
            'mutable core or runtime owner types.';
 
+  const _SignatureLeak.rawCollectionCallbackParameter({
+    required this.sourceElement,
+    required this.typeName,
+  }) : kind = _SignatureLeakKind.rawCollectionCallbackParameter,
+       ownerRepoRelPath = null,
+       message =
+           'public signature hermeticity violation: exported callback '
+           'typedef parameter types must not expose raw SDK collection '
+           'types such as $typeName anywhere in the callback parameter '
+           'shape.';
+
   final Element sourceElement;
   final String typeName;
   final String? ownerRepoRelPath;
@@ -738,4 +809,8 @@ final class _SignatureLeak {
   final _SignatureLeakKind kind;
 }
 
-enum _SignatureLeakKind { hermeticity, forbiddenPublicType }
+enum _SignatureLeakKind {
+  hermeticity,
+  forbiddenPublicType,
+  rawCollectionCallbackParameter,
+}

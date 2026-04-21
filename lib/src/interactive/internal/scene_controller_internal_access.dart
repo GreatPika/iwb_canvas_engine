@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../../contract/snapshot.dart';
 import '../scene_controller.dart';
+import '../scene_controller_interaction.dart';
 import 'scene_controller_interaction_access.dart';
 import 'interactive_geometry.dart';
 
@@ -20,11 +21,7 @@ class _SceneControllerInternalAccess {
   final int Function() readEpoch;
   final Offset Function(NodeId nodeId) previewDeltaForNode;
   final void Function(VoidCallback? hook) setBeforePointerDispatchHook;
-  final Offset Function({
-    required SceneSnapshot snapshot,
-    required List<NodeSnapshot> movedNodes,
-    required Offset proposedDelta,
-  })
+  final Offset Function(MoveCommitDeltaRequest request)
   runMoveCommitDeltaResolverForTest;
   final SceneControllerInteractionAccess Function()
   readInteractionAccessForTest;
@@ -51,11 +48,7 @@ final class SceneControllerInternalAccessRegistration {
   final int Function() readEpoch;
   final Offset Function(NodeId nodeId) previewDeltaForNode;
   final void Function(VoidCallback? hook) setBeforePointerDispatchHook;
-  final Offset Function({
-    required SceneSnapshot snapshot,
-    required List<NodeSnapshot> movedNodes,
-    required Offset proposedDelta,
-  })
+  final Offset Function(MoveCommitDeltaRequest request)
   runMoveCommitDeltaResolverForTest;
   final SceneControllerInteractionAccess Function()
   readInteractionAccessForTest;
@@ -119,18 +112,12 @@ void sceneControllerInternalSetBeforePointerDispatchHook(
 }
 
 Offset sceneControllerInternalRunMoveCommitDeltaResolverForTest(
-  SceneController controller, {
-  required SceneSnapshot snapshot,
-  required List<NodeSnapshot> movedNodes,
-  required Offset proposedDelta,
-}) {
+  SceneController controller,
+  MoveCommitDeltaRequest request,
+) {
   return _requireSceneControllerInternalAccess(
     controller,
-  ).runMoveCommitDeltaResolverForTest(
-    snapshot: snapshot,
-    movedNodes: movedNodes,
-    proposedDelta: proposedDelta,
-  );
+  ).runMoveCommitDeltaResolverForTest(request);
 }
 
 SceneControllerInteractionAccess

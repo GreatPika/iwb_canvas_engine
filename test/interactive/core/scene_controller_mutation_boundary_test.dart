@@ -60,12 +60,7 @@ void main() {
                   payload: payload,
                 ));
               },
-          resolveMoveCommitDelta:
-              ({
-                required SceneSnapshot snapshot,
-                required List<NodeSnapshot> movedNodes,
-                required Offset proposedDelta,
-              }) => proposedDelta,
+          resolveMoveCommitDelta: (request) => request.proposedDelta,
           requireFiniteOffset: (value, {required name}) {
             if (!value.dx.isFinite || !value.dy.isFinite) {
               throw ArgumentError.value(value, name, 'Must be finite.');
@@ -206,12 +201,7 @@ void main() {
           resolveTimestampMs: (timestampMs) => timestampMs ?? -1,
           emitAction:
               (type, nodeIds, timestampMs, {Map<String, Object?>? payload}) {},
-          resolveMoveCommitDelta:
-              ({
-                required SceneSnapshot snapshot,
-                required List<NodeSnapshot> movedNodes,
-                required Offset proposedDelta,
-              }) => proposedDelta,
+          resolveMoveCommitDelta: (request) => request.proposedDelta,
           requireFiniteOffset: (value, {required name}) {},
           clearPointerNormalizationState: () {},
           schedulePublicNotify: () {
@@ -295,12 +285,7 @@ void main() {
                   payload: payload,
                 ));
               },
-          resolveMoveCommitDelta:
-              ({
-                required SceneSnapshot snapshot,
-                required List<NodeSnapshot> movedNodes,
-                required Offset proposedDelta,
-              }) => proposedDelta,
+          resolveMoveCommitDelta: (request) => request.proposedDelta,
           requireFiniteOffset: (value, {required name}) {},
           clearPointerNormalizationState: () {},
           schedulePublicNotify: () {},
@@ -374,17 +359,12 @@ void main() {
                   payload: payload,
                 ));
               },
-          resolveMoveCommitDelta:
-              ({
-                required SceneSnapshot snapshot,
-                required List<NodeSnapshot> movedNodes,
-                required Offset proposedDelta,
-              }) {
-                expect(snapshot.layers.single.nodes, hasLength(2));
-                expect(movedNodes.map((node) => node.id), <NodeId>['b']);
-                expect(proposedDelta, const Offset(10, 0));
-                return const Offset(15, 0);
-              },
+          resolveMoveCommitDelta: (request) {
+            expect(request.snapshot.layers.single.nodes, hasLength(2));
+            expect(request.movedNodes.map((node) => node.id), <NodeId>['b']);
+            expect(request.proposedDelta, const Offset(10, 0));
+            return const Offset(15, 0);
+          },
           requireFiniteOffset: (value, {required name}) {
             if (!value.dx.isFinite || !value.dy.isFinite) {
               throw ArgumentError.value(value, name, 'Must be finite.');
@@ -446,6 +426,81 @@ void main() {
       expect(movedNode.transform.tx, 55);
       expect(movedNode.transform.ty, 10);
     });
+
+    test(
+      'resolver payload mutation cannot change authoritative move commit set',
+      () {
+        final controller = SceneStoreController(
+          initialSnapshot: SceneSnapshot(
+            layers: <ContentLayerSnapshot>[
+              ContentLayerSnapshot(
+                id: 'layer-auto-0',
+                nodes: <NodeSnapshot>[
+                  RectNodeSnapshot(
+                    id: 'a',
+                    size: const Size(20, 10),
+                    transform: Transform2D.translation(const Offset(10, 10)),
+                  ),
+                  RectNodeSnapshot(
+                    id: 'b',
+                    size: const Size(20, 10),
+                    transform: Transform2D.translation(const Offset(40, 10)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+        addTearDown(controller.dispose);
+
+        final boundary = SceneControllerMutationBoundary(
+          mutationAccess: SceneStoreControllerCommittedMutationAccess(
+            controller,
+          ),
+          readSnapshot: () => controller.snapshot,
+          callbacks: SceneControllerMutationBoundaryCallbacks(
+            resolveTimestampMs: (timestampMs) => timestampMs ?? -1,
+            emitAction:
+                (
+                  type,
+                  nodeIds,
+                  timestampMs, {
+                  Map<String, Object?>? payload,
+                }) {},
+            resolveMoveCommitDelta: (request) {
+              expect(request.snapshot.layers.single.nodes, hasLength(2));
+              expect(request.movedNodes.map((node) => node.id), <NodeId>[
+                'a',
+                'b',
+              ]);
+              expect(
+                () => (request.movedNodes as List<NodeSnapshot>).removeLast(),
+                throwsUnsupportedError,
+              );
+              return request.proposedDelta;
+            },
+            requireFiniteOffset: (value, {required name}) {},
+            clearPointerNormalizationState: () {},
+            schedulePublicNotify: () {},
+            scheduleSceneRepaint: () {},
+            scheduleOverlayRepaint: () {},
+          ),
+        );
+
+        boundary.setSelection(const <NodeId>{'a', 'b'});
+
+        final moveResult = boundary.commitMoveSelection(const Offset(10, 0));
+
+        expect(moveResult.appliedDelta, const Offset(10, 0));
+        expect(moveResult.movedIds, <NodeId>['a', 'b']);
+
+        final movedNodes = controller.snapshot.layers.single.nodes
+            .cast<RectNodeSnapshot>()
+            .toList(growable: false);
+        expect(movedNodes[0].transform.tx, 20);
+        expect(movedNodes[1].transform.tx, 50);
+      },
+    );
 
     test(
       'runtime mutation api covers selection action delegation shells',

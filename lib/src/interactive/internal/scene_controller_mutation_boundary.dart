@@ -7,7 +7,9 @@ import '../../contract/scene_write_txn.dart';
 import '../../contract/snapshot.dart';
 import '../../contract/transform2d.dart';
 import '../../core/action_events.dart';
+import '../../core/immutable_collections.dart';
 import '../../controller/scene_controller_committed_mutation_access.dart';
+import '../scene_controller_interaction.dart';
 import '../interaction_eligibility_policy.dart'
     as interaction_eligibility_policy;
 import 'interactive_move_callbacks.dart';
@@ -32,12 +34,7 @@ final class SceneControllerMutationBoundaryCallbacks {
     Map<String, Object?>? payload,
   })
   emitAction;
-  final Offset Function({
-    required SceneSnapshot snapshot,
-    required List<NodeSnapshot> movedNodes,
-    required Offset proposedDelta,
-  })
-  resolveMoveCommitDelta;
+  final Offset Function(MoveCommitDeltaRequest request) resolveMoveCommitDelta;
   final void Function(Offset value, {required String name}) requireFiniteOffset;
   final VoidCallback clearPointerNormalizationState;
   final VoidCallback schedulePublicNotify;
@@ -294,19 +291,23 @@ final class SceneControllerMutationBoundary {
   MoveCommitSelectionResult commitMoveSelection(Offset proposedDelta) {
     final result = mutationAccess.write<MoveCommitSelectionResult>((writer) {
       final snapshot = writer.snapshot;
-      final movedNodes = interaction_eligibility_policy
-          .selectedCommitMovableNodesInSnapshotOrder(
-            snapshot: snapshot,
-            selected: writer.selectedNodeIds,
-          );
+      final movedNodes = freezeList<NodeSnapshot>(
+        interaction_eligibility_policy
+            .selectedCommitMovableNodesInSnapshotOrder(
+              snapshot: snapshot,
+              selected: writer.selectedNodeIds,
+            ),
+      );
       if (movedNodes.isEmpty) {
         return (appliedDelta: Offset.zero, movedIds: const <NodeId>[]);
       }
 
       final resolvedDelta = callbacks.resolveMoveCommitDelta(
-        snapshot: snapshot,
-        movedNodes: movedNodes,
-        proposedDelta: proposedDelta,
+        MoveCommitDeltaRequest(
+          snapshot: snapshot,
+          movedNodes: movedNodes,
+          proposedDelta: proposedDelta,
+        ),
       );
       callbacks.requireFiniteOffset(resolvedDelta, name: 'resolvedDelta');
       if (resolvedDelta == Offset.zero) {

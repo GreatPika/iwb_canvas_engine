@@ -108,6 +108,7 @@ The package barrel currently exports the following architectural roots.
 - `SceneControllerInteraction`
 - `SceneControllerSelection`
 - `SceneControllerScene`
+- `MoveCommitDeltaRequest`
 - `MoveCommitDeltaResolver`
 - `SceneView` / `SceneViewInteractive`
 
@@ -397,6 +398,9 @@ Its role is intentionally narrow and central:
 - route supported public scene/selection mutations
 - project action events for delete/clear/transform style operations
 - schedule the correct post-commit invalidation channels
+- freeze authoritative move-commit node snapshots once, construct
+  `MoveCommitDeltaRequest`, and keep commit iteration ownership inside the
+  mutation boundary
 - keep gesture preview state separate from committed state until commit
 
 ### 7.4 View/runtime seam
@@ -612,6 +616,9 @@ important for architectural reasoning.
 ### Interaction and render invariants
 
 - interactive previews remain ephemeral until commit
+- interactive callback contracts expose immutable request/value boundaries, and
+  exported callback typedef parameter shapes must not expose raw
+  `List` / `Map` / `Set` types anywhere inside the callback parameter graph
 - the render pipeline paints from one atomic frame read
 - committed fast-path paint admission is used only when the frame snapshot
   matches the committed snapshot
@@ -636,8 +643,8 @@ alone.
   seams.
 - `tool/check_guardrails.dart`  
   Guards public-surface hermeticity, controller/write boundaries, interactive
-  mutation boundaries, contract/model architecture boundaries, and other
-  structural rules.
+  mutation boundaries, raw callback-typedef collection leaks, contract/model
+  architecture boundaries, and other structural rules.
 - `tool/check_invariant_coverage.dart`  
   Checks that invariant ids, required/regression proof surfaces, and required
   verification-step reachability stay aligned.

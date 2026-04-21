@@ -5,18 +5,42 @@ import 'package:flutter/foundation.dart';
 import '../contract/canvas_pointer_input.dart';
 import '../contract/pointer_input.dart';
 import '../contract/snapshot.dart';
+import '../core/immutable_collections.dart';
 import '../core/interaction_types.dart';
 import 'internal/interactive_draw_style.dart';
 import 'internal/scene_controller_interaction_access.dart';
 import 'internal/scene_controller_interaction_config.dart';
 import 'internal/scene_controller_interaction_runtime.dart';
 
+@immutable
+final class MoveCommitDeltaRequest {
+  factory MoveCommitDeltaRequest({
+    required SceneSnapshot snapshot,
+    required Iterable<NodeSnapshot> movedNodes,
+    required Offset proposedDelta,
+  }) {
+    return MoveCommitDeltaRequest._(
+      snapshot: snapshot,
+      movedNodes: freezeList<NodeSnapshot>(movedNodes),
+      proposedDelta: proposedDelta,
+    );
+  }
+
+  const MoveCommitDeltaRequest._({
+    required this.snapshot,
+    required List<NodeSnapshot> movedNodes,
+    required this.proposedDelta,
+  }) : _movedNodes = movedNodes;
+
+  final SceneSnapshot snapshot;
+  final List<NodeSnapshot> _movedNodes;
+  final Offset proposedDelta;
+
+  Iterable<NodeSnapshot> get movedNodes => _movedNodes;
+}
+
 typedef MoveCommitDeltaResolver =
-    Offset Function({
-      required SceneSnapshot snapshot,
-      required List<NodeSnapshot> movedNodes,
-      required Offset proposedDelta,
-    });
+    Offset Function(MoveCommitDeltaRequest request);
 
 abstract interface class SceneControllerInteraction implements Listenable {
   Rect? get selectionRect;

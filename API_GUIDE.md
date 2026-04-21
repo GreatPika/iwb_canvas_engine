@@ -90,6 +90,7 @@ Package scope:
 - `CanvasPointerInput`
 - `CanvasPointerPhase`
 - `PointerInputSettings`
+- `MoveCommitDeltaRequest`
 - `MoveCommitDeltaResolver`
 - `ActionCommitted`
 - `ActionCommittedDelta`
@@ -269,6 +270,18 @@ Lifecycle rule:
 
 - Call `dispose()` when the controller is no longer used.
 - Public controller operations on a disposed controller throw `StateError`.
+
+Move-commit resolver rule:
+
+- `moveCommitDeltaResolver` uses
+  `Offset Function(MoveCommitDeltaRequest request)`.
+- `request.snapshot` is the commit-time `SceneSnapshot`.
+- `request.movedNodes` is an immutable iterable backed by a detached snapshot
+  owned by the commit boundary.
+- `request.proposedDelta` is the pre-resolver commit delta.
+- Return the resolved `Offset`. Returning `Offset.zero` skips the move commit.
+- Resolver execution stays purity-guarded and non-reentrant. Public stateful
+  interaction entrypoints still throw `StateError` during the callback.
 
 ### 5.2 `controller.scene`
 
@@ -532,6 +545,9 @@ When aligning older code to the current mainline contract:
    directly.
 8. Treat `actions`, `editTextRequests`, and controller notifications as
    asynchronous integration signals.
+9. Replace older named-parameter move-commit resolvers with
+   `MoveCommitDeltaRequest` and read `snapshot`, `movedNodes`, and
+   `proposedDelta` from the request object.
 
 ## 11. Minimal integration example
 

@@ -77,14 +77,10 @@ final class SceneControllerInteractionRuntime {
     overlayNotifyScheduler.schedule();
   }
 
-  Offset runMoveCommitDeltaResolver({
-    required SceneSnapshot snapshot,
-    required List<NodeSnapshot> movedNodes,
-    required Offset proposedDelta,
-  }) {
+  Offset runMoveCommitDeltaResolver(MoveCommitDeltaRequest request) {
     final resolver = _moveCommitDeltaResolver;
     if (resolver == null) {
-      return proposedDelta;
+      return request.proposedDelta;
     }
     if (_moveCommitResolverActive) {
       throw StateError(
@@ -94,11 +90,7 @@ final class SceneControllerInteractionRuntime {
 
     _moveCommitResolverActive = true;
     try {
-      return resolver(
-        snapshot: snapshot,
-        movedNodes: movedNodes,
-        proposedDelta: proposedDelta,
-      );
+      return resolver(request);
     } finally {
       _moveCommitResolverActive = false;
     }
@@ -331,13 +323,8 @@ SceneControllerMutationBoundary _createMutationBoundary(
           payload: payload,
         );
       },
-      resolveMoveCommitDelta:
-          ({required snapshot, required movedNodes, required proposedDelta}) =>
-              readRuntime().runMoveCommitDeltaResolver(
-                snapshot: snapshot,
-                movedNodes: movedNodes,
-                proposedDelta: proposedDelta,
-              ),
+      resolveMoveCommitDelta: (request) =>
+          readRuntime().runMoveCommitDeltaResolver(request),
       requireFiniteOffset: request.requireFiniteOffset,
       clearPointerNormalizationState: () {
         readRuntime().runtime.clearPointerNormalizationState();

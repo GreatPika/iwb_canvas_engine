@@ -4,8 +4,8 @@
 
 Replace the live-collection `MoveCommitDeltaResolver` callback surface with an
 immutable `MoveCommitDeltaRequest` boundary, keep move-commit node ownership
-inside the mutation boundary, and mechanically forbid raw collection
-parameters in exported public callback typedefs.
+inside the mutation boundary, and mechanically forbid raw collection types
+anywhere inside exported public callback-typedef parameter shapes.
 
 ## 2. Change Boundary
 
@@ -22,7 +22,7 @@ parameters in exported public callback typedefs.
   callback arguments to the request object
 - add regression tests that lock immutability and commit-set/order stability
 - add a public-signature guardrail that rejects exported callback typedefs with
-  raw `List` / `Map` / `Set` parameters
+  raw `List` / `Map` / `Set` types anywhere inside callback-parameter shapes
 - update public and architecture documentation plus changelog for the breaking
   callback contract change
 
@@ -205,8 +205,9 @@ parameters in exported public callback typedefs.
   node list is frozen exactly once and reused for both resolver input and
   commit iteration
 - enforce the public-surface policy mechanically in the existing public
-  signature guardrail by rejecting exported callback typedef parameters whose
-  resolved SDK collection type is `List`, `Map`, or `Set`
+  signature guardrail by rejecting exported callback typedef parameter types
+  whose resolved shape contains SDK collection types `List`, `Map`, or `Set`
+  anywhere inside the callback parameter graph
 
 #### Owning Layer or Module
 
@@ -298,10 +299,10 @@ repository evidence fixes the owner and enforcement seams.
    request object, and iterates that same frozen snapshot for the commit loop.
 3. The old named-parameter `MoveCommitDeltaResolver` shape is removed
    completely from public API, runtime wiring, internal test seams, and tests.
-4. The new public-signature rule resolves typedef aliases and still rejects
-   exported callback typedef parameters whose effective SDK collection type is
-   `List`, `Map`, or `Set`; ordinary method returns or non-callback API shapes
-   remain governed by existing rules.
+4. The new public-signature rule resolves typedef aliases and recursively
+   rejects exported callback typedef parameter types whose effective SDK type
+   graph contains `List`, `Map`, or `Set`; ordinary method returns or
+   non-callback API shapes remain governed by existing rules.
 5. Structural proof is split by owner:
    the callback raw-collection prohibition is proved in the public-signature
    guardrail tool suite, while resolver seam retirement is proved by the
@@ -317,8 +318,9 @@ repository evidence fixes the owner and enforcement seams.
    boundary-owned frozen snapshot.
 3. Interactive runtime purity and reentrancy behavior remain unchanged apart
    from the new request-object parameter shape.
-4. Exported public callback typedefs with raw `List` / `Map` / `Set`
-   parameters, including typedef-alias forms, fail `tool/check_guardrails.dart`.
+4. Exported public callback typedefs with raw `List` / `Map` / `Set` types
+   anywhere inside callback-parameter shapes, including typedef-alias,
+   record-field, and nested-callback forms, fail `tool/check_guardrails.dart`.
 5. Public docs and changelog describe the breaking resolver migration and the
    immutable request semantics.
 
@@ -420,10 +422,10 @@ repository evidence fixes the owner and enforcement seams.
   resolver purity/reentrancy behavior
 - structural proof:
   a guardrail sandbox test that fails when an exported callback typedef uses a
-  raw collection parameter directly or through a typedef alias, plus an
-  executable interaction-contract or architecture-boundary proof for the
-  request-object resolver seam and the public API surface check for export
-  retirement
+  raw collection parameter directly, through a typedef alias, or inside a
+  nested callback/record parameter shape, plus an executable
+  interaction-contract or architecture-boundary proof for the request-object
+  resolver seam and the public API surface check for export retirement
 - for bug fixes, regressions, false positives, false negatives, and
   invariant-enforcement gaps: one failing reproducer first, plus 1 to 3 guard
   tests for neighboring branches of the same contract
@@ -465,13 +467,14 @@ repository evidence fixes the owner and enforcement seams.
 ### Optional: Resolution Rules
 
 - when the public-signature guardrail sees an exported callback typedef
-  parameter whose resolved SDK collection type is `List`, `Map`, or `Set`,
-  whether written directly or through a typedef alias, it must report a public
+  parameter whose resolved type graph contains SDK collection type `List`,
+  `Map`, or `Set`, whether written directly, through a typedef alias, or
+  inside a nested callback/record parameter shape, it must report a public
   signature hermeticity violation at the typedef source element
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Lock the Defect at the Boundary Owner
+### Slice 1. [x] Lock the Defect at the Boundary Owner
 
 #### Slice Contract
 
@@ -514,7 +517,7 @@ for unchanged behavior on the current resolver seam.
 - the reproducer fails before the implementation change and passes after the
   owner-side fix
 
-### Slice 2. [ ] Replace the Public Resolver Seam with MoveCommitDeltaRequest
+### Slice 2. [x] Replace the Public Resolver Seam with MoveCommitDeltaRequest
 
 #### Slice Contract
 
@@ -565,18 +568,18 @@ request-object seam and keep authoritative move-node ownership in the boundary.
 - all interactive resolver tests pass on the request-object seam and the public
   API golden matches the new export surface
 
-### Slice 3. [ ] Enforce Raw-Collection Callback Prohibition
+### Slice 3. [x] Enforce Raw-Collection Callback Prohibition
 
 #### Slice Contract
 
-Make raw `List` / `Map` / `Set` parameters in exported callback typedefs fail
-the public-signature guardrail.
+Make raw `List` / `Map` / `Set` types anywhere inside exported callback
+typedef parameter shapes fail the public-signature guardrail.
 
 #### Change
 
 - extend `public_signature_rules.dart`
 - add sandbox tests for allowed request-object callbacks and rejected raw
-  collection callback parameters
+  collection callback parameter shapes
 
 #### Behavioral Verification
 
@@ -602,12 +605,16 @@ the public-signature guardrail.
 - exported callback typedef with `Map<K, V>` or `Set<T>` parameter is rejected
 - exported callback typedef with a typedef alias to `List<T>`, `Map<K, V>`, or
   `Set<T>` is rejected
+- exported callback typedef with a record field typed as `List<T>`, `Map<K, V>`,
+  or `Set<T>` is rejected
+- exported callback typedef with a nested callback parameter typed as
+  `List<T>`, `Map<K, V>`, or `Set<T>` is rejected
 
 #### Closure Evidence
 
 - the sandbox suite passes only when the new guardrail rule is active
 
-### Slice 4. [ ] Sync Public Contract Documents and Release Notes
+### Slice 4. [x] Sync Public Contract Documents and Release Notes
 
 #### Slice Contract
 
@@ -668,7 +675,8 @@ contract and immutable request semantics.
   authoritative frozen move-node snapshot and uses it for both resolver input
   and commit iteration
 - interactive tests prove resolver input cannot change commit-set ownership
-- guardrails reject exported callback typedefs with raw collection parameters,
-  including typedef-alias forms
+- guardrails reject exported callback typedefs with raw collection types
+  anywhere inside callback-parameter shapes, including typedef-alias,
+  record-field, and nested-callback forms
 - `README.md`, `API_GUIDE.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `PLAN.md`,
   and the new step document reflect the final state

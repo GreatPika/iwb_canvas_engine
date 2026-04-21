@@ -197,16 +197,12 @@ void setBeforePointerDispatchHook(
 }
 
 Offset runMoveCommitDeltaResolverForTest(
-  SceneController controller, {
-  required SceneSnapshot snapshot,
-  required List<NodeSnapshot> movedNodes,
-  required Offset proposedDelta,
-}) {
+  SceneController controller,
+  MoveCommitDeltaRequest request,
+) {
   return sceneControllerInternalRunMoveCommitDeltaResolverForTest(
     controller,
-    snapshot: snapshot,
-    movedNodes: movedNodes,
-    proposedDelta: proposedDelta,
+    request,
   );
 }
 

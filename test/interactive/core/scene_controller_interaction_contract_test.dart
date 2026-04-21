@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/canvas_pointer_input.dart';
 import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
+import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
+import 'package:iwb_canvas_engine/src/core/immutable_collections.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/core/interaction_types.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_internal_access.dart';
@@ -41,6 +43,87 @@ void main() {
 
       completed = true;
       expect(completed, isTrue);
+    });
+
+    test(
+      'internal access routes move commit resolver through request seam',
+      () {
+        late MoveCommitDeltaRequest capturedRequest;
+        final controller = SceneController(
+          moveCommitDeltaResolver: (request) {
+            capturedRequest = request;
+            expect(
+              () => (request.movedNodes as List<NodeSnapshot>).removeLast(),
+              throwsUnsupportedError,
+            );
+            return const Offset(7, 0);
+          },
+        );
+        addTearDown(controller.dispose);
+
+        final snapshot = SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-0',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(id: 'node', size: const Size(20, 10)),
+              ],
+            ),
+          ],
+        );
+        final request = MoveCommitDeltaRequest(
+          snapshot: snapshot,
+          movedNodes: snapshot.layers.single.nodes,
+          proposedDelta: const Offset(5, 0),
+        );
+
+        final resolved =
+            sceneControllerInternalRunMoveCommitDeltaResolverForTest(
+              controller,
+              request,
+            );
+
+        expect(resolved, const Offset(7, 0));
+        expect(capturedRequest, same(request));
+        expect(capturedRequest.proposedDelta, const Offset(5, 0));
+        expect(capturedRequest.movedNodes.map((node) => node.id), <NodeId>[
+          'node',
+        ]);
+      },
+    );
+
+    test('move commit request reuses already frozen moved nodes', () {
+      final snapshot = SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'layer-auto-0',
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'node', size: const Size(20, 10)),
+            ],
+          ),
+        ],
+      );
+      final frozenMovedNodes = freezeList<NodeSnapshot>(
+        snapshot.layers.single.nodes,
+      );
+
+      final request = MoveCommitDeltaRequest(
+        snapshot: snapshot,
+        movedNodes: frozenMovedNodes,
+        proposedDelta: const Offset(5, 0),
+      );
+      final movedNodes = request.movedNodes as List<NodeSnapshot>;
+
+      expect(request.movedNodes, same(frozenMovedNodes));
+      expect(
+        () => movedNodes[0] = RectNodeSnapshot(
+          id: 'other',
+          size: const Size(10, 10),
+        ),
+        throwsUnsupportedError,
+      );
+      expect(() => movedNodes.length = 0, throwsUnsupportedError);
+      expect(() => movedNodes.removeLast(), throwsUnsupportedError);
     });
 
     test('controller exposes view runtime pointer session through adapter', () {

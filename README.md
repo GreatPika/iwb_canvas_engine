@@ -136,6 +136,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 
 - Listen to `controller.actions` for committed action events that can feed your
   app-level history or analytics.
+- Pass `moveCommitDeltaResolver` to `SceneController` when app code must clamp
+  or remap committed drag deltas. The resolver receives a
+  `MoveCommitDeltaRequest` with immutable `movedNodes`.
 - Listen to `controller.editTextRequests` to open app-owned text editing UI.
 - Pass `imageResolver` to `SceneView` when the scene contains image nodes.
 - Call `controller.scene.notifySceneChanged()` when host-owned visual resources

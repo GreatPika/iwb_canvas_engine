@@ -3,6 +3,7 @@ library;
 
 // INV:INV-ENG-PUBLIC-SIGNATURE-HERMETICITY
 // INV:INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES
+// INV:INV-ENG-COMMITTED-READ-SIDE-HERMETICITY
 
 import 'package:test/test.dart';
 
@@ -77,6 +78,207 @@ final class _SceneControllerSceneOwnerState {}
         }
       },
     );
+
+    test(
+      'allows exported callback typedef that uses a public request object',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeCanonicalPublicExportScaffold(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/interactive/scene_controller_interaction.dart',
+            '''
+class MoveCommitDeltaRequest {
+  const MoveCommitDeltaRequest();
+}
+
+typedef MoveCommitDeltaResolver = Object? Function(
+  MoveCommitDeltaRequest request,
+);
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    for (final invalidDirectCase in <({String kind, String parameterType})>[
+      (kind: 'List', parameterType: 'List<String>'),
+      (kind: 'Map', parameterType: 'Map<String, String>'),
+      (kind: 'Set', parameterType: 'Set<String>'),
+    ]) {
+      test(
+        'rejects exported callback typedef with raw ${invalidDirectCase.kind} parameter',
+        () async {
+          final sandbox = await createGuardrailsSandbox();
+          try {
+            writeCanonicalPublicExportScaffold(sandbox);
+            writeSandboxFile(
+              sandbox,
+              'lib/src/interactive/scene_controller_interaction.dart',
+              '''
+typedef MoveCommitDeltaResolver = Object? Function(
+  ${invalidDirectCase.parameterType} movedNodes,
+);
+''',
+            );
+
+            final result = await runSandboxTool(
+              sandbox,
+              'check_guardrails.dart',
+            );
+            expect(result.exitCode, isNonZero);
+            expect(
+              result.stderr.toString(),
+              contains('public signature hermeticity violation'),
+            );
+            expect(result.stderr.toString(), contains(invalidDirectCase.kind));
+            expect(
+              result.stderr.toString(),
+              contains('callback typedef parameter types'),
+            );
+          } finally {
+            sandbox.deleteSync(recursive: true);
+          }
+        },
+      );
+    }
+
+    for (final invalidAliasCase in <({String kind, String aliasBody})>[
+      (kind: 'List', aliasBody: 'List<String>'),
+      (kind: 'Map', aliasBody: 'Map<String, String>'),
+      (kind: 'Set', aliasBody: 'Set<String>'),
+    ]) {
+      test(
+        'rejects exported callback typedef with ${invalidAliasCase.kind} alias parameter',
+        () async {
+          final sandbox = await createGuardrailsSandbox();
+          try {
+            writeCanonicalPublicExportScaffold(sandbox);
+            writeSandboxFile(
+              sandbox,
+              'lib/src/interactive/scene_controller_interaction.dart',
+              '''
+typedef MoveCommitNodes = ${invalidAliasCase.aliasBody};
+typedef MoveCommitDeltaResolver = Object? Function(
+  MoveCommitNodes movedNodes,
+);
+''',
+            );
+
+            final result = await runSandboxTool(
+              sandbox,
+              'check_guardrails.dart',
+            );
+            expect(result.exitCode, isNonZero);
+            expect(
+              result.stderr.toString(),
+              contains('public signature hermeticity violation'),
+            );
+            expect(result.stderr.toString(), contains(invalidAliasCase.kind));
+            expect(
+              result.stderr.toString(),
+              contains('callback typedef parameter types'),
+            );
+          } finally {
+            sandbox.deleteSync(recursive: true);
+          }
+        },
+      );
+    }
+
+    for (final invalidRecordCase in <({String kind, String fieldType})>[
+      (kind: 'List', fieldType: 'List<String>'),
+      (kind: 'Map', fieldType: 'Map<String, String>'),
+      (kind: 'Set', fieldType: 'Set<String>'),
+    ]) {
+      test(
+        'rejects exported callback typedef with ${invalidRecordCase.kind} inside record parameter',
+        () async {
+          final sandbox = await createGuardrailsSandbox();
+          try {
+            writeCanonicalPublicExportScaffold(sandbox);
+            writeSandboxFile(
+              sandbox,
+              'lib/src/interactive/scene_controller_interaction.dart',
+              '''
+typedef MoveCommitDeltaResolver = Object? Function(
+  ({${invalidRecordCase.fieldType} movedNodes}) request,
+);
+''',
+            );
+
+            final result = await runSandboxTool(
+              sandbox,
+              'check_guardrails.dart',
+            );
+            expect(result.exitCode, isNonZero);
+            expect(
+              result.stderr.toString(),
+              contains('public signature hermeticity violation'),
+            );
+            expect(result.stderr.toString(), contains(invalidRecordCase.kind));
+            expect(
+              result.stderr.toString(),
+              contains('callback typedef parameter types'),
+            );
+          } finally {
+            sandbox.deleteSync(recursive: true);
+          }
+        },
+      );
+    }
+
+    for (final invalidNestedCallbackCase
+        in <({String kind, String parameterType})>[
+          (kind: 'List', parameterType: 'List<String>'),
+          (kind: 'Map', parameterType: 'Map<String, String>'),
+          (kind: 'Set', parameterType: 'Set<String>'),
+        ]) {
+      test(
+        'rejects exported callback typedef with ${invalidNestedCallbackCase.kind} inside nested callback parameter',
+        () async {
+          final sandbox = await createGuardrailsSandbox();
+          try {
+            writeCanonicalPublicExportScaffold(sandbox);
+            writeSandboxFile(
+              sandbox,
+              'lib/src/interactive/scene_controller_interaction.dart',
+              '''
+typedef MoveCommitDeltaResolver = Object? Function(
+  void Function(${invalidNestedCallbackCase.parameterType} movedNodes) callback,
+);
+''',
+            );
+
+            final result = await runSandboxTool(
+              sandbox,
+              'check_guardrails.dart',
+            );
+            expect(result.exitCode, isNonZero);
+            expect(
+              result.stderr.toString(),
+              contains('public signature hermeticity violation'),
+            );
+            expect(
+              result.stderr.toString(),
+              contains(invalidNestedCallbackCase.kind),
+            );
+            expect(
+              result.stderr.toString(),
+              contains('callback typedef parameter types'),
+            );
+          } finally {
+            sandbox.deleteSync(recursive: true);
+          }
+        },
+      );
+    }
 
     test(
       'rejects exported constructor parameter typed from internal path',

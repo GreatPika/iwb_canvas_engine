@@ -23,6 +23,10 @@ in changes that have not yet been published to pub.dev.
   generated-id helpers, and `SceneWriteTxn.writeSignalEnqueue(...)`.
 - Stopped exposing public stroke `pointsRevision`. Stroke geometry revision is
   runtime-only metadata.
+- Replaced the old named-parameter `MoveCommitDeltaResolver` surface with
+  `MoveCommitDeltaRequest`. Move-commit callbacks now receive immutable
+  `movedNodes`, and exported callback typedefs may not expose raw
+  `List` / `Map` / `Set` types anywhere inside callback parameter shapes.
 
 ### Added
 

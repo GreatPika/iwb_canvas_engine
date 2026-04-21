@@ -165,17 +165,12 @@ void main() {
               ContentLayer(id: 'layer-auto-3b', nodes: <SceneNode>[rect]),
             ],
           ),
-          moveCommitDeltaResolver:
-              ({
-                required SceneSnapshot snapshot,
-                required List<NodeSnapshot> movedNodes,
-                required Offset proposedDelta,
-              }) {
-                expect(snapshot.layers, hasLength(2));
-                expect(movedNodes.map((node) => node.id), <String>['node']);
-                expect(proposedDelta, const Offset(30, 0));
-                return const Offset(40, 0);
-              },
+          moveCommitDeltaResolver: (request) {
+            expect(request.snapshot.layers, hasLength(2));
+            expect(request.movedNodes.map((node) => node.id), <String>['node']);
+            expect(request.proposedDelta, const Offset(30, 0));
+            return const Offset(40, 0);
+          },
         );
         addTearDown(controller.dispose);
 
@@ -229,17 +224,12 @@ void main() {
             ContentLayer(id: 'layer-auto-3c', nodes: <SceneNode>[rect]),
           ],
         ),
-        moveCommitDeltaResolver:
-            ({
-              required SceneSnapshot snapshot,
-              required List<NodeSnapshot> movedNodes,
-              required Offset proposedDelta,
-            }) {
-              expect(snapshot.layers, hasLength(2));
-              expect(movedNodes, isNotEmpty);
-              expect(proposedDelta, const Offset(30, 0));
-              return Offset.zero;
-            },
+        moveCommitDeltaResolver: (request) {
+          expect(request.snapshot.layers, hasLength(2));
+          expect(request.movedNodes, isNotEmpty);
+          expect(request.proposedDelta, const Offset(30, 0));
+          return Offset.zero;
+        },
       );
       addTearDown(controller.dispose);
 
@@ -299,18 +289,13 @@ void main() {
               ),
             ],
           ),
-          moveCommitDeltaResolver:
-              ({
-                required SceneSnapshot snapshot,
-                required List<NodeSnapshot> movedNodes,
-                required Offset proposedDelta,
-              }) {
-                expect(snapshot.layers, hasLength(2));
-                expect(movedNodes.map((node) => node.id), <String>['node']);
-                expect(proposedDelta, const Offset(30, 0));
-                controller.interaction.setMode(CanvasMode.draw);
-                return proposedDelta;
-              },
+          moveCommitDeltaResolver: (request) {
+            expect(request.snapshot.layers, hasLength(2));
+            expect(request.movedNodes.map((node) => node.id), <String>['node']);
+            expect(request.proposedDelta, const Offset(30, 0));
+            controller.interaction.setMode(CanvasMode.draw);
+            return request.proposedDelta;
+          },
         );
         addTearDown(controller.dispose);
 
@@ -399,21 +384,16 @@ void main() {
               ),
             ],
           ),
-          moveCommitDeltaResolver:
-              ({
-                required SceneSnapshot snapshot,
-                required List<NodeSnapshot> movedNodes,
-                required Offset proposedDelta,
-              }) {
-                expect(snapshot.layers, hasLength(2));
-                expect(movedNodes.map((node) => node.id), <String>['node']);
-                expect(proposedDelta, const Offset(30, 0));
-                controller.interaction.handleDoubleTap(
-                  position: const Offset(60, 60),
-                  timestampMs: 99,
-                );
-                return proposedDelta;
-              },
+          moveCommitDeltaResolver: (request) {
+            expect(request.snapshot.layers, hasLength(2));
+            expect(request.movedNodes.map((node) => node.id), <String>['node']);
+            expect(request.proposedDelta, const Offset(30, 0));
+            controller.interaction.handleDoubleTap(
+              position: const Offset(60, 60),
+              timestampMs: 99,
+            );
+            return request.proposedDelta;
+          },
         );
         addTearDown(controller.dispose);
 
@@ -512,25 +492,20 @@ void main() {
               ),
             ],
           ),
-          moveCommitDeltaResolver:
-              ({
-                required SceneSnapshot snapshot,
-                required List<NodeSnapshot> movedNodes,
-                required Offset proposedDelta,
-              }) {
-                expect(snapshot.layers, hasLength(2));
-                expect(movedNodes.map((node) => node.id), <String>['node']);
-                expect(proposedDelta, const Offset(30, 0));
-                controller.interaction.handlePointer(
-                  sampleInput(
-                    pointerId: 99,
-                    position: const Offset(500, 500),
-                    timestampMs: 99,
-                    phase: CanvasPointerPhase.down,
-                  ),
-                );
-                return proposedDelta;
-              },
+          moveCommitDeltaResolver: (request) {
+            expect(request.snapshot.layers, hasLength(2));
+            expect(request.movedNodes.map((node) => node.id), <String>['node']);
+            expect(request.proposedDelta, const Offset(30, 0));
+            controller.interaction.handlePointer(
+              sampleInput(
+                pointerId: 99,
+                position: const Offset(500, 500),
+                timestampMs: 99,
+                phase: CanvasPointerPhase.down,
+              ),
+            );
+            return request.proposedDelta;
+          },
         );
         addTearDown(controller.dispose);
 
@@ -625,19 +600,9 @@ void main() {
               ),
             ],
           ),
-          moveCommitDeltaResolver:
-              ({
-                required SceneSnapshot snapshot,
-                required List<NodeSnapshot> movedNodes,
-                required Offset proposedDelta,
-              }) {
-                return runMoveCommitDeltaResolverForTest(
-                  controller,
-                  snapshot: snapshot,
-                  movedNodes: movedNodes,
-                  proposedDelta: proposedDelta,
-                );
-              },
+          moveCommitDeltaResolver: (request) {
+            return runMoveCommitDeltaResolverForTest(controller, request);
+          },
         );
         addTearDown(controller.dispose);
 
@@ -703,17 +668,12 @@ void main() {
             ContentLayer(id: 'layer-auto-3d', nodes: <SceneNode>[rect]),
           ],
         ),
-        moveCommitDeltaResolver:
-            ({
-              required SceneSnapshot snapshot,
-              required List<NodeSnapshot> movedNodes,
-              required Offset proposedDelta,
-            }) {
-              expect(snapshot.layers, hasLength(2));
-              expect(movedNodes, isNotEmpty);
-              expect(proposedDelta, const Offset(30, 0));
-              return const Offset(double.nan, 0);
-            },
+        moveCommitDeltaResolver: (request) {
+          expect(request.snapshot.layers, hasLength(2));
+          expect(request.movedNodes, isNotEmpty);
+          expect(request.proposedDelta, const Offset(30, 0));
+          return const Offset(double.nan, 0);
+        },
       );
       addTearDown(controller.dispose);
 

@@ -1,5 +1,10 @@
+import 'dart:collection';
+
 List<T> freezeList<T>(Iterable<T> values) {
-  return List<T>.unmodifiable(List<T>.from(values));
+  if (values is _FrozenList<T>) {
+    return values;
+  }
+  return _FrozenList<T>(List<T>.from(values));
 }
 
 Map<String, Object?>? freezePayloadMap(Map<String, Object?>? payload) {
@@ -29,4 +34,26 @@ Object? _freezeValue(Object? value) {
     return Set<Object?>.unmodifiable(value.map(_freezeValue));
   }
   return value;
+}
+
+final class _FrozenList<T> extends ListBase<T> {
+  _FrozenList(List<T> values) : _values = List<T>.unmodifiable(values);
+
+  final List<T> _values;
+
+  @override
+  int get length => _values.length;
+
+  @override
+  set length(int newLength) {
+    throw UnsupportedError('Cannot modify an immutable list.');
+  }
+
+  @override
+  T operator [](int index) => _values[index];
+
+  @override
+  void operator []=(int index, T value) {
+    throw UnsupportedError('Cannot modify an immutable list.');
+  }
 }

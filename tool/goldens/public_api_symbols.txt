@@ -25,6 +25,7 @@ LayerIdValue
 LineNodePatch
 LineNodeSnapshot
 LineNodeSpec
+MoveCommitDeltaRequest
 MoveCommitDeltaResolver
 NodeId
 NodeIdValue
