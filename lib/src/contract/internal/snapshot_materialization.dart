@@ -5,8 +5,8 @@ import '../scene_structure_validation.dart';
 import '../snapshot.dart';
 import '../transform2d.dart';
 import 'node_boundary_schema.dart';
-import 'snapshot_boundary_impl.dart';
 import 'snapshot_backing.dart';
+import 'snapshot_boundary_impl.dart';
 
 typedef _SnapshotNodeBackingBuilder<
   TBacking extends NodeSnapshotBacking,
@@ -22,135 +22,52 @@ typedef _SnapshotNodeMaterializer<
   TBacking extends NodeSnapshotBacking
 > = TSnapshot Function(TBacking backing);
 
-SceneSnapshot materializeSceneSnapshot(SceneSnapshotBacking backing) {
-  return materializeSceneSnapshotForInternalUse(backing);
-}
-
-SceneSnapshot sceneSnapshotFromValidatedBacking(SceneSnapshotBacking backing) {
-  sceneValidateSceneSnapshotBackingStructure(backing);
-  validateSceneSnapshotBackingMetadataValues(backing);
-  return materializeSceneSnapshot(backing);
-}
-
-BackgroundLayerSnapshot materializeBackgroundLayerSnapshot(
-  BackgroundLayerSnapshotBacking backing,
-) {
-  return materializeBackgroundLayerSnapshotForInternalUse(backing);
-}
-
-List<ContentLayerSnapshot> materializeContentLayerSnapshotList(
-  Iterable<ContentLayerSnapshotBacking> backings,
-) {
-  return List<ContentLayerSnapshot>.unmodifiable(
-    backings.map(materializeContentLayerSnapshot),
-  );
-}
-
-ContentLayerSnapshot materializeContentLayerSnapshot(
-  ContentLayerSnapshotBacking backing,
-) {
-  return materializeContentLayerSnapshotForInternalUse(backing);
-}
-
-CameraSnapshot materializeCameraSnapshot(CameraSnapshotBacking backing) {
-  return materializeCameraSnapshotForInternalUse(backing);
-}
-
-BackgroundSnapshot materializeBackgroundSnapshot(
-  BackgroundSnapshotBacking backing,
-) {
-  return materializeBackgroundSnapshotForInternalUse(backing);
-}
-
-GridSnapshot materializeGridSnapshot(GridSnapshotBacking backing) {
-  return materializeGridSnapshotForInternalUse(backing);
-}
-
-ScenePaletteSnapshot materializeScenePaletteSnapshot(
-  ScenePaletteSnapshotBacking backing,
-) {
-  return materializeScenePaletteSnapshotForInternalUse(backing);
-}
-
-List<NodeSnapshot> materializeNodeSnapshotList(
-  Iterable<NodeSnapshotBacking> backings,
-) {
-  return List<NodeSnapshot>.unmodifiable(backings.map(materializeNodeSnapshot));
-}
-
-NodeSnapshot materializeNodeSnapshot(NodeSnapshotBacking backing) {
-  return switch (backing) {
-    ImageNodeSnapshotBacking image => materializeImageNodeSnapshot(image),
-    TextNodeSnapshotBacking text => materializeTextNodeSnapshot(text),
-    StrokeNodeSnapshotBacking stroke => materializeStrokeNodeSnapshot(stroke),
-    LineNodeSnapshotBacking line => materializeLineNodeSnapshot(line),
-    RectNodeSnapshotBacking rect => materializeRectNodeSnapshot(rect),
-    PathNodeSnapshotBacking path => materializePathNodeSnapshot(path),
-  };
-}
-
-ImageNodeSnapshot materializeImageNodeSnapshot(
+ImageNodeSnapshot _materializeImageNodeSnapshotFromValidated(
   ImageNodeSnapshotBacking backing,
 ) {
   return materializeNodeSnapshotForInternalUse(backing) as ImageNodeSnapshot;
 }
 
-TextNodeSnapshot materializeTextNodeSnapshot(TextNodeSnapshotBacking backing) {
+TextNodeSnapshot _materializeTextNodeSnapshotFromValidated(
+  TextNodeSnapshotBacking backing,
+) {
   return materializeNodeSnapshotForInternalUse(backing) as TextNodeSnapshot;
 }
 
-StrokeNodeSnapshot materializeStrokeNodeSnapshot(
+StrokeNodeSnapshot _materializeStrokeNodeSnapshotFromValidated(
   StrokeNodeSnapshotBacking backing,
 ) {
   return materializeNodeSnapshotForInternalUse(backing) as StrokeNodeSnapshot;
 }
 
-LineNodeSnapshot materializeLineNodeSnapshot(LineNodeSnapshotBacking backing) {
+LineNodeSnapshot _materializeLineNodeSnapshotFromValidated(
+  LineNodeSnapshotBacking backing,
+) {
   return materializeNodeSnapshotForInternalUse(backing) as LineNodeSnapshot;
 }
 
-RectNodeSnapshot materializeRectNodeSnapshot(RectNodeSnapshotBacking backing) {
+RectNodeSnapshot _materializeRectNodeSnapshotFromValidated(
+  RectNodeSnapshotBacking backing,
+) {
   return materializeNodeSnapshotForInternalUse(backing) as RectNodeSnapshot;
 }
 
-PathNodeSnapshot materializePathNodeSnapshot(PathNodeSnapshotBacking backing) {
+PathNodeSnapshot _materializePathNodeSnapshotFromValidated(
+  PathNodeSnapshotBacking backing,
+) {
   return materializeNodeSnapshotForInternalUse(backing) as PathNodeSnapshot;
 }
 
-SceneSnapshot sceneSnapshotFromValidated({
-  List<ContentLayerSnapshot>? layers,
-  BackgroundLayerSnapshot? backgroundLayer,
-  CameraSnapshot? camera,
-  BackgroundSnapshot? background,
-  ScenePaletteSnapshot? palette,
-}) {
-  final backing = sceneSnapshotBackingFromValidated(
-    layers: layers?.map(contentLayerSnapshotBackingOf).toList(growable: false),
-    backgroundLayer: backgroundLayer == null
-        ? null
-        : backgroundLayerSnapshotBackingOf(backgroundLayer),
-    camera: camera == null
-        ? null
-        : cameraSnapshotBackingFromValidated(offset: camera.offset),
-    background: background == null
-        ? null
-        : backgroundSnapshotBackingFromValidated(
-            color: background.color,
-            grid: gridSnapshotBackingFromValidated(
-              isEnabled: background.grid.isEnabled,
-              cellSize: background.grid.cellSize,
-              color: background.grid.color,
-            ),
-          ),
-    palette: palette == null ? null : scenePaletteSnapshotBackingOf(palette),
-  );
-  return sceneSnapshotFromValidatedBacking(backing);
+SceneSnapshot sceneSnapshotFromValidatedBacking(SceneSnapshotBacking backing) {
+  sceneValidateSceneSnapshotBackingStructure(backing);
+  validateSceneSnapshotBackingMetadataValues(backing);
+  return materializeSceneSnapshotForInternalUse(backing);
 }
 
 BackgroundLayerSnapshot backgroundLayerSnapshotFromValidated({
   List<NodeSnapshot>? nodes,
 }) {
-  return materializeBackgroundLayerSnapshot(
+  return materializeBackgroundLayerSnapshotForInternalUse(
     backgroundLayerSnapshotBackingFromValidated(
       nodes: nodes?.map(nodeSnapshotBackingOf).toList(growable: false),
     ),
@@ -161,7 +78,7 @@ ContentLayerSnapshot contentLayerSnapshotFromValidated({
   required LayerId id,
   List<NodeSnapshot>? nodes,
 }) {
-  return materializeContentLayerSnapshot(
+  return materializeContentLayerSnapshotForInternalUse(
     contentLayerSnapshotBackingFromValidated(
       id: id,
       nodes: nodes?.map(nodeSnapshotBackingOf).toList(growable: false),
@@ -231,6 +148,40 @@ ScenePaletteSnapshot scenePaletteSnapshotFromValidated({
   );
 }
 
+NodeSnapshot nodeSnapshotFromValidatedBacking(NodeSnapshotBacking backing) {
+  return materializeNodeSnapshotForInternalUse(backing);
+}
+
+SceneSnapshot sceneSnapshotFromValidated({
+  List<ContentLayerSnapshot>? layers,
+  BackgroundLayerSnapshot? backgroundLayer,
+  CameraSnapshot? camera,
+  BackgroundSnapshot? background,
+  ScenePaletteSnapshot? palette,
+}) {
+  final backing = sceneSnapshotBackingFromValidated(
+    layers: layers?.map(contentLayerSnapshotBackingOf).toList(growable: false),
+    backgroundLayer: backgroundLayer == null
+        ? null
+        : backgroundLayerSnapshotBackingOf(backgroundLayer),
+    camera: camera == null
+        ? null
+        : cameraSnapshotBackingFromValidated(offset: camera.offset),
+    background: background == null
+        ? null
+        : backgroundSnapshotBackingFromValidated(
+            color: background.color,
+            grid: gridSnapshotBackingFromValidated(
+              isEnabled: background.grid.isEnabled,
+              cellSize: background.grid.cellSize,
+              color: background.grid.color,
+            ),
+          ),
+    palette: palette == null ? null : scenePaletteSnapshotBackingOf(palette),
+  );
+  return sceneSnapshotFromValidatedBacking(backing);
+}
+
 NodeSnapshotCommonSchemaFields nodeSnapshotCommonFieldsFromValidated({
   required NodeId id,
   int instanceRevision = 0,
@@ -278,7 +229,7 @@ ImageNodeSnapshot imageNodeSnapshotFromValidated({
     common: common,
     fields: imageNodeSchemaFieldsFromValidated(fields),
     buildBacking: imageNodeSnapshotBackingFromValidated,
-    materialize: materializeImageNodeSnapshot,
+    materialize: _materializeImageNodeSnapshotFromValidated,
   );
 }
 
@@ -290,7 +241,7 @@ TextNodeSnapshot textNodeSnapshotFromValidated({
     common: common,
     fields: textNodeSnapshotSchemaFieldsFromValidated(fields),
     buildBacking: textNodeSnapshotBackingFromValidated,
-    materialize: materializeTextNodeSnapshot,
+    materialize: _materializeTextNodeSnapshotFromValidated,
   );
 }
 
@@ -302,7 +253,7 @@ StrokeNodeSnapshot strokeNodeSnapshotFromValidated({
     common: common,
     fields: strokeNodeSnapshotSchemaFieldsFromValidated(fields),
     buildBacking: strokeNodeSnapshotBackingFromValidated,
-    materialize: materializeStrokeNodeSnapshot,
+    materialize: _materializeStrokeNodeSnapshotFromValidated,
   );
 }
 
@@ -314,7 +265,7 @@ LineNodeSnapshot lineNodeSnapshotFromValidated({
     common: common,
     fields: lineNodeSchemaFieldsFromValidated(fields),
     buildBacking: lineNodeSnapshotBackingFromValidated,
-    materialize: materializeLineNodeSnapshot,
+    materialize: _materializeLineNodeSnapshotFromValidated,
   );
 }
 
@@ -326,7 +277,7 @@ RectNodeSnapshot rectNodeSnapshotFromValidated({
     common: common,
     fields: rectNodeSchemaFieldsFromValidated(fields),
     buildBacking: rectNodeSnapshotBackingFromValidated,
-    materialize: materializeRectNodeSnapshot,
+    materialize: _materializeRectNodeSnapshotFromValidated,
   );
 }
 
@@ -338,6 +289,6 @@ PathNodeSnapshot pathNodeSnapshotFromValidated({
     common: common,
     fields: pathNodeSchemaFieldsFromValidated(fields),
     buildBacking: pathNodeSnapshotBackingFromValidated,
-    materialize: materializePathNodeSnapshot,
+    materialize: _materializePathNodeSnapshotFromValidated,
   );
 }

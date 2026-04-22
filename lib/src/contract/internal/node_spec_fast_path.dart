@@ -17,13 +17,6 @@ export 'node_spec_materialization.dart'
     show
         imageNodeSpecFromValidated,
         lineNodeSpecFromValidated,
-        materializeImageNodeSpec,
-        materializeLineNodeSpec,
-        materializeNodeSpec,
-        materializePathNodeSpec,
-        materializeRectNodeSpec,
-        materializeStrokeNodeSpec,
-        materializeTextNodeSpec,
         pathNodeSpecFromValidated,
         rectNodeSpecFromValidated,
         strokeNodeSpecFromValidated,

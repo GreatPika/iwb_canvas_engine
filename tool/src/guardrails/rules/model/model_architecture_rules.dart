@@ -217,6 +217,11 @@ GuardrailViolation? _checkModelFile(GuardrailContext context, File file) {
     partDirectiveBanMessage:
         'model architecture violation: lib/src/model/** must stay part-free after final architecture closure.',
     extraCheck: (parsed, filePosixPath) {
+      final validatedImportProofOwnerViolation =
+          _checkValidatedImportProofOwner(parsed, filePosixPath);
+      if (validatedImportProofOwnerViolation != null) {
+        return validatedImportProofOwnerViolation;
+      }
       if (filePosixPath != '/lib/src/model/document.dart') {
         if (filePosixPath == '/lib/src/model/scene_policy.dart') {
           return _checkScenePolicyImportDiagnosticOwnership(
@@ -232,6 +237,14 @@ GuardrailViolation? _checkModelFile(GuardrailContext context, File file) {
         }
         if (filePosixPath == '/lib/src/model/scene_from_import_draft.dart') {
           return _checkValidatedImportMaterializationBoundary(
+                parsed,
+                filePosixPath,
+              ) ??
+              _checkForbiddenRawSnapshotMaterialization(parsed, filePosixPath);
+        }
+        if (filePosixPath ==
+            '/lib/src/model/scene_value_validation_scene.dart') {
+          return _checkForbiddenRawSnapshotMaterialization(
             parsed,
             filePosixPath,
           );
@@ -272,6 +285,31 @@ GuardrailViolation? _checkSceneImportSnapshotFacadeOwnership(
   return null;
 }
 
+GuardrailViolation? _checkValidatedImportProofOwner(
+  ParsedUnitResult parsed,
+  String filePosixPath,
+) {
+  const ownerPath = '/lib/src/model/scene_policy.dart';
+  for (final declaration in parsed.unit.declarations) {
+    if (declaration is! ClassDeclaration) {
+      continue;
+    }
+    if (declaration.name.lexeme != 'ValidatedSceneImportDraft') {
+      continue;
+    }
+    if (filePosixPath == ownerPath) {
+      return null;
+    }
+    return GuardrailViolation(
+      filePath: filePosixPath,
+      line: lineForOffset(parsed, declaration.name.offset),
+      message:
+          'model architecture violation: scene_policy.dart must remain the only owner that declares ValidatedSceneImportDraft and mints import proof.',
+    );
+  }
+  return null;
+}
+
 GuardrailViolation? _checkValidatedImportMaterializationBoundary(
   ParsedUnitResult parsed,
   String filePosixPath,
@@ -299,6 +337,22 @@ GuardrailViolation? _checkValidatedImportMaterializationBoundary(
     );
   }
   return null;
+}
+
+GuardrailViolation? _checkForbiddenRawSnapshotMaterialization(
+  ParsedUnitResult parsed,
+  String filePosixPath,
+) {
+  final offset = parsed.content.indexOf('materializeNodeSnapshot(');
+  if (offset < 0) {
+    return null;
+  }
+  return GuardrailViolation(
+    filePath: filePosixPath,
+    line: lineForOffset(parsed, offset),
+    message:
+        'model architecture violation: validated import and draft validation paths must not materialize raw public snapshot wrappers from raw backing.',
+  );
 }
 
 GuardrailViolation? _checkScenePolicyImportDiagnosticOwnership(

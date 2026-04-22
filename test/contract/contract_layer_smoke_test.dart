@@ -129,11 +129,25 @@ void main() {
       snapshotFastPathSource,
       contains("export 'snapshot_materialization.dart'"),
     );
+    expect(
+      snapshotFastPathSource,
+      contains('nodeSnapshotFromValidatedBacking'),
+    );
+    expect(
+      snapshotFastPathSource,
+      isNot(contains("unsafe_snapshot_materialization.dart")),
+    );
+    expect(snapshotFastPathSource, isNot(contains('unsafeMaterialize')));
     expect(nodeSpecFastPathSource, contains("export 'node_spec_backing.dart'"));
     expect(
       nodeSpecFastPathSource,
       contains("export 'node_spec_materialization.dart'"),
     );
+    expect(
+      nodeSpecFastPathSource,
+      isNot(contains("unsafe_node_spec_materialization.dart")),
+    );
+    expect(nodeSpecFastPathSource, isNot(contains('unsafeMaterialize')));
     expect(
       nodePatchFastPathSource,
       contains("export 'node_patch_backing.dart'"),
@@ -142,5 +156,10 @@ void main() {
       nodePatchFastPathSource,
       contains("export 'node_patch_materialization.dart'"),
     );
+    expect(
+      nodePatchFastPathSource,
+      isNot(contains("unsafe_node_patch_materialization.dart")),
+    );
+    expect(nodePatchFastPathSource, isNot(contains('unsafeMaterialize')));
   });
 }

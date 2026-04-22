@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/snapshot.dart';
 import '../core/nodes.dart';
 import '../core/scene_limits.dart';
@@ -34,6 +35,23 @@ void sceneValidateLineNode(
     startField: '$field.localA',
     end: line.end,
     endField: '$field.localB',
+    thickness: line.thickness,
+    field: field,
+    onError: onError,
+  );
+}
+
+void sceneValidateLineNodeSnapshotBacking(
+  LineNodeSnapshotBacking line, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+  SceneValidationPathSurface pathSurface = SceneValidationPathSurface.snapshot,
+}) {
+  _sceneValidateLineNodeFields(
+    start: line.start,
+    startField: sceneValidationLineStartField(pathSurface, field: field),
+    end: line.end,
+    endField: sceneValidationLineEndField(pathSurface, field: field),
     thickness: line.thickness,
     field: field,
     onError: onError,

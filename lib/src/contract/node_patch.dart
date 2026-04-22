@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'internal/node_boundary_schema.dart';
+import 'internal/node_patch_fast_path.dart' show commonNodePatchBackingOf;
 import 'patch_field.dart';
 import 'path_fill_rule.dart';
 import 'snapshot.dart' hide PathFillRule;
@@ -68,7 +69,7 @@ class ImageNodePatch extends NodePatch {
     PatchField<Size?> naturalSize = const PatchField<Size?>.absent(),
   }) : this._validated(
          id: validateRequiredNodeId(id),
-         common: common ?? CommonNodePatch._validated(),
+         common: _validatedCommonNodePatch(common),
          fields: validateImageNodePatchSchemaFields((
            imageId: imageId,
            size: size,
@@ -108,7 +109,7 @@ class TextNodePatch extends NodePatch {
     PatchField<double?> lineHeight = const PatchField<double?>.absent(),
   }) : this._validated(
          id: validateRequiredNodeId(id),
-         common: common ?? CommonNodePatch._validated(),
+         common: _validatedCommonNodePatch(common),
          fields: validateTextNodePatchSchemaFields((
            text: text,
            fontSize: fontSize,
@@ -163,7 +164,7 @@ class StrokeNodePatch extends NodePatch {
     PatchField<Color> color = const PatchField<Color>.absent(),
   }) : this._validated(
          id: validateRequiredNodeId(id),
-         common: common ?? CommonNodePatch._validated(),
+         common: _validatedCommonNodePatch(common),
          fields: validateStrokeNodePatchSchemaFields((
            points: points,
            thickness: thickness,
@@ -195,7 +196,7 @@ class LineNodePatch extends NodePatch {
     PatchField<Color> color = const PatchField<Color>.absent(),
   }) : this._validated(
          id: validateRequiredNodeId(id),
-         common: common ?? CommonNodePatch._validated(),
+         common: _validatedCommonNodePatch(common),
          fields: validateLineNodePatchSchemaFields((
            start: start,
            end: end,
@@ -230,7 +231,7 @@ class RectNodePatch extends NodePatch {
     PatchField<double> strokeWidth = const PatchField<double>.absent(),
   }) : this._validated(
          id: validateRequiredNodeId(id),
-         common: common ?? CommonNodePatch._validated(),
+         common: _validatedCommonNodePatch(common),
          fields: validateRectNodePatchSchemaFields((
            size: size,
            fillColor: fillColor,
@@ -266,7 +267,7 @@ class PathNodePatch extends NodePatch {
     PatchField<PathFillRule> fillRule = const PatchField<PathFillRule>.absent(),
   }) : this._validated(
          id: validateRequiredNodeId(id),
-         common: common ?? CommonNodePatch._validated(),
+         common: _validatedCommonNodePatch(common),
          fields: validatePathNodePatchSchemaFields((
            svgPathData: svgPathData,
            fillColor: fillColor,
@@ -292,4 +293,29 @@ class PathNodePatch extends NodePatch {
   final PatchField<Color?> strokeColor;
   final PatchField<double> strokeWidth;
   final PatchField<PathFillRule> fillRule;
+}
+
+CommonNodePatch _validatedCommonNodePatch(CommonNodePatch? value) {
+  final resolved = value ?? CommonNodePatch._validated();
+  if (resolved.runtimeType == CommonNodePatch) {
+    return resolved;
+  }
+  try {
+    commonNodePatchBackingOf(resolved);
+  } on StateError {
+    throw StateError(
+      'Unsupported CommonNodePatch subtype at admission: '
+      '${resolved.runtimeType}.',
+    );
+  }
+  return CommonNodePatch(
+    transform: resolved.transform,
+    opacity: resolved.opacity,
+    hitPadding: resolved.hitPadding,
+    isVisible: resolved.isVisible,
+    isSelectable: resolved.isSelectable,
+    isLocked: resolved.isLocked,
+    isDeletable: resolved.isDeletable,
+    isTransformable: resolved.isTransformable,
+  );
 }

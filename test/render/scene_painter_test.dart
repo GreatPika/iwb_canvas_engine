@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' as iwb;
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/unsafe_snapshot_materialization.dart';
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/node_spec.dart';
@@ -527,7 +528,7 @@ void main() {
   test('SceneStoreController rejects invalid numeric snapshot fields', () {
     expect(
       () => SceneStoreController(
-        initialSnapshot: materializeSceneSnapshot(
+        initialSnapshot: unsafeMaterializeSceneSnapshot(
           SceneSnapshotBacking(
             camera: const CameraSnapshotBacking(offset: Offset(double.nan, 0)),
           ),
@@ -761,7 +762,7 @@ void main() {
   test('ScenePainter skips grid for invalid drawable state', () async {
     const background = Color(0xFFFFFFFF);
     final controller = _FakeRenderState(
-      snapshot: materializeSceneSnapshot(
+      snapshot: unsafeMaterializeSceneSnapshot(
         SceneSnapshotBacking(
           background: BackgroundSnapshotBacking(
             color: background,

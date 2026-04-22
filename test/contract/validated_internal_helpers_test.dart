@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_backing.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_materialization.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/unsafe_snapshot_materialization.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_model_invariants.dart';
 import 'package:iwb_canvas_engine/src/contract/validated/finite_offset_value.dart';
@@ -40,7 +41,7 @@ void main() {
   });
 
   test('internal raw metadata materializers preserve malformed values', () {
-    final camera = materializeCameraSnapshot(
+    final camera = unsafeMaterializeCameraSnapshot(
       const CameraSnapshotBacking(
         offset: Offset(double.nan, sceneCoordMax + 1),
       ),
@@ -48,7 +49,7 @@ void main() {
     expect(camera.offset.dx.isNaN, isTrue);
     expect(camera.offset.dy, sceneCoordMax + 1);
 
-    final background = materializeBackgroundSnapshot(
+    final background = unsafeMaterializeBackgroundSnapshot(
       const BackgroundSnapshotBacking(
         color: Color(0xFF123456),
         grid: GridSnapshotBacking(
@@ -63,7 +64,7 @@ void main() {
     expect(background.grid.cellSize, 0.5);
     expect(background.grid.color, const Color(0xFF654321));
 
-    final grid = materializeGridSnapshot(
+    final grid = unsafeMaterializeGridSnapshot(
       const GridSnapshotBacking(
         isEnabled: false,
         cellSize: -12.5,
@@ -74,7 +75,7 @@ void main() {
     expect(grid.cellSize, -12.5);
     expect(grid.color, const Color(0xFFABCDEF));
 
-    final palette = materializeScenePaletteSnapshot(
+    final palette = unsafeMaterializeScenePaletteSnapshot(
       ScenePaletteSnapshotBacking(
         penColors: <Color>[Color(0xFF000001)],
         backgroundColors: <Color>[Color(0xFF000002)],

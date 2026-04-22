@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/unsafe_snapshot_materialization.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 
 import 'support/scene_snapshot_invariant_assertions.dart';
@@ -43,7 +44,7 @@ void main() {
   });
 
   test('fails on duplicate NodeId across background and content', () {
-    final snapshot = materializeSceneSnapshot(
+    final snapshot = unsafeMaterializeSceneSnapshot(
       sceneSnapshotBackingFromValidated(
         backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
           nodes: <NodeSnapshotBacking>[

@@ -46,7 +46,7 @@ bool txnPatchSetNullable<T>(
   if (patch.isAbsent) {
     return false;
   }
-  final next = patch.isNullValue ? null : patch.value;
+  final next = patch.valueOrNull;
   if (next == current) {
     return false;
   }

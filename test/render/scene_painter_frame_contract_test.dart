@@ -1190,33 +1190,23 @@ void main() {
         ),
       );
       addTearDown(controller.dispose);
-      final renderState = _controllerOwnedRenderState(
-        controller,
-        snapshotOverride: SceneSnapshot(
-          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
-          backgroundLayer: BackgroundLayerSnapshot(
-            nodes: <NodeSnapshot>[
-              _UnsupportedNodeSnapshot(id: 'runtime-background-node'),
-            ],
+      expect(
+        () => _controllerOwnedRenderState(
+          controller,
+          snapshotOverride: SceneSnapshot(
+            background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+            backgroundLayer: BackgroundLayerSnapshot(
+              nodes: <NodeSnapshot>[
+                _UnsupportedNodeSnapshot(id: 'runtime-background-node'),
+              ],
+            ),
           ),
         ),
-      );
-
-      expect(
-        () => renderState
-            .preparePaintPlan(
-              renderState.captureFrameRead(),
-              const ScenePaintCandidateQuery(
-                viewportRect: Rect.fromLTWH(0, 0, 120, 100),
-                visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
-              ),
-            )
-            .candidateCount,
         throwsA(
           isA<StateError>().having(
             (error) => error.message,
             'message',
-            contains('Unsupported snapshot node type'),
+            contains('Unsupported NodeSnapshot subtype at admission'),
           ),
         ),
       );

@@ -705,7 +705,7 @@ barrels, or caller discipline.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Canonicalize Aggregate Public Boundary Admission
+### Slice 1. [x] Canonicalize Aggregate Public Boundary Admission
 
 #### Slice Contract
 
@@ -757,7 +757,7 @@ graphs into boundary admission without relaxing strict fallback seams.
 - late seam-failure tests move to eager admission failure or eager
   canonicalization expectations while strict fallback seam tests remain green
 
-### Slice 2. [ ] Lock Single-Owner Validated Import Proof and Backing-Native Model Path
+### Slice 2. [x] Lock Single-Owner Validated Import Proof and Backing-Native Model Path
 
 #### Slice Contract
 
@@ -813,7 +813,7 @@ validated proof minting must stay with one model owner.
 - model validated import paths compile and pass without depending on raw
   snapshot materialization and proof minting is structurally owner-locked
 
-### Slice 3. [ ] Split Snapshot Validated and Unsafe Helper Owners
+### Slice 3. [x] Split Snapshot Validated and Unsafe Helper Owners
 
 #### Slice Contract
 
@@ -871,7 +871,7 @@ owner file, one barrel, or one safety-signaling vocabulary.
 - no mixed validated-plus-unsafe snapshot owner or barrel remains in the
   snapshot family and the bridge inventory remains unchanged
 
-### Slice 4. [ ] Split NodeSpec and NodePatch Validated and Unsafe Helper Owners
+### Slice 4. [x] Split NodeSpec and NodePatch Validated and Unsafe Helper Owners
 
 #### Slice Contract
 
@@ -927,7 +927,7 @@ longer share one owner file, one barrel, or one safety-signaling vocabulary.
 - no mixed validated-plus-unsafe spec or patch owner or barrel remains in the
   contract layer
 
-### Slice 5. [ ] Canonicalize Nullable PatchField Semantics End-to-End
+### Slice 5. [x] Canonicalize Nullable PatchField Semantics End-to-End
 
 #### Slice Contract
 

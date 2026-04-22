@@ -55,6 +55,24 @@ TextNodeSnapshotSchemaFields textNodeSchemaFieldsFromNode(TextNode text) {
   ));
 }
 
+TextNodeSnapshotSchemaFields textNodeSchemaFieldsFromBacking(
+  TextNodeSnapshotBacking text,
+) {
+  return textNodeSnapshotSchemaFieldsFromValidated((
+    text: text.text,
+    fontSize: text.fontSize,
+    color: text.color,
+    align: text.align,
+    textDirection: text.textDirection,
+    isBold: text.isBold,
+    isItalic: text.isItalic,
+    isUnderline: text.isUnderline,
+    fontFamily: text.fontFamily,
+    maxWidth: text.maxWidth,
+    lineHeight: text.lineHeight,
+  ));
+}
+
 TextNode textNodeFromSnapshot(TextNodeSnapshot text, int instanceRevision) {
   return sceneNodeFromSnapshotViaSchema(
         snapshot: text,
@@ -64,6 +82,19 @@ TextNode textNodeFromSnapshot(TextNodeSnapshot text, int instanceRevision) {
             textNodeFromSnapshotSchema(common: common, fields: fields),
       )
       as TextNode;
+}
+
+TextNode textNodeFromSnapshotBacking(
+  TextNodeSnapshotBacking text,
+  int instanceRevision,
+) {
+  return textNodeFromSnapshotSchema(
+    common: runtimeCommonFromSnapshotBacking(
+      text,
+      instanceRevision: instanceRevision,
+    ),
+    fields: textNodeSchemaFieldsFromBacking(text),
+  );
 }
 
 TextNode textNodeFromSpec(

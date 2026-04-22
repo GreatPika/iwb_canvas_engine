@@ -35,6 +35,18 @@ PathNodeSchemaFields pathNodeSchemaFieldsFromNode(PathNode path) {
   ));
 }
 
+PathNodeSchemaFields pathNodeSchemaFieldsFromBacking(
+  PathNodeSnapshotBacking path,
+) {
+  return pathNodeSchemaFieldsFromValidated((
+    svgPathData: path.svgPathData,
+    fillColor: path.fillColor,
+    strokeColor: path.strokeColor,
+    strokeWidth: path.strokeWidth,
+    fillRule: path.fillRule,
+  ));
+}
+
 PathNode pathNodeFromSnapshot(PathNodeSnapshot path, int instanceRevision) {
   return sceneNodeFromSnapshotViaSchema(
         snapshot: path,
@@ -43,6 +55,19 @@ PathNode pathNodeFromSnapshot(PathNodeSnapshot path, int instanceRevision) {
         buildNode: pathNodeFromSchema,
       )
       as PathNode;
+}
+
+PathNode pathNodeFromSnapshotBacking(
+  PathNodeSnapshotBacking path,
+  int instanceRevision,
+) {
+  return pathNodeFromSchema(
+    common: runtimeCommonFromSnapshotBacking(
+      path,
+      instanceRevision: instanceRevision,
+    ),
+    fields: pathNodeSchemaFieldsFromBacking(path),
+  );
 }
 
 PathNode pathNodeFromSpec(

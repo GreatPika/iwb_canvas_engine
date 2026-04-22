@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/unsafe_snapshot_materialization.dart';
 import 'package:iwb_canvas_engine/src/core/grid_safety_limits.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
@@ -40,7 +41,7 @@ void main() {
   const renderer = SceneGridRenderer();
 
   test('SceneGridRenderer returns null for invalid drawable inputs', () {
-    final grid = materializeSceneSnapshot(
+    final grid = unsafeMaterializeSceneSnapshot(
       SceneSnapshotBacking(
         background: BackgroundSnapshotBacking(
           grid: GridSnapshotBacking(

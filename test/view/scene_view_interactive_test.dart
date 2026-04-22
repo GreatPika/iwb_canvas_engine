@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart' hide Image;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/unsafe_snapshot_materialization.dart';
 import 'package:iwb_canvas_engine/src/contract/canvas_pointer_input.dart';
 import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
@@ -1896,7 +1897,7 @@ void main() {
     controller.linePreviewThickness = 2;
     await paintOverlay();
 
-    controller.snapshotOverride = materializeSceneSnapshot(
+    controller.snapshotOverride = unsafeMaterializeSceneSnapshot(
       SceneSnapshotBacking(
         camera: const CameraSnapshotBacking(
           offset: Offset(double.nan, double.infinity),

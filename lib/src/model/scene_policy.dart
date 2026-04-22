@@ -1,5 +1,6 @@
 import '../contract/snapshot.dart';
 import '../contract/scene_structure_validation.dart';
+import '../contract/internal/snapshot_fast_path.dart';
 import '../core/scene.dart';
 import 'scene_import_draft.dart';
 import 'scene_import_draft_from_snapshot.dart';
@@ -10,6 +11,25 @@ import 'scene_value_validation_support.dart' as validation_support;
 typedef ScenePolicySnapshotFromScene = SceneSnapshot Function(Scene scene);
 typedef ScenePolicySceneFromValidatedImportDraft =
     Scene Function(ValidatedSceneImportDraft draft);
+
+final class ValidatedSceneImportDraft {
+  const ValidatedSceneImportDraft._(this._draft);
+
+  final SceneImportDraft _draft;
+
+  SceneSnapshotBacking get backing => _draft.backing;
+  List<ContentLayerSnapshotBacking> get layers => _draft.layers;
+  BackgroundLayerSnapshotBacking get backgroundLayer => _draft.backgroundLayer;
+  CameraSnapshotBacking get camera => _draft.camera;
+  BackgroundSnapshotBacking get background => _draft.background;
+  ScenePaletteSnapshotBacking get palette => _draft.palette;
+}
+
+SceneSnapshot sceneSnapshotFromValidatedImportDraft(
+  ValidatedSceneImportDraft draft,
+) {
+  return sceneSnapshotFromValidatedBacking(draft.backing);
+}
 
 abstract final class ScenePolicy {
   static ValidatedSceneImportDraft validateImportDraft(
@@ -95,5 +115,11 @@ ValidatedSceneImportDraft _validateStructurallyValidImportDraft(
     ),
     pathSurface: pathSurface,
   );
-  return ValidatedSceneImportDraft.fromValidated(draft);
+  return _validatedSceneImportDraftFromValidated(draft);
+}
+
+ValidatedSceneImportDraft _validatedSceneImportDraftFromValidated(
+  SceneImportDraft draft,
+) {
+  return ValidatedSceneImportDraft._(draft);
 }

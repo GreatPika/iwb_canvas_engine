@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../contract/scene_validation_diagnostics.dart';
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/snapshot.dart';
 import '../core/nodes.dart';
 import '../core/scene_limits.dart';
@@ -46,6 +47,31 @@ void sceneValidateStrokeNode(
   sceneValidatePositiveDouble(
     stroke.thickness,
     field: '$field.thickness',
+    onError: onError,
+  );
+}
+
+void sceneValidateStrokeNodeSnapshotBacking(
+  StrokeNodeSnapshotBacking stroke, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+  SceneValidationPathSurface pathSurface = SceneValidationPathSurface.snapshot,
+}) {
+  _sceneValidatePoints(
+    stroke.points,
+    field: sceneValidationStrokePointsField(pathSurface, field: field),
+    onError: onError,
+  );
+  sceneValidatePositiveDouble(
+    stroke.thickness,
+    field: '$field.thickness',
+    onError: onError,
+  );
+  sceneValidateDoubleInRange(
+    stroke.thickness,
+    field: '$field.thickness',
+    min: 0,
+    max: sceneThicknessMax,
     onError: onError,
   );
 }

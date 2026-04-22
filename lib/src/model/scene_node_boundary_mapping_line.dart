@@ -32,6 +32,17 @@ LineNodeSchemaFields lineNodeSchemaFieldsFromNode(LineNode line) {
   ));
 }
 
+LineNodeSchemaFields lineNodeSchemaFieldsFromBacking(
+  LineNodeSnapshotBacking line,
+) {
+  return lineNodeSchemaFieldsFromValidated((
+    start: line.start,
+    end: line.end,
+    thickness: line.thickness,
+    color: line.color,
+  ));
+}
+
 LineNode lineNodeFromSnapshot(LineNodeSnapshot line, int instanceRevision) {
   return sceneNodeFromSnapshotViaSchema(
         snapshot: line,
@@ -40,6 +51,19 @@ LineNode lineNodeFromSnapshot(LineNodeSnapshot line, int instanceRevision) {
         buildNode: lineNodeFromSchema,
       )
       as LineNode;
+}
+
+LineNode lineNodeFromSnapshotBacking(
+  LineNodeSnapshotBacking line,
+  int instanceRevision,
+) {
+  return lineNodeFromSchema(
+    common: runtimeCommonFromSnapshotBacking(
+      line,
+      instanceRevision: instanceRevision,
+    ),
+    fields: lineNodeSchemaFieldsFromBacking(line),
+  );
 }
 
 LineNode lineNodeFromSpec(

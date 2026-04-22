@@ -215,12 +215,19 @@ Use a `NodePatch` subtype to partially update an existing node.
 - `PatchField.value(...)` — set the field to a concrete value
 - `PatchField.nullValue()` — explicitly set the field to `null`
 
+For nullable fields, `PatchField<T?>.value(null)` canonicalizes to
+`PatchField.nullValue()`. Explicit null therefore has one admitted public form,
+not a separate fourth runtime state.
+
 `CommonNodePatch` covers the shared node fields; subtype-specific patch classes
 cover only node-family fields.
 
 Important patch rules:
 
 - Public patch constructors validate only fields that are actually present.
+- Aggregate patch constructors canonicalize supported nested boundary values to
+  exact built-in contract objects and reject unsupported boundary subtypes
+  eagerly.
 - `writeNodePatch(...)` / `patchNode(...)` return `false` when the node does
   not exist or when the patch is a semantic no-op.
 - Patching a node with the wrong patch family throws `ArgumentError`.
@@ -497,6 +504,10 @@ Public import/export paths share the same boundary contract:
   `SceneDataException`.
 - `SceneBuilder.buildFromSnapshot(...)`, `encodeScene(...)`, and
   `encodeSceneToJson(...)` validate/canonicalize snapshots before encoding.
+- Aggregate public boundary objects are canonicalized at admission: supported
+  carrier-backed nested snapshots and patches are rebuilt as exact public
+  contract values, while unsupported boundary subtypes fail before later
+  backing/materialization seams.
 - Compare failures by `SceneDataException.code`, `path`, and `details`.
   `message` is derived user-facing text.
 - Alias-bearing line/stroke range failures keep caller-visible path spelling:

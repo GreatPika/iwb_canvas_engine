@@ -186,6 +186,45 @@ void buildSceneBacking() {}
     );
 
     test(
+      'rejects non-contract code importing unsafe snapshot materialization directly',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_snapshot_from_scene.dart',
+            '''
+import '../contract/internal/unsafe_snapshot_materialization.dart';
+
+void decodeScene() {}
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/internal/unsafe_snapshot_materialization.dart',
+            'void unsafeMaterializeSceneSnapshot() {}\n',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'contract architecture',
+              detail:
+                  'canonical contract surfaces instead of importing or '
+                  're-exporting internal contract module '
+                  'unsafe_snapshot_materialization.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
       'rejects non-contract code importing internal spec and patch fast paths directly',
       () async {
         final sandbox = await createGuardrailsSandbox();

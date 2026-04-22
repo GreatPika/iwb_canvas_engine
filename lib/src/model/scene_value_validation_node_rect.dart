@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/snapshot.dart';
 import '../core/scene_limits.dart';
 import '../core/nodes.dart';
@@ -21,6 +22,19 @@ void sceneValidateRectNodeSnapshot(
 
 void sceneValidateRectNode(
   RectNode rect, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  _sceneValidateRectNodeFields(
+    size: rect.size,
+    strokeWidth: rect.strokeWidth,
+    field: field,
+    onError: onError,
+  );
+}
+
+void sceneValidateRectNodeSnapshotBacking(
+  RectNodeSnapshotBacking rect, {
   required String field,
   required SceneValidationErrorReporter onError,
 }) {

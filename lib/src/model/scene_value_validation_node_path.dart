@@ -1,3 +1,4 @@
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/snapshot.dart';
 import '../core/scene_limits.dart';
 import '../core/nodes.dart';
@@ -19,6 +20,19 @@ void sceneValidatePathNodeSnapshot(
 
 void sceneValidatePathNode(
   PathNode path, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  _sceneValidatePathNodeFields(
+    svgPathData: path.svgPathData,
+    strokeWidth: path.strokeWidth,
+    field: field,
+    onError: onError,
+  );
+}
+
+void sceneValidatePathNodeSnapshotBacking(
+  PathNodeSnapshotBacking path, {
   required String field,
   required SceneValidationErrorReporter onError,
 }) {

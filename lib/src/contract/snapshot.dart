@@ -4,6 +4,15 @@ export 'ids.dart' show LayerId, NodeId, parseLayerId, parseNodeId;
 export 'path_fill_rule.dart' show PathFillRule;
 import 'ids.dart';
 import 'internal/node_boundary_schema.dart';
+import 'internal/snapshot_fast_path.dart'
+    show
+        backgroundLayerSnapshotBackingOf,
+        backgroundSnapshotBackingOf,
+        cameraSnapshotBackingOf,
+        contentLayerSnapshotBackingOf,
+        gridSnapshotBackingOf,
+        nodeSnapshotBackingOf,
+        scenePaletteSnapshotBackingOf;
 import 'path_fill_rule.dart';
 import 'scene_defaults.dart';
 import 'scene_model_invariants.dart';
@@ -59,12 +68,18 @@ _SceneSnapshotFields _validatedSceneSnapshotFields({
   ScenePaletteSnapshot? palette,
 }) {
   final validatedLayers = List<ContentLayerSnapshot>.unmodifiable(
-    List<ContentLayerSnapshot>.from(layers ?? const <ContentLayerSnapshot>[]),
+    (layers ?? const <ContentLayerSnapshot>[])
+        .map(_admitContentLayerSnapshot)
+        .toList(growable: false),
   );
-  final validatedBackgroundLayer = backgroundLayer ?? BackgroundLayerSnapshot();
+  final validatedBackgroundLayer = _admitBackgroundLayerSnapshot(
+    backgroundLayer ?? BackgroundLayerSnapshot(),
+  );
   final validatedCamera = _validatedSceneCamera(camera);
   final validatedBackground = _validatedSceneBackground(background);
-  final validatedPalette = palette ?? ScenePaletteSnapshot();
+  final validatedPalette = _admitScenePaletteSnapshot(
+    palette ?? ScenePaletteSnapshot(),
+  );
 
   sceneValidateSceneStructure<ContentLayerSnapshot, NodeSnapshot>(
     layers: validatedLayers,
@@ -88,7 +103,9 @@ class BackgroundLayerSnapshot {
   BackgroundLayerSnapshot({List<NodeSnapshot>? nodes})
     : this._(
         nodes: List<NodeSnapshot>.unmodifiable(
-          List<NodeSnapshot>.from(nodes ?? const <NodeSnapshot>[]),
+          (nodes ?? const <NodeSnapshot>[])
+              .map(_admitNodeSnapshot)
+              .toList(growable: false),
         ),
       );
 
@@ -103,7 +120,9 @@ class ContentLayerSnapshot {
     : this._(
         id: LayerIdValue.of(id, name: 'id').value,
         nodes: List<NodeSnapshot>.unmodifiable(
-          List<NodeSnapshot>.from(nodes ?? const <NodeSnapshot>[]),
+          (nodes ?? const <NodeSnapshot>[])
+              .map(_admitNodeSnapshot)
+              .toList(growable: false),
         ),
       );
 
@@ -126,7 +145,7 @@ class BackgroundSnapshot {
   BackgroundSnapshot({
     this.color = SceneDefaults.backgroundColor,
     GridSnapshot? grid,
-  }) : grid = grid ?? GridSnapshot();
+  }) : grid = _validatedSceneGrid(grid);
 
   final Color color;
   final GridSnapshot grid;
@@ -624,23 +643,270 @@ List<double> _validatedGridSizes(List<double>? values) {
 
 CameraSnapshot _validatedSceneCamera(CameraSnapshot? value) {
   final resolved = value ?? CameraSnapshot();
-  return CameraSnapshot(
-    offset: validateSceneCameraOffset(resolved.offset, name: 'camera.offset'),
-  );
+  if (resolved.runtimeType == CameraSnapshot) {
+    return resolved;
+  }
+  try {
+    return CameraSnapshot(offset: cameraSnapshotBackingOf(resolved).offset);
+  } on StateError {
+    _throwUnsupportedBoundarySubtype(
+      value: resolved,
+      typeName: 'CameraSnapshot',
+    );
+  }
 }
 
 BackgroundSnapshot _validatedSceneBackground(BackgroundSnapshot? value) {
   final resolved = value ?? BackgroundSnapshot();
-  return BackgroundSnapshot(
-    color: resolved.color,
-    grid: GridSnapshot(
-      isEnabled: resolved.grid.isEnabled,
-      cellSize: validateSceneGridCellSize(
-        resolved.grid.cellSize,
-        name: 'background.grid.cellSize',
-        isEnabled: resolved.grid.isEnabled,
+  if (resolved.runtimeType == BackgroundSnapshot) {
+    return resolved;
+  }
+  try {
+    final backing = backgroundSnapshotBackingOf(resolved);
+    return BackgroundSnapshot(
+      color: backing.color,
+      grid: GridSnapshot(
+        isEnabled: backing.grid.isEnabled,
+        cellSize: backing.grid.cellSize,
+        color: backing.grid.color,
       ),
-      color: resolved.grid.color,
-    ),
+    );
+  } on StateError {
+    _throwUnsupportedBoundarySubtype(
+      value: resolved,
+      typeName: 'BackgroundSnapshot',
+    );
+  }
+}
+
+GridSnapshot _validatedSceneGrid(GridSnapshot? value) {
+  final resolved = value ?? GridSnapshot();
+  if (resolved.runtimeType == GridSnapshot) {
+    return resolved;
+  }
+  try {
+    final backing = gridSnapshotBackingOf(resolved);
+    return GridSnapshot(
+      isEnabled: backing.isEnabled,
+      cellSize: backing.cellSize,
+      color: backing.color,
+    );
+  } on StateError {
+    _throwUnsupportedBoundarySubtype(value: resolved, typeName: 'GridSnapshot');
+  }
+}
+
+BackgroundLayerSnapshot _admitBackgroundLayerSnapshot(
+  BackgroundLayerSnapshot layer,
+) {
+  if (layer.runtimeType == BackgroundLayerSnapshot) {
+    return layer;
+  }
+  _requireSupportedBackgroundLayerSnapshotSubtype(layer);
+  return BackgroundLayerSnapshot(nodes: layer.nodes);
+}
+
+ContentLayerSnapshot _admitContentLayerSnapshot(ContentLayerSnapshot layer) {
+  if (layer.runtimeType == ContentLayerSnapshot) {
+    return layer;
+  }
+  _requireSupportedContentLayerSnapshotSubtype(layer);
+  return ContentLayerSnapshot(id: layer.id, nodes: layer.nodes);
+}
+
+ScenePaletteSnapshot _admitScenePaletteSnapshot(ScenePaletteSnapshot palette) {
+  if (palette.runtimeType == ScenePaletteSnapshot) {
+    return palette;
+  }
+  _requireSupportedScenePaletteSnapshotSubtype(palette);
+  return ScenePaletteSnapshot(
+    penColors: palette.penColors,
+    backgroundColors: palette.backgroundColors,
+    gridSizes: palette.gridSizes,
+  );
+}
+
+NodeSnapshot _admitNodeSnapshot(NodeSnapshot snapshot) {
+  switch (snapshot) {
+    case ImageNodeSnapshot() when snapshot.runtimeType == ImageNodeSnapshot:
+    case TextNodeSnapshot() when snapshot.runtimeType == TextNodeSnapshot:
+    case StrokeNodeSnapshot() when snapshot.runtimeType == StrokeNodeSnapshot:
+    case LineNodeSnapshot() when snapshot.runtimeType == LineNodeSnapshot:
+    case RectNodeSnapshot() when snapshot.runtimeType == RectNodeSnapshot:
+    case PathNodeSnapshot() when snapshot.runtimeType == PathNodeSnapshot:
+      return snapshot;
+    case ImageNodeSnapshot():
+      _requireSupportedNodeSnapshotSubtype(snapshot);
+      return ImageNodeSnapshot(
+        id: snapshot.id,
+        instanceRevision: snapshot.instanceRevision,
+        imageId: snapshot.imageId,
+        size: snapshot.size,
+        naturalSize: snapshot.naturalSize,
+        transform: snapshot.transform,
+        opacity: snapshot.opacity,
+        hitPadding: snapshot.hitPadding,
+        isVisible: snapshot.isVisible,
+        isSelectable: snapshot.isSelectable,
+        isLocked: snapshot.isLocked,
+        isDeletable: snapshot.isDeletable,
+        isTransformable: snapshot.isTransformable,
+      );
+    case TextNodeSnapshot():
+      _requireSupportedNodeSnapshotSubtype(snapshot);
+      return TextNodeSnapshot(
+        id: snapshot.id,
+        instanceRevision: snapshot.instanceRevision,
+        text: snapshot.text,
+        fontSize: snapshot.fontSize,
+        color: snapshot.color,
+        align: snapshot.align,
+        textDirection: snapshot.textDirection,
+        isBold: snapshot.isBold,
+        isItalic: snapshot.isItalic,
+        isUnderline: snapshot.isUnderline,
+        fontFamily: snapshot.fontFamily,
+        maxWidth: snapshot.maxWidth,
+        lineHeight: snapshot.lineHeight,
+        transform: snapshot.transform,
+        opacity: snapshot.opacity,
+        hitPadding: snapshot.hitPadding,
+        isVisible: snapshot.isVisible,
+        isSelectable: snapshot.isSelectable,
+        isLocked: snapshot.isLocked,
+        isDeletable: snapshot.isDeletable,
+        isTransformable: snapshot.isTransformable,
+      );
+    case StrokeNodeSnapshot():
+      _requireSupportedNodeSnapshotSubtype(snapshot);
+      return StrokeNodeSnapshot(
+        id: snapshot.id,
+        instanceRevision: snapshot.instanceRevision,
+        points: snapshot.points,
+        thickness: snapshot.thickness,
+        color: snapshot.color,
+        transform: snapshot.transform,
+        opacity: snapshot.opacity,
+        hitPadding: snapshot.hitPadding,
+        isVisible: snapshot.isVisible,
+        isSelectable: snapshot.isSelectable,
+        isLocked: snapshot.isLocked,
+        isDeletable: snapshot.isDeletable,
+        isTransformable: snapshot.isTransformable,
+      );
+    case LineNodeSnapshot():
+      _requireSupportedNodeSnapshotSubtype(snapshot);
+      return LineNodeSnapshot(
+        id: snapshot.id,
+        instanceRevision: snapshot.instanceRevision,
+        start: snapshot.start,
+        end: snapshot.end,
+        thickness: snapshot.thickness,
+        color: snapshot.color,
+        transform: snapshot.transform,
+        opacity: snapshot.opacity,
+        hitPadding: snapshot.hitPadding,
+        isVisible: snapshot.isVisible,
+        isSelectable: snapshot.isSelectable,
+        isLocked: snapshot.isLocked,
+        isDeletable: snapshot.isDeletable,
+        isTransformable: snapshot.isTransformable,
+      );
+    case RectNodeSnapshot():
+      _requireSupportedNodeSnapshotSubtype(snapshot);
+      return RectNodeSnapshot(
+        id: snapshot.id,
+        instanceRevision: snapshot.instanceRevision,
+        size: snapshot.size,
+        fillColor: snapshot.fillColor,
+        strokeColor: snapshot.strokeColor,
+        strokeWidth: snapshot.strokeWidth,
+        transform: snapshot.transform,
+        opacity: snapshot.opacity,
+        hitPadding: snapshot.hitPadding,
+        isVisible: snapshot.isVisible,
+        isSelectable: snapshot.isSelectable,
+        isLocked: snapshot.isLocked,
+        isDeletable: snapshot.isDeletable,
+        isTransformable: snapshot.isTransformable,
+      );
+    case PathNodeSnapshot():
+      _requireSupportedNodeSnapshotSubtype(snapshot);
+      return PathNodeSnapshot(
+        id: snapshot.id,
+        instanceRevision: snapshot.instanceRevision,
+        svgPathData: snapshot.svgPathData,
+        fillColor: snapshot.fillColor,
+        strokeColor: snapshot.strokeColor,
+        strokeWidth: snapshot.strokeWidth,
+        fillRule: snapshot.fillRule,
+        transform: snapshot.transform,
+        opacity: snapshot.opacity,
+        hitPadding: snapshot.hitPadding,
+        isVisible: snapshot.isVisible,
+        isSelectable: snapshot.isSelectable,
+        isLocked: snapshot.isLocked,
+        isDeletable: snapshot.isDeletable,
+        isTransformable: snapshot.isTransformable,
+      );
+    case _:
+      _throwUnsupportedBoundarySubtype(
+        value: snapshot,
+        typeName: 'NodeSnapshot',
+      );
+  }
+}
+
+void _requireSupportedBackgroundLayerSnapshotSubtype(
+  BackgroundLayerSnapshot layer,
+) {
+  try {
+    backgroundLayerSnapshotBackingOf(layer);
+  } on StateError {
+    _throwUnsupportedBoundarySubtype(
+      value: layer,
+      typeName: 'BackgroundLayerSnapshot',
+    );
+  }
+}
+
+void _requireSupportedContentLayerSnapshotSubtype(ContentLayerSnapshot layer) {
+  try {
+    contentLayerSnapshotBackingOf(layer);
+  } on StateError {
+    _throwUnsupportedBoundarySubtype(
+      value: layer,
+      typeName: 'ContentLayerSnapshot',
+    );
+  }
+}
+
+void _requireSupportedScenePaletteSnapshotSubtype(
+  ScenePaletteSnapshot palette,
+) {
+  try {
+    scenePaletteSnapshotBackingOf(palette);
+  } on StateError {
+    _throwUnsupportedBoundarySubtype(
+      value: palette,
+      typeName: 'ScenePaletteSnapshot',
+    );
+  }
+}
+
+void _requireSupportedNodeSnapshotSubtype(NodeSnapshot snapshot) {
+  try {
+    nodeSnapshotBackingOf(snapshot);
+  } on StateError {
+    _throwUnsupportedBoundarySubtype(value: snapshot, typeName: 'NodeSnapshot');
+  }
+}
+
+Never _throwUnsupportedBoundarySubtype({
+  required Object value,
+  required String typeName,
+}) {
+  throw StateError(
+    'Unsupported $typeName subtype at admission: ${value.runtimeType}.',
   );
 }

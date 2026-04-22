@@ -32,6 +32,26 @@ SceneNode sceneNodeFromSnapshotViaBoundarySchema(
   }
 }
 
+SceneNode sceneNodeFromSnapshotBackingViaBoundarySchema(
+  NodeSnapshotBacking node, {
+  required int instanceRevision,
+}) {
+  switch (node) {
+    case ImageNodeSnapshotBacking image:
+      return imageNodeFromSnapshotBacking(image, instanceRevision);
+    case TextNodeSnapshotBacking text:
+      return textNodeFromSnapshotBacking(text, instanceRevision);
+    case StrokeNodeSnapshotBacking stroke:
+      return strokeNodeFromSnapshotBacking(stroke, instanceRevision);
+    case LineNodeSnapshotBacking line:
+      return lineNodeFromSnapshotBacking(line, instanceRevision);
+    case RectNodeSnapshotBacking rect:
+      return rectNodeFromSnapshotBacking(rect, instanceRevision);
+    case PathNodeSnapshotBacking path:
+      return pathNodeFromSnapshotBacking(path, instanceRevision);
+  }
+}
+
 SceneNode sceneNodeFromSpecViaBoundarySchema(
   NodeSpec spec, {
   required NodeId fallbackId,
@@ -60,7 +80,7 @@ SceneNode sceneNodeFromSpecViaBoundarySchema(
 }
 
 NodeSnapshot sceneNodeSnapshotFromViaBoundarySchema(SceneNode node) {
-  return materializeNodeSnapshot(
+  return nodeSnapshotFromValidatedBacking(
     sceneNodeSnapshotBackingFromViaBoundarySchema(node),
   );
 }

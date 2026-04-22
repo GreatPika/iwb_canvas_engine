@@ -173,10 +173,34 @@ void main() {
     expect(imagePatch.imageId.value, 'runtime');
     expect(textPatch.textDirection.value, TextDirection.rtl);
     expect(textPatch.fontFamily.isNullValue, isTrue);
+    expect(textPatch.lineHeight.isNullValue, isTrue);
+    expect(textPatch.lineHeight.hasValue, isFalse);
     expect(textPatch.lineHeight.valueOrNull, isNull);
     expect(strokePatch.thickness.value, 2);
     expect(linePatch.start.value, const Offset(1, 1));
     expect(rectPatch.strokeWidth.value, 3);
     expect(pathPatch.fillRule.value, PathFillRule.nonZero);
   });
+
+  test(
+    'nullable patch constructors keep one canonical explicit-null state',
+    () {
+      final imagePatch = ImageNodePatch(
+        id: 'image-null-natural-size',
+        naturalSize: PatchField<Size?>.value(null),
+      );
+      final textPatch = TextNodePatch(
+        id: 'text-nullables',
+        fontFamily: PatchField<String?>.value(null),
+        maxWidth: PatchField<double?>.value(null),
+        lineHeight: PatchField<double?>.value(null),
+      );
+
+      expect(imagePatch.naturalSize.isNullValue, isTrue);
+      expect(imagePatch.naturalSize.hasValue, isFalse);
+      expect(textPatch.fontFamily.isNullValue, isTrue);
+      expect(textPatch.maxWidth.isNullValue, isTrue);
+      expect(textPatch.lineHeight.isNullValue, isTrue);
+    },
+  );
 }

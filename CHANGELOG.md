@@ -42,6 +42,10 @@ in changes that have not yet been published to pub.dev.
 - Unified `SceneBuilder`, `decodeScene*`, `encodeScene*`, and typed snapshot
   import around the same stable `SceneDataException.code`, `path`, and
   `details` contract.
+- Canonicalized aggregate boundary admission so supported nested snapshot and
+  patch values are rebuilt eagerly as exact public contract objects, while
+  unsupported boundary subtypes now fail at admission instead of later helper
+  seams.
 - Split `SceneView` repaint responsibilities into scene and overlay channels so
   overlay-only interactive state does not repaint the base scene.
 - Finalized transaction state before commit planning. Inside `write(...)`,
@@ -55,6 +59,8 @@ in changes that have not yet been published to pub.dev.
   later.
 - Hardened text import/decode so oversized derived layout bounds are rejected
   again at the public boundary.
+- Canonicalized nullable patch null writes so `PatchField<T?>.value(null)` now
+  resolves to the same explicit-null state as `PatchField.nullValue()`.
 
 ### Fixed
 

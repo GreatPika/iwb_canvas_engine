@@ -31,6 +31,16 @@ ImageNodeSchemaFields imageNodeSchemaFieldsFromNode(ImageNode image) {
   ));
 }
 
+ImageNodeSchemaFields imageNodeSchemaFieldsFromBacking(
+  ImageNodeSnapshotBacking image,
+) {
+  return imageNodeSchemaFieldsFromValidated((
+    imageId: image.imageId,
+    size: image.size,
+    naturalSize: image.naturalSize,
+  ));
+}
+
 ImageNode imageNodeFromSnapshot(ImageNodeSnapshot image, int instanceRevision) {
   return sceneNodeFromSnapshotViaSchema(
         snapshot: image,
@@ -39,6 +49,19 @@ ImageNode imageNodeFromSnapshot(ImageNodeSnapshot image, int instanceRevision) {
         buildNode: imageNodeFromSchema,
       )
       as ImageNode;
+}
+
+ImageNode imageNodeFromSnapshotBacking(
+  ImageNodeSnapshotBacking image,
+  int instanceRevision,
+) {
+  return imageNodeFromSchema(
+    common: runtimeCommonFromSnapshotBacking(
+      image,
+      instanceRevision: instanceRevision,
+    ),
+    fields: imageNodeSchemaFieldsFromBacking(image),
+  );
 }
 
 ImageNode imageNodeFromSpec(

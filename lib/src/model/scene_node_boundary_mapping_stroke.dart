@@ -35,6 +35,16 @@ StrokeNodeSnapshotSchemaFields strokeNodeSchemaFieldsFromNode(
   ));
 }
 
+StrokeNodeSnapshotSchemaFields strokeNodeSchemaFieldsFromBacking(
+  StrokeNodeSnapshotBacking stroke,
+) {
+  return strokeNodeSnapshotSchemaFieldsFromValidated((
+    points: stroke.points,
+    thickness: stroke.thickness,
+    color: stroke.color,
+  ));
+}
+
 StrokeNode strokeNodeFromSnapshot(
   StrokeNodeSnapshot stroke,
   int instanceRevision,
@@ -46,6 +56,19 @@ StrokeNode strokeNodeFromSnapshot(
         buildNode: strokeNodeFromSnapshotSchema,
       )
       as StrokeNode;
+}
+
+StrokeNode strokeNodeFromSnapshotBacking(
+  StrokeNodeSnapshotBacking stroke,
+  int instanceRevision,
+) {
+  return strokeNodeFromSnapshotSchema(
+    common: runtimeCommonFromSnapshotBacking(
+      stroke,
+      instanceRevision: instanceRevision,
+    ),
+    fields: strokeNodeSchemaFieldsFromBacking(stroke),
+  );
 }
 
 StrokeNode strokeNodeFromSpec(

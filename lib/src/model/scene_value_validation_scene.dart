@@ -551,8 +551,8 @@ void Function(
 })
 _buildDraftNodeSnapshotValidator(SceneValidationPathSurface pathSurface) {
   return (node, {required field, required onError}) =>
-      sceneValidateNodeSnapshot(
-        materializeNodeSnapshot(node),
+      sceneValidateNodeSnapshotBacking(
+        node,
         field: field,
         onError: onError,
         pathSurface: pathSurface,

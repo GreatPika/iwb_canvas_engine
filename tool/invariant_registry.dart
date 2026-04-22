@@ -767,7 +767,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-VALIDATED-IMPORT-MATERIALIZATION-BOUNDARY',
     scope: 'engine-structure',
     title:
-        'scene import materialization accepts only ValidatedSceneImportDraft, and scene_from_snapshot.dart keeps a single raw snapshot facade without a sibling bypass helper',
+        'scene import materialization accepts only ValidatedSceneImportDraft, ScenePolicy remains the only import-proof minting owner, and validated import/draft validation paths stay off raw snapshot materialization',
     requiredProofs: <RequiredProof>[
       RequiredProof(path: 'tool/check_guardrails.dart', stepId: 'guardrails'),
     ],
@@ -782,7 +782,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY',
     scope: 'engine-structure',
     title:
-        'contract layer remains part-free and downstream non-contract code imports only canonical contract surfaces',
+        'contract layer remains part-free, snapshot/spec/patch families keep validated-only helper surfaces with separate unsafe raw owners, and downstream non-contract code imports only canonical contract surfaces',
     requiredProofs: <RequiredProof>[
       RequiredProof(path: 'tool/check_guardrails.dart', stepId: 'guardrails'),
     ],
@@ -797,7 +797,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-BOUNDARY-HERMETIC-CONCRETE-TYPES',
     scope: 'engine-api',
     title:
-        'public boundary fallback/backing seam helpers accept only the built-in concrete boundary types and reject unsupported subtypes, including public subclasses of known boundary types',
+        'public boundary admission canonicalizes supported values to exact built-in contract types and rejects unsupported subtypes before the strict fallback/backing seams, which still reject non-exact boundary runtime types',
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path: 'test/contract/validated_fast_path_contract_test.dart',

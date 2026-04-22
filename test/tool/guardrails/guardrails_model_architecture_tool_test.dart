@@ -429,6 +429,134 @@ Object materializeScene(SceneImportDraft draft) => draft;
       }
     });
 
+    test(
+      'rejects scene_import_draft.dart reclaiming import proof ownership',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(sandbox, 'lib/src/model/scene_import_draft.dart', '''
+class ValidatedSceneImportDraft {}
+''');
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'scene_policy.dart must remain the only owner that declares '
+                  'ValidatedSceneImportDraft and mints import proof',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects any non-owner model file reclaiming import proof ownership',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_from_import_draft.dart',
+            '''
+class ValidatedSceneImportDraft {}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'scene_policy.dart must remain the only owner that declares '
+                  'ValidatedSceneImportDraft and mints import proof',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects validated import materialization paths using raw snapshot materialization',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_from_import_draft.dart',
+            '''
+Object materializeNodeSnapshot(Object value) => value;
+
+Object sceneFromValidatedImportDraft(Object draft, Object node) {
+  return materializeNodeSnapshot(node);
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'validated import and draft validation paths must not materialize '
+                  'raw public snapshot wrappers from raw backing',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects draft validation paths using raw snapshot materialization',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_value_validation_scene.dart',
+            '''
+Object materializeNodeSnapshot(Object value) => value;
+
+void validateNode(Object node) {
+  materializeNodeSnapshot(node);
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'validated import and draft validation paths must not materialize '
+                  'raw public snapshot wrappers from raw backing',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
     test('rejects controller direct scene.layers.add ownership', () async {
       final sandbox = await createGuardrailsSandbox();
       try {

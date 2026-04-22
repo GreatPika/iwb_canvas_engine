@@ -62,8 +62,8 @@ SceneNode _sceneNodeFromImportDraftNode(
     node.instanceRevision,
     nextInstanceRevision: nextInstanceRevision,
   );
-  return sceneNodeFromSnapshotViaBoundarySchema(
-    materializeNodeSnapshot(node),
+  return sceneNodeFromSnapshotBackingViaBoundarySchema(
+    node,
     instanceRevision: instanceRevision,
   );
 }

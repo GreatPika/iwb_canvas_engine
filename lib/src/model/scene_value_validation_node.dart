@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
 import '../contract/validated/instance_revision_value.dart';
@@ -41,6 +42,25 @@ void sceneValidateNodeSnapshot(
   );
 }
 
+void sceneValidateNodeSnapshotBacking(
+  NodeSnapshotBacking node, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+  SceneValidationPathSurface pathSurface = SceneValidationPathSurface.snapshot,
+}) {
+  _sceneValidateSnapshotNodeBackingBaseFields(
+    node,
+    field: field,
+    onError: onError,
+  );
+  _sceneValidateSnapshotNodeBackingTypeFields(
+    node,
+    field: field,
+    onError: onError,
+    pathSurface: pathSurface,
+  );
+}
+
 void sceneValidateNode(
   SceneNode node, {
   required String field,
@@ -57,6 +77,19 @@ void _sceneValidateSnapshotNodeBaseFields(
 }) {
   _sceneValidateNodeBaseFields(
     fields: _snapshotNodeBaseValidationFields(node),
+    field: field,
+    onError: onError,
+    allowZeroInstanceRevision: true,
+  );
+}
+
+void _sceneValidateSnapshotNodeBackingBaseFields(
+  NodeSnapshotBacking node, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  _sceneValidateNodeBaseFields(
+    fields: _snapshotNodeBackingBaseValidationFields(node),
     field: field,
     onError: onError,
     allowZeroInstanceRevision: true,
@@ -180,6 +213,54 @@ void _sceneValidateSnapshotNodeTypeFields(
   }
 }
 
+void _sceneValidateSnapshotNodeBackingTypeFields(
+  NodeSnapshotBacking node, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+  required SceneValidationPathSurface pathSurface,
+}) {
+  switch (node) {
+    case ImageNodeSnapshotBacking image:
+      image_validation.sceneValidateImageNodeSnapshotBacking(
+        image,
+        field: field,
+        onError: onError,
+      );
+    case TextNodeSnapshotBacking text:
+      text_validation.sceneValidateTextNodeSnapshotBacking(
+        text,
+        field: field,
+        onError: onError,
+      );
+    case StrokeNodeSnapshotBacking stroke:
+      stroke_validation.sceneValidateStrokeNodeSnapshotBacking(
+        stroke,
+        field: field,
+        onError: onError,
+        pathSurface: pathSurface,
+      );
+    case LineNodeSnapshotBacking line:
+      line_validation.sceneValidateLineNodeSnapshotBacking(
+        line,
+        field: field,
+        onError: onError,
+        pathSurface: pathSurface,
+      );
+    case RectNodeSnapshotBacking rect:
+      rect_validation.sceneValidateRectNodeSnapshotBacking(
+        rect,
+        field: field,
+        onError: onError,
+      );
+    case PathNodeSnapshotBacking path:
+      path_validation.sceneValidatePathNodeSnapshotBacking(
+        path,
+        field: field,
+        onError: onError,
+      );
+  }
+}
+
 void _sceneValidateRuntimeNodeTypeFields(
   SceneNode node, {
   required String field,
@@ -235,6 +316,18 @@ void _sceneValidateRuntimeNodeTypeFields(
 }
 
 _NodeBaseValidationFields _snapshotNodeBaseValidationFields(NodeSnapshot node) {
+  return (
+    id: node.id,
+    instanceRevision: node.instanceRevision,
+    transform: node.transform,
+    hitPadding: node.hitPadding,
+    opacity: node.opacity,
+  );
+}
+
+_NodeBaseValidationFields _snapshotNodeBackingBaseValidationFields(
+  NodeSnapshotBacking node,
+) {
   return (
     id: node.id,
     instanceRevision: node.instanceRevision,

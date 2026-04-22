@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/unsafe_snapshot_materialization.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
     show
@@ -22,7 +23,11 @@ import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/text_layout.dart'
     show TextLayoutRequest;
 import 'package:iwb_canvas_engine/src/serialization/scene_codec.dart'
-    show debugGuardDecodeForTest, debugGuardEncodeForTest, encodeSceneDocument;
+    show
+        debugEncodeCanonicalSnapshotForTest,
+        debugGuardDecodeForTest,
+        debugGuardEncodeForTest,
+        encodeSceneDocument;
 
 Map<String, Object?> _minimalSceneJson() {
   return <String, Object?>{
@@ -103,7 +108,7 @@ void _expectSameSceneDataContract(
 }
 
 SceneSnapshot _duplicateNodeSnapshotFromInternalBypass() {
-  return materializeSceneSnapshot(
+  return unsafeMaterializeSceneSnapshot(
     sceneSnapshotBackingFromValidated(
       backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
         nodes: <NodeSnapshotBacking>[
@@ -153,6 +158,31 @@ void main() {
 
     expect(snapshot.layers.length, 1);
   });
+
+  test(
+    'debugEncodeCanonicalSnapshotForTest returns canonical parsed JSON map',
+    () {
+      final encoded = debugEncodeCanonicalSnapshotForTest(
+        SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-debug-encode',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'rect-debug-encode',
+                  size: const Size(4, 5),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      expect(encoded['schemaVersion'], schemaVersionWrite);
+      expect(encoded['backgroundLayer'], isA<Map<String, dynamic>>());
+      expect(encoded['layers'], isA<List<Object?>>());
+    },
+  );
 
   test('SceneBuilder.buildFromJson accepts Map<String, Object?>', () {
     final decodedRaw =
@@ -205,6 +235,22 @@ void main() {
       expect(
         encodeScene(SceneBuilder.buildFromJson(raw)),
         encodeScene(decodeScene(Map<String, Object?>.from(raw))),
+      );
+    },
+  );
+
+  test(
+    'debugEncodeCanonicalSnapshotForTest rejects unsupported snapshot node subtypes',
+    () {
+      expect(
+        () => debugEncodeCanonicalSnapshotForTest(_UnsupportedSceneSnapshot()),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('Unsupported NodeSnapshot subtype'),
+          ),
+        ),
       );
     },
   );
@@ -2486,7 +2532,7 @@ void main() {
 
   test('encodeScene enforces grid and palette contracts', () {
     // INV:INV-SER-JSON-GRID-PALETTE-CONTRACTS
-    final invalidGridScene = materializeSceneSnapshot(
+    final invalidGridScene = unsafeMaterializeSceneSnapshot(
       SceneSnapshotBacking(
         layers: <ContentLayerSnapshotBacking>[
           contentLayerSnapshotBackingFromValidated(id: 'layer-auto-4'),
@@ -2507,7 +2553,7 @@ void main() {
       ),
     );
 
-    final enabledGridScene = materializeSceneSnapshot(
+    final enabledGridScene = unsafeMaterializeSceneSnapshot(
       SceneSnapshotBacking(
         layers: <ContentLayerSnapshotBacking>[
           contentLayerSnapshotBackingFromValidated(id: 'layer-auto-5'),
@@ -2530,7 +2576,7 @@ void main() {
 
     expect(
       () => encodeScene(
-        materializeSceneSnapshot(
+        unsafeMaterializeSceneSnapshot(
           SceneSnapshotBacking(
             layers: <ContentLayerSnapshotBacking>[
               contentLayerSnapshotBackingFromValidated(id: 'layer-auto-6'),
@@ -2549,7 +2595,7 @@ void main() {
     );
     expect(
       () => encodeScene(
-        materializeSceneSnapshot(
+        unsafeMaterializeSceneSnapshot(
           SceneSnapshotBacking(
             layers: <ContentLayerSnapshotBacking>[
               contentLayerSnapshotBackingFromValidated(id: 'layer-auto-7'),
@@ -2568,7 +2614,7 @@ void main() {
     );
     expect(
       () => encodeScene(
-        materializeSceneSnapshot(
+        unsafeMaterializeSceneSnapshot(
           SceneSnapshotBacking(
             layers: <ContentLayerSnapshotBacking>[
               contentLayerSnapshotBackingFromValidated(id: 'layer-auto-8'),
@@ -2636,7 +2682,7 @@ void main() {
         ),
       );
 
-      final oversizedPaletteScene = materializeSceneSnapshot(
+      final oversizedPaletteScene = unsafeMaterializeSceneSnapshot(
         SceneSnapshotBacking(
           layers: <ContentLayerSnapshotBacking>[
             contentLayerSnapshotBackingFromValidated(
@@ -2667,7 +2713,7 @@ void main() {
   );
 
   test('encodeScene rejects invalid numeric fields', () {
-    final cameraNaN = materializeSceneSnapshot(
+    final cameraNaN = unsafeMaterializeSceneSnapshot(
       SceneSnapshotBacking(
         layers: <ContentLayerSnapshotBacking>[
           contentLayerSnapshotBackingFromValidated(id: 'layer-auto-9'),
@@ -2910,6 +2956,40 @@ void main() {
     expect(node['instanceRevision'], isA<int>());
     expect(node['instanceRevision'], greaterThanOrEqualTo(1));
   });
+}
+
+final class _UnsupportedSceneSnapshot extends SceneSnapshot {
+  _UnsupportedSceneSnapshot();
+
+  @override
+  BackgroundLayerSnapshot get backgroundLayer =>
+      _UnsupportedBackgroundLayerSnapshot();
+}
+
+final class _UnsupportedBackgroundLayerSnapshot
+    extends BackgroundLayerSnapshot {
+  _UnsupportedBackgroundLayerSnapshot();
+
+  @override
+  List<NodeSnapshot> get nodes => const <NodeSnapshot>[
+    _UnsupportedNodeSnapshot(),
+  ];
+}
+
+final class _UnsupportedNodeSnapshot extends NodeSnapshot {
+  const _UnsupportedNodeSnapshot()
+    : super(
+        id: 'unsupported-serialization-node',
+        instanceRevision: 1,
+        transform: Transform2D.identity,
+        opacity: 1,
+        hitPadding: 0,
+        isVisible: true,
+        isSelectable: true,
+        isLocked: false,
+        isDeletable: true,
+        isTransformable: true,
+      );
 }
 
 class _BadOpacityNode extends SceneNode {

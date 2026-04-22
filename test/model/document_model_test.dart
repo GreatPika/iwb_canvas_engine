@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/unsafe_snapshot_materialization.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
@@ -15,7 +16,7 @@ import 'package:iwb_canvas_engine/src/model/document.dart';
 
 void main() {
   SceneSnapshot duplicateNodeSnapshotFromInternalBypass() {
-    return materializeSceneSnapshot(
+    return unsafeMaterializeSceneSnapshot(
       sceneSnapshotBackingFromValidated(
         layers: <ContentLayerSnapshotBacking>[
           contentLayerSnapshotBackingFromValidated(
@@ -211,7 +212,7 @@ void main() {
     () {
       expect(
         () => txnSceneFromSnapshot(
-          materializeSceneSnapshot(
+          unsafeMaterializeSceneSnapshot(
             SceneSnapshotBacking(
               background: const BackgroundSnapshotBacking(
                 grid: GridSnapshotBacking(isEnabled: true, cellSize: 0.5),
@@ -1849,6 +1850,29 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test(
+    'nullable patch value(null) applies as the canonical explicit-null write',
+    () {
+      final rect = RectNode(
+        id: 'rect-null-canonical',
+        size: const Size(1, 1),
+        fillColor: const Color(0xFF123456),
+      );
+
+      expect(
+        txnApplyNodePatch(
+          rect,
+          RectNodePatch(
+            id: 'rect-null-canonical',
+            fillColor: PatchField<Color?>.value(null),
+          ),
+        ),
+        isTrue,
+      );
+      expect(rect.fillColor, isNull);
+    },
+  );
 
   test(
     'node patch validates only present fields and rejects invalid write values',

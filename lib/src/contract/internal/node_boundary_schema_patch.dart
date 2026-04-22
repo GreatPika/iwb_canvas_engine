@@ -305,10 +305,6 @@ PatchField<T?> _validateNullablePatchField<T>(
   required T Function(T value) transformValue,
 }) {
   if (patch.isAbsent || patch.isNullValue) return patch;
-  final rawValue = patch.value;
-  if (rawValue == null) {
-    return PatchField<T?>.value(null);
-  }
-  final value = transformValue(rawValue);
+  final value = transformValue(patch.value as T);
   return PatchField<T?>.value(value);
 }

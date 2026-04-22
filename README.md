@@ -113,7 +113,8 @@ class _CanvasScreenState extends State<CanvasScreen> {
   pointer callbacks from an already-mounted `SceneView` are ignored.
 - Supported node families are image, text, stroke, line, rect, and path.
 - Use `NodeSpec` to create nodes and `NodePatch` + `PatchField` to apply
-  partial updates.
+  partial updates. For nullable fields, `PatchField.value(null)` canonicalizes
+  to the same explicit-null state as `PatchField.nullValue()`.
 - Use `SceneController` for runtime ownership, `SceneView` for the Flutter host
   surface, and `SceneBuilder` / `encodeScene*` / `decodeScene*` for import and
   serialization.
@@ -129,6 +130,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - Current mainline JSON read set: `{7}`
 - `SceneBuilder.buildFromSnapshot(...)` and `SceneBuilder.buildFromJson(...)`
   validate and canonicalize data without requiring a controller.
+- Aggregate public boundary values such as `SceneSnapshot` and `NodePatch`
+  canonicalize supported nested boundary objects eagerly and reject
+  unsupported subtypes at admission.
 - `encodeScene(...)` / `encodeSceneToJson(...)` validate before serializing.
 - `decodeScene(...)` / `decodeSceneFromJson(...)` validate before returning a
   `SceneSnapshot`.

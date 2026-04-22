@@ -1,4 +1,5 @@
 import '../contract/snapshot.dart';
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/validated/font_family_value.dart';
 import '../contract/validated/text_content_value.dart';
 import '../core/nodes.dart';
@@ -35,6 +36,27 @@ void sceneValidateTextNode(
     fontFamily: text.fontFamily,
     maxWidth: text.maxWidth,
     lineHeight: text.lineHeight,
+    field: field,
+    onError: onError,
+  );
+}
+
+void sceneValidateTextNodeSnapshotBacking(
+  TextNodeSnapshotBacking text, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  _sceneValidateTextNodeFields(
+    textValue: text.text,
+    fontSize: text.fontSize,
+    fontFamily: text.fontFamily,
+    maxWidth: text.maxWidth,
+    lineHeight: text.lineHeight,
+    field: field,
+    onError: onError,
+  );
+  _sceneValidateTextSnapshotBackingDerivedBounds(
+    text,
     field: field,
     onError: onError,
   );
@@ -124,6 +146,40 @@ void _sceneValidateTextSnapshotDerivedBounds(
   required SceneValidationErrorReporter onError,
 }) {
   final derivedBounds = TextLayoutRequest.forSnapshot(text).measure();
+  sceneValidateDoubleInRange(
+    derivedBounds.width,
+    field: '$field.derivedBounds.w',
+    min: 0,
+    max: sceneSizeMax,
+    onError: onError,
+  );
+  sceneValidateDoubleInRange(
+    derivedBounds.height,
+    field: '$field.derivedBounds.h',
+    min: 0,
+    max: sceneSizeMax,
+    onError: onError,
+  );
+}
+
+void _sceneValidateTextSnapshotBackingDerivedBounds(
+  TextNodeSnapshotBacking text, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  final derivedBounds = TextLayoutRequest(
+    text: text.text,
+    color: text.color,
+    fontSize: text.fontSize,
+    isBold: text.isBold,
+    isItalic: text.isItalic,
+    isUnderline: text.isUnderline,
+    textAlign: text.align,
+    fontFamily: text.fontFamily,
+    lineHeight: text.lineHeight,
+    maxWidth: text.maxWidth,
+    textDirection: text.textDirection,
+  ).measure();
   sceneValidateDoubleInRange(
     derivedBounds.width,
     field: '$field.derivedBounds.w',

@@ -1,7 +1,7 @@
 import '../node_spec.dart';
 import 'node_boundary_schema.dart';
-import 'node_spec_boundary_impl.dart';
 import 'node_spec_backing.dart';
+import 'node_spec_boundary_impl.dart';
 
 typedef _NodeSpecBackingBuilder<TBacking extends NodeSpecBacking, TFields> =
     TBacking Function({
@@ -14,31 +14,39 @@ typedef _NodeSpecMaterializer<
   TBacking extends NodeSpecBacking
 > = TSpec Function(TBacking backing);
 
-NodeSpec materializeNodeSpec(NodeSpecBacking backing) {
-  return materializeNodeSpecForInternalUse(backing);
-}
-
-ImageNodeSpec materializeImageNodeSpec(ImageNodeSpecBacking backing) {
+ImageNodeSpec _materializeImageNodeSpecFromValidated(
+  ImageNodeSpecBacking backing,
+) {
   return materializeNodeSpecForInternalUse(backing) as ImageNodeSpec;
 }
 
-TextNodeSpec materializeTextNodeSpec(TextNodeSpecBacking backing) {
+TextNodeSpec _materializeTextNodeSpecFromValidated(
+  TextNodeSpecBacking backing,
+) {
   return materializeNodeSpecForInternalUse(backing) as TextNodeSpec;
 }
 
-StrokeNodeSpec materializeStrokeNodeSpec(StrokeNodeSpecBacking backing) {
+StrokeNodeSpec _materializeStrokeNodeSpecFromValidated(
+  StrokeNodeSpecBacking backing,
+) {
   return materializeNodeSpecForInternalUse(backing) as StrokeNodeSpec;
 }
 
-LineNodeSpec materializeLineNodeSpec(LineNodeSpecBacking backing) {
+LineNodeSpec _materializeLineNodeSpecFromValidated(
+  LineNodeSpecBacking backing,
+) {
   return materializeNodeSpecForInternalUse(backing) as LineNodeSpec;
 }
 
-RectNodeSpec materializeRectNodeSpec(RectNodeSpecBacking backing) {
+RectNodeSpec _materializeRectNodeSpecFromValidated(
+  RectNodeSpecBacking backing,
+) {
   return materializeNodeSpecForInternalUse(backing) as RectNodeSpec;
 }
 
-PathNodeSpec materializePathNodeSpec(PathNodeSpecBacking backing) {
+PathNodeSpec _materializePathNodeSpecFromValidated(
+  PathNodeSpecBacking backing,
+) {
   return materializeNodeSpecForInternalUse(backing) as PathNodeSpec;
 }
 
@@ -63,7 +71,7 @@ ImageNodeSpec imageNodeSpecFromValidated({
     common: common,
     fields: fields,
     buildBacking: imageNodeSpecBackingFromValidated,
-    materialize: materializeImageNodeSpec,
+    materialize: _materializeImageNodeSpecFromValidated,
   );
 }
 
@@ -75,7 +83,7 @@ TextNodeSpec textNodeSpecFromValidated({
     common: common,
     fields: fields,
     buildBacking: textNodeSpecBackingFromValidated,
-    materialize: materializeTextNodeSpec,
+    materialize: _materializeTextNodeSpecFromValidated,
   );
 }
 
@@ -87,7 +95,7 @@ StrokeNodeSpec strokeNodeSpecFromValidated({
     common: common,
     fields: fields,
     buildBacking: strokeNodeSpecBackingFromValidated,
-    materialize: materializeStrokeNodeSpec,
+    materialize: _materializeStrokeNodeSpecFromValidated,
   );
 }
 
@@ -99,7 +107,7 @@ LineNodeSpec lineNodeSpecFromValidated({
     common: common,
     fields: fields,
     buildBacking: lineNodeSpecBackingFromValidated,
-    materialize: materializeLineNodeSpec,
+    materialize: _materializeLineNodeSpecFromValidated,
   );
 }
 
@@ -111,7 +119,7 @@ RectNodeSpec rectNodeSpecFromValidated({
     common: common,
     fields: fields,
     buildBacking: rectNodeSpecBackingFromValidated,
-    materialize: materializeRectNodeSpec,
+    materialize: _materializeRectNodeSpecFromValidated,
   );
 }
 
@@ -123,6 +131,6 @@ PathNodeSpec pathNodeSpecFromValidated({
     common: common,
     fields: fields,
     buildBacking: pathNodeSpecBackingFromValidated,
-    materialize: materializePathNodeSpec,
+    materialize: _materializePathNodeSpecFromValidated,
   );
 }

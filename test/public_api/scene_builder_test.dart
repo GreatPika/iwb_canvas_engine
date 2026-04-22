@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/unsafe_snapshot_materialization.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
     show kMaxPaletteItems, kMaxStrokePointsPerNode, sceneCoordMax;
 import '../support/scene_builder_json_fixtures.dart';
@@ -59,7 +60,7 @@ void _expectSameSceneDataContract(
 }
 
 SceneSnapshot _duplicateNodeSnapshotFromInternalBypass() {
-  return materializeSceneSnapshot(
+  return unsafeMaterializeSceneSnapshot(
     sceneSnapshotBackingFromValidated(
       backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
         nodes: <NodeSnapshotBacking>[
@@ -186,7 +187,7 @@ void main() {
               jsonValues: <Object?>[
                 for (var i = 0; i < kMaxPaletteItems + 1; i++) '#FF000000',
               ],
-              snapshot: materializeSceneSnapshot(
+              snapshot: unsafeMaterializeSceneSnapshot(
                 SceneSnapshotBacking(
                   palette: ScenePaletteSnapshotBacking(
                     penColors: <Color>[
@@ -207,7 +208,7 @@ void main() {
               jsonValues: <Object?>[
                 for (var i = 0; i < kMaxPaletteItems + 1; i++) '#FFFFFFFF',
               ],
-              snapshot: materializeSceneSnapshot(
+              snapshot: unsafeMaterializeSceneSnapshot(
                 SceneSnapshotBacking(
                   palette: ScenePaletteSnapshotBacking(
                     backgroundColors: <Color>[
@@ -228,7 +229,7 @@ void main() {
               jsonValues: <Object?>[
                 for (var i = 0; i < kMaxPaletteItems + 1; i++) i + 1,
               ],
-              snapshot: materializeSceneSnapshot(
+              snapshot: unsafeMaterializeSceneSnapshot(
                 SceneSnapshotBacking(
                   palette: ScenePaletteSnapshotBacking(
                     gridSizes: <double>[

@@ -22,6 +22,18 @@ abstract interface class ScenePaletteSnapshotBackingCarrier {
   ScenePaletteSnapshotBacking get scenePaletteSnapshotBacking;
 }
 
+abstract interface class CameraSnapshotBackingCarrier {
+  CameraSnapshotBacking get cameraSnapshotBacking;
+}
+
+abstract interface class BackgroundSnapshotBackingCarrier {
+  BackgroundSnapshotBacking get backgroundSnapshotBacking;
+}
+
+abstract interface class GridSnapshotBackingCarrier {
+  GridSnapshotBacking get gridSnapshotBacking;
+}
+
 abstract interface class NodeSnapshotBackingCarrier {
   NodeSnapshotBacking get nodeSnapshotBacking;
 }
@@ -34,6 +46,12 @@ final Expando<ContentLayerSnapshotBacking> _contentLayerBackingCache =
     Expando<ContentLayerSnapshotBacking>('contentLayerSnapshotBacking');
 final Expando<ScenePaletteSnapshotBacking> _paletteBackingCache =
     Expando<ScenePaletteSnapshotBacking>('scenePaletteSnapshotBacking');
+final Expando<CameraSnapshotBacking> _cameraBackingCache =
+    Expando<CameraSnapshotBacking>('cameraSnapshotBacking');
+final Expando<BackgroundSnapshotBacking> _backgroundBackingCache =
+    Expando<BackgroundSnapshotBacking>('backgroundSnapshotBacking');
+final Expando<GridSnapshotBacking> _gridBackingCache =
+    Expando<GridSnapshotBacking>('gridSnapshotBacking');
 final Expando<NodeSnapshotBacking> _nodeSnapshotBackingCache =
     Expando<NodeSnapshotBacking>('nodeSnapshotBacking');
 
@@ -68,6 +86,27 @@ final _scenePaletteSnapshotBackingResolver =
       rebuild: _rebuildScenePaletteSnapshotBacking,
     );
 
+final _cameraSnapshotBackingResolver =
+    BoundaryBackingResolver<CameraSnapshot, CameraSnapshotBacking>(
+      cache: _cameraBackingCache,
+      readCarrier: _cameraSnapshotBackingFromCarrier,
+      rebuild: _rebuildCameraSnapshotBacking,
+    );
+
+final _backgroundSnapshotBackingResolver =
+    BoundaryBackingResolver<BackgroundSnapshot, BackgroundSnapshotBacking>(
+      cache: _backgroundBackingCache,
+      readCarrier: _backgroundSnapshotBackingFromCarrier,
+      rebuild: _rebuildBackgroundSnapshotBacking,
+    );
+
+final _gridSnapshotBackingResolver =
+    BoundaryBackingResolver<GridSnapshot, GridSnapshotBacking>(
+      cache: _gridBackingCache,
+      readCarrier: _gridSnapshotBackingFromCarrier,
+      rebuild: _rebuildGridSnapshotBacking,
+    );
+
 final _nodeSnapshotBackingResolver =
     BoundaryBackingResolver<NodeSnapshot, NodeSnapshotBacking>(
       cache: _nodeSnapshotBackingCache,
@@ -95,6 +134,18 @@ ScenePaletteSnapshotBacking scenePaletteSnapshotBackingOf(
 ) {
   return _scenePaletteSnapshotBackingResolver.resolve(palette);
 }
+
+CameraSnapshotBacking cameraSnapshotBackingOf(CameraSnapshot value) =>
+    _cameraSnapshotBackingResolver.resolve(value);
+
+BackgroundSnapshotBacking backgroundSnapshotBackingOf(
+  BackgroundSnapshot value,
+) {
+  return _backgroundSnapshotBackingResolver.resolve(value);
+}
+
+GridSnapshotBacking gridSnapshotBackingOf(GridSnapshot value) =>
+    _gridSnapshotBackingResolver.resolve(value);
 
 NodeSnapshotBacking nodeSnapshotBackingOf(NodeSnapshot snapshot) =>
     _nodeSnapshotBackingResolver.resolve(snapshot);
@@ -136,6 +187,31 @@ ScenePaletteSnapshotBacking? _scenePaletteSnapshotBackingFromCarrier(
   );
 }
 
+CameraSnapshotBacking? _cameraSnapshotBackingFromCarrier(CameraSnapshot value) {
+  return readBoundaryBackingCarrier(
+    value,
+    (carrier) =>
+        (carrier as CameraSnapshotBackingCarrier).cameraSnapshotBacking,
+  );
+}
+
+BackgroundSnapshotBacking? _backgroundSnapshotBackingFromCarrier(
+  BackgroundSnapshot value,
+) {
+  return readBoundaryBackingCarrier(
+    value,
+    (carrier) =>
+        (carrier as BackgroundSnapshotBackingCarrier).backgroundSnapshotBacking,
+  );
+}
+
+GridSnapshotBacking? _gridSnapshotBackingFromCarrier(GridSnapshot value) {
+  return readBoundaryBackingCarrier(
+    value,
+    (carrier) => (carrier as GridSnapshotBackingCarrier).gridSnapshotBacking,
+  );
+}
+
 NodeSnapshotBacking? _nodeSnapshotBackingFromCarrier(NodeSnapshot snapshot) {
   return readBoundaryBackingCarrier(
     snapshot,
@@ -154,8 +230,8 @@ SceneSnapshotBacking _rebuildSceneSnapshotBacking(SceneSnapshot snapshot) {
         .map(contentLayerSnapshotBackingOf)
         .toList(growable: false),
     backgroundLayer: backgroundLayerSnapshotBackingOf(snapshot.backgroundLayer),
-    camera: _cameraSnapshotBackingOf(snapshot.camera),
-    background: _backgroundSnapshotBackingOf(snapshot.background),
+    camera: cameraSnapshotBackingOf(snapshot.camera),
+    background: backgroundSnapshotBackingOf(snapshot.background),
     palette: scenePaletteSnapshotBackingOf(snapshot.palette),
   );
 }
@@ -199,6 +275,42 @@ ScenePaletteSnapshotBacking _rebuildScenePaletteSnapshotBacking(
     penColors: palette.penColors,
     backgroundColors: palette.backgroundColors,
     gridSizes: palette.gridSizes,
+  );
+}
+
+CameraSnapshotBacking _rebuildCameraSnapshotBacking(CameraSnapshot value) {
+  requireExactBoundaryRuntimeType(
+    value: value,
+    exactType: CameraSnapshot,
+    typeName: 'CameraSnapshot',
+  );
+  return CameraSnapshotBacking(offset: value.offset);
+}
+
+BackgroundSnapshotBacking _rebuildBackgroundSnapshotBacking(
+  BackgroundSnapshot value,
+) {
+  requireExactBoundaryRuntimeType(
+    value: value,
+    exactType: BackgroundSnapshot,
+    typeName: 'BackgroundSnapshot',
+  );
+  return BackgroundSnapshotBacking(
+    color: value.color,
+    grid: gridSnapshotBackingOf(value.grid),
+  );
+}
+
+GridSnapshotBacking _rebuildGridSnapshotBacking(GridSnapshot value) {
+  requireExactBoundaryRuntimeType(
+    value: value,
+    exactType: GridSnapshot,
+    typeName: 'GridSnapshot',
+  );
+  return GridSnapshotBacking(
+    isEnabled: value.isEnabled,
+    cellSize: value.cellSize,
+    color: value.color,
   );
 }
 
@@ -363,18 +475,22 @@ final class _MaterializedScenePaletteSnapshot extends ScenePaletteSnapshot
   List<double> get gridSizes => scenePaletteSnapshotBacking.gridSizes;
 }
 
-final class _MaterializedCameraSnapshot extends CameraSnapshot {
+final class _MaterializedCameraSnapshot extends CameraSnapshot
+    implements CameraSnapshotBackingCarrier {
   _MaterializedCameraSnapshot(this.cameraSnapshotBacking) : super();
 
+  @override
   final CameraSnapshotBacking cameraSnapshotBacking;
 
   @override
   Offset get offset => cameraSnapshotBacking.offset;
 }
 
-final class _MaterializedBackgroundSnapshot extends BackgroundSnapshot {
+final class _MaterializedBackgroundSnapshot extends BackgroundSnapshot
+    implements BackgroundSnapshotBackingCarrier {
   _MaterializedBackgroundSnapshot(this.backgroundSnapshotBacking) : super();
 
+  @override
   final BackgroundSnapshotBacking backgroundSnapshotBacking;
 
   late final GridSnapshot _grid = materializeGridSnapshotForInternalUse(
@@ -388,9 +504,11 @@ final class _MaterializedBackgroundSnapshot extends BackgroundSnapshot {
   GridSnapshot get grid => _grid;
 }
 
-final class _MaterializedGridSnapshot extends GridSnapshot {
+final class _MaterializedGridSnapshot extends GridSnapshot
+    implements GridSnapshotBackingCarrier {
   _MaterializedGridSnapshot(this.gridSnapshotBacking) : super();
 
+  @override
   final GridSnapshotBacking gridSnapshotBacking;
 
   @override
@@ -758,20 +876,3 @@ const List<Offset> _placeholderStrokePoints = <Offset>[
   Offset.zero,
   Offset(1, 0),
 ];
-
-CameraSnapshotBacking _cameraSnapshotBackingOf(CameraSnapshot value) {
-  return CameraSnapshotBacking(offset: value.offset);
-}
-
-BackgroundSnapshotBacking _backgroundSnapshotBackingOf(
-  BackgroundSnapshot value,
-) {
-  return BackgroundSnapshotBacking(
-    color: value.color,
-    grid: GridSnapshotBacking(
-      isEnabled: value.grid.isEnabled,
-      cellSize: value.grid.cellSize,
-      color: value.grid.color,
-    ),
-  );
-}

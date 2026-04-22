@@ -105,6 +105,24 @@ RuntimeNodeCommonFields runtimeCommonFromSnapshot(
   );
 }
 
+RuntimeNodeCommonFields runtimeCommonFromSnapshotBacking(
+  NodeSnapshotBacking common, {
+  required int instanceRevision,
+}) {
+  return (
+    id: common.id,
+    instanceRevision: instanceRevision,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+  );
+}
+
 RuntimeNodeCommonFields runtimeCommonFromSpec(
   NodeSpecCommonSchemaFields common, {
   required NodeId fallbackId,

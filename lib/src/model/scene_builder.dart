@@ -3,7 +3,6 @@ import '../contract/scene_data_exception.dart';
 import '../contract/snapshot.dart';
 import 'scene_builder_decode_json.dart';
 import 'scene_from_import_draft.dart';
-import 'scene_import_draft.dart';
 import 'scene_import_draft_from_snapshot.dart';
 import 'scene_policy.dart';
 import 'scene_snapshot_from_scene.dart';

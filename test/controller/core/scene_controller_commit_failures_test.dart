@@ -5,6 +5,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart'
     show kMaxContentLayersPerScene;
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/unsafe_snapshot_materialization.dart';
 import 'package:iwb_canvas_engine/src/controller/change_set.dart';
 import 'package:iwb_canvas_engine/src/controller/committed_store_state.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/repaint_flag.dart';
@@ -32,7 +33,7 @@ import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
 void main() {
   SceneSnapshot duplicateNodeSnapshotFromInternalBypass() {
-    return materializeSceneSnapshot(
+    return unsafeMaterializeSceneSnapshot(
       sceneSnapshotBackingFromValidated(
         backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
           nodes: <NodeSnapshotBacking>[
@@ -499,7 +500,7 @@ void main() {
                 'Field layers[0].nodes[0].svgPathData must be valid SVG path data.',
           ),
           (
-            snapshot: materializeSceneSnapshot(
+            snapshot: unsafeMaterializeSceneSnapshot(
               SceneSnapshotBacking(
                 palette: ScenePaletteSnapshotBacking(
                   penColors: const <Color>[],

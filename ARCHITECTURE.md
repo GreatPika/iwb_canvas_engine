@@ -262,8 +262,9 @@ The following rules are architectural, not stylistic.
 2. **`contract` owns the public boundary.** Downstream layers may consume
    canonical contract surfaces, but external callers should use only the public
    barrel.
-3. **`model` owns document conversion and structural canonicalization.**
-   Downstream non-model code should use canonical model facades instead of
+3. **`model` owns document conversion and validated import proof minting.**
+   `ValidatedSceneImportDraft` is minted only by model validation owners, and
+   downstream non-model code should use canonical model facades instead of
    reaching into internal model owners directly.
 4. **`interactive` is model-free.** Interaction code does not own snapshot/
    runtime conversion logic.
@@ -284,7 +285,9 @@ Two contract-internal files are intentionally shared with `model` and
 - `lib/src/contract/internal/snapshot_fast_path.dart`
 
 These are exceptions. Other contract-internal modules are not general-purpose
-downstream extension points.
+downstream extension points. In particular, `snapshot_fast_path.dart` is a
+validated-only bridge surface; explicit unsafe raw materializers stay in
+family-specific contract-internal owners and are not bridge surfaces.
 
 ## 7. Runtime building blocks
 
@@ -481,13 +484,14 @@ Typical flow:
 1. boundary data arrives as snapshot, map, or JSON string
 2. the boundary selects the caller-visible import diagnostic surface
 3. the boundary validates shape, values, limits, and schema version
-4. the model validation owners apply invariants through that selected path
-   surface
-5. the model layer canonicalizes the document shape into a validated
+4. public boundary admission canonicalizes supported nested boundary graphs to
+   exact built-in contract values and rejects unsupported subtypes eagerly
+5. the model validation owners apply invariants through the selected path
+   surface and canonicalize the document shape into a validated
    `SceneImportDraft` proof stage before any draft-to-output materialization
 6. runtime-scene materialization is performed only from
-   `ValidatedSceneImportDraft` inside engine-owned paths; raw snapshots enter
-   through `sceneImportFromSnapshot(...)` only
+   `ValidatedSceneImportDraft` inside engine-owned paths using validated helper
+   seams only; raw snapshots enter through `sceneImportFromSnapshot(...)` only
 7. the supported public result is a canonical `SceneSnapshot`
 
 Diagnostic-path rule:
@@ -679,8 +683,8 @@ alone.
 - `tool/check_guardrails.dart`  
   Guards public-surface hermeticity, controller/write boundaries, interactive
   mutation boundaries, raw callback-typedef collection leaks, contract/model
-  architecture boundaries, the validated import materialization seam, and
-  other structural rules.
+  architecture boundaries, the validated import materialization seam, the
+  validated-versus-unsafe helper split, and other structural rules.
 - `tool/check_invariant_coverage.dart`  
   Checks that invariant ids, required/regression proof surfaces, and required
   verification-step reachability stay aligned.

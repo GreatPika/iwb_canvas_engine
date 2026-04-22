@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/contract/scene_validation_diagnostics.dart'
     show SceneDataDiagnosticDescriptor;
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/unsafe_snapshot_materialization.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart'
     show sceneCoordMax, sceneSizeMax;
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
@@ -31,7 +32,9 @@ import 'package:iwb_canvas_engine/src/model/scene_import_draft.dart';
 import 'package:iwb_canvas_engine/src/model/scene_from_snapshot.dart'
     show sceneImportFromSnapshot;
 import 'package:iwb_canvas_engine/src/model/scene_node_boundary_mapping.dart'
-    show sceneNodeSnapshotFromViaBoundarySchema;
+    show
+        sceneNodeFromSnapshotViaBoundarySchema,
+        sceneNodeSnapshotFromViaBoundarySchema;
 import 'package:iwb_canvas_engine/src/model/scene_policy.dart';
 import 'package:iwb_canvas_engine/src/model/scene_value_validation.dart'
     as value_validation;
@@ -47,7 +50,7 @@ Map<String, Object?> _minimalSceneJson() {
 }
 
 SceneSnapshot _duplicateLayerIdSnapshotFromInternalBypass() {
-  return materializeSceneSnapshot(
+  return unsafeMaterializeSceneSnapshot(
     sceneSnapshotBackingFromValidated(
       layers: <ContentLayerSnapshotBacking>[
         contentLayerSnapshotBackingFromValidated(
@@ -72,7 +75,7 @@ SceneSnapshot _duplicateLayerIdSnapshotFromInternalBypass() {
 }
 
 SceneSnapshot _duplicateBackgroundNodeSnapshotFromInternalBypass() {
-  return materializeSceneSnapshot(
+  return unsafeMaterializeSceneSnapshot(
     sceneSnapshotBackingFromValidated(
       backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
         nodes: <NodeSnapshotBacking>[
@@ -584,6 +587,39 @@ void main() {
   );
 
   test(
+    'ScenePolicy.validateImportDraft preserves malformed raw-backing diagnostics for node values',
+    () {
+      final rawDraft = SceneImportDraft.fromBacking(
+        sceneSnapshotBackingFromValidated(
+          layers: <ContentLayerSnapshotBacking>[
+            contentLayerSnapshotBackingFromValidated(
+              id: 'layer-auto-raw-draft-invalid',
+              nodes: <NodeSnapshotBacking>[
+                const RectNodeSnapshotBacking(
+                  id: 'rect-invalid',
+                  size: Size(-1, 1),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      expect(
+        () => ScenePolicy.validateImportDraft(rawDraft),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == 'layers[0].nodes[0].size.w',
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
     'scene node boundary mapping materializes runtime nodes to snapshots',
     () {
       final snapshot = sceneNodeSnapshotFromViaBoundarySchema(
@@ -714,6 +750,96 @@ void main() {
     expect(textNode.localBounds.width, closeTo(expectedSize.width, 0.001));
     expect(textNode.localBounds.height, closeTo(expectedSize.height, 0.001));
   });
+
+  test(
+    'snapshot validation and boundary mapping cover exact snapshot node families',
+    () {
+      final snapshots = <NodeSnapshot>[
+        ImageNodeSnapshot(
+          id: 'img-coverage',
+          imageId: 'asset:coverage',
+          size: const Size(40, 30),
+          naturalSize: const Size(80, 60),
+        ),
+        TextNodeSnapshot(
+          id: 'text-coverage',
+          text: 'coverage',
+          fontSize: 18,
+          color: const Color(0xFF112233),
+          align: TextAlign.center,
+          textDirection: TextDirection.rtl,
+          fontFamily: 'Mono',
+          maxWidth: 140,
+          lineHeight: 1.3,
+        ),
+        StrokeNodeSnapshot(
+          id: 'stroke-coverage',
+          points: const <Offset>[Offset(0, 0), Offset(10, 10)],
+          thickness: 3,
+          color: const Color(0xFF445566),
+        ),
+        LineNodeSnapshot(
+          id: 'line-coverage',
+          start: const Offset(1, 2),
+          end: const Offset(9, 12),
+          thickness: 2,
+          color: const Color(0xFF778899),
+        ),
+        PathNodeSnapshot(
+          id: 'path-coverage',
+          svgPathData: 'M0 0 L20 0 L20 10 Z',
+          fillColor: const Color(0xFF4CAF50),
+          strokeColor: const Color(0xFF1B5E20),
+          strokeWidth: 1,
+          fillRule: PathFillRule.evenOdd,
+        ),
+      ];
+      final snapshot = SceneSnapshot(
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(id: 'layer-auto-coverage', nodes: snapshots),
+        ],
+      );
+
+      expect(
+        () => value_validation.sceneValidateSnapshotValues(
+          snapshot,
+          onError:
+              ({
+                required Object? value,
+                required String field,
+                String? message,
+                SceneDataDiagnosticDescriptor? diagnostic,
+              }) {
+                if (diagnostic != null) {
+                  throw diagnostic.toException(path: field, source: value);
+                }
+                fail('Unexpected validation error at $field: $message');
+              },
+          requirePositiveGridCellSize: true,
+          requireEnabledMinGridCellSize: true,
+        ),
+        returnsNormally,
+      );
+
+      final runtimeNodes = <SceneNode>[
+        for (var index = 0; index < snapshots.length; index += 1)
+          sceneNodeFromSnapshotViaBoundarySchema(
+            snapshots[index],
+            instanceRevision: index + 1,
+          ),
+      ];
+
+      expect(runtimeNodes[0], isA<ImageNode>());
+      expect(runtimeNodes[1], isA<TextNode>());
+      expect(runtimeNodes[2], isA<StrokeNode>());
+      expect(runtimeNodes[3], isA<LineNode>());
+      expect(runtimeNodes[4], isA<PathNode>());
+
+      final textNode = runtimeNodes[1] as TextNode;
+      expect(textNode.localBounds.width, greaterThan(0));
+      expect(textNode.localBounds.height, greaterThan(0));
+    },
+  );
 
   test(
     'sceneBuildFromJsonMap keeps legacy node-* and layer-* ids readable',
@@ -1569,57 +1695,44 @@ void main() {
   test(
     'sceneCanonicalizeAndValidateSnapshot rejects oversized stroke points and palette gridSizes',
     () {
-      final oversizedStroke = sceneSnapshotFromValidated(
-        layers: <ContentLayerSnapshot>[
-          ContentLayerSnapshot(
-            id: 'layer-auto-overflow-stroke',
-            nodes: <NodeSnapshot>[
-              strokeNodeSnapshotFromValidated(
-                common: nodeSnapshotCommonFieldsFromValidated(
-                  id: 'stroke-overflow-policy',
-                  instanceRevision: 1,
-                  transform: Transform2D.identity,
-                  opacity: 1,
-                  hitPadding: 0,
-                  isVisible: true,
-                  isSelectable: true,
-                  isLocked: false,
-                  isDeletable: true,
-                  isTransformable: true,
-                ),
-                fields: (
-                  points: <Offset>[
-                    for (var i = 0; i < kMaxStrokePointsPerNode + 1; i++)
-                      Offset(i.toDouble(), 0),
-                  ],
-                  thickness: 1,
-                  color: const Color(0xFF000000),
-                ),
-              ),
-            ],
-          ),
-        ],
-      );
-
       expect(
-        () =>
-            model_builder.sceneCanonicalizeAndValidateSnapshot(oversizedStroke),
+        () => sceneSnapshotFromValidated(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-overflow-stroke',
+              nodes: <NodeSnapshot>[
+                strokeNodeSnapshotFromValidated(
+                  common: nodeSnapshotCommonFieldsFromValidated(
+                    id: 'stroke-overflow-policy',
+                    instanceRevision: 1,
+                    transform: Transform2D.identity,
+                    opacity: 1,
+                    hitPadding: 0,
+                    isVisible: true,
+                    isSelectable: true,
+                    isLocked: false,
+                    isDeletable: true,
+                    isTransformable: true,
+                  ),
+                  fields: (
+                    points: <Offset>[
+                      for (var i = 0; i < kMaxStrokePointsPerNode + 1; i++)
+                        Offset(i.toDouble(), 0),
+                    ],
+                    thickness: 1,
+                    color: const Color(0xFF000000),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
         throwsA(
-          predicate(
-            (e) =>
-                e is SceneDataException &&
-                e.code == SceneDataErrorCode.invalidValue &&
-                e.path == 'layers[0].nodes[0].points' &&
-                e.details['template'] == 'maxPoints' &&
-                e.details['maxPoints'] == kMaxStrokePointsPerNode &&
-                e.message ==
-                    'Field layers[0].nodes[0].points must contain at most '
-                        '$kMaxStrokePointsPerNode points.',
-          ),
+          isA<ArgumentError>().having((error) => error.name, 'name', 'points'),
         ),
       );
 
-      final oversizedPalette = materializeSceneSnapshot(
+      final oversizedPalette = unsafeMaterializeSceneSnapshot(
         SceneSnapshotBacking(
           layers: <ContentLayerSnapshotBacking>[
             contentLayerSnapshotBackingFromValidated(
@@ -1857,7 +1970,7 @@ void main() {
 
     expect(
       () => value_validation.sceneValidateSnapshotValues(
-        materializeSceneSnapshot(
+        unsafeMaterializeSceneSnapshot(
           sceneSnapshotBackingFromValidated(
             layers: <ContentLayerSnapshotBacking>[
               contentLayerSnapshotBackingFromValidated(
@@ -1913,7 +2026,7 @@ void main() {
 
     expect(
       () => value_validation.sceneValidateSnapshotValues(
-        materializeSceneSnapshot(
+        unsafeMaterializeSceneSnapshot(
           sceneSnapshotBackingFromValidated(
             layers: <ContentLayerSnapshotBacking>[
               contentLayerSnapshotBackingFromValidated(id: 'layer-auto-dup-a'),
@@ -2014,7 +2127,7 @@ void main() {
 
       expect(
         () => value_validation.sceneValidateSnapshotValues(
-          materializeSceneSnapshot(
+          unsafeMaterializeSceneSnapshot(
             sceneSnapshotBackingFromValidated(
               backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
                 nodes: <NodeSnapshotBacking>[

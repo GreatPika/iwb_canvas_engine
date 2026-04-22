@@ -32,6 +32,17 @@ RectNodeSchemaFields rectNodeSchemaFieldsFromNode(RectNode rect) {
   ));
 }
 
+RectNodeSchemaFields rectNodeSchemaFieldsFromBacking(
+  RectNodeSnapshotBacking rect,
+) {
+  return rectNodeSchemaFieldsFromValidated((
+    size: rect.size,
+    fillColor: rect.fillColor,
+    strokeColor: rect.strokeColor,
+    strokeWidth: rect.strokeWidth,
+  ));
+}
+
 RectNode rectNodeFromSnapshot(RectNodeSnapshot rect, int instanceRevision) {
   return sceneNodeFromSnapshotViaSchema(
         snapshot: rect,
@@ -40,6 +51,19 @@ RectNode rectNodeFromSnapshot(RectNodeSnapshot rect, int instanceRevision) {
         buildNode: rectNodeFromSchema,
       )
       as RectNode;
+}
+
+RectNode rectNodeFromSnapshotBacking(
+  RectNodeSnapshotBacking rect,
+  int instanceRevision,
+) {
+  return rectNodeFromSchema(
+    common: runtimeCommonFromSnapshotBacking(
+      rect,
+      instanceRevision: instanceRevision,
+    ),
+    fields: rectNodeSchemaFieldsFromBacking(rect),
+  );
 }
 
 RectNode rectNodeFromSpec(

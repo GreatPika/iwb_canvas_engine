@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/snapshot.dart';
 import '../contract/validated/image_id_value.dart';
 import '../core/scene_limits.dart';
@@ -23,6 +24,20 @@ void sceneValidateImageNodeSnapshot(
 
 void sceneValidateImageNode(
   ImageNode image, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  _sceneValidateImageNodeFields(
+    imageId: image.imageId,
+    size: image.size,
+    naturalSize: image.naturalSize,
+    field: field,
+    onError: onError,
+  );
+}
+
+void sceneValidateImageNodeSnapshotBacking(
+  ImageNodeSnapshotBacking image, {
   required String field,
   required SceneValidationErrorReporter onError,
 }) {

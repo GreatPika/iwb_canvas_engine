@@ -24,7 +24,9 @@ SceneSnapshot sceneSnapshotFromScene(Scene scene) {
 }
 
 NodeSnapshot sceneNodeSnapshotFromScene(SceneNode node) {
-  return materializeNodeSnapshot(sceneNodeSnapshotBackingFromScene(node));
+  return nodeSnapshotFromValidatedBacking(
+    sceneNodeSnapshotBackingFromScene(node),
+  );
 }
 
 NodeSnapshotBacking sceneNodeSnapshotBackingFromScene(SceneNode node) {

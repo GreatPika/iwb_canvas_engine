@@ -10,7 +10,7 @@ class PatchField<T> {
   const PatchField.absent() : state = PatchFieldState.absent, _value = null;
 
   const PatchField.value(T value)
-    : state = PatchFieldState.value,
+    : state = value == null ? PatchFieldState.nullValue : PatchFieldState.value,
       _value = value;
 
   const PatchField.nullValue()

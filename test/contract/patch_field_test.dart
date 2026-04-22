@@ -11,4 +11,18 @@ void main() {
     expect(field.isNullValue, isFalse);
     expect(field.valueOrNull, isNull);
   });
+
+  test(
+    'PatchField.value(null) canonicalizes to nullValue for nullable fields',
+    () {
+      final field = PatchField<int?>.value(null);
+
+      expect(field.state, PatchFieldState.nullValue);
+      expect(field.isAbsent, isFalse);
+      expect(field.hasValue, isFalse);
+      expect(field.isNullValue, isTrue);
+      expect(field.valueOrNull, isNull);
+      expect(() => field.value, throwsStateError);
+    },
+  );
 }

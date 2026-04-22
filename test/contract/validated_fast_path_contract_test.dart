@@ -3,13 +3,15 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart' hide NodeId;
 import 'package:iwb_canvas_engine/src/contract/internal/node_patch_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/unsafe_node_patch_materialization.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/node_spec_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/unsafe_node_spec_materialization.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/unsafe_snapshot_materialization.dart';
 import 'package:iwb_canvas_engine/src/contract/owned_collections.dart';
 import 'package:iwb_canvas_engine/src/interactive/interaction_eligibility_policy.dart';
 import 'package:iwb_canvas_engine/src/model/scene_node_boundary_mapping.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_builder.dart';
-import 'package:iwb_canvas_engine/src/serialization/scene_codec.dart';
 
 // INV:INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY
 // INV:INV-ENG-BOUNDARY-HERMETIC-CONCRETE-TYPES
@@ -37,7 +39,7 @@ void main() {
         ),
       );
 
-      final spec = materializeNodeSpec(backing) as ImageNodeSpec;
+      final spec = unsafeMaterializeNodeSpec(backing) as ImageNodeSpec;
 
       expect(nodeSpecBackingOf(spec), same(backing));
       expect(spec.imageId, 'asset:backing');
@@ -200,7 +202,7 @@ void main() {
         ),
       );
 
-      final patch = materializeNodePatch(backing) as ImageNodePatch;
+      final patch = unsafeMaterializeNodePatch(backing) as ImageNodePatch;
 
       expect(nodePatchBackingOf(patch), same(backing));
       expect(patch.common.opacity.value, 0.25);
@@ -211,7 +213,7 @@ void main() {
 
   test('validated patch materializer covers every patch family branch', () {
     final textPatch =
-        materializeNodePatch(
+        unsafeMaterializeNodePatch(
               textNodePatchBackingFromValidated(
                 id: 'text-patch-materialized',
                 common: commonNodePatchBackingFromValidated(
@@ -243,7 +245,7 @@ void main() {
             )
             as TextNodePatch;
     final strokePatch =
-        materializeNodePatch(
+        unsafeMaterializeNodePatch(
               strokeNodePatchBackingFromValidated(
                 id: 'stroke-patch-materialized',
                 fields: (
@@ -258,7 +260,7 @@ void main() {
             )
             as StrokeNodePatch;
     final linePatch =
-        materializeNodePatch(
+        unsafeMaterializeNodePatch(
               lineNodePatchBackingFromValidated(
                 id: 'line-patch-materialized',
                 fields: (
@@ -271,7 +273,7 @@ void main() {
             )
             as LineNodePatch;
     final rectPatch =
-        materializeNodePatch(
+        unsafeMaterializeNodePatch(
               rectNodePatchBackingFromValidated(
                 id: 'rect-patch-materialized',
                 fields: (
@@ -284,7 +286,7 @@ void main() {
             )
             as RectNodePatch;
     final pathPatch =
-        materializeNodePatch(
+        unsafeMaterializeNodePatch(
               pathNodePatchBackingFromValidated(
                 id: 'path-patch-materialized',
                 fields: (
@@ -310,7 +312,7 @@ void main() {
 
   test('validated fast-path materializers cover every node family branch', () {
     final textSpec =
-        materializeNodeSpec(
+        unsafeMaterializeNodeSpec(
               textNodeSpecBackingFromValidated(
                 common: (
                   id: 'text-backing',
@@ -340,7 +342,7 @@ void main() {
             )
             as TextNodeSpec;
     final strokeSpec =
-        materializeNodeSpec(
+        unsafeMaterializeNodeSpec(
               strokeNodeSpecBackingFromValidated(
                 common: (
                   id: 'stroke-backing',
@@ -362,7 +364,7 @@ void main() {
             )
             as StrokeNodeSpec;
     final lineSpec =
-        materializeNodeSpec(
+        unsafeMaterializeNodeSpec(
               lineNodeSpecBackingFromValidated(
                 common: (
                   id: 'line-backing',
@@ -385,7 +387,7 @@ void main() {
             )
             as LineNodeSpec;
     final rectSpec =
-        materializeNodeSpec(
+        unsafeMaterializeNodeSpec(
               rectNodeSpecBackingFromValidated(
                 common: (
                   id: 'rect-backing',
@@ -408,7 +410,7 @@ void main() {
             )
             as RectNodeSpec;
     final pathSpec =
-        materializeNodeSpec(
+        unsafeMaterializeNodeSpec(
               pathNodeSpecBackingFromValidated(
                 common: (
                   id: 'path-backing',
@@ -703,10 +705,12 @@ void main() {
 
       expect(
         () => sceneSnapshotFromValidated(
-          backgroundLayer: materializeBackgroundLayerSnapshot(
+          backgroundLayer: unsafeMaterializeBackgroundLayerSnapshot(
             malformedBacking.backgroundLayer,
           ),
-          layers: materializeContentLayerSnapshotList(malformedBacking.layers),
+          layers: unsafeMaterializeContentLayerSnapshotList(
+            malformedBacking.layers,
+          ),
         ),
         throwsA(
           predicate(
@@ -732,7 +736,7 @@ void main() {
         ),
       );
 
-      final malformed = materializeSceneSnapshot(malformedBacking);
+      final malformed = unsafeMaterializeSceneSnapshot(malformedBacking);
       expect(sceneSnapshotBackingOf(malformed), same(malformedBacking));
       expect(malformed.backgroundLayer.nodes.single.id, 'dup-struct');
       expect(malformed.layers.single.nodes.single.id, 'dup-struct');
@@ -1037,6 +1041,24 @@ void main() {
         isDeletable: false,
         isTransformable: false,
       );
+      final imageSpecBacking = imageNodeSpecBackingFromValidated(
+        common: (
+          id: 'img-spec-materialized',
+          transform: Transform2D.translation(const Offset(1, 2)),
+          opacity: 0.8,
+          hitPadding: 3,
+          isVisible: false,
+          isSelectable: false,
+          isLocked: true,
+          isDeletable: false,
+          isTransformable: false,
+        ),
+        fields: (
+          imageId: 'asset:image',
+          size: const Size(10, 11),
+          naturalSize: const Size(20, 30),
+        ),
+      );
       final textSpecBacking = textNodeSpecBackingFromValidated(
         common: (
           id: 'text-spec-materialized',
@@ -1142,12 +1164,18 @@ void main() {
 
       expect(nodeSpecBackingOf(imageSpec).id, 'img-spec-public');
 
-      final textSpec = materializeTextNodeSpec(textSpecBacking);
-      final strokeSpec = materializeStrokeNodeSpec(strokeSpecBacking);
-      final lineSpec = materializeLineNodeSpec(lineSpecBacking);
-      final rectSpec = materializeRectNodeSpec(rectSpecBacking);
-      final pathSpec = materializePathNodeSpec(pathSpecBacking);
+      final materializedImageSpec = unsafeMaterializeImageNodeSpec(
+        imageSpecBacking,
+      );
+      final textSpec = unsafeMaterializeTextNodeSpec(textSpecBacking);
+      final strokeSpec = unsafeMaterializeStrokeNodeSpec(strokeSpecBacking);
+      final lineSpec = unsafeMaterializeLineNodeSpec(lineSpecBacking);
+      final rectSpec = unsafeMaterializeRectNodeSpec(rectSpecBacking);
+      final pathSpec = unsafeMaterializePathNodeSpec(pathSpecBacking);
 
+      expect(nodeSpecBackingOf(materializedImageSpec), same(imageSpecBacking));
+      expect(materializedImageSpec.imageId, 'asset:image');
+      expect(materializedImageSpec.naturalSize, const Size(20, 30));
       expect(nodeSpecBackingOf(textSpec), same(textSpecBacking));
       expect(textSpec.textDirection, TextDirection.rtl);
       expect(textSpec.fontFamily, 'Mono');
@@ -1170,6 +1198,28 @@ void main() {
         id: 'img-patch-public',
         common: publicCommon,
         imageId: PatchField<String>.value('asset:patch'),
+      );
+      final imagePatchBacking = imageNodePatchBackingFromValidated(
+        id: 'img-patch-materialized',
+        common: commonNodePatchBackingFromValidated(
+          fields: (
+            transform: PatchField<Transform2D>.value(
+              Transform2D.translation(const Offset(4, 5)),
+            ),
+            opacity: PatchField<double>.value(0.6),
+            hitPadding: PatchField<double>.value(1),
+            isVisible: PatchField<bool>.value(false),
+            isSelectable: PatchField<bool>.value(false),
+            isLocked: PatchField<bool>.value(true),
+            isDeletable: PatchField<bool>.value(false),
+            isTransformable: PatchField<bool>.value(false),
+          ),
+        ),
+        fields: (
+          imageId: PatchField<String>.value('asset:patch'),
+          size: PatchField<Size>.value(const Size(6, 7)),
+          naturalSize: PatchField<Size?>.value(const Size(8, 9)),
+        ),
       );
       expect(commonNodePatchBackingOf(publicCommon).opacity.value, 0.25);
       expect(nodePatchBackingOf(imagePatch).id, 'img-patch-public');
@@ -1248,12 +1298,21 @@ void main() {
         ),
       );
 
-      final textPatch = materializeTextNodePatch(textPatchBacking);
-      final strokePatch = materializeStrokeNodePatch(strokePatchBacking);
-      final linePatch = materializeLineNodePatch(linePatchBacking);
-      final rectPatch = materializeRectNodePatch(rectPatchBacking);
-      final pathPatch = materializePathNodePatch(pathPatchBacking);
+      final materializedImagePatch = unsafeMaterializeImageNodePatch(
+        imagePatchBacking,
+      );
+      final textPatch = unsafeMaterializeTextNodePatch(textPatchBacking);
+      final strokePatch = unsafeMaterializeStrokeNodePatch(strokePatchBacking);
+      final linePatch = unsafeMaterializeLineNodePatch(linePatchBacking);
+      final rectPatch = unsafeMaterializeRectNodePatch(rectPatchBacking);
+      final pathPatch = unsafeMaterializePathNodePatch(pathPatchBacking);
 
+      expect(
+        nodePatchBackingOf(materializedImagePatch),
+        same(imagePatchBacking),
+      );
+      expect(materializedImagePatch.imageId.value, 'asset:patch');
+      expect(materializedImagePatch.naturalSize.value, const Size(8, 9));
       expect(nodePatchBackingOf(textPatch), same(textPatchBacking));
       expect(textPatch.common.opacity.value, 0.4);
       expect(textPatch.text.value, 'patched');
@@ -1291,7 +1350,7 @@ void main() {
         'layer-public',
       );
 
-      final materializedScene = materializeSceneSnapshot(
+      final materializedScene = unsafeMaterializeSceneSnapshot(
         sceneSnapshotBackingFromValidated(
           layers: <ContentLayerSnapshotBacking>[
             contentLayerSnapshotBackingFromValidated(
@@ -1535,14 +1594,14 @@ void main() {
       for (final spec in fallbackSpecs) {
         final backing = nodeSpecBackingOf(spec);
         expect(nodeSpecBackingOf(spec), same(backing));
-        expect(materializeNodeSpec(backing).id, spec.id);
+        expect(unsafeMaterializeNodeSpec(backing).id, spec.id);
       }
 
       final commonPatch = CommonNodePatch(
         opacity: const PatchField<double>.value(0.5),
       );
       expect(
-        materializeCommonNodePatch(
+        unsafeMaterializeCommonNodePatch(
           commonNodePatchBackingOf(commonPatch),
         ).opacity.value,
         0.5,
@@ -1577,7 +1636,7 @@ void main() {
       for (final patch in fallbackPatches) {
         final backing = nodePatchBackingOf(patch);
         expect(nodePatchBackingOf(patch), same(backing));
-        expect(materializeNodePatch(backing).id, patch.id);
+        expect(unsafeMaterializeNodePatch(backing).id, patch.id);
       }
 
       final contentBackings = <ContentLayerSnapshotBacking>[
@@ -1599,6 +1658,62 @@ void main() {
         ),
       ];
       final nodeBackings = <NodeSnapshotBacking>[
+        imageNodeSnapshotBackingFromValidated(
+          common: nodeSnapshotCommonFieldsFromValidated(
+            id: 'image-a',
+            instanceRevision: 3,
+          ),
+          fields: (
+            imageId: 'asset:image-a',
+            size: const Size(8, 9),
+            naturalSize: const Size(12, 13),
+          ),
+        ),
+        textNodeSnapshotBackingFromValidated(
+          common: nodeSnapshotCommonFieldsFromValidated(
+            id: 'text-a',
+            instanceRevision: 4,
+          ),
+          fields: (
+            text: 'hello',
+            fontSize: 12,
+            color: const Color(0xFF111111),
+            align: TextAlign.center,
+            textDirection: TextDirection.rtl,
+            isBold: false,
+            isItalic: true,
+            isUnderline: false,
+            fontFamily: 'Mono',
+            maxWidth: 100,
+            lineHeight: 1.2,
+          ),
+        ),
+        strokeNodeSnapshotBackingFromValidated(
+          common: nodeSnapshotCommonFieldsFromValidated(
+            id: 'stroke-a',
+            instanceRevision: 5,
+          ),
+          fields: (
+            points: OwnedList<Offset>.of(const <Offset>[
+              Offset(0, 0),
+              Offset(1, 1),
+            ]),
+            thickness: 2,
+            color: const Color(0xFF222222),
+          ),
+        ),
+        lineNodeSnapshotBackingFromValidated(
+          common: nodeSnapshotCommonFieldsFromValidated(
+            id: 'line-a',
+            instanceRevision: 6,
+          ),
+          fields: (
+            start: const Offset(1, 2),
+            end: const Offset(3, 4),
+            thickness: 3,
+            color: const Color(0xFF333333),
+          ),
+        ),
         rectNodeSnapshotBackingFromValidated(
           common: nodeSnapshotCommonFieldsFromValidated(
             id: 'rect-a',
@@ -1611,17 +1726,336 @@ void main() {
             strokeWidth: 0,
           ),
         ),
+        pathNodeSnapshotBackingFromValidated(
+          common: nodeSnapshotCommonFieldsFromValidated(
+            id: 'path-a',
+            instanceRevision: 7,
+          ),
+          fields: (
+            svgPathData: 'M0 0 L1 1',
+            fillColor: const Color(0xFF444444),
+            strokeColor: const Color(0xFF555555),
+            strokeWidth: 1.5,
+            fillRule: PathFillRule.evenOdd,
+          ),
+        ),
       ];
 
       expect(
-        materializeContentLayerSnapshotList(contentBackings).single.id,
+        unsafeMaterializeContentLayerSnapshotList(contentBackings).single.id,
         'layer-a',
       );
-      expect(materializeNodeSnapshotList(nodeBackings).single.id, 'rect-a');
+      expect(
+        unsafeMaterializeNodeSnapshotList(
+          nodeBackings,
+        ).map((snapshot) => snapshot.id).toList(growable: false),
+        <String>['image-a', 'text-a', 'stroke-a', 'line-a', 'rect-a', 'path-a'],
+      );
+      expect(
+        unsafeMaterializeImageNodeSnapshot(
+          nodeBackings[0] as ImageNodeSnapshotBacking,
+        ).naturalSize,
+        const Size(12, 13),
+      );
+      expect(
+        unsafeMaterializeTextNodeSnapshot(
+          nodeBackings[1] as TextNodeSnapshotBacking,
+        ).fontFamily,
+        'Mono',
+      );
+      expect(
+        unsafeMaterializeStrokeNodeSnapshot(
+          nodeBackings[2] as StrokeNodeSnapshotBacking,
+        ).thickness,
+        2,
+      );
+      expect(
+        unsafeMaterializeLineNodeSnapshot(
+          nodeBackings[3] as LineNodeSnapshotBacking,
+        ).end,
+        const Offset(3, 4),
+      );
+      expect(
+        unsafeMaterializeRectNodeSnapshot(
+          nodeBackings[4] as RectNodeSnapshotBacking,
+        ).size,
+        const Size(3, 4),
+      );
+      expect(
+        unsafeMaterializePathNodeSnapshot(
+          nodeBackings[5] as PathNodeSnapshotBacking,
+        ).fillRule,
+        PathFillRule.evenOdd,
+      );
     },
   );
 
-  test('unsupported boundary subtypes fail fast across seam helpers', () {
+  test(
+    'aggregate boundary admission preserves exact values and canonicalizes carrier-backed nested values',
+    () {
+      final carrierImageBacking = imageNodeSnapshotBackingFromValidated(
+        common: nodeSnapshotCommonFieldsFromValidated(
+          id: 'image-carrier',
+          instanceRevision: 2,
+        ),
+        fields: (
+          imageId: 'asset:image-carrier',
+          size: const Size(10, 12),
+          naturalSize: const Size(20, 24),
+        ),
+      );
+      final carrierTextBacking = textNodeSnapshotBackingFromValidated(
+        common: nodeSnapshotCommonFieldsFromValidated(
+          id: 'text-carrier',
+          instanceRevision: 3,
+        ),
+        fields: (
+          text: 'carrier',
+          fontSize: 14,
+          color: const Color(0xFF123456),
+          align: TextAlign.center,
+          textDirection: TextDirection.rtl,
+          isBold: false,
+          isItalic: true,
+          isUnderline: false,
+          fontFamily: 'Mono',
+          maxWidth: 160,
+          lineHeight: 1.2,
+        ),
+      );
+      final carrierLineBacking = lineNodeSnapshotBackingFromValidated(
+        common: nodeSnapshotCommonFieldsFromValidated(
+          id: 'line-carrier',
+          instanceRevision: 4,
+        ),
+        fields: (
+          start: const Offset(1, 2),
+          end: const Offset(9, 10),
+          thickness: 2,
+          color: const Color(0xFF654321),
+        ),
+      );
+      final carrierPathBacking = pathNodeSnapshotBackingFromValidated(
+        common: nodeSnapshotCommonFieldsFromValidated(
+          id: 'path-carrier',
+          instanceRevision: 5,
+        ),
+        fields: (
+          svgPathData: 'M0 0 L12 0 L12 8 Z',
+          fillColor: const Color(0xFF4CAF50),
+          strokeColor: const Color(0xFF1B5E20),
+          strokeWidth: 1,
+          fillRule: PathFillRule.evenOdd,
+        ),
+      );
+      final exactLayer = ContentLayerSnapshot(
+        id: 'layer-exact',
+        nodes: <NodeSnapshot>[
+          RectNodeSnapshot(id: 'rect-exact', size: const Size(3, 4)),
+        ],
+      );
+      final carrierLayer = unsafeMaterializeContentLayerSnapshot(
+        contentLayerSnapshotBackingFromValidated(
+          id: 'layer-carrier',
+          nodes: <NodeSnapshotBacking>[
+            rectNodeSnapshotBackingFromValidated(
+              common: nodeSnapshotCommonFieldsFromValidated(id: 'rect-carrier'),
+              fields: (
+                size: const Size(6, 7),
+                fillColor: null,
+                strokeColor: null,
+                strokeWidth: 0,
+              ),
+            ),
+          ],
+        ),
+      );
+      final carrierBackgroundLayer = unsafeMaterializeBackgroundLayerSnapshot(
+        backgroundLayerSnapshotBackingFromValidated(
+          nodes: <NodeSnapshotBacking>[
+            carrierImageBacking,
+            carrierTextBacking,
+            carrierLineBacking,
+            carrierPathBacking,
+          ],
+        ),
+      );
+      final carrierPalette = unsafeMaterializeScenePaletteSnapshot(
+        scenePaletteSnapshotBackingFromValidated(
+          penColors: const <Color>[Color(0xFF000000), Color(0xFFE53935)],
+          backgroundColors: const <Color>[Color(0xFFFFFFFF)],
+          gridSizes: const <double>[10, 20],
+        ),
+      );
+      final carrierCamera = unsafeMaterializeCameraSnapshot(
+        cameraSnapshotBackingFromValidated(offset: const Offset(9, 11)),
+      );
+      final carrierBackground = unsafeMaterializeBackgroundSnapshot(
+        backgroundSnapshotBackingFromValidated(
+          color: const Color(0xFF102030),
+          grid: gridSnapshotBackingFromValidated(
+            isEnabled: true,
+            cellSize: 16,
+            color: const Color(0xFF405060),
+          ),
+        ),
+      );
+      final directBackgroundFromCarrierGrid = BackgroundSnapshot(
+        color: const Color(0xFF708090),
+        grid: unsafeMaterializeGridSnapshot(
+          gridSnapshotBackingFromValidated(
+            isEnabled: true,
+            cellSize: 24,
+            color: const Color(0xFF223344),
+          ),
+        ),
+      );
+      final exactCommon = CommonNodePatch(
+        opacity: PatchField<double>.value(0.5),
+      );
+      final carrierCommon = unsafeMaterializeCommonNodePatch(
+        commonNodePatchBackingFromValidated(
+          fields: (
+            transform: const PatchField<Transform2D>.absent(),
+            opacity: PatchField<double>.value(0.25),
+            hitPadding: const PatchField<double>.absent(),
+            isVisible: const PatchField<bool>.absent(),
+            isSelectable: const PatchField<bool>.absent(),
+            isLocked: const PatchField<bool>.absent(),
+            isDeletable: const PatchField<bool>.absent(),
+            isTransformable: const PatchField<bool>.absent(),
+          ),
+        ),
+      );
+
+      final snapshot = SceneSnapshot(
+        backgroundLayer: carrierBackgroundLayer,
+        camera: carrierCamera,
+        background: carrierBackground,
+        palette: carrierPalette,
+        layers: <ContentLayerSnapshot>[exactLayer, carrierLayer],
+      );
+      final patchFromExactCommon = ImageNodePatch(
+        id: 'exact-common',
+        common: exactCommon,
+      );
+      final patchFromCarrierCommon = ImageNodePatch(
+        id: 'carrier-common',
+        common: carrierCommon,
+      );
+
+      expect(snapshot.layers.first, same(exactLayer));
+      expect(snapshot.layers.last, isNot(same(carrierLayer)));
+      expect(snapshot.layers.last.runtimeType, ContentLayerSnapshot);
+      expect(snapshot.layers.last.nodes.single.runtimeType, RectNodeSnapshot);
+      expect(snapshot.layers.last.nodes.single.id, 'rect-carrier');
+      expect(snapshot.backgroundLayer, isNot(same(carrierBackgroundLayer)));
+      expect(snapshot.backgroundLayer.runtimeType, BackgroundLayerSnapshot);
+      expect(snapshot.camera, isNot(same(carrierCamera)));
+      expect(snapshot.camera.runtimeType, CameraSnapshot);
+      expect(snapshot.camera.offset, const Offset(9, 11));
+      expect(snapshot.background, isNot(same(carrierBackground)));
+      expect(snapshot.background.runtimeType, BackgroundSnapshot);
+      expect(snapshot.background.color, const Color(0xFF102030));
+      expect(snapshot.background.grid.runtimeType, GridSnapshot);
+      expect(snapshot.background.grid, isNot(same(carrierBackground.grid)));
+      expect(snapshot.background.grid.isEnabled, isTrue);
+      expect(snapshot.background.grid.cellSize, 16);
+      expect(snapshot.background.grid.color, const Color(0xFF405060));
+      expect(
+        snapshot.backgroundLayer.nodes
+            .map((node) => node.runtimeType)
+            .toList(growable: false),
+        <Type>[
+          ImageNodeSnapshot,
+          TextNodeSnapshot,
+          LineNodeSnapshot,
+          PathNodeSnapshot,
+        ],
+      );
+      expect(snapshot.palette, isNot(same(carrierPalette)));
+      expect(snapshot.palette.runtimeType, ScenePaletteSnapshot);
+      expect(snapshot.palette.gridSizes, const <double>[10, 20]);
+      expect(directBackgroundFromCarrierGrid.grid.runtimeType, GridSnapshot);
+      expect(directBackgroundFromCarrierGrid.grid.isEnabled, isTrue);
+      expect(directBackgroundFromCarrierGrid.grid.cellSize, 24);
+      expect(
+        directBackgroundFromCarrierGrid.grid.color,
+        const Color(0xFF223344),
+      );
+      expect(
+        unsafeMaterializeNodeSnapshot(carrierPathBacking),
+        isA<PathNodeSnapshot>(),
+      );
+      expect(patchFromExactCommon.common, same(exactCommon));
+      expect(patchFromCarrierCommon.common, isNot(same(carrierCommon)));
+      expect(patchFromCarrierCommon.common.runtimeType, CommonNodePatch);
+      expect(patchFromCarrierCommon.common.opacity.value, 0.25);
+    },
+  );
+
+  test(
+    'unsupported nested boundary subtypes fail at admission before seam rebuild',
+    () {
+      expect(
+        () => ContentLayerSnapshot(
+          id: 'layer-unsupported',
+          nodes: <NodeSnapshot>[_UnsupportedNodeSnapshot()],
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        () => ContentLayerSnapshot(
+          id: 'layer-subclassed',
+          nodes: <NodeSnapshot>[_SubclassedImageNodeSnapshot()],
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        () => SceneSnapshot(
+          backgroundLayer: _SubclassedBackgroundLayerSnapshot(),
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        () => SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            _SubclassedContentLayerSnapshot(
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(id: 'rect-subclassed-layer', size: Size(1, 1)),
+              ],
+            ),
+          ],
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        () => SceneSnapshot(camera: _SubclassedCameraSnapshot()),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        () => SceneSnapshot(background: _SubclassedBackgroundSnapshot()),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        () => BackgroundSnapshot(grid: _SubclassedGridSnapshot()),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        () => SceneSnapshot(palette: _SubclassedScenePaletteSnapshot()),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        () => ImageNodePatch(
+          id: 'patch-subclassed-common',
+          common: _SubclassedCommonNodePatch(),
+        ),
+        throwsA(isA<StateError>()),
+      );
+    },
+  );
+
+  test('unsupported boundary subtypes remain rejected by seam helpers', () {
     // INV:INV-ENG-BOUNDARY-HERMETIC-CONCRETE-TYPES
     final fakeSnapshot = _UnsupportedNodeSnapshot();
     final fakeSpec = _UnsupportedNodeSpec();
@@ -1658,19 +2092,6 @@ void main() {
     );
     expect(
       () => centerWorldForNodeSnapshots(<NodeSnapshot>[fakeSnapshot]),
-      throwsA(isA<StateError>()),
-    );
-    expect(
-      () => debugEncodeCanonicalSnapshotForTest(
-        SceneSnapshot(
-          layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(
-              id: 'layer-unsupported',
-              nodes: <NodeSnapshot>[fakeSnapshot],
-            ),
-          ],
-        ),
-      ),
       throwsA(isA<StateError>()),
     );
   });
@@ -1781,9 +2202,23 @@ final class _SubclassedBackgroundLayerSnapshot extends BackgroundLayerSnapshot {
 }
 
 final class _SubclassedContentLayerSnapshot extends ContentLayerSnapshot {
-  _SubclassedContentLayerSnapshot() : super(id: 'subclassed-layer');
+  _SubclassedContentLayerSnapshot({
+    List<NodeSnapshot> nodes = const <NodeSnapshot>[],
+  }) : super(id: 'subclassed-layer', nodes: nodes);
 }
 
 final class _SubclassedScenePaletteSnapshot extends ScenePaletteSnapshot {
   _SubclassedScenePaletteSnapshot();
+}
+
+final class _SubclassedCameraSnapshot extends CameraSnapshot {
+  _SubclassedCameraSnapshot();
+}
+
+final class _SubclassedBackgroundSnapshot extends BackgroundSnapshot {
+  _SubclassedBackgroundSnapshot();
+}
+
+final class _SubclassedGridSnapshot extends GridSnapshot {
+  _SubclassedGridSnapshot();
 }
