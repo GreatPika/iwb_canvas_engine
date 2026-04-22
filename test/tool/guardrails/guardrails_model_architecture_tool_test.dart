@@ -488,19 +488,34 @@ class ValidatedSceneImportDraft {}
     );
 
     test(
-      'rejects validated import materialization paths using raw snapshot materialization',
+      'rejects validated import materialization paths using raw snapshot materialization via snapshot fast path',
       () async {
         final sandbox = await createGuardrailsSandbox();
         try {
           writeMinimalControllerStore(sandbox);
           writeSandboxFile(
             sandbox,
+            'lib/src/contract/internal/snapshot_fast_path.dart',
+            '''
+export 'unsafe_snapshot_materialization.dart'
+    show unsafeMaterializeNodeSnapshot;
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/internal/unsafe_snapshot_materialization.dart',
+            '''
+Object unsafeMaterializeNodeSnapshot(Object value) => value;
+''',
+          );
+          writeSandboxFile(
+            sandbox,
             'lib/src/model/scene_from_import_draft.dart',
             '''
-Object materializeNodeSnapshot(Object value) => value;
+import '../contract/internal/snapshot_fast_path.dart' as snapshot_fast_path;
 
 Object sceneFromValidatedImportDraft(Object draft, Object node) {
-  return materializeNodeSnapshot(node);
+  return snapshot_fast_path.unsafeMaterializeNodeSnapshot(node);
 }
 ''',
           );
@@ -523,19 +538,33 @@ Object sceneFromValidatedImportDraft(Object draft, Object node) {
     );
 
     test(
-      'rejects draft validation paths using raw snapshot materialization',
+      'rejects draft validation paths using raw snapshot materialization via snapshot fast path',
       () async {
         final sandbox = await createGuardrailsSandbox();
         try {
           writeMinimalControllerStore(sandbox);
           writeSandboxFile(
             sandbox,
-            'lib/src/model/scene_value_validation_scene.dart',
+            'lib/src/contract/internal/snapshot_fast_path.dart',
+            '''
+export 'snapshot_materialization.dart' show materializeNodeSnapshot;
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/internal/snapshot_materialization.dart',
             '''
 Object materializeNodeSnapshot(Object value) => value;
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_value_validation_scene.dart',
+            '''
+import '../contract/internal/snapshot_fast_path.dart' as snapshot_fast_path;
 
 void validateNode(Object node) {
-  materializeNodeSnapshot(node);
+  snapshot_fast_path.materializeNodeSnapshot(node);
 }
 ''',
           );
@@ -551,6 +580,32 @@ void validateNode(Object node) {
                   'raw public snapshot wrappers from raw backing',
             ),
           );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'ignores local homonym for raw snapshot materialization helper names',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_from_import_draft.dart',
+            '''
+Object unsafeMaterializeNodeSnapshot(Object value) => value;
+
+Object sceneFromValidatedImportDraft(Object draft, Object node) {
+  return unsafeMaterializeNodeSnapshot(node);
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0);
         } finally {
           sandbox.deleteSync(recursive: true);
         }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/dart/element/element.dart';
 
 import '../../support/guardrail_context.dart';
 import '../../support/guardrail_ast_utils.dart' show lineForOffset;
@@ -136,6 +137,16 @@ const Set<String> _removedResidualModelFiles = <String>{
   '/lib/src/model/scene_node_boundary_mapping_support.dart',
 };
 
+const Set<String> _guardedValidatedImportSnapshotCallerFiles = <String>{
+  '/lib/src/model/scene_from_import_draft.dart',
+  '/lib/src/model/scene_value_validation_scene.dart',
+};
+
+const String _legacySnapshotMaterializationFilePath =
+    '/lib/src/contract/internal/snapshot_materialization.dart';
+const String _unsafeSnapshotMaterializationFilePath =
+    '/lib/src/contract/internal/unsafe_snapshot_materialization.dart';
+
 Future<List<GuardrailViolation>> runModelArchitectureGuardrails({
   required GuardrailContext context,
 }) async {
@@ -151,6 +162,15 @@ Future<List<GuardrailViolation>> runModelArchitectureGuardrails({
   );
   if (modelFileViolation != null) {
     violations.add(modelFileViolation);
+    return violations;
+  }
+
+  final rawSnapshotMaterializationViolation = await firstAsyncViolationInFiles(
+    modelFiles,
+    (file) => _checkForbiddenRawSnapshotMaterializationGuardrail(context, file),
+  );
+  if (rawSnapshotMaterializationViolation != null) {
+    violations.add(rawSnapshotMaterializationViolation);
     return violations;
   }
 
@@ -237,14 +257,6 @@ GuardrailViolation? _checkModelFile(GuardrailContext context, File file) {
         }
         if (filePosixPath == '/lib/src/model/scene_from_import_draft.dart') {
           return _checkValidatedImportMaterializationBoundary(
-                parsed,
-                filePosixPath,
-              ) ??
-              _checkForbiddenRawSnapshotMaterialization(parsed, filePosixPath);
-        }
-        if (filePosixPath ==
-            '/lib/src/model/scene_value_validation_scene.dart') {
-          return _checkForbiddenRawSnapshotMaterialization(
             parsed,
             filePosixPath,
           );
@@ -337,22 +349,6 @@ GuardrailViolation? _checkValidatedImportMaterializationBoundary(
     );
   }
   return null;
-}
-
-GuardrailViolation? _checkForbiddenRawSnapshotMaterialization(
-  ParsedUnitResult parsed,
-  String filePosixPath,
-) {
-  final offset = parsed.content.indexOf('materializeNodeSnapshot(');
-  if (offset < 0) {
-    return null;
-  }
-  return GuardrailViolation(
-    filePath: filePosixPath,
-    line: lineForOffset(parsed, offset),
-    message:
-        'model architecture violation: validated import and draft validation paths must not materialize raw public snapshot wrappers from raw backing.',
-  );
 }
 
 GuardrailViolation? _checkScenePolicyImportDiagnosticOwnership(
@@ -458,6 +454,35 @@ GuardrailViolation? _checkNonModelDirectiveBoundaries(
   );
 }
 
+Future<GuardrailViolation?> _checkForbiddenRawSnapshotMaterializationGuardrail(
+  GuardrailContext context,
+  File file,
+) async {
+  final filePosixPath = repoRelPathForFile(context, file);
+  if (!_guardedValidatedImportSnapshotCallerFiles.contains(filePosixPath)) {
+    return null;
+  }
+
+  final resolved = await context.getResolvedUnitResult(file.absolute.path);
+  if (resolved == null) {
+    return null;
+  }
+
+  final visitor = _ForbiddenRawSnapshotMaterializationVisitor(context: context);
+  resolved.unit.accept(visitor);
+  final violation = visitor.firstViolation;
+  if (violation == null) {
+    return null;
+  }
+
+  return GuardrailViolation(
+    filePath: filePosixPath,
+    line: resolved.lineInfo.getLocation(violation.offset).lineNumber,
+    message:
+        'model architecture violation: validated import and draft validation paths must not materialize raw public snapshot wrappers from raw backing.',
+  );
+}
+
 String _formatModelParseFailure({
   required String filePathForDiag,
   required String resultType,
@@ -488,6 +513,37 @@ final class _ControllerLayerMutationVisitor extends RecursiveAstVisitor<void> {
     }
     super.visitAssignmentExpression(node);
   }
+}
+
+final class _ForbiddenRawSnapshotMaterializationVisitor
+    extends RecursiveAstVisitor<void> {
+  _ForbiddenRawSnapshotMaterializationVisitor({required this.context});
+
+  final GuardrailContext context;
+  _ForbiddenRawSnapshotMaterializationOccurrence? firstViolation;
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    if (firstViolation != null) {
+      return;
+    }
+    if (_isForbiddenRawSnapshotMaterializerElement(
+      element: node.element,
+      context: context,
+    )) {
+      firstViolation = _ForbiddenRawSnapshotMaterializationOccurrence(
+        offset: node.offset,
+      );
+      return;
+    }
+    super.visitSimpleIdentifier(node);
+  }
+}
+
+final class _ForbiddenRawSnapshotMaterializationOccurrence {
+  const _ForbiddenRawSnapshotMaterializationOccurrence({required this.offset});
+
+  final int offset;
 }
 
 final class _ScenePolicyImportDiagnosticOwnershipVisitor
@@ -530,6 +586,28 @@ bool _isRawSceneImportDraftParameter(FormalParameter parameter) {
     return false;
   }
   return parameterType.name.lexeme == 'SceneImportDraft';
+}
+
+bool _isForbiddenRawSnapshotMaterializerElement({
+  required Element? element,
+  required GuardrailContext context,
+}) {
+  if (element is! ExecutableElement) {
+    return false;
+  }
+  final repoRelPath = element_utils.repoRelPathForElement(
+    element: element,
+    context: context,
+  );
+  if (repoRelPath == _unsafeSnapshotMaterializationFilePath) {
+    return element.displayName.startsWith('unsafeMaterialize');
+  }
+  if (repoRelPath == _legacySnapshotMaterializationFilePath) {
+    final displayName = element.displayName;
+    return displayName.startsWith('materialize') &&
+        displayName.contains('Snapshot');
+  }
+  return false;
 }
 
 _ControllerLayerMutationOccurrence? _matchControllerLayerMutation(

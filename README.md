@@ -4,30 +4,24 @@
 [![CI](https://github.com/GreatPika/iwb_canvas_engine/actions/workflows/ci.yaml/badge.svg)](https://github.com/GreatPika/iwb_canvas_engine/actions/workflows/ci.yaml)
 
 `iwb_canvas_engine` is a Flutter-first canvas engine for whiteboard-style
-products. It provides an immutable scene document model, a controller + widget
+products. It provides immutable scene documents, a controller + widget
 runtime, transactional scene mutations, and JSON import/export.
 
-This README describes the checked-in main branch. For published release history
-and unreleased mainline changes, see [CHANGELOG.md](CHANGELOG.md).
+This README stays intentionally short. Use it as the package landing page and
+the entrypoint into the deeper docs.
 
 ## What the package includes
 
-- Immutable scene documents built around `SceneSnapshot`, content layers, a
-  dedicated `backgroundLayer`, and typed node families.
-- A public runtime rooted at `SceneController`, with controller-owned
-  capabilities exposed through `controller.scene`, `controller.selection`, and
-  `controller.interaction`.
-- A ready-to-use Flutter widget, `SceneView`, for rendering and interactive
-  pointer routing.
-- Transactional scene edits through `SceneWriteTxn`.
-- Strict import/export and canonicalization through `SceneBuilder`,
+- Immutable scene documents rooted at `SceneSnapshot`.
+- A public runtime rooted at `SceneController`.
+- A ready-to-use Flutter host widget, `SceneView`.
+- Transactional scene writes through `SceneWriteTxn`.
+- Build/import and JSON entrypoints through `SceneBuilder`,
   `encodeScene*`, and `decodeScene*`.
-- A stable machine-readable error contract through `SceneDataException` and
-  `SceneDataErrorCode`.
 
 ## What the package does not include
 
-- Toolbars, dialogs, inspectors, or other product-specific UI.
+- Product-specific UI such as toolbars, dialogs, or inspectors.
 - Persistence, sync, collaboration, or backend logic.
 - App-level undo/redo storage.
 
@@ -36,8 +30,7 @@ and unreleased mainline changes, see [CHANGELOG.md](CHANGELOG.md).
 - Dart: `^3.10.4`
 - Flutter: `>=3.38.0`
 
-This package is not a pure Dart engine. Public contract types use Flutter and
-`dart:ui` primitives.
+This package is Flutter-first, not a pure Dart engine.
 
 ## Installation
 
@@ -74,18 +67,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
   @override
   void initState() {
     super.initState();
-
     controller = SceneController(
       initialSnapshot: SceneSnapshot(
         layers: [ContentLayerSnapshot(id: 'layer-0')],
-      ),
-    );
-
-    controller.scene.addNode(
-      RectNodeSpec(
-        id: 'rect-1',
-        size: const Size(160, 100),
-        fillColor: const Color(0xFF1565C0),
       ),
     );
   }
@@ -103,72 +87,22 @@ class _CanvasScreenState extends State<CanvasScreen> {
 }
 ```
 
-## Core concepts
-
-- `SceneSnapshot` is the immutable document boundary exchanged with app code.
-- Public scene data has two layer families: one dedicated `backgroundLayer`
-  plus ordered content `layers`.
-- Dispose `SceneController` when the host widget is done with it. Direct public
-  controller calls then fail fast with `StateError`, while any late routed
-  pointer callbacks from an already-mounted `SceneView` are ignored.
-- Supported node families are image, text, stroke, line, rect, and path.
-- Use `NodeSpec` to create nodes and `NodePatch` + `PatchField` to apply
-  partial updates. For nullable fields, `PatchField.value(null)` canonicalizes
-  to the same explicit-null state as `PatchField.nullValue()`.
-- Use `SceneController` for runtime ownership, `SceneView` for the Flutter host
-  surface, and `SceneBuilder` / `encodeScene*` / `decodeScene*` for import and
-  serialization.
-- `SceneWriteTxn` reads are callback-scoped: after the write callback closes,
-  new `snapshot` and `selectedNodeIds` reads throw, while values captured
-  inside the callback stay usable as immutable snapshots.
-- Use `SceneDataException.code`, `path`, and `details` as the stable
-  machine-readable failure contract when scene or JSON data is invalid.
-
-## Serialization and validation
-
-- Current mainline JSON write version: `schemaVersion = 7`
-- Current mainline JSON read set: `{7}`
-- `SceneBuilder.buildFromSnapshot(...)` and `SceneBuilder.buildFromJson(...)`
-  validate and canonicalize data without requiring a controller.
-- Aggregate public boundary values such as `SceneSnapshot` and `NodePatch`
-  canonicalize supported nested boundary objects eagerly and reject
-  unsupported subtypes at admission.
-- `encodeScene(...)` / `encodeSceneToJson(...)` validate before serializing.
-- `decodeScene(...)` / `decodeSceneFromJson(...)` validate before returning a
-  `SceneSnapshot`.
-- JSON line/stroke range diagnostics keep alias-bearing field paths such as
-  `localA`, `localB`, and `localPoints`, while typed snapshot imports keep
-  canonical `start`, `end`, and `points`.
-- Text nodes use derived bounds. Current schema payloads require explicit
-  `textDirection` and must not include legacy stored text `size` metadata.
-
-## Common integration points
-
-- Listen to `controller.actions` for committed action events that can feed your
-  app-level history or analytics.
-- Use `controller.previewDeltaResolver(nodeId)` for live move-preview reads in
-  host code. `SceneView` captures its own frozen frame-preview snapshot before
-  main-scene paint, so controller side effects during paint do not change the
-  frame that is already being rendered.
-- Pass `moveCommitDeltaResolver` to `SceneController` when app code must clamp
-  or remap committed drag deltas. The resolver receives a
-  `MoveCommitDeltaRequest` with immutable `movedNodes`.
-- Listen to `controller.editTextRequests` to open app-owned text editing UI.
-- Pass `imageResolver` to `SceneView` when the scene contains image nodes.
-- Call `controller.scene.notifySceneChanged()` when host-owned visual resources
-  change without a scene mutation, for example when an image backing store is
-  refreshed.
-
 ## Documentation
 
-- [API_GUIDE.md](API_GUIDE.md) — public API reference and integration rules.
-- [ARCHITECTURE.md](ARCHITECTURE.md) — repository architecture, invariants, and
-  ownership boundaries.
-- [CHANGELOG.md](CHANGELOG.md) — published release history plus current
-  unreleased changes.
-- [example/README.md](example/README.md) — example app scope and run
-  instructions.
-- Hosted package docs: https://greatpika.github.io/iwb_canvas_engine/
+Use the docs in this order:
+
+1. [API_GUIDE.md](API_GUIDE.md) for the supported public API and runtime
+   behavior.
+2. [ARCHITECTURE.md](ARCHITECTURE.md) for the checked-in architecture,
+   invariants, and ownership boundaries.
+3. [docs/target_architecture/README.md](docs/target_architecture/README.md) for
+   the target architecture map and family-level target cuts.
+4. [CHANGELOG.md](CHANGELOG.md) for released and unreleased user-visible
+   changes.
+5. [example/README.md](example/README.md) for example app scope and run
+   instructions.
+
+Hosted package docs: [greatpika.github.io/iwb_canvas_engine](https://greatpika.github.io/iwb_canvas_engine/)
 
 ## License
 
