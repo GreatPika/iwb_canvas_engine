@@ -2,7 +2,9 @@
 
 Ensure committed spatial invalidation tracks the full coarse spatial admission
 footprint used by hit-test and paint so committed paint queries cannot keep
-stale paint bounds after a node patch or transform.
+stale paint bounds after a combined node patch that changes geometry and
+`hitPadding`, while transform paths also converge on the same shared
+owner-side admission helper.
 
 ## 2. Change Boundary
 
@@ -260,9 +262,9 @@ stale paint bounds after a node patch or transform.
 
 ## 6. Result Requirements
 
-1. A single node patch or transform that changes committed paint admission while
-   keeping committed hit-test admission unchanged must still mark a spatial
-   change and refresh committed paint queries.
+1. A combined node patch that changes committed paint admission while keeping
+   committed hit-test admission unchanged must still mark a spatial change and
+   refresh committed paint queries.
 2. The fix must preserve the ordinary committed fast path: the stage continues
    to trust `candidate.paintBoundsWorld`, and the painter continues to cull from
    that committed value without recompute.
@@ -485,8 +487,11 @@ and committed spatial-index storage.
 
 #### Positive Scenarios
 
-- Node patch changes paint admission only.
-- Node transform changes both hit-test and paint admission.
+- Node patch changes paint admission while a simultaneous `hitPadding` change
+  preserves the committed hit-test admission footprint.
+- Node transform still routes through the same shared owner-side helper even
+  though the reproduced stale-paint branch is patch-specific in the current
+  geometry model.
 - Background paint candidate refresh stays aligned with the same owner-side
   admission contract.
 - Ordinary committed paint staging continues to trust committed candidate bounds.
@@ -570,15 +575,17 @@ alignment contract so later drift becomes mechanically visible.
 
 ## 12. Acceptance Criteria
 
-- A committed node patch or transform can no longer leave stale
-  `paintBoundsWorld` in committed paint queries when the coarse hit-test
-  admission happens to stay unchanged.
+- A combined committed node patch can no longer leave stale `paintBoundsWorld`
+  in committed paint queries when the coarse hit-test admission happens to stay
+  unchanged.
 - The same guarantee holds for background paint candidates when committed
   queries include `backgroundAndContentLayers`.
 - The reproduced fix path stays incremental and does not fall back to broad
   invalidation or render-path recompute.
 - Visual-only node changes that preserve the full coarse spatial footprint do
   not start marking spatial dirty state.
+- Transform mutation paths consume the same shared owner-side admission helper
+  instead of keeping a parallel direct formula.
 - Ordinary committed paint staging and painter culling remain consumer-only and
   continue to read committed candidate bounds without recomputing them.
 - `SceneStoreController`, `SpatialIndexCache`, and public committed spatial
