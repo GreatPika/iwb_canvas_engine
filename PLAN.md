@@ -22,3 +22,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 3. Interactive Move Commit Request Boundary](plan/step_3_interactive_move_commit_request_boundary.md)
 - [x] [Step 4. Render Frame Preview Snapshot Boundary](plan/step_4_render_frame_preview_snapshot_boundary.md)
 - [x] [Step 5. Interactive Pointer Session Lifecycle Boundary](plan/step_5_interactive_pointer_session_lifecycle_boundary.md)
+- [ ] [Step 6. Committed Spatial Admission Contract](plan/step_6_committed_spatial_admission_contract.md)
