@@ -7,6 +7,7 @@ import '../contract/scene_validation_diagnostics.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import 'scene_import_draft.dart';
+import 'scene_validation_path_surface.dart';
 import 'scene_value_validation_node.dart' as node_validation;
 import 'scene_value_validation_palette_grid.dart' as palette_grid_validation;
 import 'scene_value_validation_primitives.dart' as primitives_validation;
@@ -298,10 +299,12 @@ void sceneValidateNodeSnapshot(
   NodeSnapshot node, {
   required String field,
   required SceneValidationErrorReporter onError,
+  SceneValidationPathSurface pathSurface = SceneValidationPathSurface.snapshot,
 }) => node_validation.sceneValidateNodeSnapshot(
   node,
   field: field,
   onError: onError,
+  pathSurface: pathSurface,
 );
 
 void sceneValidateNode(
@@ -325,13 +328,14 @@ void sceneValidateSnapshotValues(
 void sceneValidateImportDraftValues(
   SceneImportDraft draft, {
   required SceneValidationErrorReporter onError,
-  required bool requirePositiveGridCellSize,
-  required bool requireEnabledMinGridCellSize,
+  required ({bool requirePositiveCellSize, bool requireEnabledMinCellSize})
+  gridPolicy,
+  required SceneValidationPathSurface pathSurface,
 }) => scene_validation.sceneValidateImportDraftValues(
   draft,
   onError: onError,
-  requirePositiveGridCellSize: requirePositiveGridCellSize,
-  requireEnabledMinGridCellSize: requireEnabledMinGridCellSize,
+  gridPolicy: gridPolicy,
+  pathSurface: pathSurface,
 );
 
 void sceneValidateSceneValues(

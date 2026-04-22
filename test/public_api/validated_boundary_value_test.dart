@@ -10,6 +10,7 @@ import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
         kMaxLayerIdLength,
         kMaxNodesPerScene,
         kMaxNodeIdLength,
+        sceneCoordMax,
         kMaxSvgPathDataLength,
         kMaxTextLength;
 
@@ -178,6 +179,89 @@ void main() {
         throwsA(isA<ArgumentError>()),
       );
     });
+
+    test(
+      'public JSON import surfaces alias-bearing out-of-range diagnostics with stable path details',
+      () {
+        final scenarios =
+            <({String description, Map<String, Object?> node, String path})>[
+              (
+                description: 'line localA.x',
+                node: _baseNodeJson(id: 'line-a', type: 'line')
+                  ..addAll(<String, Object?>{
+                    'localA': <String, Object?>{'x': sceneCoordMax + 1, 'y': 0},
+                    'localB': const <String, Object?>{'x': 1, 'y': 1},
+                    'thickness': 1,
+                    'color': '#FF000000',
+                  }),
+                path: 'layers[0].nodes[0].localA.x',
+              ),
+              (
+                description: 'line localB.y',
+                node: _baseNodeJson(id: 'line-b', type: 'line')
+                  ..addAll(<String, Object?>{
+                    'localA': const <String, Object?>{'x': 0, 'y': 0},
+                    'localB': <String, Object?>{'x': 1, 'y': sceneCoordMax + 1},
+                    'thickness': 1,
+                    'color': '#FF000000',
+                  }),
+                path: 'layers[0].nodes[0].localB.y',
+              ),
+              (
+                description: 'stroke localPoints[1].x',
+                node: _baseNodeJson(id: 'stroke-x', type: 'stroke')
+                  ..addAll(<String, Object?>{
+                    'localPoints': <Object?>[
+                      const <String, Object?>{'x': 0, 'y': 0},
+                      <String, Object?>{'x': sceneCoordMax + 1, 'y': 1},
+                    ],
+                    'thickness': 1,
+                    'color': '#FF000000',
+                  }),
+                path: 'layers[0].nodes[0].localPoints[1].x',
+              ),
+              (
+                description: 'stroke localPoints[1].y',
+                node: _baseNodeJson(id: 'stroke-y', type: 'stroke')
+                  ..addAll(<String, Object?>{
+                    'localPoints': <Object?>[
+                      const <String, Object?>{'x': 0, 'y': 0},
+                      <String, Object?>{'x': 1, 'y': sceneCoordMax + 1},
+                    ],
+                    'thickness': 1,
+                    'color': '#FF000000',
+                  }),
+                path: 'layers[0].nodes[0].localPoints[1].y',
+              ),
+            ];
+
+        for (final scenario in scenarios) {
+          expect(
+            () => decodeScene(
+              _minimalSceneJson()
+                ..['layers'] = <Object?>[
+                  <String, Object?>{
+                    'id': 'layer-0',
+                    'nodes': <Object?>[scenario.node],
+                  },
+                ],
+            ),
+            throwsA(
+              predicate(
+                (error) =>
+                    error is SceneDataException &&
+                    error.code == SceneDataErrorCode.outOfRange &&
+                    error.path == scenario.path &&
+                    error.details['template'] == 'outOfRange' &&
+                    error.details['min'] == -sceneCoordMax &&
+                    error.details['max'] == sceneCoordMax,
+              ),
+            ),
+            reason: scenario.description,
+          );
+        }
+      },
+    );
 
     test(
       'public node spec constructors reject invalid write values eagerly',

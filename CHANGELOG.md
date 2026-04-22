@@ -61,6 +61,9 @@ in changes that have not yet been published to pub.dev.
 - Fixed paint over-admission by separating paint admission from hit-test
   admission. Hit-testing still honors hit padding, while paint admission now
   uses paint bounds only.
+- Fixed JSON import/build line and stroke range diagnostics so alias-bearing
+  field paths stay on `localA`, `localB`, and `localPoints`, while typed
+  snapshot import surfaces keep canonical `start`, `end`, and `points`.
 - Fixed main-scene move-preview rendering so one captured frame keeps a frozen
   preview snapshot across paint admission and late node resolution, even when
   app `imageResolver` callbacks mutate controller state mid-paint.

@@ -177,6 +177,22 @@ void sceneValidateSvgPathData(
   );
 }
 
+void sceneValidateDoubleInRange(
+  double value, {
+  required String field,
+  required double min,
+  required double max,
+  required SceneValidationErrorReporter onError,
+}) {
+  if (value >= min && value <= max) return;
+  sceneValidationFail(
+    onError: onError,
+    value: value,
+    field: field,
+    diagnostic: SceneDataDiagnosticDescriptor.outOfRange(min: min, max: max),
+  );
+}
+
 void _sceneValidatePrimitiveBoundary<T>(
   T value, {
   required String field,

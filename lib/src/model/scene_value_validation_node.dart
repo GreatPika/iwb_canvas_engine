@@ -1,10 +1,14 @@
+import 'dart:math' as math;
+
 import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
 import '../contract/validated/instance_revision_value.dart';
 import '../contract/validated/node_id_value.dart';
 import '../contract/validated/non_negative_finite_double_value.dart';
 import '../contract/validated/opacity_value.dart';
+import '../core/scene_limits.dart';
 import '../core/nodes.dart';
+import 'scene_validation_path_surface.dart';
 import 'scene_value_validation_node_image.dart' as image_validation;
 import 'scene_value_validation_node_line.dart' as line_validation;
 import 'scene_value_validation_node_path.dart' as path_validation;
@@ -26,9 +30,15 @@ void sceneValidateNodeSnapshot(
   NodeSnapshot node, {
   required String field,
   required SceneValidationErrorReporter onError,
+  SceneValidationPathSurface pathSurface = SceneValidationPathSurface.snapshot,
 }) {
   _sceneValidateSnapshotNodeBaseFields(node, field: field, onError: onError);
-  _sceneValidateSnapshotNodeTypeFields(node, field: field, onError: onError);
+  _sceneValidateSnapshotNodeTypeFields(
+    node,
+    field: field,
+    onError: onError,
+    pathSurface: pathSurface,
+  );
 }
 
 void sceneValidateNode(
@@ -108,12 +118,25 @@ void _sceneValidateNodeBaseFields({
     onError: onError,
     validate: () => OpacityValue.of(fields.opacity, name: '$field.opacity'),
   );
+  sceneValidateDoubleInRange(
+    fields.hitPadding,
+    field: '$field.hitPadding',
+    min: 0,
+    max: sceneHitPaddingMax,
+    onError: onError,
+  );
+  _sceneValidateTransformRanges(
+    fields.transform,
+    field: '$field.transform',
+    onError: onError,
+  );
 }
 
 void _sceneValidateSnapshotNodeTypeFields(
   NodeSnapshot node, {
   required String field,
   required SceneValidationErrorReporter onError,
+  required SceneValidationPathSurface pathSurface,
 }) {
   switch (node) {
     case ImageNodeSnapshot image:
@@ -133,12 +156,14 @@ void _sceneValidateSnapshotNodeTypeFields(
         stroke,
         field: field,
         onError: onError,
+        pathSurface: pathSurface,
       );
     case LineNodeSnapshot line:
       line_validation.sceneValidateLineNodeSnapshot(
         line,
         field: field,
         onError: onError,
+        pathSurface: pathSurface,
       );
     case RectNodeSnapshot rect:
       rect_validation.sceneValidateRectNodeSnapshot(
@@ -226,5 +251,47 @@ _NodeBaseValidationFields _runtimeNodeBaseValidationFields(SceneNode node) {
     transform: node.transform,
     hitPadding: node.hitPadding,
     opacity: node.opacity,
+  );
+}
+
+void _sceneValidateTransformRanges(
+  Transform2D transform, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  sceneValidateDoubleInRange(
+    transform.tx,
+    field: '$field.tx',
+    min: sceneCoordMin,
+    max: sceneCoordMax,
+    onError: onError,
+  );
+  sceneValidateDoubleInRange(
+    transform.ty,
+    field: '$field.ty',
+    min: sceneCoordMin,
+    max: sceneCoordMax,
+    onError: onError,
+  );
+
+  final scaleX = math.sqrt(
+    transform.a * transform.a + transform.b * transform.b,
+  );
+  final scaleY = math.sqrt(
+    transform.c * transform.c + transform.d * transform.d,
+  );
+  sceneValidateDoubleInRange(
+    scaleX,
+    field: '$field.scaleX',
+    min: sceneScaleMin,
+    max: sceneScaleMax,
+    onError: onError,
+  );
+  sceneValidateDoubleInRange(
+    scaleY,
+    field: '$field.scaleY',
+    min: sceneScaleMin,
+    max: sceneScaleMax,
+    onError: onError,
   );
 }

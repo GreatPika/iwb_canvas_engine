@@ -791,6 +791,82 @@ void validateScene() {}
       },
     );
 
+    // INV:INV-SER-IMPORT-DIAGNOSTIC-SURFACE
+    test(
+      'rejects non-model code importing scene_validation_path_surface.dart directly',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/serialization/scene_codec.dart',
+            '''
+import '../model/scene_validation_path_surface.dart';
+
+void decodeScene() {}
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_validation_path_surface.dart',
+            'enum SceneValidationPathSurface { snapshot, jsonImport }\n',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'canonical model facades instead of importing or '
+                  're-exporting internal owner module '
+                  'scene_validation_path_surface.dart',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    // INV:INV-SER-IMPORT-DIAGNOSTIC-SURFACE
+    test(
+      'rejects scene_policy.dart reintroducing direct import-range diagnostics',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(sandbox, 'lib/src/model/scene_policy.dart', '''
+import '../contract/scene_data_exception.dart';
+
+void validateImportDraft(double value) {
+  throw SceneDataException.outOfRange(
+    path: 'layers[0].nodes[0].start.x',
+    min: -1,
+    max: 1,
+    source: value,
+  );
+}
+''');
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'scene_policy.dart must not own direct import-range diagnostics',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
     test(
       'rejects non-model code re-exporting restricted model owner modules',
       () async {

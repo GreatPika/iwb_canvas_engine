@@ -197,6 +197,35 @@ void main() {
     );
 
     test(
+      'sceneValidateNodeSnapshot keeps canonical snapshot field paths for out-of-range coordinates',
+      () {
+        expect(
+          () => sceneValidateNodeSnapshot(
+            LineNodeSnapshot(
+              id: 'line-range',
+              start: Offset(sceneCoordMax + 1, 0),
+              end: const Offset(1, 1),
+              thickness: 1,
+              color: const Color(0xFF000000),
+            ),
+            field: 'node',
+            onError: _throwFailure,
+          ),
+          throwsA(
+            predicate(
+              (error) =>
+                  error is _ValidationFailure &&
+                  error.field == 'node.start.x' &&
+                  error.diagnostic?.template == 'outOfRange' &&
+                  error.diagnostic?.args['min'] == -sceneCoordMax &&
+                  error.diagnostic?.args['max'] == sceneCoordMax,
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
       'facade forwards validation entrypoints to explicit owner modules',
       () {
         expect(() {

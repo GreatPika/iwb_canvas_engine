@@ -1877,6 +1877,86 @@ void main() {
     );
   });
 
+  test(
+    'decodeSceneFromJson, decodeScene, and SceneBuilder.buildFromJson share alias-bearing out-of-range diagnostics',
+    () {
+      final scenarios =
+          <({String description, Map<String, Object?> node, String path})>[
+            (
+              description: 'line localA.x',
+              node: _baseNodeJson(id: 'line-a', type: 'line')
+                ..addAll(<String, Object?>{
+                  'localA': <String, Object?>{'x': sceneCoordMax + 1, 'y': 0},
+                  'localB': const <String, Object?>{'x': 1, 'y': 1},
+                  'thickness': 1,
+                  'color': '#FF000000',
+                }),
+              path: 'layers[0].nodes[0].localA.x',
+            ),
+            (
+              description: 'line localB.y',
+              node: _baseNodeJson(id: 'line-b', type: 'line')
+                ..addAll(<String, Object?>{
+                  'localA': const <String, Object?>{'x': 0, 'y': 0},
+                  'localB': <String, Object?>{'x': 1, 'y': sceneCoordMax + 1},
+                  'thickness': 1,
+                  'color': '#FF000000',
+                }),
+              path: 'layers[0].nodes[0].localB.y',
+            ),
+            (
+              description: 'stroke localPoints[1].x',
+              node: _baseNodeJson(id: 'stroke-x', type: 'stroke')
+                ..addAll(<String, Object?>{
+                  'localPoints': <Object?>[
+                    const <String, Object?>{'x': 0, 'y': 0},
+                    <String, Object?>{'x': sceneCoordMax + 1, 'y': 1},
+                  ],
+                  'thickness': 1,
+                  'color': '#FF000000',
+                }),
+              path: 'layers[0].nodes[0].localPoints[1].x',
+            ),
+            (
+              description: 'stroke localPoints[1].y',
+              node: _baseNodeJson(id: 'stroke-y', type: 'stroke')
+                ..addAll(<String, Object?>{
+                  'localPoints': <Object?>[
+                    const <String, Object?>{'x': 0, 'y': 0},
+                    <String, Object?>{'x': 1, 'y': sceneCoordMax + 1},
+                  ],
+                  'thickness': 1,
+                  'color': '#FF000000',
+                }),
+              path: 'layers[0].nodes[0].localPoints[1].y',
+            ),
+          ];
+
+      for (final scenario in scenarios) {
+        final raw = _sceneWithSingleNode(scenario.node);
+        final encoded = jsonEncode(raw);
+
+        final fromJsonString = _captureSceneDataException(
+          () => decodeSceneFromJson(encoded),
+        );
+        final fromMap = _captureSceneDataException(() => decodeScene(raw));
+        final fromBuilder = _captureSceneDataException(
+          () => SceneBuilder.buildFromJson(raw),
+        );
+
+        _expectSameSceneDataContract(fromJsonString, fromMap);
+        _expectSameSceneDataContract(fromBuilder, fromMap);
+        expect(fromMap.code, SceneDataErrorCode.outOfRange);
+        expect(fromMap.path, scenario.path, reason: scenario.description);
+        expect(fromMap.details, const <String, Object?>{
+          'template': 'outOfRange',
+          'min': -sceneCoordMax,
+          'max': sceneCoordMax,
+        });
+      }
+    },
+  );
+
   test('encodeSceneDocument rejects mutable node opacity outside [0,1]', () {
     final scene = Scene(
       layers: <ContentLayer>[

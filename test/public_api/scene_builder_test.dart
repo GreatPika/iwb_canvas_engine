@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
-    show kMaxPaletteItems, kMaxStrokePointsPerNode;
+    show kMaxPaletteItems, kMaxStrokePointsPerNode, sceneCoordMax;
 import '../support/scene_builder_json_fixtures.dart';
 
 Map<String, Object?> _textNodeJson({
@@ -330,6 +330,88 @@ void main() {
         naturalSizeError.message,
         'Missing required field layers[0].nodes[0].naturalSize.w.',
       );
+    },
+  );
+
+  // INV:INV-SER-IMPORT-DIAGNOSTIC-SURFACE
+  test(
+    'SceneBuilder.buildFromJson keeps alias-bearing out-of-range diagnostics aligned with decodeScene',
+    () {
+      final scenarios =
+          <({String description, Map<String, Object?> node, String path})>[
+            (
+              description: 'line localA.x',
+              node: <String, Object?>{
+                ...minimalRectNodeJson(id: 'line-a'),
+                'type': 'line',
+                'localA': <String, Object?>{'x': sceneCoordMax + 1, 'y': 0},
+                'localB': const <String, Object?>{'x': 1, 'y': 1},
+                'thickness': 1,
+                'color': '#FF000000',
+              },
+              path: 'layers[0].nodes[0].localA.x',
+            ),
+            (
+              description: 'line localB.y',
+              node: <String, Object?>{
+                ...minimalRectNodeJson(id: 'line-b'),
+                'type': 'line',
+                'localA': const <String, Object?>{'x': 0, 'y': 0},
+                'localB': <String, Object?>{'x': 1, 'y': sceneCoordMax + 1},
+                'thickness': 1,
+                'color': '#FF000000',
+              },
+              path: 'layers[0].nodes[0].localB.y',
+            ),
+            (
+              description: 'stroke localPoints[1].x',
+              node: <String, Object?>{
+                ...minimalRectNodeJson(id: 'stroke-x'),
+                'type': 'stroke',
+                'localPoints': <Object?>[
+                  const <String, Object?>{'x': 0, 'y': 0},
+                  <String, Object?>{'x': sceneCoordMax + 1, 'y': 1},
+                ],
+                'thickness': 1,
+                'color': '#FF000000',
+              },
+              path: 'layers[0].nodes[0].localPoints[1].x',
+            ),
+            (
+              description: 'stroke localPoints[1].y',
+              node: <String, Object?>{
+                ...minimalRectNodeJson(id: 'stroke-y'),
+                'type': 'stroke',
+                'localPoints': <Object?>[
+                  const <String, Object?>{'x': 0, 'y': 0},
+                  <String, Object?>{'x': 1, 'y': sceneCoordMax + 1},
+                ],
+                'thickness': 1,
+                'color': '#FF000000',
+              },
+              path: 'layers[0].nodes[0].localPoints[1].y',
+            ),
+          ];
+
+      for (final scenario in scenarios) {
+        final raw = minimalSceneJson(contentNodes: <Object?>[scenario.node]);
+
+        final fromBuilder = _captureSceneDataException(
+          () => SceneBuilder.buildFromJson(raw),
+        );
+        final fromCodec = _captureSceneDataException(
+          () => decodeScene(Map<String, dynamic>.from(raw)),
+        );
+
+        _expectSameSceneDataContract(fromBuilder, fromCodec);
+        expect(fromBuilder.code, SceneDataErrorCode.outOfRange);
+        expect(fromBuilder.path, scenario.path, reason: scenario.description);
+        expect(fromBuilder.details, const <String, Object?>{
+          'template': 'outOfRange',
+          'min': -sceneCoordMax,
+          'max': sceneCoordMax,
+        });
+      }
     },
   );
 

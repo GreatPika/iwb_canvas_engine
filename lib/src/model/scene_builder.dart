@@ -7,6 +7,7 @@ import 'scene_import_draft.dart';
 import 'scene_import_draft_from_snapshot.dart';
 import 'scene_policy.dart';
 import 'scene_snapshot_from_scene.dart';
+import 'scene_validation_path_surface.dart';
 
 Scene sceneBuildFromSnapshot(
   SceneSnapshot rawSnapshot, {
@@ -15,13 +16,17 @@ Scene sceneBuildFromSnapshot(
   return sceneImportFromDraft(
     sceneImportDraftFromSnapshot(rawSnapshot),
     nextInstanceRevision: nextInstanceRevision,
+    validationPathSurface: SceneValidationPathSurface.snapshot,
   );
 }
 
 Scene sceneBuildFromJsonMap(Map<String, Object?> rawJson) {
   try {
     final rawDraft = sceneBuilderDecodeImportDraftFromJson(rawJson);
-    return sceneImportFromDraft(rawDraft);
+    return sceneImportFromDraft(
+      rawDraft,
+      validationPathSurface: SceneValidationPathSurface.jsonImport,
+    );
   } on SceneDataException {
     rethrow;
   } catch (error) {
@@ -36,7 +41,10 @@ Scene sceneBuildFromDynamicJsonMap(Map<String, dynamic> rawJson) {
 SceneSnapshot sceneCanonicalizeAndValidateSnapshot(SceneSnapshot rawSnapshot) {
   final rawDraft = sceneImportDraftFromSnapshot(rawSnapshot);
   return sceneSnapshotFromValidatedImportDraft(
-    ScenePolicy.validateImportDraft(rawDraft),
+    ScenePolicy.validateImportDraft(
+      rawDraft,
+      pathSurface: SceneValidationPathSurface.snapshot,
+    ),
   );
 }
 

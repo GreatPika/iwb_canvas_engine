@@ -499,6 +499,10 @@ Public import/export paths share the same boundary contract:
   `encodeSceneToJson(...)` validate/canonicalize snapshots before encoding.
 - Compare failures by `SceneDataException.code`, `path`, and `details`.
   `message` is derived user-facing text.
+- Alias-bearing line/stroke range failures keep caller-visible path spelling:
+  JSON import/build entrypoints report `localA`, `localB`, and `localPoints`,
+  while typed snapshot import/build entrypoints keep `start`, `end`, and
+  `points`.
 - Oversized ids, text payloads, SVG path data, palette lists, stroke point
   lists, layer counts, and scene-wide node counts are rejected at the public
   boundary.
@@ -527,6 +531,11 @@ Use these fields for machine handling:
 
 `source` is diagnostic support only. It may contain a sanitized preview rather
 than the original raw object.
+
+Path naming follows the caller-visible import surface. For the same line/stroke
+range invariant, JSON entrypoints surface alias-bearing paths such as
+`layers[0].nodes[0].localA.x` and `localPoints[1].y`, while typed snapshot
+entrypoints keep canonical paths such as `start.x`, `end.y`, and `points[i].x`.
 
 ### 9.3 `SceneDataErrorCode`
 

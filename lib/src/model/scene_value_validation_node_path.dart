@@ -1,4 +1,5 @@
 import '../contract/snapshot.dart';
+import '../core/scene_limits.dart';
 import '../core/nodes.dart';
 import 'scene_value_validation_primitives.dart';
 import 'scene_value_validation_support.dart';
@@ -43,6 +44,13 @@ void _sceneValidatePathNodeFields({
   sceneValidateNonNegativeDouble(
     strokeWidth,
     field: '$field.strokeWidth',
+    onError: onError,
+  );
+  sceneValidateDoubleInRange(
+    strokeWidth,
+    field: '$field.strokeWidth',
+    min: 0,
+    max: sceneThicknessMax,
     onError: onError,
   );
 }

@@ -4,6 +4,7 @@ import '../contract/validated/layer_id_value.dart';
 import '../core/nodes.dart';
 import '../core/scene.dart';
 import 'scene_import_draft.dart';
+import 'scene_validation_path_surface.dart';
 import 'scene_value_validation_node.dart';
 import 'scene_value_validation_palette_grid.dart';
 import 'scene_value_validation_support.dart' as validation_support;
@@ -31,6 +32,10 @@ typedef SceneValidationErrorReporter =
     validation_support.SceneValidationErrorReporter;
 
 typedef _SceneValidationStepRunner = void Function(void Function() step);
+typedef _GridValidationPolicy = ({
+  bool requirePositiveCellSize,
+  bool requireEnabledMinCellSize,
+});
 
 typedef _SceneValueValidationAccessors<TScene, TGrid, TPalette, TLayer, TNode> =
     ({
@@ -50,8 +55,7 @@ typedef _SceneValueValidationAccessors<TScene, TGrid, TPalette, TLayer, TNode> =
         TGrid grid, {
         required String field,
         required SceneValidationErrorReporter onError,
-        required bool requirePositiveCellSize,
-        required bool requireEnabledMinCellSize,
+        required _GridValidationPolicy policy,
       })
       validateGrid,
       void Function(
@@ -68,10 +72,22 @@ typedef _SceneValueValidationAccessors<TScene, TGrid, TPalette, TLayer, TNode> =
       validateSingleNode,
     });
 
+typedef _SceneValueValidationConfig<TScene, TGrid, TPalette, TLayer, TNode> = ({
+  SceneValidationErrorReporter onError,
+  _GridValidationPolicy gridPolicy,
+  _SceneValidationStepRunner runStep,
+  _SceneValueValidationAccessors<TScene, TGrid, TPalette, TLayer, TNode>
+  accessors,
+});
+
+typedef _LayerNodeValidationConfig<TNode> = ({
+  SceneValidationErrorReporter onError,
+  _SceneValidationStepRunner runStep,
+  _NodeValidationAccessors<TNode> accessors,
+});
+
 final _snapshotSceneValueValidationAccessors =
     _buildSnapshotSceneValueValidationAccessors();
-final _draftSceneValueValidationAccessors =
-    _buildDraftSceneValueValidationAccessors();
 final _runtimeSceneValueValidationAccessors =
     _buildRuntimeSceneValueValidationAccessors();
 
@@ -89,11 +105,15 @@ void sceneValidateSnapshotValues(
     NodeSnapshot
   >(
     snapshot,
-    onError: onError,
-    requirePositiveGridCellSize: requirePositiveGridCellSize,
-    requireEnabledMinGridCellSize: requireEnabledMinGridCellSize,
-    runStep: _sceneRunValidationStep,
-    accessors: _snapshotSceneValueValidationAccessors,
+    config: (
+      onError: onError,
+      gridPolicy: (
+        requirePositiveCellSize: requirePositiveGridCellSize,
+        requireEnabledMinCellSize: requireEnabledMinGridCellSize,
+      ),
+      runStep: _sceneRunValidationStep,
+      accessors: _snapshotSceneValueValidationAccessors,
+    ),
   );
 }
 
@@ -111,11 +131,15 @@ void sceneValidateSceneValues(
     SceneNode
   >(
     scene,
-    onError: onError,
-    requirePositiveGridCellSize: requirePositiveGridCellSize,
-    requireEnabledMinGridCellSize: requireEnabledMinGridCellSize,
-    runStep: _sceneRunValidationStep,
-    accessors: _runtimeSceneValueValidationAccessors,
+    config: (
+      onError: onError,
+      gridPolicy: (
+        requirePositiveCellSize: requirePositiveGridCellSize,
+        requireEnabledMinCellSize: requireEnabledMinGridCellSize,
+      ),
+      runStep: _sceneRunValidationStep,
+      accessors: _runtimeSceneValueValidationAccessors,
+    ),
   );
 }
 
@@ -134,11 +158,15 @@ List<String> sceneCollectRuntimeSceneValueViolations(
     SceneNode
   >(
     scene,
-    onError: validation_support.sceneValidationThrowSceneDataException,
-    requirePositiveGridCellSize: requirePositiveGridCellSize,
-    requireEnabledMinGridCellSize: requireEnabledMinGridCellSize,
-    runStep: _sceneCollectValidationStepRunner(violations),
-    accessors: _runtimeSceneValueValidationAccessors,
+    config: (
+      onError: validation_support.sceneValidationThrowSceneDataException,
+      gridPolicy: (
+        requirePositiveCellSize: requirePositiveGridCellSize,
+        requireEnabledMinCellSize: requireEnabledMinGridCellSize,
+      ),
+      runStep: _sceneCollectValidationStepRunner(violations),
+      accessors: _runtimeSceneValueValidationAccessors,
+    ),
   );
 
   return violations;
@@ -160,8 +188,9 @@ List<String> sceneCollectRuntimeContentLayerIdViolations(Scene scene) {
 void sceneValidateImportDraftValues(
   SceneImportDraft draft, {
   required SceneValidationErrorReporter onError,
-  required bool requirePositiveGridCellSize,
-  required bool requireEnabledMinGridCellSize,
+  required ({bool requirePositiveCellSize, bool requireEnabledMinCellSize})
+  gridPolicy,
+  required SceneValidationPathSurface pathSurface,
 }) {
   _sceneValidateSceneValuesWithLayerIds<
     SceneImportDraft,
@@ -171,11 +200,14 @@ void sceneValidateImportDraftValues(
     NodeSnapshotBacking
   >(
     draft,
-    onError: onError,
-    requirePositiveGridCellSize: requirePositiveGridCellSize,
-    requireEnabledMinGridCellSize: requireEnabledMinGridCellSize,
-    runStep: _sceneRunValidationStep,
-    accessors: _draftSceneValueValidationAccessors,
+    config: (
+      onError: onError,
+      gridPolicy: gridPolicy,
+      runStep: _sceneRunValidationStep,
+      accessors: _buildDraftSceneValueValidationAccessors(
+        pathSurface: pathSurface,
+      ),
+    ),
   );
 }
 
@@ -200,7 +232,7 @@ _buildSnapshotSceneValueValidationAccessors() {
     contentLayersOf: (scene) => scene.layers,
     layerIdOf: (layer) => layer.id,
     layerNodesOf: (layer) => layer.nodes,
-    validateGrid: sceneValidateGridSnapshot,
+    validateGrid: _sceneValidateSnapshotGrid,
     validatePalette: sceneValidatePaletteSnapshot,
     validateSingleNode: sceneValidateNodeSnapshot,
   );
@@ -213,7 +245,9 @@ _SceneValueValidationAccessors<
   ContentLayerSnapshotBacking,
   NodeSnapshotBacking
 >
-_buildDraftSceneValueValidationAccessors() {
+_buildDraftSceneValueValidationAccessors({
+  required SceneValidationPathSurface pathSurface,
+}) {
   return (
     validateCameraOffset: (scene, {required field, required onError}) =>
         sceneValidateCameraOffsetValue(
@@ -227,35 +261,9 @@ _buildDraftSceneValueValidationAccessors() {
     contentLayersOf: (scene) => scene.layers,
     layerIdOf: (layer) => layer.id,
     layerNodesOf: (layer) => layer.nodes,
-    validateGrid:
-        (
-          grid, {
-          required field,
-          required onError,
-          required requirePositiveCellSize,
-          required requireEnabledMinCellSize,
-        }) => sceneValidateGridCellSizeValue(
-          cellSize: grid.cellSize,
-          isEnabled: grid.isEnabled,
-          field: field,
-          onError: onError,
-          requirePositiveCellSize: requirePositiveCellSize,
-          requireEnabledMinCellSize: requireEnabledMinCellSize,
-        ),
-    validatePalette: (palette, {required field, required onError}) =>
-        sceneValidatePaletteFields(
-          penColors: palette.penColors,
-          backgroundColors: palette.backgroundColors,
-          gridSizes: palette.gridSizes,
-          field: field,
-          onError: onError,
-        ),
-    validateSingleNode: (node, {required field, required onError}) =>
-        sceneValidateNodeSnapshot(
-          materializeNodeSnapshot(node),
-          field: field,
-          onError: onError,
-        ),
+    validateGrid: _sceneValidateDraftGrid,
+    validatePalette: _sceneValidateDraftPalette,
+    validateSingleNode: _buildDraftNodeSnapshotValidator(pathSurface),
   );
 }
 
@@ -280,7 +288,7 @@ _buildRuntimeSceneValueValidationAccessors() {
     contentLayersOf: (scene) => scene.layers,
     layerIdOf: (layer) => layer.id,
     layerNodesOf: (layer) => layer.nodes,
-    validateGrid: sceneValidateGrid,
+    validateGrid: _sceneValidateRuntimeGrid,
     validatePalette: sceneValidatePalette,
     validateSingleNode: sceneValidateNode,
   );
@@ -288,61 +296,18 @@ _buildRuntimeSceneValueValidationAccessors() {
 
 void _sceneValidateSceneValues<TScene, TGrid, TPalette, TLayer, TNode>(
   TScene scene, {
-  required SceneValidationErrorReporter onError,
-  required bool requirePositiveGridCellSize,
-  required bool requireEnabledMinGridCellSize,
-  required _SceneValidationStepRunner runStep,
-  required _SceneValueValidationAccessors<
-    TScene,
-    TGrid,
-    TPalette,
-    TLayer,
-    TNode
-  >
-  accessors,
+  required _SceneValueValidationConfig<TScene, TGrid, TPalette, TLayer, TNode>
+  config,
 }) {
-  runStep(
-    () => accessors.validateCameraOffset(
-      scene,
-      field: 'camera.offset',
-      onError: onError,
-    ),
-  );
-  runStep(
-    () => accessors.validateGrid(
-      accessors.gridOf(scene),
-      field: 'background.grid',
-      onError: onError,
-      requirePositiveCellSize: requirePositiveGridCellSize,
-      requireEnabledMinCellSize: requireEnabledMinGridCellSize,
-    ),
-  );
-  runStep(
-    () => accessors.validatePalette(
-      accessors.paletteOf(scene),
-      field: 'palette',
-      onError: onError,
-    ),
-  );
-
-  final backgroundNodes = accessors.backgroundNodesOf(scene);
-  if (backgroundNodes != null) {
-    _sceneValidateLayerNodes<TNode>(
-      backgroundNodes,
-      field: 'backgroundLayer',
-      onError: onError,
-      runStep: runStep,
-      accessors: (validateNode: accessors.validateSingleNode),
-    );
-  }
+  _sceneValidateSharedSceneFields(scene, config: config);
 
   _sceneValidateContentLayers<TLayer, TNode>(
-    accessors.contentLayersOf(scene),
-    onError: onError,
-    runStep: runStep,
+    config.accessors.contentLayersOf(scene),
+    onError: config.onError,
+    runStep: config.runStep,
     accessors: (
-      layerNodesOf: accessors.layerNodesOf,
-      validateSingleNode: accessors.validateSingleNode,
+      layerNodesOf: config.accessors.layerNodesOf,
+      validateSingleNode: config.accessors.validateSingleNode,
     ),
   );
 }
@@ -350,64 +315,63 @@ void _sceneValidateSceneValues<TScene, TGrid, TPalette, TLayer, TNode>(
 void
 _sceneValidateSceneValuesWithLayerIds<TScene, TGrid, TPalette, TLayer, TNode>(
   TScene scene, {
-  required SceneValidationErrorReporter onError,
-  required bool requirePositiveGridCellSize,
-  required bool requireEnabledMinGridCellSize,
-  required _SceneValidationStepRunner runStep,
-  required _SceneValueValidationAccessors<
-    TScene,
-    TGrid,
-    TPalette,
-    TLayer,
-    TNode
-  >
-  accessors,
+  required _SceneValueValidationConfig<TScene, TGrid, TPalette, TLayer, TNode>
+  config,
 }) {
-  runStep(
-    () => accessors.validateCameraOffset(
+  _sceneValidateSharedSceneFields(scene, config: config);
+
+  _sceneValidateContentLayersWithLayerIds<TLayer, TNode>(
+    config.accessors.contentLayersOf(scene),
+    onError: config.onError,
+    runStep: config.runStep,
+    accessors: (
+      layerIdOf: config.accessors.layerIdOf,
+      layerNodesOf: config.accessors.layerNodesOf,
+      validateSingleNode: config.accessors.validateSingleNode,
+    ),
+  );
+}
+
+void _sceneValidateSharedSceneFields<TScene, TGrid, TPalette, TLayer, TNode>(
+  TScene scene, {
+  required _SceneValueValidationConfig<TScene, TGrid, TPalette, TLayer, TNode>
+  config,
+}) {
+  config.runStep(
+    () => config.accessors.validateCameraOffset(
       scene,
       field: 'camera.offset',
-      onError: onError,
+      onError: config.onError,
     ),
   );
-  runStep(
-    () => accessors.validateGrid(
-      accessors.gridOf(scene),
+  config.runStep(
+    () => config.accessors.validateGrid(
+      config.accessors.gridOf(scene),
       field: 'background.grid',
-      onError: onError,
-      requirePositiveCellSize: requirePositiveGridCellSize,
-      requireEnabledMinCellSize: requireEnabledMinGridCellSize,
+      onError: config.onError,
+      policy: config.gridPolicy,
     ),
   );
-  runStep(
-    () => accessors.validatePalette(
-      accessors.paletteOf(scene),
+  config.runStep(
+    () => config.accessors.validatePalette(
+      config.accessors.paletteOf(scene),
       field: 'palette',
-      onError: onError,
+      onError: config.onError,
     ),
   );
 
-  final backgroundNodes = accessors.backgroundNodesOf(scene);
+  final backgroundNodes = config.accessors.backgroundNodesOf(scene);
   if (backgroundNodes != null) {
     _sceneValidateLayerNodes<TNode>(
       backgroundNodes,
       field: 'backgroundLayer',
-      onError: onError,
-      runStep: runStep,
-      accessors: (validateNode: accessors.validateSingleNode),
+      config: (
+        onError: config.onError,
+        runStep: config.runStep,
+        accessors: (validateNode: config.accessors.validateSingleNode),
+      ),
     );
   }
-
-  _sceneValidateContentLayersWithLayerIds<TLayer, TNode>(
-    accessors.contentLayersOf(scene),
-    onError: onError,
-    runStep: runStep,
-    accessors: (
-      layerIdOf: accessors.layerIdOf,
-      layerNodesOf: accessors.layerNodesOf,
-      validateSingleNode: accessors.validateSingleNode,
-    ),
-  );
 }
 
 void _sceneValidateContentLayerIds<TLayer>(
@@ -457,9 +421,11 @@ void _sceneValidateContentLayersWithLayerIds<TLayer, TNode>(
     _sceneValidateLayerNodes<TNode>(
       accessors.layerNodesOf(layer),
       field: field,
-      onError: onError,
-      runStep: runStep,
-      accessors: (validateNode: accessors.validateSingleNode),
+      config: (
+        onError: onError,
+        runStep: runStep,
+        accessors: (validateNode: accessors.validateSingleNode),
+      ),
     );
   }
 }
@@ -476,9 +442,11 @@ void _sceneValidateContentLayers<TLayer, TNode>(
     _sceneValidateLayerNodes<TNode>(
       accessors.layerNodesOf(layer),
       field: field,
-      onError: onError,
-      runStep: runStep,
-      accessors: (validateNode: accessors.validateSingleNode),
+      config: (
+        onError: onError,
+        runStep: runStep,
+        accessors: (validateNode: accessors.validateSingleNode),
+      ),
     );
   }
 }
@@ -486,15 +454,17 @@ void _sceneValidateContentLayers<TLayer, TNode>(
 void _sceneValidateLayerNodes<TNode>(
   List<TNode> nodes, {
   required String field,
-  required SceneValidationErrorReporter onError,
-  required _SceneValidationStepRunner runStep,
-  required _NodeValidationAccessors<TNode> accessors,
+  required _LayerNodeValidationConfig<TNode> config,
 }) {
   for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
     final node = nodes[nodeIndex];
     final nodeField = '$field.nodes[$nodeIndex]';
-    runStep(
-      () => accessors.validateNode(node, field: nodeField, onError: onError),
+    config.runStep(
+      () => config.accessors.validateNode(
+        node,
+        field: nodeField,
+        onError: config.onError,
+      ),
     );
   }
 }
@@ -513,6 +483,81 @@ void _sceneValidateLayerId(
 }
 
 void _sceneRunValidationStep(void Function() step) => step();
+
+void _sceneValidateDraftGrid(
+  GridSnapshotBacking grid, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+  required _GridValidationPolicy policy,
+}) {
+  sceneValidateGridCellSizeValue(
+    cellSize: grid.cellSize,
+    isEnabled: grid.isEnabled,
+    field: field,
+    onError: onError,
+    requirePositiveCellSize: policy.requirePositiveCellSize,
+    requireEnabledMinCellSize: policy.requireEnabledMinCellSize,
+  );
+}
+
+void _sceneValidateDraftPalette(
+  ScenePaletteSnapshotBacking palette, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  sceneValidatePaletteFields(
+    penColors: palette.penColors,
+    backgroundColors: palette.backgroundColors,
+    gridSizes: palette.gridSizes,
+    field: field,
+    onError: onError,
+  );
+}
+
+void _sceneValidateSnapshotGrid(
+  GridSnapshot grid, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+  required _GridValidationPolicy policy,
+}) {
+  sceneValidateGridSnapshot(
+    grid,
+    field: field,
+    onError: onError,
+    requirePositiveCellSize: policy.requirePositiveCellSize,
+    requireEnabledMinCellSize: policy.requireEnabledMinCellSize,
+  );
+}
+
+void _sceneValidateRuntimeGrid(
+  GridSettings grid, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+  required _GridValidationPolicy policy,
+}) {
+  sceneValidateGrid(
+    grid,
+    field: field,
+    onError: onError,
+    requirePositiveCellSize: policy.requirePositiveCellSize,
+    requireEnabledMinCellSize: policy.requireEnabledMinCellSize,
+  );
+}
+
+void Function(
+  NodeSnapshotBacking node, {
+  required String field,
+  required SceneValidationErrorReporter onError,
+})
+_buildDraftNodeSnapshotValidator(SceneValidationPathSurface pathSurface) {
+  return (node, {required field, required onError}) =>
+      sceneValidateNodeSnapshot(
+        materializeNodeSnapshot(node),
+        field: field,
+        onError: onError,
+        pathSurface: pathSurface,
+      );
+}
 
 _SceneValidationStepRunner _sceneCollectValidationStepRunner(
   List<String> violations,

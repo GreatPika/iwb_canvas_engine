@@ -1195,6 +1195,28 @@ const List<Invariant> invariants = <Invariant>[
     ],
   ),
   Invariant(
+    id: 'INV-SER-IMPORT-DIAGNOSTIC-SURFACE',
+    scope: 'serialization',
+    title:
+        'import/build entrypoints select one model-owned diagnostic path surface so JSON line/stroke range failures keep localA/localB/localPoints while typed snapshots keep start/end/points',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(
+        path: 'test/public_api/scene_builder_test.dart',
+        stepId: 'scope_model_contract',
+      ),
+      RequiredProof(
+        path: 'test/model/scene_validation_path_surface_contract_test.dart',
+        stepId: 'scope_model_contract',
+      ),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(
+        path:
+            'test/tool/guardrails/guardrails_model_architecture_tool_test.dart',
+      ),
+    ],
+  ),
+  Invariant(
     id: 'INV-SER-JSON-GRID-PALETTE-CONTRACTS',
     scope: 'serialization',
     title:

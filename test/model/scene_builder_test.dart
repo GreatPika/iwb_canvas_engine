@@ -1636,6 +1636,129 @@ void main() {
   );
 
   test(
+    'sceneCanonicalizeAndValidateSnapshot and ScenePolicy.validateImportSnapshot keep canonical out-of-range paths',
+    () {
+      final scenarios =
+          <({String description, SceneSnapshot snapshot, String path})>[
+            (
+              description: 'line start.x',
+              snapshot: SceneSnapshot(
+                layers: <ContentLayerSnapshot>[
+                  ContentLayerSnapshot(
+                    id: 'layer-auto-line-start',
+                    nodes: <NodeSnapshot>[
+                      LineNodeSnapshot(
+                        id: 'line-start',
+                        start: Offset(sceneCoordMax + 1, 0),
+                        end: const Offset(1, 1),
+                        thickness: 1,
+                        color: const Color(0xFF000000),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              path: 'layers[0].nodes[0].start.x',
+            ),
+            (
+              description: 'line end.y',
+              snapshot: SceneSnapshot(
+                layers: <ContentLayerSnapshot>[
+                  ContentLayerSnapshot(
+                    id: 'layer-auto-line-end',
+                    nodes: <NodeSnapshot>[
+                      LineNodeSnapshot(
+                        id: 'line-end',
+                        start: const Offset(0, 0),
+                        end: Offset(1, sceneCoordMax + 1),
+                        thickness: 1,
+                        color: const Color(0xFF000000),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              path: 'layers[0].nodes[0].end.y',
+            ),
+            (
+              description: 'stroke points[1].x',
+              snapshot: SceneSnapshot(
+                layers: <ContentLayerSnapshot>[
+                  ContentLayerSnapshot(
+                    id: 'layer-auto-stroke-x',
+                    nodes: <NodeSnapshot>[
+                      StrokeNodeSnapshot(
+                        id: 'stroke-x',
+                        points: <Offset>[
+                          const Offset(0, 0),
+                          Offset(sceneCoordMax + 1, 1),
+                        ],
+                        thickness: 1,
+                        color: const Color(0xFF000000),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              path: 'layers[0].nodes[0].points[1].x',
+            ),
+            (
+              description: 'stroke points[1].y',
+              snapshot: SceneSnapshot(
+                layers: <ContentLayerSnapshot>[
+                  ContentLayerSnapshot(
+                    id: 'layer-auto-stroke-y',
+                    nodes: <NodeSnapshot>[
+                      StrokeNodeSnapshot(
+                        id: 'stroke-y',
+                        points: <Offset>[
+                          const Offset(0, 0),
+                          Offset(1, sceneCoordMax + 1),
+                        ],
+                        thickness: 1,
+                        color: const Color(0xFF000000),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              path: 'layers[0].nodes[0].points[1].y',
+            ),
+          ];
+
+      for (final scenario in scenarios) {
+        for (final validate
+            in <({String label, SceneSnapshot Function(SceneSnapshot) run})>[
+              (
+                label: 'sceneCanonicalizeAndValidateSnapshot',
+                run: model_builder.sceneCanonicalizeAndValidateSnapshot,
+              ),
+              (
+                label: 'ScenePolicy.validateImportSnapshot',
+                run: ScenePolicy.validateImportSnapshot,
+              ),
+            ]) {
+          expect(
+            () => validate.run(scenario.snapshot),
+            throwsA(
+              predicate(
+                (e) =>
+                    e is SceneDataException &&
+                    e.code == SceneDataErrorCode.outOfRange &&
+                    e.path == scenario.path &&
+                    e.details['template'] == 'outOfRange' &&
+                    e.details['min'] == -sceneCoordMax &&
+                    e.details['max'] == sceneCoordMax,
+              ),
+            ),
+            reason: '${scenario.description} via ${validate.label}',
+          );
+        }
+      }
+    },
+  );
+
+  test(
     'sceneCanonicalizeAndValidateSnapshot validates optional text layout fields and non-uniform path transforms',
     () {
       final snapshot = sceneSnapshotFromValidated(

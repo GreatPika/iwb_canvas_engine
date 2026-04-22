@@ -496,7 +496,7 @@ canonical drafts or duplicating range checks in decode owners.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Lock the alias-bearing boundary drift reproducers
+### Slice 1. [x] Lock the alias-bearing boundary drift reproducers
 
 #### Slice Contract
 
@@ -560,7 +560,7 @@ owner-side implementation change.
 - The new public-boundary reproducer cases fail against the current drift while
   neighboring finite/max-points and model-architecture proofs stay green.
 
-### Slice 2. [ ] Introduce the import diagnostic surface and retire policy-owned path assembly
+### Slice 2. [x] Introduce the import diagnostic surface and retire policy-owned path assembly
 
 #### Slice Contract
 
@@ -627,7 +627,7 @@ construction.
   turns green, and the new guardrail fails on both policy-owned and direct
   `scene_validation_path_surface.dart` import regression fixtures.
 
-### Slice 3. [ ] Register the import diagnostic surface contract and publish it
+### Slice 3. [x] Register the import diagnostic surface contract and publish it
 
 #### Slice Contract
 

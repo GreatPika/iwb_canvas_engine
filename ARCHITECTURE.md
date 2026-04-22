@@ -479,10 +479,22 @@ document**.
 Typical flow:
 
 1. boundary data arrives as snapshot, map, or JSON string
-2. the boundary validates shape, values, limits, and schema version
-3. the model layer canonicalizes the document shape
-4. runtime-scene materialization is performed only inside engine-owned paths
-5. the supported public result is a canonical `SceneSnapshot`
+2. the boundary selects the caller-visible import diagnostic surface
+3. the boundary validates shape, values, limits, and schema version
+4. the model validation owners apply invariants through that selected path
+   surface
+5. the model layer canonicalizes the document shape
+6. runtime-scene materialization is performed only inside engine-owned paths
+7. the supported public result is a canonical `SceneSnapshot`
+
+Diagnostic-path rule:
+
+- JSON import/build entrypoints keep alias-bearing line/stroke range paths such
+  as `localA`, `localB`, and `localPoints`.
+- Typed snapshot import/build entrypoints keep canonical `start`, `end`, and
+  `points`.
+- The path-selection seam is model-owned and internal; canonical draft/backing
+  carriers do not store provenance metadata for those names.
 
 ### 8.2 Transactional write and commit flow
 
@@ -596,11 +608,16 @@ important for architectural reasoning.
 - `SceneSnapshot` is the canonical public document boundary
 - import/build/serialization failures use stable `SceneDataException`
   categories and structured details
+- import/build diagnostics choose caller-visible path spelling at the boundary,
+  and `scene_policy.dart` stays orchestration-only rather than rebuilding late
+  node range paths
 
 ### Layering invariants
 
 - the `lib/src/**` layer DAG is explicit and enforced
 - contract and model architecture boundaries are guarded mechanically
+- import diagnostic path selection stays model-internal and is guarded against
+  direct non-model imports or policy-owned range reassembly
 - interactive architecture remains split across facade, runtime, mutation
   boundary, and view-runtime assembly
 - the view shell reaches the engine through `SceneViewRuntime`

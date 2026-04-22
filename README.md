@@ -132,6 +132,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - `encodeScene(...)` / `encodeSceneToJson(...)` validate before serializing.
 - `decodeScene(...)` / `decodeSceneFromJson(...)` validate before returning a
   `SceneSnapshot`.
+- JSON line/stroke range diagnostics keep alias-bearing field paths such as
+  `localA`, `localB`, and `localPoints`, while typed snapshot imports keep
+  canonical `start`, `end`, and `points`.
 - Text nodes use derived bounds. Current schema payloads require explicit
   `textDirection` and must not include legacy stored text `size` metadata.
 

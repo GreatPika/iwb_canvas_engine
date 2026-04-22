@@ -6,12 +6,18 @@ import 'scene_graph_traversal.dart';
 import 'scene_import_draft.dart';
 import 'scene_node_boundary_mapping.dart';
 import 'scene_policy.dart';
+import 'scene_validation_path_surface.dart';
 
 Scene sceneImportFromDraft(
   SceneImportDraft rawDraft, {
   int Function()? nextInstanceRevision,
+  SceneValidationPathSurface validationPathSurface =
+      SceneValidationPathSurface.snapshot,
 }) {
-  final canonicalDraft = ScenePolicy.validateImportDraft(rawDraft);
+  final canonicalDraft = ScenePolicy.validateImportDraft(
+    rawDraft,
+    pathSurface: validationPathSurface,
+  );
   return sceneFromImportDraft(
     canonicalDraft,
     nextInstanceRevision: nextInstanceRevision,

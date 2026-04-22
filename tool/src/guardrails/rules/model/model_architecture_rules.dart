@@ -1,9 +1,11 @@
 import 'dart:io';
 
+import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
 import '../../support/guardrail_context.dart';
+import '../../support/guardrail_ast_utils.dart' show lineForOffset;
 import '../../core/guardrail_element_utils.dart' as element_utils;
 import '../../core/guardrail_rule.dart';
 import '../../core/guardrail_rule_metadata.dart';
@@ -61,6 +63,7 @@ const Set<String> _restrictedModelOwnerModules = <String>{
   '/lib/src/model/scene_from_snapshot.dart',
   '/lib/src/model/scene_policy.dart',
   '/lib/src/model/scene_snapshot_from_scene.dart',
+  '/lib/src/model/scene_validation_path_surface.dart',
   '/lib/src/model/scene_node_boundary_mapping_common.dart',
   '/lib/src/model/scene_node_boundary_mapping.dart',
   '/lib/src/model/scene_node_boundary_mapping_image.dart',
@@ -214,6 +217,12 @@ GuardrailViolation? _checkModelFile(GuardrailContext context, File file) {
         'model architecture violation: lib/src/model/** must stay part-free after final architecture closure.',
     extraCheck: (parsed, filePosixPath) {
       if (filePosixPath != '/lib/src/model/document.dart') {
+        if (filePosixPath == '/lib/src/model/scene_policy.dart') {
+          return _checkScenePolicyImportDiagnosticOwnership(
+            parsed,
+            filePosixPath,
+          );
+        }
         return null;
       }
       return checkDirectiveBoundaryViolation(
@@ -226,6 +235,24 @@ GuardrailViolation? _checkModelFile(GuardrailContext context, File file) {
             'model architecture violation: document.dart must consume scene_from_snapshot.dart / scene_snapshot_from_scene.dart directly and must not import scene_builder.dart.',
       );
     },
+  );
+}
+
+GuardrailViolation? _checkScenePolicyImportDiagnosticOwnership(
+  ParsedUnitResult parsed,
+  String filePosixPath,
+) {
+  final visitor = _ScenePolicyImportDiagnosticOwnershipVisitor();
+  parsed.unit.accept(visitor);
+  final violation = visitor.firstViolation;
+  if (violation == null) {
+    return null;
+  }
+  return GuardrailViolation(
+    filePath: filePosixPath,
+    line: lineForOffset(parsed, violation.offset),
+    message:
+        'model architecture violation: scene_policy.dart must not own direct import-range diagnostics; keep import diagnostic paths inside scene_value_validation*.dart owners.',
   );
 }
 
@@ -344,6 +371,34 @@ final class _ControllerLayerMutationVisitor extends RecursiveAstVisitor<void> {
     }
     super.visitAssignmentExpression(node);
   }
+}
+
+final class _ScenePolicyImportDiagnosticOwnershipVisitor
+    extends RecursiveAstVisitor<void> {
+  _ScenePolicyImportDiagnosticOwnershipOccurrence? firstViolation;
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (firstViolation != null) {
+      return;
+    }
+    final target = node.target;
+    if (target is SimpleIdentifier &&
+        target.name == 'SceneDataException' &&
+        node.methodName.name == 'outOfRange') {
+      firstViolation = _ScenePolicyImportDiagnosticOwnershipOccurrence(
+        offset: node.offset,
+      );
+      return;
+    }
+    super.visitMethodInvocation(node);
+  }
+}
+
+final class _ScenePolicyImportDiagnosticOwnershipOccurrence {
+  const _ScenePolicyImportDiagnosticOwnershipOccurrence({required this.offset});
+
+  final int offset;
 }
 
 _ControllerLayerMutationOccurrence? _matchControllerLayerMutation(
