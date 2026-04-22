@@ -995,6 +995,23 @@ const List<Invariant> invariants = <Invariant>[
     ],
   ),
   Invariant(
+    id: 'INV-ENG-COMMITTED-SPATIAL-ADMISSION-ALIGNMENT',
+    scope: 'engine-runtime',
+    title:
+        'committed mutation dirty-tracking and committed spatial storage share one coarse spatial admission contract',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(
+        path:
+            'test/controller/internal/node_mutation_spatial_admission_contract_test.dart',
+        stepId: 'scope_controller_internal',
+      ),
+      RequiredProof(
+        path: 'test/controller/core/scene_controller_spatial_index_test.dart',
+        stepId: 'scope_controller',
+      ),
+    ],
+  ),
+  Invariant(
     id: 'INV-ENG-TIMESTAMP-MS-MONOTONIC',
     scope: 'engine-runtime',
     title:

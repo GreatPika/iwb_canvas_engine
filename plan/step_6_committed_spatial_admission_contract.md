@@ -383,7 +383,7 @@ owner-side admission helper.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Lock the stale committed paint reproducer
+### Slice 1. [x] Lock the stale committed paint reproducer
 
 #### Slice Contract
 
@@ -449,7 +449,7 @@ implementation.
 - The new reproducer and guards fail against the current bug, while the
   unchanged committed paint consumer contract remains green.
 
-### Slice 2. [ ] Align owner-side spatial admission semantics
+### Slice 2. [x] Align owner-side spatial admission semantics
 
 #### Slice Contract
 
@@ -509,7 +509,7 @@ and committed spatial-index storage.
 - All Slice 1 reproducers turn green, and the reproduced case stays incremental
   in controller/cache debug assertions.
 
-### Slice 3. [ ] Register the spatial admission alignment invariant
+### Slice 3. [x] Register the spatial admission alignment invariant
 
 #### Slice Contract
 

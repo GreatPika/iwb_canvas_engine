@@ -22,6 +22,17 @@ typedef _MetricTraceState = ({
   double radiusSquared,
   double step,
 });
+typedef NodeSpatialAdmissionBounds = ({
+  Rect hitTestBoundsWorld,
+  Rect paintBoundsWorld,
+});
+
+NodeSpatialAdmissionBounds nodeSpatialAdmissionBoundsWorld(SceneNode node) {
+  return (
+    hitTestBoundsWorld: nodeGeometryCandidateBoundsWorld(node),
+    paintBoundsWorld: nodePaintBoundsWorld(node),
+  );
+}
 
 Rect nodeGeometryCandidateBoundsWorld(
   SceneNode node, {

@@ -348,7 +348,8 @@ bool _upsertResolvedHitTestNode(
     return true;
   }
 
-  final hitTestBounds = nodeHitTestCandidateBoundsWorld(resolved.node);
+  final admissionBounds = nodeSpatialAdmissionBoundsWorld(resolved.node);
+  final hitTestBounds = admissionBounds.hitTestBoundsWorld;
   if (!isFiniteRect(hitTestBounds)) {
     return true;
   }
@@ -377,7 +378,8 @@ bool _upsertResolvedPaintNode(
     return true;
   }
 
-  final paintBounds = nodePaintBoundsWorld(resolved.node);
+  final admissionBounds = nodeSpatialAdmissionBoundsWorld(resolved.node);
+  final paintBounds = admissionBounds.paintBoundsWorld;
   if (!isFiniteRect(paintBounds)) {
     return true;
   }

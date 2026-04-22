@@ -5,7 +5,7 @@ import '../core/nodes.dart';
 class ChangeSet {
   bool documentReplaced = false;
   bool structuralChanged = false;
-  // True when hit candidate bounds changed (or scene structure changed).
+  // True when coarse spatial admission changed (or scene structure changed).
   bool boundsChanged = false;
   bool visualChanged = false;
   bool selectionChanged = false;

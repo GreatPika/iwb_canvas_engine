@@ -1,8 +1,6 @@
-import 'dart:ui' show Rect;
-
 import '../contract/node_spec.dart';
 import '../contract/transform2d.dart';
-import '../core/hit_test.dart';
+import '../core/node_geometry.dart';
 import '../core/nodes.dart';
 import '../core/selection_policy.dart';
 import '../model/document.dart';
@@ -79,14 +77,14 @@ MutationApplyResult<bool> _patch(TxnContext ctx, PatchNodeOp op) {
   }
 
   final found = ctx.txnResolveMutableNode(patch.id);
-  final beforeCandidate = nodeHitTestCandidateBoundsWorld(found.node);
+  final beforeAdmission = nodeSpatialAdmissionBoundsWorld(found.node);
   txnApplyNodePatch(found.node, patch);
-  final afterCandidate = nodeHitTestCandidateBoundsWorld(found.node);
+  final afterAdmission = nodeSpatialAdmissionBoundsWorld(found.node);
   trackUpdatedNodeGeometry(
     ctx,
     nodeId: patch.id,
-    beforeCandidate: beforeCandidate,
-    afterCandidate: afterCandidate,
+    beforeAdmission: beforeAdmission,
+    afterAdmission: afterAdmission,
   );
   return const MutationApplyResult<bool>(value: true, changed: true);
 }
@@ -243,11 +241,11 @@ NodeSpec _normalizeInsertSpec(
 void trackUpdatedNodeGeometry(
   TxnContext ctx, {
   required NodeId nodeId,
-  required Rect? beforeCandidate,
-  required Rect? afterCandidate,
+  required NodeSpatialAdmissionBounds beforeAdmission,
+  required NodeSpatialAdmissionBounds afterAdmission,
 }) {
   ctx.changeSet.txnTrackUpdated(nodeId);
-  if (beforeCandidate != afterCandidate) {
+  if (beforeAdmission != afterAdmission) {
     ctx.changeSet
       ..txnMarkBoundsChanged()
       ..txnTrackSpatialGeometryChanged(nodeId);
@@ -262,14 +260,14 @@ void txnApplyNodeTransform(
   required Transform2D transform,
 }) {
   final found = ctx.txnResolveMutableNode(nodeId);
-  final beforeCandidate = nodeHitTestCandidateBoundsWorld(found.node);
+  final beforeAdmission = nodeSpatialAdmissionBoundsWorld(found.node);
   found.node.transform = transform;
-  final afterCandidate = nodeHitTestCandidateBoundsWorld(found.node);
+  final afterAdmission = nodeSpatialAdmissionBoundsWorld(found.node);
   trackUpdatedNodeGeometry(
     ctx,
     nodeId: nodeId,
-    beforeCandidate: beforeCandidate,
-    afterCandidate: afterCandidate,
+    beforeAdmission: beforeAdmission,
+    afterAdmission: afterAdmission,
   );
 }
 

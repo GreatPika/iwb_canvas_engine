@@ -9,14 +9,47 @@ import 'package:iwb_canvas_engine/src/core/id_generator.dart';
 import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
 import 'package:iwb_canvas_engine/src/controller/change_set.dart';
 import 'package:iwb_canvas_engine/src/controller/mutation_executor.dart';
+import 'package:iwb_canvas_engine/src/controller/mutation_op.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_writer_runtime.dart';
 import 'package:iwb_canvas_engine/src/controller/txn_context.dart';
 import 'package:iwb_canvas_engine/src/controller/internal/spatial_index_cache.dart';
+import 'package:iwb_canvas_engine/src/model/document.dart';
 
 // INV:INV-ENG-SPATIAL-INDEX-REBUILD-ON-INVALID
 
 void main() {
+  Scene rectSceneForAdmissionContract() {
+    return Scene(
+      layers: <ContentLayer>[
+        ContentLayer(
+          id: 'layer-admission',
+          nodes: <SceneNode>[
+            RectNode(
+              id: 'r1',
+              size: const Size(10, 10),
+              strokeColor: const Color(0xFF000000),
+              strokeWidth: 0,
+              hitPadding: 6,
+              transform: Transform2D.translation(const Offset(5, 5)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  TxnContext newAdmissionTxnContext(Scene scene) {
+    final nodeLocator = txnBuildNodeLocator(scene);
+    return TxnContext(
+      baseScene: scene,
+      workingSelection: <NodeId>{},
+      baseAllNodeIds: nodeLocator.keys.toSet(),
+      baseNodeLocator: nodeLocator,
+      nextInstanceRevision: 1,
+    );
+  }
+
   test(
     'SceneWriter clearScene creates missing background layer and clears',
     () {
@@ -267,6 +300,118 @@ void main() {
       );
       expect(invalidThird, isNotEmpty);
       expect(slice.debugBuildCount, 6);
+    },
+  );
+
+  test(
+    'SpatialIndexCache keeps visual-only node patches out of spatial invalidation',
+    () {
+      final cache = SpatialIndexCache();
+      final scene = rectSceneForAdmissionContract();
+      final nodeLocator = txnBuildNodeLocator(scene);
+
+      expect(
+        cache
+            .writeQueryPaintCandidates(
+              scene: scene,
+              nodeLocator: nodeLocator,
+              worldBounds: const Rect.fromLTWH(0, 0, 10, 10),
+              controllerEpoch: 0,
+            )
+            .map((candidate) => candidate.nodeId),
+        <NodeId>['r1'],
+      );
+      expect(cache.debugBuildCount, 1);
+
+      final ctx = newAdmissionTxnContext(scene);
+      final patchResult = const MutationExecutor().execute<bool>(
+        ctx,
+        PatchNodeOp(
+          RectNodePatch(
+            id: 'r1',
+            common: CommonNodePatch(opacity: PatchField<double>.value(0.5)),
+          ),
+        ),
+      );
+      expect(patchResult.changed, isTrue);
+      expect(ctx.changeSet.boundsChanged, isFalse);
+      expect(ctx.changeSet.spatialGeometryChangedIds, isEmpty);
+      expect(ctx.changeSet.visualChanged, isTrue);
+
+      cache.writeHandleCommit(
+        scene: ctx.workingScene,
+        nodeLocator: txnBuildNodeLocator(ctx.workingScene),
+        changeSet: ctx.changeSet,
+        controllerEpoch: 0,
+      );
+
+      expect(
+        cache
+            .writeQueryPaintCandidates(
+              scene: ctx.workingScene,
+              nodeLocator: txnBuildNodeLocator(ctx.workingScene),
+              worldBounds: const Rect.fromLTWH(0, 0, 10, 10),
+              controllerEpoch: 0,
+            )
+            .map((candidate) => candidate.nodeId),
+        <NodeId>['r1'],
+      );
+      expect(cache.debugBuildCount, 1);
+      expect(cache.debugIncrementalApplyCount, 0);
+    },
+  );
+
+  test(
+    'SpatialIndexCache refreshes expanded paint admission through the incremental path',
+    () {
+      final cache = SpatialIndexCache();
+      final scene = rectSceneForAdmissionContract();
+      final nodeLocator = txnBuildNodeLocator(scene);
+
+      expect(
+        cache.writeQueryPaintCandidates(
+          scene: scene,
+          nodeLocator: nodeLocator,
+          worldBounds: const Rect.fromLTWH(11, 5, 1, 1),
+          controllerEpoch: 0,
+        ),
+        isEmpty,
+      );
+      expect(cache.debugBuildCount, 1);
+
+      final ctx = newAdmissionTxnContext(scene);
+      final patchResult = const MutationExecutor().execute<bool>(
+        ctx,
+        PatchNodeOp(
+          RectNodePatch(
+            id: 'r1',
+            strokeWidth: PatchField<double>.value(4),
+            common: CommonNodePatch(hitPadding: PatchField<double>.value(4)),
+          ),
+        ),
+      );
+      expect(patchResult.changed, isTrue);
+
+      cache.writeHandleCommit(
+        scene: ctx.workingScene,
+        nodeLocator: txnBuildNodeLocator(ctx.workingScene),
+        changeSet: ctx.changeSet,
+        controllerEpoch: 0,
+      );
+
+      expect(
+        cache
+            .writeQueryPaintCandidates(
+              scene: ctx.workingScene,
+              nodeLocator: txnBuildNodeLocator(ctx.workingScene),
+              worldBounds: const Rect.fromLTWH(11, 5, 1, 1),
+              controllerEpoch: 0,
+            )
+            .map((candidate) => candidate.nodeId),
+        <NodeId>['r1'],
+      );
+      expect(cache.debugBuildCount, 1);
+      expect(cache.debugIncrementalApplyCount, 1);
     },
   );
 

@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
 // INV:INV-ENG-ID-INDEX-FROM-SCENE
+// INV:INV-ENG-COMMITTED-SPATIAL-ADMISSION-ALIGNMENT
 
 void main() {
   SceneSnapshot twoRectSnapshot() {
@@ -17,6 +18,28 @@ void main() {
             RectNodeSnapshot(id: 'r1', size: Size(10, 10)),
             RectNodeSnapshot(id: 'r2', size: Size(12, 12)),
           ],
+        ),
+      ],
+    );
+  }
+
+  SceneSnapshot stableHitButExpandingPaintSnapshot({bool background = false}) {
+    final node = RectNodeSnapshot(
+      id: background ? 'bg-paint' : 'r-paint',
+      size: const Size(10, 10),
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 0,
+      hitPadding: 6,
+      transform: Transform2D.translation(const Offset(5, 5)),
+    );
+    return SceneSnapshot(
+      backgroundLayer: background
+          ? BackgroundLayerSnapshot(nodes: <NodeSnapshot>[node])
+          : null,
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
+          id: 'layer-auto-paint',
+          nodes: background ? const <NodeSnapshot>[] : <NodeSnapshot>[node],
         ),
       ],
     );
@@ -105,6 +128,91 @@ void main() {
     expect(controller.debug.spatialIndexBuildCount, 1);
     expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
   });
+
+  test(
+    'spatial index refreshes committed paint incrementally when paint admission expands but hit admission stays stable',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: stableHitButExpandingPaintSnapshot(),
+      );
+      addTearDown(controller.dispose);
+
+      const expandedPaintProbe = Rect.fromLTWH(11, 5, 1, 1);
+      expect(controller.queryPaintCandidates(expandedPaintProbe), isEmpty);
+      expect(controller.debug.spatialIndexBuildCount, 1);
+
+      controller.write<void>((writer) {
+        writer.writeNodePatch(
+          RectNodePatch(
+            id: 'r-paint',
+            strokeWidth: PatchField<double>.value(4),
+            common: CommonNodePatch(hitPadding: PatchField<double>.value(4)),
+          ),
+        );
+      });
+
+      expect(controller.debug.lastChangeSet.boundsChanged, isTrue);
+      expect(
+        controller.debug.lastChangeSet.spatialGeometryChangedIds,
+        contains('r-paint'),
+      );
+      expect(
+        controller
+            .queryPaintCandidates(expandedPaintProbe)
+            .map((candidate) => candidate.nodeId),
+        <NodeId>['r-paint'],
+      );
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
+    },
+  );
+
+  test(
+    'background paint queries refresh incrementally under the same committed admission contract',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: stableHitButExpandingPaintSnapshot(background: true),
+      );
+      addTearDown(controller.dispose);
+
+      const expandedPaintProbe = Rect.fromLTWH(11, 5, 1, 1);
+      expect(
+        controller.queryPaintCandidates(
+          expandedPaintProbe,
+          scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+        ),
+        isEmpty,
+      );
+      expect(controller.debug.spatialIndexBuildCount, 1);
+
+      controller.write<void>((writer) {
+        writer.writeNodePatch(
+          RectNodePatch(
+            id: 'bg-paint',
+            strokeWidth: PatchField<double>.value(4),
+            common: CommonNodePatch(hitPadding: PatchField<double>.value(4)),
+          ),
+        );
+      });
+
+      expect(controller.debug.lastChangeSet.boundsChanged, isTrue);
+      expect(
+        controller.debug.lastChangeSet.spatialGeometryChangedIds,
+        contains('bg-paint'),
+      );
+      expect(
+        controller
+            .queryPaintCandidates(
+              expandedPaintProbe,
+              scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+            )
+            .map((candidate) => candidate.nodeId),
+        <NodeId>['bg-paint'],
+      );
+      expect(controller.debug.spatialIndexBuildCount, 1);
+      expect(controller.debug.spatialIndexIncrementalApplyCount, 1);
+    },
+  );
 
   test('spatial index handles huge node and updates incrementally', () {
     final controller = SceneStoreController(
