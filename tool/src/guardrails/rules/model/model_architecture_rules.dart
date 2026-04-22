@@ -18,6 +18,7 @@ final GuardrailRule modelArchitectureGuardrailRule = GuardrailRule(
     id: 'model-architecture',
     invariantIds: <String>[
       'INV-ENG-MODEL-ARCHITECTURE-BOUNDARY',
+      'INV-ENG-VALIDATED-IMPORT-MATERIALIZATION-BOUNDARY',
       'INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER',
       'INV-ENG-RUNTIME-NODE-VALUE-OWNERS',
     ],
@@ -223,6 +224,18 @@ GuardrailViolation? _checkModelFile(GuardrailContext context, File file) {
             filePosixPath,
           );
         }
+        if (filePosixPath == '/lib/src/model/scene_from_snapshot.dart') {
+          return _checkSceneImportSnapshotFacadeOwnership(
+            parsed,
+            filePosixPath,
+          );
+        }
+        if (filePosixPath == '/lib/src/model/scene_from_import_draft.dart') {
+          return _checkValidatedImportMaterializationBoundary(
+            parsed,
+            filePosixPath,
+          );
+        }
         return null;
       }
       return checkDirectiveBoundaryViolation(
@@ -236,6 +249,56 @@ GuardrailViolation? _checkModelFile(GuardrailContext context, File file) {
       );
     },
   );
+}
+
+GuardrailViolation? _checkSceneImportSnapshotFacadeOwnership(
+  ParsedUnitResult parsed,
+  String filePosixPath,
+) {
+  for (final declaration in parsed.unit.declarations) {
+    if (declaration is! FunctionDeclaration) {
+      continue;
+    }
+    if (declaration.name.lexeme != 'sceneFromSnapshot') {
+      continue;
+    }
+    return GuardrailViolation(
+      filePath: filePosixPath,
+      line: lineForOffset(parsed, declaration.name.offset),
+      message:
+          'model architecture violation: scene_from_snapshot.dart must expose only sceneImportFromSnapshot(...) and must not reintroduce sceneFromSnapshot(...).',
+    );
+  }
+  return null;
+}
+
+GuardrailViolation? _checkValidatedImportMaterializationBoundary(
+  ParsedUnitResult parsed,
+  String filePosixPath,
+) {
+  for (final declaration in parsed.unit.declarations) {
+    if (declaration is! FunctionDeclaration) {
+      continue;
+    }
+    final parameterList = declaration.functionExpression.parameters;
+    if (parameterList == null || parameterList.parameters.isEmpty) {
+      continue;
+    }
+    final firstParameter = parameterList.parameters.first;
+    if (!_isRawSceneImportDraftParameter(firstParameter)) {
+      continue;
+    }
+    if (declaration.name.lexeme == 'sceneImportFromDraft') {
+      continue;
+    }
+    return GuardrailViolation(
+      filePath: filePosixPath,
+      line: lineForOffset(parsed, firstParameter.offset),
+      message:
+          'model architecture violation: scene_from_import_draft.dart must materialize scenes only from ValidatedSceneImportDraft.',
+    );
+  }
+  return null;
 }
 
 GuardrailViolation? _checkScenePolicyImportDiagnosticOwnership(
@@ -399,6 +462,20 @@ final class _ScenePolicyImportDiagnosticOwnershipOccurrence {
   const _ScenePolicyImportDiagnosticOwnershipOccurrence({required this.offset});
 
   final int offset;
+}
+
+bool _isRawSceneImportDraftParameter(FormalParameter parameter) {
+  if (parameter is DefaultFormalParameter) {
+    return _isRawSceneImportDraftParameter(parameter.parameter);
+  }
+  final TypeAnnotation? parameterType = switch (parameter) {
+    SimpleFormalParameter(:final type) => type,
+    _ => null,
+  };
+  if (parameterType is! NamedType) {
+    return false;
+  }
+  return parameterType.name.lexeme == 'SceneImportDraft';
 }
 
 _ControllerLayerMutationOccurrence? _matchControllerLayerMutation(

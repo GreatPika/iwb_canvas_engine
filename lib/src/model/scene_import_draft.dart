@@ -29,6 +29,21 @@ final class SceneImportDraft {
   ScenePaletteSnapshotBacking get palette => backing.palette;
 }
 
-SceneSnapshot sceneSnapshotFromValidatedImportDraft(SceneImportDraft draft) {
+final class ValidatedSceneImportDraft {
+  const ValidatedSceneImportDraft.fromValidated(this._draft);
+
+  final SceneImportDraft _draft;
+
+  SceneSnapshotBacking get backing => _draft.backing;
+  List<ContentLayerSnapshotBacking> get layers => _draft.layers;
+  BackgroundLayerSnapshotBacking get backgroundLayer => _draft.backgroundLayer;
+  CameraSnapshotBacking get camera => _draft.camera;
+  BackgroundSnapshotBacking get background => _draft.background;
+  ScenePaletteSnapshotBacking get palette => _draft.palette;
+}
+
+SceneSnapshot sceneSnapshotFromValidatedImportDraft(
+  ValidatedSceneImportDraft draft,
+) {
   return sceneSnapshotFromValidatedBacking(draft.backing);
 }

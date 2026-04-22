@@ -152,6 +152,7 @@ void main() {
               file: 'rules/model/model_architecture_rules.dart',
               invariants: <String>[
                 'INV-ENG-MODEL-ARCHITECTURE-BOUNDARY',
+                'INV-ENG-VALIDATED-IMPORT-MATERIALIZATION-BOUNDARY',
                 'INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER',
                 'INV-ENG-RUNTIME-NODE-VALUE-OWNERS',
               ],
@@ -199,6 +200,9 @@ void main() {
               'controller-api',
             ],
             'INV-ENG-MODEL-ARCHITECTURE-BOUNDARY': <String>[
+              'model-architecture',
+            ],
+            'INV-ENG-VALIDATED-IMPORT-MATERIALIZATION-BOUNDARY': <String>[
               'model-architecture',
             ],
             'INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER': <String>[

@@ -12,13 +12,3 @@ Scene sceneImportFromSnapshot(
     nextInstanceRevision: nextInstanceRevision,
   );
 }
-
-Scene sceneFromSnapshot(
-  SceneSnapshot snapshot, {
-  int Function()? nextInstanceRevision,
-}) {
-  return sceneFromImportDraft(
-    sceneImportDraftFromSnapshot(snapshot),
-    nextInstanceRevision: nextInstanceRevision,
-  );
-}

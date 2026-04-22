@@ -26,10 +26,10 @@ import 'package:iwb_canvas_engine/src/model/scene_builder.dart'
 import 'package:iwb_canvas_engine/src/model/document.dart'
     show txnSceneFromSnapshot, txnSceneToSnapshot;
 import 'package:iwb_canvas_engine/src/model/scene_from_import_draft.dart'
-    show sceneFromImportDraft;
+    show sceneFromValidatedImportDraft;
 import 'package:iwb_canvas_engine/src/model/scene_import_draft.dart';
 import 'package:iwb_canvas_engine/src/model/scene_from_snapshot.dart'
-    show sceneFromSnapshot;
+    show sceneImportFromSnapshot;
 import 'package:iwb_canvas_engine/src/model/scene_node_boundary_mapping.dart'
     show sceneNodeSnapshotFromViaBoundarySchema;
 import 'package:iwb_canvas_engine/src/model/scene_policy.dart';
@@ -88,6 +88,30 @@ SceneSnapshot _duplicateBackgroundNodeSnapshotFromInternalBypass() {
         contentLayerSnapshotBackingFromValidated(id: 'layer-auto-3'),
       ],
     ),
+  );
+}
+
+SceneSnapshot _outOfRangeTransformSnapshot() {
+  return SceneSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
+        id: 'layer-auto-out-of-range',
+        nodes: <NodeSnapshot>[
+          RectNodeSnapshot(
+            id: 'rect-out-of-range',
+            size: const Size(1, 1),
+            transform: const Transform2D(
+              a: 1,
+              b: 0,
+              c: 0,
+              d: 1,
+              tx: 10000001,
+              ty: 0,
+            ),
+          ),
+        ],
+      ),
+    ],
   );
 }
 
@@ -460,12 +484,12 @@ void main() {
         (scene) => ScenePolicy.validateRuntimeScene(
           scene,
           snapshotFromScene: txnSceneToSnapshot,
-          sceneFromImportDraft: sceneFromImportDraft,
+          sceneFromValidatedImportDraft: sceneFromValidatedImportDraft,
         ),
         (scene) => ScenePolicy.validateEncodeScene(
           scene,
           snapshotFromScene: txnSceneToSnapshot,
-          sceneFromImportDraft: sceneFromImportDraft,
+          sceneFromValidatedImportDraft: sceneFromValidatedImportDraft,
         ),
       ];
 
@@ -516,14 +540,14 @@ void main() {
           ],
         ),
         snapshotFromScene: txnSceneToSnapshot,
-        sceneFromImportDraft: sceneFromImportDraft,
+        sceneFromValidatedImportDraft: sceneFromValidatedImportDraft,
       );
       expect(runtimeScene.layers.single.nodes.single.id, 'rect-policy');
     },
   );
 
-  test('sceneFromSnapshot imports through the draft adapter wrapper', () {
-    final imported = sceneFromSnapshot(
+  test('sceneImportFromSnapshot imports through the draft adapter wrapper', () {
+    final imported = sceneImportFromSnapshot(
       SceneSnapshot(
         layers: <ContentLayerSnapshot>[
           ContentLayerSnapshot(
@@ -543,6 +567,23 @@ void main() {
   });
 
   test(
+    'sceneImportFromSnapshot rejects out-of-range transform values from typed snapshots',
+    () {
+      expect(
+        () => sceneImportFromSnapshot(_outOfRangeTransformSnapshot()),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.outOfRange &&
+                e.path == 'layers[0].nodes[0].transform.tx',
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
     'scene node boundary mapping materializes runtime nodes to snapshots',
     () {
       final snapshot = sceneNodeSnapshotFromViaBoundarySchema(
@@ -555,30 +596,9 @@ void main() {
   );
 
   test('sceneBuildFromSnapshot rejects out-of-range transform values', () {
-    final snapshot = SceneSnapshot(
-      layers: <ContentLayerSnapshot>[
-        ContentLayerSnapshot(
-          id: 'layer-auto-0',
-          nodes: <NodeSnapshot>[
-            RectNodeSnapshot(
-              id: 'r1',
-              size: Size(1, 1),
-              transform: Transform2D(
-                a: 1,
-                b: 0,
-                c: 0,
-                d: 1,
-                tx: 10000001,
-                ty: 0,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-
     expect(
-      () => model_builder.sceneBuildFromSnapshot(snapshot),
+      () =>
+          model_builder.sceneBuildFromSnapshot(_outOfRangeTransformSnapshot()),
       throwsA(
         predicate(
           (e) =>

@@ -52,7 +52,7 @@ Scene sceneCanonicalizeAndValidateScene(Scene rawScene) {
   return ScenePolicy.validateRuntimeScene(
     rawScene,
     snapshotFromScene: sceneSnapshotFromScene,
-    sceneFromImportDraft: sceneFromImportDraft,
+    sceneFromValidatedImportDraft: sceneFromValidatedImportDraft,
   );
 }
 
@@ -60,7 +60,7 @@ Scene sceneValidateCore(Scene scene) {
   return ScenePolicy.validateEncodeScene(
     scene,
     snapshotFromScene: sceneSnapshotFromScene,
-    sceneFromImportDraft: sceneFromImportDraft,
+    sceneFromValidatedImportDraft: sceneFromValidatedImportDraft,
   );
 }
 

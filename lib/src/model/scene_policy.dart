@@ -8,11 +8,11 @@ import 'scene_value_validation.dart';
 import 'scene_value_validation_support.dart' as validation_support;
 
 typedef ScenePolicySnapshotFromScene = SceneSnapshot Function(Scene scene);
-typedef ScenePolicySceneFromImportDraft =
-    Scene Function(SceneImportDraft draft);
+typedef ScenePolicySceneFromValidatedImportDraft =
+    Scene Function(ValidatedSceneImportDraft draft);
 
 abstract final class ScenePolicy {
-  static SceneImportDraft validateImportDraft(
+  static ValidatedSceneImportDraft validateImportDraft(
     SceneImportDraft rawDraft, {
     SceneValidationPathSurface pathSurface =
         SceneValidationPathSurface.snapshot,
@@ -37,31 +37,34 @@ abstract final class ScenePolicy {
   static Scene validateRuntimeScene(
     Scene rawScene, {
     required ScenePolicySnapshotFromScene snapshotFromScene,
-    required ScenePolicySceneFromImportDraft sceneFromImportDraft,
+    required ScenePolicySceneFromValidatedImportDraft
+    sceneFromValidatedImportDraft,
   }) {
     return _validateSceneBoundary(
       rawScene,
       snapshotFromScene: snapshotFromScene,
-      sceneFromImportDraft: sceneFromImportDraft,
+      sceneFromValidatedImportDraft: sceneFromValidatedImportDraft,
     );
   }
 
   static Scene validateEncodeScene(
     Scene scene, {
     required ScenePolicySnapshotFromScene snapshotFromScene,
-    required ScenePolicySceneFromImportDraft sceneFromImportDraft,
+    required ScenePolicySceneFromValidatedImportDraft
+    sceneFromValidatedImportDraft,
   }) {
     return _validateSceneBoundary(
       scene,
       snapshotFromScene: snapshotFromScene,
-      sceneFromImportDraft: sceneFromImportDraft,
+      sceneFromValidatedImportDraft: sceneFromValidatedImportDraft,
     );
   }
 
   static Scene _validateSceneBoundary(
     Scene rawScene, {
     required ScenePolicySnapshotFromScene snapshotFromScene,
-    required ScenePolicySceneFromImportDraft sceneFromImportDraft,
+    required ScenePolicySceneFromValidatedImportDraft
+    sceneFromValidatedImportDraft,
   }) {
     sceneValidateSceneValues(
       rawScene,
@@ -75,11 +78,11 @@ abstract final class ScenePolicy {
       rawDraft,
       pathSurface: SceneValidationPathSurface.snapshot,
     );
-    return sceneFromImportDraft(canonicalDraft);
+    return sceneFromValidatedImportDraft(canonicalDraft);
   }
 }
 
-SceneImportDraft _validateStructurallyValidImportDraft(
+ValidatedSceneImportDraft _validateStructurallyValidImportDraft(
   SceneImportDraft draft, {
   required SceneValidationPathSurface pathSurface,
 }) {
@@ -92,5 +95,5 @@ SceneImportDraft _validateStructurallyValidImportDraft(
     ),
     pathSurface: pathSurface,
   );
-  return draft;
+  return ValidatedSceneImportDraft.fromValidated(draft);
 }

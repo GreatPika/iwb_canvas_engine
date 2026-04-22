@@ -532,6 +532,42 @@ void main() {
     );
   });
 
+  test('txnSceneFromSnapshot rejects out-of-range transform values', () {
+    expect(
+      () => txnSceneFromSnapshot(
+        SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-out-of-range',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(
+                  id: 'rect-out-of-range',
+                  size: const Size(1, 1),
+                  transform: const Transform2D(
+                    a: 1,
+                    b: 0,
+                    c: 0,
+                    d: 1,
+                    tx: 10000001,
+                    ty: 0,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.outOfRange &&
+              e.path == 'layers[0].nodes[0].transform.tx',
+        ),
+      ),
+    );
+  });
+
   test('find/locator/insert/erase node utilities work across layers', () {
     final scene = sceneWithAllNodeTypes();
     final locator = txnBuildNodeLocator(scene);

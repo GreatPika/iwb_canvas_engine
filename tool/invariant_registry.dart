@@ -764,6 +764,21 @@ const List<Invariant> invariants = <Invariant>[
     ],
   ),
   Invariant(
+    id: 'INV-ENG-VALIDATED-IMPORT-MATERIALIZATION-BOUNDARY',
+    scope: 'engine-structure',
+    title:
+        'scene import materialization accepts only ValidatedSceneImportDraft, and scene_from_snapshot.dart keeps a single raw snapshot facade without a sibling bypass helper',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(path: 'tool/check_guardrails.dart', stepId: 'guardrails'),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(
+        path:
+            'test/tool/guardrails/guardrails_model_architecture_tool_test.dart',
+      ),
+    ],
+  ),
+  Invariant(
     id: 'INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY',
     scope: 'engine-structure',
     title:

@@ -524,7 +524,7 @@ helper that currently creates semantic drift.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Lock the scene snapshot bypass regression
+### Slice 1. [x] Lock the scene snapshot bypass regression
 
 #### Slice Contract
 
@@ -575,7 +575,7 @@ owner-side implementation changes.
 - The new transitional behavioral reproducer fails on the current code.
 - The new structural negative scenarios fail on the current guardrail set.
 
-### Slice 2. [ ] Introduce the validated import proof seam
+### Slice 2. [x] Introduce the validated import proof seam
 
 #### Slice Contract
 
@@ -625,7 +625,7 @@ migrate all in-scope model import owners to that seam.
 - No pure scene materializer accepts `SceneImportDraft`.
 - All in-scope model import callers compile and pass the locked tests.
 
-### Slice 3. [ ] Retire the bypass helper and publish the invariant
+### Slice 3. [x] Retire the bypass helper and publish the invariant
 
 #### Slice Contract
 

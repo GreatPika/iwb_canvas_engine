@@ -483,8 +483,11 @@ Typical flow:
 3. the boundary validates shape, values, limits, and schema version
 4. the model validation owners apply invariants through that selected path
    surface
-5. the model layer canonicalizes the document shape
-6. runtime-scene materialization is performed only inside engine-owned paths
+5. the model layer canonicalizes the document shape into a validated
+   `SceneImportDraft` proof stage before any draft-to-output materialization
+6. runtime-scene materialization is performed only from
+   `ValidatedSceneImportDraft` inside engine-owned paths; raw snapshots enter
+   through `sceneImportFromSnapshot(...)` only
 7. the supported public result is a canonical `SceneSnapshot`
 
 Diagnostic-path rule:
@@ -611,6 +614,9 @@ important for architectural reasoning.
 - import/build diagnostics choose caller-visible path spelling at the boundary,
   and `scene_policy.dart` stays orchestration-only rather than rebuilding late
   node range paths
+- runtime scene materialization from import drafts must cross one validated
+  proof seam (`ValidatedSceneImportDraft`); raw `SceneImportDraft` and raw
+  snapshot helpers must not bypass model import policy
 
 ### Layering invariants
 
@@ -673,7 +679,8 @@ alone.
 - `tool/check_guardrails.dart`  
   Guards public-surface hermeticity, controller/write boundaries, interactive
   mutation boundaries, raw callback-typedef collection leaks, contract/model
-  architecture boundaries, and other structural rules.
+  architecture boundaries, the validated import materialization seam, and
+  other structural rules.
 - `tool/check_invariant_coverage.dart`  
   Checks that invariant ids, required/regression proof surfaces, and required
   verification-step reachability stay aligned.

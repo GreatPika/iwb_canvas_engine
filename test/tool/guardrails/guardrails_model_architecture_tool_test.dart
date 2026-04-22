@@ -10,6 +10,7 @@ import '../support/tool_process_test_support.dart';
 void main() {
   group('tool/check_guardrails.dart', () {
     // INV:INV-ENG-MODEL-ARCHITECTURE-BOUNDARY
+    // INV:INV-ENG-VALIDATED-IMPORT-MATERIALIZATION-BOUNDARY
     // INV:INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER
     // INV:INV-ENG-RUNTIME-NODE-VALUE-OWNERS
     test('rejects part directives under lib/src/model', () async {
@@ -339,6 +340,94 @@ void decodeScene() {}
         }
       },
     );
+
+    test('rejects reintroduced raw scene snapshot bypass helper', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeSandboxFile(sandbox, 'lib/src/model/scene_from_snapshot.dart', '''
+Object sceneImportFromSnapshot(Object snapshot) => snapshot;
+
+Object sceneFromSnapshot(Object snapshot) => sceneImportFromSnapshot(snapshot);
+''');
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'model architecture',
+            detail:
+                'scene_from_snapshot.dart must expose only sceneImportFromSnapshot(...) '
+                'and must not reintroduce sceneFromSnapshot(...)',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects raw SceneImportDraft pure materializers', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/model/scene_from_import_draft.dart',
+          '''
+class SceneImportDraft {}
+
+Object sceneFromImportDraft(SceneImportDraft draft) => draft;
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'model architecture',
+            detail:
+                'scene_from_import_draft.dart must materialize scenes only from '
+                'ValidatedSceneImportDraft',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects renamed raw SceneImportDraft pure materializers', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/model/scene_from_import_draft.dart',
+          '''
+class SceneImportDraft {}
+
+Object sceneImportFromDraft(SceneImportDraft draft) => draft;
+
+Object materializeScene(SceneImportDraft draft) => draft;
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'model architecture',
+            detail:
+                'scene_from_import_draft.dart must materialize scenes only from '
+                'ValidatedSceneImportDraft',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
 
     test('rejects controller direct scene.layers.add ownership', () async {
       final sandbox = await createGuardrailsSandbox();

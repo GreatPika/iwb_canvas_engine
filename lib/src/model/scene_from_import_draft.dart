@@ -18,14 +18,14 @@ Scene sceneImportFromDraft(
     rawDraft,
     pathSurface: validationPathSurface,
   );
-  return sceneFromImportDraft(
+  return sceneFromValidatedImportDraft(
     canonicalDraft,
     nextInstanceRevision: nextInstanceRevision,
   );
 }
 
-Scene sceneFromImportDraft(
-  SceneImportDraft draft, {
+Scene sceneFromValidatedImportDraft(
+  ValidatedSceneImportDraft draft, {
   int Function()? nextInstanceRevision,
 }) {
   final instanceRevisionAllocator =
@@ -73,7 +73,7 @@ SceneGraphTraversalSource<
   ContentLayerSnapshotBacking,
   NodeSnapshotBacking
 >
-_sceneImportDraftTraversalSource(SceneImportDraft draft) {
+_sceneImportDraftTraversalSource(ValidatedSceneImportDraft draft) {
   return SceneGraphTraversalSource(
     backgroundLayer: draft.backgroundLayer,
     layers: draft.layers,
@@ -95,7 +95,7 @@ SceneGraphTraversalStrategy<
   ScenePalette
 >
 _sceneImportDraftStrategy(
-  SceneImportDraft draft, {
+  ValidatedSceneImportDraft draft, {
   required SceneNode Function(NodeSnapshotBacking node) mapNode,
 }) {
   return SceneGraphTraversalStrategy(
