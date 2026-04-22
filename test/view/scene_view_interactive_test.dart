@@ -21,6 +21,7 @@ import 'package:iwb_canvas_engine/src/view/scene_view_interactive.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_runtime_host.dart';
 
 // INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
+// INV:INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE
 // INV:INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES
 // INV:INV-ENG-VIEW-POINTER-SESSION-DETACH
 
@@ -171,6 +172,21 @@ void _dispatchHostPointerEvent(WidgetTester tester, PointerEvent event) {
     default:
       fail('Unsupported test pointer event: ${event.runtimeType}.');
   }
+}
+
+Future<void> _doubleTapWithGap(
+  WidgetTester tester, {
+  required int pointer,
+  required Duration gap,
+  Offset position = const Offset(8, 8),
+}) async {
+  final first = await tester.startGesture(position, pointer: pointer);
+  await first.up();
+  await tester.pump(gap);
+  final second = await tester.startGesture(position, pointer: pointer);
+  await second.up();
+  await tester.pump();
+  await tester.pump();
 }
 
 SceneSnapshot _cacheSnapshot({
@@ -790,6 +806,383 @@ void main() {
   );
 
   testWidgets(
+    'SceneViewInteractive resets pending tap history on replaceScene epoch break',
+    (tester) async {
+      final controller = SceneController(
+        initialSnapshot: _snapshot(text: 'replace-scene-epoch-a'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      addTearDown(controller.dispose);
+      final editRequests = <Object>[];
+      final editSub = controller.editTextRequests.listen(editRequests.add);
+      addTearDown(editSub.cancel);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final first = await tester.startGesture(
+        const Offset(8, 8),
+        pointer: 8302,
+      );
+      await first.up();
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNotNull,
+      );
+
+      controller.scene.replaceScene(_snapshot(text: 'replace-scene-epoch-b'));
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNull,
+      );
+
+      final second = await tester.startGesture(
+        const Offset(8, 8),
+        pointer: 8302,
+      );
+      await second.up();
+      await tester.pump();
+      await tester.pump();
+
+      expect(editRequests, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive resets pending tap history on interaction mode change',
+    (tester) async {
+      final controller = SceneController(
+        initialSnapshot: _snapshot(text: 'mode-reset'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      addTearDown(controller.dispose);
+      final editRequests = <Object>[];
+      final editSub = controller.editTextRequests.listen(editRequests.add);
+      addTearDown(editSub.cancel);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final gesture = await tester.startGesture(
+        const Offset(8, 8),
+        pointer: 8303,
+      );
+      await gesture.up();
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNotNull,
+      );
+
+      controller.interaction.setMode(CanvasMode.draw);
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNull,
+      );
+
+      final second = await tester.startGesture(
+        const Offset(8, 8),
+        pointer: 8303,
+      );
+      await second.up();
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNotNull,
+      );
+      expect(editRequests, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive resets pending tap history on draw tool change',
+    (tester) async {
+      final controller = SceneController(
+        initialSnapshot: _snapshot(text: 'draw-tool-reset'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      addTearDown(controller.dispose);
+      final editRequests = <Object>[];
+      final editSub = controller.editTextRequests.listen(editRequests.add);
+      addTearDown(editSub.cancel);
+      controller.interaction.setMode(CanvasMode.draw);
+      controller.interaction.setDrawTool(DrawTool.pen);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final gesture = await tester.startGesture(
+        const Offset(8, 8),
+        pointer: 8304,
+      );
+      await gesture.up();
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNotNull,
+      );
+
+      controller.interaction.setDrawTool(DrawTool.line);
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNull,
+      );
+
+      final second = await tester.startGesture(
+        const Offset(8, 8),
+        pointer: 8304,
+      );
+      await second.up();
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNotNull,
+      );
+      expect(editRequests, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive resets pending tap history on real camera offset change',
+    (tester) async {
+      final controller = SceneController(
+        initialSnapshot: _snapshot(text: 'camera-reset'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      addTearDown(controller.dispose);
+      final editRequests = <Object>[];
+      final editSub = controller.editTextRequests.listen(editRequests.add);
+      addTearDown(editSub.cancel);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final gesture = await tester.startGesture(
+        const Offset(8, 8),
+        pointer: 8305,
+      );
+      await gesture.up();
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNotNull,
+      );
+
+      controller.scene.setCameraOffset(const Offset(5, 6));
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNull,
+      );
+
+      final second = await tester.startGesture(
+        const Offset(8, 8),
+        pointer: 8305,
+      );
+      await second.up();
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNotNull,
+      );
+      expect(editRequests, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive preserves pending tap history on no-op mode change',
+    (tester) async {
+      final controller = SceneController(
+        initialSnapshot: _snapshot(text: 'mode-no-op'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      addTearDown(controller.dispose);
+      final editRequests = <Object>[];
+      final editSub = controller.editTextRequests.listen(editRequests.add);
+      addTearDown(editSub.cancel);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final first = await tester.startGesture(
+        const Offset(8, 8),
+        pointer: 8306,
+      );
+      await first.up();
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNotNull,
+      );
+
+      controller.interaction.setMode(controller.interaction.mode);
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNotNull,
+      );
+
+      final second = await tester.startGesture(
+        const Offset(8, 8),
+        pointer: 8306,
+      );
+      await second.up();
+      await tester.pump();
+      await tester.pump();
+
+      expect(editRequests, hasLength(1));
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive preserves pending tap history on no-op draw tool change',
+    (tester) async {
+      final controller = SceneController(
+        initialSnapshot: _snapshot(text: 'draw-tool-no-op'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      addTearDown(controller.dispose);
+      final editRequests = <Object>[];
+      final editSub = controller.editTextRequests.listen(editRequests.add);
+      addTearDown(editSub.cancel);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final first = await tester.startGesture(
+        const Offset(8, 8),
+        pointer: 8307,
+      );
+      await first.up();
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNotNull,
+      );
+
+      controller.interaction.setDrawTool(controller.interaction.drawTool);
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNotNull,
+      );
+
+      final second = await tester.startGesture(
+        const Offset(8, 8),
+        pointer: 8307,
+      );
+      await second.up();
+      await tester.pump();
+      await tester.pump();
+
+      expect(editRequests, hasLength(1));
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive preserves pending tap history on no-op camera offset change',
+    (tester) async {
+      final controller = SceneController(
+        initialSnapshot: _snapshot(text: 'camera-no-op'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      addTearDown(controller.dispose);
+      final editRequests = <Object>[];
+      final editSub = controller.editTextRequests.listen(editRequests.add);
+      addTearDown(editSub.cancel);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      final first = await tester.startGesture(
+        const Offset(8, 8),
+        pointer: 8308,
+      );
+      await first.up();
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNotNull,
+      );
+
+      controller.scene.setCameraOffset(controller.snapshot.camera.offset);
+      await tester.pump();
+
+      expect(
+        debugSceneViewInteractivePendingTapFlushTimestampMsOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        isNotNull,
+      );
+
+      final second = await tester.startGesture(
+        const Offset(8, 8),
+        pointer: 8308,
+      );
+      await second.up();
+      await tester.pump();
+      await tester.pump();
+
+      expect(editRequests, hasLength(1));
+    },
+  );
+
+  testWidgets(
     'SceneViewRuntimeHost detaches old session before dispose and router reset',
     (tester) async {
       final runtimeA = _HostLifecycleRecordingRuntime(
@@ -947,6 +1340,75 @@ void main() {
     expect(find.byType(SceneViewInteractive), findsNothing);
   });
 
+  testWidgets(
+    'SceneViewInteractive ignores late routed callbacks after controller dispose',
+    (tester) async {
+      final controller = SceneController(
+        initialSnapshot: _snapshot(text: 'late-dispose-callbacks'),
+      );
+      var controllerDisposed = false;
+      addTearDown(() {
+        if (!controllerDisposed) {
+          controller.dispose();
+        }
+      });
+      var actionCount = 0;
+      var editRequestCount = 0;
+      final actionSub = controller.actions.listen((_) {
+        actionCount += 1;
+      });
+      final editSub = controller.editTextRequests.listen((_) {
+        editRequestCount += 1;
+      });
+      addTearDown(actionSub.cancel);
+      addTearDown(editSub.cancel);
+
+      await tester.pumpWidget(_host(controller));
+      await tester.pump();
+
+      controller.dispose();
+      controllerDisposed = true;
+
+      expect(
+        () => _dispatchHostPointerEvent(
+          tester,
+          const PointerDownEvent(
+            pointer: 8402,
+            position: Offset(20, 20),
+            kind: PointerDeviceKind.touch,
+          ),
+        ),
+        returnsNormally,
+      );
+      expect(
+        () => _dispatchHostPointerEvent(
+          tester,
+          const PointerUpEvent(
+            pointer: 8402,
+            position: Offset(20, 20),
+            kind: PointerDeviceKind.touch,
+          ),
+        ),
+        returnsNormally,
+      );
+      expect(
+        () => _dispatchHostPointerEvent(
+          tester,
+          const PointerCancelEvent(
+            pointer: 8403,
+            position: Offset(24, 24),
+            kind: PointerDeviceKind.touch,
+          ),
+        ),
+        returnsNormally,
+      );
+      await tester.pump();
+
+      expect(actionCount, 0);
+      expect(editRequestCount, 0);
+    },
+  );
+
   testWidgets('SceneViewInteractive applies pointer settings updates live', (
     tester,
   ) async {
@@ -962,17 +1424,11 @@ void main() {
     await tester.pumpWidget(_host(controller));
     await tester.pump();
 
-    Future<void> doubleTapWithGap(Duration gap) async {
-      final first = await tester.startGesture(const Offset(8, 8), pointer: 31);
-      await first.up();
-      await tester.pump(gap);
-      final second = await tester.startGesture(const Offset(8, 8), pointer: 31);
-      await second.up();
-      await tester.pump();
-      await tester.pump();
-    }
-
-    await doubleTapWithGap(const Duration(milliseconds: 20));
+    await _doubleTapWithGap(
+      tester,
+      pointer: 31,
+      gap: const Duration(milliseconds: 20),
+    );
     expect(editRequests.length, 1);
 
     controller.interaction.setPointerSettings(
@@ -980,7 +1436,11 @@ void main() {
     );
     await tester.pump();
 
-    await doubleTapWithGap(const Duration(milliseconds: 20));
+    await _doubleTapWithGap(
+      tester,
+      pointer: 31,
+      gap: const Duration(milliseconds: 20),
+    );
     expect(editRequests.length, 1);
   });
 
@@ -1020,23 +1480,11 @@ void main() {
 
       expect(_textNode(controller).transform.tx, closeTo(30, 1e-6));
 
-      Future<void> doubleTapWithGap(Duration gap) async {
-        final first = await tester.startGesture(
-          const Offset(8, 8),
-          pointer: 56,
-        );
-        await first.up();
-        await tester.pump(gap);
-        final second = await tester.startGesture(
-          const Offset(8, 8),
-          pointer: 56,
-        );
-        await second.up();
-        await tester.pump();
-        await tester.pump();
-      }
-
-      await doubleTapWithGap(const Duration(milliseconds: 20));
+      await _doubleTapWithGap(
+        tester,
+        pointer: 56,
+        gap: const Duration(milliseconds: 20),
+      );
       expect(editRequests, isEmpty);
     },
   );
@@ -1074,23 +1522,11 @@ void main() {
       await hold.up();
       await tester.pump();
 
-      Future<void> doubleTapWithGap(Duration gap) async {
-        final first = await tester.startGesture(
-          const Offset(8, 8),
-          pointer: 58,
-        );
-        await first.up();
-        await tester.pump(gap);
-        final second = await tester.startGesture(
-          const Offset(8, 8),
-          pointer: 58,
-        );
-        await second.up();
-        await tester.pump();
-        await tester.pump();
-      }
-
-      await doubleTapWithGap(const Duration(milliseconds: 20));
+      await _doubleTapWithGap(
+        tester,
+        pointer: 58,
+        gap: const Duration(milliseconds: 20),
+      );
       expect(editRequests, isEmpty);
     },
   );

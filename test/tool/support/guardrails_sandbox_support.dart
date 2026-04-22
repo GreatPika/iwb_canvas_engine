@@ -819,6 +819,8 @@ class SceneControllerInteractionRuntime {
 
   PointerSessionToken createPointerSessionToken() => PointerSessionToken();
 
+  void registerPointerSession(Object session, {required PointerSessionToken token}) {}
+
   void detachPointerSession(PointerSessionToken token) {
     _ensureKnownPointerSessionToken(token);
   }
@@ -1078,7 +1080,12 @@ class State<T> {
     sandbox,
     'lib/src/interactive/internal/scene_controller_pointer_session.dart',
     '''
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
+
 import '../../contract/canvas_pointer_input.dart';
+import '../../contract/pointer_input.dart';
 import '../../contract/scene_view_runtime.dart';
 import 'pointer_session_token.dart';
 
@@ -1086,25 +1093,61 @@ class PointerInputTracker {}
 
 class SceneControllerPointerSession implements SceneViewPointerSession {
   SceneControllerPointerSession({
+    required Listenable ownerListenable,
     required PointerSessionToken token,
+    required PointerInputSettings Function() readPointerSettings,
+    required bool Function() isMounted,
+    required bool Function() hasLiveRawPointers,
     required void Function(PointerSessionToken token) detachPointerSession,
     required void Function(PointerSessionToken token) releasePointerSessionToken,
-    required void Function() handlePointerFromSession,
-    required void Function() handleDoubleTapFromSession,
-  }) : _token = token;
+    required void Function(
+      CanvasPointerInput input, {
+      required PointerSessionToken token,
+    })
+    handlePointerFromSession,
+    required void Function({
+      required Offset position,
+      int? timestampMs,
+      required PointerSessionToken token,
+    })
+    handleDoubleTapFromSession,
+  }) : _ownerListenable = ownerListenable,
+       _readPointerSettings = readPointerSettings,
+       _isMounted = isMounted,
+       _hasLiveRawPointers = hasLiveRawPointers,
+       _token = token,
+       _handlePointerFromSession = handlePointerFromSession,
+       _handleDoubleTapFromSession = handleDoubleTapFromSession;
+
+  final Listenable _ownerListenable;
+  final PointerInputSettings Function() _readPointerSettings;
+  final bool Function() _isMounted;
+  final bool Function() _hasLiveRawPointers;
 
   final PointerSessionToken _token;
   final Object _ownerListener = Object();
-
-  final _ownerListenable = _OwnerListenable();
   final _PendingTapFlushScheduler _pendingTapFlushScheduler =
       _PendingTapFlushScheduler();
+  final void Function(
+    CanvasPointerInput input, {
+    required PointerSessionToken token,
+  })
+  _handlePointerFromSession;
+  final void Function({
+    required Offset position,
+    int? timestampMs,
+    required PointerSessionToken token,
+  })
+  _handleDoubleTapFromSession;
 
   @override
   int? get pendingTapFlushTimestampMs => null;
 
   void createTracker() {
     PointerInputTracker();
+    _readPointerSettings();
+    _isMounted();
+    _hasLiveRawPointers();
   }
 
   void attach() {
@@ -1112,8 +1155,21 @@ class SceneControllerPointerSession implements SceneViewPointerSession {
   }
 
   void route(PointerSessionToken token) {
-    _handlePointerFromSession(token);
-    _handleDoubleTapFromSession(token);
+    _handlePointerFromSession(
+      const CanvasPointerInput(
+        pointerId: 1,
+        position: Offset.zero,
+        timestampMs: 0,
+        phase: CanvasPointerPhase.down,
+        kind: PointerDeviceKind.touch,
+      ),
+      token: token,
+    );
+    _handleDoubleTapFromSession(
+      position: Offset.zero,
+      timestampMs: 0,
+      token: token,
+    );
   }
 
   @override
@@ -1124,7 +1180,7 @@ class SceneControllerPointerSession implements SceneViewPointerSession {
 
   @override
   void handleRoutedSample(
-    Object sample, {
+    PointerSample sample, {
     required bool shouldTrackSignals,
   }) {}
 
@@ -1161,12 +1217,6 @@ class SceneControllerPointerSession implements SceneViewPointerSession {
 class _PendingTapFlushScheduler {
   void dispose() {}
 }
-
-class _OwnerListenable {
-  void addListener(Object listener) {}
-
-  void removeListener(Object listener) {}
-}
 ''',
   );
   writeSandboxFile(
@@ -1183,7 +1233,10 @@ class _OwnerListenable {
     sandbox,
     'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
     '''
+import 'package:flutter/foundation.dart';
+
 import '../../contract/scene_view_runtime.dart';
+import '../../contract/pointer_input.dart';
 import '../scene_controller_interaction.dart';
 import 'scene_controller_pointer_session.dart';
 import 'pointer_session_token.dart';
@@ -1203,8 +1256,13 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
     required bool Function() isMounted,
     required bool Function() hasLiveRawPointers,
   }) {
-    return SceneControllerPointerSession(
-      token: _interactionRuntime.createPointerSessionToken(),
+    final token = _interactionRuntime.createPointerSessionToken();
+    final session = SceneControllerPointerSession(
+      ownerListenable: renderState,
+      token: token,
+      readPointerSettings: () => const PointerInputSettings(),
+      isMounted: isMounted,
+      hasLiveRawPointers: hasLiveRawPointers,
       detachPointerSession:
           _interactionRuntime.detachPointerSession,
       releasePointerSessionToken:
@@ -1214,10 +1272,13 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
       handleDoubleTapFromSession:
           _interactionRuntime.handleDoubleTapFromSession,
     );
+    _interactionRuntime.registerPointerSession(session, token: token);
+    return session;
   }
 }
 
-final class SceneControllerSceneViewRenderState implements SceneViewRenderState {
+final class SceneControllerSceneViewRenderState
+    implements SceneViewRenderState, Listenable {
   SceneControllerInteraction get _interaction => SceneControllerInteraction();
 
   @override

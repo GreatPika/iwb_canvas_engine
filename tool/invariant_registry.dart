@@ -827,6 +827,29 @@ const List<Invariant> invariants = <Invariant>[
     ],
   ),
   Invariant(
+    id: 'INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE',
+    scope: 'engine-runtime',
+    title:
+        'interactive runtime owns live pointer-session epoch reset and disposal deactivation, while same-session tap tracking remains session-local and late routed callbacks after owner disposal become local no-ops',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(
+        path:
+            'test/interactive/core/scene_controller_interaction_contract_test.dart',
+        stepId: 'scope_interactive',
+      ),
+      RequiredProof(
+        path: 'test/view/scene_view_interactive_test.dart',
+        stepId: 'scope_render_view',
+      ),
+      RequiredProof(path: 'tool/check_guardrails.dart', stepId: 'guardrails'),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(
+        path: 'test/tool/guardrails/guardrails_interactive_api_tool_test.dart',
+      ),
+    ],
+  ),
+  Invariant(
     id: 'INV-ENG-INTERACTIVE-DRAW-STYLE-SNAPSHOT',
     scope: 'engine-runtime',
     title:

@@ -16,6 +16,7 @@ import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller_interaction.dart';
 
 // INV:INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY
+// INV:INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE
 // INV:INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY
 
 void main() {
@@ -246,6 +247,123 @@ void main() {
 
       expect(() => session.dispose(), returnsNormally);
     });
+
+    test(
+      'disposed controller turns an already-created live session into local no-op',
+      () {
+        final controller = SceneController();
+        final session = sceneControllerViewRuntimeOf(controller)
+            .createPointerSession(
+              isMounted: () => true,
+              hasLiveRawPointers: () => false,
+            );
+        var actionCount = 0;
+        var editRequestCount = 0;
+        final actionSub = controller.actions.listen((_) {
+          actionCount += 1;
+        });
+        final editSub = controller.editTextRequests.listen((_) {
+          editRequestCount += 1;
+        });
+        addTearDown(actionSub.cancel);
+        addTearDown(editSub.cancel);
+
+        controller.dispose();
+
+        expect(
+          () => session.handleRoutedSample(
+            const PointerSample(
+              pointerId: 1,
+              position: Offset(4, 4),
+              timestampMs: 1,
+              phase: PointerPhase.down,
+              kind: PointerDeviceKind.touch,
+            ),
+            shouldTrackSignals: true,
+          ),
+          returnsNormally,
+        );
+        expect(
+          () => session.handleRoutedSample(
+            const PointerSample(
+              pointerId: 1,
+              position: Offset(4, 4),
+              timestampMs: 2,
+              phase: PointerPhase.up,
+              kind: PointerDeviceKind.touch,
+            ),
+            shouldTrackSignals: true,
+          ),
+          returnsNormally,
+        );
+        expect(
+          () => session.handleInvalidTerminalSample(
+            input: const CanvasPointerInput(
+              pointerId: 1,
+              position: Offset(4, 4),
+              phase: CanvasPointerPhase.cancel,
+              kind: PointerDeviceKind.touch,
+              timestampMs: 3,
+            ),
+            pointerId: 1,
+            referenceTimestampMs: 3,
+          ),
+          returnsNormally,
+        );
+        expect(actionCount, 0);
+        expect(editRequestCount, 0);
+      },
+    );
+
+    test(
+      'disposed runtime turns previously live runtime callbacks into local no-op',
+      () {
+        final controller = SceneController();
+        final runtime = sceneControllerInternalInteractionAccessForTest(
+          controller,
+        ).runtime;
+        final ownerListenable = ChangeNotifier();
+        addTearDown(ownerListenable.dispose);
+        final token = runtime.createPointerSessionToken();
+        final session = SceneControllerPointerSession(
+          ownerListenable: ownerListenable,
+          token: token,
+          readPointerSettings: () => const PointerInputSettings(),
+          isMounted: () => true,
+          hasLiveRawPointers: () => false,
+          detachPointerSession: runtime.detachPointerSession,
+          releasePointerSessionToken: runtime.releasePointerSessionToken,
+          handlePointerFromSession: runtime.handlePointerFromSession,
+          handleDoubleTapFromSession: runtime.handleDoubleTapFromSession,
+        );
+        addTearDown(session.dispose);
+        runtime.registerPointerSession(session, token: token);
+
+        controller.dispose();
+
+        expect(
+          () => runtime.handlePointerFromSession(
+            const CanvasPointerInput(
+              pointerId: 1,
+              position: Offset(4, 4),
+              phase: CanvasPointerPhase.down,
+              kind: PointerDeviceKind.touch,
+              timestampMs: 1,
+            ),
+            token: token,
+          ),
+          returnsNormally,
+        );
+        expect(
+          () => runtime.handleDoubleTapFromSession(
+            position: const Offset(4, 4),
+            timestampMs: 2,
+            token: token,
+          ),
+          returnsNormally,
+        );
+      },
+    );
 
     test('disposed controller runtime rejects pointer session creation', () {
       final controller = SceneController();

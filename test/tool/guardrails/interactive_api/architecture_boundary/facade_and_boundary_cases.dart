@@ -504,6 +504,11 @@ class SceneControllerInteractionRuntime {
 
   PointerSessionToken createPointerSessionToken() => PointerSessionToken();
 
+  void registerPointerSession(
+    Object session, {
+    required PointerSessionToken token,
+  }) {}
+
   void detachPointerSession(PointerSessionToken token) {}
 
   void releasePointerSessionToken(PointerSessionToken token) {}
@@ -601,6 +606,11 @@ class SceneControllerInteractionRuntime {
   }) {}
 
   PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void registerPointerSession(
+    Object session, {
+    required PointerSessionToken token,
+  }) {}
 
   void detachPointerSession(PointerSessionToken token) {}
 

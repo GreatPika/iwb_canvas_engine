@@ -278,6 +278,11 @@ Lifecycle rule:
 
 - Call `dispose()` when the controller is no longer used.
 - Public controller operations on a disposed controller throw `StateError`.
+- Late routed pointer callbacks from an already-created `SceneView` session are
+  ignored after controller disposal.
+- Successful same-runtime semantic epoch breaks (`replaceScene(...)`, real
+  `setCameraOffset(...)`, `setMode(...)`, and `setDrawTool(...)`) clear
+  session-local pending tap history synchronously.
 
 Move-commit resolver rule:
 

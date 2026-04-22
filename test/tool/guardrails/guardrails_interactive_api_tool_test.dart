@@ -28,6 +28,7 @@ part 'interactive_api/architecture_boundary/pointer_host_and_public_shell_cases.
 void main() {
   group('tool/check_guardrails.dart', () {
     // INV:INV-ENG-INTERACTIVE-RESOLVER-PURITY
+    // INV:INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE
     _registerInteractiveAcceptanceTests();
     _registerInteractiveGuardViolationTests();
     _registerInteractiveDisposeGuardTests();

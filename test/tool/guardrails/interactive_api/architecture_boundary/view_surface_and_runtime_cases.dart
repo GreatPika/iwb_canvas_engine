@@ -391,6 +391,110 @@ class SceneControllerSceneViewRenderState implements SceneViewRenderState {
   );
 
   test(
+    'rejects scene view runtime that skips runtime-owned live-session registration',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
+          '''
+import '../../contract/scene_view_runtime.dart';
+import 'scene_controller_pointer_session.dart';
+import 'pointer_session_token.dart';
+
+final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
+  SceneControllerSceneViewRuntime({
+    Object? ensurePublicSideEffectAllowed,
+  });
+
+  @override
+  final renderState = SceneControllerSceneViewRenderState();
+  final _interactionRuntime = SceneControllerInteractionRuntime();
+
+  @override
+  SceneViewPointerSession createPointerSession({
+    required bool Function() isMounted,
+    required bool Function() hasLiveRawPointers,
+  }) {
+    final token = _interactionRuntime.createPointerSessionToken();
+    return SceneControllerPointerSession(
+      token: token,
+      detachPointerSession: _interactionRuntime.detachPointerSession,
+      releasePointerSessionToken: _interactionRuntime.releasePointerSessionToken,
+      handlePointerFromSession: _interactionRuntime.handlePointerFromSession,
+      handleDoubleTapFromSession:
+          _interactionRuntime.handleDoubleTapFromSession,
+    );
+  }
+}
+
+class SceneControllerInteractionRuntime {
+  PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void registerPointerSession(
+    Object session, {
+    required PointerSessionToken token,
+  }) {}
+
+  void detachPointerSession(Object token) {}
+
+  void releasePointerSessionToken(Object token) {}
+
+  void handlePointerFromSession() {}
+
+  void handleDoubleTapFromSession() {}
+}
+
+class SceneControllerSceneViewRenderState implements SceneViewRenderState {
+  @override
+  void addListener(Object listener) {}
+
+  @override
+  void removeListener(Object listener) {}
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerSceneViewRuntime must own the render-state '
+                'adapter and pointer-session factory.',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
     'rejects scene view runtime that routes pointer-session callbacks through local wrappers',
     () async {
       final sandbox = await createGuardrailsSandbox();

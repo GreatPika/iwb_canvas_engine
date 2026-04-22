@@ -508,7 +508,7 @@ faults.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Lock lifecycle reproducers and structural owner contract
+### Slice 1. [x] Lock lifecycle reproducers and structural owner contract
 
 #### Slice Contract
 
@@ -566,7 +566,7 @@ runtime-owned live-session registration.
 - Architecture and guardrail proof surfaces pass with runtime-owned session
   registration and without moving tracker policy into `view/**`.
 
-### Slice 2. [ ] Implement runtime-owned pointer-session lifecycle orchestration
+### Slice 2. [x] Implement runtime-owned pointer-session lifecycle orchestration
 
 #### Slice Contract
 

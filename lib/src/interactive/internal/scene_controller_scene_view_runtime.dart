@@ -70,7 +70,7 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
   }) {
     _ensurePublicSideEffectAllowed('createPointerSession');
     final token = _interactionRuntime.createPointerSessionToken();
-    return SceneControllerPointerSession(
+    final session = SceneControllerPointerSession(
       ownerListenable: _ownerListenable,
       token: token,
       readPointerSettings: () => _readInteraction().pointerSettings,
@@ -83,6 +83,8 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
       handleDoubleTapFromSession:
           _interactionRuntime.handleDoubleTapFromSession,
     );
+    _interactionRuntime.registerPointerSession(session, token: token);
+    return session;
   }
 }
 

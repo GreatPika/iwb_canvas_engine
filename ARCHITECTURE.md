@@ -415,6 +415,9 @@ It exposes:
 
 - `SceneViewRenderState`
 - `SceneViewPointerSession` creation
+- runtime-owned registration of each concrete pointer session so same-runtime
+  semantic epoch breaks clear session-local tap history and controller
+  disposal deactivates live sessions before late routed callbacks
 
 #### `SceneControllerSceneViewRenderState`
 
@@ -530,8 +533,13 @@ Architectural consequences:
 
 - Flutter pointer hosting stays in `view/**`
 - controller-owned gesture state stays in `interactive/**`
+- runtime-owned pointer-session lifecycle stays in `interactive/**`, while the
+  concrete session keeps tracker/timer ownership
 - gesture previews are ephemeral and are not committed scene state
 - external public mutations are guarded during active gesture ownership
+- successful same-runtime epoch breaks reset pending tap history synchronously,
+  and controller disposal deactivates live sessions so late routed callbacks
+  are ignored without mutating controller state
 
 ### 8.4 Render flow
 

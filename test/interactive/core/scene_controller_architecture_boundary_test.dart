@@ -215,10 +215,19 @@ void main() {
       isTrue,
     );
     expect(
-      analysis.returnedExpressionConstructorType(
+      analysis.variableInitializerConstructorType(
         analysis.findMethod(sceneViewRuntimeClass, 'createPointerSession'),
+        'session',
       ),
       'SceneControllerPointerSession',
+    );
+    expect(
+      analysis.containsMethodInvocation(
+        analysis.findMethod(sceneViewRuntimeClass, 'createPointerSession'),
+        target: '_interactionRuntime',
+        methodName: 'registerPointerSession',
+      ),
+      isTrue,
     );
     expect(
       analysis.namedTypeOf(

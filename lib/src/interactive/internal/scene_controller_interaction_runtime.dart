@@ -15,6 +15,7 @@ import 'interactive_runtime_callbacks.dart';
 import 'interactive_selection_actions.dart';
 import 'pointer_session_token.dart';
 import 'scene_controller_mutation_boundary.dart';
+import 'scene_controller_pointer_session.dart';
 
 final class SceneControllerInteractionRuntime {
   SceneControllerInteractionRuntime._({
@@ -38,6 +39,9 @@ final class SceneControllerInteractionRuntime {
   final InteractiveRuntime runtime;
   final Set<PointerSessionToken> _pointerSessionTokens =
       <PointerSessionToken>{};
+  final Map<PointerSessionToken, SceneControllerPointerSession>
+  _pointerSessionsByToken =
+      <PointerSessionToken, SceneControllerPointerSession>{};
 
   bool _isDisposed = false;
   bool _moveCommitResolverActive = false;
@@ -64,6 +68,7 @@ final class SceneControllerInteractionRuntime {
 
   void interruptForExternalMutation() {
     runtime.interruptForExternalMutation();
+    _resetLivePointerSessions();
   }
 
   void scheduleNotify() {
@@ -99,6 +104,12 @@ final class SceneControllerInteractionRuntime {
 
   void dispose() {
     _isDisposed = true;
+    for (final session in _pointerSessionsByToken.values.toList(
+      growable: false,
+    )) {
+      session.deactivateForOwnerDispose();
+    }
+    _pointerSessionsByToken.clear();
     _pointerSessionTokens.clear();
     publicNotifyScheduler.dispose();
     sceneNotifyScheduler.dispose();
@@ -200,6 +211,7 @@ extension SceneControllerInteractionRuntimeStateApi
 
   void interruptForInteractionConfigChange() {
     runtime.interruptForInteractionConfigChange();
+    _resetLivePointerSessions();
   }
 
   void clearPointerNormalizationState() {
@@ -215,6 +227,14 @@ extension SceneControllerInteractionRuntimeMutationApi
     return token;
   }
 
+  void registerPointerSession(
+    SceneControllerPointerSession session, {
+    required PointerSessionToken token,
+  }) {
+    _ensureKnownPointerSessionToken(token);
+    _pointerSessionsByToken[token] = session;
+  }
+
   void detachPointerSession(PointerSessionToken token) {
     if (!_pointerSessionTokens.contains(token)) {
       return;
@@ -223,6 +243,7 @@ extension SceneControllerInteractionRuntimeMutationApi
   }
 
   void releasePointerSessionToken(PointerSessionToken token) {
+    _pointerSessionsByToken.remove(token);
     _pointerSessionTokens.remove(token);
   }
 
@@ -286,6 +307,9 @@ extension SceneControllerInteractionRuntimeMutationApi
     CanvasPointerInput input, {
     required PointerSessionToken token,
   }) {
+    if (_isDisposed) {
+      return;
+    }
     _ensureKnownPointerSessionToken(token);
     runtime.handlePointerFromSession(input, token: token);
   }
@@ -295,6 +319,9 @@ extension SceneControllerInteractionRuntimeMutationApi
     int? timestampMs,
     required PointerSessionToken token,
   }) {
+    if (_isDisposed) {
+      return;
+    }
     _ensureKnownPointerSessionToken(token);
     runtime.handleDoubleTapFromSession(
       position: position,
@@ -306,6 +333,14 @@ extension SceneControllerInteractionRuntimeMutationApi
   void _ensureKnownPointerSessionToken(PointerSessionToken token) {
     if (!_pointerSessionTokens.contains(token)) {
       throw StateError('Unknown pointer session token.');
+    }
+  }
+
+  void _resetLivePointerSessions() {
+    for (final session in _pointerSessionsByToken.values.toList(
+      growable: false,
+    )) {
+      session.resetForInteractiveEpoch();
     }
   }
 }

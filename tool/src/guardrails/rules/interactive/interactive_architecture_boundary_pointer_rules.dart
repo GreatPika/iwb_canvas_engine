@@ -61,6 +61,13 @@ Future<GuardrailViolation?> _checkInteractiveViewRuntimeBoundary(
         ownerName: 'SceneControllerInteractionRuntime',
         methodName: 'createPointerSessionToken',
       ) ||
+      !_methodInvokesOwnedMethod(
+        createPointerSession,
+        context: context,
+        filePath: interactionRuntimeFilePath,
+        ownerName: 'SceneControllerInteractionRuntime',
+        methodName: 'registerPointerSession',
+      ) ||
       !_methodCreatesOwnedType(
         createPointerSession,
         context: context,

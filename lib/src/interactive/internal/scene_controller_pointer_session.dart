@@ -155,6 +155,24 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
     _applyPendingPointerSettingsIfPossible();
   }
 
+  void resetForInteractiveEpoch() {
+    if (_detached || _disposed) {
+      return;
+    }
+    _resetPointerTrackerState(settings: _appliedPointerSettings);
+  }
+
+  void deactivateForOwnerDispose() {
+    if (_detached || _disposed) {
+      return;
+    }
+    _detached = true;
+    _pendingPointerSettings = null;
+    _pointerTrackerGeneration++;
+    _pendingTapFlushScheduler.clear();
+    _releaseOwnedResources();
+  }
+
   void _handleOwnerChanged() {
     if (_detached) {
       return;
@@ -220,6 +238,10 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
   void _resetPointerTracking({required PointerInputSettings settings}) {
     _pendingPointerSettings = null;
     _appliedPointerSettings = settings;
+    _resetPointerTrackerState(settings: settings);
+  }
+
+  void _resetPointerTrackerState({required PointerInputSettings settings}) {
     _pointerTracker = PointerInputTracker(settings: settings);
     _pointerTrackerGeneration++;
     _pendingTapFlushScheduler.clear();

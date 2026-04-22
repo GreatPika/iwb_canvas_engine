@@ -108,6 +108,9 @@ class _CanvasScreenState extends State<CanvasScreen> {
 - `SceneSnapshot` is the immutable document boundary exchanged with app code.
 - Public scene data has two layer families: one dedicated `backgroundLayer`
   plus ordered content `layers`.
+- Dispose `SceneController` when the host widget is done with it. Direct public
+  controller calls then fail fast with `StateError`, while any late routed
+  pointer callbacks from an already-mounted `SceneView` are ignored.
 - Supported node families are image, text, stroke, line, rect, and path.
 - Use `NodeSpec` to create nodes and `NodePatch` + `PatchField` to apply
   partial updates.

@@ -126,6 +126,7 @@ void main() {
               invariants: <String>[
                 'INV-ENG-INTERACTIVE-RESOLVER-PURITY',
                 'INV-ENG-INTERACTIVE-MUTATION-BOUNDARY',
+                'INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE',
                 'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY',
                 'INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY',
               ],
@@ -180,6 +181,9 @@ void main() {
             ],
             'INV-ENG-INTERACTIVE-RESOLVER-PURITY': <String>['interactive-api'],
             'INV-ENG-INTERACTIVE-MUTATION-BOUNDARY': <String>[
+              'interactive-api',
+            ],
+            'INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE': <String>[
               'interactive-api',
             ],
             'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY': <String>[

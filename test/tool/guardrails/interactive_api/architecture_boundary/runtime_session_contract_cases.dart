@@ -87,6 +87,11 @@ extension SceneControllerInteractionRuntimeMutationApi
     on SceneControllerInteractionRuntime {
   PointerSessionToken createPointerSessionToken() => PointerSessionToken();
 
+  void registerPointerSession(
+    Object session, {
+    required PointerSessionToken token,
+  }) {}
+
   void detachPointerSession(PointerSessionToken token) {}
 
   void releasePointerSessionToken(PointerSessionToken token) {}
@@ -253,6 +258,11 @@ SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
 extension SceneControllerInteractionRuntimeMutationApi
     on SceneControllerInteractionRuntime {
   PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void registerPointerSession(
+    Object session, {
+    required PointerSessionToken token,
+  }) {}
 
   void detachPointerSession(PointerSessionToken token) {}
 
@@ -429,6 +439,11 @@ SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
 extension SceneControllerInteractionRuntimeMutationApi
     on SceneControllerInteractionRuntime {
   PointerSessionToken createPointerSessionToken() => PointerSessionToken();
+
+  void registerPointerSession(
+    Object session, {
+    required PointerSessionToken token,
+  }) {}
 
   void detachPointerSession(PointerSessionToken token) {}
 

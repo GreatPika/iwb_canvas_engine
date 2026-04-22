@@ -71,6 +71,9 @@ in changes that have not yet been published to pub.dev.
 - Fixed `SceneView` detach/runtime-swap behavior so controller-owned resources
   are released deterministically and the last good runtime remains active until
   a replacement succeeds.
+- Fixed controller-owned pointer-session lifecycle so successful same-runtime
+  epoch breaks clear pending tap history and still-mounted view hosts ignore
+  late routed callbacks after controller disposal.
 
 ## 5.1.0 (2026-03-04)
 
