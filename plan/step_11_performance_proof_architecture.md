@@ -6,14 +6,15 @@ Establish a repository-owned performance proof architecture where required CI
 uses deterministic owner-level proof and executable workflow checks, while
 isolated benchmark diagnostics remain production-path artifacts with honest
 metric semantics, explicit cold-versus-steady-state meaning, and no dependency
-on DCM or dedicated hardware.
+on dedicated hardware, while DCM is removed only from GitHub CI.
 
 ## 2. Change Boundary
 
 ### Included in the Change
 
-- Remove `dcm analyze .` from GitHub-hosted required verification and from the
-  graph-owned CI workflow contract; keep DCM as optional local evidence only.
+- Remove `dcm analyze .` from `.github/workflows/ci.yaml` and from the
+  graph-owned CI workflow expectations only; keep DCM available in
+  repository-local verification surfaces.
 - Separate hard-gated deterministic performance proof from diagnostic load
   profile collection.
 - Make the load-profile contract declare case taxonomy, execution mode,
@@ -45,6 +46,8 @@ on DCM or dedicated hardware.
 - No public API, serialization, or document-model behavior change.
 - No reintroduction of DCM into GitHub CI through a wrapper, fallback token, or
   separate secret-dependent job.
+- No retirement of DCM from repository-local verification presets or local
+  developer workflows.
 
 ## 3. Surrounding Code Review
 
@@ -90,7 +93,7 @@ on DCM or dedicated hardware.
   and diffs them against the checked-in baseline JSON.
 - `tool/src/verification_contract/verification_contract_registry.dart` —
   `required_code_change` and CI workflow expectations currently include
-  `dcm_analyze`.
+  `dcm_analyze`, so GitHub CI and local required verification are coupled today.
 - `test/tool/bench_diff_load_profiles_test.dart` — current coverage locks the
   zero-baseline absolute threshold path, but not the positive-baseline
   over-budget path.
@@ -127,7 +130,7 @@ on DCM or dedicated hardware.
 
 ### Current Entry Path
 
-- GitHub-required verification:
+- GitHub CI verification:
   `required_code_change` ->
   `tool/src/verification_contract/verification_contract_registry.dart` ->
   `.github/workflows/ci.yaml`.
@@ -150,7 +153,8 @@ on DCM or dedicated hardware.
 
 - Required verification ownership is currently split between
   `tool/src/verification_contract/verification_contract_registry.dart`,
-  `.github/workflows/ci.yaml`, and the hard-coded DCM step.
+  `.github/workflows/ci.yaml`, and the hard-coded DCM step, with no current
+  distinction between GitHub CI and local required verification.
 - Diagnostic benchmark ownership is currently split across
   `tool/bench/load_profile_policy.dart`,
   `tool/bench/run_load_profiles.dart`,
@@ -213,7 +217,7 @@ on DCM or dedicated hardware.
   `test/render/render_geometry_cache_test.dart` — the repository already proves
   performance-relevant behavior through deterministic owner-local counters and
   cache-hit semantics instead of through wall-clock thresholds, which is the
-  closest valid precedent for the required contour.
+  closest valid precedent for the GitHub CI deterministic contour.
 - `test/render/scene_render_caches_test.dart` and
   `test/render/scene_painter_test.dart` — the repository already has
   integrated proof at the shared render-cache owner and at the real
@@ -264,9 +268,9 @@ on DCM or dedicated hardware.
 - Adding overlay-preview benchmark taxonomy now — wrong seam timing because the
   target architecture still treats the overlay read as the not-yet-split half of
   the mixed render seam.
-- Keeping DCM inside GitHub-required verification — wrong executable layer
-  because the required workflow must run from repository-owned surfaces without
-  external keying.
+- Keeping DCM inside GitHub CI — wrong executable layer for that environment
+  because the hosted workflow must run without the missing key, even though DCM
+  may remain part of repository-local verification.
 
 ## 4. Architecture
 
@@ -280,17 +284,20 @@ on DCM or dedicated hardware.
 #### Selected Architectural Form
 
 - Adopt a two-contour performance proof architecture:
-- the required contour is deterministic owner-level proof in `test/**` plus
+- the GitHub CI contour is deterministic owner-level proof in `test/**` plus
   executable workflow-contract checks in `test/tool/**`; it proves cache reuse,
   warm-path behavior, benchmark taxonomy, and workflow drift without relying on
-  hardware-stable timing;
+  hardware-stable timing and does not depend on DCM;
+- the repository-local required verification contour may still include DCM as a
+  local analyzer surface;
 - the diagnostic contour is isolated load-profile collection in `tool/bench/**`
   plus `perf_nightly.yaml`; it emits production-path artifacts with explicit
   `cold_start` versus `steady_state` meaning, truthful metric names, and
   explicit gated-versus-diagnostic metrics;
-- GitHub-required verification consumes only repository-owned executable checks,
-  so DCM is removed from the required contour instead of being patched through a
-  secret-dependent setup step.
+- GitHub CI consumes only repository-owned executable checks, so DCM is removed
+  from the CI workflow contour instead of being patched through a
+  secret-dependent setup step; local verification policy is not narrowed by
+  this step.
 
 #### Owning Layer or Module
 
@@ -318,7 +325,7 @@ on DCM or dedicated hardware.
   structurally guarded as non-production.
 - Workflow and verification-contract ownership stays above benchmark tooling:
   workflows call `tool/bench/**`, but benchmark tooling does not define the
-  required verification contour.
+  GitHub CI contour.
 - Required deterministic proof depends directly on runtime owners and tool
   contract tests, not on benchmark baseline JSON artifacts.
 
@@ -330,15 +337,17 @@ on DCM or dedicated hardware.
   required operations, metric names, and gated-versus-diagnostic status.
 - Benchmark reports and checked-in baseline JSON files remain diagnostic
   artifacts; they are not the sole source of required CI truth.
-- The verification graph owns whether GitHub-required CI runs a step at all.
+- The verification graph owns CI workflow expectations separately from local
+  preset membership.
 
 #### Entry and Exit Boundaries
 
 - Required entry boundaries:
-  `required_code_change`,
   `tool/check_verification_contract.dart`,
   `.github/workflows/ci.yaml`, and the deterministic test suites under
   `test/controller/**`, `test/render/**`, and `test/tool/**`.
+- Local verification entry boundaries:
+  `required_code_change` and `tool/run_verification_preset.dart`.
 - Diagnostic entry boundaries:
   `tool/bench/run_load_profiles.dart` and `.github/workflows/perf_nightly.yaml`.
 - Required exit boundaries:
@@ -369,7 +378,8 @@ on DCM or dedicated hardware.
 - Keep percentile metrics with 3 to 4 samples — rejected because the reported
   statistic is semantically false.
 - Reintroduce DCM into GitHub CI through a wrapper or secret — rejected because
-  required verification must stay executable from repository-owned surfaces.
+  the hosted workflow must stay executable from repository-owned surfaces
+  without missing credentials.
 
 #### Why This Level Is Correct
 
@@ -382,10 +392,9 @@ on DCM or dedicated hardware.
 
 ## 5. Locked Decisions
 
-1. `dcm_analyze` is retired from the GitHub-required executable contour:
-   `.github/workflows/ci.yaml`,
-   `required_code_change`, and CI workflow expectations stop requiring it.
-   DCM remains optional local evidence only.
+1. `dcm_analyze` is retired only from `.github/workflows/ci.yaml` and from the
+   graph-owned CI workflow expectations. `required_code_change` and other
+   repository-local verification surfaces may continue to include DCM.
 2. The required performance contour is deterministic: cache reuse, warm-path
    behavior, and benchmark ownership are proven by owner-local tests and tool
    contract tests, not by wall-clock baseline diffs.
@@ -409,13 +418,12 @@ on DCM or dedicated hardware.
 
 ## 6. Result Requirements
 
-1. GitHub-required verification runs successfully without DCM and without
-   secret-dependent setup.
+1. GitHub CI runs successfully without DCM and without secret-dependent setup.
 2. A positive-baseline benchmark report that is already above an absolute
    budget fails the diff verdict even when `current == baseline`.
 3. No fake percentile metric remains in the load-profile contract or checked-in
    baselines.
-4. Required CI contains deterministic proof for committed spatial warm-path
+4. GitHub CI contains deterministic proof for committed spatial warm-path
    behavior and for the existing hot render caches that dominate current
    steady-state paint work.
 5. Diagnostic benchmark reports distinguish `cold_start` and `steady_state`
@@ -432,8 +440,9 @@ on DCM or dedicated hardware.
 
 ### Required Order
 
-- First, remove DCM from the executable GitHub-required contour and lock that
-  retirement with resolver and workflow-drift tests.
+- First, remove DCM from GitHub CI and its workflow expectations while keeping
+  local preset behavior unchanged, and lock that split with workflow-drift
+  tests.
 - Second, add the failing benchmark reproducer and neighboring guard tests for
   the diff verdict contract before changing the diff owner.
 - Third, retire the fake percentile contract and migrate the diagnostic metric
@@ -448,11 +457,13 @@ on DCM or dedicated hardware.
 
 ### Successor Seam and Retirement Gates
 
-- GitHub-required verification seam:
-  `dcm_analyze` may be removed from the graph and workflow only after
-  `test/tool/run_verification_preset_tool_test.dart` and
-  `test/tool/verification_contract_tool_test.dart` prove the successor
-  executable contour.
+- GitHub CI seam:
+  `dcm analyze .` may be removed from `.github/workflows/ci.yaml` and from CI
+  workflow expectations only after
+  `test/tool/verification_contract_tool_test.dart` proves the successor
+  executable contour and
+  `test/tool/run_verification_preset_tool_test.dart` proves that local preset
+  membership has not been narrowed by mistake.
 - Benchmark verdict seam:
   the current positive-baseline relative-only branch in
   `tool/bench/diff_load_profiles.dart` may be retired only after
@@ -540,7 +551,7 @@ on DCM or dedicated hardware.
 
 - Production-path diagnostic benchmarks must stay on the real production owner
   graph.
-- The required performance contour must remain deterministic and executable on
+- The GitHub CI performance contour must remain deterministic and executable on
   GitHub-hosted runners without external keys or dedicated hardware.
 - `steady_state` measurements must not include first-build work.
 - Absolute budgets must not depend on baseline sign or value.
@@ -553,9 +564,10 @@ on DCM or dedicated hardware.
   `test/tool/bench_diff_load_profiles_test.dart` must start with one failing
   reproducer for the positive-baseline over-budget case, plus 1 to 3 guard tests
   for neighboring verdict branches;
-  `test/tool/run_verification_preset_tool_test.dart` and
   `test/tool/verification_contract_tool_test.dart` must start with the failing
-  DCM-retirement contract expectations;
+  GitHub-CI DCM-removal expectation, and
+  `test/tool/run_verification_preset_tool_test.dart` must guard that local
+  preset membership still retains DCM;
   deterministic cache and warm-path proofs must use the existing owner-local
   debug counters or directly observable owner behavior.
 - structural proof:
@@ -564,7 +576,7 @@ on DCM or dedicated hardware.
   `test/render/scene_painter_bounds_contract_test.dart` remains the structural
   proof that main-scene render benchmarks stay on the real render seam;
   `tool/check_verification_contract.dart` remains the executable workflow-drift
-  proof for the GitHub-required contour.
+  proof for the GitHub CI contour.
 - for bug fixes, regressions, false positives, false negatives, and
   invariant-enforcement gaps: one failing reproducer first, plus 1 to 3 guard
   tests for neighboring branches of the same contract.
@@ -586,7 +598,7 @@ on DCM or dedicated hardware.
 
 - Do not add benchmark-only committed render-state or committed store owners for
   production-path measurements.
-- Do not restore DCM to GitHub-required verification through a wrapper,
+- Do not restore DCM to GitHub CI through a wrapper,
   fallback secret, or a parallel required job.
 - Do not keep `p95*` names while still collecting too few samples to make those
   names truthful.
@@ -600,16 +612,17 @@ on DCM or dedicated hardware.
 
 #### Slice Contract
 
-GitHub-required verification becomes fully executable from repository-owned
-surfaces by removing DCM from the required preset, CI workflow contract, and
-their regression fixtures.
+GitHub CI becomes fully executable from repository-owned
+surfaces by removing DCM from the CI workflow and CI workflow expectations
+without narrowing repository-local verification presets.
 
 #### Change
 
-- Add the failing resolver and workflow-drift expectations that prove the DCM
-  step must disappear.
-- Update the verification graph and `.github/workflows/ci.yaml` so the required
-  contour no longer includes `dcm_analyze`.
+- Add the failing workflow-drift expectation that proves the CI DCM step must
+  disappear, and add the local-preset guard expectation that proves
+  `required_code_change` still retains `dcm_analyze`.
+- Update the verification graph and `.github/workflows/ci.yaml` so the GitHub
+  CI contour no longer includes `dcm analyze .`.
 - Keep `perf_nightly.yaml` focused on perf diagnostics rather than adding a DCM
   substitute there.
 
@@ -631,17 +644,19 @@ their regression fixtures.
 
 #### Positive Scenarios
 
-- `required_code_change` resolves without `dcm_analyze`.
 - CI workflow drift check accepts the hand-authored workflow without DCM.
+- `required_code_change` still resolves with `dcm_analyze`.
 
 #### Negative Scenarios
 
-- Reintroducing `dcm analyze .` into the graph or CI workflow fails the drift
-  checks.
+- Reintroducing `dcm analyze .` into GitHub CI fails the drift checks.
+- Removing `dcm_analyze` from `required_code_change` by accident fails the
+  preset guard tests.
 
 #### Closure Evidence
 
-- GitHub-required verification has no executable dependency on DCM.
+- GitHub CI has no executable dependency on DCM, while local required
+  verification remains unchanged.
 
 ### Slice 2. [ ] Honest Benchmark Verdict Contract
 
@@ -694,7 +709,7 @@ budgets, including when the baseline already exceeds the configured cap.
 
 #### Slice Contract
 
-Required CI proves the currently hot steady-state work through deterministic
+GitHub CI proves the currently hot steady-state work through deterministic
 owner-local tests for committed spatial reuse and render-cache reuse instead of
 through wall-clock benchmark thresholds.
 
@@ -748,7 +763,7 @@ through wall-clock benchmark thresholds.
 
 #### Closure Evidence
 
-- Required CI proves no-extra-work semantics on the current hot owners without
+- GitHub CI proves no-extra-work semantics on the current hot owners without
   depending on wall-clock thresholds.
 
 ### Slice 4. [ ] Diagnostic Benchmark Taxonomy
@@ -817,11 +832,11 @@ preserving the real production owner seams.
 
 ## 12. Acceptance Criteria
 
-- GitHub-required verification no longer depends on DCM and stays aligned with
-  the graph-owned workflow contract.
+- GitHub CI no longer depends on DCM and stays aligned with the graph-owned
+  CI workflow contract, while local required verification still retains DCM.
 - The benchmark diff contract fails positive-baseline over-budget cases and no
   longer exposes fake percentile metrics.
-- Required CI has deterministic hot-path proof for committed spatial reuse and
+- GitHub CI has deterministic hot-path proof for committed spatial reuse and
   the current render caches.
 - Diagnostic benchmarks distinguish `cold_start` from `steady_state` and cover
   text layout cache, stroke path cache, and static background cache
