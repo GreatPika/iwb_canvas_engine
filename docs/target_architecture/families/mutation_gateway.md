@@ -63,6 +63,11 @@ that many committed mutation families are still concentrated in one owner.
 
 ## DCM-Guided Local Cut Map
 
+Unless noted otherwise, the counts in this table come from the current
+full-project `dcm analyze-structure lib/src --reporter=dot` graph. The
+narrowed mutation-family graph is used below to validate the local owner shape
+and the direction of family-internal edges.
+
 | File | DCM pressure | Interpretation | Target local role | Priority |
 |---|---|---|---|---|
 | `lib/src/interactive/internal/scene_controller_mutation_boundary.dart` | `in=4`, `out=12`; 30 methods; response set 66; weighted methods 58; `commitMoveSelection(...)` 42 SLOC | The gateway owner is the primary local hot spot inside this family | Single committed-write gateway with narrower internal mutation-family organization | Primary |
@@ -95,11 +100,11 @@ inventory is:
 
 | Target local owner | Files | Why this bucket is locked |
 |---|---|---|
-| Gateway core | `lib/src/interactive/internal/scene_controller_mutation_boundary.dart` | DCM shows the primary hot spot here: `in=4`, `out=2` inside the narrowed family graph, 30 methods, response set 66, weighted methods 58. |
-| Committed-mutation adapter seam | `lib/src/controller/scene_controller_committed_mutation_access.dart` | DCM shows one broad adapter seam into the store family: `in=3`, `out=2`, 27 methods on the implementation, response set 51. |
-| Scene-side wrapper | `lib/src/interactive/internal/scene_controller_scene_mutations.dart` | DCM shows one thin upstream wrapper. In the narrowed mutation-family graph it remains only a single-hop caller of the gateway core. |
-| Selection-side wrapper | `lib/src/interactive/internal/scene_controller_selection_mutations.dart` | DCM shows one thin upstream wrapper. In the narrowed mutation-family graph it remains only a single-hop caller of the gateway core. |
-| Interaction-side selection helper | `lib/src/interactive/internal/interactive_selection_actions.dart` | DCM shows one thin downstream helper: `in=1`, `out=2`. |
+| Gateway core | `lib/src/interactive/internal/scene_controller_mutation_boundary.dart` | DCM shows the primary hot spot here. In the narrowed mutation-family graph it remains the central fan-in node at `in=3`, `out=1`, with all family-internal write routing converging here before crossing into the adapter seam. |
+| Committed-mutation adapter seam | `lib/src/controller/scene_controller_committed_mutation_access.dart` | DCM shows one broad adapter seam into the store family. In the narrowed mutation-family graph it stays a terminal adapter at `in=1`, `out=0`, which matches the target rule that only the gateway crosses into committed-write access. |
+| Scene-side wrapper | `lib/src/interactive/internal/scene_controller_scene_mutations.dart` | DCM shows one thin upstream wrapper. In the narrowed mutation-family graph it remains a single-hop caller of the gateway core at `in=0`, `out=1`. |
+| Selection-side wrapper | `lib/src/interactive/internal/scene_controller_selection_mutations.dart` | DCM shows one thin upstream wrapper. In the narrowed mutation-family graph it remains a single-hop caller of the gateway core at `in=0`, `out=1`. |
+| Interaction-side selection helper | `lib/src/interactive/internal/interactive_selection_actions.dart` | DCM shows one thin interaction-side helper. In the narrowed mutation-family graph it remains a single-hop caller of the gateway core at `in=0`, `out=1`. |
 
 ## Locked Local Target Graph
 
