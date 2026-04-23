@@ -20,6 +20,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Keep the previous main commit locally available so paths-filter
+          # does not need an extra fetch by SHA on push events.
+          fetch-depth: 0
 
       - name: Detect tool-test-impacting changes
         id: filter

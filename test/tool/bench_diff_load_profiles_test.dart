@@ -864,7 +864,7 @@ Map<String, Object?> _caseMetrics(
     'name': name,
     'profile': 'smoke',
     'metrics': metrics,
-    if (probes case final value?) 'probes': value,
+    ...?(probes == null ? null : <String, Object?>{'probes': probes}),
   };
 }
 

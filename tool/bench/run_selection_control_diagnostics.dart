@@ -299,10 +299,14 @@ Map<String, Object?> _buildSelectionCaseReport(
       'meanWithOverNoRatio': _mean(ratioValues),
       'medianWithOverNoDeltaPct': _median(deltaPctValues),
       'meanWithOverNoDeltaPct': _mean(deltaPctValues),
-      if (noProbeSummary != null)
-        'paintNoSelectionProbeSummary': noProbeSummary,
-      if (withProbeSummary != null)
-        'paintWithSelectionProbeSummary': withProbeSummary,
+      ...?(noProbeSummary == null
+          ? null
+          : <String, Object?>{'paintNoSelectionProbeSummary': noProbeSummary}),
+      ...?(withProbeSummary == null
+          ? null
+          : <String, Object?>{
+              'paintWithSelectionProbeSummary': withProbeSummary,
+            }),
     },
     'runs': runs.map((run) => run.toJson()).toList(growable: false),
   };
