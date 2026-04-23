@@ -29,3 +29,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 10. Model-Owned Layer Topology Locator Contract](plan/step_10_model_owned_layer_topology_locator_contract.md)
 - [x] [Step 11. Performance Proof Architecture](plan/step_11_performance_proof_architecture.md)
 - [x] [Step 12. Product-Realistic Performance Measurement Contract](plan/step_12_product_realistic_performance_measurement_contract.md)
+- [ ] [Step 13. Bounded Main-Scene Paint Work](plan/step_13_bounded_main_scene_paint_work.md)
