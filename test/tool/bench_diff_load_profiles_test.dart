@@ -860,7 +860,7 @@ Map<String, Object?> _caseMetrics(
     'name': name,
     'profile': 'smoke',
     'metrics': metrics,
-    if (probes != null) 'probes': probes,
+    if (probes case final value?) 'probes': value,
   };
 }
 

@@ -32,20 +32,18 @@ test('controller-owned capabilities remain usable', () {
     test(
       'public barrel consumer cannot instantiate capability owners',
       () async {
-        for (final typeName in <String>[
-          'SceneControllerInteraction',
-          'SceneControllerSelection',
-          'SceneControllerScene',
-        ]) {
-          final result = await _runTempPkgSnippet('''
-test('direct construction is rejected for $typeName', () {
-  $typeName();
+        final result = await _runTempPkgSnippet('''
+test('direct construction is rejected for capability owners', () {
+  SceneControllerInteraction();
+  SceneControllerSelection();
+  SceneControllerScene();
 });
 ''');
 
-          expect(result.exitCode, isNonZero, reason: result.stdout);
-          expect(result.stderr, contains(typeName));
-        }
+        expect(result.exitCode, isNonZero, reason: result.stdout);
+        expect(result.stderr, contains('SceneControllerInteraction'));
+        expect(result.stderr, contains('SceneControllerSelection'));
+        expect(result.stderr, contains('SceneControllerScene'));
       },
     );
   });

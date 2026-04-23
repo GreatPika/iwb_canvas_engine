@@ -2,6 +2,7 @@
 AGENTS.md
 DEVELOPMENT_PLAN.md
 CODE_REVIEW_CHECKLIST.md
+docs/
 
 # Flutter/Dart/Pub build artifacts.
 .dart_tool/
