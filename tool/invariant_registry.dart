@@ -1033,6 +1033,22 @@ const List<Invariant> invariants = <Invariant>[
     ],
   ),
   Invariant(
+    id: 'INV-ENG-GRID-BOUNDED-ITERATION',
+    scope: 'engine-runtime',
+    title:
+        'dense grid rendering uses one bounded axis plan so planned work, draw work, and static-cache recorded work stay aligned on the render owner seam',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(
+        path: 'test/render/scene_grid_renderer_contract_test.dart',
+        stepId: 'scope_render_view',
+      ),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(path: 'test/render/scene_grid_renderer_test.dart'),
+      RegressionProof(path: 'test/render/scene_static_layer_cache_test.dart'),
+    ],
+  ),
+  Invariant(
     id: 'INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION',
     scope: 'engine-structure',
     title:

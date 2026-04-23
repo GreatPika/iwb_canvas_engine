@@ -36,7 +36,26 @@ const List<String> _cacheChurnProbeKeys = <String>[
   'evictDelta',
 ];
 
-const List<String> _selectionCompositingProbeKeys = <String>['saveLayerCount'];
+const List<String> _selectionCompositingProbeKeys = <String>[
+  'saveLayerCount',
+  'unboundedSaveLayerCount',
+  'saveLayerBoundsArea',
+];
+
+const List<String> _stableVisibleWorkingSetPaintProbeKeys = <String>[
+  'geometryBuildDelta',
+  'geometryHitDelta',
+  'geometryEvictDelta',
+  'textBuildDelta',
+  'textHitDelta',
+  'textEvictDelta',
+  'strokeBuildDelta',
+  'strokeHitDelta',
+  'strokeEvictDelta',
+  'pathMetricsBuildDelta',
+  'pathMetricsHitDelta',
+  'pathMetricsEvictDelta',
+];
 
 const List<String> _staticBackgroundProbeKeys = <String>[
   'buildDelta',
@@ -201,6 +220,7 @@ class LoadProfilePolicy {
     selectionPathPainterOnlyCaseName,
     selectionPathCandidateStagingCaseName,
     selectionPathEndToEndPaintCaseName,
+    stableVisibleWorkingSetPaintCaseName,
     textLayoutCacheCaseName,
     strokePathCacheCaseName,
     staticBackgroundCacheCaseName,
@@ -221,6 +241,12 @@ class LoadProfilePolicy {
       return <String, List<String>>{
         'paint_cache_miss': _cacheChurnProbeKeys,
         'paint_cache_hit': _cacheChurnProbeKeys,
+      };
+    }
+    if (caseName == stableVisibleWorkingSetPaintCaseName) {
+      return <String, List<String>>{
+        'paint_cache_miss': _stableVisibleWorkingSetPaintProbeKeys,
+        'paint_cache_hit': _stableVisibleWorkingSetPaintProbeKeys,
       };
     }
     if (caseName == staticBackgroundCacheCaseName) {
@@ -261,7 +287,8 @@ class LoadProfilePolicy {
     if (caseName == selectionPathCandidateStagingCaseName) {
       return _selectionPathStagingRequiredOperations;
     }
-    if (caseName == textLayoutCacheCaseName ||
+    if (caseName == stableVisibleWorkingSetPaintCaseName ||
+        caseName == textLayoutCacheCaseName ||
         caseName == strokePathCacheCaseName ||
         caseName == staticBackgroundCacheCaseName) {
       return _cacheBranchRequiredOperations;
@@ -336,6 +363,9 @@ class LoadProfilePolicy {
         'viewport': backgroundViewport.toJson(),
       };
     }
+    if (caseName == stableVisibleWorkingSetPaintCaseName) {
+      return <String, Object?>{'kind': 'stable_visible_working_set_paint'};
+    }
     if (caseName == worstCaseName) {
       return <String, Object?>{'kind': 'stress_worst_case'};
     }
@@ -362,7 +392,8 @@ class LoadProfilePolicy {
     required String caseName,
     required String operationName,
   }) {
-    if ((caseName == textLayoutCacheCaseName ||
+    if ((caseName == stableVisibleWorkingSetPaintCaseName ||
+            caseName == textLayoutCacheCaseName ||
             caseName == strokePathCacheCaseName ||
             caseName == staticBackgroundCacheCaseName) &&
         operationName == 'paint_cache_hit') {
@@ -419,6 +450,8 @@ const String selectionPathCandidateStagingCaseName =
     'selection_path_candidate_staging';
 const String selectionPathEndToEndPaintCaseName =
     'selection_path_end_to_end_paint';
+const String stableVisibleWorkingSetPaintCaseName =
+    'stable_visible_working_set_paint';
 const String textLayoutCacheCaseName = 'text_layout_cache';
 const String strokePathCacheCaseName = 'stroke_path_cache';
 const String staticBackgroundCacheCaseName = 'static_background_cache';

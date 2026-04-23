@@ -24,6 +24,14 @@ class ScenePathMetricsCache {
   @visibleForTesting
   int get debugSize => _entries.debugSize;
 
+  ({int buildCount, int hitCount, int evictCount}) captureProbe() {
+    return (
+      buildCount: debugBuildCount,
+      hitCount: debugHitCount,
+      evictCount: debugEvictCount,
+    );
+  }
+
   /// Owner-level invalidation for controller epoch/document boundaries.
   ///
   /// Keys stay scoped to `(nodeId, instanceRevision)` and local path inputs;

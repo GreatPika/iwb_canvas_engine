@@ -10,6 +10,7 @@ import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
     as interactive;
+import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 import 'load_profile_policy.dart';
@@ -114,6 +115,22 @@ void main() {
   );
 
   test(
+    'load profile stable-visible-working-set-paint profile=$profile',
+    () {
+      final metrics = _runStableVisibleWorkingSetPaintCase(
+        iterations: policy.selectionPathIterations,
+      );
+      _emitResult(
+        profile: profile,
+        name: stableVisibleWorkingSetPaintCaseName,
+        metrics: metrics,
+        contract: policy.contractForCase(stableVisibleWorkingSetPaintCaseName),
+      );
+    },
+    timeout: const Timeout(Duration(minutes: 10)),
+  );
+
+  test(
     'load profile text-layout-cache profile=$profile',
     () {
       final metrics = _runTextLayoutCacheCase(
@@ -200,6 +217,13 @@ void main() {
     );
   }
 }
+
+typedef _BenchmarkPaintCaches = ({
+  RenderGeometryCache geometryCache,
+  SceneTextLayoutCache textLayoutCache,
+  SceneStrokePathCache strokePathCache,
+  ScenePathMetricsCache pathMetricsCache,
+});
 
 String _resolveProfile() {
   final raw = Platform.environment['IWB_BENCH_PROFILE']?.trim().toLowerCase();
@@ -631,6 +655,112 @@ Map<String, Object?> _runSelectionPathEndToEndPaintCase({
       'metrics': <String, Object?>{
         'paint_no_selection': noSelectionMetric,
         'paint_with_selection': withSelectionMetric,
+      },
+    };
+  } finally {
+    renderState.dispose();
+    interactionController.dispose();
+    controller.dispose();
+  }
+}
+
+Map<String, Object?> _runStableVisibleWorkingSetPaintCase({
+  required int iterations,
+}) {
+  final scenario = _stableVisibleWorkingSetScenario();
+  final controller = SceneStoreController(initialSnapshot: scenario.snapshot);
+  controller.write<void>((writer) {
+    writer.writeSelectionReplace(scenario.selectedPathIds);
+  });
+  final interactionController = interactive.SceneController();
+  final renderState = _createProductionBenchmarkRenderState(
+    controller: controller,
+    interactionController: interactionController,
+  );
+  const canvasSize = Size(520, 320);
+
+  try {
+    final missMetric = _measureOperation(
+      iterations: iterations,
+      run: (_) {
+        final caches = _createBenchmarkPaintCaches();
+        final painter = ScenePainter(
+          controller: renderState,
+          imageResolver: (_) => null,
+          geometryCache: caches.geometryCache,
+          textLayoutCache: caches.textLayoutCache,
+          strokePathCache: caches.strokePathCache,
+          pathMetricsCache: caches.pathMetricsCache,
+        );
+        _paintScene(painter, canvasSize);
+      },
+    );
+
+    final hitCaches = _createBenchmarkPaintCaches();
+    final hitPainter = ScenePainter(
+      controller: renderState,
+      imageResolver: (_) => null,
+      geometryCache: hitCaches.geometryCache,
+      textLayoutCache: hitCaches.textLayoutCache,
+      strokePathCache: hitCaches.strokePathCache,
+      pathMetricsCache: hitCaches.pathMetricsCache,
+    );
+    final hitMetric = _measureOperation(
+      iterations: iterations,
+      warmUp: () {
+        _paintScene(hitPainter, canvasSize);
+      },
+      run: (_) {
+        _paintScene(hitPainter, canvasSize);
+      },
+    );
+
+    final missProbeCaches = _createBenchmarkPaintCaches();
+    final missProbePainter = ScenePainter(
+      controller: renderState,
+      imageResolver: (_) => null,
+      geometryCache: missProbeCaches.geometryCache,
+      textLayoutCache: missProbeCaches.textLayoutCache,
+      strokePathCache: missProbeCaches.strokePathCache,
+      pathMetricsCache: missProbeCaches.pathMetricsCache,
+    );
+    final missProbe = _captureStableVisibleWorkingSetPaintProbe(
+      run: () {
+        _paintScene(missProbePainter, canvasSize);
+      },
+      caches: missProbeCaches,
+    );
+
+    final hitProbeCaches = _createBenchmarkPaintCaches();
+    final hitProbePainter = ScenePainter(
+      controller: renderState,
+      imageResolver: (_) => null,
+      geometryCache: hitProbeCaches.geometryCache,
+      textLayoutCache: hitProbeCaches.textLayoutCache,
+      strokePathCache: hitProbeCaches.strokePathCache,
+      pathMetricsCache: hitProbeCaches.pathMetricsCache,
+    );
+    final hitProbe = _captureStableVisibleWorkingSetPaintProbe(
+      warmUp: () {
+        _paintScene(hitProbePainter, canvasSize);
+      },
+      run: () {
+        _paintScene(hitProbePainter, canvasSize);
+      },
+      caches: hitProbeCaches,
+    );
+
+    return <String, Object?>{
+      'iterations': iterations,
+      'visibleNodeCount': scenario.visibleNodeCount,
+      'selectedPathCount': scenario.selectedPathIds.length,
+      'probes': <String, Object?>{
+        'paint_cache_miss': missProbe,
+        'paint_cache_hit': hitProbe,
+      },
+      'metrics': <String, Object?>{
+        'paint_cache_miss': missMetric,
+        'paint_cache_hit': hitMetric,
       },
     };
   } finally {
@@ -1107,6 +1237,81 @@ SceneControllerSceneViewRenderState _createProductionBenchmarkRenderState({
 
 Offset _benchmarkZeroPreviewDelta(NodeId _) => Offset.zero;
 
+_BenchmarkPaintCaches _createBenchmarkPaintCaches() {
+  return (
+    geometryCache: RenderGeometryCache(maxEntries: 8),
+    textLayoutCache: SceneTextLayoutCache(maxEntries: 2),
+    strokePathCache: SceneStrokePathCache(maxEntries: 2),
+    pathMetricsCache: ScenePathMetricsCache(maxEntries: 2),
+  );
+}
+
+({SceneSnapshot snapshot, Set<NodeId> selectedPathIds, int visibleNodeCount})
+_stableVisibleWorkingSetScenario() {
+  final selectedPathIds = <NodeId>{};
+  final nodes = <NodeSnapshot>[];
+  for (var i = 0; i < 3; i++) {
+    nodes.add(
+      TextNodeSnapshot(
+        id: 'stable-text-$i',
+        text: 'stable text $i',
+        fontSize: 14,
+        color: const Color(0xFF000000),
+        textDirection: TextDirection.ltr,
+        transform: Transform2D.translation(
+          Offset(24 + (i * 160).toDouble(), 24),
+        ),
+      ),
+    );
+    nodes.add(
+      StrokeNodeSnapshot(
+        id: 'stable-stroke-$i',
+        points: _linearPoints(count: 96, y: 0),
+        thickness: 3,
+        color: const Color(0xFF0055AA),
+        transform: Transform2D.translation(
+          Offset(24 + (i * 160).toDouble(), 96),
+        ),
+      ),
+    );
+    final pathId = 'stable-path-$i';
+    selectedPathIds.add(pathId);
+    nodes.add(
+      PathNodeSnapshot(
+        id: pathId,
+        svgPathData: _closedRibbonPath(segments: 48),
+        strokeColor: const Color(0xFF663300),
+        strokeWidth: 2,
+        transform: Transform2D.translation(
+          Offset(24 + (i * 160).toDouble(), 156),
+        ),
+      ),
+    );
+    nodes.add(
+      RectNodeSnapshot(
+        id: 'stable-rect-$i',
+        size: const Size(72, 28),
+        fillColor: const Color(0xFF88CCEE),
+        transform: Transform2D.translation(
+          Offset(24 + (i * 160).toDouble(), 252),
+        ),
+      ),
+    );
+  }
+  return (
+    snapshot: SceneSnapshot(
+      layers: <ContentLayerSnapshot>[
+        ContentLayerSnapshot(
+          id: 'layer-auto-stable-visible-paint',
+          nodes: nodes,
+        ),
+      ],
+    ),
+    selectedPathIds: selectedPathIds,
+    visibleNodeCount: nodes.length,
+  );
+}
+
 Map<String, Object?> _runHugeBoundsMetric({required int iterations}) {
   final snapshot = SceneSnapshot(
     layers: <ContentLayerSnapshot>[
@@ -1332,10 +1537,26 @@ Map<String, num> _captureSelectionSaveLayerProbe({
 }) {
   final canvas = TestRecordingCanvas();
   painter.paintPrepared(canvas, preparedScene);
-  final saveLayerCount = canvas.invocations
+  final saveLayerBounds = canvas.invocations
       .where((invocation) => invocation.invocation.memberName == #saveLayer)
-      .length;
-  return <String, num>{'saveLayerCount': saveLayerCount};
+      .map((invocation) => invocation.invocation.positionalArguments.first)
+      .toList(growable: false);
+  var unboundedSaveLayerCount = 0;
+  var saveLayerBoundsArea = 0.0;
+  for (final bounds in saveLayerBounds) {
+    if (bounds == null) {
+      unboundedSaveLayerCount += 1;
+      continue;
+    }
+    if (bounds is Rect) {
+      saveLayerBoundsArea += bounds.width * bounds.height;
+    }
+  }
+  return <String, num>{
+    'saveLayerCount': saveLayerBounds.length,
+    'unboundedSaveLayerCount': unboundedSaveLayerCount,
+    'saveLayerBoundsArea': saveLayerBoundsArea,
+  };
 }
 
 Map<String, num> _captureCacheChurnProbe({
@@ -1354,6 +1575,40 @@ Map<String, num> _captureCacheChurnProbe({
     'buildDelta': readBuildCount() - buildBefore,
     'hitDelta': readHitCount() - hitBefore,
     'evictDelta': readEvictCount() - evictBefore,
+  };
+}
+
+Map<String, num> _captureStableVisibleWorkingSetPaintProbe({
+  void Function()? warmUp,
+  required void Function() run,
+  required _BenchmarkPaintCaches caches,
+}) {
+  warmUp?.call();
+  final geometryBefore = caches.geometryCache.captureProbe();
+  final textBefore = caches.textLayoutCache.captureProbe();
+  final strokeBefore = caches.strokePathCache.captureProbe();
+  final pathMetricsBefore = caches.pathMetricsCache.captureProbe();
+  run();
+  final geometryAfter = caches.geometryCache.captureProbe();
+  final textAfter = caches.textLayoutCache.captureProbe();
+  final strokeAfter = caches.strokePathCache.captureProbe();
+  final pathMetricsAfter = caches.pathMetricsCache.captureProbe();
+  return <String, num>{
+    'geometryBuildDelta': geometryAfter.buildCount - geometryBefore.buildCount,
+    'geometryHitDelta': geometryAfter.hitCount - geometryBefore.hitCount,
+    'geometryEvictDelta': geometryAfter.evictCount - geometryBefore.evictCount,
+    'textBuildDelta': textAfter.buildCount - textBefore.buildCount,
+    'textHitDelta': textAfter.hitCount - textBefore.hitCount,
+    'textEvictDelta': textAfter.evictCount - textBefore.evictCount,
+    'strokeBuildDelta': strokeAfter.buildCount - strokeBefore.buildCount,
+    'strokeHitDelta': strokeAfter.hitCount - strokeBefore.hitCount,
+    'strokeEvictDelta': strokeAfter.evictCount - strokeBefore.evictCount,
+    'pathMetricsBuildDelta':
+        pathMetricsAfter.buildCount - pathMetricsBefore.buildCount,
+    'pathMetricsHitDelta':
+        pathMetricsAfter.hitCount - pathMetricsBefore.hitCount,
+    'pathMetricsEvictDelta':
+        pathMetricsAfter.evictCount - pathMetricsBefore.evictCount,
   };
 }
 

@@ -1417,6 +1417,10 @@ void main() {
         height: 96,
       );
       await _expectSameImagePixels(actual, expected);
+      expect(
+        await _countNonBackgroundPixels(actual, background),
+        greaterThan(0),
+      );
     },
   );
 
@@ -2085,6 +2089,10 @@ void main() {
       );
 
       await _expectSameImagePixels(withoutPathCache, withPathCache);
+      expect(
+        await _countNonBackgroundPixels(withPathCache, background),
+        greaterThan(0),
+      );
     },
   );
 

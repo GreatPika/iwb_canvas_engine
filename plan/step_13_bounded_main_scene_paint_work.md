@@ -728,7 +728,7 @@ painted geometry and halo style.
 - `scene_painter_bounds_contract_test.dart` proves bounded selection
   compositing remains on the render owner seam
 
-### Slice 3. [ ] Bounded Grid Iteration Plan
+### Slice 3. [x] Bounded Grid Iteration Plan
 
 #### Slice Contract
 
@@ -784,7 +784,7 @@ grid picture recording.
 - `scene_grid_renderer_contract_test.dart` proves one bounded plan owns grid
   work semantics
 
-### Slice 4. [ ] Diagnostic Paint-Work Measurement Refresh
+### Slice 4. [x] Diagnostic Paint-Work Measurement Refresh
 
 #### Slice Contract
 

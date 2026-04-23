@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/core/grid_safety_limits.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
 
+// INV:INV-ENG-GRID-BOUNDED-ITERATION
 Future<int> _countNonBackgroundPixelsOnColumn(
   Image image,
   int x,
@@ -136,47 +137,46 @@ void main() {
     );
   });
 
-  test(
-    'SceneGridRenderer debugWorkForPlan exposes loop waste on dense grids',
-    () {
-      final grid = GridSnapshot(
-        isEnabled: true,
-        cellSize: 1,
-        color: Color(0xFF000000),
-      );
+  test('SceneGridRenderer debugWorkForPlan stays bounded on dense grids', () {
+    final grid = GridSnapshot(
+      isEnabled: true,
+      cellSize: 1,
+      color: Color(0xFF000000),
+    );
 
-      final plan = renderer.plan(
-        SceneGridRenderRequest(
-          grid: grid,
-          size: Size(600, 400),
-          cameraOffset: Offset(0.5, 0.5),
-          gridStrokeWidth: 1,
-        ),
-      );
+    final plan = renderer.plan(
+      SceneGridRenderRequest(
+        grid: grid,
+        size: Size(600, 400),
+        cameraOffset: Offset(0.5, 0.5),
+        gridStrokeWidth: 1,
+      ),
+    );
 
-      expect(plan, isNotNull);
-      if (plan == null) {
-        fail('Expected renderer plan for drawable dense grid.');
-      }
+    expect(plan, isNotNull);
+    if (plan == null) {
+      fail('Expected renderer plan for drawable dense grid.');
+    }
 
-      final work = renderer.debugWorkForPlan(plan);
-      expect(work.xAxis.loopIterations, greaterThan(work.xAxis.drawnLineCount));
-      expect(work.yAxis.loopIterations, greaterThan(work.yAxis.drawnLineCount));
-      expect(work.loopIterations, greaterThan(work.drawnLineCount));
-      expect(work.toJson(), <String, Object?>{
-        'loopIterations': work.loopIterations,
-        'drawnLineCount': work.drawnLineCount,
-        'xAxis': <String, int>{
-          'loopIterations': work.xAxis.loopIterations,
-          'drawnLineCount': work.xAxis.drawnLineCount,
-        },
-        'yAxis': <String, int>{
-          'loopIterations': work.yAxis.loopIterations,
-          'drawnLineCount': work.yAxis.drawnLineCount,
-        },
-      });
-    },
-  );
+    final work = renderer.debugWorkForPlan(plan);
+    expect(work.xAxis.loopIterations, equals(work.xAxis.drawnLineCount));
+    expect(work.yAxis.loopIterations, equals(work.yAxis.drawnLineCount));
+    expect(work.loopIterations, equals(work.drawnLineCount));
+    expect(work.xAxis.loopIterations, equals(plan.xAxis.maxVisibleLines));
+    expect(work.yAxis.loopIterations, equals(plan.yAxis.maxVisibleLines));
+    expect(work.toJson(), <String, Object?>{
+      'loopIterations': work.loopIterations,
+      'drawnLineCount': work.drawnLineCount,
+      'xAxis': <String, int>{
+        'loopIterations': work.xAxis.loopIterations,
+        'drawnLineCount': work.xAxis.drawnLineCount,
+      },
+      'yAxis': <String, int>{
+        'loopIterations': work.yAxis.loopIterations,
+        'drawnLineCount': work.yAxis.drawnLineCount,
+      },
+    });
+  });
 
   test(
     'SceneGridRenderer draws full-height vertical lines on wide viewports',

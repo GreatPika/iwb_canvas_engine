@@ -611,6 +611,7 @@ void main() {
         selectionPathCandidateStagingCaseName,
         selectionPathEndToEndPaintCaseName,
         selectionPathPainterOnlyCaseName,
+        stableVisibleWorkingSetPaintCaseName,
         staticBackgroundCacheCaseName,
         strokePathCacheCaseName,
         textLayoutCacheCaseName,
@@ -619,6 +620,7 @@ void main() {
         selectionPathCandidateStagingCaseName,
         selectionPathEndToEndPaintCaseName,
         selectionPathPainterOnlyCaseName,
+        stableVisibleWorkingSetPaintCaseName,
         staticBackgroundCacheCaseName,
         strokePathCacheCaseName,
         textLayoutCacheCaseName,
@@ -630,6 +632,7 @@ void main() {
           '$selectionPathCandidateStagingCaseName, '
           '$selectionPathEndToEndPaintCaseName, '
           '$selectionPathPainterOnlyCaseName, '
+          '$stableVisibleWorkingSetPaintCaseName, '
           '$staticBackgroundCacheCaseName, '
           '$strokePathCacheCaseName, '
           '$textLayoutCacheCaseName',
@@ -642,6 +645,7 @@ void main() {
           '$selectionPathCandidateStagingCaseName, '
           '$selectionPathEndToEndPaintCaseName, '
           '$selectionPathPainterOnlyCaseName, '
+          '$stableVisibleWorkingSetPaintCaseName, '
           '$staticBackgroundCacheCaseName, '
           '$strokePathCacheCaseName, '
           '$textLayoutCacheCaseName',
@@ -987,6 +991,43 @@ List<Map<String, Object?>> _smokeCacheCases(Map<String, num> metrics) {
   final leaf = _smokeMetricLeaf(metrics);
   return <Map<String, Object?>>[
     _caseMetrics(
+      stableVisibleWorkingSetPaintCaseName,
+      <String, Map<String, num>>{
+        'paint_cache_miss': leaf,
+        'paint_cache_hit': leaf,
+      },
+      probes: <String, Map<String, num>>{
+        'paint_cache_miss': _stableVisibleWorkingSetProbeLeaf(
+          geometryBuildDelta: 12,
+          geometryHitDelta: 0,
+          geometryEvictDelta: 4,
+          textBuildDelta: 3,
+          textHitDelta: 0,
+          textEvictDelta: 1,
+          strokeBuildDelta: 3,
+          strokeHitDelta: 0,
+          strokeEvictDelta: 1,
+          pathMetricsBuildDelta: 3,
+          pathMetricsHitDelta: 0,
+          pathMetricsEvictDelta: 1,
+        ),
+        'paint_cache_hit': _stableVisibleWorkingSetProbeLeaf(
+          geometryBuildDelta: 4,
+          geometryHitDelta: 8,
+          geometryEvictDelta: 4,
+          textBuildDelta: 1,
+          textHitDelta: 2,
+          textEvictDelta: 1,
+          strokeBuildDelta: 1,
+          strokeHitDelta: 2,
+          strokeEvictDelta: 1,
+          pathMetricsBuildDelta: 1,
+          pathMetricsHitDelta: 2,
+          pathMetricsEvictDelta: 1,
+        ),
+      },
+    ),
+    _caseMetrics(
       textLayoutCacheCaseName,
       <String, Map<String, num>>{
         'paint_cache_miss': leaf,
@@ -1015,15 +1056,61 @@ List<Map<String, Object?>> _smokeCacheCases(Map<String, num> metrics) {
         'paint_cache_hit': leaf,
       },
       probes: <String, Map<String, num>>{
-        'paint_cache_miss': _staticBackgroundProbeLeaf(buildDelta: 1),
-        'paint_cache_hit': _staticBackgroundProbeLeaf(buildDelta: 0),
+        'paint_cache_miss': _staticBackgroundProbeLeaf(
+          buildDelta: 1,
+          gridLoopIterations: 200,
+          gridDrawnLineCount: 200,
+        ),
+        'paint_cache_hit': _staticBackgroundProbeLeaf(
+          buildDelta: 0,
+          gridLoopIterations: 0,
+          gridDrawnLineCount: 0,
+        ),
       },
     ),
   ];
 }
 
-Map<String, num> _selectionProbeLeaf(num saveLayerCount) {
-  return <String, num>{'saveLayerCount': saveLayerCount};
+Map<String, num> _selectionProbeLeaf(
+  num saveLayerCount, {
+  num unboundedSaveLayerCount = 0,
+  num saveLayerBoundsArea = 0,
+}) {
+  return <String, num>{
+    'saveLayerCount': saveLayerCount,
+    'unboundedSaveLayerCount': unboundedSaveLayerCount,
+    'saveLayerBoundsArea': saveLayerBoundsArea,
+  };
+}
+
+Map<String, num> _stableVisibleWorkingSetProbeLeaf({
+  required num geometryBuildDelta,
+  required num geometryHitDelta,
+  required num geometryEvictDelta,
+  required num textBuildDelta,
+  required num textHitDelta,
+  required num textEvictDelta,
+  required num strokeBuildDelta,
+  required num strokeHitDelta,
+  required num strokeEvictDelta,
+  required num pathMetricsBuildDelta,
+  required num pathMetricsHitDelta,
+  required num pathMetricsEvictDelta,
+}) {
+  return <String, num>{
+    'geometryBuildDelta': geometryBuildDelta,
+    'geometryHitDelta': geometryHitDelta,
+    'geometryEvictDelta': geometryEvictDelta,
+    'textBuildDelta': textBuildDelta,
+    'textHitDelta': textHitDelta,
+    'textEvictDelta': textEvictDelta,
+    'strokeBuildDelta': strokeBuildDelta,
+    'strokeHitDelta': strokeHitDelta,
+    'strokeEvictDelta': strokeEvictDelta,
+    'pathMetricsBuildDelta': pathMetricsBuildDelta,
+    'pathMetricsHitDelta': pathMetricsHitDelta,
+    'pathMetricsEvictDelta': pathMetricsEvictDelta,
+  };
 }
 
 Map<String, num> _cacheProbeLeaf({

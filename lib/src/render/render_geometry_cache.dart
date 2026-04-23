@@ -32,6 +32,14 @@ class RenderGeometryCache {
   @visibleForTesting
   int get debugSize => _entries.debugSize;
 
+  ({int buildCount, int hitCount, int evictCount}) captureProbe() {
+    return (
+      buildCount: debugBuildCount,
+      hitCount: debugHitCount,
+      evictCount: debugEvictCount,
+    );
+  }
+
   GeometryEntry get(
     NodeSnapshot node, {
     ResolvedTextLayout? resolvedTextLayout,

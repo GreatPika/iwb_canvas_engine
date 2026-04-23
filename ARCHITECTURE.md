@@ -462,8 +462,17 @@ The render subsystem owns caches for:
 - stroke/path work
 - static background/grid layers
 
-Cache lifecycle belongs to the render/view shell and is invalidated by
-controller epoch and runtime replacement events.
+Geometry, text-layout, stroke-path, and path-selection-metrics retention now
+share the render-local `scan_resistant_cache.dart` owner, while cache lifecycle
+still belongs to the render/view shell and is invalidated by controller epoch
+and runtime replacement events.
+
+Bounded paint-work policy also stays inside the render layer:
+
+- `selection_halo_compositing.dart` owns tight main-scene halo `saveLayer`
+  bounds derived from geometry and halo style
+- `SceneGridRenderer` owns bounded axis plans consumed by both direct grid draw
+  and `SceneStaticLayerCache` recording/probe surfaces
 
 ## 8. Main execution flows
 
@@ -682,9 +691,10 @@ Performance proof follows a two-contour architecture:
   is the separate stress/nightly profile for large-scene and worst-case
   diagnostics.
 - Diagnostic load-profile reports carry explicit owner-level probe surfaces for
-  cache churn, selection `saveLayer` work, and grid loop-versus-drawn-line
-  counts. The benchmark runner and diff layer consume production-owner seams
-  only and do not introduce benchmark-only runtime owners.
+  stable visible-working-set cache reuse, bounded selection `saveLayer` count
+  and area, and bounded grid work recorded from the shared grid plan. The
+  benchmark runner and diff layer consume production-owner seams only and do
+  not introduce benchmark-only runtime owners.
 
 ## 10. Mechanical enforcement
 

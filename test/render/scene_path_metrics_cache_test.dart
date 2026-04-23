@@ -32,6 +32,26 @@ void main() {
     expect(cache.debugSize, 1);
   });
 
+  test(
+    'ScenePathMetricsCache captureProbe exposes build hit and evict counts',
+    () {
+      final cache = ScenePathMetricsCache(maxEntries: 2);
+      final nodeA = PathNodeSnapshot(id: 'probe-a', svgPathData: 'M0 0 H10');
+      final nodeB = PathNodeSnapshot(id: 'probe-b', svgPathData: 'M0 0 H10');
+      final nodeC = PathNodeSnapshot(id: 'probe-c', svgPathData: 'M0 0 H10');
+      final path = Path()
+        ..moveTo(0, 0)
+        ..lineTo(10, 0);
+
+      cache.getOrBuild(node: nodeA, localPath: path);
+      cache.getOrBuild(node: nodeA, localPath: path);
+      cache.getOrBuild(node: nodeB, localPath: path);
+      cache.getOrBuild(node: nodeC, localPath: path);
+
+      expect(cache.captureProbe(), (buildCount: 3, hitCount: 1, evictCount: 1));
+    },
+  );
+
   test('ScenePathMetricsCache rebuilds on svgPathData change', () {
     final cache = ScenePathMetricsCache(maxEntries: 8);
     final nodeA = PathNodeSnapshot(id: 'p-1', svgPathData: 'M0 0 H10 V10 H0 Z');

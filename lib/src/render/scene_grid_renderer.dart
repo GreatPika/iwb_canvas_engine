@@ -51,7 +51,6 @@ class SceneGridRenderer {
       canvas,
       plan.xAxis,
       frame: (
-        cellSize: plan.cellSize,
         axisExtent: plan.size.width,
         lineLength: plan.size.height,
         vertical: true,
@@ -62,7 +61,6 @@ class SceneGridRenderer {
       canvas,
       plan.yAxis,
       frame: (
-        cellSize: plan.cellSize,
         axisExtent: plan.size.height,
         lineLength: plan.size.width,
         vertical: false,
@@ -92,11 +90,19 @@ class SceneGridRenderer {
   }
 
   SceneGridAxisPlan _axisPlan(double extent, double cameraShift, double cell) {
-    final lineUpperBound = _visibleLineUpperBound(extent, cell);
+    final visibleLineCount = _visibleLineCountUpperBound(extent, cell);
+    final stride = _strideForVisibleLineCountUpperBound(visibleLineCount);
+    final firstPosition = _gridStart(cameraShift, cell);
+    final positionStep = cell * stride;
     return SceneGridAxisPlan._(
-      start: _gridStart(cameraShift, cell),
-      stride: _strideForVisibleLineUpperBound(lineUpperBound),
-      lineUpperBound: lineUpperBound,
+      firstPosition: firstPosition,
+      stride: stride,
+      positionStep: positionStep,
+      iterationCount: _iterationCount(
+        firstPosition: firstPosition,
+        axisExtent: extent,
+        positionStep: positionStep,
+      ),
     );
   }
 
@@ -108,7 +114,6 @@ class SceneGridRenderer {
   }) {
     _visitAxisLines(
       axis,
-      frame: frame,
       onDrawLine: (position) {
         final start = frame.vertical
             ? Offset(position, 0)
@@ -122,29 +127,21 @@ class SceneGridRenderer {
   }
 
   SceneGridAxisWorkStats _measureAxisWork(SceneGridAxisPlan axis) {
-    final loopIterations = axis.lineUpperBound;
-    final drawnLineCount = loopIterations == 0
-        ? 0
-        : ((loopIterations - 1) ~/ axis.stride) + 1;
     return SceneGridAxisWorkStats(
-      loopIterations: loopIterations,
-      drawnLineCount: drawnLineCount,
+      loopIterations: axis.iterationCount,
+      drawnLineCount: axis.iterationCount,
     );
   }
 
   void _visitAxisLines(
     SceneGridAxisPlan axis, {
-    required _SceneGridAxisDrawFrame frame,
     required void Function(double position) onDrawLine,
   }) {
     for (
-      var position = axis.start, index = 0;
-      position <= frame.axisExtent;
-      position += frame.cellSize, index++
+      var position = axis.firstPosition, iteration = 0;
+      iteration < axis.iterationCount;
+      position += axis.positionStep, iteration++
     ) {
-      if (index % axis.stride != 0) {
-        continue;
-      }
       onDrawLine(position);
     }
   }
@@ -166,7 +163,6 @@ class SceneGridRenderRequest {
 }
 
 typedef _SceneGridAxisDrawFrame = ({
-  double cellSize,
   double axisExtent,
   double lineLength,
   bool vertical,
@@ -194,16 +190,18 @@ class SceneGridRenderPlan {
 @immutable
 class SceneGridAxisPlan {
   const SceneGridAxisPlan._({
-    required this.start,
+    required this.firstPosition,
     required this.stride,
-    required this.lineUpperBound,
+    required this.positionStep,
+    required this.iterationCount,
   });
 
-  final double start;
+  final double firstPosition;
   final int stride;
-  final int lineUpperBound;
+  final double positionStep;
+  final int iterationCount;
 
-  int get maxVisibleLines => (lineUpperBound / stride).ceil();
+  int get maxVisibleLines => iterationCount;
 }
 
 @immutable
@@ -263,18 +261,36 @@ bool _isDrawable(
   return true;
 }
 
-int _visibleLineUpperBound(double extent, double cell) {
+int _visibleLineCountUpperBound(double extent, double cell) {
   if (!extent.isFinite || !cell.isFinite || extent <= 0 || cell <= 0) {
     return 0;
   }
   return (extent / cell).ceil().clamp(0, 1 << 30) + 1;
 }
 
-int _strideForVisibleLineUpperBound(int lineUpperBound) {
-  if (lineUpperBound <= kMaxGridLinesPerAxis) {
+int _strideForVisibleLineCountUpperBound(int visibleLineCount) {
+  if (visibleLineCount <= kMaxGridLinesPerAxis) {
     return 1;
   }
-  return (lineUpperBound / kMaxGridLinesPerAxis).ceil().clamp(1, 1 << 30);
+  return (visibleLineCount / kMaxGridLinesPerAxis).ceil().clamp(1, 1 << 30);
+}
+
+int _iterationCount({
+  required double firstPosition,
+  required double axisExtent,
+  required double positionStep,
+}) {
+  if (!firstPosition.isFinite ||
+      !axisExtent.isFinite ||
+      !positionStep.isFinite ||
+      positionStep <= 0 ||
+      firstPosition > axisExtent) {
+    return 0;
+  }
+  return (((axisExtent - firstPosition) / positionStep).floor() + 1).clamp(
+    0,
+    1 << 30,
+  );
 }
 
 double _gridStart(double offset, double cell) {

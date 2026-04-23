@@ -72,6 +72,9 @@ in changes that have not yet been published to pub.dev.
 
 ### Fixed
 
+- Fixed main-scene paint hot paths so repeated over-capacity frames keep
+  scan-resistant render-cache reuse, selection halo compositing records only
+  bounded `saveLayer` regions, and dense-grid diagnostics report bounded work.
 - Fixed paint over-admission by separating paint admission from hit-test
   admission. Hit-testing still honors hit padding, while paint admission now
   uses paint bounds only.

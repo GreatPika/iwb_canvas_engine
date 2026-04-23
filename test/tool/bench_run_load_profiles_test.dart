@@ -116,6 +116,7 @@ void main() {
           '$selectionPathCandidateStagingCaseName, '
           '$selectionPathEndToEndPaintCaseName, '
           '$selectionPathPainterOnlyCaseName, '
+          '$stableVisibleWorkingSetPaintCaseName, '
           '$staticBackgroundCacheCaseName, '
           '$strokePathCacheCaseName, '
           '$textLayoutCacheCaseName',
@@ -221,6 +222,11 @@ void main() {
           source: source,
           methodStart: 'Map<String, Object?> _runStrokePathCacheCase({',
         );
+        final stableBody = _extractMethodBody(
+          source: source,
+          methodStart:
+              'Map<String, Object?> _runStableVisibleWorkingSetPaintCase({',
+        );
         final staticBody = _extractMethodBody(
           source: source,
           methodStart: 'Map<String, Object?> _runStaticBackgroundCacheCase({',
@@ -233,6 +239,15 @@ void main() {
         expect(strokeBody, contains('_createProductionBenchmarkRenderState('));
         expect(strokeBody, contains('warmUp: () {'));
         expect(strokeBody, isNot(contains('_BenchmarkControllerRenderState(')));
+
+        expect(stableBody, contains('_createProductionBenchmarkRenderState('));
+        expect(stableBody, contains('_createBenchmarkPaintCaches()'));
+        expect(stableBody, contains('warmUp: () {'));
+        expect(
+          stableBody,
+          contains('_captureStableVisibleWorkingSetPaintProbe('),
+        );
+        expect(stableBody, isNot(contains('_BenchmarkControllerRenderState(')));
 
         expect(staticBody, contains('SceneControllerSceneViewRenderState('));
         expect(staticBody, contains('warmUp: () {'));
@@ -324,6 +339,36 @@ void main() {
       final issues = run_load_profiles.validateCollectedBenchmarkCaseContracts(
         policy: policy,
         parsedCases: <Map<String, Object?>>[
+          _probeRecord(stableVisibleWorkingSetPaintCaseName, <String, Object?>{
+            'paint_cache_miss': <String, Object?>{
+              'geometryBuildDelta': 12,
+              'geometryHitDelta': 0,
+              'geometryEvictDelta': 4,
+              'textBuildDelta': 3,
+              'textHitDelta': 0,
+              'textEvictDelta': 1,
+              'strokeBuildDelta': 3,
+              'strokeHitDelta': 0,
+              'strokeEvictDelta': 1,
+              'pathMetricsBuildDelta': 3,
+              'pathMetricsHitDelta': 0,
+              'pathMetricsEvictDelta': 1,
+            },
+            'paint_cache_hit': <String, Object?>{
+              'geometryBuildDelta': 4,
+              'geometryHitDelta': 8,
+              'geometryEvictDelta': 4,
+              'textBuildDelta': 1,
+              'textHitDelta': 2,
+              'textEvictDelta': 1,
+              'strokeBuildDelta': 1,
+              'strokeHitDelta': 2,
+              'strokeEvictDelta': 1,
+              'pathMetricsBuildDelta': 1,
+              'pathMetricsHitDelta': 2,
+              'pathMetricsEvictDelta': 1,
+            },
+          }),
           _probeRecord(textLayoutCacheCaseName, <String, Object?>{
             'paint_cache_miss': <String, Object?>{
               'buildDelta': 1,
@@ -337,14 +382,22 @@ void main() {
             },
           }),
           _probeRecord(selectionPathEndToEndPaintCaseName, <String, Object?>{
-            'paint_no_selection': <String, Object?>{'saveLayerCount': 0},
-            'paint_with_selection': <String, Object?>{'saveLayerCount': 8},
+            'paint_no_selection': <String, Object?>{
+              'saveLayerCount': 0,
+              'unboundedSaveLayerCount': 0,
+              'saveLayerBoundsArea': 0,
+            },
+            'paint_with_selection': <String, Object?>{
+              'saveLayerCount': 8,
+              'unboundedSaveLayerCount': 0,
+              'saveLayerBoundsArea': 2048,
+            },
           }),
           _probeRecord(staticBackgroundCacheCaseName, <String, Object?>{
             'paint_cache_miss': <String, Object?>{
               'buildDelta': 1,
               'disposeDelta': 0,
-              'gridLoopIterations': 1000,
+              'gridLoopIterations': 200,
               'gridDrawnLineCount': 200,
             },
             'paint_cache_hit': <String, Object?>{
@@ -393,6 +446,12 @@ void main() {
         expect(
           source,
           contains('load profile background-layer-paint profile=\$profile'),
+        );
+        expect(
+          source,
+          contains(
+            'load profile stable-visible-working-set-paint profile=\$profile',
+          ),
         );
       },
     );
@@ -462,6 +521,8 @@ void main() {
           contains('_paintPreparedScene(painter, withSelectionPrepared);'),
         );
         expect(painterOnlyBody, contains('_captureSelectionSaveLayerProbe('));
+        expect(source, contains('unboundedSaveLayerCount'));
+        expect(source, contains('saveLayerBoundsArea'));
         expect(painterSource, contains('class ScenePainterPreparedScene'));
         expect(
           painterSource,

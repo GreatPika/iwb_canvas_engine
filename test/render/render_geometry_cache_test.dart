@@ -55,6 +55,23 @@ void main() {
     expect(cache.debugSize, 1);
   });
 
+  test(
+    'RenderGeometryCache captureProbe exposes build hit and evict counts',
+    () {
+      final cache = RenderGeometryCache(maxEntries: 2);
+      final nodeA = RectNodeSnapshot(id: 'probe-a', size: const Size(10, 10));
+      final nodeB = RectNodeSnapshot(id: 'probe-b', size: const Size(10, 10));
+      final nodeC = RectNodeSnapshot(id: 'probe-c', size: const Size(10, 10));
+
+      cache.get(nodeA);
+      cache.get(nodeA);
+      cache.get(nodeB);
+      cache.get(nodeC);
+
+      expect(cache.captureProbe(), (buildCount: 3, hitCount: 1, evictCount: 1));
+    },
+  );
+
   test('RenderGeometryCache requires resolved text layout for text nodes', () {
     final cache = RenderGeometryCache();
     final node = _textNode();

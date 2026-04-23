@@ -10,6 +10,7 @@ import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 import '../support/committed_scene_view_render_state.dart';
 
+// INV:INV-ENG-GRID-BOUNDED-ITERATION
 Future<Color> _pixelAt(Image image, int x, int y) async {
   final data = await image.toByteData(format: ImageByteFormat.rawRgba);
   if (data == null) {
@@ -353,7 +354,7 @@ void main() {
     },
   );
 
-  test('SceneStaticLayerCache applies stride for dense grid line counts', () {
+  test('SceneStaticLayerCache records bounded grid work for dense grids', () {
     final cache = SceneStaticLayerCache();
     const renderer = SceneGridRenderer();
     final background = BackgroundSnapshot(
@@ -392,7 +393,10 @@ void main() {
       fail('Expected renderer plan for dense static grid.');
     }
     final work = renderer.debugWorkForPlan(plan);
-    expect(work.loopIterations, greaterThan(work.drawnLineCount));
+    final probe = cache.captureProbe();
+    expect(work.loopIterations, equals(work.drawnLineCount));
+    expect(probe.gridLoopIterations, equals(work.loopIterations));
+    expect(probe.gridDrawnLineCount, equals(work.drawnLineCount));
   });
 
   test('SceneStaticLayerCache releases picture when grid becomes disabled', () {
