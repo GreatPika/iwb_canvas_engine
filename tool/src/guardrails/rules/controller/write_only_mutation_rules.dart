@@ -194,12 +194,23 @@ GuardrailViolation? _sceneStoreControllerViewRenderStateViolation({
   if (controller == null) {
     return null;
   }
-  if (!_implementsForbiddenType(
-    typeOwner: controller,
-    context: context,
-    forbiddenRepoRelPath: '/lib/src/contract/scene_view_render_state.dart',
-    forbiddenTypeName: 'SceneViewRenderState',
-  )) {
+  const forbiddenViewReadTypes = <String>[
+    'SceneViewMainSceneRenderRead',
+    'SceneViewOverlayPreviewRead',
+  ];
+  String? matchedTypeName;
+  for (final typeName in forbiddenViewReadTypes) {
+    if (_implementsForbiddenType(
+      typeOwner: controller,
+      context: context,
+      forbiddenRepoRelPath: '/lib/src/contract/scene_view_render_state.dart',
+      forbiddenTypeName: typeName,
+    )) {
+      matchedTypeName = typeName;
+      break;
+    }
+  }
+  if (matchedTypeName == null) {
     return null;
   }
   return buildElementGuardrailViolation(
@@ -207,7 +218,7 @@ GuardrailViolation? _sceneStoreControllerViewRenderStateViolation({
     sourceElement: controller,
     message:
         'controller API violation: SceneStoreController must not implement '
-        'SceneViewRenderState',
+        '$matchedTypeName',
   );
 }
 

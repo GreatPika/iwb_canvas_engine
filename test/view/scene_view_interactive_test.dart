@@ -1956,7 +1956,7 @@ void main() {
     'SceneViewInteractive overlay painter normalizes reversed marquee bounds',
     (tester) async {
       final painter = SceneViewInteractiveOverlayPainter(
-        renderState: _MutableSceneViewRenderState(
+        overlayPreviewRead: _MutableSceneViewReadState(
           snapshot: _snapshot(text: 'normalized-marquee'),
           selectionRectOverride: const Rect.fromLTRB(76, 54, 12, 18),
         ),
@@ -1975,7 +1975,7 @@ void main() {
     'SceneViewInteractive overlay painter clamps invalid marquee stroke width',
     (tester) async {
       final painter = SceneViewInteractiveOverlayPainter(
-        renderState: _MutableSceneViewRenderState(
+        overlayPreviewRead: _MutableSceneViewReadState(
           snapshot: _snapshot(text: 'clamped-marquee'),
           selectionRectOverride: const Rect.fromLTRB(12, 18, 76, 54),
         ),
@@ -2321,11 +2321,11 @@ class _RecordingSceneViewRuntime implements SceneViewRuntime {
   _RecordingSceneViewRuntime({
     required SceneSnapshot snapshot,
     PointerInputSettings pointerSettings = const PointerInputSettings(),
-  }) : _renderState = _StaticSceneViewRenderState(snapshot),
+  }) : _renderState = _StaticSceneViewReadState(snapshot),
        _pointerSettings = pointerSettings;
 
   final ChangeNotifier _ownerListenable = ChangeNotifier();
-  final _StaticSceneViewRenderState _renderState;
+  final _StaticSceneViewReadState _renderState;
   final List<CanvasPointerInput> recordedInputs = <CanvasPointerInput>[];
   final List<(Offset position, int? timestampMs)> recordedDoubleTaps =
       <(Offset position, int? timestampMs)>[];
@@ -2341,7 +2341,10 @@ class _RecordingSceneViewRuntime implements SceneViewRuntime {
   }
 
   @override
-  SceneViewRenderState get renderState => _renderState;
+  SceneViewMainSceneRenderRead get mainSceneRenderRead => _renderState;
+
+  @override
+  SceneViewOverlayPreviewRead get overlayPreviewRead => _renderState;
 
   @override
   SceneViewPointerSession createPointerSession({
@@ -2424,9 +2427,9 @@ class _RecordingSceneViewPointerSession implements SceneViewPointerSession {
 
 class _HostLifecycleRecordingRuntime implements SceneViewRuntime {
   _HostLifecycleRecordingRuntime({required SceneSnapshot snapshot})
-    : _renderState = _StaticSceneViewRenderState(snapshot);
+    : _renderState = _StaticSceneViewReadState(snapshot);
 
-  final _StaticSceneViewRenderState _renderState;
+  final _StaticSceneViewReadState _renderState;
   final List<String> lifecycleLog = <String>[];
   final List<PointerSample> recordedSamples = <PointerSample>[];
   int _sessionCounter = 0;
@@ -2434,7 +2437,10 @@ class _HostLifecycleRecordingRuntime implements SceneViewRuntime {
   void dispose() {}
 
   @override
-  SceneViewRenderState get renderState => _renderState;
+  SceneViewMainSceneRenderRead get mainSceneRenderRead => _renderState;
+
+  @override
+  SceneViewOverlayPreviewRead get overlayPreviewRead => _renderState;
 
   @override
   SceneViewPointerSession createPointerSession({
@@ -2497,9 +2503,9 @@ class _FlakyCreatePointerSessionRuntime implements SceneViewRuntime {
   _FlakyCreatePointerSessionRuntime({
     required SceneSnapshot snapshot,
     required this.failAttemptCount,
-  }) : _renderState = _StaticSceneViewRenderState(snapshot);
+  }) : _renderState = _StaticSceneViewReadState(snapshot);
 
-  final _StaticSceneViewRenderState _renderState;
+  final _StaticSceneViewReadState _renderState;
   final List<String> lifecycleLog = <String>[];
   final List<PointerSample> recordedSamples = <PointerSample>[];
   final int failAttemptCount;
@@ -2509,7 +2515,10 @@ class _FlakyCreatePointerSessionRuntime implements SceneViewRuntime {
   void dispose() {}
 
   @override
-  SceneViewRenderState get renderState => _renderState;
+  SceneViewMainSceneRenderRead get mainSceneRenderRead => _renderState;
+
+  @override
+  SceneViewOverlayPreviewRead get overlayPreviewRead => _renderState;
 
   @override
   SceneViewPointerSession createPointerSession({
@@ -2529,9 +2538,9 @@ class _FlakyCreatePointerSessionRuntime implements SceneViewRuntime {
   }
 }
 
-class _StaticSceneViewRenderState extends ChangeNotifier
-    implements SceneViewRenderState {
-  _StaticSceneViewRenderState(this._snapshot);
+class _StaticSceneViewReadState extends ChangeNotifier
+    implements SceneViewMainSceneRenderRead, SceneViewOverlayPreviewRead {
+  _StaticSceneViewReadState(this._snapshot);
 
   final SceneSnapshot _snapshot;
 
@@ -2609,8 +2618,8 @@ class _StaticSceneViewRenderState extends ChangeNotifier
   Color get activeLinePreviewColor => const Color(0xFF000000);
 }
 
-class _MutableSceneViewRenderState extends _StaticSceneViewRenderState {
-  _MutableSceneViewRenderState({
+class _MutableSceneViewReadState extends _StaticSceneViewReadState {
+  _MutableSceneViewReadState({
     required SceneSnapshot snapshot,
     this.selectionRectOverride,
   }) : super(snapshot);

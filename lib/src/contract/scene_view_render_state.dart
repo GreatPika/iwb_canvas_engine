@@ -108,18 +108,20 @@ final class SceneViewFrameRead {
   Offset get cameraOffset => snapshot.camera.offset;
 }
 
-/// Internal read-side contract shared by the main painter and overlay painter.
-abstract interface class SceneViewRenderState implements SceneRenderState {
+abstract interface class SceneViewMainSceneRenderRead
+    implements SceneRenderState {
   int get controllerEpoch;
-  Listenable get overlayRepaintListenable;
-  Rect? get selectionRect;
-  Offset get cameraOffset;
   SceneViewFrameRead captureFrameRead();
   ScenePreparedPaintPlan preparePaintPlan(
     SceneViewFrameRead frameRead,
     ScenePaintCandidateQuery query,
   );
+}
 
+abstract interface class SceneViewOverlayPreviewRead {
+  Listenable get overlayRepaintListenable;
+  Rect? get selectionRect;
+  Offset get cameraOffset;
   bool get hasActiveStrokePreview;
   List<Offset> get activeStrokePreviewPoints;
   double get activeStrokePreviewThickness;

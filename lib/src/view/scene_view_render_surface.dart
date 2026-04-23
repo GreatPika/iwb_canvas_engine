@@ -30,7 +30,7 @@ SceneRenderCaches debugSceneViewRenderCachesOf(BuildContext context) {
 class SceneViewRenderSurface extends StatefulWidget {
   // ignore: prefer_const_constructors_in_immutables, cache wiring keeps this constructor non-const
   SceneViewRenderSurface({
-    required SceneViewRenderState renderState,
+    required SceneViewMainSceneRenderRead mainSceneRenderRead,
     ImageResolver? imageResolver,
     SceneStaticLayerCache? staticLayerCache,
     SceneTextLayoutCache? textLayoutCache,
@@ -42,7 +42,7 @@ class SceneViewRenderSurface extends StatefulWidget {
     double gridStrokeWidth = 1,
     Widget child = const SizedBox.expand(),
     super.key,
-  }) : _renderState = renderState,
+  }) : _mainSceneRenderRead = mainSceneRenderRead,
        _staticLayerCache = staticLayerCache,
        _textLayoutCache = textLayoutCache,
        _strokePathCache = strokePathCache,
@@ -54,7 +54,7 @@ class SceneViewRenderSurface extends StatefulWidget {
        _gridStrokeWidth = gridStrokeWidth,
        _child = child;
 
-  final SceneViewRenderState _renderState;
+  final SceneViewMainSceneRenderRead _mainSceneRenderRead;
   final SceneStaticLayerCache? _staticLayerCache;
   final SceneTextLayoutCache? _textLayoutCache;
   final SceneStrokePathCache? _strokePathCache;
@@ -100,19 +100,19 @@ class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
   void initState() {
     super.initState();
     _renderCacheLifecycle.initialize(
-      controllerEpoch: widget._renderState.controllerEpoch,
+      controllerEpoch: widget._mainSceneRenderRead.controllerEpoch,
     );
-    widget._renderState.addListener(_handleControllerChanged);
+    widget._mainSceneRenderRead.addListener(_handleControllerChanged);
   }
 
   @override
   void didUpdateWidget(SceneViewRenderSurface oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget._renderState != widget._renderState) {
-      oldWidget._renderState.removeListener(_handleControllerChanged);
-      widget._renderState.addListener(_handleControllerChanged);
+    if (oldWidget._mainSceneRenderRead != widget._mainSceneRenderRead) {
+      oldWidget._mainSceneRenderRead.removeListener(_handleControllerChanged);
+      widget._mainSceneRenderRead.addListener(_handleControllerChanged);
       _renderCacheLifecycle.handleControllerSwap(
-        controllerEpoch: widget._renderState.controllerEpoch,
+        controllerEpoch: widget._mainSceneRenderRead.controllerEpoch,
       );
     }
     if (_cacheDependenciesOf(oldWidget) != _cacheDependenciesOf(widget)) {
@@ -122,7 +122,7 @@ class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
 
   @override
   void dispose() {
-    widget._renderState.removeListener(_handleControllerChanged);
+    widget._mainSceneRenderRead.removeListener(_handleControllerChanged);
     _renderCacheLifecycle.dispose();
     super.dispose();
   }
@@ -131,7 +131,7 @@ class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
   Widget build(BuildContext context) {
     return CustomPaint(
       painter: ScenePainter(
-        controller: widget._renderState,
+        controller: widget._mainSceneRenderRead,
         imageResolver: widget._imageResolver,
         staticLayerCache: _renderCacheLifecycle.staticLayerCache,
         textLayoutCache: _renderCacheLifecycle.textLayoutCache,
@@ -148,7 +148,7 @@ class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
 
   void _handleControllerChanged() {
     _renderCacheLifecycle.clearIfEpochChanged(
-      widget._renderState.controllerEpoch,
+      widget._mainSceneRenderRead.controllerEpoch,
     );
   }
 }

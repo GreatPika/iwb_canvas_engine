@@ -40,19 +40,21 @@ void main() {
       );
       addTearDown(marqueeController.dispose);
 
-      final marqueeRenderState = interactive
-          .sceneControllerViewRuntimeOf(marqueeController)
-          .renderState;
+      final marqueeRuntime = interactive.sceneControllerViewRuntimeOf(
+        marqueeController,
+      );
+      final marqueeMainSceneRenderRead = marqueeRuntime.mainSceneRenderRead;
+      final marqueeOverlayPreviewRead = marqueeRuntime.overlayPreviewRead;
       var marqueePublicNotifications = 0;
       var marqueeSceneRepaints = 0;
       var marqueeOverlayRepaints = 0;
       marqueeController.addListener(() {
         marqueePublicNotifications += 1;
       });
-      marqueeRenderState.addListener(() {
+      marqueeMainSceneRenderRead.addListener(() {
         marqueeSceneRepaints += 1;
       });
-      marqueeRenderState.overlayRepaintListenable.addListener(() {
+      marqueeOverlayPreviewRead.overlayRepaintListenable.addListener(() {
         marqueeOverlayRepaints += 1;
       });
 
@@ -87,19 +89,21 @@ void main() {
       moveController.selection.setSelection(const <String>{'rect-1'});
       await pumpEventQueue();
 
-      final moveRenderState = interactive
-          .sceneControllerViewRuntimeOf(moveController)
-          .renderState;
+      final moveRuntime = interactive.sceneControllerViewRuntimeOf(
+        moveController,
+      );
+      final moveMainSceneRenderRead = moveRuntime.mainSceneRenderRead;
+      final moveOverlayPreviewRead = moveRuntime.overlayPreviewRead;
       var movePublicNotifications = 0;
       var moveSceneRepaints = 0;
       var moveOverlayRepaints = 0;
       moveController.addListener(() {
         movePublicNotifications += 1;
       });
-      moveRenderState.addListener(() {
+      moveMainSceneRenderRead.addListener(() {
         moveSceneRepaints += 1;
       });
-      moveRenderState.overlayRepaintListenable.addListener(() {
+      moveOverlayPreviewRead.overlayRepaintListenable.addListener(() {
         moveOverlayRepaints += 1;
       });
 
@@ -144,19 +148,19 @@ void main() {
       controller.selection.setSelection(const <String>{'rect-1'});
       await pumpEventQueue();
 
-      final renderState = interactive
-          .sceneControllerViewRuntimeOf(controller)
-          .renderState;
+      final runtime = interactive.sceneControllerViewRuntimeOf(controller);
+      final mainSceneRenderRead = runtime.mainSceneRenderRead;
+      final overlayPreviewRead = runtime.overlayPreviewRead;
       var publicNotifications = 0;
       var sceneRepaints = 0;
       var overlayRepaints = 0;
       controller.addListener(() {
         publicNotifications += 1;
       });
-      renderState.addListener(() {
+      mainSceneRenderRead.addListener(() {
         sceneRepaints += 1;
       });
-      renderState.overlayRepaintListenable.addListener(() {
+      overlayPreviewRead.overlayRepaintListenable.addListener(() {
         overlayRepaints += 1;
       });
 

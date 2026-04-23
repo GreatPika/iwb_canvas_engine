@@ -607,29 +607,29 @@ class SceneViewInteractive extends StatelessWidget {
 import '../contract/scene_view_render_state.dart';
 
 class SceneViewRenderSurface {
-  SceneViewRenderSurface({required SceneViewRenderState renderState})
-    : _renderState = renderState;
+  SceneViewRenderSurface({required SceneViewMainSceneRenderRead mainSceneRenderRead})
+    : _mainSceneRenderRead = mainSceneRenderRead;
 
-  SceneViewRenderSurface.interactive({required SceneViewRenderState renderState})
-    : _renderState = renderState;
+  SceneViewRenderSurface.interactive({required SceneViewMainSceneRenderRead mainSceneRenderRead})
+    : _mainSceneRenderRead = mainSceneRenderRead;
 
-  final SceneViewRenderState _renderState;
+  final SceneViewMainSceneRenderRead _mainSceneRenderRead;
 
   SceneViewRenderSurfaceState createState() => SceneViewRenderSurfaceState();
 }
 
 class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
   void initState() {
-    widget._renderState.addListener(_handleControllerChanged);
+    widget._mainSceneRenderRead.addListener(_handleControllerChanged);
   }
 
   void didUpdateWidget(SceneViewRenderSurface oldWidget) {
-    oldWidget._renderState.removeListener(_handleControllerChanged);
-    widget._renderState.addListener(_handleControllerChanged);
+    oldWidget._mainSceneRenderRead.removeListener(_handleControllerChanged);
+    widget._mainSceneRenderRead.addListener(_handleControllerChanged);
   }
 
   void dispose() {
-    widget._renderState.removeListener(_handleControllerChanged);
+    widget._mainSceneRenderRead.removeListener(_handleControllerChanged);
   }
 
   void _handleControllerChanged() {}

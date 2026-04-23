@@ -1170,14 +1170,14 @@ class SceneStoreController {
     );
 
     test(
-      'rejects SceneStoreController implementing SceneViewRenderState',
+      'rejects SceneStoreController implementing SceneViewMainSceneRenderRead',
       () async {
         final sandbox = await createGuardrailsSandbox();
         try {
           writeSandboxFile(
             sandbox,
             'lib/src/contract/scene_view_render_state.dart',
-            'abstract interface class SceneViewRenderState {}\n',
+            'abstract interface class SceneViewMainSceneRenderRead {}\n',
           );
           writeSandboxFile(
             sandbox,
@@ -1192,7 +1192,7 @@ export 'scene_view_render_state.dart';
             '''
 import '../contract/view_state_alias.dart';
 
-class SceneStoreController implements SceneViewRenderState {
+class SceneStoreController implements SceneViewMainSceneRenderRead {
   final int controllerEpoch = 0;
 }
 ''',
@@ -1205,7 +1205,54 @@ class SceneStoreController implements SceneViewRenderState {
             diagnostic(
               category: 'controller API',
               detail:
-                  'SceneStoreController must not implement SceneViewRenderState',
+                  'SceneStoreController must not implement '
+                  'SceneViewMainSceneRenderRead',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects SceneStoreController implementing SceneViewOverlayPreviewRead',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/scene_view_render_state.dart',
+            'abstract interface class SceneViewOverlayPreviewRead {}\n',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/view_state_alias.dart',
+            '''
+export 'scene_view_render_state.dart';
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/controller/scene_store_controller.dart',
+            '''
+import '../contract/view_state_alias.dart';
+
+class SceneStoreController implements SceneViewOverlayPreviewRead {
+  final int controllerEpoch = 0;
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'controller API',
+              detail:
+                  'SceneStoreController must not implement '
+                  'SceneViewOverlayPreviewRead',
             ),
           );
         } finally {

@@ -34,12 +34,16 @@ void main() {
       expect(state.selectedNodeIds, isEmpty);
     });
 
-    test('SceneStoreController is not a SceneViewRenderState', () {
-      final controller = SceneStoreController();
-      addTearDown(controller.dispose);
+    test(
+      'SceneStoreController is not a scene-view main or overlay read contract',
+      () {
+        final controller = SceneStoreController();
+        addTearDown(controller.dispose);
 
-      expect(controller, isNot(isA<SceneViewRenderState>()));
-    });
+        expect(controller, isNot(isA<SceneViewMainSceneRenderRead>()));
+        expect(controller, isNot(isA<SceneViewOverlayPreviewRead>()));
+      },
+    );
 
     test(
       'ScenePaintCandidateQuery uses value equality and stable hashCode',
@@ -85,8 +89,13 @@ void main() {
         expect(controller.selection, isA<SceneControllerSelection>());
         expect(controller.scene, isA<SceneControllerScene>());
         expect(runtime, isA<SceneViewRuntime>());
-        expect(runtime.renderState, isA<SceneViewRenderState>());
-        expect(controller, isNot(isA<SceneViewRenderState>()));
+        expect(
+          runtime.mainSceneRenderRead,
+          isA<SceneViewMainSceneRenderRead>(),
+        );
+        expect(runtime.overlayPreviewRead, isA<SceneViewOverlayPreviewRead>());
+        expect(controller, isNot(isA<SceneViewMainSceneRenderRead>()));
+        expect(controller, isNot(isA<SceneViewOverlayPreviewRead>()));
       },
     );
 
@@ -129,15 +138,15 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        final renderState = interactive
-            .sceneControllerViewRuntimeOf(controller)
-            .renderState;
+        final runtime = interactive.sceneControllerViewRuntimeOf(controller);
+        final mainSceneRenderRead = runtime.mainSceneRenderRead;
+        final overlayPreviewRead = runtime.overlayPreviewRead;
         var sceneRepaints = 0;
         var overlayRepaints = 0;
-        renderState.addListener(() {
+        mainSceneRenderRead.addListener(() {
           sceneRepaints += 1;
         });
-        renderState.overlayRepaintListenable.addListener(() {
+        overlayPreviewRead.overlayRepaintListenable.addListener(() {
           overlayRepaints += 1;
         });
 
@@ -171,15 +180,17 @@ void main() {
         );
         addTearDown(marqueeController.dispose);
 
-        final marqueeRenderState = interactive
-            .sceneControllerViewRuntimeOf(marqueeController)
-            .renderState;
+        final marqueeRuntime = interactive.sceneControllerViewRuntimeOf(
+          marqueeController,
+        );
+        final marqueeMainSceneRenderRead = marqueeRuntime.mainSceneRenderRead;
+        final marqueeOverlayPreviewRead = marqueeRuntime.overlayPreviewRead;
         var marqueeSceneRepaints = 0;
         var marqueeOverlayRepaints = 0;
-        marqueeRenderState.addListener(() {
+        marqueeMainSceneRenderRead.addListener(() {
           marqueeSceneRepaints += 1;
         });
-        marqueeRenderState.overlayRepaintListenable.addListener(() {
+        marqueeOverlayPreviewRead.overlayRepaintListenable.addListener(() {
           marqueeOverlayRepaints += 1;
         });
 
@@ -228,15 +239,17 @@ void main() {
         moveController.selection.setSelection(const <String>{'rect-1'});
         await pumpEventQueue();
 
-        final moveRenderState = interactive
-            .sceneControllerViewRuntimeOf(moveController)
-            .renderState;
+        final moveRuntime = interactive.sceneControllerViewRuntimeOf(
+          moveController,
+        );
+        final moveMainSceneRenderRead = moveRuntime.mainSceneRenderRead;
+        final moveOverlayPreviewRead = moveRuntime.overlayPreviewRead;
         var moveSceneRepaints = 0;
         var moveOverlayRepaints = 0;
-        moveRenderState.addListener(() {
+        moveMainSceneRenderRead.addListener(() {
           moveSceneRepaints += 1;
         });
-        moveRenderState.overlayRepaintListenable.addListener(() {
+        moveOverlayPreviewRead.overlayRepaintListenable.addListener(() {
           moveOverlayRepaints += 1;
         });
 
@@ -297,15 +310,15 @@ void main() {
         controller.selection.setSelection(const <String>{'rect-1'});
         await pumpEventQueue();
 
-        final renderState = interactive
-            .sceneControllerViewRuntimeOf(controller)
-            .renderState;
+        final runtime = interactive.sceneControllerViewRuntimeOf(controller);
+        final mainSceneRenderRead = runtime.mainSceneRenderRead;
+        final overlayPreviewRead = runtime.overlayPreviewRead;
         var sceneRepaints = 0;
         var overlayRepaints = 0;
-        renderState.addListener(() {
+        mainSceneRenderRead.addListener(() {
           sceneRepaints += 1;
         });
-        renderState.overlayRepaintListenable.addListener(() {
+        overlayPreviewRead.overlayRepaintListenable.addListener(() {
           overlayRepaints += 1;
         });
 

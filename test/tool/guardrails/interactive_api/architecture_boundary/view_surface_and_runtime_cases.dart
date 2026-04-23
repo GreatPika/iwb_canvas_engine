@@ -2,7 +2,7 @@ part of '../../guardrails_interactive_api_tool_test.dart';
 
 void _registerInteractiveArchitectureBoundaryViewSurfaceAndRuntimeTests() {
   test(
-    'rejects render surface that shadows the SceneViewRenderState contract locally',
+    'rejects render surface that shadows the SceneViewMainSceneRenderRead contract locally',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -33,7 +33,7 @@ void _registerInteractiveArchitectureBoundaryViewSurfaceAndRuntimeTests() {
           '''
 import '../contract/scene_view_runtime.dart';
 
-class SceneViewRenderState {
+class SceneViewMainSceneRenderRead {
   void addListener(Object listener) {}
 
   void removeListener(Object listener) {}
@@ -41,26 +41,26 @@ class SceneViewRenderState {
 
 class SceneViewRenderSurface {
   SceneViewRenderSurface({
-    required SceneViewRenderState renderState,
-  }) : _renderState = renderState;
+    required SceneViewMainSceneRenderRead mainSceneRenderRead,
+  }) : _mainSceneRenderRead = mainSceneRenderRead;
 
-  final SceneViewRenderState _renderState;
+  final SceneViewMainSceneRenderRead _mainSceneRenderRead;
 
   State<SceneViewRenderSurface> createState() => SceneViewRenderSurfaceState();
 }
 
 class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
   void initState() {
-    widget._renderState.addListener(_handleControllerChanged);
+    widget._mainSceneRenderRead.addListener(_handleControllerChanged);
   }
 
   void didUpdateWidget(SceneViewRenderSurface oldWidget) {
-    oldWidget._renderState.removeListener(_handleControllerChanged);
-    widget._renderState.addListener(_handleControllerChanged);
+    oldWidget._mainSceneRenderRead.removeListener(_handleControllerChanged);
+    widget._mainSceneRenderRead.addListener(_handleControllerChanged);
   }
 
   void dispose() {
-    widget._renderState.removeListener(_handleControllerChanged);
+    widget._mainSceneRenderRead.removeListener(_handleControllerChanged);
   }
 
   Object build(Object context) => Object();
@@ -92,7 +92,7 @@ class State<T> {
   );
 
   test(
-    'rejects render surface that subscribes listeners outside widget renderState',
+    'rejects render surface that subscribes listeners outside widget mainSceneRenderRead',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -125,11 +125,11 @@ import '../contract/scene_view_runtime.dart';
 
 class SceneViewRenderSurface {
   SceneViewRenderSurface({
-    required SceneViewRenderState renderState,
-  }) : _renderState = renderState;
+    required SceneViewMainSceneRenderRead mainSceneRenderRead,
+  }) : _mainSceneRenderRead = mainSceneRenderRead;
 
-  final SceneViewRenderState _renderState;
-  final SceneViewRenderState _otherRenderState = SceneControllerSceneViewRenderState();
+  final SceneViewMainSceneRenderRead _mainSceneRenderRead;
+  final SceneViewMainSceneRenderRead _otherRenderState = SceneControllerSceneViewMainSceneRenderRead();
 }
 
 class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
@@ -153,7 +153,7 @@ class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
   void _handleControllerChanged() {}
 }
 
-class SceneControllerSceneViewRenderState implements SceneViewRenderState {
+class SceneControllerSceneViewMainSceneRenderRead implements SceneViewMainSceneRenderRead {
   @override
   void addListener(Object listener) {}
 
@@ -224,7 +224,7 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
   });
 
   @override
-  final renderState = SceneControllerSceneViewRenderState();
+  final mainSceneRenderRead = SceneControllerSceneViewMainSceneRenderRead();
   final _interactionRuntime = SceneControllerInteractionRuntime();
 
   @override
@@ -265,7 +265,7 @@ class SceneControllerInteractionRuntime {
   void handleDoubleTapFromSession() {}
 }
 
-class SceneControllerSceneViewRenderState implements SceneViewRenderState {
+class SceneControllerSceneViewMainSceneRenderRead implements SceneViewMainSceneRenderRead {
   @override
   void addListener(Object listener) {}
 
@@ -332,7 +332,7 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
   });
 
   @override
-  final renderState = SceneControllerSceneViewRenderState();
+  final mainSceneRenderRead = SceneControllerSceneViewMainSceneRenderRead();
   final _interactionRuntime = SceneControllerInteractionRuntime();
 
   @override
@@ -363,7 +363,7 @@ class SceneControllerInteractionRuntime {
   void handleDoubleTapFromSession() {}
 }
 
-class SceneControllerSceneViewRenderState implements SceneViewRenderState {
+class SceneControllerSceneViewMainSceneRenderRead implements SceneViewMainSceneRenderRead {
   @override
   void addListener(Object listener) {}
 
@@ -371,6 +371,110 @@ class SceneControllerSceneViewRenderState implements SceneViewRenderState {
   void removeListener(Object listener) {}
 }
 ''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerSceneViewRuntime must own the render-state '
+                'adapter and pointer-session factory',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects scene view runtime whose main read owner drops its contract',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
+          _sceneViewRuntimeFixtureWithReadOwnerImplementationDrift(
+            mainReadImplementsContract: false,
+            overlayReadImplementsContract: true,
+          ),
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerSceneViewRuntime must own the render-state '
+                'adapter and pointer-session factory',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects scene view runtime whose overlay read owner drops its contract',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
+          _sceneViewRuntimeFixtureWithReadOwnerImplementationDrift(
+            mainReadImplementsContract: true,
+            overlayReadImplementsContract: false,
+          ),
         );
 
         final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
@@ -430,7 +534,7 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
   });
 
   @override
-  final renderState = SceneControllerSceneViewRenderState();
+  final mainSceneRenderRead = SceneControllerSceneViewMainSceneRenderRead();
   final _interactionRuntime = SceneControllerInteractionRuntime();
 
   @override
@@ -467,7 +571,7 @@ class SceneControllerInteractionRuntime {
   void handleDoubleTapFromSession() {}
 }
 
-class SceneControllerSceneViewRenderState implements SceneViewRenderState {
+class SceneControllerSceneViewMainSceneRenderRead implements SceneViewMainSceneRenderRead {
   @override
   void addListener(Object listener) {}
 
@@ -534,7 +638,7 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
   });
 
   @override
-  final renderState = SceneControllerSceneViewRenderState();
+  final mainSceneRenderRead = SceneControllerSceneViewMainSceneRenderRead();
   final _interactionRuntime = SceneControllerInteractionRuntime();
 
   @override
@@ -572,7 +676,7 @@ class SceneControllerInteractionRuntime {
   void handleDoubleTapFromSession() {}
 }
 
-class SceneControllerSceneViewRenderState implements SceneViewRenderState {
+class SceneControllerSceneViewMainSceneRenderRead implements SceneViewMainSceneRenderRead {
   @override
   void addListener(Object listener) {}
 
@@ -843,4 +947,81 @@ class _Access {
       sandbox.deleteSync(recursive: true);
     }
   });
+}
+
+String _sceneViewRuntimeFixtureWithReadOwnerImplementationDrift({
+  required bool mainReadImplementsContract,
+  required bool overlayReadImplementsContract,
+}) {
+  final mainReadInterfaces = mainReadImplementsContract
+      ? 'SceneViewMainSceneRenderRead, Listenable'
+      : 'Listenable';
+  final overlayReadInterface = overlayReadImplementsContract
+      ? ' implements SceneViewOverlayPreviewRead'
+      : '';
+  return '''
+import 'package:flutter/foundation.dart';
+
+import '../../contract/scene_view_runtime.dart';
+import '../../contract/pointer_input.dart';
+import 'scene_controller_pointer_session.dart';
+import 'pointer_session_token.dart';
+import 'scene_controller_interaction_runtime.dart';
+
+final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
+  SceneControllerSceneViewRuntime({
+    Object? ensurePublicSideEffectAllowed,
+  });
+
+  final _interactionRuntime = SceneControllerInteractionRuntime();
+  final SceneControllerSceneViewMainSceneRenderRead _mainSceneRenderRead =
+      SceneControllerSceneViewMainSceneRenderRead();
+  final SceneControllerSceneViewOverlayPreviewRead _overlayPreviewRead =
+      SceneControllerSceneViewOverlayPreviewRead();
+
+  @override
+  SceneViewMainSceneRenderRead get mainSceneRenderRead =>
+      _mainSceneRenderRead as dynamic;
+
+  @override
+  SceneViewOverlayPreviewRead get overlayPreviewRead =>
+      _overlayPreviewRead as dynamic;
+
+  @override
+  SceneViewPointerSession createPointerSession({
+    required bool Function() isMounted,
+    required bool Function() hasLiveRawPointers,
+  }) {
+    final token = _interactionRuntime.createPointerSessionToken();
+    final session = SceneControllerPointerSession(
+      ownerListenable: _mainSceneRenderRead,
+      token: token,
+      readPointerSettings: () => const PointerInputSettings(),
+      isMounted: isMounted,
+      hasLiveRawPointers: hasLiveRawPointers,
+      detachPointerSession:
+          _interactionRuntime.detachPointerSession,
+      releasePointerSessionToken:
+          _interactionRuntime.releasePointerSessionToken,
+      handlePointerFromSession:
+          _interactionRuntime.handlePointerFromSession,
+      handleDoubleTapFromSession:
+          _interactionRuntime.handleDoubleTapFromSession,
+    );
+    _interactionRuntime.registerPointerSession(session, token: token);
+    return session;
+  }
+}
+
+final class SceneControllerSceneViewMainSceneRenderRead
+    implements $mainReadInterfaces {
+  @override
+  void addListener(Object listener) {}
+
+  @override
+  void removeListener(Object listener) {}
+}
+
+final class SceneControllerSceneViewOverlayPreviewRead$overlayReadInterface {}
+''';
 }

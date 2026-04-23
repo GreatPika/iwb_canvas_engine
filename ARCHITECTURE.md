@@ -194,11 +194,12 @@ This split is deliberate:
 ### 5.4 The runtime seams exposed to view hosting
 
 The view host does not talk directly to controller internals. The explicit seam
-is:
+is one assembled runtime plus narrowed read contracts:
 
 - `SceneViewRuntime`
+- `SceneViewMainSceneRenderRead`
+- `SceneViewOverlayPreviewRead`
 - `SceneViewPointerSession`
-- `SceneViewRenderState`
 
 That seam exists so the Flutter host shell can stay in `view/**`, while the
 interactive/controller-owned runtime remains inside `interactive/**` and
@@ -273,8 +274,10 @@ The following rules are architectural, not stylistic.
    selection writes.
 6. **The view shell reaches the engine through `SceneViewRuntime`.** The view
    host should not reopen concrete controller internals from `view/**`.
-7. **The render layer is read-only.** Rendering consumes `SceneViewRenderState`
-   and frame reads; it does not mutate scene state.
+7. **The render layer is read-only.** Rendering consumes
+   `SceneViewMainSceneRenderRead` and frame reads, while live marquee and draw
+   preview state stay on `SceneViewOverlayPreviewRead`; the render path does
+   not mutate scene state.
 
 ### Contract-internal bridge surfaces
 
@@ -331,9 +334,10 @@ It adapts a `SceneController` into a `SceneViewRuntimeHost`.
 - committed spatial query helpers
 - committed revision counters
 
-It implements `SceneRenderState`, **not** the full
-`SceneViewRenderState`. That distinction is intentional: the committed store is
-not the whole assembled view runtime.
+It implements `SceneRenderState`, **not** the scene-view read family
+(`SceneViewMainSceneRenderRead` / `SceneViewOverlayPreviewRead`). That
+distinction is intentional: the committed store is not the whole assembled
+view runtime.
 
 #### `SceneControllerCommitRuntime`
 
@@ -417,29 +421,39 @@ This is the controller-owned adapter from `SceneController` into
 
 It exposes:
 
-- `SceneViewRenderState`
+- `SceneViewMainSceneRenderRead`
+- `SceneViewOverlayPreviewRead`
 - `SceneViewPointerSession` creation
 - runtime-owned registration of each concrete pointer session so same-runtime
   semantic epoch breaks clear session-local tap history and controller
   disposal deactivates live sessions before late routed callbacks
 
-#### `SceneControllerSceneViewRenderState`
+#### `SceneControllerSceneViewMainSceneRenderRead`
 
-This is the assembled read-side state used by both the main render surface and
-the overlay. It adds to the committed store contract:
+This is the controller-owned main-scene read owner used by the render surface
+and render layer. It adds to the committed store contract:
 
 - `captureFrameRead()`
 - `preparePaintPlan(...)`
-- overlay repaint listenable
-- live selection reads plus frame-preview capture for main-scene paint
+- scene repaint listening plus frame-preview capture for main-scene paint
 - controller epoch / selection revision carriage for render invalidation
+
+#### `SceneControllerSceneViewOverlayPreviewRead`
+
+This is the controller-owned overlay-preview read owner used by the overlay
+paint shell and facade preview getters. It owns:
+
+- overlay repaint listening
+- live selection reads
+- live stroke/line preview reads
+- camera offset for overlay-space painting
 
 ### 7.5 Rendering
 
 #### `ScenePainter`
 
 `ScenePainter` is the scene painter. It is a `CustomPainter` driven by
-`SceneViewRenderState`.
+`SceneViewMainSceneRenderRead`.
 
 Its contract is intentionally strict: it captures one atomic
 `SceneViewFrameRead` and reuses that frame authority across the paint pipeline.
@@ -577,7 +591,7 @@ Typical frame flow:
 1. `ScenePainter` requests one `SceneViewFrameRead`
 2. `ScenePainterFrameOwner` computes the viewport rect and widened visibility
    rect
-3. `SceneViewRenderState.preparePaintPlan(...)` chooses the candidate
+3. `SceneViewMainSceneRenderRead.preparePaintPlan(...)` chooses the candidate
    enumeration strategy
 4. the painter resolves node paint data from that frame authority
 5. background, nodes, and selection visuals are painted from the same captured

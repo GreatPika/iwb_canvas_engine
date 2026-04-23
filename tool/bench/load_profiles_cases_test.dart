@@ -8,8 +8,6 @@ import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
-import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
-    as interactive;
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
@@ -444,10 +442,8 @@ Map<String, Object?> _runSelectionPathPainterOnlyCase({
     pathSegments: pathSegments,
   );
   final controller = SceneStoreController(initialSnapshot: snapshot);
-  final interactionController = interactive.SceneController();
   final renderState = _createProductionBenchmarkRenderState(
     controller: controller,
-    interactionController: interactionController,
   );
   final pathCache = ScenePathMetricsCache(maxEntries: pathNodeCount * 2);
   final painter = ScenePainter(
@@ -514,7 +510,6 @@ Map<String, Object?> _runSelectionPathPainterOnlyCase({
       },
     };
   } finally {
-    interactionController.dispose();
     renderState.dispose();
     controller.dispose();
   }
@@ -530,10 +525,8 @@ Map<String, Object?> _runSelectionPathCandidateStagingCase({
     pathSegments: pathSegments,
   );
   final controller = SceneStoreController(initialSnapshot: snapshot);
-  final interactionController = interactive.SceneController();
   final renderState = _createProductionBenchmarkRenderState(
     controller: controller,
-    interactionController: interactionController,
   );
   final selectedIds = <NodeId>{
     for (var i = 0; i < pathNodeCount; i++) 'spm-$i',
@@ -575,7 +568,6 @@ Map<String, Object?> _runSelectionPathCandidateStagingCase({
     };
   } finally {
     renderState.dispose();
-    interactionController.dispose();
     controller.dispose();
   }
 }
@@ -590,10 +582,8 @@ Map<String, Object?> _runSelectionPathEndToEndPaintCase({
     pathSegments: pathSegments,
   );
   final controller = SceneStoreController(initialSnapshot: snapshot);
-  final interactionController = interactive.SceneController();
   final renderState = _createProductionBenchmarkRenderState(
     controller: controller,
-    interactionController: interactionController,
   );
   final pathCache = ScenePathMetricsCache(maxEntries: pathNodeCount * 2);
   final painter = ScenePainter(
@@ -659,7 +649,6 @@ Map<String, Object?> _runSelectionPathEndToEndPaintCase({
     };
   } finally {
     renderState.dispose();
-    interactionController.dispose();
     controller.dispose();
   }
 }
@@ -672,10 +661,8 @@ Map<String, Object?> _runStableVisibleWorkingSetPaintCase({
   controller.write<void>((writer) {
     writer.writeSelectionReplace(scenario.selectedPathIds);
   });
-  final interactionController = interactive.SceneController();
   final renderState = _createProductionBenchmarkRenderState(
     controller: controller,
-    interactionController: interactionController,
   );
   const canvasSize = Size(520, 320);
 
@@ -765,7 +752,6 @@ Map<String, Object?> _runStableVisibleWorkingSetPaintCase({
     };
   } finally {
     renderState.dispose();
-    interactionController.dispose();
     controller.dispose();
   }
 }
@@ -789,10 +775,8 @@ Map<String, Object?> _runTextLayoutCacheCase({required int iterations}) {
     ],
   );
   final controller = SceneStoreController(initialSnapshot: snapshot);
-  final interactionController = interactive.SceneController();
   final renderState = _createProductionBenchmarkRenderState(
     controller: controller,
-    interactionController: interactionController,
   );
   const canvasSize = Size(320, 160);
 
@@ -872,7 +856,6 @@ Map<String, Object?> _runTextLayoutCacheCase({required int iterations}) {
     };
   } finally {
     renderState.dispose();
-    interactionController.dispose();
     controller.dispose();
   }
 }
@@ -894,10 +877,8 @@ Map<String, Object?> _runStrokePathCacheCase({required int iterations}) {
     ],
   );
   final controller = SceneStoreController(initialSnapshot: snapshot);
-  final interactionController = interactive.SceneController();
   final renderState = _createProductionBenchmarkRenderState(
     controller: controller,
-    interactionController: interactionController,
   );
   const canvasSize = Size(320, 160);
 
@@ -977,7 +958,6 @@ Map<String, Object?> _runStrokePathCacheCase({required int iterations}) {
     };
   } finally {
     renderState.dispose();
-    interactionController.dispose();
     controller.dispose();
   }
 }
@@ -1009,9 +989,8 @@ Map<String, Object?> _runStaticBackgroundCacheCase({
     ),
   );
   final controller = SceneStoreController(initialSnapshot: snapshot);
-  final interactionController = interactive.SceneController();
   SceneSnapshot readSnapshot() => controller.snapshot;
-  final renderState = SceneControllerSceneViewRenderState(
+  final renderState = SceneControllerSceneViewMainSceneRenderRead(
     storeController: controller,
     readSnapshot: readSnapshot,
     readSelectedNodeIds: () => controller.selectedNodeIds,
@@ -1020,7 +999,6 @@ Map<String, Object?> _runStaticBackgroundCacheCase({
       snapshot: readSnapshot(),
       deltaForNode: _benchmarkZeroPreviewDelta,
     ),
-    readInteraction: () => interactionController.interaction,
   );
   const canvasSize = Size(320, 180);
 
@@ -1097,7 +1075,6 @@ Map<String, Object?> _runStaticBackgroundCacheCase({
     };
   } finally {
     renderState.dispose();
-    interactionController.dispose();
     controller.dispose();
   }
 }
@@ -1122,9 +1099,8 @@ Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
     ),
   );
   final controller = SceneStoreController(initialSnapshot: snapshot);
-  final interactionController = interactive.SceneController();
   SceneSnapshot readSnapshot() => controller.snapshot;
-  final renderState = SceneControllerSceneViewRenderState(
+  final renderState = SceneControllerSceneViewMainSceneRenderRead(
     storeController: controller,
     readSnapshot: readSnapshot,
     readSelectedNodeIds: () => controller.selectedNodeIds,
@@ -1133,7 +1109,6 @@ Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
       snapshot: readSnapshot(),
       deltaForNode: _benchmarkZeroPreviewDelta,
     ),
-    readInteraction: () => interactionController.interaction,
   );
   final painter = ScenePainter(
     controller: renderState,
@@ -1186,7 +1161,6 @@ Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
     };
   } finally {
     renderState.dispose();
-    interactionController.dispose();
     controller.dispose();
   }
 }
@@ -1217,12 +1191,12 @@ SceneSnapshot _selectionPathSnapshot({
   );
 }
 
-SceneControllerSceneViewRenderState _createProductionBenchmarkRenderState({
+SceneControllerSceneViewMainSceneRenderRead
+_createProductionBenchmarkRenderState({
   required SceneStoreController controller,
-  required interactive.SceneController interactionController,
 }) {
   SceneSnapshot readSnapshot() => controller.snapshot;
-  return SceneControllerSceneViewRenderState(
+  return SceneControllerSceneViewMainSceneRenderRead(
     storeController: controller,
     readSnapshot: readSnapshot,
     readSelectedNodeIds: () => controller.selectedNodeIds,
@@ -1231,7 +1205,6 @@ SceneControllerSceneViewRenderState _createProductionBenchmarkRenderState({
       snapshot: readSnapshot(),
       deltaForNode: _benchmarkZeroPreviewDelta,
     ),
-    readInteraction: () => interactionController.interaction,
   );
 }
 

@@ -454,16 +454,20 @@ void unregisterSceneControllerInternalAccess(Object controller) {}
       );
       writeSandboxFile(sandbox, 'lib/src/contract/scene_view_runtime.dart', '''
 abstract interface class SceneViewRuntime {
-  SceneViewRenderState get renderState;
+  SceneViewMainSceneRenderRead get mainSceneRenderRead;
+
+  SceneViewOverlayPreviewRead get overlayPreviewRead;
 
   SceneViewPointerSession get createPointerSession;
 }
 
-abstract interface class SceneViewRenderState {
+abstract interface class SceneViewMainSceneRenderRead {
   void addListener(Object listener);
 
   void removeListener(Object listener);
 }
+
+abstract interface class SceneViewOverlayPreviewRead {}
 
 abstract interface class SceneViewPointerSession {
   int get detach;

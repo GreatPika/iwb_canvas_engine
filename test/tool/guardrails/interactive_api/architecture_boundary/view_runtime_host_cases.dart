@@ -66,7 +66,7 @@ class _SceneViewRuntimeHostState {
 
   Object build() {
     final renderState = widget.controller;
-    return SceneViewRenderSurface(renderState: renderState);
+    return SceneViewRenderSurface(mainSceneRenderRead: renderState);
   }
 
   SceneViewPointerSession _createReplacementPointerSession(
@@ -91,8 +91,235 @@ class SceneViewInteractivePointerHost {
 
 class SceneViewRenderSurface {
   SceneViewRenderSurface({
-    required Object renderState,
+    required Object mainSceneRenderRead,
   });
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewRuntimeHost must remain the active-runtime and '
+                'pointer-host owner for the view boundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects runtime host that omits overlay preview read routing',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_runtime_host.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+import 'scene_view_interactive_overlay_painter.dart';
+import 'scene_view_interactive_pointer_host.dart';
+import 'scene_view_render_surface.dart';
+
+class SceneViewRuntimeHost extends StatefulWidget {
+  final SceneViewRuntime runtime;
+
+  SceneViewRuntimeHost({required this.runtime});
+}
+
+class _SceneViewRuntimeHostState {
+  late final SceneViewInteractivePointerHost _pointerHost;
+  late SceneViewRuntime _activeRuntime;
+
+  void initState() {
+    _activeRuntime = widget.runtime;
+    _pointerHost = SceneViewInteractivePointerHost(
+      pointerSession: _activeRuntime.createPointerSession(
+        isMounted: () => true,
+        hasLiveRawPointers: () => false,
+      ),
+    );
+  }
+
+  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_activeRuntime == widget.runtime) {
+      return;
+    }
+    final nextPointerSession = _createReplacementPointerSession(widget.runtime);
+    _pointerHost.replacePointerSession(nextPointerSession);
+    _activeRuntime = widget.runtime;
+  }
+
+  Object build() {
+    final mainSceneRenderRead = _activeRuntime.mainSceneRenderRead;
+    return SceneViewRenderSurface(mainSceneRenderRead: mainSceneRenderRead);
+  }
+
+  SceneViewPointerSession _createReplacementPointerSession(
+    SceneViewRuntime runtime,
+  ) {
+    return runtime.createPointerSession(
+      isMounted: () => true,
+      hasLiveRawPointers: () => false,
+    );
+  }
+}
+
+class StatefulWidget {}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneViewRuntimeHost must remain the active-runtime and '
+                'pointer-host owner for the view boundary',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects runtime host that routes main-scene read to overlay painter',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_interactive_overlay_painter.dart',
+          '''
+class SceneViewInteractiveOverlayPainter {
+  SceneViewInteractiveOverlayPainter({required Object overlayPreviewRead});
+}
+''',
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/view/scene_view_runtime_host.dart',
+          '''
+import '../contract/scene_view_runtime.dart';
+import 'scene_view_interactive_overlay_painter.dart';
+import 'scene_view_interactive_pointer_host.dart';
+import 'scene_view_render_surface.dart';
+
+class SceneViewRuntimeHost extends StatefulWidget {
+  final SceneViewRuntime runtime;
+
+  SceneViewRuntimeHost({required this.runtime});
+}
+
+class _SceneViewRuntimeHostState {
+  late final SceneViewInteractivePointerHost _pointerHost;
+  late SceneViewRuntime _activeRuntime;
+
+  void initState() {
+    _activeRuntime = widget.runtime;
+    _pointerHost = SceneViewInteractivePointerHost(
+      pointerSession: _activeRuntime.createPointerSession(
+        isMounted: () => true,
+        hasLiveRawPointers: () => false,
+      ),
+    );
+  }
+
+  void didUpdateWidget(SceneViewRuntimeHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_activeRuntime == widget.runtime) {
+      return;
+    }
+    final nextPointerSession = _createReplacementPointerSession(widget.runtime);
+    _pointerHost.replacePointerSession(nextPointerSession);
+    _activeRuntime = widget.runtime;
+  }
+
+  Object build() {
+    final mainSceneRenderRead = _activeRuntime.mainSceneRenderRead;
+    final overlayPreviewRead = _activeRuntime.mainSceneRenderRead;
+    return _SceneViewRuntimeHostShell(
+      foregroundPainter: SceneViewInteractiveOverlayPainter(
+        overlayPreviewRead: overlayPreviewRead,
+      ),
+      child: SceneViewRenderSurface(mainSceneRenderRead: mainSceneRenderRead),
+    );
+  }
+
+  SceneViewPointerSession _createReplacementPointerSession(
+    SceneViewRuntime runtime,
+  ) {
+    return runtime.createPointerSession(
+      isMounted: () => true,
+      hasLiveRawPointers: () => false,
+    );
+  }
+}
+
+class StatefulWidget {}
+
+class _SceneViewRuntimeHostShell {
+  _SceneViewRuntimeHostShell({
+    required this.foregroundPainter,
+    required this.child,
+  });
+
+  final Object foregroundPainter;
+  final Object child;
 }
 ''',
         );
@@ -174,8 +401,8 @@ class _SceneViewRuntimeHostState {
   }
 
   Object build() {
-    final renderState = _activeRuntime.renderState;
-    return SceneViewRenderSurface(renderState: renderState);
+    final renderState = _activeRuntime.mainSceneRenderRead;
+    return SceneViewRenderSurface(mainSceneRenderRead: renderState);
   }
 
   SceneViewPointerSession _createReplacementPointerSession(
@@ -273,8 +500,8 @@ class _SceneViewRuntimeHostState {
   }
 
   Object build() {
-    final renderState = _activeRuntime.renderState;
-    return SceneViewRenderSurface(renderState: renderState);
+    final renderState = _activeRuntime.mainSceneRenderRead;
+    return SceneViewRenderSurface(mainSceneRenderRead: renderState);
   }
 
   SceneViewPointerSession _createReplacementPointerSession(
@@ -374,8 +601,8 @@ class _SceneViewRuntimeHostState {
   }
 
   Object build() {
-    final renderState = _activeRuntime.renderState;
-    return SceneViewRenderSurface(renderState: renderState);
+    final renderState = _activeRuntime.mainSceneRenderRead;
+    return SceneViewRenderSurface(mainSceneRenderRead: renderState);
   }
 
   SceneViewPointerSession _createReplacementPointerSession(
@@ -476,8 +703,8 @@ class _SceneViewRuntimeHostState {
   }
 
   Object build() {
-    final renderState = _staleRuntime.renderState;
-    return SceneViewRenderSurface(renderState: renderState);
+    final renderState = _staleRuntime.mainSceneRenderRead;
+    return SceneViewRenderSurface(mainSceneRenderRead: renderState);
   }
 
   SceneViewPointerSession _createReplacementPointerSession(
@@ -576,8 +803,8 @@ class _SceneViewRuntimeHostState {
   }
 
   Object build() {
-    final renderState = _activeRuntime.renderState;
-    return SceneViewRenderSurface(renderState: renderState);
+    final renderState = _activeRuntime.mainSceneRenderRead;
+    return SceneViewRenderSurface(mainSceneRenderRead: renderState);
   }
 
   SceneViewPointerSession _createReplacementPointerSession(
@@ -676,8 +903,8 @@ class _SceneViewRuntimeHostState {
   }
 
   Object build() {
-    final renderState = _activeRuntime.renderState;
-    return SceneViewRenderSurface(renderState: renderState);
+    final renderState = _activeRuntime.mainSceneRenderRead;
+    return SceneViewRenderSurface(mainSceneRenderRead: renderState);
   }
 
   SceneViewPointerSession _createReplacementPointerSession(

@@ -40,6 +40,13 @@ Future<GuardrailViolation?> _checkRuntimeHostBoundary(
       '../view/scene_view_render_surface.dart',
     ),
   );
+  final overlayPainterFilePath = _repoRelPath(
+    context,
+    _interactiveArchitectureFile(
+      context,
+      '../view/scene_view_interactive_overlay_painter.dart',
+    ),
+  );
   final pointerHostFilePath = _repoRelPath(
     context,
     _interactiveArchitectureFile(
@@ -54,8 +61,10 @@ Future<GuardrailViolation?> _checkRuntimeHostBoundary(
   if (hostClass == null ||
       !_hasImport(parsed, '../contract/scene_view_runtime.dart') ||
       !_hasImport(parsed, 'scene_view_interactive_pointer_host.dart') ||
+      !_hasImport(parsed, 'scene_view_interactive_overlay_painter.dart') ||
       !_hasImport(parsed, 'scene_view_render_surface.dart') ||
       _hasTopLevelOwner(parsed, 'SceneViewInteractivePointerHost') ||
+      _hasTopLevelOwner(parsed, 'SceneViewInteractiveOverlayPainter') ||
       _hasTopLevelOwner(parsed, 'SceneViewRenderSurface') ||
       initState == null ||
       didUpdateWidget == null ||
@@ -209,14 +218,32 @@ Future<GuardrailViolation?> _checkRuntimeHostBoundary(
       !_methodCreatesOwnedType(
         buildMethod,
         context: context,
+        filePath: overlayPainterFilePath,
+        typeName: 'SceneViewInteractiveOverlayPainter',
+      ) ||
+      !_methodUsesOwnedTypeArgSource(
+        buildMethod,
+        ownerClass: hostClass,
+        context: context,
+        filePath: overlayPainterFilePath,
+        typeName: 'SceneViewInteractiveOverlayPainter',
+        argName: 'overlayPreviewRead',
+        sourceSegments: const <String>['_activeRuntime', 'overlayPreviewRead'],
+      ) ||
+      !_methodCreatesOwnedType(
+        buildMethod,
+        context: context,
         filePath: renderSurfaceFilePath,
         typeName: 'SceneViewRenderSurface',
       ) ||
-      !_methodUsesSceneViewRenderSurfaceArgSource(
+      !_methodUsesOwnedTypeArgSource(
         buildMethod,
         ownerClass: hostClass,
-        argName: 'renderState',
-        sourceSegments: const <String>['_activeRuntime', 'renderState'],
+        context: context,
+        filePath: renderSurfaceFilePath,
+        typeName: 'SceneViewRenderSurface',
+        argName: 'mainSceneRenderRead',
+        sourceSegments: const <String>['_activeRuntime', 'mainSceneRenderRead'],
       )) {
     return GuardrailViolation(
       filePath: filePath,

@@ -3,7 +3,9 @@ import 'pointer_input.dart';
 import 'scene_view_render_state.dart';
 
 abstract interface class SceneViewRuntime {
-  SceneViewRenderState get renderState;
+  SceneViewMainSceneRenderRead get mainSceneRenderRead;
+
+  SceneViewOverlayPreviewRead get overlayPreviewRead;
 
   SceneViewPointerSession createPointerSession({
     required bool Function() isMounted,

@@ -128,6 +128,7 @@ void main() {
                 'INV-ENG-INTERACTIVE-MUTATION-BOUNDARY',
                 'INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE',
                 'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY',
+                'INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY',
                 'INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY',
               ],
               reads: <String>[],
@@ -189,6 +190,9 @@ void main() {
             ],
             'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY': <String>[
               'controller-api',
+              'interactive-api',
+            ],
+            'INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY': <String>[
               'interactive-api',
             ],
             'INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY': <String>[

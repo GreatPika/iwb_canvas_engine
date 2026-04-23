@@ -50,6 +50,9 @@ void main() {
     final renderSurface = analysis.parsed(
       'lib/src/view/scene_view_render_surface.dart',
     );
+    final overlayPainter = analysis.parsed(
+      'lib/src/view/scene_view_interactive_overlay_painter.dart',
+    );
 
     final sceneController = analysis.findClass(facade, 'SceneController');
     final sceneControllerBridge = analysis.findTopLevelFunction(
@@ -68,9 +71,13 @@ void main() {
       sceneViewRuntime,
       'SceneControllerSceneViewRuntime',
     );
-    final renderStateClass = analysis.findClass(
+    final mainSceneRenderReadClass = analysis.findClass(
       sceneViewRuntime,
-      'SceneControllerSceneViewRenderState',
+      'SceneControllerSceneViewMainSceneRenderRead',
+    );
+    final overlayPreviewReadClass = analysis.findClass(
+      sceneViewRuntime,
+      'SceneControllerSceneViewOverlayPreviewRead',
     );
     final pointerSessionClass = analysis.findClass(
       pointerSession,
@@ -116,7 +123,17 @@ void main() {
       isFalse,
     );
     expect(
-      analysis.implementsInterface(sceneController, 'SceneViewRenderState'),
+      analysis.implementsInterface(
+        sceneController,
+        'SceneViewMainSceneRenderRead',
+      ),
+      isFalse,
+    );
+    expect(
+      analysis.implementsInterface(
+        sceneController,
+        'SceneViewOverlayPreviewRead',
+      ),
       isFalse,
     );
     expect(
@@ -203,10 +220,8 @@ void main() {
       analysis.implementsInterface(sceneViewRuntimeClass, 'SceneViewRuntime'),
       isTrue,
     );
-    expect(
-      analysis.implementsInterface(renderStateClass, 'SceneViewRenderState'),
-      isTrue,
-    );
+    expect(mainSceneRenderReadClass.name.lexeme, isNotEmpty);
+    expect(overlayPreviewReadClass.name.lexeme, isNotEmpty);
     expect(
       analysis.implementsInterface(
         pointerSessionClass,
@@ -231,9 +246,19 @@ void main() {
     );
     expect(
       analysis.namedTypeOf(
-        analysis.findGetter(sceneViewRuntimeClass, 'renderState').returnType,
+        analysis
+            .findGetter(sceneViewRuntimeClass, 'mainSceneRenderRead')
+            .returnType,
       ),
-      'SceneViewRenderState',
+      'SceneViewMainSceneRenderRead',
+    );
+    expect(
+      analysis.namedTypeOf(
+        analysis
+            .findGetter(sceneViewRuntimeClass, 'overlayPreviewRead')
+            .returnType,
+      ),
+      'SceneViewOverlayPreviewRead',
     );
 
     expect(
@@ -266,9 +291,16 @@ void main() {
     expect(
       analysis.variableInitializerPropertyChain(
         analysis.findMethod(runtimeHostState, 'build'),
-        'renderState',
+        'mainSceneRenderRead',
       ),
-      '_activeRuntime.renderState',
+      '_activeRuntime.mainSceneRenderRead',
+    );
+    expect(
+      analysis.variableInitializerPropertyChain(
+        analysis.findMethod(runtimeHostState, 'build'),
+        'overlayPreviewRead',
+      ),
+      '_activeRuntime.overlayPreviewRead',
     );
 
     expect(
@@ -296,9 +328,9 @@ void main() {
           analysis.findMethod(runtimeHostState, 'build'),
           'SceneViewInteractiveOverlayPainter',
         ),
-        'renderState',
+        'overlayPreviewRead',
       ),
-      'renderState',
+      'overlayPreviewRead',
     );
     expect(
       analysis.namedConstructorArgumentIdentifier(
@@ -306,9 +338,9 @@ void main() {
           analysis.findMethod(runtimeHostState, 'build'),
           'SceneViewRenderSurface',
         ),
-        'renderState',
+        'mainSceneRenderRead',
       ),
-      'renderState',
+      'mainSceneRenderRead',
     );
 
     expect(
@@ -318,9 +350,26 @@ void main() {
     expect(
       analysis.namedFormalParameterType(
         analysis.findConstructor(renderSurfaceClass),
-        'renderState',
+        'mainSceneRenderRead',
       ),
-      'SceneViewRenderState',
+      'SceneViewMainSceneRenderRead',
+    );
+    expect(
+      analysis.hasImport(
+        overlayPainter,
+        '../interactive/scene_controller.dart',
+      ),
+      isFalse,
+    );
+    expect(
+      analysis.classFieldType(
+        analysis.findClass(
+          overlayPainter,
+          'SceneViewInteractiveOverlayPainter',
+        ),
+        'overlayPreviewRead',
+      ),
+      'SceneViewOverlayPreviewRead',
     );
     expect(
       analysis.containsConstructorInvocation(

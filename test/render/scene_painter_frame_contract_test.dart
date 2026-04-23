@@ -10,8 +10,6 @@ import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_paint_candidate_stage.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_selected_paint_order_cache.dart';
-import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
-    as interactive;
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter_frame.dart';
@@ -19,7 +17,7 @@ import 'package:iwb_canvas_engine/src/render/scene_painter_frame.dart';
 // INV:INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION
 
 class _CapturedWorldRectRenderState extends ChangeNotifier
-    implements SceneViewRenderState {
+    implements SceneViewMainSceneRenderRead {
   _CapturedWorldRectRenderState({
     required this.snapshot,
     required this.paintCandidates,
@@ -37,7 +35,6 @@ class _CapturedWorldRectRenderState extends ChangeNotifier
   final List<ScenePaintCandidate> paintCandidates;
   ScenePaintCandidateQuery? lastEnumeratedQuery;
 
-  @override
   Offset get cameraOffset => camera;
 
   @override
@@ -62,53 +59,39 @@ class _CapturedWorldRectRenderState extends ChangeNotifier
   @override
   int get controllerEpoch => 0;
 
-  @override
   Listenable get overlayRepaintListenable => this;
 
-  @override
   Rect? get selectionRect => null;
 
-  @override
   bool get hasActiveStrokePreview => false;
 
-  @override
   List<Offset> get activeStrokePreviewPoints => const <Offset>[];
 
-  @override
   double get activeStrokePreviewThickness => 0;
 
-  @override
   Color get activeStrokePreviewColor => const Color(0x00000000);
 
-  @override
   double get activeStrokePreviewOpacity => 0;
 
-  @override
   bool get hasActiveLinePreview => false;
 
-  @override
   Offset? get activeLinePreviewStart => null;
 
-  @override
   Offset? get activeLinePreviewEnd => null;
 
-  @override
   double get activeLinePreviewThickness => 0;
 
-  @override
   Color get activeLinePreviewColor => const Color(0x00000000);
 }
 
-SceneViewRenderState _controllerOwnedRenderState(
+SceneViewMainSceneRenderRead _controllerOwnedRenderState(
   SceneStoreController controller, {
   Set<NodeId> selectedNodeIds = const <NodeId>{},
   Offset Function(NodeId nodeId)? previewDeltaResolver,
   SceneSnapshot? snapshotOverride,
 }) {
-  final interactionController = interactive.SceneController();
-  addTearDown(interactionController.dispose);
   SceneSnapshot readSnapshot() => snapshotOverride ?? controller.snapshot;
-  final renderState = SceneControllerSceneViewRenderState(
+  final renderState = SceneControllerSceneViewMainSceneRenderRead(
     storeController: controller,
     readSnapshot: readSnapshot,
     readSelectedNodeIds: () => selectedNodeIds,
@@ -117,7 +100,6 @@ SceneViewRenderState _controllerOwnedRenderState(
       snapshot: readSnapshot(),
       deltaForNode: previewDeltaResolver ?? (_) => Offset.zero,
     ),
-    readInteraction: () => interactionController.interaction,
   );
   addTearDown(renderState.dispose);
   return renderState;
@@ -359,7 +341,7 @@ void main() {
       );
 
       expect(renderState.selectedNodeIds, const <NodeId>{'captured-node'});
-      expect(renderState.cameraOffset, const Offset(12, 8));
+      expect(renderState.snapshot, same(frameSnapshot));
       final frameRead = renderState.captureFrameRead();
 
       expect(frameRead.snapshot, same(frameSnapshot));

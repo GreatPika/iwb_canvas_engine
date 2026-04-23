@@ -97,7 +97,7 @@ correct read side, and retire the legacy `SceneViewRenderState` seam.
   `test/view/scene_view_test.dart`, and
   `test/view/scene_view_interactive_test.dart` - existing render/view behavior
   suites consume the current seam directly or through local runtime stubs
-- `test/support/committed_scene_view_render_state.dart` - in-repo fixture still
+- `test/support/committed_scene_view_read_state.dart` - in-repo fixture still
   implements the mixed contract
 - `tool/bench/load_profiles_cases_test.dart` and
   `test/tool/bench_run_load_profiles_test.dart` - benchmark-owned production
@@ -458,7 +458,7 @@ correct read side, and retire the legacy `SceneViewRenderState` seam.
   `ScenePainterFrameOwner`, `SceneController`,
   `SceneControllerSceneViewRuntime`,
   `test/interactive/core/scene_controller_interactive_move_preview_invariants_test.dart`,
-  `test/support/committed_scene_view_render_state.dart`,
+  `test/support/committed_scene_view_read_state.dart`,
   the local runtime stubs in `test/view/scene_view_interactive_test.dart`,
   `tool/bench/load_profiles_cases_test.dart`,
   `test/tool/support/guardrails_sandbox_support.dart`,
@@ -517,7 +517,7 @@ correct read side, and retire the legacy `SceneViewRenderState` seam.
 
 ### Fixtures and Supporting Data
 
-- `test/support/committed_scene_view_render_state.dart`
+- `test/support/committed_scene_view_read_state.dart`
 - `test/tool/support/guardrails_sandbox_support.dart`
 
 ### Registry, Inventory, and Workflow Files
@@ -601,7 +601,7 @@ correct read side, and retire the legacy `SceneViewRenderState` seam.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Introduce Explicit Read Contracts and Migrate Compile-Time Consumers
+### Slice 1. [x] Introduce Explicit Read Contracts and Migrate Compile-Time Consumers
 
 #### Slice Contract
 
@@ -618,7 +618,7 @@ contracts before the runtime implementation itself is split.
 - migrate `SceneViewRuntimeHost`, `SceneViewRenderSurface`,
   `SceneViewInteractiveOverlayPainter`, `ScenePainter`, and
   `ScenePainterFrameOwner` to the explicit successor types and seam names
-- migrate `test/support/committed_scene_view_render_state.dart`,
+- migrate `test/support/committed_scene_view_read_state.dart`,
   `test/interactive/core/scene_controller_interactive_move_preview_invariants_test.dart`,
   `tool/bench/load_profiles_cases_test.dart`,
   `test/tool/support/guardrails_sandbox_support.dart`, and the affected
@@ -650,7 +650,7 @@ contracts before the runtime implementation itself is split.
 
 #### Fixtures Used
 
-- `test/support/committed_scene_view_render_state.dart`
+- `test/support/committed_scene_view_read_state.dart`
 - `test/tool/support/guardrails_sandbox_support.dart`
 - local runtime stubs inside `test/view/scene_view_interactive_test.dart`
 
@@ -682,7 +682,7 @@ contracts before the runtime implementation itself is split.
   successor contracts already have structural drift checks before the runtime
   owner split lands
 
-### Slice 2. [ ] Retire the Mixed Runtime Read Owner
+### Slice 2. [x] Retire the Mixed Runtime Read Owner
 
 #### Slice Contract
 
@@ -723,7 +723,7 @@ consumers and structural guardrails already understand the successor contracts.
 
 #### Fixtures Used
 
-- `test/support/committed_scene_view_render_state.dart`
+- `test/support/committed_scene_view_read_state.dart`
 - `test/tool/support/guardrails_sandbox_support.dart`
 - local runtime stubs inside `test/view/scene_view_interactive_test.dart`
 
@@ -745,7 +745,7 @@ consumers and structural guardrails already understand the successor contracts.
   structural guardrail scaffolds while the existing behavior suites remain
   green
 
-### Slice 3. [ ] Sync Invariants and Checked-In Architecture
+### Slice 3. [x] Sync Invariants and Checked-In Architecture
 
 #### Slice Contract
 
@@ -810,7 +810,7 @@ surfaces.
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_controller_api_tool_test.dart`
 - `dart run tool/check_guardrails.dart`
 - `dart run tool/check_invariant_coverage.dart`
-- `printf '%s\n' 'PLAN.md' 'plan/step_15_main_scene_and_overlay_render_read_split.md' 'lib/src/contract/scene_view_runtime.dart' 'lib/src/contract/scene_view_render_state.dart' 'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart' 'lib/src/interactive/scene_controller.dart' 'lib/src/view/scene_view_runtime_host.dart' 'lib/src/view/scene_view_render_surface.dart' 'lib/src/view/scene_view_interactive_overlay_painter.dart' 'lib/src/render/scene_painter.dart' 'lib/src/render/scene_painter_frame.dart' 'test/contract/runtime_contract_interfaces_test.dart' 'test/render/scene_painter_test.dart' 'test/render/scene_painter_frame_contract_test.dart' 'test/render/scene_static_layer_cache_test.dart' 'test/view/scene_view_test.dart' 'test/view/scene_view_interactive_test.dart' 'test/interactive/core/scene_controller_public_listener_contract_test.dart' 'test/interactive/core/scene_controller_interactive_move_preview_invariants_test.dart' 'test/interactive/core/scene_controller_architecture_boundary_test.dart' 'test/support/committed_scene_view_render_state.dart' 'test/tool/guardrails/guardrails_interactive_api_tool_test.dart' 'test/tool/guardrails/guardrails_controller_api_tool_test.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/view_and_graph_cases.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/view_runtime_host_cases.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/view_surface_and_runtime_cases.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/runtime_and_draw_ownership_cases.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/owner_and_mutation_boundary_cases.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/pointer_host_and_public_shell_cases.dart' 'test/tool/support/guardrails_sandbox_support.dart' 'test/tool/bench_run_load_profiles_test.dart' 'tool/bench/load_profiles_cases_test.dart' 'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_facade_rules.dart' 'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_pointer_rules.dart' 'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_view_surface_rules.dart' 'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_view_host_rules.dart' 'tool/src/guardrails/rules/controller/write_only_mutation_rules.dart' 'tool/invariant_registry.dart' 'ARCHITECTURE.md' | dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=-`
+- `printf '%s\n' 'PLAN.md' 'plan/step_15_main_scene_and_overlay_render_read_split.md' 'lib/src/contract/scene_view_runtime.dart' 'lib/src/contract/scene_view_render_state.dart' 'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart' 'lib/src/interactive/scene_controller.dart' 'lib/src/view/scene_view_runtime_host.dart' 'lib/src/view/scene_view_render_surface.dart' 'lib/src/view/scene_view_interactive_overlay_painter.dart' 'lib/src/render/scene_painter.dart' 'lib/src/render/scene_painter_frame.dart' 'test/contract/runtime_contract_interfaces_test.dart' 'test/render/scene_painter_test.dart' 'test/render/scene_painter_frame_contract_test.dart' 'test/render/scene_static_layer_cache_test.dart' 'test/view/scene_view_test.dart' 'test/view/scene_view_interactive_test.dart' 'test/interactive/core/scene_controller_public_listener_contract_test.dart' 'test/interactive/core/scene_controller_interactive_move_preview_invariants_test.dart' 'test/interactive/core/scene_controller_architecture_boundary_test.dart' 'test/support/committed_scene_view_read_state.dart' 'test/tool/guardrails/guardrails_interactive_api_tool_test.dart' 'test/tool/guardrails/guardrails_controller_api_tool_test.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/view_and_graph_cases.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/view_runtime_host_cases.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/view_surface_and_runtime_cases.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/runtime_and_draw_ownership_cases.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/owner_and_mutation_boundary_cases.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/pointer_host_and_public_shell_cases.dart' 'test/tool/support/guardrails_sandbox_support.dart' 'test/tool/bench_run_load_profiles_test.dart' 'tool/bench/load_profiles_cases_test.dart' 'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_facade_rules.dart' 'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_pointer_rules.dart' 'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_view_surface_rules.dart' 'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_view_host_rules.dart' 'tool/src/guardrails/rules/controller/write_only_mutation_rules.dart' 'tool/invariant_registry.dart' 'ARCHITECTURE.md' | dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=-`
 
 ## 12. Acceptance Criteria
 

@@ -6,18 +6,18 @@ import '../core/numeric_clamp.dart';
 
 class SceneViewInteractiveOverlayPainter extends CustomPainter {
   SceneViewInteractiveOverlayPainter({
-    required this.renderState,
+    required this.overlayPreviewRead,
     required this.selectionColor,
     required this.selectionStrokeWidth,
-  }) : super(repaint: renderState.overlayRepaintListenable);
+  }) : super(repaint: overlayPreviewRead.overlayRepaintListenable);
 
-  final SceneViewRenderState renderState;
+  final SceneViewOverlayPreviewRead overlayPreviewRead;
   final Color selectionColor;
   final double selectionStrokeWidth;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cameraOffset = sanitizeFiniteOffset(renderState.cameraOffset);
+    final cameraOffset = sanitizeFiniteOffset(overlayPreviewRead.cameraOffset);
     _paintMarqueeSelection(canvas, cameraOffset);
     _paintStrokePreview(canvas, cameraOffset);
     _paintLinePreview(canvas, cameraOffset);
@@ -25,13 +25,13 @@ class SceneViewInteractiveOverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SceneViewInteractiveOverlayPainter oldDelegate) {
-    return oldDelegate.renderState != renderState ||
+    return oldDelegate.overlayPreviewRead != overlayPreviewRead ||
         oldDelegate.selectionColor != selectionColor ||
         oldDelegate.selectionStrokeWidth != selectionStrokeWidth;
   }
 
   void _paintMarqueeSelection(Canvas canvas, Offset cameraOffset) {
-    final selectionRect = renderState.selectionRect;
+    final selectionRect = overlayPreviewRead.selectionRect;
     if (selectionRect == null ||
         !selectionRect.left.isFinite ||
         !selectionRect.top.isFinite ||
@@ -71,23 +71,23 @@ class SceneViewInteractiveOverlayPainter extends CustomPainter {
   }
 
   void _paintStrokePreview(Canvas canvas, Offset cameraOffset) {
-    if (!renderState.hasActiveStrokePreview) {
+    if (!overlayPreviewRead.hasActiveStrokePreview) {
       return;
     }
 
-    final points = renderState.activeStrokePreviewPoints;
+    final points = overlayPreviewRead.activeStrokePreviewPoints;
     if (points.isEmpty) {
       return;
     }
 
-    final thickness = renderState.activeStrokePreviewThickness;
+    final thickness = overlayPreviewRead.activeStrokePreviewThickness;
     if (!thickness.isFinite || thickness <= 0) {
       return;
     }
 
     final color = _applyOpacity(
-      renderState.activeStrokePreviewColor,
-      renderState.activeStrokePreviewOpacity,
+      overlayPreviewRead.activeStrokePreviewColor,
+      overlayPreviewRead.activeStrokePreviewOpacity,
     );
 
     if (points.length == 1) {
@@ -144,17 +144,17 @@ class SceneViewInteractiveOverlayPainter extends CustomPainter {
   }
 
   void _paintLinePreview(Canvas canvas, Offset cameraOffset) {
-    if (!renderState.hasActiveLinePreview) {
+    if (!overlayPreviewRead.hasActiveLinePreview) {
       return;
     }
 
-    final start = renderState.activeLinePreviewStart;
-    final end = renderState.activeLinePreviewEnd;
+    final start = overlayPreviewRead.activeLinePreviewStart;
+    final end = overlayPreviewRead.activeLinePreviewEnd;
     if (start == null || end == null) {
       return;
     }
 
-    final thickness = renderState.activeLinePreviewThickness;
+    final thickness = overlayPreviewRead.activeLinePreviewThickness;
     if (!thickness.isFinite || thickness <= 0) {
       return;
     }
@@ -166,7 +166,7 @@ class SceneViewInteractiveOverlayPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = thickness
         ..strokeCap = StrokeCap.round
-        ..color = renderState.activeLinePreviewColor,
+        ..color = overlayPreviewRead.activeLinePreviewColor,
     );
   }
 

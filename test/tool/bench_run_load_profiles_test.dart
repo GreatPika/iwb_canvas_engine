@@ -249,7 +249,10 @@ void main() {
         );
         expect(stableBody, isNot(contains('_BenchmarkControllerRenderState(')));
 
-        expect(staticBody, contains('SceneControllerSceneViewRenderState('));
+        expect(
+          staticBody,
+          contains('SceneControllerSceneViewMainSceneRenderRead('),
+        );
         expect(staticBody, contains('warmUp: () {'));
         expect(staticBody, isNot(contains('_BenchmarkControllerRenderState(')));
       },
@@ -428,7 +431,7 @@ void main() {
     });
 
     test(
-      'background paint benchmark is wired through SceneControllerSceneViewRenderState instead of benchmark-only render state',
+      'background paint benchmark is wired through SceneControllerSceneViewMainSceneRenderRead instead of benchmark-only render state',
       () {
         final source = File(
           'tool/bench/load_profiles_cases_test.dart',
@@ -439,7 +442,7 @@ void main() {
               'Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({',
         );
 
-        expect(body, contains('SceneControllerSceneViewRenderState('));
+        expect(body, contains('SceneControllerSceneViewMainSceneRenderRead('));
         expect(body, contains('captureFramePreview: () =>'));
         expect(body, contains('SceneViewFramePreview.captureSnapshot('));
         expect(body, isNot(contains('_BenchmarkControllerRenderState(')));

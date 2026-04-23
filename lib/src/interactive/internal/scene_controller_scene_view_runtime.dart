@@ -29,12 +29,15 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
        _ensurePublicSideEffectAllowed = ensurePublicSideEffectAllowed,
        _readInteraction = readInteraction,
        _readInteractionRuntime = readInteractionRuntime,
-       _renderState = SceneControllerSceneViewRenderState(
+       _mainSceneRenderRead = SceneControllerSceneViewMainSceneRenderRead(
          storeController: storeController,
          readSnapshot: readSnapshot,
          readSelectedNodeIds: readSelectedNodeIds,
          readControllerEpoch: readControllerEpoch,
          captureFramePreview: captureFramePreview,
+       ),
+       _overlayPreviewRead = SceneControllerSceneViewOverlayPreviewRead(
+         readSnapshot: readSnapshot,
          readInteraction: readInteraction,
        );
 
@@ -43,24 +46,29 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
   _ensurePublicSideEffectAllowed;
   final SceneControllerInteraction Function() _readInteraction;
   final SceneControllerInteractionRuntime Function() _readInteractionRuntime;
-  final SceneControllerSceneViewRenderState _renderState;
+  final SceneControllerSceneViewMainSceneRenderRead _mainSceneRenderRead;
+  final SceneControllerSceneViewOverlayPreviewRead _overlayPreviewRead;
 
   SceneControllerInteractionRuntime get _interactionRuntime =>
       _readInteractionRuntime();
 
   @override
-  SceneViewRenderState get renderState => _renderState;
+  SceneViewMainSceneRenderRead get mainSceneRenderRead => _mainSceneRenderRead;
+
+  @override
+  SceneViewOverlayPreviewRead get overlayPreviewRead => _overlayPreviewRead;
 
   void scheduleSceneRepaint() {
-    _renderState.scheduleSceneRepaint();
+    _mainSceneRenderRead.scheduleSceneRepaint();
   }
 
   void scheduleOverlayRepaint() {
-    _renderState.scheduleOverlayRepaint();
+    _overlayPreviewRead.scheduleOverlayRepaint();
   }
 
   void dispose() {
-    _renderState.dispose();
+    _mainSceneRenderRead.dispose();
+    _overlayPreviewRead.dispose();
   }
 
   @override
@@ -88,15 +96,14 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
   }
 }
 
-final class SceneControllerSceneViewRenderState
-    implements SceneViewRenderState {
-  SceneControllerSceneViewRenderState({
+final class SceneControllerSceneViewMainSceneRenderRead
+    implements SceneViewMainSceneRenderRead {
+  SceneControllerSceneViewMainSceneRenderRead({
     required SceneStoreController storeController,
     required SceneSnapshot Function() readSnapshot,
     required Set<NodeId> Function() readSelectedNodeIds,
     required int Function() readControllerEpoch,
     required SceneViewFramePreview Function() captureFramePreview,
-    required SceneControllerInteraction Function() readInteraction,
   }) : _storeController = storeController,
        _paintCandidateStage = SceneControllerPaintCandidateStage(
          store: storeController,
@@ -104,22 +111,16 @@ final class SceneControllerSceneViewRenderState
        _readSnapshot = readSnapshot,
        _readSelectedNodeIds = readSelectedNodeIds,
        _readControllerEpoch = readControllerEpoch,
-       _captureFramePreview = captureFramePreview,
-       _readInteraction = readInteraction;
+       _captureFramePreview = captureFramePreview;
 
   final SceneStoreController _storeController;
   final SceneControllerPaintCandidateStage _paintCandidateStage;
   final SceneControllerSceneRepaintChannel _sceneRepaintChannel =
       SceneControllerSceneRepaintChannel();
-  final SceneControllerOverlayRepaintChannel _overlayRepaintChannel =
-      SceneControllerOverlayRepaintChannel();
   final SceneSnapshot Function() _readSnapshot;
   final Set<NodeId> Function() _readSelectedNodeIds;
   final int Function() _readControllerEpoch;
   final SceneViewFramePreview Function() _captureFramePreview;
-  final SceneControllerInteraction Function() _readInteraction;
-
-  SceneControllerInteraction get _interaction => _readInteraction();
 
   @override
   void addListener(VoidCallback listener) {
@@ -132,9 +133,6 @@ final class SceneControllerSceneViewRenderState
   }
 
   @override
-  Listenable get overlayRepaintListenable => _overlayRepaintChannel;
-
-  @override
   SceneSnapshot get snapshot => _readSnapshot();
 
   @override
@@ -142,12 +140,6 @@ final class SceneControllerSceneViewRenderState
 
   @override
   int get controllerEpoch => _readControllerEpoch();
-
-  @override
-  Rect? get selectionRect => _interaction.selectionRect;
-
-  @override
-  Offset get cameraOffset => snapshot.camera.offset;
 
   @override
   SceneViewFrameRead captureFrameRead() {
@@ -183,6 +175,39 @@ final class SceneControllerSceneViewRenderState
     );
   }
 
+  void scheduleSceneRepaint() {
+    _sceneRepaintChannel.scheduleNotify();
+  }
+
+  void dispose() {
+    _sceneRepaintChannel.dispose();
+  }
+}
+
+final class SceneControllerSceneViewOverlayPreviewRead
+    implements SceneViewOverlayPreviewRead {
+  SceneControllerSceneViewOverlayPreviewRead({
+    required SceneSnapshot Function() readSnapshot,
+    required SceneControllerInteraction Function() readInteraction,
+  }) : _readSnapshot = readSnapshot,
+       _readInteraction = readInteraction;
+
+  final SceneControllerOverlayRepaintChannel _overlayRepaintChannel =
+      SceneControllerOverlayRepaintChannel();
+  final SceneSnapshot Function() _readSnapshot;
+  final SceneControllerInteraction Function() _readInteraction;
+
+  SceneControllerInteraction get _interaction => _readInteraction();
+
+  @override
+  Listenable get overlayRepaintListenable => _overlayRepaintChannel;
+
+  @override
+  Rect? get selectionRect => _interaction.selectionRect;
+
+  @override
+  Offset get cameraOffset => _readSnapshot().camera.offset;
+
   @override
   bool get hasActiveStrokePreview => _interaction.hasActiveStrokePreview;
 
@@ -217,16 +242,11 @@ final class SceneControllerSceneViewRenderState
   @override
   Color get activeLinePreviewColor => _interaction.activeLinePreviewColor;
 
-  void scheduleSceneRepaint() {
-    _sceneRepaintChannel.scheduleNotify();
-  }
-
   void scheduleOverlayRepaint() {
     _overlayRepaintChannel.scheduleNotify();
   }
 
   void dispose() {
-    _sceneRepaintChannel.dispose();
     _overlayRepaintChannel.dispose();
   }
 }

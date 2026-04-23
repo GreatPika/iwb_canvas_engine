@@ -1,8 +1,11 @@
 part of 'mutation_boundary_rules.dart';
 
-bool _methodUsesSceneViewRenderSurfaceArgSource(
+bool _methodUsesOwnedTypeArgSource(
   MethodDeclaration method, {
   required ClassDeclaration ownerClass,
+  required GuardrailContext context,
+  required String filePath,
+  required String typeName,
   required String argName,
   required List<String> sourceSegments,
 }) {
@@ -13,8 +16,12 @@ bool _methodUsesSceneViewRenderSurfaceArgSource(
       onFunctionInvocation: (_) {},
       onInstanceCreation: (candidate) {
         if (found ||
-            candidate.constructorName.type.name.lexeme !=
-                'SceneViewRenderSurface') {
+            !_matchesOwnedConstructor(
+              element: candidate.constructorName.element,
+              context: context,
+              filePath: filePath,
+              ownerName: typeName,
+            )) {
           return;
         }
         for (final argument in candidate.argumentList.arguments) {

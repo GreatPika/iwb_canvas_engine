@@ -44,34 +44,36 @@ class SceneController extends ChangeNotifier {
   final SceneStoreController _storeController;
   late final SceneControllerGraph _graph;
 
-  SceneViewRenderState get _viewRenderState =>
-      _graph.sceneViewRuntime.renderState;
+  SceneViewOverlayPreviewRead get _overlayPreviewRead =>
+      _graph.sceneViewRuntime.overlayPreviewRead;
 
   SceneSnapshot get snapshot => _storeController.snapshot;
   Set<NodeId> get selectedNodeIds => _storeController.selectedNodeIds;
   int get controllerEpoch => _storeController.controllerEpoch;
 
-  Rect? get selectionRect => _viewRenderState.selectionRect;
-  Offset get cameraOffset => _viewRenderState.cameraOffset;
+  Rect? get selectionRect => _overlayPreviewRead.selectionRect;
+  Offset get cameraOffset => _overlayPreviewRead.cameraOffset;
   Offset Function(NodeId nodeId) get previewDeltaResolver =>
       sceneControllerGraphPreviewDeltaResolver(_graph);
 
-  bool get hasActiveStrokePreview => _viewRenderState.hasActiveStrokePreview;
+  bool get hasActiveStrokePreview => _overlayPreviewRead.hasActiveStrokePreview;
   List<Offset> get activeStrokePreviewPoints =>
-      _viewRenderState.activeStrokePreviewPoints;
+      _overlayPreviewRead.activeStrokePreviewPoints;
   double get activeStrokePreviewThickness =>
-      _viewRenderState.activeStrokePreviewThickness;
+      _overlayPreviewRead.activeStrokePreviewThickness;
   Color get activeStrokePreviewColor =>
-      _viewRenderState.activeStrokePreviewColor;
+      _overlayPreviewRead.activeStrokePreviewColor;
   double get activeStrokePreviewOpacity =>
-      _viewRenderState.activeStrokePreviewOpacity;
+      _overlayPreviewRead.activeStrokePreviewOpacity;
 
-  bool get hasActiveLinePreview => _viewRenderState.hasActiveLinePreview;
-  Offset? get activeLinePreviewStart => _viewRenderState.activeLinePreviewStart;
-  Offset? get activeLinePreviewEnd => _viewRenderState.activeLinePreviewEnd;
+  bool get hasActiveLinePreview => _overlayPreviewRead.hasActiveLinePreview;
+  Offset? get activeLinePreviewStart =>
+      _overlayPreviewRead.activeLinePreviewStart;
+  Offset? get activeLinePreviewEnd => _overlayPreviewRead.activeLinePreviewEnd;
   double get activeLinePreviewThickness =>
-      _viewRenderState.activeLinePreviewThickness;
-  Color get activeLinePreviewColor => _viewRenderState.activeLinePreviewColor;
+      _overlayPreviewRead.activeLinePreviewThickness;
+  Color get activeLinePreviewColor =>
+      _overlayPreviewRead.activeLinePreviewColor;
 
   SceneControllerInteraction get interaction => _graph.interaction;
   SceneControllerSelection get selection => _graph.selection;

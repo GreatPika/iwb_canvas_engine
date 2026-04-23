@@ -34,6 +34,7 @@ void main() {
     _registerInteractiveDisposeGuardTests();
     _registerCapabilityGuardViolationTests();
     // INV:INV-ENG-INTERACTIVE-MUTATION-BOUNDARY
+    // INV:INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY
     // INV:INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY
     _registerInteractiveArchitectureGuardrailTests();
     _registerCommittedReadSideHermeticityTests();

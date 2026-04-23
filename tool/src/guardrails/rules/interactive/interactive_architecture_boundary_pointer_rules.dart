@@ -18,9 +18,13 @@ Future<GuardrailViolation?> _checkInteractiveViewRuntimeBoundary(
     resolved.unit.declarations,
     'SceneControllerSceneViewRuntime',
   );
-  final renderStateClass = findClassDeclarationByName(
+  final mainSceneRenderReadClass = findClassDeclarationByName(
     resolved.unit.declarations,
-    'SceneControllerSceneViewRenderState',
+    'SceneControllerSceneViewMainSceneRenderRead',
+  );
+  final overlayPreviewReadClass = findClassDeclarationByName(
+    resolved.unit.declarations,
+    'SceneControllerSceneViewOverlayPreviewRead',
   );
   final createPointerSession = runtimeClass == null
       ? null
@@ -43,12 +47,19 @@ Future<GuardrailViolation?> _checkInteractiveViewRuntimeBoundary(
     ),
   );
   if (runtimeClass == null ||
-      renderStateClass == null ||
+      mainSceneRenderReadClass == null ||
+      overlayPreviewReadClass == null ||
       !classImplementsNamedInterface(runtimeClass, 'SceneViewRuntime') ||
       !classImplementsNamedInterface(
-        renderStateClass,
-        'SceneViewRenderState',
+        mainSceneRenderReadClass,
+        'SceneViewMainSceneRenderRead',
       ) ||
+      !classImplementsNamedInterface(
+        overlayPreviewReadClass,
+        'SceneViewOverlayPreviewRead',
+      ) ||
+      !_classOwnsGetterOrMethod(runtimeClass, 'mainSceneRenderRead') ||
+      !_classOwnsGetterOrMethod(runtimeClass, 'overlayPreviewRead') ||
       createPointerSession == null ||
       !_methodReturnsInterfaceType(
         createPointerSession,

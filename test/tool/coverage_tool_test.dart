@@ -104,7 +104,7 @@ class ToolDefaults {
   );
 
   test(
-    'passes when missing file is the scene view render-state declaration unit',
+    'passes when missing file is the scene view render-read declaration unit',
     () async {
       final result = await _runCoverageScenario(
         files: <String, String>{
@@ -114,7 +114,10 @@ abstract interface class SceneRenderState {}
           'lib/src/contract/scene_view_render_state.dart': '''
 import 'scene_render_state.dart';
 
-abstract interface class SceneViewRenderState implements SceneRenderState {}
+abstract interface class SceneViewMainSceneRenderRead
+    implements SceneRenderState {}
+
+abstract interface class SceneViewOverlayPreviewRead {}
 ''',
           'lib/src/contract/a.dart': 'int covered() => 1;\n',
         },

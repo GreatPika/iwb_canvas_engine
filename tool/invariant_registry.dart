@@ -187,7 +187,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE',
     scope: 'engine-structure',
     title:
-        'SceneStoreController remains committed-store-only on the read side, while full SceneViewRenderState stays on the assembled interactive runtime path',
+        'SceneStoreController remains committed-store-only on the read side, while SceneViewMainSceneRenderRead and SceneViewOverlayPreviewRead stay assembled on the interactive runtime path',
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path: 'test/contract/runtime_contract_interfaces_test.dart',
@@ -923,12 +923,18 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY',
     scope: 'engine-structure',
     title:
-        'interactive view/render shell files consume one assembled SceneViewRuntime boundary, keep overlay ownership outside the render surface, split scene and overlay repaint channels inside one controller-owned render-state family, and do not reopen concrete-controller seams through view/**',
+        'interactive view/render shell files consume one assembled SceneViewRuntime boundary, route SceneViewMainSceneRenderRead only to the render surface, route SceneViewOverlayPreviewRead only to overlay consumers, and do not reopen concrete-controller seams through view/**',
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path:
             'test/interactive/core/scene_controller_architecture_boundary_test.dart',
         stepId: 'scope_interactive',
+      ),
+      RequiredProof(path: 'tool/check_guardrails.dart', stepId: 'guardrails'),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(
+        path: 'test/tool/guardrails/guardrails_interactive_api_tool_test.dart',
       ),
     ],
   ),

@@ -130,7 +130,8 @@ class _SceneViewRuntimeHostState extends State<SceneViewRuntimeHost> {
 
   @override
   Widget build(BuildContext context) {
-    final renderState = _activeRuntime.renderState;
+    final mainSceneRenderRead = _activeRuntime.mainSceneRenderRead;
+    final overlayPreviewRead = _activeRuntime.overlayPreviewRead;
     return Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: (event) =>
@@ -143,13 +144,13 @@ class _SceneViewRuntimeHostState extends State<SceneViewRuntimeHost> {
           _pointerHost.handlePointerEvent(event, PointerPhase.cancel),
       child: CustomPaint(
         foregroundPainter: SceneViewInteractiveOverlayPainter(
-          renderState: renderState,
+          overlayPreviewRead: overlayPreviewRead,
           selectionColor: widget.selectionColor,
           selectionStrokeWidth: widget.selectionStrokeWidth,
         ),
         child: SceneViewRenderSurface(
           key: _renderSurfaceKey,
-          renderState: renderState,
+          mainSceneRenderRead: mainSceneRenderRead,
           imageResolver: widget.imageResolver,
           selectionColor: widget.selectionColor,
           selectionStrokeWidth: widget.selectionStrokeWidth,

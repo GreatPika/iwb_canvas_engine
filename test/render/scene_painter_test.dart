@@ -22,12 +22,13 @@ import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scen
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
     as interactive;
 
-import '../support/committed_scene_view_render_state.dart';
+import '../support/committed_scene_view_read_state.dart';
 
 // INV:INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION
 // INV:INV-ENG-SELECTION-BOUNDED-COMPOSITING
 
-class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
+class _FakeRenderState extends ChangeNotifier
+    implements SceneViewMainSceneRenderRead {
   _FakeRenderState({
     required this.snapshot,
     Set<NodeId>? selectedNodeIds,
@@ -44,13 +45,10 @@ class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
   @override
   final int controllerEpoch = 0;
 
-  @override
   Listenable get overlayRepaintListenable => this;
 
-  @override
   Rect? selectionRect;
 
-  @override
   Offset get cameraOffset => snapshot.camera.offset;
 
   @override
@@ -85,34 +83,24 @@ class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
     );
   }
 
-  @override
   bool get hasActiveStrokePreview => false;
 
-  @override
   List<Offset> get activeStrokePreviewPoints => const <Offset>[];
 
-  @override
   double get activeStrokePreviewThickness => 0;
 
-  @override
   Color get activeStrokePreviewColor => const Color(0x00000000);
 
-  @override
   double get activeStrokePreviewOpacity => 0;
 
-  @override
   bool get hasActiveLinePreview => false;
 
-  @override
   Offset? get activeLinePreviewStart => null;
 
-  @override
   Offset? get activeLinePreviewEnd => null;
 
-  @override
   double get activeLinePreviewThickness => 0;
 
-  @override
   Color get activeLinePreviewColor => const Color(0x00000000);
 
   set selectedNodeIds(Set<NodeId> value) {
@@ -123,12 +111,12 @@ class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
 
 Offset _zeroPreviewDelta(NodeId _) => Offset.zero;
 
-CommittedSceneViewRenderState _mirrorRenderState(
+CommittedSceneViewReadState _mirrorRenderState(
   SceneStoreController controller, {
   Offset Function(NodeId nodeId)? previewDeltaResolver,
   Rect? selectionRect,
 }) {
-  final renderState = CommittedSceneViewRenderState.mirror(
+  final renderState = CommittedSceneViewReadState.mirror(
     controller,
     previewDeltaResolver: previewDeltaResolver,
     selectionRect: selectionRect,
@@ -137,15 +125,13 @@ CommittedSceneViewRenderState _mirrorRenderState(
   return renderState;
 }
 
-SceneViewRenderState _controllerOwnedRenderState(
+SceneViewMainSceneRenderRead _controllerOwnedRenderState(
   SceneStoreController controller, {
   Set<NodeId>? selectedNodeIds,
   Offset Function(NodeId nodeId)? previewDeltaResolver,
 }) {
-  final interactionController = interactive.SceneController();
-  addTearDown(interactionController.dispose);
   SceneSnapshot readSnapshot() => controller.snapshot;
-  final renderState = SceneControllerSceneViewRenderState(
+  final renderState = SceneControllerSceneViewMainSceneRenderRead(
     storeController: controller,
     readSnapshot: readSnapshot,
     readSelectedNodeIds: () => selectedNodeIds ?? controller.selectedNodeIds,
@@ -154,7 +140,6 @@ SceneViewRenderState _controllerOwnedRenderState(
       snapshot: readSnapshot(),
       deltaForNode: previewDeltaResolver ?? _zeroPreviewDelta,
     ),
-    readInteraction: () => interactionController.interaction,
   );
   addTearDown(renderState.dispose);
   return renderState;
@@ -2436,7 +2421,7 @@ void main() {
 
       final renderState = interactive
           .sceneControllerViewRuntimeOf(controller)
-          .renderState;
+          .mainSceneRenderRead;
       final image = await _solidImage(const Color(0xFF000000));
       var invalidatedPreview = false;
 

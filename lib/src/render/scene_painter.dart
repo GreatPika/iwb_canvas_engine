@@ -63,7 +63,7 @@ class ScenePainter extends CustomPainter {
        ),
        super(repaint: controller);
 
-  final SceneViewRenderState controller;
+  final SceneViewMainSceneRenderRead controller;
   final ImageResolver imageResolver;
   final SceneStaticLayerCache? staticLayerCache;
   final SceneTextLayoutCache? textLayoutCache;
@@ -141,7 +141,7 @@ class _ScenePainterConfig {
     required this.gridStrokeWidth,
   });
 
-  final SceneViewRenderState controller;
+  final SceneViewMainSceneRenderRead controller;
   final ImageResolver imageResolver;
   final SceneStaticLayerCache? staticLayerCache;
   final SceneTextLayoutCache? textLayoutCache;

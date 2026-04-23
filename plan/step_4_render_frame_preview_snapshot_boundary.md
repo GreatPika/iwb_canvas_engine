@@ -109,11 +109,11 @@ re-enter during painting.
   controller preview resolver is intentionally live and resets to zero after
   `setMode(...)`
 - `test/render/scene_static_layer_cache_test.dart` - direct render consumer of
-  `CommittedSceneViewRenderState` and a surrounding cache regression surface
+  `CommittedSceneViewReadState` and a surrounding cache regression surface
 - `test/view/scene_view_test.dart` - direct view-host consumer of
-  `CommittedSceneViewRenderState` and a surrounding render-surface regression
+  `CommittedSceneViewReadState` and a surrounding render-surface regression
   surface
-- `test/support/committed_scene_view_render_state.dart` and
+- `test/support/committed_scene_view_read_state.dart` and
   `test/view/scene_view_interactive_test.dart` - in-repo test doubles still
   mirror the current live render seam and must migrate with the contract
 - `tool/bench/load_profiles_cases_test.dart` - benchmark-owned
@@ -188,9 +188,9 @@ re-enter during painting.
 - `test/view/scene_view_interactive_test.dart` - locks captured draw-style
   semantics for overlay preview after config changes
 - `test/render/scene_static_layer_cache_test.dart` - locks surrounding render
-  cache behavior through `CommittedSceneViewRenderState`
+  cache behavior through `CommittedSceneViewReadState`
 - `test/view/scene_view_test.dart` - locks surrounding view host rendering
-  through `CommittedSceneViewRenderState`
+  through `CommittedSceneViewReadState`
 - `test/tool/bench_run_load_profiles_test.dart` - locks benchmark render-state
   wiring at the source level
 
@@ -466,7 +466,7 @@ the requested bug-fix scope lock the owner, seam, and dependency direction.
 - `test/render/scene_painter_bounds_contract_test.dart`
 - `test/render/scene_static_layer_cache_test.dart`
 - `test/contract/runtime_contract_interfaces_test.dart`
-- `test/support/committed_scene_view_render_state.dart`
+- `test/support/committed_scene_view_read_state.dart`
 - `test/view/scene_view_interactive_test.dart`
 - `test/view/scene_view_test.dart`
 - `test/tool/bench_run_load_profiles_test.dart`
@@ -477,7 +477,7 @@ the requested bug-fix scope lock the owner, seam, and dependency direction.
 - existing render pixel helpers and image fixtures inside
   `test/render/scene_painter_test.dart`
 - existing `SceneViewRenderState` test doubles in
-  `test/support/committed_scene_view_render_state.dart` and
+  `test/support/committed_scene_view_read_state.dart` and
   `test/view/scene_view_interactive_test.dart`
 - existing benchmark render-state implementation in
   `tool/bench/load_profiles_cases_test.dart`
@@ -680,7 +680,7 @@ and retire the live preview seam from the render contract.
 
 #### Fixtures Used
 
-- `test/support/committed_scene_view_render_state.dart`
+- `test/support/committed_scene_view_read_state.dart`
 - fake render-state implementations in render and view tests
 
 #### Positive Scenarios
@@ -763,7 +763,7 @@ surfaces.
 - `flutter test test/tool/bench_run_load_profiles_test.dart`
 - `flutter test tool/bench/load_profiles_cases_test.dart --plain-name 'load profile background-layer-paint profile=smoke'`
 - `dart run tool/check_invariant_coverage.dart`
-- `printf '%s\n' 'PLAN.md' 'plan/step_4_render_frame_preview_snapshot_boundary.md' 'lib/src/contract/scene_view_render_state.dart' 'lib/src/interactive/scene_controller.dart' 'lib/src/interactive/internal/scene_controller_graph.dart' 'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart' 'lib/src/interactive/internal/scene_controller_interaction_runtime.dart' 'lib/src/interactive/internal/interactive_move_session.dart' 'lib/src/interactive/internal/interactive_move_preview_state.dart' 'lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart' 'lib/src/core/scene_snapshot_paint_candidates.dart' 'lib/src/render/scene_painter_frame.dart' 'test/render/scene_painter_test.dart' 'test/render/scene_painter_frame_contract_test.dart' 'test/render/scene_painter_bounds_contract_test.dart' 'test/render/scene_static_layer_cache_test.dart' 'test/contract/runtime_contract_interfaces_test.dart' 'test/support/committed_scene_view_render_state.dart' 'test/view/scene_view_test.dart' 'test/view/scene_view_interactive_test.dart' 'test/tool/bench_run_load_profiles_test.dart' 'tool/bench/load_profiles_cases_test.dart' 'tool/invariant_registry.dart' 'README.md' 'API_GUIDE.md' 'ARCHITECTURE.md' 'CHANGELOG.md' | dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=-`
+- `printf '%s\n' 'PLAN.md' 'plan/step_4_render_frame_preview_snapshot_boundary.md' 'lib/src/contract/scene_view_render_state.dart' 'lib/src/interactive/scene_controller.dart' 'lib/src/interactive/internal/scene_controller_graph.dart' 'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart' 'lib/src/interactive/internal/scene_controller_interaction_runtime.dart' 'lib/src/interactive/internal/interactive_move_session.dart' 'lib/src/interactive/internal/interactive_move_preview_state.dart' 'lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart' 'lib/src/core/scene_snapshot_paint_candidates.dart' 'lib/src/render/scene_painter_frame.dart' 'test/render/scene_painter_test.dart' 'test/render/scene_painter_frame_contract_test.dart' 'test/render/scene_painter_bounds_contract_test.dart' 'test/render/scene_static_layer_cache_test.dart' 'test/contract/runtime_contract_interfaces_test.dart' 'test/support/committed_scene_view_read_state.dart' 'test/view/scene_view_test.dart' 'test/view/scene_view_interactive_test.dart' 'test/tool/bench_run_load_profiles_test.dart' 'tool/bench/load_profiles_cases_test.dart' 'tool/invariant_registry.dart' 'README.md' 'API_GUIDE.md' 'ARCHITECTURE.md' 'CHANGELOG.md' | dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=-`
 
 ## 12. Acceptance Criteria
 

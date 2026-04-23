@@ -283,6 +283,7 @@ class _DisposedSceneViewPointerSession implements SceneViewPointerSession {
           'lib/src/view/scene_view_runtime_host.dart',
           '''
 import '../contract/scene_view_runtime.dart';
+import 'scene_view_interactive_overlay_painter.dart';
 import 'scene_view_interactive_pointer_host.dart';
 import 'scene_view_render_surface.dart';
 
@@ -296,7 +297,11 @@ class _SceneViewRuntimeHostState {
   late final SceneViewInteractivePointerHost _pointerHost;
   late SceneViewRuntime _activeRuntime;
 
-  SceneViewRenderState get _renderStateForBuild => _activeRuntime.renderState;
+  SceneViewMainSceneRenderRead get _mainSceneRenderReadForBuild =>
+      _activeRuntime.mainSceneRenderRead;
+
+  SceneViewOverlayPreviewRead get _overlayPreviewReadForBuild =>
+      _activeRuntime.overlayPreviewRead;
 
   void initState() {
     _activeRuntime = widget.runtime;
@@ -319,7 +324,14 @@ class _SceneViewRuntimeHostState {
   }
 
   Object build() {
-    return SceneViewRenderSurface(renderState: _renderStateForBuild);
+    return _SceneViewRuntimeHostShell(
+      foregroundPainter: SceneViewInteractiveOverlayPainter(
+        overlayPreviewRead: _overlayPreviewReadForBuild,
+      ),
+      child: SceneViewRenderSurface(
+        mainSceneRenderRead: _mainSceneRenderReadForBuild,
+      ),
+    );
   }
 
   SceneViewPointerSession _createReplacementPointerSession(
@@ -333,6 +345,16 @@ class _SceneViewRuntimeHostState {
 }
 
 class StatefulWidget {}
+
+class _SceneViewRuntimeHostShell {
+  _SceneViewRuntimeHostShell({
+    required this.foregroundPainter,
+    required this.child,
+  });
+
+  final Object foregroundPainter;
+  final Object child;
+}
 ''',
         );
 

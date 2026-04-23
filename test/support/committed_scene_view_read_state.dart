@@ -6,9 +6,9 @@ import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/scene_snapshot_paint_candidates.dart';
 
-class CommittedSceneViewRenderState extends ChangeNotifier
-    implements SceneViewRenderState {
-  CommittedSceneViewRenderState({
+class CommittedSceneViewReadState extends ChangeNotifier
+    implements SceneViewMainSceneRenderRead, SceneViewOverlayPreviewRead {
+  CommittedSceneViewReadState({
     required SceneSnapshot snapshot,
     Set<NodeId> selectedNodeIds = const <NodeId>{},
     int controllerEpoch = 0,
@@ -21,7 +21,7 @@ class CommittedSceneViewRenderState extends ChangeNotifier
        _previewDeltaResolver = previewDeltaResolver ?? _zeroPreviewDelta,
        _selectionRect = selectionRect;
 
-  CommittedSceneViewRenderState.mirror(
+  CommittedSceneViewReadState.mirror(
     SceneStoreController controller, {
     Offset Function(NodeId nodeId)? previewDeltaResolver,
     Rect? selectionRect,

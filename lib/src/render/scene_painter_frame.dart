@@ -37,7 +37,7 @@ class ScenePainterFrameOwner {
     required this.selectionStrokeWidth,
   });
 
-  final SceneViewRenderState renderState;
+  final SceneViewMainSceneRenderRead renderState;
   final SceneTextLayoutCache? textLayoutCache;
   final RenderGeometryCache geometryCache;
   final Color selectionColor;

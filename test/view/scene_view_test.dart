@@ -9,7 +9,7 @@ import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_render_surface.dart';
 
-import '../support/committed_scene_view_render_state.dart';
+import '../support/committed_scene_view_read_state.dart';
 
 // INV:INV-ENG-VIEW-RENDER-SURFACE-DEBUG-PROBES
 
@@ -67,7 +67,7 @@ SceneSnapshot _churnSnapshot({required int pairCount, required String prefix}) {
 }
 
 Widget _coreHost({
-  required SceneViewRenderState renderState,
+  required SceneViewMainSceneRenderRead mainSceneRenderRead,
   ui.Image? Function(String imageId)? imageResolver,
   SceneStaticLayerCache? staticLayerCache,
   SceneTextLayoutCache? textLayoutCache,
@@ -83,7 +83,7 @@ Widget _coreHost({
       width: width,
       height: height,
       child: SceneViewRenderSurface(
-        renderState: renderState,
+        mainSceneRenderRead: mainSceneRenderRead,
         imageResolver: imageResolver,
         staticLayerCache: staticLayerCache,
         textLayoutCache: textLayoutCache,
@@ -95,10 +95,10 @@ Widget _coreHost({
   );
 }
 
-CommittedSceneViewRenderState _mirrorRenderState(
+CommittedSceneViewReadState _mirrorRenderState(
   SceneStoreController controller,
 ) {
-  final renderState = CommittedSceneViewRenderState.mirror(controller);
+  final renderState = CommittedSceneViewReadState.mirror(controller);
   addTearDown(renderState.dispose);
   return renderState;
 }
@@ -122,7 +122,7 @@ void main() {
 
     await tester.pumpWidget(
       _coreHost(
-        renderState: renderState,
+        mainSceneRenderRead: renderState,
         imageResolver: (_) => null,
         staticLayerCache: staticLayerCache,
         textLayoutCache: textLayoutCache,
@@ -185,7 +185,7 @@ void main() {
 
     await tester.pumpWidget(
       _coreHost(
-        renderState: renderState,
+        mainSceneRenderRead: renderState,
         width: 96,
         height: 96,
         imageResolver: (_) => null,
@@ -237,7 +237,7 @@ void main() {
 
     await tester.pumpWidget(
       _coreHost(
-        renderState: renderStateA,
+        mainSceneRenderRead: renderStateA,
         width: 96,
         height: 96,
         imageResolver: (_) => null,
@@ -256,7 +256,7 @@ void main() {
 
     await tester.pumpWidget(
       _coreHost(
-        renderState: renderStateB,
+        mainSceneRenderRead: renderStateB,
         width: 96,
         height: 96,
         imageResolver: (_) => null,
@@ -286,7 +286,7 @@ void main() {
       final renderState = _mirrorRenderState(controller);
       addTearDown(controller.dispose);
 
-      await tester.pumpWidget(_coreHost(renderState: renderState));
+      await tester.pumpWidget(_coreHost(mainSceneRenderRead: renderState));
       await tester.pump();
 
       final customPaint = tester.widget<CustomPaint>(find.byType(CustomPaint));
@@ -323,7 +323,7 @@ void main() {
 
       await tester.pumpWidget(
         _coreHost(
-          renderState: renderState,
+          mainSceneRenderRead: renderState,
           staticLayerCache: extStaticA,
           textLayoutCache: extTextA,
           strokePathCache: extStrokeA,
@@ -341,7 +341,7 @@ void main() {
 
       await tester.pumpWidget(
         _coreHost(
-          renderState: renderState,
+          mainSceneRenderRead: renderState,
           staticLayerCache: extStaticB,
           textLayoutCache: extTextB,
           strokePathCache: extStrokeB,
@@ -360,7 +360,7 @@ void main() {
       expect(extRenderCaches.geometryCache, same(extGeometryB));
       expect(extRenderCaches.geometryCache, isNot(same(extGeometryA)));
 
-      await tester.pumpWidget(_coreHost(renderState: renderState));
+      await tester.pumpWidget(_coreHost(mainSceneRenderRead: renderState));
       await tester.pump();
       final ownedRenderCaches = debugSceneViewRenderCachesOf(
         tester.element(find.byType(SceneViewRenderSurface)),
@@ -389,7 +389,7 @@ void main() {
 
       await tester.pumpWidget(
         _coreHost(
-          renderState: renderState,
+          mainSceneRenderRead: renderState,
           width: 96,
           height: 96,
           imageResolver: (_) => null,

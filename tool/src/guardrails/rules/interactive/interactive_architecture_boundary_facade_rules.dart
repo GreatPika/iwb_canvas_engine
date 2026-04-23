@@ -43,7 +43,14 @@ Future<GuardrailViolation?> _checkInteractiveFacadeBoundary(
           'facade over the assembled controller graph.',
     );
   }
-  if (classImplementsNamedInterface(interactiveClass, 'SceneViewRenderState')) {
+  if (classImplementsNamedInterface(
+        interactiveClass,
+        'SceneViewMainSceneRenderRead',
+      ) ||
+      classImplementsNamedInterface(
+        interactiveClass,
+        'SceneViewOverlayPreviewRead',
+      )) {
     return GuardrailViolation(
       filePath: filePath,
       line: _lineForResolvedOffset(resolved, interactiveClass.offset),

@@ -150,14 +150,14 @@ Future<GuardrailViolation?> _checkRenderSurfaceBoundary(
       !_classHasFieldTypeFromAllowedFiles(
         widgetClass,
         context: context,
-        typeName: 'SceneViewRenderState',
+        typeName: 'SceneViewMainSceneRenderRead',
         allowedFilePaths: renderStateFilePaths,
       ) ||
       !_constructorHasParameterTypeFromAllowedFiles(
         widgetClass,
         context: context,
-        parameterName: 'renderState',
-        typeName: 'SceneViewRenderState',
+        parameterName: 'mainSceneRenderRead',
+        typeName: 'SceneViewMainSceneRenderRead',
         allowedFilePaths: renderStateFilePaths,
       ) ||
       initState == null ||
@@ -165,22 +165,22 @@ Future<GuardrailViolation?> _checkRenderSurfaceBoundary(
       disposeMethod == null ||
       !_methodInvokesMethodOnQualifiedTarget(
         initState,
-        targetSegments: const <String>['widget', '_renderState'],
+        targetSegments: const <String>['widget', '_mainSceneRenderRead'],
         methodName: 'addListener',
       ) ||
       !_methodInvokesMethodOnQualifiedTarget(
         didUpdateWidget,
-        targetSegments: const <String>['oldWidget', '_renderState'],
+        targetSegments: const <String>['oldWidget', '_mainSceneRenderRead'],
         methodName: 'removeListener',
       ) ||
       !_methodInvokesMethodOnQualifiedTarget(
         didUpdateWidget,
-        targetSegments: const <String>['widget', '_renderState'],
+        targetSegments: const <String>['widget', '_mainSceneRenderRead'],
         methodName: 'addListener',
       ) ||
       !_methodInvokesMethodOnQualifiedTarget(
         disposeMethod,
-        targetSegments: const <String>['widget', '_renderState'],
+        targetSegments: const <String>['widget', '_mainSceneRenderRead'],
         methodName: 'removeListener',
       )) {
     return GuardrailViolation(

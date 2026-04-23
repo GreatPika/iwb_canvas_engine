@@ -390,7 +390,7 @@ Object sceneControllerGraphEditTextRequests(Object graph) => Object();
   });
 
   test(
-    'rejects facade when SceneController becomes SceneViewRenderState',
+    'rejects facade when SceneController becomes SceneViewMainSceneRenderRead',
     () async {
       final sandbox = await createGuardrailsSandbox();
       try {
@@ -401,7 +401,60 @@ Object sceneControllerGraphEditTextRequests(Object graph) => Object();
           'lib/src/interactive/scene_controller.dart',
           sceneControllerFixture(
             classDeclaration:
-                'class SceneController implements SceneViewRenderState {',
+                'class SceneController implements SceneViewMainSceneRenderRead {',
+            graphMembers: '''
+  SceneController() {
+    _graph = createSceneControllerGraph(SceneControllerGraphRequest());
+  }
+
+  late final dynamic _graph;
+''',
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneController must remain a thin facade over '
+                'the assembled controller graph',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
+    'rejects facade when SceneController becomes SceneViewOverlayPreviewRead',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          sceneControllerFixture(
+            classDeclaration:
+                'class SceneController implements SceneViewOverlayPreviewRead {',
             graphMembers: '''
   SceneController() {
     _graph = createSceneControllerGraph(SceneControllerGraphRequest());
@@ -493,15 +546,15 @@ class _SceneViewRuntimeHostState {
   }
 
   Object build() {
-    final renderState = _activeRuntime.renderState;
-    return SceneViewRenderSurface(renderState: renderState);
+    final renderState = _activeRuntime.mainSceneRenderRead;
+    return SceneViewRenderSurface(mainSceneRenderRead: renderState);
   }
 }
 
 class StatefulWidget {}
 
 class SceneViewRuntime {
-  Object get renderState => Object();
+  Object get mainSceneRenderRead => Object();
 
   SceneViewPointerSession createPointerSession({
     required bool Function() isMounted,
@@ -519,7 +572,7 @@ class SceneViewInteractivePointerHost {
 
 class SceneViewRenderSurface {
   SceneViewRenderSurface({
-    required Object renderState,
+    required Object mainSceneRenderRead,
   });
 }
 ''',

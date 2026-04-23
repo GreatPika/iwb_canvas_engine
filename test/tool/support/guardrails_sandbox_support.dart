@@ -738,7 +738,9 @@ typedef InteractiveDrawStyle = ({
 import 'canvas_pointer_input.dart';
 
 abstract interface class SceneViewRuntime {
-  SceneViewRenderState get renderState;
+  SceneViewMainSceneRenderRead get mainSceneRenderRead;
+
+  SceneViewOverlayPreviewRead get overlayPreviewRead;
 
   SceneViewPointerSession createPointerSession({
     required bool Function() isMounted,
@@ -746,11 +748,13 @@ abstract interface class SceneViewRuntime {
   });
 }
 
-abstract interface class SceneViewRenderState {
+abstract interface class SceneViewMainSceneRenderRead {
   void addListener(Object listener);
 
   void removeListener(Object listener);
 }
+
+abstract interface class SceneViewOverlayPreviewRead {}
 
 abstract interface class SceneViewPointerSession {
   int? get pendingTapFlushTimestampMs;
@@ -990,6 +994,7 @@ class SceneViewInteractive {
 ''');
   writeSandboxFile(sandbox, 'lib/src/view/scene_view_runtime_host.dart', '''
 import '../contract/scene_view_runtime.dart';
+import 'scene_view_interactive_overlay_painter.dart';
 import 'scene_view_interactive_pointer_host.dart';
 import 'scene_view_render_surface.dart';
 
@@ -1024,8 +1029,14 @@ class _SceneViewRuntimeHostState {
   }
 
   Object build() {
-    final renderState = _activeRuntime.renderState;
-    return SceneViewRenderSurface(renderState: renderState);
+    final mainSceneRenderRead = _activeRuntime.mainSceneRenderRead;
+    final overlayPreviewRead = _activeRuntime.overlayPreviewRead;
+    return _SceneViewRuntimeHostShell(
+      foregroundPainter: SceneViewInteractiveOverlayPainter(
+        overlayPreviewRead: overlayPreviewRead,
+      ),
+      child: SceneViewRenderSurface(mainSceneRenderRead: mainSceneRenderRead),
+    );
   }
 
   SceneViewPointerSession _createReplacementPointerSession(
@@ -1039,32 +1050,57 @@ class _SceneViewRuntimeHostState {
 }
 
 class StatefulWidget {}
+
+class _SceneViewRuntimeHostShell {
+  _SceneViewRuntimeHostShell({
+    required this.foregroundPainter,
+    required this.child,
+  });
+
+  final Object foregroundPainter;
+  final Object child;
+}
 ''');
+  writeSandboxFile(
+    sandbox,
+    'lib/src/view/scene_view_interactive_overlay_painter.dart',
+    '''
+import '../contract/scene_view_runtime.dart';
+
+class SceneViewInteractiveOverlayPainter {
+  SceneViewInteractiveOverlayPainter({
+    required SceneViewOverlayPreviewRead overlayPreviewRead,
+  }) : _overlayPreviewRead = overlayPreviewRead;
+
+  final SceneViewOverlayPreviewRead _overlayPreviewRead;
+}
+''',
+  );
   writeSandboxFile(sandbox, 'lib/src/view/scene_view_render_surface.dart', '''
 import '../contract/scene_view_runtime.dart';
 
 class SceneViewRenderSurface {
   SceneViewRenderSurface({
-    required SceneViewRenderState renderState,
-  }) : _renderState = renderState;
+    required SceneViewMainSceneRenderRead mainSceneRenderRead,
+  }) : _mainSceneRenderRead = mainSceneRenderRead;
 
-  final SceneViewRenderState _renderState;
+  final SceneViewMainSceneRenderRead _mainSceneRenderRead;
 
   State<SceneViewRenderSurface> createState() => SceneViewRenderSurfaceState();
 }
 
 class SceneViewRenderSurfaceState extends State<SceneViewRenderSurface> {
   void initState() {
-    widget._renderState.addListener(_handleControllerChanged);
+    widget._mainSceneRenderRead.addListener(_handleControllerChanged);
   }
 
   void didUpdateWidget(SceneViewRenderSurface oldWidget) {
-    oldWidget._renderState.removeListener(_handleControllerChanged);
-    widget._renderState.addListener(_handleControllerChanged);
+    oldWidget._mainSceneRenderRead.removeListener(_handleControllerChanged);
+    widget._mainSceneRenderRead.addListener(_handleControllerChanged);
   }
 
   void dispose() {
-    widget._renderState.removeListener(_handleControllerChanged);
+    widget._mainSceneRenderRead.removeListener(_handleControllerChanged);
   }
 
   Object build(Object context) => Object();
@@ -1247,9 +1283,17 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
     Object? ensurePublicSideEffectAllowed,
   });
 
-  @override
-  final renderState = SceneControllerSceneViewRenderState();
   final _interactionRuntime = SceneControllerInteractionRuntime();
+  final SceneControllerSceneViewMainSceneRenderRead _mainSceneRenderRead =
+      SceneControllerSceneViewMainSceneRenderRead();
+  final SceneControllerSceneViewOverlayPreviewRead _overlayPreviewRead =
+      SceneControllerSceneViewOverlayPreviewRead();
+
+  @override
+  SceneViewMainSceneRenderRead get mainSceneRenderRead => _mainSceneRenderRead;
+
+  @override
+  SceneViewOverlayPreviewRead get overlayPreviewRead => _overlayPreviewRead;
 
   @override
   SceneViewPointerSession createPointerSession({
@@ -1258,7 +1302,7 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
   }) {
     final token = _interactionRuntime.createPointerSessionToken();
     final session = SceneControllerPointerSession(
-      ownerListenable: renderState,
+      ownerListenable: _mainSceneRenderRead,
       token: token,
       readPointerSettings: () => const PointerInputSettings(),
       isMounted: isMounted,
@@ -1277,15 +1321,18 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
   }
 }
 
-final class SceneControllerSceneViewRenderState
-    implements SceneViewRenderState, Listenable {
-  SceneControllerInteraction get _interaction => SceneControllerInteraction();
-
+final class SceneControllerSceneViewMainSceneRenderRead
+    implements SceneViewMainSceneRenderRead, Listenable {
   @override
   void addListener(Object listener) {}
 
   @override
   void removeListener(Object listener) {}
+}
+
+final class SceneControllerSceneViewOverlayPreviewRead
+    implements SceneViewOverlayPreviewRead {
+  SceneControllerInteraction get _interaction => SceneControllerInteraction();
 }
 ''',
   );

@@ -115,9 +115,11 @@ void main() {
       controller.selection.setSelection(const <NodeId>{'node'});
       final beforeNode =
           nodeById(controller.snapshot, 'node') as RectNodeSnapshot;
-      final renderState = sceneControllerViewRuntimeOf(controller).renderState;
+      final mainSceneRenderRead = sceneControllerViewRuntimeOf(
+        controller,
+      ).mainSceneRenderRead;
       var sceneRepaints = 0;
-      renderState.addListener(() {
+      mainSceneRenderRead.addListener(() {
         sceneRepaints += 1;
       });
 
@@ -173,11 +175,11 @@ void main() {
           addTearDown(controller.dispose);
           await pumpEventQueue();
 
-          final renderState = sceneControllerViewRuntimeOf(
+          final mainSceneRenderRead = sceneControllerViewRuntimeOf(
             controller,
-          ).renderState;
+          ).mainSceneRenderRead;
           var sceneRepaints = 0;
-          renderState.addListener(() {
+          mainSceneRenderRead.addListener(() {
             sceneRepaints += 1;
           });
 
@@ -235,11 +237,11 @@ void main() {
         final detachController = buildSelectedRectController(layerOffset: 4);
         addTearDown(detachController.dispose);
         await pumpEventQueue();
-        final detachRenderState = sceneControllerViewRuntimeOf(
+        final detachMainSceneRenderRead = sceneControllerViewRuntimeOf(
           detachController,
-        ).renderState;
+        ).mainSceneRenderRead;
         var detachSceneRepaints = 0;
-        detachRenderState.addListener(() {
+        detachMainSceneRenderRead.addListener(() {
           detachSceneRepaints += 1;
         });
         final session = sceneControllerViewRuntimeOf(detachController)

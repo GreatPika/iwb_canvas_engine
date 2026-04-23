@@ -8,7 +8,7 @@ import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
-import '../support/committed_scene_view_render_state.dart';
+import '../support/committed_scene_view_read_state.dart';
 
 // INV:INV-ENG-GRID-BOUNDED-ITERATION
 Future<Color> _pixelAt(Image image, int x, int y) async {
@@ -508,7 +508,7 @@ void main() {
     );
     const size = Size(3980, 80);
     final controller = SceneStoreController(initialSnapshot: scene);
-    final renderState = CommittedSceneViewRenderState.mirror(controller);
+    final renderState = CommittedSceneViewReadState.mirror(controller);
     addTearDown(controller.dispose);
     addTearDown(renderState.dispose);
 
