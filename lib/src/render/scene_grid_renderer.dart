@@ -71,6 +71,13 @@ class SceneGridRenderer {
     );
   }
 
+  SceneGridRenderWorkStats debugWorkForPlan(SceneGridRenderPlan plan) {
+    return SceneGridRenderWorkStats(
+      xAxis: _measureAxisWork(plan.xAxis),
+      yAxis: _measureAxisWork(plan.yAxis),
+    );
+  }
+
   Offset cameraShiftFor(Offset cameraOffset, double cellSize) {
     if (!_isFiniteOffset(cameraOffset)) {
       return Offset.zero;
@@ -99,6 +106,37 @@ class SceneGridRenderer {
     required _SceneGridAxisDrawFrame frame,
     required Paint paint,
   }) {
+    _visitAxisLines(
+      axis,
+      frame: frame,
+      onDrawLine: (position) {
+        final start = frame.vertical
+            ? Offset(position, 0)
+            : Offset(0, position);
+        final end = frame.vertical
+            ? Offset(position, frame.lineLength)
+            : Offset(frame.lineLength, position);
+        canvas.drawLine(start, end, paint);
+      },
+    );
+  }
+
+  SceneGridAxisWorkStats _measureAxisWork(SceneGridAxisPlan axis) {
+    final loopIterations = axis.lineUpperBound;
+    final drawnLineCount = loopIterations == 0
+        ? 0
+        : ((loopIterations - 1) ~/ axis.stride) + 1;
+    return SceneGridAxisWorkStats(
+      loopIterations: loopIterations,
+      drawnLineCount: drawnLineCount,
+    );
+  }
+
+  void _visitAxisLines(
+    SceneGridAxisPlan axis, {
+    required _SceneGridAxisDrawFrame frame,
+    required void Function(double position) onDrawLine,
+  }) {
     for (
       var position = axis.start, index = 0;
       position <= frame.axisExtent;
@@ -107,11 +145,7 @@ class SceneGridRenderer {
       if (index % axis.stride != 0) {
         continue;
       }
-      final start = frame.vertical ? Offset(position, 0) : Offset(0, position);
-      final end = frame.vertical
-          ? Offset(position, frame.lineLength)
-          : Offset(frame.lineLength, position);
-      canvas.drawLine(start, end, paint);
+      onDrawLine(position);
     }
   }
 }
@@ -170,6 +204,40 @@ class SceneGridAxisPlan {
   final int lineUpperBound;
 
   int get maxVisibleLines => (lineUpperBound / stride).ceil();
+}
+
+@immutable
+class SceneGridRenderWorkStats {
+  const SceneGridRenderWorkStats({required this.xAxis, required this.yAxis});
+
+  final SceneGridAxisWorkStats xAxis;
+  final SceneGridAxisWorkStats yAxis;
+
+  int get loopIterations => xAxis.loopIterations + yAxis.loopIterations;
+  int get drawnLineCount => xAxis.drawnLineCount + yAxis.drawnLineCount;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'loopIterations': loopIterations,
+    'drawnLineCount': drawnLineCount,
+    'xAxis': xAxis.toJson(),
+    'yAxis': yAxis.toJson(),
+  };
+}
+
+@immutable
+class SceneGridAxisWorkStats {
+  const SceneGridAxisWorkStats({
+    required this.loopIterations,
+    required this.drawnLineCount,
+  });
+
+  final int loopIterations;
+  final int drawnLineCount;
+
+  Map<String, int> toJson() => <String, int>{
+    'loopIterations': loopIterations,
+    'drawnLineCount': drawnLineCount,
+  };
 }
 
 bool _isDrawable(

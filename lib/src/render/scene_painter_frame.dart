@@ -44,6 +44,13 @@ class ScenePainterFrameOwner {
   final double selectionStrokeWidth;
 
   ScenePainterPaintFrame create(Size size, SceneViewFrameRead frameRead) {
+    return ScenePainterPaintFrame.fromPrepared(createPrepared(size, frameRead));
+  }
+
+  ScenePainterPreparedFrame createPrepared(
+    Size size,
+    SceneViewFrameRead frameRead,
+  ) {
     final selectionStyle = ScenePainterSelectionStyle(
       color: selectionColor,
       haloWidth: clampNonNegativeFinite(selectionStrokeWidth),
@@ -60,7 +67,7 @@ class ScenePainterFrameOwner {
       size.height,
     );
     final viewRect = visibilityBudget.applyTo(rawViewRect);
-    return ScenePainterPaintFrame(
+    return ScenePainterPreparedFrame(
       cameraOffset: cameraOffset,
       viewRect: viewRect,
       paintPlan: renderState.preparePaintPlan(

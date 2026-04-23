@@ -134,6 +134,43 @@ void main() {
     expect(cache.debugDisposeCount, 1);
   });
 
+  test('SceneStaticLayerCache captureProbe exposes owner-level counters', () {
+    final cache = SceneStaticLayerCache();
+    final background = BackgroundSnapshot(
+      color: Color(0xFFFFFFFF),
+      grid: GridSnapshot(
+        isEnabled: true,
+        cellSize: 20,
+        color: Color(0xFFCCCCCC),
+      ),
+    );
+
+    expect(cache.captureProbe(), (
+      buildCount: 0,
+      disposeCount: 0,
+      gridLoopIterations: 0,
+      gridDrawnLineCount: 0,
+    ));
+
+    final recorder = PictureRecorder();
+    _drawStaticLayer(
+      cache,
+      recorder,
+      background: background,
+      size: const Size(120, 80),
+      cameraOffset: Offset.zero,
+      gridStrokeWidth: 1,
+    );
+    recorder.endRecording();
+    cache.clear();
+
+    final probe = cache.captureProbe();
+    expect(probe.buildCount, 1);
+    expect(probe.disposeCount, 1);
+    expect(probe.gridLoopIterations, greaterThan(0));
+    expect(probe.gridDrawnLineCount, greaterThan(0));
+  });
+
   test('SceneStaticLayerCache does not rebuild grid picture on camera pan', () {
     final cache = SceneStaticLayerCache();
     final background = BackgroundSnapshot(
@@ -170,6 +207,52 @@ void main() {
     recorder2.endRecording();
     expect(cache.debugBuildCount, 1);
     expect(cache.debugDisposeCount, 0);
+    expect(cache.captureProbe().gridLoopIterations, greaterThan(0));
+    expect(cache.captureProbe().gridDrawnLineCount, greaterThan(0));
+  });
+
+  test('SceneStaticLayerCache hit path keeps grid work counters unchanged '
+      'after warm-up', () {
+    final cache = SceneStaticLayerCache();
+    final background = BackgroundSnapshot(
+      color: Color(0xFFFFFFFF),
+      grid: GridSnapshot(
+        isEnabled: true,
+        cellSize: 1,
+        color: Color(0xFFCCCCCC),
+      ),
+    );
+    const size = Size(320, 180);
+
+    final warmUpRecorder = PictureRecorder();
+    _drawStaticLayer(
+      cache,
+      warmUpRecorder,
+      background: background,
+      size: size,
+      cameraOffset: Offset.zero,
+      gridStrokeWidth: 1,
+    );
+    warmUpRecorder.endRecording();
+
+    final before = cache.captureProbe();
+
+    final hitRecorder = PictureRecorder();
+    _drawStaticLayer(
+      cache,
+      hitRecorder,
+      background: background,
+      size: size,
+      cameraOffset: const Offset(13, 7),
+      gridStrokeWidth: 1,
+    );
+    hitRecorder.endRecording();
+
+    final after = cache.captureProbe();
+    expect(after.buildCount - before.buildCount, 0);
+    expect(after.disposeCount - before.disposeCount, 0);
+    expect(after.gridLoopIterations - before.gridLoopIterations, 0);
+    expect(after.gridDrawnLineCount - before.gridDrawnLineCount, 0);
   });
 
   test('SceneStaticLayerCache clips translated grid to scene bounds', () async {
@@ -272,6 +355,7 @@ void main() {
 
   test('SceneStaticLayerCache applies stride for dense grid line counts', () {
     final cache = SceneStaticLayerCache();
+    const renderer = SceneGridRenderer();
     final background = BackgroundSnapshot(
       color: Color(0xFFFFFFFF),
       grid: GridSnapshot(
@@ -294,6 +378,21 @@ void main() {
 
     expect(cache.debugBuildCount, 1);
     expect(cache.debugKeyHashCode, isNotNull);
+
+    final plan = renderer.plan(
+      SceneGridRenderRequest(
+        grid: background.grid,
+        size: const Size(600, 400),
+        cameraOffset: Offset.zero,
+        gridStrokeWidth: 1,
+      ),
+    );
+    expect(plan, isNotNull);
+    if (plan == null) {
+      fail('Expected renderer plan for dense static grid.');
+    }
+    final work = renderer.debugWorkForPlan(plan);
+    expect(work.loopIterations, greaterThan(work.drawnLineCount));
   });
 
   test('SceneStaticLayerCache releases picture when grid becomes disabled', () {

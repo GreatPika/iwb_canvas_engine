@@ -52,8 +52,37 @@ String _extractMethodBody({
   throw StateError('Method body end not found: $methodStart');
 }
 
+String _smokePrimaryNodeCaseName() =>
+    loadProfilePolicyFor('smoke').nodeCases.single.name;
+
+Map<String, Object?> _probeRecord(String name, Map<String, Object?> probes) {
+  return <String, Object?>{'name': name, 'probes': probes};
+}
+
 void main() {
   group('tool/bench/run_load_profiles.dart', () {
+    test('locks smoke as product profile and full as stress profile', () {
+      final smoke = loadProfilePolicyFor('smoke');
+      final full = loadProfilePolicyFor('full');
+      final smokeMetadata = smoke.reportMetadata;
+      final fullMetadata = full.reportMetadata;
+
+      expect(smoke.nodeCases.map((c) => c.nodeCount), <int>[1000]);
+      expect(smokeMetadata['profileSemantics'], 'product_realistic');
+      expect(smoke.requiredCaseNames, isNot(contains(worstCaseName)));
+      expect(smokeMetadata['backgroundViewport'], <String, int>{
+        'width': 3840,
+        'height': 2160,
+      });
+      expect(full.requiredCaseNames, contains(worstCaseName));
+      expect(full.nodeCases.map((c) => c.nodeCount), <int>[
+        10000,
+        50000,
+        100000,
+      ]);
+      expect(fullMetadata['profileSemantics'], 'stress_nightly');
+    });
+
     test('accepts exact smoke case set from policy', () {
       final policy = loadProfilePolicyFor('smoke');
 
@@ -74,10 +103,9 @@ void main() {
       final issues = run_load_profiles.validateCollectedBenchmarkCases(
         policy: policy,
         parsedCases: <Map<String, Object?>>[
-          <String, Object?>{'name': 'nodes_10000'},
+          <String, Object?>{'name': _smokePrimaryNodeCaseName()},
           <String, Object?>{'name': 'strokes_1000_pts_256'},
           <String, Object?>{'name': backgroundLayerPaintAdmissionCaseName},
-          <String, Object?>{'name': worstCaseName},
         ],
       );
 
@@ -101,16 +129,18 @@ void main() {
       final issues = run_load_profiles.validateCollectedBenchmarkCases(
         policy: policy,
         parsedCases: <Map<String, Object?>>[
-          <String, Object?>{'name': 'nodes_10000'},
-          <String, Object?>{'name': 'nodes_10000'},
+          <String, Object?>{'name': _smokePrimaryNodeCaseName()},
+          <String, Object?>{'name': _smokePrimaryNodeCaseName()},
           <String, Object?>{'name': 'strokes_1000_pts_256'},
           <String, Object?>{'name': selectionPathPainterOnlyCaseName},
-          <String, Object?>{'name': worstCaseName},
           <String, Object?>{'name': 'unexpected_case'},
         ],
       );
 
-      expect(issues, contains('duplicate benchmark cases: nodes_10000'));
+      expect(
+        issues,
+        contains('duplicate benchmark cases: ${_smokePrimaryNodeCaseName()}'),
+      );
       expect(issues, contains('unexpected benchmark cases: unexpected_case'));
     });
 
@@ -220,7 +250,9 @@ void main() {
           'tool/bench/load_profile_policy.dart',
         ).readAsStringSync();
         final policy = loadProfilePolicyFor('smoke');
-        final nodeContract = policy.contractForCase('nodes_10000');
+        final nodeContract = policy.contractForCase(
+          _smokePrimaryNodeCaseName(),
+        );
         final textContract = policy.contractForCase(textLayoutCacheCaseName);
 
         expect(
@@ -238,29 +270,107 @@ void main() {
         expect(casesSource, contains("'contract': contract"));
         expect(policySource, contains('warmupIterations'));
         expect(policySource, contains('measuredIterations'));
+        expect(policySource, contains('probeKeys'));
         expect(policySource, contains('gatedMetrics'));
         expect(policySource, contains('diagnosticMetrics'));
         expect(casesSource, isNot(contains('includePercentiles')));
       },
     );
 
-    test('worst_case contract reports its own measured iteration count', () {
+    test('fails when required defect probes are missing from smoke report', () {
+      final policy = loadProfilePolicyFor('smoke');
+
+      final issues = run_load_profiles.validateCollectedBenchmarkCaseContracts(
+        policy: policy,
+        parsedCases: <Map<String, Object?>>[
+          _probeRecord(textLayoutCacheCaseName, const <String, Object?>{}),
+          _probeRecord(
+            selectionPathEndToEndPaintCaseName,
+            const <String, Object?>{},
+          ),
+          _probeRecord(
+            staticBackgroundCacheCaseName,
+            const <String, Object?>{},
+          ),
+        ],
+      );
+
+      expect(
+        issues,
+        contains(
+          'benchmark case "$textLayoutCacheCaseName" is missing probes for '
+          '"paint_cache_miss"',
+        ),
+      );
+      expect(
+        issues,
+        contains(
+          'benchmark case "$selectionPathEndToEndPaintCaseName" is missing '
+          'probes for "paint_no_selection"',
+        ),
+      );
+      expect(
+        issues,
+        contains(
+          'benchmark case "$staticBackgroundCacheCaseName" is missing probes '
+          'for "paint_cache_hit"',
+        ),
+      );
+    });
+
+    test('accepts required defect probes for smoke report surfaces', () {
+      final policy = loadProfilePolicyFor('smoke');
+
+      final issues = run_load_profiles.validateCollectedBenchmarkCaseContracts(
+        policy: policy,
+        parsedCases: <Map<String, Object?>>[
+          _probeRecord(textLayoutCacheCaseName, <String, Object?>{
+            'paint_cache_miss': <String, Object?>{
+              'buildDelta': 1,
+              'hitDelta': 0,
+              'evictDelta': 0,
+            },
+            'paint_cache_hit': <String, Object?>{
+              'buildDelta': 0,
+              'hitDelta': 1,
+              'evictDelta': 0,
+            },
+          }),
+          _probeRecord(selectionPathEndToEndPaintCaseName, <String, Object?>{
+            'paint_no_selection': <String, Object?>{'saveLayerCount': 0},
+            'paint_with_selection': <String, Object?>{'saveLayerCount': 8},
+          }),
+          _probeRecord(staticBackgroundCacheCaseName, <String, Object?>{
+            'paint_cache_miss': <String, Object?>{
+              'buildDelta': 1,
+              'disposeDelta': 0,
+              'gridLoopIterations': 1000,
+              'gridDrawnLineCount': 200,
+            },
+            'paint_cache_hit': <String, Object?>{
+              'buildDelta': 0,
+              'disposeDelta': 0,
+              'gridLoopIterations': 0,
+              'gridDrawnLineCount': 0,
+            },
+          }),
+        ],
+      );
+
+      expect(issues, isEmpty);
+    });
+
+    test('worst_case contract stays in the stress profile only', () {
       final smokePolicy = loadProfilePolicyFor('smoke');
       final fullPolicy = loadProfilePolicyFor('full');
 
-      final smokeContract = smokePolicy.contractForCase(worstCaseName);
       final fullContract = fullPolicy.contractForCase(worstCaseName);
-
-      final smokeOperation =
-          ((smokeContract['operations']
-                  as Map<String, Object?>)['huge_bounds.query'])
-              as Map<String, Object?>;
       final fullOperation =
           ((fullContract['operations']
                   as Map<String, Object?>)['huge_bounds.query'])
               as Map<String, Object?>;
 
-      expect(smokeOperation['measuredIterations'], 2);
+      expect(smokePolicy.requiredCaseNames, isNot(contains(worstCaseName)));
       expect(fullOperation['measuredIterations'], 3);
     });
 
@@ -292,6 +402,9 @@ void main() {
       () {
         final source = File(
           'tool/bench/load_profiles_cases_test.dart',
+        ).readAsStringSync();
+        final painterSource = File(
+          'lib/src/render/scene_painter.dart',
         ).readAsStringSync();
         final stagingBody = _extractMethodBody(
           source: source,
@@ -328,10 +441,43 @@ void main() {
         );
         expect(endToEndBody, contains('_paintScene(painter, canvasSize);'));
 
-        expect(painterOnlyBody, contains('_BenchmarkControllerRenderState('));
+        expect(
+          painterOnlyBody,
+          contains('_createProductionBenchmarkRenderState('),
+        );
+        expect(
+          painterOnlyBody,
+          contains('final noSelectionPrepared = painter.prepareForPaint('),
+        );
+        expect(
+          painterOnlyBody,
+          contains('_paintPreparedScene(painter, noSelectionPrepared);'),
+        );
+        expect(
+          painterOnlyBody,
+          contains('final withSelectionPrepared = painter.prepareForPaint('),
+        );
+        expect(
+          painterOnlyBody,
+          contains('_paintPreparedScene(painter, withSelectionPrepared);'),
+        );
+        expect(painterOnlyBody, contains('_captureSelectionSaveLayerProbe('));
+        expect(painterSource, contains('class ScenePainterPreparedScene'));
+        expect(
+          painterSource,
+          contains('ScenePainterPreparedScene prepareForPaint('),
+        );
+        expect(painterSource, contains('void paintPrepared('));
         expect(
           source,
-          contains('preview: SceneViewFramePreview.captureSnapshot('),
+          isNot(contains('class _PainterOnlyBenchmarkRenderState')),
+        );
+        expect(source, isNot(contains('_benchmarkPaintCandidates(')));
+        expect(
+          source,
+          contains(
+            'captureFramePreview: () => SceneViewFramePreview.captureSnapshot(',
+          ),
         );
         expect(source, isNot(contains('readPreviewDeltaResolver')));
       },

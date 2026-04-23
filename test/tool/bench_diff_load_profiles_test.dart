@@ -10,8 +10,81 @@ import '../../tool/bench/diff_load_profiles.dart' as bench_diff;
 
 // INV:INV-ENG-PERFORMANCE-PROOF-CONTOUR
 
+String _smokePrimaryNodeCaseName() =>
+    loadProfilePolicyFor('smoke').nodeCases.single.name;
+
 void main() {
   group('tool/bench/diff_load_profiles.dart', () {
+    test('diff policy reports smoke as product and full as stress', () {
+      final smokeOutput = bench_diff.buildDiffReport(
+        baseline: _fullSmokeReport(metricValue: 100),
+        current: _fullSmokeReport(metricValue: 100),
+        requiredProfile: 'smoke',
+        baselinePath: 'baseline.json',
+        currentPath: 'current.json',
+      );
+      final fullOutput = bench_diff.buildDiffReport(
+        baseline: _report(
+          profile: 'full',
+          cases: const <Map<String, Object?>>[],
+        ),
+        current: _report(
+          profile: 'full',
+          cases: const <Map<String, Object?>>[],
+        ),
+        requiredProfile: 'full',
+        baselinePath: 'baseline.json',
+        currentPath: 'current.json',
+      );
+
+      expect(
+        (smokeOutput['policy'] as Map<String, Object?>)['profileSemantics'],
+        'product_realistic',
+      );
+      expect(
+        (fullOutput['policy'] as Map<String, Object?>)['profileSemantics'],
+        'stress_nightly',
+      );
+    });
+
+    test('diff report carries defect probe values alongside metrics', () {
+      final baseline = _fullSmokeReport(metricValue: 100);
+      final current = _fullSmokeReport(metricValue: 100);
+      final selectionCase =
+          ((current['cases'] as List).cast<Map<String, Object?>>()).singleWhere(
+            (item) => item['name'] == selectionPathEndToEndPaintCaseName,
+          );
+      final selectionProbes =
+          (selectionCase['probes']
+                  as Map<String, Object?>)['paint_with_selection']
+              as Map<String, Object?>;
+      selectionProbes['saveLayerCount'] = 12;
+
+      final output = bench_diff.buildDiffReport(
+        baseline: baseline,
+        current: current,
+        requiredProfile: 'smoke',
+        baselinePath: 'baseline.json',
+        currentPath: 'current.json',
+      );
+
+      final selectionDiff =
+          ((output['cases'] as List).cast<Map<String, Object?>>()).singleWhere(
+            (item) => item['name'] == selectionPathEndToEndPaintCaseName,
+          );
+      final operation =
+          ((selectionDiff['operations'] as List).cast<Map<String, Object?>>())
+              .singleWhere(
+                (item) => item['operation'] == 'paint_with_selection',
+              );
+      final probe = ((operation['probes'] as List).cast<Map<String, Object?>>())
+          .singleWhere((item) => item['probe'] == 'saveLayerCount');
+
+      expect(probe['baselineValue'], 8);
+      expect(probe['currentValue'], 12);
+      expect(probe['delta'], 4);
+    });
+
     test('builds byte-identical deterministic diff report', () async {
       final sandbox = await _createSandbox();
       try {
@@ -43,13 +116,16 @@ void main() {
         expect(firstOutput['profile'], 'smoke');
 
         final summary = firstOutput['summary'] as Map<String, Object?>;
-        expect(summary['comparedCases'], 10);
+        expect(
+          summary['comparedCases'],
+          loadProfilePolicyFor('smoke').requiredCaseNames.length,
+        );
         expect(summary['missingInBaseline'], isEmpty);
         expect(summary['missingInCurrent'], isEmpty);
 
         final cases = firstOutput['cases'] as List<Object?>;
         final case0 = cases.cast<Map<String, Object?>>().singleWhere(
-          (item) => item['name'] == 'nodes_10000',
+          (item) => item['name'] == _smokePrimaryNodeCaseName(),
         );
         final operations = case0['operations'] as List<Object?>;
         final operation0 = operations.cast<Map<String, Object?>>().singleWhere(
@@ -93,7 +169,9 @@ void main() {
         final metrics =
             (((((output['cases'] as List).cast<Map<String, Object?>>())
                                 .singleWhere(
-                                  (item) => item['name'] == 'nodes_10000',
+                                  (item) =>
+                                      item['name'] ==
+                                      _smokePrimaryNodeCaseName(),
                                 )['operations']
                             as List)
                         .cast<Map<String, Object?>>())
@@ -120,12 +198,15 @@ void main() {
           _report(
             profile: 'smoke',
             cases: <Map<String, Object?>>[
-              _caseMetrics('nodes_10000', <String, Map<String, num>>{
-                'single_node_patch': _metrics(100, 100, 100, 100),
-                'single_node_transform': _metrics(100, 100, 100, 100),
-                'toggle_selection': _metrics(100, 100, 100, 100),
-                'move_selection': _metrics(100, 100, 100, 100),
-              }),
+              _caseMetrics(
+                _smokePrimaryNodeCaseName(),
+                <String, Map<String, num>>{
+                  'single_node_patch': _metrics(100, 100, 100, 100),
+                  'single_node_transform': _metrics(100, 100, 100, 100),
+                  'toggle_selection': _metrics(100, 100, 100, 100),
+                  'move_selection': _metrics(100, 100, 100, 100),
+                },
+              ),
             ],
           ),
         );
@@ -152,7 +233,9 @@ void main() {
         final summary = output['summary'] as Map<String, Object?>;
         expect(summary['comparedCases'], 0);
         expect(summary['missingInBaseline'], <String>['strokes_1000_pts_256']);
-        expect(summary['missingInCurrent'], <String>['nodes_10000']);
+        expect(summary['missingInCurrent'], <String>[
+          _smokePrimaryNodeCaseName(),
+        ]);
         expect(summary['failureCount'], greaterThan(0));
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -186,7 +269,9 @@ void main() {
           final metrics =
               (((((output['cases'] as List).cast<Map<String, Object?>>())
                                   .singleWhere(
-                                    (item) => item['name'] == 'nodes_10000',
+                                    (item) =>
+                                        item['name'] ==
+                                        _smokePrimaryNodeCaseName(),
                                   )['operations']
                               as List)
                           .cast<Map<String, Object?>>())
@@ -211,7 +296,7 @@ void main() {
           profile: 'smoke',
           cases: <Map<String, Object?>>[
             <String, Object?>{
-              'name': 'nodes_10000',
+              'name': _smokePrimaryNodeCaseName(),
               'profile': 'smoke',
               'metrics': <String, Object?>{
                 'single_node_patch': <String, Object?>{
@@ -396,12 +481,15 @@ void main() {
         baseline: _report(
           profile: 'smoke',
           cases: <Map<String, Object?>>[
-            _caseMetrics('nodes_10000', <String, Map<String, num>>{
-              'single_node_patch': _metrics(100, 100, 100, 100),
-              'single_node_transform': _metrics(100, 100, 100, 100),
-              'toggle_selection': _metrics(100, 100, 100, 100),
-              'move_selection': _metrics(100, 100, 100, 100),
-            }),
+            _caseMetrics(
+              _smokePrimaryNodeCaseName(),
+              <String, Map<String, num>>{
+                'single_node_patch': _metrics(100, 100, 100, 100),
+                'single_node_transform': _metrics(100, 100, 100, 100),
+                'toggle_selection': _metrics(100, 100, 100, 100),
+                'move_selection': _metrics(100, 100, 100, 100),
+              },
+            ),
             _caseMetrics('strokes_1000_pts_256', <String, Map<String, num>>{
               'single_stroke_patch_thickness': _metrics(100, 100, 100, 100),
               'single_stroke_patch_points': _metrics(100, 100, 100, 100),
@@ -411,24 +499,23 @@ void main() {
             _caseMetrics(
               backgroundLayerPaintAdmissionCaseName,
               <String, Map<String, num>>{
-                'enumerate_small_viewport': _metrics(100, 100, 100, 100),
-                'paint_small_viewport': _metrics(100, 100, 100, 100),
+                'enumerate_viewport': _metrics(100, 100, 100, 100),
+                'paint_viewport': _metrics(100, 100, 100, 100),
               },
-            ),
-            _caseMetrics(
-              worstCaseName,
-              _worstCaseMetrics(_metrics(100, 100, 100, 100)),
             ),
           ],
         ),
         current: _report(
           profile: 'smoke',
           cases: <Map<String, Object?>>[
-            _caseMetrics('nodes_10000', <String, Map<String, num>>{
-              'single_node_patch': _metrics(100, 100, 100, 100),
-              'single_node_transform': _metrics(100, 100, 100, 100),
-              'toggle_selection': _metrics(100, 100, 100, 100),
-            }),
+            _caseMetrics(
+              _smokePrimaryNodeCaseName(),
+              <String, Map<String, num>>{
+                'single_node_patch': _metrics(100, 100, 100, 100),
+                'single_node_transform': _metrics(100, 100, 100, 100),
+                'toggle_selection': _metrics(100, 100, 100, 100),
+              },
+            ),
             _caseMetrics('strokes_1000_pts_256', <String, Map<String, num>>{
               'single_stroke_patch_thickness': _metrics(100, 100, 100, 100),
               'single_stroke_patch_points': _metrics(100, 100, 100, 100),
@@ -438,13 +525,9 @@ void main() {
             _caseMetrics(
               backgroundLayerPaintAdmissionCaseName,
               <String, Map<String, num>>{
-                'enumerate_small_viewport': _metrics(100, 100, 100, 100),
-                'paint_small_viewport': _metrics(100, 100, 100, 100),
+                'enumerate_viewport': _metrics(100, 100, 100, 100),
+                'paint_viewport': _metrics(100, 100, 100, 100),
               },
-            ),
-            _caseMetrics(
-              worstCaseName,
-              _worstCaseMetrics(_metrics(100, 100, 100, 100)),
             ),
           ],
         ),
@@ -457,7 +540,8 @@ void main() {
       expect(
         output['failures'],
         contains(
-          'nodes_10000 missing required operations in current: move_selection',
+          '${_smokePrimaryNodeCaseName()} missing required operations in '
+          'current: move_selection',
         ),
       );
     });
@@ -467,12 +551,15 @@ void main() {
         baseline: _report(
           profile: 'smoke',
           cases: <Map<String, Object?>>[
-            _caseMetrics('nodes_10000', <String, Map<String, num>>{
-              'single_node_patch': _metrics(100, 100, 100, 100),
-              'single_node_transform': _metrics(100, 100, 100, 100),
-              'toggle_selection': _metrics(100, 100, 100, 100),
-              'move_selection': _metrics(100, 100, 100, 100),
-            }),
+            _caseMetrics(
+              _smokePrimaryNodeCaseName(),
+              <String, Map<String, num>>{
+                'single_node_patch': _metrics(100, 100, 100, 100),
+                'single_node_transform': _metrics(100, 100, 100, 100),
+                'toggle_selection': _metrics(100, 100, 100, 100),
+                'move_selection': _metrics(100, 100, 100, 100),
+              },
+            ),
             _caseMetrics('strokes_1000_pts_256', <String, Map<String, num>>{
               'single_stroke_patch_thickness': _metrics(100, 100, 100, 100),
               'single_stroke_patch_points': _metrics(100, 100, 100, 100),
@@ -481,25 +568,24 @@ void main() {
             _caseMetrics(
               backgroundLayerPaintAdmissionCaseName,
               <String, Map<String, num>>{
-                'enumerate_small_viewport': _metrics(100, 100, 100, 100),
-                'paint_small_viewport': _metrics(100, 100, 100, 100),
+                'enumerate_viewport': _metrics(100, 100, 100, 100),
+                'paint_viewport': _metrics(100, 100, 100, 100),
               },
-            ),
-            _caseMetrics(
-              worstCaseName,
-              _worstCaseMetrics(_metrics(100, 100, 100, 100)),
             ),
           ],
         ),
         current: _report(
           profile: 'smoke',
           cases: <Map<String, Object?>>[
-            _caseMetrics('nodes_10000', <String, Map<String, num>>{
-              'single_node_patch': _metrics(100, 100, 100, 100),
-              'single_node_transform': _metrics(100, 100, 100, 100),
-              'toggle_selection': _metrics(100, 100, 100, 100),
-              'move_selection': _metrics(100, 100, 100, 100),
-            }),
+            _caseMetrics(
+              _smokePrimaryNodeCaseName(),
+              <String, Map<String, num>>{
+                'single_node_patch': _metrics(100, 100, 100, 100),
+                'single_node_transform': _metrics(100, 100, 100, 100),
+                'toggle_selection': _metrics(100, 100, 100, 100),
+                'move_selection': _metrics(100, 100, 100, 100),
+              },
+            ),
             _caseMetrics('strokes_1000_pts_256', <String, Map<String, num>>{
               'single_stroke_patch_thickness': _metrics(100, 100, 100, 100),
               'single_stroke_patch_points': _metrics(100, 100, 100, 100),
@@ -508,13 +594,9 @@ void main() {
             _caseMetrics(
               backgroundLayerPaintAdmissionCaseName,
               <String, Map<String, num>>{
-                'enumerate_small_viewport': _metrics(100, 100, 100, 100),
-                'paint_small_viewport': _metrics(100, 100, 100, 100),
+                'enumerate_viewport': _metrics(100, 100, 100, 100),
+                'paint_viewport': _metrics(100, 100, 100, 100),
               },
-            ),
-            _caseMetrics(
-              worstCaseName,
-              _worstCaseMetrics(_metrics(100, 100, 100, 100)),
             ),
           ],
         ),
@@ -586,8 +668,7 @@ void main() {
       expect(failures.any((item) => item.contains('avgUs regression')), isTrue);
     });
 
-    test('fails when gated memory regression exceeds configured threshold', () {
-      final policy = loadProfilePolicyFor('smoke');
+    test('treats memory deltas as diagnostic-only in product diff output', () {
       final output = bench_diff.buildDiffReport(
         baseline: _fullSmokeReportWithNodePatchMetrics(
           singleNodePatchMetrics: _metrics(
@@ -607,13 +688,7 @@ void main() {
             100,
             100,
             100,
-            avgRssDeltaBytes:
-                1000 +
-                (1000 *
-                        policy.maxRegressionPctByMetric['avgRssDeltaBytes']! /
-                        100)
-                    .round() +
-                100,
+            avgRssDeltaBytes: 5000,
             minRssDeltaBytes: 1000,
             p95RssDeltaBytes: 1000,
             maxRssDeltaBytes: 1000,
@@ -624,108 +699,20 @@ void main() {
         currentPath: 'current.json',
       );
 
-      expect(output['status'], 'fail');
-      final failures = (output['failures'] as List<Object?>).cast<String>();
-      expect(
-        failures.any((item) => item.contains('avgRssDeltaBytes regression')),
-        isTrue,
-      );
+      expect(output['status'], 'pass');
+      final nodeCase = ((output['cases'] as List).cast<Map<String, Object?>>())
+          .singleWhere((item) => item['name'] == _smokePrimaryNodeCaseName());
+      final nodeOperation =
+          ((nodeCase['operations'] as List).cast<Map<String, Object?>>())
+              .singleWhere((item) => item['operation'] == 'single_node_patch');
+      final memoryMetric =
+          ((nodeOperation['metrics'] as List).cast<Map<String, Object?>>())
+              .singleWhere((item) => item['metric'] == 'avgRssDeltaBytes');
+
+      expect(memoryMetric['status'], 'not_gated');
+      expect(memoryMetric['maxAllowedRegressionPct'], isNull);
+      expect(memoryMetric['maxAllowedAbsoluteValue'], isNull);
     });
-
-    test(
-      'fails when zero-baseline memory delta exceeds absolute threshold',
-      () {
-        final policy = loadProfilePolicyFor('smoke');
-        final output = bench_diff.buildDiffReport(
-          baseline: _fullSmokeReportWithNodePatchMetrics(
-            singleNodePatchMetrics: _metrics(
-              100,
-              100,
-              100,
-              100,
-              avgRssDeltaBytes: 0,
-              minRssDeltaBytes: 0,
-              p95RssDeltaBytes: 0,
-              maxRssDeltaBytes: 0,
-            ),
-          ),
-          current: _fullSmokeReportWithNodePatchMetrics(
-            singleNodePatchMetrics: _metrics(
-              100,
-              100,
-              100,
-              100,
-              avgRssDeltaBytes:
-                  policy.maxAbsoluteValueByMetric['avgRssDeltaBytes']!.toInt() +
-                  1,
-              minRssDeltaBytes: 0,
-              p95RssDeltaBytes: 0,
-              maxRssDeltaBytes: 0,
-            ),
-          ),
-          requiredProfile: 'smoke',
-          baselinePath: 'baseline.json',
-          currentPath: 'current.json',
-        );
-
-        expect(output['status'], 'fail');
-        final failures = (output['failures'] as List<Object?>).cast<String>();
-        expect(
-          failures.any(
-            (item) => item.contains('avgRssDeltaBytes current value'),
-          ),
-          isTrue,
-        );
-      },
-    );
-
-    test(
-      'fails when positive-baseline memory delta already exceeds absolute threshold',
-      () {
-        final policy = loadProfilePolicyFor('smoke');
-        final overBudgetValue =
-            policy.maxAbsoluteValueByMetric['avgRssDeltaBytes']!.toInt() + 1;
-
-        final output = bench_diff.buildDiffReport(
-          baseline: _fullSmokeReportWithNodePatchMetrics(
-            singleNodePatchMetrics: _metrics(
-              100,
-              100,
-              100,
-              100,
-              avgRssDeltaBytes: overBudgetValue,
-              minRssDeltaBytes: 0,
-              p95RssDeltaBytes: 0,
-              maxRssDeltaBytes: overBudgetValue,
-            ),
-          ),
-          current: _fullSmokeReportWithNodePatchMetrics(
-            singleNodePatchMetrics: _metrics(
-              100,
-              100,
-              100,
-              100,
-              avgRssDeltaBytes: overBudgetValue,
-              minRssDeltaBytes: 0,
-              p95RssDeltaBytes: 0,
-              maxRssDeltaBytes: overBudgetValue,
-            ),
-          ),
-          requiredProfile: 'smoke',
-          baselinePath: 'baseline.json',
-          currentPath: 'current.json',
-        );
-
-        expect(output['status'], 'fail');
-        final failures = (output['failures'] as List<Object?>).cast<String>();
-        expect(
-          failures.any(
-            (item) => item.contains('avgRssDeltaBytes current value'),
-          ),
-          isTrue,
-        );
-      },
-    );
 
     test('applies perf policy even when CLI omits --profile', () async {
       final sandbox = await _createSandbox();
@@ -768,12 +755,15 @@ void main() {
         final invalidReport = _report(
           profile: 'mystery',
           cases: <Map<String, Object?>>[
-            _caseMetrics('nodes_10000', <String, Map<String, num>>{
-              'single_node_patch': _metrics(100, 100, 100, 100),
-              'single_node_transform': _metrics(100, 100, 100, 100),
-              'toggle_selection': _metrics(100, 100, 100, 100),
-              'move_selection': _metrics(100, 100, 100, 100),
-            }),
+            _caseMetrics(
+              _smokePrimaryNodeCaseName(),
+              <String, Map<String, num>>{
+                'single_node_patch': _metrics(100, 100, 100, 100),
+                'single_node_transform': _metrics(100, 100, 100, 100),
+                'toggle_selection': _metrics(100, 100, 100, 100),
+                'move_selection': _metrics(100, 100, 100, 100),
+              },
+            ),
           ],
         );
         _writeJson(sandbox, 'baseline.json', invalidReport);
@@ -861,11 +851,16 @@ Map<String, Object?> _report({
   };
 }
 
-Map<String, Object?> _caseMetrics(String name, Object metrics) {
+Map<String, Object?> _caseMetrics(
+  String name,
+  Object metrics, {
+  Object? probes,
+}) {
   return <String, Object?>{
     'name': name,
     'profile': 'smoke',
     'metrics': metrics,
+    if (probes != null) 'probes': probes,
   };
 }
 
@@ -887,7 +882,7 @@ Map<String, Object?> _fullSmokeReport({
   return _report(
     profile: 'smoke',
     cases: <Map<String, Object?>>[
-      _caseMetrics('nodes_10000', <String, Map<String, num>>{
+      _caseMetrics(_smokePrimaryNodeCaseName(), <String, Map<String, num>>{
         'single_node_patch': _smokeMetricLeaf(regressedMetrics),
         'single_node_transform': _smokeMetricLeaf(stableMetrics),
         'toggle_selection': _smokeMetricLeaf(stableMetrics),
@@ -898,36 +893,15 @@ Map<String, Object?> _fullSmokeReport({
         'single_stroke_patch_points': _smokeMetricLeaf(stableMetrics),
         'toggle_selection': _smokeMetricLeaf(stableMetrics),
       }),
-      _caseMetrics(selectionPathPainterOnlyCaseName, <String, Map<String, num>>{
-        'paint_no_selection': _smokeMetricLeaf(stableMetrics),
-        'paint_with_selection': _smokeMetricLeaf(stableMetrics),
-      }),
-      _caseMetrics(
-        selectionPathCandidateStagingCaseName,
-        <String, Map<String, num>>{
-          'stage_no_selection': _smokeMetricLeaf(stableMetrics),
-          'stage_with_selection': _smokeMetricLeaf(stableMetrics),
-        },
-      ),
-      _caseMetrics(
-        selectionPathEndToEndPaintCaseName,
-        <String, Map<String, num>>{
-          'paint_no_selection': _smokeMetricLeaf(stableMetrics),
-          'paint_with_selection': _smokeMetricLeaf(stableMetrics),
-        },
-      ),
+      ..._smokeSelectionPathCases(stableMetrics),
       _caseMetrics(
         backgroundLayerPaintAdmissionCaseName,
         <String, Map<String, num>>{
-          'enumerate_small_viewport': _smokeMetricLeaf(stableMetrics),
-          'paint_small_viewport': _smokeMetricLeaf(stableMetrics),
+          'enumerate_viewport': _smokeMetricLeaf(stableMetrics),
+          'paint_viewport': _smokeMetricLeaf(stableMetrics),
         },
       ),
       ..._smokeCacheCases(stableMetrics),
-      _caseMetrics(
-        worstCaseName,
-        _worstCaseMetrics(_smokeMetricLeaf(stableMetrics)),
-      ),
     ],
   );
 }
@@ -939,7 +913,7 @@ Map<String, Object?> _fullSmokeReportWithNodePatchMetrics({
   return _report(
     profile: 'smoke',
     cases: <Map<String, Object?>>[
-      _caseMetrics('nodes_10000', <String, Map<String, num>>{
+      _caseMetrics(_smokePrimaryNodeCaseName(), <String, Map<String, num>>{
         'single_node_patch': _smokeMetricLeaf(singleNodePatchMetrics),
         'single_node_transform': _smokeMetricLeaf(stableMetrics),
         'toggle_selection': _smokeMetricLeaf(stableMetrics),
@@ -950,36 +924,15 @@ Map<String, Object?> _fullSmokeReportWithNodePatchMetrics({
         'single_stroke_patch_points': _smokeMetricLeaf(stableMetrics),
         'toggle_selection': _smokeMetricLeaf(stableMetrics),
       }),
-      _caseMetrics(selectionPathPainterOnlyCaseName, <String, Map<String, num>>{
-        'paint_no_selection': _smokeMetricLeaf(stableMetrics),
-        'paint_with_selection': _smokeMetricLeaf(stableMetrics),
-      }),
-      _caseMetrics(
-        selectionPathCandidateStagingCaseName,
-        <String, Map<String, num>>{
-          'stage_no_selection': _smokeMetricLeaf(stableMetrics),
-          'stage_with_selection': _smokeMetricLeaf(stableMetrics),
-        },
-      ),
-      _caseMetrics(
-        selectionPathEndToEndPaintCaseName,
-        <String, Map<String, num>>{
-          'paint_no_selection': _smokeMetricLeaf(stableMetrics),
-          'paint_with_selection': _smokeMetricLeaf(stableMetrics),
-        },
-      ),
+      ..._smokeSelectionPathCases(stableMetrics),
       _caseMetrics(
         backgroundLayerPaintAdmissionCaseName,
         <String, Map<String, num>>{
-          'enumerate_small_viewport': _smokeMetricLeaf(stableMetrics),
-          'paint_small_viewport': _smokeMetricLeaf(stableMetrics),
+          'enumerate_viewport': _smokeMetricLeaf(stableMetrics),
+          'paint_viewport': _smokeMetricLeaf(stableMetrics),
         },
       ),
       ..._smokeCacheCases(stableMetrics),
-      _caseMetrics(
-        worstCaseName,
-        _worstCaseMetrics(_smokeMetricLeaf(stableMetrics)),
-      ),
     ],
   );
 }
@@ -998,10 +951,17 @@ Map<String, num> _smokeMetricLeaf(Map<String, num> metrics) {
 List<Map<String, Object?>> _smokeSelectionPathCases(Map<String, num> metrics) {
   final leaf = _smokeMetricLeaf(metrics);
   return <Map<String, Object?>>[
-    _caseMetrics(selectionPathPainterOnlyCaseName, <String, Map<String, num>>{
-      'paint_no_selection': leaf,
-      'paint_with_selection': leaf,
-    }),
+    _caseMetrics(
+      selectionPathPainterOnlyCaseName,
+      <String, Map<String, num>>{
+        'paint_no_selection': leaf,
+        'paint_with_selection': leaf,
+      },
+      probes: <String, Map<String, num>>{
+        'paint_no_selection': _selectionProbeLeaf(0),
+        'paint_with_selection': _selectionProbeLeaf(8),
+      },
+    ),
     _caseMetrics(
       selectionPathCandidateStagingCaseName,
       <String, Map<String, num>>{
@@ -1009,42 +969,85 @@ List<Map<String, Object?>> _smokeSelectionPathCases(Map<String, num> metrics) {
         'stage_with_selection': leaf,
       },
     ),
-    _caseMetrics(selectionPathEndToEndPaintCaseName, <String, Map<String, num>>{
-      'paint_no_selection': leaf,
-      'paint_with_selection': leaf,
-    }),
+    _caseMetrics(
+      selectionPathEndToEndPaintCaseName,
+      <String, Map<String, num>>{
+        'paint_no_selection': leaf,
+        'paint_with_selection': leaf,
+      },
+      probes: <String, Map<String, num>>{
+        'paint_no_selection': _selectionProbeLeaf(0),
+        'paint_with_selection': _selectionProbeLeaf(8),
+      },
+    ),
   ];
 }
 
 List<Map<String, Object?>> _smokeCacheCases(Map<String, num> metrics) {
   final leaf = _smokeMetricLeaf(metrics);
   return <Map<String, Object?>>[
-    _caseMetrics(textLayoutCacheCaseName, <String, Map<String, num>>{
-      'paint_cache_miss': leaf,
-      'paint_cache_hit': leaf,
-    }),
-    _caseMetrics(strokePathCacheCaseName, <String, Map<String, num>>{
-      'paint_cache_miss': leaf,
-      'paint_cache_hit': leaf,
-    }),
-    _caseMetrics(staticBackgroundCacheCaseName, <String, Map<String, num>>{
-      'paint_cache_miss': leaf,
-      'paint_cache_hit': leaf,
-    }),
+    _caseMetrics(
+      textLayoutCacheCaseName,
+      <String, Map<String, num>>{
+        'paint_cache_miss': leaf,
+        'paint_cache_hit': leaf,
+      },
+      probes: <String, Map<String, num>>{
+        'paint_cache_miss': _cacheProbeLeaf(buildDelta: 1, hitDelta: 0),
+        'paint_cache_hit': _cacheProbeLeaf(buildDelta: 0, hitDelta: 1),
+      },
+    ),
+    _caseMetrics(
+      strokePathCacheCaseName,
+      <String, Map<String, num>>{
+        'paint_cache_miss': leaf,
+        'paint_cache_hit': leaf,
+      },
+      probes: <String, Map<String, num>>{
+        'paint_cache_miss': _cacheProbeLeaf(buildDelta: 1, hitDelta: 0),
+        'paint_cache_hit': _cacheProbeLeaf(buildDelta: 0, hitDelta: 1),
+      },
+    ),
+    _caseMetrics(
+      staticBackgroundCacheCaseName,
+      <String, Map<String, num>>{
+        'paint_cache_miss': leaf,
+        'paint_cache_hit': leaf,
+      },
+      probes: <String, Map<String, num>>{
+        'paint_cache_miss': _staticBackgroundProbeLeaf(buildDelta: 1),
+        'paint_cache_hit': _staticBackgroundProbeLeaf(buildDelta: 0),
+      },
+    ),
   ];
 }
 
-Map<String, Object?> _worstCaseMetrics(Map<String, num> stableMetrics) {
-  return <String, Object?>{
-    'huge_bounds': <String, Object?>{
-      'query': stableMetrics,
-      'move_selection': stableMetrics,
-    },
-    'huge_rect_select': stableMetrics,
-    'very_long_path': <String, Object?>{
-      'patch_svg_path': stableMetrics,
-      'query_candidates': stableMetrics,
-    },
+Map<String, num> _selectionProbeLeaf(num saveLayerCount) {
+  return <String, num>{'saveLayerCount': saveLayerCount};
+}
+
+Map<String, num> _cacheProbeLeaf({
+  required num buildDelta,
+  required num hitDelta,
+  num evictDelta = 0,
+}) {
+  return <String, num>{
+    'buildDelta': buildDelta,
+    'hitDelta': hitDelta,
+    'evictDelta': evictDelta,
+  };
+}
+
+Map<String, num> _staticBackgroundProbeLeaf({
+  required num buildDelta,
+  num gridLoopIterations = 1000,
+  num gridDrawnLineCount = 200,
+}) {
+  return <String, num>{
+    'buildDelta': buildDelta,
+    'disposeDelta': 0,
+    'gridLoopIterations': gridLoopIterations,
+    'gridDrawnLineCount': gridDrawnLineCount,
   };
 }
 

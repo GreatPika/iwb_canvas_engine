@@ -108,6 +108,7 @@ Map<String, Object?> buildDiffReport({
         current: currentCase,
         metricKeys: policy.requiredMetricKeys,
         requiredOperations: policy.requiredOperationsForCase(caseName),
+        requiredProbesByOperation: policy.requiredProbeKeysForCase(caseName),
         maxRegressionPctByMetric: policy.maxRegressionPctByMetric,
         maxAbsoluteValueByMetric: policy.maxAbsoluteValueByMetric,
       ),
@@ -153,6 +154,12 @@ Map<String, Object?> buildDiffReport({
     final missingRequiredOpsInCurrent =
         (summary['missingRequiredOperationsInCurrent'] as List<Object?>)
             .cast<String>();
+    final missingRequiredProbesInBaseline =
+        (summary['missingRequiredProbesInBaseline'] as List<Object?>)
+            .cast<String>();
+    final missingRequiredProbesInCurrent =
+        (summary['missingRequiredProbesInCurrent'] as List<Object?>)
+            .cast<String>();
     if (missingRequiredOpsInBaseline.isNotEmpty) {
       failures.add(
         '$caseName missing required operations in baseline: '
@@ -163,6 +170,18 @@ Map<String, Object?> buildDiffReport({
       failures.add(
         '$caseName missing required operations in current: '
         '${missingRequiredOpsInCurrent.join(', ')}',
+      );
+    }
+    if (missingRequiredProbesInBaseline.isNotEmpty) {
+      failures.add(
+        '$caseName missing required probes in baseline: '
+        '${missingRequiredProbesInBaseline.join(', ')}',
+      );
+    }
+    if (missingRequiredProbesInCurrent.isNotEmpty) {
+      failures.add(
+        '$caseName missing required probes in current: '
+        '${missingRequiredProbesInCurrent.join(', ')}',
       );
     }
 
@@ -200,6 +219,7 @@ Map<String, Object?> buildDiffReport({
     'currentPath': currentPath,
     'status': status,
     'policy': <String, Object?>{
+      ...policy.reportMetadata,
       'requiredCases': policy.requiredCaseNames,
       'maxRegressionPctByMetric': policy.maxRegressionPctByMetric,
       'maxAbsoluteValueByMetric': policy.maxAbsoluteValueByMetric,
@@ -224,12 +244,15 @@ Map<String, Object?> _diffCase({
   required _CaseReport current,
   required List<String> metricKeys,
   required List<String> requiredOperations,
+  required Map<String, List<String>> requiredProbesByOperation,
   required Map<String, double> maxRegressionPctByMetric,
   required Map<String, double> maxAbsoluteValueByMetric,
 }) {
   final operationNames = <String>{
     ...baseline.metricsByOperation.keys,
     ...current.metricsByOperation.keys,
+    ...baseline.probesByOperation.keys,
+    ...current.probesByOperation.keys,
   }.toList(growable: false)..sort();
 
   final missingInBaseline = <String>[];
@@ -239,6 +262,10 @@ Map<String, Object?> _diffCase({
   for (final op in operationNames) {
     final baselineMetrics = baseline.metricsByOperation[op];
     final currentMetrics = current.metricsByOperation[op];
+    final baselineProbes =
+        baseline.probesByOperation[op] ?? const <String, double>{};
+    final currentProbes =
+        current.probesByOperation[op] ?? const <String, double>{};
     if (baselineMetrics == null) {
       missingInBaseline.add(op);
       continue;
@@ -293,7 +320,32 @@ Map<String, Object?> _diffCase({
       }
       metricDiffs.add(metricDiff);
     }
-    operations.add(<String, Object?>{'operation': op, 'metrics': metricDiffs});
+
+    final probeNames = <String>{
+      ...baselineProbes.keys,
+      ...currentProbes.keys,
+    }.toList(growable: false)..sort();
+    final probeDiffs = <Map<String, Object?>>[
+      for (final probeName in probeNames)
+        <String, Object?>{
+          'probe': probeName,
+          'baselineValue': baselineProbes[probeName],
+          'currentValue': currentProbes[probeName],
+          'delta':
+              baselineProbes.containsKey(probeName) &&
+                  currentProbes.containsKey(probeName)
+              ? _roundTo3(
+                  currentProbes[probeName]! - baselineProbes[probeName]!,
+                )
+              : null,
+        },
+    ];
+
+    operations.add(<String, Object?>{
+      'operation': op,
+      'metrics': metricDiffs,
+      'probes': probeDiffs,
+    });
   }
 
   final requiredOperationSet = requiredOperations.toSet();
@@ -307,6 +359,20 @@ Map<String, Object?> _diffCase({
           .where((op) => !current.metricsByOperation.containsKey(op))
           .toList()
         ..sort();
+  final missingRequiredProbesInBaseline = <String>[
+    for (final entry in requiredProbesByOperation.entries)
+      for (final probeName in entry.value)
+        if (!(baseline.probesByOperation[entry.key]?.containsKey(probeName) ??
+            false))
+          '${entry.key}.$probeName',
+  ]..sort();
+  final missingRequiredProbesInCurrent = <String>[
+    for (final entry in requiredProbesByOperation.entries)
+      for (final probeName in entry.value)
+        if (!(current.probesByOperation[entry.key]?.containsKey(probeName) ??
+            false))
+          '${entry.key}.$probeName',
+  ]..sort();
 
   return <String, Object?>{
     'name': caseName,
@@ -315,6 +381,8 @@ Map<String, Object?> _diffCase({
       'missingOperationsInCurrent': missingInCurrent,
       'missingRequiredOperationsInBaseline': missingRequiredInBaseline,
       'missingRequiredOperationsInCurrent': missingRequiredInCurrent,
+      'missingRequiredProbesInBaseline': missingRequiredProbesInBaseline,
+      'missingRequiredProbesInCurrent': missingRequiredProbesInCurrent,
     },
     'operations': operations,
   };
@@ -432,8 +500,17 @@ _Report _readReportFromObject(
       );
     }
 
+    final probesByOperation = _readProbeLeavesByOperation(
+      rawCase['probes'],
+      sourcePath: '$sourcePath#cases[$i]',
+    );
+
     cases.add(
-      _CaseReport(name: caseName, metricsByOperation: metricsByOperation),
+      _CaseReport(
+        name: caseName,
+        metricsByOperation: metricsByOperation,
+        probesByOperation: probesByOperation,
+      ),
     );
   }
   return _Report(profile: profile, cases: cases);
@@ -521,7 +598,48 @@ Never _printUsageAndExit(int code) {
     '--baseline=<path> --current=<path> --output=<path> '
     '[--profile=<smoke|full>]',
   );
+  stdout.writeln(
+    '  smoke: compare product-realistic diagnostics against the checked-in product baseline',
+  );
+  stdout.writeln(
+    '  full: compare stress/nightly diagnostics against the checked-in stress baseline',
+  );
   exit(code);
+}
+
+Map<String, Map<String, double>> _readProbeLeavesByOperation(
+  Object? rawProbes, {
+  required String sourcePath,
+}) {
+  if (rawProbes == null) {
+    return const <String, Map<String, double>>{};
+  }
+  if (rawProbes is! Map<String, Object?>) {
+    throw _DiffToolInputException(
+      'field "probes" must be an object in $sourcePath',
+    );
+  }
+
+  final probesByOperation = <String, Map<String, double>>{};
+  rawProbes.forEach((operationName, rawProbeMap) {
+    if (rawProbeMap is! Map<String, Object?>) {
+      throw _DiffToolInputException(
+        'probes.$operationName must be an object in $sourcePath',
+      );
+    }
+    final probeMap = <String, double>{};
+    rawProbeMap.forEach((probeName, rawValue) {
+      if (rawValue is! num || !rawValue.isFinite) {
+        throw _DiffToolInputException(
+          'probes.$operationName.$probeName must be a finite number '
+          'in $sourcePath',
+        );
+      }
+      probeMap[probeName] = rawValue.toDouble();
+    });
+    probesByOperation[operationName] = probeMap;
+  });
+  return probesByOperation;
 }
 
 class _Options {
@@ -546,10 +664,15 @@ class _Report {
 }
 
 class _CaseReport {
-  const _CaseReport({required this.name, required this.metricsByOperation});
+  const _CaseReport({
+    required this.name,
+    required this.metricsByOperation,
+    required this.probesByOperation,
+  });
 
   final String name;
   final Map<String, Map<String, double>> metricsByOperation;
+  final Map<String, Map<String, double>> probesByOperation;
 }
 
 class _DiffToolInputException implements Exception {

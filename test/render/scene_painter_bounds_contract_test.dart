@@ -97,6 +97,10 @@ void main() {
         methodStart:
             'ScenePainterPaintFrame create(Size size, SceneViewFrameRead frameRead)',
       );
+      final createPreparedBody = _extractMethodBody(
+        source: source,
+        methodStart: 'ScenePainterPreparedFrame createPrepared(',
+      );
       final body = _extractMethodBody(
         source: source,
         methodStart: 'ScenePainterResolvedNodePaintData resolveNodePaintData(',
@@ -105,28 +109,48 @@ void main() {
       expect(source, contains('class ScenePainterVisibilityBudget'));
       expect(
         createBody,
+        contains('return ScenePainterPaintFrame.fromPrepared('),
+      );
+      expect(createBody, contains('createPrepared(size, frameRead));'));
+      expect(
+        createPreparedBody,
         contains('final visibilityBudget = ScenePainterVisibilityBudget('),
       );
       expect(
-        createBody,
+        createPreparedBody,
         contains('hasSelectedNodes: frameRead.selectedNodeIds.isNotEmpty,'),
       );
-      expect(createBody, contains('final rawViewRect = Rect.fromLTWH('));
       expect(
-        createBody,
+        createPreparedBody,
+        contains('final rawViewRect = Rect.fromLTWH('),
+      );
+      expect(
+        createPreparedBody,
         contains('final viewRect = visibilityBudget.applyTo(rawViewRect);'),
       );
-      expect(createBody, contains('paintPlan: renderState.preparePaintPlan('));
-      expect(createBody, contains('frameRead,'));
-      expect(createBody, contains('paintPlan: renderState.preparePaintPlan('));
-      expect(createBody, contains('viewportRect: rawViewRect,'));
-      expect(createBody, contains('visibilityRect: viewRect,'));
-      expect(createBody, contains('selectedIds: frameRead.selectedNodeIds,'));
       expect(
-        createBody,
+        createPreparedBody,
+        contains('paintPlan: renderState.preparePaintPlan('),
+      );
+      expect(createPreparedBody, contains('frameRead,'));
+      expect(
+        createPreparedBody,
+        contains('paintPlan: renderState.preparePaintPlan('),
+      );
+      expect(createPreparedBody, contains('viewportRect: rawViewRect,'));
+      expect(createPreparedBody, contains('visibilityRect: viewRect,'));
+      expect(
+        createPreparedBody,
+        contains('selectedIds: frameRead.selectedNodeIds,'),
+      );
+      expect(
+        createPreparedBody,
         isNot(contains('List<ScenePaintCandidate>.unmodifiable(')),
       );
-      expect(createBody, contains('paintPlan: renderState.preparePaintPlan('));
+      expect(
+        createPreparedBody,
+        contains('paintPlan: renderState.preparePaintPlan('),
+      );
       expect(source, isNot(contains('scenePainterCullPadding')));
       expect(body, contains('final textLayout = switch (node) {'));
       expect(
@@ -147,6 +171,9 @@ void main() {
       source,
       contains('_shell.paint(canvas, size, controller.captureFrameRead());'),
     );
+    expect(source, contains('ScenePainterPreparedScene prepareForPaint('));
+    expect(source, contains('frame: _shell.prepareFrame(size, frameRead),'));
+    expect(source, contains('_shell.paintPrepared('));
   });
 
   test(
@@ -326,4 +353,16 @@ void main() {
     expect(body, isNot(contains('_nodePreviewOffset(')));
     expect(body, isNot(contains('geometryCache.get(')));
   });
+
+  test(
+    'selection rendering keeps saveLayer compositing on selection owner seam',
+    () {
+      final source = File(
+        'lib/src/render/scene_painter_selection.dart',
+      ).readAsStringSync();
+
+      expect(source, contains('canvas.saveLayer(null, Paint());'));
+      expect(source, isNot(contains('benchmark-only')));
+    },
+  );
 }

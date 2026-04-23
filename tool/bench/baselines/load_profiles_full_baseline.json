@@ -1,24 +1,39 @@
 {
-  "generatedAtUtc": "2026-04-23T10:03:45.576368Z",
+  "generatedAtUtc": "2026-04-23T12:55:42.938171Z",
   "profile": "full",
+  "policy": {
+    "profileSemantics": "stress_nightly",
+    "maxNodeCount": 100000,
+    "includesWorstCaseDiagnostics": true,
+    "backgroundViewport": {
+      "width": 240,
+      "height": 160
+    }
+  },
   "caseCount": 13,
   "cases": [
     {
       "name": "nodes_10000",
       "profile": "full",
       "contract": {
+        "profileSemantics": "stress_nightly",
+        "scenario": {
+          "kind": "node_scale",
+          "nodeCount": 10000
+        },
         "operations": {
           "single_node_patch": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -27,13 +42,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -42,13 +58,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -57,55 +74,54 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "nodeCount": 10000,
+      "iterations": 4,
       "metrics": {
-        "nodeCount": 10000,
-        "iterations": 4,
-        "metrics": {
-          "single_node_patch": {
-            "avgUs": 34458,
-            "minUs": 22286,
-            "maxUs": 63985,
-            "avgRssDeltaBytes": 1560576,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 5439488
-          },
-          "single_node_transform": {
-            "avgUs": 31754,
-            "minUs": 29855,
-            "maxUs": 34945,
-            "avgRssDeltaBytes": 3780608,
-            "minRssDeltaBytes": 2129920,
-            "maxRssDeltaBytes": 6553600
-          },
-          "toggle_selection": {
-            "avgUs": 23511,
-            "minUs": 22241,
-            "maxUs": 26912,
-            "avgRssDeltaBytes": 360448,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 835584
-          },
-          "move_selection": {
-            "avgUs": 31297,
-            "minUs": 26582,
-            "maxUs": 36031,
-            "avgRssDeltaBytes": 237568,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 950272
-          }
+        "single_node_patch": {
+          "avgUs": 33789,
+          "minUs": 21818,
+          "maxUs": 63106,
+          "avgRssDeltaBytes": 1708032,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 6078464
+        },
+        "single_node_transform": {
+          "avgUs": 31224,
+          "minUs": 29592,
+          "maxUs": 34220,
+          "avgRssDeltaBytes": 3567616,
+          "minRssDeltaBytes": 622592,
+          "maxRssDeltaBytes": 5701632
+        },
+        "toggle_selection": {
+          "avgUs": 22391,
+          "minUs": 21128,
+          "maxUs": 25590,
+          "avgRssDeltaBytes": 544768,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 1343488
+        },
+        "move_selection": {
+          "avgUs": 30704,
+          "minUs": 26222,
+          "maxUs": 36261,
+          "avgRssDeltaBytes": 241664,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 966656
         }
       }
     },
@@ -113,18 +129,24 @@
       "name": "nodes_50000",
       "profile": "full",
       "contract": {
+        "profileSemantics": "stress_nightly",
+        "scenario": {
+          "kind": "node_scale",
+          "nodeCount": 50000
+        },
         "operations": {
           "single_node_patch": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -133,13 +155,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -148,13 +171,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -163,55 +187,54 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "nodeCount": 50000,
+      "iterations": 4,
       "metrics": {
-        "nodeCount": 50000,
-        "iterations": 4,
-        "metrics": {
-          "single_node_patch": {
-            "avgUs": 115261,
-            "minUs": 110144,
-            "maxUs": 125499,
-            "avgRssDeltaBytes": 8548352,
-            "minRssDeltaBytes": 4964352,
-            "maxRssDeltaBytes": 9912320
-          },
-          "single_node_transform": {
-            "avgUs": 147837,
-            "minUs": 141733,
-            "maxUs": 153076,
-            "avgRssDeltaBytes": 4091904,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 9814016
-          },
-          "toggle_selection": {
-            "avgUs": 113857,
-            "minUs": 108657,
-            "maxUs": 126911,
-            "avgRssDeltaBytes": 5885952,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 7913472
-          },
-          "move_selection": {
-            "avgUs": 144989,
-            "minUs": 143141,
-            "maxUs": 146630,
-            "avgRssDeltaBytes": 1974272,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 7520256
-          }
+        "single_node_patch": {
+          "avgUs": 113018,
+          "minUs": 108698,
+          "maxUs": 124782,
+          "avgRssDeltaBytes": 7389184,
+          "minRssDeltaBytes": 1966080,
+          "maxRssDeltaBytes": 9748480
+        },
+        "single_node_transform": {
+          "avgUs": 145621,
+          "minUs": 140291,
+          "maxUs": 149080,
+          "avgRssDeltaBytes": 4952064,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 9912320
+        },
+        "toggle_selection": {
+          "avgUs": 112390,
+          "minUs": 107912,
+          "maxUs": 124192,
+          "avgRssDeltaBytes": 5861376,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 7913472
+        },
+        "move_selection": {
+          "avgUs": 146301,
+          "minUs": 143794,
+          "maxUs": 148325,
+          "avgRssDeltaBytes": 3080192,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 8601600
         }
       }
     },
@@ -219,18 +242,24 @@
       "name": "nodes_100000",
       "profile": "full",
       "contract": {
+        "profileSemantics": "stress_nightly",
+        "scenario": {
+          "kind": "node_scale",
+          "nodeCount": 100000
+        },
         "operations": {
           "single_node_patch": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -239,13 +268,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -254,13 +284,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -269,55 +300,54 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "nodeCount": 100000,
+      "iterations": 4,
       "metrics": {
-        "nodeCount": 100000,
-        "iterations": 4,
-        "metrics": {
-          "single_node_patch": {
-            "avgUs": 234919,
-            "minUs": 226123,
-            "maxUs": 245145,
-            "avgRssDeltaBytes": 14340096,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 20905984
-          },
-          "single_node_transform": {
-            "avgUs": 309711,
-            "minUs": 296780,
-            "maxUs": 322230,
-            "avgRssDeltaBytes": 25563136,
-            "minRssDeltaBytes": 12107776,
-            "maxRssDeltaBytes": 55427072
-          },
-          "toggle_selection": {
-            "avgUs": 245808,
-            "minUs": 227990,
-            "maxUs": 256942,
-            "avgRssDeltaBytes": 9261056,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 19578880
-          },
-          "move_selection": {
-            "avgUs": 320236,
-            "minUs": 317970,
-            "maxUs": 324025,
-            "avgRssDeltaBytes": 14946304,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 56131584
-          }
+        "single_node_patch": {
+          "avgUs": 234702,
+          "minUs": 225954,
+          "maxUs": 243753,
+          "avgRssDeltaBytes": 14344192,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 21397504
+        },
+        "single_node_transform": {
+          "avgUs": 311028,
+          "minUs": 303040,
+          "maxUs": 318699,
+          "avgRssDeltaBytes": 29814784,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 55820288
+        },
+        "toggle_selection": {
+          "avgUs": 236747,
+          "minUs": 225114,
+          "maxUs": 242720,
+          "avgRssDeltaBytes": 9261056,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 19562496
+        },
+        "move_selection": {
+          "avgUs": 333108,
+          "minUs": 313835,
+          "maxUs": 358081,
+          "avgRssDeltaBytes": 22749184,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 55656448
         }
       }
     },
@@ -325,18 +355,25 @@
       "name": "strokes_1000_pts_1024",
       "profile": "full",
       "contract": {
+        "profileSemantics": "stress_nightly",
+        "scenario": {
+          "kind": "stroke_scale",
+          "strokeCount": 1000,
+          "pointsPerStroke": 1024
+        },
         "operations": {
           "single_stroke_patch_thickness": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -345,13 +382,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -360,48 +398,47 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "strokeCount": 1000,
+      "pointsPerStroke": 1024,
+      "iterations": 3,
       "metrics": {
-        "strokeCount": 1000,
-        "pointsPerStroke": 1024,
-        "iterations": 3,
-        "metrics": {
-          "single_stroke_patch_thickness": {
-            "avgUs": 321293,
-            "minUs": 318621,
-            "maxUs": 326510,
-            "avgRssDeltaBytes": 3675477,
-            "minRssDeltaBytes": 786432,
-            "maxRssDeltaBytes": 8699904
-          },
-          "single_stroke_patch_points": {
-            "avgUs": 321557,
-            "minUs": 320694,
-            "maxUs": 322915,
-            "avgRssDeltaBytes": 1217877,
-            "minRssDeltaBytes": 1048576,
-            "maxRssDeltaBytes": 1310720
-          },
-          "toggle_selection": {
-            "avgUs": 315069,
-            "minUs": 314327,
-            "maxUs": 316516,
-            "avgRssDeltaBytes": 600747,
-            "minRssDeltaBytes": 245760,
-            "maxRssDeltaBytes": 1294336
-          }
+        "single_stroke_patch_thickness": {
+          "avgUs": 321661,
+          "minUs": 319859,
+          "maxUs": 324777,
+          "avgRssDeltaBytes": 3418795,
+          "minRssDeltaBytes": 786432,
+          "maxRssDeltaBytes": 8175616
+        },
+        "single_stroke_patch_points": {
+          "avgUs": 321665,
+          "minUs": 318805,
+          "maxUs": 325066,
+          "avgRssDeltaBytes": 1316181,
+          "minRssDeltaBytes": 835584,
+          "maxRssDeltaBytes": 1835008
+        },
+        "toggle_selection": {
+          "avgUs": 323027,
+          "minUs": 317359,
+          "maxUs": 334340,
+          "avgRssDeltaBytes": 606208,
+          "minRssDeltaBytes": 262144,
+          "maxRssDeltaBytes": 1294336
         }
       }
     },
@@ -409,18 +446,25 @@
       "name": "strokes_5000_pts_512",
       "profile": "full",
       "contract": {
+        "profileSemantics": "stress_nightly",
+        "scenario": {
+          "kind": "stroke_scale",
+          "strokeCount": 5000,
+          "pointsPerStroke": 512
+        },
         "operations": {
           "single_stroke_patch_thickness": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -429,13 +473,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -444,48 +489,47 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "strokeCount": 5000,
+      "pointsPerStroke": 512,
+      "iterations": 3,
       "metrics": {
-        "strokeCount": 5000,
-        "pointsPerStroke": 512,
-        "iterations": 3,
-        "metrics": {
-          "single_stroke_patch_thickness": {
-            "avgUs": 825074,
-            "minUs": 809598,
-            "maxUs": 836672,
-            "avgRssDeltaBytes": 2244608,
-            "minRssDeltaBytes": 1130496,
-            "maxRssDeltaBytes": 4210688
-          },
-          "single_stroke_patch_points": {
-            "avgUs": 805958,
-            "minUs": 802946,
-            "maxUs": 810659,
-            "avgRssDeltaBytes": 1600171,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 3702784
-          },
-          "toggle_selection": {
-            "avgUs": 797541,
-            "minUs": 795340,
-            "maxUs": 798794,
-            "avgRssDeltaBytes": 431445,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 655360
-          }
+        "single_stroke_patch_thickness": {
+          "avgUs": 803100,
+          "minUs": 799839,
+          "maxUs": 807825,
+          "avgRssDeltaBytes": 2244608,
+          "minRssDeltaBytes": 1114112,
+          "maxRssDeltaBytes": 4227072
+        },
+        "single_stroke_patch_points": {
+          "avgUs": 803327,
+          "minUs": 797422,
+          "maxUs": 810287,
+          "avgRssDeltaBytes": 1419947,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 3162112
+        },
+        "toggle_selection": {
+          "avgUs": 798989,
+          "minUs": 795701,
+          "maxUs": 801970,
+          "avgRssDeltaBytes": 425984,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 638976
         }
       }
     },
@@ -493,18 +537,25 @@
       "name": "selection_path_painter_only",
       "profile": "full",
       "contract": {
+        "profileSemantics": "stress_nightly",
+        "scenario": {
+          "kind": "selection_path_painter_only"
+        },
         "operations": {
           "paint_no_selection": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [
+              "saveLayerCount"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -513,40 +564,49 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [
+              "saveLayerCount"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "pathNodeCount": 2000,
+      "pathSegments": 256,
+      "iterations": 4,
       "metrics": {
-        "pathNodeCount": 2000,
-        "pathSegments": 256,
-        "iterations": 4,
-        "metrics": {
-          "paint_no_selection": {
-            "avgUs": 244632,
-            "minUs": 231039,
-            "maxUs": 273297,
-            "avgRssDeltaBytes": 7352320,
-            "minRssDeltaBytes": 5783552,
-            "maxRssDeltaBytes": 9093120
-          },
-          "paint_with_selection": {
-            "avgUs": 270040,
-            "minUs": 237786,
-            "maxUs": 350002,
-            "avgRssDeltaBytes": 7421952,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 23691264
-          }
+        "paint_no_selection": {
+          "avgUs": 94959,
+          "minUs": 85767,
+          "maxUs": 109204,
+          "avgRssDeltaBytes": 5472256,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 8847360
+        },
+        "paint_with_selection": {
+          "avgUs": 97684,
+          "minUs": 87113,
+          "maxUs": 122547,
+          "avgRssDeltaBytes": 5660672,
+          "minRssDeltaBytes": 4636672,
+          "maxRssDeltaBytes": 6488064
+        }
+      },
+      "probes": {
+        "paint_no_selection": {
+          "saveLayerCount": 0
+        },
+        "paint_with_selection": {
+          "saveLayerCount": 2000
         }
       }
     },
@@ -554,18 +614,23 @@
       "name": "selection_path_candidate_staging",
       "profile": "full",
       "contract": {
+        "profileSemantics": "stress_nightly",
+        "scenario": {
+          "kind": "selection_path_candidate_staging"
+        },
         "operations": {
           "stage_no_selection": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -574,40 +639,39 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "pathNodeCount": 2000,
+      "pathSegments": 256,
+      "iterations": 4,
       "metrics": {
-        "pathNodeCount": 2000,
-        "pathSegments": 256,
-        "iterations": 4,
-        "metrics": {
-          "stage_no_selection": {
-            "avgUs": 27065,
-            "minUs": 2679,
-            "maxUs": 99075,
-            "avgRssDeltaBytes": 438272,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 1753088
-          },
-          "stage_with_selection": {
-            "avgUs": 22565,
-            "minUs": 2519,
-            "maxUs": 81759,
-            "avgRssDeltaBytes": 1433600,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 3457024
-          }
+        "stage_no_selection": {
+          "avgUs": 35165,
+          "minUs": 1465,
+          "maxUs": 135923,
+          "avgRssDeltaBytes": 196608,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 786432
+        },
+        "stage_with_selection": {
+          "avgUs": 22080,
+          "minUs": 2491,
+          "maxUs": 80350,
+          "avgRssDeltaBytes": 4096,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 16384
         }
       }
     },
@@ -615,18 +679,25 @@
       "name": "selection_path_end_to_end_paint",
       "profile": "full",
       "contract": {
+        "profileSemantics": "stress_nightly",
+        "scenario": {
+          "kind": "selection_path_end_to_end_paint"
+        },
         "operations": {
           "paint_no_selection": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [
+              "saveLayerCount"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -635,40 +706,49 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [
+              "saveLayerCount"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "pathNodeCount": 2000,
+      "pathSegments": 256,
+      "iterations": 4,
       "metrics": {
-        "pathNodeCount": 2000,
-        "pathSegments": 256,
-        "iterations": 4,
-        "metrics": {
-          "paint_no_selection": {
-            "avgUs": 110426,
-            "minUs": 84325,
-            "maxUs": 186050,
-            "avgRssDeltaBytes": 155648,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 557056
-          },
-          "paint_with_selection": {
-            "avgUs": 112912,
-            "minUs": 87913,
-            "maxUs": 185655,
-            "avgRssDeltaBytes": 2977792,
-            "minRssDeltaBytes": 671744,
-            "maxRssDeltaBytes": 6127616
-          }
+        "paint_no_selection": {
+          "avgUs": 110826,
+          "minUs": 85483,
+          "maxUs": 176909,
+          "avgRssDeltaBytes": 3715072,
+          "minRssDeltaBytes": 2277376,
+          "maxRssDeltaBytes": 5963776
+        },
+        "paint_with_selection": {
+          "avgUs": 123563,
+          "minUs": 92162,
+          "maxUs": 195629,
+          "avgRssDeltaBytes": 1753088,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 5341184
+        }
+      },
+      "probes": {
+        "paint_no_selection": {
+          "saveLayerCount": 0
+        },
+        "paint_with_selection": {
+          "saveLayerCount": 2000
         }
       }
     },
@@ -676,18 +756,27 @@
       "name": "text_layout_cache",
       "profile": "full",
       "contract": {
+        "profileSemantics": "stress_nightly",
+        "scenario": {
+          "kind": "text_layout_cache"
+        },
         "operations": {
           "paint_cache_miss": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [
+              "buildDelta",
+              "hitDelta",
+              "evictDelta"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -696,38 +785,53 @@
             "executionMode": "steady_state",
             "warmupIterations": 1,
             "measuredIterations": 4,
+            "probeKeys": [
+              "buildDelta",
+              "hitDelta",
+              "evictDelta"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "iterations": 4,
       "metrics": {
-        "iterations": 4,
-        "metrics": {
-          "paint_cache_miss": {
-            "avgUs": 1027,
-            "minUs": 73,
-            "maxUs": 3757,
-            "avgRssDeltaBytes": 20480,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 65536
-          },
-          "paint_cache_hit": {
-            "avgUs": 77,
-            "minUs": 22,
-            "maxUs": 229,
-            "avgRssDeltaBytes": 0,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 0
-          }
+        "paint_cache_miss": {
+          "avgUs": 1152,
+          "minUs": 67,
+          "maxUs": 4281,
+          "avgRssDeltaBytes": 12288,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 49152
+        },
+        "paint_cache_hit": {
+          "avgUs": 77,
+          "minUs": 22,
+          "maxUs": 231,
+          "avgRssDeltaBytes": 4096,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 16384
+        }
+      },
+      "probes": {
+        "paint_cache_miss": {
+          "buildDelta": 1,
+          "hitDelta": 0,
+          "evictDelta": 0
+        },
+        "paint_cache_hit": {
+          "buildDelta": 0,
+          "hitDelta": 1,
+          "evictDelta": 0
         }
       }
     },
@@ -735,18 +839,27 @@
       "name": "stroke_path_cache",
       "profile": "full",
       "contract": {
+        "profileSemantics": "stress_nightly",
+        "scenario": {
+          "kind": "stroke_path_cache"
+        },
         "operations": {
           "paint_cache_miss": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [
+              "buildDelta",
+              "hitDelta",
+              "evictDelta"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -755,38 +868,53 @@
             "executionMode": "steady_state",
             "warmupIterations": 1,
             "measuredIterations": 4,
+            "probeKeys": [
+              "buildDelta",
+              "hitDelta",
+              "evictDelta"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "iterations": 4,
       "metrics": {
-        "iterations": 4,
-        "metrics": {
-          "paint_cache_miss": {
-            "avgUs": 603,
-            "minUs": 76,
-            "maxUs": 2148,
-            "avgRssDeltaBytes": 8192,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 32768
-          },
-          "paint_cache_hit": {
-            "avgUs": 70,
-            "minUs": 27,
-            "maxUs": 193,
-            "avgRssDeltaBytes": 0,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 0
-          }
+        "paint_cache_miss": {
+          "avgUs": 714,
+          "minUs": 79,
+          "maxUs": 2549,
+          "avgRssDeltaBytes": 8192,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 32768
+        },
+        "paint_cache_hit": {
+          "avgUs": 92,
+          "minUs": 33,
+          "maxUs": 248,
+          "avgRssDeltaBytes": 0,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 0
+        }
+      },
+      "probes": {
+        "paint_cache_miss": {
+          "buildDelta": 1,
+          "hitDelta": 0,
+          "evictDelta": 0
+        },
+        "paint_cache_hit": {
+          "buildDelta": 0,
+          "hitDelta": 1,
+          "evictDelta": 0
         }
       }
     },
@@ -794,18 +922,28 @@
       "name": "static_background_cache",
       "profile": "full",
       "contract": {
+        "profileSemantics": "stress_nightly",
+        "scenario": {
+          "kind": "static_background_cache"
+        },
         "operations": {
           "paint_cache_miss": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [
+              "buildDelta",
+              "disposeDelta",
+              "gridLoopIterations",
+              "gridDrawnLineCount"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -814,39 +952,57 @@
             "executionMode": "steady_state",
             "warmupIterations": 1,
             "measuredIterations": 4,
+            "probeKeys": [
+              "buildDelta",
+              "disposeDelta",
+              "gridLoopIterations",
+              "gridDrawnLineCount"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "backgroundNodeCount": 100000,
+      "iterations": 4,
       "metrics": {
-        "backgroundNodeCount": 100000,
-        "iterations": 4,
-        "metrics": {
-          "paint_cache_miss": {
-            "avgUs": 56344,
-            "minUs": 6106,
-            "maxUs": 201501,
-            "avgRssDeltaBytes": 9900032,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 39550976
-          },
-          "paint_cache_hit": {
-            "avgUs": 5888,
-            "minUs": 5765,
-            "maxUs": 6047,
-            "avgRssDeltaBytes": 4096,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 16384
-          }
+        "paint_cache_miss": {
+          "avgUs": 59447,
+          "minUs": 5976,
+          "maxUs": 213974,
+          "avgRssDeltaBytes": 9781248,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 39092224
+        },
+        "paint_cache_hit": {
+          "avgUs": 5839,
+          "minUs": 5631,
+          "maxUs": 6315,
+          "avgRssDeltaBytes": 4096,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 16384
+        }
+      },
+      "probes": {
+        "paint_cache_miss": {
+          "buildDelta": 1,
+          "disposeDelta": 0,
+          "gridLoopIterations": 502,
+          "gridDrawnLineCount": 342
+        },
+        "paint_cache_hit": {
+          "buildDelta": 0,
+          "disposeDelta": 0,
+          "gridLoopIterations": 0,
+          "gridDrawnLineCount": 0
         }
       }
     },
@@ -854,59 +1010,72 @@
       "name": "background_layer_paint_admission",
       "profile": "full",
       "contract": {
+        "profileSemantics": "stress_nightly",
+        "scenario": {
+          "kind": "background_viewport",
+          "nodeCount": 100000,
+          "viewport": {
+            "width": 240,
+            "height": 160
+          }
+        },
         "operations": {
-          "enumerate_small_viewport": {
+          "enumerate_viewport": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           },
-          "paint_small_viewport": {
+          "paint_viewport": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "backgroundNodeCount": 100000,
+      "iterations": 4,
+      "viewport": {
+        "width": 240,
+        "height": 160
+      },
       "metrics": {
-        "backgroundNodeCount": 100000,
-        "iterations": 4,
-        "metrics": {
-          "enumerate_small_viewport": {
-            "avgUs": 49161,
-            "minUs": 4598,
-            "maxUs": 182487,
-            "avgRssDeltaBytes": 9986048,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 39944192
-          },
-          "paint_small_viewport": {
-            "avgUs": 4932,
-            "minUs": 4778,
-            "maxUs": 5142,
-            "avgRssDeltaBytes": 0,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 0
-          }
+        "enumerate_viewport": {
+          "avgUs": 48033,
+          "minUs": 4811,
+          "maxUs": 177231,
+          "avgRssDeltaBytes": 8228864,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 32915456
+        },
+        "paint_viewport": {
+          "avgUs": 5309,
+          "minUs": 5230,
+          "maxUs": 5426,
+          "avgRssDeltaBytes": 0,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 0
         }
       }
     },
@@ -914,18 +1083,23 @@
       "name": "worst_case",
       "profile": "full",
       "contract": {
+        "profileSemantics": "stress_nightly",
+        "scenario": {
+          "kind": "stress_worst_case"
+        },
         "operations": {
           "huge_bounds.query": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -934,13 +1108,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -949,13 +1124,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -964,13 +1140,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -979,67 +1156,66 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "largeQueryNodeCount": 50000,
+      "longPathSegments": 12000,
+      "iterations": 3,
       "metrics": {
-        "largeQueryNodeCount": 50000,
-        "longPathSegments": 12000,
-        "iterations": 3,
-        "metrics": {
-          "huge_bounds": {
-            "query": {
-              "avgUs": 118,
-              "minUs": 0,
-              "maxUs": 352,
-              "avgRssDeltaBytes": 0,
-              "minRssDeltaBytes": 0,
-              "maxRssDeltaBytes": 0
-            },
-            "move_selection": {
-              "avgUs": 435,
-              "minUs": 164,
-              "maxUs": 574,
-              "avgRssDeltaBytes": 16384,
-              "minRssDeltaBytes": 0,
-              "maxRssDeltaBytes": 32768
-            }
+        "huge_bounds": {
+          "query": {
+            "avgUs": 70,
+            "minUs": 1,
+            "maxUs": 206,
+            "avgRssDeltaBytes": 0,
+            "minRssDeltaBytes": 0,
+            "maxRssDeltaBytes": 0
           },
-          "huge_rect_select": {
-            "avgUs": 46186,
-            "minUs": 15092,
-            "maxUs": 108122,
-            "avgRssDeltaBytes": 12866901,
-            "minRssDeltaBytes": 2883584,
-            "maxRssDeltaBytes": 27983872
+          "move_selection": {
+            "avgUs": 631,
+            "minUs": 220,
+            "maxUs": 1105,
+            "avgRssDeltaBytes": 5461,
+            "minRssDeltaBytes": 0,
+            "maxRssDeltaBytes": 16384
+          }
+        },
+        "huge_rect_select": {
+          "avgUs": 49126,
+          "minUs": 11756,
+          "maxUs": 120432,
+          "avgRssDeltaBytes": 11239424,
+          "minRssDeltaBytes": 2867200,
+          "maxRssDeltaBytes": 27934720
+        },
+        "very_long_path": {
+          "patch_svg_path": {
+            "avgUs": 8310,
+            "minUs": 2560,
+            "maxUs": 11649,
+            "avgRssDeltaBytes": 567979,
+            "minRssDeltaBytes": 0,
+            "maxRssDeltaBytes": 1638400
           },
-          "very_long_path": {
-            "patch_svg_path": {
-              "avgUs": 8308,
-              "minUs": 2450,
-              "maxUs": 11973,
-              "avgRssDeltaBytes": 1119573,
-              "minRssDeltaBytes": 65536,
-              "maxRssDeltaBytes": 2195456
-            },
-            "query_candidates": {
-              "avgUs": 90,
-              "minUs": 29,
-              "maxUs": 208,
-              "avgRssDeltaBytes": 0,
-              "minRssDeltaBytes": 0,
-              "maxRssDeltaBytes": 0
-            }
+          "query_candidates": {
+            "avgUs": 98,
+            "minUs": 36,
+            "maxUs": 205,
+            "avgRssDeltaBytes": 0,
+            "minRssDeltaBytes": 0,
+            "maxRssDeltaBytes": 0
           }
         }
       }

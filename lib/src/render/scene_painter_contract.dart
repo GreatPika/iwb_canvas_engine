@@ -5,6 +5,22 @@ import '../contract/snapshot.dart';
 import '../core/text_layout.dart';
 import 'render_geometry_cache.dart';
 
+class ScenePainterPreparedFrame {
+  const ScenePainterPreparedFrame({
+    required this.cameraOffset,
+    required this.viewRect,
+    required this.paintPlan,
+    required this.selectedIds,
+    required this.selectionStyle,
+  });
+
+  final Offset cameraOffset;
+  final Rect viewRect;
+  final ScenePreparedPaintPlan paintPlan;
+  final Set<NodeId> selectedIds;
+  final ScenePainterSelectionStyle selectionStyle;
+}
+
 class ScenePainterSelectionStyle {
   const ScenePainterSelectionStyle({
     required this.color,
@@ -23,6 +39,18 @@ class ScenePainterPaintFrame {
     required this.selectedIds,
     required this.selectionStyle,
   });
+
+  factory ScenePainterPaintFrame.fromPrepared(
+    ScenePainterPreparedFrame prepared,
+  ) {
+    return ScenePainterPaintFrame(
+      cameraOffset: prepared.cameraOffset,
+      viewRect: prepared.viewRect,
+      paintPlan: prepared.paintPlan,
+      selectedIds: prepared.selectedIds,
+      selectionStyle: prepared.selectionStyle,
+    );
+  }
 
   final Offset cameraOffset;
   final Rect viewRect;

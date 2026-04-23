@@ -472,7 +472,7 @@ optimizations.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Product Profile Taxonomy
+### Slice 1. [x] Product Profile Taxonomy
 
 #### Slice Contract
 
@@ -520,7 +520,7 @@ primary product norm.
 
 - repository diagnostics now speak clearly about product versus stress results
 
-### Slice 2. [ ] Defect-Oriented Probe Metrics
+### Slice 2. [x] Defect-Oriented Probe Metrics
 
 #### Slice Contract
 
@@ -571,7 +571,7 @@ only owners.
 - later optimization steps can compare before/after results for each known
   defect instead of one generic perf number
 
-### Slice 3. [ ] Product Baseline Capture
+### Slice 3. [x] Product Baseline Capture
 
 #### Slice Contract
 

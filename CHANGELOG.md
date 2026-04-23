@@ -66,8 +66,9 @@ in changes that have not yet been published to pub.dev.
   committed state carry a derived `layerIndexById` companion map.
 - Reworked repository-owned performance proof architecture. GitHub CI now uses
   deterministic owner-level proof plus workflow-contract checks, while
-  diagnostic load profiles use truthful metric names and explicit
-  `cold_start` versus `steady_state` benchmark semantics.
+  diagnostic load profiles now split `smoke` product scenarios from `full`
+  stress/nightly coverage and expose explicit cache-churn, selection
+  compositing, and grid-iteration probes.
 
 ### Fixed
 

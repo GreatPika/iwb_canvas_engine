@@ -10,6 +10,7 @@ import 'cache/scene_stroke_path_cache.dart';
 import 'cache/scene_text_layout_cache.dart';
 import 'render_geometry_cache.dart';
 import 'scene_painter_background.dart';
+import 'scene_painter_contract.dart';
 import 'scene_painter_frame.dart';
 import 'scene_painter_node_renderer.dart';
 import 'scene_painter_selection.dart';
@@ -21,6 +22,18 @@ export 'cache/scene_stroke_path_cache.dart';
 export 'cache/scene_text_layout_cache.dart';
 
 typedef ImageResolver = Image? Function(String imageId);
+
+final class ScenePainterPreparedScene {
+  const ScenePainterPreparedScene._({
+    required this.size,
+    required this.frameRead,
+    required this.frame,
+  });
+
+  final Size size;
+  final SceneViewFrameRead frameRead;
+  final ScenePainterPreparedFrame frame;
+}
 
 class ScenePainter extends CustomPainter {
   ScenePainter({
@@ -64,6 +77,24 @@ class ScenePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     _shell.paint(canvas, size, controller.captureFrameRead());
+  }
+
+  ScenePainterPreparedScene prepareForPaint(Size size) {
+    final frameRead = controller.captureFrameRead();
+    return ScenePainterPreparedScene._(
+      size: size,
+      frameRead: frameRead,
+      frame: _shell.prepareFrame(size, frameRead),
+    );
+  }
+
+  void paintPrepared(Canvas canvas, ScenePainterPreparedScene preparedScene) {
+    _shell.paintPrepared(
+      canvas,
+      preparedScene.size,
+      preparedScene.frameRead,
+      preparedScene.frame,
+    );
   }
 
   @override

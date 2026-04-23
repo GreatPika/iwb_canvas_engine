@@ -34,6 +34,14 @@ class SceneTextLayoutCache {
   @visibleForTesting
   int get debugSize => _entries.length;
 
+  ({int buildCount, int hitCount, int evictCount}) captureProbe() {
+    return (
+      buildCount: _debugBuildCount,
+      hitCount: _debugHitCount,
+      evictCount: _debugEvictCount,
+    );
+  }
+
   void clear() => _entries.clear();
 
   /// Returns a render-ready [ResolvedTextLayout] derived only from [node] and

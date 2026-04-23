@@ -137,6 +137,48 @@ void main() {
   });
 
   test(
+    'SceneGridRenderer debugWorkForPlan exposes loop waste on dense grids',
+    () {
+      final grid = GridSnapshot(
+        isEnabled: true,
+        cellSize: 1,
+        color: Color(0xFF000000),
+      );
+
+      final plan = renderer.plan(
+        SceneGridRenderRequest(
+          grid: grid,
+          size: Size(600, 400),
+          cameraOffset: Offset(0.5, 0.5),
+          gridStrokeWidth: 1,
+        ),
+      );
+
+      expect(plan, isNotNull);
+      if (plan == null) {
+        fail('Expected renderer plan for drawable dense grid.');
+      }
+
+      final work = renderer.debugWorkForPlan(plan);
+      expect(work.xAxis.loopIterations, greaterThan(work.xAxis.drawnLineCount));
+      expect(work.yAxis.loopIterations, greaterThan(work.yAxis.drawnLineCount));
+      expect(work.loopIterations, greaterThan(work.drawnLineCount));
+      expect(work.toJson(), <String, Object?>{
+        'loopIterations': work.loopIterations,
+        'drawnLineCount': work.drawnLineCount,
+        'xAxis': <String, int>{
+          'loopIterations': work.xAxis.loopIterations,
+          'drawnLineCount': work.xAxis.drawnLineCount,
+        },
+        'yAxis': <String, int>{
+          'loopIterations': work.yAxis.loopIterations,
+          'drawnLineCount': work.yAxis.drawnLineCount,
+        },
+      });
+    },
+  );
+
+  test(
     'SceneGridRenderer draws full-height vertical lines on wide viewports',
     () async {
       const background = Color(0xFFFFFFFF);

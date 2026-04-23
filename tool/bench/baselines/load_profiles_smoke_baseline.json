@@ -1,24 +1,39 @@
 {
-  "generatedAtUtc": "2026-04-23T10:03:11.539477Z",
+  "generatedAtUtc": "2026-04-23T12:55:07.561105Z",
   "profile": "smoke",
-  "caseCount": 10,
+  "policy": {
+    "profileSemantics": "product_realistic",
+    "maxNodeCount": 1000,
+    "includesWorstCaseDiagnostics": false,
+    "backgroundViewport": {
+      "width": 3840,
+      "height": 2160
+    }
+  },
+  "caseCount": 9,
   "cases": [
     {
-      "name": "nodes_10000",
+      "name": "nodes_1000",
       "profile": "smoke",
       "contract": {
+        "profileSemantics": "product_realistic",
+        "scenario": {
+          "kind": "node_scale",
+          "nodeCount": 1000
+        },
         "operations": {
           "single_node_patch": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -27,13 +42,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -42,13 +58,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -57,55 +74,54 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "nodeCount": 1000,
+      "iterations": 3,
       "metrics": {
-        "nodeCount": 10000,
-        "iterations": 3,
-        "metrics": {
-          "single_node_patch": {
-            "avgUs": 38783,
-            "minUs": 24465,
-            "maxUs": 63837,
-            "avgRssDeltaBytes": 1589248,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 4374528
-          },
-          "single_node_transform": {
-            "avgUs": 31370,
-            "minUs": 28111,
-            "maxUs": 36450,
-            "avgRssDeltaBytes": 7596715,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 11829248
-          },
-          "toggle_selection": {
-            "avgUs": 24896,
-            "minUs": 22148,
-            "maxUs": 29690,
-            "avgRssDeltaBytes": 98304,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 294912
-          },
-          "move_selection": {
-            "avgUs": 29203,
-            "minUs": 26722,
-            "maxUs": 32514,
-            "avgRssDeltaBytes": 1785856,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 3883008
-          }
+        "single_node_patch": {
+          "avgUs": 14217,
+          "minUs": 4112,
+          "maxUs": 32759,
+          "avgRssDeltaBytes": 1545557,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 4046848
+        },
+        "single_node_transform": {
+          "avgUs": 5455,
+          "minUs": 4104,
+          "maxUs": 7856,
+          "avgRssDeltaBytes": 3309568,
+          "minRssDeltaBytes": 2424832,
+          "maxRssDeltaBytes": 4079616
+        },
+        "toggle_selection": {
+          "avgUs": 3657,
+          "minUs": 3184,
+          "maxUs": 4068,
+          "avgRssDeltaBytes": 87381,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 196608
+        },
+        "move_selection": {
+          "avgUs": 4010,
+          "minUs": 3181,
+          "maxUs": 5060,
+          "avgRssDeltaBytes": 1064960,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 3194880
         }
       }
     },
@@ -113,18 +129,25 @@
       "name": "strokes_1000_pts_256",
       "profile": "smoke",
       "contract": {
+        "profileSemantics": "product_realistic",
+        "scenario": {
+          "kind": "stroke_scale",
+          "strokeCount": 1000,
+          "pointsPerStroke": 256
+        },
         "operations": {
           "single_stroke_patch_thickness": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 2,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -133,13 +156,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 2,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -148,48 +172,47 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 2,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "strokeCount": 1000,
+      "pointsPerStroke": 256,
+      "iterations": 2,
       "metrics": {
-        "strokeCount": 1000,
-        "pointsPerStroke": 256,
-        "iterations": 2,
-        "metrics": {
-          "single_stroke_patch_thickness": {
-            "avgUs": 88074,
-            "minUs": 83756,
-            "maxUs": 92391,
-            "avgRssDeltaBytes": 65536,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 131072
-          },
-          "single_stroke_patch_points": {
-            "avgUs": 84182,
-            "minUs": 83923,
-            "maxUs": 84441,
-            "avgRssDeltaBytes": 98304,
-            "minRssDeltaBytes": 98304,
-            "maxRssDeltaBytes": 98304
-          },
-          "toggle_selection": {
-            "avgUs": 82986,
-            "minUs": 81287,
-            "maxUs": 84684,
-            "avgRssDeltaBytes": 106496,
-            "minRssDeltaBytes": 98304,
-            "maxRssDeltaBytes": 114688
-          }
+        "single_stroke_patch_thickness": {
+          "avgUs": 88836,
+          "minUs": 88365,
+          "maxUs": 89306,
+          "avgRssDeltaBytes": 1024000,
+          "minRssDeltaBytes": 655360,
+          "maxRssDeltaBytes": 1392640
+        },
+        "single_stroke_patch_points": {
+          "avgUs": 83365,
+          "minUs": 83364,
+          "maxUs": 83366,
+          "avgRssDeltaBytes": 311296,
+          "minRssDeltaBytes": 98304,
+          "maxRssDeltaBytes": 524288
+        },
+        "toggle_selection": {
+          "avgUs": 80333,
+          "minUs": 79931,
+          "maxUs": 80735,
+          "avgRssDeltaBytes": 90112,
+          "minRssDeltaBytes": 81920,
+          "maxRssDeltaBytes": 98304
         }
       }
     },
@@ -197,18 +220,25 @@
       "name": "selection_path_painter_only",
       "profile": "smoke",
       "contract": {
+        "profileSemantics": "product_realistic",
+        "scenario": {
+          "kind": "selection_path_painter_only"
+        },
         "operations": {
           "paint_no_selection": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [
+              "saveLayerCount"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -217,40 +247,49 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [
+              "saveLayerCount"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "pathNodeCount": 400,
+      "pathSegments": 128,
+      "iterations": 3,
       "metrics": {
-        "pathNodeCount": 400,
-        "pathSegments": 128,
-        "iterations": 3,
-        "metrics": {
-          "paint_no_selection": {
-            "avgUs": 33010,
-            "minUs": 21915,
-            "maxUs": 54123,
-            "avgRssDeltaBytes": 846507,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 1490944
-          },
-          "paint_with_selection": {
-            "avgUs": 28292,
-            "minUs": 20854,
-            "maxUs": 39890,
-            "avgRssDeltaBytes": 1731243,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 5144576
-          }
+        "paint_no_selection": {
+          "avgUs": 9958,
+          "minUs": 2867,
+          "maxUs": 23729,
+          "avgRssDeltaBytes": 289451,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 638976
+        },
+        "paint_with_selection": {
+          "avgUs": 7044,
+          "minUs": 3079,
+          "maxUs": 12280,
+          "avgRssDeltaBytes": 1387179,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 3784704
+        }
+      },
+      "probes": {
+        "paint_no_selection": {
+          "saveLayerCount": 0
+        },
+        "paint_with_selection": {
+          "saveLayerCount": 400
         }
       }
     },
@@ -258,18 +297,23 @@
       "name": "selection_path_candidate_staging",
       "profile": "smoke",
       "contract": {
+        "profileSemantics": "product_realistic",
+        "scenario": {
+          "kind": "selection_path_candidate_staging"
+        },
         "operations": {
           "stage_no_selection": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -278,40 +322,39 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "pathNodeCount": 400,
+      "pathSegments": 128,
+      "iterations": 3,
       "metrics": {
-        "pathNodeCount": 400,
-        "pathSegments": 128,
-        "iterations": 3,
-        "metrics": {
-          "stage_no_selection": {
-            "avgUs": 6952,
-            "minUs": 1139,
-            "maxUs": 18484,
-            "avgRssDeltaBytes": 65536,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 196608
-          },
-          "stage_with_selection": {
-            "avgUs": 4754,
-            "minUs": 1288,
-            "maxUs": 11550,
-            "avgRssDeltaBytes": 5461,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 16384
-          }
+        "stage_no_selection": {
+          "avgUs": 5221,
+          "minUs": 686,
+          "maxUs": 14006,
+          "avgRssDeltaBytes": 27307,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 81920
+        },
+        "stage_with_selection": {
+          "avgUs": 4113,
+          "minUs": 993,
+          "maxUs": 10172,
+          "avgRssDeltaBytes": 638976,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 1196032
         }
       }
     },
@@ -319,18 +362,25 @@
       "name": "selection_path_end_to_end_paint",
       "profile": "smoke",
       "contract": {
+        "profileSemantics": "product_realistic",
+        "scenario": {
+          "kind": "selection_path_end_to_end_paint"
+        },
         "operations": {
           "paint_no_selection": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [
+              "saveLayerCount"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -339,40 +389,49 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [
+              "saveLayerCount"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "pathNodeCount": 400,
+      "pathSegments": 128,
+      "iterations": 3,
       "metrics": {
-        "pathNodeCount": 400,
-        "pathSegments": 128,
-        "iterations": 3,
-        "metrics": {
-          "paint_no_selection": {
-            "avgUs": 9024,
-            "minUs": 2174,
-            "maxUs": 22418,
-            "avgRssDeltaBytes": 196608,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 589824
-          },
-          "paint_with_selection": {
-            "avgUs": 8152,
-            "minUs": 3214,
-            "maxUs": 17582,
-            "avgRssDeltaBytes": 54613,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 98304
-          }
+        "paint_no_selection": {
+          "avgUs": 10555,
+          "minUs": 2114,
+          "maxUs": 27300,
+          "avgRssDeltaBytes": 628053,
+          "minRssDeltaBytes": 212992,
+          "maxRssDeltaBytes": 933888
+        },
+        "paint_with_selection": {
+          "avgUs": 8596,
+          "minUs": 2972,
+          "maxUs": 18241,
+          "avgRssDeltaBytes": 671744,
+          "minRssDeltaBytes": 147456,
+          "maxRssDeltaBytes": 1622016
+        }
+      },
+      "probes": {
+        "paint_no_selection": {
+          "saveLayerCount": 0
+        },
+        "paint_with_selection": {
+          "saveLayerCount": 400
         }
       }
     },
@@ -380,18 +439,27 @@
       "name": "text_layout_cache",
       "profile": "smoke",
       "contract": {
+        "profileSemantics": "product_realistic",
+        "scenario": {
+          "kind": "text_layout_cache"
+        },
         "operations": {
           "paint_cache_miss": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [
+              "buildDelta",
+              "hitDelta",
+              "evictDelta"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -400,38 +468,53 @@
             "executionMode": "steady_state",
             "warmupIterations": 1,
             "measuredIterations": 3,
+            "probeKeys": [
+              "buildDelta",
+              "hitDelta",
+              "evictDelta"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "iterations": 3,
       "metrics": {
-        "iterations": 3,
-        "metrics": {
-          "paint_cache_miss": {
-            "avgUs": 1606,
-            "minUs": 137,
-            "maxUs": 4353,
-            "avgRssDeltaBytes": 32768,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 98304
-          },
-          "paint_cache_hit": {
-            "avgUs": 89,
-            "minUs": 29,
-            "maxUs": 199,
-            "avgRssDeltaBytes": 0,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 0
-          }
+        "paint_cache_miss": {
+          "avgUs": 1361,
+          "minUs": 79,
+          "maxUs": 3855,
+          "avgRssDeltaBytes": 32768,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 98304
+        },
+        "paint_cache_hit": {
+          "avgUs": 74,
+          "minUs": 28,
+          "maxUs": 160,
+          "avgRssDeltaBytes": 0,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 0
+        }
+      },
+      "probes": {
+        "paint_cache_miss": {
+          "buildDelta": 1,
+          "hitDelta": 0,
+          "evictDelta": 0
+        },
+        "paint_cache_hit": {
+          "buildDelta": 0,
+          "hitDelta": 1,
+          "evictDelta": 0
         }
       }
     },
@@ -439,18 +522,27 @@
       "name": "stroke_path_cache",
       "profile": "smoke",
       "contract": {
+        "profileSemantics": "product_realistic",
+        "scenario": {
+          "kind": "stroke_path_cache"
+        },
         "operations": {
           "paint_cache_miss": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [
+              "buildDelta",
+              "hitDelta",
+              "evictDelta"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -459,38 +551,53 @@
             "executionMode": "steady_state",
             "warmupIterations": 1,
             "measuredIterations": 3,
+            "probeKeys": [
+              "buildDelta",
+              "hitDelta",
+              "evictDelta"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "iterations": 3,
       "metrics": {
-        "iterations": 3,
-        "metrics": {
-          "paint_cache_miss": {
-            "avgUs": 787,
-            "minUs": 115,
-            "maxUs": 2124,
-            "avgRssDeltaBytes": 5461,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 16384
-          },
-          "paint_cache_hit": {
-            "avgUs": 100,
-            "minUs": 34,
-            "maxUs": 219,
-            "avgRssDeltaBytes": 5461,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 16384
-          }
+        "paint_cache_miss": {
+          "avgUs": 669,
+          "minUs": 97,
+          "maxUs": 1811,
+          "avgRssDeltaBytes": 5461,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 16384
+        },
+        "paint_cache_hit": {
+          "avgUs": 89,
+          "minUs": 33,
+          "maxUs": 197,
+          "avgRssDeltaBytes": 0,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 0
+        }
+      },
+      "probes": {
+        "paint_cache_miss": {
+          "buildDelta": 1,
+          "hitDelta": 0,
+          "evictDelta": 0
+        },
+        "paint_cache_hit": {
+          "buildDelta": 0,
+          "hitDelta": 1,
+          "evictDelta": 0
         }
       }
     },
@@ -498,18 +605,28 @@
       "name": "static_background_cache",
       "profile": "smoke",
       "contract": {
+        "profileSemantics": "product_realistic",
+        "scenario": {
+          "kind": "static_background_cache"
+        },
         "operations": {
           "paint_cache_miss": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [
+              "buildDelta",
+              "disposeDelta",
+              "gridLoopIterations",
+              "gridDrawnLineCount"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
@@ -518,39 +635,57 @@
             "executionMode": "steady_state",
             "warmupIterations": 1,
             "measuredIterations": 3,
+            "probeKeys": [
+              "buildDelta",
+              "disposeDelta",
+              "gridLoopIterations",
+              "gridDrawnLineCount"
+            ],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
+      "backgroundNodeCount": 1000,
+      "iterations": 3,
       "metrics": {
-        "backgroundNodeCount": 10000,
-        "iterations": 3,
-        "metrics": {
-          "paint_cache_miss": {
-            "avgUs": 10698,
-            "minUs": 797,
-            "maxUs": 30064,
-            "avgRssDeltaBytes": 1720320,
-            "minRssDeltaBytes": 16384,
-            "maxRssDeltaBytes": 4997120
-          },
-          "paint_cache_hit": {
-            "avgUs": 1366,
-            "minUs": 1234,
-            "maxUs": 1550,
-            "avgRssDeltaBytes": 5461,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 16384
-          }
+        "paint_cache_miss": {
+          "avgUs": 3033,
+          "minUs": 426,
+          "maxUs": 8175,
+          "avgRssDeltaBytes": 5461,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 16384
+        },
+        "paint_cache_hit": {
+          "avgUs": 288,
+          "minUs": 232,
+          "maxUs": 377,
+          "avgRssDeltaBytes": 0,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 0
+        }
+      },
+      "probes": {
+        "paint_cache_miss": {
+          "buildDelta": 1,
+          "disposeDelta": 0,
+          "gridLoopIterations": 502,
+          "gridDrawnLineCount": 342
+        },
+        "paint_cache_hit": {
+          "buildDelta": 0,
+          "disposeDelta": 0,
+          "gridLoopIterations": 0,
+          "gridDrawnLineCount": 0
         }
       }
     },
@@ -558,193 +693,72 @@
       "name": "background_layer_paint_admission",
       "profile": "smoke",
       "contract": {
+        "profileSemantics": "product_realistic",
+        "scenario": {
+          "kind": "background_viewport",
+          "nodeCount": 1000,
+          "viewport": {
+            "width": 3840,
+            "height": 2160
+          }
+        },
         "operations": {
-          "enumerate_small_viewport": {
+          "enumerate_viewport": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           },
-          "paint_small_viewport": {
+          "paint_viewport": {
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
+            "probeKeys": [],
             "gatedMetrics": [
-              "avgRssDeltaBytes",
               "avgUs"
             ],
             "diagnosticMetrics": [
               "minUs",
               "maxUs",
+              "avgRssDeltaBytes",
               "minRssDeltaBytes",
               "maxRssDeltaBytes"
             ]
           }
         }
       },
-      "metrics": {
-        "backgroundNodeCount": 10000,
-        "iterations": 3,
-        "metrics": {
-          "enumerate_small_viewport": {
-            "avgUs": 5612,
-            "minUs": 470,
-            "maxUs": 15838,
-            "avgRssDeltaBytes": 824661,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 2457600
-          },
-          "paint_small_viewport": {
-            "avgUs": 661,
-            "minUs": 570,
-            "maxUs": 781,
-            "avgRssDeltaBytes": 207531,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 622592
-          }
-        }
-      }
-    },
-    {
-      "name": "worst_case",
-      "profile": "smoke",
-      "contract": {
-        "operations": {
-          "huge_bounds.query": {
-            "executionMode": "cold_start",
-            "warmupIterations": 0,
-            "measuredIterations": 2,
-            "gatedMetrics": [
-              "avgRssDeltaBytes",
-              "avgUs"
-            ],
-            "diagnosticMetrics": [
-              "minUs",
-              "maxUs",
-              "minRssDeltaBytes",
-              "maxRssDeltaBytes"
-            ]
-          },
-          "huge_bounds.move_selection": {
-            "executionMode": "cold_start",
-            "warmupIterations": 0,
-            "measuredIterations": 2,
-            "gatedMetrics": [
-              "avgRssDeltaBytes",
-              "avgUs"
-            ],
-            "diagnosticMetrics": [
-              "minUs",
-              "maxUs",
-              "minRssDeltaBytes",
-              "maxRssDeltaBytes"
-            ]
-          },
-          "huge_rect_select": {
-            "executionMode": "cold_start",
-            "warmupIterations": 0,
-            "measuredIterations": 2,
-            "gatedMetrics": [
-              "avgRssDeltaBytes",
-              "avgUs"
-            ],
-            "diagnosticMetrics": [
-              "minUs",
-              "maxUs",
-              "minRssDeltaBytes",
-              "maxRssDeltaBytes"
-            ]
-          },
-          "very_long_path.patch_svg_path": {
-            "executionMode": "cold_start",
-            "warmupIterations": 0,
-            "measuredIterations": 2,
-            "gatedMetrics": [
-              "avgRssDeltaBytes",
-              "avgUs"
-            ],
-            "diagnosticMetrics": [
-              "minUs",
-              "maxUs",
-              "minRssDeltaBytes",
-              "maxRssDeltaBytes"
-            ]
-          },
-          "very_long_path.query_candidates": {
-            "executionMode": "cold_start",
-            "warmupIterations": 0,
-            "measuredIterations": 2,
-            "gatedMetrics": [
-              "avgRssDeltaBytes",
-              "avgUs"
-            ],
-            "diagnosticMetrics": [
-              "minUs",
-              "maxUs",
-              "minRssDeltaBytes",
-              "maxRssDeltaBytes"
-            ]
-          }
-        }
+      "backgroundNodeCount": 1000,
+      "iterations": 3,
+      "viewport": {
+        "width": 3840,
+        "height": 2160
       },
       "metrics": {
-        "largeQueryNodeCount": 10000,
-        "longPathSegments": 2000,
-        "iterations": 2,
-        "metrics": {
-          "huge_bounds": {
-            "query": {
-              "avgUs": 58,
-              "minUs": 1,
-              "maxUs": 115,
-              "avgRssDeltaBytes": 0,
-              "minRssDeltaBytes": 0,
-              "maxRssDeltaBytes": 0
-            },
-            "move_selection": {
-              "avgUs": 330,
-              "minUs": 136,
-              "maxUs": 523,
-              "avgRssDeltaBytes": 8192,
-              "minRssDeltaBytes": 0,
-              "maxRssDeltaBytes": 16384
-            }
-          },
-          "huge_rect_select": {
-            "avgUs": 11091,
-            "minUs": 2495,
-            "maxUs": 19686,
-            "avgRssDeltaBytes": 1769472,
-            "minRssDeltaBytes": 32768,
-            "maxRssDeltaBytes": 3506176
-          },
-          "very_long_path": {
-            "patch_svg_path": {
-              "avgUs": 1750,
-              "minUs": 1390,
-              "maxUs": 2109,
-              "avgRssDeltaBytes": 0,
-              "minRssDeltaBytes": 0,
-              "maxRssDeltaBytes": 0
-            },
-            "query_candidates": {
-              "avgUs": 62,
-              "minUs": 30,
-              "maxUs": 94,
-              "avgRssDeltaBytes": 0,
-              "minRssDeltaBytes": 0,
-              "maxRssDeltaBytes": 0
-            }
-          }
+        "enumerate_viewport": {
+          "avgUs": 1316,
+          "minUs": 281,
+          "maxUs": 3246,
+          "avgRssDeltaBytes": 0,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 0
+        },
+        "paint_viewport": {
+          "avgUs": 951,
+          "minUs": 776,
+          "maxUs": 1171,
+          "avgRssDeltaBytes": 1075883,
+          "minRssDeltaBytes": 802816,
+          "maxRssDeltaBytes": 1458176
         }
       }
     }

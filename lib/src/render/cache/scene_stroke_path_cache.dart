@@ -33,6 +33,14 @@ class SceneStrokePathCache {
   @visibleForTesting
   int get debugSize => _entries.length;
 
+  ({int buildCount, int hitCount, int evictCount}) captureProbe() {
+    return (
+      buildCount: _debugBuildCount,
+      hitCount: _debugHitCount,
+      evictCount: _debugEvictCount,
+    );
+  }
+
   /// Owner-level invalidation for controller epoch/document boundaries.
   ///
   /// Keys stay scoped to `(nodeId, instanceRevision)` and local stroke inputs;

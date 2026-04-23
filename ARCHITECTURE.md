@@ -674,11 +674,17 @@ trigger filters, scope ids, and workflow expectations live in
 
 Performance proof follows a two-contour architecture:
 - GitHub CI owns deterministic owner-level proof plus executable workflow drift
-  checks. It does not rely on wall-clock benchmark thresholds or DCM.
+  checks. It does not rely on wall-clock benchmark thresholds, machine-wide
+  memory budgets, or DCM.
 - Diagnostic load profiles under `tool/bench/**` remain repository-owned
-  regression artifacts. They declare explicit `cold_start` versus
-  `steady_state` semantics, warm-up discipline, truthful metric names, and
-  production-owner versus benchmark-only seams.
+  regression artifacts. `smoke` is the product-realistic profile for scenes up
+  to `1000` nodes plus an explicit `3840x2160` viewport scenario, while `full`
+  is the separate stress/nightly profile for large-scene and worst-case
+  diagnostics.
+- Diagnostic load-profile reports carry explicit owner-level probe surfaces for
+  cache churn, selection `saveLayer` work, and grid loop-versus-drawn-line
+  counts. The benchmark runner and diff layer consume production-owner seams
+  only and do not introduce benchmark-only runtime owners.
 
 ## 10. Mechanical enforcement
 

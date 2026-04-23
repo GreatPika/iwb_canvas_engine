@@ -83,6 +83,47 @@ void main() {
     },
   );
 
+  test('Scene text and stroke caches expose owner-level probe counters', () {
+    final textCache = SceneTextLayoutCache(maxEntries: 1);
+    final strokeCache = SceneStrokePathCache(maxEntries: 1);
+    final textNode = _textNode();
+    final otherTextNode = TextNodeSnapshot(
+      id: 'text-2',
+      text: 'other',
+      fontSize: 14,
+      color: const Color(0xFF000000),
+      textDirection: TextDirection.ltr,
+      maxWidth: 80,
+    );
+    final strokeNode = _strokeNode();
+    final otherStrokeNode = StrokeNodeSnapshot(
+      id: 'stroke-2',
+      instanceRevision: 2,
+      points: const <Offset>[Offset(0, 0), Offset(8, 4)],
+      thickness: 2,
+      color: const Color(0xFF000000),
+    );
+
+    textCache.getOrBuild(node: textNode);
+    textCache.getOrBuild(node: textNode);
+    textCache.getOrBuild(node: otherTextNode);
+
+    strokeCache.getOrBuild(strokeNode);
+    strokeCache.getOrBuild(strokeNode);
+    strokeCache.getOrBuild(otherStrokeNode);
+
+    expect(textCache.captureProbe(), (
+      buildCount: 2,
+      hitCount: 1,
+      evictCount: 1,
+    ));
+    expect(strokeCache.captureProbe(), (
+      buildCount: 2,
+      hitCount: 1,
+      evictCount: 1,
+    ));
+  });
+
   test('SceneRenderCaches disposeOwned clears and disposes owned caches', () {
     final renderCaches = SceneRenderCaches();
     final textNode = _textNode();

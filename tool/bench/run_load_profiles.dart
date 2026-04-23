@@ -71,10 +71,21 @@ Future<void> main(List<String> args) async {
     }
     exit(1);
   }
+  final contractIssues = validateCollectedBenchmarkCaseContracts(
+    policy: policy,
+    parsedCases: parsedCases,
+  );
+  if (contractIssues.isNotEmpty) {
+    for (final issue in contractIssues) {
+      stderr.writeln('FAIL: $issue');
+    }
+    exit(1);
+  }
 
   final report = <String, Object?>{
     'generatedAtUtc': DateTime.now().toUtc().toIso8601String(),
     'profile': profile,
+    'policy': policy.reportMetadata,
     'caseCount': parsedCases.length,
     'cases': parsedCases,
   };
@@ -102,6 +113,53 @@ List<String> validateCollectedBenchmarkCases({
     policy: policy,
     caseNames: caseNames,
   );
+}
+
+List<String> validateCollectedBenchmarkCaseContracts({
+  required LoadProfilePolicy policy,
+  required List<Map<String, Object?>> parsedCases,
+}) {
+  final issues = <String>[];
+
+  for (final parsedCase in parsedCases) {
+    final caseName = parsedCase['name'];
+    if (caseName is! String || caseName.isEmpty) {
+      continue;
+    }
+
+    final requiredProbeKeys = policy.requiredProbeKeysForCase(caseName);
+    if (requiredProbeKeys.isEmpty) {
+      continue;
+    }
+
+    final rawProbes = parsedCase['probes'];
+    if (rawProbes is! Map<String, Object?>) {
+      issues.add('benchmark case "$caseName" is missing a "probes" object');
+      continue;
+    }
+
+    requiredProbeKeys.forEach((operationName, probeKeys) {
+      final rawOperation = rawProbes[operationName];
+      if (rawOperation is! Map<String, Object?>) {
+        issues.add(
+          'benchmark case "$caseName" is missing probes for "$operationName"',
+        );
+        return;
+      }
+
+      for (final probeKey in probeKeys) {
+        final probeValue = rawOperation[probeKey];
+        if (probeValue is! num || !probeValue.isFinite) {
+          issues.add(
+            'benchmark case "$caseName" probe '
+            '"$operationName.$probeKey" must be a finite number',
+          );
+        }
+      }
+    });
+  }
+
+  return issues;
 }
 
 _Options _parseArgs(List<String> args) {
@@ -133,6 +191,12 @@ Never _printUsageAndExit(int code) {
   stdout.writeln(
     'Usage: dart run tool/bench/run_load_profiles.dart '
     '--profile=<smoke|full> [--output=<path>]',
+  );
+  stdout.writeln(
+    '  smoke: product-realistic diagnostics (<=1000 nodes, includes 3840x2160 viewport)',
+  );
+  stdout.writeln(
+    '  full: stress/nightly diagnostics (10k+ scenes and worst-case coverage)',
   );
   exit(code);
 }

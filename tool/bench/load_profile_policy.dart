@@ -30,14 +30,29 @@ const List<String> _cacheBranchRequiredOperations = <String>[
   'paint_cache_hit',
 ];
 
+const List<String> _cacheChurnProbeKeys = <String>[
+  'buildDelta',
+  'hitDelta',
+  'evictDelta',
+];
+
+const List<String> _selectionCompositingProbeKeys = <String>['saveLayerCount'];
+
+const List<String> _staticBackgroundProbeKeys = <String>[
+  'buildDelta',
+  'disposeDelta',
+  'gridLoopIterations',
+  'gridDrawnLineCount',
+];
+
 const List<String> _selectionPathStagingRequiredOperations = <String>[
   'stage_no_selection',
   'stage_with_selection',
 ];
 
 const List<String> _backgroundLayerPaintAdmissionRequiredOperations = <String>[
-  'enumerate_small_viewport',
-  'paint_small_viewport',
+  'enumerate_viewport',
+  'paint_viewport',
 ];
 
 const List<String> _worstCaseRequiredOperations = <String>[
@@ -52,7 +67,8 @@ const Map<String, LoadProfilePolicy> _loadProfilePolicies =
     <String, LoadProfilePolicy>{
       'smoke': LoadProfilePolicy(
         profile: 'smoke',
-        nodeCases: <LoadProfileNodeCase>[LoadProfileNodeCase(nodeCount: 10000)],
+        profileSemantics: 'product_realistic',
+        nodeCases: <LoadProfileNodeCase>[LoadProfileNodeCase(nodeCount: 1000)],
         nodeIterations: 3,
         strokeCases: <LoadProfileStrokeCase>[
           LoadProfileStrokeCase(strokeCount: 1000, pointsPerStroke: 256),
@@ -61,17 +77,17 @@ const Map<String, LoadProfilePolicy> _loadProfilePolicies =
         selectionPathNodeCount: 400,
         selectionPathSegments: 128,
         selectionPathIterations: 3,
-        largeQueryNodeCount: 10000,
+        largeQueryNodeCount: 1000,
         longPathSegments: 2000,
         worstCaseIterations: 2,
-        maxRegressionPctByMetric: <String, double>{
-          'avgUs': 35,
-          'avgRssDeltaBytes': 150,
-        },
-        maxAbsoluteValueByMetric: <String, double>{'avgRssDeltaBytes': 1048576},
+        includesWorstCaseDiagnostics: false,
+        backgroundViewport: LoadProfileViewport(width: 3840, height: 2160),
+        maxRegressionPctByMetric: <String, double>{'avgUs': 35},
+        maxAbsoluteValueByMetric: <String, double>{},
       ),
       'full': LoadProfilePolicy(
         profile: 'full',
+        profileSemantics: 'stress_nightly',
         nodeCases: <LoadProfileNodeCase>[
           LoadProfileNodeCase(nodeCount: 10000),
           LoadProfileNodeCase(nodeCount: 50000),
@@ -89,11 +105,10 @@ const Map<String, LoadProfilePolicy> _loadProfilePolicies =
         largeQueryNodeCount: 50000,
         longPathSegments: 12000,
         worstCaseIterations: 3,
-        maxRegressionPctByMetric: <String, double>{
-          'avgUs': 35,
-          'avgRssDeltaBytes': 150,
-        },
-        maxAbsoluteValueByMetric: <String, double>{'avgRssDeltaBytes': 1048576},
+        includesWorstCaseDiagnostics: true,
+        backgroundViewport: LoadProfileViewport(width: 240, height: 160),
+        maxRegressionPctByMetric: <String, double>{'avgUs': 35},
+        maxAbsoluteValueByMetric: <String, double>{},
       ),
     };
 
@@ -145,6 +160,7 @@ List<String> validateProducedLoadProfileCaseNames({
 class LoadProfilePolicy {
   const LoadProfilePolicy({
     required this.profile,
+    required this.profileSemantics,
     required this.nodeCases,
     required this.nodeIterations,
     required this.strokeCases,
@@ -155,11 +171,14 @@ class LoadProfilePolicy {
     required this.largeQueryNodeCount,
     required this.longPathSegments,
     required this.worstCaseIterations,
+    required this.includesWorstCaseDiagnostics,
+    required this.backgroundViewport,
     required this.maxRegressionPctByMetric,
     required this.maxAbsoluteValueByMetric,
   });
 
   final String profile;
+  final String profileSemantics;
   final List<LoadProfileNodeCase> nodeCases;
   final int nodeIterations;
   final List<LoadProfileStrokeCase> strokeCases;
@@ -170,6 +189,8 @@ class LoadProfilePolicy {
   final int largeQueryNodeCount;
   final int longPathSegments;
   final int worstCaseIterations;
+  final bool includesWorstCaseDiagnostics;
+  final LoadProfileViewport backgroundViewport;
   final Map<String, double> maxRegressionPctByMetric;
   final Map<String, double> maxAbsoluteValueByMetric;
   List<String> get requiredMetricKeys => _loadProfileRequiredMetricKeys;
@@ -184,8 +205,47 @@ class LoadProfilePolicy {
     strokePathCacheCaseName,
     staticBackgroundCacheCaseName,
     backgroundLayerPaintAdmissionCaseName,
-    worstCaseName,
+    if (includesWorstCaseDiagnostics) worstCaseName,
   ];
+
+  Map<String, Object?> get reportMetadata => <String, Object?>{
+    'profileSemantics': profileSemantics,
+    'maxNodeCount': nodeCases.last.nodeCount,
+    'includesWorstCaseDiagnostics': includesWorstCaseDiagnostics,
+    'backgroundViewport': backgroundViewport.toJson(),
+  };
+
+  Map<String, List<String>> requiredProbeKeysForCase(String caseName) {
+    if (caseName == textLayoutCacheCaseName ||
+        caseName == strokePathCacheCaseName) {
+      return <String, List<String>>{
+        'paint_cache_miss': _cacheChurnProbeKeys,
+        'paint_cache_hit': _cacheChurnProbeKeys,
+      };
+    }
+    if (caseName == staticBackgroundCacheCaseName) {
+      return <String, List<String>>{
+        'paint_cache_miss': _staticBackgroundProbeKeys,
+        'paint_cache_hit': _staticBackgroundProbeKeys,
+      };
+    }
+    if (caseName == selectionPathPainterOnlyCaseName ||
+        caseName == selectionPathEndToEndPaintCaseName) {
+      return <String, List<String>>{
+        'paint_no_selection': _selectionCompositingProbeKeys,
+        'paint_with_selection': _selectionCompositingProbeKeys,
+      };
+    }
+    return const <String, List<String>>{};
+  }
+
+  List<String> requiredProbeKeysForOperation({
+    required String caseName,
+    required String operationName,
+  }) {
+    return requiredProbeKeysForCase(caseName)[operationName] ??
+        const <String>[];
+  }
 
   List<String> requiredOperationsForCase(String caseName) {
     if (nodeCases.any((c) => c.name == caseName)) {
@@ -226,6 +286,8 @@ class LoadProfilePolicy {
         .toList(growable: false);
 
     return <String, Object?>{
+      'profileSemantics': profileSemantics,
+      'scenario': _scenarioForCase(caseName),
       'operations': <String, Object?>{
         for (final operation in requiredOperations)
           operation: <String, Object?>{
@@ -238,11 +300,46 @@ class LoadProfilePolicy {
               operationName: operation,
             ),
             'measuredIterations': measuredIterationsForCase(caseName),
+            'probeKeys': requiredProbeKeysForOperation(
+              caseName: caseName,
+              operationName: operation,
+            ),
             'gatedMetrics': gatedMetrics,
             'diagnosticMetrics': diagnosticMetrics,
           },
       },
     };
+  }
+
+  Map<String, Object?> _scenarioForCase(String caseName) {
+    for (final nodeCase in nodeCases) {
+      if (nodeCase.name == caseName) {
+        return <String, Object?>{
+          'kind': 'node_scale',
+          'nodeCount': nodeCase.nodeCount,
+        };
+      }
+    }
+    for (final strokeCase in strokeCases) {
+      if (strokeCase.name == caseName) {
+        return <String, Object?>{
+          'kind': 'stroke_scale',
+          'strokeCount': strokeCase.strokeCount,
+          'pointsPerStroke': strokeCase.pointsPerStroke,
+        };
+      }
+    }
+    if (caseName == backgroundLayerPaintAdmissionCaseName) {
+      return <String, Object?>{
+        'kind': 'background_viewport',
+        'nodeCount': nodeCases.last.nodeCount,
+        'viewport': backgroundViewport.toJson(),
+      };
+    }
+    if (caseName == worstCaseName) {
+      return <String, Object?>{'kind': 'stress_worst_case'};
+    }
+    return <String, Object?>{'kind': caseName};
   }
 
   int measuredIterationsForCase(String caseName) {
@@ -306,6 +403,15 @@ class LoadProfileStrokeCase {
   final int pointsPerStroke;
 
   String get name => 'strokes_${strokeCount}_pts_$pointsPerStroke';
+}
+
+class LoadProfileViewport {
+  const LoadProfileViewport({required this.width, required this.height});
+
+  final int width;
+  final int height;
+
+  Map<String, int> toJson() => <String, int>{'width': width, 'height': height};
 }
 
 const String selectionPathPainterOnlyCaseName = 'selection_path_painter_only';

@@ -667,6 +667,131 @@ void main() {
   );
 
   test(
+    'ScenePainter exposes selection saveLayer work on the real paint path',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-selection-probe',
+              nodes: <NodeSnapshot>[
+                PathNodeSnapshot(
+                  id: 'selection-probe-path',
+                  svgPathData: 'M0 0 H24 V16 H0 Z',
+                  fillColor: Color(0xFF81C784),
+                  strokeColor: Color(0xFF000000),
+                  strokeWidth: 2,
+                  transform: Transform2D.translation(const Offset(40, 40)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
+      final painter = ScenePainter(
+        controller: renderState,
+        imageResolver: (_) => null,
+        selectionColor: const Color(0xFFFF0000),
+        selectionStrokeWidth: 2,
+      );
+
+      controller.write<void>((writer) {
+        writer.writeSelectionClear();
+      });
+      final noSelectionCanvas = TestRecordingCanvas();
+      painter.paint(noSelectionCanvas, const Size(120, 100));
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'selection-probe-path'});
+      });
+      final withSelectionCanvas = TestRecordingCanvas();
+      painter.paint(withSelectionCanvas, const Size(120, 100));
+
+      final noSelectionSaveLayers = noSelectionCanvas.invocations
+          .where((invocation) => invocation.invocation.memberName == #saveLayer)
+          .length;
+      final withSelectionSaveLayers = withSelectionCanvas.invocations
+          .where((invocation) => invocation.invocation.memberName == #saveLayer)
+          .length;
+
+      expect(noSelectionSaveLayers, 0);
+      expect(withSelectionSaveLayers, greaterThan(0));
+    },
+  );
+
+  test(
+    'ScenePainter prepared paint preserves selection saveLayer behavior',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-selection-prepared-probe',
+              nodes: <NodeSnapshot>[
+                PathNodeSnapshot(
+                  id: 'selection-prepared-path',
+                  svgPathData: 'M0 0 H24 V16 H0 Z',
+                  fillColor: Color(0xFF81C784),
+                  strokeColor: Color(0xFF000000),
+                  strokeWidth: 2,
+                  transform: Transform2D.translation(const Offset(40, 40)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
+      final painter = ScenePainter(
+        controller: renderState,
+        imageResolver: (_) => null,
+        selectionColor: const Color(0xFFFF0000),
+        selectionStrokeWidth: 2,
+      );
+
+      controller.write<void>((writer) {
+        writer.writeSelectionClear();
+      });
+      final preparedNoSelection = painter.prepareForPaint(const Size(120, 100));
+      final noSelectionCanvas = TestRecordingCanvas();
+      painter.paintPrepared(noSelectionCanvas, preparedNoSelection);
+
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'selection-prepared-path'});
+      });
+      final directWithSelectionCanvas = TestRecordingCanvas();
+      painter.paint(directWithSelectionCanvas, const Size(120, 100));
+
+      final preparedWithSelection = painter.prepareForPaint(
+        const Size(120, 100),
+      );
+      final preparedWithSelectionCanvas = TestRecordingCanvas();
+      painter.paintPrepared(preparedWithSelectionCanvas, preparedWithSelection);
+
+      final noSelectionSaveLayers = noSelectionCanvas.invocations
+          .where((invocation) => invocation.invocation.memberName == #saveLayer)
+          .length;
+      final directWithSelectionSaveLayers = directWithSelectionCanvas
+          .invocations
+          .where((invocation) => invocation.invocation.memberName == #saveLayer)
+          .length;
+      final preparedWithSelectionSaveLayers = preparedWithSelectionCanvas
+          .invocations
+          .where((invocation) => invocation.invocation.memberName == #saveLayer)
+          .length;
+
+      expect(noSelectionSaveLayers, 0);
+      expect(directWithSelectionSaveLayers, greaterThan(0));
+      expect(preparedWithSelectionSaveLayers, directWithSelectionSaveLayers);
+    },
+  );
+
+  test(
     'ScenePainter keeps grid visible with over-density via stride',
     () async {
       const background = Color(0xFFFFFFFF);

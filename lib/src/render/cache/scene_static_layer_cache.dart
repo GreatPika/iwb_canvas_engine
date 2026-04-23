@@ -13,6 +13,8 @@ class SceneStaticLayerCache {
 
   int _debugBuildCount = 0;
   int _debugDisposeCount = 0;
+  int _debugGridLoopIterations = 0;
+  int _debugGridDrawnLineCount = 0;
 
   @visibleForTesting
   int get debugBuildCount => _debugBuildCount;
@@ -20,6 +22,21 @@ class SceneStaticLayerCache {
   int get debugDisposeCount => _debugDisposeCount;
   @visibleForTesting
   int? get debugKeyHashCode => _key?.hashCode;
+
+  ({
+    int buildCount,
+    int disposeCount,
+    int gridLoopIterations,
+    int gridDrawnLineCount,
+  })
+  captureProbe() {
+    return (
+      buildCount: _debugBuildCount,
+      disposeCount: _debugDisposeCount,
+      gridLoopIterations: _debugGridLoopIterations,
+      gridDrawnLineCount: _debugGridDrawnLineCount,
+    );
+  }
 
   /// Owner-level invalidation for controller epoch/document boundaries.
   ///
@@ -66,6 +83,9 @@ class SceneStaticLayerCache {
       _disposeGridPictureIfNeeded();
       _key = key;
       _gridPicture = _recordGridPicture(plan);
+      final work = _gridRenderer.debugWorkForPlan(plan);
+      _debugGridLoopIterations += work.loopIterations;
+      _debugGridDrawnLineCount += work.drawnLineCount;
       _debugBuildCount += 1;
     }
 

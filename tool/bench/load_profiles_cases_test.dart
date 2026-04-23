@@ -2,14 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/controller/scene_snapshot_materializer.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
-import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
-import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
     as interactive;
@@ -171,6 +168,7 @@ void main() {
       final metrics = _runBackgroundLayerPaintAdmissionCase(
         backgroundNodeCount: policy.nodeCases.last.nodeCount,
         iterations: policy.nodeIterations,
+        viewport: policy.backgroundViewport,
       );
       _emitResult(
         profile: profile,
@@ -182,23 +180,25 @@ void main() {
     timeout: const Timeout(Duration(minutes: 10)),
   );
 
-  test(
-    'load profile worst-case profile=$profile',
-    () {
-      final metrics = _runWorstCaseProfile(
-        largeQueryNodeCount: policy.largeQueryNodeCount,
-        longPathSegments: policy.longPathSegments,
-        iterations: policy.worstCaseIterations,
-      );
-      _emitResult(
-        profile: profile,
-        name: worstCaseName,
-        metrics: metrics,
-        contract: policy.contractForCase(worstCaseName),
-      );
-    },
-    timeout: const Timeout(Duration(minutes: 10)),
-  );
+  if (policy.includesWorstCaseDiagnostics) {
+    test(
+      'load profile worst-case profile=$profile',
+      () {
+        final metrics = _runWorstCaseProfile(
+          largeQueryNodeCount: policy.largeQueryNodeCount,
+          longPathSegments: policy.longPathSegments,
+          iterations: policy.worstCaseIterations,
+        );
+        _emitResult(
+          profile: profile,
+          name: worstCaseName,
+          metrics: metrics,
+          contract: policy.contractForCase(worstCaseName),
+        );
+      },
+      timeout: const Timeout(Duration(minutes: 10)),
+    );
+  }
 }
 
 String _resolveProfile() {
@@ -420,7 +420,11 @@ Map<String, Object?> _runSelectionPathPainterOnlyCase({
     pathSegments: pathSegments,
   );
   final controller = SceneStoreController(initialSnapshot: snapshot);
-  final renderState = _BenchmarkControllerRenderState(controller);
+  final interactionController = interactive.SceneController();
+  final renderState = _createProductionBenchmarkRenderState(
+    controller: controller,
+    interactionController: interactionController,
+  );
   final pathCache = ScenePathMetricsCache(maxEntries: pathNodeCount * 2);
   final painter = ScenePainter(
     controller: renderState,
@@ -433,37 +437,60 @@ Map<String, Object?> _runSelectionPathPainterOnlyCase({
   const canvasSize = Size(2200, 1400);
 
   try {
+    controller.write<void>((writer) {
+      writer.writeSelectionClear();
+    });
+    final noSelectionPrepared = painter.prepareForPaint(canvasSize);
     final noSelectionMetric = _measureOperation(
       iterations: iterations,
       run: (_) {
-        controller.write<void>((writer) {
-          writer.writeSelectionClear();
-        });
-        _paintScene(painter, canvasSize);
+        _paintPreparedScene(painter, noSelectionPrepared);
       },
     );
 
     pathCache.clear();
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(selectedIds);
+    });
+    final withSelectionPrepared = painter.prepareForPaint(canvasSize);
     final withSelectionMetric = _measureOperation(
       iterations: iterations,
       run: (_) {
-        controller.write<void>((writer) {
-          writer.writeSelectionReplace(selectedIds);
-        });
-        _paintScene(painter, canvasSize);
+        _paintPreparedScene(painter, withSelectionPrepared);
       },
+    );
+
+    controller.write<void>((writer) {
+      writer.writeSelectionClear();
+    });
+    final noSelectionProbe = _captureSelectionSaveLayerProbe(
+      painter: painter,
+      preparedScene: painter.prepareForPaint(canvasSize),
+    );
+
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(selectedIds);
+    });
+    final withSelectionProbe = _captureSelectionSaveLayerProbe(
+      painter: painter,
+      preparedScene: painter.prepareForPaint(canvasSize),
     );
 
     return <String, Object?>{
       'pathNodeCount': pathNodeCount,
       'pathSegments': pathSegments,
       'iterations': iterations,
+      'probes': <String, Object?>{
+        'paint_no_selection': noSelectionProbe,
+        'paint_with_selection': withSelectionProbe,
+      },
       'metrics': <String, Object?>{
         'paint_no_selection': noSelectionMetric,
         'paint_with_selection': withSelectionMetric,
       },
     };
   } finally {
+    interactionController.dispose();
     renderState.dispose();
     controller.dispose();
   }
@@ -577,10 +604,30 @@ Map<String, Object?> _runSelectionPathEndToEndPaintCase({
       },
     );
 
+    controller.write<void>((writer) {
+      writer.writeSelectionClear();
+    });
+    final noSelectionProbe = _captureSelectionSaveLayerProbe(
+      painter: painter,
+      preparedScene: painter.prepareForPaint(canvasSize),
+    );
+
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(selectedIds);
+    });
+    final withSelectionProbe = _captureSelectionSaveLayerProbe(
+      painter: painter,
+      preparedScene: painter.prepareForPaint(canvasSize),
+    );
+
     return <String, Object?>{
       'pathNodeCount': pathNodeCount,
       'pathSegments': pathSegments,
       'iterations': iterations,
+      'probes': <String, Object?>{
+        'paint_no_selection': noSelectionProbe,
+        'paint_with_selection': withSelectionProbe,
+      },
       'metrics': <String, Object?>{
         'paint_no_selection': noSelectionMetric,
         'paint_with_selection': withSelectionMetric,
@@ -649,8 +696,45 @@ Map<String, Object?> _runTextLayoutCacheCase({required int iterations}) {
       },
     );
 
+    final missProbeCache = SceneTextLayoutCache(maxEntries: 8);
+    final missProbePainter = ScenePainter(
+      controller: renderState,
+      imageResolver: (_) => null,
+      textLayoutCache: missProbeCache,
+    );
+    final missProbe = _captureCacheChurnProbe(
+      run: () {
+        _paintScene(missProbePainter, canvasSize);
+      },
+      readBuildCount: () => missProbeCache.captureProbe().buildCount,
+      readHitCount: () => missProbeCache.captureProbe().hitCount,
+      readEvictCount: () => missProbeCache.captureProbe().evictCount,
+    );
+
+    final hitProbeCache = SceneTextLayoutCache(maxEntries: 8);
+    final hitProbePainter = ScenePainter(
+      controller: renderState,
+      imageResolver: (_) => null,
+      textLayoutCache: hitProbeCache,
+    );
+    final hitProbe = _captureCacheChurnProbe(
+      warmUp: () {
+        _paintScene(hitProbePainter, canvasSize);
+      },
+      run: () {
+        _paintScene(hitProbePainter, canvasSize);
+      },
+      readBuildCount: () => hitProbeCache.captureProbe().buildCount,
+      readHitCount: () => hitProbeCache.captureProbe().hitCount,
+      readEvictCount: () => hitProbeCache.captureProbe().evictCount,
+    );
+
     return <String, Object?>{
       'iterations': iterations,
+      'probes': <String, Object?>{
+        'paint_cache_miss': missProbe,
+        'paint_cache_hit': hitProbe,
+      },
       'metrics': <String, Object?>{
         'paint_cache_miss': missMetric,
         'paint_cache_hit': hitMetric,
@@ -717,8 +801,45 @@ Map<String, Object?> _runStrokePathCacheCase({required int iterations}) {
       },
     );
 
+    final missProbeCache = SceneStrokePathCache(maxEntries: 8);
+    final missProbePainter = ScenePainter(
+      controller: renderState,
+      imageResolver: (_) => null,
+      strokePathCache: missProbeCache,
+    );
+    final missProbe = _captureCacheChurnProbe(
+      run: () {
+        _paintScene(missProbePainter, canvasSize);
+      },
+      readBuildCount: () => missProbeCache.captureProbe().buildCount,
+      readHitCount: () => missProbeCache.captureProbe().hitCount,
+      readEvictCount: () => missProbeCache.captureProbe().evictCount,
+    );
+
+    final hitProbeCache = SceneStrokePathCache(maxEntries: 8);
+    final hitProbePainter = ScenePainter(
+      controller: renderState,
+      imageResolver: (_) => null,
+      strokePathCache: hitProbeCache,
+    );
+    final hitProbe = _captureCacheChurnProbe(
+      warmUp: () {
+        _paintScene(hitProbePainter, canvasSize);
+      },
+      run: () {
+        _paintScene(hitProbePainter, canvasSize);
+      },
+      readBuildCount: () => hitProbeCache.captureProbe().buildCount,
+      readHitCount: () => hitProbeCache.captureProbe().hitCount,
+      readEvictCount: () => hitProbeCache.captureProbe().evictCount,
+    );
+
     return <String, Object?>{
       'iterations': iterations,
+      'probes': <String, Object?>{
+        'paint_cache_miss': missProbe,
+        'paint_cache_hit': hitProbe,
+      },
       'metrics': <String, Object?>{
         'paint_cache_miss': missMetric,
         'paint_cache_hit': hitMetric,
@@ -752,7 +873,7 @@ Map<String, Object?> _runStaticBackgroundCacheCase({
       color: const Color(0xFFFFFFFF),
       grid: GridSnapshot(
         isEnabled: true,
-        cellSize: 24,
+        cellSize: 1,
         color: const Color(0xFFDDDDDD),
       ),
     ),
@@ -803,9 +924,42 @@ Map<String, Object?> _runStaticBackgroundCacheCase({
       },
     );
 
+    final missProbeCache = SceneStaticLayerCache();
+    final missProbePainter = ScenePainter(
+      controller: renderState,
+      imageResolver: (_) => null,
+      staticLayerCache: missProbeCache,
+    );
+    final missProbe = _captureStaticBackgroundProbe(
+      run: () {
+        _paintScene(missProbePainter, canvasSize);
+      },
+      captureProbe: () => missProbeCache.captureProbe(),
+    );
+
+    final hitProbeCache = SceneStaticLayerCache();
+    final hitProbePainter = ScenePainter(
+      controller: renderState,
+      imageResolver: (_) => null,
+      staticLayerCache: hitProbeCache,
+    );
+    final hitProbe = _captureStaticBackgroundProbe(
+      warmUp: () {
+        _paintScene(hitProbePainter, canvasSize);
+      },
+      run: () {
+        _paintScene(hitProbePainter, canvasSize);
+      },
+      captureProbe: () => hitProbeCache.captureProbe(),
+    );
+
     return <String, Object?>{
       'backgroundNodeCount': backgroundNodeCount,
       'iterations': iterations,
+      'probes': <String, Object?>{
+        'paint_cache_miss': missProbe,
+        'paint_cache_hit': hitProbe,
+      },
       'metrics': <String, Object?>{
         'paint_cache_miss': missMetric,
         'paint_cache_hit': hitMetric,
@@ -821,6 +975,7 @@ Map<String, Object?> _runStaticBackgroundCacheCase({
 Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
   required int backgroundNodeCount,
   required int iterations,
+  required LoadProfileViewport viewport,
 }) {
   final snapshot = SceneSnapshot(
     backgroundLayer: BackgroundLayerSnapshot(
@@ -854,11 +1009,24 @@ Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
     controller: renderState,
     imageResolver: (_) => null,
   );
-  const query = ScenePaintCandidateQuery(
-    viewportRect: Rect.fromLTWH(0, 0, 240, 160),
-    visibilityRect: Rect.fromLTWH(-1, -1, 242, 162),
+  final query = ScenePaintCandidateQuery(
+    viewportRect: Rect.fromLTWH(
+      0,
+      0,
+      viewport.width.toDouble(),
+      viewport.height.toDouble(),
+    ),
+    visibilityRect: Rect.fromLTWH(
+      -1,
+      -1,
+      viewport.width.toDouble() + 2,
+      viewport.height.toDouble() + 2,
+    ),
   );
-  const canvasSize = Size(240, 160);
+  final canvasSize = Size(
+    viewport.width.toDouble(),
+    viewport.height.toDouble(),
+  );
 
   try {
     final enumerateMetric = _measureOperation(
@@ -880,9 +1048,10 @@ Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
     return <String, Object?>{
       'backgroundNodeCount': backgroundNodeCount,
       'iterations': iterations,
+      'viewport': viewport.toJson(),
       'metrics': <String, Object?>{
-        'enumerate_small_viewport': enumerateMetric,
-        'paint_small_viewport': paintMetric,
+        'enumerate_viewport': enumerateMetric,
+        'paint_viewport': paintMetric,
       },
     };
   } finally {
@@ -896,7 +1065,7 @@ SceneSnapshot _selectionPathSnapshot({
   required int pathNodeCount,
   required int pathSegments,
 }) {
-  final pathData = _horizontalPath(segments: pathSegments);
+  final pathData = _closedRibbonPath(segments: pathSegments);
   return SceneSnapshot(
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
@@ -936,127 +1105,7 @@ SceneControllerSceneViewRenderState _createProductionBenchmarkRenderState({
   );
 }
 
-class _BenchmarkControllerRenderState extends ChangeNotifier
-    implements SceneViewRenderState {
-  _BenchmarkControllerRenderState(this._controller) {
-    _controller.addListener(notifyListeners);
-  }
-
-  final SceneStoreController _controller;
-
-  @override
-  SceneSnapshot get snapshot => _controller.snapshot;
-
-  @override
-  Set<NodeId> get selectedNodeIds => _controller.selectedNodeIds;
-
-  @override
-  int get controllerEpoch => _controller.controllerEpoch;
-
-  @override
-  Listenable get overlayRepaintListenable => this;
-
-  @override
-  Rect? get selectionRect => null;
-
-  @override
-  Offset get cameraOffset => snapshot.camera.offset;
-
-  @override
-  SceneViewFrameRead captureFrameRead() {
-    return SceneViewFrameRead(
-      snapshot: snapshot,
-      selectedNodeIds: selectedNodeIds,
-      selectionRevision: 0,
-      preview: SceneViewFramePreview.captureSnapshot(
-        snapshot: snapshot,
-        deltaForNode: _benchmarkZeroPreviewDelta,
-      ),
-    );
-  }
-
-  @override
-  ScenePreparedPaintPlan preparePaintPlan(
-    SceneViewFrameRead frameRead,
-    ScenePaintCandidateQuery query,
-  ) {
-    return ScenePreparedPaintCandidateList(
-      _benchmarkPaintCandidates(frameRead, query),
-    );
-  }
-
-  @override
-  bool get hasActiveStrokePreview => false;
-
-  @override
-  List<Offset> get activeStrokePreviewPoints => const <Offset>[];
-
-  @override
-  double get activeStrokePreviewThickness => 0;
-
-  @override
-  Color get activeStrokePreviewColor => const Color(0x00000000);
-
-  @override
-  double get activeStrokePreviewOpacity => 0;
-
-  @override
-  bool get hasActiveLinePreview => false;
-
-  @override
-  Offset? get activeLinePreviewStart => null;
-
-  @override
-  Offset? get activeLinePreviewEnd => null;
-
-  @override
-  double get activeLinePreviewThickness => 0;
-
-  @override
-  Color get activeLinePreviewColor => const Color(0x00000000);
-
-  @override
-  void dispose() {
-    _controller.removeListener(notifyListeners);
-    super.dispose();
-  }
-}
-
 Offset _benchmarkZeroPreviewDelta(NodeId _) => Offset.zero;
-
-Iterable<ScenePaintCandidate> _benchmarkPaintCandidates(
-  SceneViewFrameRead frameRead,
-  ScenePaintCandidateQuery query,
-) sync* {
-  for (final node in frameRead.snapshot.backgroundLayer.nodes) {
-    final candidateRect = frameRead.selectedNodeIds.contains(node.id)
-        ? query.visibilityRect
-        : query.viewportRect;
-    if (_benchmarkCandidateOverlaps(node, candidateRect)) {
-      yield ScenePaintCandidate(
-        node: node,
-        paintBoundsWorld: nodeSnapshotBoundsWorld(node),
-      );
-    }
-  }
-  for (final layer in frameRead.snapshot.layers) {
-    for (final node in layer.nodes) {
-      final candidateRect = frameRead.selectedNodeIds.contains(node.id)
-          ? query.visibilityRect
-          : query.viewportRect;
-      if (_benchmarkCandidateOverlaps(node, candidateRect)) {
-        yield ScenePaintCandidate(
-          node: node,
-          paintBoundsWorld: nodeSnapshotBoundsWorld(node),
-        );
-      }
-    }
-  }
-}
-
-bool _benchmarkCandidateOverlaps(NodeSnapshot node, Rect worldRect) {
-  return worldRect.overlaps(boundsWorldForNodeSnapshot(node));
-}
 
 Map<String, Object?> _runHugeBoundsMetric({required int iterations}) {
   final snapshot = SceneSnapshot(
@@ -1248,6 +1297,16 @@ String _horizontalPath({required int segments}) {
   return buf.toString();
 }
 
+String _closedRibbonPath({required int segments}) {
+  final buf = StringBuffer('M0 0');
+  for (var i = 1; i <= segments; i++) {
+    buf.write(' L${i.toDouble()} 0');
+  }
+  buf.write(' L${segments.toDouble()} 20');
+  buf.write(' L0 20 Z');
+  return buf.toString();
+}
+
 void _paintScene(ScenePainter painter, Size size) {
   final recorder = PictureRecorder();
   final canvas = Canvas(recorder);
@@ -1256,17 +1315,89 @@ void _paintScene(ScenePainter painter, Size size) {
   picture.dispose();
 }
 
+void _paintPreparedScene(
+  ScenePainter painter,
+  ScenePainterPreparedScene preparedScene,
+) {
+  final recorder = PictureRecorder();
+  final canvas = Canvas(recorder);
+  painter.paintPrepared(canvas, preparedScene);
+  final picture = recorder.endRecording();
+  picture.dispose();
+}
+
+Map<String, num> _captureSelectionSaveLayerProbe({
+  required ScenePainter painter,
+  required ScenePainterPreparedScene preparedScene,
+}) {
+  final canvas = TestRecordingCanvas();
+  painter.paintPrepared(canvas, preparedScene);
+  final saveLayerCount = canvas.invocations
+      .where((invocation) => invocation.invocation.memberName == #saveLayer)
+      .length;
+  return <String, num>{'saveLayerCount': saveLayerCount};
+}
+
+Map<String, num> _captureCacheChurnProbe({
+  void Function()? warmUp,
+  required void Function() run,
+  required int Function() readBuildCount,
+  required int Function() readHitCount,
+  required int Function() readEvictCount,
+}) {
+  warmUp?.call();
+  final buildBefore = readBuildCount();
+  final hitBefore = readHitCount();
+  final evictBefore = readEvictCount();
+  run();
+  return <String, num>{
+    'buildDelta': readBuildCount() - buildBefore,
+    'hitDelta': readHitCount() - hitBefore,
+    'evictDelta': readEvictCount() - evictBefore,
+  };
+}
+
+Map<String, num> _captureStaticBackgroundProbe({
+  void Function()? warmUp,
+  required void Function() run,
+  required ({
+    int buildCount,
+    int disposeCount,
+    int gridLoopIterations,
+    int gridDrawnLineCount,
+  })
+  Function()
+  captureProbe,
+}) {
+  warmUp?.call();
+  final before = captureProbe();
+  run();
+  final after = captureProbe();
+  return <String, num>{
+    'buildDelta': after.buildCount - before.buildCount,
+    'disposeDelta': after.disposeCount - before.disposeCount,
+    'gridLoopIterations': after.gridLoopIterations - before.gridLoopIterations,
+    'gridDrawnLineCount': after.gridDrawnLineCount - before.gridDrawnLineCount,
+  };
+}
+
 void _emitResult({
   required String profile,
   required String name,
   required Map<String, Object?> metrics,
   required Map<String, Object?> contract,
 }) {
+  final rawMetrics = metrics['metrics'];
+  final rawProbes = metrics['probes'];
   final record = <String, Object?>{
     'name': name,
     'profile': profile,
     'contract': contract,
-    'metrics': metrics,
+    for (final entry in metrics.entries)
+      if (entry.key != 'metrics' && entry.key != 'probes')
+        entry.key: entry.value,
+    'metrics': rawMetrics is Map<String, Object?> ? rawMetrics : metrics,
+    if (rawProbes is Map<String, Object?>) 'probes': rawProbes,
   };
   final line = '$_resultPrefix${jsonEncode(record)}';
   // ignore: avoid_print, benchmark helper emits machine-readable JSON lines
