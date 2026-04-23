@@ -13,6 +13,7 @@ import 'package:iwb_canvas_engine/src/render/render_geometry_builder.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 
 // INV:INV-ENG-RENDER-GEOMETRY-KEY-STABLE
+// INV:INV-ENG-RENDER-CACHE-SCAN-RESISTANT
 void main() {
   test('RenderGeometryCache rejects non-positive maxEntries', () {
     expect(() => RenderGeometryCache(maxEntries: 0), throwsArgumentError);
@@ -499,25 +500,8 @@ void main() {
     expect(cache.debugBuildCount, 2);
   });
 
-  test('RenderGeometryCache evicts least recently used entry', () {
-    final cache = RenderGeometryCache(maxEntries: 2);
-    final nodeA = RectNodeSnapshot(id: 'rect-a', size: Size(8, 8));
-    final nodeB = RectNodeSnapshot(id: 'rect-b', size: Size(8, 8));
-    final nodeC = RectNodeSnapshot(id: 'rect-c', size: Size(8, 8));
-
-    cache.get(nodeA);
-    cache.get(nodeB);
-    cache.get(nodeC);
-
-    expect(cache.debugSize, 2);
-    expect(cache.debugEvictCount, 1);
-
-    cache.get(nodeA);
-    expect(cache.debugBuildCount, 4);
-  });
-
   test(
-    'RenderGeometryCache cache hit refreshes recency and keeps entry in cache',
+    'RenderGeometryCache reuses a stable maxEntries plus one ordered scan on the second frame',
     () {
       final cache = RenderGeometryCache(maxEntries: 2);
       final nodeA = RectNodeSnapshot(id: 'rect-a', size: Size(8, 8));
@@ -526,18 +510,41 @@ void main() {
 
       cache.get(nodeA);
       cache.get(nodeB);
-      cache.get(nodeA); // refresh A recency
-      cache.get(nodeC); // should evict B
-      cache.get(nodeA); // A must still be cached
+      cache.get(nodeC);
+
+      expect(cache.debugBuildCount, 3);
+      expect(cache.debugHitCount, 0);
+      expect(cache.debugSize, 2);
+      expect(cache.debugEvictCount, 1);
+
+      cache.get(nodeA);
+      cache.get(nodeB);
+      cache.get(nodeC);
+
+      expect(cache.debugBuildCount, lessThan(6));
+      expect(cache.debugHitCount, greaterThan(0));
+      expect(cache.debugSize, 2);
+      expect(cache.debugEvictCount, greaterThanOrEqualTo(2));
+    },
+  );
+
+  test(
+    'RenderGeometryCache keeps the protected entry across a neighboring miss',
+    () {
+      final cache = RenderGeometryCache(maxEntries: 2);
+      final nodeA = RectNodeSnapshot(id: 'rect-a', size: Size(8, 8));
+      final nodeB = RectNodeSnapshot(id: 'rect-b', size: Size(8, 8));
+      final nodeC = RectNodeSnapshot(id: 'rect-c', size: Size(8, 8));
+
+      cache.get(nodeA);
+      cache.get(nodeB);
+      cache.get(nodeC);
+      cache.get(nodeB);
 
       expect(cache.debugSize, 2);
       expect(cache.debugBuildCount, 3);
-      expect(cache.debugHitCount, 2);
+      expect(cache.debugHitCount, 1);
       expect(cache.debugEvictCount, 1);
-
-      cache.get(nodeB);
-      expect(cache.debugBuildCount, 4);
-      expect(cache.debugEvictCount, 2);
     },
   );
 

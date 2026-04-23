@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 void main() {
   // INV:INV-ENG-EPOCH-INVALIDATION
+  // INV:INV-ENG-RENDER-CACHE-SCAN-RESISTANT
   test('ScenePathMetricsCache rejects non-positive maxEntries', () {
     expect(() => ScenePathMetricsCache(maxEntries: 0), throwsArgumentError);
     expect(() => ScenePathMetricsCache(maxEntries: -1), throwsArgumentError);
@@ -130,50 +131,106 @@ void main() {
     expect(identical(emptyEntry, emptyEntryHit), isTrue);
   });
 
-  test('ScenePathMetricsCache evicts least-recent entry (LRU)', () {
-    final cache = ScenePathMetricsCache(maxEntries: 2);
-    final a = PathNodeSnapshot(id: 'a', svgPathData: 'M0 0 H10');
-    final b = PathNodeSnapshot(id: 'b', svgPathData: 'M0 0 V10');
-    final c = PathNodeSnapshot(id: 'c', svgPathData: 'M0 0 H5 V5 H0 Z');
+  test(
+    'ScenePathMetricsCache reuses a stable maxEntries plus one ordered scan on the second frame',
+    () {
+      final cache = ScenePathMetricsCache(maxEntries: 2);
+      final a = PathNodeSnapshot(id: 'a', svgPathData: 'M0 0 H10');
+      final b = PathNodeSnapshot(id: 'b', svgPathData: 'M0 0 V10');
+      final c = PathNodeSnapshot(id: 'c', svgPathData: 'M0 0 H5 V5 H0 Z');
 
-    cache.getOrBuild(
-      node: a,
-      localPath: Path()
-        ..moveTo(0, 0)
-        ..lineTo(10, 0),
-    );
-    cache.getOrBuild(
-      node: b,
-      localPath: Path()
-        ..moveTo(0, 0)
-        ..lineTo(0, 10),
-    );
-    expect(cache.debugSize, 2);
-    expect(cache.debugEvictCount, 0);
+      cache.getOrBuild(
+        node: a,
+        localPath: Path()
+          ..moveTo(0, 0)
+          ..lineTo(10, 0),
+      );
+      cache.getOrBuild(
+        node: b,
+        localPath: Path()
+          ..moveTo(0, 0)
+          ..lineTo(0, 10),
+      );
+      cache.getOrBuild(
+        node: c,
+        localPath: Path()..addRect(const Rect.fromLTWH(0, 0, 5, 5)),
+      );
 
-    cache.getOrBuild(
-      node: a,
-      localPath: Path()
-        ..moveTo(0, 0)
-        ..lineTo(10, 0),
-    );
-    expect(cache.debugHitCount, 1);
+      expect(cache.debugBuildCount, 3);
+      expect(cache.debugHitCount, 0);
+      expect(cache.debugSize, 2);
+      expect(cache.debugEvictCount, 1);
 
-    cache.getOrBuild(
-      node: c,
-      localPath: Path()..addRect(const Rect.fromLTWH(0, 0, 5, 5)),
-    );
-    expect(cache.debugSize, 2);
-    expect(cache.debugEvictCount, 1);
+      cache.getOrBuild(
+        node: a,
+        localPath: Path()
+          ..moveTo(0, 0)
+          ..lineTo(10, 0),
+      );
+      cache.getOrBuild(
+        node: b,
+        localPath: Path()
+          ..moveTo(0, 0)
+          ..lineTo(0, 10),
+      );
+      cache.getOrBuild(
+        node: c,
+        localPath: Path()..addRect(const Rect.fromLTWH(0, 0, 5, 5)),
+      );
 
-    cache.getOrBuild(
-      node: b,
-      localPath: Path()
-        ..moveTo(0, 0)
-        ..lineTo(0, 10),
-    );
-    expect(cache.debugBuildCount, 4);
-  });
+      expect(cache.debugBuildCount, lessThan(6));
+      expect(cache.debugHitCount, greaterThan(0));
+      expect(cache.debugSize, 2);
+      expect(cache.debugEvictCount, greaterThanOrEqualTo(2));
+    },
+  );
+
+  test(
+    'ScenePathMetricsCache keeps the protected entry across a neighboring miss',
+    () {
+      final cache = ScenePathMetricsCache(maxEntries: 2);
+      final a = PathNodeSnapshot(id: 'a', svgPathData: 'M0 0 H10');
+      final b = PathNodeSnapshot(id: 'b', svgPathData: 'M0 0 V10');
+      final c = PathNodeSnapshot(id: 'c', svgPathData: 'M0 0 H5 V5 H0 Z');
+
+      cache.getOrBuild(
+        node: a,
+        localPath: Path()
+          ..moveTo(0, 0)
+          ..lineTo(10, 0),
+      );
+      cache.getOrBuild(
+        node: b,
+        localPath: Path()
+          ..moveTo(0, 0)
+          ..lineTo(0, 10),
+      );
+      expect(cache.debugSize, 2);
+      expect(cache.debugEvictCount, 0);
+
+      cache.getOrBuild(
+        node: a,
+        localPath: Path()
+          ..moveTo(0, 0)
+          ..lineTo(10, 0),
+      );
+      cache.getOrBuild(
+        node: c,
+        localPath: Path()..addRect(const Rect.fromLTWH(0, 0, 5, 5)),
+      );
+      cache.getOrBuild(
+        node: b,
+        localPath: Path()
+          ..moveTo(0, 0)
+          ..lineTo(0, 10),
+      );
+
+      expect(cache.debugSize, 2);
+      expect(cache.debugBuildCount, lessThan(5));
+      expect(cache.debugHitCount, greaterThan(0));
+      expect(cache.debugEvictCount, greaterThanOrEqualTo(1));
+    },
+  );
 
   test('ScenePathMetricsCache clear drops entries', () {
     final cache = ScenePathMetricsCache(maxEntries: 8);

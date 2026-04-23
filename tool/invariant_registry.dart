@@ -996,6 +996,28 @@ const List<Invariant> invariants = <Invariant>[
     ],
   ),
   Invariant(
+    id: 'INV-ENG-RENDER-CACHE-SCAN-RESISTANT',
+    scope: 'engine-runtime',
+    title:
+        'hot render caches share one scan-resistant retention owner so stable ordered over-capacity scans keep steady-state reuse',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(
+        path: 'test/render/scene_render_caches_test.dart',
+        stepId: 'scope_render_view',
+      ),
+      RequiredProof(
+        path: 'test/render/render_cache_policy_contract_test.dart',
+        stepId: 'scope_render_view',
+      ),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(path: 'test/render/render_geometry_cache_test.dart'),
+      RegressionProof(path: 'test/render/scene_text_layout_cache_test.dart'),
+      RegressionProof(path: 'test/render/scene_stroke_path_cache_test.dart'),
+      RegressionProof(path: 'test/render/scene_path_metrics_cache_test.dart'),
+    ],
+  ),
+  Invariant(
     id: 'INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION',
     scope: 'engine-structure',
     title:

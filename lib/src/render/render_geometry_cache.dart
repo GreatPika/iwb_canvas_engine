@@ -1,45 +1,36 @@
-import 'dart:collection';
-
 import 'package:flutter/foundation.dart';
 
 import '../core/text_layout.dart';
 import '../contract/snapshot.dart';
+import 'cache/scan_resistant_cache.dart';
 import 'render_geometry_entry.dart';
 import 'render_geometry_builder.dart';
 export 'render_geometry_entry.dart';
 
-int _requirePositiveGeometryCacheEntries(int maxEntries) {
-  if (maxEntries <= 0) {
-    throw ArgumentError.value(maxEntries, 'maxEntries', 'Must be > 0.');
-  }
-  return maxEntries;
-}
-
 /// Per-node geometry cache injected into `ScenePainter`.
 ///
-/// Memory is bounded via LRU eviction (`maxEntries`), while `invalidateAll()`
-/// remains available for explicit full cache reset on owner epoch/document
-/// boundaries. `epoch` is intentionally not part of per-entry keys.
+/// Retention is bounded via a shared scan-resistant policy, while
+/// `invalidateAll()` remains available for explicit full cache reset on owner
+/// epoch/document boundaries. `epoch` is intentionally not part of per-entry
+/// keys.
 class RenderGeometryCache {
   RenderGeometryCache({int maxEntries = 512})
-    : maxEntries = _requirePositiveGeometryCacheEntries(maxEntries);
+    : maxEntries = requirePositiveScanResistantCacheEntries(maxEntries),
+      _entries = ScanResistantCache<_NodeInstanceKey, _GeometryCacheRecord>(
+        maxEntries: maxEntries,
+      );
 
   final int maxEntries;
-  final LinkedHashMap<_NodeInstanceKey, _GeometryCacheRecord> _entries =
-      LinkedHashMap<_NodeInstanceKey, _GeometryCacheRecord>();
-
-  int _debugBuildCount = 0;
-  int _debugHitCount = 0;
-  int _debugEvictCount = 0;
+  final ScanResistantCache<_NodeInstanceKey, _GeometryCacheRecord> _entries;
 
   @visibleForTesting
-  int get debugBuildCount => _debugBuildCount;
+  int get debugBuildCount => _entries.debugBuildCount;
   @visibleForTesting
-  int get debugHitCount => _debugHitCount;
+  int get debugHitCount => _entries.debugHitCount;
   @visibleForTesting
-  int get debugEvictCount => _debugEvictCount;
+  int get debugEvictCount => _entries.debugEvictCount;
   @visibleForTesting
-  int get debugSize => _entries.length;
+  int get debugSize => _entries.debugSize;
 
   GeometryEntry get(
     NodeSnapshot node, {
@@ -50,31 +41,22 @@ class RenderGeometryCache {
       nodeId: node.id,
       instanceRevision: node.instanceRevision,
     );
-    final cached = _entries.remove(entryKey);
-    if (cached != null && cached.key == key) {
-      _entries[entryKey] = cached;
-      _debugHitCount += 1;
-      return cached.entry;
-    }
-
-    final entry = buildRenderGeometryEntry(
-      node,
-      resolvedTextLayout: resolvedTextLayout,
-    );
-    _entries[entryKey] = _GeometryCacheRecord(key: key, entry: entry);
-    _debugBuildCount += 1;
-    _evictIfNeeded();
-    return entry;
+    return _entries
+        .getOrBuild(
+          key: entryKey,
+          isValid: (_GeometryCacheRecord cached) => cached.key == key,
+          build: () {
+            final entry = buildRenderGeometryEntry(
+              node,
+              resolvedTextLayout: resolvedTextLayout,
+            );
+            return _GeometryCacheRecord(key: key, entry: entry);
+          },
+        )
+        .entry;
   }
 
   void invalidateAll() => _entries.clear();
-
-  void _evictIfNeeded() {
-    while (_entries.length > maxEntries) {
-      _entries.remove(_entries.keys.first);
-      _debugEvictCount += 1;
-    }
-  }
 }
 
 class _GeometryCacheRecord {

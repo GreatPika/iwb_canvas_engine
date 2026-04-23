@@ -609,7 +609,7 @@ without changing the accepted target architecture.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Scan-Resistant Render Cache Policy
+### Slice 1. [x] Scan-Resistant Render Cache Policy
 
 #### Slice Contract
 

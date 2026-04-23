@@ -12,6 +12,7 @@ import 'package:iwb_canvas_engine/src/render/scene_grid_renderer.dart';
 import 'package:iwb_canvas_engine/src/render/scene_render_caches.dart';
 
 void main() {
+  // INV:INV-ENG-RENDER-CACHE-SCAN-RESISTANT
   test(
     'SceneRenderCaches clearAll forces rebuilds without changing local cache keys',
     () {
@@ -123,6 +124,136 @@ void main() {
       evictCount: 1,
     ));
   });
+
+  test(
+    'SceneRenderCaches keeps steady-state cache reuse for stable ordered work over capacity',
+    () {
+      final textCache = SceneTextLayoutCache(maxEntries: 2);
+      final strokeCache = SceneStrokePathCache(maxEntries: 2);
+      final pathCache = ScenePathMetricsCache(maxEntries: 2);
+      final geometryCache = RenderGeometryCache(maxEntries: 2);
+      final renderCaches = SceneRenderCaches(
+        textLayoutCache: textCache,
+        strokePathCache: strokeCache,
+        pathMetricsCache: pathCache,
+        geometryCache: geometryCache,
+      );
+      final textNodes = <TextNodeSnapshot>[
+        _textNode(id: 'text-a', text: 'A'),
+        _textNode(id: 'text-b', text: 'B'),
+        _textNode(id: 'text-c', text: 'C'),
+      ];
+
+      for (final node in textNodes) {
+        renderCaches.textLayoutCache.getOrBuild(node: node);
+        renderCaches.geometryCache.get(
+          node,
+          resolvedTextLayout: _resolvedTextLayout(node),
+        );
+      }
+      final textBuildsAfterWarmup = textCache.debugBuildCount;
+      final geometryBuildsAfterTextWarmup = geometryCache.debugBuildCount;
+
+      for (final node in textNodes) {
+        renderCaches.textLayoutCache.getOrBuild(node: node);
+        renderCaches.geometryCache.get(
+          node,
+          resolvedTextLayout: _resolvedTextLayout(node),
+        );
+      }
+
+      expect(textCache.debugBuildCount, lessThan(textBuildsAfterWarmup + 3));
+      expect(textCache.debugHitCount, greaterThan(0));
+      expect(
+        geometryCache.debugBuildCount,
+        lessThan(geometryBuildsAfterTextWarmup + 3),
+      );
+      expect(geometryCache.debugHitCount, greaterThan(0));
+
+      renderCaches.clearAll();
+
+      final strokeNodes = <StrokeNodeSnapshot>[
+        _strokeNode(
+          id: 'stroke-a',
+          points: const <Offset>[Offset(0, 0), Offset(1, 0)],
+        ),
+        _strokeNode(
+          id: 'stroke-b',
+          points: const <Offset>[Offset(0, 0), Offset(0, 1)],
+        ),
+        _strokeNode(
+          id: 'stroke-c',
+          points: const <Offset>[Offset(1, 1), Offset(2, 2)],
+        ),
+      ];
+
+      for (final node in strokeNodes) {
+        renderCaches.strokePathCache.getOrBuild(node);
+        renderCaches.geometryCache.get(node);
+      }
+      final strokeBuildsAfterWarmup = strokeCache.debugBuildCount;
+      final geometryBuildsAfterStrokeWarmup = geometryCache.debugBuildCount;
+
+      for (final node in strokeNodes) {
+        renderCaches.strokePathCache.getOrBuild(node);
+        renderCaches.geometryCache.get(node);
+      }
+
+      expect(
+        strokeCache.debugBuildCount,
+        lessThan(strokeBuildsAfterWarmup + 3),
+      );
+      expect(strokeCache.debugHitCount, greaterThan(0));
+      expect(
+        geometryCache.debugBuildCount,
+        lessThan(geometryBuildsAfterStrokeWarmup + 3),
+      );
+      expect(geometryCache.debugHitCount, greaterThan(1));
+
+      renderCaches.clearAll();
+
+      final pathNodes = <PathNodeSnapshot>[
+        _pathNode(id: 'path-a', svgPathData: 'M0 0 H10'),
+        _pathNode(id: 'path-b', svgPathData: 'M0 0 V10'),
+        _pathNode(id: 'path-c', svgPathData: 'M0 0 H5 V5 H0 Z'),
+      ];
+      final localPaths = <Path>[
+        Path()
+          ..moveTo(0, 0)
+          ..lineTo(10, 0),
+        Path()
+          ..moveTo(0, 0)
+          ..lineTo(0, 10),
+        Path()..addRect(const Rect.fromLTWH(0, 0, 5, 5)),
+      ];
+
+      for (var i = 0; i < pathNodes.length; i++) {
+        renderCaches.pathMetricsCache.getOrBuild(
+          node: pathNodes[i],
+          localPath: localPaths[i],
+        );
+        renderCaches.geometryCache.get(pathNodes[i]);
+      }
+      final pathBuildsAfterWarmup = pathCache.debugBuildCount;
+      final geometryBuildsAfterPathWarmup = geometryCache.debugBuildCount;
+
+      for (var i = 0; i < pathNodes.length; i++) {
+        renderCaches.pathMetricsCache.getOrBuild(
+          node: pathNodes[i],
+          localPath: localPaths[i],
+        );
+        renderCaches.geometryCache.get(pathNodes[i]);
+      }
+
+      expect(pathCache.debugBuildCount, lessThan(pathBuildsAfterWarmup + 3));
+      expect(pathCache.debugHitCount, greaterThan(0));
+      expect(
+        geometryCache.debugBuildCount,
+        lessThan(geometryBuildsAfterPathWarmup + 3),
+      );
+      expect(geometryCache.debugHitCount, greaterThanOrEqualTo(3));
+    },
+  );
 
   test('SceneRenderCaches disposeOwned clears and disposes owned caches', () {
     final renderCaches = SceneRenderCaches();
@@ -303,10 +434,10 @@ void main() {
   );
 }
 
-TextNodeSnapshot _textNode() {
+TextNodeSnapshot _textNode({String id = 'text', String text = 'cache'}) {
   return TextNodeSnapshot(
-    id: 'text',
-    text: 'cache',
+    id: id,
+    text: text,
     fontSize: 14,
     color: const Color(0xFF000000),
     textDirection: TextDirection.ltr,
@@ -318,21 +449,27 @@ ResolvedTextLayout _resolvedTextLayout(TextNodeSnapshot node) {
   return TextLayoutRequest.forRenderSnapshot(node).resolve();
 }
 
-StrokeNodeSnapshot _strokeNode() {
+StrokeNodeSnapshot _strokeNode({
+  String id = 'stroke',
+  List<Offset> points = const <Offset>[Offset(0, 0), Offset(10, 10)],
+}) {
   return StrokeNodeSnapshot(
-    id: 'stroke',
+    id: id,
     instanceRevision: 1,
-    points: const <Offset>[Offset(0, 0), Offset(10, 10)],
+    points: points,
     thickness: 2,
     color: const Color(0xFF000000),
   );
 }
 
-PathNodeSnapshot _pathNode() {
+PathNodeSnapshot _pathNode({
+  String id = 'path',
+  String svgPathData = 'M0 0 H10 V10 H0 Z',
+}) {
   return PathNodeSnapshot(
-    id: 'path',
+    id: id,
     instanceRevision: 1,
-    svgPathData: 'M0 0 H10 V10 H0 Z',
+    svgPathData: svgPathData,
   );
 }
 

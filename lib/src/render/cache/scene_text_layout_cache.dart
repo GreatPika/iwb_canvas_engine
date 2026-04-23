@@ -1,44 +1,34 @@
-import 'dart:collection';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
 import '../../core/text_layout.dart';
 import '../../contract/snapshot.dart';
-
-int _requirePositiveCacheEntries(int maxEntries) {
-  if (maxEntries <= 0) {
-    throw ArgumentError.value(maxEntries, 'maxEntries', 'Must be > 0.');
-  }
-  return maxEntries;
-}
+import 'scan_resistant_cache.dart';
 
 class SceneTextLayoutCache {
   SceneTextLayoutCache({int maxEntries = 256})
-    : maxEntries = _requirePositiveCacheEntries(maxEntries);
+    : maxEntries = requirePositiveScanResistantCacheEntries(maxEntries),
+      _entries = ScanResistantCache<_TextLayoutKey, ResolvedTextLayout>(
+        maxEntries: maxEntries,
+      );
 
   final int maxEntries;
-  final LinkedHashMap<_TextLayoutKey, ResolvedTextLayout> _entries =
-      LinkedHashMap<_TextLayoutKey, ResolvedTextLayout>();
-
-  int _debugBuildCount = 0;
-  int _debugHitCount = 0;
-  int _debugEvictCount = 0;
+  final ScanResistantCache<_TextLayoutKey, ResolvedTextLayout> _entries;
 
   @visibleForTesting
-  int get debugBuildCount => _debugBuildCount;
+  int get debugBuildCount => _entries.debugBuildCount;
   @visibleForTesting
-  int get debugHitCount => _debugHitCount;
+  int get debugHitCount => _entries.debugHitCount;
   @visibleForTesting
-  int get debugEvictCount => _debugEvictCount;
+  int get debugEvictCount => _entries.debugEvictCount;
   @visibleForTesting
-  int get debugSize => _entries.length;
+  int get debugSize => _entries.debugSize;
 
   ({int buildCount, int hitCount, int evictCount}) captureProbe() {
     return (
-      buildCount: _debugBuildCount,
-      hitCount: _debugHitCount,
-      evictCount: _debugEvictCount,
+      buildCount: debugBuildCount,
+      hitCount: debugHitCount,
+      evictCount: debugEvictCount,
     );
   }
 
@@ -65,26 +55,11 @@ class SceneTextLayoutCache {
       color: textStyle.color ?? const Color(0xFF000000),
       textDirection: request.textDirection,
     );
-
-    final cached = _entries.remove(key);
-    if (cached != null) {
-      _entries[key] = cached;
-      _debugHitCount += 1;
-      return cached;
-    }
-
-    final resolvedTextLayout = request.resolve();
-    _entries[key] = resolvedTextLayout;
-    _debugBuildCount += 1;
-    _evictIfNeeded();
-    return resolvedTextLayout;
-  }
-
-  void _evictIfNeeded() {
-    while (_entries.length > maxEntries) {
-      _entries.remove(_entries.keys.first);
-      _debugEvictCount += 1;
-    }
+    return _entries.getOrBuild(
+      key: key,
+      isValid: (_) => true,
+      build: request.resolve,
+    );
   }
 }
 

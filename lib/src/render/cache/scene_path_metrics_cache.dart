@@ -1,37 +1,28 @@
-import 'dart:collection';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
 import '../../contract/snapshot.dart';
-
-int _requirePositiveCacheEntries(int maxEntries) {
-  if (maxEntries <= 0) {
-    throw ArgumentError.value(maxEntries, 'maxEntries', 'Must be > 0.');
-  }
-  return maxEntries;
-}
+import 'scan_resistant_cache.dart';
 
 class ScenePathMetricsCache {
   ScenePathMetricsCache({int maxEntries = 512})
-    : maxEntries = _requirePositiveCacheEntries(maxEntries);
+    : maxEntries = requirePositiveScanResistantCacheEntries(maxEntries),
+      _entries = ScanResistantCache<_NodeInstanceKey, _PathMetricsEntry>(
+        maxEntries: maxEntries,
+      );
 
   final int maxEntries;
-  final LinkedHashMap<_NodeInstanceKey, _PathMetricsEntry> _entries =
-      LinkedHashMap<_NodeInstanceKey, _PathMetricsEntry>();
-
-  int _debugBuildCount = 0;
-  int _debugHitCount = 0;
-  int _debugEvictCount = 0;
+  final ScanResistantCache<_NodeInstanceKey, _PathMetricsEntry> _entries;
 
   @visibleForTesting
-  int get debugBuildCount => _debugBuildCount;
+  int get debugBuildCount => _entries.debugBuildCount;
   @visibleForTesting
-  int get debugHitCount => _debugHitCount;
+  int get debugHitCount => _entries.debugHitCount;
   @visibleForTesting
-  int get debugEvictCount => _debugEvictCount;
+  int get debugEvictCount => _entries.debugEvictCount;
   @visibleForTesting
-  int get debugSize => _entries.length;
+  int get debugSize => _entries.debugSize;
 
   /// Owner-level invalidation for controller epoch/document boundaries.
   ///
@@ -51,31 +42,25 @@ class ScenePathMetricsCache {
       nodeId: node.id,
       instanceRevision: node.instanceRevision,
     );
-    final cached = _entries.remove(key);
-    if (cached != null &&
-        cached.svgPathData == node.svgPathData &&
-        cached.fillRule == node.fillRule) {
-      _entries[key] = cached;
-      _debugHitCount += 1;
-      return cached.contours;
-    }
-
-    final contours = buildPathSelectionContours(localPath, node.fillRule);
-    _entries[key] = _PathMetricsEntry(
-      svgPathData: node.svgPathData,
-      fillRule: node.fillRule,
-      contours: contours,
-    );
-    _debugBuildCount += 1;
-    _evictIfNeeded();
-    return contours;
-  }
-
-  void _evictIfNeeded() {
-    while (_entries.length > maxEntries) {
-      _entries.remove(_entries.keys.first);
-      _debugEvictCount += 1;
-    }
+    return _entries
+        .getOrBuild(
+          key: key,
+          isValid: (_PathMetricsEntry cached) =>
+              cached.svgPathData == node.svgPathData &&
+              cached.fillRule == node.fillRule,
+          build: () {
+            final contours = buildPathSelectionContours(
+              localPath,
+              node.fillRule,
+            );
+            return _PathMetricsEntry(
+              svgPathData: node.svgPathData,
+              fillRule: node.fillRule,
+              contours: contours,
+            );
+          },
+        )
+        .contours;
   }
 }
 

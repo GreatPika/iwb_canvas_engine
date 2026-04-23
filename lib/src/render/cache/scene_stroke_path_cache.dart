@@ -1,43 +1,34 @@
-import 'dart:collection';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
 import '../../contract/snapshot.dart';
-
-int _requirePositiveCacheEntries(int maxEntries) {
-  if (maxEntries <= 0) {
-    throw ArgumentError.value(maxEntries, 'maxEntries', 'Must be > 0.');
-  }
-  return maxEntries;
-}
+import 'scan_resistant_cache.dart';
 
 class SceneStrokePathCache {
   SceneStrokePathCache({int maxEntries = 512})
-    : maxEntries = _requirePositiveCacheEntries(maxEntries);
+    : maxEntries = requirePositiveScanResistantCacheEntries(maxEntries),
+      _entries = ScanResistantCache<_NodeInstanceKey, _StrokePathEntry>(
+        maxEntries: maxEntries,
+      );
 
   final int maxEntries;
-  final LinkedHashMap<_NodeInstanceKey, _StrokePathEntry> _entries =
-      LinkedHashMap<_NodeInstanceKey, _StrokePathEntry>();
-
-  int _debugBuildCount = 0;
-  int _debugHitCount = 0;
-  int _debugEvictCount = 0;
+  final ScanResistantCache<_NodeInstanceKey, _StrokePathEntry> _entries;
 
   @visibleForTesting
-  int get debugBuildCount => _debugBuildCount;
+  int get debugBuildCount => _entries.debugBuildCount;
   @visibleForTesting
-  int get debugHitCount => _debugHitCount;
+  int get debugHitCount => _entries.debugHitCount;
   @visibleForTesting
-  int get debugEvictCount => _debugEvictCount;
+  int get debugEvictCount => _entries.debugEvictCount;
   @visibleForTesting
-  int get debugSize => _entries.length;
+  int get debugSize => _entries.debugSize;
 
   ({int buildCount, int hitCount, int evictCount}) captureProbe() {
     return (
-      buildCount: _debugBuildCount,
-      hitCount: _debugHitCount,
-      evictCount: _debugEvictCount,
+      buildCount: debugBuildCount,
+      hitCount: debugHitCount,
+      evictCount: debugEvictCount,
     );
   }
 
@@ -64,30 +55,23 @@ class SceneStrokePathCache {
       nodeId: node.id,
       instanceRevision: node.instanceRevision,
     );
-    final cached = _entries.remove(key);
-    if (cached != null && identical(cached.points, node.points)) {
-      _entries[key] = cached;
-      _debugHitCount += 1;
-      return cached.path;
-    }
-
-    final path = buildStrokePath(node.points);
-    _entries[key] = _StrokePathEntry(
-      path: path,
-      // Equivalent public stroke snapshots share one canonical immutable points
-      // owner, so identity is an exact O(1) freshness check here.
-      points: node.points,
-    );
-    _debugBuildCount += 1;
-    _evictIfNeeded();
-    return path;
-  }
-
-  void _evictIfNeeded() {
-    while (_entries.length > maxEntries) {
-      _entries.remove(_entries.keys.first);
-      _debugEvictCount += 1;
-    }
+    return _entries
+        .getOrBuild(
+          key: key,
+          isValid: (_StrokePathEntry cached) =>
+              identical(cached.points, node.points),
+          build: () {
+            final path = buildStrokePath(node.points);
+            return _StrokePathEntry(
+              path: path,
+              // Equivalent public stroke snapshots share one canonical
+              // immutable points owner, so identity is an exact O(1)
+              // freshness check here.
+              points: node.points,
+            );
+          },
+        )
+        .path;
   }
 }
 

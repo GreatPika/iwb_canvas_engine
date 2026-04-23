@@ -10,6 +10,7 @@ import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // INV:INV-ENG-RENDER-CACHE-SCAN-RESISTANT
 
   test('render text cache consumes shared core text layout owner', () {
     final source = File(
@@ -20,7 +21,7 @@ void main() {
     expect(source, contains('TextLayoutRequest _createTextLayoutRequest('));
     expect(source, contains('final request = _createTextLayoutRequest('));
     expect(source, contains('request.buildTextStyle()'));
-    expect(source, contains('final resolvedTextLayout = request.resolve();'));
+    expect(source, contains('build: request.resolve,'));
     expect(source, isNot(contains('TextPainter buildSceneTextPainter(')));
     expect(source, isNot(contains('recomputeDerivedTextSize(')));
     expect(source, isNot(contains('freezePayloadMap(')));
@@ -227,27 +228,53 @@ void main() {
     },
   );
 
-  test('SceneTextLayoutCache evicts least-recent entries (LRU)', () {
-    final cache = SceneTextLayoutCache(maxEntries: 2);
-    final a = _textNode(id: 'a', text: 'A', maxWidth: 20);
-    final b = _textNode(id: 'b', text: 'B', maxWidth: 20);
-    final c = _textNode(id: 'c', text: 'C', maxWidth: 20);
+  test(
+    'SceneTextLayoutCache reuses a stable maxEntries plus one ordered scan on the second frame',
+    () {
+      final cache = SceneTextLayoutCache(maxEntries: 2);
+      final a = _textNode(id: 'a', text: 'A', maxWidth: 20);
+      final b = _textNode(id: 'b', text: 'B', maxWidth: 20);
+      final c = _textNode(id: 'c', text: 'C', maxWidth: 20);
 
-    cache.getOrBuild(node: a);
-    cache.getOrBuild(node: b);
-    expect(cache.debugSize, 2);
-    expect(cache.debugEvictCount, 0);
+      cache.getOrBuild(node: a);
+      cache.getOrBuild(node: b);
+      cache.getOrBuild(node: c);
 
-    cache.getOrBuild(node: a);
-    expect(cache.debugHitCount, 1);
+      expect(cache.debugBuildCount, 3);
+      expect(cache.debugHitCount, 0);
+      expect(cache.debugSize, 2);
+      expect(cache.debugEvictCount, 1);
 
-    cache.getOrBuild(node: c);
-    expect(cache.debugEvictCount, 1);
-    expect(cache.debugSize, 2);
+      cache.getOrBuild(node: a);
+      cache.getOrBuild(node: b);
+      cache.getOrBuild(node: c);
 
-    cache.getOrBuild(node: b);
-    expect(cache.debugBuildCount, 4);
-  });
+      expect(cache.debugBuildCount, lessThan(6));
+      expect(cache.debugHitCount, greaterThan(0));
+      expect(cache.debugSize, 2);
+      expect(cache.debugEvictCount, greaterThanOrEqualTo(2));
+    },
+  );
+
+  test(
+    'SceneTextLayoutCache keeps the protected entry across a neighboring miss',
+    () {
+      final cache = SceneTextLayoutCache(maxEntries: 2);
+      final a = _textNode(id: 'a', text: 'A', maxWidth: 20);
+      final b = _textNode(id: 'b', text: 'B', maxWidth: 20);
+      final c = _textNode(id: 'c', text: 'C', maxWidth: 20);
+
+      cache.getOrBuild(node: a);
+      cache.getOrBuild(node: b);
+      cache.getOrBuild(node: c);
+      cache.getOrBuild(node: b);
+
+      expect(cache.debugSize, 2);
+      expect(cache.debugBuildCount, 3);
+      expect(cache.debugHitCount, 1);
+      expect(cache.debugEvictCount, 1);
+    },
+  );
 
   test('SceneTextLayoutCache clear drops entries', () {
     final cache = SceneTextLayoutCache(maxEntries: 8);

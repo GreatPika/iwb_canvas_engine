@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 
 void main() {
   // INV:INV-ENG-EPOCH-INVALIDATION
+  // INV:INV-ENG-RENDER-CACHE-SCAN-RESISTANT
   test('stroke path cache rejects non-positive maxEntries', () {
     expect(() => SceneStrokePathCache(maxEntries: 0), throwsArgumentError);
     expect(() => SceneStrokePathCache(maxEntries: -1), throwsArgumentError);
@@ -142,39 +143,86 @@ void main() {
     },
   );
 
-  test('stroke path cache evicts least-recent entry (LRU)', () {
-    final cache = SceneStrokePathCache(maxEntries: 2);
-    final a = StrokeNodeSnapshot(
-      id: 'a',
-      points: const <Offset>[Offset(0, 0), Offset(1, 0)],
-      thickness: 2,
-      color: const Color(0xFF000000),
-    );
-    final b = StrokeNodeSnapshot(
-      id: 'b',
-      points: const <Offset>[Offset(0, 0), Offset(0, 1)],
-      thickness: 2,
-      color: const Color(0xFF000000),
-    );
-    final c = StrokeNodeSnapshot(
-      id: 'c',
-      points: const <Offset>[Offset(1, 1), Offset(2, 2)],
-      thickness: 2,
-      color: const Color(0xFF000000),
-    );
+  test(
+    'stroke path cache reuses a stable maxEntries plus one ordered scan on the second frame',
+    () {
+      final cache = SceneStrokePathCache(maxEntries: 2);
+      final a = StrokeNodeSnapshot(
+        id: 'a',
+        points: const <Offset>[Offset(0, 0), Offset(1, 0)],
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+      final b = StrokeNodeSnapshot(
+        id: 'b',
+        points: const <Offset>[Offset(0, 0), Offset(0, 1)],
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+      final c = StrokeNodeSnapshot(
+        id: 'c',
+        points: const <Offset>[Offset(1, 1), Offset(2, 2)],
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
 
-    cache.getOrBuild(a);
-    cache.getOrBuild(b);
-    expect(cache.debugSize, 2);
-    expect(cache.debugEvictCount, 0);
+      cache.getOrBuild(a);
+      cache.getOrBuild(b);
+      cache.getOrBuild(c);
 
-    cache.getOrBuild(a);
-    expect(cache.debugHitCount, 1);
+      expect(cache.debugBuildCount, 3);
+      expect(cache.debugHitCount, 0);
+      expect(cache.debugSize, 2);
+      expect(cache.debugEvictCount, 1);
 
-    cache.getOrBuild(c);
-    expect(cache.debugSize, 2);
-    expect(cache.debugEvictCount, 1);
-  });
+      cache.getOrBuild(a);
+      cache.getOrBuild(b);
+      cache.getOrBuild(c);
+
+      expect(cache.debugBuildCount, lessThan(6));
+      expect(cache.debugHitCount, greaterThan(0));
+      expect(cache.debugSize, 2);
+      expect(cache.debugEvictCount, greaterThanOrEqualTo(2));
+    },
+  );
+
+  test(
+    'stroke path cache keeps the protected entry across a neighboring miss',
+    () {
+      final cache = SceneStrokePathCache(maxEntries: 2);
+      final a = StrokeNodeSnapshot(
+        id: 'a',
+        points: const <Offset>[Offset(0, 0), Offset(1, 0)],
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+      final b = StrokeNodeSnapshot(
+        id: 'b',
+        points: const <Offset>[Offset(0, 0), Offset(0, 1)],
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+      final c = StrokeNodeSnapshot(
+        id: 'c',
+        points: const <Offset>[Offset(1, 1), Offset(2, 2)],
+        thickness: 2,
+        color: const Color(0xFF000000),
+      );
+
+      cache.getOrBuild(a);
+      cache.getOrBuild(b);
+      expect(cache.debugSize, 2);
+      expect(cache.debugEvictCount, 0);
+
+      cache.getOrBuild(c);
+      cache.getOrBuild(b);
+
+      expect(cache.debugSize, 2);
+      expect(cache.debugBuildCount, 3);
+      expect(cache.debugHitCount, 1);
+      expect(cache.debugEvictCount, 1);
+    },
+  );
 
   test('stroke path cache clear drops entries', () {
     final cache = SceneStrokePathCache(maxEntries: 8);
