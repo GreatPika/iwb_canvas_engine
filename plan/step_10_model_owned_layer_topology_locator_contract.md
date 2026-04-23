@@ -1,5 +1,13 @@
 # Change Contract
 
+Historical note: Step 14 retired the speculative semantic content-layer
+replacement seam introduced here. References to
+`txnReplaceContentLayerInScene(...)` below are historical execution context
+only; the living runtime seam inventory keeps semantic replacement on prepared
+whole-scene adoption and keeps only `txnReplaceContentLayerSlotInScene(...)`
+for topology-preserving copy-on-write slot replacement, enforced with fail-fast
+runtime guards rather than debug-only checks.
+
 ## 1. Change Mandate
 
 Make content-layer topology mutation self-contained by moving layer-topology

@@ -196,6 +196,37 @@ void main() {
     },
   );
 
+  test('prepared scene replacement remains the semantic replacement owner', () {
+    final snapshotMaterializerSource = File(
+      'lib/src/controller/scene_snapshot_materializer.dart',
+    ).readAsStringSync();
+    final txnWorkspaceSource = File(
+      'lib/src/controller/txn_workspace.dart',
+    ).readAsStringSync();
+
+    expect(
+      snapshotMaterializerSource,
+      contains('PreparedSceneReplacement materializeSceneReplacement('),
+    );
+    expect(
+      snapshotMaterializerSource,
+      contains('void adoptPreparedSceneReplacement('),
+    );
+    expect(
+      snapshotMaterializerSource,
+      contains('ctx.txnAdoptScene(backing.scene);'),
+    );
+    expect(
+      snapshotMaterializerSource,
+      isNot(contains('txnReplaceContentLayerSlotInScene(')),
+    );
+    expect(
+      snapshotMaterializerSource,
+      isNot(contains('txnReplaceContentLayerInScene(')),
+    );
+    expect(txnWorkspaceSource, contains('txnReplaceContentLayerSlotInScene('));
+  });
+
   test(
     'MutationExecutor finalizes selection on node patches before commit planning',
     () {

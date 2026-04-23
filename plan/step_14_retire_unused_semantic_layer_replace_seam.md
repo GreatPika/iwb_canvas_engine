@@ -282,9 +282,10 @@ real product-owned mutation contract.
    still imply that the retired semantic seam is part of the living design.
 4. No new semantic layer-replace helper will be introduced in this corrective
    step.
-5. Slot-seam enforcement uses one explicit mechanism: debug assertions in the
-   model helper plus owner-side structural tests and guardrails; this step does
-   not leave enforcement form open for selection during implementation.
+5. Slot-seam enforcement uses one explicit mechanism: fail-fast runtime guards
+   in the model helper plus owner-side structural tests and guardrails; this
+   step does not leave enforcement form open for selection during
+   implementation.
 
 ## 6. Result Requirements
 
@@ -411,13 +412,13 @@ real product-owned mutation contract.
 - slot replacement must preserve node count and per-index node identity
 - slot replacement may allocate a fresh owning `ContentLayer` object and fresh
   node list for copy-on-write purposes only
-- slot replacement enforcement uses debug assertions in
-  `txnReplaceContentLayerSlotInScene(...)`; tests and guardrails are the proof
-  surface for drift visibility outside assert-enabled runs
+- slot replacement enforcement uses fail-fast runtime guards in
+  `txnReplaceContentLayerSlotInScene(...)`; tests and guardrails make drift
+  visible and keep the seam inventory explicit
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Retire Semantic Replace Seam From The Model Facade
+### Slice 1. [x] Retire Semantic Replace Seam From The Model Facade
 
 #### Slice Contract
 
@@ -464,7 +465,7 @@ model facade without changing active production flows.
 - dead semantic seam is gone from the model files
 - active production tests stay green without introducing a replacement seam
 
-### Slice 2. [ ] Narrow Slot Replacement To Copy-On-Write Only
+### Slice 2. [x] Narrow Slot Replacement To Copy-On-Write Only
 
 #### Slice Contract
 
@@ -476,8 +477,9 @@ helper, and source-of-truth artifacts describe only that surviving seam.
 
 - add slot-seam guard tests for preserved `layer.id`, node count, and per-index
   node identity
-- tighten `txnReplaceContentLayerSlotInScene(...)` with debug assertions so
-  semantic topology mutation through the slot seam becomes visible immediately
+- tighten `txnReplaceContentLayerSlotInScene(...)` with fail-fast runtime
+  guards so semantic topology mutation through the slot seam becomes visible
+  immediately in every build
 - align controller seam tests and guardrail fixtures with the narrowed slot
   contract
 - update Step 10 and Step 14 plan/source-of-truth artifacts as closure evidence

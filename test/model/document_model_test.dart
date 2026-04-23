@@ -1237,113 +1237,93 @@ void main() {
   });
 
   test(
-    'txnReplaceContentLayerInScene validates index and replaces in place',
+    'txnReplaceContentLayerSlotInScene preserves topology while swapping the owning layer object',
     () {
-      final scene = Scene(
-        layers: <ContentLayer>[
-          ContentLayer(id: 'layer-auto-20'),
-          ContentLayer(id: 'layer-auto-21'),
-        ],
+      final firstNode = RectNode(id: 'slot-node-1', size: const Size(1, 1));
+      final secondNode = RectNode(id: 'slot-node-2', size: const Size(2, 2));
+      final original = ContentLayer(
+        id: 'layer-auto-slot',
+        nodes: <SceneNode>[firstNode, secondNode],
       );
+      final scene = Scene(layers: <ContentLayer>[original]);
       final replacement = ContentLayer(
-        id: 'layer-auto-21',
-        nodes: <SceneNode>[
-          RectNode(id: 'replaced-node', size: const Size(2, 2)),
-        ],
+        id: original.id,
+        nodes: <SceneNode>[firstNode, secondNode],
       );
 
-      txnReplaceContentLayerInScene(
+      txnReplaceContentLayerSlotInScene(
         scene: scene,
-        layerIndex: 1,
+        layerIndex: 0,
         layer: replacement,
       );
 
-      expect(scene.layers[1], same(replacement));
+      expect(scene.layers.single, same(replacement));
+      expect(scene.layers.single.id, original.id);
+      expect(scene.layers.single.nodes, hasLength(original.nodes.length));
+      expect(scene.layers.single.nodes[0], same(firstNode));
+      expect(scene.layers.single.nodes[1], same(secondNode));
+      expect(scene.layers.single.nodes, isNot(same(original.nodes)));
       expect(
-        () => txnReplaceContentLayerInScene(
+        () => txnReplaceContentLayerSlotInScene(
           scene: scene,
           layerIndex: -1,
           layer: replacement,
         ),
         throwsRangeError,
       );
-      expect(
-        () => txnReplaceContentLayerInScene(
-          scene: scene,
-          layerIndex: scene.layers.length,
-          layer: replacement,
-        ),
-        throwsRangeError,
-      );
     },
   );
 
   test(
-    'txnReplaceContentLayerInScene rejects duplicate replacement layer ids',
+    'txnReplaceContentLayerSlotInScene rejects semantic topology changes',
     () {
-      final scene = Scene(
-        layers: <ContentLayer>[
-          ContentLayer(id: 'layer-auto-20'),
-          ContentLayer(id: 'layer-auto-21'),
-        ],
-      );
-
-      expect(
-        () => txnReplaceContentLayerInScene(
-          scene: scene,
-          layerIndex: 0,
-          layer: ContentLayer(id: 'layer-auto-21'),
-          layerIndexById: txnBuildLayerIndexById(scene),
-        ),
-        throwsA(
-          predicate(
-            (e) =>
-                e is SceneDataException &&
-                e.code == SceneDataErrorCode.duplicateLayerId &&
-                e.path == 'layers[0].id',
-          ),
-        ),
-      );
-    },
-  );
-
-  test(
-    'txnReplaceContentLayerInScene rewrites layer id companion maps and locator entries',
-    () {
+      final firstNode = RectNode(id: 'slot-node-3', size: const Size(1, 1));
+      final secondNode = RectNode(id: 'slot-node-4', size: const Size(2, 2));
       final scene = Scene(
         layers: <ContentLayer>[
           ContentLayer(
-            id: 'layer-auto-20',
-            nodes: <SceneNode>[
-              RectNode(id: 'old-node', size: const Size(1, 1)),
-            ],
+            id: 'layer-auto-slot',
+            nodes: <SceneNode>[firstNode, secondNode],
           ),
-          ContentLayer(id: 'layer-auto-21'),
         ],
       );
-      final locator = txnBuildNodeLocator(scene);
-      final layerIndexById = txnBuildLayerIndexById(scene);
 
-      txnReplaceContentLayerInScene(
-        scene: scene,
-        layerIndex: 0,
-        layer: ContentLayer(
-          id: 'layer-auto-22',
-          nodes: <SceneNode>[RectNode(id: 'new-node', size: const Size(2, 2))],
+      expect(
+        () => txnReplaceContentLayerSlotInScene(
+          scene: scene,
+          layerIndex: 0,
+          layer: ContentLayer(
+            id: 'layer-auto-other',
+            nodes: <SceneNode>[firstNode, secondNode],
+          ),
         ),
-        nodeLocator: locator,
-        layerIndexById: layerIndexById,
+        throwsStateError,
       );
-
-      expect(layerIndexById, <LayerId, int>{
-        'layer-auto-22': 0,
-        'layer-auto-21': 1,
-      });
-      expect(locator.containsKey('old-node'), isFalse);
-      expect(locator['new-node'], (
-        contentLayerId: 'layer-auto-22',
-        nodeIndex: 0,
-      ));
+      expect(
+        () => txnReplaceContentLayerSlotInScene(
+          scene: scene,
+          layerIndex: 0,
+          layer: ContentLayer(
+            id: 'layer-auto-slot',
+            nodes: <SceneNode>[firstNode],
+          ),
+        ),
+        throwsStateError,
+      );
+      expect(
+        () => txnReplaceContentLayerSlotInScene(
+          scene: scene,
+          layerIndex: 0,
+          layer: ContentLayer(
+            id: 'layer-auto-slot',
+            nodes: <SceneNode>[
+              RectNode(id: 'replacement', size: const Size(3, 3)),
+              secondNode,
+            ],
+          ),
+        ),
+        throwsStateError,
+      );
     },
   );
 

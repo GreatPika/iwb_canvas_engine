@@ -58,49 +58,16 @@ int txnInsertContentLayerInScene({
   return resolvedInsertIndex;
 }
 
-void txnReplaceContentLayerInScene({
-  required Scene scene,
-  required int layerIndex,
-  required ContentLayer layer,
-  Map<NodeId, NodeLocatorEntry>? nodeLocator,
-  Map<LayerId, int>? layerIndexById,
-}) {
-  final resolvedNodeLocator = nodeLocator ?? locator.txnBuildNodeLocator(scene);
-  final resolvedLayerIndexById =
-      layerIndexById ?? locator.txnBuildLayerIndexById(scene);
-  final previous = _txnRequireValidLayerIndex(
-    scene: scene,
-    layerIndex: layerIndex,
-  );
-  final existingIndex = resolvedLayerIndexById[layer.id];
-  if (existingIndex != null && existingIndex != layerIndex) {
-    throw SceneDataException.duplicateLayerId(
-      path: 'layers[$layerIndex].id',
-      layerId: layer.id,
-    );
-  }
-
-  scene.layers[layerIndex] = layer;
-  if (previous.id != layer.id) {
-    resolvedLayerIndexById.remove(previous.id);
-    resolvedLayerIndexById[layer.id] = layerIndex;
-  }
-  for (final node in previous.nodes) {
-    resolvedNodeLocator.remove(node.id);
-  }
-  locator.txnWriteLayerNodeLocations(
-    locator: resolvedNodeLocator,
-    nodes: layer.nodes,
-    contentLayerId: layer.id,
-  );
-}
-
 void txnReplaceContentLayerSlotInScene({
   required Scene scene,
   required int layerIndex,
   required ContentLayer layer,
 }) {
-  _txnRequireValidLayerIndex(scene: scene, layerIndex: layerIndex);
+  final previous = _txnRequireValidLayerIndex(
+    scene: scene,
+    layerIndex: layerIndex,
+  );
+  _txnRequireSlotReplacementPreservesTopology(previous: previous, layer: layer);
   scene.layers[layerIndex] = layer;
 }
 
@@ -222,5 +189,24 @@ void _txnRequireUniqueLayerId({
       path: targetPath,
       layerId: layerId,
     );
+  }
+}
+
+void _txnRequireSlotReplacementPreservesTopology({
+  required ContentLayer previous,
+  required ContentLayer layer,
+}) {
+  if (layer.id != previous.id) {
+    throw StateError('Slot replacement must preserve layer.id.');
+  }
+  if (layer.nodes.length != previous.nodes.length) {
+    throw StateError('Slot replacement must preserve node count.');
+  }
+  for (var index = 0; index < previous.nodes.length; index++) {
+    if (!identical(layer.nodes[index], previous.nodes[index])) {
+      throw StateError(
+        'Slot replacement must preserve per-index node identity.',
+      );
+    }
   }
 }

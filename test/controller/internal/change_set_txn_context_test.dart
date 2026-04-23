@@ -401,14 +401,12 @@ void main() {
   test(
     'TxnContext ensureContentLayer shifts node locator, preserves cloned layer identity and layer seed',
     () {
+      final tailNode = RectNode(id: 'tail', size: const Size(1, 1));
       final ctx = TxnContext(
         baseScene: Scene(
           layers: <ContentLayer>[
             ContentLayer(id: 'layer-auto-60'),
-            ContentLayer(
-              id: 'layer-auto-61',
-              nodes: <SceneNode>[RectNode(id: 'tail', size: const Size(1, 1))],
-            ),
+            ContentLayer(id: 'layer-auto-61', nodes: <SceneNode>[tailNode]),
           ],
         ),
         workingSelection: <NodeId>{},
@@ -419,6 +417,9 @@ void main() {
 
       final clonedLayer = ctx.txnEnsureMutableLayer(1);
       expect(ctx.debugLayerShallowClones, 1);
+      expect(clonedLayer.id, 'layer-auto-61');
+      expect(clonedLayer.nodes, hasLength(1));
+      expect(clonedLayer.nodes.single, same(tailNode));
 
       expect(ctx.txnEnsureContentLayer('layer-10', index: 1), isTrue);
       expect(
@@ -442,6 +443,8 @@ void main() {
 
       final shiftedLayer = ctx.txnEnsureMutableLayer(2);
       expect(identical(shiftedLayer, clonedLayer), isTrue);
+      expect(shiftedLayer.id, 'layer-auto-61');
+      expect(shiftedLayer.nodes.single, same(resolvedTailAgain.node));
       expect(ctx.debugLayerShallowClones, 1);
 
       expect(

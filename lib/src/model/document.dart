@@ -163,22 +163,6 @@ int txnInsertContentLayerInScene({
   );
 }
 
-void txnReplaceContentLayerInScene({
-  required Scene scene,
-  required int layerIndex,
-  required ContentLayer layer,
-  Map<NodeId, NodeLocatorEntry>? nodeLocator,
-  Map<LayerId, int>? layerIndexById,
-}) {
-  document_scene_insert.txnReplaceContentLayerInScene(
-    scene: scene,
-    layerIndex: layerIndex,
-    layer: layer,
-    nodeLocator: nodeLocator,
-    layerIndexById: layerIndexById,
-  );
-}
-
 void txnReplaceContentLayerSlotInScene({
   required Scene scene,
   required int layerIndex,

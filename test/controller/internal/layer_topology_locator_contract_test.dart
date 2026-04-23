@@ -10,6 +10,12 @@ void main() {
     final txnWorkspaceSource = File(
       'lib/src/controller/txn_workspace.dart',
     ).readAsStringSync();
+    final modelFacadeSource = File(
+      'lib/src/model/document.dart',
+    ).readAsStringSync();
+    final modelInsertSource = File(
+      'lib/src/model/document_scene_insert.dart',
+    ).readAsStringSync();
 
     expect(
       txnWorkspaceSource,
@@ -19,6 +25,34 @@ void main() {
     expect(txnWorkspaceSource, contains('txnReplaceContentLayerSlotInScene('));
     expect(
       txnWorkspaceSource,
+      isNot(contains('txnReplaceContentLayerInScene(')),
+    );
+    expect(
+      modelFacadeSource,
+      isNot(contains('txnReplaceContentLayerInScene(')),
+    );
+    expect(
+      modelInsertSource,
+      isNot(contains('txnReplaceContentLayerInScene(')),
+    );
+  });
+
+  test('model facade keeps only the topology-preserving layer slot seam', () {
+    final modelFacadeSource = File(
+      'lib/src/model/document.dart',
+    ).readAsStringSync();
+    final modelInsertSource = File(
+      'lib/src/model/document_scene_insert.dart',
+    ).readAsStringSync();
+
+    expect(modelFacadeSource, contains('txnReplaceContentLayerSlotInScene('));
+    expect(modelInsertSource, contains('txnReplaceContentLayerSlotInScene('));
+    expect(
+      modelFacadeSource,
+      isNot(contains('txnReplaceContentLayerInScene(')),
+    );
+    expect(
+      modelInsertSource,
       isNot(contains('txnReplaceContentLayerInScene(')),
     );
   });
