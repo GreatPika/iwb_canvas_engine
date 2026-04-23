@@ -1295,6 +1295,7 @@ void main() {
   );
 
   test('ScenePainter uses caches when provided', () async {
+    // INV:INV-ENG-PERFORMANCE-PROOF-CONTOUR
     const background = Color(0xFFFFFFFF);
     final strokeCache = SceneStrokePathCache(maxEntries: 8);
     final textCache = SceneTextLayoutCache(maxEntries: 8);

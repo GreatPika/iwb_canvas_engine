@@ -86,6 +86,32 @@ Run something else.
       }
     });
 
+    test('fails when CI reintroduces DCM analyze', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeCanonicalCiWorkflow(
+          sandbox,
+          extraStaticChecksRun: 'dcm analyze .',
+        );
+        _writeCanonicalPerfNightlyWorkflow(sandbox);
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_verification_contract.dart',
+        );
+
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            '.github/workflows/ci.yaml has unexpected executable run entry `.|dcm analyze .`',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test('fails when CI tool-test trigger surface drifts', () async {
       final sandbox = await _createSandbox();
       try {
@@ -435,6 +461,19 @@ const List<String> _canonicalTriggerEntries = <String>[
 
 const String _toolTestJobsExpr = r'${{ steps.test-jobs.outputs.jobs }}';
 const String _coverageJobsExpr = r'${{ steps.test-jobs.outputs.jobs }}';
+const String _coverageJobsRun = r'''JOBS="$(getconf _NPROCESSORS_ONLN)"
+if [ "$JOBS" -gt 1 ]; then
+  JOBS=$((JOBS - 1))
+fi
+echo "jobs=$JOBS" >> "$GITHUB_OUTPUT"''';
+const String _toolJobsRun = r'''JOBS="$(getconf _NPROCESSORS_ONLN)"
+if [ "$JOBS" -gt 1 ]; then
+  JOBS=$((JOBS - 1))
+fi
+if [ "$JOBS" -gt 6 ]; then
+  JOBS=6
+fi
+echo "jobs=$JOBS" >> "$GITHUB_OUTPUT"''';
 
 Future<Directory> _createSandbox() {
   return createToolSandbox(
@@ -464,25 +503,31 @@ void _replaceInSandboxFile(
   file.writeAsStringSync(updated);
 }
 
+String _indentBlock(String value, int spaces) {
+  final prefix = ' ' * spaces;
+  return value.split('\n').map((line) => '$prefix$line').join('\n');
+}
+
 void _writeCanonicalCiWorkflow(
   Directory sandbox, {
   List<String>? triggerEntries,
   String? removeRun,
+  String? extraStaticChecksRun,
 }) {
-  final runEntries = <String>[
-    'dcm analyze .',
+  final staticChecksRuns = <String>[
+    'flutter pub get',
     'dart format --output=none --set-exit-if-changed lib test example/lib example/test tool',
     'flutter analyze',
+    if (extraStaticChecksRun != null && extraStaticChecksRun != removeRun)
+      extraStaticChecksRun,
+    'flutter pub get',
     'flutter analyze lib test',
+    'flutter test --no-pub test',
     'dart run tool/check_verification_contract.dart',
     'dart run tool/check_import_boundaries.dart',
     'dart run tool/check_public_api_surface.dart',
     'dart run tool/check_guardrails.dart',
     'dart run tool/check_invariant_coverage.dart',
-    'flutter test --no-pub test',
-    'flutter test --coverage --no-pub --exclude-tags=tool -j "$_coverageJobsExpr"',
-    'dart run tool/check_coverage.dart',
-    'dart run tool/run_tool_tests.dart --jobs="$_toolTestJobsExpr"',
   ].where((entry) => entry != removeRun).toList(growable: false);
 
   writeSandboxFile(sandbox, '.github/workflows/ci.yaml', '''
@@ -499,40 +544,63 @@ ${(triggerEntries ?? _canonicalTriggerEntries).map((entry) => "              - '
 
   static-checks:
     steps:
-      - name: DCM analyze
-        run: ${runEntries[0]}
+      - name: Pub get
+        run: ${staticChecksRuns[0]}
       - name: Format
-        run: ${runEntries[1]}
+        run: ${staticChecksRuns[1]}
       - name: Analyze
-        run: ${runEntries[2]}
+        run: ${staticChecksRuns[2]}
+      ${staticChecksRuns.contains('dcm analyze .') ? '- name: DCM analyze\n        run: dcm analyze .' : ''}
+      - name: Example pub get
+        working-directory: example
+        run: ${staticChecksRuns.contains('flutter pub get') ? 'flutter pub get' : 'echo missing'}
       - name: Example analyze
         working-directory: example
-        run: ${runEntries[3]}
-      - name: Verification contract
-        run: ${runEntries.contains('dart run tool/check_verification_contract.dart') ? 'dart run tool/check_verification_contract.dart' : 'dart run tool/check_import_boundaries.dart'}
-      - name: Import boundaries
-        run: ${runEntries.contains('dart run tool/check_import_boundaries.dart') ? 'dart run tool/check_import_boundaries.dart' : 'dart run tool/check_public_api_surface.dart'}
-      - name: Public API surface
-        run: ${runEntries.contains('dart run tool/check_public_api_surface.dart') ? 'dart run tool/check_public_api_surface.dart' : 'dart run tool/check_guardrails.dart'}
-      - name: Guardrails
-        run: ${runEntries.contains('dart run tool/check_guardrails.dart') ? 'dart run tool/check_guardrails.dart' : 'dart run tool/check_invariant_coverage.dart'}
-      - name: Invariant coverage
-        run: ${runEntries.contains('dart run tool/check_invariant_coverage.dart') ? 'dart run tool/check_invariant_coverage.dart' : 'flutter test --no-pub test'}
+        run: ${staticChecksRuns.contains('flutter analyze lib test') ? 'flutter analyze lib test' : 'flutter test --no-pub test'}
       - name: Example test
         working-directory: example
-        run: ${runEntries.contains('flutter test --no-pub test') ? 'flutter test --no-pub test' : 'flutter test --coverage --no-pub --exclude-tags=tool'}
+        run: ${staticChecksRuns.contains('flutter test --no-pub test') ? 'flutter test --no-pub test' : 'dart run tool/check_verification_contract.dart'}
+      - name: Verification contract
+        run: ${staticChecksRuns.contains('dart run tool/check_verification_contract.dart') ? 'dart run tool/check_verification_contract.dart' : 'dart run tool/check_import_boundaries.dart'}
+      - name: Import boundaries
+        run: ${staticChecksRuns.contains('dart run tool/check_import_boundaries.dart') ? 'dart run tool/check_import_boundaries.dart' : 'dart run tool/check_public_api_surface.dart'}
+      - name: Public API surface
+        run: ${staticChecksRuns.contains('dart run tool/check_public_api_surface.dart') ? 'dart run tool/check_public_api_surface.dart' : 'dart run tool/check_guardrails.dart'}
+      - name: Guardrails
+        run: ${staticChecksRuns.contains('dart run tool/check_guardrails.dart') ? 'dart run tool/check_guardrails.dart' : 'dart run tool/check_invariant_coverage.dart'}
+      - name: Invariant coverage
+        run: ${staticChecksRuns.contains('dart run tool/check_invariant_coverage.dart') ? 'dart run tool/check_invariant_coverage.dart' : 'echo missing'}
 
   tests-coverage:
     steps:
+      - name: Pub get
+        run: ${removeRun == 'flutter pub get' ? 'echo missing' : 'flutter pub get'}
+      - name: Coverage jobs
+        run: |
+${_indentBlock(_coverageJobsRun, 10)}
       - name: Coverage test
-        run: ${runEntries.contains('flutter test --coverage --no-pub --exclude-tags=tool -j "$_coverageJobsExpr"') ? 'flutter test --coverage --no-pub --exclude-tags=tool -j "$_coverageJobsExpr"' : 'dart run tool/check_coverage.dart'}
+        run: ${removeRun == 'flutter test --coverage --no-pub --exclude-tags=tool -j "$_coverageJobsExpr"' ? 'dart run tool/check_coverage.dart' : 'flutter test --coverage --no-pub --exclude-tags=tool -j "$_coverageJobsExpr"'}
       - name: Coverage check
-        run: ${runEntries.contains('dart run tool/check_coverage.dart') ? 'dart run tool/check_coverage.dart' : 'echo missing'}
+        run: ${removeRun == 'dart run tool/check_coverage.dart' ? 'echo missing' : 'dart run tool/check_coverage.dart'}
 
   tool-tests:
     steps:
+      - name: Pub get
+        run: ${removeRun == 'flutter pub get' ? 'echo missing' : 'flutter pub get'}
+      - name: Tool jobs
+        run: |
+${_indentBlock(_toolJobsRun, 10)}
       - name: Tool tests
-        run: ${runEntries.contains('dart run tool/run_tool_tests.dart --jobs="$_toolTestJobsExpr"') ? 'dart run tool/run_tool_tests.dart --jobs="$_toolTestJobsExpr"' : 'echo missing'}
+        run: ${removeRun == 'dart run tool/run_tool_tests.dart --jobs="$_toolTestJobsExpr"' ? 'echo missing' : 'dart run tool/run_tool_tests.dart --jobs="$_toolTestJobsExpr"'}
+
+  release-hygiene:
+    steps:
+      - name: Pub get
+        run: ${removeRun == 'flutter pub get' ? 'echo missing' : 'flutter pub get'}
+      - name: Dartdoc
+        run: ${removeRun == 'dart doc' ? 'echo missing' : 'dart doc'}
+      - name: Publish dry-run
+        run: ${removeRun == 'dart pub publish --dry-run' ? 'echo missing' : 'dart pub publish --dry-run'}
 ''');
 }
 

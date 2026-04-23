@@ -174,7 +174,7 @@ Map<String, Object?> buildDiffReport({
       for (final rawMetric in metrics) {
         final metric = rawMetric as Map<String, Object?>;
         if (metric['status'] == 'regressed') {
-          if (metric['deltaPct'] == null &&
+          if (metric['regressionKind'] == 'absolute' &&
               metric['maxAllowedAbsoluteValue'] != null) {
             failures.add(
               '$caseName/$operationName ${metric['metric']} current value '
@@ -255,6 +255,8 @@ Map<String, Object?> _diffCase({
       final deltaAbsUs = currentValue - baselineValue;
       final threshold = maxRegressionPctByMetric[metricKey];
       final absoluteThreshold = maxAbsoluteValueByMetric[metricKey];
+      final exceedsAbsoluteThreshold =
+          absoluteThreshold != null && currentValue > absoluteThreshold;
       final metricDiff = <String, Object?>{
         'metric': metricKey,
         'baselineUs': baselineValue,
@@ -262,11 +264,12 @@ Map<String, Object?> _diffCase({
         'deltaAbsUs': deltaAbsUs,
         'maxAllowedRegressionPct': threshold,
         'maxAllowedAbsoluteValue': absoluteThreshold,
+        'regressionKind': exceedsAbsoluteThreshold ? 'absolute' : 'relative',
       };
       if (baselineValue <= 0) {
         metricDiff['deltaPct'] = null;
         metricDiff['deltaPctNote'] = 'baseline_is_zero_or_negative';
-        if (absoluteThreshold != null && currentValue > absoluteThreshold) {
+        if (exceedsAbsoluteThreshold) {
           metricDiff['status'] = 'regressed';
         } else if (absoluteThreshold != null) {
           metricDiff['status'] = 'ok';
@@ -278,8 +281,10 @@ Map<String, Object?> _diffCase({
       } else {
         final deltaPct = _roundTo3(((deltaAbsUs / baselineValue) * 100));
         metricDiff['deltaPct'] = deltaPct;
-        if (threshold == null) {
-          metricDiff['status'] = 'not_gated';
+        if (exceedsAbsoluteThreshold) {
+          metricDiff['status'] = 'regressed';
+        } else if (threshold == null) {
+          metricDiff['status'] = absoluteThreshold == null ? 'not_gated' : 'ok';
         } else if (deltaPct > threshold) {
           metricDiff['status'] = 'regressed';
         } else {

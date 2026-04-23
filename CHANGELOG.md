@@ -64,12 +64,18 @@ in changes that have not yet been published to pub.dev.
 - Moved runtime content-layer topology ownership fully into the model seam.
   Stable node locators now track `contentLayerId`, while transaction and
   committed state carry a derived `layerIndexById` companion map.
+- Reworked repository-owned performance proof architecture. GitHub CI now uses
+  deterministic owner-level proof plus workflow-contract checks, while
+  diagnostic load profiles use truthful metric names and explicit
+  `cold_start` versus `steady_state` benchmark semantics.
 
 ### Fixed
 
 - Fixed paint over-admission by separating paint admission from hit-test
   admission. Hit-testing still honors hit padding, while paint admission now
   uses paint bounds only.
+- Fixed benchmark diff verdicts so absolute budgets fail even when a positive
+  baseline is already over budget and `current == baseline`.
 - Fixed JSON import/build line and stroke range diagnostics so alias-bearing
   field paths stay on `localA`, `localB`, and `localPoints`, while typed
   snapshot import surfaces keep canonical `start`, `end`, and `points`.

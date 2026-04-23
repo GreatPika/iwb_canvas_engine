@@ -944,6 +944,34 @@ const List<Invariant> invariants = <Invariant>[
     ],
   ),
   Invariant(
+    id: 'INV-ENG-PERFORMANCE-PROOF-CONTOUR',
+    scope: 'engine-runtime',
+    title:
+        'required performance proof stays deterministic on committed spatial and render owners, while diagnostic benchmark policy remains a regression surface',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(
+        path: 'test/controller/internal/spatial_index_cache_test.dart',
+        stepId: 'scope_controller_internal',
+      ),
+      RequiredProof(
+        path: 'test/render/scene_render_caches_test.dart',
+        stepId: 'scope_render_view',
+      ),
+      RequiredProof(
+        path: 'test/render/scene_painter_test.dart',
+        stepId: 'scope_render_view',
+      ),
+      RequiredProof(
+        path: 'test/render/scene_painter_bounds_contract_test.dart',
+        stepId: 'scope_render_view',
+      ),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(path: 'test/tool/bench_diff_load_profiles_test.dart'),
+      RegressionProof(path: 'test/tool/bench_run_load_profiles_test.dart'),
+    ],
+  ),
+  Invariant(
     id: 'INV-ENG-RENDER-HIT-BOUNDS-PARITY',
     scope: 'engine-runtime',
     title:

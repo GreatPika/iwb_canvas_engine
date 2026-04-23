@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 // INV:INV-ENG-SCENE-PAINTER-MODULE-BOUNDARY
 // INV:INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION
+// INV:INV-ENG-PERFORMANCE-PROOF-CONTOUR
 
 String _extractMethodBody({
   required String source,

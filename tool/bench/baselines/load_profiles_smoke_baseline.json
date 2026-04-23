@@ -1,46 +1,110 @@
 {
-  "generatedAtUtc": "2026-04-18T19:15:05.363329Z",
+  "generatedAtUtc": "2026-04-23T10:03:11.539477Z",
   "profile": "smoke",
-  "caseCount": 7,
+  "caseCount": 10,
   "cases": [
     {
       "name": "nodes_10000",
       "profile": "smoke",
+      "contract": {
+        "operations": {
+          "single_node_patch": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "single_node_transform": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "toggle_selection": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "move_selection": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          }
+        }
+      },
       "metrics": {
         "nodeCount": 10000,
         "iterations": 3,
         "metrics": {
           "single_node_patch": {
-            "avgUs": 29932,
-            "minUs": 20242,
-            "maxUs": 48508,
-            "avgRssDeltaBytes": 906581,
+            "avgUs": 38783,
+            "minUs": 24465,
+            "maxUs": 63837,
+            "avgRssDeltaBytes": 1589248,
             "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 2277376
+            "maxRssDeltaBytes": 4374528
           },
           "single_node_transform": {
-            "avgUs": 29261,
-            "minUs": 25780,
-            "maxUs": 33398,
-            "avgRssDeltaBytes": 4789589,
+            "avgUs": 31370,
+            "minUs": 28111,
+            "maxUs": 36450,
+            "avgRssDeltaBytes": 7596715,
             "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 7634944
+            "maxRssDeltaBytes": 11829248
           },
           "toggle_selection": {
-            "avgUs": 20654,
-            "minUs": 18801,
-            "maxUs": 23860,
-            "avgRssDeltaBytes": 245760,
-            "minRssDeltaBytes": 65536,
-            "maxRssDeltaBytes": 360448
+            "avgUs": 24896,
+            "minUs": 22148,
+            "maxUs": 29690,
+            "avgRssDeltaBytes": 98304,
+            "minRssDeltaBytes": 0,
+            "maxRssDeltaBytes": 294912
           },
           "move_selection": {
-            "avgUs": 25735,
-            "minUs": 23587,
-            "maxUs": 29429,
-            "avgRssDeltaBytes": 1949696,
+            "avgUs": 29203,
+            "minUs": 26722,
+            "maxUs": 32514,
+            "avgRssDeltaBytes": 1785856,
             "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 4915200
+            "maxRssDeltaBytes": 3883008
           }
         }
       }
@@ -48,34 +112,83 @@
     {
       "name": "strokes_1000_pts_256",
       "profile": "smoke",
+      "contract": {
+        "operations": {
+          "single_stroke_patch_thickness": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 2,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "single_stroke_patch_points": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 2,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "toggle_selection": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 2,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          }
+        }
+      },
       "metrics": {
         "strokeCount": 1000,
         "pointsPerStroke": 256,
         "iterations": 2,
         "metrics": {
           "single_stroke_patch_thickness": {
-            "avgUs": 57469,
-            "minUs": 56055,
-            "maxUs": 58883,
-            "avgRssDeltaBytes": 565248,
+            "avgUs": 88074,
+            "minUs": 83756,
+            "maxUs": 92391,
+            "avgRssDeltaBytes": 65536,
             "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 1130496
+            "maxRssDeltaBytes": 131072
           },
           "single_stroke_patch_points": {
-            "avgUs": 56480,
-            "minUs": 56459,
-            "maxUs": 56500,
-            "avgRssDeltaBytes": 598016,
-            "minRssDeltaBytes": 81920,
-            "maxRssDeltaBytes": 1114112
+            "avgUs": 84182,
+            "minUs": 83923,
+            "maxUs": 84441,
+            "avgRssDeltaBytes": 98304,
+            "minRssDeltaBytes": 98304,
+            "maxRssDeltaBytes": 98304
           },
           "toggle_selection": {
-            "avgUs": 54863,
-            "minUs": 54656,
-            "maxUs": 55069,
-            "avgRssDeltaBytes": 589824,
-            "minRssDeltaBytes": 81920,
-            "maxRssDeltaBytes": 1097728
+            "avgUs": 82986,
+            "minUs": 81287,
+            "maxUs": 84684,
+            "avgRssDeltaBytes": 106496,
+            "minRssDeltaBytes": 98304,
+            "maxRssDeltaBytes": 114688
           }
         }
       }
@@ -83,26 +196,60 @@
     {
       "name": "selection_path_painter_only",
       "profile": "smoke",
+      "contract": {
+        "operations": {
+          "paint_no_selection": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "paint_with_selection": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          }
+        }
+      },
       "metrics": {
         "pathNodeCount": 400,
         "pathSegments": 128,
         "iterations": 3,
         "metrics": {
           "paint_no_selection": {
-            "avgUs": 31981,
-            "minUs": 22358,
-            "maxUs": 51150,
-            "avgRssDeltaBytes": 655360,
-            "minRssDeltaBytes": 114688,
-            "maxRssDeltaBytes": 1638400
+            "avgUs": 33010,
+            "minUs": 21915,
+            "maxUs": 54123,
+            "avgRssDeltaBytes": 846507,
+            "minRssDeltaBytes": 0,
+            "maxRssDeltaBytes": 1490944
           },
           "paint_with_selection": {
-            "avgUs": 28380,
-            "minUs": 20614,
-            "maxUs": 39771,
-            "avgRssDeltaBytes": 1441792,
+            "avgUs": 28292,
+            "minUs": 20854,
+            "maxUs": 39890,
+            "avgRssDeltaBytes": 1731243,
             "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 4325376
+            "maxRssDeltaBytes": 5144576
           }
         }
       }
@@ -110,26 +257,60 @@
     {
       "name": "selection_path_candidate_staging",
       "profile": "smoke",
+      "contract": {
+        "operations": {
+          "stage_no_selection": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "stage_with_selection": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          }
+        }
+      },
       "metrics": {
         "pathNodeCount": 400,
         "pathSegments": 128,
         "iterations": 3,
         "metrics": {
           "stage_no_selection": {
-            "avgUs": 6422,
-            "minUs": 995,
-            "maxUs": 17222,
-            "avgRssDeltaBytes": 43691,
+            "avgUs": 6952,
+            "minUs": 1139,
+            "maxUs": 18484,
+            "avgRssDeltaBytes": 65536,
             "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 114688
+            "maxRssDeltaBytes": 196608
           },
           "stage_with_selection": {
-            "avgUs": 4733,
-            "minUs": 1352,
-            "maxUs": 11380,
-            "avgRssDeltaBytes": 0,
+            "avgUs": 4754,
+            "minUs": 1288,
+            "maxUs": 11550,
+            "avgRssDeltaBytes": 5461,
             "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 0
+            "maxRssDeltaBytes": 16384
           }
         }
       }
@@ -137,26 +318,238 @@
     {
       "name": "selection_path_end_to_end_paint",
       "profile": "smoke",
+      "contract": {
+        "operations": {
+          "paint_no_selection": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "paint_with_selection": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          }
+        }
+      },
       "metrics": {
         "pathNodeCount": 400,
         "pathSegments": 128,
         "iterations": 3,
         "metrics": {
           "paint_no_selection": {
-            "avgUs": 9315,
-            "minUs": 1918,
-            "maxUs": 23948,
+            "avgUs": 9024,
+            "minUs": 2174,
+            "maxUs": 22418,
+            "avgRssDeltaBytes": 196608,
+            "minRssDeltaBytes": 0,
+            "maxRssDeltaBytes": 589824
+          },
+          "paint_with_selection": {
+            "avgUs": 8152,
+            "minUs": 3214,
+            "maxUs": 17582,
+            "avgRssDeltaBytes": 54613,
+            "minRssDeltaBytes": 0,
+            "maxRssDeltaBytes": 98304
+          }
+        }
+      }
+    },
+    {
+      "name": "text_layout_cache",
+      "profile": "smoke",
+      "contract": {
+        "operations": {
+          "paint_cache_miss": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "paint_cache_hit": {
+            "executionMode": "steady_state",
+            "warmupIterations": 1,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          }
+        }
+      },
+      "metrics": {
+        "iterations": 3,
+        "metrics": {
+          "paint_cache_miss": {
+            "avgUs": 1606,
+            "minUs": 137,
+            "maxUs": 4353,
+            "avgRssDeltaBytes": 32768,
+            "minRssDeltaBytes": 0,
+            "maxRssDeltaBytes": 98304
+          },
+          "paint_cache_hit": {
+            "avgUs": 89,
+            "minUs": 29,
+            "maxUs": 199,
             "avgRssDeltaBytes": 0,
             "minRssDeltaBytes": 0,
             "maxRssDeltaBytes": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "stroke_path_cache",
+      "profile": "smoke",
+      "contract": {
+        "operations": {
+          "paint_cache_miss": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
           },
-          "paint_with_selection": {
-            "avgUs": 8216,
-            "minUs": 3215,
-            "maxUs": 17906,
-            "avgRssDeltaBytes": 529749,
+          "paint_cache_hit": {
+            "executionMode": "steady_state",
+            "warmupIterations": 1,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          }
+        }
+      },
+      "metrics": {
+        "iterations": 3,
+        "metrics": {
+          "paint_cache_miss": {
+            "avgUs": 787,
+            "minUs": 115,
+            "maxUs": 2124,
+            "avgRssDeltaBytes": 5461,
             "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 1490944
+            "maxRssDeltaBytes": 16384
+          },
+          "paint_cache_hit": {
+            "avgUs": 100,
+            "minUs": 34,
+            "maxUs": 219,
+            "avgRssDeltaBytes": 5461,
+            "minRssDeltaBytes": 0,
+            "maxRssDeltaBytes": 16384
+          }
+        }
+      }
+    },
+    {
+      "name": "static_background_cache",
+      "profile": "smoke",
+      "contract": {
+        "operations": {
+          "paint_cache_miss": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "paint_cache_hit": {
+            "executionMode": "steady_state",
+            "warmupIterations": 1,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          }
+        }
+      },
+      "metrics": {
+        "backgroundNodeCount": 10000,
+        "iterations": 3,
+        "metrics": {
+          "paint_cache_miss": {
+            "avgUs": 10698,
+            "minUs": 797,
+            "maxUs": 30064,
+            "avgRssDeltaBytes": 1720320,
+            "minRssDeltaBytes": 16384,
+            "maxRssDeltaBytes": 4997120
+          },
+          "paint_cache_hit": {
+            "avgUs": 1366,
+            "minUs": 1234,
+            "maxUs": 1550,
+            "avgRssDeltaBytes": 5461,
+            "minRssDeltaBytes": 0,
+            "maxRssDeltaBytes": 16384
           }
         }
       }
@@ -164,25 +557,59 @@
     {
       "name": "background_layer_paint_admission",
       "profile": "smoke",
+      "contract": {
+        "operations": {
+          "enumerate_small_viewport": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "paint_small_viewport": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 3,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          }
+        }
+      },
       "metrics": {
         "backgroundNodeCount": 10000,
         "iterations": 3,
         "metrics": {
           "enumerate_small_viewport": {
-            "avgUs": 8803,
-            "minUs": 56,
-            "maxUs": 26238,
-            "avgRssDeltaBytes": 589824,
+            "avgUs": 5612,
+            "minUs": 470,
+            "maxUs": 15838,
+            "avgRssDeltaBytes": 824661,
             "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 1769472
+            "maxRssDeltaBytes": 2457600
           },
           "paint_small_viewport": {
-            "avgUs": 367,
-            "minUs": 146,
-            "maxUs": 783,
-            "avgRssDeltaBytes": 0,
+            "avgUs": 661,
+            "minUs": 570,
+            "maxUs": 781,
+            "avgRssDeltaBytes": 207531,
             "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 0
+            "maxRssDeltaBytes": 622592
           }
         }
       }
@@ -190,6 +617,85 @@
     {
       "name": "worst_case",
       "profile": "smoke",
+      "contract": {
+        "operations": {
+          "huge_bounds.query": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 2,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "huge_bounds.move_selection": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 2,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "huge_rect_select": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 2,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "very_long_path.patch_svg_path": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 2,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          },
+          "very_long_path.query_candidates": {
+            "executionMode": "cold_start",
+            "warmupIterations": 0,
+            "measuredIterations": 2,
+            "gatedMetrics": [
+              "avgRssDeltaBytes",
+              "avgUs"
+            ],
+            "diagnosticMetrics": [
+              "minUs",
+              "maxUs",
+              "minRssDeltaBytes",
+              "maxRssDeltaBytes"
+            ]
+          }
+        }
+      },
       "metrics": {
         "largeQueryNodeCount": 10000,
         "longPathSegments": 2000,
@@ -197,43 +703,43 @@
         "metrics": {
           "huge_bounds": {
             "query": {
-              "avgUs": 61,
+              "avgUs": 58,
               "minUs": 1,
-              "maxUs": 120,
+              "maxUs": 115,
               "avgRssDeltaBytes": 0,
               "minRssDeltaBytes": 0,
               "maxRssDeltaBytes": 0
             },
             "move_selection": {
-              "avgUs": 761,
-              "minUs": 133,
-              "maxUs": 1389,
+              "avgUs": 330,
+              "minUs": 136,
+              "maxUs": 523,
               "avgRssDeltaBytes": 8192,
               "minRssDeltaBytes": 0,
               "maxRssDeltaBytes": 16384
             }
           },
           "huge_rect_select": {
-            "avgUs": 13297,
-            "minUs": 2044,
-            "maxUs": 24549,
-            "avgRssDeltaBytes": 1474560,
-            "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 2949120
+            "avgUs": 11091,
+            "minUs": 2495,
+            "maxUs": 19686,
+            "avgRssDeltaBytes": 1769472,
+            "minRssDeltaBytes": 32768,
+            "maxRssDeltaBytes": 3506176
           },
           "very_long_path": {
             "patch_svg_path": {
-              "avgUs": 3694,
-              "minUs": 2172,
-              "maxUs": 5215,
-              "avgRssDeltaBytes": 2121728,
+              "avgUs": 1750,
+              "minUs": 1390,
+              "maxUs": 2109,
+              "avgRssDeltaBytes": 0,
               "minRssDeltaBytes": 0,
-              "maxRssDeltaBytes": 4243456
+              "maxRssDeltaBytes": 0
             },
             "query_candidates": {
-              "avgUs": 73,
-              "minUs": 28,
-              "maxUs": 117,
+              "avgUs": 62,
+              "minUs": 30,
+              "maxUs": 94,
               "avgRssDeltaBytes": 0,
               "minRssDeltaBytes": 0,
               "maxRssDeltaBytes": 0

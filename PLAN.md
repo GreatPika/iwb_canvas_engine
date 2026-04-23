@@ -27,4 +27,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 8. Validated Import Materialization Boundary](plan/step_8_validated_import_materialization_boundary.md)
 - [x] [Step 9. Boundary Admission Canonicalization and Unsafe Materialization Split](plan/step_9_boundary_admission_canonicalization_and_unsafe_materialization_split.md)
 - [x] [Step 10. Model-Owned Layer Topology Locator Contract](plan/step_10_model_owned_layer_topology_locator_contract.md)
-- [ ] [Step 11. Performance Proof Architecture](plan/step_11_performance_proof_architecture.md)
+- [x] [Step 11. Performance Proof Architecture](plan/step_11_performance_proof_architecture.md)

@@ -16,6 +16,7 @@ void main() {
     'SceneRenderCaches clearAll forces rebuilds without changing local cache keys',
     () {
       // INV:INV-ENG-EPOCH-INVALIDATION
+      // INV:INV-ENG-PERFORMANCE-PROOF-CONTOUR
       final staticCache = SceneStaticLayerCache();
       final textCache = SceneTextLayoutCache(maxEntries: 8);
       final strokeCache = SceneStrokePathCache(maxEntries: 8);

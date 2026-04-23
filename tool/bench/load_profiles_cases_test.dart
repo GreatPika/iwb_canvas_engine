@@ -22,7 +22,6 @@ const _resultPrefix = 'IWB_BENCH_RESULT ';
 void main() {
   final profile = _resolveProfile();
   final policy = loadProfilePolicyFor(profile);
-  final includePercentiles = policy.profile == 'full';
 
   for (final nodeCase in policy.nodeCases) {
     test(
@@ -31,9 +30,13 @@ void main() {
         final metrics = _runNodeScaleCase(
           nodeCount: nodeCase.nodeCount,
           iterations: policy.nodeIterations,
-          includePercentiles: includePercentiles,
         );
-        _emitResult(profile: profile, name: nodeCase.name, metrics: metrics);
+        _emitResult(
+          profile: profile,
+          name: nodeCase.name,
+          metrics: metrics,
+          contract: policy.contractForCase(nodeCase.name),
+        );
       },
       timeout: const Timeout(Duration(minutes: 10)),
     );
@@ -47,9 +50,13 @@ void main() {
           strokeCount: strokeCase.strokeCount,
           pointsPerStroke: strokeCase.pointsPerStroke,
           iterations: policy.strokeIterations,
-          includePercentiles: includePercentiles,
         );
-        _emitResult(profile: profile, name: strokeCase.name, metrics: metrics);
+        _emitResult(
+          profile: profile,
+          name: strokeCase.name,
+          metrics: metrics,
+          contract: policy.contractForCase(strokeCase.name),
+        );
       },
       timeout: const Timeout(Duration(minutes: 10)),
     );
@@ -62,12 +69,12 @@ void main() {
         pathNodeCount: policy.selectionPathNodeCount,
         pathSegments: policy.selectionPathSegments,
         iterations: policy.selectionPathIterations,
-        includePercentiles: includePercentiles,
       );
       _emitResult(
         profile: profile,
         name: selectionPathPainterOnlyCaseName,
         metrics: metrics,
+        contract: policy.contractForCase(selectionPathPainterOnlyCaseName),
       );
     },
     timeout: const Timeout(Duration(minutes: 10)),
@@ -80,12 +87,12 @@ void main() {
         pathNodeCount: policy.selectionPathNodeCount,
         pathSegments: policy.selectionPathSegments,
         iterations: policy.selectionPathIterations,
-        includePercentiles: includePercentiles,
       );
       _emitResult(
         profile: profile,
         name: selectionPathCandidateStagingCaseName,
         metrics: metrics,
+        contract: policy.contractForCase(selectionPathCandidateStagingCaseName),
       );
     },
     timeout: const Timeout(Duration(minutes: 10)),
@@ -98,12 +105,61 @@ void main() {
         pathNodeCount: policy.selectionPathNodeCount,
         pathSegments: policy.selectionPathSegments,
         iterations: policy.selectionPathIterations,
-        includePercentiles: includePercentiles,
       );
       _emitResult(
         profile: profile,
         name: selectionPathEndToEndPaintCaseName,
         metrics: metrics,
+        contract: policy.contractForCase(selectionPathEndToEndPaintCaseName),
+      );
+    },
+    timeout: const Timeout(Duration(minutes: 10)),
+  );
+
+  test(
+    'load profile text-layout-cache profile=$profile',
+    () {
+      final metrics = _runTextLayoutCacheCase(
+        iterations: policy.selectionPathIterations,
+      );
+      _emitResult(
+        profile: profile,
+        name: textLayoutCacheCaseName,
+        metrics: metrics,
+        contract: policy.contractForCase(textLayoutCacheCaseName),
+      );
+    },
+    timeout: const Timeout(Duration(minutes: 10)),
+  );
+
+  test(
+    'load profile stroke-path-cache profile=$profile',
+    () {
+      final metrics = _runStrokePathCacheCase(
+        iterations: policy.selectionPathIterations,
+      );
+      _emitResult(
+        profile: profile,
+        name: strokePathCacheCaseName,
+        metrics: metrics,
+        contract: policy.contractForCase(strokePathCacheCaseName),
+      );
+    },
+    timeout: const Timeout(Duration(minutes: 10)),
+  );
+
+  test(
+    'load profile static-background-cache profile=$profile',
+    () {
+      final metrics = _runStaticBackgroundCacheCase(
+        backgroundNodeCount: policy.nodeCases.last.nodeCount,
+        iterations: policy.nodeIterations,
+      );
+      _emitResult(
+        profile: profile,
+        name: staticBackgroundCacheCaseName,
+        metrics: metrics,
+        contract: policy.contractForCase(staticBackgroundCacheCaseName),
       );
     },
     timeout: const Timeout(Duration(minutes: 10)),
@@ -115,12 +171,12 @@ void main() {
       final metrics = _runBackgroundLayerPaintAdmissionCase(
         backgroundNodeCount: policy.nodeCases.last.nodeCount,
         iterations: policy.nodeIterations,
-        includePercentiles: includePercentiles,
       );
       _emitResult(
         profile: profile,
         name: backgroundLayerPaintAdmissionCaseName,
         metrics: metrics,
+        contract: policy.contractForCase(backgroundLayerPaintAdmissionCaseName),
       );
     },
     timeout: const Timeout(Duration(minutes: 10)),
@@ -133,9 +189,13 @@ void main() {
         largeQueryNodeCount: policy.largeQueryNodeCount,
         longPathSegments: policy.longPathSegments,
         iterations: policy.worstCaseIterations,
-        includePercentiles: includePercentiles,
       );
-      _emitResult(profile: profile, name: worstCaseName, metrics: metrics);
+      _emitResult(
+        profile: profile,
+        name: worstCaseName,
+        metrics: metrics,
+        contract: policy.contractForCase(worstCaseName),
+      );
     },
     timeout: const Timeout(Duration(minutes: 10)),
   );
@@ -152,7 +212,6 @@ String _resolveProfile() {
 Map<String, Object?> _runNodeScaleCase({
   required int nodeCount,
   required int iterations,
-  required bool includePercentiles,
 }) {
   final snapshot = SceneSnapshot(
     layers: <ContentLayerSnapshot>[
@@ -179,7 +238,6 @@ Map<String, Object?> _runNodeScaleCase({
 
     final patchMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (i) {
         final width = i.isEven ? 2.0 : 1.0;
         controller.write<void>((writer) {
@@ -195,7 +253,6 @@ Map<String, Object?> _runNodeScaleCase({
 
     final transformMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (i) {
         controller.write<void>((writer) {
           writer.writeNodeTransformSet(
@@ -211,7 +268,6 @@ Map<String, Object?> _runNodeScaleCase({
 
     final toggleMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (_) {
         controller.write<void>((writer) {
           writer.writeSelectionToggle(targetId);
@@ -221,7 +277,6 @@ Map<String, Object?> _runNodeScaleCase({
 
     final moveMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (_) {
         controller.write<void>((writer) {
           writer.writeSelectionReplace(<NodeId>{targetId});
@@ -249,7 +304,6 @@ Map<String, Object?> _runStrokeScaleCase({
   required int strokeCount,
   required int pointsPerStroke,
   required int iterations,
-  required bool includePercentiles,
 }) {
   final nodes = <NodeSnapshot>[
     for (var i = 0; i < strokeCount; i++)
@@ -278,7 +332,6 @@ Map<String, Object?> _runStrokeScaleCase({
 
     final thicknessMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (i) {
         controller.write<void>((writer) {
           writer.writeNodePatch(
@@ -293,7 +346,6 @@ Map<String, Object?> _runStrokeScaleCase({
 
     final pointsMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (i) {
         controller.write<void>((writer) {
           writer.writeNodePatch(
@@ -310,7 +362,6 @@ Map<String, Object?> _runStrokeScaleCase({
 
     final toggleMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (_) {
         controller.write<void>((writer) {
           writer.writeSelectionToggle(targetId);
@@ -337,21 +388,15 @@ Map<String, Object?> _runWorstCaseProfile({
   required int largeQueryNodeCount,
   required int longPathSegments,
   required int iterations,
-  required bool includePercentiles,
 }) {
-  final hugeBoundsMetric = _runHugeBoundsMetric(
-    iterations: iterations,
-    includePercentiles: includePercentiles,
-  );
+  final hugeBoundsMetric = _runHugeBoundsMetric(iterations: iterations);
   final hugeRectSelectMetric = _runHugeRectSelectMetric(
     nodeCount: largeQueryNodeCount,
     iterations: iterations,
-    includePercentiles: includePercentiles,
   );
   final longPathMetric = _runVeryLongPathMetric(
     segments: longPathSegments,
     iterations: iterations,
-    includePercentiles: includePercentiles,
   );
   return <String, Object?>{
     'largeQueryNodeCount': largeQueryNodeCount,
@@ -369,7 +414,6 @@ Map<String, Object?> _runSelectionPathPainterOnlyCase({
   required int pathNodeCount,
   required int pathSegments,
   required int iterations,
-  required bool includePercentiles,
 }) {
   final snapshot = _selectionPathSnapshot(
     pathNodeCount: pathNodeCount,
@@ -391,7 +435,6 @@ Map<String, Object?> _runSelectionPathPainterOnlyCase({
   try {
     final noSelectionMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (_) {
         controller.write<void>((writer) {
           writer.writeSelectionClear();
@@ -403,7 +446,6 @@ Map<String, Object?> _runSelectionPathPainterOnlyCase({
     pathCache.clear();
     final withSelectionMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (_) {
         controller.write<void>((writer) {
           writer.writeSelectionReplace(selectedIds);
@@ -431,7 +473,6 @@ Map<String, Object?> _runSelectionPathCandidateStagingCase({
   required int pathNodeCount,
   required int pathSegments,
   required int iterations,
-  required bool includePercentiles,
 }) {
   final snapshot = _selectionPathSnapshot(
     pathNodeCount: pathNodeCount,
@@ -454,7 +495,6 @@ Map<String, Object?> _runSelectionPathCandidateStagingCase({
   try {
     final noSelectionMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (_) {
         controller.write<void>((writer) {
           writer.writeSelectionClear();
@@ -465,7 +505,6 @@ Map<String, Object?> _runSelectionPathCandidateStagingCase({
 
     final withSelectionMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (_) {
         controller.write<void>((writer) {
           writer.writeSelectionReplace(selectedIds);
@@ -494,7 +533,6 @@ Map<String, Object?> _runSelectionPathEndToEndPaintCase({
   required int pathNodeCount,
   required int pathSegments,
   required int iterations,
-  required bool includePercentiles,
 }) {
   final snapshot = _selectionPathSnapshot(
     pathNodeCount: pathNodeCount,
@@ -520,7 +558,6 @@ Map<String, Object?> _runSelectionPathEndToEndPaintCase({
   try {
     final noSelectionMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (_) {
         controller.write<void>((writer) {
           writer.writeSelectionClear();
@@ -532,7 +569,6 @@ Map<String, Object?> _runSelectionPathEndToEndPaintCase({
     pathCache.clear();
     final withSelectionMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (_) {
         controller.write<void>((writer) {
           writer.writeSelectionReplace(selectedIds);
@@ -557,10 +593,234 @@ Map<String, Object?> _runSelectionPathEndToEndPaintCase({
   }
 }
 
+Map<String, Object?> _runTextLayoutCacheCase({required int iterations}) {
+  final snapshot = SceneSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
+        id: 'layer-auto-text-cache',
+        nodes: <NodeSnapshot>[
+          TextNodeSnapshot(
+            id: 'text-cache',
+            text: 'layout cache benchmark',
+            fontSize: 14,
+            color: const Color(0xFF000000),
+            textDirection: TextDirection.ltr,
+            transform: Transform2D.translation(const Offset(24, 24)),
+          ),
+        ],
+      ),
+    ],
+  );
+  final controller = SceneStoreController(initialSnapshot: snapshot);
+  final interactionController = interactive.SceneController();
+  final renderState = _createProductionBenchmarkRenderState(
+    controller: controller,
+    interactionController: interactionController,
+  );
+  const canvasSize = Size(320, 160);
+
+  try {
+    final missMetric = _measureOperation(
+      iterations: iterations,
+      run: (_) {
+        final textCache = SceneTextLayoutCache(maxEntries: 8);
+        final painter = ScenePainter(
+          controller: renderState,
+          imageResolver: (_) => null,
+          textLayoutCache: textCache,
+        );
+        _paintScene(painter, canvasSize);
+      },
+    );
+
+    final textCache = SceneTextLayoutCache(maxEntries: 8);
+    final painter = ScenePainter(
+      controller: renderState,
+      imageResolver: (_) => null,
+      textLayoutCache: textCache,
+    );
+    final hitMetric = _measureOperation(
+      iterations: iterations,
+      warmUp: () {
+        _paintScene(painter, canvasSize);
+      },
+      run: (_) {
+        _paintScene(painter, canvasSize);
+      },
+    );
+
+    return <String, Object?>{
+      'iterations': iterations,
+      'metrics': <String, Object?>{
+        'paint_cache_miss': missMetric,
+        'paint_cache_hit': hitMetric,
+      },
+    };
+  } finally {
+    renderState.dispose();
+    interactionController.dispose();
+    controller.dispose();
+  }
+}
+
+Map<String, Object?> _runStrokePathCacheCase({required int iterations}) {
+  final snapshot = SceneSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
+        id: 'layer-auto-stroke-cache',
+        nodes: <NodeSnapshot>[
+          StrokeNodeSnapshot(
+            id: 'stroke-cache',
+            points: _linearPoints(count: 256, y: 40),
+            thickness: 4,
+            color: const Color(0xFF000000),
+          ),
+        ],
+      ),
+    ],
+  );
+  final controller = SceneStoreController(initialSnapshot: snapshot);
+  final interactionController = interactive.SceneController();
+  final renderState = _createProductionBenchmarkRenderState(
+    controller: controller,
+    interactionController: interactionController,
+  );
+  const canvasSize = Size(320, 160);
+
+  try {
+    final missMetric = _measureOperation(
+      iterations: iterations,
+      run: (_) {
+        final strokeCache = SceneStrokePathCache(maxEntries: 8);
+        final painter = ScenePainter(
+          controller: renderState,
+          imageResolver: (_) => null,
+          strokePathCache: strokeCache,
+        );
+        _paintScene(painter, canvasSize);
+      },
+    );
+
+    final strokeCache = SceneStrokePathCache(maxEntries: 8);
+    final painter = ScenePainter(
+      controller: renderState,
+      imageResolver: (_) => null,
+      strokePathCache: strokeCache,
+    );
+    final hitMetric = _measureOperation(
+      iterations: iterations,
+      warmUp: () {
+        _paintScene(painter, canvasSize);
+      },
+      run: (_) {
+        _paintScene(painter, canvasSize);
+      },
+    );
+
+    return <String, Object?>{
+      'iterations': iterations,
+      'metrics': <String, Object?>{
+        'paint_cache_miss': missMetric,
+        'paint_cache_hit': hitMetric,
+      },
+    };
+  } finally {
+    renderState.dispose();
+    interactionController.dispose();
+    controller.dispose();
+  }
+}
+
+Map<String, Object?> _runStaticBackgroundCacheCase({
+  required int backgroundNodeCount,
+  required int iterations,
+}) {
+  final snapshot = SceneSnapshot(
+    backgroundLayer: BackgroundLayerSnapshot(
+      nodes: <NodeSnapshot>[
+        for (var i = 0; i < backgroundNodeCount; i++)
+          RectNodeSnapshot(
+            id: 'sbg$i',
+            size: const Size(8, 8),
+            transform: Transform2D.translation(
+              Offset((i % 500) * 32.0, (i ~/ 500) * 32.0),
+            ),
+          ),
+      ],
+    ),
+    background: BackgroundSnapshot(
+      color: const Color(0xFFFFFFFF),
+      grid: GridSnapshot(
+        isEnabled: true,
+        cellSize: 24,
+        color: const Color(0xFFDDDDDD),
+      ),
+    ),
+  );
+  final controller = SceneStoreController(initialSnapshot: snapshot);
+  final interactionController = interactive.SceneController();
+  SceneSnapshot readSnapshot() => controller.snapshot;
+  final renderState = SceneControllerSceneViewRenderState(
+    storeController: controller,
+    readSnapshot: readSnapshot,
+    readSelectedNodeIds: () => controller.selectedNodeIds,
+    readControllerEpoch: () => controller.controllerEpoch,
+    captureFramePreview: () => SceneViewFramePreview.captureSnapshot(
+      snapshot: readSnapshot(),
+      deltaForNode: _benchmarkZeroPreviewDelta,
+    ),
+    readInteraction: () => interactionController.interaction,
+  );
+  const canvasSize = Size(320, 180);
+
+  try {
+    final missMetric = _measureOperation(
+      iterations: iterations,
+      run: (_) {
+        final staticCache = SceneStaticLayerCache();
+        final painter = ScenePainter(
+          controller: renderState,
+          imageResolver: (_) => null,
+          staticLayerCache: staticCache,
+        );
+        _paintScene(painter, canvasSize);
+      },
+    );
+
+    final staticCache = SceneStaticLayerCache();
+    final painter = ScenePainter(
+      controller: renderState,
+      imageResolver: (_) => null,
+      staticLayerCache: staticCache,
+    );
+    final hitMetric = _measureOperation(
+      iterations: iterations,
+      warmUp: () {
+        _paintScene(painter, canvasSize);
+      },
+      run: (_) {
+        _paintScene(painter, canvasSize);
+      },
+    );
+
+    return <String, Object?>{
+      'backgroundNodeCount': backgroundNodeCount,
+      'iterations': iterations,
+      'metrics': <String, Object?>{
+        'paint_cache_miss': missMetric,
+        'paint_cache_hit': hitMetric,
+      },
+    };
+  } finally {
+    renderState.dispose();
+    interactionController.dispose();
+    controller.dispose();
+  }
+}
+
 Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
   required int backgroundNodeCount,
   required int iterations,
-  required bool includePercentiles,
 }) {
   final snapshot = SceneSnapshot(
     backgroundLayer: BackgroundLayerSnapshot(
@@ -603,7 +863,6 @@ Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
   try {
     final enumerateMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (_) {
         renderState
             .preparePaintPlan(renderState.captureFrameRead(), query)
@@ -613,7 +872,6 @@ Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
 
     final paintMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (_) {
         _paintScene(painter, canvasSize);
       },
@@ -800,10 +1058,7 @@ bool _benchmarkCandidateOverlaps(NodeSnapshot node, Rect worldRect) {
   return worldRect.overlaps(boundsWorldForNodeSnapshot(node));
 }
 
-Map<String, Object?> _runHugeBoundsMetric({
-  required int iterations,
-  required bool includePercentiles,
-}) {
+Map<String, Object?> _runHugeBoundsMetric({required int iterations}) {
   final snapshot = SceneSnapshot(
     layers: <ContentLayerSnapshot>[
       ContentLayerSnapshot(
@@ -818,7 +1073,6 @@ Map<String, Object?> _runHugeBoundsMetric({
   try {
     final queryMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (_) {
         controller.queryHitTestCandidates(const Rect.fromLTWH(0, 0, 10, 10));
       },
@@ -826,7 +1080,6 @@ Map<String, Object?> _runHugeBoundsMetric({
 
     final moveMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (i) {
         controller.write<void>((writer) {
           writer.writeSelectionReplace(const <NodeId>{'huge'});
@@ -852,7 +1105,6 @@ Map<String, Object?> _runHugeBoundsMetric({
 Map<String, Object?> _runHugeRectSelectMetric({
   required int nodeCount,
   required int iterations,
-  required bool includePercentiles,
 }) {
   final snapshot = SceneSnapshot(
     layers: <ContentLayerSnapshot>[
@@ -875,7 +1127,6 @@ Map<String, Object?> _runHugeRectSelectMetric({
   try {
     return _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (_) {
         controller.queryHitTestCandidates(
           const Rect.fromLTWH(-128000, -12800, 256000, 25600),
@@ -890,7 +1141,6 @@ Map<String, Object?> _runHugeRectSelectMetric({
 Map<String, Object?> _runVeryLongPathMetric({
   required int segments,
   required int iterations,
-  required bool includePercentiles,
 }) {
   final pathA = _horizontalPath(segments: segments);
   final pathB = _horizontalPath(segments: segments + 100);
@@ -913,7 +1163,6 @@ Map<String, Object?> _runVeryLongPathMetric({
   try {
     final patchMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (i) {
         controller.write<void>((writer) {
           writer.writeNodePatch(
@@ -928,7 +1177,6 @@ Map<String, Object?> _runVeryLongPathMetric({
 
     final queryMetric = _measureOperation(
       iterations: iterations,
-      includePercentiles: includePercentiles,
       run: (_) {
         controller.queryHitTestCandidates(
           const Rect.fromLTWH(0, 0, 100000, 100),
@@ -947,9 +1195,10 @@ Map<String, Object?> _runVeryLongPathMetric({
 
 Map<String, Object?> _measureOperation({
   required int iterations,
-  required bool includePercentiles,
+  void Function()? warmUp,
   required void Function(int iteration) run,
 }) {
+  warmUp?.call();
   final latencySamplesUs = <int>[];
   final rssDeltaSamplesBytes = <int>[];
   for (var i = 0; i < iterations; i++) {
@@ -984,17 +1233,6 @@ Map<String, Object?> _measureOperation({
     'minRssDeltaBytes': rssDeltaSamplesBytes.first,
     'maxRssDeltaBytes': rssDeltaSamplesBytes.last,
   };
-  if (!includePercentiles) {
-    return metrics;
-  }
-  final p95Index =
-      ((latencySamplesUs.length * 95) / 100).ceil().clamp(
-        1,
-        latencySamplesUs.length,
-      ) -
-      1;
-  metrics['p95Us'] = latencySamplesUs[p95Index];
-  metrics['p95RssDeltaBytes'] = rssDeltaSamplesBytes[p95Index];
   return metrics;
 }
 
@@ -1022,10 +1260,12 @@ void _emitResult({
   required String profile,
   required String name,
   required Map<String, Object?> metrics,
+  required Map<String, Object?> contract,
 }) {
   final record = <String, Object?>{
     'name': name,
     'profile': profile,
+    'contract': contract,
     'metrics': metrics,
   };
   final line = '$_resultPrefix${jsonEncode(record)}';

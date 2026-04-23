@@ -8,6 +8,8 @@ import 'package:test/test.dart';
 import '../../tool/bench/load_profile_policy.dart';
 import '../../tool/bench/run_load_profiles.dart' as run_load_profiles;
 
+// INV:INV-ENG-PERFORMANCE-PROOF-CONTOUR
+
 String _extractMethodBody({
   required String source,
   required String methodStart,
@@ -85,7 +87,10 @@ void main() {
           'missing required benchmark cases: '
           '$selectionPathCandidateStagingCaseName, '
           '$selectionPathEndToEndPaintCaseName, '
-          '$selectionPathPainterOnlyCaseName',
+          '$selectionPathPainterOnlyCaseName, '
+          '$staticBackgroundCacheCaseName, '
+          '$strokePathCacheCaseName, '
+          '$textLayoutCacheCaseName',
         ),
       );
     });
@@ -122,6 +127,141 @@ void main() {
       expect(issues, <String>[
         'benchmark case #0 is missing a non-empty "name"',
       ]);
+    });
+
+    test('uses truthful metric schema without fake percentile keys', () {
+      final fullPolicy = loadProfilePolicyFor('full');
+      final smokePolicy = loadProfilePolicyFor('smoke');
+
+      expect(fullPolicy.requiredMetricKeys, <String>[
+        'avgUs',
+        'minUs',
+        'maxUs',
+        'avgRssDeltaBytes',
+        'minRssDeltaBytes',
+        'maxRssDeltaBytes',
+      ]);
+      expect(smokePolicy.requiredMetricKeys, <String>[
+        'avgUs',
+        'minUs',
+        'maxUs',
+        'avgRssDeltaBytes',
+        'minRssDeltaBytes',
+        'maxRssDeltaBytes',
+      ]);
+      expect(
+        fullPolicy.maxRegressionPctByMetric.keys,
+        isNot(contains('p95Us')),
+      );
+      expect(
+        fullPolicy.maxRegressionPctByMetric.keys,
+        isNot(contains('p95RssDeltaBytes')),
+      );
+      expect(
+        fullPolicy.maxAbsoluteValueByMetric.keys,
+        isNot(contains('p95RssDeltaBytes')),
+      );
+    });
+
+    test('checked-in baselines do not retain fake percentile keys', () {
+      final smokeBaseline = File(
+        'tool/bench/baselines/load_profiles_smoke_baseline.json',
+      ).readAsStringSync();
+      final fullBaseline = File(
+        'tool/bench/baselines/load_profiles_full_baseline.json',
+      ).readAsStringSync();
+
+      expect(smokeBaseline, isNot(contains('"p95Us"')));
+      expect(smokeBaseline, isNot(contains('"p95RssDeltaBytes"')));
+      expect(fullBaseline, isNot(contains('"p95Us"')));
+      expect(fullBaseline, isNot(contains('"p95RssDeltaBytes"')));
+    });
+
+    test(
+      'cache benchmark cases keep production owners and warm up steady-state hits',
+      () {
+        final source = File(
+          'tool/bench/load_profiles_cases_test.dart',
+        ).readAsStringSync();
+        final textBody = _extractMethodBody(
+          source: source,
+          methodStart: 'Map<String, Object?> _runTextLayoutCacheCase({',
+        );
+        final strokeBody = _extractMethodBody(
+          source: source,
+          methodStart: 'Map<String, Object?> _runStrokePathCacheCase({',
+        );
+        final staticBody = _extractMethodBody(
+          source: source,
+          methodStart: 'Map<String, Object?> _runStaticBackgroundCacheCase({',
+        );
+
+        expect(textBody, contains('_createProductionBenchmarkRenderState('));
+        expect(textBody, contains('warmUp: () {'));
+        expect(textBody, isNot(contains('_BenchmarkControllerRenderState(')));
+
+        expect(strokeBody, contains('_createProductionBenchmarkRenderState('));
+        expect(strokeBody, contains('warmUp: () {'));
+        expect(strokeBody, isNot(contains('_BenchmarkControllerRenderState(')));
+
+        expect(staticBody, contains('SceneControllerSceneViewRenderState('));
+        expect(staticBody, contains('warmUp: () {'));
+        expect(staticBody, isNot(contains('_BenchmarkControllerRenderState(')));
+      },
+    );
+
+    test(
+      'load-profile source emits explicit cold/steady taxonomy metadata',
+      () {
+        final casesSource = File(
+          'tool/bench/load_profiles_cases_test.dart',
+        ).readAsStringSync();
+        final policySource = File(
+          'tool/bench/load_profile_policy.dart',
+        ).readAsStringSync();
+        final policy = loadProfilePolicyFor('smoke');
+        final nodeContract = policy.contractForCase('nodes_10000');
+        final textContract = policy.contractForCase(textLayoutCacheCaseName);
+
+        expect(
+          (((nodeContract['operations']
+                  as Map<String, Object?>)['single_node_patch']
+              as Map<String, Object?>)['executionMode']),
+          'cold_start',
+        );
+        expect(
+          (((textContract['operations']
+                  as Map<String, Object?>)['paint_cache_hit']
+              as Map<String, Object?>)['executionMode']),
+          'steady_state',
+        );
+        expect(casesSource, contains("'contract': contract"));
+        expect(policySource, contains('warmupIterations'));
+        expect(policySource, contains('measuredIterations'));
+        expect(policySource, contains('gatedMetrics'));
+        expect(policySource, contains('diagnosticMetrics'));
+        expect(casesSource, isNot(contains('includePercentiles')));
+      },
+    );
+
+    test('worst_case contract reports its own measured iteration count', () {
+      final smokePolicy = loadProfilePolicyFor('smoke');
+      final fullPolicy = loadProfilePolicyFor('full');
+
+      final smokeContract = smokePolicy.contractForCase(worstCaseName);
+      final fullContract = fullPolicy.contractForCase(worstCaseName);
+
+      final smokeOperation =
+          ((smokeContract['operations']
+                  as Map<String, Object?>)['huge_bounds.query'])
+              as Map<String, Object?>;
+      final fullOperation =
+          ((fullContract['operations']
+                  as Map<String, Object?>)['huge_bounds.query'])
+              as Map<String, Object?>;
+
+      expect(smokeOperation['measuredIterations'], 2);
+      expect(fullOperation['measuredIterations'], 3);
     });
 
     test(

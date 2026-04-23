@@ -7,6 +7,21 @@ const String toolTestFilterName = 'tool_tests';
 
 const String ciToolTestJobsExpression = r'${{ steps.test-jobs.outputs.jobs }}';
 const String ciCoverageJobsExpression = r'${{ steps.test-jobs.outputs.jobs }}';
+const String ciCoverageJobsCommand =
+    'JOBS="\$(getconf _NPROCESSORS_ONLN)"\n'
+    'if [ "\$JOBS" -gt 1 ]; then\n'
+    '  JOBS=\$((JOBS - 1))\n'
+    'fi\n'
+    'echo "jobs=\$JOBS" >> "\$GITHUB_OUTPUT"';
+const String ciToolJobsCommand =
+    'JOBS="\$(getconf _NPROCESSORS_ONLN)"\n'
+    'if [ "\$JOBS" -gt 1 ]; then\n'
+    '  JOBS=\$((JOBS - 1))\n'
+    'fi\n'
+    'if [ "\$JOBS" -gt 6 ]; then\n'
+    '  JOBS=6\n'
+    'fi\n'
+    'echo "jobs=\$JOBS" >> "\$GITHUB_OUTPUT"';
 const String perfNightlyFuzzCommand =
     'JOBS="\$(getconf _NPROCESSORS_ONLN)"\n'
     'if [ "\$JOBS" -gt 1 ]; then\n'
@@ -168,15 +183,20 @@ final VerificationGraph verificationGraph = VerificationGraph(
     ciWorkflowPath: VerificationWorkflowDefinition(
       path: ciWorkflowPath,
       runExpectations: <VerificationRunExpectation>[
-        VerificationRunExpectation(command: 'dcm analyze .'),
+        VerificationRunExpectation(command: 'flutter pub get'),
         VerificationRunExpectation(
           command:
               'dart format --output=none --set-exit-if-changed lib test '
               'example/lib example/test tool',
         ),
         VerificationRunExpectation(command: 'flutter analyze'),
+        VerificationRunExpectation(command: 'flutter pub get', cwd: 'example'),
         VerificationRunExpectation(
           command: 'flutter analyze lib test',
+          cwd: 'example',
+        ),
+        VerificationRunExpectation(
+          command: 'flutter test --no-pub test',
           cwd: 'example',
         ),
         VerificationRunExpectation(
@@ -194,10 +214,8 @@ final VerificationGraph verificationGraph = VerificationGraph(
         VerificationRunExpectation(
           command: 'dart run tool/check_invariant_coverage.dart',
         ),
-        VerificationRunExpectation(
-          command: 'flutter test --no-pub test',
-          cwd: 'example',
-        ),
+        VerificationRunExpectation(command: 'flutter pub get'),
+        VerificationRunExpectation(command: ciCoverageJobsCommand),
         VerificationRunExpectation(
           command:
               'flutter test --coverage --no-pub --exclude-tags=tool '
@@ -206,12 +224,18 @@ final VerificationGraph verificationGraph = VerificationGraph(
         VerificationRunExpectation(
           command: 'dart run tool/check_coverage.dart',
         ),
+        VerificationRunExpectation(command: 'flutter pub get'),
+        VerificationRunExpectation(command: ciToolJobsCommand),
         VerificationRunExpectation(
           command:
               'dart run tool/run_tool_tests.dart '
               '--jobs="$ciToolTestJobsExpression"',
         ),
+        VerificationRunExpectation(command: 'flutter pub get'),
+        VerificationRunExpectation(command: 'dart doc'),
+        VerificationRunExpectation(command: 'dart pub publish --dry-run'),
       ],
+      ownsEntireExecutableRunSurface: true,
       changeFilters: <String, List<String>>{
         toolTestFilterName: <String>[
           'lib/iwb_canvas_engine.dart',

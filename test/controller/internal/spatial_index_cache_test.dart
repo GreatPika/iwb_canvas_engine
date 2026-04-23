@@ -330,6 +330,37 @@ void main() {
   );
 
   test(
+    'SpatialIndexCache reuses committed paint candidates on the steady-state path',
+    () {
+      // INV:INV-ENG-PERFORMANCE-PROOF-CONTOUR
+      final cache = SpatialIndexCache();
+      final scene = rectSceneForAdmissionContract();
+      final nodeLocator = buildStableNodeLocator(scene);
+      final layerIndexById = txnBuildLayerIndexById(scene);
+
+      final first = cache.writeQueryPaintCandidates(
+        scene: scene,
+        nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
+        worldBounds: const Rect.fromLTWH(0, 0, 10, 10),
+        controllerEpoch: 0,
+      );
+      final second = cache.writeQueryPaintCandidates(
+        scene: scene,
+        nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
+        worldBounds: const Rect.fromLTWH(0, 0, 10, 10),
+        controllerEpoch: 0,
+      );
+
+      expect(first.map((candidate) => candidate.nodeId), <NodeId>['r1']);
+      expect(second.map((candidate) => candidate.nodeId), <NodeId>['r1']);
+      expect(cache.debugBuildCount, 1);
+      expect(cache.debugIncrementalApplyCount, 0);
+    },
+  );
+
+  test(
     'SpatialIndexCache keeps visual-only node patches out of spatial invalidation',
     () {
       final cache = SpatialIndexCache();

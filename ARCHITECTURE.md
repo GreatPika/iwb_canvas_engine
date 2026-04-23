@@ -672,6 +672,14 @@ in `tool/invariant_registry.dart`. Executable verification steps, presets,
 trigger filters, scope ids, and workflow expectations live in
 `tool/src/verification_contract/verification_contract_registry.dart`.
 
+Performance proof follows a two-contour architecture:
+- GitHub CI owns deterministic owner-level proof plus executable workflow drift
+  checks. It does not rely on wall-clock benchmark thresholds or DCM.
+- Diagnostic load profiles under `tool/bench/**` remain repository-owned
+  regression artifacts. They declare explicit `cold_start` versus
+  `steady_state` semantics, warm-up discipline, truthful metric names, and
+  production-owner versus benchmark-only seams.
+
 ## 10. Mechanical enforcement
 
 Architecture is backed by repository-local enforcement, not by documentation

@@ -1,15 +1,4 @@
-const List<String> _fullLoadProfileRequiredMetricKeys = <String>[
-  'avgUs',
-  'minUs',
-  'p95Us',
-  'maxUs',
-  'avgRssDeltaBytes',
-  'minRssDeltaBytes',
-  'p95RssDeltaBytes',
-  'maxRssDeltaBytes',
-];
-
-const List<String> _smokeLoadProfileRequiredMetricKeys = <String>[
+const List<String> _loadProfileRequiredMetricKeys = <String>[
   'avgUs',
   'minUs',
   'maxUs',
@@ -34,6 +23,11 @@ const List<String> _strokeCaseRequiredOperations = <String>[
 const List<String> _selectionPathPaintRequiredOperations = <String>[
   'paint_no_selection',
   'paint_with_selection',
+];
+
+const List<String> _cacheBranchRequiredOperations = <String>[
+  'paint_cache_miss',
+  'paint_cache_hit',
 ];
 
 const List<String> _selectionPathStagingRequiredOperations = <String>[
@@ -97,14 +91,9 @@ const Map<String, LoadProfilePolicy> _loadProfilePolicies =
         worstCaseIterations: 3,
         maxRegressionPctByMetric: <String, double>{
           'avgUs': 35,
-          'p95Us': 45,
           'avgRssDeltaBytes': 150,
-          'p95RssDeltaBytes': 200,
         },
-        maxAbsoluteValueByMetric: <String, double>{
-          'avgRssDeltaBytes': 1048576,
-          'p95RssDeltaBytes': 2097152,
-        },
+        maxAbsoluteValueByMetric: <String, double>{'avgRssDeltaBytes': 1048576},
       ),
     };
 
@@ -183,9 +172,7 @@ class LoadProfilePolicy {
   final int worstCaseIterations;
   final Map<String, double> maxRegressionPctByMetric;
   final Map<String, double> maxAbsoluteValueByMetric;
-  List<String> get requiredMetricKeys => profile == 'smoke'
-      ? _smokeLoadProfileRequiredMetricKeys
-      : _fullLoadProfileRequiredMetricKeys;
+  List<String> get requiredMetricKeys => _loadProfileRequiredMetricKeys;
 
   List<String> get requiredCaseNames => <String>[
     ...nodeCases.map((c) => c.name),
@@ -193,6 +180,9 @@ class LoadProfilePolicy {
     selectionPathPainterOnlyCaseName,
     selectionPathCandidateStagingCaseName,
     selectionPathEndToEndPaintCaseName,
+    textLayoutCacheCaseName,
+    strokePathCacheCaseName,
+    staticBackgroundCacheCaseName,
     backgroundLayerPaintAdmissionCaseName,
     worstCaseName,
   ];
@@ -211,6 +201,11 @@ class LoadProfilePolicy {
     if (caseName == selectionPathCandidateStagingCaseName) {
       return _selectionPathStagingRequiredOperations;
     }
+    if (caseName == textLayoutCacheCaseName ||
+        caseName == strokePathCacheCaseName ||
+        caseName == staticBackgroundCacheCaseName) {
+      return _cacheBranchRequiredOperations;
+    }
     if (caseName == backgroundLayerPaintAdmissionCaseName) {
       return _backgroundLayerPaintAdmissionRequiredOperations;
     }
@@ -218,6 +213,78 @@ class LoadProfilePolicy {
       return _worstCaseRequiredOperations;
     }
     return const <String>[];
+  }
+
+  Map<String, Object?> contractForCase(String caseName) {
+    final requiredOperations = requiredOperationsForCase(caseName);
+    final gatedMetrics = <String>{
+      ...maxRegressionPctByMetric.keys,
+      ...maxAbsoluteValueByMetric.keys,
+    }.toList()..sort();
+    final diagnosticMetrics = requiredMetricKeys
+        .where((metric) => !gatedMetrics.contains(metric))
+        .toList(growable: false);
+
+    return <String, Object?>{
+      'operations': <String, Object?>{
+        for (final operation in requiredOperations)
+          operation: <String, Object?>{
+            'executionMode': executionModeForOperation(
+              caseName: caseName,
+              operationName: operation,
+            ),
+            'warmupIterations': warmupIterationsForOperation(
+              caseName: caseName,
+              operationName: operation,
+            ),
+            'measuredIterations': measuredIterationsForCase(caseName),
+            'gatedMetrics': gatedMetrics,
+            'diagnosticMetrics': diagnosticMetrics,
+          },
+      },
+    };
+  }
+
+  int measuredIterationsForCase(String caseName) {
+    if (nodeCases.any((c) => c.name == caseName)) {
+      return nodeIterations;
+    }
+    if (strokeCases.any((c) => c.name == caseName)) {
+      return strokeIterations;
+    }
+    if (caseName == backgroundLayerPaintAdmissionCaseName) {
+      return nodeIterations;
+    }
+    if (caseName == worstCaseName) {
+      return worstCaseIterations;
+    }
+    return selectionPathIterations;
+  }
+
+  String executionModeForOperation({
+    required String caseName,
+    required String operationName,
+  }) {
+    if ((caseName == textLayoutCacheCaseName ||
+            caseName == strokePathCacheCaseName ||
+            caseName == staticBackgroundCacheCaseName) &&
+        operationName == 'paint_cache_hit') {
+      return 'steady_state';
+    }
+    return 'cold_start';
+  }
+
+  int warmupIterationsForOperation({
+    required String caseName,
+    required String operationName,
+  }) {
+    return executionModeForOperation(
+              caseName: caseName,
+              operationName: operationName,
+            ) ==
+            'steady_state'
+        ? 1
+        : 0;
   }
 }
 
@@ -246,6 +313,9 @@ const String selectionPathCandidateStagingCaseName =
     'selection_path_candidate_staging';
 const String selectionPathEndToEndPaintCaseName =
     'selection_path_end_to_end_paint';
+const String textLayoutCacheCaseName = 'text_layout_cache';
+const String strokePathCacheCaseName = 'stroke_path_cache';
+const String staticBackgroundCacheCaseName = 'static_background_cache';
 const String backgroundLayerPaintAdmissionCaseName =
     'background_layer_paint_admission';
 const String worstCaseName = 'worst_case';

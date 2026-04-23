@@ -58,14 +58,6 @@ jobs:
       - name: Pub get
         run: flutter pub get
 
-      - name: Install DCM
-        uses: CQLabs/setup-dcm@v2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: DCM analyze
-        run: dcm analyze .
-
       - name: Format (check)
         run: dart format --output=none --set-exit-if-changed lib test example/lib example/test tool
 
@@ -166,45 +158,6 @@ jobs:
 
       - name: Tool tests
         run: dart run tool/run_tool_tests.dart --jobs="${{ steps.test-jobs.outputs.jobs }}"
-
-  smoke-bench:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: "3.38.9"
-          cache: true
-
-      - name: Pub get
-        run: flutter pub get
-
-      - name: Load profiles (smoke)
-        run: dart run tool/bench/run_load_profiles.dart --profile=smoke --output=build/bench/load_profiles_smoke.json
-
-      - name: Upload smoke benchmark artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: load-profiles-smoke
-          path: build/bench/load_profiles_smoke.json
-
-      - name: Diff smoke benchmark report vs baseline
-        if: always()
-        run: dart run tool/bench/diff_load_profiles.dart --profile=smoke --baseline=tool/bench/baselines/load_profiles_smoke_baseline.json --current=build/bench/load_profiles_smoke.json --output=build/bench/load_profiles_smoke_diff.json
-
-      - name: Upload smoke benchmark diff artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: load-profiles-smoke-diff
-          path: build/bench/load_profiles_smoke_diff.json
 
   release-hygiene:
     runs-on: ubuntu-latest

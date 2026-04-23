@@ -8,6 +8,8 @@ import 'package:test/test.dart';
 import '../../tool/bench/load_profile_policy.dart';
 import '../../tool/bench/diff_load_profiles.dart' as bench_diff;
 
+// INV:INV-ENG-PERFORMANCE-PROOF-CONTOUR
+
 void main() {
   group('tool/bench/diff_load_profiles.dart', () {
     test('builds byte-identical deterministic diff report', () async {
@@ -41,7 +43,7 @@ void main() {
         expect(firstOutput['profile'], 'smoke');
 
         final summary = firstOutput['summary'] as Map<String, Object?>;
-        expect(summary['comparedCases'], 7);
+        expect(summary['comparedCases'], 10);
         expect(summary['missingInBaseline'], isEmpty);
         expect(summary['missingInCurrent'], isEmpty);
 
@@ -527,11 +529,17 @@ void main() {
         selectionPathCandidateStagingCaseName,
         selectionPathEndToEndPaintCaseName,
         selectionPathPainterOnlyCaseName,
+        staticBackgroundCacheCaseName,
+        strokePathCacheCaseName,
+        textLayoutCacheCaseName,
       ]);
       expect(summary['missingRequiredInCurrent'], <String>[
         selectionPathCandidateStagingCaseName,
         selectionPathEndToEndPaintCaseName,
         selectionPathPainterOnlyCaseName,
+        staticBackgroundCacheCaseName,
+        strokePathCacheCaseName,
+        textLayoutCacheCaseName,
       ]);
       expect(
         output['failures'],
@@ -539,7 +547,10 @@ void main() {
           'missing required cases in baseline: '
           '$selectionPathCandidateStagingCaseName, '
           '$selectionPathEndToEndPaintCaseName, '
-          '$selectionPathPainterOnlyCaseName',
+          '$selectionPathPainterOnlyCaseName, '
+          '$staticBackgroundCacheCaseName, '
+          '$strokePathCacheCaseName, '
+          '$textLayoutCacheCaseName',
         ),
       );
       expect(
@@ -548,7 +559,10 @@ void main() {
           'missing required cases in current: '
           '$selectionPathCandidateStagingCaseName, '
           '$selectionPathEndToEndPaintCaseName, '
-          '$selectionPathPainterOnlyCaseName',
+          '$selectionPathPainterOnlyCaseName, '
+          '$staticBackgroundCacheCaseName, '
+          '$strokePathCacheCaseName, '
+          '$textLayoutCacheCaseName',
         ),
       );
     });
@@ -647,6 +661,54 @@ void main() {
               minRssDeltaBytes: 0,
               p95RssDeltaBytes: 0,
               maxRssDeltaBytes: 0,
+            ),
+          ),
+          requiredProfile: 'smoke',
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        );
+
+        expect(output['status'], 'fail');
+        final failures = (output['failures'] as List<Object?>).cast<String>();
+        expect(
+          failures.any(
+            (item) => item.contains('avgRssDeltaBytes current value'),
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'fails when positive-baseline memory delta already exceeds absolute threshold',
+      () {
+        final policy = loadProfilePolicyFor('smoke');
+        final overBudgetValue =
+            policy.maxAbsoluteValueByMetric['avgRssDeltaBytes']!.toInt() + 1;
+
+        final output = bench_diff.buildDiffReport(
+          baseline: _fullSmokeReportWithNodePatchMetrics(
+            singleNodePatchMetrics: _metrics(
+              100,
+              100,
+              100,
+              100,
+              avgRssDeltaBytes: overBudgetValue,
+              minRssDeltaBytes: 0,
+              p95RssDeltaBytes: 0,
+              maxRssDeltaBytes: overBudgetValue,
+            ),
+          ),
+          current: _fullSmokeReportWithNodePatchMetrics(
+            singleNodePatchMetrics: _metrics(
+              100,
+              100,
+              100,
+              100,
+              avgRssDeltaBytes: overBudgetValue,
+              minRssDeltaBytes: 0,
+              p95RssDeltaBytes: 0,
+              maxRssDeltaBytes: overBudgetValue,
             ),
           ),
           requiredProfile: 'smoke',
@@ -861,6 +923,7 @@ Map<String, Object?> _fullSmokeReport({
           'paint_small_viewport': _smokeMetricLeaf(stableMetrics),
         },
       ),
+      ..._smokeCacheCases(stableMetrics),
       _caseMetrics(
         worstCaseName,
         _worstCaseMetrics(_smokeMetricLeaf(stableMetrics)),
@@ -912,6 +975,7 @@ Map<String, Object?> _fullSmokeReportWithNodePatchMetrics({
           'paint_small_viewport': _smokeMetricLeaf(stableMetrics),
         },
       ),
+      ..._smokeCacheCases(stableMetrics),
       _caseMetrics(
         worstCaseName,
         _worstCaseMetrics(_smokeMetricLeaf(stableMetrics)),
@@ -948,6 +1012,24 @@ List<Map<String, Object?>> _smokeSelectionPathCases(Map<String, num> metrics) {
     _caseMetrics(selectionPathEndToEndPaintCaseName, <String, Map<String, num>>{
       'paint_no_selection': leaf,
       'paint_with_selection': leaf,
+    }),
+  ];
+}
+
+List<Map<String, Object?>> _smokeCacheCases(Map<String, num> metrics) {
+  final leaf = _smokeMetricLeaf(metrics);
+  return <Map<String, Object?>>[
+    _caseMetrics(textLayoutCacheCaseName, <String, Map<String, num>>{
+      'paint_cache_miss': leaf,
+      'paint_cache_hit': leaf,
+    }),
+    _caseMetrics(strokePathCacheCaseName, <String, Map<String, num>>{
+      'paint_cache_miss': leaf,
+      'paint_cache_hit': leaf,
+    }),
+    _caseMetrics(staticBackgroundCacheCaseName, <String, Map<String, num>>{
+      'paint_cache_miss': leaf,
+      'paint_cache_hit': leaf,
     }),
   ];
 }

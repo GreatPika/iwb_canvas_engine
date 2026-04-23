@@ -608,7 +608,7 @@ on dedicated hardware, while DCM is removed only from GitHub CI.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] GitHub-Executable Verification Surface
+### Slice 1. [x] GitHub-Executable Verification Surface
 
 #### Slice Contract
 
@@ -658,7 +658,7 @@ without narrowing repository-local verification presets.
 - GitHub CI has no executable dependency on DCM, while local required
   verification remains unchanged.
 
-### Slice 2. [ ] Honest Benchmark Verdict Contract
+### Slice 2. [x] Honest Benchmark Verdict Contract
 
 #### Slice Contract
 
@@ -705,7 +705,7 @@ budgets, including when the baseline already exceeds the configured cap.
 - No active load-profile verdict depends on a fake percentile or on
   baseline-sign special casing for absolute budgets.
 
-### Slice 3. [ ] Deterministic Hot-Path Proof
+### Slice 3. [x] Deterministic Hot-Path Proof
 
 #### Slice Contract
 
@@ -766,7 +766,7 @@ through wall-clock benchmark thresholds.
 - GitHub CI proves no-extra-work semantics on the current hot owners without
   depending on wall-clock thresholds.
 
-### Slice 4. [ ] Diagnostic Benchmark Taxonomy
+### Slice 4. [x] Diagnostic Benchmark Taxonomy
 
 #### Slice Contract
 
