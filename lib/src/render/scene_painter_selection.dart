@@ -8,6 +8,7 @@ import 'cache/scene_stroke_path_cache.dart';
 import 'canvas_scope.dart';
 import 'scene_painter_contract.dart';
 import 'scene_painter_shared.dart';
+import 'selection_halo_compositing.dart';
 
 class ScenePainterSelectionRenderer {
   ScenePainterSelectionRenderer({
@@ -61,18 +62,6 @@ class SceneSelectionPaintContext {
   final Offset cameraOffset;
   final ScenePainterSelectionStyle style;
   final Float64List transformBuffer;
-}
-
-class SelectionHaloStyle {
-  const SelectionHaloStyle({
-    required this.color,
-    required this.haloWidth,
-    this.baseStrokeWidth = 0,
-  });
-
-  final Color color;
-  final double haloWidth;
-  final double baseStrokeWidth;
 }
 
 void _drawSelectionForNode(
@@ -247,7 +236,7 @@ void _drawClosedPathSelection(
   if (closedContours == null) {
     return;
   }
-  _drawPathHalo(canvas, closedContours, style, clearFill: true);
+  _drawPathHalo(canvas, closedContours, style);
 }
 
 void _drawOpenPathSelection(
@@ -295,7 +284,6 @@ void _drawWorldBoundsSelection(
       color: context.style.color,
       haloWidth: context.style.haloWidth,
     ),
-    clearFill: true,
   );
 }
 
@@ -336,48 +324,10 @@ void _drawDotSelection(
   );
 }
 
-void _drawRectHalo(
-  Canvas canvas,
-  Rect rect,
-  SelectionHaloStyle style, {
-  required bool clearFill,
-}) {
-  canvas.saveLayer(null, Paint());
-  canvas.drawRect(
-    rect,
-    Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = clampNonNegativeFinite(style.haloWidth * 2)
-      ..color = style.color,
-  );
-  final clearPaint = Paint()..blendMode = BlendMode.clear;
-  if (clearFill) {
-    clearPaint.style = PaintingStyle.fill;
-    canvas.drawRect(rect, clearPaint);
-  }
-  canvas.restore();
+void _drawRectHalo(Canvas canvas, Rect rect, SelectionHaloStyle style) {
+  drawBoundedRectHalo(canvas, rect, style);
 }
 
-void _drawPathHalo(
-  Canvas canvas,
-  Path path,
-  SelectionHaloStyle style, {
-  required bool clearFill,
-}) {
-  canvas.saveLayer(null, Paint());
-  canvas.drawPath(path, _haloPaint(style));
-  final clearPaint = Paint()..blendMode = BlendMode.clear;
-  if (clearFill) {
-    clearPaint.style = PaintingStyle.fill;
-    canvas.drawPath(path, clearPaint);
-  }
-  if (style.baseStrokeWidth > 0) {
-    clearPaint
-      ..style = PaintingStyle.stroke
-      ..strokeJoin = StrokeJoin.round
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = style.baseStrokeWidth;
-    canvas.drawPath(path, clearPaint);
-  }
-  canvas.restore();
+void _drawPathHalo(Canvas canvas, Path path, SelectionHaloStyle style) {
+  drawBoundedPathHalo(canvas, path, style, _haloPaint(style));
 }

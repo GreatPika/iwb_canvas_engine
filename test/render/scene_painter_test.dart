@@ -25,6 +25,7 @@ import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
 import '../support/committed_scene_view_render_state.dart';
 
 // INV:INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION
+// INV:INV-ENG-SELECTION-BOUNDED-COMPOSITING
 
 class _FakeRenderState extends ChangeNotifier implements SceneViewRenderState {
   _FakeRenderState({
@@ -330,6 +331,69 @@ void _expectRectNear(Rect actual, Rect expected, {double tolerance = 2.0}) {
   expect((actual.top - expected.top).abs(), lessThanOrEqualTo(tolerance));
   expect((actual.right - expected.right).abs(), lessThanOrEqualTo(tolerance));
   expect((actual.bottom - expected.bottom).abs(), lessThanOrEqualTo(tolerance));
+}
+
+List<Object?> _recordedSaveLayerBounds(TestRecordingCanvas canvas) {
+  return canvas.invocations
+      .where((entry) => entry.invocation.memberName == #saveLayer)
+      .map((entry) => entry.invocation.positionalArguments.first)
+      .toList(growable: false);
+}
+
+Future<void> _expectSameImagePixels(Image actual, Image expected) async {
+  expect(actual.width, expected.width);
+  expect(actual.height, expected.height);
+
+  final actualData = await actual.toByteData(format: ImageByteFormat.rawRgba);
+  if (actualData == null) {
+    throw StateError('Failed to encode actual image to raw RGBA.');
+  }
+  final expectedData = await expected.toByteData(
+    format: ImageByteFormat.rawRgba,
+  );
+  if (expectedData == null) {
+    throw StateError('Failed to encode expected image to raw RGBA.');
+  }
+
+  expect(actualData.buffer.asUint8List(), expectedData.buffer.asUint8List());
+}
+
+Future<Image> _paintLegacyRectHaloImage({
+  required Rect rect,
+  required Color background,
+  required Color fillColor,
+  required Color selectionColor,
+  required double selectionStrokeWidth,
+  required int width,
+  required int height,
+}) async {
+  final recorder = PictureRecorder();
+  final canvas = Canvas(recorder);
+  canvas.drawRect(
+    Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+    Paint()..color = background,
+  );
+  canvas.drawRect(
+    rect,
+    Paint()
+      ..style = PaintingStyle.fill
+      ..color = fillColor,
+  );
+  canvas.saveLayer(null, Paint());
+  canvas.drawRect(
+    rect,
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = selectionStrokeWidth * 2
+      ..color = selectionColor,
+  );
+  final clearPaint = Paint()
+    ..style = PaintingStyle.fill
+    ..blendMode = BlendMode.clear;
+  canvas.drawRect(rect, clearPaint);
+  canvas.restore();
+  final picture = recorder.endRecording();
+  return picture.toImage(width, height);
 }
 
 void main() {
@@ -667,7 +731,7 @@ void main() {
   );
 
   test(
-    'ScenePainter exposes selection saveLayer work on the real paint path',
+    'ScenePainter bounds selection saveLayer work on the real paint path',
     () {
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
@@ -710,20 +774,24 @@ void main() {
       final withSelectionCanvas = TestRecordingCanvas();
       painter.paint(withSelectionCanvas, const Size(120, 100));
 
-      final noSelectionSaveLayers = noSelectionCanvas.invocations
-          .where((invocation) => invocation.invocation.memberName == #saveLayer)
-          .length;
-      final withSelectionSaveLayers = withSelectionCanvas.invocations
-          .where((invocation) => invocation.invocation.memberName == #saveLayer)
-          .length;
+      final noSelectionSaveLayers = _recordedSaveLayerBounds(noSelectionCanvas);
+      final withSelectionSaveLayers = _recordedSaveLayerBounds(
+        withSelectionCanvas,
+      );
 
-      expect(noSelectionSaveLayers, 0);
-      expect(withSelectionSaveLayers, greaterThan(0));
+      expect(noSelectionSaveLayers, isEmpty);
+      expect(withSelectionSaveLayers, hasLength(1));
+      expect(withSelectionSaveLayers, everyElement(isA<Rect>()));
+      final boundedLayer = withSelectionSaveLayers.single as Rect;
+      expect(boundedLayer.width, greaterThan(24));
+      expect(boundedLayer.height, greaterThan(16));
+      expect(boundedLayer.width, lessThan(40));
+      expect(boundedLayer.height, lessThan(32));
     },
   );
 
   test(
-    'ScenePainter prepared paint preserves selection saveLayer behavior',
+    'ScenePainter prepared paint preserves bounded selection saveLayer behavior',
     () {
       final controller = SceneStoreController(
         initialSnapshot: SceneSnapshot(
@@ -773,21 +841,29 @@ void main() {
       final preparedWithSelectionCanvas = TestRecordingCanvas();
       painter.paintPrepared(preparedWithSelectionCanvas, preparedWithSelection);
 
-      final noSelectionSaveLayers = noSelectionCanvas.invocations
-          .where((invocation) => invocation.invocation.memberName == #saveLayer)
-          .length;
-      final directWithSelectionSaveLayers = directWithSelectionCanvas
-          .invocations
-          .where((invocation) => invocation.invocation.memberName == #saveLayer)
-          .length;
-      final preparedWithSelectionSaveLayers = preparedWithSelectionCanvas
-          .invocations
-          .where((invocation) => invocation.invocation.memberName == #saveLayer)
-          .length;
+      final noSelectionSaveLayers = _recordedSaveLayerBounds(noSelectionCanvas);
+      final directWithSelectionSaveLayers = _recordedSaveLayerBounds(
+        directWithSelectionCanvas,
+      );
+      final preparedWithSelectionSaveLayers = _recordedSaveLayerBounds(
+        preparedWithSelectionCanvas,
+      );
 
-      expect(noSelectionSaveLayers, 0);
-      expect(directWithSelectionSaveLayers, greaterThan(0));
-      expect(preparedWithSelectionSaveLayers, directWithSelectionSaveLayers);
+      expect(noSelectionSaveLayers, isEmpty);
+      expect(directWithSelectionSaveLayers, hasLength(1));
+      expect(preparedWithSelectionSaveLayers, hasLength(1));
+      expect(directWithSelectionSaveLayers, everyElement(isA<Rect>()));
+      expect(preparedWithSelectionSaveLayers, everyElement(isA<Rect>()));
+      final directBounds = directWithSelectionSaveLayers.single as Rect;
+      expect(directBounds.width, greaterThan(24));
+      expect(directBounds.height, greaterThan(16));
+      expect(directBounds.width, lessThan(40));
+      expect(directBounds.height, lessThan(32));
+      _expectRectNear(
+        preparedWithSelectionSaveLayers.single as Rect,
+        directBounds,
+        tolerance: 0.001,
+      );
     },
   );
 
@@ -1285,6 +1361,62 @@ void main() {
         () => _expectRectNear(previewBounds, expectedFrame.shift(previewDelta)),
         returnsNormally,
       );
+    },
+  );
+
+  test(
+    'ScenePainter keeps rect world-bounds halo pixel-parity with legacy unbounded compositing',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      const nodeFill = Color(0xFF000000);
+      const selectionColor = Color(0xFFFF0000);
+      const selectionStrokeWidth = 6.0;
+      final node = RectNodeSnapshot(
+        id: 'rect-world-selection-legacy-parity',
+        size: const Size(20, 12),
+        fillColor: nodeFill,
+        strokeWidth: 0,
+        transform: Transform2D.translation(const Offset(24, 28)),
+      );
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: background),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-rect-legacy-parity',
+              nodes: <NodeSnapshot>[node],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
+      controller.write((writer) {
+        writer.writeSelectionReplace(const <NodeId>{
+          'rect-world-selection-legacy-parity',
+        });
+      });
+
+      final actual = await _paintToImage(
+        ScenePainter(
+          controller: renderState,
+          imageResolver: (_) => null,
+          selectionStrokeWidth: selectionStrokeWidth,
+          selectionColor: selectionColor,
+        ),
+        width: 96,
+        height: 96,
+      );
+      final expected = await _paintLegacyRectHaloImage(
+        rect: RenderGeometryCache().get(node).worldBounds,
+        background: background,
+        fillColor: nodeFill,
+        selectionColor: selectionColor,
+        selectionStrokeWidth: selectionStrokeWidth,
+        width: 96,
+        height: 96,
+      );
+      await _expectSameImagePixels(actual, expected);
     },
   );
 
@@ -1896,6 +2028,63 @@ void main() {
         await _countNonBackgroundPixels(withPathCache, background),
         greaterThan(0),
       );
+    },
+  );
+
+  test(
+    'ScenePainter keeps closed-path halo parity with and without path metrics cache',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: background),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-closed-path-parity',
+              nodes: <NodeSnapshot>[
+                PathNodeSnapshot(
+                  id: 'closed-path-parity',
+                  svgPathData: 'M0 0 C18 -6 26 24 4 28 Z',
+                  fillColor: Color(0xFF4DB6AC),
+                  strokeColor: Color(0xFF004D40),
+                  strokeWidth: 3,
+                  transform: Transform2D.translation(const Offset(38, 34)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
+      controller.write((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'closed-path-parity'});
+      });
+
+      final withoutPathCache = await _paintToImage(
+        ScenePainter(
+          controller: renderState,
+          imageResolver: (_) => null,
+          selectionColor: const Color(0xFFFF0000),
+          selectionStrokeWidth: 3,
+          pathMetricsCache: null,
+        ),
+        width: 120,
+        height: 120,
+      );
+      final withPathCache = await _paintToImage(
+        ScenePainter(
+          controller: renderState,
+          imageResolver: (_) => null,
+          selectionColor: const Color(0xFFFF0000),
+          selectionStrokeWidth: 3,
+          pathMetricsCache: ScenePathMetricsCache(),
+        ),
+        width: 120,
+        height: 120,
+      );
+
+      await _expectSameImagePixels(withoutPathCache, withPathCache);
     },
   );
 

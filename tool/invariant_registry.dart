@@ -1018,6 +1018,21 @@ const List<Invariant> invariants = <Invariant>[
     ],
   ),
   Invariant(
+    id: 'INV-ENG-SELECTION-BOUNDED-COMPOSITING',
+    scope: 'engine-runtime',
+    title:
+        'main-scene selection halo compositing keeps masked halo semantics while every halo saveLayer uses geometry-derived non-null tight bounds on the render owner seam',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(
+        path: 'test/render/scene_painter_bounds_contract_test.dart',
+        stepId: 'scope_render_view',
+      ),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(path: 'test/render/scene_painter_test.dart'),
+    ],
+  ),
+  Invariant(
     id: 'INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION',
     scope: 'engine-structure',
     title:

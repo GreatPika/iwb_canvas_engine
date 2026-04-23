@@ -675,7 +675,7 @@ caches consume one shared render-local retention policy owner.
 - `test/render/render_cache_policy_contract_test.dart` proves the copied local
   LRU policy code is retired
 
-### Slice 2. [ ] Bounded Selection Halo Compositing
+### Slice 2. [x] Bounded Selection Halo Compositing
 
 #### Slice Contract
 

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 // INV:INV-ENG-SCENE-PAINTER-MODULE-BOUNDARY
 // INV:INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION
+// INV:INV-ENG-SELECTION-BOUNDED-COMPOSITING
 // INV:INV-ENG-PERFORMANCE-PROOF-CONTOUR
 
 String _extractMethodBody({
@@ -355,13 +356,16 @@ void main() {
   });
 
   test(
-    'selection rendering keeps saveLayer compositing on selection owner seam',
+    'selection rendering keeps bounded compositing on selection owner seam',
     () {
       final source = File(
         'lib/src/render/scene_painter_selection.dart',
       ).readAsStringSync();
 
-      expect(source, contains('canvas.saveLayer(null, Paint());'));
+      expect(source, contains("import 'selection_halo_compositing.dart';"));
+      expect(source, contains('drawBoundedRectHalo('));
+      expect(source, contains('drawBoundedPathHalo('));
+      expect(source, isNot(contains('canvas.saveLayer(null, Paint());')));
       expect(source, isNot(contains('benchmark-only')));
     },
   );
