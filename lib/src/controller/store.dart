@@ -2,6 +2,7 @@ import '../core/nodes.dart';
 import '../core/scene.dart';
 import '../core/id_generator.dart';
 import '../core/revision_policy.dart';
+import '../contract/ids.dart' show LayerId;
 import '../model/document.dart';
 import '../model/document_clone.dart';
 
@@ -12,6 +13,7 @@ class SceneStore {
           : Set<NodeId>.from(selectedNodeIds),
       allNodeIds = txnCollectNodeIds(sceneDoc),
       nodeLocator = txnBuildNodeLocator(sceneDoc),
+      layerIndexById = txnBuildLayerIndexById(sceneDoc),
       idGeneratorState = createInitialIdGeneratorState(),
       revisionState = createInitialRevisionAllocatorState();
 
@@ -19,6 +21,7 @@ class SceneStore {
   Set<NodeId> selectedNodeIds;
   Set<NodeId> allNodeIds;
   Map<NodeId, NodeLocatorEntry> nodeLocator;
+  Map<LayerId, int> layerIndexById;
   IdGeneratorState idGeneratorState;
   RevisionAllocatorState revisionState;
 

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/ids.dart' show LayerId;
 import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart'
     show
         kMaxContentLayersPerScene,
@@ -106,6 +107,7 @@ void main() {
     required Set<NodeId> selectedNodeIds,
     required Set<NodeId> allNodeIds,
     required Map<NodeId, NodeLocatorEntry> nodeLocator,
+    Map<LayerId, int>? layerIndexById,
     required IdGeneratorState idGeneratorState,
     int controllerEpoch = 0,
     RevisionAllocatorState? revisionState,
@@ -121,6 +123,7 @@ void main() {
       selectedNodeIds: selectedNodeIds,
       allNodeIds: allNodeIds,
       nodeLocator: nodeLocator,
+      layerIndexById: layerIndexById ?? txnBuildLayerIndexById(scene),
       idGeneratorState: idGeneratorState,
       revisionState:
           revisionState ??
@@ -141,6 +144,7 @@ void main() {
     required Set<NodeId> selectedNodeIds,
     required Set<NodeId> allNodeIds,
     required Map<NodeId, NodeLocatorEntry> nodeLocator,
+    Map<LayerId, int>? layerIndexById,
     required IdGeneratorState idGeneratorState,
     int controllerEpoch = 0,
     RevisionAllocatorState? revisionState,
@@ -157,6 +161,7 @@ void main() {
         selectedNodeIds: selectedNodeIds,
         allNodeIds: allNodeIds,
         nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
         idGeneratorState: idGeneratorState,
         controllerEpoch: controllerEpoch,
         revisionState: revisionState,
@@ -271,7 +276,7 @@ void main() {
       selectedNodeIds: const <NodeId>{'node-1'},
       allNodeIds: const <NodeId>{'node-1'},
       nodeLocator: const <NodeId, NodeLocatorEntry>{
-        'node-1': (layerIndex: 0, nodeIndex: 0),
+        'node-1': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
       },
       idGeneratorState: state(nextNodeCounter: 2),
       nextInstanceRevision: 2,
@@ -339,7 +344,7 @@ void main() {
         selectedNodeIds: const <NodeId>{},
         allNodeIds: const <NodeId>{'node-1'},
         nodeLocator: const <NodeId, NodeLocatorEntry>{
-          'node-1': (layerIndex: 0, nodeIndex: 0),
+          'node-1': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
         },
         idGeneratorState: state(nextNodeCounter: 2),
         nextInstanceRevision: 2,
@@ -392,7 +397,7 @@ void main() {
       selectedNodeIds: const <NodeId>{},
       allNodeIds: const <NodeId>{'dup'},
       nodeLocator: const <NodeId, NodeLocatorEntry>{
-        'dup': (layerIndex: 0, nodeIndex: 0),
+        'dup': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
       },
       idGeneratorState: state(),
       nextInstanceRevision: 2,
@@ -443,7 +448,7 @@ void main() {
       selectedNodeIds: const <NodeId>{},
       allNodeIds: const <NodeId>{'dup-bg'},
       nodeLocator: const <NodeId, NodeLocatorEntry>{
-        'dup-bg': (layerIndex: -1, nodeIndex: 0),
+        'dup-bg': (contentLayerId: null, nodeIndex: 0),
       },
       idGeneratorState: state(),
       nextInstanceRevision: 2,
@@ -475,8 +480,8 @@ void main() {
       selectedNodeIds: const <NodeId>{},
       allNodeIds: const <NodeId>{'bg', 'n1'},
       nodeLocator: const <NodeId, NodeLocatorEntry>{
-        'bg': (layerIndex: -1, nodeIndex: 0),
-        'n1': (layerIndex: 0, nodeIndex: 0),
+        'bg': (contentLayerId: null, nodeIndex: 0),
+        'n1': (contentLayerId: 'layer-auto-4', nodeIndex: 0),
       },
       idGeneratorState: state(nextNodeCounter: 2),
       nextInstanceRevision: 2,
@@ -503,7 +508,7 @@ void main() {
       selectedNodeIds: const <NodeId>{},
       allNodeIds: const <NodeId>{'dup'},
       nodeLocator: const <NodeId, NodeLocatorEntry>{
-        'dup': (layerIndex: -1, nodeIndex: 0),
+        'dup': (contentLayerId: null, nodeIndex: 0),
       },
       idGeneratorState: state(),
       nextInstanceRevision: 2,
@@ -568,7 +573,7 @@ void main() {
         selectedNodeIds: const <NodeId>{},
         allNodeIds: const <NodeId>{'bad-node'},
         nodeLocator: const <NodeId, NodeLocatorEntry>{
-          'bad-node': (layerIndex: 0, nodeIndex: 0),
+          'bad-node': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
         },
         idGeneratorState: state(nextNodeCounter: 2),
         nextInstanceRevision: 2,
@@ -591,7 +596,7 @@ void main() {
       selectedNodeIds: const <NodeId>{'node-1'},
       allNodeIds: const <NodeId>{'node-1'},
       nodeLocator: const <NodeId, NodeLocatorEntry>{
-        'node-1': (layerIndex: 0, nodeIndex: 0),
+        'node-1': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
       },
       idGeneratorState: state(nextNodeCounter: 2),
       revisionState: revisionState,
@@ -633,7 +638,7 @@ void main() {
       selectedNodeIds: const <NodeId>{'node-1'},
       allNodeIds: const <NodeId>{'node-1'},
       nodeLocator: const <NodeId, NodeLocatorEntry>{
-        'node-1': (layerIndex: 0, nodeIndex: 0),
+        'node-1': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
       },
       idGeneratorState: state(nextNodeCounter: 2),
       controllerEpoch: -1,
@@ -652,7 +657,7 @@ void main() {
       selectedNodeIds: const <NodeId>{'node-1'},
       allNodeIds: const <NodeId>{'node-1'},
       nodeLocator: const <NodeId, NodeLocatorEntry>{
-        'node-1': (layerIndex: 0, nodeIndex: 0),
+        'node-1': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
       },
       idGeneratorState: state(nextNodeCounter: 2),
       revisionState: revisionState,
@@ -678,7 +683,7 @@ void main() {
       selectedNodeIds: const <NodeId>{},
       allNodeIds: const <NodeId>{'bad-rev'},
       nodeLocator: const <NodeId, NodeLocatorEntry>{
-        'bad-rev': (layerIndex: 0, nodeIndex: 0),
+        'bad-rev': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
       },
       idGeneratorState: state(),
       nextInstanceRevision: 1,
@@ -724,7 +729,7 @@ void main() {
           selectedNodeIds: const <NodeId>{},
           allNodeIds: const <NodeId>{'node-1'},
           nodeLocator: const <NodeId, NodeLocatorEntry>{
-            'node-1': (layerIndex: 0, nodeIndex: 0),
+            'node-1': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
           },
           idGeneratorState: state(nextNodeCounter: 2),
           nextInstanceRevision: 2,
@@ -1119,7 +1124,7 @@ void main() {
       selectedNodeIds: const <NodeId>{'node-1'},
       allNodeIds: const <NodeId>{'node-1'},
       nodeLocator: const <NodeId, NodeLocatorEntry>{
-        'node-1': (layerIndex: 0, nodeIndex: 7),
+        'node-1': (contentLayerId: 'layer-auto-0', nodeIndex: 7),
       },
       idGeneratorState: state(nextNodeCounter: 2),
       nextInstanceRevision: 2,
@@ -1128,6 +1133,26 @@ void main() {
     expect(
       violations.join('\n'),
       contains('nodeLocator must match buildNodeLocator(scene)'),
+    );
+  });
+
+  test('detects mismatched layerIndexById entries', () {
+    final scene = sceneFixture();
+    final violations = txnCollectStoreInvariantViolations(
+      scene: scene,
+      selectedNodeIds: const <NodeId>{'node-1'},
+      allNodeIds: const <NodeId>{'node-1'},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{
+        'node-1': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
+      },
+      layerIndexById: const <LayerId, int>{'layer-auto-0': 7},
+      idGeneratorState: state(nextNodeCounter: 2),
+      nextInstanceRevision: 2,
+      commitRevision: 0,
+    );
+    expect(
+      violations.join('\n'),
+      contains('layerIndexById must match buildLayerIndexById(scene)'),
     );
   });
 

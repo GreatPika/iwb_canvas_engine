@@ -4,15 +4,17 @@ class _TxnDerivedState {
   _TxnDerivedState({
     required Set<NodeId> baseAllNodeIds,
     required Map<NodeId, NodeLocatorEntry> baseNodeLocator,
+    required Map<LayerId, int> baseLayerIndexById,
   }) : _baseAllNodeIds = baseAllNodeIds,
-       _baseNodeLocator = baseNodeLocator;
+       _baseNodeLocator = baseNodeLocator,
+       _baseLayerIndexById = baseLayerIndexById;
 
   Set<NodeId> _baseAllNodeIds;
   final Set<NodeId> _addedNodeIds = <NodeId>{};
   final Set<NodeId> _removedNodeIds = <NodeId>{};
   Set<NodeId>? _materializedAllNodeIds;
   Map<NodeId, NodeLocatorEntry> _baseNodeLocator;
-  Map<LayerId, int>? _baseLayerIndexById;
+  Map<LayerId, int> _baseLayerIndexById;
   Map<NodeId, NodeLocatorEntry>? _materializedNodeLocator;
   Map<LayerId, int>? _materializedLayerIndexById;
 }
@@ -74,6 +76,24 @@ extension TxnDerivedStateContext on TxnContext {
     return _derivedState.nodeLocatorView();
   }
 
+  Map<LayerId, int> txnLayerIndexByIdView() {
+    txnEnsureActive();
+    return _derivedState.layerIndexByIdView(
+      scene: workingScene,
+      debugStats: _debugStats,
+    );
+  }
+
+  Map<LayerId, int> txnLayerIndexByIdForCommit({
+    required bool structuralChanged,
+  }) {
+    return _derivedState.layerIndexByIdForCommit(
+      scene: workingScene,
+      structuralChanged: structuralChanged,
+      debugStats: _debugStats,
+    );
+  }
+
   @visibleForTesting
   Set<NodeId> debugNodeIdsView({required bool structuralChanged}) {
     return txnAllNodeIdsForCommit(structuralChanged: structuralChanged);
@@ -90,6 +110,14 @@ extension TxnDerivedStateContext on TxnContext {
 extension _TxnDerivedStateNodeSetOps on _TxnDerivedState {
   Map<NodeId, NodeLocatorEntry> get workingNodeLocator =>
       _materializedNodeLocator ?? _baseNodeLocator;
+
+  Map<LayerId, int> workingLayerIndexById({
+    required Scene scene,
+    required _TxnDebugStats debugStats,
+  }) {
+    return _materializedLayerIndexById ??
+        _materializeLayerIdIndexFromScene(scene: scene, debugStats: debugStats);
+  }
 
   Map<NodeId, NodeLocatorEntry> ensureMutableNodeLocator(
     _TxnDebugStats debugStats,
@@ -176,12 +204,12 @@ extension _TxnDerivedStateNodeSetOps on _TxnDerivedState {
   void adoptScene(Scene scene) {
     _baseAllNodeIds = txnCollectNodeIds(scene);
     _baseNodeLocator = txnBuildNodeLocator(scene);
-    _baseLayerIndexById = null;
+    _baseLayerIndexById = txnBuildLayerIndexById(scene);
     _addedNodeIds.clear();
     _removedNodeIds.clear();
     _materializedAllNodeIds = _baseAllNodeIds;
     _materializedNodeLocator = _baseNodeLocator;
-    _materializedLayerIndexById = null;
+    _materializedLayerIndexById = _baseLayerIndexById;
   }
 }
 
@@ -190,11 +218,7 @@ extension _TxnDerivedStateBaseLookupOps on _TxnDerivedState {
     required Scene baseScene,
     required LayerId layerId,
   }) {
-    final baseIndexById = _baseLayerIndexById ??= <LayerId, int>{
-      for (var index = 0; index < baseScene.layers.length; index++)
-        baseScene.layers[index].id: index,
-    };
-    final index = baseIndexById[layerId];
+    final index = _baseLayerIndexById[layerId];
     if (index == null || index < 0 || index >= baseScene.layers.length) {
       return null;
     }
@@ -209,6 +233,7 @@ extension _TxnDerivedStateBaseLookupOps on _TxnDerivedState {
     return txnFindNodeByLocator(
       scene: baseScene,
       nodeLocator: _baseNodeLocator,
+      layerIndexById: _baseLayerIndexById,
       nodeId: nodeId,
     )?.node;
   }
@@ -250,8 +275,19 @@ extension _TxnDerivedStateLayerIndexOps on _TxnDerivedState {
     );
   }
 
-  void invalidateLayerIdIndex() {
-    _materializedLayerIndexById = null;
+  Map<LayerId, int> ensureMutableLayerIndexById({
+    required Scene scene,
+    required _TxnDebugStats debugStats,
+  }) {
+    final cached = _materializedLayerIndexById;
+    if (cached != null) {
+      return cached;
+    }
+    final materialized = Map<LayerId, int>.from(
+      _materializeLayerIdIndexFromScene(scene: scene, debugStats: debugStats),
+    );
+    _materializedLayerIndexById = materialized;
+    return materialized;
   }
 
   Set<NodeId> _materializeAllNodeIds(_TxnDebugStats debugStats) {
@@ -281,10 +317,7 @@ extension _TxnDerivedStateLayerIndexOps on _TxnDerivedState {
     if (!forceRebuild && cached != null) {
       return cached;
     }
-    final indexById = <LayerId, int>{
-      for (var index = 0; index < scene.layers.length; index++)
-        scene.layers[index].id: index,
-    };
+    final indexById = txnBuildLayerIndexById(scene);
     _materializedLayerIndexById = indexById;
     debugStats.layerIdIndexMaterializations =
         debugStats.layerIdIndexMaterializations + 1;
@@ -320,6 +353,32 @@ extension _TxnDerivedStateLayerIndexOps on _TxnDerivedState {
       return null;
     }
     return scene.layers[index].id == layerId ? index : null;
+  }
+
+  Map<LayerId, int> layerIndexByIdView({
+    required Scene scene,
+    required _TxnDebugStats debugStats,
+  }) {
+    return workingLayerIndexById(scene: scene, debugStats: debugStats);
+  }
+
+  Map<LayerId, int> layerIndexByIdForCommit({
+    required Scene scene,
+    required bool structuralChanged,
+    required _TxnDebugStats debugStats,
+  }) {
+    if (!structuralChanged) {
+      final materialized = _materializedLayerIndexById;
+      if (materialized != null) {
+        return materialized;
+      }
+      return _baseLayerIndexById;
+    }
+    return _materializeLayerIdIndexFromScene(
+      scene: scene,
+      debugStats: debugStats,
+      forceRebuild: true,
+    );
   }
 
   void _updateNodeIdMembership(NodeId nodeId, {required bool present}) {

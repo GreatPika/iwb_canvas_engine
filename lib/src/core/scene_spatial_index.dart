@@ -2,12 +2,14 @@ import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../contract/ids.dart' show LayerId;
 import 'geometry.dart';
 import 'hit_test.dart';
 import 'node_geometry.dart';
 import 'nodes.dart';
 import 'scene.dart';
 import 'scene_limits.dart';
+import 'scene_node_locator.dart';
 
 const int kMaxCellsPerNode = 1024;
 const int kMaxQueryCells = 50000;
@@ -78,13 +80,15 @@ class SceneSpatialIndex {
 
   factory SceneSpatialIndex.build(
     Scene scene, {
-    Map<NodeId, SceneSpatialCandidateLocation>? nodeLocator,
+    Map<NodeId, NodeLocatorEntry>? nodeLocator,
+    Map<LayerId, int>? layerIndexById,
   }) {
     final index = SceneSpatialIndex._(_defaultSpatialCellSize);
     _rebuildSpatialIndex(
       index,
       scene: scene,
-      nodeLocator: nodeLocator ?? _buildNodeLocator(scene),
+      nodeLocator: nodeLocator ?? _buildStableNodeLocator(scene),
+      layerIndexById: layerIndexById ?? _buildLayerIndexById(scene),
     );
     return index;
   }
@@ -104,8 +108,9 @@ class SceneSpatialIndex {
   bool _isPaintValid = true;
 
   Scene? _scene;
-  Map<NodeId, SceneSpatialCandidateLocation> _nodeLocator =
-      const <NodeId, SceneSpatialCandidateLocation>{};
+  Map<NodeId, NodeLocatorEntry> _nodeLocator =
+      const <NodeId, NodeLocatorEntry>{};
+  Map<LayerId, int> _layerIndexById = const <LayerId, int>{};
 
   int get debugLargeCandidateCount =>
       <NodeId>{..._largeHitTestNodeIds, ..._largePaintNodeIds}.length;
@@ -129,25 +134,29 @@ class SceneSpatialIndex {
 
   bool applyIncremental({
     required Scene scene,
-    required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
+    required Map<NodeId, NodeLocatorEntry> nodeLocator,
+    required Map<LayerId, int> layerIndexById,
     required SceneSpatialIndexChangeSet changeSet,
   }) {
     return _applySceneSpatialIndexIncremental(
       this,
       scene: scene,
       nodeLocator: nodeLocator,
+      layerIndexById: layerIndexById,
       changeSet: changeSet,
     );
   }
 
   SceneSpatialIndex cloneForIncrementalUpdate({
     required Scene scene,
-    required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
+    required Map<NodeId, NodeLocatorEntry> nodeLocator,
+    required Map<LayerId, int> layerIndexById,
   }) {
     return _cloneSceneSpatialIndex(
       this,
       scene: scene,
       nodeLocator: nodeLocator,
+      layerIndexById: layerIndexById,
     );
   }
 }
@@ -231,10 +240,16 @@ List<ScenePaintSpatialCandidate> _querySceneSpatialIndexPaint(
 bool _applySceneSpatialIndexIncremental(
   SceneSpatialIndex index, {
   required Scene scene,
-  required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required Map<LayerId, int> layerIndexById,
   required SceneSpatialIndexChangeSet changeSet,
 }) {
-  _bindSpatialIndexState(index, scene: scene, nodeLocator: nodeLocator);
+  _bindSpatialIndexState(
+    index,
+    scene: scene,
+    nodeLocator: nodeLocator,
+    layerIndexById: layerIndexById,
+  );
   if (_hasNoIncrementalChanges(changeSet)) {
     return true;
   }
@@ -252,7 +267,8 @@ bool _applySceneSpatialIndexIncremental(
 SceneSpatialIndex _cloneSceneSpatialIndex(
   SceneSpatialIndex source, {
   required Scene scene,
-  required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required Map<LayerId, int> layerIndexById,
 }) {
   final clone = SceneSpatialIndex._(source._cellSize);
   clone._isHitTestValid = source._isHitTestValid;
@@ -260,7 +276,12 @@ SceneSpatialIndex _cloneSceneSpatialIndex(
   clone._debugHitTestFallbackQueryCount =
       source._debugHitTestFallbackQueryCount;
   clone._debugPaintFallbackQueryCount = source._debugPaintFallbackQueryCount;
-  _bindSpatialIndexState(clone, scene: scene, nodeLocator: nodeLocator);
+  _bindSpatialIndexState(
+    clone,
+    scene: scene,
+    nodeLocator: nodeLocator,
+    layerIndexById: layerIndexById,
+  );
 
   for (final entry in source._hitTestCells.entries) {
     clone._hitTestCells[entry.key] = <NodeId>{...entry.value};
@@ -282,9 +303,15 @@ SceneSpatialIndex _cloneSceneSpatialIndex(
 void _rebuildSpatialIndex(
   SceneSpatialIndex index, {
   required Scene scene,
-  required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required Map<LayerId, int> layerIndexById,
 }) {
-  _bindSpatialIndexState(index, scene: scene, nodeLocator: nodeLocator);
+  _bindSpatialIndexState(
+    index,
+    scene: scene,
+    nodeLocator: nodeLocator,
+    layerIndexById: layerIndexById,
+  );
   index._isHitTestValid = true;
   index._isPaintValid = true;
   _clearHitTestData(index);
@@ -314,10 +341,12 @@ void _rebuildSpatialIndex(
 void _bindSpatialIndexState(
   SceneSpatialIndex index, {
   required Scene scene,
-  required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required Map<LayerId, int> layerIndexById,
 }) {
   index._scene = scene;
   index._nodeLocator = nodeLocator;
+  index._layerIndexById = layerIndexById;
 }
 
 bool _upsertNodeById(SceneSpatialIndex index, NodeId nodeId) {
@@ -537,7 +566,10 @@ _ResolvedSpatialNode? _resolveSpatialNodeById(
   if (scene == null) return null;
   final location = index._nodeLocator[nodeId];
   if (location == null) return null;
-  final layerIndex = location.layerIndex;
+  final layerIndex = _resolveLayerIndex(location, index._layerIndexById);
+  if (layerIndex == null) {
+    return null;
+  }
   final nodeIndex = location.nodeIndex;
   if (layerIndex == -1) {
     final backgroundNodes = scene.backgroundLayer?.nodes;
@@ -765,8 +797,12 @@ int _comparePaintCandidateIds(SceneSpatialIndex index, NodeId a, NodeId b) {
   }
   final aLocation = index._nodeLocator[a];
   final bLocation = index._nodeLocator[b];
-  final aLayerIndex = aLocation?.layerIndex ?? 0x3fffffff;
-  final bLayerIndex = bLocation?.layerIndex ?? 0x3fffffff;
+  final aLayerIndex = aLocation == null
+      ? 0x3fffffff
+      : (_resolveLayerIndex(aLocation, index._layerIndexById) ?? 0x3fffffff);
+  final bLayerIndex = bLocation == null
+      ? 0x3fffffff
+      : (_resolveLayerIndex(bLocation, index._layerIndexById) ?? 0x3fffffff);
   final layerComparison = aLayerIndex.compareTo(bLayerIndex);
   if (layerComparison != 0) {
     return layerComparison;
@@ -915,15 +951,35 @@ class _CellKey {
   int get hashCode => Object.hash(x, y);
 }
 
-Map<NodeId, SceneSpatialCandidateLocation> _buildNodeLocator(Scene scene) {
-  final out = <NodeId, SceneSpatialCandidateLocation>{};
+Map<NodeId, NodeLocatorEntry> _buildStableNodeLocator(Scene scene) {
+  final out = <NodeId, NodeLocatorEntry>{};
   _visitResolvedPaintableNodes(scene, (resolved) {
     out[resolved.node.id] = (
-      layerIndex: resolved.layerIndex,
+      contentLayerId: resolved.layerIndex == -1
+          ? null
+          : scene.layers[resolved.layerIndex].id,
       nodeIndex: resolved.nodeIndex,
     );
   });
   return out;
+}
+
+Map<LayerId, int> _buildLayerIndexById(Scene scene) {
+  return <LayerId, int>{
+    for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++)
+      scene.layers[layerIndex].id: layerIndex,
+  };
+}
+
+int? _resolveLayerIndex(
+  NodeLocatorEntry location,
+  Map<LayerId, int> layerIndexById,
+) {
+  final contentLayerId = location.contentLayerId;
+  if (contentLayerId == null) {
+    return -1;
+  }
+  return layerIndexById[contentLayerId];
 }
 
 void _visitResolvedContentNodes(

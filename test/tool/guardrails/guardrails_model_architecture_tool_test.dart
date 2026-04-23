@@ -638,8 +638,9 @@ class Scene {
           diagnostic(
             category: 'model architecture',
             detail:
-                'controller code must not mutate scene.layers directly via .add(...); '
-                'use model-owned scene layer mutation helpers instead.',
+                'controller code must not own content-layer topology via .add(...); '
+                'use model-owned semantic topology helpers and keep controller '
+                'on the topology-preserving slot seam only.',
           ),
         );
       } finally {
@@ -673,8 +674,9 @@ class Scene {
           diagnostic(
             category: 'model architecture',
             detail:
-                'controller code must not mutate scene.layers directly via '
-                '.removeAt(...); use model-owned scene layer mutation helpers instead.',
+                'controller code must not own content-layer topology via '
+                '.removeAt(...); use model-owned semantic topology helpers and '
+                'keep controller on the topology-preserving slot seam only.',
           ),
         );
       } finally {
@@ -710,8 +712,9 @@ class Scene {
             diagnostic(
               category: 'model architecture',
               detail:
-                  'controller code must not mutate scene.layers directly via '
-                  '[]=; use model-owned scene layer mutation helpers instead.',
+                  'controller code must not own content-layer topology via '
+                  '[]=; use model-owned semantic topology helpers and keep '
+                  'controller on the topology-preserving slot seam only.',
             ),
           );
         } finally {
@@ -748,8 +751,60 @@ class Scene {
           diagnostic(
             category: 'model architecture',
             detail:
-                'controller code must not mutate scene.layers directly via '
-                '.clear(...); use model-owned scene layer mutation helpers instead.',
+                'controller code must not own content-layer topology via '
+                '.clear(...); use model-owned semantic topology helpers and '
+                'keep controller on the topology-preserving slot seam only.',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('rejects controller semantic layer-topology helper calls', () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeSandboxFile(sandbox, 'lib/src/controller/scene_runtime.dart', '''
+import '../core/scene.dart';
+import '../model/document.dart';
+
+class _SceneRuntime {
+  void _touch(Scene scene) {
+    txnReplaceContentLayerInScene(
+      scene: scene,
+      layerIndex: 0,
+      layer: Object(),
+    );
+  }
+}
+''');
+        writeSandboxFile(sandbox, 'lib/src/core/scene.dart', '''
+class Scene {
+  final List<Object> layers = <Object>[];
+}
+''');
+        writeSandboxFile(sandbox, 'lib/src/model/document.dart', '''
+import '../core/scene.dart';
+
+void txnReplaceContentLayerInScene({
+  required Scene scene,
+  required int layerIndex,
+  required Object layer,
+}) {}
+''');
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'model architecture',
+            detail:
+                'controller code must not own content-layer topology via '
+                'txnReplaceContentLayerInScene(...); use model-owned '
+                'semantic topology helpers and keep controller on the '
+                'topology-preserving slot seam only.',
           ),
         );
       } finally {
@@ -758,7 +813,7 @@ class Scene {
     });
 
     test(
-      'allows controller scene layer mutation through document facade helper',
+      'allows controller layer slot replacement through topology-preserving helper',
       () async {
         final sandbox = await createGuardrailsSandbox();
         try {
@@ -769,7 +824,7 @@ import '../model/document.dart';
 
 class _SceneRuntime {
   void _touch(Scene scene) {
-    txnReplaceContentLayerInScene(
+    txnReplaceContentLayerSlotInScene(
       scene: scene,
       layerIndex: 0,
       layer: Object(),
@@ -785,7 +840,7 @@ class Scene {
           writeSandboxFile(sandbox, 'lib/src/model/document.dart', '''
 import '../core/scene.dart';
 
-void txnReplaceContentLayerInScene({
+void txnReplaceContentLayerSlotInScene({
   required Scene scene,
   required int layerIndex,
   required Object layer,

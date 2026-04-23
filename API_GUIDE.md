@@ -315,7 +315,7 @@ Move-commit resolver rule:
 | `setGridCellSize(...)` | Replace the grid cell size. Invalid values throw immediately. |
 | `setCameraOffset(...)` | Replace the camera offset. |
 | `addNode(...)` | Insert a node from a `NodeSpec`. |
-| `ensureLayer(...)` | Create a content layer if it does not already exist. |
+| `ensureLayer(...)` | Create a content layer if it does not already exist. Layer ids stay unique, and later same-write node/selection operations still resolve correctly after inserted-layer topology shifts. |
 | `patchNode(...)` | Apply a `NodePatch` to an existing node. |
 | `removeNode(...)` | Remove a single node by id. |
 | `clearScene(...)` | Clear content layers while keeping the dedicated background layer concept. |
@@ -467,6 +467,10 @@ Available transaction verbs:
 Important transaction notes:
 
 - `layerId` addresses content layers only, never `backgroundLayer`.
+- `writeLayerEnsure(...)` is idempotent for an existing `layerId`, but a newly
+  inserted content layer now updates runtime topology ownership inside the
+  model seam so later same-write delete/patch/selection flows still resolve by
+  the current layer position.
 - `txn.selectedNodeIds` is a detached immutable selection snapshot for that
   read. Values captured while the transaction is active remain usable after the
   callback closes, but the transaction handle itself expires.

@@ -50,6 +50,10 @@ void main() {
     );
   }
 
+  Map<NodeId, NodeLocatorEntry> buildStableNodeLocator(Scene scene) {
+    return txnBuildNodeLocator(scene);
+  }
+
   test(
     'SceneWriter clearScene creates missing background layer and clears',
     () {
@@ -96,13 +100,15 @@ void main() {
           ),
         ],
       );
-      final nodeLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
-        'r1': (layerIndex: 0, nodeIndex: 0),
+      final nodeLocator = <NodeId, NodeLocatorEntry>{
+        'r1': (contentLayerId: 'layer-auto-2', nodeIndex: 0),
       };
+      final layerIndexById = txnBuildLayerIndexById(scene);
 
       final first = slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
       );
@@ -113,6 +119,7 @@ void main() {
       slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
       );
@@ -122,12 +129,14 @@ void main() {
       slice.writeHandleCommit(
         scene: scene,
         nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
         changeSet: noChange,
         controllerEpoch: 0,
       );
       slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
       );
@@ -148,9 +157,10 @@ void main() {
           ),
         ],
       );
-      final movedLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
-        'r1': (layerIndex: 0, nodeIndex: 0),
+      final movedLocator = <NodeId, NodeLocatorEntry>{
+        'r1': (contentLayerId: 'layer-auto-3', nodeIndex: 0),
       };
+      final movedLayerIndexById = txnBuildLayerIndexById(movedScene);
       final movedChange = ChangeSet()
         ..txnMarkBoundsChanged()
         ..txnTrackUpdated('r1')
@@ -158,12 +168,14 @@ void main() {
       slice.writeHandleCommit(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         changeSet: movedChange,
         controllerEpoch: 0,
       );
       final movedCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
       );
@@ -171,6 +183,7 @@ void main() {
       final oldCandidatesAfterMove = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
       );
@@ -184,12 +197,14 @@ void main() {
       slice.writeHandleCommit(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         changeSet: malformedAdded,
         controllerEpoch: 0,
       );
       final rebuiltAfterMalformedAdd = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
       );
@@ -203,12 +218,14 @@ void main() {
       slice.writeHandleCommit(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         changeSet: malformedBoundsOnly,
         controllerEpoch: 0,
       );
       slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
       );
@@ -217,12 +234,14 @@ void main() {
       slice.writeHandleCommit(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         changeSet: noChange,
         controllerEpoch: 1,
       );
       slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 1,
       );
@@ -232,12 +251,14 @@ void main() {
       slice.writeHandleCommit(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         changeSet: gridOnly,
         controllerEpoch: 1,
       );
       slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 1,
       );
@@ -259,13 +280,15 @@ void main() {
           ),
         ],
       );
-      final outOfRangeLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
-        'r1': (layerIndex: 0, nodeIndex: 0),
+      final outOfRangeLocator = <NodeId, NodeLocatorEntry>{
+        'r1': (contentLayerId: 'layer-auto-4', nodeIndex: 0),
       };
+      final outOfRangeLayerIndexById = txnBuildLayerIndexById(outOfRangeScene);
       final outOfRangeBounds = Rect.fromLTWH(sceneCoordMax + 450, -20, 100, 40);
       final invalidFirst = slice.writeQueryHitTestCandidates(
         scene: outOfRangeScene,
         nodeLocator: outOfRangeLocator,
+        layerIndexById: outOfRangeLayerIndexById,
         worldBounds: outOfRangeBounds,
         controllerEpoch: 2,
       );
@@ -279,6 +302,7 @@ void main() {
       slice.writeHandleCommit(
         scene: outOfRangeScene,
         nodeLocator: outOfRangeLocator,
+        layerIndexById: outOfRangeLayerIndexById,
         changeSet: outOfRangeChange,
         controllerEpoch: 2,
       );
@@ -286,6 +310,7 @@ void main() {
       final invalidSecond = slice.writeQueryHitTestCandidates(
         scene: outOfRangeScene,
         nodeLocator: outOfRangeLocator,
+        layerIndexById: outOfRangeLayerIndexById,
         worldBounds: outOfRangeBounds,
         controllerEpoch: 2,
       );
@@ -295,6 +320,7 @@ void main() {
       final invalidThird = slice.writeQueryHitTestCandidates(
         scene: outOfRangeScene,
         nodeLocator: outOfRangeLocator,
+        layerIndexById: outOfRangeLayerIndexById,
         worldBounds: outOfRangeBounds,
         controllerEpoch: 2,
       );
@@ -308,13 +334,15 @@ void main() {
     () {
       final cache = SpatialIndexCache();
       final scene = rectSceneForAdmissionContract();
-      final nodeLocator = txnBuildNodeLocator(scene);
+      final nodeLocator = buildStableNodeLocator(scene);
+      final layerIndexById = txnBuildLayerIndexById(scene);
 
       expect(
         cache
             .writeQueryPaintCandidates(
               scene: scene,
               nodeLocator: nodeLocator,
+              layerIndexById: layerIndexById,
               worldBounds: const Rect.fromLTWH(0, 0, 10, 10),
               controllerEpoch: 0,
             )
@@ -340,7 +368,8 @@ void main() {
 
       cache.writeHandleCommit(
         scene: ctx.workingScene,
-        nodeLocator: txnBuildNodeLocator(ctx.workingScene),
+        nodeLocator: buildStableNodeLocator(ctx.workingScene),
+        layerIndexById: txnBuildLayerIndexById(ctx.workingScene),
         changeSet: ctx.changeSet,
         controllerEpoch: 0,
       );
@@ -349,7 +378,8 @@ void main() {
         cache
             .writeQueryPaintCandidates(
               scene: ctx.workingScene,
-              nodeLocator: txnBuildNodeLocator(ctx.workingScene),
+              nodeLocator: buildStableNodeLocator(ctx.workingScene),
+              layerIndexById: txnBuildLayerIndexById(ctx.workingScene),
               worldBounds: const Rect.fromLTWH(0, 0, 10, 10),
               controllerEpoch: 0,
             )
@@ -366,12 +396,14 @@ void main() {
     () {
       final cache = SpatialIndexCache();
       final scene = rectSceneForAdmissionContract();
-      final nodeLocator = txnBuildNodeLocator(scene);
+      final nodeLocator = buildStableNodeLocator(scene);
+      final layerIndexById = txnBuildLayerIndexById(scene);
 
       expect(
         cache.writeQueryPaintCandidates(
           scene: scene,
           nodeLocator: nodeLocator,
+          layerIndexById: layerIndexById,
           worldBounds: const Rect.fromLTWH(11, 5, 1, 1),
           controllerEpoch: 0,
         ),
@@ -394,7 +426,8 @@ void main() {
 
       cache.writeHandleCommit(
         scene: ctx.workingScene,
-        nodeLocator: txnBuildNodeLocator(ctx.workingScene),
+        nodeLocator: buildStableNodeLocator(ctx.workingScene),
+        layerIndexById: txnBuildLayerIndexById(ctx.workingScene),
         changeSet: ctx.changeSet,
         controllerEpoch: 0,
       );
@@ -403,7 +436,8 @@ void main() {
         cache
             .writeQueryPaintCandidates(
               scene: ctx.workingScene,
-              nodeLocator: txnBuildNodeLocator(ctx.workingScene),
+              nodeLocator: buildStableNodeLocator(ctx.workingScene),
+              layerIndexById: txnBuildLayerIndexById(ctx.workingScene),
               worldBounds: const Rect.fromLTWH(11, 5, 1, 1),
               controllerEpoch: 0,
             )
@@ -427,13 +461,15 @@ void main() {
           ),
         ],
       );
-      final nodeLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
-        'r1': (layerIndex: 0, nodeIndex: 0),
+      final nodeLocator = <NodeId, NodeLocatorEntry>{
+        'r1': (contentLayerId: 'layer-auto-5', nodeIndex: 0),
       };
+      final layerIndexById = txnBuildLayerIndexById(scene);
 
       slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
       );
@@ -454,9 +490,10 @@ void main() {
           ),
         ],
       );
-      final movedLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
-        'r1': (layerIndex: 0, nodeIndex: 0),
+      final movedLocator = <NodeId, NodeLocatorEntry>{
+        'r1': (contentLayerId: 'layer-auto-6', nodeIndex: 0),
       };
+      final movedLayerIndexById = txnBuildLayerIndexById(movedScene);
       final movedChange = ChangeSet()
         ..txnMarkBoundsChanged()
         ..txnTrackUpdated('r1')
@@ -468,6 +505,7 @@ void main() {
       slice.writeHandleCommit(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         changeSet: movedChange,
         controllerEpoch: 0,
       );
@@ -475,12 +513,14 @@ void main() {
       final movedCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
       );
       final oldCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
       );
@@ -506,13 +546,15 @@ void main() {
           ),
         ],
       );
-      final nodeLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
-        'r1': (layerIndex: 0, nodeIndex: 0),
+      final nodeLocator = <NodeId, NodeLocatorEntry>{
+        'r1': (contentLayerId: 'layer-auto-7', nodeIndex: 0),
       };
+      final layerIndexById = txnBuildLayerIndexById(scene);
 
       final initialCandidates = slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
       );
@@ -535,9 +577,10 @@ void main() {
           ),
         ],
       );
-      final movedLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
-        'r1': (layerIndex: 0, nodeIndex: 0),
+      final movedLocator = <NodeId, NodeLocatorEntry>{
+        'r1': (contentLayerId: 'layer-auto-8', nodeIndex: 0),
       };
+      final movedLayerIndexById = txnBuildLayerIndexById(movedScene);
       final movedChange = ChangeSet()
         ..txnMarkBoundsChanged()
         ..txnTrackUpdated('r1')
@@ -554,6 +597,7 @@ void main() {
         () => slice.writeHandleCommit(
           scene: movedScene,
           nodeLocator: movedLocator,
+          layerIndexById: movedLayerIndexById,
           changeSet: movedChange,
           controllerEpoch: 0,
         ),
@@ -563,12 +607,14 @@ void main() {
       final stillOldAtOrigin = slice.writeQueryHitTestCandidates(
         scene: scene,
         nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
       );
       final noMovedCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
       );
@@ -602,14 +648,16 @@ void main() {
         ),
       ],
     );
-    final originalLocator = <NodeId, SceneSpatialCandidateLocation>{
-      'a-first': (layerIndex: 0, nodeIndex: 0),
-      'b-second': (layerIndex: 0, nodeIndex: 1),
+    final originalLocator = <NodeId, NodeLocatorEntry>{
+      'a-first': (contentLayerId: 'layer-paint-order', nodeIndex: 0),
+      'b-second': (contentLayerId: 'layer-paint-order', nodeIndex: 1),
     };
+    final originalLayerIndexById = txnBuildLayerIndexById(originalScene);
 
     cache.writeQueryPaintCandidates(
       scene: originalScene,
       nodeLocator: originalLocator,
+      layerIndexById: originalLayerIndexById,
       worldBounds: const Rect.fromLTWH(0, 0, 100, 40),
       controllerEpoch: 0,
     );
@@ -638,11 +686,12 @@ void main() {
         ),
       ],
     );
-    final updatedLocator = <NodeId, SceneSpatialCandidateLocation>{
-      'z-inserted': (layerIndex: 0, nodeIndex: 0),
-      'a-first': (layerIndex: 0, nodeIndex: 1),
-      'b-second': (layerIndex: 0, nodeIndex: 2),
+    final updatedLocator = <NodeId, NodeLocatorEntry>{
+      'z-inserted': (contentLayerId: 'layer-paint-order', nodeIndex: 0),
+      'a-first': (contentLayerId: 'layer-paint-order', nodeIndex: 1),
+      'b-second': (contentLayerId: 'layer-paint-order', nodeIndex: 2),
     };
+    final updatedLayerIndexById = txnBuildLayerIndexById(updatedScene);
     final changeSet = ChangeSet()
       ..txnMarkStructuralChanged()
       ..txnTrackAdded('z-inserted');
@@ -650,12 +699,14 @@ void main() {
     cache.writeHandleCommit(
       scene: updatedScene,
       nodeLocator: updatedLocator,
+      layerIndexById: updatedLayerIndexById,
       changeSet: changeSet,
       controllerEpoch: 0,
     );
     final candidates = cache.writeQueryPaintCandidates(
       scene: updatedScene,
       nodeLocator: updatedLocator,
+      layerIndexById: updatedLayerIndexById,
       worldBounds: const Rect.fromLTWH(0, 0, 100, 40),
       controllerEpoch: 0,
     );
@@ -694,16 +745,18 @@ void main() {
         ),
       ],
     );
-    final nodeLocator = <NodeId, ({int layerIndex, int nodeIndex})>{
-      'bg': (layerIndex: -1, nodeIndex: 0),
-      'fg': (layerIndex: 0, nodeIndex: 0),
+    final nodeLocator = <NodeId, NodeLocatorEntry>{
+      'bg': (contentLayerId: null, nodeIndex: 0),
+      'fg': (contentLayerId: 'layer-auto-scope', nodeIndex: 0),
     };
+    final layerIndexById = txnBuildLayerIndexById(scene);
 
     expect(
       cache
           .writeQueryPaintCandidates(
             scene: scene,
             nodeLocator: nodeLocator,
+            layerIndexById: layerIndexById,
             worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
             controllerEpoch: 0,
           )
@@ -716,6 +769,7 @@ void main() {
           .writeQueryPaintCandidates(
             scene: scene,
             nodeLocator: nodeLocator,
+            layerIndexById: layerIndexById,
             worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
             controllerEpoch: 0,
             scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,

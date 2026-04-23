@@ -20,6 +20,7 @@ class TxnContext {
     required Set<NodeId> workingSelection,
     required Set<NodeId> baseAllNodeIds,
     Map<NodeId, NodeLocatorEntry>? baseNodeLocator,
+    Map<LayerId, int>? baseLayerIndexById,
     int? nodeIdSeed,
     int? layerIdSeed,
     IdGeneratorState? idGeneratorState,
@@ -43,6 +44,8 @@ class TxnContext {
        _derivedState = _TxnDerivedState(
          baseAllNodeIds: baseAllNodeIds,
          baseNodeLocator: baseNodeLocator ?? txnBuildNodeLocator(baseScene),
+         baseLayerIndexById:
+             baseLayerIndexById ?? txnBuildLayerIndexById(baseScene),
        ),
        _workspace = _TxnWorkspace(baseScene: baseScene);
 
@@ -118,6 +121,10 @@ class TxnContext {
     return txnFindNodeByLocator(
       scene: workingScene,
       nodeLocator: _derivedState.workingNodeLocator,
+      layerIndexById: _derivedState.workingLayerIndexById(
+        scene: workingScene,
+        debugStats: _debugStats,
+      ),
       nodeId: id,
     );
   }

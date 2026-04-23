@@ -1,3 +1,4 @@
+import '../contract/ids.dart' show LayerId;
 import '../core/id_generator.dart';
 import '../core/nodes.dart';
 import '../core/revision_policy.dart';
@@ -11,6 +12,7 @@ final class CommittedStoreState {
     required this.selectedNodeIds,
     required this.allNodeIds,
     required this.nodeLocator,
+    required this.layerIndexById,
     required this.idGeneratorState,
     required this.revisionState,
     required this.controllerEpoch,
@@ -37,6 +39,7 @@ final class CommittedStoreState {
       selectedNodeIds: selectedNodeIds,
       allNodeIds: candidate.allNodeIds,
       nodeLocator: candidate.nodeLocator,
+      layerIndexById: candidate.layerIndexById,
       idGeneratorState: candidate.idGeneratorState,
       revisionState: revisionState,
       controllerEpoch: controllerEpoch,
@@ -52,6 +55,7 @@ final class CommittedStoreState {
   final Set<NodeId> selectedNodeIds;
   final Set<NodeId> allNodeIds;
   final Map<NodeId, NodeLocatorEntry> nodeLocator;
+  final Map<LayerId, int> layerIndexById;
   final IdGeneratorState idGeneratorState;
   final RevisionAllocatorState revisionState;
   final int controllerEpoch;

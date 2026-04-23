@@ -367,7 +367,8 @@ the callback remain usable.
 - base runtime scene
 - working selection
 - node-id set
-- node locator
+- stable node locator keyed by `contentLayerId` + `nodeIndex`
+- `layerIndexById` as the derived companion map for current content-layer order
 - id/revision allocator state
 - lazily materialized writable clones
 
@@ -644,6 +645,9 @@ important for architectural reasoning.
 ### Transaction and commit invariants
 
 - writes are synchronous, non-nested, and atomic
+- model helpers own semantic content-layer topology mutation; controller code
+  may carry `nodeLocator` / `layerIndexById`, but it must not repair topology
+  manually
 - the controller uses scene/layer/node copy-on-write
 - committed reads are snapshot-backed
 - mutable runtime scene state does not escape the write subsystem

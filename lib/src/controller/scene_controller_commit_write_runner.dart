@@ -80,6 +80,7 @@ final class SceneControllerCommitWriteRunner {
       workingSelection: HashSet.of(_store.selectedNodeIds),
       baseAllNodeIds: _store.allNodeIds,
       baseNodeLocator: _store.nodeLocator,
+      baseLayerIndexById: _store.layerIndexById,
       idGeneratorState: _store.idGeneratorState,
       revisionState: _store.revisionState,
     );

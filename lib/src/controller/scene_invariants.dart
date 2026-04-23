@@ -1,3 +1,4 @@
+import '../contract/ids.dart' show LayerId;
 import '../core/id_generator.dart';
 import '../core/nodes.dart';
 import '../core/revision_policy.dart';
@@ -24,6 +25,7 @@ List<String> txnCollectStoreInvariantViolations(CommittedStoreState state) {
       scene: state.scene,
       allNodeIds: state.allNodeIds,
       nodeLocator: state.nodeLocator,
+      layerIndexById: state.layerIndexById,
     ),
   );
   violations.addAll(
@@ -161,6 +163,7 @@ List<String> _txnCollectSceneIndexInvariantViolations({
   required Scene scene,
   required Set<NodeId> allNodeIds,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required Map<LayerId, int> layerIndexById,
 }) {
   final violations = <String>[];
 
@@ -184,6 +187,17 @@ List<String> _txnCollectSceneIndexInvariantViolations({
     violations.add(
       'nodeLocator must match buildNodeLocator(scene). '
       'actual=$nodeLocator expected=$expectedNodeLocator',
+    );
+  }
+
+  final expectedLayerIndexById = txnBuildLayerIndexById(scene);
+  if (layerIndexById.length != expectedLayerIndexById.length ||
+      !expectedLayerIndexById.entries.every(
+        (entry) => layerIndexById[entry.key] == entry.value,
+      )) {
+    violations.add(
+      'layerIndexById must match buildLayerIndexById(scene). '
+      'actual=$layerIndexById expected=$expectedLayerIndexById',
     );
   }
 
@@ -247,6 +261,7 @@ List<String> _txnCollectCriticalRuntimeSceneValidityInvariantViolations({
   return _txnCollectCriticalRuntimeSceneValidityViolationsForScope(
     scene: state.scene,
     nodeLocator: state.nodeLocator,
+    layerIndexById: state.layerIndexById,
     scope: scope,
   );
 }
@@ -283,6 +298,7 @@ _CriticalRuntimeValidationScope _txnBuildCriticalRuntimeValidationScope({
 List<String> _txnCollectCriticalRuntimeSceneValidityViolationsForScope({
   required Scene scene,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required Map<LayerId, int> layerIndexById,
   required _CriticalRuntimeValidationScope scope,
 }) {
   if (scope.validateFullScene) {
@@ -329,6 +345,7 @@ List<String> _txnCollectCriticalRuntimeSceneValidityViolationsForScope({
     _txnCollectCriticalTrackedNodeViolations(
       scene: scene,
       nodeLocator: nodeLocator,
+      layerIndexById: layerIndexById,
       nodeIds: scope.trackedNodeIds,
     ),
   );
@@ -339,6 +356,7 @@ List<String> _txnCollectCriticalRuntimeSceneValidityViolationsForScope({
 List<String> _txnCollectCriticalTrackedNodeViolations({
   required Scene scene,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  required Map<LayerId, int> layerIndexById,
   required Set<NodeId> nodeIds,
 }) {
   if (nodeIds.isEmpty) {
@@ -351,6 +369,7 @@ List<String> _txnCollectCriticalTrackedNodeViolations({
     final found = txnFindNodeByLocator(
       scene: scene,
       nodeLocator: nodeLocator,
+      layerIndexById: layerIndexById,
       nodeId: nodeId,
     );
     if (found == null) {

@@ -170,8 +170,8 @@ void main() {
     expect(
       ctx.debugNodeLocatorView(structuralChanged: true),
       <NodeId, NodeLocatorEntry>{
-        'node-7': (layerIndex: 0, nodeIndex: 0),
-        'manual': (layerIndex: 0, nodeIndex: 1),
+        'node-7': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
+        'manual': (contentLayerId: 'layer-auto-0', nodeIndex: 1),
       },
     );
     expect(ctx.nodeIdSeed, 1);
@@ -328,7 +328,7 @@ void main() {
     );
 
     expect(ctx.txnFindContentLayerIndexById('layer-auto-40'), 0);
-    expect(ctx.debugLayerIdIndexMaterializations, 2);
+    expect(ctx.debugLayerIdIndexMaterializations, 1);
   });
 
   test('TxnContext rebuilds stale layerId index on mismatch', () {
@@ -357,6 +357,46 @@ void main() {
     expect(ctx.txnFindContentLayerIndexById('layer-auto-51'), 0);
     expect(ctx.debugLayerIdIndexMaterializations, 2);
   });
+
+  test(
+    'TxnContext structural commit rebuilds materialized layerId index after clearScene',
+    () {
+      final baseScene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-53'),
+          ContentLayer(
+            id: 'layer-auto-54',
+            nodes: <SceneNode>[
+              RectNode(id: 'clear-me', size: const Size(1, 1)),
+            ],
+          ),
+        ],
+      );
+      final ctx = TxnContext(
+        baseScene: baseScene,
+        workingSelection: <NodeId>{},
+        baseAllNodeIds: txnCollectNodeIds(baseScene),
+        nodeIdSeed: 0,
+        nextInstanceRevision: 1,
+      );
+
+      expect(ctx.txnFindContentLayerIndexById('layer-auto-53'), 0);
+      expect(ctx.debugLayerIdIndexMaterializations, 1);
+
+      final cleared = txnClearSceneKeepBackground(
+        scene: ctx.txnEnsureMutableScene(),
+        nodeLocator: ctx.txnEnsureMutableNodeLocator(),
+        layerIndexById: ctx.txnLayerIndexByIdView(),
+      );
+
+      expect(cleared.didStructuralClear, isTrue);
+      expect(ctx.workingScene.layers, isEmpty);
+      expect(ctx.txnLayerIndexByIdView(), isEmpty);
+      expect(ctx.txnLayerIndexByIdForCommit(structuralChanged: true), isEmpty);
+      expect(ctx.txnFindContentLayerIndexById('layer-auto-53'), isNull);
+      expect(ctx.debugLayerIdIndexMaterializations, 2);
+    },
+  );
 
   test(
     'TxnContext ensureContentLayer shifts node locator, preserves cloned layer identity and layer seed',
@@ -487,7 +527,7 @@ void main() {
 
       expect(ctx.debugNodeLocatorMaterializations, 0);
       final locator = ctx.debugNodeLocatorView(structuralChanged: true);
-      expect(locator['r1'], (layerIndex: 0, nodeIndex: 0));
+      expect(locator['r1'], (contentLayerId: 'layer-auto-3', nodeIndex: 0));
       expect(ctx.debugNodeLocatorMaterializations, 1);
     },
   );
@@ -517,7 +557,7 @@ void main() {
       expect(ctx.debugNodeLocatorMaterializations, 1);
       expect(
         ctx.debugNodeLocatorView(structuralChanged: false),
-        containsPair('rebuilt', (layerIndex: 1, nodeIndex: 0)),
+        containsPair('rebuilt', (contentLayerId: 'layer-extra', nodeIndex: 0)),
       );
 
       ctx.txnRebuildNodeLocatorFromWorkingScene();
@@ -658,9 +698,9 @@ void main() {
       containsAll(<NodeId>{'node-2', 'node-9', 'custom'}),
     );
     expect(storeWithSelection.nodeLocator, <NodeId, NodeLocatorEntry>{
-      'node-2': (layerIndex: 0, nodeIndex: 0),
-      'node-9': (layerIndex: 0, nodeIndex: 1),
-      'custom': (layerIndex: 0, nodeIndex: 2),
+      'node-2': (contentLayerId: 'layer-auto-4', nodeIndex: 0),
+      'node-9': (contentLayerId: 'layer-auto-4', nodeIndex: 1),
+      'custom': (contentLayerId: 'layer-auto-4', nodeIndex: 2),
     });
     expect(storeWithSelection.nodeIdSeed, 1);
     expect(storeWithSelection.nextInstanceRevision, 1);

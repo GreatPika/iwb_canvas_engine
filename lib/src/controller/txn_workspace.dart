@@ -76,15 +76,16 @@ extension _TxnWorkspaceSceneOps on _TxnWorkspace {
     required _TxnDerivedState derivedState,
   }) {
     final scene = ensureMutableScene(ctx._debugStats);
-    final previousLayerCount = scene.layers.length;
-    final resolvedIndex = txnResolveInsertLayerIndex(
-      scene: scene,
-      nextLayerId: ctx.txnNextLayerId,
-    );
-    if (scene.layers.length != previousLayerCount) {
-      derivedState.invalidateLayerIdIndex();
+    if (scene.layers.isEmpty) {
+      final created = ensureContentLayer(
+        ctx: ctx,
+        derivedState: derivedState,
+        layerId: ctx.txnNextLayerId(),
+      );
+      assert(created, 'Generated layer ids must be unique.');
+      return 0;
     }
-    return resolvedIndex;
+    return scene.layers.length - 1;
   }
 
   Scene ensureMutableScene(_TxnDebugStats debugStats) {
@@ -109,24 +110,16 @@ extension _TxnWorkspaceSceneOps on _TxnWorkspace {
     int? index,
   }) {
     ctx.txnEnsureActive();
-    if (derivedState.hasLayerId(ctx: ctx, layerId: layerId)) {
-      return false;
-    }
-
     final scene = ensureMutableScene(ctx._debugStats);
-    final targetIndex = txnInsertContentLayerInScene(
+    return txnEnsureContentLayerInScene(
       scene: scene,
       layerId: layerId,
+      layerIndexById: derivedState.ensureMutableLayerIndexById(
+        scene: scene,
+        debugStats: ctx._debugStats,
+      ),
       insertIndex: index,
     );
-    if (targetIndex < scene.layers.length - 1) {
-      txnShiftNodeLocatorLayersFrom(
-        nodeLocator: derivedState.ensureMutableNodeLocator(ctx._debugStats),
-        startLayerIndex: targetIndex,
-      );
-    }
-    derivedState.invalidateLayerIdIndex();
-    return true;
   }
 
   BackgroundLayer ensureMutableBackgroundLayer({
@@ -219,7 +212,7 @@ extension _TxnWorkspaceNodeOps on _TxnWorkspace {
     }
 
     final cloned = txnCloneContentLayerShallow(current);
-    txnReplaceContentLayerInScene(
+    txnReplaceContentLayerSlotInScene(
       scene: scene,
       layerIndex: layerIndex,
       layer: cloned,

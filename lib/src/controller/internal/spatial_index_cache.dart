@@ -2,9 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
+import '../../contract/ids.dart' show LayerId;
 import '../../core/nodes.dart';
 import '../../core/scene.dart';
 import '../../core/scene_spatial_index.dart';
+import '../../core/scene_node_locator.dart';
 import '../change_set.dart';
 
 class SpatialIndexCache {
@@ -23,13 +25,18 @@ class SpatialIndexCache {
 
   List<SceneHitTestSpatialCandidate> writeQueryHitTestCandidates({
     required Scene scene,
-    required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
+    required Map<NodeId, NodeLocatorEntry> nodeLocator,
+    required Map<LayerId, int> layerIndexById,
     required Rect worldBounds,
     required int controllerEpoch,
   }) {
     final needsBuild = _index == null || _indexEpoch != controllerEpoch;
     if (needsBuild) {
-      _index = SceneSpatialIndex.build(scene, nodeLocator: nodeLocator);
+      _index = SceneSpatialIndex.build(
+        scene,
+        nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
+      );
       _indexEpoch = controllerEpoch;
       _debugBuildCount = _debugBuildCount + 1;
     }
@@ -42,7 +49,8 @@ class SpatialIndexCache {
 
   List<ScenePaintSpatialCandidate> writeQueryPaintCandidates({
     required Scene scene,
-    required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
+    required Map<NodeId, NodeLocatorEntry> nodeLocator,
+    required Map<LayerId, int> layerIndexById,
     required Rect worldBounds,
     required int controllerEpoch,
     ScenePaintSpatialQueryScope scope =
@@ -50,7 +58,11 @@ class SpatialIndexCache {
   }) {
     final needsBuild = _index == null || _indexEpoch != controllerEpoch;
     if (needsBuild) {
-      _index = SceneSpatialIndex.build(scene, nodeLocator: nodeLocator);
+      _index = SceneSpatialIndex.build(
+        scene,
+        nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
+      );
       _indexEpoch = controllerEpoch;
       _debugBuildCount = _debugBuildCount + 1;
     }
@@ -63,13 +75,15 @@ class SpatialIndexCache {
 
   void writeHandleCommit({
     required Scene scene,
-    required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
+    required Map<NodeId, NodeLocatorEntry> nodeLocator,
+    required Map<LayerId, int> layerIndexById,
     required ChangeSet changeSet,
     required int controllerEpoch,
   }) {
     final prepared = writePrepareCommit(
       scene: scene,
       nodeLocator: nodeLocator,
+      layerIndexById: layerIndexById,
       changeSet: changeSet,
       controllerEpoch: controllerEpoch,
     );
@@ -78,7 +92,8 @@ class SpatialIndexCache {
 
   Object writePrepareCommit({
     required Scene scene,
-    required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
+    required Map<NodeId, NodeLocatorEntry> nodeLocator,
+    required Map<LayerId, int> layerIndexById,
     required ChangeSet changeSet,
     required int controllerEpoch,
   }) {
@@ -109,6 +124,7 @@ class SpatialIndexCache {
         beforePrepareHook: debugBeforeIncrementalPrepareHook,
         scene: scene,
         nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
         changeSet: changeSet,
         controllerEpoch: controllerEpoch,
       ),
@@ -120,6 +136,7 @@ class SpatialIndexCache {
     return _prepareFallbackRebuild(
       scene: scene,
       nodeLocator: nodeLocator,
+      layerIndexById: layerIndexById,
       controllerEpoch: controllerEpoch,
     );
   }
@@ -153,11 +170,16 @@ class SpatialIndexCache {
 
   _PreparedSpatialIndexCommit _prepareFallbackRebuild({
     required Scene scene,
-    required Map<NodeId, SceneSpatialCandidateLocation> nodeLocator,
+    required Map<NodeId, NodeLocatorEntry> nodeLocator,
+    required Map<LayerId, int> layerIndexById,
     required int controllerEpoch,
   }) {
     debugBeforeFallbackRebuildHook?.call();
-    final rebuilt = SceneSpatialIndex.build(scene, nodeLocator: nodeLocator);
+    final rebuilt = SceneSpatialIndex.build(
+      scene,
+      nodeLocator: nodeLocator,
+      layerIndexById: layerIndexById,
+    );
     return _PreparedSpatialIndexCommit.replaceRebuilt(
       candidate: rebuilt,
       controllerEpoch: controllerEpoch,
@@ -213,10 +235,12 @@ _PreparedSpatialIndexCommit? _prepareIncrementalCommit(
     final candidate = args.index!.cloneForIncrementalUpdate(
       scene: args.scene,
       nodeLocator: args.nodeLocator,
+      layerIndexById: args.layerIndexById,
     );
     final applied = candidate.applyIncremental(
       scene: args.scene,
       nodeLocator: args.nodeLocator,
+      layerIndexById: args.layerIndexById,
       changeSet: SceneSpatialIndexChangeSet(
         addedNodeIds: args.changeSet.addedNodeIds,
         removedNodeIds: args.changeSet.removedNodeIds,
@@ -241,6 +265,7 @@ class _IncrementalPrepareArgs {
     required this.beforePrepareHook,
     required this.scene,
     required this.nodeLocator,
+    required this.layerIndexById,
     required this.changeSet,
     required this.controllerEpoch,
   });
@@ -248,7 +273,8 @@ class _IncrementalPrepareArgs {
   final SceneSpatialIndex? index;
   final void Function()? beforePrepareHook;
   final Scene scene;
-  final Map<NodeId, SceneSpatialCandidateLocation> nodeLocator;
+  final Map<NodeId, NodeLocatorEntry> nodeLocator;
+  final Map<LayerId, int> layerIndexById;
   final ChangeSet changeSet;
   final int controllerEpoch;
 }

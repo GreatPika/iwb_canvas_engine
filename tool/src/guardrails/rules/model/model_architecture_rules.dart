@@ -133,6 +133,12 @@ const Set<String> _guardedSceneLayersMutationMethods = <String>{
   'shuffle',
 };
 
+const Set<String> _forbiddenControllerTopologyHelperNames = <String>{
+  'txnInsertContentLayerInScene',
+  'txnReplaceContentLayerInScene',
+  'txnShiftNodeLocatorLayersFrom',
+};
+
 const Set<String> _removedResidualModelFiles = <String>{
   '/lib/src/model/scene_node_boundary_mapping_support.dart',
 };
@@ -393,7 +399,7 @@ Future<GuardrailViolation?> _checkControllerStructuralMutationGuardrail(
     filePath: filePosixPath,
     line: resolved.lineInfo.getLocation(violation.offset).lineNumber,
     message:
-        'model architecture violation: controller code must not mutate scene.layers directly via ${violation.operationLabel}; use model-owned scene layer mutation helpers instead.',
+        'model architecture violation: controller code must not own content-layer topology via ${violation.operationLabel}; use model-owned semantic topology helpers and keep controller on the topology-preserving slot seam only.',
   );
 }
 
@@ -498,7 +504,9 @@ final class _ControllerLayerMutationVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitMethodInvocation(MethodInvocation node) {
-    firstViolation ??= _matchControllerLayerMutation(node, context: context);
+    firstViolation ??=
+        _matchControllerLayerMutation(node, context: context) ??
+        _matchForbiddenControllerTopologyHelperCall(node, context: context);
     if (firstViolation != null) {
       return;
     }
@@ -644,6 +652,31 @@ _ControllerLayerMutationOccurrence? _matchControllerLayerAssignment(
   return _ControllerLayerMutationOccurrence(
     operationLabel: '[]=',
     offset: node.operator.offset,
+  );
+}
+
+_ControllerLayerMutationOccurrence? _matchForbiddenControllerTopologyHelperCall(
+  MethodInvocation node, {
+  required GuardrailContext context,
+}) {
+  final element = node.methodName.element;
+  if (element is! ExecutableElement) {
+    return null;
+  }
+  if (!_forbiddenControllerTopologyHelperNames.contains(element.displayName)) {
+    return null;
+  }
+  final repoRelPath = element_utils.repoRelPathForElement(
+    element: element,
+    context: context,
+    requireLibPrefix: true,
+  );
+  if (repoRelPath != '/lib/src/model/document.dart') {
+    return null;
+  }
+  return _ControllerLayerMutationOccurrence(
+    operationLabel: '${element.displayName}(...)',
+    offset: node.methodName.offset,
   );
 }
 

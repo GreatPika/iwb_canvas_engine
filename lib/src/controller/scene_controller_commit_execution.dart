@@ -74,6 +74,7 @@ SceneControllerWriteCommitResult _executeEffectsOnlyPlan({
       selectedNodeIds: context.store.selectedNodeIds,
       allNodeIds: context.store.allNodeIds,
       nodeLocator: context.store.nodeLocator,
+      layerIndexById: context.store.layerIndexById,
       idGeneratorState: context.store.idGeneratorState,
       revisionState: context.store.revisionState,
       controllerEpoch: context.store.controllerEpoch,
@@ -124,6 +125,7 @@ SceneControllerWriteCommitResult _executeStatePlan({
   final preparedSpatialCommit = context.spatialIndexCache.writePrepareCommit(
     scene: committedStoreState.scene,
     nodeLocator: committedStoreState.nodeLocator,
+    layerIndexById: committedStoreState.layerIndexById,
     changeSet: plan.changeSet,
     controllerEpoch: committedStoreState.controllerEpoch,
   );
@@ -181,6 +183,7 @@ void _applyCommittedStore({
   store.selectedNodeIds = committedStoreState.selectedNodeIds;
   store.allNodeIds = committedStoreState.allNodeIds;
   store.nodeLocator = committedStoreState.nodeLocator;
+  store.layerIndexById = committedStoreState.layerIndexById;
   store.idGeneratorState = committedStoreState.idGeneratorState;
   store.revisionState = committedStoreState.revisionState;
   store.controllerEpoch = committedStoreState.controllerEpoch;

@@ -12,6 +12,7 @@ class MutationCommitCandidate {
     required this.selection,
     required this.allNodeIds,
     required this.nodeLocator,
+    required this.layerIndexById,
     required this.idGeneratorState,
     required this.revisionState,
   });
@@ -20,6 +21,7 @@ class MutationCommitCandidate {
   final Set<NodeId> selection;
   final Set<NodeId> allNodeIds;
   final Map<NodeId, NodeLocatorEntry> nodeLocator;
+  final Map<LayerId, int> layerIndexById;
   final IdGeneratorState idGeneratorState;
   final RevisionAllocatorState revisionState;
 }

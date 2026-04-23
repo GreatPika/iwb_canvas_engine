@@ -15,7 +15,7 @@ import 'scene_node_boundary_mapping.dart';
 import 'scene_from_snapshot.dart';
 import 'scene_snapshot_from_scene.dart';
 
-typedef NodeLocatorEntry = ({int layerIndex, int nodeIndex});
+typedef NodeLocatorEntry = ({LayerId? contentLayerId, int nodeIndex});
 typedef PreparedNodeRemoval = ({NodeId nodeId, int nodeIndex});
 typedef PreparedNodeRemovalsByLayer = Map<int, List<PreparedNodeRemoval>>;
 
@@ -42,25 +42,21 @@ Map<NodeId, NodeLocatorEntry> txnBuildNodeLocator(Scene scene) {
   return document_locator.txnBuildNodeLocator(scene);
 }
 
+Map<LayerId, int> txnBuildLayerIndexById(Scene scene) {
+  return document_locator.txnBuildLayerIndexById(scene);
+}
+
 ({SceneNode node, int layerIndex, int nodeIndex})? txnFindNodeByLocator({
   required Scene scene,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  Map<LayerId, int>? layerIndexById,
   required NodeId nodeId,
 }) {
   return document_locator.txnFindNodeByLocator(
     scene: scene,
     nodeLocator: nodeLocator,
+    layerIndexById: layerIndexById,
     nodeId: nodeId,
-  );
-}
-
-void txnShiftNodeLocatorLayersFrom({
-  required Map<NodeId, NodeLocatorEntry> nodeLocator,
-  required int startLayerIndex,
-}) {
-  document_locator.txnShiftNodeLocatorLayersFrom(
-    nodeLocator: nodeLocator,
-    startLayerIndex: startLayerIndex,
   );
 }
 
@@ -139,14 +135,30 @@ bool txnInsertNodeInScene({
   );
 }
 
+bool txnEnsureContentLayerInScene({
+  required Scene scene,
+  required LayerId layerId,
+  required Map<LayerId, int> layerIndexById,
+  int? insertIndex,
+}) {
+  return document_scene_insert.txnEnsureContentLayerInScene(
+    scene: scene,
+    layerId: layerId,
+    layerIndexById: layerIndexById,
+    insertIndex: insertIndex,
+  );
+}
+
 int txnInsertContentLayerInScene({
   required Scene scene,
   required LayerId layerId,
+  Map<LayerId, int>? layerIndexById,
   int? insertIndex,
 }) {
   return document_scene_insert.txnInsertContentLayerInScene(
     scene: scene,
     layerId: layerId,
+    layerIndexById: layerIndexById,
     insertIndex: insertIndex,
   );
 }
@@ -155,8 +167,24 @@ void txnReplaceContentLayerInScene({
   required Scene scene,
   required int layerIndex,
   required ContentLayer layer,
+  Map<NodeId, NodeLocatorEntry>? nodeLocator,
+  Map<LayerId, int>? layerIndexById,
 }) {
   document_scene_insert.txnReplaceContentLayerInScene(
+    scene: scene,
+    layerIndex: layerIndex,
+    layer: layer,
+    nodeLocator: nodeLocator,
+    layerIndexById: layerIndexById,
+  );
+}
+
+void txnReplaceContentLayerSlotInScene({
+  required Scene scene,
+  required int layerIndex,
+  required ContentLayer layer,
+}) {
+  document_scene_insert.txnReplaceContentLayerSlotInScene(
     scene: scene,
     layerIndex: layerIndex,
     layer: layer,
@@ -166,11 +194,13 @@ void txnReplaceContentLayerInScene({
 SceneNode? txnEraseNodeFromScene({
   required Scene scene,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  Map<LayerId, int>? layerIndexById,
   required NodeId nodeId,
 }) {
   return document_scene_edit.txnEraseNodeFromScene(
     scene: scene,
     nodeLocator: nodeLocator,
+    layerIndexById: layerIndexById,
     nodeId: nodeId,
   );
 }
@@ -190,11 +220,13 @@ List<NodeId> txnErasePreparedNodesFromScene({
 List<NodeId> txnEraseNodesFromScene({
   required Scene scene,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  Map<LayerId, int>? layerIndexById,
   required Set<NodeId> nodeIds,
 }) {
   return document_scene_edit.txnEraseNodesFromScene(
     scene: scene,
     nodeLocator: nodeLocator,
+    layerIndexById: layerIndexById,
     nodeIds: nodeIds,
   );
 }
@@ -202,10 +234,12 @@ List<NodeId> txnEraseNodesFromScene({
 TxnClearSceneKeepBackgroundResult txnClearSceneKeepBackground({
   required Scene scene,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  Map<LayerId, int>? layerIndexById,
 }) {
   final result = document_scene_edit.txnClearSceneKeepBackground(
     scene: scene,
     nodeLocator: nodeLocator,
+    layerIndexById: layerIndexById,
   );
   return TxnClearSceneKeepBackgroundResult(
     removedNodeIds: result.removedNodeIds,
@@ -217,11 +251,13 @@ int txnResolveInsertLayerIndex({
   required Scene scene,
   LayerId? layerId,
   LayerId Function()? nextLayerId,
+  Map<LayerId, int>? layerIndexById,
 }) {
   return document_scene_insert.txnResolveInsertLayerIndex(
     scene: scene,
     layerId: layerId,
     nextLayerId: nextLayerId,
+    layerIndexById: layerIndexById,
   );
 }
 
@@ -239,11 +275,13 @@ Set<NodeId> txnNormalizeSelection({
   required Set<NodeId> rawSelection,
   required Scene scene,
   Map<NodeId, NodeLocatorEntry>? nodeLocator,
+  Map<LayerId, int>? layerIndexById,
 }) {
   return document_selection.txnNormalizeSelection(
     rawSelection: rawSelection,
     scene: scene,
     nodeLocator: nodeLocator,
+    layerIndexById: layerIndexById,
   );
 }
 
@@ -251,11 +289,13 @@ bool txnIsSelectionCandidateId({
   required Scene scene,
   required NodeId nodeId,
   Map<NodeId, NodeLocatorEntry>? nodeLocator,
+  Map<LayerId, int>? layerIndexById,
 }) {
   return document_selection.txnIsSelectionCandidateId(
     scene: scene,
     nodeId: nodeId,
     nodeLocator: nodeLocator,
+    layerIndexById: layerIndexById,
   );
 }
 

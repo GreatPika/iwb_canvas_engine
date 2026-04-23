@@ -2,12 +2,14 @@ import 'dart:collection';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contract/ids.dart' show LayerId;
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/core/hit_test.dart';
 import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
+import 'package:iwb_canvas_engine/src/core/scene_node_locator.dart';
 import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
 
 class _ThrowingLookupMap<K, V> extends MapBase<K, V> {
@@ -90,6 +92,13 @@ void main() {
         ContentLayer(id: 'layer-auto-0', nodes: <SceneNode>[node]),
       ],
     );
+  }
+
+  Map<LayerId, int> buildLayerIndexById(Scene scene) {
+    return <LayerId, int>{
+      for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++)
+        scene.layers[layerIndex].id: layerIndex,
+    };
   }
 
   RectNode rectCoveringCells({
@@ -652,14 +661,14 @@ void main() {
         RectNode(id: 'r1', size: const Size(100, 100)),
       );
       final index = SceneSpatialIndex.build(scene);
-      final throwingLookup =
-          _ThrowingLookupMap<NodeId, SceneSpatialCandidateLocation>({
-            'r1': (layerIndex: 0, nodeIndex: 0),
-          });
+      final throwingLookup = _ThrowingLookupMap<NodeId, NodeLocatorEntry>({
+        'r1': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
+      });
 
       final applied = index.applyIncremental(
         scene: scene,
         nodeLocator: throwingLookup,
+        layerIndexById: buildLayerIndexById(scene),
         changeSet: const SceneSpatialIndexChangeSet(
           addedNodeIds: <NodeId>{},
           removedNodeIds: <NodeId>{},
@@ -683,14 +692,14 @@ void main() {
         RectNode(id: 'paint-r1', size: const Size(100, 100)),
       );
       final index = SceneSpatialIndex.build(scene);
-      final throwingLookup =
-          _ThrowingLookupMap<NodeId, SceneSpatialCandidateLocation>({
-            'paint-r1': (layerIndex: 0, nodeIndex: 0),
-          });
+      final throwingLookup = _ThrowingLookupMap<NodeId, NodeLocatorEntry>({
+        'paint-r1': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
+      });
 
       final applied = index.applyIncremental(
         scene: scene,
         nodeLocator: throwingLookup,
+        layerIndexById: buildLayerIndexById(scene),
         changeSet: const SceneSpatialIndexChangeSet(
           addedNodeIds: <NodeId>{},
           removedNodeIds: <NodeId>{},
@@ -717,13 +726,14 @@ void main() {
       );
       final index = SceneSpatialIndex.build(scene);
       final throwingContainsKey =
-          _ThrowingContainsKeyMap<NodeId, SceneSpatialCandidateLocation>({
-            'r1': (layerIndex: 0, nodeIndex: 0),
+          _ThrowingContainsKeyMap<NodeId, NodeLocatorEntry>({
+            'r1': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
           });
 
       final applied = index.applyIncremental(
         scene: scene,
         nodeLocator: throwingContainsKey,
+        layerIndexById: buildLayerIndexById(scene),
         changeSet: const SceneSpatialIndexChangeSet(
           addedNodeIds: <NodeId>{},
           removedNodeIds: <NodeId>{},
@@ -742,12 +752,13 @@ void main() {
       final sourceScene = sceneWithRect(
         RectNode(id: 'r1', size: const Size(10, 10)),
       );
-      final sourceLocator = <NodeId, SceneSpatialCandidateLocation>{
-        'r1': (layerIndex: 0, nodeIndex: 0),
+      final sourceLocator = <NodeId, NodeLocatorEntry>{
+        'r1': (contentLayerId: 'layer-auto-0', nodeIndex: 0),
       };
       final sourceIndex = SceneSpatialIndex.build(
         sourceScene,
         nodeLocator: sourceLocator,
+        layerIndexById: buildLayerIndexById(sourceScene),
       );
 
       final movedScene = Scene(
@@ -764,17 +775,19 @@ void main() {
           ),
         ],
       );
-      final movedLocator = <NodeId, SceneSpatialCandidateLocation>{
-        'r1': (layerIndex: 0, nodeIndex: 0),
+      final movedLocator = <NodeId, NodeLocatorEntry>{
+        'r1': (contentLayerId: 'layer-auto-3', nodeIndex: 0),
       };
 
       final candidate = sourceIndex.cloneForIncrementalUpdate(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: buildLayerIndexById(movedScene),
       );
       final applied = candidate.applyIncremental(
         scene: movedScene,
         nodeLocator: movedLocator,
+        layerIndexById: buildLayerIndexById(movedScene),
         changeSet: const SceneSpatialIndexChangeSet(
           addedNodeIds: <NodeId>{},
           removedNodeIds: <NodeId>{},
@@ -817,12 +830,13 @@ void main() {
         ],
       ),
     );
-    final originalLocator = <NodeId, SceneSpatialCandidateLocation>{
-      'bg-incremental': (layerIndex: -1, nodeIndex: 0),
+    final originalLocator = <NodeId, NodeLocatorEntry>{
+      'bg-incremental': (contentLayerId: null, nodeIndex: 0),
     };
     final index = SceneSpatialIndex.build(
       originalScene,
       nodeLocator: originalLocator,
+      layerIndexById: buildLayerIndexById(originalScene),
     );
 
     final movedScene = Scene(
@@ -836,13 +850,14 @@ void main() {
         ],
       ),
     );
-    final movedLocator = <NodeId, SceneSpatialCandidateLocation>{
-      'bg-incremental': (layerIndex: -1, nodeIndex: 0),
+    final movedLocator = <NodeId, NodeLocatorEntry>{
+      'bg-incremental': (contentLayerId: null, nodeIndex: 0),
     };
 
     final applied = index.applyIncremental(
       scene: movedScene,
       nodeLocator: movedLocator,
+      layerIndexById: buildLayerIndexById(movedScene),
       changeSet: const SceneSpatialIndexChangeSet(
         addedNodeIds: <NodeId>{},
         removedNodeIds: <NodeId>{},
@@ -886,13 +901,14 @@ void main() {
         ),
       ],
     );
-    final originalLocator = <NodeId, SceneSpatialCandidateLocation>{
-      'a-first': (layerIndex: 0, nodeIndex: 0),
-      'b-second': (layerIndex: 0, nodeIndex: 1),
+    final originalLocator = <NodeId, NodeLocatorEntry>{
+      'a-first': (contentLayerId: 'layer-insert-order', nodeIndex: 0),
+      'b-second': (contentLayerId: 'layer-insert-order', nodeIndex: 1),
     };
     final index = SceneSpatialIndex.build(
       originalScene,
       nodeLocator: originalLocator,
+      layerIndexById: buildLayerIndexById(originalScene),
     );
 
     final updatedScene = Scene(
@@ -919,15 +935,16 @@ void main() {
         ),
       ],
     );
-    final updatedLocator = <NodeId, SceneSpatialCandidateLocation>{
-      'z-inserted': (layerIndex: 0, nodeIndex: 0),
-      'a-first': (layerIndex: 0, nodeIndex: 1),
-      'b-second': (layerIndex: 0, nodeIndex: 2),
+    final updatedLocator = <NodeId, NodeLocatorEntry>{
+      'z-inserted': (contentLayerId: 'layer-insert-order', nodeIndex: 0),
+      'a-first': (contentLayerId: 'layer-insert-order', nodeIndex: 1),
+      'b-second': (contentLayerId: 'layer-insert-order', nodeIndex: 2),
     };
 
     final applied = index.applyIncremental(
       scene: updatedScene,
       nodeLocator: updatedLocator,
+      layerIndexById: buildLayerIndexById(updatedScene),
       changeSet: const SceneSpatialIndexChangeSet(
         addedNodeIds: <NodeId>{'z-inserted'},
         removedNodeIds: <NodeId>{},
@@ -971,14 +988,15 @@ void main() {
         ),
       ],
     );
-    final originalLocator = <NodeId, SceneSpatialCandidateLocation>{
-      'z-removed': (layerIndex: 0, nodeIndex: 0),
-      'a-first': (layerIndex: 0, nodeIndex: 1),
-      'b-second': (layerIndex: 0, nodeIndex: 2),
+    final originalLocator = <NodeId, NodeLocatorEntry>{
+      'z-removed': (contentLayerId: 'layer-remove-order', nodeIndex: 0),
+      'a-first': (contentLayerId: 'layer-remove-order', nodeIndex: 1),
+      'b-second': (contentLayerId: 'layer-remove-order', nodeIndex: 2),
     };
     final index = SceneSpatialIndex.build(
       originalScene,
       nodeLocator: originalLocator,
+      layerIndexById: buildLayerIndexById(originalScene),
     );
 
     final updatedScene = Scene(
@@ -1000,14 +1018,15 @@ void main() {
         ),
       ],
     );
-    final updatedLocator = <NodeId, SceneSpatialCandidateLocation>{
-      'a-first': (layerIndex: 0, nodeIndex: 0),
-      'b-second': (layerIndex: 0, nodeIndex: 1),
+    final updatedLocator = <NodeId, NodeLocatorEntry>{
+      'a-first': (contentLayerId: 'layer-remove-order', nodeIndex: 0),
+      'b-second': (contentLayerId: 'layer-remove-order', nodeIndex: 1),
     };
 
     final applied = index.applyIncremental(
       scene: updatedScene,
       nodeLocator: updatedLocator,
+      layerIndexById: buildLayerIndexById(updatedScene),
       changeSet: const SceneSpatialIndexChangeSet(
         addedNodeIds: <NodeId>{},
         removedNodeIds: <NodeId>{'z-removed'},
@@ -1028,7 +1047,8 @@ void main() {
   test('build catches scene iteration errors and marks index invalid', () {
     final index = SceneSpatialIndex.build(
       _ThrowingLayersScene(),
-      nodeLocator: const <NodeId, SceneSpatialCandidateLocation>{},
+      nodeLocator: const <NodeId, NodeLocatorEntry>{},
+      layerIndexById: const <LayerId, int>{},
     );
     expect(index.isValid, isFalse);
   });
@@ -1046,12 +1066,13 @@ void main() {
         ContentLayer(id: 'layer-auto-parity', nodes: <SceneNode>[originalNode]),
       ],
     );
-    final originalLocator = <NodeId, SceneSpatialCandidateLocation>{
-      originalNode.id: (layerIndex: 0, nodeIndex: 0),
+    final originalLocator = <NodeId, NodeLocatorEntry>{
+      originalNode.id: (contentLayerId: 'layer-auto-parity', nodeIndex: 0),
     };
     final incremental = SceneSpatialIndex.build(
       originalScene,
       nodeLocator: originalLocator,
+      layerIndexById: buildLayerIndexById(originalScene),
     );
 
     final movedNode = StrokeNode(
@@ -1066,13 +1087,14 @@ void main() {
         ContentLayer(id: 'layer-auto-parity', nodes: <SceneNode>[movedNode]),
       ],
     );
-    final movedLocator = <NodeId, SceneSpatialCandidateLocation>{
-      movedNode.id: (layerIndex: 0, nodeIndex: 0),
+    final movedLocator = <NodeId, NodeLocatorEntry>{
+      movedNode.id: (contentLayerId: 'layer-auto-parity', nodeIndex: 0),
     };
 
     final applied = incremental.applyIncremental(
       scene: movedScene,
       nodeLocator: movedLocator,
+      layerIndexById: buildLayerIndexById(movedScene),
       changeSet: SceneSpatialIndexChangeSet(
         addedNodeIds: const <NodeId>{},
         removedNodeIds: const <NodeId>{},
@@ -1082,6 +1104,7 @@ void main() {
     final rebuilt = SceneSpatialIndex.build(
       movedScene,
       nodeLocator: movedLocator,
+      layerIndexById: buildLayerIndexById(movedScene),
     );
     final queryRect = const Rect.fromLTWH(40, 0, 100, 60);
 

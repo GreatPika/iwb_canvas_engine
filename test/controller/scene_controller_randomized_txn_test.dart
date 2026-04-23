@@ -249,6 +249,7 @@ void _assertPostConditions({
       selectedNodeIds: controller.selectedNodeIds,
       allNodeIds: txnCollectNodeIds(scene),
       nodeLocator: txnBuildNodeLocator(scene),
+      layerIndexById: txnBuildLayerIndexById(scene),
       idGeneratorState: controller.debug.idGeneratorState,
       revisionState: createInitialRevisionAllocatorState(
         nextInstanceRevision: 1,

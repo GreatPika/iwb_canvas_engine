@@ -1,13 +1,16 @@
 import 'dart:ui';
 
+import '../contract/ids.dart' show LayerId;
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import '../core/scene_node_locator.dart';
 import 'document_locator.dart' as locator;
 
 Set<NodeId> txnNormalizeSelection({
   required Set<NodeId> rawSelection,
   required Scene scene,
-  Map<NodeId, ({int layerIndex, int nodeIndex})>? nodeLocator,
+  Map<NodeId, NodeLocatorEntry>? nodeLocator,
+  Map<LayerId, int>? layerIndexById,
 }) {
   return <NodeId>{
     for (final id in rawSelection)
@@ -15,6 +18,7 @@ Set<NodeId> txnNormalizeSelection({
         scene: scene,
         nodeId: id,
         nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
       ))
         id,
   };
@@ -23,13 +27,16 @@ Set<NodeId> txnNormalizeSelection({
 bool txnIsSelectionCandidateId({
   required Scene scene,
   required NodeId nodeId,
-  Map<NodeId, ({int layerIndex, int nodeIndex})>? nodeLocator,
+  Map<NodeId, NodeLocatorEntry>? nodeLocator,
+  Map<LayerId, int>? layerIndexById,
 }) {
   final found = nodeLocator == null
       ? locator.txnFindNodeById(scene, nodeId)
       : locator.txnFindNodeByLocator(
           scene: scene,
           nodeLocator: nodeLocator,
+          layerIndexById:
+              layerIndexById ?? locator.txnBuildLayerIndexById(scene),
           nodeId: nodeId,
         );
   if (found == null || found.layerIndex == -1) {

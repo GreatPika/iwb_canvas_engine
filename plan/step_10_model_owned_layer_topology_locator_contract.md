@@ -566,7 +566,7 @@ removing controller-side locator repair.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Stable Layer-Identity Locator In The Write Path
+### Slice 1. [x] Stable Layer-Identity Locator In The Write Path
 
 #### Slice Contract
 
@@ -632,7 +632,7 @@ on controller-side locator repair.
 - source inspection proves the controller write path no longer repairs locator
   layer indices manually
 
-### Slice 2. [ ] Committed Resolver And Spatial Consumer Migration
+### Slice 2. [x] Committed Resolver And Spatial Consumer Migration
 
 #### Slice Contract
 
@@ -690,7 +690,7 @@ entries plus `layerIndexById` while preserving current positional outputs.
 - no per-insert node-locator layer-index rewrite remains in committed or core
   consumers
 
-### Slice 3. [ ] Guardrail And Documentation Alignment
+### Slice 3. [x] Guardrail And Documentation Alignment
 
 #### Slice Contract
 

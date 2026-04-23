@@ -5,7 +5,8 @@ import 'package:flutter/foundation.dart';
 import '../contract/scene_render_state.dart';
 import '../core/scene.dart' show Scene;
 import '../core/scene_spatial_index.dart';
-import '../model/document.dart';
+import '../model/document.dart'
+    show NodeLocatorEntry, txnSceneFromSnapshot, txnSceneToSnapshot;
 import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
 import 'commands/draw_commands.dart';
@@ -114,6 +115,7 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
     return _commitRuntime.spatialIndexCache.writeQueryHitTestCandidates(
       scene: _store.sceneDoc,
       nodeLocator: _store.nodeLocator,
+      layerIndexById: _store.layerIndexById,
       worldBounds: worldBounds,
       controllerEpoch: _store.controllerEpoch,
     );
@@ -127,6 +129,7 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
     return _commitRuntime.spatialIndexCache.writeQueryPaintCandidates(
       scene: _store.sceneDoc,
       nodeLocator: _store.nodeLocator,
+      layerIndexById: _store.layerIndexById,
       worldBounds: worldBounds,
       controllerEpoch: _store.controllerEpoch,
       scope: scope,
@@ -151,10 +154,17 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
     if (location == null) {
       return null;
     }
+    final layerIndex = _resolveCommittedLayerIndex(
+      location: location,
+      layerIndexById: _store.layerIndexById,
+    );
+    if (layerIndex == null) {
+      return null;
+    }
     return _resolveSnapshotAtLocationInSnapshot(
       snapshot: snapshot,
       nodeId: nodeId,
-      layerIndex: location.layerIndex,
+      layerIndex: layerIndex,
       nodeIndex: location.nodeIndex,
     );
   }
@@ -162,6 +172,17 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   Offset centerWorldForNodeSnapshots(Iterable<NodeSnapshot> snapshots) {
     return centerWorldForNodeSnapshotsMaterialized(snapshots);
   }
+}
+
+int? _resolveCommittedLayerIndex({
+  required NodeLocatorEntry location,
+  required Map<LayerId, int> layerIndexById,
+}) {
+  final contentLayerId = location.contentLayerId;
+  if (contentLayerId == null) {
+    return -1;
+  }
+  return layerIndexById[contentLayerId];
 }
 
 extension SceneStoreControllerCommittedSceneReplacementAccess

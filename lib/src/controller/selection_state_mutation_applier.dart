@@ -30,6 +30,7 @@ MutationApplyResult<List<NodeId>?> _replaceSelection(
     rawSelection: nodeIds,
     scene: ctx.workingScene,
     nodeLocator: ctx.txnNodeLocatorView(),
+    layerIndexById: ctx.txnLayerIndexByIdView(),
   );
   if (nextSelection.isEmpty ||
       _selectionSetsEqual(ctx.workingSelection, nextSelection)) {
@@ -51,6 +52,7 @@ MutationApplyResult<bool> _toggleSelection(TxnContext ctx, NodeId nodeId) {
     scene: ctx.workingScene,
     nodeId: nodeId,
     nodeLocator: ctx.txnNodeLocatorView(),
+    layerIndexById: ctx.txnLayerIndexByIdView(),
   )) {
     return const MutationApplyResult<bool>(value: false, changed: false);
   }

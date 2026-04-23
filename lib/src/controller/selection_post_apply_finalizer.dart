@@ -7,6 +7,7 @@ void finalizePostApplySelection(TxnContext ctx) {
     rawSelection: ctx.workingSelection,
     scene: ctx.workingScene,
     nodeLocator: ctx.txnNodeLocatorView(),
+    layerIndexById: ctx.txnLayerIndexByIdView(),
   );
   if (_selectionSetsEqual(ctx.workingSelection, normalizedSelection)) {
     return;

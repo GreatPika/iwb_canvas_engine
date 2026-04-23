@@ -61,6 +61,9 @@ in changes that have not yet been published to pub.dev.
   again at the public boundary.
 - Canonicalized nullable patch null writes so `PatchField<T?>.value(null)` now
   resolves to the same explicit-null state as `PatchField.nullValue()`.
+- Moved runtime content-layer topology ownership fully into the model seam.
+  Stable node locators now track `contentLayerId`, while transaction and
+  committed state carry a derived `layerIndexById` companion map.
 
 ### Fixed
 
@@ -83,6 +86,9 @@ in changes that have not yet been published to pub.dev.
 - Fixed controller-owned pointer-session lifecycle so successful same-runtime
   epoch breaks clear pending tap history and still-mounted view hosts ignore
   late routed callbacks after controller disposal.
+- Fixed same-write and committed node resolution after inserted content layers.
+  Ensuring a layer before later delete/patch/selection or committed snapshot
+  resolution no longer leaves stale positional locators behind.
 
 ## 5.1.0 (2026-03-04)
 

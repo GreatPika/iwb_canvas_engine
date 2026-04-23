@@ -632,20 +632,79 @@ void main() {
     );
   });
 
-  test('txnShiftNodeLocatorLayersFrom shifts only content-layer entries', () {
-    final locator = <NodeId, NodeLocatorEntry>{
-      'bg': (layerIndex: -1, nodeIndex: 0),
-      'a': (layerIndex: 0, nodeIndex: 0),
-      'b': (layerIndex: 1, nodeIndex: 0),
-      'c': (layerIndex: 2, nodeIndex: 3),
-    };
+  test(
+    'txnInsertContentLayerInScene keeps stable locator entries and updates layerIndexById',
+    () {
+      final scene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
+        ),
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-a'),
+          ContentLayer(
+            id: 'layer-b',
+            nodes: <SceneNode>[RectNode(id: 'tail', size: const Size(1, 1))],
+          ),
+          ContentLayer(
+            id: 'layer-c',
+            nodes: <SceneNode>[RectNode(id: 'tail-2', size: const Size(1, 1))],
+          ),
+        ],
+      );
+      final locator = txnBuildNodeLocator(scene);
+      final layerIndexById = txnBuildLayerIndexById(scene);
 
-    txnShiftNodeLocatorLayersFrom(nodeLocator: locator, startLayerIndex: 1);
+      txnInsertContentLayerInScene(
+        scene: scene,
+        layerId: 'layer-inserted',
+        layerIndexById: layerIndexById,
+        insertIndex: 1,
+      );
 
-    expect(locator['bg'], (layerIndex: -1, nodeIndex: 0));
-    expect(locator['a'], (layerIndex: 0, nodeIndex: 0));
-    expect(locator['b'], (layerIndex: 2, nodeIndex: 0));
-    expect(locator['c'], (layerIndex: 3, nodeIndex: 3));
+      expect(locator['bg'], (contentLayerId: null, nodeIndex: 0));
+      expect(locator['tail'], (contentLayerId: 'layer-b', nodeIndex: 0));
+      expect(locator['tail-2'], (contentLayerId: 'layer-c', nodeIndex: 0));
+      expect(layerIndexById, <LayerId, int>{
+        'layer-a': 0,
+        'layer-inserted': 1,
+        'layer-b': 2,
+        'layer-c': 3,
+      });
+      expect(
+        txnFindNodeByLocator(
+          scene: scene,
+          nodeLocator: locator,
+          layerIndexById: layerIndexById,
+          nodeId: 'tail',
+        )?.layerIndex,
+        2,
+      );
+    },
+  );
+
+  test('txnInsertContentLayerInScene rejects duplicate content layer ids', () {
+    final scene = Scene(
+      layers: <ContentLayer>[
+        ContentLayer(id: 'layer-a'),
+        ContentLayer(id: 'layer-b'),
+      ],
+    );
+
+    expect(
+      () => txnInsertContentLayerInScene(
+        scene: scene,
+        layerId: 'layer-b',
+        layerIndexById: txnBuildLayerIndexById(scene),
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.duplicateLayerId &&
+              e.path == 'layers[2].id',
+        ),
+      ),
+    );
   });
 
   test('txnInsertNodeInScene rejects duplicate node ids', () {
@@ -713,8 +772,8 @@ void main() {
       scene.layers.single.nodes.map((node) => node.id).toList(growable: false),
       <String>['a', 'mid', 'b'],
     );
-    expect(locator['mid'], (layerIndex: 0, nodeIndex: 1));
-    expect(locator['b'], (layerIndex: 0, nodeIndex: 2));
+    expect(locator['mid'], (contentLayerId: 'layer-auto-11b', nodeIndex: 1));
+    expect(locator['b'], (contentLayerId: 'layer-auto-11b', nodeIndex: 2));
 
     expect(
       () => txnInsertNodeInScene(
@@ -811,7 +870,7 @@ void main() {
 
     final wrongIndexLocator = <NodeId, NodeLocatorEntry>{
       ...locator,
-      'bg-b': (layerIndex: -1, nodeIndex: 99),
+      'bg-b': (contentLayerId: null, nodeIndex: 99),
     };
     expect(
       txnFindNodeByLocator(
@@ -824,7 +883,7 @@ void main() {
 
     final wrongIdLocator = <NodeId, NodeLocatorEntry>{
       ...locator,
-      'bg-a': (layerIndex: -1, nodeIndex: 1),
+      'bg-a': (contentLayerId: null, nodeIndex: 1),
     };
     expect(
       txnFindNodeByLocator(
@@ -842,7 +901,7 @@ void main() {
     );
     expect(removed, isNotNull);
     expect(locator.containsKey('bg-a'), isFalse);
-    expect(locator['bg-b'], (layerIndex: -1, nodeIndex: 0));
+    expect(locator['bg-b'], (contentLayerId: null, nodeIndex: 0));
 
     scene.backgroundLayer = null;
     expect(
@@ -873,8 +932,8 @@ void main() {
     );
     expect(removed, isNotNull);
     expect(locator.containsKey('b'), isFalse);
-    expect(locator['a'], (layerIndex: 0, nodeIndex: 0));
-    expect(locator['c'], (layerIndex: 0, nodeIndex: 1));
+    expect(locator['a'], (contentLayerId: 'layer-auto-13', nodeIndex: 0));
+    expect(locator['c'], (contentLayerId: 'layer-auto-13', nodeIndex: 1));
   });
 
   test(
@@ -923,9 +982,12 @@ void main() {
         scene.layers[1].nodes.map((node) => node.id).toList(growable: false),
         const <NodeId>['b'],
       );
-      expect(locator['bg'], (layerIndex: -1, nodeIndex: 0));
-      expect(locator['locked'], (layerIndex: 0, nodeIndex: 0));
-      expect(locator['b'], (layerIndex: 1, nodeIndex: 0));
+      expect(locator['bg'], (contentLayerId: null, nodeIndex: 0));
+      expect(locator['locked'], (
+        contentLayerId: 'layer-auto-13a',
+        nodeIndex: 0,
+      ));
+      expect(locator['b'], (contentLayerId: 'layer-auto-13b', nodeIndex: 0));
     },
   );
 
@@ -984,9 +1046,9 @@ void main() {
         scene.layers[1].nodes.map((node) => node.id).toList(growable: false),
         const <NodeId>['c'],
       );
-      expect(locator['bg-b'], (layerIndex: -1, nodeIndex: 0));
-      expect(locator['a'], (layerIndex: 0, nodeIndex: 0));
-      expect(locator['c'], (layerIndex: 1, nodeIndex: 0));
+      expect(locator['bg-b'], (contentLayerId: null, nodeIndex: 0));
+      expect(locator['a'], (contentLayerId: 'layer-auto-13aa', nodeIndex: 0));
+      expect(locator['c'], (contentLayerId: 'layer-auto-13ab', nodeIndex: 0));
     },
   );
 
@@ -1036,10 +1098,12 @@ void main() {
         ],
       );
       final locator = txnBuildNodeLocator(scene);
+      final layerIndexById = txnBuildLayerIndexById(scene);
 
       final cleared = txnClearSceneKeepBackground(
         scene: scene,
         nodeLocator: locator,
+        layerIndexById: layerIndexById,
       );
 
       expect(cleared.didStructuralClear, isTrue);
@@ -1048,13 +1112,16 @@ void main() {
       expect(scene.layers, isEmpty);
       expect(scene.backgroundLayer, isNotNull);
       expect(locator, isEmpty);
+      expect(layerIndexById, isEmpty);
 
       final noop = txnClearSceneKeepBackground(
         scene: scene,
         nodeLocator: locator,
+        layerIndexById: layerIndexById,
       );
       expect(noop.didStructuralClear, isFalse);
       expect(noop.removedNodeIds, isEmpty);
+      expect(layerIndexById, isEmpty);
     },
   );
 
@@ -1080,17 +1147,37 @@ void main() {
 
   test('resolve layer index creates one layer for empty scene by default', () {
     final emptyScene = Scene();
+    final layerIndexById = <LayerId, int>{};
 
     final index = txnResolveInsertLayerIndex(
       scene: emptyScene,
       layerId: null,
       nextLayerId: () => 'layer-0',
+      layerIndexById: layerIndexById,
     );
     expect(index, 0);
     expect(emptyScene.layers.length, 1);
     expect(emptyScene.layers.single.id, 'layer-0');
     expect(emptyScene.layers.last, isA<ContentLayer>());
+    expect(layerIndexById, <LayerId, int>{'layer-0': 0});
   });
+
+  test(
+    'resolve layer index creates one layer for empty scene without companion index map',
+    () {
+      final emptyScene = Scene();
+
+      final index = txnResolveInsertLayerIndex(
+        scene: emptyScene,
+        layerId: null,
+        nextLayerId: () => 'layer-0',
+      );
+
+      expect(index, 0);
+      expect(emptyScene.layers.length, 1);
+      expect(emptyScene.layers.single.id, 'layer-0');
+    },
+  );
 
   test(
     'txnInsertContentLayerInScene rejects overflow before scene mutation',
@@ -1191,6 +1278,75 @@ void main() {
     },
   );
 
+  test(
+    'txnReplaceContentLayerInScene rejects duplicate replacement layer ids',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-auto-20'),
+          ContentLayer(id: 'layer-auto-21'),
+        ],
+      );
+
+      expect(
+        () => txnReplaceContentLayerInScene(
+          scene: scene,
+          layerIndex: 0,
+          layer: ContentLayer(id: 'layer-auto-21'),
+          layerIndexById: txnBuildLayerIndexById(scene),
+        ),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.duplicateLayerId &&
+                e.path == 'layers[0].id',
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
+    'txnReplaceContentLayerInScene rewrites layer id companion maps and locator entries',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-20',
+            nodes: <SceneNode>[
+              RectNode(id: 'old-node', size: const Size(1, 1)),
+            ],
+          ),
+          ContentLayer(id: 'layer-auto-21'),
+        ],
+      );
+      final locator = txnBuildNodeLocator(scene);
+      final layerIndexById = txnBuildLayerIndexById(scene);
+
+      txnReplaceContentLayerInScene(
+        scene: scene,
+        layerIndex: 0,
+        layer: ContentLayer(
+          id: 'layer-auto-22',
+          nodes: <SceneNode>[RectNode(id: 'new-node', size: const Size(2, 2))],
+        ),
+        nodeLocator: locator,
+        layerIndexById: layerIndexById,
+      );
+
+      expect(layerIndexById, <LayerId, int>{
+        'layer-auto-22': 0,
+        'layer-auto-21': 1,
+      });
+      expect(locator.containsKey('old-node'), isFalse);
+      expect(locator['new-node'], (
+        contentLayerId: 'layer-auto-22',
+        nodeIndex: 0,
+      ));
+    },
+  );
+
   test('selection/grid helpers enforce transaction invariants', () {
     final scene = Scene(
       backgroundLayer: BackgroundLayer(
@@ -1218,6 +1374,7 @@ void main() {
     final normalized = txnNormalizeSelection(
       rawSelection: <NodeId>{'ok', 'hidden', 'nonsel', 'bg', 'missing'},
       scene: scene,
+      nodeLocator: txnBuildNodeLocator(scene),
     );
     expect(normalized, <NodeId>{'ok', 'nonsel'});
 

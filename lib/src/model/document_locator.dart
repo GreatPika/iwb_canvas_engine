@@ -1,5 +1,7 @@
+import '../contract/ids.dart' show LayerId;
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import '../core/scene_node_locator.dart';
 
 ({SceneNode node, int layerIndex, int nodeIndex})? txnFindNodeById(
   Scene scene,
@@ -26,38 +28,49 @@ import '../core/scene.dart';
   return null;
 }
 
-Map<NodeId, ({int layerIndex, int nodeIndex})> txnBuildNodeLocator(
-  Scene scene,
-) {
-  final locator = <NodeId, ({int layerIndex, int nodeIndex})>{};
+Map<NodeId, NodeLocatorEntry> txnBuildNodeLocator(Scene scene) {
+  final locator = <NodeId, NodeLocatorEntry>{};
   txnWriteLayerNodeLocations(
     locator: locator,
     nodes: scene.backgroundLayer?.nodes,
-    layerIndex: -1,
+    contentLayerId: null,
   );
   for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++) {
     txnWriteLayerNodeLocations(
       locator: locator,
       nodes: scene.layers[layerIndex].nodes,
-      layerIndex: layerIndex,
+      contentLayerId: scene.layers[layerIndex].id,
     );
   }
   return locator;
 }
 
+Map<LayerId, int> txnBuildLayerIndexById(Scene scene) {
+  return <LayerId, int>{
+    for (var layerIndex = 0; layerIndex < scene.layers.length; layerIndex++)
+      scene.layers[layerIndex].id: layerIndex,
+  };
+}
+
 ({SceneNode node, int layerIndex, int nodeIndex})? txnFindNodeByLocator({
   required Scene scene,
-  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  Map<LayerId, int>? layerIndexById,
   required NodeId nodeId,
 }) {
   final entry = nodeLocator[nodeId];
   if (entry == null) {
     return null;
   }
-  final nodes = txnResolveLayerNodes(
+  final resolved = txnResolveNodeLocatorEntry(
     scene: scene,
-    layerIndex: entry.layerIndex,
+    entry: entry,
+    layerIndexById: layerIndexById ?? txnBuildLayerIndexById(scene),
   );
+  if (resolved == null) {
+    return null;
+  }
+  final nodes = resolved.nodes;
   if (nodes == null) {
     return null;
   }
@@ -69,23 +82,7 @@ Map<NodeId, ({int layerIndex, int nodeIndex})> txnBuildNodeLocator(
   if (node.id != nodeId) {
     return null;
   }
-  return (node: node, layerIndex: entry.layerIndex, nodeIndex: nodeIndex);
-}
-
-void txnShiftNodeLocatorLayersFrom({
-  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
-  required int startLayerIndex,
-}) {
-  for (final entry in nodeLocator.entries.toList(growable: false)) {
-    final location = entry.value;
-    if (location.layerIndex == -1 || location.layerIndex < startLayerIndex) {
-      continue;
-    }
-    nodeLocator[entry.key] = (
-      layerIndex: location.layerIndex + 1,
-      nodeIndex: location.nodeIndex,
-    );
-  }
+  return (node: node, layerIndex: resolved.layerIndex, nodeIndex: nodeIndex);
 }
 
 ({SceneNode node, int layerIndex, int nodeIndex})? _txnFindNodeInLayerNodes({
@@ -106,31 +103,41 @@ void txnShiftNodeLocatorLayersFrom({
 }
 
 void txnWriteLayerNodeLocations({
-  required Map<NodeId, ({int layerIndex, int nodeIndex})> locator,
+  required Map<NodeId, NodeLocatorEntry> locator,
   required List<SceneNode>? nodes,
-  required int layerIndex,
+  required LayerId? contentLayerId,
   int startNodeIndex = 0,
 }) {
   if (nodes == null) {
     return;
   }
   for (var nodeIndex = startNodeIndex; nodeIndex < nodes.length; nodeIndex++) {
-    locator[nodes[nodeIndex].id] = (
-      layerIndex: layerIndex,
+    locator[nodes[nodeIndex].id] = nodeLocatorEntry(
+      contentLayerId: contentLayerId,
       nodeIndex: nodeIndex,
     );
   }
 }
 
-List<SceneNode>? txnResolveLayerNodes({
+({List<SceneNode>? nodes, int layerIndex})? txnResolveNodeLocatorEntry({
   required Scene scene,
-  required int layerIndex,
+  required NodeLocatorEntry entry,
+  required Map<LayerId, int> layerIndexById,
 }) {
-  if (layerIndex == -1) {
-    return scene.backgroundLayer?.nodes;
+  final contentLayerId = entry.contentLayerId;
+  if (contentLayerId == null) {
+    return (nodes: scene.backgroundLayer?.nodes, layerIndex: -1);
+  }
+  final layerIndex = layerIndexById[contentLayerId];
+  if (layerIndex == null) {
+    return null;
   }
   if (layerIndex < 0 || layerIndex >= scene.layers.length) {
     return null;
   }
-  return scene.layers[layerIndex].nodes;
+  final layer = scene.layers[layerIndex];
+  if (layer.id != contentLayerId) {
+    return null;
+  }
+  return (nodes: layer.nodes, layerIndex: layerIndex);
 }

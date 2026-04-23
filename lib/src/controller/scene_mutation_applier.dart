@@ -79,6 +79,7 @@ MutationApplyResult<ClearSceneResult> _clearSceneKeepBackground(
   final result = txnClearSceneKeepBackground(
     scene: ctx.txnEnsureMutableScene(),
     nodeLocator: ctx.txnEnsureMutableNodeLocator(),
+    layerIndexById: ctx.txnLayerIndexByIdView(),
   );
   for (final id in result.removedNodeIds) {
     ctx.txnForgetNodeId(id);

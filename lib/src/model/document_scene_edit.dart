@@ -1,16 +1,20 @@
+import '../contract/ids.dart' show LayerId;
 import '../core/nodes.dart';
 import '../core/scene.dart';
+import '../core/scene_node_locator.dart';
 import '../core/selection_policy.dart';
 import 'document_locator.dart' as locator;
 
 SceneNode? txnEraseNodeFromScene({
   required Scene scene,
-  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  Map<LayerId, int>? layerIndexById,
   required NodeId nodeId,
 }) {
   final found = locator.txnFindNodeByLocator(
     scene: scene,
     nodeLocator: nodeLocator,
+    layerIndexById: layerIndexById ?? locator.txnBuildLayerIndexById(scene),
     nodeId: nodeId,
   );
   if (found == null) {
@@ -34,7 +38,7 @@ SceneNode? txnEraseNodeFromScene({
 
 List<NodeId> txnErasePreparedNodesFromScene({
   required Scene scene,
-  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required Map<int, List<({NodeId nodeId, int nodeIndex})>> removalsByLayer,
 }) {
   if (removalsByLayer.isEmpty) {
@@ -62,9 +66,12 @@ List<NodeId> txnErasePreparedNodesFromScene({
 
 List<NodeId> txnEraseNodesFromScene({
   required Scene scene,
-  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  Map<LayerId, int>? layerIndexById,
   required Set<NodeId> nodeIds,
 }) {
+  final resolvedLayerIndexById =
+      layerIndexById ?? locator.txnBuildLayerIndexById(scene);
   if (nodeIds.isEmpty) {
     return const <NodeId>[];
   }
@@ -74,6 +81,7 @@ List<NodeId> txnEraseNodesFromScene({
     final found = locator.txnFindNodeByLocator(
       scene: scene,
       nodeLocator: nodeLocator,
+      layerIndexById: resolvedLayerIndexById,
       nodeId: nodeId,
     );
     if (found == null ||
@@ -98,7 +106,8 @@ List<NodeId> txnEraseNodesFromScene({
 ({List<NodeId> removedNodeIds, bool didStructuralClear})
 txnClearSceneKeepBackground({
   required Scene scene,
-  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+  Map<LayerId, int>? layerIndexById,
 }) {
   final removedNodeIds = <NodeId>[
     for (final layer in scene.layers) ...layer.nodes.map((node) => node.id),
@@ -111,6 +120,7 @@ txnClearSceneKeepBackground({
   }
   if (scene.layers.isNotEmpty) {
     scene.layers.clear();
+    layerIndexById?.clear();
     didStructuralClear = true;
   }
   for (final nodeId in removedNodeIds) {
@@ -124,17 +134,18 @@ txnClearSceneKeepBackground({
 
 List<NodeId> _txnErasePreparedNodesFromLayer({
   required Scene scene,
-  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required int layerIndex,
   required List<({NodeId nodeId, int nodeIndex})>? preparedRemovals,
 }) {
   if (preparedRemovals == null || preparedRemovals.isEmpty) {
     return const <NodeId>[];
   }
-  final layerNodes = locator.txnResolveLayerNodes(
-    scene: scene,
-    layerIndex: layerIndex,
-  );
+  final layerNodes = layerIndex == -1
+      ? scene.backgroundLayer?.nodes
+      : (layerIndex < 0 || layerIndex >= scene.layers.length
+            ? null
+            : scene.layers[layerIndex].nodes);
   if (layerNodes == null) {
     return const <NodeId>[];
   }
@@ -152,7 +163,7 @@ List<NodeId> _txnErasePreparedNodesFromLayer({
   );
   locator.txnWriteLayerNodeLocations(
     locator: nodeLocator,
-    layerIndex: layerIndex,
+    contentLayerId: layerIndex == -1 ? null : scene.layers[layerIndex].id,
     nodes: layerNodes,
   );
   return removedNodeIds;
@@ -191,7 +202,7 @@ List<({NodeId nodeId, int nodeIndex})> _txnCollectValidPreparedRemovals({
 }
 
 List<NodeId> _txnEraseValidatedRemovals({
-  required Map<NodeId, ({int layerIndex, int nodeIndex})> nodeLocator,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required List<SceneNode> layerNodes,
   required List<({NodeId nodeId, int nodeIndex})> validRemovals,
 }) {

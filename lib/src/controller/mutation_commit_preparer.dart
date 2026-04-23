@@ -27,6 +27,9 @@ MutationCommitCandidate? _prepareMutationCommitCandidate(TxnContext ctx) {
     nodeLocator: ctx.txnNodeLocatorForCommit(
       structuralChanged: ctx.changeSet.structuralChanged,
     ),
+    layerIndexById: ctx.txnLayerIndexByIdForCommit(
+      structuralChanged: ctx.changeSet.structuralChanged,
+    ),
     idGeneratorState: ctx.idGeneratorState.copy(),
     revisionState: ctx.revisionState.copy(),
   );

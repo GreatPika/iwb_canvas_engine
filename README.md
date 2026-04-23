@@ -16,6 +16,8 @@ the entrypoint into the deeper docs.
 - A public runtime rooted at `SceneController`.
 - A ready-to-use Flutter host widget, `SceneView`.
 - Transactional scene writes through `SceneWriteTxn`.
+- Stable content-layer addressing through `layerId`, including same-write layer
+  insertion before later node mutations.
 - Build/import and JSON entrypoints through `SceneBuilder`,
   `encodeScene*`, and `decodeScene*`.
 
