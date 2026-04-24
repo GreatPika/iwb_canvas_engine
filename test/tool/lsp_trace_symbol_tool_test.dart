@@ -51,20 +51,22 @@ void main() {
             'lib/src/flow.dart',
             'Sink.addNode',
             '--json-out=artifacts/trace.json',
-            '--mermaid-out=artifacts/trace.mmd',
+            '--mermaid-out=artifacts/trace.md',
           ],
         );
 
         expect(result.exitCode, 0, reason: result.stderr.toString());
         final jsonFile = File('${sandbox.path}/artifacts/trace.json');
-        final mermaidFile = File('${sandbox.path}/artifacts/trace.mmd');
+        final mermaidFile = File('${sandbox.path}/artifacts/trace.md');
         expect(jsonFile.existsSync(), isTrue);
         expect(mermaidFile.existsSync(), isTrue);
         expect(
           jsonFile.readAsStringSync(),
           contains('"symbol": "Sink.addNode"'),
         );
+        expect(mermaidFile.readAsStringSync(), contains('```mermaid'));
         expect(mermaidFile.readAsStringSync(), contains('flowchart LR'));
+        expect(mermaidFile.readAsStringSync(), contains('```'));
       } finally {
         sandbox.deleteSync(recursive: true);
       }

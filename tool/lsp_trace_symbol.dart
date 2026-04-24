@@ -123,7 +123,11 @@ Future<ToolCommandResult> runLspTraceSymbolTool(
       _writeOutputFile(workingRoot, jsonOutPath, '$reportJson\n');
     }
     if (mermaidOutPath != null) {
-      _writeOutputFile(workingRoot, mermaidOutPath, '$mermaid\n');
+      _writeOutputFile(
+        workingRoot,
+        mermaidOutPath,
+        '${_renderMermaidDocument(mermaid)}\n',
+      );
     }
 
     if (jsonOutput) {
@@ -330,6 +334,10 @@ String _renderMermaid(Map<String, Object?> report) {
     reverse: false,
   );
   return buffer.toString();
+}
+
+String _renderMermaidDocument(String mermaid) {
+  return '```mermaid\n$mermaid\n```';
 }
 
 void _writeMermaidTree(

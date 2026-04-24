@@ -1,0 +1,321 @@
+{
+  "symbol": "createSceneControllerGraph",
+  "kind": "function",
+  "path": "lib/src/interactive/internal/scene_controller_graph.dart",
+  "referencesByFile": {
+    "lib/src/interactive/scene_controller.dart": 1,
+    "lib/src/interactive/internal/scene_controller_graph.dart": 1
+  },
+  "implementations": [],
+  "incoming": [],
+  "outgoing": [
+    {
+      "name": "_assembleSceneControllerGraph",
+      "detail": "scene_controller_graph.dart",
+      "path": "lib/src/interactive/internal/scene_controller_graph.dart",
+      "children": [
+        {
+          "name": "_createInteractionConfig",
+          "detail": "scene_controller_graph.dart",
+          "path": "lib/src/interactive/internal/scene_controller_graph.dart",
+          "children": [
+            {
+              "name": "SceneControllerInteractionConfig",
+              "detail": "SceneControllerInteractionConfig",
+              "path": "lib/src/interactive/internal/scene_controller_interaction_config.dart",
+              "children": []
+            },
+            {
+              "name": "validatePointerInputSettings",
+              "detail": "pointer_input.dart",
+              "path": "lib/src/contract/pointer_input.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "SceneControllerSceneViewRuntime",
+          "detail": "SceneControllerSceneViewRuntime",
+          "path": "lib/src/interactive/internal/scene_controller_scene_view_runtime.dart",
+          "children": [
+            {
+              "name": "SceneControllerSceneViewMainSceneRenderRead",
+              "detail": "SceneControllerSceneViewMainSceneRenderRead",
+              "path": "lib/src/interactive/internal/scene_controller_scene_view_runtime.dart",
+              "children": []
+            },
+            {
+              "name": "SceneControllerSceneViewOverlayPreviewRead",
+              "detail": "SceneControllerSceneViewOverlayPreviewRead",
+              "path": "lib/src/interactive/internal/scene_controller_scene_view_runtime.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "ensurePublicSideEffectAllowed",
+          "detail": "SceneControllerInteractionRuntime",
+          "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+          "children": []
+        },
+        {
+          "name": "get interaction",
+          "detail": "SceneController",
+          "path": "lib/src/interactive/scene_controller.dart",
+          "children": []
+        },
+        {
+          "name": "captureFramePreview",
+          "detail": "SceneControllerInteractionRuntimeMutationApi",
+          "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+          "children": [
+            {
+              "name": "captureFramePreview",
+              "detail": "InteractiveMoveSession",
+              "path": "lib/src/interactive/internal/interactive_move_session.dart",
+              "children": []
+            },
+            {
+              "name": "get debugMoveSession",
+              "detail": "InteractiveRuntime",
+              "path": "lib/src/interactive/internal/interactive_runtime.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "_createInteractionRuntime",
+          "detail": "scene_controller_graph.dart",
+          "path": "lib/src/interactive/internal/scene_controller_graph.dart",
+          "children": [
+            {
+              "name": "createSceneControllerInteractionRuntime",
+              "detail": "scene_controller_interaction_runtime.dart",
+              "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+              "children": []
+            },
+            {
+              "name": "SceneControllerInteractionRuntimeRequest",
+              "detail": "SceneControllerInteractionRuntimeRequest",
+              "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+              "children": []
+            },
+            {
+              "name": "scheduleSceneRepaint",
+              "detail": "SceneControllerSceneViewRuntime",
+              "path": "lib/src/interactive/internal/scene_controller_scene_view_runtime.dart",
+              "children": []
+            },
+            {
+              "name": "scheduleOverlayRepaint",
+              "detail": "SceneControllerSceneViewRuntime",
+              "path": "lib/src/interactive/internal/scene_controller_scene_view_runtime.dart",
+              "children": []
+            },
+            {
+              "name": "SceneStoreControllerCommittedMutationAccess",
+              "detail": "SceneStoreControllerCommittedMutationAccess",
+              "path": "lib/src/controller/scene_controller_committed_mutation_access.dart",
+              "children": []
+            },
+            {
+              "name": "dragStartSlop",
+              "detail": "SceneControllerInteractionConfig",
+              "path": "lib/src/interactive/internal/scene_controller_interaction_config.dart",
+              "children": []
+            },
+            {
+              "name": "currentDrawStyle",
+              "detail": "SceneControllerInteractionConfig",
+              "path": "lib/src/interactive/internal/scene_controller_interaction_config.dart",
+              "children": []
+            },
+            {
+              "name": "requireFiniteOffset",
+              "detail": "SceneControllerInteractionConfig",
+              "path": "lib/src/interactive/internal/scene_controller_interaction_config.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "_createSelectionMutations",
+          "detail": "scene_controller_graph.dart",
+          "path": "lib/src/interactive/internal/scene_controller_graph.dart",
+          "children": [
+            {
+              "name": "SceneControllerSelectionMutations",
+              "detail": "SceneControllerSelectionMutations",
+              "path": "lib/src/interactive/internal/scene_controller_selection_mutations.dart",
+              "children": []
+            },
+            {
+              "name": "ensureExternalMutationAllowed",
+              "detail": "SceneControllerInteractionRuntime",
+              "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "_createSceneMutations",
+          "detail": "scene_controller_graph.dart",
+          "path": "lib/src/interactive/internal/scene_controller_graph.dart",
+          "children": [
+            {
+              "name": "SceneControllerSceneMutations",
+              "detail": "SceneControllerSceneMutations",
+              "path": "lib/src/interactive/internal/scene_controller_scene_mutations.dart",
+              "children": []
+            },
+            {
+              "name": "ensureExternalMutationAllowed",
+              "detail": "SceneControllerInteractionRuntime",
+              "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+              "children": []
+            },
+            {
+              "name": "interruptForExternalMutation",
+              "detail": "SceneControllerInteractionRuntime",
+              "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "SceneControllerInteractionContext",
+          "detail": "SceneControllerInteractionContext",
+          "path": "lib/src/interactive/internal/scene_controller_interaction_access.dart",
+          "children": []
+        },
+        {
+          "name": "clearSelection",
+          "detail": "SceneControllerSelectionMutations",
+          "path": "lib/src/interactive/internal/scene_controller_selection_mutations.dart",
+          "children": [
+            {
+              "name": "clearSelection",
+              "detail": "SceneControllerMutationBoundary",
+              "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "SceneControllerInteractionOwner",
+          "detail": "SceneControllerInteractionOwner",
+          "path": "lib/src/interactive/scene_controller_interaction.dart",
+          "children": []
+        },
+        {
+          "name": "SceneControllerSelectionOwner",
+          "detail": "SceneControllerSelectionOwner",
+          "path": "lib/src/interactive/scene_controller_selection.dart",
+          "children": []
+        },
+        {
+          "name": "SceneControllerSceneOwner",
+          "detail": "SceneControllerSceneOwner",
+          "path": "lib/src/interactive/scene_controller_scene.dart",
+          "children": []
+        },
+        {
+          "name": "SceneControllerInternalAccessRegistration",
+          "detail": "SceneControllerInternalAccessRegistration",
+          "path": "lib/src/interactive/internal/scene_controller_internal_access.dart",
+          "children": []
+        },
+        {
+          "name": "previewDeltaForNode",
+          "detail": "SceneControllerInteractionRuntimeMutationApi",
+          "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+          "children": [
+            {
+              "name": "movePreviewDeltaForNode",
+              "detail": "InteractiveMoveSession",
+              "path": "lib/src/interactive/internal/interactive_move_session.dart",
+              "children": []
+            },
+            {
+              "name": "get debugMoveSession",
+              "detail": "InteractiveRuntime",
+              "path": "lib/src/interactive/internal/interactive_runtime.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "setBeforePointerDispatchHook",
+          "detail": "SceneControllerInteractionRuntimeMutationApi",
+          "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+          "children": [
+            {
+              "name": "setBeforePointerDispatchHook",
+              "detail": "InteractiveRuntime",
+              "path": "lib/src/interactive/internal/interactive_runtime.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "runMoveCommitDeltaResolver",
+          "detail": "SceneControllerInteractionRuntime",
+          "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+          "children": []
+        },
+        {
+          "name": "get activeEraserPointsLength",
+          "detail": "SceneControllerInteractionRuntimeStateApi",
+          "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+          "children": [
+            {
+              "name": "get activeEraserPointsLength",
+              "detail": "InteractiveRuntime",
+              "path": "lib/src/interactive/internal/interactive_runtime.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "get eraserSpatialQueryCount",
+          "detail": "SceneControllerInteractionRuntimeStateApi",
+          "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+          "children": [
+            {
+              "name": "get debugEraserSpatialQueryCount",
+              "detail": "InteractiveRuntime",
+              "path": "lib/src/interactive/internal/interactive_runtime.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "get eraserPreciseSegmentCheckCount",
+          "detail": "SceneControllerInteractionRuntimeStateApi",
+          "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+          "children": [
+            {
+              "name": "get debugEraserPreciseSegmentChecks",
+              "detail": "InteractiveRuntime",
+              "path": "lib/src/interactive/internal/interactive_runtime.dart",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "registerSceneControllerInternalAccess",
+      "detail": "scene_controller_internal_access.dart",
+      "path": "lib/src/interactive/internal/scene_controller_internal_access.dart",
+      "children": [
+        {
+          "name": "_SceneControllerInternalAccess",
+          "detail": "_SceneControllerInternalAccess",
+          "path": "lib/src/interactive/internal/scene_controller_internal_access.dart",
+          "children": []
+        }
+      ]
+    }
+  ]
+}

@@ -91,6 +91,14 @@ owners, and the repository-local LSP probe workflow.
   `lib/src/interactive/internal/scene_controller_scene_view_runtime.dart` -
   together show that `SceneViewRuntime` already exposes `mainSceneRenderRead`
   and `overlayPreviewRead`, so the family doc is stale at the local-owner level
+- `lib/src/interactive/scene_controller_interaction.dart` - the public
+  interaction owner mixes read/config getters, pointer handling, and config
+  mutation entrypoints, so a whole-class boundary-bypass check would
+  over-approximate the committed-write seam this step needs to prove
+- `lib/src/interactive/internal/interactive_selection_actions.dart` - the
+  checked-in interaction-side selection helper is the narrow write-side owner
+  whose public methods all delegate into `SceneControllerMutationBoundary`, so
+  it is the correct boundary-bypass proof surface for the interaction family
 - `lib/src/view/scene_view_runtime_host.dart` - checked-in runtime host still
   consumes the `SceneViewRuntime` boundary and is part of the current
   runtime-view path that the new artifact set must document mechanically
@@ -272,7 +280,7 @@ owners, and the repository-local LSP probe workflow.
 - `docs/target_architecture/execution_flows.md` owns the short runtime-view
   registry for the target runtime-view layer and links to mechanically
   generated flow artifacts
-- `docs/target_architecture/evidence/*.json` and `*.mmd` own the committed
+- `docs/target_architecture/evidence/*.json` and `*.md` own the committed
   machine-generated flow/path/diagram artifacts referenced by the target map
 - `PLAN.md` and `plan/*.md` own execution order and slice contracts, but are
   not part of the target-form hierarchy
@@ -360,6 +368,11 @@ Not used. The architectural form is locked in 4A.
    section set, when the shared status vocabulary drifts, when a family omits
    repository-local probe commands and evidence links, or when target docs
    reintroduce hand-written flow/diagram blocks.
+11. Interaction-family write-side boundary proof is anchored on
+    `InteractiveSelectionActions`, not on the whole
+    `SceneControllerInteractionOwner`, because the public interaction owner
+    legitimately includes read/config/pointer methods that do not cross the
+    committed-write seam.
 
 ## 6. Result Requirements
 
@@ -451,19 +464,19 @@ Not used. The architectural form is locked in 4A.
 - `docs/target_architecture/families/store_and_commit_path.md`
 - `docs/target_architecture/families/view_runtime_and_render_seam.md`
 - `docs/target_architecture/evidence/composition_root_trace.json`
-- `docs/target_architecture/evidence/composition_root_trace.mmd`
+- `docs/target_architecture/evidence/composition_root_trace.md`
 - `docs/target_architecture/evidence/add_node_write_flow.json`
-- `docs/target_architecture/evidence/add_node_write_flow.mmd`
+- `docs/target_architecture/evidence/add_node_write_flow.md`
 - `docs/target_architecture/evidence/render_main_scene_read_flow.json`
-- `docs/target_architecture/evidence/render_main_scene_read_flow.mmd`
+- `docs/target_architecture/evidence/render_main_scene_read_flow.md`
 - `docs/target_architecture/evidence/render_overlay_preview_flow.json`
-- `docs/target_architecture/evidence/render_overlay_preview_flow.mmd`
+- `docs/target_architecture/evidence/render_overlay_preview_flow.md`
 - `docs/target_architecture/evidence/replace_scene_write_flow.json`
-- `docs/target_architecture/evidence/replace_scene_write_flow.mmd`
+- `docs/target_architecture/evidence/replace_scene_write_flow.md`
 - `docs/target_architecture/evidence/commit_move_selection_flow.json`
-- `docs/target_architecture/evidence/commit_move_selection_flow.mmd`
+- `docs/target_architecture/evidence/commit_move_selection_flow.md`
 - `docs/target_architecture/evidence/pointer_input_flow.json`
-- `docs/target_architecture/evidence/pointer_input_flow.mmd`
+- `docs/target_architecture/evidence/pointer_input_flow.md`
 - `PLAN.md`
 - `plan/step_16_target_architecture_map_normalization.md`
 
@@ -491,8 +504,10 @@ Not used. The architectural form is locked in 4A.
 - `lib/src/contract/scene_view_render_state.dart`
 - `lib/src/interactive/internal/scene_controller_scene_view_runtime.dart`
 - `lib/src/interactive/internal/scene_controller_graph.dart`
+- `lib/src/interactive/scene_controller_interaction.dart`
 - `lib/src/interactive/internal/scene_controller_interaction_runtime.dart`
 - `lib/src/interactive/internal/interactive_runtime.dart`
+- `lib/src/interactive/internal/interactive_selection_actions.dart`
 - `lib/src/interactive/internal/scene_controller_mutation_boundary.dart`
 - `lib/src/controller/scene_controller_committed_mutation_access.dart`
 - `lib/src/controller/scene_store_controller.dart`
@@ -588,7 +603,7 @@ Not used. The architectural form is locked in 4A.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Lock The Normalized Target-Map Skeleton
+### Slice 1. [x] Lock The Normalized Target-Map Skeleton
 
 #### Slice Contract
 
@@ -637,7 +652,7 @@ contract plus the top-level overview to that shape without yet rewriting
 - `README.md` and `overview.md` follow the normalized shape and the new
   structural test is green for these two files only
 
-### Slice 2. [ ] Generate The Runtime-View Artifact Set And Rewrite Execution Flows
+### Slice 2. [x] Generate The Runtime-View Artifact Set And Rewrite Execution Flows
 
 #### Slice Contract
 
@@ -649,15 +664,15 @@ are removed.
 #### Change
 
 - generate and commit `docs/target_architecture/evidence/add_node_write_flow.json`
-  and `docs/target_architecture/evidence/add_node_write_flow.mmd`
+  and `docs/target_architecture/evidence/add_node_write_flow.md`
 - generate and commit `docs/target_architecture/evidence/pointer_input_flow.json`
-  and `docs/target_architecture/evidence/pointer_input_flow.mmd`
+  and `docs/target_architecture/evidence/pointer_input_flow.md`
 - generate and commit
   `docs/target_architecture/evidence/render_main_scene_read_flow.json` and
-  `docs/target_architecture/evidence/render_main_scene_read_flow.mmd`
+  `docs/target_architecture/evidence/render_main_scene_read_flow.md`
 - generate and commit
   `docs/target_architecture/evidence/render_overlay_preview_flow.json` and
-  `docs/target_architecture/evidence/render_overlay_preview_flow.mmd`
+  `docs/target_architecture/evidence/render_overlay_preview_flow.md`
 - rewrite `docs/target_architecture/execution_flows.md` into the short
   runtime-view registry that links only to this complete artifact set
 - remove the unsupported hand-maintained import/build flow from
@@ -669,10 +684,10 @@ are removed.
 #### Behavioral Verification
 
 - `dart run tool/run_tool_tests.dart test/tool/target_architecture_map_tool_test.dart`
-- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/scene_controller_scene.dart SceneControllerSceneOwner.addNode --direction=outgoing --depth=5 --json-out=docs/target_architecture/evidence/add_node_write_flow.json --mermaid-out=docs/target_architecture/evidence/add_node_write_flow.mmd`
-- `dart run tool/lsp_trace_symbol.dart lib/src/view/scene_view_interactive_pointer_host.dart SceneViewInteractivePointerHost.handlePointerEvent --direction=outgoing --depth=3 --json-out=docs/target_architecture/evidence/pointer_input_flow.json --mermaid-out=docs/target_architecture/evidence/pointer_input_flow.mmd`
-- `dart run tool/lsp_trace_symbol.dart lib/src/contract/scene_view_runtime.dart SceneViewRuntime.mainSceneRenderRead --direction=both --depth=2 --json-out=docs/target_architecture/evidence/render_main_scene_read_flow.json --mermaid-out=docs/target_architecture/evidence/render_main_scene_read_flow.mmd`
-- `dart run tool/lsp_trace_symbol.dart lib/src/contract/scene_view_runtime.dart SceneViewRuntime.overlayPreviewRead --direction=both --depth=2 --json-out=docs/target_architecture/evidence/render_overlay_preview_flow.json --mermaid-out=docs/target_architecture/evidence/render_overlay_preview_flow.mmd`
+- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/scene_controller_scene.dart SceneControllerSceneOwner.addNode --direction=outgoing --depth=5 --json-out=docs/target_architecture/evidence/add_node_write_flow.json --mermaid-out=docs/target_architecture/evidence/add_node_write_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/view/scene_view_interactive_pointer_host.dart SceneViewInteractivePointerHost.handlePointerEvent --direction=outgoing --depth=3 --json-out=docs/target_architecture/evidence/pointer_input_flow.json --mermaid-out=docs/target_architecture/evidence/pointer_input_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/contract/scene_view_runtime.dart SceneViewRuntime.mainSceneRenderRead --direction=both --depth=2 --json-out=docs/target_architecture/evidence/render_main_scene_read_flow.json --mermaid-out=docs/target_architecture/evidence/render_main_scene_read_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/contract/scene_view_runtime.dart SceneViewRuntime.overlayPreviewRead --direction=both --depth=2 --json-out=docs/target_architecture/evidence/render_overlay_preview_flow.json --mermaid-out=docs/target_architecture/evidence/render_overlay_preview_flow.md`
 
 #### Structural Verification
 
@@ -702,7 +717,7 @@ are removed.
   and the structural test plus probe commands are green for the runtime-view
   layer
 
-### Slice 3. [ ] Sync The View Runtime Family To The Landed Local Form
+### Slice 3. [x] Sync The View Runtime Family To The Landed Local Form
 
 #### Slice Contract
 
@@ -726,7 +741,7 @@ mechanical evidence explicit.
 
 - `dart run tool/run_tool_tests.dart test/tool/target_architecture_map_tool_test.dart`
 - `dart run tool/lsp_trace_flow.dart lib/src/view/scene_view_interactive_pointer_host.dart SceneViewInteractivePointerHost.handlePointerEvent --depth=5`
-- `dart run tool/lsp_trace_symbol.dart lib/src/view/scene_view_interactive_pointer_host.dart SceneViewInteractivePointerHost.handlePointerEvent --direction=outgoing --depth=3 --json-out=docs/target_architecture/evidence/pointer_input_flow.json --mermaid-out=docs/target_architecture/evidence/pointer_input_flow.mmd`
+- `dart run tool/lsp_trace_symbol.dart lib/src/view/scene_view_interactive_pointer_host.dart SceneViewInteractivePointerHost.handlePointerEvent --direction=outgoing --depth=3 --json-out=docs/target_architecture/evidence/pointer_input_flow.json --mermaid-out=docs/target_architecture/evidence/pointer_input_flow.md`
 
 #### Structural Verification
 
@@ -753,7 +768,7 @@ mechanical evidence explicit.
 - the view/runtime family doc matches the landed local form and the structural
   test plus live probes still succeed
 
-### Slice 4. [ ] Normalize The Composition Root Family
+### Slice 4. [x] Normalize The Composition Root Family
 
 #### Slice Contract
 
@@ -767,7 +782,7 @@ raw analytical narrative.
   under the normalized family-doc section set
 - generate and commit
   `docs/target_architecture/evidence/composition_root_trace.json` and
-  `docs/target_architecture/evidence/composition_root_trace.mmd`
+  `docs/target_architecture/evidence/composition_root_trace.md`
 - extend `test/tool/target_architecture_map_tool_test.dart` with family-level
   expectations for the normalized section set, status block, and mechanical
   evidence references in this doc
@@ -775,7 +790,7 @@ raw analytical narrative.
 #### Behavioral Verification
 
 - `dart run tool/run_tool_tests.dart test/tool/target_architecture_map_tool_test.dart`
-- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/scene_controller_graph.dart createSceneControllerGraph --direction=outgoing --depth=3 --json-out=docs/target_architecture/evidence/composition_root_trace.json --mermaid-out=docs/target_architecture/evidence/composition_root_trace.mmd`
+- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/scene_controller_graph.dart createSceneControllerGraph --direction=outgoing --depth=3 --json-out=docs/target_architecture/evidence/composition_root_trace.json --mermaid-out=docs/target_architecture/evidence/composition_root_trace.md`
 
 #### Structural Verification
 
@@ -800,7 +815,7 @@ raw analytical narrative.
 - the composition family doc follows the normalized shape and the structural
   test plus composition trace remain green
 
-### Slice 5. [ ] Normalize The Mutation Gateway Family
+### Slice 5. [x] Normalize The Mutation Gateway Family
 
 #### Slice Contract
 
@@ -847,7 +862,7 @@ without raw analytical narrative.
 - the gateway family doc follows the normalized shape and the structural test
   plus gateway probes remain green
 
-### Slice 6. [ ] Normalize The Store And Commit Family
+### Slice 6. [x] Normalize The Store And Commit Family
 
 #### Slice Contract
 
@@ -861,7 +876,7 @@ analytical narrative.
   the normalized family-doc section set
 - generate and commit
   `docs/target_architecture/evidence/replace_scene_write_flow.json` and
-  `docs/target_architecture/evidence/replace_scene_write_flow.mmd`
+  `docs/target_architecture/evidence/replace_scene_write_flow.md`
 - extend `test/tool/target_architecture_map_tool_test.dart` with family-level
   expectations for the normalized section set, status block, and mechanical
   evidence references in this doc
@@ -869,7 +884,7 @@ analytical narrative.
 #### Behavioral Verification
 
 - `dart run tool/run_tool_tests.dart test/tool/target_architecture_map_tool_test.dart`
-- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/scene_controller_scene_mutations.dart SceneControllerSceneMutations.replaceScene --direction=outgoing --depth=5 --json-out=docs/target_architecture/evidence/replace_scene_write_flow.json --mermaid-out=docs/target_architecture/evidence/replace_scene_write_flow.mmd`
+- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/scene_controller_scene_mutations.dart SceneControllerSceneMutations.replaceScene --direction=outgoing --depth=5 --json-out=docs/target_architecture/evidence/replace_scene_write_flow.json --mermaid-out=docs/target_architecture/evidence/replace_scene_write_flow.md`
 
 #### Structural Verification
 
@@ -894,7 +909,7 @@ analytical narrative.
 - the store/commit family doc follows the normalized shape and the structural
   test plus replace-scene write trace remain green
 
-### Slice 7. [ ] Normalize The Interaction Family And Close The Map
+### Slice 7. [x] Normalize The Interaction Family And Close The Map
 
 #### Slice Contract
 
@@ -907,7 +922,7 @@ that the directory now stays in the normalized short and checkable form.
   normalized family-doc section set
 - generate and commit
   `docs/target_architecture/evidence/commit_move_selection_flow.json` and
-  `docs/target_architecture/evidence/commit_move_selection_flow.mmd`
+  `docs/target_architecture/evidence/commit_move_selection_flow.md`
 - extend `test/tool/target_architecture_map_tool_test.dart` with final
   expectations that every family doc follows the normalized section shape and
   carries one status plus one mechanical evidence block
@@ -918,12 +933,12 @@ that the directory now stays in the normalized short and checkable form.
 - `dart run tool/run_tool_tests.dart test/tool/target_architecture_map_tool_test.dart`
 - `dart run tool/lsp_find_thin_wrappers.dart lib/src/interactive --classification=pure-forwarder`
 - `dart run tool/lsp_trace_flow.dart lib/src/interactive/internal/interactive_selection_actions.dart InteractiveSelectionActions.commitMoveSelection --depth=5`
-- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/interactive_selection_actions.dart InteractiveSelectionActions.commitMoveSelection --direction=outgoing --depth=5 --json-out=docs/target_architecture/evidence/commit_move_selection_flow.json --mermaid-out=docs/target_architecture/evidence/commit_move_selection_flow.mmd`
+- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/interactive_selection_actions.dart InteractiveSelectionActions.commitMoveSelection --direction=outgoing --depth=5 --json-out=docs/target_architecture/evidence/commit_move_selection_flow.json --mermaid-out=docs/target_architecture/evidence/commit_move_selection_flow.md`
 
 #### Structural Verification
 
 - `dart run tool/run_tool_tests.dart test/tool/target_architecture_map_tool_test.dart`
-- `dart run tool/lsp_find_boundary_bypasses.dart lib/src/interactive/scene_controller_interaction.dart SceneControllerInteractionOwner --must-pass=SceneControllerMutationBoundary --depth=4`
+- `dart run tool/lsp_find_boundary_bypasses.dart lib/src/interactive/internal/interactive_selection_actions.dart InteractiveSelectionActions --must-pass=SceneControllerMutationBoundary --depth=4`
 
 #### Fixtures Used
 
@@ -949,7 +964,7 @@ that the directory now stays in the normalized short and checkable form.
 
 - `dart run tool/run_tool_tests.dart test/tool/target_architecture_map_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/lsp_find_symbols_tool_test.dart test/tool/lsp_trace_symbol_tool_test.dart test/tool/lsp_trace_flow_tool_test.dart test/tool/lsp_find_boundary_bypasses_tool_test.dart test/tool/lsp_find_thin_wrappers_tool_test.dart`
-- `printf '%s\n' docs/target_architecture/README.md docs/target_architecture/overview.md docs/target_architecture/execution_flows.md docs/target_architecture/families/composition_root_and_facade.md docs/target_architecture/families/interaction_runtime.md docs/target_architecture/families/mutation_gateway.md docs/target_architecture/families/store_and_commit_path.md docs/target_architecture/families/view_runtime_and_render_seam.md docs/target_architecture/evidence/composition_root_trace.json docs/target_architecture/evidence/composition_root_trace.mmd docs/target_architecture/evidence/add_node_write_flow.json docs/target_architecture/evidence/add_node_write_flow.mmd docs/target_architecture/evidence/render_main_scene_read_flow.json docs/target_architecture/evidence/render_main_scene_read_flow.mmd docs/target_architecture/evidence/render_overlay_preview_flow.json docs/target_architecture/evidence/render_overlay_preview_flow.mmd docs/target_architecture/evidence/replace_scene_write_flow.json docs/target_architecture/evidence/replace_scene_write_flow.mmd docs/target_architecture/evidence/commit_move_selection_flow.json docs/target_architecture/evidence/commit_move_selection_flow.mmd docs/target_architecture/evidence/pointer_input_flow.json docs/target_architecture/evidence/pointer_input_flow.mmd PLAN.md plan/step_16_target_architecture_map_normalization.md test/tool/target_architecture_map_tool_test.dart | dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=-`
+- `printf '%s\n' docs/target_architecture/README.md docs/target_architecture/overview.md docs/target_architecture/execution_flows.md docs/target_architecture/families/composition_root_and_facade.md docs/target_architecture/families/interaction_runtime.md docs/target_architecture/families/mutation_gateway.md docs/target_architecture/families/store_and_commit_path.md docs/target_architecture/families/view_runtime_and_render_seam.md docs/target_architecture/evidence/composition_root_trace.json docs/target_architecture/evidence/composition_root_trace.md docs/target_architecture/evidence/add_node_write_flow.json docs/target_architecture/evidence/add_node_write_flow.md docs/target_architecture/evidence/render_main_scene_read_flow.json docs/target_architecture/evidence/render_main_scene_read_flow.md docs/target_architecture/evidence/render_overlay_preview_flow.json docs/target_architecture/evidence/render_overlay_preview_flow.md docs/target_architecture/evidence/replace_scene_write_flow.json docs/target_architecture/evidence/replace_scene_write_flow.md docs/target_architecture/evidence/commit_move_selection_flow.json docs/target_architecture/evidence/commit_move_selection_flow.md docs/target_architecture/evidence/pointer_input_flow.json docs/target_architecture/evidence/pointer_input_flow.md PLAN.md plan/step_16_target_architecture_map_normalization.md test/tool/target_architecture_map_tool_test.dart | dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=-`
 
 ## 12. Acceptance Criteria
 

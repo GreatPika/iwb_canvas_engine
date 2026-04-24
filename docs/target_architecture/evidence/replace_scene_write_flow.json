@@ -1,0 +1,32 @@
+{
+  "symbol": "SceneControllerSceneMutations.replaceScene",
+  "kind": "method",
+  "path": "lib/src/interactive/internal/scene_controller_scene_mutations.dart",
+  "referencesByFile": {
+    "lib/src/interactive/scene_controller_scene.dart": 1,
+    "lib/src/interactive/internal/scene_controller_scene_mutations.dart": 1
+  },
+  "implementations": [],
+  "incoming": [],
+  "outgoing": [
+    {
+      "name": "replaceScene",
+      "detail": "SceneControllerMutationBoundary",
+      "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+      "children": [
+        {
+          "name": "replaceScene",
+          "detail": "SceneControllerCommittedMutationAccess",
+          "path": "lib/src/controller/scene_controller_committed_mutation_access.dart",
+          "children": []
+        },
+        {
+          "name": "_scheduleSceneAndOverlayCommit",
+          "detail": "SceneControllerMutationBoundary",
+          "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+          "children": []
+        }
+      ]
+    }
+  ]
+}

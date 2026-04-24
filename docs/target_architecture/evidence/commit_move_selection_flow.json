@@ -1,0 +1,147 @@
+{
+  "symbol": "InteractiveSelectionActions.commitMoveSelection",
+  "kind": "method",
+  "path": "lib/src/interactive/internal/interactive_selection_actions.dart",
+  "referencesByFile": {
+    "test/interactive/core/scene_controller_mutation_boundary_test.dart": 1,
+    "lib/src/interactive/internal/interactive_selection_actions.dart": 1
+  },
+  "implementations": [],
+  "incoming": [],
+  "outgoing": [
+    {
+      "name": "commitMoveSelection",
+      "detail": "SceneControllerMutationBoundary",
+      "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+      "children": [
+        {
+          "name": "write",
+          "detail": "SceneControllerCommittedMutationAccess",
+          "path": "lib/src/controller/scene_controller_committed_mutation_access.dart",
+          "children": []
+        },
+        {
+          "name": "get snapshot",
+          "detail": "SceneWriteTxn",
+          "path": "lib/src/contract/scene_write_txn.dart",
+          "children": []
+        },
+        {
+          "name": "freezeList",
+          "detail": "immutable_collections.dart",
+          "path": "lib/src/core/immutable_collections.dart",
+          "children": [
+            {
+              "name": "_FrozenList",
+              "detail": "_FrozenList",
+              "path": "lib/src/core/immutable_collections.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "selectedCommitMovableNodesInSnapshotOrder",
+          "detail": "interaction_eligibility_policy.dart",
+          "path": "lib/src/interactive/interaction_eligibility_policy.dart",
+          "children": [
+            {
+              "name": "selectedNodesInSnapshotOrder",
+              "detail": "interaction_eligibility_policy.dart",
+              "path": "lib/src/interactive/interaction_eligibility_policy.dart",
+              "children": []
+            },
+            {
+              "name": "canCommitMove",
+              "detail": "interaction_eligibility_policy.dart",
+              "path": "lib/src/interactive/interaction_eligibility_policy.dart",
+              "children": [
+                {
+                  "name": "canPreviewMove",
+                  "detail": "interaction_eligibility_policy.dart",
+                  "path": "lib/src/interactive/interaction_eligibility_policy.dart",
+                  "children": [
+                    {
+                      "name": "canSelect",
+                      "detail": "interaction_eligibility_policy.dart",
+                      "path": "lib/src/interactive/interaction_eligibility_policy.dart",
+                      "children": []
+                    },
+                    {
+                      "name": "canTransform",
+                      "detail": "interaction_eligibility_policy.dart",
+                      "path": "lib/src/interactive/interaction_eligibility_policy.dart",
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "get selectedNodeIds",
+          "detail": "SceneWriteTxn",
+          "path": "lib/src/contract/scene_write_txn.dart",
+          "children": []
+        },
+        {
+          "name": "MoveCommitDeltaRequest",
+          "detail": "MoveCommitDeltaRequest",
+          "path": "lib/src/interactive/scene_controller_interaction.dart",
+          "children": [
+            {
+              "name": "MoveCommitDeltaRequest._",
+              "detail": "MoveCommitDeltaRequest",
+              "path": "lib/src/interactive/scene_controller_interaction.dart",
+              "children": []
+            },
+            {
+              "name": "freezeList",
+              "detail": "immutable_collections.dart",
+              "path": "lib/src/core/immutable_collections.dart",
+              "children": [
+                {
+                  "name": "_FrozenList",
+                  "detail": "_FrozenList",
+                  "path": "lib/src/core/immutable_collections.dart",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "withTranslation",
+          "detail": "Transform2D",
+          "path": "lib/src/contract/transform2d.dart",
+          "children": [
+            {
+              "name": "Transform2D",
+              "detail": "Transform2D",
+              "path": "lib/src/contract/transform2d.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "get translation",
+          "detail": "Transform2D",
+          "path": "lib/src/contract/transform2d.dart",
+          "children": []
+        },
+        {
+          "name": "writeNodeTransformSet",
+          "detail": "SceneWriteTxn",
+          "path": "lib/src/contract/scene_write_txn.dart",
+          "children": []
+        },
+        {
+          "name": "_scheduleSceneCommit",
+          "detail": "SceneControllerMutationBoundary",
+          "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+          "children": []
+        }
+      ]
+    }
+  ]
+}
