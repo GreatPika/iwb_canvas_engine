@@ -32,3 +32,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 13. Bounded Main-Scene Paint Work](plan/step_13_bounded_main_scene_paint_work.md)
 - [x] [Step 14. Retire Unused Semantic Layer Replace Seam](plan/step_14_retire_unused_semantic_layer_replace_seam.md)
 - [x] [Step 15. Main-Scene and Overlay Render Read Split](plan/step_15_main_scene_and_overlay_render_read_split.md)
+- [ ] [Step 16. Target Architecture Map Normalization](plan/step_16_target_architecture_map_normalization.md)
