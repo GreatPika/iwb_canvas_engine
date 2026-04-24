@@ -6,14 +6,13 @@ import '../contract/scene_view_render_state.dart';
 import '../contract/scene_view_runtime.dart';
 import '../contract/snapshot.dart';
 import '../contract/pointer_input.dart';
-import '../controller/scene_store_controller.dart';
 import '../core/action_events.dart';
 import 'internal/scene_controller_graph.dart';
 import 'scene_controller_interaction.dart';
 import 'scene_controller_scene.dart';
 import 'scene_controller_selection.dart';
 
-class SceneController extends ChangeNotifier {
+final class SceneController extends ChangeNotifier {
   SceneController({
     SceneSnapshot? initialSnapshot,
     PointerInputSettings? pointerSettings,
@@ -21,40 +20,34 @@ class SceneController extends ChangeNotifier {
     bool clearSelectionOnDrawModeEnter = false,
     MoveCommitDeltaResolver? moveCommitDeltaResolver,
     String? textFontFamilyByDefault,
-  }) : _storeController = SceneStoreController(
-         initialSnapshot: initialSnapshot,
-         textFontFamilyByDefault: textFontFamilyByDefault,
-       ) {
+  }) {
     _graph = createSceneControllerGraph(
       SceneControllerGraphRequest(
         owner: this,
         notifyListeners: notifyListeners,
-        storeController: _storeController,
-        readSnapshot: () => snapshot,
-        readSelectedNodeIds: () => selectedNodeIds,
-        readControllerEpoch: () => controllerEpoch,
+        initialSnapshot: initialSnapshot,
         pointerSettings: pointerSettings,
         dragStartSlop: dragStartSlop,
         clearSelectionOnDrawModeEnter: clearSelectionOnDrawModeEnter,
         moveCommitDeltaResolver: moveCommitDeltaResolver,
+        textFontFamilyByDefault: textFontFamilyByDefault,
       ),
     );
   }
 
-  final SceneStoreController _storeController;
-  late final SceneControllerGraph _graph;
+  late final SceneControllerGraphHandle _graph;
 
   SceneViewOverlayPreviewRead get _overlayPreviewRead =>
       _graph.sceneViewRuntime.overlayPreviewRead;
 
-  SceneSnapshot get snapshot => _storeController.snapshot;
-  Set<NodeId> get selectedNodeIds => _storeController.selectedNodeIds;
-  int get controllerEpoch => _storeController.controllerEpoch;
+  SceneSnapshot get snapshot => _graph.snapshot;
+  Set<NodeId> get selectedNodeIds => _graph.selectedNodeIds;
+  int get controllerEpoch => _graph.controllerEpoch;
 
   Rect? get selectionRect => _overlayPreviewRead.selectionRect;
   Offset get cameraOffset => _overlayPreviewRead.cameraOffset;
   Offset Function(NodeId nodeId) get previewDeltaResolver =>
-      sceneControllerGraphPreviewDeltaResolver(_graph);
+      _graph.previewDeltaResolver;
 
   bool get hasActiveStrokePreview => _overlayPreviewRead.hasActiveStrokePreview;
   List<Offset> get activeStrokePreviewPoints =>
@@ -79,16 +72,14 @@ class SceneController extends ChangeNotifier {
   SceneControllerSelection get selection => _graph.selection;
   SceneControllerScene get scene => _graph.scene;
 
-  Stream<ActionCommitted> get actions => sceneControllerGraphActions(_graph);
-  Stream<EditTextRequested> get editTextRequests =>
-      sceneControllerGraphEditTextRequests(_graph);
+  Stream<ActionCommitted> get actions => _graph.actions;
+  Stream<EditTextRequested> get editTextRequests => _graph.editTextRequests;
 
   void _ensurePublicSideEffectAllowed(
     String operation, {
     bool allowAfterDispose = false,
   }) {
-    sceneControllerGraphEnsurePublicSideEffectAllowed(
-      _graph,
+    _graph.ensurePublicSideEffectAllowed(
       operation,
       allowAfterDispose: allowAfterDispose,
     );
@@ -97,13 +88,9 @@ class SceneController extends ChangeNotifier {
   @override
   void dispose() {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
-    if (sceneControllerGraphIsDisposed(_graph)) {
-      return;
+    if (_graph.dispose()) {
+      super.dispose();
     }
-    _storeController.dispose();
-    disposeSceneControllerGraph(_graph);
-    detachSceneControllerGraphInternalAccess(this);
-    super.dispose();
   }
 }
 

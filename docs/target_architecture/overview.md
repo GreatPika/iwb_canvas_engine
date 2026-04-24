@@ -30,7 +30,7 @@ It records the stable owner-family registry only:
 
 | Family | Target boundary | Verification status | Detailed map |
 | --- | --- | --- | --- |
-| Composition root and facade | Keep `SceneController` thin and center runtime assembly in one internal composition root. | `locked, needs slimming` | [composition_root_and_facade.md](families/composition_root_and_facade.md) |
+| Composition root and facade | Keep `SceneController` thin and center runtime assembly plus teardown in one internal composition root. | `locked` | [composition_root_and_facade.md](families/composition_root_and_facade.md) |
 | View runtime and render seam | Keep one assembled `SceneViewRuntime` boundary while exposing separate `mainSceneRenderRead` and `overlayPreviewRead` surfaces. | `locked` | [view_runtime_and_render_seam.md](families/view_runtime_and_render_seam.md) |
 | Interaction runtime | Keep one interaction family that owns pointer-session orchestration, gesture state, and ephemeral preview state only. | `locked, needs slimming` | [interaction_runtime.md](families/interaction_runtime.md) |
 | Mutation gateway | Keep `SceneControllerMutationBoundary` as the only interaction-owned bridge into committed writes. | `locked, needs slimming` | [mutation_gateway.md](families/mutation_gateway.md) |

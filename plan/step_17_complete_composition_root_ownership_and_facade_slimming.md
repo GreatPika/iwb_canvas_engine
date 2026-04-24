@@ -28,6 +28,9 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
 - refresh `ARCHITECTURE.md`, the composition target-family docs, and the
   committed composition-root evidence once the new local form lands
 - update `PLAN.md` and this step document together when the step closes
+- close the accidental public subclass seam by making `SceneController` final,
+  so graph-owned committed reads do not have to preserve facade getter
+  overrides as an internal runtime input
 
 ### Not Included in the Change
 
@@ -36,8 +39,9 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
   assembly and teardown in the right owner
 - no store-facade cleanup inside `SceneStoreController` beyond moving its
   construction site
-- no public API, export-surface, or runtime-contract behavior change for
-  package callers
+- no supported public import, export-symbol, document schema, or scene/view
+  behavior change for package callers beyond closing the accidental
+  `SceneController` subclass seam
 - no pointer-session ownership change, runtime-host swap change, or render-seam
   change
 - no special-case relaxation of the resolved `SceneController` entrypoint
@@ -45,8 +49,9 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
   rule from the public facade
 - no ADR update; `docs/adr/0001_target_engine_architecture.md` already locks
   the accepted top-level owner split
-- no `README.md`, `API_GUIDE.md`, or `CHANGELOG.md` update because this step
-  changes internal checked-in architecture, not public package behavior
+- no `README.md` update because the package overview and quick start do not
+  change; `API_GUIDE.md` and `CHANGELOG.md` must be updated if this step closes
+  the public `SceneController` subclass seam
 
 ## 3. Surrounding Code Review
 
@@ -329,6 +334,9 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
 - `SceneController` stores only `_graph: SceneControllerGraphHandle` and
   delegates committed reads, overlay-preview reads, capability owners, streams,
   preview-delta access, and `dispose()` through that handle
+- `SceneController` is a final concrete runtime owner rather than a subclass
+  extension seam; internal runtime reads must not depend on overriding public
+  committed-read getters
 - `SceneController.dispose()` remains a facade-owned guarded block body:
   it calls `_ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true)`,
   delegates teardown to `_graph.dispose()`, and calls `super.dispose()` only
@@ -459,6 +467,8 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
 3. `SceneController` keeps `sceneControllerViewRuntimeOf` and the public
    capability getters (`interaction`, `selection`, `scene`), but it does not
    keep a peer `_storeController` field after this step.
+3a. `SceneController` is final, so package callers compose the concrete runtime
+    owner instead of subclassing it or overriding committed-read getters.
 4. `SceneController.dispose()` remains the public guarded entrypoint for
    dispose and may only perform facade preflight, one delegated call into
    `SceneControllerGraphHandle.dispose()`, and conditional `super.dispose()`;
@@ -563,6 +573,8 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
 - `lib/src/interactive/internal/scene_controller_internal_access.dart`
 - `tool/src/guardrails/rules/interactive/interactive_architecture_boundary_facade_rules.dart`
 - `tool/src/guardrails/rules/interactive/interactive_architecture_boundary_graph_rules.dart`
+- `API_GUIDE.md`
+- `CHANGELOG.md`
 - `ARCHITECTURE.md`
 - `docs/target_architecture/overview.md`
 - `docs/target_architecture/families/composition_root_and_facade.md`
@@ -578,10 +590,13 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
 - `test/tool/guardrails/interactive_api/architecture_boundary/view_and_graph_cases.dart`
 - `test/tool/guardrails/interactive_api/architecture_boundary/facade_and_boundary_cases.dart`
 - `test/tool/target_architecture_map_tool_test.dart`
+- `test/view/scene_view_interactive_test.dart`
 
 ### Fixtures and Supporting Data
 
 - `test/tool/support/guardrails_sandbox_support.dart`
+- `test/tool/support/guardrail_fixture_manifest.dart`
+- `test/tool/support/guardrail_fixture_writer.dart`
 - `docs/target_architecture/evidence/composition_root_trace.json`
 - `docs/target_architecture/evidence/composition_root_trace.md`
 
@@ -598,7 +613,9 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
 - `lib/src/interactive/**`
 - `docs/target_architecture/**`
 - `test/interactive/core/**`
+- `test/view/**`
 - `test/tool/guardrails/**`
+- `test/tool/support/**`
 - `tool/src/guardrails/rules/interactive/**`
 
 ## 9. Implementation Rules
@@ -613,6 +630,8 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
   runtime; only the construction site moves
 - `sceneControllerViewRuntimeOf` remains the only top-level view bridge from
   the public facade into the assembled runtime boundary
+- `SceneController` is a final concrete runtime facade; package integrations
+  compose it instead of subclassing it or overriding committed-read getters
 - `SceneController.dispose()` remains a public facade guard point that satisfies
   the resolved `_ensurePublicSideEffectAllowed(...)` entrypoint rule while
   delegating teardown ownership to the graph handle
@@ -672,7 +691,7 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Introduce `SceneControllerGraphHandle` for Facade Delegation
+### Slice 1. [x] Introduce `SceneControllerGraphHandle` for Facade Delegation
 
 #### Slice Contract
 
@@ -736,7 +755,7 @@ before store ownership moves.
   composition family's remaining forwarding surface, and the public facade no
   longer depends on top-level graph helper functions for that behavior
 
-### Slice 2. [ ] Move Store Construction and Teardown Into the Composition Root
+### Slice 2. [x] Move Store Construction and Teardown Into the Composition Root
 
 #### Slice Contract
 
@@ -813,7 +832,7 @@ controller teardown order.
   public controller path, while the facade keeps only its public delegation
   surface
 
-### Slice 3. [ ] Sync Architecture and Target Map to the Locked Composition Form
+### Slice 3. [x] Sync Architecture and Target Map to the Locked Composition Form
 
 #### Slice Contract
 
@@ -833,6 +852,8 @@ pre-cut split ownership.
   `locked, needs slimming` to the landed locked local form
 - update `ARCHITECTURE.md` so `SceneController` no longer owns both a
   `SceneStoreController` and an assembled controller graph
+- update `API_GUIDE.md` and `CHANGELOG.md` if the landed form makes
+  `SceneController` final to close the public subclass seam
 - tighten `tool/invariant_registry.dart` wording if needed so the interactive
   architecture invariant points at the final composition proof surface
 - update `PLAN.md` and this step document checkbox state when the step closes
@@ -861,6 +882,8 @@ pre-cut split ownership.
 - checked-in architecture text describes one thin public facade over one
   composition-root-owned lifecycle handle
 - the composition family status is `locked` in the target map
+- public-facing docs and release notes describe `SceneController` as a final
+  concrete runtime owner when the subclass seam is closed
 
 #### Negative Scenarios
 
@@ -868,11 +891,13 @@ pre-cut split ownership.
   owner of both the store and the assembled graph
 - no target-map status still reports the composition family as
   `locked, needs slimming` after the code and evidence land
+- no step-contract text still claims this change avoids `API_GUIDE.md` or
+  `CHANGELOG.md` updates when a public `SceneController` finalization lands
 
 #### Closure Evidence
 
-- source-of-truth docs, committed evidence, and invariant coverage all match
-  the implemented composition cut
+- source-of-truth docs, committed evidence, public API notes, release notes,
+  and invariant coverage all match the implemented composition cut
 
 ## 11. Final Verification
 
@@ -885,7 +910,7 @@ pre-cut split ownership.
 - `dart run tool/run_tool_tests.dart test/tool/target_architecture_map_tool_test.dart`
 - `dart run tool/check_guardrails.dart`
 - `dart run tool/check_invariant_coverage.dart`
-- `printf '%s\n' 'PLAN.md' 'plan/step_17_complete_composition_root_ownership_and_facade_slimming.md' 'lib/src/interactive/scene_controller.dart' 'lib/src/interactive/internal/scene_controller_graph.dart' 'lib/src/interactive/internal/scene_controller_internal_access.dart' 'test/interactive/core/scene_controller_architecture_boundary_test.dart' 'test/interactive/core/scene_controller_interaction_contract_test.dart' 'test/interactive/core/scene_controller_public_listener_contract_test.dart' 'test/interactive/core/scene_controller_interactive_dispose_fail_fast_test.dart' 'test/tool/guardrails/guardrails_interactive_api_tool_test.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/view_and_graph_cases.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/facade_and_boundary_cases.dart' 'test/tool/support/guardrails_sandbox_support.dart' 'test/tool/target_architecture_map_tool_test.dart' 'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_facade_rules.dart' 'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_graph_rules.dart' 'tool/invariant_registry.dart' 'ARCHITECTURE.md' 'docs/target_architecture/overview.md' 'docs/target_architecture/families/composition_root_and_facade.md' 'docs/target_architecture/evidence/composition_root_trace.json' 'docs/target_architecture/evidence/composition_root_trace.md' | dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=-`
+- `printf '%s\n' 'API_GUIDE.md' 'ARCHITECTURE.md' 'CHANGELOG.md' 'PLAN.md' 'plan/step_17_complete_composition_root_ownership_and_facade_slimming.md' 'lib/src/interactive/scene_controller.dart' 'lib/src/interactive/internal/scene_controller_graph.dart' 'lib/src/interactive/internal/scene_controller_internal_access.dart' 'test/interactive/core/scene_controller_architecture_boundary_test.dart' 'test/interactive/core/scene_controller_interaction_contract_test.dart' 'test/interactive/core/scene_controller_public_listener_contract_test.dart' 'test/interactive/core/scene_controller_interactive_dispose_fail_fast_test.dart' 'test/tool/guardrails/guardrails_interactive_api_tool_test.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/view_and_graph_cases.dart' 'test/tool/guardrails/interactive_api/architecture_boundary/facade_and_boundary_cases.dart' 'test/tool/support/guardrail_fixture_manifest.dart' 'test/tool/support/guardrail_fixture_writer.dart' 'test/tool/support/guardrails_sandbox_support.dart' 'test/tool/target_architecture_map_tool_test.dart' 'test/view/scene_view_interactive_test.dart' 'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_facade_rules.dart' 'tool/src/guardrails/rules/interactive/interactive_architecture_boundary_graph_rules.dart' 'tool/invariant_registry.dart' 'docs/target_architecture/overview.md' 'docs/target_architecture/families/composition_root_and_facade.md' 'docs/target_architecture/evidence/composition_root_trace.json' 'docs/target_architecture/evidence/composition_root_trace.md' | dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=-`
 
 ## 12. Acceptance Criteria
 
@@ -900,7 +925,10 @@ pre-cut split ownership.
 - `SceneController.dispose()` stays a facade-guarded public entrypoint while
   delegating teardown ownership to `SceneControllerGraphHandle`, with no direct
   facade teardown fan-out and no resolved-guard special-case
+- `SceneController` is final and public docs/release notes describe composition
+  as the supported customization model instead of subclassing
 - architecture-boundary proof and interactive guardrails reject facade-owned
   store construction, direct teardown fan-out, and a reintroduced helper bag
-- `ARCHITECTURE.md`, the composition target-family docs, and the committed
-  `composition_root_trace` evidence all describe the landed locked local form
+- `API_GUIDE.md`, `CHANGELOG.md`, `ARCHITECTURE.md`, the composition
+  target-family docs, and the committed `composition_root_trace` evidence all
+  describe the landed locked local form

@@ -720,7 +720,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY',
     scope: 'engine-runtime',
     title:
-        'interactive capability/runtime/event/write-side owners remain structurally split, keep SceneController as the committed render-state boundary, stay model-free under lib/src/interactive/**, and do not reabsorb deleted residual seams',
+        'interactive composition, capability, runtime, event, and write-side owners remain structurally split; SceneController stays a thin public facade over the graph handle and does not re-own store construction, teardown fan-out, render-state surfaces, or deleted residual seams',
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path:

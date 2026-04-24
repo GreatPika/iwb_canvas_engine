@@ -145,37 +145,40 @@ void main() {
       expect(session.pendingTapFlushTimestampMs, isNull);
     });
 
-    test('session-routed pointer bypasses public interaction facade', () {
-      final controller = _ThrowingInteractionController();
-      addTearDown(controller.dispose);
-      controller.interaction.setMode(CanvasMode.draw);
-      controller.interaction.setDrawTool(DrawTool.pen);
+    test(
+      'session-routed pointer reaches runtime without facade subclassing',
+      () {
+        final controller = SceneController();
+        addTearDown(controller.dispose);
+        controller.interaction.setMode(CanvasMode.draw);
+        controller.interaction.setDrawTool(DrawTool.pen);
 
-      final session = sceneControllerViewRuntimeOf(controller)
-          .createPointerSession(
-            isMounted: () => true,
-            hasLiveRawPointers: () => false,
-          );
-      addTearDown(() {
-        session.detach();
-        session.dispose();
-      });
+        final session = sceneControllerViewRuntimeOf(controller)
+            .createPointerSession(
+              isMounted: () => true,
+              hasLiveRawPointers: () => false,
+            );
+        addTearDown(() {
+          session.detach();
+          session.dispose();
+        });
 
-      expect(
-        () => session.handleRoutedSample(
-          const PointerSample(
-            pointerId: 1,
-            position: Offset(10, 10),
-            timestampMs: 1,
-            phase: PointerPhase.down,
-            kind: PointerDeviceKind.touch,
+        expect(
+          () => session.handleRoutedSample(
+            const PointerSample(
+              pointerId: 1,
+              position: Offset(10, 10),
+              timestampMs: 1,
+              phase: PointerPhase.down,
+              kind: PointerDeviceKind.touch,
+            ),
+            shouldTrackSignals: false,
           ),
-          shouldTrackSignals: false,
-        ),
-        returnsNormally,
-      );
-      expect(controller.interaction.hasActiveStrokePreview, isTrue);
-    });
+          returnsNormally,
+        );
+        expect(controller.interaction.hasActiveStrokePreview, isTrue);
+      },
+    );
 
     test('session runtime rejects unknown pointer session token', () {
       final controller = SceneController();
@@ -594,34 +597,5 @@ final class _TrackingListenable implements Listenable {
     for (final listener in List<VoidCallback>.of(_listeners)) {
       listener();
     }
-  }
-}
-
-class _ThrowingInteractionController extends SceneController {
-  _ThrowingInteractionController();
-
-  late final SceneControllerInteraction _interaction =
-      _ThrowingSessionTransportInteraction(
-        sceneControllerInternalInteractionAccessForTest(this),
-      );
-
-  @override
-  SceneControllerInteraction get interaction => _interaction;
-}
-
-class _ThrowingSessionTransportInteraction
-    extends SceneControllerInteractionOwner {
-  _ThrowingSessionTransportInteraction(super.access);
-
-  @override
-  void handlePointer(CanvasPointerInput input) {
-    throw StateError('public handlePointer must not transport session input');
-  }
-
-  @override
-  void handleDoubleTap({required Offset position, int? timestampMs}) {
-    throw StateError(
-      'public handleDoubleTap must not transport session double taps',
-    );
   }
 }

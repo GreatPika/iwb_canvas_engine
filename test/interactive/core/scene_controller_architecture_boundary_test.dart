@@ -67,6 +67,7 @@ void main() {
       graph,
       '_assembleSceneControllerGraph',
     );
+    final graphHandle = analysis.findClass(graph, 'SceneControllerGraphHandle');
     final sceneViewRuntimeClass = analysis.findClass(
       sceneViewRuntime,
       'SceneControllerSceneViewRuntime',
@@ -109,6 +110,10 @@ void main() {
       isTrue,
     );
     expect(
+      analysis.hasImport(facade, '../controller/scene_store_controller.dart'),
+      isFalse,
+    );
+    expect(
       analysis.hasImport(
         facade,
         'internal/scene_controller_internal_access.dart',
@@ -142,6 +147,46 @@ void main() {
         'createSceneControllerGraph',
       ),
       isTrue,
+    );
+    expect(
+      analysis.containsIdentifier(facade.unit, 'sceneControllerGraphActions'),
+      isFalse,
+    );
+    expect(
+      analysis.containsIdentifier(
+        facade.unit,
+        'sceneControllerGraphEditTextRequests',
+      ),
+      isFalse,
+    );
+    expect(
+      analysis.containsIdentifier(
+        facade.unit,
+        'sceneControllerGraphPreviewDeltaResolver',
+      ),
+      isFalse,
+    );
+    expect(
+      analysis.containsIdentifier(
+        facade.unit,
+        'sceneControllerGraphEnsurePublicSideEffectAllowed',
+      ),
+      isFalse,
+    );
+    expect(
+      analysis.containsIdentifier(
+        facade.unit,
+        'sceneControllerGraphIsDisposed',
+      ),
+      isFalse,
+    );
+    expect(
+      analysis.containsIdentifier(facade.unit, 'SceneStoreController'),
+      isFalse,
+    );
+    expect(
+      analysis.containsIdentifier(facade.unit, '_storeController'),
+      isFalse,
     );
     expect(
       analysis.hasUnnamedFactoryInvocation(
@@ -191,6 +236,13 @@ void main() {
     expect(
       analysis.variableInitializerConstructorType(
         graphAssembly,
+        'storeController',
+      ),
+      'SceneStoreController',
+    );
+    expect(
+      analysis.variableInitializerConstructorType(
+        graphAssembly,
         'sceneViewRuntime',
       ),
       'SceneControllerSceneViewRuntime',
@@ -200,20 +252,71 @@ void main() {
       'SceneControllerInteractionOwner',
     );
     expect(
-      analysis.returnedRecordFieldConstructorType(graphAssembly, 'selection'),
-      'SceneControllerSelectionOwner',
+      analysis.containsConstructorInvocation(
+        graphAssembly,
+        'SceneControllerGraphHandle',
+      ),
+      isTrue,
     );
     expect(
-      analysis.returnedRecordFieldConstructorType(graphAssembly, 'scene'),
-      'SceneControllerSceneOwner',
+      analysis.classFieldType(graphHandle, 'interaction'),
+      'SceneControllerInteraction',
     );
     expect(
-      analysis.returnedRecordFieldIdentifier(graphAssembly, 'sceneViewRuntime'),
-      'sceneViewRuntime',
+      analysis.classFieldType(graphHandle, 'selection'),
+      'SceneControllerSelection',
     );
     expect(
-      analysis.returnedRecordFieldIdentifier(graphAssembly, 'interaction'),
-      'interaction',
+      analysis.classFieldType(graphHandle, 'scene'),
+      'SceneControllerScene',
+    );
+    expect(
+      analysis.classFieldType(graphHandle, 'sceneViewRuntime'),
+      'SceneViewRuntime',
+    );
+    expect(
+      analysis.classFieldType(graphHandle, '_storeController'),
+      'SceneStoreController',
+    );
+    expect(
+      analysis.hasTopLevelFunction(graph, 'sceneControllerGraphActions'),
+      isFalse,
+    );
+    expect(
+      analysis.hasTopLevelFunction(
+        graph,
+        'sceneControllerGraphEditTextRequests',
+      ),
+      isFalse,
+    );
+    expect(
+      analysis.hasTopLevelFunction(
+        graph,
+        'sceneControllerGraphPreviewDeltaResolver',
+      ),
+      isFalse,
+    );
+    expect(
+      analysis.hasTopLevelFunction(
+        graph,
+        'sceneControllerGraphEnsurePublicSideEffectAllowed',
+      ),
+      isFalse,
+    );
+    expect(
+      analysis.hasTopLevelFunction(graph, 'sceneControllerGraphIsDisposed'),
+      isFalse,
+    );
+    expect(
+      analysis.hasTopLevelFunction(graph, 'disposeSceneControllerGraph'),
+      isFalse,
+    );
+    expect(
+      analysis.hasTopLevelFunction(
+        graph,
+        'detachSceneControllerGraphInternalAccess',
+      ),
+      isFalse,
     );
 
     expect(
@@ -428,6 +531,12 @@ final class _ArchitectureAnalysis {
       }
     }
     throw StateError('Top-level function not found: $functionName');
+  }
+
+  bool hasTopLevelFunction(ParseStringResult parsed, String functionName) {
+    return parsed.unit.declarations.whereType<FunctionDeclaration>().any(
+      (declaration) => declaration.name.lexeme == functionName,
+    );
   }
 
   MethodDeclaration findMethod(

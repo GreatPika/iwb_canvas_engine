@@ -74,6 +74,7 @@ Future<GuardrailViolation?> _checkInteractiveFacadeBoundary(
     'internal/interactive_draw_coordinator.dart',
     'internal/interactive_runtime.dart',
     'internal/interactive_event_dispatcher.dart',
+    '../controller/scene_store_controller.dart',
   })) {
     return GuardrailViolation(
       filePath: filePath,
@@ -85,6 +86,35 @@ Future<GuardrailViolation?> _checkInteractiveFacadeBoundary(
   }
   if (_unitContainsIdentifier(parsed.unit, 'createPointerSemanticsBridge') ||
       _unitContainsIdentifier(parsed.unit, 'StreamController') ||
+      _unitContainsIdentifier(parsed.unit, 'sceneControllerGraphActions') ||
+      _unitContainsIdentifier(
+        parsed.unit,
+        'sceneControllerGraphEditTextRequests',
+      ) ||
+      _unitContainsIdentifier(
+        parsed.unit,
+        'sceneControllerGraphPreviewDeltaResolver',
+      ) ||
+      _unitContainsIdentifier(
+        parsed.unit,
+        'sceneControllerGraphEnsurePublicSideEffectAllowed',
+      ) ||
+      _unitContainsIdentifier(parsed.unit, 'sceneControllerGraphIsDisposed') ||
+      _unitContainsIdentifier(parsed.unit, 'disposeSceneControllerGraph') ||
+      _unitContainsIdentifier(
+        parsed.unit,
+        'detachSceneControllerGraphInternalAccess',
+      ) ||
+      _unitContainsIdentifier(parsed.unit, 'SceneStoreController') ||
+      _unitContainsIdentifier(parsed.unit, '_storeController') ||
+      _unitContainsQualifiedPrefix(parsed.unit, <String>[
+        '_graph',
+        'disposeRuntime',
+      ]) ||
+      _unitContainsQualifiedPrefix(parsed.unit, <String>[
+        '_graph',
+        'detachInternalAccess',
+      ]) ||
       _unitContainsIdentifier(parsed.unit, '_timestampCursorMs') ||
       _unitContainsQualifiedPrefix(parsed.unit, <String>[
         '_runtime',

@@ -34,6 +34,126 @@ void _registerInteractiveArchitectureBoundaryViewAndGraphTests() {
     }
   });
 
+  test('rejects graph assembly that receives a prebuilt store', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        sceneControllerFixture(
+          methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+        ),
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/internal/scene_controller_graph.dart',
+        '''
+import '../../controller/scene_controller_committed_mutation_access.dart';
+import '../../controller/scene_store_controller.dart';
+import '../scene_controller_interaction.dart';
+import '../scene_controller_scene.dart';
+import '../scene_controller_selection.dart';
+import 'scene_controller_internal_access.dart';
+import 'scene_controller_interaction_access.dart';
+import 'scene_controller_interaction_runtime.dart';
+import 'scene_controller_scene_mutations.dart';
+import 'scene_controller_selection_mutations.dart';
+import 'scene_controller_scene_view_runtime.dart';
+
+class SceneControllerGraphRequest {
+  SceneStoreController? storeController;
+}
+
+class SceneControllerGraphHandle {
+  SceneControllerGraphHandle({
+    required this.storeController,
+    required this.sceneViewRuntime,
+    required this.internalAccessRegistration,
+  });
+
+  final SceneStoreController storeController;
+  final SceneControllerSceneViewRuntime sceneViewRuntime;
+  final SceneControllerInternalAccessRegistration internalAccessRegistration;
+
+  Object get actions => Object();
+
+  Object get editTextRequests => Object();
+}
+
+SceneControllerGraphHandle createSceneControllerGraph(Object request) {
+  final graph = _assembleSceneControllerGraph(request as SceneControllerGraphRequest);
+  registerSceneControllerInternalAccess(Object(), graph.internalAccessRegistration);
+  return graph;
+}
+
+SceneControllerGraphHandle _assembleSceneControllerGraph(
+  SceneControllerGraphRequest request,
+) {
+  final storeController = request.storeController!;
+  final interactionRuntime = createSceneControllerInteractionRuntime(
+    request: SceneControllerInteractionRuntimeRequest(
+      mutationAccess: SceneStoreControllerCommittedMutationAccess(),
+    ),
+  );
+  final selectionMutations = SceneControllerSelectionMutations();
+  final sceneMutations = SceneControllerSceneMutations();
+  final interaction = SceneControllerInteractionOwner(
+    SceneControllerInteractionContext(runtime: interactionRuntime),
+  );
+  final selection = SceneControllerSelectionOwner(
+    runtime: interactionRuntime,
+    mutations: selectionMutations,
+  );
+  final scene = SceneControllerSceneOwner(
+    ensurePublicSideEffectAllowed:
+        interactionRuntime.ensurePublicSideEffectAllowed,
+    mutations: sceneMutations,
+  );
+  interaction.toString();
+  selection.toString();
+  scene.toString();
+  return SceneControllerGraphHandle(
+    storeController: storeController,
+    sceneViewRuntime: SceneControllerSceneViewRuntime(
+      ensurePublicSideEffectAllowed:
+          interactionRuntime.ensurePublicSideEffectAllowed,
+    ),
+    internalAccessRegistration: SceneControllerInternalAccessRegistration(),
+  );
+}
+''',
+      );
+
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'SceneController graph must assemble view runtime and '
+              'internal access outside the facade',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
+
   test(
     'accepts facade-to-view runtime bridge with render-state-only view surface',
     () async {
@@ -308,7 +428,9 @@ Object createSceneControllerGraph(Object request) => Object();
         'lib/src/interactive/internal/scene_controller_graph.dart',
         '''
 import 'scene_controller_internal_access.dart';
+import 'scene_controller_interaction_access.dart';
 import 'scene_controller_scene_view_runtime.dart';
+import '../../controller/scene_store_controller.dart';
 
 class SceneControllerInteractionOwner {}
 
@@ -332,23 +454,26 @@ class _InteractionRuntime {
   void ensurePublicSideEffectAllowed(String operation) {}
 }
 
-class _Graph {
-  _Graph({
+class SceneControllerGraphHandle {
+  SceneControllerGraphHandle({
+    required this.storeController,
     required this.sceneViewRuntime,
     required this.internalAccessRegistration,
   });
 
+  final SceneStoreController storeController;
   final SceneControllerSceneViewRuntime sceneViewRuntime;
   final SceneControllerInternalAccessRegistration internalAccessRegistration;
 }
 
-Object createSceneControllerGraph(Object request) {
+SceneControllerGraphHandle createSceneControllerGraph(Object request) {
   final graph = _assembleSceneControllerGraph(request);
   registerSceneControllerInternalAccess(Object(), graph.internalAccessRegistration);
   return graph;
 }
 
-_Graph _assembleSceneControllerGraph(Object request) {
+SceneControllerGraphHandle _assembleSceneControllerGraph(Object request) {
+  final storeController = SceneStoreController();
   final interactionRuntime = _InteractionRuntime();
   final interaction = SceneControllerInteractionOwner();
   final selection = SceneControllerSelectionOwner(interactionRuntime);
@@ -358,7 +483,8 @@ _Graph _assembleSceneControllerGraph(Object request) {
   interaction.toString();
   selection.toString();
   scene.toString();
-  return _Graph(
+  return SceneControllerGraphHandle(
+    storeController: storeController,
     sceneViewRuntime: SceneControllerSceneViewRuntime(
       ensurePublicSideEffectAllowed:
           interactionRuntime.ensurePublicSideEffectAllowed,
@@ -366,10 +492,6 @@ _Graph _assembleSceneControllerGraph(Object request) {
     internalAccessRegistration: SceneControllerInternalAccessRegistration(),
   );
 }
-
-Object sceneControllerGraphActions(Object graph) => Object();
-
-Object sceneControllerGraphEditTextRequests(Object graph) => Object();
 ''',
       );
 

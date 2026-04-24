@@ -15,6 +15,37 @@
       "path": "lib/src/interactive/internal/scene_controller_graph.dart",
       "children": [
         {
+          "name": "SceneStoreController",
+          "detail": "SceneStoreController",
+          "path": "lib/src/controller/scene_store_controller.dart",
+          "children": [
+            {
+              "name": "SceneStore",
+              "detail": "SceneStore",
+              "path": "lib/src/controller/store.dart",
+              "children": []
+            },
+            {
+              "name": "txnSceneFromSnapshot",
+              "detail": "document.dart",
+              "path": "lib/src/model/document.dart",
+              "children": []
+            },
+            {
+              "name": "SceneSnapshot",
+              "detail": "SceneSnapshot",
+              "path": "lib/src/contract/snapshot.dart",
+              "children": []
+            },
+            {
+              "name": "SceneControllerCommitRuntime",
+              "detail": "SceneControllerCommitRuntime",
+              "path": "lib/src/controller/scene_controller_commit_runtime.dart",
+              "children": []
+            }
+          ]
+        },
+        {
           "name": "_createInteractionConfig",
           "detail": "scene_controller_graph.dart",
           "path": "lib/src/interactive/internal/scene_controller_graph.dart",
@@ -56,6 +87,38 @@
           "name": "ensurePublicSideEffectAllowed",
           "detail": "SceneControllerInteractionRuntime",
           "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+          "children": []
+        },
+        {
+          "name": "get snapshot",
+          "detail": "SceneStoreController",
+          "path": "lib/src/controller/scene_store_controller.dart",
+          "children": [
+            {
+              "name": "txnSceneToSnapshot",
+              "detail": "document.dart",
+              "path": "lib/src/model/document.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "get selectedNodeIds",
+          "detail": "SceneStoreController",
+          "path": "lib/src/controller/scene_store_controller.dart",
+          "children": [
+            {
+              "name": "get selectedNodeIdsView",
+              "detail": "SceneControllerCommitRuntime",
+              "path": "lib/src/controller/scene_controller_commit_runtime.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "get controllerEpoch",
+          "detail": "SceneStoreController",
+          "path": "lib/src/controller/scene_store_controller.dart",
           "children": []
         },
         {
@@ -116,6 +179,18 @@
               "name": "SceneStoreControllerCommittedMutationAccess",
               "detail": "SceneStoreControllerCommittedMutationAccess",
               "path": "lib/src/controller/scene_controller_committed_mutation_access.dart",
+              "children": []
+            },
+            {
+              "name": "get snapshot",
+              "detail": "SceneStoreController",
+              "path": "lib/src/controller/scene_store_controller.dart",
+              "children": []
+            },
+            {
+              "name": "get selectedNodeIds",
+              "detail": "SceneStoreController",
+              "path": "lib/src/controller/scene_store_controller.dart",
               "children": []
             },
             {
@@ -205,6 +280,12 @@
           "name": "SceneControllerInteractionOwner",
           "detail": "SceneControllerInteractionOwner",
           "path": "lib/src/interactive/scene_controller_interaction.dart",
+          "children": []
+        },
+        {
+          "name": "SceneControllerGraphHandle",
+          "detail": "SceneControllerGraphHandle",
+          "path": "lib/src/interactive/internal/scene_controller_graph.dart",
           "children": []
         },
         {
@@ -316,6 +397,12 @@
           "children": []
         }
       ]
+    },
+    {
+      "name": "get internalAccessRegistration",
+      "detail": "SceneControllerGraphHandle",
+      "path": "lib/src/interactive/internal/scene_controller_graph.dart",
+      "children": []
     }
   ]
 }

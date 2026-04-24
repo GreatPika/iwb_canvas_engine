@@ -1240,9 +1240,9 @@ void main() {
     // - single-active-pointer semantics: existing move/draw policy group
 
     test(
-      'internal interaction access reads snapshot through the public controller facade',
+      'internal interaction access reads graph-owned committed snapshot',
       () {
-        final controller = _SnapshotOverrideController(
+        final controller = SceneController(
           initialSnapshot: SceneSnapshot(
             layers: <ContentLayerSnapshot>[
               ContentLayerSnapshot(id: 'layer-auto-0'),
@@ -1251,17 +1251,11 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        final overriddenSnapshot = SceneSnapshot(
-          layers: <ContentLayerSnapshot>[
-            ContentLayerSnapshot(id: 'layer-override'),
-          ],
-        );
-        controller.snapshotOverride = overriddenSnapshot;
+        final snapshot = sceneControllerInternalInteractionAccessForTest(
+          controller,
+        ).snapshot;
 
-        expect(
-          sceneControllerInternalInteractionAccessForTest(controller).snapshot,
-          same(overriddenSnapshot),
-        );
+        expect(snapshot.layers.single.id, 'layer-auto-0');
       },
     );
 
@@ -1321,13 +1315,4 @@ void main() {
       },
     );
   });
-}
-
-class _SnapshotOverrideController extends SceneController {
-  _SnapshotOverrideController({required super.initialSnapshot});
-
-  SceneSnapshot? snapshotOverride;
-
-  @override
-  SceneSnapshot get snapshot => snapshotOverride ?? super.snapshot;
 }

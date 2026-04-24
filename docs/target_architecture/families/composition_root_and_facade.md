@@ -6,13 +6,17 @@ This family defines who assembles the runtime center and which public owner is
 allowed to expose that assembled graph to package callers.
 
 The checked-in code keeps one public `SceneController` facade and centers the
-assembly path in `createSceneControllerGraph`.
+assembly and teardown path in `createSceneControllerGraph` and
+`SceneControllerGraphHandle`.
 
 ## Target Rules
 
 - `SceneController` remains the supported public interactive facade.
 - `createSceneControllerGraph` remains the internal composition-root entrypoint
   that assembles runtime owners and capability owners.
+- `SceneControllerGraphHandle` owns the assembled controller lifecycle,
+  including `SceneStoreController` construction, runtime teardown, view-runtime
+  teardown, and internal-access unregistration.
 - Assembled runtime dependencies such as `SceneStoreController`,
   `SceneControllerInteractionRuntime`, and `SceneControllerSceneViewRuntime`
   stay dependencies of the root, not peer public roots.
@@ -23,7 +27,7 @@ assembly path in `createSceneControllerGraph`.
 
 - Public facade:
   `lib/src/interactive/scene_controller.dart`
-- Composition root and root-local helpers:
+- Composition root and lifecycle handle:
   `lib/src/interactive/internal/scene_controller_graph.dart`
 - Internal access seam:
   `lib/src/interactive/internal/scene_controller_internal_access.dart`
@@ -40,6 +44,10 @@ assembly path in `createSceneControllerGraph`.
 
 - Do not let `SceneController` become a peer assembly owner alongside the
   internal composition root.
+- Do not let `SceneController` construct `SceneStoreController` or directly fan
+  teardown out across store, runtime, view-runtime, or internal-access owners.
+- Do not reintroduce a top-level `sceneControllerGraph*` helper bag; extend
+  `SceneControllerGraphHandle` for composition-family forwarding.
 - Do not treat capability owners as separate roots or let them absorb runtime
   assembly responsibilities.
 - Do not turn the composition root into a new domain-logic bucket; it may wire
@@ -54,7 +62,7 @@ assembly path in `createSceneControllerGraph`.
 
 ## Status
 
-- `locked, needs slimming`
-- Checked-in code already centers assembly in `createSceneControllerGraph`, but
-  the facade and root-local helper surface are still broader than the intended
-  steady-state shape.
+- `locked`
+- Checked-in code centers assembly, store construction, facade forwarding, and
+  coordinated teardown in `SceneControllerGraphHandle`; `SceneController`
+  remains the thin public facade.

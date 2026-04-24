@@ -145,6 +145,7 @@ void main() {
         dragStartSlop: 0.001,
       );
       addTearDown(controller.dispose);
+      expect(controller.controllerEpoch, 0);
       controller.selection.setSelection(const <String>{'rect-1'});
       await pumpEventQueue();
 
@@ -186,6 +187,32 @@ void main() {
       expect(publicNotifications, 0);
       expect(sceneRepaints, 0);
       expect(overlayRepaints, 0);
+    },
+  );
+
+  test(
+    'rejected dispose during active write keeps public listener surface alive',
+    () async {
+      final controller = SceneController(initialSnapshot: rectSnapshot());
+      addTearDown(controller.dispose);
+
+      var publicNotifications = 0;
+      controller.addListener(() {
+        publicNotifications += 1;
+      });
+
+      controller.scene.write<void>((_) {
+        expect(() => controller.dispose(), throwsStateError);
+      });
+      await pumpEventQueue();
+
+      expect(publicNotifications, 0);
+
+      controller.selection.setSelection(const <String>{'rect-1'});
+      await pumpEventQueue();
+
+      expect(controller.selectedNodeIds, const <String>{'rect-1'});
+      expect(publicNotifications, 1);
     },
   );
 }

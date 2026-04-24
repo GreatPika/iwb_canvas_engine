@@ -171,7 +171,8 @@ void main() {
         'SceneControllerSceneViewRuntime',
         'composition_root_trace.json',
         'composition_root_trace.md',
-        '`locked, needs slimming`',
+        'SceneControllerGraphHandle',
+        '`locked`',
       ]);
       expect(source, isNot(contains('## Current Mismatch')));
       expect(source, isNot(contains('## Target Shape')));

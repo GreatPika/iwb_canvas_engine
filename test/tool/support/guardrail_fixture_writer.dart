@@ -16,8 +16,8 @@ ${manifest.classDeclaration}
 ${manifest.graphMembers}
 ${manifest.extraMembers}
 
-  Object get actions => sceneControllerGraphActions(_graph);
-  Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);
+  Object get actions => _graph.actions;
+  Object get editTextRequests => _graph.editTextRequests;
 
 ${manifest.methods}
 
@@ -39,7 +39,7 @@ String sceneControllerFixture({
   required String methods,
   String classDeclaration = 'class SceneController {',
   String graphMembers = '''
-  final Object _graph = createSceneControllerGraph(
+  final SceneControllerGraphHandle _graph = createSceneControllerGraph(
     SceneControllerGraphRequest(),
   );
 ''',
@@ -64,7 +64,7 @@ void writeSceneControllerFixture(
   required String methods,
   String classDeclaration = 'class SceneController {',
   String graphMembers = '''
-  final Object _graph = createSceneControllerGraph(
+  final SceneControllerGraphHandle _graph = createSceneControllerGraph(
     SceneControllerGraphRequest(),
   );
 ''',

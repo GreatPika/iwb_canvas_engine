@@ -5,7 +5,7 @@ final class GuardrailSceneControllerFixtureManifest {
     required this.methods,
     this.classDeclaration = 'class SceneController {',
     this.graphMembers = '''
-  final Object _graph = createSceneControllerGraph(
+  final SceneControllerGraphHandle _graph = createSceneControllerGraph(
     SceneControllerGraphRequest(),
   );
 ''',
@@ -26,7 +26,7 @@ GuardrailSceneControllerFixtureManifest sceneControllerFixtureManifest({
   required String methods,
   String classDeclaration = 'class SceneController {',
   String graphMembers = '''
-  final Object _graph = createSceneControllerGraph(
+  final SceneControllerGraphHandle _graph = createSceneControllerGraph(
     SceneControllerGraphRequest(),
   );
 ''',

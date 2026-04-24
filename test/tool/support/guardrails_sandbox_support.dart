@@ -1341,10 +1341,12 @@ final class SceneControllerSceneViewOverlayPreviewRead
     'lib/src/interactive/internal/scene_controller_graph.dart',
     '''
 import '../../controller/scene_controller_committed_mutation_access.dart';
+import '../../controller/scene_store_controller.dart';
 import '../scene_controller_interaction.dart';
 import '../scene_controller_scene.dart';
 import '../scene_controller_selection.dart';
 import 'scene_controller_internal_access.dart';
+import 'scene_controller_interaction_access.dart';
 import 'scene_controller_interaction_runtime.dart';
 import 'scene_controller_scene_mutations.dart';
 import 'scene_controller_selection_mutations.dart';
@@ -1352,23 +1354,30 @@ import 'scene_controller_scene_view_runtime.dart';
 
 class SceneControllerGraphRequest {}
 
-class _Graph {
-  _Graph({
+class SceneControllerGraphHandle {
+  SceneControllerGraphHandle({
+    required this.storeController,
     required this.sceneViewRuntime,
     required this.internalAccessRegistration,
   });
 
+  final SceneStoreController storeController;
   final SceneControllerSceneViewRuntime sceneViewRuntime;
   final SceneControllerInternalAccessRegistration internalAccessRegistration;
+
+  Object get actions => Object();
+
+  Object get editTextRequests => Object();
 }
 
-Object createSceneControllerGraph(Object request) {
+SceneControllerGraphHandle createSceneControllerGraph(Object request) {
   final graph = _assembleSceneControllerGraph(request);
   registerSceneControllerInternalAccess(Object(), graph.internalAccessRegistration);
   return graph;
 }
 
-_Graph _assembleSceneControllerGraph(Object request) {
+SceneControllerGraphHandle _assembleSceneControllerGraph(Object request) {
+  final storeController = SceneStoreController();
   final interactionRuntime = createSceneControllerInteractionRuntime(
     request: SceneControllerInteractionRuntimeRequest(
       mutationAccess: SceneStoreControllerCommittedMutationAccess(),
@@ -1391,7 +1400,8 @@ _Graph _assembleSceneControllerGraph(Object request) {
   interaction.toString();
   selection.toString();
   scene.toString();
-  return _Graph(
+  return SceneControllerGraphHandle(
+    storeController: storeController,
     sceneViewRuntime: SceneControllerSceneViewRuntime(
       ensurePublicSideEffectAllowed:
           interactionRuntime.ensurePublicSideEffectAllowed,
@@ -1399,10 +1409,6 @@ _Graph _assembleSceneControllerGraph(Object request) {
     internalAccessRegistration: SceneControllerInternalAccessRegistration(),
   );
 }
-
-Object sceneControllerGraphActions(Object graph) => Object();
-
-Object sceneControllerGraphEditTextRequests(Object graph) => Object();
 ''',
   );
   writeSandboxFile(

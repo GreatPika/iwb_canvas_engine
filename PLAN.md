@@ -33,4 +33,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 14. Retire Unused Semantic Layer Replace Seam](plan/step_14_retire_unused_semantic_layer_replace_seam.md)
 - [x] [Step 15. Main-Scene and Overlay Render Read Split](plan/step_15_main_scene_and_overlay_render_read_split.md)
 - [x] [Step 16. Target Architecture Map Normalization](plan/step_16_target_architecture_map_normalization.md)
-- [ ] [Step 17. Complete Composition Root Ownership And Facade Slimming](plan/step_17_complete_composition_root_ownership_and_facade_slimming.md)
+- [x] [Step 17. Complete Composition Root Ownership And Facade Slimming](plan/step_17_complete_composition_root_ownership_and_facade_slimming.md)

@@ -380,10 +380,19 @@ The architecture depends on **copy-on-write**, not full-scene eager deep clone.
 
 ### 7.3 Interactive runtime
 
-#### `SceneControllerGraph`
+#### `SceneControllerGraphHandle`
 
-The controller graph wires together the public controller facade, interaction
-runtime, selection owner, scene owner, and assembled view runtime.
+This is the internal composition-root handle for the public interactive
+controller path. It is returned by `createSceneControllerGraph` and owns
+assembly and coordinated teardown for the store, interaction runtime,
+capability owners, view runtime, and internal-access registration.
+
+`SceneController` remains the public `ChangeNotifier` facade. It delegates
+committed reads, overlay-preview reads, streams, capability owners, and
+guarded dispose to the handle; it must not construct `SceneStoreController` or
+fan teardown out across store/runtime/internal-access owners directly. The
+facade is final and is not a subclass extension seam; committed reads used by
+the graph come from the graph-owned store.
 
 #### `SceneControllerInteractionRuntime`
 

@@ -18,43 +18,98 @@ import 'scene_controller_scene_view_runtime.dart';
 import 'scene_controller_scene_mutations.dart';
 import 'scene_controller_selection_mutations.dart';
 
-typedef SceneControllerGraph = ({
-  SceneControllerInteractionRuntime interactionRuntime,
-  SceneControllerInteractionAccess interactionAccess,
-  SceneControllerInteraction interaction,
-  SceneControllerSelection selection,
-  SceneControllerScene scene,
-  SceneViewRuntime sceneViewRuntime,
-  SceneControllerInternalAccessRegistration internalAccessRegistration,
-});
+final class SceneControllerGraphHandle {
+  SceneControllerGraphHandle({
+    required SceneController owner,
+    required SceneStoreController storeController,
+    required SceneControllerInteractionRuntime interactionRuntime,
+    required this.interactionAccess,
+    required this.interaction,
+    required this.selection,
+    required this.scene,
+    required this.sceneViewRuntime,
+    required SceneControllerInternalAccessRegistration
+    internalAccessRegistration,
+  }) : _owner = owner,
+       _storeController = storeController,
+       _interactionRuntime = interactionRuntime,
+       _internalAccessRegistration = internalAccessRegistration;
+
+  final SceneController _owner;
+  final SceneStoreController _storeController;
+  final SceneControllerInteractionRuntime _interactionRuntime;
+  final SceneControllerInteractionAccess interactionAccess;
+  final SceneControllerInteraction interaction;
+  final SceneControllerSelection selection;
+  final SceneControllerScene scene;
+  final SceneViewRuntime sceneViewRuntime;
+  final SceneControllerInternalAccessRegistration _internalAccessRegistration;
+
+  SceneControllerInternalAccessRegistration get internalAccessRegistration =>
+      _internalAccessRegistration;
+
+  SceneSnapshot get snapshot => _storeController.snapshot;
+
+  Set<NodeId> get selectedNodeIds => _storeController.selectedNodeIds;
+
+  int get controllerEpoch => _storeController.controllerEpoch;
+
+  Offset Function(NodeId nodeId) get previewDeltaResolver =>
+      _interactionRuntime.previewDeltaForNode;
+
+  Stream<ActionCommitted> get actions => _interactionRuntime.actions;
+
+  Stream<EditTextRequested> get editTextRequests =>
+      _interactionRuntime.editTextRequests;
+
+  void ensurePublicSideEffectAllowed(
+    String operation, {
+    bool allowAfterDispose = false,
+  }) {
+    _interactionRuntime.ensurePublicSideEffectAllowed(
+      operation,
+      allowAfterDispose: allowAfterDispose,
+    );
+  }
+
+  bool dispose() {
+    if (_interactionRuntime.isDisposed) {
+      return false;
+    }
+    _storeController.dispose();
+    _interactionRuntime.dispose();
+    final runtime = sceneViewRuntime;
+    if (runtime is SceneControllerSceneViewRuntime) {
+      runtime.dispose();
+    }
+    unregisterSceneControllerInternalAccess(_owner);
+    return true;
+  }
+}
 
 final class SceneControllerGraphRequest {
   const SceneControllerGraphRequest({
     required this.owner,
     required this.notifyListeners,
-    required this.storeController,
-    required this.readSnapshot,
-    required this.readSelectedNodeIds,
-    required this.readControllerEpoch,
+    required this.initialSnapshot,
     required this.pointerSettings,
     required this.dragStartSlop,
     required this.clearSelectionOnDrawModeEnter,
     required this.moveCommitDeltaResolver,
+    required this.textFontFamilyByDefault,
   });
 
   final SceneController owner;
   final void Function() notifyListeners;
-  final SceneStoreController storeController;
-  final SceneSnapshot Function() readSnapshot;
-  final Set<NodeId> Function() readSelectedNodeIds;
-  final int Function() readControllerEpoch;
+  final SceneSnapshot? initialSnapshot;
   final PointerInputSettings? pointerSettings;
   final double? dragStartSlop;
   final bool clearSelectionOnDrawModeEnter;
   final MoveCommitDeltaResolver? moveCommitDeltaResolver;
+  final String? textFontFamilyByDefault;
 }
 
-SceneControllerGraph createSceneControllerGraph(
+SceneControllerGraphHandle createSceneControllerGraph(
   SceneControllerGraphRequest request,
 ) {
   final graph = _assembleSceneControllerGraph(request);
@@ -65,22 +120,26 @@ SceneControllerGraph createSceneControllerGraph(
   return graph;
 }
 
-SceneControllerGraph _assembleSceneControllerGraph(
+SceneControllerGraphHandle _assembleSceneControllerGraph(
   SceneControllerGraphRequest request,
 ) {
+  final storeController = SceneStoreController(
+    initialSnapshot: request.initialSnapshot,
+    textFontFamilyByDefault: request.textFontFamilyByDefault,
+  );
   final interactionConfig = _createInteractionConfig(request);
   late final SceneControllerInteractionRuntime interactionRuntime;
   final sceneViewRuntime = SceneControllerSceneViewRuntime(
-    storeController: request.storeController,
+    storeController: storeController,
     ownerListenable: request.owner,
     ensurePublicSideEffectAllowed: (operation, {allowAfterDispose = false}) =>
         interactionRuntime.ensurePublicSideEffectAllowed(
           operation,
           allowAfterDispose: allowAfterDispose,
         ),
-    readSnapshot: request.readSnapshot,
-    readSelectedNodeIds: request.readSelectedNodeIds,
-    readControllerEpoch: request.readControllerEpoch,
+    readSnapshot: () => storeController.snapshot,
+    readSelectedNodeIds: () => storeController.selectedNodeIds,
+    readControllerEpoch: () => storeController.controllerEpoch,
     readInteraction: () => request.owner.interaction,
     captureFramePreview: () => interactionRuntime.captureFramePreview(),
     readInteractionRuntime: () => interactionRuntime,
@@ -89,6 +148,7 @@ SceneControllerGraph _assembleSceneControllerGraph(
     request: request,
     interactionConfig: interactionConfig,
     sceneViewRuntime: sceneViewRuntime,
+    storeController: storeController,
   );
   final selectionMutations = _createSelectionMutations(
     interactionRuntime: interactionRuntime,
@@ -100,14 +160,16 @@ SceneControllerGraph _assembleSceneControllerGraph(
     owner: request.owner,
     config: interactionConfig,
     runtime: interactionRuntime,
-    readSnapshot: request.readSnapshot,
-    hasSelectionState: () => request.readSelectedNodeIds().isNotEmpty,
+    readSnapshot: () => storeController.snapshot,
+    hasSelectionState: () => storeController.selectedNodeIds.isNotEmpty,
     clearSelectionState: selectionMutations.clearSelection,
     clearSelectionOnDrawModeEnter: request.clearSelectionOnDrawModeEnter,
   );
   final interaction = SceneControllerInteractionOwner(interactionAccess);
 
-  return (
+  return SceneControllerGraphHandle(
+    owner: request.owner,
+    storeController: storeController,
     interactionRuntime: interactionRuntime,
     interactionAccess: interactionAccess,
     interaction: interaction,
@@ -122,7 +184,7 @@ SceneControllerGraph _assembleSceneControllerGraph(
     ),
     sceneViewRuntime: sceneViewRuntime,
     internalAccessRegistration: SceneControllerInternalAccessRegistration(
-      readEpoch: request.readControllerEpoch,
+      readEpoch: () => storeController.controllerEpoch,
       previewDeltaForNode: interactionRuntime.previewDeltaForNode,
       setBeforePointerDispatchHook:
           interactionRuntime.setBeforePointerDispatchHook,
@@ -137,51 +199,6 @@ SceneControllerGraph _assembleSceneControllerGraph(
           interactionRuntime.eraserPreciseSegmentCheckCount,
     ),
   );
-}
-
-void detachSceneControllerGraphInternalAccess(SceneController controller) {
-  unregisterSceneControllerInternalAccess(controller);
-}
-
-Offset Function(NodeId nodeId) sceneControllerGraphPreviewDeltaResolver(
-  SceneControllerGraph graph,
-) {
-  return graph.interactionRuntime.previewDeltaForNode;
-}
-
-Stream<ActionCommitted> sceneControllerGraphActions(
-  SceneControllerGraph graph,
-) {
-  return graph.interactionRuntime.actions;
-}
-
-Stream<EditTextRequested> sceneControllerGraphEditTextRequests(
-  SceneControllerGraph graph,
-) {
-  return graph.interactionRuntime.editTextRequests;
-}
-
-void sceneControllerGraphEnsurePublicSideEffectAllowed(
-  SceneControllerGraph graph,
-  String operation, {
-  bool allowAfterDispose = false,
-}) {
-  graph.interactionRuntime.ensurePublicSideEffectAllowed(
-    operation,
-    allowAfterDispose: allowAfterDispose,
-  );
-}
-
-bool sceneControllerGraphIsDisposed(SceneControllerGraph graph) {
-  return graph.interactionRuntime.isDisposed;
-}
-
-void disposeSceneControllerGraph(SceneControllerGraph graph) {
-  graph.interactionRuntime.dispose();
-  final sceneViewRuntime = graph.sceneViewRuntime;
-  if (sceneViewRuntime is SceneControllerSceneViewRuntime) {
-    sceneViewRuntime.dispose();
-  }
 }
 
 SceneControllerInteractionConfig _createInteractionConfig(
@@ -199,18 +216,19 @@ SceneControllerInteractionRuntime _createInteractionRuntime({
   required SceneControllerGraphRequest request,
   required SceneControllerInteractionConfig interactionConfig,
   required SceneControllerSceneViewRuntime sceneViewRuntime,
+  required SceneStoreController storeController,
 }) {
   return createSceneControllerInteractionRuntime(
     request: SceneControllerInteractionRuntimeRequest(
       notifyPublicListeners: request.notifyListeners,
       notifySceneListeners: sceneViewRuntime.scheduleSceneRepaint,
       notifyOverlayListeners: sceneViewRuntime.scheduleOverlayRepaint,
-      storeController: request.storeController,
+      storeController: storeController,
       mutationAccess: SceneStoreControllerCommittedMutationAccess(
-        request.storeController,
+        storeController,
       ),
-      readSnapshot: request.readSnapshot,
-      readSelectedNodeIds: request.readSelectedNodeIds,
+      readSnapshot: () => storeController.snapshot,
+      readSelectedNodeIds: () => storeController.selectedNodeIds,
       readMode: () => interactionConfig.mode,
       readDragStartSlop: interactionConfig.dragStartSlop,
       readDrawStyle: interactionConfig.currentDrawStyle,

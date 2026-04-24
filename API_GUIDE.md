@@ -245,7 +245,10 @@ specs, or patches.
 
 ### 5.1 `SceneController`
 
-`SceneController` is the concrete public runtime owner.
+`SceneController` is the concrete public runtime owner. It is a final runtime
+root, not a subclass extension point; host integrations should compose it and
+use `scene`, `selection`, `interaction`, and `SceneView` rather than overriding
+controller getters.
 
 Constructor parameters:
 

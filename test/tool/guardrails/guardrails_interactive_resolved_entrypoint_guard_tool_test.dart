@@ -55,7 +55,11 @@ void _writeNeutralCapabilityOwners(
     writeSandboxFile(
       sandbox,
       'lib/src/interactive/scene_controller_interaction.dart',
-      'class SceneControllerInteractionOwner {}\n',
+      '''
+class SceneControllerInteractionOwner {
+  SceneControllerInteractionOwner(Object access) {}
+}
+''',
     );
   }
   if (exceptRelativePath !=
@@ -63,14 +67,28 @@ void _writeNeutralCapabilityOwners(
     writeSandboxFile(
       sandbox,
       'lib/src/interactive/scene_controller_selection.dart',
-      'class SceneControllerSelectionOwner {}\n',
+      '''
+class SceneControllerSelectionOwner {
+  SceneControllerSelectionOwner({
+    required Object runtime,
+    required Object mutations,
+  }) {}
+}
+''',
     );
   }
   if (exceptRelativePath != 'lib/src/interactive/scene_controller_scene.dart') {
     writeSandboxFile(
       sandbox,
       'lib/src/interactive/scene_controller_scene.dart',
-      'class SceneControllerSceneOwner {}\n',
+      '''
+class SceneControllerSceneOwner {
+  SceneControllerSceneOwner({
+    required Object ensurePublicSideEffectAllowed,
+    required Object mutations,
+  }) {}
+}
+''',
     );
   }
 }
@@ -422,7 +440,7 @@ ${scenario.prelude}
             methods: _canonicalControllerMethods(
               handlePointerSignature: '()',
               handlePointerBody: '''
-    sceneControllerGraphActions(_graph);
+    _graph.actions;
     _ensurePublicSideEffectAllowed('handlePointer');
 ''',
             ),

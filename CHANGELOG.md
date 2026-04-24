@@ -27,6 +27,8 @@ in changes that have not yet been published to pub.dev.
   `MoveCommitDeltaRequest`. Move-commit callbacks now receive immutable
   `movedNodes`, and exported callback typedefs may not expose raw
   `List` / `Map` / `Set` types anywhere inside callback parameter shapes.
+- Made `SceneController` final. Integrations must compose the concrete runtime
+  owner instead of subclassing it or overriding committed-read getters.
 
 ### Added
 

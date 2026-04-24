@@ -26,9 +26,9 @@ void main() {
       for (final path in candidateFiles) {
         final source = File(path).readAsStringSync();
         final canonicalShapeMarkers = <String>[
-          'final Object _graph = createSceneControllerGraph(',
-          'Object get actions => sceneControllerGraphActions(_graph);',
-          'Object get editTextRequests => sceneControllerGraphEditTextRequests(_graph);',
+          'final SceneControllerGraphHandle _graph = createSceneControllerGraph(',
+          'Object get actions => _graph.actions;',
+          'Object get editTextRequests => _graph.editTextRequests;',
           'SceneViewRuntime sceneControllerViewRuntimeOf(SceneController controller)',
         ];
         final matchedMarkerCount = canonicalShapeMarkers

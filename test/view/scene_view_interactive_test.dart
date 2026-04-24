@@ -2,8 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart' hide Image;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
-import 'package:iwb_canvas_engine/src/contract/internal/unsafe_snapshot_materialization.dart';
 import 'package:iwb_canvas_engine/src/contract/canvas_pointer_input.dart';
 import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
@@ -11,10 +9,8 @@ import 'package:iwb_canvas_engine/src/contract/scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/interaction_types.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart';
-import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_internal_access.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/pointer_session_token.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_pointer_session.dart';
-import 'package:iwb_canvas_engine/src/interactive/scene_controller_interaction.dart';
 import 'package:iwb_canvas_engine/src/core/scene_snapshot_paint_candidates.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/view/scene_view_interactive_overlay_painter.dart';
@@ -1842,71 +1838,81 @@ void main() {
   testWidgets('SceneViewInteractive overlay painter covers preview branches', (
     tester,
   ) async {
-    final controller = _OverlayTestController(
-      initialSnapshot: _snapshot(text: 'overlay'),
-    );
-    addTearDown(controller.dispose);
+    final overlayPreviewRead = _PreviewOverlayReadState();
 
-    Future<void> paintOverlay() async {
-      await tester.pumpWidget(_host(controller));
-      await tester.pump();
-      final customPaint = tester.widget<CustomPaint>(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is CustomPaint &&
-              widget.foregroundPainter is SceneViewInteractiveOverlayPainter,
-        ),
+    void paintOverlay() {
+      final overlay = SceneViewInteractiveOverlayPainter(
+        overlayPreviewRead: overlayPreviewRead,
+        selectionColor: const Color(0xFF00AAFF),
+        selectionStrokeWidth: 2,
       );
-      final overlay = customPaint.foregroundPainter;
-      if (overlay == null) {
-        fail('Expected overlay foreground painter.');
-      }
       final recorder = PictureRecorder();
       final canvas = Canvas(recorder);
       overlay.paint(canvas, const Size(120, 120));
       recorder.endRecording();
     }
 
-    controller.strokeActive = true;
-    controller.strokePoints = const <Offset>[];
-    await paintOverlay();
-    expect(controller.strokePoints, isEmpty);
+    overlayPreviewRead.strokeActive = true;
+    overlayPreviewRead.strokePoints = const <Offset>[];
+    paintOverlay();
+    expect(overlayPreviewRead.strokePoints, isEmpty);
 
-    controller.strokePoints = const <Offset>[Offset(10, 10)];
-    controller.strokeThickness = 0;
-    await paintOverlay();
+    overlayPreviewRead.strokePoints = const <Offset>[Offset(10, 10)];
+    overlayPreviewRead.strokeThickness = 0;
+    paintOverlay();
 
-    controller.strokeThickness = 4;
-    controller.strokeOpacity = 2;
-    await paintOverlay();
-    expect(controller.strokeOpacity, 2);
+    overlayPreviewRead.strokeThickness = 4;
+    overlayPreviewRead.strokeOpacity = 2;
+    paintOverlay();
+    expect(overlayPreviewRead.strokeOpacity, 2);
 
-    controller.strokePoints = const <Offset>[Offset(10, 10), Offset(20, 20)];
-    await paintOverlay();
+    overlayPreviewRead.strokePoints = const <Offset>[
+      Offset(10, 10),
+      Offset(20, 20),
+    ];
+    paintOverlay();
 
-    controller.lineActive = true;
-    controller.lineStart = null;
-    controller.lineEnd = null;
-    await paintOverlay();
+    overlayPreviewRead.lineActive = true;
+    overlayPreviewRead.lineStart = null;
+    overlayPreviewRead.lineEnd = null;
+    paintOverlay();
 
-    controller.lineStart = const Offset(5, 5);
-    controller.lineEnd = const Offset(25, 25);
-    controller.linePreviewThickness = 0;
-    await paintOverlay();
+    overlayPreviewRead.lineStart = const Offset(5, 5);
+    overlayPreviewRead.lineEnd = const Offset(25, 25);
+    overlayPreviewRead.linePreviewThickness = 0;
+    paintOverlay();
 
-    controller.linePreviewThickness = 2;
-    await paintOverlay();
+    overlayPreviewRead.linePreviewThickness = 2;
+    paintOverlay();
 
-    controller.snapshotOverride = unsafeMaterializeSceneSnapshot(
-      SceneSnapshotBacking(
-        camera: const CameraSnapshotBacking(
-          offset: Offset(double.nan, double.infinity),
-        ),
-        layers: const <ContentLayerSnapshotBacking>[],
-      ),
+    overlayPreviewRead.cameraOffset = const Offset(double.nan, double.infinity);
+    paintOverlay();
+
+    final baselinePainter = SceneViewInteractiveOverlayPainter(
+      overlayPreviewRead: overlayPreviewRead,
+      selectionColor: const Color(0xFF00AAFF),
+      selectionStrokeWidth: 2,
     );
-    await paintOverlay();
-    controller.snapshotOverride = null;
+    expect(
+      baselinePainter.shouldRepaint(
+        SceneViewInteractiveOverlayPainter(
+          overlayPreviewRead: overlayPreviewRead,
+          selectionColor: const Color(0xFFAA5500),
+          selectionStrokeWidth: 2,
+        ),
+      ),
+      isTrue,
+    );
+    expect(
+      baselinePainter.shouldRepaint(
+        SceneViewInteractiveOverlayPainter(
+          overlayPreviewRead: overlayPreviewRead,
+          selectionColor: const Color(0xFF00AAFF),
+          selectionStrokeWidth: 4,
+        ),
+      ),
+      isTrue,
+    );
   });
 
   testWidgets(
@@ -2094,25 +2100,39 @@ void main() {
   );
 
   test('SceneController facade forwards runtime-backed render getters', () {
-    final controller = _OverlayTestController(
+    final controller = SceneController(
       initialSnapshot: _snapshot(text: 'facade-getters'),
+      dragStartSlop: 0.001,
     );
     addTearDown(controller.dispose);
-
-    controller.strokeActive = true;
-    controller.strokePoints = const <Offset>[Offset(1, 2), Offset(3, 4)];
-    controller.strokeThickness = 6;
-    controller.strokeColor = const Color(0xFFAA5500);
-    controller.strokeOpacity = 0.4;
-    controller.lineActive = true;
-    controller.lineStart = const Offset(10, 20);
-    controller.lineEnd = const Offset(30, 40);
-    controller.linePreviewThickness = 5;
-    controller.lineColor = const Color(0xFF0055AA);
 
     expect(controller.selectionRect, isNull);
     expect(controller.cameraOffset, Offset.zero);
     expect(controller.previewDeltaResolver('node-1'), Offset.zero);
+
+    controller.interaction.setMode(CanvasMode.draw);
+    controller.interaction.setDrawTool(DrawTool.pen);
+    controller.interaction.penThickness = 6;
+    controller.interaction.setDrawColor(const Color(0xFFAA5500));
+    controller.interaction.handlePointer(
+      const CanvasPointerInput(
+        pointerId: 1,
+        position: Offset(1, 2),
+        timestampMs: 1,
+        phase: CanvasPointerPhase.down,
+        kind: PointerDeviceKind.touch,
+      ),
+    );
+    controller.interaction.handlePointer(
+      const CanvasPointerInput(
+        pointerId: 1,
+        position: Offset(3, 4),
+        timestampMs: 2,
+        phase: CanvasPointerPhase.move,
+        kind: PointerDeviceKind.touch,
+      ),
+    );
+
     expect(controller.hasActiveStrokePreview, isTrue);
     expect(controller.activeStrokePreviewPoints, const <Offset>[
       Offset(1, 2),
@@ -2120,7 +2140,39 @@ void main() {
     ]);
     expect(controller.activeStrokePreviewThickness, 6);
     expect(controller.activeStrokePreviewColor, const Color(0xFFAA5500));
-    expect(controller.activeStrokePreviewOpacity, 0.4);
+    expect(controller.activeStrokePreviewOpacity, 1);
+
+    controller.interaction.handlePointer(
+      const CanvasPointerInput(
+        pointerId: 1,
+        position: Offset(3, 4),
+        timestampMs: 3,
+        phase: CanvasPointerPhase.up,
+        kind: PointerDeviceKind.touch,
+      ),
+    );
+    controller.interaction.setDrawTool(DrawTool.line);
+    controller.interaction.lineThickness = 5;
+    controller.interaction.setDrawColor(const Color(0xFF0055AA));
+    controller.interaction.handlePointer(
+      const CanvasPointerInput(
+        pointerId: 2,
+        position: Offset(10, 20),
+        timestampMs: 4,
+        phase: CanvasPointerPhase.down,
+        kind: PointerDeviceKind.touch,
+      ),
+    );
+    controller.interaction.handlePointer(
+      const CanvasPointerInput(
+        pointerId: 2,
+        position: Offset(30, 40),
+        timestampMs: 5,
+        phase: CanvasPointerPhase.move,
+        kind: PointerDeviceKind.touch,
+      ),
+    );
+
     expect(controller.hasActiveLinePreview, isTrue);
     expect(controller.activeLinePreviewStart, const Offset(10, 20));
     expect(controller.activeLinePreviewEnd, const Offset(30, 40));
@@ -2252,16 +2304,10 @@ void main() {
   );
 }
 
-class _OverlayTestController extends SceneController {
-  _OverlayTestController({required super.initialSnapshot});
-
-  late final SceneControllerInteraction _interaction = _OverlayTestInteraction(
-    sceneControllerInternalInteractionAccessForTest(this),
-    this,
-  );
-
-  SceneSnapshot? snapshotOverride;
-
+final class _PreviewOverlayReadState extends ChangeNotifier
+    implements SceneViewOverlayPreviewRead {
+  @override
+  Offset cameraOffset = Offset.zero;
   bool strokeActive = false;
   List<Offset> strokePoints = const <Offset>[];
   double strokeThickness = 2;
@@ -2275,46 +2321,40 @@ class _OverlayTestController extends SceneController {
   Color lineColor = const Color(0xFF654321);
 
   @override
-  SceneSnapshot get snapshot => snapshotOverride ?? super.snapshot;
+  Listenable get overlayRepaintListenable => this;
 
   @override
-  SceneControllerInteraction get interaction => _interaction;
-}
-
-class _OverlayTestInteraction extends SceneControllerInteractionOwner {
-  _OverlayTestInteraction(super.access, this.controller);
-
-  final _OverlayTestController controller;
+  Rect? get selectionRect => null;
 
   @override
-  bool get hasActiveStrokePreview => controller.strokeActive;
+  bool get hasActiveStrokePreview => strokeActive;
 
   @override
-  List<Offset> get activeStrokePreviewPoints => controller.strokePoints;
+  List<Offset> get activeStrokePreviewPoints => strokePoints;
 
   @override
-  double get activeStrokePreviewThickness => controller.strokeThickness;
+  double get activeStrokePreviewThickness => strokeThickness;
 
   @override
-  Color get activeStrokePreviewColor => controller.strokeColor;
+  Color get activeStrokePreviewColor => strokeColor;
 
   @override
-  double get activeStrokePreviewOpacity => controller.strokeOpacity;
+  double get activeStrokePreviewOpacity => strokeOpacity;
 
   @override
-  bool get hasActiveLinePreview => controller.lineActive;
+  bool get hasActiveLinePreview => lineActive;
 
   @override
-  Offset? get activeLinePreviewStart => controller.lineStart;
+  Offset? get activeLinePreviewStart => lineStart;
 
   @override
-  Offset? get activeLinePreviewEnd => controller.lineEnd;
+  Offset? get activeLinePreviewEnd => lineEnd;
 
   @override
-  double get activeLinePreviewThickness => controller.linePreviewThickness;
+  double get activeLinePreviewThickness => linePreviewThickness;
 
   @override
-  Color get activeLinePreviewColor => controller.lineColor;
+  Color get activeLinePreviewColor => lineColor;
 }
 
 class _RecordingSceneViewRuntime implements SceneViewRuntime {

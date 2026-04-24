@@ -48,63 +48,175 @@ Future<GuardrailViolation?> _checkInteractiveGraphAssembly(
       'internal/scene_controller_scene_view_runtime.dart',
     ),
   );
-  if (createGraph == null ||
-      assembleGraph == null ||
-      _hasTopLevelOwner(parsed, 'SceneControllerInteractionOwner') ||
-      _hasTopLevelOwner(parsed, 'SceneControllerSelectionOwner') ||
-      _hasTopLevelOwner(parsed, 'SceneControllerSceneOwner') ||
-      _hasTopLevelOwner(parsed, 'SceneControllerSceneViewRuntime') ||
-      _hasTopLevelOwner(parsed, 'SceneControllerInternalAccessRegistration') ||
-      !_functionInvokesOwnedTopLevelFunction(
+  final storeControllerFilePath = _repoRelPath(
+    context,
+    _interactiveArchitectureFile(
+      context,
+      '../controller/scene_store_controller.dart',
+    ),
+  );
+  final failures = <String>[];
+  void requireCondition(bool condition, String name) {
+    if (!condition) {
+      failures.add(name);
+    }
+  }
+
+  requireCondition(createGraph != null, 'createSceneControllerGraph');
+  requireCondition(assembleGraph != null, '_assembleSceneControllerGraph');
+  requireCondition(
+    _hasTopLevelOwner(parsed, 'SceneControllerGraphHandle'),
+    'SceneControllerGraphHandle',
+  );
+  requireCondition(
+    !_hasTopLevelOwner(parsed, 'SceneControllerGraph'),
+    'no SceneControllerGraph record',
+  );
+  requireCondition(
+    !_hasTopLevelOwner(parsed, 'SceneStoreController'),
+    'no local SceneStoreController',
+  );
+  requireCondition(
+    !_hasTopLevelOwner(parsed, 'SceneControllerInteractionOwner'),
+    'no local interaction owner',
+  );
+  requireCondition(
+    !_hasTopLevelOwner(parsed, 'SceneControllerSelectionOwner'),
+    'no local selection owner',
+  );
+  requireCondition(
+    !_hasTopLevelOwner(parsed, 'SceneControllerSceneOwner'),
+    'no local scene owner',
+  );
+  requireCondition(
+    !_hasTopLevelOwner(parsed, 'SceneControllerSceneViewRuntime'),
+    'no local view runtime',
+  );
+  requireCondition(
+    !_hasTopLevelOwner(parsed, 'SceneControllerInternalAccessRegistration'),
+    'no local internal access registration',
+  );
+  if (createGraph != null) {
+    requireCondition(
+      _functionInvokesOwnedTopLevelFunction(
         createGraph,
         context: context,
         filePath: filePath,
         functionName: '_assembleSceneControllerGraph',
-      ) ||
-      !_functionInvokesOwnedTopLevelFunction(
+      ),
+      'factory invokes assembly',
+    );
+    requireCondition(
+      _functionInvokesOwnedTopLevelFunction(
         createGraph,
         context: context,
         filePath: internalAccessFilePath,
         functionName: 'registerSceneControllerInternalAccess',
-      ) ||
-      !_functionCreatesOwnedType(
+      ),
+      'factory registers internal access',
+    );
+  }
+  if (assembleGraph != null) {
+    requireCondition(
+      _functionCreatesOwnedType(
+        assembleGraph,
+        context: context,
+        filePath: filePath,
+        typeName: 'SceneControllerGraphHandle',
+      ),
+      'assembly creates graph handle',
+    );
+    requireCondition(
+      _functionCreatesOwnedType(
+        assembleGraph,
+        context: context,
+        filePath: storeControllerFilePath,
+        typeName: 'SceneStoreController',
+      ),
+      'assembly creates store controller',
+    );
+    requireCondition(
+      _functionCreatesOwnedType(
         assembleGraph,
         context: context,
         filePath: interactionOwnerFilePath,
         typeName: 'SceneControllerInteractionOwner',
-      ) ||
-      !_functionCreatesOwnedType(
+      ),
+      'assembly creates interaction owner',
+    );
+    requireCondition(
+      _functionCreatesOwnedType(
         assembleGraph,
         context: context,
         filePath: selectionOwnerFilePath,
         typeName: 'SceneControllerSelectionOwner',
-      ) ||
-      !_functionCreatesOwnedType(
+      ),
+      'assembly creates selection owner',
+    );
+    requireCondition(
+      _functionCreatesOwnedType(
         assembleGraph,
         context: context,
         filePath: sceneOwnerFilePath,
         typeName: 'SceneControllerSceneOwner',
-      ) ||
-      !_functionCreatesOwnedType(
+      ),
+      'assembly creates scene owner',
+    );
+    requireCondition(
+      _functionCreatesOwnedType(
         assembleGraph,
         context: context,
         filePath: sceneViewRuntimeFilePath,
         typeName: 'SceneControllerSceneViewRuntime',
-      ) ||
-      !_functionCreatesOwnedType(
+      ),
+      'assembly creates view runtime',
+    );
+    requireCondition(
+      _functionCreatesOwnedType(
         assembleGraph,
         context: context,
         filePath: internalAccessFilePath,
         typeName: 'SceneControllerInternalAccessRegistration',
-      ) ||
-      _unitContainsIdentifier(parsed.unit, 'createPointerSemanticsBridge') ||
-      _unitContainsIdentifier(parsed.unit, 'SceneControllerPointerSemantics')) {
+      ),
+      'assembly creates internal access registration',
+    );
+  }
+  requireCondition(
+    !_hasTopLevelFunction(parsed, 'sceneControllerGraphActions') &&
+        !_hasTopLevelFunction(parsed, 'sceneControllerGraphEditTextRequests') &&
+        !_hasTopLevelFunction(
+          parsed,
+          'sceneControllerGraphPreviewDeltaResolver',
+        ) &&
+        !_hasTopLevelFunction(
+          parsed,
+          'sceneControllerGraphEnsurePublicSideEffectAllowed',
+        ) &&
+        !_hasTopLevelFunction(parsed, 'sceneControllerGraphIsDisposed') &&
+        !_hasTopLevelFunction(parsed, 'disposeSceneControllerGraph') &&
+        !_hasTopLevelFunction(
+          parsed,
+          'detachSceneControllerGraphInternalAccess',
+        ),
+    'no graph helper bag',
+  );
+  requireCondition(
+    !_unitContainsIdentifier(parsed.unit, 'createPointerSemanticsBridge') &&
+        !_unitContainsIdentifier(
+          parsed.unit,
+          'SceneControllerPointerSemantics',
+        ),
+    'no pointer semantics bridge',
+  );
+
+  if (failures.isNotEmpty) {
     return GuardrailViolation(
       filePath: filePath,
       line: 1,
       message:
           'interactive API violation: SceneController graph must assemble '
-          'view runtime and internal access outside the facade.',
+          'view runtime and internal access outside the facade. '
+          'Missing: ${failures.join(', ')}.',
     );
   }
   return null;
