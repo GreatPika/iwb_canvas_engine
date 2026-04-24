@@ -74,86 +74,114 @@ void _registerInteractiveArchitectureBoundaryFacadeAndBoundaryTests() {
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+          'lib/src/interactive/scene_controller_scene.dart',
           '''
-class SceneControllerSceneMutations {
-  final mutations = Object();
+import 'internal/scene_controller_interaction_runtime.dart';
+
+class SceneControllerSceneOwner {
+  final SceneControllerInteractionRuntime _runtime =
+      SceneControllerInteractionRuntime();
+  final _mutationBoundary = _MutationBoundary();
 
   void write(Object fn) {
-    ensureExternalMutationAllowed('write');
+    _runtime.ensurePublicSideEffectAllowed('write');
+    _ensureExternalMutationAllowed('write');
     storeController.write(fn);
   }
 
   void setBackgroundColor(Object value) {
-    ensureExternalMutationAllowed('setBackgroundColor');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('setBackgroundColor');
+    _ensureExternalMutationAllowed('setBackgroundColor');
+    _mutationBoundary.toString();
   }
 
   void setGridEnabled(bool value) {
-    ensureExternalMutationAllowed('setGridEnabled');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('setGridEnabled');
+    _ensureExternalMutationAllowed('setGridEnabled');
+    _mutationBoundary.toString();
   }
 
   void setGridCellSize(double value) {
-    ensureExternalMutationAllowed('setGridCellSize');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('setGridCellSize');
+    _ensureExternalMutationAllowed('setGridCellSize');
+    _mutationBoundary.toString();
   }
 
   void addNode(Object node) {
-    ensureExternalMutationAllowed('addNode');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('addNode');
+    _ensureExternalMutationAllowed('addNode');
+    _mutationBoundary.toString();
   }
 
   void ensureLayer(Object layerId) {
-    ensureExternalMutationAllowed('ensureLayer');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('ensureLayer');
+    _ensureExternalMutationAllowed('ensureLayer');
+    _mutationBoundary.toString();
   }
 
   void patchNode(Object patch) {
-    ensureExternalMutationAllowed('patchNode');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('patchNode');
+    _ensureExternalMutationAllowed('patchNode');
+    _mutationBoundary.toString();
   }
 
   void removeNode(Object nodeId) {
-    ensureExternalMutationAllowed('removeNode');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('removeNode');
+    _ensureExternalMutationAllowed('removeNode');
+    _mutationBoundary.toString();
   }
 
   void clearScene() {
-    ensureExternalMutationAllowed('clearScene');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('clearScene');
+    _ensureExternalMutationAllowed('clearScene');
+    _mutationBoundary.toString();
   }
 
   void setCameraOffset(Object value) {
-    mutations.validateCameraOffset(value);
-    if (!mutations.shouldApplyCameraOffset(value)) {
+    _runtime.ensurePublicSideEffectAllowed('setCameraOffset');
+    _mutationBoundary.validateCameraOffset(value);
+    if (!_mutationBoundary.shouldApplyCameraOffset(value)) {
       return;
     }
-    interruptForExternalMutation();
-    mutations.setCameraOffset(value);
+    _interruptForExternalMutation();
+    _mutationBoundary.setCameraOffset(value);
   }
 
   void replaceScene(Object snapshot) {
-    mutations.replaceScene(
+    _runtime.ensurePublicSideEffectAllowed('replaceScene');
+    _mutationBoundary.replaceScene(
       snapshot,
-      interruptBeforeApply: interruptForExternalMutation,
+      interruptBeforeApply: _interruptForExternalMutation,
     );
   }
 
   void notifySceneChanged() {
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('notifySceneChanged');
+    _mutationBoundary.notifySceneChanged();
   }
 
-  final void Function(String operation) ensureExternalMutationAllowed =
+  final void Function(String operation) _ensureExternalMutationAllowed =
       (String operation) {};
 
-  final void Function() interruptForExternalMutation = () {};
+  final void Function() _interruptForExternalMutation = () {};
 
   final storeController = _StoreController();
 }
 
 class _StoreController {
   void write(Object fn) {}
+}
+
+class _MutationBoundary {
+  void validateCameraOffset(Object value) {}
+
+  bool shouldApplyCameraOffset(Object value) => true;
+
+  void setCameraOffset(Object value) {}
+
+  void replaceScene(Object snapshot, {required Object interruptBeforeApply}) {}
+
+  void notifySceneChanged() {}
 }
 ''',
         );
@@ -165,7 +193,7 @@ class _StoreController {
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneControllerSceneMutations must delegate committed scene '
+                'SceneControllerSceneOwner must delegate committed scene '
                 'writes through SceneControllerMutationBoundary',
           ),
         );
@@ -201,85 +229,113 @@ class _StoreController {
       );
       writeSandboxFile(
         sandbox,
-        'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+        'lib/src/interactive/scene_controller_scene.dart',
         '''
-class SceneControllerSceneMutations {
-  final mutations = Object();
+import 'internal/scene_controller_interaction_runtime.dart';
+
+class SceneControllerSceneOwner {
+  final SceneControllerInteractionRuntime _runtime =
+      SceneControllerInteractionRuntime();
+  final _mutationBoundary = _MutationBoundary();
 
   void write(Object fn) {
-    ensureExternalMutationAllowed('write');
+    _runtime.ensurePublicSideEffectAllowed('write');
+    _ensureExternalMutationAllowed('write');
     storeController.write<int>(fn);
   }
 
   void setBackgroundColor(Object value) {
-    ensureExternalMutationAllowed('setBackgroundColor');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('setBackgroundColor');
+    _ensureExternalMutationAllowed('setBackgroundColor');
+    _mutationBoundary.toString();
   }
 
   void setGridEnabled(bool value) {
-    ensureExternalMutationAllowed('setGridEnabled');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('setGridEnabled');
+    _ensureExternalMutationAllowed('setGridEnabled');
+    _mutationBoundary.toString();
   }
 
   void setGridCellSize(double value) {
-    ensureExternalMutationAllowed('setGridCellSize');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('setGridCellSize');
+    _ensureExternalMutationAllowed('setGridCellSize');
+    _mutationBoundary.toString();
   }
 
   void addNode(Object node) {
-    ensureExternalMutationAllowed('addNode');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('addNode');
+    _ensureExternalMutationAllowed('addNode');
+    _mutationBoundary.toString();
   }
 
   void ensureLayer(Object layerId) {
-    ensureExternalMutationAllowed('ensureLayer');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('ensureLayer');
+    _ensureExternalMutationAllowed('ensureLayer');
+    _mutationBoundary.toString();
   }
 
   void patchNode(Object patch) {
-    ensureExternalMutationAllowed('patchNode');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('patchNode');
+    _ensureExternalMutationAllowed('patchNode');
+    _mutationBoundary.toString();
   }
 
   void removeNode(Object nodeId) {
-    ensureExternalMutationAllowed('removeNode');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('removeNode');
+    _ensureExternalMutationAllowed('removeNode');
+    _mutationBoundary.toString();
   }
 
   void clearScene() {
-    ensureExternalMutationAllowed('clearScene');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('clearScene');
+    _ensureExternalMutationAllowed('clearScene');
+    _mutationBoundary.toString();
   }
 
   void setCameraOffset(Object value) {
-    mutations.validateCameraOffset(value);
-    if (!mutations.shouldApplyCameraOffset(value)) {
+    _runtime.ensurePublicSideEffectAllowed('setCameraOffset');
+    _mutationBoundary.validateCameraOffset(value);
+    if (!_mutationBoundary.shouldApplyCameraOffset(value)) {
       return;
     }
-    interruptForExternalMutation();
-    mutations.setCameraOffset(value);
+    _interruptForExternalMutation();
+    _mutationBoundary.setCameraOffset(value);
   }
 
   void replaceScene(Object snapshot) {
-    mutations.replaceScene(
+    _runtime.ensurePublicSideEffectAllowed('replaceScene');
+    _mutationBoundary.replaceScene(
       snapshot,
-      interruptBeforeApply: interruptForExternalMutation,
+      interruptBeforeApply: _interruptForExternalMutation,
     );
   }
 
   void notifySceneChanged() {
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('notifySceneChanged');
+    _mutationBoundary.notifySceneChanged();
   }
 
-  void ensureExternalMutationAllowed(String operation) {}
+  void _ensureExternalMutationAllowed(String operation) {}
 
-  void interruptForExternalMutation() {}
+  void _interruptForExternalMutation() {}
 
   final storeController = _Core();
 }
 
 class _Core {
   void write<T>(Object fn) {}
+}
+
+class _MutationBoundary {
+  void validateCameraOffset(Object value) {}
+
+  bool shouldApplyCameraOffset(Object value) => true;
+
+  void setCameraOffset(Object value) {}
+
+  void replaceScene(Object snapshot, {required Object interruptBeforeApply}) {}
+
+  void notifySceneChanged() {}
 }
 ''',
       );
@@ -291,7 +347,7 @@ class _Core {
         diagnostic(
           category: 'interactive API',
           detail:
-              'SceneControllerSceneMutations must delegate committed scene '
+              'SceneControllerSceneOwner must delegate committed scene '
               'writes through SceneControllerMutationBoundary',
         ),
       );
@@ -328,52 +384,64 @@ class _Core {
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/internal/scene_controller_selection_mutations.dart',
+          'lib/src/interactive/scene_controller_selection.dart',
           '''
-class SceneControllerSelectionMutations {
-  final mutations = Object();
+import 'internal/scene_controller_interaction_runtime.dart';
+
+class SceneControllerSelectionOwner {
+  final SceneControllerInteractionRuntime _runtime =
+      SceneControllerInteractionRuntime();
+  final _mutationBoundary = _MutationBoundary();
 
   void setSelection(Object nodeIds) {
-    ensureExternalMutationAllowed('setSelection');
+    _runtime.ensurePublicSideEffectAllowed('setSelection');
+    _ensureExternalMutationAllowed('setSelection');
     storeController.commands.writeSelectionReplace(nodeIds);
   }
 
   void toggleSelection(Object nodeId) {
-    ensureExternalMutationAllowed('toggleSelection');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('toggleSelection');
+    _ensureExternalMutationAllowed('toggleSelection');
+    _mutationBoundary.toString();
   }
 
   void clearSelection() {
-    ensureExternalMutationAllowed('clearSelection');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('clearSelection');
+    _ensureExternalMutationAllowed('clearSelection');
+    _mutationBoundary.toString();
   }
 
   void selectAll() {
-    ensureExternalMutationAllowed('selectAll');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('selectAll');
+    _ensureExternalMutationAllowed('selectAll');
+    _mutationBoundary.toString();
   }
 
   void rotateSelection() {
-    ensureExternalMutationAllowed('rotateSelection');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('rotateSelection');
+    _ensureExternalMutationAllowed('rotateSelection');
+    _mutationBoundary.toString();
   }
 
   void flipSelectionVertical() {
-    ensureExternalMutationAllowed('flipSelectionVertical');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('flipSelectionVertical');
+    _ensureExternalMutationAllowed('flipSelectionVertical');
+    _mutationBoundary.toString();
   }
 
   void flipSelectionHorizontal() {
-    ensureExternalMutationAllowed('flipSelectionHorizontal');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('flipSelectionHorizontal');
+    _ensureExternalMutationAllowed('flipSelectionHorizontal');
+    _mutationBoundary.toString();
   }
 
   void deleteSelection() {
-    ensureExternalMutationAllowed('deleteSelection');
-    mutations.toString();
+    _runtime.ensurePublicSideEffectAllowed('deleteSelection');
+    _ensureExternalMutationAllowed('deleteSelection');
+    _mutationBoundary.toString();
   }
 
-  void ensureExternalMutationAllowed(String operation) {}
+  void _ensureExternalMutationAllowed(String operation) {}
 
   final storeController = _StoreController();
 }
@@ -385,6 +453,8 @@ class _StoreController {
 class _Commands {
   void writeSelectionReplace(Object nodeIds) {}
 }
+
+class _MutationBoundary {}
 ''',
         );
 
@@ -395,7 +465,7 @@ class _Commands {
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneControllerSelectionMutations must delegate committed '
+                'SceneControllerSelectionOwner must delegate committed '
                 'selection writes through SceneControllerMutationBoundary',
           ),
         );
@@ -405,18 +475,16 @@ class _Commands {
     },
   );
 
-  test(
-    'rejects selection actions core write bypass outside mutation boundary',
-    () async {
-      final sandbox = await createGuardrailsSandbox();
-      try {
-        writeMinimalControllerStore(sandbox);
-        writeInteractiveArchitectureSupportScaffold(sandbox);
-        writeSandboxFile(
-          sandbox,
-          'lib/src/interactive/scene_controller.dart',
-          sceneControllerFixture(
-            methods: '''
+  test('rejects reintroduced runtime selection actions shell', () async {
+    final sandbox = await createGuardrailsSandbox();
+    try {
+      writeMinimalControllerStore(sandbox);
+      writeInteractiveArchitectureSupportScaffold(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/scene_controller.dart',
+        sceneControllerFixture(
+          methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
   }
@@ -429,12 +497,12 @@ class _Commands {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
 ''',
-          ),
-        );
-        writeSandboxFile(
-          sandbox,
-          'lib/src/interactive/internal/interactive_selection_actions.dart',
-          '''
+        ),
+      );
+      writeSandboxFile(
+        sandbox,
+        'lib/src/interactive/internal/interactive_selection_actions.dart',
+        '''
 class InteractiveSelectionActions {
   void rotateSelection() {
     core.write('rotateSelection');
@@ -447,24 +515,23 @@ class _Core {
   void write(Object operation) {}
 }
 ''',
-        );
+      );
 
-        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-        expect(result.exitCode, isNonZero);
-        expect(
-          result.stderr.toString(),
-          diagnostic(
-            category: 'interactive API',
-            detail:
-                'InteractiveSelectionActions must remain a thin routing shell '
-                'over SceneControllerMutationBoundary',
-          ),
-        );
-      } finally {
-        sandbox.deleteSync(recursive: true);
-      }
-    },
-  );
+      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+      expect(result.exitCode, isNonZero);
+      expect(
+        result.stderr.toString(),
+        diagnostic(
+          category: 'interactive API',
+          detail:
+              'InteractiveSelectionActions is a deleted routing shell and '
+              'must not exist',
+        ),
+      );
+    } finally {
+      sandbox.deleteSync(recursive: true);
+    }
+  });
 
   test(
     'rejects runtime selection callbacks that bypass mutation boundary',
@@ -577,7 +644,6 @@ import 'dart:ui';
 
 import '../contract/canvas_pointer_input.dart';
 import '../../controller/scene_controller_committed_mutation_access.dart';
-import 'interactive_selection_actions.dart';
 import 'pointer_session_token.dart';
 import 'scene_controller_mutation_boundary.dart';
 
@@ -592,12 +658,10 @@ class SceneControllerInteractionRuntimeRequest {
 class SceneControllerInteractionRuntime {
   SceneControllerInteractionRuntime._({
     required this.mutationBoundary,
-    required this.selectionActions,
     required this.runtime,
   });
 
   final SceneControllerMutationBoundary mutationBoundary;
-  final InteractiveSelectionActions selectionActions;
   final InteractiveRuntime runtime;
 
   void ensurePublicSideEffectAllowed(
@@ -640,14 +704,12 @@ SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
   required SceneControllerInteractionRuntimeRequest request,
 }) {
   final mutationBoundary = _createMutationBoundary(request);
-  final selectionActions = _createSelectionActions(mutationBoundary);
   final interactiveRuntime = _createInteractiveRuntime(
     request,
     mutationBoundary: mutationBoundary,
   );
   return SceneControllerInteractionRuntime._(
     mutationBoundary: mutationBoundary,
-    selectionActions: selectionActions,
     runtime: interactiveRuntime,
   );
 }
@@ -658,12 +720,6 @@ SceneControllerMutationBoundary _createMutationBoundary(
   return SceneControllerMutationBoundary(
     mutationAccess: request.mutationAccess,
   );
-}
-
-InteractiveSelectionActions _createSelectionActions(
-  SceneControllerMutationBoundary mutationBoundary,
-) {
-  return InteractiveSelectionActions(mutations: mutationBoundary);
 }
 
 InteractiveRuntime _createInteractiveRuntime(

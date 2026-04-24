@@ -57,6 +57,15 @@ GuardrailViolation? _checkDeletedInteractiveResidualSeams(
       '/lib/src/interactive/internal/scene_controller_pointer_semantics.dart' =>
         'SceneControllerPointerSemantics is a deleted residual seam and '
             'must not exist.',
+      '/lib/src/interactive/internal/interactive_selection_actions.dart' =>
+        'InteractiveSelectionActions is a deleted routing shell and must '
+            'not exist.',
+      '/lib/src/interactive/internal/scene_controller_scene_mutations.dart' =>
+        'SceneControllerSceneMutations is a deleted routing shell and must '
+            'not exist.',
+      '/lib/src/interactive/internal/scene_controller_selection_mutations.dart' =>
+        'SceneControllerSelectionMutations is a deleted routing shell and '
+            'must not exist.',
       '/lib/src/interactive/scene_view_pointer_semantics.dart' =>
         'SceneView pointer-semantics seam is deleted and must not exist.',
       _ => 'deleted residual seam must not exist ($filePath).',

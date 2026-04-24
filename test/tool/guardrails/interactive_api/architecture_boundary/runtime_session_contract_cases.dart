@@ -37,7 +37,6 @@ import 'dart:ui';
 
 import '../contract/canvas_pointer_input.dart';
 import '../../controller/scene_controller_committed_mutation_access.dart';
-import 'interactive_selection_actions.dart';
 import 'interactive_runtime.dart';
 import 'pointer_session_token.dart';
 import 'scene_controller_mutation_boundary.dart';
@@ -45,12 +44,10 @@ import 'scene_controller_mutation_boundary.dart';
 final class SceneControllerInteractionRuntime {
   SceneControllerInteractionRuntime._({
     required this.mutationBoundary,
-    required this.selectionActions,
     required this.runtime,
   });
 
   final SceneControllerMutationBoundary mutationBoundary;
-  final InteractiveSelectionActions selectionActions;
   final InteractiveRuntime runtime;
 
   void ensurePublicSideEffectAllowed(
@@ -71,14 +68,12 @@ SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
   required SceneControllerInteractionRuntimeRequest request,
 }) {
   final mutationBoundary = _createMutationBoundary(request);
-  final selectionActions = _createSelectionActions(mutationBoundary);
   final interactiveRuntime = _createInteractiveRuntime(
     request,
     mutationBoundary: mutationBoundary,
   );
   return SceneControllerInteractionRuntime._(
     mutationBoundary: mutationBoundary,
-    selectionActions: selectionActions,
     runtime: interactiveRuntime,
   );
 }
@@ -126,12 +121,6 @@ SceneControllerMutationBoundary _createMutationBoundary(
   return SceneControllerMutationBoundary(
     mutationAccess: request.mutationAccess,
   );
-}
-
-InteractiveSelectionActions _createSelectionActions(
-  SceneControllerMutationBoundary mutationBoundary,
-) {
-  return InteractiveSelectionActions(mutations: mutationBoundary);
 }
 
 InteractiveRuntime _createInteractiveRuntime(
@@ -207,7 +196,6 @@ import 'dart:ui';
 
 import '../contract/canvas_pointer_input.dart';
 import '../../controller/scene_controller_committed_mutation_access.dart';
-import 'interactive_selection_actions.dart';
 import 'interactive_runtime.dart';
 import 'pointer_session_token.dart';
 import 'scene_controller_mutation_boundary.dart';
@@ -215,12 +203,10 @@ import 'scene_controller_mutation_boundary.dart';
 final class SceneControllerInteractionRuntime {
   SceneControllerInteractionRuntime._({
     required this.mutationBoundary,
-    required this.selectionActions,
     required this.runtime,
   });
 
   final SceneControllerMutationBoundary mutationBoundary;
-  final InteractiveSelectionActions selectionActions;
   final InteractiveRuntime runtime;
 
   void ensurePublicSideEffectAllowed(
@@ -243,14 +229,12 @@ SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
   required SceneControllerInteractionRuntimeRequest request,
 }) {
   final mutationBoundary = _createMutationBoundary(request);
-  final selectionActions = _createSelectionActions(mutationBoundary);
   final interactiveRuntime = _createInteractiveRuntime(
     request,
     mutationBoundary: mutationBoundary,
   );
   return SceneControllerInteractionRuntime._(
     mutationBoundary: mutationBoundary,
-    selectionActions: selectionActions,
     runtime: interactiveRuntime,
   );
 }
@@ -306,12 +290,6 @@ SceneControllerMutationBoundary _createMutationBoundary(
   return SceneControllerMutationBoundary(
     mutationAccess: request.mutationAccess,
   );
-}
-
-InteractiveSelectionActions _createSelectionActions(
-  SceneControllerMutationBoundary mutationBoundary,
-) {
-  return InteractiveSelectionActions(mutations: mutationBoundary);
 }
 
 InteractiveRuntime _createInteractiveRuntime(
@@ -388,7 +366,6 @@ import 'dart:ui';
 
 import '../contract/canvas_pointer_input.dart';
 import '../../controller/scene_controller_committed_mutation_access.dart';
-import 'interactive_selection_actions.dart';
 import 'interactive_runtime.dart';
 import 'pointer_session_token.dart';
 import 'scene_controller_mutation_boundary.dart';
@@ -396,12 +373,10 @@ import 'scene_controller_mutation_boundary.dart';
 final class SceneControllerInteractionRuntime {
   SceneControllerInteractionRuntime._({
     required this.mutationBoundary,
-    required this.selectionActions,
     required this.runtime,
   });
 
   final SceneControllerMutationBoundary mutationBoundary;
-  final InteractiveSelectionActions selectionActions;
   final InteractiveRuntime runtime;
 
   void ensurePublicSideEffectAllowed(
@@ -424,14 +399,12 @@ SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
   required SceneControllerInteractionRuntimeRequest request,
 }) {
   final mutationBoundary = _createMutationBoundary(request);
-  final selectionActions = _createSelectionActions(mutationBoundary);
   final interactiveRuntime = _createInteractiveRuntime(
     request,
     mutationBoundary: mutationBoundary,
   );
   return SceneControllerInteractionRuntime._(
     mutationBoundary: mutationBoundary,
-    selectionActions: selectionActions,
     runtime: interactiveRuntime,
   );
 }
@@ -487,12 +460,6 @@ SceneControllerMutationBoundary _createMutationBoundary(
   return SceneControllerMutationBoundary(
     mutationAccess: request.mutationAccess,
   );
-}
-
-InteractiveSelectionActions _createSelectionActions(
-  SceneControllerMutationBoundary mutationBoundary,
-) {
-  return InteractiveSelectionActions(mutations: mutationBoundary);
 }
 
 InteractiveRuntime _createInteractiveRuntime(

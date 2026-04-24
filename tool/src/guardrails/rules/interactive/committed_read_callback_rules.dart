@@ -14,6 +14,7 @@ enum MutationOwnerContractKind {
   standardEffectfulRoute,
   cameraOffsetPreflight,
   replaceSceneForwarding,
+  publicGuardedBoundaryRoute,
 }
 
 final class MutationOwnerGuardSpec {
@@ -29,8 +30,8 @@ final class MutationOwnerGuardSpec {
 }
 
 const String ensureExternalMutationAllowedCall =
-    'ensureExternalMutationAllowed';
-const String interruptForExternalMutationCall = 'interruptForExternalMutation';
+    '_ensureExternalMutationAllowed';
+const String interruptForExternalMutationCall = '_interruptForExternalMutation';
 
 const List<MutationOwnerPolicySpec> selectionMutationOwnerPolicies =
     <MutationOwnerPolicySpec>[
@@ -116,18 +117,23 @@ const List<MutationOwnerPolicySpec> sceneMutationOwnerPolicies =
         requiredGuard: interruptForExternalMutationCall,
         contractKind: MutationOwnerContractKind.replaceSceneForwarding,
       ),
+      MutationOwnerPolicySpec(
+        methodName: 'notifySceneChanged',
+        requiredGuard: '',
+        contractKind: MutationOwnerContractKind.publicGuardedBoundaryRoute,
+      ),
     ];
 
 const List<MutationOwnerGuardSpec> mutationOwnerGuardSpecs =
     <MutationOwnerGuardSpec>[
       MutationOwnerGuardSpec(
-        relativePath: 'internal/scene_controller_selection_mutations.dart',
-        className: 'SceneControllerSelectionMutations',
+        relativePath: 'scene_controller_selection.dart',
+        className: 'SceneControllerSelectionOwner',
         policies: selectionMutationOwnerPolicies,
       ),
       MutationOwnerGuardSpec(
-        relativePath: 'internal/scene_controller_scene_mutations.dart',
-        className: 'SceneControllerSceneMutations',
+        relativePath: 'scene_controller_scene.dart',
+        className: 'SceneControllerSceneOwner',
         policies: sceneMutationOwnerPolicies,
       ),
     ];

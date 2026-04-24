@@ -48,20 +48,22 @@ const List<_InteractiveOwnerSpec> _interactiveOwnerSpecs =
         alternativeOwnerNames: <String>{'SceneControllerInteractionOwner'},
       ),
       _InteractiveOwnerSpec(
+        relativePath: 'scene_controller_scene.dart',
+        ownerName: 'SceneControllerScene',
+        alternativeOwnerNames: <String>{'SceneControllerSceneOwner'},
+      ),
+      _InteractiveOwnerSpec(
+        relativePath: 'scene_controller_selection.dart',
+        ownerName: 'SceneControllerSelection',
+        alternativeOwnerNames: <String>{'SceneControllerSelectionOwner'},
+      ),
+      _InteractiveOwnerSpec(
         relativePath: 'internal/scene_controller_interaction_runtime.dart',
         ownerName: 'SceneControllerInteractionRuntime',
       ),
       _InteractiveOwnerSpec(
         relativePath: 'internal/scene_controller_interaction_access.dart',
         ownerName: 'SceneControllerInteractionContext',
-      ),
-      _InteractiveOwnerSpec(
-        relativePath: 'internal/scene_controller_scene_mutations.dart',
-        ownerName: 'SceneControllerSceneMutations',
-      ),
-      _InteractiveOwnerSpec(
-        relativePath: 'internal/scene_controller_selection_mutations.dart',
-        ownerName: 'SceneControllerSelectionMutations',
       ),
       _InteractiveOwnerSpec(
         relativePath: 'internal/scene_controller_mutation_boundary.dart',
@@ -74,10 +76,6 @@ const List<_InteractiveOwnerSpec> _interactiveOwnerSpecs =
       _InteractiveOwnerSpec(
         relativePath: 'internal/pointer_session_token.dart',
         ownerName: 'PointerSessionToken',
-      ),
-      _InteractiveOwnerSpec(
-        relativePath: 'internal/interactive_selection_actions.dart',
-        ownerName: 'InteractiveSelectionActions',
       ),
       _InteractiveOwnerSpec(
         relativePath: 'internal/scene_controller_graph.dart',
@@ -121,6 +119,9 @@ const List<String> _deletedInteractiveResidualFiles = <String>[
   '/lib/src/interactive/internal/scene_controller_selection_access.dart',
   '/lib/src/interactive/internal/scene_controller_facade_assembly.dart',
   '/lib/src/interactive/internal/scene_controller_pointer_semantics.dart',
+  '/lib/src/interactive/internal/interactive_selection_actions.dart',
+  '/lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+  '/lib/src/interactive/internal/scene_controller_selection_mutations.dart',
   '/lib/src/interactive/scene_view_pointer_semantics.dart',
 ];
 
@@ -136,12 +137,11 @@ Future<GuardrailViolation?> _checkInteractiveArchitectureBoundary(
       await _checkPointerSessionBoundary(context) ??
       _checkPointerSessionTokenBoundary(context) ??
       await _checkInteractiveRuntimeBoundary(context) ??
+      await _checkSceneMutationOwnerBoundary(context) ??
+      await _checkSelectionMutationOwnerBoundary(context) ??
       await _checkMutationBoundaryOwner(context) ??
       await _checkInteractiveInteractionRuntimeBoundary(context) ??
       _checkEligibilityPolicyBoundary(context) ??
-      await _checkSceneMutationShellBoundary(context) ??
-      await _checkSelectionMutationShellBoundary(context) ??
-      await _checkSelectionActionsBoundary(context) ??
       _checkInternalAccessBoundary(context) ??
       await _checkPointerHostBoundary(context) ??
       await _checkRuntimeHostBoundary(context) ??

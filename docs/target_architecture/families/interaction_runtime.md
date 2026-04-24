@@ -7,19 +7,23 @@ public capability surfaces, pointer sessions, and the mutation gateway without
 becoming a second committed-scene owner.
 
 The checked-in code already keeps one interaction family with a bridge owner,
-an ephemeral runtime core, and a separate mutation gateway.
+an ephemeral runtime core, and direct callback wiring into a separate mutation
+gateway.
 
 ## Target Rules
 
 - `SceneControllerInteractionRuntime` remains the interaction-family bridge for
-  public-side-effect safety, notify scheduling, pointer-session registry, and
-  gateway wiring.
+  public-side-effect safety, notify scheduling, pointer-session registry,
+  runtime-owned mutation entrypoints, and gateway wiring.
 - `InteractiveRuntime` remains the ephemeral runtime core for gesture, move,
   and draw orchestration.
 - `SceneControllerPointerSession` remains the pointer-session adapter between
   the view-facing runtime boundary and the interaction family.
 - `SceneControllerMutationBoundary` remains outside the interaction core and
   stays the only committed-write bridge.
+- Runtime-owned move/draw/selection callbacks may wire directly to
+  `SceneControllerMutationBoundary`; do not reintroduce a routing helper
+  between those callbacks and the boundary.
 
 ## Owners
 
@@ -46,16 +50,17 @@ an ephemeral runtime core, and a separate mutation gateway.
 - Do not turn bridge/core breadth into an implied new top-level family without
   a separate accepted owner-boundary decision.
 - Do not let interaction-owned writes bypass `SceneControllerMutationBoundary`.
+- Do not reintroduce a runtime-owned routing shell between live interaction
+  callbacks and `SceneControllerMutationBoundary`.
 
 ## Mechanical Evidence
 
 - `dart run tool/lsp_find_thin_wrappers.dart lib/src/interactive --classification=pure-forwarder`
-- `dart run tool/lsp_trace_flow.dart lib/src/interactive/internal/interactive_selection_actions.dart InteractiveSelectionActions.commitMoveSelection --depth=5`
-- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/interactive_selection_actions.dart InteractiveSelectionActions.commitMoveSelection --direction=outgoing --depth=5 --json-out=docs/target_architecture/evidence/commit_move_selection_flow.json --mermaid-out=docs/target_architecture/evidence/commit_move_selection_flow.md`
+- `dart run tool/lsp_trace_flow.dart lib/src/interactive/internal/scene_controller_interaction_runtime.dart _createInteractiveRuntime --depth=4`
+- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/scene_controller_interaction_runtime.dart _createInteractiveRuntime --direction=outgoing --depth=4 --json-out=docs/target_architecture/evidence/commit_move_selection_flow.json --mermaid-out=docs/target_architecture/evidence/commit_move_selection_flow.md`
   Evidence:
   [commit_move_selection_flow.json](../evidence/commit_move_selection_flow.json),
   [commit_move_selection_flow.md](../evidence/commit_move_selection_flow.md)
-- `dart run tool/lsp_find_boundary_bypasses.dart lib/src/interactive/internal/interactive_selection_actions.dart InteractiveSelectionActions --must-pass=SceneControllerMutationBoundary --depth=4`
 
 ## Status
 

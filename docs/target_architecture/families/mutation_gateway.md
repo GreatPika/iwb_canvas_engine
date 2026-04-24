@@ -6,8 +6,8 @@ This family defines which owner may translate interaction-side mutation intent
 into committed writes.
 
 The checked-in code keeps one committed-write gateway in
-`SceneControllerMutationBoundary` and routes scene-side mutation wrappers
-through that boundary.
+`SceneControllerMutationBoundary`, and direct public/runtime mutation callers
+route straight into that boundary.
 
 ## Target Rules
 
@@ -15,8 +15,9 @@ through that boundary.
   that performs committed writes.
 - `SceneControllerCommittedMutationAccess` remains the adapter seam from the
   gateway into the committed store/write path.
-- Scene-side and selection-side wrappers stay thin callers of the gateway; they
-  do not become competing write owners.
+- `SceneControllerSceneOwner`, `SceneControllerSelectionOwner`, and runtime-
+  owned mutation entrypoints may call the gateway directly, but they do not
+  become competing write owners.
 - Gesture lifetime, preview lifetime, and view hosting remain outside the
   gateway.
 
@@ -26,17 +27,18 @@ through that boundary.
   `lib/src/interactive/internal/scene_controller_mutation_boundary.dart`
 - Committed-mutation access seam:
   `lib/src/controller/scene_controller_committed_mutation_access.dart`
-- Scene-side and selection-side wrappers:
-  `lib/src/interactive/internal/scene_controller_scene_mutations.dart` and
-  `lib/src/interactive/internal/scene_controller_selection_mutations.dart`
-- Interaction-side selection helper:
-  `lib/src/interactive/internal/interactive_selection_actions.dart`
+- Direct public mutation owners:
+  `lib/src/interactive/scene_controller_scene.dart` and
+  `lib/src/interactive/scene_controller_selection.dart`
+- Runtime-owned direct mutation callers:
+  `lib/src/interactive/internal/scene_controller_interaction_runtime.dart`
 
 ## Forbidden Shapes
 
-- Do not let scene-side wrappers, selection-side wrappers, or interaction
-  helpers bypass `SceneControllerMutationBoundary` to reach committed writes
-  directly.
+- Do not let direct public owners or runtime-owned mutation callers bypass
+  `SceneControllerMutationBoundary` to reach committed writes directly.
+- Do not reintroduce a routing-only mutation shell between direct callers and
+  `SceneControllerMutationBoundary`.
 - Do not let `SceneControllerCommittedMutationAccess` grow into a second
   interaction-owned gateway.
 - Do not move gesture orchestration, preview state, or view-hosting behavior
@@ -49,10 +51,13 @@ through that boundary.
   [add_node_write_flow.json](../evidence/add_node_write_flow.json),
   [add_node_write_flow.md](../evidence/add_node_write_flow.md)
 - `dart run tool/lsp_find_boundary_bypasses.dart lib/src/interactive/scene_controller_scene.dart SceneControllerSceneOwner --must-pass=SceneControllerMutationBoundary --depth=5`
+- `dart run tool/lsp_find_boundary_bypasses.dart lib/src/interactive/scene_controller_selection.dart SceneControllerSelectionOwner --must-pass=SceneControllerMutationBoundary --depth=5`
 - `dart run tool/lsp_find_thin_wrappers.dart lib/src/interactive --classification=pure-forwarder`
 
 ## Status
 
-- `locked, needs slimming`
-- The gateway boundary is stable, but the gateway core and committed-mutation
-  adapter remain broader than the intended steady-state shape.
+- `locked`
+- The checked-in local form now matches the accepted direct-route target:
+  direct public/runtime callers cross `SceneControllerMutationBoundary`
+  without a routing-shell layer, while committed mutation access remains the
+  controller-owned downstream seam.

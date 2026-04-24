@@ -32,7 +32,6 @@ part 'interactive_architecture_boundary_pointer_rules.dart';
 part 'interactive_architecture_boundary_pointer_host_rules.dart';
 part 'interactive_architecture_boundary_mutation_rules.dart';
 part 'interactive_architecture_boundary_mutation_runtime_rules.dart';
-part 'interactive_architecture_boundary_mutation_shell_rules.dart';
 part 'interactive_architecture_boundary_draw_rules.dart';
 part 'interactive_architecture_boundary_file_support.dart';
 part 'interactive_architecture_boundary_declaration_support.dart';
@@ -275,7 +274,7 @@ const List<CapabilityGuardSpec> _capabilityGuardSpecs = <CapabilityGuardSpec>[
   CapabilityGuardSpec(
     relativePath: 'scene_controller_scene.dart',
     className: 'SceneControllerSceneOwner',
-    primaryGuardCall: 'ensurePublicSideEffectAllowed',
+    primaryGuardCall: '_runtime.ensurePublicSideEffectAllowed',
   ),
   CapabilityGuardSpec(
     relativePath: 'scene_controller_selection.dart',

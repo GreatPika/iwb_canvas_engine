@@ -214,62 +214,37 @@
           ]
         },
         {
-          "name": "_createSelectionMutations",
-          "detail": "scene_controller_graph.dart",
-          "path": "lib/src/interactive/internal/scene_controller_graph.dart",
-          "children": [
-            {
-              "name": "SceneControllerSelectionMutations",
-              "detail": "SceneControllerSelectionMutations",
-              "path": "lib/src/interactive/internal/scene_controller_selection_mutations.dart",
-              "children": []
-            },
-            {
-              "name": "ensureExternalMutationAllowed",
-              "detail": "SceneControllerInteractionRuntime",
-              "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
-              "children": []
-            }
-          ]
-        },
-        {
-          "name": "_createSceneMutations",
-          "detail": "scene_controller_graph.dart",
-          "path": "lib/src/interactive/internal/scene_controller_graph.dart",
-          "children": [
-            {
-              "name": "SceneControllerSceneMutations",
-              "detail": "SceneControllerSceneMutations",
-              "path": "lib/src/interactive/internal/scene_controller_scene_mutations.dart",
-              "children": []
-            },
-            {
-              "name": "ensureExternalMutationAllowed",
-              "detail": "SceneControllerInteractionRuntime",
-              "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
-              "children": []
-            },
-            {
-              "name": "interruptForExternalMutation",
-              "detail": "SceneControllerInteractionRuntime",
-              "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
-              "children": []
-            }
-          ]
-        },
-        {
           "name": "SceneControllerInteractionContext",
           "detail": "SceneControllerInteractionContext",
           "path": "lib/src/interactive/internal/scene_controller_interaction_access.dart",
           "children": []
         },
         {
+          "name": "ensureExternalMutationAllowed",
+          "detail": "SceneControllerInteractionRuntime",
+          "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+          "children": [
+            {
+              "name": "get hasActiveGesture",
+              "detail": "InteractiveRuntime",
+              "path": "lib/src/interactive/internal/interactive_runtime.dart",
+              "children": []
+            }
+          ]
+        },
+        {
           "name": "clearSelection",
-          "detail": "SceneControllerSelectionMutations",
-          "path": "lib/src/interactive/internal/scene_controller_selection_mutations.dart",
+          "detail": "SceneControllerMutationBoundary",
+          "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
           "children": [
             {
               "name": "clearSelection",
+              "detail": "SceneControllerCommittedMutationAccess",
+              "path": "lib/src/controller/scene_controller_committed_mutation_access.dart",
+              "children": []
+            },
+            {
+              "name": "_scheduleSceneCommit",
               "detail": "SceneControllerMutationBoundary",
               "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
               "children": []

@@ -22,10 +22,6 @@ Future<GuardrailViolation?> _checkInteractiveInteractionRuntimeBoundary(
     resolved.unit.declarations,
     '_createMutationBoundary',
   );
-  final createSelectionActions = _findTopLevelFunctionByName(
-    resolved.unit.declarations,
-    '_createSelectionActions',
-  );
   final createInteractiveRuntime = _findTopLevelFunctionByName(
     resolved.unit.declarations,
     '_createInteractiveRuntime',
@@ -58,6 +54,66 @@ Future<GuardrailViolation?> _checkInteractiveInteractionRuntimeBoundary(
               interactionRuntimeClass.members,
               'handleDoubleTapFromSession',
             ));
+  final clearSceneSelectionState =
+      _findExtensionMethodOnType(
+        resolved.unit,
+        'SceneControllerInteractionRuntime',
+        'clearSceneSelectionState',
+      ) ??
+      (interactionRuntimeClass == null
+          ? null
+          : _findMethodByName(
+              interactionRuntimeClass.members,
+              'clearSceneSelectionState',
+            ));
+  final rotateSelection =
+      _findExtensionMethodOnType(
+        resolved.unit,
+        'SceneControllerInteractionRuntime',
+        'rotateSelection',
+      ) ??
+      (interactionRuntimeClass == null
+          ? null
+          : _findMethodByName(
+              interactionRuntimeClass.members,
+              'rotateSelection',
+            ));
+  final flipSelectionVertical =
+      _findExtensionMethodOnType(
+        resolved.unit,
+        'SceneControllerInteractionRuntime',
+        'flipSelectionVertical',
+      ) ??
+      (interactionRuntimeClass == null
+          ? null
+          : _findMethodByName(
+              interactionRuntimeClass.members,
+              'flipSelectionVertical',
+            ));
+  final flipSelectionHorizontal =
+      _findExtensionMethodOnType(
+        resolved.unit,
+        'SceneControllerInteractionRuntime',
+        'flipSelectionHorizontal',
+      ) ??
+      (interactionRuntimeClass == null
+          ? null
+          : _findMethodByName(
+              interactionRuntimeClass.members,
+              'flipSelectionHorizontal',
+            ));
+  final deleteSelection =
+      _findExtensionMethodOnType(
+        resolved.unit,
+        'SceneControllerInteractionRuntime',
+        'deleteSelection',
+      ) ??
+      (interactionRuntimeClass == null
+          ? null
+          : _findMethodByName(
+              interactionRuntimeClass.members,
+              'deleteSelection',
+            ));
   final mutationBoundaryFilePath = _repoRelPath(
     context,
     _interactiveArchitectureFile(
@@ -65,24 +121,24 @@ Future<GuardrailViolation?> _checkInteractiveInteractionRuntimeBoundary(
       'internal/scene_controller_mutation_boundary.dart',
     ),
   );
-  final selectionActionsFilePath = _repoRelPath(
-    context,
-    _interactiveArchitectureFile(
-      context,
-      'internal/interactive_selection_actions.dart',
-    ),
-  );
   if (!_hasImport(
         parsed,
         '../../controller/scene_controller_committed_mutation_access.dart',
       ) ||
       !_hasImport(parsed, 'scene_controller_mutation_boundary.dart') ||
+      _hasImport(parsed, 'interactive_selection_actions.dart') ||
+      _unitContainsIdentifier(parsed.unit, 'InteractiveSelectionActions') ||
+      _unitContainsIdentifier(parsed.unit, '_createSelectionActions') ||
       createRuntime == null ||
       createMutationBoundary == null ||
-      createSelectionActions == null ||
       createInteractiveRuntime == null ||
       handlePointerFromSession == null ||
       handleDoubleTapFromSession == null ||
+      clearSceneSelectionState == null ||
+      rotateSelection == null ||
+      flipSelectionVertical == null ||
+      flipSelectionHorizontal == null ||
+      deleteSelection == null ||
       !_methodContainsOrderedStatementsWithForbiddenOutsideSequence(
         handlePointerFromSession,
         orderedMatchers: <bool Function(Statement)>[
@@ -163,12 +219,6 @@ Future<GuardrailViolation?> _checkInteractiveInteractionRuntimeBoundary(
         createRuntime,
         context: context,
         filePath: filePath,
-        functionName: '_createSelectionActions',
-      ) ||
-      !_functionInvokesOwnedTopLevelFunction(
-        createRuntime,
-        context: context,
-        filePath: filePath,
         functionName: '_createInteractiveRuntime',
       ) ||
       !_functionCreatesOwnedType(
@@ -176,19 +226,6 @@ Future<GuardrailViolation?> _checkInteractiveInteractionRuntimeBoundary(
         context: context,
         filePath: mutationBoundaryFilePath,
         typeName: 'SceneControllerMutationBoundary',
-      ) ||
-      !_functionHasParameterTypeFromAllowedFiles(
-        createSelectionActions,
-        context: context,
-        parameterName: 'mutationBoundary',
-        typeName: 'SceneControllerMutationBoundary',
-        allowedFilePaths: <String>{mutationBoundaryFilePath},
-      ) ||
-      !_functionCreatesOwnedType(
-        createSelectionActions,
-        context: context,
-        filePath: selectionActionsFilePath,
-        typeName: 'InteractiveSelectionActions',
       ) ||
       !_functionHasParameterTypeFromAllowedFiles(
         createInteractiveRuntime,
@@ -238,6 +275,41 @@ Future<GuardrailViolation?> _checkInteractiveInteractionRuntimeBoundary(
         filePath: mutationBoundaryFilePath,
         ownerName: 'SceneControllerMutationBoundary',
         elementName: 'commitEraseNodes',
+      ) ||
+      !_methodReferencesOwnedExecutable(
+        clearSceneSelectionState,
+        context: context,
+        filePath: mutationBoundaryFilePath,
+        ownerName: 'SceneControllerMutationBoundary',
+        elementName: 'clearScene',
+      ) ||
+      !_methodReferencesOwnedExecutable(
+        rotateSelection,
+        context: context,
+        filePath: mutationBoundaryFilePath,
+        ownerName: 'SceneControllerMutationBoundary',
+        elementName: 'rotateSelection',
+      ) ||
+      !_methodReferencesOwnedExecutable(
+        flipSelectionVertical,
+        context: context,
+        filePath: mutationBoundaryFilePath,
+        ownerName: 'SceneControllerMutationBoundary',
+        elementName: 'flipSelectionVertical',
+      ) ||
+      !_methodReferencesOwnedExecutable(
+        flipSelectionHorizontal,
+        context: context,
+        filePath: mutationBoundaryFilePath,
+        ownerName: 'SceneControllerMutationBoundary',
+        elementName: 'flipSelectionHorizontal',
+      ) ||
+      !_methodReferencesOwnedExecutable(
+        deleteSelection,
+        context: context,
+        filePath: mutationBoundaryFilePath,
+        ownerName: 'SceneControllerMutationBoundary',
+        elementName: 'deleteSelection',
       ) ||
       _unitContainsQualifiedPrefix(parsed.unit, <String>[
         'request',

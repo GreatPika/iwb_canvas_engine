@@ -101,7 +101,7 @@ class SceneControllerSceneOwner {
           category: 'interactive API',
           detail:
               'public SceneControllerSceneOwner entrypoints must guard '
-              'resolver purity with ensurePublicSideEffectAllowed',
+              'resolver purity with _runtime.ensurePublicSideEffectAllowed',
         ),
       );
     } finally {
@@ -109,16 +109,18 @@ class SceneControllerSceneOwner {
     }
   });
 
-  test('rejects selection mutation owner without active gesture guard', () async {
-    final sandbox = await createGuardrailsSandbox();
-    try {
-      writeMinimalControllerStore(sandbox);
-      writeInteractiveArchitectureSupportScaffold(sandbox);
-      writeSandboxFile(
-        sandbox,
-        'lib/src/interactive/scene_controller.dart',
-        sceneControllerFixture(
-          methods: '''
+  test(
+    'rejects selection mutation owner without active gesture guard',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          sceneControllerFixture(
+            methods: '''
   void handlePointer(Object input) {
     _ensurePublicSideEffectAllowed('handlePointer');
   }
@@ -131,32 +133,33 @@ class SceneControllerSceneOwner {
     _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
   }
 ''',
-        ),
-      );
-      writeSandboxFile(
-        sandbox,
-        'lib/src/interactive/internal/scene_controller_selection_mutations.dart',
-        interactiveSelectionMutationsFixture(
-          setSelectionBody: "print('missing guard');",
-        ),
-      );
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller_selection.dart',
+          interactiveSelectionMutationsFixture(
+            setSelectionBody: "print('missing guard');",
+          ),
+        );
 
-      final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
-      expect(result.exitCode, isNonZero);
-      expect(
-        result.stderr.toString(),
-        diagnostic(
-          category: 'interactive API',
-          detail:
-              'SceneControllerSelectionMutations.setSelection must guard '
-              'active-gesture exclusivity with '
-              'ensureExternalMutationAllowed',
-        ),
-      );
-    } finally {
-      sandbox.deleteSync(recursive: true);
-    }
-  });
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerSelectionOwner.setSelection must guard '
+                'active-gesture exclusivity with '
+                '_ensureExternalMutationAllowed',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
 
   test(
     'rejects selection mutation owner with late active gesture guard',
@@ -186,11 +189,11 @@ class SceneControllerSceneOwner {
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/internal/scene_controller_selection_mutations.dart',
+          'lib/src/interactive/scene_controller_selection.dart',
           interactiveSelectionMutationsFixture(
             setSelectionBody: '''
-mutations.setSelection(nodeIds);
-ensureExternalMutationAllowed('setSelection');
+_mutationBoundary.setSelection(nodeIds);
+_ensureExternalMutationAllowed('setSelection');
 ''',
           ),
         );
@@ -202,9 +205,9 @@ ensureExternalMutationAllowed('setSelection');
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneControllerSelectionMutations.setSelection must guard '
+                'SceneControllerSelectionOwner.setSelection must guard '
                 'active-gesture exclusivity with '
-                'ensureExternalMutationAllowed',
+                '_ensureExternalMutationAllowed',
           ),
         );
       } finally {
@@ -241,15 +244,15 @@ ensureExternalMutationAllowed('setSelection');
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/internal/scene_controller_selection_mutations.dart',
+          'lib/src/interactive/scene_controller_selection.dart',
           interactiveSelectionMutationsFixture(
             setSelectionBody: '''
 final shouldWrite = nodeIds != null;
 if (!shouldWrite) {
   return;
 }
-ensureExternalMutationAllowed('setSelection');
-mutations.setSelection(nodeIds);
+_ensureExternalMutationAllowed('setSelection');
+_mutationBoundary.setSelection(nodeIds);
 ''',
           ),
         );
@@ -290,7 +293,7 @@ mutations.setSelection(nodeIds);
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+          'lib/src/interactive/scene_controller_scene.dart',
           interactiveSceneMutationsFixture(
             writeBody: "print('missing guard');",
           ),
@@ -303,9 +306,9 @@ mutations.setSelection(nodeIds);
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneControllerSceneMutations.write must guard '
+                'SceneControllerSceneOwner.write must guard '
                 'active-gesture exclusivity with '
-                'ensureExternalMutationAllowed',
+                '_ensureExternalMutationAllowed',
           ),
         );
       } finally {
@@ -342,11 +345,11 @@ mutations.setSelection(nodeIds);
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+          'lib/src/interactive/scene_controller_scene.dart',
           interactiveSceneMutationsFixture(
             writeBody: '''
-mutations.write(fn);
-ensureExternalMutationAllowed('write');
+_mutationBoundary.write(fn);
+_ensureExternalMutationAllowed('write');
 ''',
           ),
         );
@@ -358,9 +361,9 @@ ensureExternalMutationAllowed('write');
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneControllerSceneMutations.write must guard '
+                'SceneControllerSceneOwner.write must guard '
                 'active-gesture exclusivity with '
-                'ensureExternalMutationAllowed',
+                '_ensureExternalMutationAllowed',
           ),
         );
       } finally {
@@ -397,7 +400,7 @@ ensureExternalMutationAllowed('write');
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+          'lib/src/interactive/scene_controller_scene.dart',
           interactiveSceneMutationsFixture(),
         );
 
@@ -437,15 +440,15 @@ ensureExternalMutationAllowed('write');
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+          'lib/src/interactive/scene_controller_scene.dart',
           interactiveSceneMutationsFixture(
             setCameraOffsetBody: '''
-mutations.validateCameraOffset(value);
-if (!mutations.shouldApplyCameraOffset(value)) {
+_mutationBoundary.validateCameraOffset(value);
+if (!_mutationBoundary.shouldApplyCameraOffset(value)) {
   return;
 }
-mutations.setCameraOffset(value);
-interruptForExternalMutation();
+_mutationBoundary.setCameraOffset(value);
+_interruptForExternalMutation();
 ''',
           ),
         );
@@ -457,9 +460,9 @@ interruptForExternalMutation();
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneControllerSceneMutations.setCameraOffset must guard '
+                'SceneControllerSceneOwner.setCameraOffset must guard '
                 'active-gesture exclusivity with '
-                'interruptForExternalMutation',
+                '_interruptForExternalMutation',
           ),
         );
       } finally {
@@ -496,15 +499,15 @@ interruptForExternalMutation();
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+          'lib/src/interactive/scene_controller_scene.dart',
           interactiveSceneMutationsFixture(
             setCameraOffsetBody: '''
-mutations.validateCameraOffset(value);
-if (!mutations.shouldApplyCameraOffset(value)) {
+_mutationBoundary.validateCameraOffset(value);
+if (!_mutationBoundary.shouldApplyCameraOffset(value)) {
   final noop = 1;
 }
-interruptForExternalMutation();
-mutations.setCameraOffset(value);
+_interruptForExternalMutation();
+_mutationBoundary.setCameraOffset(value);
 ''',
           ),
         );
@@ -516,9 +519,9 @@ mutations.setCameraOffset(value);
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneControllerSceneMutations.setCameraOffset must guard '
+                'SceneControllerSceneOwner.setCameraOffset must guard '
                 'active-gesture exclusivity with '
-                'interruptForExternalMutation',
+                '_interruptForExternalMutation',
           ),
         );
       } finally {
@@ -555,16 +558,16 @@ mutations.setCameraOffset(value);
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+          'lib/src/interactive/scene_controller_scene.dart',
           interactiveSceneMutationsFixture(
             setCameraOffsetBody: '''
-mutations.validateCameraOffset(value);
-if (!mutations.shouldApplyCameraOffset(value)) {
+_mutationBoundary.validateCameraOffset(value);
+if (!_mutationBoundary.shouldApplyCameraOffset(value)) {
   return;
 }
-interruptForExternalMutation();
+_interruptForExternalMutation();
 final debugMarker = value;
-mutations.setCameraOffset(debugMarker);
+_mutationBoundary.setCameraOffset(debugMarker);
 ''',
           ),
         );
@@ -576,9 +579,9 @@ mutations.setCameraOffset(debugMarker);
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneControllerSceneMutations.setCameraOffset must guard '
+                'SceneControllerSceneOwner.setCameraOffset must guard '
                 'active-gesture exclusivity with '
-                'interruptForExternalMutation',
+                '_interruptForExternalMutation',
           ),
         );
       } finally {
@@ -613,7 +616,7 @@ mutations.setCameraOffset(debugMarker);
       );
       writeSandboxFile(
         sandbox,
-        'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+        'lib/src/interactive/scene_controller_scene.dart',
         interactiveSceneMutationsFixture(),
       );
 
@@ -652,10 +655,10 @@ mutations.setCameraOffset(debugMarker);
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+          'lib/src/interactive/scene_controller_scene.dart',
           interactiveSceneMutationsFixture(
             replaceSceneBody: '''
-mutations.replaceScene(
+_mutationBoundary.replaceScene(
   snapshot,
   interruptBeforeApply: () {},
 );
@@ -670,9 +673,9 @@ mutations.replaceScene(
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneControllerSceneMutations.replaceScene must guard '
+                'SceneControllerSceneOwner.replaceScene must guard '
                 'active-gesture exclusivity with '
-                'interruptForExternalMutation',
+                '_interruptForExternalMutation',
           ),
         );
       } finally {
@@ -707,11 +710,11 @@ mutations.replaceScene(
       );
       writeSandboxFile(
         sandbox,
-        'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+        'lib/src/interactive/scene_controller_scene.dart',
         interactiveSceneMutationsFixture(
           replaceSceneBody: '''
-final beforeApply = interruptForExternalMutation;
-mutations.replaceScene(
+final beforeApply = _interruptForExternalMutation;
+_mutationBoundary.replaceScene(
   snapshot,
   interruptBeforeApply: beforeApply,
 );
@@ -726,9 +729,9 @@ mutations.replaceScene(
         diagnostic(
           category: 'interactive API',
           detail:
-              'SceneControllerSceneMutations.replaceScene must guard '
+              'SceneControllerSceneOwner.replaceScene must guard '
               'active-gesture exclusivity with '
-              'interruptForExternalMutation',
+              '_interruptForExternalMutation',
         ),
       );
     } finally {
@@ -762,12 +765,12 @@ mutations.replaceScene(
       );
       writeSandboxFile(
         sandbox,
-        'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+        'lib/src/interactive/scene_controller_scene.dart',
         interactiveSceneMutationsFixture(
           replaceSceneBody: '''
-var beforeApply = interruptForExternalMutation;
+var beforeApply = _interruptForExternalMutation;
 beforeApply = () {};
-mutations.replaceScene(
+_mutationBoundary.replaceScene(
   snapshot,
   interruptBeforeApply: beforeApply,
 );
@@ -782,9 +785,9 @@ mutations.replaceScene(
         diagnostic(
           category: 'interactive API',
           detail:
-              'SceneControllerSceneMutations.replaceScene must guard '
+              'SceneControllerSceneOwner.replaceScene must guard '
               'active-gesture exclusivity with '
-              'interruptForExternalMutation',
+              '_interruptForExternalMutation',
         ),
       );
     } finally {
@@ -820,14 +823,14 @@ mutations.replaceScene(
         );
         writeSandboxFile(
           sandbox,
-          'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+          'lib/src/interactive/scene_controller_scene.dart',
           interactiveSceneMutationsFixture(
             replaceSceneBody: '''
-mutations.replaceScene(
+_mutationBoundary.replaceScene(
   snapshot,
-  interruptBeforeApply: interruptForExternalMutation,
+  interruptBeforeApply: _interruptForExternalMutation,
 );
-mutations.clearScene();
+_mutationBoundary.clearScene();
 ''',
           ),
         );
@@ -839,9 +842,9 @@ mutations.clearScene();
           diagnostic(
             category: 'interactive API',
             detail:
-                'SceneControllerSceneMutations.replaceScene must guard '
+                'SceneControllerSceneOwner.replaceScene must guard '
                 'active-gesture exclusivity with '
-                'interruptForExternalMutation',
+                '_interruptForExternalMutation',
           ),
         );
       } finally {
@@ -876,52 +879,69 @@ mutations.clearScene();
       );
       writeSandboxFile(
         sandbox,
-        'lib/src/interactive/internal/scene_controller_scene_mutations.dart',
+        'lib/src/interactive/scene_controller_scene.dart',
         '''
-class SceneControllerSceneMutations {
+import 'internal/scene_controller_interaction_runtime.dart';
+
+class SceneControllerSceneOwner {
+  final SceneControllerInteractionRuntime _runtime =
+      SceneControllerInteractionRuntime();
+  final _mutationBoundary = _MutationBoundary();
+
   void write(Object fn) {
+    _runtime.ensurePublicSideEffectAllowed('write');
     _guardExternal('write');
   }
 
   void setBackgroundColor(Object value) {
-    ensureExternalMutationAllowed('setBackgroundColor');
+    _runtime.ensurePublicSideEffectAllowed('setBackgroundColor');
+    _ensureExternalMutationAllowed('setBackgroundColor');
   }
 
   void setGridEnabled(bool value) {
-    ensureExternalMutationAllowed('setGridEnabled');
+    _runtime.ensurePublicSideEffectAllowed('setGridEnabled');
+    _ensureExternalMutationAllowed('setGridEnabled');
   }
 
   void setGridCellSize(double value) {
-    ensureExternalMutationAllowed('setGridCellSize');
+    _runtime.ensurePublicSideEffectAllowed('setGridCellSize');
+    _ensureExternalMutationAllowed('setGridCellSize');
   }
 
   void addNode(Object node) {
-    ensureExternalMutationAllowed('addNode');
+    _runtime.ensurePublicSideEffectAllowed('addNode');
+    _ensureExternalMutationAllowed('addNode');
   }
 
   void ensureLayer(Object layerId) {
-    ensureExternalMutationAllowed('ensureLayer');
+    _runtime.ensurePublicSideEffectAllowed('ensureLayer');
+    _ensureExternalMutationAllowed('ensureLayer');
   }
 
   void patchNode(Object patch) {
-    ensureExternalMutationAllowed('patchNode');
+    _runtime.ensurePublicSideEffectAllowed('patchNode');
+    _ensureExternalMutationAllowed('patchNode');
   }
 
   void removeNode(Object nodeId) {
-    ensureExternalMutationAllowed('removeNode');
+    _runtime.ensurePublicSideEffectAllowed('removeNode');
+    _ensureExternalMutationAllowed('removeNode');
   }
 
   void clearScene() {
-    ensureExternalMutationAllowed('clearScene');
+    _runtime.ensurePublicSideEffectAllowed('clearScene');
+    _ensureExternalMutationAllowed('clearScene');
   }
 
   void _guardExternal(String operation) {
-    ensureExternalMutationAllowed(operation);
+    _ensureExternalMutationAllowed(operation);
   }
 
-  final void Function(String operation) ensureExternalMutationAllowed =
+  final void Function(String operation) _ensureExternalMutationAllowed =
       (String operation) {};
 }
+
+class _MutationBoundary {}
 ''',
       );
 
@@ -932,13 +952,64 @@ class SceneControllerSceneMutations {
         diagnostic(
           category: 'interactive API',
           detail:
-              'SceneControllerSceneMutations.write must guard '
+              'SceneControllerSceneOwner.write must guard '
               'active-gesture exclusivity with '
-              'ensureExternalMutationAllowed',
+              '_ensureExternalMutationAllowed',
         ),
       );
     } finally {
       sandbox.deleteSync(recursive: true);
     }
   });
+
+  test(
+    'rejects scene mutation owner notifySceneChanged without direct boundary route',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller_scene.dart',
+          interactiveSceneMutationsFixture(
+            notifySceneChangedBody: "print('missing direct route');",
+          ),
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneControllerSceneOwner.notifySceneChanged must route '
+                'directly through _mutationBoundary.notifySceneChanged(...)',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
 }

@@ -545,7 +545,7 @@ void main() {
         runtime.flipSelectionHorizontal(timestampMs: 80);
         runtime.flipSelectionVertical(timestampMs: 81);
 
-        final moveResult = runtime.selectionActions.commitMoveSelection(
+        final moveResult = runtime.mutationBoundary.commitMoveSelection(
           const Offset(5, 0),
         );
         expect(moveResult.appliedDelta, const Offset(5, 0));

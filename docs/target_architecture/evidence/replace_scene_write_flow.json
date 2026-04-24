@@ -1,14 +1,26 @@
 {
-  "symbol": "SceneControllerSceneMutations.replaceScene",
+  "symbol": "SceneControllerSceneOwner.replaceScene",
   "kind": "method",
-  "path": "lib/src/interactive/internal/scene_controller_scene_mutations.dart",
+  "path": "lib/src/interactive/scene_controller_scene.dart",
   "referencesByFile": {
-    "lib/src/interactive/scene_controller_scene.dart": 1,
-    "lib/src/interactive/internal/scene_controller_scene_mutations.dart": 1
+    "example/test/ui/canvas_example/canvas_example_view_model_test.dart": 1,
+    "example/lib/ui/canvas_example/view_models/canvas_example_view_model.dart": 1,
+    "test/view/scene_view_interactive_test.dart": 4,
+    "test/interactive/core/scene_controller_interactive_basics_test.dart": 3,
+    "test/interactive/core/scene_controller_interactive_dispose_matrix_test.dart": 2,
+    "test/interactive/core/scene_controller_interactive_invalid_pointer_input_test.dart": 1,
+    "test/interactive/core/scene_controller_interactive_dispose_fail_fast_test.dart": 1,
+    "lib/src/interactive/scene_controller_scene.dart": 1
   },
   "implementations": [],
   "incoming": [],
   "outgoing": [
+    {
+      "name": "ensurePublicSideEffectAllowed",
+      "detail": "SceneControllerInteractionRuntime",
+      "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+      "children": []
+    },
     {
       "name": "replaceScene",
       "detail": "SceneControllerMutationBoundary",

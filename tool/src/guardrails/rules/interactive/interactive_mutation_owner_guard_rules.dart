@@ -116,6 +116,16 @@ GuardrailViolation? _checkMutationOwnerPolicy({
         className: className,
         policy: policy,
       );
+    case MutationOwnerContractKind.publicGuardedBoundaryRoute:
+      return _checkPublicGuardedBoundaryRoutePolicy(
+        context: context,
+        body: body,
+        member: member,
+        filePath: filePath,
+        lineFor: lineFor,
+        className: className,
+        policy: policy,
+      );
   }
 }
 
@@ -202,7 +212,14 @@ GuardrailViolation? _checkReplaceSceneMutationOwnerPolicy({
 }) {
   var sawForwarding = false;
   for (final statement in body.block.statements) {
-    if (!sawForwarding && isAllowedPurePreludeStatement(statement)) {
+    if (!sawForwarding &&
+        (isAllowedPurePreludeStatement(statement) ||
+            _isAllowedPublicSideEffectGuardStatement(
+              statement: statement,
+              context: context,
+              filePath: filePath,
+              className: className,
+            ))) {
       continue;
     }
     if (!sawForwarding &&
@@ -235,6 +252,50 @@ GuardrailViolation? _checkReplaceSceneMutationOwnerPolicy({
         );
 }
 
+GuardrailViolation? _checkPublicGuardedBoundaryRoutePolicy({
+  required GuardrailContext context,
+  required BlockFunctionBody body,
+  required MethodDeclaration member,
+  required String filePath,
+  required int Function(int offset) lineFor,
+  required String className,
+  required MutationOwnerPolicySpec policy,
+}) {
+  var sawBoundaryRoute = false;
+  for (final statement in body.block.statements) {
+    final event = _classifyMutationOwnerStatement(
+      statement: statement,
+      context: context,
+      filePath: filePath,
+      className: className,
+      requiredGuard: policy.requiredGuard,
+    );
+    if (!sawBoundaryRoute &&
+        event.kind == SemanticSequenceEventKind.purePrelude) {
+      continue;
+    }
+    if (!sawBoundaryRoute &&
+        event.kind == SemanticSequenceEventKind.effectfulBoundaryRoute) {
+      sawBoundaryRoute = true;
+      continue;
+    }
+    return _publicGuardedBoundaryRouteViolation(
+      filePath: filePath,
+      line: lineFor(statement.offset),
+      className: className,
+      methodName: policy.methodName,
+    );
+  }
+  return sawBoundaryRoute
+      ? null
+      : _publicGuardedBoundaryRouteViolation(
+          filePath: filePath,
+          line: lineFor(member.offset),
+          className: className,
+          methodName: policy.methodName,
+        );
+}
+
 GuardrailViolation _mutationOwnerPolicyViolation({
   required String filePath,
   required int line,
@@ -248,6 +309,21 @@ GuardrailViolation _mutationOwnerPolicyViolation({
     detail:
         '$className.$methodName must guard active-gesture exclusivity with '
         '$requiredGuard(...).',
+  );
+}
+
+GuardrailViolation _publicGuardedBoundaryRouteViolation({
+  required String filePath,
+  required int line,
+  required String className,
+  required String methodName,
+}) {
+  return _capabilityGuardViolation(
+    filePath: filePath,
+    line: line,
+    detail:
+        '$className.$methodName must route directly through '
+        '_mutationBoundary.$methodName(...).',
   );
 }
 
@@ -286,7 +362,13 @@ SemanticSequenceEvent _classifyMutationOwnerStatement({
   required String className,
   required String requiredGuard,
 }) {
-  if (isAllowedPurePreludeStatement(statement)) {
+  if (isAllowedPurePreludeStatement(statement) ||
+      _isAllowedPublicSideEffectGuardStatement(
+        statement: statement,
+        context: context,
+        filePath: filePath,
+        className: className,
+      )) {
     return SemanticSequenceEvent(
       kind: SemanticSequenceEventKind.purePrelude,
       statement: statement,
@@ -339,6 +421,37 @@ SemanticSequenceEvent _classifyMutationOwnerStatement({
   );
 }
 
+bool _isAllowedPublicSideEffectGuardStatement({
+  required Statement statement,
+  required GuardrailContext context,
+  required String filePath,
+  required String className,
+}) {
+  final expression = extractStatementExpression(statement);
+  return switch (expression) {
+    MethodInvocation(:final target, :final methodName, :final argumentList)
+        when methodName.name == 'ensurePublicSideEffectAllowed' &&
+            argumentList.arguments.isNotEmpty &&
+            (_matchesOwnedFieldReference(
+                  element: _expressionElement(target),
+                  context: context,
+                  filePath: filePath,
+                  ownerName: className,
+                  fieldName: '_runtime',
+                ) ||
+                (target == null &&
+                    _matchesOwnedFieldReference(
+                      element: methodName.element,
+                      context: context,
+                      filePath: filePath,
+                      ownerName: className,
+                      fieldName: 'ensurePublicSideEffectAllowed',
+                    ))) =>
+      true,
+    _ => false,
+  };
+}
+
 _MutationBoundaryRoute? _mutationBoundaryRouteForStatement({
   required Statement statement,
   required GuardrailContext context,
@@ -360,7 +473,7 @@ _MutationBoundaryRoute? _mutationBoundaryRouteForStatement({
         context: context,
         filePath: filePath,
         ownerName: className,
-        fieldName: 'mutations',
+        fieldName: '_mutationBoundary',
       )
       ? _MutationBoundaryRoute(
           methodName: expression.methodName.name,
@@ -418,7 +531,7 @@ bool _isAllowedReplaceSceneForwardingStatement({
         context: context,
         filePath: filePath,
         ownerName: className,
-        fieldName: 'mutations',
+        fieldName: '_mutationBoundary',
       )) {
     return false;
   }
@@ -469,7 +582,7 @@ bool _isCameraOffsetShouldApplyGuardExpression({
         context: context,
         filePath: filePath,
         ownerName: className,
-        fieldName: 'mutations',
+        fieldName: '_mutationBoundary',
       );
 }
 
@@ -536,7 +649,8 @@ _MutationBoundaryRouteKind? _mutationBoundaryRouteKindForMethodName(
     'flipSelectionHorizontal' ||
     'deleteSelection' ||
     'setCameraOffset' ||
-    'replaceScene' => _MutationBoundaryRouteKind.effectfulBoundaryRoute,
+    'replaceScene' ||
+    'notifySceneChanged' => _MutationBoundaryRouteKind.effectfulBoundaryRoute,
     _ => null,
   };
 }

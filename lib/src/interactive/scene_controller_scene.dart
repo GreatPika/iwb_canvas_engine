@@ -4,7 +4,8 @@ import '../contract/node_patch.dart';
 import '../contract/node_spec.dart';
 import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
-import 'internal/scene_controller_scene_mutations.dart';
+import 'internal/scene_controller_interaction_runtime.dart';
+import 'internal/scene_controller_mutation_boundary.dart';
 
 abstract interface class SceneControllerScene {
   T write<T>(T Function(SceneWriteTxn writer) fn);
@@ -23,83 +24,112 @@ abstract interface class SceneControllerScene {
 
 class SceneControllerSceneOwner implements SceneControllerScene {
   const SceneControllerSceneOwner({
-    required this.ensurePublicSideEffectAllowed,
-    required SceneControllerSceneMutations mutations,
-  }) : _mutations = mutations;
+    required SceneControllerInteractionRuntime runtime,
+    required SceneControllerMutationBoundary mutationBoundary,
+  }) : _runtime = runtime,
+       _mutationBoundary = mutationBoundary;
 
-  final void Function(String operation, {bool allowAfterDispose})
-  ensurePublicSideEffectAllowed;
-  final SceneControllerSceneMutations _mutations;
+  final SceneControllerInteractionRuntime _runtime;
+  final SceneControllerMutationBoundary _mutationBoundary;
 
   @override
   T write<T>(T Function(SceneWriteTxn writer) fn) {
-    ensurePublicSideEffectAllowed('write');
-    return _mutations.write(fn);
+    _runtime.ensurePublicSideEffectAllowed('write');
+    _ensureExternalMutationAllowed('write');
+    return _mutationBoundary.write(fn);
   }
 
   @override
   void setBackgroundColor(Color value) {
-    ensurePublicSideEffectAllowed('setBackgroundColor');
-    _mutations.setBackgroundColor(value);
+    _runtime.ensurePublicSideEffectAllowed('setBackgroundColor');
+    _ensureExternalMutationAllowed('setBackgroundColor');
+    _mutationBoundary.setBackgroundColor(value);
   }
 
   @override
   void setGridEnabled(bool value) {
-    ensurePublicSideEffectAllowed('setGridEnabled');
-    _mutations.setGridEnabled(value);
+    _runtime.ensurePublicSideEffectAllowed('setGridEnabled');
+    _ensureExternalMutationAllowed('setGridEnabled');
+    _mutationBoundary.setGridEnabled(value);
   }
 
   @override
   void setGridCellSize(double value) {
-    ensurePublicSideEffectAllowed('setGridCellSize');
-    _mutations.setGridCellSize(value);
+    _runtime.ensurePublicSideEffectAllowed('setGridCellSize');
+    _ensureExternalMutationAllowed('setGridCellSize');
+    _mutationBoundary.setGridCellSize(value);
   }
 
   @override
   void setCameraOffset(Offset value) {
-    ensurePublicSideEffectAllowed('setCameraOffset');
-    _mutations.setCameraOffset(value);
+    _runtime.ensurePublicSideEffectAllowed('setCameraOffset');
+    _mutationBoundary.validateCameraOffset(value);
+    if (!_mutationBoundary.shouldApplyCameraOffset(value)) {
+      return;
+    }
+    _interruptForExternalMutation();
+    _mutationBoundary.setCameraOffset(value);
   }
 
   @override
   NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex}) {
-    ensurePublicSideEffectAllowed('addNode');
-    return _mutations.addNode(node, layerId: layerId, insertIndex: insertIndex);
+    _runtime.ensurePublicSideEffectAllowed('addNode');
+    _ensureExternalMutationAllowed('addNode');
+    return _mutationBoundary.addNode(
+      node,
+      layerId: layerId,
+      insertIndex: insertIndex,
+    );
   }
 
   @override
   bool ensureLayer(LayerId layerId, {int? index}) {
-    ensurePublicSideEffectAllowed('ensureLayer');
-    return _mutations.ensureLayer(layerId, index: index);
+    _runtime.ensurePublicSideEffectAllowed('ensureLayer');
+    _ensureExternalMutationAllowed('ensureLayer');
+    return _mutationBoundary.ensureLayer(layerId, index: index);
   }
 
   @override
   bool patchNode(NodePatch patch) {
-    ensurePublicSideEffectAllowed('patchNode');
-    return _mutations.patchNode(patch);
+    _runtime.ensurePublicSideEffectAllowed('patchNode');
+    _ensureExternalMutationAllowed('patchNode');
+    return _mutationBoundary.patchNode(patch);
   }
 
   @override
   bool removeNode(NodeId id, {int? timestampMs}) {
-    ensurePublicSideEffectAllowed('removeNode');
-    return _mutations.removeNode(id, timestampMs: timestampMs);
+    _runtime.ensurePublicSideEffectAllowed('removeNode');
+    _ensureExternalMutationAllowed('removeNode');
+    return _mutationBoundary.removeNode(id, timestampMs: timestampMs);
   }
 
   @override
   void clearScene({int? timestampMs}) {
-    ensurePublicSideEffectAllowed('clearScene');
-    _mutations.clearScene(timestampMs: timestampMs);
+    _runtime.ensurePublicSideEffectAllowed('clearScene');
+    _ensureExternalMutationAllowed('clearScene');
+    _mutationBoundary.clearScene(timestampMs: timestampMs);
   }
 
   @override
   void replaceScene(SceneSnapshot snapshot) {
-    ensurePublicSideEffectAllowed('replaceScene');
-    _mutations.replaceScene(snapshot);
+    _runtime.ensurePublicSideEffectAllowed('replaceScene');
+    _mutationBoundary.replaceScene(
+      snapshot,
+      interruptBeforeApply: _interruptForExternalMutation,
+    );
   }
 
   @override
   void notifySceneChanged() {
-    ensurePublicSideEffectAllowed('notifySceneChanged');
-    _mutations.notifySceneChanged();
+    _runtime.ensurePublicSideEffectAllowed('notifySceneChanged');
+    _mutationBoundary.notifySceneChanged();
+  }
+
+  void _ensureExternalMutationAllowed(String operation) {
+    _runtime.ensureExternalMutationAllowed(operation);
+  }
+
+  void _interruptForExternalMutation() {
+    _runtime.interruptForExternalMutation();
   }
 }

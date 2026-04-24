@@ -251,6 +251,7 @@ EnsureCallInfo? _resolveCapabilityEnsureCallInfo({
             ? const EnsureCallInfo(hasAllowAfterDispose: false)
             : null;
       case 'SceneControllerSelectionOwner':
+      case 'SceneControllerSceneOwner':
         return _matchesOwnedMethod(
                   element: expression.methodName.element,
                   context: context,
@@ -270,19 +271,6 @@ EnsureCallInfo? _resolveCapabilityEnsureCallInfo({
       default:
         break;
     }
-  }
-
-  if (expression is FunctionExpressionInvocation &&
-      className == 'SceneControllerSceneOwner') {
-    return _matchesOwnedFieldReference(
-          element: _expressionElement(expression.function),
-          context: context,
-          filePath: filePath,
-          ownerName: className,
-          fieldName: 'ensurePublicSideEffectAllowed',
-        )
-        ? const EnsureCallInfo(hasAllowAfterDispose: false)
-        : null;
   }
 
   return null;

@@ -70,8 +70,6 @@ import '../scene_controller_selection.dart';
 import 'scene_controller_internal_access.dart';
 import 'scene_controller_interaction_access.dart';
 import 'scene_controller_interaction_runtime.dart';
-import 'scene_controller_scene_mutations.dart';
-import 'scene_controller_selection_mutations.dart';
 import 'scene_controller_scene_view_runtime.dart';
 
 class SceneControllerGraphRequest {
@@ -109,19 +107,16 @@ SceneControllerGraphHandle _assembleSceneControllerGraph(
       mutationAccess: SceneStoreControllerCommittedMutationAccess(),
     ),
   );
-  final selectionMutations = SceneControllerSelectionMutations();
-  final sceneMutations = SceneControllerSceneMutations();
   final interaction = SceneControllerInteractionOwner(
     SceneControllerInteractionContext(runtime: interactionRuntime),
   );
   final selection = SceneControllerSelectionOwner(
     runtime: interactionRuntime,
-    mutations: selectionMutations,
+    mutationBoundary: interactionRuntime.mutationBoundary,
   );
   final scene = SceneControllerSceneOwner(
-    ensurePublicSideEffectAllowed:
-        interactionRuntime.ensurePublicSideEffectAllowed,
-    mutations: sceneMutations,
+    runtime: interactionRuntime,
+    mutationBoundary: interactionRuntime.mutationBoundary,
   );
   interaction.toString();
   selection.toString();

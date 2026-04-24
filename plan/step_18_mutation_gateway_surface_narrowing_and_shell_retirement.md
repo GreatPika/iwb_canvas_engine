@@ -684,7 +684,7 @@ replace-scene sequencing on the controller-owned committed mutation seam.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Retire Runtime Selection Routing Shell
+### Slice 1. [x] Retire Runtime Selection Routing Shell
 
 #### Slice Contract
 
@@ -747,7 +747,7 @@ and no longer assembles or stores `InteractiveSelectionActions`.
 - `tool/src/guardrails/rules/interactive/interactive_architecture_boundary_mutation_shell_rules.dart`
   still exists and still protects the two surviving public shell files
 
-### Slice 2. [ ] Retire Public Scene And Selection Mutation Shells
+### Slice 2. [x] Retire Public Scene And Selection Mutation Shells
 
 #### Slice Contract
 
@@ -833,7 +833,7 @@ scene/selection mutation shells.
   is absent only after its public-shell checks have been replaced by direct
   public-owner proof
 
-### Slice 3. [ ] Refresh Mutation-Family Proof And Mark The Family Locked
+### Slice 3. [x] Refresh Mutation-Family Proof And Mark The Family Locked
 
 #### Slice Contract
 

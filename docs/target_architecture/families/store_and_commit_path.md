@@ -42,7 +42,7 @@ routes transactional writes through a dedicated commit runtime.
 
 ## Mechanical Evidence
 
-- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/scene_controller_scene_mutations.dart SceneControllerSceneMutations.replaceScene --direction=outgoing --depth=5 --json-out=docs/target_architecture/evidence/replace_scene_write_flow.json --mermaid-out=docs/target_architecture/evidence/replace_scene_write_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/scene_controller_scene.dart SceneControllerSceneOwner.replaceScene --direction=outgoing --depth=5 --json-out=docs/target_architecture/evidence/replace_scene_write_flow.json --mermaid-out=docs/target_architecture/evidence/replace_scene_write_flow.md`
   Evidence:
   [replace_scene_write_flow.json](../evidence/replace_scene_write_flow.json),
   [replace_scene_write_flow.md](../evidence/replace_scene_write_flow.md)

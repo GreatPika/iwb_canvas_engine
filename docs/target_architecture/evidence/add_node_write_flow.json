@@ -13,28 +13,61 @@
   "incoming": [],
   "outgoing": [
     {
+      "name": "ensurePublicSideEffectAllowed",
+      "detail": "SceneControllerInteractionRuntime",
+      "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+      "children": []
+    },
+    {
+      "name": "_ensureExternalMutationAllowed",
+      "detail": "SceneControllerSceneOwner",
+      "path": "lib/src/interactive/scene_controller_scene.dart",
+      "children": [
+        {
+          "name": "ensureExternalMutationAllowed",
+          "detail": "SceneControllerInteractionRuntime",
+          "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+          "children": [
+            {
+              "name": "get hasActiveGesture",
+              "detail": "InteractiveRuntime",
+              "path": "lib/src/interactive/internal/interactive_runtime.dart",
+              "children": [
+                {
+                  "name": "get hasActiveGesture",
+                  "detail": "InteractiveGestureRouter",
+                  "path": "lib/src/interactive/internal/interactive_gesture_router.dart",
+                  "children": [
+                    {
+                      "name": "get hasActiveGesture",
+                      "detail": "InteractiveGestureMachine",
+                      "path": "lib/src/interactive/internal/interactive_gesture_machine.dart",
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "addNode",
-      "detail": "SceneControllerSceneMutations",
-      "path": "lib/src/interactive/internal/scene_controller_scene_mutations.dart",
+      "detail": "SceneControllerMutationBoundary",
+      "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
       "children": [
         {
           "name": "addNode",
+          "detail": "SceneControllerCommittedMutationAccess",
+          "path": "lib/src/controller/scene_controller_committed_mutation_access.dart",
+          "children": []
+        },
+        {
+          "name": "_scheduleSceneCommit",
           "detail": "SceneControllerMutationBoundary",
           "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
-          "children": [
-            {
-              "name": "addNode",
-              "detail": "SceneControllerCommittedMutationAccess",
-              "path": "lib/src/controller/scene_controller_committed_mutation_access.dart",
-              "children": []
-            },
-            {
-              "name": "_scheduleSceneCommit",
-              "detail": "SceneControllerMutationBoundary",
-              "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
-              "children": []
-            }
-          ]
+          "children": []
         }
       ]
     }

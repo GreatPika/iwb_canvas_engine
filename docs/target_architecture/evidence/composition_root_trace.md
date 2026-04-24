@@ -67,65 +67,57 @@ flowchart LR
   N23 --> N32
   N33["SceneControllerInteractionConfig.requireFiniteOffset"]
   N23 --> N33
-  N34["scene_controller_graph.dart._createSelectionMutations"]
+  N34["SceneControllerInteractionContext.SceneControllerInteractionContext"]
   N1 --> N34
-  N35["SceneControllerSelectionMutations.SceneControllerSelectionMutations"]
-  N34 --> N35
-  N36["SceneControllerInteractionRuntime.ensureExternalMutationAllowed"]
-  N34 --> N36
-  N37["scene_controller_graph.dart._createSceneMutations"]
+  N35["SceneControllerInteractionRuntime.ensureExternalMutationAllowed"]
+  N1 --> N35
+  N36["InteractiveRuntime.get hasActiveGesture"]
+  N35 --> N36
+  N37["SceneControllerMutationBoundary.clearSelection"]
   N1 --> N37
-  N38["SceneControllerSceneMutations.SceneControllerSceneMutations"]
+  N38["SceneControllerCommittedMutationAccess.clearSelection"]
   N37 --> N38
-  N39["SceneControllerInteractionRuntime.ensureExternalMutationAllowed"]
+  N39["SceneControllerMutationBoundary._scheduleSceneCommit"]
   N37 --> N39
-  N40["SceneControllerInteractionRuntime.interruptForExternalMutation"]
-  N37 --> N40
-  N41["SceneControllerInteractionContext.SceneControllerInteractionContext"]
+  N40["SceneControllerInteractionOwner.SceneControllerInteractionOwner"]
+  N1 --> N40
+  N41["SceneControllerGraphHandle.SceneControllerGraphHandle"]
   N1 --> N41
-  N42["SceneControllerSelectionMutations.clearSelection"]
+  N42["SceneControllerSelectionOwner.SceneControllerSelectionOwner"]
   N1 --> N42
-  N43["SceneControllerMutationBoundary.clearSelection"]
-  N42 --> N43
-  N44["SceneControllerInteractionOwner.SceneControllerInteractionOwner"]
+  N43["SceneControllerSceneOwner.SceneControllerSceneOwner"]
+  N1 --> N43
+  N44["SceneControllerInternalAccessRegistration.SceneControllerInternalAccessRegistration"]
   N1 --> N44
-  N45["SceneControllerGraphHandle.SceneControllerGraphHandle"]
+  N45["SceneControllerInteractionRuntimeMutationApi.previewDeltaForNode"]
   N1 --> N45
-  N46["SceneControllerSelectionOwner.SceneControllerSelectionOwner"]
-  N1 --> N46
-  N47["SceneControllerSceneOwner.SceneControllerSceneOwner"]
-  N1 --> N47
-  N48["SceneControllerInternalAccessRegistration.SceneControllerInternalAccessRegistration"]
+  N46["InteractiveMoveSession.movePreviewDeltaForNode"]
+  N45 --> N46
+  N47["InteractiveRuntime.get debugMoveSession"]
+  N45 --> N47
+  N48["SceneControllerInteractionRuntimeMutationApi.setBeforePointerDispatchHook"]
   N1 --> N48
-  N49["SceneControllerInteractionRuntimeMutationApi.previewDeltaForNode"]
-  N1 --> N49
-  N50["InteractiveMoveSession.movePreviewDeltaForNode"]
-  N49 --> N50
-  N51["InteractiveRuntime.get debugMoveSession"]
-  N49 --> N51
-  N52["SceneControllerInteractionRuntimeMutationApi.setBeforePointerDispatchHook"]
-  N1 --> N52
-  N53["InteractiveRuntime.setBeforePointerDispatchHook"]
-  N52 --> N53
-  N54["SceneControllerInteractionRuntime.runMoveCommitDeltaResolver"]
-  N1 --> N54
-  N55["SceneControllerInteractionRuntimeStateApi.get activeEraserPointsLength"]
+  N49["InteractiveRuntime.setBeforePointerDispatchHook"]
+  N48 --> N49
+  N50["SceneControllerInteractionRuntime.runMoveCommitDeltaResolver"]
+  N1 --> N50
+  N51["SceneControllerInteractionRuntimeStateApi.get activeEraserPointsLength"]
+  N1 --> N51
+  N52["InteractiveRuntime.get activeEraserPointsLength"]
+  N51 --> N52
+  N53["SceneControllerInteractionRuntimeStateApi.get eraserSpatialQueryCount"]
+  N1 --> N53
+  N54["InteractiveRuntime.get debugEraserSpatialQueryCount"]
+  N53 --> N54
+  N55["SceneControllerInteractionRuntimeStateApi.get eraserPreciseSegmentCheckCount"]
   N1 --> N55
-  N56["InteractiveRuntime.get activeEraserPointsLength"]
+  N56["InteractiveRuntime.get debugEraserPreciseSegmentChecks"]
   N55 --> N56
-  N57["SceneControllerInteractionRuntimeStateApi.get eraserSpatialQueryCount"]
-  N1 --> N57
-  N58["InteractiveRuntime.get debugEraserSpatialQueryCount"]
+  N57["scene_controller_internal_access.dart.registerSceneControllerInternalAccess"]
+  N0 --> N57
+  N58["_SceneControllerInternalAccess._SceneControllerInternalAccess"]
   N57 --> N58
-  N59["SceneControllerInteractionRuntimeStateApi.get eraserPreciseSegmentCheckCount"]
-  N1 --> N59
-  N60["InteractiveRuntime.get debugEraserPreciseSegmentChecks"]
-  N59 --> N60
-  N61["scene_controller_internal_access.dart.registerSceneControllerInternalAccess"]
-  N0 --> N61
-  N62["_SceneControllerInternalAccess._SceneControllerInternalAccess"]
-  N61 --> N62
-  N63["SceneControllerGraphHandle.get internalAccessRegistration"]
-  N0 --> N63
+  N59["SceneControllerGraphHandle.get internalAccessRegistration"]
+  N0 --> N59
 
 ```

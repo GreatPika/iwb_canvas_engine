@@ -1,14 +1,271 @@
 {
-  "symbol": "InteractiveSelectionActions.commitMoveSelection",
-  "kind": "method",
-  "path": "lib/src/interactive/internal/interactive_selection_actions.dart",
+  "symbol": "_createInteractiveRuntime",
+  "kind": "function",
+  "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
   "referencesByFile": {
-    "test/interactive/core/scene_controller_mutation_boundary_test.dart": 1,
-    "lib/src/interactive/internal/interactive_selection_actions.dart": 1
+    "lib/src/interactive/internal/scene_controller_interaction_runtime.dart": 2
   },
   "implementations": [],
   "incoming": [],
   "outgoing": [
+    {
+      "name": "InteractiveRuntime",
+      "detail": "InteractiveRuntime",
+      "path": "lib/src/interactive/internal/interactive_runtime.dart",
+      "children": [
+        {
+          "name": "InteractiveMoveSession",
+          "detail": "InteractiveMoveSession",
+          "path": "lib/src/interactive/internal/interactive_move_session.dart",
+          "children": [
+            {
+              "name": "InteractiveMovePreviewState",
+              "detail": "InteractiveMovePreviewState",
+              "path": "lib/src/interactive/internal/interactive_move_preview_state.dart",
+              "children": []
+            },
+            {
+              "name": "InteractiveMoveHitTestEngine",
+              "detail": "InteractiveMoveHitTestEngine",
+              "path": "lib/src/interactive/internal/interactive_move_hit_test_engine.dart",
+              "children": []
+            },
+            {
+              "name": "InteractiveMoveSelectionCoordinator",
+              "detail": "InteractiveMoveSelectionCoordinator",
+              "path": "lib/src/interactive/internal/interactive_move_selection_coordinator.dart",
+              "children": []
+            },
+            {
+              "name": "InteractiveMoveCommitCoordinator",
+              "detail": "InteractiveMoveCommitCoordinator",
+              "path": "lib/src/interactive/internal/interactive_move_commit_coordinator.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "InteractiveMoveSessionCallbacks",
+          "detail": "InteractiveMoveSessionCallbacks",
+          "path": "lib/src/interactive/internal/interactive_move_callbacks.dart",
+          "children": []
+        },
+        {
+          "name": "emitAction",
+          "detail": "InteractiveEventDispatcher",
+          "path": "lib/src/interactive/internal/interactive_event_dispatcher.dart",
+          "children": [
+            {
+              "name": "ActionCommitted",
+              "detail": "ActionCommitted",
+              "path": "lib/src/core/action_events.dart",
+              "children": [
+                {
+                  "name": "ActionCommitted._",
+                  "detail": "ActionCommitted",
+                  "path": "lib/src/core/action_events.dart",
+                  "children": []
+                },
+                {
+                  "name": "freezeList",
+                  "detail": "immutable_collections.dart",
+                  "path": "lib/src/core/immutable_collections.dart",
+                  "children": []
+                },
+                {
+                  "name": "freezePayloadMap",
+                  "detail": "immutable_collections.dart",
+                  "path": "lib/src/core/immutable_collections.dart",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "InteractiveDrawCoordinator",
+          "detail": "InteractiveDrawCoordinator",
+          "path": "lib/src/interactive/internal/interactive_draw_coordinator.dart",
+          "children": [
+            {
+              "name": "InteractiveDrawStrokeEngine",
+              "detail": "InteractiveDrawStrokeEngine",
+              "path": "lib/src/interactive/internal/interactive_draw_stroke_engine.dart",
+              "children": []
+            },
+            {
+              "name": "InteractiveDrawStrokeEngineCallbacks",
+              "detail": "InteractiveDrawStrokeEngineCallbacks",
+              "path": "lib/src/interactive/internal/interactive_draw_stroke_engine.dart",
+              "children": []
+            },
+            {
+              "name": "InteractiveDrawLineEngine",
+              "detail": "InteractiveDrawLineEngine",
+              "path": "lib/src/interactive/internal/interactive_draw_line_engine.dart",
+              "children": []
+            },
+            {
+              "name": "InteractiveDrawLineEngineCallbacks",
+              "detail": "InteractiveDrawLineEngineCallbacks",
+              "path": "lib/src/interactive/internal/interactive_draw_line_engine.dart",
+              "children": []
+            },
+            {
+              "name": "InteractiveDrawEraserEngine",
+              "detail": "InteractiveDrawEraserEngine",
+              "path": "lib/src/interactive/internal/interactive_draw_eraser_engine.dart",
+              "children": []
+            },
+            {
+              "name": "InteractiveDrawEraserEngineCallbacks",
+              "detail": "InteractiveDrawEraserEngineCallbacks",
+              "path": "lib/src/interactive/internal/interactive_draw_eraser_engine.dart",
+              "children": []
+            },
+            {
+              "name": "InteractiveDrawTerminalRouter",
+              "detail": "InteractiveDrawTerminalRouter",
+              "path": "lib/src/interactive/internal/interactive_draw_terminal_router.dart",
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "InteractiveDrawCoordinatorCallbacks",
+          "detail": "InteractiveDrawCoordinatorCallbacks",
+          "path": "lib/src/interactive/internal/interactive_draw_coordinator_callbacks.dart",
+          "children": []
+        }
+      ]
+    },
+    {
+      "name": "InteractiveRuntimeCallbacks",
+      "detail": "InteractiveRuntimeCallbacks",
+      "path": "lib/src/interactive/internal/interactive_runtime_callbacks.dart",
+      "children": []
+    },
+    {
+      "name": "schedule",
+      "detail": "InteractiveNotifyScheduler",
+      "path": "lib/src/interactive/internal/interactive_event_dispatcher.dart",
+      "children": []
+    },
+    {
+      "name": "queryHitTestCandidates",
+      "detail": "SceneStoreControllerSpatialAccess",
+      "path": "lib/src/controller/scene_store_controller.dart",
+      "children": [
+        {
+          "name": "writeQueryHitTestCandidates",
+          "detail": "SpatialIndexCache",
+          "path": "lib/src/controller/internal/spatial_index_cache.dart",
+          "children": [
+            {
+              "name": "SceneSpatialIndex.build",
+              "detail": "SceneSpatialIndex",
+              "path": "lib/src/core/scene_spatial_index.dart",
+              "children": [
+                {
+                  "name": "SceneSpatialIndex._",
+                  "detail": "SceneSpatialIndex",
+                  "path": "lib/src/core/scene_spatial_index.dart",
+                  "children": []
+                },
+                {
+                  "name": "_rebuildSpatialIndex",
+                  "detail": "scene_spatial_index.dart",
+                  "path": "lib/src/core/scene_spatial_index.dart",
+                  "children": []
+                },
+                {
+                  "name": "_buildStableNodeLocator",
+                  "detail": "scene_spatial_index.dart",
+                  "path": "lib/src/core/scene_spatial_index.dart",
+                  "children": []
+                },
+                {
+                  "name": "_buildLayerIndexById",
+                  "detail": "scene_spatial_index.dart",
+                  "path": "lib/src/core/scene_spatial_index.dart",
+                  "children": []
+                }
+              ]
+            },
+            {
+              "name": "queryHitTestCandidates",
+              "detail": "SceneSpatialIndex",
+              "path": "lib/src/core/scene_spatial_index.dart",
+              "children": [
+                {
+                  "name": "_querySceneSpatialIndexHitTest",
+                  "detail": "scene_spatial_index.dart",
+                  "path": "lib/src/core/scene_spatial_index.dart",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "get spatialIndexCache",
+          "detail": "SceneControllerCommitRuntime",
+          "path": "lib/src/controller/scene_controller_commit_runtime.dart",
+          "children": []
+        }
+      ]
+    },
+    {
+      "name": "resolveSpatialCandidateSnapshot",
+      "detail": "SceneStoreControllerSpatialAccess",
+      "path": "lib/src/controller/scene_store_controller.dart",
+      "children": [
+        {
+          "name": "_resolveSnapshotAtLocationInSnapshot",
+          "detail": "scene_store_controller.dart",
+          "path": "lib/src/controller/scene_store_controller.dart",
+          "children": []
+        }
+      ]
+    },
+    {
+      "name": "setSelection",
+      "detail": "SceneControllerMutationBoundary",
+      "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+      "children": [
+        {
+          "name": "replaceSelection",
+          "detail": "SceneControllerCommittedMutationAccess",
+          "path": "lib/src/controller/scene_controller_committed_mutation_access.dart",
+          "children": []
+        },
+        {
+          "name": "_scheduleSceneCommit",
+          "detail": "SceneControllerMutationBoundary",
+          "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+          "children": []
+        }
+      ]
+    },
+    {
+      "name": "clearSelection",
+      "detail": "SceneControllerMutationBoundary",
+      "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+      "children": [
+        {
+          "name": "clearSelection",
+          "detail": "SceneControllerCommittedMutationAccess",
+          "path": "lib/src/controller/scene_controller_committed_mutation_access.dart",
+          "children": []
+        },
+        {
+          "name": "_scheduleSceneCommit",
+          "detail": "SceneControllerMutationBoundary",
+          "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+          "children": []
+        }
+      ]
+    },
     {
       "name": "commitMoveSelection",
       "detail": "SceneControllerMutationBoundary",
@@ -59,20 +316,7 @@
                   "name": "canPreviewMove",
                   "detail": "interaction_eligibility_policy.dart",
                   "path": "lib/src/interactive/interaction_eligibility_policy.dart",
-                  "children": [
-                    {
-                      "name": "canSelect",
-                      "detail": "interaction_eligibility_policy.dart",
-                      "path": "lib/src/interactive/interaction_eligibility_policy.dart",
-                      "children": []
-                    },
-                    {
-                      "name": "canTransform",
-                      "detail": "interaction_eligibility_policy.dart",
-                      "path": "lib/src/interactive/interaction_eligibility_policy.dart",
-                      "children": []
-                    }
-                  ]
+                  "children": []
                 }
               ]
             }
@@ -133,6 +377,63 @@
           "name": "writeNodeTransformSet",
           "detail": "SceneWriteTxn",
           "path": "lib/src/contract/scene_write_txn.dart",
+          "children": []
+        },
+        {
+          "name": "_scheduleSceneCommit",
+          "detail": "SceneControllerMutationBoundary",
+          "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+          "children": []
+        }
+      ]
+    },
+    {
+      "name": "commitDrawStroke",
+      "detail": "SceneControllerMutationBoundary",
+      "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+      "children": [
+        {
+          "name": "commitDrawStroke",
+          "detail": "SceneControllerCommittedMutationAccess",
+          "path": "lib/src/controller/scene_controller_committed_mutation_access.dart",
+          "children": []
+        },
+        {
+          "name": "_scheduleSceneCommit",
+          "detail": "SceneControllerMutationBoundary",
+          "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+          "children": []
+        }
+      ]
+    },
+    {
+      "name": "commitDrawLineFromWorldSegment",
+      "detail": "SceneControllerMutationBoundary",
+      "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+      "children": [
+        {
+          "name": "commitDrawLineFromWorldSegment",
+          "detail": "SceneControllerCommittedMutationAccess",
+          "path": "lib/src/controller/scene_controller_committed_mutation_access.dart",
+          "children": []
+        },
+        {
+          "name": "_scheduleSceneCommit",
+          "detail": "SceneControllerMutationBoundary",
+          "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+          "children": []
+        }
+      ]
+    },
+    {
+      "name": "commitEraseNodes",
+      "detail": "SceneControllerMutationBoundary",
+      "path": "lib/src/interactive/internal/scene_controller_mutation_boundary.dart",
+      "children": [
+        {
+          "name": "commitEraseNodes",
+          "detail": "SceneControllerCommittedMutationAccess",
+          "path": "lib/src/controller/scene_controller_committed_mutation_access.dart",
           "children": []
         },
         {

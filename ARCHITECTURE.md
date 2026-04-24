@@ -404,22 +404,33 @@ This is the public-side-effect gate and interactive runtime owner. It manages:
 - interaction events and timestamp resolution
 - scheduling of public notifications, scene repaint, and overlay repaint
 - pointer-session ownership tokens
+- runtime-owned mutation entrypoints and callback wiring that route directly to
+  `SceneControllerMutationBoundary`
 
 #### `SceneControllerMutationBoundary`
 
 This is the only interactive owner that performs committed mutation work. It
-translates interaction intents into committed writes through
+receives direct calls from public scene/selection owners and runtime-owned
+interaction callbacks, then translates those interaction intents into
+committed writes through
 `SceneControllerCommittedMutationAccess`.
 
 Its role is intentionally narrow and central:
 
 - route supported public scene/selection mutations
+- serve runtime-owned move/draw/selection mutation entrypoints without a
+  routing-only intermediary shell
 - project action events for delete/clear/transform style operations
 - schedule the correct post-commit invalidation channels
 - freeze authoritative move-commit node snapshots once, construct
   `MoveCommitDeltaRequest`, and keep commit iteration ownership inside the
   mutation boundary
 - keep gesture preview state separate from committed state until commit
+
+Caller-local preflight stays with the direct caller that owns the trigger. In
+practice that means public owners keep public-side-effect checks, active-
+gesture exclusivity, and external-mutation interrupt timing where those
+policies are caller-specific.
 
 ### 7.4 View/runtime seam
 
@@ -545,8 +556,11 @@ Typical flow:
 
 1. caller enters the write boundary through:
    - `controller.scene.write(...)`
+   - convenience scene/selection mutation APIs that route through
+     `SceneControllerMutationBoundary`
+   - runtime-owned interaction callbacks wired directly to
+     `SceneControllerMutationBoundary`
    - `SceneWriteTxn`
-   - convenience scene/selection/controller mutation APIs
 2. the controller opens a `TxnContext`
 3. the write callback mutates transaction-owned runtime state
 4. copy-on-write clones are created only for mutated scene/layer/node owners

@@ -12,7 +12,6 @@ import 'interactive_draw_style.dart';
 import 'interactive_event_dispatcher.dart';
 import 'interactive_runtime.dart';
 import 'interactive_runtime_callbacks.dart';
-import 'interactive_selection_actions.dart';
 import 'pointer_session_token.dart';
 import 'scene_controller_mutation_boundary.dart';
 import 'scene_controller_pointer_session.dart';
@@ -25,7 +24,6 @@ final class SceneControllerInteractionRuntime {
     required this.overlayNotifyScheduler,
     required this.events,
     required this.mutationBoundary,
-    required this.selectionActions,
     required this.runtime,
   }) : _moveCommitDeltaResolver = moveCommitDeltaResolver;
 
@@ -35,7 +33,6 @@ final class SceneControllerInteractionRuntime {
   final InteractiveNotifyScheduler overlayNotifyScheduler;
   final InteractiveEventDispatcher events;
   final SceneControllerMutationBoundary mutationBoundary;
-  final InteractiveSelectionActions selectionActions;
   final InteractiveRuntime runtime;
   final Set<PointerSessionToken> _pointerSessionTokens =
       <PointerSessionToken>{};
@@ -164,7 +161,6 @@ SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
   final events = InteractiveEventDispatcher();
   late final SceneControllerInteractionRuntime wiredRuntime;
   final mutationBoundary = _createMutationBoundary(request, () => wiredRuntime);
-  final selectionActions = _createSelectionActions(mutationBoundary);
   final interactiveRuntime = _createInteractiveRuntime(
     request,
     publicNotifyScheduler: publicNotifyScheduler,
@@ -180,7 +176,6 @@ SceneControllerInteractionRuntime createSceneControllerInteractionRuntime({
     overlayNotifyScheduler: overlayNotifyScheduler,
     events: events,
     mutationBoundary: mutationBoundary,
-    selectionActions: selectionActions,
     runtime: interactiveRuntime,
   );
   return wiredRuntime;
@@ -261,26 +256,26 @@ extension SceneControllerInteractionRuntimeMutationApi
   }
 
   void clearSceneSelectionState({int? timestampMs}) {
-    selectionActions.clearScene(timestampMs: timestampMs);
+    mutationBoundary.clearScene(timestampMs: timestampMs);
   }
 
   void rotateSelection({required bool clockwise, int? timestampMs}) {
-    selectionActions.rotateSelection(
+    mutationBoundary.rotateSelection(
       clockwise: clockwise,
       timestampMs: timestampMs,
     );
   }
 
   void flipSelectionVertical({int? timestampMs}) {
-    selectionActions.flipSelectionVertical(timestampMs: timestampMs);
+    mutationBoundary.flipSelectionVertical(timestampMs: timestampMs);
   }
 
   void flipSelectionHorizontal({int? timestampMs}) {
-    selectionActions.flipSelectionHorizontal(timestampMs: timestampMs);
+    mutationBoundary.flipSelectionHorizontal(timestampMs: timestampMs);
   }
 
   void deleteSelection({int? timestampMs}) {
-    selectionActions.deleteSelection(timestampMs: timestampMs);
+    mutationBoundary.deleteSelection(timestampMs: timestampMs);
   }
 
   Offset previewDeltaForNode(NodeId nodeId) {
@@ -380,12 +375,6 @@ SceneControllerMutationBoundary _createMutationBoundary(
       },
     ),
   );
-}
-
-InteractiveSelectionActions _createSelectionActions(
-  SceneControllerMutationBoundary mutationBoundary,
-) {
-  return InteractiveSelectionActions(mutations: mutationBoundary);
 }
 
 InteractiveRuntime _createInteractiveRuntime(

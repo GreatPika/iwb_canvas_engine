@@ -15,8 +15,6 @@ import 'scene_controller_interaction_access.dart';
 import 'scene_controller_interaction_config.dart';
 import 'scene_controller_interaction_runtime.dart';
 import 'scene_controller_scene_view_runtime.dart';
-import 'scene_controller_scene_mutations.dart';
-import 'scene_controller_selection_mutations.dart';
 
 final class SceneControllerGraphHandle {
   SceneControllerGraphHandle({
@@ -150,19 +148,16 @@ SceneControllerGraphHandle _assembleSceneControllerGraph(
     sceneViewRuntime: sceneViewRuntime,
     storeController: storeController,
   );
-  final selectionMutations = _createSelectionMutations(
-    interactionRuntime: interactionRuntime,
-  );
-  final sceneMutations = _createSceneMutations(
-    interactionRuntime: interactionRuntime,
-  );
   final interactionAccess = SceneControllerInteractionContext(
     owner: request.owner,
     config: interactionConfig,
     runtime: interactionRuntime,
     readSnapshot: () => storeController.snapshot,
     hasSelectionState: () => storeController.selectedNodeIds.isNotEmpty,
-    clearSelectionState: selectionMutations.clearSelection,
+    clearSelectionState: () {
+      interactionRuntime.ensureExternalMutationAllowed('clearSelection');
+      interactionRuntime.mutationBoundary.clearSelection();
+    },
     clearSelectionOnDrawModeEnter: request.clearSelectionOnDrawModeEnter,
   );
   final interaction = SceneControllerInteractionOwner(interactionAccess);
@@ -175,12 +170,11 @@ SceneControllerGraphHandle _assembleSceneControllerGraph(
     interaction: interaction,
     selection: SceneControllerSelectionOwner(
       runtime: interactionRuntime,
-      mutations: selectionMutations,
+      mutationBoundary: interactionRuntime.mutationBoundary,
     ),
     scene: SceneControllerSceneOwner(
-      ensurePublicSideEffectAllowed:
-          interactionRuntime.ensurePublicSideEffectAllowed,
-      mutations: sceneMutations,
+      runtime: interactionRuntime,
+      mutationBoundary: interactionRuntime.mutationBoundary,
     ),
     sceneViewRuntime: sceneViewRuntime,
     internalAccessRegistration: SceneControllerInternalAccessRegistration(
@@ -235,27 +229,5 @@ SceneControllerInteractionRuntime _createInteractionRuntime({
       requireFiniteOffset: SceneControllerInteractionConfig.requireFiniteOffset,
       moveCommitDeltaResolver: request.moveCommitDeltaResolver,
     ),
-  );
-}
-
-SceneControllerSelectionMutations _createSelectionMutations({
-  required SceneControllerInteractionRuntime interactionRuntime,
-}) {
-  return SceneControllerSelectionMutations(
-    mutations: interactionRuntime.mutationBoundary,
-    ensureExternalMutationAllowed:
-        interactionRuntime.ensureExternalMutationAllowed,
-  );
-}
-
-SceneControllerSceneMutations _createSceneMutations({
-  required SceneControllerInteractionRuntime interactionRuntime,
-}) {
-  return SceneControllerSceneMutations(
-    mutations: interactionRuntime.mutationBoundary,
-    ensureExternalMutationAllowed:
-        interactionRuntime.ensureExternalMutationAllowed,
-    interruptForExternalMutation:
-        interactionRuntime.interruptForExternalMutation,
   );
 }

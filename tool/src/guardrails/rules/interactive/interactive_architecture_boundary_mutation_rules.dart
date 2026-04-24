@@ -21,6 +21,69 @@ GuardrailViolation? _checkEligibilityPolicyBoundary(GuardrailContext context) {
   return null;
 }
 
+Future<GuardrailViolation?> _checkSceneMutationOwnerBoundary(
+  GuardrailContext context,
+) async {
+  final file = _interactiveArchitectureFile(
+    context,
+    'scene_controller_scene.dart',
+  );
+  final filePath = _repoRelPath(context, file);
+  final parsed = _parseArchitectureUnit(context, file);
+  final ownerClass = _findClassDeclaration(
+    parsed.unit,
+    'SceneControllerSceneOwner',
+  );
+  if (ownerClass == null ||
+      !_classHasFieldNamed(ownerClass, '_mutationBoundary') ||
+      !_unitContainsQualifiedPrefix(parsed.unit, <String>[
+        '_mutationBoundary',
+      ]) ||
+      _unitContainsIdentifier(parsed.unit, 'storeController') ||
+      _unitContainsQualifiedPrefix(parsed.unit, <String>['core', 'write'])) {
+    return GuardrailViolation(
+      filePath: filePath,
+      line: 1,
+      message:
+          'interactive API violation: SceneControllerSceneOwner must '
+          'delegate committed scene writes through '
+          'SceneControllerMutationBoundary.',
+    );
+  }
+  return null;
+}
+
+Future<GuardrailViolation?> _checkSelectionMutationOwnerBoundary(
+  GuardrailContext context,
+) async {
+  final file = _interactiveArchitectureFile(
+    context,
+    'scene_controller_selection.dart',
+  );
+  final filePath = _repoRelPath(context, file);
+  final parsed = _parseArchitectureUnit(context, file);
+  final ownerClass = _findClassDeclaration(
+    parsed.unit,
+    'SceneControllerSelectionOwner',
+  );
+  if (ownerClass == null ||
+      !_classHasFieldNamed(ownerClass, '_mutationBoundary') ||
+      !_unitContainsQualifiedPrefix(parsed.unit, <String>[
+        '_mutationBoundary',
+      ]) ||
+      _unitContainsIdentifier(parsed.unit, 'storeController')) {
+    return GuardrailViolation(
+      filePath: filePath,
+      line: 1,
+      message:
+          'interactive API violation: SceneControllerSelectionOwner must '
+          'delegate committed selection writes through '
+          'SceneControllerMutationBoundary.',
+    );
+  }
+  return null;
+}
+
 Future<GuardrailViolation?> _checkMutationBoundaryOwner(
   GuardrailContext context,
 ) async {

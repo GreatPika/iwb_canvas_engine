@@ -201,11 +201,19 @@ void main() {
       _expectContainsAll(source, const <String>[
         'SceneControllerMutationBoundary',
         'SceneControllerCommittedMutationAccess',
+        'SceneControllerSceneOwner',
+        'SceneControllerSelectionOwner',
+        'scene_controller_interaction_runtime.dart',
         'add_node_write_flow.json',
         'add_node_write_flow.md',
         'lsp_find_boundary_bypasses.dart',
         'lsp_find_thin_wrappers.dart',
-        '`locked, needs slimming`',
+        '`locked`',
+      ]);
+      _expectContainsNone(source, const <String>[
+        'SceneControllerSceneMutations',
+        'SceneControllerSelectionMutations',
+        'InteractiveSelectionActions',
       ]);
       expect(source, isNot(contains('## Current Mismatch')));
       expect(source, isNot(contains('## Target Shape')));
@@ -266,11 +274,15 @@ void main() {
         'InteractiveRuntime',
         'SceneControllerPointerSession',
         'SceneControllerMutationBoundary',
+        '_createInteractiveRuntime',
         'commit_move_selection_flow.json',
         'commit_move_selection_flow.md',
         'lsp_find_thin_wrappers.dart',
-        'lsp_find_boundary_bypasses.dart',
         '`locked, needs slimming`',
+      ]);
+      _expectContainsNone(source, const <String>[
+        'InteractiveSelectionActions',
+        'interactive_selection_actions.dart',
       ]);
       expect(source, isNot(contains('## Current Mismatch')));
       expect(source, isNot(contains('## Target Shape')));
@@ -315,6 +327,103 @@ void main() {
         );
       }
     });
+
+    test('mutation-family evidence stays on live direct-route entrypoints', () {
+      final addNodeJson = _read(
+        'docs/target_architecture/evidence/add_node_write_flow.json',
+      );
+      final addNodeMermaid = _read(
+        'docs/target_architecture/evidence/add_node_write_flow.md',
+      );
+      final replaceSceneJson = _read(
+        'docs/target_architecture/evidence/replace_scene_write_flow.json',
+      );
+      final replaceSceneMermaid = _read(
+        'docs/target_architecture/evidence/replace_scene_write_flow.md',
+      );
+      final commitMoveJson = _read(
+        'docs/target_architecture/evidence/commit_move_selection_flow.json',
+      );
+      final commitMoveMermaid = _read(
+        'docs/target_architecture/evidence/commit_move_selection_flow.md',
+      );
+      expect(<String>[
+        addNodeJson,
+        addNodeMermaid,
+        replaceSceneJson,
+        replaceSceneMermaid,
+        commitMoveJson,
+        commitMoveMermaid,
+      ], hasLength(6));
+
+      _expectContainsAll(addNodeJson, const <String>[
+        '"symbol": "SceneControllerSceneOwner.addNode"',
+        '"detail": "SceneControllerMutationBoundary"',
+      ]);
+      _expectContainsAll(addNodeMermaid, const <String>[
+        'SceneControllerSceneOwner.addNode',
+        'SceneControllerMutationBoundary.addNode',
+      ]);
+
+      _expectContainsAll(replaceSceneJson, const <String>[
+        '"symbol": "SceneControllerSceneOwner.replaceScene"',
+        '"detail": "SceneControllerCommittedMutationAccess"',
+      ]);
+      _expectContainsAll(replaceSceneMermaid, const <String>[
+        'SceneControllerSceneOwner.replaceScene',
+        'SceneControllerMutationBoundary.replaceScene',
+      ]);
+
+      _expectContainsAll(commitMoveJson, const <String>[
+        '"symbol": "_createInteractiveRuntime"',
+        '"name": "commitMoveSelection"',
+        '"detail": "SceneControllerMutationBoundary"',
+      ]);
+      _expectContainsAll(commitMoveMermaid, const <String>[
+        '_createInteractiveRuntime',
+        'SceneControllerMutationBoundary.commitMoveSelection',
+      ]);
+
+      for (final source in <String>[
+        addNodeJson,
+        addNodeMermaid,
+        replaceSceneJson,
+        replaceSceneMermaid,
+        commitMoveJson,
+        commitMoveMermaid,
+      ]) {
+        _expectContainsNone(source, const <String>[
+          'SceneControllerSceneMutations',
+          'SceneControllerSelectionMutations',
+          'InteractiveSelectionActions',
+        ]);
+      }
+    });
+
+    test(
+      'composition root evidence reflects direct owner assembly without retired shells',
+      () {
+        final compositionJson = _read(
+          'docs/target_architecture/evidence/composition_root_trace.json',
+        );
+        final compositionMermaid = _read(
+          'docs/target_architecture/evidence/composition_root_trace.md',
+        );
+        expect(<String>[compositionJson, compositionMermaid], hasLength(2));
+
+        for (final source in <String>[compositionJson, compositionMermaid]) {
+          _expectContainsAll(source, const <String>[
+            'SceneControllerSelectionOwner',
+            'SceneControllerSceneOwner',
+          ]);
+          _expectContainsNone(source, const <String>[
+            'SceneControllerSceneMutations',
+            'SceneControllerSelectionMutations',
+            'InteractiveSelectionActions',
+          ]);
+        }
+      },
+    );
   });
 }
 
@@ -367,6 +476,12 @@ void _expectSections(String source, List<String> headings) {
 void _expectContainsAll(String source, List<String> fragments) {
   for (final fragment in fragments) {
     expect(source, contains(fragment), reason: 'Missing `$fragment`');
+  }
+}
+
+void _expectContainsNone(String source, List<String> fragments) {
+  for (final fragment in fragments) {
+    expect(source, isNot(contains(fragment)), reason: 'Unexpected `$fragment`');
   }
 }
 
