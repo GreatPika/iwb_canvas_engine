@@ -15,12 +15,13 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
   `SceneControllerGraphHandle` returned by `createSceneControllerGraph`
 - move `SceneStoreController` construction from `SceneController` into
   `createSceneControllerGraph` / `_assembleSceneControllerGraph`
-- move coordinated teardown, internal-access unregister, stream access,
-  preview-delta access, and public-side-effect delegation behind
-  `SceneControllerGraphHandle`
+- move coordinated teardown after facade-side dispose preflight,
+  internal-access unregister, stream access, preview-delta access, and
+  root-local public-side-effect delegation behind `SceneControllerGraphHandle`
 - slim `SceneController` so it keeps only the public facade surface:
   public capability owners, committed-read getters, overlay-preview getters,
-  stream getters, `sceneControllerViewRuntimeOf`, and one delegated `dispose()`
+  stream getters, `sceneControllerViewRuntimeOf`, and one guarded delegated
+  `dispose()`
 - update structural architecture proof and interactive guardrails so future
   regressions catch facade-owned store construction, direct teardown fan-out,
   or a reintroduced top-level helper bag
@@ -39,6 +40,9 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
   package callers
 - no pointer-session ownership change, runtime-host swap change, or render-seam
   change
+- no special-case relaxation of the resolved `SceneController` entrypoint
+  guard; `dispose()` must continue to satisfy the existing guarded block-body
+  rule from the public facade
 - no ADR update; `docs/adr/0001_target_engine_architecture.md` already locks
   the accepted top-level owner split
 - no `README.md`, `API_GUIDE.md`, or `CHANGELOG.md` update because this step
@@ -116,11 +120,21 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
   - current graph guardrails already require assembly of capability owners,
   view runtime, and internal access under `scene_controller_graph.dart`, but
   they do not yet require store construction to live there
+- `tool/src/guardrails/rules/interactive/resolved_entrypoint_guard_rules.dart`
+  - current resolved guardrails require each public `SceneController`
+  entrypoint, including `dispose()`, to remain a facade-owned block body
+  guarded by `_ensurePublicSideEffectAllowed(...)`, so the target thin-facade
+  form must keep dispose preflight at the public boundary instead of moving it
+  behind a guardrail special-case or an unguarded direct graph call
 - `test/tool/guardrails/interactive_api/architecture_boundary/view_and_graph_cases.dart`
   and `test/tool/guardrails/interactive_api/architecture_boundary/facade_and_boundary_cases.dart`
   - existing guardrail cases already model canonical graph assembly and thin
   facade constraints, and are the correct place to add store/lifecycle
   regressions for this cut
+- `test/tool/guardrails/guardrails_interactive_resolved_entrypoint_guard_tool_test.dart`
+  - existing tool proof already locks the public guarded-entrypoint form for
+  `SceneController`, so the composition cut must preserve that shape while
+  slimming teardown fan-out
 - `test/tool/support/guardrails_sandbox_support.dart` - the shared interactive
   scaffold still needs to model the canonical composition shape that tool
   guardrails assert
@@ -315,12 +329,17 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
 - `SceneController` stores only `_graph: SceneControllerGraphHandle` and
   delegates committed reads, overlay-preview reads, capability owners, streams,
   preview-delta access, and `dispose()` through that handle
+- `SceneController.dispose()` remains a facade-owned guarded block body:
+  it calls `_ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true)`,
+  delegates teardown to `_graph.dispose()`, and calls `super.dispose()` only
+  after the first successful graph-owned teardown; it must not re-expand into
+  facade-owned teardown fan-out
 - `SceneController` remains the public `ChangeNotifier` facade and is still the
   `Listenable` owner passed into interaction access and pointer-session hosting;
   the handle does not replace the public notifier
 - `SceneControllerGraphHandle.dispose()` owns coordinated teardown and must
   preserve the current safety order:
-  public-side-effect preflight and idempotence check first,
+  idempotence check first after facade preflight,
   `SceneStoreController.dispose()` second,
   interactive runtime and view-runtime teardown third,
   internal-access unregister last
@@ -385,8 +404,11 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
   `sceneControllerViewRuntimeOf(controller)` remains the only top-level bridge
   from the public facade into `SceneViewRuntime`
 - teardown exit:
-  `SceneController.dispose()` delegates to `_graph.dispose()` and no longer
-  coordinates multiple root-local cleanup calls itself
+  `SceneController.dispose()` ->
+  `_ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true)` ->
+  `_graph.dispose()` ->
+  `super.dispose()` only after successful first teardown, with no facade-owned
+  fan-out across store/runtime/internal-access cleanup
 
 #### Permitted Extension Seam
 
@@ -437,17 +459,22 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
 3. `SceneController` keeps `sceneControllerViewRuntimeOf` and the public
    capability getters (`interaction`, `selection`, `scene`), but it does not
    keep a peer `_storeController` field after this step.
-4. `SceneControllerGraphHandle.dispose()` must preserve current dispose
+4. `SceneController.dispose()` remains the public guarded entrypoint for
+   dispose and may only perform facade preflight, one delegated call into
+   `SceneControllerGraphHandle.dispose()`, and conditional `super.dispose()`;
+   it must not regain direct teardown fan-out or depend on a guardrail
+   special-case.
+5. `SceneControllerGraphHandle.dispose()` must preserve current dispose
    semantics:
    idempotent success after prior dispose,
    fail-fast during active committed write,
    no partial interactive teardown when store dispose rejects,
    and internal-access unregister only after successful teardown.
-5. `scene_controller_graph.dart` remains the only file allowed to coordinate
+6. `scene_controller_graph.dart` remains the only file allowed to coordinate
    `registerSceneControllerInternalAccess(...)` and
    `unregisterSceneControllerInternalAccess(...)` for the public controller
    path.
-6. The composition family moves from `locked, needs slimming` to `locked` only
+7. The composition family moves from `locked, needs slimming` to `locked` only
    after the refreshed `composition_root_trace` shows store construction under
    `createSceneControllerGraph` and the facade no longer owns store or direct
    teardown wiring.
@@ -463,7 +490,9 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
    `SceneController.dispose()` stays idempotent,
    `dispose()` still fails fast during active write without partially tearing
    down the controller,
-   and internal access remains unavailable after successful dispose.
+   internal access remains unavailable after successful dispose,
+   and `dispose()` remains a facade-guarded public entrypoint rather than an
+   unguarded direct graph call.
 4. `sceneControllerViewRuntimeOf` continues to return the assembled
    `SceneViewRuntime`, and the interaction contract tests still observe the same
    pointer-session and internal-access behavior.
@@ -485,7 +514,8 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
   forwarding surface to it so lifecycle and delegation are no longer expressed
   through top-level helper functions
 - third, move store construction and coordinated teardown into the graph handle
-  and retire the facade-owned store field plus direct teardown fan-out
+  while preserving facade-owned dispose preflight and retiring the facade-owned
+  store field plus direct teardown fan-out
 - fourth, refresh source-of-truth docs, committed evidence, and step tracking
   once the final local form is already green
 
@@ -507,8 +537,9 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
   `test/tool/guardrails/interactive_api/architecture_boundary/facade_and_boundary_cases.dart`
   all consume the handle-based composition shape
 - facade-owned store construction must not be deleted until
-  `SceneControllerGraphHandle.dispose()` proves the existing active-write
-  fail-fast behavior and idempotent dispose behavior
+  `SceneController.dispose()` still satisfies the resolved public-entrypoint
+  guard shape and `SceneControllerGraphHandle.dispose()` proves the existing
+  active-write fail-fast behavior and idempotent dispose behavior
 - `docs/target_architecture/overview.md`,
   `docs/target_architecture/families/composition_root_and_facade.md`, and
   `docs/target_architecture/evidence/composition_root_trace.*` update only
@@ -542,6 +573,7 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
 - `test/interactive/core/scene_controller_interaction_contract_test.dart`
 - `test/interactive/core/scene_controller_public_listener_contract_test.dart`
 - `test/interactive/core/scene_controller_interactive_dispose_fail_fast_test.dart`
+- `test/tool/guardrails/guardrails_interactive_resolved_entrypoint_guard_tool_test.dart`
 - `test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
 - `test/tool/guardrails/interactive_api/architecture_boundary/view_and_graph_cases.dart`
 - `test/tool/guardrails/interactive_api/architecture_boundary/facade_and_boundary_cases.dart`
@@ -581,6 +613,9 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
   runtime; only the construction site moves
 - `sceneControllerViewRuntimeOf` remains the only top-level view bridge from
   the public facade into the assembled runtime boundary
+- `SceneController.dispose()` remains a public facade guard point that satisfies
+  the resolved `_ensurePublicSideEffectAllowed(...)` entrypoint rule while
+  delegating teardown ownership to the graph handle
 - successful dispose unregisters internal access, while failed dispose during
   active write leaves the controller usable
 
@@ -594,6 +629,7 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
   must stay green across the composition cut
 - structural proof:
   `test/interactive/core/scene_controller_architecture_boundary_test.dart`,
+  `test/tool/guardrails/guardrails_interactive_resolved_entrypoint_guard_tool_test.dart`,
   `test/tool/guardrails/guardrails_interactive_api_tool_test.dart`,
   `test/tool/target_architecture_map_tool_test.dart`, and
   `dart run tool/check_invariant_coverage.dart`
@@ -617,6 +653,11 @@ one internal graph handle, leaving `SceneController` as a thin public facade.
 - no move of public `ChangeNotifier` ownership out of `SceneController`
 - no teardown order that disposes interactive runtime or unregisters internal
   access before store-dispose preflight
+- no unguarded public `dispose()` that calls `_graph.dispose()` directly from
+  the facade without `_ensurePublicSideEffectAllowed(...)`
+- no guardrail special-case that makes delegated `dispose()` legal by relaxing
+  the existing resolved public-entrypoint contract instead of preserving the
+  guarded facade shape
 - no new `sceneControllerGraph*` top-level helper bag after
   `SceneControllerGraphHandle` lands
 - no mutation-family or store-family cleanup unrelated to the ownership move
@@ -660,6 +701,7 @@ before store ownership moves.
 #### Structural Verification
 
 - `flutter test test/interactive/core/scene_controller_architecture_boundary_test.dart`
+- `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_resolved_entrypoint_guard_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
 
 #### Fixtures Used
@@ -712,7 +754,7 @@ controller teardown order.
   `createSceneControllerGraph` / `_assembleSceneControllerGraph`
 - move coordinated teardown into `SceneControllerGraphHandle.dispose()` with
   the locked order:
-  preflight/idempotence check,
+  idempotence check after facade preflight,
   `SceneStoreController.dispose()`,
   runtime teardown,
   internal-access unregister
@@ -732,6 +774,7 @@ controller teardown order.
 #### Structural Verification
 
 - `flutter test test/interactive/core/scene_controller_architecture_boundary_test.dart`
+- `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_resolved_entrypoint_guard_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
 
 #### Fixtures Used
@@ -741,6 +784,8 @@ controller teardown order.
 #### Positive Scenarios
 
 - `SceneController.dispose()` remains idempotent on the public facade
+- `SceneController.dispose()` remains a facade-owned guarded block body while
+  delegating teardown coordination to `SceneControllerGraphHandle`
 - `dispose()` during active write still fails fast before any partial
   interactive teardown
 - a rejected `dispose()` during active write leaves the public listener surface
@@ -756,6 +801,9 @@ controller teardown order.
   `detachSceneControllerGraphInternalAccess(...)` directly
 - `scene_controller_graph.dart` becomes the only interactive file allowed to
   construct the store for the public controller path
+- `SceneController.dispose()` cannot become an unguarded one-line
+  `_graph.dispose()` delegate and cannot require a resolved-entrypoint guard
+  special-case to stay legal
 - a failed `dispose()` must not partially call `super.dispose()` or otherwise
   kill the public notifier surface before the controller remains usable again
 
@@ -832,6 +880,7 @@ pre-cut split ownership.
 - `flutter test test/interactive/core/scene_controller_public_listener_contract_test.dart`
 - `flutter test test/interactive/core/scene_controller_interactive_dispose_fail_fast_test.dart`
 - `flutter test test/interactive/core/scene_controller_architecture_boundary_test.dart`
+- `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_resolved_entrypoint_guard_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/guardrails/guardrails_interactive_api_tool_test.dart`
 - `dart run tool/run_tool_tests.dart test/tool/target_architecture_map_tool_test.dart`
 - `dart run tool/check_guardrails.dart`
@@ -848,6 +897,9 @@ pre-cut split ownership.
   including idempotent dispose, active-write fail-fast, public-listener
   survival after rejected dispose, and internal-access unregister after
   successful dispose
+- `SceneController.dispose()` stays a facade-guarded public entrypoint while
+  delegating teardown ownership to `SceneControllerGraphHandle`, with no direct
+  facade teardown fan-out and no resolved-guard special-case
 - architecture-boundary proof and interactive guardrails reject facade-owned
   store construction, direct teardown fan-out, and a reintroduced helper bag
 - `ARCHITECTURE.md`, the composition target-family docs, and the committed
