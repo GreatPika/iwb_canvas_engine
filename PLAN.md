@@ -34,3 +34,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 15. Main-Scene and Overlay Render Read Split](plan/step_15_main_scene_and_overlay_render_read_split.md)
 - [x] [Step 16. Target Architecture Map Normalization](plan/step_16_target_architecture_map_normalization.md)
 - [x] [Step 17. Complete Composition Root Ownership And Facade Slimming](plan/step_17_complete_composition_root_ownership_and_facade_slimming.md)
+- [ ] [Step 18. Mutation Gateway Surface Narrowing And Shell Retirement](plan/step_18_mutation_gateway_surface_narrowing_and_shell_retirement.md)
