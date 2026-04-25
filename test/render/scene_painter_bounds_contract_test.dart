@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 // INV:INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION
 // INV:INV-ENG-SELECTION-BOUNDED-COMPOSITING
 // INV:INV-ENG-PERFORMANCE-PROOF-CONTOUR
+// INV:INV-ENG-PAINT-ADMISSION-BOUNDS-SOURCE
 
 String _extractMethodBody({
   required String source,
@@ -290,6 +291,47 @@ void main() {
     expect(ordinaryBody, isNot(contains('nodePaintBoundsWorld(')));
     expect(stageBody, isNot(contains('.sort(')));
   });
+
+  test(
+    'paint admission modules use explicit bounds sources instead of heavy snapshot geometry',
+    () {
+      final stageSource = File(
+        'lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart',
+      ).readAsStringSync();
+      final snapshotEnumeratorSource = File(
+        'lib/src/core/scene_snapshot_paint_candidates.dart',
+      ).readAsStringSync();
+      final supplementBody = _extractMethodBody(
+        source: stageSource,
+        methodStart: 'void _stageSelectedSupplements({',
+      );
+
+      expect(stageSource, contains('queryPaintCandidates('));
+      expect(supplementBody, contains('queryPaintCandidates('));
+      expect(supplementBody, contains('spatialCandidate.paintBoundsWorld'));
+
+      expect(
+        snapshotEnumeratorSource,
+        contains('SnapshotPaintAdmissionBoundsSource'),
+      );
+      expect(snapshotEnumeratorSource, contains('.resolveBasePaintBounds('));
+
+      for (final MapEntry(:key, :value) in <String, String>{
+        'selected supplement stage': stageSource,
+        'snapshot candidate enumerator': snapshotEnumeratorSource,
+      }.entries) {
+        expect(value, isNot(contains('nodeSnapshotPaintBoundsWorld(')));
+        expect(value, isNot(contains('TextLayoutRequest')));
+        expect(value, isNot(contains('.measure()')));
+        expect(value, isNot(contains('buildCenteredSvgPathGeometry(')));
+        expect(
+          value,
+          isNot(contains('_snapshotPaintBoundsWorld(')),
+          reason: key,
+        );
+      }
+    },
+  );
 
   test(
     'frame preview contract stays frozen across capture, admission, and late node resolution',

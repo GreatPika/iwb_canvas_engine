@@ -1080,6 +1080,29 @@ const List<Invariant> invariants = <Invariant>[
     ],
   ),
   Invariant(
+    id: 'INV-ENG-PAINT-ADMISSION-BOUNDS-SOURCE',
+    scope: 'engine-runtime',
+    title:
+        'paint-candidate admission consumes explicit committed or snapshot-local paint-bounds sources, keeping text layout and SVG path parsing out of admission modules while render geometry resolves later',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(
+        path: 'test/render/scene_painter_bounds_contract_test.dart',
+        stepId: 'scope_render_view',
+      ),
+      RequiredProof(
+        path: 'test/render/scene_painter_frame_contract_test.dart',
+        stepId: 'scope_render_view',
+      ),
+      RequiredProof(
+        path: 'test/core/snapshot_paint_admission_bounds_test.dart',
+        stepId: 'scope_core',
+      ),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(path: 'test/tool/bench_run_load_profiles_test.dart'),
+    ],
+  ),
+  Invariant(
     id: 'INV-ENG-SCENE-PAINTER-MODULE-BOUNDARY',
     scope: 'engine-structure',
     title:

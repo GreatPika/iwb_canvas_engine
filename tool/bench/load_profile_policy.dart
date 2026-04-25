@@ -69,9 +69,19 @@ const List<String> _selectionPathStagingRequiredOperations = <String>[
   'stage_with_selection',
 ];
 
+const List<String> _selectionPathStagingProbeKeys = <String>[
+  'selectedCommittedBoundsReuseDelta',
+];
+
 const List<String> _backgroundLayerPaintAdmissionRequiredOperations = <String>[
   'enumerate_viewport',
   'paint_viewport',
+];
+
+const List<String> _backgroundLayerPaintAdmissionProbeKeys = <String>[
+  'snapshotAdmissionBuildDelta',
+  'snapshotAdmissionHitDelta',
+  'snapshotAdmissionEvictDelta',
 ];
 
 const List<String> _worstCaseRequiredOperations = <String>[
@@ -260,6 +270,16 @@ class LoadProfilePolicy {
       return <String, List<String>>{
         'paint_no_selection': _selectionCompositingProbeKeys,
         'paint_with_selection': _selectionCompositingProbeKeys,
+      };
+    }
+    if (caseName == selectionPathCandidateStagingCaseName) {
+      return <String, List<String>>{
+        'stage_with_selection': _selectionPathStagingProbeKeys,
+      };
+    }
+    if (caseName == backgroundLayerPaintAdmissionCaseName) {
+      return <String, List<String>>{
+        'enumerate_viewport': _backgroundLayerPaintAdmissionProbeKeys,
       };
     }
     return const <String, List<String>>{};

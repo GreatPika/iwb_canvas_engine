@@ -502,6 +502,13 @@ This object computes:
 - paint-candidate admission query
 - resolved node paint data, including text layout and preview delta
 
+Paint admission consumes coarse `paintBoundsWorld` from explicit admission
+sources. Committed ordinary candidates and committed selected supplements use
+the committed spatial paint index through `SceneStoreController.queryPaintCandidates(...)`.
+Snapshot-local fallback uses `SnapshotPaintAdmissionBoundsCache`, a bounded
+core owner keyed by node id, instance revision, and geometry-affecting snapshot
+payload. Text layout and path geometry remain late render-resolution work.
+
 #### Render caches
 
 The render subsystem owns caches for:
@@ -639,9 +646,12 @@ Typical frame flow:
 There are two paint-admission modes:
 
 - **committed fast path** when the captured frame snapshot is identical to the
-  committed controller snapshot
+  committed controller snapshot; ordinary candidates and selected supplements
+  read base paint bounds from the committed spatial paint index and apply frame
+  preview deltas as cheap `Rect.shift(...)` operations
 - **snapshot-local enumeration** when the active frame snapshot differs from
-  the committed store snapshot
+  the committed store snapshot; enumeration reads base paint bounds from the
+  bounded snapshot-local admission cache and then applies frame preview deltas
 
 This avoids mixing stale committed candidate data into a frame that is
 authoritatively based on a different snapshot.
@@ -724,6 +734,9 @@ important for architectural reasoning.
   frame-preview snapshot
 - committed fast-path paint admission is used only when the frame snapshot
   matches the committed snapshot
+- paint-candidate admission must use explicit committed or snapshot-local
+  paint-bounds sources; admission modules must not perform text measurement or
+  SVG path parsing directly
 - the public `SceneController.previewDeltaResolver` stays live and distinct
   from the frame-captured render preview seam
 - overlay repaint ownership stays separate from the main scene render surface
@@ -771,6 +784,9 @@ alone.
 - `tool/check_verification_contract.dart`  
   Checks hand-authored workflow YAML against the graph-owned verification
   contract.
+- `test/render/scene_painter_bounds_contract_test.dart`  
+  Locks the scene-painter frame/admission boundary and rejects direct heavy
+  snapshot geometry calls from admission modules.
 
 ### Contributor rule
 

@@ -18,6 +18,7 @@ import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter_contract.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter_node_renderer.dart';
 import 'package:iwb_canvas_engine/src/core/scene_snapshot_paint_candidates.dart';
+import 'package:iwb_canvas_engine/src/core/snapshot_paint_admission_bounds.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/interactive_move_preview_read.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
@@ -42,6 +43,8 @@ class _FakeRenderState extends ChangeNotifier
   SceneSnapshot snapshot;
   Set<NodeId> _selectedNodeIds;
   final Offset Function(NodeId nodeId)? _previewDeltaResolver;
+  final SnapshotPaintAdmissionBoundsCache _snapshotPaintAdmissionBoundsCache =
+      SnapshotPaintAdmissionBoundsCache();
 
   @override
   final int controllerEpoch = 0;
@@ -80,6 +83,7 @@ class _FakeRenderState extends ChangeNotifier
         query: query,
         selectedNodeIds: frameRead.selectedNodeIds,
         preview: frameRead.preview,
+        admissionBounds: _snapshotPaintAdmissionBoundsCache,
       ),
     );
   }

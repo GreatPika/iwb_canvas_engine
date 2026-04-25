@@ -16,6 +16,7 @@ import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter_frame.dart';
 
 // INV:INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION
+// INV:INV-ENG-PAINT-ADMISSION-BOUNDS-SOURCE
 
 class _CapturedWorldRectRenderState extends ChangeNotifier
     implements SceneViewMainSceneRenderRead {
@@ -514,6 +515,155 @@ void main() {
   );
 
   test(
+    'snapshot-local fallback reuses cached base admission bounds for offscreen text and path nodes',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _controllerOwnedRenderState(
+        controller,
+        snapshotOverride: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'snapshot-local-cache-layer',
+              nodes: <NodeSnapshot>[
+                TextNodeSnapshot(
+                  id: 'snapshot-local-offscreen-text',
+                  text: 'offscreen text',
+                  fontSize: 18,
+                  color: const Color(0xFF000000),
+                  textDirection: TextDirection.ltr,
+                  transform: Transform2D.translation(const Offset(300, 20)),
+                ),
+                PathNodeSnapshot(
+                  id: 'snapshot-local-offscreen-path',
+                  svgPathData: 'M0 0 H40 V20 H0 Z',
+                  fillColor: const Color(0xFF000000),
+                  transform: Transform2D.translation(const Offset(360, 20)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      final concreteRenderState =
+          renderState as SceneControllerSceneViewMainSceneRenderRead;
+      const query = ScenePaintCandidateQuery(
+        viewportRect: Rect.fromLTWH(0, 0, 120, 100),
+        visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
+      );
+
+      final firstPlan = renderState.preparePaintPlan(
+        renderState.captureFrameRead(),
+        query,
+      );
+      final secondPlan = renderState.preparePaintPlan(
+        renderState.captureFrameRead(),
+        query,
+      );
+
+      expect(_candidateIds(firstPlan), isEmpty);
+      expect(_candidateIds(secondPlan), isEmpty);
+      expect(
+        concreteRenderState.debugSnapshotPaintAdmissionBoundsBuildCount,
+        2,
+      );
+      expect(concreteRenderState.debugSnapshotPaintAdmissionBoundsHitCount, 2);
+      expect(
+        concreteRenderState.debugSnapshotPaintAdmissionBoundsEvictCount,
+        0,
+      );
+      expect(concreteRenderState.captureSnapshotPaintAdmissionBoundsProbe(), (
+        buildCount: 2,
+        hitCount: 2,
+        evictCount: 0,
+      ));
+    },
+  );
+
+  test(
+    'snapshot-local preview delta shifts admitted bounds without rebuilding base admission bounds',
+    () {
+      var previewDelta = const Offset(-120, 0);
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _controllerOwnedRenderState(
+        controller,
+        selectedNodeIds: const <NodeId>{'snapshot-local-preview-text'},
+        previewDeltaResolver: (nodeId) {
+          return nodeId == 'snapshot-local-preview-text'
+              ? previewDelta
+              : Offset.zero;
+        },
+        snapshotOverride: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'snapshot-local-preview-layer',
+              nodes: <NodeSnapshot>[
+                TextNodeSnapshot(
+                  id: 'snapshot-local-preview-text',
+                  text: 'preview text',
+                  fontSize: 18,
+                  color: const Color(0xFF000000),
+                  textDirection: TextDirection.ltr,
+                  transform: Transform2D.translation(const Offset(160, 20)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      final concreteRenderState =
+          renderState as SceneControllerSceneViewMainSceneRenderRead;
+      const query = ScenePaintCandidateQuery(
+        viewportRect: Rect.fromLTWH(0, 0, 120, 100),
+        visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
+      );
+
+      final firstPlan = renderState.preparePaintPlan(
+        renderState.captureFrameRead(),
+        query,
+      );
+      previewDelta = const Offset(-100, 0);
+      final secondPlan = renderState.preparePaintPlan(
+        renderState.captureFrameRead(),
+        query,
+      );
+
+      expect(_candidateIds(firstPlan), const <NodeId>[
+        'snapshot-local-preview-text',
+      ]);
+      expect(_candidateIds(secondPlan), const <NodeId>[
+        'snapshot-local-preview-text',
+      ]);
+      expect(
+        concreteRenderState.debugSnapshotPaintAdmissionBoundsBuildCount,
+        1,
+      );
+      expect(concreteRenderState.debugSnapshotPaintAdmissionBoundsHitCount, 1);
+      expect(
+        secondPlan.candidateAt(0).paintBoundsWorld.left -
+            firstPlan.candidateAt(0).paintBoundsWorld.left,
+        20,
+      );
+      expect(
+        concreteRenderState
+            .debugCommittedSelectedSupplementSpatialBoundsReuseCount,
+        0,
+      );
+    },
+  );
+
+  test(
     'controller-owned render state resolves selected content supplements from the active frame snapshot',
     () {
       final controller = SceneStoreController(
@@ -796,6 +946,11 @@ void main() {
         'visible-viewport-node',
         'selected-edge-node',
       ]);
+      expect(
+        (renderState as SceneControllerSceneViewMainSceneRenderRead)
+            .debugCommittedSelectedSupplementSpatialBoundsReuseCount,
+        1,
+      );
     },
   );
 
@@ -930,6 +1085,7 @@ void main() {
         hasLength(1),
       );
       expect(stage.debugCommittedFastPathGlobalSortAvoidanceCount, 1);
+      expect(stage.debugCommittedSelectedSupplementSpatialBoundsReuseCount, 4);
     },
   );
 

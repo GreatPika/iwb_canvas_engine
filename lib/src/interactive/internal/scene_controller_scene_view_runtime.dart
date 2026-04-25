@@ -6,6 +6,7 @@ import '../../contract/scene_view_render_state.dart';
 import '../../contract/scene_view_runtime.dart';
 import '../../contract/snapshot.dart';
 import '../../controller/scene_store_controller.dart';
+import '../../core/snapshot_paint_admission_bounds.dart';
 import '../../core/scene_snapshot_paint_candidates.dart';
 import '../scene_controller_interaction.dart';
 import 'interactive_move_preview_read.dart';
@@ -116,6 +117,8 @@ final class SceneControllerSceneViewMainSceneRenderRead
 
   final SceneStoreController _storeController;
   final SceneControllerPaintCandidateStage _paintCandidateStage;
+  final SnapshotPaintAdmissionBoundsCache _snapshotPaintAdmissionBoundsCache =
+      SnapshotPaintAdmissionBoundsCache();
   final SceneControllerSceneRepaintChannel _sceneRepaintChannel =
       SceneControllerSceneRepaintChannel();
   final SceneSnapshot Function() _readSnapshot;
@@ -142,6 +145,27 @@ final class SceneControllerSceneViewMainSceneRenderRead
   @override
   int get controllerEpoch => _readControllerEpoch();
 
+  @visibleForTesting
+  int get debugSnapshotPaintAdmissionBoundsBuildCount =>
+      _snapshotPaintAdmissionBoundsCache.debugBuildCount;
+
+  @visibleForTesting
+  int get debugSnapshotPaintAdmissionBoundsHitCount =>
+      _snapshotPaintAdmissionBoundsCache.debugHitCount;
+
+  @visibleForTesting
+  int get debugSnapshotPaintAdmissionBoundsEvictCount =>
+      _snapshotPaintAdmissionBoundsCache.debugEvictCount;
+
+  int get debugCommittedSelectedSupplementSpatialBoundsReuseCount =>
+      _paintCandidateStage
+          .debugCommittedSelectedSupplementSpatialBoundsReuseCount;
+
+  ({int buildCount, int hitCount, int evictCount})
+  captureSnapshotPaintAdmissionBoundsProbe() {
+    return _snapshotPaintAdmissionBoundsCache.captureProbe();
+  }
+
   @override
   SceneViewFrameRead captureFrameRead() {
     return SceneViewFrameRead(
@@ -165,6 +189,7 @@ final class SceneControllerSceneViewMainSceneRenderRead
           query: query,
           selectedNodeIds: frameRead.selectedNodeIds,
           preview: frameRead.preview,
+          admissionBounds: _snapshotPaintAdmissionBoundsCache,
         ),
       );
     }

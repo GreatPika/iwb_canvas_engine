@@ -578,11 +578,32 @@ Map<String, Object?> _runSelectionPathCandidateStagingCase({
         renderState.preparePaintPlan(renderState.captureFrameRead(), query);
       },
     );
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(selectedIds);
+    });
+    const selectedSupplementProbeQuery = ScenePaintCandidateQuery(
+      viewportRect: Rect.fromLTWH(-1000, -1000, 1, 1),
+      visibilityRect: Rect.fromLTWH(0, 0, 2200, 1400),
+    );
+    final selectedBoundsReuseBefore =
+        renderState.debugCommittedSelectedSupplementSpatialBoundsReuseCount;
+    renderState.preparePaintPlan(
+      renderState.captureFrameRead(),
+      selectedSupplementProbeQuery,
+    );
+    final selectedBoundsReuseAfter =
+        renderState.debugCommittedSelectedSupplementSpatialBoundsReuseCount;
 
     return <String, Object?>{
       'pathNodeCount': pathNodeCount,
       'pathSegments': pathSegments,
       'iterations': iterations,
+      'probes': <String, Object?>{
+        'stage_with_selection': <String, num>{
+          'selectedCommittedBoundsReuseDelta':
+              selectedBoundsReuseAfter - selectedBoundsReuseBefore,
+        },
+      },
       'metrics': <String, Object?>{
         'stage_no_selection': noSelectionMetric,
         'stage_with_selection': withSelectionMetric,
@@ -1171,11 +1192,16 @@ Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
         _paintScene(painter, canvasSize);
       },
     );
+    final snapshotAdmissionProbe = _captureSnapshotAdmissionProbe(
+      snapshot: snapshot,
+      query: query,
+    );
 
     return <String, Object?>{
       'backgroundNodeCount': backgroundNodeCount,
       'iterations': iterations,
       'viewport': viewport.toJson(),
+      'probes': <String, Object?>{'enumerate_viewport': snapshotAdmissionProbe},
       'metrics': <String, Object?>{
         'enumerate_viewport': enumerateMetric,
         'paint_viewport': paintMetric,
@@ -1629,6 +1655,54 @@ Map<String, num> _captureStaticBackgroundProbe({
     'gridLoopIterations': after.gridLoopIterations - before.gridLoopIterations,
     'gridDrawnLineCount': after.gridDrawnLineCount - before.gridDrawnLineCount,
   };
+}
+
+Map<String, num> _captureSnapshotAdmissionProbe({
+  required SceneSnapshot snapshot,
+  required ScenePaintCandidateQuery query,
+}) {
+  final probeSnapshot = _snapshotAdmissionProbeSnapshot(snapshot);
+  final controller = SceneStoreController(initialSnapshot: SceneSnapshot());
+  SceneSnapshot readSnapshot() => probeSnapshot;
+  final renderState = SceneControllerSceneViewMainSceneRenderRead(
+    storeController: controller,
+    readSnapshot: readSnapshot,
+    readSelectedNodeIds: () => const <NodeId>{},
+    readControllerEpoch: () => controller.controllerEpoch,
+    readMovePreview: () => _FixedMovePreviewRead(
+      readSnapshot: readSnapshot,
+      deltaForNode: _benchmarkZeroPreviewDelta,
+    ),
+  );
+  try {
+    final before = renderState.captureSnapshotPaintAdmissionBoundsProbe();
+    renderState.preparePaintPlan(renderState.captureFrameRead(), query);
+    renderState.preparePaintPlan(renderState.captureFrameRead(), query);
+    final after = renderState.captureSnapshotPaintAdmissionBoundsProbe();
+    return <String, num>{
+      'snapshotAdmissionBuildDelta': after.buildCount - before.buildCount,
+      'snapshotAdmissionHitDelta': after.hitCount - before.hitCount,
+      'snapshotAdmissionEvictDelta': after.evictCount - before.evictCount,
+    };
+  } finally {
+    renderState.dispose();
+    controller.dispose();
+  }
+}
+
+SceneSnapshot _snapshotAdmissionProbeSnapshot(SceneSnapshot snapshot) {
+  final probeNodes = snapshot.backgroundLayer.nodes
+      .take(64)
+      .toList(growable: false);
+  if (probeNodes.isEmpty) {
+    return snapshot;
+  }
+  return SceneSnapshot(
+    camera: snapshot.camera,
+    background: snapshot.background,
+    palette: snapshot.palette,
+    backgroundLayer: BackgroundLayerSnapshot(nodes: probeNodes),
+  );
 }
 
 void _emitResult({

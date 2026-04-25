@@ -6,7 +6,6 @@ import '../../contract/scene_view_render_state.dart';
 import '../../contract/snapshot.dart';
 import '../../controller/scene_store_controller.dart';
 import '../../core/geometry.dart';
-import '../../core/node_geometry.dart';
 import '../../core/scene_spatial_index.dart';
 import 'scene_controller_selected_paint_order_cache.dart';
 
@@ -27,6 +26,7 @@ final class SceneControllerPaintCandidateStage {
   bool _hasUsedBuffers = false;
   int _debugStageBufferReuseCount = 0;
   int _debugCommittedFastPathGlobalSortAvoidanceCount = 0;
+  int _debugCommittedSelectedSupplementSpatialBoundsReuseCount = 0;
 
   @visibleForTesting
   int get debugSelectedOrderCacheRebuildCount =>
@@ -42,6 +42,9 @@ final class SceneControllerPaintCandidateStage {
   @visibleForTesting
   int get debugCommittedFastPathGlobalSortAvoidanceCount =>
       _debugCommittedFastPathGlobalSortAvoidanceCount;
+
+  int get debugCommittedSelectedSupplementSpatialBoundsReuseCount =>
+      _debugCommittedSelectedSupplementSpatialBoundsReuseCount;
 
   ScenePreparedPaintPlan prepareCommittedPaintPlan({
     required ScenePaintCandidateQuery query,
@@ -128,24 +131,44 @@ final class SceneControllerPaintCandidateStage {
     );
 
     for (final token in selectedTokens) {
-      final resolvedNode = _store.resolveSnapshotNodeById(token.nodeId);
-      if (resolvedNode == null ||
-          buffers.acceptedNodeIds.contains(token.nodeId)) {
+      if (buffers.acceptedNodeIds.contains(token.nodeId)) {
         continue;
       }
-      final paintBounds = _snapshotPaintBoundsWorld(
-        node: resolvedNode.node,
-        preview: preview,
-      );
+      final previewDelta = preview.deltaForNode(token.nodeId);
+      ScenePaintSpatialCandidate? selectedSpatialCandidate;
+      for (final candidate in _store.queryPaintCandidates(
+        visibilityRect.shift(-previewDelta),
+        scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+      )) {
+        if (candidate.nodeId == token.nodeId) {
+          selectedSpatialCandidate = candidate;
+          break;
+        }
+      }
+      final spatialCandidate = selectedSpatialCandidate;
+      if (spatialCandidate == null ||
+          !isFiniteRect(spatialCandidate.paintBoundsWorld)) {
+        continue;
+      }
+      final resolvedNode = _store.resolveSpatialCandidateSnapshot((
+        nodeId: spatialCandidate.nodeId,
+        layerIndex: spatialCandidate.layerIndex,
+        nodeIndex: spatialCandidate.nodeIndex,
+      ));
+      if (resolvedNode == null) {
+        continue;
+      }
+      final paintBounds = spatialCandidate.paintBoundsWorld.shift(previewDelta);
       if (!isFiniteRect(paintBounds) || !visibilityRect.overlaps(paintBounds)) {
         continue;
       }
       if (!buffers.acceptedNodeIds.add(token.nodeId)) {
         continue;
       }
+      _debugCommittedSelectedSupplementSpatialBoundsReuseCount += 1;
       buffers.supplementCandidates.add((
         candidate: ScenePaintCandidate(
-          node: resolvedNode.node,
+          node: resolvedNode,
           paintBoundsWorld: paintBounds,
         ),
         layerIndex: token.layerIndex,
@@ -210,13 +233,4 @@ int _compareSceneOrder(_OrderedPaintCandidate a, _OrderedPaintCandidate b) {
     return layerOrder;
   }
   return a.nodeIndex.compareTo(b.nodeIndex);
-}
-
-Rect _snapshotPaintBoundsWorld({
-  required NodeSnapshot node,
-  required SceneViewFramePreview preview,
-}) {
-  requireNodeSnapshotGeometrySupport(node);
-  final previewDelta = preview.deltaForNode(node.id);
-  return nodeSnapshotPaintBoundsWorld(node).shift(previewDelta);
 }

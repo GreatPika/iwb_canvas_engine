@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-04-23T16:02:53.868506Z",
+  "generatedAtUtc": "2026-04-25T10:17:06.896871Z",
   "profile": "smoke",
   "policy": {
     "profileSemantics": "product_realistic",
@@ -92,36 +92,36 @@
       "iterations": 3,
       "metrics": {
         "single_node_patch": {
-          "avgUs": 16016,
-          "minUs": 4073,
-          "maxUs": 37685,
-          "avgRssDeltaBytes": 1862315,
-          "minRssDeltaBytes": 311296,
-          "maxRssDeltaBytes": 4014080
+          "avgUs": 14010,
+          "minUs": 4188,
+          "maxUs": 32118,
+          "avgRssDeltaBytes": 1949696,
+          "minRssDeltaBytes": 376832,
+          "maxRssDeltaBytes": 4030464
         },
         "single_node_transform": {
-          "avgUs": 5902,
-          "minUs": 3777,
-          "maxUs": 8848,
-          "avgRssDeltaBytes": 3391488,
-          "minRssDeltaBytes": 1884160,
-          "maxRssDeltaBytes": 4898816
+          "avgUs": 5324,
+          "minUs": 3694,
+          "maxUs": 7904,
+          "avgRssDeltaBytes": 2954581,
+          "minRssDeltaBytes": 2146304,
+          "maxRssDeltaBytes": 3407872
         },
         "toggle_selection": {
-          "avgUs": 3687,
-          "minUs": 3303,
-          "maxUs": 4445,
-          "avgRssDeltaBytes": 131072,
+          "avgUs": 3461,
+          "minUs": 3178,
+          "maxUs": 3818,
+          "avgRssDeltaBytes": 322219,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 393216
+          "maxRssDeltaBytes": 966656
         },
         "move_selection": {
-          "avgUs": 4261,
-          "minUs": 3207,
-          "maxUs": 5098,
-          "avgRssDeltaBytes": 262144,
-          "minRssDeltaBytes": 163840,
-          "maxRssDeltaBytes": 442368
+          "avgUs": 3939,
+          "minUs": 3065,
+          "maxUs": 4696,
+          "avgRssDeltaBytes": 557056,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 1409024
         }
       }
     },
@@ -191,25 +191,25 @@
       "iterations": 2,
       "metrics": {
         "single_stroke_patch_thickness": {
-          "avgUs": 82981,
-          "minUs": 81290,
-          "maxUs": 84672,
-          "avgRssDeltaBytes": 655360,
-          "minRssDeltaBytes": 573440,
-          "maxRssDeltaBytes": 737280
+          "avgUs": 81256,
+          "minUs": 79666,
+          "maxUs": 82846,
+          "avgRssDeltaBytes": 647168,
+          "minRssDeltaBytes": 147456,
+          "maxRssDeltaBytes": 1146880
         },
         "single_stroke_patch_points": {
-          "avgUs": 84215,
-          "minUs": 81517,
-          "maxUs": 86912,
-          "avgRssDeltaBytes": 778240,
-          "minRssDeltaBytes": 114688,
-          "maxRssDeltaBytes": 1441792
+          "avgUs": 83000,
+          "minUs": 79915,
+          "maxUs": 86085,
+          "avgRssDeltaBytes": 892928,
+          "minRssDeltaBytes": 245760,
+          "maxRssDeltaBytes": 1540096
         },
         "toggle_selection": {
-          "avgUs": 80419,
-          "minUs": 79945,
-          "maxUs": 80893,
+          "avgUs": 78021,
+          "minUs": 77505,
+          "maxUs": 78537,
           "avgRssDeltaBytes": 90112,
           "minRssDeltaBytes": 81920,
           "maxRssDeltaBytes": 98304
@@ -272,20 +272,20 @@
       "iterations": 3,
       "metrics": {
         "paint_no_selection": {
-          "avgUs": 10069,
-          "minUs": 2622,
-          "maxUs": 23549,
-          "avgRssDeltaBytes": 278528,
-          "minRssDeltaBytes": 16384,
-          "maxRssDeltaBytes": 802816
+          "avgUs": 10814,
+          "minUs": 3368,
+          "maxUs": 25484,
+          "avgRssDeltaBytes": 453291,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 1359872
         },
         "paint_with_selection": {
-          "avgUs": 7527,
-          "minUs": 4086,
-          "maxUs": 14050,
-          "avgRssDeltaBytes": 666283,
-          "minRssDeltaBytes": 98304,
-          "maxRssDeltaBytes": 1654784
+          "avgUs": 7385,
+          "minUs": 3618,
+          "maxUs": 13104,
+          "avgRssDeltaBytes": 922965,
+          "minRssDeltaBytes": 360448,
+          "maxRssDeltaBytes": 1507328
         }
       },
       "probes": {
@@ -330,7 +330,9 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
-            "probeKeys": [],
+            "probeKeys": [
+              "selectedCommittedBoundsReuseDelta"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -349,20 +351,25 @@
       "iterations": 3,
       "metrics": {
         "stage_no_selection": {
-          "avgUs": 5517,
-          "minUs": 791,
-          "maxUs": 14752,
-          "avgRssDeltaBytes": 447829,
+          "avgUs": 5189,
+          "minUs": 770,
+          "maxUs": 13800,
+          "avgRssDeltaBytes": 43691,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 1310720
+          "maxRssDeltaBytes": 98304
         },
         "stage_with_selection": {
-          "avgUs": 4305,
-          "minUs": 973,
-          "maxUs": 10552,
-          "avgRssDeltaBytes": 305835,
+          "avgUs": 4135,
+          "minUs": 881,
+          "maxUs": 10074,
+          "avgRssDeltaBytes": 557056,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 868352
+          "maxRssDeltaBytes": 1097728
+        }
+      },
+      "probes": {
+        "stage_with_selection": {
+          "selectedCommittedBoundsReuseDelta": 400
         }
       }
     },
@@ -422,20 +429,20 @@
       "iterations": 3,
       "metrics": {
         "paint_no_selection": {
-          "avgUs": 10203,
-          "minUs": 1390,
-          "maxUs": 25995,
-          "avgRssDeltaBytes": 742741,
+          "avgUs": 9682,
+          "minUs": 1308,
+          "maxUs": 25903,
+          "avgRssDeltaBytes": 802816,
           "minRssDeltaBytes": 16384,
-          "maxRssDeltaBytes": 1900544
+          "maxRssDeltaBytes": 2375680
         },
         "paint_with_selection": {
-          "avgUs": 8315,
-          "minUs": 3219,
-          "maxUs": 17713,
-          "avgRssDeltaBytes": 1813163,
+          "avgUs": 7663,
+          "minUs": 3170,
+          "maxUs": 16195,
+          "avgRssDeltaBytes": 2113536,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 4734976
+          "maxRssDeltaBytes": 4800512
         }
       },
       "probes": {
@@ -525,20 +532,20 @@
       "selectedPathCount": 3,
       "metrics": {
         "paint_cache_miss": {
-          "avgUs": 2642,
-          "minUs": 334,
-          "maxUs": 7167,
-          "avgRssDeltaBytes": 38229,
-          "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 114688
+          "avgUs": 2609,
+          "minUs": 440,
+          "maxUs": 6935,
+          "avgRssDeltaBytes": 54613,
+          "minRssDeltaBytes": 16384,
+          "maxRssDeltaBytes": 131072
         },
         "paint_cache_hit": {
-          "avgUs": 444,
-          "minUs": 332,
-          "maxUs": 571,
-          "avgRssDeltaBytes": 0,
+          "avgUs": 457,
+          "minUs": 234,
+          "maxUs": 787,
+          "avgRssDeltaBytes": 5461,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 0
+          "maxRssDeltaBytes": 16384
         }
       },
       "probes": {
@@ -626,17 +633,17 @@
       "iterations": 3,
       "metrics": {
         "paint_cache_miss": {
-          "avgUs": 204,
-          "minUs": 63,
-          "maxUs": 463,
+          "avgUs": 227,
+          "minUs": 81,
+          "maxUs": 469,
           "avgRssDeltaBytes": 0,
           "minRssDeltaBytes": 0,
           "maxRssDeltaBytes": 0
         },
         "paint_cache_hit": {
-          "avgUs": 40,
-          "minUs": 26,
-          "maxUs": 62,
+          "avgUs": 39,
+          "minUs": 27,
+          "maxUs": 60,
           "avgRssDeltaBytes": 0,
           "minRssDeltaBytes": 0,
           "maxRssDeltaBytes": 0
@@ -709,17 +716,17 @@
       "iterations": 3,
       "metrics": {
         "paint_cache_miss": {
-          "avgUs": 217,
-          "minUs": 105,
-          "maxUs": 431,
+          "avgUs": 264,
+          "minUs": 87,
+          "maxUs": 489,
           "avgRssDeltaBytes": 0,
           "minRssDeltaBytes": 0,
           "maxRssDeltaBytes": 0
         },
         "paint_cache_hit": {
-          "avgUs": 46,
-          "minUs": 34,
-          "maxUs": 68,
+          "avgUs": 41,
+          "minUs": 29,
+          "maxUs": 56,
           "avgRssDeltaBytes": 0,
           "minRssDeltaBytes": 0,
           "maxRssDeltaBytes": 0
@@ -795,17 +802,17 @@
       "iterations": 3,
       "metrics": {
         "paint_cache_miss": {
-          "avgUs": 3187,
-          "minUs": 504,
-          "maxUs": 8428,
-          "avgRssDeltaBytes": 16384,
+          "avgUs": 2576,
+          "minUs": 364,
+          "maxUs": 6806,
+          "avgRssDeltaBytes": 114688,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 49152
+          "maxRssDeltaBytes": 344064
         },
         "paint_cache_hit": {
-          "avgUs": 281,
-          "minUs": 182,
-          "maxUs": 427,
+          "avgUs": 289,
+          "minUs": 200,
+          "maxUs": 416,
           "avgRssDeltaBytes": 0,
           "minRssDeltaBytes": 0,
           "maxRssDeltaBytes": 0
@@ -844,7 +851,11 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
-            "probeKeys": [],
+            "probeKeys": [
+              "snapshotAdmissionBuildDelta",
+              "snapshotAdmissionHitDelta",
+              "snapshotAdmissionEvictDelta"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -882,20 +893,27 @@
       },
       "metrics": {
         "enumerate_viewport": {
-          "avgUs": 2103,
-          "minUs": 590,
-          "maxUs": 4886,
-          "avgRssDeltaBytes": 49152,
+          "avgUs": 1160,
+          "minUs": 264,
+          "maxUs": 2931,
+          "avgRssDeltaBytes": 196608,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 114688
+          "maxRssDeltaBytes": 589824
         },
         "paint_viewport": {
-          "avgUs": 2659,
-          "minUs": 1204,
-          "maxUs": 5414,
-          "avgRssDeltaBytes": 802816,
+          "avgUs": 891,
+          "minUs": 799,
+          "maxUs": 1047,
+          "avgRssDeltaBytes": 824661,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 2408448
+          "maxRssDeltaBytes": 1245184
+        }
+      },
+      "probes": {
+        "enumerate_viewport": {
+          "snapshotAdmissionBuildDelta": 64,
+          "snapshotAdmissionHitDelta": 64,
+          "snapshotAdmissionEvictDelta": 0
         }
       }
     }

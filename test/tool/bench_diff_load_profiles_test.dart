@@ -904,6 +904,9 @@ Map<String, Object?> _fullSmokeReport({
           'enumerate_viewport': _smokeMetricLeaf(stableMetrics),
           'paint_viewport': _smokeMetricLeaf(stableMetrics),
         },
+        probes: <String, Map<String, num>>{
+          'enumerate_viewport': _snapshotAdmissionProbeLeaf(),
+        },
       ),
       ..._smokeCacheCases(stableMetrics),
     ],
@@ -934,6 +937,9 @@ Map<String, Object?> _fullSmokeReportWithNodePatchMetrics({
         <String, Map<String, num>>{
           'enumerate_viewport': _smokeMetricLeaf(stableMetrics),
           'paint_viewport': _smokeMetricLeaf(stableMetrics),
+        },
+        probes: <String, Map<String, num>>{
+          'enumerate_viewport': _snapshotAdmissionProbeLeaf(),
         },
       ),
       ..._smokeCacheCases(stableMetrics),
@@ -971,6 +977,11 @@ List<Map<String, Object?>> _smokeSelectionPathCases(Map<String, num> metrics) {
       <String, Map<String, num>>{
         'stage_no_selection': leaf,
         'stage_with_selection': leaf,
+      },
+      probes: <String, Map<String, num>>{
+        'stage_with_selection': <String, num>{
+          'selectedCommittedBoundsReuseDelta': 8,
+        },
       },
     ),
     _caseMetrics(
@@ -1135,6 +1146,18 @@ Map<String, num> _staticBackgroundProbeLeaf({
     'disposeDelta': 0,
     'gridLoopIterations': gridLoopIterations,
     'gridDrawnLineCount': gridDrawnLineCount,
+  };
+}
+
+Map<String, num> _snapshotAdmissionProbeLeaf({
+  num buildDelta = 64,
+  num hitDelta = 64,
+  num evictDelta = 0,
+}) {
+  return <String, num>{
+    'snapshotAdmissionBuildDelta': buildDelta,
+    'snapshotAdmissionHitDelta': hitDelta,
+    'snapshotAdmissionEvictDelta': evictDelta,
   };
 }
 

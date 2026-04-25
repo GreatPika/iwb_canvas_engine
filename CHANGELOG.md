@@ -74,6 +74,10 @@ in changes that have not yet been published to pub.dev.
 
 ### Fixed
 
+- Fixed paint-candidate admission so committed selected supplements reuse
+  committed spatial paint bounds and snapshot-local fallback reuses bounded
+  admission bounds, avoiding repeated text layout and SVG path parsing before
+  render resolution.
 - Fixed main-scene paint hot paths so repeated over-capacity frames keep
   scan-resistant render-cache reuse, selection halo compositing records only
   bounded `saveLayer` regions, and dense-grid diagnostics report bounded work.

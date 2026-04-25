@@ -9,6 +9,7 @@ import '../../tool/bench/load_profile_policy.dart';
 import '../../tool/bench/run_load_profiles.dart' as run_load_profiles;
 
 // INV:INV-ENG-PERFORMANCE-PROOF-CONTOUR
+// INV:INV-ENG-PAINT-ADMISSION-BOUNDS-SOURCE
 
 String _extractMethodBody({
   required String source,
@@ -307,6 +308,14 @@ void main() {
             const <String, Object?>{},
           ),
           _probeRecord(
+            selectionPathCandidateStagingCaseName,
+            const <String, Object?>{},
+          ),
+          _probeRecord(
+            backgroundLayerPaintAdmissionCaseName,
+            const <String, Object?>{},
+          ),
+          _probeRecord(
             staticBackgroundCacheCaseName,
             const <String, Object?>{},
           ),
@@ -325,6 +334,20 @@ void main() {
         contains(
           'benchmark case "$selectionPathEndToEndPaintCaseName" is missing '
           'probes for "paint_no_selection"',
+        ),
+      );
+      expect(
+        issues,
+        contains(
+          'benchmark case "$selectionPathCandidateStagingCaseName" is missing '
+          'probes for "stage_with_selection"',
+        ),
+      );
+      expect(
+        issues,
+        contains(
+          'benchmark case "$backgroundLayerPaintAdmissionCaseName" is missing '
+          'probes for "enumerate_viewport"',
         ),
       );
       expect(
@@ -396,6 +419,18 @@ void main() {
               'saveLayerBoundsArea': 2048,
             },
           }),
+          _probeRecord(selectionPathCandidateStagingCaseName, <String, Object?>{
+            'stage_with_selection': <String, Object?>{
+              'selectedCommittedBoundsReuseDelta': 12,
+            },
+          }),
+          _probeRecord(backgroundLayerPaintAdmissionCaseName, <String, Object?>{
+            'enumerate_viewport': <String, Object?>{
+              'snapshotAdmissionBuildDelta': 12,
+              'snapshotAdmissionHitDelta': 12,
+              'snapshotAdmissionEvictDelta': 0,
+            },
+          }),
           _probeRecord(staticBackgroundCacheCaseName, <String, Object?>{
             'paint_cache_miss': <String, Object?>{
               'buildDelta': 1,
@@ -456,6 +491,8 @@ void main() {
             'load profile stable-visible-working-set-paint profile=\$profile',
           ),
         );
+        expect(source, contains('_captureSnapshotAdmissionProbe('));
+        expect(source, contains('snapshotAdmissionBuildDelta'));
       },
     );
 
@@ -496,6 +533,10 @@ void main() {
           isNot(contains('_BenchmarkControllerRenderState(')),
         );
         expect(stagingBody, isNot(contains('_benchmarkPaintCandidates(')));
+        expect(
+          stagingBody,
+          contains('debugCommittedSelectedSupplementSpatialBoundsReuseCount'),
+        );
 
         expect(
           endToEndBody,

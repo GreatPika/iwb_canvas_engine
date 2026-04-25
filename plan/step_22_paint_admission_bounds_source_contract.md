@@ -733,7 +733,7 @@ ownership, and verification strategy.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Characterize Heavy Admission And Lock Structural Boundaries
+### Slice 1. [x] Characterize Heavy Admission And Lock Structural Boundaries
 
 #### Slice Contract
 
@@ -785,7 +785,7 @@ before implementation changes.
 
 - targeted tests fail before implementation and pass after later slices
 
-### Slice 2. [ ] Move Committed Selected Supplements To Spatial Paint Bounds
+### Slice 2. [x] Move Committed Selected Supplements To Spatial Paint Bounds
 
 #### Slice Contract
 
@@ -851,7 +851,7 @@ paint-bounds owner as ordinary candidates.
 - source structural test proves no direct heavy snapshot bounds remain in the
   committed selected supplement path
 
-### Slice 3. [ ] Introduce Snapshot-Local Admission Bounds Source
+### Slice 3. [x] Introduce Snapshot-Local Admission Bounds Source
 
 #### Slice Contract
 
@@ -908,7 +908,7 @@ snapshot-local admission bounds source with strong validity semantics.
 - targeted core/render tests pass
 - DCM metrics for the new production file are green
 
-### Slice 4. [ ] Migrate Snapshot-Local Enumeration And Retire Direct Admission Bounds
+### Slice 4. [x] Migrate Snapshot-Local Enumeration And Retire Direct Admission Bounds
 
 #### Slice Contract
 
@@ -967,7 +967,7 @@ snapshot-local admission bounds source and no longer owns heavy geometry work.
 - targeted render tests pass
 - structural source-lock tests pass
 
-### Slice 5. [ ] Register Invariants, Architecture Docs, And Diagnostics
+### Slice 5. [x] Register Invariants, Architecture Docs, And Diagnostics
 
 #### Slice Contract
 

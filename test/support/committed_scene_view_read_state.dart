@@ -5,6 +5,7 @@ import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/scene_snapshot_paint_candidates.dart';
+import 'package:iwb_canvas_engine/src/core/snapshot_paint_admission_bounds.dart';
 
 class CommittedSceneViewReadState extends ChangeNotifier
     implements SceneViewMainSceneRenderRead, SceneViewOverlayPreviewRead {
@@ -35,6 +36,8 @@ class CommittedSceneViewReadState extends ChangeNotifier
   final SceneStoreController? _mirroredController;
   final Offset Function(NodeId nodeId) _previewDeltaResolver;
   final Rect? _selectionRect;
+  final SnapshotPaintAdmissionBoundsCache _snapshotPaintAdmissionBoundsCache =
+      SnapshotPaintAdmissionBoundsCache();
 
   SceneSnapshot _snapshot = SceneSnapshot();
   Set<NodeId> _selectedNodeIds = const <NodeId>{};
@@ -84,6 +87,7 @@ class CommittedSceneViewReadState extends ChangeNotifier
         query: query,
         selectedNodeIds: frameRead.selectedNodeIds,
         preview: frameRead.preview,
+        admissionBounds: _snapshotPaintAdmissionBoundsCache,
       ),
     );
   }
