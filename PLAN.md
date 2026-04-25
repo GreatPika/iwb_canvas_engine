@@ -38,3 +38,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 19. Interaction Family Compression And Narrow Read Seams](plan/step_19_interaction_family_compression_and_narrow_read_seams.md)
 - [x] [Step 20. Store Facade Narrowing And Command Owner Retirement](plan/step_20_store_facade_narrowing_and_command_owner_retirement.md)
 - [x] [Step 21. Scene Commands Canonical Exact Surface And Alias Retirement](plan/step_21_scene_commands_canonical_exact_surface_and_alias_retirement.md)
+- [ ] [Step 22. Paint Admission Bounds Source Contract](plan/step_22_paint_admission_bounds_source_contract.md)
