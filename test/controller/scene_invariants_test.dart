@@ -209,7 +209,8 @@ void main() {
     );
   }
 
-  void assertCriticalTxnStoreInvariants({
+  ({bool validateFullScene, int trackedNodeCount})
+  assertCriticalTxnStoreInvariants({
     required Scene scene,
     Set<NodeId> selectedNodeIds = const <NodeId>{},
     int selectionRevision = 0,
@@ -220,7 +221,7 @@ void main() {
     Scene? previousScene,
     ChangeSet? changeSet,
   }) {
-    scene_invariants.assertCriticalTxnStoreInvariants(
+    return scene_invariants.assertCriticalTxnStoreInvariants(
       state: committedStoreState(
         scene: scene,
         selectedNodeIds: selectedNodeIds,
@@ -872,6 +873,37 @@ void main() {
       );
     },
   );
+
+  test('critical runtime invariant check returns tracked scope stats', () {
+    final scene = sceneFixture();
+    final changeSet = ChangeSet()..txnTrackUpdated('node-1');
+
+    final stats = assertCriticalTxnStoreInvariants(
+      scene: scene,
+      commitRevision: 1,
+      previousCommitRevision: 0,
+      previousScene: scene,
+      changeSet: changeSet,
+    );
+
+    expect(stats.validateFullScene, false);
+    expect(stats.trackedNodeCount, 1);
+  });
+
+  test('critical runtime invariant check returns full-scene scope stats', () {
+    final scene = sceneFixture();
+
+    final stats = assertCriticalTxnStoreInvariants(
+      scene: scene,
+      commitRevision: 1,
+      previousCommitRevision: 0,
+      previousScene: scene,
+      changeSet: ChangeSet()..documentReplaced = true,
+    );
+
+    expect(stats.validateFullScene, true);
+    expect(stats.trackedNodeCount, 0);
+  });
 
   test(
     'critical runtime invariant check reports negative commit regression',

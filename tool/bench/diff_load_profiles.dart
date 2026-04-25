@@ -71,6 +71,24 @@ Map<String, Object?> buildDiffReport({
       'current=${currentReport.profile} expected=$resolvedProfile',
     );
   }
+  _assertFixedHarnessRuntimeMetadata(
+    reportName: 'baseline',
+    runtimeMetadata: baselineReport.runtimeMetadata,
+  );
+  _assertFixedHarnessRuntimeMetadata(
+    reportName: 'current',
+    runtimeMetadata: currentReport.runtimeMetadata,
+  );
+  if (!_runtimeMetadataMatches(
+    baselineReport.runtimeMetadata,
+    currentReport.runtimeMetadata,
+  )) {
+    throw _DiffToolInputException(
+      'runtime contour mismatch. '
+      'baseline=${_describeRuntimeMetadata(baselineReport.runtimeMetadata)} '
+      'current=${_describeRuntimeMetadata(currentReport.runtimeMetadata)}',
+    );
+  }
 
   final baselineByCase = <String, _CaseReport>{
     for (final c in baselineReport.cases) c.name: c,
@@ -215,6 +233,10 @@ Map<String, Object?> buildDiffReport({
   final status = failures.isEmpty ? 'pass' : 'fail';
   return <String, Object?>{
     'profile': resolvedProfile,
+    'runtimeMetadata': <String, Object?>{
+      'baseline': baselineReport.runtimeMetadata,
+      'current': currentReport.runtimeMetadata,
+    },
     'baselinePath': baselinePath,
     'currentPath': currentPath,
     'status': status,
@@ -236,6 +258,35 @@ Map<String, Object?> buildDiffReport({
     },
     'cases': comparedCases,
   };
+}
+
+void _assertFixedHarnessRuntimeMetadata({
+  required String reportName,
+  required Map<String, Object?> runtimeMetadata,
+}) {
+  for (final entry in fixedHarnessRuntimeMetadata.entries) {
+    if (runtimeMetadata[entry.key] != entry.value) {
+      throw _DiffToolInputException(
+        '$reportName runtime contour must match fixed harness. '
+        'expected ${entry.key}=${entry.value} actual=${runtimeMetadata[entry.key]}',
+      );
+    }
+  }
+}
+
+bool _runtimeMetadataMatches(
+  Map<String, Object?> baseline,
+  Map<String, Object?> current,
+) {
+  return baseline['runtimeMode'] == current['runtimeMode'] &&
+      baseline['assertionsEnabled'] == current['assertionsEnabled'] &&
+      baseline['debugInvariantMode'] == current['debugInvariantMode'];
+}
+
+String _describeRuntimeMetadata(Map<String, Object?> runtimeMetadata) {
+  return 'runtimeMode=${runtimeMetadata['runtimeMode']} '
+      'assertionsEnabled=${runtimeMetadata['assertionsEnabled']} '
+      'debugInvariantMode=${runtimeMetadata['debugInvariantMode']}';
 }
 
 Map<String, Object?> _diffCase({
@@ -459,6 +510,7 @@ _Report _readReportFromObject(
   }
 
   final policy = _requirePolicy(profile);
+  final runtimeMetadata = _readRuntimeMetadata(decoded, sourcePath: sourcePath);
   final rawCases = decoded['cases'];
   if (rawCases is! List) {
     throw _DiffToolInputException(
@@ -513,7 +565,40 @@ _Report _readReportFromObject(
       ),
     );
   }
-  return _Report(profile: profile, cases: cases);
+  return _Report(
+    profile: profile,
+    runtimeMetadata: runtimeMetadata,
+    cases: cases,
+  );
+}
+
+Map<String, Object?> _readRuntimeMetadata(
+  Map<String, Object?> decoded, {
+  required String sourcePath,
+}) {
+  final runtimeMode = decoded['runtimeMode'];
+  if (runtimeMode is! String) {
+    throw _DiffToolInputException(
+      'field "runtimeMode" must be a string in $sourcePath',
+    );
+  }
+  final assertionsEnabled = decoded['assertionsEnabled'];
+  if (assertionsEnabled is! bool) {
+    throw _DiffToolInputException(
+      'field "assertionsEnabled" must be a boolean in $sourcePath',
+    );
+  }
+  final debugInvariantMode = decoded['debugInvariantMode'];
+  if (debugInvariantMode is! String) {
+    throw _DiffToolInputException(
+      'field "debugInvariantMode" must be a string in $sourcePath',
+    );
+  }
+  return <String, Object?>{
+    'runtimeMode': runtimeMode,
+    'assertionsEnabled': assertionsEnabled,
+    'debugInvariantMode': debugInvariantMode,
+  };
 }
 
 String _requireString(
@@ -657,9 +742,14 @@ class _Options {
 }
 
 class _Report {
-  const _Report({required this.profile, required this.cases});
+  const _Report({
+    required this.profile,
+    required this.runtimeMetadata,
+    required this.cases,
+  });
 
   final String profile;
+  final Map<String, Object?> runtimeMetadata;
   final List<_CaseReport> cases;
 }
 

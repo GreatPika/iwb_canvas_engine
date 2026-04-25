@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/controller/scene_controller_commit_debug.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
@@ -15,6 +16,21 @@ import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'load_profile_policy.dart';
 
 const _resultPrefix = 'IWB_BENCH_RESULT ';
+
+Map<String, int> _writeCommitAttributionProbe(
+  SceneControllerCommitAttribution attribution,
+) {
+  return <String, int>{
+    'stateCommitExecuted': attribution.stateCommitExecuted,
+    'effectsOnlyCommitExecuted': attribution.effectsOnlyCommitExecuted,
+    'criticalValidationRan': attribution.criticalValidationRan,
+    'criticalValidationFullScene': attribution.criticalValidationFullScene,
+    'criticalValidationTrackedNodeCount':
+        attribution.criticalValidationTrackedNodeCount,
+    'debugFullStoreInvariantPassRan':
+        attribution.debugFullStoreInvariantPassRan,
+  };
+}
 
 final class _FixedMovePreviewRead implements InteractiveMovePreviewRead {
   _FixedMovePreviewRead({
@@ -280,6 +296,7 @@ Map<String, Object?> _runNodeScaleCase({
   try {
     controller.queryHitTestCandidates(const Rect.fromLTWH(0, 0, 1, 1));
 
+    late Map<String, int> patchProbe;
     final patchMetric = _measureOperation(
       iterations: iterations,
       run: (i) {
@@ -292,9 +309,13 @@ Map<String, Object?> _runNodeScaleCase({
             ),
           );
         });
+        patchProbe = _writeCommitAttributionProbe(
+          controller.debug.lastCommitAttribution,
+        );
       },
     );
 
+    late Map<String, int> transformProbe;
     final transformMetric = _measureOperation(
       iterations: iterations,
       run: (i) {
@@ -307,18 +328,26 @@ Map<String, Object?> _runNodeScaleCase({
         controller.queryHitTestCandidates(
           Rect.fromLTWH((i + 1).toDouble(), 0, 1, 1),
         );
+        transformProbe = _writeCommitAttributionProbe(
+          controller.debug.lastCommitAttribution,
+        );
       },
     );
 
+    late Map<String, int> toggleProbe;
     final toggleMetric = _measureOperation(
       iterations: iterations,
       run: (_) {
         controller.write<void>((writer) {
           writer.writeSelectionToggle(targetId);
         });
+        toggleProbe = _writeCommitAttributionProbe(
+          controller.debug.lastCommitAttribution,
+        );
       },
     );
 
+    late Map<String, int> moveProbe;
     final moveMetric = _measureOperation(
       iterations: iterations,
       run: (_) {
@@ -326,6 +355,9 @@ Map<String, Object?> _runNodeScaleCase({
           writer.writeSelectionReplace(<NodeId>{targetId});
           writer.writeSelectionTranslate(const Offset(1, 0));
         });
+        moveProbe = _writeCommitAttributionProbe(
+          controller.debug.lastCommitAttribution,
+        );
       },
     );
 
@@ -337,6 +369,12 @@ Map<String, Object?> _runNodeScaleCase({
         'single_node_transform': transformMetric,
         'toggle_selection': toggleMetric,
         'move_selection': moveMetric,
+      },
+      'probes': <String, Object?>{
+        'single_node_patch': patchProbe,
+        'single_node_transform': transformProbe,
+        'toggle_selection': toggleProbe,
+        'move_selection': moveProbe,
       },
     };
   } finally {
@@ -374,6 +412,7 @@ Map<String, Object?> _runStrokeScaleCase({
   try {
     controller.queryHitTestCandidates(const Rect.fromLTWH(0, 0, 1, 1));
 
+    late Map<String, int> thicknessProbe;
     final thicknessMetric = _measureOperation(
       iterations: iterations,
       run: (i) {
@@ -385,9 +424,13 @@ Map<String, Object?> _runStrokeScaleCase({
             ),
           );
         });
+        thicknessProbe = _writeCommitAttributionProbe(
+          controller.debug.lastCommitAttribution,
+        );
       },
     );
 
+    late Map<String, int> pointsProbe;
     final pointsMetric = _measureOperation(
       iterations: iterations,
       run: (i) {
@@ -401,15 +444,22 @@ Map<String, Object?> _runStrokeScaleCase({
             ),
           );
         });
+        pointsProbe = _writeCommitAttributionProbe(
+          controller.debug.lastCommitAttribution,
+        );
       },
     );
 
+    late Map<String, int> toggleProbe;
     final toggleMetric = _measureOperation(
       iterations: iterations,
       run: (_) {
         controller.write<void>((writer) {
           writer.writeSelectionToggle(targetId);
         });
+        toggleProbe = _writeCommitAttributionProbe(
+          controller.debug.lastCommitAttribution,
+        );
       },
     );
 
@@ -421,6 +471,11 @@ Map<String, Object?> _runStrokeScaleCase({
         'single_stroke_patch_thickness': thicknessMetric,
         'single_stroke_patch_points': pointsMetric,
         'toggle_selection': toggleMetric,
+      },
+      'probes': <String, Object?>{
+        'single_stroke_patch_thickness': thicknessProbe,
+        'single_stroke_patch_points': pointsProbe,
+        'toggle_selection': toggleProbe,
       },
     };
   } finally {

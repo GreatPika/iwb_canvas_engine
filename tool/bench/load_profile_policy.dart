@@ -20,6 +20,21 @@ const List<String> _strokeCaseRequiredOperations = <String>[
   'toggle_selection',
 ];
 
+const List<String> writeCommitAttributionProbeKeys = <String>[
+  'stateCommitExecuted',
+  'effectsOnlyCommitExecuted',
+  'criticalValidationRan',
+  'criticalValidationFullScene',
+  'criticalValidationTrackedNodeCount',
+  'debugFullStoreInvariantPassRan',
+];
+
+const Map<String, Object> fixedHarnessRuntimeMetadata = <String, Object>{
+  'runtimeMode': 'debug',
+  'assertionsEnabled': true,
+  'debugInvariantMode': 'full_store',
+};
+
 const List<String> _selectionPathPaintRequiredOperations = <String>[
   'paint_no_selection',
   'paint_with_selection',
@@ -246,6 +261,18 @@ class LoadProfilePolicy {
   };
 
   Map<String, List<String>> requiredProbeKeysForCase(String caseName) {
+    if (nodeCases.any((c) => c.name == caseName)) {
+      return <String, List<String>>{
+        for (final operation in _nodeCaseRequiredOperations)
+          operation: writeCommitAttributionProbeKeys,
+      };
+    }
+    if (strokeCases.any((c) => c.name == caseName)) {
+      return <String, List<String>>{
+        for (final operation in _strokeCaseRequiredOperations)
+          operation: writeCommitAttributionProbeKeys,
+      };
+    }
     if (caseName == textLayoutCacheCaseName ||
         caseName == strokePathCacheCaseName) {
       return <String, List<String>>{

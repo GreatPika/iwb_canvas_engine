@@ -98,6 +98,82 @@ void main() {
       expect(issues, isEmpty);
     });
 
+    test('fails when report runtime metadata is missing', () {
+      expect(
+        run_load_profiles.validateReportRuntimeMetadata(
+          report: <String, Object?>{
+            'profile': 'smoke',
+            'cases': const <Map<String, Object?>>[],
+          },
+        ),
+        containsAll(<String>[
+          'report runtimeMode must equal fixed harness value debug',
+          'report assertionsEnabled must equal fixed harness value true',
+          'report debugInvariantMode must equal fixed harness value full_store',
+        ]),
+      );
+    });
+
+    test('fails when runtime metadata drifts from the fixed harness contour', () {
+      expect(
+        run_load_profiles.validateReportRuntimeMetadata(
+          report: <String, Object?>{
+            'runtimeMode': 'profile',
+            'assertionsEnabled': false,
+            'debugInvariantMode': 'disabled',
+          },
+        ),
+        containsAll(<String>[
+          'report runtimeMode must equal fixed harness value debug',
+          'report assertionsEnabled must equal fixed harness value true',
+          'report debugInvariantMode must equal fixed harness value full_store',
+        ]),
+      );
+    });
+
+    test('runner emits the current fixed benchmark contour metadata', () {
+      expect(
+        run_load_profiles.collectLoadProfileRuntimeMetadata(),
+        <String, Object?>{
+          'runtimeMode': 'debug',
+          'assertionsEnabled': true,
+          'debugInvariantMode': 'full_store',
+        },
+      );
+    });
+
+    test('runner locks the current flutter-test benchmark harness', () {
+      final source = File(
+        'tool/bench/run_load_profiles.dart',
+      ).readAsStringSync();
+
+      expect(source, contains("Process.start("));
+      expect(source, contains("'flutter'"));
+      expect(source, contains("'test'"));
+      expect(source, contains("'tool/bench/load_profiles_cases_test.dart'"));
+      expect(source, contains("'expanded'"));
+      expect(source, contains("'IWB_BENCH_PROFILE': profile"));
+      expect(source, contains('...collectLoadProfileRuntimeMetadata(),'));
+    });
+
+    test('runner validates runtime metadata before writing report json', () {
+      final source = File(
+        'tool/bench/run_load_profiles.dart',
+      ).readAsStringSync();
+      final mainBody = _extractMethodBody(
+        source: source,
+        methodStart: 'Future<void> main(List<String> args) async',
+      );
+      final validationIndex = mainBody.indexOf(
+        'validateReportRuntimeMetadata(report: report)',
+      );
+      final writeIndex = mainBody.indexOf('writeAsStringSync');
+
+      expect(validationIndex, isNonNegative);
+      expect(writeIndex, isNonNegative);
+      expect(validationIndex, lessThan(writeIndex));
+    });
+
     test('fails when a required smoke case is missing', () {
       final policy = loadProfilePolicyFor('smoke');
 
@@ -357,6 +433,52 @@ void main() {
           'for "paint_cache_hit"',
         ),
       );
+    });
+
+    test(
+      'fails when write attribution probes are missing from smoke report',
+      () {
+        final policy = loadProfilePolicyFor('smoke');
+
+        final issues = run_load_profiles
+            .validateCollectedBenchmarkCaseContracts(
+              policy: policy,
+              parsedCases: <Map<String, Object?>>[
+                _probeRecord(
+                  _smokePrimaryNodeCaseName(),
+                  const <String, Object?>{},
+                ),
+              ],
+            );
+
+        expect(
+          issues,
+          contains(
+            'benchmark case "${_smokePrimaryNodeCaseName()}" is missing probes '
+            'for "single_node_patch"',
+          ),
+        );
+      },
+    );
+
+    test('write benchmarks keep controller-owned commit attribution seam', () {
+      final source = File(
+        'tool/bench/load_profiles_cases_test.dart',
+      ).readAsStringSync();
+      final nodeBody = _extractMethodBody(
+        source: source,
+        methodStart: 'Map<String, Object?> _runNodeScaleCase({',
+      );
+      final strokeBody = _extractMethodBody(
+        source: source,
+        methodStart: 'Map<String, Object?> _runStrokeScaleCase({',
+      );
+
+      for (final body in <String>[nodeBody, strokeBody]) {
+        expect(body, contains('controller.write<void>('));
+        expect(body, contains('controller.debug.lastCommitAttribution'));
+        expect(body, isNot(contains('_benchmarkWrite')));
+      }
     });
 
     test('accepts required defect probes for smoke report surfaces', () {

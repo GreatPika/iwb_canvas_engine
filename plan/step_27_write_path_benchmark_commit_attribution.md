@@ -2,26 +2,26 @@
 
 ## 1. Change Mandate
 
-Make write-path load-profile benchmarks honest about the runtime contour they
-measure by recording mandatory runtime-mode metadata at the report level and
-controller-owned commit/invariant attribution probes at the write-operation
-level, without introducing a benchmark-only write seam or changing committed
-write semantics.
+Make write-path load-profile benchmarks honest about the current fixed
+benchmark harness contour they measure by recording mandatory runtime metadata
+at the report level and controller-owned commit/invariant attribution probes
+at the write-operation level, without introducing a benchmark-only write seam
+or changing committed write semantics.
 
 ## 2. Change Boundary
 
 ### Included in the Change
 
-- Add explicit run-level metadata to `load_profiles` reports for the benchmark
-  harness/runtime contour that produced the measurements, including
-  `runtimeMode`, `assertionsEnabled`, and `debugInvariantMode` with a fixed
-  contract vocabulary.
+- Add explicit run-level metadata to `load_profiles` reports for the current
+  fixed `flutter test` benchmark harness contour, including `runtimeMode`,
+  `assertionsEnabled`, and `debugInvariantMode` with a fixed contract
+  vocabulary.
 - Add controller-owned attribution probes for write-scale benchmark cases so
   node/stroke write operations can report which commit/invariant contour ran
   under the measured `controller.write(...)` call.
 - Extend the write-scale load-profile policy, runner validation, diff parsing,
-  and baseline fixtures so missing runtime metadata or missing attribution
-  probes become contract violations.
+  and baseline fixtures so missing runtime metadata, fixed-harness contour
+  mismatch, or missing attribution probes become contract violations.
 - Keep write-scale benchmark timing on the current production owner path:
   `SceneStoreController.write(...)` through commit planning/execution and the
   existing invariant checks.
@@ -67,7 +67,8 @@ write semantics.
   `controller.write(...)` directly; the report already supports operation-level
   probes for other benchmark families but not for write-scale cases.
 - `tool/bench/diff_load_profiles.dart` — diffing already understands
-  operation-level probes but does not validate run-level runtime metadata.
+  operation-level probes but does not reject baseline/current fixed-harness
+  runtime contour mismatch.
 - `tool/bench/baselines/load_profiles_full_baseline.json` — the
   `strokes_5000_pts_512` case currently records `toggle_selection` at nearly
   the same cost as stroke patch operations while declaring empty `probeKeys`.
@@ -198,8 +199,9 @@ write semantics.
 #### Selected Architectural Form
 
 - Keep the existing `flutter test`-based diagnostic benchmark harness.
-- Add run-level runtime metadata in `tool/bench/**` for the current benchmark
-  process so every report declares which runtime contour produced it.
+- Add run-level runtime metadata in `tool/bench/**` for the current fixed
+  `flutter test` benchmark process so every report declares that one runtime
+  contour explicitly.
 - Add controller-owned last-commit attribution facts in
   `SceneControllerCommitDebugState` and expose them through the existing
   `SceneStoreController.debug` seam.
@@ -230,7 +232,8 @@ write semantics.
 - The benchmark runner owns serialization of run metadata and case-level probe
   leaves.
 - Baseline JSON remains a diagnostic artifact that records the explicit
-  runtime/attribution contour; it does not define commit semantics.
+  fixed-harness runtime/attribution contour; it does not define commit
+  semantics.
 
 #### Entry and Exit Boundaries
 
@@ -245,8 +248,8 @@ write semantics.
 
 - The only new benchmark-consumable production seam is controller-owned debug
   attribution on `SceneStoreController.debug`.
-- Run-level runtime metadata may be derived in the benchmark process and
-  serialized by `tool/bench/**`.
+- Run-level runtime metadata is fixed to the current `flutter test` harness
+  contour in this step and serialized by `tool/bench/**`.
 
 #### Rejected Alternatives
 
@@ -271,22 +274,23 @@ write semantics.
 ## 5. Locked Decisions
 
 1. This step keeps the existing `flutter test` load-profile harness and makes
-   its runtime contour explicit instead of replacing it.
+   that one fixed runtime contour explicit instead of replacing it.
 2. Write-scale benchmark timing continues to measure the full
    `SceneStoreController.write(...)` path under the active runtime mode.
-3. Run-level report metadata must include:
-   `runtimeMode` with exact values `debug`, `profile`, or `release`;
-   `assertionsEnabled` as a boolean that reflects Dart assert availability in
-   the benchmark process;
-   `debugInvariantMode` with exact values `disabled` or `full_store`.
-4. Write-scale node/stroke cases must declare required commit-attribution
+3. Run-level report metadata must include the fixed-harness contour fields
+   `runtimeMode`, `assertionsEnabled`, and `debugInvariantMode`, and the
+   current harness must emit them with the exact values
+   `debug`, `true`, and `full_store`.
+4. `diff_load_profiles.dart` must reject baseline/current pairs whose fixed
+   harness contour metadata does not match.
+5. Write-scale node/stroke cases must declare required commit-attribution
    probes in `LoadProfilePolicy`; empty `probeKeys` are no longer valid there.
-5. Commit/invariant attribution facts must be read from controller-owned debug
+6. Commit/invariant attribution facts must be read from controller-owned debug
    state, not inferred by duplicating commit logic in `tool/bench/**`.
-6. This step does not add a benchmark mode that changes commit behavior.
-7. Proof/documentation updates happen only after the successor attribution seam
+7. This step does not add a benchmark mode that changes commit behavior.
+8. Proof/documentation updates happen only after the successor attribution seam
    is mechanically enforced by tests.
-8. The exact write-scale probe vocabulary is fixed to numeric leaves so it
+9. The exact write-scale probe vocabulary is fixed to numeric leaves so it
    stays compatible with the existing bench runner/diff contract:
    `stateCommitExecuted`,
    `effectsOnlyCommitExecuted`,
@@ -294,7 +298,7 @@ write semantics.
    `criticalValidationFullScene`,
    `criticalValidationTrackedNodeCount`,
    `debugFullStoreInvariantPassRan`.
-9. The exact write-scale probe semantics are fixed as follows:
+10. The exact write-scale probe semantics are fixed as follows:
    `stateCommitExecuted = 1` only when the measured write resolves to
    `ControllerStateCommitPlan`, otherwise `0`;
    `effectsOnlyCommitExecuted = 1` only when the measured write resolves to
@@ -311,11 +315,13 @@ write semantics.
 
 ## 6. Result Requirements
 
-1. Every `load_profiles` report states the runtime contour that produced it.
+1. Every `load_profiles` report states the current fixed benchmark harness
+   contour that produced it.
 2. Every write-scale node/stroke benchmark case emits mandatory
    commit-attribution probes in addition to timing/memory metrics.
-3. Missing runtime metadata or missing write-attribution probes fails tool
-   contract validation and diff validation.
+3. Missing runtime metadata, fixed-harness contour mismatch, or missing
+   write-attribution probes fails tool contract validation and diff
+   validation.
 4. The benchmark implementation still measures the real committed write path
    and still routes through `SceneStoreController.write(...)`.
 5. Architecture and invariant text explicitly describe write-path benchmark
@@ -469,7 +475,7 @@ write semantics.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Lock the write-path attribution contract with failing proof
+### Slice 1. [x] Lock the write-path attribution contract with failing proof
 
 #### Slice Contract
 
@@ -521,8 +527,8 @@ commit path.
 
 #### Positive Scenarios
 
-- a report with explicit runtime metadata is accepted
-- a diff input pair with explicit runtime metadata is accepted
+- a report with explicit fixed-harness runtime metadata is accepted
+- a diff input pair with matching fixed-harness runtime metadata is accepted
 - a write-scale case with the required attribution probes is accepted
 - a diff input pair with the required attribution probes is accepted
 - controller tests can read the new last-commit attribution facts through the
@@ -534,6 +540,8 @@ commit path.
   fails validation
 - a diff input missing `runtimeMode`, `assertionsEnabled`, or
   `debugInvariantMode` fails diff input validation
+- a diff input pair with different fixed-harness runtime metadata fails diff
+  input validation
 - a node/stroke write case missing its attribution probes fails validation
 - a diff input with a write-scale case missing its attribution probes fails
   diff input validation
@@ -545,7 +553,7 @@ commit path.
 - the new tests fail before owner-side implementation and then pass without any
   benchmark-only bypass seam
 
-### Slice 2. [ ] Add controller-owned commit attribution and wire write cases
+### Slice 2. [x] Add controller-owned commit attribution and wire write cases
 
 #### Slice Contract
 
@@ -566,8 +574,8 @@ write entry path.
   `debugFullStoreInvariantPassRan`.
 - Make node/stroke benchmark cases capture those facts around each measured
   write operation and serialize them as operation-level probes.
-- Add run-level runtime metadata emission and validation in the bench runner
-  and diff layer.
+- Add fixed-harness runtime metadata emission in the bench runner and matching
+  contour validation in the diff layer.
 
 #### Behavioral Verification
 
@@ -591,11 +599,13 @@ write entry path.
   `single_node_patch`, `single_node_transform`, `toggle_selection`,
   `move_selection`, `single_stroke_patch_thickness`,
   `single_stroke_patch_points`, and `toggle_selection`
-- the bench runner writes explicit runtime metadata at the report level
+- the bench runner writes explicit fixed-harness runtime metadata at the
+  report level
 - diff output preserves the new probes instead of dropping them
-- the run-level metadata uses only the fixed values:
-  `runtimeMode in {debug, profile, release}`,
-  `debugInvariantMode in {disabled, full_store}`
+- the run-level metadata uses the current fixed harness values:
+  `runtimeMode = debug`,
+  `assertionsEnabled = true`,
+  `debugInvariantMode = full_store`
 
 #### Negative Scenarios
 
@@ -608,7 +618,7 @@ write entry path.
 - generated smoke report includes the new run metadata and write-attribution
   probes, and tool tests prove both presence and source-level owner usage
 
-### Slice 3. [ ] Refresh proof text and diagnostic baselines to the new contour
+### Slice 3. [x] Refresh proof text and diagnostic baselines to the new contour
 
 #### Slice Contract
 
@@ -649,8 +659,8 @@ mechanically visible.
 
 #### Negative Scenarios
 
-- stale baselines without the new metadata/probes are rejected by diff/tool
-  tests
+- stale baselines without the new metadata/probes or with mismatched fixed
+  contour metadata are rejected by diff/tool tests
 - invariant coverage fails if proof text is updated without executable proof
   references
 
@@ -674,11 +684,11 @@ mechanically visible.
 
 ## 12. Acceptance Criteria
 
-- The contractually required runtime metadata is present in every
-  `load_profiles` report.
+- The contractually required fixed-harness runtime metadata is present in
+  every `load_profiles` report.
 - Node/stroke write-scale cases emit controller-owned commit-attribution probes
   and can no longer claim empty `probeKeys`.
 - Benchmark source-level proof confirms that write cases still route through
   the real committed write path.
-- The checked-in baselines and proof text describe the same explicit
+- The checked-in baselines and proof text describe the same explicit fixed
   runtime/attribution contour as the executable tool/controller tests.

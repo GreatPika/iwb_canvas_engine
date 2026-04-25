@@ -65,7 +65,6 @@ class SceneStoreController extends ChangeNotifier implements SceneRenderState {
 
   Stream<CommittedSignal> get signals => _commitRuntime.signals;
 
-  @visibleForTesting
   SceneStoreControllerDebugAccess get debug =>
       SceneStoreControllerDebugAccess(store: _store, runtime: _commitRuntime);
 

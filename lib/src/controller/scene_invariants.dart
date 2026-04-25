@@ -18,6 +18,16 @@ typedef _CriticalRuntimeValidationScope = ({
   Set<NodeId> trackedNodeIds,
 });
 
+typedef CriticalRuntimeValidationScopeStats = ({
+  bool validateFullScene,
+  int trackedNodeCount,
+});
+
+typedef _CriticalStoreInvariantCheck = ({
+  List<String> violations,
+  CriticalRuntimeValidationScopeStats runtimeValidationScope,
+});
+
 List<String> txnCollectStoreInvariantViolations(CommittedStoreState state) {
   final violations = <String>[];
   violations.addAll(
@@ -66,6 +76,31 @@ List<String> txnCollectCriticalStoreInvariantViolations({
   ChangeSet? changeSet,
   Scene? previousScene,
 }) {
+  return _txnCheckCriticalStoreInvariants(
+    state: state,
+    commitRevision: commitRevision,
+    previousCommitRevision: previousCommitRevision,
+    previousSelectedNodeIds: previousSelectedNodeIds,
+    previousSelectionRevision: previousSelectionRevision,
+    changeSet: changeSet,
+    previousScene: previousScene,
+  ).violations;
+}
+
+_CriticalStoreInvariantCheck _txnCheckCriticalStoreInvariants({
+  required CommittedStoreState state,
+  required int commitRevision,
+  required int previousCommitRevision,
+  Set<NodeId>? previousSelectedNodeIds,
+  int? previousSelectionRevision,
+  ChangeSet? changeSet,
+  Scene? previousScene,
+}) {
+  final runtimeValidationScope = _txnBuildCriticalRuntimeValidationScope(
+    changeSet: changeSet,
+    previousScene: previousScene,
+    scene: state.scene,
+  );
   final violations = <String>[];
   if (commitRevision <= previousCommitRevision) {
     violations.add(
@@ -85,13 +120,20 @@ List<String> txnCollectCriticalStoreInvariantViolations({
     ),
   );
   violations.addAll(
-    _txnCollectCriticalRuntimeSceneValidityInvariantViolations(
-      state: state,
-      changeSet: changeSet,
-      previousScene: previousScene,
+    _txnCollectCriticalRuntimeSceneValidityViolationsForScope(
+      scene: state.scene,
+      nodeLocator: state.nodeLocator,
+      layerIndexById: state.layerIndexById,
+      scope: runtimeValidationScope,
     ),
   );
-  return violations;
+  return (
+    violations: violations,
+    runtimeValidationScope: (
+      validateFullScene: runtimeValidationScope.validateFullScene,
+      trackedNodeCount: runtimeValidationScope.trackedNodeIds.length,
+    ),
+  );
 }
 
 void debugAssertTxnStoreInvariants(CommittedStoreState state) {
@@ -103,7 +145,7 @@ void debugAssertTxnStoreInvariants(CommittedStoreState state) {
   }
 }
 
-void assertCriticalTxnStoreInvariants({
+CriticalRuntimeValidationScopeStats assertCriticalTxnStoreInvariants({
   required CommittedStoreState state,
   required int commitRevision,
   required int previousCommitRevision,
@@ -112,7 +154,7 @@ void assertCriticalTxnStoreInvariants({
   ChangeSet? changeSet,
   Scene? previousScene,
 }) {
-  final violations = txnCollectCriticalStoreInvariantViolations(
+  final check = _txnCheckCriticalStoreInvariants(
     state: state,
     commitRevision: commitRevision,
     previousCommitRevision: previousCommitRevision,
@@ -121,12 +163,14 @@ void assertCriticalTxnStoreInvariants({
     changeSet: changeSet,
     previousScene: previousScene,
   );
+  final violations = check.violations;
   if (violations.isNotEmpty) {
     throw StateError(
       'Critical committed store invariants violated:\n- '
       '${violations.join('\n- ')}',
     );
   }
+  return check.runtimeValidationScope;
 }
 
 Iterable<SceneNode> _txnAllNodes(Scene scene) sync* {
@@ -246,24 +290,6 @@ List<String> _txnCollectCommittedSelectionRevisionInvariantViolations({
   }
 
   return const <String>[];
-}
-
-List<String> _txnCollectCriticalRuntimeSceneValidityInvariantViolations({
-  required CommittedStoreState state,
-  required ChangeSet? changeSet,
-  required Scene? previousScene,
-}) {
-  final scope = _txnBuildCriticalRuntimeValidationScope(
-    changeSet: changeSet,
-    previousScene: previousScene,
-    scene: state.scene,
-  );
-  return _txnCollectCriticalRuntimeSceneValidityViolationsForScope(
-    scene: state.scene,
-    nodeLocator: state.nodeLocator,
-    layerIndexById: state.layerIndexById,
-    scope: scope,
-  );
 }
 
 _CriticalRuntimeValidationScope _txnBuildCriticalRuntimeValidationScope({

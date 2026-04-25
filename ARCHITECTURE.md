@@ -768,11 +768,15 @@ Performance proof follows a two-contour architecture:
   to `1000` nodes plus an explicit `3840x2160` viewport scenario, while `full`
   is the separate stress/nightly profile for large-scene and worst-case
   diagnostics.
-- Diagnostic load-profile reports carry explicit owner-level probe surfaces for
-  stable visible-working-set cache reuse, bounded selection `saveLayer` count
-  and area, and bounded grid work recorded from the shared grid plan. The
-  benchmark runner and diff layer consume production-owner seams only and do
-  not introduce benchmark-only runtime owners.
+- Diagnostic load-profile reports carry explicit fixed-harness
+  runtime-contour metadata (`runtimeMode`, `assertionsEnabled`,
+  `debugInvariantMode`) and owner-level probe surfaces for stable
+  visible-working-set cache reuse, bounded selection `saveLayer` count and
+  area, bounded grid work recorded from the shared grid plan, and write-path
+  commit/invariant attribution read from `SceneStoreController.debug`. The
+  benchmark runner and diff layer consume production-owner seams only, reject
+  baseline/current contour mismatch inside the current fixed harness contract,
+  and do not introduce benchmark-only runtime or write owners.
 
 ## 10. Mechanical enforcement
 

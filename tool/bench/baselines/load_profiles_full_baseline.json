@@ -1,6 +1,9 @@
 {
-  "generatedAtUtc": "2026-04-25T10:18:14.122891Z",
+  "generatedAtUtc": "2026-04-25T19:58:24.085378Z",
   "profile": "full",
+  "runtimeMode": "debug",
+  "assertionsEnabled": true,
+  "debugInvariantMode": "full_store",
   "policy": {
     "profileSemantics": "stress_nightly",
     "maxNodeCount": 100000,
@@ -26,7 +29,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -42,7 +52,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -58,7 +75,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -74,7 +98,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -92,36 +123,70 @@
       "iterations": 4,
       "metrics": {
         "single_node_patch": {
-          "avgUs": 31051,
-          "minUs": 21166,
-          "maxUs": 54182,
-          "avgRssDeltaBytes": 1249280,
-          "minRssDeltaBytes": 458752,
-          "maxRssDeltaBytes": 2211840
+          "avgUs": 32959,
+          "minUs": 21874,
+          "maxUs": 59327,
+          "avgRssDeltaBytes": 1093632,
+          "minRssDeltaBytes": 0,
+          "maxRssDeltaBytes": 2473984
         },
         "single_node_transform": {
-          "avgUs": 30241,
-          "minUs": 27295,
-          "maxUs": 32628,
-          "avgRssDeltaBytes": 6045696,
+          "avgUs": 30536,
+          "minUs": 27092,
+          "maxUs": 32629,
+          "avgRssDeltaBytes": 5550080,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 9977856
+          "maxRssDeltaBytes": 8634368
         },
         "toggle_selection": {
-          "avgUs": 23303,
-          "minUs": 21139,
-          "maxUs": 28925,
-          "avgRssDeltaBytes": 290816,
+          "avgUs": 23134,
+          "minUs": 21216,
+          "maxUs": 28500,
+          "avgRssDeltaBytes": 237568,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 851968
+          "maxRssDeltaBytes": 835584
         },
         "move_selection": {
-          "avgUs": 28346,
-          "minUs": 26459,
-          "maxUs": 31385,
-          "avgRssDeltaBytes": 905216,
+          "avgUs": 28926,
+          "minUs": 25332,
+          "maxUs": 33867,
+          "avgRssDeltaBytes": 2179072,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 1441792
+          "maxRssDeltaBytes": 5963776
+        }
+      },
+      "probes": {
+        "single_node_patch": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 1,
+          "debugFullStoreInvariantPassRan": 1
+        },
+        "single_node_transform": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 1,
+          "debugFullStoreInvariantPassRan": 1
+        },
+        "toggle_selection": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 0,
+          "debugFullStoreInvariantPassRan": 1
+        },
+        "move_selection": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 1,
+          "debugFullStoreInvariantPassRan": 1
         }
       }
     },
@@ -139,7 +204,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -155,7 +227,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -171,7 +250,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -187,7 +273,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -205,36 +298,70 @@
       "iterations": 4,
       "metrics": {
         "single_node_patch": {
-          "avgUs": 113623,
-          "minUs": 109461,
-          "maxUs": 118012,
-          "avgRssDeltaBytes": 7667712,
+          "avgUs": 109873,
+          "minUs": 106300,
+          "maxUs": 115376,
+          "avgRssDeltaBytes": 6533120,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 11059200
+          "maxRssDeltaBytes": 9781248
         },
         "single_node_transform": {
-          "avgUs": 142975,
-          "minUs": 138153,
-          "maxUs": 146706,
-          "avgRssDeltaBytes": 16068608,
+          "avgUs": 141085,
+          "minUs": 139379,
+          "maxUs": 144030,
+          "avgRssDeltaBytes": 4792320,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 37126144
+          "maxRssDeltaBytes": 10616832
         },
         "toggle_selection": {
-          "avgUs": 121675,
-          "minUs": 109234,
-          "maxUs": 144004,
-          "avgRssDeltaBytes": 5890048,
+          "avgUs": 111889,
+          "minUs": 106678,
+          "maxUs": 123542,
+          "avgRssDeltaBytes": 5816320,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 7962624
+          "maxRssDeltaBytes": 7766016
         },
         "move_selection": {
-          "avgUs": 147948,
-          "minUs": 144721,
-          "maxUs": 151839,
-          "avgRssDeltaBytes": 8871936,
+          "avgUs": 141596,
+          "minUs": 140028,
+          "maxUs": 143506,
+          "avgRssDeltaBytes": 2293760,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 30523392
+          "maxRssDeltaBytes": 8011776
+        }
+      },
+      "probes": {
+        "single_node_patch": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 1,
+          "debugFullStoreInvariantPassRan": 1
+        },
+        "single_node_transform": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 1,
+          "debugFullStoreInvariantPassRan": 1
+        },
+        "toggle_selection": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 0,
+          "debugFullStoreInvariantPassRan": 1
+        },
+        "move_selection": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 1,
+          "debugFullStoreInvariantPassRan": 1
         }
       }
     },
@@ -252,7 +379,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -268,7 +402,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -284,7 +425,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -300,7 +448,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 4,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -318,36 +473,70 @@
       "iterations": 4,
       "metrics": {
         "single_node_patch": {
-          "avgUs": 228241,
-          "minUs": 219439,
-          "maxUs": 238295,
-          "avgRssDeltaBytes": 14516224,
+          "avgUs": 229688,
+          "minUs": 223074,
+          "maxUs": 236116,
+          "avgRssDeltaBytes": 15241216,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 21413888
+          "maxRssDeltaBytes": 21970944
         },
         "single_node_transform": {
-          "avgUs": 304493,
-          "minUs": 297696,
-          "maxUs": 311357,
-          "avgRssDeltaBytes": 26185728,
+          "avgUs": 303870,
+          "minUs": 294402,
+          "maxUs": 312836,
+          "avgRssDeltaBytes": 20684800,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 69320704
+          "maxRssDeltaBytes": 46333952
         },
         "toggle_selection": {
-          "avgUs": 227054,
-          "minUs": 219842,
-          "maxUs": 241614,
-          "avgRssDeltaBytes": 11304960,
+          "avgUs": 243749,
+          "minUs": 231170,
+          "maxUs": 259915,
+          "avgRssDeltaBytes": 9060352,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 17612800
+          "maxRssDeltaBytes": 18448384
         },
         "move_selection": {
-          "avgUs": 306789,
-          "minUs": 303112,
-          "maxUs": 315225,
-          "avgRssDeltaBytes": 7254016,
+          "avgUs": 309137,
+          "minUs": 301405,
+          "maxUs": 316303,
+          "avgRssDeltaBytes": 23408640,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 29016064
+          "maxRssDeltaBytes": 58949632
+        }
+      },
+      "probes": {
+        "single_node_patch": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 1,
+          "debugFullStoreInvariantPassRan": 1
+        },
+        "single_node_transform": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 1,
+          "debugFullStoreInvariantPassRan": 1
+        },
+        "toggle_selection": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 0,
+          "debugFullStoreInvariantPassRan": 1
+        },
+        "move_selection": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 1,
+          "debugFullStoreInvariantPassRan": 1
         }
       }
     },
@@ -366,7 +555,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -382,7 +578,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -398,7 +601,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -417,28 +627,54 @@
       "iterations": 3,
       "metrics": {
         "single_stroke_patch_thickness": {
-          "avgUs": 314912,
-          "minUs": 312935,
-          "maxUs": 318501,
-          "avgRssDeltaBytes": 1305259,
-          "minRssDeltaBytes": 1277952,
-          "maxRssDeltaBytes": 1343488
+          "avgUs": 318507,
+          "minUs": 316201,
+          "maxUs": 321967,
+          "avgRssDeltaBytes": 1048576,
+          "minRssDeltaBytes": 819200,
+          "maxRssDeltaBytes": 1261568
         },
         "single_stroke_patch_points": {
-          "avgUs": 311511,
-          "minUs": 309474,
-          "maxUs": 312640,
-          "avgRssDeltaBytes": 1283413,
-          "minRssDeltaBytes": 950272,
-          "maxRssDeltaBytes": 1589248
+          "avgUs": 318312,
+          "minUs": 316695,
+          "maxUs": 320467,
+          "avgRssDeltaBytes": 1190571,
+          "minRssDeltaBytes": 737280,
+          "maxRssDeltaBytes": 1523712
         },
         "toggle_selection": {
-          "avgUs": 310063,
-          "minUs": 309072,
-          "maxUs": 310691,
-          "avgRssDeltaBytes": 584363,
+          "avgUs": 315403,
+          "minUs": 313037,
+          "maxUs": 318295,
+          "avgRssDeltaBytes": 589824,
           "minRssDeltaBytes": 229376,
-          "maxRssDeltaBytes": 1277952
+          "maxRssDeltaBytes": 1294336
+        }
+      },
+      "probes": {
+        "single_stroke_patch_thickness": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 1,
+          "debugFullStoreInvariantPassRan": 1
+        },
+        "single_stroke_patch_points": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 1,
+          "debugFullStoreInvariantPassRan": 1
+        },
+        "toggle_selection": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 0,
+          "debugFullStoreInvariantPassRan": 1
         }
       }
     },
@@ -457,7 +693,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -473,7 +716,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -489,7 +739,14 @@
             "executionMode": "cold_start",
             "warmupIterations": 0,
             "measuredIterations": 3,
-            "probeKeys": [],
+            "probeKeys": [
+              "stateCommitExecuted",
+              "effectsOnlyCommitExecuted",
+              "criticalValidationRan",
+              "criticalValidationFullScene",
+              "criticalValidationTrackedNodeCount",
+              "debugFullStoreInvariantPassRan"
+            ],
             "gatedMetrics": [
               "avgUs"
             ],
@@ -508,28 +765,54 @@
       "iterations": 3,
       "metrics": {
         "single_stroke_patch_thickness": {
-          "avgUs": 787806,
-          "minUs": 782139,
-          "maxUs": 797171,
-          "avgRssDeltaBytes": 868352,
+          "avgUs": 802085,
+          "minUs": 793078,
+          "maxUs": 811552,
+          "avgRssDeltaBytes": 1190571,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 1556480
+          "maxRssDeltaBytes": 2670592
         },
         "single_stroke_patch_points": {
-          "avgUs": 787724,
-          "minUs": 786013,
-          "maxUs": 789947,
-          "avgRssDeltaBytes": 1583787,
+          "avgUs": 839505,
+          "minUs": 817793,
+          "maxUs": 880569,
+          "avgRssDeltaBytes": 1070421,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 3686400
+          "maxRssDeltaBytes": 2129920
         },
         "toggle_selection": {
-          "avgUs": 783300,
-          "minUs": 782248,
-          "maxUs": 784472,
-          "avgRssDeltaBytes": 737280,
-          "minRssDeltaBytes": 589824,
-          "maxRssDeltaBytes": 1015808
+          "avgUs": 796329,
+          "minUs": 795392,
+          "maxUs": 797112,
+          "avgRssDeltaBytes": 759125,
+          "minRssDeltaBytes": 606208,
+          "maxRssDeltaBytes": 1064960
+        }
+      },
+      "probes": {
+        "single_stroke_patch_thickness": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 1,
+          "debugFullStoreInvariantPassRan": 1
+        },
+        "single_stroke_patch_points": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 1,
+          "debugFullStoreInvariantPassRan": 1
+        },
+        "toggle_selection": {
+          "stateCommitExecuted": 1,
+          "effectsOnlyCommitExecuted": 0,
+          "criticalValidationRan": 1,
+          "criticalValidationFullScene": 0,
+          "criticalValidationTrackedNodeCount": 0,
+          "debugFullStoreInvariantPassRan": 1
         }
       }
     },
@@ -589,20 +872,20 @@
       "iterations": 4,
       "metrics": {
         "paint_no_selection": {
-          "avgUs": 80082,
-          "minUs": 64839,
-          "maxUs": 113830,
-          "avgRssDeltaBytes": 1736704,
-          "minRssDeltaBytes": 540672,
-          "maxRssDeltaBytes": 5128192
+          "avgUs": 78514,
+          "minUs": 64526,
+          "maxUs": 110935,
+          "avgRssDeltaBytes": 2179072,
+          "minRssDeltaBytes": 49152,
+          "maxRssDeltaBytes": 6602752
         },
         "paint_with_selection": {
-          "avgUs": 78221,
-          "minUs": 67893,
-          "maxUs": 103063,
-          "avgRssDeltaBytes": 6479872,
-          "minRssDeltaBytes": 1343488,
-          "maxRssDeltaBytes": 14942208
+          "avgUs": 77476,
+          "minUs": 68197,
+          "maxUs": 99468,
+          "avgRssDeltaBytes": 6995968,
+          "minRssDeltaBytes": 2162688,
+          "maxRssDeltaBytes": 15597568
         }
       },
       "probes": {
@@ -668,20 +951,20 @@
       "iterations": 4,
       "metrics": {
         "stage_no_selection": {
-          "avgUs": 24410,
-          "minUs": 1444,
-          "maxUs": 91037,
-          "avgRssDeltaBytes": 421888,
+          "avgUs": 23290,
+          "minUs": 1429,
+          "maxUs": 88380,
+          "avgRssDeltaBytes": 16384,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 1163264
+          "maxRssDeltaBytes": 65536
         },
         "stage_with_selection": {
-          "avgUs": 21568,
-          "minUs": 2210,
-          "maxUs": 78740,
-          "avgRssDeltaBytes": 249856,
+          "avgUs": 21767,
+          "minUs": 2252,
+          "maxUs": 80073,
+          "avgRssDeltaBytes": 0,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 524288
+          "maxRssDeltaBytes": 0
         }
       },
       "probes": {
@@ -746,20 +1029,20 @@
       "iterations": 4,
       "metrics": {
         "paint_no_selection": {
-          "avgUs": 91539,
-          "minUs": 64104,
-          "maxUs": 172956,
-          "avgRssDeltaBytes": 606208,
-          "minRssDeltaBytes": 32768,
-          "maxRssDeltaBytes": 2244608
+          "avgUs": 91081,
+          "minUs": 62377,
+          "maxUs": 171989,
+          "avgRssDeltaBytes": 856064,
+          "minRssDeltaBytes": 49152,
+          "maxRssDeltaBytes": 3080192
         },
         "paint_with_selection": {
-          "avgUs": 97751,
-          "minUs": 68859,
-          "maxUs": 168196,
-          "avgRssDeltaBytes": 2768896,
-          "minRssDeltaBytes": 901120,
-          "maxRssDeltaBytes": 7143424
+          "avgUs": 121615,
+          "minUs": 77631,
+          "maxUs": 199525,
+          "avgRssDeltaBytes": 5320704,
+          "minRssDeltaBytes": 950272,
+          "maxRssDeltaBytes": 7979008
         }
       },
       "probes": {
@@ -849,17 +1132,17 @@
       "selectedPathCount": 3,
       "metrics": {
         "paint_cache_miss": {
-          "avgUs": 1900,
-          "minUs": 333,
-          "maxUs": 6501,
-          "avgRssDeltaBytes": 24576,
+          "avgUs": 2395,
+          "minUs": 357,
+          "maxUs": 8046,
+          "avgRssDeltaBytes": 32768,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 98304
+          "maxRssDeltaBytes": 131072
         },
         "paint_cache_hit": {
-          "avgUs": 224,
-          "minUs": 174,
-          "maxUs": 353,
+          "avgUs": 340,
+          "minUs": 203,
+          "maxUs": 481,
           "avgRssDeltaBytes": 0,
           "minRssDeltaBytes": 0,
           "maxRssDeltaBytes": 0
@@ -950,20 +1233,20 @@
       "iterations": 4,
       "metrics": {
         "paint_cache_miss": {
-          "avgUs": 154,
-          "minUs": 62,
-          "maxUs": 420,
-          "avgRssDeltaBytes": 4096,
+          "avgUs": 155,
+          "minUs": 64,
+          "maxUs": 409,
+          "avgRssDeltaBytes": 16384,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 16384
+          "maxRssDeltaBytes": 32768
         },
         "paint_cache_hit": {
-          "avgUs": 29,
-          "minUs": 20,
-          "maxUs": 52,
-          "avgRssDeltaBytes": 0,
+          "avgUs": 47,
+          "minUs": 27,
+          "maxUs": 64,
+          "avgRssDeltaBytes": 8192,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 0
+          "maxRssDeltaBytes": 16384
         }
       },
       "probes": {
@@ -1033,20 +1316,20 @@
       "iterations": 4,
       "metrics": {
         "paint_cache_miss": {
-          "avgUs": 170,
-          "minUs": 79,
-          "maxUs": 403,
-          "avgRssDeltaBytes": 0,
+          "avgUs": 187,
+          "minUs": 82,
+          "maxUs": 488,
+          "avgRssDeltaBytes": 53248,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 0
+          "maxRssDeltaBytes": 114688
         },
         "paint_cache_hit": {
-          "avgUs": 38,
-          "minUs": 28,
-          "maxUs": 65,
-          "avgRssDeltaBytes": 0,
+          "avgUs": 37,
+          "minUs": 30,
+          "maxUs": 56,
+          "avgRssDeltaBytes": 12288,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 0
+          "maxRssDeltaBytes": 16384
         }
       },
       "probes": {
@@ -1119,18 +1402,18 @@
       "iterations": 4,
       "metrics": {
         "paint_cache_miss": {
-          "avgUs": 50962,
-          "minUs": 5551,
-          "maxUs": 181945,
-          "avgRssDeltaBytes": 8986624,
+          "avgUs": 51510,
+          "minUs": 5253,
+          "maxUs": 183830,
+          "avgRssDeltaBytes": 10293248,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 35880960
+          "maxRssDeltaBytes": 41107456
         },
         "paint_cache_hit": {
-          "avgUs": 5397,
-          "minUs": 5049,
-          "maxUs": 6034,
-          "avgRssDeltaBytes": 4096,
+          "avgUs": 5193,
+          "minUs": 5033,
+          "maxUs": 5492,
+          "avgRssDeltaBytes": 8192,
           "minRssDeltaBytes": 0,
           "maxRssDeltaBytes": 16384
         }
@@ -1210,20 +1493,20 @@
       },
       "metrics": {
         "enumerate_viewport": {
-          "avgUs": 44758,
-          "minUs": 4549,
-          "maxUs": 164611,
-          "avgRssDeltaBytes": 15069184,
+          "avgUs": 44244,
+          "minUs": 4558,
+          "maxUs": 162748,
+          "avgRssDeltaBytes": 16158720,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 60276736
+          "maxRssDeltaBytes": 64634880
         },
         "paint_viewport": {
-          "avgUs": 5035,
-          "minUs": 4797,
-          "maxUs": 5413,
-          "avgRssDeltaBytes": 0,
+          "avgUs": 4874,
+          "minUs": 4759,
+          "maxUs": 5050,
+          "avgRssDeltaBytes": 4096,
           "minRssDeltaBytes": 0,
-          "maxRssDeltaBytes": 0
+          "maxRssDeltaBytes": 16384
         }
       },
       "probes": {
@@ -1331,43 +1614,43 @@
       "metrics": {
         "huge_bounds": {
           "query": {
-            "avgUs": 46,
-            "minUs": 1,
-            "maxUs": 137,
+            "avgUs": 36,
+            "minUs": 0,
+            "maxUs": 104,
             "avgRssDeltaBytes": 0,
             "minRssDeltaBytes": 0,
             "maxRssDeltaBytes": 0
           },
           "move_selection": {
-            "avgUs": 296,
-            "minUs": 72,
-            "maxUs": 416,
+            "avgUs": 337,
+            "minUs": 80,
+            "maxUs": 473,
             "avgRssDeltaBytes": 10923,
             "minRssDeltaBytes": 0,
             "maxRssDeltaBytes": 32768
           }
         },
         "huge_rect_select": {
-          "avgUs": 44592,
-          "minUs": 14406,
-          "maxUs": 100582,
-          "avgRssDeltaBytes": 10840747,
-          "minRssDeltaBytes": 983040,
-          "maxRssDeltaBytes": 21774336
+          "avgUs": 43542,
+          "minUs": 13779,
+          "maxUs": 99235,
+          "avgRssDeltaBytes": 10218155,
+          "minRssDeltaBytes": 2867200,
+          "maxRssDeltaBytes": 21168128
         },
         "very_long_path": {
           "patch_svg_path": {
-            "avgUs": 7894,
-            "minUs": 2706,
-            "maxUs": 10702,
-            "avgRssDeltaBytes": 524288,
+            "avgUs": 8115,
+            "minUs": 3958,
+            "maxUs": 10556,
+            "avgRssDeltaBytes": 349525,
             "minRssDeltaBytes": 0,
-            "maxRssDeltaBytes": 1572864
+            "maxRssDeltaBytes": 573440
           },
           "query_candidates": {
-            "avgUs": 90,
-            "minUs": 18,
-            "maxUs": 233,
+            "avgUs": 131,
+            "minUs": 17,
+            "maxUs": 198,
             "avgRssDeltaBytes": 0,
             "minRssDeltaBytes": 0,
             "maxRssDeltaBytes": 0

@@ -59,6 +59,7 @@ SceneControllerWriteCommitResult _executeEffectsOnlyPlan({
   required ControllerEffectsOnlyCommitPlan plan,
   required SceneControllerCommitExecutionContext context,
 }) {
+  context.debugState.recordEffectsOnlyCommitPlan();
   if (!context.signalsBuffer.writeHasBufferedSignals &&
       !context.repaintFlag.needsNotify) {
     return const SceneControllerWriteCommitResult(
@@ -91,6 +92,7 @@ SceneControllerWriteCommitResult _executeEffectsOnlyPlan({
       previousSelectionRevision: context.store.selectionRevision,
       previousScene: context.store.sceneDoc,
       changeSet: plan.changeSet,
+      debugState: context.debugState,
       beforeInvariantPrecheckHook:
           context.debugState.beforeInvariantPrecheckHook,
     );
@@ -110,6 +112,7 @@ SceneControllerWriteCommitResult _executeStatePlan({
   required ControllerStateCommitPlan plan,
   required SceneControllerCommitExecutionContext context,
 }) {
+  context.debugState.recordStateCommitPlan();
   final committedStoreState = plan.committedStoreState;
   _assertStoreInvariantsCandidate(
     state: committedStoreState,
@@ -118,6 +121,7 @@ SceneControllerWriteCommitResult _executeStatePlan({
     previousSelectionRevision: context.store.selectionRevision,
     previousScene: context.store.sceneDoc,
     changeSet: plan.changeSet,
+    debugState: context.debugState,
     beforeInvariantPrecheckHook: context.debugState.beforeInvariantPrecheckHook,
   );
 
@@ -155,9 +159,10 @@ void _assertStoreInvariantsCandidate({
   required int previousSelectionRevision,
   required Scene previousScene,
   required ChangeSet changeSet,
+  required SceneControllerCommitDebugState debugState,
   required void Function()? beforeInvariantPrecheckHook,
 }) {
-  assertCriticalTxnStoreInvariants(
+  final criticalScope = assertCriticalTxnStoreInvariants(
     state: state,
     commitRevision: state.commitRevision,
     previousCommitRevision: previousCommitRevision,
@@ -166,6 +171,10 @@ void _assertStoreInvariantsCandidate({
     changeSet: changeSet,
     previousScene: previousScene,
   );
+  debugState.recordCriticalValidation(
+    fullScene: criticalScope.validateFullScene,
+    trackedNodeCount: criticalScope.trackedNodeCount,
+  );
   if (!kDebugMode && !kProfileMode) {
     return;
   }
@@ -173,6 +182,7 @@ void _assertStoreInvariantsCandidate({
     beforeInvariantPrecheckHook?.call();
     return true;
   }());
+  debugState.recordDebugFullStoreInvariantPass();
   debugAssertTxnStoreInvariants(state);
 }
 

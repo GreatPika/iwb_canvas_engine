@@ -959,7 +959,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-PERFORMANCE-PROOF-CONTOUR',
     scope: 'engine-runtime',
     title:
-        'required performance proof stays deterministic on committed spatial and render owners, while diagnostic benchmark policy remains a regression surface',
+        'required performance proof stays deterministic on committed spatial and render owners, while diagnostic benchmark policy declares the current fixed harness contour and production-owner attribution',
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path: 'test/controller/internal/spatial_index_cache_test.dart',
@@ -979,6 +979,9 @@ const List<Invariant> invariants = <Invariant>[
       ),
     ],
     regressionProofs: <RegressionProof>[
+      RegressionProof(
+        path: 'test/controller/core/scene_controller_commit_debug_test.dart',
+      ),
       RegressionProof(path: 'test/tool/bench_diff_load_profiles_test.dart'),
       RegressionProof(path: 'test/tool/bench_run_load_profiles_test.dart'),
     ],

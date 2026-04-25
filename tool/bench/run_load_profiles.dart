@@ -85,16 +85,42 @@ Future<void> main(List<String> args) async {
   final report = <String, Object?>{
     'generatedAtUtc': DateTime.now().toUtc().toIso8601String(),
     'profile': profile,
+    ...collectLoadProfileRuntimeMetadata(),
     'policy': policy.reportMetadata,
     'caseCount': parsedCases.length,
     'cases': parsedCases,
   };
+  final reportIssues = validateReportRuntimeMetadata(report: report);
+  if (reportIssues.isNotEmpty) {
+    for (final issue in reportIssues) {
+      stderr.writeln('FAIL: $issue');
+    }
+    exit(1);
+  }
 
   final outputFile = File(outputPath);
   outputFile.parent.createSync(recursive: true);
   final encoder = const JsonEncoder.withIndent('  ');
   outputFile.writeAsStringSync('${encoder.convert(report)}\n');
   stdout.writeln('Benchmark report written: ${outputFile.path}');
+}
+
+Map<String, Object?> collectLoadProfileRuntimeMetadata() {
+  return Map<String, Object?>.of(fixedHarnessRuntimeMetadata);
+}
+
+List<String> validateReportRuntimeMetadata({
+  required Map<String, Object?> report,
+}) {
+  final issues = <String>[];
+  for (final entry in fixedHarnessRuntimeMetadata.entries) {
+    if (report[entry.key] != entry.value) {
+      issues.add(
+        'report ${entry.key} must equal fixed harness value ${entry.value}',
+      );
+    }
+  }
+  return issues;
 }
 
 List<String> validateCollectedBenchmarkCases({

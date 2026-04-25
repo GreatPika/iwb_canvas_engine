@@ -47,6 +47,88 @@ void main() {
       );
     });
 
+    test('fails when report runtime metadata is missing', () {
+      expect(
+        () => bench_diff.buildDiffReport(
+          baseline: _report(
+            profile: 'smoke',
+            cases: const <Map<String, Object?>>[],
+            includeRuntimeMetadata: false,
+          ),
+          current: _report(
+            profile: 'smoke',
+            cases: const <Map<String, Object?>>[],
+            includeRuntimeMetadata: false,
+          ),
+          requiredProfile: 'smoke',
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ),
+        throwsA(
+          isA<Exception>().having(
+            (error) => error.toString(),
+            'message',
+            contains('field "runtimeMode" must be a string'),
+          ),
+        ),
+      );
+    });
+
+    test(
+      'fails when both reports share the same wrong fixed-harness contour',
+      () {
+        expect(
+          () => bench_diff.buildDiffReport(
+            baseline:
+                _report(profile: 'smoke', cases: const <Map<String, Object?>>[])
+                  ..['runtimeMode'] = 'profile'
+                  ..['assertionsEnabled'] = false
+                  ..['debugInvariantMode'] = 'disabled',
+            current:
+                _report(profile: 'smoke', cases: const <Map<String, Object?>>[])
+                  ..['runtimeMode'] = 'profile'
+                  ..['assertionsEnabled'] = false
+                  ..['debugInvariantMode'] = 'disabled',
+            requiredProfile: 'smoke',
+            baselinePath: 'baseline.json',
+            currentPath: 'current.json',
+          ),
+          throwsA(
+            isA<Exception>().having(
+              (error) => error.toString(),
+              'message',
+              contains('baseline runtime contour must match fixed harness.'),
+            ),
+          ),
+        );
+      },
+    );
+
+    test('fails when baseline and current runtime contours differ', () {
+      expect(
+        () => bench_diff.buildDiffReport(
+          baseline: _report(
+            profile: 'smoke',
+            cases: const <Map<String, Object?>>[],
+          ),
+          current: _report(
+            profile: 'smoke',
+            cases: const <Map<String, Object?>>[],
+          )..['debugInvariantMode'] = 'disabled',
+          requiredProfile: 'smoke',
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ),
+        throwsA(
+          isA<Exception>().having(
+            (error) => error.toString(),
+            'message',
+            contains('current runtime contour must match fixed harness.'),
+          ),
+        ),
+      );
+    });
+
     test('diff report carries defect probe values alongside metrics', () {
       final baseline = _fullSmokeReport(metricValue: 100);
       final current = _fullSmokeReport(metricValue: 100);
@@ -324,6 +406,38 @@ void main() {
       }
     });
 
+    test('fails when write attribution probes are missing', () {
+      final output = bench_diff.buildDiffReport(
+        baseline: _fullSmokeReportWithNodePatchMetrics(
+          singleNodePatchMetrics: _metrics(100, 100, 100, 100),
+          includeWriteAttributionProbes: false,
+        ),
+        current: _fullSmokeReportWithNodePatchMetrics(
+          singleNodePatchMetrics: _metrics(100, 100, 100, 100),
+          includeWriteAttributionProbes: false,
+        ),
+        requiredProfile: 'smoke',
+        baselinePath: 'baseline.json',
+        currentPath: 'current.json',
+      );
+
+      expect(output['status'], 'fail');
+      final failures = (output['failures'] as List<Object?>).cast<String>();
+      final nodeFailure = failures.singleWhere(
+        (failure) =>
+            failure.startsWith(
+              '${_smokePrimaryNodeCaseName()} missing required probes in '
+              'baseline: ',
+            ) &&
+            failure.contains('single_node_patch.stateCommitExecuted') &&
+            failure.contains('single_node_transform.stateCommitExecuted') &&
+            failure.contains('toggle_selection.stateCommitExecuted') &&
+            failure.contains('move_selection.stateCommitExecuted') &&
+            failure.contains('debugFullStoreInvariantPassRan'),
+      );
+      expect(nodeFailure, contains('criticalValidationTrackedNodeCount'));
+    });
+
     test('buildDiffReport fails when metric value is Infinity', () {
       expect(
         () => bench_diff.buildDiffReport(
@@ -400,6 +514,9 @@ void main() {
         ),
         current: <String, Object?>{
           'profile': 'smoke',
+          'runtimeMode': 'debug',
+          'assertionsEnabled': true,
+          'debugInvariantMode': 'full_store',
           'caseCount': 1,
           'cases': <Map<String, Object?>>[
             <String, Object?>{
@@ -436,6 +553,9 @@ void main() {
       final output = bench_diff.buildDiffReport(
         baseline: <String, Object?>{
           'profile': 'smoke',
+          'runtimeMode': 'debug',
+          'assertionsEnabled': true,
+          'debugInvariantMode': 'full_store',
           'caseCount': 1,
           'cases': <Map<String, Object?>>[
             <String, Object?>{
@@ -847,9 +967,15 @@ Map<String, Object?> _decodeOutput(String raw) {
 Map<String, Object?> _report({
   required String profile,
   required List<Map<String, Object?>> cases,
+  bool includeRuntimeMetadata = true,
 }) {
   return <String, Object?>{
     'profile': profile,
+    if (includeRuntimeMetadata) ...<String, Object?>{
+      'runtimeMode': 'debug',
+      'assertionsEnabled': true,
+      'debugInvariantMode': 'full_store',
+    },
     'caseCount': cases.length,
     'cases': cases,
   };
@@ -871,6 +997,7 @@ Map<String, Object?> _caseMetrics(
 Map<String, Object?> _fullSmokeReport({
   required num metricValue,
   bool onlyAvgRegression = false,
+  bool includeWriteAttributionProbes = true,
 }) {
   final stableMetrics = _metrics(100, 100, 100, 100);
   final regressedMetrics = <String, num>{
@@ -886,17 +1013,25 @@ Map<String, Object?> _fullSmokeReport({
   return _report(
     profile: 'smoke',
     cases: <Map<String, Object?>>[
-      _caseMetrics(_smokePrimaryNodeCaseName(), <String, Map<String, num>>{
-        'single_node_patch': _smokeMetricLeaf(regressedMetrics),
-        'single_node_transform': _smokeMetricLeaf(stableMetrics),
-        'toggle_selection': _smokeMetricLeaf(stableMetrics),
-        'move_selection': _smokeMetricLeaf(stableMetrics),
-      }),
-      _caseMetrics('strokes_1000_pts_256', <String, Map<String, num>>{
-        'single_stroke_patch_thickness': _smokeMetricLeaf(stableMetrics),
-        'single_stroke_patch_points': _smokeMetricLeaf(stableMetrics),
-        'toggle_selection': _smokeMetricLeaf(stableMetrics),
-      }),
+      _caseMetrics(
+        _smokePrimaryNodeCaseName(),
+        <String, Map<String, num>>{
+          'single_node_patch': _smokeMetricLeaf(regressedMetrics),
+          'single_node_transform': _smokeMetricLeaf(stableMetrics),
+          'toggle_selection': _smokeMetricLeaf(stableMetrics),
+          'move_selection': _smokeMetricLeaf(stableMetrics),
+        },
+        probes: includeWriteAttributionProbes ? _nodeWriteProbes() : null,
+      ),
+      _caseMetrics(
+        'strokes_1000_pts_256',
+        <String, Map<String, num>>{
+          'single_stroke_patch_thickness': _smokeMetricLeaf(stableMetrics),
+          'single_stroke_patch_points': _smokeMetricLeaf(stableMetrics),
+          'toggle_selection': _smokeMetricLeaf(stableMetrics),
+        },
+        probes: includeWriteAttributionProbes ? _strokeWriteProbes() : null,
+      ),
       ..._smokeSelectionPathCases(stableMetrics),
       _caseMetrics(
         backgroundLayerPaintAdmissionCaseName,
@@ -915,22 +1050,31 @@ Map<String, Object?> _fullSmokeReport({
 
 Map<String, Object?> _fullSmokeReportWithNodePatchMetrics({
   required Map<String, num> singleNodePatchMetrics,
+  bool includeWriteAttributionProbes = true,
 }) {
   final stableMetrics = _metrics(100, 100, 100, 100);
   return _report(
     profile: 'smoke',
     cases: <Map<String, Object?>>[
-      _caseMetrics(_smokePrimaryNodeCaseName(), <String, Map<String, num>>{
-        'single_node_patch': _smokeMetricLeaf(singleNodePatchMetrics),
-        'single_node_transform': _smokeMetricLeaf(stableMetrics),
-        'toggle_selection': _smokeMetricLeaf(stableMetrics),
-        'move_selection': _smokeMetricLeaf(stableMetrics),
-      }),
-      _caseMetrics('strokes_1000_pts_256', <String, Map<String, num>>{
-        'single_stroke_patch_thickness': _smokeMetricLeaf(stableMetrics),
-        'single_stroke_patch_points': _smokeMetricLeaf(stableMetrics),
-        'toggle_selection': _smokeMetricLeaf(stableMetrics),
-      }),
+      _caseMetrics(
+        _smokePrimaryNodeCaseName(),
+        <String, Map<String, num>>{
+          'single_node_patch': _smokeMetricLeaf(singleNodePatchMetrics),
+          'single_node_transform': _smokeMetricLeaf(stableMetrics),
+          'toggle_selection': _smokeMetricLeaf(stableMetrics),
+          'move_selection': _smokeMetricLeaf(stableMetrics),
+        },
+        probes: includeWriteAttributionProbes ? _nodeWriteProbes() : null,
+      ),
+      _caseMetrics(
+        'strokes_1000_pts_256',
+        <String, Map<String, num>>{
+          'single_stroke_patch_thickness': _smokeMetricLeaf(stableMetrics),
+          'single_stroke_patch_points': _smokeMetricLeaf(stableMetrics),
+          'toggle_selection': _smokeMetricLeaf(stableMetrics),
+        },
+        probes: includeWriteAttributionProbes ? _strokeWriteProbes() : null,
+      ),
       ..._smokeSelectionPathCases(stableMetrics),
       _caseMetrics(
         backgroundLayerPaintAdmissionCaseName,
@@ -955,6 +1099,38 @@ Map<String, num> _smokeMetricLeaf(Map<String, num> metrics) {
     'avgRssDeltaBytes': metrics['avgRssDeltaBytes']!,
     'minRssDeltaBytes': metrics['minRssDeltaBytes']!,
     'maxRssDeltaBytes': metrics['maxRssDeltaBytes']!,
+  };
+}
+
+Map<String, Map<String, num>> _nodeWriteProbes() {
+  return <String, Map<String, num>>{
+    'single_node_patch': _stateWriteAttributionProbe(trackedNodeCount: 1),
+    'single_node_transform': _stateWriteAttributionProbe(trackedNodeCount: 1),
+    'toggle_selection': _stateWriteAttributionProbe(),
+    'move_selection': _stateWriteAttributionProbe(trackedNodeCount: 1),
+  };
+}
+
+Map<String, Map<String, num>> _strokeWriteProbes() {
+  return <String, Map<String, num>>{
+    'single_stroke_patch_thickness': _stateWriteAttributionProbe(
+      trackedNodeCount: 1,
+    ),
+    'single_stroke_patch_points': _stateWriteAttributionProbe(
+      trackedNodeCount: 1,
+    ),
+    'toggle_selection': _stateWriteAttributionProbe(),
+  };
+}
+
+Map<String, num> _stateWriteAttributionProbe({num trackedNodeCount = 0}) {
+  return <String, num>{
+    'stateCommitExecuted': 1,
+    'effectsOnlyCommitExecuted': 0,
+    'criticalValidationRan': 1,
+    'criticalValidationFullScene': 0,
+    'criticalValidationTrackedNodeCount': trackedNodeCount,
+    'debugFullStoreInvariantPassRan': 1,
   };
 }
 
