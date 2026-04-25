@@ -12,7 +12,7 @@ Normalize the repository-owned performance regression surface so it covers the r
 - Measure that eraser case through the real public interaction path (`SceneController.interaction.handlePointer(...)`) instead of an internal engine shortcut.
 - Extend the existing interactive internal-access probe seam with one eraser attribution counter that makes the benchmark report explainable.
 - Require exact eraser probe keys in load-profile policy, runner validation, diff validation, and the checked-in `full` baseline.
-- Retire `tool/bench/baselines/selection_control_diagnostics_smoke_baseline.json` as an orphaned artifact and lock `run_selection_control_diagnostics.dart` as an ad hoc diagnostic runner instead of a repository-owned regression gate.
+- Retire `tool/bench/baselines/selection_control_diagnostics_smoke_baseline.json` as an orphaned artifact and lock the existing `run_selection_control_diagnostics.dart` runner as unchanged ad hoc diagnostics instead of a repository-owned regression gate.
 
 ### Not Included in the Change
 
@@ -111,13 +111,13 @@ Normalize the repository-owned performance regression surface so it covers the r
 
 - Extend the canonical `load_profiles full` regression surface with one eraser benchmark case that executes through the real `SceneController.interaction.handlePointer(...)` path.
 - Keep raw eraser attribution facts inside the interactive owner chain and expose them only through the existing controller-private internal-access seam.
-- Retire the committed `selection_control_diagnostics` baseline artifact instead of promoting that runner into a second regression gate.
+- Retire the committed `selection_control_diagnostics` baseline artifact instead of promoting that unchanged runner into a second regression gate.
 
 #### Owning Layer or Module
 
 - `tool/bench/**` owns canonical case naming, policy, report schema, diff comparison, and checked-in load-profile baselines.
 - `lib/src/interactive/internal/**` owns raw eraser work counters and their propagation through the existing internal-access seam.
-- `tool/bench/run_selection_control_diagnostics.dart` remains an ad hoc utility and does not own a checked-in regression baseline.
+- `tool/bench/run_selection_control_diagnostics.dart` remains an unchanged ad hoc utility and does not own a checked-in regression baseline.
 
 #### Dependency Direction
 
@@ -174,6 +174,7 @@ Normalize the repository-owned performance regression surface so it covers the r
    - `deletedCount`: committed node-removal count returned by the committed erase path for the measured operation.
 7. `projectedPointCount` is a raw interactive-owner fact, not a benchmark-only derived estimate.
 8. `tool/bench/baselines/selection_control_diagnostics_smoke_baseline.json` is retired in this step; `run_selection_control_diagnostics.dart` remains an ad hoc diagnostic runner and gains no baseline/diff/CI contract here.
+9. `tool/bench/run_selection_control_diagnostics.dart` is not edited in this step; its ad hoc status is enforced by artifact cleanup plus tool/workflow verification.
 
 ## 6. Result Requirements
 
@@ -183,6 +184,7 @@ Normalize the repository-owned performance regression surface so it covers the r
 4. The interactive owner chain exposes `projectedPointCount` through the existing internal-access seam without widening the public package API.
 5. The checked-in canonical perf baseline inventory contains only canonical load-profile baselines after this step; no selection diagnostic baseline remains committed.
 6. `run_selection_control_diagnostics.dart` still produces a standalone diagnostic report from existing selection load-profile cases, but the repository no longer implies that this output is a checked-in regression reference.
+7. This step does not modify `tool/bench/run_selection_control_diagnostics.dart`.
 
 ## 7. Execution Order and Gates
 
@@ -255,6 +257,7 @@ Normalize the repository-owned performance regression surface so it covers the r
 - `INV-ENG-PERFORMANCE-PROOF-CONTOUR` remains the only repository-owned benchmark regression surface in this area.
 - `INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP` remains unchanged; the benchmark may observe long-gesture costs but must not weaken gesture-buffer correctness or bounds.
 - The mutation-gateway target form remains unchanged: committed eraser deletion still passes through `SceneControllerMutationBoundary`.
+- `run_selection_control_diagnostics.dart` remains unchanged; this step must prove ad hoc status without rewriting the runner.
 
 ### Required Proof
 
@@ -267,7 +270,7 @@ Normalize the repository-owned performance regression surface so it covers the r
 
 - Add one eraser probe callback path and one internal-access getter path through existing interactive owners.
 - Add one new canonical `full` load-profile case plus policy/diff/baseline contract for it.
-- Delete the orphaned selection-diagnostic baseline artifact and tighten runner tests/source checks around its ad hoc status.
+- Delete the orphaned selection-diagnostic baseline artifact and tighten runner/workflow tests around its ad hoc status without editing the runner.
 
 ### Forbidden Moves
 
@@ -277,6 +280,7 @@ Normalize the repository-owned performance regression surface so it covers the r
 - Do not add a `smoke` eraser case in this step.
 - Do not add a selection-diagnostic diff tool, workflow command, or verification-contract expectation in this step.
 - Do not keep the orphaned selection-diagnostic baseline file after the step closes.
+- Do not edit `tool/bench/run_selection_control_diagnostics.dart` in this step.
 
 ### Optional: Allowed Forms That Are Not Violations
 
@@ -299,7 +303,7 @@ The repository stops implying that selection-control diagnostics are a checked-i
   - its source/help surface does not gain baseline/diff workflow semantics;
   - nightly workflow and verification-contract tests continue to omit selection-diagnostic benchmark commands.
 - Delete `tool/bench/baselines/selection_control_diagnostics_smoke_baseline.json`.
-- Keep the runner report format intact unless a test-owned clarification is needed for its ad hoc status; edit `tool/bench/run_selection_control_diagnostics.dart` only if that clarification is required to keep the runner explicitly ad hoc.
+- Keep the runner report format and source unchanged; the ad hoc status is locked by tests plus baseline-artifact retirement, not by a runner rewrite.
 
 #### Behavioral Verification
 
