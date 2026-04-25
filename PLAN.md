@@ -41,3 +41,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 22. Paint Admission Bounds Source Contract](plan/step_22_paint_admission_bounds_source_contract.md)
 - [x] [Step 23. Effective Public Namespace And Signature Proof Unification](plan/step_23_effective_public_namespace_and_signature_proof_unification.md)
 - [x] [Step 24. Exception-Safe Pointer Terminal Lifecycle](plan/step_24_exception_safe_pointer_terminal_lifecycle.md)
+- [ ] [Step 25. Committed Spatial Candidate Structural Revision Contract](plan/step_25_committed_spatial_candidate_structural_revision_contract.md)
