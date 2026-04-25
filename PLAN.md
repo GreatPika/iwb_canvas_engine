@@ -43,3 +43,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 24. Exception-Safe Pointer Terminal Lifecycle](plan/step_24_exception_safe_pointer_terminal_lifecycle.md)
 - [x] [Step 25. Committed Spatial Candidate Structural Revision Contract](plan/step_25_committed_spatial_candidate_structural_revision_contract.md)
 - [x] [Step 26. Typed Boundary Admission Diagnostic Symmetry](plan/step_26_typed_boundary_admission_diagnostic_symmetry.md)
+- [ ] [Step 27. Write-Path Benchmark Commit Attribution](plan/step_27_write_path_benchmark_commit_attribution.md)
