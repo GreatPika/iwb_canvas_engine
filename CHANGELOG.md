@@ -102,6 +102,9 @@ in changes that have not yet been published to pub.dev.
 - Fixed controller-owned pointer-session lifecycle so successful same-runtime
   epoch breaks clear pending tap history and still-mounted view hosts ignore
   late routed callbacks after controller disposal.
+- Fixed `SceneViewInteractive` terminal pointer cleanup so raw pointer slots
+  and deferred pointer settings are released, and tap tracking is cleared,
+  even when terminal interactive dispatch throws.
 - Fixed same-write and committed node resolution after inserted content layers.
   Ensuring a layer before later delete/patch/selection or committed snapshot
   resolution no longer leaves stale positional locators behind.

@@ -114,16 +114,24 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
     if (_detached) {
       return;
     }
-    _handlePointerFromSession(
-      CanvasPointerInput(
-        pointerId: sample.pointerId,
-        position: sample.position,
-        timestampMs: sample.timestampMs,
-        phase: canvasPointerPhaseFromPointerPhase(sample.phase),
-        kind: sample.kind,
-      ),
-      token: _token,
-    );
+    try {
+      _handlePointerFromSession(
+        CanvasPointerInput(
+          pointerId: sample.pointerId,
+          position: sample.position,
+          timestampMs: sample.timestampMs,
+          phase: canvasPointerPhaseFromPointerPhase(sample.phase),
+          kind: sample.kind,
+        ),
+        token: _token,
+      );
+    } catch (_) {
+      if (shouldTrackSignals && _isTerminalSample(sample)) {
+        _pointerTracker.discardPointer(sample.pointerId);
+        _syncPendingFlushTimer(referenceTimestampMs: sample.timestampMs);
+      }
+      rethrow;
+    }
     if (shouldTrackSignals) {
       _emitTrackedSignals(sample);
     }
@@ -139,9 +147,12 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
     if (_detached) {
       return;
     }
-    _handlePointerFromSession(input, token: _token);
-    _pointerTracker.discardPointer(pointerId);
-    _syncPendingFlushTimer(referenceTimestampMs: referenceTimestampMs);
+    try {
+      _handlePointerFromSession(input, token: _token);
+    } finally {
+      _pointerTracker.discardPointer(pointerId);
+      _syncPendingFlushTimer(referenceTimestampMs: referenceTimestampMs);
+    }
   }
 
   @override
@@ -197,6 +208,11 @@ final class SceneControllerPointerSession implements SceneViewPointerSession {
         token: _token,
       );
     }
+  }
+
+  bool _isTerminalSample(PointerSample sample) {
+    return sample.phase == PointerPhase.up ||
+        sample.phase == PointerPhase.cancel;
   }
 
   void _syncPendingFlushTimer({required int referenceTimestampMs}) {

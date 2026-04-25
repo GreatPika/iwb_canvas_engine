@@ -29,7 +29,7 @@ app UI, product workflows, or backend logic.
   - `API_GUIDE.md` using `$api-guide-sync`
   - `ARCHITECTURE.md` using `$architecture-sync` when invariants, architecture, or module ownership change
   - `CHANGELOG.md` using `$changelog-sync`
-- Use `$change-contract` when adding a new step to `PLAN.md` or drafting a new step contract.
+- Use `$change-contract` as the canonical step-contract template when adding a new step to `PLAN.md`.
 - Documentation should stay release-ready: concise, current, and free of stale
   implementation detail.
 

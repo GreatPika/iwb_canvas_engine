@@ -40,4 +40,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 21. Scene Commands Canonical Exact Surface And Alias Retirement](plan/step_21_scene_commands_canonical_exact_surface_and_alias_retirement.md)
 - [x] [Step 22. Paint Admission Bounds Source Contract](plan/step_22_paint_admission_bounds_source_contract.md)
 - [x] [Step 23. Effective Public Namespace And Signature Proof Unification](plan/step_23_effective_public_namespace_and_signature_proof_unification.md)
-- [ ] [Step 24. Exception-Safe Pointer Terminal Lifecycle](plan/step_24_exception_safe_pointer_terminal_lifecycle.md)
+- [x] [Step 24. Exception-Safe Pointer Terminal Lifecycle](plan/step_24_exception_safe_pointer_terminal_lifecycle.md)

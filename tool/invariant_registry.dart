@@ -815,7 +815,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE',
     scope: 'view-runtime',
     title:
-        'SceneView pointer-slot allocator releases slots on up/cancel and reuses the minimum free slot id',
+        'SceneView pointer-slot allocator releases slots on up/cancel, including terminal dispatch exceptions, and reuses the minimum free slot id',
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path: 'test/view/scene_view_pointer_router_test.dart',
@@ -839,7 +839,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY',
     scope: 'view-runtime',
     title:
-        'SceneView keeps pointer-settings live-apply behavior on the same controller without re-owning tracker/pending-setting state in the host shell',
+        'SceneView keeps pointer-settings live-apply behavior on the same controller, including idle terminal release after dispatch exceptions, without re-owning tracker/pending-setting state in the host shell',
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path: 'test/view/scene_view_interactive_test.dart',
@@ -851,7 +851,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE',
     scope: 'engine-runtime',
     title:
-        'interactive runtime owns live pointer-session epoch reset and disposal deactivation, while same-session tap tracking remains session-local and late routed callbacks after owner disposal become local no-ops',
+        'interactive runtime owns live pointer-session epoch reset and disposal deactivation, while same-session tap tracking remains session-local and terminal cleanup stays exception-safe across the view host/session boundary',
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path:

@@ -485,7 +485,7 @@ effects even when downstream interactive terminal dispatch throws.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Reproduce Throwing Terminal Cleanup Gap
+### Slice 1. [x] Reproduce Throwing Terminal Cleanup Gap
 
 #### Slice Contract
 
@@ -529,8 +529,12 @@ checked-in host path.
 #### Closure Evidence
 
 - the new reproducer fails on the checked-in implementation before the fix
+- `flutter test test/view/scene_view_interactive_test.dart` failed before the
+  host fix because terminal dispatch exceptions left live raw pointer count at
+  `1`, reused pointer slot id `2`, and skipped idle-gated pointer-settings
+  release side effects
 
-### Slice 2. [ ] Harden Host-Level Terminal Cleanup
+### Slice 2. [x] Harden Host-Level Terminal Cleanup
 
 #### Slice Contract
 
@@ -574,8 +578,10 @@ Fix the root cause at the host owner so terminal cleanup executes from
 
 - slice 1 tests turn green with only owner-side host changes unless session-
   local cleanup still proves inconsistent
+- `flutter test test/view/scene_view_interactive_test.dart` passed after the
+  host-level `finally` fix, so no runtime seam change was required
 
-### Slice 3. [ ] Update Lifecycle Invariant And Release Proof
+### Slice 3. [x] Update Lifecycle Invariant And Release Proof
 
 #### Slice Contract
 
@@ -624,8 +630,10 @@ whether session-local cleanup changes were needed.
 
 - invariant registry, changelog, and any needed structural proof are updated in
   the same change as the landed behavior fix
+- `tool/invariant_registry.dart` now names exception-safe terminal cleanup,
+  and `CHANGELOG.md` records the observable `SceneViewInteractive` fix
 
-### Slice 4. [ ] Align Session Local Terminal State If Host Fix Is Insufficient
+### Slice 4. [x] Align Session Local Terminal State If Host Fix Is Insufficient
 
 #### Slice Contract
 
@@ -666,6 +674,9 @@ preserving the same accepted seam and proof shape.
 
 - session-local cleanup is added only if slice 2 plus slice 3 still leave the
   exercised terminal failure path inconsistent
+- `SceneControllerPointerSession` now discards session-local tracker state and
+  resyncs pending tap timers when terminal forwarding throws, covering the
+  stale tap-history path left after host-owned raw-slot cleanup
 
 ## 11. Final Verification
 

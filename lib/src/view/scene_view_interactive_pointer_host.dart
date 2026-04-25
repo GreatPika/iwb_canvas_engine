@@ -136,6 +136,24 @@ class _SceneViewInteractivePointerRuntime {
       event: event,
       phase: phase,
     );
+    if (_isTerminalPhase(phase)) {
+      try {
+        _pointerSession.handleRoutedSample(
+          sample,
+          shouldTrackSignals: _pointerRouter.shouldTrackSignals(
+            pointerId: sample.pointerId,
+            phase: sample.phase,
+          ),
+        );
+      } finally {
+        final release = _pointerRouter.release(event.pointer);
+        _pointerSession.handleRawPointerRelease(
+          isIdleAfterRelease: release.isIdleAfterRelease,
+        );
+      }
+      return;
+    }
+
     _pointerSession.handleRoutedSample(
       sample,
       shouldTrackSignals: _pointerRouter.shouldTrackSignals(
@@ -143,12 +161,6 @@ class _SceneViewInteractivePointerRuntime {
         phase: sample.phase,
       ),
     );
-    if (_isTerminalPhase(phase)) {
-      final release = _pointerRouter.release(event.pointer);
-      _pointerSession.handleRawPointerRelease(
-        isIdleAfterRelease: release.isIdleAfterRelease,
-      );
-    }
   }
 
   void _forwardInvalidTerminalHostEvent(
@@ -168,13 +180,16 @@ class _SceneViewInteractivePointerRuntime {
       _pointerSampleFromEvent(pointerId: pointerId, event: event, phase: phase),
     );
     final release = _pointerRouter.release(event.pointer);
-    _pointerSession.handleInvalidTerminalSample(
-      input: input,
-      pointerId: pointerId,
-      referenceTimestampMs: event.timeStamp.inMilliseconds,
-    );
-    _pointerSession.handleRawPointerRelease(
-      isIdleAfterRelease: release.isIdleAfterRelease,
-    );
+    try {
+      _pointerSession.handleInvalidTerminalSample(
+        input: input,
+        pointerId: pointerId,
+        referenceTimestampMs: event.timeStamp.inMilliseconds,
+      );
+    } finally {
+      _pointerSession.handleRawPointerRelease(
+        isIdleAfterRelease: release.isIdleAfterRelease,
+      );
+    }
   }
 }

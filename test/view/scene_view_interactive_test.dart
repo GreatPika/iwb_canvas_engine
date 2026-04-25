@@ -753,6 +753,345 @@ void main() {
   );
 
   testWidgets(
+    'SceneViewInteractive releases raw pointer after throwing terminal dispatch',
+    (tester) async {
+      // INV:INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE
+      // INV:INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE
+      final runtime = _RecordingSceneViewRuntime(
+        snapshot: _snapshot(text: 'throw-terminal-release'),
+        throwOnTerminalInput: true,
+      );
+      addTearDown(runtime.dispose);
+
+      await tester.pumpWidget(_runtimeHost(runtime));
+      await tester.pump();
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8301,
+          position: Offset(16, 16),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+
+      expect(
+        () => _dispatchHostPointerEvent(
+          tester,
+          const PointerUpEvent(
+            pointer: 8301,
+            position: Offset(16, 16),
+            kind: PointerDeviceKind.touch,
+          ),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'terminal dispatch failed',
+          ),
+        ),
+      );
+
+      expect(
+        debugSceneViewInteractiveLiveRawPointerCountOf(
+          _sceneViewRuntimeHostContext(tester),
+        ),
+        0,
+      );
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive reuses pointer slot after throwing terminal release',
+    (tester) async {
+      // INV:INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE
+      final runtime = _RecordingSceneViewRuntime(
+        snapshot: _snapshot(text: 'throw-terminal-slot-reuse'),
+        throwOnTerminalInput: true,
+      );
+      addTearDown(runtime.dispose);
+
+      await tester.pumpWidget(_runtimeHost(runtime));
+      await tester.pump();
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8311,
+          position: Offset(16, 16),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      expect(
+        () => _dispatchHostPointerEvent(
+          tester,
+          const PointerCancelEvent(
+            pointer: 8311,
+            position: Offset(16, 16),
+            kind: PointerDeviceKind.touch,
+          ),
+        ),
+        throwsStateError,
+      );
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8312,
+          position: Offset(18, 18),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+
+      expect(
+        runtime.recordedInputs
+            .map((input) => (input.pointerId, input.phase))
+            .toList(),
+        <(int, CanvasPointerPhase)>[
+          (1, CanvasPointerPhase.down),
+          (1, CanvasPointerPhase.cancel),
+          (1, CanvasPointerPhase.down),
+        ],
+      );
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive applies pending pointer settings after throwing terminal release',
+    (tester) async {
+      // INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
+      final runtime = _RecordingSceneViewRuntime(
+        snapshot: _snapshot(text: 'throw-terminal-settings'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+        throwOnTerminalInput: true,
+        remainingTerminalInputThrows: 1,
+      );
+      addTearDown(runtime.dispose);
+
+      await tester.pumpWidget(_runtimeHost(runtime));
+      await tester.pump();
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8321,
+          position: Offset(10, 10),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      runtime.updatePointerSettings(
+        const PointerInputSettings(doubleTapMaxDelayMs: 1),
+      );
+      await tester.pump();
+
+      expect(
+        () => _dispatchHostPointerEvent(
+          tester,
+          const PointerUpEvent(
+            pointer: 8321,
+            position: Offset(10, 10),
+            kind: PointerDeviceKind.touch,
+          ),
+        ),
+        throwsStateError,
+      );
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8322,
+          position: Offset(12, 12),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerUpEvent(
+          pointer: 8322,
+          position: Offset(12, 12),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 20));
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8323,
+          position: Offset(12, 12),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerUpEvent(
+          pointer: 8323,
+          position: Offset(12, 12),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+
+      expect(runtime.recordedDoubleTaps, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive applies pending pointer settings after throwing invalid terminal release',
+    (tester) async {
+      // INV:INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY
+      final runtime = _RecordingSceneViewRuntime(
+        snapshot: _snapshot(text: 'throw-invalid-terminal-settings'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+        throwOnTerminalInput: true,
+        remainingTerminalInputThrows: 1,
+      );
+      addTearDown(runtime.dispose);
+
+      await tester.pumpWidget(_runtimeHost(runtime));
+      await tester.pump();
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8331,
+          position: Offset(10, 10),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      runtime.updatePointerSettings(
+        const PointerInputSettings(doubleTapMaxDelayMs: 1),
+      );
+      await tester.pump();
+
+      expect(
+        () => _dispatchHostPointerEvent(
+          tester,
+          const PointerUpEvent(
+            pointer: 8331,
+            position: Offset(double.nan, 10),
+            kind: PointerDeviceKind.touch,
+          ),
+        ),
+        throwsStateError,
+      );
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8332,
+          position: Offset(12, 12),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerUpEvent(
+          pointer: 8332,
+          position: Offset(12, 12),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 20));
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8333,
+          position: Offset(12, 12),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerUpEvent(
+          pointer: 8333,
+          position: Offset(12, 12),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+
+      expect(runtime.recordedDoubleTaps, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'SceneViewInteractive clears session tap state after throwing terminal release',
+    (tester) async {
+      // INV:INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE
+      final runtime = _RecordingSceneViewRuntime(
+        snapshot: _snapshot(text: 'throw-terminal-session-state'),
+        pointerSettings: const PointerInputSettings(doubleTapMaxDelayMs: 300),
+      );
+      addTearDown(runtime.dispose);
+
+      await tester.pumpWidget(_runtimeHost(runtime));
+      await tester.pump();
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8341,
+          position: Offset(12, 12),
+          timeStamp: Duration.zero,
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerUpEvent(
+          pointer: 8341,
+          position: Offset(12, 12),
+          timeStamp: Duration.zero,
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+
+      runtime.throwOnNextTerminalInputs(1);
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8342,
+          position: Offset(12, 12),
+          timeStamp: Duration(milliseconds: 20),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      expect(
+        () => _dispatchHostPointerEvent(
+          tester,
+          const PointerUpEvent(
+            pointer: 8342,
+            position: Offset(12, 12),
+            timeStamp: Duration(milliseconds: 20),
+            kind: PointerDeviceKind.touch,
+          ),
+        ),
+        throwsStateError,
+      );
+
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerDownEvent(
+          pointer: 8343,
+          position: Offset(12, 12),
+          timeStamp: Duration(milliseconds: 40),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+      _dispatchHostPointerEvent(
+        tester,
+        const PointerUpEvent(
+          pointer: 8343,
+          position: Offset(12, 12),
+          timeStamp: Duration(milliseconds: 40),
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+
+      expect(runtime.recordedDoubleTaps, isEmpty);
+    },
+  );
+
+  testWidgets(
     'SceneViewInteractive cancels stale pending tap timer on controller swap',
     (tester) async {
       final runtimeA = _RecordingSceneViewRuntime(
@@ -2362,15 +2701,25 @@ class _RecordingSceneViewRuntime implements SceneViewRuntime {
   _RecordingSceneViewRuntime({
     required SceneSnapshot snapshot,
     PointerInputSettings pointerSettings = const PointerInputSettings(),
+    this.throwOnTerminalInput = false,
+    int? remainingTerminalInputThrows,
   }) : _renderState = _StaticSceneViewReadState(snapshot),
-       _pointerSettings = pointerSettings;
+       _pointerSettings = pointerSettings,
+       _remainingTerminalInputThrows = remainingTerminalInputThrows;
 
   final ChangeNotifier _ownerListenable = ChangeNotifier();
   final _StaticSceneViewReadState _renderState;
   final List<CanvasPointerInput> recordedInputs = <CanvasPointerInput>[];
   final List<(Offset position, int? timestampMs)> recordedDoubleTaps =
       <(Offset position, int? timestampMs)>[];
+  bool throwOnTerminalInput;
   PointerInputSettings _pointerSettings;
+  int? _remainingTerminalInputThrows;
+
+  void throwOnNextTerminalInputs(int count) {
+    throwOnTerminalInput = true;
+    _remainingTerminalInputThrows = count;
+  }
 
   void updatePointerSettings(PointerInputSettings value) {
     _pointerSettings = value;
@@ -2404,6 +2753,10 @@ class _RecordingSceneViewRuntime implements SceneViewRuntime {
         handlePointerFromSession:
             (CanvasPointerInput input, {required PointerSessionToken token}) {
               recordedInputs.add(input);
+              if (throwOnTerminalInput &&
+                  _shouldThrowForTerminalInput(input.phase)) {
+                throw StateError('terminal dispatch failed');
+              }
             },
         handleDoubleTapFromSession:
             ({
@@ -2415,6 +2768,21 @@ class _RecordingSceneViewRuntime implements SceneViewRuntime {
             },
       ),
     );
+  }
+
+  bool _shouldThrowForTerminalInput(CanvasPointerPhase phase) {
+    if (phase != CanvasPointerPhase.up && phase != CanvasPointerPhase.cancel) {
+      return false;
+    }
+    final remaining = _remainingTerminalInputThrows;
+    if (remaining == null) {
+      return true;
+    }
+    if (remaining <= 0) {
+      return false;
+    }
+    _remainingTerminalInputThrows = remaining - 1;
+    return true;
   }
 }
 
