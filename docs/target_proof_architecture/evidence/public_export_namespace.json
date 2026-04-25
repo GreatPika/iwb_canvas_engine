@@ -1,0 +1,1029 @@
+{
+  "entrypoint": "/lib/iwb_canvas_engine.dart",
+  "directExports": [
+    {
+      "directive": "export 'src/contract/node_patch.dart';",
+      "targets": [
+        "/lib/src/contract/node_patch.dart"
+      ],
+      "filters": []
+    },
+    {
+      "directive": "export 'src/contract/node_spec.dart';",
+      "targets": [
+        "/lib/src/contract/node_spec.dart"
+      ],
+      "filters": []
+    },
+    {
+      "directive": "export 'src/contract/patch_field.dart';",
+      "targets": [
+        "/lib/src/contract/patch_field.dart"
+      ],
+      "filters": []
+    },
+    {
+      "directive": "export 'src/contract/canvas_pointer_input.dart';",
+      "targets": [
+        "/lib/src/contract/canvas_pointer_input.dart"
+      ],
+      "filters": []
+    },
+    {
+      "directive": "export 'src/model/scene_builder_api.dart';",
+      "targets": [
+        "/lib/src/model/scene_builder_api.dart"
+      ],
+      "filters": []
+    },
+    {
+      "directive": "export 'src/contract/scene_data_exception.dart';",
+      "targets": [
+        "/lib/src/contract/scene_data_exception.dart"
+      ],
+      "filters": []
+    },
+    {
+      "directive": "export 'src/contract/scene_render_state.dart';",
+      "targets": [
+        "/lib/src/contract/scene_render_state.dart"
+      ],
+      "filters": []
+    },
+    {
+      "directive": "export 'src/contract/scene_write_txn.dart';",
+      "targets": [
+        "/lib/src/contract/scene_write_txn.dart"
+      ],
+      "filters": []
+    },
+    {
+      "directive": "export 'src/contract/snapshot.dart';",
+      "targets": [
+        "/lib/src/contract/snapshot.dart"
+      ],
+      "filters": []
+    },
+    {
+      "directive": "export 'src/contract/validated.dart';",
+      "targets": [
+        "/lib/src/contract/validated.dart"
+      ],
+      "filters": []
+    },
+    {
+      "directive": "export 'src/core/action_events.dart' show ActionCommitted, ActionCommittedDelta, ActionType, EditTextRequested;",
+      "targets": [
+        "/lib/src/core/action_events.dart"
+      ],
+      "filters": [
+        {
+          "kind": "show",
+          "names": [
+            "ActionCommitted",
+            "ActionCommittedDelta",
+            "ActionType",
+            "EditTextRequested"
+          ]
+        }
+      ]
+    },
+    {
+      "directive": "export 'src/core/interaction_types.dart' show CanvasMode, DrawTool;",
+      "targets": [
+        "/lib/src/core/interaction_types.dart"
+      ],
+      "filters": [
+        {
+          "kind": "show",
+          "names": [
+            "CanvasMode",
+            "DrawTool"
+          ]
+        }
+      ]
+    },
+    {
+      "directive": "export 'src/contract/pointer_input.dart' show PointerInputSettings;",
+      "targets": [
+        "/lib/src/contract/pointer_input.dart"
+      ],
+      "filters": [
+        {
+          "kind": "show",
+          "names": [
+            "PointerInputSettings"
+          ]
+        }
+      ]
+    },
+    {
+      "directive": "export 'src/contract/transform2d.dart' show Transform2D;",
+      "targets": [
+        "/lib/src/contract/transform2d.dart"
+      ],
+      "filters": [
+        {
+          "kind": "show",
+          "names": [
+            "Transform2D"
+          ]
+        }
+      ]
+    },
+    {
+      "directive": "export 'src/interactive/scene_controller.dart' show SceneController;",
+      "targets": [
+        "/lib/src/interactive/scene_controller.dart"
+      ],
+      "filters": [
+        {
+          "kind": "show",
+          "names": [
+            "SceneController"
+          ]
+        }
+      ]
+    },
+    {
+      "directive": "export 'src/interactive/scene_controller_interaction.dart' show MoveCommitDeltaRequest, MoveCommitDeltaResolver, SceneControllerInteraction;",
+      "targets": [
+        "/lib/src/interactive/scene_controller_interaction.dart"
+      ],
+      "filters": [
+        {
+          "kind": "show",
+          "names": [
+            "MoveCommitDeltaRequest",
+            "MoveCommitDeltaResolver",
+            "SceneControllerInteraction"
+          ]
+        }
+      ]
+    },
+    {
+      "directive": "export 'src/interactive/scene_controller_selection.dart' show SceneControllerSelection;",
+      "targets": [
+        "/lib/src/interactive/scene_controller_selection.dart"
+      ],
+      "filters": [
+        {
+          "kind": "show",
+          "names": [
+            "SceneControllerSelection"
+          ]
+        }
+      ]
+    },
+    {
+      "directive": "export 'src/interactive/scene_controller_scene.dart' show SceneControllerScene;",
+      "targets": [
+        "/lib/src/interactive/scene_controller_scene.dart"
+      ],
+      "filters": [
+        {
+          "kind": "show",
+          "names": [
+            "SceneControllerScene"
+          ]
+        }
+      ]
+    },
+    {
+      "directive": "export 'src/view/scene_view_interactive.dart' show SceneView, SceneViewInteractive;",
+      "targets": [
+        "/lib/src/view/scene_view_interactive.dart"
+      ],
+      "filters": [
+        {
+          "kind": "show",
+          "names": [
+            "SceneView",
+            "SceneViewInteractive"
+          ]
+        }
+      ]
+    },
+    {
+      "directive": "export 'src/serialization/scene_codec.dart' show decodeScene, decodeSceneFromJson, encodeScene, encodeSceneToJson, schemaVersionWrite, schemaVersionsRead;",
+      "targets": [
+        "/lib/src/serialization/scene_codec.dart"
+      ],
+      "filters": [
+        {
+          "kind": "show",
+          "names": [
+            "decodeScene",
+            "decodeSceneFromJson",
+            "encodeScene",
+            "encodeSceneToJson",
+            "schemaVersionWrite",
+            "schemaVersionsRead"
+          ]
+        }
+      ]
+    }
+  ],
+  "directExportTargets": [
+    "/lib/src/contract/canvas_pointer_input.dart",
+    "/lib/src/contract/node_patch.dart",
+    "/lib/src/contract/node_spec.dart",
+    "/lib/src/contract/patch_field.dart",
+    "/lib/src/contract/pointer_input.dart",
+    "/lib/src/contract/scene_data_exception.dart",
+    "/lib/src/contract/scene_render_state.dart",
+    "/lib/src/contract/scene_write_txn.dart",
+    "/lib/src/contract/snapshot.dart",
+    "/lib/src/contract/transform2d.dart",
+    "/lib/src/contract/validated.dart",
+    "/lib/src/core/action_events.dart",
+    "/lib/src/core/interaction_types.dart",
+    "/lib/src/interactive/scene_controller.dart",
+    "/lib/src/interactive/scene_controller_interaction.dart",
+    "/lib/src/interactive/scene_controller_scene.dart",
+    "/lib/src/interactive/scene_controller_selection.dart",
+    "/lib/src/model/scene_builder_api.dart",
+    "/lib/src/serialization/scene_codec.dart",
+    "/lib/src/view/scene_view_interactive.dart"
+  ],
+  "directTargetOwnerPaths": [
+    {
+      "target": "/lib/src/contract/canvas_pointer_input.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/contract/canvas_pointer_input.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/contract/node_patch.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/contract/node_patch.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/contract/node_spec.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/contract/node_spec.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/contract/patch_field.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/contract/patch_field.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/contract/pointer_input.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/contract/pointer_input.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/contract/scene_data_exception.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/contract/scene_data_exception.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/contract/scene_render_state.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/contract/scene_render_state.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/contract/scene_write_txn.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/contract/scene_write_txn.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/contract/snapshot.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/contract/ids.dart",
+        "/lib/src/contract/path_fill_rule.dart",
+        "/lib/src/contract/snapshot.dart"
+      ],
+      "transitiveOwnerPaths": [
+        "/lib/src/contract/ids.dart",
+        "/lib/src/contract/path_fill_rule.dart"
+      ]
+    },
+    {
+      "target": "/lib/src/contract/transform2d.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/contract/transform2d.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/contract/validated.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/contract/validated/finite_offset_value.dart",
+        "/lib/src/contract/validated/font_family_value.dart",
+        "/lib/src/contract/validated/image_id_value.dart",
+        "/lib/src/contract/validated/instance_revision_value.dart",
+        "/lib/src/contract/validated/layer_id_value.dart",
+        "/lib/src/contract/validated/node_id_value.dart",
+        "/lib/src/contract/validated/non_negative_finite_double_value.dart",
+        "/lib/src/contract/validated/opacity_value.dart",
+        "/lib/src/contract/validated/positive_finite_double_value.dart",
+        "/lib/src/contract/validated/svg_path_data_value.dart",
+        "/lib/src/contract/validated/text_content_value.dart"
+      ],
+      "transitiveOwnerPaths": [
+        "/lib/src/contract/validated/finite_offset_value.dart",
+        "/lib/src/contract/validated/font_family_value.dart",
+        "/lib/src/contract/validated/image_id_value.dart",
+        "/lib/src/contract/validated/instance_revision_value.dart",
+        "/lib/src/contract/validated/layer_id_value.dart",
+        "/lib/src/contract/validated/node_id_value.dart",
+        "/lib/src/contract/validated/non_negative_finite_double_value.dart",
+        "/lib/src/contract/validated/opacity_value.dart",
+        "/lib/src/contract/validated/positive_finite_double_value.dart",
+        "/lib/src/contract/validated/svg_path_data_value.dart",
+        "/lib/src/contract/validated/text_content_value.dart"
+      ]
+    },
+    {
+      "target": "/lib/src/core/action_events.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/core/action_events.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/core/interaction_types.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/core/interaction_types.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/interactive/scene_controller.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/interactive/scene_controller.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/interactive/scene_controller_interaction.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/interactive/scene_controller_interaction.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/interactive/scene_controller_scene.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/interactive/scene_controller_scene.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/interactive/scene_controller_selection.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/interactive/scene_controller_selection.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/model/scene_builder_api.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/model/scene_builder_api.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/serialization/scene_codec.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/serialization/scene_codec.dart"
+      ],
+      "transitiveOwnerPaths": []
+    },
+    {
+      "target": "/lib/src/view/scene_view_interactive.dart",
+      "visibleOwnerPaths": [
+        "/lib/src/view/scene_view_interactive.dart"
+      ],
+      "transitiveOwnerPaths": []
+    }
+  ],
+  "effectiveOwnerPaths": [
+    "/lib/src/contract/canvas_pointer_input.dart",
+    "/lib/src/contract/ids.dart",
+    "/lib/src/contract/node_patch.dart",
+    "/lib/src/contract/node_spec.dart",
+    "/lib/src/contract/patch_field.dart",
+    "/lib/src/contract/path_fill_rule.dart",
+    "/lib/src/contract/pointer_input.dart",
+    "/lib/src/contract/scene_data_exception.dart",
+    "/lib/src/contract/scene_render_state.dart",
+    "/lib/src/contract/scene_write_txn.dart",
+    "/lib/src/contract/snapshot.dart",
+    "/lib/src/contract/transform2d.dart",
+    "/lib/src/contract/validated/finite_offset_value.dart",
+    "/lib/src/contract/validated/font_family_value.dart",
+    "/lib/src/contract/validated/image_id_value.dart",
+    "/lib/src/contract/validated/instance_revision_value.dart",
+    "/lib/src/contract/validated/layer_id_value.dart",
+    "/lib/src/contract/validated/node_id_value.dart",
+    "/lib/src/contract/validated/non_negative_finite_double_value.dart",
+    "/lib/src/contract/validated/opacity_value.dart",
+    "/lib/src/contract/validated/positive_finite_double_value.dart",
+    "/lib/src/contract/validated/svg_path_data_value.dart",
+    "/lib/src/contract/validated/text_content_value.dart",
+    "/lib/src/core/action_events.dart",
+    "/lib/src/core/interaction_types.dart",
+    "/lib/src/interactive/scene_controller.dart",
+    "/lib/src/interactive/scene_controller_interaction.dart",
+    "/lib/src/interactive/scene_controller_scene.dart",
+    "/lib/src/interactive/scene_controller_selection.dart",
+    "/lib/src/model/scene_builder_api.dart",
+    "/lib/src/serialization/scene_codec.dart",
+    "/lib/src/view/scene_view_interactive.dart"
+  ],
+  "transitiveOwnerPaths": [
+    "/lib/src/contract/ids.dart",
+    "/lib/src/contract/path_fill_rule.dart",
+    "/lib/src/contract/validated/finite_offset_value.dart",
+    "/lib/src/contract/validated/font_family_value.dart",
+    "/lib/src/contract/validated/image_id_value.dart",
+    "/lib/src/contract/validated/instance_revision_value.dart",
+    "/lib/src/contract/validated/layer_id_value.dart",
+    "/lib/src/contract/validated/node_id_value.dart",
+    "/lib/src/contract/validated/non_negative_finite_double_value.dart",
+    "/lib/src/contract/validated/opacity_value.dart",
+    "/lib/src/contract/validated/positive_finite_double_value.dart",
+    "/lib/src/contract/validated/svg_path_data_value.dart",
+    "/lib/src/contract/validated/text_content_value.dart"
+  ],
+  "effectiveSymbols": [
+    {
+      "name": "ActionCommitted",
+      "kind": "class",
+      "ownerPath": "/lib/src/core/action_events.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "ActionCommittedDelta",
+      "kind": "extension",
+      "ownerPath": "/lib/src/core/action_events.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "ActionType",
+      "kind": "enum",
+      "ownerPath": "/lib/src/core/action_events.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "BackgroundLayerSnapshot",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/snapshot.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "BackgroundSnapshot",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/snapshot.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "CameraSnapshot",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/snapshot.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "CanvasMode",
+      "kind": "enum",
+      "ownerPath": "/lib/src/core/interaction_types.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "CanvasPointerInput",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/canvas_pointer_input.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "CanvasPointerPhase",
+      "kind": "enum",
+      "ownerPath": "/lib/src/contract/canvas_pointer_input.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "ClearSceneResult",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/scene_write_txn.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "CommonNodePatch",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_patch.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "ContentLayerSnapshot",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/snapshot.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "DrawTool",
+      "kind": "enum",
+      "ownerPath": "/lib/src/core/interaction_types.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "EditTextRequested",
+      "kind": "class",
+      "ownerPath": "/lib/src/core/action_events.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "FiniteOffsetValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/finite_offset_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "FontFamilyValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/font_family_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "GridSnapshot",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/snapshot.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "ImageIdValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/image_id_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "ImageNodePatch",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_patch.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "ImageNodeSnapshot",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/snapshot.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "ImageNodeSpec",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_spec.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "InstanceRevisionValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/instance_revision_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "LayerId",
+      "kind": "type alias",
+      "ownerPath": "/lib/src/contract/ids.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "LayerIdValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/layer_id_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "LineNodePatch",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_patch.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "LineNodeSnapshot",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/snapshot.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "LineNodeSpec",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_spec.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "MoveCommitDeltaRequest",
+      "kind": "class",
+      "ownerPath": "/lib/src/interactive/scene_controller_interaction.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "MoveCommitDeltaResolver",
+      "kind": "type alias",
+      "ownerPath": "/lib/src/interactive/scene_controller_interaction.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "NodeId",
+      "kind": "type alias",
+      "ownerPath": "/lib/src/contract/ids.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "NodeIdValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/node_id_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "NodePatch",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_patch.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "NodeSnapshot",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/snapshot.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "NodeSpec",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_spec.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "NonNegativeFiniteDoubleValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/non_negative_finite_double_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "OpacityValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/opacity_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "PatchField",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/patch_field.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "PatchFieldState",
+      "kind": "enum",
+      "ownerPath": "/lib/src/contract/patch_field.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "PathFillRule",
+      "kind": "enum",
+      "ownerPath": "/lib/src/contract/path_fill_rule.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "PathNodePatch",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_patch.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "PathNodeSnapshot",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/snapshot.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "PathNodeSpec",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_spec.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "PointerInputSettings",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/pointer_input.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "PositiveFiniteDoubleValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/positive_finite_double_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "RectNodePatch",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_patch.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "RectNodeSnapshot",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/snapshot.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "RectNodeSpec",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_spec.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "SceneBuilder",
+      "kind": "class",
+      "ownerPath": "/lib/src/model/scene_builder_api.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "SceneController",
+      "kind": "class",
+      "ownerPath": "/lib/src/interactive/scene_controller.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "SceneControllerInteraction",
+      "kind": "class",
+      "ownerPath": "/lib/src/interactive/scene_controller_interaction.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "SceneControllerScene",
+      "kind": "class",
+      "ownerPath": "/lib/src/interactive/scene_controller_scene.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "SceneControllerSelection",
+      "kind": "class",
+      "ownerPath": "/lib/src/interactive/scene_controller_selection.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "SceneDataErrorCode",
+      "kind": "enum",
+      "ownerPath": "/lib/src/contract/scene_data_exception.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "SceneDataException",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/scene_data_exception.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "ScenePaletteSnapshot",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/snapshot.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "SceneRenderState",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/scene_render_state.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "SceneSnapshot",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/snapshot.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "SceneView",
+      "kind": "type alias",
+      "ownerPath": "/lib/src/view/scene_view_interactive.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "SceneViewInteractive",
+      "kind": "class",
+      "ownerPath": "/lib/src/view/scene_view_interactive.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "SceneWriteTxn",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/scene_write_txn.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "StrokeNodePatch",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_patch.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "StrokeNodeSnapshot",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/snapshot.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "StrokeNodeSpec",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_spec.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "SvgPathDataValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/svg_path_data_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "TextContentValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/text_content_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "TextNodePatch",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_patch.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "TextNodeSnapshot",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/snapshot.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "TextNodeSpec",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/node_spec.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "Transform2D",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/transform2d.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "decodeScene",
+      "kind": "function",
+      "ownerPath": "/lib/src/serialization/scene_codec.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "decodeSceneFromJson",
+      "kind": "function",
+      "ownerPath": "/lib/src/serialization/scene_codec.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "encodeScene",
+      "kind": "function",
+      "ownerPath": "/lib/src/serialization/scene_codec.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "encodeSceneToJson",
+      "kind": "function",
+      "ownerPath": "/lib/src/serialization/scene_codec.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "parseLayerId",
+      "kind": "function",
+      "ownerPath": "/lib/src/contract/ids.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "parseNodeId",
+      "kind": "function",
+      "ownerPath": "/lib/src/contract/ids.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "schemaVersionWrite",
+      "kind": "getter",
+      "ownerPath": "/lib/src/serialization/scene_codec.dart",
+      "directlyExportedOwner": true
+    },
+    {
+      "name": "schemaVersionsRead",
+      "kind": "getter",
+      "ownerPath": "/lib/src/serialization/scene_codec.dart",
+      "directlyExportedOwner": true
+    }
+  ],
+  "transitivelyExportedSymbols": [
+    {
+      "name": "FiniteOffsetValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/finite_offset_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "FontFamilyValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/font_family_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "ImageIdValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/image_id_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "InstanceRevisionValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/instance_revision_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "LayerId",
+      "kind": "type alias",
+      "ownerPath": "/lib/src/contract/ids.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "LayerIdValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/layer_id_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "NodeId",
+      "kind": "type alias",
+      "ownerPath": "/lib/src/contract/ids.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "NodeIdValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/node_id_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "NonNegativeFiniteDoubleValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/non_negative_finite_double_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "OpacityValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/opacity_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "PathFillRule",
+      "kind": "enum",
+      "ownerPath": "/lib/src/contract/path_fill_rule.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "PositiveFiniteDoubleValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/positive_finite_double_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "SvgPathDataValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/svg_path_data_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "TextContentValue",
+      "kind": "class",
+      "ownerPath": "/lib/src/contract/validated/text_content_value.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "parseLayerId",
+      "kind": "function",
+      "ownerPath": "/lib/src/contract/ids.dart",
+      "directlyExportedOwner": false
+    },
+    {
+      "name": "parseNodeId",
+      "kind": "function",
+      "ownerPath": "/lib/src/contract/ids.dart",
+      "directlyExportedOwner": false
+    }
+  ]
+}
