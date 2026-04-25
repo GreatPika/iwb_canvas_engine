@@ -223,7 +223,7 @@ GuardrailViolation? _sceneStoreControllerViewRenderStateViolation({
 }
 
 GuardrailViolation? _controllerSymbolOccurrenceViolation({
-  required ControllerSymbolOccurrence? occurrence,
+  required _ControllerSymbolOccurrence? occurrence,
   required ParsedUnitResult parsed,
   required String filePosixPath,
   required String message,
@@ -1135,8 +1135,8 @@ Never _onParseFailure({
   );
 }
 
-class ControllerSymbolOccurrence {
-  const ControllerSymbolOccurrence({required this.name, required this.offset});
+final class _ControllerSymbolOccurrence {
+  const _ControllerSymbolOccurrence({required this.name, required this.offset});
 
   final String name;
   final int offset;
@@ -1149,7 +1149,7 @@ final class _ControllerFileInspection {
   });
 
   final bool hasControllerEpoch;
-  final ControllerSymbolOccurrence? sceneViewRenderStateImport;
+  final _ControllerSymbolOccurrence? sceneViewRenderStateImport;
 }
 
 _ControllerFileInspection _inspectControllerFile(ParsedUnitResult parsed) {
@@ -1163,7 +1163,7 @@ _ControllerFileInspection _inspectControllerFile(ParsedUnitResult parsed) {
 
 final class _ControllerSyntaxCollector extends RecursiveAstVisitor<void> {
   bool hasControllerEpoch = false;
-  ControllerSymbolOccurrence? sceneViewRenderStateImport;
+  _ControllerSymbolOccurrence? sceneViewRenderStateImport;
 
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
@@ -1177,7 +1177,7 @@ final class _ControllerSyntaxCollector extends RecursiveAstVisitor<void> {
   void visitImportDirective(ImportDirective node) {
     final uri = node.uri.stringValue;
     if (uri != null && uri.endsWith('scene_view_render_state.dart')) {
-      sceneViewRenderStateImport = ControllerSymbolOccurrence(
+      sceneViewRenderStateImport = _ControllerSymbolOccurrence(
         name: uri,
         offset: node.uri.offset,
       );

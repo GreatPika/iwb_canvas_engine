@@ -252,32 +252,32 @@ GuardrailViolation? _validateEnsureCall({
       : null;
 }
 
-final class CapabilityGuardSpec {
-  const CapabilityGuardSpec({
+final class _CapabilityGuardSpec {
+  const _CapabilityGuardSpec({
     required this.relativePath,
     required this.className,
     required this.primaryGuardCall,
-    this.secondaryGuardCallsByMethod = const <String, String>{},
   });
 
   final String relativePath;
   final String className;
   final String primaryGuardCall;
-  final Map<String, String> secondaryGuardCallsByMethod;
+  final Map<String, String> secondaryGuardCallsByMethod =
+      const <String, String>{};
 }
 
-const List<CapabilityGuardSpec> _capabilityGuardSpecs = <CapabilityGuardSpec>[
-  CapabilityGuardSpec(
+const List<_CapabilityGuardSpec> _capabilityGuardSpecs = <_CapabilityGuardSpec>[
+  _CapabilityGuardSpec(
     relativePath: 'scene_controller_interaction.dart',
     className: 'SceneControllerInteractionOwner',
     primaryGuardCall: '_runtime.ensurePublicSideEffectAllowed',
   ),
-  CapabilityGuardSpec(
+  _CapabilityGuardSpec(
     relativePath: 'scene_controller_scene.dart',
     className: 'SceneControllerSceneOwner',
     primaryGuardCall: '_runtime.ensurePublicSideEffectAllowed',
   ),
-  CapabilityGuardSpec(
+  _CapabilityGuardSpec(
     relativePath: 'scene_controller_selection.dart',
     className: 'SceneControllerSelectionOwner',
     primaryGuardCall: '_runtime.ensurePublicSideEffectAllowed',
