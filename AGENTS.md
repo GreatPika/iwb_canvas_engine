@@ -12,15 +12,20 @@ app UI, product workflows, or backend logic.
 - `CHANGELOG.md` for released and unreleased user-visible changes.
 - `PLAN.md` for the active roadmap.
 
-## Execution tracking
+## Plan workflow
 
+- `PLAN.md` is the active roadmap and the source of truth for planned work.
+- When adding a new step to `PLAN.md`, use `$change-contract` directly as the
+  canonical step-contract template. Do not infer the required structure from
+  existing plan steps.
+- Follow the step contract as written during implementation. If a step contract
+  conflicts with the current code, guardrails, tests, or repository-local
+  boundary enforcement, stop implementation, report the exact contradiction with
+  file-level evidence, and resolve the contract or enforcement before
+  continuing. Do not silently reinterpret the plan.
 - After completing a plan step, update the corresponding checkbox entries in
-  `PLAN.md` and any linked step document so finished items are
-  marked done in the same change.
-- If a step contract conflicts with the current code, guardrails, tests, or
-  repository-local boundary enforcement, stop implementation, report the exact
-  contradiction with file-level evidence, and resolve the contract or
-  enforcement before continuing. Do not silently reinterpret the plan.
+  `PLAN.md` and any linked step document so finished items are marked done in
+  the same change.
 
 ## Documentation hygiene
 
@@ -29,7 +34,6 @@ app UI, product workflows, or backend logic.
   - `API_GUIDE.md` using `$api-guide-sync`
   - `ARCHITECTURE.md` using `$architecture-sync` when invariants, architecture, or module ownership change
   - `CHANGELOG.md` using `$changelog-sync`
-- Use `$change-contract` as the canonical step-contract template when adding a new step to `PLAN.md`.
 - Documentation should stay release-ready: concise, current, and free of stale
   implementation detail.
 
@@ -41,6 +45,7 @@ app UI, product workflows, or backend logic.
 ## Verification
 
 After any code change, run `dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=<path-or->` and provide every modified, added, renamed, or deleted repository-relative path as one line from that file or from stdin.
+
 - Run targeted tool-test verification only for tool-impacting changes or when
   debugging a tool failure; otherwise rely on the required preset's resolved
   plan.
