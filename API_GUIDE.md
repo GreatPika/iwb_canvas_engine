@@ -511,6 +511,10 @@ Public import/export paths share the same boundary contract:
   `SceneDataException`.
 - `SceneBuilder.buildFromSnapshot(...)`, `encodeScene(...)`, and
   `encodeSceneToJson(...)` validate/canonicalize snapshots before encoding.
+- Unsupported typed snapshot-family subtypes reported by
+  `SceneBuilder.buildFromSnapshot(...)`, `encodeScene(...)`, and
+  `encodeSceneToJson(...)` use the same `SceneDataException.code`, `path`, and
+  `details` contract. They are not reported as JSON transport failures.
 - Aggregate public boundary objects are canonicalized at admission: supported
   carrier-backed nested snapshots and patches are rebuilt as exact public
   contract values, while unsupported boundary subtypes fail before later
@@ -563,7 +567,7 @@ entrypoints keep canonical paths such as `start.x`, `end.y`, and `points[i].x`.
 | `unsupportedSchemaVersion` | The payload schema version is not accepted by this mainline. |
 | `missingField` | A required field is absent. |
 | `invalidFieldType` | A field exists but has the wrong type. |
-| `invalidValue` | A field value violates semantic validation. |
+| `invalidValue` | A field value violates semantic validation, or a typed public boundary value uses an unsupported subtype such as `details['template'] == 'unsupportedBoundarySubtype'`. |
 | `duplicateNodeId` | Duplicate node ids were found in the scene. |
 | `duplicateLayerId` | Duplicate content-layer ids were found in the scene. |
 | `outOfRange` | A numeric or indexed value is outside the accepted range. |

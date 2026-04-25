@@ -42,4 +42,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 23. Effective Public Namespace And Signature Proof Unification](plan/step_23_effective_public_namespace_and_signature_proof_unification.md)
 - [x] [Step 24. Exception-Safe Pointer Terminal Lifecycle](plan/step_24_exception_safe_pointer_terminal_lifecycle.md)
 - [x] [Step 25. Committed Spatial Candidate Structural Revision Contract](plan/step_25_committed_spatial_candidate_structural_revision_contract.md)
-- [ ] [Step 26. Typed Boundary Admission Diagnostic Symmetry](plan/step_26_typed_boundary_admission_diagnostic_symmetry.md)
+- [x] [Step 26. Typed Boundary Admission Diagnostic Symmetry](plan/step_26_typed_boundary_admission_diagnostic_symmetry.md)

@@ -803,7 +803,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-BOUNDARY-HERMETIC-CONCRETE-TYPES',
     scope: 'engine-api',
     title:
-        'public boundary admission canonicalizes supported values to exact built-in contract types and rejects unsupported subtypes before the strict fallback/backing seams, which still reject non-exact boundary runtime types',
+        'public boundary admission admits only exact or carrier-backed top-level snapshots, canonicalizes supported nested values to exact built-in contract types, and rejects unsupported subtypes before the strict fallback/backing seams, which still reject non-exact boundary runtime types',
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path: 'test/contract/validated_fast_path_contract_test.dart',
@@ -1329,10 +1329,14 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-SER-IMPORT-DIAGNOSTIC-SURFACE',
     scope: 'serialization',
     title:
-        'import/build entrypoints select one model-owned diagnostic path surface so JSON line/stroke range failures keep localA/localB/localPoints while typed snapshots keep start/end/points',
+        'import/build entrypoints select one model-owned diagnostic path surface so JSON line/stroke range failures keep localA/localB/localPoints, typed snapshots keep start/end/points, and unsupported typed boundary subtypes are translated before serialization transport wrapping',
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path: 'test/public_api/scene_builder_test.dart',
+        stepId: 'scope_model_contract',
+      ),
+      RequiredProof(
+        path: 'test/serialization/scene_codec_validation_test.dart',
         stepId: 'scope_model_contract',
       ),
       RequiredProof(

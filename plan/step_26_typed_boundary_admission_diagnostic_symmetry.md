@@ -521,7 +521,7 @@ and keeping serialization free of typed-boundary policy.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Lock The Broken Public Contract
+### Slice 1. [x] Lock The Broken Public Contract
 
 #### Slice Contract
 
@@ -564,7 +564,7 @@ change lands.
 - the new reproducer fails before implementation and names the expected stable
   public parity contract
 
-### Slice 2. [ ] Restore Admission Before Draft Conversion
+### Slice 2. [x] Restore Admission Before Draft Conversion
 
 #### Slice Contract
 
@@ -614,7 +614,7 @@ to the stable public `SceneDataException`.
 - builder and encode parity tests pass without changing debug/internal raw seam
   behavior
 
-### Slice 3. [ ] Lock Repository Truth For The Typed Contract
+### Slice 3. [x] Lock Repository Truth For The Typed Contract
 
 #### Slice Contract
 

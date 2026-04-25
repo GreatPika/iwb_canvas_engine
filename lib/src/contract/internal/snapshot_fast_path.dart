@@ -47,6 +47,7 @@ export 'snapshot_materialization.dart'
         textNodeSnapshotFromValidated;
 export 'snapshot_boundary_impl.dart'
     show
+        admitSceneSnapshotAtBoundary,
         backgroundLayerSnapshotBackingOf,
         backgroundSnapshotBackingOf,
         cameraSnapshotBackingOf,
@@ -55,3 +56,5 @@ export 'snapshot_boundary_impl.dart'
         nodeSnapshotBackingOf,
         scenePaletteSnapshotBackingOf,
         sceneSnapshotBackingOf;
+export 'boundary_impl_support.dart'
+    show UnsupportedBoundarySubtypeAdmissionException;

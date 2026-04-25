@@ -438,6 +438,42 @@ void main() {
   );
 
   test(
+    'SceneBuilder.buildFromSnapshot reports unsupported typed scene subtypes as SceneDataException',
+    () {
+      // INV:INV-SER-IMPORT-DIAGNOSTIC-SURFACE
+      final error = _captureSceneDataException(
+        () => SceneBuilder.buildFromSnapshot(_UnsupportedSceneSnapshot()),
+      );
+
+      expect(error.code, SceneDataErrorCode.invalidValue);
+      expect(error.path, isNull);
+      expect(error.details, const <String, Object?>{
+        'template': 'unsupportedBoundarySubtype',
+        'boundaryType': 'SceneSnapshot',
+        'runtimeType': '_UnsupportedSceneSnapshot',
+      });
+    },
+  );
+
+  test(
+    'SceneController initialSnapshot reports unsupported typed scene subtypes as SceneDataException',
+    () {
+      // INV:INV-SER-IMPORT-DIAGNOSTIC-SURFACE
+      final error = _captureSceneDataException(
+        () => SceneController(initialSnapshot: _UnsupportedSceneSnapshot()),
+      );
+
+      expect(error.code, SceneDataErrorCode.invalidValue);
+      expect(error.path, isNull);
+      expect(error.details, const <String, Object?>{
+        'template': 'unsupportedBoundarySubtype',
+        'boundaryType': 'SceneSnapshot',
+        'runtimeType': '_UnsupportedSceneSnapshot',
+      });
+    },
+  );
+
+  test(
     'SceneBuilder.buildFromJson preserves duplicate-id diagnostics of decodeScene',
     () {
       // INV:INV-ENG-SHARED-SCENE-METADATA-CONTRACT
@@ -466,4 +502,8 @@ void main() {
       });
     },
   );
+}
+
+final class _UnsupportedSceneSnapshot extends SceneSnapshot {
+  _UnsupportedSceneSnapshot();
 }

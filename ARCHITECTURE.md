@@ -554,15 +554,19 @@ Typical flow:
 1. boundary data arrives as snapshot, map, or JSON string
 2. the boundary selects the caller-visible import diagnostic surface
 3. the boundary validates shape, values, limits, and schema version
-4. public boundary admission canonicalizes supported nested boundary graphs to
+4. typed snapshot import re-enters contract-owned boundary admission before
+   draft conversion; unsupported typed snapshot-family subtypes are translated
+   by the model gateway to stable `SceneDataException` details, while strict
+   backing seams remain internal backstops
+5. public boundary admission canonicalizes supported nested boundary graphs to
    exact built-in contract values and rejects unsupported subtypes eagerly
-5. the model validation owners apply invariants through the selected path
+6. the model validation owners apply invariants through the selected path
    surface and canonicalize the document shape into a validated
    `SceneImportDraft` proof stage before any draft-to-output materialization
-6. runtime-scene materialization is performed only from
+7. runtime-scene materialization is performed only from
    `ValidatedSceneImportDraft` inside engine-owned paths using validated helper
    seams only; raw snapshots enter through `sceneImportFromSnapshot(...)` only
-7. the supported public result is a canonical `SceneSnapshot`
+8. the supported public result is a canonical `SceneSnapshot`
 
 Diagnostic-path rule:
 
@@ -696,6 +700,9 @@ important for architectural reasoning.
 - import/build diagnostics choose caller-visible path spelling at the boundary,
   and `scene_policy.dart` stays orchestration-only rather than rebuilding late
   node range paths
+- typed unsupported-subtype diagnostics stay model-owned at the public gateway;
+  serialization inherits them through `SceneBuilder.buildFromSnapshot(...)`
+  instead of classifying typed boundary policy itself
 - runtime scene materialization from import drafts must cross one validated
   proof seam (`ValidatedSceneImportDraft`); raw `SceneImportDraft` and raw
   snapshot helpers must not bypass model import policy

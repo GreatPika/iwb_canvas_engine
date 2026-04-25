@@ -549,6 +549,26 @@ void main() {
     },
   );
 
+  test(
+    'ScenePolicy.validateImportSnapshot reports unsupported typed scene subtypes as SceneDataException',
+    () {
+      expect(
+        () => ScenePolicy.validateImportSnapshot(_UnsupportedSceneSnapshot()),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.invalidValue &&
+                e.path == null &&
+                e.details['template'] == 'unsupportedBoundarySubtype' &&
+                e.details['boundaryType'] == 'SceneSnapshot' &&
+                e.details['runtimeType'] == '_UnsupportedSceneSnapshot',
+          ),
+        ),
+      );
+    },
+  );
+
   test('sceneImportFromSnapshot imports through the draft adapter wrapper', () {
     final imported = sceneImportFromSnapshot(
       SceneSnapshot(
@@ -2262,4 +2282,8 @@ void main() {
       ),
     );
   });
+}
+
+final class _UnsupportedSceneSnapshot extends SceneSnapshot {
+  _UnsupportedSceneSnapshot();
 }

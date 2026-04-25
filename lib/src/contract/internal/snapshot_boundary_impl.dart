@@ -150,6 +150,21 @@ GridSnapshotBacking gridSnapshotBackingOf(GridSnapshot value) =>
 NodeSnapshotBacking nodeSnapshotBackingOf(NodeSnapshot snapshot) =>
     _nodeSnapshotBackingResolver.resolve(snapshot);
 
+SceneSnapshot admitSceneSnapshotAtBoundary(SceneSnapshot snapshot) {
+  if (snapshot.runtimeType == SceneSnapshot) {
+    return snapshot;
+  }
+  try {
+    sceneSnapshotBackingOf(snapshot);
+  } on StateError {
+    throwUnsupportedBoundarySubtypeAtAdmission(
+      value: snapshot,
+      typeName: 'SceneSnapshot',
+    );
+  }
+  return snapshot;
+}
+
 SceneSnapshotBacking? _sceneSnapshotBackingFromCarrier(SceneSnapshot snapshot) {
   return readBoundaryBackingCarrier(
     snapshot,

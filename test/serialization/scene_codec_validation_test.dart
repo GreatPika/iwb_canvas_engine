@@ -255,6 +255,34 @@ void main() {
     },
   );
 
+  test(
+    'encodeScene keeps unsupported typed scene subtype diagnostics aligned with SceneBuilder',
+    () {
+      // INV:INV-SER-IMPORT-DIAGNOSTIC-SURFACE
+      final snapshot = _UnsupportedSceneSnapshot();
+
+      final fromBuilder = _captureSceneDataException(
+        () => SceneBuilder.buildFromSnapshot(snapshot),
+      );
+      final fromEncode = _captureSceneDataException(
+        () => encodeScene(snapshot),
+      );
+      final fromJson = _captureSceneDataException(
+        () => encodeSceneToJson(snapshot),
+      );
+
+      _expectSameSceneDataContract(fromEncode, fromBuilder);
+      _expectSameSceneDataContract(fromJson, fromBuilder);
+      expect(fromBuilder.code, SceneDataErrorCode.invalidValue);
+      expect(fromBuilder.path, isNull);
+      expect(fromBuilder.details, const <String, Object?>{
+        'template': 'unsupportedBoundarySubtype',
+        'boundaryType': 'SceneSnapshot',
+        'runtimeType': '_UnsupportedSceneSnapshot',
+      });
+    },
+  );
+
   test('SceneDataException implements FormatException shape', () {
     final error = SceneDataException(
       code: SceneDataErrorCode.duplicateLayerId,

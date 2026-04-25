@@ -74,6 +74,10 @@ in changes that have not yet been published to pub.dev.
 
 ### Fixed
 
+- Fixed unsupported typed `SceneSnapshot` subtype diagnostics so
+  `SceneBuilder.buildFromSnapshot(...)`, `encodeScene(...)`, and
+  `encodeSceneToJson(...)` now report the same `SceneDataException` contract
+  instead of leaking raw `StateError` or JSON transport errors.
 - Fixed paint-candidate admission so committed selected supplements reuse
   committed spatial paint bounds and snapshot-local fallback reuses bounded
   admission bounds, avoiding repeated text layout and SVG path parsing before

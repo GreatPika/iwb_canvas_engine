@@ -19,7 +19,8 @@ the entrypoint into the deeper docs.
 - Stable content-layer addressing through `layerId`, including same-write layer
   insertion before later node mutations.
 - Build/import and JSON entrypoints through `SceneBuilder`,
-  `encodeScene*`, and `decodeScene*`.
+  `encodeScene*`, and `decodeScene*`, with shared `SceneDataException`
+  diagnostics for public scene-data failures.
 
 ## What the package does not include
 

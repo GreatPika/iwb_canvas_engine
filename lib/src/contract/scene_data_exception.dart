@@ -65,6 +65,23 @@ class SceneDataException implements FormatException {
     );
   }
 
+  /// Reports an unsupported typed public boundary subtype.
+  factory SceneDataException.unsupportedBoundarySubtype({
+    required String boundaryType,
+    required String runtimeType,
+    Object? source,
+  }) {
+    return SceneDataException.boundary(
+      code: SceneDataErrorCode.invalidValue,
+      details: <String, Object?>{
+        'template': 'unsupportedBoundarySubtype',
+        'boundaryType': boundaryType,
+        'runtimeType': runtimeType,
+      },
+      source: source,
+    );
+  }
+
   /// Reports that the schema version is unsupported by this package build.
   factory SceneDataException.unsupportedSchemaVersion({
     required String path,
@@ -794,6 +811,9 @@ String? _deriveSceneDataJsonTemplateMessage({
       'Scene JSON payload must be <= ${details['maxLength'] ?? '?'} characters.',
     'jsonObjectKeysMustBeStrings' => 'JSON object keys must be strings.',
     'invalidColorLiteral' => 'Invalid color: ${details['value'] ?? '?'}.',
+    'unsupportedBoundarySubtype' =>
+      'Unsupported ${details['boundaryType'] ?? 'boundary'} subtype: '
+          '${details['runtimeType'] ?? '?'}.',
     _ => null,
   };
 }

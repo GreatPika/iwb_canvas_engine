@@ -63,3 +63,28 @@ void requireExactBoundaryRuntimeType<TPublic extends Object>({
   }
   throw StateError('Unsupported $typeName subtype: ${value.runtimeType}');
 }
+
+final class UnsupportedBoundarySubtypeAdmissionException implements Exception {
+  UnsupportedBoundarySubtypeAdmissionException({
+    required this.typeName,
+    required this.runtimeTypeName,
+  });
+
+  final String typeName;
+  final String runtimeTypeName;
+
+  @override
+  String toString() {
+    return 'Unsupported $typeName subtype at admission: $runtimeTypeName.';
+  }
+}
+
+Never throwUnsupportedBoundarySubtypeAtAdmission({
+  required Object value,
+  required String typeName,
+}) {
+  throw UnsupportedBoundarySubtypeAdmissionException(
+    typeName: typeName,
+    runtimeTypeName: value.runtimeType.toString(),
+  );
+}
