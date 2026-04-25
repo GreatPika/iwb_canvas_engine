@@ -3,6 +3,8 @@ import 'guardrail_violation.dart';
 
 final class GuardrailRunState {
   static const String exportedSurfacesArtifact = 'exportedSurfaces';
+  static const String effectivePublicExportNamespaceArtifact =
+      'effectivePublicExportNamespace';
 
   final Map<String, Object> _artifacts = <String, Object>{};
   _ActiveRuleScope? _activeRuleScope;

@@ -10,7 +10,8 @@
       ],
       "readsStateArtifacts": [],
       "writesStateArtifacts": [
-        "exportedSurfaces"
+        "exportedSurfaces",
+        "effectivePublicExportNamespace"
       ]
     },
     {
@@ -22,7 +23,7 @@
         "INV-ENG-PUBLIC-SIGNATURE-HERMETICITY"
       ],
       "readsStateArtifacts": [
-        "exportedSurfaces"
+        "effectivePublicExportNamespace"
       ],
       "writesStateArtifacts": []
     },
@@ -81,13 +82,20 @@
   ],
   "runnerArtifacts": [
     {
-      "id": "exportedSurfaces",
+      "id": "effectivePublicExportNamespace",
       "writers": [
         "public-surface"
       ],
       "readers": [
         "public-signature"
       ]
+    },
+    {
+      "id": "exportedSurfaces",
+      "writers": [
+        "public-surface"
+      ],
+      "readers": []
     }
   ],
   "invariants": [

@@ -5,8 +5,8 @@ import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/session.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/element/element.dart';
 
+import 'src/guardrails/rules/public/public_export_namespace_support.dart';
 import 'src/tool_command_result.dart';
 
 Future<ToolCommandResult> runTraceExportNamespaceTool(
@@ -68,7 +68,7 @@ Future<Map<String, Object?>> _buildReport({
   required String entrypointArg,
 }) async {
   final rootAbsPath = root.absolute.path;
-  final rootAbsPosixPath = _toPosixPath(rootAbsPath);
+  final rootAbsPosixPath = toPublicExportNamespacePosixPath(rootAbsPath);
   final entrypointFile = File(_resolveAgainstRoot(root, entrypointArg));
   if (!entrypointFile.existsSync()) {
     throw _TraceFailure('Entrypoint file not found: $entrypointArg');
@@ -76,7 +76,7 @@ Future<Map<String, Object?>> _buildReport({
 
   final entrypointAbsPath = entrypointFile.absolute.path;
   final entrypointRepoRelPath = _toRepoRelativePosixPath(
-    absPosixPath: _toPosixPath(entrypointAbsPath),
+    absPosixPath: toPublicExportNamespacePosixPath(entrypointAbsPath),
     rootAbsPosixPath: rootAbsPosixPath,
   );
   final packageName = _readPackageName(root);
@@ -109,7 +109,7 @@ Future<Map<String, Object?>> _buildReport({
     final targets = <String>[];
     for (final uriRef in _collectDirectiveUriRefs(directive)) {
       final resolvedTarget = _resolveToRepoRelTargetPosix(
-        targetPosix: _toPosixPath(uriRef),
+        targetPosix: toPublicExportNamespacePosixPath(uriRef),
         packageName: packageName,
         fileDirRepoRelPosix: entrypointDirRepoRelPosix,
       );
@@ -128,25 +128,20 @@ Future<Map<String, Object?>> _buildReport({
   final effectiveSymbols = <Map<String, Object?>>[];
   final effectiveOwnerPaths = <String>{};
   final transitiveSymbols = <Map<String, Object?>>[];
-  final entries =
-      resolvedResult.element.exportNamespace.definedNames2.entries
-          .where((entry) => entry.key.isNotEmpty && !entry.key.startsWith('_'))
-          .where((entry) => !entry.key.endsWith('='))
-          .toList(growable: false)
-        ..sort((left, right) => left.key.compareTo(right.key));
+  final effectiveNamespace = collectEffectivePublicExportNamespace(
+    resolvedLibrary: resolvedResult,
+    rootAbsPath: rootAbsPath,
+    packageName: packageName,
+  );
 
-  for (final entry in entries) {
-    final ownerPath = _repoRelPathForElement(
-      element: entry.value,
-      rootAbsPosixPath: rootAbsPosixPath,
-      packageName: packageName,
-    );
+  for (final exportedElement in effectiveNamespace.elements) {
+    final ownerPath = exportedElement.ownerPath;
     if (ownerPath != null) {
       effectiveOwnerPaths.add(ownerPath);
     }
     final record = <String, Object?>{
-      'name': entry.key,
-      'kind': entry.value.kind.displayName,
+      'name': exportedElement.name,
+      'kind': exportedElement.kind,
       'ownerPath': ownerPath,
       'directlyExportedOwner':
           ownerPath != null && directTargets.contains(ownerPath),
@@ -169,18 +164,13 @@ Future<Map<String, Object?>> _buildReport({
     );
     final visibleOwnerPaths = <String>{};
     if (resolved != null) {
-      for (final entry
-          in resolved.element.exportNamespace.definedNames2.entries) {
-        if (entry.key.isEmpty ||
-            entry.key.startsWith('_') ||
-            entry.key.endsWith('=')) {
-          continue;
-        }
-        final ownerPath = _repoRelPathForElement(
-          element: entry.value,
-          rootAbsPosixPath: rootAbsPosixPath,
-          packageName: packageName,
-        );
+      final targetNamespace = collectEffectivePublicExportNamespace(
+        resolvedLibrary: resolved,
+        rootAbsPath: rootAbsPath,
+        packageName: packageName,
+      );
+      for (final exportedElement in targetNamespace.elements) {
+        final ownerPath = exportedElement.ownerPath;
         if (ownerPath != null) {
           visibleOwnerPaths.add(ownerPath);
         }
@@ -267,32 +257,6 @@ List<Map<String, Object?>> _collectDirectiveFilters(ExportDirective directive) {
         };
       })
       .toList(growable: false);
-}
-
-String? _repoRelPathForElement({
-  required Element element,
-  required String rootAbsPosixPath,
-  required String packageName,
-}) {
-  final source = element.firstFragment.libraryFragment?.source;
-  if (source == null || source.uri.scheme == 'dart') {
-    return null;
-  }
-  if (source.uri.scheme == 'package') {
-    final segments = source.uri.pathSegments;
-    if (segments.isNotEmpty && segments.first != packageName) {
-      return null;
-    }
-  }
-
-  final absPosixPath = _toPosixPath(source.fullName);
-  if (!absPosixPath.startsWith('$rootAbsPosixPath/')) {
-    return null;
-  }
-  return _toRepoRelativePosixPath(
-    absPosixPath: absPosixPath,
-    rootAbsPosixPath: rootAbsPosixPath,
-  );
 }
 
 String _renderSummary(Map<String, Object?> report) {
@@ -417,13 +381,14 @@ String _readPackageName(Directory root) {
   for (final line in pubspec.readAsLinesSync()) {
     final match = RegExp(r'^\s*name:\s*([A-Za-z0-9_]+)\s*$').firstMatch(line);
     if (match != null) {
-      return match.group(1)!;
+      final packageName = match.group(1);
+      if (packageName != null) {
+        return packageName;
+      }
     }
   }
   return 'iwb_canvas_engine';
 }
-
-String _toPosixPath(String path) => path.replaceAll('\\', '/');
 
 String _normalizePosixPath(String path) {
   final isAbs = path.startsWith('/');

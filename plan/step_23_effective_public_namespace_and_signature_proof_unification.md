@@ -460,7 +460,7 @@ separate barrel-layout proof.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Transitive Proof Reproducer Lock
+### Slice 1. [x] Transitive Proof Reproducer Lock
 
 #### Slice Contract
 
@@ -514,7 +514,7 @@ seam or artifact changes begin.
 - the regression suite contains a failing transitive proof-gap reproducer
   before any owner-side implementation edit starts
 
-### Slice 2. [ ] Shared Effective Namespace Support
+### Slice 2. [x] Shared Effective Namespace Support
 
 #### Slice Contract
 
@@ -561,7 +561,7 @@ the new transitive reproducer remains the behavioral lock for the later fix.
 
 - `public_export_namespace.json|md` is regenerated from the shared support seam
 
-### Slice 3. [ ] Effective Namespace Guardrail Handoff
+### Slice 3. [x] Effective Namespace Guardrail Handoff
 
 #### Slice Contract
 
@@ -612,7 +612,7 @@ artifact handoff.
 
 - `proof_inventory.json|md` is regenerated and shows the split artifact model
 
-### Slice 4. [ ] Proof Map Lock And Evidence Refresh
+### Slice 4. [x] Proof Map Lock And Evidence Refresh
 
 #### Slice Contract
 

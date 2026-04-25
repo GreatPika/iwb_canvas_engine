@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 
+import 'src/guardrails/rules/public/public_export_namespace_support.dart';
 import 'src/tool_command_result.dart';
 
 // Invariants enforced by this tool:
@@ -159,13 +160,28 @@ Future<List<String>> _collectExportedSymbols({required Directory root}) async {
     );
   }
 
-  final names =
-      result.element.exportNamespace.definedNames2.keys
-          .where((name) => name.isNotEmpty && !name.startsWith('_'))
-          .where((name) => !name.endsWith('='))
-          .toList(growable: false)
-        ..sort();
-  return names;
+  return collectEffectivePublicExportNamespace(
+    resolvedLibrary: result,
+    rootAbsPath: rootPath,
+    packageName: _readPackageName(root),
+  ).symbolNames;
+}
+
+String _readPackageName(Directory root) {
+  final pubspec = File('${root.path}${Platform.pathSeparator}pubspec.yaml');
+  if (!pubspec.existsSync()) {
+    return 'iwb_canvas_engine';
+  }
+  for (final line in pubspec.readAsLinesSync()) {
+    final match = RegExp(r'^\s*name:\s*([A-Za-z0-9_]+)\s*$').firstMatch(line);
+    if (match != null) {
+      final packageName = match.group(1);
+      if (packageName != null) {
+        return packageName;
+      }
+    }
+  }
+  return 'iwb_canvas_engine';
 }
 
 class _PublicApiSurfaceFailure implements Exception {

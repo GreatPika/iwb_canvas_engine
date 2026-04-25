@@ -20,6 +20,7 @@ owners must be scanned for public-signature hermeticity.
 ## Owners
 
 - `tool/check_public_api_surface.dart`
+- `tool/src/guardrails/rules/public/public_export_namespace_support.dart`
 - `tool/src/guardrails/rules/public/public_surface_rules.dart`
 - `tool/src/guardrails/rules/public/public_signature_rules.dart`
 - `tool/goldens/public_api_symbols.txt`
@@ -41,7 +42,9 @@ owners must be scanned for public-signature hermeticity.
 
 ## Status
 
-- `provisional`
-- Current mechanical evidence shows transitively exported public owner files
-  under `snapshot.dart` and `validated.dart`, while the public-signature
-  guardrail still depends on a direct-export surface artifact.
+- `locked`
+- The public-surface golden tool and public-signature hermeticity guardrail both
+  use the effective public namespace of `lib/iwb_canvas_engine.dart` for symbol
+  visibility and real owner resolution.
+- Direct export-target files remain a separate barrel-layout proof surface;
+  they no longer define the full public-signature scan scope.

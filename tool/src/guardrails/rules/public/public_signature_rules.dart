@@ -1,11 +1,7 @@
-import 'dart:io';
-
-import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 
 import '../../support/guardrail_context.dart';
-import '../../support/guardrail_path_utils.dart';
 import '../../core/guardrail_element_utils.dart' as element_utils;
 import '../../core/guardrail_rule.dart';
 import '../../core/guardrail_rule_metadata.dart';
@@ -13,6 +9,7 @@ import '../../core/guardrail_run_state.dart';
 import '../../core/resolved_type_leak_traversal.dart';
 import '../../core/signature_leak_support.dart';
 import '../../core/guardrail_violation.dart';
+import 'public_export_namespace_support.dart';
 import 'public_surface_rules.dart';
 
 const Set<String> _forbiddenCallbackCollectionTypeNames = <String>{
@@ -32,32 +29,33 @@ final GuardrailRule publicSignatureGuardrailRule = GuardrailRule(
     description:
         'Checks resolved exported signatures against hidden, internal, and '
         'mutable type leaks.',
-    readsStateArtifacts: <String>[GuardrailRunState.exportedSurfacesArtifact],
+    readsStateArtifacts: <String>[
+      GuardrailRunState.effectivePublicExportNamespaceArtifact,
+    ],
   ),
   run: _runPublicSignatureGuardrailRule,
 );
 
 Future<List<GuardrailViolation>> runPublicSignatureHermeticityGuardrails({
   required GuardrailContext context,
-  required Map<String, ExportedLibrarySurface> exportedSurfaces,
+  required EffectivePublicExportNamespace effectivePublicExportNamespace,
 }) async {
   final violations = <GuardrailViolation>[];
-  final publicVisibleTypeOwners = await _loadPublicVisibleTypeOwners(context);
-  final exportedFiles = exportedSurfaces.keys.toList(growable: false)..sort();
+  final publicVisibleTypeOwners = _collectPublicVisibleTypeOwners(
+    effectivePublicExportNamespace,
+  );
+  final exportedElements =
+      effectivePublicExportNamespace.elements.toList(growable: false)..sort(
+        (left, right) => element_utils.compareElementsBySourceOrder(
+          left.element,
+          right.element,
+        ),
+      );
 
-  for (final repoRel in exportedFiles) {
-    final library = await _resolveExportedLibrary(
+  for (final exportedElement in exportedElements) {
+    final violation = _scanExportedElementForHermeticity(
       context: context,
-      repoRel: repoRel,
-    );
-    if (library == null) {
-      continue;
-    }
-
-    final violation = _scanResolvedLibraryForHermeticity(
-      context: context,
-      resolved: library,
-      surface: exportedSurfaces[repoRel]!,
+      exportedElement: exportedElement,
       publicVisibleTypeOwners: publicVisibleTypeOwners,
     );
     if (violation != null) {
@@ -75,173 +73,74 @@ Future<List<GuardrailViolation>> _runPublicSignatureGuardrailRule(
 ) {
   return runPublicSignatureHermeticityGuardrails(
     context: context,
-    exportedSurfaces: state
-        .requireArtifact<Map<String, ExportedLibrarySurface>>(
-          artifactId: GuardrailRunState.exportedSurfacesArtifact,
+    effectivePublicExportNamespace: state
+        .requireArtifact<EffectivePublicExportNamespace>(
+          artifactId: GuardrailRunState.effectivePublicExportNamespaceArtifact,
           readerRuleId: publicSignatureGuardrailRule.metadata.id,
         ),
   );
 }
 
-Future<Map<String, Set<String>>> _loadPublicVisibleTypeOwners(
-  GuardrailContext context,
-) async {
-  final result = await context.getResolvedLibraryResult(
-    context.publicEntrypointAbsPath,
-  );
-  if (result == null) {
-    throw GuardrailToolFailure(
-      GuardrailViolation(
-        filePath: '/lib/iwb_canvas_engine.dart',
-        line: 1,
-        message:
-            'tool failure: unable to resolve public entrypoint library '
-            '(result: null)',
-      ),
-    );
-  }
-
+Map<String, Set<String>> _collectPublicVisibleTypeOwners(
+  EffectivePublicExportNamespace effectivePublicExportNamespace,
+) {
   final ownersByName = <String, Set<String>>{};
-  for (final entry in result.element.exportNamespace.definedNames2.entries) {
-    final element = entry.value;
+  for (final exportedElement in effectivePublicExportNamespace.elements) {
+    final element = exportedElement.element;
     if (!_isPublicVisibleTypeElement(element)) {
       continue;
     }
-    final ownerRepoRelPath = _repoRelForElement(
-      element: element,
-      context: context,
-    );
+    final ownerRepoRelPath = exportedElement.ownerPath;
     if (ownerRepoRelPath == null) {
       continue;
     }
-    ownersByName.putIfAbsent(entry.key, () => <String>{}).add(ownerRepoRelPath);
+    ownersByName
+        .putIfAbsent(exportedElement.name, () => <String>{})
+        .add(ownerRepoRelPath);
   }
   return ownersByName;
 }
 
-Future<ResolvedLibraryResult?> _resolveExportedLibrary({
+GuardrailViolation? _scanExportedElementForHermeticity({
   required GuardrailContext context,
-  required String repoRel,
-}) {
-  final file = File(posixJoin(context.root.path, repoRel.substring(1)));
-  if (!file.existsSync()) {
-    return Future<ResolvedLibraryResult?>.value(null);
-  }
-  return context.getResolvedLibraryResult(file.absolute.path);
-}
-
-GuardrailViolation? _scanResolvedLibraryForHermeticity({
-  required GuardrailContext context,
-  required ResolvedLibraryResult resolved,
-  required ExportedLibrarySurface surface,
+  required EffectivePublicExportedElement exportedElement,
   required Map<String, Set<String>> publicVisibleTypeOwners,
 }) {
   final forbiddenPublicTypeNames = _forbiddenPublicTypeNamesForLibrary(
-    repoRelPath: surface.repoRelPath,
+    repoRelPath: exportedElement.ownerPath,
   );
-  final exportedElements = _collectExportedElements(
-    library: resolved.element,
-    surface: surface,
-  )..sort(element_utils.compareElementsBySourceOrder);
-
-  for (final element in exportedElements) {
-    final leak = _findLeakInExportedElement(
-      element: element,
-      context: context,
-      publicVisibleTypeOwners: publicVisibleTypeOwners,
-      forbiddenPublicTypeNames: forbiddenPublicTypeNames,
-    );
-    if (leak == null) {
-      continue;
-    }
-
-    final filePath = _repoRelForElement(
-      element: leak.sourceElement,
-      context: context,
-    );
-    final line = element_utils.lineForElement(leak.sourceElement);
-    if (filePath == null || line == null) {
-      continue;
-    }
-
-    return GuardrailViolation(
-      filePath: filePath,
-      line: line,
-      message: switch (leak.kind) {
-        _SignatureLeakKind.hermeticity =>
-          'public signature hermeticity violation: exported public '
-              'signature must not expose ${leak.typeName} '
-              'from ${leak.ownerRepoRelPath}.',
-        _SignatureLeakKind.forbiddenPublicType =>
-          '${leak.message} (${leak.typeName}).',
-        _SignatureLeakKind.rawCollectionCallbackParameter => leak.message,
-      },
-    );
+  final leak = _findLeakInExportedElement(
+    element: exportedElement.element,
+    context: context,
+    publicVisibleTypeOwners: publicVisibleTypeOwners,
+    forbiddenPublicTypeNames: forbiddenPublicTypeNames,
+  );
+  if (leak == null) {
+    return null;
   }
 
-  return null;
-}
+  final filePath = _repoRelForElement(
+    element: leak.sourceElement,
+    context: context,
+  );
+  final line = element_utils.lineForElement(leak.sourceElement);
+  if (filePath == null || line == null) {
+    return null;
+  }
 
-List<Element> _collectExportedElements({
-  required LibraryElement library,
-  required ExportedLibrarySurface surface,
-}) {
-  return <Element>[
-    ...library.classes.where(
-      (element) => _exportsNamedElement(element, surface: surface),
-    ),
-    ...library.enums.where(
-      (element) => _exportsNamedElement(element, surface: surface),
-    ),
-    ...library.mixins.where(
-      (element) => _exportsNamedElement(element, surface: surface),
-    ),
-    ...library.extensions.where(
-      (element) => _exportsExtensionElement(element, surface: surface),
-    ),
-    ...library.extensionTypes.where(
-      (element) => _exportsNamedElement(element, surface: surface),
-    ),
-    ...library.typeAliases.where(
-      (element) => _exportsNamedElement(element, surface: surface),
-    ),
-    ...library.topLevelFunctions.where(
-      (element) => _exportsNamedElement(element, surface: surface),
-    ),
-    ...library.topLevelVariables.where(
-      (element) => _exportsNamedElement(element, surface: surface),
-    ),
-    ...library.getters.where(
-      (element) =>
-          !element.isSynthetic &&
-          _exportsNamedElement(element, surface: surface),
-    ),
-    ...library.setters.where(
-      (element) =>
-          !element.isSynthetic &&
-          _exportsNamedElement(element, surface: surface),
-    ),
-  ];
-}
-
-bool _exportsNamedElement(
-  Element element, {
-  required ExportedLibrarySurface surface,
-}) {
-  final name = element.displayName;
-  return name.isNotEmpty &&
-      isPublicName(name) &&
-      surface.exportsTopLevelName(name);
-}
-
-bool _exportsExtensionElement(
-  ExtensionElement element, {
-  required ExportedLibrarySurface surface,
-}) {
-  final name = element.displayName;
-  return name.isEmpty
-      ? surface.exportsUnnamedExtensions
-      : isPublicName(name) && surface.exportsTopLevelName(name);
+  return GuardrailViolation(
+    filePath: filePath,
+    line: line,
+    message: switch (leak.kind) {
+      _SignatureLeakKind.hermeticity =>
+        'public signature hermeticity violation: exported public '
+            'signature must not expose ${leak.typeName} '
+            'from ${leak.ownerRepoRelPath}.',
+      _SignatureLeakKind.forbiddenPublicType =>
+        '${leak.message} (${leak.typeName}).',
+      _SignatureLeakKind.rawCollectionCallbackParameter => leak.message,
+    },
+  );
 }
 
 bool _isPublicVisibleTypeElement(Element element) {
@@ -751,7 +650,9 @@ _SignatureLeak? _classifyElementLeak({
   return null;
 }
 
-Set<String> _forbiddenPublicTypeNamesForLibrary({required String repoRelPath}) {
+Set<String> _forbiddenPublicTypeNamesForLibrary({
+  required String? repoRelPath,
+}) {
   return switch (repoRelPath) {
     '/lib/src/interactive/scene_controller.dart' ||
     '/lib/src/interactive/scene_controller_interaction.dart' ||

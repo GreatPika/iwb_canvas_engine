@@ -29,8 +29,8 @@ It records the stable proof-family registry only:
 
 | Family | Target boundary | Verification status | Detailed map |
 | --- | --- | --- | --- |
-| Public entrypoint and signature proof | Keep one effective public namespace model for golden surface, owner resolution, and signature hermeticity checks. | `provisional` | [public_entrypoint_and_signature_proof.md](families/public_entrypoint_and_signature_proof.md) |
-| Guardrail runner and artifact model | Keep rule order, invariant ownership, and shared runner artifacts explicit so one artifact does not silently stand in for two proof universes. | `provisional` | [guardrail_runner_and_artifact_model.md](families/guardrail_runner_and_artifact_model.md) |
+| Public entrypoint and signature proof | Keep one effective public namespace model for golden surface, owner resolution, and signature hermeticity checks. | `locked` | [public_entrypoint_and_signature_proof.md](families/public_entrypoint_and_signature_proof.md) |
+| Guardrail runner and artifact model | Keep rule order, invariant ownership, and shared runner artifacts explicit so one artifact does not silently stand in for two proof universes. | `locked` | [guardrail_runner_and_artifact_model.md](families/guardrail_runner_and_artifact_model.md) |
 | Invariant registry and proof reachability | Keep invariant ids, required proof paths, regression surfaces, and required-code-change reachability explicit and mechanically checked. | `locked` | [invariant_registry_and_proof_reachability.md](families/invariant_registry_and_proof_reachability.md) |
 
 ## Mechanical Evidence

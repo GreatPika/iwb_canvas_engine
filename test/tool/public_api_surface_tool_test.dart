@@ -176,6 +176,8 @@ class _PrivateClass {}
 
 void topFn() {}
 
+set topSetter(int value) {}
+
 String multiLineFn(
   int value,
 ) {

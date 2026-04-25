@@ -22,7 +22,7 @@ void main() {
 
           expect(result.exitCode, 0, reason: result.stderr.toString());
           expect(result.stdout.toString(), contains('Guardrail rules: 6'));
-          expect(result.stdout.toString(), contains('Runner artifacts: 1'));
+          expect(result.stdout.toString(), contains('Runner artifacts: 2'));
           expect(result.stdout.toString(), contains('Invariants: 100'));
         } finally {
           sandbox.deleteSync(recursive: true);
@@ -60,6 +60,17 @@ void main() {
                 (artifact['writers'] as List<Object?>).contains(
                   'public-surface',
                 ) &&
+                (artifact['readers'] as List<Object?>).isEmpty,
+          ),
+          isTrue,
+        );
+        expect(
+          artifacts.any(
+            (artifact) =>
+                artifact['id'] == 'effectivePublicExportNamespace' &&
+                (artifact['writers'] as List<Object?>).contains(
+                  'public-surface',
+                ) &&
                 (artifact['readers'] as List<Object?>).contains(
                   'public-signature',
                 ),
@@ -79,6 +90,10 @@ void main() {
         expect(
           markdownFile.readAsStringSync(),
           contains('artifact: exportedSurfaces'),
+        );
+        expect(
+          markdownFile.readAsStringSync(),
+          contains('artifact: effectivePublicExportNamespace'),
         );
       } finally {
         sandbox.deleteSync(recursive: true);

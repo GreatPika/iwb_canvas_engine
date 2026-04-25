@@ -12,6 +12,7 @@ import '../../core/guardrail_run_state.dart';
 import '../../core/guardrail_runner_support.dart';
 import '../../core/guardrail_violation.dart';
 import '../../../layer_guardrails.dart';
+import 'public_export_namespace_support.dart';
 
 final GuardrailRule publicSurfaceGuardrailRule = GuardrailRule(
   metadata: const GuardrailRuleMetadata(
@@ -24,7 +25,10 @@ final GuardrailRule publicSurfaceGuardrailRule = GuardrailRule(
     description:
         'Scans exported public surfaces for mutable API leaks and transaction '
         'escape hatches.',
-    writesStateArtifacts: <String>[GuardrailRunState.exportedSurfacesArtifact],
+    writesStateArtifacts: <String>[
+      GuardrailRunState.exportedSurfacesArtifact,
+      GuardrailRunState.effectivePublicExportNamespaceArtifact,
+    ],
   ),
   run: _runPublicSurfaceGuardrailRule,
 );
@@ -106,10 +110,12 @@ class DirectiveCombinators {
 class PublicSurfaceGuardrailResult {
   const PublicSurfaceGuardrailResult({
     required this.exportedSurfaces,
+    required this.effectivePublicExportNamespace,
     required this.violations,
   });
 
   final Map<String, ExportedLibrarySurface> exportedSurfaces;
+  final EffectivePublicExportNamespace effectivePublicExportNamespace;
   final List<GuardrailViolation> violations;
 }
 
@@ -272,6 +278,9 @@ Future<PublicSurfaceGuardrailResult> runPublicSurfaceGuardrails({
   if (violations.isNotEmpty) {
     return PublicSurfaceGuardrailResult(
       exportedSurfaces: const <String, ExportedLibrarySurface>{},
+      effectivePublicExportNamespace: EffectivePublicExportNamespace(
+        elements: const <EffectivePublicExportedElement>[],
+      ),
       violations: violations,
     );
   }
@@ -280,9 +289,15 @@ Future<PublicSurfaceGuardrailResult> runPublicSurfaceGuardrails({
     context: context,
     violations: violations,
   );
+  final effectivePublicExportNamespace = violations.isEmpty
+      ? await _collectEffectivePublicExportNamespace(context)
+      : EffectivePublicExportNamespace(
+          elements: const <EffectivePublicExportedElement>[],
+        );
   if (violations.isNotEmpty) {
     return PublicSurfaceGuardrailResult(
       exportedSurfaces: exportedSurfaces,
+      effectivePublicExportNamespace: effectivePublicExportNamespace,
       violations: violations,
     );
   }
@@ -293,6 +308,7 @@ Future<PublicSurfaceGuardrailResult> runPublicSurfaceGuardrails({
   if (violations.isNotEmpty) {
     return PublicSurfaceGuardrailResult(
       exportedSurfaces: exportedSurfaces,
+      effectivePublicExportNamespace: effectivePublicExportNamespace,
       violations: violations,
     );
   }
@@ -311,6 +327,7 @@ Future<PublicSurfaceGuardrailResult> runPublicSurfaceGuardrails({
   _checkSceneWriteTxnContract(context: context, violations: violations);
   return PublicSurfaceGuardrailResult(
     exportedSurfaces: exportedSurfaces,
+    effectivePublicExportNamespace: effectivePublicExportNamespace,
     violations: violations,
   );
 }
@@ -324,7 +341,35 @@ Future<List<GuardrailViolation>> _runPublicSurfaceGuardrailRule(
     artifactId: GuardrailRunState.exportedSurfacesArtifact,
     value: result.exportedSurfaces,
   );
+  state.writeArtifact(
+    artifactId: GuardrailRunState.effectivePublicExportNamespaceArtifact,
+    value: result.effectivePublicExportNamespace,
+  );
   return result.violations;
+}
+
+Future<EffectivePublicExportNamespace> _collectEffectivePublicExportNamespace(
+  GuardrailContext context,
+) async {
+  final result = await context.getResolvedLibraryResult(
+    context.publicEntrypointAbsPath,
+  );
+  if (result == null) {
+    throw GuardrailToolFailure(
+      GuardrailViolation(
+        filePath: '/lib/iwb_canvas_engine.dart',
+        line: 1,
+        message:
+            'tool failure: unable to resolve public entrypoint library '
+            '(result: null)',
+      ),
+    );
+  }
+  return collectEffectivePublicExportNamespace(
+    resolvedLibrary: result,
+    rootAbsPath: context.root.absolute.path,
+    packageName: context.packageName,
+  );
 }
 
 void validateExportedApiScanPolicies({

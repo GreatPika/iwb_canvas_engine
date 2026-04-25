@@ -10,6 +10,7 @@ void main() {
     test('README defines the normalized directory contract', () {
       final source = _read('docs/target_proof_architecture/README.md');
 
+      expect(source, isNotEmpty);
       _expectSections(source, const <String>[
         '## Purpose',
         '## Directory Roles',
@@ -59,6 +60,7 @@ void main() {
         for (final status in statuses) {
           expect(_allowedStatuses, contains(status));
         }
+        expect(statuses, everyElement(equals('locked')));
       },
     );
 
@@ -94,11 +96,12 @@ void main() {
       }
     });
 
-    test('public namespace family records the provisional namespace split', () {
+    test('public namespace family records the locked namespace split', () {
       final source = _read(
         'docs/target_proof_architecture/families/public_entrypoint_and_signature_proof.md',
       );
 
+      expect(source, isNotEmpty);
       _expectSections(source, const <String>[
         '## Purpose',
         '## Target Rules',
@@ -109,10 +112,11 @@ void main() {
       ]);
       _expectContainsAll(source, const <String>[
         'tool/check_public_api_surface.dart',
+        'tool/src/guardrails/rules/public/public_export_namespace_support.dart',
         'tool/src/guardrails/rules/public/public_surface_rules.dart',
         'tool/src/guardrails/rules/public/public_signature_rules.dart',
         'trace_export_namespace.dart',
-        '`provisional`',
+        '`locked`',
       ]);
     });
 
@@ -121,6 +125,7 @@ void main() {
         'docs/target_proof_architecture/families/guardrail_runner_and_artifact_model.md',
       );
 
+      expect(source, isNotEmpty);
       _expectSections(source, const <String>[
         '## Purpose',
         '## Target Rules',
@@ -135,8 +140,9 @@ void main() {
         'tool/src/guardrails/guardrail_rule_inventory.dart',
         'tool/src/guardrails/core/guardrail_run_state.dart',
         'exportedSurfaces',
+        'effectivePublicExportNamespace',
         'trace_proof_inventory.dart',
-        '`provisional`',
+        '`locked`',
       ]);
     });
 
@@ -145,6 +151,7 @@ void main() {
         'docs/target_proof_architecture/families/invariant_registry_and_proof_reachability.md',
       );
 
+      expect(source, isNotEmpty);
       _expectSections(source, const <String>[
         '## Purpose',
         '## Target Rules',
@@ -186,10 +193,20 @@ void _expectContainsAll(String source, List<String> snippets) {
 
 Set<String> _evidenceLinks(String source) {
   final matches = RegExp(r'\((evidence/[^)]+\.md)\)').allMatches(source);
-  return matches.map((match) => match.group(1)!).toSet();
+  return matches.map((match) => _requireGroup(match, 1)).toSet();
 }
 
 List<String> _registryStatuses(String source) {
   final matches = RegExp(r'\|\s*`([^`]+)`\s*\|').allMatches(source);
-  return matches.map((match) => match.group(1)!).toList(growable: false);
+  return matches
+      .map((match) => _requireGroup(match, 1))
+      .toList(growable: false);
+}
+
+String _requireGroup(RegExpMatch match, int group) {
+  final value = match.group(group);
+  if (value == null) {
+    fail('Missing regex group $group for match ${match.group(0)}');
+  }
+  return value;
 }

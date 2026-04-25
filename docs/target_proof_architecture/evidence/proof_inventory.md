@@ -15,13 +15,15 @@ flowchart LR
   N0 --> N5
   N6["contract-architecture\ncontract\n1 invariants"]
   N0 --> N6
-  N7["artifact: exportedSurfaces"]
+  N7["artifact: effectivePublicExportNamespace"]
   N1 --> N7
   N7 --> N2
+  N8["artifact: exportedSurfaces"]
+  N1 --> N8
 ```
 
 Inventory summary:
 - Guardrail rules: 6
-- Runner artifacts: 1
+- Runner artifacts: 2
 - Invariants: 100
 - Guardrail-backed invariants: 17

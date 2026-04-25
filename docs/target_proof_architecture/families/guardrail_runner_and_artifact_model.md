@@ -38,7 +38,7 @@ surfaces do not silently change meaning.
 
 ## Status
 
-- `provisional`
-- Current mechanical evidence shows one shared `exportedSurfaces` artifact,
-  while public proof needs separate reasoning for direct barrel layout and
-  effective public namespace ownership.
+- `locked`
+- Current mechanical evidence shows separate public-proof artifacts:
+  `exportedSurfaces` for direct barrel-layout policy and
+  `effectivePublicExportNamespace` for effective namespace signature coverage.

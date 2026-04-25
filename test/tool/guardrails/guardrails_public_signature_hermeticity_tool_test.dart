@@ -453,6 +453,104 @@ class SelectionHelper {}
     );
 
     test(
+      'rejects transitively exported method signature typed with hidden helper',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeCanonicalPublicExportScaffold(sandbox);
+          writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+export 'snapshot_transitive.dart' show SceneSnapshot;
+''');
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/snapshot_transitive.dart',
+            '''
+class SceneSnapshot {
+  SnapshotHelper helper() => SnapshotHelper();
+}
+
+class SnapshotHelper {}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains('public signature hermeticity violation'),
+          );
+          expect(result.stderr.toString(), contains('SnapshotHelper'));
+          expect(
+            result.stderr.toString(),
+            contains('/lib/src/contract/snapshot_transitive.dart'),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'allows transitively exported signature using only public and SDK types',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeCanonicalPublicExportScaffold(sandbox);
+          writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+export 'snapshot_transitive.dart' show SceneSnapshot, SnapshotId;
+''');
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/snapshot_transitive.dart',
+            '''
+typedef SnapshotId = String;
+
+class SceneSnapshot {
+  const SceneSnapshot(this.id);
+
+  final SnapshotId id;
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'ignores transitively hidden owner signatures after ordered show and hide',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeCanonicalPublicExportScaffold(sandbox);
+          writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+export 'snapshot_transitive.dart' show HiddenSnapshot hide HiddenSnapshot;
+''');
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/snapshot_transitive.dart',
+            '''
+class HiddenSnapshot {
+  HiddenSnapshotHelper helper() => HiddenSnapshotHelper();
+}
+
+class HiddenSnapshotHelper {}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
       'rejects exported getter and setter typed with hidden helper',
       () async {
         final sandbox = await createGuardrailsSandbox();
@@ -479,6 +577,31 @@ class SelectionState {}
             contains('public signature hermeticity violation'),
           );
           expect(result.stderr.toString(), contains('SelectionState'));
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects exported top-level setter typed with hidden helper',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeCanonicalPublicExportScaffold(sandbox);
+          writeSandboxFile(sandbox, 'lib/src/contract/snapshot.dart', '''
+class _SnapshotHelper {}
+
+set helper(_SnapshotHelper value) {}
+''');
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains('public signature hermeticity violation'),
+          );
+          expect(result.stderr.toString(), contains('_SnapshotHelper'));
         } finally {
           sandbox.deleteSync(recursive: true);
         }

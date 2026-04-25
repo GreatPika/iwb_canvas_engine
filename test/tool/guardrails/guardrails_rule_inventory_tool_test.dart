@@ -106,7 +106,10 @@ void main() {
                 'INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES',
               ],
               reads: <String>[],
-              writes: <String>[GuardrailRunState.exportedSurfacesArtifact],
+              writes: <String>[
+                GuardrailRunState.exportedSurfacesArtifact,
+                GuardrailRunState.effectivePublicExportNamespaceArtifact,
+              ],
             ),
             const InventoryRuleEntry(
               id: 'public-signature',
@@ -116,7 +119,9 @@ void main() {
                 'INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES',
                 'INV-ENG-PUBLIC-SIGNATURE-HERMETICITY',
               ],
-              reads: <String>[GuardrailRunState.exportedSurfacesArtifact],
+              reads: <String>[
+                GuardrailRunState.effectivePublicExportNamespaceArtifact,
+              ],
               writes: <String>[],
             ),
             const InventoryRuleEntry(
@@ -225,7 +230,7 @@ void main() {
       },
     );
 
-    test('exportedSurfaces handoff stays single-writer and single-reader', () {
+    test('public proof runner artifacts keep separate handoffs', () {
       final exportedSurfacesWriters = guardrailRuleInventory
           .where(
             (rule) => rule.metadata.writesStateArtifacts.contains(
@@ -242,19 +247,40 @@ void main() {
           )
           .map((rule) => rule.metadata.id)
           .toList(growable: false);
+      final effectiveNamespaceWriters = guardrailRuleInventory
+          .where(
+            (rule) => rule.metadata.writesStateArtifacts.contains(
+              GuardrailRunState.effectivePublicExportNamespaceArtifact,
+            ),
+          )
+          .map((rule) => rule.metadata.id)
+          .toList(growable: false);
+      final effectiveNamespaceReaders = guardrailRuleInventory
+          .where(
+            (rule) => rule.metadata.readsStateArtifacts.contains(
+              GuardrailRunState.effectivePublicExportNamespaceArtifact,
+            ),
+          )
+          .map((rule) => rule.metadata.id)
+          .toList(growable: false);
 
       expect(
         exportedSurfacesWriters,
         orderedEquals(<String>['public-surface']),
       );
+      expect(exportedSurfacesReaders, isEmpty);
       expect(
-        exportedSurfacesReaders,
+        effectiveNamespaceWriters,
+        orderedEquals(<String>['public-surface']),
+      );
+      expect(
+        effectiveNamespaceReaders,
         orderedEquals(<String>['public-signature']),
       );
     });
 
     test(
-      'public-signature stage fails clearly without exportedSurfaces state',
+      'public-signature stage fails clearly without effective namespace state',
       () async {
         final sandbox = await createGuardrailsSandbox();
         try {
@@ -272,7 +298,8 @@ void main() {
                 (failure) => failure.violation.message,
                 'message',
                 contains(
-                  'declares runner artifact exportedSurfaces as required input before it exists',
+                  'declares runner artifact effectivePublicExportNamespace '
+                  'as required input before it exists',
                 ),
               ),
             ),
