@@ -1,0 +1,4 @@
+interface:
+  display_name: "Repo Forensics"
+  short_description: "Use local probes, DCM, and clone analysis to investigate repository flows, ownership, proof coverage, and drift."
+  default_prompt: "Investigate this repository issue with local mechanical probes before recommending or making changes."
