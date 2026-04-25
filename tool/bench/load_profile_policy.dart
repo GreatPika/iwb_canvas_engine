@@ -99,6 +99,13 @@ const List<String> _backgroundLayerPaintAdmissionProbeKeys = <String>[
   'snapshotAdmissionEvictDelta',
 ];
 
+const List<String> eraserCommitProbeKeys = <String>[
+  'spatialQueryCount',
+  'preciseSegmentCheckCount',
+  'projectedPointCount',
+  'deletedCount',
+];
+
 const List<String> _worstCaseRequiredOperations = <String>[
   'huge_bounds.query',
   'huge_bounds.move_selection',
@@ -250,6 +257,7 @@ class LoadProfilePolicy {
     strokePathCacheCaseName,
     staticBackgroundCacheCaseName,
     backgroundLayerPaintAdmissionCaseName,
+    if (profile == 'full') eraserLongPathMixedSceneCaseName,
     if (includesWorstCaseDiagnostics) worstCaseName,
   ];
 
@@ -309,6 +317,11 @@ class LoadProfilePolicy {
         'enumerate_viewport': _backgroundLayerPaintAdmissionProbeKeys,
       };
     }
+    if (caseName == eraserLongPathMixedSceneCaseName) {
+      return <String, List<String>>{
+        eraserLongPathCommitOperationName: eraserCommitProbeKeys,
+      };
+    }
     return const <String, List<String>>{};
   }
 
@@ -342,6 +355,9 @@ class LoadProfilePolicy {
     }
     if (caseName == backgroundLayerPaintAdmissionCaseName) {
       return _backgroundLayerPaintAdmissionRequiredOperations;
+    }
+    if (caseName == eraserLongPathMixedSceneCaseName) {
+      return const <String>[eraserLongPathCommitOperationName];
     }
     if (caseName == worstCaseName) {
       return _worstCaseRequiredOperations;
@@ -412,6 +428,9 @@ class LoadProfilePolicy {
     }
     if (caseName == stableVisibleWorkingSetPaintCaseName) {
       return <String, Object?>{'kind': 'stable_visible_working_set_paint'};
+    }
+    if (caseName == eraserLongPathMixedSceneCaseName) {
+      return <String, Object?>{'kind': 'eraser_long_path_mixed_scene'};
     }
     if (caseName == worstCaseName) {
       return <String, Object?>{'kind': 'stress_worst_case'};
@@ -504,4 +523,6 @@ const String strokePathCacheCaseName = 'stroke_path_cache';
 const String staticBackgroundCacheCaseName = 'static_background_cache';
 const String backgroundLayerPaintAdmissionCaseName =
     'background_layer_paint_admission';
+const String eraserLongPathMixedSceneCaseName = 'eraser_long_path_mixed_scene';
+const String eraserLongPathCommitOperationName = 'erase_path_commit';
 const String worstCaseName = 'worst_case';

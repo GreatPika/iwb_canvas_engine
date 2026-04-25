@@ -231,3 +231,7 @@ int eraserSpatialQueryCount(SceneController controller) {
 int eraserPreciseSegmentCheckCount(SceneController controller) {
   return sceneControllerInternalEraserPreciseSegmentCheckCount(controller);
 }
+
+int eraserProjectedPointCount(SceneController controller) {
+  return sceneControllerInternalEraserProjectedPointCount(controller);
+}

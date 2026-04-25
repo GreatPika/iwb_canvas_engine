@@ -773,7 +773,9 @@ Performance proof follows a two-contour architecture:
   `debugInvariantMode`) and owner-level probe surfaces for stable
   visible-working-set cache reuse, bounded selection `saveLayer` count and
   area, bounded grid work recorded from the shared grid plan, and write-path
-  commit/invariant attribution read from `SceneStoreController.debug`. The
+  commit/invariant attribution read from `SceneStoreController.debug`, plus
+  eraser commit attribution read through the controller-private interaction
+  internal-access seam. The
   benchmark runner and diff layer consume production-owner seams only, reject
   baseline/current contour mismatch inside the current fixed harness contract,
   and do not introduce benchmark-only runtime or write owners.

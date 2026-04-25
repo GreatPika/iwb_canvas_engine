@@ -18,6 +18,7 @@ class _SceneControllerInternalAccess {
     required this.readActiveEraserPointsLength,
     required this.readEraserSpatialQueryCount,
     required this.readEraserPreciseSegmentCheckCount,
+    required this.readEraserProjectedPointCount,
   });
 
   final int Function() readEpoch;
@@ -31,6 +32,7 @@ class _SceneControllerInternalAccess {
   final int Function() readActiveEraserPointsLength;
   final int Function() readEraserSpatialQueryCount;
   final int Function() readEraserPreciseSegmentCheckCount;
+  final int Function() readEraserProjectedPointCount;
 }
 
 final Expando<_SceneControllerInternalAccess> _sceneControllerInternalAccess =
@@ -47,6 +49,7 @@ final class SceneControllerInternalAccessRegistration {
     required this.readActiveEraserPointsLength,
     required this.readEraserSpatialQueryCount,
     required this.readEraserPreciseSegmentCheckCount,
+    required this.readEraserProjectedPointCount,
   });
 
   final int Function() readEpoch;
@@ -60,6 +63,7 @@ final class SceneControllerInternalAccessRegistration {
   final int Function() readActiveEraserPointsLength;
   final int Function() readEraserSpatialQueryCount;
   final int Function() readEraserPreciseSegmentCheckCount;
+  final int Function() readEraserProjectedPointCount;
 }
 
 void registerSceneControllerInternalAccess(
@@ -78,6 +82,7 @@ void registerSceneControllerInternalAccess(
     readEraserSpatialQueryCount: registration.readEraserSpatialQueryCount,
     readEraserPreciseSegmentCheckCount:
         registration.readEraserPreciseSegmentCheckCount,
+    readEraserProjectedPointCount: registration.readEraserProjectedPointCount,
   );
 }
 
@@ -170,4 +175,12 @@ int sceneControllerInternalEraserPreciseSegmentCheckCount(
   return _requireSceneControllerInternalAccess(
     controller,
   ).readEraserPreciseSegmentCheckCount();
+}
+
+int sceneControllerInternalEraserProjectedPointCount(
+  SceneController controller,
+) {
+  return _requireSceneControllerInternalAccess(
+    controller,
+  ).readEraserProjectedPointCount();
 }

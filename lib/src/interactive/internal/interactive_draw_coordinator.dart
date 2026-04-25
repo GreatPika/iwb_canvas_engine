@@ -76,6 +76,8 @@ class InteractiveDrawCoordinator {
       _eraserEngine.debugEraserSpatialQueryCount;
   int get debugEraserPreciseSegmentChecks =>
       _eraserEngine.debugEraserPreciseSegmentChecks;
+  int get debugEraserProjectedPointCount =>
+      _eraserEngine.debugEraserProjectedPointCount;
 
   void handlePointer(
     PointerSample sample,

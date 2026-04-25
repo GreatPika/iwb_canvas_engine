@@ -65,6 +65,49 @@ void main() {
 
     expect(erased, <String>['line']);
     expect(removedIds, <String>['line']);
+    expect(engine.debugEraserProjectedPointCount, 0);
+  });
+
+  test('eraser projected hit counts materialized local points', () {
+    final line = LineNodeSnapshot(
+      id: 'line',
+      start: const Offset(-20, 0),
+      end: const Offset(20, 0),
+      thickness: 2,
+      color: const Color(0xFF000000),
+      transform: Transform2D.translation(const Offset(120, 80)),
+    );
+    final candidate = SceneHitTestSpatialCandidate(
+      nodeId: line.id,
+      layerIndex: 0,
+      nodeIndex: 0,
+      structuralRevision: 0,
+      hitTestBoundsWorld: nodeSnapshotBoundsWorld(line),
+    );
+
+    final engine = InteractiveDrawEraserEngine(
+      callbacks: InteractiveDrawEraserEngineCallbacks(
+        onOverlayStateChanged: () {},
+        queryHitTestCandidates: (_) => <SceneHitTestSpatialCandidate>[
+          candidate,
+        ],
+        resolveSpatialCandidateSnapshot: (location) =>
+            location.layerIndex == candidate.layerIndex &&
+                location.nodeIndex == candidate.nodeIndex
+            ? line
+            : null,
+        commitEraseNodes: (ids) => ids.length,
+      ),
+    );
+
+    engine.handleDown(const Offset(100, 80));
+    final erased = engine.commitOnUp(
+      const Offset(140, 80),
+      eraserThickness: 30,
+    );
+
+    expect(erased, <String>['line']);
+    expect(engine.debugEraserProjectedPointCount, 2);
   });
 
   test('eraser fallback handles singular stroke transform with segment', () {
@@ -111,6 +154,7 @@ void main() {
 
     expect(erased, <String>['stroke']);
     expect(removedIds, <String>['stroke']);
+    expect(engine.debugEraserProjectedPointCount, 0);
   });
 
   test('eraser keeps undeletable nodes even when geometry matches', () {

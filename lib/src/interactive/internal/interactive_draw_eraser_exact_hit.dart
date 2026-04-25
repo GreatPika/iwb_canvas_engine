@@ -12,9 +12,11 @@ import 'interactive_geometry.dart';
 class InteractiveDrawEraserExactHitCallbacks {
   const InteractiveDrawEraserExactHitCallbacks({
     required this.onPreciseSegmentCheck,
+    required this.onProjectedPointCount,
   });
 
   final void Function() onPreciseSegmentCheck;
+  final void Function(int count) onProjectedPointCount;
 }
 
 class InteractiveDrawEraserExactHit {
@@ -98,6 +100,7 @@ class InteractiveDrawEraserExactHit {
     final points = eraserPoints
         .map<Offset>(inverse.applyToPoint)
         .toList(growable: false);
+    callbacks.onProjectedPointCount(points.length);
     final sigmaMax = maxSingularValue2x2(
       inverse.a,
       inverse.b,

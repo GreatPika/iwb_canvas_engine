@@ -44,15 +44,18 @@ class InteractiveDrawEraserEngine {
       InteractiveDrawEraserExactHit(
         callbacks: InteractiveDrawEraserExactHitCallbacks(
           onPreciseSegmentCheck: _incrementPreciseSegmentChecks,
+          onProjectedPointCount: _addProjectedPointCount,
         ),
       );
 
   int _debugEraserSpatialQueryCount = 0;
   int _debugEraserPreciseSegmentChecks = 0;
+  int _debugEraserProjectedPointCount = 0;
 
   int get activeEraserPointsLength => _pathBuffer.length;
   int get debugEraserSpatialQueryCount => _debugEraserSpatialQueryCount;
   int get debugEraserPreciseSegmentChecks => _debugEraserPreciseSegmentChecks;
+  int get debugEraserProjectedPointCount => _debugEraserProjectedPointCount;
 
   void resetGestureState() {
     _pathBuffer.clear();
@@ -75,6 +78,7 @@ class InteractiveDrawEraserEngine {
 
     _debugEraserSpatialQueryCount = 0;
     _debugEraserPreciseSegmentChecks = 0;
+    _debugEraserProjectedPointCount = 0;
 
     _pathBuffer.appendTerminalPoint(scenePoint, enforceSoftLimit: true);
 
@@ -121,5 +125,9 @@ class InteractiveDrawEraserEngine {
 
   void _incrementPreciseSegmentChecks() {
     _debugEraserPreciseSegmentChecks = _debugEraserPreciseSegmentChecks + 1;
+  }
+
+  void _addProjectedPointCount(int count) {
+    _debugEraserProjectedPointCount = _debugEraserProjectedPointCount + count;
   }
 }

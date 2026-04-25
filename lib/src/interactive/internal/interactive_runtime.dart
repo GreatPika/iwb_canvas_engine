@@ -98,6 +98,8 @@ class InteractiveRuntime {
       _drawCoordinator.debugEraserSpatialQueryCount;
   int get debugEraserPreciseSegmentChecks =>
       _drawCoordinator.debugEraserPreciseSegmentChecks;
+  int get debugEraserProjectedPointCount =>
+      _drawCoordinator.debugEraserProjectedPointCount;
 
   void handlePublicPointer(CanvasPointerInput input) {
     _dispatchPointer(input);

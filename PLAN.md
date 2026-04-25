@@ -44,4 +44,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 25. Committed Spatial Candidate Structural Revision Contract](plan/step_25_committed_spatial_candidate_structural_revision_contract.md)
 - [x] [Step 26. Typed Boundary Admission Diagnostic Symmetry](plan/step_26_typed_boundary_admission_diagnostic_symmetry.md)
 - [x] [Step 27. Write-Path Benchmark Commit Attribution](plan/step_27_write_path_benchmark_commit_attribution.md)
-- [ ] [Step 28. Eraser Perf Proof Coverage And Selection Diagnostic Baseline Retirement](plan/step_28_eraser_perf_proof_coverage_and_selection_diagnostic_baseline_retirement.md)
+- [x] [Step 28. Eraser Perf Proof Coverage And Selection Diagnostic Baseline Retirement](plan/step_28_eraser_perf_proof_coverage_and_selection_diagnostic_baseline_retirement.md)

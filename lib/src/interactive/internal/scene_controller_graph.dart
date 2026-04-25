@@ -186,6 +186,8 @@ SceneControllerGraphHandle _assembleSceneControllerGraph(
           interactionRuntime.eraserSpatialQueryCount,
       readEraserPreciseSegmentCheckCount: () =>
           interactionRuntime.eraserPreciseSegmentCheckCount,
+      readEraserProjectedPointCount: () =>
+          interactionRuntime.eraserProjectedPointCount,
     ),
   );
 }

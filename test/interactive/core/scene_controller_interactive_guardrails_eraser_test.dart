@@ -235,6 +235,55 @@ void main() {
       });
 
       test(
+        'eraser projected point count is exposed through internal access',
+        () {
+          final controller = controllerFromScene(
+            Scene(
+              layers: <ContentLayer>[
+                ContentLayer(id: 'layer-auto-projected-0'),
+                ContentLayer(
+                  id: 'layer-auto-projected-1',
+                  nodes: <SceneNode>[
+                    horizontalStroke(
+                      id: 'projected-hit',
+                      y: 0,
+                      length: 120,
+                      step: 30,
+                      thickness: 2,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+          addTearDown(controller.dispose);
+
+          controller.interaction.setMode(CanvasMode.draw);
+          controller.interaction.setDrawTool(DrawTool.eraser);
+          controller.interaction.eraserThickness = 20;
+
+          controller.interaction.handlePointer(
+            sampleInput(
+              pointerId: 7,
+              position: const Offset(0, 0),
+              timestampMs: 1,
+              phase: CanvasPointerPhase.down,
+            ),
+          );
+          controller.interaction.handlePointer(
+            sampleInput(
+              pointerId: 7,
+              position: const Offset(120, 0),
+              timestampMs: 2,
+              phase: CanvasPointerPhase.up,
+            ),
+          );
+
+          expect(eraserProjectedPointCount(controller), greaterThan(0));
+        },
+      );
+
+      test(
         'eraser zigzag path keeps coarse prefilter correctness and bounded checks',
         () {
           const zigzagLength = 2000.0;

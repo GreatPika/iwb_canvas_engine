@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:test/test.dart';
 
 import '../../tool/bench/run_selection_control_diagnostics.dart'
@@ -71,6 +73,31 @@ void main() {
       expect(run.paintWithSelectionAvgUs, 70);
       expect(run.withOverNoRatio, 0.7);
       expect(run.paintWithSelectionProbe?.saveLayerBoundsArea, 1200);
+    });
+
+    test('does not keep a checked-in selection diagnostic baseline', () {
+      final selectionDiagnosticBaselines = Directory('tool/bench/baselines')
+          .listSync()
+          .whereType<File>()
+          .map((file) => file.uri.pathSegments.last)
+          .where(
+            (name) =>
+                name.startsWith('selection_control_diagnostics') &&
+                name.endsWith('.json'),
+          )
+          .toList(growable: false);
+
+      expect(selectionDiagnosticBaselines, isEmpty);
+    });
+
+    test('stays an ad hoc report generator without baseline or diff args', () {
+      final source = File(
+        'tool/bench/run_selection_control_diagnostics.dart',
+      ).readAsStringSync();
+
+      expect(source, isNot(contains('--baseline')));
+      expect(source, isNot(contains('--diff')));
+      expect(source, isNot(contains('diff_load_profiles')));
     });
   });
 }

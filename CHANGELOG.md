@@ -70,7 +70,9 @@ in changes that have not yet been published to pub.dev.
   deterministic owner-level proof plus workflow-contract checks, while
   diagnostic load profiles now split `smoke` product scenarios from `full`
   stress/nightly coverage and expose explicit cache-churn, selection
-  compositing, and grid-iteration probes.
+  compositing, grid-iteration, and eraser commit probes. Selection diagnostic
+  reports remain ad hoc and no longer ship with a checked-in regression
+  baseline.
 
 ### Fixed
 

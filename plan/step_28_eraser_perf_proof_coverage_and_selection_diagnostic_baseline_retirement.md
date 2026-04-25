@@ -289,7 +289,7 @@ Normalize the repository-owned performance regression surface so it covers the r
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Retire Orphaned Selection Diagnostic Baseline
+### Slice 1. [x] Retire Orphaned Selection Diagnostic Baseline
 
 #### Slice Contract
 
@@ -333,7 +333,7 @@ The repository stops implying that selection-control diagnostics are a checked-i
 - The committed baseline inventory contains no selection diagnostic baseline files.
 - Tool tests explicitly encode the runner as ad hoc and the inventory as canonical-load-profile-only.
 
-### Slice 2. [ ] Add Full Eraser Load-Profile Regression Surface
+### Slice 2. [x] Add Full Eraser Load-Profile Regression Surface
 
 #### Slice Contract
 

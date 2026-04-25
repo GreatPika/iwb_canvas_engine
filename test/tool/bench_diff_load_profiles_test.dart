@@ -773,6 +773,100 @@ void main() {
       );
     });
 
+    test('fails when full eraser case is missing from reports', () {
+      final output = bench_diff.buildDiffReport(
+        baseline: _report(
+          profile: 'full',
+          cases: const <Map<String, Object?>>[],
+        ),
+        current: _report(
+          profile: 'full',
+          cases: const <Map<String, Object?>>[],
+        ),
+        requiredProfile: 'full',
+        baselinePath: 'baseline.json',
+        currentPath: 'current.json',
+      );
+
+      expect(output['status'], 'fail');
+      final failures = (output['failures'] as List<Object?>).cast<String>();
+      expect(
+        failures.any(
+          (failure) =>
+              failure.startsWith('missing required cases in baseline: ') &&
+              failure.contains(eraserLongPathMixedSceneCaseName),
+        ),
+        isTrue,
+      );
+      expect(
+        failures.any(
+          (failure) =>
+              failure.startsWith('missing required cases in current: ') &&
+              failure.contains(eraserLongPathMixedSceneCaseName),
+        ),
+        isTrue,
+      );
+    });
+
+    test('fails when full eraser probes are missing', () {
+      final output = bench_diff.buildDiffReport(
+        baseline: _report(
+          profile: 'full',
+          cases: <Map<String, Object?>>[
+            _caseMetrics(eraserLongPathMixedSceneCaseName, <String, Object?>{
+              eraserLongPathCommitOperationName: _metrics(100, 100, 100, 100),
+            }),
+          ],
+        ),
+        current: _report(
+          profile: 'full',
+          cases: <Map<String, Object?>>[
+            _caseMetrics(eraserLongPathMixedSceneCaseName, <String, Object?>{
+              eraserLongPathCommitOperationName: _metrics(100, 100, 100, 100),
+            }),
+          ],
+        ),
+        requiredProfile: 'full',
+        baselinePath: 'baseline.json',
+        currentPath: 'current.json',
+      );
+
+      expect(output['status'], 'fail');
+      final failures = (output['failures'] as List<Object?>).cast<String>();
+      final baselineFailure = failures.singleWhere(
+        (failure) => failure.startsWith(
+          '$eraserLongPathMixedSceneCaseName missing required probes in '
+          'baseline: ',
+        ),
+      );
+      final currentFailure = failures.singleWhere(
+        (failure) => failure.startsWith(
+          '$eraserLongPathMixedSceneCaseName missing required probes in '
+          'current: ',
+        ),
+      );
+      for (final failure in <String>[baselineFailure, currentFailure]) {
+        expect(
+          failure,
+          contains('$eraserLongPathCommitOperationName.spatialQueryCount'),
+        );
+        expect(
+          failure,
+          contains(
+            '$eraserLongPathCommitOperationName.preciseSegmentCheckCount',
+          ),
+        );
+        expect(
+          failure,
+          contains('$eraserLongPathCommitOperationName.projectedPointCount'),
+        );
+        expect(
+          failure,
+          contains('$eraserLongPathCommitOperationName.deletedCount'),
+        );
+      }
+    });
+
     test('fails when gated regression exceeds configured threshold', () {
       final policy = loadProfilePolicyFor('smoke');
       final output = bench_diff.buildDiffReport(

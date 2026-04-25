@@ -587,6 +587,80 @@ void main() {
       expect(fullOperation['measuredIterations'], 3);
     });
 
+    test('full profile requires eraser commit case and exact probes', () {
+      final smokePolicy = loadProfilePolicyFor('smoke');
+      final fullPolicy = loadProfilePolicyFor('full');
+      final eraserContract = fullPolicy.contractForCase(
+        eraserLongPathMixedSceneCaseName,
+      );
+      final eraserOperation =
+          ((eraserContract['operations']
+                  as Map<String, Object?>)[eraserLongPathCommitOperationName])
+              as Map<String, Object?>;
+
+      expect(
+        smokePolicy.requiredCaseNames,
+        isNot(contains(eraserLongPathMixedSceneCaseName)),
+      );
+      expect(
+        fullPolicy.requiredCaseNames,
+        contains(eraserLongPathMixedSceneCaseName),
+      );
+      expect(
+        fullPolicy.requiredOperationsForCase(eraserLongPathMixedSceneCaseName),
+        <String>[eraserLongPathCommitOperationName],
+      );
+      expect(eraserOperation['probeKeys'], eraserCommitProbeKeys);
+    });
+
+    test('fails when full eraser probes are missing from report', () {
+      final policy = loadProfilePolicyFor('full');
+
+      final issues = run_load_profiles.validateCollectedBenchmarkCaseContracts(
+        policy: policy,
+        parsedCases: <Map<String, Object?>>[
+          _probeRecord(
+            eraserLongPathMixedSceneCaseName,
+            const <String, Object?>{},
+          ),
+        ],
+      );
+
+      expect(
+        issues,
+        contains(
+          'benchmark case "$eraserLongPathMixedSceneCaseName" is missing '
+          'probes for "$eraserLongPathCommitOperationName"',
+        ),
+      );
+    });
+
+    test('eraser benchmark uses public pointer path and internal probes', () {
+      final source = File(
+        'tool/bench/load_profiles_cases_test.dart',
+      ).readAsStringSync();
+      final eraserBody = _extractMethodBody(
+        source: source,
+        methodStart: 'Map<String, Object?> _runEraserLongPathMixedSceneCase({',
+      );
+
+      expect(eraserBody, contains('controller.interaction.handlePointer('));
+      expect(
+        eraserBody,
+        contains('sceneControllerInternalEraserSpatialQueryCount('),
+      );
+      expect(
+        eraserBody,
+        contains('sceneControllerInternalEraserPreciseSegmentCheckCount('),
+      );
+      expect(
+        eraserBody,
+        contains('sceneControllerInternalEraserProjectedPointCount('),
+      );
+      expect(eraserBody, isNot(contains('InteractiveDrawEraserEngine(')));
+      expect(eraserBody, isNot(contains('.commitOnUp(')));
+    });
+
     test(
       'background paint benchmark is wired through SceneControllerSceneViewMainSceneRenderRead instead of benchmark-only render state',
       () {

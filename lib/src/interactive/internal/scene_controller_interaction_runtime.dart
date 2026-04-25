@@ -203,6 +203,7 @@ extension SceneControllerInteractionRuntimeStateApi
   int get eraserSpatialQueryCount => runtime.debugEraserSpatialQueryCount;
   int get eraserPreciseSegmentCheckCount =>
       runtime.debugEraserPreciseSegmentChecks;
+  int get eraserProjectedPointCount => runtime.debugEraserProjectedPointCount;
   InteractiveMovePreviewRead get movePreviewRead => runtime.movePreviewRead;
 
   void interruptForInteractionConfigChange() {

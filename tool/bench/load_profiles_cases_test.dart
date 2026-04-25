@@ -9,6 +9,7 @@ import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
 import 'package:iwb_canvas_engine/src/interactive/internal/interactive_move_preview_read.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_internal_access.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
@@ -232,6 +233,24 @@ void main() {
     },
     timeout: const Timeout(Duration(minutes: 10)),
   );
+
+  if (profile == 'full') {
+    test(
+      'load profile eraser-long-path-mixed-scene profile=$profile',
+      () {
+        final metrics = _runEraserLongPathMixedSceneCase(
+          iterations: policy.selectionPathIterations,
+        );
+        _emitResult(
+          profile: profile,
+          name: eraserLongPathMixedSceneCaseName,
+          metrics: metrics,
+          contract: policy.contractForCase(eraserLongPathMixedSceneCaseName),
+        );
+      },
+      timeout: const Timeout(Duration(minutes: 10)),
+    );
+  }
 
   if (policy.includesWorstCaseDiagnostics) {
     test(
@@ -1266,6 +1285,137 @@ Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
     renderState.dispose();
     controller.dispose();
   }
+}
+
+Map<String, Object?> _runEraserLongPathMixedSceneCase({
+  required int iterations,
+}) {
+  final gesture = _eraserLongPathMixedSceneGesture();
+  final controllers = <SceneController>[
+    for (var i = 0; i < iterations; i++) _createEraserBenchmarkController(),
+  ];
+
+  void runGesture(SceneController controller) {
+    controller.interaction.handlePointer(
+      CanvasPointerInput(
+        pointerId: 1,
+        position: gesture.first,
+        timestampMs: 1,
+        phase: CanvasPointerPhase.down,
+        kind: PointerDeviceKind.touch,
+      ),
+    );
+    for (var i = 1; i < gesture.length; i++) {
+      controller.interaction.handlePointer(
+        CanvasPointerInput(
+          pointerId: 1,
+          position: gesture[i],
+          timestampMs: i + 1,
+          phase: i == gesture.length - 1
+              ? CanvasPointerPhase.up
+              : CanvasPointerPhase.move,
+          kind: PointerDeviceKind.touch,
+        ),
+      );
+    }
+  }
+
+  try {
+    late Map<String, num> eraseProbe;
+    final metric = _measureOperation(
+      iterations: iterations,
+      run: (i) {
+        final controller = controllers[i];
+        final nodeCountBefore = _foregroundNodeCount(controller.snapshot);
+        runGesture(controller);
+        final deletedCount =
+            nodeCountBefore - _foregroundNodeCount(controller.snapshot);
+        eraseProbe = <String, num>{
+          'spatialQueryCount': sceneControllerInternalEraserSpatialQueryCount(
+            controller,
+          ),
+          'preciseSegmentCheckCount':
+              sceneControllerInternalEraserPreciseSegmentCheckCount(controller),
+          'projectedPointCount':
+              sceneControllerInternalEraserProjectedPointCount(controller),
+          'deletedCount': deletedCount,
+        };
+      },
+    );
+
+    return <String, Object?>{
+      'iterations': iterations,
+      'gesturePointCount': gesture.length,
+      'probes': <String, Object?>{
+        eraserLongPathCommitOperationName: eraseProbe,
+      },
+      'metrics': <String, Object?>{eraserLongPathCommitOperationName: metric},
+    };
+  } finally {
+    for (final controller in controllers) {
+      controller.dispose();
+    }
+  }
+}
+
+SceneController _createEraserBenchmarkController() {
+  final controller = SceneController(initialSnapshot: _eraserMixedScene());
+  controller.interaction.setMode(CanvasMode.draw);
+  controller.interaction.setDrawTool(DrawTool.eraser);
+  controller.interaction.eraserThickness = 18;
+  return controller;
+}
+
+SceneSnapshot _eraserMixedScene() {
+  return SceneSnapshot(
+    layers: <ContentLayerSnapshot>[
+      ContentLayerSnapshot(
+        id: 'layer-auto-eraser-mixed',
+        nodes: <NodeSnapshot>[
+          StrokeNodeSnapshot(
+            id: 'eraser-near-stroke',
+            points: _linearPoints(count: 256, y: 0),
+            thickness: 2,
+            color: const Color(0xFF000000),
+          ),
+          StrokeNodeSnapshot(
+            id: 'eraser-safe-far-stroke',
+            points: _linearPoints(count: 256, y: 80),
+            thickness: 2,
+            color: const Color(0xFF000000),
+          ),
+          LineNodeSnapshot(
+            id: 'eraser-cross-line',
+            start: const Offset(128, -40),
+            end: const Offset(128, 40),
+            thickness: 2,
+            color: const Color(0xFF000000),
+          ),
+          LineNodeSnapshot(
+            id: 'eraser-safe-far-line',
+            start: const Offset(128, 120),
+            end: const Offset(200, 120),
+            thickness: 2,
+            color: const Color(0xFF000000),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+List<Offset> _eraserLongPathMixedSceneGesture() {
+  return <Offset>[
+    for (var i = 0; i < 256; i++) Offset(i.toDouble(), i.isEven ? -2.0 : 2.0),
+  ];
+}
+
+int _foregroundNodeCount(SceneSnapshot snapshot) {
+  var count = 0;
+  for (final layer in snapshot.layers) {
+    count += layer.nodes.length;
+  }
+  return count;
 }
 
 SceneSnapshot _selectionPathSnapshot({

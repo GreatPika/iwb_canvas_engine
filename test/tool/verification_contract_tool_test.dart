@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
+import '../../tool/src/verification_contract/verification_contract_registry.dart';
 import 'support/tool_process_test_support.dart';
 
 void main() {
@@ -266,6 +267,15 @@ Run something else.
         }
       },
     );
+
+    test('keeps selection diagnostics out of perf nightly contract', () {
+      final commands = perfNightlyWorkflowRunExpectations
+          .map((expectation) => expectation.command)
+          .join('\n');
+
+      expect(commands, isNot(contains('run_selection_control_diagnostics')));
+      expect(commands, isNot(contains('selection_control_diagnostics')));
+    });
 
     test('reports invalid workflow yaml without crashing', () async {
       final sandbox = await _createSandbox();
