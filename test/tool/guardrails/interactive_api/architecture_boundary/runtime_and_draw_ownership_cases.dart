@@ -45,11 +45,11 @@ class SceneControllerMutationBoundary {
   }
 
   void setSelection(Object nodeIds) {
-    _sceneCommands.writeSelectionReplace(nodeIds);
+    _sceneCommands.writeSelectionReplaceExactResult(nodeIds);
   }
 
   void clearSelection() {
-    _sceneCommands.writeSelectionClear();
+    _sceneCommands.writeSelectionClearExactChange();
   }
 
   void deleteSelection() {
@@ -93,9 +93,9 @@ class _Core {
 }
 
 class _Commands {
-  void writeSelectionReplace(Object nodeIds) {}
+  Object? writeSelectionReplaceExactResult(Object nodeIds) => null;
 
-  void writeSelectionClear() {}
+  bool writeSelectionClearExactChange() => false;
 
   void writeDeleteSelection() {}
 

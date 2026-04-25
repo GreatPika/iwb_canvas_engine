@@ -83,10 +83,6 @@ class SceneCommands {
     });
   }
 
-  void writeSelectionReplace(Iterable<NodeId> nodeIds) {
-    writeSelectionReplaceExactResult(nodeIds);
-  }
-
   bool writeSelectionToggleExactChange(NodeId nodeId) {
     return _writeRunner<bool>((writer) {
       final changed = writer.writeSelectionToggle(nodeId);
@@ -99,10 +95,6 @@ class SceneCommands {
       }
       return changed;
     });
-  }
-
-  void writeSelectionToggle(NodeId nodeId) {
-    writeSelectionToggleExactChange(nodeId);
   }
 
   bool writeSelectionClearExactChange() {
@@ -118,10 +110,6 @@ class SceneCommands {
     });
   }
 
-  void writeSelectionClear() {
-    writeSelectionClearExactChange();
-  }
-
   ({int selectedCount, bool changed}) writeSelectionSelectAllExactResult({
     bool onlySelectable = true,
   }) {
@@ -135,12 +123,6 @@ class SceneCommands {
       }
       return result;
     });
-  }
-
-  int writeSelectionSelectAll({bool onlySelectable = true}) {
-    return writeSelectionSelectAllExactResult(
-      onlySelectable: onlySelectable,
-    ).selectedCount;
   }
 
   int writeSelectionTransform(Transform2D delta) {
@@ -203,10 +185,6 @@ class SceneCommands {
     });
   }
 
-  void writeBackgroundColorSet(Color color) {
-    writeBackgroundColorSetExactChange(color);
-  }
-
   bool writeGridEnabledSetExactChange(bool enabled) {
     return _writeRunner<bool>((writer) {
       final changed = sceneWriterWriteGridEnableExactChange(writer, enabled);
@@ -218,10 +196,6 @@ class SceneCommands {
       }
       return changed;
     });
-  }
-
-  void writeGridEnabledSet(bool enabled) {
-    writeGridEnabledSetExactChange(enabled);
   }
 
   bool writeGridCellSizeSetExactChange(double size) {
@@ -237,10 +211,6 @@ class SceneCommands {
     });
   }
 
-  void writeGridCellSizeSet(double size) {
-    writeGridCellSizeSetExactChange(size);
-  }
-
   bool writeCameraOffsetSetExactChange(Offset offset) {
     return _writeRunner<bool>((writer) {
       final changed = sceneWriterWriteCameraOffsetExactChange(writer, offset);
@@ -249,9 +219,5 @@ class SceneCommands {
       }
       return changed;
     });
-  }
-
-  void writeCameraOffsetSet(Offset offset) {
-    writeCameraOffsetSetExactChange(offset);
   }
 }

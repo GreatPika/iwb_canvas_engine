@@ -418,7 +418,7 @@ forwarders.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Adopt Canonical Exact Methods In Tests And Fixtures
+### Slice 1. [x] Adopt Canonical Exact Methods In Tests And Fixtures
 
 #### Slice Contract
 
@@ -469,7 +469,7 @@ methods while command behavior and diagnostics stay unchanged.
 - the in-scope migrated files contain no remaining calls to the retiring alias
   names
 
-### Slice 2. [ ] Retire SceneCommands Alias Declarations And Lock The Surface
+### Slice 2. [x] Retire SceneCommands Alias Declarations And Lock The Surface
 
 #### Slice Contract
 

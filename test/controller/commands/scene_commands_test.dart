@@ -268,8 +268,8 @@ void main() {
 
       sceneCommandsFor(
         controller,
-      ).writeSelectionReplace(const <NodeId>{'selected'});
-      sceneCommandsFor(controller).writeSelectionToggle('selected');
+      ).writeSelectionReplaceExactResult(const <NodeId>{'selected'});
+      sceneCommandsFor(controller).writeSelectionToggleExactChange('selected');
       await pumpEventQueue();
 
       expect(patchMissing, isFalse);
@@ -303,14 +303,14 @@ void main() {
 
       sceneCommandsFor(
         controller,
-      ).writeSelectionReplace(const <NodeId>{'base'});
-      sceneCommandsFor(controller).writeSelectionClear();
+      ).writeSelectionReplaceExactResult(const <NodeId>{'base'});
+      sceneCommandsFor(controller).writeSelectionClearExactChange();
       await pumpEventQueue();
       expect(signalTypes, contains('selection.cleared'));
 
       final selectNone = sceneCommandsFor(
         controller,
-      ).writeSelectionSelectAll(onlySelectable: false);
+      ).writeSelectionSelectAllExactResult(onlySelectable: false).selectedCount;
       await pumpEventQueue();
       expect(selectNone, 1);
       expect(signalTypes, contains('selection.all'));
@@ -338,10 +338,12 @@ void main() {
 
       sceneCommandsFor(
         controller,
-      ).writeBackgroundColorSet(const Color(0xFFAA5500));
-      sceneCommandsFor(controller).writeGridEnabledSet(true);
-      sceneCommandsFor(controller).writeGridCellSizeSet(42);
-      sceneCommandsFor(controller).writeCameraOffsetSet(const Offset(10, -4));
+      ).writeBackgroundColorSetExactChange(const Color(0xFFAA5500));
+      sceneCommandsFor(controller).writeGridEnabledSetExactChange(true);
+      sceneCommandsFor(controller).writeGridCellSizeSetExactChange(42);
+      sceneCommandsFor(
+        controller,
+      ).writeCameraOffsetSetExactChange(const Offset(10, -4));
       await pumpEventQueue();
       expect(
         signalTypes,
@@ -366,7 +368,7 @@ void main() {
     });
     addTearDown(sub.cancel);
 
-    sceneCommandsFor(controller).writeSelectionClear();
+    sceneCommandsFor(controller).writeSelectionClearExactChange();
     await pumpEventQueue();
 
     expect(signalTypes, isNot(contains('selection.cleared')));
@@ -381,7 +383,7 @@ void main() {
 
       sceneCommandsFor(
         controller,
-      ).writeSelectionReplace(const <NodeId>{'base'});
+      ).writeSelectionReplaceExactResult(const <NodeId>{'base'});
       await pumpEventQueue();
       expect(controller.selectedNodeIds, const <NodeId>{'base'});
 
@@ -404,7 +406,7 @@ void main() {
 
       final selectedCount = sceneCommandsFor(
         controller,
-      ).writeSelectionSelectAll();
+      ).writeSelectionSelectAllExactResult().selectedCount;
       await pumpEventQueue();
 
       expect(selectedCount, 0);
@@ -424,11 +426,15 @@ void main() {
     });
     addTearDown(sub.cancel);
 
-    sceneCommandsFor(controller).writeSelectionReplace(const <NodeId>{'base'});
+    sceneCommandsFor(
+      controller,
+    ).writeSelectionReplaceExactResult(const <NodeId>{'base'});
     await pumpEventQueue();
     expect(signalTypes.where((type) => type == 'selection.replaced').length, 1);
 
-    sceneCommandsFor(controller).writeSelectionReplace(const <NodeId>{'base'});
+    sceneCommandsFor(
+      controller,
+    ).writeSelectionReplaceExactResult(const <NodeId>{'base'});
     await pumpEventQueue();
     expect(signalTypes.where((type) => type == 'selection.replaced').length, 1);
     assertControllerInvariants(controller);
@@ -450,12 +456,14 @@ void main() {
 
       sceneCommandsFor(
         controller,
-      ).writeSelectionReplace(const <NodeId>{'base'});
+      ).writeSelectionReplaceExactResult(const <NodeId>{'base'});
       await pumpEventQueue();
       expect(controller.selectedNodeIds, const <NodeId>{'base'});
       expect(replacedSignals, 1);
 
-      sceneCommandsFor(controller).writeSelectionReplace(const <NodeId>{});
+      sceneCommandsFor(
+        controller,
+      ).writeSelectionReplaceExactResult(const <NodeId>{});
       await pumpEventQueue();
 
       expect(controller.selectedNodeIds, const <NodeId>{'base'});
@@ -478,7 +486,7 @@ void main() {
 
     sceneCommandsFor(
       controller,
-    ).writeSelectionReplace(const <NodeId>{'base', 'missing'});
+    ).writeSelectionReplaceExactResult(const <NodeId>{'base', 'missing'});
     await pumpEventQueue();
 
     expect(replacedIds, isNotNull);
@@ -512,9 +520,9 @@ void main() {
     });
     addTearDown(sub.cancel);
 
-    sceneCommandsFor(
-      controller,
-    ).writeSelectionReplace(const <NodeId>{'z-node', 'base', 'a-node'});
+    sceneCommandsFor(controller).writeSelectionReplaceExactResult(
+      const <NodeId>{'z-node', 'base', 'a-node'},
+    );
     await pumpEventQueue();
 
     expect(replacedIds, const <NodeId>['a-node', 'base', 'z-node']);
@@ -557,12 +565,9 @@ void main() {
     });
     addTearDown(sub.cancel);
 
-    sceneCommandsFor(controller).writeSelectionReplace(const <NodeId>{
-      'visible',
-      'hidden',
-      'bg',
-      'missing',
-    });
+    sceneCommandsFor(controller).writeSelectionReplaceExactResult(
+      const <NodeId>{'visible', 'hidden', 'bg', 'missing'},
+    );
     await pumpEventQueue();
 
     expect(replacedIds, const <NodeId>['visible']);
@@ -586,14 +591,14 @@ void main() {
 
       sceneCommandsFor(
         controller,
-      ).writeSelectionReplace(const <NodeId>{'base'});
+      ).writeSelectionReplaceExactResult(const <NodeId>{'base'});
       await pumpEventQueue();
       expect(controller.selectedNodeIds, const <NodeId>{'base'});
       expect(replacedSignals, 1);
 
       sceneCommandsFor(
         controller,
-      ).writeSelectionReplace(const <NodeId>{'missing'});
+      ).writeSelectionReplaceExactResult(const <NodeId>{'missing'});
       await pumpEventQueue();
       expect(controller.selectedNodeIds, const <NodeId>{'base'});
       expect(replacedSignals, 1);
@@ -611,7 +616,7 @@ void main() {
     });
     addTearDown(sub.cancel);
 
-    sceneCommandsFor(controller).writeSelectionToggle('missing');
+    sceneCommandsFor(controller).writeSelectionToggleExactChange('missing');
     await pumpEventQueue();
 
     expect(signalTypes, isNot(contains('selection.toggled')));
@@ -677,12 +682,9 @@ void main() {
       });
       addTearDown(sub.cancel);
 
-      sceneCommandsFor(controller).writeSelectionReplace(const <NodeId>{
-        'bg',
-        'locked',
-        'free',
-        'missing',
-      });
+      sceneCommandsFor(controller).writeSelectionReplaceExactResult(
+        const <NodeId>{'bg', 'locked', 'free', 'missing'},
+      );
       await pumpEventQueue();
       expect(controller.selectedNodeIds, const <NodeId>{'locked', 'free'});
 
@@ -728,14 +730,16 @@ void main() {
 
       sceneCommandsFor(
         controller,
-      ).writeBackgroundColorSet(snapshot.background.color);
+      ).writeBackgroundColorSetExactChange(snapshot.background.color);
       sceneCommandsFor(
         controller,
-      ).writeGridEnabledSet(snapshot.background.grid.isEnabled);
+      ).writeGridEnabledSetExactChange(snapshot.background.grid.isEnabled);
       sceneCommandsFor(
         controller,
-      ).writeGridCellSizeSet(snapshot.background.grid.cellSize);
-      sceneCommandsFor(controller).writeCameraOffsetSet(snapshot.camera.offset);
+      ).writeGridCellSizeSetExactChange(snapshot.background.grid.cellSize);
+      sceneCommandsFor(
+        controller,
+      ).writeCameraOffsetSetExactChange(snapshot.camera.offset);
       await pumpEventQueue();
 
       final trackedSignalTypes = signalTypes
@@ -768,10 +772,12 @@ void main() {
 
       sceneCommandsFor(
         controller,
-      ).writeBackgroundColorSet(const Color(0xFFAA5500));
-      sceneCommandsFor(controller).writeGridEnabledSet(true);
-      sceneCommandsFor(controller).writeGridCellSizeSet(42);
-      sceneCommandsFor(controller).writeCameraOffsetSet(const Offset(10, -4));
+      ).writeBackgroundColorSetExactChange(const Color(0xFFAA5500));
+      sceneCommandsFor(controller).writeGridEnabledSetExactChange(true);
+      sceneCommandsFor(controller).writeGridCellSizeSetExactChange(42);
+      sceneCommandsFor(
+        controller,
+      ).writeCameraOffsetSetExactChange(const Offset(10, -4));
       await pumpEventQueue();
 
       expect(
@@ -793,7 +799,7 @@ void main() {
     addTearDown(controller.dispose);
 
     expect(
-      () => sceneCommandsFor(controller).writeGridCellSizeSet(0),
+      () => sceneCommandsFor(controller).writeGridCellSizeSetExactChange(0),
       throwsArgumentError,
     );
     await pumpEventQueue();

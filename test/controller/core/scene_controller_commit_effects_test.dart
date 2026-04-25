@@ -118,7 +118,7 @@ void main() {
 
       sceneCommandsFor(
         controller,
-      ).writeSelectionSelectAll(onlySelectable: false);
+      ).writeSelectionSelectAllExactResult(onlySelectable: false);
 
       expect(controller.selectedNodeIds, const <NodeId>{
         'selectable',

@@ -43,7 +43,9 @@ void main() {
     final controller = buildController();
     addTearDown(controller.dispose);
 
-    sceneCommandsFor(controller).writeSelectionReplace(const <NodeId>{'base'});
+    sceneCommandsFor(
+      controller,
+    ).writeSelectionReplaceExactResult(const <NodeId>{'base'});
     final moved = moveCommandsFor(
       controller,
     ).writeTranslateSelection(const Offset(7, 3));
@@ -61,7 +63,9 @@ void main() {
     final controller = buildController();
     addTearDown(controller.dispose);
 
-    sceneCommandsFor(controller).writeSelectionReplace(const <NodeId>{'base'});
+    sceneCommandsFor(
+      controller,
+    ).writeSelectionReplaceExactResult(const <NodeId>{'base'});
 
     expect(
       () => moveCommandsFor(

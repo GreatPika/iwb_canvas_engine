@@ -397,7 +397,7 @@ class SceneControllerSelectionOwner {
   void setSelection(Object nodeIds) {
     _runtime.ensurePublicSideEffectAllowed('setSelection');
     _ensureExternalMutationAllowed('setSelection');
-    _sceneCommands.writeSelectionReplace(nodeIds);
+    _sceneCommands.writeSelectionReplaceExactResult(nodeIds);
   }
 
   void toggleSelection(Object nodeId) {
@@ -451,7 +451,7 @@ class _StoreController {
 }
 
 class _Commands {
-  void writeSelectionReplace(Object nodeIds) {}
+  Object? writeSelectionReplaceExactResult(Object nodeIds) => null;
 }
 
 class _MutationBoundary {}
@@ -854,11 +854,11 @@ class SceneControllerMutationBoundary {
   }
 
   void setSelection(Object nodeIds) {
-    _sceneCommands.writeSelectionReplace(nodeIds);
+    _sceneCommands.writeSelectionReplaceExactResult(nodeIds);
   }
 
   void clearSelection() {
-    _sceneCommands.writeSelectionClear();
+    _sceneCommands.writeSelectionClearExactChange();
   }
 
   void deleteSelection() {
@@ -902,9 +902,9 @@ class _Core {
 }
 
 class _Commands {
-  void writeSelectionReplace(Object nodeIds) {}
+  Object? writeSelectionReplaceExactResult(Object nodeIds) => null;
 
-  void writeSelectionClear() {}
+  bool writeSelectionClearExactChange() => false;
 
   void writeDeleteSelection() {}
 
