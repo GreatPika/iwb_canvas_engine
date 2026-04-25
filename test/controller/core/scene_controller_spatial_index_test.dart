@@ -455,6 +455,7 @@ void main() {
           nodeId: byId['r1']!.nodeId,
           layerIndex: byId['r1']!.layerIndex,
           nodeIndex: byId['r1']!.nodeIndex,
+          structuralRevision: byId['r1']!.structuralRevision,
         )),
         isNotNull,
       );
@@ -463,6 +464,7 @@ void main() {
           nodeId: byId['r3']!.nodeId,
           layerIndex: byId['r3']!.layerIndex,
           nodeIndex: byId['r3']!.nodeIndex,
+          structuralRevision: byId['r3']!.structuralRevision,
         )),
         isNotNull,
       );

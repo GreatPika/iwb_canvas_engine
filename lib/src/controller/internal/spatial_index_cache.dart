@@ -29,6 +29,7 @@ class SpatialIndexCache {
     required Map<LayerId, int> layerIndexById,
     required Rect worldBounds,
     required int controllerEpoch,
+    required int structuralRevision,
   }) {
     final needsBuild = _index == null || _indexEpoch != controllerEpoch;
     if (needsBuild) {
@@ -36,6 +37,7 @@ class SpatialIndexCache {
         scene,
         nodeLocator: nodeLocator,
         layerIndexById: layerIndexById,
+        structuralRevision: structuralRevision,
       );
       _indexEpoch = controllerEpoch;
       _debugBuildCount = _debugBuildCount + 1;
@@ -53,6 +55,7 @@ class SpatialIndexCache {
     required Map<LayerId, int> layerIndexById,
     required Rect worldBounds,
     required int controllerEpoch,
+    required int structuralRevision,
     ScenePaintSpatialQueryScope scope =
         ScenePaintSpatialQueryScope.contentLayersOnly,
   }) {
@@ -62,6 +65,7 @@ class SpatialIndexCache {
         scene,
         nodeLocator: nodeLocator,
         layerIndexById: layerIndexById,
+        structuralRevision: structuralRevision,
       );
       _indexEpoch = controllerEpoch;
       _debugBuildCount = _debugBuildCount + 1;
@@ -79,6 +83,7 @@ class SpatialIndexCache {
     required Map<LayerId, int> layerIndexById,
     required ChangeSet changeSet,
     required int controllerEpoch,
+    required int structuralRevision,
   }) {
     final prepared = writePrepareCommit(
       scene: scene,
@@ -86,6 +91,7 @@ class SpatialIndexCache {
       layerIndexById: layerIndexById,
       changeSet: changeSet,
       controllerEpoch: controllerEpoch,
+      structuralRevision: structuralRevision,
     );
     writeApplyPreparedCommit(prepared);
   }
@@ -96,6 +102,7 @@ class SpatialIndexCache {
     required Map<LayerId, int> layerIndexById,
     required ChangeSet changeSet,
     required int controllerEpoch,
+    required int structuralRevision,
   }) {
     final coldStart = _prepareColdStartEpoch(_index, controllerEpoch);
     if (coldStart != null) {
@@ -127,6 +134,7 @@ class SpatialIndexCache {
         layerIndexById: layerIndexById,
         changeSet: changeSet,
         controllerEpoch: controllerEpoch,
+        structuralRevision: structuralRevision,
       ),
     );
     if (incremental != null) {
@@ -138,6 +146,7 @@ class SpatialIndexCache {
       nodeLocator: nodeLocator,
       layerIndexById: layerIndexById,
       controllerEpoch: controllerEpoch,
+      structuralRevision: structuralRevision,
     );
   }
 
@@ -173,12 +182,14 @@ class SpatialIndexCache {
     required Map<NodeId, NodeLocatorEntry> nodeLocator,
     required Map<LayerId, int> layerIndexById,
     required int controllerEpoch,
+    required int structuralRevision,
   }) {
     debugBeforeFallbackRebuildHook?.call();
     final rebuilt = SceneSpatialIndex.build(
       scene,
       nodeLocator: nodeLocator,
       layerIndexById: layerIndexById,
+      structuralRevision: structuralRevision,
     );
     return _PreparedSpatialIndexCommit.replaceRebuilt(
       candidate: rebuilt,
@@ -236,11 +247,13 @@ _PreparedSpatialIndexCommit? _prepareIncrementalCommit(
       scene: args.scene,
       nodeLocator: args.nodeLocator,
       layerIndexById: args.layerIndexById,
+      structuralRevision: args.structuralRevision,
     );
     final applied = candidate.applyIncremental(
       scene: args.scene,
       nodeLocator: args.nodeLocator,
       layerIndexById: args.layerIndexById,
+      structuralRevision: args.structuralRevision,
       changeSet: SceneSpatialIndexChangeSet(
         addedNodeIds: args.changeSet.addedNodeIds,
         removedNodeIds: args.changeSet.removedNodeIds,
@@ -268,6 +281,7 @@ class _IncrementalPrepareArgs {
     required this.layerIndexById,
     required this.changeSet,
     required this.controllerEpoch,
+    required this.structuralRevision,
   });
 
   final SceneSpatialIndex? index;
@@ -277,6 +291,7 @@ class _IncrementalPrepareArgs {
   final Map<LayerId, int> layerIndexById;
   final ChangeSet changeSet;
   final int controllerEpoch;
+  final int structuralRevision;
 }
 
 class _PreparedSpatialIndexCommit {

@@ -35,6 +35,7 @@ final class InteractiveMoveHitTestEngine {
         nodeId: candidate.nodeId,
         layerIndex: candidate.layerIndex,
         nodeIndex: candidate.nodeIndex,
+        structuralRevision: candidate.structuralRevision,
       ));
       if (node == null) {
         continue;
@@ -59,6 +60,7 @@ final class InteractiveMoveHitTestEngine {
         nodeId: candidate.nodeId,
         layerIndex: candidate.layerIndex,
         nodeIndex: candidate.nodeIndex,
+        structuralRevision: candidate.structuralRevision,
       ));
       if (node == null) {
         continue;

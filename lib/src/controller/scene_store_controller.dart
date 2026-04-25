@@ -112,6 +112,7 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
       layerIndexById: _store.layerIndexById,
       worldBounds: worldBounds,
       controllerEpoch: _store.controllerEpoch,
+      structuralRevision: _store.structuralRevision,
     );
   }
 
@@ -126,6 +127,7 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
       layerIndexById: _store.layerIndexById,
       worldBounds: worldBounds,
       controllerEpoch: _store.controllerEpoch,
+      structuralRevision: _store.structuralRevision,
       scope: scope,
     );
   }
@@ -133,6 +135,9 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
   NodeSnapshot? resolveSpatialCandidateSnapshot(
     SceneSpatialCandidateReference candidate,
   ) {
+    if (candidate.structuralRevision != _store.structuralRevision) {
+      return null;
+    }
     return _resolveSnapshotAtLocationInSnapshot(
       snapshot: snapshot,
       nodeId: candidate.nodeId,

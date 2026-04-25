@@ -90,6 +90,7 @@ final class SceneControllerPaintCandidateStage {
         nodeId: candidate.nodeId,
         layerIndex: candidate.layerIndex,
         nodeIndex: candidate.nodeIndex,
+        structuralRevision: candidate.structuralRevision,
       ));
       if (resolvedNode == null ||
           !buffers.acceptedNodeIds.add(resolvedNode.id)) {
@@ -154,6 +155,7 @@ final class SceneControllerPaintCandidateStage {
         nodeId: spatialCandidate.nodeId,
         layerIndex: spatialCandidate.layerIndex,
         nodeIndex: spatialCandidate.nodeIndex,
+        structuralRevision: spatialCandidate.structuralRevision,
       ));
       if (resolvedNode == null) {
         continue;

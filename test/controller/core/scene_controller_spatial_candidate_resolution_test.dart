@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/core/scene_spatial_index.dart';
 
 // INV:INV-ENG-ID-INDEX-FROM-SCENE
+// INV:INV-ENG-COMMITTED-READ-SIDE-HERMETICITY
 
 void main() {
   SceneSnapshot twoRectSnapshot() {
@@ -22,6 +23,28 @@ void main() {
     );
   }
 
+  SceneSpatialCandidateReference hitTestReference(
+    SceneHitTestSpatialCandidate candidate,
+  ) {
+    return (
+      nodeId: candidate.nodeId,
+      layerIndex: candidate.layerIndex,
+      nodeIndex: candidate.nodeIndex,
+      structuralRevision: candidate.structuralRevision,
+    );
+  }
+
+  SceneSpatialCandidateReference paintReference(
+    ScenePaintSpatialCandidate candidate,
+  ) {
+    return (
+      nodeId: candidate.nodeId,
+      layerIndex: candidate.layerIndex,
+      nodeIndex: candidate.nodeIndex,
+      structuralRevision: candidate.structuralRevision,
+    );
+  }
+
   test(
     'resolveSpatialCandidateSnapshot accepts valid foreground candidate',
     () {
@@ -35,11 +58,9 @@ void main() {
       );
       expect(candidates, isNotEmpty);
 
-      final resolved = controller.resolveSpatialCandidateSnapshot((
-        nodeId: candidates.first.nodeId,
-        layerIndex: candidates.first.layerIndex,
-        nodeIndex: candidates.first.nodeIndex,
-      ));
+      final resolved = controller.resolveSpatialCandidateSnapshot(
+        hitTestReference(candidates.first),
+      );
       expect(resolved, isNotNull);
       expect(resolved?.id, candidates.first.nodeId);
     },
@@ -68,11 +89,9 @@ void main() {
             scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
           )
           .single;
-      final resolved = controller.resolveSpatialCandidateSnapshot((
-        nodeId: backgroundCandidate.nodeId,
-        layerIndex: backgroundCandidate.layerIndex,
-        nodeIndex: backgroundCandidate.nodeIndex,
-      ));
+      final resolved = controller.resolveSpatialCandidateSnapshot(
+        paintReference(backgroundCandidate),
+      );
 
       expect(backgroundCandidate.layerIndex, -1);
       expect(resolved, isNotNull);
@@ -148,6 +167,7 @@ void main() {
           nodeId: stale.nodeId,
           layerIndex: stale.layerIndex,
           nodeIndex: stale.nodeIndex,
+          structuralRevision: stale.structuralRevision,
         )),
         isNull,
       );
@@ -173,6 +193,7 @@ void main() {
           nodeId: 'bg-node',
           layerIndex: -1,
           nodeIndex: 99,
+          structuralRevision: 0,
         )),
         isNull,
       );
@@ -183,8 +204,18 @@ void main() {
     final controller = SceneStoreController(initialSnapshot: twoRectSnapshot());
     addTearDown(controller.dispose);
 
-    const outOfRangeLayer = (nodeId: 'r1', layerIndex: 99, nodeIndex: 0);
-    const outOfRangeNode = (nodeId: 'r1', layerIndex: 0, nodeIndex: 99);
+    const outOfRangeLayer = (
+      nodeId: 'r1',
+      layerIndex: 99,
+      nodeIndex: 0,
+      structuralRevision: 0,
+    );
+    const outOfRangeNode = (
+      nodeId: 'r1',
+      layerIndex: 0,
+      nodeIndex: 99,
+      structuralRevision: 0,
+    );
 
     expect(controller.resolveSpatialCandidateSnapshot(outOfRangeLayer), isNull);
     expect(controller.resolveSpatialCandidateSnapshot(outOfRangeNode), isNull);
@@ -221,6 +252,137 @@ void main() {
           nodeId: stale.nodeId,
           layerIndex: stale.layerIndex,
           nodeIndex: stale.nodeIndex,
+          structuralRevision: stale.structuralRevision,
+        )),
+        isNull,
+      );
+    },
+  );
+
+  test(
+    'resolveSpatialCandidateSnapshot rejects same-id stale foreground candidate after replaceScene',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-0',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(id: 'reused', size: Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final stale = controller
+          .queryHitTestCandidates(const Rect.fromLTWH(0, 0, 10, 10))
+          .single;
+
+      controller.writeReplaceScene(
+        SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-1',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(id: 'reused', size: Size(20, 20)),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      expect(
+        controller.resolveSpatialCandidateSnapshot((
+          nodeId: stale.nodeId,
+          layerIndex: stale.layerIndex,
+          nodeIndex: stale.nodeIndex,
+          structuralRevision: stale.structuralRevision,
+        )),
+        isNull,
+      );
+    },
+  );
+
+  test(
+    'resolveSpatialCandidateSnapshot rejects same-id stale background candidate after replaceScene',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'bg-reused', size: Size(10, 10)),
+            ],
+          ),
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final stale = controller
+          .queryPaintCandidates(
+            const Rect.fromLTWH(0, 0, 10, 10),
+            scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
+          )
+          .single;
+
+      controller.writeReplaceScene(
+        SceneSnapshot(
+          backgroundLayer: BackgroundLayerSnapshot(
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(id: 'bg-reused', size: Size(20, 20)),
+            ],
+          ),
+        ),
+      );
+
+      expect(
+        controller.resolveSpatialCandidateSnapshot((
+          nodeId: stale.nodeId,
+          layerIndex: stale.layerIndex,
+          nodeIndex: stale.nodeIndex,
+          structuralRevision: stale.structuralRevision,
+        )),
+        isNull,
+      );
+    },
+  );
+
+  test(
+    'resolveSpatialCandidateSnapshot rejects same-id stale candidate after structural rewrite',
+    () {
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-auto-0',
+              nodes: <NodeSnapshot>[
+                RectNodeSnapshot(id: 'reused', size: Size(10, 10)),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final stale = controller
+          .queryHitTestCandidates(const Rect.fromLTWH(0, 0, 10, 10))
+          .single;
+
+      controller.write<void>((writer) {
+        expect(writer.writeNodeErase('reused'), isTrue);
+        writer.writeNodeInsert(
+          RectNodeSpec(id: 'reused', size: const Size(20, 20)),
+          insertIndex: 0,
+        );
+      });
+
+      expect(
+        controller.resolveSpatialCandidateSnapshot((
+          nodeId: stale.nodeId,
+          layerIndex: stale.layerIndex,
+          nodeIndex: stale.nodeIndex,
+          structuralRevision: stale.structuralRevision,
         )),
         isNull,
       );
@@ -243,11 +405,9 @@ void main() {
         writer.writeSelectionReplace(const <NodeId>{'r1'});
       });
 
-      final resolved = controller.resolveSpatialCandidateSnapshot((
-        nodeId: candidate.nodeId,
-        layerIndex: candidate.layerIndex,
-        nodeIndex: candidate.nodeIndex,
-      ));
+      final resolved = controller.resolveSpatialCandidateSnapshot(
+        hitTestReference(candidate),
+      );
       expect(resolved, isNotNull);
       if (resolved == null) {
         fail('Expected spatial candidate resolution to return selected node.');
@@ -336,6 +496,7 @@ void main() {
           nodeId: 'stale',
           layerIndex: 0,
           nodeIndex: 0,
+          structuralRevision: 0,
         )),
         isNull,
       );

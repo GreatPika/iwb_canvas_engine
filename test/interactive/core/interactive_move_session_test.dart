@@ -125,6 +125,7 @@ void main() {
         nodeId: nodeId,
         layerIndex: 0,
         nodeIndex: 0,
+        structuralRevision: 0,
         hitTestBoundsWorld: Rect.fromLTWH(0, 0, 20, 20),
       );
 

@@ -128,6 +128,7 @@ SceneControllerWriteCommitResult _executeStatePlan({
     layerIndexById: committedStoreState.layerIndexById,
     changeSet: plan.changeSet,
     controllerEpoch: committedStoreState.controllerEpoch,
+    structuralRevision: committedStoreState.structuralRevision,
   );
 
   final committedSignals = context.signalsBuffer.writeTakeCommitted(

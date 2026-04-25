@@ -34,6 +34,7 @@ void main() {
       nodeId: line.id,
       layerIndex: 0,
       nodeIndex: 0,
+      structuralRevision: 0,
       hitTestBoundsWorld: nodeSnapshotBoundsWorld(line),
     );
     final removedIds = <String>[];
@@ -78,6 +79,7 @@ void main() {
       nodeId: stroke.id,
       layerIndex: 0,
       nodeIndex: 0,
+      structuralRevision: 0,
       hitTestBoundsWorld: nodeSnapshotBoundsWorld(stroke),
     );
     final removedIds = <String>[];
@@ -125,6 +127,7 @@ void main() {
       nodeId: line.id,
       layerIndex: 0,
       nodeIndex: 0,
+      structuralRevision: 0,
       hitTestBoundsWorld: nodeSnapshotBoundsWorld(line),
     );
     final removedIds = <String>[];

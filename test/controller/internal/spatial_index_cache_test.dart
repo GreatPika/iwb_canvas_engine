@@ -111,6 +111,7 @@ void main() {
         layerIndexById: layerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       expect(first, isNotEmpty);
       expect(slice.debugBuildCount, 1);
@@ -122,6 +123,7 @@ void main() {
         layerIndexById: layerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       expect(slice.debugBuildCount, 1);
 
@@ -132,6 +134,7 @@ void main() {
         layerIndexById: layerIndexById,
         changeSet: noChange,
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       slice.writeQueryHitTestCandidates(
         scene: scene,
@@ -139,6 +142,7 @@ void main() {
         layerIndexById: layerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       expect(slice.debugBuildCount, 1);
       expect(slice.debugIncrementalApplyCount, 0);
@@ -171,6 +175,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         changeSet: movedChange,
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       final movedCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
@@ -178,6 +183,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       expect(movedCandidates, isNotEmpty);
       final oldCandidatesAfterMove = slice.writeQueryHitTestCandidates(
@@ -186,6 +192,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       expect(oldCandidatesAfterMove, isEmpty);
       expect(slice.debugBuildCount, 1);
@@ -200,6 +207,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         changeSet: malformedAdded,
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       final rebuiltAfterMalformedAdd = slice.writeQueryHitTestCandidates(
         scene: movedScene,
@@ -207,6 +215,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       expect(
         rebuiltAfterMalformedAdd.map((candidate) => candidate.nodeId),
@@ -221,6 +230,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         changeSet: malformedBoundsOnly,
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       slice.writeQueryHitTestCandidates(
         scene: movedScene,
@@ -228,6 +238,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       expect(slice.debugBuildCount, 3);
 
@@ -237,6 +248,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         changeSet: noChange,
         controllerEpoch: 1,
+        structuralRevision: 0,
       );
       slice.writeQueryHitTestCandidates(
         scene: movedScene,
@@ -244,6 +256,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 1,
+        structuralRevision: 0,
       );
       expect(slice.debugBuildCount, 4);
 
@@ -254,6 +267,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         changeSet: gridOnly,
         controllerEpoch: 1,
+        structuralRevision: 0,
       );
       slice.writeQueryHitTestCandidates(
         scene: movedScene,
@@ -261,6 +275,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 1,
+        structuralRevision: 0,
       );
       expect(slice.debugBuildCount, 4);
 
@@ -291,6 +306,7 @@ void main() {
         layerIndexById: outOfRangeLayerIndexById,
         worldBounds: outOfRangeBounds,
         controllerEpoch: 2,
+        structuralRevision: 0,
       );
       expect(invalidFirst, isNotEmpty);
       expect(slice.debugBuildCount, 5);
@@ -305,6 +321,7 @@ void main() {
         layerIndexById: outOfRangeLayerIndexById,
         changeSet: outOfRangeChange,
         controllerEpoch: 2,
+        structuralRevision: 0,
       );
       // INV:INV-ENG-SPATIAL-INDEX-REBUILD-ON-INVALID
       final invalidSecond = slice.writeQueryHitTestCandidates(
@@ -313,6 +330,7 @@ void main() {
         layerIndexById: outOfRangeLayerIndexById,
         worldBounds: outOfRangeBounds,
         controllerEpoch: 2,
+        structuralRevision: 0,
       );
       expect(invalidSecond, isNotEmpty);
       expect(slice.debugBuildCount, 6);
@@ -323,6 +341,7 @@ void main() {
         layerIndexById: outOfRangeLayerIndexById,
         worldBounds: outOfRangeBounds,
         controllerEpoch: 2,
+        structuralRevision: 0,
       );
       expect(invalidThird, isNotEmpty);
       expect(slice.debugBuildCount, 6);
@@ -344,6 +363,7 @@ void main() {
         layerIndexById: layerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 10, 10),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       final second = cache.writeQueryPaintCandidates(
         scene: scene,
@@ -351,12 +371,101 @@ void main() {
         layerIndexById: layerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 10, 10),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
 
       expect(first.map((candidate) => candidate.nodeId), <NodeId>['r1']);
       expect(second.map((candidate) => candidate.nodeId), <NodeId>['r1']);
       expect(cache.debugBuildCount, 1);
       expect(cache.debugIncrementalApplyCount, 0);
+    },
+  );
+
+  test(
+    'SpatialIndexCache stamps fresh structural provenance after committed structural changes',
+    () {
+      final cache = SpatialIndexCache();
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-0',
+            nodes: <SceneNode>[RectNode(id: 'r1', size: const Size(10, 10))],
+          ),
+        ],
+      );
+      final nodeLocator = buildStableNodeLocator(scene);
+      final layerIndexById = txnBuildLayerIndexById(scene);
+
+      final initial = cache.writeQueryHitTestCandidates(
+        scene: scene,
+        nodeLocator: nodeLocator,
+        layerIndexById: layerIndexById,
+        worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
+        controllerEpoch: 0,
+        structuralRevision: 1,
+      );
+      expect(initial.single.structuralRevision, 1);
+
+      final movedScene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-0',
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'r1',
+                size: const Size(10, 10),
+                transform: Transform2D.translation(const Offset(40, 0)),
+              ),
+            ],
+          ),
+        ],
+      );
+      final movedLocator = buildStableNodeLocator(movedScene);
+      final movedLayerIndexById = txnBuildLayerIndexById(movedScene);
+      final movedChange = ChangeSet()
+        ..txnMarkBoundsChanged()
+        ..txnTrackUpdated('r1')
+        ..txnTrackSpatialGeometryChanged('r1');
+      cache.writeHandleCommit(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
+        changeSet: movedChange,
+        controllerEpoch: 0,
+        structuralRevision: 2,
+      );
+      final incremental = cache.writeQueryHitTestCandidates(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
+        worldBounds: const Rect.fromLTWH(40, 0, 20, 20),
+        controllerEpoch: 0,
+        structuralRevision: 2,
+      );
+      expect(incremental.single.structuralRevision, 2);
+      expect(cache.debugIncrementalApplyCount, 1);
+
+      final malformedAdded = ChangeSet()
+        ..txnMarkStructuralChanged()
+        ..txnTrackAdded('ghost');
+      cache.writeHandleCommit(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
+        changeSet: malformedAdded,
+        controllerEpoch: 0,
+        structuralRevision: 3,
+      );
+      final rebuilt = cache.writeQueryHitTestCandidates(
+        scene: movedScene,
+        nodeLocator: movedLocator,
+        layerIndexById: movedLayerIndexById,
+        worldBounds: const Rect.fromLTWH(40, 0, 20, 20),
+        controllerEpoch: 0,
+        structuralRevision: 3,
+      );
+      expect(rebuilt.single.structuralRevision, 3);
+      expect(cache.debugBuildCount, 2);
     },
   );
 
@@ -376,6 +485,7 @@ void main() {
               layerIndexById: layerIndexById,
               worldBounds: const Rect.fromLTWH(0, 0, 10, 10),
               controllerEpoch: 0,
+              structuralRevision: 0,
             )
             .map((candidate) => candidate.nodeId),
         <NodeId>['r1'],
@@ -403,6 +513,7 @@ void main() {
         layerIndexById: txnBuildLayerIndexById(ctx.workingScene),
         changeSet: ctx.changeSet,
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
 
       expect(
@@ -413,6 +524,7 @@ void main() {
               layerIndexById: txnBuildLayerIndexById(ctx.workingScene),
               worldBounds: const Rect.fromLTWH(0, 0, 10, 10),
               controllerEpoch: 0,
+              structuralRevision: 0,
             )
             .map((candidate) => candidate.nodeId),
         <NodeId>['r1'],
@@ -437,6 +549,7 @@ void main() {
           layerIndexById: layerIndexById,
           worldBounds: const Rect.fromLTWH(11, 5, 1, 1),
           controllerEpoch: 0,
+          structuralRevision: 0,
         ),
         isEmpty,
       );
@@ -461,6 +574,7 @@ void main() {
         layerIndexById: txnBuildLayerIndexById(ctx.workingScene),
         changeSet: ctx.changeSet,
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
 
       expect(
@@ -471,6 +585,7 @@ void main() {
               layerIndexById: txnBuildLayerIndexById(ctx.workingScene),
               worldBounds: const Rect.fromLTWH(11, 5, 1, 1),
               controllerEpoch: 0,
+              structuralRevision: 0,
             )
             .map((candidate) => candidate.nodeId),
         <NodeId>['r1'],
@@ -503,6 +618,7 @@ void main() {
         layerIndexById: layerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       expect(slice.debugBuildCount, 1);
       expect(slice.debugIncrementalApplyCount, 0);
@@ -539,6 +655,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         changeSet: movedChange,
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
 
       final movedCandidates = slice.writeQueryHitTestCandidates(
@@ -547,6 +664,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       final oldCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
@@ -554,6 +672,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
 
       expect(movedCandidates.map((candidate) => candidate.nodeId), <NodeId>[
@@ -588,6 +707,7 @@ void main() {
         layerIndexById: layerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       expect(initialCandidates.map((candidate) => candidate.nodeId), <NodeId>[
         'r1',
@@ -631,6 +751,7 @@ void main() {
           layerIndexById: movedLayerIndexById,
           changeSet: movedChange,
           controllerEpoch: 0,
+          structuralRevision: 0,
         ),
         throwsStateError,
       );
@@ -641,6 +762,7 @@ void main() {
         layerIndexById: layerIndexById,
         worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       final noMovedCandidates = slice.writeQueryHitTestCandidates(
         scene: movedScene,
@@ -648,6 +770,7 @@ void main() {
         layerIndexById: movedLayerIndexById,
         worldBounds: const Rect.fromLTWH(100, 0, 20, 20),
         controllerEpoch: 0,
+        structuralRevision: 0,
       );
       expect(stillOldAtOrigin.map((candidate) => candidate.nodeId), <NodeId>[
         'r1',
@@ -691,6 +814,7 @@ void main() {
       layerIndexById: originalLayerIndexById,
       worldBounds: const Rect.fromLTWH(0, 0, 100, 40),
       controllerEpoch: 0,
+      structuralRevision: 0,
     );
 
     final updatedScene = Scene(
@@ -733,6 +857,7 @@ void main() {
       layerIndexById: updatedLayerIndexById,
       changeSet: changeSet,
       controllerEpoch: 0,
+      structuralRevision: 0,
     );
     final candidates = cache.writeQueryPaintCandidates(
       scene: updatedScene,
@@ -740,6 +865,7 @@ void main() {
       layerIndexById: updatedLayerIndexById,
       worldBounds: const Rect.fromLTWH(0, 0, 100, 40),
       controllerEpoch: 0,
+      structuralRevision: 0,
     );
 
     expect(cache.debugBuildCount, 1);
@@ -790,6 +916,7 @@ void main() {
             layerIndexById: layerIndexById,
             worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
             controllerEpoch: 0,
+            structuralRevision: 0,
           )
           .map((candidate) => candidate.nodeId),
       <NodeId>['fg'],
@@ -803,6 +930,7 @@ void main() {
             layerIndexById: layerIndexById,
             worldBounds: const Rect.fromLTWH(0, 0, 20, 20),
             controllerEpoch: 0,
+            structuralRevision: 0,
             scope: ScenePaintSpatialQueryScope.backgroundAndContentLayers,
           )
           .map((candidate) => candidate.nodeId)

@@ -115,6 +115,7 @@ const Set<String> _allowedSceneHitTestSpatialCandidateFieldNames = <String>{
   'nodeId',
   'layerIndex',
   'nodeIndex',
+  'structuralRevision',
   'hitTestBoundsWorld',
 };
 
@@ -122,6 +123,7 @@ const Set<String> _allowedScenePaintSpatialCandidateFieldNames = <String>{
   'nodeId',
   'layerIndex',
   'nodeIndex',
+  'structuralRevision',
   'paintBoundsWorld',
 };
 
@@ -452,8 +454,8 @@ GuardrailViolation? _sealedSpatialPayloadViolation({
           sourceElement: field,
           detail:
               'committed spatial payload "${payloadOwner.displayName}.'
-              '${field.displayName}" must not extend the sealed locator-only '
-              'field surface.',
+              '${field.displayName}" must not extend the sealed '
+              'structural-provenance field surface.',
         );
       }
       continue;
@@ -481,8 +483,8 @@ GuardrailViolation? _sealedSpatialPayloadViolation({
       sourceElement: payloadOwner,
       detail:
           'committed spatial payload "${payloadOwner.displayName}" must '
-          'keep required locator field "$requiredFieldName" on the sealed '
-          'surface.',
+          'keep required structural-provenance field "$requiredFieldName" '
+          'on the sealed surface.',
     );
   }
 
@@ -507,7 +509,7 @@ GuardrailViolation? _sealedSpatialPayloadViolation({
       detail:
           'committed spatial payload "${payloadOwner.displayName}."'
           '${getter.displayName}" must not add custom public accessors '
-          'outside the sealed locator-only field surface.',
+          'outside the sealed structural-provenance field surface.',
     );
   }
 
@@ -520,7 +522,7 @@ GuardrailViolation? _sealedSpatialPayloadViolation({
       detail:
           'committed spatial payload "${payloadOwner.displayName}."'
           '${setter.displayName}" must not add custom public accessors '
-          'outside the sealed locator-only field surface.',
+          'outside the sealed structural-provenance field surface.',
     );
   }
 
@@ -533,7 +535,7 @@ GuardrailViolation? _sealedSpatialPayloadViolation({
       detail:
           'committed spatial payload "${payloadOwner.displayName}."'
           '${method.displayName}" must not add public methods outside the '
-          'sealed locator-only field surface.',
+          'sealed structural-provenance field surface.',
     );
   }
 
@@ -1052,14 +1054,14 @@ GuardrailViolation? _spatialCandidateConstructorViolation(
     namedConstructorDetail:
         'committed spatial payload "$payloadOwnerName.$constructorName" '
         'must not add public named constructors outside the sealed '
-        'locator-only field surface.',
+        'structural-provenance field surface.',
     forbiddenTypeDetail: (forbiddenTypeName) =>
         'committed spatial payload constructor for "$payloadOwnerName" '
         'must not expose live runtime scene-graph types '
         '($forbiddenTypeName).',
     extraParameterDetail: (parameterName) =>
         'committed spatial payload constructor for "$payloadOwnerName" '
-        'must not extend the sealed locator-only field surface with '
+        'must not extend the sealed structural-provenance field surface with '
         'parameter "$parameterName".',
   );
 }

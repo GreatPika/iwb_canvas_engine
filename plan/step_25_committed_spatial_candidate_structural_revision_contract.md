@@ -548,7 +548,7 @@ contract in tests, guardrails, and architecture sources of truth.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Lock the Stale Structural Candidate Regression
+### Slice 1. [x] Lock the Stale Structural Candidate Regression
 
 #### Slice Contract
 
@@ -601,7 +601,7 @@ so same-id stale reuse after structural commits is no longer an untested gap.
   the currently confirmed defect
 - the current structural guardrail suite still passes before the owner-side fix
 
-### Slice 2. [ ] Carry Structural Revision Through the Committed Spatial Seam
+### Slice 2. [x] Carry Structural Revision Through the Committed Spatial Seam
 
 #### Slice Contract
 
@@ -674,7 +674,7 @@ fresh queries after structural commits resolve successfully.
 - controller and interactive guardrail rules, fixtures, and tool tests all pass
   with the new exact payload and callback signature
 
-### Slice 3. [ ] Seal the Structural-Provenance Contract in Repository Truth
+### Slice 3. [x] Seal the Structural-Provenance Contract in Repository Truth
 
 #### Slice Contract
 

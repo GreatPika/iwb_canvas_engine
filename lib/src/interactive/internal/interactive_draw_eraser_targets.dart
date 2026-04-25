@@ -107,6 +107,7 @@ class InteractiveDrawEraserTargets {
       nodeId: candidate.nodeId,
       layerIndex: candidate.layerIndex,
       nodeIndex: candidate.nodeIndex,
+      structuralRevision: candidate.structuralRevision,
     ));
     if (node == null) return;
     if (node is! StrokeNodeSnapshot && node is! LineNodeSnapshot) return;

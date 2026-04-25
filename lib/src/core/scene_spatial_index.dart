@@ -20,6 +20,7 @@ typedef SceneSpatialCandidateReference = ({
   NodeId nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 typedef _CellSpan = ({int startX, int endX, int startY, int endY});
 typedef _ResolvedSpatialNode = ({
@@ -38,12 +39,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -52,12 +55,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 
@@ -82,6 +87,7 @@ class SceneSpatialIndex {
     Scene scene, {
     Map<NodeId, NodeLocatorEntry>? nodeLocator,
     Map<LayerId, int>? layerIndexById,
+    int structuralRevision = 0,
   }) {
     final index = SceneSpatialIndex._(_defaultSpatialCellSize);
     _rebuildSpatialIndex(
@@ -89,6 +95,7 @@ class SceneSpatialIndex {
       scene: scene,
       nodeLocator: nodeLocator ?? _buildStableNodeLocator(scene),
       layerIndexById: layerIndexById ?? _buildLayerIndexById(scene),
+      structuralRevision: structuralRevision,
     );
     return index;
   }
@@ -111,6 +118,7 @@ class SceneSpatialIndex {
   Map<NodeId, NodeLocatorEntry> _nodeLocator =
       const <NodeId, NodeLocatorEntry>{};
   Map<LayerId, int> _layerIndexById = const <LayerId, int>{};
+  int _structuralRevision = 0;
 
   int get debugLargeCandidateCount =>
       <NodeId>{..._largeHitTestNodeIds, ..._largePaintNodeIds}.length;
@@ -136,6 +144,7 @@ class SceneSpatialIndex {
     required Scene scene,
     required Map<NodeId, NodeLocatorEntry> nodeLocator,
     required Map<LayerId, int> layerIndexById,
+    required int structuralRevision,
     required SceneSpatialIndexChangeSet changeSet,
   }) {
     return _applySceneSpatialIndexIncremental(
@@ -143,6 +152,7 @@ class SceneSpatialIndex {
       scene: scene,
       nodeLocator: nodeLocator,
       layerIndexById: layerIndexById,
+      structuralRevision: structuralRevision,
       changeSet: changeSet,
     );
   }
@@ -151,12 +161,14 @@ class SceneSpatialIndex {
     required Scene scene,
     required Map<NodeId, NodeLocatorEntry> nodeLocator,
     required Map<LayerId, int> layerIndexById,
+    required int structuralRevision,
   }) {
     return _cloneSceneSpatialIndex(
       this,
       scene: scene,
       nodeLocator: nodeLocator,
       layerIndexById: layerIndexById,
+      structuralRevision: structuralRevision,
     );
   }
 }
@@ -242,6 +254,7 @@ bool _applySceneSpatialIndexIncremental(
   required Scene scene,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required Map<LayerId, int> layerIndexById,
+  required int structuralRevision,
   required SceneSpatialIndexChangeSet changeSet,
 }) {
   _bindSpatialIndexState(
@@ -249,6 +262,7 @@ bool _applySceneSpatialIndexIncremental(
     scene: scene,
     nodeLocator: nodeLocator,
     layerIndexById: layerIndexById,
+    structuralRevision: structuralRevision,
   );
   if (_hasNoIncrementalChanges(changeSet)) {
     return true;
@@ -269,6 +283,7 @@ SceneSpatialIndex _cloneSceneSpatialIndex(
   required Scene scene,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required Map<LayerId, int> layerIndexById,
+  required int structuralRevision,
 }) {
   final clone = SceneSpatialIndex._(source._cellSize);
   clone._isHitTestValid = source._isHitTestValid;
@@ -281,6 +296,7 @@ SceneSpatialIndex _cloneSceneSpatialIndex(
     scene: scene,
     nodeLocator: nodeLocator,
     layerIndexById: layerIndexById,
+    structuralRevision: structuralRevision,
   );
 
   for (final entry in source._hitTestCells.entries) {
@@ -305,12 +321,14 @@ void _rebuildSpatialIndex(
   required Scene scene,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required Map<LayerId, int> layerIndexById,
+  required int structuralRevision,
 }) {
   _bindSpatialIndexState(
     index,
     scene: scene,
     nodeLocator: nodeLocator,
     layerIndexById: layerIndexById,
+    structuralRevision: structuralRevision,
   );
   index._isHitTestValid = true;
   index._isPaintValid = true;
@@ -343,10 +361,12 @@ void _bindSpatialIndexState(
   required Scene scene,
   required Map<NodeId, NodeLocatorEntry> nodeLocator,
   required Map<LayerId, int> layerIndexById,
+  required int structuralRevision,
 }) {
   index._scene = scene;
   index._nodeLocator = nodeLocator;
   index._layerIndexById = layerIndexById;
+  index._structuralRevision = structuralRevision;
 }
 
 bool _upsertNodeById(SceneSpatialIndex index, NodeId nodeId) {
@@ -612,8 +632,9 @@ _CellSpan? _tryCellSpanForRect(SceneSpatialIndex index, Rect rect) {
 
 List<SceneHitTestSpatialCandidate> _queryLinearHitTest(
   Scene scene,
-  Rect worldRect,
-) {
+  Rect worldRect, {
+  required int structuralRevision,
+}) {
   final out = <SceneHitTestSpatialCandidate>[];
   _visitResolvedContentNodes(scene, (resolved) {
     final hitTestBounds = nodeHitTestCandidateBoundsWorld(resolved.node);
@@ -628,6 +649,7 @@ List<SceneHitTestSpatialCandidate> _queryLinearHitTest(
         nodeId: resolved.node.id,
         layerIndex: resolved.layerIndex,
         nodeIndex: resolved.nodeIndex,
+        structuralRevision: structuralRevision,
         hitTestBoundsWorld: hitTestBounds,
       ),
     );
@@ -638,6 +660,7 @@ List<SceneHitTestSpatialCandidate> _queryLinearHitTest(
 List<ScenePaintSpatialCandidate> _queryLinearPaint(
   Scene scene,
   Rect worldRect, {
+  required int structuralRevision,
   required ScenePaintSpatialQueryScope scope,
 }) {
   final out = <ScenePaintSpatialCandidate>[];
@@ -657,6 +680,7 @@ List<ScenePaintSpatialCandidate> _queryLinearPaint(
         nodeId: resolved.node.id,
         layerIndex: resolved.layerIndex,
         nodeIndex: resolved.nodeIndex,
+        structuralRevision: structuralRevision,
         paintBoundsWorld: paintBounds,
       ),
     );
@@ -671,7 +695,11 @@ List<SceneHitTestSpatialCandidate> _queryLinearFallbackHitTest(
 ) {
   index._debugHitTestFallbackQueryCount =
       index._debugHitTestFallbackQueryCount + 1;
-  return _queryLinearHitTest(scene, worldRect);
+  return _queryLinearHitTest(
+    scene,
+    worldRect,
+    structuralRevision: index._structuralRevision,
+  );
 }
 
 List<ScenePaintSpatialCandidate> _queryLinearFallbackPaint(
@@ -681,7 +709,12 @@ List<ScenePaintSpatialCandidate> _queryLinearFallbackPaint(
   required ScenePaintSpatialQueryScope scope,
 }) {
   index._debugPaintFallbackQueryCount = index._debugPaintFallbackQueryCount + 1;
-  return _queryLinearPaint(scene, worldRect, scope: scope);
+  return _queryLinearPaint(
+    scene,
+    worldRect,
+    structuralRevision: index._structuralRevision,
+    scope: scope,
+  );
 }
 
 Set<NodeId>? _queryCandidateIds(
@@ -738,6 +771,7 @@ List<SceneHitTestSpatialCandidate> _resolveHitTestCandidates(
         nodeId: resolved.node.id,
         layerIndex: resolved.layerIndex,
         nodeIndex: resolved.nodeIndex,
+        structuralRevision: index._structuralRevision,
         hitTestBoundsWorld: entry.hitTestBoundsWorld,
       ),
     );
@@ -773,6 +807,7 @@ List<ScenePaintSpatialCandidate> _resolvePaintCandidates(
         nodeId: resolved.node.id,
         layerIndex: resolved.layerIndex,
         nodeIndex: resolved.nodeIndex,
+        structuralRevision: index._structuralRevision,
         paintBoundsWorld: entry.paintBoundsWorld,
       ),
     );

@@ -1594,6 +1594,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 enum ScenePaintSpatialQueryScope {
@@ -1606,12 +1607,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -1620,12 +1623,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');

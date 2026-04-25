@@ -669,6 +669,7 @@ void main() {
         scene: scene,
         nodeLocator: throwingLookup,
         layerIndexById: buildLayerIndexById(scene),
+        structuralRevision: 0,
         changeSet: const SceneSpatialIndexChangeSet(
           addedNodeIds: <NodeId>{},
           removedNodeIds: <NodeId>{},
@@ -700,6 +701,7 @@ void main() {
         scene: scene,
         nodeLocator: throwingLookup,
         layerIndexById: buildLayerIndexById(scene),
+        structuralRevision: 0,
         changeSet: const SceneSpatialIndexChangeSet(
           addedNodeIds: <NodeId>{},
           removedNodeIds: <NodeId>{},
@@ -734,6 +736,7 @@ void main() {
         scene: scene,
         nodeLocator: throwingContainsKey,
         layerIndexById: buildLayerIndexById(scene),
+        structuralRevision: 0,
         changeSet: const SceneSpatialIndexChangeSet(
           addedNodeIds: <NodeId>{},
           removedNodeIds: <NodeId>{},
@@ -759,6 +762,7 @@ void main() {
         sourceScene,
         nodeLocator: sourceLocator,
         layerIndexById: buildLayerIndexById(sourceScene),
+        structuralRevision: 0,
       );
 
       final movedScene = Scene(
@@ -783,11 +787,13 @@ void main() {
         scene: movedScene,
         nodeLocator: movedLocator,
         layerIndexById: buildLayerIndexById(movedScene),
+        structuralRevision: 0,
       );
       final applied = candidate.applyIncremental(
         scene: movedScene,
         nodeLocator: movedLocator,
         layerIndexById: buildLayerIndexById(movedScene),
+        structuralRevision: 0,
         changeSet: const SceneSpatialIndexChangeSet(
           addedNodeIds: <NodeId>{},
           removedNodeIds: <NodeId>{},
@@ -837,6 +843,7 @@ void main() {
       originalScene,
       nodeLocator: originalLocator,
       layerIndexById: buildLayerIndexById(originalScene),
+      structuralRevision: 0,
     );
 
     final movedScene = Scene(
@@ -858,6 +865,7 @@ void main() {
       scene: movedScene,
       nodeLocator: movedLocator,
       layerIndexById: buildLayerIndexById(movedScene),
+      structuralRevision: 0,
       changeSet: const SceneSpatialIndexChangeSet(
         addedNodeIds: <NodeId>{},
         removedNodeIds: <NodeId>{},
@@ -909,6 +917,7 @@ void main() {
       originalScene,
       nodeLocator: originalLocator,
       layerIndexById: buildLayerIndexById(originalScene),
+      structuralRevision: 0,
     );
 
     final updatedScene = Scene(
@@ -945,6 +954,7 @@ void main() {
       scene: updatedScene,
       nodeLocator: updatedLocator,
       layerIndexById: buildLayerIndexById(updatedScene),
+      structuralRevision: 0,
       changeSet: const SceneSpatialIndexChangeSet(
         addedNodeIds: <NodeId>{'z-inserted'},
         removedNodeIds: <NodeId>{},
@@ -997,6 +1007,7 @@ void main() {
       originalScene,
       nodeLocator: originalLocator,
       layerIndexById: buildLayerIndexById(originalScene),
+      structuralRevision: 0,
     );
 
     final updatedScene = Scene(
@@ -1027,6 +1038,7 @@ void main() {
       scene: updatedScene,
       nodeLocator: updatedLocator,
       layerIndexById: buildLayerIndexById(updatedScene),
+      structuralRevision: 0,
       changeSet: const SceneSpatialIndexChangeSet(
         addedNodeIds: <NodeId>{},
         removedNodeIds: <NodeId>{'z-removed'},
@@ -1049,6 +1061,7 @@ void main() {
       _ThrowingLayersScene(),
       nodeLocator: const <NodeId, NodeLocatorEntry>{},
       layerIndexById: const <LayerId, int>{},
+      structuralRevision: 0,
     );
     expect(index.isValid, isFalse);
   });
@@ -1073,6 +1086,7 @@ void main() {
       originalScene,
       nodeLocator: originalLocator,
       layerIndexById: buildLayerIndexById(originalScene),
+      structuralRevision: 0,
     );
 
     final movedNode = StrokeNode(
@@ -1095,6 +1109,7 @@ void main() {
       scene: movedScene,
       nodeLocator: movedLocator,
       layerIndexById: buildLayerIndexById(movedScene),
+      structuralRevision: 0,
       changeSet: SceneSpatialIndexChangeSet(
         addedNodeIds: const <NodeId>{},
         removedNodeIds: const <NodeId>{},
@@ -1105,6 +1120,7 @@ void main() {
       movedScene,
       nodeLocator: movedLocator,
       layerIndexById: buildLayerIndexById(movedScene),
+      structuralRevision: 0,
     );
     final queryRect = const Rect.fromLTWH(40, 0, 100, 60);
 

@@ -1447,7 +1447,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY',
     scope: 'engine-controller',
     title:
-        'committed read-side controller and interactive callback contracts expose immutable snapshots/request objects instead of live runtime scene graph types or raw callback-parameter collection leaks, shared paint admission includes backgroundLayer, hit-test admission stays content-only, and every committed query candidate shape is resolvable through the paired snapshot helper surface',
+        'committed read-side controller and interactive callback contracts expose immutable snapshots/request objects instead of live runtime scene graph types or raw callback-parameter collection leaks, shared paint admission includes backgroundLayer, hit-test admission stays content-only, every committed query candidate shape is resolvable through the paired snapshot helper surface, and stale committed spatial candidates from older structural revisions are rejected before location lookup',
     requiredProofs: <RequiredProof>[
       RequiredProof(path: 'tool/check_guardrails.dart', stepId: 'guardrails'),
     ],
@@ -1458,6 +1458,10 @@ const List<Invariant> invariants = <Invariant>[
       RegressionProof(
         path:
             'test/tool/guardrails/guardrails_public_signature_hermeticity_tool_test.dart',
+      ),
+      RegressionProof(
+        path:
+            'test/controller/core/scene_controller_spatial_candidate_resolution_test.dart',
       ),
     ],
   ),

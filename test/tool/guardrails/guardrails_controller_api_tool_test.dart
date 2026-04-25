@@ -100,6 +100,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 enum ScenePaintSpatialQueryScope {
@@ -112,12 +113,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final String nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -126,12 +129,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final String nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -1575,6 +1580,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 enum ScenePaintSpatialQueryScope {
@@ -1587,12 +1593,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -1601,12 +1609,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -1685,6 +1695,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 enum ScenePaintSpatialQueryScope {
@@ -1697,12 +1708,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -1711,12 +1724,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -1809,6 +1824,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 enum ScenePaintSpatialQueryScope {
@@ -1821,12 +1837,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -1835,12 +1853,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -1890,7 +1910,7 @@ extension SceneStoreControllerSpatialAccess on SceneStoreController {
     );
 
     test(
-      'rejects committed spatial payload field outside sealed locator-only surface',
+      'rejects committed spatial payload field outside sealed structural-provenance surface',
       () async {
         final sandbox = await createGuardrailsSandbox();
         try {
@@ -1907,6 +1927,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 enum ScenePaintSpatialQueryScope {
@@ -1919,15 +1940,17 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
-    required this.hitTestBoundsWorld,
     required this.structuralRevision,
+    required this.hitTestBoundsWorld,
+    required this.debugToken,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
-  final Rect hitTestBoundsWorld;
   final int structuralRevision;
+  final Rect hitTestBoundsWorld;
+  final int debugToken;
 }
 
 class ScenePaintSpatialCandidate {
@@ -1935,12 +1958,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -1962,8 +1987,8 @@ class SceneStoreController {
               category: 'controller API',
               detail:
                   'committed spatial payload '
-                  '"SceneHitTestSpatialCandidate.structuralRevision" must not extend '
-                  'the sealed locator-only field surface',
+                  '"SceneHitTestSpatialCandidate.debugToken" must not extend '
+                  'the sealed structural-provenance field surface',
             ),
           );
         } finally {
@@ -1994,6 +2019,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 enum ScenePaintSpatialQueryScope {
@@ -2006,6 +2032,7 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
     required this.leaked,
   });
@@ -2013,6 +2040,7 @@ class SceneHitTestSpatialCandidate {
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
   final ({SceneNode node}) leaked;
 }
@@ -2022,12 +2050,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -2071,6 +2101,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 enum ScenePaintSpatialQueryScope {
@@ -2083,12 +2114,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final String nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -2097,12 +2130,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final String nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -2146,12 +2181,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final String nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -2160,12 +2197,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final String nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -2202,6 +2241,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 enum ScenePaintSpatialQueryScope {
@@ -2317,6 +2357,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 class SceneHitTestSpatialCandidate {}
@@ -2381,6 +2422,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 enum ScenePaintSpatialQueryScope {
@@ -2393,12 +2435,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -2407,12 +2451,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -2458,6 +2504,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 enum ScenePaintSpatialQueryScope {
@@ -2470,12 +2517,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -2484,12 +2533,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -2546,6 +2597,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 enum ScenePaintSpatialQueryScope {
@@ -2558,12 +2610,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -2572,12 +2626,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -2655,6 +2711,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 enum ScenePaintSpatialQueryScope {
@@ -2667,6 +2724,7 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
     required SceneNode leakedNode,
   });
@@ -2674,6 +2732,7 @@ class SceneHitTestSpatialCandidate {
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -2682,12 +2741,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -2744,6 +2805,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 class SceneHitTestSpatialCandidate {
@@ -2751,12 +2813,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -2765,12 +2829,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -2856,6 +2922,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 class SceneHitTestSpatialCandidate {
@@ -2863,12 +2930,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -2877,12 +2946,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -3107,6 +3178,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 class SceneHitTestSpatialCandidate {
@@ -3114,12 +3186,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -3128,12 +3202,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');
@@ -3220,6 +3296,7 @@ typedef SceneSpatialCandidateReference = ({
   String nodeId,
   int layerIndex,
   int nodeIndex,
+  int structuralRevision,
 });
 
 class SceneHitTestSpatialCandidate {
@@ -3227,12 +3304,14 @@ class SceneHitTestSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.hitTestBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect hitTestBoundsWorld;
 }
 
@@ -3241,12 +3320,14 @@ class ScenePaintSpatialCandidate {
     required this.nodeId,
     required this.layerIndex,
     required this.nodeIndex,
+    required this.structuralRevision,
     required this.paintBoundsWorld,
   });
 
   final NodeId nodeId;
   final int layerIndex;
   final int nodeIndex;
+  final int structuralRevision;
   final Rect paintBoundsWorld;
 }
 ''');

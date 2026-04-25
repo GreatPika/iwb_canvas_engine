@@ -188,6 +188,10 @@ runtime scene.
 This split is deliberate:
 
 - public reads resolve immutable snapshots
+- committed spatial candidates carry the committed store's
+  `structuralRevision`; `resolveSpatialCandidateSnapshot(...)` must reject
+  candidates from older structural revisions before using their stored
+  location
 - transactional writes operate on internal mutable runtime state
 - mutable `Scene` / `SceneNode` instances do not escape the write subsystem
 
@@ -599,7 +603,9 @@ Architectural consequences:
 - async write callbacks are forbidden
 - transaction-owned mutable runtime state does not leak after callback close;
   transaction reads cross the boundary through runtime-owned helpers that
-  return detached immutable values and reject stale handles
+  return detached immutable values and reject stale handles, including
+  committed spatial candidates whose structural revision no longer matches the
+  committed store
 - snapshot materialization happens from the committed store boundary, not from
   escaped runtime state
 
