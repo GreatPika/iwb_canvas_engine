@@ -19,8 +19,6 @@ It records the stable owner-family registry only:
 
 - `locked`: the accepted target and the family document are aligned with the
   checked-in local form.
-- `locked, needs slimming`: the accepted target is fixed, but the checked-in
-  owner is still broader or more shimmed than the intended local form.
 - `provisional`: the target direction is known, but the local family contract
   still needs a narrower owner cut before it can be treated as locked.
 - `docs stale`: checked-in code already changed the local form, so the family
@@ -34,7 +32,7 @@ It records the stable owner-family registry only:
 | View runtime and render seam | Keep one assembled `SceneViewRuntime` boundary while exposing separate `mainSceneRenderRead` and `overlayPreviewRead` surfaces. | `locked` | [view_runtime_and_render_seam.md](families/view_runtime_and_render_seam.md) |
 | Interaction runtime | Keep one interaction family that owns pointer-session orchestration, gesture state, and ephemeral preview state only. | `locked` | [interaction_runtime.md](families/interaction_runtime.md) |
 | Mutation gateway | Keep `SceneControllerMutationBoundary` as the only interaction-owned bridge into committed writes. | `locked` | [mutation_gateway.md](families/mutation_gateway.md) |
-| Store and commit path | Keep committed state in the store/write-kernel path and slim the broad store facade over time. | `locked, needs slimming` | [store_and_commit_path.md](families/store_and_commit_path.md) |
+| Store and commit path | Keep committed state in the store/write-kernel path while exposing only the narrow committed store facade and sealed read helpers. | `locked` | [store_and_commit_path.md](families/store_and_commit_path.md) |
 
 ## Mechanical Evidence
 

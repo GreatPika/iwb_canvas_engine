@@ -546,7 +546,7 @@ touching the write kernel.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Adopt Direct Command-Runner Ownership
+### Slice 1. [x] Adopt Direct Command-Runner Ownership
 
 #### Slice Contract
 
@@ -610,7 +610,7 @@ behavior stays unchanged and the old facade fields still exist temporarily.
   `test/controller/core/scene_controller_commit_effects_test.dart` finds no
   remaining retired-field references
 
-### Slice 2. [ ] Retire Store Facade Command Fields
+### Slice 2. [x] Retire Store Facade Command Fields
 
 #### Slice Contract
 
@@ -668,7 +668,7 @@ the store facade surface becomes structurally narrow.
 - controller guardrail rules no longer list those fields on the sealed
   `SceneStoreController` public surface
 
-### Slice 3. [ ] Lock The Store Family Target Map
+### Slice 3. [x] Lock The Store Family Target Map
 
 #### Slice Contract
 

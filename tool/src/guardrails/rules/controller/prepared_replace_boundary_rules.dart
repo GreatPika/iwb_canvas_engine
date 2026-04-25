@@ -139,9 +139,6 @@ const Set<String> _allowedSceneStoreControllerTopLevelNames = <String>{
 
 const Set<String> _allowedSceneStoreControllerPublicMemberNames = <String>{
   'field:textFontFamilyByDefault',
-  'field:commands',
-  'field:move',
-  'field:draw',
   'getter:snapshot',
   'getter:selectedNodeIds',
   'getter:controllerEpoch',
@@ -514,9 +511,6 @@ GuardrailViolation? _checkSceneStorePreparedReplaceBoundary({
     allowedNames: _allowedSceneStoreControllerPublicMemberNames,
     requiredNames: const <String>{
       'field:textFontFamilyByDefault',
-      'field:commands',
-      'field:move',
-      'field:draw',
       'getter:snapshot',
       'getter:selectedNodeIds',
       'getter:controllerEpoch',

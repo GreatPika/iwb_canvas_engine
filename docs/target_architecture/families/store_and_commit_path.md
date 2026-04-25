@@ -11,7 +11,10 @@ routes transactional writes through a dedicated commit runtime.
 ## Target Rules
 
 - `SceneStoreController` remains the committed store facade for snapshot reads,
-  committed queries, and write entrypoints.
+  revision metadata, signals, debug projection, committed queries, and write
+  entrypoints.
+- `SceneStoreController` does not expose `SceneCommands`, `MoveCommands`, or
+  `DrawCommands` as facade-owned public fields.
 - `SceneControllerCommitRuntime` remains the write kernel that owns
   transactional execution, commit planning, and post-commit lifecycle.
 - `TxnContext` remains the copy-on-write workspace for transactional writes.
@@ -39,6 +42,9 @@ routes transactional writes through a dedicated commit runtime.
   `SceneControllerCommitRuntime`.
 - Do not let the store facade absorb interaction-side gateway behavior or view
   responsibilities.
+- Do not reintroduce command-owner bags on `SceneStoreController`; direct
+  command-owner construction around `writeWithSceneWriter` is the successor
+  seam.
 
 ## Mechanical Evidence
 
@@ -49,6 +55,6 @@ routes transactional writes through a dedicated commit runtime.
 
 ## Status
 
-- `locked, needs slimming`
-- The store/write split is stable, but `SceneStoreController` remains the most
-  obvious local slimming target inside the family.
+- `locked`
+- The checked-in store facade now matches the accepted narrow owner form while
+  the commit runtime remains the write kernel.

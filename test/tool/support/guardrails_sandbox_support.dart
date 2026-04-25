@@ -1714,9 +1714,6 @@ import 'scene_writer.dart';
 
 class SceneStoreController {
   final String? textFontFamilyByDefault = null;
-  final Object commands = Object();
-  final Object move = Object();
-  final Object draw = Object();
 
   SceneSnapshot get snapshot => const SceneSnapshot();
 

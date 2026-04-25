@@ -39,6 +39,10 @@ void assertControllerInvariants(SceneStoreController controller) {
   );
 }
 
+SceneCommands sceneCommandsFor(SceneStoreController controller) {
+  return SceneCommands(controller.writeWithSceneWriter);
+}
+
 void main() {
   test(
     'writeClearScene emits scene.cleared on structural clear-side effect',
@@ -154,9 +158,9 @@ void main() {
       notifications = notifications + 1;
     });
 
-    final created = controller.commands.writeAddNode(
-      RectNodeSpec(id: 'cmd-added', size: const Size(6, 6)),
-    );
+    final created = sceneCommandsFor(
+      controller,
+    ).writeAddNode(RectNodeSpec(id: 'cmd-added', size: const Size(6, 6)));
     await pumpEventQueue();
 
     expect(created, 'cmd-added');
@@ -173,9 +177,9 @@ void main() {
     addTearDown(controller.dispose);
 
     for (var i = 0; i < 100; i++) {
-      controller.commands.writeAddNode(
-        RectNodeSpec(id: 'auto-$i', size: const Size(6, 6)),
-      );
+      sceneCommandsFor(
+        controller,
+      ).writeAddNode(RectNodeSpec(id: 'auto-$i', size: const Size(6, 6)));
     }
     await pumpEventQueue();
 
@@ -189,7 +193,7 @@ void main() {
     addTearDown(controller.dispose);
 
     expect(
-      () => controller.commands.writeAddNode(
+      () => sceneCommandsFor(controller).writeAddNode(
         RectNodeSpec(id: 'bad-index', size: const Size(8, 8)),
         layerId: 'missing-layer',
       ),
@@ -204,9 +208,9 @@ void main() {
     addTearDown(controller.dispose);
 
     expect(
-      () => controller.commands.writeAddNode(
-        RectNodeSpec(id: 'base', size: const Size(8, 8)),
-      ),
+      () => sceneCommandsFor(
+        controller,
+      ).writeAddNode(RectNodeSpec(id: 'base', size: const Size(8, 8))),
       throwsA(
         isA<ArgumentError>().having((error) => error.name, 'name', 'spec.id'),
       ),
@@ -219,7 +223,7 @@ void main() {
     final controller = buildController();
     addTearDown(controller.dispose);
 
-    controller.commands.writeAddNode(
+    sceneCommandsFor(controller).writeAddNode(
       RectNodeSpec(id: 'before-base', size: const Size(8, 8)),
       insertIndex: 0,
     );
@@ -246,20 +250,26 @@ void main() {
       });
       addTearDown(sub.cancel);
 
-      final patchMissing = controller.commands.writePatchNode(
+      final patchMissing = sceneCommandsFor(controller).writePatchNode(
         RectNodePatch(id: 'missing', strokeWidth: PatchField<double>.value(2)),
       );
-      final patchExisting = controller.commands.writePatchNode(
+      final patchExisting = sceneCommandsFor(controller).writePatchNode(
         RectNodePatch(id: 'base', strokeWidth: PatchField<double>.value(3)),
       );
-      final deleteMissing = controller.commands.writeDeleteNode('missing');
-      final deleteExisting = controller.commands.writeDeleteNode('base');
-      controller.commands.writeAddNode(
-        RectNodeSpec(id: 'selected', size: const Size(8, 8)),
-      );
+      final deleteMissing = sceneCommandsFor(
+        controller,
+      ).writeDeleteNode('missing');
+      final deleteExisting = sceneCommandsFor(
+        controller,
+      ).writeDeleteNode('base');
+      sceneCommandsFor(
+        controller,
+      ).writeAddNode(RectNodeSpec(id: 'selected', size: const Size(8, 8)));
 
-      controller.commands.writeSelectionReplace(const <NodeId>{'selected'});
-      controller.commands.writeSelectionToggle('selected');
+      sceneCommandsFor(
+        controller,
+      ).writeSelectionReplace(const <NodeId>{'selected'});
+      sceneCommandsFor(controller).writeSelectionToggle('selected');
       await pumpEventQueue();
 
       expect(patchMissing, isFalse);
@@ -291,43 +301,47 @@ void main() {
       });
       addTearDown(sub.cancel);
 
-      controller.commands.writeSelectionReplace(const <NodeId>{'base'});
-      controller.commands.writeSelectionClear();
+      sceneCommandsFor(
+        controller,
+      ).writeSelectionReplace(const <NodeId>{'base'});
+      sceneCommandsFor(controller).writeSelectionClear();
       await pumpEventQueue();
       expect(signalTypes, contains('selection.cleared'));
 
-      final selectNone = controller.commands.writeSelectionSelectAll(
-        onlySelectable: false,
-      );
+      final selectNone = sceneCommandsFor(
+        controller,
+      ).writeSelectionSelectAll(onlySelectable: false);
       await pumpEventQueue();
       expect(selectNone, 1);
       expect(signalTypes, contains('selection.all'));
       expect(controller.selectedNodeIds, const <NodeId>{'base'});
 
-      final transformed = controller.commands.writeSelectionTransform(
-        Transform2D.translation(const Offset(4, 6)),
-      );
+      final transformed = sceneCommandsFor(
+        controller,
+      ).writeSelectionTransform(Transform2D.translation(const Offset(4, 6)));
       await pumpEventQueue();
       expect(transformed, 1);
       expect(signalTypes, contains('selection.transformed'));
 
-      final deleted = controller.commands.writeDeleteSelection();
+      final deleted = sceneCommandsFor(controller).writeDeleteSelection();
       await pumpEventQueue();
       expect(deleted, 1);
       expect(signalTypes, contains('selection.deleted'));
 
-      controller.commands.writeAddNode(
-        RectNodeSpec(id: 'temp', size: const Size(4, 4)),
-      );
-      final cleared = controller.commands.writeClearScene();
+      sceneCommandsFor(
+        controller,
+      ).writeAddNode(RectNodeSpec(id: 'temp', size: const Size(4, 4)));
+      final cleared = sceneCommandsFor(controller).writeClearScene();
       await pumpEventQueue();
       expect(cleared, 1);
       expect(signalTypes, contains('scene.cleared'));
 
-      controller.commands.writeBackgroundColorSet(const Color(0xFFAA5500));
-      controller.commands.writeGridEnabledSet(true);
-      controller.commands.writeGridCellSizeSet(42);
-      controller.commands.writeCameraOffsetSet(const Offset(10, -4));
+      sceneCommandsFor(
+        controller,
+      ).writeBackgroundColorSet(const Color(0xFFAA5500));
+      sceneCommandsFor(controller).writeGridEnabledSet(true);
+      sceneCommandsFor(controller).writeGridCellSizeSet(42);
+      sceneCommandsFor(controller).writeCameraOffsetSet(const Offset(10, -4));
       await pumpEventQueue();
       expect(
         signalTypes,
@@ -352,7 +366,7 @@ void main() {
     });
     addTearDown(sub.cancel);
 
-    controller.commands.writeSelectionClear();
+    sceneCommandsFor(controller).writeSelectionClear();
     await pumpEventQueue();
 
     expect(signalTypes, isNot(contains('selection.cleared')));
@@ -365,11 +379,13 @@ void main() {
       final controller = buildController();
       addTearDown(controller.dispose);
 
-      controller.commands.writeSelectionReplace(const <NodeId>{'base'});
+      sceneCommandsFor(
+        controller,
+      ).writeSelectionReplace(const <NodeId>{'base'});
       await pumpEventQueue();
       expect(controller.selectedNodeIds, const <NodeId>{'base'});
 
-      controller.commands.writePatchNode(
+      sceneCommandsFor(controller).writePatchNode(
         RectNodePatch(
           id: 'base',
           common: CommonNodePatch(isSelectable: PatchField<bool>.value(false)),
@@ -386,7 +402,9 @@ void main() {
       });
       addTearDown(sub.cancel);
 
-      final selectedCount = controller.commands.writeSelectionSelectAll();
+      final selectedCount = sceneCommandsFor(
+        controller,
+      ).writeSelectionSelectAll();
       await pumpEventQueue();
 
       expect(selectedCount, 0);
@@ -406,11 +424,11 @@ void main() {
     });
     addTearDown(sub.cancel);
 
-    controller.commands.writeSelectionReplace(const <NodeId>{'base'});
+    sceneCommandsFor(controller).writeSelectionReplace(const <NodeId>{'base'});
     await pumpEventQueue();
     expect(signalTypes.where((type) => type == 'selection.replaced').length, 1);
 
-    controller.commands.writeSelectionReplace(const <NodeId>{'base'});
+    sceneCommandsFor(controller).writeSelectionReplace(const <NodeId>{'base'});
     await pumpEventQueue();
     expect(signalTypes.where((type) => type == 'selection.replaced').length, 1);
     assertControllerInvariants(controller);
@@ -430,12 +448,14 @@ void main() {
       });
       addTearDown(sub.cancel);
 
-      controller.commands.writeSelectionReplace(const <NodeId>{'base'});
+      sceneCommandsFor(
+        controller,
+      ).writeSelectionReplace(const <NodeId>{'base'});
       await pumpEventQueue();
       expect(controller.selectedNodeIds, const <NodeId>{'base'});
       expect(replacedSignals, 1);
 
-      controller.commands.writeSelectionReplace(const <NodeId>{});
+      sceneCommandsFor(controller).writeSelectionReplace(const <NodeId>{});
       await pumpEventQueue();
 
       expect(controller.selectedNodeIds, const <NodeId>{'base'});
@@ -456,10 +476,9 @@ void main() {
     });
     addTearDown(sub.cancel);
 
-    controller.commands.writeSelectionReplace(const <NodeId>{
-      'base',
-      'missing',
-    });
+    sceneCommandsFor(
+      controller,
+    ).writeSelectionReplace(const <NodeId>{'base', 'missing'});
     await pumpEventQueue();
 
     expect(replacedIds, isNotNull);
@@ -477,12 +496,12 @@ void main() {
     final controller = buildController();
     addTearDown(controller.dispose);
 
-    controller.commands.writeAddNode(
-      RectNodeSpec(id: 'z-node', size: const Size(8, 8)),
-    );
-    controller.commands.writeAddNode(
-      RectNodeSpec(id: 'a-node', size: const Size(8, 8)),
-    );
+    sceneCommandsFor(
+      controller,
+    ).writeAddNode(RectNodeSpec(id: 'z-node', size: const Size(8, 8)));
+    sceneCommandsFor(
+      controller,
+    ).writeAddNode(RectNodeSpec(id: 'a-node', size: const Size(8, 8)));
     await pumpEventQueue();
 
     List<NodeId>? replacedIds;
@@ -493,11 +512,9 @@ void main() {
     });
     addTearDown(sub.cancel);
 
-    controller.commands.writeSelectionReplace(const <NodeId>{
-      'z-node',
-      'base',
-      'a-node',
-    });
+    sceneCommandsFor(
+      controller,
+    ).writeSelectionReplace(const <NodeId>{'z-node', 'base', 'a-node'});
     await pumpEventQueue();
 
     expect(replacedIds, const <NodeId>['a-node', 'base', 'z-node']);
@@ -540,7 +557,7 @@ void main() {
     });
     addTearDown(sub.cancel);
 
-    controller.commands.writeSelectionReplace(const <NodeId>{
+    sceneCommandsFor(controller).writeSelectionReplace(const <NodeId>{
       'visible',
       'hidden',
       'bg',
@@ -567,12 +584,16 @@ void main() {
       });
       addTearDown(sub.cancel);
 
-      controller.commands.writeSelectionReplace(const <NodeId>{'base'});
+      sceneCommandsFor(
+        controller,
+      ).writeSelectionReplace(const <NodeId>{'base'});
       await pumpEventQueue();
       expect(controller.selectedNodeIds, const <NodeId>{'base'});
       expect(replacedSignals, 1);
 
-      controller.commands.writeSelectionReplace(const <NodeId>{'missing'});
+      sceneCommandsFor(
+        controller,
+      ).writeSelectionReplace(const <NodeId>{'missing'});
       await pumpEventQueue();
       expect(controller.selectedNodeIds, const <NodeId>{'base'});
       expect(replacedSignals, 1);
@@ -590,7 +611,7 @@ void main() {
     });
     addTearDown(sub.cancel);
 
-    controller.commands.writeSelectionToggle('missing');
+    sceneCommandsFor(controller).writeSelectionToggle('missing');
     await pumpEventQueue();
 
     expect(signalTypes, isNot(contains('selection.toggled')));
@@ -611,7 +632,7 @@ void main() {
       });
       addTearDown(sub.cancel);
 
-      final deleted = controller.commands.writeDeleteSelection();
+      final deleted = sceneCommandsFor(controller).writeDeleteSelection();
       await pumpEventQueue();
 
       expect(deleted, 0);
@@ -656,7 +677,7 @@ void main() {
       });
       addTearDown(sub.cancel);
 
-      controller.commands.writeSelectionReplace(const <NodeId>{
+      sceneCommandsFor(controller).writeSelectionReplace(const <NodeId>{
         'bg',
         'locked',
         'free',
@@ -665,7 +686,7 @@ void main() {
       await pumpEventQueue();
       expect(controller.selectedNodeIds, const <NodeId>{'locked', 'free'});
 
-      final deleted = controller.commands.writeDeleteSelection();
+      final deleted = sceneCommandsFor(controller).writeDeleteSelection();
       await pumpEventQueue();
 
       expect(deleted, 1);
@@ -680,7 +701,7 @@ void main() {
         const <NodeId>['locked'],
       );
 
-      final noOpDelete = controller.commands.writeDeleteSelection();
+      final noOpDelete = sceneCommandsFor(controller).writeDeleteSelection();
       await pumpEventQueue();
 
       expect(noOpDelete, 0);
@@ -705,14 +726,16 @@ void main() {
       });
       addTearDown(sub.cancel);
 
-      controller.commands.writeBackgroundColorSet(snapshot.background.color);
-      controller.commands.writeGridEnabledSet(
-        snapshot.background.grid.isEnabled,
-      );
-      controller.commands.writeGridCellSizeSet(
-        snapshot.background.grid.cellSize,
-      );
-      controller.commands.writeCameraOffsetSet(snapshot.camera.offset);
+      sceneCommandsFor(
+        controller,
+      ).writeBackgroundColorSet(snapshot.background.color);
+      sceneCommandsFor(
+        controller,
+      ).writeGridEnabledSet(snapshot.background.grid.isEnabled);
+      sceneCommandsFor(
+        controller,
+      ).writeGridCellSizeSet(snapshot.background.grid.cellSize);
+      sceneCommandsFor(controller).writeCameraOffsetSet(snapshot.camera.offset);
       await pumpEventQueue();
 
       final trackedSignalTypes = signalTypes
@@ -743,10 +766,12 @@ void main() {
       });
       addTearDown(sub.cancel);
 
-      controller.commands.writeBackgroundColorSet(const Color(0xFFAA5500));
-      controller.commands.writeGridEnabledSet(true);
-      controller.commands.writeGridCellSizeSet(42);
-      controller.commands.writeCameraOffsetSet(const Offset(10, -4));
+      sceneCommandsFor(
+        controller,
+      ).writeBackgroundColorSet(const Color(0xFFAA5500));
+      sceneCommandsFor(controller).writeGridEnabledSet(true);
+      sceneCommandsFor(controller).writeGridCellSizeSet(42);
+      sceneCommandsFor(controller).writeCameraOffsetSet(const Offset(10, -4));
       await pumpEventQueue();
 
       expect(
@@ -768,7 +793,7 @@ void main() {
     addTearDown(controller.dispose);
 
     expect(
-      () => controller.commands.writeGridCellSizeSet(0),
+      () => sceneCommandsFor(controller).writeGridCellSizeSet(0),
       throwsArgumentError,
     );
     await pumpEventQueue();

@@ -37,25 +37,27 @@ void _registerInteractiveArchitectureBoundaryRuntimeAndDrawOwnershipTests() {
           '''
 class SceneControllerMutationBoundary {
   final storeController = _Core();
+  final _sceneCommands = _Commands();
+  final _drawCommands = _Draw();
 
   bool clearScene() {
     return storeController.write<bool>((writer) => true);
   }
 
   void setSelection(Object nodeIds) {
-    storeController.commands.writeSelectionReplace(nodeIds);
+    _sceneCommands.writeSelectionReplace(nodeIds);
   }
 
   void clearSelection() {
-    storeController.commands.writeSelectionClear();
+    _sceneCommands.writeSelectionClear();
   }
 
   void deleteSelection() {
-    storeController.commands.writeDeleteSelection();
+    _sceneCommands.writeDeleteSelection();
   }
 
   void transformSelection(Object delta) {
-    storeController.commands.writeSelectionTransform(delta);
+    _sceneCommands.writeSelectionTransform(delta);
   }
 
   Object prepareSceneReplacement(Object snapshot) {
@@ -70,22 +72,19 @@ class SceneControllerMutationBoundary {
   Object commitMoveSelection(Object proposedDelta) => proposedDelta;
 
   Object commitDrawStroke(Object payload) {
-    return storeController.draw.writeDrawStroke(payload);
+    return _drawCommands.writeDrawStroke(payload);
   }
 
   Object commitDrawLineFromWorldSegment(Object payload) {
-    return storeController.draw.writeDrawLineFromWorldSegment(payload);
+    return _drawCommands.writeDrawLineFromWorldSegment(payload);
   }
 
   int commitEraseNodes(Object ids) {
-    return storeController.draw.writeEraseNodes(ids);
+    return _drawCommands.writeEraseNodes(ids);
   }
 }
 
 class _Core {
-  final commands = _Commands();
-  final draw = _Draw();
-
   T write<T>(Object fn) => true as T;
 
   Object prepareSceneReplacement(Object snapshot) => snapshot;

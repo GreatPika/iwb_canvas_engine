@@ -51,13 +51,13 @@ void main() {
         ]);
         _expectContainsAll(source, const <String>[
           '`locked`',
-          '`locked, needs slimming`',
           '`provisional`',
           '`docs stale`',
           'View runtime and render seam',
           '| `locked` |',
           'test/tool/target_architecture_map_tool_test.dart',
         ]);
+        expect(source, isNot(contains('`locked, needs slimming`')));
 
         final statuses = _ownerRegistryStatuses(source);
         expect(statuses, hasLength(5));
@@ -244,8 +244,9 @@ void main() {
         'TxnContext',
         'replace_scene_write_flow.json',
         'replace_scene_write_flow.md',
-        '`locked, needs slimming`',
+        '`locked`',
       ]);
+      expect(source, isNot(contains('`locked, needs slimming`')));
       expect(source, isNot(contains('## Current Mismatch')));
       expect(source, isNot(contains('## Target Shape')));
       expect(source, isNot(contains('## Locked Local Owner Inventory')));
@@ -429,7 +430,6 @@ void main() {
 
 const Set<String> _allowedStatuses = <String>{
   'locked',
-  'locked, needs slimming',
   'provisional',
   'docs stale',
 };

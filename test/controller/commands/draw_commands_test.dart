@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart';
+import 'package:iwb_canvas_engine/src/controller/commands/draw_commands.dart';
+import 'package:iwb_canvas_engine/src/controller/commands/scene_commands.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
 import '../support/scene_snapshot_invariant_assertions.dart';
@@ -29,6 +31,14 @@ void assertControllerInvariants(SceneStoreController controller) {
   );
 }
 
+SceneCommands sceneCommandsFor(SceneStoreController controller) {
+  return SceneCommands(controller.writeWithSceneWriter);
+}
+
+DrawCommands drawCommandsFor(SceneStoreController controller) {
+  return DrawCommands(controller.writeWithSceneWriter);
+}
+
 void main() {
   test('draw commands create line/stroke and erase removes node ids', () async {
     final controller = buildController();
@@ -40,21 +50,20 @@ void main() {
     });
     addTearDown(sub.cancel);
 
-    final strokeId = controller.draw.writeDrawStroke(
+    final strokeId = drawCommandsFor(controller).writeDrawStroke(
       points: const <Offset>[Offset(0, 0), Offset(10, 0)],
       thickness: 2,
       color: const Color(0xFF000000),
     );
-    final lineId = controller.draw.writeDrawLine(
+    final lineId = drawCommandsFor(controller).writeDrawLine(
       segment: (start: const Offset(0, 0), end: const Offset(0, 10)),
       thickness: 3,
       color: const Color(0xFF111111),
     );
 
-    final removed = controller.draw.writeEraseNodes(<NodeId>[
-      strokeId,
-      'missing',
-    ]);
+    final removed = drawCommandsFor(
+      controller,
+    ).writeEraseNodes(<NodeId>[strokeId, 'missing']);
     await pumpEventQueue();
 
     expect(lineId, isNotEmpty);
@@ -71,7 +80,7 @@ void main() {
     addTearDown(controller.dispose);
 
     for (var i = 0; i < 100; i++) {
-      controller.draw.writeDrawStroke(
+      drawCommandsFor(controller).writeDrawStroke(
         points: <Offset>[Offset(i.toDouble(), 0), Offset(i.toDouble() + 1, 0)],
         thickness: 2,
         color: const Color(0xFF000000),
@@ -88,12 +97,12 @@ void main() {
     final controller = buildController();
     addTearDown(controller.dispose);
 
-    controller.commands.writeAddNode(
-      RectNodeSpec(id: 'z-node', size: const Size(6, 6)),
-    );
-    controller.commands.writeAddNode(
-      RectNodeSpec(id: 'a-node', size: const Size(6, 6)),
-    );
+    sceneCommandsFor(
+      controller,
+    ).writeAddNode(RectNodeSpec(id: 'z-node', size: const Size(6, 6)));
+    sceneCommandsFor(
+      controller,
+    ).writeAddNode(RectNodeSpec(id: 'a-node', size: const Size(6, 6)));
     await pumpEventQueue();
 
     List<NodeId>? erasedIds;
@@ -104,11 +113,9 @@ void main() {
     });
     addTearDown(sub.cancel);
 
-    final removedCount = controller.draw.writeEraseNodes(const <NodeId>{
-      'z-node',
-      'base',
-      'a-node',
-    });
+    final removedCount = drawCommandsFor(
+      controller,
+    ).writeEraseNodes(const <NodeId>{'z-node', 'base', 'a-node'});
     await pumpEventQueue();
 
     expect(removedCount, 3);
@@ -127,9 +134,9 @@ void main() {
     });
     addTearDown(sub.cancel);
 
-    final removedCount = controller.draw.writeEraseNodes(const <NodeId>{
-      'missing',
-    });
+    final removedCount = drawCommandsFor(
+      controller,
+    ).writeEraseNodes(const <NodeId>{'missing'});
     await pumpEventQueue();
 
     expect(removedCount, 0);
@@ -148,7 +155,7 @@ void main() {
       growable: false,
     );
 
-    final strokeId = controller.draw.writeDrawStroke(
+    final strokeId = drawCommandsFor(controller).writeDrawStroke(
       points: points,
       thickness: 2,
       color: const Color(0xFF000000),
@@ -175,7 +182,7 @@ void main() {
     addTearDown(controller.dispose);
 
     expect(
-      () => controller.draw.writeDrawLine(
+      () => drawCommandsFor(controller).writeDrawLine(
         segment: (start: const Offset(0, 0), end: const Offset(10, 10)),
         thickness: 0,
         color: const Color(0xFF000000),
@@ -190,7 +197,7 @@ void main() {
     final controller = buildController();
     addTearDown(controller.dispose);
 
-    final lineId = controller.draw.writeDrawLineFromWorldSegment(
+    final lineId = drawCommandsFor(controller).writeDrawLineFromWorldSegment(
       start: const Offset(10, 20),
       end: const Offset(50, 40),
       thickness: 3,

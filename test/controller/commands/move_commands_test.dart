@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/controller/commands/move_commands.dart';
+import 'package:iwb_canvas_engine/src/controller/commands/scene_commands.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
 import '../support/scene_snapshot_invariant_assertions.dart';
@@ -28,13 +30,23 @@ void assertControllerInvariants(SceneStoreController controller) {
   );
 }
 
+SceneCommands sceneCommandsFor(SceneStoreController controller) {
+  return SceneCommands(controller.writeWithSceneWriter);
+}
+
+MoveCommands moveCommandsFor(SceneStoreController controller) {
+  return MoveCommands(controller.writeWithSceneWriter);
+}
+
 void main() {
   test('move commands translate selected nodes in one commit', () {
     final controller = buildController();
     addTearDown(controller.dispose);
 
-    controller.commands.writeSelectionReplace(const <NodeId>{'base'});
-    final moved = controller.move.writeTranslateSelection(const Offset(7, 3));
+    sceneCommandsFor(controller).writeSelectionReplace(const <NodeId>{'base'});
+    final moved = moveCommandsFor(
+      controller,
+    ).writeTranslateSelection(const Offset(7, 3));
 
     final node =
         controller.snapshot.layers.first.nodes.first as RectNodeSnapshot;
@@ -49,11 +61,12 @@ void main() {
     final controller = buildController();
     addTearDown(controller.dispose);
 
-    controller.commands.writeSelectionReplace(const <NodeId>{'base'});
+    sceneCommandsFor(controller).writeSelectionReplace(const <NodeId>{'base'});
 
     expect(
-      () =>
-          controller.move.writeTranslateSelection(const Offset(double.nan, 1)),
+      () => moveCommandsFor(
+        controller,
+      ).writeTranslateSelection(const Offset(double.nan, 1)),
       throwsArgumentError,
     );
     assertControllerInvariants(controller);

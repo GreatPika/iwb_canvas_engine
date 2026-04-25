@@ -5,6 +5,8 @@ import '../contract/node_spec.dart';
 import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
 import '../contract/transform2d.dart';
+import 'commands/draw_commands.dart';
+import 'commands/scene_commands.dart';
 import 'scene_controller_commit_runtime.dart';
 import 'scene_store_controller.dart';
 
@@ -86,6 +88,12 @@ final class SceneStoreControllerCommittedMutationAccess
   SceneStoreControllerCommittedMutationAccess(this._storeController);
 
   final SceneStoreController _storeController;
+  late final SceneCommands _commands = SceneCommands(
+    _storeController.writeWithSceneWriter,
+  );
+  late final DrawCommands _draw = DrawCommands(
+    _storeController.writeWithSceneWriter,
+  );
 
   @override
   T write<T>(T Function(SceneWriteTxn writer) fn) {
@@ -105,7 +113,7 @@ final class SceneStoreControllerCommittedMutationAccess
 
   @override
   NodeId addNode(NodeSpec node, {LayerId? layerId, int? insertIndex}) {
-    return _storeController.commands.writeAddNode(
+    return _commands.writeAddNode(
       node,
       layerId: layerId,
       insertIndex: insertIndex,
@@ -121,37 +129,37 @@ final class SceneStoreControllerCommittedMutationAccess
 
   @override
   bool patchNode(NodePatch patch) {
-    return _storeController.commands.writePatchNode(patch);
+    return _commands.writePatchNode(patch);
   }
 
   @override
   bool removeNode(NodeId id) {
-    return _storeController.commands.writeDeleteNode(id);
+    return _commands.writeDeleteNode(id);
   }
 
   @override
   bool setBackgroundColor(Color value) {
-    return _storeController.commands.writeBackgroundColorSetExactChange(value);
+    return _commands.writeBackgroundColorSetExactChange(value);
   }
 
   @override
   bool setGridEnabled(bool value) {
-    return _storeController.commands.writeGridEnabledSetExactChange(value);
+    return _commands.writeGridEnabledSetExactChange(value);
   }
 
   @override
   bool setGridCellSize(double value) {
-    return _storeController.commands.writeGridCellSizeSetExactChange(value);
+    return _commands.writeGridCellSizeSetExactChange(value);
   }
 
   @override
   bool setCameraOffset(Offset value) {
-    return _storeController.commands.writeCameraOffsetSetExactChange(value);
+    return _commands.writeCameraOffsetSetExactChange(value);
   }
 
   @override
   ClearSceneResult clearSceneExactResult() {
-    return _storeController.commands.writeClearSceneExactResult();
+    return _commands.writeClearSceneExactResult();
   }
 
   @override
@@ -177,37 +185,34 @@ final class SceneStoreControllerCommittedMutationAccess
 
   @override
   bool replaceSelection(Iterable<NodeId> nodeIds) {
-    return _storeController.commands.writeSelectionReplaceExactResult(
-          nodeIds,
-        ) !=
-        null;
+    return _commands.writeSelectionReplaceExactResult(nodeIds) != null;
   }
 
   @override
   bool toggleSelection(NodeId nodeId) {
-    return _storeController.commands.writeSelectionToggleExactChange(nodeId);
+    return _commands.writeSelectionToggleExactChange(nodeId);
   }
 
   @override
   bool clearSelection() {
-    return _storeController.commands.writeSelectionClearExactChange();
+    return _commands.writeSelectionClearExactChange();
   }
 
   @override
   ({int selectedCount, bool changed}) selectAll({bool onlySelectable = true}) {
-    return _storeController.commands.writeSelectionSelectAllExactResult(
+    return _commands.writeSelectionSelectAllExactResult(
       onlySelectable: onlySelectable,
     );
   }
 
   @override
   int transformSelection(Transform2D delta) {
-    return _storeController.commands.writeSelectionTransform(delta);
+    return _commands.writeSelectionTransform(delta);
   }
 
   @override
   int deleteSelection() {
-    return _storeController.commands.writeDeleteSelection();
+    return _commands.writeDeleteSelection();
   }
 
   @override
@@ -217,7 +222,7 @@ final class SceneStoreControllerCommittedMutationAccess
     required Color color,
     required double opacity,
   }) {
-    return _storeController.draw.writeDrawStroke(
+    return _draw.writeDrawStroke(
       points: points,
       thickness: thickness,
       color: color,
@@ -233,7 +238,7 @@ final class SceneStoreControllerCommittedMutationAccess
     required Color color,
     required double opacity,
   }) {
-    return _storeController.draw.writeDrawLineFromWorldSegment(
+    return _draw.writeDrawLineFromWorldSegment(
       start: start,
       end: end,
       thickness: thickness,
@@ -244,7 +249,7 @@ final class SceneStoreControllerCommittedMutationAccess
 
   @override
   int commitEraseNodes(Iterable<NodeId> ids) {
-    return _storeController.draw.writeEraseNodes(ids);
+    return _draw.writeEraseNodes(ids);
   }
 
   @override

@@ -392,11 +392,12 @@ class SceneControllerSelectionOwner {
   final SceneControllerInteractionRuntime _runtime =
       SceneControllerInteractionRuntime();
   final _mutationBoundary = _MutationBoundary();
+  final _sceneCommands = _Commands();
 
   void setSelection(Object nodeIds) {
     _runtime.ensurePublicSideEffectAllowed('setSelection');
     _ensureExternalMutationAllowed('setSelection');
-    storeController.commands.writeSelectionReplace(nodeIds);
+    _sceneCommands.writeSelectionReplace(nodeIds);
   }
 
   void toggleSelection(Object nodeId) {
@@ -447,7 +448,6 @@ class SceneControllerSelectionOwner {
 }
 
 class _StoreController {
-  final commands = _Commands();
 }
 
 class _Commands {
@@ -585,8 +585,8 @@ class SceneControllerInteractionRuntime {
   void handleDoubleTapFromSession() {}
 
   void wireRuntime(Object request, Object mutationBoundary) {
-    request.storeController.commands.writeSelectionReplace;
-    request.storeController.draw.writeDrawStroke;
+    request.sceneCommands.writeSelectionReplace;
+    request.drawCommands.writeDrawStroke;
   }
 }
 ''',
@@ -785,10 +785,15 @@ class SceneControllerMutationBoundary {
   SceneControllerMutationBoundary(this.storeController);
 
   final SceneStoreController storeController;
+  final _sceneCommands = _Commands();
 
   void clearScene() {
-    storeController.commands.writeClearSceneExactResult();
+    _sceneCommands.writeClearSceneExactResult();
   }
+}
+
+class _Commands {
+  void writeClearSceneExactResult() {}
 }
 ''',
       );
@@ -841,25 +846,27 @@ class SceneControllerMutationBoundary {
           '''
 class SceneControllerMutationBoundary {
   final storeController = _Core();
+  final _sceneCommands = _Commands();
+  final _drawCommands = _Draw();
 
   void clearScene() {
     storeController.write<void>((writer) {});
   }
 
   void setSelection(Object nodeIds) {
-    storeController.commands.writeSelectionReplace(nodeIds);
+    _sceneCommands.writeSelectionReplace(nodeIds);
   }
 
   void clearSelection() {
-    storeController.commands.writeSelectionClear();
+    _sceneCommands.writeSelectionClear();
   }
 
   void deleteSelection() {
-    storeController.commands.writeDeleteSelection();
+    _sceneCommands.writeDeleteSelection();
   }
 
   void transformSelection(Object delta) {
-    storeController.commands.writeSelectionTransform(delta);
+    _sceneCommands.writeSelectionTransform(delta);
   }
 
   Object prepareSceneReplacement(Object snapshot) {
@@ -874,22 +881,19 @@ class SceneControllerMutationBoundary {
   Object commitMoveSelection(Object proposedDelta) => proposedDelta;
 
   Object commitDrawStroke(Object payload) {
-    return storeController.draw.writeDrawStroke(payload);
+    return _drawCommands.writeDrawStroke(payload);
   }
 
   Object commitDrawLineFromWorldSegment(Object payload) {
-    return storeController.draw.writeDrawLineFromWorldSegment(payload);
+    return _drawCommands.writeDrawLineFromWorldSegment(payload);
   }
 
   int commitEraseNodes(Object ids) {
-    return storeController.draw.writeEraseNodes(ids);
+    return _drawCommands.writeEraseNodes(ids);
   }
 }
 
 class _Core {
-  final commands = _Commands();
-  final draw = _Draw();
-
   void write<T>(Object fn) {}
 
   Object prepareSceneReplacement(Object snapshot) => snapshot;

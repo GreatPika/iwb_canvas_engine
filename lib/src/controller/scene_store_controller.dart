@@ -9,9 +9,6 @@ import '../model/document.dart'
     show NodeLocatorEntry, txnSceneFromSnapshot, txnSceneToSnapshot;
 import '../contract/scene_write_txn.dart';
 import '../contract/snapshot.dart';
-import 'commands/draw_commands.dart';
-import 'commands/move_commands.dart';
-import 'commands/scene_commands.dart';
 import 'internal/signal_event.dart';
 import 'scene_controller_commit_debug.dart';
 import 'scene_controller_commit_runtime.dart';
@@ -40,9 +37,6 @@ class SceneStoreController extends ChangeNotifier implements SceneRenderState {
 
   Scene? _cachedSnapshotScene;
   SceneSnapshot? _cachedSnapshot;
-  late final SceneCommands commands = SceneCommands(writeWithSceneWriter);
-  late final MoveCommands move = MoveCommands(writeWithSceneWriter);
-  late final DrawCommands draw = DrawCommands(writeWithSceneWriter);
 
   @override
   SceneSnapshot get snapshot {

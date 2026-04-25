@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/controller/commands/scene_commands.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 
 // INV:INV-ENG-TXN-ATOMIC-COMMIT
@@ -14,6 +15,10 @@ import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 // INV:INV-ENG-DISPOSE-FAIL-FAST
 
 void main() {
+  SceneCommands sceneCommandsFor(SceneStoreController controller) {
+    return SceneCommands(controller.writeWithSceneWriter);
+  }
+
   SceneSnapshot twoRectSnapshot() {
     return SceneSnapshot(
       layers: <ContentLayerSnapshot>[
@@ -111,7 +116,9 @@ void main() {
       );
       addTearDown(controller.dispose);
 
-      controller.commands.writeSelectionSelectAll(onlySelectable: false);
+      sceneCommandsFor(
+        controller,
+      ).writeSelectionSelectAll(onlySelectable: false);
 
       expect(controller.selectedNodeIds, const <NodeId>{
         'selectable',

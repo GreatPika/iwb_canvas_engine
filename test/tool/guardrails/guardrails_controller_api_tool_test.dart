@@ -186,9 +186,6 @@ import 'scene_controller_commit_runtime.dart';
 import 'scene_writer.dart';
 
 class _CommittedSignal {}
-class _SceneCommands {}
-class _MoveCommands {}
-class _DrawCommands {}
 class _ChangeNotifier {
   void notifyListeners() {}
   void dispose() {}
@@ -196,9 +193,6 @@ class _ChangeNotifier {
 
 $classDeclaration
   final String? textFontFamilyByDefault = null;
-  final commands = _SceneCommands();
-  final move = _MoveCommands();
-  final draw = _DrawCommands();
 
   SceneSnapshot get snapshot => SceneSnapshot();
   Set<String> get selectedNodeIds => <String>{};
