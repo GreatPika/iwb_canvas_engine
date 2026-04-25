@@ -592,7 +592,7 @@ the locked target shape without changing the supported public interaction API.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Narrow Preview And Test Read Seams
+### Slice 1. [x] Narrow Preview And Test Read Seams
 
 #### Slice Contract
 
@@ -666,7 +666,7 @@ runtime/snapshot readers while behavior stays unchanged.
   `readInteractionAccessForTest` /
   `sceneControllerInternalInteractionAccessForTest(...)`
 
-### Slice 2. [ ] Retire Interaction Access Context Bag
+### Slice 2. [x] Retire Interaction Access Context Bag
 
 #### Slice Contract
 
@@ -721,7 +721,7 @@ sandbox fixtures to the direct-constructor form.
 - repository search over `lib/**`, `test/**`, and `tool/**` finds no remaining
   references to `SceneControllerInteractionContext`
 
-### Slice 3. [ ] Lock The Interaction Family Target Map
+### Slice 3. [x] Lock The Interaction Family Target Map
 
 #### Slice Contract
 

@@ -394,18 +394,32 @@ fan teardown out across store/runtime/internal-access owners directly. The
 facade is final and is not a subclass extension seam; committed reads used by
 the graph come from the graph-owned store.
 
+#### `SceneControllerInteractionOwner`
+
+This is the supported public interaction capability owner. It is assembled from
+explicit dependencies:
+
+- one `Listenable` owner surface for public listener forwarding
+- `SceneControllerInteractionConfig` for interaction configuration state
+- `SceneControllerInteractionRuntime` for public-side-effect safety and
+  runtime entrypoints
+- narrow selection policy hooks for draw-mode entry behavior
+
+It must not depend on an aggregate access/context bag.
+
 #### `SceneControllerInteractionRuntime`
 
 This is the public-side-effect gate and interactive runtime owner. It manages:
 
 - public side-effect safety checks
-- gesture lifetime
-- move/draw preview state
+- runtime entry into gesture orchestration
 - interaction events and timestamp resolution
 - scheduling of public notifications, scene repaint, and overlay repaint
 - pointer-session ownership tokens
 - runtime-owned mutation entrypoints and callback wiring that route directly to
   `SceneControllerMutationBoundary`
+- the narrow `InteractiveMovePreviewRead` bridge consumed by composition-root
+  wiring
 
 #### `SceneControllerMutationBoundary`
 
@@ -455,7 +469,8 @@ and render layer. It adds to the committed store contract:
 
 - `captureFrameRead()`
 - `preparePaintPlan(...)`
-- scene repaint listening plus frame-preview capture for main-scene paint
+- scene repaint listening plus move-preview capture through
+  `InteractiveMovePreviewRead` for main-scene paint
 - controller epoch / selection revision carriage for render invalidation
 
 #### `SceneControllerSceneViewOverlayPreviewRead`

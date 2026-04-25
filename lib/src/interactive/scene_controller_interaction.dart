@@ -8,7 +8,6 @@ import '../contract/snapshot.dart';
 import '../core/immutable_collections.dart';
 import '../core/interaction_types.dart';
 import 'internal/interactive_draw_style.dart';
-import 'internal/scene_controller_interaction_access.dart';
 import 'internal/scene_controller_interaction_config.dart';
 import 'internal/scene_controller_interaction_runtime.dart';
 
@@ -85,107 +84,119 @@ abstract interface class SceneControllerInteraction implements Listenable {
 }
 
 class SceneControllerInteractionOwner implements SceneControllerInteraction {
-  SceneControllerInteractionOwner(this._access);
+  SceneControllerInteractionOwner({
+    required Listenable ownerListenable,
+    required SceneControllerInteractionConfig config,
+    required SceneControllerInteractionRuntime runtime,
+    required bool clearSelectionOnDrawModeEnter,
+    required bool Function() hasSelection,
+    required VoidCallback clearSelectionState,
+  }) : _ownerListenable = ownerListenable,
+       _config = config,
+       _runtime = runtime,
+       _clearSelectionOnDrawModeEnter = clearSelectionOnDrawModeEnter,
+       _hasSelection = hasSelection,
+       _clearSelectionState = clearSelectionState;
 
-  final SceneControllerInteractionAccess _access;
+  final Listenable _ownerListenable;
+  final SceneControllerInteractionConfig _config;
+  final SceneControllerInteractionRuntime _runtime;
+  final bool _clearSelectionOnDrawModeEnter;
+  final bool Function() _hasSelection;
+  final VoidCallback _clearSelectionState;
 
   @override
   void addListener(VoidCallback listener) {
-    _access.addListener(listener);
+    _ownerListenable.addListener(listener);
   }
 
   @override
   void removeListener(VoidCallback listener) {
-    _access.removeListener(listener);
+    _ownerListenable.removeListener(listener);
   }
 
   @override
-  Rect? get selectionRect => _access.runtime.selectionRect;
+  Rect? get selectionRect => _runtime.selectionRect;
   @override
-  Offset? get pendingLineStart => _access.runtime.pendingLineStart;
+  Offset? get pendingLineStart => _runtime.pendingLineStart;
   @override
-  int? get pendingLineTimestampMs => _access.runtime.pendingLineTimestampMs;
+  int? get pendingLineTimestampMs => _runtime.pendingLineTimestampMs;
   @override
-  bool get hasPendingLineStart => _access.runtime.hasPendingLineStart;
+  bool get hasPendingLineStart => _runtime.hasPendingLineStart;
   @override
-  Color? get pendingLineColor => _access.runtime.pendingLineStyle?.drawColor;
+  Color? get pendingLineColor => _runtime.pendingLineStyle?.drawColor;
   @override
-  double? get pendingLineThickness =>
-      _access.runtime.pendingLineStyle?.lineThickness;
-  InteractiveDrawStyle? get _activeDrawStyle => _access.runtime.activeDrawStyle;
+  double? get pendingLineThickness => _runtime.pendingLineStyle?.lineThickness;
+  InteractiveDrawStyle? get _activeDrawStyle => _runtime.activeDrawStyle;
   @override
   bool get hasActiveStrokePreview =>
-      _access.runtime.isActiveDrawGesture &&
+      _runtime.isActiveDrawGesture &&
       ((_activeDrawStyle?.drawTool == DrawTool.pen) ||
           (_activeDrawStyle?.drawTool == DrawTool.highlighter)) &&
-      _access.runtime.hasActiveStrokePoints;
+      _runtime.hasActiveStrokePoints;
   @override
   List<Offset> get activeStrokePreviewPoints =>
-      _access.runtime.activeStrokePreviewPoints;
+      _runtime.activeStrokePreviewPoints;
   @override
   double get activeStrokePreviewThickness =>
-      (_activeDrawStyle?.drawTool ?? _access.config.drawTool) ==
-          DrawTool.highlighter
-      ? _activeDrawStyle?.highlighterThickness ??
-            _access.config.highlighterThickness
-      : _activeDrawStyle?.penThickness ?? _access.config.penThickness;
+      (_activeDrawStyle?.drawTool ?? _config.drawTool) == DrawTool.highlighter
+      ? _activeDrawStyle?.highlighterThickness ?? _config.highlighterThickness
+      : _activeDrawStyle?.penThickness ?? _config.penThickness;
   @override
   Color get activeStrokePreviewColor =>
-      _activeDrawStyle?.drawColor ?? _access.config.drawColor;
+      _activeDrawStyle?.drawColor ?? _config.drawColor;
   @override
   double get activeStrokePreviewOpacity =>
-      (_activeDrawStyle?.drawTool ?? _access.config.drawTool) ==
-          DrawTool.highlighter
-      ? _activeDrawStyle?.highlighterOpacity ??
-            _access.config.highlighterOpacity
+      (_activeDrawStyle?.drawTool ?? _config.drawTool) == DrawTool.highlighter
+      ? _activeDrawStyle?.highlighterOpacity ?? _config.highlighterOpacity
       : 1;
   @override
   bool get hasActiveLinePreview =>
-      _access.runtime.isActiveDrawGesture &&
+      _runtime.isActiveDrawGesture &&
       _activeDrawStyle?.drawTool == DrawTool.line &&
-      _access.runtime.activeLinePreviewStart != null &&
-      _access.runtime.activeLinePreviewEnd != null;
+      _runtime.activeLinePreviewStart != null &&
+      _runtime.activeLinePreviewEnd != null;
   @override
-  Offset? get activeLinePreviewStart => _access.runtime.activeLinePreviewStart;
+  Offset? get activeLinePreviewStart => _runtime.activeLinePreviewStart;
   @override
-  Offset? get activeLinePreviewEnd => _access.runtime.activeLinePreviewEnd;
+  Offset? get activeLinePreviewEnd => _runtime.activeLinePreviewEnd;
   @override
   double get activeLinePreviewThickness =>
-      _activeDrawStyle?.lineThickness ?? _access.config.lineThickness;
+      _activeDrawStyle?.lineThickness ?? _config.lineThickness;
   @override
   Color get activeLinePreviewColor =>
-      _activeDrawStyle?.drawColor ?? _access.config.drawColor;
+      _activeDrawStyle?.drawColor ?? _config.drawColor;
   @override
-  CanvasMode get mode => _access.config.mode;
+  CanvasMode get mode => _config.mode;
   @override
-  DrawTool get drawTool => _access.config.drawTool;
+  DrawTool get drawTool => _config.drawTool;
   @override
-  Color get drawColor => _access.config.drawColor;
+  Color get drawColor => _config.drawColor;
   @override
-  double get penThickness => _access.config.penThickness;
+  double get penThickness => _config.penThickness;
   @override
-  double get highlighterThickness => _access.config.highlighterThickness;
+  double get highlighterThickness => _config.highlighterThickness;
   @override
-  double get lineThickness => _access.config.lineThickness;
+  double get lineThickness => _config.lineThickness;
   @override
-  double get eraserThickness => _access.config.eraserThickness;
+  double get eraserThickness => _config.eraserThickness;
   @override
-  double get highlighterOpacity => _access.config.highlighterOpacity;
+  double get highlighterOpacity => _config.highlighterOpacity;
   @override
-  double get dragStartSlop => _access.config.dragStartSlop();
+  double get dragStartSlop => _config.dragStartSlop();
   @override
-  PointerInputSettings get pointerSettings => _access.config.pointerSettings;
+  PointerInputSettings get pointerSettings => _config.pointerSettings;
 
   @override
   void handlePointer(CanvasPointerInput input) {
-    _access.runtime.ensurePublicSideEffectAllowed('handlePointer');
-    _access.runtime.handlePublicPointer(input);
+    _runtime.ensurePublicSideEffectAllowed('handlePointer');
+    _runtime.handlePublicPointer(input);
   }
 
   @override
   void handleDoubleTap({required Offset position, int? timestampMs}) {
-    _access.runtime.ensurePublicSideEffectAllowed('handleDoubleTap');
-    _access.runtime.handlePublicDoubleTap(
+    _runtime.ensurePublicSideEffectAllowed('handleDoubleTap');
+    _runtime.handlePublicDoubleTap(
       position: position,
       timestampMs: timestampMs,
     );
@@ -193,112 +204,112 @@ class SceneControllerInteractionOwner implements SceneControllerInteraction {
 
   @override
   void setMode(CanvasMode value) {
-    _access.runtime.ensurePublicSideEffectAllowed('setMode');
+    _runtime.ensurePublicSideEffectAllowed('setMode');
     if (mode == value) return;
 
-    _access.runtime.interruptForInteractionConfigChange();
-    _access.config.mode = value;
+    _runtime.interruptForInteractionConfigChange();
+    _config.mode = value;
 
     if (value == CanvasMode.draw &&
-        _access.clearSelectionOnDrawModeEnter &&
-        _access.hasSelection) {
-      _access.clearSelectionState();
+        _clearSelectionOnDrawModeEnter &&
+        _hasSelection()) {
+      _clearSelectionState();
     }
 
-    _access.runtime.scheduleNotify();
+    _runtime.scheduleNotify();
   }
 
   @override
   void setDrawTool(DrawTool value) {
-    _access.runtime.ensurePublicSideEffectAllowed('setDrawTool');
+    _runtime.ensurePublicSideEffectAllowed('setDrawTool');
     if (drawTool == value) return;
-    _access.runtime.interruptForInteractionConfigChange();
-    _access.config.drawTool = value;
-    _access.runtime.scheduleNotify();
+    _runtime.interruptForInteractionConfigChange();
+    _config.drawTool = value;
+    _runtime.scheduleNotify();
   }
 
   @override
   void setDrawColor(Color value) {
-    _access.runtime.ensurePublicSideEffectAllowed('setDrawColor');
+    _runtime.ensurePublicSideEffectAllowed('setDrawColor');
     if (drawColor == value) return;
-    _access.config.drawColor = value;
-    _access.runtime.scheduleNotify();
+    _config.drawColor = value;
+    _runtime.scheduleNotify();
   }
 
   @override
   set penThickness(double value) {
-    _access.runtime.ensurePublicSideEffectAllowed('penThickness');
-    _access.config.penThickness =
+    _runtime.ensurePublicSideEffectAllowed('penThickness');
+    _config.penThickness =
         SceneControllerInteractionConfig.requireFinitePositive(
           value,
           name: 'penThickness',
         );
-    _access.runtime.scheduleNotify();
+    _runtime.scheduleNotify();
   }
 
   @override
   set highlighterThickness(double value) {
-    _access.runtime.ensurePublicSideEffectAllowed('highlighterThickness');
-    _access.config.highlighterThickness =
+    _runtime.ensurePublicSideEffectAllowed('highlighterThickness');
+    _config.highlighterThickness =
         SceneControllerInteractionConfig.requireFinitePositive(
           value,
           name: 'highlighterThickness',
         );
-    _access.runtime.scheduleNotify();
+    _runtime.scheduleNotify();
   }
 
   @override
   set lineThickness(double value) {
-    _access.runtime.ensurePublicSideEffectAllowed('lineThickness');
-    _access.config.lineThickness =
+    _runtime.ensurePublicSideEffectAllowed('lineThickness');
+    _config.lineThickness =
         SceneControllerInteractionConfig.requireFinitePositive(
           value,
           name: 'lineThickness',
         );
-    _access.runtime.scheduleNotify();
+    _runtime.scheduleNotify();
   }
 
   @override
   set eraserThickness(double value) {
-    _access.runtime.ensurePublicSideEffectAllowed('eraserThickness');
-    _access.config.eraserThickness =
+    _runtime.ensurePublicSideEffectAllowed('eraserThickness');
+    _config.eraserThickness =
         SceneControllerInteractionConfig.requireFinitePositive(
           value,
           name: 'eraserThickness',
         );
-    _access.runtime.scheduleNotify();
+    _runtime.scheduleNotify();
   }
 
   @override
   set highlighterOpacity(double value) {
-    _access.runtime.ensurePublicSideEffectAllowed('highlighterOpacity');
-    _access.config.highlighterOpacity =
+    _runtime.ensurePublicSideEffectAllowed('highlighterOpacity');
+    _config.highlighterOpacity =
         SceneControllerInteractionConfig.requireFiniteInUnitInterval(
           value,
           name: 'highlighterOpacity',
         );
-    _access.runtime.scheduleNotify();
+    _runtime.scheduleNotify();
   }
 
   @override
   void setPointerSettings(PointerInputSettings value) {
-    _access.runtime.ensurePublicSideEffectAllowed('setPointerSettings');
+    _runtime.ensurePublicSideEffectAllowed('setPointerSettings');
     validatePointerInputSettings(value);
-    _access.config.pointerSettings = value;
-    _access.runtime.scheduleNotify();
+    _config.pointerSettings = value;
+    _runtime.scheduleNotify();
   }
 
   @override
   void setDragStartSlop(double? value) {
-    _access.runtime.ensurePublicSideEffectAllowed('setDragStartSlop');
+    _runtime.ensurePublicSideEffectAllowed('setDragStartSlop');
     final resolved = value == null
         ? null
         : SceneControllerInteractionConfig.requireFiniteNonNegative(
             value,
             name: 'dragStartSlop',
           );
-    if (_access.config.dragStartSlopOverride == resolved) return;
-    _access.config.dragStartSlopOverride = resolved;
-    _access.runtime.scheduleNotify();
+    if (_config.dragStartSlopOverride == resolved) return;
+    _config.dragStartSlopOverride = resolved;
+    _runtime.scheduleNotify();
   }
 }

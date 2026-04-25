@@ -52,6 +52,7 @@ final GuardrailRule interactiveApiGuardrailRule = GuardrailRule(
     invariantIds: <String>[
       'INV-ENG-INTERACTIVE-RESOLVER-PURITY',
       'INV-ENG-INTERACTIVE-MUTATION-BOUNDARY',
+      'INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY',
       'INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE',
       'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY',
       'INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY',
@@ -269,7 +270,7 @@ const List<CapabilityGuardSpec> _capabilityGuardSpecs = <CapabilityGuardSpec>[
   CapabilityGuardSpec(
     relativePath: 'scene_controller_interaction.dart',
     className: 'SceneControllerInteractionOwner',
-    primaryGuardCall: '_access.runtime.ensurePublicSideEffectAllowed',
+    primaryGuardCall: '_runtime.ensurePublicSideEffectAllowed',
   ),
   CapabilityGuardSpec(
     relativePath: 'scene_controller_scene.dart',

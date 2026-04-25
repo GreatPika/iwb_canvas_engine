@@ -8,9 +8,10 @@ import 'interactive_move_callbacks.dart';
 import 'interactive_move_gesture_state.dart';
 import 'interactive_move_hit_test_engine.dart';
 import 'interactive_move_preview_state.dart';
+import 'interactive_move_preview_read.dart';
 import 'interactive_move_selection_coordinator.dart';
 
-class InteractiveMoveSession {
+class InteractiveMoveSession implements InteractiveMovePreviewRead {
   InteractiveMoveSession({required this.callbacks}) {
     final previewState = InteractiveMovePreviewState();
     _previewState = previewState;
@@ -44,10 +45,12 @@ class InteractiveMoveSession {
     return _hitTestEngine.hitTestTopNode(scenePoint);
   }
 
-  Offset movePreviewDeltaForNode(NodeId nodeId) {
+  @override
+  Offset previewDeltaForNode(NodeId nodeId) {
     return _previewState.deltaForNode(nodeId);
   }
 
+  @override
   SceneViewFramePreview captureFramePreview() {
     return _previewState.captureFramePreview();
   }

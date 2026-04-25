@@ -231,53 +231,53 @@ final class SceneStoreControllerCommittedMutationAccess
   );
   writeSandboxFile(
     sandbox,
-    'lib/src/interactive/internal/scene_controller_interaction_access.dart',
-    '''
-import 'scene_controller_interaction_runtime.dart';
-
-abstract interface class SceneControllerInteractionAccess {
-  SceneControllerInteractionRuntime get runtime;
-}
-
-final class SceneControllerInteractionContext
-    implements SceneControllerInteractionAccess {
-  const SceneControllerInteractionContext({required this.runtime});
-
-  @override
-  final SceneControllerInteractionRuntime runtime;
-}
-''',
-  );
-  writeSandboxFile(
-    sandbox,
     'lib/src/interactive/scene_controller_interaction.dart',
     '''
-import 'internal/scene_controller_interaction_access.dart';
+import 'package:flutter/foundation.dart';
+
+import 'internal/scene_controller_interaction_config.dart';
 import 'internal/scene_controller_interaction_runtime.dart';
 
 abstract interface class SceneControllerInteraction {}
 
 class SceneControllerInteractionOwner implements SceneControllerInteraction {
-  final _access = _CanonicalInteractionOwnerAccess();
+  SceneControllerInteractionOwner({
+    required Listenable ownerListenable,
+    required SceneControllerInteractionConfig config,
+    required SceneControllerInteractionRuntime runtime,
+    required bool clearSelectionOnDrawModeEnter,
+    required bool Function() hasSelection,
+    required VoidCallback clearSelectionState,
+  }) : _ownerListenable = ownerListenable,
+       _config = config,
+       _runtime = runtime,
+       _clearSelectionOnDrawModeEnter = clearSelectionOnDrawModeEnter,
+       _hasSelection = hasSelection,
+       _clearSelectionState = clearSelectionState;
+
+  final Listenable _ownerListenable;
+  final SceneControllerInteractionConfig _config;
+  final SceneControllerInteractionRuntime _runtime;
+  final bool _clearSelectionOnDrawModeEnter;
+  final bool Function() _hasSelection;
+  final VoidCallback _clearSelectionState;
 
   void handlePointer(Object input) {
-    _access.runtime.ensurePublicSideEffectAllowed('handlePointer');
+    _runtime.ensurePublicSideEffectAllowed('handlePointer');
   }
 
   void handleDoubleTap() {
-    _access.runtime.ensurePublicSideEffectAllowed('handleDoubleTap');
+    _runtime.ensurePublicSideEffectAllowed('handleDoubleTap');
   }
 
   set mode(int value) {
-    _access.runtime.ensurePublicSideEffectAllowed('mode');
+    _runtime.ensurePublicSideEffectAllowed('mode');
+    _config.toString();
+    _ownerListenable.toString();
+    _clearSelectionOnDrawModeEnter.toString();
+    _hasSelection.toString();
+    _clearSelectionState.toString();
   }
-}
-
-final class _CanonicalInteractionOwnerAccess
-    implements SceneControllerInteractionAccess {
-  @override
-  final SceneControllerInteractionRuntime runtime =
-      SceneControllerInteractionRuntime();
 }
 ''',
   );
@@ -1465,11 +1465,12 @@ final class SceneControllerSceneViewOverlayPreviewRead
     '''
 import '../../controller/scene_controller_committed_mutation_access.dart';
 import '../../controller/scene_store_controller.dart';
+import 'package:flutter/foundation.dart';
 import '../scene_controller_interaction.dart';
 import '../scene_controller_scene.dart';
 import '../scene_controller_selection.dart';
 import 'scene_controller_internal_access.dart';
-import 'scene_controller_interaction_access.dart';
+import 'scene_controller_interaction_config.dart';
 import 'scene_controller_interaction_runtime.dart';
 import 'scene_controller_scene_view_runtime.dart';
 
@@ -1499,13 +1500,19 @@ SceneControllerGraphHandle createSceneControllerGraph(Object request) {
 
 SceneControllerGraphHandle _assembleSceneControllerGraph(Object request) {
   final storeController = SceneStoreController();
+  final interactionConfig = SceneControllerInteractionConfig();
   final interactionRuntime = createSceneControllerInteractionRuntime(
     request: SceneControllerInteractionRuntimeRequest(
       mutationAccess: SceneStoreControllerCommittedMutationAccess(),
     ),
   );
   final interaction = SceneControllerInteractionOwner(
-    SceneControllerInteractionContext(runtime: interactionRuntime),
+    ownerListenable: ChangeNotifier(),
+    config: interactionConfig,
+    runtime: interactionRuntime,
+    clearSelectionOnDrawModeEnter: true,
+    hasSelection: () => false,
+    clearSelectionState: () {},
   );
   final selection = SceneControllerSelectionOwner(
     runtime: interactionRuntime,

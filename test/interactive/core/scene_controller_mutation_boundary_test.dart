@@ -533,9 +533,9 @@ void main() {
         final sub = controller.actions.listen(committed.add);
         addTearDown(sub.cancel);
 
-        final runtime = sceneControllerInternalInteractionAccessForTest(
+        final runtime = sceneControllerInternalInteractionRuntimeForTest(
           controller,
-        ).runtime;
+        );
 
         expect(runtime.resolveTimestampMs(77), 77);
         runtime.emitAction(ActionType.clear, const <NodeId>[], 78);

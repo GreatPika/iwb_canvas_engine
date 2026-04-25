@@ -62,10 +62,6 @@ const List<_InteractiveOwnerSpec> _interactiveOwnerSpecs =
         ownerName: 'SceneControllerInteractionRuntime',
       ),
       _InteractiveOwnerSpec(
-        relativePath: 'internal/scene_controller_interaction_access.dart',
-        ownerName: 'SceneControllerInteractionContext',
-      ),
-      _InteractiveOwnerSpec(
         relativePath: 'internal/scene_controller_mutation_boundary.dart',
         ownerName: 'SceneControllerMutationBoundary',
       ),
@@ -123,6 +119,7 @@ const List<String> _deletedInteractiveResidualFiles = <String>[
   '/lib/src/interactive/internal/scene_controller_scene_mutations.dart',
   '/lib/src/interactive/internal/scene_controller_selection_mutations.dart',
   '/lib/src/interactive/scene_view_pointer_semantics.dart',
+  '/lib/src/interactive/internal/scene_controller_interaction_access.dart',
 ];
 
 Future<GuardrailViolation?> _checkInteractiveArchitectureBoundary(

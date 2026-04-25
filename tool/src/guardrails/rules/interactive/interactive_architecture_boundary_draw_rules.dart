@@ -3,6 +3,9 @@ part of 'mutation_boundary_rules.dart';
 Future<GuardrailViolation?> _checkInteractiveRuntimeBoundary(
   GuardrailContext context,
 ) async {
+  const retiredMoveSessionGetter =
+      'debugMove'
+      'Session';
   final file = _interactiveArchitectureFile(
     context,
     'internal/interactive_runtime.dart',
@@ -10,6 +13,16 @@ Future<GuardrailViolation?> _checkInteractiveRuntimeBoundary(
   final filePath = _repoRelPath(context, file);
   final parsed = _parseArchitectureUnit(context, file);
   final runtimeClass = _findClassDeclaration(parsed.unit, 'InteractiveRuntime');
+  if (runtimeClass != null &&
+      _classOwnsGetterOrMethod(runtimeClass, retiredMoveSessionGetter)) {
+    return GuardrailViolation(
+      filePath: filePath,
+      line: 1,
+      message:
+          'interactive API violation: InteractiveRuntime must not expose '
+          'InteractiveMoveSession outside InteractiveMovePreviewRead.',
+    );
+  }
   if (runtimeClass == null ||
       !_hasImport(parsed, 'interactive_draw_coordinator.dart') ||
       !_hasImport(parsed, 'interactive_event_dispatcher.dart') ||

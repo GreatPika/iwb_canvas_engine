@@ -8,6 +8,7 @@ import '../../contract/snapshot.dart';
 import '../../controller/scene_store_controller.dart';
 import '../../core/scene_snapshot_paint_candidates.dart';
 import '../scene_controller_interaction.dart';
+import 'interactive_move_preview_read.dart';
 import 'scene_controller_interaction_runtime.dart';
 import 'scene_controller_paint_candidate_stage.dart';
 import 'scene_controller_pointer_session.dart';
@@ -21,7 +22,7 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
     required SceneSnapshot Function() readSnapshot,
     required Set<NodeId> Function() readSelectedNodeIds,
     required int Function() readControllerEpoch,
-    required SceneViewFramePreview Function() captureFramePreview,
+    required InteractiveMovePreviewRead Function() movePreviewRead,
     required SceneControllerInteraction Function() readInteraction,
     required SceneControllerInteractionRuntime Function()
     readInteractionRuntime,
@@ -34,7 +35,7 @@ final class SceneControllerSceneViewRuntime implements SceneViewRuntime {
          readSnapshot: readSnapshot,
          readSelectedNodeIds: readSelectedNodeIds,
          readControllerEpoch: readControllerEpoch,
-         captureFramePreview: captureFramePreview,
+         readMovePreview: movePreviewRead,
        ),
        _overlayPreviewRead = SceneControllerSceneViewOverlayPreviewRead(
          readSnapshot: readSnapshot,
@@ -103,7 +104,7 @@ final class SceneControllerSceneViewMainSceneRenderRead
     required SceneSnapshot Function() readSnapshot,
     required Set<NodeId> Function() readSelectedNodeIds,
     required int Function() readControllerEpoch,
-    required SceneViewFramePreview Function() captureFramePreview,
+    required InteractiveMovePreviewRead Function() readMovePreview,
   }) : _storeController = storeController,
        _paintCandidateStage = SceneControllerPaintCandidateStage(
          store: storeController,
@@ -111,7 +112,7 @@ final class SceneControllerSceneViewMainSceneRenderRead
        _readSnapshot = readSnapshot,
        _readSelectedNodeIds = readSelectedNodeIds,
        _readControllerEpoch = readControllerEpoch,
-       _captureFramePreview = captureFramePreview;
+       _readMovePreview = readMovePreview;
 
   final SceneStoreController _storeController;
   final SceneControllerPaintCandidateStage _paintCandidateStage;
@@ -120,7 +121,7 @@ final class SceneControllerSceneViewMainSceneRenderRead
   final SceneSnapshot Function() _readSnapshot;
   final Set<NodeId> Function() _readSelectedNodeIds;
   final int Function() _readControllerEpoch;
-  final SceneViewFramePreview Function() _captureFramePreview;
+  final InteractiveMovePreviewRead Function() _readMovePreview;
 
   @override
   void addListener(VoidCallback listener) {
@@ -147,7 +148,7 @@ final class SceneControllerSceneViewMainSceneRenderRead
       snapshot: _readSnapshot(),
       selectedNodeIds: _readSelectedNodeIds(),
       selectionRevision: _storeController.selectionRevision,
-      preview: _captureFramePreview(),
+      preview: _readMovePreview().captureFramePreview(),
     );
   }
 

@@ -242,11 +242,12 @@ EnsureCallInfo? _resolveCapabilityEnsureCallInfo({
                   ownerName: 'SceneControllerInteractionRuntime',
                   elementName: 'ensurePublicSideEffectAllowed',
                 ) &&
-                _matchesOwnedAccessRuntimeTarget(
-                  target: expression.target,
+                _matchesOwnedFieldReference(
+                  element: _expressionElement(expression.target),
                   context: context,
                   filePath: filePath,
                   ownerName: className,
+                  fieldName: '_runtime',
                 )
             ? const EnsureCallInfo(hasAllowAfterDispose: false)
             : null;

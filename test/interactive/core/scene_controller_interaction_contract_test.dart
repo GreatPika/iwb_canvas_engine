@@ -184,9 +184,9 @@ void main() {
       final controller = SceneController();
       addTearDown(controller.dispose);
 
-      final runtime = sceneControllerInternalInteractionAccessForTest(
+      final runtime = sceneControllerInternalInteractionRuntimeForTest(
         controller,
-      ).runtime;
+      );
 
       expect(
         () => runtime.handlePointerFromSession(
@@ -322,9 +322,9 @@ void main() {
       'disposed runtime turns previously live runtime callbacks into local no-op',
       () {
         final controller = SceneController();
-        final runtime = sceneControllerInternalInteractionAccessForTest(
+        final runtime = sceneControllerInternalInteractionRuntimeForTest(
           controller,
-        ).runtime;
+        );
         final ownerListenable = ChangeNotifier();
         addTearDown(ownerListenable.dispose);
         final token = runtime.createPointerSessionToken();

@@ -324,10 +324,13 @@ void main() {
       expect(
         runtimeSource,
         contains(
-          'required SceneViewFramePreview Function() captureFramePreview,',
+          'required InteractiveMovePreviewRead Function() readMovePreview,',
         ),
       );
-      expect(runtimeSource, contains('preview: _captureFramePreview(),'));
+      expect(
+        runtimeSource,
+        contains('preview: _readMovePreview().captureFramePreview(),'),
+      );
       expect(runtimeSource, contains('preview: frameRead.preview,'));
       expect(runtimeSource, isNot(contains('readPreviewDeltaResolver')));
 

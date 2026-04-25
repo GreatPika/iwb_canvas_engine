@@ -137,9 +137,7 @@ void _registerInteractiveAcceptanceTests() {
       expect(interactionOwner, contains('void handlePointer(Object input)'));
       expect(
         interactionOwner,
-        contains(
-          "_access.runtime.ensurePublicSideEffectAllowed('handlePointer');",
-        ),
+        contains("_runtime.ensurePublicSideEffectAllowed('handlePointer');"),
       );
       expect(interactionOwner, contains('void handleDoubleTap()'));
       expect(interactionOwner, contains('set mode(int value)'));

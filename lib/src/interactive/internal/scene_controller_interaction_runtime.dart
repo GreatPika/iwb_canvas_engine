@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import '../../contract/canvas_pointer_input.dart';
-import '../../contract/scene_view_render_state.dart';
 import '../../contract/snapshot.dart';
 import '../../controller/scene_controller_committed_mutation_access.dart';
 import '../../controller/scene_store_controller.dart';
@@ -10,6 +9,7 @@ import '../../core/interaction_types.dart';
 import '../scene_controller_interaction.dart';
 import 'interactive_draw_style.dart';
 import 'interactive_event_dispatcher.dart';
+import 'interactive_move_preview_read.dart';
 import 'interactive_runtime.dart';
 import 'interactive_runtime_callbacks.dart';
 import 'pointer_session_token.dart';
@@ -203,6 +203,7 @@ extension SceneControllerInteractionRuntimeStateApi
   int get eraserSpatialQueryCount => runtime.debugEraserSpatialQueryCount;
   int get eraserPreciseSegmentCheckCount =>
       runtime.debugEraserPreciseSegmentChecks;
+  InteractiveMovePreviewRead get movePreviewRead => runtime.movePreviewRead;
 
   void interruptForInteractionConfigChange() {
     runtime.interruptForInteractionConfigChange();
@@ -276,14 +277,6 @@ extension SceneControllerInteractionRuntimeMutationApi
 
   void deleteSelection({int? timestampMs}) {
     mutationBoundary.deleteSelection(timestampMs: timestampMs);
-  }
-
-  Offset previewDeltaForNode(NodeId nodeId) {
-    return runtime.debugMoveSession.movePreviewDeltaForNode(nodeId);
-  }
-
-  SceneViewFramePreview captureFramePreview() {
-    return runtime.debugMoveSession.captureFramePreview();
   }
 
   void setBeforePointerDispatchHook(VoidCallback? hook) {

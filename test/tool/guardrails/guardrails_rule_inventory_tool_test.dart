@@ -126,6 +126,7 @@ void main() {
               invariants: <String>[
                 'INV-ENG-INTERACTIVE-RESOLVER-PURITY',
                 'INV-ENG-INTERACTIVE-MUTATION-BOUNDARY',
+                'INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY',
                 'INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE',
                 'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY',
                 'INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY',
@@ -183,6 +184,9 @@ void main() {
             ],
             'INV-ENG-INTERACTIVE-RESOLVER-PURITY': <String>['interactive-api'],
             'INV-ENG-INTERACTIVE-MUTATION-BOUNDARY': <String>[
+              'interactive-api',
+            ],
+            'INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY': <String>[
               'interactive-api',
             ],
             'INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE': <String>[

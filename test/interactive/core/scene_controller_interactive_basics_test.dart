@@ -1176,10 +1176,10 @@ void main() {
       controller.interaction.setMode(CanvasMode.draw);
       controller.interaction.setDrawTool(DrawTool.pen);
 
-      final access = sceneControllerInternalInteractionAccessForTest(
+      final runtime = sceneControllerInternalInteractionRuntimeForTest(
         controller,
       );
-      expect(access.runtime.hasActiveGesture, isFalse);
+      expect(runtime.hasActiveGesture, isFalse);
 
       controller.interaction.handlePointer(
         sampleInput(
@@ -1189,7 +1189,7 @@ void main() {
           phase: CanvasPointerPhase.down,
         ),
       );
-      expect(access.runtime.hasActiveGesture, isTrue);
+      expect(runtime.hasActiveGesture, isTrue);
 
       controller.interaction.handlePointer(
         sampleInput(
@@ -1199,7 +1199,7 @@ void main() {
           phase: CanvasPointerPhase.up,
         ),
       );
-      expect(access.runtime.hasActiveGesture, isFalse);
+      expect(runtime.hasActiveGesture, isFalse);
     });
 
     test('down dispatch resets active gesture owner when dispatch throws', () {
@@ -1251,9 +1251,9 @@ void main() {
         );
         addTearDown(controller.dispose);
 
-        final snapshot = sceneControllerInternalInteractionAccessForTest(
+        final snapshot = sceneControllerInternalCommittedSnapshotForTest(
           controller,
-        ).snapshot;
+        );
 
         expect(snapshot.layers.single.id, 'layer-auto-0');
       },

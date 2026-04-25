@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/core/node_geometry.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/interactive_move_preview_read.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_paint_candidate_stage.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_selected_paint_order_cache.dart';
@@ -84,6 +85,27 @@ class _CapturedWorldRectRenderState extends ChangeNotifier
   Color get activeLinePreviewColor => const Color(0x00000000);
 }
 
+final class _FixedMovePreviewRead implements InteractiveMovePreviewRead {
+  _FixedMovePreviewRead({
+    required this.readSnapshot,
+    required this.deltaForNode,
+  });
+
+  final SceneSnapshot Function() readSnapshot;
+  final Offset Function(NodeId nodeId) deltaForNode;
+
+  @override
+  SceneViewFramePreview captureFramePreview() {
+    return SceneViewFramePreview.captureSnapshot(
+      snapshot: readSnapshot(),
+      deltaForNode: deltaForNode,
+    );
+  }
+
+  @override
+  Offset previewDeltaForNode(NodeId nodeId) => deltaForNode(nodeId);
+}
+
 SceneViewMainSceneRenderRead _controllerOwnedRenderState(
   SceneStoreController controller, {
   Set<NodeId> selectedNodeIds = const <NodeId>{},
@@ -96,8 +118,8 @@ SceneViewMainSceneRenderRead _controllerOwnedRenderState(
     readSnapshot: readSnapshot,
     readSelectedNodeIds: () => selectedNodeIds,
     readControllerEpoch: () => controller.controllerEpoch,
-    captureFramePreview: () => SceneViewFramePreview.captureSnapshot(
-      snapshot: readSnapshot(),
+    readMovePreview: () => _FixedMovePreviewRead(
+      readSnapshot: readSnapshot,
       deltaForNode: previewDeltaResolver ?? (_) => Offset.zero,
     ),
   );

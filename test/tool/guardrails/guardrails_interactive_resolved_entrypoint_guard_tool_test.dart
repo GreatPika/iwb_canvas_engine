@@ -490,98 +490,83 @@ ${scenario.prelude}
 }
 
 void _registerResolvedCapabilityGuardRegressionTests() {
-  final scenarios = <({String name, String relativePath, String content, String detail})>[
-    (
-      name: 'interaction owner fake _access getter',
-      relativePath: 'lib/src/interactive/scene_controller_interaction.dart',
-      content: '''
+  final scenarios =
+      <({String name, String relativePath, String content, String detail})>[
+        (
+          name: 'interaction owner fake _runtime getter',
+          relativePath: 'lib/src/interactive/scene_controller_interaction.dart',
+          content: '''
 class SceneControllerInteractionOwner {
-  _FakeAccess get _access => _FakeAccess();
+  _FakeRuntime get _runtime => _FakeRuntime();
 
   void handlePointer() {
-    _access.runtime.ensurePublicSideEffectAllowed('handlePointer');
+    _runtime.ensurePublicSideEffectAllowed('handlePointer');
   }
-}
-
-class _FakeAccess {
-  _FakeRuntime get runtime => _FakeRuntime();
 }
 
 class _FakeRuntime {
   void ensurePublicSideEffectAllowed(String operation) {}
 }
 ''',
-      detail:
-          'public SceneControllerInteractionOwner entrypoints must guard '
-          'resolver purity with _access.runtime.ensurePublicSideEffectAllowed',
-    ),
-    (
-      name: 'interaction owner fake _access field',
-      relativePath: 'lib/src/interactive/scene_controller_interaction.dart',
-      content: '''
+          detail:
+              'public SceneControllerInteractionOwner entrypoints must guard '
+              'resolver purity with _runtime.ensurePublicSideEffectAllowed',
+        ),
+        (
+          name: 'interaction owner fake _runtime field',
+          relativePath: 'lib/src/interactive/scene_controller_interaction.dart',
+          content: '''
 class SceneControllerInteractionOwner {
-  final _access = _FakeAccess();
+  final _runtime = _FakeRuntime();
 
   void handlePointer() {
-    _access.runtime.ensurePublicSideEffectAllowed('handlePointer');
+    _runtime.ensurePublicSideEffectAllowed('handlePointer');
   }
-}
-
-class _FakeAccess {
-  final runtime = _FakeRuntime();
 }
 
 class _FakeRuntime {
   void ensurePublicSideEffectAllowed(String operation) {}
 }
 ''',
-      detail:
-          'public SceneControllerInteractionOwner entrypoints must guard '
-          'resolver purity with _access.runtime.ensurePublicSideEffectAllowed',
-    ),
-    (
-      name: 'interaction owner local alias',
-      relativePath: 'lib/src/interactive/scene_controller_interaction.dart',
-      content: '''
+          detail:
+              'public SceneControllerInteractionOwner entrypoints must guard '
+              'resolver purity with _runtime.ensurePublicSideEffectAllowed',
+        ),
+        (
+          name: 'interaction owner local alias',
+          relativePath: 'lib/src/interactive/scene_controller_interaction.dart',
+          content: '''
 class SceneControllerInteractionOwner {
-  final _access = _Access();
+  final _runtime = _RuntimeAccess();
 
   void handlePointer() {
-    final access = _access;
-    access.runtime.ensurePublicSideEffectAllowed('handlePointer');
+    final runtime = _runtime;
+    runtime.ensurePublicSideEffectAllowed('handlePointer');
   }
-}
-
-class _Access {
-  final runtime = _RuntimeAccess();
 }
 
 class _RuntimeAccess {
   void ensurePublicSideEffectAllowed(String operation) {}
 }
 ''',
-      detail:
-          'public SceneControllerInteractionOwner entrypoints must guard '
-          'resolver purity with _access.runtime.ensurePublicSideEffectAllowed',
-    ),
-    (
-      name: 'interaction owner pre-guard getter read',
-      relativePath: 'lib/src/interactive/scene_controller_interaction.dart',
-      content: '''
+          detail:
+              'public SceneControllerInteractionOwner entrypoints must guard '
+              'resolver purity with _runtime.ensurePublicSideEffectAllowed',
+        ),
+        (
+          name: 'interaction owner pre-guard getter read',
+          relativePath: 'lib/src/interactive/scene_controller_interaction.dart',
+          content: '''
 class SceneControllerInteractionOwner {
-  final _access = _Access();
+  final _runtime = _RuntimeAccess();
   final _probe = _Probe();
 
   void handlePointer() {
     if (_probe.unsafeFlag) {
       return;
     }
-    _access.runtime.ensurePublicSideEffectAllowed('handlePointer');
+    _runtime.ensurePublicSideEffectAllowed('handlePointer');
   }
-}
-
-class _Access {
-  final runtime = _RuntimeAccess();
 }
 
 class _RuntimeAccess {
@@ -595,28 +580,24 @@ class _Probe {
   }
 }
 ''',
-      detail:
-          'public SceneControllerInteractionOwner entrypoints must guard '
-          'resolver purity with _access.runtime.ensurePublicSideEffectAllowed',
-    ),
-    (
-      name: 'interaction owner pre-guard index read',
-      relativePath: 'lib/src/interactive/scene_controller_interaction.dart',
-      content: '''
+          detail:
+              'public SceneControllerInteractionOwner entrypoints must guard '
+              'resolver purity with _runtime.ensurePublicSideEffectAllowed',
+        ),
+        (
+          name: 'interaction owner pre-guard index read',
+          relativePath: 'lib/src/interactive/scene_controller_interaction.dart',
+          content: '''
 class SceneControllerInteractionOwner {
-  final _access = _Access();
+  final _runtime = _RuntimeAccess();
   final _probe = _IndexProbe();
 
   void handlePointer() {
     if (_probe[0]) {
       return;
     }
-    _access.runtime.ensurePublicSideEffectAllowed('handlePointer');
+    _runtime.ensurePublicSideEffectAllowed('handlePointer');
   }
-}
-
-class _Access {
-  final runtime = _RuntimeAccess();
 }
 
 class _RuntimeAccess {
@@ -630,14 +611,14 @@ class _IndexProbe {
   }
 }
 ''',
-      detail:
-          'public SceneControllerInteractionOwner entrypoints must guard '
-          'resolver purity with _access.runtime.ensurePublicSideEffectAllowed',
-    ),
-    (
-      name: 'selection owner fake _runtime getter',
-      relativePath: 'lib/src/interactive/scene_controller_selection.dart',
-      content: '''
+          detail:
+              'public SceneControllerInteractionOwner entrypoints must guard '
+              'resolver purity with _runtime.ensurePublicSideEffectAllowed',
+        ),
+        (
+          name: 'selection owner fake _runtime getter',
+          relativePath: 'lib/src/interactive/scene_controller_selection.dart',
+          content: '''
 class SceneControllerSelectionOwner {
   _FakeRuntime get _runtime => _FakeRuntime();
 
@@ -650,14 +631,14 @@ class _FakeRuntime {
   void ensurePublicSideEffectAllowed(String operation) {}
 }
 ''',
-      detail:
-          'public SceneControllerSelectionOwner entrypoints must guard '
-          'resolver purity with _runtime.ensurePublicSideEffectAllowed',
-    ),
-    (
-      name: 'selection owner fake _runtime field',
-      relativePath: 'lib/src/interactive/scene_controller_selection.dart',
-      content: '''
+          detail:
+              'public SceneControllerSelectionOwner entrypoints must guard '
+              'resolver purity with _runtime.ensurePublicSideEffectAllowed',
+        ),
+        (
+          name: 'selection owner fake _runtime field',
+          relativePath: 'lib/src/interactive/scene_controller_selection.dart',
+          content: '''
 class SceneControllerSelectionOwner {
   final _runtime = _FakeRuntime();
 
@@ -670,14 +651,14 @@ class _FakeRuntime {
   void ensurePublicSideEffectAllowed(String operation) {}
 }
 ''',
-      detail:
-          'public SceneControllerSelectionOwner entrypoints must guard '
-          'resolver purity with _runtime.ensurePublicSideEffectAllowed',
-    ),
-    (
-      name: 'selection owner local alias',
-      relativePath: 'lib/src/interactive/scene_controller_selection.dart',
-      content: '''
+          detail:
+              'public SceneControllerSelectionOwner entrypoints must guard '
+              'resolver purity with _runtime.ensurePublicSideEffectAllowed',
+        ),
+        (
+          name: 'selection owner local alias',
+          relativePath: 'lib/src/interactive/scene_controller_selection.dart',
+          content: '''
 class SceneControllerSelectionOwner {
   final _runtime = _Runtime();
 
@@ -691,14 +672,14 @@ class _Runtime {
   void ensurePublicSideEffectAllowed(String operation) {}
 }
 ''',
-      detail:
-          'public SceneControllerSelectionOwner entrypoints must guard '
-          'resolver purity with _runtime.ensurePublicSideEffectAllowed',
-    ),
-    (
-      name: 'selection owner pre-guard getter read',
-      relativePath: 'lib/src/interactive/scene_controller_selection.dart',
-      content: '''
+          detail:
+              'public SceneControllerSelectionOwner entrypoints must guard '
+              'resolver purity with _runtime.ensurePublicSideEffectAllowed',
+        ),
+        (
+          name: 'selection owner pre-guard getter read',
+          relativePath: 'lib/src/interactive/scene_controller_selection.dart',
+          content: '''
 class SceneControllerSelectionOwner {
   final _runtime = _Runtime();
   final _probe = _Probe();
@@ -722,14 +703,14 @@ class _Probe {
   }
 }
 ''',
-      detail:
-          'public SceneControllerSelectionOwner entrypoints must guard '
-          'resolver purity with _runtime.ensurePublicSideEffectAllowed',
-    ),
-    (
-      name: 'selection owner interpolation getter read',
-      relativePath: 'lib/src/interactive/scene_controller_selection.dart',
-      content: '''
+          detail:
+              'public SceneControllerSelectionOwner entrypoints must guard '
+              'resolver purity with _runtime.ensurePublicSideEffectAllowed',
+        ),
+        (
+          name: 'selection owner interpolation getter read',
+          relativePath: 'lib/src/interactive/scene_controller_selection.dart',
+          content: '''
 class SceneControllerSelectionOwner {
   final _runtime = _Runtime();
 
@@ -751,14 +732,14 @@ class _Runtime {
   void ensurePublicSideEffectAllowed(String operation) {}
 }
 ''',
-      detail:
-          'public SceneControllerSelectionOwner entrypoints must guard '
-          'resolver purity with _runtime.ensurePublicSideEffectAllowed',
-    ),
-    (
-      name: 'scene owner local alias',
-      relativePath: 'lib/src/interactive/scene_controller_scene.dart',
-      content: '''
+          detail:
+              'public SceneControllerSelectionOwner entrypoints must guard '
+              'resolver purity with _runtime.ensurePublicSideEffectAllowed',
+        ),
+        (
+          name: 'scene owner local alias',
+          relativePath: 'lib/src/interactive/scene_controller_scene.dart',
+          content: '''
 abstract interface class SceneControllerScene {
   void write(Object fn);
 }
@@ -779,14 +760,14 @@ void _ensure(
   bool allowAfterDispose = false,
 }) {}
 ''',
-      detail:
-          'public SceneControllerSceneOwner entrypoints must guard '
-          'resolver purity with _runtime.ensurePublicSideEffectAllowed',
-    ),
-    (
-      name: 'scene owner pre-guard getter read',
-      relativePath: 'lib/src/interactive/scene_controller_scene.dart',
-      content: '''
+          detail:
+              'public SceneControllerSceneOwner entrypoints must guard '
+              'resolver purity with _runtime.ensurePublicSideEffectAllowed',
+        ),
+        (
+          name: 'scene owner pre-guard getter read',
+          relativePath: 'lib/src/interactive/scene_controller_scene.dart',
+          content: '''
 abstract interface class SceneControllerScene {
   void write(Object fn);
 }
@@ -814,11 +795,11 @@ void _ensure(
   bool allowAfterDispose = false,
 }) {}
 ''',
-      detail:
-          'public SceneControllerSceneOwner entrypoints must guard '
-          'resolver purity with _runtime.ensurePublicSideEffectAllowed',
-    ),
-  ];
+          detail:
+              'public SceneControllerSceneOwner entrypoints must guard '
+              'resolver purity with _runtime.ensurePublicSideEffectAllowed',
+        ),
+      ];
 
   for (final scenario in scenarios) {
     test('rejects capability guard bypass: ${scenario.name}', () async {
@@ -937,15 +918,11 @@ void _ensure(
 import 'internal/scene_controller_interaction_runtime.dart';
 
 class SceneControllerInteractionOwner {
-  final _access = _Access();
+  final _runtime = SceneControllerInteractionRuntime();
 
   void handlePointer() {
-    return _access.runtime.ensurePublicSideEffectAllowed('handlePointer');
+    return _runtime.ensurePublicSideEffectAllowed('handlePointer');
   }
-}
-
-class _Access {
-  final runtime = SceneControllerInteractionRuntime();
 }
 ''',
         );
@@ -958,7 +935,7 @@ class _Access {
             category: 'interactive API',
             detail:
                 'public SceneControllerInteractionOwner entrypoints must guard '
-                'resolver purity with _access.runtime.ensurePublicSideEffectAllowed',
+                'resolver purity with _runtime.ensurePublicSideEffectAllowed',
           ),
         );
       } finally {
@@ -1188,6 +1165,8 @@ abstract interface class SceneControllerScene {
   void write(Object fn);
 
   void clearScene();
+
+  void notifySceneChanged();
 }
 
 class SceneControllerSceneOwner implements SceneControllerScene {
@@ -1276,6 +1255,12 @@ class SceneControllerSceneOwner implements SceneControllerScene {
       snapshot,
       interruptBeforeApply: _interruptForExternalMutation,
     );
+  }
+
+  @override
+  void notifySceneChanged() {
+    _runtime.ensurePublicSideEffectAllowed('notifySceneChanged');
+    _mutationBoundary.notifySceneChanged();
   }
 
   void _ensureExternalMutationAllowed(String operation) {

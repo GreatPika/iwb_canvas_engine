@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/contract/pointer_input.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/interactive_gesture_machine.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/interactive_move_callbacks.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/interactive_move_preview_read.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/interactive_move_session.dart';
 
 void main() {
@@ -160,6 +161,25 @@ void main() {
         );
       }
 
+      test('move session owns the narrow move-preview read seam', () {
+        final session = buildMoveSession(
+          onSceneStateChanged: () {},
+          commitMoveSelection: (proposedDelta) =>
+              (appliedDelta: proposedDelta, movedIds: const <NodeId>[nodeId]),
+          emitAction: (_, _, _, {payload}) {},
+        );
+        addTearDown(session.dispose);
+
+        final previewRead = session as InteractiveMovePreviewRead;
+
+        expect(previewRead.previewDeltaForNode(nodeId), Offset.zero);
+        expect(previewRead.hasPreviewDeltaForNode(nodeId), isFalse);
+        expect(
+          previewRead.captureFramePreview().deltaForNode(nodeId),
+          Offset.zero,
+        );
+      });
+
       test('selected-node move tap emits no scene callback or action', () {
         var sceneChanges = 0;
         var commitCalls = 0;
@@ -204,7 +224,7 @@ void main() {
         expect(sceneChanges, 0);
         expect(commitCalls, 0);
         expect(emittedActions, 0);
-        expect(session.movePreviewDeltaForNode(nodeId), Offset.zero);
+        expect(session.previewDeltaForNode(nodeId), Offset.zero);
       });
 
       test('selected-node move drag emits scene callback from move only', () {
@@ -243,7 +263,7 @@ void main() {
         );
 
         expect(sceneChanges, 1);
-        expect(session.movePreviewDeltaForNode(nodeId), const Offset(6, 0));
+        expect(session.previewDeltaForNode(nodeId), const Offset(6, 0));
       });
     });
   });

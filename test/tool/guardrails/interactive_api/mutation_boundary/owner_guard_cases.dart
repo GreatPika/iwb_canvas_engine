@@ -48,7 +48,7 @@ class SceneControllerInteractionOwner {
             detail:
                 'public SceneControllerInteractionOwner entrypoints must guard '
                 'resolver purity with '
-                '_access.runtime.ensurePublicSideEffectAllowed',
+                '_runtime.ensurePublicSideEffectAllowed',
           ),
         );
       } finally {

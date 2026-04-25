@@ -720,12 +720,18 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY',
     scope: 'engine-runtime',
     title:
-        'interactive composition, capability, runtime, event, and write-side owners remain structurally split; SceneController stays a thin public facade over the graph handle and does not re-own store construction, teardown fan-out, render-state surfaces, or deleted residual seams',
+        'interactive composition, capability, runtime, event, and write-side owners remain structurally split; SceneController stays a thin public facade over the graph handle, the interaction owner uses explicit constructor dependencies instead of an access bag, and move preview exits only through InteractiveMovePreviewRead without a runtime move-session leak',
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path:
             'test/interactive/core/scene_controller_architecture_boundary_test.dart',
         stepId: 'scope_interactive',
+      ),
+      RequiredProof(path: 'tool/check_guardrails.dart', stepId: 'guardrails'),
+    ],
+    regressionProofs: <RegressionProof>[
+      RegressionProof(
+        path: 'test/tool/guardrails/guardrails_interactive_api_tool_test.dart',
       ),
     ],
   ),

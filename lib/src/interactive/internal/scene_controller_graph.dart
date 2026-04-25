@@ -11,7 +11,6 @@ import '../scene_controller_interaction.dart';
 import '../scene_controller_scene.dart';
 import '../scene_controller_selection.dart';
 import 'scene_controller_internal_access.dart';
-import 'scene_controller_interaction_access.dart';
 import 'scene_controller_interaction_config.dart';
 import 'scene_controller_interaction_runtime.dart';
 import 'scene_controller_scene_view_runtime.dart';
@@ -21,7 +20,6 @@ final class SceneControllerGraphHandle {
     required SceneController owner,
     required SceneStoreController storeController,
     required SceneControllerInteractionRuntime interactionRuntime,
-    required this.interactionAccess,
     required this.interaction,
     required this.selection,
     required this.scene,
@@ -36,7 +34,6 @@ final class SceneControllerGraphHandle {
   final SceneController _owner;
   final SceneStoreController _storeController;
   final SceneControllerInteractionRuntime _interactionRuntime;
-  final SceneControllerInteractionAccess interactionAccess;
   final SceneControllerInteraction interaction;
   final SceneControllerSelection selection;
   final SceneControllerScene scene;
@@ -53,7 +50,7 @@ final class SceneControllerGraphHandle {
   int get controllerEpoch => _storeController.controllerEpoch;
 
   Offset Function(NodeId nodeId) get previewDeltaResolver =>
-      _interactionRuntime.previewDeltaForNode;
+      _internalAccessRegistration.movePreviewRead.previewDeltaForNode;
 
   Stream<ActionCommitted> get actions => _interactionRuntime.actions;
 
@@ -139,7 +136,7 @@ SceneControllerGraphHandle _assembleSceneControllerGraph(
     readSelectedNodeIds: () => storeController.selectedNodeIds,
     readControllerEpoch: () => storeController.controllerEpoch,
     readInteraction: () => request.owner.interaction,
-    captureFramePreview: () => interactionRuntime.captureFramePreview(),
+    movePreviewRead: () => interactionRuntime.movePreviewRead,
     readInteractionRuntime: () => interactionRuntime,
   );
   interactionRuntime = _createInteractionRuntime(
@@ -148,25 +145,22 @@ SceneControllerGraphHandle _assembleSceneControllerGraph(
     sceneViewRuntime: sceneViewRuntime,
     storeController: storeController,
   );
-  final interactionAccess = SceneControllerInteractionContext(
-    owner: request.owner,
+  final interaction = SceneControllerInteractionOwner(
+    ownerListenable: request.owner,
     config: interactionConfig,
     runtime: interactionRuntime,
-    readSnapshot: () => storeController.snapshot,
-    hasSelectionState: () => storeController.selectedNodeIds.isNotEmpty,
+    clearSelectionOnDrawModeEnter: request.clearSelectionOnDrawModeEnter,
+    hasSelection: () => storeController.selectedNodeIds.isNotEmpty,
     clearSelectionState: () {
       interactionRuntime.ensureExternalMutationAllowed('clearSelection');
       interactionRuntime.mutationBoundary.clearSelection();
     },
-    clearSelectionOnDrawModeEnter: request.clearSelectionOnDrawModeEnter,
   );
-  final interaction = SceneControllerInteractionOwner(interactionAccess);
 
   return SceneControllerGraphHandle(
     owner: request.owner,
     storeController: storeController,
     interactionRuntime: interactionRuntime,
-    interactionAccess: interactionAccess,
     interaction: interaction,
     selection: SceneControllerSelectionOwner(
       runtime: interactionRuntime,
@@ -179,12 +173,13 @@ SceneControllerGraphHandle _assembleSceneControllerGraph(
     sceneViewRuntime: sceneViewRuntime,
     internalAccessRegistration: SceneControllerInternalAccessRegistration(
       readEpoch: () => storeController.controllerEpoch,
-      previewDeltaForNode: interactionRuntime.previewDeltaForNode,
+      movePreviewRead: interactionRuntime.movePreviewRead,
       setBeforePointerDispatchHook:
           interactionRuntime.setBeforePointerDispatchHook,
       runMoveCommitDeltaResolverForTest:
           interactionRuntime.runMoveCommitDeltaResolver,
-      readInteractionAccessForTest: () => interactionAccess,
+      readInteractionRuntimeForTest: () => interactionRuntime,
+      readCommittedSnapshotForTest: () => storeController.snapshot,
       readActiveEraserPointsLength: () =>
           interactionRuntime.activeEraserPointsLength,
       readEraserSpatialQueryCount: () =>

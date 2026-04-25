@@ -64,11 +64,12 @@ void _registerInteractiveArchitectureBoundaryViewAndGraphTests() {
         '''
 import '../../controller/scene_controller_committed_mutation_access.dart';
 import '../../controller/scene_store_controller.dart';
+import 'package:flutter/foundation.dart';
 import '../scene_controller_interaction.dart';
 import '../scene_controller_scene.dart';
 import '../scene_controller_selection.dart';
 import 'scene_controller_internal_access.dart';
-import 'scene_controller_interaction_access.dart';
+import 'scene_controller_interaction_config.dart';
 import 'scene_controller_interaction_runtime.dart';
 import 'scene_controller_scene_view_runtime.dart';
 
@@ -102,13 +103,19 @@ SceneControllerGraphHandle _assembleSceneControllerGraph(
   SceneControllerGraphRequest request,
 ) {
   final storeController = request.storeController!;
+  final interactionConfig = SceneControllerInteractionConfig();
   final interactionRuntime = createSceneControllerInteractionRuntime(
     request: SceneControllerInteractionRuntimeRequest(
       mutationAccess: SceneStoreControllerCommittedMutationAccess(),
     ),
   );
   final interaction = SceneControllerInteractionOwner(
-    SceneControllerInteractionContext(runtime: interactionRuntime),
+    ownerListenable: ChangeNotifier(),
+    config: interactionConfig,
+    runtime: interactionRuntime,
+    clearSelectionOnDrawModeEnter: true,
+    hasSelection: () => false,
+    clearSelectionState: () {},
   );
   final selection = SceneControllerSelectionOwner(
     runtime: interactionRuntime,
@@ -423,7 +430,6 @@ Object createSceneControllerGraph(Object request) => Object();
         'lib/src/interactive/internal/scene_controller_graph.dart',
         '''
 import 'scene_controller_internal_access.dart';
-import 'scene_controller_interaction_access.dart';
 import 'scene_controller_scene_view_runtime.dart';
 import '../../controller/scene_store_controller.dart';
 

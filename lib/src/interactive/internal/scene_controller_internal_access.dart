@@ -3,28 +3,31 @@ import 'dart:ui';
 import '../../contract/snapshot.dart';
 import '../scene_controller.dart';
 import '../scene_controller_interaction.dart';
-import 'scene_controller_interaction_access.dart';
 import 'interactive_geometry.dart';
+import 'interactive_move_preview_read.dart';
+import 'scene_controller_interaction_runtime.dart';
 
 class _SceneControllerInternalAccess {
   const _SceneControllerInternalAccess({
     required this.readEpoch,
-    required this.previewDeltaForNode,
+    required this.movePreviewRead,
     required this.setBeforePointerDispatchHook,
     required this.runMoveCommitDeltaResolverForTest,
-    required this.readInteractionAccessForTest,
+    required this.readInteractionRuntimeForTest,
+    required this.readCommittedSnapshotForTest,
     required this.readActiveEraserPointsLength,
     required this.readEraserSpatialQueryCount,
     required this.readEraserPreciseSegmentCheckCount,
   });
 
   final int Function() readEpoch;
-  final Offset Function(NodeId nodeId) previewDeltaForNode;
+  final InteractiveMovePreviewRead movePreviewRead;
   final void Function(VoidCallback? hook) setBeforePointerDispatchHook;
   final Offset Function(MoveCommitDeltaRequest request)
   runMoveCommitDeltaResolverForTest;
-  final SceneControllerInteractionAccess Function()
-  readInteractionAccessForTest;
+  final SceneControllerInteractionRuntime Function()
+  readInteractionRuntimeForTest;
+  final SceneSnapshot Function() readCommittedSnapshotForTest;
   final int Function() readActiveEraserPointsLength;
   final int Function() readEraserSpatialQueryCount;
   final int Function() readEraserPreciseSegmentCheckCount;
@@ -36,22 +39,24 @@ final Expando<_SceneControllerInternalAccess> _sceneControllerInternalAccess =
 final class SceneControllerInternalAccessRegistration {
   const SceneControllerInternalAccessRegistration({
     required this.readEpoch,
-    required this.previewDeltaForNode,
+    required this.movePreviewRead,
     required this.setBeforePointerDispatchHook,
     required this.runMoveCommitDeltaResolverForTest,
-    required this.readInteractionAccessForTest,
+    required this.readInteractionRuntimeForTest,
+    required this.readCommittedSnapshotForTest,
     required this.readActiveEraserPointsLength,
     required this.readEraserSpatialQueryCount,
     required this.readEraserPreciseSegmentCheckCount,
   });
 
   final int Function() readEpoch;
-  final Offset Function(NodeId nodeId) previewDeltaForNode;
+  final InteractiveMovePreviewRead movePreviewRead;
   final void Function(VoidCallback? hook) setBeforePointerDispatchHook;
   final Offset Function(MoveCommitDeltaRequest request)
   runMoveCommitDeltaResolverForTest;
-  final SceneControllerInteractionAccess Function()
-  readInteractionAccessForTest;
+  final SceneControllerInteractionRuntime Function()
+  readInteractionRuntimeForTest;
+  final SceneSnapshot Function() readCommittedSnapshotForTest;
   final int Function() readActiveEraserPointsLength;
   final int Function() readEraserSpatialQueryCount;
   final int Function() readEraserPreciseSegmentCheckCount;
@@ -63,11 +68,12 @@ void registerSceneControllerInternalAccess(
 ) {
   _sceneControllerInternalAccess[controller] = _SceneControllerInternalAccess(
     readEpoch: registration.readEpoch,
-    previewDeltaForNode: registration.previewDeltaForNode,
+    movePreviewRead: registration.movePreviewRead,
     setBeforePointerDispatchHook: registration.setBeforePointerDispatchHook,
     runMoveCommitDeltaResolverForTest:
         registration.runMoveCommitDeltaResolverForTest,
-    readInteractionAccessForTest: registration.readInteractionAccessForTest,
+    readInteractionRuntimeForTest: registration.readInteractionRuntimeForTest,
+    readCommittedSnapshotForTest: registration.readCommittedSnapshotForTest,
     readActiveEraserPointsLength: registration.readActiveEraserPointsLength,
     readEraserSpatialQueryCount: registration.readEraserSpatialQueryCount,
     readEraserPreciseSegmentCheckCount:
@@ -99,7 +105,7 @@ Offset sceneControllerInternalPreviewDeltaForNode(
 ) {
   return _requireSceneControllerInternalAccess(
     controller,
-  ).previewDeltaForNode(nodeId);
+  ).movePreviewRead.previewDeltaForNode(nodeId);
 }
 
 void sceneControllerInternalSetBeforePointerDispatchHook(
@@ -120,11 +126,19 @@ Offset sceneControllerInternalRunMoveCommitDeltaResolverForTest(
   ).runMoveCommitDeltaResolverForTest(request);
 }
 
-SceneControllerInteractionAccess
-sceneControllerInternalInteractionAccessForTest(SceneController controller) {
+SceneControllerInteractionRuntime
+sceneControllerInternalInteractionRuntimeForTest(SceneController controller) {
   return _requireSceneControllerInternalAccess(
     controller,
-  ).readInteractionAccessForTest();
+  ).readInteractionRuntimeForTest();
+}
+
+SceneSnapshot sceneControllerInternalCommittedSnapshotForTest(
+  SceneController controller,
+) {
+  return _requireSceneControllerInternalAccess(
+    controller,
+  ).readCommittedSnapshotForTest();
 }
 
 void sceneControllerInternalEnforceGestureBufferSoftLimitForTest(

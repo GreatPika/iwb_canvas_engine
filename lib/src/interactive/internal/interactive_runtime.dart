@@ -8,6 +8,7 @@ import 'interactive_event_dispatcher.dart';
 import 'interactive_gesture_machine.dart';
 import 'interactive_gesture_router.dart';
 import 'interactive_move_callbacks.dart';
+import 'interactive_move_preview_read.dart';
 import 'interactive_move_session.dart';
 import 'interactive_pointer_normalizer.dart';
 import 'interactive_runtime_callbacks.dart';
@@ -86,7 +87,7 @@ class InteractiveRuntime {
   Offset? get activeLinePreviewEnd => _drawCoordinator.activeLinePreviewEnd;
   InteractiveDrawStyle? get activeDrawStyle => _drawCoordinator.activeDrawStyle;
 
-  InteractiveMoveSession get debugMoveSession => _moveSession;
+  InteractiveMovePreviewRead get movePreviewRead => _moveSession;
 
   void setBeforePointerDispatchHook(VoidCallback? hook) {
     _debugBeforePointerDispatchHook = hook;

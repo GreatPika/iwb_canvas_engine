@@ -1,35 +1,5 @@
 part of 'mutation_boundary_rules.dart';
 
-bool _matchesOwnedAccessRuntimeTarget({
-  required Expression? target,
-  required GuardrailContext context,
-  required String filePath,
-  required String ownerName,
-}) {
-  final rootTarget = switch (target?.unParenthesized) {
-    PropertyAccess(:final target?, :final propertyName) => (
-      root: _expressionElement(target),
-      propertyName: propertyName.name,
-    ),
-    PrefixedIdentifier(:final prefix, :final identifier) => (
-      root: prefix.element,
-      propertyName: identifier.name,
-    ),
-    _ => null,
-  };
-  if (rootTarget == null) {
-    return false;
-  }
-  return _matchesOwnedFieldReference(
-        element: rootTarget.root,
-        context: context,
-        filePath: filePath,
-        ownerName: ownerName,
-        fieldName: '_access',
-      ) &&
-      rootTarget.propertyName == 'runtime';
-}
-
 Future<ResolvedUnitResult> _resolveInteractiveUnitOrFail({
   required GuardrailContext context,
   required File file,

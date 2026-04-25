@@ -18,6 +18,7 @@ import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter_contract.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter_node_renderer.dart';
 import 'package:iwb_canvas_engine/src/core/scene_snapshot_paint_candidates.dart';
+import 'package:iwb_canvas_engine/src/interactive/internal/interactive_move_preview_read.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/interactive/scene_controller.dart'
     as interactive;
@@ -109,6 +110,27 @@ class _FakeRenderState extends ChangeNotifier
   }
 }
 
+final class _FixedMovePreviewRead implements InteractiveMovePreviewRead {
+  _FixedMovePreviewRead({
+    required this.readSnapshot,
+    required this.deltaForNode,
+  });
+
+  final SceneSnapshot Function() readSnapshot;
+  final Offset Function(NodeId nodeId) deltaForNode;
+
+  @override
+  SceneViewFramePreview captureFramePreview() {
+    return SceneViewFramePreview.captureSnapshot(
+      snapshot: readSnapshot(),
+      deltaForNode: deltaForNode,
+    );
+  }
+
+  @override
+  Offset previewDeltaForNode(NodeId nodeId) => deltaForNode(nodeId);
+}
+
 Offset _zeroPreviewDelta(NodeId _) => Offset.zero;
 
 CommittedSceneViewReadState _mirrorRenderState(
@@ -136,8 +158,8 @@ SceneViewMainSceneRenderRead _controllerOwnedRenderState(
     readSnapshot: readSnapshot,
     readSelectedNodeIds: () => selectedNodeIds ?? controller.selectedNodeIds,
     readControllerEpoch: () => controller.controllerEpoch,
-    captureFramePreview: () => SceneViewFramePreview.captureSnapshot(
-      snapshot: readSnapshot(),
+    readMovePreview: () => _FixedMovePreviewRead(
+      readSnapshot: readSnapshot,
       deltaForNode: previewDeltaResolver ?? _zeroPreviewDelta,
     ),
   );

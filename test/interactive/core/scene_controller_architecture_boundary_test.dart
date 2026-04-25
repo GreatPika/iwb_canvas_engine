@@ -8,6 +8,18 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late _ArchitectureAnalysis analysis;
+  const retiredInteractionAccessReader =
+      'readInteractionAccessFor'
+      'Test';
+  const retiredInteractionAccessHelper =
+      'sceneControllerInternalInteractionAccessFor'
+      'Test';
+  const retiredDebugMoveSession =
+      'debugMove'
+      'Session';
+  const retiredInteractionContext =
+      'SceneControllerInteraction'
+      'Context';
 
   setUpAll(() {
     analysis = _ArchitectureAnalysis(repoRootPath: Directory.current.path);
@@ -18,6 +30,9 @@ void main() {
   // INV:INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY
   // INV:INV-ENG-COMMITTED-SELECTION-REVISION-ALIGNMENT
   test('SceneController architecture boundary remains structurally split', () {
+    analysis.expectMissingFile(
+      'lib/src/interactive/internal/scene_controller_interaction_access.dart',
+    );
     analysis.expectMissingFile(
       'lib/src/interactive/internal/scene_controller_facade_assembly.dart',
     );
@@ -32,8 +47,17 @@ void main() {
     final graph = analysis.parsed(
       'lib/src/interactive/internal/scene_controller_graph.dart',
     );
+    final interactionOwner = analysis.parsed(
+      'lib/src/interactive/scene_controller_interaction.dart',
+    );
+    final internalAccess = analysis.parsed(
+      'lib/src/interactive/internal/scene_controller_internal_access.dart',
+    );
     final runtimeContract = analysis.parsed(
       'lib/src/contract/scene_view_runtime.dart',
+    );
+    final interactionRuntime = analysis.parsed(
+      'lib/src/interactive/internal/scene_controller_interaction_runtime.dart',
     );
     final sceneViewRuntime = analysis.parsed(
       'lib/src/interactive/internal/scene_controller_scene_view_runtime.dart',
@@ -55,6 +79,10 @@ void main() {
     );
 
     final sceneController = analysis.findClass(facade, 'SceneController');
+    final interactionOwnerClass = analysis.findClass(
+      interactionOwner,
+      'SceneControllerInteractionOwner',
+    );
     final sceneControllerBridge = analysis.findTopLevelFunction(
       facade,
       'sceneControllerViewRuntimeOf',
@@ -104,6 +132,13 @@ void main() {
     expect(
       analysis.hasImport(facade, 'internal/scene_controller_graph.dart'),
       isTrue,
+    );
+    expect(
+      analysis.hasImport(
+        interactionOwner,
+        'internal/scene_controller_interaction_access.dart',
+      ),
+      isFalse,
     );
     expect(
       analysis.hasImport(facade, '../contract/scene_view_runtime.dart'),
@@ -318,6 +353,84 @@ void main() {
       ),
       isFalse,
     );
+    expect(
+      analysis.containsMethodInvocation(
+        graphAssembly,
+        target: 'interactionRuntime',
+        methodName: 'captureFramePreview',
+      ),
+      isFalse,
+    );
+    expect(
+      analysis.containsMethodInvocation(
+        graphAssembly,
+        target: 'interactionRuntime',
+        methodName: 'previewDeltaForNode',
+      ),
+      isFalse,
+    );
+    expect(
+      analysis.containsIdentifier(graph.unit, retiredInteractionAccessReader),
+      isFalse,
+    );
+    expect(
+      analysis.containsIdentifier(
+        internalAccess.unit,
+        retiredInteractionAccessHelper,
+      ),
+      isFalse,
+    );
+    expect(
+      analysis.containsIdentifier(
+        internalAccess.unit,
+        retiredInteractionAccessReader,
+      ),
+      isFalse,
+    );
+    expect(
+      analysis.containsIdentifier(graph.unit, retiredInteractionContext),
+      isFalse,
+    );
+    expect(
+      analysis.containsIdentifier(
+        interactionRuntime.unit,
+        retiredDebugMoveSession,
+      ),
+      isFalse,
+    );
+    expect(
+      analysis.classFieldType(interactionOwnerClass, '_ownerListenable'),
+      'Listenable',
+    );
+    expect(
+      analysis.classFieldType(interactionOwnerClass, '_config'),
+      'SceneControllerInteractionConfig',
+    );
+    expect(
+      analysis.classFieldType(interactionOwnerClass, '_runtime'),
+      'SceneControllerInteractionRuntime',
+    );
+    expect(
+      analysis.namedFormalParameterType(
+        analysis.findConstructor(interactionOwnerClass),
+        'ownerListenable',
+      ),
+      'Listenable',
+    );
+    expect(
+      analysis.namedFormalParameterType(
+        analysis.findConstructor(interactionOwnerClass),
+        'config',
+      ),
+      'SceneControllerInteractionConfig',
+    );
+    expect(
+      analysis.namedFormalParameterType(
+        analysis.findConstructor(interactionOwnerClass),
+        'runtime',
+      ),
+      'SceneControllerInteractionRuntime',
+    );
 
     expect(
       analysis.implementsInterface(sceneViewRuntimeClass, 'SceneViewRuntime'),
@@ -338,6 +451,13 @@ void main() {
         'session',
       ),
       'SceneControllerPointerSession',
+    );
+    expect(
+      analysis.namedFormalParameterType(
+        analysis.findConstructor(sceneViewRuntimeClass),
+        'movePreviewRead',
+      ),
+      'InteractiveMovePreviewRead Function()',
     );
     expect(
       analysis.containsMethodInvocation(

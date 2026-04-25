@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_view_render_state.dart';
 import 'package:iwb_canvas_engine/src/core/scene_limits.dart' show sceneSizeMax;
+import 'package:iwb_canvas_engine/src/interactive/internal/interactive_move_preview_read.dart';
 import 'package:iwb_canvas_engine/src/interactive/internal/scene_controller_scene_view_runtime.dart';
 import 'package:iwb_canvas_engine/src/render/render_geometry_cache.dart';
 import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
@@ -14,6 +15,27 @@ import 'package:iwb_canvas_engine/src/render/scene_painter.dart';
 import 'load_profile_policy.dart';
 
 const _resultPrefix = 'IWB_BENCH_RESULT ';
+
+final class _FixedMovePreviewRead implements InteractiveMovePreviewRead {
+  _FixedMovePreviewRead({
+    required this.readSnapshot,
+    required this.deltaForNode,
+  });
+
+  final SceneSnapshot Function() readSnapshot;
+  final Offset Function(NodeId nodeId) deltaForNode;
+
+  @override
+  SceneViewFramePreview captureFramePreview() {
+    return SceneViewFramePreview.captureSnapshot(
+      snapshot: readSnapshot(),
+      deltaForNode: deltaForNode,
+    );
+  }
+
+  @override
+  Offset previewDeltaForNode(NodeId nodeId) => deltaForNode(nodeId);
+}
 
 void main() {
   final profile = _resolveProfile();
@@ -995,8 +1017,8 @@ Map<String, Object?> _runStaticBackgroundCacheCase({
     readSnapshot: readSnapshot,
     readSelectedNodeIds: () => controller.selectedNodeIds,
     readControllerEpoch: () => controller.controllerEpoch,
-    captureFramePreview: () => SceneViewFramePreview.captureSnapshot(
-      snapshot: readSnapshot(),
+    readMovePreview: () => _FixedMovePreviewRead(
+      readSnapshot: readSnapshot,
       deltaForNode: _benchmarkZeroPreviewDelta,
     ),
   );
@@ -1105,8 +1127,8 @@ Map<String, Object?> _runBackgroundLayerPaintAdmissionCase({
     readSnapshot: readSnapshot,
     readSelectedNodeIds: () => controller.selectedNodeIds,
     readControllerEpoch: () => controller.controllerEpoch,
-    captureFramePreview: () => SceneViewFramePreview.captureSnapshot(
-      snapshot: readSnapshot(),
+    readMovePreview: () => _FixedMovePreviewRead(
+      readSnapshot: readSnapshot,
       deltaForNode: _benchmarkZeroPreviewDelta,
     ),
   );
@@ -1201,8 +1223,8 @@ _createProductionBenchmarkRenderState({
     readSnapshot: readSnapshot,
     readSelectedNodeIds: () => controller.selectedNodeIds,
     readControllerEpoch: () => controller.controllerEpoch,
-    captureFramePreview: () => SceneViewFramePreview.captureSnapshot(
-      snapshot: readSnapshot(),
+    readMovePreview: () => _FixedMovePreviewRead(
+      readSnapshot: readSnapshot,
       deltaForNode: _benchmarkZeroPreviewDelta,
     ),
   );

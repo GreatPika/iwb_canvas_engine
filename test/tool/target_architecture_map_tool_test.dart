@@ -256,7 +256,7 @@ void main() {
       );
     });
 
-    test('interaction family keeps one accepted boundary with local debt', () {
+    test('interaction family records the locked local boundary', () {
       final source = _read(
         'docs/target_architecture/families/interaction_runtime.md',
       );
@@ -278,7 +278,7 @@ void main() {
         'commit_move_selection_flow.json',
         'commit_move_selection_flow.md',
         'lsp_find_thin_wrappers.dart',
-        '`locked, needs slimming`',
+        '`locked`',
       ]);
       _expectContainsNone(source, const <String>[
         'InteractiveSelectionActions',

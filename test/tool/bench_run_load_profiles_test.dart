@@ -443,8 +443,8 @@ void main() {
         );
 
         expect(body, contains('SceneControllerSceneViewMainSceneRenderRead('));
-        expect(body, contains('captureFramePreview: () =>'));
-        expect(body, contains('SceneViewFramePreview.captureSnapshot('));
+        expect(body, contains('readMovePreview: () => _FixedMovePreviewRead('));
+        expect(source, contains('SceneViewFramePreview.captureSnapshot('));
         expect(body, isNot(contains('_BenchmarkControllerRenderState(')));
         expect(
           source,
@@ -539,9 +539,7 @@ void main() {
         expect(source, isNot(contains('_benchmarkPaintCandidates(')));
         expect(
           source,
-          contains(
-            'captureFramePreview: () => SceneViewFramePreview.captureSnapshot(',
-          ),
+          contains('readMovePreview: () => _FixedMovePreviewRead('),
         );
         expect(source, isNot(contains('readPreviewDeltaResolver')));
       },

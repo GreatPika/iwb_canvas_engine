@@ -3,6 +3,9 @@ part of 'mutation_boundary_rules.dart';
 Future<GuardrailViolation?> _checkInteractiveInteractionRuntimeBoundary(
   GuardrailContext context,
 ) async {
+  const retiredMoveSessionGetter =
+      'debugMove'
+      'Session';
   final file = _interactiveArchitectureFile(
     context,
     'internal/scene_controller_interaction_runtime.dart',
@@ -114,6 +117,42 @@ Future<GuardrailViolation?> _checkInteractiveInteractionRuntimeBoundary(
               interactionRuntimeClass.members,
               'deleteSelection',
             ));
+  final previewDeltaForNode =
+      _findExtensionMethodOnType(
+        resolved.unit,
+        'SceneControllerInteractionRuntime',
+        'previewDeltaForNode',
+      ) ??
+      (interactionRuntimeClass == null
+          ? null
+          : _findMethodByName(
+              interactionRuntimeClass.members,
+              'previewDeltaForNode',
+            ));
+  final captureFramePreview =
+      _findExtensionMethodOnType(
+        resolved.unit,
+        'SceneControllerInteractionRuntime',
+        'captureFramePreview',
+      ) ??
+      (interactionRuntimeClass == null
+          ? null
+          : _findMethodByName(
+              interactionRuntimeClass.members,
+              'captureFramePreview',
+            ));
+  if (previewDeltaForNode != null ||
+      captureFramePreview != null ||
+      _unitContainsIdentifier(parsed.unit, retiredMoveSessionGetter)) {
+    return GuardrailViolation(
+      filePath: filePath,
+      line: 1,
+      message:
+          'interactive API violation: SceneControllerInteractionRuntime '
+          'must not re-expose move preview readback; composition wiring must '
+          'use InteractiveMovePreviewRead.',
+    );
+  }
   final mutationBoundaryFilePath = _repoRelPath(
     context,
     _interactiveArchitectureFile(

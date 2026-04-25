@@ -128,18 +128,12 @@
           "children": []
         },
         {
-          "name": "captureFramePreview",
-          "detail": "SceneControllerInteractionRuntimeMutationApi",
+          "name": "get movePreviewRead",
+          "detail": "SceneControllerInteractionRuntimeStateApi",
           "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
           "children": [
             {
-              "name": "captureFramePreview",
-              "detail": "InteractiveMoveSession",
-              "path": "lib/src/interactive/internal/interactive_move_session.dart",
-              "children": []
-            },
-            {
-              "name": "get debugMoveSession",
+              "name": "get movePreviewRead",
               "detail": "InteractiveRuntime",
               "path": "lib/src/interactive/internal/interactive_runtime.dart",
               "children": []
@@ -214,9 +208,9 @@
           ]
         },
         {
-          "name": "SceneControllerInteractionContext",
-          "detail": "SceneControllerInteractionContext",
-          "path": "lib/src/interactive/internal/scene_controller_interaction_access.dart",
+          "name": "SceneControllerInteractionOwner",
+          "detail": "SceneControllerInteractionOwner",
+          "path": "lib/src/interactive/scene_controller_interaction.dart",
           "children": []
         },
         {
@@ -252,12 +246,6 @@
           ]
         },
         {
-          "name": "SceneControllerInteractionOwner",
-          "detail": "SceneControllerInteractionOwner",
-          "path": "lib/src/interactive/scene_controller_interaction.dart",
-          "children": []
-        },
-        {
           "name": "SceneControllerGraphHandle",
           "detail": "SceneControllerGraphHandle",
           "path": "lib/src/interactive/internal/scene_controller_graph.dart",
@@ -280,25 +268,6 @@
           "detail": "SceneControllerInternalAccessRegistration",
           "path": "lib/src/interactive/internal/scene_controller_internal_access.dart",
           "children": []
-        },
-        {
-          "name": "previewDeltaForNode",
-          "detail": "SceneControllerInteractionRuntimeMutationApi",
-          "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
-          "children": [
-            {
-              "name": "movePreviewDeltaForNode",
-              "detail": "InteractiveMoveSession",
-              "path": "lib/src/interactive/internal/interactive_move_session.dart",
-              "children": []
-            },
-            {
-              "name": "get debugMoveSession",
-              "detail": "InteractiveRuntime",
-              "path": "lib/src/interactive/internal/interactive_runtime.dart",
-              "children": []
-            }
-          ]
         },
         {
           "name": "setBeforePointerDispatchHook",
