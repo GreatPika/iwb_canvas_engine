@@ -663,6 +663,9 @@ fresh queries after structural commits resolve successfully.
 
 - stale same-id candidates from an earlier structural revision resolve to
   `null`
+- existing nested-admission coverage for background/content candidate
+  resolution remains intact; this slice only adds structural provenance and
+  does not reclassify that protection surface
 - non-structural selection-only reuse remains valid
 
 #### Closure Evidence
