@@ -107,3 +107,93 @@ Confirmed active defects only.
 - Next action: Guarantee terminal draw cleanup through `finally` at the draw
   owner seam and add regression tests for failing stroke, line, and eraser
   commits.
+
+### KI-4
+
+- ID: `KI-4`
+- Severity: `P2`
+- Summary: Runtime stroke value diagnostics do not enforce the same upper
+  `sceneThicknessMax` bound as snapshot/backing validation, so oversized
+  `StrokeNode.thickness` can escape runtime invariant reporting.
+- Detection: Compare runtime/snapshot/backing stroke validators in
+  `lib/src/model/scene_value_validation_node_stroke.dart`
+- Evidence:
+  - `lib/src/model/scene_value_validation_node_stroke.dart`
+  - `lib/src/model/scene_value_validation_node_line.dart`
+  - Current detections:
+    `sceneValidateStrokeNode` checks positive finite thickness but skips
+    `sceneValidateDoubleInRange(... max: sceneThicknessMax)`;
+    `sceneValidateStrokeNodeSnapshot` and
+    `sceneValidateStrokeNodeSnapshotBacking` do enforce the upper bound;
+    `sceneValidateLineNode` already keeps runtime/snapshot/backing thickness
+    validation aligned through `_sceneValidateLineNodeFields`
+- Next action: Add the missing runtime `sceneThicknessMax` range check for
+  stroke thickness and cover it with runtime diagnostic tests.
+
+### KI-5
+
+- ID: `KI-5`
+- Severity: `P2`
+- Summary: Direct model-level scene insertion trusts caller-supplied derived
+  locator/index state as the sole uniqueness and budget source, so stale or
+  incomplete maps can admit duplicate ids or undercount node budget.
+- Detection: Inspect topology mutation helpers in
+  `lib/src/model/document_scene_insert.dart` against derived locator builders
+  in `lib/src/model/document_locator.dart`
+- Evidence:
+  - `lib/src/model/document_scene_insert.dart`
+  - `lib/src/model/document_locator.dart`
+  - Current detections:
+    `txnInsertNodeInScene` uses `nodeLocator.containsKey(node.id)` for
+    uniqueness and `nodeLocator.length` for node budget;
+    `txnInsertContentLayerInScene` uses
+    `layerIndexById.containsKey(layerId)` for uniqueness;
+    both paths can bypass topology invariants when caller-provided derived
+    indexes are stale or incomplete
+- Next action: Move uniqueness and budget checks to actual scene topology or
+  make the fast-path freshness precondition explicit and enforced.
+
+### KI-6
+
+- ID: `KI-6`
+- Severity: `P2`
+- Summary: Fill-only path hit-testing applies `hitPadding` to coarse candidate
+  bounds but not to the precise path hit-test, so touch padding around filled
+  paths is inconsistent with other node families.
+- Detection: Compare path candidate-bounds inflation with precise path hit-test
+  in `lib/src/core/node_geometry.dart`
+- Evidence:
+  - `lib/src/core/hit_test.dart`
+  - `lib/src/core/node_geometry.dart`
+  - Current detections:
+    `nodeGeometryCandidateBoundsWorld` and
+    `nodeSnapshotGeometryCandidateBoundsWorld` inflate by
+    `hitPadding + kHitSlop`;
+    `_hitTestPathGeometry` only accepts fill hits through
+    `localPath.contains(localPoint)`;
+    `_pathStrokeRadiusLocal` returns `0` for fill-only paths, so padding never
+    reaches the precise check when `strokeColor == null`
+- Next action: Align fill-only path precise hit-testing with shared
+  `hitPadding` semantics and add runtime/snapshot hit-test regression cases.
+
+### KI-7
+
+- ID: `KI-7`
+- Severity: `P3`
+- Summary: Paint candidate admission uses different edge-touch predicates in
+  committed spatial queries and snapshot-local fallback, so committed paint
+  plans can include ordinary candidates that snapshot fallback excludes.
+- Detection: Compare committed paint admission in
+  `lib/src/core/scene_spatial_index.dart` with snapshot fallback admission in
+  `lib/src/core/scene_snapshot_paint_candidates.dart`
+- Evidence:
+  - `lib/src/core/scene_spatial_index.dart`
+  - `lib/src/core/scene_snapshot_paint_candidates.dart`
+  - Current detections:
+    committed paint queries resolve candidates through an inclusive boundary
+    predicate;
+    snapshot-local fallback uses strict `Rect.overlaps`;
+    painter culling is also strict, so the drift currently affects candidate
+    plan parity and staging work rather than confirmed pixels
+- Next action: Choose one shared paint admission boundary policy, codify it in
+  tests, and remove the committed-vs-snapshot drift.
