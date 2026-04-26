@@ -3,8 +3,10 @@ import 'dart:io';
 
 import 'audit_bridge_surfaces.dart';
 import 'audit_patch_field_admission.dart';
+import 'audit_post_commit_cleanup_order.dart';
 import 'audit_route_expectations.dart';
 import 'audit_schema_family_parity.dart';
+import 'audit_terminal_cleanup_safety.dart';
 import 'audit_validated_materialization_paths.dart';
 import 'src/tool_command_result.dart';
 
@@ -32,6 +34,11 @@ Future<ToolCommandResult> runRepositoryAuditsTool(
               run: runAuditPatchFieldAdmissionTool,
             ),
             _AuditSpec(
+              name: 'post_commit_cleanup_order',
+              description: 'Post-commit side-effect cleanup order audit',
+              run: runAuditPostCommitCleanupOrderTool,
+            ),
+            _AuditSpec(
               name: 'schema_family_parity',
               description: 'Schema-family parity audit',
               run: runAuditSchemaFamilyParityTool,
@@ -45,6 +52,11 @@ Future<ToolCommandResult> runRepositoryAuditsTool(
               name: 'bridge_surfaces',
               description: 'Bridge surface raw-backing leak audit',
               run: runAuditBridgeSurfacesTool,
+            ),
+            _AuditSpec(
+              name: 'terminal_cleanup_safety',
+              description: 'Terminal exception-safe cleanup audit',
+              run: runAuditTerminalCleanupSafetyTool,
             ),
           ]
           .where(

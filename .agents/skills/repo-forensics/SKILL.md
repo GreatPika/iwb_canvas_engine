@@ -48,6 +48,14 @@ Start from repository sources of truth:
 - `dart run tool/audit_validated_materialization_paths.dart [path-or-dir]`
   Find `*FromValidated*` wrappers that jump straight to raw materialization.
 
+- `dart run tool/audit_terminal_cleanup_safety.dart [path-or-dir]`
+  Find terminal handlers that call hazardous commit/action paths and clean up
+  only after success instead of through `finally`.
+
+- `dart run tool/audit_post_commit_cleanup_order.dart [path-or-dir]`
+  Find flows where local cleanup sits after fallible post-commit
+  `emit`/`notify`/`dispatch` work.
+
 - `dart run tool/lsp_find_boundary_bypasses.dart <file> <class> --must-pass=<OwnerOrMethod> --depth=N`
   Check whether class methods miss a required owner, gateway, or boundary.
 
