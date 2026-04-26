@@ -197,3 +197,169 @@ Confirmed active defects only.
     plan parity and staging work rather than confirmed pixels
 - Next action: Choose one shared paint admission boundary policy, codify it in
   tests, and remove the committed-vs-snapshot drift.
+
+### KI-8
+
+- ID: `KI-8`
+- Severity: `P1`
+- Summary: Selection rendering redraws base line/stroke/open-path geometry in a
+  late overlay pass, which can change alpha, break scene draw order, and add
+  extra stroke-path work for selected vector nodes.
+- Detection: Compare content-pass node rendering in
+  `lib/src/render/scene_painter_node_renderer.dart` with selection-pass redraws
+  in `lib/src/render/scene_painter_selection.dart`
+- Evidence:
+  - `lib/src/render/scene_painter_shell.dart`
+  - `lib/src/render/scene_painter_node_renderer.dart`
+  - `lib/src/render/scene_painter_selection.dart`
+  - `lib/src/render/scene_painter_shared.dart`
+  - Current detections:
+    selected `LineNodeSnapshot` base geometry is redrawn in
+    `_drawLineSelection` after the full content pass;
+    selected `StrokeNodeSnapshot` base geometry is redrawn in
+    `_drawStrokePathSelection` / `_drawDotSelection` after the full content
+    pass;
+    selected open `PathNodeSnapshot` stroke is redrawn in
+    `_drawOpenPathSelection` after the full content pass;
+    large selected strokes can rebuild stroke paths twice per frame when no
+    `SceneStrokePathCache` is supplied
+- Next action: Remove base-geometry redraw from the selection overlay or
+  replace it with bounded halo compositing, then add render tests for
+  alpha-preservation, overlap order, and open-path parity.
+
+### KI-9
+
+- ID: `KI-9`
+- Severity: `P1`
+- Summary: The committed proof inventory artifact is stale relative to the
+  current invariant registry, so proof consumers can read outdated invariant
+  titles, proof paths, and summary counts.
+- Detection: Compare `tool/invariant_registry.dart` with committed
+  `docs/target_proof_architecture/evidence/proof_inventory.json`
+- Evidence:
+  - `tool/invariant_registry.dart`
+  - `tool/trace_proof_inventory.dart`
+  - `docs/target_proof_architecture/evidence/proof_inventory.json`
+  - Current detections:
+    committed `proof_inventory.json` rows drift from registry-backed
+    `trace_proof_inventory` output for at least
+    `INV-ENG-PERFORMANCE-PROOF-CONTOUR`,
+    `INV-SER-IMPORT-DIAGNOSTIC-SURFACE`, and
+    `INV-ENG-COMMITTED-READ-SIDE-HERMETICITY`
+- Next action: Regenerate the committed proof inventory artifacts from the
+  current invariant registry and commit the refreshed evidence.
+
+### KI-10
+
+- ID: `KI-10`
+- Severity: `P2`
+- Summary: The tool/test proof contour does not assert freshness of the
+  committed proof inventory, so stale evidence artifacts can pass the existing
+  invariant and tool verification flow.
+- Detection: Compare committed evidence coverage in tool tests against the
+  generated output path used by `trace_proof_inventory`
+- Evidence:
+  - `test/tool/trace_proof_inventory_tool_test.dart`
+  - `test/tool/target_proof_architecture_map_tool_test.dart`
+  - `tool/src/verification_contract/verification_contract_registry.dart`
+  - `docs/target_proof_architecture/evidence/proof_inventory.json`
+  - Current detections:
+    `trace_proof_inventory_tool_test` validates generated temp output but does
+    not compare it to committed `docs/target_proof_architecture/evidence/**`;
+    `target_proof_architecture_map_tool_test` checks evidence links but not
+    canonical inventory freshness;
+    existing required verification can therefore pass while committed proof
+    inventory remains stale
+- Next action: Add a committed-evidence freshness assertion for the canonical
+  proof inventory JSON, and optionally the markdown companion if it remains a
+  required committed artifact.
+
+### KI-11
+
+- ID: `KI-11`
+- Severity: `P2`
+- Summary: The API docs / Pages workflow is outside the verification contract,
+  so executable workflow drift in `.github/workflows/api_docs_pages.yaml` is
+  not checked by the contract checker.
+- Detection: Compare workflow coverage in
+  `tool/src/verification_contract/verification_contract_registry.dart` and
+  `tool/check_verification_contract.dart` with committed workflows under
+  `.github/workflows`
+- Evidence:
+  - `tool/src/verification_contract/verification_contract_registry.dart`
+  - `tool/check_verification_contract.dart`
+  - `.github/workflows/api_docs_pages.yaml`
+  - `ARCHITECTURE.md`
+  - Current detections:
+    verification contract registry and checker only cover `ci.yaml` and
+    `perf_nightly.yaml`;
+    `.github/workflows/api_docs_pages.yaml` contains executable run commands
+    but has no workflow definition in the contract graph
+- Next action: Add `api_docs_pages.yaml` to the verification contract graph and
+  checker, or explicitly document and test that it is intentionally excluded.
+
+### KI-12
+
+- ID: `KI-12`
+- Severity: `P2`
+- Summary: The load-profile runner validates case names and probes but does not
+  validate required metrics, required operations, or required metric keys
+  before writing benchmark reports.
+- Detection: Compare runner-side validation in
+  `tool/bench/run_load_profiles.dart` with contract metadata in
+  `tool/bench/load_profile_policy.dart`
+- Evidence:
+  - `tool/bench/load_profile_policy.dart`
+  - `tool/bench/run_load_profiles.dart`
+  - `tool/bench/diff_load_profiles.dart`
+  - `test/tool/bench_run_load_profiles_test.dart`
+  - Current detections:
+    runner-side contract validation checks case names and probes but can still
+    emit reports missing required operations or required metric leaves;
+    diff-side validation rejects part of that corruption later, after the
+    malformed report has already been written
+- Next action: Add runner-side validation for raw metrics, required operations,
+  required metric keys, and finite metric values before report emission.
+
+### KI-13
+
+- ID: `KI-13`
+- Severity: `P3`
+- Summary: Load-profile diff output uses `...Us` field names even for RSS byte
+  metrics, so the emitted schema mislabels memory values as microseconds.
+- Detection: Inspect metric diff output construction in
+  `tool/bench/diff_load_profiles.dart` against metric taxonomy in
+  `tool/bench/load_profile_policy.dart`
+- Evidence:
+  - `tool/bench/load_profile_policy.dart`
+  - `tool/bench/diff_load_profiles.dart`
+  - `test/tool/bench_diff_load_profiles_test.dart`
+  - Current detections:
+    `avgRssDeltaBytes`, `minRssDeltaBytes`, and `maxRssDeltaBytes` are emitted
+    through the same `baselineUs/currentUs/deltaAbsUs` shape used for latency
+    metrics
+- Next action: Switch diff output to a unit-truthful schema, for example
+  neutral value fields plus an explicit unit, and add tests for latency vs RSS
+  metric output.
+
+### KI-14
+
+- ID: `KI-14`
+- Severity: `P3`
+- Summary: Load-profile diff input validation does not reject duplicate case
+  names or stale `caseCount`, so malformed baseline/current reports can be
+  silently normalized before comparison.
+- Detection: Compare runner-side case taxonomy validation with diff-side report
+  ingestion in `tool/bench/diff_load_profiles.dart`
+- Evidence:
+  - `tool/bench/run_load_profiles.dart`
+  - `tool/bench/load_profile_policy.dart`
+  - `tool/bench/diff_load_profiles.dart`
+  - `test/tool/bench_diff_load_profiles_test.dart`
+  - Current detections:
+    diff report ingestion does not validate `caseCount`;
+    duplicate case names collapse into a map keyed by case name;
+    malformed baseline/current artifacts can therefore lose taxonomy defects
+    before diff status is computed
+- Next action: Reject duplicate case names and mismatched `caseCount` during
+  diff input parsing, before baseline/current cases are converted into maps.
