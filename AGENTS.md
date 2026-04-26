@@ -10,6 +10,8 @@ app UI, product workflows, or backend logic.
 - `API_GUIDE.md` for public API, runtime behavior, and migration notes.
 - `ARCHITECTURE.md` for architecture, invariants, and module boundaries.
 - `CHANGELOG.md` for released and unreleased user-visible changes.
+- `KNOWN_ISSUES.md` for active, confirmed defects with mechanical evidence and
+  constrained entry rules.
 - `PLAN.md` for the active roadmap.
 
 ## Plan workflow
@@ -36,6 +38,10 @@ app UI, product workflows, or backend logic.
   - `CHANGELOG.md` using `$changelog-sync`
 - Documentation should stay release-ready: concise, current, and free of stale
   implementation detail.
+- `KNOWN_ISSUES.md` is for active confirmed defects only. If an issue is listed
+  there, it is unresolved. Remove it in the same change that fixes it and adds
+  regression proof. Do not use it for feature ideas, temporary notes, archived
+  history, or unverified suspicions.
 
 ## Invariant discipline
 
