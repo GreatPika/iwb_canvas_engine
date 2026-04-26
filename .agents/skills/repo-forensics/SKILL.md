@@ -45,6 +45,9 @@ Start from repository sources of truth:
 - `dart run tool/audit_route_expectations.dart [--config=<json>]`
   Check known critical routes for required hops or forbidden bypasses.
 
+- `dart run tool/audit_validated_materialization_paths.dart [path-or-dir]`
+  Find `*FromValidated*` wrappers that jump straight to raw materialization.
+
 - `dart run tool/lsp_find_boundary_bypasses.dart <file> <class> --must-pass=<OwnerOrMethod> --depth=N`
   Check whether class methods miss a required owner, gateway, or boundary.
 
@@ -56,6 +59,16 @@ Start from repository sources of truth:
 - `dart run tool/audit_patch_field_admission.dart [path-or-dir]`
   Scan patch schema validators for direct passthrough of non-nullable
   `PatchField<T>` values.
+
+- `dart run tool/audit_schema_family_parity.dart [path-or-dir]`
+  Check schema-family return shapes and backing propagation for field drift.
+
+- `dart run tool/audit_bridge_surfaces.dart [path-or-dir]`
+  Check allowed bridge surfaces for raw backing and materialization-from-backing
+  export leaks.
+
+- `dart run tool/run_repository_audits.dart [--tool=<name>]`
+  Run the main standalone audits together; keep `--tool=` for targeted runs.
 
 - `dart run tool/trace_export_namespace.dart lib/iwb_canvas_engine.dart --json`
   Inspect direct exports, effective exported symbols, and export owners.
@@ -96,9 +109,9 @@ Start from repository sources of truth:
 
 ### Known-Issue Sweep
 
-1. Run `audit_route_expectations.dart` for critical-path bypass regressions.
-2. Run `audit_patch_field_admission.dart` for patch boundary admission drift.
-3. Compare results with `KNOWN_ISSUES.md`.
+1. Run `run_repository_audits.dart` for the full standalone audit bundle.
+2. Re-run one narrow tool when you need focused evidence for one defect class.
+3. Compare active findings with `KNOWN_ISSUES.md`.
 
 ### Proof Gap
 

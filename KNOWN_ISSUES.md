@@ -61,14 +61,20 @@ Confirmed active defects only.
 - Summary: Validated snapshot fast-path materialization can expose
   `SceneSnapshot` and `NodeSnapshot` objects built from raw backing without
   full value validation.
-- Detection: `dart run tool/audit_route_expectations.dart`
+- Detection:
+  `dart run tool/audit_route_expectations.dart`,
+  `dart run tool/audit_validated_materialization_paths.dart`,
+  `dart run tool/audit_bridge_surfaces.dart`
 - Evidence:
   - `tool/audit/route_expectations_boundary_audit.json`
   - `lib/src/contract/internal/snapshot_materialization.dart`
+  - `lib/src/contract/internal/snapshot_fast_path.dart`
   - Current detections:
     `nodeSnapshotFromValidatedBacking` does not reach
     `validateSnapshotCommonSchemaFields`;
     `sceneSnapshotFromValidatedBacking` does not reach
-    `sceneValidateImportDraftValues`
+    `sceneValidateImportDraftValues`;
+    `snapshot_fast_path.dart` exports raw backing and
+    materialization-from-backing helpers
 - Next action: Add full value validation before validated snapshot
   materialization or narrow the fast-path surface.
