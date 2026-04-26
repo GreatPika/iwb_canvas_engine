@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "iwb_canvas_engine_example" "\0"
+            VALUE "CompanyName", "Sergei Rogov" "\0"
+            VALUE "FileDescription", "IWB Canvas Engine Example" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "iwb_canvas_engine_example" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Sergei Rogov. All rights reserved." "\0"
             VALUE "OriginalFilename", "iwb_canvas_engine_example.exe" "\0"
-            VALUE "ProductName", "iwb_canvas_engine_example" "\0"
+            VALUE "ProductName", "IWB Canvas Engine Example" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

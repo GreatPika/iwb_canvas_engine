@@ -2,7 +2,7 @@
 #ifndef MyAppVersion
   #define MyAppVersion "0.0.0"
 #endif
-#define MyAppPublisher "GreatPika"
+#define MyAppPublisher "Sergei Rogov"
 #define MyAppExeName "iwb_canvas_engine_example.exe"
 #ifndef MySourceDir
   #error "MySourceDir must be provided to the installer build."

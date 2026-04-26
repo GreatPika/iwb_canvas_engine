@@ -1,11 +1,11 @@
 {
-    "name": "iwb_canvas_engine_example",
-    "short_name": "iwb_canvas_engine_example",
+    "name": "IWB Canvas Engine Example",
+    "short_name": "IWB Canvas Engine",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Interactive example app for the IWB Canvas Engine Flutter package.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
