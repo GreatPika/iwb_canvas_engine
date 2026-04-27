@@ -103,11 +103,15 @@ flowchart LR
   N1 --> N50
   N51["InteractiveRuntime.get debugEraserPreciseSegmentChecks"]
   N50 --> N51
-  N52["scene_controller_internal_access.dart.registerSceneControllerInternalAccess"]
-  N0 --> N52
-  N53["_SceneControllerInternalAccess._SceneControllerInternalAccess"]
+  N52["SceneControllerInteractionRuntimeStateApi.get eraserProjectedPointCount"]
+  N1 --> N52
+  N53["InteractiveRuntime.get debugEraserProjectedPointCount"]
   N52 --> N53
-  N54["SceneControllerGraphHandle.get internalAccessRegistration"]
+  N54["scene_controller_internal_access.dart.registerSceneControllerInternalAccess"]
   N0 --> N54
+  N55["_SceneControllerInternalAccess._SceneControllerInternalAccess"]
+  N54 --> N55
+  N56["SceneControllerGraphHandle.get internalAccessRegistration"]
+  N0 --> N56
 
 ```

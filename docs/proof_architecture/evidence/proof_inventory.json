@@ -857,7 +857,7 @@
     {
       "id": "INV-ENG-BOUNDARY-HERMETIC-CONCRETE-TYPES",
       "scope": "engine-api",
-      "title": "public boundary admission canonicalizes supported values to exact built-in contract types and rejects unsupported subtypes before the strict fallback/backing seams, which still reject non-exact boundary runtime types",
+      "title": "public boundary admission admits only exact or carrier-backed top-level snapshots, canonicalizes supported nested values to exact built-in contract types, and rejects unsupported subtypes before the strict fallback/backing seams, which still reject non-exact boundary runtime types",
       "requiredProofs": [
         {
           "path": "test/contract/validated_fast_path_contract_test.dart",
@@ -869,7 +869,7 @@
     {
       "id": "INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE",
       "scope": "view-runtime",
-      "title": "SceneView pointer-slot allocator releases slots on up/cancel and reuses the minimum free slot id",
+      "title": "SceneView pointer-slot allocator releases slots on up/cancel, including terminal dispatch exceptions, and reuses the minimum free slot id",
       "requiredProofs": [
         {
           "path": "test/view/scene_view_pointer_router_test.dart",
@@ -893,7 +893,7 @@
     {
       "id": "INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY",
       "scope": "view-runtime",
-      "title": "SceneView keeps pointer-settings live-apply behavior on the same controller without re-owning tracker/pending-setting state in the host shell",
+      "title": "SceneView keeps pointer-settings live-apply behavior on the same controller, including idle terminal release after dispatch exceptions, without re-owning tracker/pending-setting state in the host shell",
       "requiredProofs": [
         {
           "path": "test/view/scene_view_interactive_test.dart",
@@ -905,7 +905,7 @@
     {
       "id": "INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE",
       "scope": "engine-runtime",
-      "title": "interactive runtime owns live pointer-session epoch reset and disposal deactivation, while same-session tap tracking remains session-local and late routed callbacks after owner disposal become local no-ops",
+      "title": "interactive runtime owns live pointer-session epoch reset and disposal deactivation, while same-session tap tracking remains session-local and terminal cleanup stays exception-safe across the view host/session boundary",
       "requiredProofs": [
         {
           "path": "test/interactive/core/scene_controller_interaction_contract_test.dart",
@@ -1013,7 +1013,7 @@
     {
       "id": "INV-ENG-PERFORMANCE-PROOF-CONTOUR",
       "scope": "engine-runtime",
-      "title": "required performance proof stays deterministic on committed spatial and render owners, while diagnostic benchmark policy remains a regression surface",
+      "title": "required performance proof stays deterministic on committed spatial and render owners, while diagnostic benchmark policy declares the current fixed harness contour and production-owner attribution",
       "requiredProofs": [
         {
           "path": "test/controller/internal/spatial_index_cache_test.dart",
@@ -1033,6 +1033,9 @@
         }
       ],
       "regressionProofs": [
+        {
+          "path": "test/controller/core/scene_controller_commit_debug_test.dart"
+        },
         {
           "path": "test/tool/bench_diff_load_profiles_test.dart"
         },
@@ -1396,10 +1399,14 @@
     {
       "id": "INV-SER-IMPORT-DIAGNOSTIC-SURFACE",
       "scope": "serialization",
-      "title": "import/build entrypoints select one model-owned diagnostic path surface so JSON line/stroke range failures keep localA/localB/localPoints while typed snapshots keep start/end/points",
+      "title": "import/build entrypoints select one model-owned diagnostic path surface so JSON line/stroke range failures keep localA/localB/localPoints, typed snapshots keep start/end/points, and unsupported typed boundary subtypes are translated before serialization transport wrapping",
       "requiredProofs": [
         {
           "path": "test/public_api/scene_builder_test.dart",
+          "stepId": "scope_model_contract"
+        },
+        {
+          "path": "test/serialization/scene_codec_validation_test.dart",
           "stepId": "scope_model_contract"
         },
         {
@@ -1512,7 +1519,7 @@
     {
       "id": "INV-ENG-COMMITTED-READ-SIDE-HERMETICITY",
       "scope": "engine-controller",
-      "title": "committed read-side controller and interactive callback contracts expose immutable snapshots/request objects instead of live runtime scene graph types or raw callback-parameter collection leaks, shared paint admission includes backgroundLayer, hit-test admission stays content-only, and every committed query candidate shape is resolvable through the paired snapshot helper surface",
+      "title": "committed read-side controller and interactive callback contracts expose immutable snapshots/request objects instead of live runtime scene graph types or raw callback-parameter collection leaks, shared paint admission includes backgroundLayer, hit-test admission stays content-only, every committed query candidate shape is resolvable through the paired snapshot helper surface, and stale committed spatial candidates from older structural revisions are rejected before location lookup",
       "requiredProofs": [
         {
           "path": "tool/check_guardrails.dart",
@@ -1525,6 +1532,9 @@
         },
         {
           "path": "test/tool/guardrails/guardrails_public_signature_hermeticity_tool_test.dart"
+        },
+        {
+          "path": "test/controller/core/scene_controller_spatial_candidate_resolution_test.dart"
         }
       ]
     }
@@ -1560,7 +1570,7 @@
     },
     {
       "stepId": "scope_model_contract",
-      "count": 18
+      "count": 19
     },
     {
       "stepId": "scope_render_view",

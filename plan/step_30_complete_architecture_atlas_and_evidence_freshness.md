@@ -88,8 +88,8 @@ known architectural defects that must not be normalized as target architecture.
   mechanical enforcement, and contributor rules; it is the closest complete
   source for the family list but is too monolithic to be the requested atlas.
 - `KNOWN_ISSUES.md` - already records active confirmed defects with mechanical
-  evidence and currently includes stale proof evidence (`KI-9`) plus the missing
-  freshness check for committed proof inventory (`KI-10`).
+  evidence; at contract drafting it included stale proof evidence (`KI-9`) plus
+  the missing freshness check for committed proof inventory (`KI-10`).
 - `PLAN.md` - is the active roadmap index and requires one dedicated step
   document per execution contract.
 - `docs/target_architecture/README.md` - scopes the current directory to ADR
@@ -112,15 +112,16 @@ known architectural defects that must not be normalized as target architecture.
   entrypoint/signature proof, guardrail runner/artifact model, and invariant
   registry/reachability proof.
 - `docs/target_proof_architecture/evidence/proof_inventory.json` - committed
-  proof inventory currently differs from `dart run tool/trace_proof_inventory.dart`
-  output, matching `KI-9`.
+  proof inventory differed from `dart run tool/trace_proof_inventory.dart`
+  output at contract drafting, matching `KI-9`.
 - `test/tool/target_architecture_map_tool_test.dart` - validates Markdown
   section shape, status vocabulary, evidence links, and selected evidence
   snippets, but it does not prove full family coverage or generated evidence
   freshness.
 - `test/tool/target_proof_architecture_map_tool_test.dart` - validates proof
-  map Markdown shape and links, but it does not compare committed evidence with
-  regenerated `trace_proof_inventory` output, matching `KI-10`.
+  map Markdown shape and links; at contract drafting it did not compare
+  committed evidence with regenerated `trace_proof_inventory` output, matching
+  `KI-10`.
 - `tool/lsp_trace_symbol.dart`, `tool/lsp_trace_flow.dart`,
   `tool/lsp_find_symbols.dart`, `tool/lsp_find_boundary_bypasses.dart`, and
   `tool/lsp_find_thin_wrappers.dart` - provide repository-local runtime and
@@ -883,7 +884,7 @@ atlas paths without changing their family meaning yet.
 - One docs entrypoint exists and old target-map names no longer own current
   architecture navigation.
 
-### Slice 3. [ ] Evidence Freshness And Existing Defect Closure
+### Slice 3. [x] Evidence Freshness And Existing Defect Closure
 
 #### Slice Contract
 

@@ -59,7 +59,7 @@ final RegExp _knownIssuePattern = RegExp(r'\bKI-\d+\b');
 
 Future<void> main(List<String> args) async {
   final config = _Config.parse(args);
-  final result = _AtlasChecker(config).check();
+  final result = await _AtlasChecker(config).check();
 
   if (result.failures.isNotEmpty) {
     stderr.writeln('FAIL: architecture atlas check failed.');
@@ -120,8 +120,9 @@ class _AtlasChecker {
   final List<String> _failures = <String>[];
   final Set<String> _referencedEvidencePaths = <String>{};
   final Set<String> _commandOutputEvidencePaths = <String>{};
+  final Set<String> _freshnessCheckedCommands = <String>{};
 
-  _CheckResult check() {
+  Future<_CheckResult> check() async {
     final entrypoint = _file('ARCHITECTURE_ATLAS.md');
     _requireFile(entrypoint, 'atlas entrypoint');
     if (entrypoint.existsSync()) {
@@ -144,6 +145,7 @@ class _AtlasChecker {
     );
     _checkFlowDocs();
     _checkEvidenceOrphans();
+    await _checkEvidenceFreshness();
 
     return _CheckResult(List<String>.unmodifiable(_failures));
   }
@@ -404,6 +406,80 @@ class _AtlasChecker {
         );
       }
     }
+
+    if (File('${config.repoRoot.path}/$toolPath').existsSync()) {
+      _freshnessCheckedCommands.add(command);
+    }
+  }
+
+  Future<void> _checkEvidenceFreshness() async {
+    final tempRoot = await Directory.systemTemp.createTemp(
+      'architecture_atlas_freshness_',
+    );
+    try {
+      for (final command in _freshnessCheckedCommands) {
+        await _checkCommandFreshness(tempRoot, command);
+      }
+    } finally {
+      if (tempRoot.existsSync()) {
+        tempRoot.deleteSync(recursive: true);
+      }
+    }
+  }
+
+  Future<void> _checkCommandFreshness(
+    Directory tempRoot,
+    String command,
+  ) async {
+    final tokens = _splitCommand(command);
+    if (tokens.length < 3 || tokens[0] != 'dart' || tokens[1] != 'run') {
+      return;
+    }
+
+    final outputPaths = <String, String>{};
+    final rewrittenArgs = <String>[];
+    for (final token in tokens.skip(2)) {
+      rewrittenArgs.add(
+        _rewriteOutputArg(
+          token: token,
+          tempRoot: tempRoot,
+          outputPaths: outputPaths,
+        ),
+      );
+    }
+    if (outputPaths.isEmpty) {
+      return;
+    }
+
+    final result = await Process.run('dart', <String>[
+      'run',
+      ...rewrittenArgs,
+    ], workingDirectory: config.repoRoot.path);
+    if (result.exitCode != 0) {
+      _failures.add(
+        'Generated evidence command failed while checking freshness: '
+        '`$command`\n${result.stderr}',
+      );
+      return;
+    }
+
+    for (final entry in outputPaths.entries) {
+      final committedEvidence = _file(entry.key);
+      final generatedEvidence = File(entry.value);
+      if (!generatedEvidence.existsSync()) {
+        _failures.add(
+          'Generated evidence command did not write `${entry.key}`: `$command`.',
+        );
+        continue;
+      }
+      if (!committedEvidence.existsSync()) {
+        continue;
+      }
+      if (committedEvidence.readAsStringSync() !=
+          generatedEvidence.readAsStringSync()) {
+        _failures.add('${entry.key} is stale; regenerate it with `$command`.');
+      }
+    }
   }
 
   void _checkFlowDocs() {
@@ -593,6 +669,80 @@ String? _outputPath(RegExp pattern, String command) {
     return null;
   }
   return match.group(1) ?? match.group(2);
+}
+
+String _rewriteOutputArg({
+  required String token,
+  required Directory tempRoot,
+  required Map<String, String> outputPaths,
+}) {
+  for (final flag in const <String>[
+    '--json-out=',
+    '--md-out=',
+    '--mermaid-out=',
+  ]) {
+    if (!token.startsWith(flag)) {
+      continue;
+    }
+    final originalOutput = token.substring(flag.length);
+    final evidencePath = _evidencePathFromOutputToken(originalOutput);
+    if (evidencePath == null) {
+      return token;
+    }
+    final generatedPath = '${tempRoot.path}/$evidencePath';
+    File(generatedPath).parent.createSync(recursive: true);
+    outputPaths[evidencePath] = generatedPath;
+    return '$flag$generatedPath';
+  }
+  return token;
+}
+
+String? _evidencePathFromOutputToken(String output) {
+  final direct = output
+      .replaceFirst(RegExp(r'^\$DOCS_ROOT/'), '')
+      .replaceFirst(RegExp(r'^docs/'), '');
+  if (direct.startsWith('architecture/evidence/') ||
+      direct.startsWith('proof_architecture/evidence/')) {
+    return direct;
+  }
+  return null;
+}
+
+List<String> _splitCommand(String command) {
+  final tokens = <String>[];
+  final buffer = StringBuffer();
+  String? quote;
+
+  void flush() {
+    if (buffer.isEmpty) {
+      return;
+    }
+    tokens.add(buffer.toString());
+    buffer.clear();
+  }
+
+  for (var index = 0; index < command.length; index += 1) {
+    final char = command[index];
+    if (quote != null) {
+      if (char == quote) {
+        quote = null;
+      } else {
+        buffer.write(char);
+      }
+      continue;
+    }
+    if (char == '"' || char == "'") {
+      quote = char;
+      continue;
+    }
+    if (char.trim().isEmpty) {
+      flush();
+      continue;
+    }
+    buffer.write(char);
+  }
+  flush();
+  return tokens;
 }
 
 String _basename(String path) {

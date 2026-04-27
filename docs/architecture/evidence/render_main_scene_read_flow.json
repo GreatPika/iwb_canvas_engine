@@ -13,22 +13,22 @@
   "implementations": [
     {
       "path": "test/view/scene_view_interactive_test.dart",
-      "line": 2440,
+      "line": 2927,
       "character": 36
     },
     {
       "path": "test/view/scene_view_interactive_test.dart",
-      "line": 2518,
+      "line": 2849,
       "character": 36
     },
     {
       "path": "test/view/scene_view_interactive_test.dart",
-      "line": 2344,
+      "line": 2734,
       "character": 36
     },
     {
       "path": "lib/src/interactive/internal/scene_controller_scene_view_runtime.dart",
-      "line": 56,
+      "line": 58,
       "character": 36
     }
   ],

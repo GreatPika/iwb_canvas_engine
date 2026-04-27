@@ -199,53 +199,6 @@ Confirmed active defects only.
   replace it with bounded halo compositing, then add render tests for
   alpha-preservation, overlap order, and open-path parity.
 
-### KI-9
-
-- ID: `KI-9`
-- Severity: `P1`
-- Summary: The committed proof inventory artifact is stale relative to the
-  current invariant registry, so proof consumers can read outdated invariant
-  titles, proof paths, and summary counts.
-- Detection: Compare `tool/invariant_registry.dart` with committed
-  `docs/proof_architecture/evidence/proof_inventory.json`
-- Evidence:
-  - `tool/invariant_registry.dart`
-  - `tool/trace_proof_inventory.dart`
-  - `docs/proof_architecture/evidence/proof_inventory.json`
-  - Current detections:
-    committed `proof_inventory.json` rows drift from registry-backed
-    `trace_proof_inventory` output for at least
-    `INV-ENG-PERFORMANCE-PROOF-CONTOUR`,
-    `INV-SER-IMPORT-DIAGNOSTIC-SURFACE`, and
-    `INV-ENG-COMMITTED-READ-SIDE-HERMETICITY`
-- Next action: Regenerate the committed proof inventory artifacts from the
-  current invariant registry and commit the refreshed evidence.
-
-### KI-10
-
-- ID: `KI-10`
-- Severity: `P2`
-- Summary: The tool/test proof contour does not assert freshness of the
-  committed proof inventory, so stale evidence artifacts can pass the existing
-  invariant and tool verification flow.
-- Detection: Compare committed evidence coverage in tool tests against the
-  generated output path used by `trace_proof_inventory`
-- Evidence:
-  - `test/tool/trace_proof_inventory_tool_test.dart`
-  - `test/tool/target_proof_architecture_map_tool_test.dart`
-  - `tool/src/verification_contract/verification_contract_registry.dart`
-  - `docs/proof_architecture/evidence/proof_inventory.json`
-  - Current detections:
-    `trace_proof_inventory_tool_test` validates generated temp output but does
-    not compare it to committed `docs/proof_architecture/evidence/**`;
-    `target_proof_architecture_map_tool_test` checks evidence links but not
-    canonical inventory freshness;
-    existing required verification can therefore pass while committed proof
-    inventory remains stale
-- Next action: Add a committed-evidence freshness assertion for the canonical
-  proof inventory JSON, and optionally the markdown companion if it remains a
-  required committed artifact.
-
 ### KI-11
 
 - ID: `KI-11`

@@ -326,6 +326,19 @@
               "children": []
             }
           ]
+        },
+        {
+          "name": "get eraserProjectedPointCount",
+          "detail": "SceneControllerInteractionRuntimeStateApi",
+          "path": "lib/src/interactive/internal/scene_controller_interaction_runtime.dart",
+          "children": [
+            {
+              "name": "get debugEraserProjectedPointCount",
+              "detail": "InteractiveRuntime",
+              "path": "lib/src/interactive/internal/interactive_runtime.dart",
+              "children": []
+            }
+          ]
         }
       ]
     },

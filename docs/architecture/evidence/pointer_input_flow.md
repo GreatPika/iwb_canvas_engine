@@ -37,11 +37,11 @@ flowchart LR
   N1 --> N17
   N18["PointerSample.PointerSample"]
   N17 --> N18
-  N19["SceneViewPointerSession.handleRoutedSample"]
+  N19["scene_view_interactive_pointer_host.dart._isTerminalPhase"]
   N1 --> N19
-  N20["SceneViewPointerRouter.shouldTrackSignals"]
+  N20["SceneViewPointerSession.handleRoutedSample"]
   N1 --> N20
-  N21["scene_view_interactive_pointer_host.dart._isTerminalPhase"]
+  N21["SceneViewPointerRouter.shouldTrackSignals"]
   N1 --> N21
   N22["SceneViewPointerRouter.release"]
   N1 --> N22

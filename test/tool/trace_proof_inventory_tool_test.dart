@@ -99,5 +99,37 @@ void main() {
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test('committed proof inventory artifacts are fresh', () async {
+      final sandbox = await Directory.systemTemp.createTemp(
+        'iwb_canvas_engine_trace_proof_inventory_freshness_test_',
+      );
+      try {
+        final generatedJson = '${sandbox.path}/proof_inventory.generated.json';
+        final generatedMarkdown =
+            '${sandbox.path}/proof_inventory.generated.md';
+        final result = await trace_proof_inventory_tool
+            .runTraceProofInventoryTool(<String>[
+              '--json-out=$generatedJson',
+              '--md-out=$generatedMarkdown',
+            ]);
+
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        expect(
+          File(
+            'docs/proof_architecture/evidence/proof_inventory.json',
+          ).readAsStringSync(),
+          File(generatedJson).readAsStringSync(),
+        );
+        expect(
+          File(
+            'docs/proof_architecture/evidence/proof_inventory.md',
+          ).readAsStringSync(),
+          File(generatedMarkdown).readAsStringSync(),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
   });
 }

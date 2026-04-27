@@ -12,22 +12,22 @@
   "implementations": [
     {
       "path": "test/view/scene_view_interactive_test.dart",
-      "line": 2443,
+      "line": 2930,
       "character": 35
     },
     {
       "path": "test/view/scene_view_interactive_test.dart",
-      "line": 2521,
+      "line": 2852,
       "character": 35
     },
     {
       "path": "test/view/scene_view_interactive_test.dart",
-      "line": 2347,
+      "line": 2737,
       "character": 35
     },
     {
       "path": "lib/src/interactive/internal/scene_controller_scene_view_runtime.dart",
-      "line": 59,
+      "line": 61,
       "character": 35
     }
   ],
@@ -62,49 +62,13 @@
           "children": []
         },
         {
-          "name": "get cameraOffset",
-          "detail": "SceneController",
-          "path": "lib/src/interactive/scene_controller.dart",
-          "children": []
-        },
-        {
-          "name": "get activeStrokePreviewThickness",
-          "detail": "SceneController",
-          "path": "lib/src/interactive/scene_controller.dart",
-          "children": []
-        },
-        {
           "name": "get selectionRect",
           "detail": "SceneController",
           "path": "lib/src/interactive/scene_controller.dart",
           "children": []
         },
         {
-          "name": "get activeStrokePreviewColor",
-          "detail": "SceneController",
-          "path": "lib/src/interactive/scene_controller.dart",
-          "children": []
-        },
-        {
-          "name": "get activeStrokePreviewOpacity",
-          "detail": "SceneController",
-          "path": "lib/src/interactive/scene_controller.dart",
-          "children": []
-        },
-        {
-          "name": "get hasActiveLinePreview",
-          "detail": "SceneController",
-          "path": "lib/src/interactive/scene_controller.dart",
-          "children": []
-        },
-        {
-          "name": "get activeLinePreviewStart",
-          "detail": "SceneController",
-          "path": "lib/src/interactive/scene_controller.dart",
-          "children": []
-        },
-        {
-          "name": "get activeLinePreviewEnd",
+          "name": "get cameraOffset",
           "detail": "SceneController",
           "path": "lib/src/interactive/scene_controller.dart",
           "children": []
@@ -116,13 +80,49 @@
           "children": []
         },
         {
+          "name": "get hasActiveStrokePreview",
+          "detail": "SceneController",
+          "path": "lib/src/interactive/scene_controller.dart",
+          "children": []
+        },
+        {
+          "name": "get activeLinePreviewEnd",
+          "detail": "SceneController",
+          "path": "lib/src/interactive/scene_controller.dart",
+          "children": []
+        },
+        {
           "name": "get activeLinePreviewColor",
           "detail": "SceneController",
           "path": "lib/src/interactive/scene_controller.dart",
           "children": []
         },
         {
-          "name": "get hasActiveStrokePreview",
+          "name": "get activeLinePreviewStart",
+          "detail": "SceneController",
+          "path": "lib/src/interactive/scene_controller.dart",
+          "children": []
+        },
+        {
+          "name": "get activeStrokePreviewThickness",
+          "detail": "SceneController",
+          "path": "lib/src/interactive/scene_controller.dart",
+          "children": []
+        },
+        {
+          "name": "get activeStrokePreviewColor",
+          "detail": "SceneController",
+          "path": "lib/src/interactive/scene_controller.dart",
+          "children": []
+        },
+        {
+          "name": "get hasActiveLinePreview",
+          "detail": "SceneController",
+          "path": "lib/src/interactive/scene_controller.dart",
+          "children": []
+        },
+        {
+          "name": "get activeStrokePreviewOpacity",
           "detail": "SceneController",
           "path": "lib/src/interactive/scene_controller.dart",
           "children": []

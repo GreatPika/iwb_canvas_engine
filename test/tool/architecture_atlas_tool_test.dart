@@ -247,6 +247,33 @@ void main() {
       );
     });
 
+    test('rejects stale generated evidence artifacts', () async {
+      final sandbox = await _createAtlasSandbox();
+      addTearDown(() => sandbox.deleteSync(recursive: true));
+      _writeCompleteAtlas(sandbox);
+      writeSandboxFile(
+        sandbox,
+        'docs/proof_architecture/evidence/proof_inventory.json',
+        '{"proof": false}\n',
+      );
+      writeSandboxFile(
+        sandbox,
+        'docs/architecture/evidence/runtime_trace.md',
+        'flowchart stale\n',
+      );
+
+      final result = await _runChecker(sandbox);
+
+      _expectFailure(
+        result,
+        'proof_architecture/evidence/proof_inventory.json is stale',
+      );
+      expect(
+        result.stderr,
+        contains('architecture/evidence/runtime_trace.md is stale'),
+      );
+    });
+
     test(
       'rejects unknown statuses and unlinked known issue statuses',
       () async {
@@ -289,15 +316,23 @@ Future<Directory> _createAtlasSandbox() async {
 }
 
 void _writeCommandStubs(Directory sandbox) {
-  for (final tool in const <String>[
-    'tool/lsp_trace_symbol.dart',
+  writeSandboxFile(sandbox, 'tool/lsp_trace_symbol.dart', _generatedToolStub);
+  writeSandboxFile(
+    sandbox,
     'tool/trace_export_namespace.dart',
+    _generatedToolStub,
+  );
+  writeSandboxFile(
+    sandbox,
     'tool/trace_proof_inventory.dart',
-    'tool/check_guardrails.dart',
+    _generatedToolStub,
+  );
+  writeSandboxFile(sandbox, 'tool/check_guardrails.dart', 'void main() {}\n');
+  writeSandboxFile(
+    sandbox,
     'tool/audit_bridge_surfaces.dart',
-  ]) {
-    writeSandboxFile(sandbox, tool, 'void main() {}\n');
-  }
+    'void main() {}\n',
+  );
 }
 
 Future<ProcessResult> _runChecker(Directory sandbox) {
@@ -381,7 +416,7 @@ void _writeCompleteAtlas(
   writeSandboxFile(
     sandbox,
     'docs/architecture/evidence/runtime_trace.json',
-    '{"trace": true}',
+    '{"trace": true}\n',
   );
   writeSandboxFile(
     sandbox,
@@ -391,12 +426,12 @@ void _writeCompleteAtlas(
   writeSandboxFile(
     sandbox,
     'docs/proof_architecture/evidence/proof_inventory.json',
-    '{"proof": true}',
+    '{"proof": true}\n',
   );
   writeSandboxFile(
     sandbox,
     'docs/proof_architecture/evidence/proof_inventory.md',
-    'Proof inventory\n',
+    '# Proof inventory\n',
   );
 }
 
@@ -488,3 +523,31 @@ const String _familyBodyWithoutProofLinks =
     '`locked`\n\n'
     '## Update Triggers\n\n'
     '- Fixture trigger.\n';
+
+const String _generatedToolStub = r'''
+import 'dart:io';
+
+void main(List<String> args) {
+  for (final arg in args) {
+    if (arg.startsWith('--json-out=')) {
+      final path = arg.substring('--json-out='.length);
+      final content = path.contains('proof_inventory')
+          ? '{"proof": true}\n'
+          : '{"trace": true}\n';
+      _write(path, content);
+    }
+    if (arg.startsWith('--md-out=')) {
+      _write(arg.substring('--md-out='.length), '# Proof inventory\n');
+    }
+    if (arg.startsWith('--mermaid-out=')) {
+      _write(arg.substring('--mermaid-out='.length), 'flowchart TD\n');
+    }
+  }
+}
+
+void _write(String path, String content) {
+  final file = File(path);
+  file.parent.createSync(recursive: true);
+  file.writeAsStringSync(content);
+}
+''';
