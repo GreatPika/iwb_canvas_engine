@@ -757,7 +757,7 @@ known architectural defects that must not be normalized as target architecture.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Atlas Checker Characterization
+### Slice 1. [x] Atlas Checker Characterization
 
 #### Slice Contract
 
