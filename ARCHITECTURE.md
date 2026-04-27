@@ -15,6 +15,7 @@ wins. In practice, the source of truth is the combination of:
 - `lib/iwb_canvas_engine.dart`
 - `lib/src/**`
 - `tool/invariant_registry.dart`
+- `docs/ARCHITECTURE_ATLAS.md`
 - `tool/check_import_boundaries.dart`
 - `tool/check_guardrails.dart`
 - architecture-facing tests under `test/**`
@@ -803,6 +804,9 @@ alone.
 - `tool/check_verification_contract.dart`  
   Checks hand-authored workflow YAML against the graph-owned verification
   contract.
+- `tool/check_architecture_atlas.dart`
+  Checks the architecture atlas family registry, proof links, generated
+  evidence references, and freshness of committed atlas evidence.
 - `test/render/scene_painter_bounds_contract_test.dart`  
   Locks the scene-painter frame/admission boundary and rejects direct heavy
   snapshot geometry calls from admission modules.
@@ -816,6 +820,7 @@ relevant combination of:
 - tests
 - guardrails/import-boundary tools
 - invariant registry entries
+- architecture atlas family docs or generated evidence
 - public API surface golden data
 - this document
 

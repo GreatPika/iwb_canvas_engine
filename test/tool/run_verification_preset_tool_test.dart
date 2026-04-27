@@ -66,6 +66,7 @@ void main() {
               'example_analyze',
               'dcm_analyze',
               'verification_contract',
+              'architecture_atlas',
               'import_boundaries',
               'public_api_surface',
               'guardrails',

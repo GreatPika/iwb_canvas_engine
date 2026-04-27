@@ -59,6 +59,11 @@ final VerificationGraph verificationGraph = VerificationGraph(
       kind: VerificationStepKind.driftCheck,
       command: 'dart run tool/check_verification_contract.dart',
     ),
+    'architecture_atlas': VerificationStepDefinition(
+      id: 'architecture_atlas',
+      kind: VerificationStepKind.driftCheck,
+      command: 'dart run tool/check_architecture_atlas.dart',
+    ),
     'import_boundaries': VerificationStepDefinition(
       id: 'import_boundaries',
       kind: VerificationStepKind.shell,
@@ -162,6 +167,7 @@ final VerificationGraph verificationGraph = VerificationGraph(
         'example_analyze',
         'dcm_analyze',
         'verification_contract',
+        'architecture_atlas',
         'import_boundaries',
         'public_api_surface',
         'guardrails',
@@ -201,6 +207,9 @@ final VerificationGraph verificationGraph = VerificationGraph(
         ),
         VerificationRunExpectation(
           command: 'dart run tool/check_verification_contract.dart',
+        ),
+        VerificationRunExpectation(
+          command: 'dart run tool/check_architecture_atlas.dart',
         ),
         VerificationRunExpectation(
           command: 'dart run tool/check_import_boundaries.dart',

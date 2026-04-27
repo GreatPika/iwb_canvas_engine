@@ -1071,7 +1071,7 @@ are all discoverable from the atlas.
 - The proof atlas is complete enough for routing future enforcement and CI
   changes by owner family.
 
-### Slice 6. [ ] Retire Old Map Tests And Source Links
+### Slice 6. [x] Retire Old Map Tests And Source Links
 
 #### Slice Contract
 
@@ -1119,7 +1119,7 @@ checker owns atlas validation.
 
 - The narrow atlas checker is the canonical atlas proof seam.
 
-### Slice 7. [ ] Final Documentation Source-Of-Truth Alignment
+### Slice 7. [x] Final Documentation Source-Of-Truth Alignment
 
 #### Slice Contract
 

@@ -534,6 +534,7 @@ void _writeCanonicalCiWorkflow(
     'flutter analyze lib test',
     'flutter test --no-pub test',
     'dart run tool/check_verification_contract.dart',
+    'dart run tool/check_architecture_atlas.dart',
     'dart run tool/check_import_boundaries.dart',
     'dart run tool/check_public_api_surface.dart',
     'dart run tool/check_guardrails.dart',
@@ -572,6 +573,8 @@ ${(triggerEntries ?? _canonicalTriggerEntries).map((entry) => "              - '
         run: ${staticChecksRuns.contains('flutter test --no-pub test') ? 'flutter test --no-pub test' : 'dart run tool/check_verification_contract.dart'}
       - name: Verification contract
         run: ${staticChecksRuns.contains('dart run tool/check_verification_contract.dart') ? 'dart run tool/check_verification_contract.dart' : 'dart run tool/check_import_boundaries.dart'}
+      - name: Architecture atlas
+        run: ${staticChecksRuns.contains('dart run tool/check_architecture_atlas.dart') ? 'dart run tool/check_architecture_atlas.dart' : 'dart run tool/check_import_boundaries.dart'}
       - name: Import boundaries
         run: ${staticChecksRuns.contains('dart run tool/check_import_boundaries.dart') ? 'dart run tool/check_import_boundaries.dart' : 'dart run tool/check_public_api_surface.dart'}
       - name: Public API surface

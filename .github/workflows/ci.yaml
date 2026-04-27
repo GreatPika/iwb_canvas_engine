@@ -83,6 +83,9 @@ jobs:
       - name: Verification contract
         run: dart run tool/check_verification_contract.dart
 
+      - name: Architecture atlas
+        run: dart run tool/check_architecture_atlas.dart
+
       - name: Import boundaries
         run: dart run tool/check_import_boundaries.dart
 
