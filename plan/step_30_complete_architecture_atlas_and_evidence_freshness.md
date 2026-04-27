@@ -833,7 +833,7 @@ trees, not against the repository docs that are created and migrated in slice 2.
 - Atlas checker exists, is tested against fixture atlas trees, and is ready to
   run against repository docs after slice 2 creates the real atlas skeleton.
 
-### Slice 2. [ ] Single Entrypoint And Directory Migration
+### Slice 2. [x] Single Entrypoint And Directory Migration
 
 #### Slice Contract
 

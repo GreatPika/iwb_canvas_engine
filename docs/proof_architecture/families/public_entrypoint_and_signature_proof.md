@@ -36,7 +36,7 @@ owners must be scanned for public-signature hermeticity.
 
 ## Mechanical Evidence
 
-- `dart run tool/trace_export_namespace.dart lib/iwb_canvas_engine.dart --json-out=docs/target_proof_architecture/evidence/public_export_namespace.json --md-out=docs/target_proof_architecture/evidence/public_export_namespace.md`
+- `dart run tool/trace_export_namespace.dart lib/iwb_canvas_engine.dart --json-out=docs/proof_architecture/evidence/public_export_namespace.json --md-out=docs/proof_architecture/evidence/public_export_namespace.md`
 - `dart run tool/check_public_api_surface.dart`
 - `dart run tool/check_guardrails.dart`
 
@@ -48,3 +48,7 @@ owners must be scanned for public-signature hermeticity.
   visibility and real owner resolution.
 - Direct export-target files remain a separate barrel-layout proof surface;
   they no longer define the full public-signature scan scope.
+
+## Update Triggers
+
+- Refresh this family when its listed proof tools, evidence artifacts, or registry-backed invariants change.

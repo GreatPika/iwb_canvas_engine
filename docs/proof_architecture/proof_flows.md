@@ -3,7 +3,7 @@
 ## Purpose
 
 This document records the compact registry of mechanically supported proof
-flows and inventories that back the proof target map.
+flows and inventories that back the proof atlas.
 
 ## Proof-Flow Registry
 
@@ -19,3 +19,8 @@ flows and inventories that back the proof target map.
 - Do not embed long rule narratives, raw JSON, or hand-written diagrams here.
 - Add a new proof-flow entry only after a committed machine-generated evidence
   artifact exists under [`evidence/`](evidence).
+
+## Evidence Commands
+
+- `dart run tool/trace_export_namespace.dart lib/iwb_canvas_engine.dart --json-out=docs/proof_architecture/evidence/public_export_namespace.json --md-out=docs/proof_architecture/evidence/public_export_namespace.md`
+- `dart run tool/trace_proof_inventory.dart --json-out=docs/proof_architecture/evidence/proof_inventory.json --md-out=docs/proof_architecture/evidence/proof_inventory.md`

@@ -33,7 +33,7 @@ surfaces do not silently change meaning.
 
 ## Mechanical Evidence
 
-- `dart run tool/trace_proof_inventory.dart --json-out=docs/target_proof_architecture/evidence/proof_inventory.json --md-out=docs/target_proof_architecture/evidence/proof_inventory.md`
+- `dart run tool/trace_proof_inventory.dart --json-out=docs/proof_architecture/evidence/proof_inventory.json --md-out=docs/proof_architecture/evidence/proof_inventory.md`
 - `dart run tool/check_guardrails.dart`
 
 ## Status
@@ -42,3 +42,7 @@ surfaces do not silently change meaning.
 - Current mechanical evidence shows separate public-proof artifacts:
   `exportedSurfaces` for direct barrel-layout policy and
   `effectivePublicExportNamespace` for effective namespace signature coverage.
+
+## Update Triggers
+
+- Refresh this family when its listed proof tools, evidence artifacts, or registry-backed invariants change.

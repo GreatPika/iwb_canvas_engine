@@ -207,11 +207,11 @@ Confirmed active defects only.
   current invariant registry, so proof consumers can read outdated invariant
   titles, proof paths, and summary counts.
 - Detection: Compare `tool/invariant_registry.dart` with committed
-  `docs/target_proof_architecture/evidence/proof_inventory.json`
+  `docs/proof_architecture/evidence/proof_inventory.json`
 - Evidence:
   - `tool/invariant_registry.dart`
   - `tool/trace_proof_inventory.dart`
-  - `docs/target_proof_architecture/evidence/proof_inventory.json`
+  - `docs/proof_architecture/evidence/proof_inventory.json`
   - Current detections:
     committed `proof_inventory.json` rows drift from registry-backed
     `trace_proof_inventory` output for at least
@@ -234,10 +234,10 @@ Confirmed active defects only.
   - `test/tool/trace_proof_inventory_tool_test.dart`
   - `test/tool/target_proof_architecture_map_tool_test.dart`
   - `tool/src/verification_contract/verification_contract_registry.dart`
-  - `docs/target_proof_architecture/evidence/proof_inventory.json`
+  - `docs/proof_architecture/evidence/proof_inventory.json`
   - Current detections:
     `trace_proof_inventory_tool_test` validates generated temp output but does
-    not compare it to committed `docs/target_proof_architecture/evidence/**`;
+    not compare it to committed `docs/proof_architecture/evidence/**`;
     `target_proof_architecture_map_tool_test` checks evidence links but not
     canonical inventory freshness;
     existing required verification can therefore pass while committed proof

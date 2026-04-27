@@ -55,10 +55,18 @@ assembly and teardown path in `createSceneControllerGraph` and
 
 ## Mechanical Evidence
 
-- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/scene_controller_graph.dart createSceneControllerGraph --direction=outgoing --depth=3 --json-out=docs/target_architecture/evidence/composition_root_trace.json --mermaid-out=docs/target_architecture/evidence/composition_root_trace.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/scene_controller_graph.dart createSceneControllerGraph --direction=outgoing --depth=3 --json-out=docs/architecture/evidence/composition_root_trace.json --mermaid-out=docs/architecture/evidence/composition_root_trace.md`
   Evidence:
   [composition_root_trace.json](../evidence/composition_root_trace.json),
   [composition_root_trace.md](../evidence/composition_root_trace.md)
+
+## Proof Links
+
+- Proof family: [public entrypoint and signature proof](../../proof_architecture/families/public_entrypoint_and_signature_proof.md)
+- Proof family: [guardrail runner and artifact model](../../proof_architecture/families/guardrail_runner_and_artifact_model.md)
+- Guardrail: `dart run tool/check_guardrails.dart`
+- Import boundaries: `dart run tool/check_import_boundaries.dart`
+- Invariant: `INV-G-LAYER-DAG`
 
 ## Status
 
@@ -66,3 +74,7 @@ assembly and teardown path in `createSceneControllerGraph` and
 - Checked-in code centers assembly, store construction, facade forwarding, and
   coordinated teardown in `SceneControllerGraphHandle`; `SceneController`
   remains the thin public facade.
+
+## Update Triggers
+
+- Refresh this family when its listed owners, evidence commands, or linked proof surfaces change.

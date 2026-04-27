@@ -9,6 +9,8 @@ app UI, product workflows, or backend logic.
 - `README.md` for package overview and getting started.
 - `API_GUIDE.md` for public API, runtime behavior, and migration notes.
 - `ARCHITECTURE.md` for architecture, invariants, and module boundaries.
+- `docs/ARCHITECTURE_ATLAS.md` for architecture and proof family navigation,
+  including routes from families to evidence and known issues.
 - `CHANGELOG.md` for released and unreleased user-visible changes.
 - `KNOWN_ISSUES.md` for active, confirmed defects with mechanical evidence and
   constrained entry rules.

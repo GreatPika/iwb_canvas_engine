@@ -48,13 +48,25 @@ routes transactional writes through a dedicated commit runtime.
 
 ## Mechanical Evidence
 
-- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/scene_controller_scene.dart SceneControllerSceneOwner.replaceScene --direction=outgoing --depth=5 --json-out=docs/target_architecture/evidence/replace_scene_write_flow.json --mermaid-out=docs/target_architecture/evidence/replace_scene_write_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/scene_controller_scene.dart SceneControllerSceneOwner.replaceScene --direction=outgoing --depth=5 --json-out=docs/architecture/evidence/replace_scene_write_flow.json --mermaid-out=docs/architecture/evidence/replace_scene_write_flow.md`
   Evidence:
   [replace_scene_write_flow.json](../evidence/replace_scene_write_flow.json),
   [replace_scene_write_flow.md](../evidence/replace_scene_write_flow.md)
+
+## Proof Links
+
+- Proof family: [public entrypoint and signature proof](../../proof_architecture/families/public_entrypoint_and_signature_proof.md)
+- Proof family: [guardrail runner and artifact model](../../proof_architecture/families/guardrail_runner_and_artifact_model.md)
+- Guardrail: `dart run tool/check_guardrails.dart`
+- Import boundaries: `dart run tool/check_import_boundaries.dart`
+- Invariant: `INV-G-LAYER-DAG`
 
 ## Status
 
 - `locked`
 - The checked-in store facade now matches the accepted narrow owner form while
   the commit runtime remains the write kernel.
+
+## Update Triggers
+
+- Refresh this family when its listed owners, evidence commands, or linked proof surfaces change.

@@ -69,10 +69,18 @@ wiring into a separate mutation gateway.
 
 - `dart run tool/lsp_find_thin_wrappers.dart lib/src/interactive --classification=pure-forwarder`
 - `dart run tool/lsp_trace_flow.dart lib/src/interactive/internal/scene_controller_interaction_runtime.dart _createInteractiveRuntime --depth=4`
-- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/scene_controller_interaction_runtime.dart _createInteractiveRuntime --direction=outgoing --depth=4 --json-out=docs/target_architecture/evidence/commit_move_selection_flow.json --mermaid-out=docs/target_architecture/evidence/commit_move_selection_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/scene_controller_interaction_runtime.dart _createInteractiveRuntime --direction=outgoing --depth=4 --json-out=docs/architecture/evidence/commit_move_selection_flow.json --mermaid-out=docs/architecture/evidence/commit_move_selection_flow.md`
   Evidence:
   [commit_move_selection_flow.json](../evidence/commit_move_selection_flow.json),
   [commit_move_selection_flow.md](../evidence/commit_move_selection_flow.md)
+
+## Proof Links
+
+- Proof family: [public entrypoint and signature proof](../../proof_architecture/families/public_entrypoint_and_signature_proof.md)
+- Proof family: [guardrail runner and artifact model](../../proof_architecture/families/guardrail_runner_and_artifact_model.md)
+- Guardrail: `dart run tool/check_guardrails.dart`
+- Import boundaries: `dart run tool/check_import_boundaries.dart`
+- Invariant: `INV-G-LAYER-DAG`
 
 ## Status
 
@@ -80,3 +88,7 @@ wiring into a separate mutation gateway.
 - The checked-in family now matches the accepted local form: explicit public
   owner dependencies, a move-owned preview read seam, and no runtime move-
   session leak.
+
+## Update Triggers
+
+- Refresh this family when its listed owners, evidence commands, or linked proof surfaces change.

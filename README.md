@@ -100,8 +100,8 @@ Use the docs in this order:
    behavior.
 2. [ARCHITECTURE.md](ARCHITECTURE.md) for the checked-in architecture,
    invariants, and ownership boundaries.
-3. [docs/target_architecture/README.md](docs/target_architecture/README.md) for
-   the target architecture map and family-level target cuts.
+3. [docs/ARCHITECTURE_ATLAS.md](docs/ARCHITECTURE_ATLAS.md) for the engine
+   architecture atlas, proof atlas, and family-level ownership routes.
 4. [CHANGELOG.md](CHANGELOG.md) for released and unreleased user-visible
    changes.
 5. [example/README.md](example/README.md) for example app scope and run

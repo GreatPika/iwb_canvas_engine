@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document is the runtime-view layer of the target map.
+This document is the runtime-view layer of the atlas.
 
 It records only mechanically supported runtime-center flows and the target
 boundary each artifact is used to check. It does not carry hand-written flow
@@ -24,3 +24,10 @@ diagrams or unsupported runtime views.
   can derive and persist that path mechanically.
 - Link to committed evidence artifacts only; family docs own the local target
   rule and probe-command detail.
+
+## Evidence Commands
+
+- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/scene_controller_scene.dart SceneControllerSceneOwner.addNode --direction=outgoing --depth=5 --json-out=docs/architecture/evidence/add_node_write_flow.json --mermaid-out=docs/architecture/evidence/add_node_write_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/view/scene_view_interactive_pointer_host.dart SceneViewInteractivePointerHost.handlePointerEvent --direction=outgoing --depth=3 --json-out=docs/architecture/evidence/pointer_input_flow.json --mermaid-out=docs/architecture/evidence/pointer_input_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/contract/scene_view_runtime.dart SceneViewRuntime.mainSceneRenderRead --direction=both --depth=2 --json-out=docs/architecture/evidence/render_main_scene_read_flow.json --mermaid-out=docs/architecture/evidence/render_main_scene_read_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/contract/scene_view_runtime.dart SceneViewRuntime.overlayPreviewRead --direction=both --depth=2 --json-out=docs/architecture/evidence/render_overlay_preview_flow.json --mermaid-out=docs/architecture/evidence/render_overlay_preview_flow.md`

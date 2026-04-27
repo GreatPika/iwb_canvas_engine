@@ -147,13 +147,13 @@ This ADR is the accepted top-level target only.
 Use the companion documents like this:
 
 - `ARCHITECTURE.md` describes the checked-in architecture now.
-- `docs/target_architecture/README.md` is the working target map and the
+- `docs/ARCHITECTURE_ATLAS.md` is the working atlas and the
   planning entrypoint for architecture slices.
 - `PLAN.md` records execution order; it does not define architecture.
 
 Source-of-truth order:
 
-`ADR 0001 -> docs/target_architecture -> PLAN`
+`ADR 0001 -> docs/ARCHITECTURE_ATLAS.md -> PLAN`
 
 ## 9. Alternatives Considered
 

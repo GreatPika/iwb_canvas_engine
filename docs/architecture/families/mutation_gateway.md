@@ -46,13 +46,21 @@ route straight into that boundary.
 
 ## Mechanical Evidence
 
-- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/scene_controller_scene.dart SceneControllerSceneOwner.addNode --direction=outgoing --depth=5 --json-out=docs/target_architecture/evidence/add_node_write_flow.json --mermaid-out=docs/target_architecture/evidence/add_node_write_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/scene_controller_scene.dart SceneControllerSceneOwner.addNode --direction=outgoing --depth=5 --json-out=docs/architecture/evidence/add_node_write_flow.json --mermaid-out=docs/architecture/evidence/add_node_write_flow.md`
   Evidence:
   [add_node_write_flow.json](../evidence/add_node_write_flow.json),
   [add_node_write_flow.md](../evidence/add_node_write_flow.md)
 - `dart run tool/lsp_find_boundary_bypasses.dart lib/src/interactive/scene_controller_scene.dart SceneControllerSceneOwner --must-pass=SceneControllerMutationBoundary --depth=5`
 - `dart run tool/lsp_find_boundary_bypasses.dart lib/src/interactive/scene_controller_selection.dart SceneControllerSelectionOwner --must-pass=SceneControllerMutationBoundary --depth=5`
 - `dart run tool/lsp_find_thin_wrappers.dart lib/src/interactive --classification=pure-forwarder`
+
+## Proof Links
+
+- Proof family: [public entrypoint and signature proof](../../proof_architecture/families/public_entrypoint_and_signature_proof.md)
+- Proof family: [guardrail runner and artifact model](../../proof_architecture/families/guardrail_runner_and_artifact_model.md)
+- Guardrail: `dart run tool/check_guardrails.dart`
+- Import boundaries: `dart run tool/check_import_boundaries.dart`
+- Invariant: `INV-G-LAYER-DAG`
 
 ## Status
 
@@ -61,3 +69,7 @@ route straight into that boundary.
   direct public/runtime callers cross `SceneControllerMutationBoundary`
   without a routing-shell layer, while committed mutation access remains the
   controller-owned downstream seam.
+
+## Update Triggers
+
+- Refresh this family when its listed owners, evidence commands, or linked proof surfaces change.
