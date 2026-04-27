@@ -610,7 +610,7 @@ Not used. The architectural form is locked in 4A.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Node Snapshot Projection
+### Slice 1. [x] Node Snapshot Projection
 
 #### Slice Contract
 
@@ -667,7 +667,7 @@ model-owned projection seam.
   the model-owned typed projection seam, and the new model guardrail negative
   fixture fails before any future regression can reintroduce the unsafe call.
 
-### Slice 2. [ ] Scene Snapshot Projection
+### Slice 2. [x] Scene Snapshot Projection
 
 #### Slice Contract
 
@@ -722,7 +722,7 @@ behind the model-owned projection seam.
   `scene_snapshot_projection.dart`; model production callers no longer require
   bridge-visible generic backing-to-public scene materialization.
 
-### Slice 3. [ ] Narrow Snapshot Bridge And Audits
+### Slice 3. [x] Narrow Snapshot Bridge And Audits
 
 #### Slice Contract
 
@@ -781,7 +781,7 @@ the structural detectors enforce the narrowed seam.
 
 - All `KI-2` audit detections pass for the narrowed bridge.
 
-### Slice 4. [ ] Close Documentation And Known Issue
+### Slice 4. [x] Close Documentation And Known Issue
 
 #### Slice Contract
 

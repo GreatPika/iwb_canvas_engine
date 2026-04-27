@@ -64,6 +64,7 @@ const Set<String> _restrictedModelOwnerModules = <String>{
   '/lib/src/model/scene_from_import_draft.dart',
   '/lib/src/model/scene_from_snapshot.dart',
   '/lib/src/model/scene_policy.dart',
+  '/lib/src/model/scene_snapshot_projection.dart',
   '/lib/src/model/scene_snapshot_from_scene.dart',
   '/lib/src/model/scene_validation_path_surface.dart',
   '/lib/src/model/scene_node_boundary_mapping_common.dart',
@@ -145,6 +146,9 @@ const Set<String> _removedResidualModelFiles = <String>{
 
 const Set<String> _guardedValidatedImportSnapshotCallerFiles = <String>{
   '/lib/src/model/scene_from_import_draft.dart',
+  '/lib/src/model/scene_policy.dart',
+  '/lib/src/model/scene_snapshot_projection.dart',
+  '/lib/src/model/scene_snapshot_from_scene.dart',
   '/lib/src/model/scene_value_validation_scene.dart',
 };
 
@@ -612,6 +616,10 @@ bool _isForbiddenRawSnapshotMaterializerElement({
   }
   if (repoRelPath == _legacySnapshotMaterializationFilePath) {
     final displayName = element.displayName;
+    if (displayName == 'nodeSnapshotFromValidatedBacking' ||
+        displayName == 'sceneSnapshotFromValidatedBacking') {
+      return true;
+    }
     return displayName.startsWith('materialize') &&
         displayName.contains('Snapshot');
   }

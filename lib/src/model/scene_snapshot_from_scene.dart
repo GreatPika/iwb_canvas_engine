@@ -4,6 +4,7 @@ import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/snapshot.dart';
 import 'scene_graph_traversal.dart';
 import 'scene_node_boundary_mapping.dart';
+import 'scene_snapshot_projection.dart';
 
 SceneSnapshot sceneSnapshotFromScene(Scene scene) {
   return traverseSceneGraph<
@@ -24,9 +25,7 @@ SceneSnapshot sceneSnapshotFromScene(Scene scene) {
 }
 
 NodeSnapshot sceneNodeSnapshotFromScene(SceneNode node) {
-  return nodeSnapshotFromValidatedBacking(
-    sceneNodeSnapshotBackingFromScene(node),
-  );
+  return projectValidatedNodeSnapshot(sceneNodeSnapshotBackingFromScene(node));
 }
 
 NodeSnapshotBacking sceneNodeSnapshotBackingFromScene(SceneNode node) {
@@ -92,7 +91,7 @@ _sceneExportStrategy(Scene scene) {
             background: background,
             palette: palette,
           );
-          return sceneSnapshotFromValidatedBacking(backing);
+          return projectValidatedSceneSnapshot(backing);
         },
   );
 }

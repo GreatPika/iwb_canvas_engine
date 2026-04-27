@@ -131,7 +131,11 @@ void main() {
     );
     expect(
       snapshotFastPathSource,
-      contains('nodeSnapshotFromValidatedBacking'),
+      isNot(contains('nodeSnapshotFromValidatedBacking')),
+    );
+    expect(
+      snapshotFastPathSource,
+      isNot(contains('sceneSnapshotFromValidatedBacking')),
     );
     expect(
       snapshotFastPathSource,

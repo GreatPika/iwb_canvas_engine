@@ -45,6 +45,9 @@ Future<Directory> _createSandbox() {
       'tool/audit_terminal_cleanup_safety.dart',
       'tool/audit_validated_materialization_paths.dart',
       'tool/audit_bridge_surfaces.dart',
+      'tool/src/guardrails/rules/public/public_export_namespace_support.dart',
+      'tool/src/guardrails/support/guardrail_context.dart',
+      'tool/src/guardrails/support/guardrail_path_utils.dart',
       'tool/src/lsp',
       'tool/src/tool_command_result.dart',
     ],
@@ -67,6 +70,25 @@ const Map<String, Object> _bridgeSurfaceDescriptors = <String, Object>{
     '''
 export 'sample_backing.dart'
     show SampleBacking, sampleBackingFromValidated;
+export 'sample_materialization.dart' show sampleFromValidatedBacking;
+''',
+  );
+  writeSandboxFile(sandbox, 'lib/src/contract/internal/sample_backing.dart', '''
+final class SampleBacking {
+  const SampleBacking();
+}
+
+SampleBacking sampleBackingFromValidated(Object value) => const SampleBacking();
+''');
+  writeSandboxFile(
+    sandbox,
+    'lib/src/contract/internal/sample_materialization.dart',
+    '''
+Object sampleFromValidatedBacking(SampleBacking backing) => Object();
+
+final class SampleBacking {
+  const SampleBacking();
+}
 ''',
   );
 }

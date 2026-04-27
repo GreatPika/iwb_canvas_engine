@@ -58,9 +58,8 @@ known architectural defects that must not be normalized as target architecture.
 
 ### Not Included in the Change
 
-- no production architecture fixes for existing known issues such as `KI-2`,
-  `KI-3`, `KI-4`, `KI-5`, `KI-6`, `KI-7`, `KI-8`, `KI-11`, `KI-12`, `KI-13`,
-  or `KI-14`
+- no production architecture fixes for existing known issues; this step only
+  migrates atlas and evidence ownership
 - no public API, schema, serialization behavior, runtime behavior, rendering
   behavior, or performance-policy behavior change
 - no broad rewrite of `ARCHITECTURE.md`; it remains the checked-in current

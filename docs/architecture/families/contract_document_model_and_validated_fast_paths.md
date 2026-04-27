@@ -10,6 +10,8 @@ materialization rules.
 - Boundary data remains immutable and validated before public exposure.
 - Validated fast paths must not bypass full value validation unless the
   precondition is explicit and mechanically enforced.
+- `snapshot_fast_path.dart` may expose raw backing carriers and typed
+  validated helpers, but not generic backing-to-public snapshot materializers.
 
 ## Owners
 
@@ -19,8 +21,9 @@ materialization rules.
 
 ## Forbidden Shapes
 
-- Do not expose raw backing helpers as supported public materialization paths.
-- Do not describe KI-2 as target architecture.
+- Do not expose generic `*FromValidatedBacking` snapshot materializers through
+  bridge surfaces.
+- Do not treat raw backing carriers as public-object validation proof.
 
 ## Mechanical Evidence
 
@@ -39,10 +42,10 @@ materialization rules.
 
 ## Status
 
-- `known issue`
-- Validated fast-path materialization remains tracked by
-  [KI-2](../../../KNOWN_ISSUES.md#ki-2); this family keeps the intended rule
-  explicit while the defect stays unresolved.
+- `locked`
+- Validated snapshot fast paths keep carrier access separate from public
+  snapshot projection; the bridge-surface and validated-materialization audits
+  enforce that split.
 
 ## Update Triggers
 

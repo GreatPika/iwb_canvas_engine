@@ -77,7 +77,7 @@ void main() {
           architectureStatusOverrides: const <String, String>{
             'public_package_boundary':
                 '`known issue`\n\n'
-                'Tracked by [KI-2](../../KNOWN_ISSUES.md#ki-2).',
+                'Tracked by [KI-999](../../KNOWN_ISSUES.md#ki-999).',
           },
         );
 
@@ -95,7 +95,7 @@ void main() {
         architectureStatusOverrides: const <String, String>{
           'public_package_boundary':
               '`known issue`\n\n'
-              'Tracked by KI-2 in KNOWN_ISSUES.md.',
+              'Tracked by KI-999 in KNOWN_ISSUES.md.',
         },
       );
 

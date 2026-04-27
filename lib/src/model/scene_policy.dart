@@ -4,6 +4,7 @@ import '../contract/internal/snapshot_fast_path.dart';
 import '../core/scene.dart';
 import 'scene_import_draft.dart';
 import 'scene_import_draft_from_snapshot.dart';
+import 'scene_snapshot_projection.dart';
 import 'scene_validation_path_surface.dart';
 import 'scene_value_validation.dart';
 import 'scene_value_validation_support.dart' as validation_support;
@@ -28,7 +29,7 @@ final class ValidatedSceneImportDraft {
 SceneSnapshot sceneSnapshotFromValidatedImportDraft(
   ValidatedSceneImportDraft draft,
 ) {
-  return sceneSnapshotFromValidatedBacking(draft.backing);
+  return projectValidatedSceneSnapshot(draft.backing);
 }
 
 abstract final class ScenePolicy {

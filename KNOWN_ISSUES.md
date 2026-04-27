@@ -8,7 +8,7 @@ Confirmed active defects only.
 
 - Keep entries short.
 - One entry per root cause.
-- Use repository-local IDs in the format `KI-1`, `KI-2`, `KI-3`, ...
+- Use repository-local IDs in the format `KI-<number>`.
 - Do not put feature ideas, vague risks, or temporary notes here.
 - If an issue is listed here, it is unresolved.
 - Do not track status here.
@@ -25,31 +25,6 @@ Confirmed active defects only.
 - `Next action`
 
 ## Active Issues
-
-### KI-2
-
-- ID: `KI-2`
-- Severity: `P2`
-- Summary: Validated snapshot fast-path materialization can expose
-  `SceneSnapshot` and `NodeSnapshot` objects built from raw backing without
-  full value validation.
-- Detection:
-  `dart run tool/audit_route_expectations.dart`,
-  `dart run tool/audit_validated_materialization_paths.dart`,
-  `dart run tool/audit_bridge_surfaces.dart`
-- Evidence:
-  - `tool/audit/route_expectations_boundary_audit.json`
-  - `lib/src/contract/internal/snapshot_materialization.dart`
-  - `lib/src/contract/internal/snapshot_fast_path.dart`
-  - Current detections:
-    `nodeSnapshotFromValidatedBacking` does not reach
-    `validateSnapshotCommonSchemaFields`;
-    `sceneSnapshotFromValidatedBacking` does not reach
-    `sceneValidateImportDraftValues`;
-    `snapshot_fast_path.dart` exports raw backing and
-    materialization-from-backing helpers
-- Next action: Add full value validation before validated snapshot
-  materialization or narrow the fast-path surface.
 
 ### KI-3
 

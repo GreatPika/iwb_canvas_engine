@@ -36,6 +36,7 @@ import 'package:iwb_canvas_engine/src/model/scene_node_boundary_mapping.dart'
         sceneNodeFromSnapshotViaBoundarySchema,
         sceneNodeSnapshotFromViaBoundarySchema;
 import 'package:iwb_canvas_engine/src/model/scene_policy.dart';
+import 'package:iwb_canvas_engine/src/model/scene_snapshot_projection.dart';
 import 'package:iwb_canvas_engine/src/model/scene_value_validation.dart'
     as value_validation;
 
@@ -633,6 +634,43 @@ void main() {
                 e is SceneDataException &&
                 e.code == SceneDataErrorCode.invalidValue &&
                 e.path == 'layers[0].nodes[0].size.w',
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
+    'validated scene snapshot projection rejects malformed backing graphs',
+    () {
+      final malformedBacking = sceneSnapshotBackingFromValidated(
+        backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
+          nodes: <NodeSnapshotBacking>[
+            nodeSnapshotBackingOf(
+              RectNodeSnapshot(id: 'dup-projection', size: const Size(1, 1)),
+            ),
+          ],
+        ),
+        layers: <ContentLayerSnapshotBacking>[
+          contentLayerSnapshotBackingFromValidated(
+            id: 'layer-auto-projection',
+            nodes: <NodeSnapshotBacking>[
+              nodeSnapshotBackingOf(
+                RectNodeSnapshot(id: 'dup-projection', size: const Size(2, 2)),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      expect(
+        () => projectValidatedSceneSnapshot(malformedBacking),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.duplicateNodeId &&
+                e.path == 'layers[0].nodes[0].id',
           ),
         ),
       );

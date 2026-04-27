@@ -9,6 +9,7 @@ import 'scene_node_boundary_mapping_path.dart';
 import 'scene_node_boundary_mapping_rect.dart';
 import 'scene_node_boundary_mapping_stroke.dart';
 import 'scene_node_boundary_mapping_text.dart';
+import 'scene_snapshot_projection.dart';
 
 SceneNode sceneNodeFromSnapshotViaBoundarySchema(
   NodeSnapshot node, {
@@ -80,7 +81,7 @@ SceneNode sceneNodeFromSpecViaBoundarySchema(
 }
 
 NodeSnapshot sceneNodeSnapshotFromViaBoundarySchema(SceneNode node) {
-  return nodeSnapshotFromValidatedBacking(
+  return projectValidatedNodeSnapshot(
     sceneNodeSnapshotBackingFromViaBoundarySchema(node),
   );
 }

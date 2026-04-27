@@ -58,12 +58,6 @@ PathNodeSnapshot _materializePathNodeSnapshotFromValidated(
   return materializeNodeSnapshotForInternalUse(backing) as PathNodeSnapshot;
 }
 
-SceneSnapshot sceneSnapshotFromValidatedBacking(SceneSnapshotBacking backing) {
-  sceneValidateSceneSnapshotBackingStructure(backing);
-  validateSceneSnapshotBackingMetadataValues(backing);
-  return materializeSceneSnapshotForInternalUse(backing);
-}
-
 BackgroundLayerSnapshot backgroundLayerSnapshotFromValidated({
   List<NodeSnapshot>? nodes,
 }) {
@@ -148,10 +142,6 @@ ScenePaletteSnapshot scenePaletteSnapshotFromValidated({
   );
 }
 
-NodeSnapshot nodeSnapshotFromValidatedBacking(NodeSnapshotBacking backing) {
-  return materializeNodeSnapshotForInternalUse(backing);
-}
-
 SceneSnapshot sceneSnapshotFromValidated({
   List<ContentLayerSnapshot>? layers,
   BackgroundLayerSnapshot? backgroundLayer,
@@ -179,7 +169,9 @@ SceneSnapshot sceneSnapshotFromValidated({
           ),
     palette: palette == null ? null : scenePaletteSnapshotBackingOf(palette),
   );
-  return sceneSnapshotFromValidatedBacking(backing);
+  sceneValidateSceneSnapshotBackingStructure(backing);
+  validateSceneSnapshotBackingMetadataValues(backing);
+  return materializeSceneSnapshotForInternalUse(backing);
 }
 
 NodeSnapshotCommonSchemaFields nodeSnapshotCommonFieldsFromValidated({

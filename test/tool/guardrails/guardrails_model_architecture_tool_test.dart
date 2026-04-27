@@ -587,6 +587,90 @@ void validateNode(Object node) {
     );
 
     test(
+      'rejects model snapshot projection using generic backing materializers',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/internal/snapshot_materialization.dart',
+            '''
+Object nodeSnapshotFromValidatedBacking(Object value) => value;
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_snapshot_projection.dart',
+            '''
+import '../contract/internal/snapshot_materialization.dart';
+
+Object projectValidatedNodeSnapshot(Object node) {
+  return nodeSnapshotFromValidatedBacking(node);
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'validated import and draft validation paths must not materialize '
+                  'raw public snapshot wrappers from raw backing',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects runtime scene export using unsafe snapshot materializers',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/internal/unsafe_snapshot_materialization.dart',
+            '''
+Object unsafeMaterializeSceneSnapshot(Object value) => value;
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_snapshot_from_scene.dart',
+            '''
+import '../contract/internal/unsafe_snapshot_materialization.dart';
+
+Object sceneSnapshotFromScene(Object scene) {
+  return unsafeMaterializeSceneSnapshot(scene);
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'validated import and draft validation paths must not materialize '
+                  'raw public snapshot wrappers from raw backing',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
       'ignores local homonym for raw snapshot materialization helper names',
       () async {
         final sandbox = await createGuardrailsSandbox();

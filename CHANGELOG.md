@@ -76,6 +76,9 @@ in changes that have not yet been published to pub.dev.
 
 ### Fixed
 
+- Fixed validated snapshot fast paths so raw snapshot backing carriers can no
+  longer be exposed as public `SceneSnapshot` or `NodeSnapshot` objects without
+  crossing the model-owned validation and projection path.
 - Fixed public `NodePatch` constructors so explicit null writes to
   non-nullable patch fields now throw `ArgumentError` at construction time
   instead of reaching transactional patch application.

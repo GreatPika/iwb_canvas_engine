@@ -9,6 +9,8 @@ runtime materialization.
 
 - External input is validated at the import/build boundary.
 - Import diagnostics remain stable and path-aware.
+- Public snapshot projection from validated import or runtime backing belongs
+  to model-owned projection, not contract-owned generic backing materializers.
 
 ## Owners
 
@@ -35,13 +37,9 @@ runtime materialization.
 
 ## Status
 
-- `known issue`
-- `dart run tool/audit_route_expectations.dart` currently detects the
-  validated snapshot materialization failure tracked by
-  [KI-2](../../../KNOWN_ISSUES.md#ki-2). Import draft validation routes remain
-  represented by the passing route-audit rows and guardrail surface, but the
-  family cannot use locked status while the shared audit includes that active
-  defect.
+- `locked`
+- Route expectations cover import draft validation and model-owned snapshot
+  projection for validated import and runtime export paths.
 
 ## Update Triggers
 

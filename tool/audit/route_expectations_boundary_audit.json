@@ -37,19 +37,28 @@
       "depth": 3
     },
     {
-      "description": "Validated node snapshot materialization should validate snapshot common fields before exposing a boundary object",
-      "file": "lib/src/contract/internal/snapshot_materialization.dart",
-      "symbol": "nodeSnapshotFromValidatedBacking",
-      "target": "validateSnapshotCommonSchemaFields",
+      "description": "Validated node snapshot projection should validate snapshot common fields before exposing a boundary object",
+      "file": "lib/src/model/scene_snapshot_projection.dart",
+      "symbol": "projectValidatedNodeSnapshot",
+      "target": "snapshotCommonSchemaFieldsFromValidated",
       "expectation": "contains",
       "direction": "outgoing",
       "depth": 3
     },
     {
-      "description": "Validated scene snapshot materialization should validate import draft values before exposing a boundary object",
-      "file": "lib/src/contract/internal/snapshot_materialization.dart",
-      "symbol": "sceneSnapshotFromValidatedBacking",
-      "target": "sceneValidateImportDraftValues",
+      "description": "Validated import snapshot exposure should route through model-owned scene projection",
+      "file": "lib/src/model/scene_policy.dart",
+      "symbol": "sceneSnapshotFromValidatedImportDraft",
+      "target": "projectValidatedSceneSnapshot",
+      "expectation": "contains",
+      "direction": "outgoing",
+      "depth": 2
+    },
+    {
+      "description": "Runtime scene snapshot export should route through model-owned scene projection",
+      "file": "lib/src/model/scene_snapshot_from_scene.dart",
+      "symbol": "sceneSnapshotFromScene",
+      "target": "projectValidatedSceneSnapshot",
       "expectation": "contains",
       "direction": "outgoing",
       "depth": 3

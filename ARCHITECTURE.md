@@ -294,8 +294,11 @@ Two contract-internal files are intentionally shared with `model` and
 
 These are exceptions. Other contract-internal modules are not general-purpose
 downstream extension points. In particular, `snapshot_fast_path.dart` is a
-validated-only bridge surface; explicit unsafe raw materializers stay in
-family-specific contract-internal owners and are not bridge surfaces.
+carrier and typed-helper bridge surface, not a generic raw backing to public
+snapshot materializer. Model-owned public snapshot projection lives in
+`lib/src/model/scene_snapshot_projection.dart`; explicit unsafe raw
+materializers stay in family-specific contract-internal owners and are not
+bridge surfaces.
 
 ## 7. Runtime building blocks
 
@@ -707,6 +710,9 @@ important for architectural reasoning.
 - runtime scene materialization from import drafts must cross one validated
   proof seam (`ValidatedSceneImportDraft`); raw `SceneImportDraft` and raw
   snapshot helpers must not bypass model import policy
+- validated public snapshot projection from raw backing carriers is
+  model-owned; `snapshot_fast_path.dart` must not expose generic
+  backing-to-public snapshot materializers
 
 ### Layering invariants
 
