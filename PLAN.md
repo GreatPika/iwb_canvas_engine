@@ -45,3 +45,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 26. Typed Boundary Admission Diagnostic Symmetry](plan/step_26_typed_boundary_admission_diagnostic_symmetry.md)
 - [x] [Step 27. Write-Path Benchmark Commit Attribution](plan/step_27_write_path_benchmark_commit_attribution.md)
 - [x] [Step 28. Eraser Perf Proof Coverage And Selection Diagnostic Baseline Retirement](plan/step_28_eraser_perf_proof_coverage_and_selection_diagnostic_baseline_retirement.md)
+- [ ] [Step 29. Node Patch Non-Nullable Field Admission](plan/step_29_node_patch_non_nullable_field_admission.md)
