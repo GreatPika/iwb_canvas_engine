@@ -26,34 +26,6 @@ Confirmed active defects only.
 
 ## Active Issues
 
-### KI-1
-
-- ID: `KI-1`
-- Severity: `P1`
-- Summary: Some non-nullable public `NodePatch` fields accept
-  `PatchField.nullValue()` and fail later in transactional patch application
-  instead of being rejected at the boundary.
-- Detection: `dart run tool/audit_patch_field_admission.dart`
-- Evidence:
-  - `lib/src/contract/internal/node_boundary_schema_patch.dart`
-  - Current detections:
-    `validatePatchCommonSchemaFields.isVisible`,
-    `validatePatchCommonSchemaFields.isSelectable`,
-    `validatePatchCommonSchemaFields.isLocked`,
-    `validatePatchCommonSchemaFields.isDeletable`,
-    `validatePatchCommonSchemaFields.isTransformable`,
-    `validateTextNodePatchSchemaFields.color`,
-    `validateTextNodePatchSchemaFields.align`,
-    `validateTextNodePatchSchemaFields.textDirection`,
-    `validateTextNodePatchSchemaFields.isBold`,
-    `validateTextNodePatchSchemaFields.isItalic`,
-    `validateTextNodePatchSchemaFields.isUnderline`,
-    `validateStrokeNodePatchSchemaFields.color`,
-    `validateLineNodePatchSchemaFields.color`,
-    `validatePathNodePatchSchemaFields.fillRule`
-- Next action: Reject direct passthrough for those non-nullable patch fields
-  and add regression tests.
-
 ### KI-2
 
 - ID: `KI-2`

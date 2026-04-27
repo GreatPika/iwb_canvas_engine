@@ -18,6 +18,8 @@ the entrypoint into the deeper docs.
 - Transactional scene writes through `SceneWriteTxn`.
 - Stable content-layer addressing through `layerId`, including same-write layer
   insertion before later node mutations.
+- Eager public validation for snapshots, node specs, and node patches before
+  runtime mutation begins.
 - Build/import and JSON entrypoints through `SceneBuilder`,
   `encodeScene*`, and `decodeScene*`, with shared `SceneDataException`
   diagnostics for public scene-data failures.

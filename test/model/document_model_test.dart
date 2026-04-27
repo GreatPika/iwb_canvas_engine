@@ -2011,6 +2011,225 @@ void main() {
     },
   );
 
+  test('node patch rejects explicit null for non-nullable public fields', () {
+    final invalidCases =
+        <({Object Function() create, String field, String message})>[
+          (
+            create: () =>
+                CommonNodePatch(isVisible: PatchField<bool>.nullValue()),
+            field: 'isVisible',
+            message:
+                'PatchField.nullValue() is invalid for non-nullable field.',
+          ),
+          (
+            create: () =>
+                CommonNodePatch(isSelectable: PatchField<bool>.nullValue()),
+            field: 'isSelectable',
+            message:
+                'PatchField.nullValue() is invalid for non-nullable field.',
+          ),
+          (
+            create: () =>
+                CommonNodePatch(isLocked: PatchField<bool>.nullValue()),
+            field: 'isLocked',
+            message:
+                'PatchField.nullValue() is invalid for non-nullable field.',
+          ),
+          (
+            create: () =>
+                CommonNodePatch(isDeletable: PatchField<bool>.nullValue()),
+            field: 'isDeletable',
+            message:
+                'PatchField.nullValue() is invalid for non-nullable field.',
+          ),
+          (
+            create: () =>
+                CommonNodePatch(isTransformable: PatchField<bool>.nullValue()),
+            field: 'isTransformable',
+            message:
+                'PatchField.nullValue() is invalid for non-nullable field.',
+          ),
+          (
+            create: () => TextNodePatch(
+              id: 'text-null',
+              color: PatchField<Color>.nullValue(),
+            ),
+            field: 'color',
+            message:
+                'PatchField.nullValue() is invalid for non-nullable field.',
+          ),
+          (
+            create: () => TextNodePatch(
+              id: 'text-null',
+              align: PatchField<TextAlign>.nullValue(),
+            ),
+            field: 'align',
+            message:
+                'PatchField.nullValue() is invalid for non-nullable field.',
+          ),
+          (
+            create: () => TextNodePatch(
+              id: 'text-null',
+              textDirection: PatchField<TextDirection>.nullValue(),
+            ),
+            field: 'textDirection',
+            message:
+                'PatchField.nullValue() is invalid for non-nullable field.',
+          ),
+          (
+            create: () => TextNodePatch(
+              id: 'text-null',
+              isBold: PatchField<bool>.nullValue(),
+            ),
+            field: 'isBold',
+            message:
+                'PatchField.nullValue() is invalid for non-nullable field.',
+          ),
+          (
+            create: () => TextNodePatch(
+              id: 'text-null',
+              isItalic: PatchField<bool>.nullValue(),
+            ),
+            field: 'isItalic',
+            message:
+                'PatchField.nullValue() is invalid for non-nullable field.',
+          ),
+          (
+            create: () => TextNodePatch(
+              id: 'text-null',
+              isUnderline: PatchField<bool>.nullValue(),
+            ),
+            field: 'isUnderline',
+            message:
+                'PatchField.nullValue() is invalid for non-nullable field.',
+          ),
+          (
+            create: () => StrokeNodePatch(
+              id: 'stroke-null',
+              color: PatchField<Color>.nullValue(),
+            ),
+            field: 'color',
+            message:
+                'PatchField.nullValue() is invalid for non-nullable field.',
+          ),
+          (
+            create: () => LineNodePatch(
+              id: 'line-null',
+              color: PatchField<Color>.nullValue(),
+            ),
+            field: 'color',
+            message:
+                'PatchField.nullValue() is invalid for non-nullable field.',
+          ),
+          (
+            create: () => PathNodePatch(
+              id: 'path-null',
+              fillRule: PatchField<PathFillRule>.nullValue(),
+            ),
+            field: 'fillRule',
+            message:
+                'PatchField.nullValue() is invalid for non-nullable field.',
+          ),
+        ];
+
+    for (final invalid in invalidCases) {
+      expect(
+        invalid.create,
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.name == invalid.field &&
+                e.message == invalid.message,
+          ),
+        ),
+      );
+    }
+
+    expect(CommonNodePatch.new, returnsNormally);
+    expect(() => TextNodePatch(id: 'text-absent'), returnsNormally);
+    expect(() => StrokeNodePatch(id: 'stroke-absent'), returnsNormally);
+    expect(() => LineNodePatch(id: 'line-absent'), returnsNormally);
+    expect(() => PathNodePatch(id: 'path-absent'), returnsNormally);
+
+    expect(
+      () => CommonNodePatch(
+        isVisible: PatchField<bool>.value(true),
+        isSelectable: PatchField<bool>.value(true),
+        isLocked: PatchField<bool>.value(false),
+        isDeletable: PatchField<bool>.value(true),
+        isTransformable: PatchField<bool>.value(true),
+      ),
+      returnsNormally,
+    );
+    expect(
+      () => TextNodePatch(
+        id: 'text-value',
+        color: PatchField<Color>.value(const Color(0xFF123456)),
+        align: PatchField<TextAlign>.value(TextAlign.center),
+        textDirection: PatchField<TextDirection>.value(TextDirection.ltr),
+        isBold: PatchField<bool>.value(true),
+        isItalic: PatchField<bool>.value(false),
+        isUnderline: PatchField<bool>.value(true),
+      ),
+      returnsNormally,
+    );
+    expect(
+      () => StrokeNodePatch(
+        id: 'stroke-value',
+        color: PatchField<Color>.value(const Color(0xFF654321)),
+      ),
+      returnsNormally,
+    );
+    expect(
+      () => LineNodePatch(
+        id: 'line-value',
+        color: PatchField<Color>.value(const Color(0xFFABCDEF)),
+      ),
+      returnsNormally,
+    );
+    expect(
+      () => PathNodePatch(
+        id: 'path-value',
+        fillRule: PatchField<PathFillRule>.value(PathFillRule.evenOdd),
+      ),
+      returnsNormally,
+    );
+
+    expect(
+      () => ImageNodePatch(
+        id: 'image-nullable-null',
+        naturalSize: PatchField<Size?>.nullValue(),
+      ),
+      returnsNormally,
+    );
+    expect(
+      () => TextNodePatch(
+        id: 'text-nullable-null',
+        fontFamily: PatchField<String?>.nullValue(),
+        maxWidth: PatchField<double?>.nullValue(),
+        lineHeight: PatchField<double?>.nullValue(),
+      ),
+      returnsNormally,
+    );
+    expect(
+      () => RectNodePatch(
+        id: 'rect-nullable-null',
+        fillColor: PatchField<Color?>.nullValue(),
+        strokeColor: PatchField<Color?>.nullValue(),
+      ),
+      returnsNormally,
+    );
+    expect(
+      () => PathNodePatch(
+        id: 'path-nullable-null',
+        fillColor: PatchField<Color?>.nullValue(),
+        strokeColor: PatchField<Color?>.nullValue(),
+      ),
+      returnsNormally,
+    );
+  });
+
   test(
     'node patch validates only present fields and rejects invalid write values',
     () {

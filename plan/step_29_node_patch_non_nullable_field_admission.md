@@ -220,7 +220,7 @@ Fix `KI-1` by making public `NodePatch` admission reject explicit null writes fo
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Enforce Patch Boundary Nullability Contract
+### Slice 1. [x] Enforce Patch Boundary Nullability Contract
 
 #### Slice Contract
 
@@ -257,7 +257,7 @@ Add the failing reproducer and guard tests before changing implementation, then 
 - The behavioral test fails before the implementation edit, then passes after it.
 - The patch field admission audit is clean after the schema-owner change.
 
-### Slice 2. [ ] Close KI-1 And Public Reporting
+### Slice 2. [x] Close KI-1 And Public Reporting
 
 #### Slice Contract
 

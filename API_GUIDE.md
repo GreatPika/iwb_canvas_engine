@@ -225,6 +225,9 @@ cover only node-family fields.
 Important patch rules:
 
 - Public patch constructors validate only fields that are actually present.
+- `PatchField.nullValue()` is accepted only for nullable patch fields; using it
+  for non-nullable patch fields throws `ArgumentError` during patch
+  construction.
 - Aggregate patch constructors canonicalize supported nested boundary values to
   exact built-in contract objects and reject unsupported boundary subtypes
   eagerly.

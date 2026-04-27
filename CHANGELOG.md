@@ -76,6 +76,9 @@ in changes that have not yet been published to pub.dev.
 
 ### Fixed
 
+- Fixed public `NodePatch` constructors so explicit null writes to
+  non-nullable patch fields now throw `ArgumentError` at construction time
+  instead of reaching transactional patch application.
 - Fixed unsupported typed `SceneSnapshot` subtype diagnostics so
   `SceneBuilder.buildFromSnapshot(...)`, `encodeScene(...)`, and
   `encodeSceneToJson(...)` now report the same `SceneDataException` contract

@@ -86,11 +86,31 @@ NodePatchCommonSchemaFields validatePatchCommonSchemaFields(
       transformValue: (value) =>
           validateNonNegativeFiniteDoubleValue(value, name: 'hitPadding'),
     ),
-    isVisible: fields.isVisible,
-    isSelectable: fields.isSelectable,
-    isLocked: fields.isLocked,
-    isDeletable: fields.isDeletable,
-    isTransformable: fields.isTransformable,
+    isVisible: _validateNonNullablePatchField(
+      fields.isVisible,
+      name: 'isVisible',
+      transformValue: (value) => value,
+    ),
+    isSelectable: _validateNonNullablePatchField(
+      fields.isSelectable,
+      name: 'isSelectable',
+      transformValue: (value) => value,
+    ),
+    isLocked: _validateNonNullablePatchField(
+      fields.isLocked,
+      name: 'isLocked',
+      transformValue: (value) => value,
+    ),
+    isDeletable: _validateNonNullablePatchField(
+      fields.isDeletable,
+      name: 'isDeletable',
+      transformValue: (value) => value,
+    ),
+    isTransformable: _validateNonNullablePatchField(
+      fields.isTransformable,
+      name: 'isTransformable',
+      transformValue: (value) => value,
+    ),
   );
 }
 
@@ -139,12 +159,36 @@ TextNodePatchSchemaFields validateTextNodePatchSchemaFields(
       transformValue: (value) =>
           validatePositiveFiniteDoubleValue(value, name: 'fontSize'),
     ),
-    color: fields.color,
-    align: fields.align,
-    textDirection: fields.textDirection,
-    isBold: fields.isBold,
-    isItalic: fields.isItalic,
-    isUnderline: fields.isUnderline,
+    color: _validateNonNullablePatchField(
+      fields.color,
+      name: 'color',
+      transformValue: (value) => value,
+    ),
+    align: _validateNonNullablePatchField(
+      fields.align,
+      name: 'align',
+      transformValue: (value) => value,
+    ),
+    textDirection: _validateNonNullablePatchField(
+      fields.textDirection,
+      name: 'textDirection',
+      transformValue: (value) => value,
+    ),
+    isBold: _validateNonNullablePatchField(
+      fields.isBold,
+      name: 'isBold',
+      transformValue: (value) => value,
+    ),
+    isItalic: _validateNonNullablePatchField(
+      fields.isItalic,
+      name: 'isItalic',
+      transformValue: (value) => value,
+    ),
+    isUnderline: _validateNonNullablePatchField(
+      fields.isUnderline,
+      name: 'isUnderline',
+      transformValue: (value) => value,
+    ),
     fontFamily: _validateNullablePatchField(
       fields.fontFamily,
       transformValue: (value) =>
@@ -183,7 +227,11 @@ StrokeNodePatchSchemaFields validateStrokeNodePatchSchemaFields(
       transformValue: (value) =>
           validatePositiveFiniteDoubleValue(value, name: 'thickness'),
     ),
-    color: fields.color,
+    color: _validateNonNullablePatchField(
+      fields.color,
+      name: 'color',
+      transformValue: (value) => value,
+    ),
   );
 }
 
@@ -218,7 +266,11 @@ LineNodePatchSchemaFields validateLineNodePatchSchemaFields(
       transformValue: (value) =>
           validatePositiveFiniteDoubleValue(value, name: 'thickness'),
     ),
-    color: fields.color,
+    color: _validateNonNullablePatchField(
+      fields.color,
+      name: 'color',
+      transformValue: (value) => value,
+    ),
   );
 }
 
@@ -268,7 +320,11 @@ PathNodePatchSchemaFields validatePathNodePatchSchemaFields(
       transformValue: (value) =>
           validateNonNegativeFiniteDoubleValue(value, name: 'strokeWidth'),
     ),
-    fillRule: fields.fillRule,
+    fillRule: _validateNonNullablePatchField(
+      fields.fillRule,
+      name: 'fillRule',
+      transformValue: (value) => value,
+    ),
   );
 }
 
