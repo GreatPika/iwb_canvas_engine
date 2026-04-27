@@ -52,6 +52,7 @@ routes transactional writes through a dedicated commit runtime.
   Evidence:
   [replace_scene_write_flow.json](../evidence/replace_scene_write_flow.json),
   [replace_scene_write_flow.md](../evidence/replace_scene_write_flow.md)
+- `flutter test --no-pub test/model test/controller test/interactive`
 
 ## Proof Links
 
@@ -59,7 +60,21 @@ routes transactional writes through a dedicated commit runtime.
 - Proof family: [guardrail runner and artifact model](../../proof_architecture/families/guardrail_runner_and_artifact_model.md)
 - Guardrail: `dart run tool/check_guardrails.dart`
 - Import boundaries: `dart run tool/check_import_boundaries.dart`
-- Invariant: `INV-G-LAYER-DAG`
+- Invariant: `INV-ENG-WRITE-ONLY-MUTATION`
+- Invariant: `INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE`
+- Invariant: `INV-ENG-TXN-WRITER-LIFETIME`
+- Invariant: `INV-ENG-TXN-ATOMIC-COMMIT`
+- Invariant: `INV-ENG-COMMITTED-SELECTION-REVISION-ALIGNMENT`
+- Invariant: `INV-ENG-TXN-FINALIZED-BEFORE-COMMIT-PLAN`
+- Invariant: `INV-ENG-TXN-COPY-ON-WRITE`
+- Invariant: `INV-ENG-WRITE-PROTOCOL`
+- Invariant: `INV-ENG-SIGNALS-AFTER-COMMIT`
+- Invariant: `INV-ENG-WRITE-NUMERIC-GUARDS`
+- Invariant: `INV-ENG-DISPOSE-FAIL-FAST`
+- Invariant: `INV-ENG-CONTROLLER-COMMIT-RUNTIME-BOUNDARY`
+- Invariant: `INV-ENG-SCENE-WRITE-TXN-ADAPTER-BOUNDARY`
+- Invariant: `INV-ENG-CLEAR-SCENE-RESULT-REMOVED-NODE-IDS-IMMUTABLE`
+- Invariant: `INV-ENG-COMMITTED-READ-SIDE-HERMETICITY`
 
 ## Status
 

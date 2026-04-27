@@ -73,6 +73,7 @@ wiring into a separate mutation gateway.
   Evidence:
   [commit_move_selection_flow.json](../evidence/commit_move_selection_flow.json),
   [commit_move_selection_flow.md](../evidence/commit_move_selection_flow.md)
+- `flutter test --no-pub test/interactive test/controller test/view`
 
 ## Proof Links
 
@@ -80,14 +81,33 @@ wiring into a separate mutation gateway.
 - Proof family: [guardrail runner and artifact model](../../proof_architecture/families/guardrail_runner_and_artifact_model.md)
 - Guardrail: `dart run tool/check_guardrails.dart`
 - Import boundaries: `dart run tool/check_import_boundaries.dart`
-- Invariant: `INV-G-LAYER-DAG`
+- Invariant: `INV-ENG-INTERACTIVE-ASYNC-DELIVERY`
+- Invariant: `INV-ENG-INTERACTIVE-PUBLIC-LISTENER-REPAINT-INDEPENDENCE`
+- Invariant: `INV-ENG-INTERACTIVE-HANDLE-POINTER-NON-REENTRANT`
+- Invariant: `INV-ENG-INTERACTIVE-POINTER-FINITE`
+- Invariant: `INV-ENG-POINTER-SETTINGS-VALIDATION`
+- Invariant: `INV-ENG-INTERACTIVE-SINGLE-ACTIVE-POINTER`
+- Invariant: `INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP`
+- Invariant: `INV-ENG-INTERACTIVE-CANCEL-STATE-RESET`
+- Invariant: `INV-ENG-INTERACTIVE-INTERRUPTION-SEMANTICS`
+- Invariant: `INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP`
+- Invariant: `INV-ENG-INTERACTIVE-RESOLVER-PURITY`
+- Invariant: `INV-ENG-INTERACTIVE-MOVE-COMMIT-RESOLVER-NON-REENTRANT`
+- Invariant: `INV-ENG-INTERACTIVE-PUBLIC-MUTATION-EXCLUSIVITY`
+- Invariant: `INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY`
+- Invariant: `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY`
+- Invariant: `INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE`
+- Invariant: `INV-ENG-INTERACTIVE-DRAW-STYLE-SNAPSHOT`
+- Invariant: `INV-ENG-TIMESTAMP-MS-MONOTONIC`
+- Invariant: `INV-ENG-COMMITTED-READ-SIDE-HERMETICITY`
+- Invariant: `INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY`
 
 ## Status
 
-- `locked`
-- The checked-in family now matches the accepted local form: explicit public
-  owner dependencies, a move-owned preview read seam, and no runtime move-
-  session leak.
+- `known issue`
+- Move and pointer-session ownership matches the accepted local form, but draw
+  terminal cleanup remains tracked by
+  [KI-3](../../../KNOWN_ISSUES.md#ki-3).
 
 ## Update Triggers
 

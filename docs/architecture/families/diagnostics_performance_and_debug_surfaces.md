@@ -13,7 +13,14 @@ performance proof contours.
 ## Owners
 
 - `tool/bench/**`
-- `test/tool/**`
+- `test/tool/bench_*_test.dart`
+- `test/controller/core/scene_controller_commit_debug_test.dart`
+- `test/controller/internal/spatial_index_cache_test.dart`
+- `test/render/scene_render_caches_test.dart`
+- `test/render/scene_painter_test.dart`
+- `test/render/scene_painter_bounds_contract_test.dart`
+- `test/view/scene_view_interactive_test.dart`
+- `test/view/scene_view_test.dart`
 
 ## Forbidden Shapes
 
@@ -24,17 +31,24 @@ performance proof contours.
 
 - `dart run tool/check_guardrails.dart`
 - `dart run tool/check_verification_contract.dart`
+- `dart run tool/run_tool_tests.dart test/tool/bench_run_load_profiles_test.dart test/tool/bench_diff_load_profiles_test.dart test/tool/bench_selection_control_diagnostics_test.dart test/tool/verification_contract_tool_test.dart`
+- `flutter test --no-pub test/controller/core/scene_controller_commit_debug_test.dart test/controller/internal/spatial_index_cache_test.dart test/render/scene_render_caches_test.dart test/render/scene_painter_test.dart test/render/scene_painter_bounds_contract_test.dart test/view/scene_view_interactive_test.dart test/view/scene_view_test.dart`
 
 ## Proof Links
 
 - Proof family: [verification contract and workflow drift](../../proof_architecture/families/verification_contract_and_workflow_drift.md)
 - Invariant: `INV-ENG-PERFORMANCE-PROOF-CONTOUR`
+- Invariant: `INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES`
+- Invariant: `INV-ENG-VIEW-RENDER-SURFACE-DEBUG-PROBES`
 
 ## Status
 
-- `docs stale`
-- This slice creates the atlas route; the family is completed in the engine
-  family atlas slice.
+- `known issue`
+- Benchmark validation and schema defects remain tracked by
+  [KI-12](../../../KNOWN_ISSUES.md#ki-12),
+  [KI-13](../../../KNOWN_ISSUES.md#ki-13), and
+  [KI-14](../../../KNOWN_ISSUES.md#ki-14); performance proof still belongs to
+  repository-local tooling.
 
 ## Update Triggers
 

@@ -39,6 +39,7 @@ owners must be scanned for public-signature hermeticity.
 - `dart run tool/trace_export_namespace.dart lib/iwb_canvas_engine.dart --json-out=docs/proof_architecture/evidence/public_export_namespace.json --md-out=docs/proof_architecture/evidence/public_export_namespace.md`
 - `dart run tool/check_public_api_surface.dart`
 - `dart run tool/check_guardrails.dart`
+- `dart run tool/run_tool_tests.dart test/tool/trace_export_namespace_tool_test.dart`
 
 ## Status
 

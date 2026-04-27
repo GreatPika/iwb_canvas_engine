@@ -25,17 +25,31 @@ semantics.
 
 - `dart run tool/check_import_boundaries.dart`
 - `dart run tool/check_guardrails.dart`
+- `flutter test --no-pub test/core test/controller`
 
 ## Proof Links
 
 - Proof family: [guardrail runner and artifact model](../../proof_architecture/families/guardrail_runner_and_artifact_model.md)
+- Invariant: `INV-G-NODEID-UNIQUE`
+- Invariant: `INV-G-LAYERID-UNIQUE`
+- Invariant: `INV-G-LAYER-Z-ORDER-BY-LIST`
+- Invariant: `INV-ENG-STROKE-RUNTIME-GEOMETRY-OWNER`
+- Invariant: `INV-ENG-PALETTE-RUNTIME-VALUE-OWNER`
+- Invariant: `INV-ENG-RUNTIME-NODE-VALUE-OWNERS`
+- Invariant: `INV-ENG-EVENTS-IMMUTABLE`
 - Invariant: `INV-ENG-CORE-ARCHITECTURE-BOUNDARY`
+- Invariant: `INV-ENG-POINTER-SETTINGS-VALIDATION`
+- Invariant: `INV-ENG-RENDER-HIT-BOUNDS-PARITY`
+- Invariant: `INV-ENG-PAINT-ADMISSION-BOUNDS-SOURCE`
+- Invariant: `INV-ENG-PATH-NODE-CACHE-INVALIDATION`
 
 ## Status
 
-- `docs stale`
-- This slice creates the atlas route; the family is completed in the engine
-  family atlas slice.
+- `known issue`
+- Hit-testing and paint candidate parity defects remain tracked by
+  [KI-6](../../../KNOWN_ISSUES.md#ki-6) and
+  [KI-7](../../../KNOWN_ISSUES.md#ki-7); the family keeps the shared geometry
+  and spatial-index target rules visible.
 
 ## Update Triggers
 

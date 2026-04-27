@@ -59,6 +59,7 @@ assembly and teardown path in `createSceneControllerGraph` and
   Evidence:
   [composition_root_trace.json](../evidence/composition_root_trace.json),
   [composition_root_trace.md](../evidence/composition_root_trace.md)
+- `flutter test --no-pub test/controller test/interactive`
 
 ## Proof Links
 
@@ -67,6 +68,11 @@ assembly and teardown path in `createSceneControllerGraph` and
 - Guardrail: `dart run tool/check_guardrails.dart`
 - Import boundaries: `dart run tool/check_import_boundaries.dart`
 - Invariant: `INV-G-LAYER-DAG`
+- Invariant: `INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE`
+- Invariant: `INV-ENG-CONTROLLER-COMMIT-RUNTIME-BOUNDARY`
+- Invariant: `INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY`
+- Invariant: `INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY`
+- Invariant: `INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY`
 
 ## Status
 

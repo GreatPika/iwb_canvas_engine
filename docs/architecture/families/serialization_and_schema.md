@@ -26,17 +26,30 @@ validation parity.
 
 - `dart run tool/audit_schema_family_parity.dart lib/src`
 - `dart run tool/check_guardrails.dart`
+- `flutter test --no-pub test/serialization test/model`
 
 ## Proof Links
 
 - Proof family: [invariant registry and proof reachability](../../proof_architecture/families/invariant_registry_and_proof_reachability.md)
 - Invariant: `INV-G-LAYER-BOUNDARIES`
+- Invariant: `INV-ENG-SHARED-SCENE-METADATA-CONTRACT`
+- Invariant: `INV-SER-JSON-NUMERIC-VALIDATION`
+- Invariant: `INV-SER-IMPORT-DIAGNOSTIC-SURFACE`
+- Invariant: `INV-SER-JSON-GRID-PALETTE-CONTRACTS`
+- Invariant: `INV-SER-SHARED-STROKE-POINT-LIMIT`
+- Invariant: `INV-SER-SHARED-PALETTE-ITEM-LIMIT`
+- Invariant: `INV-SER-TEXT-DIRECTION-EXPLICIT`
+- Invariant: `INV-SER-TYPED-LAYER-SPLIT`
+- Invariant: `INV-SER-CANONICAL-BACKGROUND-LAYER`
+- Invariant: `INV-SER-SCHEMA-VERSION-CONTRACT`
+- Invariant: `INV-SER-UNSUPPORTED-SCHEMA-VERSION-CODE`
 
 ## Status
 
-- `docs stale`
-- This slice creates the atlas route; the family is completed in the engine
-  family atlas slice.
+- `known issue`
+- Runtime stroke value validation remains tracked by
+  [KI-4](../../../KNOWN_ISSUES.md#ki-4); the atlas preserves schema parity as
+  the target rule rather than normalizing the drift.
 
 ## Update Triggers
 

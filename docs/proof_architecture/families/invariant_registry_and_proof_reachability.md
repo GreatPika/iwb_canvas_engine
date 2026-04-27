@@ -33,6 +33,7 @@ must stay explicit and mechanically checked.
 
 - `dart run tool/trace_proof_inventory.dart --json-out=docs/proof_architecture/evidence/proof_inventory.json --md-out=docs/proof_architecture/evidence/proof_inventory.md`
 - `dart run tool/check_invariant_coverage.dart`
+- `dart run tool/run_tool_tests.dart test/tool/trace_proof_inventory_tool_test.dart`
 
 ## Status
 

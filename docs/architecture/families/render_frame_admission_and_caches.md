@@ -25,17 +25,28 @@ rendering, and render caches.
 
 - `dart run tool/check_import_boundaries.dart`
 - `dart run tool/check_guardrails.dart`
+- `flutter test --no-pub test/render test/view`
 
 ## Proof Links
 
 - Proof family: [guardrail runner and artifact model](../../proof_architecture/families/guardrail_runner_and_artifact_model.md)
+- Invariant: `INV-ENG-EPOCH-INVALIDATION`
+- Invariant: `INV-ENG-PERFORMANCE-PROOF-CONTOUR`
+- Invariant: `INV-ENG-RENDER-HIT-BOUNDS-PARITY`
+- Invariant: `INV-ENG-RENDER-GEOMETRY-KEY-STABLE`
+- Invariant: `INV-ENG-RENDER-CACHE-SCAN-RESISTANT`
+- Invariant: `INV-ENG-SELECTION-BOUNDED-COMPOSITING`
+- Invariant: `INV-ENG-GRID-BOUNDED-ITERATION`
 - Invariant: `INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION`
+- Invariant: `INV-ENG-PAINT-ADMISSION-BOUNDS-SOURCE`
+- Invariant: `INV-ENG-SCENE-PAINTER-MODULE-BOUNDARY`
 
 ## Status
 
-- `docs stale`
-- This slice creates the atlas route; the family is completed in the engine
-  family atlas slice.
+- `known issue`
+- Selection rendering redraw drift remains tracked by
+  [KI-8](../../../KNOWN_ISSUES.md#ki-8); frame admission and cache ownership
+  remain the target family rules.
 
 ## Update Triggers
 

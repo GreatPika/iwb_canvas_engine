@@ -26,17 +26,23 @@ materialization rules.
 
 - `dart run tool/audit_validated_materialization_paths.dart lib/src/contract`
 - `dart run tool/audit_bridge_surfaces.dart lib/src/contract`
+- `flutter test --no-pub test/contract`
 
 ## Proof Links
 
 - Proof family: [guardrail runner and artifact model](../../proof_architecture/families/guardrail_runner_and_artifact_model.md)
+- Invariant: `INV-ENG-NO-EXTERNAL-MUTATION`
+- Invariant: `INV-ENG-PUBLIC-SNAPSHOT-GLOBAL-VALIDITY`
+- Invariant: `INV-ENG-SHARED-SCENE-METADATA-CONTRACT`
 - Invariant: `INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY`
+- Invariant: `INV-ENG-BOUNDARY-HERMETIC-CONCRETE-TYPES`
 
 ## Status
 
-- `docs stale`
-- This slice creates the atlas route; the family is completed in the engine
-  family atlas slice.
+- `known issue`
+- Validated fast-path materialization remains tracked by
+  [KI-2](../../../KNOWN_ISSUES.md#ki-2); this family keeps the intended rule
+  explicit while the defect stays unresolved.
 
 ## Update Triggers
 

@@ -26,17 +26,29 @@ This family owns model-level document topology and mutation helpers.
 
 - `dart run tool/check_import_boundaries.dart`
 - `dart run tool/check_guardrails.dart`
+- `flutter test --no-pub test/model`
 
 ## Proof Links
 
 - Proof family: [invariant registry and proof reachability](../../proof_architecture/families/invariant_registry_and_proof_reachability.md)
+- Invariant: `INV-G-NODEID-UNIQUE`
+- Invariant: `INV-G-LAYERID-UNIQUE`
+- Invariant: `INV-G-SELECTION-NORMALIZED`
+- Invariant: `INV-G-GRID-ENABLE-CELL-SIZE-RELATION`
+- Invariant: `INV-ENG-ID-INDEX-FROM-SCENE`
+- Invariant: `INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER`
+- Invariant: `INV-ENG-COMMITTED-STORE-METADATA-CONTRACT`
+- Invariant: `INV-ENG-RUNTIME-SCENE-VALIDITY-BACKSTOP`
+- Invariant: `INV-ENG-PALETTE-RUNTIME-VALUE-OWNER`
+- Invariant: `INV-ENG-RUNTIME-NODE-VALUE-OWNERS`
 - Invariant: `INV-ENG-MODEL-ARCHITECTURE-BOUNDARY`
 
 ## Status
 
-- `docs stale`
-- This slice creates the atlas route; the family is completed in the engine
-  family atlas slice.
+- `known issue`
+- Model topology fast-path drift remains tracked by
+  [KI-5](../../../KNOWN_ISSUES.md#ki-5); scene topology remains the intended
+  source of truth for uniqueness and budget decisions.
 
 ## Update Triggers
 

@@ -53,6 +53,7 @@ route straight into that boundary.
 - `dart run tool/lsp_find_boundary_bypasses.dart lib/src/interactive/scene_controller_scene.dart SceneControllerSceneOwner --must-pass=SceneControllerMutationBoundary --depth=5`
 - `dart run tool/lsp_find_boundary_bypasses.dart lib/src/interactive/scene_controller_selection.dart SceneControllerSelectionOwner --must-pass=SceneControllerMutationBoundary --depth=5`
 - `dart run tool/lsp_find_thin_wrappers.dart lib/src/interactive --classification=pure-forwarder`
+- `flutter test --no-pub test/interactive test/controller`
 
 ## Proof Links
 
@@ -60,7 +61,12 @@ route straight into that boundary.
 - Proof family: [guardrail runner and artifact model](../../proof_architecture/families/guardrail_runner_and_artifact_model.md)
 - Guardrail: `dart run tool/check_guardrails.dart`
 - Import boundaries: `dart run tool/check_import_boundaries.dart`
-- Invariant: `INV-G-LAYER-DAG`
+- Invariant: `INV-ENG-WRITE-ONLY-MUTATION`
+- Invariant: `INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY`
+- Invariant: `INV-ENG-INTERACTIVE-RESOLVER-PURITY`
+- Invariant: `INV-ENG-INTERACTIVE-PUBLIC-MUTATION-EXCLUSIVITY`
+- Invariant: `INV-ENG-INTERACTIVE-MUTATION-BOUNDARY`
+- Invariant: `INV-ENG-COMMITTED-READ-SIDE-HERMETICITY`
 
 ## Status
 

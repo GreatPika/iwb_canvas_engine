@@ -1,4 +1,4 @@
-# View Runtime And Render Seam
+# View Runtime And Pointer Hosting
 
 ## Purpose
 
@@ -59,6 +59,7 @@ preview.
   Evidence:
   [pointer_input_flow.json](../evidence/pointer_input_flow.json),
   [pointer_input_flow.md](../evidence/pointer_input_flow.md)
+- `flutter test --no-pub test/view test/render test/interactive`
 
 ## Proof Links
 
@@ -66,7 +67,16 @@ preview.
 - Proof family: [guardrail runner and artifact model](../../proof_architecture/families/guardrail_runner_and_artifact_model.md)
 - Guardrail: `dart run tool/check_guardrails.dart`
 - Import boundaries: `dart run tool/check_import_boundaries.dart`
-- Invariant: `INV-G-LAYER-DAG`
+- Invariant: `INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE`
+- Invariant: `INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE`
+- Invariant: `INV-ENG-VIEW-ACTIVE-POINTER-GATE`
+- Invariant: `INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY`
+- Invariant: `INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE`
+- Invariant: `INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES`
+- Invariant: `INV-ENG-VIEW-POINTER-SESSION-DETACH`
+- Invariant: `INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY`
+- Invariant: `INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY`
+- Invariant: `INV-ENG-VIEW-RENDER-SURFACE-DEBUG-PROBES`
 
 ## Status
 

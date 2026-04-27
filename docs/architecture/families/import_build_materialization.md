@@ -25,17 +25,23 @@ runtime materialization.
 
 - `dart run tool/audit_route_expectations.dart`
 - `dart run tool/check_guardrails.dart`
+- `flutter test --no-pub test/model test/serialization`
 
 ## Proof Links
 
 - Proof family: [guardrail runner and artifact model](../../proof_architecture/families/guardrail_runner_and_artifact_model.md)
 - Invariant: `INV-ENG-VALIDATED-IMPORT-MATERIALIZATION-BOUNDARY`
+- Invariant: `INV-SER-IMPORT-DIAGNOSTIC-SURFACE`
 
 ## Status
 
-- `docs stale`
-- This slice creates the atlas route; the family is completed in the engine
-  family atlas slice.
+- `known issue`
+- `dart run tool/audit_route_expectations.dart` currently detects the
+  validated snapshot materialization failure tracked by
+  [KI-2](../../../KNOWN_ISSUES.md#ki-2). Import draft validation routes remain
+  represented by the passing route-audit rows and guardrail surface, but the
+  family cannot use locked status while the shared audit includes that active
+  defect.
 
 ## Update Triggers
 

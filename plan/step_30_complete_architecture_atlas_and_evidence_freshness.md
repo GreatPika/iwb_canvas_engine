@@ -953,7 +953,7 @@ claim stale generated artifacts as current architecture.
   is mechanically detected; `KI-9` and `KI-10` are removed only in the same
   change that adds the failing-first freshness regression proof.
 
-### Slice 4. [ ] Complete Engine Family Atlas
+### Slice 4. [x] Complete Engine Family Atlas
 
 #### Slice Contract
 
@@ -1019,7 +1019,7 @@ owner-family coverage without accepting known defects as target rules.
 - The engine atlas is complete enough for routing future code changes by owner
   family.
 
-### Slice 5. [ ] Complete Proof Family Atlas
+### Slice 5. [x] Complete Proof Family Atlas
 
 #### Slice Contract
 

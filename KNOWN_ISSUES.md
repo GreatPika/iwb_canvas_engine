@@ -288,3 +288,32 @@ Confirmed active defects only.
     before diff status is computed
 - Next action: Reject duplicate case names and mismatched `caseCount` during
   diff input parsing, before baseline/current cases are converted into maps.
+
+### KI-15
+
+- ID: `KI-15`
+- Severity: `P3`
+- Summary: Architecture family invariant ownership is enforced from a
+  checker-local map instead of a registry-owned source of truth, so future
+  invariant additions require manual synchronization across the invariant
+  registry, atlas checker, checker fixtures, and family docs.
+- Detection: Compare expected architecture-family invariant ids in
+  `tool/check_architecture_atlas.dart` and
+  `test/tool/architecture_atlas_tool_test.dart` with canonical invariant
+  definitions in `tool/invariant_registry.dart`.
+- Evidence:
+  - `tool/check_architecture_atlas.dart`
+  - `test/tool/architecture_atlas_tool_test.dart`
+  - `tool/invariant_registry.dart`
+  - `docs/architecture/families/*.md`
+  - Current detections:
+    `tool/check_architecture_atlas.dart` owns the
+    `family -> expected invariant ids` map separately from
+    `tool/invariant_registry.dart`;
+    `test/tool/architecture_atlas_tool_test.dart` keeps a parallel fixture map;
+    adding a new registry-backed invariant can pass invariant coverage while
+    still requiring manual atlas-family mapping updates.
+- Next action: Move architecture-family ownership for invariants into
+  `tool/invariant_registry.dart` or a registry-owned companion, then derive
+  atlas checker expectations and tests from that source so unmapped invariants
+  fail mechanically.

@@ -25,6 +25,155 @@ const Set<String> _expectedProofFamilyIds = <String>{
   'verification_contract_and_workflow_drift',
 };
 
+const Map<String, Set<String>> _expectedArchitectureFamilyInvariantIds =
+    <String, Set<String>>{
+      'public_package_boundary': <String>{
+        'INV-G-PUBLIC-ENTRYPOINTS',
+        'INV-ENG-NO-EXTERNAL-MUTATION',
+        'INV-ENG-PUBLIC-SNAPSHOT-GLOBAL-VALIDITY',
+        'INV-ENG-SHARED-SCENE-METADATA-CONTRACT',
+        'INV-ENG-SAFE-TXN-API',
+        'INV-ENG-PUBLIC-SURFACE-NO-MUTABLE-TYPES',
+        'INV-ENG-PUBLIC-SIGNATURE-HERMETICITY',
+      },
+      'contract_document_model_and_validated_fast_paths': <String>{
+        'INV-ENG-NO-EXTERNAL-MUTATION',
+        'INV-ENG-PUBLIC-SNAPSHOT-GLOBAL-VALIDITY',
+        'INV-ENG-SHARED-SCENE-METADATA-CONTRACT',
+        'INV-ENG-CONTRACT-ARCHITECTURE-BOUNDARY',
+        'INV-ENG-BOUNDARY-HERMETIC-CONCRETE-TYPES',
+      },
+      'import_build_materialization': <String>{
+        'INV-ENG-VALIDATED-IMPORT-MATERIALIZATION-BOUNDARY',
+        'INV-SER-IMPORT-DIAGNOSTIC-SURFACE',
+      },
+      'serialization_and_schema': <String>{
+        'INV-G-LAYER-BOUNDARIES',
+        'INV-ENG-SHARED-SCENE-METADATA-CONTRACT',
+        'INV-SER-JSON-NUMERIC-VALIDATION',
+        'INV-SER-IMPORT-DIAGNOSTIC-SURFACE',
+        'INV-SER-JSON-GRID-PALETTE-CONTRACTS',
+        'INV-SER-SHARED-STROKE-POINT-LIMIT',
+        'INV-SER-SHARED-PALETTE-ITEM-LIMIT',
+        'INV-SER-TEXT-DIRECTION-EXPLICIT',
+        'INV-SER-TYPED-LAYER-SPLIT',
+        'INV-SER-CANONICAL-BACKGROUND-LAYER',
+        'INV-SER-SCHEMA-VERSION-CONTRACT',
+        'INV-SER-UNSUPPORTED-SCHEMA-VERSION-CODE',
+      },
+      'core_scene_graph_geometry_and_spatial_indexes': <String>{
+        'INV-G-NODEID-UNIQUE',
+        'INV-G-LAYERID-UNIQUE',
+        'INV-G-LAYER-Z-ORDER-BY-LIST',
+        'INV-ENG-STROKE-RUNTIME-GEOMETRY-OWNER',
+        'INV-ENG-PALETTE-RUNTIME-VALUE-OWNER',
+        'INV-ENG-RUNTIME-NODE-VALUE-OWNERS',
+        'INV-ENG-EVENTS-IMMUTABLE',
+        'INV-ENG-CORE-ARCHITECTURE-BOUNDARY',
+        'INV-ENG-POINTER-SETTINGS-VALIDATION',
+        'INV-ENG-RENDER-HIT-BOUNDS-PARITY',
+        'INV-ENG-PAINT-ADMISSION-BOUNDS-SOURCE',
+        'INV-ENG-PATH-NODE-CACHE-INVALIDATION',
+      },
+      'model_document_mutation_and_topology': <String>{
+        'INV-G-NODEID-UNIQUE',
+        'INV-G-LAYERID-UNIQUE',
+        'INV-G-SELECTION-NORMALIZED',
+        'INV-G-GRID-ENABLE-CELL-SIZE-RELATION',
+        'INV-ENG-ID-INDEX-FROM-SCENE',
+        'INV-ENG-RUNTIME-SCENE-STRUCTURE-OWNER',
+        'INV-ENG-COMMITTED-STORE-METADATA-CONTRACT',
+        'INV-ENG-RUNTIME-SCENE-VALIDITY-BACKSTOP',
+        'INV-ENG-PALETTE-RUNTIME-VALUE-OWNER',
+        'INV-ENG-RUNTIME-NODE-VALUE-OWNERS',
+        'INV-ENG-MODEL-ARCHITECTURE-BOUNDARY',
+      },
+      'store_and_commit_path': <String>{
+        'INV-ENG-WRITE-ONLY-MUTATION',
+        'INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE',
+        'INV-ENG-TXN-WRITER-LIFETIME',
+        'INV-ENG-TXN-ATOMIC-COMMIT',
+        'INV-ENG-COMMITTED-SELECTION-REVISION-ALIGNMENT',
+        'INV-ENG-TXN-FINALIZED-BEFORE-COMMIT-PLAN',
+        'INV-ENG-TXN-COPY-ON-WRITE',
+        'INV-ENG-WRITE-PROTOCOL',
+        'INV-ENG-SIGNALS-AFTER-COMMIT',
+        'INV-ENG-WRITE-NUMERIC-GUARDS',
+        'INV-ENG-DISPOSE-FAIL-FAST',
+        'INV-ENG-CONTROLLER-COMMIT-RUNTIME-BOUNDARY',
+        'INV-ENG-SCENE-WRITE-TXN-ADAPTER-BOUNDARY',
+        'INV-ENG-CLEAR-SCENE-RESULT-REMOVED-NODE-IDS-IMMUTABLE',
+        'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY',
+      },
+      'composition_root_and_facade': <String>{
+        'INV-G-LAYER-DAG',
+        'INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE',
+        'INV-ENG-CONTROLLER-COMMIT-RUNTIME-BOUNDARY',
+        'INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY',
+        'INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY',
+        'INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY',
+      },
+      'interaction_runtime': <String>{
+        'INV-ENG-INTERACTIVE-ASYNC-DELIVERY',
+        'INV-ENG-INTERACTIVE-PUBLIC-LISTENER-REPAINT-INDEPENDENCE',
+        'INV-ENG-INTERACTIVE-HANDLE-POINTER-NON-REENTRANT',
+        'INV-ENG-INTERACTIVE-POINTER-FINITE',
+        'INV-ENG-POINTER-SETTINGS-VALIDATION',
+        'INV-ENG-INTERACTIVE-SINGLE-ACTIVE-POINTER',
+        'INV-ENG-INTERACTIVE-GESTURE-BUFFER-SOFT-CAP',
+        'INV-ENG-INTERACTIVE-CANCEL-STATE-RESET',
+        'INV-ENG-INTERACTIVE-INTERRUPTION-SEMANTICS',
+        'INV-ENG-INTERACTIVE-PREVIEW-COMMIT-ON-UP',
+        'INV-ENG-INTERACTIVE-RESOLVER-PURITY',
+        'INV-ENG-INTERACTIVE-MOVE-COMMIT-RESOLVER-NON-REENTRANT',
+        'INV-ENG-INTERACTIVE-PUBLIC-MUTATION-EXCLUSIVITY',
+        'INV-ENG-INTERACTIVE-ARCHITECTURE-BOUNDARY',
+        'INV-ENG-INTERACTIVE-MUTATION-BOUNDARY',
+        'INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE',
+        'INV-ENG-INTERACTIVE-DRAW-STYLE-SNAPSHOT',
+        'INV-ENG-TIMESTAMP-MS-MONOTONIC',
+        'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY',
+        'INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY',
+      },
+      'mutation_gateway': <String>{
+        'INV-ENG-WRITE-ONLY-MUTATION',
+        'INV-ENG-PREPARED-REPLACE-SCENE-BOUNDARY-HERMETICITY',
+        'INV-ENG-INTERACTIVE-RESOLVER-PURITY',
+        'INV-ENG-INTERACTIVE-PUBLIC-MUTATION-EXCLUSIVITY',
+        'INV-ENG-INTERACTIVE-MUTATION-BOUNDARY',
+        'INV-ENG-COMMITTED-READ-SIDE-HERMETICITY',
+      },
+      'view_runtime_and_pointer_hosting': <String>{
+        'INV-ENG-CONTROLLER-NO-FULL-VIEW-RENDER-STATE',
+        'INV-ENG-VIEW-POINTER-SLOT-LIFECYCLE',
+        'INV-ENG-VIEW-ACTIVE-POINTER-GATE',
+        'INV-ENG-VIEW-POINTER-SETTINGS-LIVE-APPLY',
+        'INV-ENG-INTERACTIVE-POINTER-SESSION-LIFECYCLE',
+        'INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES',
+        'INV-ENG-VIEW-POINTER-SESSION-DETACH',
+        'INV-ENG-VIEW-POINTER-SEMANTICS-BOUNDARY',
+        'INV-ENG-VIEW-RENDER-READ-STATE-BOUNDARY',
+        'INV-ENG-VIEW-RENDER-SURFACE-DEBUG-PROBES',
+      },
+      'render_frame_admission_and_caches': <String>{
+        'INV-ENG-EPOCH-INVALIDATION',
+        'INV-ENG-PERFORMANCE-PROOF-CONTOUR',
+        'INV-ENG-RENDER-HIT-BOUNDS-PARITY',
+        'INV-ENG-RENDER-GEOMETRY-KEY-STABLE',
+        'INV-ENG-RENDER-CACHE-SCAN-RESISTANT',
+        'INV-ENG-SELECTION-BOUNDED-COMPOSITING',
+        'INV-ENG-GRID-BOUNDED-ITERATION',
+        'INV-ENG-SCENE-PAINTER-FRAME-RESOLUTION',
+        'INV-ENG-PAINT-ADMISSION-BOUNDS-SOURCE',
+        'INV-ENG-SCENE-PAINTER-MODULE-BOUNDARY',
+      },
+      'diagnostics_performance_and_debug_surfaces': <String>{
+        'INV-ENG-PERFORMANCE-PROOF-CONTOUR',
+        'INV-ENG-VIEW-RUNTIME-HOST-DEBUG-PROBES',
+        'INV-ENG-VIEW-RENDER-SURFACE-DEBUG-PROBES',
+      },
+    };
+
 const Set<String> _allowedStatuses = <String>{
   'locked',
   'known issue',
@@ -49,6 +198,9 @@ final RegExp _invariantPattern = RegExp(
 );
 final RegExp _commandPattern = RegExp(
   r'dart run (tool/[^\s`]+\.dart)[^\r\n`]*',
+);
+final RegExp _flutterToolTestPattern = RegExp(
+  r'flutter test[^\r\n`]*\btest/tool(?:\b|/)',
 );
 final RegExp _jsonOutPattern = RegExp(r'--json-out=(?:"([^"]+)"|([^\s`]+))');
 final RegExp _mdOutPattern = RegExp(r'--md-out=(?:"([^"]+)"|([^\s`]+))');
@@ -222,6 +374,9 @@ class _AtlasChecker {
 
     _checkStatus(file, source);
     _checkInvariantIds(file, source);
+    if (kind == _FamilyKind.architecture) {
+      _checkExpectedFamilyInvariantIds(file, id, source);
+    }
     _checkEvidenceLinks(file, source);
     _checkToolCommands(file, source);
   }
@@ -314,6 +469,24 @@ class _AtlasChecker {
     }
   }
 
+  void _checkExpectedFamilyInvariantIds(File file, String id, String source) {
+    final expectedIds =
+        _expectedArchitectureFamilyInvariantIds[id] ?? const <String>{};
+    final actualIds = _invariantPattern
+        .allMatches(source)
+        .map((match) => _requireGroup(match, 0))
+        .toSet();
+    final missing = expectedIds.difference(actualIds).toList()..sort();
+    if (missing.isEmpty) {
+      return;
+    }
+
+    _failures.add(
+      '${_rel(file.path)} is missing expected invariant links: '
+      '${missing.map((missingId) => '`$missingId`').join(', ')}.',
+    );
+  }
+
   void _checkEvidenceLinks(File file, String source) {
     for (final match in _markdownLinkPattern.allMatches(source)) {
       final link = _requireGroup(match, 2);
@@ -329,6 +502,8 @@ class _AtlasChecker {
   }
 
   void _checkToolCommands(File file, String source) {
+    _checkToolTestCommands(file, source);
+
     final commandMatches = _commandPattern.allMatches(source).toList();
     if (commandMatches.isEmpty) {
       _failures.add(
@@ -346,6 +521,15 @@ class _AtlasChecker {
         );
       }
       _checkGeneratedEvidenceCommand(file, command, toolPath);
+    }
+  }
+
+  void _checkToolTestCommands(File file, String source) {
+    for (final match in _flutterToolTestPattern.allMatches(source)) {
+      _failures.add(
+        '${_rel(file.path)} must run test/tool/** through '
+        '`dart run tool/run_tool_tests.dart`, not `${_requireGroup(match, 0)}`.',
+      );
     }
   }
 
