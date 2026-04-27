@@ -16,6 +16,8 @@ the entrypoint into the deeper docs.
 - A public runtime rooted at `SceneController`.
 - A ready-to-use Flutter host widget, `SceneView`.
 - Transactional scene writes through `SceneWriteTxn`.
+- Draw-mode interaction state is cleaned before rethrow if terminal stroke,
+  line, or eraser commits fail.
 - Stable content-layer addressing through `layerId`, including same-write layer
   insertion before later node mutations.
 - Eager public validation for snapshots, node specs, and node patches before

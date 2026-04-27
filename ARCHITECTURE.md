@@ -638,6 +638,9 @@ Architectural consequences:
 - runtime-owned pointer-session lifecycle stays in `interactive/**`, while the
   concrete session keeps tracker/timer ownership
 - gesture previews are ephemeral and are not committed scene state
+- terminal draw cleanup is exception-safe at the draw owner seams; commit or
+  action-emission failures rethrow after gesture, preview, pending-line, and
+  tool-local buffers are cleaned
 - external public mutations are guarded during active gesture ownership
 - successful same-runtime epoch breaks reset pending tap history synchronously,
   and controller disposal deactivates live sessions so late routed callbacks
@@ -747,6 +750,8 @@ important for architectural reasoning.
 ### Interaction and render invariants
 
 - interactive previews remain ephemeral until commit
+- interactive terminal cleanup must remain exception-safe across draw, move,
+  and pointer-session owner seams
 - interactive callback contracts expose immutable request/value boundaries, and
   exported callback typedef parameter shapes must not expose raw
   `List` / `Map` / `Set` types anywhere inside the callback parameter graph

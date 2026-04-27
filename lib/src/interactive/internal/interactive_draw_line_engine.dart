@@ -190,13 +190,16 @@ class InteractiveDrawLineEngine {
     required Offset down,
     required InteractiveDrawStyle style,
   }) {
-    _emitLineCommit(
-      timestampMs: interaction.timestampMs,
-      start: down,
-      end: interaction.scenePoint,
-      style: style,
-    );
-    clearPendingLineOwnedBy(interaction.sessionToken);
+    try {
+      _emitLineCommit(
+        timestampMs: interaction.timestampMs,
+        start: down,
+        end: interaction.scenePoint,
+        style: style,
+      );
+    } finally {
+      clearPendingLineOwnedBy(interaction.sessionToken);
+    }
   }
 
   void _emitLineCommit({

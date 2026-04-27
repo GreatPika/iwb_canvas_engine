@@ -77,21 +77,23 @@ class InteractiveDrawStrokeEngine {
     final thickness = isHighlighter
         ? style.highlighterThickness
         : style.penThickness;
-    final strokeId = callbacks.commitDrawStroke(
-      points: committedPoints,
-      thickness: thickness,
-      color: style.drawColor,
-      opacity: isHighlighter ? style.highlighterOpacity : 1,
-    );
+    try {
+      final strokeId = callbacks.commitDrawStroke(
+        points: committedPoints,
+        thickness: thickness,
+        color: style.drawColor,
+        opacity: isHighlighter ? style.highlighterOpacity : 1,
+      );
 
-    _actionEmitter.emitStrokeCommit(
-      nodeId: strokeId,
-      timestampMs: timestampMs,
-      style: style,
-      isHighlighter: isHighlighter,
-      thickness: thickness,
-    );
-
-    _pathBuffer.clear();
+      _actionEmitter.emitStrokeCommit(
+        nodeId: strokeId,
+        timestampMs: timestampMs,
+        style: style,
+        isHighlighter: isHighlighter,
+        thickness: thickness,
+      );
+    } finally {
+      _pathBuffer.clear();
+    }
   }
 }

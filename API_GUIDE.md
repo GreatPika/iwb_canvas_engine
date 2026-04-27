@@ -382,6 +382,9 @@ Important notes:
   `handlePointer(...)` and `handleDoubleTap(...)` are for custom hosts.
 - Two-tap line flows expose `pendingLineColor` and `pendingLineThickness` so
   host UI can mirror the pending commit style.
+- Draw terminal cleanup is exception-safe. If a terminal stroke, dragged-line,
+  eraser commit, or draw action emission throws, the exception still propagates
+  after gesture, preview, pending-line, and tool-local buffers are cleaned.
 - Public scene and selection mutations are gesture-exclusive. During an active
   draw or move gesture, scene/selection mutation APIs may throw `StateError`.
 - `PointerInputSettings` is treated as a value object and can be replaced live.

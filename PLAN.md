@@ -51,4 +51,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 29. Node Patch Non-Nullable Field Admission](plan/step_29_node_patch_non_nullable_field_admission.md)
 - [x] [Step 30. Complete Architecture Atlas And Evidence Freshness](plan/step_30_complete_architecture_atlas_and_evidence_freshness.md)
 - [x] [Step 31. Validated Snapshot Fast-Path Admission](plan/step_31_validated_snapshot_fast_path_admission.md)
-- [ ] [Step 32. Exception-Safe Draw Terminal Cleanup](plan/step_32_exception_safe_draw_terminal_cleanup.md)
+- [x] [Step 32. Exception-Safe Draw Terminal Cleanup](plan/step_32_exception_safe_draw_terminal_cleanup.md)

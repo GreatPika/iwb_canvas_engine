@@ -26,35 +26,6 @@ Confirmed active defects only.
 
 ## Active Issues
 
-### KI-3
-
-- ID: `KI-3`
-- Severity: `P1`
-- Summary: Interactive draw terminal cleanup is not exception-safe, so draw
-  session, preview, or buffer state can survive a failing terminal commit path.
-- Detection:
-  `dart run tool/audit_terminal_cleanup_safety.dart`,
-  `dart run tool/audit_post_commit_cleanup_order.dart`
-- Evidence:
-  - `lib/src/interactive/internal/interactive_draw_terminal_router.dart`
-  - `lib/src/interactive/internal/interactive_draw_stroke_engine.dart`
-  - `lib/src/interactive/internal/interactive_draw_line_engine.dart`
-  - `lib/src/interactive/internal/interactive_draw_eraser_engine.dart`
-  - Broad `lib/src` sweep currently adds no extra families beyond draw terminal
-    cleanup; `InteractiveMoveSession._moveHandleUp` already uses `finally`.
-  - Current terminal-cleanup detections:
-    `InteractiveDrawTerminalRouter.handleUp`,
-    `InteractiveDrawStrokeEngine.commitOnUp`,
-    `InteractiveDrawLineEngine._commitDraggedLine`,
-    `InteractiveDrawEraserEngine.commitOnUp`
-  - Current post-commit cleanup-order detections:
-    `InteractiveDrawTerminalRouter.handleUp`,
-    `InteractiveDrawStrokeEngine.commitOnUp`,
-    `InteractiveDrawLineEngine._commitDraggedLine`
-- Next action: Guarantee terminal draw cleanup through `finally` at the draw
-  owner seam and add regression tests for failing stroke, line, and eraser
-  commits.
-
 ### KI-4
 
 - ID: `KI-4`

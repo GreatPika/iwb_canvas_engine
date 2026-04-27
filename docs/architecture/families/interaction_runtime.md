@@ -104,10 +104,11 @@ wiring into a separate mutation gateway.
 
 ## Status
 
-- `known issue`
-- Move and pointer-session ownership matches the accepted local form, but draw
-  terminal cleanup remains tracked by
-  [KI-3](../../../KNOWN_ISSUES.md#ki-3).
+- `locked`
+- Move, draw, and pointer-session terminal cleanup match the accepted local
+  owner form. Draw terminal cleanup is exception-safe at the router and
+  tool-local engine seams without moving committed-write ownership out of
+  `SceneControllerMutationBoundary`.
 
 ## Update Triggers
 

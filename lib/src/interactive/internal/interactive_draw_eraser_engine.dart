@@ -82,12 +82,14 @@ class InteractiveDrawEraserEngine {
 
     _pathBuffer.appendTerminalPoint(scenePoint, enforceSoftLimit: true);
 
-    final deletedIds = _eraseAnnotations(
-      _pathBuffer.points,
-      eraserThickness: eraserThickness,
-    );
-    _pathBuffer.clear();
-    return deletedIds;
+    try {
+      return _eraseAnnotations(
+        _pathBuffer.points,
+        eraserThickness: eraserThickness,
+      );
+    } finally {
+      _pathBuffer.clear();
+    }
   }
 
   List<NodeId> _eraseAnnotations(

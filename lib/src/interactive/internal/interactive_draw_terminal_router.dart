@@ -46,42 +46,44 @@ class InteractiveDrawTerminalRouter {
       return;
     }
 
-    switch (capturedStyle.drawTool) {
-      case DrawTool.pen:
-      case DrawTool.highlighter:
-        strokeEngine.commitOnUp(
-          sample.timestampMs,
-          scenePoint,
-          style: capturedStyle,
-        );
-        break;
-      case DrawTool.line:
-        lineEngine.commitOnUp((
-          timestampMs: sample.timestampMs,
-          scenePoint: scenePoint,
-          downScene: gestureSession.downScene,
-          moved: gestureSession.moved,
-          dragStartSlop: dragStartSlop,
-          capturedStyle: capturedStyle,
-          sessionToken: gestureSession.sessionToken,
-        ));
-        break;
-      case DrawTool.eraser:
-        final deletedIds = eraserEngine.commitOnUp(
-          scenePoint,
-          eraserThickness: capturedStyle.eraserThickness,
-        );
-        if (deletedIds.isNotEmpty) {
-          _actionEmitter.emitEraseCommit(
-            nodeIds: deletedIds,
+    try {
+      switch (capturedStyle.drawTool) {
+        case DrawTool.pen:
+        case DrawTool.highlighter:
+          strokeEngine.commitOnUp(
+            sample.timestampMs,
+            scenePoint,
+            style: capturedStyle,
+          );
+          break;
+        case DrawTool.line:
+          lineEngine.commitOnUp((
             timestampMs: sample.timestampMs,
+            scenePoint: scenePoint,
+            downScene: gestureSession.downScene,
+            moved: gestureSession.moved,
+            dragStartSlop: dragStartSlop,
+            capturedStyle: capturedStyle,
+            sessionToken: gestureSession.sessionToken,
+          ));
+          break;
+        case DrawTool.eraser:
+          final deletedIds = eraserEngine.commitOnUp(
+            scenePoint,
             eraserThickness: capturedStyle.eraserThickness,
           );
-        }
-        break;
+          if (deletedIds.isNotEmpty) {
+            _actionEmitter.emitEraseCommit(
+              nodeIds: deletedIds,
+              timestampMs: sample.timestampMs,
+              eraserThickness: capturedStyle.eraserThickness,
+            );
+          }
+          break;
+      }
+    } finally {
+      gestureSession.clear();
+      lineEngine.resetGestureState();
     }
-
-    gestureSession.clear();
-    lineEngine.resetGestureState();
   }
 }

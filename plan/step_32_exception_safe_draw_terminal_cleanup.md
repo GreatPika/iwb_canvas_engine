@@ -525,7 +525,7 @@ Not used. The architectural form is locked in 4A.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Reproduce and close shared router plus stroke cleanup
+### Slice 1. [x] Reproduce and close shared router plus stroke cleanup
 
 #### Slice Contract
 
@@ -580,7 +580,7 @@ correct even when the stroke terminal commit path throws.
 - new stroke/router reproducers are green
 - targeted standalone audits no longer report the router/stroke findings
 
-### Slice 2. [ ] Reproduce and close line plus eraser owner cleanup
+### Slice 2. [x] Reproduce and close line plus eraser owner cleanup
 
 #### Slice Contract
 
@@ -636,7 +636,7 @@ semantics.
 - new line/eraser reproducers and neighboring guards are green
 - targeted standalone audits no longer report the line/eraser findings
 
-### Slice 3. [ ] Close repository proof and issue tracking for KI-3
+### Slice 3. [x] Close repository proof and issue tracking for KI-3
 
 #### Slice Contract
 

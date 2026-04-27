@@ -76,6 +76,9 @@ in changes that have not yet been published to pub.dev.
 
 ### Fixed
 
+- Fixed draw-mode terminal cleanup so failing stroke, dragged-line, eraser, or
+  draw action-emission paths clear gesture, preview, pending-line, and
+  tool-local buffer state before rethrowing.
 - Fixed validated snapshot fast paths so raw snapshot backing carriers can no
   longer be exposed as public `SceneSnapshot` or `NodeSnapshot` objects without
   crossing the model-owned validation and projection path.
