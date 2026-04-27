@@ -40,9 +40,9 @@ known architectural defects that must not be normalized as target architecture.
 - require every generated evidence artifact to name its checked-in generator
   command, including the exact `--json-out` and `--md-out` or `--mermaid-out`
   paths used to refresh the committed files
-- enforce that every engine architecture family has proof links to the proof
-  families, invariant ids, guardrail/audit commands, and generated evidence
-  that hold or observe that family
+- enforce that every engine architecture family has `Proof Links` to the proof
+  families, guardrail/audit commands, generated evidence, and registry-backed
+  invariant ids when such invariants exist
 - derive proof-link validity from code-owned registries and tools, not from
   other Markdown documents
 - enforce that atlas evidence freshness is checked mechanically from
@@ -308,8 +308,9 @@ known architectural defects that must not be normalized as target architecture.
   - audit evidence: the specific `dart run tool/audit_*.dart` command named by
     the family
 - Engine family docs include a short `Proof Links` section that links to proof
-  families, invariant ids, guardrail/audit commands, and generated evidence
-  without duplicating proof-family internals.
+  families, guardrail/audit commands, generated evidence, and registry-backed
+  invariant ids when such invariants exist, without duplicating proof-family
+  internals.
 - Existing Markdown tests may keep only entrypoint/link smoke assertions. They
   must not infer architecture meaning from prose.
 - Family status vocabulary is:
@@ -451,8 +452,9 @@ known architectural defects that must not be normalized as target architecture.
    `docs/proof_architecture/overview.md` and has a matching family document.
 4. Every family has a concise normative document with purpose, target rules,
    owners, forbidden shapes, mechanical evidence, status, and update triggers.
-5. Every engine architecture family has explicit proof links to existing proof
-   families, invariant ids, guardrail/audit commands, and generated evidence.
+5. Every engine architecture family has explicit `Proof Links` to existing
+   proof families, guardrail/audit commands, generated evidence, and
+   registry-backed invariant ids when such invariants exist.
 6. Every generated evidence artifact named by family docs is fresh against its
    repository-local generator command.
 7. The atlas checker fails when a family is missing, a generated evidence file
@@ -714,6 +716,10 @@ known architectural defects that must not be normalized as target architecture.
 - `Proof Links` sections must support proof-family file links, `INV-*` ids,
   guardrail command paths, and audit command paths for engine architecture
   families.
+- `INV-*` ids are required only when the family has a registry-backed invariant
+  in `tool/invariant_registry.dart`; otherwise the family must state that no
+  registry-backed invariant exists and still name at least one guardrail, audit,
+  or generated evidence command.
 - Family docs must support `Update Triggers` so contributors know when to
   refresh evidence or family docs.
 
@@ -723,9 +729,8 @@ known architectural defects that must not be normalized as target architecture.
   evidence.
 - A family may cite multiple evidence commands when one command cannot prove the
   whole boundary.
-- A family may declare no invariant ids only when its `Proof Links` section
-  explicitly says why and still names at least one guardrail, audit, or evidence
-  command.
+- A family may declare no invariant ids only under the registry-backed
+  invariant rule above.
 - A family may be `known issue` at final closure when the defect is confirmed,
   linked, mechanically evidenced, and outside this change boundary.
 - Markdown entry/link smoke tests may remain if they do not infer semantic
@@ -961,7 +966,8 @@ owner-family coverage without accepting known defects as target rules.
   `docs/architecture/execution_flows.md`, and family links to include all
   engine families named in section 5.
 - For each family, cite existing structural checks, behavioral suites, audits,
-  generated evidence, proof-family links, invariant ids, and update triggers.
+  generated evidence, proof-family links, applicable registry-backed invariant
+  ids, and update triggers.
 - Add a concise `Proof Links` section to every engine architecture family; it
   must link to proof families and code-owned checks without duplicating
   proof-family explanations.
@@ -1180,7 +1186,8 @@ the plan step only after final verification passes.
 - The atlas checker enforces the exact expected family id set from section 5
   and rejects missing, duplicate, or unknown family ids.
 - Every engine architecture family has checked proof links to existing proof
-  families, invariant ids, guardrail/audit commands, and evidence commands.
+  families, guardrail/audit commands, evidence commands, and registry-backed
+  invariant ids when such invariants exist.
 - Committed generated evidence is fresh for every freshness-checkable artifact.
 - No committed evidence artifact is orphaned.
 - No `docs stale` family remains.
