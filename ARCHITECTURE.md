@@ -755,8 +755,9 @@ important for architectural reasoning.
   from the frame-captured render preview seam
 - overlay repaint ownership stays separate from the main scene render surface
 
-Canonical invariant ids plus required-versus-regression proof declarations live
-in `tool/invariant_registry.dart`. Executable verification steps, presets,
+Canonical invariant ids, architecture-family invariant ownership, and
+required-versus-regression proof declarations live in
+`tool/invariant_registry.dart`. Executable verification steps, presets,
 trigger filters, scope ids, and workflow expectations live in
 `tool/src/verification_contract/verification_contract_registry.dart`.
 
@@ -806,7 +807,8 @@ alone.
   contract.
 - `tool/check_architecture_atlas.dart`
   Checks the architecture atlas family registry, proof links, generated
-  evidence references, and freshness of committed atlas evidence.
+  evidence references, registry-owned family invariant expectations, and
+  freshness of committed atlas evidence.
 - `test/render/scene_painter_bounds_contract_test.dart`  
   Locks the scene-painter frame/admission boundary and rejects direct heavy
   snapshot geometry calls from admission modules.

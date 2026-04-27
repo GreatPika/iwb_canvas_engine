@@ -3,13 +3,15 @@
 ## Purpose
 
 This family fixes the target shape for invariant bookkeeping: invariant ids,
-required proof paths, regression surfaces, and required-code-change reachability
-must stay explicit and mechanically checked.
+architecture-family ownership, required proof paths, regression surfaces, and
+required-code-change reachability must stay explicit and mechanically checked.
 
 ## Target Rules
 
 - Keep invariant ids, scopes, titles, and proof paths in one checked-in
   registry.
+- Keep architecture-family invariant expectations registry-owned so atlas docs
+  and atlas checker fixtures cannot drift through parallel maps.
 - Require every invariant to name at least one executable required proof
   surface.
 - Require required proofs to stay reachable from the `required_code_change`
@@ -26,6 +28,7 @@ must stay explicit and mechanically checked.
 ## Forbidden Shapes
 
 - Invariants without executable required proofs.
+- Architecture-family invariant expectations owned by checker-local maps.
 - Required proof paths that are unreachable from `required_code_change`.
 - Regression surfaces that drift without matching invariant markers.
 
@@ -38,8 +41,9 @@ must stay explicit and mechanically checked.
 ## Status
 
 - `locked`
-- Current mechanical coverage is green, and proof reachability remains explicit
-  in the invariant registry plus verification-contract registry.
+- Current mechanical coverage is green, and proof reachability plus
+  architecture-family invariant ownership remain explicit in the invariant
+  registry plus verification-contract registry.
 
 ## Update Triggers
 
