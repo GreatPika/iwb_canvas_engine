@@ -202,8 +202,10 @@ Future<List<Map<String, Object?>>> _collectCallTree(
     method: method,
     includeExternal: includeExternal,
   );
+  final sortedEntries = entries.toList(growable: false)
+    ..sort(_compareCallItems);
   final result = <Map<String, Object?>>[];
-  for (final mapped in entries) {
+  for (final mapped in sortedEntries) {
     final next = <String, Object?>{
       'name': mapped.name,
       'detail': mapped.detail,
@@ -221,6 +223,26 @@ Future<List<Map<String, Object?>>> _collectCallTree(
   return result;
 }
 
+int _compareCallItems(LspCallItem left, LspCallItem right) {
+  final pathCompare = left.repoRelativePath.compareTo(right.repoRelativePath);
+  if (pathCompare != 0) {
+    return pathCompare;
+  }
+  final detailCompare = left.detail.compareTo(right.detail);
+  if (detailCompare != 0) {
+    return detailCompare;
+  }
+  final nameCompare = left.name.compareTo(right.name);
+  if (nameCompare != 0) {
+    return nameCompare;
+  }
+  final lineCompare = left.line.compareTo(right.line);
+  if (lineCompare != 0) {
+    return lineCompare;
+  }
+  return left.character.compareTo(right.character);
+}
+
 Map<String, int> _countLocationsByFile(
   LanguageServerClient client,
   List<Object?> rawLocations,
@@ -231,7 +253,8 @@ Map<String, int> _countLocationsByFile(
     final path = client.toRepoRelativePath(cast['uri'] as String? ?? '');
     counts.update(path, (value) => value + 1, ifAbsent: () => 1);
   }
-  return counts;
+  final sortedPaths = counts.keys.toList(growable: false)..sort();
+  return <String, int>{for (final path in sortedPaths) path: counts[path]!};
 }
 
 List<Map<String, Object?>> _mapLocations(
@@ -252,7 +275,22 @@ List<Map<String, Object?>> _mapLocations(
           'character': (start['character'] as int? ?? 0) + 1,
         };
       })
-      .toList(growable: false);
+      .toList(growable: false)
+    ..sort(_compareLocations);
+}
+
+int _compareLocations(Map<String, Object?> left, Map<String, Object?> right) {
+  final pathCompare = (left['path'] as String).compareTo(
+    right['path'] as String,
+  );
+  if (pathCompare != 0) {
+    return pathCompare;
+  }
+  final lineCompare = (left['line'] as int).compareTo(right['line'] as int);
+  if (lineCompare != 0) {
+    return lineCompare;
+  }
+  return (left['character'] as int).compareTo(right['character'] as int);
 }
 
 void _writeTree(

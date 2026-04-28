@@ -3,16 +3,21 @@
   "kind": "getter",
   "path": "lib/src/contract/scene_view_runtime.dart",
   "referencesByFile": {
-    "test/contract/runtime_contract_interfaces_test.dart": 5,
-    "test/interactive/core/scene_controller_public_listener_contract_test.dart": 3,
-    "lib/src/view/scene_view_runtime_host.dart": 1,
+    "lib/src/contract/scene_view_runtime.dart": 1,
     "lib/src/interactive/scene_controller.dart": 1,
-    "lib/src/contract/scene_view_runtime.dart": 1
+    "lib/src/view/scene_view_runtime_host.dart": 1,
+    "test/contract/runtime_contract_interfaces_test.dart": 5,
+    "test/interactive/core/scene_controller_public_listener_contract_test.dart": 3
   },
   "implementations": [
     {
+      "path": "lib/src/interactive/internal/scene_controller_scene_view_runtime.dart",
+      "line": 61,
+      "character": 35
+    },
+    {
       "path": "test/view/scene_view_interactive_test.dart",
-      "line": 2930,
+      "line": 2737,
       "character": 35
     },
     {
@@ -22,65 +27,18 @@
     },
     {
       "path": "test/view/scene_view_interactive_test.dart",
-      "line": 2737,
-      "character": 35
-    },
-    {
-      "path": "lib/src/interactive/internal/scene_controller_scene_view_runtime.dart",
-      "line": 61,
+      "line": 2930,
       "character": 35
     }
   ],
   "incoming": [
-    {
-      "name": "main",
-      "detail": "runtime_contract_interfaces_test.dart",
-      "path": "test/contract/runtime_contract_interfaces_test.dart",
-      "children": []
-    },
-    {
-      "name": "main",
-      "detail": "scene_controller_public_listener_contract_test.dart",
-      "path": "test/interactive/core/scene_controller_public_listener_contract_test.dart",
-      "children": []
-    },
-    {
-      "name": "build",
-      "detail": "_SceneViewRuntimeHostState",
-      "path": "lib/src/view/scene_view_runtime_host.dart",
-      "children": []
-    },
     {
       "name": "get _overlayPreviewRead",
       "detail": "SceneController",
       "path": "lib/src/interactive/scene_controller.dart",
       "children": [
         {
-          "name": "get activeStrokePreviewPoints",
-          "detail": "SceneController",
-          "path": "lib/src/interactive/scene_controller.dart",
-          "children": []
-        },
-        {
-          "name": "get selectionRect",
-          "detail": "SceneController",
-          "path": "lib/src/interactive/scene_controller.dart",
-          "children": []
-        },
-        {
-          "name": "get cameraOffset",
-          "detail": "SceneController",
-          "path": "lib/src/interactive/scene_controller.dart",
-          "children": []
-        },
-        {
-          "name": "get activeLinePreviewThickness",
-          "detail": "SceneController",
-          "path": "lib/src/interactive/scene_controller.dart",
-          "children": []
-        },
-        {
-          "name": "get hasActiveStrokePreview",
+          "name": "get activeLinePreviewColor",
           "detail": "SceneController",
           "path": "lib/src/interactive/scene_controller.dart",
           "children": []
@@ -92,19 +50,13 @@
           "children": []
         },
         {
-          "name": "get activeLinePreviewColor",
-          "detail": "SceneController",
-          "path": "lib/src/interactive/scene_controller.dart",
-          "children": []
-        },
-        {
           "name": "get activeLinePreviewStart",
           "detail": "SceneController",
           "path": "lib/src/interactive/scene_controller.dart",
           "children": []
         },
         {
-          "name": "get activeStrokePreviewThickness",
+          "name": "get activeLinePreviewThickness",
           "detail": "SceneController",
           "path": "lib/src/interactive/scene_controller.dart",
           "children": []
@@ -116,18 +68,66 @@
           "children": []
         },
         {
+          "name": "get activeStrokePreviewOpacity",
+          "detail": "SceneController",
+          "path": "lib/src/interactive/scene_controller.dart",
+          "children": []
+        },
+        {
+          "name": "get activeStrokePreviewPoints",
+          "detail": "SceneController",
+          "path": "lib/src/interactive/scene_controller.dart",
+          "children": []
+        },
+        {
+          "name": "get activeStrokePreviewThickness",
+          "detail": "SceneController",
+          "path": "lib/src/interactive/scene_controller.dart",
+          "children": []
+        },
+        {
+          "name": "get cameraOffset",
+          "detail": "SceneController",
+          "path": "lib/src/interactive/scene_controller.dart",
+          "children": []
+        },
+        {
           "name": "get hasActiveLinePreview",
           "detail": "SceneController",
           "path": "lib/src/interactive/scene_controller.dart",
           "children": []
         },
         {
-          "name": "get activeStrokePreviewOpacity",
+          "name": "get hasActiveStrokePreview",
+          "detail": "SceneController",
+          "path": "lib/src/interactive/scene_controller.dart",
+          "children": []
+        },
+        {
+          "name": "get selectionRect",
           "detail": "SceneController",
           "path": "lib/src/interactive/scene_controller.dart",
           "children": []
         }
       ]
+    },
+    {
+      "name": "build",
+      "detail": "_SceneViewRuntimeHostState",
+      "path": "lib/src/view/scene_view_runtime_host.dart",
+      "children": []
+    },
+    {
+      "name": "main",
+      "detail": "runtime_contract_interfaces_test.dart",
+      "path": "test/contract/runtime_contract_interfaces_test.dart",
+      "children": []
+    },
+    {
+      "name": "main",
+      "detail": "scene_controller_public_listener_contract_test.dart",
+      "path": "test/interactive/core/scene_controller_public_listener_contract_test.dart",
+      "children": []
     }
   ],
   "outgoing": []

@@ -1,6 +1,7 @@
 @Tags(['tool'])
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
@@ -64,6 +65,13 @@ void main() {
           jsonFile.readAsStringSync(),
           contains('"symbol": "Sink.addNode"'),
         );
+        final jsonMap =
+            jsonDecode(jsonFile.readAsStringSync()) as Map<String, Object?>;
+        final referencePaths =
+            (jsonMap['referencesByFile'] as Map<String, Object?>).keys.toList();
+        expect(referencePaths, orderedEquals(referencePaths.toList()..sort()));
+        _expectCallTreeSorted(jsonMap['incoming'] as List<Object?>);
+        _expectCallTreeSorted(jsonMap['outgoing'] as List<Object?>);
         expect(mermaidFile.readAsStringSync(), contains('```mermaid'));
         expect(mermaidFile.readAsStringSync(), contains('flowchart LR'));
         expect(mermaidFile.readAsStringSync(), contains('```'));
@@ -72,6 +80,23 @@ void main() {
       }
     });
   });
+}
+
+void _expectCallTreeSorted(List<Object?> nodes) {
+  final mappedNodes = nodes.cast<Map<String, Object?>>();
+  final keys = mappedNodes.map(_callTreeSortKey).toList();
+  expect(keys, orderedEquals(keys.toList()..sort()));
+  for (final node in mappedNodes) {
+    _expectCallTreeSorted(node['children'] as List<Object?>);
+  }
+}
+
+String _callTreeSortKey(Map<String, Object?> node) {
+  return [
+    node['path'] as String? ?? '',
+    node['detail'] as String? ?? '',
+    node['name'] as String? ?? '',
+  ].join('\u{0}');
 }
 
 Future<Directory> _createSandbox() {

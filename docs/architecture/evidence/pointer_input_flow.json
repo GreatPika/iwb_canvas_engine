@@ -3,8 +3,8 @@
   "kind": "method",
   "path": "lib/src/view/scene_view_interactive_pointer_host.dart",
   "referencesByFile": {
-    "lib/src/view/scene_view_runtime_host.dart": 4,
-    "lib/src/view/scene_view_interactive_pointer_host.dart": 1
+    "lib/src/view/scene_view_interactive_pointer_host.dart": 1,
+    "lib/src/view/scene_view_runtime_host.dart": 4
   },
   "implementations": [],
   "incoming": [],
@@ -15,14 +15,56 @@
       "path": "lib/src/view/scene_view_interactive_pointer_host.dart",
       "children": [
         {
-          "name": "_shouldDropInvalidFiniteAdmission",
-          "detail": "scene_view_interactive_pointer_host.dart",
+          "name": "handleRawPointerRelease",
+          "detail": "SceneViewPointerSession",
+          "path": "lib/src/contract/scene_view_runtime.dart",
+          "children": []
+        },
+        {
+          "name": "handleRoutedSample",
+          "detail": "SceneViewPointerSession",
+          "path": "lib/src/contract/scene_view_runtime.dart",
+          "children": []
+        },
+        {
+          "name": "_forwardInvalidTerminalHostEvent",
+          "detail": "_SceneViewInteractivePointerRuntime",
           "path": "lib/src/view/scene_view_interactive_pointer_host.dart",
           "children": [
             {
-              "name": "_hasFiniteLocalPosition",
+              "name": "handleInvalidTerminalSample",
+              "detail": "SceneViewPointerSession",
+              "path": "lib/src/contract/scene_view_runtime.dart",
+              "children": []
+            },
+            {
+              "name": "handleRawPointerRelease",
+              "detail": "SceneViewPointerSession",
+              "path": "lib/src/contract/scene_view_runtime.dart",
+              "children": []
+            },
+            {
+              "name": "_canvasPointerInputFromSample",
               "detail": "scene_view_interactive_pointer_host.dart",
               "path": "lib/src/view/scene_view_interactive_pointer_host.dart",
+              "children": []
+            },
+            {
+              "name": "_pointerSampleFromEvent",
+              "detail": "scene_view_interactive_pointer_host.dart",
+              "path": "lib/src/view/scene_view_interactive_pointer_host.dart",
+              "children": []
+            },
+            {
+              "name": "_routePointerId",
+              "detail": "scene_view_interactive_pointer_host.dart",
+              "path": "lib/src/view/scene_view_interactive_pointer_host.dart",
+              "children": []
+            },
+            {
+              "name": "release",
+              "detail": "SceneViewPointerRouter",
+              "path": "lib/src/view/scene_view_pointer_router.dart",
               "children": []
             }
           ]
@@ -47,66 +89,10 @@
           ]
         },
         {
-          "name": "_forwardInvalidTerminalHostEvent",
-          "detail": "_SceneViewInteractivePointerRuntime",
-          "path": "lib/src/view/scene_view_interactive_pointer_host.dart",
-          "children": [
-            {
-              "name": "_routePointerId",
-              "detail": "scene_view_interactive_pointer_host.dart",
-              "path": "lib/src/view/scene_view_interactive_pointer_host.dart",
-              "children": []
-            },
-            {
-              "name": "_canvasPointerInputFromSample",
-              "detail": "scene_view_interactive_pointer_host.dart",
-              "path": "lib/src/view/scene_view_interactive_pointer_host.dart",
-              "children": []
-            },
-            {
-              "name": "_pointerSampleFromEvent",
-              "detail": "scene_view_interactive_pointer_host.dart",
-              "path": "lib/src/view/scene_view_interactive_pointer_host.dart",
-              "children": []
-            },
-            {
-              "name": "release",
-              "detail": "SceneViewPointerRouter",
-              "path": "lib/src/view/scene_view_pointer_router.dart",
-              "children": []
-            },
-            {
-              "name": "handleInvalidTerminalSample",
-              "detail": "SceneViewPointerSession",
-              "path": "lib/src/contract/scene_view_runtime.dart",
-              "children": []
-            },
-            {
-              "name": "handleRawPointerRelease",
-              "detail": "SceneViewPointerSession",
-              "path": "lib/src/contract/scene_view_runtime.dart",
-              "children": []
-            }
-          ]
-        },
-        {
-          "name": "_routePointerId",
+          "name": "_isTerminalPhase",
           "detail": "scene_view_interactive_pointer_host.dart",
           "path": "lib/src/view/scene_view_interactive_pointer_host.dart",
-          "children": [
-            {
-              "name": "route",
-              "detail": "SceneViewPointerRouter",
-              "path": "lib/src/view/scene_view_pointer_router.dart",
-              "children": []
-            },
-            {
-              "name": "get isStray",
-              "detail": "SceneViewPointerRouteResult",
-              "path": "lib/src/view/scene_view_pointer_router.dart",
-              "children": []
-            }
-          ]
+          "children": []
         },
         {
           "name": "_pointerSampleFromEvent",
@@ -122,22 +108,36 @@
           ]
         },
         {
-          "name": "_isTerminalPhase",
+          "name": "_routePointerId",
           "detail": "scene_view_interactive_pointer_host.dart",
           "path": "lib/src/view/scene_view_interactive_pointer_host.dart",
-          "children": []
+          "children": [
+            {
+              "name": "get isStray",
+              "detail": "SceneViewPointerRouteResult",
+              "path": "lib/src/view/scene_view_pointer_router.dart",
+              "children": []
+            },
+            {
+              "name": "route",
+              "detail": "SceneViewPointerRouter",
+              "path": "lib/src/view/scene_view_pointer_router.dart",
+              "children": []
+            }
+          ]
         },
         {
-          "name": "handleRoutedSample",
-          "detail": "SceneViewPointerSession",
-          "path": "lib/src/contract/scene_view_runtime.dart",
-          "children": []
-        },
-        {
-          "name": "shouldTrackSignals",
-          "detail": "SceneViewPointerRouter",
-          "path": "lib/src/view/scene_view_pointer_router.dart",
-          "children": []
+          "name": "_shouldDropInvalidFiniteAdmission",
+          "detail": "scene_view_interactive_pointer_host.dart",
+          "path": "lib/src/view/scene_view_interactive_pointer_host.dart",
+          "children": [
+            {
+              "name": "_hasFiniteLocalPosition",
+              "detail": "scene_view_interactive_pointer_host.dart",
+              "path": "lib/src/view/scene_view_interactive_pointer_host.dart",
+              "children": []
+            }
+          ]
         },
         {
           "name": "release",
@@ -145,13 +145,13 @@
           "path": "lib/src/view/scene_view_pointer_router.dart",
           "children": [
             {
-              "name": "SceneViewPointerReleaseResult.noop",
+              "name": "SceneViewPointerReleaseResult",
               "detail": "SceneViewPointerReleaseResult",
               "path": "lib/src/view/scene_view_pointer_router.dart",
               "children": []
             },
             {
-              "name": "SceneViewPointerReleaseResult",
+              "name": "SceneViewPointerReleaseResult.noop",
               "detail": "SceneViewPointerReleaseResult",
               "path": "lib/src/view/scene_view_pointer_router.dart",
               "children": []
@@ -159,9 +159,9 @@
           ]
         },
         {
-          "name": "handleRawPointerRelease",
-          "detail": "SceneViewPointerSession",
-          "path": "lib/src/contract/scene_view_runtime.dart",
+          "name": "shouldTrackSignals",
+          "detail": "SceneViewPointerRouter",
+          "path": "lib/src/view/scene_view_pointer_router.dart",
           "children": []
         }
       ]
