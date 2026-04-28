@@ -24,7 +24,7 @@ proof links, status, and update triggers.
 | `public_package_boundary` | [Public package boundary](families/public_package_boundary.md) | `locked` |
 | `contract_document_model_and_validated_fast_paths` | [Contract document model and validated fast paths](families/contract_document_model_and_validated_fast_paths.md) | `locked` |
 | `import_build_materialization` | [Import build materialization](families/import_build_materialization.md) | `locked` |
-| `serialization_and_schema` | [Serialization and schema](families/serialization_and_schema.md) | `known issue` |
+| `serialization_and_schema` | [Serialization and schema](families/serialization_and_schema.md) | `locked` |
 | `core_scene_graph_geometry_and_spatial_indexes` | [Core scene graph geometry and spatial indexes](families/core_scene_graph_geometry_and_spatial_indexes.md) | `known issue` |
 | `model_document_mutation_and_topology` | [Model document mutation and topology](families/model_document_mutation_and_topology.md) | `locked` |
 | `store_and_commit_path` | [Store and commit path](families/store_and_commit_path.md) | `locked` |

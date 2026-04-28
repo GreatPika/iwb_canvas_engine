@@ -1336,6 +1336,223 @@ export '../model/scene_builder.dart';
       }
     });
 
+    test(
+      'rejects direct vector width primitive validation in node family validators',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_value_validation_node_stroke.dart',
+            '''
+void sceneValidateStrokeNode(Object stroke) {
+  final thickness = 1.0;
+  final widthField = 'node.thickness';
+  sceneValidatePositiveDouble(
+    thickness,
+    field: widthField,
+    onError: (Object error) {},
+  );
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'vector width field thickness must use '
+                  'sceneValidatePositiveVectorWidth(...) instead of direct '
+                  'primitive width validation',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects route drift when one node validator route misses width helper',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_value_validation_node_stroke.dart',
+            '''
+void sceneValidateStrokeNode(Object stroke) {}
+
+void sceneValidateStrokeNodeSnapshot(Object stroke) {
+  _sceneValidateStrokeNodeFields();
+}
+
+void sceneValidateStrokeNodeSnapshotBacking(Object stroke) {
+  _sceneValidateStrokeNodeFields();
+}
+
+void _sceneValidateStrokeNodeFields() {
+  final thickness = 1.0;
+  sceneValidatePositiveVectorWidth(
+    thickness,
+    field: 'node.thickness',
+    onError: (Object error) {},
+  );
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'vector width field thickness route '
+                  'sceneValidateStrokeNode must reach '
+                  'sceneValidatePositiveVectorWidth(...)',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects direct node property width validation even with helper present',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_value_validation_node_stroke.dart',
+            '''
+void sceneValidateStrokeNode(dynamic stroke) {
+  sceneValidatePositiveVectorWidth(
+    stroke.thickness,
+    field: 'node.thickness',
+    onError: (Object error) {},
+  );
+  sceneValidatePositiveDouble(
+    stroke.thickness,
+    field: 'node.thickness',
+    onError: (Object error) {},
+  );
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'vector width field thickness must use '
+                  'sceneValidatePositiveVectorWidth(...) instead of direct '
+                  'primitive width validation',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects direct width primitive validation through neutral value alias',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_value_validation_node_line.dart',
+            '''
+void sceneValidateLineNode(dynamic line) {
+  sceneValidatePositiveVectorWidth(
+    line.thickness,
+    field: 'node.thickness',
+    onError: (Object error) {},
+  );
+  final value = line.thickness;
+  sceneValidatePositiveDouble(
+    value,
+    field: 'node.thickness',
+    onError: (Object error) {},
+  );
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'model architecture',
+              detail:
+                  'vector width field thickness must use '
+                  'sceneValidatePositiveVectorWidth(...) instead of direct '
+                  'primitive width validation',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'allows shared vector width helper usage in node family validators',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/model/scene_value_validation_node_path.dart',
+            '''
+void sceneValidatePathNode(Object path) {
+  _sceneValidatePathNodeFields();
+}
+
+void sceneValidatePathNodeSnapshot(Object path) {
+  _sceneValidatePathNodeFields();
+}
+
+void sceneValidatePathNodeSnapshotBacking(Object path) {
+  _sceneValidatePathNodeFields();
+}
+
+void _sceneValidatePathNodeFields() {
+  final strokeWidth = 1.0;
+  sceneValidateNonNegativeVectorWidth(
+    strokeWidth,
+    field: 'node.strokeWidth',
+    onError: (Object error) {},
+  );
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0, reason: result.stderr.toString());
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
     test('allows non-model imports of canonical model facades', () async {
       final sandbox = await createGuardrailsSandbox();
       try {

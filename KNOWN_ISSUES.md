@@ -26,28 +26,6 @@ Confirmed active defects only.
 
 ## Active Issues
 
-### KI-4
-
-- ID: `KI-4`
-- Severity: `P2`
-- Summary: Runtime stroke value diagnostics do not enforce the same upper
-  `sceneThicknessMax` bound as snapshot/backing validation, so oversized
-  `StrokeNode.thickness` can escape runtime invariant reporting.
-- Detection: Compare runtime/snapshot/backing stroke validators in
-  `lib/src/model/scene_value_validation_node_stroke.dart`
-- Evidence:
-  - `lib/src/model/scene_value_validation_node_stroke.dart`
-  - `lib/src/model/scene_value_validation_node_line.dart`
-  - Current detections:
-    `sceneValidateStrokeNode` checks positive finite thickness but skips
-    `sceneValidateDoubleInRange(... max: sceneThicknessMax)`;
-    `sceneValidateStrokeNodeSnapshot` and
-    `sceneValidateStrokeNodeSnapshotBacking` do enforce the upper bound;
-    `sceneValidateLineNode` already keeps runtime/snapshot/backing thickness
-    validation aligned through `_sceneValidateLineNodeFields`
-- Next action: Add the missing runtime `sceneThicknessMax` range check for
-  stroke thickness and cover it with runtime diagnostic tests.
-
 ### KI-6
 
 - ID: `KI-6`

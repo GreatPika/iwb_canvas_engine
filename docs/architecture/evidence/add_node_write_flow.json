@@ -4,6 +4,7 @@
   "path": "lib/src/interactive/scene_controller_scene.dart",
   "referencesByFile": {
     "example/lib/ui/canvas_example/view_models/canvas_example_view_model.dart": 1,
+    "test/controller/core/scene_controller_commit_failures_test.dart": 2,
     "test/interactive/core/scene_controller_interactive_basics_test.dart": 11,
     "test/interactive/core/scene_controller_interactive_single_pointer_policy_test.dart": 1,
     "test/interactive/core/scene_controller_interactive_dispose_matrix_test.dart": 1,

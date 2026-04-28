@@ -76,6 +76,9 @@ in changes that have not yet been published to pub.dev.
 
 ### Fixed
 
+- Fixed public stroke insert and patch validation so oversized
+  `StrokeNodeSpec.thickness` and `StrokeNodePatch.thickness` fail before
+  committed controller state changes, matching line and import validation.
 - Fixed direct model-level scene insertion so stale transaction locator or
   layer-index maps can no longer admit duplicate ids or undercount the scene
   node budget.

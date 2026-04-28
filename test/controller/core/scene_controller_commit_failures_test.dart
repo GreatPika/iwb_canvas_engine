@@ -2,8 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart'
-    show kMaxContentLayersPerScene;
 import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 import 'package:iwb_canvas_engine/src/contract/internal/unsafe_snapshot_materialization.dart';
 import 'package:iwb_canvas_engine/src/controller/change_set.dart';
@@ -18,6 +16,8 @@ import 'package:iwb_canvas_engine/src/controller/scene_store_controller.dart';
 import 'package:iwb_canvas_engine/src/controller/store.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
+    show kMaxContentLayersPerScene, sceneThicknessMax;
 import 'package:iwb_canvas_engine/src/model/document.dart';
 import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 
@@ -468,6 +468,106 @@ void main() {
       expect(store.commitRevision, originalCommitRevision);
     },
   );
+
+  test(
+    'public stroke insert rejects oversized thickness before committing store',
+    () {
+      final controller = SceneController(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[ContentLayerSnapshot(id: 'layer-0')],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final beforeSnapshot = controller.snapshot;
+      final beforeEpoch = controller.controllerEpoch;
+
+      expect(
+        () => controller.scene.addNode(
+          StrokeNodeSpec(
+            id: 'stroke-too-wide',
+            points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+            thickness: sceneThicknessMax + 1,
+            color: const Color(0xFF000000),
+          ),
+        ),
+        throwsStateError,
+      );
+
+      expect(controller.snapshot, same(beforeSnapshot));
+      expect(controller.controllerEpoch, beforeEpoch);
+      expect(controller.snapshot.layers.single.nodes, isEmpty);
+    },
+  );
+
+  test(
+    'public stroke patch rejects oversized thickness before committing store',
+    () {
+      final controller = SceneController(
+        initialSnapshot: SceneSnapshot(
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'layer-0',
+              nodes: <NodeSnapshot>[
+                StrokeNodeSnapshot(
+                  id: 'stroke-0',
+                  points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+                  thickness: 1,
+                  color: const Color(0xFF000000),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      final beforeSnapshot = controller.snapshot;
+      final beforeEpoch = controller.controllerEpoch;
+
+      expect(
+        () => controller.scene.patchNode(
+          StrokeNodePatch(
+            id: 'stroke-0',
+            thickness: PatchField<double>.value(sceneThicknessMax + 1),
+          ),
+        ),
+        throwsStateError,
+      );
+
+      final stroke =
+          controller.snapshot.layers.single.nodes.single as StrokeNodeSnapshot;
+      expect(controller.snapshot, same(beforeSnapshot));
+      expect(controller.controllerEpoch, beforeEpoch);
+      expect(stroke.thickness, 1);
+    },
+  );
+
+  test('public line insert still rejects oversized thickness', () {
+    final controller = SceneController(
+      initialSnapshot: SceneSnapshot(
+        layers: <ContentLayerSnapshot>[ContentLayerSnapshot(id: 'layer-0')],
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    final beforeSnapshot = controller.snapshot;
+
+    expect(
+      () => controller.scene.addNode(
+        LineNodeSpec(
+          id: 'line-too-wide',
+          start: const Offset(0, 0),
+          end: const Offset(1, 1),
+          thickness: sceneThicknessMax + 1,
+          color: const Color(0xFF000000),
+        ),
+      ),
+      throwsStateError,
+    );
+
+    expect(controller.snapshot, same(beforeSnapshot));
+  });
 
   test('initialSnapshot rejects malformed snapshots with SceneDataException', () {
     final malformedCases =

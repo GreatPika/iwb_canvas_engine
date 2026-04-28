@@ -80,6 +80,7 @@ const Set<String> _restrictedModelOwnerModules = <String>{
   '/lib/src/model/scene_value_validation_primitives.dart',
   '/lib/src/model/scene_value_validation_support.dart',
   '/lib/src/model/scene_value_validation_scene.dart',
+  '/lib/src/model/scene_value_validation_vector_width.dart',
 };
 
 const Set<String> _guardedRuntimeNodeOwnerFiles = <String>{
@@ -151,6 +152,61 @@ const Set<String> _guardedValidatedImportSnapshotCallerFiles = <String>{
   '/lib/src/model/scene_snapshot_from_scene.dart',
   '/lib/src/model/scene_value_validation_scene.dart',
 };
+
+const Set<String> _guardedVectorWidthValidatorFiles = <String>{
+  '/lib/src/model/scene_value_validation_node_stroke.dart',
+  '/lib/src/model/scene_value_validation_node_line.dart',
+  '/lib/src/model/scene_value_validation_node_rect.dart',
+  '/lib/src/model/scene_value_validation_node_path.dart',
+};
+
+const Map<String, _VectorWidthExpectation> _vectorWidthExpectationsByFile =
+    <String, _VectorWidthExpectation>{
+      '/lib/src/model/scene_value_validation_node_stroke.dart':
+          _VectorWidthExpectation(
+            fieldName: 'thickness',
+            valueExpression: 'thickness',
+            helperName: 'sceneValidatePositiveVectorWidth',
+            routeNames: <String>{
+              'sceneValidateStrokeNode',
+              'sceneValidateStrokeNodeSnapshot',
+              'sceneValidateStrokeNodeSnapshotBacking',
+            },
+          ),
+      '/lib/src/model/scene_value_validation_node_line.dart':
+          _VectorWidthExpectation(
+            fieldName: 'thickness',
+            valueExpression: 'thickness',
+            helperName: 'sceneValidatePositiveVectorWidth',
+            routeNames: <String>{
+              'sceneValidateLineNode',
+              'sceneValidateLineNodeSnapshot',
+              'sceneValidateLineNodeSnapshotBacking',
+            },
+          ),
+      '/lib/src/model/scene_value_validation_node_rect.dart':
+          _VectorWidthExpectation(
+            fieldName: 'strokeWidth',
+            valueExpression: 'strokeWidth',
+            helperName: 'sceneValidateNonNegativeVectorWidth',
+            routeNames: <String>{
+              'sceneValidateRectNode',
+              'sceneValidateRectNodeSnapshot',
+              'sceneValidateRectNodeSnapshotBacking',
+            },
+          ),
+      '/lib/src/model/scene_value_validation_node_path.dart':
+          _VectorWidthExpectation(
+            fieldName: 'strokeWidth',
+            valueExpression: 'strokeWidth',
+            helperName: 'sceneValidateNonNegativeVectorWidth',
+            routeNames: <String>{
+              'sceneValidatePathNode',
+              'sceneValidatePathNodeSnapshot',
+              'sceneValidatePathNodeSnapshotBacking',
+            },
+          ),
+    };
 
 const String _legacySnapshotMaterializationFilePath =
     '/lib/src/contract/internal/snapshot_materialization.dart';
@@ -252,6 +308,13 @@ GuardrailViolation? _checkModelFile(GuardrailContext context, File file) {
       if (validatedImportProofOwnerViolation != null) {
         return validatedImportProofOwnerViolation;
       }
+      final vectorWidthViolation = _checkVectorWidthValidationOwner(
+        parsed,
+        filePosixPath,
+      );
+      if (vectorWidthViolation != null) {
+        return vectorWidthViolation;
+      }
       if (filePosixPath != '/lib/src/model/document.dart') {
         if (filePosixPath == '/lib/src/model/scene_policy.dart') {
           return _checkScenePolicyImportDiagnosticOwnership(
@@ -283,6 +346,37 @@ GuardrailViolation? _checkModelFile(GuardrailContext context, File file) {
             'model architecture violation: document.dart must consume scene_from_snapshot.dart / scene_snapshot_from_scene.dart directly and must not import scene_builder.dart.',
       );
     },
+  );
+}
+
+GuardrailViolation? _checkVectorWidthValidationOwner(
+  ParsedUnitResult parsed,
+  String filePosixPath,
+) {
+  if (!_guardedVectorWidthValidatorFiles.contains(filePosixPath)) {
+    return null;
+  }
+  final expectation = _vectorWidthExpectationsByFile[filePosixPath]!;
+  final visitor = _VectorWidthValidationOwnerVisitor(expectation);
+  parsed.unit.accept(visitor);
+  final violation = visitor.firstViolation;
+  if (violation != null) {
+    return GuardrailViolation(
+      filePath: filePosixPath,
+      line: lineForOffset(parsed, violation.offset),
+      message:
+          'model architecture violation: vector width field ${violation.fieldName} must use ${expectation.helperName}(...) instead of direct primitive width validation.',
+    );
+  }
+  final missingRoute = visitor.firstRouteMissingExpectedHelper();
+  if (missingRoute == null) {
+    return null;
+  }
+  return GuardrailViolation(
+    filePath: filePosixPath,
+    line: lineForOffset(parsed, missingRoute.offset),
+    message:
+        'model architecture violation: vector width field ${expectation.fieldName} route ${missingRoute.routeName} must reach ${expectation.helperName}(...).',
   );
 }
 
@@ -580,10 +674,198 @@ final class _ScenePolicyImportDiagnosticOwnershipVisitor
   }
 }
 
+final class _VectorWidthExpectation {
+  const _VectorWidthExpectation({
+    required this.fieldName,
+    required this.valueExpression,
+    required this.helperName,
+    required this.routeNames,
+  });
+
+  final String fieldName;
+  final String valueExpression;
+  final String helperName;
+  final Set<String> routeNames;
+}
+
+final class _VectorWidthValidationOwnerVisitor
+    extends RecursiveAstVisitor<void> {
+  _VectorWidthValidationOwnerVisitor(this.expectation);
+
+  final _VectorWidthExpectation expectation;
+  _VectorWidthValidationOwnerOccurrence? firstViolation;
+  final Map<String, int> _functionOffsets = <String, int>{};
+  final Map<String, Set<String>> _callsByFunction = <String, Set<String>>{};
+  final Set<String> _functionsWithExpectedHelper = <String>{};
+  String? _currentFunctionName;
+
+  @override
+  void visitFunctionDeclaration(FunctionDeclaration node) {
+    final previousFunctionName = _currentFunctionName;
+    final functionName = node.name.lexeme;
+    _currentFunctionName = functionName;
+    _functionOffsets[functionName] = node.name.offset;
+    _callsByFunction.putIfAbsent(functionName, () => <String>{});
+    super.visitFunctionDeclaration(node);
+    _currentFunctionName = previousFunctionName;
+  }
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (firstViolation != null) {
+      return;
+    }
+    final methodName = node.methodName.name;
+    if (methodName == 'sceneValidatePositiveDouble' ||
+        methodName == 'sceneValidateNonNegativeDouble') {
+      if (_isExpectedWidthPrimitiveValue(node) ||
+          _hasExpectedWidthFieldLabel(node)) {
+        firstViolation = _VectorWidthValidationOwnerOccurrence(
+          fieldName: expectation.fieldName,
+          offset: node.methodName.offset,
+        );
+        return;
+      }
+    }
+    if (methodName == 'sceneValidateDoubleInRange') {
+      final isWidthValue = _isExpectedWidthPrimitiveValue(node);
+      final hasWidthFieldLabel = _hasExpectedWidthFieldLabel(node);
+      final maxExpression = _namedArgumentExpression(node, 'max');
+      if (isWidthValue ||
+          hasWidthFieldLabel ||
+          _isSceneThicknessMax(maxExpression)) {
+        firstViolation = _VectorWidthValidationOwnerOccurrence(
+          fieldName: expectation.fieldName,
+          offset: node.methodName.offset,
+        );
+        return;
+      }
+    }
+    final currentFunctionName = _currentFunctionName;
+    if (currentFunctionName != null && node.target == null) {
+      _callsByFunction
+          .putIfAbsent(currentFunctionName, () => <String>{})
+          .add(methodName);
+    }
+    if (methodName == expectation.helperName &&
+        _isExpectedWidthPrimitiveValue(node)) {
+      if (currentFunctionName != null) {
+        _functionsWithExpectedHelper.add(currentFunctionName);
+      }
+    }
+    super.visitMethodInvocation(node);
+  }
+
+  _VectorWidthRouteMissingOccurrence? firstRouteMissingExpectedHelper() {
+    for (final routeName in expectation.routeNames) {
+      final routeOffset = _functionOffsets[routeName];
+      if (routeOffset == null) {
+        return _VectorWidthRouteMissingOccurrence(
+          routeName: routeName,
+          offset: 0,
+        );
+      }
+      if (!_routeReachesExpectedHelper(routeName)) {
+        return _VectorWidthRouteMissingOccurrence(
+          routeName: routeName,
+          offset: routeOffset,
+        );
+      }
+    }
+    return null;
+  }
+
+  bool _routeReachesExpectedHelper(String routeName) {
+    final pending = <String>[routeName];
+    final visited = <String>{};
+    while (pending.isNotEmpty) {
+      final functionName = pending.removeLast();
+      if (!visited.add(functionName)) {
+        continue;
+      }
+      if (_functionsWithExpectedHelper.contains(functionName)) {
+        return true;
+      }
+      for (final calleeName
+          in _callsByFunction[functionName] ?? const <String>{}) {
+        if (_callsByFunction.containsKey(calleeName)) {
+          pending.add(calleeName);
+        }
+      }
+    }
+    return false;
+  }
+
+  bool _isExpectedWidthPrimitiveValue(MethodInvocation node) {
+    final arguments = node.argumentList.arguments;
+    if (arguments.isEmpty) {
+      return false;
+    }
+    return _isExpectedWidthExpression(arguments.first);
+  }
+
+  bool _hasExpectedWidthFieldLabel(MethodInvocation node) {
+    final fieldExpression = _namedArgumentExpression(node, 'field');
+    if (fieldExpression == null) {
+      return false;
+    }
+    return fieldExpression.toSource().contains(expectation.fieldName);
+  }
+
+  bool _isExpectedWidthExpression(Expression expression) {
+    final unwrapped = switch (expression) {
+      ParenthesizedExpression(:final expression) => expression,
+      _ => expression,
+    };
+    return switch (unwrapped) {
+      SimpleIdentifier(:final name) => name == expectation.fieldName,
+      PropertyAccess(:final propertyName) =>
+        propertyName.name == expectation.fieldName,
+      PrefixedIdentifier(:final identifier) =>
+        identifier.name == expectation.fieldName,
+      _ => unwrapped.toSource() == expectation.valueExpression,
+    };
+  }
+}
+
+final class _VectorWidthValidationOwnerOccurrence {
+  const _VectorWidthValidationOwnerOccurrence({
+    required this.fieldName,
+    required this.offset,
+  });
+
+  final String fieldName;
+  final int offset;
+}
+
+final class _VectorWidthRouteMissingOccurrence {
+  const _VectorWidthRouteMissingOccurrence({
+    required this.routeName,
+    required this.offset,
+  });
+
+  final String routeName;
+  final int offset;
+}
+
 final class _ScenePolicyImportDiagnosticOwnershipOccurrence {
   const _ScenePolicyImportDiagnosticOwnershipOccurrence({required this.offset});
 
   final int offset;
+}
+
+Expression? _namedArgumentExpression(MethodInvocation node, String name) {
+  for (final argument in node.argumentList.arguments) {
+    if (argument is NamedExpression && argument.name.label.name == name) {
+      return argument.expression;
+    }
+  }
+  return null;
+}
+
+bool _isSceneThicknessMax(Expression? expression) {
+  return expression is SimpleIdentifier &&
+      expression.name == 'sceneThicknessMax';
 }
 
 bool _isRawSceneImportDraftParameter(FormalParameter parameter) {

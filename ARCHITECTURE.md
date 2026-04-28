@@ -740,6 +740,8 @@ important for architectural reasoning.
 - runtime node geometry is local; `transform` is the placement authority
 - runtime `backgroundLayer` may be absent internally, but snapshot/JSON
   boundaries always canonicalize a dedicated background layer
+- model-owned runtime, snapshot, and backing node value validators share vector
+  width semantics for stroke/line `thickness` and rect/path `strokeWidth`
 
 ### Transaction and commit invariants
 
@@ -814,7 +816,8 @@ alone.
   Guards public-surface hermeticity, controller/write boundaries, interactive
   mutation boundaries, raw callback-typedef collection leaks, contract/model
   architecture boundaries, the validated import materialization seam, the
-  validated-versus-unsafe helper split, and other structural rules.
+  validated-versus-unsafe helper split, model-owned vector-width validation
+  helper usage, and other structural rules.
 - `tool/check_invariant_coverage.dart`  
   Checks that invariant ids, required/regression proof surfaces, and required
   verification-step reachability stay aligned.

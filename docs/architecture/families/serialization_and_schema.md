@@ -46,10 +46,10 @@ validation parity.
 
 ## Status
 
-- `known issue`
-- Runtime stroke value validation remains tracked by
-  [KI-4](../../../KNOWN_ISSUES.md#ki-4); the atlas preserves schema parity as
-  the target rule rather than normalizing the drift.
+- `locked`
+- Runtime, snapshot, and backing vector-width validation share the model-owned
+  width contract for stroke thickness, line thickness, rectangle
+  `strokeWidth`, and path `strokeWidth`.
 
 ## Update Triggers
 

@@ -372,6 +372,7 @@ between runtime, snapshot, and backing validation paths.
 - `lib/src/model/scene_value_validation_node_line.dart`
 - `lib/src/model/scene_value_validation_node_rect.dart`
 - `lib/src/model/scene_value_validation_node_path.dart`
+- `lib/src/model/scene_value_validation_vector_width.dart`
 - `tool/src/guardrails/rules/model/model_architecture_rules.dart`
 
 ### Test Files
@@ -475,7 +476,7 @@ between runtime, snapshot, and backing validation paths.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Shared Width Validation And Drift Guardrail
+### Slice 1. [x] Shared Width Validation And Drift Guardrail
 
 #### Slice Contract
 
@@ -544,7 +545,7 @@ helper. Add negative and allowed-form tests in
 - Guardrail negative tests fail before the guardrail change and pass after it;
   `check_guardrails` remains green on the repository.
 
-### Slice 2. [ ] Issue and Documentation Closure
+### Slice 2. [x] Issue and Documentation Closure
 
 #### Slice Contract
 
@@ -600,7 +601,7 @@ the required proof for this step is green.
 - Generate an untracked newline-delimited changed-paths file at
   `/tmp/iwb_step_35_changed_paths.txt` for the final preset.
 - `dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=/tmp/iwb_step_35_changed_paths.txt`
-- `dcm calculate-metrics lib/src/model/scene_value_validation_primitives.dart lib/src/model/scene_value_validation_node_stroke.dart lib/src/model/scene_value_validation_node_line.dart lib/src/model/scene_value_validation_node_rect.dart lib/src/model/scene_value_validation_node_path.dart`
+- `dcm calculate-metrics lib/src/model/scene_value_validation_primitives.dart lib/src/model/scene_value_validation_vector_width.dart lib/src/model/scene_value_validation_node_stroke.dart lib/src/model/scene_value_validation_node_line.dart lib/src/model/scene_value_validation_node_rect.dart lib/src/model/scene_value_validation_node_path.dart`
 - `dart run tool/run_repository_audits.dart`
 
 ## 12. Acceptance Criteria

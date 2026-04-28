@@ -8,6 +8,7 @@ import '../core/scene_limits.dart';
 import 'scene_validation_path_surface.dart';
 import 'scene_value_validation_primitives.dart';
 import 'scene_value_validation_support.dart';
+import 'scene_value_validation_vector_width.dart';
 
 void sceneValidateStrokeNodeSnapshot(
   StrokeNodeSnapshot stroke, {
@@ -15,21 +16,11 @@ void sceneValidateStrokeNodeSnapshot(
   required SceneValidationErrorReporter onError,
   SceneValidationPathSurface pathSurface = SceneValidationPathSurface.snapshot,
 }) {
-  _sceneValidatePoints(
-    stroke.points,
-    field: sceneValidationStrokePointsField(pathSurface, field: field),
-    onError: onError,
-  );
-  sceneValidatePositiveDouble(
-    stroke.thickness,
-    field: '$field.thickness',
-    onError: onError,
-  );
-  sceneValidateDoubleInRange(
-    stroke.thickness,
-    field: '$field.thickness',
-    min: 0,
-    max: sceneThicknessMax,
+  _sceneValidateStrokeNodeFields(
+    points: stroke.points,
+    pointsField: sceneValidationStrokePointsField(pathSurface, field: field),
+    thickness: stroke.thickness,
+    field: field,
     onError: onError,
   );
 }
@@ -39,14 +30,11 @@ void sceneValidateStrokeNode(
   required String field,
   required SceneValidationErrorReporter onError,
 }) {
-  _sceneValidatePoints(
-    stroke.points,
-    field: '$field.localPoints',
-    onError: onError,
-  );
-  sceneValidatePositiveDouble(
-    stroke.thickness,
-    field: '$field.thickness',
+  _sceneValidateStrokeNodeFields(
+    points: stroke.points,
+    pointsField: '$field.localPoints',
+    thickness: stroke.thickness,
+    field: field,
     onError: onError,
   );
 }
@@ -57,21 +45,26 @@ void sceneValidateStrokeNodeSnapshotBacking(
   required SceneValidationErrorReporter onError,
   SceneValidationPathSurface pathSurface = SceneValidationPathSurface.snapshot,
 }) {
-  _sceneValidatePoints(
-    stroke.points,
-    field: sceneValidationStrokePointsField(pathSurface, field: field),
+  _sceneValidateStrokeNodeFields(
+    points: stroke.points,
+    pointsField: sceneValidationStrokePointsField(pathSurface, field: field),
+    thickness: stroke.thickness,
+    field: field,
     onError: onError,
   );
-  sceneValidatePositiveDouble(
-    stroke.thickness,
+}
+
+void _sceneValidateStrokeNodeFields({
+  required List<Offset> points,
+  required String pointsField,
+  required double thickness,
+  required String field,
+  required SceneValidationErrorReporter onError,
+}) {
+  _sceneValidatePoints(points, field: pointsField, onError: onError);
+  sceneValidatePositiveVectorWidth(
+    thickness,
     field: '$field.thickness',
-    onError: onError,
-  );
-  sceneValidateDoubleInRange(
-    stroke.thickness,
-    field: '$field.thickness',
-    min: 0,
-    max: sceneThicknessMax,
     onError: onError,
   );
 }

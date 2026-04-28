@@ -3,12 +3,17 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_contract_limits.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_data_exception.dart';
+import 'package:iwb_canvas_engine/src/contract/internal/snapshot_fast_path.dart';
 import 'package:iwb_canvas_engine/src/contract/scene_validation_diagnostics.dart';
 import 'package:iwb_canvas_engine/src/contract/snapshot.dart';
 import 'package:iwb_canvas_engine/src/core/nodes.dart';
 import 'package:iwb_canvas_engine/src/core/scene.dart';
+import 'package:iwb_canvas_engine/src/core/scene_limits.dart'
+    show sceneThicknessMax;
 import 'package:iwb_canvas_engine/src/contract/transform2d.dart';
 import 'package:iwb_canvas_engine/src/model/scene_value_validation.dart';
+import 'package:iwb_canvas_engine/src/model/scene_value_validation_node.dart'
+    as node_validation;
 import 'package:iwb_canvas_engine/src/model/scene_value_validation_scene.dart'
     as scene_value_validation_scene;
 import 'package:iwb_canvas_engine/src/model/scene_value_validation_palette_grid.dart'
@@ -167,6 +172,97 @@ void main() {
         );
       },
     );
+
+    test(
+      'stroke runtime snapshot and backing validators share thickness range',
+      () {
+        final oversizedThickness = sceneThicknessMax + 1;
+
+        expect(
+          () => sceneValidateNode(
+            _RawStrokeNode(
+              id: 'stroke-runtime',
+              rawPoints: const <Offset>[Offset(0, 0), Offset(1, 1)],
+              rawThickness: oversizedThickness,
+            ),
+            field: 'node',
+            onError: _throwFailure,
+          ),
+          throwsA(_outOfRangeFailure('node.thickness', oversizedThickness)),
+        );
+
+        expect(
+          () => sceneValidateNodeSnapshot(
+            StrokeNodeSnapshot(
+              id: 'stroke-snapshot',
+              points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+              thickness: oversizedThickness,
+              color: const Color(0xFF000000),
+            ),
+            field: 'node',
+            onError: _throwFailure,
+          ),
+          throwsA(_outOfRangeFailure('node.thickness', oversizedThickness)),
+        );
+
+        expect(
+          () => node_validation.sceneValidateNodeSnapshotBacking(
+            StrokeNodeSnapshotBacking(
+              id: 'stroke-backing',
+              points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+              thickness: oversizedThickness,
+              color: const Color(0xFF000000),
+            ),
+            field: 'node',
+            onError: _throwFailure,
+          ),
+          throwsA(_outOfRangeFailure('node.thickness', oversizedThickness)),
+        );
+      },
+    );
+
+    test('adjacent vector width validators keep their range contracts', () {
+      final oversizedThickness = sceneThicknessMax + 1;
+
+      expect(
+        () => sceneValidateNode(
+          _RawLineNode(
+            id: 'line-runtime',
+            rawStart: const Offset(0, 0),
+            rawEnd: const Offset(1, 1),
+            rawThickness: oversizedThickness,
+          ),
+          field: 'node',
+          onError: _throwFailure,
+        ),
+        throwsA(_outOfRangeFailure('node.thickness', oversizedThickness)),
+      );
+
+      expect(
+        () => sceneValidateNode(
+          _RawRectNode(
+            id: 'rect-runtime',
+            transform: Transform2D.identity,
+            hitPadding: 0,
+            opacity: 1,
+            size: const Size(10, 10),
+            strokeWidth: oversizedThickness,
+          ),
+          field: 'node',
+          onError: _throwFailure,
+        ),
+        throwsA(_outOfRangeFailure('node.strokeWidth', oversizedThickness)),
+      );
+
+      expect(
+        () => sceneValidateNode(
+          _RawPathNode(strokeWidth: oversizedThickness),
+          field: 'node',
+          onError: _throwFailure,
+        ),
+        throwsA(_outOfRangeFailure('node.strokeWidth', oversizedThickness)),
+      );
+    });
 
     test(
       'sceneValidateNode keeps line runtime field paths after family split',
@@ -899,6 +995,18 @@ Never _throwFailure({
   );
 }
 
+Matcher _outOfRangeFailure(String field, double value) {
+  return predicate(
+    (error) =>
+        error is _ValidationFailure &&
+        error.field == field &&
+        error.diagnostic?.template == 'outOfRange' &&
+        error.diagnostic?.args['min'] == 0 &&
+        error.diagnostic?.args['max'] == sceneThicknessMax &&
+        error.value == value,
+  );
+}
+
 class _ValidationFailure {
   _ValidationFailure({
     required this.value,
@@ -1018,6 +1126,40 @@ final class _RawLineNode extends LineNode {
 
   @override
   double get thickness => _rawThickness;
+}
+
+final class _RawStrokeNode extends StrokeNode {
+  _RawStrokeNode({
+    required super.id,
+    required List<Offset> rawPoints,
+    required double rawThickness,
+  }) : _rawPoints = rawPoints,
+       _rawThickness = rawThickness,
+       super(
+         points: const <Offset>[Offset(0, 0), Offset(1, 1)],
+         thickness: 1,
+         color: const Color(0xFF000000),
+       );
+
+  final List<Offset> _rawPoints;
+  final double _rawThickness;
+
+  @override
+  List<Offset> get points => _rawPoints;
+
+  @override
+  double get thickness => _rawThickness;
+}
+
+final class _RawPathNode extends PathNode {
+  _RawPathNode({required double strokeWidth})
+    : _rawStrokeWidth = strokeWidth,
+      super(id: 'path-runtime', svgPathData: 'M0 0 L1 1', strokeWidth: 1);
+
+  final double _rawStrokeWidth;
+
+  @override
+  double get strokeWidth => _rawStrokeWidth;
 }
 
 final class _MismatchedRectTypeNode extends SceneNode {

@@ -1,9 +1,9 @@
 import '../contract/internal/snapshot_fast_path.dart';
 import '../contract/snapshot.dart';
-import '../core/scene_limits.dart';
 import '../core/nodes.dart';
 import 'scene_value_validation_primitives.dart';
 import 'scene_value_validation_support.dart';
+import 'scene_value_validation_vector_width.dart';
 
 void sceneValidatePathNodeSnapshot(
   PathNodeSnapshot path, {
@@ -55,16 +55,9 @@ void _sceneValidatePathNodeFields({
     field: '$field.svgPathData',
     onError: onError,
   );
-  sceneValidateNonNegativeDouble(
+  sceneValidateNonNegativeVectorWidth(
     strokeWidth,
     field: '$field.strokeWidth',
-    onError: onError,
-  );
-  sceneValidateDoubleInRange(
-    strokeWidth,
-    field: '$field.strokeWidth',
-    min: 0,
-    max: sceneThicknessMax,
     onError: onError,
   );
 }

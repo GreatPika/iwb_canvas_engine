@@ -532,6 +532,11 @@ Public import/export paths share the same boundary contract:
   JSON import/build entrypoints report `localA`, `localB`, and `localPoints`,
   while typed snapshot import/build entrypoints keep `start`, `end`, and
   `points`.
+- Vector widths are document-valid only when finite, signed correctly, and
+  within the scene thickness limit: stroke and line `thickness` must be
+  positive, while rectangle and path `strokeWidth` may be zero. Oversized
+  public scene mutations are rejected before the committed controller snapshot
+  changes.
 - Oversized ids, text payloads, SVG path data, palette lists, stroke point
   lists, layer counts, and scene-wide node counts are rejected at the public
   boundary.
@@ -545,7 +550,7 @@ Public import/export paths share the same boundary contract:
 | Error type | Typical meaning |
 | --- | --- |
 | `ArgumentError` | The caller passed an invalid runtime argument or tried to construct an invalid public boundary value. |
-| `StateError` | The runtime contract was violated, for example by using a disposed controller, reusing a stale transaction handle, or performing forbidden work during an active gesture. |
+| `StateError` | The runtime contract was violated, for example by using a disposed controller, reusing a stale transaction handle, performing forbidden work during an active gesture, or trying to commit runtime scene data that fails model-owned invariants. |
 | `SceneDataException` | Scene data or JSON is malformed at the public boundary. |
 
 ### 9.2 `SceneDataException`

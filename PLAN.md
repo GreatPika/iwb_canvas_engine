@@ -54,4 +54,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 32. Exception-Safe Draw Terminal Cleanup](plan/step_32_exception_safe_draw_terminal_cleanup.md)
 - [x] [Step 33. Selection Overlay Halo-Only Rendering](plan/step_33_selection_overlay_halo_only_rendering.md)
 - [x] [Step 34. Scene Topology Admission Source](plan/step_34_scene_topology_admission_source.md)
-- [ ] [Step 35. Vector Width Runtime Validation Parity](plan/step_35_vector_width_runtime_validation_parity.md)
+- [x] [Step 35. Vector Width Runtime Validation Parity](plan/step_35_vector_width_runtime_validation_parity.md)

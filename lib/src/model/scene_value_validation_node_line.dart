@@ -7,6 +7,7 @@ import '../core/scene_limits.dart';
 import 'scene_validation_path_surface.dart';
 import 'scene_value_validation_primitives.dart';
 import 'scene_value_validation_support.dart';
+import 'scene_value_validation_vector_width.dart';
 
 void sceneValidateLineNodeSnapshot(
   LineNodeSnapshot line, {
@@ -69,16 +70,9 @@ void _sceneValidateLineNodeFields({
 }) {
   sceneValidateFiniteOffset(start, field: startField, onError: onError);
   sceneValidateFiniteOffset(end, field: endField, onError: onError);
-  sceneValidatePositiveDouble(
+  sceneValidatePositiveVectorWidth(
     thickness,
     field: '$field.thickness',
-    onError: onError,
-  );
-  sceneValidateDoubleInRange(
-    thickness,
-    field: '$field.thickness',
-    min: 0,
-    max: sceneThicknessMax,
     onError: onError,
   );
   sceneValidateDoubleInRange(
