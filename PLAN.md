@@ -53,3 +53,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 31. Validated Snapshot Fast-Path Admission](plan/step_31_validated_snapshot_fast_path_admission.md)
 - [x] [Step 32. Exception-Safe Draw Terminal Cleanup](plan/step_32_exception_safe_draw_terminal_cleanup.md)
 - [x] [Step 33. Selection Overlay Halo-Only Rendering](plan/step_33_selection_overlay_halo_only_rendering.md)
+- [ ] [Step 34. Scene Topology Admission Source](plan/step_34_scene_topology_admission_source.md)
