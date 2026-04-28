@@ -45,10 +45,11 @@ This family owns model-level document topology and mutation helpers.
 
 ## Status
 
-- `known issue`
-- Model topology fast-path drift remains tracked by
-  [KI-5](../../../KNOWN_ISSUES.md#ki-5); scene topology remains the intended
-  source of truth for uniqueness and budget decisions.
+- `locked`
+- Model topology insertion admission uses scene topology as the source of
+  truth for node uniqueness, node budget, and content-layer uniqueness.
+  Derived `nodeLocator` and `layerIndexById` maps are companion indexes and
+  are refreshed from scene topology after successful semantic insertion.
 
 ## Update Triggers
 

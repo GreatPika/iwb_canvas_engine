@@ -48,29 +48,6 @@ Confirmed active defects only.
 - Next action: Add the missing runtime `sceneThicknessMax` range check for
   stroke thickness and cover it with runtime diagnostic tests.
 
-### KI-5
-
-- ID: `KI-5`
-- Severity: `P2`
-- Summary: Direct model-level scene insertion trusts caller-supplied derived
-  locator/index state as the sole uniqueness and budget source, so stale or
-  incomplete maps can admit duplicate ids or undercount node budget.
-- Detection: Inspect topology mutation helpers in
-  `lib/src/model/document_scene_insert.dart` against derived locator builders
-  in `lib/src/model/document_locator.dart`
-- Evidence:
-  - `lib/src/model/document_scene_insert.dart`
-  - `lib/src/model/document_locator.dart`
-  - Current detections:
-    `txnInsertNodeInScene` uses `nodeLocator.containsKey(node.id)` for
-    uniqueness and `nodeLocator.length` for node budget;
-    `txnInsertContentLayerInScene` uses
-    `layerIndexById.containsKey(layerId)` for uniqueness;
-    both paths can bypass topology invariants when caller-provided derived
-    indexes are stale or incomplete
-- Next action: Move uniqueness and budget checks to actual scene topology or
-  make the fast-path freshness precondition explicit and enforced.
-
 ### KI-6
 
 - ID: `KI-6`

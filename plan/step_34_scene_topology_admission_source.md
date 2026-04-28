@@ -2,7 +2,7 @@ language: english
 
 # Change Contract
 
-Status: planned.
+Status: completed.
 
 ## 1. Change Mandate
 
@@ -529,7 +529,7 @@ Not used. The architectural form is locked in 4A.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Close KI-5 With Scene-Owned Admission
+### Slice 1. [x] Close KI-5 With Scene-Owned Admission
 
 #### Slice Contract
 

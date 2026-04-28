@@ -707,6 +707,88 @@ void main() {
     );
   });
 
+  test(
+    'txnInsertContentLayerInScene rejects duplicate ids from scene topology',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-a'),
+          ContentLayer(id: 'layer-b'),
+        ],
+      );
+      final staleLayerIndexById = <LayerId, int>{'layer-a': 0};
+
+      expect(
+        () => txnInsertContentLayerInScene(
+          scene: scene,
+          layerId: 'layer-b',
+          layerIndexById: staleLayerIndexById,
+        ),
+        throwsA(
+          predicate(
+            (e) =>
+                e is SceneDataException &&
+                e.code == SceneDataErrorCode.duplicateLayerId &&
+                e.path == 'layers[2].id',
+          ),
+        ),
+      );
+      expect(
+        scene.layers.map((layer) => layer.id).toList(growable: false),
+        const <LayerId>['layer-a', 'layer-b'],
+      );
+      expect(staleLayerIndexById, <LayerId, int>{'layer-a': 0});
+    },
+  );
+
+  test(
+    'txnEnsureContentLayerInScene no-ops and refreshes stale layer index from scene topology',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-a'),
+          ContentLayer(id: 'layer-b'),
+        ],
+      );
+      final staleLayerIndexById = <LayerId, int>{'layer-a': 0};
+
+      final inserted = txnEnsureContentLayerInScene(
+        scene: scene,
+        layerId: 'layer-b',
+        layerIndexById: staleLayerIndexById,
+      );
+
+      expect(inserted, isFalse);
+      expect(
+        scene.layers.map((layer) => layer.id).toList(growable: false),
+        const <LayerId>['layer-a', 'layer-b'],
+      );
+      expect(staleLayerIndexById, txnBuildLayerIndexById(scene));
+    },
+  );
+
+  test(
+    'txnInsertContentLayerInScene refreshes stale layer index after successful insert',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(id: 'layer-a'),
+          ContentLayer(id: 'layer-b'),
+        ],
+      );
+      final staleLayerIndexById = <LayerId, int>{'layer-a': 0};
+
+      txnInsertContentLayerInScene(
+        scene: scene,
+        layerId: 'layer-c',
+        layerIndexById: staleLayerIndexById,
+        insertIndex: 1,
+      );
+
+      expect(staleLayerIndexById, txnBuildLayerIndexById(scene));
+    },
+  );
+
   test('txnInsertNodeInScene rejects duplicate node ids', () {
     final scene = Scene(
       layers: <ContentLayer>[
@@ -729,6 +811,28 @@ void main() {
     );
   });
 
+  test('txnInsertNodeInScene rejects duplicate ids from scene topology', () {
+    final scene = Scene(
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[RectNode(id: 'dup', size: const Size(1, 1))],
+      ),
+      layers: <ContentLayer>[ContentLayer(id: 'layer-auto-11a')],
+    );
+    final staleLocator = <NodeId, NodeLocatorEntry>{};
+
+    expect(
+      () => txnInsertNodeInScene(
+        scene: scene,
+        nodeLocator: staleLocator,
+        node: RectNode(id: 'dup', size: const Size(2, 2)),
+        layerIndex: 0,
+      ),
+      throwsStateError,
+    );
+    expect(scene.layers.single.nodes, isEmpty);
+    expect(staleLocator, isEmpty);
+  });
+
   test('txnInsertNodeInScene rejects out-of-range layer index', () {
     final scene = Scene(
       layers: <ContentLayer>[ContentLayer(id: 'layer-auto-11a')],
@@ -745,6 +849,33 @@ void main() {
       throwsRangeError,
     );
   });
+
+  test(
+    'txnInsertNodeInScene refreshes stale locator after successful insert',
+    () {
+      final scene = Scene(
+        backgroundLayer: BackgroundLayer(
+          nodes: <SceneNode>[RectNode(id: 'bg', size: const Size(1, 1))],
+        ),
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-auto-11b',
+            nodes: <SceneNode>[RectNode(id: 'a', size: const Size(1, 1))],
+          ),
+        ],
+      );
+      final staleLocator = <NodeId, NodeLocatorEntry>{};
+
+      txnInsertNodeInScene(
+        scene: scene,
+        nodeLocator: staleLocator,
+        node: RectNode(id: 'new', size: const Size(2, 2)),
+        layerIndex: 0,
+      );
+
+      expect(staleLocator, txnBuildNodeLocator(scene));
+    },
+  );
 
   test('txnInsertNodeInScene inserts by index and reindexes shifted nodes', () {
     final scene = Scene(
@@ -829,6 +960,39 @@ void main() {
       beforeNodeIds,
     );
     expect(locator.containsKey('overflow'), isFalse);
+  });
+
+  test('txnInsertNodeInScene counts scene nodes for budget admission', () {
+    final scene = Scene(
+      layers: <ContentLayer>[ContentLayer(id: 'layer-auto-overflow-stale')],
+      backgroundLayer: BackgroundLayer(
+        nodes: <SceneNode>[
+          for (var i = 0; i < kMaxNodesPerScene; i++)
+            RectNode(id: 'node-$i', size: const Size(1, 1)),
+        ],
+      ),
+    );
+    final staleLocator = <NodeId, NodeLocatorEntry>{};
+
+    expect(
+      () => txnInsertNodeInScene(
+        scene: scene,
+        nodeLocator: staleLocator,
+        node: RectNode(id: 'overflow', size: const Size(2, 2)),
+        layerIndex: 0,
+      ),
+      throwsA(
+        predicate(
+          (e) =>
+              e is SceneDataException &&
+              e.code == SceneDataErrorCode.invalidValue &&
+              e.path == 'layers[0].nodes' &&
+              e.details['template'] == 'maxNodes',
+        ),
+      ),
+    );
+    expect(scene.layers.single.nodes, isEmpty);
+    expect(staleLocator, isEmpty);
   });
 
   test('find/locator/erase utilities handle dedicated background layer', () {

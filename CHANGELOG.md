@@ -76,6 +76,9 @@ in changes that have not yet been published to pub.dev.
 
 ### Fixed
 
+- Fixed direct model-level scene insertion so stale transaction locator or
+  layer-index maps can no longer admit duplicate ids or undercount the scene
+  node budget.
 - Fixed selected line, stroke, dot, and open-path rendering so selection halos
   no longer repaint base vector content, preserving alpha, scene draw order,
   and stroke-path cache work.

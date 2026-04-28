@@ -12,7 +12,8 @@ bool txnEnsureContentLayerInScene({
   required Map<LayerId, int> layerIndexById,
   int? insertIndex,
 }) {
-  if (layerIndexById.containsKey(layerId)) {
+  if (txnFindContentLayerIndexById(scene: scene, layerId: layerId) != null) {
+    _txnRefreshLayerIndexById(scene: scene, layerIndexById: layerIndexById);
     return false;
   }
   txnInsertContentLayerInScene(
@@ -30,8 +31,6 @@ int txnInsertContentLayerInScene({
   Map<LayerId, int>? layerIndexById,
   int? insertIndex,
 }) {
-  final resolvedLayerIndexById =
-      layerIndexById ?? locator.txnBuildLayerIndexById(scene);
   sceneRequireContentLayerLimit(scene.layers.length + 1);
   final resolvedInsertIndex = insertIndex ?? scene.layers.length;
   if (resolvedInsertIndex < 0 || resolvedInsertIndex > scene.layers.length) {
@@ -44,17 +43,14 @@ int txnInsertContentLayerInScene({
   }
   _txnRequireUniqueLayerId(
     layerId: layerId,
-    layerIndexById: resolvedLayerIndexById,
+    scene: scene,
     targetPath: 'layers[$resolvedInsertIndex].id',
   );
 
   scene.layers.insert(resolvedInsertIndex, ContentLayer(id: layerId));
-  for (final entry in resolvedLayerIndexById.entries.toList(growable: false)) {
-    if (entry.value >= resolvedInsertIndex) {
-      resolvedLayerIndexById[entry.key] = entry.value + 1;
-    }
+  if (layerIndexById != null) {
+    _txnRefreshLayerIndexById(scene: scene, layerIndexById: layerIndexById);
   }
-  resolvedLayerIndexById[layerId] = resolvedInsertIndex;
   return resolvedInsertIndex;
 }
 
@@ -78,7 +74,7 @@ bool txnInsertNodeInScene({
   required int layerIndex,
   int? insertIndex,
 }) {
-  if (nodeLocator.containsKey(node.id)) {
+  if (locator.txnFindNodeById(scene, node.id) != null) {
     throw StateError('Node id must be unique: ${node.id}');
   }
   if (layerIndex < 0 || layerIndex >= scene.layers.length) {
@@ -101,7 +97,7 @@ bool txnInsertNodeInScene({
     );
   }
   sceneConsumeNodeBudget(
-    totalNodeCount: nodeLocator.length,
+    totalNodeCount: _txnCountSceneNodes(scene),
     path: 'layers[$layerIndex].nodes',
   );
 
@@ -110,12 +106,7 @@ bool txnInsertNodeInScene({
   } else {
     targetLayer.nodes.insert(insertedNodeIndex, node);
   }
-  locator.txnWriteLayerNodeLocations(
-    locator: nodeLocator,
-    contentLayerId: targetLayer.id,
-    nodes: targetLayer.nodes,
-    startNodeIndex: insertedNodeIndex,
-  );
+  _txnRefreshNodeLocator(scene: scene, nodeLocator: nodeLocator);
   return true;
 }
 
@@ -181,15 +172,41 @@ ContentLayer _txnRequireValidLayerIndex({
 
 void _txnRequireUniqueLayerId({
   required LayerId layerId,
-  required Map<LayerId, int> layerIndexById,
+  required Scene scene,
   required String targetPath,
 }) {
-  if (layerIndexById.containsKey(layerId)) {
+  if (txnFindContentLayerIndexById(scene: scene, layerId: layerId) != null) {
     throw SceneDataException.duplicateLayerId(
       path: targetPath,
       layerId: layerId,
     );
   }
+}
+
+int _txnCountSceneNodes(Scene scene) {
+  var totalNodeCount = scene.backgroundLayer?.nodes.length ?? 0;
+  for (final layer in scene.layers) {
+    totalNodeCount += layer.nodes.length;
+  }
+  return totalNodeCount;
+}
+
+void _txnRefreshNodeLocator({
+  required Scene scene,
+  required Map<NodeId, NodeLocatorEntry> nodeLocator,
+}) {
+  nodeLocator
+    ..clear()
+    ..addAll(locator.txnBuildNodeLocator(scene));
+}
+
+void _txnRefreshLayerIndexById({
+  required Scene scene,
+  required Map<LayerId, int> layerIndexById,
+}) {
+  layerIndexById
+    ..clear()
+    ..addAll(locator.txnBuildLayerIndexById(scene));
 }
 
 void _txnRequireSlotReplacementPreservesTopology({

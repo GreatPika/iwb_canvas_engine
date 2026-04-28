@@ -26,7 +26,7 @@ proof links, status, and update triggers.
 | `import_build_materialization` | [Import build materialization](families/import_build_materialization.md) | `locked` |
 | `serialization_and_schema` | [Serialization and schema](families/serialization_and_schema.md) | `known issue` |
 | `core_scene_graph_geometry_and_spatial_indexes` | [Core scene graph geometry and spatial indexes](families/core_scene_graph_geometry_and_spatial_indexes.md) | `known issue` |
-| `model_document_mutation_and_topology` | [Model document mutation and topology](families/model_document_mutation_and_topology.md) | `known issue` |
+| `model_document_mutation_and_topology` | [Model document mutation and topology](families/model_document_mutation_and_topology.md) | `locked` |
 | `store_and_commit_path` | [Store and commit path](families/store_and_commit_path.md) | `locked` |
 | `composition_root_and_facade` | [Composition root and facade](families/composition_root_and_facade.md) | `locked` |
 | `interaction_runtime` | [Interaction runtime](families/interaction_runtime.md) | `locked` |
