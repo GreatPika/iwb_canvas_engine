@@ -5,6 +5,10 @@ import 'package:yaml/yaml.dart';
 import 'src/verification_contract/verification_contract_models.dart';
 import 'src/verification_contract/verification_contract_registry.dart';
 
+final RegExp _scriptReferencePattern = RegExp(
+  r'''(?:^|\s)(?:bash|sh)\s+(tool/[^\s`"']+)|(?:^|\s)-File\s+(tool/[^\s`"']+)|(?:^|\s)\./(tool/[^\s`"']+\.ps1)''',
+);
+
 Future<void> main(List<String> _) async {
   final failures = <String>[
     ..._checkWorkflowRegistryCoverage(
@@ -119,6 +123,14 @@ Iterable<String> _checkWorkflow(
   for (final run in unexpectedRuns) {
     yield '${workflow.path} has unexpected executable run entry `$run`.';
   }
+  for (final entry in workflow.runExpectations) {
+    for (final scriptPath in _scriptReferences(entry.command)) {
+      if (!File(scriptPath).existsSync()) {
+        yield '${workflow.path} expected run entry `${entry.command}` '
+            'references missing script `$scriptPath`.';
+      }
+    }
+  }
 
   for (final filterEntry in workflow.changeFilters.entries) {
     final actualEntries = workflowDocument.filterEntries(filterEntry.key);
@@ -132,6 +144,15 @@ Iterable<String> _checkWorkflow(
     }
     if (extraEntries.isNotEmpty) {
       yield 'Unexpected ${workflow.path} ${filterEntry.key} entries: ${extraEntries.join(', ')}';
+    }
+  }
+}
+
+Iterable<String> _scriptReferences(String command) sync* {
+  for (final match in _scriptReferencePattern.allMatches(command)) {
+    final scriptPath = match.group(1) ?? match.group(2) ?? match.group(3);
+    if (scriptPath != null) {
+      yield scriptPath;
     }
   }
 }

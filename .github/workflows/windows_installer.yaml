@@ -37,21 +37,7 @@ jobs:
       - name: Resolve installer metadata
         id: metadata
         shell: pwsh
-        run: |
-          $pubspec = Get-Content pubspec.yaml -Raw
-          if ($pubspec -notmatch '(?m)^version:\s*([0-9A-Za-z\.\+\-]+)\s*$') {
-            throw "Could not resolve package version from pubspec.yaml"
-          }
-
-          $packageVersion = $Matches[1]
-          $installerVersion = $packageVersion.Split('+')[0]
-          $safeVersion = $packageVersion -replace '[^0-9A-Za-z\.\-]+', '-'
-          $outputDir = Join-Path $env:GITHUB_WORKSPACE 'build\installer'
-
-          "package_version=$packageVersion" >> $env:GITHUB_OUTPUT
-          "installer_version=$installerVersion" >> $env:GITHUB_OUTPUT
-          "safe_version=$safeVersion" >> $env:GITHUB_OUTPUT
-          "output_dir=$outputDir" >> $env:GITHUB_OUTPUT
+        run: ./tool/windows/resolve_installer_metadata.ps1
 
       - name: Install Inno Setup
         shell: pwsh
@@ -59,15 +45,7 @@ jobs:
 
       - name: Build installer
         shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path '${{ steps.metadata.outputs.output_dir }}' | Out-Null
-
-          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' `
-            '/DMyAppVersion=${{ steps.metadata.outputs.installer_version }}' `
-            '/DMyOutputDir=${{ steps.metadata.outputs.output_dir }}' `
-            '/DMyOutputBaseFilename=iwb_canvas_engine_example_setup_${{ steps.metadata.outputs.safe_version }}' `
-            '/DMySourceDir=${{ github.workspace }}\example\build\windows\x64\runner\Release' `
-            '.\tool\windows\example_installer.iss'
+        run: './tool/windows/build_example_installer.ps1 -InstallerVersion "${{ steps.metadata.outputs.installer_version }}" -OutputDir "${{ steps.metadata.outputs.output_dir }}" -SafeVersion "${{ steps.metadata.outputs.safe_version }}"'
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4

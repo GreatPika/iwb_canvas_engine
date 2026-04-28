@@ -376,6 +376,34 @@ jobs:
       }
     });
 
+    test('fails when a contracted workflow script is missing', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeCanonicalCiWorkflow(sandbox);
+        _writeCanonicalPerfNightlyWorkflow(sandbox);
+        File(
+          '${sandbox.path}/tool/pages/build_api_docs_pages_site.sh',
+        ).deleteSync();
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_verification_contract.dart',
+        );
+
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            '.github/workflows/api_docs_pages.yaml expected run entry '
+            '`bash tool/pages/build_api_docs_pages_site.sh` references '
+            'missing script `tool/pages/build_api_docs_pages_site.sh`',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
     test('accepts an untracked workflow without run entries', () async {
       final sandbox = await _createSandbox();
       try {
@@ -582,6 +610,7 @@ Future<Directory> _createSandbox() async {
     ],
     includeAnalyzer: false,
   );
+  _writeCanonicalWorkflowScripts(sandbox);
   _writeCanonicalApiDocsPagesWorkflow(sandbox);
   _writeCanonicalWindowsInstallerWorkflow(sandbox);
   return sandbox;
@@ -769,8 +798,7 @@ jobs:
       - name: Pub get
         run: ${removeRun == 'flutter pub get' ? 'echo missing' : 'flutter pub get'}
       - name: Generate site (API + Demo)
-        run: |
-${_indentBlock(removeRun == apiDocsPagesGenerateSiteCommand ? 'echo missing' : apiDocsPagesGenerateSiteCommand, 10)}
+        run: ${removeRun == apiDocsPagesGenerateSiteCommand ? 'echo missing' : apiDocsPagesGenerateSiteCommand}
       - name: Disable Jekyll
         run: ${removeRun == 'touch build/site/.nojekyll' ? 'echo missing' : 'touch build/site/.nojekyll'}
 ${extraRun == null ? '' : '''
@@ -783,6 +811,24 @@ ${extraRun == null ? '' : '''
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
 ''');
+}
+
+void _writeCanonicalWorkflowScripts(Directory sandbox) {
+  writeSandboxFile(
+    sandbox,
+    'tool/pages/build_api_docs_pages_site.sh',
+    '#!/usr/bin/env bash\n',
+  );
+  writeSandboxFile(
+    sandbox,
+    'tool/windows/resolve_installer_metadata.ps1',
+    "Write-Output 'metadata'\n",
+  );
+  writeSandboxFile(
+    sandbox,
+    'tool/windows/build_example_installer.ps1',
+    "Write-Output 'installer'\n",
+  );
 }
 
 void _writeCanonicalWindowsInstallerWorkflow(Directory sandbox) {
@@ -801,13 +847,11 @@ jobs:
         working-directory: example
         run: flutter build windows --release
       - name: Resolve installer metadata
-        run: |
-${_indentBlock(windowsInstallerMetadataCommand, 10)}
+        run: $windowsInstallerMetadataCommand
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
       - name: Build installer
-        run: |
-${_indentBlock(windowsInstallerBuildCommand, 10)}
+        run: '$windowsInstallerBuildCommand'
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
 ''');
