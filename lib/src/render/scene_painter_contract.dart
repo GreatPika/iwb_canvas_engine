@@ -91,12 +91,14 @@ class ScenePainterResolvedNodePaintData {
     required this.previewDelta,
     required this.geometry,
     this.textLayout,
+    this.strokePath,
   });
 
   final NodeSnapshot node;
   final Offset previewDelta;
   final GeometryEntry geometry;
   final ResolvedTextLayout? textLayout;
+  final Path? strokePath;
 
   Rect get worldBounds {
     if (previewDelta == Offset.zero) {

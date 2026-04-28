@@ -4,7 +4,6 @@ import 'dart:ui';
 import '../contract/snapshot.dart';
 import '../core/numeric_clamp.dart';
 import 'cache/scene_path_metrics_cache.dart';
-import 'cache/scene_stroke_path_cache.dart';
 import 'canvas_scope.dart';
 import 'scene_painter_contract.dart';
 import 'scene_painter_shared.dart';
@@ -12,11 +11,9 @@ import 'selection_halo_compositing.dart';
 
 class ScenePainterSelectionRenderer {
   ScenePainterSelectionRenderer({
-    required SceneStrokePathCache? strokePathCache,
     required ScenePathMetricsCache? pathMetricsCache,
     required Float64List transformBuffer,
   }) : _support = SceneSelectionSupport(
-         strokePathCache: strokePathCache,
          pathMetricsCache: pathMetricsCache,
          transformBuffer: transformBuffer,
        );
@@ -40,12 +37,10 @@ class ScenePainterSelectionRenderer {
 
 class SceneSelectionSupport {
   const SceneSelectionSupport({
-    required this.strokePathCache,
     required this.pathMetricsCache,
     required this.transformBuffer,
   });
 
-  final SceneStrokePathCache? strokePathCache;
   final ScenePathMetricsCache? pathMetricsCache;
   final Float64List transformBuffer;
 }
@@ -78,7 +73,7 @@ void _drawSelectionForNode(
       case LineNodeSnapshot line:
         _drawLineSelection(line, context);
       case StrokeNodeSnapshot stroke:
-        _drawStrokeSelection(stroke, context, support.strokePathCache);
+        _drawStrokeSelection(stroke, resolvedNode.strokePath, context);
       case PathNodeSnapshot pathNode:
         _drawPathSelection(
           pathNode,
@@ -113,19 +108,13 @@ void _drawLineSelection(
         haloWidth: context.style.haloWidth,
         baseStrokeWidth: baseThickness,
       );
-      context.canvas.drawLine(
-        node.start,
-        node.end,
+      _drawPathHalo(
+        context.canvas,
+        Path()
+          ..moveTo(node.start.dx, node.start.dy)
+          ..lineTo(node.end.dx, node.end.dy),
+        style,
         _haloPaint(style, cap: StrokeCap.round),
-      );
-      context.canvas.drawLine(
-        node.start,
-        node.end,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = baseThickness
-          ..strokeCap = StrokeCap.round
-          ..color = scenePainterApplyOpacity(node.color, node.opacity),
       );
     },
   );
@@ -133,8 +122,8 @@ void _drawLineSelection(
 
 void _drawStrokeSelection(
   StrokeNodeSnapshot node,
+  Path? resolvedStrokePath,
   SceneSelectionPaintContext context,
-  SceneStrokePathCache? strokePathCache,
 ) {
   if (!scenePainterCanPaintStrokeNode(node)) {
     return;
@@ -153,23 +142,24 @@ void _drawStrokeSelection(
           context,
           center: node.points.first,
           radius: baseThickness / 2,
-          baseColor: scenePainterApplyOpacity(node.color, node.opacity),
         );
+        return;
+      }
+      final path = resolvedStrokePath;
+      if (path == null) {
         return;
       }
 
       _drawStrokePathSelection(
-        node: node,
         context: context,
         baseThickness: baseThickness,
-        path: scenePainterResolveStrokePath(node, strokePathCache),
+        path: path,
       );
     },
   );
 }
 
 void _drawStrokePathSelection({
-  required StrokeNodeSnapshot node,
   required SceneSelectionPaintContext context,
   required double baseThickness,
   required Path path,
@@ -179,18 +169,11 @@ void _drawStrokePathSelection({
     haloWidth: context.style.haloWidth,
     baseStrokeWidth: baseThickness,
   );
-  context.canvas.drawPath(
+  _drawPathHalo(
+    context.canvas,
     path,
+    style,
     _haloPaint(style, cap: StrokeCap.round, join: StrokeJoin.round),
-  );
-  context.canvas.drawPath(
-    path,
-    Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = baseThickness
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..color = scenePainterApplyOpacity(node.color, node.opacity),
   );
 }
 
@@ -223,7 +206,7 @@ void _drawPathSelection(
         baseStrokeWidth: baseStrokeWidth,
       );
       _drawClosedPathSelection(context.canvas, contours.closedContours, style);
-      _drawOpenPathSelection(contours.openContours, node, context, style);
+      _drawOpenPathSelection(contours.openContours, context, style);
     },
   );
 }
@@ -241,29 +224,15 @@ void _drawClosedPathSelection(
 
 void _drawOpenPathSelection(
   List<Path> contours,
-  PathNodeSnapshot node,
   SceneSelectionPaintContext context,
   SelectionHaloStyle style,
 ) {
   for (final contour in contours) {
-    context.canvas.drawPath(
+    _drawPathHalo(
+      context.canvas,
       contour,
+      style,
       _haloPaint(style, cap: StrokeCap.round, join: StrokeJoin.round),
-    );
-    if (style.baseStrokeWidth <= 0) {
-      continue;
-    }
-    context.canvas.drawPath(
-      contour,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = style.baseStrokeWidth
-        ..strokeJoin = StrokeJoin.round
-        ..strokeCap = StrokeCap.round
-        ..color = scenePainterApplyOpacity(
-          node.strokeColor ?? context.style.color,
-          node.opacity,
-        ),
     );
   }
 }
@@ -306,21 +275,15 @@ void _drawDotSelection(
   SceneSelectionPaintContext context, {
   required Offset center,
   required double radius,
-  required Color baseColor,
 }) {
-  context.canvas.drawCircle(
-    center,
-    radius + context.style.haloWidth,
-    Paint()
-      ..style = PaintingStyle.fill
-      ..color = context.style.color,
-  );
-  context.canvas.drawCircle(
-    center,
-    radius,
-    Paint()
-      ..style = PaintingStyle.fill
-      ..color = baseColor,
+  drawBoundedCircleHalo(
+    context.canvas,
+    center: center,
+    radius: radius,
+    style: SelectionHaloStyle(
+      color: context.style.color,
+      haloWidth: context.style.haloWidth,
+    ),
   );
 }
 
@@ -328,6 +291,11 @@ void _drawRectHalo(Canvas canvas, Rect rect, SelectionHaloStyle style) {
   drawBoundedRectHalo(canvas, rect, style);
 }
 
-void _drawPathHalo(Canvas canvas, Path path, SelectionHaloStyle style) {
-  drawBoundedPathHalo(canvas, path, style, _haloPaint(style));
+void _drawPathHalo(
+  Canvas canvas,
+  Path path,
+  SelectionHaloStyle style, [
+  Paint? haloPaint,
+]) {
+  drawBoundedPathHalo(canvas, path, style, haloPaint ?? _haloPaint(style));
 }

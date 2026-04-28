@@ -770,6 +770,7 @@ void main() {
       final frameOwner = ScenePainterFrameOwner(
         renderState: renderState,
         textLayoutCache: textLayoutCache,
+        strokePathCache: null,
         geometryCache: geometryCache,
         selectionColor: const Color(0xFF1565C0),
         selectionStrokeWidth: 1,
@@ -822,6 +823,7 @@ void main() {
       final frameOwner = ScenePainterFrameOwner(
         renderState: renderState,
         textLayoutCache: null,
+        strokePathCache: null,
         geometryCache: RenderGeometryCache(),
         selectionColor: const Color(0xFF1565C0),
         selectionStrokeWidth: 4,
@@ -871,6 +873,7 @@ void main() {
       final frameOwner = ScenePainterFrameOwner(
         renderState: renderState,
         textLayoutCache: null,
+        strokePathCache: null,
         geometryCache: RenderGeometryCache(),
         selectionColor: const Color(0xFF1565C0),
         selectionStrokeWidth: 4,

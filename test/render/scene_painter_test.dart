@@ -511,7 +511,6 @@ void main() {
       );
       final renderer = ScenePainterNodeRenderer(
         imageResolver: (_) => null,
-        strokePathCache: null,
         transformBuffer: Float64List(16),
       );
       final recorder = PictureRecorder();
@@ -554,6 +553,58 @@ void main() {
       );
 
       recorder.endRecording();
+    },
+  );
+
+  test(
+    'ScenePainterNodeRenderer rejects multi-point stroke paint without frame-resolved path',
+    () {
+      final strokeNode = StrokeNodeSnapshot(
+        id: 'stroke-missing-path',
+        points: const <Offset>[Offset(0, 0), Offset(20, 0)],
+        thickness: 4,
+        color: const Color(0xFF000000),
+      );
+      final renderer = ScenePainterNodeRenderer(
+        imageResolver: (_) => null,
+        transformBuffer: Float64List(16),
+      );
+
+      expect(
+        () => renderer.paintNodeLayers(
+          canvas: TestRecordingCanvas(),
+          frame: ScenePainterPaintFrame(
+            cameraOffset: Offset.zero,
+            viewRect: const Rect.fromLTWH(-20, -20, 80, 80),
+            paintPlan: ScenePreparedPaintCandidateList(<ScenePaintCandidate>[
+              ScenePaintCandidate(
+                node: strokeNode,
+                paintBoundsWorld: nodeSnapshotBoundsWorld(strokeNode),
+              ),
+            ]),
+            selectedIds: const <NodeId>{},
+            selectionStyle: const ScenePainterSelectionStyle(
+              color: Color(0xFF1565C0),
+              haloWidth: 1,
+            ),
+          ),
+          resolveNodePaintData: (_) => ScenePainterResolvedNodePaintData(
+            node: strokeNode,
+            previewDelta: Offset.zero,
+            geometry: GeometryEntry(
+              localBounds: const Rect.fromLTRB(-2, -2, 22, 2),
+              worldBounds: nodeSnapshotBoundsWorld(strokeNode),
+            ),
+          ),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('Missing resolved stroke path'),
+          ),
+        ),
+      );
     },
   );
 
@@ -687,6 +738,249 @@ void main() {
     );
     expect(cachedNonBackground, greaterThan(0));
   });
+
+  test('ScenePainter keeps selected line base pixels alpha-stable', () async {
+    const background = Color(0x00000000);
+    final line = LineNodeSnapshot(
+      id: 'line-alpha-stable',
+      start: const Offset(10, 30),
+      end: const Offset(70, 30),
+      thickness: 6,
+      color: const Color(0xFF000000),
+      opacity: 0.25,
+    );
+    final controller = SceneStoreController(
+      initialSnapshot: SceneSnapshot(
+        background: BackgroundSnapshot(color: background),
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'line-alpha-layer',
+            nodes: <NodeSnapshot>[line],
+          ),
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+    final renderState = _mirrorRenderState(controller);
+    final painter = ScenePainter(
+      controller: renderState,
+      imageResolver: (_) => null,
+      selectionColor: const Color(0xFFFF0000),
+      selectionStrokeWidth: 4,
+    );
+
+    final unselected = await _paintToImage(painter, width: 90, height: 60);
+    controller.write<void>((writer) {
+      writer.writeSelectionReplace(const <NodeId>{'line-alpha-stable'});
+    });
+    final selected = await _paintToImage(painter, width: 90, height: 60);
+
+    expect(
+      await _pixelColor(selected, 40, 30),
+      await _pixelColor(unselected, 40, 30),
+    );
+  });
+
+  test(
+    'ScenePainter keeps later content above selected line content',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      const coverColor = Color(0xFF2962FF);
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: background),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'line-order-layer',
+              nodes: <NodeSnapshot>[
+                LineNodeSnapshot(
+                  id: 'line-under-cover',
+                  start: const Offset(10, 30),
+                  end: const Offset(70, 30),
+                  thickness: 8,
+                  color: const Color(0xFF000000),
+                ),
+                RectNodeSnapshot(
+                  id: 'later-cover',
+                  size: const Size(20, 20),
+                  fillColor: coverColor,
+                  strokeWidth: 0,
+                  transform: Transform2D.translation(const Offset(40, 30)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'line-under-cover'});
+      });
+
+      final image = await _paintToImage(
+        ScenePainter(
+          controller: renderState,
+          imageResolver: (_) => null,
+          selectionColor: const Color(0xFFFF0000),
+          selectionStrokeWidth: 4,
+        ),
+        width: 90,
+        height: 60,
+      );
+
+      expect(await _pixelColor(image, 40, 30), coverColor);
+    },
+  );
+
+  test(
+    'ScenePainter keeps selected dot base pixels alpha-stable with visible halo',
+    () async {
+      const background = Color(0x00000000);
+      final dot = StrokeNodeSnapshot(
+        id: 'dot-alpha-stable',
+        points: const <Offset>[Offset(30, 30)],
+        thickness: 8,
+        color: const Color(0xFF000000),
+        opacity: 0.25,
+      );
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: background),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'dot-alpha-layer',
+              nodes: <NodeSnapshot>[dot],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
+      final painter = ScenePainter(
+        controller: renderState,
+        imageResolver: (_) => null,
+        selectionColor: const Color(0xFFFF0000),
+        selectionStrokeWidth: 4,
+      );
+
+      final unselected = await _paintToImage(painter, width: 70, height: 70);
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'dot-alpha-stable'});
+      });
+      final selected = await _paintToImage(painter, width: 70, height: 70);
+
+      expect(
+        await _pixelColor(selected, 30, 30),
+        await _pixelColor(unselected, 30, 30),
+      );
+      final haloPixel = await _pixelColor(selected, 37, 30);
+      expect(haloPixel.a, greaterThan(0.8));
+      expect(haloPixel.r, greaterThan(0.8));
+      expect(haloPixel.g, 0);
+      expect(haloPixel.b, 0);
+    },
+  );
+
+  test(
+    'ScenePainter reuses selected stroke path without selection cache lookup',
+    () async {
+      final strokeCache = SceneStrokePathCache(maxEntries: 8);
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: const Color(0xFFFFFFFF)),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'stroke-selection-cache-layer',
+              nodes: <NodeSnapshot>[
+                StrokeNodeSnapshot(
+                  id: 'stroke-selection-cache',
+                  points: const <Offset>[Offset(10, 10), Offset(60, 30)],
+                  thickness: 4,
+                  color: const Color(0xFF000000),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'stroke-selection-cache'});
+      });
+
+      await _paintToImage(
+        ScenePainter(
+          controller: renderState,
+          imageResolver: (_) => null,
+          strokePathCache: strokeCache,
+          selectionColor: const Color(0xFFFF0000),
+          selectionStrokeWidth: 3,
+        ),
+        width: 80,
+        height: 50,
+      );
+
+      expect(strokeCache.debugBuildCount, 1);
+      expect(strokeCache.debugHitCount, 0);
+    },
+  );
+
+  test(
+    'ScenePainter keeps selected open path base pixels alpha-stable and ordered',
+    () async {
+      const background = Color(0xFFFFFFFF);
+      const coverColor = Color(0xFF00A152);
+      final path = PathNodeSnapshot(
+        id: 'open-path-alpha-order',
+        svgPathData: 'M10 30 L70 30',
+        strokeColor: const Color(0xFF000000),
+        strokeWidth: 6,
+        opacity: 0.25,
+      );
+      final controller = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: background),
+          layers: <ContentLayerSnapshot>[
+            ContentLayerSnapshot(
+              id: 'open-path-layer',
+              nodes: <NodeSnapshot>[
+                path,
+                RectNodeSnapshot(
+                  id: 'open-path-cover',
+                  size: const Size(20, 20),
+                  fillColor: coverColor,
+                  strokeWidth: 0,
+                  transform: Transform2D.translation(const Offset(40, 30)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+      final renderState = _mirrorRenderState(controller);
+      final painter = ScenePainter(
+        controller: renderState,
+        imageResolver: (_) => null,
+        selectionColor: const Color(0xFFFF0000),
+        selectionStrokeWidth: 4,
+      );
+
+      final unselected = await _paintToImage(painter, width: 90, height: 60);
+      controller.write<void>((writer) {
+        writer.writeSelectionReplace(const <NodeId>{'open-path-alpha-order'});
+      });
+      final selected = await _paintToImage(painter, width: 90, height: 60);
+
+      expect(
+        await _pixelColor(selected, 20, 30),
+        await _pixelColor(unselected, 20, 30),
+      );
+      expect(await _pixelColor(selected, 40, 30), coverColor);
+    },
+  );
 
   test(
     'ScenePainter keeps canvas save stack balanced across preview and selection scopes',

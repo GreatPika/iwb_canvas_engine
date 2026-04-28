@@ -508,7 +508,8 @@ This object computes:
 - view rectangle and visibility rectangle
 - selection halo budget
 - paint-candidate admission query
-- resolved node paint data, including text layout and preview delta
+- resolved node paint data, including text layout, preview delta, and reusable
+  non-dot stroke paths
 
 Paint admission consumes coarse `paintBoundsWorld` from explicit admission
 sources. Committed ordinary candidates and committed selected supplements use
@@ -535,6 +536,9 @@ Bounded paint-work policy also stays inside the render layer:
 
 - `selection_halo_compositing.dart` owns tight main-scene halo `saveLayer`
   bounds derived from geometry and halo style
+- `ScenePainterSelectionRenderer` owns selection visuals only; base node
+  geometry remains in `ScenePainterNodeRenderer`, and selected line, stroke,
+  dot, and open-path content is not redrawn in the selection overlay
 - `SceneGridRenderer` owns bounded axis plans consumed by both direct grid draw
   and `SceneStaticLayerCache` recording/probe surfaces
 
@@ -657,7 +661,8 @@ Typical frame flow:
    enumeration strategy
 4. the painter resolves node paint data from that frame authority
 5. background, nodes, and selection visuals are painted from the same captured
-   frame and the same frozen frame-preview snapshot
+   frame and the same frozen frame-preview snapshot; selection visuals add only
+   bounded halo pixels over already-painted selected content
 6. overlay rendering listens through the separate overlay repaint channel
 
 There are two paint-admission modes:

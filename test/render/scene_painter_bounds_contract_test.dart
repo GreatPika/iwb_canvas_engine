@@ -414,4 +414,45 @@ void main() {
       expect(source, isNot(contains('benchmark-only')));
     },
   );
+
+  test('node rendering consumes frame-resolved stroke paths only', () {
+    final nodeRendererSource = File(
+      'lib/src/render/scene_painter_node_renderer.dart',
+    ).readAsStringSync();
+    final frameSource = File(
+      'lib/src/render/scene_painter_frame.dart',
+    ).readAsStringSync();
+
+    expect(
+      nodeRendererSource,
+      isNot(contains("import 'cache/scene_stroke_path_cache.dart';")),
+    );
+    expect(nodeRendererSource, isNot(contains('SceneStrokePathCache')));
+    expect(
+      nodeRendererSource,
+      isNot(contains('scenePainterResolveStrokePath(')),
+    );
+    expect(nodeRendererSource, contains('resolvedNode.strokePath'));
+    expect(nodeRendererSource, contains('_requireResolvedStrokePath('));
+    expect(frameSource, contains('scenePainterResolveStrokePath('));
+  });
+
+  test('selection rendering stays halo-only for selected vector content', () {
+    final source = File(
+      'lib/src/render/scene_painter_selection.dart',
+    ).readAsStringSync();
+
+    expect(
+      source,
+      isNot(contains("import 'cache/scene_stroke_path_cache.dart';")),
+    );
+    expect(source, isNot(contains('scenePainterResolveStrokePath(')));
+    expect(source, isNot(contains('buildStrokePath(')));
+    expect(source, isNot(contains('.drawLine(')));
+    expect(source, isNot(contains('.drawCircle(')));
+    expect(source, isNot(contains('.drawPath(')));
+    expect(source, contains('resolvedNode.strokePath'));
+    expect(source, contains('drawBoundedCircleHalo('));
+    expect(source, contains('drawBoundedPathHalo('));
+  });
 }

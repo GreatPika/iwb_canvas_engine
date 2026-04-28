@@ -76,6 +76,9 @@ in changes that have not yet been published to pub.dev.
 
 ### Fixed
 
+- Fixed selected line, stroke, dot, and open-path rendering so selection halos
+  no longer repaint base vector content, preserving alpha, scene draw order,
+  and stroke-path cache work.
 - Fixed draw-mode terminal cleanup so failing stroke, dragged-line, eraser, or
   draw action-emission paths clear gesture, preview, pending-line, and
   tool-local buffer state before rethrowing.

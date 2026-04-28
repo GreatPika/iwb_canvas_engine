@@ -164,17 +164,16 @@ ScenePainterShell _createScenePainterShell(_ScenePainterConfig config) {
     frameOwner: ScenePainterFrameOwner(
       renderState: config.controller,
       textLayoutCache: config.textLayoutCache,
+      strokePathCache: config.strokePathCache,
       geometryCache: config.geometryCache,
       selectionColor: config.selectionColor,
       selectionStrokeWidth: config.selectionStrokeWidth,
     ),
     nodeRenderer: ScenePainterNodeRenderer(
       imageResolver: config.imageResolver,
-      strokePathCache: config.strokePathCache,
       transformBuffer: nodeTransformBuffer,
     ),
     selectionRenderer: ScenePainterSelectionRenderer(
-      strokePathCache: config.strokePathCache,
       pathMetricsCache: config.pathMetricsCache,
       transformBuffer: selectionTransformBuffer,
     ),

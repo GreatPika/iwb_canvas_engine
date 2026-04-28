@@ -1185,7 +1185,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-SELECTION-BOUNDED-COMPOSITING',
     scope: 'engine-runtime',
     title:
-        'main-scene selection halo compositing keeps masked halo semantics while every halo saveLayer uses geometry-derived non-null tight bounds on the render owner seam',
+        'main-scene selection rendering is halo-only for selected vector content, keeps masked halo semantics, and uses geometry-derived non-null tight bounds for every halo saveLayer on the render owner seam',
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path: 'test/render/scene_painter_bounds_contract_test.dart',

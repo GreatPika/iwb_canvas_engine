@@ -68,6 +68,40 @@ void drawBoundedPathHalo(
   canvas.restore();
 }
 
+void drawBoundedCircleHalo(
+  Canvas canvas, {
+  required Offset center,
+  required double radius,
+  required SelectionHaloStyle style,
+}) {
+  final safeRadius = clampNonNegativeFinite(radius);
+  final haloWidth = clampNonNegativeFinite(style.haloWidth);
+  final layerBounds = _inflateFiniteBounds(
+    Rect.fromCircle(center: center, radius: safeRadius),
+    haloWidth,
+  );
+  if (layerBounds == null) {
+    return;
+  }
+
+  canvas.saveLayer(layerBounds, Paint());
+  canvas.drawCircle(
+    center,
+    safeRadius + haloWidth,
+    Paint()
+      ..style = PaintingStyle.fill
+      ..color = style.color,
+  );
+  canvas.drawCircle(
+    center,
+    safeRadius,
+    Paint()
+      ..style = PaintingStyle.fill
+      ..blendMode = BlendMode.clear,
+  );
+  canvas.restore();
+}
+
 Rect? _inflateFiniteBounds(Rect bounds, double padding) {
   if (!scenePainterIsFiniteRect(bounds)) {
     return null;

@@ -116,35 +116,6 @@ Confirmed active defects only.
 - Next action: Choose one shared paint admission boundary policy, codify it in
   tests, and remove the committed-vs-snapshot drift.
 
-### KI-8
-
-- ID: `KI-8`
-- Severity: `P1`
-- Summary: Selection rendering redraws base line/stroke/open-path geometry in a
-  late overlay pass, which can change alpha, break scene draw order, and add
-  extra stroke-path work for selected vector nodes.
-- Detection: Compare content-pass node rendering in
-  `lib/src/render/scene_painter_node_renderer.dart` with selection-pass redraws
-  in `lib/src/render/scene_painter_selection.dart`
-- Evidence:
-  - `lib/src/render/scene_painter_shell.dart`
-  - `lib/src/render/scene_painter_node_renderer.dart`
-  - `lib/src/render/scene_painter_selection.dart`
-  - `lib/src/render/scene_painter_shared.dart`
-  - Current detections:
-    selected `LineNodeSnapshot` base geometry is redrawn in
-    `_drawLineSelection` after the full content pass;
-    selected `StrokeNodeSnapshot` base geometry is redrawn in
-    `_drawStrokePathSelection` / `_drawDotSelection` after the full content
-    pass;
-    selected open `PathNodeSnapshot` stroke is redrawn in
-    `_drawOpenPathSelection` after the full content pass;
-    large selected strokes can rebuild stroke paths twice per frame when no
-    `SceneStrokePathCache` is supplied
-- Next action: Remove base-geometry redraw from the selection overlay or
-  replace it with bounded halo compositing, then add render tests for
-  alpha-preservation, overlap order, and open-path parity.
-
 ### KI-11
 
 - ID: `KI-11`

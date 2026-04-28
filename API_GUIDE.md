@@ -421,7 +421,8 @@ Responsibilities:
 
 - render the current scene
 - own the Flutter pointer-routing path for normal interactive use
-- render selection and preview overlays
+- render preview overlays and halo-only selection visuals without repainting
+  selected scene content out of order
 - resolve image nodes through `imageResolver`, which has type
   `ui.Image? Function(String imageId)?`
 

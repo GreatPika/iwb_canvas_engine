@@ -2,6 +2,9 @@ language: english
 
 # Change Contract
 
+Status: completed. `KI-8` is closed by the implementation change that made
+selection rendering halo-only and removed the active known-issue entry.
+
 ## 1. Change Mandate
 
 Close `KI-8` by making main-scene selection rendering a halo-only overlay so
@@ -564,7 +567,7 @@ Not used. The architectural form is locked in 4A.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Close Line and Dot Selection Redraw
+### Slice 1. [x] Close Line and Dot Selection Redraw
 
 #### Slice Contract
 
@@ -616,7 +619,7 @@ line or dot content.
 - line/dot structural proof fails against the current selection redraw code and
   passes after the slice implementation
 
-### Slice 2. [ ] Move Stroke Path Reuse to Frame-Resolved Data
+### Slice 2. [x] Move Stroke Path Reuse to Frame-Resolved Data
 
 #### Slice Contract
 
@@ -679,7 +682,7 @@ stroke redraw.
 - DCM output is reviewed as a signal and not used to justify mechanical
   splitting
 
-### Slice 3. [ ] Close Path Selection Redraw and Full Halo-Only Proof
+### Slice 3. [x] Close Path Selection Redraw and Full Halo-Only Proof
 
 #### Slice Contract
 
@@ -732,7 +735,7 @@ halo-only.
 - alpha, draw-order, halo visibility, preview parity, and cache tests are green
 - structural proof rejects the old selection redraw form
 
-### Slice 4. [ ] Close KI-8 Source-of-Truth and Final Verification
+### Slice 4. [x] Close KI-8 Source-of-Truth and Final Verification
 
 #### Slice Contract
 

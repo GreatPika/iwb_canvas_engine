@@ -6,7 +6,6 @@ import 'package:flutter/rendering.dart';
 import '../contract/snapshot.dart';
 import '../core/text_layout.dart';
 import '../core/numeric_clamp.dart';
-import 'cache/scene_stroke_path_cache.dart';
 import 'canvas_scope.dart';
 import 'scene_painter_contract.dart';
 import 'scene_painter_shared.dart';
@@ -14,13 +13,9 @@ import 'scene_painter_shared.dart';
 class ScenePainterNodeRenderer {
   ScenePainterNodeRenderer({
     required Image? Function(String imageId) imageResolver,
-    required SceneStrokePathCache? strokePathCache,
     required Float64List transformBuffer,
   }) : _transformBuffer = transformBuffer,
-       _support = SceneNodeRenderSupport(
-         imageResolver: imageResolver,
-         strokePathCache: strokePathCache,
-       );
+       _support = SceneNodeRenderSupport(imageResolver: imageResolver);
 
   final Float64List _transformBuffer;
   final SceneNodeRenderSupport _support;
@@ -74,9 +69,8 @@ class ScenePainterNodeRenderer {
 class SceneNodeRenderSupport {
   SceneNodeRenderSupport({
     required Image? Function(String imageId) imageResolver,
-    required SceneStrokePathCache? strokePathCache,
   }) : shapes = SceneShapeNodeRenderer(),
-       strokes = SceneStrokeNodeRenderer(strokePathCache: strokePathCache),
+       strokes = const SceneStrokeNodeRenderer(),
        rich = SceneRichNodeRenderer(imageResolver: imageResolver);
 
   final SceneShapeNodeRenderer shapes;
@@ -157,9 +151,7 @@ class SceneShapeNodeRenderer {
 }
 
 class SceneStrokeNodeRenderer {
-  const SceneStrokeNodeRenderer({required this.strokePathCache});
-
-  final SceneStrokePathCache? strokePathCache;
+  const SceneStrokeNodeRenderer();
 
   void drawLineNode(LineNodeSnapshot node, SceneNodeRenderContext context) {
     if (!node.transform.isFinite ||
@@ -188,7 +180,11 @@ class SceneStrokeNodeRenderer {
     );
   }
 
-  void drawStrokeNode(StrokeNodeSnapshot node, SceneNodeRenderContext context) {
+  void drawStrokeNode(
+    StrokeNodeSnapshot node,
+    SceneNodeRenderContext context, {
+    Path? resolvedStrokePath,
+  }) {
     if (!scenePainterCanPaintStrokeNode(node)) {
       return;
     }
@@ -213,7 +209,7 @@ class SceneStrokeNodeRenderer {
           return;
         }
 
-        final path = scenePainterResolveStrokePath(node, strokePathCache);
+        final path = _requireResolvedStrokePath(node, resolvedStrokePath);
 
         context.canvas.drawPath(
           path,
@@ -326,7 +322,11 @@ void _drawResolvedNode(
       case LineNodeSnapshot lineNode:
         support.strokes.drawLineNode(lineNode, context);
       case StrokeNodeSnapshot strokeNode:
-        support.strokes.drawStrokeNode(strokeNode, context);
+        support.strokes.drawStrokeNode(
+          strokeNode,
+          context,
+          resolvedStrokePath: resolvedNode.strokePath,
+        );
       case TextNodeSnapshot textNode:
         support.rich.drawTextNode(
           textNode,
@@ -365,6 +365,13 @@ ResolvedTextLayout _requireResolvedTextLayout(
   throw StateError(
     'Missing resolved text layout for text node ${resolvedNode.node.id}.',
   );
+}
+
+Path _requireResolvedStrokePath(StrokeNodeSnapshot node, Path? strokePath) {
+  if (strokePath != null) {
+    return strokePath;
+  }
+  throw StateError('Missing resolved stroke path for stroke node ${node.id}.');
 }
 
 typedef _FillAndStrokeStyle = ({

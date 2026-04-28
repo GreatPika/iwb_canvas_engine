@@ -10,6 +10,9 @@ rendering, and render caches.
 - A frame paints from one frozen frame authority.
 - Candidate admission and selection overlays must not introduce unbounded work
   or draw-order drift.
+- Selection rendering owns halo-only visuals; base selected-node geometry stays
+  in the content pass and reusable stroke paths are borrowed from
+  frame-resolved paint data.
 
 ## Owners
 
@@ -43,10 +46,9 @@ rendering, and render caches.
 
 ## Status
 
-- `known issue`
-- Selection rendering redraw drift remains tracked by
-  [KI-8](../../../KNOWN_ISSUES.md#ki-8); frame admission and cache ownership
-  remain the target family rules.
+- `locked`
+- Selection overlay redraw drift is closed; frame admission, halo-only
+  selection rendering, and render-cache ownership now match the target rules.
 
 ## Update Triggers
 
