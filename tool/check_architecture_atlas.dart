@@ -41,7 +41,9 @@ const List<String> _requiredFamilyHeadings = <String>[
   '## Update Triggers',
 ];
 
-final RegExp _registryRowPattern = RegExp(r'^\|\s*`([^`]+)`\s*\|');
+final RegExp _registryRowPattern = RegExp(
+  r'^\|\s*`([^`]+)`\s*\|.*\|\s*`([^`]+)`\s*\|\s*$',
+);
 final RegExp _markdownLinkPattern = RegExp(r'\[([^\]]+)\]\(([^)]+)\)');
 final RegExp _statusPattern = RegExp(r'`(locked|known issue|docs stale)`');
 final RegExp _invariantPattern = RegExp(
@@ -180,6 +182,7 @@ class _AtlasChecker {
         continue;
       }
       final id = _requireGroup(match, 1);
+      final registryStatus = _requireGroup(match, 2);
       rows.add(id);
       if (!seen.add(id)) {
         _failures.add('${_rel(overview.path)} duplicates family id `$id`.');
@@ -193,6 +196,19 @@ class _AtlasChecker {
       if (!line.contains('($expectedLink)')) {
         _failures.add(
           '${_rel(overview.path)} family `$id` must link to `$expectedLink`.',
+        );
+      }
+      if (!_allowedStatuses.contains(registryStatus)) {
+        _failures.add(
+          '${_rel(overview.path)} family `$id` has unsupported registry '
+          'status `$registryStatus`.',
+        );
+      }
+      final familyStatus = _familyStatus(kind, id);
+      if (familyStatus != null && registryStatus != familyStatus) {
+        _failures.add(
+          '${_rel(overview.path)} family `$id` status `$registryStatus` must '
+          'match ${kind.directory}/families/$id.md status `$familyStatus`.',
         );
       }
     }
@@ -279,15 +295,8 @@ class _AtlasChecker {
   }
 
   void _checkStatus(File file, String source) {
-    final statusSection = _section(source, '## Status');
-    if (statusSection == null) {
-      return;
-    }
-
-    final statuses = _statusPattern
-        .allMatches(statusSection)
-        .map((match) => _requireGroup(match, 1))
-        .toList(growable: false);
+    final statusSection = _section(source, '## Status') ?? '';
+    final statuses = _statusesFromSource(source);
     if (statuses.length != 1) {
       _failures.add(
         '${_rel(file.path)} must declare exactly one status from '
@@ -306,6 +315,26 @@ class _AtlasChecker {
         'KNOWN_ISSUES.md or a dedicated plan step.',
       );
     }
+  }
+
+  String? _familyStatus(_FamilyKind kind, String id) {
+    final file = _file('${kind.directory}/families/$id.md');
+    if (!file.existsSync()) {
+      return null;
+    }
+    final statuses = _statusesFromSource(file.readAsStringSync());
+    return statuses.length == 1 ? statuses.single : null;
+  }
+
+  List<String> _statusesFromSource(String source) {
+    final statusSection = _section(source, '## Status');
+    if (statusSection == null) {
+      return const <String>[];
+    }
+    return _statusPattern
+        .allMatches(statusSection)
+        .map((match) => _requireGroup(match, 1))
+        .toList(growable: false);
   }
 
   void _checkInvariantIds(File file, String source) {

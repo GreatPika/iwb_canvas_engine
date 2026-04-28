@@ -151,6 +151,29 @@ void main() {
       );
     });
 
+    test('rejects family registry status drift', () async {
+      final sandbox = await _createAtlasSandbox();
+      addTearDown(() => sandbox.deleteSync(recursive: true));
+      _writeCompleteAtlas(sandbox);
+      _writeArchitectureOverview(
+        sandbox,
+        _architectureFamilyIds,
+        statusOverrides: const <String, String>{
+          'public_package_boundary': '`docs stale`',
+        },
+      );
+
+      final result = await _runChecker(sandbox);
+
+      expect(result.exitCode, isNot(0));
+      _expectFailure(
+        result,
+        'architecture/overview.md family `public_package_boundary` status '
+        '`docs stale` must match architecture/families/public_package_boundary.md '
+        'status `locked`',
+      );
+    });
+
     test('rejects missing and orphan evidence artifacts', () async {
       final sandbox = await _createAtlasSandbox();
       addTearDown(() => sandbox.deleteSync(recursive: true));
@@ -417,7 +440,11 @@ void _writeCompleteAtlas(
         '- [Engine architecture](architecture/overview.md)\n'
         '- [Proof architecture](proof_architecture/overview.md)\n',
   );
-  _writeArchitectureOverview(sandbox, _architectureFamilyIds);
+  _writeArchitectureOverview(
+    sandbox,
+    _architectureFamilyIds,
+    statusOverrides: architectureStatusOverrides,
+  );
   _writeProofOverview(sandbox, _proofFamilyIds);
   writeSandboxFile(
     sandbox,
@@ -486,7 +513,11 @@ void _writeCompleteAtlas(
   );
 }
 
-void _writeArchitectureOverview(Directory sandbox, List<String> ids) {
+void _writeArchitectureOverview(
+  Directory sandbox,
+  List<String> ids, {
+  Map<String, String> statusOverrides = const <String, String>{},
+}) {
   writeSandboxFile(
     sandbox,
     'docs/architecture/overview.md',
@@ -494,7 +525,7 @@ void _writeArchitectureOverview(Directory sandbox, List<String> ids) {
         '## Owner Family Registry\n\n'
         '| Family id | Family | Status |\n'
         '| --- | --- | --- |\n'
-        '${ids.map((id) => '| `$id` | [Family](families/$id.md) | `locked` |').join('\n')}\n',
+        '${ids.map((id) => '| `$id` | [Family](families/$id.md) | ${_registryStatus(statusOverrides[id])} |').join('\n')}\n',
   );
 }
 
@@ -508,6 +539,14 @@ void _writeProofOverview(Directory sandbox, List<String> ids) {
         '| --- | --- | --- |\n'
         '${ids.map((id) => '| `$id` | [Family](families/$id.md) | `locked` |').join('\n')}\n',
   );
+}
+
+String _registryStatus(String? statusOverride) {
+  if (statusOverride == null) {
+    return '`locked`';
+  }
+  final match = RegExp(r'`([^`]+)`').firstMatch(statusOverride);
+  return match == null ? statusOverride : '`${match.group(1)}`';
 }
 
 String _architectureFamilyBody({
