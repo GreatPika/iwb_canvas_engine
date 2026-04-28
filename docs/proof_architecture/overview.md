@@ -23,7 +23,7 @@ verification contracts, generated evidence, and invariant reachability.
 | `public_entrypoint_and_signature_proof` | [Public entrypoint and signature proof](families/public_entrypoint_and_signature_proof.md) | `locked` |
 | `guardrail_runner_and_artifact_model` | [Guardrail runner and artifact model](families/guardrail_runner_and_artifact_model.md) | `locked` |
 | `invariant_registry_and_proof_reachability` | [Invariant registry and proof reachability](families/invariant_registry_and_proof_reachability.md) | `locked` |
-| `verification_contract_and_workflow_drift` | [Verification contract and workflow drift](families/verification_contract_and_workflow_drift.md) | `known issue` |
+| `verification_contract_and_workflow_drift` | [Verification contract and workflow drift](families/verification_contract_and_workflow_drift.md) | `locked` |
 
 ## Mechanical Evidence
 

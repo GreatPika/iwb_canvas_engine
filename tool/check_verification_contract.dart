@@ -7,11 +7,12 @@ import 'src/verification_contract/verification_contract_registry.dart';
 
 Future<void> main(List<String> _) async {
   final failures = <String>[
-    ..._checkWorkflow(File(ciWorkflowPath), ciWorkflowDefinition),
-    ..._checkWorkflow(
-      File(perfNightlyWorkflowPath),
-      perfNightlyWorkflowDefinition,
+    ..._checkWorkflowRegistryCoverage(
+      Directory('.github/workflows'),
+      verificationGraph.workflows.keys.toSet(),
     ),
+    for (final workflow in verificationWorkflowDefinitions)
+      ..._checkWorkflow(File(workflow.path), workflow),
   ];
 
   if (failures.isNotEmpty) {
@@ -26,8 +27,59 @@ Future<void> main(List<String> _) async {
   stdout.writeln(
     'Verification contract OK '
     '(${toolTestTriggerEntries.length} trigger entries, '
-    '${ciWorkflowRunExpectations.length} CI run entries).',
+    '${verificationWorkflowDefinitions.length} workflows).',
   );
+}
+
+Iterable<String> _checkWorkflowRegistryCoverage(
+  Directory workflowsDirectory,
+  Set<String> contractedWorkflowPaths,
+) sync* {
+  if (!workflowsDirectory.existsSync()) {
+    return;
+  }
+
+  final workflowFiles =
+      workflowsDirectory
+          .listSync(followLinks: false)
+          .whereType<File>()
+          .where(_isWorkflowYamlFile)
+          .toList()
+        ..sort((left, right) => left.path.compareTo(right.path));
+
+  for (final workflowFile in workflowFiles) {
+    final path = _repoRelativePath(workflowFile);
+    if (contractedWorkflowPaths.contains(path)) {
+      continue;
+    }
+
+    final content = workflowFile.readAsStringSync();
+    late final _WorkflowDocument workflowDocument;
+    try {
+      workflowDocument = _parseWorkflowDocument(content);
+    } on _WorkflowParseException catch (error) {
+      yield '$path ${error.message}';
+      continue;
+    }
+    if (workflowDocument.runEntries.isNotEmpty) {
+      yield '$path has executable run entries but is not represented in the '
+          'verification contract graph.';
+    }
+  }
+}
+
+bool _isWorkflowYamlFile(File file) {
+  return file.path.endsWith('.yaml') || file.path.endsWith('.yml');
+}
+
+String _repoRelativePath(File file) {
+  final normalized = file.path.replaceAll('\\', '/');
+  const marker = '.github/workflows/';
+  final markerIndex = normalized.lastIndexOf(marker);
+  if (markerIndex == -1) {
+    return normalized;
+  }
+  return normalized.substring(markerIndex);
 }
 
 Iterable<String> _checkWorkflow(

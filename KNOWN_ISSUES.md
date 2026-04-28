@@ -116,30 +116,6 @@ Confirmed active defects only.
 - Next action: Choose one shared paint admission boundary policy, codify it in
   tests, and remove the committed-vs-snapshot drift.
 
-### KI-11
-
-- ID: `KI-11`
-- Severity: `P2`
-- Summary: The API docs / Pages workflow is outside the verification contract,
-  so executable workflow drift in `.github/workflows/api_docs_pages.yaml` is
-  not checked by the contract checker.
-- Detection: Compare workflow coverage in
-  `tool/src/verification_contract/verification_contract_registry.dart` and
-  `tool/check_verification_contract.dart` with committed workflows under
-  `.github/workflows`
-- Evidence:
-  - `tool/src/verification_contract/verification_contract_registry.dart`
-  - `tool/check_verification_contract.dart`
-  - `.github/workflows/api_docs_pages.yaml`
-  - `ARCHITECTURE.md`
-  - Current detections:
-    verification contract registry and checker only cover `ci.yaml` and
-    `perf_nightly.yaml`;
-    `.github/workflows/api_docs_pages.yaml` contains executable run commands
-    but has no workflow definition in the contract graph
-- Next action: Add `api_docs_pages.yaml` to the verification contract graph and
-  checker, or explicitly document and test that it is intentionally excluded.
-
 ### KI-12
 
 - ID: `KI-12`

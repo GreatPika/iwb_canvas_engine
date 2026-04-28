@@ -196,6 +196,36 @@ Run something else.
       },
     );
 
+    test(
+      'fails when API docs pages owned run surface grows unexpectedly',
+      () async {
+        final sandbox = await _createSandbox();
+        try {
+          _writeCanonicalCiWorkflow(sandbox);
+          _writeCanonicalPerfNightlyWorkflow(sandbox);
+          _writeCanonicalApiDocsPagesWorkflow(
+            sandbox,
+            extraRun: 'echo pages drift',
+          );
+
+          final result = await runSandboxTool(
+            sandbox,
+            'check_verification_contract.dart',
+          );
+
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            contains(
+              '.github/workflows/api_docs_pages.yaml has unexpected executable run entry `.|echo pages drift`',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
     test('fails when perf nightly duplicates an owned run entry', () async {
       final sandbox = await _createSandbox();
       try {
@@ -309,6 +339,64 @@ jobs:
           result.stderr.toString(),
           isNot(contains('Unhandled exception')),
         );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('fails when a workflow with run entries is outside the graph', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeCanonicalCiWorkflow(sandbox);
+        _writeCanonicalPerfNightlyWorkflow(sandbox);
+        writeSandboxFile(sandbox, '.github/workflows/untracked.yaml', '''
+name: Untracked
+
+jobs:
+  drift:
+    steps:
+      - name: Drift
+        run: echo drift
+''');
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_verification_contract.dart',
+        );
+
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          contains(
+            '.github/workflows/untracked.yaml has executable run entries but is not represented in the verification contract graph.',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
+
+    test('accepts an untracked workflow without run entries', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeCanonicalCiWorkflow(sandbox);
+        _writeCanonicalPerfNightlyWorkflow(sandbox);
+        writeSandboxFile(sandbox, '.github/workflows/uses_only.yaml', '''
+name: Uses Only
+
+jobs:
+  noop:
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+''');
+
+        final result = await runSandboxTool(
+          sandbox,
+          'check_verification_contract.dart',
+        );
+
+        expect(result.exitCode, 0, reason: result.stderr.toString());
       } finally {
         sandbox.deleteSync(recursive: true);
       }
@@ -485,8 +573,8 @@ if [ "$JOBS" -gt 6 ]; then
 fi
 echo "jobs=$JOBS" >> "$GITHUB_OUTPUT"''';
 
-Future<Directory> _createSandbox() {
-  return createToolSandbox(
+Future<Directory> _createSandbox() async {
+  final sandbox = await createToolSandbox(
     tempPrefix: 'iwb_canvas_engine_verification_contract_',
     toolFiles: const <String>[
       'tool/check_verification_contract.dart',
@@ -494,6 +582,9 @@ Future<Directory> _createSandbox() {
     ],
     includeAnalyzer: false,
   );
+  _writeCanonicalApiDocsPagesWorkflow(sandbox);
+  _writeCanonicalWindowsInstallerWorkflow(sandbox);
+  return sandbox;
 }
 
 void _replaceInSandboxFile(
@@ -661,6 +752,64 @@ ${extraRun == null ? '' : '''
       - name: Unexpected extra run
         run: ${runEntries.last}
 '''}
+''');
+}
+
+void _writeCanonicalApiDocsPagesWorkflow(
+  Directory sandbox, {
+  String? removeRun,
+  String? extraRun,
+}) {
+  writeSandboxFile(sandbox, '.github/workflows/api_docs_pages.yaml', '''
+name: API Docs (GitHub Pages)
+
+jobs:
+  build:
+    steps:
+      - name: Pub get
+        run: ${removeRun == 'flutter pub get' ? 'echo missing' : 'flutter pub get'}
+      - name: Generate site (API + Demo)
+        run: |
+${_indentBlock(removeRun == apiDocsPagesGenerateSiteCommand ? 'echo missing' : apiDocsPagesGenerateSiteCommand, 10)}
+      - name: Disable Jekyll
+        run: ${removeRun == 'touch build/site/.nojekyll' ? 'echo missing' : 'touch build/site/.nojekyll'}
+${extraRun == null ? '' : '''
+      - name: Unexpected extra run
+        run: $extraRun
+'''}
+
+  deploy:
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+''');
+}
+
+void _writeCanonicalWindowsInstallerWorkflow(Directory sandbox) {
+  writeSandboxFile(sandbox, '.github/workflows/windows_installer.yaml', '''
+name: Windows Installer
+
+jobs:
+  build-installer:
+    steps:
+      - name: Pub get
+        run: flutter pub get
+      - name: Example pub get
+        working-directory: example
+        run: flutter pub get
+      - name: Build Windows release
+        working-directory: example
+        run: flutter build windows --release
+      - name: Resolve installer metadata
+        run: |
+${_indentBlock(windowsInstallerMetadataCommand, 10)}
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+      - name: Build installer
+        run: |
+${_indentBlock(windowsInstallerBuildCommand, 10)}
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
 ''');
 }
 

@@ -3,6 +3,9 @@ import 'verification_contract_models.dart';
 const String requiredCodeChangePreset = 'required_code_change';
 const String ciWorkflowPath = '.github/workflows/ci.yaml';
 const String perfNightlyWorkflowPath = '.github/workflows/perf_nightly.yaml';
+const String apiDocsPagesWorkflowPath = '.github/workflows/api_docs_pages.yaml';
+const String windowsInstallerWorkflowPath =
+    '.github/workflows/windows_installer.yaml';
 const String toolTestFilterName = 'tool_tests';
 
 const String ciToolTestJobsExpression = r'${{ steps.test-jobs.outputs.jobs }}';
@@ -28,6 +31,93 @@ const String perfNightlyFuzzCommand =
     '  JOBS=\$((JOBS - 1))\n'
     'fi\n'
     'flutter test test/controller/scene_controller_randomized_txn_test.dart --no-pub -j "\$JOBS"';
+const String apiDocsPagesGenerateSiteCommand =
+    'set -euo pipefail\n'
+    '\n'
+    'repo_name="\${GITHUB_REPOSITORY#*/}"\n'
+    'base_href="/\${repo_name}/demo/"\n'
+    '\n'
+    'rm -rf build/site\n'
+    'mkdir -p build/site\n'
+    '\n'
+    'dart doc --output build/site/api\n'
+    '\n'
+    'pushd example\n'
+    'flutter pub get\n'
+    'flutter build web --release --base-href "\${base_href}"\n'
+    'popd\n'
+    '\n'
+    'mkdir -p build/site/demo\n'
+    'cp -a example/build/web/. build/site/demo/\n'
+    '\n'
+    "cat > build/site/index.html <<'HTML'\n"
+    '<!doctype html>\n'
+    '<html lang="en">\n'
+    '  <head>\n'
+    '    <meta charset="utf-8" />\n'
+    '    <meta name="viewport" content="width=device-width,initial-scale=1" />\n'
+    '    <title>iwb_canvas_engine</title>\n'
+    '    <style>\n'
+    '      :root { color-scheme: light dark; }\n'
+    '      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 40px; line-height: 1.45; }\n'
+    '      .card { max-width: 720px; padding: 20px 22px; border: 1px solid rgba(127,127,127,.25); border-radius: 12px; }\n'
+    '      a { font-weight: 600; }\n'
+    '      ul { margin: 10px 0 0; padding-left: 18px; }\n'
+    '    </style>\n'
+    '  </head>\n'
+    '  <body>\n'
+    '    <div class="card">\n'
+    '      <h1>iwb_canvas_engine</h1>\n'
+    '      <p>GitHub Pages site for API reference and a live demo built from <code>example/</code>.</p>\n'
+    '      <ul>\n'
+    '        <li><a href="./demo/">Web demo</a></li>\n'
+    '        <li><a href="./api/">API reference (Dartdoc)</a></li>\n'
+    '      </ul>\n'
+    '    </div>\n'
+    '  </body>\n'
+    '</html>\n'
+    'HTML';
+const String windowsInstallerMetadataCommand =
+    r'$pubspec = Get-Content pubspec.yaml -Raw'
+    '\n'
+    r"if ($pubspec -notmatch '(?m)^version:\s*([0-9A-Za-z\.\+\-]+)\s*$') {"
+    '\n'
+    r'  throw "Could not resolve package version from pubspec.yaml"'
+    '\n'
+    r'}'
+    '\n'
+    '\n'
+    r'$packageVersion = $Matches[1]'
+    '\n'
+    r"$installerVersion = $packageVersion.Split('+')[0]"
+    '\n'
+    r"$safeVersion = $packageVersion -replace '[^0-9A-Za-z\.\-]+', '-'"
+    '\n'
+    r"$outputDir = Join-Path $env:GITHUB_WORKSPACE 'build\installer'"
+    '\n'
+    '\n'
+    r'"package_version=$packageVersion" >> $env:GITHUB_OUTPUT'
+    '\n'
+    r'"installer_version=$installerVersion" >> $env:GITHUB_OUTPUT'
+    '\n'
+    r'"safe_version=$safeVersion" >> $env:GITHUB_OUTPUT'
+    '\n'
+    r'"output_dir=$outputDir" >> $env:GITHUB_OUTPUT';
+const String windowsInstallerBuildCommand =
+    r"New-Item -ItemType Directory -Force -Path '${{ steps.metadata.outputs.output_dir }}' | Out-Null"
+    '\n'
+    '\n'
+    r"& 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' `"
+    '\n'
+    r"  '/DMyAppVersion=${{ steps.metadata.outputs.installer_version }}' `"
+    '\n'
+    r"  '/DMyOutputDir=${{ steps.metadata.outputs.output_dir }}' `"
+    '\n'
+    r"  '/DMyOutputBaseFilename=iwb_canvas_engine_example_setup_${{ steps.metadata.outputs.safe_version }}' `"
+    '\n'
+    r"  '/DMySourceDir=${{ github.workspace }}\example\build\windows\x64\runner\Release' `"
+    '\n'
+    r"  '.\tool\windows\example_installer.iss'";
 
 final VerificationGraph verificationGraph = VerificationGraph(
   steps: const <String, VerificationStepDefinition>{
@@ -283,6 +373,32 @@ final VerificationGraph verificationGraph = VerificationGraph(
       ],
       ownsEntireExecutableRunSurface: true,
     ),
+    apiDocsPagesWorkflowPath: VerificationWorkflowDefinition(
+      path: apiDocsPagesWorkflowPath,
+      runExpectations: <VerificationRunExpectation>[
+        VerificationRunExpectation(command: 'flutter pub get'),
+        VerificationRunExpectation(command: apiDocsPagesGenerateSiteCommand),
+        VerificationRunExpectation(command: 'touch build/site/.nojekyll'),
+      ],
+      ownsEntireExecutableRunSurface: true,
+    ),
+    windowsInstallerWorkflowPath: VerificationWorkflowDefinition(
+      path: windowsInstallerWorkflowPath,
+      runExpectations: <VerificationRunExpectation>[
+        VerificationRunExpectation(command: 'flutter pub get'),
+        VerificationRunExpectation(command: 'flutter pub get', cwd: 'example'),
+        VerificationRunExpectation(
+          command: 'flutter build windows --release',
+          cwd: 'example',
+        ),
+        VerificationRunExpectation(command: windowsInstallerMetadataCommand),
+        VerificationRunExpectation(
+          command: 'choco install innosetup --no-progress -y',
+        ),
+        VerificationRunExpectation(command: windowsInstallerBuildCommand),
+      ],
+      ownsEntireExecutableRunSurface: true,
+    ),
   },
 );
 
@@ -336,3 +452,8 @@ List<VerificationRunExpectation> get ciWorkflowRunExpectations =>
 
 List<VerificationRunExpectation> get perfNightlyWorkflowRunExpectations =>
     perfNightlyWorkflowDefinition.runExpectations;
+
+List<VerificationWorkflowDefinition> get verificationWorkflowDefinitions =>
+    List<VerificationWorkflowDefinition>.unmodifiable(
+      verificationGraph.workflows.values,
+    );

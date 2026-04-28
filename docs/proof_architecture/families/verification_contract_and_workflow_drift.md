@@ -29,8 +29,7 @@ drift checks.
 
 ## Status
 
-- `known issue`
-- Workflow coverage is tracked by [KI-11](../../../KNOWN_ISSUES.md#ki-11).
+- `locked`
 
 ## Update Triggers
 
