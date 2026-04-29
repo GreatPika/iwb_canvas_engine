@@ -62,6 +62,81 @@ void main() {
     expect(nodeGeometryHitTest(const Offset(75, 10), path), isFalse);
   });
 
+  // INV:INV-ENG-PATH-FILL-HIT-PADDING-PARITY
+  test('fill-only path precise hit test accepts contour hit padding', () {
+    final path = PathNode(
+      id: 'fill-path-padding',
+      svgPathData: 'M0 0 H20 V20 H0 Z',
+      fillColor: const Color(0xFF00FF00),
+      hitPadding: 2,
+      transform: Transform2D.translation(const Offset(100, 100)),
+    );
+
+    expect(nodeGeometryHitTest(const Offset(100, 100), path), isTrue);
+    expect(nodeGeometryHitTest(const Offset(113, 100), path), isTrue);
+  });
+
+  test('fill-only open path hit padding includes implicit close edge', () {
+    final path = PathNode(
+      id: 'fill-open-path-padding',
+      svgPathData: 'M0 0 H20 V20 H0',
+      fillColor: const Color(0xFF00FF00),
+      hitPadding: 2,
+      transform: Transform2D.translation(const Offset(100, 100)),
+    );
+
+    expect(nodeGeometryHitTest(const Offset(87, 100), path), isTrue);
+  });
+
+  test('stroke-only open path hit padding excludes implicit close edge', () {
+    final path = PathNode(
+      id: 'stroke-open-path-padding',
+      svgPathData: 'M0 0 H20 V20 H0',
+      strokeColor: const Color(0xFF000000),
+      strokeWidth: 2,
+      hitPadding: 2,
+      transform: Transform2D.translation(const Offset(100, 100)),
+    );
+
+    expect(nodeGeometryHitTest(const Offset(87, 100), path), isFalse);
+  });
+
+  test('fill-only path hit padding stays aligned for snapshots', () {
+    final path = PathNodeSnapshot(
+      id: 'fill-path-padding-snapshot',
+      svgPathData: 'M0 0 H20 V20 H0 Z',
+      fillColor: const Color(0xFF00FF00),
+      hitPadding: 2,
+      transform: Transform2D.translation(const Offset(100, 100)),
+    );
+
+    expect(nodeSnapshotGeometryHitTest(const Offset(113, 100), path), isTrue);
+  });
+
+  test('fill-only path hit padding still rejects outside candidate bounds', () {
+    final path = PathNode(
+      id: 'fill-path-candidate-bounds',
+      svgPathData: 'M0 0 H20 V20 H0 Z',
+      fillColor: const Color(0xFF00FF00),
+      hitPadding: 2,
+      transform: Transform2D.translation(const Offset(100, 100)),
+    );
+
+    expect(nodeGeometryHitTest(const Offset(116.5, 100), path), isFalse);
+  });
+
+  test('evenOdd path hit padding treats inner contours as touch targets', () {
+    final path = PathNode(
+      id: 'fill-path-even-odd-hole',
+      svgPathData: 'M0 0 H40 V40 H0 Z M12 12 H28 V28 H12 Z',
+      fillColor: const Color(0xFF00FF00),
+      fillRule: PathFillRule.evenOdd,
+    );
+
+    expect(nodeGeometryHitTest(Offset.zero, path), isFalse);
+    expect(nodeGeometryHitTest(const Offset(7, 0), path), isTrue);
+  });
+
   test(
     'node snapshot geometry candidate bounds and hit test match shared rules',
     () {

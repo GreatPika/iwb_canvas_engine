@@ -25,5 +25,5 @@ flowchart LR
 Inventory summary:
 - Guardrail rules: 6
 - Runner artifacts: 2
-- Invariants: 100
+- Invariants: 101
 - Guardrail-backed invariants: 17

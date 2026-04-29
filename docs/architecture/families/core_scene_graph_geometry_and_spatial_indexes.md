@@ -19,7 +19,7 @@ semantics.
 ## Forbidden Shapes
 
 - Do not encode a separate hit-test policy in each caller.
-- Do not describe KI-6 or KI-7 as target architecture.
+- Do not describe KI-7 as target architecture.
 
 ## Mechanical Evidence
 
@@ -40,14 +40,14 @@ semantics.
 - Invariant: `INV-ENG-CORE-ARCHITECTURE-BOUNDARY`
 - Invariant: `INV-ENG-POINTER-SETTINGS-VALIDATION`
 - Invariant: `INV-ENG-RENDER-HIT-BOUNDS-PARITY`
+- Invariant: `INV-ENG-PATH-FILL-HIT-PADDING-PARITY`
 - Invariant: `INV-ENG-PAINT-ADMISSION-BOUNDS-SOURCE`
 - Invariant: `INV-ENG-PATH-NODE-CACHE-INVALIDATION`
 
 ## Status
 
 - `known issue`
-- Hit-testing and paint candidate parity defects remain tracked by
-  [KI-6](../../../KNOWN_ISSUES.md#ki-6) and
+- Paint candidate parity remains tracked by
   [KI-7](../../../KNOWN_ISSUES.md#ki-7); the family keeps the shared geometry
   and spatial-index target rules visible.
 

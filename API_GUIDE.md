@@ -183,6 +183,10 @@ Text nodes have a few important boundary rules:
 ### 3.4 Paths and transforms
 
 - `PathFillRule` is the public fill-rule contract for path nodes.
+- Path hit-testing honors `hitPadding` plus the engine's fixed hit slop after
+  coarse candidate-bounds admission. Filled paths accept points inside the exact
+  fill, and also accept points close enough to path contours, including inner
+  contours created by `PathFillRule.evenOdd`.
 - `Transform2D` is a public 2D affine transform type.
 - `Transform2D` supports `translation(...)`, `scale(...)`, `rotationDeg(...)`,
   `trs(...)`, `multiply(...)`, `invert()`, `applyToPoint(...)`, and

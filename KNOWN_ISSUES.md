@@ -26,29 +26,6 @@ Confirmed active defects only.
 
 ## Active Issues
 
-### KI-6
-
-- ID: `KI-6`
-- Severity: `P2`
-- Summary: Fill-only path hit-testing applies `hitPadding` to coarse candidate
-  bounds but not to the precise path hit-test, so touch padding around filled
-  paths is inconsistent with other node families.
-- Detection: Compare path candidate-bounds inflation with precise path hit-test
-  in `lib/src/core/node_geometry.dart`
-- Evidence:
-  - `lib/src/core/hit_test.dart`
-  - `lib/src/core/node_geometry.dart`
-  - Current detections:
-    `nodeGeometryCandidateBoundsWorld` and
-    `nodeSnapshotGeometryCandidateBoundsWorld` inflate by
-    `hitPadding + kHitSlop`;
-    `_hitTestPathGeometry` only accepts fill hits through
-    `localPath.contains(localPoint)`;
-    `_pathStrokeRadiusLocal` returns `0` for fill-only paths, so padding never
-    reaches the precise check when `strokeColor == null`
-- Next action: Align fill-only path precise hit-testing with shared
-  `hitPadding` semantics and add runtime/snapshot hit-test regression cases.
-
 ### KI-7
 
 - ID: `KI-7`

@@ -1057,6 +1057,18 @@
       "regressionProofs": []
     },
     {
+      "id": "INV-ENG-PATH-FILL-HIT-PADDING-PARITY",
+      "scope": "engine-runtime",
+      "title": "path fill precise hit-testing accepts exact fill or path-contour distance within sanitized hitPadding plus hit slop after candidate-bounds admission for runtime and snapshot geometry",
+      "requiredProofs": [
+        {
+          "path": "test/core/node_geometry_test.dart",
+          "stepId": "scope_core"
+        }
+      ],
+      "regressionProofs": []
+    },
+    {
       "id": "INV-ENG-RENDER-GEOMETRY-KEY-STABLE",
       "scope": "engine-runtime",
       "title": "render geometry cache keys use canonical public geometry owners instead of linear point scans",
@@ -1562,7 +1574,7 @@
     },
     {
       "stepId": "scope_core",
-      "count": 7
+      "count": 8
     },
     {
       "stepId": "scope_interactive",

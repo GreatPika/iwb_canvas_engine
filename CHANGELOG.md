@@ -108,6 +108,8 @@ in changes that have not yet been published to pub.dev.
 - Fixed paint over-admission by separating paint admission from hit-test
   admission. Hit-testing still honors hit padding, while paint admission now
   uses paint bounds only.
+- Fixed fill-only path hit-testing so `hitPadding` applies to precise filled
+  path contour hits for both runtime nodes and snapshots.
 - Fixed benchmark diff verdicts so absolute budgets fail even when a positive
   baseline is already over budget and `current == baseline`.
 - Fixed JSON import/build line and stroke range diagnostics so alias-bearing

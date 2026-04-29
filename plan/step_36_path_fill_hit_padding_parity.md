@@ -432,7 +432,7 @@ snapshot path hit-test candidates.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Path Fill Hit-Padding Proof And Owner Fix
+### Slice 1. [x] Path Fill Hit-Padding Proof And Owner Fix
 
 #### Slice Contract
 
@@ -489,7 +489,7 @@ candidate-bounds admission. Keep existing stroked path tests green.
 - Slice-local behavioral tests pass.
 - Import-boundary and guardrail checks remain green.
 
-### Slice 2. [ ] Invariant And Issue Closure
+### Slice 2. [x] Invariant And Issue Closure
 
 #### Slice Contract
 

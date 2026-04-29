@@ -23,7 +23,7 @@ void main() {
           expect(result.exitCode, 0, reason: result.stderr.toString());
           expect(result.stdout.toString(), contains('Guardrail rules: 6'));
           expect(result.stdout.toString(), contains('Runner artifacts: 2'));
-          expect(result.stdout.toString(), contains('Invariants: 100'));
+          expect(result.stdout.toString(), contains('Invariants: 101'));
         } finally {
           sandbox.deleteSync(recursive: true);
         }

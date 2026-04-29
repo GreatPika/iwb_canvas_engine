@@ -112,12 +112,9 @@ bool nodeGeometryHitTest(Offset point, SceneNode node) {
       localPath: (node as PathNode).buildLocalPath(),
       candidateBoundsWorld: nodeGeometryCandidateBoundsWorld(node),
       hasFill: node.fillColor != null,
-      strokeRadiusLocal: _pathStrokeRadiusLocal(
-        strokeColor: node.strokeColor,
-        strokeWidth: node.strokeWidth,
-        inverse: node.transform.invert(),
-        scenePadding: _geometryScenePadding(hitPadding: node.hitPadding),
-      ),
+      strokeColor: node.strokeColor,
+      strokeWidth: node.strokeWidth,
+      scenePadding: _geometryScenePadding(hitPadding: node.hitPadding),
     ),
     NodeType.line => _hitTestWorldStrokeGeometry(
       point: point,
@@ -172,12 +169,9 @@ bool nodeSnapshotGeometryHitTest(Offset point, NodeSnapshot node) {
       localPath: _snapshotLocalPath(node),
       candidateBoundsWorld: nodeSnapshotGeometryCandidateBoundsWorld(node),
       hasFill: node.fillColor != null,
-      strokeRadiusLocal: _pathStrokeRadiusLocal(
-        strokeColor: node.strokeColor,
-        strokeWidth: node.strokeWidth,
-        inverse: node.transform.invert(),
-        scenePadding: _geometryScenePadding(hitPadding: node.hitPadding),
-      ),
+      strokeColor: node.strokeColor,
+      strokeWidth: node.strokeWidth,
+      scenePadding: _geometryScenePadding(hitPadding: node.hitPadding),
     ),
     LineNodeSnapshot() => _hitTestWorldStrokeGeometry(
       point: point,
@@ -273,7 +267,9 @@ bool _hitTestPathGeometry({
   required Path? localPath,
   required Rect candidateBoundsWorld,
   required bool hasFill,
-  required double strokeRadiusLocal,
+  required Color? strokeColor,
+  required double strokeWidth,
+  required double scenePadding,
 }) {
   if (localPath == null) return false;
   if (!candidateBoundsWorld.contains(point)) return false;
@@ -285,10 +281,39 @@ bool _hitTestPathGeometry({
   if (hasFill && localPath.contains(localPoint)) {
     return true;
   }
+  if (hasFill &&
+      _hitTestPathFillContourPaddingPrecise(
+        localPath,
+        localPoint,
+        _pathFillRadiusLocal(
+          hasFill: hasFill,
+          inverse: inverse,
+          scenePadding: scenePadding,
+        ),
+      )) {
+    return true;
+  }
+  final strokeRadiusLocal = _pathStrokeRadiusLocal(
+    strokeColor: strokeColor,
+    strokeWidth: strokeWidth,
+    inverse: inverse,
+    scenePadding: scenePadding,
+  );
   if (strokeRadiusLocal <= 0) {
     return false;
   }
   return _hitTestPathStrokePrecise(localPath, localPoint, strokeRadiusLocal);
+}
+
+double _pathFillRadiusLocal({
+  required bool hasFill,
+  required Transform2D? inverse,
+  required double scenePadding,
+}) {
+  if (!hasFill || inverse == null) {
+    return 0;
+  }
+  return _sceneScalarToLocalMax(inverse, scenePadding);
 }
 
 double _pathStrokeRadiusLocal({
@@ -426,6 +451,22 @@ bool _hitTestPathStrokePrecise(
   final radiusSquared = radius * radius;
   return _hitTestPathMetrics(
     localPath.computeMetrics(),
+    localPoint: localPoint,
+    radius: radius,
+    radiusSquared: radiusSquared,
+  );
+}
+
+bool _hitTestPathFillContourPaddingPrecise(
+  Path localPath,
+  Offset localPoint,
+  double fillRadiusLocal,
+) {
+  final radius = clampNonNegativeFinite(fillRadiusLocal);
+  if (radius <= 0) return false;
+  final radiusSquared = radius * radius;
+  return _hitTestPathMetrics(
+    localPath.computeMetrics(forceClosed: true),
     localPoint: localPoint,
     radius: radius,
     radiusSquared: radiusSquared,

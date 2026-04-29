@@ -99,6 +99,7 @@ const Map<String, Set<String>> architectureFamilyInvariantIds =
         'INV-ENG-CORE-ARCHITECTURE-BOUNDARY',
         'INV-ENG-POINTER-SETTINGS-VALIDATION',
         'INV-ENG-RENDER-HIT-BOUNDS-PARITY',
+        'INV-ENG-PATH-FILL-HIT-PADDING-PARITY',
         'INV-ENG-PAINT-ADMISSION-BOUNDS-SOURCE',
         'INV-ENG-PATH-NODE-CACHE-INVALIDATION',
       },
@@ -1144,6 +1145,18 @@ const List<Invariant> invariants = <Invariant>[
       RequiredProof(
         path: 'test/render/render_hit_bounds_parity_test.dart',
         stepId: 'scope_render_view',
+      ),
+    ],
+  ),
+  Invariant(
+    id: 'INV-ENG-PATH-FILL-HIT-PADDING-PARITY',
+    scope: 'engine-runtime',
+    title:
+        'path fill precise hit-testing accepts exact fill or path-contour distance within sanitized hitPadding plus hit slop after candidate-bounds admission for runtime and snapshot geometry',
+    requiredProofs: <RequiredProof>[
+      RequiredProof(
+        path: 'test/core/node_geometry_test.dart',
+        stepId: 'scope_core',
       ),
     ],
   ),
