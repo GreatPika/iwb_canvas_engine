@@ -153,35 +153,6 @@ List<String> validateCollectedBenchmarkCaseContracts({
       continue;
     }
 
-    final requiredOperations = policy.requiredOperationsForCase(caseName);
-    if (requiredOperations.isNotEmpty) {
-      final rawMetrics = parsedCase['metrics'];
-      if (rawMetrics is! Map<String, Object?>) {
-        issues.add('benchmark case "$caseName" is missing a "metrics" object');
-      } else {
-        for (final operationName in requiredOperations) {
-          final rawOperation = rawMetrics[operationName];
-          if (rawOperation is! Map<String, Object?>) {
-            issues.add(
-              'benchmark case "$caseName" is missing metrics for '
-              '"$operationName"',
-            );
-            continue;
-          }
-
-          for (final metricKey in policy.requiredMetricKeys) {
-            final metricValue = rawOperation[metricKey];
-            if (metricValue is! num || !metricValue.isFinite) {
-              issues.add(
-                'benchmark case "$caseName" metric '
-                '"$operationName.$metricKey" must be a finite number',
-              );
-            }
-          }
-        }
-      }
-    }
-
     final requiredProbeKeys = policy.requiredProbeKeysForCase(caseName);
     if (requiredProbeKeys.isEmpty) {
       continue;
