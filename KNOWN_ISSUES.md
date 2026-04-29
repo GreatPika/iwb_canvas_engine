@@ -48,29 +48,6 @@ Confirmed active defects only.
 - Next action: Choose one shared paint admission boundary policy, codify it in
   tests, and remove the committed-vs-snapshot drift.
 
-### KI-12
-
-- ID: `KI-12`
-- Severity: `P2`
-- Summary: The load-profile runner validates case names and probes but does not
-  validate required metrics, required operations, or required metric keys
-  before writing benchmark reports.
-- Detection: Compare runner-side validation in
-  `tool/bench/run_load_profiles.dart` with contract metadata in
-  `tool/bench/load_profile_policy.dart`
-- Evidence:
-  - `tool/bench/load_profile_policy.dart`
-  - `tool/bench/run_load_profiles.dart`
-  - `tool/bench/diff_load_profiles.dart`
-  - `test/tool/bench_run_load_profiles_test.dart`
-  - Current detections:
-    runner-side contract validation checks case names and probes but can still
-    emit reports missing required operations or required metric leaves;
-    diff-side validation rejects part of that corruption later, after the
-    malformed report has already been written
-- Next action: Add runner-side validation for raw metrics, required operations,
-  required metric keys, and finite metric values before report emission.
-
 ### KI-13
 
 - ID: `KI-13`

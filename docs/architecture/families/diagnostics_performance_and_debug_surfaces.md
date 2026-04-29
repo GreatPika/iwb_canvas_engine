@@ -25,7 +25,7 @@ performance proof contours.
 ## Forbidden Shapes
 
 - Do not emit benchmark reports that bypass runner-side validation.
-- Do not describe KI-12, KI-13, or KI-14 as target architecture.
+- Do not describe KI-13 or KI-14 as target architecture.
 
 ## Mechanical Evidence
 
@@ -45,8 +45,7 @@ performance proof contours.
 
 - `known issue`
 - Benchmark validation and schema defects remain tracked by
-  [KI-12](../../../KNOWN_ISSUES.md#ki-12),
-  [KI-13](../../../KNOWN_ISSUES.md#ki-13), and
+  [KI-13](../../../KNOWN_ISSUES.md#ki-13) and
   [KI-14](../../../KNOWN_ISSUES.md#ki-14); performance proof still belongs to
   repository-local tooling.
 

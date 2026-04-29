@@ -153,6 +153,33 @@ List<String> validateCollectedBenchmarkCaseContracts({
       continue;
     }
 
+    final requiredOperations = policy.requiredOperationsForCase(caseName);
+    if (requiredOperations.isNotEmpty) {
+      final rawMetrics = parsedCase['metrics'];
+      if (rawMetrics is! Map<String, Object?>) {
+        issues.add('benchmark case "$caseName" is missing a "metrics" object');
+      } else {
+        final metricsByOperation = <String, Map<String, num>>{};
+        _collectMetricLeaves(
+          root: rawMetrics,
+          metricKeys: policy.requiredMetricKeys,
+          caseName: caseName,
+          pathPrefix: '',
+          sink: metricsByOperation,
+          issues: issues,
+        );
+        for (final operationName in requiredOperations) {
+          final operationMetrics = metricsByOperation[operationName];
+          if (operationMetrics == null) {
+            issues.add(
+              'benchmark case "$caseName" is missing metrics for '
+              '"$operationName"',
+            );
+          }
+        }
+      }
+    }
+
     final requiredProbeKeys = policy.requiredProbeKeysForCase(caseName);
     if (requiredProbeKeys.isEmpty) {
       continue;
@@ -186,6 +213,73 @@ List<String> validateCollectedBenchmarkCaseContracts({
   }
 
   return issues;
+}
+
+void _collectMetricLeaves({
+  required Map<String, Object?> root,
+  required List<String> metricKeys,
+  required String caseName,
+  required String pathPrefix,
+  required Map<String, Map<String, num>> sink,
+  required List<String> issues,
+}) {
+  final hasAnyRequiredKey = metricKeys.any(root.containsKey);
+  if (hasAnyRequiredKey) {
+    final operationName = _normalizeMetricOperationPath(pathPrefix);
+    final metricValues = <String, num>{};
+    for (final metricKey in metricKeys) {
+      final rawValue = root[metricKey];
+      if (rawValue is! num || !rawValue.isFinite) {
+        final metricPath = operationName == 'root'
+            ? metricKey
+            : '$operationName.$metricKey';
+        issues.add(
+          'benchmark case "$caseName" metric '
+          '"$metricPath" must be a finite number',
+        );
+      } else {
+        metricValues[metricKey] = rawValue;
+      }
+    }
+    final existing = sink[operationName];
+    if (existing != null) {
+      issues.add(
+        'benchmark case "$caseName" has duplicate metrics for '
+        '"$operationName" after path normalization',
+      );
+      return;
+    }
+    sink[operationName] = metricValues;
+    return;
+  }
+
+  final keys = root.keys.toList(growable: false)..sort();
+  for (final key in keys) {
+    final child = root[key];
+    if (child is! Map<String, Object?>) {
+      continue;
+    }
+    final childPath = pathPrefix.isEmpty ? key : '$pathPrefix.$key';
+    _collectMetricLeaves(
+      root: child,
+      metricKeys: metricKeys,
+      caseName: caseName,
+      pathPrefix: childPath,
+      sink: sink,
+      issues: issues,
+    );
+  }
+}
+
+String _normalizeMetricOperationPath(String path) {
+  if (path.isEmpty) {
+    return 'root';
+  }
+  var normalized = path;
+  while (normalized.startsWith('metrics.')) {
+    normalized = normalized.substring('metrics.'.length);
+  }
+  return normalized;
 }
 
 _Options _parseArgs(List<String> args) {

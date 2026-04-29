@@ -57,8 +57,46 @@ String _smokePrimaryNodeCaseName() =>
     loadProfilePolicyFor('smoke').nodeCases.single.name;
 
 Map<String, Object?> _probeRecord(String name, Map<String, Object?> probes) {
-  return <String, Object?>{'name': name, 'probes': probes};
+  return <String, Object?>{
+    'name': name,
+    'metrics': _validMetricsForCase(name),
+    'probes': probes,
+  };
 }
+
+Map<String, Object?> _validMetricsForCase(String name) {
+  final smokeOperations = loadProfilePolicyFor(
+    'smoke',
+  ).requiredOperationsForCase(name);
+  final operations = smokeOperations.isNotEmpty
+      ? smokeOperations
+      : loadProfilePolicyFor('full').requiredOperationsForCase(name);
+
+  return <String, Object?>{
+    for (final operation in operations) operation: _validMetricLeaf(),
+  };
+}
+
+Map<String, Object?> _validMetricLeaf() => <String, Object?>{
+  'avgUs': 10,
+  'minUs': 8,
+  'maxUs': 12,
+  'avgRssDeltaBytes': 1,
+  'minRssDeltaBytes': 0,
+  'maxRssDeltaBytes': 2,
+};
+
+Map<String, Object?> _validNestedWorstCaseMetrics() => <String, Object?>{
+  'huge_bounds': <String, Object?>{
+    'query': _validMetricLeaf(),
+    'move_selection': _validMetricLeaf(),
+  },
+  'huge_rect_select': _validMetricLeaf(),
+  'very_long_path': <String, Object?>{
+    'patch_svg_path': _validMetricLeaf(),
+    'query_candidates': _validMetricLeaf(),
+  },
+};
 
 void main() {
   group('tool/bench/run_load_profiles.dart', () {
@@ -166,6 +204,24 @@ void main() {
       );
       final validationIndex = mainBody.indexOf(
         'validateReportRuntimeMetadata(report: report)',
+      );
+      final writeIndex = mainBody.indexOf('writeAsStringSync');
+
+      expect(validationIndex, isNonNegative);
+      expect(writeIndex, isNonNegative);
+      expect(validationIndex, lessThan(writeIndex));
+    });
+
+    test('runner validates case contracts before writing report json', () {
+      final source = File(
+        'tool/bench/run_load_profiles.dart',
+      ).readAsStringSync();
+      final mainBody = _extractMethodBody(
+        source: source,
+        methodStart: 'Future<void> main(List<String> args) async',
+      );
+      final validationIndex = mainBody.indexOf(
+        'validateCollectedBenchmarkCaseContracts(',
       );
       final writeIndex = mainBody.indexOf('writeAsStringSync');
 
@@ -371,6 +427,194 @@ void main() {
         expect(casesSource, isNot(contains('includePercentiles')));
       },
     );
+
+    test('fails when required metrics object is missing from smoke report', () {
+      final policy = loadProfilePolicyFor('smoke');
+
+      final issues = run_load_profiles.validateCollectedBenchmarkCaseContracts(
+        policy: policy,
+        parsedCases: <Map<String, Object?>>[
+          <String, Object?>{
+            'name': textLayoutCacheCaseName,
+            'probes': const <String, Object?>{},
+          },
+        ],
+      );
+
+      expect(
+        issues,
+        contains(
+          'benchmark case "$textLayoutCacheCaseName" is missing a "metrics" '
+          'object',
+        ),
+      );
+    });
+
+    test('fails when required operations are missing from metrics', () {
+      final policy = loadProfilePolicyFor('smoke');
+
+      final issues = run_load_profiles.validateCollectedBenchmarkCaseContracts(
+        policy: policy,
+        parsedCases: <Map<String, Object?>>[
+          <String, Object?>{
+            'name': textLayoutCacheCaseName,
+            'metrics': <String, Object?>{
+              'paint_cache_miss': _validMetricLeaf(),
+            },
+            'probes': const <String, Object?>{},
+          },
+        ],
+      );
+
+      expect(
+        issues,
+        contains(
+          'benchmark case "$textLayoutCacheCaseName" is missing metrics for '
+          '"paint_cache_hit"',
+        ),
+      );
+    });
+
+    test('validates metrics even when a case does not require probes', () {
+      final policy = loadProfilePolicyFor('full');
+
+      final worstCaseMetrics = _validNestedWorstCaseMetrics();
+      final hugeBounds =
+          worstCaseMetrics['huge_bounds']! as Map<String, Object?>;
+      hugeBounds.remove('move_selection');
+      final issues = run_load_profiles.validateCollectedBenchmarkCaseContracts(
+        policy: policy,
+        parsedCases: <Map<String, Object?>>[
+          <String, Object?>{'name': worstCaseName, 'metrics': worstCaseMetrics},
+        ],
+      );
+
+      expect(
+        issues,
+        contains(
+          'benchmark case "$worstCaseName" is missing metrics for '
+          '"huge_bounds.move_selection"',
+        ),
+      );
+      expect(
+        issues,
+        isNot(
+          contains(
+            'benchmark case "$worstCaseName" is missing a "probes" object',
+          ),
+        ),
+      );
+    });
+
+    test('accepts nested metric paths from full worst-case reports', () {
+      final policy = loadProfilePolicyFor('full');
+
+      final issues = run_load_profiles.validateCollectedBenchmarkCaseContracts(
+        policy: policy,
+        parsedCases: <Map<String, Object?>>[
+          <String, Object?>{
+            'name': worstCaseName,
+            'metrics': _validNestedWorstCaseMetrics(),
+          },
+        ],
+      );
+
+      expect(issues, isEmpty);
+    });
+
+    test('fails on duplicate metric paths after normalization', () {
+      final policy = loadProfilePolicyFor('smoke');
+
+      final issues = run_load_profiles.validateCollectedBenchmarkCaseContracts(
+        policy: policy,
+        parsedCases: <Map<String, Object?>>[
+          <String, Object?>{
+            'name': textLayoutCacheCaseName,
+            'metrics': <String, Object?>{
+              'paint_cache_miss': _validMetricLeaf(),
+              'metrics': <String, Object?>{
+                'paint_cache_miss': _validMetricLeaf(),
+              },
+              'paint_cache_hit': _validMetricLeaf(),
+            },
+            'probes': const <String, Object?>{},
+          },
+        ],
+      );
+
+      expect(
+        issues,
+        contains(
+          'benchmark case "$textLayoutCacheCaseName" has duplicate metrics for '
+          '"paint_cache_miss" after path normalization',
+        ),
+      );
+    });
+
+    test('fails when required metric keys are missing from operations', () {
+      final policy = loadProfilePolicyFor('smoke');
+
+      final issues = run_load_profiles.validateCollectedBenchmarkCaseContracts(
+        policy: policy,
+        parsedCases: <Map<String, Object?>>[
+          <String, Object?>{
+            'name': textLayoutCacheCaseName,
+            'metrics': <String, Object?>{
+              'paint_cache_miss': <String, Object?>{
+                'avgUs': 10,
+                'minUs': 8,
+                'maxUs': 12,
+                'minRssDeltaBytes': 0,
+                'maxRssDeltaBytes': 2,
+              },
+              'paint_cache_hit': _validMetricLeaf(),
+            },
+            'probes': const <String, Object?>{},
+          },
+        ],
+      );
+
+      expect(
+        issues,
+        contains(
+          'benchmark case "$textLayoutCacheCaseName" metric '
+          '"paint_cache_miss.avgRssDeltaBytes" must be a finite number',
+        ),
+      );
+    });
+
+    test('fails when metric values are not finite numbers', () {
+      final policy = loadProfilePolicyFor('smoke');
+
+      Map<String, Object?> caseWithMetricValue(Object? value) {
+        final missMetrics = _validMetricLeaf();
+        missMetrics['avgUs'] = value;
+        return <String, Object?>{
+          'name': textLayoutCacheCaseName,
+          'metrics': <String, Object?>{
+            'paint_cache_miss': missMetrics,
+            'paint_cache_hit': _validMetricLeaf(),
+          },
+          'probes': const <String, Object?>{},
+        };
+      }
+
+      for (final value in <Object?>[double.nan, double.infinity, null, '10']) {
+        final issues = run_load_profiles
+            .validateCollectedBenchmarkCaseContracts(
+              policy: policy,
+              parsedCases: <Map<String, Object?>>[caseWithMetricValue(value)],
+            );
+
+        expect(
+          issues,
+          contains(
+            'benchmark case "$textLayoutCacheCaseName" metric '
+            '"paint_cache_miss.avgUs" must be a finite number',
+          ),
+        );
+      }
+    });
 
     test('fails when required defect probes are missing from smoke report', () {
       final policy = loadProfilePolicyFor('smoke');
