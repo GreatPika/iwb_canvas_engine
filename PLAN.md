@@ -55,3 +55,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 33. Selection Overlay Halo-Only Rendering](plan/step_33_selection_overlay_halo_only_rendering.md)
 - [x] [Step 34. Scene Topology Admission Source](plan/step_34_scene_topology_admission_source.md)
 - [x] [Step 35. Vector Width Runtime Validation Parity](plan/step_35_vector_width_runtime_validation_parity.md)
+- [ ] [Step 36. Path Fill Hit Padding Parity](plan/step_36_path_fill_hit_padding_parity.md)
