@@ -48,6 +48,10 @@ Start from repository sources of truth:
 - `dart run tool/audit_validated_materialization_paths.dart [path-or-dir]`
   Find `*FromValidated*` wrappers that jump straight to raw materialization.
 
+- `dart run tool/audit_validated_backing_structure.dart [path-or-dir]`
+  Find `*BackingFromValidated` builders that return a backing type with a
+  separate structure validator without reaching that validator.
+
 - `dart run tool/audit_terminal_cleanup_safety.dart [path-or-dir]`
   Find terminal handlers that call hazardous commit/action paths and clean up
   only after success instead of through `finally`.
