@@ -57,3 +57,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 35. Vector Width Runtime Validation Parity](plan/step_35_vector_width_runtime_validation_parity.md)
 - [x] [Step 36. Path Fill Hit Padding Parity](plan/step_36_path_fill_hit_padding_parity.md)
 - [x] [Step 37. Paint Admission Edge-Touch Parity](plan/step_37_paint_admission_edge_touch_parity.md)
+- [ ] [Step 38. Load-Profile Diff Report Contract](plan/step_38_load_profile_diff_report_contract.md)
