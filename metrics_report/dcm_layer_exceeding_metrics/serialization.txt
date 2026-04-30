@@ -1,0 +1,4 @@
+## number-of-imports
+- HIGH | lib/src/serialization/scene_codec.dart | file (1 entry)
+  This file has 12 imports, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/file/number-of-imports

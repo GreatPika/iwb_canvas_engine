@@ -1,0 +1,81 @@
+## cyclomatic-complexity
+- HIGH | lib/src/core/scene_spatial_index.dart | function _comparePaintCandidateIds (1 entry)
+  This function has cyclomatic complexity of 12, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/function/cyclomatic-complexity
+- HIGH | lib/src/core/scene_spatial_index.dart | function _resolveSpatialNodeById (1 entry)
+  This function has cyclomatic complexity of 15, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/function/cyclomatic-complexity
+
+## number-of-imports
+- HIGH | lib/src/core/scene_spatial_index.dart | file (1 entry)
+  This file has 12 imports, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/file/number-of-imports
+
+## number-of-methods
+- VERY HIGH | lib/src/core/box_nodes.dart | class TextNode (1 entry)
+  This class has 25 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- VERY HIGH | lib/src/core/text_node_layout_state.dart | class TextNodeLayoutState (1 entry)
+  This class has 24 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- HIGH | lib/src/core/box_nodes.dart | class ImageNode (1 entry)
+  This class has 11 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- HIGH | lib/src/core/path_node.dart | class PathNode (1 entry)
+  This class has 12 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- HIGH | lib/src/core/path_node.dart | class _PathNodeLocalPathCacheOwner (1 entry)
+  This class has 13 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- HIGH | lib/src/core/scene_node.dart | class SceneNode (1 entry)
+  This class has 17 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+
+## number-of-parameters
+- HIGH | lib/src/core/node_geometry.dart | function _hitTestBoxGeometry (1 entry)
+  This function has 5 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/core/node_geometry.dart | function _hitTestPathGeometry (1 entry)
+  This function has 8 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/core/node_geometry.dart | function _hitTestWorldStrokeGeometry (1 entry)
+  This function has 6 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/core/scene_snapshot_paint_candidates.dart | function _snapshotPaintBoundsForQuery (1 entry)
+  This function has 5 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/core/scene_snapshot_paint_candidates.dart | function enumerateSnapshotPaintCandidates (1 entry)
+  This function has 5 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/core/scene_spatial_index.dart | function _applySceneSpatialIndexIncremental (1 entry)
+  This function has 6 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/core/scene_spatial_index.dart | function _bindSpatialIndexState (1 entry)
+  This function has 5 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/core/scene_spatial_index.dart | function _cloneSceneSpatialIndex (1 entry)
+  This function has 5 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/core/scene_spatial_index.dart | function _placeRoleSpatialEntry (1 entry)
+  This function has 6 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/core/scene_spatial_index.dart | function _queryCandidateIds (1 entry)
+  This function has 5 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/core/scene_spatial_index.dart | function _rebuildSpatialIndex (1 entry)
+  This function has 5 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/core/scene_spatial_index.dart | function _removeRoleSpatialEntry (1 entry)
+  This function has 5 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/core/scene_spatial_index.dart | method SceneSpatialIndex.applyIncremental (1 entry)
+  This method has 5 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+
+## source-lines-of-code
+- HIGH | lib/src/core/node_geometry.dart | function nodeGeometryHitTest (1 entry)
+  This function has 52 source lines of code, which exceeds the threshold of 40.
+  https://dcm.dev/docs/metrics/function/source-lines-of-code
+- HIGH | lib/src/core/node_geometry.dart | function nodeSnapshotGeometryHitTest (1 entry)
+  This function has 55 source lines of code, which exceeds the threshold of 40.
+  https://dcm.dev/docs/metrics/function/source-lines-of-code

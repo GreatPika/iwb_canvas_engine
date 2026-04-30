@@ -1,0 +1,183 @@
+## coupling-between-object-classes
+- HIGH | lib/src/interactive/internal/interactive_draw_coordinator.dart | class InteractiveDrawCoordinator (2 entries)
+  This class is coupled with 13 other classes, which exceeds the threshold of 12.
+  https://dcm.dev/docs/metrics/class/coupling-between-object-classes
+- HIGH | lib/src/interactive/internal/interactive_runtime.dart | class InteractiveRuntime (4 entries)
+  This class is coupled with 15 other classes, which exceeds the threshold of 12.
+  https://dcm.dev/docs/metrics/class/coupling-between-object-classes
+- HIGH | lib/src/interactive/internal/scene_controller_graph.dart | class SceneControllerGraphHandle (1 entry)
+  This class is coupled with 13 other classes, which exceeds the threshold of 12.
+  https://dcm.dev/docs/metrics/class/coupling-between-object-classes
+- HIGH | lib/src/interactive/internal/scene_controller_mutation_boundary.dart | class SceneControllerMutationBoundary (4 entries)
+  This class is coupled with 14 other classes, which exceeds the threshold of 12.
+  https://dcm.dev/docs/metrics/class/coupling-between-object-classes
+- HIGH | lib/src/interactive/internal/scene_controller_scene_view_runtime.dart | class SceneControllerSceneViewMainSceneRenderRead (2 entries)
+  This class is coupled with 13 other classes, which exceeds the threshold of 12.
+  https://dcm.dev/docs/metrics/class/coupling-between-object-classes
+- HIGH | lib/src/interactive/internal/scene_controller_scene_view_runtime.dart | class SceneControllerSceneViewRuntime (1 entry)
+  This class is coupled with 15 other classes, which exceeds the threshold of 12.
+  https://dcm.dev/docs/metrics/class/coupling-between-object-classes
+
+## cyclomatic-complexity
+- HIGH | lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart | method SceneControllerPaintCandidateStage._stageSelectedSupplements (3 entries)
+  This method has cyclomatic complexity of 12, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/function/cyclomatic-complexity
+
+## number-of-imports
+- HIGH | lib/src/interactive/internal/interactive_draw_coordinator.dart | file (1 entry)
+  This file has 11 imports, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/file/number-of-imports
+- HIGH | lib/src/interactive/internal/interactive_move_session.dart | file (1 entry)
+  This file has 11 imports, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/file/number-of-imports
+- HIGH | lib/src/interactive/internal/interactive_runtime.dart | file (1 entry)
+  This file has 14 imports, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/file/number-of-imports
+- HIGH | lib/src/interactive/internal/scene_controller_graph.dart | file (1 entry)
+  This file has 15 imports, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/file/number-of-imports
+- HIGH | lib/src/interactive/internal/scene_controller_interaction_runtime.dart | file (1 entry)
+  This file has 16 imports, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/file/number-of-imports
+- HIGH | lib/src/interactive/internal/scene_controller_mutation_boundary.dart | file (1 entry)
+  This file has 13 imports, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/file/number-of-imports
+- HIGH | lib/src/interactive/internal/scene_controller_scene_view_runtime.dart | file (1 entry)
+  This file has 13 imports, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/file/number-of-imports
+- HIGH | lib/src/interactive/scene_controller.dart | file (1 entry)
+  This file has 11 imports, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/file/number-of-imports
+
+## number-of-methods
+- VERY HIGH | lib/src/interactive/internal/interactive_draw_coordinator.dart | class InteractiveDrawCoordinator (2 entries)
+  This class has 23 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- VERY HIGH | lib/src/interactive/internal/interactive_draw_line_engine.dart | class InteractiveDrawLineEngine (2 entries)
+  This class has 21 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- VERY HIGH | lib/src/interactive/internal/interactive_move_session.dart | class InteractiveMoveSession (3 entries)
+  This class has 22 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- VERY HIGH | lib/src/interactive/internal/interactive_runtime.dart | class InteractiveRuntime (4 entries)
+  This class has 38 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- VERY HIGH | lib/src/interactive/internal/scene_controller_interaction_runtime.dart | extension SceneControllerInteractionRuntimeStateApi (1 entry)
+  This extension has 22 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- VERY HIGH | lib/src/interactive/internal/scene_controller_mutation_boundary.dart | class SceneControllerMutationBoundary (4 entries)
+  This class has 30 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- VERY HIGH | lib/src/interactive/scene_controller.dart | class SceneController (1 entry)
+  This class has 25 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- VERY HIGH | lib/src/interactive/scene_controller_interaction.dart | class SceneControllerInteraction (1 entry)
+  This class has 38 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- VERY HIGH | lib/src/interactive/scene_controller_interaction.dart | class SceneControllerInteractionOwner (3 entries)
+  This class has 42 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- HIGH | lib/src/interactive/internal/interactive_draw_eraser_engine.dart | class InteractiveDrawEraserEngine (1 entry)
+  This class has 13 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- HIGH | lib/src/interactive/internal/interactive_draw_path_buffer.dart | class InteractiveDrawPathBuffer (1 entry)
+  This class has 11 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- HIGH | lib/src/interactive/internal/interactive_gesture_router.dart | class InteractiveGestureRouter (1 entry)
+  This class has 12 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- HIGH | lib/src/interactive/internal/interactive_move_gesture_state.dart | class InteractiveMoveGestureState (1 entry)
+  This class has 13 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- HIGH | lib/src/interactive/internal/scene_controller_interaction_runtime.dart | extension SceneControllerInteractionRuntimeMutationApi (1 entry)
+  This extension has 18 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- HIGH | lib/src/interactive/internal/scene_controller_pointer_session.dart | class SceneControllerPointerSession (2 entries)
+  This class has 19 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- HIGH | lib/src/interactive/internal/scene_controller_scene_view_runtime.dart | class SceneControllerSceneViewMainSceneRenderRead (2 entries)
+  This class has 15 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- HIGH | lib/src/interactive/internal/scene_controller_scene_view_runtime.dart | class SceneControllerSceneViewOverlayPreviewRead (1 entry)
+  This class has 17 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- HIGH | lib/src/interactive/scene_controller_scene.dart | class SceneControllerScene (1 entry)
+  This class has 12 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+- HIGH | lib/src/interactive/scene_controller_scene.dart | class SceneControllerSceneOwner (1 entry)
+  This class has 15 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+
+## number-of-parameters
+- HIGH | lib/src/interactive/internal/interactive_draw_action_emitter.dart | method InteractiveDrawActionEmitter.emitDrawCommit (1 entry)
+  This method has 6 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/interactive/internal/interactive_draw_action_emitter.dart | method InteractiveDrawActionEmitter.emitStrokeCommit (1 entry)
+  This method has 5 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/interactive/internal/interactive_draw_coordinator.dart | method InteractiveDrawCoordinator.handlePointer (1 entry)
+  This method has 5 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/interactive/internal/interactive_draw_line_engine.dart | method InteractiveDrawLineEngine.handleMove (1 entry)
+  This method has 5 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/interactive/internal/scene_controller_interaction_runtime.dart | function _createInteractiveRuntime (1 entry)
+  This function has 6 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/interactive/internal/scene_controller_mutation_boundary.dart | method SceneControllerMutationBoundary.commitDrawLineFromWorldSegment (1 entry)
+  This method has 5 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+- HIGH | lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart | method SceneControllerPaintCandidateStage._stageSelectedSupplements (3 entries)
+  This method has 6 parameters, which exceeds the threshold of 4.
+  https://dcm.dev/docs/metrics/function/number-of-parameters
+
+## response-for-class
+- HIGH | lib/src/interactive/internal/interactive_move_session.dart | class InteractiveMoveSession (3 entries)
+  This class has a response set of 43 methods, which exceeds the threshold of 40.
+  https://dcm.dev/docs/metrics/class/response-for-class
+- HIGH | lib/src/interactive/internal/interactive_runtime.dart | class InteractiveRuntime (4 entries)
+  This class has a response set of 54 methods, which exceeds the threshold of 40.
+  https://dcm.dev/docs/metrics/class/response-for-class
+- HIGH | lib/src/interactive/internal/scene_controller_mutation_boundary.dart | class SceneControllerMutationBoundary (4 entries)
+  This class has a response set of 66 methods, which exceeds the threshold of 40.
+  https://dcm.dev/docs/metrics/class/response-for-class
+- HIGH | lib/src/interactive/scene_controller_interaction.dart | class SceneControllerInteractionOwner (3 entries)
+  This class has a response set of 54 methods, which exceeds the threshold of 40.
+  https://dcm.dev/docs/metrics/class/response-for-class
+
+## source-lines-of-code
+- HIGH | lib/src/interactive/internal/interactive_draw_line_engine.dart | method InteractiveDrawLineEngine.commitOnUp (1 entry)
+  This method has 42 source lines of code, which exceeds the threshold of 40.
+  https://dcm.dev/docs/metrics/function/source-lines-of-code
+- HIGH | lib/src/interactive/internal/interactive_draw_terminal_router.dart | method InteractiveDrawTerminalRouter.handleUp (1 entry)
+  This method has 45 source lines of code, which exceeds the threshold of 40.
+  https://dcm.dev/docs/metrics/function/source-lines-of-code
+- HIGH | lib/src/interactive/internal/scene_controller_graph.dart | function _assembleSceneControllerGraph (1 entry)
+  This function has 71 source lines of code, which exceeds the threshold of 40.
+  https://dcm.dev/docs/metrics/function/source-lines-of-code
+- HIGH | lib/src/interactive/internal/scene_controller_mutation_boundary.dart | method SceneControllerMutationBoundary.commitMoveSelection (1 entry)
+  This method has 42 source lines of code, which exceeds the threshold of 40.
+  https://dcm.dev/docs/metrics/function/source-lines-of-code
+- HIGH | lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart | method SceneControllerPaintCandidateStage._stageSelectedSupplements (3 entries)
+  This method has 65 source lines of code, which exceeds the threshold of 40.
+  https://dcm.dev/docs/metrics/function/source-lines-of-code
+
+## weighted-methods-per-class
+- VERY HIGH | lib/src/interactive/scene_controller_interaction.dart | class SceneControllerInteractionOwner (3 entries)
+  This class has the total methods complexity of 79, which exceeds the threshold of 35.
+  https://dcm.dev/docs/metrics/class/weighted-methods-per-class
+- HIGH | lib/src/interactive/internal/interactive_draw_line_engine.dart | class InteractiveDrawLineEngine (2 entries)
+  This class has the total methods complexity of 40, which exceeds the threshold of 35.
+  https://dcm.dev/docs/metrics/class/weighted-methods-per-class
+- HIGH | lib/src/interactive/internal/interactive_move_session.dart | class InteractiveMoveSession (3 entries)
+  This class has the total methods complexity of 42, which exceeds the threshold of 35.
+  https://dcm.dev/docs/metrics/class/weighted-methods-per-class
+- HIGH | lib/src/interactive/internal/interactive_runtime.dart | class InteractiveRuntime (4 entries)
+  This class has the total methods complexity of 57, which exceeds the threshold of 35.
+  https://dcm.dev/docs/metrics/class/weighted-methods-per-class
+- HIGH | lib/src/interactive/internal/scene_controller_mutation_boundary.dart | class SceneControllerMutationBoundary (4 entries)
+  This class has the total methods complexity of 58, which exceeds the threshold of 35.
+  https://dcm.dev/docs/metrics/class/weighted-methods-per-class
+- HIGH | lib/src/interactive/internal/scene_controller_pointer_session.dart | class SceneControllerPointerSession (2 entries)
+  This class has the total methods complexity of 49, which exceeds the threshold of 35.
+  https://dcm.dev/docs/metrics/class/weighted-methods-per-class

@@ -1,0 +1,12 @@
+## coupling-between-object-classes
+- HIGH | lib/src/view/scene_view_render_surface.dart | class SceneViewRenderSurfaceState (1 entry)
+  This class is coupled with 15 other classes, which exceeds the threshold of 12.
+  https://dcm.dev/docs/metrics/class/coupling-between-object-classes
+- HIGH | lib/src/view/scene_view_runtime_host.dart | class _SceneViewRuntimeHostState (1 entry)
+  This class is coupled with 18 other classes, which exceeds the threshold of 12.
+  https://dcm.dev/docs/metrics/class/coupling-between-object-classes
+
+## source-lines-of-code
+- HIGH | lib/src/view/scene_view_interactive_pointer_host.dart | method _SceneViewInteractivePointerRuntime.handlePointerEvent (1 entry)
+  This method has 44 source lines of code, which exceeds the threshold of 40.
+  https://dcm.dev/docs/metrics/function/source-lines-of-code

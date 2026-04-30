@@ -1,0 +1,19 @@
+## coupling-between-object-classes
+- HIGH | lib/src/render/scene_painter_frame.dart | class ScenePainterFrameOwner (1 entry)
+  This class is coupled with 19 other classes, which exceeds the threshold of 12.
+  https://dcm.dev/docs/metrics/class/coupling-between-object-classes
+
+## number-of-imports
+- HIGH | lib/src/render/scene_painter.dart | file (1 entry)
+  This file has 15 imports, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/file/number-of-imports
+
+## number-of-methods
+- HIGH | lib/src/render/scene_render_caches.dart | class SceneViewRenderCacheLifecycle (1 entry)
+  This class has 12 methods, which exceeds the threshold of 10.
+  https://dcm.dev/docs/metrics/class/number-of-methods
+
+## source-lines-of-code
+- HIGH | lib/src/render/cache/scene_static_layer_cache.dart | method SceneStaticLayerCache.draw (1 entry)
+  This method has 41 source lines of code, which exceeds the threshold of 40.
+  https://dcm.dev/docs/metrics/function/source-lines-of-code
