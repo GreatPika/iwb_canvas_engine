@@ -124,6 +124,8 @@ in changes that have not yet been published to pub.dev.
 - Fixed JSON import/build line and stroke range diagnostics so alias-bearing
   field paths stay on `localA`, `localB`, and `localPoints`, while typed
   snapshot import surfaces keep canonical `start`, `end`, and `points`.
+- Fixed parsed-map JSON import so line endpoint and stroke point offset objects
+  with non-string keys now fail with the stable JSON object-key error contract.
 - Fixed main-scene move-preview rendering so one captured frame keeps a frozen
   preview snapshot across paint admission and late node resolution, even when
   app `imageResolver` callbacks mutate controller state mid-paint.

@@ -59,4 +59,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 37. Paint Admission Edge-Touch Parity](plan/step_37_paint_admission_edge_touch_parity.md)
 - [x] [Step 38. Load-Profile Diff Report Contract](plan/step_38_load_profile_diff_report_contract.md)
 - [x] [Step 39. Scene Snapshot Backing Validation Contract](plan/step_39_scene_snapshot_backing_validation_contract.md)
-- [ ] [Step 40. JSON Offset Object Key Contract](plan/step_40_json_offset_object_key_contract.md)
+- [x] [Step 40. JSON Offset Object Key Contract](plan/step_40_json_offset_object_key_contract.md)

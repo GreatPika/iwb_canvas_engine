@@ -325,6 +325,14 @@ Offset validatedRequireJsonFiniteOffset(
       source: raw,
     );
   }
+  for (final key in raw.keys) {
+    if (key is! String) {
+      throw SceneDataException.jsonObjectKeysMustBeStrings(
+        path: path,
+        source: key,
+      );
+    }
+  }
   final dx = raw['x'];
   final dy = raw['y'];
   if (dx is! num || dy is! num) {

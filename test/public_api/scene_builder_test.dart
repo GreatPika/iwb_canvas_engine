@@ -417,6 +417,93 @@ void main() {
   );
 
   test(
+    'SceneBuilder.buildFromJson keeps offset object-key diagnostics aligned with decodeScene',
+    () {
+      final validLine = minimalSceneJson(
+        contentNodes: <Object?>[
+          <String, Object?>{
+            ...minimalRectNodeJson(id: 'line-valid'),
+            'type': 'line',
+            'localA': const <String, Object?>{'x': 0, 'y': 0},
+            'localB': const <String, Object?>{'x': 1, 'y': 1},
+            'thickness': 1,
+            'color': '#FF000000',
+          },
+        ],
+      );
+      expect(
+        SceneBuilder.buildFromJson(validLine).layers.single.nodes,
+        hasLength(1),
+      );
+      expect(
+        decodeScene(Map<String, dynamic>.from(validLine)).layers.single.nodes,
+        hasLength(1),
+      );
+
+      final scenarios =
+          <({String description, Map<String, Object?> node, String path})>[
+            (
+              description: 'line localA',
+              node: <String, Object?>{
+                ...minimalRectNodeJson(id: 'line-a-key'),
+                'type': 'line',
+                'localA': <Object?, Object?>{'x': 0, 'y': 0, 1: 'extra'},
+                'localB': const <String, Object?>{'x': 1, 'y': 1},
+                'thickness': 1,
+                'color': '#FF000000',
+              },
+              path: 'layers[0].nodes[0].localA',
+            ),
+            (
+              description: 'line localB',
+              node: <String, Object?>{
+                ...minimalRectNodeJson(id: 'line-b-key'),
+                'type': 'line',
+                'localA': const <String, Object?>{'x': 0, 'y': 0},
+                'localB': <Object?, Object?>{'x': 1, 'y': 1, 1: 'extra'},
+                'thickness': 1,
+                'color': '#FF000000',
+              },
+              path: 'layers[0].nodes[0].localB',
+            ),
+            (
+              description: 'stroke localPoints[1]',
+              node: <String, Object?>{
+                ...minimalRectNodeJson(id: 'stroke-key'),
+                'type': 'stroke',
+                'localPoints': <Object?>[
+                  const <String, Object?>{'x': 0, 'y': 0},
+                  <Object?, Object?>{'x': 1, 'y': 1, 1: 'extra'},
+                ],
+                'thickness': 1,
+                'color': '#FF000000',
+              },
+              path: 'layers[0].nodes[0].localPoints[1]',
+            ),
+          ];
+
+      for (final scenario in scenarios) {
+        final raw = minimalSceneJson(contentNodes: <Object?>[scenario.node]);
+
+        final fromBuilder = _captureSceneDataException(
+          () => SceneBuilder.buildFromJson(raw),
+        );
+        final fromCodec = _captureSceneDataException(
+          () => decodeScene(Map<String, dynamic>.from(raw)),
+        );
+
+        _expectSameSceneDataContract(fromBuilder, fromCodec);
+        expect(fromBuilder.code, SceneDataErrorCode.invalidFieldType);
+        expect(fromBuilder.path, scenario.path, reason: scenario.description);
+        expect(fromBuilder.details, const <String, Object?>{
+          'template': 'jsonObjectKeysMustBeStrings',
+        });
+        expect(fromBuilder.source, 1, reason: scenario.description);
+      }
+    },
+  );
+
+  test(
     'SceneBuilder.buildFromSnapshot reports path-aware duplicate-id failures',
     () {
       // INV:INV-ENG-PUBLIC-SNAPSHOT-GLOBAL-VALIDITY

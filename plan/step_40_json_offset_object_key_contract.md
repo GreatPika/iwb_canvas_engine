@@ -449,7 +449,7 @@ line endpoints and stroke points.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Public Offset Boundary Key Guard
+### Slice 1. [x] Public Offset Boundary Key Guard
 
 #### Slice Contract
 
@@ -498,7 +498,7 @@ coordinate behavior before adding the minimal contract-local key guard in
 - The direct public boundary test fails before the implementation change and
   passes after the contract-local fix.
 
-### Slice 2. [ ] Scene Import Offset Key Parity
+### Slice 2. [x] Scene Import Offset Key Parity
 
 #### Slice Contract
 
@@ -552,7 +552,7 @@ then verify the slice passes with the Slice 1 contract-owner fix.
 - The contract documents that `decodeSceneFromJson(...)` cannot be used to
   construct the same non-string-key malformed object shape.
 
-### Slice 3. [ ] Known Issue Retirement and Release Ledger
+### Slice 3. [x] Known Issue Retirement and Release Ledger
 
 #### Slice Contract
 

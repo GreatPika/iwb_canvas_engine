@@ -1,5 +1,10 @@
 import 'dart:io';
 
+import 'package:analyzer/dart/analysis/results.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+
+import '../../support/guardrail_ast_utils.dart' show lineForOffset;
 import '../../support/guardrail_context.dart';
 import '../../core/guardrail_rule.dart';
 import '../../core/guardrail_rule_metadata.dart';
@@ -77,6 +82,15 @@ Future<List<GuardrailViolation>> runContractArchitectureGuardrails({
     return violations;
   }
 
+  final jsonObjectKeySourceViolation = firstViolationInFiles(
+    libFiles,
+    (file) => _checkJsonObjectKeyDiagnosticSource(context, file),
+  );
+  if (jsonObjectKeySourceViolation != null) {
+    violations.add(jsonObjectKeySourceViolation);
+    return violations;
+  }
+
   return violations;
 }
 
@@ -119,4 +133,86 @@ String _formatContractParseFailure({
   required String resultType,
 }) {
   return 'contract architecture violation: failed to parse $filePathForDiag ($resultType).';
+}
+
+GuardrailViolation? _checkJsonObjectKeyDiagnosticSource(
+  GuardrailContext context,
+  File file,
+) {
+  final filePosixPath = repoRelPathForFile(context, file);
+  final parsed = parseGuardrailUnitOrThrow(
+    context: context,
+    file: file,
+    filePosixPath: filePosixPath,
+    failureFormatter: _formatContractParseFailure,
+  );
+
+  final visitor = _JsonObjectKeyDiagnosticSourceVisitor(
+    parsed: parsed,
+    filePosixPath: filePosixPath,
+  );
+  parsed.unit.accept(visitor);
+  return visitor.violation;
+}
+
+final class _JsonObjectKeyDiagnosticSourceVisitor
+    extends RecursiveAstVisitor<void> {
+  _JsonObjectKeyDiagnosticSourceVisitor({
+    required this.parsed,
+    required this.filePosixPath,
+  });
+
+  final ParsedUnitResult parsed;
+  final String filePosixPath;
+  GuardrailViolation? violation;
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (violation != null) {
+      return;
+    }
+    if (!_isJsonObjectKeysMustBeStringsCall(node)) {
+      super.visitMethodInvocation(node);
+      return;
+    }
+
+    final sourceExpression = _namedArgumentExpression(node, 'source');
+    if (sourceExpression == null ||
+        !_looksLikeKeyExpression(sourceExpression)) {
+      violation = GuardrailViolation(
+        filePath: filePosixPath,
+        line: lineForOffset(parsed, node.methodName.offset),
+        message:
+            'contract architecture violation: jsonObjectKeysMustBeStrings diagnostics must pass the offending object key as source.',
+      );
+      return;
+    }
+
+    super.visitMethodInvocation(node);
+  }
+}
+
+bool _isJsonObjectKeysMustBeStringsCall(MethodInvocation node) {
+  if (node.methodName.name != 'jsonObjectKeysMustBeStrings') {
+    return false;
+  }
+  final target = node.target;
+  return target is Identifier && target.name == 'SceneDataException';
+}
+
+Expression? _namedArgumentExpression(MethodInvocation node, String name) {
+  for (final argument in node.argumentList.arguments) {
+    if (argument is NamedExpression && argument.name.label.name == name) {
+      return argument.expression;
+    }
+  }
+  return null;
+}
+
+bool _looksLikeKeyExpression(Expression expression) {
+  final source = expression.toSource().toLowerCase();
+  return source == 'key' ||
+      source.endsWith('.key') ||
+      source.endsWith("['key']") ||
+      source.endsWith('["key"]');
 }

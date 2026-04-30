@@ -122,6 +122,67 @@ void main() {
       );
     });
 
+    test('finite offset JSON values reject non-string object keys first', () {
+      expect(
+        FiniteOffsetValue.fromJson(const <String, Object?>{
+          'x': 3,
+          'y': 4,
+          'label': 'ignored',
+        }, path: 'offset').value,
+        const Offset(3, 4),
+      );
+
+      expect(
+        () => FiniteOffsetValue.fromJson(<Object?, Object?>{
+          'x': 3,
+          'y': 4,
+          0: 'extra',
+        }, path: 'offset'),
+        throwsA(
+          predicate(
+            (error) =>
+                error is SceneDataException &&
+                error.code == SceneDataErrorCode.invalidFieldType &&
+                error.path == 'offset' &&
+                error.details['template'] == 'jsonObjectKeysMustBeStrings' &&
+                error.source == 0,
+          ),
+        ),
+      );
+
+      expect(
+        () => FiniteOffsetValue.fromJson(const <String, Object?>{
+          'x': 1,
+          'y': 'bad',
+        }, path: 'offset'),
+        throwsA(
+          predicate(
+            (error) =>
+                error is SceneDataException &&
+                error.code == SceneDataErrorCode.invalidFieldType &&
+                error.path == 'offset' &&
+                error.details['template'] == 'fieldMustBeOffsetObject',
+          ),
+        ),
+      );
+
+      expect(
+        () => FiniteOffsetValue.fromJson(<String, Object?>{
+          'x': double.infinity,
+          'y': 0,
+        }, path: 'offset'),
+        throwsA(
+          predicate(
+            (error) =>
+                error is SceneDataException &&
+                error.code == SceneDataErrorCode.invalidValue &&
+                error.path == 'offset' &&
+                error.details['template'] == 'fieldCoordinatesMustBeFinite',
+          ),
+        ),
+      );
+    });
+
     test(
       'instance revision policy differentiates snapshot and scene rules',
       () {

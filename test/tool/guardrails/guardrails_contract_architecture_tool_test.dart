@@ -306,5 +306,139 @@ void buildSceneSnapshot() {}
         }
       },
     );
+
+    test(
+      'allows JSON object-key diagnostics sourced from the offending key',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/scene_data_exception.dart',
+            '''
+class SceneDataException {
+  static void jsonObjectKeysMustBeStrings({String? path, Object? source}) {}
+}
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/validated/validated_value_support.dart',
+            '''
+import '../scene_data_exception.dart';
+
+void requireJsonObjectKeys(Map<Object?, Object?> raw) {
+  for (final entry in raw.entries) {
+    final key = entry.key;
+    if (key is! String) {
+      SceneDataException.jsonObjectKeysMustBeStrings(source: key);
+    }
+  }
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, 0);
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects JSON object-key diagnostics sourced from the whole object',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/scene_data_exception.dart',
+            '''
+class SceneDataException {
+  static void jsonObjectKeysMustBeStrings({String? path, Object? source}) {}
+}
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/validated/validated_value_support.dart',
+            '''
+import '../scene_data_exception.dart';
+
+void requireJsonObjectKeys(Map<Object?, Object?> raw) {
+  for (final entry in raw.entries) {
+    final key = entry.key;
+    if (key is! String) {
+      SceneDataException.jsonObjectKeysMustBeStrings(source: raw);
+    }
+  }
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'contract architecture',
+              detail:
+                  'jsonObjectKeysMustBeStrings diagnostics must pass the '
+                  'offending object key as source',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
+
+    test(
+      'rejects JSON object-key diagnostics sourced from a key-suffixed alias',
+      () async {
+        final sandbox = await createGuardrailsSandbox();
+        try {
+          writeMinimalControllerStore(sandbox);
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/scene_data_exception.dart',
+            '''
+class SceneDataException {
+  static void jsonObjectKeysMustBeStrings({String? path, Object? source}) {}
+}
+''',
+          );
+          writeSandboxFile(
+            sandbox,
+            'lib/src/contract/validated/validated_value_support.dart',
+            '''
+import '../scene_data_exception.dart';
+
+void requireJsonObjectKeys(Map<Object?, Object?> raw) {
+  final rawKey = raw;
+  SceneDataException.jsonObjectKeysMustBeStrings(source: rawKey);
+}
+''',
+          );
+
+          final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+          expect(result.exitCode, isNonZero);
+          expect(
+            result.stderr.toString(),
+            diagnostic(
+              category: 'contract architecture',
+              detail:
+                  'jsonObjectKeysMustBeStrings diagnostics must pass the '
+                  'offending object key as source',
+            ),
+          );
+        } finally {
+          sandbox.deleteSync(recursive: true);
+        }
+      },
+    );
   });
 }

@@ -2031,6 +2031,87 @@ void main() {
     },
   );
 
+  test(
+    'decodeScene and SceneBuilder.buildFromJson reject parsed offset maps with non-string keys',
+    () {
+      final validStroke = _sceneWithSingleNode(
+        _baseNodeJson(id: 'stroke-valid', type: 'stroke')
+          ..addAll(<String, Object?>{
+            'localPoints': <Object?>[
+              const <String, Object?>{'x': 0, 'y': 0},
+              const <String, Object?>{'x': 1, 'y': 1},
+            ],
+            'thickness': 1,
+            'color': '#FF000000',
+          }),
+      );
+      expect(decodeScene(validStroke).layers.single.nodes, hasLength(1));
+      expect(
+        SceneBuilder.buildFromJson(validStroke).layers.single.nodes,
+        hasLength(1),
+      );
+
+      final scenarios =
+          <({String description, Map<String, Object?> node, String path})>[
+            (
+              description: 'line localA',
+              node: _baseNodeJson(id: 'line-a-key', type: 'line')
+                ..addAll(<String, Object?>{
+                  'localA': <Object?, Object?>{'x': 0, 'y': 0, 1: 'extra'},
+                  'localB': const <String, Object?>{'x': 1, 'y': 1},
+                  'thickness': 1,
+                  'color': '#FF000000',
+                }),
+              path: 'layers[0].nodes[0].localA',
+            ),
+            (
+              description: 'line localB',
+              node: _baseNodeJson(id: 'line-b-key', type: 'line')
+                ..addAll(<String, Object?>{
+                  'localA': const <String, Object?>{'x': 0, 'y': 0},
+                  'localB': <Object?, Object?>{'x': 1, 'y': 1, 1: 'extra'},
+                  'thickness': 1,
+                  'color': '#FF000000',
+                }),
+              path: 'layers[0].nodes[0].localB',
+            ),
+            (
+              description: 'stroke localPoints[1]',
+              node: _baseNodeJson(id: 'stroke-key', type: 'stroke')
+                ..addAll(<String, Object?>{
+                  'localPoints': <Object?>[
+                    const <String, Object?>{'x': 0, 'y': 0},
+                    <Object?, Object?>{'x': 1, 'y': 1, 1: 'extra'},
+                  ],
+                  'thickness': 1,
+                  'color': '#FF000000',
+                }),
+              path: 'layers[0].nodes[0].localPoints[1]',
+            ),
+          ];
+
+      for (final scenario in scenarios) {
+        final raw = _sceneWithSingleNode(scenario.node);
+
+        final fromMap = _captureSceneDataException(() => decodeScene(raw));
+        final fromBuilder = _captureSceneDataException(
+          () => SceneBuilder.buildFromJson(raw),
+        );
+
+        _expectSameSceneDataContract(fromBuilder, fromMap);
+        expect(fromMap.code, SceneDataErrorCode.invalidFieldType);
+        expect(fromMap.path, scenario.path, reason: scenario.description);
+        expect(fromMap.details, const <String, Object?>{
+          'template': 'jsonObjectKeysMustBeStrings',
+        });
+        expect(fromMap.source, 1, reason: scenario.description);
+      }
+
+      // decodeSceneFromJson is intentionally absent here: valid JSON text
+      // cannot represent a non-string object key after jsonDecode.
+    },
+  );
+
   test('encodeSceneDocument rejects mutable node opacity outside [0,1]', () {
     final scene = Scene(
       layers: <ContentLayer>[

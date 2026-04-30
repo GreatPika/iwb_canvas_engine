@@ -61,24 +61,6 @@ Confirmed active defects only.
   and add a test where both reports include the full required set plus the same
   extra case.
 
-### KI-18
-
-- `ID`: KI-18
-- `Severity`: P2
-- `Summary`: parsed-map scene import accepts malformed offset objects with
-  non-string extra keys for line endpoints and stroke points, creating schema
-  admission parity drift from other JSON object fields.
-- `Detection`: static inspection of line/stroke scene-builder decode paths and
-  JSON object key guards.
-- `Evidence`: `line.localA`, `line.localB`, and `stroke.localPoints[i]` flow
-  through `validatedRequireJsonFiniteOffset`, which accepts
-  `Map<Object?, Object?>` and reads only `x`/`y`; the shared
-  `sceneBuilderCastMap` guard rejects non-string keys but is not applied on
-  these offset subobjects.
-- `Next action`: apply the shared object-key guard before finite offset
-  validation for these fields and add regression tests for non-string extra keys
-  on both line endpoints and stroke point items.
-
 ### KI-19
 
 - `ID`: KI-19
