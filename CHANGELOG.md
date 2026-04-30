@@ -76,6 +76,9 @@ in changes that have not yet been published to pub.dev.
 
 ### Fixed
 
+- Fixed internal `SceneSnapshot` backing validation so validated snapshot
+  fast paths reject duplicate scene layer or node ids before returning backing
+  values.
 - Fixed public stroke insert and patch validation so oversized
   `StrokeNodeSpec.thickness` and `StrokeNodePatch.thickness` fail before
   committed controller state changes, matching line and import validation.

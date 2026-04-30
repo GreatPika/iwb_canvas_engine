@@ -34,7 +34,7 @@ import 'package:iwb_canvas_engine/src/model/document_clone.dart';
 void main() {
   SceneSnapshot duplicateNodeSnapshotFromInternalBypass() {
     return unsafeMaterializeSceneSnapshot(
-      sceneSnapshotBackingFromValidated(
+      SceneSnapshotBacking(
         backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
           nodes: <NodeSnapshotBacking>[
             nodeSnapshotBackingOf(

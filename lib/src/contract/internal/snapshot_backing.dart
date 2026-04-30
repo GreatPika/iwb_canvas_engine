@@ -5,6 +5,7 @@ import '../owned_collections.dart';
 import '../path_fill_rule.dart';
 import '../scene_defaults.dart';
 import '../scene_model_invariants.dart';
+import '../scene_structure_validation.dart';
 import '../transform2d.dart';
 import 'node_boundary_schema.dart';
 
@@ -304,13 +305,15 @@ SceneSnapshotBacking sceneSnapshotBackingFromValidated({
   final resolvedCamera = _validatedCameraSnapshotBacking(camera);
   final resolvedBackground = _validatedBackgroundSnapshotBacking(background);
   final resolvedPalette = _validatedScenePaletteSnapshotBacking(palette);
-  return SceneSnapshotBacking(
+  final backing = SceneSnapshotBacking(
     layers: layers,
     backgroundLayer: backgroundLayer,
     camera: resolvedCamera,
     background: resolvedBackground,
     palette: resolvedPalette,
   );
+  sceneValidateSceneSnapshotBackingStructure(backing);
+  return backing;
 }
 
 void validateSceneSnapshotBackingMetadataValues(SceneSnapshotBacking backing) {

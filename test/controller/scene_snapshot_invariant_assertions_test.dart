@@ -45,7 +45,7 @@ void main() {
 
   test('fails on duplicate NodeId across background and content', () {
     final snapshot = unsafeMaterializeSceneSnapshot(
-      sceneSnapshotBackingFromValidated(
+      SceneSnapshotBacking(
         backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
           nodes: <NodeSnapshotBacking>[
             nodeSnapshotBackingOf(

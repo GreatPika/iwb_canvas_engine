@@ -50,13 +50,12 @@ materialization rules.
 
 ## Status
 
-- `known issue`
+- `locked`
 - Validated snapshot fast paths keep carrier access separate from generic
-  backing-to-public snapshot projection, but current checked-in code still has
-  a validated backing builder shape that can skip the separate scene-structure
-  validator. `tool/audit_validated_backing_structure.dart` inventories this
-  gap until the backing helper/surface is split or renamed at the owning
-  contract boundary. Tracked by [KI-15](../../../KNOWN_ISSUES.md#ki-15).
+  backing-to-public snapshot projection. Backing builders named
+  `*BackingFromValidated` route through matching global structure validators
+  before returning backing values when such validators exist, and direct raw
+  backing construction remains the explicit internal bypass.
 
 ## Update Triggers
 

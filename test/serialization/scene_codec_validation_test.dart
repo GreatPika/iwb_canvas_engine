@@ -109,7 +109,7 @@ void _expectSameSceneDataContract(
 
 SceneSnapshot _duplicateNodeSnapshotFromInternalBypass() {
   return unsafeMaterializeSceneSnapshot(
-    sceneSnapshotBackingFromValidated(
+    SceneSnapshotBacking(
       backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
         nodes: <NodeSnapshotBacking>[
           nodeSnapshotBackingOf(

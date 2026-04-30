@@ -58,4 +58,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 36. Path Fill Hit Padding Parity](plan/step_36_path_fill_hit_padding_parity.md)
 - [x] [Step 37. Paint Admission Edge-Touch Parity](plan/step_37_paint_admission_edge_touch_parity.md)
 - [x] [Step 38. Load-Profile Diff Report Contract](plan/step_38_load_profile_diff_report_contract.md)
-- [ ] [Step 39. Scene Snapshot Backing Validation Contract](plan/step_39_scene_snapshot_backing_validation_contract.md)
+- [x] [Step 39. Scene Snapshot Backing Validation Contract](plan/step_39_scene_snapshot_backing_validation_contract.md)

@@ -52,7 +52,7 @@ Map<String, Object?> _minimalSceneJson() {
 
 SceneSnapshot _duplicateLayerIdSnapshotFromInternalBypass() {
   return unsafeMaterializeSceneSnapshot(
-    sceneSnapshotBackingFromValidated(
+    SceneSnapshotBacking(
       layers: <ContentLayerSnapshotBacking>[
         contentLayerSnapshotBackingFromValidated(
           id: 'layer-auto-dup',
@@ -77,7 +77,7 @@ SceneSnapshot _duplicateLayerIdSnapshotFromInternalBypass() {
 
 SceneSnapshot _duplicateBackgroundNodeSnapshotFromInternalBypass() {
   return unsafeMaterializeSceneSnapshot(
-    sceneSnapshotBackingFromValidated(
+    SceneSnapshotBacking(
       backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
         nodes: <NodeSnapshotBacking>[
           nodeSnapshotBackingOf(
@@ -643,7 +643,7 @@ void main() {
   test(
     'validated scene snapshot projection rejects malformed backing graphs',
     () {
-      final malformedBacking = sceneSnapshotBackingFromValidated(
+      final malformedBacking = SceneSnapshotBacking(
         backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
           nodes: <NodeSnapshotBacking>[
             nodeSnapshotBackingOf(
@@ -2029,7 +2029,7 @@ void main() {
     expect(
       () => value_validation.sceneValidateSnapshotValues(
         unsafeMaterializeSceneSnapshot(
-          sceneSnapshotBackingFromValidated(
+          SceneSnapshotBacking(
             layers: <ContentLayerSnapshotBacking>[
               contentLayerSnapshotBackingFromValidated(
                 id: 'layer-auto-2',
@@ -2085,7 +2085,7 @@ void main() {
     expect(
       () => value_validation.sceneValidateSnapshotValues(
         unsafeMaterializeSceneSnapshot(
-          sceneSnapshotBackingFromValidated(
+          SceneSnapshotBacking(
             layers: <ContentLayerSnapshotBacking>[
               contentLayerSnapshotBackingFromValidated(id: 'layer-auto-dup-a'),
               contentLayerSnapshotBackingFromValidated(id: 'layer-auto-dup-a'),
@@ -2186,7 +2186,7 @@ void main() {
       expect(
         () => value_validation.sceneValidateSnapshotValues(
           unsafeMaterializeSceneSnapshot(
-            sceneSnapshotBackingFromValidated(
+            SceneSnapshotBacking(
               backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
                 nodes: <NodeSnapshotBacking>[
                   nodeSnapshotBackingOf(

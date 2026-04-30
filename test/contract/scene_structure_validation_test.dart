@@ -57,7 +57,7 @@ void main() {
   test(
     'sceneValidateSceneSnapshotBackingStructure reports duplicate node ids',
     () {
-      final backing = sceneSnapshotBackingFromValidated(
+      final backing = SceneSnapshotBacking(
         backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
           nodes: <NodeSnapshotBacking>[
             nodeSnapshotBackingOf(
@@ -95,7 +95,7 @@ void main() {
   test(
     'sceneValidateSceneSnapshotBackingStructure reports duplicate layer ids',
     () {
-      final backing = sceneSnapshotBackingFromValidated(
+      final backing = SceneSnapshotBacking(
         layers: <ContentLayerSnapshotBacking>[
           contentLayerSnapshotBackingFromValidated(id: 'layer-dup'),
           contentLayerSnapshotBackingFromValidated(id: 'layer-dup'),
@@ -116,4 +116,97 @@ void main() {
       );
     },
   );
+
+  test('sceneSnapshotBackingFromValidated accepts valid scene structure', () {
+    final backing = sceneSnapshotBackingFromValidated(
+      backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
+        nodes: <NodeSnapshotBacking>[
+          nodeSnapshotBackingOf(
+            RectNodeSnapshot(id: 'bg-valid', size: const Size(1, 1)),
+          ),
+        ],
+      ),
+      layers: <ContentLayerSnapshotBacking>[
+        contentLayerSnapshotBackingFromValidated(
+          id: 'layer-valid',
+          nodes: <NodeSnapshotBacking>[
+            nodeSnapshotBackingOf(
+              RectNodeSnapshot(id: 'node-valid', size: const Size(2, 2)),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    expect(backing.layers.single.id, 'layer-valid');
+    expect(backing.backgroundLayer.nodes.single.id, 'bg-valid');
+  });
+
+  test('sceneSnapshotBackingFromValidated rejects duplicate node ids', () {
+    expect(
+      () => sceneSnapshotBackingFromValidated(
+        backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
+          nodes: <NodeSnapshotBacking>[
+            nodeSnapshotBackingOf(
+              RectNodeSnapshot(id: 'dup-fast-path', size: const Size(1, 1)),
+            ),
+          ],
+        ),
+        layers: <ContentLayerSnapshotBacking>[
+          contentLayerSnapshotBackingFromValidated(
+            id: 'layer-fast-path',
+            nodes: <NodeSnapshotBacking>[
+              nodeSnapshotBackingOf(
+                RectNodeSnapshot(id: 'dup-fast-path', size: const Size(2, 2)),
+              ),
+            ],
+          ),
+        ],
+      ),
+      throwsA(
+        predicate(
+          (error) =>
+              error is SceneDataException &&
+              error.code == SceneDataErrorCode.duplicateNodeId &&
+              error.path == 'layers[0].nodes[0].id' &&
+              error.details['template'] == 'duplicateNodeId',
+        ),
+      ),
+    );
+  });
+
+  test('sceneSnapshotBackingFromValidated rejects duplicate layer ids', () {
+    expect(
+      () => sceneSnapshotBackingFromValidated(
+        layers: <ContentLayerSnapshotBacking>[
+          contentLayerSnapshotBackingFromValidated(id: 'layer-fast-dup'),
+          contentLayerSnapshotBackingFromValidated(id: 'layer-fast-dup'),
+        ],
+      ),
+      throwsA(
+        predicate(
+          (error) =>
+              error is SceneDataException &&
+              error.code == SceneDataErrorCode.duplicateLayerId &&
+              error.path == 'layers[1].id' &&
+              error.details['template'] == 'duplicateLayerId',
+        ),
+      ),
+    );
+  });
+
+  test('SceneSnapshotBacking remains the explicit raw backing bypass', () {
+    final backing = SceneSnapshotBacking(
+      layers: <ContentLayerSnapshotBacking>[
+        contentLayerSnapshotBackingFromValidated(id: 'raw-layer'),
+        contentLayerSnapshotBackingFromValidated(id: 'raw-layer'),
+      ],
+    );
+
+    expect(backing.layers, hasLength(2));
+    expect(backing.layers.map((layer) => layer.id), <String>[
+      'raw-layer',
+      'raw-layer',
+    ]);
+  });
 }

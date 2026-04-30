@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import '../scene_defaults.dart';
-import '../scene_structure_validation.dart';
 import '../snapshot.dart';
 import '../transform2d.dart';
 import 'node_boundary_schema.dart';
@@ -169,7 +168,6 @@ SceneSnapshot sceneSnapshotFromValidated({
           ),
     palette: palette == null ? null : scenePaletteSnapshotBackingOf(palette),
   );
-  sceneValidateSceneSnapshotBackingStructure(backing);
   validateSceneSnapshotBackingMetadataValues(backing);
   return materializeSceneSnapshotForInternalUse(backing);
 }

@@ -659,7 +659,7 @@ void main() {
   test(
     'validated snapshot producers enforce structure while raw materialization keeps the internal bypass',
     () {
-      final malformedBacking = sceneSnapshotBackingFromValidated(
+      final malformedBacking = SceneSnapshotBacking(
         backgroundLayer: backgroundLayerSnapshotBackingFromValidated(
           nodes: <NodeSnapshotBacking>[
             nodeSnapshotBackingOf(

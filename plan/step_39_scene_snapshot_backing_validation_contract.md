@@ -582,7 +582,7 @@ internal backing assembly.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Validated Scene Backing Owner Fix
+### Slice 1. [x] Validated Scene Backing Owner Fix
 
 #### Slice Contract
 
@@ -666,7 +666,7 @@ returns.
 - targeted contract/model tests pass
 - standalone repository audits pass
 
-### Slice 2. [ ] Issue And Architecture Closure
+### Slice 2. [x] Issue And Architecture Closure
 
 #### Slice Contract
 
