@@ -767,8 +767,8 @@ important for architectural reasoning.
 - committed fast-path paint admission is used only when the frame snapshot
   matches the committed snapshot
 - paint-candidate admission must use explicit committed or snapshot-local
-  paint-bounds sources; admission modules must not perform text measurement or
-  SVG path parsing directly
+  paint-bounds sources and the shared strict paint-overlap predicate; admission
+  modules must not perform text measurement or SVG path parsing directly
 - the public `SceneController.previewDeltaResolver` stays live and distinct
   from the frame-captured render preview seam
 - overlay repaint ownership stays separate from the main scene render surface

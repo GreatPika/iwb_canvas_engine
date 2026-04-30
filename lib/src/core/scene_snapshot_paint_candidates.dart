@@ -3,6 +3,7 @@ import 'dart:ui';
 import '../contract/scene_view_render_state.dart';
 import '../contract/snapshot.dart';
 import 'geometry.dart';
+import 'paint_candidate_admission.dart';
 import 'snapshot_paint_admission_bounds.dart';
 
 Iterable<ScenePaintCandidate> enumerateSnapshotPaintCandidates({
@@ -59,5 +60,10 @@ Rect? _snapshotPaintBoundsForQuery({
   final visibilityRect = selectedNodeIds.contains(node.id)
       ? query.visibilityRect
       : query.viewportRect;
-  return visibilityRect.overlaps(paintBounds) ? paintBounds : null;
+  return admitsPaintCandidate(
+        queryRect: visibilityRect,
+        paintBoundsWorld: paintBounds,
+      )
+      ? paintBounds
+      : null;
 }

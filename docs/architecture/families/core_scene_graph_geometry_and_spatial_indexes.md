@@ -46,10 +46,10 @@ semantics.
 
 ## Status
 
-- `known issue`
-- Paint candidate parity remains tracked by
-  [KI-7](../../../KNOWN_ISSUES.md#ki-7); the family keeps the shared geometry
-  and spatial-index target rules visible.
+- `locked`
+- Paint candidate admission uses one strict core edge-overlap predicate for
+  committed spatial paint queries and snapshot-local enumeration. Hit-test
+  queries keep their inclusive edge-touch predicate.
 
 ## Update Triggers
 

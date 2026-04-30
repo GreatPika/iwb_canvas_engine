@@ -1248,7 +1248,7 @@ const List<Invariant> invariants = <Invariant>[
     id: 'INV-ENG-PAINT-ADMISSION-BOUNDS-SOURCE',
     scope: 'engine-runtime',
     title:
-        'paint-candidate admission consumes explicit committed or snapshot-local paint-bounds sources, keeping text layout and SVG path parsing out of admission modules while render geometry resolves later',
+        'paint-candidate admission consumes explicit committed or snapshot-local paint-bounds sources through one strict paint-overlap predicate, keeping text layout and SVG path parsing out of admission modules while render geometry resolves later',
     requiredProofs: <RequiredProof>[
       RequiredProof(
         path: 'test/render/scene_painter_bounds_contract_test.dart',

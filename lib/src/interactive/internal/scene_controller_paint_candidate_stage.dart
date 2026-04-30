@@ -6,6 +6,7 @@ import '../../contract/scene_view_render_state.dart';
 import '../../contract/snapshot.dart';
 import '../../controller/scene_store_controller.dart';
 import '../../core/geometry.dart';
+import '../../core/paint_candidate_admission.dart';
 import '../../core/scene_spatial_index.dart';
 import 'scene_controller_selected_paint_order_cache.dart';
 
@@ -161,7 +162,11 @@ final class SceneControllerPaintCandidateStage {
         continue;
       }
       final paintBounds = spatialCandidate.paintBoundsWorld.shift(previewDelta);
-      if (!isFiniteRect(paintBounds) || !visibilityRect.overlaps(paintBounds)) {
+      if (!isFiniteRect(paintBounds) ||
+          !admitsPaintCandidate(
+            queryRect: visibilityRect,
+            paintBoundsWorld: paintBounds,
+          )) {
         continue;
       }
       if (!buffers.acceptedNodeIds.add(token.nodeId)) {

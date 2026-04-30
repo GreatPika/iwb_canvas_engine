@@ -515,6 +515,73 @@ void main() {
   );
 
   test(
+    'committed and snapshot paint admission exclude ordinary edge-touch candidates',
+    () {
+      const query = ScenePaintCandidateQuery(
+        viewportRect: Rect.fromLTWH(0, 0, 120, 100),
+        visibilityRect: Rect.fromLTWH(0, 0, 120, 100),
+      );
+      final frameSnapshot = SceneSnapshot(
+        background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+        layers: <ContentLayerSnapshot>[
+          ContentLayerSnapshot(
+            id: 'edge-touch-parity-layer',
+            nodes: <NodeSnapshot>[
+              RectNodeSnapshot(
+                id: 'edge-touch-only-node',
+                size: const Size(20, 20),
+                fillColor: const Color(0xFF000000),
+                strokeWidth: 0,
+                transform: Transform2D.translation(const Offset(130, 20)),
+              ),
+              RectNodeSnapshot(
+                id: 'positive-overlap-node',
+                size: const Size(20, 20),
+                fillColor: const Color(0xFF000000),
+                strokeWidth: 0,
+                transform: Transform2D.translation(const Offset(110, 20)),
+              ),
+            ],
+          ),
+        ],
+      );
+      final committedController = SceneStoreController(
+        initialSnapshot: frameSnapshot,
+      );
+      addTearDown(committedController.dispose);
+      final snapshotLocalController = SceneStoreController(
+        initialSnapshot: SceneSnapshot(
+          background: BackgroundSnapshot(color: Color(0xFFFFFFFF)),
+        ),
+      );
+      addTearDown(snapshotLocalController.dispose);
+      final committedRenderState = _controllerOwnedRenderState(
+        committedController,
+      );
+      final snapshotLocalRenderState = _controllerOwnedRenderState(
+        snapshotLocalController,
+        snapshotOverride: frameSnapshot,
+      );
+
+      final committedPlan = committedRenderState.preparePaintPlan(
+        committedRenderState.captureFrameRead(),
+        query,
+      );
+      final snapshotLocalPlan = snapshotLocalRenderState.preparePaintPlan(
+        snapshotLocalRenderState.captureFrameRead(),
+        query,
+      );
+
+      expect(_candidateIds(committedPlan), const <NodeId>[
+        'positive-overlap-node',
+      ]);
+      expect(_candidateIds(snapshotLocalPlan), const <NodeId>[
+        'positive-overlap-node',
+      ]);
+    },
+  );
+
+  test(
     'snapshot-local fallback reuses cached base admission bounds for offscreen text and path nodes',
     () {
       final controller = SceneStoreController(

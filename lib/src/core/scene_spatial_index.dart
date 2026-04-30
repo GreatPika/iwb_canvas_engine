@@ -7,6 +7,7 @@ import 'geometry.dart';
 import 'hit_test.dart';
 import 'node_geometry.dart';
 import 'nodes.dart';
+import 'paint_candidate_admission.dart';
 import 'scene.dart';
 import 'scene_limits.dart';
 import 'scene_node_locator.dart';
@@ -672,7 +673,10 @@ List<ScenePaintSpatialCandidate> _queryLinearPaint(
     if (!isFiniteRect(paintBounds)) {
       return;
     }
-    if (!_rectsIntersectInclusive(paintBounds, worldRect)) {
+    if (!admitsPaintCandidate(
+      queryRect: worldRect,
+      paintBoundsWorld: paintBounds,
+    )) {
       return;
     }
     out.add(
@@ -791,7 +795,10 @@ List<ScenePaintSpatialCandidate> _resolvePaintCandidates(
     if (entry == null) {
       continue;
     }
-    if (!_rectsIntersectInclusive(entry.paintBoundsWorld, worldRect)) {
+    if (!admitsPaintCandidate(
+      queryRect: worldRect,
+      paintBoundsWorld: entry.paintBoundsWorld,
+    )) {
       continue;
     }
     final resolved = _resolveSpatialNodeById(index, nodeId);

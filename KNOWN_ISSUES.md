@@ -26,28 +26,6 @@ Confirmed active defects only.
 
 ## Active Issues
 
-### KI-7
-
-- ID: `KI-7`
-- Severity: `P3`
-- Summary: Paint candidate admission uses different edge-touch predicates in
-  committed spatial queries and snapshot-local fallback, so committed paint
-  plans can include ordinary candidates that snapshot fallback excludes.
-- Detection: Compare committed paint admission in
-  `lib/src/core/scene_spatial_index.dart` with snapshot fallback admission in
-  `lib/src/core/scene_snapshot_paint_candidates.dart`
-- Evidence:
-  - `lib/src/core/scene_spatial_index.dart`
-  - `lib/src/core/scene_snapshot_paint_candidates.dart`
-  - Current detections:
-    committed paint queries resolve candidates through an inclusive boundary
-    predicate;
-    snapshot-local fallback uses strict `Rect.overlaps`;
-    painter culling is also strict, so the drift currently affects candidate
-    plan parity and staging work rather than confirmed pixels
-- Next action: Choose one shared paint admission boundary policy, codify it in
-  tests, and remove the committed-vs-snapshot drift.
-
 ### KI-13
 
 - ID: `KI-13`

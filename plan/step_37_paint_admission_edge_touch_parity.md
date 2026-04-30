@@ -450,7 +450,7 @@ paint bounds actually overlap the query rectangle.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Shared Strict Paint Admission Predicate
+### Slice 1. [x] Shared Strict Paint Admission Predicate
 
 #### Slice Contract
 

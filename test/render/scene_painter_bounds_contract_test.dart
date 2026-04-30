@@ -333,6 +333,60 @@ void main() {
     },
   );
 
+  test('paint admission modules share the core edge predicate', () {
+    final predicateSource = File(
+      'lib/src/core/paint_candidate_admission.dart',
+    ).readAsStringSync();
+    final spatialIndexSource = File(
+      'lib/src/core/scene_spatial_index.dart',
+    ).readAsStringSync();
+    final snapshotEnumeratorSource = File(
+      'lib/src/core/scene_snapshot_paint_candidates.dart',
+    ).readAsStringSync();
+    final stageSource = File(
+      'lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart',
+    ).readAsStringSync();
+    final linearPaintBody = _extractMethodBody(
+      source: spatialIndexSource,
+      methodStart: 'List<ScenePaintSpatialCandidate> _queryLinearPaint(',
+    );
+    final resolvePaintBody = _extractMethodBody(
+      source: spatialIndexSource,
+      methodStart: 'List<ScenePaintSpatialCandidate> _resolvePaintCandidates(',
+    );
+    final snapshotQueryBody = _extractMethodBody(
+      source: snapshotEnumeratorSource,
+      methodStart: 'Rect? _snapshotPaintBoundsForQuery({',
+    );
+    final supplementBody = _extractMethodBody(
+      source: stageSource,
+      methodStart: 'void _stageSelectedSupplements({',
+    );
+
+    expect(predicateSource, contains('bool admitsPaintCandidate('));
+    expect(predicateSource, contains('queryRect.overlaps(paintBoundsWorld)'));
+    expect(
+      spatialIndexSource,
+      contains("import 'paint_candidate_admission.dart';"),
+    );
+    expect(
+      snapshotEnumeratorSource,
+      contains("import 'paint_candidate_admission.dart';"),
+    );
+    expect(
+      stageSource,
+      contains("import '../../core/paint_candidate_admission.dart';"),
+    );
+    expect(linearPaintBody, contains('admitsPaintCandidate('));
+    expect(resolvePaintBody, contains('admitsPaintCandidate('));
+    expect(snapshotQueryBody, contains('admitsPaintCandidate('));
+    expect(supplementBody, contains('admitsPaintCandidate('));
+    expect(linearPaintBody, isNot(contains('_rectsIntersectInclusive(')));
+    expect(resolvePaintBody, isNot(contains('_rectsIntersectInclusive(')));
+    expect(snapshotQueryBody, isNot(contains('.overlaps(')));
+    expect(supplementBody, isNot(contains('.overlaps(')));
+  });
+
   test(
     'frame preview contract stays frozen across capture, admission, and late node resolution',
     () {

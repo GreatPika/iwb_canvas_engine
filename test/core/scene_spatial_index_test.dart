@@ -252,6 +252,47 @@ void main() {
     expect(index.queryPaintCandidates(ringProbe), isEmpty);
   });
 
+  test(
+    'paint admission uses strict edge overlap while hit-test remains inclusive',
+    () {
+      final scene = Scene(
+        layers: <ContentLayer>[
+          ContentLayer(
+            id: 'layer-edge-touch-admission',
+            nodes: <SceneNode>[
+              RectNode(
+                id: 'edge-touch-only',
+                size: const Size(20, 20),
+                transform: Transform2D.translation(const Offset(130, 20)),
+              ),
+              RectNode(
+                id: 'positive-overlap',
+                size: const Size(20, 20),
+                transform: Transform2D.translation(const Offset(110, 20)),
+              ),
+            ],
+          ),
+        ],
+      );
+      final index = SceneSpatialIndex.build(scene);
+      const paintProbe = Rect.fromLTWH(0, 0, 120, 100);
+      const edgeProbe = Rect.fromLTWH(120, 20, 0, 0);
+
+      expect(
+        index
+            .queryPaintCandidates(paintProbe)
+            .map((candidate) => candidate.nodeId),
+        <NodeId>['positive-overlap'],
+      );
+      expect(
+        index
+            .queryHitTestCandidates(edgeProbe)
+            .map((candidate) => candidate.nodeId),
+        contains('edge-touch-only'),
+      );
+    },
+  );
+
   test('paint scope includes background while hit-test stays content-only', () {
     final scene = Scene(
       backgroundLayer: BackgroundLayer(
