@@ -47,15 +47,15 @@ preview.
 
 - `dart run tool/lsp_find_symbols.dart mainSceneRenderRead --path-contains=lib/src/contract`
 - `dart run tool/lsp_find_symbols.dart overlayPreviewRead --path-contains=lib/src/contract`
-- `dart run tool/lsp_trace_symbol.dart lib/src/contract/scene_view_runtime.dart SceneViewRuntime.mainSceneRenderRead --direction=both --depth=2 --json-out=docs/architecture/evidence/render_main_scene_read_flow.json --mermaid-out=docs/architecture/evidence/render_main_scene_read_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/contract/scene_view_runtime.dart SceneViewRuntime.mainSceneRenderRead --direction=both --depth=2 --omit-reference-path-prefix=test/ --omit-reference-path-prefix=example/ --json-out=docs/architecture/evidence/render_main_scene_read_flow.json --mermaid-out=docs/architecture/evidence/render_main_scene_read_flow.md`
   Evidence:
   [render_main_scene_read_flow.json](../evidence/render_main_scene_read_flow.json),
   [render_main_scene_read_flow.md](../evidence/render_main_scene_read_flow.md)
-- `dart run tool/lsp_trace_symbol.dart lib/src/contract/scene_view_runtime.dart SceneViewRuntime.overlayPreviewRead --direction=both --depth=2 --json-out=docs/architecture/evidence/render_overlay_preview_flow.json --mermaid-out=docs/architecture/evidence/render_overlay_preview_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/contract/scene_view_runtime.dart SceneViewRuntime.overlayPreviewRead --direction=both --depth=2 --omit-reference-path-prefix=test/ --omit-reference-path-prefix=example/ --json-out=docs/architecture/evidence/render_overlay_preview_flow.json --mermaid-out=docs/architecture/evidence/render_overlay_preview_flow.md`
   Evidence:
   [render_overlay_preview_flow.json](../evidence/render_overlay_preview_flow.json),
   [render_overlay_preview_flow.md](../evidence/render_overlay_preview_flow.md)
-- `dart run tool/lsp_trace_symbol.dart lib/src/view/scene_view_interactive_pointer_host.dart SceneViewInteractivePointerHost.handlePointerEvent --direction=outgoing --depth=3 --json-out=docs/architecture/evidence/pointer_input_flow.json --mermaid-out=docs/architecture/evidence/pointer_input_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/view/scene_view_interactive_pointer_host.dart SceneViewInteractivePointerHost.handlePointerEvent --direction=outgoing --depth=3 --omit-reference-path-prefix=test/ --omit-reference-path-prefix=example/ --json-out=docs/architecture/evidence/pointer_input_flow.json --mermaid-out=docs/architecture/evidence/pointer_input_flow.md`
   Evidence:
   [pointer_input_flow.json](../evidence/pointer_input_flow.json),
   [pointer_input_flow.md](../evidence/pointer_input_flow.md)

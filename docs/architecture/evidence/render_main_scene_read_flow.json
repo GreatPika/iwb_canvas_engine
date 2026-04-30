@@ -4,11 +4,7 @@
   "path": "lib/src/contract/scene_view_runtime.dart",
   "referencesByFile": {
     "lib/src/contract/scene_view_runtime.dart": 1,
-    "lib/src/view/scene_view_runtime_host.dart": 1,
-    "test/contract/runtime_contract_interfaces_test.dart": 5,
-    "test/interactive/core/scene_controller_interactive_move_preview_invariants_test.dart": 3,
-    "test/interactive/core/scene_controller_public_listener_contract_test.dart": 3,
-    "test/render/scene_painter_test.dart": 1
+    "lib/src/view/scene_view_runtime_host.dart": 1
   },
   "implementations": [
     {

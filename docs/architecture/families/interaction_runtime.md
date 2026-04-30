@@ -69,7 +69,7 @@ wiring into a separate mutation gateway.
 
 - `dart run tool/lsp_find_thin_wrappers.dart lib/src/interactive --classification=pure-forwarder`
 - `dart run tool/lsp_trace_flow.dart lib/src/interactive/internal/scene_controller_interaction_runtime.dart _createInteractiveRuntime --depth=4`
-- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/scene_controller_interaction_runtime.dart _createInteractiveRuntime --direction=outgoing --depth=4 --json-out=docs/architecture/evidence/commit_move_selection_flow.json --mermaid-out=docs/architecture/evidence/commit_move_selection_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/scene_controller_interaction_runtime.dart _createInteractiveRuntime --direction=outgoing --depth=4 --omit-reference-path-prefix=test/ --omit-reference-path-prefix=example/ --json-out=docs/architecture/evidence/commit_move_selection_flow.json --mermaid-out=docs/architecture/evidence/commit_move_selection_flow.md`
   Evidence:
   [commit_move_selection_flow.json](../evidence/commit_move_selection_flow.json),
   [commit_move_selection_flow.md](../evidence/commit_move_selection_flow.md)

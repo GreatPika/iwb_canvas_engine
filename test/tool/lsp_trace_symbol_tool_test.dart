@@ -79,6 +79,51 @@ void main() {
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test('can omit noisy reference path prefixes from json output', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeFixture(sandbox);
+        writeSandboxFile(sandbox, 'test/flow_test.dart', '''
+import '../lib/src/flow.dart';
+
+void exercise(Sink sink) {
+  sink.addNode(1);
+}
+''');
+        writeSandboxFile(sandbox, 'example/lib/example.dart', '''
+import '../../lib/src/flow.dart';
+
+void exercise(Sink sink) {
+  sink.addNode(2);
+}
+''');
+
+        final result = await runSandboxTool(
+          sandbox,
+          'lsp_trace_symbol.dart',
+          args: const <String>[
+            'lib/src/flow.dart',
+            'Sink.addNode',
+            '--json-out=artifacts/trace.json',
+            '--omit-reference-path-prefix=test/',
+            '--omit-reference-path-prefix=example/',
+          ],
+        );
+
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        final jsonFile = File('${sandbox.path}/artifacts/trace.json');
+        final jsonMap =
+            jsonDecode(jsonFile.readAsStringSync()) as Map<String, Object?>;
+        final referencePaths =
+            (jsonMap['referencesByFile'] as Map<String, Object?>).keys.toList();
+        expect(referencePaths, isNot(contains('test/flow_test.dart')));
+        expect(referencePaths, isNot(contains('example/lib/example.dart')));
+        expect(referencePaths, contains('lib/src/flow.dart'));
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
   });
 }
 

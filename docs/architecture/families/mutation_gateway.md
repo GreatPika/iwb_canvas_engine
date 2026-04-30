@@ -46,7 +46,7 @@ route straight into that boundary.
 
 ## Mechanical Evidence
 
-- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/scene_controller_scene.dart SceneControllerSceneOwner.addNode --direction=outgoing --depth=5 --json-out=docs/architecture/evidence/add_node_write_flow.json --mermaid-out=docs/architecture/evidence/add_node_write_flow.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/scene_controller_scene.dart SceneControllerSceneOwner.addNode --direction=outgoing --depth=5 --omit-reference-path-prefix=test/ --omit-reference-path-prefix=example/ --json-out=docs/architecture/evidence/add_node_write_flow.json --mermaid-out=docs/architecture/evidence/add_node_write_flow.md`
   Evidence:
   [add_node_write_flow.json](../evidence/add_node_write_flow.json),
   [add_node_write_flow.md](../evidence/add_node_write_flow.md)

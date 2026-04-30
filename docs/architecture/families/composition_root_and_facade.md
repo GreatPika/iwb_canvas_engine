@@ -55,7 +55,7 @@ assembly and teardown path in `createSceneControllerGraph` and
 
 ## Mechanical Evidence
 
-- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/scene_controller_graph.dart createSceneControllerGraph --direction=outgoing --depth=3 --json-out=docs/architecture/evidence/composition_root_trace.json --mermaid-out=docs/architecture/evidence/composition_root_trace.md`
+- `dart run tool/lsp_trace_symbol.dart lib/src/interactive/internal/scene_controller_graph.dart createSceneControllerGraph --direction=outgoing --depth=3 --omit-reference-path-prefix=test/ --omit-reference-path-prefix=example/ --json-out=docs/architecture/evidence/composition_root_trace.json --mermaid-out=docs/architecture/evidence/composition_root_trace.md`
   Evidence:
   [composition_root_trace.json](../evidence/composition_root_trace.json),
   [composition_root_trace.md](../evidence/composition_root_trace.md)

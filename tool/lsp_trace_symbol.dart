@@ -16,7 +16,8 @@ Future<ToolCommandResult> runLspTraceSymbolTool(
       stderr:
           'Usage: dart run tool/lsp_trace_symbol.dart <file> <symbol> '
           '[--depth=N] [--direction=outgoing|incoming|both] [--json] '
-          '[--json-out=file] [--mermaid] [--mermaid-out=file]\n',
+          '[--json-out=file] [--mermaid] [--mermaid-out=file] '
+          '[--omit-reference-path-prefix=prefix]\n',
     );
   }
 
@@ -30,6 +31,10 @@ Future<ToolCommandResult> runLspTraceSymbolTool(
   final jsonOutPath = _parseStringFlag(args, '--json-out');
   final mermaidOutput = args.contains('--mermaid');
   final mermaidOutPath = _parseStringFlag(args, '--mermaid-out');
+  final omittedReferencePathPrefixes = _parseRepeatedStringFlag(
+    args,
+    '--omit-reference-path-prefix',
+  );
 
   final located = () {
     try {
@@ -108,6 +113,7 @@ Future<ToolCommandResult> runLspTraceSymbolTool(
       'referencesByFile': _countLocationsByFile(
         client,
         references as List<Object?>? ?? const <Object?>[],
+        omittedPathPrefixes: omittedReferencePathPrefixes,
       ),
       'implementations': _mapLocations(
         client,
@@ -245,16 +251,29 @@ int _compareCallItems(LspCallItem left, LspCallItem right) {
 
 Map<String, int> _countLocationsByFile(
   LanguageServerClient client,
-  List<Object?> rawLocations,
-) {
+  List<Object?> rawLocations, {
+  required List<String> omittedPathPrefixes,
+}) {
   final counts = <String, int>{};
   for (final location in rawLocations.whereType<Map<Object?, Object?>>()) {
     final cast = location.cast<String, Object?>();
     final path = client.toRepoRelativePath(cast['uri'] as String? ?? '');
+    if (_hasAnyPathPrefix(path, omittedPathPrefixes)) {
+      continue;
+    }
     counts.update(path, (value) => value + 1, ifAbsent: () => 1);
   }
   final sortedPaths = counts.keys.toList(growable: false)..sort();
   return <String, int>{for (final path in sortedPaths) path: counts[path]!};
+}
+
+bool _hasAnyPathPrefix(String path, List<String> prefixes) {
+  for (final prefix in prefixes) {
+    if (path.startsWith(prefix)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 List<Map<String, Object?>> _mapLocations(
@@ -332,6 +351,16 @@ String? _parseStringFlag(List<String> args, String name) {
     }
   }
   return null;
+}
+
+List<String> _parseRepeatedStringFlag(List<String> args, String name) {
+  final values = <String>[];
+  for (final argument in args) {
+    if (argument.startsWith('$name=')) {
+      values.add(argument.substring(name.length + 1));
+    }
+  }
+  return values;
 }
 
 final class _TraceFailure implements Exception {
