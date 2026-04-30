@@ -25,7 +25,10 @@ performance proof contours.
 ## Forbidden Shapes
 
 - Do not emit benchmark reports that bypass runner-side validation.
-- Do not describe KI-13 or KI-14 as target architecture.
+- Do not compare malformed load-profile diff inputs after report identity has
+  become lossy.
+- Do not emit benchmark metric values through unit-specific field names unless
+  the field unit is true for every metric using that field.
 
 ## Mechanical Evidence
 
@@ -43,11 +46,10 @@ performance proof contours.
 
 ## Status
 
-- `known issue`
-- Benchmark validation and schema defects remain tracked by
-  [KI-13](../../../KNOWN_ISSUES.md#ki-13) and
-  [KI-14](../../../KNOWN_ISSUES.md#ki-14); performance proof still belongs to
-  repository-local tooling.
+- `locked`
+- Load-profile diff ingestion preserves report identity before comparison, and
+  metric diff output uses neutral value fields with policy-owned units.
+  Performance proof remains repository-local tooling.
 
 ## Update Triggers
 

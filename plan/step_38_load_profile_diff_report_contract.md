@@ -542,7 +542,7 @@ that single report-contract fix.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Diff Input Report Identity
+### Slice 1. [x] Diff Input Report Identity
 
 #### Slice Contract
 
@@ -595,7 +595,7 @@ comparison.
   owner
 - no missing-case comparison tests were converted into input-error tests
 
-### Slice 2. [ ] Unit-Truthful Metric Diff Schema
+### Slice 2. [x] Unit-Truthful Metric Diff Schema
 
 #### Slice Contract
 
@@ -656,7 +656,7 @@ output.
 - DCM metric output is reviewed as a signal; no metric-only refactor is
   required unless the implementation materially worsens touched functions
 
-### Slice 3. [ ] Known-Issue And Architecture Retirement
+### Slice 3. [x] Known-Issue And Architecture Retirement
 
 #### Slice Contract
 

@@ -129,6 +129,7 @@ Map<String, Object?> buildDiffReport({
         requiredProbesByOperation: policy.requiredProbeKeysForCase(caseName),
         maxRegressionPctByMetric: policy.maxRegressionPctByMetric,
         maxAbsoluteValueByMetric: policy.maxAbsoluteValueByMetric,
+        metricUnitForMetric: policy.unitForRequiredMetric,
       ),
     );
   }
@@ -215,7 +216,7 @@ Map<String, Object?> buildDiffReport({
               metric['maxAllowedAbsoluteValue'] != null) {
             failures.add(
               '$caseName/$operationName ${metric['metric']} current value '
-              '${metric['currentUs']} exceeds absolute limit '
+              '${metric['currentValue']} exceeds absolute limit '
               '${metric['maxAllowedAbsoluteValue']}',
             );
           } else {
@@ -298,6 +299,7 @@ Map<String, Object?> _diffCase({
   required Map<String, List<String>> requiredProbesByOperation,
   required Map<String, double> maxRegressionPctByMetric,
   required Map<String, double> maxAbsoluteValueByMetric,
+  required String Function(String metricKey) metricUnitForMetric,
 }) {
   final operationNames = <String>{
     ...baseline.metricsByOperation.keys,
@@ -330,16 +332,17 @@ Map<String, Object?> _diffCase({
     for (final metricKey in metricKeys) {
       final baselineValue = baselineMetrics[metricKey]!;
       final currentValue = currentMetrics[metricKey]!;
-      final deltaAbsUs = currentValue - baselineValue;
+      final deltaAbs = currentValue - baselineValue;
       final threshold = maxRegressionPctByMetric[metricKey];
       final absoluteThreshold = maxAbsoluteValueByMetric[metricKey];
       final exceedsAbsoluteThreshold =
           absoluteThreshold != null && currentValue > absoluteThreshold;
       final metricDiff = <String, Object?>{
         'metric': metricKey,
-        'baselineUs': baselineValue,
-        'currentUs': currentValue,
-        'deltaAbsUs': deltaAbsUs,
+        'baselineValue': baselineValue,
+        'currentValue': currentValue,
+        'deltaAbs': deltaAbs,
+        'unit': metricUnitForMetric(metricKey),
         'maxAllowedRegressionPct': threshold,
         'maxAllowedAbsoluteValue': absoluteThreshold,
         'regressionKind': exceedsAbsoluteThreshold ? 'absolute' : 'relative',
@@ -357,7 +360,7 @@ Map<String, Object?> _diffCase({
               : 'baseline_zero';
         }
       } else {
-        final deltaPct = _roundTo3(((deltaAbsUs / baselineValue) * 100));
+        final deltaPct = _roundTo3(((deltaAbs / baselineValue) * 100));
         metricDiff['deltaPct'] = deltaPct;
         if (exceedsAbsoluteThreshold) {
           metricDiff['status'] = 'regressed';
@@ -517,8 +520,15 @@ _Report _readReportFromObject(
       'report field "cases" must be a list: $sourcePath',
     );
   }
+  _assertCaseCountMatches(
+    decoded,
+    caseLength: rawCases.length,
+    sourcePath: sourcePath,
+  );
 
   final cases = <_CaseReport>[];
+  final caseNames = <String>{};
+  final duplicateCaseNames = <String>{};
   for (var i = 0; i < rawCases.length; i++) {
     final rawCase = rawCases[i];
     if (rawCase is! Map<String, Object?>) {
@@ -531,6 +541,9 @@ _Report _readReportFromObject(
       'name',
       sourcePath: '$sourcePath#cases[$i]',
     );
+    if (!caseNames.add(caseName)) {
+      duplicateCaseNames.add(caseName);
+    }
     final rawMetrics = rawCase['metrics'];
     if (rawMetrics is! Map<String, Object?>) {
       throw _DiffToolInputException(
@@ -565,11 +578,36 @@ _Report _readReportFromObject(
       ),
     );
   }
+  if (duplicateCaseNames.isNotEmpty) {
+    final sortedDuplicates = duplicateCaseNames.toList()..sort();
+    throw _DiffToolInputException(
+      'duplicate case names in $sourcePath: ${sortedDuplicates.join(', ')}',
+    );
+  }
   return _Report(
     profile: profile,
     runtimeMetadata: runtimeMetadata,
     cases: cases,
   );
+}
+
+void _assertCaseCountMatches(
+  Map<String, Object?> decoded, {
+  required int caseLength,
+  required String sourcePath,
+}) {
+  final rawCaseCount = decoded['caseCount'];
+  if (rawCaseCount is! int) {
+    throw _DiffToolInputException(
+      'report field "caseCount" must be an integer in $sourcePath',
+    );
+  }
+  if (rawCaseCount != caseLength) {
+    throw _DiffToolInputException(
+      'report field "caseCount" must match cases length in $sourcePath. '
+      'caseCount=$rawCaseCount cases.length=$caseLength',
+    );
+  }
 }
 
 Map<String, Object?> _readRuntimeMetadata(

@@ -7,6 +7,15 @@ const List<String> _loadProfileRequiredMetricKeys = <String>[
   'maxRssDeltaBytes',
 ];
 
+const Map<String, String> _loadProfileMetricUnits = <String, String>{
+  'avgUs': 'microseconds',
+  'minUs': 'microseconds',
+  'maxUs': 'microseconds',
+  'avgRssDeltaBytes': 'bytes',
+  'minRssDeltaBytes': 'bytes',
+  'maxRssDeltaBytes': 'bytes',
+};
+
 const List<String> _nodeCaseRequiredOperations = <String>[
   'single_node_patch',
   'single_node_transform',
@@ -245,6 +254,17 @@ class LoadProfilePolicy {
   final Map<String, double> maxRegressionPctByMetric;
   final Map<String, double> maxAbsoluteValueByMetric;
   List<String> get requiredMetricKeys => _loadProfileRequiredMetricKeys;
+
+  String unitForRequiredMetric(String metricKey) {
+    if (!_loadProfileMetricUnits.containsKey(metricKey)) {
+      throw ArgumentError.value(
+        metricKey,
+        'metricKey',
+        'Must be one of: ${_loadProfileMetricUnits.keys.join(', ')}.',
+      );
+    }
+    return _loadProfileMetricUnits[metricKey]!;
+  }
 
   List<String> get requiredCaseNames => <String>[
     ...nodeCases.map((c) => c.name),

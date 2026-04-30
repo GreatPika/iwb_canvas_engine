@@ -115,6 +115,9 @@ in changes that have not yet been published to pub.dev.
   path contour hits for both runtime nodes and snapshots.
 - Fixed benchmark diff verdicts so absolute budgets fail even when a positive
   baseline is already over budget and `current == baseline`.
+- Fixed load-profile benchmark diff reports so malformed input identity is
+  rejected before comparison and metric values use neutral fields with explicit
+  units.
 - Fixed JSON import/build line and stroke range diagnostics so alias-bearing
   field paths stay on `localA`, `localB`, and `localPoints`, while typed
   snapshot import surfaces keep canonical `start`, `end`, and `points`.

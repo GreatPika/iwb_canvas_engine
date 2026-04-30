@@ -33,7 +33,7 @@ proof links, status, and update triggers.
 | `mutation_gateway` | [Mutation gateway](families/mutation_gateway.md) | `locked` |
 | `view_runtime_and_pointer_hosting` | [View runtime and pointer hosting](families/view_runtime_and_pointer_hosting.md) | `locked` |
 | `render_frame_admission_and_caches` | [Render frame admission and caches](families/render_frame_admission_and_caches.md) | `locked` |
-| `diagnostics_performance_and_debug_surfaces` | [Diagnostics performance and debug surfaces](families/diagnostics_performance_and_debug_surfaces.md) | `known issue` |
+| `diagnostics_performance_and_debug_surfaces` | [Diagnostics performance and debug surfaces](families/diagnostics_performance_and_debug_surfaces.md) | `locked` |
 
 ## Mechanical Evidence
 

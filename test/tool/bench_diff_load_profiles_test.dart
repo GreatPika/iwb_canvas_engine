@@ -165,6 +165,7 @@ void main() {
       expect(probe['baselineValue'], 8);
       expect(probe['currentValue'], 12);
       expect(probe['delta'], 4);
+      expect(probe, isNot(contains('deltaAbs')));
     });
 
     test('builds byte-identical deterministic diff report', () async {
@@ -219,7 +220,7 @@ void main() {
                   return (m as Map<String, Object?>)['metric'] == 'avgUs';
                 })
                 as Map<String, Object?>;
-        expect((avg['deltaAbsUs'] as num).toDouble(), 10);
+        expect((avg['deltaAbs'] as num).toDouble(), 10);
         expect((avg['deltaPct'] as num).toDouble(), 10);
       } finally {
         sandbox.deleteSync(recursive: true);
@@ -263,12 +264,99 @@ void main() {
                 as List);
         final avg = metrics.first as Map<String, Object?>;
         expect(avg['metric'], 'avgUs');
-        expect((avg['baselineUs'] as num).toDouble(), closeTo(100.4, 0.0001));
-        expect((avg['currentUs'] as num).toDouble(), closeTo(101.1, 0.0001));
-        expect((avg['deltaAbsUs'] as num).toDouble(), closeTo(0.7, 0.0001));
+        expect(
+          (avg['baselineValue'] as num).toDouble(),
+          closeTo(100.4, 0.0001),
+        );
+        expect((avg['currentValue'] as num).toDouble(), closeTo(101.1, 0.0001));
+        expect((avg['deltaAbs'] as num).toDouble(), closeTo(0.7, 0.0001));
       } finally {
         sandbox.deleteSync(recursive: true);
       }
+    });
+
+    test('fails when report caseCount is missing, non-integral, or stale', () {
+      final validReport = _report(
+        profile: 'smoke',
+        cases: <Map<String, Object?>>[
+          _caseMetrics(_smokePrimaryNodeCaseName(), <String, Map<String, num>>{
+            'single_node_patch': _metrics(100, 100, 100, 100),
+          }),
+        ],
+      );
+
+      for (final invalidCaseCount in <Object?>[null, 1.5, 2]) {
+        final baseline = Map<String, Object?>.from(validReport);
+        if (invalidCaseCount == null) {
+          baseline.remove('caseCount');
+        } else {
+          baseline['caseCount'] = invalidCaseCount;
+        }
+
+        expect(
+          () => bench_diff.buildDiffReport(
+            baseline: baseline,
+            current: validReport,
+            requiredProfile: 'smoke',
+            baselinePath: 'baseline.json',
+            currentPath: 'current.json',
+          ),
+          throwsA(
+            isA<Exception>().having(
+              (error) => error.toString(),
+              'message',
+              invalidCaseCount == 2
+                  ? contains('caseCount" must match cases length')
+                  : contains('caseCount" must be an integer'),
+            ),
+          ),
+        );
+      }
+    });
+
+    test('fails when diff input report has duplicate case names', () {
+      expect(
+        () => bench_diff.buildDiffReport(
+          baseline: _report(
+            profile: 'smoke',
+            cases: <Map<String, Object?>>[
+              _caseMetrics(
+                _smokePrimaryNodeCaseName(),
+                <String, Map<String, num>>{
+                  'single_node_patch': _metrics(100, 100, 100, 100),
+                },
+              ),
+              _caseMetrics(
+                _smokePrimaryNodeCaseName(),
+                <String, Map<String, num>>{
+                  'single_node_patch': _metrics(100, 100, 100, 100),
+                },
+              ),
+            ],
+          ),
+          current: _report(
+            profile: 'smoke',
+            cases: <Map<String, Object?>>[
+              _caseMetrics(
+                _smokePrimaryNodeCaseName(),
+                <String, Map<String, num>>{
+                  'single_node_patch': _metrics(100, 100, 100, 100),
+                },
+              ),
+            ],
+          ),
+          requiredProfile: 'smoke',
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ),
+        throwsA(
+          isA<Exception>().having(
+            (error) => error.toString(),
+            'message',
+            contains('duplicate case names in baseline.json: nodes_1000'),
+          ),
+        ),
+      );
     });
 
     test('reports missing cases in baseline and current', () async {
@@ -928,8 +1016,44 @@ void main() {
               .singleWhere((item) => item['metric'] == 'avgRssDeltaBytes');
 
       expect(memoryMetric['status'], 'not_gated');
+      expect(memoryMetric['baselineValue'], 1000);
+      expect(memoryMetric['currentValue'], 5000);
+      expect(memoryMetric['deltaAbs'], 4000);
+      expect(memoryMetric['unit'], 'bytes');
+      expect(memoryMetric, isNot(contains('baselineUs')));
+      expect(memoryMetric, isNot(contains('currentUs')));
+      expect(memoryMetric, isNot(contains('deltaAbsUs')));
       expect(memoryMetric['maxAllowedRegressionPct'], isNull);
       expect(memoryMetric['maxAllowedAbsoluteValue'], isNull);
+    });
+
+    test('labels latency metric diffs with microsecond units', () {
+      final output = bench_diff.buildDiffReport(
+        baseline: _fullSmokeReportWithNodePatchMetrics(
+          singleNodePatchMetrics: _metrics(100, 90, 120, 130),
+        ),
+        current: _fullSmokeReportWithNodePatchMetrics(
+          singleNodePatchMetrics: _metrics(110, 95, 130, 140),
+        ),
+        requiredProfile: 'smoke',
+        baselinePath: 'baseline.json',
+        currentPath: 'current.json',
+      );
+
+      final latencyMetric = _metricDiff(
+        output,
+        caseName: _smokePrimaryNodeCaseName(),
+        operationName: 'single_node_patch',
+        metricName: 'avgUs',
+      );
+
+      expect(latencyMetric['baselineValue'], 100);
+      expect(latencyMetric['currentValue'], 110);
+      expect(latencyMetric['deltaAbs'], 10);
+      expect(latencyMetric['unit'], 'microseconds');
+      expect(latencyMetric, isNot(contains('baselineUs')));
+      expect(latencyMetric, isNot(contains('currentUs')));
+      expect(latencyMetric, isNot(contains('deltaAbsUs')));
     });
 
     test('applies perf policy even when CLI omits --profile', () async {
@@ -1031,6 +1155,21 @@ environment:
     '${sandbox.path}/tool/bench/load_profile_policy.dart',
   );
   return sandbox;
+}
+
+Map<String, Object?> _metricDiff(
+  Map<String, Object?> output, {
+  required String caseName,
+  required String operationName,
+  required String metricName,
+}) {
+  final caseDiff = ((output['cases'] as List).cast<Map<String, Object?>>())
+      .singleWhere((item) => item['name'] == caseName);
+  final operation =
+      ((caseDiff['operations'] as List).cast<Map<String, Object?>>())
+          .singleWhere((item) => item['operation'] == operationName);
+  return ((operation['metrics'] as List).cast<Map<String, Object?>>())
+      .singleWhere((item) => item['metric'] == metricName);
 }
 
 Future<ProcessResult> _runDiffTool(
