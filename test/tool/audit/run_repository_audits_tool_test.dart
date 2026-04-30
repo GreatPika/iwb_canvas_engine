@@ -30,6 +30,32 @@ void main() {
         sandbox.deleteSync(recursive: true);
       }
     });
+
+    test('includes validated backing structure in shared runner', () async {
+      final sandbox = await _createSandbox();
+      try {
+        _writeValidatedBackingStructureViolation(sandbox);
+
+        final result = await runSandboxTool(
+          sandbox,
+          'run_repository_audits.dart',
+          args: const <String>['--tool=validated_backing_structure'],
+        );
+
+        expect(result.exitCode, 1, reason: result.stderr.toString());
+        expect(
+          result.stdout.toString(),
+          contains('Repository audits summary: total=1, passed=0, failed=1'),
+        );
+        expect(
+          result.stdout.toString(),
+          contains('validated_backing_structure'),
+        );
+        expect(result.stdout.toString(), contains('boardBackingFromValidated'));
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    });
   });
 }
 
@@ -43,6 +69,7 @@ Future<Directory> _createSandbox() {
       'tool/audit_post_commit_cleanup_order.dart',
       'tool/audit_schema_family_parity.dart',
       'tool/audit_terminal_cleanup_safety.dart',
+      'tool/audit_validated_backing_structure.dart',
       'tool/audit_validated_materialization_paths.dart',
       'tool/audit_bridge_surfaces.dart',
       'tool/src/guardrails/rules/public/public_export_namespace_support.dart',
@@ -91,4 +118,18 @@ final class SampleBacking {
 }
 ''',
   );
+}
+
+void _writeValidatedBackingStructureViolation(Directory sandbox) {
+  writeSandboxFile(sandbox, 'lib/src/contract/sample_backing.dart', '''
+final class BoardBacking {
+  BoardBacking();
+}
+
+void boardValidateBoardBackingStructure(BoardBacking backing) {}
+
+BoardBacking boardBackingFromValidated() {
+  return BoardBacking();
+}
+''');
 }

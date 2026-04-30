@@ -7,6 +7,7 @@ import 'audit_post_commit_cleanup_order.dart';
 import 'audit_route_expectations.dart';
 import 'audit_schema_family_parity.dart';
 import 'audit_terminal_cleanup_safety.dart';
+import 'audit_validated_backing_structure.dart';
 import 'audit_validated_materialization_paths.dart';
 import 'src/tool_command_result.dart';
 
@@ -47,6 +48,11 @@ Future<ToolCommandResult> runRepositoryAuditsTool(
               name: 'validated_materialization_paths',
               description: 'Validated materialization path audit',
               run: runAuditValidatedMaterializationPathsTool,
+            ),
+            _AuditSpec(
+              name: 'validated_backing_structure',
+              description: 'Validated backing structure audit',
+              run: runAuditValidatedBackingStructureTool,
             ),
             _AuditSpec(
               name: 'bridge_surfaces',
