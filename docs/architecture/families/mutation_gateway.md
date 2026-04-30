@@ -15,6 +15,9 @@ route straight into that boundary.
   that performs committed writes.
 - `SceneControllerCommittedMutationAccess` remains the adapter seam from the
   gateway into the committed store/write path.
+- `SceneStoreControllerCommittedMutationAccess` is assembled only by the
+  `SceneController` graph composition root; tests and guardrail fixtures may
+  build their own adapter instances.
 - `SceneControllerSceneOwner`, `SceneControllerSelectionOwner`, and runtime-
   owned mutation entrypoints may call the gateway directly, but they do not
   become competing write owners.
@@ -37,6 +40,8 @@ route straight into that boundary.
 
 - Do not let direct public owners or runtime-owned mutation callers bypass
   `SceneControllerMutationBoundary` to reach committed writes directly.
+- Do not create production `SceneStoreControllerCommittedMutationAccess`
+  instances outside `scene_controller_graph.dart`.
 - Do not reintroduce a routing-only mutation shell between direct callers and
   `SceneControllerMutationBoundary`.
 - Do not let `SceneControllerCommittedMutationAccess` grow into a second

@@ -157,6 +157,61 @@ SceneControllerGraphHandle _assembleSceneControllerGraph(
   });
 
   test(
+    'rejects production committed mutation access assembly outside graph root',
+    () async {
+      final sandbox = await createGuardrailsSandbox();
+      try {
+        writeMinimalControllerStore(sandbox);
+        writeInteractiveArchitectureSupportScaffold(sandbox);
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/scene_controller.dart',
+          sceneControllerFixture(
+            methods: '''
+  void handlePointer(Object input) {
+    _ensurePublicSideEffectAllowed('handlePointer');
+  }
+
+  void handleDoubleTap() {
+    _ensurePublicSideEffectAllowed('handleDoubleTap');
+  }
+
+  void dispose() {
+    _ensurePublicSideEffectAllowed('dispose', allowAfterDispose: true);
+  }
+''',
+          ),
+        );
+        writeSandboxFile(
+          sandbox,
+          'lib/src/interactive/internal/rogue_mutation_access.dart',
+          '''
+import '../../controller/scene_controller_committed_mutation_access.dart';
+
+Object createRogueCommittedMutationAccess() {
+  return SceneStoreControllerCommittedMutationAccess();
+}
+''',
+        );
+
+        final result = await runSandboxTool(sandbox, 'check_guardrails.dart');
+        expect(result.exitCode, isNonZero);
+        expect(
+          result.stderr.toString(),
+          diagnostic(
+            category: 'interactive API',
+            detail:
+                'SceneStoreControllerCommittedMutationAccess must be '
+                'assembled only by the SceneController graph composition root',
+          ),
+        );
+      } finally {
+        sandbox.deleteSync(recursive: true);
+      }
+    },
+  );
+
+  test(
     'accepts facade-to-view runtime bridge with render-state-only view surface',
     () async {
       final sandbox = await createGuardrailsSandbox();

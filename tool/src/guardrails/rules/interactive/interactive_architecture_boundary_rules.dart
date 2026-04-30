@@ -130,6 +130,7 @@ Future<GuardrailViolation?> _checkInteractiveArchitectureBoundary(
       await _checkInteractiveFacadeBoundary(context) ??
       _checkSceneViewRuntimeContract(context) ??
       await _checkInteractiveGraphAssembly(context) ??
+      await _checkCommittedMutationAccessAdapterAssembly(context) ??
       await _checkInteractiveViewRuntimeBoundary(context) ??
       await _checkPointerSessionBoundary(context) ??
       _checkPointerSessionTokenBoundary(context) ??

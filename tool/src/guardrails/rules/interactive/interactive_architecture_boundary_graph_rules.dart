@@ -1,5 +1,10 @@
 part of 'mutation_boundary_rules.dart';
 
+const String _sceneControllerGraphAssemblyFilePath =
+    '/lib/src/interactive/internal/scene_controller_graph.dart';
+const String _committedMutationAccessAdapterFilePath =
+    '/lib/src/controller/scene_controller_committed_mutation_access.dart';
+
 Future<GuardrailViolation?> _checkInteractiveGraphAssembly(
   GuardrailContext context,
 ) async {
@@ -218,6 +223,56 @@ Future<GuardrailViolation?> _checkInteractiveGraphAssembly(
           'view runtime and internal access outside the facade. '
           'Missing: ${failures.join(', ')}.',
     );
+  }
+  return null;
+}
+
+Future<GuardrailViolation?> _checkCommittedMutationAccessAdapterAssembly(
+  GuardrailContext context,
+) async {
+  for (final file in collectSortedLibSrcDartFiles(context)) {
+    final filePath = toRepoRelPosixPath(
+      absPosixPath: toPosixPath(file.absolute.path),
+      rootAbsPosixPath: context.rootAbsPosixPath,
+    );
+    if (filePath == _sceneControllerGraphAssemblyFilePath) {
+      continue;
+    }
+    final resolved = await context.getResolvedUnitResult(file.absolute.path);
+    if (resolved == null) {
+      continue;
+    }
+    InstanceCreationExpression? violationNode;
+    resolved.unit.accept(
+      _ResolvedInvocationCollector(
+        onMethodInvocation: (_) {},
+        onFunctionInvocation: (_) {},
+        onInstanceCreation: (candidate) {
+          if (violationNode != null) {
+            return;
+          }
+          if (_matchesOwnedConstructor(
+            element: candidate.constructorName.element,
+            context: context,
+            filePath: _committedMutationAccessAdapterFilePath,
+            ownerName: 'SceneStoreControllerCommittedMutationAccess',
+          )) {
+            violationNode = candidate;
+          }
+        },
+      ),
+    );
+    final node = violationNode;
+    if (node != null) {
+      return GuardrailViolation(
+        filePath: filePath,
+        line: resolved.lineInfo.getLocation(node.offset).lineNumber,
+        message:
+            'interactive API violation: '
+            'SceneStoreControllerCommittedMutationAccess must be assembled '
+            'only by the SceneController graph composition root.',
+      );
+    }
   }
   return null;
 }
