@@ -32,12 +32,7 @@ old iwb_canvas_engine
 
 ### 0.1 Scope lock для v1
 
-v1 deliberately keeps the old engine feature scope tight. New architecture work
-must not expand product behavior while the package boundary, document model,
-runtime store, edit kernel, rendering, interaction, resources and codec are
-being rebuilt.
-
-Mandatory v1 additions and preserved public concepts:
+v1 scope additions over old functional behavior:
 
 ```text
 - CanvasResourceId;
@@ -48,33 +43,6 @@ Mandatory v1 additions and preserved public concepts:
 - CanvasPalette;
 - CanvasGrid.color;
 - CanvasSurface(interactive=false).
-```
-
-Allowed in v1 **only when an ADR is accepted before P1.5 exits**:
-
-```text
-- CanvasSvgResource / CanvasSvgElement;
-- CanvasResourceSource.uri;
-- async CanvasResourceResolver;
-- owned/borrowed resolved resources;
-- strict unknown-field rejection.
-```
-
-Deferred to v2:
-
-```text
-- full SVG feature parity beyond simple resolved Picture rendering.
-```
-
-Explicitly out of v1:
-
-```text
-- camera zoom;
-- multitouch gestures;
-- embeddedBase64 resources;
-- engine-owned URI loading;
-- network loading;
-- any new gesture/transform modes beyond old engine behavior.
 ```
 
 Запрещено в новом package:
@@ -178,7 +146,7 @@ tool/goldens/public_api_symbols.txt
 - old action stream закрывается при dispose;
 - timestamps монотонно нормализуются runtime-ом;
 - старый imageId должен быть мигрируем в resourceId/appKey;
-- palette и grid.color существуют в старом документе и не должны потеряться без ADR.
+- palette и grid.color существуют в старом документе и не должны потеряться.
 ```
 
 ---
@@ -321,7 +289,6 @@ packages/iwb_canvas_engine_next/
         main_painter.dart
         overlay_painter.dart
         image_bridge.dart
-        svg_bridge.dart            # ADR-gated; absent from mandatory v1
   test/
     api_contract/
     functional_ledger/
@@ -385,6 +352,7 @@ CanvasTextElement
 CanvasStrokeElement
 CanvasLineElement
 CanvasRectElement
+CanvasElementRead
 CanvasElementUpdate
 CanvasImageElementUpdate
 CanvasPathElementUpdate
@@ -402,16 +370,12 @@ CanvasResourcePort
 CanvasResource
 CanvasImageResource
 CanvasResourceSource
-CanvasAppKeyResourceSource
 CanvasResourceResolver
 CanvasElementId
 CanvasLayerId
 CanvasResourceId
 CanvasActionId
 CanvasOptional
-CanvasOptionalAbsent
-CanvasOptionalValue
-CanvasOptionalNull
 CanvasClearResult
 CanvasDrawTool
 CanvasInteractionMode
@@ -441,9 +405,6 @@ CanvasMoveCancel
 CanvasSelectionStyle
 CanvasGridStyle
 CanvasDiagnosticPolicy
-CanvasDiagnosticDisabled
-CanvasDiagnosticSummary
-CanvasDiagnosticVerbose
 CanvasDataException
 CanvasDataErrorCode
 CanvasTransform
@@ -457,18 +418,18 @@ canvasSchemaVersionsRead
 
 The old public symbols listed in `tool/goldens/public_api_symbols.txt` from the old package are not exported by this new package. Natural concepts may exist under new names, but old public shapes are banned.
 
-Factory target classes are either private or exported. Mandatory v1 exports
-`CanvasAppKeyResourceSource` and the concrete diagnostic policy classes because
-public factories target them. If URI/SVG/owned-resolved resource ADRs are
-accepted, the corresponding factory target classes such as
-`CanvasUriResourceSource` must be added to the public export list in the same
-ADR change.
+Factory target classes are private implementation details. Public factories on
+sealed base types may target private classes, but the public barrel exports only
+the sealed base type and stable DTO/port names.
 
-The new package is Flutter-based. Public API declarations may use `dart:ui`,
-`package:flutter/widgets.dart` and `package:flutter/foundation.dart` types
-directly where that keeps the canvas contract explicit. This matches the
-current package, whose public surface already exposes Flutter concepts such as
-`Offset`, `Color`, pointer device kinds, widgets and listenables.
+The new package is Flutter-based. Public API may use:
+
+```text
+- dart:ui;
+- dart:typed_data;
+- package:flutter/widgets.dart;
+- package:flutter/foundation.dart.
+```
 
 ### 4.2 Identifier types
 
@@ -538,22 +499,22 @@ The new API does not use old `PatchField`. It uses a new optional value type.
 ```dart
 sealed class CanvasOptional<T> {
   const CanvasOptional();
-  const factory CanvasOptional.absent() = CanvasOptionalAbsent<T>;
-  const factory CanvasOptional.value(T value) = CanvasOptionalValue<T>;
-  const factory CanvasOptional.nullValue() = CanvasOptionalNull<T>;
+  const factory CanvasOptional.absent() = _CanvasOptionalAbsent<T>;
+  const factory CanvasOptional.value(T value) = _CanvasOptionalValue<T>;
+  const factory CanvasOptional.nullValue() = _CanvasOptionalNull<T>;
 }
 
-final class CanvasOptionalAbsent<T> extends CanvasOptional<T> {
-  const CanvasOptionalAbsent();
+final class _CanvasOptionalAbsent<T> extends CanvasOptional<T> {
+  const _CanvasOptionalAbsent();
 }
 
-final class CanvasOptionalValue<T> extends CanvasOptional<T> {
-  const CanvasOptionalValue(this.value);
+final class _CanvasOptionalValue<T> extends CanvasOptional<T> {
+  const _CanvasOptionalValue(this.value);
   final T value;
 }
 
-final class CanvasOptionalNull<T> extends CanvasOptional<T> {
-  const CanvasOptionalNull();
+final class _CanvasOptionalNull<T> extends CanvasOptional<T> {
+  const _CanvasOptionalNull();
 }
 ```
 
@@ -613,8 +574,7 @@ Dispose contract:
 - readDocument after dispose is allowed and returns last committed immutable document;
 - actions stream closes;
 - textEditRequests stream closes;
-- mandatory v1 resource caches are cleared without disposing app-provided ui.Image objects;
-- if an owned/borrowed resources ADR is accepted, only owned results are disposed by engine.
+- mandatory v1 resource caches are cleared without disposing app-provided ui.Image objects.
 ```
 
 ### 4.5 Runtime config
@@ -627,7 +587,6 @@ final class CanvasRuntimeConfig {
     this.initialDrawStyle = const CanvasDrawStyle(),
     this.clearSelectionOnDrawModeEnter = false,
     this.moveCommitResolver,
-    this.defaultTextFontFamily,
     this.diagnosticPolicy = const CanvasDiagnosticPolicy.disabled(),
   });
 
@@ -636,23 +595,8 @@ final class CanvasRuntimeConfig {
   final CanvasDrawStyle initialDrawStyle;
   final bool clearSelectionOnDrawModeEnter;
   final CanvasMoveCommitResolver? moveCommitResolver;
-  final String? defaultTextFontFamily;
   final CanvasDiagnosticPolicy diagnosticPolicy;
 }
-```
-
-`defaultTextFontFamily` validation: `null` or non-empty string length <= 256.
-
-`defaultTextFontFamily` application:
-
-```text
-- applies only when the runtime creates a new CanvasTextElement from an
-  interaction commit or high-level text creation command that does not provide
-  an explicit fontFamily;
-- does not rewrite existing CanvasTextElement values;
-- does not apply during decodeCanvasDocument/decodeCanvasDocumentFromJson;
-- does not apply during readDocument;
-- does not apply during loadDocument or replaceDraftDocument.
 ```
 
 ### 4.6 Flutter surface
@@ -679,14 +623,16 @@ final class CanvasSurface extends StatefulWidget {
 Surface contract:
 
 ```text
+- v1 supports one active CanvasSurface per CanvasRuntime;
 - interactive=false disables pointer routing on CanvasSurface only;
 - interactive=false still paints document;
 - interactive=false does not mutate runtime mode, document, selection, preview or resources;
-- toggling interactive from false back to true resumes routing for future pointer
-  events only and does not synthesize missed terminal events;
+- if interactive changes from true to false while a pointer session is active,
+  CanvasSurface routes cancel cleanup before disabling further routing;
+- toggling interactive back to true resumes routing only for subsequent pointer events;
 - CanvasSurface never mutates committed document directly;
 - CanvasSurface routes pointer samples into InteractionEngine;
-- v1 resourceResolver is synchronous and app-owned;
+- CanvasSurface resourceResolver is the app-owned synchronous image resolver for that surface;
 - CanvasSurface does not own or dispose app-provided ui.Image instances.
 ```
 
@@ -813,7 +759,7 @@ final class CanvasPalette {
 }
 ```
 
-Decision: camera zoom is not part of v1. The old engine has camera offset only. Zoom requires coordinate system, pointer mapping, grid, overlay and benchmark work; it is deferred to schema v2.
+CanvasCamera v1 stores offset only, matching old engine behavior.
 
 ### 4.9 Geometry enums and transform
 
@@ -892,12 +838,14 @@ Validation:
 
 ```text
 - all components must be finite at public construction and decode;
-- transforms that participate in hit testing, pointer mapping or bounds
-  computation must be invertible unless the specific family contract declares a
-  coarse-bounds fallback;
+- multiply order: a.multiply(b) applies b first, then a;
+- applyToRect returns axis-aligned bounding box of four transformed rect corners;
+- invert returns null when transform is not invertible;
+- toCanvasTransform uses Flutter column-major 4x4 layout;
+- element transforms must be invertible;
 - scale singular values must remain within [1e-4, 1e4] when invertibility is
   required;
-- toCanvasTransform uses Flutter's column-major 4x4 layout:
+- toCanvasTransform layout:
   [a,b,0,0, c,d,0,0, 0,0,1,0, tx,ty,0,1].
 ```
 
@@ -1101,10 +1049,6 @@ final class CanvasRectElement extends CanvasElement {
   final double strokeWidth;
 }
 ```
-
-`CanvasSvgElement` is not part of mandatory v1. If an ADR accepts SVG resources
-before P1.5 exits, it is added as an ADR-gated public type with simple resolved
-`Picture` rendering only.
 
 ### 4.11 Element updates
 
@@ -1310,6 +1254,8 @@ Update semantics:
   concrete update constructor for that field;
 - non-nullable common/family fields reject CanvasOptional.nullValue() in the
   concrete update constructor before any draft mutation.
+- every concrete update constructor rejects CanvasOptional.nullValue() for
+  non-nullable fields before draft mutation.
 ```
 
 ### 4.12 Edit API
@@ -1400,7 +1346,9 @@ Rules:
 ```text
 - command mutations must go through EditKernel and inherit rollback/stale/dispose checks;
 - removeElement emits deleteElements only when it removes an element;
-- clearContent emits clearContent only when it removes content;
+- CanvasCommandPort.clearContent emits clearContent only when removedElementIds is not empty;
+- if only unused resources are removed and no elements are removed, no user
+  action event is emitted;
 - command action payloads are emitted after atomic install;
 - if command mutation rolls back or no-ops, no action event is emitted.
 ```
@@ -1525,13 +1473,10 @@ pointer position -> finite for down/move; invalid terminal samples are routed to
 Pointer scope for v1:
 
 ```text
-- pointerId is used only to route samples and reject stale/foreign terminal samples;
+- pointerId is used only to route samples and reject stale terminal samples;
 - one runtime has at most one active pointer session;
-- a second pointer down while a session is active is ignored except for cleanup
-  bookkeeping in the Flutter bridge;
-- pinch, two-finger pan and two-finger rotate are v2+;
-- no multitouch gesture state is stored in InteractionEngine v1;
-- no new gesture/transform modes beyond the old engine are introduced in v1.
+- a second pointer down while a session is active is ignored;
+- no concurrent pointer sessions are stored.
 ```
 
 ### 4.16 Camera API
@@ -1546,7 +1491,7 @@ abstract interface class CanvasCameraPort {
 }
 ```
 
-Camera v1 has no zoom. Offset validation: finite x/y within `[-1e7, 1e7]`.
+Offset validation: finite x/y within `[-1e7, 1e7]`.
 
 ### 4.17 Resource API
 
@@ -1569,8 +1514,8 @@ sealed class CanvasResource {
   CanvasResource({
     required this.id,
     required this.source,
-    required this.contentHash,
-    required this.byteLength,
+    this.contentHash,
+    this.byteLength,
     Map<String, Object?> metadata = const {},
   });
 
@@ -1596,11 +1541,11 @@ final class CanvasImageResource extends CanvasResource {
 
 sealed class CanvasResourceSource {
   const CanvasResourceSource();
-  const factory CanvasResourceSource.appKey(String key) = CanvasAppKeyResourceSource;
+  const factory CanvasResourceSource.appKey(String key) = _CanvasAppKeyResourceSource;
 }
 
-final class CanvasAppKeyResourceSource extends CanvasResourceSource {
-  const CanvasAppKeyResourceSource(this.key);
+final class _CanvasAppKeyResourceSource extends CanvasResourceSource {
+  const _CanvasAppKeyResourceSource(this.key);
   final String key;
 }
 ```
@@ -1617,101 +1562,19 @@ v1 resource rules:
 
 ```text
 - CanvasResourceSource.appKey is mandatory for v1 resource sources;
-- the engine never opens files, asset bundle paths, URIs or network URLs;
-- embedded binary resources are not part of v1;
-- resourceResolver is synchronous in mandatory v1;
-- all ui.Image objects returned by the app resolver are borrowed by the engine;
+- no engine IO;
+- no asset-bundle loading;
+- no file loading;
+- no remote/network loading;
+- in-document binary resource sources are not part of v1;
+- resourceResolver is synchronous in v1;
+- all ui.Image objects returned by CanvasResourceResolver are app-owned;
 - the engine never disposes app-provided ui.Image instances;
+- the engine stores only resource descriptors and render cache references;
+- markResourceDirty invalidates visual cache but does not mutate document;
+- markResourceDirty schedules repaint for the attached CanvasSurface;
 - resolver must return a stable visual result for the same resource descriptor
   unless the app calls markResourceDirty/markAllResourcesDirty.
-```
-
-ADR-gated resource API additions:
-
-```dart
-final class CanvasUriResourceSource extends CanvasResourceSource {
-  const CanvasUriResourceSource(this.uri);
-  final Uri uri;
-}
-
-final class CanvasSvgResource extends CanvasResource {
-  CanvasSvgResource({
-    required super.id,
-    required super.source,
-    this.mimeType = 'image/svg+xml',
-    super.contentHash,
-    super.byteLength,
-    super.metadata,
-  });
-
-  final String mimeType;
-}
-
-final class CanvasSvgElement extends CanvasElement {
-  CanvasSvgElement({
-    required super.id,
-    required this.resourceId,
-    required this.viewportSize,
-    super.revision,
-    super.transform,
-    super.opacity,
-    super.hitPadding,
-    super.isVisible,
-    super.isSelectable,
-    super.isLocked,
-    super.isDeletable,
-    super.isTransformable,
-    super.metadata,
-  });
-
-  final CanvasResourceId resourceId;
-  final Size viewportSize;
-}
-
-// ADR-gated replacement for the mandatory v1 synchronous CanvasResourceResolver.
-abstract interface class CanvasResourceResolver {
-  FutureOr<CanvasResolvedImage?> resolveImage(CanvasImageResource resource);
-  FutureOr<CanvasResolvedSvg?> resolveSvg(CanvasSvgResource resource);
-}
-
-final class CanvasResolvedImage {
-  const CanvasResolvedImage.borrowed(this.image) : ownedByEngine = false;
-  const CanvasResolvedImage.owned(this.image) : ownedByEngine = true;
-
-  final ui.Image image;
-  final bool ownedByEngine;
-}
-
-final class CanvasResolvedSvg {
-  const CanvasResolvedSvg({
-    required this.picture,
-    required this.viewportSize,
-    required this.ownedByEngine,
-  });
-
-  final Picture picture;
-  final Size viewportSize;
-  final bool ownedByEngine;
-}
-```
-
-ADR-gated resource rules:
-
-```text
-- if an ADR accepts one of these public concrete classes, the public barrel must
-  explicitly export its factory target class;
-- if the SVG ADR is accepted, CanvasElementKind gains `svg` in the same change;
-- CanvasResourceSource.uri does not authorize engine-owned URI loading;
-- URI values may only be interpreted by the application resolver;
-- network loading remains outside the engine even if URI descriptors are
-  accepted;
-- async resolver completions must be token-checked;
-- stale borrowed results are ignored;
-- stale owned results are disposed immediately;
-- owned image/picture results are disposed on cache eviction, resource removal,
-  loadDocument or runtime dispose;
-- SVG v1, if accepted by ADR, is limited to simple resolved Picture rendering;
-- full SVG feature parity is v2.
 ```
 
 ### 4.18 Preview state
@@ -1913,6 +1776,18 @@ final class CanvasEraseActionPayload extends CanvasActionPayload {
 }
 ```
 
+Payload collection rules:
+
+```text
+- CanvasSelectionActionPayload.previousSelection defensively copies input;
+- CanvasSelectionActionPayload.nextSelection defensively copies input;
+- CanvasDeleteActionPayload.removedElementIds defensively copies input;
+- CanvasClearActionPayload.removedElementIds defensively copies input;
+- CanvasClearActionPayload.removedResourceIds defensively copies input;
+- CanvasEraseActionPayload.erasedElementIds defensively copies input;
+- CanvasActionCommitted.elementIds defensively copies input.
+```
+
 Event emission matrix:
 
 | Operation | Emits action? | Type | Payload |
@@ -1922,7 +1797,7 @@ Event emission matrix:
 | CanvasEdit.removeElement | no | — | — |
 | CanvasEdit.clearContent | no | — | — |
 | high-level command removeElement | yes if removed | `deleteElements` | `CanvasDeleteActionPayload` |
-| high-level command clearContent | yes if removed | `clearContent` | `CanvasClearActionPayload` |
+| high-level command clearContent | yes if removed elements | `clearContent` | `CanvasClearActionPayload` |
 | selection.setSelection from API | no | — | — |
 | marquee selection commit | yes if changed | `selectMarquee` | `CanvasSelectionActionPayload` |
 | selected move commit | yes if moved | `moveSelection` | `CanvasTransformActionPayload` |
@@ -2085,21 +1960,24 @@ final class CanvasDataException implements Exception {
 
 sealed class CanvasDiagnosticPolicy {
   const CanvasDiagnosticPolicy();
-  const factory CanvasDiagnosticPolicy.disabled() = CanvasDiagnosticDisabled;
-  const factory CanvasDiagnosticPolicy.summary() = CanvasDiagnosticSummary;
-  const factory CanvasDiagnosticPolicy.verbose({int maxPreviewLength, int maxListEntries}) = CanvasDiagnosticVerbose;
+  const factory CanvasDiagnosticPolicy.disabled() = _CanvasDiagnosticDisabled;
+  const factory CanvasDiagnosticPolicy.summary() = _CanvasDiagnosticSummary;
+  const factory CanvasDiagnosticPolicy.verbose({
+    int maxPreviewLength,
+    int maxListEntries,
+  }) = _CanvasDiagnosticVerbose;
 }
 
-final class CanvasDiagnosticDisabled extends CanvasDiagnosticPolicy {
-  const CanvasDiagnosticDisabled();
+final class _CanvasDiagnosticDisabled extends CanvasDiagnosticPolicy {
+  const _CanvasDiagnosticDisabled();
 }
 
-final class CanvasDiagnosticSummary extends CanvasDiagnosticPolicy {
-  const CanvasDiagnosticSummary();
+final class _CanvasDiagnosticSummary extends CanvasDiagnosticPolicy {
+  const _CanvasDiagnosticSummary();
 }
 
-final class CanvasDiagnosticVerbose extends CanvasDiagnosticPolicy {
-  const CanvasDiagnosticVerbose({
+final class _CanvasDiagnosticVerbose extends CanvasDiagnosticPolicy {
+  const _CanvasDiagnosticVerbose({
     this.maxPreviewLength = 256,
     this.maxListEntries = 32,
   });
@@ -2141,10 +2019,18 @@ Canonical JSON shape:
 }
 ```
 
-Unknown fields are not a mandatory v1 rejection gate. The base v1 decoder
-validates all known fields, ignores unknown non-metadata fields and preserves
-unknown keys only inside `metadata`. Strict unknown-field rejection may be added
-only by ADR before P1.5 exits.
+Unknown fields policy:
+
+```text
+- known schema v1 fields are validated;
+- unknown non-metadata fields are ignored on decode;
+- unknown non-metadata fields are not preserved by canonical encode;
+- metadata is the only roundtripped extension area;
+- unsupported schemaVersion is rejected.
+- unknown element kind is rejected;
+- unknown resource source kind is rejected;
+- unknown enum value is rejected.
+```
 
 ### 5.2 Primitive encodings
 
@@ -2177,19 +2063,13 @@ Image resource:
 Rules:
 
 ```text
-mandatory v1 resource source -> appKey only;
-source.kind=appKey          -> requires key; forbids uri/base64;
-source.kind=uri             -> rejected unless an ADR accepts URI descriptors;
-source.kind=embeddedBase64  -> rejected in v1;
-contentHash                 -> null or non-empty string <= 256;
-byteLength                  -> null or int >= 0 and <= 32MB;
-mimeType                    -> null or non-empty string <= 128;
-resource id uniqueness      -> global across document.
+source.kind=appKey    -> requires key;
+appKey                -> non-empty string, length <= 1024, no control characters;
+contentHash           -> null or non-empty string <= 256;
+byteLength            -> null or int >= 0 and <= 32MB;
+mimeType              -> null or non-empty string <= 128;
+resource id uniqueness -> global across document.
 ```
-
-Schema v1 has no embedded binary resource representation. If a URI ADR is
-accepted, `source.kind=uri` is descriptor-only and still does not permit engine
-IO, asset-bundle loading or network loading.
 
 ### 5.4 Element common JSON
 
@@ -2228,9 +2108,6 @@ Image element:
 ```
 
 `naturalSize` may be omitted or null.
-
-`kind=svg` is rejected in mandatory v1 unless an SVG ADR is accepted before
-P1.5 exits.
 
 Path element:
 
@@ -2386,16 +2263,15 @@ Validation is applied at:
 
 ### 7.1 Resource state
 
-`DocumentStoreKernel` owns resource descriptors as part of committed document. `ResourceKernel` owns runtime caches and resolver tokens.
+`DocumentStoreKernel` owns resource descriptors as part of committed document. `ResourceKernel` owns runtime caches.
 
 ```text
 Committed document:
   resource descriptors only.
 
 Runtime cache:
-  resolved borrowed app images;
-  dirty resource ids;
-  resolver generation tokens only if an async resolver ADR is accepted.
+  resolved app-provided image references;
+  dirty resource ids.
 ```
 
 ### 7.2 Atomic operations
@@ -2438,13 +2314,15 @@ Semantics:
 ```text
 - does not change document revision;
 - increments resourceVisualRevision;
-- invalidates resolved cache entries for target resource(s);
+- invalidates resolved cache entries for target resource;
 - schedules main repaint;
 - does not emit action event;
 - does not clear selection;
 - does not clear preview;
-- if called after dispose, throws StateError.
+- after dispose throws StateError.
 ```
+
+`markAllResourcesDirty` applies the same rule to every registered resource.
 
 ### 7.5 v1 resource boundary
 
@@ -2453,37 +2331,20 @@ Semantics:
 - resource mutation remains inside CanvasEdit;
 - resolver calls are synchronous and app-owned;
 - no engine IO;
-- no engine-owned URI loading;
-- no network loading;
-- no embedded binary/base64 resources;
-- SVG resources, URI descriptors, async resolution and owned/borrowed resolved
-  resources require ADR approval before P1.5 exits.
+- no asset-bundle loading;
+- no file loading;
+- no remote/network loading;
+- no in-document binary resource sources;
+- no SVG resources.
 ```
 
-### 7.6 ADR-gated async resolver lifecycle
-
-This section is inactive for mandatory v1. It becomes binding only if an ADR
-accepts async resource resolution before P1.5 exits.
-
-```text
-- every resolve request gets resourceId + resourceRevision + resolverToken;
-- if resource revision changes before completion, result is stale;
-- if resolverToken changes before completion, result is stale;
-- stale borrowed result is ignored;
-- stale owned result is disposed immediately;
-- resolver exception records sanitized diagnostic and paints missing-resource placeholder;
-- resolver exception does not mutate document;
-- one resource may have at most one in-flight resolve per revision per surface.
-```
-
-### 7.7 Missing resource placeholder
+### 7.6 Missing resource placeholder
 
 If an image element references a missing or unresolved resource, FrameEngine
-paints a bounded placeholder rectangle. If SVG is accepted by ADR, the same
-placeholder rule applies to `CanvasSvgElement`.
+paints a bounded placeholder rectangle.
 
 ```text
-image size, or SVG viewportSize only when SVG ADR is accepted;
+image size determines placeholder bounds;
 no full-document repaint loop;
 no repeated resolver retry in same frame;
 diagnostic emitted only if verbose diagnostics enabled or schema missing reference occurs at load time.
@@ -2534,57 +2395,29 @@ diagnostic emitted only if verbose diagnostics enabled or schema missing referen
 | grid enabled/size/color | `GridSnapshot` | `CanvasGrid` | `functional.grid` |
 | palette | `ScenePaletteSnapshot` | `CanvasPalette` | `functional.palette_roundtrip` |
 | external image repaint | `notifySceneChanged` | `markResourceDirty` | `functional.resource_dirty_repaint` |
-| save/restore | schema v7 codec | schema v1 codec | `functional.schema_v1_roundtrip` |
+| save/restore | schema codec | schema v1 codec | `functional.schema_v1_roundtrip` |
 | old saved docs migration | old schema v7 | migration tool outside core | `migration.schema_v7_to_v1` |
 
-All rows must be green before release. A row cannot be removed without ADR.
-
-ADR-gated ledger rows are tracked separately and are not release blockers for
-mandatory v1. `CanvasSvgResource` + `CanvasSvgElement` may add
-`functional.add_svg_resource_element` only after an SVG ADR is accepted.
+All rows must be green before release.
 
 ---
 
 ## 9. Accepted differences from old engine
 
-| Difference | Decision | ADR required? |
-|---|---|---:|
-| Old public API not preserved | Accepted target decision | no |
-| `SceneController` absent | Accepted target decision | no |
-| `SceneSnapshot` absent | Accepted target decision | no |
-| `NodeSpec`/`NodePatch` absent | Accepted target decision | no |
-| old `CanvasPointerInput` name absent | New type is `CanvasPointerSample` | no |
-| schema v7 not production decode target | Migration tool handles v7 outside core | yes: `ADR-001-schema-v7-migration` |
-| camera zoom not in v1 | Explicit v1 scope guardrail; deferred to v2+ | no |
-| palette preserved | Included in `CanvasDocument` | no |
-| grid color preserved | Included in `CanvasGrid` | no |
-| old imageId replaced | `CanvasResourceId` + `CanvasResourceSource.appKey` | yes: `ADR-003-resource-identity` |
-| SVG resource/element | Not mandatory v1; allowed only if ADR accepted before P1.5 | yes: `ADR-004-svg-resource-scope` |
-| URI resource source | Not mandatory v1; allowed only if ADR accepted before P1.5 | yes: `ADR-008-uri-resource-source` |
-| async resource resolver | Not mandatory v1; allowed only if ADR accepted before P1.5 | yes: `ADR-009-async-resource-resolver` |
-| owned/borrowed resolved resources | Not mandatory v1; allowed only if ADR accepted before P1.5 | yes: `ADR-010-owned-resolved-resources` |
-| action payload no longer Map | typed payload classes | yes: `ADR-005-typed-action-payloads` |
-| move resolver async not supported | synchronous resolver only | yes: `ADR-006-sync-move-resolver-v1` |
-| app migration adapters outside engine | explicit boundary | no |
-| strict unknown schema field rejection | Not mandatory v1; allowed only if ADR accepted before P1.5 | yes: `ADR-007-strict-schema-v1` |
-| embeddedBase64 resources absent | Explicit v1 ban | no |
-| engine-owned URI/network loading absent | Explicit v1 ban | no |
-| multitouch gestures absent | Explicit v1 ban; pointerId is routing only | no |
-
-ADR template:
-
-```text
-ADR id
-Decision
-Old behavior
-New behavior
-Why accepted
-Data loss risk
-Migration path
-Tests
-Benchmarks if relevant
-Rollback plan
-```
+| Difference | Decision |
+|---|---|
+| Old public API not preserved | accepted target decision |
+| `SceneController` absent | accepted target decision |
+| `SceneSnapshot` absent | accepted target decision |
+| `NodeSpec`/`NodePatch` absent | accepted target decision |
+| old `CanvasPointerInput` name absent | new type is `CanvasPointerSample` |
+| schema v7 not production decode target | migration tool outside core |
+| palette preserved | `CanvasDocument.palette` |
+| grid color preserved | `CanvasGrid.color` |
+| old imageId replaced | `CanvasResourceId` + `CanvasResourceSource.appKey` |
+| action payload no longer Map | typed payload classes |
+| move resolver async not supported | synchronous resolver only |
+| app migration adapters outside engine | explicit boundary |
 
 ---
 
@@ -2651,7 +2484,6 @@ RectRows
 ```
 
 Each row table stores only family-specific fields plus common packed fields needed by render/hit/update. Public DTOs are projections.
-`SvgRows` exists only if the SVG ADR is accepted before P1.5 exits.
 
 ### 10.2 Revisions
 
@@ -2873,7 +2705,7 @@ Failure ordering:
 ### 14.1 Pointer session lifecycle
 
 ```mermaid
-stateDiagram-v2
+stateDiagram
   [*] --> Idle
   Idle --> ActivePointer: down(valid)
   ActivePointer --> ActivePointer: move(valid same token)
@@ -2890,9 +2722,8 @@ Rules:
 
 ```text
 - one active routed pointer per runtime;
-- pointerId is a routing token only, not multitouch gesture state;
+- pointerId is a routing token only;
 - concurrent pointer sessions are not supported in v1;
-- pinch, two-finger pan and two-finger rotate are v2+;
 - raw pointer routing belongs to Flutter bridge;
 - InteractionEngine receives normalized CanvasPointerSample;
 - stale pointer token samples are ignored except terminal cleanup;
@@ -2958,10 +2789,8 @@ Rules:
 - painters do not live-read runtime;
 - painters do not materialize CanvasDocument;
 - stale spatial candidate is rejected by structuralRevision/generation check;
-- image resolver is only side-effect boundary in paint, and it cannot mutate runtime;
-- mandatory v1 resolver calls are synchronous;
-- async resolver completion schedules repaint through ResourceKernel only if the
-  async resolver ADR is accepted.
+- image resolver is the only external read boundary in paint, and it cannot mutate runtime;
+- v1 resolver calls are synchronous.
 ```
 
 ### 15.2 RenderElementRecord
@@ -2994,8 +2823,6 @@ StrokeRenderRow: pointsKey, thickness, color
 LineRenderRow: start, end, thickness, color
 RectRenderRow: size, fillColor, strokeColor, strokeWidth
 ```
-
-`SvgRenderRow` is ADR-gated with `CanvasSvgElement` and is not mandatory v1.
 
 ### 15.3 Selected supplement staging
 
@@ -3168,7 +2995,6 @@ Full clone of spatial index for ordinary edit is forbidden. Page-level copy is a
 | PathGeometryCache | Geometry/Frame | pathData/fillRule/strokeWidth | path update | yes bounded |
 | StrokePathCache | Frame | pointsKey/thickness/transform scale | stroke update | yes bounded |
 | ImageResolveCache | Resource | resourceId/resourceRevision | resource dirty/descriptor change | yes, sync app resolver only |
-| SvgResolveCache | Resource | resourceId/resourceRevision/token | resource dirty/descriptor change | ADR-gated with SVG + async resolver |
 | StaticBackgroundCache | Frame | background/grid/camera bucket/dpr | camera/background/grid | yes bounded |
 | PaintPlanCache | Frame | structural/bounds/visual/viewport/selection | typed invalidation | yes bounded |
 | SelectedOrderCache | Frame | selectionRevision/structuralRevision | selection/structure | yes bounded |
@@ -3201,7 +3027,7 @@ CanvasDocument decodeCanvasDocumentFromJson(String json);
 2. JSON parse;
 3. root object check;
 4. schemaVersion check;
-5. known field validation and optional ADR-gated unknown field rejection;
+5. known field validation and v1 unknown field policy;
 6. primitive validation;
 7. resources validation;
 8. elements validation;
@@ -3380,15 +3206,6 @@ Mandatory guardrails:
 | `new_core.no_scene_controller_shape_dependency` | no `SceneController` concept in core |
 | `new_core.no_node_spec_patch_shape_dependency` | no old NodeSpec/NodePatch/PatchField in core |
 | `new_core.single_runtime_root` | exactly one production RuntimeRoot |
-| `scope.no_zoom_v1` | no camera zoom field, API, schema field, gesture or benchmark exists in v1 |
-| `scope.no_multitouch_v1` | pointerId is routing only; no concurrent pointer sessions or pinch/two-finger gestures |
-| `scope.no_embedded_base64_v1` | no accepted embeddedBase64 public type, schema source or decoder path |
-| `scope.no_engine_uri_loading_v1` | engine never performs URI, asset-bundle, file or network loading |
-| `scope.adr_gate_svg_resource` | CanvasSvgResource/CanvasSvgElement require accepted ADR before P1.5 exit |
-| `scope.adr_gate_uri_source` | CanvasResourceSource.uri requires accepted ADR before P1.5 exit |
-| `scope.adr_gate_async_resolver` | async CanvasResourceResolver requires accepted ADR before P1.5 exit |
-| `scope.adr_gate_owned_borrowed_resources` | owned/borrowed resolved resources require accepted ADR before P1.5 exit |
-| `scope.adr_gate_strict_unknown_fields` | strict unknown-field rejection requires accepted ADR before P1.5 exit |
 | `edit.sync_non_nested` | nested/async edit rejected |
 | `edit.rollback_no_effects` | rollback discards events/repaint/resources/spatial |
 | `edit.stale_handle_rejected` | stale edit handle throws |
@@ -3397,12 +3214,9 @@ Mandatory guardrails:
 | `load.prepares_before_interrupt` | failed load does not interrupt gesture |
 | `load.success_interrupts_before_install` | success interrupt happens before atomic install |
 | `preview.selected_move_main_repaint` | selected move preview increments main repaint, not overlay |
-| `preview.overlay_split` | marquee/draw/line/eraser preview increments overlay only |
-| `frame.no_document_projection_in_paint` | paint never materializes CanvasDocument |
-| `frame.no_live_runtime_read_in_painter` | painters use captured frame only |
-| `spatial.touched_only_update` | ordinary edit does not rebuild full index |
 | `resources.mutation_inside_edit_only` | resource descriptor mutation only via CanvasEdit |
 | `resources.dirty_no_document_revision` | markResourceDirty does not increment documentRevision |
+| `resources.app_key_only` | resource descriptors use appKey only |
 | `codec.schema_v1_exact` | only schema v1 read/write |
 | `codec.known_fields_validated` | known schema v1 fields are validated and canonical encoder writes only v1 fields |
 | `diagnostics.disabled_no_alloc_hot_path` | no record allocation on successful hot path |
@@ -3412,76 +3226,34 @@ Mandatory guardrails:
 
 ## 23. Tests
 
-### 23.1 API contract tests
+Required tests:
 
 ```text
-test/api_contract/public_exports_test.dart
+test/api_contract/public_api_v1_compiles_as_written_test.dart
+test/api_contract/no_undefined_public_type_references_test.dart
 test/api_contract/no_old_public_symbols_test.dart
-test/api_contract/public_types_defined_test.dart
 test/api_contract/dto_immutability_test.dart
-test/api_contract/id_validation_test.dart
-test/api_contract/optional_patch_test.dart
-```
 
-### 23.2 Functional ledger tests
-
-One test file per ledger row:
-
-```text
-test/functional_ledger/create_runtime_test.dart
-test/functional_ledger/surface_paint_test.dart
-test/functional_ledger/load_document_test.dart
-...
-```
-
-Every ledger row must have a test id in code comments and guardrail metadata.
-
-### 23.3 Schema tests
-
-```text
-test/schema_v1/roundtrip_all_elements_test.dart
-test/schema_v1/resources_test.dart
-test/schema_v1/limits_test.dart
 test/schema_v1/known_fields_validation_test.dart
-test/schema_v1/duplicate_ids_test.dart
-test/schema_v1/missing_resource_reference_test.dart
-test/schema_v1/metadata_limits_test.dart
-test/schema_v1/error_payload_test.dart
-```
+test/schema_v1/resources_appkey_only_test.dart
+test/schema_v1/reject_unknown_element_kind_test.dart
+test/schema_v1/reject_unknown_resource_source_kind_test.dart
 
-### 23.4 Runtime tests
-
-```text
-test/edit_kernel/sync_non_nested_test.dart
-test/edit_kernel/rollback_test.dart
-test/edit_kernel/stale_handle_test.dart
-test/edit_kernel/resource_atomicity_test.dart
-test/edit_kernel/load_document_staged_test.dart
-
-test/interaction/pointer_policy_test.dart
-test/interaction/selected_move_test.dart
-test/interaction/marquee_test.dart
-test/interaction/draw_pencil_marker_test.dart
-test/interaction/two_tap_line_test.dart
-test/interaction/eraser_test.dart
-test/interaction/text_edit_request_test.dart
-
-test/frame/main_frame_capture_test.dart
-test/frame/overlay_frame_capture_test.dart
-test/frame/selected_supplement_test.dart
-test/frame/no_document_projection_hot_path_test.dart
-
-test/spatial/tile_outlier_test.dart
-test/spatial/touched_update_test.dart
-test/spatial/hit_test_policy_test.dart
-
-test/resources/resource_dirty_test.dart
 test/resources/sync_image_resolver_test.dart
 test/resources/app_owned_image_not_disposed_test.dart
+test/resources/resource_dirty_test.dart
+test/resources/mark_all_resources_dirty_test.dart
 
-test/diagnostics/disabled_hot_path_test.dart
-test/diagnostics/sanitizer_test.dart
+test/events/typed_action_payloads_test.dart
+test/events/edit_kernel_low_level_mutations_do_not_emit_actions_test.dart
+test/events/commands_emit_user_actions_test.dart
+
+test/surface/interactive_false_pointer_routing_test.dart
+test/surface/interactive_false_active_session_cancel_test.dart
 ```
+
+Functional ledger rows still require row-specific tests.
+Runtime coverage must include edit_kernel, interaction, frame, spatial, schema_v1, resources, events, surface and diagnostics tests.
 
 ---
 
@@ -3494,8 +3266,7 @@ equivalent old feature path -> no unapproved regression;
 new-only feature path -> own baseline;
 hot input path -> avg + P95 + max gates;
 paint path -> bounded by candidate count, not total scene size;
-memory path -> RSS + allocation budget;
-all accepted regressions require ADR.
+memory path -> RSS + allocation budget.
 ```
 
 Required benchmark cases:
@@ -3513,12 +3284,14 @@ Required benchmark cases:
 | `frame.main_capture` | 1k/10k/50k/100k | avg/P95/max, alloc bytes |
 | `frame.overlay_capture` | active previews | avg/P95/max, alloc bytes |
 | `frame.paint_candidates` | 1k/10k/50k/100k | candidate count, saveLayer count |
+| `resources.resolve_sync` | 1k resources | resolver calls, cache hits, repaint count |
+| `resources.mark_dirty` | 1k resources | repaint count, cache invalidation cost |
+| `resources.mark_all_dirty` | 1k resources | repaint count, cache invalidation cost |
+| `projection.read_document` | 1k/10k/50k/100k | first read/cache hit |
+| `codec.decode_v1` | all fixtures | avg/P95/max, error payload |
 | `spatial.query_point` | 1k/10k/50k/100k | tile count, fallback count |
 | `spatial.touched_update` | 1k/10k/50k | rebuilt ids/pages |
-| `projection.read_document` | 1k/10k/50k/100k | first read/cache hit |
-| `resources.resolve_sync` | 1k resources | resolver calls, cache hits, repaint count |
 | `diagnostics.disabled_pointer` | hot pointer | allocations = 0 records |
-| `codec.decode_v1` | all fixtures | avg/P95/max, error payload |
 
 ---
 
@@ -3632,23 +3405,15 @@ no implementation proceeds without green inventory guardrail.
 Deliverables:
 
 ```text
-- machine-readable mandatory v1 public type allowlist;
-- ADR-gated feature inventory for SVG resources, URI source, async resolver,
-  owned/borrowed resolved resources and strict unknown-field rejection;
-- no-v1 feature denylist for zoom, multitouch, embeddedBase64, engine URI
-  loading, network loading and new gesture/transform modes;
-- public API draft probe that fails on undefined public type references;
-- schema/resource scope probe that fails on accepted embeddedBase64 or
-  non-ADR URI/SVG;
-- interaction scope probe that fails on multitouch gesture state.
+- scope checklist based on old functional behavior and approved v1 additions;
+- public API draft probe;
+- public API compiles as written.
 ```
 
 Exit criteria:
 
 ```text
 mandatory v1 scope is green;
-all ADR-gated features are either backed by accepted ADRs or absent from the
-mandatory v1 API/schema/runtime plan;
 public API compiles as written;
 no undefined public type references remain;
 P2 public API freeze is blocked until this gate is green.
@@ -3696,7 +3461,7 @@ Exit criteria:
 ```text
 all schema roundtrip tests green;
 known field validation tests green;
-strict unknown field rejection absent unless ADR-approved;
+unknown-field policy tests green;
 limits tests green;
 error payload tests green.
 ```
@@ -3706,13 +3471,19 @@ error payload tests green.
 Deliverables:
 
 ```text
-- ResourceTable;
 - ResourceKernel;
+- CanvasResourceId;
+- CanvasResourceSource.appKey only;
 - resource mutation inside CanvasEdit only;
-- markResourceDirty/markAllResourcesDirty;
+- markResourceDirty;
+- markAllResourcesDirty;
 - synchronous app-owned image resolver bridge;
-- no engine IO/network/embedded binary guardrails;
-- ADR-gated async/owned-borrowed/SVG/URI checks.
+- no engine IO;
+- no asset-bundle loading;
+- no file loading;
+- no remote/network loading;
+- no in-document binary resource sources;
+- no SVG resources.
 ```
 
 Exit criteria:
@@ -3721,7 +3492,7 @@ Exit criteria:
 resource descriptor mutation is rollback-safe;
 resource dirty schedules main repaint without document revision;
 resolver image results are app-owned and not disposed by engine;
-async/owned-borrowed/SVG/URI code is absent unless ADR-approved.
+resource surface matches the v1 appKey/synchronous image contract.
 ```
 
 ### P5 — store kernel and projection cache
@@ -3906,7 +3677,7 @@ Exit criteria:
 functional ledger complete;
 schema tests green;
 interaction/frame/spatial/resource tests green;
-benchmarks pass or ADR-approved;
+benchmarks pass;
 no old imports;
 no legacy facade;
 no app adapters in package.
@@ -3929,23 +3700,21 @@ Release is blocked unless all statements are true:
 8. schema v1 encode/decode contract is green.
 9. validation limits are green.
 10. resource lifecycle tests are green.
-11. no zoom/multitouch/embeddedBase64/engine URI loading/network loading guardrails are green.
-12. ADR-gated SVG/URI/async/owned-borrowed/strict-unknown checks are green.
-13. edit rollback/stale/nested/async tests are green.
-14. loadDocument staged success/failure tests are green.
-15. geometry/spatial parity tests are green.
-16. selected move preview main repaint test is green.
-17. overlay preview repaint split tests are green.
-18. text edit request integration tests are green.
-19. action typed payload tests are green.
-20. low-level edit emits no user action events tests are green.
-21. DTO immutability tests are green.
-22. no CanvasDocument projection in paint/pointer/hit tests are green.
-23. diagnostics disabled hot-path allocation tests are green.
-24. all required diagrams exist and match owners.
-25. migration tool handles old schema v7 fixtures without silent loss.
-26. benchmark gates pass or accepted ADRs exist.
-27. AppCanvasPort, OldEngineAdapter and NewEngineAdapter are not present in the engine package.
+11. edit rollback/stale/nested/async tests are green.
+12. loadDocument staged success/failure tests are green.
+13. geometry/spatial parity tests are green.
+14. selected move preview main repaint test is green.
+15. overlay preview repaint split tests are green.
+16. text edit request integration tests are green.
+17. action typed payload tests are green.
+18. low-level edit emits no user action events tests are green.
+19. DTO immutability tests are green.
+20. no CanvasDocument projection in paint/pointer/hit tests are green.
+21. diagnostics disabled hot-path allocation tests are green.
+22. all required diagrams exist and match owners.
+23. migration tool handles old schema v7 fixtures without silent loss.
+24. benchmark gates pass.
+25. AppCanvasPort, OldEngineAdapter and NewEngineAdapter are not present in the engine package.
 ```
 
 ---
@@ -3955,20 +3724,17 @@ Release is blocked unless all statements are true:
 This corrected plan explicitly removes from engine deliverables:
 
 ```text
-- AppCanvasPort;
-- OldEngineAdapter;
-- NewEngineAdapter;
-- legacy facade;
 - Legacy API Ledger;
 - old public symbol compatibility;
-- camera zoom in v1;
-- async move resolver in v1;
-- multitouch gestures in v1;
-- embeddedBase64 resources in v1;
-- engine-owned URI or network loading in v1;
-- mandatory SVG resource/element support without ADR;
-- mandatory async resource resolver or owned/borrowed resource ownership without ADR;
-- mandatory strict unknown-field rejection without ADR.
+- extra camera transforms;
+- simultaneous multi-pointer gesture handling;
+- SVG resource/element runtime;
+- URI resource source;
+- in-document binary resource payloads;
+- async resource resolver;
+- engine resource ownership model for resolved resources;
+- engine IO for URI or remote resource loading;
+- unknown-field rejection beyond the v1 policy.
 ```
 
 It adds required implementation details that were missing:
@@ -3986,10 +3752,9 @@ It adds required implementation details that were missing:
 - typed action payload schema;
 - separation between low-level CanvasEdit mutations and user action events;
 - interactive=false as CanvasSurface pointer-routing only;
-- defaultTextFontFamily application boundary;
-- single active pointer session and explicit no-multitouch v1 rule;
+- single active pointer session;
 - text editing integration model;
-- accepted differences and ADR list;
+- accepted differences table;
 - geometry/hit-test policy;
 - reordered phases with oracle/capability inventory at the beginning;
 - no app adapters inside the engine package.
