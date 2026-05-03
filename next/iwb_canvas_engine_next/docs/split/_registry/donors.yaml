@@ -1,0 +1,1437 @@
+-
+  id: direct_numeric_policy
+  source_paths:
+    - lib/src/core/numeric_clamp.dart
+    - lib/src/core/numeric_tolerance.dart
+    - lib/src/contract/transform_tolerance.dart
+  decision: copy
+  target_phases:
+    - P2
+    - P7
+  target_owner: GeometryPolicy numeric tolerance foundation
+  use_for:
+    - clamp and tolerance behavior
+  do_not_copy:
+    - legacy public export paths
+  required_tests:
+    - "geometry and hit-test tests"
+  blocks:
+    - P2
+    - P7
+  related_sections:
+    - section_04_public_api_v1
+    - section_16_geometry_policy
+  notes: "Direct-copy candidate; relocate into next-owned foundation."
+-
+  id: direct_local_bounds_policy
+  source_paths:
+    - lib/src/core/local_bounds_policy.dart
+  decision: copy
+  target_phases:
+    - P7
+    - P8
+  target_owner: GeometryPolicy local bounds
+  use_for:
+    - local bounds policy parity
+  do_not_copy:
+    - old snapshot coupling
+  required_tests:
+    - test/render/render_geometry_cache_test.dart
+    - test/render/render_hit_bounds_parity_test.dart
+  blocks:
+    - P7
+    - P8
+  related_sections:
+    - section_16_geometry_policy
+    - section_15_frame_render_contract
+  notes: Small cohesive donor.
+-
+  id: direct_paint_admission
+  source_paths:
+    - lib/src/core/paint_candidate_admission.dart
+  decision: copy
+  target_phases:
+    - P7
+    - P8
+  target_owner: Paint admission policy
+  use_for:
+    - "edge-touch paint candidate admission"
+  do_not_copy:
+    - old scene traversal shell
+  required_tests:
+    - test/render/scene_painter_bounds_contract_test.dart
+    - plan/step_37_paint_admission_edge_touch_parity.md
+  blocks:
+    - P7
+    - P8
+  related_sections:
+    - section_16_geometry_policy
+    - section_15_frame_render_contract
+  notes: Algorithm donor.
+-
+  id: direct_scan_resistant_cache
+  source_paths:
+    - lib/src/render/cache/scan_resistant_cache.dart
+  decision: copy
+  target_phases:
+    - P8
+    - P12
+  target_owner: Render cache policy
+  use_for:
+    - "bounded scan-resistant cache behavior"
+  do_not_copy:
+    - old render owner lifecycle
+  required_tests:
+    - test/render/scan_resistant_cache_test.dart
+    - test/render/render_cache_policy_contract_test.dart
+  blocks:
+    - P8
+    - P12
+  related_sections:
+    - section_18_cache_policy
+    - section_24_benchmarks
+  notes: Reusable cache primitive.
+-
+  id: direct_pointer_tap_tracking
+  source_paths:
+    - lib/src/core/pointer_input_tracker.dart
+  decision: copy
+  target_phases:
+    - P9
+  target_owner: Pointer session tap tracking
+  use_for:
+    - tap timing and pointer tracking
+  do_not_copy:
+    - legacy controller ownership
+  required_tests:
+    - test/core/pointer_input_test.dart
+  blocks:
+    - P9
+  related_sections:
+    - section_14_interaction_engine
+  notes: "Direct-copy candidate with new owner."
+-
+  id: direct_flutter_pointer_routing
+  source_paths:
+    - lib/src/view/scene_view_pointer_router.dart
+  decision: copy
+  target_phases:
+    - P10
+  target_owner: CanvasSurface pointer adapter
+  use_for:
+    - Flutter pointer routing behavior
+  do_not_copy:
+    - old SceneView facade
+  required_tests:
+    - test/view/scene_view_pointer_router_test.dart
+  blocks:
+    - P10
+  related_sections:
+    - section_14_interaction_engine
+  notes: Surface integration donor.
+-
+  id: direct_gesture_ownership
+  source_paths:
+    - lib/src/interactive/internal/interactive_gesture_machine.dart
+  decision: copy
+  target_phases:
+    - P9
+  target_owner: InteractionEngine gesture ownership
+  use_for:
+    - "single-pointer ownership policy"
+  do_not_copy:
+    - old callback graph
+  required_tests:
+    - test/interactive/core/interactive_move_session_test.dart
+    - "single-pointer policy tests"
+  blocks:
+    - P9
+  related_sections:
+    - section_14_interaction_engine
+  notes: Copy behavior into new InteractionEngine owner.
+-
+  id: direct_structure_validation
+  source_paths:
+    - lib/src/contract/scene_structure_validation.dart
+  decision: copy_adapt
+  target_phases:
+    - P2
+    - P3
+  target_owner: DTO and schema structure validation
+  use_for:
+    - structure validation behavior
+  do_not_copy:
+    - old public type names
+  required_tests:
+    - test/contract/scene_structure_validation_test.dart
+  blocks:
+    - P2
+    - P3
+  related_sections:
+    - section_04_public_api_v1
+    - section_05_schema_v1_contract
+  notes: Adapt names and error surfaces.
+-
+  id: foundation_transform2d
+  source_paths:
+    - lib/src/contract/transform2d.dart
+  decision: copy_adapt
+  target_phases:
+    - P2
+    - P3
+    - P7
+  target_owner: CanvasTransform and geometry math
+  use_for:
+    - "2D affine math, inverse handling, point and rect transform, canvas matrix layout"
+  do_not_copy:
+    - old contract namespace
+  required_tests:
+    - geometry and schema transform tests
+  blocks:
+    - P2
+    - P3
+    - P7
+  related_sections:
+    - section_04_public_api_v1
+    - section_05_schema_v1_contract
+    - section_16_geometry_policy
+  notes: Foundation donor.
+-
+  id: foundation_core_geometry
+  source_paths:
+    - lib/src/core/geometry.dart
+  decision: copy_adapt
+  target_phases:
+    - P7
+  target_owner: GeometryPolicy v1
+  use_for:
+    - "AABB, stroke bounds, singular value helpers, distances"
+  do_not_copy:
+    - old node APIs
+  required_tests:
+    - geometry policy tests
+  blocks:
+    - P7
+  related_sections:
+    - section_16_geometry_policy
+  notes: Port as algorithms over next shape structs.
+-
+  id: foundation_contract_limits
+  source_paths:
+    - lib/src/contract/scene_contract_limits.dart
+  decision: copy_adapt
+  target_phases:
+    - P1.5
+    - P2
+    - P3
+  target_owner: Validation limits and public constructors
+  use_for:
+    - "id, text, svg, stroke, layer, node, json and coordinate limits"
+  do_not_copy:
+    - old public constants as API unless approved by v1 surface
+  required_tests:
+    - validation limits tests
+  blocks:
+    - P1.5
+    - P2
+    - P3
+  related_sections:
+    - section_04_public_api_v1
+    - section_06_validation_limits
+  notes: Scope gate input.
+-
+  id: foundation_error_contract
+  source_paths:
+    - lib/src/contract/scene_data_exception.dart
+    - lib/src/contract/scene_validation_diagnostics.dart
+  decision: copy_adapt
+  target_phases:
+    - P2
+    - P3
+  target_owner: CanvasDataException and DiagnosticsHub
+  use_for:
+    - "structured code, path, details, source errors and sanitized diagnostics"
+  do_not_copy:
+    - old exception names if not in v1 API
+  required_tests:
+    - error payload tests
+    - diagnostics tests
+  blocks:
+    - P2
+    - P3
+  related_sections:
+    - section_04_public_api_v1
+    - section_20_diagnostics_hub
+  notes: Error behavior donor.
+-
+  id: foundation_validators
+  source_paths:
+    - "lib/src/contract/validated/*.dart"
+    - lib/src/contract/validated/validated_value_support.dart
+  decision: adapt
+  target_phases:
+    - P2
+    - P3
+  target_owner: Public DTO and schema validators
+  use_for:
+    - "finite, range, string, json and svg validation policies"
+  do_not_copy:
+    - legacy validated wrapper public shape
+  required_tests:
+    - constructor validation tests
+    - schema validation tests
+  blocks:
+    - P2
+    - P3
+  related_sections:
+    - section_04_public_api_v1
+    - section_06_validation_limits
+  notes: Behavior donor.
+-
+  id: foundation_tri_state_patch_semantics
+  source_paths:
+    - lib/src/contract/patch_field.dart
+    - lib/src/contract/node_patch.dart
+  decision: copy_adapt
+  target_phases:
+    - P2
+  target_owner: CanvasOptional update semantics
+  use_for:
+    - "absent, value, explicit-null behavior and non-nullable-null rejection"
+  do_not_copy:
+    - PatchField name or NodePatch public API
+  required_tests:
+    - element update tests
+  blocks:
+    - P2
+  related_sections:
+    - section_04_public_api_v1
+  notes: Semantics only where v1 API approves.
+-
+  id: foundation_immutable_collections
+  source_paths:
+    - lib/src/contract/owned_collections.dart
+    - lib/src/core/immutable_collections.dart
+  decision: adapt
+  target_phases:
+    - P2
+  target_owner: DTO immutability
+  use_for:
+    - defensive copy and unmodifiable list/map behavior
+  do_not_copy:
+    - old DTO shells
+  required_tests:
+    - test/api_contract/dto_immutability_test.dart
+  blocks:
+    - P2
+  related_sections:
+    - section_04_public_api_v1
+  notes: DTO policy donor.
+-
+  id: foundation_pointer_input_contract
+  source_paths:
+    - lib/src/contract/pointer_input.dart
+    - lib/src/contract/canvas_pointer_input.dart
+    - lib/src/contract/pointer_phase_codec.dart
+  decision: copy_adapt
+  target_phases:
+    - P2
+    - P9
+  target_owner: Canvas pointer API and InteractionEngine
+  use_for:
+    - "pointer phases, policy validation, device kind handling"
+  do_not_copy:
+    - old pointer public boundary where v1 differs
+  required_tests:
+    - pointer API tests
+    - interaction pointer lifecycle tests
+  blocks:
+    - P2
+    - P9
+  related_sections:
+    - section_04_public_api_v1
+    - section_14_interaction_engine
+  notes: Shared API/runtime input.
+-
+  id: foundation_action_event_immutability
+  source_paths:
+    - lib/src/core/action_events.dart
+  decision: adapt
+  target_phases:
+    - P2
+    - P9
+  target_owner: CanvasActionEvent and text edit events
+  use_for:
+    - "immutable events, timestamp normalization, text edit request evidence"
+  do_not_copy:
+    - old event public names unless in v1 API
+  required_tests:
+    - test/events/typed_action_payloads_test.dart
+  blocks:
+    - P2
+    - P9
+  related_sections:
+    - section_04_public_api_v1
+    - section_14_interaction_engine
+  notes: Event behavior donor.
+-
+  id: geometry_node_geometry
+  source_paths:
+    - lib/src/core/node_geometry.dart
+  decision: adapt
+  target_phases:
+    - P7
+  target_owner: GeometryPolicy and HitTestPolicy
+  use_for:
+    - "hit eligibility, candidate bounds, inverse transform hits, line/stroke radius, path fill/stroke sampling cap"
+  do_not_copy:
+    - SceneNode or NodeSnapshot APIs
+  required_tests:
+    - test/core/node_geometry_test.dart
+    - test/core/hit_test_test.dart
+    - test/core/hit_test_candidate_bounds_test.dart
+  blocks:
+    - P7
+  related_sections:
+    - section_16_geometry_policy
+  notes: Algorithm over next structs.
+-
+  id: geometry_hit_test
+  source_paths:
+    - lib/src/core/hit_test.dart
+  decision: adapt
+  target_phases:
+    - P7
+  target_owner: HitTestPolicy v1
+  use_for:
+    - primitive hit behavior and hit slop policy
+  do_not_copy:
+    - "hitTestTopNode traversal or legacy scene-order logic"
+  required_tests:
+    - test/core/hit_test_test.dart
+  blocks:
+    - P7
+  related_sections:
+    - section_16_geometry_policy
+  notes: Traversal belongs to next spatial/store order.
+-
+  id: render_geometry_builder
+  source_paths:
+    - lib/src/render/render_geometry_builder.dart
+  decision: adapt
+  target_phases:
+    - P7
+    - P8
+  target_owner: RenderElementRecord geometry construction
+  use_for:
+    - "local/world bounds and validity-key idea"
+  do_not_copy:
+    - "old snapshot, text layout or cache keys"
+  required_tests:
+    - test/render/render_geometry_cache_test.dart
+    - test/render/render_hit_bounds_parity_test.dart
+  blocks:
+    - P7
+    - P8
+  related_sections:
+    - section_15_frame_render_contract
+    - section_16_geometry_policy
+  notes: Frame geometry donor.
+-
+  id: geometry_interactive_geometry
+  source_paths:
+    - lib/src/interactive/internal/interactive_geometry.dart
+  decision: copy_adapt
+  target_phases:
+    - P7
+    - P9
+  target_owner: Draw and eraser geometry helpers
+  use_for:
+    - "segment batching, segment bounds, rect-distance prefilter"
+  do_not_copy:
+    - "gesture soft-limit shell coupled to old input sampling"
+  required_tests:
+    - test/interactive/core/interactive_draw_path_buffer_test.dart
+    - eraser guardrail tests
+  blocks:
+    - P7
+    - P9
+  related_sections:
+    - section_14_interaction_engine
+    - section_16_geometry_policy
+  notes: Shared interaction geometry donor.
+-
+  id: geometry_eraser_exact_hit
+  source_paths:
+    - lib/src/interactive/internal/interactive_draw_eraser_exact_hit.dart
+    - line/stroke eraser hit files
+  decision: adapt
+  target_phases:
+    - P7
+    - P9
+  target_owner: "Eraser exact-hit engine"
+  use_for:
+    - "projected eraser-to-local algorithm, singular transform fallback, batched exact checks"
+  do_not_copy:
+    - "old snapshots, delete eligibility shell, debug counters as structure"
+  required_tests:
+    - test/interactive/core/interactive_draw_eraser_engine_test.dart
+    - eraser lifecycle tests
+  blocks:
+    - P7
+    - P9
+  related_sections:
+    - section_14_interaction_engine
+    - section_16_geometry_policy
+  notes: Port after new geometry and spatial owners exist.
+-
+  id: spatial_scene_spatial_index
+  source_paths:
+    - lib/src/core/scene_spatial_index.dart
+  decision: adapt
+  target_phases:
+    - P7
+  target_owner: SpatialKernel tile and outlier indexes
+  use_for:
+    - "uniform-grid index, hit/paint entries, outlier fallback, structuralRevision payload concept"
+  do_not_copy:
+    - "old Scene, SceneNode, locator maps, background sentinel"
+  required_tests:
+    - spatial index tests
+  blocks:
+    - P7
+  related_sections:
+    - section_17_spatial_kernel
+  notes: Runtime owner changes completely.
+-
+  id: spatial_index_cache
+  source_paths:
+    - lib/src/controller/internal/spatial_index_cache.dart
+  decision: adapt
+  target_phases:
+    - P7
+    - P8
+  target_owner: SpatialKernel invalidation cache
+  use_for:
+    - "lazy build, epoch invalidation, incremental commit, fallback rebuild, debug counters"
+  do_not_copy:
+    - old ChangeSet or controller revisions
+  required_tests:
+    - touched spatial update tests
+  blocks:
+    - P7
+    - P8
+  related_sections:
+    - section_17_spatial_kernel
+    - section_18_cache_policy
+  notes: Cache behavior donor.
+-
+  id: store_scene_controller_read_paths
+  source_paths:
+    - lib/src/controller/scene_store_controller.dart spatial query/resolve paths
+  decision: adapt
+  target_phases:
+    - P5
+    - P7
+  target_owner: DocumentStoreKernel committed read and candidate resolve
+  use_for:
+    - opaque committed candidates and stale structuralRevision rejection
+  do_not_copy:
+    - controller facade shell
+  required_tests:
+    - committed read tests
+    - spatial stale candidate tests
+  blocks:
+    - P5
+    - P7
+  related_sections:
+    - section_10_runtime_data_model
+    - section_17_spatial_kernel
+  notes: Extract behavior only.
+-
+  id: snapshot_paint_admission_bounds
+  source_paths:
+    - lib/src/core/snapshot_paint_admission_bounds.dart
+  decision: adapt
+  target_phases:
+    - P8
+  target_owner: FrameEngine paint bounds cache
+  use_for:
+    - "bounded snapshot-local paint-bounds cache idea"
+  do_not_copy:
+    - old validity keys without next shape rebuild
+  required_tests:
+    - paint bounds cache tests
+  blocks:
+    - P8
+  related_sections:
+    - section_15_frame_render_contract
+  notes: Frame cache donor.
+-
+  id: snapshot_paint_candidates
+  source_paths:
+    - lib/src/core/scene_snapshot_paint_candidates.dart
+  decision: adapt
+  target_phases:
+    - P8
+  target_owner: FrameEngine fallback candidate enumeration
+  use_for:
+    - fallback enumeration and selected preview widened visibility rect
+  do_not_copy:
+    - "old non-committed fallback path as primary architecture"
+  required_tests:
+    - paint candidate tests
+  blocks:
+    - P8
+  related_sections:
+    - section_15_frame_render_contract
+  notes: Use only where next fallback needs it.
+-
+  id: frame_render_state
+  source_paths:
+    - lib/src/contract/scene_view_render_state.dart
+  decision: adapt
+  target_phases:
+    - P8
+  target_owner: Captured frame model
+  use_for:
+    - "atomic frame-read and immutable preview snapshot model"
+  do_not_copy:
+    - old contract path or name
+  required_tests:
+    - main capture tests
+    - overlay capture tests
+  blocks:
+    - P8
+  related_sections:
+    - section_15_frame_render_contract
+  notes: Do not leak old public surface.
+-
+  id: scene_view_runtime_fast_path
+  source_paths:
+    - lib/src/interactive/internal/scene_controller_scene_view_runtime.dart
+  decision: adapt
+  target_phases:
+    - P8
+  target_owner: FrameEngine committed fast path
+  use_for:
+    - committed fast path only when frame snapshot matches committed snapshot
+  do_not_copy:
+    - controller shell
+  required_tests:
+    - frame snapshot consistency tests
+  blocks:
+    - P8
+  related_sections:
+    - section_15_frame_render_contract
+  notes: "Fast-path behavior only."
+-
+  id: paint_candidate_stage
+  source_paths:
+    - lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart
+  decision: adapt
+  target_phases:
+    - P8
+  target_owner: PaintPlan staging
+  use_for:
+    - "ordered paint plan, selected supplements, preview shifted bounds, merge without global sort"
+  do_not_copy:
+    - old stage owner or ordering tokens without next model
+  required_tests:
+    - selected supplement staging tests
+  blocks:
+    - P8
+  related_sections:
+    - section_15_frame_render_contract
+  notes: Requires next order token.
+-
+  id: scene_painter_frame
+  source_paths:
+    - lib/src/render/scene_painter_frame.dart
+  decision: adapt
+  target_phases:
+    - P8
+    - P10
+  target_owner: Main and overlay painters
+  use_for:
+    - "viewport calculation, halo visibility budget, single paint-plan call"
+  do_not_copy:
+    - Flutter/node snapshot coupling
+  required_tests:
+    - painter frame tests
+    - widget paint tests
+  blocks:
+    - P8
+    - P10
+  related_sections:
+    - section_15_frame_render_contract
+  notes: Surface integration donor.
+-
+  id: scene_render_caches
+  source_paths:
+    - lib/src/render/scene_render_caches.dart
+  decision: adapt
+  target_phases:
+    - P8
+    - P10
+  target_owner: Render cache owner lifecycle
+  use_for:
+    - "single render-cache owner lifecycle and epoch/controller swap clearing"
+  do_not_copy:
+    - old controller lifecycle
+  required_tests:
+    - render cache lifecycle tests
+  blocks:
+    - P8
+    - P10
+  related_sections:
+    - section_18_cache_policy
+  notes: New owner must be FrameEngine or surface bridge.
+-
+  id: static_layer_cache
+  source_paths:
+    - lib/src/render/cache/scene_static_layer_cache.dart
+  decision: adapt
+  target_phases:
+    - P8
+    - P10
+  target_owner: Optional static layer cache
+  use_for:
+    - recorded grid/background cache and Picture.dispose lifecycle
+  do_not_copy:
+    - cache if next design drops static layer cache
+  required_tests:
+    - static layer cache disposal tests
+  blocks:
+    - P8
+    - P10
+  related_sections:
+    - section_18_cache_policy
+  notes: Use only if next keeps static layer cache.
+-
+  id: text_stroke_path_metrics_caches
+  source_paths:
+    - lib/src/render/cache/scene_text_layout_cache.dart
+    - lib/src/render/cache/scene_stroke_path_cache.dart
+    - lib/src/render/cache/scene_path_metrics_cache.dart
+  decision: adapt
+  target_phases:
+    - P8
+  target_owner: Render family caches
+  use_for:
+    - "text layout, stroke path and path metrics cache shapes"
+  do_not_copy:
+    - old snapshot and revision keys
+  required_tests:
+    - render cache key tests
+  blocks:
+    - P8
+  related_sections:
+    - section_18_cache_policy
+  notes: Rekey for next runtime rows.
+-
+  id: dto_snapshot_behavior
+  source_paths:
+    - lib/src/contract/snapshot.dart
+  decision: adapt
+  target_phases:
+    - P2
+  target_owner: CanvasDocument DTOs
+  use_for:
+    - "immutable DTO construction, defensive copies, canonical background/palette/grid behavior"
+  do_not_copy:
+    - legacy family names or broad file structure
+  required_tests:
+    - test/api_contract/dto_immutability_test.dart
+  blocks:
+    - P2
+  related_sections:
+    - section_04_public_api_v1
+  notes: DTO behavior donor.
+-
+  id: dto_node_spec_behavior
+  source_paths:
+    - lib/src/contract/node_spec.dart
+  decision: adapt
+  target_phases:
+    - P2
+  target_owner: Element creation DTO validation
+  use_for:
+    - creation DTO validation split from snapshots
+  do_not_copy:
+    - old family names and old API shape
+  required_tests:
+    - public constructor validation tests
+  blocks:
+    - P2
+  related_sections:
+    - section_04_public_api_v1
+  notes: Creation validation behavior only.
+-
+  id: dto_boundary_schema
+  source_paths:
+    - "lib/src/contract/internal/node_boundary_schema*.dart"
+  decision: adapt
+  target_phases:
+    - P2
+    - P3
+  target_owner: Typed and JSON schema field groups
+  use_for:
+    - "shared schema-field groups and parity across typed/JSON validation"
+  do_not_copy:
+    - "internal fast-path or backing coupling"
+  required_tests:
+    - "schema family parity tests if next keeps field-record schema families"
+  blocks:
+    - P2
+    - P3
+  related_sections:
+    - section_04_public_api_v1
+    - section_05_schema_v1_contract
+  notes: Only if next uses comparable field records.
+-
+  id: dto_scene_value_validation
+  source_paths:
+    - "lib/src/model/scene_value_validation*.dart"
+  decision: adapt_rewrite
+  target_phases:
+    - P2
+    - P3
+  target_owner: Runtime/model validation adapters
+  use_for:
+    - diagnostic normalization and validation behavior
+  do_not_copy:
+    - bridges to old mutable runtime
+  required_tests:
+    - validation diagnostics tests
+  blocks:
+    - P2
+    - P3
+  related_sections:
+    - section_06_validation_limits
+    - section_20_diagnostics_hub
+  notes: Rewrite shell around next DTOs.
+-
+  id: dto_node_boundary_mapping
+  source_paths:
+    - "lib/src/model/scene_node_boundary_mapping*.dart"
+  decision: adapt
+  target_phases:
+    - P3
+    - P5
+  target_owner: Codec and store mapping families
+  use_for:
+    - mapping families between boundary DTOs and runtime rows
+  do_not_copy:
+    - old node names and runtime shapes
+  required_tests:
+    - DTO to runtime mapping tests
+  blocks:
+    - P3
+    - P5
+  related_sections:
+    - section_05_schema_v1_contract
+    - section_10_runtime_data_model
+  notes: Port concepts after next rows exist.
+-
+  id: dto_document_helpers
+  source_paths:
+    - "lib/src/model/document_*.dart"
+  decision: adapt
+  target_phases:
+    - P5
+    - P6
+  target_owner: DocumentStoreKernel and EditKernel helpers
+  use_for:
+    - "pure document edit, clone and selection helpers"
+  do_not_copy:
+    - ownership that conflicts with store/edit split
+  required_tests:
+    - store kernel tests
+    - edit kernel tests
+  blocks:
+    - P5
+    - P6
+  related_sections:
+    - section_10_runtime_data_model
+    - section_11_edit_kernel
+  notes: Verify ownership before porting.
+-
+  id: codec_guards
+  source_paths:
+    - lib/src/serialization/codec_guards.dart
+  decision: copy_adapt
+  target_phases:
+    - P3
+  target_owner: CodecBoundary raw JSON guards
+  use_for:
+    - "raw JSON length, parse and non-object root guards"
+  do_not_copy:
+    - "part-of scene_codec structure"
+  required_tests:
+    - schema raw input guard tests
+  blocks:
+    - P3
+  related_sections:
+    - section_05_schema_v1_contract
+    - section_19_codec_boundary
+  notes: Rename and own in next codec boundary.
+-
+  id: codec_json_require
+  source_paths:
+    - lib/src/model/scene_builder_json_require.dart
+  decision: copy_adapt
+  target_phases:
+    - P3
+  target_owner: Schema v1 strict field access
+  use_for:
+    - path builder and strict field access helpers
+  do_not_copy:
+    - SceneBuilder name
+  required_tests:
+    - schema known field validation tests
+  blocks:
+    - P3
+  related_sections:
+    - section_05_schema_v1_contract
+    - section_19_codec_boundary
+  notes: Small codec helper donor.
+-
+  id: codec_json_parse
+  source_paths:
+    - lib/src/model/scene_builder_json_parse.dart
+  decision: adapt
+  target_phases:
+    - P3
+  target_owner: Schema v1 primitive parsers
+  use_for:
+    - "color, size, offset, transform and enum parsers"
+  do_not_copy:
+    - old enum and transform names
+  required_tests:
+    - primitive encoding tests
+  blocks:
+    - P3
+  related_sections:
+    - section_05_schema_v1_contract
+    - section_19_codec_boundary
+  notes: Adapt to v1 names.
+-
+  id: codec_metadata_decode
+  source_paths:
+    - lib/src/model/scene_builder_decode_scene_metadata.dart
+  decision: adapt
+  target_phases:
+    - P3
+    - P11
+  target_owner: Schema v1 metadata codec and migration
+  use_for:
+    - "schema gate, camera, background, grid and palette validation sequence"
+  do_not_copy:
+    - old schema shape into production v1
+  required_tests:
+    - metadata codec tests
+    - migration metadata tests
+  blocks:
+    - P3
+    - P11
+  related_sections:
+    - section_05_schema_v1_contract
+    - section_25_migration_tool
+  notes: Production v1 and migration have different targets.
+-
+  id: codec_layer_decode
+  source_paths:
+    - lib/src/model/scene_builder_decode_layers.dart
+  decision: adapt
+  target_phases:
+    - P3
+  target_owner: Layer schema codec
+  use_for:
+    - layer/background layer decode loops and node budget pathing
+  do_not_copy:
+    - old layer model if v1 differs
+  required_tests:
+    - layer JSON tests
+  blocks:
+    - P3
+  related_sections:
+    - section_05_schema_v1_contract
+  notes: Adapt to next layer model.
+-
+  id: codec_node_common_decode
+  source_paths:
+    - lib/src/model/scene_builder_decode_node_common.dart
+  decision: adapt
+  target_phases:
+    - P3
+    - P11
+  target_owner: Element common schema codec and migration
+  use_for:
+    - "common id, revision, transform, flag, opacity and hitPadding decode behavior"
+  do_not_copy:
+    - old instanceRevision semantics as next schema unless specified
+  required_tests:
+    - element common JSON tests
+    - migration instanceRevision tests
+  blocks:
+    - P3
+    - P11
+  related_sections:
+    - section_05_schema_v1_contract
+    - section_25_migration_tool
+  notes: "instanceRevision behavior is migration-relevant."
+-
+  id: codec_family_decode
+  source_paths:
+    - lib/src/model/scene_builder_decode_image.dart
+    - lib/src/model/scene_builder_decode_path.dart
+    - lib/src/model/scene_builder_decode_text.dart
+    - lib/src/model/scene_builder_decode_stroke.dart
+    - lib/src/model/scene_builder_decode_line.dart
+    - lib/src/model/scene_builder_decode_rect.dart
+  decision: adapt
+  target_phases:
+    - P3
+    - P11
+  target_owner: Element family codecs and migration
+  use_for:
+    - family decode validation and diagnostic paths
+  do_not_copy:
+    - old JSON aliases into v1 except where specified
+  required_tests:
+    - element family JSON tests
+    - migration family fixture tests
+  blocks:
+    - P3
+    - P11
+  related_sections:
+    - section_05_schema_v1_contract
+    - section_25_migration_tool
+  notes: Aliases mostly belong to migration.
+-
+  id: codec_scene_codec_flow
+  source_paths:
+    - lib/src/serialization/scene_codec.dart
+  decision: adapt_rewrite
+  target_phases:
+    - P3
+    - P11
+  target_owner: CodecBoundary and migration codec reference
+  use_for:
+    - canonical encode/decode flow and encode helper behavior
+  do_not_copy:
+    - SceneSnapshot and SceneBuilder coupling
+    - old public SceneCodec surface
+  required_tests:
+    - schema roundtrip tests
+    - migration fixture tests
+  blocks:
+    - P3
+    - P11
+  related_sections:
+    - section_19_codec_boundary
+    - section_25_migration_tool
+  notes: Rewrite shell around next DTOs.
+-
+  id: codec_validation_path_surface
+  source_paths:
+    - lib/src/model/scene_validation_path_surface.dart
+  decision: copy_adapt
+  target_phases:
+    - P3
+    - P11
+  target_owner: Diagnostic path projection
+  use_for:
+    - "typed-vs-JSON diagnostic path aliasing where aliases remain"
+  do_not_copy:
+    - aliases not approved for v1
+  required_tests:
+    - diagnostic path tests
+    - migration alias tests
+  blocks:
+    - P3
+    - P11
+  related_sections:
+    - section_19_codec_boundary
+    - section_25_migration_tool
+  notes: Use only where aliases remain.
+-
+  id: tooling_schema_family_parity
+  source_paths:
+    - tool/audit_schema_family_parity.dart
+  decision: adapt
+  target_phases:
+    - P12
+  target_owner: Tooling guardrail
+  use_for:
+    - "static schema-family parity audit if next keeps field-record schema families"
+  do_not_copy:
+    - legacy paths and package names
+  required_tests:
+    - tooling guardrail smoke tests
+  blocks:
+    - P12
+  related_sections:
+    - section_22_guardrails_machine_checks
+  notes: Conditional tooling donor.
+-
+  id: interaction_pointer_host
+  source_paths:
+    - lib/src/view/scene_view_interactive_pointer_host.dart
+  decision: adapt
+  target_phases:
+    - P10
+  target_owner: CanvasSurface pointer host
+  use_for:
+    - "finite admission, terminal release in finally, session replacement reset"
+  do_not_copy:
+    - old Flutter host facade
+  required_tests:
+    - surface pointer host tests
+  blocks:
+    - P10
+  related_sections:
+    - section_14_interaction_engine
+  notes: Flutter surface donor.
+-
+  id: interaction_pointer_session
+  source_paths:
+    - lib/src/interactive/internal/scene_controller_pointer_session.dart
+  decision: adapt
+  target_phases:
+    - P9
+    - P10
+  target_owner: InteractionEngine pointer session
+  use_for:
+    - "session detach/dispose, pending tap timer, settings adoption only when raw pointers idle"
+  do_not_copy:
+    - current Listenable wiring if owner differs
+  required_tests:
+    - pointer session lifecycle tests
+  blocks:
+    - P9
+    - P10
+  related_sections:
+    - section_14_interaction_engine
+  notes: Timer lifecycle needs careful ownership.
+-
+  id: interaction_pointer_normalizer
+  source_paths:
+    - lib/src/interactive/internal/interactive_pointer_normalizer.dart
+  decision: copy_adapt
+  target_phases:
+    - P9
+  target_owner: Pointer sample normalizer
+  use_for:
+    - "non-finite sample filtering and terminal recovery from last finite point"
+  do_not_copy:
+    - "wrong session-token keying"
+  required_tests:
+    - pointer normalization tests
+  blocks:
+    - P9
+  related_sections:
+    - section_14_interaction_engine
+  notes: "Preserve session-token behavior."
+-
+  id: interaction_event_dispatcher
+  source_paths:
+    - lib/src/interactive/internal/interactive_event_dispatcher.dart
+  decision: adapt
+  target_phases:
+    - P9
+  target_owner: Interaction event dispatch
+  use_for:
+    - "monotonic timestamp resolution, stream ownership, deferred notify scheduling"
+  do_not_copy:
+    - old sync/async notification contract before next decision
+  required_tests:
+    - event dispatch tests
+  blocks:
+    - P9
+  related_sections:
+    - section_14_interaction_engine
+  notes: Notification contract must match next API.
+-
+  id: interaction_double_tap_router
+  source_paths:
+    - lib/src/interactive/internal/interactive_double_tap_router.dart
+  decision: adapt
+  target_phases:
+    - P9
+  target_owner: Text edit request router
+  use_for:
+    - "text double-tap edit-request routing"
+  do_not_copy:
+    - "old text hit-test read model"
+  required_tests:
+    - text edit request tests
+  blocks:
+    - P9
+  related_sections:
+    - section_14_interaction_engine
+  notes: "Depends on new text hit-test."
+-
+  id: interaction_gesture_runtime
+  source_paths:
+    - lib/src/interactive/internal/interactive_gesture_router.dart
+    - lib/src/interactive/internal/interactive_runtime.dart
+  decision: adapt
+  target_phases:
+    - P9
+  target_owner: InteractionEngine dispatch order and cleanup
+  use_for:
+    - "dispatch order, reentrancy guard, terminal cleanup, external mutation interruption"
+  do_not_copy:
+    - old callback graph
+  required_tests:
+    - interaction state tests
+    - terminal cleanup tests
+  blocks:
+    - P9
+  related_sections:
+    - section_14_interaction_engine
+  notes: "Behavior only, not structure."
+-
+  id: interaction_move_session
+  source_paths:
+    - lib/src/interactive/internal/interactive_move_session.dart
+    - move coordinators
+  decision: adapt
+  target_phases:
+    - P9
+  target_owner: Move and marquee interaction machines
+  use_for:
+    - "move preview, marquee selection, commit-on-up, cancel restore"
+  do_not_copy:
+    - "old selection, hit-test and mutation callback wiring"
+  required_tests:
+    - move preview tests
+    - marquee selection tests
+  blocks:
+    - P9
+  related_sections:
+    - section_14_interaction_engine
+  notes: "Depends on new selection, hit-test and mutation callbacks."
+-
+  id: interaction_draw_coordinator
+  source_paths:
+    - lib/src/interactive/internal/interactive_draw_coordinator.dart
+    - draw engines
+    - terminal router
+    - action emitter
+  decision: adapt_rewrite
+  target_phases:
+    - P9
+  target_owner: "Draw, line and eraser machines"
+  use_for:
+    - "stroke, line, eraser lifecycle, pending line state, exception-safe terminal cleanup"
+  do_not_copy:
+    - eraser internals before new geometry/spatial model
+  required_tests:
+    - draw lifecycle tests
+    - "line two-tap tests"
+    - eraser lifecycle tests
+  blocks:
+    - P9
+  related_sections:
+    - section_14_interaction_engine
+  notes: Rewrite shell around next models.
+-
+  id: interaction_mutation_boundary
+  source_paths:
+    - lib/src/interactive/internal/scene_controller_mutation_boundary.dart
+  decision: adapt
+  target_phases:
+    - P6
+    - P9
+  target_owner: "Interaction-owned mutation bridge into EditKernel"
+  use_for:
+    - "single interaction-owned bridge into committed writes"
+  do_not_copy:
+    - legacy bridge names and access types
+  required_tests:
+    - mutation boundary tests
+    - interaction commit tests
+  blocks:
+    - P6
+    - P9
+  related_sections:
+    - section_11_edit_kernel
+    - section_14_interaction_engine
+  notes: Bridge must target next EditKernel.
+-
+  id: staged_load_runtime_materialization
+  source_paths:
+    - lib/src/controller/scene_writer_runtime.dart
+    - lib/src/controller/scene_snapshot_materializer.dart
+    - lib/src/controller/scene_controller_committed_mutation_access.dart
+  decision: adapt
+  target_phases:
+    - P6
+    - P9
+  target_owner: loadDocument staged materialization
+  use_for:
+    - "validate/materialize first, interrupt active interaction only before successful apply, consume prepared replacement once"
+  do_not_copy:
+    - prepared replacement through public API
+  required_tests:
+    - loadDocument staged tests
+  blocks:
+    - P6
+    - P9
+  related_sections:
+    - section_12_load_document
+  notes: "Critical staged-load behavior."
+-
+  id: validated_import_draft
+  source_paths:
+    - lib/src/model/scene_import_draft.dart
+    - lib/src/model/scene_policy.dart
+    - lib/src/model/scene_from_import_draft.dart
+    - lib/src/model/scene_import_draft_from_snapshot.dart
+  decision: adapt
+  target_phases:
+    - P3
+    - P6
+  target_owner: Validated document import draft
+  use_for:
+    - validated import draft before runtime materialization
+  do_not_copy:
+    - old import draft naming as public API
+  required_tests:
+    - validated import draft tests
+    - loadDocument tests
+  blocks:
+    - P3
+    - P6
+  related_sections:
+    - section_12_load_document
+    - section_19_codec_boundary
+  notes: Rename around next loadDocument model.
+-
+  id: interaction_public_controller_behavior
+  source_paths:
+    - lib/src/interactive/scene_controller_interaction.dart
+    - lib/src/interactive/scene_controller_scene.dart
+  decision: rewrite_reference
+  target_phases:
+    - P1
+    - P2
+  target_owner: Behavioral checklist only
+  use_for:
+    - behavioral contracts and validation calls as evidence
+  do_not_copy:
+    - old public API shape
+  required_tests:
+    - functional ledger row tests
+  blocks:
+    - P1
+    - P2
+  related_sections:
+    - section_01_legacy_oracle
+    - section_04_public_api_v1
+  notes: Reference only.
+-
+  id: avoid_scene_controller_facades
+  source_paths:
+    - lib/src/interactive/scene_controller.dart
+    - public controller facade files
+  decision: avoid
+  target_phases:
+    - avoid
+  target_owner: No next owner
+  use_for:
+    - behavioral evidence only through functional ledger
+  do_not_copy:
+    - old public API shape
+    - controller facade files
+  required_tests:
+    - "none"
+  blocks:
+    - new_core.no_scene_controller_shape_dependency
+  related_sections:
+    - section_00_status_and_scope
+    - section_22_guardrails_machine_checks
+  notes: Forbidden as structure.
+-
+  id: avoid_interactive_runtime_whole
+  source_paths:
+    - lib/src/interactive/internal/interactive_runtime.dart as a whole
+  decision: avoid
+  target_phases:
+    - avoid
+  target_owner: No next owner
+  use_for:
+    - dispatch semantics only through interaction_gesture_runtime
+  do_not_copy:
+    - whole old callback graph
+  required_tests:
+    - "none"
+  blocks:
+    - P9
+  related_sections:
+    - section_14_interaction_engine
+  notes: Use targeted behavior donor instead.
+-
+  id: avoid_scene_builder_public_architecture
+  source_paths:
+    - lib/src/model/scene_builder.dart
+    - lib/src/model/scene_builder_api.dart
+  decision: avoid
+  target_phases:
+    - avoid
+  target_owner: No next owner
+  use_for:
+    - schema behavior evidence only through codec donors
+  do_not_copy:
+    - old builder API
+  required_tests:
+    - "none"
+  blocks:
+    - P3
+  related_sections:
+    - section_19_codec_boundary
+  notes: Forbidden as public architecture.
+-
+  id: avoid_scene_codec_whole
+  source_paths:
+    - lib/src/serialization/scene_codec.dart as a whole
+  decision: avoid
+  target_phases:
+    - avoid
+  target_owner: No next owner
+  use_for:
+    - canonical flow through codec_scene_codec_flow
+  do_not_copy:
+    - SceneSnapshot coupling
+    - old public codec surface
+  required_tests:
+    - "none"
+  blocks:
+    - P3
+  related_sections:
+    - section_19_codec_boundary
+  notes: Use adapt_rewrite donor record instead.
+-
+  id: avoid_scene_store_controller_whole
+  source_paths:
+    - lib/src/controller/scene_store_controller.dart as a whole
+  decision: avoid
+  target_phases:
+    - avoid
+  target_owner: No next owner
+  use_for:
+    - committed read and spatial semantics through store_scene_controller_read_paths
+  do_not_copy:
+    - mixed controller facade
+  required_tests:
+    - "none"
+  blocks:
+    - P5
+    - P7
+  related_sections:
+    - section_10_runtime_data_model
+    - section_17_spatial_kernel
+  notes: Use targeted behavior donor instead.

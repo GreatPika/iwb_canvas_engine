@@ -1,0 +1,738 @@
+-
+  id: P0
+  title: package skeleton and hard boundaries
+  read_first_sections:
+    - section_00_status_and_scope
+    - section_02_architecture_model
+    - section_03_package_layout
+    - section_21_diagrams
+    - section_22_guardrails_machine_checks
+    - section_26_implementation_phases
+  required_donors:
+    - "none"
+  forbidden_donors:
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - c4_context
+    - c4_container
+    - c4_component_runtime
+    - c4_code_edit_kernel
+    - dfd_public_edit
+    - dfd_load_document_success_failure
+    - dfd_pointer_preview_commit
+    - dfd_main_paint_frame
+    - dfd_overlay_frame
+    - dfd_resource_resolution
+    - dfd_schema_v1_decode_encode
+    - dfd_cache_invalidation
+    - dfd_diagnostics_error_projection
+    - dfd_migration_tool
+    - seq_edit_success
+    - seq_edit_rollback
+    - seq_load_document_success
+    - seq_load_document_failure
+    - seq_selected_move_preview_commit
+    - seq_selected_move_cancel
+    - seq_marquee_select
+    - seq_pencil_marker_commit
+    - seq_line_two_tap_commit
+    - seq_eraser_commit
+    - seq_text_edit_request
+    - seq_main_paint
+    - seq_overlay_paint
+    - seq_resource_resolution
+    - seq_dispose_during_gesture
+    - state_runtime_lifecycle
+    - state_edit_session
+    - state_pointer_session
+    - state_select_marquee
+    - state_selected_move
+    - state_pencil_marker_draw
+    - state_two_tap_line
+    - state_eraser
+    - state_pending_text_edit_request
+    - state_resource_resolution
+  guardrails:
+    - diagrams.all_required_present
+    - new_api.no_old_public_types
+    - new_core.no_legacy_imports
+    - new_core.no_node_spec_patch_shape_dependency
+    - new_core.no_scene_controller_shape_dependency
+    - new_core.single_runtime_root
+  tests:
+    - test.api_contract.no_old_public_symbols
+    - test.diagrams.required_present
+    - test.guardrails.blocking_suite
+  exit_criteria:
+    - new package builds empty public API skeleton
+    - old package not imported
+    - old public symbols not exported
+    - all required public type names have files.
+-
+  id: P1
+  title: old capability inventory and oracle lock
+  read_first_sections:
+    - section_01_legacy_oracle
+    - section_08_functional_ledger
+    - section_26_implementation_phases
+    - section_28_changes_from_previous_draft
+  required_donors:
+    - interaction_public_controller_behavior
+  forbidden_donors:
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - "none"
+  guardrails:
+    - new_api.functional_ledger_complete
+  tests:
+    - test.functional_ledger.row_specific_tests
+  exit_criteria:
+    - functional ledger rows are complete
+    - "each row has oracle file(s), new API target and test id"
+    - "each reusable donor has a decision, target phase and required ported tests"
+    - copy/adapt donors are linked from the relevant implementation phase
+    - no implementation proceeds without green inventory guardrail.
+-
+  id: P1.5
+  title: v1 scope gate before public API freeze
+  read_first_sections:
+    - section_00_status_and_scope
+    - section_04_public_api_v1
+    - section_06_validation_limits
+    - section_09_accepted_differences
+    - section_26_implementation_phases
+  required_donors:
+    - foundation_contract_limits
+  forbidden_donors:
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - c4_container
+    - c4_context
+    - dfd_diagnostics_error_projection
+    - dfd_migration_tool
+    - dfd_public_edit
+  guardrails:
+    - codec.known_fields_validated
+    - new_api.dto_immutability
+    - new_api.id_validation_no_extension_type_escape
+    - new_api.no_undefined_public_type_references
+    - new_api.public_api_compiles_as_written
+    - new_api.public_types_complete
+    - new_api.v1_scope_gate_green_before_freeze
+    - new_core.no_legacy_imports
+    - new_core.no_node_spec_patch_shape_dependency
+    - new_core.no_scene_controller_shape_dependency
+  tests:
+    - test.api_contract.v1_scope_gate
+  exit_criteria:
+    - mandatory v1 scope is green
+    - public API compiles as written
+    - no undefined public type references remain
+    - P2 public API freeze is blocked until this gate is green.
+-
+  id: P2
+  title: public API v1 freeze
+  read_first_sections:
+    - section_04_public_api_v1
+    - section_06_validation_limits
+    - section_09_accepted_differences
+    - section_23_tests
+    - section_26_implementation_phases
+  required_donors:
+    - direct_numeric_policy
+    - direct_structure_validation
+    - foundation_transform2d
+    - foundation_contract_limits
+    - foundation_error_contract
+    - foundation_validators
+    - foundation_tri_state_patch_semantics
+    - foundation_immutable_collections
+    - foundation_pointer_input_contract
+    - foundation_action_event_immutability
+    - dto_snapshot_behavior
+    - dto_node_spec_behavior
+    - dto_boundary_schema
+    - dto_scene_value_validation
+    - interaction_public_controller_behavior
+  forbidden_donors:
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - c4_context
+    - dfd_diagnostics_error_projection
+    - dfd_migration_tool
+    - dfd_public_edit
+  guardrails:
+    - codec.known_fields_validated
+    - new_api.dto_immutability
+    - new_api.functional_ledger_complete
+    - new_api.id_validation_no_extension_type_escape
+    - new_api.no_undefined_public_type_references
+    - new_api.public_api_compiles_as_written
+    - new_api.public_types_complete
+    - new_api.v1_scope_gate_green_before_freeze
+  tests:
+    - test.api_contract.public_api_v1_compiles_as_written
+    - test.api_contract.no_undefined_public_type_references
+    - test.api_contract.no_old_public_symbols
+    - test.api_contract.dto_immutability
+    - test.events.typed_action_payloads
+    - test.validation_limits.constructor_and_schema_limits
+  exit_criteria:
+    - P1.5 scope gate remains green
+    - public API compiles
+    - all public constructor validations pass/fail as specified
+    - no old public symbols exported
+    - no public type references internal runtime classes.
+-
+  id: P3
+  title: schema v1 DTO validation and codec skeleton
+  read_first_sections:
+    - section_05_schema_v1_contract
+    - section_06_validation_limits
+    - section_19_codec_boundary
+    - section_20_diagnostics_hub
+    - section_23_tests
+    - section_26_implementation_phases
+  required_donors:
+    - direct_structure_validation
+    - foundation_transform2d
+    - foundation_contract_limits
+    - foundation_error_contract
+    - foundation_validators
+    - dto_boundary_schema
+    - dto_scene_value_validation
+    - dto_node_boundary_mapping
+    - codec_guards
+    - codec_json_require
+    - codec_json_parse
+    - codec_metadata_decode
+    - codec_layer_decode
+    - codec_node_common_decode
+    - codec_family_decode
+    - codec_scene_codec_flow
+    - codec_validation_path_surface
+    - validated_import_draft
+  forbidden_donors:
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - dfd_diagnostics_error_projection
+    - dfd_schema_v1_decode_encode
+  guardrails:
+    - codec.known_fields_validated
+    - codec.schema_v1_exact
+    - diagnostics.disabled_no_alloc_hot_path
+    - new_api.functional_ledger_complete
+    - new_api.id_validation_no_extension_type_escape
+  tests:
+    - test.schema_v1.known_fields_validation
+    - test.schema_v1.resources_appkey_only
+    - test.schema_v1.reject_unknown_element_kind
+    - test.schema_v1.reject_unknown_resource_source_kind
+    - test.validation_limits.constructor_and_schema_limits
+  exit_criteria:
+    - all schema roundtrip tests green
+    - known field validation tests green
+    - "unknown-field policy tests green"
+    - limits tests green
+    - error payload tests green.
+-
+  id: P4
+  title: resources
+  read_first_sections:
+    - section_04_public_api_v1
+    - section_07_resource_lifecycle
+    - section_23_tests
+    - section_26_implementation_phases
+  required_donors:
+    - "none"
+  forbidden_donors:
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - c4_context
+    - dfd_public_edit
+    - dfd_resource_resolution
+    - seq_resource_resolution
+    - state_resource_resolution
+  guardrails:
+    - new_api.dto_immutability
+    - new_api.functional_ledger_complete
+    - new_api.id_validation_no_extension_type_escape
+    - new_api.no_undefined_public_type_references
+    - new_api.public_api_compiles_as_written
+    - new_api.public_types_complete
+    - resources.app_key_only
+    - resources.dirty_no_document_revision
+    - resources.mutation_inside_edit_only
+  tests:
+    - test.schema_v1.resources_appkey_only
+    - test.schema_v1.reject_unknown_resource_source_kind
+    - test.resources.sync_image_resolver
+    - test.resources.app_owned_image_not_disposed
+    - test.resources.resource_dirty
+    - test.resources.mark_all_resources_dirty
+  exit_criteria:
+    - "resource descriptor mutation is rollback-safe"
+    - resource dirty schedules main repaint without document revision
+    - "resolver image results are app-owned and not disposed by engine"
+    - resource surface matches the v1 appKey/synchronous image contract.
+-
+  id: P5
+  title: store kernel and projection cache
+  read_first_sections:
+    - section_02_architecture_model
+    - section_10_runtime_data_model
+    - section_26_implementation_phases
+  required_donors:
+    - store_scene_controller_read_paths
+    - dto_node_boundary_mapping
+    - dto_document_helpers
+  forbidden_donors:
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - c4_component_runtime
+    - c4_container
+    - dfd_cache_invalidation
+  guardrails:
+    - new_core.single_runtime_root
+  tests:
+    - test.store.read_document_projection
+    - test.store.no_projection_hot_path
+  exit_criteria:
+    - readDocument projection matches DTO state
+    - projection lazy counters pass
+    - no projection in hot path tests pass.
+-
+  id: P6
+  title: edit kernel
+  read_first_sections:
+    - section_10_runtime_data_model
+    - section_11_edit_kernel
+    - section_12_load_document
+    - section_13_operation_matrix
+    - section_26_implementation_phases
+  required_donors:
+    - dto_document_helpers
+    - interaction_mutation_boundary
+    - staged_load_runtime_materialization
+    - validated_import_draft
+  forbidden_donors:
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - c4_code_edit_kernel
+    - c4_component_runtime
+    - dfd_cache_invalidation
+    - dfd_load_document_success_failure
+    - dfd_public_edit
+    - seq_edit_rollback
+    - seq_edit_success
+    - seq_load_document_failure
+    - seq_load_document_success
+    - state_edit_session
+  guardrails:
+    - edit.rollback_no_effects
+    - edit.stale_handle_rejected
+    - edit.sync_non_nested
+    - events.low_level_edit_no_user_actions
+    - load.prepares_before_interrupt
+    - load.success_interrupts_before_install
+    - new_core.single_runtime_root
+  tests:
+    - test.events.low_level_mutations_do_not_emit_actions
+    - test.edit_kernel.sync_non_nested_async_stale
+    - test.edit_kernel.rollback
+    - test.load_document.staged_success_failure
+  exit_criteria:
+    - "sync/non-nested/async/stale tests green"
+    - rollback tests green
+    - loadDocument staged tests green
+    - operation matrix tests green.
+-
+  id: P7
+  title: spatial and geometry
+  read_first_sections:
+    - section_16_geometry_policy
+    - section_17_spatial_kernel
+    - section_26_implementation_phases
+  required_donors:
+    - direct_numeric_policy
+    - direct_local_bounds_policy
+    - direct_paint_admission
+    - foundation_transform2d
+    - foundation_core_geometry
+    - geometry_node_geometry
+    - geometry_hit_test
+    - render_geometry_builder
+    - geometry_interactive_geometry
+    - geometry_eraser_exact_hit
+    - spatial_scene_spatial_index
+    - spatial_index_cache
+    - store_scene_controller_read_paths
+  forbidden_donors:
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - dfd_cache_invalidation
+    - dfd_pointer_preview_commit
+  guardrails:
+    - "none"
+  tests:
+    - test.geometry.hit_policy
+    - test.spatial.touched_update
+  exit_criteria:
+    - hit tests green
+    - spatial constants green
+    - outlier behavior green
+    - "touched-only spatial update green."
+-
+  id: P8
+  title: frame engine and render caches
+  read_first_sections:
+    - section_10_runtime_data_model
+    - section_15_frame_render_contract
+    - section_16_geometry_policy
+    - section_17_spatial_kernel
+    - section_18_cache_policy
+    - section_26_implementation_phases
+  required_donors:
+    - direct_local_bounds_policy
+    - direct_paint_admission
+    - direct_scan_resistant_cache
+    - render_geometry_builder
+    - spatial_index_cache
+    - snapshot_paint_admission_bounds
+    - snapshot_paint_candidates
+    - frame_render_state
+    - scene_view_runtime_fast_path
+    - paint_candidate_stage
+    - scene_painter_frame
+    - scene_render_caches
+    - static_layer_cache
+    - text_stroke_path_metrics_caches
+  forbidden_donors:
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - c4_component_runtime
+    - dfd_cache_invalidation
+    - dfd_main_paint_frame
+    - dfd_overlay_frame
+    - dfd_pointer_preview_commit
+    - seq_main_paint
+    - seq_overlay_paint
+  guardrails:
+    - new_core.single_runtime_root
+    - preview.selected_move_main_repaint
+  tests:
+    - test.store.no_projection_hot_path
+    - test.frame.main_overlay_capture
+    - test.frame.no_live_runtime_read_in_painters
+  exit_criteria:
+    - main capture once
+    - overlay capture once
+    - selected move preview main repaint
+    - overlay previews overlay repaint
+    - no live runtime read in painters
+    - no CanvasDocument projection in paint.
+-
+  id: P9
+  title: interaction engine
+  read_first_sections:
+    - section_04_public_api_v1
+    - section_12_load_document
+    - section_14_interaction_engine
+    - section_23_tests
+    - section_26_implementation_phases
+  required_donors:
+    - direct_pointer_tap_tracking
+    - direct_gesture_ownership
+    - foundation_pointer_input_contract
+    - foundation_action_event_immutability
+    - geometry_interactive_geometry
+    - geometry_eraser_exact_hit
+    - interaction_pointer_session
+    - interaction_pointer_normalizer
+    - interaction_event_dispatcher
+    - interaction_double_tap_router
+    - interaction_gesture_runtime
+    - interaction_move_session
+    - interaction_draw_coordinator
+    - interaction_mutation_boundary
+    - staged_load_runtime_materialization
+  forbidden_donors:
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - c4_context
+    - dfd_load_document_success_failure
+    - dfd_pointer_preview_commit
+    - dfd_public_edit
+    - seq_dispose_during_gesture
+    - seq_eraser_commit
+    - seq_line_two_tap_commit
+    - seq_load_document_failure
+    - seq_load_document_success
+    - seq_marquee_select
+    - seq_pencil_marker_commit
+    - seq_selected_move_cancel
+    - seq_selected_move_preview_commit
+    - seq_text_edit_request
+    - state_eraser
+    - state_pencil_marker_draw
+    - state_pending_text_edit_request
+    - state_pointer_session
+    - state_select_marquee
+    - state_selected_move
+    - state_two_tap_line
+  guardrails:
+    - load.prepares_before_interrupt
+    - load.success_interrupts_before_install
+    - new_api.dto_immutability
+    - new_api.functional_ledger_complete
+    - new_api.id_validation_no_extension_type_escape
+    - new_api.no_undefined_public_type_references
+    - new_api.public_api_compiles_as_written
+    - new_api.public_types_complete
+    - preview.selected_move_main_repaint
+  tests:
+    - test.events.typed_action_payloads
+    - test.events.commands_emit_user_actions
+    - test.load_document.staged_success_failure
+    - test.interaction.state_machines
+    - test.interaction.move_resolver_reentrancy
+  exit_criteria:
+    - all interaction state tests green
+    - pending line preview exposed
+    - text edit event emitted
+    - resolver cannot reenter mutation
+    - loadDocument failure preserves gesture
+    - loadDocument success clears gesture.
+-
+  id: P10
+  title: Flutter surface
+  read_first_sections:
+    - section_04_public_api_v1
+    - section_07_resource_lifecycle
+    - section_14_interaction_engine
+    - section_15_frame_render_contract
+    - section_18_cache_policy
+    - section_23_tests
+    - section_26_implementation_phases
+  required_donors:
+    - direct_flutter_pointer_routing
+    - scene_painter_frame
+    - scene_render_caches
+    - static_layer_cache
+    - interaction_pointer_host
+    - interaction_pointer_session
+  forbidden_donors:
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - c4_context
+    - dfd_cache_invalidation
+    - dfd_main_paint_frame
+    - dfd_overlay_frame
+    - dfd_pointer_preview_commit
+    - dfd_public_edit
+    - dfd_resource_resolution
+    - seq_dispose_during_gesture
+    - seq_eraser_commit
+    - seq_line_two_tap_commit
+    - seq_main_paint
+    - seq_marquee_select
+    - seq_overlay_paint
+    - seq_pencil_marker_commit
+    - seq_resource_resolution
+    - seq_selected_move_cancel
+    - seq_selected_move_preview_commit
+    - seq_text_edit_request
+    - state_eraser
+    - state_pencil_marker_draw
+    - state_pending_text_edit_request
+    - state_pointer_session
+    - state_resource_resolution
+    - state_select_marquee
+    - state_selected_move
+    - state_two_tap_line
+  guardrails:
+    - load.prepares_before_interrupt
+    - load.success_interrupts_before_install
+    - new_api.dto_immutability
+    - new_api.functional_ledger_complete
+    - new_api.id_validation_no_extension_type_escape
+    - new_api.no_undefined_public_type_references
+    - new_api.public_api_compiles_as_written
+    - new_api.public_types_complete
+    - preview.selected_move_main_repaint
+    - resources.app_key_only
+    - resources.dirty_no_document_revision
+    - resources.mutation_inside_edit_only
+  tests:
+    - test.resources.sync_image_resolver
+    - test.resources.app_owned_image_not_disposed
+    - test.surface.interactive_false_pointer_routing
+    - test.surface.interactive_false_active_session_cancel
+    - test.surface.widget_paint
+  exit_criteria:
+    - surface paints empty and populated docs
+    - "interactive=false disables pointer routing"
+    - resource resolver repaint works
+    - widget tests green.
+-
+  id: P11
+  title: migration tool package
+  read_first_sections:
+    - section_09_accepted_differences
+    - section_19_codec_boundary
+    - section_25_migration_tool
+    - section_26_implementation_phases
+  required_donors:
+    - codec_metadata_decode
+    - codec_node_common_decode
+    - codec_family_decode
+    - codec_scene_codec_flow
+    - codec_validation_path_surface
+  forbidden_donors:
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - dfd_migration_tool
+    - dfd_schema_v1_decode_encode
+  guardrails:
+    - codec.known_fields_validated
+    - codec.schema_v1_exact
+    - new_api.v1_scope_gate_green_before_freeze
+  tests:
+    - test.migration.old_fixture_migration
+    - test.migration.no_silent_data_loss
+  exit_criteria:
+    - old fixture migration tests green
+    - imageId maps to resources
+    - palette/grid color/revision preserved
+    - no silent data loss.
+-
+  id: P12
+  title: "benchmarks, diagrams, release readiness"
+  read_first_sections:
+    - section_08_functional_ledger
+    - section_18_cache_policy
+    - section_20_diagnostics_hub
+    - section_21_diagrams
+    - section_22_guardrails_machine_checks
+    - section_23_tests
+    - section_24_benchmarks
+    - section_26_implementation_phases
+    - section_27_final_release_gates
+  required_donors:
+    - direct_scan_resistant_cache
+    - tooling_schema_family_parity
+  forbidden_donors:
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - c4_code_edit_kernel
+    - c4_component_runtime
+    - c4_container
+    - c4_context
+    - dfd_cache_invalidation
+    - dfd_diagnostics_error_projection
+    - dfd_load_document_success_failure
+    - dfd_main_paint_frame
+    - dfd_migration_tool
+    - dfd_overlay_frame
+    - dfd_pointer_preview_commit
+    - dfd_public_edit
+    - dfd_resource_resolution
+    - dfd_schema_v1_decode_encode
+    - seq_dispose_during_gesture
+    - seq_edit_rollback
+    - seq_edit_success
+    - seq_eraser_commit
+    - seq_line_two_tap_commit
+    - seq_load_document_failure
+    - seq_load_document_success
+    - seq_main_paint
+    - seq_marquee_select
+    - seq_overlay_paint
+    - seq_pencil_marker_commit
+    - seq_resource_resolution
+    - seq_selected_move_cancel
+    - seq_selected_move_preview_commit
+    - seq_text_edit_request
+    - state_edit_session
+    - state_eraser
+    - state_pencil_marker_draw
+    - state_pending_text_edit_request
+    - state_pointer_session
+    - state_resource_resolution
+    - state_runtime_lifecycle
+    - state_select_marquee
+    - state_selected_move
+    - state_two_tap_line
+  guardrails:
+    - diagnostics.disabled_no_alloc_hot_path
+    - diagrams.all_required_present
+    - new_api.functional_ledger_complete
+  tests:
+    - test.functional_ledger.row_specific_tests
+    - test.benchmarks.required_cases
+    - test.diagrams.required_present
+    - test.guardrails.blocking_suite
+  exit_criteria:
+    - functional ledger complete
+    - schema tests green
+    - interaction/frame/spatial/resource tests green
+    - benchmarks pass
+    - no old imports
+    - no legacy facade
+    - no app adapters in package.
