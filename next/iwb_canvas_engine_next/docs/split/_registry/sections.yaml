@@ -1,7 +1,7 @@
 -
   id: section_00_status_and_scope
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 0
-  file: docs/split/implementation/00_status_and_scope.md
+  source: docs/split/_registry/sections.yaml / section 0
+  file: docs/split/architecture/00_architecture_overview.md
   title: 0. Статус и обязательное архитектурное решение
   phases:
     - P0
@@ -23,8 +23,8 @@
     - test.api_contract.v1_scope_gate
 -
   id: section_01_legacy_oracle
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 1
-  file: docs/split/implementation/01_legacy_oracle.md
+  source: docs/split/_registry/sections.yaml / section 1
+  file: docs/split/planning/legacy_oracle.md
   title: 1. Что проверено по старому архиву
   phases:
     - P1
@@ -42,8 +42,8 @@
     - "none"
 -
   id: section_02_architecture_model
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 2
-  file: docs/split/implementation/02_architecture_model.md
+  source: docs/split/_registry/sections.yaml / section 2
+  file: docs/split/architecture/01_runtime_ownership.md
   title: 2. Несущая модель новой библиотеки
   phases:
     - P0
@@ -63,8 +63,8 @@
     - "none"
 -
   id: section_03_package_layout
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 3
-  file: docs/split/implementation/03_package_layout.md
+  source: docs/split/_registry/sections.yaml / section 3
+  file: docs/split/architecture/02_package_boundaries.md
   title: 3. Package layout
   phases:
     - P0
@@ -83,8 +83,8 @@
     - test.api_contract.no_old_public_symbols
 -
   id: section_04_public_api_v1
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 4
-  file: docs/split/implementation/04_public_api_v1.md
+  source: docs/split/_registry/sections.yaml / section 4
+  file: docs/split/contracts/public_api_v1.md
   title: "4. Public API v1: полный surface"
   phases:
     - P1.5
@@ -127,8 +127,8 @@
     - test.api_contract.v1_scope_gate
 -
   id: section_05_schema_v1_contract
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 5
-  file: docs/split/implementation/05_schema_v1_contract.md
+  source: docs/split/_registry/sections.yaml / section 5
+  file: docs/split/contracts/schema_v1.md
   title: 5. Schema v1 full field contract
   phases:
     - P3
@@ -160,8 +160,8 @@
     - test.schema_v1.reject_unknown_resource_source_kind
 -
   id: section_06_validation_limits
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 6
-  file: docs/split/implementation/06_validation_limits.md
+  source: docs/split/_registry/sections.yaml / section 6
+  file: docs/split/contracts/validation_limits.md
   title: 6. Validation limits
   phases:
     - P1.5
@@ -183,8 +183,8 @@
     - test.validation_limits.constructor_and_schema_limits
 -
   id: section_07_resource_lifecycle
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 7
-  file: docs/split/implementation/07_resource_lifecycle.md
+  source: docs/split/_registry/sections.yaml / section 7
+  file: docs/split/contracts/resources.md
   title: 7. Resource lifecycle contract
   phases:
     - P4
@@ -212,8 +212,8 @@
     - test.resources.mark_all_resources_dirty
 -
   id: section_08_functional_ledger
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 8
-  file: docs/split/implementation/08_functional_ledger.md
+  source: docs/split/_registry/sections.yaml / section 8
+  file: docs/split/verification/functional_ledger.md
   title: "8. Functional ledger: old capability -> new API -> required test"
   phases:
     - P1
@@ -232,8 +232,8 @@
     - test.functional_ledger.row_specific_tests
 -
   id: section_09_accepted_differences
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 9
-  file: docs/split/implementation/09_accepted_differences.md
+  source: docs/split/_registry/sections.yaml / section 9
+  file: docs/split/architecture/04_decisions_and_differences.md
   title: 9. Accepted differences from old engine
   phases:
     - P1.5
@@ -253,8 +253,8 @@
     - "none"
 -
   id: section_10_runtime_data_model
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 10
-  file: docs/split/implementation/10_runtime_data_model.md
+  source: docs/split/_registry/sections.yaml / section 10
+  file: docs/split/architecture/03_data_model.md
   title: 10. Runtime data model
   phases:
     - P5
@@ -279,8 +279,8 @@
     - test.store.no_projection_hot_path
 -
   id: section_11_edit_kernel
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 11
-  file: docs/split/implementation/11_edit_kernel.md
+  source: docs/split/_registry/sections.yaml / section 11
+  file: docs/split/contracts/edit_kernel.md
   title: 11. EditKernel implementation contract
   phases:
     - P6
@@ -311,8 +311,8 @@
     - test.edit_kernel.rollback
 -
   id: section_12_load_document
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 12
-  file: docs/split/implementation/12_load_document.md
+  source: docs/split/_registry/sections.yaml / section 12
+  file: docs/split/contracts/load_document.md
   title: "12. `loadDocument` staged contract"
   phases:
     - P6
@@ -337,8 +337,8 @@
     - test.load_document.staged_success_failure
 -
   id: section_13_operation_matrix
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 13
-  file: docs/split/implementation/13_operation_matrix.md
+  source: docs/split/_registry/sections.yaml / section 13
+  file: docs/split/contracts/operation_matrix.md
   title: 13. Operation matrix
   phases:
     - P6
@@ -359,8 +359,8 @@
     - test.edit_kernel.sync_non_nested_async_stale
 -
   id: section_14_interaction_engine
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 14
-  file: docs/split/implementation/14_interaction_engine.md
+  source: docs/split/_registry/sections.yaml / section 14
+  file: docs/split/contracts/interaction_engine.md
   title: 14. InteractionEngine
   phases:
     - P9
@@ -412,8 +412,8 @@
     - test.surface.widget_paint
 -
   id: section_15_frame_render_contract
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 15
-  file: docs/split/implementation/15_frame_render_contract.md
+  source: docs/split/_registry/sections.yaml / section 15
+  file: docs/split/contracts/frame_rendering.md
   title: 15. FrameEngine and render contract
   phases:
     - P8
@@ -449,8 +449,8 @@
     - test.surface.widget_paint
 -
   id: section_16_geometry_policy
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 16
-  file: docs/split/implementation/16_geometry_policy.md
+  source: docs/split/_registry/sections.yaml / section 16
+  file: docs/split/contracts/geometry.md
   title: 16. Geometry policy v1
   phases:
     - P7
@@ -477,8 +477,8 @@
     - test.geometry.hit_policy
 -
   id: section_17_spatial_kernel
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 17
-  file: docs/split/implementation/17_spatial_kernel.md
+  source: docs/split/_registry/sections.yaml / section 17
+  file: docs/split/contracts/spatial_kernel.md
   title: 17. SpatialKernel
   phases:
     - P7
@@ -499,8 +499,8 @@
     - test.spatial.touched_update
 -
   id: section_18_cache_policy
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 18
-  file: docs/split/implementation/18_cache_policy.md
+  source: docs/split/_registry/sections.yaml / section 18
+  file: docs/split/contracts/cache_policy.md
   title: 18. Cache policy ledger
   phases:
     - P8
@@ -523,8 +523,8 @@
     - "none"
 -
   id: section_19_codec_boundary
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 19
-  file: docs/split/implementation/19_codec_boundary.md
+  source: docs/split/_registry/sections.yaml / section 19
+  file: docs/split/contracts/codec_boundary.md
   title: 19. CodecBoundary
   phases:
     - P3
@@ -553,8 +553,8 @@
     - "none"
 -
   id: section_20_diagnostics_hub
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 20
-  file: docs/split/implementation/20_diagnostics_hub.md
+  source: docs/split/_registry/sections.yaml / section 20
+  file: docs/split/contracts/diagnostics.md
   title: 20. DiagnosticsHub
   phases:
     - P3
@@ -574,8 +574,8 @@
     - "none"
 -
   id: section_21_diagrams
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 21
-  file: docs/split/implementation/21_diagrams.md
+  source: docs/split/_registry/sections.yaml / section 21
+  file: docs/split/architecture/diagrams.md
   title: 21. Diagram deliverables
   phases:
     - P0
@@ -634,8 +634,8 @@
     - test.diagrams.required_present
 -
   id: section_22_guardrails_machine_checks
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 22
-  file: docs/split/implementation/22_guardrails_machine_checks.md
+  source: docs/split/_registry/sections.yaml / section 22
+  file: docs/split/verification/guardrails.md
   title: 22. Guardrails and machine checks
   phases:
     - P0
@@ -682,8 +682,8 @@
     - test.guardrails.blocking_suite
 -
   id: section_23_tests
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 23
-  file: docs/split/implementation/23_tests.md
+  source: docs/split/_registry/sections.yaml / section 23
+  file: docs/split/verification/tests.md
   title: 23. Tests
   phases:
     - P2
@@ -810,8 +810,8 @@
     - test.guardrails.blocking_suite
 -
   id: section_24_benchmarks
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 24
-  file: docs/split/implementation/24_benchmarks.md
+  source: docs/split/_registry/sections.yaml / section 24
+  file: docs/split/verification/benchmarks.md
   title: 24. Benchmarks
   phases:
     - P12
@@ -829,8 +829,8 @@
     - test.benchmarks.required_cases
 -
   id: section_25_migration_tool
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 25
-  file: docs/split/implementation/25_migration_tool.md
+  source: docs/split/_registry/sections.yaml / section 25
+  file: docs/split/contracts/migration_tool.md
   title: 25. Migration tool outside production core
   phases:
     - P11
@@ -853,8 +853,8 @@
     - test.migration.no_silent_data_loss
 -
   id: section_26_implementation_phases
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 26
-  file: docs/split/implementation/26_implementation_phases.md
+  source: docs/split/_registry/sections.yaml / section 26
+  file: docs/split/planning/implementation_phases.md
   title: 26. Implementation phases and tasks
   phases:
     - P0
@@ -978,8 +978,8 @@
     - "none"
 -
   id: section_27_final_release_gates
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 27
-  file: docs/split/implementation/27_final_release_gates.md
+  source: docs/split/_registry/sections.yaml / section 27
+  file: docs/split/verification/release_gates.md
   title: 27. Final release gates
   phases:
     - P12
@@ -1092,8 +1092,8 @@
     - test.guardrails.blocking_suite
 -
   id: section_28_changes_from_previous_draft
-  source: iwb_canvas_engine_next_full_implementation_plan_v2.md / section 28
-  file: docs/split/implementation/28_changes_from_previous_draft.md
+  source: docs/split/_registry/sections.yaml / section 28
+  file: docs/split/planning/changes_from_previous_draft.md
   title: 28. Immediate changes compared with the previous draft
   phases:
     - P1

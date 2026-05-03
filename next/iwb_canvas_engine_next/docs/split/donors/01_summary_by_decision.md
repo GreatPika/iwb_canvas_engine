@@ -1,7 +1,7 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `donors_01_summary_by_decision`
-Source: `docs/iwb_canvas_engine_next_donor_inventory.md / Summary by decision`
-Canonical original: `docs/iwb_canvas_engine_next_donor_inventory.md`
+Source: `docs/split/_registry/donors.yaml / Summary by decision`
+Canonical source: `docs/split/_registry/donors.yaml`
 Feeds registry: `docs/split/_registry/donors.yaml`
 Feeds indexes:
 - `docs/split/indexes/donor_to_phase.md`

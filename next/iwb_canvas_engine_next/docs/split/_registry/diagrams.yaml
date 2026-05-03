@@ -1,7 +1,8 @@
 -
   id: c4_context
   kind: c4
-  planned_path: tool/diagrams/c4_context.mmd
+  planned_path: docs/split/diagrams/generated/c4_context.mmd
+  architecture_manifest: docs/split/architecture/architecture.yaml
   related_sections:
     - section_00_status_and_scope
     - section_04_public_api_v1
@@ -17,7 +18,8 @@
 -
   id: c4_container
   kind: c4
-  planned_path: tool/diagrams/c4_container.mmd
+  planned_path: docs/split/diagrams/generated/c4_container.mmd
+  architecture_manifest: docs/split/architecture/architecture.yaml
   related_sections:
     - section_00_status_and_scope
     - section_02_architecture_model
@@ -31,7 +33,8 @@
 -
   id: c4_component_runtime
   kind: c4
-  planned_path: tool/diagrams/c4_component_runtime.mmd
+  planned_path: docs/split/diagrams/generated/c4_component_runtime.mmd
+  architecture_manifest: docs/split/architecture/architecture.yaml
   related_sections:
     - section_02_architecture_model
     - section_10_runtime_data_model
@@ -45,7 +48,7 @@
 -
   id: c4_code_edit_kernel
   kind: c4
-  planned_path: tool/diagrams/c4_code_edit_kernel.mmd
+  planned_path: docs/split/diagrams/generated/c4_code_edit_kernel.mmd
   related_sections:
     - section_11_edit_kernel
     - section_21_diagrams
@@ -56,7 +59,7 @@
 -
   id: dfd_public_edit
   kind: data_flow
-  planned_path: tool/diagrams/dfd_public_edit.mmd
+  planned_path: docs/split/diagrams/generated/dfd_public_edit.mmd
   related_sections:
     - section_04_public_api_v1
     - section_11_edit_kernel
@@ -73,7 +76,7 @@
 -
   id: dfd_load_document_success_failure
   kind: data_flow
-  planned_path: tool/diagrams/dfd_load_document_success_failure.mmd
+  planned_path: docs/split/diagrams/generated/dfd_load_document_success_failure.mmd
   related_sections:
     - section_12_load_document
     - section_21_diagrams
@@ -85,7 +88,7 @@
 -
   id: dfd_pointer_preview_commit
   kind: data_flow
-  planned_path: tool/diagrams/dfd_pointer_preview_commit.mmd
+  planned_path: docs/split/diagrams/generated/dfd_pointer_preview_commit.mmd
   related_sections:
     - section_14_interaction_engine
     - section_16_geometry_policy
@@ -100,7 +103,7 @@
 -
   id: dfd_main_paint_frame
   kind: data_flow
-  planned_path: tool/diagrams/dfd_main_paint_frame.mmd
+  planned_path: docs/split/diagrams/generated/dfd_main_paint_frame.mmd
   related_sections:
     - section_15_frame_render_contract
     - section_21_diagrams
@@ -112,7 +115,7 @@
 -
   id: dfd_overlay_frame
   kind: data_flow
-  planned_path: tool/diagrams/dfd_overlay_frame.mmd
+  planned_path: docs/split/diagrams/generated/dfd_overlay_frame.mmd
   related_sections:
     - section_15_frame_render_contract
     - section_21_diagrams
@@ -124,7 +127,7 @@
 -
   id: dfd_resource_resolution
   kind: data_flow
-  planned_path: tool/diagrams/dfd_resource_resolution.mmd
+  planned_path: docs/split/diagrams/generated/dfd_resource_resolution.mmd
   related_sections:
     - section_07_resource_lifecycle
     - section_21_diagrams
@@ -136,7 +139,7 @@
 -
   id: dfd_schema_v1_decode_encode
   kind: data_flow
-  planned_path: tool/diagrams/dfd_schema_v1_decode_encode.mmd
+  planned_path: docs/split/diagrams/generated/dfd_schema_v1_decode_encode.mmd
   related_sections:
     - section_05_schema_v1_contract
     - section_19_codec_boundary
@@ -149,7 +152,7 @@
 -
   id: dfd_cache_invalidation
   kind: data_flow
-  planned_path: tool/diagrams/dfd_cache_invalidation.mmd
+  planned_path: docs/split/diagrams/generated/dfd_cache_invalidation.mmd
   related_sections:
     - section_10_runtime_data_model
     - section_17_spatial_kernel
@@ -166,7 +169,7 @@
 -
   id: dfd_diagnostics_error_projection
   kind: data_flow
-  planned_path: tool/diagrams/dfd_diagnostics_error_projection.mmd
+  planned_path: docs/split/diagrams/generated/dfd_diagnostics_error_projection.mmd
   related_sections:
     - section_06_validation_limits
     - section_20_diagnostics_hub
@@ -180,7 +183,7 @@
 -
   id: dfd_migration_tool
   kind: data_flow
-  planned_path: tool/diagrams/dfd_migration_tool.mmd
+  planned_path: docs/split/diagrams/generated/dfd_migration_tool.mmd
   related_sections:
     - section_09_accepted_differences
     - section_21_diagrams
@@ -194,7 +197,7 @@
 -
   id: seq_edit_success
   kind: sequence
-  planned_path: tool/diagrams/seq_edit_success.mmd
+  planned_path: docs/split/diagrams/generated/seq_edit_success.mmd
   related_sections:
     - section_11_edit_kernel
     - section_13_operation_matrix
@@ -206,7 +209,7 @@
 -
   id: seq_edit_rollback
   kind: sequence
-  planned_path: tool/diagrams/seq_edit_rollback.mmd
+  planned_path: docs/split/diagrams/generated/seq_edit_rollback.mmd
   related_sections:
     - section_11_edit_kernel
     - section_13_operation_matrix
@@ -218,7 +221,7 @@
 -
   id: seq_load_document_success
   kind: sequence
-  planned_path: tool/diagrams/seq_load_document_success.mmd
+  planned_path: docs/split/diagrams/generated/seq_load_document_success.mmd
   related_sections:
     - section_12_load_document
     - section_21_diagrams
@@ -230,7 +233,7 @@
 -
   id: seq_load_document_failure
   kind: sequence
-  planned_path: tool/diagrams/seq_load_document_failure.mmd
+  planned_path: docs/split/diagrams/generated/seq_load_document_failure.mmd
   related_sections:
     - section_12_load_document
     - section_21_diagrams
@@ -242,7 +245,7 @@
 -
   id: seq_selected_move_preview_commit
   kind: sequence
-  planned_path: tool/diagrams/seq_selected_move_preview_commit.mmd
+  planned_path: docs/split/diagrams/generated/seq_selected_move_preview_commit.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -254,7 +257,7 @@
 -
   id: seq_selected_move_cancel
   kind: sequence
-  planned_path: tool/diagrams/seq_selected_move_cancel.mmd
+  planned_path: docs/split/diagrams/generated/seq_selected_move_cancel.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -266,7 +269,7 @@
 -
   id: seq_marquee_select
   kind: sequence
-  planned_path: tool/diagrams/seq_marquee_select.mmd
+  planned_path: docs/split/diagrams/generated/seq_marquee_select.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -278,7 +281,7 @@
 -
   id: seq_pencil_marker_commit
   kind: sequence
-  planned_path: tool/diagrams/seq_pencil_marker_commit.mmd
+  planned_path: docs/split/diagrams/generated/seq_pencil_marker_commit.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -290,7 +293,7 @@
 -
   id: seq_line_two_tap_commit
   kind: sequence
-  planned_path: tool/diagrams/seq_line_two_tap_commit.mmd
+  planned_path: docs/split/diagrams/generated/seq_line_two_tap_commit.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -302,7 +305,7 @@
 -
   id: seq_eraser_commit
   kind: sequence
-  planned_path: tool/diagrams/seq_eraser_commit.mmd
+  planned_path: docs/split/diagrams/generated/seq_eraser_commit.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -314,7 +317,7 @@
 -
   id: seq_text_edit_request
   kind: sequence
-  planned_path: tool/diagrams/seq_text_edit_request.mmd
+  planned_path: docs/split/diagrams/generated/seq_text_edit_request.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -326,7 +329,7 @@
 -
   id: seq_main_paint
   kind: sequence
-  planned_path: tool/diagrams/seq_main_paint.mmd
+  planned_path: docs/split/diagrams/generated/seq_main_paint.mmd
   related_sections:
     - section_15_frame_render_contract
     - section_21_diagrams
@@ -338,7 +341,7 @@
 -
   id: seq_overlay_paint
   kind: sequence
-  planned_path: tool/diagrams/seq_overlay_paint.mmd
+  planned_path: docs/split/diagrams/generated/seq_overlay_paint.mmd
   related_sections:
     - section_15_frame_render_contract
     - section_21_diagrams
@@ -350,7 +353,7 @@
 -
   id: seq_resource_resolution
   kind: sequence
-  planned_path: tool/diagrams/seq_resource_resolution.mmd
+  planned_path: docs/split/diagrams/generated/seq_resource_resolution.mmd
   related_sections:
     - section_07_resource_lifecycle
     - section_21_diagrams
@@ -362,7 +365,7 @@
 -
   id: seq_dispose_during_gesture
   kind: sequence
-  planned_path: tool/diagrams/seq_dispose_during_gesture.mmd
+  planned_path: docs/split/diagrams/generated/seq_dispose_during_gesture.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -374,7 +377,7 @@
 -
   id: state_runtime_lifecycle
   kind: state
-  planned_path: tool/diagrams/state_runtime_lifecycle.mmd
+  planned_path: docs/split/diagrams/generated/state_runtime_lifecycle.mmd
   related_sections:
     - section_21_diagrams
   related_phases:
@@ -383,7 +386,7 @@
 -
   id: state_edit_session
   kind: state
-  planned_path: tool/diagrams/state_edit_session.mmd
+  planned_path: docs/split/diagrams/generated/state_edit_session.mmd
   related_sections:
     - section_11_edit_kernel
     - section_21_diagrams
@@ -394,7 +397,7 @@
 -
   id: state_pointer_session
   kind: state
-  planned_path: tool/diagrams/state_pointer_session.mmd
+  planned_path: docs/split/diagrams/generated/state_pointer_session.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -406,7 +409,7 @@
 -
   id: state_select_marquee
   kind: state
-  planned_path: tool/diagrams/state_select_marquee.mmd
+  planned_path: docs/split/diagrams/generated/state_select_marquee.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -418,7 +421,7 @@
 -
   id: state_selected_move
   kind: state
-  planned_path: tool/diagrams/state_selected_move.mmd
+  planned_path: docs/split/diagrams/generated/state_selected_move.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -430,7 +433,7 @@
 -
   id: state_pencil_marker_draw
   kind: state
-  planned_path: tool/diagrams/state_pencil_marker_draw.mmd
+  planned_path: docs/split/diagrams/generated/state_pencil_marker_draw.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -442,7 +445,7 @@
 -
   id: state_two_tap_line
   kind: state
-  planned_path: tool/diagrams/state_two_tap_line.mmd
+  planned_path: docs/split/diagrams/generated/state_two_tap_line.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -454,7 +457,7 @@
 -
   id: state_eraser
   kind: state
-  planned_path: tool/diagrams/state_eraser.mmd
+  planned_path: docs/split/diagrams/generated/state_eraser.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -466,7 +469,7 @@
 -
   id: state_pending_text_edit_request
   kind: state
-  planned_path: tool/diagrams/state_pending_text_edit_request.mmd
+  planned_path: docs/split/diagrams/generated/state_pending_text_edit_request.mmd
   related_sections:
     - section_14_interaction_engine
     - section_21_diagrams
@@ -478,7 +481,7 @@
 -
   id: state_resource_resolution
   kind: state
-  planned_path: tool/diagrams/state_resource_resolution.mmd
+  planned_path: docs/split/diagrams/generated/state_resource_resolution.mmd
   related_sections:
     - section_07_resource_lifecycle
     - section_21_diagrams

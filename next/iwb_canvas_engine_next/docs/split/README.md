@@ -1,24 +1,50 @@
 # Split documentation for `iwb_canvas_engine_next`
 
-The canonical source of truth remains the two original files in `docs/`:
+This directory is the durable source of truth for the next-engine transition and
+target architecture.
 
-- `iwb_canvas_engine_next_full_implementation_plan_v2.md`
-- `iwb_canvas_engine_next_donor_inventory.md`
-
-This directory is a working navigation layer. Start implementation planning from `indexes/by_phase.md`, then open the linked implementation sections, donor records, diagrams, tests and guardrails.
+Start architecture work at `architecture/README.md`. Start execution planning at
+`indexes/by_phase.md`. Start donor work at `donors/00_reuse_rules.md` and
+`_registry/donors.yaml`.
 
 ## Layout
 
-- `implementation/`: one file per top-level implementation-plan section, with a context capsule and preserved original body.
-- `donors/`: split donor inventory sections. Donor use is controlled by `_registry/donors.yaml`.
-- `diagrams/`: catalog of required Mermaid deliverables from section 21.
-- `indexes/`: human-readable working maps by phase, subsystem, guardrail, test area and donor relation.
-- `_registry/`: machine-readable coverage records used to prevent orphan sections, donors and diagrams.
+- `architecture/`: target-system shape, ownership, package boundaries,
+  architecture decisions, and diagram source data.
+- `contracts/`: subsystem-level normative behavior and invariants.
+- `verification/`: functional ledger, tests, guardrails, benchmarks, and release
+  gates.
+- `planning/`: legacy-oracle context, implementation sequencing, and historical
+  draft notes.
+- `donors/`: split donor inventory sections. Donor use is controlled by
+  `_registry/donors.yaml`.
+- `diagrams/`: human-readable catalog of required Mermaid deliverables.
+- `indexes/`: human-readable maps by phase, subsystem, guardrail, test area, and
+  donor relation.
+- `_registry/`: machine-readable coverage records for sections, donors,
+  diagrams, phases, tests, and guardrails.
+- `../../plan/`: workspace-level Change Contracts and audit trails for
+  documentation or architecture changes.
 
-## Reconstruction rule
+## Source rule
 
-The text between `ORIGINAL-SECTION:BEGIN` and `ORIGINAL-SECTION:END` is the preserved canonical body. Reconstruct by concatenating those bodies in filename order for implementation and donor files separately.
+The role-based split files are the documentation source of truth. The text
+between `ORIGINAL-SECTION:BEGIN` and `ORIGINAL-SECTION:END` preserves the
+previously reviewed section body for traceability, but the active owner is the
+role folder and `_registry/sections.yaml`.
 
 ## Donor rule
 
-A donor is allowed for implementation only when `_registry/donors.yaml` gives it a target phase and owner. Records with `decision: avoid` or `target_phases: [reference_only]` are not implementation structure.
+A donor is allowed for implementation only when `_registry/donors.yaml` gives it
+a target phase and owner. Records with `decision: avoid` or
+`target_phases: [reference_only]` are not implementation structure.
+
+## Mechanical checks
+
+Run these commands from `next/iwb_canvas_engine_next/`:
+
+```bash
+dart run docs/split/tool/check_split_navigation.dart
+dart run docs/split/tool/check_split_source_coverage.dart
+dart run docs/split/tool/generate_architecture_diagrams.dart --check
+```

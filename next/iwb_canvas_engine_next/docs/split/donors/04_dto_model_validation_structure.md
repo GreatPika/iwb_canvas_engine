@@ -1,7 +1,7 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `donors_04_dto_model_validation_structure`
-Source: `docs/iwb_canvas_engine_next_donor_inventory.md / DTO, model, validation, and structure donors`
-Canonical original: `docs/iwb_canvas_engine_next_donor_inventory.md`
+Source: `docs/split/_registry/donors.yaml / DTO, model, validation, and structure donors`
+Canonical source: `docs/split/_registry/donors.yaml`
 Feeds registry: `docs/split/_registry/donors.yaml`
 Feeds indexes:
 - `docs/split/indexes/donor_to_phase.md`

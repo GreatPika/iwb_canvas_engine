@@ -1,7 +1,7 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `donors_00_reuse_rules`
-Source: `docs/iwb_canvas_engine_next_donor_inventory.md / Reuse rules`
-Canonical original: `docs/iwb_canvas_engine_next_donor_inventory.md`
+Source: `docs/split/_registry/donors.yaml / Reuse rules`
+Canonical source: `docs/split/_registry/donors.yaml`
 Feeds registry: `docs/split/_registry/donors.yaml`
 Feeds indexes:
 - `docs/split/indexes/donor_to_phase.md`

@@ -20,11 +20,15 @@ Keep root files limited to workspace-level configuration and agent guidance:
 - `dart_test.yaml`
 - `pubspec.yaml`
 - `pubspec.lock`
+- `plan/`
 - `legacy/`
 - `next/`
 
 Do not move old package docs, source, tests, tooling, or CI back into the root.
 Do not place new engine implementation files in the root.
+Keep root `plan/` limited to workspace-level Change Contracts and audit trails;
+target architecture, subsystem contracts, verification assets, donor docs, and
+transition source material still live under `next/iwb_canvas_engine_next/docs/`.
 
 ## Legacy Boundary
 
@@ -61,10 +65,14 @@ Put all new-engine artifacts here:
 - guardrail registries;
 - release gates.
 
-The current transition source documents live under:
+The current transition source documents live under the role-based split
+documentation:
 
-- `next/iwb_canvas_engine_next/docs/iwb_canvas_engine_next_full_implementation_plan_v2.md`
-- `next/iwb_canvas_engine_next/docs/iwb_canvas_engine_next_donor_inventory.md`
+- `next/iwb_canvas_engine_next/docs/split/architecture/README.md`
+- `next/iwb_canvas_engine_next/docs/split/contracts/`
+- `next/iwb_canvas_engine_next/docs/split/verification/`
+- `next/iwb_canvas_engine_next/docs/split/planning/`
+- `next/iwb_canvas_engine_next/docs/split/donors/`
 
 Do not treat legacy architecture docs as binding architecture for the new
 engine. They are evidence for old behavior only.
@@ -110,7 +118,9 @@ from that package directory unless a root workspace command is more appropriate.
 Write durable project documentation in English unless the user explicitly asks
 for another language. User-facing chat should follow the user's language.
 
-Do not create root-level docs for the new engine. Place them under
+Do not create root-level docs for the new engine, except workspace-level Change
+Contracts under root `plan/`. Place engine architecture, contracts,
+verification, planning, donor docs, and indexes under
 `next/iwb_canvas_engine_next/docs/`.
 
 ## Change Discipline

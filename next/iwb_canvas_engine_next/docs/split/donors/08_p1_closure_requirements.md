@@ -1,7 +1,7 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `donors_08_p1_closure_requirements`
-Source: `docs/iwb_canvas_engine_next_donor_inventory.md / P1 closure requirements`
-Canonical original: `docs/iwb_canvas_engine_next_donor_inventory.md`
+Source: `docs/split/_registry/donors.yaml / P1 closure requirements`
+Canonical source: `docs/split/_registry/donors.yaml`
 Feeds registry: `docs/split/_registry/donors.yaml`
 Feeds indexes:
 - `docs/split/indexes/donor_to_phase.md`
