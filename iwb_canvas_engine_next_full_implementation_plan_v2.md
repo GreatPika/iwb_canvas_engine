@@ -1566,7 +1566,6 @@ v1 resource rules:
 - no asset-bundle loading;
 - no file loading;
 - no remote/network loading;
-- in-document binary resource sources are not part of v1;
 - resourceResolver is synchronous in v1;
 - all ui.Image objects returned by CanvasResourceResolver are app-owned;
 - the engine never disposes app-provided ui.Image instances;
@@ -2333,9 +2332,7 @@ Semantics:
 - no engine IO;
 - no asset-bundle loading;
 - no file loading;
-- no remote/network loading;
-- no in-document binary resource sources;
-- no SVG resources.
+- no remote/network loading.
 ```
 
 ### 7.6 Missing resource placeholder
@@ -3482,8 +3479,6 @@ Deliverables:
 - no asset-bundle loading;
 - no file loading;
 - no remote/network loading;
-- no in-document binary resource sources;
-- no SVG resources.
 ```
 
 Exit criteria:
@@ -3721,21 +3716,7 @@ Release is blocked unless all statements are true:
 
 ## 28. Immediate changes compared with the previous draft
 
-This corrected plan explicitly removes from engine deliverables:
-
-```text
-- Legacy API Ledger;
-- old public symbol compatibility;
-- extra camera transforms;
-- simultaneous multi-pointer gesture handling;
-- SVG resource/element runtime;
-- URI resource source;
-- in-document binary resource payloads;
-- async resource resolver;
-- engine resource ownership model for resolved resources;
-- engine IO for URI or remote resource loading;
-- unknown-field rejection beyond the v1 policy.
-```
+This corrected plan removes legacy API compatibility deliverables and old public symbol compatibility.
 
 It adds required implementation details that were missing:
 
