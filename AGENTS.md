@@ -1,94 +1,128 @@
-# Product boundary
+# Workspace Instructions
 
-`iwb_canvas_engine` is a Flutter/Dart canvas engine package. It owns scene
-modeling, rendering, input handling, and JSON serialization. It does not own
-app UI, product workflows, or backend logic.
+This repository is now a workspace with two intentionally separated areas:
 
-## Document map
+- `legacy/iwb_canvas_engine/` — the existing engine. Treat it as a functional
+  oracle and implementation donor only.
+- `next/iwb_canvas_engine_next/` — the new engine package and the only place
+  for new architecture, new implementation, new tests, and new transition docs.
 
-- `README.md` for package overview and getting started.
-- `API_GUIDE.md` for public API, runtime behavior, and migration notes.
-- `ARCHITECTURE.md` for architecture, invariants, and module boundaries.
-- `docs/ARCHITECTURE_ATLAS.md` for architecture and proof family navigation,
-  including routes from families to evidence and known issues.
-- `CHANGELOG.md` for released and unreleased user-visible changes.
-- `KNOWN_ISSUES.md` for active, confirmed defects with mechanical evidence and
-  constrained entry rules.
-- `PLAN.md` for the active roadmap.
+The repository root is only the workspace/control layer.
 
-## Plan workflow
+## Root Ownership
 
-- `PLAN.md` is the active roadmap and the source of truth for planned work.
-- When adding a new step to `PLAN.md`, use `$change-contract` directly as the
-  canonical step-contract template. Do not infer the required structure from
-  existing plan steps.
-- Follow the step contract as written during implementation. If a step contract
-  conflicts with the current code, guardrails, tests, or repository-local
-  boundary enforcement, stop implementation, report the exact contradiction with
-  file-level evidence, and resolve the contract or enforcement before
-  continuing. Do not silently reinterpret the plan.
-- After completing a plan step, update the corresponding checkbox entries in
-  `PLAN.md` and any linked step document so finished items are marked done in
-  the same change.
+Keep root files limited to workspace-level configuration and agent guidance:
 
-## Documentation hygiene
+- `AGENTS.md`
+- `.agents/`
+- `.gitignore`
+- `analysis_options.yaml`
+- `dart_test.yaml`
+- `pubspec.yaml`
+- `pubspec.lock`
+- `legacy/`
+- `next/`
 
-- Public behavior changes must update:
-  - `README.md` using `$readme-sync`
-  - `API_GUIDE.md` using `$api-guide-sync`
-  - `ARCHITECTURE.md` using `$architecture-sync` when invariants, architecture, or module ownership change
-  - `CHANGELOG.md` using `$changelog-sync`
-- Documentation should stay release-ready: concise, current, and free of stale
-  implementation detail.
-- `KNOWN_ISSUES.md` is for active confirmed defects only. If an issue is listed
-  there, it is unresolved. Remove it in the same change that fixes it and adds
-  regression proof. Do not use it for feature ideas, temporary notes, archived
-  history, or unverified suspicions.
+Do not move old package docs, source, tests, tooling, or CI back into the root.
+Do not place new engine implementation files in the root.
 
-## Invariant discipline
+## Legacy Boundary
 
-- Add or modify invariant definitions in `tool/invariant_registry.dart`.
-- Reference enforcement with exact `// INV:<id>` markers in `test/**` or `tool/**`.
+`legacy/iwb_canvas_engine/` is not the target implementation area.
 
-## Verification
+Use it only to:
 
-After any code change, run `dart run tool/run_verification_preset.dart run --preset=required_code_change --changed-paths-file=<path-or->` and provide every modified, added, renamed, or deleted repository-relative path as one line from that file or from stdin.
+- inspect old behavior;
+- run old tests or examples when needed;
+- identify donor code;
+- compare functional behavior;
+- copy or adapt code into `next/iwb_canvas_engine_next/` when explicitly useful.
 
-- Run targeted tool-test verification only for tool-impacting changes or when
-  debugging a tool failure; otherwise rely on the required preset's resolved
-  plan.
-- For new production files under `lib/**`, run `dcm calculate-metrics` and keep
-  them green against the current thresholds.
-- Run `dcm calculate-metrics` for legacy files only when adding a large new
-  unit, substantially rewriting a hotspot, or validating a suspected metric
-  regression.
-- Do not run package tests directly with plain `dart test` in this repository.
-  Use the verification preset or `flutter test` for production/package-owned
-  surfaces. For `test/tool/**`, use `dart run tool/run_tool_tests.dart` or the
-  verification preset; that repository wrapper owns its internal `dart test`
-  invocation.
-- Coverage is shell-only. After a failed coverage gate, prefer
-  `dart run tool/check_coverage.dart --json` for machine-first triage, add
-  `--uncovered-branches` when branch diagnostics matter, and add
-  `--changed-only` when the next action should be limited to changed
-  `lib/src/**` files from the current git worktree. The JSON `gaps` payload is
-  the canonical actionable output and already includes candidate test files
-  plus preferred verification step ids when they can be resolved.
-- For minimal runtime/listener contract repros that need a clean package
-  boundary, use `dart run tool/run_temp_pkg_test.dart`. Do not hand-assemble
-  ad hoc `/tmp` test packages or run manual import/path wiring when this tool
-  fits the task.
-- Run heavyweight verification commands sequentially. Do not run
-  `flutter test --coverage ...` in parallel with
-  `dart run tool/run_tool_tests.dart`.
-- Documentation-only changes do not require the full Flutter pipeline unless
-  the task also changes code, tooling contracts, or executable examples.
+Do not modify legacy code unless the user explicitly asks for a legacy fix or
+the change is required to keep the moved legacy package runnable after workspace
+layout work.
 
-## Release hygiene
+The new engine must not import the legacy package or any `legacy/**` source.
 
-- Add user-visible changes under `## Unreleased` in `CHANGELOG.md`.
-- Move `Unreleased` entries into a versioned section during release cut.
-- Prefix breaking changes with `Breaking:`.
-- Before publish, also run:
-  - `dart doc`
-  - `dart pub publish --dry-run`
+## Next Boundary
+
+`next/iwb_canvas_engine_next/` owns the new library.
+
+Put all new-engine artifacts here:
+
+- package source;
+- tests;
+- tools;
+- diagrams;
+- architecture docs;
+- implementation plans;
+- functional ledgers;
+- donor registries;
+- guardrail registries;
+- release gates.
+
+The current transition source documents live under:
+
+- `next/iwb_canvas_engine_next/docs/iwb_canvas_engine_next_full_implementation_plan_v2.md`
+- `next/iwb_canvas_engine_next/docs/iwb_canvas_engine_next_donor_inventory.md`
+
+Do not treat legacy architecture docs as binding architecture for the new
+engine. They are evidence for old behavior only.
+
+## Donor Rules
+
+Old code may be used as a donor only through one of these modes:
+
+- `copy` — move the idea or implementation shape into `next`, then make it
+  compile under the new API and package layout.
+- `adapt` — preserve behavior while changing ownership, naming, API, or data
+  shape for the new architecture.
+- `rewrite-reference` — use the old code/tests only as behavioral evidence.
+
+Every copied or adapted donor must have ported or equivalent tests in `next`.
+If a donor conflicts with the new API, package layout, or no-legacy boundary,
+the new architecture wins.
+
+## Workspace Commands
+
+Use the workspace root for dependency resolution:
+
+```bash
+flutter pub get
+dart pub workspace list
+dart analyze
+```
+
+Use package directories for package-specific app/test runs. For example:
+
+```bash
+cd legacy/iwb_canvas_engine/example
+flutter run -d macos
+flutter analyze
+flutter test --no-pub test/widget_test.dart
+```
+
+When new code appears under `next/iwb_canvas_engine_next/`, run verification
+from that package directory unless a root workspace command is more appropriate.
+
+## Documentation
+
+Write durable project documentation in English unless the user explicitly asks
+for another language. User-facing chat should follow the user's language.
+
+Do not create root-level docs for the new engine. Place them under
+`next/iwb_canvas_engine_next/docs/`.
+
+## Change Discipline
+
+Prefer mechanical moves for layout changes.
+
+Before changing code, identify whether the change belongs to:
+
+- workspace root;
+- legacy oracle/donor package;
+- next package.
+
+Keep these boundaries explicit in final reports. If a command fails after a
+layout change, first suspect stale generated files, workspace config, or old
+paths before changing implementation code.

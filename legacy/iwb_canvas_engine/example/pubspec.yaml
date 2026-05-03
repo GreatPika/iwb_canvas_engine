@@ -3,6 +3,8 @@ description: Example app for iwb_canvas_engine.
 publish_to: 'none'
 version: 0.0.1
 
+resolution: workspace
+
 environment:
   sdk: ^3.10.4
 

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Changelog Sync"
-  short_description: "Keep the changelog concise, user-facing, and aligned with real public changes."
-  default_prompt: "Audit and update CHANGELOG.md so unreleased and released sections reflect actual user-visible package changes."

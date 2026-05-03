@@ -1,4 +1,0 @@
-interface:
-  display_name: "Architecture Sync"
-  short_description: "Keep the architecture document concise, normative, and synced with code."
-  default_prompt: "Audit and update ARCHITECTURE.md after architecture-affecting repository changes."

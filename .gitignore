@@ -1,33 +1,18 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
+# macOS / editors
 .DS_Store
-.atom/
-.buildlog/
-.history
-.svn/
-migrate_working_dir/
-
-# IntelliJ related
+.idea/
 *.iml
 *.ipr
 *.iws
-.idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-# Libraries should not include pubspec.lock, per https://dart.dev/guides/libraries/private-files#pubspeclock.
-/pubspec.lock
-**/doc/api/
+# Dart / Flutter workspace state
 .dart_tool/
 .flutter-plugins-dependencies
-/build/
-/coverage/
 
-# Internal project docs are excluded from pub.dev packaging via `.pubignore`.
+# Build outputs
+build/
+coverage/
+**/build/
+**/.dart_tool/
+
+# Pub lock files are kept intentionally at the workspace/package level.
