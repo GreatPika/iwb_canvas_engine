@@ -149,6 +149,43 @@ tool/goldens/public_api_symbols.txt
 - palette и grid.color существуют в старом документе и не должны потеряться.
 ```
 
+### 1.1 Current-code donor inventory
+
+Старый движок является не только functional oracle, но и donor source для
+проверенных алгоритмов, контрактов, тестов и guardrails.
+
+Donor reuse не означает legacy facade:
+
+```text
+- новый package не импортирует старый package или старые runtime paths;
+- old public API names не становятся public API нового package;
+- donor code переносится только как copy/adapt/rewrite-reference;
+- каждый перенесённый donor обязан получить ported/equivalent tests;
+- если donor shape конфликтует с новым API v1, package layout или no-legacy
+  rules, новое решение имеет приоритет.
+```
+
+Подробный donor inventory вынесен в отдельный файл:
+
+```text
+iwb_canvas_engine_next_donor_inventory.md
+```
+
+P1 обязан закрыть этот inventory до начала deep runtime implementation.
+Особенно важные donor families:
+
+```text
+- geometry kernel: Transform2D, numeric policy, geometry helpers, local bounds;
+- hit-test/eraser: node geometry rules, path/stroke hit-test, eraser projection;
+- spatial/render: uniform grid index, paint admission, frame read, render caches;
+- DTO/validation: limits, structured errors, value validators, immutability,
+  tri-state update semantics, structure validation;
+- codec/migration: JSON guards, path-aware readers, primitive parsers, schema
+  family decode/encode behavior and schema v7 migration references;
+- interaction/edit: pointer tracker/router/normalizer, gesture ownership,
+  action/text events, mutation boundary and staged loadDocument semantics.
+```
+
 ---
 
 ## 2. Несущая модель новой библиотеки
@@ -3380,7 +3417,9 @@ Deliverables:
 
 ```text
 - old_to_next_functional_matrix.md;
+- iwb_canvas_engine_next_donor_inventory.md;
 - old oracle file list;
+- donor file list with copy/adapt/rewrite-reference decisions;
 - example scenario inventory;
 - action/event inventory;
 - pointer/preview inventory;
@@ -3394,6 +3433,8 @@ Exit criteria:
 ```text
 functional ledger rows are complete;
 each row has oracle file(s), new API target and test id;
+each reusable donor has a decision, target phase and required ported tests;
+copy/adapt donors are linked from the relevant implementation phase;
 no implementation proceeds without green inventory guardrail.
 ```
 
