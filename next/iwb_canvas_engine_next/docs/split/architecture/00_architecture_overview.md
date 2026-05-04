@@ -8,18 +8,14 @@ Must read before editing:
 - `section_01_legacy_oracle` -> `docs/split/planning/legacy_oracle.md`
 - `section_03_package_layout` -> `docs/split/architecture/02_package_boundaries.md`
 - `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
-Depends on:
-- `section_01_legacy_oracle` -> `docs/split/planning/legacy_oracle.md`
-- `section_03_package_layout` -> `docs/split/architecture/02_package_boundaries.md`
-- `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
 Feeds phases:
 - `P0`
 - `P1.5`
 Related donors:
 - `none`
 Related diagrams:
-- `docs/split/diagrams/README.md#c4_context` -> `docs/split/diagrams/generated/c4_context.mmd`
-- `docs/split/diagrams/README.md#c4_container` -> `docs/split/diagrams/generated/c4_container.mmd`
+- `c4_context`
+- `c4_container`
 Required tests:
 - `test.api_contract.v1_scope_gate`
 Guardrails:

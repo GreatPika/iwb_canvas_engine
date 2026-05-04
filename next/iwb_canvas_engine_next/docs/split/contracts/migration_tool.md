@@ -8,10 +8,6 @@ Must read before editing:
 - `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
 - `section_09_accepted_differences` -> `docs/split/architecture/04_decisions_and_differences.md`
 - `section_19_codec_boundary` -> `docs/split/contracts/codec_boundary.md`
-Depends on:
-- `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
-- `section_09_accepted_differences` -> `docs/split/architecture/04_decisions_and_differences.md`
-- `section_19_codec_boundary` -> `docs/split/contracts/codec_boundary.md`
 Feeds phases:
 - `P11`
 Related donors:
@@ -21,7 +17,7 @@ Related donors:
 - `codec_scene_codec_flow`
 - `codec_validation_path_surface`
 Related diagrams:
-- `docs/split/diagrams/README.md#dfd_migration_tool` -> `docs/split/diagrams/generated/dfd_migration_tool.mmd`
+- `dfd_migration_tool`
 Required tests:
 - `test.migration.old_fixture_migration`
 - `test.migration.no_silent_data_loss`

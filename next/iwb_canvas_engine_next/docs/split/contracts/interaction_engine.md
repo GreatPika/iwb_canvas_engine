@@ -10,12 +10,6 @@ Must read before editing:
 - `section_12_load_document` -> `docs/split/contracts/load_document.md`
 - `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
 - `section_16_geometry_policy` -> `docs/split/contracts/geometry.md`
-Depends on:
-- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
-- `section_11_edit_kernel` -> `docs/split/contracts/edit_kernel.md`
-- `section_12_load_document` -> `docs/split/contracts/load_document.md`
-- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
-- `section_16_geometry_policy` -> `docs/split/contracts/geometry.md`
 Feeds phases:
 - `P9`
 - `P10`
@@ -30,22 +24,22 @@ Related donors:
 - `interaction_draw_coordinator`
 - `interaction_mutation_boundary`
 Related diagrams:
-- `docs/split/diagrams/README.md#dfd_pointer_preview_commit` -> `docs/split/diagrams/generated/dfd_pointer_preview_commit.mmd`
-- `docs/split/diagrams/README.md#seq_selected_move_preview_commit` -> `docs/split/diagrams/generated/seq_selected_move_preview_commit.mmd`
-- `docs/split/diagrams/README.md#seq_selected_move_cancel` -> `docs/split/diagrams/generated/seq_selected_move_cancel.mmd`
-- `docs/split/diagrams/README.md#seq_marquee_select` -> `docs/split/diagrams/generated/seq_marquee_select.mmd`
-- `docs/split/diagrams/README.md#seq_pencil_marker_commit` -> `docs/split/diagrams/generated/seq_pencil_marker_commit.mmd`
-- `docs/split/diagrams/README.md#seq_line_two_tap_commit` -> `docs/split/diagrams/generated/seq_line_two_tap_commit.mmd`
-- `docs/split/diagrams/README.md#seq_eraser_commit` -> `docs/split/diagrams/generated/seq_eraser_commit.mmd`
-- `docs/split/diagrams/README.md#seq_text_edit_request` -> `docs/split/diagrams/generated/seq_text_edit_request.mmd`
-- `docs/split/diagrams/README.md#seq_dispose_during_gesture` -> `docs/split/diagrams/generated/seq_dispose_during_gesture.mmd`
-- `docs/split/diagrams/README.md#state_pointer_session` -> `docs/split/diagrams/generated/state_pointer_session.mmd`
-- `docs/split/diagrams/README.md#state_select_marquee` -> `docs/split/diagrams/generated/state_select_marquee.mmd`
-- `docs/split/diagrams/README.md#state_selected_move` -> `docs/split/diagrams/generated/state_selected_move.mmd`
-- `docs/split/diagrams/README.md#state_pencil_marker_draw` -> `docs/split/diagrams/generated/state_pencil_marker_draw.mmd`
-- `docs/split/diagrams/README.md#state_two_tap_line` -> `docs/split/diagrams/generated/state_two_tap_line.mmd`
-- `docs/split/diagrams/README.md#state_eraser` -> `docs/split/diagrams/generated/state_eraser.mmd`
-- `docs/split/diagrams/README.md#state_pending_text_edit_request` -> `docs/split/diagrams/generated/state_pending_text_edit_request.mmd`
+- `dfd_pointer_preview_commit`
+- `seq_selected_move_preview_commit`
+- `seq_selected_move_cancel`
+- `seq_marquee_select`
+- `seq_pencil_marker_commit`
+- `seq_line_two_tap_commit`
+- `seq_eraser_commit`
+- `seq_text_edit_request`
+- `seq_dispose_during_gesture`
+- `state_pointer_session`
+- `state_select_marquee`
+- `state_selected_move`
+- `state_pencil_marker_draw`
+- `state_two_tap_line`
+- `state_eraser`
+- `state_pending_text_edit_request`
 Required tests:
 - `test.events.typed_action_payloads`
 - `test.events.commands_emit_user_actions`

@@ -8,10 +8,6 @@ Must read before editing:
 - `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
 - `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
 - `section_17_spatial_kernel` -> `docs/split/contracts/spatial_kernel.md`
-Depends on:
-- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
-- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
-- `section_17_spatial_kernel` -> `docs/split/contracts/spatial_kernel.md`
 Feeds phases:
 - `P7`
 - `P8`
@@ -26,7 +22,7 @@ Related donors:
 - `direct_local_bounds_policy`
 - `direct_paint_admission`
 Related diagrams:
-- `docs/split/diagrams/README.md#dfd_pointer_preview_commit` -> `docs/split/diagrams/generated/dfd_pointer_preview_commit.mmd`
+- `dfd_pointer_preview_commit`
 Required tests:
 - `test.geometry.hit_policy`
 Guardrails:

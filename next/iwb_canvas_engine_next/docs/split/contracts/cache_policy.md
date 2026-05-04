@@ -8,10 +8,6 @@ Must read before editing:
 - `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
 - `section_17_spatial_kernel` -> `docs/split/contracts/spatial_kernel.md`
 - `section_24_benchmarks` -> `docs/split/verification/benchmarks.md`
-Depends on:
-- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
-- `section_17_spatial_kernel` -> `docs/split/contracts/spatial_kernel.md`
-- `section_24_benchmarks` -> `docs/split/verification/benchmarks.md`
 Feeds phases:
 - `P8`
 - `P10`
@@ -22,7 +18,7 @@ Related donors:
 - `static_layer_cache`
 - `text_stroke_path_metrics_caches`
 Related diagrams:
-- `docs/split/diagrams/README.md#dfd_cache_invalidation` -> `docs/split/diagrams/generated/dfd_cache_invalidation.mmd`
+- `dfd_cache_invalidation`
 Required tests:
 - `none`
 Guardrails:

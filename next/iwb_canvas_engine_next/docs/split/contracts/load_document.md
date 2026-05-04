@@ -9,11 +9,6 @@ Must read before editing:
 - `section_11_edit_kernel` -> `docs/split/contracts/edit_kernel.md`
 - `section_13_operation_matrix` -> `docs/split/contracts/operation_matrix.md`
 - `section_14_interaction_engine` -> `docs/split/contracts/interaction_engine.md`
-Depends on:
-- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
-- `section_11_edit_kernel` -> `docs/split/contracts/edit_kernel.md`
-- `section_13_operation_matrix` -> `docs/split/contracts/operation_matrix.md`
-- `section_14_interaction_engine` -> `docs/split/contracts/interaction_engine.md`
 Feeds phases:
 - `P6`
 - `P9`
@@ -22,9 +17,9 @@ Related donors:
 - `validated_import_draft`
 - `interaction_mutation_boundary`
 Related diagrams:
-- `docs/split/diagrams/README.md#dfd_load_document_success_failure` -> `docs/split/diagrams/generated/dfd_load_document_success_failure.mmd`
-- `docs/split/diagrams/README.md#seq_load_document_success` -> `docs/split/diagrams/generated/seq_load_document_success.mmd`
-- `docs/split/diagrams/README.md#seq_load_document_failure` -> `docs/split/diagrams/generated/seq_load_document_failure.mmd`
+- `dfd_load_document_success_failure`
+- `seq_load_document_success`
+- `seq_load_document_failure`
 Required tests:
 - `test.load_document.staged_success_failure`
 Guardrails:

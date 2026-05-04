@@ -9,11 +9,6 @@ Must read before editing:
 - `section_03_package_layout` -> `docs/split/architecture/02_package_boundaries.md`
 - `section_21_diagrams` -> `docs/split/architecture/diagrams.md`
 - `section_27_final_release_gates` -> `docs/split/verification/release_gates.md`
-Depends on:
-- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
-- `section_03_package_layout` -> `docs/split/architecture/02_package_boundaries.md`
-- `section_21_diagrams` -> `docs/split/architecture/diagrams.md`
-- `section_27_final_release_gates` -> `docs/split/verification/release_gates.md`
 Feeds phases:
 - `P0`
 - `P12`

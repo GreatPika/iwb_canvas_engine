@@ -16,8 +16,8 @@ documents as the source for current runtime ownership.
    runtime shape.
 4. Read `03_data_model.md` and `04_decisions_and_differences.md` for state
    ownership and accepted differences from the legacy engine.
-5. Read `diagrams.md` and the generated files in `docs/split/diagrams/generated/` when changing
-   architecture.
+5. Read `diagrams.md` and the Mermaid files in
+   `docs/split/diagrams/generated/` when changing architecture.
 
 ## Role routing
 
@@ -58,8 +58,7 @@ documents as the source for current runtime ownership.
   gates.
 - `planning/` owns transition sequencing and historical context.
 - `donors/` owns old-engine donor rules and reusable evidence.
-- `_registry/` owns machine-readable section, donor, diagram, guardrail, phase,
-  and test relationships.
+- `_registry/` owns machine-readable section coverage and donor records.
 
 ## Mechanical checks
 
@@ -67,7 +66,5 @@ Run these commands from `next/iwb_canvas_engine_next/`:
 
 ```bash
 dart run docs/split/tool/generate_split_context_capsules.dart --check
-dart run docs/split/tool/check_split_navigation.dart
-dart run docs/split/tool/check_split_source_coverage.dart
-dart run docs/split/tool/generate_architecture_diagrams.dart --check
+dart run docs/split/tool/check_split_docs.dart
 ```

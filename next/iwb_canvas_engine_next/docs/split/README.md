@@ -18,11 +18,10 @@ Start architecture work at `architecture/README.md`. Start execution planning at
   draft notes.
 - `donors/`: split donor inventory sections. Donor use is controlled by
   `_registry/donors.yaml`.
-- `diagrams/`: human-readable catalog of required Mermaid deliverables.
+- `diagrams/`: human-readable catalog and Mermaid diagram files.
 - `indexes/`: human-readable maps by phase, subsystem, guardrail, test area, and
   donor relation.
-- `_registry/`: machine-readable coverage records for sections, donors,
-  diagrams, phases, tests, and guardrails.
+- `_registry/`: machine-readable section coverage and donor records.
 - `../../plan/`: workspace-level Change Contracts and audit trails for
   documentation or architecture changes.
 
@@ -44,7 +43,5 @@ Run these commands from `next/iwb_canvas_engine_next/`:
 
 ```bash
 dart run docs/split/tool/generate_split_context_capsules.dart --check
-dart run docs/split/tool/check_split_navigation.dart
-dart run docs/split/tool/check_split_source_coverage.dart
-dart run docs/split/tool/generate_architecture_diagrams.dart --check
+dart run docs/split/tool/check_split_docs.dart
 ```

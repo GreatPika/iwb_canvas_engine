@@ -7,9 +7,6 @@ Owns:
 Must read before editing:
 - `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
 - `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
-Depends on:
-- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
-- `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
 Feeds phases:
 - `P1.5`
 - `P2`
@@ -19,7 +16,7 @@ Related donors:
 - `foundation_validators`
 - `foundation_error_contract`
 Related diagrams:
-- `docs/split/diagrams/README.md#dfd_diagnostics_error_projection` -> `docs/split/diagrams/generated/dfd_diagnostics_error_projection.mmd`
+- `dfd_diagnostics_error_projection`
 Required tests:
 - `test.validation_limits.constructor_and_schema_limits`
 Guardrails:

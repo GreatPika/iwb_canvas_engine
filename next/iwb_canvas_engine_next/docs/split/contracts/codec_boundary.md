@@ -9,11 +9,6 @@ Must read before editing:
 - `section_06_validation_limits` -> `docs/split/contracts/validation_limits.md`
 - `section_20_diagnostics_hub` -> `docs/split/contracts/diagnostics.md`
 - `section_25_migration_tool` -> `docs/split/contracts/migration_tool.md`
-Depends on:
-- `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
-- `section_06_validation_limits` -> `docs/split/contracts/validation_limits.md`
-- `section_20_diagnostics_hub` -> `docs/split/contracts/diagnostics.md`
-- `section_25_migration_tool` -> `docs/split/contracts/migration_tool.md`
 Feeds phases:
 - `P3`
 - `P11`
@@ -28,7 +23,7 @@ Related donors:
 - `codec_scene_codec_flow`
 - `codec_validation_path_surface`
 Related diagrams:
-- `docs/split/diagrams/README.md#dfd_schema_v1_decode_encode` -> `docs/split/diagrams/generated/dfd_schema_v1_decode_encode.mmd`
+- `dfd_schema_v1_decode_encode`
 Required tests:
 - `none`
 Guardrails:

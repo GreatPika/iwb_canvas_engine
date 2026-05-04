@@ -10,12 +10,6 @@ Must read before editing:
 - `section_16_geometry_policy` -> `docs/split/contracts/geometry.md`
 - `section_17_spatial_kernel` -> `docs/split/contracts/spatial_kernel.md`
 - `section_18_cache_policy` -> `docs/split/contracts/cache_policy.md`
-Depends on:
-- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
-- `section_14_interaction_engine` -> `docs/split/contracts/interaction_engine.md`
-- `section_16_geometry_policy` -> `docs/split/contracts/geometry.md`
-- `section_17_spatial_kernel` -> `docs/split/contracts/spatial_kernel.md`
-- `section_18_cache_policy` -> `docs/split/contracts/cache_policy.md`
 Feeds phases:
 - `P8`
 - `P10`
@@ -31,10 +25,10 @@ Related donors:
 - `static_layer_cache`
 - `text_stroke_path_metrics_caches`
 Related diagrams:
-- `docs/split/diagrams/README.md#dfd_main_paint_frame` -> `docs/split/diagrams/generated/dfd_main_paint_frame.mmd`
-- `docs/split/diagrams/README.md#dfd_overlay_frame` -> `docs/split/diagrams/generated/dfd_overlay_frame.mmd`
-- `docs/split/diagrams/README.md#seq_main_paint` -> `docs/split/diagrams/generated/seq_main_paint.mmd`
-- `docs/split/diagrams/README.md#seq_overlay_paint` -> `docs/split/diagrams/generated/seq_overlay_paint.mmd`
+- `dfd_main_paint_frame`
+- `dfd_overlay_frame`
+- `seq_main_paint`
+- `seq_overlay_paint`
 Required tests:
 - `test.store.no_projection_hot_path`
 - `test.frame.main_overlay_capture`

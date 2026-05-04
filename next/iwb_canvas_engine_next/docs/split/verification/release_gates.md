@@ -10,12 +10,6 @@ Must read before editing:
 - `section_23_tests` -> `docs/split/verification/tests.md`
 - `section_24_benchmarks` -> `docs/split/verification/benchmarks.md`
 - `section_26_implementation_phases` -> `docs/split/planning/implementation_phases.md`
-Depends on:
-- `section_21_diagrams` -> `docs/split/architecture/diagrams.md`
-- `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
-- `section_23_tests` -> `docs/split/verification/tests.md`
-- `section_24_benchmarks` -> `docs/split/verification/benchmarks.md`
-- `section_26_implementation_phases` -> `docs/split/planning/implementation_phases.md`
 Feeds phases:
 - `P12`
 Related donors:

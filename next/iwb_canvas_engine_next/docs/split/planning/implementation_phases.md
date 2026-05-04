@@ -8,10 +8,6 @@ Must read before editing:
 - `docs/split/indexes/by_phase.md`
 - `docs/split/indexes/phase_to_donor.md`
 - `section_27_final_release_gates` -> `docs/split/verification/release_gates.md`
-Depends on:
-- `docs/split/indexes/by_phase.md`
-- `docs/split/indexes/phase_to_donor.md`
-- `section_27_final_release_gates` -> `docs/split/verification/release_gates.md`
 Feeds phases:
 - `P0`
 - `P1`

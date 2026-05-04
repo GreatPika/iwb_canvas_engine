@@ -8,10 +8,6 @@ Must read before editing:
 - `section_06_validation_limits` -> `docs/split/contracts/validation_limits.md`
 - `section_19_codec_boundary` -> `docs/split/contracts/codec_boundary.md`
 - `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
-Depends on:
-- `section_06_validation_limits` -> `docs/split/contracts/validation_limits.md`
-- `section_19_codec_boundary` -> `docs/split/contracts/codec_boundary.md`
-- `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
 Feeds phases:
 - `P3`
 - `P12`
@@ -19,7 +15,7 @@ Related donors:
 - `foundation_error_contract`
 - `dto_scene_value_validation`
 Related diagrams:
-- `docs/split/diagrams/README.md#dfd_diagnostics_error_projection` -> `docs/split/diagrams/generated/dfd_diagnostics_error_projection.mmd`
+- `dfd_diagnostics_error_projection`
 Required tests:
 - `none`
 Guardrails:

@@ -10,12 +10,6 @@ Must read before editing:
 - `section_06_validation_limits` -> `docs/split/contracts/validation_limits.md`
 - `section_07_resource_lifecycle` -> `docs/split/contracts/resources.md`
 - `section_21_diagrams` -> `docs/split/architecture/diagrams.md`
-Depends on:
-- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
-- `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
-- `section_06_validation_limits` -> `docs/split/contracts/validation_limits.md`
-- `section_07_resource_lifecycle` -> `docs/split/contracts/resources.md`
-- `section_21_diagrams` -> `docs/split/architecture/diagrams.md`
 Feeds phases:
 - `P1.5`
 - `P2`
@@ -34,8 +28,8 @@ Related donors:
 - `dto_snapshot_behavior`
 - `dto_node_spec_behavior`
 Related diagrams:
-- `docs/split/diagrams/README.md#c4_context` -> `docs/split/diagrams/generated/c4_context.mmd`
-- `docs/split/diagrams/README.md#dfd_public_edit` -> `docs/split/diagrams/generated/dfd_public_edit.mmd`
+- `c4_context`
+- `dfd_public_edit`
 Required tests:
 - `test.api_contract.public_api_v1_compiles_as_written`
 - `test.api_contract.no_undefined_public_type_references`

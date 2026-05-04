@@ -8,10 +8,6 @@ Must read before editing:
 - `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
 - `docs/split/donors/00_reuse_rules.md`
 - `docs/split/donors/01_summary_by_decision.md`
-Depends on:
-- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
-- `docs/split/donors/00_reuse_rules.md`
-- `docs/split/donors/01_summary_by_decision.md`
 Feeds phases:
 - `P1`
 Related donors:

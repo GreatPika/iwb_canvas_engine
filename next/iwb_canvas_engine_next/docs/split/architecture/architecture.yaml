@@ -159,13 +159,3 @@ forbidden_dependencies:
   - from: RuntimeRoot
     to: legacy/iwb_canvas_engine
     reason: The next package must not depend on legacy implementation.
-diagram_targets:
-  - id: c4_context
-    kind: c4_context
-    planned_path: docs/split/diagrams/generated/c4_context.mmd
-  - id: c4_container
-    kind: c4_container
-    planned_path: docs/split/diagrams/generated/c4_container.mmd
-  - id: c4_component_runtime
-    kind: c4_component
-    planned_path: docs/split/diagrams/generated/c4_component_runtime.mmd

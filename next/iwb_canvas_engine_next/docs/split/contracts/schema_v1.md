@@ -9,11 +9,6 @@ Must read before editing:
 - `section_06_validation_limits` -> `docs/split/contracts/validation_limits.md`
 - `section_19_codec_boundary` -> `docs/split/contracts/codec_boundary.md`
 - `section_25_migration_tool` -> `docs/split/contracts/migration_tool.md`
-Depends on:
-- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
-- `section_06_validation_limits` -> `docs/split/contracts/validation_limits.md`
-- `section_19_codec_boundary` -> `docs/split/contracts/codec_boundary.md`
-- `section_25_migration_tool` -> `docs/split/contracts/migration_tool.md`
 Feeds phases:
 - `P3`
 Related donors:
@@ -28,7 +23,7 @@ Related donors:
 - `codec_validation_path_surface`
 - `dto_boundary_schema`
 Related diagrams:
-- `docs/split/diagrams/README.md#dfd_schema_v1_decode_encode` -> `docs/split/diagrams/generated/dfd_schema_v1_decode_encode.mmd`
+- `dfd_schema_v1_decode_encode`
 Required tests:
 - `test.schema_v1.known_fields_validation`
 - `test.schema_v1.resources_appkey_only`

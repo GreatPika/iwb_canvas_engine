@@ -8,10 +8,6 @@ Must read before editing:
 - `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
 - `section_17_spatial_kernel` -> `docs/split/contracts/spatial_kernel.md`
 - `section_18_cache_policy` -> `docs/split/contracts/cache_policy.md`
-Depends on:
-- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
-- `section_17_spatial_kernel` -> `docs/split/contracts/spatial_kernel.md`
-- `section_18_cache_policy` -> `docs/split/contracts/cache_policy.md`
 Feeds phases:
 - `P12`
 Related donors:

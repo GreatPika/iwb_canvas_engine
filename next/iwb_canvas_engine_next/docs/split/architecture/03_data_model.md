@@ -9,11 +9,6 @@ Must read before editing:
 - `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
 - `section_11_edit_kernel` -> `docs/split/contracts/edit_kernel.md`
 - `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
-Depends on:
-- `section_02_architecture_model` -> `docs/split/architecture/01_runtime_ownership.md`
-- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
-- `section_11_edit_kernel` -> `docs/split/contracts/edit_kernel.md`
-- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
 Feeds phases:
 - `P5`
 - `P6`
@@ -23,8 +18,8 @@ Related donors:
 - `store_scene_controller_read_paths`
 - `dto_node_boundary_mapping`
 Related diagrams:
-- `docs/split/diagrams/README.md#c4_component_runtime` -> `docs/split/diagrams/generated/c4_component_runtime.mmd`
-- `docs/split/diagrams/README.md#dfd_cache_invalidation` -> `docs/split/diagrams/generated/dfd_cache_invalidation.mmd`
+- `c4_component_runtime`
+- `dfd_cache_invalidation`
 Required tests:
 - `test.store.read_document_projection`
 - `test.store.no_projection_hot_path`

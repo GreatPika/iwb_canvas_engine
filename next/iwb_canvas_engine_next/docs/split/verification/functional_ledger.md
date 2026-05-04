@@ -8,10 +8,6 @@ Must read before editing:
 - `section_01_legacy_oracle` -> `docs/split/planning/legacy_oracle.md`
 - `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
 - `docs/split/donors/00_reuse_rules.md`
-Depends on:
-- `section_01_legacy_oracle` -> `docs/split/planning/legacy_oracle.md`
-- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
-- `docs/split/donors/00_reuse_rules.md`
 Feeds phases:
 - `P1`
 - `P12`

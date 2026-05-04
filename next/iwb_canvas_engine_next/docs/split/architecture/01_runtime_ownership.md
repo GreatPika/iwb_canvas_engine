@@ -8,18 +8,14 @@ Must read before editing:
 - `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
 - `section_03_package_layout` -> `docs/split/architecture/02_package_boundaries.md`
 - `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
-Depends on:
-- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
-- `section_03_package_layout` -> `docs/split/architecture/02_package_boundaries.md`
-- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
 Feeds phases:
 - `P0`
 - `P5`
 Related donors:
 - `none`
 Related diagrams:
-- `docs/split/diagrams/README.md#c4_container` -> `docs/split/diagrams/generated/c4_container.mmd`
-- `docs/split/diagrams/README.md#c4_component_runtime` -> `docs/split/diagrams/generated/c4_component_runtime.mmd`
+- `c4_container`
+- `c4_component_runtime`
 Required tests:
 - `none`
 Guardrails:

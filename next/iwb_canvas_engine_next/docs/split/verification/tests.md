@@ -10,12 +10,6 @@ Must read before editing:
 - `section_07_resource_lifecycle` -> `docs/split/contracts/resources.md`
 - `section_14_interaction_engine` -> `docs/split/contracts/interaction_engine.md`
 - `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
-Depends on:
-- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
-- `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
-- `section_07_resource_lifecycle` -> `docs/split/contracts/resources.md`
-- `section_14_interaction_engine` -> `docs/split/contracts/interaction_engine.md`
-- `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
 Feeds phases:
 - `P2`
 - `P3`

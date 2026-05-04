@@ -8,16 +8,12 @@ Must read before editing:
 - `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
 - `section_02_architecture_model` -> `docs/split/architecture/01_runtime_ownership.md`
 - `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
-Depends on:
-- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
-- `section_02_architecture_model` -> `docs/split/architecture/01_runtime_ownership.md`
-- `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
 Feeds phases:
 - `P0`
 Related donors:
 - `none`
 Related diagrams:
-- `docs/split/diagrams/README.md#c4_container` -> `docs/split/diagrams/generated/c4_container.mmd`
+- `c4_container`
 Required tests:
 - `test.api_contract.no_old_public_symbols`
 Guardrails:

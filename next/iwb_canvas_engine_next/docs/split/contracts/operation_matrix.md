@@ -8,17 +8,13 @@ Must read before editing:
 - `section_11_edit_kernel` -> `docs/split/contracts/edit_kernel.md`
 - `section_12_load_document` -> `docs/split/contracts/load_document.md`
 - `section_23_tests` -> `docs/split/verification/tests.md`
-Depends on:
-- `section_11_edit_kernel` -> `docs/split/contracts/edit_kernel.md`
-- `section_12_load_document` -> `docs/split/contracts/load_document.md`
-- `section_23_tests` -> `docs/split/verification/tests.md`
 Feeds phases:
 - `P6`
 Related donors:
 - `interaction_mutation_boundary`
 Related diagrams:
-- `docs/split/diagrams/README.md#seq_edit_success` -> `docs/split/diagrams/generated/seq_edit_success.mmd`
-- `docs/split/diagrams/README.md#seq_edit_rollback` -> `docs/split/diagrams/generated/seq_edit_rollback.mmd`
+- `seq_edit_success`
+- `seq_edit_rollback`
 Required tests:
 - `test.edit_kernel.sync_non_nested_async_stale`
 Guardrails:

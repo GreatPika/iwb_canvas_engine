@@ -8,10 +8,6 @@ Must read before editing:
 - `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
 - `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
 - `section_16_geometry_policy` -> `docs/split/contracts/geometry.md`
-Depends on:
-- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
-- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
-- `section_16_geometry_policy` -> `docs/split/contracts/geometry.md`
 Feeds phases:
 - `P7`
 - `P8`
@@ -20,7 +16,7 @@ Related donors:
 - `spatial_index_cache`
 - `store_scene_controller_read_paths`
 Related diagrams:
-- `docs/split/diagrams/README.md#dfd_cache_invalidation` -> `docs/split/diagrams/generated/dfd_cache_invalidation.mmd`
+- `dfd_cache_invalidation`
 Required tests:
 - `test.spatial.touched_update`
 Guardrails:

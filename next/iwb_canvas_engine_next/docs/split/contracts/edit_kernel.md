@@ -9,11 +9,6 @@ Must read before editing:
 - `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
 - `section_12_load_document` -> `docs/split/contracts/load_document.md`
 - `section_13_operation_matrix` -> `docs/split/contracts/operation_matrix.md`
-Depends on:
-- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
-- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
-- `section_12_load_document` -> `docs/split/contracts/load_document.md`
-- `section_13_operation_matrix` -> `docs/split/contracts/operation_matrix.md`
 Feeds phases:
 - `P6`
 Related donors:
@@ -22,11 +17,11 @@ Related donors:
 - `validated_import_draft`
 - `dto_document_helpers`
 Related diagrams:
-- `docs/split/diagrams/README.md#c4_code_edit_kernel` -> `docs/split/diagrams/generated/c4_code_edit_kernel.mmd`
-- `docs/split/diagrams/README.md#dfd_public_edit` -> `docs/split/diagrams/generated/dfd_public_edit.mmd`
-- `docs/split/diagrams/README.md#seq_edit_success` -> `docs/split/diagrams/generated/seq_edit_success.mmd`
-- `docs/split/diagrams/README.md#seq_edit_rollback` -> `docs/split/diagrams/generated/seq_edit_rollback.mmd`
-- `docs/split/diagrams/README.md#state_edit_session` -> `docs/split/diagrams/generated/state_edit_session.mmd`
+- `c4_code_edit_kernel`
+- `dfd_public_edit`
+- `seq_edit_success`
+- `seq_edit_rollback`
+- `state_edit_session`
 Required tests:
 - `test.events.low_level_mutations_do_not_emit_actions`
 - `test.edit_kernel.sync_non_nested_async_stale`

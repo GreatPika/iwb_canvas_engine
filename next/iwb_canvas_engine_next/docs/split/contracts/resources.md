@@ -8,19 +8,15 @@ Must read before editing:
 - `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
 - `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
 - `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
-Depends on:
-- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
-- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
-- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
 Feeds phases:
 - `P4`
 - `P10`
 Related donors:
 - `none`
 Related diagrams:
-- `docs/split/diagrams/README.md#dfd_resource_resolution` -> `docs/split/diagrams/generated/dfd_resource_resolution.mmd`
-- `docs/split/diagrams/README.md#seq_resource_resolution` -> `docs/split/diagrams/generated/seq_resource_resolution.mmd`
-- `docs/split/diagrams/README.md#state_resource_resolution` -> `docs/split/diagrams/generated/state_resource_resolution.mmd`
+- `dfd_resource_resolution`
+- `seq_resource_resolution`
+- `state_resource_resolution`
 Required tests:
 - `test.schema_v1.resources_appkey_only`
 - `test.schema_v1.reject_unknown_resource_source_kind`

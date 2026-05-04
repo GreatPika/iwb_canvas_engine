@@ -8,10 +8,6 @@ Must read before editing:
 - `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
 - `section_08_functional_ledger` -> `docs/split/verification/functional_ledger.md`
 - `section_25_migration_tool` -> `docs/split/contracts/migration_tool.md`
-Depends on:
-- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
-- `section_08_functional_ledger` -> `docs/split/verification/functional_ledger.md`
-- `section_25_migration_tool` -> `docs/split/contracts/migration_tool.md`
 Feeds phases:
 - `P1.5`
 - `P2`
@@ -19,7 +15,7 @@ Feeds phases:
 Related donors:
 - `none`
 Related diagrams:
-- `docs/split/diagrams/README.md#dfd_migration_tool` -> `docs/split/diagrams/generated/dfd_migration_tool.mmd`
+- `dfd_migration_tool`
 Required tests:
 - `none`
 Guardrails:
