@@ -65,14 +65,14 @@ Put all new-engine artifacts here:
 - guardrail registries;
 - release gates.
 
-The current transition source documents live under the role-based split
+The current transition source documents live under the role-based next-engine
 documentation:
 
-- `next/iwb_canvas_engine_next/docs/split/architecture/README.md`
-- `next/iwb_canvas_engine_next/docs/split/contracts/`
-- `next/iwb_canvas_engine_next/docs/split/verification/`
-- `next/iwb_canvas_engine_next/docs/split/planning/`
-- `next/iwb_canvas_engine_next/docs/split/donors/`
+- `next/iwb_canvas_engine_next/docs/architecture/README.md`
+- `next/iwb_canvas_engine_next/docs/contracts/`
+- `next/iwb_canvas_engine_next/docs/verification/`
+- `next/iwb_canvas_engine_next/docs/planning/`
+- `next/iwb_canvas_engine_next/docs/donors/`
 
 Do not treat legacy architecture docs as binding architecture for the new
 engine. They are evidence for old behavior only.

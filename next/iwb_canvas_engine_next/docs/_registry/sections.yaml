@@ -1,0 +1,1173 @@
+-
+  id: section_00_status_and_scope
+  source: docs/_registry/sections.yaml / section 0
+  file: docs/architecture/00_architecture_overview.md
+  title: 0. Статус и обязательное архитектурное решение
+  phases:
+    - P0
+    - P1.5
+  must_read:
+    - section_01_legacy_oracle
+    - section_03_package_layout
+    - section_22_guardrails_machine_checks
+  donors:
+    - "none"
+  diagrams:
+    - c4_context
+    - c4_container
+  guardrails:
+    - new_core.no_legacy_imports
+    - new_core.no_scene_controller_shape_dependency
+    - new_core.no_node_spec_patch_shape_dependency
+  tests:
+    - test.api_contract.v1_scope_gate
+  do_not_assume:
+    - no legacy facade
+    - no SceneController
+    - no old public API shape
+    - no old runtime fallback
+-
+  id: section_01_legacy_oracle
+  source: docs/_registry/sections.yaml / section 1
+  file: docs/planning/legacy_oracle.md
+  title: 1. Что проверено по старому архиву
+  phases:
+    - P1
+  must_read:
+    - section_00_status_and_scope
+    - docs/donors/00_reuse_rules.md
+    - docs/donors/01_summary_by_decision.md
+  donors:
+    - "none"
+  diagrams:
+    - "none"
+  guardrails:
+    - new_api.functional_ledger_complete
+  tests:
+    - "none"
+  do_not_assume:
+    - old engine is oracle only
+    - no old runtime fallback
+-
+  id: section_02_architecture_model
+  source: docs/_registry/sections.yaml / section 2
+  file: docs/architecture/01_runtime_ownership.md
+  title: 2. Несущая модель новой библиотеки
+  phases:
+    - P0
+    - P5
+  must_read:
+    - section_00_status_and_scope
+    - section_03_package_layout
+    - section_10_runtime_data_model
+  donors:
+    - "none"
+  diagrams:
+    - c4_container
+    - c4_component_runtime
+  guardrails:
+    - new_core.single_runtime_root
+  tests:
+    - "none"
+  do_not_assume:
+    - no legacy facade
+    - no SceneController
+-
+  id: section_03_package_layout
+  source: docs/_registry/sections.yaml / section 3
+  file: docs/architecture/02_package_boundaries.md
+  title: 3. Package layout
+  phases:
+    - P0
+  must_read:
+    - section_00_status_and_scope
+    - section_02_architecture_model
+    - section_22_guardrails_machine_checks
+  donors:
+    - "none"
+  diagrams:
+    - c4_container
+  guardrails:
+    - new_core.no_legacy_imports
+    - new_api.no_old_public_types
+  tests:
+    - test.api_contract.no_old_public_symbols
+  do_not_assume:
+    - no old package import
+    - no app adapters in package
+-
+  id: section_04_public_api_v1
+  source: docs/_registry/sections.yaml / section 4
+  file: docs/contracts/public_api_v1.md
+  title: "4. Public API v1: полный surface"
+  phases:
+    - P1.5
+    - P2
+    - P4
+    - P9
+    - P10
+  must_read:
+    - section_00_status_and_scope
+    - section_05_schema_v1_contract
+    - section_06_validation_limits
+    - section_07_resource_lifecycle
+    - section_21_diagrams
+  donors:
+    - foundation_transform2d
+    - foundation_contract_limits
+    - foundation_error_contract
+    - foundation_validators
+    - foundation_tri_state_patch_semantics
+    - foundation_immutable_collections
+    - foundation_pointer_input_contract
+    - foundation_action_event_immutability
+    - dto_snapshot_behavior
+    - dto_node_spec_behavior
+  diagrams:
+    - c4_context
+    - dfd_public_edit
+  guardrails:
+    - new_api.public_types_complete
+    - new_api.public_api_compiles_as_written
+    - new_api.no_undefined_public_type_references
+    - new_api.dto_immutability
+    - new_api.id_validation_no_extension_type_escape
+  tests:
+    - test.api_contract.public_api_v1_compiles_as_written
+    - test.api_contract.no_undefined_public_type_references
+    - test.api_contract.no_old_public_symbols
+    - test.api_contract.dto_immutability
+    - test.events.typed_action_payloads
+    - test.api_contract.v1_scope_gate
+  do_not_assume:
+    - no old public API shape
+    - no PatchField export
+    - no SceneController export
+-
+  id: section_05_schema_v1_contract
+  source: docs/_registry/sections.yaml / section 5
+  file: docs/contracts/schema_v1.md
+  title: 5. Schema v1 full field contract
+  phases:
+    - P3
+  must_read:
+    - section_04_public_api_v1
+    - section_06_validation_limits
+    - section_19_codec_boundary
+    - section_25_migration_tool
+  donors:
+    - codec_guards
+    - codec_json_require
+    - codec_json_parse
+    - codec_metadata_decode
+    - codec_layer_decode
+    - codec_node_common_decode
+    - codec_family_decode
+    - codec_scene_codec_flow
+    - codec_validation_path_surface
+    - dto_boundary_schema
+  diagrams:
+    - dfd_schema_v1_decode_encode
+  guardrails:
+    - codec.schema_v1_exact
+    - codec.known_fields_validated
+  tests:
+    - test.schema_v1.known_fields_validation
+    - test.schema_v1.resources_appkey_only
+    - test.schema_v1.reject_unknown_element_kind
+    - test.schema_v1.reject_unknown_resource_source_kind
+  do_not_assume:
+    - no schema v7 public entrypoints as next API
+    - no old SceneBuilder API shape
+-
+  id: section_06_validation_limits
+  source: docs/_registry/sections.yaml / section 6
+  file: docs/contracts/validation_limits.md
+  title: 6. Validation limits
+  phases:
+    - P1.5
+    - P2
+    - P3
+  must_read:
+    - section_04_public_api_v1
+    - section_05_schema_v1_contract
+  donors:
+    - foundation_contract_limits
+    - foundation_validators
+    - foundation_error_contract
+  diagrams:
+    - dfd_diagnostics_error_projection
+  guardrails:
+    - codec.known_fields_validated
+    - new_api.id_validation_no_extension_type_escape
+  tests:
+    - test.validation_limits.constructor_and_schema_limits
+  do_not_assume:
+    - no unvalidated public ids
+    - no old diagnostics surface leakage
+-
+  id: section_07_resource_lifecycle
+  source: docs/_registry/sections.yaml / section 7
+  file: docs/contracts/resources.md
+  title: 7. Resource lifecycle contract
+  phases:
+    - P4
+    - P10
+  must_read:
+    - section_04_public_api_v1
+    - section_10_runtime_data_model
+    - section_15_frame_render_contract
+  donors:
+    - "none"
+  diagrams:
+    - dfd_resource_resolution
+    - seq_resource_resolution
+    - state_resource_resolution
+  guardrails:
+    - resources.mutation_inside_edit_only
+    - resources.dirty_no_document_revision
+    - resources.app_key_only
+  tests:
+    - test.schema_v1.resources_appkey_only
+    - test.schema_v1.reject_unknown_resource_source_kind
+    - test.resources.sync_image_resolver
+    - test.resources.app_owned_image_not_disposed
+    - test.resources.resource_dirty
+    - test.resources.mark_all_resources_dirty
+  do_not_assume:
+    - no engine IO
+    - no asset-bundle loading
+    - no file loading
+    - no remote/network loading
+-
+  id: section_08_functional_ledger
+  source: docs/_registry/sections.yaml / section 8
+  file: docs/verification/functional_ledger.md
+  title: "8. Functional ledger: old capability -> new API -> required test"
+  phases:
+    - P1
+    - P12
+  must_read:
+    - section_01_legacy_oracle
+    - section_04_public_api_v1
+    - docs/donors/00_reuse_rules.md
+  donors:
+    - "none"
+  diagrams:
+    - "none"
+  guardrails:
+    - new_api.functional_ledger_complete
+  tests:
+    - test.functional_ledger.row_specific_tests
+  do_not_assume:
+    - do not prove next API completeness by old public API ledger
+-
+  id: section_09_accepted_differences
+  source: docs/_registry/sections.yaml / section 9
+  file: docs/architecture/04_decisions_and_differences.md
+  title: 9. Accepted differences from old engine
+  phases:
+    - P1.5
+    - P2
+    - P11
+  must_read:
+    - section_00_status_and_scope
+    - section_08_functional_ledger
+    - section_25_migration_tool
+  donors:
+    - "none"
+  diagrams:
+    - dfd_migration_tool
+  guardrails:
+    - new_api.v1_scope_gate_green_before_freeze
+  tests:
+    - "none"
+  do_not_assume:
+    - accepted differences are explicit only
+    - no silent legacy compatibility layer
+-
+  id: section_10_runtime_data_model
+  source: docs/_registry/sections.yaml / section 10
+  file: docs/architecture/03_data_model.md
+  title: 10. Runtime data model
+  phases:
+    - P5
+    - P6
+    - P8
+  must_read:
+    - section_02_architecture_model
+    - section_04_public_api_v1
+    - section_11_edit_kernel
+    - section_15_frame_render_contract
+  donors:
+    - dto_document_helpers
+    - store_scene_controller_read_paths
+    - dto_node_boundary_mapping
+  diagrams:
+    - c4_component_runtime
+    - dfd_cache_invalidation
+  guardrails:
+    - new_core.single_runtime_root
+  tests:
+    - test.store.read_document_projection
+    - test.store.no_projection_hot_path
+  do_not_assume:
+    - no old mutable runtime graph
+    - no SceneController shape dependency
+-
+  id: section_11_edit_kernel
+  source: docs/_registry/sections.yaml / section 11
+  file: docs/contracts/edit_kernel.md
+  title: 11. EditKernel implementation contract
+  phases:
+    - P6
+  must_read:
+    - section_04_public_api_v1
+    - section_10_runtime_data_model
+    - section_12_load_document
+    - section_13_operation_matrix
+  donors:
+    - interaction_mutation_boundary
+    - staged_load_runtime_materialization
+    - validated_import_draft
+    - dto_document_helpers
+  diagrams:
+    - c4_code_edit_kernel
+    - dfd_public_edit
+    - seq_edit_success
+    - seq_edit_rollback
+    - state_edit_session
+  guardrails:
+    - edit.sync_non_nested
+    - edit.rollback_no_effects
+    - edit.stale_handle_rejected
+    - events.low_level_edit_no_user_actions
+  tests:
+    - test.events.low_level_mutations_do_not_emit_actions
+    - test.edit_kernel.sync_non_nested_async_stale
+    - test.edit_kernel.rollback
+  do_not_assume:
+    - no old SceneWriteTxn
+    - no old controller shell
+    - no async nested edit
+-
+  id: section_12_load_document
+  source: docs/_registry/sections.yaml / section 12
+  file: docs/contracts/load_document.md
+  title: "12. `loadDocument` staged contract"
+  phases:
+    - P6
+    - P9
+  must_read:
+    - section_10_runtime_data_model
+    - section_11_edit_kernel
+    - section_13_operation_matrix
+    - section_14_interaction_engine
+  donors:
+    - staged_load_runtime_materialization
+    - validated_import_draft
+    - interaction_mutation_boundary
+  diagrams:
+    - dfd_load_document_success_failure
+    - seq_load_document_success
+    - seq_load_document_failure
+  guardrails:
+    - load.prepares_before_interrupt
+    - load.success_interrupts_before_install
+  tests:
+    - test.load_document.staged_success_failure
+  do_not_assume:
+    - no interrupt before successful preparation
+    - no prepared replacement in public API
+-
+  id: section_13_operation_matrix
+  source: docs/_registry/sections.yaml / section 13
+  file: docs/contracts/operation_matrix.md
+  title: 13. Operation matrix
+  phases:
+    - P6
+  must_read:
+    - section_11_edit_kernel
+    - section_12_load_document
+    - section_23_tests
+  donors:
+    - interaction_mutation_boundary
+  diagrams:
+    - seq_edit_success
+    - seq_edit_rollback
+  guardrails:
+    - edit.sync_non_nested
+    - edit.rollback_no_effects
+    - edit.stale_handle_rejected
+  tests:
+    - test.edit_kernel.sync_non_nested_async_stale
+  do_not_assume:
+    - no implicit mutation path outside EditKernel
+-
+  id: section_14_interaction_engine
+  source: docs/_registry/sections.yaml / section 14
+  file: docs/contracts/interaction_engine.md
+  title: 14. InteractionEngine
+  phases:
+    - P9
+    - P10
+  must_read:
+    - section_04_public_api_v1
+    - section_11_edit_kernel
+    - section_12_load_document
+    - section_15_frame_render_contract
+    - section_16_geometry_policy
+  donors:
+    - interaction_pointer_host
+    - interaction_pointer_session
+    - interaction_pointer_normalizer
+    - interaction_event_dispatcher
+    - interaction_double_tap_router
+    - interaction_gesture_runtime
+    - interaction_move_session
+    - interaction_draw_coordinator
+    - interaction_mutation_boundary
+  diagrams:
+    - dfd_pointer_preview_commit
+    - seq_selected_move_preview_commit
+    - seq_selected_move_cancel
+    - seq_marquee_select
+    - seq_pencil_marker_commit
+    - seq_line_two_tap_commit
+    - seq_eraser_commit
+    - seq_text_edit_request
+    - seq_dispose_during_gesture
+    - state_pointer_session
+    - state_select_marquee
+    - state_selected_move
+    - state_pencil_marker_draw
+    - state_two_tap_line
+    - state_eraser
+    - state_pending_text_edit_request
+  guardrails:
+    - preview.selected_move_main_repaint
+    - load.prepares_before_interrupt
+    - load.success_interrupts_before_install
+  tests:
+    - test.events.typed_action_payloads
+    - test.events.commands_emit_user_actions
+    - test.surface.interactive_false_pointer_routing
+    - test.surface.interactive_false_active_session_cancel
+    - test.interaction.state_machines
+    - test.interaction.move_resolver_reentrancy
+    - test.surface.widget_paint
+  do_not_assume:
+    - no old callback graph as structure
+    - no reentrant mutation from resolver
+-
+  id: section_15_frame_render_contract
+  source: docs/_registry/sections.yaml / section 15
+  file: docs/contracts/frame_rendering.md
+  title: 15. FrameEngine and render contract
+  phases:
+    - P8
+    - P10
+  must_read:
+    - section_10_runtime_data_model
+    - section_14_interaction_engine
+    - section_16_geometry_policy
+    - section_17_spatial_kernel
+    - section_18_cache_policy
+  donors:
+    - frame_render_state
+    - render_geometry_builder
+    - snapshot_paint_admission_bounds
+    - snapshot_paint_candidates
+    - scene_view_runtime_fast_path
+    - paint_candidate_stage
+    - scene_painter_frame
+    - scene_render_caches
+    - static_layer_cache
+    - text_stroke_path_metrics_caches
+  diagrams:
+    - dfd_main_paint_frame
+    - dfd_overlay_frame
+    - seq_main_paint
+    - seq_overlay_paint
+  guardrails:
+    - preview.selected_move_main_repaint
+  tests:
+    - test.store.no_projection_hot_path
+    - test.frame.main_overlay_capture
+    - test.frame.no_live_runtime_read_in_painters
+    - test.surface.widget_paint
+  do_not_assume:
+    - no live runtime reads in painters
+    - no CanvasDocument projection in paint
+-
+  id: section_16_geometry_policy
+  source: docs/_registry/sections.yaml / section 16
+  file: docs/contracts/geometry.md
+  title: 16. Geometry policy v1
+  phases:
+    - P7
+    - P8
+  must_read:
+    - section_04_public_api_v1
+    - section_15_frame_render_contract
+    - section_17_spatial_kernel
+  donors:
+    - foundation_core_geometry
+    - geometry_node_geometry
+    - geometry_hit_test
+    - geometry_interactive_geometry
+    - geometry_eraser_exact_hit
+    - foundation_transform2d
+    - direct_numeric_policy
+    - direct_local_bounds_policy
+    - direct_paint_admission
+  diagrams:
+    - dfd_pointer_preview_commit
+  guardrails:
+    - "none"
+  tests:
+    - test.geometry.hit_policy
+  do_not_assume:
+    - do not port old SceneNode traversal
+    - do not copy legacy scene order logic
+-
+  id: section_17_spatial_kernel
+  source: docs/_registry/sections.yaml / section 17
+  file: docs/contracts/spatial_kernel.md
+  title: 17. SpatialKernel
+  phases:
+    - P7
+    - P8
+  must_read:
+    - section_10_runtime_data_model
+    - section_15_frame_render_contract
+    - section_16_geometry_policy
+  donors:
+    - spatial_scene_spatial_index
+    - spatial_index_cache
+    - store_scene_controller_read_paths
+  diagrams:
+    - dfd_cache_invalidation
+  guardrails:
+    - "none"
+  tests:
+    - test.spatial.touched_update
+  do_not_assume:
+    - do not port old Scene or locator maps
+    - do not rely on stale structuralRevision
+-
+  id: section_18_cache_policy
+  source: docs/_registry/sections.yaml / section 18
+  file: docs/contracts/cache_policy.md
+  title: 18. Cache policy ledger
+  phases:
+    - P8
+    - P10
+    - P12
+  must_read:
+    - section_15_frame_render_contract
+    - section_17_spatial_kernel
+    - section_24_benchmarks
+  donors:
+    - direct_scan_resistant_cache
+    - scene_render_caches
+    - static_layer_cache
+    - text_stroke_path_metrics_caches
+  diagrams:
+    - dfd_cache_invalidation
+  guardrails:
+    - "none"
+  tests:
+    - "none"
+  do_not_assume:
+    - no unbounded cache owner sprawl
+    - no cache keys tied to old snapshots
+-
+  id: section_19_codec_boundary
+  source: docs/_registry/sections.yaml / section 19
+  file: docs/contracts/codec_boundary.md
+  title: 19. CodecBoundary
+  phases:
+    - P3
+    - P11
+  must_read:
+    - section_05_schema_v1_contract
+    - section_06_validation_limits
+    - section_20_diagnostics_hub
+    - section_25_migration_tool
+  donors:
+    - codec_guards
+    - codec_json_require
+    - codec_json_parse
+    - codec_metadata_decode
+    - codec_layer_decode
+    - codec_node_common_decode
+    - codec_family_decode
+    - codec_scene_codec_flow
+    - codec_validation_path_surface
+  diagrams:
+    - dfd_schema_v1_decode_encode
+  guardrails:
+    - codec.schema_v1_exact
+    - codec.known_fields_validated
+  tests:
+    - "none"
+  do_not_assume:
+    - no old SceneCodec surface as next API
+    - no schema v7 read/write in production core
+-
+  id: section_20_diagnostics_hub
+  source: docs/_registry/sections.yaml / section 20
+  file: docs/contracts/diagnostics.md
+  title: 20. DiagnosticsHub
+  phases:
+    - P3
+    - P12
+  must_read:
+    - section_06_validation_limits
+    - section_19_codec_boundary
+    - section_22_guardrails_machine_checks
+  donors:
+    - foundation_error_contract
+    - dto_scene_value_validation
+  diagrams:
+    - dfd_diagnostics_error_projection
+  guardrails:
+    - diagnostics.disabled_no_alloc_hot_path
+  tests:
+    - "none"
+  do_not_assume:
+    - no diagnostic allocations on successful hot path
+-
+  id: section_21_diagrams
+  source: docs/_registry/sections.yaml / section 21
+  file: docs/architecture/diagrams.md
+  title: 21. Diagram deliverables
+  phases:
+    - P0
+    - P12
+  must_read:
+    - section_02_architecture_model
+    - section_11_edit_kernel
+    - section_14_interaction_engine
+    - section_15_frame_render_contract
+    - section_25_migration_tool
+  donors:
+    - "none"
+  diagrams:
+    - c4_context
+    - c4_container
+    - c4_component_runtime
+    - c4_code_edit_kernel
+    - dfd_public_edit
+    - dfd_load_document_success_failure
+    - dfd_pointer_preview_commit
+    - dfd_main_paint_frame
+    - dfd_overlay_frame
+    - dfd_resource_resolution
+    - dfd_schema_v1_decode_encode
+    - dfd_cache_invalidation
+    - dfd_diagnostics_error_projection
+    - dfd_migration_tool
+    - seq_edit_success
+    - seq_edit_rollback
+    - seq_load_document_success
+    - seq_load_document_failure
+    - seq_selected_move_preview_commit
+    - seq_selected_move_cancel
+    - seq_marquee_select
+    - seq_pencil_marker_commit
+    - seq_line_two_tap_commit
+    - seq_eraser_commit
+    - seq_text_edit_request
+    - seq_main_paint
+    - seq_overlay_paint
+    - seq_resource_resolution
+    - seq_dispose_during_gesture
+    - state_runtime_lifecycle
+    - state_edit_session
+    - state_pointer_session
+    - state_select_marquee
+    - state_selected_move
+    - state_pencil_marker_draw
+    - state_two_tap_line
+    - state_eraser
+    - state_pending_text_edit_request
+    - state_resource_resolution
+  guardrails:
+    - diagrams.all_required_present
+  tests:
+    - test.diagrams.required_present
+  do_not_assume:
+    - no architecture change without diagram catalog update
+-
+  id: section_22_guardrails_machine_checks
+  source: docs/_registry/sections.yaml / section 22
+  file: docs/verification/guardrails.md
+  title: 22. Guardrails and machine checks
+  phases:
+    - P0
+    - P12
+  must_read:
+    - section_00_status_and_scope
+    - section_03_package_layout
+    - section_21_diagrams
+    - section_27_final_release_gates
+  donors:
+    - tooling_schema_family_parity
+  diagrams:
+    - "none"
+  guardrails:
+    - new_api.functional_ledger_complete
+    - new_api.integration_surface_complete
+    - new_api.v1_scope_gate_green_before_freeze
+    - new_api.no_old_public_types
+    - new_api.public_types_complete
+    - new_api.public_api_compiles_as_written
+    - new_api.no_undefined_public_type_references
+    - new_api.dto_immutability
+    - new_api.id_validation_no_extension_type_escape
+    - new_core.no_legacy_imports
+    - new_core.no_scene_controller_shape_dependency
+    - new_core.no_node_spec_patch_shape_dependency
+    - new_core.single_runtime_root
+    - edit.sync_non_nested
+    - edit.rollback_no_effects
+    - edit.stale_handle_rejected
+    - events.low_level_edit_no_user_actions
+    - events.commands_emit_user_actions
+    - load.prepares_before_interrupt
+    - load.success_interrupts_before_install
+    - preview.selected_move_main_repaint
+    - resources.mutation_inside_edit_only
+    - resources.dirty_no_document_revision
+    - resources.app_key_only
+    - codec.schema_v1_exact
+    - codec.known_fields_validated
+    - diagnostics.disabled_no_alloc_hot_path
+    - diagrams.all_required_present
+  tests:
+    - test.guardrails.blocking_suite
+  do_not_assume:
+    - no non-blocking critical guardrail
+-
+  id: section_23_tests
+  source: docs/_registry/sections.yaml / section 23
+  file: docs/verification/tests.md
+  title: 23. Tests
+  phases:
+    - P2
+    - P3
+    - P4
+    - P9
+    - P10
+    - P12
+  must_read:
+    - section_04_public_api_v1
+    - section_05_schema_v1_contract
+    - section_07_resource_lifecycle
+    - section_14_interaction_engine
+    - section_22_guardrails_machine_checks
+  donors:
+    - direct_numeric_policy
+    - direct_local_bounds_policy
+    - direct_paint_admission
+    - direct_scan_resistant_cache
+    - direct_pointer_tap_tracking
+    - direct_flutter_pointer_routing
+    - direct_gesture_ownership
+    - direct_structure_validation
+    - foundation_transform2d
+    - foundation_core_geometry
+    - foundation_contract_limits
+    - foundation_error_contract
+    - foundation_validators
+    - foundation_tri_state_patch_semantics
+    - foundation_immutable_collections
+    - foundation_pointer_input_contract
+    - foundation_action_event_immutability
+    - geometry_node_geometry
+    - geometry_hit_test
+    - render_geometry_builder
+    - geometry_interactive_geometry
+    - geometry_eraser_exact_hit
+    - spatial_scene_spatial_index
+    - spatial_index_cache
+    - store_scene_controller_read_paths
+    - snapshot_paint_admission_bounds
+    - snapshot_paint_candidates
+    - frame_render_state
+    - scene_view_runtime_fast_path
+    - paint_candidate_stage
+    - scene_painter_frame
+    - scene_render_caches
+    - static_layer_cache
+    - text_stroke_path_metrics_caches
+    - dto_snapshot_behavior
+    - dto_node_spec_behavior
+    - dto_boundary_schema
+    - dto_scene_value_validation
+    - dto_node_boundary_mapping
+    - dto_document_helpers
+    - codec_guards
+    - codec_json_require
+    - codec_json_parse
+    - codec_metadata_decode
+    - codec_layer_decode
+    - codec_node_common_decode
+    - codec_family_decode
+    - codec_scene_codec_flow
+    - codec_validation_path_surface
+    - tooling_schema_family_parity
+    - interaction_pointer_host
+    - interaction_pointer_session
+    - interaction_pointer_normalizer
+    - interaction_event_dispatcher
+    - interaction_double_tap_router
+    - interaction_gesture_runtime
+    - interaction_move_session
+    - interaction_draw_coordinator
+    - interaction_mutation_boundary
+    - staged_load_runtime_materialization
+    - validated_import_draft
+    - interaction_public_controller_behavior
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - "none"
+  guardrails:
+    - new_api.functional_ledger_complete
+  tests:
+    - test.api_contract.public_api_v1_compiles_as_written
+    - test.api_contract.no_undefined_public_type_references
+    - test.api_contract.no_old_public_symbols
+    - test.api_contract.dto_immutability
+    - test.schema_v1.known_fields_validation
+    - test.schema_v1.resources_appkey_only
+    - test.schema_v1.reject_unknown_element_kind
+    - test.schema_v1.reject_unknown_resource_source_kind
+    - test.resources.sync_image_resolver
+    - test.resources.app_owned_image_not_disposed
+    - test.resources.resource_dirty
+    - test.resources.mark_all_resources_dirty
+    - test.events.typed_action_payloads
+    - test.events.low_level_mutations_do_not_emit_actions
+    - test.events.commands_emit_user_actions
+    - test.surface.interactive_false_pointer_routing
+    - test.surface.interactive_false_active_session_cancel
+    - test.functional_ledger.row_specific_tests
+    - test.api_contract.v1_scope_gate
+    - test.validation_limits.constructor_and_schema_limits
+    - test.store.read_document_projection
+    - test.store.no_projection_hot_path
+    - test.edit_kernel.sync_non_nested_async_stale
+    - test.edit_kernel.rollback
+    - test.load_document.staged_success_failure
+    - test.geometry.hit_policy
+    - test.spatial.touched_update
+    - test.frame.main_overlay_capture
+    - test.frame.no_live_runtime_read_in_painters
+    - test.interaction.state_machines
+    - test.interaction.move_resolver_reentrancy
+    - test.surface.widget_paint
+    - test.migration.old_fixture_migration
+    - test.migration.no_silent_data_loss
+    - test.benchmarks.required_cases
+    - test.diagrams.required_present
+    - test.guardrails.blocking_suite
+  do_not_assume:
+    - no donor reuse without ported or equivalent tests
+-
+  id: section_24_benchmarks
+  source: docs/_registry/sections.yaml / section 24
+  file: docs/verification/benchmarks.md
+  title: 24. Benchmarks
+  phases:
+    - P12
+  must_read:
+    - section_15_frame_render_contract
+    - section_17_spatial_kernel
+    - section_18_cache_policy
+  donors:
+    - direct_scan_resistant_cache
+  diagrams:
+    - "none"
+  guardrails:
+    - "none"
+  tests:
+    - test.benchmarks.required_cases
+  do_not_assume:
+    - no unapproved old feature path regression
+-
+  id: section_25_migration_tool
+  source: docs/_registry/sections.yaml / section 25
+  file: docs/contracts/migration_tool.md
+  title: 25. Migration tool outside production core
+  phases:
+    - P11
+  must_read:
+    - section_05_schema_v1_contract
+    - section_09_accepted_differences
+    - section_19_codec_boundary
+  donors:
+    - codec_metadata_decode
+    - codec_node_common_decode
+    - codec_family_decode
+    - codec_scene_codec_flow
+    - codec_validation_path_surface
+  diagrams:
+    - dfd_migration_tool
+  guardrails:
+    - codec.schema_v1_exact
+  tests:
+    - test.migration.old_fixture_migration
+    - test.migration.no_silent_data_loss
+  do_not_assume:
+    - no migration code inside production core
+    - no silent data loss
+-
+  id: section_26_implementation_phases
+  source: docs/_registry/sections.yaml / section 26
+  file: docs/planning/implementation_phases.md
+  title: 26. Implementation phases and tasks
+  phases:
+    - P0
+    - P1
+    - P1.5
+    - P2
+    - P3
+    - P4
+    - P5
+    - P6
+    - P7
+    - P8
+    - P9
+    - P10
+    - P11
+    - P12
+  must_read:
+    - docs/indexes/by_phase.md
+    - docs/indexes/phase_to_donor.md
+    - section_27_final_release_gates
+  donors:
+    - direct_numeric_policy
+    - direct_local_bounds_policy
+    - direct_paint_admission
+    - direct_scan_resistant_cache
+    - direct_pointer_tap_tracking
+    - direct_flutter_pointer_routing
+    - direct_gesture_ownership
+    - direct_structure_validation
+    - foundation_transform2d
+    - foundation_core_geometry
+    - foundation_contract_limits
+    - foundation_error_contract
+    - foundation_validators
+    - foundation_tri_state_patch_semantics
+    - foundation_immutable_collections
+    - foundation_pointer_input_contract
+    - foundation_action_event_immutability
+    - geometry_node_geometry
+    - geometry_hit_test
+    - render_geometry_builder
+    - geometry_interactive_geometry
+    - geometry_eraser_exact_hit
+    - spatial_scene_spatial_index
+    - spatial_index_cache
+    - store_scene_controller_read_paths
+    - snapshot_paint_admission_bounds
+    - snapshot_paint_candidates
+    - frame_render_state
+    - scene_view_runtime_fast_path
+    - paint_candidate_stage
+    - scene_painter_frame
+    - scene_render_caches
+    - static_layer_cache
+    - text_stroke_path_metrics_caches
+    - dto_snapshot_behavior
+    - dto_node_spec_behavior
+    - dto_boundary_schema
+    - dto_scene_value_validation
+    - dto_node_boundary_mapping
+    - dto_document_helpers
+    - codec_guards
+    - codec_json_require
+    - codec_json_parse
+    - codec_metadata_decode
+    - codec_layer_decode
+    - codec_node_common_decode
+    - codec_family_decode
+    - codec_scene_codec_flow
+    - codec_validation_path_surface
+    - tooling_schema_family_parity
+    - interaction_pointer_host
+    - interaction_pointer_session
+    - interaction_pointer_normalizer
+    - interaction_event_dispatcher
+    - interaction_double_tap_router
+    - interaction_gesture_runtime
+    - interaction_move_session
+    - interaction_draw_coordinator
+    - interaction_mutation_boundary
+    - staged_load_runtime_materialization
+    - validated_import_draft
+    - interaction_public_controller_behavior
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - "none"
+  guardrails:
+    - new_api.functional_ledger_complete
+    - new_api.integration_surface_complete
+    - new_api.v1_scope_gate_green_before_freeze
+    - new_api.no_old_public_types
+    - new_api.public_types_complete
+    - new_api.public_api_compiles_as_written
+    - new_api.no_undefined_public_type_references
+    - new_api.dto_immutability
+    - new_api.id_validation_no_extension_type_escape
+    - new_core.no_legacy_imports
+    - new_core.no_scene_controller_shape_dependency
+    - new_core.no_node_spec_patch_shape_dependency
+    - new_core.single_runtime_root
+    - edit.sync_non_nested
+    - edit.rollback_no_effects
+    - edit.stale_handle_rejected
+    - events.low_level_edit_no_user_actions
+    - events.commands_emit_user_actions
+    - load.prepares_before_interrupt
+    - load.success_interrupts_before_install
+    - preview.selected_move_main_repaint
+    - resources.mutation_inside_edit_only
+    - resources.dirty_no_document_revision
+    - resources.app_key_only
+    - codec.schema_v1_exact
+    - codec.known_fields_validated
+    - diagnostics.disabled_no_alloc_hot_path
+    - diagrams.all_required_present
+  tests:
+    - "none"
+  do_not_assume:
+    - do not start phase without linked sections and donors
+-
+  id: section_27_final_release_gates
+  source: docs/_registry/sections.yaml / section 27
+  file: docs/verification/release_gates.md
+  title: 27. Final release gates
+  phases:
+    - P12
+  must_read:
+    - section_21_diagrams
+    - section_22_guardrails_machine_checks
+    - section_23_tests
+    - section_24_benchmarks
+    - section_26_implementation_phases
+  donors:
+    - direct_numeric_policy
+    - direct_local_bounds_policy
+    - direct_paint_admission
+    - direct_scan_resistant_cache
+    - direct_pointer_tap_tracking
+    - direct_flutter_pointer_routing
+    - direct_gesture_ownership
+    - direct_structure_validation
+    - foundation_transform2d
+    - foundation_core_geometry
+    - foundation_contract_limits
+    - foundation_error_contract
+    - foundation_validators
+    - foundation_tri_state_patch_semantics
+    - foundation_immutable_collections
+    - foundation_pointer_input_contract
+    - foundation_action_event_immutability
+    - geometry_node_geometry
+    - geometry_hit_test
+    - render_geometry_builder
+    - geometry_interactive_geometry
+    - geometry_eraser_exact_hit
+    - spatial_scene_spatial_index
+    - spatial_index_cache
+    - store_scene_controller_read_paths
+    - snapshot_paint_admission_bounds
+    - snapshot_paint_candidates
+    - frame_render_state
+    - scene_view_runtime_fast_path
+    - paint_candidate_stage
+    - scene_painter_frame
+    - scene_render_caches
+    - static_layer_cache
+    - text_stroke_path_metrics_caches
+    - dto_snapshot_behavior
+    - dto_node_spec_behavior
+    - dto_boundary_schema
+    - dto_scene_value_validation
+    - dto_node_boundary_mapping
+    - dto_document_helpers
+    - codec_guards
+    - codec_json_require
+    - codec_json_parse
+    - codec_metadata_decode
+    - codec_layer_decode
+    - codec_node_common_decode
+    - codec_family_decode
+    - codec_scene_codec_flow
+    - codec_validation_path_surface
+    - tooling_schema_family_parity
+    - interaction_pointer_host
+    - interaction_pointer_session
+    - interaction_pointer_normalizer
+    - interaction_event_dispatcher
+    - interaction_double_tap_router
+    - interaction_gesture_runtime
+    - interaction_move_session
+    - interaction_draw_coordinator
+    - interaction_mutation_boundary
+    - staged_load_runtime_materialization
+    - validated_import_draft
+    - interaction_public_controller_behavior
+    - avoid_scene_controller_facades
+    - avoid_interactive_runtime_whole
+    - avoid_scene_builder_public_architecture
+    - avoid_scene_codec_whole
+    - avoid_scene_store_controller_whole
+  diagrams:
+    - "none"
+  guardrails:
+    - new_api.functional_ledger_complete
+    - new_api.integration_surface_complete
+    - new_api.v1_scope_gate_green_before_freeze
+    - new_api.no_old_public_types
+    - new_api.public_types_complete
+    - new_api.public_api_compiles_as_written
+    - new_api.no_undefined_public_type_references
+    - new_api.dto_immutability
+    - new_api.id_validation_no_extension_type_escape
+    - new_core.no_legacy_imports
+    - new_core.no_scene_controller_shape_dependency
+    - new_core.no_node_spec_patch_shape_dependency
+    - new_core.single_runtime_root
+    - edit.sync_non_nested
+    - edit.rollback_no_effects
+    - edit.stale_handle_rejected
+    - events.low_level_edit_no_user_actions
+    - events.commands_emit_user_actions
+    - load.prepares_before_interrupt
+    - load.success_interrupts_before_install
+    - preview.selected_move_main_repaint
+    - resources.mutation_inside_edit_only
+    - resources.dirty_no_document_revision
+    - resources.app_key_only
+    - codec.schema_v1_exact
+    - codec.known_fields_validated
+    - diagnostics.disabled_no_alloc_hot_path
+    - diagrams.all_required_present
+  tests:
+    - test.guardrails.blocking_suite
+  do_not_assume:
+    - no release with old imports, legacy facade, or unlinked donor reuse
