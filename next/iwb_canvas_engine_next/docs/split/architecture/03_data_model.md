@@ -35,7 +35,6 @@ Do not assume:
 - no SceneController shape dependency
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 10. Runtime data model
 
 ### 10.1 Committed document
@@ -135,4 +134,3 @@ Projection DTOs must deep-copy all public collections and metadata.
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

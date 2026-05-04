@@ -39,7 +39,6 @@ Do not assume:
 - no schema v7 read/write in production core
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 19. CodecBoundary
 
 ### 19.1 Entry points
@@ -88,4 +87,3 @@ CanvasDocument decodeCanvasDocumentFromJson(String json);
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

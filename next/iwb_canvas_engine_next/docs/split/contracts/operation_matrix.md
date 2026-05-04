@@ -29,7 +29,6 @@ Do not assume:
 - no implicit mutation path outside EditKernel
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 13. Operation matrix
 
 | Operation | State touched | Revisions | Spatial | Projection | Repaint | Events |
@@ -69,4 +68,3 @@ Do not assume:
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

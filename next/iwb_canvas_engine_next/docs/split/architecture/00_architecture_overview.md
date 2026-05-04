@@ -33,12 +33,11 @@ Do not assume:
 - no old runtime fallback
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
-# `iwb_canvas_engine_next`: полный implementation plan без legacy-фасада внутри нового движка
+# `iwb_canvas_engine_next`: scope and architecture decision
 
 ## 0. Статус и обязательное архитектурное решение
 
-Документ является целевой спецификацией реализации для переписывания библиотеки с нуля.
+Документ фиксирует обязательную границу v1 для новой библиотеки.
 Он заменяет прежнюю модель, где новый runtime должен был сохранять старую форму публичного API.
 
 Фиксированное решение:
@@ -84,34 +83,28 @@ v1 scope additions over old functional behavior:
 Запрещено в новом package:
 
 ```text
-- реализовывать legacy facade старого API;
-- экспортировать SceneController;
-- экспортировать SceneSnapshot;
-- экспортировать NodeSpec;
-- экспортировать NodePatch;
-- экспортировать PatchField;
-- экспортировать SceneWriteTxn;
-- экспортировать старые schema v7 public entrypoints как API нового package;
-- размещать AppCanvasPort внутри нового package;
-- размещать OldEngineAdapter внутри нового package;
-- размещать NewEngineAdapter внутри нового package;
-- использовать старый runtime в production path;
-- доказывать полноту нового API прохождением старого public API ledger.
+Old public API:
+  - реализовывать legacy facade старого API;
+  - экспортировать SceneController;
+  - экспортировать SceneSnapshot;
+  - экспортировать NodeSpec;
+  - экспортировать NodePatch;
+  - экспортировать PatchField;
+  - экспортировать SceneWriteTxn;
+  - экспортировать старые schema v7 public entrypoints как API нового package.
+
+App integration:
+  - размещать AppCanvasPort внутри нового package;
+  - размещать OldEngineAdapter внутри нового package;
+  - размещать NewEngineAdapter внутри нового package.
+
+Runtime and proof:
+  - использовать старый runtime в production path;
+  - доказывать полноту нового API прохождением старого public API ledger.
 ```
 
-Приложение может иметь собственный слой миграции, но он находится **вне** `iwb_canvas_engine_next`:
-
-```text
-app/
-  canvas_port/
-    AppCanvasPort
-    OldEngineAdapter -> old iwb_canvas_engine
-    NewEngineAdapter -> iwb_canvas_engine_next
-    adapter_contract_tests
-```
-
-Этот слой не является deliverable движка. Движок обязан предоставить чистый новый API и собственные contract tests. Приложение само решает, как адаптировать его к `AppCanvasPort`.
+Приложение может иметь собственный слой миграции или adapter contract, но он находится **вне** `iwb_canvas_engine_next`.
+Такой слой не является deliverable движка. Движок обязан предоставить чистый новый API и собственные contract tests; приложение само решает, как адаптировать его к своему integration port.
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

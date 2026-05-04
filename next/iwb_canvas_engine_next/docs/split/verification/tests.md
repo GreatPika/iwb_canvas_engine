@@ -137,7 +137,6 @@ Do not assume:
 - no donor reuse without ported or equivalent tests
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 23. Tests
 
 Required tests:
@@ -171,4 +170,3 @@ Runtime coverage must include edit_kernel, interaction, frame, spatial, schema_v
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

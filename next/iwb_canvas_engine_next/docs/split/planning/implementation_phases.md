@@ -132,7 +132,6 @@ Do not assume:
 - do not start phase without linked sections and donors
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 26. Implementation phases and tasks
 
 ### P0 — package skeleton and hard boundaries
@@ -469,4 +468,3 @@ no app adapters in package.
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

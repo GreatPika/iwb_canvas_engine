@@ -28,7 +28,6 @@ Do not assume:
 - no app adapters in package
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 3. Package layout
 
 Новый package создаётся отдельно:
@@ -152,4 +151,3 @@ all lib/**                   -> may not import old package or old runtime paths
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

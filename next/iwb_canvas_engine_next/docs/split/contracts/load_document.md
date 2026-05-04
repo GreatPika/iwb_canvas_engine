@@ -35,7 +35,6 @@ Do not assume:
 - no prepared replacement in public API
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 12. `loadDocument` staged contract
 
 `CanvasEditPort.loadDocument(document)` is the new public external document replacement operation.
@@ -83,4 +82,3 @@ Failure ordering:
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

@@ -9,7 +9,6 @@ Feeds indexes:
 Use rule: donor entries are phase-bound implementation inputs, not old architecture to copy.
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## Summary by decision
 
 ### Strong direct-copy candidates
@@ -45,4 +44,3 @@ codec, geometry, and interaction slices depend on them.
 | Pointer input contract | `lib/src/contract/pointer_input.dart`, `lib/src/contract/canvas_pointer_input.dart`, `lib/src/contract/pointer_phase_codec.dart` | pointer phases, policy validation, pointer-device kind handling | `copy/adapt` | P2/P9 |
 | Action event immutability | `lib/src/core/action_events.dart` | immutable events, timestamp normalization behavior, text-edit request shape evidence | `adapt` | P2/P9 |
 
-<!-- ORIGINAL-SECTION:END -->

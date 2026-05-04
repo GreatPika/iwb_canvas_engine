@@ -9,7 +9,6 @@ Feeds indexes:
 Use rule: donor entries are phase-bound implementation inputs, not old architecture to copy.
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## P1 closure requirements
 
 P1 donor inventory is closed only when:
@@ -24,4 +23,3 @@ P1 donor inventory is closed only when:
   expected;
 - implementation phases do not import donor files from the old package at
   runtime.
-<!-- ORIGINAL-SECTION:END -->

@@ -55,7 +55,6 @@ Do not assume:
 - no SceneController export
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 4. Public API v1: полный surface
 
 Dart declarations below are normative. Implementation must compile against these names and semantics.
@@ -1722,4 +1721,3 @@ No public diagnostics stream is exported in v1. Diagnostics are projected only t
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

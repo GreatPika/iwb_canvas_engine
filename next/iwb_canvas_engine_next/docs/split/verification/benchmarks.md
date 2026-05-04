@@ -26,7 +26,6 @@ Do not assume:
 - no unapproved old feature path regression
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 24. Benchmarks
 
 Benchmark policy:
@@ -65,4 +64,3 @@ Required benchmark cases:
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

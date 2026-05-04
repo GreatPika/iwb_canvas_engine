@@ -9,7 +9,6 @@ Feeds indexes:
 Use rule: donor entries are phase-bound implementation inputs, not old architecture to copy.
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## Geometry, hit-test, and eraser donors
 
 Port these as algorithms over new shape structs, not as old `SceneNode` or
@@ -23,4 +22,3 @@ Port these as algorithms over new shape structs, not as old `SceneNode` or
 | `lib/src/interactive/internal/interactive_geometry.dart` | segment batching, segment range bounds, rect-distance prefilter | `copy/adapt` | gesture soft-limit helpers depend on input sampling | `test/interactive/core/interactive_draw_path_buffer_test.dart`, eraser guardrail tests |
 | `lib/src/interactive/internal/interactive_draw_eraser_exact_hit.dart` and line/stroke eraser hit files | projected eraser-to-local algorithm, singular transform fallback, batched exact line/stroke checks | `adapt` | tied to old snapshots, delete eligibility, debug counters | `test/interactive/core/interactive_draw_eraser_engine_test.dart`, eraser lifecycle tests |
 
-<!-- ORIGINAL-SECTION:END -->

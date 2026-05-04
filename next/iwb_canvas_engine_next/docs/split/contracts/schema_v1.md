@@ -42,7 +42,6 @@ Do not assume:
 - no old SceneBuilder API shape
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 5. Schema v1 full field contract
 
 ### 5.1 Top-level JSON
@@ -258,4 +257,3 @@ metadata may not override schema fields.
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

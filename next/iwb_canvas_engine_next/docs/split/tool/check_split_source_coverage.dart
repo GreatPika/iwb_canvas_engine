@@ -41,11 +41,6 @@ void _checkSectionCoverage() {
       _fail('$id still points to retired implementation bucket');
     }
     _requireFile(file);
-    final text = File(file).readAsStringSync();
-    if (!text.contains('<!-- ORIGINAL-SECTION:BEGIN -->') ||
-        !text.contains('<!-- ORIGINAL-SECTION:END -->')) {
-      _fail('$file does not preserve an ORIGINAL-SECTION block');
-    }
   }
 
   for (final expectedId in expectedIds) {
@@ -71,10 +66,6 @@ void _checkDonorCoverage() {
 
   for (final file in donorFiles) {
     final text = file.readAsStringSync();
-    if (!text.contains('<!-- ORIGINAL-SECTION:BEGIN -->') ||
-        !text.contains('<!-- ORIGINAL-SECTION:END -->')) {
-      _fail('${file.path} does not preserve an ORIGINAL-SECTION block');
-    }
     if (!text.contains('docs/split/_registry/donors.yaml')) {
       _fail('${file.path} does not point to the donor registry');
     }

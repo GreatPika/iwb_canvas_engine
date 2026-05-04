@@ -47,7 +47,6 @@ Do not assume:
 - no CanvasDocument projection in paint
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 15. FrameEngine and render contract
 
 ### 15.1 Captured frames
@@ -139,4 +138,3 @@ Algorithm:
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

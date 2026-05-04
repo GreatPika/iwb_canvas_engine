@@ -9,7 +9,6 @@ Feeds indexes:
 Use rule: donor entries are phase-bound implementation inputs, not old architecture to copy.
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## Interaction, edit, event, and staged-load donors
 
 These donors carry critical behavior. The public controller/facade shells are
@@ -30,4 +29,3 @@ not donors for the new public API.
 | `lib/src/model/scene_import_draft.dart`, `scene_policy.dart`, `scene_from_import_draft.dart`, `scene_import_draft_from_snapshot.dart` | validated import draft seam before runtime materialization | `adapt` | rename around new `loadDocument` model | P3/P6 |
 | `lib/src/interactive/scene_controller_interaction.dart`, `scene_controller_scene.dart` | behavioral contracts and validation calls only | `rewrite-reference` | old public API shape is banned | P1/P2 checklist |
 
-<!-- ORIGINAL-SECTION:END -->

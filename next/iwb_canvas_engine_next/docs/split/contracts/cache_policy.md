@@ -32,7 +32,6 @@ Do not assume:
 - no cache keys tied to old snapshots
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 18. Cache policy ledger
 
 | Cache | Owner | Key | Invalidated by | Hot path allowed? |
@@ -53,4 +52,3 @@ Cache miss in hot path must be bounded by candidate count, not total scene size.
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

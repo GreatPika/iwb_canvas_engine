@@ -69,7 +69,6 @@ Do not assume:
 - no architecture change without diagram catalog update
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 21. Diagram deliverables
 
 All diagrams below are required files under `docs/split/diagrams/generated/` and must be regenerated when architecture changes.
@@ -171,4 +170,3 @@ state_resource_resolution.mmd
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

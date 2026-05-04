@@ -9,7 +9,6 @@ Feeds indexes:
 Use rule: donor entries are phase-bound implementation inputs, not old architecture to copy.
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## Spatial, frame, render, and cache donors
 
 These are valuable after the committed store and revision model exist. Do not
@@ -30,4 +29,3 @@ copy old controller shells.
 | `lib/src/render/cache/scene_static_layer_cache.dart` | recorded grid/background cache and explicit `Picture.dispose` lifecycle | `adapt` | only if next keeps static layer cache | P8/P10 |
 | `lib/src/render/cache/scene_text_layout_cache.dart`, `scene_stroke_path_cache.dart`, `scene_path_metrics_cache.dart` | text layout, stroke path, path metrics cache shapes | `adapt` | old keys depend on snapshots/revisions | P8 |
 
-<!-- ORIGINAL-SECTION:END -->

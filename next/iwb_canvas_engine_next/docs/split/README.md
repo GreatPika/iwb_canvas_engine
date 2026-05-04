@@ -28,10 +28,9 @@ Start architecture work at `architecture/README.md`. Start execution planning at
 
 ## Source rule
 
-The role-based split files are the documentation source of truth. The text
-between `ORIGINAL-SECTION:BEGIN` and `ORIGINAL-SECTION:END` preserves the
-previously reviewed section body for traceability, but the active owner is the
-role folder and `_registry/sections.yaml`.
+The role-based split files are the documentation source of truth. The active
+owner is the role folder and `_registry/sections.yaml`; retired pre-split source
+markers are not part of the current contract.
 
 ## Donor rule
 

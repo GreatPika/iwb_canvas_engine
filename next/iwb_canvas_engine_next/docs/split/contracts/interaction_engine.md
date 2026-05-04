@@ -63,7 +63,6 @@ Do not assume:
 - no reentrant mutation from resolver
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 14. InteractionEngine
 
 ### 14.1 Pointer session lifecycle
@@ -115,4 +114,3 @@ Double-tap on a visible selectable text element emits `CanvasTextEditRequested`.
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

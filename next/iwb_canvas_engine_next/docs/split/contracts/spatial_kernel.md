@@ -30,7 +30,6 @@ Do not assume:
 - do not rely on stale structuralRevision
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 17. SpatialKernel
 
 Spatial structure:
@@ -75,4 +74,3 @@ Full clone of spatial index for ordinary edit is forbidden. Page-level copy is a
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

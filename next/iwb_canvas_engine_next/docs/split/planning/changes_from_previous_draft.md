@@ -24,7 +24,6 @@ Do not assume:
 - do not resurrect previous draft decisions
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 28. Immediate changes compared with the previous draft
 
 This corrected plan removes legacy API compatibility deliverables and old public symbol compatibility.
@@ -51,4 +50,3 @@ It adds required implementation details that were missing:
 - reordered phases with oracle/capability inventory at the beginning;
 - no app adapters inside the engine package.
 ```
-<!-- ORIGINAL-SECTION:END -->

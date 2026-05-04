@@ -32,7 +32,6 @@ Do not assume:
 - no silent data loss
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 25. Migration tool outside production core
 
 Production core reads/writes only schema v1.
@@ -89,4 +88,3 @@ No silent data loss is allowed. Any intentional loss must appear in `DataLossRep
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

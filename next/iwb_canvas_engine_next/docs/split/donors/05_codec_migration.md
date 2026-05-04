@@ -9,7 +9,6 @@ Feeds indexes:
 Use rule: donor entries are phase-bound implementation inputs, not old architecture to copy.
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## Codec and migration donors
 
 Use these to build the schema v1 codec and later the schema v7 migration tool.
@@ -39,4 +38,3 @@ Migration-relevant old behavior to preserve as reference:
 - old JSON diagnostic aliases include line `localA`/`localB` and stroke
   `localPoints`.
 
-<!-- ORIGINAL-SECTION:END -->

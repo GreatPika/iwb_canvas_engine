@@ -36,7 +36,6 @@ Do not assume:
 - do not copy legacy scene order logic
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 16. Geometry policy v1
 
 Constants:
@@ -137,4 +136,3 @@ Eraser:
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

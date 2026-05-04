@@ -9,7 +9,6 @@ Feeds indexes:
 Use rule: donor entries are phase-bound implementation inputs, not old architecture to copy.
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## DTO, model, validation, and structure donors
 
 These are useful as validation and immutability behavior. Do not copy the old
@@ -24,4 +23,3 @@ public class names into the new public API.
 | `lib/src/model/scene_node_boundary_mapping*.dart` | mapping families between boundary DTOs and runtime rows | `adapt` | old node names and runtime shapes | P3/P5 |
 | `lib/src/model/document_*.dart` | pure document edit/clone/selection helpers | `adapt` | verify ownership against new store/edit split | P5/P6 |
 
-<!-- ORIGINAL-SECTION:END -->

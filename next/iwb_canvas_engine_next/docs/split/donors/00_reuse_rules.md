@@ -9,7 +9,6 @@ Feeds indexes:
 Use rule: donor entries are phase-bound implementation inputs, not old architecture to copy.
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 # `iwb_canvas_engine_next`: current-code donor inventory
 
 This document lists reusable donors from the current `iwb_canvas_engine`
@@ -39,4 +38,3 @@ the new package to import the old runtime or preserve the old public API.
 - If donor code conflicts with the new v1 API, package layout, or no-legacy
   rules, the new plan wins.
 
-<!-- ORIGINAL-SECTION:END -->

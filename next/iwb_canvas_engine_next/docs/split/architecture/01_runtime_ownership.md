@@ -29,7 +29,6 @@ Do not assume:
 - no SceneController
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 2. Несущая модель новой библиотеки
 
 Новая библиотека предоставляет графический runtime для холста. Она не хранит предметную модель приложения.
@@ -80,4 +79,3 @@ RuntimeRoot
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

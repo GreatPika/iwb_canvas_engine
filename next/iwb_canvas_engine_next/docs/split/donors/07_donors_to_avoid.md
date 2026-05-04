@@ -9,7 +9,6 @@ Feeds indexes:
 Use rule: donor entries are phase-bound implementation inputs, not old architecture to copy.
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## Donors to avoid as structure
 
 These files are useful as behavioral evidence or test sources, but they should
@@ -26,4 +25,3 @@ not shape the new package structure.
 - `lib/src/controller/scene_store_controller.dart` as a whole: useful committed
   read and spatial resolution semantics, but mixed with old controller facade.
 
-<!-- ORIGINAL-SECTION:END -->

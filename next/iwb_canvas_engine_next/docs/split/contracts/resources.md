@@ -39,7 +39,6 @@ Do not assume:
 - no remote/network loading
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 7. Resource lifecycle contract
 
 ### 7.1 Resource state
@@ -131,4 +130,3 @@ diagnostic emitted only if verbose diagnostics enabled or schema missing referen
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

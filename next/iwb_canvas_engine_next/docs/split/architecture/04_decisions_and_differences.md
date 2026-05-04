@@ -29,7 +29,6 @@ Do not assume:
 - no silent legacy compatibility layer
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 9. Accepted differences from old engine
 
 | Difference | Decision |
@@ -49,4 +48,3 @@ Do not assume:
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

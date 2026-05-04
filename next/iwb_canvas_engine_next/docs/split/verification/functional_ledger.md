@@ -27,7 +27,6 @@ Do not assume:
 - do not prove next API completeness by old public API ledger
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 8. Functional ledger: old capability -> new API -> required test
 
 | Capability | Old oracle | New API v1 | Required test id |
@@ -78,4 +77,3 @@ All rows must be green before release.
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

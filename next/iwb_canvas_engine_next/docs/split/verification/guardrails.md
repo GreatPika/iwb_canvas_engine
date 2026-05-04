@@ -56,7 +56,6 @@ Do not assume:
 - no non-blocking critical guardrail
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 22. Guardrails and machine checks
 
 Mandatory guardrails:
@@ -94,4 +93,3 @@ Mandatory guardrails:
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

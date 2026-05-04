@@ -28,7 +28,6 @@ Do not assume:
 - no diagnostic allocations on successful hot path
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 20. DiagnosticsHub
 
 `DiagnosticsHub` is internal.
@@ -61,4 +60,3 @@ Sanitizer permits only JSON-like primitives and bounded previews. It forbids run
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

@@ -30,7 +30,6 @@ Do not assume:
 - no old diagnostics surface leakage
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 6. Validation limits
 
 These limits are mandatory for v1. They intentionally preserve old safety limits where an old equivalent exists.
@@ -84,4 +83,3 @@ Validation is applied at:
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

@@ -42,7 +42,6 @@ Do not assume:
 - no async nested edit
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 11. EditKernel implementation contract
 
 ### 11.1 Write sequence
@@ -137,4 +136,3 @@ CommitCompiler must produce exact invalidation. Generic global invalidation is f
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->

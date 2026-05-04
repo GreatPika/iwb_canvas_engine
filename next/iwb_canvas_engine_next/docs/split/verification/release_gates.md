@@ -123,7 +123,6 @@ Do not assume:
 - no release with old imports, legacy facade, or unlinked donor reuse
 <!-- CONTEXT:END -->
 
-<!-- ORIGINAL-SECTION:BEGIN -->
 ## 27. Final release gates
 
 Release is blocked unless all statements are true:
@@ -158,4 +157,3 @@ Release is blocked unless all statements are true:
 
 ---
 
-<!-- ORIGINAL-SECTION:END -->
