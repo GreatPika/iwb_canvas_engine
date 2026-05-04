@@ -88,7 +88,6 @@ Read first:
 - `section_01_legacy_oracle`
 - `section_08_functional_ledger`
 - `section_26_implementation_phases`
-- `section_28_changes_from_previous_draft`
 
 Required donors:
 - `interaction_public_controller_behavior`

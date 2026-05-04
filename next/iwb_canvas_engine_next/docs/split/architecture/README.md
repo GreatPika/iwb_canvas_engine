@@ -44,8 +44,8 @@ documents as the source for current runtime ownership.
 - Migration work routes to `docs/split/contracts/migration_tool.md`.
 - Test, benchmark, guardrail, and release-readiness work routes to
   `docs/split/verification/`.
-- Legacy-oracle evidence, implementation sequencing, and previous draft history
-  route to `docs/split/planning/`.
+- Legacy-oracle evidence and implementation sequencing route to
+  `docs/split/planning/`.
 - Donor decisions route to `docs/split/donors/` and
   `docs/split/_registry/donors.yaml`.
 - Change Contracts route to `../../plan/`.

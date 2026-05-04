@@ -32,4 +32,3 @@ Coverage summary for split context capsules and registries.
 - `section_25_migration_tool`: must_read=linked, donors=linked, diagrams=linked, tests=linked, guardrails=linked
 - `section_26_implementation_phases`: must_read=linked, donors=linked, diagrams=explicit none, tests=explicit none, guardrails=linked
 - `section_27_final_release_gates`: must_read=linked, donors=linked, diagrams=explicit none, tests=linked, guardrails=linked
-- `section_28_changes_from_previous_draft`: must_read=linked, donors=explicit none, diagrams=explicit none, tests=explicit none, guardrails=explicit none

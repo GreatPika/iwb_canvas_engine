@@ -24,7 +24,7 @@ void main() {
 void _checkSectionCoverage() {
   final sections = _loadYamlList('docs/split/_registry/sections.yaml');
   final expectedIds = {
-    for (var index = 0; index <= 28; index++)
+    for (var index = 0; index <= 27; index++)
       'section_${index.toString().padLeft(2, '0')}',
   };
   final seenIds = <String>{};
