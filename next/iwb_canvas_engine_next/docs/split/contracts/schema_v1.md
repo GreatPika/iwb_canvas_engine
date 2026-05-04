@@ -1,19 +1,19 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_05_schema_v1_contract`
-Source: `docs/split/_registry/sections.yaml / section 5`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/contracts/schema_v1.md`
 Owns:
 - 5. Schema v1 full field contract
 Must read before editing:
-- `section_04_public_api_v1`
-- `section_06_validation_limits`
-- `section_19_codec_boundary`
-- `section_25_migration_tool`
+- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
+- `section_06_validation_limits` -> `docs/split/contracts/validation_limits.md`
+- `section_19_codec_boundary` -> `docs/split/contracts/codec_boundary.md`
+- `section_25_migration_tool` -> `docs/split/contracts/migration_tool.md`
 Depends on:
-- `section_04_public_api_v1`
-- `section_06_validation_limits`
-- `section_19_codec_boundary`
-- `section_25_migration_tool`
+- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
+- `section_06_validation_limits` -> `docs/split/contracts/validation_limits.md`
+- `section_19_codec_boundary` -> `docs/split/contracts/codec_boundary.md`
+- `section_25_migration_tool` -> `docs/split/contracts/migration_tool.md`
 Feeds phases:
 - `P3`
 Related donors:
@@ -28,7 +28,7 @@ Related donors:
 - `codec_validation_path_surface`
 - `dto_boundary_schema`
 Related diagrams:
-- docs/split/diagrams/README.md#dfd_schema_v1_decode_encode -> docs/split/diagrams/generated/dfd_schema_v1_decode_encode.mmd
+- `docs/split/diagrams/README.md#dfd_schema_v1_decode_encode` -> `docs/split/diagrams/generated/dfd_schema_v1_decode_encode.mmd`
 Required tests:
 - `test.schema_v1.known_fields_validation`
 - `test.schema_v1.resources_appkey_only`
@@ -37,7 +37,7 @@ Required tests:
 Guardrails:
 - `codec.schema_v1_exact`
 - `codec.known_fields_validated`
-Do not infer:
+Do not assume:
 - no schema v7 public entrypoints as next API
 - no old SceneBuilder API shape
 <!-- CONTEXT:END -->

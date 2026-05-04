@@ -21,6 +21,11 @@
     - new_core.no_node_spec_patch_shape_dependency
   tests:
     - test.api_contract.v1_scope_gate
+  do_not_assume:
+    - no legacy facade
+    - no SceneController
+    - no old public API shape
+    - no old runtime fallback
 -
   id: section_01_legacy_oracle
   source: docs/split/_registry/sections.yaml / section 1
@@ -40,6 +45,9 @@
     - new_api.functional_ledger_complete
   tests:
     - "none"
+  do_not_assume:
+    - old engine is oracle only
+    - no old runtime fallback
 -
   id: section_02_architecture_model
   source: docs/split/_registry/sections.yaml / section 2
@@ -61,6 +69,9 @@
     - new_core.single_runtime_root
   tests:
     - "none"
+  do_not_assume:
+    - no legacy facade
+    - no SceneController
 -
   id: section_03_package_layout
   source: docs/split/_registry/sections.yaml / section 3
@@ -81,6 +92,9 @@
     - new_api.no_old_public_types
   tests:
     - test.api_contract.no_old_public_symbols
+  do_not_assume:
+    - no old package import
+    - no app adapters in package
 -
   id: section_04_public_api_v1
   source: docs/split/_registry/sections.yaml / section 4
@@ -125,6 +139,10 @@
     - test.api_contract.dto_immutability
     - test.events.typed_action_payloads
     - test.api_contract.v1_scope_gate
+  do_not_assume:
+    - no old public API shape
+    - no PatchField export
+    - no SceneController export
 -
   id: section_05_schema_v1_contract
   source: docs/split/_registry/sections.yaml / section 5
@@ -158,6 +176,9 @@
     - test.schema_v1.resources_appkey_only
     - test.schema_v1.reject_unknown_element_kind
     - test.schema_v1.reject_unknown_resource_source_kind
+  do_not_assume:
+    - no schema v7 public entrypoints as next API
+    - no old SceneBuilder API shape
 -
   id: section_06_validation_limits
   source: docs/split/_registry/sections.yaml / section 6
@@ -181,6 +202,9 @@
     - new_api.id_validation_no_extension_type_escape
   tests:
     - test.validation_limits.constructor_and_schema_limits
+  do_not_assume:
+    - no unvalidated public ids
+    - no old diagnostics surface leakage
 -
   id: section_07_resource_lifecycle
   source: docs/split/_registry/sections.yaml / section 7
@@ -210,6 +234,11 @@
     - test.resources.app_owned_image_not_disposed
     - test.resources.resource_dirty
     - test.resources.mark_all_resources_dirty
+  do_not_assume:
+    - no engine IO
+    - no asset-bundle loading
+    - no file loading
+    - no remote/network loading
 -
   id: section_08_functional_ledger
   source: docs/split/_registry/sections.yaml / section 8
@@ -230,6 +259,8 @@
     - new_api.functional_ledger_complete
   tests:
     - test.functional_ledger.row_specific_tests
+  do_not_assume:
+    - do not prove next API completeness by old public API ledger
 -
   id: section_09_accepted_differences
   source: docs/split/_registry/sections.yaml / section 9
@@ -251,6 +282,9 @@
     - new_api.v1_scope_gate_green_before_freeze
   tests:
     - "none"
+  do_not_assume:
+    - accepted differences are explicit only
+    - no silent legacy compatibility layer
 -
   id: section_10_runtime_data_model
   source: docs/split/_registry/sections.yaml / section 10
@@ -277,6 +311,9 @@
   tests:
     - test.store.read_document_projection
     - test.store.no_projection_hot_path
+  do_not_assume:
+    - no old mutable runtime graph
+    - no SceneController shape dependency
 -
   id: section_11_edit_kernel
   source: docs/split/_registry/sections.yaml / section 11
@@ -309,6 +346,10 @@
     - test.events.low_level_mutations_do_not_emit_actions
     - test.edit_kernel.sync_non_nested_async_stale
     - test.edit_kernel.rollback
+  do_not_assume:
+    - no old SceneWriteTxn
+    - no old controller shell
+    - no async nested edit
 -
   id: section_12_load_document
   source: docs/split/_registry/sections.yaml / section 12
@@ -335,6 +376,9 @@
     - load.success_interrupts_before_install
   tests:
     - test.load_document.staged_success_failure
+  do_not_assume:
+    - no interrupt before successful preparation
+    - no prepared replacement in public API
 -
   id: section_13_operation_matrix
   source: docs/split/_registry/sections.yaml / section 13
@@ -357,6 +401,8 @@
     - edit.stale_handle_rejected
   tests:
     - test.edit_kernel.sync_non_nested_async_stale
+  do_not_assume:
+    - no implicit mutation path outside EditKernel
 -
   id: section_14_interaction_engine
   source: docs/split/_registry/sections.yaml / section 14
@@ -410,6 +456,9 @@
     - test.interaction.state_machines
     - test.interaction.move_resolver_reentrancy
     - test.surface.widget_paint
+  do_not_assume:
+    - no old callback graph as structure
+    - no reentrant mutation from resolver
 -
   id: section_15_frame_render_contract
   source: docs/split/_registry/sections.yaml / section 15
@@ -447,6 +496,9 @@
     - test.frame.main_overlay_capture
     - test.frame.no_live_runtime_read_in_painters
     - test.surface.widget_paint
+  do_not_assume:
+    - no live runtime reads in painters
+    - no CanvasDocument projection in paint
 -
   id: section_16_geometry_policy
   source: docs/split/_registry/sections.yaml / section 16
@@ -475,6 +527,9 @@
     - "none"
   tests:
     - test.geometry.hit_policy
+  do_not_assume:
+    - do not port old SceneNode traversal
+    - do not copy legacy scene order logic
 -
   id: section_17_spatial_kernel
   source: docs/split/_registry/sections.yaml / section 17
@@ -497,6 +552,9 @@
     - "none"
   tests:
     - test.spatial.touched_update
+  do_not_assume:
+    - do not port old Scene or locator maps
+    - do not rely on stale structuralRevision
 -
   id: section_18_cache_policy
   source: docs/split/_registry/sections.yaml / section 18
@@ -521,6 +579,9 @@
     - "none"
   tests:
     - "none"
+  do_not_assume:
+    - no unbounded cache owner sprawl
+    - no cache keys tied to old snapshots
 -
   id: section_19_codec_boundary
   source: docs/split/_registry/sections.yaml / section 19
@@ -551,6 +612,9 @@
     - codec.known_fields_validated
   tests:
     - "none"
+  do_not_assume:
+    - no old SceneCodec surface as next API
+    - no schema v7 read/write in production core
 -
   id: section_20_diagnostics_hub
   source: docs/split/_registry/sections.yaml / section 20
@@ -572,6 +636,8 @@
     - diagnostics.disabled_no_alloc_hot_path
   tests:
     - "none"
+  do_not_assume:
+    - no diagnostic allocations on successful hot path
 -
   id: section_21_diagrams
   source: docs/split/_registry/sections.yaml / section 21
@@ -632,6 +698,8 @@
     - diagrams.all_required_present
   tests:
     - test.diagrams.required_present
+  do_not_assume:
+    - no architecture change without diagram catalog update
 -
   id: section_22_guardrails_machine_checks
   source: docs/split/_registry/sections.yaml / section 22
@@ -680,6 +748,8 @@
     - diagrams.all_required_present
   tests:
     - test.guardrails.blocking_suite
+  do_not_assume:
+    - no non-blocking critical guardrail
 -
   id: section_23_tests
   source: docs/split/_registry/sections.yaml / section 23
@@ -808,6 +878,8 @@
     - test.benchmarks.required_cases
     - test.diagrams.required_present
     - test.guardrails.blocking_suite
+  do_not_assume:
+    - no donor reuse without ported or equivalent tests
 -
   id: section_24_benchmarks
   source: docs/split/_registry/sections.yaml / section 24
@@ -827,6 +899,8 @@
     - "none"
   tests:
     - test.benchmarks.required_cases
+  do_not_assume:
+    - no unapproved old feature path regression
 -
   id: section_25_migration_tool
   source: docs/split/_registry/sections.yaml / section 25
@@ -851,6 +925,9 @@
   tests:
     - test.migration.old_fixture_migration
     - test.migration.no_silent_data_loss
+  do_not_assume:
+    - no migration code inside production core
+    - no silent data loss
 -
   id: section_26_implementation_phases
   source: docs/split/_registry/sections.yaml / section 26
@@ -976,6 +1053,8 @@
     - diagrams.all_required_present
   tests:
     - "none"
+  do_not_assume:
+    - do not start phase without linked sections and donors
 -
   id: section_27_final_release_gates
   source: docs/split/_registry/sections.yaml / section 27
@@ -1090,6 +1169,8 @@
     - diagrams.all_required_present
   tests:
     - test.guardrails.blocking_suite
+  do_not_assume:
+    - no release with old imports, legacy facade, or unlinked donor reuse
 -
   id: section_28_changes_from_previous_draft
   source: docs/split/_registry/sections.yaml / section 28
@@ -1108,3 +1189,5 @@
     - "none"
   tests:
     - "none"
+  do_not_assume:
+    - do not resurrect previous draft decisions

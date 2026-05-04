@@ -66,6 +66,7 @@ documents as the source for current runtime ownership.
 Run these commands from `next/iwb_canvas_engine_next/`:
 
 ```bash
+dart run docs/split/tool/generate_split_context_capsules.dart --check
 dart run docs/split/tool/check_split_navigation.dart
 dart run docs/split/tool/check_split_source_coverage.dart
 dart run docs/split/tool/generate_architecture_diagrams.dart --check

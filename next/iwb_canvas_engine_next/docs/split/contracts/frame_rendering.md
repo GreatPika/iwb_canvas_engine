@@ -1,21 +1,21 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_15_frame_render_contract`
-Source: `docs/split/_registry/sections.yaml / section 15`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/contracts/frame_rendering.md`
 Owns:
 - 15. FrameEngine and render contract
 Must read before editing:
-- `section_10_runtime_data_model`
-- `section_14_interaction_engine`
-- `section_16_geometry_policy`
-- `section_17_spatial_kernel`
-- `section_18_cache_policy`
+- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
+- `section_14_interaction_engine` -> `docs/split/contracts/interaction_engine.md`
+- `section_16_geometry_policy` -> `docs/split/contracts/geometry.md`
+- `section_17_spatial_kernel` -> `docs/split/contracts/spatial_kernel.md`
+- `section_18_cache_policy` -> `docs/split/contracts/cache_policy.md`
 Depends on:
-- `section_10_runtime_data_model`
-- `section_14_interaction_engine`
-- `section_16_geometry_policy`
-- `section_17_spatial_kernel`
-- `section_18_cache_policy`
+- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
+- `section_14_interaction_engine` -> `docs/split/contracts/interaction_engine.md`
+- `section_16_geometry_policy` -> `docs/split/contracts/geometry.md`
+- `section_17_spatial_kernel` -> `docs/split/contracts/spatial_kernel.md`
+- `section_18_cache_policy` -> `docs/split/contracts/cache_policy.md`
 Feeds phases:
 - `P8`
 - `P10`
@@ -31,10 +31,10 @@ Related donors:
 - `static_layer_cache`
 - `text_stroke_path_metrics_caches`
 Related diagrams:
-- docs/split/diagrams/README.md#dfd_main_paint_frame -> docs/split/diagrams/generated/dfd_main_paint_frame.mmd
-- docs/split/diagrams/README.md#dfd_overlay_frame -> docs/split/diagrams/generated/dfd_overlay_frame.mmd
-- docs/split/diagrams/README.md#seq_main_paint -> docs/split/diagrams/generated/seq_main_paint.mmd
-- docs/split/diagrams/README.md#seq_overlay_paint -> docs/split/diagrams/generated/seq_overlay_paint.mmd
+- `docs/split/diagrams/README.md#dfd_main_paint_frame` -> `docs/split/diagrams/generated/dfd_main_paint_frame.mmd`
+- `docs/split/diagrams/README.md#dfd_overlay_frame` -> `docs/split/diagrams/generated/dfd_overlay_frame.mmd`
+- `docs/split/diagrams/README.md#seq_main_paint` -> `docs/split/diagrams/generated/seq_main_paint.mmd`
+- `docs/split/diagrams/README.md#seq_overlay_paint` -> `docs/split/diagrams/generated/seq_overlay_paint.mmd`
 Required tests:
 - `test.store.no_projection_hot_path`
 - `test.frame.main_overlay_capture`
@@ -42,7 +42,7 @@ Required tests:
 - `test.surface.widget_paint`
 Guardrails:
 - `preview.selected_move_main_repaint`
-Do not infer:
+Do not assume:
 - no live runtime reads in painters
 - no CanvasDocument projection in paint
 <!-- CONTEXT:END -->

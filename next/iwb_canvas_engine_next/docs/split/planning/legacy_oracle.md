@@ -1,15 +1,15 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_01_legacy_oracle`
-Source: `docs/split/_registry/sections.yaml / section 1`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/planning/legacy_oracle.md`
 Owns:
 - 1. Что проверено по старому архиву
 Must read before editing:
-- `section_00_status_and_scope`
+- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
 - `docs/split/donors/00_reuse_rules.md`
 - `docs/split/donors/01_summary_by_decision.md`
 Depends on:
-- `section_00_status_and_scope`
+- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
 - `docs/split/donors/00_reuse_rules.md`
 - `docs/split/donors/01_summary_by_decision.md`
 Feeds phases:
@@ -22,7 +22,7 @@ Required tests:
 - `none`
 Guardrails:
 - `new_api.functional_ledger_complete`
-Do not infer:
+Do not assume:
 - old engine is oracle only
 - no old runtime fallback
 <!-- CONTEXT:END -->

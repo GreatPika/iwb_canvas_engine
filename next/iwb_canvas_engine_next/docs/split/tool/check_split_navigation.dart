@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:yaml/yaml.dart';
 
+import 'split_context_capsules.dart';
+
 final _errors = <String>[];
 final _sectionIds = <String>{};
 final _ownerIds = <String>{};
@@ -13,6 +15,7 @@ void main() {
   _checkArchitectureManifest();
   _checkMarkdownIndexes();
   _checkNoRetiredActiveReferences();
+  _checkGeneratedContextCapsules();
 
   if (_errors.isNotEmpty) {
     stderr.writeln('Split navigation check failed:');
@@ -24,6 +27,11 @@ void main() {
   }
 
   stdout.writeln('Split navigation check passed.');
+}
+
+void _checkGeneratedContextCapsules() {
+  final result = syncSplitContextCapsules(checkOnly: true);
+  _errors.addAll(result.errors);
 }
 
 void _checkRequiredEntrypoints() {

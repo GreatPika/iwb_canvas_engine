@@ -1,17 +1,17 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_16_geometry_policy`
-Source: `docs/split/_registry/sections.yaml / section 16`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/contracts/geometry.md`
 Owns:
 - 16. Geometry policy v1
 Must read before editing:
-- `section_04_public_api_v1`
-- `section_15_frame_render_contract`
-- `section_17_spatial_kernel`
+- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
+- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
+- `section_17_spatial_kernel` -> `docs/split/contracts/spatial_kernel.md`
 Depends on:
-- `section_04_public_api_v1`
-- `section_15_frame_render_contract`
-- `section_17_spatial_kernel`
+- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
+- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
+- `section_17_spatial_kernel` -> `docs/split/contracts/spatial_kernel.md`
 Feeds phases:
 - `P7`
 - `P8`
@@ -26,12 +26,12 @@ Related donors:
 - `direct_local_bounds_policy`
 - `direct_paint_admission`
 Related diagrams:
-- docs/split/diagrams/README.md#dfd_pointer_preview_commit -> docs/split/diagrams/generated/dfd_pointer_preview_commit.mmd
+- `docs/split/diagrams/README.md#dfd_pointer_preview_commit` -> `docs/split/diagrams/generated/dfd_pointer_preview_commit.mmd`
 Required tests:
 - `test.geometry.hit_policy`
 Guardrails:
 - `none`
-Do not infer:
+Do not assume:
 - do not port old SceneNode traversal
 - do not copy legacy scene order logic
 <!-- CONTEXT:END -->

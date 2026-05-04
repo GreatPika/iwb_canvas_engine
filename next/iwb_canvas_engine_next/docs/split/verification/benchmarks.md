@@ -1,17 +1,17 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_24_benchmarks`
-Source: `docs/split/_registry/sections.yaml / section 24`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/verification/benchmarks.md`
 Owns:
 - 24. Benchmarks
 Must read before editing:
-- `section_15_frame_render_contract`
-- `section_17_spatial_kernel`
-- `section_18_cache_policy`
+- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
+- `section_17_spatial_kernel` -> `docs/split/contracts/spatial_kernel.md`
+- `section_18_cache_policy` -> `docs/split/contracts/cache_policy.md`
 Depends on:
-- `section_15_frame_render_contract`
-- `section_17_spatial_kernel`
-- `section_18_cache_policy`
+- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
+- `section_17_spatial_kernel` -> `docs/split/contracts/spatial_kernel.md`
+- `section_18_cache_policy` -> `docs/split/contracts/cache_policy.md`
 Feeds phases:
 - `P12`
 Related donors:
@@ -22,7 +22,7 @@ Required tests:
 - `test.benchmarks.required_cases`
 Guardrails:
 - `none`
-Do not infer:
+Do not assume:
 - no unapproved old feature path regression
 <!-- CONTEXT:END -->
 

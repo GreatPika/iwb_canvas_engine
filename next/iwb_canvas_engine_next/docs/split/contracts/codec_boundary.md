@@ -1,19 +1,19 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_19_codec_boundary`
-Source: `docs/split/_registry/sections.yaml / section 19`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/contracts/codec_boundary.md`
 Owns:
 - 19. CodecBoundary
 Must read before editing:
-- `section_05_schema_v1_contract`
-- `section_06_validation_limits`
-- `section_20_diagnostics_hub`
-- `section_25_migration_tool`
+- `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
+- `section_06_validation_limits` -> `docs/split/contracts/validation_limits.md`
+- `section_20_diagnostics_hub` -> `docs/split/contracts/diagnostics.md`
+- `section_25_migration_tool` -> `docs/split/contracts/migration_tool.md`
 Depends on:
-- `section_05_schema_v1_contract`
-- `section_06_validation_limits`
-- `section_20_diagnostics_hub`
-- `section_25_migration_tool`
+- `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
+- `section_06_validation_limits` -> `docs/split/contracts/validation_limits.md`
+- `section_20_diagnostics_hub` -> `docs/split/contracts/diagnostics.md`
+- `section_25_migration_tool` -> `docs/split/contracts/migration_tool.md`
 Feeds phases:
 - `P3`
 - `P11`
@@ -28,13 +28,13 @@ Related donors:
 - `codec_scene_codec_flow`
 - `codec_validation_path_surface`
 Related diagrams:
-- docs/split/diagrams/README.md#dfd_schema_v1_decode_encode -> docs/split/diagrams/generated/dfd_schema_v1_decode_encode.mmd
+- `docs/split/diagrams/README.md#dfd_schema_v1_decode_encode` -> `docs/split/diagrams/generated/dfd_schema_v1_decode_encode.mmd`
 Required tests:
 - `none`
 Guardrails:
 - `codec.schema_v1_exact`
 - `codec.known_fields_validated`
-Do not infer:
+Do not assume:
 - no old SceneCodec surface as next API
 - no schema v7 read/write in production core
 <!-- CONTEXT:END -->

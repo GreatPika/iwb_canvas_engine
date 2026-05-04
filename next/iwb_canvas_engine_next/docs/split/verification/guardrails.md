@@ -1,19 +1,19 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_22_guardrails_machine_checks`
-Source: `docs/split/_registry/sections.yaml / section 22`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/verification/guardrails.md`
 Owns:
 - 22. Guardrails and machine checks
 Must read before editing:
-- `section_00_status_and_scope`
-- `section_03_package_layout`
-- `section_21_diagrams`
-- `section_27_final_release_gates`
+- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
+- `section_03_package_layout` -> `docs/split/architecture/02_package_boundaries.md`
+- `section_21_diagrams` -> `docs/split/architecture/diagrams.md`
+- `section_27_final_release_gates` -> `docs/split/verification/release_gates.md`
 Depends on:
-- `section_00_status_and_scope`
-- `section_03_package_layout`
-- `section_21_diagrams`
-- `section_27_final_release_gates`
+- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
+- `section_03_package_layout` -> `docs/split/architecture/02_package_boundaries.md`
+- `section_21_diagrams` -> `docs/split/architecture/diagrams.md`
+- `section_27_final_release_gates` -> `docs/split/verification/release_gates.md`
 Feeds phases:
 - `P0`
 - `P12`
@@ -52,7 +52,7 @@ Guardrails:
 - `codec.known_fields_validated`
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagrams.all_required_present`
-Do not infer:
+Do not assume:
 - no non-blocking critical guardrail
 <!-- CONTEXT:END -->
 

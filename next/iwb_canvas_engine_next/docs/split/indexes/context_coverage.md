@@ -2,7 +2,7 @@
 
 Coverage summary for split context capsules and registries.
 
-## Implementation sections
+## Split sections
 
 - `section_00_status_and_scope`: must_read=linked, donors=explicit none, diagrams=linked, tests=linked, guardrails=linked
 - `section_01_legacy_oracle`: must_read=linked, donors=explicit none, diagrams=explicit none, tests=explicit none, guardrails=linked

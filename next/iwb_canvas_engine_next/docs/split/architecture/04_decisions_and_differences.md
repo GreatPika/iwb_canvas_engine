@@ -1,17 +1,17 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_09_accepted_differences`
-Source: `docs/split/_registry/sections.yaml / section 9`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/architecture/04_decisions_and_differences.md`
 Owns:
 - 9. Accepted differences from old engine
 Must read before editing:
-- `section_00_status_and_scope`
-- `section_08_functional_ledger`
-- `section_25_migration_tool`
+- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
+- `section_08_functional_ledger` -> `docs/split/verification/functional_ledger.md`
+- `section_25_migration_tool` -> `docs/split/contracts/migration_tool.md`
 Depends on:
-- `section_00_status_and_scope`
-- `section_08_functional_ledger`
-- `section_25_migration_tool`
+- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
+- `section_08_functional_ledger` -> `docs/split/verification/functional_ledger.md`
+- `section_25_migration_tool` -> `docs/split/contracts/migration_tool.md`
 Feeds phases:
 - `P1.5`
 - `P2`
@@ -19,12 +19,12 @@ Feeds phases:
 Related donors:
 - `none`
 Related diagrams:
-- docs/split/diagrams/README.md#dfd_migration_tool -> docs/split/diagrams/generated/dfd_migration_tool.mmd
+- `docs/split/diagrams/README.md#dfd_migration_tool` -> `docs/split/diagrams/generated/dfd_migration_tool.mmd`
 Required tests:
 - `none`
 Guardrails:
 - `new_api.v1_scope_gate_green_before_freeze`
-Do not infer:
+Do not assume:
 - accepted differences are explicit only
 - no silent legacy compatibility layer
 <!-- CONTEXT:END -->

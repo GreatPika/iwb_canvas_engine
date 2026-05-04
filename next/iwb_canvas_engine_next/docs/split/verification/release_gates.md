@@ -1,21 +1,21 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_27_final_release_gates`
-Source: `docs/split/_registry/sections.yaml / section 27`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/verification/release_gates.md`
 Owns:
 - 27. Final release gates
 Must read before editing:
-- `section_21_diagrams`
-- `section_22_guardrails_machine_checks`
-- `section_23_tests`
-- `section_24_benchmarks`
-- `section_26_implementation_phases`
+- `section_21_diagrams` -> `docs/split/architecture/diagrams.md`
+- `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
+- `section_23_tests` -> `docs/split/verification/tests.md`
+- `section_24_benchmarks` -> `docs/split/verification/benchmarks.md`
+- `section_26_implementation_phases` -> `docs/split/planning/implementation_phases.md`
 Depends on:
-- `section_21_diagrams`
-- `section_22_guardrails_machine_checks`
-- `section_23_tests`
-- `section_24_benchmarks`
-- `section_26_implementation_phases`
+- `section_21_diagrams` -> `docs/split/architecture/diagrams.md`
+- `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
+- `section_23_tests` -> `docs/split/verification/tests.md`
+- `section_24_benchmarks` -> `docs/split/verification/benchmarks.md`
+- `section_26_implementation_phases` -> `docs/split/planning/implementation_phases.md`
 Feeds phases:
 - `P12`
 Related donors:
@@ -119,7 +119,7 @@ Guardrails:
 - `codec.known_fields_validated`
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagrams.all_required_present`
-Do not infer:
+Do not assume:
 - no release with old imports, legacy facade, or unlinked donor reuse
 <!-- CONTEXT:END -->
 

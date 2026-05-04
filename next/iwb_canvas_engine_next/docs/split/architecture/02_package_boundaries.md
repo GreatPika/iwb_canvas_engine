@@ -1,29 +1,29 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_03_package_layout`
-Source: `docs/split/_registry/sections.yaml / section 3`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/architecture/02_package_boundaries.md`
 Owns:
 - 3. Package layout
 Must read before editing:
-- `section_00_status_and_scope`
-- `section_02_architecture_model`
-- `section_22_guardrails_machine_checks`
+- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
+- `section_02_architecture_model` -> `docs/split/architecture/01_runtime_ownership.md`
+- `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
 Depends on:
-- `section_00_status_and_scope`
-- `section_02_architecture_model`
-- `section_22_guardrails_machine_checks`
+- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
+- `section_02_architecture_model` -> `docs/split/architecture/01_runtime_ownership.md`
+- `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
 Feeds phases:
 - `P0`
 Related donors:
 - `none`
 Related diagrams:
-- docs/split/diagrams/README.md#c4_container -> docs/split/diagrams/generated/c4_container.mmd
+- `docs/split/diagrams/README.md#c4_container` -> `docs/split/diagrams/generated/c4_container.mmd`
 Required tests:
 - `test.api_contract.no_old_public_symbols`
 Guardrails:
 - `new_core.no_legacy_imports`
 - `new_api.no_old_public_types`
-Do not infer:
+Do not assume:
 - no old package import
 - no app adapters in package
 <!-- CONTEXT:END -->

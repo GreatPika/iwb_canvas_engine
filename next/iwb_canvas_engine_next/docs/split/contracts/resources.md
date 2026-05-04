@@ -1,26 +1,26 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_07_resource_lifecycle`
-Source: `docs/split/_registry/sections.yaml / section 7`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/contracts/resources.md`
 Owns:
 - 7. Resource lifecycle contract
 Must read before editing:
-- `section_04_public_api_v1`
-- `section_10_runtime_data_model`
-- `section_15_frame_render_contract`
+- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
+- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
+- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
 Depends on:
-- `section_04_public_api_v1`
-- `section_10_runtime_data_model`
-- `section_15_frame_render_contract`
+- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
+- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
+- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
 Feeds phases:
 - `P4`
 - `P10`
 Related donors:
 - `none`
 Related diagrams:
-- docs/split/diagrams/README.md#dfd_resource_resolution -> docs/split/diagrams/generated/dfd_resource_resolution.mmd
-- docs/split/diagrams/README.md#seq_resource_resolution -> docs/split/diagrams/generated/seq_resource_resolution.mmd
-- docs/split/diagrams/README.md#state_resource_resolution -> docs/split/diagrams/generated/state_resource_resolution.mmd
+- `docs/split/diagrams/README.md#dfd_resource_resolution` -> `docs/split/diagrams/generated/dfd_resource_resolution.mmd`
+- `docs/split/diagrams/README.md#seq_resource_resolution` -> `docs/split/diagrams/generated/seq_resource_resolution.mmd`
+- `docs/split/diagrams/README.md#state_resource_resolution` -> `docs/split/diagrams/generated/state_resource_resolution.mmd`
 Required tests:
 - `test.schema_v1.resources_appkey_only`
 - `test.schema_v1.reject_unknown_resource_source_kind`
@@ -32,7 +32,7 @@ Guardrails:
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`
 - `resources.app_key_only`
-Do not infer:
+Do not assume:
 - no engine IO
 - no asset-bundle loading
 - no file loading

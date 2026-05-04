@@ -1,17 +1,17 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_26_implementation_phases`
-Source: `docs/split/_registry/sections.yaml / section 26`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/planning/implementation_phases.md`
 Owns:
 - 26. Implementation phases and tasks
 Must read before editing:
 - `docs/split/indexes/by_phase.md`
 - `docs/split/indexes/phase_to_donor.md`
-- `section_27_final_release_gates`
+- `section_27_final_release_gates` -> `docs/split/verification/release_gates.md`
 Depends on:
 - `docs/split/indexes/by_phase.md`
 - `docs/split/indexes/phase_to_donor.md`
-- `section_27_final_release_gates`
+- `section_27_final_release_gates` -> `docs/split/verification/release_gates.md`
 Feeds phases:
 - `P0`
 - `P1`
@@ -128,7 +128,7 @@ Guardrails:
 - `codec.known_fields_validated`
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagrams.all_required_present`
-Do not infer:
+Do not assume:
 - do not start phase without linked sections and donors
 <!-- CONTEXT:END -->
 

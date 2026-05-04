@@ -1,6 +1,6 @@
 # Diagram catalog
 
-Every item below is required by implementation plan section 21. The catalog links split docs to the planned Mermaid file paths under `docs/split/diagrams/generated/`.
+Every item below is required by split section 21. The catalog links split docs to the planned Mermaid file paths under `docs/split/diagrams/generated/`.
 
 ## c4_context
 

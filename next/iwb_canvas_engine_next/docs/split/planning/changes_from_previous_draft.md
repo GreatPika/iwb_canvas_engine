@@ -1,15 +1,15 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_28_changes_from_previous_draft`
-Source: `docs/split/_registry/sections.yaml / section 28`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/planning/changes_from_previous_draft.md`
 Owns:
 - 28. Immediate changes compared with the previous draft
 Must read before editing:
-- `section_00_status_and_scope`
-- `section_26_implementation_phases`
+- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
+- `section_26_implementation_phases` -> `docs/split/planning/implementation_phases.md`
 Depends on:
-- `section_00_status_and_scope`
-- `section_26_implementation_phases`
+- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
+- `section_26_implementation_phases` -> `docs/split/planning/implementation_phases.md`
 Feeds phases:
 - `P1`
 Related donors:
@@ -20,7 +20,7 @@ Required tests:
 - `none`
 Guardrails:
 - `none`
-Do not infer:
+Do not assume:
 - do not resurrect previous draft decisions
 <!-- CONTEXT:END -->
 

@@ -1,19 +1,19 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_12_load_document`
-Source: `docs/split/_registry/sections.yaml / section 12`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/contracts/load_document.md`
 Owns:
 - 12. `loadDocument` staged contract
 Must read before editing:
-- `section_10_runtime_data_model`
-- `section_11_edit_kernel`
-- `section_13_operation_matrix`
-- `section_14_interaction_engine`
+- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
+- `section_11_edit_kernel` -> `docs/split/contracts/edit_kernel.md`
+- `section_13_operation_matrix` -> `docs/split/contracts/operation_matrix.md`
+- `section_14_interaction_engine` -> `docs/split/contracts/interaction_engine.md`
 Depends on:
-- `section_10_runtime_data_model`
-- `section_11_edit_kernel`
-- `section_13_operation_matrix`
-- `section_14_interaction_engine`
+- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
+- `section_11_edit_kernel` -> `docs/split/contracts/edit_kernel.md`
+- `section_13_operation_matrix` -> `docs/split/contracts/operation_matrix.md`
+- `section_14_interaction_engine` -> `docs/split/contracts/interaction_engine.md`
 Feeds phases:
 - `P6`
 - `P9`
@@ -22,15 +22,15 @@ Related donors:
 - `validated_import_draft`
 - `interaction_mutation_boundary`
 Related diagrams:
-- docs/split/diagrams/README.md#dfd_load_document_success_failure -> docs/split/diagrams/generated/dfd_load_document_success_failure.mmd
-- docs/split/diagrams/README.md#seq_load_document_success -> docs/split/diagrams/generated/seq_load_document_success.mmd
-- docs/split/diagrams/README.md#seq_load_document_failure -> docs/split/diagrams/generated/seq_load_document_failure.mmd
+- `docs/split/diagrams/README.md#dfd_load_document_success_failure` -> `docs/split/diagrams/generated/dfd_load_document_success_failure.mmd`
+- `docs/split/diagrams/README.md#seq_load_document_success` -> `docs/split/diagrams/generated/seq_load_document_success.mmd`
+- `docs/split/diagrams/README.md#seq_load_document_failure` -> `docs/split/diagrams/generated/seq_load_document_failure.mmd`
 Required tests:
 - `test.load_document.staged_success_failure`
 Guardrails:
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
-Do not infer:
+Do not assume:
 - no interrupt before successful preparation
 - no prepared replacement in public API
 <!-- CONTEXT:END -->

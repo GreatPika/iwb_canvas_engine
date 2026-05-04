@@ -1,30 +1,30 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_02_architecture_model`
-Source: `docs/split/_registry/sections.yaml / section 2`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/architecture/01_runtime_ownership.md`
 Owns:
 - 2. Несущая модель новой библиотеки
 Must read before editing:
-- `section_00_status_and_scope`
-- `section_03_package_layout`
-- `section_10_runtime_data_model`
+- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
+- `section_03_package_layout` -> `docs/split/architecture/02_package_boundaries.md`
+- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
 Depends on:
-- `section_00_status_and_scope`
-- `section_03_package_layout`
-- `section_10_runtime_data_model`
+- `section_00_status_and_scope` -> `docs/split/architecture/00_architecture_overview.md`
+- `section_03_package_layout` -> `docs/split/architecture/02_package_boundaries.md`
+- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
 Feeds phases:
 - `P0`
 - `P5`
 Related donors:
 - `none`
 Related diagrams:
-- docs/split/diagrams/README.md#c4_container -> docs/split/diagrams/generated/c4_container.mmd
-- docs/split/diagrams/README.md#c4_component_runtime -> docs/split/diagrams/generated/c4_component_runtime.mmd
+- `docs/split/diagrams/README.md#c4_container` -> `docs/split/diagrams/generated/c4_container.mmd`
+- `docs/split/diagrams/README.md#c4_component_runtime` -> `docs/split/diagrams/generated/c4_component_runtime.mmd`
 Required tests:
 - `none`
 Guardrails:
 - `new_core.single_runtime_root`
-Do not infer:
+Do not assume:
 - no legacy facade
 - no SceneController
 <!-- CONTEXT:END -->

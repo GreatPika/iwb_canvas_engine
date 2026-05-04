@@ -1,31 +1,31 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_13_operation_matrix`
-Source: `docs/split/_registry/sections.yaml / section 13`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/contracts/operation_matrix.md`
 Owns:
 - 13. Operation matrix
 Must read before editing:
-- `section_11_edit_kernel`
-- `section_12_load_document`
-- `section_23_tests`
+- `section_11_edit_kernel` -> `docs/split/contracts/edit_kernel.md`
+- `section_12_load_document` -> `docs/split/contracts/load_document.md`
+- `section_23_tests` -> `docs/split/verification/tests.md`
 Depends on:
-- `section_11_edit_kernel`
-- `section_12_load_document`
-- `section_23_tests`
+- `section_11_edit_kernel` -> `docs/split/contracts/edit_kernel.md`
+- `section_12_load_document` -> `docs/split/contracts/load_document.md`
+- `section_23_tests` -> `docs/split/verification/tests.md`
 Feeds phases:
 - `P6`
 Related donors:
 - `interaction_mutation_boundary`
 Related diagrams:
-- docs/split/diagrams/README.md#seq_edit_success -> docs/split/diagrams/generated/seq_edit_success.mmd
-- docs/split/diagrams/README.md#seq_edit_rollback -> docs/split/diagrams/generated/seq_edit_rollback.mmd
+- `docs/split/diagrams/README.md#seq_edit_success` -> `docs/split/diagrams/generated/seq_edit_success.mmd`
+- `docs/split/diagrams/README.md#seq_edit_rollback` -> `docs/split/diagrams/generated/seq_edit_rollback.mmd`
 Required tests:
 - `test.edit_kernel.sync_non_nested_async_stale`
 Guardrails:
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
 - `edit.stale_handle_rejected`
-Do not infer:
+Do not assume:
 - no implicit mutation path outside EditKernel
 <!-- CONTEXT:END -->
 

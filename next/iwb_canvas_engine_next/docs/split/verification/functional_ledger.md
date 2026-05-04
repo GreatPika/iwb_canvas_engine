@@ -1,16 +1,16 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_08_functional_ledger`
-Source: `docs/split/_registry/sections.yaml / section 8`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/verification/functional_ledger.md`
 Owns:
 - 8. Functional ledger: old capability -> new API -> required test
 Must read before editing:
-- `section_01_legacy_oracle`
-- `section_04_public_api_v1`
+- `section_01_legacy_oracle` -> `docs/split/planning/legacy_oracle.md`
+- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
 - `docs/split/donors/00_reuse_rules.md`
 Depends on:
-- `section_01_legacy_oracle`
-- `section_04_public_api_v1`
+- `section_01_legacy_oracle` -> `docs/split/planning/legacy_oracle.md`
+- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
 - `docs/split/donors/00_reuse_rules.md`
 Feeds phases:
 - `P1`
@@ -23,7 +23,7 @@ Required tests:
 - `test.functional_ledger.row_specific_tests`
 Guardrails:
 - `new_api.functional_ledger_complete`
-Do not infer:
+Do not assume:
 - do not prove next API completeness by old public API ledger
 <!-- CONTEXT:END -->
 

@@ -1,6 +1,6 @@
 # By guardrail
 
-Guardrails extracted from implementation plan section 22.
+Guardrails extracted from split section 22.
 
 ## new_api.functional_ledger_complete
 

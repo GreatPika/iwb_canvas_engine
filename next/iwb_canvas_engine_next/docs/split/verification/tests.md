@@ -1,21 +1,21 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_23_tests`
-Source: `docs/split/_registry/sections.yaml / section 23`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/verification/tests.md`
 Owns:
 - 23. Tests
 Must read before editing:
-- `section_04_public_api_v1`
-- `section_05_schema_v1_contract`
-- `section_07_resource_lifecycle`
-- `section_14_interaction_engine`
-- `section_22_guardrails_machine_checks`
+- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
+- `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
+- `section_07_resource_lifecycle` -> `docs/split/contracts/resources.md`
+- `section_14_interaction_engine` -> `docs/split/contracts/interaction_engine.md`
+- `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
 Depends on:
-- `section_04_public_api_v1`
-- `section_05_schema_v1_contract`
-- `section_07_resource_lifecycle`
-- `section_14_interaction_engine`
-- `section_22_guardrails_machine_checks`
+- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
+- `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
+- `section_07_resource_lifecycle` -> `docs/split/contracts/resources.md`
+- `section_14_interaction_engine` -> `docs/split/contracts/interaction_engine.md`
+- `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
 Feeds phases:
 - `P2`
 - `P3`
@@ -133,7 +133,7 @@ Required tests:
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `new_api.functional_ledger_complete`
-Do not infer:
+Do not assume:
 - no donor reuse without ported or equivalent tests
 <!-- CONTEXT:END -->
 

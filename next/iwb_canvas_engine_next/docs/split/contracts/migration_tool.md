@@ -1,17 +1,17 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_25_migration_tool`
-Source: `docs/split/_registry/sections.yaml / section 25`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/contracts/migration_tool.md`
 Owns:
 - 25. Migration tool outside production core
 Must read before editing:
-- `section_05_schema_v1_contract`
-- `section_09_accepted_differences`
-- `section_19_codec_boundary`
+- `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
+- `section_09_accepted_differences` -> `docs/split/architecture/04_decisions_and_differences.md`
+- `section_19_codec_boundary` -> `docs/split/contracts/codec_boundary.md`
 Depends on:
-- `section_05_schema_v1_contract`
-- `section_09_accepted_differences`
-- `section_19_codec_boundary`
+- `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
+- `section_09_accepted_differences` -> `docs/split/architecture/04_decisions_and_differences.md`
+- `section_19_codec_boundary` -> `docs/split/contracts/codec_boundary.md`
 Feeds phases:
 - `P11`
 Related donors:
@@ -21,13 +21,13 @@ Related donors:
 - `codec_scene_codec_flow`
 - `codec_validation_path_surface`
 Related diagrams:
-- docs/split/diagrams/README.md#dfd_migration_tool -> docs/split/diagrams/generated/dfd_migration_tool.mmd
+- `docs/split/diagrams/README.md#dfd_migration_tool` -> `docs/split/diagrams/generated/dfd_migration_tool.mmd`
 Required tests:
 - `test.migration.old_fixture_migration`
 - `test.migration.no_silent_data_loss`
 Guardrails:
 - `codec.schema_v1_exact`
-Do not infer:
+Do not assume:
 - no migration code inside production core
 - no silent data loss
 <!-- CONTEXT:END -->

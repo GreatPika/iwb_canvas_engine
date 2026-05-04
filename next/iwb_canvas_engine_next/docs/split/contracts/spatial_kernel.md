@@ -1,17 +1,17 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_17_spatial_kernel`
-Source: `docs/split/_registry/sections.yaml / section 17`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/contracts/spatial_kernel.md`
 Owns:
 - 17. SpatialKernel
 Must read before editing:
-- `section_10_runtime_data_model`
-- `section_15_frame_render_contract`
-- `section_16_geometry_policy`
+- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
+- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
+- `section_16_geometry_policy` -> `docs/split/contracts/geometry.md`
 Depends on:
-- `section_10_runtime_data_model`
-- `section_15_frame_render_contract`
-- `section_16_geometry_policy`
+- `section_10_runtime_data_model` -> `docs/split/architecture/03_data_model.md`
+- `section_15_frame_render_contract` -> `docs/split/contracts/frame_rendering.md`
+- `section_16_geometry_policy` -> `docs/split/contracts/geometry.md`
 Feeds phases:
 - `P7`
 - `P8`
@@ -20,12 +20,12 @@ Related donors:
 - `spatial_index_cache`
 - `store_scene_controller_read_paths`
 Related diagrams:
-- docs/split/diagrams/README.md#dfd_cache_invalidation -> docs/split/diagrams/generated/dfd_cache_invalidation.mmd
+- `docs/split/diagrams/README.md#dfd_cache_invalidation` -> `docs/split/diagrams/generated/dfd_cache_invalidation.mmd`
 Required tests:
 - `test.spatial.touched_update`
 Guardrails:
 - `none`
-Do not infer:
+Do not assume:
 - do not port old Scene or locator maps
 - do not rely on stale structuralRevision
 <!-- CONTEXT:END -->

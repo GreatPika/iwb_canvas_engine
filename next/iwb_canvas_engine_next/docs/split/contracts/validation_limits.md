@@ -1,15 +1,15 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_06_validation_limits`
-Source: `docs/split/_registry/sections.yaml / section 6`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/contracts/validation_limits.md`
 Owns:
 - 6. Validation limits
 Must read before editing:
-- `section_04_public_api_v1`
-- `section_05_schema_v1_contract`
+- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
+- `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
 Depends on:
-- `section_04_public_api_v1`
-- `section_05_schema_v1_contract`
+- `section_04_public_api_v1` -> `docs/split/contracts/public_api_v1.md`
+- `section_05_schema_v1_contract` -> `docs/split/contracts/schema_v1.md`
 Feeds phases:
 - `P1.5`
 - `P2`
@@ -19,13 +19,13 @@ Related donors:
 - `foundation_validators`
 - `foundation_error_contract`
 Related diagrams:
-- docs/split/diagrams/README.md#dfd_diagnostics_error_projection -> docs/split/diagrams/generated/dfd_diagnostics_error_projection.mmd
+- `docs/split/diagrams/README.md#dfd_diagnostics_error_projection` -> `docs/split/diagrams/generated/dfd_diagnostics_error_projection.mmd`
 Required tests:
 - `test.validation_limits.constructor_and_schema_limits`
 Guardrails:
 - `codec.known_fields_validated`
 - `new_api.id_validation_no_extension_type_escape`
-Do not infer:
+Do not assume:
 - no unvalidated public ids
 - no old diagnostics surface leakage
 <!-- CONTEXT:END -->

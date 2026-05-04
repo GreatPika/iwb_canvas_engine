@@ -1,32 +1,32 @@
 <!-- CONTEXT:BEGIN -->
 Registry id: `section_00_status_and_scope`
-Source: `docs/split/_registry/sections.yaml / section 0`
-Canonical source: `docs/split/_registry/sections.yaml`
+Registry source: `docs/split/_registry/sections.yaml`
+Document path: `docs/split/architecture/00_architecture_overview.md`
 Owns:
 - 0. Статус и обязательное архитектурное решение
 Must read before editing:
-- `section_01_legacy_oracle`
-- `section_03_package_layout`
-- `section_22_guardrails_machine_checks`
+- `section_01_legacy_oracle` -> `docs/split/planning/legacy_oracle.md`
+- `section_03_package_layout` -> `docs/split/architecture/02_package_boundaries.md`
+- `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
 Depends on:
-- `section_01_legacy_oracle`
-- `section_03_package_layout`
-- `section_22_guardrails_machine_checks`
+- `section_01_legacy_oracle` -> `docs/split/planning/legacy_oracle.md`
+- `section_03_package_layout` -> `docs/split/architecture/02_package_boundaries.md`
+- `section_22_guardrails_machine_checks` -> `docs/split/verification/guardrails.md`
 Feeds phases:
 - `P0`
 - `P1.5`
 Related donors:
 - `none`
 Related diagrams:
-- docs/split/diagrams/README.md#c4_context -> docs/split/diagrams/generated/c4_context.mmd
-- docs/split/diagrams/README.md#c4_container -> docs/split/diagrams/generated/c4_container.mmd
+- `docs/split/diagrams/README.md#c4_context` -> `docs/split/diagrams/generated/c4_context.mmd`
+- `docs/split/diagrams/README.md#c4_container` -> `docs/split/diagrams/generated/c4_container.mmd`
 Required tests:
 - `test.api_contract.v1_scope_gate`
 Guardrails:
 - `new_core.no_legacy_imports`
 - `new_core.no_scene_controller_shape_dependency`
 - `new_core.no_node_spec_patch_shape_dependency`
-Do not infer:
+Do not assume:
 - no legacy facade
 - no SceneController
 - no old public API shape
