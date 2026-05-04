@@ -1,0 +1,61 @@
+%% Public edit rollback sequence
+sequenceDiagram
+  autonumber
+
+  actor Caller as Application code
+  participant API as CanvasEditPort
+  participant EK as EditKernel
+  participant Store as DocumentStoreKernel
+  participant Draft as DraftDocument
+  participant Handle as CanvasEdit handle
+  participant Touched as TouchedSet
+  participant Plan as CommitPlan
+  participant Effects as Buffered effects
+  participant Signals as Public signals
+
+  Caller->>API: edit(fn)
+  API->>EK: open synchronous edit session
+  EK->>EK: reject disposed or nested edit
+  EK->>Store: read committed identity and revision snapshot
+  Store-->>EK: committed tables, selection, preview, and revisions
+  EK->>Draft: create rollback-safe draft
+  EK->>Handle: bind live handle to session
+  EK-->>Caller: invoke fn(handle)
+
+  alt callback throws
+    activate Handle
+    Caller->>Handle: draft document/resource/selection mutations
+    Handle->>Draft: mutate draft only
+    Draft->>Touched: record exact mutation facts
+    Caller--x EK: throw original exception
+    deactivate Handle
+    EK->>EK: capture original exception
+  else callback returns Future
+    Caller-->>EK: Future result
+    EK->>EK: reject async edit before commit planning
+    Note over EK: Returned Future is treated as a rollback path; no async mutation may outlive the session.
+  else preflight fails before atomic install
+    activate Handle
+    Caller->>Handle: synchronous CanvasEdit mutations
+    Handle->>Draft: mutate draft only
+    Draft->>Touched: record exact mutation facts
+    Handle-->>Caller: mutation results
+    deactivate Handle
+    Caller-->>EK: callback result
+    EK->>EK: reject Future result before success path
+    EK->>Plan: compile touched set and invalidation candidates
+    Touched-->>Plan: exact changed state
+    Plan->>Store: preflight invariants
+    Store--x Plan: preflight error
+    Plan--x EK: rethrow preflight error
+  end
+
+  EK->>Effects: discard buffered events, repaint, resources, spatial, and projection effects
+  EK->>Draft: discard draft
+  EK->>Touched: discard touched set
+  EK->>Handle: close session and mark handle stale
+  Note over Handle: Any later handle operation throws StateError.
+  Note over EK,Store: Committed document identity, revisions, selection, and preview remain unchanged.
+  Note over Store,Signals: No atomic install runs; no action event, text edit event, public notify, scene repaint, or overlay repaint is published.
+  EK--x API: rethrow original exception, async edit rejection, or preflight error
+  API--x Caller: propagate safely

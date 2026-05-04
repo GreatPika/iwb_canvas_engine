@@ -1,0 +1,75 @@
+%% Main paint frame sequence
+sequenceDiagram
+  autonumber
+
+  participant Surface as CanvasSurface
+  participant Frame as FrameEngine
+  participant Store as DocumentStoreKernel
+  participant Preview as CanvasPreviewState
+  participant Spatial as SpatialKernel
+  participant PlanCache as PaintPlanCache
+  participant Resources as ResourceKernel
+  participant Resolver as CanvasResourceResolver
+  participant Painter as Main painter
+
+  Surface->>Frame: paint main scene request(viewportRect, cameraOffset, dpr, resolver)
+  Frame->>Store: capture committed tables, revisions, camera, viewport, and selection once
+  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, visualRevision, selectionRevision, resourceRevision, resourceVisualRevision, cameraOffset, viewportRect, selectionIds
+  Frame->>Preview: capture immutable selected move preview once
+  Preview-->>Frame: selectedMoveDelta or none
+  Note over Frame: CapturedMainFrame freezes the runtime facts used by this main paint frame.
+
+  Frame->>PlanCache: lookup paint plan by captured revisions, viewport, selection, resourceVisualRevision, and selectedMoveDelta
+
+  alt paint plan cache hit
+    PlanCache-->>Frame: immutable RenderElementRecord list
+  else paint plan cache miss
+    Frame->>Spatial: query paint candidates bounded by captured viewportRect
+    Spatial-->>Frame: ordinary candidate handles with id, generation, orderToken, and structuralRevision
+
+    opt selectedMoveDelta is active
+      Frame->>Spatial: query selected supplement using visibilityRect shifted by -selectedMoveDelta
+      Spatial-->>Frame: selected candidate handles with id, generation, orderToken, and structuralRevision
+    end
+
+    loop for each ordinary or selected candidate handle
+      Frame->>Store: resolve handle against captured structuralRevision and generation
+      alt handle generation and structuralRevision still match the captured frame
+        Store-->>Frame: immutable family row view, common paint fields, selection flags, and resourceId if any
+        Frame->>Frame: build RenderElementRecord with row view and previewDelta for selected moved records
+      else stale candidate
+        Store-->>Frame: reject stale candidate
+        Frame->>Frame: skip record for stale generation or structuralRevision
+      end
+    end
+
+    Frame->>Frame: merge ordinary and selected supplement records by orderToken
+    Note over Frame: No full-scene sort and no CanvasDocument materialization.
+    Frame->>PlanCache: store immutable ordered RenderElementRecord list
+  end
+
+  opt records include image resource ids
+    loop for each image resource id in records
+      Frame->>Resources: resolve paint asset(resourceId, captured resource revisions, resolver)
+      Resources->>Store: resolve committed descriptor against captured resourceRevision
+      Store-->>Resources: appKey descriptor or missing descriptor
+
+      alt cached resolved image is current
+        Resources-->>Frame: app-owned image paint asset
+      else descriptor missing or resolver returns null
+        Resources-->>Frame: bounded missing image placeholder
+      else sync resolver call required
+        Resources->>Resolver: resolveImage(appKey descriptor)
+        Resolver-->>Resources: app-owned image or null
+        Resources-->>Frame: resolved image or bounded placeholder
+      end
+    end
+  end
+
+  Frame->>Painter: paint immutable records, resolved assets, and bounded frame render caches
+  Painter-->>Surface: draw main scene
+
+  Note over Painter: Painter consumes immutable RenderElementRecord data only; it performs no live runtime reads.
+  Note over Frame,Store: Forbidden in main paint: Store mutation, CanvasDocument projection, DocumentProjectionCache read, public API reads, and InteractionEngine mutation.
+  Note over Resources,Resolver: ResourceKernel owns the app resolver boundary; painter never calls the application resolver directly.
+  Note over Surface,Painter: No legacy scene, controller, snapshot, or public DTO entities participate in this sequence.

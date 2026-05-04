@@ -1,0 +1,91 @@
+%% Selected move preview then cancel sequence
+sequenceDiagram
+  autonumber
+
+  actor User as User pointer
+  participant Surface as CanvasSurface
+  participant Tools as CanvasToolPort
+  participant IE as InteractionEngine
+  participant Store as DocumentStoreKernel
+  participant Spatial as SpatialKernel
+  participant Preview as CanvasPreviewState
+  participant Frame as FrameEngine
+  participant Resolver as CanvasMoveCommitResolver
+  participant EK as EditKernel
+  participant Draft as DraftDocument
+  participant Touched as TouchedSet
+  participant Plan as CommitPlan
+  participant Caches as Projection and resource caches
+  participant Events as EventBuffer
+  participant Signals as Public signals
+
+  User->>Surface: pointer down on selected movable element
+  Surface->>Tools: handlePointer(CanvasPointerSample down)
+  Tools->>IE: normalized finite down sample
+  IE->>IE: admit one active pointer token
+  IE->>Store: read selection ids and transformable flags
+  Store-->>IE: selected ids in document order
+  IE->>Spatial: hit-test down position once
+  Spatial-->>IE: top visible selectable element id
+  IE->>IE: start active selected move session
+  Note over IE: Session stores pointer token, sessionId, start position, selected ids, movable ids, and current preview delta.
+  IE->>Preview: publish selected move preview with delta Offset.zero
+
+  loop pointer move samples for same token
+    User->>Surface: pointer move
+    Surface->>Tools: handlePointer(CanvasPointerSample move)
+    Tools->>IE: normalized finite move sample
+    IE->>IE: update active selected move session delta
+    IE->>Preview: replace immutable main-scene preview snapshot
+    Preview->>Frame: request main-scene repaint only
+    Frame->>Store: capture committed frame facts and selection ids once
+    Frame->>Preview: capture selectedMoveDelta once
+    Frame->>Spatial: query viewport plus selected supplement shifted by -previewDelta
+    Spatial-->>Frame: ordinary and selected candidate handles
+    Frame->>Frame: build RenderElementRecord previewDelta for selected records
+    Frame->>Signals: publish main repaint request
+    Signals-->>Surface: repaint main scene with selected move preview
+  end
+
+  alt same-token pointer cancel
+    User->>Surface: pointer cancel
+    Surface->>Tools: handlePointer(CanvasPointerSample cancel)
+    Tools->>IE: same-token cancel sample
+    IE->>IE: classify active selected move as cancelled
+    Note over IE,Resolver: Resolver is not called for pointer cancel.
+  else mode change or interactive disabled during session
+    User->>Surface: mode change or interactive=false
+    Surface->>Tools: route active session cancel before disabling routing
+    Tools->>IE: mode-change cancellation for active token
+    IE->>IE: classify active selected move as cancelled
+    Note over IE,Resolver: Resolver is not called for mode-change cancellation.
+  else terminal pointer up resolved as CanvasMoveCancel
+    User->>Surface: pointer up
+    Surface->>Tools: handlePointer(CanvasPointerSample up)
+    Tools->>IE: same-token terminal sample
+    IE->>IE: read proposedDelta from selected move session
+    IE->>Store: read summary, moved element reads, selection bounds
+    Store-->>IE: CanvasMoveCommitRequest inputs
+    IE->>Resolver: resolve(request with proposedDelta)
+    Resolver-->>IE: CanvasMoveCancel(reason)
+    IE->>IE: discard selected move commit intent
+  end
+
+  IE->>Preview: clear selected move preview and active session
+  Preview->>Frame: request main-scene repaint cleanup
+  Frame->>Store: capture committed frame facts and selection ids once
+  Frame->>Preview: capture no selectedMoveDelta
+  Frame->>Spatial: query viewport without preview-shifted selected supplement
+  Spatial-->>Frame: ordinary candidate handles
+  Frame->>Frame: build records without selected move preview delta
+  Frame->>Signals: publish main repaint cleanup request
+  Signals-->>Surface: repaint main scene without selected move preview
+  IE->>IE: return pointer runtime to idle
+  IE-->>Tools: cancel handling complete
+
+  Note over Preview,Frame: Selected move cleanup affects the main scene; it is not overlay-only cleanup.
+  Note over EK,Draft: No EditKernel commit; no DraftDocument mutation.
+  Note over Touched,Plan: No TouchedSet, no CommitPlan, and no atomic install.
+  Note over Store,Spatial: No document, revision, selection, spatial, or projection state changes.
+  Note over Caches: No projection cache eviction and no resource cache change.
+  Note over Events,Signals: No action event and no public document notification.

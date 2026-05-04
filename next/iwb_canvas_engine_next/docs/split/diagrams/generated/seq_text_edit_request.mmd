@@ -1,0 +1,69 @@
+%% Text double-tap edit request sequence
+sequenceDiagram
+  autonumber
+
+  actor User as User pointer
+  participant Surface as CanvasSurface
+  participant Tools as CanvasToolPort
+  participant IE as InteractionEngine
+  participant Store as DocumentStoreKernel
+  participant Spatial as SpatialKernel
+  participant Geometry as GeometryPolicy
+  participant Requests as CanvasTextEditRequested stream
+  participant Frame as FrameEngine
+  participant Signals as Public signals
+  participant App as Application
+  participant TextOverlay as Flutter text editor overlay app-owned
+
+  User->>Surface: first tap on canvas
+  Surface->>Tools: handlePointer(CanvasPointerSample down/up)
+  Tools->>IE: normalized finite tap sample
+  IE->>IE: admit tap if no active pointer conflict, stale token, or drag beyond tapSlop
+  IE->>IE: convert viewPosition to finite worldPosition
+  IE->>Spatial: query point hit candidates at worldPosition
+  Spatial-->>IE: committed content handles in hit order
+  IE->>Geometry: exact point hit for visible selectable content elements
+  Geometry-->>IE: top visible selectable content element or none
+
+  alt first tap has no top hit or top hit is not text
+    IE-->>Tools: finish tap without edit request
+    Note over IE,Signals: No document, revision, spatial, projection, resource, selection, preview, repaint, or action effect is produced.
+  else first tap top hit is text
+    IE->>Store: read immutable text element snapshot and boundsWorld
+    Store-->>IE: textSnapshot, boundsWorld, and element generation
+    IE->>IE: store pending tap candidate, timestamp, viewPosition, and worldPosition
+    Note over IE: Pending tap state is gesture detection only; it is not document, selection, or preview state.
+  end
+
+  User->>Surface: second tap on canvas
+  Surface->>Tools: handlePointer(CanvasPointerSample down/up)
+  Tools->>IE: normalized finite tap sample
+  IE->>IE: admit tap if no active pointer conflict, stale token, or drag beyond tapSlop
+  IE->>IE: convert viewPosition to finite worldPosition
+  IE->>Spatial: query point hit candidates at second worldPosition
+  Spatial-->>IE: committed content handles in hit order
+  IE->>Geometry: exact point hit for visible selectable content elements
+  Geometry-->>IE: top visible selectable content element or none
+
+  alt no top hit, top hit is not text, no matching pending first tap, delay exceeded, slop exceeded, or candidate changed
+    IE->>IE: replace or clear pending tap candidate
+    IE-->>Tools: finish tap without edit request
+    Note over IE,Signals: No automatic select/deselect, preview update, repaint request, CanvasActionCommitted, or edit commit occurs.
+  else top hit is text and double-tap matches the same current text element
+    IE->>Store: read current text element snapshot, boundsWorld, and generation
+    Store-->>IE: current textSnapshot and boundsWorld
+    IE->>IE: verify candidate still visible, selectable, text, and generation-current
+    IE->>Requests: emit CanvasTextEditRequested(elementId, timestampMs, viewPosition, worldPosition, boundsWorld, textSnapshot)
+    Requests->>Signals: publish text edit request notification only
+    Signals-->>App: deliver CanvasTextEditRequested
+    App->>TextOverlay: create and own Flutter text editor overlay
+    Note over App,TextOverlay: IME, focus, accessibility, text selection, hide/show policy, and editor lifetime belong to the application.
+    Note over IE,Frame: The engine does not create or own the Flutter text editor overlay and does not write app overlay state into CanvasPreviewState.
+    IE-->>Tools: clear pending tap candidate and finish double-tap handling
+  end
+
+  opt later application text change outside this sequence
+    Note over App: The application commits changed text through updateElement(CanvasTextElementUpdate) on the normal public edit path.
+  end
+
+  Note over IE,Signals: Forbidden in this sequence: EditKernel commit, DraftDocument, TouchedSet, CommitPlan, atomic install, document or revision changes, spatial updates, projection/cache eviction, resource changes, preview mutation, selection mutation, CanvasActionCommitted, and engine-owned app overlay.

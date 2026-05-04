@@ -1,0 +1,139 @@
+%% Eraser corridor preview then terminal commit sequence
+sequenceDiagram
+  autonumber
+
+  actor User as User pointer
+  participant Surface as CanvasSurface
+  participant Tools as CanvasToolPort
+  participant IE as InteractionEngine
+  participant Preview as CanvasPreviewState
+  participant Frame as FrameEngine
+  participant Spatial as SpatialKernel
+  participant Geometry as GeometryPolicy
+  participant EK as EditKernel
+  participant Store as DocumentStoreKernel
+  participant Draft as DraftDocument
+  participant Touched as TouchedSet
+  participant Plan as CommitPlan
+  participant Projection as DocumentProjectionCache
+  participant Events as EventBuffer
+  participant Signals as Public signals
+
+  User->>Surface: pointer down in draw mode with eraser tool
+  Surface->>Tools: handlePointer(CanvasPointerSample down)
+  Tools->>IE: normalized finite down sample
+  IE->>IE: admit one active pointer token
+  IE->>IE: read finite eraserThickness and start eraser session
+  Note over IE: Session stores pointer token, sessionId, eraserThickness, and corridor points in world coordinates.
+  IE->>Preview: publish kind eraser with first corridor point
+  Preview->>Frame: request overlay repaint only
+  Frame->>Preview: capture overlayRevision and eraser corridor once
+  Frame->>Frame: build immutable eraser corridor overlay primitive
+  Frame->>Signals: publish overlay repaint request
+  Signals-->>Surface: repaint overlay eraser corridor
+
+  loop pointer move samples for same token
+    User->>Surface: pointer move
+    Surface->>Tools: handlePointer(CanvasPointerSample move)
+    Tools->>IE: normalized finite move sample
+    IE->>IE: append corridor point and trim if interactive eraser soft limit is exceeded
+    Note over IE: Corridor remains preview state only; no selected-move main-scene preview is staged.
+    IE->>Spatial: query corridor envelope inflated by eraserThickness / 2 + hitPadding + 4.0
+    Spatial-->>IE: committed candidate handles from content hit scope
+    IE->>Geometry: exact eraser segment-to-family checks for visible deletable candidates
+    Geometry-->>IE: tentative touched ids for session only
+    Note over IE,Geometry: Read-only candidate refresh can guide terminal intent, but it does not mutate selection, Store, spatial index, or caches.
+    IE->>Preview: replace immutable eraser corridor preview snapshot
+    Preview->>Frame: request overlay repaint only
+    Frame->>Preview: capture overlayRevision and corridor once
+    Frame->>Frame: build immutable eraser corridor overlay primitive
+    Frame->>Signals: publish overlay repaint request
+    Signals-->>Surface: repaint overlay eraser corridor
+  end
+
+  alt stale non-terminal sample or second pointer down during active routing
+    Surface->>Tools: handlePointer(CanvasPointerSample move/down)
+    Tools->>IE: stale token or unsupported concurrent pointer
+    IE-->>Tools: ignore without preview, edit, repaint, or action
+  else cancel, mode change, dispose, or invalid terminal cleanup
+    User->>Surface: cancel or external interruption
+    Surface->>Tools: terminal cleanup request
+    Tools->>IE: cleanup active eraser session
+    IE->>Preview: clear eraser corridor and active session
+    Preview->>Frame: request overlay repaint cleanup
+    Frame->>Signals: publish overlay cleanup repaint request
+    Signals-->>Surface: repaint overlay without eraser corridor
+    Note over EK,Signals: No EditKernel commit, Store mutation, spatial remove/update, projection eviction, main repaint, or erase action is published.
+  else loadDocument success interrupts active eraser
+    Surface->>Tools: terminal cleanup request from external load success
+    Tools->>IE: cleanup active eraser session
+    IE->>Preview: clear eraser corridor and active session
+    Preview->>Frame: request overlay repaint cleanup
+    Frame->>Signals: publish overlay cleanup repaint request
+    Signals-->>Surface: repaint overlay without eraser corridor
+    Note over EK,Signals: No eraser EditKernel commit, eraser spatial remove/update, eraser projection eviction, eraser main repaint, or erase action is published.
+    Note over Store,Frame: The loadDocument success Store mutation, spatial rebuild, projection eviction, and main plus overlay repaint are external load effects covered by seq_load_document_success.
+  else same-token pointer up
+    User->>Surface: pointer up
+    Surface->>Tools: handlePointer(CanvasPointerSample up)
+    Tools->>IE: same-token finite terminal sample
+    IE->>IE: append terminal point if distinct and trim corridor to eraser point limit
+    IE->>Spatial: query final corridor envelope for content hit candidates
+    Spatial-->>IE: committed candidate handles with generation and structuralRevision
+    IE->>Geometry: exact eraser checks; require isDeletable and exclude background elements
+    Geometry-->>IE: final erasedElementIds in document order
+
+    alt final erasedElementIds is empty
+      IE->>Preview: clear eraser corridor and active session
+      Preview->>Frame: request overlay repaint cleanup
+      Frame->>Signals: publish overlay cleanup repaint request
+      Signals-->>Surface: repaint overlay without eraser corridor
+      Note over Touched,Signals: No touched set, revision change, spatial remove/update, projection eviction, main repaint, public document notification, or erase action is published.
+    else at least one element is erased
+      IE->>EK: open synchronous interaction edit
+      EK->>EK: reject disposed or nested edit
+      EK->>Store: read committed revision snapshot
+      Store-->>EK: committed tables and revision
+      EK->>Draft: create rollback-safe draft
+      IE->>Draft: remove each erasedElementId through edit mutation
+      Note over IE,Draft: InteractionEngine never mutates DocumentStoreKernel directly.
+      Draft->>Touched: record removedElementIds and selectionChanged when removed ids were selected
+      Note over Touched: Exact committed scope: removed ids; document, structural, bounds, visual, projection, and selection revision if selection changed.
+      IE->>Events: stage deferred erase action descriptor
+      Note over Events: Not public yet. Deferred payload is CanvasEraseActionPayload(eraserThickness, erasedElementIds, corridorPointCount).
+      EK->>EK: reject Future result before success path
+      EK->>Plan: compile exact erase touched set and invalidation
+      Touched-->>Plan: removed ids and revision facts
+      Plan->>Frame: prepare main repaint masks
+      Plan->>Events: attach staged erase action to commit
+      Plan->>Store: preflight registry, layer membership, and selection invariants
+      Store-->>Plan: preflight accepted
+      Plan->>Store: install committed document atomically
+      Store->>Store: remove registry rows, layer memberships, family rows, and selected ids
+      Note over Plan,Store: Atomic install is the commit boundary; no action is visible before this point.
+      Store->>Spatial: apply touched-id spatial remove/update for erased ids
+      Spatial-->>Store: deleted ids removed from hit and paint indexes
+      Store->>Projection: evict public document projection by projectionRevision
+      Store->>Events: materialize CanvasActionCommitted erase after install
+      Store->>Frame: publish committed main repaint bus
+      EK->>EK: close edit session and stale handle
+      EK-->>IE: edit result
+      IE->>Preview: clear eraser corridor and active session
+      Preview->>Frame: request overlay repaint cleanup
+      Events->>Signals: publish document revision and erase action notifications
+      Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
+      Signals-->>Surface: repaint main scene without erased elements and overlay without eraser corridor
+      IE-->>Tools: terminal handling complete
+    end
+  end
+
+  opt edit exception, rejected Future, or preflight failure
+    EK->>Events: discard pending erase action
+    EK->>EK: rollback draft and close session
+    EK-->>IE: terminal failure
+    IE->>Preview: clear eraser corridor and active session
+    Preview->>Frame: request overlay repaint cleanup
+    Frame->>Signals: publish overlay cleanup repaint request
+    Signals-->>Surface: repaint overlay without eraser corridor
+    Note over Store,Signals: Rollback keeps committed document, revisions, selection, spatial index, projection cache, main repaint, public document notifications, and erase action unchanged.
+  end

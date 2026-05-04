@@ -1,0 +1,24 @@
+C4Component
+title EditKernel code component view
+
+Container(PublicAPI, "Public API", "lib/src/api/", "Stable edit and command ports that open synchronous edit sessions.")
+Container(DocumentStoreKernel, "DocumentStoreKernel", "lib/src/store/", "Committed document tables, revisions, selection, resources, and projection cache.")
+Container(DiagnosticsHub, "DiagnosticsHub", "lib/src/diagnostics/", "Structured validation and runtime error projection.")
+
+Container_Boundary(edit_kernel, "EditKernel (lib/src/edit/)") {
+  Component(EditSession, "EditSession", "session owner", "Rejects disposed, nested, async, and stale edit handles; owns callback lifetime.")
+  Component(DraftDocument, "DraftDocument", "mutable draft", "Rollback-safe working copy created from the committed revision.")
+  Component(TouchedSet, "TouchedSet", "change tracker", "Records exact document, geometry, visual, resource, selection, and replacement touches.")
+  Component(CommitPlan, "CommitPlan", "commit description", "Compiles touched state into revisions, cache invalidation, repaint requests, and buffered events.")
+  Component(CommitApplier, "CommitApplier", "atomic installer", "Preflights invariants and installs committed changes only after a valid plan.")
+}
+
+Rel(PublicAPI, EditSession, "opens edit(fn) or command mutation")
+Rel(EditSession, DocumentStoreKernel, "reads committed revision")
+Rel(EditSession, DraftDocument, "creates and closes")
+Rel(DraftDocument, TouchedSet, "records mutations")
+Rel(EditSession, CommitPlan, "finalizes synchronous callback")
+Rel(TouchedSet, CommitPlan, "supplies exact invalidation inputs")
+Rel(CommitPlan, CommitApplier, "hands off validated commit work")
+Rel(CommitApplier, DocumentStoreKernel, "atomically installs committed state")
+Rel(CommitApplier, DiagnosticsHub, "projects validation/runtime failures")

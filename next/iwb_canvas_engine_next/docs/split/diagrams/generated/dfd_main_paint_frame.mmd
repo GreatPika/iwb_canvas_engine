@@ -1,0 +1,90 @@
+%% Main paint frame data flow
+flowchart LR
+
+  Surface["CanvasSurface\nmain paint host"]
+  AppResolver["Application resourceResolver\nsynchronous app-owned image read"]
+
+  subgraph Store["DocumentStoreKernel"]
+    Committed["Committed tables\nrevisions, camera, selection,\nresource descriptors"]
+    ProjectionCache["DocumentProjectionCache\nreadDocument/codec/tests only"]
+  end
+
+  subgraph Interaction["InteractionEngine"]
+    PreviewSnapshot["Immutable preview snapshot\nselected move delta if active"]
+  end
+
+  subgraph Spatial["SpatialKernel"]
+    PaintIndex["Paint spatial index\ncandidate ids and generations"]
+    ShiftedCandidates["Selected supplement candidates\nquery shifted by -previewDelta"]
+  end
+
+  subgraph Resources["ResourceKernel"]
+    ImageResolveCache["ImageResolveCache\nresourceId + resourceRevision"]
+    MissingPlaceholder["Bounded missing image placeholder"]
+  end
+
+  subgraph Frame["FrameEngine"]
+    RepaintSignal["Main repaint request"]
+    Capture["Main frame capture\nsingle runtime read boundary"]
+    CapturedFrame["CapturedMainFrame\ndocument, structural, bounds,\nvisual, selection, resourceVisual,\ncamera, viewport, selectedMoveDelta"]
+    PaintPlanCache["PaintPlanCache\nbounded hot-path cache"]
+    OrdinaryStage["Ordinary paint candidates\nviewport and halo"]
+    SupplementStage["Selected supplement staging\npreview-shifted visibility"]
+    RecordBuilder["Render record builder\nresolve handles by revision/generation"]
+    Merge["Order-token merge\nno full-scene sort"]
+    Records["Immutable RenderElementRecord list\ncompact row views, selection flags,\npreviewDelta"]
+    RenderCaches["Frame render caches\ntext, path, stroke,\nstatic background"]
+    ResolvedAssets["Resolved paint assets\nimages or placeholders"]
+    ProjectionBlocked["No CanvasDocument materialization\nin main paint"]
+  end
+
+  subgraph Painter["Painter"]
+    MainPainter["Main painter\nrecords + render caches + assets only"]
+    PaintedScene["Painted main scene"]
+    LiveReadBlocked["No live runtime reads\nfrom painter"]
+  end
+
+  Surface -->|"paint asks for main scene"| RepaintSignal
+  RepaintSignal -->|"capture once for this paint"| Capture
+
+  Capture -->|"read committed frame facts once"| Committed
+  Committed -->|"revisioned table snapshot facts"| CapturedFrame
+  Capture -->|"read immutable selected move preview once"| PreviewSnapshot
+  PreviewSnapshot -->|"selectedMoveDelta or none"| CapturedFrame
+
+  CapturedFrame -->|"cache key\nrevisions, viewport, selection"| PaintPlanCache
+  PaintPlanCache -->|"cache hit: immutable records"| Records
+  PaintPlanCache -->|"cache miss inputs"| OrdinaryStage
+
+  OrdinaryStage -->|"viewport query only"| PaintIndex
+  PaintIndex -->|"candidate ids with generations"| OrdinaryStage
+  CapturedFrame -->|"selection ids and preview delta"| SupplementStage
+  SupplementStage -->|"shifted visibility query only"| ShiftedCandidates
+  ShiftedCandidates -->|"selected candidate ids with generations"| SupplementStage
+
+  OrdinaryStage -->|"ordinary handles"| RecordBuilder
+  SupplementStage -->|"shifted selected handles"| RecordBuilder
+  RecordBuilder -->|"resolve row data by captured revisions"| Committed
+  Committed -->|"immutable row views\nstale generation rejected"| RecordBuilder
+  RecordBuilder -->|"ordinary + previewDelta records"| Merge
+  Merge -->|"ordered paint plan"| Records
+
+  Records -->|"text/path/stroke/static keys"| RenderCaches
+  RenderCaches -->|"bounded cached paint primitives"| MainPainter
+
+  Records -->|"image resource ids"| ImageResolveCache
+  ImageResolveCache -->|"cache miss only\nsync read request"| AppResolver
+  AppResolver -->|"app-owned image reference\nno engine IO, no mutation"| ImageResolveCache
+  ImageResolveCache -->|"resolved image"| ResolvedAssets
+  ImageResolveCache -.->|"missing or unresolved"| MissingPlaceholder
+  MissingPlaceholder -.->|"bounded placeholder asset"| ResolvedAssets
+
+  Records -->|"immutable render records"| MainPainter
+  ResolvedAssets -->|"paint-time assets"| MainPainter
+  MainPainter -->|"draw commands"| PaintedScene
+  PaintedScene --> Surface
+
+  MainPainter -.->|"forbidden"| LiveReadBlocked
+  LiveReadBlocked -.->|"no DocumentStore, SpatialKernel,\nInteractionEngine, or Public API reads"| MainPainter
+  Capture -.->|"forbidden in paint hot path"| ProjectionBlocked
+  ProjectionCache -.->|"not read by main paint"| ProjectionBlocked

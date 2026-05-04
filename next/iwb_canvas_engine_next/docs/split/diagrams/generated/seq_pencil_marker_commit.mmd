@@ -1,0 +1,121 @@
+%% Pencil and marker stroke preview then terminal commit sequence
+sequenceDiagram
+  autonumber
+
+  actor User as User pointer
+  participant Surface as CanvasSurface
+  participant Tools as CanvasToolPort
+  participant IE as InteractionEngine
+  participant Preview as CanvasPreviewState
+  participant Frame as FrameEngine
+  participant EK as EditKernel
+  participant Store as DocumentStoreKernel
+  participant Draft as DraftDocument
+  participant Touched as TouchedSet
+  participant Plan as CommitPlan
+  participant Spatial as SpatialKernel
+  participant Projection as DocumentProjectionCache
+  participant Events as EventBuffer
+  participant Signals as Public signals
+
+  User->>Surface: pointer down in draw mode with pencil or marker
+  Surface->>Tools: handlePointer(CanvasPointerSample down)
+  Tools->>IE: normalized finite down sample
+  IE->>IE: admit one active pointer token
+  IE->>IE: read drawStyle and start stroke session
+  Note over IE: Session stores pointer token, sessionId, tool, color, thickness, opacity, and normalized stroke points.
+  IE->>Preview: publish kind pencilStroke or markerStroke with first point
+  Preview->>Frame: request overlay repaint only
+  Frame->>Preview: capture overlayRevision and stroke preview once
+  Frame->>Frame: build immutable stroke overlay primitive
+  Frame->>Signals: publish overlay repaint request
+  Signals-->>Surface: repaint overlay stroke preview
+
+  loop pointer move samples for same token
+    User->>Surface: pointer move
+    Surface->>Tools: handlePointer(CanvasPointerSample move)
+    Tools->>IE: normalized finite move sample
+    IE->>IE: append normalized point and trim/resample if interactive stroke soft limit is exceeded
+    Note over IE,Frame: Pencil and marker preview is overlay-only; no selected-move main-scene preview delta is staged.
+    IE->>Preview: replace immutable stroke preview snapshot
+    Preview->>Frame: request overlay repaint only
+    Frame->>Preview: capture overlayRevision and strokePoints once
+    Frame->>Frame: build immutable stroke overlay primitive
+    Frame->>Signals: publish overlay repaint request
+    Signals-->>Surface: repaint overlay stroke preview
+  end
+
+  alt stale non-terminal sample
+    Surface->>Tools: handlePointer(CanvasPointerSample move)
+    Tools->>IE: stale pointer token
+    IE-->>Tools: ignore without preview, edit, repaint, or action
+  else same-token terminal sample is invalid
+    User->>Surface: pointer up or cancel
+    Surface->>Tools: handlePointer(CanvasPointerSample terminal)
+    Tools->>IE: same-token terminal cleanup sample
+    IE->>Preview: clear stroke preview and active session
+    Preview->>Frame: request overlay repaint cleanup
+    Frame->>Signals: publish overlay cleanup repaint request
+    Signals-->>Surface: repaint overlay without stroke preview
+    Note over EK,Events: No EditKernel commit, Store mutation, spatial update, projection eviction, main repaint, or action event.
+  else same-token pointer up
+    User->>Surface: pointer up
+    Surface->>Tools: handlePointer(CanvasPointerSample up)
+    Tools->>IE: same-token terminal sample
+    IE->>IE: append finite terminal point if distinct
+    IE->>IE: normalize, cap, and resample final points to max stroke points per element
+
+    alt final stroke has no paintable points
+      IE->>Preview: clear stroke preview and active session
+      Preview->>Frame: request overlay repaint cleanup
+      Frame->>Signals: publish overlay cleanup repaint request
+      Signals-->>Surface: repaint overlay without stroke preview
+      Note over Touched,Signals: No touched set, commit plan, revision change, spatial change, projection eviction, main repaint, or draw action is published.
+    else final stroke is accepted
+      IE->>EK: open synchronous interaction edit
+      EK->>EK: reject disposed or nested edit
+      EK->>Store: read committed revision snapshot
+      Store-->>EK: committed tables and revision
+      EK->>Draft: create rollback-safe draft
+      IE->>Draft: add CanvasStrokeElement with generated element id
+      Note over IE,Draft: Stroke uses final normalized points, color, thickness, and pencil opacity 1.0 or markerOpacity.
+      Draft->>Touched: record addedElementIds containing new stroke id
+      Note over Touched: Exact committed scope: new id; document, structural, bounds, visual, and projection revisions.
+      IE->>Events: stage deferred draw action descriptor
+      Note over Events: Not public yet. Deferred type is drawPencil or drawMarker with CanvasDrawStrokeActionPayload(tool, color, thickness, opacity, pointCount).
+      EK->>EK: reject Future result before success path
+      EK->>Plan: compile exact add-stroke touched set and invalidation
+      Touched-->>Plan: added id and revision facts
+      Plan->>Frame: prepare main repaint masks
+      Plan->>Events: attach staged draw action to commit
+      Plan->>Store: preflight invariants
+      Store-->>Plan: preflight accepted
+      Plan->>Store: install committed document atomically
+      Store->>Store: replace layer membership, registry, stroke row, and revision state
+      Note over Plan,Store: Atomic install is the commit boundary; InteractionEngine never mutates Store directly.
+      Store->>Spatial: apply touched-id spatial add or update for new stroke id
+      Spatial-->>Store: spatial index updated for new paint and hit bounds
+      Store->>Projection: evict public document projection by projectionRevision
+      Store->>Events: materialize CanvasActionCommitted drawPencil or drawMarker after install
+      Store->>Frame: publish committed main repaint bus
+      EK->>EK: close edit session and stale handle
+      EK-->>IE: edit result
+      IE->>Preview: clear stroke preview and active session
+      Preview->>Frame: request overlay repaint cleanup
+      Events->>Signals: publish document revision and draw action notifications
+      Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
+      Signals-->>Surface: repaint main scene with committed stroke and overlay without preview
+      IE-->>Tools: terminal handling complete
+    end
+  end
+
+  opt edit exception, rejected Future, or preflight failure
+    EK->>Events: discard pending draw action
+    EK->>EK: rollback draft and close session
+    EK-->>IE: terminal failure
+    IE->>Preview: clear stroke preview and active session
+    Preview->>Frame: request overlay repaint cleanup
+    Frame->>Signals: publish overlay cleanup repaint request
+    Signals-->>Surface: repaint overlay without stroke preview
+    Note over Store,Signals: Rollback keeps committed document, revisions, spatial index, projection cache, main repaint, public document notifications, and draw actions unchanged.
+  end

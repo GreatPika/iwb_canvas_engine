@@ -1,0 +1,133 @@
+%% CanvasEdit session lifecycle state diagram
+stateDiagram-v2
+  [*] --> Idle
+
+  state "Idle / no edit session" as Idle
+  note right of Idle
+    No DraftDocument, TouchedSet, CommitPlan,
+    or live CanvasEdit handle exists.
+  end note
+
+  Idle --> Rejected: edit(fn) after runtime dispose / StateError
+  Idle --> Rejected: closed handle operation / StateError
+  Idle --> Session: edit(fn) while runtime active
+
+  state "Rejected before session" as Rejected
+  note right of Rejected
+    Disposed and stale-handle operations fail before
+    draft creation. No install, revision, cache,
+    repaint, notification, or action effect is allowed.
+  end note
+  Rejected --> Idle: exception propagated
+
+  state "Open synchronous session" as Session {
+    [*] --> Opening
+
+    state "Open draft and live handle" as Opening
+    note right of Opening
+      Read the committed revision snapshot, create a
+      rollback-safe draft, create an empty touched set,
+      and bind the live CanvasEdit handle to this session.
+      No legacy SceneController, SceneWriteTxn, NodeSpec,
+      or PatchField entity participates.
+    end note
+
+    Opening --> CallbackExecuting: invoke fn(handle)
+
+    state "Callback executing" as CallbackExecuting
+    CallbackExecuting --> CallbackExecuting: synchronous CanvasEdit mutation / mutate draft and record touched facts
+    CallbackExecuting --> CallbackExecuting: nested edit(fn) attempt / throw StateError; no nested session opens
+    CallbackExecuting --> Rollback: callback throws or handle mutation fails
+    CallbackExecuting --> FutureRejected: callback returns Future
+    CallbackExecuting --> CallbackReturned: callback returns normal value
+
+    state "Future return rejected" as FutureRejected
+    note right of FutureRejected
+      Async edit is rejected before commit planning.
+      No mutation may outlive the synchronous session.
+    end note
+    FutureRejected --> Rollback: treat as failed edit
+
+    state "Callback returned normally" as CallbackReturned
+    CallbackReturned --> NoOpDecision: inspect touched set
+
+    state NoOpDecision <<choice>>
+    NoOpDecision --> NoOpEmptyTouched: touched set is empty
+    NoOpDecision --> CommitPlanning: touched set is non-empty
+
+    state "No-op empty touched set" as NoOpEmptyTouched
+    note right of NoOpEmptyTouched
+      No atomic install. No document, structural, bounds,
+      visual, projection, selection, resource, preview,
+      or repaint revision changes. No cache eviction,
+      public notification, text edit event, repaint, or action.
+    end note
+    NoOpEmptyTouched --> CloseNoOp: close session
+
+    state "Commit planning" as CommitPlanning
+    CommitPlanning --> Preflight: compile exact revisions, invalidation, repaint intent
+
+    state "Preflight" as Preflight
+    Preflight --> Rollback: invariant, validation, or admission failure
+    Preflight --> AtomicInstall: preflight accepted
+
+    state "Rollback discard" as Rollback
+    note left of Rollback
+      Discard draft, touched set, buffered events,
+      repaint requests, spatial deltas, resource effects,
+      and projection/cache effects. Committed document
+      identity and all revisions remain unchanged.
+    end note
+    Rollback --> CloseRollback: close session
+
+    state "Atomic install" as AtomicInstall
+    note right of AtomicInstall
+      This is the only commit boundary.
+      Public notifications are not allowed before this state.
+    end note
+    AtomicInstall --> PostCommitEffects: replace committed tables and revision state
+
+    state "Post-commit effects" as PostCommitEffects
+    note right of PostCommitEffects
+      Apply exact spatial deltas, projection/resource cache
+      invalidation, repaint buses, and revision/listener effects
+      after install. Low-level CanvasEdit emits no user action event.
+    end note
+    PostCommitEffects --> CloseCommitted: effects staged after install
+
+    state "Close and mark handle stale" as CloseCommitted
+    state "Close stale handle after rollback" as CloseRollback
+    state "Close stale handle after no-op" as CloseNoOp
+
+    CloseCommitted --> NotifyPublic: handle closed
+    CloseNoOp --> ReturnResult: handle closed
+    CloseRollback --> RethrowFailure: handle closed
+
+    state "Publish public notifications" as NotifyPublic
+    note right of NotifyPublic
+      Reachable only after atomic install.
+      Document/revision listeners and repaint notifications
+      observe committed state, never draft state.
+    end note
+    NotifyPublic --> ReturnResult: return callback result
+
+    state "Return callback result" as ReturnResult
+    state "Rethrow failure" as RethrowFailure
+
+    ReturnResult --> [*]
+    RethrowFailure --> [*]
+  }
+
+  Session --> Idle: session finished
+
+  note left of Session
+    Negative invariants:
+    rollback and no-op never install;
+    rollback and no-op do not change revisions,
+    caches, repaint buses, public notifications,
+    text edit streams, or user action streams;
+    stale handle operations throw StateError;
+    nested edit is rejected;
+    Future-returning edit is rejected;
+    no legacy entities are part of the lifecycle.
+  end note

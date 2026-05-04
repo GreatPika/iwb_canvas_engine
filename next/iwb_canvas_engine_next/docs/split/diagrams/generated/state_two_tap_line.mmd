@@ -1,0 +1,134 @@
+%% Two-tap line lifecycle state diagram
+stateDiagram-v2
+  [*] --> Idle
+
+  state "Idle / no pending line" as Idle
+  note right of Idle
+    No pending start, line preview, line commit intent,
+    or pointer-owned line overlay exists.
+  end note
+
+  Idle --> FirstTapGate: finite first tap in line tool
+  Idle --> Idle: non-line tool, invalid tap, or stale sample / ignore
+  Idle --> Disposed: runtime.dispose()
+
+  state "First tap admission" as FirstTapGate
+  note right of FirstTapGate
+    The first tap stores finite start facts, current tool,
+    and current document/controller epoch. It never creates
+    a line element, commit intent, action, or document signal.
+  end note
+
+  FirstTapGate --> PendingStart: start finite and tool style drawable / store pending start, publish overlay pending marker
+  FirstTapGate --> Idle: non-finite start, non-drawable style, disposed, or inactive surface / no commit
+
+  state "Pending start / epoch-bound" as PendingStart
+  note right of PendingStart
+    Pending line state outlives unrelated pointer-session
+    terminal cleanup. Only line-owned cleanup, mode/tool
+    change, successful load, interactive=false, cancel,
+    dispose, or terminal line decision may clear it.
+  end note
+
+  PendingStart --> LinePreview: finite pointer move with same tool and epoch / overlay line preview only
+  PendingStart --> SecondTapGate: finite second tap
+  PendingStart --> CleanupOnly: cancel, mode/tool change, interactive=false, or loadDocument success
+  PendingStart --> PendingStart: loadDocument failure / preserve pending start and preview
+  PendingStart --> PendingStart: unrelated pointer cleanup or stale non-terminal sample / preserve pending start
+  PendingStart --> DisposeCleanup: runtime.dispose()
+
+  state "Line preview / overlay only" as LinePreview
+  note right of LinePreview
+    Preview facts are immutable overlay state. No selected-move
+    main-scene preview, resolver call, Store mutation, spatial
+    update, projection eviction, action, or document notification
+    is allowed while previewing.
+  end note
+
+  LinePreview --> LinePreview: finite move with same tool and epoch / replace overlay preview end
+  LinePreview --> SecondTapGate: finite second tap
+  LinePreview --> CleanupOnly: cancel, mode/tool change, interactive=false, or loadDocument success
+  LinePreview --> LinePreview: loadDocument failure / preserve pending line
+  LinePreview --> LinePreview: unrelated pointer cleanup or stale non-terminal sample / preserve preview
+  LinePreview --> DisposeCleanup: runtime.dispose()
+
+  state "Second tap terminal gate" as SecondTapGate
+  note right of SecondTapGate
+    A terminal tap may create a commit intent only when the
+    pending start still exists, tool and epoch match, start/end
+    are finite, and line facts remain drawable.
+  end note
+
+  SecondTapGate --> CleanupOnly: no pending start, stale epoch, tool mismatch, invalid terminal, or non-finite facts
+  SecondTapGate --> CleanupOnly: same endpoint or length below drawable threshold
+  SecondTapGate --> CommitIntent: same tool and epoch with drawable finite line facts
+
+  state "Commit intent / EditKernel only" as CommitIntent
+  note right of CommitIntent
+    InteractionEngine submits a synchronous EditKernel request
+    to add the line. It does not mutate DocumentStoreKernel
+    directly and does not publish drawLine before commit success.
+  end note
+
+  CommitIntent --> EditKernelOutcome: open interaction edit and stage drawLine action descriptor
+
+  state "EditKernel outcome" as EditKernelOutcome
+  note right of EditKernelOutcome
+    Atomic install is the only commit boundary. Rollback,
+    rejected Future, stale handle, preflight failure, or exception
+    leaves document, revisions, spatial index, projection cache,
+    main repaint, and drawLine action unchanged.
+  end note
+
+  EditKernelOutcome --> SuccessfulCommit: atomic install accepted
+  EditKernelOutcome --> CleanupOnly: rollback, rejection, preflight failure, or exception
+
+  state "Successful commit installed" as SuccessfulCommit
+  SuccessfulCommit --> CleanupAfterCommit: close edit session and mark pending line cleared
+
+  state "Cleanup after successful commit" as CleanupAfterCommit
+  note right of CleanupAfterCommit
+    Pending start and overlay preview are cleared before public
+    document/action/repaint signals are observed.
+  end note
+
+  CleanupAfterCommit --> PublishCommitSignals: pending line and preview cleared
+
+  state "Publish successful commit signals" as PublishCommitSignals
+  note right of PublishCommitSignals
+    Publish document revision notification, drawLine action,
+    main repaint for the committed line, and overlay cleanup
+    repaint only after the successful EditKernel outcome.
+  end note
+  PublishCommitSignals --> Idle: signals published
+
+  state "Cleanup only / no committed effects" as CleanupOnly
+  note left of CleanupOnly
+    Clears pending start and line overlay preview only. No line
+    element, document notification, drawLine action, spatial delta,
+    projection eviction, or main-scene preview is produced.
+  end note
+  CleanupOnly --> OverlayCleanup: pending overlay was visible
+  CleanupOnly --> Idle: no visible overlay
+
+  state "Overlay cleanup repaint" as OverlayCleanup
+  OverlayCleanup --> Idle: overlay cleanup published
+
+  state "Dispose cleanup" as DisposeCleanup
+  note left of DisposeCleanup
+    Runtime disposal clears pending line and preview before
+    streams close. Later samples cannot revive or commit it.
+  end note
+  DisposeCleanup --> Disposed: pending line cleared
+
+  state "Disposed runtime" as Disposed
+  Disposed --> Disposed: later pointer/edit operation / StateError
+  Disposed --> Disposed: dispose() again / no side effects
+
+  note left of CommitIntent
+    Negative invariants:
+    no selected-move resolver;
+    no selected-move main-scene preview;
+    no direct Store mutation;
+    no legacy source as normative architecture.
+  end note

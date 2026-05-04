@@ -1,0 +1,146 @@
+%% Generic pointer session lifecycle state diagram
+stateDiagram-v2
+  [*] --> Idle
+
+  state "Idle / no routed pointer" as Idle
+  note right of Idle
+    No active pointer token, session id, tool session,
+    or pointer-owned preview snapshot exists.
+    A runtime admits at most one routed pointer session.
+  end note
+
+  Idle --> Disposed: runtime.dispose()
+  Idle --> Idle: stale move/up/cancel / ignore
+  Idle --> AdmissionGate: handlePointer(down)
+  Idle --> Idle: non-down sample without active token / ignore
+
+  state "Down admission gate" as AdmissionGate
+  note right of AdmissionGate
+    The Flutter bridge routes samples to the public tool port.
+    Down samples must be normalized and finite before
+    InteractionEngine admits a pointer token.
+  end note
+
+  AdmissionGate --> ActivePointer: finite normalized down / bind token, session id, and tool epoch
+  AdmissionGate --> Idle: non-finite or invalid down / reject without preview
+  AdmissionGate --> Idle: runtime disposed / StateError
+
+  state "Active pointer / one routed token" as ActivePointer {
+    [*] --> Routing
+
+    state "Routed session" as Routing
+    note right of Routing
+      The active session owns exactly one pointer id,
+      session id, and tool epoch. Pointer id is a routing
+      token only, not document identity.
+    end note
+
+    Routing --> Routing: same-token finite move / update preview only
+    Routing --> Routing: concurrent down while active / reject without second session
+    Routing --> Routing: stale move or wrong epoch / ignore without preview, repaint, edit, or event
+    Routing --> TerminalGate: same-token up
+    Routing --> CleanupOnly: same-token cancel
+    Routing --> CleanupOnly: mode/tool change cancels session
+    Routing --> CleanupOnly: interactive=false routes cancel first
+    Routing --> CleanupOnly: loadDocument success interrupts after preparation
+    Routing --> Routing: loadDocument failure / preserve active session
+    Routing --> DisposeCleanup: runtime.dispose() interrupts session
+
+    state "Terminal sample gate" as TerminalGate
+    note right of TerminalGate
+      Terminal up samples can commit only when pointer token,
+      session id, tool epoch, and terminal facts still match.
+      Stale terminal facts may release the active token but
+      cannot create a commit intent.
+    end note
+
+    TerminalGate --> CleanupOnly: stale token, wrong epoch, non-finite facts, or invalid terminal
+    TerminalGate --> TerminalDecision: finite same-token terminal facts
+
+    state TerminalDecision <<choice>>
+    TerminalDecision --> CleanupOnly: terminal intent is no-op, zero selected-move delta, or empty movable set
+    TerminalDecision --> ResolverDecision: selected move with non-zero proposed delta and non-empty movable set
+    TerminalDecision --> CommitIntent: committing non-move tool terminal intent
+
+    state "Selected move resolver decision" as ResolverDecision
+    ResolverDecision --> CleanupOnly: CanvasMoveCancel or resolver failure
+    ResolverDecision --> CommitIntent: finite CanvasMoveCommit delta
+
+    state "Commit intent" as CommitIntent
+    note right of CommitIntent
+      Commit-capable pointer tools produce an interaction
+      commit request. InteractionEngine never mutates
+      DocumentStoreKernel directly.
+    end note
+
+    CommitIntent --> EditKernelCommit: open synchronous EditKernel session
+
+    state "EditKernel commit outcome" as EditKernelCommit
+    note right of EditKernelCommit
+      Atomic install, rollback, rejection, and staged action
+      publication belong to the EditKernel commit outcome path.
+    end note
+
+    EditKernelCommit --> CloseSession: commit installed
+    EditKernelCommit --> CloseSession: rejected, rolled back, or threw
+
+    state "Cleanup only" as CleanupOnly
+    note left of CleanupOnly
+      Cancel, load success, mode change, interactive=false,
+      dispose, stale terminal, invalid terminal, no-op, and
+      non-committing paths clear preview/session state only.
+      The selected-move resolver is not called on cancel,
+      load, mode, interactive=false, or dispose paths.
+    end note
+
+    CleanupOnly --> CloseSession: clear preview/session state
+    DisposeCleanup --> CloseSession: clear preview/session before stream close
+
+    state "Close pointer session" as CloseSession
+    note right of CloseSession
+      Preview/session cleanup completes and the active token
+      is released before public action, preview, document,
+      or repaint signals are published to observers.
+    end note
+
+    CloseSession --> CleanupTarget: classify cleared preview kind
+
+    state CleanupTarget <<choice>>
+    CleanupTarget --> MainSceneCleanup: selected-move preview was active
+    CleanupTarget --> OverlayCleanup: overlay preview was active
+    CleanupTarget --> NoPreviewCleanup: no visible preview
+
+    state "Main-scene cleanup" as MainSceneCleanup
+    state "Overlay cleanup" as OverlayCleanup
+    state "No-preview cleanup" as NoPreviewCleanup
+
+    MainSceneCleanup --> PublicSignals: queue main-scene cleanup repaint
+    OverlayCleanup --> PublicSignals: queue overlay cleanup repaint
+    NoPreviewCleanup --> PublicSignals: no cleanup repaint
+
+    state "Public signals after close" as PublicSignals
+    PublicSignals --> [*]: publish queued commit/cancel effects
+  }
+
+  ActivePointer --> Idle: terminal or cleanup complete
+  ActivePointer --> Disposed: dispose cleanup complete
+
+  state "Disposed runtime" as Disposed
+  note right of Disposed
+    Later pointer samples and mutating public operations throw
+    StateError("CanvasRuntime is disposed.") and cannot revive
+    or commit a stale pointer session.
+  end note
+
+  Disposed --> Disposed: dispose() again / return without side effects
+  Disposed --> Disposed: pointer sample or mutating operation / StateError
+
+  note left of ActivePointer
+    Negative invariants:
+    no direct Store mutation from InteractionEngine;
+    no multiple active pointer sessions;
+    no stale terminal commit;
+    no selected-move resolver on cancel, load,
+    mode, interactive=false, or dispose;
+    no legacy architecture as normative input.
+  end note

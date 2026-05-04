@@ -1,0 +1,167 @@
+%% Selected move lifecycle state diagram
+stateDiagram-v2
+  [*] --> Idle
+
+  state "Idle / no selected move preview" as Idle
+  note right of Idle
+    No selected move session, selectedMoveDelta,
+    selected supplement, resolver request, or commit
+    intent exists.
+  end note
+
+  Idle --> Idle: move/up/cancel without active selected move / ignore
+  Idle --> AdmissionGate: "generic pointer session admits finite down"
+  Idle --> Disposed: runtime.dispose()
+
+  state "Selected target admission" as AdmissionGate
+  note right of AdmissionGate
+    Admission happens after the generic pointer session
+    owns the routed token, session id, and tool epoch.
+    Hit-test uses visible selectable geometry. The target
+    must be selected and at least one selected id must be
+    movable or this path performs no selected move work.
+  end note
+
+  AdmissionGate --> ActivePreview: "hit selected movable target / start session"
+  AdmissionGate --> PreResolverCleanup: "no selected target, no moved ids, or empty movable set"
+  AdmissionGate --> PreResolverCleanup: "stale epoch or non-finite admission facts"
+
+  state "Active selected move preview" as ActivePreview {
+    [*] --> PreviewReady
+
+    state "Main-scene preview ready" as PreviewReady
+    note right of PreviewReady
+      Preview is selectedMoveDelta plus selected
+      supplement staging in the main scene. It is not
+      marquee, stroke, line, or eraser overlay preview.
+    end note
+
+    PreviewReady --> PreviewReady: "same token/epoch finite move / replace selectedMoveDelta"
+    PreviewReady --> PreviewReady: "stale token, wrong epoch, or non-finite move / ignore"
+    PreviewReady --> PreResolverCleanup: "same-token cancel"
+    PreviewReady --> PreResolverCleanup: "mode change"
+    PreviewReady --> PreResolverCleanup: "interactive=false"
+    PreviewReady --> PreResolverCleanup: "loadDocument success"
+    PreviewReady --> PreviewReady: "loadDocument failure / preserve if generic session preserves"
+    PreviewReady --> PreResolverCleanup: "runtime.dispose()"
+    PreviewReady --> TerminalGate: "same-token pointer up"
+
+    state "Terminal gate" as TerminalGate
+    note right of TerminalGate
+      Terminal commit requires the active token, session id,
+      tool epoch, finite proposed delta, and current movable
+      ids to still match the selected move session.
+    end note
+
+    TerminalGate --> PreResolverCleanup: "stale token, wrong epoch, invalid terminal, or non-finite delta"
+    TerminalGate --> NoOpTerminal: "zero delta or empty movable set"
+    TerminalGate --> ResolverGate: "non-zero finite delta and non-empty movable set"
+
+    state "No-op terminal" as NoOpTerminal
+    note left of NoOpTerminal
+      Zero movement, no moved ids, or no selected movable
+      path clears only the selected move preview/session.
+      It does not call the resolver and emits no action.
+    end note
+    NoOpTerminal --> PreResolverCleanup: "clear main-scene preview only"
+
+    state "Resolver gate / once per terminal up" as ResolverGate
+    note right of ResolverGate
+      The selected-move resolver is synchronous in v1
+      and may be called exactly once only from this
+      terminal-up gate. Preview, cancel, load, mode,
+      interactive=false, dispose, zero, and empty paths
+      never call it.
+    end note
+
+    ResolverGate --> ResolverCleanup: "CanvasMoveCancel"
+    ResolverGate --> ResolverCleanup: "resolver throws / runtime-safe error after cleanup"
+    ResolverGate --> ResolverCleanup: "CanvasMoveCommit delta non-finite"
+    ResolverGate --> CommitIntent: "finite CanvasMoveCommit delta"
+
+    state "Selected move commit intent" as CommitIntent
+    note right of CommitIntent
+      InteractionEngine holds only a commit intent.
+      It does not mutate DocumentStoreKernel directly.
+    end note
+
+    CommitIntent --> EditKernelOutcome: "open synchronous EditKernel interaction edit"
+
+    state "EditKernel commit outcome" as EditKernelOutcome
+    note right of EditKernelOutcome
+      EditKernel is the only commit boundary. It applies
+      transforms, exact touched state, spatial updates,
+      projection/cache invalidation, repaint buses, and
+      buffered action effects only through its commit result.
+    end note
+
+    EditKernelOutcome --> CleanupAfterSuccess: "commit installed"
+    EditKernelOutcome --> EditFailureCleanup: "rejected, rolled back, or threw"
+
+    state "Cleanup after successful commit" as CleanupAfterSuccess
+    note left of CleanupAfterSuccess
+      Clear selected move preview/session before public
+      document, repaint, and action signals are published.
+    end note
+    CleanupAfterSuccess --> PublicSignals: "publish commit effects after cleanup"
+
+    state "Public signals after cleanup" as PublicSignals
+    note right of PublicSignals
+      A moveSelection action is visible only after selected
+      move cleanup and a successful EditKernel commit.
+      Cleanup paths publish no action.
+    end note
+    PublicSignals --> [*]
+  }
+
+  state "Pre-resolver cleanup" as PreResolverCleanup
+  note right of PreResolverCleanup
+    Cancel, mode change, load success, interactive=false,
+    dispose, stale terminal, invalid terminal, zero move,
+    empty movable set, and admission no-op paths have not
+    called the resolver or opened an edit. They emit no action.
+  end note
+
+  state "Resolver cleanup" as ResolverCleanup
+  note right of ResolverCleanup
+    The resolver was already called, but its result did
+    not produce an edit: CanvasMoveCancel, resolver failure,
+    or non-finite CanvasMoveCommit delta. No edit opens,
+    no Store mutation occurs, and no action is emitted.
+  end note
+
+  state "Edit failure cleanup" as EditFailureCleanup
+  note right of EditFailureCleanup
+    EditKernel was opened but rejected, rolled back, or threw.
+    No successful commit, action event, public document
+    notification, or direct Store mutation by InteractionEngine
+    is allowed.
+  end note
+
+  PreResolverCleanup --> MainSceneCleanup: "clear selected move preview/session"
+  ResolverCleanup --> MainSceneCleanup: "clear selected move preview/session"
+  EditFailureCleanup --> MainSceneCleanup: "clear selected move preview/session"
+
+  state "Main-scene cleanup repaint" as MainSceneCleanup
+  note right of MainSceneCleanup
+    Clear selectedMoveDelta and selected move session.
+    Queue main-scene cleanup repaint for selected move
+    preview. Do not use overlay-only cleanup as the
+    primary cleanup path.
+  end note
+
+  MainSceneCleanup --> Idle: "cleanup published no action or committed document mutation"
+  ActivePreview --> Idle: "terminal cleanup complete"
+
+  state "Disposed runtime" as Disposed
+  Disposed --> Disposed: pointer sample or mutating operation / StateError
+
+  note left of ActivePreview
+    Negative invariants:
+    no resolver on preview, cancel, load, mode,
+    interactive=false, dispose, zero, or empty;
+    no stale or invalid terminal commit;
+    no direct Store mutation from InteractionEngine;
+    no overlay-only selected move cleanup;
+    no legacy source is normative.
+  end note

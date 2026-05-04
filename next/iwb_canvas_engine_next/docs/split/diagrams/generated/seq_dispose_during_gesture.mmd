@@ -1,0 +1,86 @@
+%% Dispose during an active gesture sequence
+sequenceDiagram
+  autonumber
+
+  actor App as Application
+  actor User as User pointer
+  participant Surface as CanvasSurface
+  participant Runtime as CanvasRuntime
+  participant Tools as CanvasToolPort
+  participant IE as InteractionEngine
+  participant Preview as CanvasPreviewState
+  participant Frame as FrameEngine
+  participant Store as DocumentStoreKernel
+  participant Spatial as SpatialKernel
+  participant Projection as DocumentProjectionCache
+  participant Resources as ResourceKernel
+  participant Cache as ImageResolveCache
+  participant Resolver as CanvasResourceResolver
+  participant MoveResolver as CanvasMoveCommitResolver
+  participant EK as EditKernel
+  participant Actions as CanvasActionCommitted stream
+  participant TextRequests as CanvasTextEditRequested stream
+  participant Signals as Public signals
+
+  Note over User,Preview: Initial condition: one active routed pointer owns a preview snapshot.
+  Note over Store,Resources: Committed document, selection, spatial indexes, projection cache, and resource descriptors are current before dispose.
+
+  App->>Runtime: dispose()
+
+  alt runtime is already disposed
+    Runtime-->>App: return without side effects
+    Note over Runtime,Signals: Dispose is idempotent. No repaint, stream event, revision tick, resource invalidation, resolver call, or document read is produced.
+  else first dispose call
+    Runtime->>Runtime: enter disposing guard and reject reentrant mutation
+    Runtime->>Tools: stop accepting new public pointer routing
+    Tools->>IE: interrupt active pointer because runtime is disposing
+    IE->>IE: classify active session as dispose cancellation
+    Note over IE,MoveResolver: Move commit resolver is not called when dispose cancels a gesture.
+
+    alt active preview is selected move
+      IE->>Preview: clear selected move preview and active session
+      Preview->>Frame: request main-scene repaint cleanup
+      Frame->>Store: capture committed frame facts and selection ids once
+      Frame->>Preview: capture no selectedMoveDelta
+      Frame->>Spatial: query viewport without preview-shifted selected supplement
+      Spatial-->>Frame: ordinary candidate handles only
+      Frame->>Signals: publish main repaint cleanup request
+      Signals-->>Surface: repaint main scene without selected move preview
+      Note over Preview,Frame: Selected move cleanup is main-scene cleanup, not overlay-only cleanup.
+    else active preview is overlay-only
+      IE->>Preview: clear overlay preview and active session
+      Preview->>Frame: request overlay repaint cleanup
+      Frame->>Preview: capture no overlay preview primitive
+      Frame->>Signals: publish overlay cleanup repaint request
+      Signals-->>Surface: repaint overlay without preview
+      Note over Preview,Frame: Marquee, pencil, marker, pending line, line preview, and eraser corridor cleanup target the overlay.
+    end
+
+    Runtime->>Resources: clear mandatory v1 runtime resource caches
+    Resources->>Cache: drop resolved-image cache entries
+    Note over Resources,Resolver: App-owned ui.Image instances and the app resolver are not disposed by the engine.
+
+    Runtime->>Actions: close stream
+    Runtime->>TextRequests: close stream
+    Note over Runtime,Signals: No public listenable close is specified by v1; dispose does not increment document or preview revisions by itself.
+
+    Runtime->>Runtime: transition to disposed
+    Runtime-->>App: dispose complete
+
+    Note over EK,Store: No terminal commit, no EditKernel commit, no DraftDocument, no TouchedSet, no CommitPlan, and no atomic install.
+    Note over Store,Projection: No document revision, selection, spatial index, projection cache, or resource descriptor mutation occurs due solely to dispose.
+    Note over Actions,Signals: No CanvasActionCommitted and no text edit request is emitted by dispose.
+  end
+
+  User->>Surface: later pointer move or terminal sample
+  Surface->>Runtime: route public mutating operation
+  Runtime-->>Surface: throw StateError("CanvasRuntime is disposed.")
+  Note over Surface,IE: Later samples cannot revive the pointer session or commit a stale preview.
+
+  App->>Runtime: readDocument()
+  Runtime->>Store: read last committed immutable document
+  Store-->>Runtime: last committed document
+  Runtime-->>App: CanvasDocument
+
+  App->>Runtime: later edit, command, selection, tool, camera, loadDocument, or resource mutation
+  Runtime-->>App: throw StateError("CanvasRuntime is disposed.")

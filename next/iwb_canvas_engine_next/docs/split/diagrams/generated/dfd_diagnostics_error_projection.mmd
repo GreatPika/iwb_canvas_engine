@@ -1,0 +1,88 @@
+%% Diagnostics and error projection data flow
+flowchart LR
+
+  App["Application code"]
+  Tooling["Migration tooling\noutside production core"]
+
+  subgraph PublicBoundary["Public API and runtime boundaries"]
+    PublicCalls["Public calls\nDTO construction, codec, load, edit, resources"]
+    RuntimeFlows["Runtime flows\ninteraction, frame, spatial, resource"]
+    PublicException["CanvasDataException\ncode, message, path,\nbounded details"]
+    RuntimeSafeError["Runtime-safe error projection\nStateError or CanvasDataException"]
+  end
+
+  subgraph ErrorSources["Error sources"]
+    ValidationErrors["Validation errors\nschema, DTO, limits,\nids, metadata, references"]
+    RuntimeErrors["Runtime errors\nedit, interaction, frame,\nspatial, resource"]
+    MigrationErrors["Migration errors\nunsupported fields, losses,\nwarnings, failed mapping"]
+    InternalErrors["Internal diagnostics errors\nsanitized fallback path"]
+  end
+
+  subgraph HotSuccess["Successful hot paths with diagnostics disabled"]
+    PointerMoveSuccess["Successful pointer move"]
+    PaintSuccess["Successful main or overlay paint"]
+    DisabledGate["Disabled diagnostic policy\nbranch-only overhead"]
+    NoSuccessAllocation["No DiagnosticRecord allocation\nno details string interpolation"]
+  end
+
+  subgraph DiagnosticsHub["DiagnosticsHub internal"]
+    PolicyGate["Diagnostic policy gate\ndisabled, summary, verbose"]
+    DiagnosticRecord["DiagnosticRecord\ncode, severity, source,\npath, revision, sessionId,\ncorrelationId"]
+    RawDetails["Raw error context\nlimits, ids, counts,\nfield values, source error facts"]
+    Sanitizer["Diagnostics sanitizer\nJSON-like primitives and\nbounded previews only"]
+    SanitizedDetails["Sanitized details map\nbounded strings, lists,\nmaps, numbers, booleans"]
+    SummaryProjection["Summary projection\nstable code, path, message"]
+    VerboseProjection["Verbose projection\ncapped detail previews"]
+    FormattingCache["DiagnosticFormattingCache\nverbose diagnostics only"]
+    InternalSink["Internal and test-only sink\npolicy-gated"]
+  end
+
+  subgraph Forbidden["Forbidden diagnostic payloads and side effects"]
+    UnsafePayloads["Forbidden payloads\nruntime objects, handles,\ncanvases, ui.Image, closures,\nfull scene dumps, filesystem paths"]
+    PublicStream["No public diagnostics stream\nin v1 API"]
+    RuntimeMutation["No diagnostic mutation\nof document, preview, selection,\nresources, caches, or repaint buses"]
+    HotPathAllocation["Forbidden successful hot-path allocation\nrecords or formatted detail strings"]
+  end
+
+  App -->|"calls public API"| PublicCalls
+  PublicCalls -->|"boundary validation failure"| ValidationErrors
+  PublicCalls -->|"runtime failure from public operation"| RuntimeErrors
+  RuntimeFlows -->|"pointer, paint, spatial,\nor resource failure"| RuntimeErrors
+  Tooling -->|"migration report failure"| MigrationErrors
+
+  ValidationErrors -->|"error path"| DiagnosticRecord
+  RuntimeErrors -->|"error path"| DiagnosticRecord
+  MigrationErrors -->|"tool error path"| DiagnosticRecord
+  InternalErrors -->|"self-protection path"| DiagnosticRecord
+  ValidationErrors -->|"bounded validation context"| RawDetails
+  RuntimeErrors -->|"safe runtime facts only"| RawDetails
+  MigrationErrors -->|"report counts and warnings"| RawDetails
+  InternalErrors -->|"fallback facts"| RawDetails
+
+  PolicyGate -->|"controls detail level and sinks"| Sanitizer
+  DiagnosticRecord -->|"structured record facts"| Sanitizer
+  RawDetails -->|"candidate details"| Sanitizer
+  Sanitizer -->|"safe details only"| SanitizedDetails
+  Sanitizer -.->|"reject or replace unsafe values"| UnsafePayloads
+  SanitizedDetails -->|"summary policy"| SummaryProjection
+  SanitizedDetails -->|"verbose policy"| VerboseProjection
+  VerboseProjection -->|"formatting allowed only here"| FormattingCache
+  SummaryProjection -->|"project public error"| PublicException
+  VerboseProjection -->|"project public error with capped details"| PublicException
+  SanitizedDetails -.->|"enabled policies only"| InternalSink
+  InternalSink -.->|"not exported"| PublicStream
+
+  PublicException -->|"throw to caller\nallocated only on error path"| App
+  RuntimeErrors -->|"non-data runtime failure"| RuntimeSafeError
+  RuntimeSafeError -->|"throw to caller"| App
+
+  PointerMoveSuccess --> DisabledGate
+  PaintSuccess --> DisabledGate
+  DisabledGate -->|"success path"| NoSuccessAllocation
+  NoSuccessAllocation -.->|"does not create"| DiagnosticRecord
+  NoSuccessAllocation -.->|"blocks"| HotPathAllocation
+
+  DiagnosticRecord -.->|"must not expose"| UnsafePayloads
+  SanitizedDetails -.->|"must not contain"| UnsafePayloads
+  Sanitizer -.->|"forbidden side effect"| RuntimeMutation
+  PublicException -.->|"only public projection"| PublicStream

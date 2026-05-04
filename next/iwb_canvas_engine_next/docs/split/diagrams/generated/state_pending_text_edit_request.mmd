@@ -1,0 +1,122 @@
+%% Pending text edit request state diagram
+stateDiagram-v2
+  [*] --> Idle
+
+  state "Idle / no pending text tap" as Idle
+  note right of Idle
+    No pending tap candidate exists.
+    There is no document mutation, selection change,
+    preview state, repaint request, or action event.
+  end note
+
+  Idle --> Disposed: "runtime.dispose()"
+  Idle --> FirstTapGate: "finite tap or click admitted"
+  Idle --> Idle: "invalid, stale, drag, active pointer conflict, or wrong mode / ignore"
+
+  state "First tap gate" as FirstTapGate
+  note right of FirstTapGate
+    First tap detection is gesture tracking only.
+    It reads current hit data and may remember a text
+    candidate, but it never edits committed document state.
+  end note
+
+  FirstTapGate --> TopHitFirst: "query committed content hit candidates"
+  FirstTapGate --> Idle: "non-finite world position or tapSlop exceeded / no request"
+
+  state "Top visible selectable hit first" as TopHitFirst
+  note right of TopHitFirst
+    Spatial and geometry policy choose the first exact
+    visible selectable content element in paint order.
+    Background and non-selectable content cannot qualify.
+  end note
+
+  TopHitFirst --> Idle: "no top hit / no request"
+  TopHitFirst --> Idle: "top hit is not text / no request"
+  TopHitFirst --> PendingCandidate: "top hit is text / store id, generation, positions, timestamp, epoch"
+
+  state "Pending text tap candidate" as PendingCandidate
+  note right of PendingCandidate
+    Pending state is input history only:
+    element id, generation, view/world positions,
+    timestamp, and controller/tool epoch.
+    It is not CanvasPreviewState and not Store state.
+  end note
+
+  PendingCandidate --> SecondTapGate: "second tap or explicit double-tap"
+  PendingCandidate --> CleanupOnly: "delay exceeded, slop exceeded, invalid sample, no hit, mode/tool epoch mismatch, mode change, or interactive=false"
+  PendingCandidate --> CleanupOnly: "loadDocument success after install"
+  PendingCandidate --> PendingCandidate: "loadDocument validation/materialization failure before install / preserve tap; no emit, repaint, or mutation"
+  PendingCandidate --> DisposeCleanup: "runtime.dispose()"
+
+  state "Second tap gate" as SecondTapGate
+  note right of SecondTapGate
+    The second tap must be revalidated against the
+    current committed document and current epoch.
+  end note
+
+  SecondTapGate --> CleanupOnly: "non-finite world position, tapSlop exceeded, doubleTapSlop exceeded, or delay exceeded"
+  SecondTapGate --> TopHitSecond: "query current committed content hit candidates"
+
+  state "Second top-hit gate" as TopHitSecond
+  note right of TopHitSecond
+    The current top visible selectable content hit wins
+    before checking element kind. A text element behind
+    a non-text top hit cannot request editing.
+  end note
+
+  TopHitSecond --> CleanupOnly: "no top hit / clear pending only"
+  TopHitSecond --> CleanupOnly: "top hit is not text / clear pending only"
+  TopHitSecond --> CandidateMatch: "top hit is text"
+
+  state "Candidate match gate" as CandidateMatch
+  note right of CandidateMatch
+    The second text hit must match the pending element
+    and still be visible, selectable, text, generation-current,
+    and epoch-current.
+  end note
+
+  CandidateMatch --> CleanupOnly: "different text, stale generation, hidden, unselectable, or epoch mismatch"
+  CandidateMatch --> EmitRequest: "same current text element"
+
+  state "Emit app-owned text edit request" as EmitRequest
+  note right of EmitRequest
+    InteractionEngine emits CanvasTextEditRequested with
+    element id, timestamp, view/world positions, boundsWorld,
+    and immutable text snapshot. This is not an EditKernel
+    commit and not a document/action mutation.
+  end note
+
+  EmitRequest --> AppOwnsEditor: "publish textEditRequests event"
+
+  state "Application owns editor overlay" as AppOwnsEditor
+  note right of AppOwnsEditor
+    The application owns Flutter editor overlay, IME,
+    focus, accessibility, hide/show policy, and later
+    updateElement text commit flow outside this request state.
+  end note
+
+  AppOwnsEditor --> CleanupOnly: "request delivered"
+
+  state "Cleanup only" as CleanupOnly
+  note left of CleanupOnly
+    Cleanup clears pending tap history only.
+    It publishes no text request, action event,
+    document revision, selection change, preview update,
+    spatial update, projection eviction, or repaint.
+  end note
+
+  CleanupOnly --> Idle: "pending candidate cleared"
+  DisposeCleanup --> Disposed: "clear pending tap and close textEditRequests stream"
+
+  state "Disposed runtime" as Disposed
+  Disposed --> Disposed: "later mutating operation or pointer sample / StateError"
+  Disposed --> Disposed: "dispose again / no side effects"
+
+  note left of PendingCandidate
+    Negative invariants:
+    no selected-move resolver;
+    no main-scene or overlay preview;
+    no direct DocumentStoreKernel mutation;
+    no EditKernel commit;
+    no legacy architecture as normative source.
+  end note

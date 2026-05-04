@@ -1,0 +1,165 @@
+%% Pencil and marker stroke lifecycle state diagram
+stateDiagram-v2
+  [*] --> Idle
+
+  state "Idle / no active stroke" as Idle
+  note right of Idle
+    No pencil or marker stroke session, stroke draft,
+    overlay stroke preview, add-stroke commit intent,
+    or pending draw action exists.
+  end note
+
+  Idle --> Idle: "move/up/cancel without active stroke / ignore"
+  Idle --> AdmissionGate: "generic pointer session admits finite normalized down"
+  Idle --> Disposed: "runtime.dispose()"
+
+  state "Stroke admission gate" as AdmissionGate
+  note right of AdmissionGate
+    Admission occurs only after the generic pointer
+    session owns the routed token, session id, and
+    tool epoch. The active draw tool must be pencil
+    or marker.
+  end note
+
+  AdmissionGate --> Drafting: "pencil/marker down / start stroke draft"
+  AdmissionGate --> CleanupOnly: "wrong tool, stale epoch, or non-finite facts"
+
+  state "Active stroke draft" as Drafting {
+    [*] --> PreviewReady
+
+    state "Overlay stroke preview ready" as PreviewReady
+    note right of PreviewReady
+      Preview kind is pencilStroke or markerStroke.
+      It is overlay-only and stores immutable stroke
+      points, color, thickness, opacity, pointer id,
+      and session id.
+    end note
+
+    PreviewReady --> PreviewReady: "same token/epoch finite move / append or update preview"
+    PreviewReady --> PreviewReady: "interactive stroke soft limit exceeded / trim to interactive stroke trim-to"
+    PreviewReady --> PreviewReady: "stale token, wrong epoch, or non-finite move / ignore without repaint"
+    PreviewReady --> TerminalGate: "same-token pointer up"
+    PreviewReady --> CleanupOnly: "same-token cancel"
+    PreviewReady --> CleanupOnly: "mode change"
+    PreviewReady --> CleanupOnly: "loadDocument success"
+    PreviewReady --> PreviewReady: "loadDocument failure / preserve if generic pointer session preserves"
+    PreviewReady --> CleanupOnly: "interactive=false routes cancel"
+    PreviewReady --> DisposeCleanup: "runtime.dispose()"
+
+    state "Terminal stroke gate" as TerminalGate
+    note right of TerminalGate
+      Terminal up can commit only when token, session id,
+      tool epoch, terminal sample, and final stroke facts
+      still match the active stroke draft.
+    end note
+
+    TerminalGate --> CleanupOnly: "stale token, wrong epoch, invalid terminal, or non-finite facts"
+    TerminalGate --> NoOpTerminal: "empty stroke or minimum drawable stroke gate fails"
+    TerminalGate --> FinalStrokeNormalization: "valid terminal sample and enough stroke facts"
+
+    state "No-op terminal" as NoOpTerminal
+    note left of NoOpTerminal
+      Too-short, empty, invalid, and stale terminal
+      paths clean up preview/session only. They do not
+      open EditKernel, mutate the document, notify
+      document listeners, repaint main scene, or emit
+      drawPencil/drawMarker.
+    end note
+    NoOpTerminal --> CleanupOnly: "clear stroke preview/session only"
+
+    state "Final stroke normalization" as FinalStrokeNormalization
+    note right of FinalStrokeNormalization
+      Terminal/final normalization caps or resamples
+      committed points within max stroke points per
+      element before an add-stroke commit intent exists.
+    end note
+    FinalStrokeNormalization --> CommitIntent: "final normalized stroke accepted"
+
+    state "Add-stroke commit intent" as CommitIntent
+    note right of CommitIntent
+      Intent contains tool, final normalized points,
+      color, thickness, and pencil opacity 1.0 or
+      marker opacity. InteractionEngine never mutates
+      DocumentStoreKernel directly.
+    end note
+
+    CommitIntent --> EditKernelOutcome: "open synchronous EditKernel interaction edit"
+
+    state "EditKernel outcome" as EditKernelOutcome
+    note right of EditKernelOutcome
+      EditKernel is the only commit boundary. It may
+      install the add-stroke edit atomically or reject,
+      roll back, or throw with no public commit effects.
+    end note
+
+    EditKernelOutcome --> CleanupAfterCommit: "commit installed"
+    EditKernelOutcome --> EditFailureCleanup: "rejected, rolled back, or threw"
+
+    state "Cleanup after successful commit" as CleanupAfterCommit
+    note left of CleanupAfterCommit
+      Clear stroke preview/session before publishing
+      public commit effects. Cleanup repaint target is
+      overlay only.
+    end note
+    CleanupAfterCommit --> PublicCommitEffects: "queue overlay cleanup repaint"
+
+    state "Public commit effects" as PublicCommitEffects
+    note right of PublicCommitEffects
+      After successful commit and session cleanup,
+      publish the main repaint, document/revision
+      notifications, and drawPencil or drawMarker
+      action with CanvasDrawStrokeActionPayload.
+    end note
+    PublicCommitEffects --> [*]
+  }
+
+  state "Cleanup only" as CleanupOnly
+  note right of CleanupOnly
+    Cancel, mode change, load success, interactive=false,
+    stale terminal, invalid terminal, empty stroke, and
+    too-short stroke paths clear only the stroke preview
+    and active stroke session.
+  end note
+
+  state "Edit failure cleanup" as EditFailureCleanup
+  note right of EditFailureCleanup
+    Rejection, rollback, and thrown edit paths clear only
+    the stroke preview/session. No add-stroke install,
+    public document notification, main repaint, or
+    drawPencil/drawMarker action is visible.
+  end note
+
+  state "Dispose cleanup" as DisposeCleanup
+  note right of DisposeCleanup
+    Runtime disposal clears the active stroke preview
+    and session only, then closes runtime streams.
+    It cannot create an add-stroke commit intent.
+  end note
+
+  CleanupOnly --> OverlayCleanup: "clear pencil/marker preview"
+  EditFailureCleanup --> OverlayCleanup: "clear pencil/marker preview"
+  DisposeCleanup --> Disposed: "clear pencil/marker preview before stream close"
+
+  state "Overlay cleanup repaint" as OverlayCleanup
+  note right of OverlayCleanup
+    Stroke preview cleanup uses overlay repaint only.
+    It does not use selected-move main-scene preview,
+    a selected-move resolver, or a main-scene cleanup
+    target.
+  end note
+
+  OverlayCleanup --> Idle: "cleanup complete with no public commit effects"
+  Drafting --> Idle: "terminal handling complete"
+
+  state "Disposed runtime" as Disposed
+  Disposed --> Disposed: "dispose() again / no side effects"
+  Disposed --> Disposed: "pointer sample or mutating operation / StateError"
+
+  note left of Drafting
+    Negative invariants:
+    no selected-move resolver;
+    no main-scene stroke preview;
+    no direct Store mutation;
+    no action or document notification on cleanup/no-op/failure;
+    no legacy source is normative.
+  end note

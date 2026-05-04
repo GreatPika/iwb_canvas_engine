@@ -1,0 +1,72 @@
+%% Resource resolution during main paint sequence
+sequenceDiagram
+  autonumber
+
+  participant App as Application
+  participant Surface as CanvasSurface
+  participant Frame as FrameEngine
+  participant Store as DocumentStoreKernel
+  participant Resources as ResourceKernel
+  participant Cache as ImageResolveCache
+  participant Resolver as CanvasResourceResolver
+  participant Painter as Main painter
+  participant Port as CanvasResourcePort
+  participant Signals as Repaint signals
+
+  Surface->>Frame: paint main scene request(viewportRect, cameraOffset, dpr, resolver)
+  Frame->>Store: capture committed main-frame facts once
+  Store-->>Frame: resourceRevision, resourceVisualRevision, compact rows, and revisions
+  Frame->>Frame: build immutable RenderElementRecord list
+  Note over Frame: Each image render record carries resourceId from the committed row and uses captured resourceRevision/resourceVisualRevision.
+
+  opt records contain image resource ids
+    loop for each image RenderElementRecord
+      Frame->>Resources: resolve paint image(record.resourceId, captured resourceRevision, resolver)
+      Resources->>Store: read committed descriptor by resourceId at captured resourceRevision
+      Store-->>Resources: CanvasImageResource appKey descriptor or missing descriptor
+
+      alt descriptor is missing
+        Resources-->>Frame: bounded missing image placeholder
+      else descriptor exists
+        Resources->>Cache: lookup key(resourceId, resourceRevision)
+
+        alt cache hit
+          Cache-->>Resources: cached app-owned ui.Image or cached missing/null result
+          Resources-->>Frame: app-owned ui.Image or bounded placeholder
+        else cache miss
+          Resources->>Resolver: resolveImage(CanvasImageResource appKey descriptor)
+          Note over Resources,Resolver: Synchronous app-owned resolver boundary only; no async resolver, file, network, asset-bundle, or engine IO loading.
+          Resolver-->>Resources: app-owned ui.Image or null
+
+          alt app returns ui.Image
+            Resources->>Cache: store key(resourceId, resourceRevision) -> app-owned ui.Image reference
+            Resources-->>Frame: app-owned ui.Image paint asset
+          else app returns null
+            Resources->>Cache: remember missing/null result for this frame and key
+            Resources-->>Frame: bounded missing image placeholder
+          end
+        end
+      end
+    end
+  end
+
+  Frame->>Painter: paint immutable records with resolved image assets or placeholders
+  Painter-->>Surface: draw main scene
+
+  Note over Painter,Resolver: Painter never calls CanvasResourceResolver directly; ResourceKernel owns the resolver boundary.
+  Note over Resources,Resolver: Returned ui.Image objects are owned by the application; the engine never disposes app-owned images.
+  Note over Frame,Store: Main paint does not materialize CanvasDocument and does not read DocumentProjectionCache.
+  Note over Resources,Store: ResourcePort cannot mutate descriptors; descriptor mutation is only through the CanvasEdit commit path outside this sequence.
+  Note over Surface,Painter: No legacy scene, controller, snapshot, or public DTO entities participate in resource resolution.
+
+  opt application reports changed external resource visuals
+    App->>Port: markResourceDirty(resourceId) or markAllResourcesDirty()
+    Port->>Resources: invalidate dirty resourceVisual cache for target id or all registered resources
+    Resources->>Cache: invalidate ImageResolveCache entries by resourceId or all
+    Resources->>Store: increment resourceVisualRevision only
+    Store-->>Resources: documentRevision, selection, and preview unchanged
+    Resources->>Signals: schedule main repaint
+    Signals-->>Surface: repaint main scene
+
+    Note over Port,Store: Dirty visual invalidation does not mutate descriptors, document revision, action events, selection, preview, or CanvasDocument projection.
+  end

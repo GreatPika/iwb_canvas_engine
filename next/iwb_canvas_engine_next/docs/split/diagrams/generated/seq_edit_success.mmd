@@ -1,0 +1,55 @@
+%% Successful public edit sequence
+sequenceDiagram
+  autonumber
+
+  actor Caller as Application code
+  participant API as CanvasEditPort
+  participant EK as EditKernel
+  participant Store as DocumentStoreKernel
+  participant Draft as DraftDocument
+  participant Handle as CanvasEdit handle
+  participant Touched as TouchedSet
+  participant Plan as CommitPlan
+  participant Frame as FrameEngine
+  participant Events as EventBuffer
+  participant Signals as Public signals
+
+  Caller->>API: edit(fn)
+  API->>EK: open synchronous edit session
+  EK->>EK: reject disposed or nested edit
+  EK->>Store: read committed revision snapshot
+  Store-->>EK: committed tables and revision
+  EK->>Draft: create rollback-safe draft
+  EK->>Handle: bind live handle to session
+  EK-->>Caller: invoke fn(handle)
+
+  activate Handle
+  Caller->>Handle: synchronous CanvasEdit mutations
+  Handle->>Draft: mutate draft document/resources/selection
+  Draft->>Touched: record exact mutation facts
+  Handle-->>Caller: mutation results
+  deactivate Handle
+
+  Caller-->>EK: callback result
+  EK->>EK: reject Future result before success path
+  Note over EK: If the callback returns a Future, rollback applies and no commit work runs.
+  EK->>Plan: compile touched set, revisions, invalidation, repaint intent
+  Touched-->>Plan: exact changed state
+  Plan->>Frame: prepare repaint masks
+  Plan->>Events: stage commit event buffer
+  Note over Events: Low-level CanvasEdit commits stage no user action events.
+  Plan->>Store: preflight invariants
+  Store-->>Plan: preflight accepted
+
+  Plan->>Store: install committed document atomically
+  Store->>Store: replace committed tables and revision state
+  Note over Plan,Store: Atomic install is the commit boundary.
+
+  Store->>Events: commit buffered internal effects
+  Store->>Frame: publish repaint buses
+  EK->>Handle: close session and mark handle stale
+  Note over Handle: Any operation after callback throws StateError.
+  Events->>Signals: publish document/revision listeners
+  Frame->>Signals: publish repaint notifications
+  EK-->>API: return callback result
+  API-->>Caller: callback result

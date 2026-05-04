@@ -1,0 +1,90 @@
+%% Resource resolution data flow
+flowchart LR
+
+  App["Application\nowns images and app keys"]
+  Surface["CanvasSurface\npaint host with resourceResolver"]
+  AppResolver["CanvasResourceResolver.resolveImage\nsynchronous app boundary"]
+
+  subgraph PublicAPI["Public API"]
+    EditCall["CanvasEdit mutation\nupsert/remove resource descriptors"]
+    DirtyCall["CanvasResourcePort\nmarkResourceDirty / markAllResourcesDirty"]
+  end
+
+  subgraph Edit["EditKernel"]
+    ResourceMutation["Resource descriptor mutation\ninside rollback-safe edit only"]
+    CommitPlan["CommitPlan\nresource descriptor invalidation"]
+  end
+
+  subgraph Store["DocumentStoreKernel"]
+    ResourceTable["Committed resource descriptor table\nCanvasImageResource"]
+    AppKeyDescriptor["CanvasResourceSource.appKey only\nid + appKey + metadata"]
+    DocumentRevision["documentRevision\nchanges only on committed descriptor mutation"]
+    ResourceRevision["resourceRevision\ndescriptor version"]
+  end
+
+  subgraph Frame["FrameEngine"]
+    MainPaint["Main paint frame\ncaptured once"]
+    RenderRecords["Immutable RenderElementRecord list\nimage resource ids"]
+    AssetRequest["Paint asset request\nresourceId -> descriptor"]
+    PaintAsset["Paint asset\nui.Image or bounded placeholder"]
+    MainRepaint["Main repaint request"]
+  end
+
+  subgraph Resources["ResourceKernel"]
+    DescriptorRead["Descriptor lookup\nresourceId to appKey descriptor"]
+    ImageResolveCache["ImageResolveCache\nresourceId + resourceRevision"]
+    DirtySet["Dirty resource ids\nexplicit visual invalidation"]
+    ResourceVisualRevision["resourceVisualRevision\nvisual cache version"]
+    MissingResult["Missing or unresolved result\ncached for this frame"]
+    Placeholder["Bounded missing image placeholder"]
+  end
+
+  subgraph Forbidden["Forbidden paths"]
+    EngineIO["No engine IO\nno asset bundle, file, or network loading"]
+    EngineDisposal["Engine never disposes\napp-owned ui.Image"]
+    DirtyDocRevision["markResourceDirty does not increment\ndocumentRevision"]
+    ResourcePortMutation["ResourcePort cannot mutate\nresource descriptors"]
+  end
+
+  App -->|"creates appKey descriptors through edit"| EditCall
+  EditCall -->|"only mutation entry for descriptors"| ResourceMutation
+  ResourceMutation -->|"draft resource table changes"| CommitPlan
+  CommitPlan -->|"atomic install on success"| ResourceTable
+  CommitPlan -->|"descriptor changed or removed"| ResourceRevision
+  CommitPlan -->|"committed document state changed"| DocumentRevision
+  CommitPlan -->|"evict descriptor-dependent entries"| ImageResolveCache
+  ResourceTable -->|"stores source.kind = appKey only"| AppKeyDescriptor
+
+  Surface -->|"main paint asks for records"| MainPaint
+  MainPaint -->|"image elements carry resource ids"| RenderRecords
+  RenderRecords -->|"resourceId"| AssetRequest
+  AssetRequest -->|"read committed descriptor"| DescriptorRead
+  DescriptorRead -->|"resourceId lookup"| ResourceTable
+  ResourceTable -->|"CanvasImageResource with appKey"| DescriptorRead
+  DescriptorRead -->|"cache key: resourceId + resourceRevision"| ImageResolveCache
+
+  ImageResolveCache -->|"cache hit: app-owned image"| PaintAsset
+  ImageResolveCache -->|"cache miss: sync resolve request"| AppResolver
+  Surface -->|"provides resolver instance"| AppResolver
+  AppResolver -->|"passes descriptor with appKey"| App
+  App -->|"returns app-owned ui.Image or null"| AppResolver
+  AppResolver -->|"stable visual result\nno runtime mutation"| ImageResolveCache
+  ImageResolveCache -->|"resolved image"| PaintAsset
+  ImageResolveCache -.->|"missing resource or null result"| MissingResult
+  MissingResult -.->|"bounded placeholder result"| Placeholder
+  Placeholder -.->|"placeholder paint asset"| PaintAsset
+  PaintAsset -->|"assets only; no live resource mutation"| MainPaint
+
+  App -->|"external image contents changed"| DirtyCall
+  DirtyCall -->|"explicit dirty signal"| DirtySet
+  DirtySet -->|"invalidate target or all cache entries"| ImageResolveCache
+  DirtySet -->|"increment visual revision only"| ResourceVisualRevision
+  ResourceVisualRevision -->|"schedule main repaint"| MainRepaint
+  MainRepaint --> Surface
+
+  DirtyCall -.->|"forbidden"| DirtyDocRevision
+  DirtyDocRevision -.->|"documentRevision unchanged"| DocumentRevision
+  DirtyCall -.->|"forbidden"| ResourcePortMutation
+  ResourcePortMutation -.->|"descriptor mutation must use CanvasEdit"| ResourceMutation
+  AppResolver -.->|"forbidden"| EngineIO
+  AppResolver -.->|"forbidden"| EngineDisposal

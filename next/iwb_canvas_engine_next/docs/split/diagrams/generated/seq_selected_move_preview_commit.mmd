@@ -1,0 +1,111 @@
+%% Selected move preview then terminal commit sequence
+sequenceDiagram
+  autonumber
+
+  actor User as User pointer
+  participant Surface as CanvasSurface
+  participant Tools as CanvasToolPort
+  participant IE as InteractionEngine
+  participant Store as DocumentStoreKernel
+  participant Spatial as SpatialKernel
+  participant Preview as CanvasPreviewState
+  participant Frame as FrameEngine
+  participant Resolver as CanvasMoveCommitResolver
+  participant EK as EditKernel
+  participant Draft as DraftDocument
+  participant Touched as TouchedSet
+  participant Plan as CommitPlan
+  participant Events as EventBuffer
+  participant Signals as Public signals
+
+  User->>Surface: pointer down
+  Surface->>Tools: handlePointer(CanvasPointerSample down)
+  Tools->>IE: normalized finite down sample
+  IE->>IE: admit one active pointer token
+  IE->>Store: read selection ids and transformable flags
+  Store-->>IE: selected ids in document order
+  IE->>Spatial: hit-test down position once
+  Spatial-->>IE: top visible selectable element id
+
+  alt hit is selected and movable set is not empty
+    IE->>IE: start selected move session
+    Note over IE: Session stores pointer token, sessionId, start position, selected ids, movable ids, and delta Offset.zero.
+    IE->>Preview: publish kind selectedMove, selectedMoveDelta Offset.zero
+  else down is not admitted for selected move
+    IE-->>Tools: route to other move mode behavior or ignore
+  end
+
+  loop pointer move samples for same token
+    User->>Surface: pointer move
+    Surface->>Tools: handlePointer(CanvasPointerSample move)
+    Tools->>IE: normalized finite move sample
+    IE->>IE: compute previewDelta from session start position
+    Note over IE,Spatial: No per-delta hit-test. Preview uses selected ids and the session delta captured at pointer down.
+    IE->>Preview: replace immutable snapshot with selectedMoveDelta
+    Preview->>Frame: request main-scene repaint only
+    Frame->>Store: capture committed frame facts and selection ids once
+    Frame->>Preview: capture selectedMoveDelta once
+    Frame->>Spatial: query viewport plus selected supplement shifted by -previewDelta
+    Spatial-->>Frame: ordinary and selected candidate handles
+    Frame->>Frame: build RenderElementRecord previewDelta for selected records
+    Frame->>Signals: publish main repaint request
+    Signals-->>Surface: repaint main scene with selected move preview
+  end
+
+  User->>Surface: pointer up
+  Surface->>Tools: handlePointer(CanvasPointerSample up)
+  Tools->>IE: same-token terminal sample
+  IE->>IE: read proposedDelta from selected move session
+
+  alt proposedDelta is zero or movable set is empty
+    IE->>Preview: clear selected move preview and session
+    Preview->>Frame: request main-scene repaint cleanup
+    IE-->>Tools: finish with no edit and no action event
+  else moved selection
+    IE->>Store: read summary, moved element reads, selection bounds
+    Store-->>IE: CanvasMoveCommitRequest inputs
+
+    opt resolver configured
+      IE->>Resolver: resolve(request with proposedDelta)
+      Resolver-->>IE: CanvasMoveCommit(delta) or CanvasMoveCancel
+    end
+
+    alt CanvasMoveCancel returned
+      IE->>Preview: clear selected move preview and session
+      Preview->>Frame: request main-scene repaint cleanup
+      IE-->>Tools: finish with no edit and no action event
+    else finite committed delta accepted
+      IE->>EK: open synchronous interaction edit
+      EK->>EK: reject disposed, nested edit, or resolver reentrant mutation
+      EK->>Store: read committed revision snapshot
+      Store-->>EK: committed tables and revision
+      EK->>Draft: create rollback-safe draft
+      IE->>Draft: for each movable selected id, set transform
+      Note over IE,Draft: newTransform = CanvasTransform.translation(delta).multiply(oldTransform)
+      Draft->>Touched: record transformedElementIds, geometry, visual, projection
+      IE->>Events: stage CanvasActionCommitted
+      Note over Events: type moveSelection; elementIds in document order; payload CanvasTransformActionPayload(delta: CanvasTransform.translation(delta), operation: move, pivotWorld: null).
+      EK->>EK: reject Future result before success path
+      EK->>Plan: compile exact touched set, revisions, invalidation, repaint intent
+      Touched-->>Plan: transformed ids and revision facts
+      Plan->>Frame: prepare main repaint masks
+      Plan->>Events: attach staged moveSelection event to commit
+      Plan->>Store: preflight invariants
+      Store-->>Plan: preflight accepted
+      Plan->>Store: install committed document atomically
+      Store->>Store: replace transform rows and revision state
+      Note over Plan,Store: Atomic install is the commit boundary.
+      Store->>Spatial: apply touched-id spatial update
+      Store->>Store: evict public projection cache by projectionRevision
+      Store->>Events: commit buffered action and revision effects
+      Store->>Frame: publish committed main repaint bus
+      EK->>EK: close edit session and stale handle
+      EK-->>IE: edit result
+      IE->>Preview: clear selected move preview and session
+      Preview->>Frame: request main-scene repaint cleanup
+      Events->>Signals: publish document and action notifications
+      Frame->>Signals: publish committed and cleanup main repaint notifications
+      Signals-->>Surface: repaint main scene without preview delta
+      IE-->>Tools: terminal handling complete
+    end
+  end

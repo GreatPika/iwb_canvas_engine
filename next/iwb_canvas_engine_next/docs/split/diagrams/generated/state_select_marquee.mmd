@@ -1,0 +1,138 @@
+%% Marquee selection lifecycle state diagram
+stateDiagram-v2
+  [*] --> Idle
+
+  state "Idle / no marquee" as Idle
+  note right of Idle
+    No marquee pointer token, anchor, rectangle,
+    candidate set, or overlay preview exists.
+  end note
+
+  Idle --> DownAdmission: generic pointer session admits down for marquee
+  Idle --> Idle: stale move/up/cancel / ignore
+  Idle --> Disposed: runtime.dispose()
+
+  state "Down admitted by pointer session" as DownAdmission
+  note right of DownAdmission
+    Admission is owned by the generic pointer session.
+    InteractionEngine records token, session id, anchor,
+    tool epoch, and previous selection.
+  end note
+
+  DownAdmission --> DragPreview: publish zero-area marquee preview / overlay repaint
+  DownAdmission --> Idle: invalid down or disposed / no preview, edit, or event
+
+  state "Dragging / overlay-only preview" as DragPreview
+  note right of DragPreview
+    Move samples normalize the anchor-current rectangle
+    and replace CanvasPreviewState. Cleanup and preview
+    repaint target the overlay bus only.
+  end note
+
+  DragPreview --> DragPreview: same-token finite move / update marqueeRect and overlay repaint
+  DragPreview --> DragPreview: stale move, wrong epoch, or non-finite move / ignore
+  DragPreview --> CandidateQuery: same-token finite up
+  DragPreview --> InvalidTerminal: stale, invalid, or non-finite up
+  DragPreview --> CleanupOnly: cancel, mode change, interactive=false, load success
+  DragPreview --> CleanupOnly: runtime.dispose()
+  DragPreview --> DragPreview: load failure / preserve session and preview
+
+  state "Candidate query / read only" as CandidateQuery
+  note right of CandidateQuery
+    SpatialKernel may be queried only for visible selectable
+    marquee candidates whose hitBoundsWorld overlap the
+    normalized marquee rectangle. The query cannot mutate
+    committed document state or commit selection directly.
+  end note
+
+  CandidateQuery --> CandidateQuery: reject stale candidate handle / continue
+  CandidateQuery --> SelectionIntent: exact family inclusion and document-order ids
+  CandidateQuery --> InvalidTerminal: stale session facts detected
+
+  state "Selection-change intent" as SelectionIntent
+  note right of SelectionIntent
+    Terminal up computes previousSelection, nextSelection,
+    and marqueeRectWorld. This state is only an intent;
+    no Store mutation or public notification has happened.
+  end note
+
+  SelectionIntent --> NoOpSelection: next selection empty and previous empty
+  SelectionIntent --> NoOpSelection: next selection equals previous selection
+  SelectionIntent --> EditCommit: selection changed / open synchronous EditKernel edit
+
+  state "No-op selection cleanup" as NoOpSelection
+  note right of NoOpSelection
+    Empty-unchanged and unchanged selection paths clear
+    marquee preview/session only. They do not open an edit,
+    mutate Store, increment selection revision, emit an
+    action, or notify document listeners.
+  end note
+
+  NoOpSelection --> OverlayCleanup: clear marquee preview and release session
+
+  state "EditKernel commit outcome" as EditCommit
+  note right of EditCommit
+    Selection mutation is committed only through EditKernel.
+    Atomic install is the commit boundary; rollback or
+    rejection leaves committed selection and public signals
+    unchanged.
+  end note
+
+  EditCommit --> PostCommitCleanup: commit installed with selectionChanged
+  EditCommit --> OverlayCleanup: rollback, rejection, or exception / no action or document notification
+
+  state "Post-commit session cleanup" as PostCommitCleanup
+  note right of PostCommitCleanup
+    Interaction cleanup runs before action events,
+    document notifications, or repaint signals are
+    published to observers.
+  end note
+
+  PostCommitCleanup --> CommittedOverlayCleanup: clear marquee preview and release session
+
+  state "Committed overlay cleanup" as CommittedOverlayCleanup
+  CommittedOverlayCleanup --> PublicCommitSignals: overlay cleanup queued and session released
+
+  state "Public signals after cleanup" as PublicCommitSignals
+  PublicCommitSignals --> Idle: publish selection revision, selectMarquee action, main repaint, overlay cleanup repaint
+
+  state "Invalid terminal sample" as InvalidTerminal
+  note right of InvalidTerminal
+    Stale token, wrong epoch, invalid session id, non-finite
+    terminal facts, and stale candidate generations cannot
+    create a commit intent.
+  end note
+
+  InvalidTerminal --> OverlayCleanup: cleanup only
+
+  state "Cleanup only" as CleanupOnly
+  note left of CleanupOnly
+    Cancel, mode change, interactive=false, load success,
+    dispose, stale terminal, invalid terminal, no-op, and
+    edit failure clear marquee overlay/session state only.
+    Load failure preserves the active marquee when the
+    generic pointer session preserves it.
+  end note
+
+  CleanupOnly --> OverlayCleanup: clear marquee preview and release session
+
+  state "Overlay cleanup repaint" as OverlayCleanup
+  note right of OverlayCleanup
+    Marquee cleanup requests overlay repaint only.
+    It never uses selected-move resolver, delta staging,
+    selected supplement cleanup, or main-scene preview cleanup.
+  end note
+
+  OverlayCleanup --> Idle: cleanup finished
+  OverlayCleanup --> Disposed: dispose cleanup finished
+
+  state "Disposed runtime" as Disposed
+  Disposed --> Disposed: later pointer sample or mutating operation / StateError
+
+  note left of DragPreview
+    Negative invariants:
+    no selected-move resolver, delta, or main-scene preview;
+    no direct Store mutation from InteractionEngine;
+    no commit on cancel, stale, invalid, or no-op paths;
+    no legacy architecture as normative input.
+  end note

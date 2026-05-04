@@ -100,8 +100,10 @@ package_boundaries:
 allowed_dependencies:
   - from: Application
     to: PublicAPI
+    context_label: calls public API
   - from: PublicAPI
     to: RuntimeRoot
+    context_label: creates and drives runtime
   - from: RuntimeRoot
     to: DocumentStoreKernel
   - from: RuntimeRoot
@@ -140,8 +142,10 @@ allowed_dependencies:
     to: DiagnosticsHub
   - from: Flutter
     to: PublicAPI
+    context_label: supplies Flutter integration
   - from: JsonDocument
     to: PublicAPI
+    context_label: decoded and encoded through API
 forbidden_dependencies:
   - from: PublicAPI
     to: DocumentStoreKernel

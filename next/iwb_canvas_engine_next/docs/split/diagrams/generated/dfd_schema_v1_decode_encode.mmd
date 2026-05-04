@@ -1,0 +1,103 @@
+%% Schema v1 decode/encode data flow
+flowchart LR
+
+  App["Application code"]
+  JsonInput["External JSON\nMap or JSON string"]
+  JsonOutput["Canonical schema v1 JSON\nMap or JSON string"]
+
+  subgraph PublicAPI["Public API boundary"]
+    DecodeEntry["decodeCanvasDocument\nfrom Map or JSON string"]
+    EncodeEntry["encodeCanvasDocument\nfrom CanvasDocument DTO"]
+    PublicDocument["CanvasDocument DTO\nimmutable public projection"]
+    PublicError["CanvasDataException\nsafe code, path, message, details"]
+  end
+
+  subgraph Codec["CodecBoundary"]
+    RawLimit["Raw JSON length check\n32MB string limit"]
+    JsonParse["JSON parse\nroot object required"]
+    VersionGate["schemaVersion gate\nread exactly {1}"]
+    FieldPolicy["Known v1 field validation\nunknown non-metadata fields ignored"]
+    PrimitiveValidation["Primitive and limit validation\nfinite numbers, colors, ids, counts"]
+    ResourceValidation["Resource validation\nimage resources, appKey source only"]
+    ElementValidation["Element validation\nknown element kinds and enums only"]
+    ReferenceValidation["Cross-reference validation\nduplicate ids and missing resources"]
+    MetadataValidation["Metadata validation\nJSON-only values and bounded extension area"]
+    DecodeMaterializer["DTO materializer\nCanvasDocument immutable DTO"]
+
+    DtoValidation["Public DTO validation\nconstructor/schema limits"]
+    CanonicalEncoder["Canonical v1 encoder\nwrite schemaVersion = 1"]
+    CanonicalFields["Canonical field writer\nall common fields, uppercase colors"]
+    CanonicalResources["Canonical resource writer\nsource.kind = appKey only"]
+    CanonicalMetadata["Metadata writer\npreserve metadata only"]
+    CanonicalMap["JSON-compatible Map\nv1 fields only"]
+  end
+
+  subgraph Diagnostics["DiagnosticsHub"]
+    DiagnosticRecord["Internal diagnostic record\nsource = codec, path, code"]
+    Sanitizer["Diagnostics sanitizer\nJSON-like bounded details only"]
+    InternalSink["Internal/test diagnostic sinks\npolicy-gated"]
+  end
+
+  subgraph Rejections["Rejected inputs"]
+    UnsupportedVersion["Unsupported schemaVersion\nschema v1 exact"]
+    UnknownKind["Unknown element kind,\nresource source kind, or enum"]
+    InvalidKnownField["Invalid known field\nprimitive, limit, metadata, id, reference"]
+    LegacyBlocked["No legacy schema or public types\nno SceneController, SceneSnapshot,\nNodeSpec, NodePatch, PatchField"]
+  end
+
+  subgraph Forbidden["Forbidden side effects and preservation"]
+    RuntimeMutation["No decode/encode mutation\nof committed runtime state"]
+    RuntimeProjection["Runtime projection is caller-owned\noutside schema encode flow"]
+    UnknownPreserve["Unknown non-metadata fields\nnot preserved by encode"]
+    MigrationInCore["No production schema v7 read/write\nmigration is separate tooling"]
+  end
+
+  App -->|"decode request"| DecodeEntry
+  JsonInput -->|"Map or JSON string"| DecodeEntry
+  DecodeEntry -->|"string input"| RawLimit
+  DecodeEntry -->|"Map input skips parse\nbut still validates root"| JsonParse
+  RawLimit -->|"bounded raw text"| JsonParse
+  JsonParse -->|"root object facts"| VersionGate
+  VersionGate -->|"schemaVersion == 1"| FieldPolicy
+  FieldPolicy -->|"known schema fields"| PrimitiveValidation
+  FieldPolicy -.->|"unknown non-metadata fields are ignored"| UnknownPreserve
+  FieldPolicy -->|"metadata objects"| MetadataValidation
+  PrimitiveValidation -->|"bounded ids, numbers, colors, layers, counts"| ResourceValidation
+  ResourceValidation -->|"validated resource descriptors"| ElementValidation
+  ElementValidation -->|"validated element family records"| ReferenceValidation
+  MetadataValidation -->|"validated metadata extension data"| ReferenceValidation
+  ReferenceValidation -->|"validated v1 document facts"| DecodeMaterializer
+  DecodeMaterializer -->|"immutable DTO; no runtime side effects"| PublicDocument
+  PublicDocument -->|"decoded result"| App
+
+  VersionGate -.->|"not exactly v1"| UnsupportedVersion
+  ResourceValidation -.->|"source.kind not appKey"| UnknownKind
+  ElementValidation -.->|"unknown element kind or enum"| UnknownKind
+  PrimitiveValidation -.->|"invalid primitive or limit"| InvalidKnownField
+  ReferenceValidation -.->|"duplicate id or missing resource"| InvalidKnownField
+  MetadataValidation -.->|"non JSON-like or over limit"| InvalidKnownField
+  UnsupportedVersion -.->|"codec failure"| DiagnosticRecord
+  UnknownKind -.->|"codec failure"| DiagnosticRecord
+  InvalidKnownField -.->|"codec failure"| DiagnosticRecord
+  DiagnosticRecord -->|"safe projection only"| Sanitizer
+  Sanitizer -->|"CanvasDataErrorCode, path, bounded details"| PublicError
+  Sanitizer -.->|"when enabled"| InternalSink
+  PublicError -.->|"throw projected error"| App
+
+  App -->|"encode request"| EncodeEntry
+  PublicDocument -->|"public DTO input"| EncodeEntry
+  EncodeEntry -->|"validate DTO before writing JSON"| DtoValidation
+  DtoValidation -->|"valid public DTO facts"| CanonicalEncoder
+  CanonicalEncoder -->|"schemaVersion = 1\npreserve resource/layer/element order"| CanonicalFields
+  CanonicalFields -->|"element common fields always written"| CanonicalResources
+  CanonicalResources -->|"appKey resource descriptors only"| CanonicalMetadata
+  CanonicalMetadata -->|"metadata preserved\nunknown non-metadata omitted"| CanonicalMap
+  CanonicalMap -->|"Map or encoded string"| JsonOutput
+  JsonOutput -->|"encoded result"| App
+
+  DtoValidation -.->|"invalid DTO"| DiagnosticRecord
+  DecodeMaterializer -.->|"forbidden"| RuntimeMutation
+  CanonicalEncoder -.->|"forbidden"| RuntimeMutation
+  EncodeEntry -.->|"forbidden source path"| RuntimeProjection
+  VersionGate -.->|"forbidden"| MigrationInCore
+  CanonicalMap -.->|"forbidden legacy/public fields"| LegacyBlocked

@@ -1,0 +1,65 @@
+%% Public edit data flow
+flowchart LR
+
+  App["Application code"]
+
+  subgraph API["Public API boundary"]
+    EditPort["CanvasEditPort.edit(fn)"]
+    EditHandle["CanvasEdit handle"]
+    EditResult["Callback result"]
+    PublicSignals["Post-commit public signals\n(document revision/listeners)\nno user action events"]
+  end
+
+  subgraph EditKernel["EditKernel"]
+    SessionGate["Session gate\nreject disposed, nested, stale"]
+    Finalize["Session finalization\ncallback value, throw, or rejected Future"]
+    Draft["DraftDocument\nrollback-safe mutable copy"]
+    Touched["TouchedSet\nexact changed state"]
+    NoOp["Empty touched set\nno revisions, cache eviction, repaint, or events"]
+    Plan["CommitPlan\nrevisions, invalidation, repaint intent"]
+    Rollback["Rollback discard\nbuffered effects only"]
+  end
+
+  subgraph Store["DocumentStoreKernel"]
+    Committed["CommittedDocument tables\nresources, selection, revisions, projection cache"]
+    Install["Atomic install"]
+  end
+
+  subgraph Effects["Committed effects"]
+    SpatialDelta["Spatial delta\nfor touched ids"]
+    ProjectionEvict["Projection cache eviction"]
+    ResourceInvalidation["Resource cache invalidation"]
+    RepaintBus["Main/overlay repaint buses"]
+    Diagnostics["Diagnostics projection\nvalidation/runtime failures"]
+  end
+
+  App -->|"synchronous edit callback"| EditPort
+  EditPort -->|"open edit session"| SessionGate
+  SessionGate -->|"committed revision snapshot"| Committed
+  Committed -->|"draft source data"| Draft
+  SessionGate -->|"valid live handle"| EditHandle
+  EditHandle -->|"low-level document/resource/selection mutations"| Draft
+  EditHandle -->|"callback completes"| Finalize
+  Finalize -->|"synchronous callback value"| Touched
+  Finalize -.->|"Future returned after callback"| Rollback
+  Finalize -.->|"callback throws"| Rollback
+  Draft -->|"mutation facts"| Touched
+  Touched -->|"empty touched set"| NoOp
+  NoOp -->|"return without install or side effects"| EditResult
+  Touched -->|"non-empty exact invalidation inputs"| Plan
+  Plan -->|"preflight data and commit payload"| Install
+  Install -->|"replace committed tables atomically"| Committed
+
+  Install -->|"apply spatial update scope"| SpatialDelta
+  Install -->|"apply projection eviction scope"| ProjectionEvict
+  Install -->|"apply resource descriptor/cache scope"| ResourceInvalidation
+  Install -->|"publish paint invalidation scope"| RepaintBus
+  Install -->|"publish after atomic install"| PublicSignals
+  Install -->|"return after successful commit"| EditResult
+  EditResult -->|"callback result"| App
+
+  SessionGate -.->|"StateError before callback"| Rollback
+  Rollback -.->|"discard draft, events, repaint, spatial/resource/projection effects"| App
+  SessionGate -->|"validation/runtime failure"| Diagnostics
+  Install -->|"preflight failure"| Diagnostics
+  Diagnostics -->|"projected exception"| App

@@ -77,7 +77,10 @@ Map<String, String> _renderDiagrams(YamlMap manifest) {
 
 String _renderContext(YamlMap manifest) {
   final actors = _list(manifest, 'external_actors');
+  final owners = _list(manifest, 'runtime_owners');
   final dependencies = _list(manifest, 'allowed_dependencies');
+  final publicApi = _ownerById(owners, 'PublicAPI');
+  final runtimeRoot = _ownerById(owners, 'RuntimeRoot');
   final buffer = StringBuffer()
     ..writeln('C4Context')
     ..writeln('title iwb_canvas_engine_next system context')
@@ -85,18 +88,18 @@ String _renderContext(YamlMap manifest) {
 
   for (final actor in actors) {
     buffer.writeln(
-      'Person(${_id(actor)}, "${_label(actor)}", "${_summary(actor)}")',
+      'System_Ext(${_id(actor)}, "${_label(actor)}", "${_summary(actor)}")',
     );
   }
   buffer
     ..writeln('System_Boundary(next_engine, "iwb_canvas_engine_next") {')
     ..writeln(
-      '  System(PublicAPI, "Public API", '
-      '"Stable DTOs, operations, events, and errors")',
+      '  System(${_id(publicApi)}, "${_label(publicApi)}", '
+      '"${_summary(publicApi)}")',
     )
     ..writeln(
-      '  System(RuntimeRoot, "RuntimeRoot", '
-      '"Single production runtime owner")',
+      '  System(${_id(runtimeRoot)}, "${_label(runtimeRoot)}", '
+      '"${_summary(runtimeRoot)}")',
     )
     ..writeln('}');
 
@@ -108,7 +111,9 @@ String _renderContext(YamlMap manifest) {
     final targetInContext =
         _hasOwner(actors, to) || to == 'PublicAPI' || to == 'RuntimeRoot';
     if (sourceInContext && targetInContext) {
-      buffer.writeln('Rel($from, $to, "uses")');
+      buffer.writeln(
+        'Rel($from, $to, "${_optionalString(dependency, 'context_label', 'uses')}")',
+      );
     }
   }
 
@@ -354,6 +359,17 @@ String _string(YamlMap map, String field) {
     return value;
   }
   throw StateError('Missing string field $field');
+}
+
+String _optionalString(YamlMap map, String field, String fallback) {
+  final value = map[field];
+  if (value == null) {
+    return fallback;
+  }
+  if (value is String) {
+    return _escape(value);
+  }
+  throw StateError('$field must be a string when provided');
 }
 
 bool _hasOwner(List<YamlMap> owners, String id) =>

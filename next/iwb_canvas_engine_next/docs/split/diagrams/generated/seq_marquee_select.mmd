@@ -1,0 +1,100 @@
+%% Marquee drag preview then terminal selection commit sequence
+sequenceDiagram
+  autonumber
+
+  actor User as User pointer
+  participant Surface as CanvasSurface
+  participant Tools as CanvasToolPort
+  participant IE as InteractionEngine
+  participant Store as DocumentStoreKernel
+  participant Spatial as SpatialKernel
+  participant Preview as CanvasPreviewState
+  participant Frame as FrameEngine
+  participant EK as EditKernel
+  participant Draft as DraftDocument
+  participant Touched as TouchedSet
+  participant Plan as CommitPlan
+  participant Events as EventBuffer
+  participant Signals as Public signals
+
+  User->>Surface: pointer down in move mode
+  Surface->>Tools: handlePointer(CanvasPointerSample down)
+  Tools->>IE: normalized finite down sample
+  IE->>IE: admit one active pointer token
+  IE->>Store: read current selection ids
+  Store-->>IE: previous selection in document order
+  IE->>Spatial: hit-test down position once
+  Spatial-->>IE: top visible selectable element id or none
+
+  alt down is admitted for selected move
+    IE-->>Tools: route to selected move behavior
+  else down is admitted for marquee
+    IE->>IE: start marquee session with anchor position
+    Note over IE: Session stores pointer token, sessionId, anchor position, and previous selection.
+    IE->>Preview: publish kind marquee with zero-area marqueeRect
+    Preview->>Frame: request overlay repaint only
+    Frame->>Signals: publish overlay repaint request
+    Signals-->>Surface: repaint overlay rectangle preview
+  end
+
+  loop pointer move samples for same token
+    User->>Surface: pointer move
+    Surface->>Tools: handlePointer(CanvasPointerSample move)
+    Tools->>IE: normalized finite move sample
+    IE->>IE: normalize rectangle from anchor to current position
+    Note over IE,Frame: Marquee drag preview is overlay-only; no selected-move main-scene preview delta is staged.
+    IE->>Preview: replace immutable marquee preview snapshot
+    Preview->>Frame: request overlay repaint only
+    Frame->>Preview: capture overlayRevision and marqueeRect once
+    Frame->>Frame: build marquee fill and stroke overlay primitives
+    Frame->>Signals: publish overlay repaint request
+    Signals-->>Surface: repaint overlay rectangle preview
+  end
+
+  User->>Surface: pointer up
+  Surface->>Tools: handlePointer(CanvasPointerSample up)
+  Tools->>IE: same-token terminal sample
+  IE->>IE: normalize terminal marquee rectangle
+  IE->>Spatial: query hitBounds overlapping marquee rect
+  Spatial-->>IE: visible selectable candidate handles
+  IE->>IE: run exact family inclusion test and order selected ids by document order
+
+  alt next selection equals previous selection
+    IE->>Preview: clear marquee preview and active session
+    Preview->>Frame: request overlay repaint cleanup
+    Frame->>Signals: publish overlay cleanup repaint request
+    Signals-->>Surface: repaint overlay without marquee
+    Note over EK,Events: No EditKernel commit, no Store mutation, no selection revision, and no selectMarquee action.
+    IE-->>Tools: terminal handling complete
+  else marquee selection changed
+    IE->>EK: open synchronous interaction edit
+    EK->>EK: reject disposed or nested edit
+    EK->>Store: read committed revision snapshot
+    Store-->>EK: committed tables and revision
+    EK->>Draft: create rollback-safe draft
+    IE->>Draft: set selection to next selected ids
+    Draft->>Touched: record selectionChanged only
+    IE->>Events: stage CanvasActionCommitted
+    Note over Events: type selectMarquee; elementIds are next selection in document order; payload CanvasSelectionActionPayload(previousSelection, nextSelection, marqueeRectWorld).
+    EK->>EK: reject Future result before success path
+    EK->>Plan: compile exact selection revision and repaint intent
+    Touched-->>Plan: selectionChanged revision fact
+    Plan->>Frame: prepare main repaint masks
+    Plan->>Events: attach staged selectMarquee event to commit
+    Plan->>Store: preflight invariants
+    Store-->>Plan: preflight accepted
+    Plan->>Store: install committed selection atomically
+    Store->>Store: replace committed selection and selectionRevision
+    Note over Plan,Store: Atomic install is the commit boundary.
+    Note over Store,Spatial: Selection changes do not update spatial indexes or projection cache.
+    Store->>Events: commit buffered action and revision effects
+    Store->>Frame: publish committed main repaint bus
+    EK->>EK: close edit session and stale handle
+    EK-->>IE: edit result
+    IE->>Preview: clear marquee preview and active session
+    Preview->>Frame: request overlay repaint cleanup
+    Events->>Signals: publish selection revision and action notifications
+    Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
+    Signals-->>Surface: repaint main scene selection and overlay without marquee
+    IE-->>Tools: terminal handling complete
+  end

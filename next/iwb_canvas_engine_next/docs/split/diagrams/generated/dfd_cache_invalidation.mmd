@@ -1,0 +1,140 @@
+%% Cache invalidation data flow
+flowchart LR
+
+  App["Application"]
+  Surface["CanvasSurface\npaint and repaint host"]
+
+  subgraph Sources["Invalidation sources"]
+    Touched["TouchedSet\nadded, removed, updated,\ngeometry, visual, resource,\nselection, meta, documentReplaced"]
+    LoadSuccess["Staged load success\ntyped replacement effect"]
+    PreviewCleanup["Preview cleanup\nterminal or cancel repaint effect"]
+    EmptyOrRollback["Empty touched set or rollback\nno revisions, cache eviction,\nspatial change, repaint, or events"]
+    ResourceDirtyCall["CanvasResourcePort\nmarkResourceDirty / markAllResourcesDirty"]
+  end
+
+  subgraph Compiler["Commit compiler"]
+    ExactPlan["CommitPlan\nexact revisions and invalidation scopes"]
+    OrdinaryScope["Ordinary edit scope\ntouched ids and typed state only"]
+    ReplacementScope["Edit documentReplaced scope\nonly CommitPlan full rebuild"]
+    ForbiddenGlobal["Forbidden generic global invalidation\nunless documentReplaced"]
+  end
+
+  subgraph Store["DocumentStoreKernel"]
+    CommittedInstall["Atomic committed install"]
+    RevisionState["RevisionState"]
+    DocumentRevision["documentRevision"]
+    StructuralRevision["structuralRevision"]
+    BoundsRevision["boundsRevision"]
+    VisualRevision["visualRevision"]
+    SelectionRevision["selectionRevision"]
+    ProjectionRevision["projectionRevision"]
+    ResourceRevision["resourceRevision"]
+    ResourceVisualRevision["resourceVisualRevision"]
+  end
+
+  subgraph Spatial["SpatialKernel"]
+    SpatialIndex["SpatialIndex\nentries by touched id"]
+    SpatialDelta["SpatialDelta\nadd, remove, touched update"]
+    TouchedSpatialUpdate["Ordinary spatial update\nonly touched ids"]
+    SpatialRebuild["Full spatial rebuild\nreplacement only"]
+    SpatialFallback["Invalid index fallback\nbounded query and deferred rebuild"]
+  end
+
+  subgraph Projection["Document projection cache"]
+    ProjectionEvict["Projection cache eviction\nby projectionRevision scope"]
+    NoProjectionHotPath["No CanvasDocument projection\nin paint, pointer, or hit hot paths"]
+  end
+
+  subgraph Resources["ResourceKernel"]
+    DescriptorCacheEvict["ImageResolveCache eviction\nresource descriptor changed"]
+    DirtyResourceEvict["ImageResolveCache eviction\nexplicit dirty target or all"]
+    DirtyVisualOnly["Resource dirty visual path\nresourceVisualRevision only"]
+  end
+
+  subgraph Frame["FrameEngine"]
+    PaintPlanInvalidation["PaintPlanCache invalidation\nstructural, bounds, visual,\nviewport, selection"]
+    StaticFrameInvalidation["StaticBackgroundCache invalidation\ncamera, background, grid"]
+    TextPathInvalidation["Text, path, stroke cache invalidation\nonly changed render inputs"]
+    MainRepaint["Main repaint bus"]
+    OverlayRepaint["Overlay repaint bus\npreview cleanup only"]
+    OverlaySnapshot["OverlayStateSnapshot\noverlayRevision"]
+  end
+
+  subgraph Forbidden["Forbidden effects"]
+    DirtyDocumentRevision["Resource dirty must not increment\ndocumentRevision"]
+    DirtySelectionPreview["Resource dirty must not clear\nselection or preview"]
+    DirtyActionEvent["Resource dirty must not emit\naction events"]
+    SpatialFullClone["Full spatial clone\nfor ordinary edit"]
+  end
+
+  App -->|"committed edit or terminal commit"| Touched
+  Touched -->|"no changed facts"| EmptyOrRollback
+  EmptyOrRollback -.->|"return without side effects"| App
+  Touched -->|"non-empty exact facts"| ExactPlan
+
+  ExactPlan -->|"ordinary edit, no documentReplaced"| OrdinaryScope
+  ExactPlan -->|"documentReplaced"| ReplacementScope
+  ExactPlan -.->|"not allowed"| ForbiddenGlobal
+  ForbiddenGlobal -.->|"blocked unless replacement scope"| ExactPlan
+
+  OrdinaryScope -->|"preflight and commit payload"| CommittedInstall
+  ReplacementScope -->|"prepared document replacement"| CommittedInstall
+  LoadSuccess -->|"prepared staged replacement\noutside edit CommitPlan"| CommittedInstall
+  CommittedInstall -->|"publish committed revision changes"| RevisionState
+
+  RevisionState --> DocumentRevision
+  RevisionState --> StructuralRevision
+  RevisionState --> BoundsRevision
+  RevisionState --> VisualRevision
+  RevisionState --> SelectionRevision
+  RevisionState --> ProjectionRevision
+  RevisionState --> ResourceRevision
+
+  OrdinaryScope -->|"added or removed ids"| SpatialDelta
+  OrdinaryScope -->|"geometry or transform changed ids"| SpatialDelta
+  SpatialDelta -->|"apply removals and additions"| TouchedSpatialUpdate
+  TouchedSpatialUpdate -->|"bounded candidate updates"| SpatialIndex
+  TouchedSpatialUpdate -.->|"forbidden ordinary path"| SpatialFullClone
+  ReplacementScope -->|"whole document changed"| SpatialRebuild
+  LoadSuccess -->|"staged whole document replacement"| SpatialRebuild
+  SpatialRebuild -->|"rebuild from committed tables"| SpatialIndex
+  SpatialDelta -.->|"stale generation or invalid delta"| SpatialFallback
+
+  ReplacementScope -->|"full projection eviction allowed"| ProjectionEvict
+  LoadSuccess -->|"full projection eviction typed effect"| ProjectionEvict
+  ProjectionRevision -->|"evict changed public projection entries"| ProjectionEvict
+  ProjectionEvict -.->|"hot paths still use compact records"| NoProjectionHotPath
+
+  ReplacementScope -->|"clear resource resolve cache"| DescriptorCacheEvict
+  LoadSuccess -->|"clear resource resolve cache typed effect"| DescriptorCacheEvict
+  ResourceRevision -->|"descriptor upsert/remove"| DescriptorCacheEvict
+  DescriptorCacheEvict -->|"resource-dependent paint changed"| MainRepaint
+
+  ResourceDirtyCall -->|"explicit external visual invalidation"| DirtyResourceEvict
+  DirtyResourceEvict -->|"cache entries only"| DirtyVisualOnly
+  DirtyVisualOnly -->|"increment visual cache version"| ResourceVisualRevision
+  ResourceVisualRevision -->|"resource visuals changed"| MainRepaint
+  ResourceDirtyCall -.->|"forbidden"| DirtyDocumentRevision
+  ResourceDirtyCall -.->|"forbidden"| DirtySelectionPreview
+  ResourceDirtyCall -.->|"forbidden"| DirtyActionEvent
+
+  StructuralRevision -->|"structure/order changed"| PaintPlanInvalidation
+  BoundsRevision -->|"bounds changed"| PaintPlanInvalidation
+  VisualRevision -->|"visual rows changed"| PaintPlanInvalidation
+  SelectionRevision -->|"selection changed"| PaintPlanInvalidation
+  ReplacementScope -->|"full frame cache reset allowed"| PaintPlanInvalidation
+  LoadSuccess -->|"full frame cache reset typed effect"| PaintPlanInvalidation
+  VisualRevision -->|"camera/background/grid/meta visuals"| StaticFrameInvalidation
+  VisualRevision -->|"changed text, path, or stroke inputs"| TextPathInvalidation
+  PaintPlanInvalidation -->|"scene records changed"| MainRepaint
+  StaticFrameInvalidation -->|"background or camera frame changed"| MainRepaint
+  TextPathInvalidation -->|"render cache entries changed"| MainRepaint
+
+  PreviewCleanup -->|"preview-only overlay change"| OverlaySnapshot
+  PreviewCleanup -->|"terminal overlay preview cleanup"| OverlaySnapshot
+  OverlaySnapshot -->|"overlayRevision"| OverlayRepaint
+  PreviewCleanup -->|"selected move preview or cleanup"| MainRepaint
+  LoadSuccess -->|"load success overlay repaint"| OverlayRepaint
+
+  MainRepaint --> Surface
+  OverlayRepaint --> Surface

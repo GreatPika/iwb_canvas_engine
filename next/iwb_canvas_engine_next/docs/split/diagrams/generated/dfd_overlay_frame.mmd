@@ -1,0 +1,60 @@
+%% Overlay frame data flow
+flowchart LR
+
+  Surface["CanvasSurface\noverlay paint host"]
+
+  subgraph Store["DocumentStoreKernel"]
+    CameraState["Committed camera state\ncameraOffset"]
+    ProjectionCache["DocumentProjectionCache\nreadDocument/codec/tests only"]
+  end
+
+  subgraph Interaction["InteractionEngine"]
+    OverlaySnapshot["OverlayStateSnapshot\noverlayRevision + immutable previewState"]
+    SelectedMovePreview["Selected move preview\nmain-scene preview only"]
+  end
+
+  subgraph Frame["FrameEngine"]
+    OverlayRepaint["Overlay repaint request"]
+    Capture["Overlay frame capture\nsingle runtime read boundary"]
+    CapturedFrame["CapturedOverlayFrame\noverlayRevision, cameraOffset,\npreviewState, selectionStyle"]
+    PreviewAdmission["Preview admission from captured previewState\nexclude selected move preview"]
+    CapturedOverlayKinds["Captured overlay preview kinds\nmarquee, stroke, pending line,\nline, eraser"]
+    MainRepaintReference["Main repaint bus\noutside overlay paint path"]
+    PrimitiveBuilder["One-shot overlay primitive builder\ncamera-adjusted immutable data"]
+    OverlayPrimitives["Immutable overlay primitives\nmarquee fill/stroke, stroke preview,\npending line, eraser corridor,\nselection UI style"]
+    ProjectionBlocked["No CanvasDocument materialization\nin overlay paint"]
+  end
+
+  subgraph Painter["Painter"]
+    OverlayPainter["Overlay painter\ncaptured frame + primitives only"]
+    PaintedOverlay["Painted overlay UI"]
+    LiveReadBlocked["No live runtime reads\nfrom painter"]
+  end
+
+  Surface -->|"paint asks for overlay UI"| OverlayRepaint
+  OverlayRepaint -->|"capture once for this paint"| Capture
+
+  Capture -->|"read camera once"| CameraState
+  CameraState -->|"cameraOffset"| CapturedFrame
+  Capture -->|"read overlay state once"| OverlaySnapshot
+  OverlaySnapshot -->|"overlayRevision and previewState"| CapturedFrame
+  Surface -->|"selectionStyle"| CapturedFrame
+
+  CapturedFrame -->|"captured previewState only"| PreviewAdmission
+  PreviewAdmission -->|"admitted overlay preview data"| CapturedOverlayKinds
+  CapturedOverlayKinds -->|"marquee/stroke/line/eraser facts"| PrimitiveBuilder
+  CapturedFrame -->|"camera and style facts"| PrimitiveBuilder
+  PrimitiveBuilder -->|"build immutable overlay primitives once"| OverlayPrimitives
+
+  PreviewAdmission -.->|"selected move preview is rejected here"| SelectedMovePreview
+  SelectedMovePreview -.->|"handled by main scene repaint,\nnot overlay painter"| MainRepaintReference
+
+  OverlayPrimitives -->|"immutable overlay data"| OverlayPainter
+  CapturedFrame -->|"captured overlay facts"| OverlayPainter
+  OverlayPainter -->|"draw commands"| PaintedOverlay
+  PaintedOverlay --> Surface
+
+  OverlayPainter -.->|"forbidden"| LiveReadBlocked
+  LiveReadBlocked -.->|"no DocumentStore, InteractionEngine,\nFrameEngine, Public API, or resolver reads"| OverlayPainter
+  Capture -.->|"forbidden in paint hot path"| ProjectionBlocked
+  ProjectionCache -.->|"not read by overlay paint"| ProjectionBlocked

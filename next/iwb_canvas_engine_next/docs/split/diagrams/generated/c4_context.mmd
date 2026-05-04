@@ -1,14 +1,14 @@
 C4Context
 title iwb_canvas_engine_next system context
 
-Person(Application, "Application", "Owns domain state and calls the public canvas API.")
-Person(Flutter, "Flutter framework", "Supplies widget, input, image, and painting integrations.")
-Person(JsonDocument, "Schema v1 JSON document", "Persisted interchange input and output at the codec boundary.")
+System_Ext(Application, "Application", "Owns domain state and calls the public canvas API.")
+System_Ext(Flutter, "Flutter framework", "Supplies widget, input, image, and painting integrations.")
+System_Ext(JsonDocument, "Schema v1 JSON document", "Persisted interchange input and output at the codec boundary.")
 System_Boundary(next_engine, "iwb_canvas_engine_next") {
-  System(PublicAPI, "Public API", "Stable DTOs, operations, events, and errors")
-  System(RuntimeRoot, "RuntimeRoot", "Single production runtime owner")
+  System(PublicAPI, "Public API", "Stable DTOs, operations, events, and errors.")
+  System(RuntimeRoot, "RuntimeRoot", "Composition root for document, edit, interaction, frame, spatial, resource, codec, and diagnostic services.")
 }
-Rel(Application, PublicAPI, "uses")
-Rel(PublicAPI, RuntimeRoot, "uses")
-Rel(Flutter, PublicAPI, "uses")
-Rel(JsonDocument, PublicAPI, "uses")
+Rel(Application, PublicAPI, "calls public API")
+Rel(PublicAPI, RuntimeRoot, "creates and drives runtime")
+Rel(Flutter, PublicAPI, "supplies Flutter integration")
+Rel(JsonDocument, PublicAPI, "decoded and encoded through API")

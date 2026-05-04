@@ -1,0 +1,104 @@
+%% Pointer preview and terminal commit/cancel data flow
+flowchart LR
+
+  Surface["CanvasSurface\nFlutter pointer host"]
+
+  subgraph API["Public API boundary"]
+    Sample["CanvasPointerSample\nnormalized finite down/move;\nterminal cleanup may use invalid sample"]
+    MoveResolver["CanvasMoveCommitResolver\nselected move terminal only"]
+    PublicSignals["Public signals\naction events, preview revision,\nmain/overlay repaint requests"]
+  end
+
+  subgraph Interaction["InteractionEngine"]
+    TokenGate["Pointer session gate\none active token per runtime"]
+    StaleSample["Stale token sample\nignored"]
+    TerminalCleanup["Terminal cleanup\nclear active preview/session"]
+    PreviewState["Immutable CanvasPreviewState\npointer-owned preview snapshot"]
+    OverlayPreview["Overlay preview kinds\nmarquee, stroke, pending line,\nline, eraser"]
+    SelectedMovePreview["Selected move preview\nmain-scene preview delta"]
+    SessionPreview["Session-only preview update\ndraw, line, selected move delta"]
+    SpatialQuery["Hit-test and candidate queries"]
+    CandidatePreview["Candidate-based preview update\nmarquee, eraser, initial hit"]
+    CommitIntent["Terminal commit intent\nselection, stroke, line,\neraser, or selected move"]
+    CancelIntent["Cancel intent\ncancel, mode change, dispose,\nresolver cancel, zero move"]
+    EditResult["Terminal edit result\nInteractionEngine-owned cleanup point"]
+    CleanupByKind["Cleanup by active preview kind"]
+  end
+
+  subgraph Spatial["SpatialKernel"]
+    Candidates["Visible/selectable candidates\ngeometry policy hit results"]
+  end
+
+  subgraph EditKernel["EditKernel"]
+    InteractionEdit["Interaction-owned edit bridge\nsynchronous edit session"]
+    Draft["DraftDocument\nrollback-safe mutations"]
+    Touched["TouchedSet and CommitPlan\nexact committed effects"]
+    Rollback["Rollback discard\nno committed effects"]
+  end
+
+  subgraph Store["DocumentStoreKernel"]
+    Committed["Committed document\nselection, revisions, resources"]
+    AtomicInstall["Atomic install"]
+  end
+
+  subgraph Effects["Committed effects"]
+    SpatialDelta["Spatial updates\nfor touched ids"]
+    ProjectionEvict["Projection/cache eviction"]
+    MainRepaint["Main repaint bus"]
+    OverlayRepaint["Overlay repaint bus\npreview cleanup"]
+    Actions["Typed user action events\nonly when terminal commit changes state"]
+    Diagnostics["Diagnostics projection\nterminal/edit failures"]
+  end
+
+  Surface -->|"routes pointer sample"| Sample
+  Sample -->|"normalized pointer data"| TokenGate
+  TokenGate -.->|"stale non-terminal token"| StaleSample
+  StaleSample -.->|"no preview, repaint, edit, or event"| Surface
+  TokenGate -.->|"stale/invalid terminal sample"| TerminalCleanup
+
+  TokenGate -->|"valid down/move sample\nfor draw/line/move delta"| SessionPreview
+  TokenGate -->|"valid sample needing candidates\nhit policy, marquee, eraser"| SpatialQuery
+  SpatialQuery -->|"read-only candidate lookup"| Candidates
+  Candidates -->|"hit-test result and selection candidates"| SpatialQuery
+
+  SessionPreview -->|"pointer/session preview facts"| PreviewState
+  SpatialQuery -->|"candidate facts"| CandidatePreview
+  CandidatePreview -->|"preview facts"| PreviewState
+  PreviewState -->|"marquee/stroke/line/eraser preview snapshot"| OverlayPreview
+  PreviewState -->|"selected move delta snapshot"| SelectedMovePreview
+  OverlayPreview -->|"preview revision only"| OverlayRepaint
+  SelectedMovePreview -->|"movePreview/main-scene revision only"| MainRepaint
+
+  TokenGate -->|"terminal same-token up"| CommitIntent
+  TokenGate -->|"cancel terminal or external cancellation"| CancelIntent
+  CancelIntent -->|"discard preview without document mutation"| TerminalCleanup
+  TerminalCleanup -->|"preview cleared"| PreviewState
+  TerminalCleanup -->|"active preview kind"| CleanupByKind
+  CleanupByKind -->|"selected move cleanup"| MainRepaint
+  CleanupByKind -->|"overlay preview cleanup"| OverlayRepaint
+
+  CommitIntent -->|"selected move request when moved"| MoveResolver
+  MoveResolver -.->|"CanvasMoveCancel, zero move, empty movable set,\nor resolver failure cleanup"| CancelIntent
+  MoveResolver -->|"finite committed delta"| CommitIntent
+
+  CommitIntent -->|"committed mutation request"| InteractionEdit
+  InteractionEdit -->|"draft mutations for terminal result"| Draft
+  Draft -->|"exact touched state"| Touched
+  Touched -->|"preflight and commit payload"| AtomicInstall
+  AtomicInstall -->|"replace committed tables atomically"| Committed
+
+  AtomicInstall -->|"apply touched spatial scope"| SpatialDelta
+  AtomicInstall -->|"evict changed projections/caches"| ProjectionEvict
+  AtomicInstall -->|"schedule committed scene repaint"| MainRepaint
+  AtomicInstall -->|"publish changed terminal action"| Actions
+  AtomicInstall -->|"commit result"| EditResult
+  EditResult -->|"post-edit interaction cleanup"| TerminalCleanup
+
+  InteractionEdit -.->|"edit exception, rejected Future,\nor preflight failure"| Rollback
+  Rollback -.->|"committed document, revisions,\nand action events unchanged"| Diagnostics
+  Rollback -.->|"terminal failure result"| EditResult
+  Diagnostics -.->|"projected runtime-safe error"| Surface
+  PublicSignals --> Surface
+  MainRepaint --> PublicSignals
+  OverlayRepaint --> PublicSignals
+  Actions --> PublicSignals

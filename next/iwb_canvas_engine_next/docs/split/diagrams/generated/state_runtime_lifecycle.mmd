@@ -1,0 +1,85 @@
+%% CanvasRuntime lifecycle state diagram
+stateDiagram-v2
+  [*] --> Creating: CanvasRuntime(...)
+
+  state "Creating runtime" as Creating
+  note right of Creating
+    Initialize committed document, runtime owners,
+    public ports, streams, listenables, and caches.
+    No legacy SceneController, NodeSpec, or PatchField entities.
+  end note
+
+  Creating --> Active: initial committed immutable document is installed
+
+  state "Active runtime" as Active
+  note right of Active
+    Public mutating operations are admitted through
+    runtime boundary guards and owning kernels.
+  end note
+
+  Active --> Active: readDocument() / return current immutable document
+  Active --> Active: successful edit or command / atomic commit and typed effects
+  Active --> Active: loadDocument success / success-only interaction interrupt, atomic replacement, cache invalidation
+  Active --> Active: loadDocument failure / no interrupt, no mutation, no repaint, no events
+  Active --> Disposing: dispose() first call
+
+  state "Disposing runtime" as Disposing {
+    [*] --> EnterGuard
+    EnterGuard: enter disposing guard
+    EnterGuard --> StopRouting: reject reentrant mutation and new pointer routing
+    StopRouting: stop public pointer routing
+
+    StopRouting --> GestureDecision
+    state GestureDecision <<choice>>
+    GestureDecision --> SelectedMoveCleanup: active selected move preview
+    GestureDecision --> OverlayCleanup: active overlay preview
+    GestureDecision --> NoGestureCleanup: no active preview
+
+    SelectedMoveCleanup: clear selected move preview and active session
+    SelectedMoveCleanup --> MainCleanupRepaint: request main-scene repaint cleanup
+    MainCleanupRepaint: repaint main scene without selected move preview
+    MainCleanupRepaint --> ResourceCacheCleanup
+
+    OverlayCleanup: clear overlay preview and active session
+    OverlayCleanup --> OverlayCleanupRepaint: request overlay repaint cleanup
+    OverlayCleanupRepaint: repaint overlay without preview primitives
+    OverlayCleanupRepaint --> ResourceCacheCleanup
+
+    NoGestureCleanup: no gesture cleanup effect
+    NoGestureCleanup --> ResourceCacheCleanup
+
+    ResourceCacheCleanup: clear mandatory v1 resource caches
+    ResourceCacheCleanup --> CloseStreams: drop resolved-image cache entries
+    CloseStreams: close actions and textEditRequests streams
+    CloseStreams --> [*]
+  }
+
+  note right of Disposing
+    Dispose never calls the move commit resolver.
+    Dispose does not dispose app-owned ui.Image instances
+    or the app-owned resource resolver.
+  end note
+
+  Disposing --> Disposed: cleanup complete
+
+  state "Disposed runtime" as Disposed
+  note right of Disposed
+    Last committed immutable document remains readable.
+    Mutating public operations throw StateError("CanvasRuntime is disposed.").
+  end note
+
+  Disposed --> Disposed: dispose() again / return without side effects
+  Disposed --> Disposed: readDocument() / return last committed immutable document
+  Disposed --> Disposed: mutating public operation or pointer sample / throw StateError
+
+  note left of Disposed
+    Negative invariants:
+    no committed document mutation from dispose;
+    no document revision, selection, spatial index,
+    projection cache, or resource descriptor mutation
+    due solely to dispose;
+    no CanvasActionCommitted event from dispose;
+    no CanvasTextEditRequested event from dispose;
+    no ValueListenable close claim in v1;
+    no document or preview revision bump by dispose itself.
+  end note

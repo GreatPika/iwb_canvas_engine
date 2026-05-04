@@ -1,0 +1,68 @@
+%% loadDocument success/failure data flow
+flowchart LR
+
+  App["Application code"]
+
+  subgraph API["Public API boundary"]
+    LoadPort["CanvasEditPort.loadDocument(document)"]
+    PublicDocument["CanvasDocument DTO"]
+    Result["Return or projected exception"]
+  end
+
+  subgraph Staging["Staged load boundary"]
+    Validator["Document validation\npublic DTO invariants"]
+    Materializer["PreparedDocumentLoad materialization\nruntime tables and ids"]
+    Prepared["Prepared replacement\ncommitted document payload"]
+    Failure["Load failure\nCanvasDataException or StateError"]
+  end
+
+  subgraph Interaction["InteractionEngine state"]
+    ActiveGesture["Active gesture and preview\npending line, pointer normalization, tap history"]
+    Interrupt["Success-only interaction interrupt\nclear preview and pending input state"]
+  end
+
+  subgraph Store["DocumentStoreKernel"]
+    ExistingCommitted["Existing committed document\nselection, revisions, projection cache"]
+    AtomicInstall["Atomic document install"]
+    ReplacementCommitted["Replacement committed document\nselection cleared"]
+  end
+
+  subgraph Effects["Committed effects"]
+    Revisions["Document-level revisions\ncontroller epoch"]
+    SpatialRebuild["Spatial index rebuild"]
+    ProjectionEvict["Projection cache eviction"]
+    ResourceEvict["Resource cache eviction"]
+    Repaint["Main and overlay repaint"]
+    Notify["Public notify after install\nno user action event"]
+    Diagnostics["Diagnostics projection\nvalidation/materialization failures"]
+  end
+
+  App -->|"external document replacement request"| LoadPort
+  LoadPort -->|"public document input"| PublicDocument
+  PublicDocument -->|"validate before runtime side effects"| Validator
+  Validator -->|"validated DTO data"| Materializer
+  Materializer -->|"prepared runtime document"| Prepared
+
+  Validator -.->|"invalid public document"| Failure
+  Materializer -.->|"materialization failure"| Failure
+  Failure -.->|"projected failure"| Diagnostics
+  Diagnostics -.->|"rethrow projected exception"| Result
+  Result -.->|"failure result"| App
+
+  Failure -.->|"no interrupt; preview and pointer state unchanged"| ActiveGesture
+  Failure -.->|"no committed state, selection, revision, cache, repaint, or event change"| ExistingCommitted
+
+  Prepared -->|"success-only interrupt request"| Interrupt
+  ActiveGesture -->|"clear active gesture state"| Interrupt
+  Interrupt -->|"prepared replacement after interaction cleanup"| AtomicInstall
+  Prepared -->|"install payload"| AtomicInstall
+  AtomicInstall -->|"replace committed state atomically"| ReplacementCommitted
+
+  ReplacementCommitted -->|"increment all document-level revisions and epoch"| Revisions
+  ReplacementCommitted -->|"rebuild from replacement document"| SpatialRebuild
+  ReplacementCommitted -->|"evict public document projection"| ProjectionEvict
+  ReplacementCommitted -->|"evict resolver/resource caches"| ResourceEvict
+  ReplacementCommitted -->|"schedule full document repaint"| Repaint
+  ReplacementCommitted -->|"publish after atomic install"| Notify
+  Notify -->|"success return"| Result
+  Result -->|"load completed"| App
