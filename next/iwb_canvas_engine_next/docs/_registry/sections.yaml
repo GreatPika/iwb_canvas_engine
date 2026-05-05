@@ -42,6 +42,7 @@
   diagrams:
     - c4_container
     - c4_component_runtime
+    - state_runtime_lifecycle
   guardrails:
     - new_core.single_runtime_root
   tests:

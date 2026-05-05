@@ -8,6 +8,7 @@ final _sectionIds = <String>{};
 void main() {
   _checkRequiredEntrypoints();
   _checkSectionsRegistry();
+  _checkDiagramCatalogRegistrySymmetry();
   _checkMarkdownPaths();
   _checkNoRetiredActiveReferences();
   _checkDiagramContractAlignment();
@@ -65,6 +66,86 @@ void _checkSectionsRegistry() {
   }
 }
 
+void _checkDiagramCatalogRegistrySymmetry() {
+  final sections = _loadYamlMapList('docs/_registry/sections.yaml');
+  final catalog = _loadDiagramCatalog('docs/diagrams/README.md');
+  final registry = <String, Set<String>>{};
+
+  for (final section in sections) {
+    final sectionId = _stringField(section, 'id', 'section registry entry');
+    final diagrams = section['diagrams'];
+    if (diagrams == null || diagrams is! YamlList) {
+      _fail('$sectionId has no list field diagrams');
+      continue;
+    }
+    for (final item in diagrams) {
+      final diagramId = item.toString();
+      if (diagramId == 'none') {
+        continue;
+      }
+      registry.putIfAbsent(diagramId, () => <String>{}).add(sectionId);
+      if (!catalog.containsKey(diagramId)) {
+        _fail(
+          '$sectionId references diagram $diagramId, '
+          'but docs/diagrams/README.md does not catalog it',
+        );
+      }
+    }
+  }
+
+  for (final entry in catalog.entries) {
+    final diagramId = entry.key;
+    final catalogSections = entry.value;
+    if (catalogSections.isEmpty) {
+      _fail('docs/diagrams/README.md catalog entry $diagramId has no sections');
+    }
+    final registrySections = registry[diagramId] ?? const <String>{};
+
+    for (final sectionId in catalogSections) {
+      if (!_sectionIds.contains(sectionId)) {
+        _fail(
+          'docs/diagrams/README.md references unknown section id $sectionId',
+        );
+        continue;
+      }
+      if (!registrySections.contains(sectionId)) {
+        _fail(
+          'diagram $diagramId is related to $sectionId in '
+          'docs/diagrams/README.md, but $sectionId does not list $diagramId '
+          'in docs/_registry/sections.yaml',
+        );
+      }
+    }
+
+    for (final sectionId in registrySections) {
+      if (!catalogSections.contains(sectionId)) {
+        _fail(
+          '$sectionId lists diagram $diagramId in docs/_registry/sections.yaml, '
+          'but docs/diagrams/README.md does not list $sectionId under '
+          '$diagramId',
+        );
+      }
+    }
+  }
+
+  final catalogedFiles = catalog.keys
+      .map((diagramId) => 'docs/diagrams/$diagramId.mmd')
+      .toSet();
+  final diagramDir = Directory('docs/diagrams');
+  if (diagramDir.existsSync()) {
+    for (final file in diagramDir.listSync().whereType<File>()) {
+      if (!file.path.endsWith('.mmd')) {
+        continue;
+      }
+      if (!catalogedFiles.contains(file.path)) {
+        _fail(
+          '${file.path} exists but is not cataloged in docs/diagrams/README.md',
+        );
+      }
+    }
+  }
+}
+
 void _checkMarkdownPaths() {
   final roots = [
     Directory('docs/architecture'),
@@ -95,6 +176,66 @@ void _checkMarkdownPaths() {
     _checkSectionIdsInText(path, text);
     _checkDocumentPathsInText(path, text);
   }
+}
+
+Map<String, Set<String>> _loadDiagramCatalog(String path) {
+  _requireFile(path);
+  final text = _read(path);
+  final catalog = <String, Set<String>>{};
+  final blocks = text.split(RegExp(r'^##\s+', multiLine: true));
+
+  for (final block in blocks.skip(1)) {
+    final lines = block.split('\n');
+    if (lines.isEmpty) {
+      continue;
+    }
+    final diagramId = lines.first.trim();
+    if (diagramId.isEmpty) {
+      _fail('$path contains an empty diagram heading');
+      continue;
+    }
+    if (catalog.containsKey(diagramId)) {
+      _fail('$path contains duplicate diagram entry $diagramId');
+      continue;
+    }
+
+    String? plannedPath;
+    final sections = <String>{};
+    for (final line in lines.skip(1)) {
+      final plannedPathMatch = RegExp(
+        r'^- Planned path: `(docs/diagrams/[^`]+\.mmd)`$',
+      ).firstMatch(line);
+      if (plannedPathMatch != null) {
+        plannedPath = plannedPathMatch.group(1);
+        continue;
+      }
+      final sectionsMatch = RegExp(
+        r'^- Related sections: (.+)$',
+      ).firstMatch(line);
+      if (sectionsMatch != null) {
+        for (final match in RegExp(
+          r'`(section_[^`]+)`',
+        ).allMatches(sectionsMatch.group(1)!)) {
+          sections.add(match.group(1)!);
+        }
+      }
+    }
+
+    final expectedPath = 'docs/diagrams/$diagramId.mmd';
+    if (plannedPath == null) {
+      _fail('$path catalog entry $diagramId has no planned path');
+    } else if (plannedPath != expectedPath) {
+      _fail(
+        '$path catalog entry $diagramId planned path must be $expectedPath, '
+        'not $plannedPath',
+      );
+    }
+    _requireFile(expectedPath, source: path);
+
+    catalog[diagramId] = sections;
+  }
+
+  return catalog;
 }
 
 void _checkNoRetiredActiveReferences() {
