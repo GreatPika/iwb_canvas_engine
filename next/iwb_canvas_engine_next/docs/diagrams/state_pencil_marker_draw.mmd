@@ -54,13 +54,13 @@ stateDiagram-v2
     end note
 
     TerminalGate --> CleanupOnly: "stale token, wrong epoch, invalid terminal, or non-finite facts"
-    TerminalGate --> NoOpTerminal: "empty stroke or minimum drawable stroke gate fails"
-    TerminalGate --> FinalStrokeNormalization: "valid terminal sample and enough stroke facts"
+    TerminalGate --> NoOpTerminal: "empty stroke"
+    TerminalGate --> FinalStrokeNormalization: "valid terminal sample and non-empty stroke facts"
 
     state "No-op terminal" as NoOpTerminal
     note left of NoOpTerminal
-      Too-short, empty, invalid, and stale terminal
-      paths clean up preview/session only. They do not
+      Empty stroke paths clean up preview/session only.
+      They do not
       open EditKernel, mutate the document, notify
       document listeners, repaint main scene, or emit
       drawPencil/drawMarker.
@@ -116,9 +116,8 @@ stateDiagram-v2
   state "Cleanup only" as CleanupOnly
   note right of CleanupOnly
     Cancel, mode change, load success, interactive=false,
-    stale terminal, invalid terminal, empty stroke, and
-    too-short stroke paths clear only the stroke preview
-    and active stroke session.
+    stale terminal, invalid terminal, and empty stroke paths
+    clear only the stroke preview and active stroke session.
   end note
 
   state "Edit failure cleanup" as EditFailureCleanup

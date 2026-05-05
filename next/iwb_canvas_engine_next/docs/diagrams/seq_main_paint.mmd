@@ -13,8 +13,9 @@ sequenceDiagram
   participant Painter as Main painter
 
   Surface->>Frame: paint main scene request(viewportRect, cameraOffset, dpr, resolver)
-  Frame->>Store: capture committed tables, revisions, camera, viewport, and selection once
-  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, visualRevision, selectionRevision, resourceVisualRevision, cameraOffset, viewportRect, selectionIds
+  Frame->>Store: capture committed tables, revisions, camera, and selection once
+  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, visualRevision, selectionRevision, resourceVisualRevision, cameraOffset, selectionIds
+  Frame->>Frame: build CapturedMainFrame with viewportRect from paint request
   Frame->>Preview: capture immutable selected move preview once
   Preview-->>Frame: selectedMoveDelta or none
   Note over Frame: CapturedMainFrame freezes the runtime facts used by this main paint frame.

@@ -79,7 +79,7 @@ sequenceDiagram
     IE->>IE: verify pending line epoch matches current controllerEpoch
     IE->>Geometry: validate finite line start, end, color, and thickness
 
-    alt line validation rejects or commit would be no-op
+    alt line validation rejects
       IE->>Preview: clear pending line or line preview
       Preview->>Frame: request overlay repaint cleanup
       Frame->>Signals: publish overlay cleanup repaint request

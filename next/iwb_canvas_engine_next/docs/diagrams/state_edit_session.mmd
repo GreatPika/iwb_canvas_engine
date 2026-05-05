@@ -59,8 +59,9 @@ stateDiagram-v2
     note right of NoOpEmptyTouched
       No atomic install. No document, structural, bounds,
       visual, projection, selection, resource, preview,
-      or repaint revision changes. No cache eviction,
-      public notification, text edit event, repaint, or action.
+      or overlay revision changes. No cache eviction,
+      public notification, text edit event, scene repaint,
+      overlay repaint, or action.
     end note
     NoOpEmptyTouched --> CloseNoOp: close session
 

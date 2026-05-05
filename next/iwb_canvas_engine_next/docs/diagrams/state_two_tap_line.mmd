@@ -57,12 +57,11 @@ stateDiagram-v2
   note right of SecondTapGate
     A terminal tap may create a commit intent only when the
     pending start still exists, tool and epoch match, start/end
-    are finite, and line facts remain drawable.
+    are finite, and style facts remain valid.
   end note
 
   SecondTapGate --> CleanupOnly: no pending start, stale epoch, tool mismatch, invalid terminal, or non-finite facts
-  SecondTapGate --> CleanupOnly: same endpoint or length below drawable threshold
-  SecondTapGate --> CommitIntent: same tool and epoch with drawable finite line facts
+  SecondTapGate --> CommitIntent: same tool and epoch with finite start/end and valid style facts
 
   state "Commit intent / EditKernel only" as CommitIntent
   note right of CommitIntent
