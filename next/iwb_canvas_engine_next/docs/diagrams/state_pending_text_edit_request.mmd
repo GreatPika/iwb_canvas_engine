@@ -38,12 +38,12 @@ stateDiagram-v2
   note right of PendingCandidate
     Pending state is input history only:
     element id, generation, view/world positions,
-    timestamp, and controller/tool epoch.
+    timestamp, and controllerEpoch.
     It is not CanvasPreviewState and not Store state.
   end note
 
   PendingCandidate --> SecondTapGate: "second tap or explicit double-tap"
-  PendingCandidate --> CleanupOnly: "delay exceeded, slop exceeded, invalid sample, no hit, mode/tool epoch mismatch, mode change, or interactive=false"
+  PendingCandidate --> CleanupOnly: "delay exceeded, slop exceeded, invalid sample, no hit, mode mismatch, controllerEpoch mismatch, mode change, or interactive=false"
   PendingCandidate --> CleanupOnly: "loadDocument success after install"
   PendingCandidate --> PendingCandidate: "loadDocument validation/materialization failure before install / preserve tap; no emit, repaint, or mutation"
   PendingCandidate --> DisposeCleanup: "runtime.dispose()"

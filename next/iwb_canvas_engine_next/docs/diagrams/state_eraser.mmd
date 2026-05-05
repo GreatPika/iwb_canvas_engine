@@ -15,7 +15,7 @@ stateDiagram-v2
 
   state "Down admitted by pointer session" as DownAdmission
   note right of DownAdmission
-    Admission requires the active token, session id, tool epoch,
+    Admission requires the active token, session id, controllerEpoch,
     draw mode, eraser tool, finite point, and finite thickness.
     Pointer id is only the routing token.
   end note
@@ -33,9 +33,9 @@ stateDiagram-v2
       Updates request overlay repaint only.
     end note
 
-    CorridorPreview --> CorridorPreview: same-token same-epoch finite move / append corridor
-    CorridorPreview --> CandidateRefresh: same-token same-epoch finite move / refresh candidates
-    CorridorPreview --> CorridorPreview: stale token, wrong epoch, or non-finite move / ignore
+    CorridorPreview --> CorridorPreview: same-token same-controllerEpoch finite move / append corridor
+    CorridorPreview --> CandidateRefresh: same-token same-controllerEpoch finite move / refresh candidates
+    CorridorPreview --> CorridorPreview: stale token, controllerEpoch mismatch, or non-finite move / ignore
     CorridorPreview --> TerminalGate: same-token up
     CorridorPreview --> CleanupOnly: same-token cancel
     CorridorPreview --> CleanupOnly: mode change
@@ -49,8 +49,8 @@ stateDiagram-v2
       Query SpatialKernel with corridor envelope inflated by
       eraserThickness / 2 + hitPadding + 4.0. Resolve committed
       candidates by generation and structuralRevision, then run
-      exact segment-to-family geometry checks for visible deletable
-      content elements. No committed mutation occurs in preview.
+      exact segment-to-family geometry checks for deletable
+      non-background content elements. No committed mutation occurs in preview.
     end note
 
     CandidateRefresh --> CorridorPreview: replace overlay preview and session candidate facts
@@ -58,12 +58,12 @@ stateDiagram-v2
 
     state "Terminal up gate" as TerminalGate
     note right of TerminalGate
-      Terminal commit is allowed only for same token, same epoch,
+      Terminal commit is allowed only for same token, same controllerEpoch,
       finite terminal point, and candidate/geometry facts derived
       from the final corridor.
     end note
 
-    TerminalGate --> CleanupOnly: stale token, wrong epoch, non-finite, or invalid terminal
+    TerminalGate --> CleanupOnly: stale token, controllerEpoch mismatch, non-finite, or invalid terminal
     TerminalGate --> FinalCandidates: valid terminal / query final corridor
 
     state "Final candidate and geometry check" as FinalCandidates

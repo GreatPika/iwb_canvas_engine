@@ -48,17 +48,18 @@ sequenceDiagram
   Store->>Store: reset generated id admission to avoid loaded ids
   Store->>Store: increment controllerEpoch and document/structural/bounds/visual/selection/projection/resource revisions
   Note over Store: Store state is committed tables and revision state, not a live CanvasDocument DTO.
+  Store-->>Runtime: committed replacement revision facts
 
-  Store->>Interaction: committed load installed with updated epoch and revisions
+  Runtime->>Interaction: committed load installed with updated epoch and revisions
   Interaction->>Interaction: clear pointer normalization and pending tap history
   Store->>Projection: evict public document projection by projectionRevision
-  Store->>Spatial: rebuild full spatial index from replacement tables
-  Store->>Resources: clear image resolve cache for replaced descriptors
-  Store->>Frame: reset replacement-scoped paint, static, text, path, and stroke caches
+  Runtime->>Spatial: rebuild full spatial index from replacement tables
+  Runtime->>Resources: clear image resolve cache for replaced descriptors
+  Runtime->>Frame: reset replacement-scoped paint, static, text, path, and stroke caches
   Frame->>Frame: schedule main repaint for replacement document
   Interaction->>Frame: schedule overlay repaint for cleared preview
 
-  Store->>Signals: publish document and revision listeners after install
+  Runtime->>Signals: publish document and revision listeners after install
   Interaction->>Signals: publish preview revision listener after install
   Note over Signals: loadDocument emits no CanvasActionCommitted event.
   Runtime-->>API: loadDocument complete

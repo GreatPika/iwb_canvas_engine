@@ -10,6 +10,7 @@ void main() {
   _checkSectionsRegistry();
   _checkMarkdownPaths();
   _checkNoRetiredActiveReferences();
+  _checkDiagramContractAlignment();
 
   if (_errors.isNotEmpty) {
     stderr.writeln('Docs check failed:');
@@ -129,6 +130,133 @@ void _checkNoRetiredActiveReferences() {
       }
     }
   }
+}
+
+void _checkDiagramContractAlignment() {
+  final files = <File>[];
+  final diagramDir = Directory('docs/diagrams');
+  if (diagramDir.existsSync()) {
+    files.addAll(
+      diagramDir
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.mmd')),
+    );
+  }
+
+  for (final root in [
+    Directory('docs/architecture'),
+    Directory('docs/contracts'),
+    Directory('docs/planning'),
+    Directory('docs/verification'),
+    Directory('docs/donors'),
+    Directory('docs/indexes'),
+  ]) {
+    if (!root.existsSync()) {
+      continue;
+    }
+    files.addAll(
+      root
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.md')),
+    );
+  }
+
+  final forbiddenText = <String, RegExp>{
+    'use controllerEpoch, not a separate tool epoch': RegExp(
+      r'\btool epoch\b',
+      caseSensitive: false,
+    ),
+    'use controllerEpoch, not controller/tool epoch': RegExp(
+      r'\bcontroller/tool epoch\b',
+      caseSensitive: false,
+    ),
+    'use explicit controllerEpoch mismatch, not mode/tool epoch mismatch':
+        RegExp(r'\bmode/tool epoch mismatch\b', caseSensitive: false),
+    'use controllerEpoch wording, not same-epoch': RegExp(
+      r'\bsame-epoch\b',
+      caseSensitive: false,
+    ),
+    'use controllerEpoch wording, not same epoch': RegExp(
+      r'\bsame epoch\b',
+      caseSensitive: false,
+    ),
+    'use controllerEpoch mismatch, not wrong epoch': RegExp(
+      r'\bwrong epoch\b',
+      caseSensitive: false,
+    ),
+    'use controllerEpoch mismatch, not stale epoch': RegExp(
+      r'\bstale epoch\b',
+      caseSensitive: false,
+    ),
+    'eraser candidates are deletable non-background, not visible deletable':
+        RegExp(r'\bvisible deletable\b', caseSensitive: false),
+    'ResourceKernel owns dirty ids/cache entries, not listener/cache references':
+        RegExp(r'\blistener/cache references\b', caseSensitive: false),
+    'resource disposal clears caches and dirty state, not listeners': RegExp(
+      r'\bresource caches and listeners\b',
+      caseSensitive: false,
+    ),
+    'disposed resources must not reopen listeners': RegExp(
+      r'\breopen listeners\b',
+      caseSensitive: false,
+    ),
+  };
+
+  for (final file in files) {
+    final text = file.readAsStringSync();
+    for (final entry in forbiddenText.entries) {
+      for (final match in entry.value.allMatches(text)) {
+        _fail('${file.path}:${_lineNumber(text, match.start)} ${entry.key}');
+      }
+    }
+
+    if (file.path.endsWith('.mmd')) {
+      _checkStoreDoesNotDispatchRuntimeEffects(file.path, text);
+      _checkInteractionDoesNotBypassEditKernel(file.path, text);
+    }
+  }
+}
+
+void _checkStoreDoesNotDispatchRuntimeEffects(String path, String text) {
+  final pattern = RegExp(
+    r'^\s*Store->>(Frame|Spatial|Events|Resources|Interaction|Signals)\s*:',
+    multiLine: true,
+  );
+  for (final match in pattern.allMatches(text)) {
+    final target = match.group(1);
+    _fail(
+      '$path:${_lineNumber(text, match.start)} '
+      'DocumentStoreKernel must not dispatch post-commit effects to $target; '
+      'route them through RuntimeRoot or CommitApplier',
+    );
+  }
+}
+
+void _checkInteractionDoesNotBypassEditKernel(String path, String text) {
+  final pattern = RegExp(
+    r'^\s*(IE|Interaction)->>(Store|Draft|Events)\s*:',
+    multiLine: true,
+  );
+  for (final match in pattern.allMatches(text)) {
+    final target = match.group(2);
+    _fail(
+      '$path:${_lineNumber(text, match.start)} '
+      'InteractionEngine must not commit by calling $target directly; '
+      'route committed mutations and staged actions through EditKernel',
+    );
+  }
+}
+
+int _lineNumber(String text, int offset) {
+  var line = 1;
+  for (var i = 0; i < offset; i += 1) {
+    if (text.codeUnitAt(i) == 10) {
+      line += 1;
+    }
+  }
+  return line;
 }
 
 void _checkReferenceList(YamlMap map, String field, String owner) {

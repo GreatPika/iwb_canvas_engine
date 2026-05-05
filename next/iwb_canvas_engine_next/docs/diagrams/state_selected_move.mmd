@@ -16,7 +16,7 @@ stateDiagram-v2
   state "Selected target admission" as AdmissionGate
   note right of AdmissionGate
     Admission happens after the generic pointer session
-    owns the routed token, session id, and tool epoch.
+    owns the routed token, session id, and controllerEpoch.
     Hit-test uses visible selectable geometry. The target
     must be selected and at least one selected id must be
     movable or this path performs no selected move work.
@@ -24,7 +24,7 @@ stateDiagram-v2
 
   AdmissionGate --> ActivePreview: "hit selected movable target / start session"
   AdmissionGate --> PreResolverCleanup: "no selected target, no moved ids, or empty movable set"
-  AdmissionGate --> PreResolverCleanup: "stale epoch or non-finite admission facts"
+  AdmissionGate --> PreResolverCleanup: "controllerEpoch mismatch or non-finite admission facts"
 
   state "Active selected move preview" as ActivePreview {
     [*] --> PreviewReady
@@ -36,8 +36,8 @@ stateDiagram-v2
       marquee, stroke, line, or eraser overlay preview.
     end note
 
-    PreviewReady --> PreviewReady: "same token/epoch finite move / replace selectedMoveDelta"
-    PreviewReady --> PreviewReady: "stale token, wrong epoch, or non-finite move / ignore"
+    PreviewReady --> PreviewReady: "same token and controllerEpoch finite move / replace selectedMoveDelta"
+    PreviewReady --> PreviewReady: "stale token, controllerEpoch mismatch, or non-finite move / ignore"
     PreviewReady --> PreResolverCleanup: "same-token cancel"
     PreviewReady --> PreResolverCleanup: "mode change"
     PreviewReady --> PreResolverCleanup: "interactive=false"
@@ -49,11 +49,11 @@ stateDiagram-v2
     state "Terminal gate" as TerminalGate
     note right of TerminalGate
       Terminal commit requires the active token, session id,
-      tool epoch, finite proposed delta, and current movable
+      controllerEpoch, finite proposed delta, and current movable
       ids to still match the selected move session.
     end note
 
-    TerminalGate --> PreResolverCleanup: "stale token, wrong epoch, invalid terminal, or non-finite delta"
+    TerminalGate --> PreResolverCleanup: "stale token, controllerEpoch mismatch, invalid terminal, or non-finite delta"
     TerminalGate --> NoOpTerminal: "zero delta or empty movable set"
     TerminalGate --> ResolverGate: "non-zero finite delta and non-empty movable set"
 

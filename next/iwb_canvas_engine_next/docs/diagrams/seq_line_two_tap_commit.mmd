@@ -15,6 +15,7 @@ sequenceDiagram
   participant Draft as DraftDocument
   participant Touched as TouchedSet
   participant CC as CommitCompiler
+  participant Applier as CommitApplier
   participant Spatial as SpatialKernel
   participant Projection as DocumentProjectionCache
   participant Events as EventBuffer
@@ -94,11 +95,12 @@ sequenceDiagram
       EK->>Store: read committed revision snapshot
       Store-->>EK: committed tables and revision
       EK->>Draft: create rollback-safe draft
-      IE->>Draft: add CanvasLineElement with generated element id
-      Note over IE,Draft: Line uses finite startWorld, endWorld, color, thickness, opacity 1.0, and default common element flags.
+      IE->>EK: provide add-line mutation request and drawLine action descriptor
+      EK->>Draft: add CanvasLineElement with generated element id
+      Note over EK,Draft: Line uses finite startWorld, endWorld, color, thickness, opacity 1.0, and default common element flags.
       Draft->>Touched: record addedElementIds containing new line id
       Note over Touched: Exact committed scope includes new line id plus document, structural, bounds, visual, and projection revisions.
-      IE->>Events: stage deferred drawLine action descriptor
+      EK->>Events: stage deferred drawLine action descriptor
       Note over Events: Not public yet. Deferred payload is CanvasDrawLineActionPayload(color, thickness, opacity, startWorld, endWorld).
       EK->>EK: reject Future result before success path
       EK->>CC: compile exact add-line touched set and invalidation
@@ -107,14 +109,16 @@ sequenceDiagram
       Store-->>CC: preflight accepted
       CC->>Frame: prepare main repaint masks
       CC->>Events: attach staged drawLine action to commit
-      CC->>Store: install compiled CommitPlan atomically
+      CC->>Applier: hand off compiled CommitPlan
+      Applier->>Store: install compiled CommitPlan atomically
       Store->>Store: replace layer membership, registry, line row, and revision state
-      Note over CC,Store: Atomic install is the commit boundary. InteractionEngine never mutates Store directly.
-      Store->>Spatial: apply touched-id spatial add for new line id
-      Spatial-->>Store: spatial index updated for new paint and hit bounds
-      Store->>Projection: evict public document projection by projectionRevision
-      Store->>Events: materialize CanvasActionCommitted drawLine after install
-      Store->>Frame: publish committed main repaint bus
+      Note over Applier,Store: Atomic install is the commit boundary. InteractionEngine never mutates Store directly.
+      Store-->>Applier: committed revision facts
+      Applier->>Spatial: apply touched-id spatial add for new line id
+      Spatial-->>Applier: spatial index updated for new paint and hit bounds
+      Applier->>Projection: evict public document projection by projectionRevision
+      Applier->>Events: materialize CanvasActionCommitted drawLine after install
+      Applier->>Frame: publish committed main repaint bus
       EK->>EK: close edit session and stale handle
       EK-->>IE: edit result
       IE->>Preview: clear pending line or line preview

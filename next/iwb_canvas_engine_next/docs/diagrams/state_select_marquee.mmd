@@ -16,7 +16,7 @@ stateDiagram-v2
   note right of DownAdmission
     Admission is owned by the generic pointer session.
     InteractionEngine records token, session id, anchor,
-    tool epoch, and previous selection.
+    controllerEpoch, and previous selection.
   end note
 
   DownAdmission --> DragPreview: publish zero-area marquee preview / overlay repaint
@@ -31,7 +31,7 @@ stateDiagram-v2
   end note
 
   DragPreview --> DragPreview: same-token finite move / update marqueeRect and overlay repaint
-  DragPreview --> DragPreview: stale move, wrong epoch, or non-finite move / ignore
+  DragPreview --> DragPreview: stale move, controllerEpoch mismatch, or non-finite move / ignore
   DragPreview --> CandidateQuery: same-token finite up
   DragPreview --> InvalidTerminal: stale, invalid, or non-finite up
   DragPreview --> CleanupOnly: cancel, mode change, interactive=false, load success
@@ -99,7 +99,7 @@ stateDiagram-v2
 
   state "Invalid terminal sample" as InvalidTerminal
   note right of InvalidTerminal
-    Stale token, wrong epoch, invalid session id, non-finite
+    Stale token, controllerEpoch mismatch, invalid session id, non-finite
     terminal facts, and stale candidate generations cannot
     create a commit intent.
   end note

@@ -10,6 +10,7 @@ sequenceDiagram
   participant Handle as CanvasEdit handle
   participant Touched as TouchedSet
   participant CC as CommitCompiler
+  participant Applier as CommitApplier
   participant Frame as FrameEngine
   participant Events as EventBuffer
   participant Signals as Public signals
@@ -41,12 +42,14 @@ sequenceDiagram
   CC->>Events: stage commit event buffer
   Note over Events: Low-level CanvasEdit commits stage no user action events.
 
-  CC->>Store: install compiled CommitPlan atomically
+  CC->>Applier: hand off compiled CommitPlan
+  Applier->>Store: install compiled CommitPlan atomically
   Store->>Store: replace committed tables and revision state
-  Note over CC,Store: Atomic install is the commit boundary.
+  Note over Applier,Store: Atomic install is the commit boundary.
+  Store-->>Applier: committed revision facts
 
-  Store->>Events: commit buffered internal effects
-  Store->>Frame: publish repaint buses
+  Applier->>Events: commit buffered internal effects
+  Applier->>Frame: publish repaint buses
   EK->>Handle: close session and mark handle stale
   Note over Handle: Any operation after callback throws StateError.
   Events->>Signals: publish document/revision listeners

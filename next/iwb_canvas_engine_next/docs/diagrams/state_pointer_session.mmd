@@ -21,7 +21,7 @@ stateDiagram-v2
     InteractionEngine admits a pointer token.
   end note
 
-  AdmissionGate --> ActivePointer: finite normalized down / bind token, session id, and tool epoch
+  AdmissionGate --> ActivePointer: finite normalized down / bind token, session id, and controllerEpoch
   AdmissionGate --> Idle: non-finite or invalid down / reject without preview
   AdmissionGate --> Disposed: runtime disposed / StateError
 
@@ -31,13 +31,13 @@ stateDiagram-v2
     state "Routed session" as Routing
     note right of Routing
       The active session owns exactly one pointer id,
-      session id, and tool epoch. Pointer id is a routing
+      session id, and controllerEpoch. Pointer id is a routing
       token only, not document identity.
     end note
 
     Routing --> Routing: same-token finite move / update preview only
     Routing --> Routing: concurrent down while active / reject without second session
-    Routing --> Routing: stale move or wrong epoch / ignore without preview, repaint, edit, or event
+    Routing --> Routing: stale move or controllerEpoch mismatch / ignore without preview, repaint, edit, or event
     Routing --> TerminalGate: same-token up
     Routing --> CleanupOnly: same-token cancel
     Routing --> CleanupOnly: mode/tool change cancels session
@@ -49,12 +49,12 @@ stateDiagram-v2
     state "Terminal sample gate" as TerminalGate
     note right of TerminalGate
       Terminal up samples can commit only when pointer token,
-      session id, tool epoch, and terminal facts still match.
+      session id, controllerEpoch, and terminal facts still match.
       Stale terminal facts may release the active token but
       cannot create a commit intent.
     end note
 
-    TerminalGate --> CleanupOnly: stale token, wrong epoch, non-finite facts, or invalid terminal
+    TerminalGate --> CleanupOnly: stale token, controllerEpoch mismatch, non-finite facts, or invalid terminal
     TerminalGate --> TerminalDecision: finite same-token terminal facts
 
     state TerminalDecision <<choice>>

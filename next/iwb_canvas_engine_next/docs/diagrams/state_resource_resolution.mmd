@@ -6,8 +6,8 @@ stateDiagram-v2
   note right of RuntimeActive
     Resource descriptors are committed document input.
     App-owned images are external input. DocumentStoreKernel
-    owns descriptor tables. ResourceKernel owns dirty state,
-    listener/cache references, and resolver calls only.
+    owns descriptor tables. ResourceKernel owns dirty ids,
+    resolved-image cache entries, and resolver calls only.
     There is no file, network, or asset IO.
   end note
 
@@ -115,8 +115,8 @@ stateDiagram-v2
 
   state "Disposed runtime" as Disposed
   note right of Disposed
-    Dispose clears runtime resource caches and listeners.
-    Later resource resolution cannot reopen listeners,
+    Dispose clears runtime resource caches and dirty state.
+    Later resource resolution cannot revive cache state,
     revive caches, call the app resolver, or mutate Store.
   end note
   Disposed --> Disposed: dispose again / no side effects

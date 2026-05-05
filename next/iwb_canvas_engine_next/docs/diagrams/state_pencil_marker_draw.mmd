@@ -17,12 +17,12 @@ stateDiagram-v2
   note right of AdmissionGate
     Admission occurs only after the generic pointer
     session owns the routed token, session id, and
-    tool epoch. The active draw tool must be pencil
+    controllerEpoch. The active draw tool must be pencil
     or marker.
   end note
 
   AdmissionGate --> Drafting: "pencil/marker down / start stroke draft"
-  AdmissionGate --> CleanupOnly: "wrong tool, stale epoch, or non-finite facts"
+  AdmissionGate --> CleanupOnly: "wrong tool, controllerEpoch mismatch, or non-finite facts"
 
   state "Active stroke draft" as Drafting {
     [*] --> PreviewReady
@@ -35,9 +35,9 @@ stateDiagram-v2
       and session id.
     end note
 
-    PreviewReady --> PreviewReady: "same token/epoch finite move / append or update preview"
+    PreviewReady --> PreviewReady: "same token and controllerEpoch finite move / append or update preview"
     PreviewReady --> PreviewReady: "interactive stroke soft limit exceeded / trim to interactive stroke trim-to"
-    PreviewReady --> PreviewReady: "stale token, wrong epoch, or non-finite move / ignore without repaint"
+    PreviewReady --> PreviewReady: "stale token, controllerEpoch mismatch, or non-finite move / ignore without repaint"
     PreviewReady --> TerminalGate: "same-token pointer up"
     PreviewReady --> CleanupOnly: "same-token cancel"
     PreviewReady --> CleanupOnly: "mode change"
@@ -49,11 +49,11 @@ stateDiagram-v2
     state "Terminal stroke gate" as TerminalGate
     note right of TerminalGate
       Terminal up can commit only when token, session id,
-      tool epoch, terminal sample, and final stroke facts
+      controllerEpoch, terminal sample, and final stroke facts
       still match the active stroke draft.
     end note
 
-    TerminalGate --> CleanupOnly: "stale token, wrong epoch, invalid terminal, or non-finite facts"
+    TerminalGate --> CleanupOnly: "stale token, controllerEpoch mismatch, invalid terminal, or non-finite facts"
     TerminalGate --> NoOpTerminal: "empty stroke"
     TerminalGate --> FinalStrokeNormalization: "valid terminal sample and non-empty stroke facts"
 

@@ -48,6 +48,7 @@ sequenceDiagram
   participant EK as EditKernel
   participant Draft as DraftDocument
   participant CC as CommitCompiler
+  participant Applier as CommitApplier
   participant Store as DocumentStoreKernel
   participant Frame as FrameEngine
   participant Events as EventBuffer
@@ -62,9 +63,11 @@ sequenceDiagram
   EK->>CC: compile touched set + invalidation
   CC->>Store: preflight invariants
   CC->>Frame: prepare repaint masks
-  Store->>Store: atomic install
-  Store->>Events: commit buffered events
-  Store->>Frame: publish repaint buses
+  CC->>Applier: hand off compiled CommitPlan
+  Applier->>Store: atomic install
+  Store-->>Applier: committed revision facts
+  Applier->>Events: commit buffered events
+  Applier->>Frame: publish repaint buses
   EK->>EK: close handle
   EK-->>Caller: return callback result
 ```
@@ -130,4 +133,3 @@ TouchedSet
 CommitCompiler must produce exact invalidation. Generic global invalidation is forbidden except `documentReplaced`.
 
 ---
-

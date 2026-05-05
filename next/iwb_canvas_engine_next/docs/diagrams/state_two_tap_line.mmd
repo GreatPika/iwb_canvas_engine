@@ -31,7 +31,7 @@ stateDiagram-v2
     line decision may clear it.
   end note
 
-  PendingStart --> LinePreview: finite pointer move with same tool and epoch / overlay line preview only
+  PendingStart --> LinePreview: finite pointer move with same tool and controllerEpoch / overlay line preview only
   PendingStart --> SecondTapGate: finite second tap
   PendingStart --> CleanupOnly: cancel, mode/tool change, or loadDocument success
   PendingStart --> PendingStart: loadDocument failure / preserve pending start and preview
@@ -47,7 +47,7 @@ stateDiagram-v2
     is allowed while previewing.
   end note
 
-  LinePreview --> LinePreview: finite move with same tool and epoch / replace overlay preview end
+  LinePreview --> LinePreview: finite move with same tool and controllerEpoch / replace overlay preview end
   LinePreview --> SecondTapGate: finite second tap
   LinePreview --> CleanupOnly: cancel, mode/tool change, or loadDocument success
   LinePreview --> LinePreview: loadDocument failure / preserve pending line
@@ -58,12 +58,12 @@ stateDiagram-v2
   state "Second tap terminal gate" as SecondTapGate
   note right of SecondTapGate
     A terminal tap may create a commit intent only when the
-    pending start still exists, tool and epoch match, start/end
+    pending start still exists, tool and controllerEpoch match, start/end
     are finite, and style facts remain valid.
   end note
 
-  SecondTapGate --> CleanupOnly: no pending start, stale epoch, tool mismatch, invalid terminal, or non-finite facts
-  SecondTapGate --> CommitIntent: same tool and epoch with finite start/end and valid style facts
+  SecondTapGate --> CleanupOnly: no pending start, controllerEpoch mismatch, tool mismatch, invalid terminal, or non-finite facts
+  SecondTapGate --> CommitIntent: same tool and controllerEpoch with finite start/end and valid style facts
 
   state "Commit intent / EditKernel only" as CommitIntent
   note right of CommitIntent
