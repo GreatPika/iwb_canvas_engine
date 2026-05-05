@@ -23,8 +23,11 @@ Related diagrams:
 Required tests:
 - `test.store.read_document_projection`
 - `test.store.no_projection_hot_path`
+- `test.store.public_document_is_projection_only`
 Guardrails:
 - `core.single_runtime_root`
+- `store.no_public_document_live_state`
+- `projection.only_explicit_read_paths`
 Do not assume:
 - no legacy mutable runtime graph
 - no SceneController shape dependency

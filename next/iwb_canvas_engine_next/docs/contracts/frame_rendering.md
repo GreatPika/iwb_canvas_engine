@@ -33,9 +33,11 @@ Required tests:
 - `test.store.no_projection_hot_path`
 - `test.frame.main_overlay_capture`
 - `test.frame.no_live_runtime_read_in_painters`
+- `test.frame.selected_supplement_staging_no_global_sort`
 - `test.surface.widget_paint`
 Guardrails:
 - `preview.selected_move_main_repaint`
+- `frame.no_global_scene_sort`
 Do not assume:
 - no live runtime reads in painters
 - no CanvasDocument projection in paint

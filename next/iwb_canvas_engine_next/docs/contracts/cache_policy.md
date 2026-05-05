@@ -20,9 +20,9 @@ Related donors:
 Related diagrams:
 - `dfd_cache_invalidation`
 Required tests:
-- `none`
+- `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
 Guardrails:
-- `none`
+- `cache.keys_use_next_revisions_only`
 Do not assume:
 - no unbounded cache owner sprawl
 - no cache keys tied to old snapshots

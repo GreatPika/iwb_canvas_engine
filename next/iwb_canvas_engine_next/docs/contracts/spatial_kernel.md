@@ -19,8 +19,11 @@ Related diagrams:
 - `dfd_cache_invalidation`
 Required tests:
 - `test.spatial.touched_update`
+- `test.spatial.no_full_clone_for_touched_update`
+- `test.spatial.stale_generation_rejected`
 Guardrails:
-- `none`
+- `spatial.no_full_clone_ordinary_edit`
+- `spatial.stale_candidate_rejected`
 Do not assume:
 - do not port old Scene or locator maps
 - do not rely on stale structuralRevision

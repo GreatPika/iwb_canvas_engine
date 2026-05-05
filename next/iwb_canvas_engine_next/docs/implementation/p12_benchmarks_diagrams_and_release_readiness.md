@@ -79,6 +79,7 @@ release-readiness gate after P10.
 
 - `diagnostics.disabled_no_alloc_hot_path` - no record allocation on successful hot path
 - `diagrams.all_required_present` - required Mermaid files exist
+- `docs.phase_guardrail_alignment` - section registry guardrails and tests are reflected in owning implementation phase docs
 - `api.functional_ledger_complete` - every functional ledger row has API + tests
 
 ## Tests
@@ -87,6 +88,7 @@ release-readiness gate after P10.
 - `test.benchmarks.required_cases` -> `required benchmark case gates`
 - `test.diagrams.required_present` -> `required Mermaid files present tests`
 - `test.guardrails.blocking_suite` -> `blocking guardrail suite`
+- `test.guardrails.phase_guardrail_alignment` -> `test/guardrails/phase_guardrail_alignment_test.dart`
 
 ## Exit gate
 
@@ -96,4 +98,5 @@ release-readiness gate after P10.
 - benchmarks pass
 - no legacy imports
 - no legacy facade
+- phase guardrail alignment green
 - no app adapters in package.

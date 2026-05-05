@@ -45,13 +45,20 @@ Required tests:
 - `test.events.commands_emit_user_actions`
 - `test.surface.interactive_false_pointer_routing`
 - `test.surface.interactive_false_active_session_cancel`
+- `test.surface.pointer_adapter_finite_normalization`
 - `test.interaction.state_machines`
 - `test.interaction.move_resolver_reentrancy`
+- `test.interaction.move_resolver_not_called_on_cancel_cleanup`
+- `test.interaction.no_stale_terminal_commit`
 - `test.surface.widget_paint`
 Guardrails:
 - `preview.selected_move_main_repaint`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
+- `interaction.no_concrete_store_imports`
+- `interaction.no_resolver_on_cancel_paths`
+- `interaction.no_stale_terminal_commit`
+- `surface.pointer_samples_normalized_before_runtime`
 Do not assume:
 - no legacy callback graph as structure
 - no reentrant mutation from resolver

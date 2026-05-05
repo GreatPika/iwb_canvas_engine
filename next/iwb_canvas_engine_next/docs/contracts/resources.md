@@ -24,10 +24,14 @@ Required tests:
 - `test.resources.app_owned_image_not_disposed`
 - `test.resources.resource_dirty`
 - `test.resources.mark_all_resources_dirty`
+- `test.resources.painter_never_calls_resolver_directly`
+- `test.resources.missing_result_cached_per_revision`
 Guardrails:
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`
 - `resources.app_key_only`
+- `resources.resolver_boundary_owned_by_resource_kernel`
+- `resources.no_same_frame_missing_retry`
 Do not assume:
 - no engine IO
 - no asset-bundle loading

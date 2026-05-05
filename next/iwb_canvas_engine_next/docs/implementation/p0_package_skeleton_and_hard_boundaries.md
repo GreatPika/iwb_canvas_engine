@@ -41,6 +41,7 @@
 - `diagrams.all_required_present` - required Mermaid files exist
 - `api.no_legacy_public_types` - legacy public golden symbols not exported by next package
 - `core.no_legacy_imports` - no import of legacy package/runtime
+- `core.import_boundaries` - package-owned source paths obey the forbidden import matrix
 - `core.no_node_spec_patch_shape_dependency` - no legacy NodeSpec/NodePatch/PatchField in core
 - `core.no_scene_controller_shape_dependency` - no SceneController concept in core
 - `core.single_runtime_root` - exactly one production RuntimeRoot
@@ -48,6 +49,7 @@
 ## Tests
 
 - `test.api_contract.no_old_public_symbols` -> `test/api_contract/no_old_public_symbols_test.dart`
+- `test.guardrails.import_boundaries` -> `test/guardrails/import_boundaries_test.dart`
 - `test.diagrams.required_present` -> `required Mermaid files present tests`
 - `test.guardrails.blocking_suite` -> `blocking guardrail suite`
 
@@ -55,5 +57,6 @@
 
 - next package builds empty public API skeleton
 - legacy package not imported
+- forbidden `lib/src/**` import boundaries are enforced
 - legacy public symbols not exported
 - all required public type names have files.

@@ -51,6 +51,8 @@
 - `resources.app_key_only` - resource descriptors use appKey only
 - `resources.dirty_no_document_revision` - markResourceDirty does not increment documentRevision
 - `resources.mutation_inside_edit_only` - resource descriptor mutation only via CanvasEdit
+- `resources.resolver_boundary_owned_by_resource_kernel` - painters never call CanvasResourceResolver directly
+- `resources.no_same_frame_missing_retry` - missing/null resolve results are cached for the frame by resourceId and resourceRevision
 
 ## Tests
 
@@ -60,10 +62,14 @@
 - `test.resources.app_owned_image_not_disposed` -> `test/resources/app_owned_image_not_disposed_test.dart`
 - `test.resources.resource_dirty` -> `test/resources/resource_dirty_test.dart`
 - `test.resources.mark_all_resources_dirty` -> `test/resources/mark_all_resources_dirty_test.dart`
+- `test.resources.painter_never_calls_resolver_directly` -> `test/resources/painter_never_calls_resolver_directly_test.dart`
+- `test.resources.missing_result_cached_per_revision` -> `test/resources/missing_result_cached_per_revision_test.dart`
 
 ## Exit gate
 
 - resource descriptor mutation is rollback-safe
 - resource dirty schedules main repaint without document revision
 - resolver image results are app-owned and not disposed by engine
+- painters resolve images only through ResourceKernel
+- missing/null resolver results do not retry in the same frame
 - resource surface matches the v1 appKey/synchronous image contract.

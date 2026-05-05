@@ -17,9 +17,10 @@ Related donors:
 Related diagrams:
 - `dfd_diagnostics_error_projection`
 Required tests:
-- `none`
+- `test.diagnostics.sanitizer_and_public_projection`
 Guardrails:
 - `diagnostics.disabled_no_alloc_hot_path`
+- `diagnostics.sanitized_public_projection`
 Do not assume:
 - no diagnostic allocations on successful hot path
 <!-- CONTEXT:END -->

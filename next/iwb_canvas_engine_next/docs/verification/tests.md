@@ -11,9 +11,14 @@ Must read before editing:
 - `section_14_interaction_engine` -> `docs/contracts/interaction_engine.md`
 - `section_22_guardrails_machine_checks` -> `docs/verification/guardrails.md`
 Feeds phases:
+- `P0`
 - `P2`
 - `P3`
 - `P4`
+- `P5`
+- `P6`
+- `P7`
+- `P8`
 - `P9`
 - `P10`
 - `P12`
@@ -92,37 +97,54 @@ Required tests:
 - `test.api_contract.no_undefined_public_type_references`
 - `test.api_contract.no_old_public_symbols`
 - `test.api_contract.dto_immutability`
+- `test.guardrails.import_boundaries`
 - `test.schema_v1.known_fields_validation`
 - `test.schema_v1.resources_appkey_only`
 - `test.schema_v1.reject_unknown_element_kind`
 - `test.schema_v1.reject_unknown_resource_source_kind`
+- `test.codec.decode_encode_no_runtime_side_effects`
+- `test.diagnostics.sanitizer_and_public_projection`
 - `test.resources.sync_image_resolver`
 - `test.resources.app_owned_image_not_disposed`
 - `test.resources.resource_dirty`
 - `test.resources.mark_all_resources_dirty`
+- `test.resources.painter_never_calls_resolver_directly`
+- `test.resources.missing_result_cached_per_revision`
 - `test.events.typed_action_payloads`
 - `test.events.low_level_mutations_do_not_emit_actions`
 - `test.events.commands_emit_user_actions`
 - `test.surface.interactive_false_pointer_routing`
 - `test.surface.interactive_false_active_session_cancel`
+- `test.surface.pointer_adapter_finite_normalization`
 - `test.functional_ledger.row_specific_tests`
 - `test.api_contract.v1_scope_gate`
 - `test.validation_limits.constructor_and_schema_limits`
 - `test.store.read_document_projection`
 - `test.store.no_projection_hot_path`
+- `test.store.public_document_is_projection_only`
 - `test.edit_kernel.sync_non_nested_async_stale`
 - `test.edit_kernel.rollback`
+- `test.edit_kernel.operation_matrix_effects`
+- `test.edit_kernel.exact_touched_invalidation`
 - `test.load_document.staged_success_failure`
 - `test.geometry.hit_policy`
+- `test.geometry.no_legacy_scene_order`
 - `test.spatial.touched_update`
+- `test.spatial.no_full_clone_for_touched_update`
+- `test.spatial.stale_generation_rejected`
 - `test.frame.main_overlay_capture`
 - `test.frame.no_live_runtime_read_in_painters`
+- `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
+- `test.frame.selected_supplement_staging_no_global_sort`
 - `test.interaction.state_machines`
 - `test.interaction.move_resolver_reentrancy`
+- `test.interaction.move_resolver_not_called_on_cancel_cleanup`
+- `test.interaction.no_stale_terminal_commit`
 - `test.surface.widget_paint`
 - `test.benchmarks.required_cases`
 - `test.diagrams.required_present`
 - `test.guardrails.blocking_suite`
+- `test.guardrails.phase_guardrail_alignment`
 Guardrails:
 - `api.functional_ledger_complete`
 Do not assume:
@@ -138,16 +160,21 @@ test/api_contract/public_api_v1_compiles_as_written_test.dart
 test/api_contract/no_undefined_public_type_references_test.dart
 test/api_contract/no_old_public_symbols_test.dart
 test/api_contract/dto_immutability_test.dart
+test/guardrails/import_boundaries_test.dart
 
 test/schema_v1/known_fields_validation_test.dart
 test/schema_v1/resources_appkey_only_test.dart
 test/schema_v1/reject_unknown_element_kind_test.dart
 test/schema_v1/reject_unknown_resource_source_kind_test.dart
+test/codec/decode_encode_no_runtime_side_effects_test.dart
+test/diagnostics/sanitizer_and_public_projection_test.dart
 
 test/resources/sync_image_resolver_test.dart
 test/resources/app_owned_image_not_disposed_test.dart
 test/resources/resource_dirty_test.dart
 test/resources/mark_all_resources_dirty_test.dart
+test/resources/painter_never_calls_resolver_directly_test.dart
+test/resources/missing_result_cached_per_revision_test.dart
 
 test/events/typed_action_payloads_test.dart
 test/events/edit_kernel_low_level_mutations_do_not_emit_actions_test.dart
@@ -155,6 +182,19 @@ test/events/commands_emit_user_actions_test.dart
 
 test/surface/interactive_false_pointer_routing_test.dart
 test/surface/interactive_false_active_session_cancel_test.dart
+test/surface/pointer_adapter_finite_normalization_test.dart
+
+test/store/public_document_is_projection_only_test.dart
+test/edit_kernel/operation_matrix_effects_test.dart
+test/edit_kernel/exact_touched_invalidation_test.dart
+test/geometry/no_legacy_scene_order_test.dart
+test/spatial/no_full_clone_for_touched_update_test.dart
+test/spatial/stale_generation_rejected_test.dart
+test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart
+test/frame/selected_supplement_staging_no_global_sort_test.dart
+test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart
+test/interaction/no_stale_terminal_commit_test.dart
+test/guardrails/phase_guardrail_alignment_test.dart
 ```
 
 Functional ledger rows still require row-specific tests.

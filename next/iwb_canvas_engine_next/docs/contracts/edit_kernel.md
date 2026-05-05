@@ -26,11 +26,13 @@ Required tests:
 - `test.events.low_level_mutations_do_not_emit_actions`
 - `test.edit_kernel.sync_non_nested_async_stale`
 - `test.edit_kernel.rollback`
+- `test.edit_kernel.exact_touched_invalidation`
 Guardrails:
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
 - `edit.stale_handle_rejected`
 - `events.low_level_edit_no_user_actions`
+- `edit.no_global_invalidation_except_replacement`
 Do not assume:
 - no legacy SceneWriteTxn
 - no legacy controller shell

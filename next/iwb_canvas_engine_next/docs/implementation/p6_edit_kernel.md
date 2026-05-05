@@ -52,6 +52,8 @@
 - `edit.rollback_no_effects` - rollback discards events/repaint/resources/spatial
 - `edit.stale_handle_rejected` - stale edit handle throws
 - `edit.sync_non_nested` - nested/async edit rejected
+- `edit.operation_matrix_complete` - every operation matrix row has executable effect assertions
+- `edit.no_global_invalidation_except_replacement` - ordinary edits compile exact touched invalidation only
 - `events.low_level_edit_no_user_actions` - CanvasEdit.removeElement/clearContent emit no user action events
 - `load.prepares_before_interrupt` - failed load does not interrupt gesture
 - `load.success_interrupts_before_install` - success interrupt happens before atomic install
@@ -62,6 +64,8 @@
 - `test.events.low_level_mutations_do_not_emit_actions` -> `test/events/edit_kernel_low_level_mutations_do_not_emit_actions_test.dart`
 - `test.edit_kernel.sync_non_nested_async_stale` -> `sync, non-nested, async and stale handle tests`
 - `test.edit_kernel.rollback` -> `rollback safety tests`
+- `test.edit_kernel.operation_matrix_effects` -> `test/edit_kernel/operation_matrix_effects_test.dart`
+- `test.edit_kernel.exact_touched_invalidation` -> `test/edit_kernel/exact_touched_invalidation_test.dart`
 - `test.load_document.staged_success_failure` -> `staged loadDocument success/failure tests`
 
 ## Exit gate
@@ -69,4 +73,5 @@
 - sync/non-nested/async/stale tests green
 - rollback tests green
 - loadDocument staged tests green
-- operation matrix tests green.
+- operation matrix tests green
+- exact touched invalidation tests green.

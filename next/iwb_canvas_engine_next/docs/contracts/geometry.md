@@ -25,8 +25,9 @@ Related diagrams:
 - `dfd_pointer_preview_commit`
 Required tests:
 - `test.geometry.hit_policy`
+- `test.geometry.no_legacy_scene_order`
 Guardrails:
-- `none`
+- `geometry.no_legacy_scene_order`
 Do not assume:
 - do not port old SceneNode traversal
 - do not copy legacy scene order logic

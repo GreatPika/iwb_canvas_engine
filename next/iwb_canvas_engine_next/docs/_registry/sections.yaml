@@ -68,8 +68,10 @@
   guardrails:
     - core.no_legacy_imports
     - api.no_legacy_public_types
+    - core.import_boundaries
   tests:
     - test.api_contract.no_old_public_symbols
+    - test.guardrails.import_boundaries
   do_not_assume:
     - no legacy package import
     - no app adapters in package
@@ -203,6 +205,8 @@
     - resources.mutation_inside_edit_only
     - resources.dirty_no_document_revision
     - resources.app_key_only
+    - resources.resolver_boundary_owned_by_resource_kernel
+    - resources.no_same_frame_missing_retry
   tests:
     - test.schema_v1.resources_appkey_only
     - test.schema_v1.reject_unknown_resource_source_kind
@@ -210,6 +214,8 @@
     - test.resources.app_owned_image_not_disposed
     - test.resources.resource_dirty
     - test.resources.mark_all_resources_dirty
+    - test.resources.painter_never_calls_resolver_directly
+    - test.resources.missing_result_cached_per_revision
   do_not_assume:
     - no engine IO
     - no asset-bundle loading
@@ -281,9 +287,12 @@
     - dfd_cache_invalidation
   guardrails:
     - core.single_runtime_root
+    - store.no_public_document_live_state
+    - projection.only_explicit_read_paths
   tests:
     - test.store.read_document_projection
     - test.store.no_projection_hot_path
+    - test.store.public_document_is_projection_only
   do_not_assume:
     - no legacy mutable runtime graph
     - no SceneController shape dependency
@@ -315,10 +324,12 @@
     - edit.rollback_no_effects
     - edit.stale_handle_rejected
     - events.low_level_edit_no_user_actions
+    - edit.no_global_invalidation_except_replacement
   tests:
     - test.events.low_level_mutations_do_not_emit_actions
     - test.edit_kernel.sync_non_nested_async_stale
     - test.edit_kernel.rollback
+    - test.edit_kernel.exact_touched_invalidation
   do_not_assume:
     - no legacy SceneWriteTxn
     - no legacy controller shell
@@ -372,8 +383,10 @@
     - edit.sync_non_nested
     - edit.rollback_no_effects
     - edit.stale_handle_rejected
+    - edit.operation_matrix_complete
   tests:
     - test.edit_kernel.sync_non_nested_async_stale
+    - test.edit_kernel.operation_matrix_effects
   do_not_assume:
     - no implicit mutation path outside EditKernel
 -
@@ -421,13 +434,20 @@
     - preview.selected_move_main_repaint
     - load.prepares_before_interrupt
     - load.success_interrupts_before_install
+    - interaction.no_concrete_store_imports
+    - interaction.no_resolver_on_cancel_paths
+    - interaction.no_stale_terminal_commit
+    - surface.pointer_samples_normalized_before_runtime
   tests:
     - test.events.typed_action_payloads
     - test.events.commands_emit_user_actions
     - test.surface.interactive_false_pointer_routing
     - test.surface.interactive_false_active_session_cancel
+    - test.surface.pointer_adapter_finite_normalization
     - test.interaction.state_machines
     - test.interaction.move_resolver_reentrancy
+    - test.interaction.move_resolver_not_called_on_cancel_cleanup
+    - test.interaction.no_stale_terminal_commit
     - test.surface.widget_paint
   do_not_assume:
     - no legacy callback graph as structure
@@ -464,10 +484,12 @@
     - seq_overlay_paint
   guardrails:
     - preview.selected_move_main_repaint
+    - frame.no_global_scene_sort
   tests:
     - test.store.no_projection_hot_path
     - test.frame.main_overlay_capture
     - test.frame.no_live_runtime_read_in_painters
+    - test.frame.selected_supplement_staging_no_global_sort
     - test.surface.widget_paint
   do_not_assume:
     - no live runtime reads in painters
@@ -497,9 +519,10 @@
   diagrams:
     - dfd_pointer_preview_commit
   guardrails:
-    - "none"
+    - geometry.no_legacy_scene_order
   tests:
     - test.geometry.hit_policy
+    - test.geometry.no_legacy_scene_order
   do_not_assume:
     - do not port old SceneNode traversal
     - do not copy legacy scene order logic
@@ -522,9 +545,12 @@
   diagrams:
     - dfd_cache_invalidation
   guardrails:
-    - "none"
+    - spatial.no_full_clone_ordinary_edit
+    - spatial.stale_candidate_rejected
   tests:
     - test.spatial.touched_update
+    - test.spatial.no_full_clone_for_touched_update
+    - test.spatial.stale_generation_rejected
   do_not_assume:
     - do not port old Scene or locator maps
     - do not rely on stale structuralRevision
@@ -549,9 +575,9 @@
   diagrams:
     - dfd_cache_invalidation
   guardrails:
-    - "none"
+    - cache.keys_use_next_revisions_only
   tests:
-    - "none"
+    - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
   do_not_assume:
     - no unbounded cache owner sprawl
     - no cache keys tied to old snapshots
@@ -581,8 +607,9 @@
   guardrails:
     - codec.schema_v1_exact
     - codec.known_fields_validated
+    - codec.no_runtime_side_effects
   tests:
-    - "none"
+    - test.codec.decode_encode_no_runtime_side_effects
   do_not_assume:
     - no legacy SceneCodec surface as next API
     - no schema v7 read/write in production core
@@ -605,8 +632,9 @@
     - dfd_diagnostics_error_projection
   guardrails:
     - diagnostics.disabled_no_alloc_hot_path
+    - diagnostics.sanitized_public_projection
   tests:
-    - "none"
+    - test.diagnostics.sanitizer_and_public_projection
   do_not_assume:
     - no diagnostic allocations on successful hot path
 -
@@ -636,24 +664,43 @@
     - api.dto_immutability
     - api.id_validation_no_extension_type_escape
     - core.no_legacy_imports
+    - core.import_boundaries
     - core.no_scene_controller_shape_dependency
     - core.no_node_spec_patch_shape_dependency
     - core.single_runtime_root
+    - store.no_public_document_live_state
+    - projection.only_explicit_read_paths
     - edit.sync_non_nested
     - edit.rollback_no_effects
     - edit.stale_handle_rejected
+    - edit.operation_matrix_complete
+    - edit.no_global_invalidation_except_replacement
     - events.low_level_edit_no_user_actions
     - events.commands_emit_user_actions
     - load.prepares_before_interrupt
     - load.success_interrupts_before_install
     - preview.selected_move_main_repaint
+    - interaction.no_concrete_store_imports
+    - interaction.no_resolver_on_cancel_paths
+    - interaction.no_stale_terminal_commit
+    - geometry.no_legacy_scene_order
+    - spatial.no_full_clone_ordinary_edit
+    - spatial.stale_candidate_rejected
+    - frame.no_global_scene_sort
+    - cache.keys_use_next_revisions_only
     - resources.mutation_inside_edit_only
     - resources.dirty_no_document_revision
     - resources.app_key_only
+    - resources.resolver_boundary_owned_by_resource_kernel
+    - resources.no_same_frame_missing_retry
     - codec.schema_v1_exact
     - codec.known_fields_validated
+    - codec.no_runtime_side_effects
     - diagnostics.disabled_no_alloc_hot_path
+    - diagnostics.sanitized_public_projection
+    - surface.pointer_samples_normalized_before_runtime
     - diagrams.all_required_present
+    - docs.phase_guardrail_alignment
   tests:
     - test.guardrails.blocking_suite
   do_not_assume:
@@ -664,9 +711,14 @@
   file: docs/verification/tests.md
   title: 23. Tests
   phases:
+    - P0
     - P2
     - P3
     - P4
+    - P5
+    - P6
+    - P7
+    - P8
     - P9
     - P10
     - P12
@@ -753,37 +805,54 @@
     - test.api_contract.no_undefined_public_type_references
     - test.api_contract.no_old_public_symbols
     - test.api_contract.dto_immutability
+    - test.guardrails.import_boundaries
     - test.schema_v1.known_fields_validation
     - test.schema_v1.resources_appkey_only
     - test.schema_v1.reject_unknown_element_kind
     - test.schema_v1.reject_unknown_resource_source_kind
+    - test.codec.decode_encode_no_runtime_side_effects
+    - test.diagnostics.sanitizer_and_public_projection
     - test.resources.sync_image_resolver
     - test.resources.app_owned_image_not_disposed
     - test.resources.resource_dirty
     - test.resources.mark_all_resources_dirty
+    - test.resources.painter_never_calls_resolver_directly
+    - test.resources.missing_result_cached_per_revision
     - test.events.typed_action_payloads
     - test.events.low_level_mutations_do_not_emit_actions
     - test.events.commands_emit_user_actions
     - test.surface.interactive_false_pointer_routing
     - test.surface.interactive_false_active_session_cancel
+    - test.surface.pointer_adapter_finite_normalization
     - test.functional_ledger.row_specific_tests
     - test.api_contract.v1_scope_gate
     - test.validation_limits.constructor_and_schema_limits
     - test.store.read_document_projection
     - test.store.no_projection_hot_path
+    - test.store.public_document_is_projection_only
     - test.edit_kernel.sync_non_nested_async_stale
     - test.edit_kernel.rollback
+    - test.edit_kernel.operation_matrix_effects
+    - test.edit_kernel.exact_touched_invalidation
     - test.load_document.staged_success_failure
     - test.geometry.hit_policy
+    - test.geometry.no_legacy_scene_order
     - test.spatial.touched_update
+    - test.spatial.no_full_clone_for_touched_update
+    - test.spatial.stale_generation_rejected
     - test.frame.main_overlay_capture
     - test.frame.no_live_runtime_read_in_painters
+    - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
+    - test.frame.selected_supplement_staging_no_global_sort
     - test.interaction.state_machines
     - test.interaction.move_resolver_reentrancy
+    - test.interaction.move_resolver_not_called_on_cancel_cleanup
+    - test.interaction.no_stale_terminal_commit
     - test.surface.widget_paint
     - test.benchmarks.required_cases
     - test.diagrams.required_present
     - test.guardrails.blocking_suite
+    - test.guardrails.phase_guardrail_alignment
   do_not_assume:
     - no donor reuse without ported or equivalent tests
 -
@@ -900,24 +969,43 @@
     - api.dto_immutability
     - api.id_validation_no_extension_type_escape
     - core.no_legacy_imports
+    - core.import_boundaries
     - core.no_scene_controller_shape_dependency
     - core.no_node_spec_patch_shape_dependency
     - core.single_runtime_root
+    - store.no_public_document_live_state
+    - projection.only_explicit_read_paths
     - edit.sync_non_nested
     - edit.rollback_no_effects
     - edit.stale_handle_rejected
+    - edit.operation_matrix_complete
+    - edit.no_global_invalidation_except_replacement
     - events.low_level_edit_no_user_actions
     - events.commands_emit_user_actions
     - load.prepares_before_interrupt
     - load.success_interrupts_before_install
     - preview.selected_move_main_repaint
+    - interaction.no_concrete_store_imports
+    - interaction.no_resolver_on_cancel_paths
+    - interaction.no_stale_terminal_commit
+    - geometry.no_legacy_scene_order
+    - spatial.no_full_clone_ordinary_edit
+    - spatial.stale_candidate_rejected
+    - frame.no_global_scene_sort
+    - cache.keys_use_next_revisions_only
     - resources.mutation_inside_edit_only
     - resources.dirty_no_document_revision
     - resources.app_key_only
+    - resources.resolver_boundary_owned_by_resource_kernel
+    - resources.no_same_frame_missing_retry
     - codec.schema_v1_exact
     - codec.known_fields_validated
+    - codec.no_runtime_side_effects
     - diagnostics.disabled_no_alloc_hot_path
+    - diagnostics.sanitized_public_projection
+    - surface.pointer_samples_normalized_before_runtime
     - diagrams.all_required_present
+    - docs.phase_guardrail_alignment
   tests:
     - test.guardrails.blocking_suite
   do_not_assume:

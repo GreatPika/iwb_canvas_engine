@@ -55,7 +55,9 @@
 
 - `codec.known_fields_validated` - known schema v1 fields are validated and canonical encoder writes only v1 fields
 - `codec.schema_v1_exact` - only schema v1 read/write
+- `codec.no_runtime_side_effects` - schema v1 decode/encode does not mutate runtime or store state
 - `diagnostics.disabled_no_alloc_hot_path` - no record allocation on successful hot path
+- `diagnostics.sanitized_public_projection` - diagnostics expose only bounded sanitized public data
 - `api.functional_ledger_complete` - every functional ledger row has API + tests
 - `api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
 
@@ -65,6 +67,8 @@
 - `test.schema_v1.resources_appkey_only` -> `test/schema_v1/resources_appkey_only_test.dart`
 - `test.schema_v1.reject_unknown_element_kind` -> `test/schema_v1/reject_unknown_element_kind_test.dart`
 - `test.schema_v1.reject_unknown_resource_source_kind` -> `test/schema_v1/reject_unknown_resource_source_kind_test.dart`
+- `test.codec.decode_encode_no_runtime_side_effects` -> `test/codec/decode_encode_no_runtime_side_effects_test.dart`
+- `test.diagnostics.sanitizer_and_public_projection` -> `test/diagnostics/sanitizer_and_public_projection_test.dart`
 - `test.validation_limits.constructor_and_schema_limits` -> `validation limits tests`
 
 ## Exit gate
@@ -74,3 +78,5 @@
 - unknown-field policy tests green
 - limits tests green
 - error payload tests green.
+- codec no-runtime-side-effect tests green
+- diagnostics sanitizer tests green.

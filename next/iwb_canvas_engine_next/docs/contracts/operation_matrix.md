@@ -17,10 +17,12 @@ Related diagrams:
 - `seq_edit_rollback`
 Required tests:
 - `test.edit_kernel.sync_non_nested_async_stale`
+- `test.edit_kernel.operation_matrix_effects`
 Guardrails:
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
 - `edit.stale_handle_rejected`
+- `edit.operation_matrix_complete`
 Do not assume:
 - no implicit mutation path outside EditKernel
 <!-- CONTEXT:END -->

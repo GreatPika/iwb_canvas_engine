@@ -23,10 +23,11 @@ Related donors:
 Related diagrams:
 - `dfd_schema_v1_decode_encode`
 Required tests:
-- `none`
+- `test.codec.decode_encode_no_runtime_side_effects`
 Guardrails:
 - `codec.schema_v1_exact`
 - `codec.known_fields_validated`
+- `codec.no_runtime_side_effects`
 Do not assume:
 - no legacy SceneCodec surface as next API
 - no schema v7 read/write in production core

@@ -28,24 +28,43 @@ Guardrails:
 - `api.dto_immutability`
 - `api.id_validation_no_extension_type_escape`
 - `core.no_legacy_imports`
+- `core.import_boundaries`
 - `core.no_scene_controller_shape_dependency`
 - `core.no_node_spec_patch_shape_dependency`
 - `core.single_runtime_root`
+- `store.no_public_document_live_state`
+- `projection.only_explicit_read_paths`
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
 - `edit.stale_handle_rejected`
+- `edit.operation_matrix_complete`
+- `edit.no_global_invalidation_except_replacement`
 - `events.low_level_edit_no_user_actions`
 - `events.commands_emit_user_actions`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 - `preview.selected_move_main_repaint`
+- `interaction.no_concrete_store_imports`
+- `interaction.no_resolver_on_cancel_paths`
+- `interaction.no_stale_terminal_commit`
+- `geometry.no_legacy_scene_order`
+- `spatial.no_full_clone_ordinary_edit`
+- `spatial.stale_candidate_rejected`
+- `frame.no_global_scene_sort`
+- `cache.keys_use_next_revisions_only`
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`
 - `resources.app_key_only`
+- `resources.resolver_boundary_owned_by_resource_kernel`
+- `resources.no_same_frame_missing_retry`
 - `codec.schema_v1_exact`
 - `codec.known_fields_validated`
+- `codec.no_runtime_side_effects`
 - `diagnostics.disabled_no_alloc_hot_path`
+- `diagnostics.sanitized_public_projection`
+- `surface.pointer_samples_normalized_before_runtime`
 - `diagrams.all_required_present`
+- `docs.phase_guardrail_alignment`
 Do not assume:
 - no non-blocking critical guardrail
 <!-- CONTEXT:END -->
@@ -66,24 +85,42 @@ Mandatory guardrails:
 | `api.dto_immutability` | DTO collections defensively copied and unmodifiable |
 | `api.id_validation_no_extension_type_escape` | ids cannot be publicly constructed without validation |
 | `core.no_legacy_imports` | no import of legacy package/runtime |
+| `core.import_boundaries` | package-owned source paths obey the forbidden import matrix from `section_03_package_layout` |
 | `core.no_scene_controller_shape_dependency` | no `SceneController` concept in core |
 | `core.no_node_spec_patch_shape_dependency` | no legacy NodeSpec/NodePatch/PatchField in core |
 | `core.single_runtime_root` | exactly one production RuntimeRoot |
+| `store.no_public_document_live_state` | DocumentStoreKernel stores compact committed tables, not a live mutable `CanvasDocument` |
+| `projection.only_explicit_read_paths` | `CanvasDocument` projection is built only by read/encode/test/tool or explicit draft-read paths, never pointer/hit/paint hot paths |
 | `edit.sync_non_nested` | nested/async edit rejected |
 | `edit.rollback_no_effects` | rollback discards events/repaint/resources/spatial |
 | `edit.stale_handle_rejected` | stale edit handle throws |
+| `edit.operation_matrix_complete` | every operation matrix row has an executable effect assertion for revisions, spatial, projection, repaint, and events |
+| `edit.no_global_invalidation_except_replacement` | ordinary edits compile exact touched invalidation; only document replacement may use global invalidation |
 | `events.low_level_edit_no_user_actions` | CanvasEdit.removeElement/clearContent emit no user action events |
 | `events.commands_emit_user_actions` | high-level commands and interaction commits own user action events |
 | `load.prepares_before_interrupt` | failed load does not interrupt gesture |
 | `load.success_interrupts_before_install` | success interrupt happens before atomic install |
 | `preview.selected_move_main_repaint` | selected move preview increments main repaint, not overlay |
+| `interaction.no_concrete_store_imports` | InteractionEngine uses EditKernel and narrow read-only query ports, not concrete store imports or mutations |
+| `interaction.no_resolver_on_cancel_paths` | selected-move resolver is not called on cancel, load, mode-change, `interactive=false`, stale terminal, or dispose paths |
+| `interaction.no_stale_terminal_commit` | stale or controllerEpoch-mismatched terminal samples cannot create commit intent |
+| `geometry.no_legacy_scene_order` | geometry and hit-test policy does not reuse legacy SceneNode traversal or legacy scene order logic |
+| `spatial.no_full_clone_ordinary_edit` | ordinary spatial updates touch only changed ids/pages; full rebuild is reserved for replacement/load paths |
+| `spatial.stale_candidate_rejected` | stale candidate handles are rejected by generation and structuralRevision checks before frame/hit use |
+| `frame.no_global_scene_sort` | selected supplement staging merges by orderToken and does not globally sort all scene elements |
+| `cache.keys_use_next_revisions_only` | cache keys use next-owned revision facts and stable inputs, not legacy snapshot shapes |
 | `resources.mutation_inside_edit_only` | resource descriptor mutation only via CanvasEdit |
 | `resources.dirty_no_document_revision` | markResourceDirty does not increment documentRevision |
 | `resources.app_key_only` | resource descriptors use appKey only |
+| `resources.resolver_boundary_owned_by_resource_kernel` | painters and frame code never call CanvasResourceResolver directly; ResourceKernel owns resolver access |
+| `resources.no_same_frame_missing_retry` | missing/null resource resolve results are cached by resourceId and resourceRevision for the frame instead of retried immediately |
 | `codec.schema_v1_exact` | only schema v1 read/write |
 | `codec.known_fields_validated` | known schema v1 fields are validated and canonical encoder writes only v1 fields |
+| `codec.no_runtime_side_effects` | schema v1 decode/encode validates and materializes DTOs without mutating runtime or store state |
 | `diagnostics.disabled_no_alloc_hot_path` | no record allocation on successful hot path |
+| `diagnostics.sanitized_public_projection` | diagnostic details expose only sanitized bounded public data and never runtime objects, images, closures, or full scene dumps |
+| `surface.pointer_samples_normalized_before_runtime` | Flutter surface adapters pass only normalized finite pointer samples into runtime routing |
 | `diagrams.all_required_present` | required Mermaid files exist |
+| `docs.phase_guardrail_alignment` | guardrails and tests listed in section registry are reflected in their owning implementation phase docs |
 
 ---
-

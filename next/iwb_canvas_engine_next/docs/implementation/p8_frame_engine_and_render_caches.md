@@ -57,12 +57,16 @@
 
 - `core.single_runtime_root` - exactly one production RuntimeRoot
 - `preview.selected_move_main_repaint` - selected move preview increments main repaint, not overlay
+- `frame.no_global_scene_sort` - selected supplement staging merges by orderToken without globally sorting the scene
+- `cache.keys_use_next_revisions_only` - cache keys use next-owned revision facts and stable inputs, not legacy snapshot shapes
 
 ## Tests
 
 - `test.store.no_projection_hot_path` -> `no projection in hot path tests`
 - `test.frame.main_overlay_capture` -> `main and overlay frame capture tests`
 - `test.frame.no_live_runtime_read_in_painters` -> `no live runtime read and no CanvasDocument projection in paint tests`
+- `test.frame.cache_keys_do_not_use_legacy_snapshot_shape` -> `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart`
+- `test.frame.selected_supplement_staging_no_global_sort` -> `test/frame/selected_supplement_staging_no_global_sort_test.dart`
 
 ## Exit gate
 
@@ -71,4 +75,6 @@
 - selected move preview main repaint
 - overlay previews overlay repaint
 - no live runtime read in painters
-- no CanvasDocument projection in paint.
+- no CanvasDocument projection in paint
+- cache keys are next-revision based
+- selected supplement staging avoids global scene sort.

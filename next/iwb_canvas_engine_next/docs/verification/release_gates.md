@@ -93,24 +93,43 @@ Guardrails:
 - `api.dto_immutability`
 - `api.id_validation_no_extension_type_escape`
 - `core.no_legacy_imports`
+- `core.import_boundaries`
 - `core.no_scene_controller_shape_dependency`
 - `core.no_node_spec_patch_shape_dependency`
 - `core.single_runtime_root`
+- `store.no_public_document_live_state`
+- `projection.only_explicit_read_paths`
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
 - `edit.stale_handle_rejected`
+- `edit.operation_matrix_complete`
+- `edit.no_global_invalidation_except_replacement`
 - `events.low_level_edit_no_user_actions`
 - `events.commands_emit_user_actions`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 - `preview.selected_move_main_repaint`
+- `interaction.no_concrete_store_imports`
+- `interaction.no_resolver_on_cancel_paths`
+- `interaction.no_stale_terminal_commit`
+- `geometry.no_legacy_scene_order`
+- `spatial.no_full_clone_ordinary_edit`
+- `spatial.stale_candidate_rejected`
+- `frame.no_global_scene_sort`
+- `cache.keys_use_next_revisions_only`
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`
 - `resources.app_key_only`
+- `resources.resolver_boundary_owned_by_resource_kernel`
+- `resources.no_same_frame_missing_retry`
 - `codec.schema_v1_exact`
 - `codec.known_fields_validated`
+- `codec.no_runtime_side_effects`
 - `diagnostics.disabled_no_alloc_hot_path`
+- `diagnostics.sanitized_public_projection`
+- `surface.pointer_samples_normalized_before_runtime`
 - `diagrams.all_required_present`
+- `docs.phase_guardrail_alignment`
 Do not assume:
 - no release with old imports, legacy facade, or unlinked donor reuse
 <!-- CONTEXT:END -->
@@ -126,24 +145,32 @@ Release is blocked unless all statements are true:
 4. api.public_api_compiles_as_written is green.
 5. api.no_legacy_public_types is green.
 6. core.no_legacy_imports is green.
-7. core.single_runtime_root is green.
-8. schema v1 encode/decode contract is green.
-9. validation limits are green.
-10. resource lifecycle tests are green.
-11. edit rollback/stale/nested/async tests are green.
-12. loadDocument staged success/failure tests are green.
-13. geometry/spatial parity tests are green.
-14. selected move preview main repaint test is green.
-15. overlay preview repaint split tests are green.
-16. text edit request integration tests are green.
-17. action typed payload tests are green.
-18. low-level edit emits no user action events tests are green.
-19. DTO immutability tests are green.
-20. no CanvasDocument projection in paint/pointer/hit tests are green.
-21. diagnostics disabled hot-path allocation tests are green.
-22. all required diagrams exist and match owners.
-23. benchmark gates pass.
-24. AppCanvasPort, OldEngineAdapter and NextEngineAdapter are not present in the engine package.
+7. core.import_boundaries is green.
+8. core.single_runtime_root is green.
+9. store/projection ownership tests are green.
+10. schema v1 encode/decode contract is green.
+11. codec no-runtime-side-effect tests are green.
+12. validation limits are green.
+13. diagnostics disabled hot-path allocation and sanitizer tests are green.
+14. resource lifecycle and resolver-boundary tests are green.
+15. edit rollback/stale/nested/async tests are green.
+16. operation matrix and exact touched invalidation tests are green.
+17. loadDocument staged success/failure tests are green.
+18. geometry/spatial parity and stale-candidate tests are green.
+19. frame capture, cache-key, and selected supplement staging tests are green.
+20. selected move preview main repaint test is green.
+21. overlay preview repaint split tests are green.
+22. text edit request integration tests are green.
+23. action typed payload tests are green.
+24. low-level edit emits no user action events tests are green.
+25. interaction stale terminal and resolver-cancel path tests are green.
+26. surface pointer normalization tests are green.
+27. DTO immutability tests are green.
+28. no CanvasDocument projection in paint/pointer/hit tests are green.
+29. all required diagrams exist and match owners.
+30. phase guardrail alignment is green.
+31. benchmark gates pass.
+32. AppCanvasPort, OldEngineAdapter and NextEngineAdapter are not present in the engine package.
 ```
 
 ---

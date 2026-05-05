@@ -16,9 +16,11 @@ Related diagrams:
 - `c4_container`
 Required tests:
 - `test.api_contract.no_old_public_symbols`
+- `test.guardrails.import_boundaries`
 Guardrails:
 - `core.no_legacy_imports`
 - `api.no_legacy_public_types`
+- `core.import_boundaries`
 Do not assume:
 - no legacy package import
 - no app adapters in package

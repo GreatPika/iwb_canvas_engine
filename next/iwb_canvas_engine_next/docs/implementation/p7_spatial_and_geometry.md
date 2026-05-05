@@ -46,16 +46,23 @@
 
 ## Guardrails
 
-- none
+- `geometry.no_legacy_scene_order` - geometry and hit-test policy does not reuse legacy SceneNode traversal or scene order logic
+- `spatial.no_full_clone_ordinary_edit` - ordinary spatial edits update touched ids/pages only
+- `spatial.stale_candidate_rejected` - stale generation or structuralRevision candidate handles are rejected before use
 
 ## Tests
 
 - `test.geometry.hit_policy` -> `geometry and hit-test policy tests`
+- `test.geometry.no_legacy_scene_order` -> `test/geometry/no_legacy_scene_order_test.dart`
 - `test.spatial.touched_update` -> `spatial constants, outlier and touched-only update tests`
+- `test.spatial.no_full_clone_for_touched_update` -> `test/spatial/no_full_clone_for_touched_update_test.dart`
+- `test.spatial.stale_generation_rejected` -> `test/spatial/stale_generation_rejected_test.dart`
 
 ## Exit gate
 
 - hit tests green
 - spatial constants green
 - outlier behavior green
-- touched-only spatial update green.
+- touched-only spatial update green
+- no legacy scene order tests green
+- stale candidate rejection tests green.

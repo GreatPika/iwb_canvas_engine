@@ -79,6 +79,9 @@
 - `api.public_api_compiles_as_written` - public API declarations compile in an empty consumer package
 - `api.public_types_complete` - all public signatures reference defined public types
 - `preview.selected_move_main_repaint` - selected move preview increments main repaint, not overlay
+- `interaction.no_concrete_store_imports` - InteractionEngine uses EditKernel and narrow query ports, not concrete store mutation
+- `interaction.no_resolver_on_cancel_paths` - selected-move resolver is not called on cancel/load/mode/interactive=false/dispose paths
+- `interaction.no_stale_terminal_commit` - stale terminal samples cannot create commit intent
 
 ## Tests
 
@@ -87,6 +90,8 @@
 - `test.load_document.staged_success_failure` -> `staged loadDocument success/failure tests`
 - `test.interaction.state_machines` -> `interaction state machine tests`
 - `test.interaction.move_resolver_reentrancy` -> `synchronous move resolver reentrancy guard tests`
+- `test.interaction.move_resolver_not_called_on_cancel_cleanup` -> `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`
+- `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
 
 ## Exit gate
 
@@ -94,5 +99,7 @@
 - pending line preview exposed
 - text edit event emitted
 - resolver cannot reenter mutation
+- resolver is not called on cancel cleanup paths
+- stale terminal samples do not commit
 - loadDocument failure preserves gesture
 - loadDocument success clears gesture.

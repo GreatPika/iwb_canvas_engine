@@ -38,14 +38,18 @@
 ## Guardrails
 
 - `core.single_runtime_root` - exactly one production RuntimeRoot
+- `store.no_public_document_live_state` - store owns compact committed tables, not a live mutable CanvasDocument
+- `projection.only_explicit_read_paths` - projection is built only by read/encode/test/tool or explicit draft-read paths
 
 ## Tests
 
 - `test.store.read_document_projection` -> `readDocument projection and cache tests`
 - `test.store.no_projection_hot_path` -> `no projection in hot path tests`
+- `test.store.public_document_is_projection_only` -> `test/store/public_document_is_projection_only_test.dart`
 
 ## Exit gate
 
 - readDocument projection matches DTO state
 - projection lazy counters pass
+- store public document state is projection-only
 - no projection in hot path tests pass.
