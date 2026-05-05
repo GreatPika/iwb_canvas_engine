@@ -87,8 +87,7 @@ flowchart LR
 ```mermaid
 flowchart TB
   Public[lib/iwb_canvas_engine_next.dart exports src/api] --> RuntimeRoot
-  Surface[CanvasSurface public widget] --> FrameEngine
-  Surface --> InteractionEngine
+  Surface[CanvasSurface public widget] --> RuntimeRoot
   RuntimeRoot --> Store[DocumentStoreKernel]
   RuntimeRoot --> Edit[EditKernel]
   RuntimeRoot --> InteractionEngine

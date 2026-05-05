@@ -116,13 +116,15 @@ stateDiagram-v2
 
   state "Overlay cleanup repaint" as OverlayCleanup
   OverlayCleanup --> Idle: overlay cleanup published
+  OverlayCleanup --> Disposed: dispose cleanup published before stream close
 
   state "Dispose cleanup" as DisposeCleanup
   note left of DisposeCleanup
-    Runtime disposal clears pending line and preview before
-    streams close. Later samples cannot revive or commit it.
+    Runtime disposal clears pending line and preview,
+    queues overlay cleanup, then closes streams.
+    Later samples cannot revive or commit it.
   end note
-  DisposeCleanup --> Disposed: pending line cleared
+  DisposeCleanup --> OverlayCleanup: pending line cleared before stream close
 
   state "Disposed runtime" as Disposed
   Disposed --> Disposed: later pointer/edit operation / StateError

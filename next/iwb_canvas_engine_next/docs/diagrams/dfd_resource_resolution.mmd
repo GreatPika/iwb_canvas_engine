@@ -39,9 +39,10 @@ flowchart LR
   end
 
   subgraph Resources["ResourceKernel"]
+    ResolvePaintAsset["Resolve paint asset\nResourceKernel-owned resolver boundary"]
     ImageResolveCache["ImageResolveCache\nresourceId + resourceRevision"]
     DirtySet["Dirty resource ids\nexplicit visual invalidation"]
-    MissingResult["Missing or unresolved result\ncached for this frame"]
+    MissingResult["Missing or unresolved result\ncached by resourceId + resourceRevision\nno same-frame retry"]
     Placeholder["Bounded missing image placeholder"]
   end
 
@@ -69,16 +70,18 @@ flowchart LR
   AssetRequest -->|"read committed descriptor snapshot"| DescriptorRead
   DescriptorRead -->|"resourceId lookup"| ResourceTable
   ResourceTable -->|"CanvasImageResource with appKey"| DescriptorRead
-  DescriptorRead -->|"descriptor snapshot + resourceRevision"| ImageResolveCache
+  DescriptorRead -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
 
-  ImageResolveCache -->|"cache hit: app-owned image"| PaintAsset
-  ImageResolveCache -->|"cache miss: sync resolve request"| AppResolver
+  ResolvePaintAsset -->|"cache lookup and bounded update"| ImageResolveCache
+  ImageResolveCache -->|"cache hit: app-owned image"| ResolvePaintAsset
+  ResolvePaintAsset -->|"cache miss: sync resolve request"| AppResolver
   Surface -->|"provides resolver instance"| AppResolver
   AppResolver -->|"passes descriptor with appKey"| App
   App -->|"returns app-owned ui.Image or null"| AppResolver
-  AppResolver -->|"stable visual result\nno runtime mutation"| ImageResolveCache
-  ImageResolveCache -->|"resolved image"| PaintAsset
-  ImageResolveCache -.->|"missing resource or null result"| MissingResult
+  AppResolver -->|"stable visual result\nno runtime mutation"| ResolvePaintAsset
+  ResolvePaintAsset -->|"store resolved or null result\nby resourceId + resourceRevision"| ImageResolveCache
+  ResolvePaintAsset -->|"resolved image"| PaintAsset
+  ResolvePaintAsset -.->|"missing resource or null result"| MissingResult
   MissingResult -.->|"bounded placeholder result"| Placeholder
   Placeholder -.->|"placeholder paint asset"| PaintAsset
   PaintAsset -->|"assets only; no live resource mutation"| MainPaint

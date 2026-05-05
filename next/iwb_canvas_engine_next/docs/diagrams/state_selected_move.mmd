@@ -43,7 +43,7 @@ stateDiagram-v2
     PreviewReady --> PreResolverCleanup: "interactive=false"
     PreviewReady --> PreResolverCleanup: "loadDocument success"
     PreviewReady --> PreviewReady: "loadDocument failure / preserve if generic session preserves"
-    PreviewReady --> PreResolverCleanup: "runtime.dispose()"
+    PreviewReady --> DisposeCleanup: "runtime.dispose()"
     PreviewReady --> TerminalGate: "same-token pointer up"
 
     state "Terminal gate" as TerminalGate
@@ -126,9 +126,9 @@ stateDiagram-v2
   state "Pre-resolver cleanup" as PreResolverCleanup
   note right of PreResolverCleanup
     Cancel, mode change, load success, interactive=false,
-    dispose, stale terminal, invalid terminal, zero move,
-    empty movable set, and admission no-op paths have not
-    called the resolver or opened an edit. They emit no action.
+    stale terminal, invalid terminal, zero move, empty movable
+    set, and admission no-op paths have not called the resolver
+    or opened an edit. They emit no action.
   end note
 
   state "Resolver cleanup" as ResolverCleanup
@@ -146,9 +146,18 @@ stateDiagram-v2
     is allowed.
   end note
 
+  state "Dispose cleanup" as DisposeCleanup
+  note right of DisposeCleanup
+    Runtime disposal clears selected-move preview/session,
+    queues main-scene cleanup, clears runtime caches, closes
+    streams, and leaves the runtime disposed. It cannot call
+    the resolver, open an edit, emit an action, or return to idle.
+  end note
+
   PreResolverCleanup --> MainSceneCleanup: "clear selected move preview/session"
   ResolverCleanup --> MainSceneCleanup: "clear selected move preview/session"
   EditFailureCleanup --> MainSceneCleanup: "clear selected move preview/session"
+  DisposeCleanup --> MainSceneCleanup: "clear selected move preview/session before stream close"
 
   state "Main-scene cleanup repaint" as MainSceneCleanup
   note right of MainSceneCleanup
@@ -159,6 +168,7 @@ stateDiagram-v2
   end note
 
   MainSceneCleanup --> Idle: "cleanup published no action or committed document mutation"
+  MainSceneCleanup --> Disposed: "dispose cleanup published before stream close"
   ActivePreview --> Idle: "terminal cleanup complete"
 
   state "Disposed runtime" as Disposed

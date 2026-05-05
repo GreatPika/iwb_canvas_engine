@@ -48,7 +48,7 @@ stateDiagram-v2
   end note
 
   CacheLookup --> CachedResolved: "cache hit: ui.Image"
-  CacheLookup --> CachedNull: "cache hit: null or missing for key/frame"
+  CacheLookup --> CachedNull: "cache hit: null or missing for resourceId + resourceRevision"
   CacheLookup --> CacheMiss: "cache miss"
 
   state "Cached resolved result" as CachedResolved
@@ -71,7 +71,7 @@ stateDiagram-v2
   SyncResolverCall --> ResolvedResult: "app returns ui.Image"
 
   state "Null resolver result" as NullResult
-  NullResult --> CacheNullResult: "remember null/missing for key or frame"
+  NullResult --> CacheNullResult: "remember null/missing by resourceId + resourceRevision; no same-frame retry"
   CacheNullResult --> PlaceholderResult: "return bounded placeholder"
 
   state "Resolved resolver result" as ResolvedResult

@@ -43,7 +43,7 @@ sequenceDiagram
             Resources->>Cache: store key(resourceId, resourceRevision) -> app-owned ui.Image reference
             Resources-->>Frame: app-owned ui.Image paint asset
           else app returns null
-            Resources->>Cache: remember missing/null result for this frame and key
+            Resources->>Cache: remember missing/null result by resourceId + resourceRevision; no same-frame retry
             Resources-->>Frame: bounded missing image placeholder
           end
         end

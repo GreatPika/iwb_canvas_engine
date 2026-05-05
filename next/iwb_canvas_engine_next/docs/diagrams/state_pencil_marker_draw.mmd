@@ -131,13 +131,14 @@ stateDiagram-v2
   state "Dispose cleanup" as DisposeCleanup
   note right of DisposeCleanup
     Runtime disposal clears the active stroke preview
-    and session only, then closes runtime streams.
-    It cannot create an add-stroke commit intent.
+    and session, queues overlay cleanup, then closes
+    runtime streams. It cannot create an add-stroke
+    commit intent.
   end note
 
   CleanupOnly --> OverlayCleanup: "clear pencil/marker preview"
   EditFailureCleanup --> OverlayCleanup: "clear pencil/marker preview"
-  DisposeCleanup --> Disposed: "clear pencil/marker preview before stream close"
+  DisposeCleanup --> OverlayCleanup: "clear pencil/marker preview before stream close"
 
   state "Overlay cleanup repaint" as OverlayCleanup
   note right of OverlayCleanup
@@ -148,6 +149,7 @@ stateDiagram-v2
   end note
 
   OverlayCleanup --> Idle: "cleanup complete with no public commit effects"
+  OverlayCleanup --> Disposed: "dispose cleanup published before stream close"
   Drafting --> Idle: "terminal handling complete"
 
   state "Disposed runtime" as Disposed

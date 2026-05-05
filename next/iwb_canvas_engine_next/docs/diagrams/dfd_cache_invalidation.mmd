@@ -25,6 +25,7 @@ flowchart LR
 
   subgraph Store["DocumentStoreKernel"]
     CommittedInstall["Atomic committed install"]
+    TypedRevisionScope["Typed revision scope\noperation matrix decides changed counters"]
     RevisionState["RevisionState"]
     DocumentRevision["documentRevision"]
     StructuralRevision["structuralRevision"]
@@ -83,16 +84,17 @@ flowchart LR
   OrdinaryScope -->|"preflight and commit payload"| CommittedInstall
   ReplacementScope -->|"prepared document replacement"| CommittedInstall
   LoadSuccess -->|"prepared staged replacement\noutside edit CommitPlan"| CommittedInstall
-  CommittedInstall -->|"publish committed revision changes"| RevisionState
+  CommittedInstall -->|"publish typed committed revision changes"| TypedRevisionScope
+  TypedRevisionScope -->|"update only counters touched by operation"| RevisionState
 
-  RevisionState --> DocumentRevision
-  RevisionState --> StructuralRevision
-  RevisionState --> BoundsRevision
-  RevisionState --> VisualRevision
-  RevisionState --> SelectionRevision
-  RevisionState --> ProjectionRevision
-  RevisionState --> ResourceRevision
-  RevisionState --> ResourceVisualRevision
+  RevisionState -.->|"document state changes"| DocumentRevision
+  RevisionState -.->|"structure/order changes"| StructuralRevision
+  RevisionState -.->|"geometry/bounds changes"| BoundsRevision
+  RevisionState -.->|"visual/meta changes"| VisualRevision
+  RevisionState -.->|"selection changes"| SelectionRevision
+  RevisionState -.->|"public projection invalidated"| ProjectionRevision
+  RevisionState -.->|"resource descriptor changes"| ResourceRevision
+  RevisionState -.->|"external resource visual dirty"| ResourceVisualRevision
 
   OrdinaryScope -->|"added or removed ids"| SpatialDelta
   OrdinaryScope -->|"geometry or transform changed ids"| SpatialDelta

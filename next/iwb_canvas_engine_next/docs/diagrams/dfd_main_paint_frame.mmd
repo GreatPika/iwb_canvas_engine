@@ -19,6 +19,7 @@ flowchart LR
   end
 
   subgraph Resources["ResourceKernel"]
+    ResolvePaintAsset["Resolve paint asset\nResourceKernel-owned resolver boundary"]
     ImageResolveCache["ImageResolveCache\nresourceId + resourceRevision"]
     MissingPlaceholder["Bounded missing image placeholder"]
   end
@@ -33,6 +34,7 @@ flowchart LR
     RecordBuilder["Render record builder\nresolve handles by revision/generation"]
     Merge["Order-token merge\nno full-scene sort"]
     Records["Immutable RenderElementRecord list\ncompact row views, selection flags,\npreviewDelta"]
+    DescriptorSnapshots["Descriptor snapshots\nresourceId + appKey descriptor + resourceRevision"]
     RenderCaches["Frame render caches\ntext, path, stroke"]
     StaticBackgroundCache["StaticBackgroundCache\nbackground + grid + camera bucket + dpr"]
     ResolvedAssets["Resolved paint assets\nimages or placeholders"]
@@ -75,11 +77,16 @@ flowchart LR
   RenderCaches -->|"bounded cached paint primitives"| MainPainter
   StaticBackgroundCache -->|"bounded static background primitive"| MainPainter
 
-  Records -->|"image resource ids"| ImageResolveCache
-  ImageResolveCache -->|"cache miss only\nsync read request"| AppResolver
-  AppResolver -->|"app-owned image reference\nno engine IO, no mutation"| ImageResolveCache
-  ImageResolveCache -->|"resolved image"| ResolvedAssets
-  ImageResolveCache -.->|"missing or unresolved"| MissingPlaceholder
+  Records -->|"image resource ids"| DescriptorSnapshots
+  DescriptorSnapshots -->|"read committed descriptor facts\nby captured revision"| Committed
+  Committed -->|"immutable descriptor snapshots"| DescriptorSnapshots
+  DescriptorSnapshots -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
+  ResolvePaintAsset -->|"cache lookup and bounded update"| ImageResolveCache
+  ImageResolveCache -->|"cached image, null,\nor missing result"| ResolvePaintAsset
+  ResolvePaintAsset -->|"cache miss only\nsync read request"| AppResolver
+  AppResolver -->|"app-owned image reference\nno engine IO, no mutation"| ResolvePaintAsset
+  ResolvePaintAsset -->|"resolved image"| ResolvedAssets
+  ResolvePaintAsset -.->|"missing or unresolved"| MissingPlaceholder
   MissingPlaceholder -.->|"bounded placeholder asset"| ResolvedAssets
 
   Records -->|"immutable render records"| MainPainter
