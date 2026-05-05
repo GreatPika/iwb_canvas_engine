@@ -21,7 +21,8 @@ stateDiagram-v2
   end note
 
   DownAdmission --> Previewing: bind eraser session and publish first corridor point
-  DownAdmission --> Idle: wrong mode/tool, non-finite facts, disposed runtime / reject without preview
+  DownAdmission --> Idle: wrong mode/tool or non-finite facts / reject without preview
+  DownAdmission --> Disposed: disposed runtime / StateError
 
   state "Active eraser preview" as Previewing {
     [*] --> CorridorPreview

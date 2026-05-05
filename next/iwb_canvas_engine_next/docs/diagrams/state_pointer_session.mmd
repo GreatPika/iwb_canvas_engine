@@ -23,7 +23,7 @@ stateDiagram-v2
 
   AdmissionGate --> ActivePointer: finite normalized down / bind token, session id, and tool epoch
   AdmissionGate --> Idle: non-finite or invalid down / reject without preview
-  AdmissionGate --> Idle: runtime disposed / StateError
+  AdmissionGate --> Disposed: runtime disposed / StateError
 
   state "Active pointer / one routed token" as ActivePointer {
     [*] --> Routing

@@ -35,11 +35,11 @@ sequenceDiagram
   Note over EK: If the callback returns a Future, rollback applies and no commit work runs.
   EK->>CC: compile touched set, revisions, invalidation, repaint intent
   Touched-->>CC: exact changed state
+  CC->>Store: preflight invariants
+  Store-->>CC: preflight accepted
   CC->>Frame: prepare repaint masks
   CC->>Events: stage commit event buffer
   Note over Events: Low-level CanvasEdit commits stage no user action events.
-  CC->>Store: preflight invariants
-  Store-->>CC: preflight accepted
 
   CC->>Store: install compiled CommitPlan atomically
   Store->>Store: replace committed tables and revision state

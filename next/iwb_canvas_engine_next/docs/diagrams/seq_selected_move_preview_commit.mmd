@@ -93,10 +93,10 @@ sequenceDiagram
       EK->>EK: reject Future result before success path
       EK->>CC: compile exact touched set, revisions, invalidation, repaint intent
       Touched-->>CC: transformed ids and revision facts
-      CC->>Frame: prepare main repaint masks
-      CC->>Events: attach staged moveSelection event to commit
       CC->>Store: preflight invariants
       Store-->>CC: preflight accepted
+      CC->>Frame: prepare main repaint masks
+      CC->>Events: attach staged moveSelection event to commit
       CC->>Store: install compiled CommitPlan atomically
       Store->>Store: replace transform rows and revision state
       Note over CC,Store: Atomic install is the commit boundary.

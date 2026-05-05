@@ -35,7 +35,7 @@ flowchart LR
   end
 
   subgraph Diagnostics["DiagnosticsHub"]
-    DiagnosticRecord["Internal diagnostic record\nsource = codec, path, code"]
+    DiagnosticRecord["Internal diagnostic record\nsource = codec, code, severity,\npath, details sanitized map"]
     Sanitizer["Diagnostics sanitizer\nJSON-like bounded details only"]
     InternalSink["Internal/test diagnostic sinks\npolicy-gated"]
   end

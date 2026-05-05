@@ -15,14 +15,14 @@ sequenceDiagram
 
   Surface->>Frame: paint main scene request(viewportRect, cameraOffset, dpr, resolver)
   Frame->>Store: capture committed main-frame facts once
-  Store-->>Frame: resourceRevision, resourceVisualRevision, compact rows, and revisions
+  Store-->>Frame: resourceVisualRevision, compact rows, and frame revisions
   Frame->>Frame: build immutable RenderElementRecord list
-  Note over Frame: Each image render record carries resourceId from the committed row and uses captured resourceRevision/resourceVisualRevision.
+  Note over Frame: Each image render record carries resourceId from the committed row and uses captured resourceVisualRevision.
 
   opt records contain image resource ids
     loop for each image RenderElementRecord
-      Frame->>Resources: resolve paint image(record.resourceId, captured resourceRevision, resolver)
-      Resources->>Store: read committed descriptor by resourceId at captured resourceRevision
+      Frame->>Resources: resolve paint image(record.resourceId, resolver)
+      Resources->>Store: read committed descriptor and descriptor resourceRevision by resourceId
       Store-->>Resources: CanvasImageResource appKey descriptor or missing descriptor
 
       alt descriptor is missing

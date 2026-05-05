@@ -20,7 +20,8 @@ stateDiagram-v2
   end note
 
   FirstTapGate --> PendingStart: start finite and tool style drawable / store pending start, publish overlay pending marker
-  FirstTapGate --> Idle: non-finite start, non-drawable style, disposed, or inactive surface / no commit
+  FirstTapGate --> Idle: non-finite start, non-drawable style, or inactive surface / no commit
+  FirstTapGate --> Disposed: disposed runtime / StateError
 
   state "Pending start / epoch-bound" as PendingStart
   note right of PendingStart

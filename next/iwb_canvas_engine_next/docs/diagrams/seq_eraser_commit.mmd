@@ -69,9 +69,9 @@ sequenceDiagram
     Tools->>IE: cleanup active eraser session
     IE->>Preview: clear eraser corridor and active session
     Preview->>Frame: request overlay repaint cleanup
-    Frame->>Signals: publish overlay cleanup repaint request
-    Signals-->>Surface: repaint overlay without eraser corridor
+    Frame->>Frame: defer overlay cleanup to loadDocument post-install repaint scheduling
     Note over EK,Signals: No eraser EditKernel commit, eraser spatial remove, eraser projection eviction, eraser main repaint, or erase action is published.
+    Note over Signals: No public eraser repaint signal is published before the successful load install boundary.
     Note over Store,Frame: The loadDocument success Store mutation, spatial rebuild, projection eviction, and main plus overlay repaint are external load effects covered by seq_load_document_success.
   else same-token pointer up
     User->>Surface: pointer up
@@ -104,10 +104,10 @@ sequenceDiagram
       EK->>EK: reject Future result before success path
       EK->>CC: compile exact erase touched set and invalidation
       Touched-->>CC: removed ids and revision facts
-      CC->>Frame: prepare main repaint masks
-      CC->>Events: attach staged erase action to commit
       CC->>Store: preflight registry, layer membership, and selection invariants
       Store-->>CC: preflight accepted
+      CC->>Frame: prepare main repaint masks
+      CC->>Events: attach staged erase action to commit
       CC->>Store: install compiled CommitPlan atomically
       Store->>Store: remove registry rows, layer memberships, family rows, and selected ids
       Note over CC,Store: Atomic install is the commit boundary, no action is visible before this point.

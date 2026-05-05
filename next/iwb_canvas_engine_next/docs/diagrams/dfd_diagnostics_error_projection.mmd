@@ -25,7 +25,7 @@ flowchart LR
 
   subgraph DiagnosticsHub["DiagnosticsHub internal"]
     PolicyGate["Diagnostic policy gate\ndisabled, summary, verbose"]
-    DiagnosticRecord["DiagnosticRecord\ncode, severity, source,\npath, revision, sessionId,\ncorrelationId"]
+    DiagnosticRecord["DiagnosticRecord\ncode, severity, source,\npath, details sanitized map,\nrevision, sessionId, correlationId"]
     RawDetails["Raw error context\nlimits, ids, counts,\nfield values, source error facts"]
     Sanitizer["Diagnostics sanitizer\nJSON-like primitives and\nbounded previews only"]
     SanitizedDetails["Sanitized details map\nbounded strings, lists,\nmaps, numbers, booleans"]

@@ -20,7 +20,8 @@ stateDiagram-v2
   end note
 
   DownAdmission --> DragPreview: publish zero-area marquee preview / overlay repaint
-  DownAdmission --> Idle: invalid down or disposed / no preview, edit, or event
+  DownAdmission --> Idle: invalid down / no preview, edit, or event
+  DownAdmission --> Disposed: disposed runtime / StateError
 
   state "Dragging / overlay-only preview" as DragPreview
   note right of DragPreview
