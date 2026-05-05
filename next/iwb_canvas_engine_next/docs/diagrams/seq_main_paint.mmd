@@ -14,12 +14,12 @@ sequenceDiagram
 
   Surface->>Frame: paint main scene request(viewportRect, cameraOffset, dpr, resolver)
   Frame->>Store: capture committed tables, revisions, camera, viewport, and selection once
-  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, visualRevision, selectionRevision, resourceVisualRevision, cameraOffset, viewportRect, selectionIds
+  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, visualRevision, selectionRevision, resourceRevision, cameraOffset, viewportRect, selectionIds
   Frame->>Preview: capture immutable selected move preview once
   Preview-->>Frame: selectedMoveDelta or none
   Note over Frame: CapturedMainFrame freezes the runtime facts used by this main paint frame.
 
-  Frame->>PlanCache: lookup paint plan by captured revisions, viewport, selection, resourceVisualRevision, and selectedMoveDelta
+  Frame->>PlanCache: lookup paint plan by structural, bounds, visual, viewport, and selection keys
 
   alt paint plan cache hit
     PlanCache-->>Frame: immutable RenderElementRecord list
@@ -50,7 +50,7 @@ sequenceDiagram
 
   opt records include image resource ids
     loop for each image resource id in records
-      Frame->>Resources: resolve paint asset(resourceId, captured resourceVisualRevision, resolver)
+      Frame->>Resources: resolve paint asset(resourceId, captured resourceRevision, resolver)
       Resources->>Store: read committed descriptor for resource id
       Store-->>Resources: appKey descriptor or missing descriptor
 
@@ -69,7 +69,7 @@ sequenceDiagram
   Frame->>Painter: paint immutable records, resolved assets, and bounded frame render caches
   Painter-->>Surface: draw main scene
 
-  Note over Painter: Painter consumes immutable RenderElementRecord data only; it performs no live runtime reads.
+  Note over Painter: Painter consumes immutable RenderElementRecord data only, it performs no live runtime reads.
   Note over Frame,Store: Forbidden in main paint: Store mutation, CanvasDocument projection, DocumentProjectionCache read, public API reads, and InteractionEngine mutation.
-  Note over Resources,Resolver: ResourceKernel owns the app resolver boundary; painter never calls the application resolver directly.
+  Note over Resources,Resolver: ResourceKernel owns the app resolver boundary, painter never calls the application resolver directly.
   Note over Surface,Painter: No legacy scene, controller, snapshot, or public DTO entities participate in this sequence.

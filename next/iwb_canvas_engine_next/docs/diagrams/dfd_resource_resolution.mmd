@@ -17,9 +17,11 @@ flowchart LR
 
   subgraph Store["DocumentStoreKernel"]
     ResourceTable["Committed resource descriptor table\nCanvasImageResource"]
-    AppKeyDescriptor["CanvasResourceSource.appKey only\nid + appKey + metadata"]
+    AppKeyDescriptor["CanvasResourceSource.appKey only\nid, appKey, contentHash,\nbyteLength, mimeType, metadata"]
     DocumentRevision["documentRevision\nchanges only on committed descriptor mutation"]
     ResourceRevision["resourceRevision\ndescriptor version"]
+    ProjectionRevision["projectionRevision\npublic document projection version"]
+    ProjectionEvict["DocumentProjectionCache eviction\nresource descriptor is projected"]
   end
 
   subgraph Frame["FrameEngine"]
@@ -52,6 +54,8 @@ flowchart LR
   CommitPlan -->|"atomic install on success"| ResourceTable
   CommitPlan -->|"descriptor changed or removed"| ResourceRevision
   CommitPlan -->|"committed document state changed"| DocumentRevision
+  CommitPlan -->|"public projection facts changed"| ProjectionRevision
+  ProjectionRevision -->|"evict descriptor projection entries"| ProjectionEvict
   CommitPlan -->|"evict descriptor-dependent entries"| ImageResolveCache
   ResourceTable -->|"stores source.kind = appKey only"| AppKeyDescriptor
 

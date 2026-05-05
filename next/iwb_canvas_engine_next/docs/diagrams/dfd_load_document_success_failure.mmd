@@ -17,8 +17,10 @@ flowchart LR
   end
 
   subgraph Interaction["InteractionEngine state"]
-    ActiveGesture["Active gesture and preview\npending line, pointer normalization, tap history"]
-    Interrupt["Success-only interaction interrupt\nclear preview and pending input state"]
+    ActivePreview["Active gesture and preview"]
+    PendingInput["Pointer normalization and pending tap history"]
+    Interrupt["Success-only interaction interrupt\nclear active gesture and preview"]
+    PostInstallCleanup["Post-install input cleanup\nclear pointer normalization and pending tap history"]
   end
 
   subgraph Store["DocumentStoreKernel"]
@@ -49,14 +51,17 @@ flowchart LR
   Diagnostics -.->|"rethrow projected exception"| Result
   Result -.->|"failure result"| App
 
-  Failure -.->|"no interrupt; preview and pointer state unchanged"| ActiveGesture
+  Failure -.->|"no interrupt; preview unchanged"| ActivePreview
+  Failure -.->|"pointer normalization and tap history unchanged"| PendingInput
   Failure -.->|"no committed state, selection, revision, cache, repaint, or event change"| ExistingCommitted
 
   Prepared -->|"success-only interrupt request"| Interrupt
-  ActiveGesture -->|"clear active gesture state"| Interrupt
-  Interrupt -->|"prepared replacement after interaction cleanup"| AtomicInstall
+  ActivePreview -->|"clear active gesture state"| Interrupt
+  Interrupt -->|"prepared replacement after preview cleanup"| AtomicInstall
   Prepared -->|"install payload"| AtomicInstall
   AtomicInstall -->|"replace committed state atomically"| ReplacementCommitted
+  ReplacementCommitted -->|"after install only"| PostInstallCleanup
+  PendingInput -->|"clear after atomic install"| PostInstallCleanup
 
   ReplacementCommitted -->|"increment all document-level revisions and epoch"| Revisions
   ReplacementCommitted -->|"rebuild from replacement document"| SpatialRebuild

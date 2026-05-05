@@ -36,7 +36,7 @@ sequenceDiagram
     Surface->>Tools: handlePointer(CanvasPointerSample move)
     Tools->>IE: normalized finite move sample
     IE->>IE: append normalized point and trim/resample if interactive stroke soft limit is exceeded
-    Note over IE,Frame: Pencil and marker preview is overlay-only; no selected-move main-scene preview delta is staged.
+    Note over IE,Frame: Pencil and marker preview is overlay-only, no selected-move main-scene preview delta is staged.
     IE->>Preview: replace immutable stroke preview snapshot
     Preview->>Frame: request overlay repaint only
     Frame->>Preview: capture overlayRevision and strokePoints once
@@ -80,7 +80,7 @@ sequenceDiagram
       IE->>Draft: add CanvasStrokeElement with generated element id
       Note over IE,Draft: Stroke uses final normalized points, color, thickness, and pencil opacity 1.0 or markerOpacity.
       Draft->>Touched: record addedElementIds containing new stroke id
-      Note over Touched: Exact committed scope: new id; document, structural, bounds, visual, and projection revisions.
+      Note over Touched: Exact committed scope: new id, document, structural, bounds, visual, and projection revisions.
       IE->>Events: stage deferred draw action descriptor
       Note over Events: Not public yet. Deferred type is drawPencil or drawMarker with CanvasDrawStrokeActionPayload(tool, color, thickness, opacity, pointCount).
       EK->>EK: reject Future result before success path
@@ -92,8 +92,8 @@ sequenceDiagram
       Store-->>CC: preflight accepted
       CC->>Store: install compiled CommitPlan atomically
       Store->>Store: replace layer membership, registry, stroke row, and revision state
-      Note over CC,Store: Atomic install is the commit boundary; InteractionEngine never mutates Store directly.
-      Store->>Spatial: apply touched-id spatial add or update for new stroke id
+      Note over CC,Store: Atomic install is the commit boundary, InteractionEngine never mutates Store directly.
+      Store->>Spatial: apply touched-id spatial add for new stroke id
       Spatial-->>Store: spatial index updated for new paint and hit bounds
       Store->>Projection: evict public document projection by projectionRevision
       Store->>Events: materialize CanvasActionCommitted drawPencil or drawMarker after install

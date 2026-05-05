@@ -37,7 +37,7 @@ sequenceDiagram
     Surface->>Tools: handlePointer(CanvasPointerSample move)
     Tools->>IE: normalized finite move sample
     IE->>IE: append corridor point and trim if interactive eraser soft limit is exceeded
-    Note over IE: Corridor remains preview state only; no selected-move main-scene preview is staged.
+    Note over IE: Corridor remains preview state only, no selected-move main-scene preview is staged.
     IE->>Spatial: query corridor envelope inflated by eraserThickness / 2 + hitPadding + 4.0
     Spatial-->>IE: committed candidate handles from content hit scope
     IE->>Geometry: exact eraser segment-to-family checks for visible deletable candidates
@@ -63,7 +63,7 @@ sequenceDiagram
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without eraser corridor
-    Note over EK,Signals: No EditKernel commit, Store mutation, spatial remove/update, projection eviction, main repaint, or erase action is published.
+    Note over EK,Signals: No EditKernel commit, Store mutation, spatial remove, projection eviction, main repaint, or erase action is published.
   else loadDocument success interrupts active eraser
     Surface->>Tools: terminal cleanup request from external load success
     Tools->>IE: cleanup active eraser session
@@ -71,7 +71,7 @@ sequenceDiagram
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without eraser corridor
-    Note over EK,Signals: No eraser EditKernel commit, eraser spatial remove/update, eraser projection eviction, eraser main repaint, or erase action is published.
+    Note over EK,Signals: No eraser EditKernel commit, eraser spatial remove, eraser projection eviction, eraser main repaint, or erase action is published.
     Note over Store,Frame: The loadDocument success Store mutation, spatial rebuild, projection eviction, and main plus overlay repaint are external load effects covered by seq_load_document_success.
   else same-token pointer up
     User->>Surface: pointer up
@@ -80,7 +80,7 @@ sequenceDiagram
     IE->>IE: append terminal point if distinct and trim corridor to eraser point limit
     IE->>Spatial: query final corridor envelope for content hit candidates
     Spatial-->>IE: committed candidate handles with generation and structuralRevision
-    IE->>Geometry: exact eraser checks; require isDeletable and exclude background elements
+    IE->>Geometry: exact eraser checks, require isDeletable and exclude background elements
     Geometry-->>IE: final erasedElementIds in document order
 
     alt final erasedElementIds is empty
@@ -88,7 +88,7 @@ sequenceDiagram
       Preview->>Frame: request overlay repaint cleanup
       Frame->>Signals: publish overlay cleanup repaint request
       Signals-->>Surface: repaint overlay without eraser corridor
-      Note over Touched,Signals: No touched set, revision change, spatial remove/update, projection eviction, main repaint, public document notification, or erase action is published.
+      Note over Touched,Signals: No touched set, revision change, spatial remove, projection eviction, main repaint, public document notification, or erase action is published.
     else at least one element is erased
       IE->>EK: open synchronous interaction edit
       EK->>EK: reject disposed or nested edit
@@ -98,7 +98,7 @@ sequenceDiagram
       IE->>Draft: remove each erasedElementId through edit mutation
       Note over IE,Draft: InteractionEngine never mutates DocumentStoreKernel directly.
       Draft->>Touched: record removedElementIds and selectionChanged when removed ids were selected
-      Note over Touched: Exact committed scope: removed ids; document, structural, bounds, visual, projection, and selection revision if selection changed.
+      Note over Touched: Exact committed scope: removed ids, document, structural, bounds, visual, projection, and selection revision if selection changed.
       IE->>Events: stage deferred erase action descriptor
       Note over Events: Not public yet. Deferred payload is CanvasEraseActionPayload(eraserThickness, erasedElementIds, corridorPointCount).
       EK->>EK: reject Future result before success path
@@ -110,8 +110,8 @@ sequenceDiagram
       Store-->>CC: preflight accepted
       CC->>Store: install compiled CommitPlan atomically
       Store->>Store: remove registry rows, layer memberships, family rows, and selected ids
-      Note over CC,Store: Atomic install is the commit boundary; no action is visible before this point.
-      Store->>Spatial: apply touched-id spatial remove/update for erased ids
+      Note over CC,Store: Atomic install is the commit boundary, no action is visible before this point.
+      Store->>Spatial: apply touched-id spatial remove for erased ids
       Spatial-->>Store: deleted ids removed from hit and paint indexes
       Store->>Projection: evict public document projection by projectionRevision
       Store->>Events: materialize CanvasActionCommitted erase after install

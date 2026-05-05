@@ -81,6 +81,7 @@ flowchart LR
   Runtime --> Resolver[App ResourceResolver]
   App --> Storage[App document storage]
   Storage --> API
+  JsonDocument[Schema v1 JSON document] --> API
 ```
 
 `c4_container.mmd`:
@@ -88,18 +89,21 @@ flowchart LR
 ```mermaid
 flowchart TB
   Public[lib/iwb_canvas_engine_next.dart exports src/api] --> RuntimeRoot
-  Surface[flutter_bridge CanvasSurface] --> FrameEngine
+  Surface[CanvasSurface public widget] --> FrameEngine
   Surface --> InteractionEngine
   RuntimeRoot --> Store[DocumentStoreKernel]
   RuntimeRoot --> Edit[EditKernel]
+  RuntimeRoot --> InteractionEngine
+  RuntimeRoot --> FrameEngine
+  RuntimeRoot --> Spatial[SpatialKernel]
   RuntimeRoot --> Resource[ResourceKernel]
   RuntimeRoot --> Codec[CodecBoundary]
   RuntimeRoot --> Diagnostics[DiagnosticsHub]
   Edit --> Store
   FrameEngine --> Store
-  FrameEngine --> Spatial[SpatialKernel]
+  FrameEngine --> Spatial
+  FrameEngine --> Resource
   InteractionEngine --> Edit
-  Resource --> FrameEngine
 ```
 
 `c4_component_runtime.mmd` must show all runtime owners and their allowed dependencies.

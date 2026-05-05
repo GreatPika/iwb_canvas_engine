@@ -17,10 +17,12 @@ flowchart LR
     JsonParse["JSON parse\nroot object required"]
     VersionGate["schemaVersion gate\nread exactly {1}"]
     FieldPolicy["Known v1 field validation\nunknown non-metadata fields ignored"]
-    PrimitiveValidation["Primitive and limit validation\nfinite numbers, colors, ids, counts"]
+    PrimitiveValidation["Primitive validation\nfinite numbers, colors, ids"]
     ResourceValidation["Resource validation\nimage resources, appKey source only"]
     ElementValidation["Element validation\nknown element kinds and enums only"]
-    ReferenceValidation["Cross-reference validation\nduplicate ids and missing resources"]
+    DuplicateIdValidation["Duplicate id validation\nresource, layer, and element ids"]
+    ReferenceValidation["Missing resource validation\nimage elements reference known resources"]
+    LayerCountValidation["Layer and node count validation\nschema limits"]
     MetadataValidation["Metadata validation\nJSON-only values and bounded extension area"]
     DecodeMaterializer["DTO materializer\nCanvasDocument immutable DTO"]
 
@@ -61,12 +63,13 @@ flowchart LR
   VersionGate -->|"schemaVersion == 1"| FieldPolicy
   FieldPolicy -->|"known schema fields"| PrimitiveValidation
   FieldPolicy -.->|"unknown non-metadata fields are ignored"| UnknownPreserve
-  FieldPolicy -->|"metadata objects"| MetadataValidation
-  PrimitiveValidation -->|"bounded ids, numbers, colors, layers, counts"| ResourceValidation
+  PrimitiveValidation -->|"bounded ids, numbers, colors"| ResourceValidation
   ResourceValidation -->|"validated resource descriptors"| ElementValidation
-  ElementValidation -->|"validated element family records"| ReferenceValidation
-  MetadataValidation -->|"validated metadata extension data"| ReferenceValidation
-  ReferenceValidation -->|"validated v1 document facts"| DecodeMaterializer
+  ElementValidation -->|"validated element family records and ids"| DuplicateIdValidation
+  DuplicateIdValidation -->|"unique ids accepted"| ReferenceValidation
+  ReferenceValidation -->|"known references accepted"| LayerCountValidation
+  LayerCountValidation -->|"bounded layer and node counts"| MetadataValidation
+  MetadataValidation -->|"validated v1 document facts"| DecodeMaterializer
   DecodeMaterializer -->|"immutable DTO; no runtime side effects"| PublicDocument
   PublicDocument -->|"decoded result"| App
 
@@ -74,7 +77,9 @@ flowchart LR
   ResourceValidation -.->|"source.kind not appKey"| UnknownKind
   ElementValidation -.->|"unknown element kind or enum"| UnknownKind
   PrimitiveValidation -.->|"invalid primitive or limit"| InvalidKnownField
-  ReferenceValidation -.->|"duplicate id or missing resource"| InvalidKnownField
+  DuplicateIdValidation -.->|"duplicate id"| InvalidKnownField
+  ReferenceValidation -.->|"missing resource"| InvalidKnownField
+  LayerCountValidation -.->|"layer or node count over limit"| InvalidKnownField
   MetadataValidation -.->|"non JSON-like or over limit"| InvalidKnownField
   UnsupportedVersion -.->|"codec failure"| DiagnosticRecord
   UnknownKind -.->|"codec failure"| DiagnosticRecord

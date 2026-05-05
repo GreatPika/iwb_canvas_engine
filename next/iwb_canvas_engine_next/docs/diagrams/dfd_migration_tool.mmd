@@ -15,7 +15,7 @@ flowchart LR
     ImageResourceMapper["Image resource mapper\nimageId to CanvasImageResource\nsource.kind = appKey"]
     LossClassifier["Loss and warning classifier\nunsupported fields,\nintentional losses, warnings"]
     CandidateV1["Candidate schema v1 document\nJSON-compatible map"]
-    ReportBuilder["MigrationReport builder\nversions, counts, created resources,\nunsupported fields, warnings, errors"]
+    ReportBuilder["MigrationReport builder\nversions, counts, created resources,\nunsupported fields, losses, warnings, errors"]
     DataLossBuilder["DataLossReport builder\nall intentional losses"]
     ToolFailure["Tool failure\nno successful v1 output"]
   end
@@ -27,7 +27,7 @@ flowchart LR
 
   subgraph Outputs["Migration outputs"]
     SchemaV1Output["Validated schema v1 output\nMap or JSON file"]
-    MigrationReport["MigrationReport\ninput v7, output v1,\nelement and resource counts"]
+    MigrationReport["MigrationReport\ninput v7, output v1,\nelement/resource counts, losses"]
     DataLossReport["DataLossReport\nno silent data loss"]
     ErrorReport["Error report\nsafe diagnostics and failed mappings"]
   end
@@ -66,7 +66,7 @@ flowchart LR
   OldSchemaChecks -->|"input version and source counts"| ReportBuilder
   ImageResourceMapper -->|"created resources from imageId"| ReportBuilder
   V1Validator -->|"output version and validated counts"| ReportBuilder
-  LossClassifier -->|"unsupported fields, warnings, errors"| ReportBuilder
+  LossClassifier -->|"unsupported fields, losses, warnings, errors"| ReportBuilder
   LossClassifier -->|"intentional losses"| DataLossBuilder
   ReportBuilder -->|"report artifact"| MigrationReport
   DataLossBuilder -->|"loss artifact"| DataLossReport

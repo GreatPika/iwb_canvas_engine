@@ -5,7 +5,7 @@ flowchart LR
   Surface["CanvasSurface\npaint and repaint host"]
 
   subgraph Sources["Invalidation sources"]
-    Touched["TouchedSet\nadded, removed, updated,\ngeometry, visual, resource,\nselection, meta, documentReplaced"]
+    Touched["TouchedSet\nadded/removed/updated/transformed ids,\ngeometry/visual changed ids,\nresource descriptor/visual ids,\nlayer order, background layer,\nselection, camera, background, grid,\npalette, documentReplaced"]
     LoadSuccess["Staged load success\ntyped replacement effect"]
     PreviewCleanup["Preview cleanup\nterminal or cancel repaint effect"]
     EmptyOrRollback["Empty touched set or rollback\nno revisions, cache eviction,\nspatial change, repaint, or events"]
@@ -56,7 +56,7 @@ flowchart LR
     StaticFrameInvalidation["StaticBackgroundCache invalidation\ncamera, background, grid"]
     TextPathInvalidation["Text, path, stroke cache invalidation\nonly changed render inputs"]
     MainRepaint["Main repaint bus"]
-    OverlayRepaint["Overlay repaint bus\npreview cleanup only"]
+    OverlayRepaint["Overlay repaint bus\npreview cleanup, load success, camera"]
     OverlaySnapshot["OverlayStateSnapshot\noverlayRevision"]
   end
 
@@ -89,6 +89,7 @@ flowchart LR
   RevisionState --> SelectionRevision
   RevisionState --> ProjectionRevision
   RevisionState --> ResourceRevision
+  RevisionState --> ResourceVisualRevision
 
   OrdinaryScope -->|"added or removed ids"| SpatialDelta
   OrdinaryScope -->|"geometry or transform changed ids"| SpatialDelta
@@ -124,7 +125,8 @@ flowchart LR
   SelectionRevision -->|"selection changed"| PaintPlanInvalidation
   ReplacementScope -->|"full frame cache reset allowed"| PaintPlanInvalidation
   LoadSuccess -->|"full frame cache reset typed effect"| PaintPlanInvalidation
-  VisualRevision -->|"camera/background/grid/meta visuals"| StaticFrameInvalidation
+  VisualRevision -->|"camera/background/grid only"| StaticFrameInvalidation
+  VisualRevision -->|"camera changed"| OverlayRepaint
   VisualRevision -->|"changed text, path, or stroke inputs"| TextPathInvalidation
   PaintPlanInvalidation -->|"scene records changed"| MainRepaint
   StaticFrameInvalidation -->|"background or camera frame changed"| MainRepaint

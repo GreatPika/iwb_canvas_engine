@@ -74,6 +74,11 @@ sequenceDiagram
       IE->>Preview: clear selected move preview and session
       Preview->>Frame: request main-scene repaint cleanup
       IE-->>Tools: finish with no edit and no action event
+    else resolver throws or returns non-finite delta
+      IE->>Preview: clear selected move preview and session
+      Preview->>Frame: request main-scene repaint cleanup
+      Note over EK,Store: No edit opens, no committed state changes, and no action event is published.
+      IE-->>Tools: rethrow projected runtime-safe error
     else finite committed delta accepted
       IE->>EK: open synchronous interaction edit
       EK->>EK: reject disposed, nested edit, or resolver reentrant mutation
@@ -84,7 +89,7 @@ sequenceDiagram
       Note over IE,Draft: newTransform = CanvasTransform.translation(delta).multiply(oldTransform)
       Draft->>Touched: record transformedElementIds, geometry, visual, projection
       IE->>Events: stage CanvasActionCommitted
-      Note over Events: type moveSelection; elementIds in document order; payload CanvasTransformActionPayload(delta: CanvasTransform.translation(delta), operation: move, pivotWorld: null).
+      Note over Events: type moveSelection, elementIds in document order, payload CanvasTransformActionPayload(delta: CanvasTransform.translation(delta), operation: move, pivotWorld: null).
       EK->>EK: reject Future result before success path
       EK->>CC: compile exact touched set, revisions, invalidation, repaint intent
       Touched-->>CC: transformed ids and revision facts
