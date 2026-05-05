@@ -12,6 +12,10 @@ flowchart LR
     ResourceDirtyCall["CanvasResourcePort\nmarkResourceDirty / markAllResourcesDirty"]
   end
 
+  subgraph Runtime["RuntimeRoot"]
+    ResourceDirtyDispatch["Resource dirty orchestration\nrevision increment + cache eviction"]
+  end
+
   subgraph Compiler["Commit compiler"]
     ExactPlan["CommitPlan\nexact revisions and invalidation scopes"]
     OrdinaryScope["Ordinary edit scope\ntouched ids and typed state only"]
@@ -48,7 +52,6 @@ flowchart LR
   subgraph Resources["ResourceKernel"]
     DescriptorCacheEvict["ImageResolveCache eviction\nresource descriptor changed"]
     DirtyResourceEvict["ImageResolveCache eviction\nexplicit dirty target or all"]
-    DirtyVisualOnly["Resource dirty visual path\nresourceVisualRevision only"]
   end
 
   subgraph Frame["FrameEngine"]
@@ -111,9 +114,9 @@ flowchart LR
   ResourceRevision -->|"descriptor upsert/remove"| DescriptorCacheEvict
   DescriptorCacheEvict -->|"resource-dependent paint changed"| MainRepaint
 
-  ResourceDirtyCall -->|"explicit external visual invalidation"| DirtyResourceEvict
-  DirtyResourceEvict -->|"cache entries only"| DirtyVisualOnly
-  DirtyVisualOnly -->|"increment visual cache version"| ResourceVisualRevision
+  ResourceDirtyCall -->|"explicit external visual invalidation"| ResourceDirtyDispatch
+  ResourceDirtyDispatch -->|"increment runtime/store visual revision"| ResourceVisualRevision
+  ResourceDirtyDispatch -->|"cache entries only"| DirtyResourceEvict
   ResourceVisualRevision -->|"resource visuals changed"| MainRepaint
   ResourceDirtyCall -.->|"forbidden"| DirtyDocumentRevision
   ResourceDirtyCall -.->|"forbidden"| DirtySelectionPreview

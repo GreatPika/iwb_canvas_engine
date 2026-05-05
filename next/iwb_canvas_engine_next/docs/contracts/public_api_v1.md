@@ -354,6 +354,8 @@ Surface contract:
 - interactive=false does not mutate runtime mode, document, selection, preview or resources;
 - if interactive changes from true to false while a pointer session is active,
   CanvasSurface routes cancel cleanup before disabling further routing;
+- pending preview state that is not owned by an active routed pointer session is
+  preserved when interactive becomes false;
 - toggling interactive back to true resumes routing only for subsequent pointer events;
 - CanvasSurface never mutates committed document directly;
 - CanvasSurface routes pointer samples into InteractionEngine;
@@ -1714,4 +1716,3 @@ final class _CanvasDiagnosticVerbose extends CanvasDiagnosticPolicy {
 No public diagnostics stream is exported in v1. Diagnostics are projected only through `CanvasDataException` and test-only/internal sinks.
 
 ---
-

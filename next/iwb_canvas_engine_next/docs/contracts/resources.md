@@ -50,6 +50,12 @@ Runtime cache:
   dirty resource ids.
 ```
 
+Paint/resource resolution receives immutable descriptor snapshots and
+`resourceRevision` from an allowed committed-state reader such as `FrameEngine`
+or `RuntimeRoot`. `ResourceKernel` must not import, read, or mutate
+`DocumentStoreKernel`; it owns resolver calls, resolved-image cache entries,
+dirty ids, and resolver-safe placeholder results.
+
 ### 7.2 Atomic operations
 
 Resource mutation is inside `CanvasEdit`:
@@ -98,6 +104,10 @@ Semantics:
 - after dispose throws StateError.
 ```
 
+`resourceVisualRevision` is committed runtime revision state. The public
+resource port delegates the revision increment to the runtime/store boundary
+and delegates cache invalidation to `ResourceKernel`.
+
 `markAllResourcesDirty` applies the same rule to every registered resource.
 
 ### 7.5 v1 resource boundary
@@ -125,4 +135,3 @@ diagnostic emitted only if verbose diagnostics enabled or schema missing referen
 ```
 
 ---
-

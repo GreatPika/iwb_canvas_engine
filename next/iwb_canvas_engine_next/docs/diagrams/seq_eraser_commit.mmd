@@ -88,7 +88,7 @@ sequenceDiagram
       Preview->>Frame: request overlay repaint cleanup
       Frame->>Signals: publish overlay cleanup repaint request
       Signals-->>Surface: repaint overlay without eraser corridor
-      Note over Touched,Signals: No touched set, revision change, spatial remove, projection eviction, main repaint, public document notification, or erase action is published.
+      Note over Touched,Signals: No touched set, committed document revision change, spatial remove, projection eviction, main repaint, public document notification, or erase action is published.
     else at least one element is erased
       IE->>EK: open synchronous interaction edit
       EK->>EK: reject disposed or nested edit
@@ -135,5 +135,5 @@ sequenceDiagram
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without eraser corridor
-    Note over Store,Signals: Rollback keeps committed document, revisions, selection, spatial index, projection cache, main repaint, public document notifications, and erase action unchanged.
+    Note over Store,Signals: Rollback keeps committed document revisions, selection, spatial index, projection cache, main repaint, public document notifications, and erase action unchanged.
   end

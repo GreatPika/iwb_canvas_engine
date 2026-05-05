@@ -14,7 +14,8 @@ flowchart LR
 
   subgraph Codec["CodecBoundary"]
     RawLimit["Raw JSON length check\n32 * 1024 * 1024 chars"]
-    JsonParse["JSON parse\nroot object required"]
+    JsonParse["JSON parse\nstring path only"]
+    RootObjectCheck["Root object check\nMap and parsed string"]
     VersionGate["schemaVersion gate\nread exactly {1}"]
     FieldPolicy["Known v1 field validation\nunknown non-metadata fields ignored"]
     PrimitiveValidation["Primitive validation\nfinite numbers, colors, ids"]
@@ -57,9 +58,10 @@ flowchart LR
   App -->|"decode request"| DecodeEntry
   JsonInput -->|"Map or JSON string"| DecodeEntry
   DecodeEntry -->|"string input"| RawLimit
-  DecodeEntry -->|"Map input skips parse\nbut still validates root"| JsonParse
+  DecodeEntry -->|"Map input skips parse"| RootObjectCheck
   RawLimit -->|"bounded raw text"| JsonParse
-  JsonParse -->|"root object facts"| VersionGate
+  JsonParse -->|"parsed JSON value"| RootObjectCheck
+  RootObjectCheck -->|"root object facts"| VersionGate
   VersionGate -->|"schemaVersion == 1"| FieldPolicy
   FieldPolicy -->|"known schema fields"| PrimitiveValidation
   FieldPolicy -.->|"unknown non-metadata fields are ignored"| UnknownPreserve

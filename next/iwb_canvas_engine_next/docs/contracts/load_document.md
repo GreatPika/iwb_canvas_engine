@@ -33,6 +33,9 @@ Do not assume:
 ## 12. `loadDocument` staged contract
 
 `CanvasEditPort.loadDocument(document)` is the new public external document replacement operation.
+The public API delegates orchestration to `RuntimeRoot`; it does not read from
+or install into `DocumentStoreKernel` directly. `DocumentStoreKernel` owns the
+atomic replacement install once validation and materialization have succeeded.
 
 Success ordering:
 
@@ -76,4 +79,3 @@ Failure ordering:
 ```
 
 ---
-

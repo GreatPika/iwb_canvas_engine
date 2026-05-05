@@ -137,7 +137,7 @@ Forbidden imports:
 lib/src/api/**               -> may not import src/store, src/edit, src/frame concrete internals
 lib/src/store/**             -> may not import src/interaction, src/frame, src/flutter_bridge
 lib/src/edit/**              -> may not import src/flutter_bridge
-lib/src/interaction/**       -> may not mutate store directly
+lib/src/interaction/**       -> may not import, read, or mutate src/store directly
 lib/src/frame/**             -> may not import public document projection as paint input
 lib/src/resources/**         -> may not import interaction state
 lib/src/codec/**             -> may not import Flutter widgets or interaction state
@@ -145,5 +145,8 @@ lib/src/flutter_bridge/**    -> may not import old iwb_canvas_engine
 all lib/**                   -> may not import old package or old runtime paths
 ```
 
----
+Committed facts used by interaction are supplied through narrow read-only query
+ports owned by the runtime/store boundary. Interaction code may depend on those
+intent-specific ports, not on `src/store` tables or concrete store internals.
 
+---

@@ -6,6 +6,7 @@ sequenceDiagram
   participant Surface as CanvasSurface
   participant Tools as CanvasToolPort
   participant IE as InteractionEngine
+  participant ReadPort as InteractionReadPort
   participant Store as DocumentStoreKernel
   participant Spatial as SpatialKernel
   participant Preview as CanvasPreviewState
@@ -22,8 +23,10 @@ sequenceDiagram
   Surface->>Tools: handlePointer(CanvasPointerSample down)
   Tools->>IE: normalized finite down sample
   IE->>IE: admit one active pointer token
-  IE->>Store: read selection ids and transformable flags
-  Store-->>IE: selected ids in document order
+  IE->>ReadPort: read selected move start facts
+  ReadPort->>Store: read selection ids and transformable flags
+  Store-->>ReadPort: selected ids and movable flags in document order
+  ReadPort-->>IE: selected ids and movable flags in document order
   IE->>Spatial: hit-test down position once
   Spatial-->>IE: top visible selectable element id
   IE->>IE: start active selected move session
@@ -63,8 +66,10 @@ sequenceDiagram
     Surface->>Tools: handlePointer(CanvasPointerSample up)
     Tools->>IE: same-token terminal sample
     IE->>IE: read proposedDelta from selected move session
-    IE->>Store: read summary, moved element reads, selection bounds
-    Store-->>IE: CanvasMoveCommitRequest inputs
+    IE->>ReadPort: read selected move commit facts
+    ReadPort->>Store: read summary, moved element reads, selection bounds
+    Store-->>ReadPort: CanvasMoveCommitRequest inputs
+    ReadPort-->>IE: CanvasMoveCommitRequest inputs
     IE->>Resolver: resolve(request with proposedDelta)
     Resolver-->>IE: CanvasMoveCancel(reason)
     IE->>IE: discard selected move commit intent
@@ -85,6 +90,6 @@ sequenceDiagram
   Note over Preview,Frame: Selected move cleanup affects the main scene; it is not overlay-only cleanup.
   Note over EK,Draft: No EditKernel commit; no DraftDocument mutation.
   Note over EK,Touched: No TouchedSet, no CommitPlan, and no atomic install.
-  Note over Store,Spatial: No document, revision, selection, spatial, or projection state changes.
+  Note over Store,Spatial: No committed document revision, selection, spatial, or projection state changes.
   Note over Caches: No projection cache eviction and no resource cache change.
   Note over Events,Signals: No action event and no public document notification.

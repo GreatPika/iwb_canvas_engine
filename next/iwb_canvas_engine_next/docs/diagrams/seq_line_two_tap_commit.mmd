@@ -6,6 +6,7 @@ sequenceDiagram
   participant Surface as CanvasSurface
   participant Tools as CanvasToolPort
   participant IE as InteractionEngine
+  participant ReadPort as InteractionReadPort
   participant Preview as CanvasPreviewState
   participant Frame as FrameEngine
   participant Geometry as GeometryPolicy
@@ -24,8 +25,10 @@ sequenceDiagram
   Tools->>IE: normalized finite tap sample
   IE->>IE: reject active pointer conflict and stale token
   IE->>IE: read drawStyle line color and finite lineThickness
-  IE->>Store: read current controllerEpoch
-  Store-->>IE: epoch for pending line start
+  IE->>ReadPort: read current controllerEpoch for pending line
+  ReadPort->>Store: read current controllerEpoch
+  Store-->>ReadPort: current epoch
+  ReadPort-->>IE: epoch for pending line start
   IE->>IE: store pending line start bound to current epoch
   IE->>Preview: publish kind pendingLineStart with start, timestamp, color, and thickness
   Note over IE,Preview: Pending line session is epoch-bound; preview snapshot is immutable and no committed document state is touched.
@@ -84,7 +87,7 @@ sequenceDiagram
       Preview->>Frame: request overlay repaint cleanup
       Frame->>Signals: publish overlay cleanup repaint request
       Signals-->>Surface: repaint overlay without line preview
-      Note over Touched,Signals: No touched set, revision change, spatial add, projection eviction, main repaint, or drawLine action is published.
+      Note over Touched,Signals: No touched set, committed document revision change, spatial add, projection eviction, main repaint, or drawLine action is published.
     else line geometry is accepted
       IE->>EK: open synchronous interaction edit
       EK->>EK: reject disposed or nested edit
@@ -131,5 +134,5 @@ sequenceDiagram
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without line preview
-    Note over Store,Signals: Rollback keeps committed document, revisions, spatial index, projection cache, main repaint, public document notifications, and drawLine action unchanged.
+    Note over Store,Signals: Rollback keeps committed document revisions, spatial index, projection cache, main repaint, public document notifications, and drawLine action unchanged.
   end

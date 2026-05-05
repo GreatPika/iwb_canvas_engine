@@ -6,6 +6,7 @@ sequenceDiagram
   participant Surface as CanvasSurface
   participant Tools as CanvasToolPort
   participant IE as InteractionEngine
+  participant ReadPort as InteractionReadPort
   participant Store as DocumentStoreKernel
   participant Spatial as SpatialKernel
   participant Preview as CanvasPreviewState
@@ -21,8 +22,10 @@ sequenceDiagram
   Surface->>Tools: handlePointer(CanvasPointerSample down)
   Tools->>IE: normalized finite down sample
   IE->>IE: admit one active pointer token
-  IE->>Store: read current selection ids
-  Store-->>IE: previous selection in document order
+  IE->>ReadPort: read marquee start selection facts
+  ReadPort->>Store: read current selection ids
+  Store-->>ReadPort: previous selection in document order
+  ReadPort-->>IE: previous selection in document order
   IE->>Spatial: hit-test down position once
   Spatial-->>IE: top visible selectable element id or none
 

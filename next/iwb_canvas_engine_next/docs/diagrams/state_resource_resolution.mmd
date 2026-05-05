@@ -5,9 +5,10 @@ stateDiagram-v2
   state "Active resource runtime" as RuntimeActive
   note right of RuntimeActive
     Resource descriptors are committed document input.
-    App-owned images are external input. The engine owns
-    only descriptor tables, dirty state, listeners, and
-    runtime cache references; no file, network, or asset IO.
+    App-owned images are external input. DocumentStoreKernel
+    owns descriptor tables; ResourceKernel owns dirty state,
+    listener/cache references, and resolver calls only.
+    There is no file, network, or asset IO.
   end note
 
   RuntimeActive --> ResolveRequested: "main paint image record carries resourceId"
@@ -16,16 +17,17 @@ stateDiagram-v2
   RuntimeActive --> Disposed: "dispose()"
 
   state "Resolve request" as ResolveRequested
-  ResolveRequested --> DescriptorLookup: "read committed descriptor by resourceId"
+  ResolveRequested --> DescriptorSnapshot: "Frame/Runtime reads descriptor snapshot"
 
-  state "Descriptor lookup" as DescriptorLookup
-  note right of DescriptorLookup
-    Lookup reads committed resource descriptors only.
+  state "Descriptor snapshot" as DescriptorSnapshot
+  note right of DescriptorSnapshot
+    The committed-state owner reads resource descriptors and
+    passes immutable descriptor facts to ResourceKernel.
     The resolver cannot create, remove, or update descriptors.
   end note
 
-  DescriptorLookup --> MissingDescriptor: "descriptor missing"
-  DescriptorLookup --> AppKeyDescriptor: "CanvasImageResource source is appKey"
+  DescriptorSnapshot --> MissingDescriptor: "descriptor missing"
+  DescriptorSnapshot --> AppKeyDescriptor: "CanvasImageResource source is appKey"
 
   state "Missing descriptor" as MissingDescriptor
   MissingDescriptor --> PlaceholderResult: "return bounded placeholder"

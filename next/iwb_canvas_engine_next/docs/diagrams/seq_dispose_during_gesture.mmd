@@ -39,6 +39,7 @@ sequenceDiagram
 
     alt active preview is selected move
       IE->>Preview: clear selected move preview and active session
+      IE->>Preview: bump overlayRevision for cleared active preview
       Preview->>Frame: request main-scene repaint cleanup
       Frame->>Store: capture committed frame facts and selection ids once
       Frame->>Preview: capture no selectedMoveDelta
@@ -49,6 +50,7 @@ sequenceDiagram
       Note over Preview,Frame: Selected move cleanup is main-scene cleanup, not overlay-only cleanup.
     else active preview is overlay-only
       IE->>Preview: clear overlay preview and active session
+      IE->>Preview: bump overlayRevision for cleared active preview
       Preview->>Frame: request overlay repaint cleanup
       Frame->>Preview: capture no overlay preview primitive
       Frame->>Signals: publish overlay cleanup repaint request
@@ -62,7 +64,7 @@ sequenceDiagram
 
     Runtime->>Actions: close stream
     Runtime->>TextRequests: close stream
-    Note over Runtime,Signals: No public listenable close is specified by v1; dispose does not increment document or preview revisions by itself.
+    Note over Runtime,Signals: No public listenable close is specified by v1; dispose does not increment document revisions. overlayRevision advances only when dispose clears active preview.
 
     Runtime->>Runtime: transition to disposed
     Runtime-->>App: dispose complete

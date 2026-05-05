@@ -4,6 +4,7 @@ sequenceDiagram
 
   actor Caller as Application code
   participant API as CanvasEditPort
+  participant Runtime as RuntimeRoot
   participant Stager as Staged load boundary
   participant Diagnostics as DiagnosticsHub
   participant Store as DocumentStoreKernel
@@ -15,35 +16,38 @@ sequenceDiagram
   participant Signals as Public signals
 
   Caller->>API: loadDocument(document)
-  API->>API: reject disposed runtime before mutation
+  API->>Runtime: delegate loadDocument(document)
+  Runtime->>Runtime: reject disposed runtime before mutation
 
   alt runtime is disposed
-    API--x Caller: throw StateError("CanvasRuntime is disposed.")
-    Note over API,Signals: Rejection is a boundary failure; no runtime, store, cache, repaint, action, or listener effect is started.
+    Runtime--x API: throw StateError("CanvasRuntime is disposed.")
+    API--x Caller: rethrow StateError
+    Note over Runtime,Signals: Rejection is a boundary failure; no store, cache, repaint, action, or listener effect is started.
   else runtime accepts public entry
-    API->>Store: read current committed identity, selection, revisions, and id admission state
-    Store-->>API: current committed state remains installed
+    Runtime->>Store: read current committed identity, selection, revisions, and id admission state
+    Store-->>Runtime: current committed state remains installed
 
-    API->>Stager: validate public CanvasDocument
+    Runtime->>Stager: validate public CanvasDocument
     Stager->>Stager: verify DTO invariants, limits, duplicate ids, resource references, and metadata
 
     alt public document validation fails
-      Stager--x API: validation failure
+      Stager--x Runtime: validation failure
     else runtime materialization fails
-      API->>Stager: prepare full document replacement from DTO and current snapshot
+      Runtime->>Stager: prepare full document replacement from DTO and current snapshot
       Stager->>Stager: materialize compact tables, resource descriptors, order, meta, and id generator floor
-      Stager--x API: materialization failure
+      Stager--x Runtime: materialization failure
     end
 
-    API->>Diagnostics: project load failure
+    Runtime->>Diagnostics: project load failure
     Diagnostics->>Diagnostics: sanitize path and bounded details
-    Diagnostics-->>API: CanvasDataException or StateError
+    Diagnostics-->>Runtime: CanvasDataException or StateError
+    Runtime--x API: rethrow projected exception
     API--x Caller: rethrow projected exception
 
-    Note over API,Interaction: Active gesture is not interrupted; preview, pending line, pointer normalization, and pending tap history remain unchanged.
+    Note over Runtime,Interaction: Active gesture is not interrupted; preview, pending line, pointer normalization, and pending tap history remain unchanged.
     Note over Store: Committed document identity, selection, controllerEpoch, and all document revisions remain unchanged.
     Note over Projection,Frame: Projection, spatial, resource, paint, static, text, path, stroke, and overlay caches remain unchanged.
     Note over Frame,Signals: No main repaint, overlay repaint, CanvasActionCommitted event, text edit event, public notify, or revision listener publication occurs.
   end
 
-  Note over API,Store: Failure stops before PreparedDocumentLoad install; there is no atomic install, revision bump, cache invalidation action, or success-path interaction cleanup.
+  Note over Runtime,Store: Failure stops before PreparedDocumentLoad install; there is no atomic install, revision bump, cache invalidation action, or success-path interaction cleanup.

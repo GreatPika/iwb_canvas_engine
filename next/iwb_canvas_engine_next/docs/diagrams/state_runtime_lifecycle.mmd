@@ -81,5 +81,6 @@ stateDiagram-v2
     no CanvasActionCommitted event from dispose;
     no CanvasTextEditRequested event from dispose;
     no ValueListenable close claim in v1;
-    no document or preview revision bump by dispose itself.
+    no committed document revision bump by dispose itself;
+    overlayRevision advances only when dispose clears active preview.
   end note

@@ -5,6 +5,7 @@ sequenceDiagram
   actor Caller as Application code
   participant Codec as CodecBoundary
   participant API as CanvasEditPort
+  participant Runtime as RuntimeRoot
   participant Stager as Staged load boundary
   participant Store as DocumentStoreKernel
   participant Interaction as InteractionEngine
@@ -23,24 +24,25 @@ sequenceDiagram
   end
 
   Caller->>API: loadDocument(document)
-  API->>API: reject disposed runtime before mutation
-  API->>Store: read current committed identity, revisions, and id admission state
-  Store-->>API: current committed snapshot remains installed
+  API->>Runtime: delegate loadDocument(document)
+  Runtime->>Runtime: reject disposed runtime before mutation
+  Runtime->>Store: read current committed identity, revisions, and id admission state
+  Store-->>Runtime: current committed snapshot remains installed
 
-  API->>Stager: validate public CanvasDocument
+  Runtime->>Stager: validate public CanvasDocument
   Stager->>Stager: verify DTO invariants, limits, duplicate ids, and resource references
-  API->>Stager: prepare full document replacement from DTO and current snapshot
+  Runtime->>Stager: prepare full document replacement from DTO and current snapshot
   Stager->>Stager: materialize compact tables, resource descriptors, order, meta, and id generator floor
-  Stager-->>API: PreparedDocumentLoad replacement payload
-  Note over API,Store: No interaction interrupt, preview clear, cache eviction, repaint, public notify, or store mutation occurs before preparation succeeds.
+  Stager-->>Runtime: PreparedDocumentLoad replacement payload
+  Note over Runtime,Store: No interaction interrupt, preview clear, cache eviction, repaint, public notify, or store mutation occurs before preparation succeeds.
 
-  API->>Interaction: success-only interrupt active interaction
+  Runtime->>Interaction: success-only interrupt active interaction
   Interaction->>Interaction: cancel active gesture and clear preview
-  Interaction->>Interaction: bump overlayRevision for cleared preview
-  Interaction-->>API: preview cleared; preview signal queued until install
+  Interaction->>Interaction: bump overlayRevision if preview was active
+  Interaction-->>Runtime: preview cleared; preview signal queued until install
   Note over Interaction,Signals: Preview state may be cleared before install, but no public signal is published before the committed replacement is installed.
 
-  API->>Store: install PreparedDocumentLoad atomically
+  Runtime->>Store: install PreparedDocumentLoad atomically
   Store->>Store: replace compact committed tables in one commit boundary
   Store->>Store: assign new committed identity and clear selection
   Store->>Store: reset generated id admission to avoid loaded ids
@@ -59,4 +61,5 @@ sequenceDiagram
   Store->>Signals: publish document and revision listeners after install
   Interaction->>Signals: publish preview revision listener after install
   Note over Signals: loadDocument emits no CanvasActionCommitted event.
+  Runtime-->>API: loadDocument complete
   API-->>Caller: return after post-install effects are scheduled and public listeners are notified

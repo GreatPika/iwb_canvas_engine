@@ -3,12 +3,12 @@ title Runtime owner component view
 Container(PublicAPI, "Public API", "lib/src/api/", "Stable DTOs, operations, events, and errors.")
 Container(RuntimeRoot, "RuntimeRoot", "lib/src/runtime/", "Composition root for document, edit, interaction, frame, spatial, resource, codec, and diagnostic services.")
 Container_Boundary(runtime_components, "RuntimeRoot internals") {
-  Component(DocumentStoreKernel, "DocumentStoreKernel", "lib/src/store/", "Committed document state, revisions, selection, and resources.")
+  Component(DocumentStoreKernel, "DocumentStoreKernel", "lib/src/store/", "Committed document state, revisions, selection, and resource descriptors.")
   Component(EditKernel, "EditKernel", "lib/src/edit/", "Synchronous edit sessions with draft, touched-set, commit, and rollback ownership.")
   Component(InteractionEngine, "InteractionEngine", "lib/src/interaction/", "Pointer sessions, tool state, previews, and terminal edit requests.")
   Component(FrameEngine, "FrameEngine", "lib/src/frame/", "Captured main and overlay frames, paint plans, and repaint buses.")
   Component(SpatialKernel, "SpatialKernel", "lib/src/spatial/", "Hit testing, bounds, and spatial indexes derived from document state.")
-  Component(ResourceKernel, "ResourceKernel", "lib/src/resources/", "Resource descriptors, resolver cache, and invalidation.")
+  Component(ResourceKernel, "ResourceKernel", "lib/src/resources/", "Resolver boundary, image resolve cache, and dirty resource ids.")
   Component(CodecBoundary, "CodecBoundary", "lib/src/codec/", "Schema v1 JSON decode, encode, validation, and diagnostics.")
   Component(DiagnosticsHub, "DiagnosticsHub", "lib/src/diagnostics/", "Structured validation and runtime error projection.")
 }

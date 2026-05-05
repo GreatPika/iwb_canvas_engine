@@ -10,6 +10,10 @@ flowchart LR
     DirtyCall["CanvasResourcePort\nmarkResourceDirty / markAllResourcesDirty"]
   end
 
+  subgraph Runtime["RuntimeRoot"]
+    ResourceDirtyDispatch["Resource dirty orchestration\nrevision increment + cache invalidation"]
+  end
+
   subgraph Edit["EditKernel"]
     ResourceMutation["Resource descriptor mutation\ninside rollback-safe edit only"]
     CommitPlan["CommitPlan\nresource descriptor invalidation"]
@@ -20,6 +24,7 @@ flowchart LR
     AppKeyDescriptor["CanvasResourceSource.appKey only\nid, appKey, contentHash,\nbyteLength, mimeType, metadata"]
     DocumentRevision["documentRevision\nchanges only on committed descriptor mutation"]
     ResourceRevision["resourceRevision\ndescriptor version"]
+    ResourceVisualRevision["resourceVisualRevision\nruntime/store visual version"]
     ProjectionRevision["projectionRevision\npublic document projection version"]
     ProjectionEvict["DocumentProjectionCache eviction\nresource descriptor is projected"]
   end
@@ -28,15 +33,14 @@ flowchart LR
     MainPaint["Main paint frame\ncaptured once"]
     RenderRecords["Immutable RenderElementRecord list\nimage resource ids"]
     AssetRequest["Paint asset request\nresourceId -> descriptor"]
+    DescriptorRead["Descriptor snapshot lookup\nresourceId to appKey descriptor"]
     PaintAsset["Paint asset\nui.Image or bounded placeholder"]
     MainRepaint["Main repaint request"]
   end
 
   subgraph Resources["ResourceKernel"]
-    DescriptorRead["Descriptor lookup\nresourceId to appKey descriptor"]
     ImageResolveCache["ImageResolveCache\nresourceId + resourceRevision"]
     DirtySet["Dirty resource ids\nexplicit visual invalidation"]
-    ResourceVisualRevision["resourceVisualRevision\nvisual cache version"]
     MissingResult["Missing or unresolved result\ncached for this frame"]
     Placeholder["Bounded missing image placeholder"]
   end
@@ -62,10 +66,10 @@ flowchart LR
   Surface -->|"main paint asks for records"| MainPaint
   MainPaint -->|"image elements carry resource ids"| RenderRecords
   RenderRecords -->|"resourceId"| AssetRequest
-  AssetRequest -->|"read committed descriptor"| DescriptorRead
+  AssetRequest -->|"read committed descriptor snapshot"| DescriptorRead
   DescriptorRead -->|"resourceId lookup"| ResourceTable
   ResourceTable -->|"CanvasImageResource with appKey"| DescriptorRead
-  DescriptorRead -->|"cache key: resourceId + resourceRevision"| ImageResolveCache
+  DescriptorRead -->|"descriptor snapshot + resourceRevision"| ImageResolveCache
 
   ImageResolveCache -->|"cache hit: app-owned image"| PaintAsset
   ImageResolveCache -->|"cache miss: sync resolve request"| AppResolver
@@ -80,9 +84,10 @@ flowchart LR
   PaintAsset -->|"assets only; no live resource mutation"| MainPaint
 
   App -->|"external image contents changed"| DirtyCall
-  DirtyCall -->|"explicit dirty signal"| DirtySet
+  DirtyCall -->|"delegate dirty signal"| ResourceDirtyDispatch
+  ResourceDirtyDispatch -->|"increment visual revision only"| ResourceVisualRevision
+  ResourceDirtyDispatch -->|"explicit cache invalidation request"| DirtySet
   DirtySet -->|"invalidate target or all cache entries"| ImageResolveCache
-  DirtySet -->|"increment visual revision only"| ResourceVisualRevision
   ResourceVisualRevision -->|"schedule main repaint"| MainRepaint
   MainRepaint --> Surface
 

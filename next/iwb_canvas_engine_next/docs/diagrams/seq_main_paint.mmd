@@ -51,9 +51,9 @@ sequenceDiagram
 
   opt records include image resource ids
     loop for each image resource id in records
-      Frame->>Resources: resolve paint asset(resourceId, resolver)
-      Resources->>Store: read committed descriptor for resource id
-      Store-->>Resources: appKey descriptor or missing descriptor
+      Frame->>Store: read committed descriptor snapshot for resource id
+      Store-->>Frame: appKey descriptor, resourceRevision, or missing descriptor
+      Frame->>Resources: resolve paint asset(descriptor snapshot, resourceRevision, resolver)
 
       alt cached resolved image is current
         Resources-->>Frame: app-owned image paint asset

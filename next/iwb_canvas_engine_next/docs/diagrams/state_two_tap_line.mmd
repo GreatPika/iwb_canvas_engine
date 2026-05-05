@@ -27,14 +27,15 @@ stateDiagram-v2
   note right of PendingStart
     Pending line state outlives unrelated pointer-session
     terminal cleanup. Only line-owned cleanup, mode/tool
-    change, successful load, interactive=false, cancel,
-    dispose, or terminal line decision may clear it.
+    change, successful load, cancel, dispose, or terminal
+    line decision may clear it.
   end note
 
   PendingStart --> LinePreview: finite pointer move with same tool and epoch / overlay line preview only
   PendingStart --> SecondTapGate: finite second tap
-  PendingStart --> CleanupOnly: cancel, mode/tool change, interactive=false, or loadDocument success
+  PendingStart --> CleanupOnly: cancel, mode/tool change, or loadDocument success
   PendingStart --> PendingStart: loadDocument failure / preserve pending start and preview
+  PendingStart --> PendingStart: interactive=false / disable future routing only; preserve pending start
   PendingStart --> PendingStart: unrelated pointer cleanup or stale non-terminal sample / preserve pending start
   PendingStart --> DisposeCleanup: runtime.dispose()
 
@@ -48,8 +49,9 @@ stateDiagram-v2
 
   LinePreview --> LinePreview: finite move with same tool and epoch / replace overlay preview end
   LinePreview --> SecondTapGate: finite second tap
-  LinePreview --> CleanupOnly: cancel, mode/tool change, interactive=false, or loadDocument success
+  LinePreview --> CleanupOnly: cancel, mode/tool change, or loadDocument success
   LinePreview --> LinePreview: loadDocument failure / preserve pending line
+  LinePreview --> LinePreview: interactive=false / disable future routing only; preserve line preview
   LinePreview --> LinePreview: unrelated pointer cleanup or stale non-terminal sample / preserve preview
   LinePreview --> DisposeCleanup: runtime.dispose()
 
@@ -76,8 +78,8 @@ stateDiagram-v2
   note right of EditKernelOutcome
     Atomic install is the only commit boundary. Rollback,
     rejected Future, stale handle, preflight failure, or exception
-    leaves document, revisions, spatial index, projection cache,
-    main repaint, and drawLine action unchanged.
+    leaves committed document revisions, spatial index,
+    projection cache, main repaint, and drawLine action unchanged.
   end note
 
   EditKernelOutcome --> SuccessfulCommit: atomic install accepted
@@ -107,6 +109,7 @@ stateDiagram-v2
     Clears pending start and line overlay preview only. No line
     element, document notification, drawLine action, spatial delta,
     projection eviction, or main-scene preview is produced.
+    overlayRevision advances only when pending preview was visible.
   end note
   CleanupOnly --> OverlayCleanup: pending overlay was visible
   CleanupOnly --> Idle: no visible overlay

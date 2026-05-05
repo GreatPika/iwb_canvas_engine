@@ -109,7 +109,10 @@ projectionRevision      -> public CanvasDocument projection invalidated
 overlayRevision         -> preview state changed
 ```
 
-No-op edit does not change revisions. Effects-only action without state change is not used in v1.
+No-op edit does not change revisions. Preview cleanup increments
+`overlayRevision` only when it clears or replaces existing preview state; a
+cleanup request against already-empty preview state is a no-op. Effects-only
+action without state change is not used in v1.
 
 ### 10.3 Public document projection
 
@@ -128,4 +131,3 @@ No-op edit does not change revisions. Effects-only action without state change i
 Projection DTOs must deep-copy all public collections and metadata.
 
 ---
-

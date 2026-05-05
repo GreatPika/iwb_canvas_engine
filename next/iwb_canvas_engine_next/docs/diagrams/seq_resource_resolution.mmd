@@ -4,6 +4,7 @@ sequenceDiagram
 
   participant App as Application
   participant Surface as CanvasSurface
+  participant Runtime as RuntimeRoot
   participant Frame as FrameEngine
   participant Store as DocumentStoreKernel
   participant Resources as ResourceKernel
@@ -21,9 +22,9 @@ sequenceDiagram
 
   opt records contain image resource ids
     loop for each image RenderElementRecord
-      Frame->>Resources: resolve paint image(record.resourceId, resolver)
-      Resources->>Store: read committed descriptor and descriptor resourceRevision by resourceId
-      Store-->>Resources: CanvasImageResource appKey descriptor or missing descriptor
+      Frame->>Store: read committed descriptor snapshot and resourceRevision by resourceId
+      Store-->>Frame: CanvasImageResource appKey descriptor or missing descriptor
+      Frame->>Resources: resolve paint image(descriptor snapshot, resourceRevision, resolver)
 
       alt descriptor is missing
         Resources-->>Frame: bounded missing image placeholder
@@ -61,11 +62,12 @@ sequenceDiagram
 
   opt application reports changed external resource visuals
     App->>Port: markResourceDirty(resourceId) or markAllResourcesDirty()
-    Port->>Resources: invalidate dirty resourceVisual cache for target id or all registered resources
+    Port->>Runtime: delegate resource dirty signal
+    Runtime->>Store: increment resourceVisualRevision only
+    Store-->>Runtime: documentRevision, selection, and preview unchanged
+    Runtime->>Resources: invalidate dirty resourceVisual cache for target id or all registered resources
     Resources->>Cache: invalidate ImageResolveCache entries by resourceId or all
-    Resources->>Store: increment resourceVisualRevision only
-    Store-->>Resources: documentRevision, selection, and preview unchanged
-    Resources->>Signals: schedule main repaint
+    Runtime->>Signals: schedule main repaint
     Signals-->>Surface: repaint main scene
 
     Note over Port,Store: Dirty visual invalidation does not mutate descriptors, document revision, action events, selection, preview, or CanvasDocument projection.

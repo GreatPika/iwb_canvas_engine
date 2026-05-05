@@ -85,6 +85,10 @@ Rules:
 - InteractionEngine receives normalized CanvasPointerSample;
 - stale pointer token samples are ignored except terminal cleanup;
 - terminal exception clears preview and schedules correct repaint;
+- committed facts for gesture decisions are read through narrow read-only
+  interaction query ports;
+- interaction query results are immutable, intent-specific facts and never
+  expose store tables or mutation methods;
 - InteractionEngine commits only through EditKernel.
 ```
 
@@ -107,4 +111,3 @@ This is mandatory. The old selected move preview uses main-scene repaint through
 Double-tap on a visible selectable text element emits `CanvasTextEditRequested`. It does not mutate document and does not select/deselect by itself.
 
 ---
-

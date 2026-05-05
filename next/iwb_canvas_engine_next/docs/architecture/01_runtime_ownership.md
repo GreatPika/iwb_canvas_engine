@@ -50,14 +50,21 @@ Canvas engine state
 | Зона | Хранит | Не должна делать |
 |---|---|---|
 | Public API | стабильные DTO, операции, события, ошибки | раскрывать таблицы, handles, caches, runtime internals |
-| DocumentStoreKernel | committed document state, revisions, selection, resources | читать gesture state или Flutter widget |
+| DocumentStoreKernel | committed document state, revisions, selection, resource descriptors | читать gesture state или Flutter widget |
 | EditKernel | synchronous edit sessions, draft, touched sets, commit/rollback | выполнять paint или pointer routing |
-| InteractionEngine | pointer sessions, tools, preview state, terminal commit requests | менять committed document в обход EditKernel |
+| InteractionEngine | pointer sessions, tools, preview state, terminal commit requests | читать или менять DocumentStoreKernel напрямую |
 | FrameEngine | captured main/overlay frames, paint plans, repaint buses | экспортировать public document |
-| ResourceKernel | resource descriptors, resolver cache, invalidation | владеть app domain assets |
+| ResourceKernel | resolver boundary, image resolve cache, dirty resource ids | владеть app domain assets или committed descriptors |
 | SpatialKernel | coarse candidate lookup, outlier policy | быть source of truth для сцены |
 | CodecBoundary | schema v1 encode/decode, validation, diagnostics | зависеть от Flutter widget или gestures |
 | DiagnosticsHub | internal diagnostic records, public error projection | добавлять public stream без API-решения |
+
+Gesture decisions may need committed facts such as controller epoch,
+selection ids, movable flags, text snapshots, and bounds. Those facts enter
+`InteractionEngine` only through narrow read-only interaction query boundaries
+owned by the runtime/store boundary. The query boundary returns immutable,
+intent-specific facts and never exposes store tables or mutation methods.
+Committed mutations requested by interaction still go through `EditKernel`.
 
 Composition root:
 

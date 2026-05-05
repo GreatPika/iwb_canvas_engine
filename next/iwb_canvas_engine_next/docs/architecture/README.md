@@ -9,8 +9,9 @@ documents as the source for current runtime ownership.
 
 ## Read path
 
-1. Read `architecture.yaml` for the machine-readable owner, boundary, and
-   dependency model.
+1. Read `architecture.yaml` for the machine-readable architecture contract:
+   owner, boundary, and dependency model. Its `source_refs` point back to the
+   role docs that explain the model.
 2. Read `00_architecture_overview.md` for scope and non-goals.
 3. Read `01_runtime_ownership.md` and `02_package_boundaries.md` for the target
    runtime shape.

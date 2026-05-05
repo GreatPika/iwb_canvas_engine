@@ -1,8 +1,9 @@
 C4Component
 title EditKernel code component view
 
-Container(PublicAPI, "Public API", "lib/src/api/", "Stable edit and command ports that open synchronous edit sessions.")
-Container(DocumentStoreKernel, "DocumentStoreKernel", "lib/src/store/", "Committed document tables, revisions, selection, resources, and projection cache.")
+Container(PublicAPI, "Public API", "lib/src/api/", "Stable edit and command ports that delegate to runtime.")
+Container(RuntimeRoot, "RuntimeRoot", "lib/src/runtime/", "Coordinates edit and command entrypoints without exposing internals.")
+Container(DocumentStoreKernel, "DocumentStoreKernel", "lib/src/store/", "Committed document tables, revisions, selection, resource descriptors, and projection cache.")
 Container(DiagnosticsHub, "DiagnosticsHub", "lib/src/diagnostics/", "Structured validation and runtime error projection.")
 
 Container_Boundary(edit_kernel, "EditKernel (lib/src/edit/)") {
@@ -14,7 +15,8 @@ Container_Boundary(edit_kernel, "EditKernel (lib/src/edit/)") {
   Component(CommitApplier, "CommitApplier", "atomic installer", "Installs committed changes only after a compiled and preflighted plan.")
 }
 
-Rel(PublicAPI, EditSession, "opens edit(fn) or command mutation")
+Rel(PublicAPI, RuntimeRoot, "delegates edit(fn) or command mutation")
+Rel(RuntimeRoot, EditSession, "opens synchronous edit session")
 Rel(EditSession, DocumentStoreKernel, "reads committed revision")
 Rel(EditSession, DraftDocument, "creates and closes")
 Rel(DraftDocument, TouchedSet, "records mutations")

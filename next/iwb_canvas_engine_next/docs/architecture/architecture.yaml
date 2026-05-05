@@ -1,5 +1,5 @@
 schema_version: 1
-source_of_truth: docs/architecture/architecture.yaml
+machine_readable_contract: docs/architecture/architecture.yaml
 package:
   name: iwb_canvas_engine_next
   boundary: next/iwb_canvas_engine_next
@@ -33,7 +33,8 @@ runtime_owners:
   - id: DocumentStoreKernel
     label: DocumentStoreKernel
     package_path: lib/src/store/
-    summary: Committed document state, revisions, selection, and resources.
+    summary: Committed document state, revisions, selection, and resource
+      descriptors.
     source_refs:
       - docs/architecture/01_runtime_ownership.md
       - docs/architecture/02_package_boundaries.md
@@ -71,7 +72,7 @@ runtime_owners:
   - id: ResourceKernel
     label: ResourceKernel
     package_path: lib/src/resources/
-    summary: Resource descriptors, resolver cache, and invalidation.
+    summary: Resolver boundary, image resolve cache, and dirty resource ids.
     source_refs:
       - docs/architecture/01_runtime_ownership.md
       - docs/architecture/02_package_boundaries.md
@@ -152,7 +153,8 @@ forbidden_dependencies:
     reason: Public API must not expose runtime storage internals.
   - from: InteractionEngine
     to: DocumentStoreKernel
-    reason: Pointer handling must request committed changes through EditKernel.
+    reason: Pointer handling reads committed facts through interaction query
+      ports and requests committed changes through EditKernel.
   - from: FrameEngine
     to: EditKernel
     reason: Rendering is read-only against committed or preview state.

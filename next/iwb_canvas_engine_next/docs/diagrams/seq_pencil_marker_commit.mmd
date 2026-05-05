@@ -70,7 +70,7 @@ sequenceDiagram
       Preview->>Frame: request overlay repaint cleanup
       Frame->>Signals: publish overlay cleanup repaint request
       Signals-->>Surface: repaint overlay without stroke preview
-      Note over Touched,Signals: No touched set, commit plan, revision change, spatial change, projection eviction, main repaint, or draw action is published.
+      Note over Touched,Signals: No touched set, commit plan, committed document revision change, spatial change, projection eviction, main repaint, or draw action is published.
     else final stroke is accepted
       IE->>EK: open synchronous interaction edit
       EK->>EK: reject disposed or nested edit
@@ -117,5 +117,5 @@ sequenceDiagram
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without stroke preview
-    Note over Store,Signals: Rollback keeps committed document, revisions, spatial index, projection cache, main repaint, public document notifications, and draw actions unchanged.
+    Note over Store,Signals: Rollback keeps committed document revisions, spatial index, projection cache, main repaint, public document notifications, and draw actions unchanged.
   end
