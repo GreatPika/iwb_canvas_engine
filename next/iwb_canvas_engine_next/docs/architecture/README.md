@@ -42,8 +42,8 @@ documents as the source for current runtime ownership.
 - Diagnostics work routes to `docs/contracts/diagnostics.md`.
 - Test, benchmark, guardrail, and release-readiness work routes to
   `docs/verification/`.
-- Legacy-oracle evidence and implementation sequencing route to
-  `docs/planning/`.
+- Implementation sequencing routes to `docs/implementation/`.
+- Legacy-oracle evidence and historical planning notes route to `docs/planning/`.
 - Donor decisions route to `docs/donors/` and
   `docs/_registry/donors.yaml`.
 - Change Contracts route to `../../plan/`.

@@ -28,5 +28,4 @@ Coverage summary for context capsules and registries.
 - `section_22_guardrails_machine_checks`: must_read=linked, donors=linked, diagrams=explicit none, tests=linked, guardrails=linked
 - `section_23_tests`: must_read=linked, donors=linked, diagrams=explicit none, tests=linked, guardrails=linked
 - `section_24_benchmarks`: must_read=linked, donors=linked, diagrams=explicit none, tests=linked, guardrails=explicit none
-- `section_26_implementation_phases`: must_read=linked, donors=linked, diagrams=explicit none, tests=explicit none, guardrails=linked
 - `section_27_final_release_gates`: must_read=linked, donors=linked, diagrams=explicit none, tests=linked, guardrails=linked

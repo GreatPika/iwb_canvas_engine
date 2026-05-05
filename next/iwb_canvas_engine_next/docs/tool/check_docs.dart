@@ -33,6 +33,7 @@ void _checkRequiredEntrypoints() {
   const requiredDirs = [
     'docs/architecture',
     'docs/contracts',
+    'docs/implementation',
     'docs/verification',
     'docs/planning',
     'docs/donors',
@@ -56,9 +57,6 @@ void _checkSectionsRegistry() {
     if (!_sectionIds.add(id)) {
       _fail('duplicate section id: $id');
     }
-    if (file.contains('docs/implementation')) {
-      _fail('$id still points to retired implementation bucket');
-    }
     _requireFile(file);
   }
 
@@ -72,6 +70,7 @@ void _checkMarkdownPaths() {
   final roots = [
     Directory('docs/architecture'),
     Directory('docs/contracts'),
+    Directory('docs/implementation'),
     Directory('docs/verification'),
     Directory('docs/planning'),
     Directory('docs/donors'),
@@ -103,13 +102,13 @@ void _checkMarkdownPaths() {
 void _checkNoRetiredActiveReferences() {
   final retired = [
     'canonical truth remains',
-    'docs/implementation',
     'iwb_canvas_engine_next_full_implementation_plan_v2',
     'iwb_canvas_engine_next_donor_inventory',
   ];
   final activeRoots = [
     Directory('docs/architecture'),
     Directory('docs/contracts'),
+    Directory('docs/implementation'),
     Directory('docs/verification'),
     Directory('docs/planning'),
     Directory('docs/donors'),
@@ -147,6 +146,7 @@ void _checkDiagramContractAlignment() {
   for (final root in [
     Directory('docs/architecture'),
     Directory('docs/contracts'),
+    Directory('docs/implementation'),
     Directory('docs/planning'),
     Directory('docs/verification'),
     Directory('docs/donors'),

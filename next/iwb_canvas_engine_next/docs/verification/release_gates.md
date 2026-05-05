@@ -8,7 +8,6 @@ Must read before editing:
 - `section_22_guardrails_machine_checks` -> `docs/verification/guardrails.md`
 - `section_23_tests` -> `docs/verification/tests.md`
 - `section_24_benchmarks` -> `docs/verification/benchmarks.md`
-- `section_26_implementation_phases` -> `docs/planning/implementation_phases.md`
 Feeds phases:
 - `P12`
 Related donors:
