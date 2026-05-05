@@ -9,8 +9,8 @@ Container_Boundary(runtime_components, "RuntimeRoot internals") {
   Component(FrameEngine, "FrameEngine", "lib/src/frame/", "Captured main and overlay frames, paint plans, and repaint buses.")
   Component(SpatialKernel, "SpatialKernel", "lib/src/spatial/", "Hit testing, bounds, and spatial indexes derived from document state.")
   Component(ResourceKernel, "ResourceKernel", "lib/src/resources/", "Resource descriptors, resolver cache, and invalidation.")
-  Component(CodecBoundary, "CodecBoundary", "lib/src/codec/", "Schema v1 JSON decode, encode, migration, and diagnostics.")
-  Component(DiagnosticsHub, "DiagnosticsHub", "lib/src/diagnostics/", "Structured validation, runtime, and migration error projection.")
+  Component(CodecBoundary, "CodecBoundary", "lib/src/codec/", "Schema v1 JSON decode, encode, validation, and diagnostics.")
+  Component(DiagnosticsHub, "DiagnosticsHub", "lib/src/diagnostics/", "Structured validation and runtime error projection.")
 }
 Rel(PublicAPI, RuntimeRoot, "creates and drives")
 Rel(RuntimeRoot, DocumentStoreKernel, "coordinates")

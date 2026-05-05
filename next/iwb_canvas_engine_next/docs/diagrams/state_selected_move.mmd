@@ -75,9 +75,18 @@ stateDiagram-v2
     end note
 
     ResolverGate --> ResolverCleanup: "CanvasMoveCancel"
-    ResolverGate --> ResolverCleanup: "resolver throws / runtime-safe error after cleanup"
-    ResolverGate --> ResolverCleanup: "CanvasMoveCommit delta non-finite"
+    ResolverGate --> ResolverErrorCleanup: "resolver throws"
+    ResolverGate --> ResolverErrorCleanup: "CanvasMoveCommit delta non-finite"
     ResolverGate --> CommitIntent: "finite CanvasMoveCommit delta"
+
+    state "Resolver error cleanup" as ResolverErrorCleanup
+    note right of ResolverErrorCleanup
+      Resolver exceptions and invalid committed deltas clear
+      selected-move preview/session, then leave through the
+      pointer handling boundary as runtime-safe errors.
+      They are not cancel/no-op outcomes.
+    end note
+    ResolverErrorCleanup --> MainSceneCleanup: "clear preview/session and rethrow"
 
     state "Selected move commit intent" as CommitIntent
     note right of CommitIntent
@@ -125,8 +134,7 @@ stateDiagram-v2
   state "Resolver cleanup" as ResolverCleanup
   note right of ResolverCleanup
     The resolver was already called, but its result did
-    not produce an edit: CanvasMoveCancel, resolver failure,
-    or non-finite CanvasMoveCommit delta. No edit opens,
+    not produce an edit: CanvasMoveCancel. No edit opens,
     no Store mutation occurs, and no action is emitted.
   end note
 

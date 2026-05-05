@@ -26,13 +26,14 @@ flowchart LR
   end
 
   subgraph Spatial["SpatialKernel"]
-    Candidates["Visible/selectable candidates\ngeometry policy hit results"]
+    Candidates["Geometry policy candidates\nhit/select: visible selectable;\neraser: visible deletable non-background"]
   end
 
   subgraph EditKernel["EditKernel"]
     InteractionEdit["Interaction-owned edit bridge\nsynchronous edit session"]
     Draft["DraftDocument\nrollback-safe mutations"]
-    Touched["TouchedSet and CommitPlan\nexact committed effects"]
+    Touched["TouchedSet\nexact changed state"]
+    Compiler["CommitCompiler\npreflight and commit plan"]
     Rollback["Rollback discard\nno committed effects"]
   end
 
@@ -59,7 +60,7 @@ flowchart LR
   TokenGate -->|"valid down/move sample\nfor draw/line/move delta"| SessionPreview
   TokenGate -->|"valid sample needing candidates\nhit policy, marquee, eraser"| SpatialQuery
   SpatialQuery -->|"read-only candidate lookup"| Candidates
-  Candidates -->|"hit-test result and selection candidates"| SpatialQuery
+  Candidates -->|"hit-test, selection, or eraser candidate facts"| SpatialQuery
 
   SessionPreview -->|"pointer/session preview facts"| PreviewState
   SpatialQuery -->|"candidate facts"| CandidatePreview
@@ -77,14 +78,18 @@ flowchart LR
   CleanupByKind -->|"selected move cleanup"| MainRepaint
   CleanupByKind -->|"overlay preview cleanup"| OverlayRepaint
 
-  CommitIntent -->|"selected move request when moved"| MoveResolver
-  MoveResolver -.->|"CanvasMoveCancel, zero move, empty movable set,\nor resolver failure cleanup"| CancelIntent
+  CommitIntent -->|"selected move zero delta or empty movable set\nbefore resolver"| CancelIntent
+  CommitIntent -->|"selected move request when non-zero\nand movable set is non-empty"| MoveResolver
+  MoveResolver -.->|"CanvasMoveCancel"| CancelIntent
+  MoveResolver -.->|"resolver exception requires preview cleanup"| TerminalCleanup
+  MoveResolver -.->|"runtime-safe error"| Diagnostics
   MoveResolver -->|"finite committed delta"| CommitIntent
 
   CommitIntent -->|"committed mutation request"| InteractionEdit
   InteractionEdit -->|"draft mutations for terminal result"| Draft
   Draft -->|"exact touched state"| Touched
-  Touched -->|"preflight and commit payload"| AtomicInstall
+  Touched -->|"compile exact effects"| Compiler
+  Compiler -->|"preflighted commit payload"| AtomicInstall
   AtomicInstall -->|"replace committed tables atomically"| Committed
 
   AtomicInstall -->|"apply touched spatial scope"| SpatialDelta

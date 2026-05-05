@@ -16,7 +16,8 @@ flowchart LR
     Draft["DraftDocument\nrollback-safe mutable copy"]
     Touched["TouchedSet\nexact changed state"]
     NoOp["Empty touched set\nno revisions, cache eviction, repaint, or events"]
-    Plan["CommitPlan\nrevisions, invalidation, repaint intent"]
+    Compiler["CommitCompiler\ncompile touched state, preflight,\nand prepare repaint masks"]
+    Plan["CommitPlan\nimmutable commit payload:\nrevisions, invalidation, repaint intent"]
     Rollback["Rollback discard\nbuffered effects only"]
   end
 
@@ -46,8 +47,10 @@ flowchart LR
   Draft -->|"mutation facts"| Touched
   Touched -->|"empty touched set"| NoOp
   NoOp -->|"return without install or side effects"| EditResult
-  Touched -->|"non-empty exact invalidation inputs"| Plan
-  Plan -->|"preflight data and commit payload"| Install
+  Touched -->|"non-empty exact invalidation inputs"| Compiler
+  Compiler -->|"produces immutable payload"| Plan
+  Compiler -->|"preflight invariants before install"| Committed
+  Plan -->|"commit payload for atomic install"| Install
   Install -->|"replace committed tables atomically"| Committed
 
   Install -->|"apply spatial update scope"| SpatialDelta
@@ -61,5 +64,5 @@ flowchart LR
   SessionGate -.->|"StateError before callback"| Rollback
   Rollback -.->|"discard draft, events, repaint, spatial/resource/projection effects"| App
   SessionGate -->|"validation/runtime failure"| Diagnostics
-  Install -->|"preflight failure"| Diagnostics
+  Compiler -->|"preflight failure before atomic install"| Diagnostics
   Diagnostics -->|"projected exception"| App

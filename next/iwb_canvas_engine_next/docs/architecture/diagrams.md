@@ -104,7 +104,7 @@ flowchart TB
 
 `c4_component_runtime.mmd` must show all runtime owners and their allowed dependencies.
 
-`c4_code_edit_kernel.mmd` must show `EditSession`, `DraftDocument`, `TouchedSet`, `CommitPlan`, `CommitApplier`.
+`c4_code_edit_kernel.mmd` must show `EditSession`, `DraftDocument`, `TouchedSet`, `CommitCompiler`, `CommitPlan`, `CommitApplier`.
 
 ### 21.2 Data flow diagrams
 
@@ -163,4 +163,3 @@ state_resource_resolution.mmd
 ```
 
 ---
-

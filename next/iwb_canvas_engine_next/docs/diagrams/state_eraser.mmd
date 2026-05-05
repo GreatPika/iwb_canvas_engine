@@ -10,6 +10,7 @@ stateDiagram-v2
   end note
 
   Idle --> DownAdmission: generic pointer session admits finite normalized down
+  Idle --> Disposed: runtime.dispose()
   Idle --> Idle: stale move/up/cancel or invalid down / no eraser session
 
   state "Down admitted by pointer session" as DownAdmission
@@ -117,6 +118,10 @@ stateDiagram-v2
   }
 
   Previewing --> Idle: eraser session closed
+  Previewing --> Disposed: dispose cleanup complete
+
+  state "Disposed runtime" as Disposed
+  Disposed --> Disposed: pointer sample or mutating operation / StateError
 
   note left of Previewing
     Forbidden paths:

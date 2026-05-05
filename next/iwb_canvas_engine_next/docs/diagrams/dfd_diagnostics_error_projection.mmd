@@ -2,7 +2,8 @@
 flowchart LR
 
   App["Application code"]
-  Tooling["Migration tooling\noutside production core"]
+  MigrationTooling["Migration tooling\noutside production core"]
+  MigrationReport["Migration report\nowned by canvas_migration_tools"]
 
   subgraph PublicBoundary["Public API and runtime boundaries"]
     PublicCalls["Public calls\nDTO construction, codec, load, edit, resources"]
@@ -14,7 +15,6 @@ flowchart LR
   subgraph ErrorSources["Error sources"]
     ValidationErrors["Validation errors\nschema, DTO, limits,\nids, metadata, references"]
     RuntimeErrors["Runtime errors\nedit, interaction, frame,\nspatial, resource"]
-    MigrationErrors["Migration errors\nunsupported fields, losses,\nwarnings, failed mapping"]
     InternalErrors["Internal diagnostics errors\nsanitized fallback path"]
   end
 
@@ -48,15 +48,13 @@ flowchart LR
   PublicCalls -->|"boundary validation failure"| ValidationErrors
   PublicCalls -->|"runtime failure from public operation"| RuntimeErrors
   RuntimeFlows -->|"pointer, paint, spatial,\nor resource failure"| RuntimeErrors
-  Tooling -->|"migration report failure"| MigrationErrors
+  MigrationTooling -->|"tool-owned failures,\nlosses, and warnings"| MigrationReport
 
   ValidationErrors -->|"error path"| DiagnosticRecord
   RuntimeErrors -->|"error path"| DiagnosticRecord
-  MigrationErrors -->|"tool error path"| DiagnosticRecord
   InternalErrors -->|"self-protection path"| DiagnosticRecord
   ValidationErrors -->|"bounded validation context"| RawDetails
   RuntimeErrors -->|"safe runtime facts only"| RawDetails
-  MigrationErrors -->|"report counts and warnings"| RawDetails
   InternalErrors -->|"fallback facts"| RawDetails
 
   PolicyGate -->|"controls detail level and sinks"| Sanitizer

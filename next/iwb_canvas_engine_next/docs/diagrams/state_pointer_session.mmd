@@ -63,8 +63,17 @@ stateDiagram-v2
     TerminalDecision --> CommitIntent: committing non-move tool terminal intent
 
     state "Selected move resolver decision" as ResolverDecision
-    ResolverDecision --> CleanupOnly: CanvasMoveCancel or resolver failure
+    ResolverDecision --> CleanupOnly: CanvasMoveCancel
+    ResolverDecision --> ResolverErrorCleanup: resolver exception
     ResolverDecision --> CommitIntent: finite CanvasMoveCommit delta
+
+    state "Resolver error cleanup" as ResolverErrorCleanup
+    note right of ResolverErrorCleanup
+      Resolver exceptions clear the selected-move preview/session,
+      then rethrow through the pointer handling boundary as a
+      runtime-safe error. They are not cancel/no-op outcomes.
+    end note
+    ResolverErrorCleanup --> CloseSession: clear preview/session and rethrow
 
     state "Commit intent" as CommitIntent
     note right of CommitIntent

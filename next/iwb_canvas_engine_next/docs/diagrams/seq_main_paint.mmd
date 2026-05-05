@@ -14,7 +14,7 @@ sequenceDiagram
 
   Surface->>Frame: paint main scene request(viewportRect, cameraOffset, dpr, resolver)
   Frame->>Store: capture committed tables, revisions, camera, viewport, and selection once
-  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, visualRevision, selectionRevision, resourceRevision, resourceVisualRevision, cameraOffset, viewportRect, selectionIds
+  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, visualRevision, selectionRevision, resourceVisualRevision, cameraOffset, viewportRect, selectionIds
   Frame->>Preview: capture immutable selected move preview once
   Preview-->>Frame: selectedMoveDelta or none
   Note over Frame: CapturedMainFrame freezes the runtime facts used by this main paint frame.
@@ -50,8 +50,8 @@ sequenceDiagram
 
   opt records include image resource ids
     loop for each image resource id in records
-      Frame->>Resources: resolve paint asset(resourceId, captured resource revisions, resolver)
-      Resources->>Store: resolve committed descriptor against captured resourceRevision
+      Frame->>Resources: resolve paint asset(resourceId, captured resourceVisualRevision, resolver)
+      Resources->>Store: read committed descriptor for resource id
       Store-->>Resources: appKey descriptor or missing descriptor
 
       alt cached resolved image is current

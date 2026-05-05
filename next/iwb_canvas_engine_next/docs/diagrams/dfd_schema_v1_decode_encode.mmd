@@ -13,7 +13,7 @@ flowchart LR
   end
 
   subgraph Codec["CodecBoundary"]
-    RawLimit["Raw JSON length check\n32MB string limit"]
+    RawLimit["Raw JSON length check\n32 * 1024 * 1024 chars"]
     JsonParse["JSON parse\nroot object required"]
     VersionGate["schemaVersion gate\nread exactly {1}"]
     FieldPolicy["Known v1 field validation\nunknown non-metadata fields ignored"]
@@ -45,9 +45,9 @@ flowchart LR
     LegacyBlocked["No legacy schema or public types\nno SceneController, SceneSnapshot,\nNodeSpec, NodePatch, PatchField"]
   end
 
-  subgraph Forbidden["Forbidden side effects and preservation"]
+  subgraph RuntimePolicy["Runtime boundaries and preservation policy"]
     RuntimeMutation["No decode/encode mutation\nof committed runtime state"]
-    RuntimeProjection["Runtime projection is caller-owned\noutside schema encode flow"]
+    RuntimeProjection["DocumentProjectionCache\nbuilt only by readDocument,\nencodeCanvasDocument, tests/tools,\nor explicit edit.readDraftDocument"]
     UnknownPreserve["Unknown non-metadata fields\nnot preserved by encode"]
     MigrationInCore["No production schema v7 read/write\nmigration is separate tooling"]
   end
@@ -85,6 +85,7 @@ flowchart LR
   PublicError -.->|"throw projected error"| App
 
   App -->|"encode request"| EncodeEntry
+  RuntimeProjection -->|"may supply public DTO\nthrough documented runtime read paths"| PublicDocument
   PublicDocument -->|"public DTO input"| EncodeEntry
   EncodeEntry -->|"validate DTO before writing JSON"| DtoValidation
   DtoValidation -->|"valid public DTO facts"| CanonicalEncoder
@@ -98,6 +99,5 @@ flowchart LR
   DtoValidation -.->|"invalid DTO"| DiagnosticRecord
   DecodeMaterializer -.->|"forbidden"| RuntimeMutation
   CanonicalEncoder -.->|"forbidden"| RuntimeMutation
-  EncodeEntry -.->|"forbidden source path"| RuntimeProjection
   VersionGate -.->|"forbidden"| MigrationInCore
   CanonicalMap -.->|"forbidden legacy/public fields"| LegacyBlocked
