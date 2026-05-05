@@ -107,7 +107,7 @@ Paint admission:
 - background elements are included in paint scope;
 - content elements are included in paint scope;
 - candidate admitted if queryRect overlaps paintBoundsWorld;
-- edge-touch parity tests must cover old behavior.
+- edge-touch parity tests must cover legacy behavior.
 ```
 
 Marquee selection:
@@ -131,4 +131,3 @@ Eraser:
 ```
 
 ---
-

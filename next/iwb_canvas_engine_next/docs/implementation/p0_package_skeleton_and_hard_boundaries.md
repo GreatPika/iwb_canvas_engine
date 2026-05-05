@@ -2,14 +2,14 @@
 
 ## Build
 
-- create packages/iwb_canvas_engine_next
+- populate the existing `next/iwb_canvas_engine_next/` package skeleton
 - create public barrel exporting only src/api/**
-- add old-public-symbol ban guardrail
-- add no-old-import guardrail
+- add `api.no_legacy_public_types` guardrail
+- add `core.no_legacy_imports` guardrail
 - add RuntimeRoot skeleton
 - add diagram file placeholders
-- add CI target for new package
-- add failing public_types_defined_test.
+- add CI target for next package
+- add `api.public_types_complete` guardrail test first, then close with it green.
 
 ## Read first
 
@@ -39,11 +39,11 @@
 ## Guardrails
 
 - `diagrams.all_required_present` - required Mermaid files exist
-- `new_api.no_old_public_types` - old public golden symbols not exported by new package
-- `new_core.no_legacy_imports` - no import of old package/runtime
-- `new_core.no_node_spec_patch_shape_dependency` - no old NodeSpec/NodePatch/PatchField in core
-- `new_core.no_scene_controller_shape_dependency` - no SceneController concept in core
-- `new_core.single_runtime_root` - exactly one production RuntimeRoot
+- `api.no_legacy_public_types` - legacy public golden symbols not exported by next package
+- `core.no_legacy_imports` - no import of legacy package/runtime
+- `core.no_node_spec_patch_shape_dependency` - no legacy NodeSpec/NodePatch/PatchField in core
+- `core.no_scene_controller_shape_dependency` - no SceneController concept in core
+- `core.single_runtime_root` - exactly one production RuntimeRoot
 
 ## Tests
 
@@ -53,7 +53,7 @@
 
 ## Exit gate
 
-- new package builds empty public API skeleton
-- old package not imported
-- old public symbols not exported
+- next package builds empty public API skeleton
+- legacy package not imported
+- legacy public symbols not exported
 - all required public type names have files.

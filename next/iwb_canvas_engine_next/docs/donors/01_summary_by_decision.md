@@ -5,7 +5,7 @@ Canonical source: `docs/_registry/donors.yaml`
 Feeds registry: `docs/_registry/donors.yaml`
 Feeds indexes:
 - `docs/indexes/donor_to_phase.md`
-Use rule: donor entries are phase-bound implementation inputs, not old architecture to copy.
+Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 
 ## Summary by decision
@@ -13,7 +13,7 @@ Use rule: donor entries are phase-bound implementation inputs, not old architect
 ### Strong direct-copy candidates
 
 These are small enough or cohesive enough to copy first, then rename/relocate
-inside the new package as needed.
+inside the next package as needed.
 
 | Area | Donor | Reuse | Proof to port |
 |---|---|---:|---|

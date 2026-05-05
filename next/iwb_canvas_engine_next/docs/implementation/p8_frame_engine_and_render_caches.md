@@ -55,7 +55,7 @@
 
 ## Guardrails
 
-- `new_core.single_runtime_root` - exactly one production RuntimeRoot
+- `core.single_runtime_root` - exactly one production RuntimeRoot
 - `preview.selected_move_main_repaint` - selected move preview increments main repaint, not overlay
 
 ## Tests

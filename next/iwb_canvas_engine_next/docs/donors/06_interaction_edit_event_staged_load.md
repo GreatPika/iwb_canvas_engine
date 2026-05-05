@@ -5,13 +5,13 @@ Canonical source: `docs/_registry/donors.yaml`
 Feeds registry: `docs/_registry/donors.yaml`
 Feeds indexes:
 - `docs/indexes/donor_to_phase.md`
-Use rule: donor entries are phase-bound implementation inputs, not old architecture to copy.
+Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 
 ## Interaction, edit, event, and staged-load donors
 
 These donors carry critical behavior. The public controller/facade shells are
-not donors for the new public API.
+not donors for the next public API.
 
 | Donor | What to preserve | Reuse | Risks | Target phase |
 |---|---|---:|---|---|
@@ -26,5 +26,4 @@ not donors for the new public API.
 | `lib/src/interactive/internal/scene_controller_mutation_boundary.dart` | single interaction-owned bridge into committed writes | `adapt` | current bridge names and access types are legacy | P6/P9 |
 | `lib/src/controller/scene_writer_runtime.dart`, `lib/src/controller/scene_snapshot_materializer.dart`, `lib/src/controller/scene_controller_committed_mutation_access.dart` | staged load: validate/materialize first, interrupt active interaction only before successful apply, consume prepared replacement once | `adapt` | do not leak prepared replacement through public API | P6/P9 |
 | `lib/src/model/scene_import_draft.dart`, `scene_policy.dart`, `scene_from_import_draft.dart`, `scene_import_draft_from_snapshot.dart` | validated import draft seam before runtime materialization | `adapt` | rename around new `loadDocument` model | P3/P6 |
-| `lib/src/interactive/scene_controller_interaction.dart`, `scene_controller_scene.dart` | behavioral contracts and validation calls only | `rewrite-reference` | old public API shape is banned | P1/P2 checklist |
-
+| `lib/src/interactive/scene_controller_interaction.dart`, `scene_controller_scene.dart` | behavioral contracts and validation calls only | `rewrite-reference` | legacy public API shape is banned | P1/P2 checklist |

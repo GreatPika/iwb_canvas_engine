@@ -32,8 +32,8 @@ Guardrails:
 - `edit.stale_handle_rejected`
 - `events.low_level_edit_no_user_actions`
 Do not assume:
-- no old SceneWriteTxn
-- no old controller shell
+- no legacy SceneWriteTxn
+- no legacy controller shell
 - no async nested edit
 <!-- CONTEXT:END -->
 

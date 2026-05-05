@@ -33,7 +33,7 @@ Guardrails:
 - `codec.known_fields_validated`
 Do not assume:
 - no schema v7 public entrypoints as next API
-- no old SceneBuilder API shape
+- no legacy SceneBuilder API shape
 <!-- CONTEXT:END -->
 
 ## 5. Schema v1 full field contract

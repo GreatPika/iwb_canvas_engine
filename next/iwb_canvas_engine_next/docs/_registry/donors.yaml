@@ -161,7 +161,7 @@
   use_for:
     - structure validation behavior
   do_not_copy:
-    - old public type names
+    - legacy public type names
   required_tests:
     - test/contract/scene_structure_validation_test.dart
   blocks:
@@ -759,7 +759,7 @@
   use_for:
     - creation DTO validation split from snapshots
   do_not_copy:
-    - old family names and old API shape
+    - legacy family names and legacy API shape
   required_tests:
     - public constructor validation tests
   blocks:
@@ -1303,7 +1303,7 @@
   use_for:
     - behavioral contracts and validation calls as evidence
   do_not_copy:
-    - old public API shape
+    - legacy public API shape
   required_tests:
     - functional ledger row tests
   blocks:
@@ -1324,12 +1324,12 @@
   use_for:
     - behavioral evidence only through functional ledger
   do_not_copy:
-    - old public API shape
+    - legacy public API shape
     - controller facade files
   required_tests:
     - "none"
   blocks:
-    - new_core.no_scene_controller_shape_dependency
+    - core.no_scene_controller_shape_dependency
   related_sections:
     - section_00_status_and_scope
     - section_22_guardrails_machine_checks

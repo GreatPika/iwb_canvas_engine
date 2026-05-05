@@ -55,7 +55,7 @@
 - `events.low_level_edit_no_user_actions` - CanvasEdit.removeElement/clearContent emit no user action events
 - `load.prepares_before_interrupt` - failed load does not interrupt gesture
 - `load.success_interrupts_before_install` - success interrupt happens before atomic install
-- `new_core.single_runtime_root` - exactly one production RuntimeRoot
+- `core.single_runtime_root` - exactly one production RuntimeRoot
 
 ## Tests
 

@@ -19,23 +19,23 @@
 
 ## Required donors
 
-- `direct_structure_validation` - decision: `copy_adapt`; target owner: DTO and schema structure validation
-- `foundation_transform2d` - decision: `copy_adapt`; target owner: CanvasTransform and geometry math
-- `foundation_contract_limits` - decision: `copy_adapt`; target owner: Validation limits and public constructors
-- `foundation_error_contract` - decision: `copy_adapt`; target owner: CanvasDataException and DiagnosticsHub
+- `direct_structure_validation` - decision: `copy/adapt`; target owner: DTO and schema structure validation
+- `foundation_transform2d` - decision: `copy/adapt`; target owner: CanvasTransform and geometry math
+- `foundation_contract_limits` - decision: `copy/adapt`; target owner: Validation limits and public constructors
+- `foundation_error_contract` - decision: `copy/adapt`; target owner: CanvasDataException and DiagnosticsHub
 - `foundation_validators` - decision: `adapt`; target owner: Public DTO and schema validators
 - `dto_boundary_schema` - decision: `adapt`; target owner: Typed and JSON schema field groups
-- `dto_scene_value_validation` - decision: `adapt_rewrite`; target owner: Runtime/model validation adapters
+- `dto_scene_value_validation` - decision: `adapt/rewrite`; target owner: Runtime/model validation adapters
 - `dto_node_boundary_mapping` - decision: `adapt`; target owner: Codec and store mapping families
-- `codec_guards` - decision: `copy_adapt`; target owner: CodecBoundary raw JSON guards
-- `codec_json_require` - decision: `copy_adapt`; target owner: Schema v1 strict field access
+- `codec_guards` - decision: `copy/adapt`; target owner: CodecBoundary raw JSON guards
+- `codec_json_require` - decision: `copy/adapt`; target owner: Schema v1 strict field access
 - `codec_json_parse` - decision: `adapt`; target owner: Schema v1 primitive parsers
 - `codec_metadata_decode` - decision: `adapt`; target owner: Schema v1 metadata codec
 - `codec_layer_decode` - decision: `adapt`; target owner: Layer schema codec
 - `codec_node_common_decode` - decision: `adapt`; target owner: Element common schema codec
 - `codec_family_decode` - decision: `adapt`; target owner: Element family codecs
-- `codec_scene_codec_flow` - decision: `adapt_rewrite`; target owner: CodecBoundary codec reference
-- `codec_validation_path_surface` - decision: `copy_adapt`; target owner: Diagnostic path projection
+- `codec_scene_codec_flow` - decision: `adapt/rewrite`; target owner: CodecBoundary codec reference
+- `codec_validation_path_surface` - decision: `copy/adapt`; target owner: Diagnostic path projection
 - `validated_import_draft` - decision: `adapt`; target owner: Validated document import draft
 
 ## Forbidden donor structure
@@ -56,8 +56,8 @@
 - `codec.known_fields_validated` - known schema v1 fields are validated and canonical encoder writes only v1 fields
 - `codec.schema_v1_exact` - only schema v1 read/write
 - `diagnostics.disabled_no_alloc_hot_path` - no record allocation on successful hot path
-- `new_api.functional_ledger_complete` - every functional ledger row has API + tests
-- `new_api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
+- `api.functional_ledger_complete` - every functional ledger row has API + tests
+- `api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
 
 ## Tests
 

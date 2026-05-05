@@ -28,7 +28,7 @@ Guardrails:
 - `codec.schema_v1_exact`
 - `codec.known_fields_validated`
 Do not assume:
-- no old SceneCodec surface as next API
+- no legacy SceneCodec surface as next API
 - no schema v7 read/write in production core
 <!-- CONTEXT:END -->
 

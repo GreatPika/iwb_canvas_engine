@@ -24,9 +24,9 @@ Required tests:
 - `test.store.read_document_projection`
 - `test.store.no_projection_hot_path`
 Guardrails:
-- `new_core.single_runtime_root`
+- `core.single_runtime_root`
 Do not assume:
-- no old mutable runtime graph
+- no legacy mutable runtime graph
 - no SceneController shape dependency
 <!-- CONTEXT:END -->
 

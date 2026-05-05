@@ -2,79 +2,79 @@
 
 Guardrails extracted from split section 22.
 
-## new_api.functional_ledger_complete
+## api.functional_ledger_complete
 
 - Rule: every functional ledger row has API + tests
 - Sections: `section_08_functional_ledger`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
 - Tests: `test.functional_ledger.row_specific_tests`, `test.guardrails.blocking_suite`
 
-## new_api.integration_surface_complete
+## api.integration_surface_complete
 
-- Rule: API has enough public surface for app-level NewEngineAdapter, but adapter is not in package
+- Rule: API has enough public surface for app-level NextEngineAdapter, but adapter is not in package
 - Sections: `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.guardrails.blocking_suite`
 
-## new_api.v1_scope_gate_green_before_freeze
+## api.v1_scope_gate_green_before_freeze
 
 - Rule: P1.5 scope gate passed before public API freeze starts
 - Sections: `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.v1_scope_gate`, `test.guardrails.blocking_suite`
 
-## new_api.no_old_public_types
+## api.no_legacy_public_types
 
-- Rule: old public golden symbols not exported by new package
+- Rule: legacy public golden symbols not exported by next package
 - Sections: `section_03_package_layout`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.no_old_public_symbols`, `test.guardrails.blocking_suite`
 
-## new_api.public_types_complete
+## api.public_types_complete
 
 - Rule: all public signatures reference defined public types
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.guardrails.blocking_suite`
 
-## new_api.public_api_compiles_as_written
+## api.public_api_compiles_as_written
 
 - Rule: public API declarations compile in an empty consumer package
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.public_api_v1_compiles_as_written`, `test.guardrails.blocking_suite`
 
-## new_api.no_undefined_public_type_references
+## api.no_undefined_public_type_references
 
 - Rule: every exported signature type is exported or from Flutter/Dart SDK
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.no_undefined_public_type_references`, `test.guardrails.blocking_suite`
 
-## new_api.dto_immutability
+## api.dto_immutability
 
 - Rule: DTO collections defensively copied and unmodifiable
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.dto_immutability`, `test.guardrails.blocking_suite`
 
-## new_api.id_validation_no_extension_type_escape
+## api.id_validation_no_extension_type_escape
 
 - Rule: ids cannot be publicly constructed without validation
 - Sections: `section_04_public_api_v1`, `section_06_validation_limits`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.validation_limits.constructor_and_schema_limits`, `test.guardrails.blocking_suite`
 
-## new_core.no_legacy_imports
+## core.no_legacy_imports
 
-- Rule: no import of old package/runtime
+- Rule: no import of legacy package/runtime
 - Sections: `section_00_status_and_scope`, `section_03_package_layout`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.guardrails.blocking_suite`
 
-## new_core.no_scene_controller_shape_dependency
+## core.no_scene_controller_shape_dependency
 
 - Rule: no SceneController concept in core
 - Sections: `section_00_status_and_scope`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.guardrails.blocking_suite`
 
-## new_core.no_node_spec_patch_shape_dependency
+## core.no_node_spec_patch_shape_dependency
 
-- Rule: no old NodeSpec/NodePatch/PatchField in core
+- Rule: no legacy NodeSpec/NodePatch/PatchField in core
 - Sections: `section_00_status_and_scope`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.guardrails.blocking_suite`
 
-## new_core.single_runtime_root
+## core.single_runtime_root
 
 - Rule: exactly one production RuntimeRoot
 - Sections: `section_02_architecture_model`, `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`

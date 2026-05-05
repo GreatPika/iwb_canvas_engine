@@ -5,13 +5,13 @@ Canonical source: `docs/_registry/donors.yaml`
 Feeds registry: `docs/_registry/donors.yaml`
 Feeds indexes:
 - `docs/indexes/donor_to_phase.md`
-Use rule: donor entries are phase-bound implementation inputs, not old architecture to copy.
+Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 
 ## Codec donors
 
 Use these to build the schema v1 codec. The old `SceneBuilder` shape is not
-the new architecture.
+the next architecture.
 
 | Donor | What to preserve | Reuse | Risks | Target phase |
 |---|---|---:|---|---|

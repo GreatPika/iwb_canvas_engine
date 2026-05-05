@@ -5,7 +5,7 @@ Canonical source: `docs/_registry/donors.yaml`
 Feeds registry: `docs/_registry/donors.yaml`
 Feeds indexes:
 - `docs/indexes/donor_to_phase.md`
-Use rule: donor entries are phase-bound implementation inputs, not old architecture to copy.
+Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 
 ## P1 closure requirements
@@ -15,10 +15,10 @@ P1 donor inventory is closed only when:
 - every donor intended for P2-P12 is represented in this file or a later
   machine-readable donor registry;
 - every `copy` or `copy/adapt` donor has at least one named test to port;
-- every `adapt` donor names the old behavior to preserve and the old shell to
-  reject;
+- every `adapt` donor names the legacy behavior to preserve and the legacy
+  shell to reject;
 - every `rewrite-reference` donor is listed only as behavior/test evidence;
 - the functional ledger links capabilities to donor files where reuse is
   expected;
-- implementation phases do not import donor files from the old package at
+- implementation phases do not import donor files from the legacy package at
   runtime.

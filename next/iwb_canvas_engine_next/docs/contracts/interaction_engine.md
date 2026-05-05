@@ -53,7 +53,7 @@ Guardrails:
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 Do not assume:
-- no old callback graph as structure
+- no legacy callback graph as structure
 - no reentrant mutation from resolver
 <!-- CONTEXT:END -->
 
@@ -104,7 +104,9 @@ Rules:
 | eraser corridor | overlay only |
 | selected move preview | main scene only |
 
-This is mandatory. The old selected move preview uses main-scene repaint through selected supplement staging; new behavior must preserve that functional result.
+This is mandatory. The legacy selected move preview uses main-scene repaint
+through selected supplement staging; next behavior must preserve that functional
+result.
 
 ### 14.3 Text double-tap
 

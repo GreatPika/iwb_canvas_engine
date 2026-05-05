@@ -3,7 +3,7 @@ Registry id: `section_08_functional_ledger`
 Registry source: `docs/_registry/sections.yaml`
 Document path: `docs/verification/functional_ledger.md`
 Owns:
-- 8. Functional ledger: old capability -> new API -> required test
+- 8. Functional ledger: legacy capability -> next API -> required test
 Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 - `docs/donors/00_reuse_rules.md`
@@ -17,16 +17,16 @@ Related diagrams:
 Required tests:
 - `test.functional_ledger.row_specific_tests`
 Guardrails:
-- `new_api.functional_ledger_complete`
+- `api.functional_ledger_complete`
 Do not assume:
-- do not prove next API completeness by old public API ledger
+- do not prove next API completeness by legacy public API ledger
 <!-- CONTEXT:END -->
 
-## 8. Functional ledger: old capability -> new API -> required test
+## 8. Functional ledger: legacy capability -> next API -> required test
 
 ## Evidence closure checklist
 
-When completing or auditing ledger rows, ensure these old behavior areas are
+When completing or auditing ledger rows, ensure these legacy behavior areas are
 covered by rows and tests, or by an explicit accepted difference:
 
 - edits are synchronous and non-nested;
@@ -48,9 +48,9 @@ covered by rows and tests, or by an explicit accepted difference:
 - draw style keeps separate thickness values for pencil, marker, line, and
   eraser, plus marker opacity;
 - external visual resource repaint was represented by legacy
-  `notifySceneChanged()` and is represented in the new API by resource dirtying,
+  `notifySceneChanged()` and is represented in the next API by resource dirtying,
   not engine-owned IO;
-- old scene limits for ids, text, paths, strokes, JSON, layers, and nodes remain
+- legacy scene limits for ids, text, paths, strokes, JSON, layers, and nodes remain
   covered by validation-limit tests;
 - geometry keeps legacy hit slop `4.0`, separate hit bounds, and separate paint
   bounds;
@@ -58,11 +58,12 @@ covered by rows and tests, or by an explicit accepted difference:
   max query cells `50000`, large-node/outlier registry, and fallback behavior;
 - action streams close on dispose;
 - runtime-created timestamps are monotonic;
-- old `imageId` behavior is migrated to the new `resourceId`/`appKey` model;
+- legacy `imageId` behavior is migrated to the next-owned `resourceId`/`appKey`
+  model;
 - palette and legacy `grid.color` survive document read/write and migration
   coverage.
 
-| Capability | Old oracle | New API v1 | Required test id |
+| Capability | Legacy oracle | Next API v1 | Required test id |
 |---|---|---|---|
 | create runtime/controller | `SceneController` | `CanvasRuntime` | `functional.create_runtime` |
 | show canvas as widget | `SceneView`/`SceneViewInteractive` | `CanvasSurface` | `functional.surface_paints_empty` |

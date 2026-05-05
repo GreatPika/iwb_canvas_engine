@@ -58,6 +58,10 @@ A donor is allowed for implementation only when `_registry/donors.yaml` gives it
 a target phase and owner. Records with `decision: avoid` or
 `target_phases: [reference_only]` are not implementation structure.
 
+Phase files use human-readable donor decisions: `copy`, `copy/adapt`, `adapt`,
+`adapt/rewrite`, and `rewrite-reference`. The registry stores the composite
+forms as snake_case YAML values.
+
 ## Mechanical checks
 
 Run these commands from `next/iwb_canvas_engine_next/`:

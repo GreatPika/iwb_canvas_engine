@@ -22,17 +22,17 @@
 
 - `direct_pointer_tap_tracking` - decision: `copy`; target owner: Pointer session tap tracking
 - `direct_gesture_ownership` - decision: `copy`; target owner: InteractionEngine gesture ownership
-- `foundation_pointer_input_contract` - decision: `copy_adapt`; target owner: Canvas pointer API and InteractionEngine
+- `foundation_pointer_input_contract` - decision: `copy/adapt`; target owner: Canvas pointer API and InteractionEngine
 - `foundation_action_event_immutability` - decision: `adapt`; target owner: CanvasActionEvent and text edit events
-- `geometry_interactive_geometry` - decision: `copy_adapt`; target owner: Draw and eraser geometry helpers
+- `geometry_interactive_geometry` - decision: `copy/adapt`; target owner: Draw and eraser geometry helpers
 - `geometry_eraser_exact_hit` - decision: `adapt`; target owner: Eraser exact-hit engine
 - `interaction_pointer_session` - decision: `adapt`; target owner: InteractionEngine pointer session
-- `interaction_pointer_normalizer` - decision: `copy_adapt`; target owner: Pointer sample normalizer
+- `interaction_pointer_normalizer` - decision: `copy/adapt`; target owner: Pointer sample normalizer
 - `interaction_event_dispatcher` - decision: `adapt`; target owner: Interaction event dispatch
 - `interaction_double_tap_router` - decision: `adapt`; target owner: Text edit request router
 - `interaction_gesture_runtime` - decision: `adapt`; target owner: InteractionEngine dispatch order and cleanup
 - `interaction_move_session` - decision: `adapt`; target owner: Move and marquee interaction machines
-- `interaction_draw_coordinator` - decision: `adapt_rewrite`; target owner: Draw, line and eraser machines
+- `interaction_draw_coordinator` - decision: `adapt/rewrite`; target owner: Draw, line and eraser machines
 - `interaction_mutation_boundary` - decision: `adapt`; target owner: Interaction-owned mutation bridge into EditKernel
 - `staged_load_runtime_materialization` - decision: `adapt`; target owner: loadDocument staged materialization
 
@@ -72,12 +72,12 @@
 
 - `load.prepares_before_interrupt` - failed load does not interrupt gesture
 - `load.success_interrupts_before_install` - success interrupt happens before atomic install
-- `new_api.dto_immutability` - DTO collections defensively copied and unmodifiable
-- `new_api.functional_ledger_complete` - every functional ledger row has API + tests
-- `new_api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
-- `new_api.no_undefined_public_type_references` - every exported signature type is exported or from Flutter/Dart SDK
-- `new_api.public_api_compiles_as_written` - public API declarations compile in an empty consumer package
-- `new_api.public_types_complete` - all public signatures reference defined public types
+- `api.dto_immutability` - DTO collections defensively copied and unmodifiable
+- `api.functional_ledger_complete` - every functional ledger row has API + tests
+- `api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
+- `api.no_undefined_public_type_references` - every exported signature type is exported or from Flutter/Dart SDK
+- `api.public_api_compiles_as_written` - public API declarations compile in an empty consumer package
+- `api.public_types_complete` - all public signatures reference defined public types
 - `preview.selected_move_main_repaint` - selected move preview increments main repaint, not overlay
 
 ## Tests

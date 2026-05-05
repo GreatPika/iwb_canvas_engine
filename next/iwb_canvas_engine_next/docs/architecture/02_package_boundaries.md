@@ -17,10 +17,10 @@ Related diagrams:
 Required tests:
 - `test.api_contract.no_old_public_symbols`
 Guardrails:
-- `new_core.no_legacy_imports`
-- `new_api.no_old_public_types`
+- `core.no_legacy_imports`
+- `api.no_legacy_public_types`
 Do not assume:
-- no old package import
+- no legacy package import
 - no app adapters in package
 <!-- CONTEXT:END -->
 
@@ -29,7 +29,7 @@ Do not assume:
 Новый package создаётся отдельно:
 
 ```text
-packages/iwb_canvas_engine_next/
+next/iwb_canvas_engine_next/
   lib/
     iwb_canvas_engine_next.dart
     src/
@@ -142,7 +142,7 @@ lib/src/frame/**             -> may not import public document projection as pai
 lib/src/resources/**         -> may not import interaction state
 lib/src/codec/**             -> may not import Flutter widgets or interaction state
 lib/src/flutter_bridge/**    -> may not import old iwb_canvas_engine
-all lib/**                   -> may not import old package or old runtime paths
+all lib/**                   -> may not import legacy package or legacy runtime paths
 ```
 
 Committed facts used by interaction are supplied through narrow read-only query

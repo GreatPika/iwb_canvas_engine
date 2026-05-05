@@ -37,7 +37,7 @@
 
 ## Guardrails
 
-- `new_core.single_runtime_root` - exactly one production RuntimeRoot
+- `core.single_runtime_root` - exactly one production RuntimeRoot
 
 ## Tests
 

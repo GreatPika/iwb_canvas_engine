@@ -17,7 +17,7 @@ Related diagrams:
 Required tests:
 - `none`
 Guardrails:
-- `new_api.v1_scope_gate_green_before_freeze`
+- `api.v1_scope_gate_green_before_freeze`
 Do not assume:
 - accepted differences are explicit only
 - no silent legacy compatibility layer
@@ -27,15 +27,15 @@ Do not assume:
 
 | Difference | Decision |
 |---|---|
-| Old public API not preserved | accepted target decision |
+| Legacy public API not preserved | accepted target decision |
 | `SceneController` absent | accepted target decision |
 | `SceneSnapshot` absent | accepted target decision |
 | `NodeSpec`/`NodePatch` absent | accepted target decision |
-| old `CanvasPointerInput` name absent | new type is `CanvasPointerSample` |
+| legacy `CanvasPointerInput` name absent | next type is `CanvasPointerSample` |
 | schema v7 not production decode target | accepted target decision |
 | palette preserved | `CanvasDocument.palette` |
 | grid color preserved | `CanvasGrid.color` |
-| old imageId replaced | `CanvasResourceId` + `CanvasResourceSource.appKey` |
+| legacy imageId replaced | `CanvasResourceId` + `CanvasResourceSource.appKey` |
 | action payload no longer Map | typed payload classes |
 | move resolver async not supported | synchronous resolver only |
 

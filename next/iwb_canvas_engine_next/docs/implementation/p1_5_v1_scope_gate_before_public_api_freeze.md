@@ -2,7 +2,7 @@
 
 ## Build
 
-- scope checklist based on old functional behavior and approved v1 additions
+- scope checklist based on legacy functional behavior and approved v1 additions
 - public API draft probe
 - public API compiles as written.
 
@@ -15,7 +15,7 @@
 
 ## Required donors
 
-- `foundation_contract_limits` - decision: `copy_adapt`; target owner: Validation limits and public constructors
+- `foundation_contract_limits` - decision: `copy/adapt`; target owner: Validation limits and public constructors
 
 ## Forbidden donor structure
 
@@ -35,15 +35,15 @@
 ## Guardrails
 
 - `codec.known_fields_validated` - known schema v1 fields are validated and canonical encoder writes only v1 fields
-- `new_api.dto_immutability` - DTO collections defensively copied and unmodifiable
-- `new_api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
-- `new_api.no_undefined_public_type_references` - every exported signature type is exported or from Flutter/Dart SDK
-- `new_api.public_api_compiles_as_written` - public API declarations compile in an empty consumer package
-- `new_api.public_types_complete` - all public signatures reference defined public types
-- `new_api.v1_scope_gate_green_before_freeze` - P1.5 scope gate passed before public API freeze starts
-- `new_core.no_legacy_imports` - no import of old package/runtime
-- `new_core.no_node_spec_patch_shape_dependency` - no old NodeSpec/NodePatch/PatchField in core
-- `new_core.no_scene_controller_shape_dependency` - no SceneController concept in core
+- `api.dto_immutability` - DTO collections defensively copied and unmodifiable
+- `api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
+- `api.no_undefined_public_type_references` - every exported signature type is exported or from Flutter/Dart SDK
+- `api.public_api_compiles_as_written` - public API declarations compile in an empty consumer package
+- `api.public_types_complete` - all public signatures reference defined public types
+- `api.v1_scope_gate_green_before_freeze` - P1.5 scope gate passed before public API freeze starts
+- `core.no_legacy_imports` - no import of legacy package/runtime
+- `core.no_node_spec_patch_shape_dependency` - no legacy NodeSpec/NodePatch/PatchField in core
+- `core.no_scene_controller_shape_dependency` - no SceneController concept in core
 
 ## Tests
 

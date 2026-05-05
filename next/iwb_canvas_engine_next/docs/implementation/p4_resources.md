@@ -42,12 +42,12 @@
 
 ## Guardrails
 
-- `new_api.dto_immutability` - DTO collections defensively copied and unmodifiable
-- `new_api.functional_ledger_complete` - every functional ledger row has API + tests
-- `new_api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
-- `new_api.no_undefined_public_type_references` - every exported signature type is exported or from Flutter/Dart SDK
-- `new_api.public_api_compiles_as_written` - public API declarations compile in an empty consumer package
-- `new_api.public_types_complete` - all public signatures reference defined public types
+- `api.dto_immutability` - DTO collections defensively copied and unmodifiable
+- `api.functional_ledger_complete` - every functional ledger row has API + tests
+- `api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
+- `api.no_undefined_public_type_references` - every exported signature type is exported or from Flutter/Dart SDK
+- `api.public_api_compiles_as_written` - public API declarations compile in an empty consumer package
+- `api.public_types_complete` - all public signatures reference defined public types
 - `resources.app_key_only` - resource descriptors use appKey only
 - `resources.dirty_no_document_revision` - markResourceDirty does not increment documentRevision
 - `resources.mutation_inside_edit_only` - resource descriptor mutation only via CanvasEdit

@@ -5,16 +5,16 @@ Canonical source: `docs/_registry/donors.yaml`
 Feeds registry: `docs/_registry/donors.yaml`
 Feeds indexes:
 - `docs/indexes/donor_to_phase.md`
-Use rule: donor entries are phase-bound implementation inputs, not old architecture to copy.
+Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 
 ## Donors to avoid as structure
 
 These files are useful as behavioral evidence or test sources, but they should
-not shape the new package structure.
+not shape the next package structure.
 
 - `lib/src/interactive/scene_controller.dart` and public controller facade
-  files: old public API shape is explicitly not preserved.
+  files: legacy public API shape is explicitly not preserved.
 - `lib/src/interactive/internal/interactive_runtime.dart` as a whole: useful
   dispatch semantics, but too coupled to old callback graph.
 - `lib/src/model/scene_builder.dart` and `scene_builder_api.dart` as public

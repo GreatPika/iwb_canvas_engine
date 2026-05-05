@@ -1,5 +1,8 @@
 # P12 - benchmarks, diagrams, release readiness
 
+Sequence note: no P11 phase is currently defined; P12 is the final
+release-readiness gate after P10.
+
 ## Build
 
 - all required diagrams complete
@@ -76,7 +79,7 @@
 
 - `diagnostics.disabled_no_alloc_hot_path` - no record allocation on successful hot path
 - `diagrams.all_required_present` - required Mermaid files exist
-- `new_api.functional_ledger_complete` - every functional ledger row has API + tests
+- `api.functional_ledger_complete` - every functional ledger row has API + tests
 
 ## Tests
 
@@ -91,6 +94,6 @@
 - schema tests green
 - interaction/frame/spatial/resource tests green
 - benchmarks pass
-- no old imports
+- no legacy imports
 - no legacy facade
 - no app adapters in package.

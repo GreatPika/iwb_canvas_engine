@@ -11,6 +11,7 @@ void main() {
   _checkDiagramCatalogRegistrySymmetry();
   _checkMarkdownPaths();
   _checkNoRetiredActiveReferences();
+  _checkImplementationPhaseClarity();
   _checkDiagramContractAlignment();
 
   if (_errors.isNotEmpty) {
@@ -243,6 +244,13 @@ void _checkNoRetiredActiveReferences() {
     'canonical truth remains',
     'iwb_canvas_engine_next_full_implementation_plan_v2',
     'iwb_canvas_engine_next_donor_inventory',
+    'packages/iwb_canvas_engine_next',
+    'ne'
+        'w_api.',
+    'ne'
+        'w_core.',
+    'no_o'
+        'ld_public_types',
   ];
   final activeRoots = [
     Directory('docs/architecture'),
@@ -264,6 +272,35 @@ void _checkNoRetiredActiveReferences() {
         if (text.contains(token)) {
           _fail('${file.path} contains retired reference: $token');
         }
+      }
+    }
+  }
+}
+
+void _checkImplementationPhaseClarity() {
+  final implementationDir = Directory('docs/implementation');
+  if (!implementationDir.existsSync()) {
+    return;
+  }
+
+  final forbiddenText = <String, RegExp>{
+    'use human-readable donor decision copy/adapt in phase docs; copy_adapt is registry YAML only':
+        RegExp(r'\bcopy_adapt\b'),
+    'use human-readable donor decision adapt/rewrite in phase docs; adapt_rewrite is registry YAML only':
+        RegExp(r'\badapt_rewrite\b'),
+    'use human-readable donor decision rewrite-reference in phase docs; rewrite_reference is registry YAML only':
+        RegExp(r'\brewrite_reference\b'),
+  };
+
+  for (final file
+      in implementationDir.listSync(recursive: true).whereType<File>()) {
+    if (!file.path.endsWith('.md')) {
+      continue;
+    }
+    final text = file.readAsStringSync();
+    for (final entry in forbiddenText.entries) {
+      for (final match in entry.value.allMatches(text)) {
+        _fail('${file.path}:${_lineNumber(text, match.start)} ${entry.key}');
       }
     }
   }

@@ -15,16 +15,16 @@
     - c4_context
     - c4_container
   guardrails:
-    - new_core.no_legacy_imports
-    - new_core.no_scene_controller_shape_dependency
-    - new_core.no_node_spec_patch_shape_dependency
+    - core.no_legacy_imports
+    - core.no_scene_controller_shape_dependency
+    - core.no_node_spec_patch_shape_dependency
   tests:
     - test.api_contract.v1_scope_gate
   do_not_assume:
     - no legacy facade
     - no SceneController
-    - no old public API shape
-    - no old runtime fallback
+    - no legacy public API shape
+    - no legacy runtime fallback
 -
   id: section_02_architecture_model
   source: docs/_registry/sections.yaml / section 2
@@ -44,7 +44,7 @@
     - c4_component_runtime
     - state_runtime_lifecycle
   guardrails:
-    - new_core.single_runtime_root
+    - core.single_runtime_root
   tests:
     - "none"
   do_not_assume:
@@ -66,12 +66,12 @@
   diagrams:
     - c4_container
   guardrails:
-    - new_core.no_legacy_imports
-    - new_api.no_old_public_types
+    - core.no_legacy_imports
+    - api.no_legacy_public_types
   tests:
     - test.api_contract.no_old_public_symbols
   do_not_assume:
-    - no old package import
+    - no legacy package import
     - no app adapters in package
 -
   id: section_04_public_api_v1
@@ -104,11 +104,11 @@
     - c4_context
     - dfd_public_edit
   guardrails:
-    - new_api.public_types_complete
-    - new_api.public_api_compiles_as_written
-    - new_api.no_undefined_public_type_references
-    - new_api.dto_immutability
-    - new_api.id_validation_no_extension_type_escape
+    - api.public_types_complete
+    - api.public_api_compiles_as_written
+    - api.no_undefined_public_type_references
+    - api.dto_immutability
+    - api.id_validation_no_extension_type_escape
   tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - test.api_contract.no_undefined_public_type_references
@@ -117,7 +117,7 @@
     - test.events.typed_action_payloads
     - test.api_contract.v1_scope_gate
   do_not_assume:
-    - no old public API shape
+    - no legacy public API shape
     - no PatchField export
     - no SceneController export
 -
@@ -154,7 +154,7 @@
     - test.schema_v1.reject_unknown_resource_source_kind
   do_not_assume:
     - no schema v7 public entrypoints as next API
-    - no old SceneBuilder API shape
+    - no legacy SceneBuilder API shape
 -
   id: section_06_validation_limits
   source: docs/_registry/sections.yaml / section 6
@@ -175,12 +175,12 @@
     - dfd_diagnostics_error_projection
   guardrails:
     - codec.known_fields_validated
-    - new_api.id_validation_no_extension_type_escape
+    - api.id_validation_no_extension_type_escape
   tests:
     - test.validation_limits.constructor_and_schema_limits
   do_not_assume:
     - no unvalidated public ids
-    - no old diagnostics surface leakage
+    - no legacy diagnostics surface leakage
 -
   id: section_07_resource_lifecycle
   source: docs/_registry/sections.yaml / section 7
@@ -219,7 +219,7 @@
   id: section_08_functional_ledger
   source: docs/_registry/sections.yaml / section 8
   file: docs/verification/functional_ledger.md
-  title: "8. Functional ledger: old capability -> new API -> required test"
+  title: "8. Functional ledger: legacy capability -> next API -> required test"
   phases:
     - P1
     - P12
@@ -231,11 +231,11 @@
   diagrams:
     - "none"
   guardrails:
-    - new_api.functional_ledger_complete
+    - api.functional_ledger_complete
   tests:
     - test.functional_ledger.row_specific_tests
   do_not_assume:
-    - do not prove next API completeness by old public API ledger
+    - do not prove next API completeness by legacy public API ledger
 -
   id: section_09_accepted_differences
   source: docs/_registry/sections.yaml / section 9
@@ -252,7 +252,7 @@
   diagrams:
     - "none"
   guardrails:
-    - new_api.v1_scope_gate_green_before_freeze
+    - api.v1_scope_gate_green_before_freeze
   tests:
     - "none"
   do_not_assume:
@@ -280,12 +280,12 @@
     - c4_component_runtime
     - dfd_cache_invalidation
   guardrails:
-    - new_core.single_runtime_root
+    - core.single_runtime_root
   tests:
     - test.store.read_document_projection
     - test.store.no_projection_hot_path
   do_not_assume:
-    - no old mutable runtime graph
+    - no legacy mutable runtime graph
     - no SceneController shape dependency
 -
   id: section_11_edit_kernel
@@ -320,8 +320,8 @@
     - test.edit_kernel.sync_non_nested_async_stale
     - test.edit_kernel.rollback
   do_not_assume:
-    - no old SceneWriteTxn
-    - no old controller shell
+    - no legacy SceneWriteTxn
+    - no legacy controller shell
     - no async nested edit
 -
   id: section_12_load_document
@@ -430,7 +430,7 @@
     - test.interaction.move_resolver_reentrancy
     - test.surface.widget_paint
   do_not_assume:
-    - no old callback graph as structure
+    - no legacy callback graph as structure
     - no reentrant mutation from resolver
 -
   id: section_15_frame_render_contract
@@ -584,7 +584,7 @@
   tests:
     - "none"
   do_not_assume:
-    - no old SceneCodec surface as next API
+    - no legacy SceneCodec surface as next API
     - no schema v7 read/write in production core
 -
   id: section_20_diagnostics_hub
@@ -626,19 +626,19 @@
   diagrams:
     - "none"
   guardrails:
-    - new_api.functional_ledger_complete
-    - new_api.integration_surface_complete
-    - new_api.v1_scope_gate_green_before_freeze
-    - new_api.no_old_public_types
-    - new_api.public_types_complete
-    - new_api.public_api_compiles_as_written
-    - new_api.no_undefined_public_type_references
-    - new_api.dto_immutability
-    - new_api.id_validation_no_extension_type_escape
-    - new_core.no_legacy_imports
-    - new_core.no_scene_controller_shape_dependency
-    - new_core.no_node_spec_patch_shape_dependency
-    - new_core.single_runtime_root
+    - api.functional_ledger_complete
+    - api.integration_surface_complete
+    - api.v1_scope_gate_green_before_freeze
+    - api.no_legacy_public_types
+    - api.public_types_complete
+    - api.public_api_compiles_as_written
+    - api.no_undefined_public_type_references
+    - api.dto_immutability
+    - api.id_validation_no_extension_type_escape
+    - core.no_legacy_imports
+    - core.no_scene_controller_shape_dependency
+    - core.no_node_spec_patch_shape_dependency
+    - core.single_runtime_root
     - edit.sync_non_nested
     - edit.rollback_no_effects
     - edit.stale_handle_rejected
@@ -747,7 +747,7 @@
   diagrams:
     - "none"
   guardrails:
-    - new_api.functional_ledger_complete
+    - api.functional_ledger_complete
   tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - test.api_contract.no_undefined_public_type_references
@@ -890,19 +890,19 @@
   diagrams:
     - "none"
   guardrails:
-    - new_api.functional_ledger_complete
-    - new_api.integration_surface_complete
-    - new_api.v1_scope_gate_green_before_freeze
-    - new_api.no_old_public_types
-    - new_api.public_types_complete
-    - new_api.public_api_compiles_as_written
-    - new_api.no_undefined_public_type_references
-    - new_api.dto_immutability
-    - new_api.id_validation_no_extension_type_escape
-    - new_core.no_legacy_imports
-    - new_core.no_scene_controller_shape_dependency
-    - new_core.no_node_spec_patch_shape_dependency
-    - new_core.single_runtime_root
+    - api.functional_ledger_complete
+    - api.integration_surface_complete
+    - api.v1_scope_gate_green_before_freeze
+    - api.no_legacy_public_types
+    - api.public_types_complete
+    - api.public_api_compiles_as_written
+    - api.no_undefined_public_type_references
+    - api.dto_immutability
+    - api.id_validation_no_extension_type_escape
+    - core.no_legacy_imports
+    - core.no_scene_controller_shape_dependency
+    - core.no_node_spec_patch_shape_dependency
+    - core.single_runtime_root
     - edit.sync_non_nested
     - edit.rollback_no_effects
     - edit.stale_handle_rejected

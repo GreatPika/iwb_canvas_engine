@@ -18,19 +18,19 @@ Related diagrams:
 Required tests:
 - `test.guardrails.blocking_suite`
 Guardrails:
-- `new_api.functional_ledger_complete`
-- `new_api.integration_surface_complete`
-- `new_api.v1_scope_gate_green_before_freeze`
-- `new_api.no_old_public_types`
-- `new_api.public_types_complete`
-- `new_api.public_api_compiles_as_written`
-- `new_api.no_undefined_public_type_references`
-- `new_api.dto_immutability`
-- `new_api.id_validation_no_extension_type_escape`
-- `new_core.no_legacy_imports`
-- `new_core.no_scene_controller_shape_dependency`
-- `new_core.no_node_spec_patch_shape_dependency`
-- `new_core.single_runtime_root`
+- `api.functional_ledger_complete`
+- `api.integration_surface_complete`
+- `api.v1_scope_gate_green_before_freeze`
+- `api.no_legacy_public_types`
+- `api.public_types_complete`
+- `api.public_api_compiles_as_written`
+- `api.no_undefined_public_type_references`
+- `api.dto_immutability`
+- `api.id_validation_no_extension_type_escape`
+- `core.no_legacy_imports`
+- `core.no_scene_controller_shape_dependency`
+- `core.no_node_spec_patch_shape_dependency`
+- `core.single_runtime_root`
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
 - `edit.stale_handle_rejected`
@@ -56,19 +56,19 @@ Mandatory guardrails:
 
 | Guardrail id | Rule |
 |---|---|
-| `new_api.functional_ledger_complete` | every functional ledger row has API + tests |
-| `new_api.integration_surface_complete` | API has enough public surface for app-level `NewEngineAdapter`, but adapter is not in package |
-| `new_api.v1_scope_gate_green_before_freeze` | P1.5 scope gate passed before public API freeze starts |
-| `new_api.no_old_public_types` | old public golden symbols not exported by new package |
-| `new_api.public_types_complete` | all public signatures reference defined public types |
-| `new_api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package |
-| `new_api.no_undefined_public_type_references` | every exported signature type is exported or from Flutter/Dart SDK |
-| `new_api.dto_immutability` | DTO collections defensively copied and unmodifiable |
-| `new_api.id_validation_no_extension_type_escape` | ids cannot be publicly constructed without validation |
-| `new_core.no_legacy_imports` | no import of old package/runtime |
-| `new_core.no_scene_controller_shape_dependency` | no `SceneController` concept in core |
-| `new_core.no_node_spec_patch_shape_dependency` | no old NodeSpec/NodePatch/PatchField in core |
-| `new_core.single_runtime_root` | exactly one production RuntimeRoot |
+| `api.functional_ledger_complete` | every functional ledger row has API + tests |
+| `api.integration_surface_complete` | API has enough public surface for app-level `NextEngineAdapter`, but adapter is not in package |
+| `api.v1_scope_gate_green_before_freeze` | P1.5 scope gate passed before public API freeze starts |
+| `api.no_legacy_public_types` | legacy public golden symbols not exported by next package |
+| `api.public_types_complete` | all public signatures reference defined public types |
+| `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package |
+| `api.no_undefined_public_type_references` | every exported signature type is exported or from Flutter/Dart SDK |
+| `api.dto_immutability` | DTO collections defensively copied and unmodifiable |
+| `api.id_validation_no_extension_type_escape` | ids cannot be publicly constructed without validation |
+| `core.no_legacy_imports` | no import of legacy package/runtime |
+| `core.no_scene_controller_shape_dependency` | no `SceneController` concept in core |
+| `core.no_node_spec_patch_shape_dependency` | no legacy NodeSpec/NodePatch/PatchField in core |
+| `core.single_runtime_root` | exactly one production RuntimeRoot |
 | `edit.sync_non_nested` | nested/async edit rejected |
 | `edit.rollback_no_effects` | rollback discards events/repaint/resources/spatial |
 | `edit.stale_handle_rejected` | stale edit handle throws |

@@ -1,10 +1,10 @@
-# P1 - old capability inventory and oracle lock
+# P1 - legacy capability inventory and oracle lock
 
 ## Build
 
 - old_to_next_functional_matrix.md
 - docs/donors/ and docs/_registry/donors.yaml
-- old oracle file list
+- legacy oracle file list
 - donor file list with copy/adapt/rewrite-reference decisions
 - example scenario inventory
 - action/event inventory
@@ -19,7 +19,7 @@
 
 ## Legacy evidence inputs
 
-Use these workspace paths when checking old behavior for the P1 inventory:
+Use these workspace paths when checking legacy behavior for the P1 inventory:
 
 ```text
 legacy/iwb_canvas_engine/lib/iwb_canvas_engine.dart
@@ -59,7 +59,7 @@ legacy/iwb_canvas_engine/example/lib/ui/canvas_example/view_models/canvas_exampl
 legacy/iwb_canvas_engine/tool/goldens/public_api_symbols.txt
 ```
 
-These files identify the old behavior surface and supporting evidence for P1.
+These files identify the legacy behavior surface and supporting evidence for P1.
 Specific reusable implementation donors are owned by `docs/_registry/donors.yaml`.
 
 ## Donor inventory focus
@@ -81,7 +81,7 @@ Use the donor registry and donor docs to cover these important donor families:
 
 ## Required donors
 
-- `interaction_public_controller_behavior` - decision: `rewrite_reference`; target owner: Behavioral checklist only
+- `interaction_public_controller_behavior` - decision: `rewrite-reference`; target owner: Behavioral checklist only
 
 ## Forbidden donor structure
 
@@ -97,7 +97,7 @@ Use the donor registry and donor docs to cover these important donor families:
 
 ## Guardrails
 
-- `new_api.functional_ledger_complete` - every functional ledger row has API + tests
+- `api.functional_ledger_complete` - every functional ledger row has API + tests
 
 ## Tests
 
@@ -106,7 +106,7 @@ Use the donor registry and donor docs to cover these important donor families:
 ## Exit gate
 
 - functional ledger rows are complete
-- each row has oracle file(s), new API target and test id
+- each row has oracle file(s), next API target and test id
 - each reusable donor has a decision, target phase and required ported tests
 - copy/adapt donors are linked from the relevant implementation phase
 - no implementation proceeds without green inventory guardrail.

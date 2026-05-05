@@ -37,13 +37,13 @@ Required tests:
 - `test.events.typed_action_payloads`
 - `test.api_contract.v1_scope_gate`
 Guardrails:
-- `new_api.public_types_complete`
-- `new_api.public_api_compiles_as_written`
-- `new_api.no_undefined_public_type_references`
-- `new_api.dto_immutability`
-- `new_api.id_validation_no_extension_type_escape`
+- `api.public_types_complete`
+- `api.public_api_compiles_as_written`
+- `api.no_undefined_public_type_references`
+- `api.dto_immutability`
+- `api.id_validation_no_extension_type_escape`
 Do not assume:
-- no old public API shape
+- no legacy public API shape
 - no PatchField export
 - no SceneController export
 <!-- CONTEXT:END -->
@@ -140,13 +140,15 @@ canvasSchemaVersionWrite
 canvasSchemaVersionsRead
 ```
 
-The old public symbols listed in `tool/goldens/public_api_symbols.txt` from the old package are not exported by this new package. Natural concepts may exist under new names, but old public shapes are banned.
+The legacy public symbols listed in `tool/goldens/public_api_symbols.txt` from
+the legacy package are not exported by this package. Natural concepts may exist
+under next-owned names, but legacy public shapes are banned.
 
 Factory target classes are private implementation details. Public factories on
 sealed base types may target private classes, but the public barrel exports only
 the sealed base type and stable DTO/port names.
 
-The new package is Flutter-based. Public API may use:
+The next package is Flutter-based. Public API may use:
 
 ```text
 - dart:ui;
@@ -218,7 +220,8 @@ Generated ids are unique within the current runtime. `loadDocument` resets id ge
 
 ### 4.3 Optional patch field
 
-The new API does not use old `PatchField`. It uses a new optional value type.
+The next API does not use legacy `PatchField`. It uses a next-owned optional
+value type.
 
 ```dart
 sealed class CanvasOptional<T> {
@@ -485,13 +488,13 @@ final class CanvasPalette {
 }
 ```
 
-CanvasCamera v1 stores offset only, matching old engine behavior.
+CanvasCamera v1 stores offset only, matching legacy engine behavior.
 
 ### 4.9 Geometry enums and transform
 
 The current package exposes `Transform2D` as a six-component affine transform
-with JSON shape `{a,b,c,d,tx,ty}` and Flutter canvas matrix conversion. The new
-public `CanvasTransform` keeps that complete behavior under the new API name.
+with JSON shape `{a,b,c,d,tx,ty}` and Flutter canvas matrix conversion. The
+public `CanvasTransform` keeps that complete behavior under the next API name.
 
 ```dart
 enum CanvasElementKind {
@@ -778,7 +781,7 @@ final class CanvasRectElement extends CanvasElement {
 
 ### 4.11 Element updates
 
-Partial updates use `CanvasOptional`, not old `NodePatch`.
+Partial updates use `CanvasOptional`, not legacy `NodePatch`.
 
 ```dart
 sealed class CanvasElementUpdate {
@@ -1304,7 +1307,7 @@ v1 resource rules:
 
 ### 4.18 Preview state
 
-The new API exposes read-only preview state because the old example reads pending line and stroke preview state.
+The next API exposes read-only preview state because the legacy example reads pending line and stroke preview state.
 
 ```dart
 enum CanvasPreviewKind {

@@ -124,7 +124,7 @@ Required tests:
 - `test.diagrams.required_present`
 - `test.guardrails.blocking_suite`
 Guardrails:
-- `new_api.functional_ledger_complete`
+- `api.functional_ledger_complete`
 Do not assume:
 - no donor reuse without ported or equivalent tests
 <!-- CONTEXT:END -->

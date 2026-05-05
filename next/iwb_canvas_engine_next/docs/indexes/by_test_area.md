@@ -7,28 +7,28 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Path: `test/api_contract/public_api_v1_compiles_as_written_test.dart`
 - Phases: `P2`
 - Sections: `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `new_api.public_api_compiles_as_written`
+- Guardrails: `api.public_api_compiles_as_written`
 
 ## test.api_contract.no_undefined_public_type_references
 
 - Path: `test/api_contract/no_undefined_public_type_references_test.dart`
 - Phases: `P2`
 - Sections: `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `new_api.no_undefined_public_type_references`
+- Guardrails: `api.no_undefined_public_type_references`
 
 ## test.api_contract.no_old_public_symbols
 
 - Path: `test/api_contract/no_old_public_symbols_test.dart`
 - Phases: `P0`, `P2`
 - Sections: `section_03_package_layout`, `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `new_api.no_old_public_types`
+- Guardrails: `api.no_legacy_public_types`
 
 ## test.api_contract.dto_immutability
 
 - Path: `test/api_contract/dto_immutability_test.dart`
 - Phases: `P2`
 - Sections: `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `new_api.dto_immutability`
+- Guardrails: `api.dto_immutability`
 
 ## test.schema_v1.known_fields_validation
 
@@ -126,21 +126,21 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Path: `functional-ledger row-specific tests`
 - Phases: `P1`, `P12`
 - Sections: `section_08_functional_ledger`, `section_23_tests`
-- Guardrails: `new_api.functional_ledger_complete`
+- Guardrails: `api.functional_ledger_complete`
 
 ## test.api_contract.v1_scope_gate
 
 - Path: `public API v1 scope gate probe`
 - Phases: `P1.5`
 - Sections: `section_00_status_and_scope`, `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `new_api.v1_scope_gate_green_before_freeze`
+- Guardrails: `api.v1_scope_gate_green_before_freeze`
 
 ## test.validation_limits.constructor_and_schema_limits
 
 - Path: `validation limits tests`
 - Phases: `P2`, `P3`
 - Sections: `section_06_validation_limits`, `section_23_tests`
-- Guardrails: `codec.known_fields_validated`, `new_api.id_validation_no_extension_type_escape`
+- Guardrails: `codec.known_fields_validated`, `api.id_validation_no_extension_type_escape`
 
 ## test.store.read_document_projection
 
@@ -245,4 +245,4 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Path: `blocking guardrail suite`
 - Phases: `P0`, `P12`
 - Sections: `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
-- Guardrails: `new_api.functional_ledger_complete`, `new_api.integration_surface_complete`, `new_api.v1_scope_gate_green_before_freeze`, `new_api.no_old_public_types`, `new_api.public_types_complete`, `new_api.public_api_compiles_as_written`, `new_api.no_undefined_public_type_references`, `new_api.dto_immutability`, `new_api.id_validation_no_extension_type_escape`, `new_core.no_legacy_imports`, `new_core.no_scene_controller_shape_dependency`, `new_core.no_node_spec_patch_shape_dependency`, `new_core.single_runtime_root`, `edit.sync_non_nested`, `edit.rollback_no_effects`, `edit.stale_handle_rejected`, `events.low_level_edit_no_user_actions`, `events.commands_emit_user_actions`, `load.prepares_before_interrupt`, `load.success_interrupts_before_install`, `preview.selected_move_main_repaint`, `resources.mutation_inside_edit_only`, `resources.dirty_no_document_revision`, `resources.app_key_only`, `codec.schema_v1_exact`, `codec.known_fields_validated`, `diagnostics.disabled_no_alloc_hot_path`, `diagrams.all_required_present`
+- Guardrails: `api.functional_ledger_complete`, `api.integration_surface_complete`, `api.v1_scope_gate_green_before_freeze`, `api.no_legacy_public_types`, `api.public_types_complete`, `api.public_api_compiles_as_written`, `api.no_undefined_public_type_references`, `api.dto_immutability`, `api.id_validation_no_extension_type_escape`, `core.no_legacy_imports`, `core.no_scene_controller_shape_dependency`, `core.no_node_spec_patch_shape_dependency`, `core.single_runtime_root`, `edit.sync_non_nested`, `edit.rollback_no_effects`, `edit.stale_handle_rejected`, `events.low_level_edit_no_user_actions`, `events.commands_emit_user_actions`, `load.prepares_before_interrupt`, `load.success_interrupts_before_install`, `preview.selected_move_main_repaint`, `resources.mutation_inside_edit_only`, `resources.dirty_no_document_revision`, `resources.app_key_only`, `codec.schema_v1_exact`, `codec.known_fields_validated`, `diagnostics.disabled_no_alloc_hot_path`, `diagrams.all_required_present`

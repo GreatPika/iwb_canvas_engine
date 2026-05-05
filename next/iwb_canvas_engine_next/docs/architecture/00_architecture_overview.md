@@ -18,14 +18,14 @@ Related diagrams:
 Required tests:
 - `test.api_contract.v1_scope_gate`
 Guardrails:
-- `new_core.no_legacy_imports`
-- `new_core.no_scene_controller_shape_dependency`
-- `new_core.no_node_spec_patch_shape_dependency`
+- `core.no_legacy_imports`
+- `core.no_scene_controller_shape_dependency`
+- `core.no_node_spec_patch_shape_dependency`
 Do not assume:
 - no legacy facade
 - no SceneController
-- no old public API shape
-- no old runtime fallback
+- no legacy public API shape
+- no legacy runtime fallback
 <!-- CONTEXT:END -->
 
 # `iwb_canvas_engine_next`: scope and architecture decision
@@ -62,7 +62,7 @@ old iwb_canvas_engine
 
 ### 0.1 Scope lock для v1
 
-v1 scope additions over old functional behavior:
+v1 scope additions over legacy functional behavior:
 
 ```text
 - CanvasResourceId;
@@ -91,7 +91,7 @@ Old public API:
 App integration:
   - размещать AppCanvasPort внутри нового package;
   - размещать OldEngineAdapter внутри нового package;
-  - размещать NewEngineAdapter внутри нового package.
+  - размещать NextEngineAdapter внутри нового package.
 
 Runtime and proof:
   - использовать старый runtime в production path;
@@ -102,4 +102,3 @@ Runtime and proof:
 Такой слой не является deliverable движка. Движок обязан предоставить чистый новый API и собственные contract tests; приложение само решает, как адаптировать его к своему integration port.
 
 ---
-

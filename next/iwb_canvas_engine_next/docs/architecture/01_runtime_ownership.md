@@ -16,10 +16,11 @@ Related donors:
 Related diagrams:
 - `c4_container`
 - `c4_component_runtime`
+- `state_runtime_lifecycle`
 Required tests:
 - `none`
 Guardrails:
-- `new_core.single_runtime_root`
+- `core.single_runtime_root`
 Do not assume:
 - no legacy facade
 - no SceneController

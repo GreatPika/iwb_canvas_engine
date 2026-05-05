@@ -20,12 +20,12 @@
 - `direct_numeric_policy` - decision: `copy`; target owner: GeometryPolicy numeric tolerance foundation
 - `direct_local_bounds_policy` - decision: `copy`; target owner: GeometryPolicy local bounds
 - `direct_paint_admission` - decision: `copy`; target owner: Paint admission policy
-- `foundation_transform2d` - decision: `copy_adapt`; target owner: CanvasTransform and geometry math
-- `foundation_core_geometry` - decision: `copy_adapt`; target owner: GeometryPolicy v1
+- `foundation_transform2d` - decision: `copy/adapt`; target owner: CanvasTransform and geometry math
+- `foundation_core_geometry` - decision: `copy/adapt`; target owner: GeometryPolicy v1
 - `geometry_node_geometry` - decision: `adapt`; target owner: GeometryPolicy and HitTestPolicy
 - `geometry_hit_test` - decision: `adapt`; target owner: HitTestPolicy v1
 - `render_geometry_builder` - decision: `adapt`; target owner: RenderElementRecord geometry construction
-- `geometry_interactive_geometry` - decision: `copy_adapt`; target owner: Draw and eraser geometry helpers
+- `geometry_interactive_geometry` - decision: `copy/adapt`; target owner: Draw and eraser geometry helpers
 - `geometry_eraser_exact_hit` - decision: `adapt`; target owner: Eraser exact-hit engine
 - `spatial_scene_spatial_index` - decision: `adapt`; target owner: SpatialKernel tile and outlier indexes
 - `spatial_index_cache` - decision: `adapt`; target owner: SpatialKernel invalidation cache
