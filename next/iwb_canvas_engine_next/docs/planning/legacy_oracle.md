@@ -125,11 +125,10 @@ P1 обязан закрыть этот inventory до начала deep runtime
 - spatial/render: uniform grid index, paint admission, frame read, render caches;
 - DTO/validation: limits, structured errors, value validators, immutability,
   tri-state update semantics, structure validation;
-- codec/migration: JSON guards, path-aware readers, primitive parsers, schema
-  family decode/encode behavior and schema v7 migration references;
+- codec: JSON guards, path-aware readers, primitive parsers, and schema family
+  decode/encode behavior;
 - interaction/edit: pointer tracker/router/normalizer, gesture ownership,
   action/text events, mutation boundary and staged loadDocument semantics.
 ```
 
 ---
-

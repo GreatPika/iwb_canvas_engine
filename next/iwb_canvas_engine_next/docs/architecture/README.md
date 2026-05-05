@@ -41,7 +41,6 @@ documents as the source for current runtime ownership.
   `docs/contracts/spatial_kernel.md`.
 - Resource lifecycle work routes to `docs/contracts/resources.md`.
 - Diagnostics work routes to `docs/contracts/diagnostics.md`.
-- Migration work routes to `docs/contracts/migration_tool.md`.
 - Test, benchmark, guardrail, and release-readiness work routes to
   `docs/verification/`.
 - Legacy-oracle evidence and implementation sequencing route to

@@ -55,4 +55,3 @@ DiagnosticRecord
 Sanitizer permits only JSON-like primitives and bounded previews. It forbids runtime objects, handles, paths, canvases, images, closures and full scene dumps.
 
 ---
-

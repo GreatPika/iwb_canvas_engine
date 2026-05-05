@@ -149,8 +149,8 @@ Guardrails extracted from split section 22.
 ## codec.schema_v1_exact
 
 - Rule: only schema v1 read/write
-- Sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`, `section_22_guardrails_machine_checks`, `section_25_migration_tool`, `section_26_implementation_phases`, `section_27_final_release_gates`
-- Tests: `test.migration.old_fixture_migration`, `test.guardrails.blocking_suite`
+- Sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`, `section_22_guardrails_machine_checks`, `section_26_implementation_phases`, `section_27_final_release_gates`
+- Tests: `test.guardrails.blocking_suite`
 
 ## codec.known_fields_validated
 

@@ -923,22 +923,18 @@
   decision: adapt
   target_phases:
     - P3
-    - P11
-  target_owner: Schema v1 metadata codec and migration
+  target_owner: Schema v1 metadata codec
   use_for:
     - "schema gate, camera, background, grid and palette validation sequence"
   do_not_copy:
     - old schema shape into production v1
   required_tests:
     - metadata codec tests
-    - migration metadata tests
   blocks:
     - P3
-    - P11
   related_sections:
     - section_05_schema_v1_contract
-    - section_25_migration_tool
-  notes: Production v1 and migration have different targets.
+  notes: Adapt to production v1.
 -
   id: codec_layer_decode
   source_paths:
@@ -965,22 +961,18 @@
   decision: adapt
   target_phases:
     - P3
-    - P11
-  target_owner: Element common schema codec and migration
+  target_owner: Element common schema codec
   use_for:
     - "common id, revision, transform, flag, opacity and hitPadding decode behavior"
   do_not_copy:
     - old instanceRevision semantics as next schema unless specified
   required_tests:
     - element common JSON tests
-    - migration instanceRevision tests
   blocks:
     - P3
-    - P11
   related_sections:
     - section_05_schema_v1_contract
-    - section_25_migration_tool
-  notes: "instanceRevision behavior is migration-relevant."
+  notes: Adapt old common-field behavior only when it belongs to schema v1.
 -
   id: codec_family_decode
   source_paths:
@@ -993,22 +985,18 @@
   decision: adapt
   target_phases:
     - P3
-    - P11
-  target_owner: Element family codecs and migration
+  target_owner: Element family codecs
   use_for:
     - family decode validation and diagnostic paths
   do_not_copy:
     - old JSON aliases into v1 except where specified
   required_tests:
     - element family JSON tests
-    - migration family fixture tests
   blocks:
     - P3
-    - P11
   related_sections:
     - section_05_schema_v1_contract
-    - section_25_migration_tool
-  notes: Aliases mostly belong to migration.
+  notes: Do not preserve old JSON aliases unless approved for schema v1.
 -
   id: codec_scene_codec_flow
   source_paths:
@@ -1016,8 +1004,7 @@
   decision: adapt_rewrite
   target_phases:
     - P3
-    - P11
-  target_owner: CodecBoundary and migration codec reference
+  target_owner: CodecBoundary codec reference
   use_for:
     - canonical encode/decode flow and encode helper behavior
   do_not_copy:
@@ -1025,13 +1012,10 @@
     - old public SceneCodec surface
   required_tests:
     - schema roundtrip tests
-    - migration fixture tests
   blocks:
     - P3
-    - P11
   related_sections:
     - section_19_codec_boundary
-    - section_25_migration_tool
   notes: Rewrite shell around next DTOs.
 -
   id: codec_validation_path_surface
@@ -1040,7 +1024,6 @@
   decision: copy_adapt
   target_phases:
     - P3
-    - P11
   target_owner: Diagnostic path projection
   use_for:
     - "typed-vs-JSON diagnostic path aliasing where aliases remain"
@@ -1048,13 +1031,10 @@
     - aliases not approved for v1
   required_tests:
     - diagnostic path tests
-    - migration alias tests
   blocks:
     - P3
-    - P11
   related_sections:
     - section_19_codec_boundary
-    - section_25_migration_tool
   notes: Use only where aliases remain.
 -
   id: tooling_schema_family_parity

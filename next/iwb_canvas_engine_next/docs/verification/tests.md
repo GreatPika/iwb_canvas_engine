@@ -120,8 +120,6 @@ Required tests:
 - `test.interaction.state_machines`
 - `test.interaction.move_resolver_reentrancy`
 - `test.surface.widget_paint`
-- `test.migration.old_fixture_migration`
-- `test.migration.no_silent_data_loss`
 - `test.benchmarks.required_cases`
 - `test.diagrams.required_present`
 - `test.guardrails.blocking_suite`
@@ -163,4 +161,3 @@ Functional ledger rows still require row-specific tests.
 Runtime coverage must include edit_kernel, interaction, frame, spatial, schema_v1, resources, events, surface and diagnostics tests.
 
 ---
-

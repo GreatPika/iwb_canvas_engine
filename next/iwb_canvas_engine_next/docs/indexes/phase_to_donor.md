@@ -130,14 +130,6 @@ Inverse map from phase to required donor records. Avoid records are listed under
 - `interaction_pointer_host`
 - `interaction_pointer_session`
 
-## P11 - migration tool package
-
-- `codec_metadata_decode`
-- `codec_node_common_decode`
-- `codec_family_decode`
-- `codec_scene_codec_flow`
-- `codec_validation_path_surface`
-
 ## P12 - benchmarks, diagrams, release readiness
 
 - `direct_scan_resistant_cache`

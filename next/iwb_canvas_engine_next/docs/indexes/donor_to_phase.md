@@ -263,8 +263,8 @@ Every donor is mapped to target phases. `avoid` records are forbidden as structu
 ## codec_metadata_decode
 
 - Decision: `adapt`
-- Target phases: `P3`, `P11`
-- Target owner: Schema v1 metadata codec and migration
+- Target phases: `P3`
+- Target owner: Schema v1 metadata codec
 
 ## codec_layer_decode
 
@@ -275,25 +275,25 @@ Every donor is mapped to target phases. `avoid` records are forbidden as structu
 ## codec_node_common_decode
 
 - Decision: `adapt`
-- Target phases: `P3`, `P11`
-- Target owner: Element common schema codec and migration
+- Target phases: `P3`
+- Target owner: Element common schema codec
 
 ## codec_family_decode
 
 - Decision: `adapt`
-- Target phases: `P3`, `P11`
-- Target owner: Element family codecs and migration
+- Target phases: `P3`
+- Target owner: Element family codecs
 
 ## codec_scene_codec_flow
 
 - Decision: `adapt_rewrite`
-- Target phases: `P3`, `P11`
-- Target owner: CodecBoundary and migration codec reference
+- Target phases: `P3`
+- Target owner: CodecBoundary codec reference
 
 ## codec_validation_path_surface
 
 - Decision: `copy_adapt`
-- Target phases: `P3`, `P11`
+- Target phases: `P3`
 - Target owner: Diagnostic path projection
 
 ## tooling_schema_family_parity

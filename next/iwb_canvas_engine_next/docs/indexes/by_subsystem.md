@@ -11,7 +11,6 @@ Subsystem-oriented reading map over the section registry.
 
 - `section_05_schema_v1_contract`
 - `section_19_codec_boundary`
-- `section_25_migration_tool`
 
 ## runtime_store_edit
 

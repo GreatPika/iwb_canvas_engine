@@ -67,9 +67,7 @@ Do not assume:
 | palette | `ScenePaletteSnapshot` | `CanvasPalette` | `functional.palette_roundtrip` |
 | external image repaint | `notifySceneChanged` | `markResourceDirty` | `functional.resource_dirty_repaint` |
 | save/restore | schema codec | schema v1 codec | `functional.schema_v1_roundtrip` |
-| old saved docs migration | old schema v7 | migration tool outside core | `migration.schema_v7_to_v1` |
 
 All rows must be green before release.
 
 ---
-

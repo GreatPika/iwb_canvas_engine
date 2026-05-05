@@ -77,7 +77,7 @@ planned Mermaid file paths under `docs/diagrams/`.
 
 - Kind: `data_flow`
 - Planned path: `docs/diagrams/dfd_schema_v1_decode_encode.mmd`
-- Related phases: `P3`, `P11`, `P0`, `P12`
+- Related phases: `P3`, `P0`, `P12`
 - Related sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`, `section_21_diagrams`
 
 ## dfd_cache_invalidation
@@ -93,13 +93,6 @@ planned Mermaid file paths under `docs/diagrams/`.
 - Planned path: `docs/diagrams/dfd_diagnostics_error_projection.mmd`
 - Related phases: `P1.5`, `P2`, `P3`, `P12`, `P0`
 - Related sections: `section_06_validation_limits`, `section_20_diagnostics_hub`, `section_21_diagrams`
-
-## dfd_migration_tool
-
-- Kind: `data_flow`
-- Planned path: `docs/diagrams/dfd_migration_tool.mmd`
-- Related phases: `P1.5`, `P2`, `P11`, `P0`, `P12`
-- Related sections: `section_09_accepted_differences`, `section_21_diagrams`, `section_25_migration_tool`
 
 ## seq_edit_success
 

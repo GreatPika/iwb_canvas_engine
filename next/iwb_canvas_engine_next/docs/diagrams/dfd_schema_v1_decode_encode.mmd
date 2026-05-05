@@ -51,7 +51,7 @@ flowchart LR
     RuntimeMutation["No decode/encode mutation\nof committed runtime state"]
     RuntimeProjection["DocumentProjectionCache\nbuilt only by readDocument,\nencodeCanvasDocument, tests/tools,\nor explicit edit.readDraftDocument"]
     UnknownPreserve["Unknown non-metadata fields\nnot preserved by encode"]
-    MigrationInCore["No production schema v7 read/write\nmigration is separate tooling"]
+    LegacySchemaBlocked["No production legacy schema read/write"]
   end
 
   App -->|"decode request"| DecodeEntry
@@ -104,5 +104,5 @@ flowchart LR
   DtoValidation -.->|"invalid DTO"| DiagnosticRecord
   DecodeMaterializer -.->|"forbidden"| RuntimeMutation
   CanonicalEncoder -.->|"forbidden"| RuntimeMutation
-  VersionGate -.->|"forbidden"| MigrationInCore
+  VersionGate -.->|"forbidden legacy schema"| LegacySchemaBlocked
   CanonicalMap -.->|"forbidden legacy/public fields"| LegacyBlocked

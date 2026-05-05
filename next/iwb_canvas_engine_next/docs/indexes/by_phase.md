@@ -36,7 +36,6 @@ Diagrams:
 - `dfd_schema_v1_decode_encode`
 - `dfd_cache_invalidation`
 - `dfd_diagnostics_error_projection`
-- `dfd_migration_tool`
 - `seq_edit_success`
 - `seq_edit_rollback`
 - `seq_load_document_success`
@@ -138,7 +137,6 @@ Diagrams:
 - `c4_container`
 - `c4_context`
 - `dfd_diagnostics_error_projection`
-- `dfd_migration_tool`
 - `dfd_public_edit`
 
 Guardrails:
@@ -198,7 +196,6 @@ Forbidden donor structure:
 Diagrams:
 - `c4_context`
 - `dfd_diagnostics_error_projection`
-- `dfd_migration_tool`
 - `dfd_public_edit`
 
 Guardrails:
@@ -697,47 +694,6 @@ Exit criteria:
 - resource resolver repaint works
 - widget tests green.
 
-## P11 - migration tool package
-
-Read first:
-- `section_09_accepted_differences`
-- `section_19_codec_boundary`
-- `section_25_migration_tool`
-- `section_26_implementation_phases`
-
-Required donors:
-- `codec_metadata_decode`
-- `codec_node_common_decode`
-- `codec_family_decode`
-- `codec_scene_codec_flow`
-- `codec_validation_path_surface`
-
-Forbidden donor structure:
-- `avoid_scene_controller_facades`
-- `avoid_interactive_runtime_whole`
-- `avoid_scene_builder_public_architecture`
-- `avoid_scene_codec_whole`
-- `avoid_scene_store_controller_whole`
-
-Diagrams:
-- `dfd_migration_tool`
-- `dfd_schema_v1_decode_encode`
-
-Guardrails:
-- `codec.known_fields_validated`
-- `codec.schema_v1_exact`
-- `new_api.v1_scope_gate_green_before_freeze`
-
-Tests:
-- `test.migration.old_fixture_migration`
-- `test.migration.no_silent_data_loss`
-
-Exit criteria:
-- old fixture migration tests green
-- imageId maps to resources
-- palette/grid color/revision preserved
-- no silent data loss.
-
 ## P12 - benchmarks, diagrams, release readiness
 
 Read first:
@@ -771,7 +727,6 @@ Diagrams:
 - `dfd_diagnostics_error_projection`
 - `dfd_load_document_success_failure`
 - `dfd_main_paint_frame`
-- `dfd_migration_tool`
 - `dfd_overlay_frame`
 - `dfd_pointer_preview_commit`
 - `dfd_public_edit`

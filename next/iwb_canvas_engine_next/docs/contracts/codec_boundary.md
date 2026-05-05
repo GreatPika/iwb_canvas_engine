@@ -8,10 +8,8 @@ Must read before editing:
 - `section_05_schema_v1_contract` -> `docs/contracts/schema_v1.md`
 - `section_06_validation_limits` -> `docs/contracts/validation_limits.md`
 - `section_20_diagnostics_hub` -> `docs/contracts/diagnostics.md`
-- `section_25_migration_tool` -> `docs/contracts/migration_tool.md`
 Feeds phases:
 - `P3`
-- `P11`
 Related donors:
 - `codec_guards`
 - `codec_json_require`
@@ -37,6 +35,9 @@ Do not assume:
 ## 19. CodecBoundary
 
 ### 19.1 Entry points
+
+Production `CodecBoundary` owns schema v1 decode/encode only. It must not read
+or write legacy schema versions.
 
 ```dart
 const int canvasSchemaVersionWrite = 1;
@@ -81,4 +82,3 @@ CanvasDocument decodeCanvasDocumentFromJson(String json);
 ```
 
 ---
-

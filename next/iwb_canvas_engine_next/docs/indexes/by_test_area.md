@@ -226,20 +226,6 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_23_tests`
 - Guardrails: `none`
 
-## test.migration.old_fixture_migration
-
-- Path: `old schema v7 fixture migration tests`
-- Phases: `P11`
-- Sections: `section_25_migration_tool`, `section_23_tests`
-- Guardrails: `codec.schema_v1_exact`
-
-## test.migration.no_silent_data_loss
-
-- Path: `MigrationReport and DataLossReport tests`
-- Phases: `P11`
-- Sections: `section_25_migration_tool`, `section_23_tests`
-- Guardrails: `none`
-
 ## test.benchmarks.required_cases
 
 - Path: `required benchmark case gates`

@@ -144,10 +144,8 @@ Release is blocked unless all statements are true:
 20. no CanvasDocument projection in paint/pointer/hit tests are green.
 21. diagnostics disabled hot-path allocation tests are green.
 22. all required diagrams exist and match owners.
-23. migration tool handles old schema v7 fixtures without silent loss.
-24. benchmark gates pass.
-25. AppCanvasPort, OldEngineAdapter and NewEngineAdapter are not present in the engine package.
+23. benchmark gates pass.
+24. AppCanvasPort, OldEngineAdapter and NewEngineAdapter are not present in the engine package.
 ```
 
 ---
-

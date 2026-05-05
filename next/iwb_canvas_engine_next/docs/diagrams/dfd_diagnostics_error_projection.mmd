@@ -2,8 +2,6 @@
 flowchart LR
 
   App["Application code"]
-  MigrationTooling["Migration tooling\noutside production core"]
-  MigrationReport["Migration report\nowned by canvas_migration_tools"]
 
   subgraph PublicBoundary["Public API and runtime boundaries"]
     PublicCalls["Public calls\nDTO construction, codec, load, edit, resources"]
@@ -48,8 +46,6 @@ flowchart LR
   PublicCalls -->|"boundary validation failure"| ValidationErrors
   PublicCalls -->|"runtime failure from public operation"| RuntimeErrors
   RuntimeFlows -->|"pointer, paint, spatial,\nor resource failure"| RuntimeErrors
-  MigrationTooling -->|"tool-owned failures,\nlosses, and warnings"| MigrationReport
-
   ValidationErrors -->|"error path"| DiagnosticRecord
   RuntimeErrors -->|"error path"| DiagnosticRecord
   InternalErrors -->|"self-protection path"| DiagnosticRecord

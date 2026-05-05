@@ -7,15 +7,13 @@ Owns:
 Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
 - `section_08_functional_ledger` -> `docs/verification/functional_ledger.md`
-- `section_25_migration_tool` -> `docs/contracts/migration_tool.md`
 Feeds phases:
 - `P1.5`
 - `P2`
-- `P11`
 Related donors:
 - `none`
 Related diagrams:
-- `dfd_migration_tool`
+- `none`
 Required tests:
 - `none`
 Guardrails:
@@ -34,13 +32,11 @@ Do not assume:
 | `SceneSnapshot` absent | accepted target decision |
 | `NodeSpec`/`NodePatch` absent | accepted target decision |
 | old `CanvasPointerInput` name absent | new type is `CanvasPointerSample` |
-| schema v7 not production decode target | migration tool outside core |
+| schema v7 not production decode target | accepted target decision |
 | palette preserved | `CanvasDocument.palette` |
 | grid color preserved | `CanvasGrid.color` |
 | old imageId replaced | `CanvasResourceId` + `CanvasResourceSource.appKey` |
 | action payload no longer Map | typed payload classes |
 | move resolver async not supported | synchronous resolver only |
-| app migration adapters outside engine | explicit boundary |
 
 ---
-

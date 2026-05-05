@@ -76,7 +76,7 @@ Required diagram deliverables from section 21 mapped to phases, sections and pla
 
 - Planned path: `docs/diagrams/dfd_schema_v1_decode_encode.mmd`
 - Kind: `data_flow`
-- Phases: `P3`, `P11`, `P0`, `P12`
+- Phases: `P3`, `P0`, `P12`
 - Sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`, `section_21_diagrams`
 
 ## dfd_cache_invalidation
@@ -92,13 +92,6 @@ Required diagram deliverables from section 21 mapped to phases, sections and pla
 - Kind: `data_flow`
 - Phases: `P1.5`, `P2`, `P3`, `P12`, `P0`
 - Sections: `section_06_validation_limits`, `section_20_diagnostics_hub`, `section_21_diagrams`
-
-## dfd_migration_tool
-
-- Planned path: `docs/diagrams/dfd_migration_tool.mmd`
-- Kind: `data_flow`
-- Phases: `P1.5`, `P2`, `P11`, `P0`, `P12`
-- Sections: `section_09_accepted_differences`, `section_21_diagrams`, `section_25_migration_tool`
 
 ## seq_edit_success
 

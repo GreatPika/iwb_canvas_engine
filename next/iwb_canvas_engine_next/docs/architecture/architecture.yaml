@@ -78,14 +78,14 @@ runtime_owners:
   - id: CodecBoundary
     label: CodecBoundary
     package_path: lib/src/codec/
-    summary: Schema v1 JSON decode, encode, migration, and diagnostics.
+    summary: Schema v1 JSON decode, encode, validation, and diagnostics.
     source_refs:
       - docs/architecture/01_runtime_ownership.md
       - docs/architecture/02_package_boundaries.md
   - id: DiagnosticsHub
     label: DiagnosticsHub
     package_path: lib/src/diagnostics/
-    summary: Structured validation, runtime, and migration error projection.
+    summary: Structured validation and runtime error projection.
     source_refs:
       - docs/architecture/01_runtime_ownership.md
       - docs/architecture/02_package_boundaries.md

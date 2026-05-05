@@ -9,7 +9,6 @@ Must read before editing:
 - `section_11_edit_kernel` -> `docs/contracts/edit_kernel.md`
 - `section_14_interaction_engine` -> `docs/contracts/interaction_engine.md`
 - `section_15_frame_render_contract` -> `docs/contracts/frame_rendering.md`
-- `section_25_migration_tool` -> `docs/contracts/migration_tool.md`
 Feeds phases:
 - `P0`
 - `P12`
@@ -29,7 +28,6 @@ Related diagrams:
 - `dfd_schema_v1_decode_encode`
 - `dfd_cache_invalidation`
 - `dfd_diagnostics_error_projection`
-- `dfd_migration_tool`
 - `seq_edit_success`
 - `seq_edit_rollback`
 - `seq_load_document_success`
@@ -124,7 +122,6 @@ dfd_resource_resolution.mmd
 dfd_schema_v1_decode_encode.mmd
 dfd_cache_invalidation.mmd
 dfd_diagnostics_error_projection.mmd
-dfd_migration_tool.mmd
 ```
 
 ### 21.3 Sequence diagrams

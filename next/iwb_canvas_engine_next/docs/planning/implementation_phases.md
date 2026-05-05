@@ -21,7 +21,6 @@ Feeds phases:
 - `P8`
 - `P9`
 - `P10`
-- `P11`
 - `P12`
 Related donors:
 - `direct_numeric_policy`
@@ -417,27 +416,6 @@ resource resolver repaint works;
 widget tests green.
 ```
 
-### P11 — migration tool package
-
-Deliverables:
-
-```text
-- packages/canvas_migration_tools;
-- old schema v7 fixtures;
-- v7 to v1 mapping;
-- MigrationReport;
-- DataLossReport.
-```
-
-Exit criteria:
-
-```text
-old fixture migration tests green;
-imageId maps to resources;
-palette/grid color/revision preserved;
-no silent data loss.
-```
-
 ### P12 — benchmarks, diagrams, release readiness
 
 Deliverables:
@@ -463,4 +441,3 @@ no app adapters in package.
 ```
 
 ---
-
