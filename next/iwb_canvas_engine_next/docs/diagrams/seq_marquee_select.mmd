@@ -45,7 +45,7 @@ sequenceDiagram
     Surface->>Tools: handlePointer(CanvasPointerSample move)
     Tools->>IE: normalized finite move sample
     IE->>IE: normalize rectangle from anchor to current position
-    Note over IE,Frame: Marquee drag preview is overlay-only; no selected-move main-scene preview delta is staged.
+    Note over IE,Frame: Marquee drag preview is overlay-only and no selected-move main-scene preview delta is staged.
     IE->>Preview: replace immutable marquee preview snapshot
     Preview->>Frame: request overlay repaint only
     Frame->>Preview: capture overlayRevision and marqueeRect once
@@ -78,7 +78,7 @@ sequenceDiagram
     IE->>Draft: set selection to next selected ids
     Draft->>Touched: record selectionChanged only
     IE->>Events: stage CanvasActionCommitted
-    Note over Events: type selectMarquee; elementIds are next selection in document order; payload CanvasSelectionActionPayload(previousSelection, nextSelection, marqueeRectWorld).
+    Note over Events: type selectMarquee. elementIds are next selection in document order. payload CanvasSelectionActionPayload(previousSelection, nextSelection, marqueeRectWorld).
     EK->>EK: reject Future result before success path
     EK->>CC: compile exact selection revision and repaint intent
     Touched-->>CC: selectionChanged revision fact

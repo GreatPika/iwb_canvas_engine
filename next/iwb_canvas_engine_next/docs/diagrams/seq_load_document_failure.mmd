@@ -22,7 +22,7 @@ sequenceDiagram
   alt runtime is disposed
     Runtime--x API: throw StateError("CanvasRuntime is disposed.")
     API--x Caller: rethrow StateError
-    Note over Runtime,Signals: Rejection is a boundary failure; no store, cache, repaint, action, or listener effect is started.
+    Note over Runtime,Signals: Rejection is a boundary failure. No store, cache, repaint, action, or listener effect is started.
   else runtime accepts public entry
     Runtime->>Store: read current committed identity, selection, revisions, and id admission state
     Store-->>Runtime: current committed state remains installed
@@ -44,10 +44,10 @@ sequenceDiagram
     Runtime--x API: rethrow projected exception
     API--x Caller: rethrow projected exception
 
-    Note over Runtime,Interaction: Active gesture is not interrupted; preview, pending line, pointer normalization, and pending tap history remain unchanged.
+    Note over Runtime,Interaction: Active gesture is not interrupted. Preview, pending line, pointer normalization, and pending tap history remain unchanged.
     Note over Store: Committed document identity, selection, controllerEpoch, and all document revisions remain unchanged.
     Note over Projection,Frame: Projection, spatial, resource, paint, static, text, path, stroke, and overlay caches remain unchanged.
     Note over Frame,Signals: No main repaint, overlay repaint, CanvasActionCommitted event, text edit event, public notify, or revision listener publication occurs.
   end
 
-  Note over Runtime,Store: Failure stops before PreparedDocumentLoad install; there is no atomic install, revision bump, cache invalidation action, or success-path interaction cleanup.
+  Note over Runtime,Store: Failure stops before PreparedDocumentLoad install. There is no atomic install, revision bump, cache invalidation action, or success-path interaction cleanup.

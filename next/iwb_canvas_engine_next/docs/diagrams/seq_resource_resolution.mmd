@@ -36,14 +36,14 @@ sequenceDiagram
           Resources-->>Frame: app-owned ui.Image or bounded placeholder
         else cache miss
           Resources->>Resolver: resolveImage(CanvasImageResource appKey descriptor)
-          Note over Resources,Resolver: Synchronous app-owned resolver boundary only; no async resolver, file, network, asset-bundle, or engine IO loading.
+          Note over Resources,Resolver: Synchronous app-owned resolver boundary only. No async resolver, file, network, asset-bundle, or engine IO loading.
           Resolver-->>Resources: app-owned ui.Image or null
 
           alt app returns ui.Image
             Resources->>Cache: store key(resourceId, resourceRevision) -> app-owned ui.Image reference
             Resources-->>Frame: app-owned ui.Image paint asset
           else app returns null
-            Resources->>Cache: remember missing/null result by resourceId + resourceRevision; no same-frame retry
+            Resources->>Cache: remember missing/null result by resourceId + resourceRevision and no same-frame retry
             Resources-->>Frame: bounded missing image placeholder
           end
         end
@@ -54,10 +54,10 @@ sequenceDiagram
   Frame->>Painter: paint immutable records with resolved image assets or placeholders
   Painter-->>Surface: draw main scene
 
-  Note over Painter,Resolver: Painter never calls CanvasResourceResolver directly; ResourceKernel owns the resolver boundary.
-  Note over Resources,Resolver: Returned ui.Image objects are owned by the application; the engine never disposes app-owned images.
+  Note over Painter,Resolver: Painter never calls CanvasResourceResolver directly. ResourceKernel owns the resolver boundary.
+  Note over Resources,Resolver: Returned ui.Image objects are owned by the application. The engine never disposes app-owned images.
   Note over Frame,Store: Main paint does not materialize CanvasDocument and does not read DocumentProjectionCache.
-  Note over Resources,Store: ResourcePort cannot mutate descriptors; descriptor mutation is only through the CanvasEdit commit path outside this sequence.
+  Note over Resources,Store: ResourcePort cannot mutate descriptors. Descriptor mutation is only through the CanvasEdit commit path outside this sequence.
   Note over Surface,Painter: No legacy scene, controller, snapshot, or public DTO entities participate in resource resolution.
 
   opt application reports changed external resource visuals

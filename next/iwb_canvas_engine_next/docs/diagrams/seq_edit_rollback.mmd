@@ -33,7 +33,7 @@ sequenceDiagram
   else callback returns Future
     Caller-->>EK: Future result
     EK->>EK: reject async edit before commit planning
-    Note over EK: Returned Future is treated as a rollback path; no async mutation may outlive the session.
+    Note over EK: Returned Future is treated as a rollback path and no async mutation may outlive the session.
   else preflight fails before atomic install
     activate Handle
     Caller->>Handle: synchronous CanvasEdit mutations
@@ -55,7 +55,7 @@ sequenceDiagram
   EK->>Touched: discard touched set
   EK->>Handle: close session and mark handle stale
   Note over Handle: Any later handle operation throws StateError.
-  Note over EK,Store: Committed document identity, revisions, and selection remain unchanged; InteractionEngine-owned preview is outside Store.
-  Note over Store,Signals: No atomic install runs; no action event, text edit event, public notify, scene repaint, or overlay repaint is published.
+  Note over EK,Store: Committed document identity, revisions, and selection remain unchanged. InteractionEngine-owned preview is outside Store.
+  Note over Store,Signals: No atomic install runs and no action event, text edit event, public notify, scene repaint, or overlay repaint is published.
   EK--x API: rethrow original exception, async edit rejection, or preflight error
   API--x Caller: propagate safely

@@ -42,7 +42,7 @@ sequenceDiagram
   Frame->>Painter: paint captured overlay frame and immutable primitives
   Painter-->>Surface: draw overlay UI
 
-  Note over Painter: Overlay painter consumes captured frame facts and immutable primitives only; it performs no live runtime reads.
+  Note over Painter: Overlay painter consumes captured frame facts and immutable primitives only. It performs no live runtime reads.
   Note over Painter,Store: Forbidden: painter reads from DocumentStoreKernel, Store, InteractionEngine, FrameEngine runtime state, or public document projection.
   Note over Frame,Store: Forbidden in overlay paint: CanvasDocument materialization, DocumentProjectionCache reads, Store mutation, cache invalidation, repaint scheduling, and action events.
   Note over Surface,Painter: Forbidden: resource resolver reads and selected move rendering in overlay paint.

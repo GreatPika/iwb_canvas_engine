@@ -31,7 +31,7 @@ sequenceDiagram
   ReadPort-->>IE: epoch for pending line start
   IE->>IE: store pending line start bound to current epoch
   IE->>Preview: publish kind pendingLineStart with start, timestamp, color, and thickness
-  Note over IE,Preview: Pending line session is epoch-bound; preview snapshot is immutable and no committed document state is touched.
+  Note over IE,Preview: Pending line session is epoch-bound. Preview snapshot is immutable and no committed document state is touched.
   Preview->>Frame: request overlay repaint only
   Frame->>Preview: capture overlayRevision and pending line start once
   Frame->>Frame: build immutable pending-line overlay primitive
@@ -44,7 +44,7 @@ sequenceDiagram
     Tools->>IE: normalized finite move sample
     IE->>IE: verify pending line epoch matches current controllerEpoch
     IE->>Preview: replace with kind linePreview using same start and preview end
-    Note over IE,Frame: Line preview is overlay-only; no selected-move main-scene preview delta is staged.
+    Note over IE,Frame: Line preview is overlay-only and no selected-move main-scene preview delta is staged.
     Preview->>Frame: request overlay repaint only
     Frame->>Preview: capture overlayRevision and line preview once
     Frame->>Geometry: build finite line preview bounds from start, end, and thickness
@@ -97,7 +97,7 @@ sequenceDiagram
       IE->>Draft: add CanvasLineElement with generated element id
       Note over IE,Draft: Line uses finite startWorld, endWorld, color, thickness, opacity 1.0, and default common element flags.
       Draft->>Touched: record addedElementIds containing new line id
-      Note over Touched: Exact committed scope: new line id; document, structural, bounds, visual, and projection revisions.
+      Note over Touched: Exact committed scope includes new line id plus document, structural, bounds, visual, and projection revisions.
       IE->>Events: stage deferred drawLine action descriptor
       Note over Events: Not public yet. Deferred payload is CanvasDrawLineActionPayload(color, thickness, opacity, startWorld, endWorld).
       EK->>EK: reject Future result before success path
@@ -109,7 +109,7 @@ sequenceDiagram
       CC->>Events: attach staged drawLine action to commit
       CC->>Store: install compiled CommitPlan atomically
       Store->>Store: replace layer membership, registry, line row, and revision state
-      Note over CC,Store: Atomic install is the commit boundary; InteractionEngine never mutates Store directly.
+      Note over CC,Store: Atomic install is the commit boundary. InteractionEngine never mutates Store directly.
       Store->>Spatial: apply touched-id spatial add for new line id
       Spatial-->>Store: spatial index updated for new paint and hit bounds
       Store->>Projection: evict public document projection by projectionRevision

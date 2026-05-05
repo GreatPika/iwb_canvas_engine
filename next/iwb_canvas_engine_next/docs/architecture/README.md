@@ -9,21 +9,19 @@ documents as the source for current runtime ownership.
 
 ## Read path
 
-1. Read `architecture.yaml` for the machine-readable architecture contract:
-   owner, boundary, and dependency model. Its `source_refs` point back to the
-   role docs that explain the model.
-2. Read `00_architecture_overview.md` for scope and non-goals.
-3. Read `01_runtime_ownership.md` and `02_package_boundaries.md` for the target
+1. Read `00_architecture_overview.md` for scope and non-goals.
+2. Read `01_runtime_ownership.md` and `02_package_boundaries.md` for the target
    runtime shape.
-4. Read `03_data_model.md` and `04_decisions_and_differences.md` for state
+3. Read `03_data_model.md` and `04_decisions_and_differences.md` for state
    ownership and accepted differences from the legacy engine.
-5. Read `docs/diagrams/README.md` and the Mermaid files in `docs/diagrams/`
+4. Read `docs/diagrams/README.md` and the Mermaid files in `docs/diagrams/`
    when changing architecture.
 
 ## Role routing
 
 - Architecture ownership and package boundary work starts in
-  `docs/architecture/architecture.yaml`.
+  `docs/architecture/01_runtime_ownership.md` and
+  `docs/architecture/02_package_boundaries.md`.
 - Public API work routes to `docs/contracts/public_api_v1.md`.
 - Schema and JSON compatibility work routes to
   `docs/contracts/schema_v1.md` and

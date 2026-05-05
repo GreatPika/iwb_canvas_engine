@@ -35,7 +35,7 @@ sequenceDiagram
     Store-->>ReadPort: textSnapshot, boundsWorld, and element generation
     ReadPort-->>IE: textSnapshot, boundsWorld, and element generation
     IE->>IE: store pending tap candidate, timestamp, viewPosition, and worldPosition
-    Note over IE: Pending tap state is gesture detection only; it is not document, selection, or preview state.
+    Note over IE: Pending tap state is gesture detection only. It is not document, selection, or preview state.
   end
 
   User->>Surface: second tap on canvas

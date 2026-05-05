@@ -64,7 +64,7 @@ sequenceDiagram
 
     Runtime->>Actions: close stream
     Runtime->>TextRequests: close stream
-    Note over Runtime,Signals: No public listenable close is specified by v1; dispose does not increment document revisions. overlayRevision advances only when dispose clears active preview.
+    Note over Runtime,Signals: No public listenable close is specified by v1. Dispose does not increment document revisions. overlayRevision advances only when dispose clears active preview.
 
     Runtime->>Runtime: transition to disposed
     Runtime-->>App: dispose complete

@@ -1,23 +1,23 @@
 %% Resource resolution and cache lifecycle state diagram
 stateDiagram-v2
-  [*] --> RuntimeActive: "CanvasRuntime active"
+  [*] --> RuntimeActive: CanvasRuntime active
 
   state "Active resource runtime" as RuntimeActive
   note right of RuntimeActive
     Resource descriptors are committed document input.
     App-owned images are external input. DocumentStoreKernel
-    owns descriptor tables; ResourceKernel owns dirty state,
+    owns descriptor tables. ResourceKernel owns dirty state,
     listener/cache references, and resolver calls only.
     There is no file, network, or asset IO.
   end note
 
-  RuntimeActive --> ResolveRequested: "main paint image record carries resourceId"
-  RuntimeActive --> DescriptorMutation: "CanvasEdit or loadDocument success mutates descriptors"
-  RuntimeActive --> DirtySignal: "markResourceDirty(id) or markAllResourcesDirty()"
-  RuntimeActive --> Disposed: "dispose()"
+  RuntimeActive --> ResolveRequested: main paint image record carries resourceId
+  RuntimeActive --> DescriptorMutation: CanvasEdit or loadDocument success mutates descriptors
+  RuntimeActive --> DirtySignal: markResourceDirty(id) or markAllResourcesDirty()
+  RuntimeActive --> Disposed: dispose()
 
   state "Resolve request" as ResolveRequested
-  ResolveRequested --> DescriptorSnapshot: "Frame/Runtime reads descriptor snapshot"
+  ResolveRequested --> DescriptorSnapshot: Frame/Runtime reads descriptor snapshot
 
   state "Descriptor snapshot" as DescriptorSnapshot
   note right of DescriptorSnapshot
@@ -26,11 +26,11 @@ stateDiagram-v2
     The resolver cannot create, remove, or update descriptors.
   end note
 
-  DescriptorSnapshot --> MissingDescriptor: "descriptor missing"
-  DescriptorSnapshot --> AppKeyDescriptor: "CanvasImageResource source is appKey"
+  DescriptorSnapshot --> MissingDescriptor: descriptor missing
+  DescriptorSnapshot --> AppKeyDescriptor: CanvasImageResource source is appKey
 
   state "Missing descriptor" as MissingDescriptor
-  MissingDescriptor --> PlaceholderResult: "return bounded placeholder"
+  MissingDescriptor --> PlaceholderResult: return bounded placeholder
 
   state "appKey descriptor available" as AppKeyDescriptor
   note right of AppKeyDescriptor
@@ -38,7 +38,7 @@ stateDiagram-v2
     resourceId plus appKey and descriptor metadata.
   end note
 
-  AppKeyDescriptor --> CacheLookup: "lookup ImageResolveCache"
+  AppKeyDescriptor --> CacheLookup: lookup ImageResolveCache
 
   state "Cache lookup" as CacheLookup
   note right of CacheLookup
@@ -47,18 +47,18 @@ stateDiagram-v2
     invalidates affected entries and advances visual revision.
   end note
 
-  CacheLookup --> CachedResolved: "cache hit: ui.Image"
-  CacheLookup --> CachedNull: "cache hit: null or missing for resourceId + resourceRevision"
-  CacheLookup --> CacheMiss: "cache miss"
+  CacheLookup --> CachedResolved: cache hit with ui.Image
+  CacheLookup --> CachedNull: cache hit with null or missing for resourceId + resourceRevision
+  CacheLookup --> CacheMiss: cache miss
 
   state "Cached resolved result" as CachedResolved
-  CachedResolved --> ResolvedVisual: "use app-owned image reference"
+  CachedResolved --> ResolvedVisual: use app-owned image reference
 
   state "Cached null result" as CachedNull
-  CachedNull --> PlaceholderResult: "use bounded placeholder"
+  CachedNull --> PlaceholderResult: use bounded placeholder
 
   state "Cache miss" as CacheMiss
-  CacheMiss --> SyncResolverCall: "call CanvasResourceResolver.resolveImage"
+  CacheMiss --> SyncResolverCall: call CanvasResourceResolver.resolveImage
 
   state "Synchronous app resolver call" as SyncResolverCall
   note right of SyncResolverCall
@@ -67,23 +67,23 @@ stateDiagram-v2
     Store, CanvasDocument, descriptors, selection, or preview.
   end note
 
-  SyncResolverCall --> NullResult: "app returns null"
-  SyncResolverCall --> ResolvedResult: "app returns ui.Image"
+  SyncResolverCall --> NullResult: app returns null
+  SyncResolverCall --> ResolvedResult: app returns ui.Image
 
   state "Null resolver result" as NullResult
-  NullResult --> CacheNullResult: "remember null/missing by resourceId + resourceRevision; no same-frame retry"
-  CacheNullResult --> PlaceholderResult: "return bounded placeholder"
+  NullResult --> CacheNullResult: remember null/missing by resourceId + resourceRevision and no same-frame retry
+  CacheNullResult --> PlaceholderResult: return bounded placeholder
 
   state "Resolved resolver result" as ResolvedResult
-  ResolvedResult --> CacheResolvedResult: "store app-owned image reference"
-  CacheResolvedResult --> ResolvedVisual: "return resolved visual"
+  ResolvedResult --> CacheResolvedResult: store app-owned image reference
+  CacheResolvedResult --> ResolvedVisual: return resolved visual
 
   state "Resolved visual" as ResolvedVisual
   note right of ResolvedVisual
     The engine may cache and paint the reference, but the
     application still owns the ui.Image and its disposal.
   end note
-  ResolvedVisual --> RuntimeActive: "paint completes"
+  ResolvedVisual --> RuntimeActive: paint completes
 
   state "Placeholder fallback" as PlaceholderResult
   note right of PlaceholderResult
@@ -91,7 +91,7 @@ stateDiagram-v2
     bounded placeholder. They do not trigger full-document
     repaint loops or repeated resolver retry in the same frame.
   end note
-  PlaceholderResult --> RuntimeActive: "paint completes"
+  PlaceholderResult --> RuntimeActive: paint completes
 
   state "Descriptor mutation path" as DescriptorMutation
   note left of DescriptorMutation
@@ -99,9 +99,9 @@ stateDiagram-v2
     rollback-safe edit or staged load. It is not a resolver
     side channel and does not use legacy architecture as source.
   end note
-  DescriptorMutation --> DescriptorRevisionChanged: "atomic install succeeds"
-  DescriptorRevisionChanged --> DescriptorCacheInvalidated: "resourceRevision/projection effects"
-  DescriptorCacheInvalidated --> RuntimeActive: "main repaint if used"
+  DescriptorMutation --> DescriptorRevisionChanged: atomic install succeeds
+  DescriptorRevisionChanged --> DescriptorCacheInvalidated: resourceRevision/projection effects
+  DescriptorCacheInvalidated --> RuntimeActive: main repaint if used
 
   state "Resource dirty signal" as DirtySignal
   note left of DirtySignal
@@ -109,9 +109,9 @@ stateDiagram-v2
     It does not mutate CanvasDocument, resource descriptors,
     selection, preview, or action streams.
   end note
-  DirtySignal --> VisualRevisionChanged: "increment resourceVisualRevision"
-  VisualRevisionChanged --> DirtyCacheInvalidated: "evict target resource or all entries"
-  DirtyCacheInvalidated --> RuntimeActive: "schedule main repaint"
+  DirtySignal --> VisualRevisionChanged: increment resourceVisualRevision
+  VisualRevisionChanged --> DirtyCacheInvalidated: evict target resource or all entries
+  DirtyCacheInvalidated --> RuntimeActive: schedule main repaint
 
   state "Disposed runtime" as Disposed
   note right of Disposed
@@ -119,15 +119,15 @@ stateDiagram-v2
     Later resource resolution cannot reopen listeners,
     revive caches, call the app resolver, or mutate Store.
   end note
-  Disposed --> Disposed: "dispose again / no side effects"
-  Disposed --> Disposed: "later resolve, dirty signal, edit, load, or pointer sample / StateError"
+  Disposed --> Disposed: dispose again / no side effects
+  Disposed --> Disposed: later resolve, dirty signal, edit, load, or pointer sample / StateError
 
   note left of RuntimeActive
     Negative invariants:
-    no engine-owned file, network, asset-bundle, or remote load;
-    no sync glue between duplicate resource sources;
-    no direct Store mutation from CanvasResourceResolver;
-    no document action from resource dirty invalidation;
-    no descriptor mutation outside edit/load path;
+    no engine-owned file, network, asset-bundle, or remote load,
+    no sync glue between duplicate resource sources,
+    no direct Store mutation from CanvasResourceResolver,
+    no document action from resource dirty invalidation,
+    no descriptor mutation outside edit/load path,
     no legacy source is normative for new resource behavior.
   end note

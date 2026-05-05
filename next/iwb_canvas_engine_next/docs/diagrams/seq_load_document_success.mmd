@@ -39,7 +39,7 @@ sequenceDiagram
   Runtime->>Interaction: success-only interrupt active interaction
   Interaction->>Interaction: cancel active gesture and clear preview
   Interaction->>Interaction: bump overlayRevision if preview was active
-  Interaction-->>Runtime: preview cleared; preview signal queued until install
+  Interaction-->>Runtime: preview cleared and preview signal queued until install
   Note over Interaction,Signals: Preview state may be cleared before install, but no public signal is published before the committed replacement is installed.
 
   Runtime->>Store: install PreparedDocumentLoad atomically
