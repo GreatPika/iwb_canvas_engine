@@ -9,7 +9,6 @@ Must read before editing:
 - `section_05_schema_v1_contract` -> `docs/contracts/schema_v1.md`
 - `section_06_validation_limits` -> `docs/contracts/validation_limits.md`
 - `section_07_resource_lifecycle` -> `docs/contracts/resources.md`
-- `section_21_diagrams` -> `docs/architecture/diagrams.md`
 Feeds phases:
 - `P1.5`
 - `P2`

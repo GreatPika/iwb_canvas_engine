@@ -111,7 +111,6 @@
     - section_05_schema_v1_contract
     - section_06_validation_limits
     - section_07_resource_lifecycle
-    - section_21_diagrams
   donors:
     - foundation_transform2d
     - foundation_contract_limits
@@ -634,66 +633,6 @@
   do_not_assume:
     - no diagnostic allocations on successful hot path
 -
-  id: section_21_diagrams
-  source: docs/_registry/sections.yaml / section 21
-  file: docs/architecture/diagrams.md
-  title: 21. Diagram deliverables
-  phases:
-    - P0
-    - P12
-  must_read:
-    - section_02_architecture_model
-    - section_11_edit_kernel
-    - section_14_interaction_engine
-    - section_15_frame_render_contract
-  donors:
-    - "none"
-  diagrams:
-    - c4_context
-    - c4_container
-    - c4_component_runtime
-    - c4_code_edit_kernel
-    - dfd_public_edit
-    - dfd_load_document_success_failure
-    - dfd_pointer_preview_commit
-    - dfd_main_paint_frame
-    - dfd_overlay_frame
-    - dfd_resource_resolution
-    - dfd_schema_v1_decode_encode
-    - dfd_cache_invalidation
-    - dfd_diagnostics_error_projection
-    - seq_edit_success
-    - seq_edit_rollback
-    - seq_load_document_success
-    - seq_load_document_failure
-    - seq_selected_move_preview_commit
-    - seq_selected_move_cancel
-    - seq_marquee_select
-    - seq_pencil_marker_commit
-    - seq_line_two_tap_commit
-    - seq_eraser_commit
-    - seq_text_edit_request
-    - seq_main_paint
-    - seq_overlay_paint
-    - seq_resource_resolution
-    - seq_dispose_during_gesture
-    - state_runtime_lifecycle
-    - state_edit_session
-    - state_pointer_session
-    - state_select_marquee
-    - state_selected_move
-    - state_pencil_marker_draw
-    - state_two_tap_line
-    - state_eraser
-    - state_pending_text_edit_request
-    - state_resource_resolution
-  guardrails:
-    - diagrams.all_required_present
-  tests:
-    - test.diagrams.required_present
-  do_not_assume:
-    - no architecture change without diagram catalog update
--
   id: section_22_guardrails_machine_checks
   source: docs/_registry/sections.yaml / section 22
   file: docs/verification/guardrails.md
@@ -704,7 +643,6 @@
   must_read:
     - section_00_status_and_scope
     - section_03_package_layout
-    - section_21_diagrams
     - section_27_final_release_gates
   donors:
     - tooling_schema_family_parity
@@ -1026,7 +964,6 @@
   phases:
     - P12
   must_read:
-    - section_21_diagrams
     - section_22_guardrails_machine_checks
     - section_23_tests
     - section_24_benchmarks

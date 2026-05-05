@@ -237,7 +237,7 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 
 - Path: `required Mermaid files present tests`
 - Phases: `P0`, `P12`
-- Sections: `section_21_diagrams`, `section_23_tests`
+- Sections: `section_23_tests`
 - Guardrails: `diagrams.all_required_present`
 
 ## test.guardrails.blocking_suite

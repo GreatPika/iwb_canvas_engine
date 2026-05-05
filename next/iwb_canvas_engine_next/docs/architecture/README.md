@@ -17,8 +17,8 @@ documents as the source for current runtime ownership.
    runtime shape.
 4. Read `03_data_model.md` and `04_decisions_and_differences.md` for state
    ownership and accepted differences from the legacy engine.
-5. Read `diagrams.md` and the Mermaid files in
-   `docs/diagrams/` when changing architecture.
+5. Read `docs/diagrams/README.md` and the Mermaid files in `docs/diagrams/`
+   when changing architecture.
 
 ## Role routing
 

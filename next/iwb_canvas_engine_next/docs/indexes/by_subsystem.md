@@ -36,7 +36,6 @@ Subsystem-oriented reading map over the section registry.
 
 ## quality_gates
 
-- `section_21_diagrams`
 - `section_22_guardrails_machine_checks`
 - `section_23_tests`
 - `section_24_benchmarks`

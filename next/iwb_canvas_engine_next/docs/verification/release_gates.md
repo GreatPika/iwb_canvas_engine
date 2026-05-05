@@ -5,7 +5,6 @@ Document path: `docs/verification/release_gates.md`
 Owns:
 - 27. Final release gates
 Must read before editing:
-- `section_21_diagrams` -> `docs/architecture/diagrams.md`
 - `section_22_guardrails_machine_checks` -> `docs/verification/guardrails.md`
 - `section_23_tests` -> `docs/verification/tests.md`
 - `section_24_benchmarks` -> `docs/verification/benchmarks.md`

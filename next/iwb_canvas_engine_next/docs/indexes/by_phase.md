@@ -8,7 +8,6 @@ Read first:
 - `section_00_status_and_scope`
 - `section_02_architecture_model`
 - `section_03_package_layout`
-- `section_21_diagrams`
 - `section_22_guardrails_machine_checks`
 - `section_26_implementation_phases`
 
@@ -700,7 +699,6 @@ Read first:
 - `section_08_functional_ledger`
 - `section_18_cache_policy`
 - `section_20_diagnostics_hub`
-- `section_21_diagrams`
 - `section_22_guardrails_machine_checks`
 - `section_23_tests`
 - `section_24_benchmarks`

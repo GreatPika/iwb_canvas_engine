@@ -167,5 +167,5 @@ Guardrails extracted from split section 22.
 ## diagrams.all_required_present
 
 - Rule: required Mermaid files exist
-- Sections: `section_21_diagrams`, `section_22_guardrails_machine_checks`, `section_26_implementation_phases`, `section_27_final_release_gates`
+- Sections: `section_22_guardrails_machine_checks`, `section_26_implementation_phases`, `section_27_final_release_gates`
 - Tests: `test.diagrams.required_present`, `test.guardrails.blocking_suite`

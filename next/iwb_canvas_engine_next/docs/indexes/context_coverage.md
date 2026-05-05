@@ -25,7 +25,6 @@ Coverage summary for context capsules and registries.
 - `section_18_cache_policy`: must_read=linked, donors=linked, diagrams=linked, tests=explicit none, guardrails=explicit none
 - `section_19_codec_boundary`: must_read=linked, donors=linked, diagrams=linked, tests=explicit none, guardrails=linked
 - `section_20_diagnostics_hub`: must_read=linked, donors=linked, diagrams=linked, tests=explicit none, guardrails=linked
-- `section_21_diagrams`: must_read=linked, donors=explicit none, diagrams=linked, tests=linked, guardrails=linked
 - `section_22_guardrails_machine_checks`: must_read=linked, donors=linked, diagrams=explicit none, tests=linked, guardrails=linked
 - `section_23_tests`: must_read=linked, donors=linked, diagrams=explicit none, tests=linked, guardrails=linked
 - `section_24_benchmarks`: must_read=linked, donors=linked, diagrams=explicit none, tests=linked, guardrails=explicit none
