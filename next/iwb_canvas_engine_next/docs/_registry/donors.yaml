@@ -1310,7 +1310,6 @@
     - P1
     - P2
   related_sections:
-    - section_01_legacy_oracle
     - section_04_public_api_v1
   notes: Reference only.
 -

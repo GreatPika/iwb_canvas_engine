@@ -7,7 +7,6 @@
     - P0
     - P1.5
   must_read:
-    - section_01_legacy_oracle
     - section_03_package_layout
     - section_22_guardrails_machine_checks
   donors:
@@ -25,28 +24,6 @@
     - no legacy facade
     - no SceneController
     - no old public API shape
-    - no old runtime fallback
--
-  id: section_01_legacy_oracle
-  source: docs/_registry/sections.yaml / section 1
-  file: docs/planning/legacy_oracle.md
-  title: 1. Что проверено по старому архиву
-  phases:
-    - P1
-  must_read:
-    - section_00_status_and_scope
-    - docs/donors/00_reuse_rules.md
-    - docs/donors/01_summary_by_decision.md
-  donors:
-    - "none"
-  diagrams:
-    - "none"
-  guardrails:
-    - new_api.functional_ledger_complete
-  tests:
-    - "none"
-  do_not_assume:
-    - old engine is oracle only
     - no old runtime fallback
 -
   id: section_02_architecture_model
@@ -246,7 +223,6 @@
     - P1
     - P12
   must_read:
-    - section_01_legacy_oracle
     - section_04_public_api_v1
     - docs/donors/00_reuse_rules.md
   donors:

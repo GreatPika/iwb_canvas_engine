@@ -43,9 +43,10 @@ documents as the source for current runtime ownership.
 - Test, benchmark, guardrail, and release-readiness work routes to
   `docs/verification/`.
 - Implementation sequencing routes to `docs/implementation/`.
-- Legacy-oracle evidence and historical planning notes route to `docs/planning/`.
-- Donor decisions route to `docs/donors/` and
-  `docs/_registry/donors.yaml`.
+- P1 legacy evidence inputs route to
+  `docs/implementation/p1_legacy_oracle_lock.md`.
+- Legacy behavior closure routes to `docs/verification/functional_ledger.md`.
+- Donor decisions route to `docs/donors/` and `docs/_registry/donors.yaml`.
 - Change Contracts route to `../../plan/`.
 
 ## Role boundaries
@@ -54,7 +55,7 @@ documents as the source for current runtime ownership.
 - `contracts/` owns subsystem-level normative behavior and invariants.
 - `verification/` owns proof plans, guardrails, tests, benchmarks, and release
   gates.
-- `planning/` owns transition sequencing and historical context.
+- `implementation/` owns phase-by-phase transition sequencing.
 - `donors/` owns old-engine donor rules and reusable evidence.
 - `_registry/` owns machine-readable section coverage and donor records.
 

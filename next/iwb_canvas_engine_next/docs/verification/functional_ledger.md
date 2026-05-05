@@ -5,7 +5,6 @@ Document path: `docs/verification/functional_ledger.md`
 Owns:
 - 8. Functional ledger: old capability -> new API -> required test
 Must read before editing:
-- `section_01_legacy_oracle` -> `docs/planning/legacy_oracle.md`
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 - `docs/donors/00_reuse_rules.md`
 Feeds phases:
@@ -24,6 +23,44 @@ Do not assume:
 <!-- CONTEXT:END -->
 
 ## 8. Functional ledger: old capability -> new API -> required test
+
+## Evidence closure checklist
+
+When completing or auditing ledger rows, ensure these old behavior areas are
+covered by rows and tests, or by an explicit accepted difference:
+
+- edits are synchronous and non-nested;
+- async edit callbacks are rejected;
+- edit handles become stale after the transaction ends;
+- rollback does not emit events, repaint, resource changes, or spatial updates;
+- document replacement is staged as validate/materialize, interrupt gesture,
+  then atomic install;
+- failed document replacement does not interrupt the active gesture;
+- main paint captures the frame once;
+- overlay repaint is separate from main repaint;
+- selected move preview repaints the main scene, not the overlay;
+- marquee, draw, line, and eraser previews repaint the overlay;
+- pending line state retains start, timestamp, color, and thickness facts;
+- text editing is requested through an event and the editing UI belongs to the
+  application;
+- pointer policy includes legacy `tapSlop`, `doubleTapSlop`,
+  `doubleTapMaxDelayMs`, `deferSingleTap`, and `dragStartSlop` behavior;
+- draw style keeps separate thickness values for pencil, marker, line, and
+  eraser, plus marker opacity;
+- external visual resource repaint was represented by legacy
+  `notifySceneChanged()` and is represented in the new API by resource dirtying,
+  not engine-owned IO;
+- old scene limits for ids, text, paths, strokes, JSON, layers, and nodes remain
+  covered by validation-limit tests;
+- geometry keeps legacy hit slop `4.0`, separate hit bounds, and separate paint
+  bounds;
+- spatial indexing keeps legacy cell size `256`, max cells per node `1024`,
+  max query cells `50000`, large-node/outlier registry, and fallback behavior;
+- action streams close on dispose;
+- runtime-created timestamps are monotonic;
+- old `imageId` behavior is migrated to the new `resourceId`/`appKey` model;
+- palette and legacy `grid.color` survive document read/write and migration
+  coverage.
 
 | Capability | Old oracle | New API v1 | Required test id |
 |---|---|---|---|

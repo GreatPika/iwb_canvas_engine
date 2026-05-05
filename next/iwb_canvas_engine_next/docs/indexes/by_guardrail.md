@@ -5,7 +5,7 @@ Guardrails extracted from split section 22.
 ## new_api.functional_ledger_complete
 
 - Rule: every functional ledger row has API + tests
-- Sections: `section_01_legacy_oracle`, `section_08_functional_ledger`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
+- Sections: `section_08_functional_ledger`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
 - Tests: `test.functional_ledger.row_specific_tests`, `test.guardrails.blocking_suite`
 
 ## new_api.integration_surface_complete

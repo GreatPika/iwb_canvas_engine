@@ -5,7 +5,6 @@ Coverage summary for context capsules and registries.
 ## Split sections
 
 - `section_00_status_and_scope`: must_read=linked, donors=explicit none, diagrams=linked, tests=linked, guardrails=linked
-- `section_01_legacy_oracle`: must_read=linked, donors=explicit none, diagrams=explicit none, tests=explicit none, guardrails=linked
 - `section_02_architecture_model`: must_read=linked, donors=explicit none, diagrams=linked, tests=explicit none, guardrails=linked
 - `section_03_package_layout`: must_read=linked, donors=explicit none, diagrams=linked, tests=linked, guardrails=linked
 - `section_04_public_api_v1`: must_read=linked, donors=linked, diagrams=linked, tests=linked, guardrails=linked

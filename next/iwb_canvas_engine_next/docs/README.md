@@ -18,7 +18,6 @@ with the phase files under `docs/implementation/`. Start donor work at
   and the exit gate for that phase.
 - `verification/`: functional ledger, tests, guardrails, benchmarks, and release
   gates.
-- `planning/`: legacy-oracle context and historical planning notes.
 - `donors/`: donor inventory sections. Donor use is controlled by
   `_registry/donors.yaml`.
 - `diagrams/`: human-readable catalog and Mermaid diagram files.

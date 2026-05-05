@@ -70,8 +70,8 @@ documentation:
 
 - `next/iwb_canvas_engine_next/docs/architecture/README.md`
 - `next/iwb_canvas_engine_next/docs/contracts/`
+- `next/iwb_canvas_engine_next/docs/implementation/`
 - `next/iwb_canvas_engine_next/docs/verification/`
-- `next/iwb_canvas_engine_next/docs/planning/`
 - `next/iwb_canvas_engine_next/docs/donors/`
 
 Do not treat legacy architecture docs as binding architecture for the new
