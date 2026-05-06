@@ -11,6 +11,7 @@ sequenceDiagram
   participant Spatial as SpatialKernel
   participant Preview as CanvasPreviewState
   participant Frame as FrameEngine
+  participant PlanCache as PaintPlanCache
   participant Resolver as CanvasMoveCommitResolver
   participant EK as EditKernel
   participant Draft as DraftDocument
@@ -51,9 +52,24 @@ sequenceDiagram
     Preview->>Frame: request main-scene repaint only
     Frame->>Store: capture committed frame facts and selection ids once
     Frame->>Preview: capture selectedMoveDelta once
-    Frame->>Spatial: query viewport plus selected supplement shifted by -previewDelta
-    Spatial-->>Frame: ordinary and selected candidate handles
-    Frame->>Frame: build RenderElementRecord previewDelta for selected records
+    Frame->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and selection keys
+    alt ordinary paint plan cache hit
+      PlanCache-->>Frame: ordinary committed RenderElementRecord list
+    else ordinary paint plan cache miss
+      Frame->>Spatial: query ordinary viewport candidates
+      Spatial-->>Frame: ordinary candidate handles
+      Frame->>Store: resolve ordinary handles against captured revisions
+      Store-->>Frame: ordinary committed row views
+      Frame->>PlanCache: store ordinary committed records only
+    end
+    Frame->>Frame: filter movable selected ids from ordinary records for this frame
+    Frame->>Spatial: query selected supplement shifted by -previewDelta
+    Spatial-->>Frame: selected supplement candidate handles
+    Frame->>Store: resolve selected supplement handles against captured revisions
+    Store-->>Frame: selected row views
+    Frame->>Frame: build per-frame supplement records with previewDelta
+    Frame->>Frame: merge filtered ordinary records and supplement by orderToken
+    Note over Frame,PlanCache: Selected supplement records are per-frame and are not stored in PaintPlanCache.
     Frame->>Signals: publish main repaint request
     Signals-->>Surface: repaint main scene with selected move preview
   end

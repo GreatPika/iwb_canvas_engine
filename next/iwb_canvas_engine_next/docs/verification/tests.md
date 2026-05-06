@@ -107,6 +107,7 @@ Required tests:
 - `test.resources.mark_all_resources_dirty`
 - `test.resources.painter_never_calls_resolver_directly`
 - `test.resources.missing_result_cached_per_revision`
+- `test.resources.resolver_frame_budget`
 - `test.resources.resolver_reentrancy_rejected`
 - `test.events.typed_action_payloads`
 - `test.events.low_level_mutations_do_not_emit_actions`
@@ -129,12 +130,15 @@ Required tests:
 - `test.load_document.staged_success_failure`
 - `test.geometry.hit_policy`
 - `test.geometry.no_legacy_scene_order`
+- `test.geometry.eraser_exact_budget_no_partial_commit`
 - `test.spatial.touched_update`
 - `test.spatial.no_full_clone_for_touched_update`
 - `test.spatial.stale_generation_rejected`
 - `test.spatial.fallback_budget_enforced`
 - `test.frame.main_overlay_capture`
 - `test.frame.no_live_runtime_read_in_painters`
+- `test.frame.paint_plan_excludes_preview_delta`
+- `test.frame.camera_pan_preserves_ordinary_paint_plan`
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
 - `test.frame.cache_capacity_eviction_policy`
 - `test.frame.selected_supplement_staging_no_global_sort`
@@ -176,6 +180,7 @@ test/resources/resource_dirty_test.dart
 test/resources/mark_all_resources_dirty_test.dart
 test/resources/painter_never_calls_resolver_directly_test.dart
 test/resources/missing_result_cached_per_revision_test.dart
+test/resources/resolver_frame_budget_test.dart
 test/resources/resolver_reentrancy_rejected_test.dart
 
 test/events/typed_action_payloads_test.dart
@@ -192,11 +197,14 @@ test/edit_kernel/operation_matrix_effects_test.dart
 test/edit_kernel/exact_touched_invalidation_test.dart
 test/edit_kernel/typed_effects_no_frame_dependency_test.dart
 test/geometry/no_legacy_scene_order_test.dart
+test/geometry/eraser_exact_budget_no_partial_commit_test.dart
 test/spatial/no_full_clone_for_touched_update_test.dart
 test/spatial/stale_generation_rejected_test.dart
 test/spatial/fallback_budget_enforced_test.dart
 test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart
 test/frame/cache_capacity_eviction_policy_test.dart
+test/frame/paint_plan_excludes_preview_delta_test.dart
+test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart
 test/frame/selected_supplement_staging_no_global_sort_test.dart
 test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart
 test/interaction/no_stale_terminal_commit_test.dart

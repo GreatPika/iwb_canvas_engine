@@ -114,16 +114,20 @@ Guardrails:
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
 - `geometry.no_legacy_scene_order`
+- `geometry.eraser_exact_budget_no_partial`
 - `spatial.no_full_clone_ordinary_edit`
 - `spatial.stale_candidate_rejected`
 - `spatial.fallback_budget_enforced`
 - `frame.no_global_scene_sort`
+- `frame.paint_plan_excludes_preview_delta`
 - `cache.keys_use_next_revisions_only`
+- `cache.frame_meta_not_element_visual`
 - `cache.hot_caches_have_capacity_eviction`
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`
 - `resources.app_key_only`
 - `resources.resolver_boundary_owned_by_resource_kernel`
+- `resources.resolver_frame_budget`
 - `resources.no_same_frame_missing_retry`
 - `resources.resolver_reentrancy_rejected`
 - `codec.schema_v1_exact`
@@ -156,12 +160,12 @@ Release is blocked unless all statements are true:
 11. codec no-runtime-side-effect tests are green.
 12. validation limits are green.
 13. diagnostics disabled hot-path allocation and sanitizer tests are green.
-14. resource lifecycle and resolver-boundary tests are green.
+14. resource lifecycle, resolver-boundary, and resolver-frame-budget tests are green.
 15. edit rollback/stale/nested/async tests are green.
 16. operation matrix and exact touched invalidation tests are green.
 17. loadDocument staged success/failure tests are green.
-18. geometry/spatial parity, stale-candidate, and fallback-budget tests are green.
-19. frame capture, cache-key, cache-policy, and selected supplement staging tests are green.
+18. geometry/spatial parity, eraser exact-budget, stale-candidate, and fallback-budget tests are green.
+19. frame capture, cache-key, cache-policy, frame-meta, paint-plan, and selected supplement staging tests are green.
 20. selected move preview main repaint test is green.
 21. overlay preview repaint split tests are green.
 22. text edit request integration tests are green.

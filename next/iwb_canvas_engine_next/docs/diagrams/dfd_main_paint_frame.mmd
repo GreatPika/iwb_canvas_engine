@@ -21,17 +21,21 @@ flowchart LR
   subgraph Resources["ResourceKernel"]
     ResolvePaintAsset["Resolve paint asset\nResourceKernel-owned resolver boundary"]
     ImageResolveCache["ImageResolveCache\nresourceId + resourceRevision"]
+    ResolverFrameBudget["Resolver frame budget\nkMaxSyncResourceResolverCallsPerFrame = 128"]
+    BudgetPlaceholder["Budget-exceeded placeholder\nnot cached as null/missing"]
     MissingPlaceholder["Bounded missing image placeholder"]
   end
 
   subgraph Frame["FrameEngine"]
     RepaintSignal["Main repaint request"]
     Capture["Main frame capture\nsingle runtime read boundary"]
-    CapturedFrame["CapturedMainFrame\ndocument, structural, bounds,\nvisual, selection, resourceVisual,\ncamera, viewport, selectedMoveDelta"]
-    PaintPlanCache["PaintPlanCache\nbounded hot-path cache"]
+    CapturedFrame["CapturedMainFrame\ndocument, structural, bounds,\nelementVisual, frameMeta, selection,\nresourceVisual, camera, viewport,\nselectedMoveDelta"]
+    PaintPlanCache["PaintPlanCache\nordinary committed records only\nno frameMeta, selectedMoveDelta,\nor previewDelta in key/value"]
+    OrdinaryPlan["Ordinary committed paint plan\ncached RenderElementRecord list"]
     OrdinaryStage["Ordinary paint candidates\nviewport and halo"]
-    SupplementStage["Selected supplement staging\npreview-shifted visibility"]
+    SupplementStage["Per-frame selected supplement staging\npreview-shifted visibility"]
     RecordBuilder["Render record builder\nresolve handles by revision/generation"]
+    FilterOrdinary["Filter selected movable ids\nfrom ordinary stream for this frame"]
     Merge["Order-token merge\nno full-scene sort"]
     Records["Immutable RenderElementRecord list\ncompact row views, selection flags,\npreviewDelta"]
     DescriptorSnapshots["Descriptor snapshots\nresourceId + appKey descriptor + resourceRevision"]
@@ -55,22 +59,28 @@ flowchart LR
   Capture -->|"read immutable selected move preview once"| PreviewSnapshot
   PreviewSnapshot -->|"selectedMoveDelta or none"| CapturedFrame
 
-  CapturedFrame -->|"cache key\nrevisions, viewport, selection"| PaintPlanCache
-  PaintPlanCache -->|"cache hit: immutable records"| Records
+  CapturedFrame -->|"ordinary cache key\nstructural, bounds, elementVisual,\nviewport, selection"| PaintPlanCache
+  PaintPlanCache -->|"cache hit: ordinary committed records"| OrdinaryPlan
   PaintPlanCache -->|"cache miss inputs"| OrdinaryStage
 
   OrdinaryStage -->|"viewport query only"| PaintIndex
   PaintIndex -->|"candidate ids with generations"| OrdinaryStage
-  CapturedFrame -->|"selection ids and preview delta"| SupplementStage
-  SupplementStage -->|"shifted visibility query only"| ShiftedCandidates
-  ShiftedCandidates -->|"selected candidate ids with generations"| SupplementStage
 
   OrdinaryStage -->|"ordinary handles"| RecordBuilder
-  SupplementStage -->|"shifted selected handles"| RecordBuilder
   RecordBuilder -->|"resolve row data by captured revisions"| Committed
   Committed -->|"immutable row views\nstale generation rejected"| RecordBuilder
-  RecordBuilder -->|"ordinary + previewDelta records"| Merge
-  Merge -->|"ordered paint plan"| Records
+  RecordBuilder -->|"ordinary committed records"| OrdinaryPlan
+  OrdinaryPlan -->|"store ordinary records only"| PaintPlanCache
+
+  OrdinaryPlan -->|"ordinary stream"| FilterOrdinary
+  CapturedFrame -->|"selection ids and preview delta"| FilterOrdinary
+  CapturedFrame -->|"selectedMoveDelta for this frame"| SupplementStage
+  SupplementStage -->|"shifted visibility query only"| ShiftedCandidates
+  ShiftedCandidates -->|"selected candidate ids with generations"| SupplementStage
+  SupplementStage -->|"shifted selected handles"| RecordBuilder
+  RecordBuilder -->|"per-frame supplement records\nwith previewDelta"| Merge
+  FilterOrdinary -->|"ordinary records excluding\nmoved selected ids"| Merge
+  Merge -->|"ordered frame records\nnot stored in PaintPlanCache"| Records
 
   Records -->|"text/path/stroke keys"| RenderCaches
   CapturedFrame -->|"background/grid/camera bucket/dpr"| StaticBackgroundCache
@@ -83,7 +93,10 @@ flowchart LR
   DescriptorSnapshots -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
   ResolvePaintAsset -->|"cache lookup and bounded update"| ImageResolveCache
   ImageResolveCache -->|"cached image, null,\nor missing result"| ResolvePaintAsset
-  ResolvePaintAsset -->|"cache miss only\nsync read request"| AppResolver
+  ImageResolveCache -->|"cache miss"| ResolverFrameBudget
+  ResolverFrameBudget -->|"budget available\nsync read request"| AppResolver
+  ResolverFrameBudget -.->|"budget exceeded\nResourceKernel-owned probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder
+  BudgetPlaceholder -.->|"bounded placeholder\nno cache write"| ResolvedAssets
   AppResolver -->|"app-owned image reference\nno engine IO, no mutation"| ResolvePaintAsset
   ResolvePaintAsset -->|"resolved image"| ResolvedAssets
   ResolvePaintAsset -.->|"missing or unresolved"| MissingPlaceholder

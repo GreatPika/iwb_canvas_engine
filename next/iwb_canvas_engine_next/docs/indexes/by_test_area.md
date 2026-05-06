@@ -240,6 +240,20 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_18_cache_policy`, `section_23_tests`
 - Guardrails: `cache.hot_caches_have_capacity_eviction`
 
+## test.frame.paint_plan_excludes_preview_delta
+
+- Path: `test/frame/paint_plan_excludes_preview_delta_test.dart`
+- Phases: `P8`, `P10`, `P12`
+- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
+- Guardrails: `frame.paint_plan_excludes_preview_delta`
+
+## test.frame.camera_pan_preserves_ordinary_paint_plan
+
+- Path: `test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart`
+- Phases: `P8`, `P10`, `P12`
+- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
+- Guardrails: `cache.frame_meta_not_element_visual`
+
 ## test.interaction.state_machines
 
 - Path: `interaction state machine tests`
@@ -280,7 +294,7 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Path: `blocking guardrail suite`
 - Phases: `P0`, `P12`
 - Sections: `section_02_architecture_model`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
-- Guardrails: `api.functional_ledger_complete`, `api.integration_surface_complete`, `api.v1_scope_gate_green_before_freeze`, `api.no_legacy_public_types`, `api.public_types_complete`, `api.public_api_compiles_as_written`, `api.no_undefined_public_type_references`, `api.dto_immutability`, `api.id_validation_no_extension_type_escape`, `core.no_legacy_imports`, `core.no_scene_controller_shape_dependency`, `core.no_node_spec_patch_shape_dependency`, `core.single_runtime_root`, `edit.sync_non_nested`, `edit.rollback_no_effects`, `edit.stale_handle_rejected`, `edit.typed_effects_no_frame_dependency`, `events.low_level_edit_no_user_actions`, `events.commands_emit_user_actions`, `load.prepares_before_interrupt`, `load.success_interrupts_before_install`, `preview.selected_move_main_repaint`, `spatial.fallback_budget_enforced`, `cache.hot_caches_have_capacity_eviction`, `resources.mutation_inside_edit_only`, `resources.dirty_no_document_revision`, `resources.app_key_only`, `resources.resolver_reentrancy_rejected`, `codec.schema_v1_exact`, `codec.known_fields_validated`, `diagnostics.disabled_no_alloc_hot_path`, `surface.interactive_false_pending_line_preserved`, `diagrams.all_required_present`
+- Guardrails: `api.functional_ledger_complete`, `api.integration_surface_complete`, `api.v1_scope_gate_green_before_freeze`, `api.no_legacy_public_types`, `api.public_types_complete`, `api.public_api_compiles_as_written`, `api.no_undefined_public_type_references`, `api.dto_immutability`, `api.id_validation_no_extension_type_escape`, `core.no_legacy_imports`, `core.no_scene_controller_shape_dependency`, `core.no_node_spec_patch_shape_dependency`, `core.single_runtime_root`, `edit.sync_non_nested`, `edit.rollback_no_effects`, `edit.stale_handle_rejected`, `edit.typed_effects_no_frame_dependency`, `events.low_level_edit_no_user_actions`, `events.commands_emit_user_actions`, `load.prepares_before_interrupt`, `load.success_interrupts_before_install`, `preview.selected_move_main_repaint`, `geometry.eraser_exact_budget_no_partial`, `spatial.fallback_budget_enforced`, `frame.paint_plan_excludes_preview_delta`, `cache.frame_meta_not_element_visual`, `cache.hot_caches_have_capacity_eviction`, `resources.mutation_inside_edit_only`, `resources.dirty_no_document_revision`, `resources.app_key_only`, `resources.resolver_frame_budget`, `resources.resolver_reentrancy_rejected`, `codec.schema_v1_exact`, `codec.known_fields_validated`, `diagnostics.disabled_no_alloc_hot_path`, `surface.interactive_false_pending_line_preserved`, `diagrams.all_required_present`
 
 ## test.codec.decode_encode_no_runtime_side_effects
 
@@ -331,6 +345,13 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_16_geometry_policy`, `section_23_tests`
 - Guardrails: `geometry.no_legacy_scene_order`
 
+## test.geometry.eraser_exact_budget_no_partial_commit
+
+- Path: `test/geometry/eraser_exact_budget_no_partial_commit_test.dart`
+- Phases: `P7`, `P8`
+- Sections: `section_16_geometry_policy`, `section_23_tests`
+- Guardrails: `geometry.eraser_exact_budget_no_partial`
+
 ## test.guardrails.import_boundaries
 
 - Path: `test/guardrails/import_boundaries_test.dart`
@@ -365,6 +386,13 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P4`
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
 - Guardrails: `resources.resolver_boundary_owned_by_resource_kernel`
+
+## test.resources.resolver_frame_budget
+
+- Path: `test/resources/resolver_frame_budget_test.dart`
+- Phases: `P4`, `P10`
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+- Guardrails: `resources.resolver_frame_budget`
 
 ## test.spatial.no_full_clone_for_touched_update
 

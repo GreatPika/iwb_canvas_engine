@@ -42,8 +42,13 @@ sequenceDiagram
     Note over IE: Corridor remains preview state only, no selected-move main-scene preview is staged.
     IE->>Spatial: query corridor envelope inflated by eraserThickness / 2 + hitPadding + 4.0
     Spatial-->>IE: committed candidate handles from content hit scope
-    IE->>Geometry: exact eraser segment-to-family checks for deletable non-background candidates
-    Geometry-->>IE: tentative touched ids for session only
+    alt preview candidate/check budget exceeded
+      IE->>Preview: keep corridor-only preview; discard tentative ids
+      Note over IE,Geometry: Preview budget is 512 candidates / 4096 exact checks per sample. Budget exceeded does not return partial tentative ids.
+    else preview budget available
+      IE->>Geometry: exact eraser segment-to-family checks for deletable non-background candidates
+      Geometry-->>IE: tentative touched ids for session only
+    end
     Note over IE,Geometry: Read-only candidate refresh can guide terminal intent, but it does not mutate selection, Store, spatial index, or caches.
     IE->>Preview: replace immutable eraser corridor preview snapshot
     Preview->>Frame: request overlay repaint only
@@ -82,53 +87,61 @@ sequenceDiagram
     IE->>IE: append terminal point if distinct and trim corridor to eraser point limit
     IE->>Spatial: query final corridor envelope for content hit candidates
     Spatial-->>IE: committed candidate handles with generation and structuralRevision
-    IE->>Geometry: exact eraser checks, require isDeletable and exclude background elements
-    Geometry-->>IE: final erasedElementIds in document order
-
-    alt final erasedElementIds is empty
+    alt terminal candidate/check budget exceeded / no partial erase
       IE->>Preview: clear eraser corridor and active session
       Preview->>Frame: request overlay repaint cleanup
       Frame->>Signals: publish overlay cleanup repaint request
       Signals-->>Surface: repaint overlay without eraser corridor
-      Note over Touched,Signals: No touched set, committed document revision change, spatial remove, projection eviction, main repaint, public document notification, or erase action is published.
-    else at least one element is erased
-      IE->>EK: open synchronous interaction edit
-      EK->>EK: reject disposed or nested edit
-      EK->>Store: read committed revision snapshot
-      Store-->>EK: committed tables and revision
-      EK->>Draft: create rollback-safe draft
-      IE->>EK: provide erase mutation request and erase action descriptor
-      EK->>Draft: remove each erasedElementId through edit mutation
-      Note over EK,Draft: InteractionEngine never mutates DocumentStoreKernel directly.
-      Draft->>Touched: record removedElementIds and selectionChanged when removed ids were selected
-      Note over Touched: Exact committed scope: removed ids, document, structural, bounds, visual, projection, and selection revision if selection changed.
-      EK->>Events: stage deferred erase action descriptor
-      Note over Events: Not public yet. Deferred payload is CanvasEraseActionPayload(eraserThickness, erasedElementIds, corridorPointCount).
-      EK->>EK: reject Future result before success path
-      EK->>CC: compile exact erase touched set and invalidation
-      Touched-->>CC: removed ids and revision facts
-      CC->>Store: preflight registry, layer membership, and selection invariants
-      Store-->>CC: preflight accepted
-      CC->>Effects: prepare typed main RepaintIntent
-      CC->>Events: attach staged erase action to commit
-      CC->>Applier: hand off compiled CommitPlan
-      Applier->>Store: install compiled CommitPlan atomically
-      Store->>Store: remove registry rows, layer memberships, family rows, and selected ids
-      Note over Applier,Store: Atomic install is the commit boundary, no action is visible before this point.
-      Store-->>Applier: committed revision facts
-      Applier->>Spatial: apply touched-id spatial remove for erased ids
-      Spatial-->>Applier: deleted ids removed from hit and paint indexes
-      Applier->>Projection: evict public document projection by projectionRevision
-      Applier->>Events: materialize CanvasActionCommitted erase after install
-      Applier->>Frame: publish committed main repaint bus
-      EK->>EK: close edit session and stale handle
-      EK-->>IE: edit result
-      IE->>Preview: clear eraser corridor and active session
-      Preview->>Frame: request overlay repaint cleanup
-      Events->>Signals: publish document revision and erase action notifications
-      Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
-      Signals-->>Surface: repaint main scene without erased elements and overlay without eraser corridor
-      IE-->>Tools: terminal handling complete
+      Note over Geometry,Signals: Terminal budget is 4096 candidates / 32768 exact checks. Budget exceeded is cleanup/no-op only: no partial erase, document mutation, main repaint, or erase action.
+    else terminal budget available
+      IE->>Geometry: exact eraser checks, require isDeletable and exclude background elements
+      Geometry-->>IE: final erasedElementIds in document order
+
+      alt final erasedElementIds is empty
+        IE->>Preview: clear eraser corridor and active session
+        Preview->>Frame: request overlay repaint cleanup
+        Frame->>Signals: publish overlay cleanup repaint request
+        Signals-->>Surface: repaint overlay without eraser corridor
+        Note over Touched,Signals: No touched set, committed document revision change, spatial remove, projection eviction, main repaint, public document notification, or erase action is published.
+      else at least one element is erased
+        IE->>EK: open synchronous interaction edit
+        EK->>EK: reject disposed or nested edit
+        EK->>Store: read committed revision snapshot
+        Store-->>EK: committed tables and revision
+        EK->>Draft: create rollback-safe draft
+        IE->>EK: provide erase mutation request and erase action descriptor
+        EK->>Draft: remove each erasedElementId through edit mutation
+        Note over EK,Draft: InteractionEngine never mutates DocumentStoreKernel directly.
+        Draft->>Touched: record removedElementIds and selectionChanged when removed ids were selected
+        Note over Touched: Exact committed scope: removed ids, document, structural, bounds, elementVisual, projection, and selection revision if selection changed.
+        EK->>Events: stage deferred erase action descriptor
+        Note over Events: Not public yet. Deferred payload is CanvasEraseActionPayload(eraserThickness, erasedElementIds, corridorPointCount).
+        EK->>EK: reject Future result before success path
+        EK->>CC: compile exact erase touched set and invalidation
+        Touched-->>CC: removed ids and revision facts
+        CC->>Store: preflight registry, layer membership, and selection invariants
+        Store-->>CC: preflight accepted
+        CC->>Effects: prepare typed main RepaintIntent
+        CC->>Events: attach staged erase action to commit
+        CC->>Applier: hand off compiled CommitPlan
+        Applier->>Store: install compiled CommitPlan atomically
+        Store->>Store: remove registry rows, layer memberships, family rows, and selected ids
+        Note over Applier,Store: Atomic install is the commit boundary, no action is visible before this point.
+        Store-->>Applier: committed revision facts
+        Applier->>Spatial: apply touched-id spatial remove for erased ids
+        Spatial-->>Applier: deleted ids removed from hit and paint indexes
+        Applier->>Projection: evict public document projection by projectionRevision
+        Applier->>Events: materialize CanvasActionCommitted erase after install
+        Applier->>Frame: publish committed main repaint bus
+        EK->>EK: close edit session and stale handle
+        EK-->>IE: edit result
+        IE->>Preview: clear eraser corridor and active session
+        Preview->>Frame: request overlay repaint cleanup
+        Events->>Signals: publish document revision and erase action notifications
+        Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
+        Signals-->>Surface: repaint main scene without erased elements and overlay without eraser corridor
+        IE-->>Tools: terminal handling complete
+      end
     end
   end
 

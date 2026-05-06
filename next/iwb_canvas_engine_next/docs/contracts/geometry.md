@@ -25,8 +25,10 @@ Related diagrams:
 Required tests:
 - `test.geometry.hit_policy`
 - `test.geometry.no_legacy_scene_order`
+- `test.geometry.eraser_exact_budget_no_partial_commit`
 Guardrails:
 - `geometry.no_legacy_scene_order`
+- `geometry.eraser_exact_budget_no_partial`
 Do not assume:
 - do not port old SceneNode traversal
 - do not copy legacy scene order logic
@@ -128,6 +130,20 @@ Eraser:
 - exact deletion uses segment-to-family geometry checks;
 - deletes only isDeletable=true elements;
 - background elements are not erased in v1.
+```
+
+Eraser exact-check budget:
+
+```text
+kMaxEraserPreviewCandidatesPerSample = 512;
+kMaxEraserPreviewExactChecksPerSample = 4096;
+kMaxEraserTerminalCandidates = 4096;
+kMaxEraserTerminalExactChecks = 32768;
+preview budget exceeded -> corridor-only preview, no tentative ids;
+terminal budget exceeded -> cleanup/no-op, no partial erase;
+budget exceeded increments diagnostic/probe counters;
+budget exceeded does not mutate document, selection, spatial index, projection,
+cache, repaint main scene, or emit erase action.
 ```
 
 ---

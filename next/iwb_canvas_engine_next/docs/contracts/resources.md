@@ -26,12 +26,14 @@ Required tests:
 - `test.resources.mark_all_resources_dirty`
 - `test.resources.painter_never_calls_resolver_directly`
 - `test.resources.missing_result_cached_per_revision`
+- `test.resources.resolver_frame_budget`
 - `test.resources.resolver_reentrancy_rejected`
 Guardrails:
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`
 - `resources.app_key_only`
 - `resources.resolver_boundary_owned_by_resource_kernel`
+- `resources.resolver_frame_budget`
 - `resources.no_same_frame_missing_retry`
 - `resources.resolver_reentrancy_rejected`
 Do not assume:
@@ -125,6 +127,7 @@ and delegates cache invalidation to `ResourceKernel`.
 - mandatory v1 supports appKey resource descriptors and dirty invalidation;
 - resource mutation remains inside CanvasEdit;
 - resolver calls are synchronous and app-owned;
+- resolver calls are bounded by internal `kMaxSyncResourceResolverCallsPerFrame = 128`;
 - reentrant public runtime mutation from inside the resolver throws `StateError`;
 - no engine IO;
 - no asset-bundle loading;
@@ -151,6 +154,21 @@ ResourceKernel marks the resolver call boundary as active before invoking the ap
 callback. Any public runtime mutation attempted by that callback is rejected with
 StateError. The failed reentrant mutation does not change document, selection,
 preview, cache, repaint, or action state.
+```
+
+Resolver frame budget:
+
+```text
+kMaxSyncResourceResolverCallsPerFrame = 128;
+the counter resets for each main paint frame;
+cache hits and missing descriptors do not consume the resolver-call budget;
+after the budget is exhausted, ResourceKernel returns a bounded placeholder;
+budget-exceeded results increment a diagnostic/probe counter;
+ResourceKernel owns the budget-exceeded retry scheduler;
+budget-exceeded results may schedule at most one pending throttled follow-up repaint;
+the pending follow-up repaint flag is cleared by the next main frame resource pass;
+painters and app resolvers must not schedule budget-exceeded follow-up repaints;
+budget-exceeded results are not cached as null, missing, or resolved images.
 ```
 
 ---

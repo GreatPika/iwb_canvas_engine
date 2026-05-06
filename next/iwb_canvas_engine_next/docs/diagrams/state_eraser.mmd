@@ -50,17 +50,21 @@ stateDiagram-v2
       eraserThickness / 2 + hitPadding + 4.0. Resolve committed
       candidates by generation and structuralRevision, then run
       exact segment-to-family geometry checks for deletable
-      non-background content elements. No committed mutation occurs in preview.
+      non-background content elements. Preview budget is 512
+      candidates / 4096 exact checks per sample. No committed
+      mutation occurs in preview.
     end note
 
     CandidateRefresh --> CorridorPreview: replace overlay preview and session candidate facts
     CandidateRefresh --> CorridorPreview: no candidates / preview remains corridor only
+    CandidateRefresh --> CorridorPreview: budget exceeded / corridor-only preview, no partial tentative ids
 
     state "Terminal up gate" as TerminalGate
     note right of TerminalGate
       Terminal commit is allowed only for same token, same controllerEpoch,
       finite terminal point, and candidate/geometry facts derived
-      from the final corridor.
+      from the final corridor. Terminal budget is 4096 candidates /
+      32768 exact checks.
     end note
 
     TerminalGate --> CleanupOnly: stale token, controllerEpoch mismatch, non-finite, or invalid terminal
@@ -68,6 +72,7 @@ stateDiagram-v2
 
     state "Final candidate and geometry check" as FinalCandidates
     FinalCandidates --> EraseDecision: compute erased ids from valid deletable content candidates
+    FinalCandidates --> CleanupOnly: budget exceeded / cleanup no-op, no partial erase
 
     state EraseDecision <<choice>>
     EraseDecision --> CleanupOnly: erased ids empty
@@ -107,6 +112,7 @@ stateDiagram-v2
     note left of CleanupOnly
       Cancel, mode change, load success, interactive=false,
       dispose, stale or invalid terminal, empty erased ids,
+      eraser budget exceeded with no partial erase,
       and EditKernel failure clear preview/session only.
       Empty/no-op cleanup publishes no erase action and no
       public document notification.
@@ -130,5 +136,6 @@ stateDiagram-v2
     no main-scene preview during eraser preview;
     no direct DocumentStoreKernel mutation;
     no full committed mutation during preview;
+    no partial erase on budget exceeded;
     no legacy source as normative architecture.
   end note

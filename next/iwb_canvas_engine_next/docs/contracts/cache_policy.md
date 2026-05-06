@@ -21,9 +21,13 @@ Related diagrams:
 Required tests:
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
 - `test.frame.cache_capacity_eviction_policy`
+- `test.frame.paint_plan_excludes_preview_delta`
+- `test.frame.camera_pan_preserves_ordinary_paint_plan`
 Guardrails:
 - `cache.keys_use_next_revisions_only`
 - `cache.hot_caches_have_capacity_eviction`
+- `cache.frame_meta_not_element_visual`
+- `frame.paint_plan_excludes_preview_delta`
 Do not assume:
 - no unbounded cache owner sprawl
 - no cache keys tied to old snapshots
@@ -37,9 +41,9 @@ Do not assume:
 | TextLayoutCache | Frame | text/style/font/width/direction/lineHeight | text/style update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | PathGeometryCache | Geometry/Frame | pathData/fillRule/strokeWidth | path update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | StrokePathCache | Frame | pointsKey/thickness/transform scale | stroke update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
-| ImageResolveCache | Resource | resourceId/resourceRevision | resource dirty/descriptor change | 1024 entries | target/all invalidation, then LRU | resolver calls, hit/miss, null-cache count | yes, sync app resolver only |
-| StaticBackgroundCache | Frame | background/grid/camera bucket/dpr | camera/background/grid | 1 picture per camera bucket | replace and dispose old picture | picture count, rebuild count | yes bounded |
-| PaintPlanCache | Frame | structural/bounds/visual/viewport/selection | typed invalidation | 16 viewport plans | LRU by viewport/revision tuple | candidate count, hit/miss, full-sort probe | yes bounded |
+| ImageResolveCache | Resource | resourceId/resourceRevision | resource dirty/descriptor change | 1024 entries | target/all invalidation, then LRU | resolver calls, budget-exceeded count, hit/miss, null-cache count | yes, sync app resolver only with `kMaxSyncResourceResolverCallsPerFrame = 128` |
+| StaticBackgroundCache | Frame | background/grid/camera bucket/dpr/frameMetaRevision | camera/background/grid | 1 picture per camera bucket | replace and dispose old picture | picture count, rebuild count | yes bounded |
+| PaintPlanCache | Frame | structural/bounds/elementVisual/viewport/selection | typed invalidation excluding frameMeta and preview | 16 viewport plans | LRU by viewport/revision tuple | candidate count, hit/miss, full-sort probe, selected-supplement bypass count | yes bounded |
 | SelectedOrderCache | Frame | selectionRevision/structuralRevision | selection/structure | 1 selected-order snapshot | replace on revision change | selected count, rebuild count | yes bounded |
 | SpatialIndex | Spatial | structural/bounds revisions | touched geometry/structure | current index only | invalid/rebuild lifecycle, not cache eviction | fallback count, budget-exceeded count | yes query only |
 | OverlayStateSnapshot | Interaction | overlayRevision | pointer/tool/load/mode/dispose | 1 overlay snapshot | replace on overlayRevision | overlay revision churn | yes tiny |
@@ -48,5 +52,24 @@ Do not assume:
 Cache miss in hot path must be bounded by candidate count, not total scene size.
 Hot caches must declare capacity, eviction, key components, invalidation owner,
 and a metric/probe before implementation.
+
+`PaintPlanCache` stores ordinary committed records only. It must not store
+selected-move supplement records, `selectedMoveDelta`, or `previewDelta`.
+`frameMetaRevision` is not a PaintPlanCache key component because camera,
+background, and grid changes repaint frame surfaces without changing ordinary
+element paint records.
+
+Resource resolver budget behavior:
+
+```text
+kMaxSyncResourceResolverCallsPerFrame = 128;
+budget-exceeded resource resolution paints a bounded placeholder;
+budget-exceeded increments a diagnostic/probe counter;
+ResourceKernel owns the budget-exceeded retry scheduler;
+budget-exceeded may schedule at most one pending throttled follow-up repaint;
+the pending follow-up repaint flag is cleared by the next main frame resource pass;
+painters and app resolvers must not schedule budget-exceeded follow-up repaints;
+budget-exceeded is not cached as null, missing, or resolved image.
+```
 
 ---

@@ -206,6 +206,12 @@ Guardrails extracted from split section 22.
 - Sections: `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`, `test.guardrails.blocking_suite`
 
+## cache.frame_meta_not_element_visual
+
+- Rule: camera/background/grid use frameMetaRevision and must not invalidate ordinary element paint plans
+- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.frame.camera_pan_preserves_ordinary_paint_plan`, `test.guardrails.blocking_suite`
+
 ## codec.no_runtime_side_effects
 
 - Rule: schema v1 decode/encode validates and materializes DTOs without mutating runtime or store state
@@ -242,11 +248,23 @@ Guardrails extracted from split section 22.
 - Sections: `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.frame.selected_supplement_staging_no_global_sort`, `test.guardrails.blocking_suite`
 
+## frame.paint_plan_excludes_preview_delta
+
+- Rule: PaintPlanCache stores ordinary committed records only and excludes selectedMoveDelta/previewDelta from keys and values
+- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.frame.paint_plan_excludes_preview_delta`, `test.guardrails.blocking_suite`
+
 ## geometry.no_legacy_scene_order
 
 - Rule: geometry and hit-test policy does not reuse legacy SceneNode traversal or legacy scene order logic
 - Sections: `section_16_geometry_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.geometry.no_legacy_scene_order`, `test.guardrails.blocking_suite`
+
+## geometry.eraser_exact_budget_no_partial
+
+- Rule: eraser exact-check budget exceeded paths produce corridor-only preview or terminal no-op cleanup, never partial erase
+- Sections: `section_16_geometry_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.geometry.eraser_exact_budget_no_partial_commit`, `test.guardrails.blocking_suite`
 
 ## interaction.no_concrete_store_imports
 
@@ -283,6 +301,12 @@ Guardrails extracted from split section 22.
 - Rule: painters and frame code never call CanvasResourceResolver directly; ResourceKernel owns resolver access
 - Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.resources.painter_never_calls_resolver_directly`, `test.guardrails.blocking_suite`
+
+## resources.resolver_frame_budget
+
+- Rule: ResourceKernel enforces per-frame sync resolver call budget and budget-exceeded placeholders are not cached as null/missing
+- Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.resources.resolver_frame_budget`, `test.guardrails.blocking_suite`
 
 ## spatial.no_full_clone_ordinary_edit
 

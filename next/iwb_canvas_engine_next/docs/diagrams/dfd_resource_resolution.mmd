@@ -41,8 +41,10 @@ flowchart LR
   subgraph Resources["ResourceKernel"]
     ResolvePaintAsset["Resolve paint asset\nResourceKernel-owned resolver boundary"]
     ImageResolveCache["ImageResolveCache\nresourceId + resourceRevision"]
+    ResolverFrameBudget["Resolver frame budget\nkMaxSyncResourceResolverCallsPerFrame = 128"]
     DirtySet["Dirty resource ids\nexplicit visual invalidation"]
     MissingResult["Missing or unresolved result\ncached by resourceId + resourceRevision\nno same-frame retry"]
+    BudgetPlaceholder["Budget-exceeded placeholder\nnot cached as null/missing"]
     Placeholder["Bounded missing image placeholder"]
   end
 
@@ -74,12 +76,14 @@ flowchart LR
   DescriptorRead -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
 
   ResolvePaintAsset -->|"cache lookup and bounded update"| ImageResolveCache
-  ImageResolveCache -->|"cache hit: app-owned image"| ResolvePaintAsset
-  ResolvePaintAsset -->|"cache miss: sync resolve request"| AppResolver
-  Surface -->|"provides resolver instance"| AppResolver
+  ImageResolveCache -->|"cache hit: app-owned image\nor null/missing"| ResolvePaintAsset
+  ImageResolveCache -->|"cache miss"| ResolverFrameBudget
+  ResolverFrameBudget -->|"budget available\nsync resolve request"| AppResolver
+  ResolverFrameBudget -.->|"budget exceeded\nResourceKernel-owned probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder
+  BudgetPlaceholder -.->|"bounded placeholder\nno cache write"| PaintAsset
+  Surface -->|"provides resolver callback\nto resource boundary"| ResolvePaintAsset
   AppResolver -->|"passes descriptor with appKey"| App
-  App -->|"returns app-owned ui.Image or null"| AppResolver
-  AppResolver -->|"stable visual result\nno runtime mutation"| ResolvePaintAsset
+  AppResolver -->|"returns app-owned ui.Image or null\nno runtime mutation"| ResolvePaintAsset
   ResolvePaintAsset -->|"store resolved or null result\nby resourceId + resourceRevision"| ImageResolveCache
   ResolvePaintAsset -->|"resolved image"| PaintAsset
   ResolvePaintAsset -.->|"missing resource or null result"| MissingResult

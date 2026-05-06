@@ -32,11 +32,15 @@ Required tests:
 - `test.store.no_projection_hot_path`
 - `test.frame.main_overlay_capture`
 - `test.frame.no_live_runtime_read_in_painters`
+- `test.frame.paint_plan_excludes_preview_delta`
+- `test.frame.camera_pan_preserves_ordinary_paint_plan`
 - `test.frame.selected_supplement_staging_no_global_sort`
 - `test.surface.widget_paint`
 Guardrails:
 - `preview.selected_move_main_repaint`
 - `frame.no_global_scene_sort`
+- `frame.paint_plan_excludes_preview_delta`
+- `cache.frame_meta_not_element_visual`
 Do not assume:
 - no live runtime reads in painters
 - no CanvasDocument projection in paint
@@ -53,7 +57,8 @@ CapturedMainFrame
   documentRevision
   structuralRevision
   boundsRevision
-  visualRevision
+  elementVisualRevision
+  frameMetaRevision
   selectionRevision
   resourceVisualRevision
   cameraOffset
@@ -81,7 +86,8 @@ Rules:
 - painters do not materialize CanvasDocument;
 - stale spatial candidate is rejected by structuralRevision/generation check;
 - image resolver is the only external read boundary in paint, and it cannot mutate runtime;
-- v1 resolver calls are synchronous.
+- v1 resolver calls are synchronous and bounded by the per-frame resolver budget;
+- camera/background/grid changes use frameMetaRevision and must not invalidate ordinary committed element paint plans.
 ```
 
 ### 15.2 RenderElementRecord
@@ -120,16 +126,22 @@ RectRenderRow: size, fillColor, strokeColor, strokeWidth
 Algorithm:
 
 ```text
-1. Build ordinary paint candidates from spatial index for viewport.
-2. Resolve candidate handles by generation and structuralRevision.
-3. Determine selected transformable ids.
-4. For selected move preview, query visibilityRect shifted by -previewDelta.
-5. Resolve selected handles.
-6. Create shifted RenderElementRecord with previewDelta.
-7. Merge ordinary and supplement records by orderToken.
-8. Do not global sort all scene elements.
-9. Do not materialize CanvasDocument.
+1. Lookup or build the committed ordinary paint plan from PaintPlanCache.
+2. PaintPlanCache stores only ordinary committed RenderElementRecord data.
+3. PaintPlanCache key uses structuralRevision, boundsRevision,
+   elementVisualRevision, viewport, and selectionRevision.
+4. PaintPlanCache key must not include frameMetaRevision, selectedMoveDelta, or
+   previewDelta.
+5. When selectedMoveDelta is active, filter movable selected ids from the
+   ordinary record stream for this frame only.
+6. Query visibilityRect shifted by -previewDelta for selected supplement
+   candidates.
+7. Resolve selected handles and create shifted RenderElementRecord instances
+   with previewDelta for this frame only.
+8. Merge filtered ordinary records and supplement records by orderToken.
+9. Do not store selected supplement records in PaintPlanCache.
+10. Do not global sort all scene elements.
+11. Do not materialize CanvasDocument.
 ```
 
 ---
-

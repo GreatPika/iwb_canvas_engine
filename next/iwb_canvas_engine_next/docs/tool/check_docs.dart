@@ -552,6 +552,7 @@ void _checkSemanticDocumentationProbes() {
     );
   }
   _checkCachePolicyRowsHaveCapacityEvictionProbe(cachePolicy);
+  _checkHotPathDesignContract();
 
   final editContract = _read('docs/contracts/edit_kernel.md');
   if (!editContract.contains(
@@ -748,6 +749,12 @@ void _expectOperationCell(
 }
 
 void _checkRevisionInvalidationAlgebra(List<Map<String, String>> rows) {
+  const frameMetaOperations = {
+    'setCameraOffset',
+    'setBackgroundColor',
+    'setGrid',
+  };
+
   for (final row in rows) {
     final operation = row['Operation'] ?? '';
     final revisions = row['Revisions'] ?? '';
@@ -778,6 +785,15 @@ void _checkRevisionInvalidationAlgebra(List<Map<String, String>> rows) {
           events != 'none') {
         _fail(
           'operation matrix row markResourceDirty must only change resourceVisualRevision, resource cache, and main repaint',
+        );
+      }
+    }
+
+    if (frameMetaOperations.contains(operation)) {
+      if (!revisions.contains('frameMeta') ||
+          revisions.contains('elementVisual')) {
+        _fail(
+          'operation matrix row $operation must use frameMeta revision and must not change elementVisual revision',
         );
       }
     }
@@ -834,10 +850,36 @@ void _checkNegativeInvariantCoverage() {
       test: 'test.resources.painter_never_calls_resolver_directly',
     ),
     (
+      path: 'docs/contracts/resources.md',
+      text:
+          'budget-exceeded results are not cached as null, missing, or resolved images',
+      guardrail: 'resources.resolver_frame_budget',
+      test: 'test.resources.resolver_frame_budget',
+    ),
+    (
+      path: 'docs/contracts/frame_rendering.md',
+      text:
+          'PaintPlanCache key must not include frameMetaRevision, selectedMoveDelta, or',
+      guardrail: 'frame.paint_plan_excludes_preview_delta',
+      test: 'test.frame.paint_plan_excludes_preview_delta',
+    ),
+    (
       path: 'docs/contracts/cache_policy.md',
       text: 'no cache keys tied to old snapshots',
       guardrail: 'cache.keys_use_next_revisions_only',
       test: 'test.frame.cache_keys_do_not_use_legacy_snapshot_shape',
+    ),
+    (
+      path: 'docs/contracts/cache_policy.md',
+      text: '`frameMetaRevision` is not a PaintPlanCache key component',
+      guardrail: 'cache.frame_meta_not_element_visual',
+      test: 'test.frame.camera_pan_preserves_ordinary_paint_plan',
+    ),
+    (
+      path: 'docs/contracts/geometry.md',
+      text: 'terminal budget exceeded -> cleanup/no-op, no partial erase',
+      guardrail: 'geometry.eraser_exact_budget_no_partial',
+      test: 'test.geometry.eraser_exact_budget_no_partial_commit',
     ),
   ];
 
@@ -922,7 +964,14 @@ void _checkStateMachineTransitionCoverage() {
       'ReentrantMutationRejected',
       'markResourceDirty',
       'resourceRevision',
+      'ResolverBudgetGate',
       'dispose',
+    ],
+    'docs/diagrams/state_eraser.mmd': [
+      'budget exceeded',
+      'no partial erase',
+      '4096 candidates',
+      '32768 exact checks',
     ],
   };
 
@@ -991,6 +1040,7 @@ void _checkHotPathBudgetLens() {
         'painters do not live-read runtime',
         'painters do not materialize CanvasDocument',
         'stale spatial candidate is rejected',
+        'PaintPlanCache stores only ordinary committed RenderElementRecord data',
       ],
     ),
     (
@@ -999,6 +1049,8 @@ void _checkHotPathBudgetLens() {
         'forbidden in paint hot path',
         'not read by main paint',
         'ResourceKernel-owned resolver boundary',
+        'ordinary committed records only',
+        'not stored in PaintPlanCache',
       ],
     ),
     (
@@ -1014,6 +1066,21 @@ void _checkHotPathBudgetLens() {
       tokens: [
         'maxFallbackCandidates = 4096',
         'no fallback path may scan the full scene silently',
+      ],
+    ),
+    (
+      path: 'docs/contracts/resources.md',
+      tokens: [
+        'kMaxSyncResourceResolverCallsPerFrame = 128',
+        'budget-exceeded results are not cached as null, missing, or resolved images',
+      ],
+    ),
+    (
+      path: 'docs/contracts/geometry.md',
+      tokens: [
+        'kMaxEraserPreviewCandidatesPerSample = 512',
+        'kMaxEraserTerminalExactChecks = 32768',
+        'terminal budget exceeded -> cleanup/no-op, no partial erase',
       ],
     ),
     (
@@ -1054,6 +1121,228 @@ void _checkHotPathBudgetLens() {
       for (final match in entry.value.allMatches(text)) {
         _fail('${file.path}:${_lineNumber(text, match.start)} ${entry.key}');
       }
+    }
+  }
+
+  _checkRequiredBenchmarkCases();
+}
+
+void _checkHotPathDesignContract() {
+  for (final file in Directory(
+    'docs',
+  ).listSync(recursive: true).whereType<File>()) {
+    if (file.path.startsWith('docs/tool/')) {
+      continue;
+    }
+    if (!file.path.endsWith('.md') &&
+        !file.path.endsWith('.mmd') &&
+        !file.path.endsWith('.yaml')) {
+      continue;
+    }
+    final text = file.readAsStringSync();
+    var start = 0;
+    while (true) {
+      final index = text.indexOf('visualRevision', start);
+      if (index == -1) {
+        break;
+      }
+      final prefixStart = index >= 16 ? index - 16 : 0;
+      final prefix = text.substring(prefixStart, index);
+      if (!prefix.endsWith('element') && !prefix.endsWith('resource')) {
+        _fail(
+          '${file.path}:${_lineNumber(text, index)} ambiguous visualRevision token; use elementVisualRevision, frameMetaRevision, or resourceVisualRevision',
+        );
+      }
+      start = index + 'visualRevision'.length;
+    }
+  }
+
+  final frameRendering = _read('docs/contracts/frame_rendering.md');
+  if (!frameRendering.contains('elementVisualRevision') ||
+      !frameRendering.contains('frameMetaRevision') ||
+      !frameRendering.contains(
+        'PaintPlanCache key must not include frameMetaRevision, selectedMoveDelta, or',
+      )) {
+    _fail(
+      'frame rendering contract must split elementVisual/frameMeta and exclude preview from PaintPlanCache',
+    );
+  }
+
+  final cachePolicy = _read('docs/contracts/cache_policy.md');
+  if (!cachePolicy.contains(
+        '| PaintPlanCache | Frame | structural/bounds/elementVisual/viewport/selection |',
+      ) ||
+      !cachePolicy.contains('It must not store') ||
+      !cachePolicy.contains('selected-move supplement records') ||
+      !cachePolicy.contains('`selectedMoveDelta`') ||
+      !cachePolicy.contains('`previewDelta`') ||
+      !cachePolicy.contains(
+        '`frameMetaRevision` is not a PaintPlanCache key component',
+      )) {
+    _fail(
+      'cache policy must keep PaintPlanCache ordinary-only and independent from frameMeta/preview',
+    );
+  }
+
+  _requireTokens(
+    'docs/diagrams/dfd_main_paint_frame.mmd',
+    [
+      'ordinary committed records only',
+      'not stored in PaintPlanCache',
+      r'ImageResolveCache -->|"cache miss"| ResolverFrameBudget',
+      r'ResolverFrameBudget -->|"budget available\nsync read request"| AppResolver',
+      r'ResolverFrameBudget -.->|"budget exceeded\nResourceKernel-owned probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder',
+      r'BudgetPlaceholder -.->|"bounded placeholder\nno cache write"| ResolvedAssets',
+    ],
+    'show ordinary paint caching and resolver budget-gated cache-miss flow',
+  );
+  _forbidTokens(
+    'docs/diagrams/dfd_main_paint_frame.mmd',
+    [
+      r'ResolvePaintAsset -->|"cache miss only\nsync read request"| AppResolver',
+      r'ResolvePaintAsset -->|"cache miss: sync resolve request"| AppResolver',
+    ],
+    'main paint DFD must not bypass resolver budget',
+  );
+
+  _requireTokens(
+    'docs/diagrams/seq_main_paint.mmd',
+    [
+      'lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and selection keys',
+      'Selected supplement records are per-frame and are not stored in PaintPlanCache',
+      'else per-frame resolver budget exceeded',
+      'else cache miss and resolver budget available',
+      'no null/missing cache write',
+    ],
+    'show ordinary paint plan reuse and budget-gated resolver calls',
+  );
+  _forbidTokens(
+    'docs/diagrams/seq_main_paint.mmd',
+    ['else sync resolver call required'],
+    'main paint sequence must name cache miss as budget available before resolver call',
+  );
+
+  for (final path in [
+    'docs/diagrams/seq_selected_move_preview_commit.mmd',
+    'docs/diagrams/seq_selected_move_cancel.mmd',
+  ]) {
+    _requireTokens(
+      path,
+      [
+        'participant PlanCache as PaintPlanCache',
+        'lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and selection keys',
+        'store ordinary committed records only',
+        'filter movable selected ids from ordinary records for this frame',
+        'query selected supplement shifted by -previewDelta',
+        'build per-frame supplement records with previewDelta',
+        'merge filtered ordinary records and supplement by orderToken',
+        'not stored in PaintPlanCache',
+      ],
+      'show selected-move preview as ordinary-plan reuse plus per-frame supplement',
+    );
+    _forbidTokens(path, [
+      'query viewport plus selected supplement',
+      'ordinary and selected candidate handles',
+    ], 'selected-move witness must not use the old direct preview path');
+  }
+
+  _requireTokens('docs/contracts/resources.md', [
+    'kMaxSyncResourceResolverCallsPerFrame = 128',
+    'ResourceKernel owns the budget-exceeded retry scheduler',
+    'budget-exceeded results may schedule at most one pending throttled follow-up repaint',
+    'the pending follow-up repaint flag is cleared by the next main frame resource pass',
+    'painters and app resolvers must not schedule budget-exceeded follow-up repaints',
+    'budget-exceeded results are not cached as null, missing, or resolved images',
+  ], 'define bounded resolver budget behavior');
+  _requireTokens(
+    'docs/diagrams/dfd_resource_resolution.mmd',
+    [
+      r'ImageResolveCache -->|"cache miss"| ResolverFrameBudget',
+      r'ResolverFrameBudget -->|"budget available\nsync resolve request"| AppResolver',
+      r'ResolverFrameBudget -.->|"budget exceeded\nResourceKernel-owned probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder',
+      r'BudgetPlaceholder -.->|"bounded placeholder\nno cache write"| PaintAsset',
+    ],
+    'route every cache miss through resolver budget before AppResolver',
+  );
+  _forbidTokens(
+    'docs/diagrams/dfd_resource_resolution.mmd',
+    [
+      r'ResolvePaintAsset -->|"cache miss: sync resolve request"| AppResolver',
+      r'ResolvePaintAsset -->|"cache miss only\nsync read request"| AppResolver',
+    ],
+    'resource DFD must not bypass resolver budget',
+  );
+  _requireTokens(
+    'docs/diagrams/state_resource_resolution.mmd',
+    [
+      'CacheMiss --> ResolverBudgetGate: check per-frame resolver budget',
+      'ResolverBudgetGate --> BudgetExceededPlaceholder: budget exhausted',
+      'ResolverBudgetGate --> SyncResolverCall: budget available',
+      'BudgetExceededPlaceholder --> PlaceholderResult: return bounded placeholder without cache write',
+      'ResourceKernel owns',
+      'Painters and app resolvers must not',
+    ],
+    'show resolver budget as the only cache-miss path to sync resolver call',
+  );
+  _requireTokens(
+    'docs/diagrams/seq_resource_resolution.mmd',
+    [
+      'else per-frame resolver budget exceeded',
+      'bounded placeholder; ResourceKernel records probe and at most one pending throttled follow-up repaint; no null/missing cache write',
+      'ResourceKernel owns the resolver boundary and budget-exceeded retry scheduler',
+      'else cache miss and resolver budget available',
+    ],
+    'show budget exceeded before resolver call and forbid cache writes on that path',
+  );
+
+  _requireTokens(
+    'docs/contracts/geometry.md',
+    [
+      'kMaxEraserPreviewCandidatesPerSample = 512',
+      'kMaxEraserPreviewExactChecksPerSample = 4096',
+      'kMaxEraserTerminalCandidates = 4096',
+      'kMaxEraserTerminalExactChecks = 32768',
+      'terminal budget exceeded -> cleanup/no-op, no partial erase',
+      'budget exceeded does not mutate document, selection, spatial index, projection,',
+    ],
+    'define exact eraser budgets and non-mutating exceeded behavior',
+  );
+  _requireTokens(
+    'docs/diagrams/state_eraser.mmd',
+    [
+      'CandidateRefresh --> CorridorPreview: budget exceeded / corridor-only preview, no partial tentative ids',
+      'FinalCandidates --> CleanupOnly: budget exceeded / cleanup no-op, no partial erase',
+    ],
+    'show eraser budget exceeded as preview-only or terminal cleanup-only',
+  );
+  _requireTokens(
+    'docs/diagrams/seq_eraser_commit.mmd',
+    [
+      'alt preview candidate/check budget exceeded',
+      'alt terminal candidate/check budget exceeded',
+      'Terminal budget is 4096 candidates / 32768 exact checks',
+      'no partial erase, document mutation, main repaint, or erase action',
+    ],
+    'show eraser budget exceeded cannot partially commit',
+  );
+}
+
+void _checkRequiredBenchmarkCases() {
+  final benchmarks = _read('docs/verification/benchmarks.md');
+  const requiredCases = [
+    'edit.set_camera_offset',
+    'frame.selected_move_preview_cached_ordinary_plan',
+    'resources.resolve_sync_cold_budget',
+    'input.eraser_budget_exceeded',
+    'load_document.success',
+    'load_document.failure',
+    'input.line_preview',
+    'edit.add_line',
+    'runtime.dispose_during_gesture',
+  ];
+  for (final benchmarkCase in requiredCases) {
+    if (!benchmarks.contains('`$benchmarkCase`')) {
+      _fail('benchmarks.md is missing required case `$benchmarkCase`');
     }
   }
 }
@@ -1925,6 +2214,25 @@ List<String> _stringListField(YamlMap map, String field, String owner) {
 }
 
 String _read(String path) => File(path).readAsStringSync();
+
+void _requireTokens(String path, List<String> tokens, String message) {
+  final text = _read(path);
+  for (final token in tokens) {
+    if (!text.contains(token)) {
+      _fail('$path $message; missing token: $token');
+    }
+  }
+}
+
+void _forbidTokens(String path, List<String> tokens, String message) {
+  final text = _read(path);
+  for (final token in tokens) {
+    final offset = text.indexOf(token);
+    if (offset != -1) {
+      _fail('$path:${_lineNumber(text, offset)} $message; found: $token');
+    }
+  }
+}
 
 void _requirePath(String path, {String? source}) {
   final normalized = path.split('#').first.split(RegExp(r'\s')).first;

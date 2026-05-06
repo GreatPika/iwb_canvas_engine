@@ -34,7 +34,9 @@ sequenceDiagram
         alt cache hit
           Cache-->>Resources: cached app-owned ui.Image or cached missing/null result
           Resources-->>Frame: app-owned ui.Image or bounded placeholder
-        else cache miss
+        else per-frame resolver budget exceeded
+          Resources-->>Frame: bounded placeholder; ResourceKernel records probe and at most one pending throttled follow-up repaint; no null/missing cache write
+        else cache miss and resolver budget available
           Resources->>Resolver: resolveImage(CanvasImageResource appKey descriptor)
           Note over Resources,Resolver: Synchronous app-owned resolver boundary only. No async resolver, file, network, asset-bundle, or engine IO loading.
           opt resolver attempts public runtime mutation
@@ -59,7 +61,7 @@ sequenceDiagram
   Frame->>Painter: paint immutable records with resolved image assets or placeholders
   Painter-->>Surface: draw main scene
 
-  Note over Painter,Resolver: Painter never calls CanvasResourceResolver directly. ResourceKernel owns the resolver boundary.
+  Note over Painter,Resolver: Painter never calls CanvasResourceResolver directly. ResourceKernel owns the resolver boundary and budget-exceeded retry scheduler.
   Note over Resources,Resolver: Returned ui.Image objects are owned by the application. The engine never disposes app-owned images.
   Note over Frame,Store: Main paint does not materialize CanvasDocument and does not read DocumentProjectionCache.
   Note over Resources,Store: ResourcePort cannot mutate descriptors. Descriptor mutation is only through the CanvasEdit commit path outside this sequence.

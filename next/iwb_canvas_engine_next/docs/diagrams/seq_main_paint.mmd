@@ -14,40 +14,49 @@ sequenceDiagram
 
   Surface->>Frame: paint main scene request(viewportRect, cameraOffset, dpr, resolver)
   Frame->>Store: capture committed tables, revisions, camera, and selection once
-  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, visualRevision, selectionRevision, resourceVisualRevision, cameraOffset, selectionIds
+  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, elementVisualRevision, frameMetaRevision, selectionRevision, resourceVisualRevision, cameraOffset, selectionIds
   Frame->>Frame: build CapturedMainFrame with viewportRect from paint request
   Frame->>Preview: capture immutable selected move preview once
   Preview-->>Frame: selectedMoveDelta or none
   Note over Frame: CapturedMainFrame freezes the runtime facts used by this main paint frame.
 
-  Frame->>PlanCache: lookup paint plan by structural, bounds, visual, viewport, and selection keys
+  Frame->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and selection keys
+  Note over Frame,PlanCache: PaintPlanCache excludes frameMetaRevision, selectedMoveDelta, and previewDelta.
 
-  alt paint plan cache hit
-    PlanCache-->>Frame: immutable RenderElementRecord list
+  alt ordinary paint plan cache hit
+    PlanCache-->>Frame: ordinary committed RenderElementRecord list
   else paint plan cache miss
     Frame->>Spatial: query paint candidates bounded by captured viewportRect
     Spatial-->>Frame: ordinary candidate handles with id, generation, orderToken, and structuralRevision
 
-    opt selectedMoveDelta is active
-      Frame->>Spatial: query selected supplement using visibilityRect shifted by -selectedMoveDelta
-      Spatial-->>Frame: selected candidate handles with id, generation, orderToken, and structuralRevision
-    end
-
-    loop for each ordinary or selected candidate handle
+    loop for each ordinary candidate handle
       Frame->>Store: resolve handle against captured structuralRevision and generation
       alt handle generation and structuralRevision still match the captured frame
         Store-->>Frame: immutable family row view, common paint fields, selection flags, and resourceId if any
-        Frame->>Frame: build RenderElementRecord with row view and previewDelta for selected moved records
+        Frame->>Frame: build ordinary committed RenderElementRecord
       else stale candidate
         Store-->>Frame: reject stale candidate
         Frame->>Frame: skip record for stale generation or structuralRevision
       end
     end
 
-    Frame->>Frame: merge ordinary and selected supplement records by orderToken
-    Note over Frame: No full-scene sort and no CanvasDocument materialization.
-    Frame->>PlanCache: store immutable ordered RenderElementRecord list
+    Frame->>PlanCache: store ordinary committed records only
   end
+
+  opt selectedMoveDelta is active
+    Frame->>Frame: filter movable selected ids from ordinary records for this frame
+    Frame->>Spatial: query selected supplement using visibilityRect shifted by -selectedMoveDelta
+    Spatial-->>Frame: selected candidate handles with id, generation, orderToken, and structuralRevision
+    loop for each selected supplement candidate handle
+      Frame->>Store: resolve handle against captured structuralRevision and generation
+      Store-->>Frame: immutable selected row view or stale rejection
+      Frame->>Frame: build per-frame supplement RenderElementRecord with previewDelta
+    end
+    Frame->>Frame: merge filtered ordinary records and supplement records by orderToken
+    Note over Frame,PlanCache: Selected supplement records are per-frame and are not stored in PaintPlanCache.
+  end
+
+  Note over Frame: No full-scene sort and no CanvasDocument materialization.
 
   opt records include image resource ids
     loop for each image resource id in records
@@ -59,7 +68,9 @@ sequenceDiagram
         Resources-->>Frame: app-owned image paint asset
       else descriptor missing or resolver returns null
         Resources-->>Frame: bounded missing image placeholder
-      else sync resolver call required
+      else per-frame resolver budget exceeded
+        Resources-->>Frame: bounded placeholder; no null/missing cache write
+      else cache miss and resolver budget available
         Resources->>Resolver: resolveImage(appKey descriptor)
         Resolver-->>Resources: app-owned image or null
         Resources-->>Frame: resolved image or bounded placeholder

@@ -48,16 +48,20 @@ Guardrails:
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
 - `geometry.no_legacy_scene_order`
+- `geometry.eraser_exact_budget_no_partial`
 - `spatial.no_full_clone_ordinary_edit`
 - `spatial.stale_candidate_rejected`
 - `spatial.fallback_budget_enforced`
 - `frame.no_global_scene_sort`
+- `frame.paint_plan_excludes_preview_delta`
 - `cache.keys_use_next_revisions_only`
+- `cache.frame_meta_not_element_visual`
 - `cache.hot_caches_have_capacity_eviction`
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`
 - `resources.app_key_only`
 - `resources.resolver_boundary_owned_by_resource_kernel`
+- `resources.resolver_frame_budget`
 - `resources.no_same_frame_missing_retry`
 - `resources.resolver_reentrancy_rejected`
 - `codec.schema_v1_exact`
@@ -109,16 +113,20 @@ Mandatory guardrails:
 | `interaction.no_resolver_on_cancel_paths` | selected-move resolver is not called on cancel, load, mode-change, `interactive=false`, stale terminal, or dispose paths |
 | `interaction.no_stale_terminal_commit` | stale or controllerEpoch-mismatched terminal samples cannot create commit intent |
 | `geometry.no_legacy_scene_order` | geometry and hit-test policy does not reuse legacy SceneNode traversal or legacy scene order logic |
+| `geometry.eraser_exact_budget_no_partial` | eraser exact-check budget exceeded paths produce corridor-only preview or terminal no-op cleanup, never partial erase |
 | `spatial.no_full_clone_ordinary_edit` | ordinary spatial updates touch only changed ids/pages; full rebuild is reserved for replacement/load paths |
 | `spatial.stale_candidate_rejected` | stale candidate handles are rejected by generation and structuralRevision checks before frame/hit use |
 | `spatial.fallback_budget_enforced` | fallback candidate union enforces maxFallbackCandidates, diagnostic counter, and typed budget-exceeded result |
 | `frame.no_global_scene_sort` | selected supplement staging merges by orderToken and does not globally sort all scene elements |
+| `frame.paint_plan_excludes_preview_delta` | PaintPlanCache stores ordinary committed records only and excludes selectedMoveDelta/previewDelta from keys and values |
 | `cache.keys_use_next_revisions_only` | cache keys use next-owned revision facts and stable inputs, not legacy snapshot shapes |
+| `cache.frame_meta_not_element_visual` | camera/background/grid use frameMetaRevision and must not invalidate ordinary element paint plans |
 | `cache.hot_caches_have_capacity_eviction` | hot caches declare capacity, eviction policy, invalidation owner, and metric/probe |
 | `resources.mutation_inside_edit_only` | resource descriptor mutation only via CanvasEdit |
 | `resources.dirty_no_document_revision` | markResourceDirty does not increment documentRevision |
 | `resources.app_key_only` | resource descriptors use appKey only |
 | `resources.resolver_boundary_owned_by_resource_kernel` | painters and frame code never call CanvasResourceResolver directly; ResourceKernel owns resolver access |
+| `resources.resolver_frame_budget` | ResourceKernel enforces per-frame sync resolver call budget and budget-exceeded placeholders are not cached as null/missing |
 | `resources.no_same_frame_missing_retry` | missing/null resource resolve results are cached by resourceId and resourceRevision for the frame instead of retried immediately |
 | `resources.resolver_reentrancy_rejected` | public runtime mutation from inside CanvasResourceResolver throws StateError without runtime effects |
 | `codec.schema_v1_exact` | only schema v1 read/write |

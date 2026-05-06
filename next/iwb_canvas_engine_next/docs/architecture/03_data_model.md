@@ -105,10 +105,19 @@ resourceRevision        -> resource descriptor changes
 resourceVisualRevision  -> markResourceDirty / resolver visual invalidation
 selectionRevision       -> selected ids changed
 boundsRevision          -> geometry/transform/hit/paint bounds changed
-visualRevision          -> visual fields/camera/background/grid/style changed
+elementVisualRevision   -> element visual fields, element style fields, and transform-affecting paint changes
+frameMetaRevision       -> camera, background, and grid changes that affect frame capture/static frame caches
 projectionRevision      -> public CanvasDocument projection invalidated
 overlayRevision         -> preview state changed
 ```
+
+`frameMetaRevision` is the v1 aggregate for frame-affecting document meta. It may
+later be split into `cameraRevision`, `backgroundRevision`, and `gridRevision`
+without changing the public API. Paint-plan cache keys must depend on
+`elementVisualRevision`, not `frameMetaRevision`; camera/background/grid changes
+repaint frame surfaces but must not invalidate ordinary committed element paint
+plans.
+In short: v1 aggregate, may split later without public API changes.
 
 No-op edit does not change revisions. Preview cleanup increments
 `overlayRevision` only when it clears or replaces existing preview state; a

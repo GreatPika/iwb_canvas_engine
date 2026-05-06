@@ -200,6 +200,7 @@
     - resources.dirty_no_document_revision
     - resources.app_key_only
     - resources.resolver_boundary_owned_by_resource_kernel
+    - resources.resolver_frame_budget
     - resources.no_same_frame_missing_retry
     - resources.resolver_reentrancy_rejected
   tests:
@@ -211,6 +212,7 @@
     - test.resources.mark_all_resources_dirty
     - test.resources.painter_never_calls_resolver_directly
     - test.resources.missing_result_cached_per_revision
+    - test.resources.resolver_frame_budget
     - test.resources.resolver_reentrancy_rejected
   do_not_assume:
     - no engine IO
@@ -477,10 +479,14 @@
   guardrails:
     - preview.selected_move_main_repaint
     - frame.no_global_scene_sort
+    - frame.paint_plan_excludes_preview_delta
+    - cache.frame_meta_not_element_visual
   tests:
     - test.store.no_projection_hot_path
     - test.frame.main_overlay_capture
     - test.frame.no_live_runtime_read_in_painters
+    - test.frame.paint_plan_excludes_preview_delta
+    - test.frame.camera_pan_preserves_ordinary_paint_plan
     - test.frame.selected_supplement_staging_no_global_sort
     - test.surface.widget_paint
   do_not_assume:
@@ -511,9 +517,11 @@
     - dfd_pointer_preview_commit
   guardrails:
     - geometry.no_legacy_scene_order
+    - geometry.eraser_exact_budget_no_partial
   tests:
     - test.geometry.hit_policy
     - test.geometry.no_legacy_scene_order
+    - test.geometry.eraser_exact_budget_no_partial_commit
   do_not_assume:
     - do not port old SceneNode traversal
     - do not copy legacy scene order logic
@@ -568,9 +576,13 @@
   guardrails:
     - cache.keys_use_next_revisions_only
     - cache.hot_caches_have_capacity_eviction
+    - cache.frame_meta_not_element_visual
+    - frame.paint_plan_excludes_preview_delta
   tests:
     - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
     - test.frame.cache_capacity_eviction_policy
+    - test.frame.paint_plan_excludes_preview_delta
+    - test.frame.camera_pan_preserves_ordinary_paint_plan
   do_not_assume:
     - no unbounded cache owner sprawl
     - no cache keys tied to old snapshots
@@ -675,16 +687,20 @@
     - interaction.no_resolver_on_cancel_paths
     - interaction.no_stale_terminal_commit
     - geometry.no_legacy_scene_order
+    - geometry.eraser_exact_budget_no_partial
     - spatial.no_full_clone_ordinary_edit
     - spatial.stale_candidate_rejected
     - spatial.fallback_budget_enforced
     - frame.no_global_scene_sort
+    - frame.paint_plan_excludes_preview_delta
     - cache.keys_use_next_revisions_only
+    - cache.frame_meta_not_element_visual
     - cache.hot_caches_have_capacity_eviction
     - resources.mutation_inside_edit_only
     - resources.dirty_no_document_revision
     - resources.app_key_only
     - resources.resolver_boundary_owned_by_resource_kernel
+    - resources.resolver_frame_budget
     - resources.no_same_frame_missing_retry
     - resources.resolver_reentrancy_rejected
     - codec.schema_v1_exact
@@ -809,6 +825,7 @@
     - test.resources.mark_all_resources_dirty
     - test.resources.painter_never_calls_resolver_directly
     - test.resources.missing_result_cached_per_revision
+    - test.resources.resolver_frame_budget
     - test.resources.resolver_reentrancy_rejected
     - test.events.typed_action_payloads
     - test.events.low_level_mutations_do_not_emit_actions
@@ -831,12 +848,15 @@
     - test.load_document.staged_success_failure
     - test.geometry.hit_policy
     - test.geometry.no_legacy_scene_order
+    - test.geometry.eraser_exact_budget_no_partial_commit
     - test.spatial.touched_update
     - test.spatial.no_full_clone_for_touched_update
     - test.spatial.stale_generation_rejected
     - test.spatial.fallback_budget_enforced
     - test.frame.main_overlay_capture
     - test.frame.no_live_runtime_read_in_painters
+    - test.frame.paint_plan_excludes_preview_delta
+    - test.frame.camera_pan_preserves_ordinary_paint_plan
     - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
     - test.frame.cache_capacity_eviction_policy
     - test.frame.selected_supplement_staging_no_global_sort
@@ -985,16 +1005,20 @@
     - interaction.no_resolver_on_cancel_paths
     - interaction.no_stale_terminal_commit
     - geometry.no_legacy_scene_order
+    - geometry.eraser_exact_budget_no_partial
     - spatial.no_full_clone_ordinary_edit
     - spatial.stale_candidate_rejected
     - spatial.fallback_budget_enforced
     - frame.no_global_scene_sort
+    - frame.paint_plan_excludes_preview_delta
     - cache.keys_use_next_revisions_only
+    - cache.frame_meta_not_element_visual
     - cache.hot_caches_have_capacity_eviction
     - resources.mutation_inside_edit_only
     - resources.dirty_no_document_revision
     - resources.app_key_only
     - resources.resolver_boundary_owned_by_resource_kernel
+    - resources.resolver_frame_budget
     - resources.no_same_frame_missing_retry
     - resources.resolver_reentrancy_rejected
     - codec.schema_v1_exact

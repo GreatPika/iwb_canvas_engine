@@ -58,7 +58,25 @@ stateDiagram-v2
   CachedNull --> PlaceholderResult: use bounded placeholder
 
   state "Cache miss" as CacheMiss
-  CacheMiss --> SyncResolverCall: call CanvasResourceResolver.resolveImage
+  CacheMiss --> ResolverBudgetGate: check per-frame resolver budget
+
+  state "Resolver budget gate" as ResolverBudgetGate
+  note right of ResolverBudgetGate
+    kMaxSyncResourceResolverCallsPerFrame = 128.
+    Budget-exceeded results paint placeholders, increment a
+    diagnostic/probe counter, and may schedule at most one
+    pending throttled follow-up repaint. ResourceKernel owns
+    that retry scheduler and clears the pending flag on the next
+    main frame resource pass. Painters and app resolvers must not
+    schedule budget-exceeded follow-up repaints. Budget-exceeded
+    results are not cached as null, missing, or resolved images.
+  end note
+
+  ResolverBudgetGate --> BudgetExceededPlaceholder: budget exhausted
+  ResolverBudgetGate --> SyncResolverCall: budget available
+
+  state "Budget-exceeded placeholder" as BudgetExceededPlaceholder
+  BudgetExceededPlaceholder --> PlaceholderResult: return bounded placeholder without cache write
 
   state "Synchronous app resolver call" as SyncResolverCall
   note right of SyncResolverCall
