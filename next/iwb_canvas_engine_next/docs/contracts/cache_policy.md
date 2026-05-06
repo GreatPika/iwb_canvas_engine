@@ -53,6 +53,12 @@ Cache miss in hot path must be bounded by candidate count, not total scene size.
 Hot caches must declare capacity, eviction, key components, invalidation owner,
 and a metric/probe before implementation.
 
+Text/path/stroke render cache misses are local to the current render record key:
+one miss can fill one bounded cache entry and record hit/miss/eviction probes,
+but it must not trigger CanvasDocument projection, full-scene candidate rebuild,
+global sort, resolver calls, repaint scheduling, or additional cache-owner work
+outside the declared cache row.
+
 `PaintPlanCache` stores ordinary committed records only. It must not store
 selected-move supplement records, `selectedMoveDelta`, or `previewDelta`.
 `frameMetaRevision` is not a PaintPlanCache key component because camera,

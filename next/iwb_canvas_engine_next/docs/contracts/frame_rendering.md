@@ -90,6 +90,16 @@ Rules:
 - camera/background/grid changes use frameMetaRevision and must not invalidate ordinary committed element paint plans.
 ```
 
+Opacity and layer policy:
+
+```text
+- element and stroke opacity are ordinary render inputs applied through primitive paint alpha;
+- ordinary opacity must not create an implicit group opacity or offscreen layer in the hot paint path;
+- any future saveLayer-producing effect must be explicit in RenderElementRecord,
+  budgeted, counted by the frame.paint_candidates offscreen-layer metric, and
+  guarded by a contract update before implementation.
+```
+
 ### 15.2 RenderElementRecord
 
 Painters receive compact immutable render records, not public `CanvasElement`.
@@ -143,5 +153,14 @@ Algorithm:
 10. Do not global sort all scene elements.
 11. Do not materialize CanvasDocument.
 ```
+
+### 15.4 Render primitive cache misses
+
+Text, path, and stroke cache misses are bounded by the current render record, not
+the scene. A main paint frame may do at most one miss fill per unique
+text/path/stroke key encountered in the already-bounded record stream, and every
+miss records hit/miss/eviction probes declared in the cache policy. A render
+primitive cache miss must not trigger CanvasDocument projection, full-scene
+candidate rebuild, global sort, resolver calls, or repaint scheduling.
 
 ---

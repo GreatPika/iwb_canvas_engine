@@ -87,6 +87,13 @@ the planned Mermaid file paths under `docs/diagrams/`.
 - Related phases: `P5`, `P6`, `P8`, `P7`, `P10`, `P12`
 - Related sections: `section_10_runtime_data_model`, `section_17_spatial_kernel`, `section_18_cache_policy`
 
+## dfd_spatial_query_budget
+
+- Kind: `data_flow`
+- Planned path: `docs/diagrams/dfd_spatial_query_budget.mmd`
+- Related phases: `P7`, `P8`, `P12`
+- Related sections: `section_17_spatial_kernel`
+
 ## dfd_diagnostics_error_projection
 
 - Kind: `data_flow`

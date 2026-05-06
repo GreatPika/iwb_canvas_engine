@@ -53,7 +53,7 @@ Required benchmark cases:
 | `input.eraser_budget_exceeded` | dense 50k | budget-exceeded count, partial erase count = 0 |
 | `frame.main_capture` | 1k/10k/50k/100k | avg/P95/max, alloc bytes |
 | `frame.overlay_capture` | active previews | avg/P95/max, alloc bytes |
-| `frame.paint_candidates` | 1k/10k/50k/100k | candidate count, saveLayer count |
+| `frame.paint_candidates` | 1k/10k/50k/100k | candidate count, offscreen-layer/saveLayer count |
 | `resources.resolve_sync` | 1k resources | resolver calls, cache hits, repaint count |
 | `resources.resolve_sync_cold_budget` | 1k uncached image records | resolver calls <= 128, budget placeholders, throttled repaint count |
 | `resources.mark_dirty` | 1k resources | repaint count, cache invalidation cost |

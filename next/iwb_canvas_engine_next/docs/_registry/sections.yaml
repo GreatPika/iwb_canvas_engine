@@ -542,6 +542,7 @@
     - store_scene_controller_read_paths
   diagrams:
     - dfd_cache_invalidation
+    - dfd_spatial_query_budget
   guardrails:
     - spatial.no_full_clone_ordinary_edit
     - spatial.stale_candidate_rejected

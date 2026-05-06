@@ -1,0 +1,35 @@
+%% Spatial query budget data flow
+flowchart LR
+
+  QueryCaller["Pointer, hit, or frame caller\nfinite query envelope"]
+
+  subgraph Spatial["SpatialKernel"]
+    QueryBoundary["Spatial query boundary\nread-only hot path"]
+    RevisionGate["Revision and generation gate\nstructuralRevision + candidate generation"]
+    TileBudget["Tile budget gate\nmax query tiles = 50000"]
+    TileUnion["Tile and outlier union\nbounded candidate ids"]
+    CandidateBudget["Candidate budget gate\nmaxFallbackCandidates = 4096"]
+    TypedResult["Typed query result\ncandidate handles only"]
+    BudgetExceeded["Typed budget-exceeded result\nno partial candidates"]
+    InvalidIndex["Invalid index fallback\nno full-scene scan"]
+  end
+
+  Diagnostics["Diagnostics counter\nbudget exceeded or fallback"]
+  RuntimeRoot["RuntimeRoot\nschedules rebuild/retry outside hot path"]
+
+  QueryCaller -->|"query hit or paint candidates"| QueryBoundary
+  QueryBoundary -->|"captured revision facts"| RevisionGate
+  RevisionGate -->|"revision/generation accepted"| TileBudget
+  RevisionGate -.->|"stale revision or generation"| BudgetExceeded
+  TileBudget -->|"query tiles <= 50000"| TileUnion
+  TileBudget -.->|"query tiles > 50000\nfallback candidate union"| CandidateBudget
+  TileUnion -->|"candidate ids + outliers"| CandidateBudget
+  CandidateBudget -->|"candidate count <= maxFallbackCandidates"| TypedResult
+  CandidateBudget -.->|"candidate count > maxFallbackCandidates"| BudgetExceeded
+  InvalidIndex -.->|"bounded fallback only"| CandidateBudget
+  BudgetExceeded -.->|"increment diagnostic counter"| Diagnostics
+  BudgetExceeded -.->|"defer rebuild/retry\noutside pointer/paint hot path"| RuntimeRoot
+  TypedResult -->|"candidate handles with revision/generation"| QueryCaller
+
+  BudgetExceeded -.->|"forbidden"| TypedResult
+  InvalidIndex -.->|"forbidden full-scene scan"| TypedResult

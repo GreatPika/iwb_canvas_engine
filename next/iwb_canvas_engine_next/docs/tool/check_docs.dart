@@ -1167,6 +1167,27 @@ void _checkHotPathDesignContract() {
       'frame rendering contract must split elementVisual/frameMeta and exclude preview from PaintPlanCache',
     );
   }
+  _requireTokens(
+    'docs/contracts/frame_rendering.md',
+    [
+      'ordinary opacity must not create an implicit group opacity or offscreen layer in the hot paint path',
+      'any future saveLayer-producing effect must be explicit in RenderElementRecord',
+      'counted by the frame.paint_candidates offscreen-layer metric',
+      'Text, path, and stroke cache misses are bounded by the current render record',
+      'primitive cache miss must not trigger CanvasDocument projection, full-scene',
+      'candidate rebuild, global sort, resolver calls, or repaint scheduling',
+    ],
+    'define opacity/saveLayer and render primitive cache miss hot-path policy',
+  );
+  _requireTokens(
+    'docs/implementation/p10_flutter_surface.md',
+    [
+      'Flutter painters apply ordinary element/stroke opacity through primitive paint alpha',
+      'Flutter painters do not call `Canvas.saveLayer` for ordinary opacity in the hot paint path',
+      'any future Flutter `Canvas.saveLayer` effect must be explicit, budgeted, probed by the frame paint benchmark',
+    ],
+    'bind Flutter Canvas.saveLayer policy to the Flutter surface implementation plan',
+  );
 
   final cachePolicy = _read('docs/contracts/cache_policy.md');
   if (!cachePolicy.contains(
@@ -1183,6 +1204,16 @@ void _checkHotPathDesignContract() {
       'cache policy must keep PaintPlanCache ordinary-only and independent from frameMeta/preview',
     );
   }
+  _requireTokens(
+    'docs/contracts/cache_policy.md',
+    [
+      'Text/path/stroke render cache misses are local to the current render record key',
+      'one miss can fill one bounded cache entry',
+      'must not trigger CanvasDocument projection, full-scene candidate rebuild,',
+      'global sort, resolver calls, repaint scheduling',
+    ],
+    'bound text/path/stroke render cache miss behavior',
+  );
 
   _requireTokens(
     'docs/diagrams/dfd_main_paint_frame.mmd',
@@ -1306,6 +1337,30 @@ void _checkHotPathDesignContract() {
       'budget exceeded does not mutate document, selection, spatial index, projection,',
     ],
     'define exact eraser budgets and non-mutating exceeded behavior',
+  );
+  _requireTokens(
+    'docs/contracts/spatial_kernel.md',
+    [
+      'query request -> revision/generation gate -> tile/outlier union -> candidate budget gate -> typed result',
+      'query tile count > 50000 -> fallback candidate union with diagnostic counter',
+      'fallback candidate count > maxFallbackCandidates -> typed budget-exceeded result',
+      'budget-exceeded result contains no partial candidates and does not mutate indexes',
+      'invalid index can request rebuild/retry only outside the hot pointer/paint path',
+    ],
+    'define spatial query budget hot-path behavior',
+  );
+  _requireTokens(
+    'docs/diagrams/dfd_spatial_query_budget.mmd',
+    [
+      'QueryBoundary["Spatial query boundary\\nread-only hot path"]',
+      'TileBudget["Tile budget gate\\nmax query tiles = 50000"]',
+      'CandidateBudget["Candidate budget gate\\nmaxFallbackCandidates = 4096"]',
+      'BudgetExceeded["Typed budget-exceeded result\\nno partial candidates"]',
+      'InvalidIndex["Invalid index fallback\\nno full-scene scan"]',
+      'BudgetExceeded -.->|"defer rebuild/retry\\noutside pointer/paint hot path"| RuntimeRoot',
+      'InvalidIndex -.->|"forbidden full-scene scan"| TypedResult',
+    ],
+    'show spatial query budget without full-scene scan or partial candidates',
   );
   _requireTokens(
     'docs/diagrams/state_eraser.mmd',

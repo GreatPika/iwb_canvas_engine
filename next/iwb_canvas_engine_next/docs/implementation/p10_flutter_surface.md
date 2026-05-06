@@ -97,5 +97,8 @@
 - interactive=false disables pointer routing
 - interactive=false cancels active pointer sessions but preserves non-active pending line state
 - resource resolver repaint works
+- Flutter painters apply ordinary element/stroke opacity through primitive paint alpha;
+- Flutter painters do not call `Canvas.saveLayer` for ordinary opacity in the hot paint path;
+- any future Flutter `Canvas.saveLayer` effect must be explicit, budgeted, probed by the frame paint benchmark, and guarded by a contract update;
 - pointer adapter normalization tests green
 - widget tests green.

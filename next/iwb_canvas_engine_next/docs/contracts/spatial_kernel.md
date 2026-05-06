@@ -16,6 +16,7 @@ Related donors:
 - `store_scene_controller_read_paths`
 Related diagrams:
 - `dfd_cache_invalidation`
+- `dfd_spatial_query_budget`
 Required tests:
 - `test.spatial.touched_update`
 - `test.spatial.no_full_clone_for_touched_update`
@@ -81,6 +82,16 @@ Fallback budget behavior:
 - budget-exceeded fallback does not return partial hit/paint candidates as valid results;
 - RuntimeRoot schedules rebuild or retry outside the hot pointer/paint path;
 - no fallback path may scan the full scene silently.
+```
+
+Spatial query hot path:
+
+```text
+query request -> revision/generation gate -> tile/outlier union -> candidate budget gate -> typed result;
+query tile count > 50000 -> fallback candidate union with diagnostic counter;
+fallback candidate count > maxFallbackCandidates -> typed budget-exceeded result;
+budget-exceeded result contains no partial candidates and does not mutate indexes;
+invalid index can request rebuild/retry only outside the hot pointer/paint path.
 ```
 
 ---
