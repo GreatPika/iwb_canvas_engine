@@ -46,7 +46,7 @@ Do not assume:
 | deleteSelection | elements/layers/selection | document, structural, bounds, visual, projection, selection | remove ids | evict | main | deleteElements |
 | CanvasEdit.clearContent | elements, selection, resources when removeUnusedResources removes descriptors | document, structural, bounds, visual, projection, selection, resource if descriptors removed | rebuild empty | evict | main | none |
 | command clearContent | elements, selection, resources when removeUnusedResources removes descriptors | document, structural, bounds, visual, projection, selection, resource if descriptors removed | rebuild empty | evict | main | clearContent if removed |
-| setCameraOffset | meta | document, visual | no | evict | main + overlay | none |
+| setCameraOffset | meta | document, visual, projection | no | evict | main + overlay | none |
 | setBackgroundColor | meta | document, visual, projection | no | evict | main | none |
 | setGrid | meta | document, visual, projection | no | evict | main | none |
 | setPalette | meta | document, projection | no | evict | none unless UI observes doc | none |

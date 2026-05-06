@@ -23,6 +23,50 @@ const _donorRelatedSectionCatalogExclusions = {
   'section_27_final_release_gates',
 };
 
+const _ownerAliases = {
+  'Public': 'PublicAPI',
+  'PublicAPI': 'PublicAPI',
+  'Surface': 'Surface',
+  'RuntimeRoot': 'RuntimeRoot',
+  'Store': 'DocumentStoreKernel',
+  'DocumentStoreKernel': 'DocumentStoreKernel',
+  'Edit': 'EditKernel',
+  'EditKernel': 'EditKernel',
+  'InteractionEngine': 'InteractionEngine',
+  'FrameEngine': 'FrameEngine',
+  'Spatial': 'SpatialKernel',
+  'SpatialKernel': 'SpatialKernel',
+  'Resource': 'ResourceKernel',
+  'ResourceKernel': 'ResourceKernel',
+  'Codec': 'CodecBoundary',
+  'CodecBoundary': 'CodecBoundary',
+  'Diagnostics': 'DiagnosticsHub',
+  'DiagnosticsHub': 'DiagnosticsHub',
+};
+
+const _allowedOwnerEdges = {
+  'PublicAPI->RuntimeRoot',
+  'Surface->RuntimeRoot',
+  'RuntimeRoot->DocumentStoreKernel',
+  'RuntimeRoot->EditKernel',
+  'RuntimeRoot->InteractionEngine',
+  'RuntimeRoot->FrameEngine',
+  'RuntimeRoot->SpatialKernel',
+  'RuntimeRoot->ResourceKernel',
+  'RuntimeRoot->CodecBoundary',
+  'RuntimeRoot->DiagnosticsHub',
+  'EditKernel->DocumentStoreKernel',
+  'EditKernel->DiagnosticsHub',
+  'InteractionEngine->EditKernel',
+  'InteractionEngine->SpatialKernel',
+  'FrameEngine->DocumentStoreKernel',
+  'FrameEngine->SpatialKernel',
+  'FrameEngine->ResourceKernel',
+  'SpatialKernel->DocumentStoreKernel',
+  'CodecBoundary->DocumentStoreKernel',
+  'CodecBoundary->DiagnosticsHub',
+};
+
 const _phaseDocs = {
   'P0': 'docs/implementation/p0_package_skeleton_and_hard_boundaries.md',
   'P1': 'docs/implementation/p1_legacy_oracle_lock.md',
@@ -51,6 +95,7 @@ void main() {
   _checkImplementationPhaseClarity();
   _checkDiagramContractAlignment();
   _checkSemanticDocumentationProbes();
+  _checkArchitectureLenses();
   _checkRegistryWitnesses();
 
   if (_errors.isNotEmpty) {
@@ -524,6 +569,725 @@ void _checkSemanticDocumentationProbes() {
     final text = file.readAsStringSync();
     if (RegExp(r'^\s*CC->>Frame\s*:', multiLine: true).hasMatch(text)) {
       _fail('${file.path} routes CommitCompiler directly to FrameEngine');
+    }
+  }
+}
+
+void _checkArchitectureLenses() {
+  _checkOwnerEdgeMatrix();
+  final operationRows = _checkOperationMatrixCompleteness();
+  _checkRevisionInvalidationAlgebra(operationRows);
+  _checkNegativeInvariantCoverage();
+  _checkStateMachineTransitionCoverage();
+  _checkFailurePathSymmetry();
+  _checkHotPathBudgetLens();
+  _checkDonorRiskLens();
+  _checkFunctionalLedgerCoverage();
+  _checkOwnerCouplingHeatmap(_loadYamlMapList(_sectionsRegistryPath));
+}
+
+void _checkOwnerEdgeMatrix() {
+  _checkC4RelEdges('docs/diagrams/c4_component_runtime.mmd');
+  _checkFlowchartOwnerEdges('docs/diagrams/c4_container.mmd');
+}
+
+void _checkC4RelEdges(String path) {
+  final text = _read(path);
+  final pattern = RegExp(r'^Rel\(([^,\s]+),\s*([^,\s]+),', multiLine: true);
+  for (final match in pattern.allMatches(text)) {
+    final source = _matchGroup(match, 1, '$path Rel source');
+    final target = _matchGroup(match, 2, '$path Rel target');
+    _checkAllowedOwnerEdge(path, text, match.start, source, target);
+  }
+}
+
+void _checkFlowchartOwnerEdges(String path) {
+  final text = _read(path);
+  final pattern = RegExp(
+    r'^\s*([A-Za-z0-9_]+)(?:\[[^\]]+\])?\s*-->\s*([A-Za-z0-9_]+)(?:\[[^\]]+\])?',
+    multiLine: true,
+  );
+  for (final match in pattern.allMatches(text)) {
+    final source = _matchGroup(match, 1, '$path flowchart source');
+    final target = _matchGroup(match, 2, '$path flowchart target');
+    _checkAllowedOwnerEdge(path, text, match.start, source, target);
+  }
+}
+
+void _checkAllowedOwnerEdge(
+  String path,
+  String text,
+  int offset,
+  String source,
+  String target,
+) {
+  final ownerSource = _ownerAliases[source];
+  final ownerTarget = _ownerAliases[target];
+  if (ownerSource == null || ownerTarget == null) {
+    return;
+  }
+  final edge = '$ownerSource->$ownerTarget';
+  if (!_allowedOwnerEdges.contains(edge)) {
+    _fail(
+      '$path:${_lineNumber(text, offset)} owner edge $edge is not in the allowed owner matrix',
+    );
+  }
+}
+
+List<Map<String, String>> _checkOperationMatrixCompleteness() {
+  final rows = _operationMatrixRows();
+  if (rows.length < 30) {
+    _fail(
+      'operation matrix has only ${rows.length} rows; expected broad v1 coverage',
+    );
+  }
+
+  final operations = <String>{};
+  for (final row in rows) {
+    final operation = row['Operation'] ?? '';
+    if (!operations.add(operation)) {
+      _fail('operation matrix contains duplicate operation: $operation');
+    }
+    for (final entry in row.entries) {
+      if (entry.value.isEmpty) {
+        _fail('operation matrix row $operation has empty ${entry.key} cell');
+      }
+      if (RegExp(
+        r'\b(maybe|tbd|unclear|not decided)\b',
+        caseSensitive: false,
+      ).hasMatch(entry.value)) {
+        _fail(
+          'operation matrix row $operation has ambiguous ${entry.key} cell: ${entry.value}',
+        );
+      }
+    }
+
+    final noEffectOperation =
+        operation.contains('no-op') || operation.contains('failure');
+    if (noEffectOperation) {
+      _expectOperationCell(row, 'State touched', {'none'});
+      _expectOperationCell(row, 'Revisions', {'none'});
+      _expectOperationCell(row, 'Spatial', {'none'});
+      _expectOperationCell(row, 'Projection', {'none'});
+      _expectOperationCell(row, 'Repaint', {'none'});
+      _expectOperationCell(row, 'Events', {'none'});
+    }
+
+    if (operation.startsWith('CanvasEdit.')) {
+      _expectOperationCell(row, 'Events', {'none'});
+    }
+
+    if (operation.contains('preview') || operation == 'line first tap') {
+      if (!(row['State touched'] ?? '').contains('preview')) {
+        _fail(
+          'operation matrix row $operation is preview-like but State touched does not say preview',
+        );
+      }
+      _expectOperationCell(row, 'Projection', {'no'});
+      _expectOperationCell(row, 'Events', {'none'});
+    }
+  }
+
+  return rows;
+}
+
+List<Map<String, String>> _operationMatrixRows() {
+  final text = _read('docs/contracts/operation_matrix.md');
+  const header =
+      '| Operation | State touched | Revisions | Spatial | Projection | Repaint | Events |';
+  final start = text.indexOf(header);
+  if (start < 0) {
+    _fail('operation matrix table header is missing or changed');
+    return const [];
+  }
+  final rows = <Map<String, String>>[];
+  final columns = [
+    'Operation',
+    'State touched',
+    'Revisions',
+    'Spatial',
+    'Projection',
+    'Repaint',
+    'Events',
+  ];
+  for (final line in text.substring(start).split('\n').skip(1)) {
+    if (!line.startsWith('|')) {
+      break;
+    }
+    if (line.contains('---')) {
+      continue;
+    }
+    final cells = line.split('|').skip(1).toList();
+    if (cells.isNotEmpty && cells.last.trim().isEmpty) {
+      cells.removeLast();
+    }
+    if (cells.length != columns.length) {
+      _fail(
+        'operation matrix row has ${cells.length} cells, expected ${columns.length}: $line',
+      );
+      continue;
+    }
+    rows.add({
+      for (var i = 0; i < columns.length; i += 1) columns[i]: cells[i].trim(),
+    });
+  }
+  return rows;
+}
+
+void _expectOperationCell(
+  Map<String, String> row,
+  String column,
+  Set<String> allowed,
+) {
+  final value = row[column] ?? '';
+  if (!allowed.contains(value)) {
+    _fail(
+      'operation matrix row ${row['Operation']} expected $column to be one of ${allowed.join(', ')}, got "$value"',
+    );
+  }
+}
+
+void _checkRevisionInvalidationAlgebra(List<Map<String, String>> rows) {
+  for (final row in rows) {
+    final operation = row['Operation'] ?? '';
+    final revisions = row['Revisions'] ?? '';
+    final spatial = row['Spatial'] ?? '';
+    final projection = row['Projection'] ?? '';
+    final repaint = row['Repaint'] ?? '';
+    final events = row['Events'] ?? '';
+
+    final projectionRevisionChanged =
+        revisions.contains('projection') ||
+        revisions.contains('all document-level');
+    if (projectionRevisionChanged && projection != 'evict') {
+      _fail(
+        'operation matrix row $operation changes projection revision but Projection is "$projection"',
+      );
+    }
+    if (projection == 'evict' && !projectionRevisionChanged) {
+      _fail(
+        'operation matrix row $operation evicts projection without projection/all-document revision',
+      );
+    }
+
+    if (operation == 'markResourceDirty') {
+      if (revisions != 'resourceVisualRevision' ||
+          spatial != 'no' ||
+          projection != 'no' ||
+          repaint != 'main' ||
+          events != 'none') {
+        _fail(
+          'operation matrix row markResourceDirty must only change resourceVisualRevision, resource cache, and main repaint',
+        );
+      }
+    }
+
+    if (operation == 'loadDocument success') {
+      if (!revisions.contains('all document-level') ||
+          !revisions.contains('epoch') ||
+          spatial != 'rebuild' ||
+          projection != 'evict' ||
+          repaint != 'main + overlay') {
+        _fail(
+          'operation matrix row loadDocument success does not model full replacement effects',
+        );
+      }
+    }
+
+    if (events != 'none' && revisions == 'none') {
+      _fail(
+        'operation matrix row $operation emits events without a revision effect',
+      );
+    }
+  }
+}
+
+void _checkNegativeInvariantCoverage() {
+  final sections = _loadYamlMapList(_sectionsRegistryPath);
+  final guardrails = _collectRegistryIds(sections, 'guardrails');
+  final tests = _collectRegistryIds(sections, 'tests');
+
+  final probes = [
+    (
+      path: 'docs/contracts/interaction_engine.md',
+      text: 'InteractionEngine commits only through EditKernel',
+      guardrail: 'interaction.no_concrete_store_imports',
+      test: 'test.interaction.state_machines',
+    ),
+    (
+      path: 'docs/contracts/edit_kernel.md',
+      text: 'CommitCompiler must not depend on concrete `FrameEngine`',
+      guardrail: 'edit.typed_effects_no_frame_dependency',
+      test: 'test.edit_kernel.typed_effects_no_frame_dependency',
+    ),
+    (
+      path: 'docs/contracts/spatial_kernel.md',
+      text: 'Full clone of spatial index for ordinary edit is forbidden',
+      guardrail: 'spatial.no_full_clone_ordinary_edit',
+      test: 'test.spatial.no_full_clone_for_touched_update',
+    ),
+    (
+      path: 'docs/contracts/resources.md',
+      text:
+          'Painters and frame paint code never call `CanvasResourceResolver` directly',
+      guardrail: 'resources.resolver_boundary_owned_by_resource_kernel',
+      test: 'test.resources.painter_never_calls_resolver_directly',
+    ),
+    (
+      path: 'docs/contracts/cache_policy.md',
+      text: 'no cache keys tied to old snapshots',
+      guardrail: 'cache.keys_use_next_revisions_only',
+      test: 'test.frame.cache_keys_do_not_use_legacy_snapshot_shape',
+    ),
+  ];
+
+  for (final probe in probes) {
+    if (!_read(probe.path).contains(probe.text)) {
+      _fail('${probe.path} is missing negative invariant text: ${probe.text}');
+    }
+    if (!guardrails.contains(probe.guardrail)) {
+      _fail(
+        'negative invariant ${probe.text} has no registry guardrail ${probe.guardrail}',
+      );
+    }
+    if (!tests.contains(probe.test)) {
+      _fail(
+        'negative invariant ${probe.text} has no registry test ${probe.test}',
+      );
+    }
+  }
+
+  for (final section in sections) {
+    final sectionId = _stringField(section, 'id', 'section registry entry');
+    final assumptions = _stringListField(section, 'do_not_assume', sectionId);
+    if (assumptions.contains('none')) {
+      continue;
+    }
+    final sectionGuardrails = _stringListField(
+      section,
+      'guardrails',
+      sectionId,
+    ).where((item) => item != 'none').toList();
+    final sectionTests = _stringListField(
+      section,
+      'tests',
+      sectionId,
+    ).where((item) => item != 'none').toList();
+    if (sectionGuardrails.isEmpty && sectionTests.isEmpty) {
+      _fail('$sectionId has negative assumptions but no guardrails or tests');
+    }
+  }
+}
+
+void _checkStateMachineTransitionCoverage() {
+  const requiredTokens = {
+    'docs/diagrams/state_runtime_lifecycle.mmd': [
+      'loadDocument success',
+      'loadDocument failure',
+      'dispose()',
+      'StateError',
+    ],
+    'docs/diagrams/state_edit_session.mmd': [
+      'Rollback',
+      'FutureRejected',
+      'nested edit',
+      'stale handle',
+    ],
+    'docs/diagrams/state_pointer_session.mmd': [
+      'interactive=false',
+      'loadDocument success',
+      'loadDocument failure',
+      'stale terminal',
+      'controllerEpoch',
+      'dispose',
+    ],
+    'docs/diagrams/state_selected_move.mmd': [
+      'interactive=false',
+      'loadDocument success',
+      'loadDocument failure',
+      'resolver',
+      'stale terminal',
+      'controllerEpoch',
+      'dispose',
+    ],
+    'docs/diagrams/state_two_tap_line.mmd': [
+      'interactive=false',
+      'loadDocument success',
+      'loadDocument failure',
+      'terminal',
+      'controllerEpoch',
+      'dispose',
+    ],
+    'docs/diagrams/state_resource_resolution.mmd': [
+      'ReentrantMutationRejected',
+      'markResourceDirty',
+      'resourceRevision',
+      'dispose',
+    ],
+  };
+
+  for (final entry in requiredTokens.entries) {
+    _requireFile(entry.key);
+    final text = _read(entry.key).toLowerCase();
+    for (final token in entry.value) {
+      if (!text.contains(token.toLowerCase())) {
+        _fail(
+          '${entry.key} state machine is missing required transition token: $token',
+        );
+      }
+    }
+  }
+}
+
+void _checkFailurePathSymmetry() {
+  const pairs = {
+    'docs/diagrams/seq_edit_success.mmd': 'docs/diagrams/seq_edit_rollback.mmd',
+    'docs/diagrams/seq_load_document_success.mmd':
+        'docs/diagrams/seq_load_document_failure.mmd',
+    'docs/diagrams/seq_selected_move_preview_commit.mmd':
+        'docs/diagrams/seq_selected_move_cancel.mmd',
+  };
+  for (final entry in pairs.entries) {
+    _requireFile(entry.key);
+    _requireFile(entry.value);
+  }
+
+  final operationRows = _operationMatrixRows();
+  final operations = operationRows
+      .map((row) => row['Operation'] ?? '')
+      .where((operation) => operation.isNotEmpty)
+      .toSet();
+  for (final operation in [
+    'loadDocument success',
+    'loadDocument failure',
+    'no-op edit',
+  ]) {
+    if (!operations.contains(operation)) {
+      _fail(
+        'operation matrix is missing failure/no-op symmetry row: $operation',
+      );
+    }
+  }
+
+  final editRollback = _read('docs/diagrams/seq_edit_rollback.mmd');
+  if (!editRollback.toLowerCase().contains('rollback') ||
+      !editRollback.contains('unchanged')) {
+    _fail(
+      'seq_edit_rollback must explicitly show rollback and unchanged state',
+    );
+  }
+  final loadFailure = _read('docs/contracts/load_document.md');
+  if (!loadFailure.contains('Failure ordering') ||
+      !loadFailure.contains('active gesture is not interrupted')) {
+    _fail('loadDocument contract must keep explicit failure ordering');
+  }
+}
+
+void _checkHotPathBudgetLens() {
+  final probes = [
+    (
+      path: 'docs/contracts/frame_rendering.md',
+      tokens: [
+        'painters do not live-read runtime',
+        'painters do not materialize CanvasDocument',
+        'stale spatial candidate is rejected',
+      ],
+    ),
+    (
+      path: 'docs/diagrams/dfd_main_paint_frame.mmd',
+      tokens: [
+        'forbidden in paint hot path',
+        'not read by main paint',
+        'ResourceKernel-owned resolver boundary',
+      ],
+    ),
+    (
+      path: 'docs/diagrams/dfd_overlay_frame.mmd',
+      tokens: [
+        'forbidden in paint hot path',
+        'not read by overlay paint',
+        'no DocumentStore, InteractionEngine',
+      ],
+    ),
+    (
+      path: 'docs/contracts/spatial_kernel.md',
+      tokens: [
+        'maxFallbackCandidates = 4096',
+        'no fallback path may scan the full scene silently',
+      ],
+    ),
+    (
+      path: 'docs/contracts/diagnostics.md',
+      tokens: ['no DiagnosticRecord allocation on successful pointer move'],
+    ),
+  ];
+
+  for (final probe in probes) {
+    final text = _read(probe.path);
+    for (final token in probe.tokens) {
+      if (!text.contains(token)) {
+        _fail('${probe.path} is missing hot-path budget token: $token');
+      }
+    }
+  }
+
+  final forbiddenDiagramCalls = <String, RegExp>{
+    'painters must not read store directly': RegExp(
+      r'^\s*(Painter|MainPainter|OverlayPainter)->>Store\s*:',
+      multiLine: true,
+    ),
+    'painters must not call resolver directly': RegExp(
+      r'^\s*(Painter|MainPainter|OverlayPainter)->>Resolver\s*:',
+      multiLine: true,
+    ),
+    'paint frame must not materialize public projection': RegExp(
+      r'^\s*Frame->>Projection\s*:',
+      multiLine: true,
+    ),
+  };
+  for (final file in Directory('docs/diagrams').listSync().whereType<File>()) {
+    if (!file.path.endsWith('.mmd')) {
+      continue;
+    }
+    final text = file.readAsStringSync();
+    for (final entry in forbiddenDiagramCalls.entries) {
+      for (final match in entry.value.allMatches(text)) {
+        _fail('${file.path}:${_lineNumber(text, match.start)} ${entry.key}');
+      }
+    }
+  }
+}
+
+void _checkFunctionalLedgerCoverage() {
+  final rows = _functionalLedgerRows();
+  if (rows.length < 40) {
+    _fail(
+      'functional ledger has only ${rows.length} rows; expected broad legacy capability coverage',
+    );
+  }
+  final tests = <String>{};
+  for (final row in rows) {
+    final capability = row['Capability'] ?? '';
+    for (final entry in row.entries) {
+      if (entry.value.isEmpty ||
+          RegExp(
+            r'\b(tbd|todo|unknown|not decided)\b',
+            caseSensitive: false,
+          ).hasMatch(entry.value)) {
+        _fail(
+          'functional ledger row $capability has incomplete ${entry.key}: ${entry.value}',
+        );
+      }
+    }
+    final testId = _stripBackticks(row['Required test id'] ?? '');
+    if (!testId.startsWith('functional.')) {
+      _fail(
+        'functional ledger row $capability has non-functional test id $testId',
+      );
+    }
+    if (!tests.add(testId)) {
+      _fail('functional ledger has duplicate required test id $testId');
+    }
+  }
+  final registryTests = _collectRegistryIds(
+    _loadYamlMapList(_sectionsRegistryPath),
+    'tests',
+  );
+  if (!registryTests.contains('test.functional_ledger.row_specific_tests')) {
+    _fail(
+      'functional ledger rows are not backed by test.functional_ledger.row_specific_tests',
+    );
+  }
+}
+
+void _checkDonorRiskLens() {
+  final donors = _loadYamlMapList('docs/_registry/donors.yaml');
+  const allowedDecisions = {
+    'copy',
+    'copy_adapt',
+    'adapt',
+    'adapt_rewrite',
+    'rewrite_reference',
+    'avoid',
+  };
+  const requiredListFields = {
+    'source_paths',
+    'target_phases',
+    'use_for',
+    'do_not_copy',
+    'required_tests',
+    'blocks',
+    'related_sections',
+  };
+
+  final donorDecisionById = <String, String>{};
+  for (final donor in donors) {
+    final donorId = _stringField(donor, 'id', 'donor registry entry');
+    final decision = _stringField(donor, 'decision', donorId);
+    donorDecisionById[donorId] = decision;
+    if (!allowedDecisions.contains(decision)) {
+      _fail('donor $donorId has unsupported decision $decision');
+    }
+    _stringField(donor, 'target_owner', donorId);
+    _stringField(donor, 'notes', donorId);
+
+    for (final field in requiredListFields) {
+      final values = _stringListField(donor, field, donorId);
+      if (values.isEmpty) {
+        _fail('donor $donorId has empty $field');
+      }
+    }
+
+    final targetPhases = _stringListField(donor, 'target_phases', donorId);
+    final blocks = _stringListField(donor, 'blocks', donorId);
+    if (decision == 'avoid') {
+      if (targetPhases.length != 1 || targetPhases.single != 'avoid') {
+        _fail('avoid donor $donorId must use target_phases: avoid');
+      }
+    } else {
+      for (final phase in targetPhases) {
+        if (!phase.startsWith('P')) {
+          _fail('donor $donorId has non-phase target $phase');
+        }
+      }
+      for (final block in blocks) {
+        if (!block.startsWith('P')) {
+          _fail('donor $donorId has non-phase block $block');
+        }
+      }
+    }
+  }
+
+  final sections = _loadYamlMapList(_sectionsRegistryPath);
+  for (final section in sections) {
+    final sectionId = _stringField(section, 'id', 'section registry entry');
+    for (final donorId in _stringListField(section, 'donors', sectionId)) {
+      if (donorId == 'none') {
+        continue;
+      }
+      final decision = donorDecisionById[donorId];
+      if (decision == 'avoid' && !_globalCatalogSections.contains(sectionId)) {
+        _fail(
+          '$sectionId uses avoid donor $donorId as ordinary donor evidence',
+        );
+      }
+    }
+  }
+}
+
+String _stripBackticks(String value) {
+  final trimmed = value.trim();
+  if (trimmed.length >= 2 && trimmed.startsWith('`') && trimmed.endsWith('`')) {
+    return trimmed.substring(1, trimmed.length - 1);
+  }
+  return trimmed;
+}
+
+List<Map<String, String>> _functionalLedgerRows() {
+  final text = _read('docs/verification/functional_ledger.md');
+  const header =
+      '| Capability | Legacy oracle | Next API v1 | Required test id |';
+  final start = text.indexOf(header);
+  if (start < 0) {
+    _fail('functional ledger table header is missing or changed');
+    return const [];
+  }
+  final columns = [
+    'Capability',
+    'Legacy oracle',
+    'Next API v1',
+    'Required test id',
+  ];
+  final rows = <Map<String, String>>[];
+  for (final line in text.substring(start).split('\n').skip(1)) {
+    if (!line.startsWith('|')) {
+      break;
+    }
+    if (line.contains('---')) {
+      continue;
+    }
+    final cells = line.split('|').skip(1).toList();
+    if (cells.isNotEmpty && cells.last.trim().isEmpty) {
+      cells.removeLast();
+    }
+    if (cells.length != columns.length) {
+      _fail(
+        'functional ledger row has ${cells.length} cells, expected ${columns.length}: $line',
+      );
+      continue;
+    }
+    rows.add({
+      for (var i = 0; i < columns.length; i += 1) columns[i]: cells[i].trim(),
+    });
+  }
+  return rows;
+}
+
+void _checkOwnerCouplingHeatmap(List<YamlMap> sections) {
+  final mustReadInDegree = <String, int>{};
+  for (final section in sections) {
+    final sectionId = _stringField(section, 'id', 'section registry entry');
+    for (final reference in _stringListField(section, 'must_read', sectionId)) {
+      if (reference.startsWith('section_')) {
+        mustReadInDegree[reference] = (mustReadInDegree[reference] ?? 0) + 1;
+      }
+    }
+  }
+
+  for (final section in sections) {
+    final sectionId = _stringField(section, 'id', 'section registry entry');
+    final isGlobal = _globalCatalogSections.contains(sectionId);
+    if (isGlobal) {
+      continue;
+    }
+    final diagrams = _stringListField(
+      section,
+      'diagrams',
+      sectionId,
+    ).where((item) => item != 'none').length;
+    final guardrails = _stringListField(
+      section,
+      'guardrails',
+      sectionId,
+    ).where((item) => item != 'none').length;
+    final tests = _stringListField(
+      section,
+      'tests',
+      sectionId,
+    ).where((item) => item != 'none').length;
+    final donors = _stringListField(
+      section,
+      'donors',
+      sectionId,
+    ).where((item) => item != 'none').length;
+    final phases = _stringListField(section, 'phases', sectionId).length;
+
+    if (diagrams > 20) {
+      _fail(
+        '$sectionId has $diagrams diagrams; split owner or phase navigation before it becomes a hub',
+      );
+    }
+    if (guardrails > 15) {
+      _fail('$sectionId has $guardrails guardrails; owner may be too broad');
+    }
+    if (tests > 15) {
+      _fail('$sectionId has $tests tests; owner may be too broad');
+    }
+    if (donors > 15) {
+      _fail('$sectionId has $donors donors; donor reuse may be too broad');
+    }
+    if (phases > 6) {
+      _fail(
+        '$sectionId feeds $phases phases; section may be acting as a hidden global hub',
+      );
+    }
+  }
+
+  for (final entry in mustReadInDegree.entries) {
+    if (entry.value > 10) {
+      _fail(
+        '${entry.key} has must_read in-degree ${entry.value}; prerequisite graph is becoming hub-shaped',
+      );
     }
   }
 }
