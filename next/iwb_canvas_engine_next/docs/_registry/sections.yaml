@@ -7,8 +7,7 @@
     - P0
     - P1.5
   must_read:
-    - section_03_package_layout
-    - section_22_guardrails_machine_checks
+    - "none"
   donors:
     - "none"
   diagrams:
@@ -35,8 +34,6 @@
     - P5
   must_read:
     - section_00_status_and_scope
-    - section_03_package_layout
-    - section_10_runtime_data_model
   donors:
     - "none"
   diagrams:
@@ -46,7 +43,7 @@
   guardrails:
     - core.single_runtime_root
   tests:
-    - "none"
+    - test.guardrails.blocking_suite
   do_not_assume:
     - no legacy facade
     - no SceneController
@@ -60,7 +57,6 @@
   must_read:
     - section_00_status_and_scope
     - section_02_architecture_model
-    - section_22_guardrails_machine_checks
   donors:
     - "none"
   diagrams:
@@ -88,9 +84,7 @@
     - P10
   must_read:
     - section_00_status_and_scope
-    - section_05_schema_v1_contract
-    - section_06_validation_limits
-    - section_07_resource_lifecycle
+    - section_03_package_layout
   donors:
     - foundation_transform2d
     - foundation_contract_limits
@@ -111,12 +105,14 @@
     - api.no_undefined_public_type_references
     - api.dto_immutability
     - api.id_validation_no_extension_type_escape
+    - surface.interactive_false_pending_line_preserved
   tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - test.api_contract.no_undefined_public_type_references
     - test.api_contract.no_old_public_symbols
     - test.api_contract.dto_immutability
     - test.events.typed_action_payloads
+    - test.surface.interactive_false_pending_line_preserved
     - test.api_contract.v1_scope_gate
   do_not_assume:
     - no legacy public API shape
@@ -132,7 +128,6 @@
   must_read:
     - section_04_public_api_v1
     - section_06_validation_limits
-    - section_19_codec_boundary
   donors:
     - codec_guards
     - codec_json_require
@@ -168,7 +163,6 @@
     - P3
   must_read:
     - section_04_public_api_v1
-    - section_05_schema_v1_contract
   donors:
     - foundation_contract_limits
     - foundation_validators
@@ -194,7 +188,7 @@
   must_read:
     - section_04_public_api_v1
     - section_10_runtime_data_model
-    - section_15_frame_render_contract
+    - section_18_cache_policy
   donors:
     - "none"
   diagrams:
@@ -207,6 +201,7 @@
     - resources.app_key_only
     - resources.resolver_boundary_owned_by_resource_kernel
     - resources.no_same_frame_missing_retry
+    - resources.resolver_reentrancy_rejected
   tests:
     - test.schema_v1.resources_appkey_only
     - test.schema_v1.reject_unknown_resource_source_kind
@@ -216,6 +211,7 @@
     - test.resources.mark_all_resources_dirty
     - test.resources.painter_never_calls_resolver_directly
     - test.resources.missing_result_cached_per_revision
+    - test.resources.resolver_reentrancy_rejected
   do_not_assume:
     - no engine IO
     - no asset-bundle loading
@@ -260,7 +256,7 @@
   guardrails:
     - api.v1_scope_gate_green_before_freeze
   tests:
-    - "none"
+    - test.api_contract.v1_scope_gate
   do_not_assume:
     - accepted differences are explicit only
     - no silent legacy compatibility layer
@@ -276,8 +272,6 @@
   must_read:
     - section_02_architecture_model
     - section_04_public_api_v1
-    - section_11_edit_kernel
-    - section_15_frame_render_contract
   donors:
     - dto_document_helpers
     - store_scene_controller_read_paths
@@ -306,8 +300,6 @@
   must_read:
     - section_04_public_api_v1
     - section_10_runtime_data_model
-    - section_12_load_document
-    - section_13_operation_matrix
   donors:
     - interaction_mutation_boundary
     - staged_load_runtime_materialization
@@ -325,11 +317,13 @@
     - edit.stale_handle_rejected
     - events.low_level_edit_no_user_actions
     - edit.no_global_invalidation_except_replacement
+    - edit.typed_effects_no_frame_dependency
   tests:
     - test.events.low_level_mutations_do_not_emit_actions
     - test.edit_kernel.sync_non_nested_async_stale
     - test.edit_kernel.rollback
     - test.edit_kernel.exact_touched_invalidation
+    - test.edit_kernel.typed_effects_no_frame_dependency
   do_not_assume:
     - no legacy SceneWriteTxn
     - no legacy controller shell
@@ -345,7 +339,6 @@
   must_read:
     - section_10_runtime_data_model
     - section_11_edit_kernel
-    - section_13_operation_matrix
     - section_14_interaction_engine
   donors:
     - staged_load_runtime_materialization
@@ -373,7 +366,6 @@
   must_read:
     - section_11_edit_kernel
     - section_12_load_document
-    - section_23_tests
   donors:
     - interaction_mutation_boundary
   diagrams:
@@ -398,9 +390,7 @@
     - P9
     - P10
   must_read:
-    - section_04_public_api_v1
     - section_11_edit_kernel
-    - section_12_load_document
     - section_15_frame_render_contract
     - section_16_geometry_policy
   donors:
@@ -432,17 +422,20 @@
     - state_pending_text_edit_request
   guardrails:
     - preview.selected_move_main_repaint
+    - events.commands_emit_user_actions
     - load.prepares_before_interrupt
     - load.success_interrupts_before_install
     - interaction.no_concrete_store_imports
     - interaction.no_resolver_on_cancel_paths
     - interaction.no_stale_terminal_commit
     - surface.pointer_samples_normalized_before_runtime
+    - surface.interactive_false_pending_line_preserved
   tests:
     - test.events.typed_action_payloads
     - test.events.commands_emit_user_actions
     - test.surface.interactive_false_pointer_routing
     - test.surface.interactive_false_active_session_cancel
+    - test.surface.interactive_false_pending_line_preserved
     - test.surface.pointer_adapter_finite_normalization
     - test.interaction.state_machines
     - test.interaction.move_resolver_reentrancy
@@ -462,8 +455,7 @@
     - P10
   must_read:
     - section_10_runtime_data_model
-    - section_14_interaction_engine
-    - section_16_geometry_policy
+    - section_07_resource_lifecycle
     - section_17_spatial_kernel
     - section_18_cache_policy
   donors:
@@ -504,8 +496,7 @@
     - P8
   must_read:
     - section_04_public_api_v1
-    - section_15_frame_render_contract
-    - section_17_spatial_kernel
+    - section_10_runtime_data_model
   donors:
     - foundation_core_geometry
     - geometry_node_geometry
@@ -536,7 +527,6 @@
     - P8
   must_read:
     - section_10_runtime_data_model
-    - section_15_frame_render_contract
     - section_16_geometry_policy
   donors:
     - spatial_scene_spatial_index
@@ -547,10 +537,12 @@
   guardrails:
     - spatial.no_full_clone_ordinary_edit
     - spatial.stale_candidate_rejected
+    - spatial.fallback_budget_enforced
   tests:
     - test.spatial.touched_update
     - test.spatial.no_full_clone_for_touched_update
     - test.spatial.stale_generation_rejected
+    - test.spatial.fallback_budget_enforced
   do_not_assume:
     - do not port old Scene or locator maps
     - do not rely on stale structuralRevision
@@ -564,9 +556,8 @@
     - P10
     - P12
   must_read:
-    - section_15_frame_render_contract
+    - section_10_runtime_data_model
     - section_17_spatial_kernel
-    - section_24_benchmarks
   donors:
     - direct_scan_resistant_cache
     - scene_render_caches
@@ -576,8 +567,10 @@
     - dfd_cache_invalidation
   guardrails:
     - cache.keys_use_next_revisions_only
+    - cache.hot_caches_have_capacity_eviction
   tests:
     - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
+    - test.frame.cache_capacity_eviction_policy
   do_not_assume:
     - no unbounded cache owner sprawl
     - no cache keys tied to old snapshots
@@ -591,7 +584,6 @@
   must_read:
     - section_05_schema_v1_contract
     - section_06_validation_limits
-    - section_20_diagnostics_hub
   donors:
     - codec_guards
     - codec_json_require
@@ -624,7 +616,6 @@
   must_read:
     - section_06_validation_limits
     - section_19_codec_boundary
-    - section_22_guardrails_machine_checks
   donors:
     - foundation_error_contract
     - dto_scene_value_validation
@@ -648,7 +639,6 @@
   must_read:
     - section_00_status_and_scope
     - section_03_package_layout
-    - section_27_final_release_gates
   donors:
     - tooling_schema_family_parity
   diagrams:
@@ -675,6 +665,7 @@
     - edit.stale_handle_rejected
     - edit.operation_matrix_complete
     - edit.no_global_invalidation_except_replacement
+    - edit.typed_effects_no_frame_dependency
     - events.low_level_edit_no_user_actions
     - events.commands_emit_user_actions
     - load.prepares_before_interrupt
@@ -686,21 +677,24 @@
     - geometry.no_legacy_scene_order
     - spatial.no_full_clone_ordinary_edit
     - spatial.stale_candidate_rejected
+    - spatial.fallback_budget_enforced
     - frame.no_global_scene_sort
     - cache.keys_use_next_revisions_only
+    - cache.hot_caches_have_capacity_eviction
     - resources.mutation_inside_edit_only
     - resources.dirty_no_document_revision
     - resources.app_key_only
     - resources.resolver_boundary_owned_by_resource_kernel
     - resources.no_same_frame_missing_retry
+    - resources.resolver_reentrancy_rejected
     - codec.schema_v1_exact
     - codec.known_fields_validated
     - codec.no_runtime_side_effects
     - diagnostics.disabled_no_alloc_hot_path
     - diagnostics.sanitized_public_projection
     - surface.pointer_samples_normalized_before_runtime
+    - surface.interactive_false_pending_line_preserved
     - diagrams.all_required_present
-    - docs.phase_guardrail_alignment
   tests:
     - test.guardrails.blocking_suite
   do_not_assume:
@@ -724,9 +718,6 @@
     - P12
   must_read:
     - section_04_public_api_v1
-    - section_05_schema_v1_contract
-    - section_07_resource_lifecycle
-    - section_14_interaction_engine
     - section_22_guardrails_machine_checks
   donors:
     - direct_numeric_policy
@@ -818,11 +809,13 @@
     - test.resources.mark_all_resources_dirty
     - test.resources.painter_never_calls_resolver_directly
     - test.resources.missing_result_cached_per_revision
+    - test.resources.resolver_reentrancy_rejected
     - test.events.typed_action_payloads
     - test.events.low_level_mutations_do_not_emit_actions
     - test.events.commands_emit_user_actions
     - test.surface.interactive_false_pointer_routing
     - test.surface.interactive_false_active_session_cancel
+    - test.surface.interactive_false_pending_line_preserved
     - test.surface.pointer_adapter_finite_normalization
     - test.functional_ledger.row_specific_tests
     - test.api_contract.v1_scope_gate
@@ -834,15 +827,18 @@
     - test.edit_kernel.rollback
     - test.edit_kernel.operation_matrix_effects
     - test.edit_kernel.exact_touched_invalidation
+    - test.edit_kernel.typed_effects_no_frame_dependency
     - test.load_document.staged_success_failure
     - test.geometry.hit_policy
     - test.geometry.no_legacy_scene_order
     - test.spatial.touched_update
     - test.spatial.no_full_clone_for_touched_update
     - test.spatial.stale_generation_rejected
+    - test.spatial.fallback_budget_enforced
     - test.frame.main_overlay_capture
     - test.frame.no_live_runtime_read_in_painters
     - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
+    - test.frame.cache_capacity_eviction_policy
     - test.frame.selected_supplement_staging_no_global_sort
     - test.interaction.state_machines
     - test.interaction.move_resolver_reentrancy
@@ -852,7 +848,6 @@
     - test.benchmarks.required_cases
     - test.diagrams.required_present
     - test.guardrails.blocking_suite
-    - test.guardrails.phase_guardrail_alignment
   do_not_assume:
     - no donor reuse without ported or equivalent tests
 -
@@ -980,6 +975,7 @@
     - edit.stale_handle_rejected
     - edit.operation_matrix_complete
     - edit.no_global_invalidation_except_replacement
+    - edit.typed_effects_no_frame_dependency
     - events.low_level_edit_no_user_actions
     - events.commands_emit_user_actions
     - load.prepares_before_interrupt
@@ -991,21 +987,24 @@
     - geometry.no_legacy_scene_order
     - spatial.no_full_clone_ordinary_edit
     - spatial.stale_candidate_rejected
+    - spatial.fallback_budget_enforced
     - frame.no_global_scene_sort
     - cache.keys_use_next_revisions_only
+    - cache.hot_caches_have_capacity_eviction
     - resources.mutation_inside_edit_only
     - resources.dirty_no_document_revision
     - resources.app_key_only
     - resources.resolver_boundary_owned_by_resource_kernel
     - resources.no_same_frame_missing_retry
+    - resources.resolver_reentrancy_rejected
     - codec.schema_v1_exact
     - codec.known_fields_validated
     - codec.no_runtime_side_effects
     - diagnostics.disabled_no_alloc_hot_path
     - diagnostics.sanitized_public_projection
     - surface.pointer_samples_normalized_before_runtime
+    - surface.interactive_false_pending_line_preserved
     - diagrams.all_required_present
-    - docs.phase_guardrail_alignment
   tests:
     - test.guardrails.blocking_suite
   do_not_assume:

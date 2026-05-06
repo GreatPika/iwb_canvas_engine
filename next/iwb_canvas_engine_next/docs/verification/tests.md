@@ -6,9 +6,6 @@ Owns:
 - 23. Tests
 Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
-- `section_05_schema_v1_contract` -> `docs/contracts/schema_v1.md`
-- `section_07_resource_lifecycle` -> `docs/contracts/resources.md`
-- `section_14_interaction_engine` -> `docs/contracts/interaction_engine.md`
 - `section_22_guardrails_machine_checks` -> `docs/verification/guardrails.md`
 Feeds phases:
 - `P0`
@@ -110,11 +107,13 @@ Required tests:
 - `test.resources.mark_all_resources_dirty`
 - `test.resources.painter_never_calls_resolver_directly`
 - `test.resources.missing_result_cached_per_revision`
+- `test.resources.resolver_reentrancy_rejected`
 - `test.events.typed_action_payloads`
 - `test.events.low_level_mutations_do_not_emit_actions`
 - `test.events.commands_emit_user_actions`
 - `test.surface.interactive_false_pointer_routing`
 - `test.surface.interactive_false_active_session_cancel`
+- `test.surface.interactive_false_pending_line_preserved`
 - `test.surface.pointer_adapter_finite_normalization`
 - `test.functional_ledger.row_specific_tests`
 - `test.api_contract.v1_scope_gate`
@@ -126,15 +125,18 @@ Required tests:
 - `test.edit_kernel.rollback`
 - `test.edit_kernel.operation_matrix_effects`
 - `test.edit_kernel.exact_touched_invalidation`
+- `test.edit_kernel.typed_effects_no_frame_dependency`
 - `test.load_document.staged_success_failure`
 - `test.geometry.hit_policy`
 - `test.geometry.no_legacy_scene_order`
 - `test.spatial.touched_update`
 - `test.spatial.no_full_clone_for_touched_update`
 - `test.spatial.stale_generation_rejected`
+- `test.spatial.fallback_budget_enforced`
 - `test.frame.main_overlay_capture`
 - `test.frame.no_live_runtime_read_in_painters`
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
+- `test.frame.cache_capacity_eviction_policy`
 - `test.frame.selected_supplement_staging_no_global_sort`
 - `test.interaction.state_machines`
 - `test.interaction.move_resolver_reentrancy`
@@ -144,7 +146,6 @@ Required tests:
 - `test.benchmarks.required_cases`
 - `test.diagrams.required_present`
 - `test.guardrails.blocking_suite`
-- `test.guardrails.phase_guardrail_alignment`
 Guardrails:
 - `api.functional_ledger_complete`
 Do not assume:
@@ -175,6 +176,7 @@ test/resources/resource_dirty_test.dart
 test/resources/mark_all_resources_dirty_test.dart
 test/resources/painter_never_calls_resolver_directly_test.dart
 test/resources/missing_result_cached_per_revision_test.dart
+test/resources/resolver_reentrancy_rejected_test.dart
 
 test/events/typed_action_payloads_test.dart
 test/events/edit_kernel_low_level_mutations_do_not_emit_actions_test.dart
@@ -182,19 +184,22 @@ test/events/commands_emit_user_actions_test.dart
 
 test/surface/interactive_false_pointer_routing_test.dart
 test/surface/interactive_false_active_session_cancel_test.dart
+test/surface/interactive_false_pending_line_preserved_test.dart
 test/surface/pointer_adapter_finite_normalization_test.dart
 
 test/store/public_document_is_projection_only_test.dart
 test/edit_kernel/operation_matrix_effects_test.dart
 test/edit_kernel/exact_touched_invalidation_test.dart
+test/edit_kernel/typed_effects_no_frame_dependency_test.dart
 test/geometry/no_legacy_scene_order_test.dart
 test/spatial/no_full_clone_for_touched_update_test.dart
 test/spatial/stale_generation_rejected_test.dart
+test/spatial/fallback_budget_enforced_test.dart
 test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart
+test/frame/cache_capacity_eviction_policy_test.dart
 test/frame/selected_supplement_staging_no_global_sort_test.dart
 test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart
 test/interaction/no_stale_terminal_commit_test.dart
-test/guardrails/phase_guardrail_alignment_test.dart
 ```
 
 Functional ledger rows still require row-specific tests.

@@ -67,8 +67,17 @@ stateDiagram-v2
     Store, CanvasDocument, descriptors, selection, or preview.
   end note
 
+  SyncResolverCall --> ReentrantMutationRejected: app attempts public runtime mutation
   SyncResolverCall --> NullResult: app returns null
   SyncResolverCall --> ResolvedResult: app returns ui.Image
+
+  state "Reentrant mutation rejected" as ReentrantMutationRejected
+  note right of ReentrantMutationRejected
+    Public runtime mutation from inside the resolver throws
+    StateError and produces no document, selection, preview,
+    cache, repaint, or action effect.
+  end note
+  ReentrantMutationRejected --> SyncResolverCall: resolver continues or unwinds without accepted mutation
 
   state "Null resolver result" as NullResult
   NullResult --> CacheNullResult: remember null/missing by resourceId + resourceRevision and no same-frame retry
@@ -127,6 +136,7 @@ stateDiagram-v2
     no engine-owned file, network, asset-bundle, or remote load,
     no sync glue between duplicate resource sources,
     no direct Store mutation from CanvasResourceResolver,
+    no accepted public runtime mutation from inside resolver,
     no document action from resource dirty invalidation,
     no descriptor mutation outside edit/load path,
     no legacy source is normative for new resource behavior.

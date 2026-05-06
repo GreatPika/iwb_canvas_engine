@@ -6,8 +6,7 @@ Owns:
 - 15. FrameEngine and render contract
 Must read before editing:
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
-- `section_14_interaction_engine` -> `docs/contracts/interaction_engine.md`
-- `section_16_geometry_policy` -> `docs/contracts/geometry.md`
+- `section_07_resource_lifecycle` -> `docs/contracts/resources.md`
 - `section_17_spatial_kernel` -> `docs/contracts/spatial_kernel.md`
 - `section_18_cache_policy` -> `docs/contracts/cache_policy.md`
 Feeds phases:

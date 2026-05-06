@@ -26,16 +26,17 @@ stateDiagram-v2
   state "Pending start / epoch-bound" as PendingStart
   note right of PendingStart
     Pending line state outlives unrelated pointer-session
-    terminal cleanup. Only line-owned cleanup, mode/tool
-    change, successful load, cancel, dispose, or terminal
-    line decision may clear it.
+    terminal cleanup and interactive=false when no active
+    routed pointer owns it. Only line-owned cleanup,
+    mode/tool change, successful load, cancel, dispose,
+    or terminal line decision may clear it.
   end note
 
   PendingStart --> LinePreview: finite pointer move with same tool and controllerEpoch / overlay line preview only
   PendingStart --> SecondTapGate: finite second tap
   PendingStart --> CleanupOnly: cancel, mode/tool change, or loadDocument success
   PendingStart --> PendingStart: loadDocument failure / preserve pending start and preview
-  PendingStart --> PendingStart: interactive=false / disable future routing only; preserve pending start
+  PendingStart --> PendingStart: interactive=false with no active routed pointer / disable future routing only; preserve pending start
   PendingStart --> PendingStart: unrelated pointer cleanup or stale non-terminal sample / preserve pending start
   PendingStart --> DisposeCleanup: runtime.dispose()
 
@@ -51,7 +52,7 @@ stateDiagram-v2
   LinePreview --> SecondTapGate: finite second tap
   LinePreview --> CleanupOnly: cancel, mode/tool change, or loadDocument success
   LinePreview --> LinePreview: loadDocument failure / preserve pending line
-  LinePreview --> LinePreview: interactive=false / disable future routing only; preserve line preview
+  LinePreview --> LinePreview: interactive=false with no active routed pointer / disable future routing only; preserve line preview
   LinePreview --> LinePreview: unrelated pointer cleanup or stale non-terminal sample / preserve preview
   LinePreview --> DisposeCleanup: runtime.dispose()
 

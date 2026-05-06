@@ -54,6 +54,7 @@
 - `edit.sync_non_nested` - nested/async edit rejected
 - `edit.operation_matrix_complete` - every operation matrix row has executable effect assertions
 - `edit.no_global_invalidation_except_replacement` - ordinary edits compile exact touched invalidation only
+- `edit.typed_effects_no_frame_dependency` - CommitCompiler produces typed effects without depending on FrameEngine
 - `events.low_level_edit_no_user_actions` - CanvasEdit.removeElement/clearContent emit no user action events
 - `load.prepares_before_interrupt` - failed load does not interrupt gesture
 - `load.success_interrupts_before_install` - success interrupt happens before atomic install
@@ -66,6 +67,7 @@
 - `test.edit_kernel.rollback` -> `rollback safety tests`
 - `test.edit_kernel.operation_matrix_effects` -> `test/edit_kernel/operation_matrix_effects_test.dart`
 - `test.edit_kernel.exact_touched_invalidation` -> `test/edit_kernel/exact_touched_invalidation_test.dart`
+- `test.edit_kernel.typed_effects_no_frame_dependency` -> `test/edit_kernel/typed_effects_no_frame_dependency_test.dart`
 - `test.load_document.staged_success_failure` -> `staged loadDocument success/failure tests`
 
 ## Exit gate
@@ -74,4 +76,5 @@
 - rollback tests green
 - loadDocument staged tests green
 - operation matrix tests green
-- exact touched invalidation tests green.
+- exact touched invalidation tests green
+- typed effect boundary tests green.

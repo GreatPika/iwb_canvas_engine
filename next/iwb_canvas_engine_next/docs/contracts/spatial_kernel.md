@@ -6,7 +6,6 @@ Owns:
 - 17. SpatialKernel
 Must read before editing:
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
-- `section_15_frame_render_contract` -> `docs/contracts/frame_rendering.md`
 - `section_16_geometry_policy` -> `docs/contracts/geometry.md`
 Feeds phases:
 - `P7`
@@ -21,9 +20,11 @@ Required tests:
 - `test.spatial.touched_update`
 - `test.spatial.no_full_clone_for_touched_update`
 - `test.spatial.stale_generation_rejected`
+- `test.spatial.fallback_budget_enforced`
 Guardrails:
 - `spatial.no_full_clone_ordinary_edit`
 - `spatial.stale_candidate_rejected`
+- `spatial.fallback_budget_enforced`
 Do not assume:
 - do not port old Scene or locator maps
 - do not rely on stale structuralRevision
@@ -49,6 +50,7 @@ Tile policy:
 cellSize = 256;
 if covered tile count > 1024 -> outlier only;
 if query tile count > 50000 -> fallback candidate union, diagnostic counter incremented;
+maxFallbackCandidates = 4096;
 normal element is not duplicated into all tiles when marked outlier;
 queries union tile candidates + outliers;
 ordinary edit updates only touched ids;
@@ -66,10 +68,19 @@ Staged update algorithm:
 6. apply additions;
 7. update entriesById;
 8. if any step fails, discard prepared delta and mark index invalid;
-9. invalid index uses bounded fallback and schedules rebuild outside hot pointer path.
+9. invalid index uses bounded fallback and schedules rebuild outside hot pointer path;
+10. fallback candidate union that would exceed maxFallbackCandidates returns a typed budget-exceeded result instead of partial candidates.
 ```
 
 Full clone of spatial index for ordinary edit is forbidden. Page-level copy is allowed only for touched pages.
 
----
+Fallback budget behavior:
 
+```text
+- fallback increments a diagnostic counter whenever the query tile or candidate budget is hit;
+- budget-exceeded fallback does not return partial hit/paint candidates as valid results;
+- RuntimeRoot schedules rebuild or retry outside the hot pointer/paint path;
+- no fallback path may scan the full scene silently.
+```
+
+---

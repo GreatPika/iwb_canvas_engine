@@ -6,9 +6,7 @@ Owns:
 - 4. Public API v1: полный surface
 Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
-- `section_05_schema_v1_contract` -> `docs/contracts/schema_v1.md`
-- `section_06_validation_limits` -> `docs/contracts/validation_limits.md`
-- `section_07_resource_lifecycle` -> `docs/contracts/resources.md`
+- `section_03_package_layout` -> `docs/architecture/02_package_boundaries.md`
 Feeds phases:
 - `P1.5`
 - `P2`
@@ -35,6 +33,7 @@ Required tests:
 - `test.api_contract.no_old_public_symbols`
 - `test.api_contract.dto_immutability`
 - `test.events.typed_action_payloads`
+- `test.surface.interactive_false_pending_line_preserved`
 - `test.api_contract.v1_scope_gate`
 Guardrails:
 - `api.public_types_complete`
@@ -42,6 +41,7 @@ Guardrails:
 - `api.no_undefined_public_type_references`
 - `api.dto_immutability`
 - `api.id_validation_no_extension_type_escape`
+- `surface.interactive_false_pending_line_preserved`
 Do not assume:
 - no legacy public API shape
 - no PatchField export
@@ -358,6 +358,9 @@ Surface contract:
   CanvasSurface routes cancel cleanup before disabling further routing;
 - pending preview state that is not owned by an active routed pointer session is
   preserved when interactive becomes false;
+- pending line start and line preview are not active routed pointer sessions after
+  their tap sample has completed; `interactive=false` preserves them until line
+  cleanup, mode/tool change, successful load, dispose, or terminal line decision;
 - toggling interactive back to true resumes routing only for subsequent pointer events;
 - CanvasSurface never mutates committed document directly;
 - CanvasSurface routes pointer samples into InteractionEngine;

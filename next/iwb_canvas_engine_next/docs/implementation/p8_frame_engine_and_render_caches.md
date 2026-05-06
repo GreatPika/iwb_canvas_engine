@@ -59,6 +59,7 @@
 - `preview.selected_move_main_repaint` - selected move preview increments main repaint, not overlay
 - `frame.no_global_scene_sort` - selected supplement staging merges by orderToken without globally sorting the scene
 - `cache.keys_use_next_revisions_only` - cache keys use next-owned revision facts and stable inputs, not legacy snapshot shapes
+- `cache.hot_caches_have_capacity_eviction` - hot caches declare capacity, eviction, invalidation owner, and probe
 
 ## Tests
 
@@ -66,6 +67,7 @@
 - `test.frame.main_overlay_capture` -> `main and overlay frame capture tests`
 - `test.frame.no_live_runtime_read_in_painters` -> `no live runtime read and no CanvasDocument projection in paint tests`
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape` -> `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart`
+- `test.frame.cache_capacity_eviction_policy` -> `test/frame/cache_capacity_eviction_policy_test.dart`
 - `test.frame.selected_supplement_staging_no_global_sort` -> `test/frame/selected_supplement_staging_no_global_sort_test.dart`
 
 ## Exit gate
@@ -77,4 +79,5 @@
 - no live runtime read in painters
 - no CanvasDocument projection in paint
 - cache keys are next-revision based
+- hot cache capacity/eviction policy is explicit
 - selected supplement staging avoids global scene sort.

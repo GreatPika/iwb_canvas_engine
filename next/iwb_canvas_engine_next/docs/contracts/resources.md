@@ -7,7 +7,7 @@ Owns:
 Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
-- `section_15_frame_render_contract` -> `docs/contracts/frame_rendering.md`
+- `section_18_cache_policy` -> `docs/contracts/cache_policy.md`
 Feeds phases:
 - `P4`
 - `P10`
@@ -26,12 +26,14 @@ Required tests:
 - `test.resources.mark_all_resources_dirty`
 - `test.resources.painter_never_calls_resolver_directly`
 - `test.resources.missing_result_cached_per_revision`
+- `test.resources.resolver_reentrancy_rejected`
 Guardrails:
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`
 - `resources.app_key_only`
 - `resources.resolver_boundary_owned_by_resource_kernel`
 - `resources.no_same_frame_missing_retry`
+- `resources.resolver_reentrancy_rejected`
 Do not assume:
 - no engine IO
 - no asset-bundle loading
@@ -120,6 +122,7 @@ and delegates cache invalidation to `ResourceKernel`.
 - mandatory v1 supports appKey resource descriptors and dirty invalidation;
 - resource mutation remains inside CanvasEdit;
 - resolver calls are synchronous and app-owned;
+- reentrant public runtime mutation from inside the resolver throws `StateError`;
 - no engine IO;
 - no asset-bundle loading;
 - no file loading;
@@ -136,6 +139,15 @@ image size determines placeholder bounds;
 no full-document repaint loop;
 no repeated resolver retry in same frame;
 diagnostic emitted only if verbose diagnostics enabled or schema missing reference occurs at load time.
+```
+
+Resolver reentrancy:
+
+```text
+ResourceKernel marks the resolver call boundary as active before invoking the app
+callback. Any public runtime mutation attempted by that callback is rejected with
+StateError. The failed reentrant mutation does not change document, selection,
+preview, cache, repaint, or action state.
 ```
 
 ---

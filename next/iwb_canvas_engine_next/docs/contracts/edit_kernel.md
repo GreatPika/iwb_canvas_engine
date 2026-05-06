@@ -7,8 +7,6 @@ Owns:
 Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
-- `section_12_load_document` -> `docs/contracts/load_document.md`
-- `section_13_operation_matrix` -> `docs/contracts/operation_matrix.md`
 Feeds phases:
 - `P6`
 Related donors:
@@ -27,12 +25,14 @@ Required tests:
 - `test.edit_kernel.sync_non_nested_async_stale`
 - `test.edit_kernel.rollback`
 - `test.edit_kernel.exact_touched_invalidation`
+- `test.edit_kernel.typed_effects_no_frame_dependency`
 Guardrails:
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
 - `edit.stale_handle_rejected`
 - `events.low_level_edit_no_user_actions`
 - `edit.no_global_invalidation_except_replacement`
+- `edit.typed_effects_no_frame_dependency`
 Do not assume:
 - no legacy SceneWriteTxn
 - no legacy controller shell
@@ -52,7 +52,7 @@ sequenceDiagram
   participant CC as CommitCompiler
   participant Applier as CommitApplier
   participant Store as DocumentStoreKernel
-  participant Frame as FrameEngine
+  participant Effects as CommitEffects
   participant Events as EventBuffer
 
   Caller->>API: edit(fn)
@@ -64,12 +64,12 @@ sequenceDiagram
   EK->>EK: reject Future result
   EK->>CC: compile touched set + invalidation
   CC->>Store: preflight invariants
-  CC->>Frame: prepare repaint masks
+  CC->>Effects: prepare typed RepaintIntent and invalidation effects
   CC->>Applier: hand off compiled CommitPlan
   Applier->>Store: atomic install
   Store-->>Applier: committed revision facts
   Applier->>Events: commit buffered events
-  Applier->>Frame: publish repaint buses
+  Applier->>Effects: publish typed post-install effects through runtime/applier boundary
   EK->>EK: close handle
   EK-->>Caller: return callback result
 ```
@@ -133,5 +133,10 @@ TouchedSet
 ```
 
 CommitCompiler must produce exact invalidation. Generic global invalidation is forbidden except `documentReplaced`.
+
+CommitCompiler must not depend on concrete `FrameEngine`. It produces a
+`CommitPlan` containing typed `RepaintIntent` and invalidation effects. The
+post-install runtime/applier boundary dispatches those effects to frame,
+spatial, resource, projection, and public signal owners.
 
 ---

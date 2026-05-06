@@ -51,6 +51,7 @@ flowchart LR
     EngineDisposal["Engine never disposes\napp-owned ui.Image"]
     DirtyDocRevision["markResourceDirty does not increment\ndocumentRevision"]
     ResourcePortMutation["ResourcePort cannot mutate\nresource descriptors"]
+    ResolverReentry["Resolver reentrant public mutation\nStateError, no runtime effects"]
   end
 
   App -->|"creates appKey descriptors through edit"| EditCall
@@ -98,5 +99,6 @@ flowchart LR
   DirtyDocRevision -.->|"documentRevision unchanged"| DocumentRevision
   DirtyCall -.->|"forbidden"| ResourcePortMutation
   ResourcePortMutation -.->|"descriptor mutation must use CanvasEdit"| ResourceMutation
+  AppResolver -.->|"forbidden"| ResolverReentry
   AppResolver -.->|"forbidden"| EngineIO
   AppResolver -.->|"forbidden"| EngineDisposal

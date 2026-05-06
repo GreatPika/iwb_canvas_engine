@@ -7,7 +7,6 @@ Owns:
 Must read before editing:
 - `section_06_validation_limits` -> `docs/contracts/validation_limits.md`
 - `section_19_codec_boundary` -> `docs/contracts/codec_boundary.md`
-- `section_22_guardrails_machine_checks` -> `docs/verification/guardrails.md`
 Feeds phases:
 - `P3`
 - `P12`

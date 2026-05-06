@@ -15,7 +15,7 @@ Related donors:
 Related diagrams:
 - `none`
 Required tests:
-- `none`
+- `test.api_contract.v1_scope_gate`
 Guardrails:
 - `api.v1_scope_gate_green_before_freeze`
 Do not assume:

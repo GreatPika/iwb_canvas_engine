@@ -79,6 +79,7 @@
 - `resources.dirty_no_document_revision` - markResourceDirty does not increment documentRevision
 - `resources.mutation_inside_edit_only` - resource descriptor mutation only via CanvasEdit
 - `surface.pointer_samples_normalized_before_runtime` - Flutter adapters pass only normalized finite pointer samples into runtime routing
+- `surface.interactive_false_pending_line_preserved` - interactive=false cancels active routed pointers but preserves non-active pending line state
 
 ## Tests
 
@@ -86,6 +87,7 @@
 - `test.resources.app_owned_image_not_disposed` -> `test/resources/app_owned_image_not_disposed_test.dart`
 - `test.surface.interactive_false_pointer_routing` -> `test/surface/interactive_false_pointer_routing_test.dart`
 - `test.surface.interactive_false_active_session_cancel` -> `test/surface/interactive_false_active_session_cancel_test.dart`
+- `test.surface.interactive_false_pending_line_preserved` -> `test/surface/interactive_false_pending_line_preserved_test.dart`
 - `test.surface.pointer_adapter_finite_normalization` -> `test/surface/pointer_adapter_finite_normalization_test.dart`
 - `test.surface.widget_paint` -> `CanvasSurface empty/populated widget paint tests`
 
@@ -93,6 +95,7 @@
 
 - surface paints empty and populated docs
 - interactive=false disables pointer routing
+- interactive=false cancels active pointer sessions but preserves non-active pending line state
 - resource resolver repaint works
 - pointer adapter normalization tests green
 - widget tests green.

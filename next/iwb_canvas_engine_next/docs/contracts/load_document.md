@@ -7,7 +7,6 @@ Owns:
 Must read before editing:
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 - `section_11_edit_kernel` -> `docs/contracts/edit_kernel.md`
-- `section_13_operation_matrix` -> `docs/contracts/operation_matrix.md`
 - `section_14_interaction_engine` -> `docs/contracts/interaction_engine.md`
 Feeds phases:
 - `P6`
@@ -45,14 +44,17 @@ Success ordering:
 2. materialize PreparedDocumentLoad;
 3. if validation/materialization succeeds, interrupt active interaction;
 4. clear preview;
-5. atomic install committed document;
-6. clear selection;
-7. increment controllerEpoch and all document-level revisions;
-8. clear pointer normalization and pending tap history;
-9. invalidate projection/spatial/frame/resource caches;
-10. schedule main repaint and overlay repaint;
-11. notify listeners after install.
+5. atomic install replacement payload, including cleared selection;
+6. increment controllerEpoch and all document-level revisions inside the same install boundary;
+7. clear pointer normalization and pending tap history;
+8. invalidate projection/spatial/frame/resource caches;
+9. schedule main repaint and overlay repaint;
+10. notify listeners after install.
 ```
+
+`PreparedDocumentLoad` owns replacement committed tables, generated id admission
+state, cleared selection, and replacement revision facts. Selection clearing is
+not a separate post-install mutation.
 
 Failure ordering:
 

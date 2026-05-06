@@ -7,7 +7,6 @@ Owns:
 Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 - `section_06_validation_limits` -> `docs/contracts/validation_limits.md`
-- `section_19_codec_boundary` -> `docs/contracts/codec_boundary.md`
 Feeds phases:
 - `P3`
 Related donors:

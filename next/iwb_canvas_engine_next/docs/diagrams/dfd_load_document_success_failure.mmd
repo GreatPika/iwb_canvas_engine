@@ -12,7 +12,7 @@ flowchart LR
   subgraph Staging["Staged load boundary"]
     Validator["Document validation\npublic DTO invariants"]
     Materializer["PreparedDocumentLoad materialization\nruntime tables and ids"]
-    Prepared["Prepared replacement\ncommitted document payload"]
+    Prepared["Prepared replacement\ncommitted document payload\nincluding cleared selection"]
     Failure["Load failure\nCanvasDataException or StateError"]
   end
 
@@ -25,8 +25,8 @@ flowchart LR
 
   subgraph Store["DocumentStoreKernel"]
     ExistingCommitted["Existing committed document\nselection, revisions, projection cache"]
-    AtomicInstall["Atomic document install"]
-    ReplacementCommitted["Replacement committed document\nselection cleared"]
+    AtomicInstall["Atomic document install\nreplacement payload boundary"]
+    ReplacementCommitted["Replacement committed document\nselection already cleared"]
   end
 
   subgraph Effects["Committed effects"]
@@ -58,8 +58,8 @@ flowchart LR
   Prepared -->|"success-only interrupt request"| Interrupt
   ActivePreview -->|"clear active gesture state"| Interrupt
   Interrupt -->|"prepared replacement after preview cleanup"| AtomicInstall
-  Prepared -->|"install payload"| AtomicInstall
-  AtomicInstall -->|"replace committed state atomically"| ReplacementCommitted
+  Prepared -->|"install payload includes cleared selection"| AtomicInstall
+  AtomicInstall -->|"replace committed state and selection atomically"| ReplacementCommitted
   ReplacementCommitted -->|"after install only"| PostInstallCleanup
   PendingInput -->|"clear after atomic install"| PostInstallCleanup
 

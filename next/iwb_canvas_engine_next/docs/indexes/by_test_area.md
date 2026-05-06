@@ -86,6 +86,13 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
 - Guardrails: `resources.dirty_no_document_revision`
 
+## test.resources.resolver_reentrancy_rejected
+
+- Path: `test/resources/resolver_reentrancy_rejected_test.dart`
+- Phases: `P4`
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+- Guardrails: `resources.resolver_reentrancy_rejected`
+
 ## test.events.typed_action_payloads
 
 - Path: `test/events/typed_action_payloads_test.dart`
@@ -112,14 +119,21 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Path: `test/surface/interactive_false_pointer_routing_test.dart`
 - Phases: `P10`
 - Sections: `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `none`
+- Guardrails: `surface.interactive_false_pending_line_preserved`
 
 ## test.surface.interactive_false_active_session_cancel
 
 - Path: `test/surface/interactive_false_active_session_cancel_test.dart`
 - Phases: `P10`
 - Sections: `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `none`
+- Guardrails: `surface.interactive_false_pending_line_preserved`
+
+## test.surface.interactive_false_pending_line_preserved
+
+- Path: `test/surface/interactive_false_pending_line_preserved_test.dart`
+- Phases: `P10`
+- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
+- Guardrails: `surface.interactive_false_pending_line_preserved`
 
 ## test.functional_ledger.row_specific_tests
 
@@ -170,6 +184,13 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_11_edit_kernel`, `section_23_tests`
 - Guardrails: `edit.rollback_no_effects`
 
+## test.edit_kernel.typed_effects_no_frame_dependency
+
+- Path: `test/edit_kernel/typed_effects_no_frame_dependency_test.dart`
+- Phases: `P6`
+- Sections: `section_11_edit_kernel`, `section_23_tests`
+- Guardrails: `edit.typed_effects_no_frame_dependency`
+
 ## test.load_document.staged_success_failure
 
 - Path: `staged loadDocument success/failure tests`
@@ -191,6 +212,13 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_17_spatial_kernel`, `section_23_tests`
 - Guardrails: `none`
 
+## test.spatial.fallback_budget_enforced
+
+- Path: `test/spatial/fallback_budget_enforced_test.dart`
+- Phases: `P7`
+- Sections: `section_17_spatial_kernel`, `section_23_tests`
+- Guardrails: `spatial.fallback_budget_enforced`
+
 ## test.frame.main_overlay_capture
 
 - Path: `main and overlay frame capture tests`
@@ -204,6 +232,13 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P8`
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
 - Guardrails: `none`
+
+## test.frame.cache_capacity_eviction_policy
+
+- Path: `test/frame/cache_capacity_eviction_policy_test.dart`
+- Phases: `P8`
+- Sections: `section_18_cache_policy`, `section_23_tests`
+- Guardrails: `cache.hot_caches_have_capacity_eviction`
 
 ## test.interaction.state_machines
 
@@ -245,4 +280,116 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Path: `blocking guardrail suite`
 - Phases: `P0`, `P12`
 - Sections: `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
-- Guardrails: `api.functional_ledger_complete`, `api.integration_surface_complete`, `api.v1_scope_gate_green_before_freeze`, `api.no_legacy_public_types`, `api.public_types_complete`, `api.public_api_compiles_as_written`, `api.no_undefined_public_type_references`, `api.dto_immutability`, `api.id_validation_no_extension_type_escape`, `core.no_legacy_imports`, `core.no_scene_controller_shape_dependency`, `core.no_node_spec_patch_shape_dependency`, `core.single_runtime_root`, `edit.sync_non_nested`, `edit.rollback_no_effects`, `edit.stale_handle_rejected`, `events.low_level_edit_no_user_actions`, `events.commands_emit_user_actions`, `load.prepares_before_interrupt`, `load.success_interrupts_before_install`, `preview.selected_move_main_repaint`, `resources.mutation_inside_edit_only`, `resources.dirty_no_document_revision`, `resources.app_key_only`, `codec.schema_v1_exact`, `codec.known_fields_validated`, `diagnostics.disabled_no_alloc_hot_path`, `diagrams.all_required_present`
+- Guardrails: `api.functional_ledger_complete`, `api.integration_surface_complete`, `api.v1_scope_gate_green_before_freeze`, `api.no_legacy_public_types`, `api.public_types_complete`, `api.public_api_compiles_as_written`, `api.no_undefined_public_type_references`, `api.dto_immutability`, `api.id_validation_no_extension_type_escape`, `core.no_legacy_imports`, `core.no_scene_controller_shape_dependency`, `core.no_node_spec_patch_shape_dependency`, `core.single_runtime_root`, `edit.sync_non_nested`, `edit.rollback_no_effects`, `edit.stale_handle_rejected`, `edit.typed_effects_no_frame_dependency`, `events.low_level_edit_no_user_actions`, `events.commands_emit_user_actions`, `load.prepares_before_interrupt`, `load.success_interrupts_before_install`, `preview.selected_move_main_repaint`, `spatial.fallback_budget_enforced`, `cache.hot_caches_have_capacity_eviction`, `resources.mutation_inside_edit_only`, `resources.dirty_no_document_revision`, `resources.app_key_only`, `resources.resolver_reentrancy_rejected`, `codec.schema_v1_exact`, `codec.known_fields_validated`, `diagnostics.disabled_no_alloc_hot_path`, `surface.interactive_false_pending_line_preserved`, `diagrams.all_required_present`
+
+## test.codec.decode_encode_no_runtime_side_effects
+
+- Path: `test/codec/decode_encode_no_runtime_side_effects_test.dart`
+- Phases: `P3`
+- Sections: `section_19_codec_boundary`, `section_23_tests`
+- Guardrails: `codec.no_runtime_side_effects`
+
+## test.diagnostics.sanitizer_and_public_projection
+
+- Path: `test/diagnostics/sanitizer_and_public_projection_test.dart`
+- Phases: `P3`, `P12`
+- Sections: `section_20_diagnostics_hub`, `section_23_tests`
+- Guardrails: `diagnostics.disabled_no_alloc_hot_path`, `diagnostics.sanitized_public_projection`
+
+## test.edit_kernel.exact_touched_invalidation
+
+- Path: `test/edit_kernel/exact_touched_invalidation_test.dart`
+- Phases: `P6`
+- Sections: `section_11_edit_kernel`, `section_23_tests`
+- Guardrails: `edit.no_global_invalidation_except_replacement`
+
+## test.edit_kernel.operation_matrix_effects
+
+- Path: `test/edit_kernel/operation_matrix_effects_test.dart`
+- Phases: `P6`
+- Sections: `section_13_operation_matrix`, `section_23_tests`
+- Guardrails: `edit.operation_matrix_complete`
+
+## test.frame.cache_keys_do_not_use_legacy_snapshot_shape
+
+- Path: `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart`
+- Phases: `P8`
+- Sections: `section_18_cache_policy`, `section_23_tests`
+- Guardrails: `cache.keys_use_next_revisions_only`
+
+## test.frame.selected_supplement_staging_no_global_sort
+
+- Path: `test/frame/selected_supplement_staging_no_global_sort_test.dart`
+- Phases: `P8`
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+- Guardrails: `frame.no_global_scene_sort`
+
+## test.geometry.no_legacy_scene_order
+
+- Path: `test/geometry/no_legacy_scene_order_test.dart`
+- Phases: `P7`
+- Sections: `section_16_geometry_policy`, `section_23_tests`
+- Guardrails: `geometry.no_legacy_scene_order`
+
+## test.guardrails.import_boundaries
+
+- Path: `test/guardrails/import_boundaries_test.dart`
+- Phases: `P0`
+- Sections: `section_03_package_layout`, `section_23_tests`
+- Guardrails: `core.import_boundaries`
+
+## test.interaction.move_resolver_not_called_on_cancel_cleanup
+
+- Path: `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`
+- Phases: `P9`
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+- Guardrails: `interaction.no_resolver_on_cancel_paths`
+
+## test.interaction.no_stale_terminal_commit
+
+- Path: `test/interaction/no_stale_terminal_commit_test.dart`
+- Phases: `P9`
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+- Guardrails: `interaction.no_stale_terminal_commit`
+
+## test.resources.missing_result_cached_per_revision
+
+- Path: `test/resources/missing_result_cached_per_revision_test.dart`
+- Phases: `P4`
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+- Guardrails: `resources.no_same_frame_missing_retry`
+
+## test.resources.painter_never_calls_resolver_directly
+
+- Path: `test/resources/painter_never_calls_resolver_directly_test.dart`
+- Phases: `P4`
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+- Guardrails: `resources.resolver_boundary_owned_by_resource_kernel`
+
+## test.spatial.no_full_clone_for_touched_update
+
+- Path: `test/spatial/no_full_clone_for_touched_update_test.dart`
+- Phases: `P7`
+- Sections: `section_17_spatial_kernel`, `section_23_tests`
+- Guardrails: `spatial.no_full_clone_ordinary_edit`
+
+## test.spatial.stale_generation_rejected
+
+- Path: `test/spatial/stale_generation_rejected_test.dart`
+- Phases: `P7`
+- Sections: `section_17_spatial_kernel`, `section_23_tests`
+- Guardrails: `spatial.stale_candidate_rejected`
+
+## test.store.public_document_is_projection_only
+
+- Path: `test/store/public_document_is_projection_only_test.dart`
+- Phases: `P5`
+- Sections: `section_10_runtime_data_model`, `section_23_tests`
+- Guardrails: `store.no_public_document_live_state`
+
+## test.surface.pointer_adapter_finite_normalization
+
+- Path: `test/surface/pointer_adapter_finite_normalization_test.dart`
+- Phases: `P10`
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+- Guardrails: `surface.pointer_samples_normalized_before_runtime`

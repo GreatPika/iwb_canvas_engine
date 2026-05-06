@@ -42,7 +42,8 @@ flowchart LR
     SpatialDelta["SpatialDelta\nadd, remove, touched update"]
     TouchedSpatialUpdate["Ordinary spatial update\nonly touched ids"]
     SpatialRebuild["Full spatial rebuild\nreplacement only"]
-    SpatialFallback["Invalid index fallback\nbounded query and deferred rebuild"]
+    SpatialFallback["Invalid index fallback\nbudgeted query/candidates,\ndiagnostic counter,\ndeferred rebuild"]
+    SpatialBudgetExceeded["Fallback budget exceeded\ntyped result, no partial candidates"]
   end
 
   subgraph Projection["Document projection cache"]
@@ -105,6 +106,8 @@ flowchart LR
   LoadSuccess -->|"staged whole document replacement"| SpatialRebuild
   SpatialRebuild -->|"rebuild from committed tables"| SpatialIndex
   SpatialDelta -.->|"stale generation or invalid delta"| SpatialFallback
+  SpatialFallback -.->|"candidate union > maxFallbackCandidates"| SpatialBudgetExceeded
+  SpatialBudgetExceeded -.->|"schedule rebuild or retry outside hot path"| SpatialRebuild
 
   ReplacementScope -->|"full projection eviction allowed"| ProjectionEvict
   LoadSuccess -->|"full projection eviction typed effect"| ProjectionEvict

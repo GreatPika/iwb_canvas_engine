@@ -5,9 +5,7 @@ Document path: `docs/contracts/interaction_engine.md`
 Owns:
 - 14. InteractionEngine
 Must read before editing:
-- `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 - `section_11_edit_kernel` -> `docs/contracts/edit_kernel.md`
-- `section_12_load_document` -> `docs/contracts/load_document.md`
 - `section_15_frame_render_contract` -> `docs/contracts/frame_rendering.md`
 - `section_16_geometry_policy` -> `docs/contracts/geometry.md`
 Feeds phases:
@@ -45,6 +43,7 @@ Required tests:
 - `test.events.commands_emit_user_actions`
 - `test.surface.interactive_false_pointer_routing`
 - `test.surface.interactive_false_active_session_cancel`
+- `test.surface.interactive_false_pending_line_preserved`
 - `test.surface.pointer_adapter_finite_normalization`
 - `test.interaction.state_machines`
 - `test.interaction.move_resolver_reentrancy`
@@ -53,12 +52,14 @@ Required tests:
 - `test.surface.widget_paint`
 Guardrails:
 - `preview.selected_move_main_repaint`
+- `events.commands_emit_user_actions`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 - `interaction.no_concrete_store_imports`
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
 - `surface.pointer_samples_normalized_before_runtime`
+- `surface.interactive_false_pending_line_preserved`
 Do not assume:
 - no legacy callback graph as structure
 - no reentrant mutation from resolver
@@ -98,6 +99,11 @@ Rules:
   expose store tables or mutation methods;
 - InteractionEngine commits only through EditKernel.
 ```
+
+`interactive=false` cancels only an active routed pointer session. Pending line
+start or line preview state that is not currently owned by an active routed
+pointer session is preserved until a line-owned cleanup, mode/tool change,
+successful load, dispose, or terminal line decision.
 
 ### 14.2 Preview repaint target
 

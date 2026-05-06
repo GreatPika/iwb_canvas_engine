@@ -15,6 +15,7 @@ sequenceDiagram
   participant Draft as DraftDocument
   participant Touched as TouchedSet
   participant CC as CommitCompiler
+  participant Effects as CommitEffects
   participant Applier as CommitApplier
   participant Spatial as SpatialKernel
   participant Projection as DocumentProjectionCache
@@ -58,7 +59,7 @@ sequenceDiagram
     Surface->>Tools: handlePointer(CanvasPointerSample move/down)
     Tools->>IE: stale token or unsupported concurrent pointer
     IE-->>Tools: ignore without preview, edit, repaint, or action
-  else cancel, mode change, dispose, or epoch mismatch
+  else cancel, mode change, dispose, active routed pointer cancellation, or epoch mismatch
     User->>Surface: cancel or external interruption
     Surface->>Tools: terminal cleanup request
     Tools->>IE: cleanup pending line state
@@ -67,6 +68,11 @@ sequenceDiagram
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without line preview
     Note over EK,Signals: No EditKernel commit, Store mutation, spatial update, projection eviction, main repaint, or drawLine action is published.
+  else interactive=false with pending line but no active routed pointer
+    Surface->>Tools: disable future routing only
+    Tools->>IE: no active routed pointer cancel
+    IE->>Preview: preserve pending line or line preview
+    Note over IE,Signals: No pending line cleanup, overlay cleanup repaint, edit, action, or committed mutation is produced.
   else terminal second tap sample is invalid
     User->>Surface: second tap terminal sample
     Surface->>Tools: handlePointer(CanvasPointerSample up)
@@ -107,7 +113,7 @@ sequenceDiagram
       Touched-->>CC: added id and revision facts
       CC->>Store: preflight invariants and finite line row validation
       Store-->>CC: preflight accepted
-      CC->>Frame: prepare main repaint masks
+      CC->>Effects: prepare typed main RepaintIntent
       CC->>Events: attach staged drawLine action to commit
       CC->>Applier: hand off compiled CommitPlan
       Applier->>Store: install compiled CommitPlan atomically

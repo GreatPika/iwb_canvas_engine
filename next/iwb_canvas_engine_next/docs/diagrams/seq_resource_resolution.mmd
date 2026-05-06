@@ -37,6 +37,11 @@ sequenceDiagram
         else cache miss
           Resources->>Resolver: resolveImage(CanvasImageResource appKey descriptor)
           Note over Resources,Resolver: Synchronous app-owned resolver boundary only. No async resolver, file, network, asset-bundle, or engine IO loading.
+          opt resolver attempts public runtime mutation
+            Resolver->>Runtime: reentrant edit/load/resource dirty/pointer mutation
+            Runtime--x Resolver: StateError; mutation rejected without runtime effects
+            Note over Runtime,Resources: Resolver reentrancy rejection does not mutate document, selection, preview, caches, repaint, or actions.
+          end
           Resolver-->>Resources: app-owned ui.Image or null
 
           alt app returns ui.Image

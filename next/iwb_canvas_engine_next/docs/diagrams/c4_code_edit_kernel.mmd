@@ -10,7 +10,7 @@ Container_Boundary(edit_kernel, "EditKernel (lib/src/edit/)") {
   Component(EditSession, "EditSession", "session owner", "Rejects disposed, nested, async, and stale edit handles; owns callback lifetime.")
   Component(DraftDocument, "DraftDocument", "mutable draft", "Rollback-safe working copy created from the committed revision.")
   Component(TouchedSet, "TouchedSet", "change tracker", "Records exact document, geometry, visual, resource, selection, and replacement touches.")
-  Component(CommitCompiler, "CommitCompiler", "commit compiler", "Compiles touched state, preflights invariants, prepares repaint masks, and produces a CommitPlan.")
+  Component(CommitCompiler, "CommitCompiler", "commit compiler", "Compiles touched state, preflights invariants, prepares typed effects, and produces a CommitPlan.")
   Component(CommitPlan, "CommitPlan", "commit description", "Immutable commit payload with revisions, cache invalidation, repaint requests, and buffered events.")
   Component(CommitApplier, "CommitApplier", "atomic installer", "Installs committed changes only after a compiled and preflighted plan.")
 }

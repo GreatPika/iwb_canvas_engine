@@ -7,8 +7,6 @@ Owns:
 Must read before editing:
 - `section_02_architecture_model` -> `docs/architecture/01_runtime_ownership.md`
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
-- `section_11_edit_kernel` -> `docs/contracts/edit_kernel.md`
-- `section_15_frame_render_contract` -> `docs/contracts/frame_rendering.md`
 Feeds phases:
 - `P5`
 - `P6`

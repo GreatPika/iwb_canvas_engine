@@ -104,6 +104,7 @@ Guardrails:
 - `edit.stale_handle_rejected`
 - `edit.operation_matrix_complete`
 - `edit.no_global_invalidation_except_replacement`
+- `edit.typed_effects_no_frame_dependency`
 - `events.low_level_edit_no_user_actions`
 - `events.commands_emit_user_actions`
 - `load.prepares_before_interrupt`
@@ -115,21 +116,24 @@ Guardrails:
 - `geometry.no_legacy_scene_order`
 - `spatial.no_full_clone_ordinary_edit`
 - `spatial.stale_candidate_rejected`
+- `spatial.fallback_budget_enforced`
 - `frame.no_global_scene_sort`
 - `cache.keys_use_next_revisions_only`
+- `cache.hot_caches_have_capacity_eviction`
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`
 - `resources.app_key_only`
 - `resources.resolver_boundary_owned_by_resource_kernel`
 - `resources.no_same_frame_missing_retry`
+- `resources.resolver_reentrancy_rejected`
 - `codec.schema_v1_exact`
 - `codec.known_fields_validated`
 - `codec.no_runtime_side_effects`
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagnostics.sanitized_public_projection`
 - `surface.pointer_samples_normalized_before_runtime`
+- `surface.interactive_false_pending_line_preserved`
 - `diagrams.all_required_present`
-- `docs.phase_guardrail_alignment`
 Do not assume:
 - no release with old imports, legacy facade, or unlinked donor reuse
 <!-- CONTEXT:END -->
@@ -156,14 +160,14 @@ Release is blocked unless all statements are true:
 15. edit rollback/stale/nested/async tests are green.
 16. operation matrix and exact touched invalidation tests are green.
 17. loadDocument staged success/failure tests are green.
-18. geometry/spatial parity and stale-candidate tests are green.
-19. frame capture, cache-key, and selected supplement staging tests are green.
+18. geometry/spatial parity, stale-candidate, and fallback-budget tests are green.
+19. frame capture, cache-key, cache-policy, and selected supplement staging tests are green.
 20. selected move preview main repaint test is green.
 21. overlay preview repaint split tests are green.
 22. text edit request integration tests are green.
 23. action typed payload tests are green.
 24. low-level edit emits no user action events tests are green.
-25. interaction stale terminal and resolver-cancel path tests are green.
+25. interaction stale terminal, resolver-cancel, and interactive=false pending-line tests are green.
 26. surface pointer normalization tests are green.
 27. DTO immutability tests are green.
 28. no CanvasDocument projection in paint/pointer/hit tests are green.

@@ -6,8 +6,6 @@ Owns:
 - 2. Несущая модель новой библиотеки
 Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
-- `section_03_package_layout` -> `docs/architecture/02_package_boundaries.md`
-- `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 Feeds phases:
 - `P0`
 - `P5`
@@ -18,7 +16,7 @@ Related diagrams:
 - `c4_component_runtime`
 - `state_runtime_lifecycle`
 Required tests:
-- `none`
+- `test.guardrails.blocking_suite`
 Guardrails:
 - `core.single_runtime_root`
 Do not assume:

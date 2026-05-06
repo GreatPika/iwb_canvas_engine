@@ -16,7 +16,7 @@ flowchart LR
     Draft["DraftDocument\nrollback-safe mutable copy"]
     Touched["TouchedSet\nexact changed state"]
     NoOp["Empty touched set\nno revisions, cache eviction, repaint, or events"]
-    Compiler["CommitCompiler\ncompile touched state, preflight,\nand prepare repaint masks"]
+    Compiler["CommitCompiler\ncompile touched state, preflight,\nand prepare typed effects"]
     Plan["CommitPlan\nimmutable commit payload:\nrevisions, invalidation, repaint intent"]
     Rollback["Rollback discard\nbuffered effects only"]
   end
@@ -31,6 +31,7 @@ flowchart LR
     ProjectionEvict["Projection cache eviction"]
     ResourceInvalidation["Resource cache invalidation"]
     RepaintBus["Main/overlay repaint buses"]
+    PostInstallEffects["Post-install effect dispatch\nruntime/applier boundary"]
     Diagnostics["Diagnostics projection\nvalidation/runtime failures"]
   end
 
@@ -56,7 +57,8 @@ flowchart LR
   Install -->|"apply spatial update scope"| SpatialDelta
   Install -->|"apply projection eviction scope"| ProjectionEvict
   Install -->|"apply resource descriptor/cache scope"| ResourceInvalidation
-  Install -->|"publish paint invalidation scope"| RepaintBus
+  Install -->|"publish typed effect scope"| PostInstallEffects
+  PostInstallEffects -->|"dispatch repaint intent"| RepaintBus
   Install -->|"publish after atomic install"| PublicSignals
   Install -->|"return after successful commit"| EditResult
   EditResult -->|"callback result"| App

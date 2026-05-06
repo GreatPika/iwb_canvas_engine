@@ -7,7 +7,6 @@ Owns:
 Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
 - `section_03_package_layout` -> `docs/architecture/02_package_boundaries.md`
-- `section_27_final_release_gates` -> `docs/verification/release_gates.md`
 Feeds phases:
 - `P0`
 - `P12`
@@ -39,6 +38,7 @@ Guardrails:
 - `edit.stale_handle_rejected`
 - `edit.operation_matrix_complete`
 - `edit.no_global_invalidation_except_replacement`
+- `edit.typed_effects_no_frame_dependency`
 - `events.low_level_edit_no_user_actions`
 - `events.commands_emit_user_actions`
 - `load.prepares_before_interrupt`
@@ -50,21 +50,24 @@ Guardrails:
 - `geometry.no_legacy_scene_order`
 - `spatial.no_full_clone_ordinary_edit`
 - `spatial.stale_candidate_rejected`
+- `spatial.fallback_budget_enforced`
 - `frame.no_global_scene_sort`
 - `cache.keys_use_next_revisions_only`
+- `cache.hot_caches_have_capacity_eviction`
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`
 - `resources.app_key_only`
 - `resources.resolver_boundary_owned_by_resource_kernel`
 - `resources.no_same_frame_missing_retry`
+- `resources.resolver_reentrancy_rejected`
 - `codec.schema_v1_exact`
 - `codec.known_fields_validated`
 - `codec.no_runtime_side_effects`
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagnostics.sanitized_public_projection`
 - `surface.pointer_samples_normalized_before_runtime`
+- `surface.interactive_false_pending_line_preserved`
 - `diagrams.all_required_present`
-- `docs.phase_guardrail_alignment`
 Do not assume:
 - no non-blocking critical guardrail
 <!-- CONTEXT:END -->
@@ -96,6 +99,7 @@ Mandatory guardrails:
 | `edit.stale_handle_rejected` | stale edit handle throws |
 | `edit.operation_matrix_complete` | every operation matrix row has an executable effect assertion for revisions, spatial, projection, repaint, and events |
 | `edit.no_global_invalidation_except_replacement` | ordinary edits compile exact touched invalidation; only document replacement may use global invalidation |
+| `edit.typed_effects_no_frame_dependency` | CommitCompiler produces typed effects and does not depend on concrete FrameEngine |
 | `events.low_level_edit_no_user_actions` | CanvasEdit.removeElement/clearContent emit no user action events |
 | `events.commands_emit_user_actions` | high-level commands and interaction commits own user action events |
 | `load.prepares_before_interrupt` | failed load does not interrupt gesture |
@@ -107,20 +111,23 @@ Mandatory guardrails:
 | `geometry.no_legacy_scene_order` | geometry and hit-test policy does not reuse legacy SceneNode traversal or legacy scene order logic |
 | `spatial.no_full_clone_ordinary_edit` | ordinary spatial updates touch only changed ids/pages; full rebuild is reserved for replacement/load paths |
 | `spatial.stale_candidate_rejected` | stale candidate handles are rejected by generation and structuralRevision checks before frame/hit use |
+| `spatial.fallback_budget_enforced` | fallback candidate union enforces maxFallbackCandidates, diagnostic counter, and typed budget-exceeded result |
 | `frame.no_global_scene_sort` | selected supplement staging merges by orderToken and does not globally sort all scene elements |
 | `cache.keys_use_next_revisions_only` | cache keys use next-owned revision facts and stable inputs, not legacy snapshot shapes |
+| `cache.hot_caches_have_capacity_eviction` | hot caches declare capacity, eviction policy, invalidation owner, and metric/probe |
 | `resources.mutation_inside_edit_only` | resource descriptor mutation only via CanvasEdit |
 | `resources.dirty_no_document_revision` | markResourceDirty does not increment documentRevision |
 | `resources.app_key_only` | resource descriptors use appKey only |
 | `resources.resolver_boundary_owned_by_resource_kernel` | painters and frame code never call CanvasResourceResolver directly; ResourceKernel owns resolver access |
 | `resources.no_same_frame_missing_retry` | missing/null resource resolve results are cached by resourceId and resourceRevision for the frame instead of retried immediately |
+| `resources.resolver_reentrancy_rejected` | public runtime mutation from inside CanvasResourceResolver throws StateError without runtime effects |
 | `codec.schema_v1_exact` | only schema v1 read/write |
 | `codec.known_fields_validated` | known schema v1 fields are validated and canonical encoder writes only v1 fields |
 | `codec.no_runtime_side_effects` | schema v1 decode/encode validates and materializes DTOs without mutating runtime or store state |
 | `diagnostics.disabled_no_alloc_hot_path` | no record allocation on successful hot path |
 | `diagnostics.sanitized_public_projection` | diagnostic details expose only sanitized bounded public data and never runtime objects, images, closures, or full scene dumps |
 | `surface.pointer_samples_normalized_before_runtime` | Flutter surface adapters pass only normalized finite pointer samples into runtime routing |
+| `surface.interactive_false_pending_line_preserved` | interactive=false cancels active routed pointers but preserves pending line state not owned by an active routed pointer |
 | `diagrams.all_required_present` | required Mermaid files exist |
-| `docs.phase_guardrail_alignment` | guardrails and tests listed in section registry are reflected in their owning implementation phase docs |
 
 ---

@@ -7,7 +7,6 @@ Owns:
 Must read before editing:
 - `section_11_edit_kernel` -> `docs/contracts/edit_kernel.md`
 - `section_12_load_document` -> `docs/contracts/load_document.md`
-- `section_23_tests` -> `docs/verification/tests.md`
 Feeds phases:
 - `P6`
 Related donors:

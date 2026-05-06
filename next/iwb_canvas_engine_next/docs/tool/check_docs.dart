@@ -2,6 +2,38 @@ import 'dart:io';
 
 import 'package:yaml/yaml.dart';
 
+const _sectionsRegistryPath = 'docs/_registry/sections.yaml';
+
+const _globalCatalogSections = {
+  'section_22_guardrails_machine_checks',
+  'section_23_tests',
+  'section_27_final_release_gates',
+};
+
+const _mustReadGlobalCatalogAllowlist = {
+  'section_23_tests': {'section_22_guardrails_machine_checks'},
+  'section_27_final_release_gates': {
+    'section_22_guardrails_machine_checks',
+    'section_23_tests',
+  },
+};
+
+const _phaseDocs = {
+  'P0': 'docs/implementation/p0_package_skeleton_and_hard_boundaries.md',
+  'P1': 'docs/implementation/p1_legacy_oracle_lock.md',
+  'P1.5': 'docs/implementation/p1_5_v1_scope_gate_before_public_api_freeze.md',
+  'P2': 'docs/implementation/p2_public_api_v1_freeze.md',
+  'P3': 'docs/implementation/p3_schema_v1_dto_validation_and_codec_skeleton.md',
+  'P4': 'docs/implementation/p4_resources.md',
+  'P5': 'docs/implementation/p5_store_kernel_and_projection_cache.md',
+  'P6': 'docs/implementation/p6_edit_kernel.md',
+  'P7': 'docs/implementation/p7_spatial_and_geometry.md',
+  'P8': 'docs/implementation/p8_frame_engine_and_render_caches.md',
+  'P9': 'docs/implementation/p9_interaction_engine.md',
+  'P10': 'docs/implementation/p10_flutter_surface.md',
+  'P12': 'docs/implementation/p12_benchmarks_diagrams_and_release_readiness.md',
+};
+
 final _errors = <String>[];
 final _sectionIds = <String>{};
 
@@ -13,6 +45,8 @@ void main() {
   _checkNoRetiredActiveReferences();
   _checkImplementationPhaseClarity();
   _checkDiagramContractAlignment();
+  _checkSemanticDocumentationProbes();
+  _checkRegistryWitnesses();
 
   if (_errors.isNotEmpty) {
     stderr.writeln('Docs check failed:');
@@ -30,7 +64,7 @@ void _checkRequiredEntrypoints() {
   const requiredFiles = [
     'docs/README.md',
     'docs/architecture/README.md',
-    'docs/_registry/sections.yaml',
+    _sectionsRegistryPath,
   ];
   const requiredDirs = [
     'docs/architecture',
@@ -51,7 +85,7 @@ void _checkRequiredEntrypoints() {
 }
 
 void _checkSectionsRegistry() {
-  final sections = _loadYamlMapList('docs/_registry/sections.yaml');
+  final sections = _loadYamlMapList(_sectionsRegistryPath);
   for (final section in sections) {
     final id = _stringField(section, 'id', 'section registry entry');
     final file = _stringField(section, 'file', id);
@@ -65,10 +99,12 @@ void _checkSectionsRegistry() {
     final id = _stringField(section, 'id', 'section registry entry');
     _checkReferenceList(section, 'must_read', id);
   }
+
+  _checkMustReadGraph(sections);
 }
 
 void _checkDiagramCatalogRegistrySymmetry() {
-  final sections = _loadYamlMapList('docs/_registry/sections.yaml');
+  final sections = _loadYamlMapList(_sectionsRegistryPath);
   final catalog = _loadDiagramCatalog('docs/diagrams/README.md');
   final registry = <String, Set<String>>{};
 
@@ -214,10 +250,15 @@ Map<String, Set<String>> _loadDiagramCatalog(String path) {
         r'^- Related sections: (.+)$',
       ).firstMatch(line);
       if (sectionsMatch != null) {
+        final relatedSections = _matchGroup(
+          sectionsMatch,
+          1,
+          '$path related sections line',
+        );
         for (final match in RegExp(
           r'`(section_[^`]+)`',
-        ).allMatches(sectionsMatch.group(1)!)) {
-          sections.add(match.group(1)!);
+        ).allMatches(relatedSections)) {
+          sections.add(_matchGroup(match, 1, '$path section reference'));
         }
       }
     }
@@ -393,6 +434,434 @@ void _checkDiagramContractAlignment() {
   }
 }
 
+void _checkSemanticDocumentationProbes() {
+  final loadContract = _read('docs/contracts/load_document.md');
+  if (RegExp(
+    r'atomic install committed document;\s*\n\s*\d+\.\s*clear selection',
+  ).hasMatch(loadContract)) {
+    _fail(
+      'loadDocument contract still allows install followed by clear selection',
+    );
+  }
+  if (!loadContract.contains('including cleared selection')) {
+    _fail(
+      'loadDocument contract must say selection is inside replacement payload',
+    );
+  }
+
+  final loadSequence = _read('docs/diagrams/seq_load_document_success.mmd');
+  if (loadSequence.contains(
+    'assign new committed identity and clear selection',
+  )) {
+    _fail('seq_load_document_success still clears selection after install');
+  }
+  if (!loadSequence.contains('cleared selection') ||
+      !loadSequence.contains('one commit boundary')) {
+    _fail(
+      'seq_load_document_success must show cleared selection inside one commit boundary',
+    );
+  }
+
+  final pointerState = _read('docs/diagrams/state_pointer_session.mmd');
+  final lineState = _read('docs/diagrams/state_two_tap_line.mmd');
+  if (!pointerState.contains('active routed pointer only')) {
+    _fail(
+      'state_pointer_session must scope interactive=false cancel to active routed pointer',
+    );
+  }
+  if (!lineState.contains('interactive=false with no active routed pointer')) {
+    _fail(
+      'state_two_tap_line must preserve pending line for non-active interactive=false',
+    );
+  }
+
+  final resourceSequence = _read('docs/diagrams/seq_resource_resolution.mmd');
+  final resourceState = _read('docs/diagrams/state_resource_resolution.mmd');
+  final resourceDfd = _read('docs/diagrams/dfd_resource_resolution.mmd');
+  if (!resourceSequence.contains(
+        'reentrant edit/load/resource dirty/pointer mutation',
+      ) ||
+      !resourceState.contains('ReentrantMutationRejected') ||
+      !resourceDfd.contains('ResolverReentry')) {
+    _fail('resource resolver diagrams must include reentrancy rejection path');
+  }
+
+  final spatialContract = _read('docs/contracts/spatial_kernel.md');
+  final cacheInvalidation = _read('docs/diagrams/dfd_cache_invalidation.mmd');
+  if (!spatialContract.contains('maxFallbackCandidates = 4096') ||
+      !cacheInvalidation.contains('SpatialBudgetExceeded')) {
+    _fail('spatial fallback must document budget and budget-exceeded path');
+  }
+
+  final cachePolicy = _read('docs/contracts/cache_policy.md');
+  if (!cachePolicy.contains('Capacity') ||
+      !cachePolicy.contains('Eviction') ||
+      !cachePolicy.contains('Metric/probe')) {
+    _fail(
+      'cache policy ledger must include capacity, eviction, and metric/probe',
+    );
+  }
+  _checkCachePolicyRowsHaveCapacityEvictionProbe(cachePolicy);
+
+  final editContract = _read('docs/contracts/edit_kernel.md');
+  if (!editContract.contains(
+    'CommitCompiler must not depend on concrete `FrameEngine`',
+  )) {
+    _fail(
+      'EditKernel contract must forbid CommitCompiler concrete FrameEngine dependency',
+    );
+  }
+  final diagramDir = Directory('docs/diagrams');
+  for (final file in diagramDir.listSync().whereType<File>()) {
+    if (!file.path.endsWith('.mmd')) {
+      continue;
+    }
+    final text = file.readAsStringSync();
+    if (RegExp(r'^\s*CC->>Frame\s*:', multiLine: true).hasMatch(text)) {
+      _fail('${file.path} routes CommitCompiler directly to FrameEngine');
+    }
+  }
+}
+
+void _checkCachePolicyRowsHaveCapacityEvictionProbe(String text) {
+  for (final line in text.split('\n')) {
+    if (!line.startsWith('| ')) {
+      continue;
+    }
+    if (line.contains('---') || line.contains('| Cache |')) {
+      continue;
+    }
+    final cells = line.split('|').skip(1).map((cell) => cell.trim()).toList();
+    if (cells.length < 8) {
+      _fail('cache policy row has too few columns: $line');
+      continue;
+    }
+    final capacity = cells[4];
+    final eviction = cells[5];
+    final probe = cells[6];
+    if (capacity.isEmpty || eviction.isEmpty || probe.isEmpty) {
+      _fail('cache policy row lacks capacity, eviction, or probe: $line');
+    }
+  }
+}
+
+void _checkRegistryWitnesses() {
+  final sections = _loadYamlMapList(_sectionsRegistryPath);
+  final sectionsById = {
+    for (final section in sections)
+      _stringField(section, 'id', 'section registry entry'): section,
+  };
+
+  if (File('docs/_registry/guardrails.yaml').existsSync()) {
+    _fail(
+      'docs/_registry/guardrails.yaml must not exist; sections.yaml owns guardrail registry links',
+    );
+  }
+  if (File('docs/_registry/tests.yaml').existsSync()) {
+    _fail(
+      'docs/_registry/tests.yaml must not exist; sections.yaml owns test registry links',
+    );
+  }
+
+  _checkGeneratedContextBlocks(sections, sectionsById);
+  _checkGuardrailAndTestWitnesses(sections);
+  _checkPhaseReadFirstWitnesses(sections);
+}
+
+void _checkGeneratedContextBlocks(
+  List<YamlMap> sections,
+  Map<String, YamlMap> sectionsById,
+) {
+  final contextPattern = RegExp(
+    r'<!-- CONTEXT:BEGIN -->[\s\S]*?<!-- CONTEXT:END -->(?:\r?\n)*',
+  );
+
+  for (final section in sections) {
+    final id = _stringField(section, 'id', 'section registry entry');
+    final file = _stringField(section, 'file', id);
+    if (!File(file).existsSync()) {
+      continue;
+    }
+    final text = _read(file);
+    final matches = contextPattern.allMatches(text).toList();
+    if (matches.isEmpty) {
+      _fail('$file is missing a generated CONTEXT capsule');
+      continue;
+    }
+    if (matches.length > 1) {
+      _fail('$file contains more than one generated CONTEXT capsule');
+      continue;
+    }
+    final match = matches.first;
+    if (match.start != 0) {
+      _fail('$file CONTEXT capsule must be the first block');
+      continue;
+    }
+    final expected = _renderExpectedContext(section, sectionsById);
+    final actual = text.substring(match.start, match.end);
+    if (actual != expected) {
+      _fail(
+        '$file CONTEXT capsule is not generated from $_sectionsRegistryPath',
+      );
+    }
+  }
+}
+
+String _renderExpectedContext(
+  YamlMap section,
+  Map<String, YamlMap> sectionsById,
+) {
+  final id = _stringField(section, 'id', 'section registry entry');
+  final file = _stringField(section, 'file', id);
+  final title = _stringField(section, 'title', id);
+  final buffer = StringBuffer()
+    ..writeln('<!-- CONTEXT:BEGIN -->')
+    ..writeln('Registry id: `$id`')
+    ..writeln('Registry source: `$_sectionsRegistryPath`')
+    ..writeln('Document path: `$file`')
+    ..writeln('Owns:');
+  _writeLiteralList(buffer, [title]);
+  buffer.writeln('Must read before editing:');
+  _writeContextReferenceList(
+    buffer,
+    _stringListField(section, 'must_read', id),
+    sectionsById,
+  );
+  buffer.writeln('Feeds phases:');
+  _writeCodeList(buffer, _stringListField(section, 'phases', id));
+  buffer.writeln('Related donors:');
+  _writeCodeList(buffer, _stringListField(section, 'donors', id));
+  buffer.writeln('Related diagrams:');
+  _writeCodeList(buffer, _stringListField(section, 'diagrams', id));
+  buffer.writeln('Required tests:');
+  _writeCodeList(buffer, _stringListField(section, 'tests', id));
+  buffer.writeln('Guardrails:');
+  _writeCodeList(buffer, _stringListField(section, 'guardrails', id));
+  buffer.writeln('Do not assume:');
+  _writeLiteralList(buffer, _stringListField(section, 'do_not_assume', id));
+  buffer
+    ..writeln('<!-- CONTEXT:END -->')
+    ..writeln();
+  return buffer.toString();
+}
+
+void _writeContextReferenceList(
+  StringBuffer buffer,
+  List<String> values,
+  Map<String, YamlMap> sectionsById,
+) {
+  for (final value in values) {
+    final section = sectionsById[value];
+    if (section != null) {
+      buffer.writeln('- `$value` -> `${_stringField(section, 'file', value)}`');
+      continue;
+    }
+    buffer.writeln('- `$value`');
+  }
+}
+
+void _writeLiteralList(StringBuffer buffer, List<String> values) {
+  for (final value in values) {
+    buffer.writeln('- $value');
+  }
+}
+
+void _writeCodeList(StringBuffer buffer, List<String> values) {
+  for (final value in values) {
+    buffer.writeln('- `$value`');
+  }
+}
+
+void _checkGuardrailAndTestWitnesses(List<YamlMap> sections) {
+  final registryGuardrails = _collectRegistryIds(sections, 'guardrails');
+  final registryTests = _collectRegistryIds(sections, 'tests');
+
+  final guardrailTable = RegExp(r'^\| `([^`]+)` \|', multiLine: true)
+      .allMatches(_read('docs/verification/guardrails.md'))
+      .map((match) => _matchGroup(match, 1, 'guardrail table row'))
+      .where((id) => id != 'Guardrail')
+      .toSet();
+  final guardrailIndex = _markdownHeadings('docs/indexes/by_guardrail.md');
+  final testDocIds = RegExp(r'`(test\.[^`]+)`')
+      .allMatches(_read('docs/verification/tests.md'))
+      .map((match) => _matchGroup(match, 1, 'test id reference'))
+      .toSet();
+  final testIndex = _markdownHeadings('docs/indexes/by_test_area.md');
+
+  _checkSetEquality(
+    'sections.yaml guardrails vs docs/verification/guardrails.md',
+    registryGuardrails,
+    guardrailTable,
+  );
+  _checkSetEquality(
+    'sections.yaml guardrails vs docs/indexes/by_guardrail.md',
+    registryGuardrails,
+    guardrailIndex,
+  );
+  _checkSetEquality(
+    'sections.yaml tests vs docs/verification/tests.md',
+    registryTests,
+    testDocIds,
+  );
+  _checkSetEquality(
+    'sections.yaml tests vs docs/indexes/by_test_area.md',
+    registryTests,
+    testIndex,
+  );
+}
+
+Set<String> _collectRegistryIds(List<YamlMap> sections, String field) {
+  final ids = <String>{};
+  for (final section in sections) {
+    final sectionId = _stringField(section, 'id', 'section registry entry');
+    for (final item in _stringListField(section, field, sectionId)) {
+      if (item != 'none') {
+        ids.add(item);
+      }
+    }
+  }
+  return ids;
+}
+
+Set<String> _markdownHeadings(String path) {
+  _requireFile(path);
+  return RegExp(r'^##\s+(.+)$', multiLine: true)
+      .allMatches(_read(path))
+      .map((match) => _matchGroup(match, 1, '$path heading').trim())
+      .toSet();
+}
+
+void _checkSetEquality(String label, Set<String> expected, Set<String> actual) {
+  final missing = expected.difference(actual).toList()..sort();
+  final extra = actual.difference(expected).toList()..sort();
+  for (final id in missing) {
+    _fail('$label missing $id');
+  }
+  for (final id in extra) {
+    _fail('$label has stale or unknown $id');
+  }
+}
+
+void _checkPhaseReadFirstWitnesses(List<YamlMap> sections) {
+  final registryPhases = <String, Set<String>>{};
+  for (final section in sections) {
+    final id = _stringField(section, 'id', 'section registry entry');
+    for (final phase in _stringListField(section, 'phases', id)) {
+      registryPhases.putIfAbsent(phase, () => <String>{}).add(id);
+    }
+  }
+
+  for (final phase in registryPhases.keys) {
+    final phaseDoc = _phaseDocs[phase];
+    if (phaseDoc == null) {
+      _fail('phase $phase has no implementation phase document mapping');
+      continue;
+    }
+    _requireFile(phaseDoc, source: _sectionsRegistryPath);
+  }
+
+  for (final entry in _phaseDocs.entries) {
+    final phase = entry.key;
+    final phaseDoc = entry.value;
+    if (!File(phaseDoc).existsSync()) {
+      continue;
+    }
+    final readFirst = _readFirstSectionIds(phaseDoc);
+    final registrySections = registryPhases[phase] ?? const <String>{};
+    for (final sectionId in readFirst) {
+      if (!_sectionIds.contains(sectionId)) {
+        _fail('$phaseDoc Read first references unknown section $sectionId');
+        continue;
+      }
+      if (!registrySections.contains(sectionId) &&
+          !_globalCatalogSections.contains(sectionId)) {
+        _fail(
+          '$phaseDoc Read first lists $sectionId, but $sectionId does not feed phase $phase',
+        );
+      }
+    }
+  }
+}
+
+Set<String> _readFirstSectionIds(String path) {
+  final match = RegExp(
+    r'^## Read first\s*$([\s\S]*?)(?=^## |\z)',
+    multiLine: true,
+  ).firstMatch(_read(path));
+  if (match == null) {
+    _fail('$path has no "Read first" section');
+    return const {};
+  }
+  final readFirstBlock = _matchGroup(match, 1, '$path Read first section');
+  return RegExp(r'`(section_[^`]+)`')
+      .allMatches(readFirstBlock)
+      .map((match) => _matchGroup(match, 1, '$path Read first reference'))
+      .toSet();
+}
+
+void _checkMustReadGraph(List<YamlMap> sections) {
+  final graph = <String, List<String>>{};
+  final sectionIds = <String>{};
+  for (final section in sections) {
+    final id = _stringField(section, 'id', 'section registry entry');
+    sectionIds.add(id);
+    final references = _stringListField(section, 'must_read', id);
+    if (references.contains('none') && references.length > 1) {
+      _fail('$id must_read cannot mix "none" with concrete references');
+    }
+    final sectionReferences = <String>[];
+    for (final reference in references) {
+      if (reference == 'none' || !reference.startsWith('section_')) {
+        continue;
+      }
+      sectionReferences.add(reference);
+      if (_globalCatalogSections.contains(reference) &&
+          !(_mustReadGlobalCatalogAllowlist[id]?.contains(reference) ??
+              false)) {
+        _fail(
+          '$id must_read points to global catalog $reference; use tests, guardrails, indexes, or phase docs for navigation instead',
+        );
+      }
+    }
+    if (!_globalCatalogSections.contains(id) && sectionReferences.length > 4) {
+      _fail(
+        '$id must_read has ${sectionReferences.length} section prerequisites; ordinary sections must have at most 4',
+      );
+    }
+    graph[id] = sectionReferences;
+  }
+
+  final visiting = <String>{};
+  final visited = <String>{};
+  final path = <String>[];
+
+  void visit(String id) {
+    if (visited.contains(id)) {
+      return;
+    }
+    if (visiting.contains(id)) {
+      final start = path.indexOf(id);
+      final cycle = [...path.sublist(start), id].join(' -> ');
+      _fail('must_read graph contains a cycle: $cycle');
+      return;
+    }
+    visiting.add(id);
+    path.add(id);
+    for (final next in graph[id] ?? const <String>[]) {
+      if (sectionIds.contains(next)) {
+        visit(next);
+      }
+    }
+    path.removeLast();
+    visiting.remove(id);
+    visited.add(id);
+  }
+
+  for (final id in graph.keys) {
+    visit(id);
+  }
+}
+
 void _checkStoreDoesNotDispatchRuntimeEffects(String path, String text) {
   final pattern = RegExp(
     r'^\s*Store->>(Frame|Spatial|Events|Resources|Interaction|Signals)\s*:',
@@ -484,6 +953,15 @@ void _checkDocumentPathsInText(String sourcePath, String text) {
   }
 }
 
+String _matchGroup(Match match, int group, String context) {
+  final value = match.group(group);
+  if (value == null) {
+    _fail('$context has no regex group $group');
+    return '';
+  }
+  return value;
+}
+
 List<YamlMap> _loadYamlMapList(String path) {
   _requireFile(path);
   final value = loadYaml(_read(path));
@@ -510,6 +988,23 @@ String _stringField(YamlMap map, String field, String owner) {
   }
   _fail('$owner must have string field $field');
   return '';
+}
+
+List<String> _stringListField(YamlMap map, String field, String owner) {
+  final value = map[field];
+  if (value is! YamlList) {
+    _fail('$owner must have list field $field');
+    return const [];
+  }
+  final items = <String>[];
+  for (final item in value) {
+    if (item is String) {
+      items.add(item);
+    } else {
+      _fail('$owner field $field must contain only strings');
+    }
+  }
+  return items;
 }
 
 String _read(String path) => File(path).readAsStringSync();

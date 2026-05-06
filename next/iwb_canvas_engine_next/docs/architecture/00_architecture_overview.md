@@ -5,8 +5,7 @@ Document path: `docs/architecture/00_architecture_overview.md`
 Owns:
 - 0. Статус и обязательное архитектурное решение
 Must read before editing:
-- `section_03_package_layout` -> `docs/architecture/02_package_boundaries.md`
-- `section_22_guardrails_machine_checks` -> `docs/verification/guardrails.md`
+- `none`
 Feeds phases:
 - `P0`
 - `P1.5`

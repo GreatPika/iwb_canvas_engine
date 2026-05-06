@@ -6,7 +6,6 @@ Owns:
 - 6. Validation limits
 Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
-- `section_05_schema_v1_contract` -> `docs/contracts/schema_v1.md`
 Feeds phases:
 - `P1.5`
 - `P2`

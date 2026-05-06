@@ -6,8 +6,7 @@ Owns:
 - 16. Geometry policy v1
 Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
-- `section_15_frame_render_contract` -> `docs/contracts/frame_rendering.md`
-- `section_17_spatial_kernel` -> `docs/contracts/spatial_kernel.md`
+- `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 Feeds phases:
 - `P7`
 - `P8`

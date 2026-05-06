@@ -19,9 +19,9 @@ Coverage summary for context capsules and registries.
 - `section_13_operation_matrix`: must_read=linked, donors=linked, diagrams=linked, tests=linked, guardrails=linked
 - `section_14_interaction_engine`: must_read=linked, donors=linked, diagrams=linked, tests=linked, guardrails=linked
 - `section_15_frame_render_contract`: must_read=linked, donors=linked, diagrams=linked, tests=linked, guardrails=linked
-- `section_16_geometry_policy`: must_read=linked, donors=linked, diagrams=linked, tests=linked, guardrails=explicit none
-- `section_17_spatial_kernel`: must_read=linked, donors=linked, diagrams=linked, tests=linked, guardrails=explicit none
-- `section_18_cache_policy`: must_read=linked, donors=linked, diagrams=linked, tests=explicit none, guardrails=explicit none
+- `section_16_geometry_policy`: must_read=linked, donors=linked, diagrams=linked, tests=linked, guardrails=linked
+- `section_17_spatial_kernel`: must_read=linked, donors=linked, diagrams=linked, tests=linked, guardrails=linked
+- `section_18_cache_policy`: must_read=linked, donors=linked, diagrams=linked, tests=linked, guardrails=linked
 - `section_19_codec_boundary`: must_read=linked, donors=linked, diagrams=linked, tests=explicit none, guardrails=linked
 - `section_20_diagnostics_hub`: must_read=linked, donors=linked, diagrams=linked, tests=explicit none, guardrails=linked
 - `section_22_guardrails_machine_checks`: must_read=linked, donors=linked, diagrams=explicit none, tests=linked, guardrails=linked

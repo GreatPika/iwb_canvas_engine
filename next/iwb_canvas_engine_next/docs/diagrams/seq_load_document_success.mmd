@@ -43,10 +43,9 @@ sequenceDiagram
   Note over Interaction,Signals: Preview state may be cleared before install, but no public signal is published before the committed replacement is installed.
 
   Runtime->>Store: install PreparedDocumentLoad atomically
-  Store->>Store: replace compact committed tables in one commit boundary
-  Store->>Store: assign new committed identity and clear selection
-  Store->>Store: reset generated id admission to avoid loaded ids
-  Store->>Store: increment controllerEpoch and document/structural/bounds/visual/selection/projection/resource revisions
+  Store->>Store: replace compact committed tables, cleared selection, and id admission in one commit boundary
+  Store->>Store: assign new committed identity
+  Store->>Store: increment controllerEpoch and document/structural/bounds/visual/selection/projection/resource revisions inside the install
   Note over Store: Store state is committed tables and revision state, not a live CanvasDocument DTO.
   Store-->>Runtime: committed replacement revision facts
 
