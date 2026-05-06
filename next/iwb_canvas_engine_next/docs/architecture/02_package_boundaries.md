@@ -140,8 +140,10 @@ lib/src/store/**             -> may not import src/interaction, src/frame, src/f
 lib/src/edit/**              -> may not import src/flutter_bridge
 lib/src/interaction/**       -> may not import, read, or mutate src/store directly
 lib/src/frame/**             -> may not import public document projection as paint input
+lib/src/spatial/**           -> may use only typed spatial delta/read ports, not concrete store tables or interaction/frame state
 lib/src/resources/**         -> may not import interaction state
 lib/src/codec/**             -> may not import Flutter widgets or interaction state
+lib/src/diagnostics/**       -> may not expose runtime objects, images, closures, or full scene dumps as public diagnostic data
 lib/src/flutter_bridge/**    -> may not import old iwb_canvas_engine
 all lib/**                   -> may not import legacy package or legacy runtime paths
 ```

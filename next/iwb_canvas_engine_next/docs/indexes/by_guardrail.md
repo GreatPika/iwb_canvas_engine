@@ -113,7 +113,7 @@ Guardrails extracted from split section 22.
 ## events.commands_emit_user_actions
 
 - Rule: high-level commands and interaction commits own user action events
-- Sections: `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.events.typed_action_payloads`, `test.events.commands_emit_user_actions`, `test.guardrails.blocking_suite`
 
 ## load.prepares_before_interrupt

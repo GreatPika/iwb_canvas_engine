@@ -61,6 +61,9 @@ Paint/resource resolution receives immutable descriptor snapshots and
 or `RuntimeRoot`. `ResourceKernel` must not import, read, or mutate
 `DocumentStoreKernel`; it owns resolver calls, resolved-image cache entries,
 dirty ids, and resolver-safe placeholder results.
+Painters and frame paint code never call `CanvasResourceResolver` directly; they
+receive immutable descriptor facts and resolve paint assets only through
+`ResourceKernel`.
 
 ### 7.2 Atomic operations
 

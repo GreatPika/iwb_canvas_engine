@@ -261,6 +261,7 @@
     - P3
   related_sections:
     - section_04_public_api_v1
+    - section_06_validation_limits
     - section_20_diagnostics_hub
   notes: Error behavior donor.
 -
@@ -685,6 +686,7 @@
     - P8
     - P10
   related_sections:
+    - section_15_frame_render_contract
     - section_18_cache_policy
   notes: New owner must be FrameEngine or surface bridge.
 -
@@ -706,6 +708,7 @@
     - P8
     - P10
   related_sections:
+    - section_15_frame_render_contract
     - section_18_cache_policy
   notes: Use only if next keeps static layer cache.
 -
@@ -727,6 +730,7 @@
   blocks:
     - P8
   related_sections:
+    - section_15_frame_render_contract
     - section_18_cache_policy
   notes: Rekey for next runtime rows.
 -
@@ -934,6 +938,7 @@
     - P3
   related_sections:
     - section_05_schema_v1_contract
+    - section_19_codec_boundary
   notes: Adapt to production v1.
 -
   id: codec_layer_decode
@@ -953,6 +958,7 @@
     - P3
   related_sections:
     - section_05_schema_v1_contract
+    - section_19_codec_boundary
   notes: Adapt to next layer model.
 -
   id: codec_node_common_decode
@@ -972,6 +978,7 @@
     - P3
   related_sections:
     - section_05_schema_v1_contract
+    - section_19_codec_boundary
   notes: Adapt old common-field behavior only when it belongs to schema v1.
 -
   id: codec_family_decode
@@ -996,6 +1003,7 @@
     - P3
   related_sections:
     - section_05_schema_v1_contract
+    - section_19_codec_boundary
   notes: Do not preserve old JSON aliases unless approved for schema v1.
 -
   id: codec_scene_codec_flow
@@ -1015,6 +1023,7 @@
   blocks:
     - P3
   related_sections:
+    - section_05_schema_v1_contract
     - section_19_codec_boundary
   notes: Rewrite shell around next DTOs.
 -
@@ -1034,6 +1043,7 @@
   blocks:
     - P3
   related_sections:
+    - section_05_schema_v1_contract
     - section_19_codec_boundary
   notes: Use only where aliases remain.
 -
@@ -1239,6 +1249,8 @@
     - P9
   related_sections:
     - section_11_edit_kernel
+    - section_12_load_document
+    - section_13_operation_matrix
     - section_14_interaction_engine
   notes: Bridge must target next EditKernel.
 -
@@ -1262,6 +1274,7 @@
     - P6
     - P9
   related_sections:
+    - section_11_edit_kernel
     - section_12_load_document
   notes: "Critical staged-load behavior."
 -
@@ -1287,6 +1300,7 @@
     - P3
     - P6
   related_sections:
+    - section_11_edit_kernel
     - section_12_load_document
     - section_19_codec_boundary
   notes: Rename around next loadDocument model.

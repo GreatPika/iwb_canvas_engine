@@ -91,7 +91,9 @@ Rules:
 - concurrent pointer sessions are not supported in v1;
 - raw pointer routing belongs to Flutter bridge;
 - InteractionEngine receives normalized CanvasPointerSample;
-- stale pointer token samples are ignored except terminal cleanup;
+- terminal admission requires the active pointer token and current
+  `controllerEpoch`; stale token or epoch mismatch may clean up only and cannot
+  create a commit intent;
 - terminal exception clears preview and schedules correct repaint;
 - committed facts for gesture decisions are read through narrow read-only
   interaction query ports;

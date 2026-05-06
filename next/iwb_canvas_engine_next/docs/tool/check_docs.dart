@@ -18,6 +18,11 @@ const _mustReadGlobalCatalogAllowlist = {
   },
 };
 
+const _donorRelatedSectionCatalogExclusions = {
+  'section_23_tests',
+  'section_27_final_release_gates',
+};
+
 const _phaseDocs = {
   'P0': 'docs/implementation/p0_package_skeleton_and_hard_boundaries.md',
   'P1': 'docs/implementation/p1_legacy_oracle_lock.md',
@@ -565,6 +570,7 @@ void _checkRegistryWitnesses() {
 
   _checkGeneratedContextBlocks(sections, sectionsById);
   _checkGuardrailAndTestWitnesses(sections);
+  _checkDonorWitnesses(sections);
   _checkPhaseReadFirstWitnesses(sections);
 }
 
@@ -673,8 +679,13 @@ void _writeCodeList(StringBuffer buffer, List<String> values) {
 }
 
 void _checkGuardrailAndTestWitnesses(List<YamlMap> sections) {
-  final registryGuardrails = _collectRegistryIds(sections, 'guardrails');
-  final registryTests = _collectRegistryIds(sections, 'tests');
+  final registryGuardrailSections = _collectRegistrySectionMap(
+    sections,
+    'guardrails',
+  );
+  final registryTestSections = _collectRegistrySectionMap(sections, 'tests');
+  final registryGuardrails = registryGuardrailSections.keys.toSet();
+  final registryTests = registryTestSections.keys.toSet();
 
   final guardrailTable = RegExp(r'^\| `([^`]+)` \|', multiLine: true)
       .allMatches(_read('docs/verification/guardrails.md'))
@@ -687,6 +698,12 @@ void _checkGuardrailAndTestWitnesses(List<YamlMap> sections) {
       .map((match) => _matchGroup(match, 1, 'test id reference'))
       .toSet();
   final testIndex = _markdownHeadings('docs/indexes/by_test_area.md');
+  final guardrailIndexSections = _markdownIndexSections(
+    'docs/indexes/by_guardrail.md',
+  );
+  final testIndexSections = _markdownIndexSections(
+    'docs/indexes/by_test_area.md',
+  );
 
   _checkSetEquality(
     'sections.yaml guardrails vs docs/verification/guardrails.md',
@@ -708,6 +725,16 @@ void _checkGuardrailAndTestWitnesses(List<YamlMap> sections) {
     registryTests,
     testIndex,
   );
+  _checkIndexSectionWitnesses(
+    'docs/indexes/by_guardrail.md',
+    registryGuardrailSections,
+    guardrailIndexSections,
+  );
+  _checkIndexSectionWitnesses(
+    'docs/indexes/by_test_area.md',
+    registryTestSections,
+    testIndexSections,
+  );
 }
 
 Set<String> _collectRegistryIds(List<YamlMap> sections, String field) {
@@ -723,12 +750,57 @@ Set<String> _collectRegistryIds(List<YamlMap> sections, String field) {
   return ids;
 }
 
+Map<String, Set<String>> _collectRegistrySectionMap(
+  List<YamlMap> sections,
+  String field,
+) {
+  final ids = <String, Set<String>>{};
+  for (final section in sections) {
+    final sectionId = _stringField(section, 'id', 'section registry entry');
+    for (final item in _stringListField(section, field, sectionId)) {
+      if (item != 'none') {
+        ids.putIfAbsent(item, () => <String>{}).add(sectionId);
+      }
+    }
+  }
+  return ids;
+}
+
 Set<String> _markdownHeadings(String path) {
   _requireFile(path);
   return RegExp(r'^##\s+(.+)$', multiLine: true)
       .allMatches(_read(path))
       .map((match) => _matchGroup(match, 1, '$path heading').trim())
       .toSet();
+}
+
+Map<String, Set<String>> _markdownIndexSections(String path) {
+  _requireFile(path);
+  final text = _read(path);
+  final sectionsByHeading = <String, Set<String>>{};
+  final blocks = text.split(RegExp(r'^##\s+', multiLine: true));
+
+  for (final block in blocks.skip(1)) {
+    final lines = block.split('\n');
+    final heading = lines.first.trim();
+    final body = lines.skip(1).join('\n');
+    final match = RegExp(
+      r'^- Sections: (.+)$',
+      multiLine: true,
+    ).firstMatch(body);
+    if (match == null) {
+      _fail('$path heading $heading has no Sections witness line');
+      sectionsByHeading[heading] = const <String>{};
+      continue;
+    }
+    final sectionLine = _matchGroup(match, 1, '$path $heading Sections line');
+    sectionsByHeading[heading] = RegExp(r'`(section_[^`]+)`')
+        .allMatches(sectionLine)
+        .map((match) => _matchGroup(match, 1, '$path section reference'))
+        .toSet();
+  }
+
+  return sectionsByHeading;
 }
 
 void _checkSetEquality(String label, Set<String> expected, Set<String> actual) {
@@ -739,6 +811,87 @@ void _checkSetEquality(String label, Set<String> expected, Set<String> actual) {
   }
   for (final id in extra) {
     _fail('$label has stale or unknown $id');
+  }
+}
+
+void _checkIndexSectionWitnesses(
+  String path,
+  Map<String, Set<String>> expected,
+  Map<String, Set<String>> actual,
+) {
+  for (final entry in expected.entries) {
+    final id = entry.key;
+    final expectedSections = entry.value;
+    final actualSections = actual[id] ?? const <String>{};
+    _checkSetEquality(
+      'sections.yaml $id sections vs $path',
+      expectedSections,
+      actualSections,
+    );
+  }
+}
+
+void _checkDonorWitnesses(List<YamlMap> sections) {
+  final donors = _loadYamlMapList('docs/_registry/donors.yaml');
+  final donorsById = <String, YamlMap>{};
+  for (final donor in donors) {
+    final donorId = _stringField(donor, 'id', 'donor registry entry');
+    if (donorsById.containsKey(donorId)) {
+      _fail('duplicate donor id: $donorId');
+    }
+    donorsById[donorId] = donor;
+    final seenRelatedSections = <String>{};
+    for (final sectionId in _stringListField(
+      donor,
+      'related_sections',
+      donorId,
+    )) {
+      if (!seenRelatedSections.add(sectionId)) {
+        _fail('donor $donorId has duplicate related section $sectionId');
+      }
+      if (!_sectionIds.contains(sectionId)) {
+        _fail('donor $donorId references unknown section id $sectionId');
+      }
+    }
+  }
+
+  final registryDonorSections = <String, Set<String>>{};
+  for (final section in sections) {
+    final sectionId = _stringField(section, 'id', 'section registry entry');
+    for (final donorId in _stringListField(section, 'donors', sectionId)) {
+      if (donorId == 'none') {
+        continue;
+      }
+      if (!donorsById.containsKey(donorId)) {
+        _fail('$sectionId references unknown donor id $donorId');
+      }
+      if (!_donorRelatedSectionCatalogExclusions.contains(sectionId)) {
+        registryDonorSections
+            .putIfAbsent(donorId, () => <String>{})
+            .add(sectionId);
+      }
+    }
+  }
+
+  for (final entry in registryDonorSections.entries) {
+    final donorId = entry.key;
+    final donor = donorsById[donorId];
+    if (donor == null) {
+      continue;
+    }
+    final relatedSections = _stringListField(
+      donor,
+      'related_sections',
+      donorId,
+    ).toSet();
+    for (final sectionId in entry.value) {
+      if (!relatedSections.contains(sectionId)) {
+        _fail(
+          'donor $donorId is used by $sectionId in $_sectionsRegistryPath, '
+          'but docs/_registry/donors.yaml does not list $sectionId as related',
+        );
+      }
+    }
   }
 }
 
