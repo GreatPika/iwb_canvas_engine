@@ -11,7 +11,7 @@ Use rule: donor entries are phase-bound implementation inputs, not legacy archit
 ## Donors to avoid as structure
 
 These files are useful as behavioral evidence or test sources, but they should
-not shape the next package structure.
+not shape the root package structure.
 
 - `lib/src/interactive/scene_controller.dart` and public controller facade
   files: legacy public API shape is explicitly not preserved.

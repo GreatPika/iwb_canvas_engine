@@ -54,7 +54,7 @@ Dart declarations below are normative. Implementation must compile against these
 
 ### 4.1 Public exports
 
-`lib/iwb_canvas_engine_next.dart` exports exactly these API families:
+`lib/iwb_canvas_engine.dart` exports exactly these API families:
 
 ```text
 CanvasRuntime
@@ -148,7 +148,7 @@ Factory target classes are private implementation details. Public factories on
 sealed base types may target private classes, but the public barrel exports only
 the sealed base type and stable DTO/port names.
 
-The next package is Flutter-based. Public API may use:
+The root package is Flutter-based. Public API may use:
 
 ```text
 - dart:ui;

@@ -27,7 +27,7 @@ Do not assume:
 - no legacy runtime fallback
 <!-- CONTEXT:END -->
 
-# `iwb_canvas_engine_next`: scope and architecture decision
+# `iwb_canvas_engine`: scope and architecture decision
 
 ## 0. Статус и обязательное архитектурное решение
 
@@ -37,7 +37,7 @@ Do not assume:
 Фиксированное решение:
 
 ```text
-iwb_canvas_engine_next
+iwb_canvas_engine
   -> отдельный новый package;
   -> новый публичный API v1;
   -> один новый runtime;
@@ -97,7 +97,7 @@ Runtime and proof:
   - доказывать полноту нового API прохождением старого public API ledger.
 ```
 
-Приложение может иметь собственный слой миграции или adapter contract, но он находится **вне** `iwb_canvas_engine_next`.
+Приложение может иметь собственный слой миграции или adapter contract, но он находится **вне** `iwb_canvas_engine`.
 Такой слой не является deliverable движка. Движок обязан предоставить чистый новый API и собственные contract tests; приложение само решает, как адаптировать его к своему integration port.
 
 ---

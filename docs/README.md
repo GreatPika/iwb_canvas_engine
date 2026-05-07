@@ -1,6 +1,6 @@
-# Documentation for `iwb_canvas_engine_next`
+# Documentation for `iwb_canvas_engine`
 
-This directory is the durable source of truth for the next-engine transition and
+This directory is the durable source of truth for the new-engine transition and
 target architecture.
 
 Start architecture work at `architecture/README.md`. Start implementation work
@@ -25,7 +25,7 @@ with the phase files under `docs/implementation/`. Start donor work at
   donor relation. Use these as reverse lookups, not as the implementation
   entrypoint.
 - `_registry/`: machine-readable section coverage and donor records.
-- `../../plan/`: workspace-level Change Contracts and audit trails for
+- `plan/`: workspace-level Change Contracts and audit trails for
   documentation or architecture changes.
 
 ## Source rule
@@ -64,7 +64,7 @@ forms as snake_case YAML values.
 
 ## Mechanical checks
 
-Run these commands from `next/iwb_canvas_engine_next/`:
+Run these commands from the repository root:
 
 ```bash
 dart run docs/tool/generate_context_capsules.dart --check

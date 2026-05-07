@@ -8,21 +8,21 @@ Feeds indexes:
 Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 
-# `iwb_canvas_engine_next`: current-code donor inventory
+# `iwb_canvas_engine`: current-code donor inventory
 
 This document lists reusable donors from the current `iwb_canvas_engine`
-codebase for the greenfield `iwb_canvas_engine_next` implementation.
+codebase for the greenfield `iwb_canvas_engine` implementation.
 
 The current engine is a **functional oracle and implementation donor**, not a
 legacy dependency. Donor use means copying or adapting proven algorithms,
-contracts, tests, and guardrails into the next package shape. It does not allow
-the next package to import the legacy runtime or preserve the legacy public API.
+contracts, tests, and guardrails into the root package shape. It does not allow
+the root package to import the legacy runtime or preserve the legacy public API.
 
 ## Reuse rules
 
 - No production import from the legacy package or legacy `lib/src/**` runtime
-  paths is allowed in `iwb_canvas_engine_next`.
-- Public names and API shapes in the next package remain governed by the v1 API
+  paths is allowed in `iwb_canvas_engine`.
+- Public names and API shapes in the root package remain governed by the v1 API
   plan, even when the implementation donor came from a legacy public type.
 - `copy` is allowed only for small cohesive utilities with low legacy coupling
   and ported tests.

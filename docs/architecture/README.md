@@ -1,7 +1,7 @@
 # Architecture entrypoint
 
 This is the first stop for target-system architecture work in
-`iwb_canvas_engine_next`.
+`iwb_canvas_engine`.
 
 Use this folder to understand current system shape, ownership boundaries,
 package boundaries, and architecture-level decisions. Do not use planning
@@ -47,7 +47,7 @@ documents as the source for current runtime ownership.
   `docs/implementation/p1_legacy_oracle_lock.md`.
 - Legacy behavior closure routes to `docs/verification/functional_ledger.md`.
 - Donor decisions route to `docs/donors/` and `docs/_registry/donors.yaml`.
-- Change Contracts route to `../../plan/`.
+- Change Contracts route to `plan/`.
 
 ## Role boundaries
 
@@ -61,7 +61,7 @@ documents as the source for current runtime ownership.
 
 ## Mechanical checks
 
-Run these commands from `next/iwb_canvas_engine_next/`:
+Run these commands from the repository root:
 
 ```bash
 dart run docs/tool/generate_context_capsules.dart --check

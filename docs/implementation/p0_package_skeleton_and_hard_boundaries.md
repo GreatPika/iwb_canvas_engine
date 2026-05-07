@@ -2,13 +2,13 @@
 
 ## Build
 
-- populate the existing `next/iwb_canvas_engine_next/` package skeleton
+- populate the existing repository-root package skeleton
 - create public barrel exporting only src/api/**
 - add `api.no_legacy_public_types` guardrail
 - add `core.no_legacy_imports` guardrail
 - add RuntimeRoot skeleton
 - add diagram file placeholders
-- add CI target for next package
+- add CI target for the root package
 - add `api.public_types_complete` guardrail test first, then close with it green.
 
 ## Read first
@@ -39,7 +39,7 @@
 ## Guardrails
 
 - `diagrams.all_required_present` - required Mermaid files exist
-- `api.no_legacy_public_types` - legacy public golden symbols not exported by next package
+- `api.no_legacy_public_types` - legacy public golden symbols not exported by root package
 - `core.no_legacy_imports` - no import of legacy package/runtime
 - `core.import_boundaries` - package-owned source paths obey the forbidden import matrix
 - `core.no_node_spec_patch_shape_dependency` - no legacy NodeSpec/NodePatch/PatchField in core
@@ -55,7 +55,7 @@
 
 ## Exit gate
 
-- next package builds empty public API skeleton
+- root package builds empty public API skeleton
 - legacy package not imported
 - forbidden `lib/src/**` import boundaries are enforced
 - legacy public symbols not exported

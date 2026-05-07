@@ -13,7 +13,7 @@ Use rule: donor entries are phase-bound implementation inputs, not legacy archit
 ### Strong direct-copy candidates
 
 These are small enough or cohesive enough to copy first, then rename/relocate
-inside the next package as needed.
+inside the root package as needed.
 
 | Area | Donor | Reuse | Proof to port |
 |---|---|---:|---|

@@ -12,8 +12,6 @@ topics:
   - drawing
   - graphics
 
-resolution: workspace
-
 platforms:
   android:
   ios:

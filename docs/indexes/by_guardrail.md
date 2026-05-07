@@ -22,7 +22,7 @@ Guardrails extracted from split section 22.
 
 ## api.no_legacy_public_types
 
-- Rule: legacy public golden symbols not exported by next package
+- Rule: legacy public golden symbols not exported by root package
 - Sections: `section_03_package_layout`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.no_old_public_symbols`, `test.guardrails.blocking_suite`
 

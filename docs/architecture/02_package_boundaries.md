@@ -27,12 +27,12 @@ Do not assume:
 
 ## 3. Package layout
 
-Новый package создаётся отдельно:
+The new package is rooted at the repository top level:
 
 ```text
-next/iwb_canvas_engine_next/
+./
   lib/
-    iwb_canvas_engine_next.dart
+    iwb_canvas_engine.dart
     src/
       api/
         canvas_runtime.dart
@@ -137,7 +137,7 @@ next/iwb_canvas_engine_next/
     diagrams/
 ```
 
-`lib/iwb_canvas_engine_next.dart` exports only `src/api/**`.
+`lib/iwb_canvas_engine.dart` exports only `src/api/**`.
 
 Production-owned тесты зеркалят top-level ownership folders под
 `lib/src/**`: `test/edit/**` покрывает `lib/src/edit/**`, `test/frame/**`

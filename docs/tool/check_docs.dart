@@ -123,7 +123,7 @@ void _checkRequiredEntrypoints() {
     'docs/verification',
     'docs/donors',
     'docs/indexes',
-    '../../plan',
+    'plan',
   ];
 
   for (final path in requiredFiles) {
@@ -333,9 +333,12 @@ Map<String, Set<String>> _loadDiagramCatalog(String path) {
 void _checkNoRetiredActiveReferences() {
   final retired = [
     'canonical truth remains',
-    'iwb_canvas_engine_next_full_implementation_plan_v2',
-    'iwb_canvas_engine_next_donor_inventory',
-    'packages/iwb_canvas_engine_next',
+    'iwb_canvas_engine'
+        '_next_full_implementation_plan_v2',
+    'iwb_canvas_engine'
+        '_next_donor_inventory',
+    'packages/iwb_canvas_engine'
+        '_next',
     'ne'
         'w_api.',
     'ne'

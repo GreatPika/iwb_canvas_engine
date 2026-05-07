@@ -85,7 +85,7 @@ Mandatory guardrails:
 | `api.functional_ledger_complete` | every functional ledger row has API + tests |
 | `api.integration_surface_complete` | API has enough public surface for app-level `NextEngineAdapter`, but adapter is not in package |
 | `api.v1_scope_gate_green_before_freeze` | P1.5 scope gate passed before public API freeze starts |
-| `api.no_legacy_public_types` | legacy public golden symbols not exported by next package |
+| `api.no_legacy_public_types` | legacy public golden symbols not exported by root package |
 | `api.public_types_complete` | all public signatures reference defined public types |
 | `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package |
 | `api.no_undefined_public_type_references` | every exported signature type is exported or from Flutter/Dart SDK |

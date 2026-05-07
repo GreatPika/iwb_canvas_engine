@@ -1,10 +1,21 @@
-name: iwb_canvas_engine_workspace
+name: iwb_canvas_engine
+description: "Scene-based canvas engine for Flutter: model, rendering, input, JSON serialization."
+version: 0.1.0
 publish_to: none
 
 environment:
   sdk: ^3.10.4
+  flutter: ">=3.38.0"
 
-workspace:
-  - legacy/iwb_canvas_engine
-  - legacy/iwb_canvas_engine/example
-  - next/iwb_canvas_engine_next
+dependencies:
+  flutter:
+    sdk: flutter
+  path_drawing: ^1.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  analyzer: ^8.4.0
+  test: ^1.26.3
+  yaml: ^3.1.3

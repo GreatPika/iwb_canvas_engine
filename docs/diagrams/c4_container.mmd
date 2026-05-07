@@ -1,5 +1,5 @@
 flowchart TB
-  Public[lib/iwb_canvas_engine_next.dart exports src/api] --> RuntimeRoot
+  Public[lib/iwb_canvas_engine.dart exports src/api] --> RuntimeRoot
   Surface[CanvasSurface public widget] --> RuntimeRoot
   RuntimeRoot --> Store[DocumentStoreKernel]
   RuntimeRoot --> Edit[EditKernel]
