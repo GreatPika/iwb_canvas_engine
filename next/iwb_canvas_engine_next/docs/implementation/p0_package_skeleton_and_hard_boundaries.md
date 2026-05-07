@@ -50,8 +50,8 @@
 
 - `test.api_contract.no_old_public_symbols` -> `test/api_contract/no_old_public_symbols_test.dart`
 - `test.guardrails.import_boundaries` -> `test/guardrails/import_boundaries_test.dart`
-- `test.diagrams.required_present` -> `required Mermaid files present tests`
-- `test.guardrails.blocking_suite` -> `blocking guardrail suite`
+- `test.guardrails.required_diagrams_present` -> `test/guardrails/required_diagrams_present_test.dart`
+- `test.guardrails.blocking_suite` -> `test/guardrails/blocking_suite_test.dart`
 
 ## Exit gate
 

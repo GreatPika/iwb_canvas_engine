@@ -116,14 +116,21 @@ next/iwb_canvas_engine_next/
   test/
     api_contract/
     functional_ledger/
-    schema_v1/
-    edit_kernel/
+    api/
+    runtime/
+    store/
+    edit/
     interaction/
     frame/
     spatial/
+    geometry/
     resources/
+    codec/
     diagnostics/
+    flutter_bridge/
+    guardrails/
     benchmarks/
+    support/
   tool/
     guardrails/
     bench/
@@ -131,6 +138,18 @@ next/iwb_canvas_engine_next/
 ```
 
 `lib/iwb_canvas_engine_next.dart` exports only `src/api/**`.
+
+Production-owned тесты зеркалят top-level ownership folders под
+`lib/src/**`: `test/edit/**` покрывает `lib/src/edit/**`, `test/frame/**`
+покрывает `lib/src/frame/**`, и так далее. Cross-cutting proof areas, которые
+не принадлежат одному production owner, остаются вне зеркала:
+`test/api_contract/**`, `test/functional_ledger/**`, `test/guardrails/**`,
+`test/benchmarks/**`, а shared test fixtures живут под `test/support/**`.
+
+Зеркало является правилом ownership и навигации, а не правилом "каждому source
+file нужен matching test file". Individual tests называются по behavior,
+contract, invariant или regression, которые они доказывают, даже если несколько
+source files совместно обеспечивают это поведение.
 
 Forbidden imports:
 

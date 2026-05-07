@@ -62,13 +62,13 @@
 
 ## Tests
 
-- `test.events.low_level_mutations_do_not_emit_actions` -> `test/events/edit_kernel_low_level_mutations_do_not_emit_actions_test.dart`
-- `test.edit_kernel.sync_non_nested_async_stale` -> `sync, non-nested, async and stale handle tests`
-- `test.edit_kernel.rollback` -> `rollback safety tests`
-- `test.edit_kernel.operation_matrix_effects` -> `test/edit_kernel/operation_matrix_effects_test.dart`
-- `test.edit_kernel.exact_touched_invalidation` -> `test/edit_kernel/exact_touched_invalidation_test.dart`
-- `test.edit_kernel.typed_effects_no_frame_dependency` -> `test/edit_kernel/typed_effects_no_frame_dependency_test.dart`
-- `test.load_document.staged_success_failure` -> `staged loadDocument success/failure tests`
+- `test.edit.low_level_mutations_do_not_emit_actions` -> `test/edit/low_level_mutations_do_not_emit_actions_test.dart`
+- `test.edit.sync_non_nested_async_stale` -> `test/edit/sync_non_nested_async_stale_test.dart`
+- `test.edit.rollback` -> `test/edit/rollback_test.dart`
+- `test.edit.operation_matrix_effects` -> `test/edit/operation_matrix_effects_test.dart`
+- `test.edit.exact_touched_invalidation` -> `test/edit/exact_touched_invalidation_test.dart`
+- `test.edit.typed_effects_no_frame_dependency` -> `test/edit/typed_effects_no_frame_dependency_test.dart`
+- `test.edit.staged_document_load_success_failure` -> `test/edit/staged_document_load_success_failure_test.dart`
 
 ## Exit gate
 

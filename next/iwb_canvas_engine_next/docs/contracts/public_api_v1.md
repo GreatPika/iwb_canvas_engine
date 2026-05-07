@@ -32,8 +32,8 @@ Required tests:
 - `test.api_contract.no_undefined_public_type_references`
 - `test.api_contract.no_old_public_symbols`
 - `test.api_contract.dto_immutability`
-- `test.events.typed_action_payloads`
-- `test.surface.interactive_false_pending_line_preserved`
+- `test.api.typed_action_payloads`
+- `test.flutter_bridge.interactive_false_pending_line_preserved`
 - `test.api_contract.v1_scope_gate`
 Guardrails:
 - `api.public_types_complete`

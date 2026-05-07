@@ -43,8 +43,8 @@
 
 ## Tests
 
-- `test.store.read_document_projection` -> `readDocument projection and cache tests`
-- `test.store.no_projection_hot_path` -> `no projection in hot path tests`
+- `test.store.read_document_projection` -> `test/store/read_document_projection_test.dart`
+- `test.store.no_projection_hot_path` -> `test/store/no_projection_hot_path_test.dart`
 - `test.store.public_document_is_projection_only` -> `test/store/public_document_is_projection_only_test.dart`
 
 ## Exit gate
@@ -52,4 +52,4 @@
 - readDocument projection matches DTO state
 - projection lazy counters pass
 - store public document state is projection-only
-- no projection in hot path tests pass.
+- `test/store/no_projection_hot_path_test.dart` passes.

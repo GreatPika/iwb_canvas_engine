@@ -20,7 +20,7 @@ Related diagrams:
 - `seq_load_document_success`
 - `seq_load_document_failure`
 Required tests:
-- `test.load_document.staged_success_failure`
+- `test.edit.staged_document_load_success_failure`
 Guardrails:
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`

@@ -47,7 +47,7 @@
 
 ## Tests
 
-- `test.api_contract.v1_scope_gate` -> `public API v1 scope gate probe`
+- `test.api_contract.v1_scope_gate` -> `test/api_contract/v1_scope_gate_test.dart`
 
 ## Exit gate
 

@@ -15,8 +15,8 @@ Related diagrams:
 - `seq_edit_success`
 - `seq_edit_rollback`
 Required tests:
-- `test.edit_kernel.sync_non_nested_async_stale`
-- `test.edit_kernel.operation_matrix_effects`
+- `test.edit.sync_non_nested_async_stale`
+- `test.edit.operation_matrix_effects`
 Guardrails:
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`

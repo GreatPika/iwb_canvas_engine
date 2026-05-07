@@ -63,9 +63,9 @@
 
 ## Tests
 
-- `test.store.no_projection_hot_path` -> `no projection in hot path tests`
-- `test.frame.main_overlay_capture` -> `main and overlay frame capture tests`
-- `test.frame.no_live_runtime_read_in_painters` -> `no live runtime read and no CanvasDocument projection in paint tests`
+- `test.store.no_projection_hot_path` -> `test/store/no_projection_hot_path_test.dart`
+- `test.frame.main_overlay_capture` -> `test/frame/main_overlay_capture_test.dart`
+- `test.frame.no_live_runtime_read_in_painters` -> `test/frame/no_live_runtime_read_in_painters_test.dart`
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape` -> `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart`
 - `test.frame.cache_capacity_eviction_policy` -> `test/frame/cache_capacity_eviction_policy_test.dart`
 - `test.frame.selected_supplement_staging_no_global_sort` -> `test/frame/selected_supplement_staging_no_global_sort_test.dart`

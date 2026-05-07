@@ -85,11 +85,11 @@
 
 - `test.resources.sync_image_resolver` -> `test/resources/sync_image_resolver_test.dart`
 - `test.resources.app_owned_image_not_disposed` -> `test/resources/app_owned_image_not_disposed_test.dart`
-- `test.surface.interactive_false_pointer_routing` -> `test/surface/interactive_false_pointer_routing_test.dart`
-- `test.surface.interactive_false_active_session_cancel` -> `test/surface/interactive_false_active_session_cancel_test.dart`
-- `test.surface.interactive_false_pending_line_preserved` -> `test/surface/interactive_false_pending_line_preserved_test.dart`
-- `test.surface.pointer_adapter_finite_normalization` -> `test/surface/pointer_adapter_finite_normalization_test.dart`
-- `test.surface.widget_paint` -> `CanvasSurface empty/populated widget paint tests`
+- `test.flutter_bridge.interactive_false_pointer_routing` -> `test/flutter_bridge/interactive_false_pointer_routing_test.dart`
+- `test.flutter_bridge.interactive_false_active_session_cancel` -> `test/flutter_bridge/interactive_false_active_session_cancel_test.dart`
+- `test.flutter_bridge.interactive_false_pending_line_preserved` -> `test/flutter_bridge/interactive_false_pending_line_preserved_test.dart`
+- `test.flutter_bridge.pointer_adapter_finite_normalization` -> `test/flutter_bridge/pointer_adapter_finite_normalization_test.dart`
+- `test.flutter_bridge.widget_paint` -> `test/flutter_bridge/widget_paint_test.dart`
 
 ## Exit gate
 

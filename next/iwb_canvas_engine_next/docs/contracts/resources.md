@@ -18,8 +18,8 @@ Related diagrams:
 - `seq_resource_resolution`
 - `state_resource_resolution`
 Required tests:
-- `test.schema_v1.resources_appkey_only`
-- `test.schema_v1.reject_unknown_resource_source_kind`
+- `test.codec.schema_v1.resources_appkey_only`
+- `test.codec.schema_v1.reject_unknown_resource_source_kind`
 - `test.resources.sync_image_resolver`
 - `test.resources.app_owned_image_not_disposed`
 - `test.resources.resource_dirty`

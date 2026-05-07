@@ -17,7 +17,7 @@ Related donors:
 Related diagrams:
 - `dfd_diagnostics_error_projection`
 Required tests:
-- `test.validation_limits.constructor_and_schema_limits`
+- `test.codec.constructor_and_schema_limits`
 Guardrails:
 - `codec.known_fields_validated`
 - `api.id_validation_no_extension_type_escape`

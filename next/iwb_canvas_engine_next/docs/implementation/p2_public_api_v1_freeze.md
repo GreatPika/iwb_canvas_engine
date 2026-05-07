@@ -66,8 +66,8 @@
 - `test.api_contract.no_undefined_public_type_references` -> `test/api_contract/no_undefined_public_type_references_test.dart`
 - `test.api_contract.no_old_public_symbols` -> `test/api_contract/no_old_public_symbols_test.dart`
 - `test.api_contract.dto_immutability` -> `test/api_contract/dto_immutability_test.dart`
-- `test.events.typed_action_payloads` -> `test/events/typed_action_payloads_test.dart`
-- `test.validation_limits.constructor_and_schema_limits` -> `validation limits tests`
+- `test.api.typed_action_payloads` -> `test/api/typed_action_payloads_test.dart`
+- `test.codec.constructor_and_schema_limits` -> `test/codec/constructor_and_schema_limits_test.dart`
 
 ## Exit gate
 

@@ -367,7 +367,7 @@
   do_not_copy:
     - old event public names unless in v1 API
   required_tests:
-    - test/events/typed_action_payloads_test.dart
+    - test/api/typed_action_payloads_test.dart
   blocks:
     - P2
     - P9

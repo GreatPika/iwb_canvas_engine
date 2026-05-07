@@ -83,10 +83,10 @@ release-readiness gate after P10.
 
 ## Tests
 
-- `test.functional_ledger.row_specific_tests` -> `functional-ledger row-specific tests`
-- `test.benchmarks.required_cases` -> `required benchmark case gates`
-- `test.diagrams.required_present` -> `required Mermaid files present tests`
-- `test.guardrails.blocking_suite` -> `blocking guardrail suite`
+- `test.functional_ledger.row_specific_tests` -> `test/functional_ledger/row_specific_tests_test.dart`
+- `test.benchmarks.required_cases` -> `test/benchmarks/required_cases_test.dart`
+- `test.guardrails.required_diagrams_present` -> `test/guardrails/required_diagrams_present_test.dart`
+- `test.guardrails.blocking_suite` -> `test/guardrails/blocking_suite_test.dart`
 
 ## Exit gate
 

@@ -35,7 +35,7 @@ Required tests:
 - `test.frame.paint_plan_excludes_preview_delta`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
 - `test.frame.selected_supplement_staging_no_global_sort`
-- `test.surface.widget_paint`
+- `test.flutter_bridge.widget_paint`
 Guardrails:
 - `preview.selected_move_main_repaint`
 - `frame.no_global_scene_sort`

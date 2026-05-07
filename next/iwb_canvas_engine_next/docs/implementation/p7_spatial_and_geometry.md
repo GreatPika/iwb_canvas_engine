@@ -53,9 +53,9 @@
 
 ## Tests
 
-- `test.geometry.hit_policy` -> `geometry and hit-test policy tests`
+- `test.geometry.hit_policy` -> `test/geometry/hit_policy_test.dart`
 - `test.geometry.no_legacy_scene_order` -> `test/geometry/no_legacy_scene_order_test.dart`
-- `test.spatial.touched_update` -> `spatial constants, outlier and touched-only update tests`
+- `test.spatial.touched_update` -> `test/spatial/touched_update_test.dart`
 - `test.spatial.no_full_clone_for_touched_update` -> `test/spatial/no_full_clone_for_touched_update_test.dart`
 - `test.spatial.stale_generation_rejected` -> `test/spatial/stale_generation_rejected_test.dart`
 - `test.spatial.fallback_budget_enforced` -> `test/spatial/fallback_budget_enforced_test.dart`

@@ -57,8 +57,8 @@
 
 ## Tests
 
-- `test.schema_v1.resources_appkey_only` -> `test/schema_v1/resources_appkey_only_test.dart`
-- `test.schema_v1.reject_unknown_resource_source_kind` -> `test/schema_v1/reject_unknown_resource_source_kind_test.dart`
+- `test.codec.schema_v1.resources_appkey_only` -> `test/codec/schema_v1/resources_appkey_only_test.dart`
+- `test.codec.schema_v1.reject_unknown_resource_source_kind` -> `test/codec/schema_v1/reject_unknown_resource_source_kind_test.dart`
 - `test.resources.sync_image_resolver` -> `test/resources/sync_image_resolver_test.dart`
 - `test.resources.app_owned_image_not_disposed` -> `test/resources/app_owned_image_not_disposed_test.dart`
 - `test.resources.resource_dirty` -> `test/resources/resource_dirty_test.dart`

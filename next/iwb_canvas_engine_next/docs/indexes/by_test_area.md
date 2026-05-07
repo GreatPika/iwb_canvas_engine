@@ -30,30 +30,30 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 - Guardrails: `api.dto_immutability`
 
-## test.schema_v1.known_fields_validation
+## test.codec.schema_v1.known_fields_validation
 
-- Path: `test/schema_v1/known_fields_validation_test.dart`
+- Path: `test/codec/schema_v1/known_fields_validation_test.dart`
 - Phases: `P3`
 - Sections: `section_05_schema_v1_contract`, `section_23_tests`
 - Guardrails: `codec.known_fields_validated`
 
-## test.schema_v1.resources_appkey_only
+## test.codec.schema_v1.resources_appkey_only
 
-- Path: `test/schema_v1/resources_appkey_only_test.dart`
+- Path: `test/codec/schema_v1/resources_appkey_only_test.dart`
 - Phases: `P3`, `P4`
 - Sections: `section_05_schema_v1_contract`, `section_07_resource_lifecycle`, `section_23_tests`
 - Guardrails: `resources.app_key_only`
 
-## test.schema_v1.reject_unknown_element_kind
+## test.codec.schema_v1.reject_unknown_element_kind
 
-- Path: `test/schema_v1/reject_unknown_element_kind_test.dart`
+- Path: `test/codec/schema_v1/reject_unknown_element_kind_test.dart`
 - Phases: `P3`
 - Sections: `section_05_schema_v1_contract`, `section_23_tests`
 - Guardrails: `codec.known_fields_validated`
 
-## test.schema_v1.reject_unknown_resource_source_kind
+## test.codec.schema_v1.reject_unknown_resource_source_kind
 
-- Path: `test/schema_v1/reject_unknown_resource_source_kind_test.dart`
+- Path: `test/codec/schema_v1/reject_unknown_resource_source_kind_test.dart`
 - Phases: `P3`, `P4`
 - Sections: `section_05_schema_v1_contract`, `section_07_resource_lifecycle`, `section_23_tests`
 - Guardrails: `resources.app_key_only`
@@ -93,121 +93,121 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
 - Guardrails: `resources.resolver_reentrancy_rejected`
 
-## test.events.typed_action_payloads
+## test.api.typed_action_payloads
 
-- Path: `test/events/typed_action_payloads_test.dart`
+- Path: `test/api/typed_action_payloads_test.dart`
 - Phases: `P2`, `P9`
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
 - Guardrails: `events.commands_emit_user_actions`
 
-## test.events.low_level_mutations_do_not_emit_actions
+## test.edit.low_level_mutations_do_not_emit_actions
 
-- Path: `test/events/edit_kernel_low_level_mutations_do_not_emit_actions_test.dart`
+- Path: `test/edit/low_level_mutations_do_not_emit_actions_test.dart`
 - Phases: `P6`
 - Sections: `section_11_edit_kernel`, `section_23_tests`
 - Guardrails: `events.low_level_edit_no_user_actions`
 
-## test.events.commands_emit_user_actions
+## test.interaction.commands_emit_user_actions
 
-- Path: `test/events/commands_emit_user_actions_test.dart`
+- Path: `test/interaction/commands_emit_user_actions_test.dart`
 - Phases: `P9`
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 - Guardrails: `events.commands_emit_user_actions`
 
-## test.surface.interactive_false_pointer_routing
+## test.flutter_bridge.interactive_false_pointer_routing
 
-- Path: `test/surface/interactive_false_pointer_routing_test.dart`
+- Path: `test/flutter_bridge/interactive_false_pointer_routing_test.dart`
 - Phases: `P10`
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 - Guardrails: `surface.interactive_false_pending_line_preserved`
 
-## test.surface.interactive_false_active_session_cancel
+## test.flutter_bridge.interactive_false_active_session_cancel
 
-- Path: `test/surface/interactive_false_active_session_cancel_test.dart`
+- Path: `test/flutter_bridge/interactive_false_active_session_cancel_test.dart`
 - Phases: `P10`
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 - Guardrails: `surface.interactive_false_pending_line_preserved`
 
-## test.surface.interactive_false_pending_line_preserved
+## test.flutter_bridge.interactive_false_pending_line_preserved
 
-- Path: `test/surface/interactive_false_pending_line_preserved_test.dart`
+- Path: `test/flutter_bridge/interactive_false_pending_line_preserved_test.dart`
 - Phases: `P10`
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
 - Guardrails: `surface.interactive_false_pending_line_preserved`
 
 ## test.functional_ledger.row_specific_tests
 
-- Path: `functional-ledger row-specific tests`
+- Path: `test/functional_ledger/row_specific_tests_test.dart`
 - Phases: `P1`, `P12`
 - Sections: `section_08_functional_ledger`, `section_23_tests`
 - Guardrails: `api.functional_ledger_complete`
 
 ## test.api_contract.v1_scope_gate
 
-- Path: `public API v1 scope gate probe`
+- Path: `test/api_contract/v1_scope_gate_test.dart`
 - Phases: `P1.5`
 - Sections: `section_00_status_and_scope`, `section_04_public_api_v1`, `section_09_accepted_differences`, `section_23_tests`
 - Guardrails: `api.v1_scope_gate_green_before_freeze`
 
-## test.validation_limits.constructor_and_schema_limits
+## test.codec.constructor_and_schema_limits
 
-- Path: `validation limits tests`
+- Path: `test/codec/constructor_and_schema_limits_test.dart`
 - Phases: `P2`, `P3`
 - Sections: `section_06_validation_limits`, `section_23_tests`
 - Guardrails: `codec.known_fields_validated`, `api.id_validation_no_extension_type_escape`
 
 ## test.store.read_document_projection
 
-- Path: `readDocument projection and cache tests`
+- Path: `test/store/read_document_projection_test.dart`
 - Phases: `P5`
 - Sections: `section_10_runtime_data_model`, `section_23_tests`
 - Guardrails: `none`
 
 ## test.store.no_projection_hot_path
 
-- Path: `no projection in hot path tests`
+- Path: `test/store/no_projection_hot_path_test.dart`
 - Phases: `P5`, `P8`
 - Sections: `section_10_runtime_data_model`, `section_15_frame_render_contract`, `section_23_tests`
 - Guardrails: `none`
 
-## test.edit_kernel.sync_non_nested_async_stale
+## test.edit.sync_non_nested_async_stale
 
-- Path: `sync, non-nested, async and stale handle tests`
+- Path: `test/edit/sync_non_nested_async_stale_test.dart`
 - Phases: `P6`
 - Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_23_tests`
 - Guardrails: `edit.sync_non_nested`, `edit.stale_handle_rejected`
 
-## test.edit_kernel.rollback
+## test.edit.rollback
 
-- Path: `rollback safety tests`
+- Path: `test/edit/rollback_test.dart`
 - Phases: `P6`
 - Sections: `section_11_edit_kernel`, `section_23_tests`
 - Guardrails: `edit.rollback_no_effects`
 
-## test.edit_kernel.typed_effects_no_frame_dependency
+## test.edit.typed_effects_no_frame_dependency
 
-- Path: `test/edit_kernel/typed_effects_no_frame_dependency_test.dart`
+- Path: `test/edit/typed_effects_no_frame_dependency_test.dart`
 - Phases: `P6`
 - Sections: `section_11_edit_kernel`, `section_23_tests`
 - Guardrails: `edit.typed_effects_no_frame_dependency`
 
-## test.load_document.staged_success_failure
+## test.edit.staged_document_load_success_failure
 
-- Path: `staged loadDocument success/failure tests`
+- Path: `test/edit/staged_document_load_success_failure_test.dart`
 - Phases: `P6`, `P9`
 - Sections: `section_12_load_document`, `section_23_tests`
 - Guardrails: `load.prepares_before_interrupt`, `load.success_interrupts_before_install`
 
 ## test.geometry.hit_policy
 
-- Path: `geometry and hit-test policy tests`
+- Path: `test/geometry/hit_policy_test.dart`
 - Phases: `P7`
 - Sections: `section_16_geometry_policy`, `section_23_tests`
 - Guardrails: `none`
 
 ## test.spatial.touched_update
 
-- Path: `spatial constants, outlier and touched-only update tests`
+- Path: `test/spatial/touched_update_test.dart`
 - Phases: `P7`
 - Sections: `section_17_spatial_kernel`, `section_23_tests`
 - Guardrails: `none`
@@ -221,14 +221,14 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 
 ## test.frame.main_overlay_capture
 
-- Path: `main and overlay frame capture tests`
+- Path: `test/frame/main_overlay_capture_test.dart`
 - Phases: `P8`
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
 - Guardrails: `preview.selected_move_main_repaint`
 
 ## test.frame.no_live_runtime_read_in_painters
 
-- Path: `no live runtime read and no CanvasDocument projection in paint tests`
+- Path: `test/frame/no_live_runtime_read_in_painters_test.dart`
 - Phases: `P8`
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
 - Guardrails: `none`
@@ -256,42 +256,42 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 
 ## test.interaction.state_machines
 
-- Path: `interaction state machine tests`
+- Path: `test/interaction/state_machines_test.dart`
 - Phases: `P9`
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 - Guardrails: `none`
 
 ## test.interaction.move_resolver_reentrancy
 
-- Path: `synchronous move resolver reentrancy guard tests`
+- Path: `test/interaction/move_resolver_reentrancy_test.dart`
 - Phases: `P9`
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 - Guardrails: `none`
 
-## test.surface.widget_paint
+## test.flutter_bridge.widget_paint
 
-- Path: `CanvasSurface empty/populated widget paint tests`
+- Path: `test/flutter_bridge/widget_paint_test.dart`
 - Phases: `P10`
 - Sections: `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_23_tests`
 - Guardrails: `none`
 
 ## test.benchmarks.required_cases
 
-- Path: `required benchmark case gates`
+- Path: `test/benchmarks/required_cases_test.dart`
 - Phases: `P12`
 - Sections: `section_24_benchmarks`, `section_23_tests`
 - Guardrails: `none`
 
-## test.diagrams.required_present
+## test.guardrails.required_diagrams_present
 
-- Path: `required Mermaid files present tests`
+- Path: `test/guardrails/required_diagrams_present_test.dart`
 - Phases: `P0`, `P12`
 - Sections: `section_23_tests`
 - Guardrails: `diagrams.all_required_present`
 
 ## test.guardrails.blocking_suite
 
-- Path: `blocking guardrail suite`
+- Path: `test/guardrails/blocking_suite_test.dart`
 - Phases: `P0`, `P12`
 - Sections: `section_02_architecture_model`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
 - Guardrails: `api.functional_ledger_complete`, `api.integration_surface_complete`, `api.v1_scope_gate_green_before_freeze`, `api.no_legacy_public_types`, `api.public_types_complete`, `api.public_api_compiles_as_written`, `api.no_undefined_public_type_references`, `api.dto_immutability`, `api.id_validation_no_extension_type_escape`, `core.no_legacy_imports`, `core.no_scene_controller_shape_dependency`, `core.no_node_spec_patch_shape_dependency`, `core.single_runtime_root`, `edit.sync_non_nested`, `edit.rollback_no_effects`, `edit.stale_handle_rejected`, `edit.typed_effects_no_frame_dependency`, `events.low_level_edit_no_user_actions`, `events.commands_emit_user_actions`, `load.prepares_before_interrupt`, `load.success_interrupts_before_install`, `preview.selected_move_main_repaint`, `geometry.eraser_exact_budget_no_partial`, `spatial.fallback_budget_enforced`, `frame.paint_plan_excludes_preview_delta`, `cache.frame_meta_not_element_visual`, `cache.hot_caches_have_capacity_eviction`, `resources.mutation_inside_edit_only`, `resources.dirty_no_document_revision`, `resources.app_key_only`, `resources.resolver_frame_budget`, `resources.resolver_reentrancy_rejected`, `codec.schema_v1_exact`, `codec.known_fields_validated`, `diagnostics.disabled_no_alloc_hot_path`, `surface.interactive_false_pending_line_preserved`, `diagrams.all_required_present`
@@ -310,16 +310,16 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_20_diagnostics_hub`, `section_23_tests`
 - Guardrails: `diagnostics.disabled_no_alloc_hot_path`, `diagnostics.sanitized_public_projection`
 
-## test.edit_kernel.exact_touched_invalidation
+## test.edit.exact_touched_invalidation
 
-- Path: `test/edit_kernel/exact_touched_invalidation_test.dart`
+- Path: `test/edit/exact_touched_invalidation_test.dart`
 - Phases: `P6`
 - Sections: `section_11_edit_kernel`, `section_23_tests`
 - Guardrails: `edit.no_global_invalidation_except_replacement`
 
-## test.edit_kernel.operation_matrix_effects
+## test.edit.operation_matrix_effects
 
-- Path: `test/edit_kernel/operation_matrix_effects_test.dart`
+- Path: `test/edit/operation_matrix_effects_test.dart`
 - Phases: `P6`
 - Sections: `section_13_operation_matrix`, `section_23_tests`
 - Guardrails: `edit.operation_matrix_complete`
@@ -415,9 +415,9 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_10_runtime_data_model`, `section_23_tests`
 - Guardrails: `store.no_public_document_live_state`
 
-## test.surface.pointer_adapter_finite_normalization
+## test.flutter_bridge.pointer_adapter_finite_normalization
 
-- Path: `test/surface/pointer_adapter_finite_normalization_test.dart`
+- Path: `test/flutter_bridge/pointer_adapter_finite_normalization_test.dart`
 - Phases: `P10`
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 - Guardrails: `surface.pointer_samples_normalized_before_runtime`

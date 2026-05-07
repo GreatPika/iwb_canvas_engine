@@ -63,13 +63,13 @@
 
 ## Tests
 
-- `test.schema_v1.known_fields_validation` -> `test/schema_v1/known_fields_validation_test.dart`
-- `test.schema_v1.resources_appkey_only` -> `test/schema_v1/resources_appkey_only_test.dart`
-- `test.schema_v1.reject_unknown_element_kind` -> `test/schema_v1/reject_unknown_element_kind_test.dart`
-- `test.schema_v1.reject_unknown_resource_source_kind` -> `test/schema_v1/reject_unknown_resource_source_kind_test.dart`
+- `test.codec.schema_v1.known_fields_validation` -> `test/codec/schema_v1/known_fields_validation_test.dart`
+- `test.codec.schema_v1.resources_appkey_only` -> `test/codec/schema_v1/resources_appkey_only_test.dart`
+- `test.codec.schema_v1.reject_unknown_element_kind` -> `test/codec/schema_v1/reject_unknown_element_kind_test.dart`
+- `test.codec.schema_v1.reject_unknown_resource_source_kind` -> `test/codec/schema_v1/reject_unknown_resource_source_kind_test.dart`
 - `test.codec.decode_encode_no_runtime_side_effects` -> `test/codec/decode_encode_no_runtime_side_effects_test.dart`
 - `test.diagnostics.sanitizer_and_public_projection` -> `test/diagnostics/sanitizer_and_public_projection_test.dart`
-- `test.validation_limits.constructor_and_schema_limits` -> `validation limits tests`
+- `test.codec.constructor_and_schema_limits` -> `test/codec/constructor_and_schema_limits_test.dart`
 
 ## Exit gate
 

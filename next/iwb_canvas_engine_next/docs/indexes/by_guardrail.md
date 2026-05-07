@@ -54,7 +54,7 @@ Guardrails extracted from split section 22.
 
 - Rule: ids cannot be publicly constructed without validation
 - Sections: `section_04_public_api_v1`, `section_06_validation_limits`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.validation_limits.constructor_and_schema_limits`, `test.guardrails.blocking_suite`
+- Tests: `test.codec.constructor_and_schema_limits`, `test.guardrails.blocking_suite`
 
 ## core.no_legacy_imports
 
@@ -84,49 +84,49 @@ Guardrails extracted from split section 22.
 
 - Rule: nested/async edit rejected
 - Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit_kernel.sync_non_nested_async_stale`, `test.guardrails.blocking_suite`
+- Tests: `test.edit.sync_non_nested_async_stale`, `test.guardrails.blocking_suite`
 
 ## edit.rollback_no_effects
 
 - Rule: rollback discards events/repaint/resources/spatial
 - Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit_kernel.rollback`, `test.guardrails.blocking_suite`
+- Tests: `test.edit.rollback`, `test.guardrails.blocking_suite`
 
 ## edit.stale_handle_rejected
 
 - Rule: stale edit handle throws
 - Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit_kernel.sync_non_nested_async_stale`, `test.guardrails.blocking_suite`
+- Tests: `test.edit.sync_non_nested_async_stale`, `test.guardrails.blocking_suite`
 
 ## edit.typed_effects_no_frame_dependency
 
 - Rule: CommitCompiler produces typed effects and does not depend on concrete FrameEngine
 - Sections: `section_11_edit_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit_kernel.typed_effects_no_frame_dependency`, `test.guardrails.blocking_suite`
+- Tests: `test.edit.typed_effects_no_frame_dependency`, `test.guardrails.blocking_suite`
 
 ## events.low_level_edit_no_user_actions
 
 - Rule: CanvasEdit.removeElement/clearContent emit no user action events
 - Sections: `section_11_edit_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.events.low_level_mutations_do_not_emit_actions`, `test.guardrails.blocking_suite`
+- Tests: `test.edit.low_level_mutations_do_not_emit_actions`, `test.guardrails.blocking_suite`
 
 ## events.commands_emit_user_actions
 
 - Rule: high-level commands and interaction commits own user action events
 - Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.events.typed_action_payloads`, `test.events.commands_emit_user_actions`, `test.guardrails.blocking_suite`
+- Tests: `test.api.typed_action_payloads`, `test.interaction.commands_emit_user_actions`, `test.guardrails.blocking_suite`
 
 ## load.prepares_before_interrupt
 
 - Rule: failed load does not interrupt gesture
 - Sections: `section_12_load_document`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.load_document.staged_success_failure`, `test.guardrails.blocking_suite`
+- Tests: `test.edit.staged_document_load_success_failure`, `test.guardrails.blocking_suite`
 
 ## load.success_interrupts_before_install
 
 - Rule: success interrupt happens before atomic install
 - Sections: `section_12_load_document`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.load_document.staged_success_failure`, `test.guardrails.blocking_suite`
+- Tests: `test.edit.staged_document_load_success_failure`, `test.guardrails.blocking_suite`
 
 ## preview.selected_move_main_repaint
 
@@ -162,7 +162,7 @@ Guardrails extracted from split section 22.
 
 - Rule: resource descriptors use appKey only
 - Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.schema_v1.resources_appkey_only`, `test.schema_v1.reject_unknown_resource_source_kind`, `test.resources.sync_image_resolver`, `test.resources.app_owned_image_not_disposed`, `test.guardrails.blocking_suite`
+- Tests: `test.codec.schema_v1.resources_appkey_only`, `test.codec.schema_v1.reject_unknown_resource_source_kind`, `test.resources.sync_image_resolver`, `test.resources.app_owned_image_not_disposed`, `test.guardrails.blocking_suite`
 
 ## resources.resolver_reentrancy_rejected
 
@@ -180,7 +180,7 @@ Guardrails extracted from split section 22.
 
 - Rule: known schema v1 fields are validated and canonical encoder writes only v1 fields
 - Sections: `section_05_schema_v1_contract`, `section_06_validation_limits`, `section_19_codec_boundary`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.schema_v1.known_fields_validation`, `test.schema_v1.reject_unknown_element_kind`, `test.validation_limits.constructor_and_schema_limits`, `test.guardrails.blocking_suite`
+- Tests: `test.codec.schema_v1.known_fields_validation`, `test.codec.schema_v1.reject_unknown_element_kind`, `test.codec.constructor_and_schema_limits`, `test.guardrails.blocking_suite`
 
 ## diagnostics.disabled_no_alloc_hot_path
 
@@ -192,13 +192,13 @@ Guardrails extracted from split section 22.
 
 - Rule: required Mermaid files exist
 - Sections: `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.diagrams.required_present`, `test.guardrails.blocking_suite`
+- Tests: `test.guardrails.required_diagrams_present`, `test.guardrails.blocking_suite`
 
 ## surface.interactive_false_pending_line_preserved
 
 - Rule: interactive=false cancels active routed pointers but preserves pending line state not owned by an active routed pointer
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.surface.interactive_false_pointer_routing`, `test.surface.interactive_false_active_session_cancel`, `test.surface.interactive_false_pending_line_preserved`, `test.guardrails.blocking_suite`
+- Tests: `test.flutter_bridge.interactive_false_pointer_routing`, `test.flutter_bridge.interactive_false_active_session_cancel`, `test.flutter_bridge.interactive_false_pending_line_preserved`, `test.guardrails.blocking_suite`
 
 ## cache.keys_use_next_revisions_only
 
@@ -234,13 +234,13 @@ Guardrails extracted from split section 22.
 
 - Rule: ordinary edits compile exact touched invalidation; only document replacement may use global invalidation
 - Sections: `section_11_edit_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit_kernel.exact_touched_invalidation`, `test.guardrails.blocking_suite`
+- Tests: `test.edit.exact_touched_invalidation`, `test.guardrails.blocking_suite`
 
 ## edit.operation_matrix_complete
 
 - Rule: every operation matrix row has an executable effect assertion for revisions, spatial, projection, repaint, and events
 - Sections: `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit_kernel.operation_matrix_effects`, `test.guardrails.blocking_suite`
+- Tests: `test.edit.operation_matrix_effects`, `test.guardrails.blocking_suite`
 
 ## frame.no_global_scene_sort
 
@@ -330,4 +330,4 @@ Guardrails extracted from split section 22.
 
 - Rule: Flutter surface adapters pass only normalized finite pointer samples into runtime routing
 - Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.surface.pointer_adapter_finite_normalization`, `test.guardrails.blocking_suite`
+- Tests: `test.flutter_bridge.pointer_adapter_finite_normalization`, `test.guardrails.blocking_suite`

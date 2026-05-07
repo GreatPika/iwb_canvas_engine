@@ -21,11 +21,11 @@ Related diagrams:
 - `seq_edit_rollback`
 - `state_edit_session`
 Required tests:
-- `test.events.low_level_mutations_do_not_emit_actions`
-- `test.edit_kernel.sync_non_nested_async_stale`
-- `test.edit_kernel.rollback`
-- `test.edit_kernel.exact_touched_invalidation`
-- `test.edit_kernel.typed_effects_no_frame_dependency`
+- `test.edit.low_level_mutations_do_not_emit_actions`
+- `test.edit.sync_non_nested_async_stale`
+- `test.edit.rollback`
+- `test.edit.exact_touched_invalidation`
+- `test.edit.typed_effects_no_frame_dependency`
 Guardrails:
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`

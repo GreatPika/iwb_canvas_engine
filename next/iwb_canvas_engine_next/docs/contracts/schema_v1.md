@@ -23,10 +23,10 @@ Related donors:
 Related diagrams:
 - `dfd_schema_v1_decode_encode`
 Required tests:
-- `test.schema_v1.known_fields_validation`
-- `test.schema_v1.resources_appkey_only`
-- `test.schema_v1.reject_unknown_element_kind`
-- `test.schema_v1.reject_unknown_resource_source_kind`
+- `test.codec.schema_v1.known_fields_validation`
+- `test.codec.schema_v1.resources_appkey_only`
+- `test.codec.schema_v1.reject_unknown_element_kind`
+- `test.codec.schema_v1.reject_unknown_resource_source_kind`
 Guardrails:
 - `codec.schema_v1_exact`
 - `codec.known_fields_validated`

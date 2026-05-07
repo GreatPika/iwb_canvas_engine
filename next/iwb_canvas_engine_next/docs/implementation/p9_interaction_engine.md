@@ -85,11 +85,11 @@
 
 ## Tests
 
-- `test.events.typed_action_payloads` -> `test/events/typed_action_payloads_test.dart`
-- `test.events.commands_emit_user_actions` -> `test/events/commands_emit_user_actions_test.dart`
-- `test.load_document.staged_success_failure` -> `staged loadDocument success/failure tests`
-- `test.interaction.state_machines` -> `interaction state machine tests`
-- `test.interaction.move_resolver_reentrancy` -> `synchronous move resolver reentrancy guard tests`
+- `test.api.typed_action_payloads` -> `test/api/typed_action_payloads_test.dart`
+- `test.interaction.commands_emit_user_actions` -> `test/interaction/commands_emit_user_actions_test.dart`
+- `test.edit.staged_document_load_success_failure` -> `test/edit/staged_document_load_success_failure_test.dart`
+- `test.interaction.state_machines` -> `test/interaction/state_machines_test.dart`
+- `test.interaction.move_resolver_reentrancy` -> `test/interaction/move_resolver_reentrancy_test.dart`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup` -> `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`
 - `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
 

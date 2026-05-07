@@ -95,10 +95,10 @@ Required tests:
 - `test.api_contract.no_old_public_symbols`
 - `test.api_contract.dto_immutability`
 - `test.guardrails.import_boundaries`
-- `test.schema_v1.known_fields_validation`
-- `test.schema_v1.resources_appkey_only`
-- `test.schema_v1.reject_unknown_element_kind`
-- `test.schema_v1.reject_unknown_resource_source_kind`
+- `test.codec.schema_v1.known_fields_validation`
+- `test.codec.schema_v1.resources_appkey_only`
+- `test.codec.schema_v1.reject_unknown_element_kind`
+- `test.codec.schema_v1.reject_unknown_resource_source_kind`
 - `test.codec.decode_encode_no_runtime_side_effects`
 - `test.diagnostics.sanitizer_and_public_projection`
 - `test.resources.sync_image_resolver`
@@ -109,25 +109,25 @@ Required tests:
 - `test.resources.missing_result_cached_per_revision`
 - `test.resources.resolver_frame_budget`
 - `test.resources.resolver_reentrancy_rejected`
-- `test.events.typed_action_payloads`
-- `test.events.low_level_mutations_do_not_emit_actions`
-- `test.events.commands_emit_user_actions`
-- `test.surface.interactive_false_pointer_routing`
-- `test.surface.interactive_false_active_session_cancel`
-- `test.surface.interactive_false_pending_line_preserved`
-- `test.surface.pointer_adapter_finite_normalization`
+- `test.api.typed_action_payloads`
+- `test.edit.low_level_mutations_do_not_emit_actions`
+- `test.interaction.commands_emit_user_actions`
+- `test.flutter_bridge.interactive_false_pointer_routing`
+- `test.flutter_bridge.interactive_false_active_session_cancel`
+- `test.flutter_bridge.interactive_false_pending_line_preserved`
+- `test.flutter_bridge.pointer_adapter_finite_normalization`
 - `test.functional_ledger.row_specific_tests`
 - `test.api_contract.v1_scope_gate`
-- `test.validation_limits.constructor_and_schema_limits`
+- `test.codec.constructor_and_schema_limits`
 - `test.store.read_document_projection`
 - `test.store.no_projection_hot_path`
 - `test.store.public_document_is_projection_only`
-- `test.edit_kernel.sync_non_nested_async_stale`
-- `test.edit_kernel.rollback`
-- `test.edit_kernel.operation_matrix_effects`
-- `test.edit_kernel.exact_touched_invalidation`
-- `test.edit_kernel.typed_effects_no_frame_dependency`
-- `test.load_document.staged_success_failure`
+- `test.edit.sync_non_nested_async_stale`
+- `test.edit.rollback`
+- `test.edit.operation_matrix_effects`
+- `test.edit.exact_touched_invalidation`
+- `test.edit.typed_effects_no_frame_dependency`
+- `test.edit.staged_document_load_success_failure`
 - `test.geometry.hit_policy`
 - `test.geometry.no_legacy_scene_order`
 - `test.geometry.eraser_exact_budget_no_partial_commit`
@@ -146,9 +146,9 @@ Required tests:
 - `test.interaction.move_resolver_reentrancy`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
 - `test.interaction.no_stale_terminal_commit`
-- `test.surface.widget_paint`
+- `test.flutter_bridge.widget_paint`
 - `test.benchmarks.required_cases`
-- `test.diagrams.required_present`
+- `test.guardrails.required_diagrams_present`
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `api.functional_ledger_complete`
@@ -165,13 +165,19 @@ test/api_contract/public_api_v1_compiles_as_written_test.dart
 test/api_contract/no_undefined_public_type_references_test.dart
 test/api_contract/no_old_public_symbols_test.dart
 test/api_contract/dto_immutability_test.dart
+test/api_contract/v1_scope_gate_test.dart
 test/guardrails/import_boundaries_test.dart
+test/guardrails/required_diagrams_present_test.dart
+test/guardrails/blocking_suite_test.dart
+test/functional_ledger/row_specific_tests_test.dart
+test/benchmarks/required_cases_test.dart
 
-test/schema_v1/known_fields_validation_test.dart
-test/schema_v1/resources_appkey_only_test.dart
-test/schema_v1/reject_unknown_element_kind_test.dart
-test/schema_v1/reject_unknown_resource_source_kind_test.dart
+test/codec/schema_v1/known_fields_validation_test.dart
+test/codec/schema_v1/resources_appkey_only_test.dart
+test/codec/schema_v1/reject_unknown_element_kind_test.dart
+test/codec/schema_v1/reject_unknown_resource_source_kind_test.dart
 test/codec/decode_encode_no_runtime_side_effects_test.dart
+test/codec/constructor_and_schema_limits_test.dart
 test/diagnostics/sanitizer_and_public_projection_test.dart
 
 test/resources/sync_image_resolver_test.dart
@@ -183,34 +189,46 @@ test/resources/missing_result_cached_per_revision_test.dart
 test/resources/resolver_frame_budget_test.dart
 test/resources/resolver_reentrancy_rejected_test.dart
 
-test/events/typed_action_payloads_test.dart
-test/events/edit_kernel_low_level_mutations_do_not_emit_actions_test.dart
-test/events/commands_emit_user_actions_test.dart
+test/api/typed_action_payloads_test.dart
+test/edit/low_level_mutations_do_not_emit_actions_test.dart
+test/interaction/commands_emit_user_actions_test.dart
 
-test/surface/interactive_false_pointer_routing_test.dart
-test/surface/interactive_false_active_session_cancel_test.dart
-test/surface/interactive_false_pending_line_preserved_test.dart
-test/surface/pointer_adapter_finite_normalization_test.dart
+test/flutter_bridge/interactive_false_pointer_routing_test.dart
+test/flutter_bridge/interactive_false_active_session_cancel_test.dart
+test/flutter_bridge/interactive_false_pending_line_preserved_test.dart
+test/flutter_bridge/pointer_adapter_finite_normalization_test.dart
+test/flutter_bridge/widget_paint_test.dart
 
+test/store/read_document_projection_test.dart
+test/store/no_projection_hot_path_test.dart
 test/store/public_document_is_projection_only_test.dart
-test/edit_kernel/operation_matrix_effects_test.dart
-test/edit_kernel/exact_touched_invalidation_test.dart
-test/edit_kernel/typed_effects_no_frame_dependency_test.dart
+test/edit/sync_non_nested_async_stale_test.dart
+test/edit/rollback_test.dart
+test/edit/operation_matrix_effects_test.dart
+test/edit/exact_touched_invalidation_test.dart
+test/edit/typed_effects_no_frame_dependency_test.dart
+test/edit/staged_document_load_success_failure_test.dart
+test/geometry/hit_policy_test.dart
 test/geometry/no_legacy_scene_order_test.dart
 test/geometry/eraser_exact_budget_no_partial_commit_test.dart
+test/spatial/touched_update_test.dart
 test/spatial/no_full_clone_for_touched_update_test.dart
 test/spatial/stale_generation_rejected_test.dart
 test/spatial/fallback_budget_enforced_test.dart
+test/frame/main_overlay_capture_test.dart
+test/frame/no_live_runtime_read_in_painters_test.dart
 test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart
 test/frame/cache_capacity_eviction_policy_test.dart
 test/frame/paint_plan_excludes_preview_delta_test.dart
 test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart
 test/frame/selected_supplement_staging_no_global_sort_test.dart
+test/interaction/state_machines_test.dart
+test/interaction/move_resolver_reentrancy_test.dart
 test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart
 test/interaction/no_stale_terminal_commit_test.dart
 ```
 
 Functional ledger rows still require row-specific tests.
-Runtime coverage must include edit_kernel, interaction, frame, spatial, schema_v1, resources, events, surface and diagnostics tests.
+Runtime coverage must include api, edit, interaction, frame, spatial, geometry, codec/schema_v1, resources, flutter_bridge, and diagnostics tests.
 
 ---

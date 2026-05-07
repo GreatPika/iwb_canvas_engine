@@ -834,7 +834,7 @@ void _checkNegativeInvariantCoverage() {
       path: 'docs/contracts/edit_kernel.md',
       text: 'CommitCompiler must not depend on concrete `FrameEngine`',
       guardrail: 'edit.typed_effects_no_frame_dependency',
-      test: 'test.edit_kernel.typed_effects_no_frame_dependency',
+      test: 'test.edit.typed_effects_no_frame_dependency',
     ),
     (
       path: 'docs/contracts/spatial_kernel.md',

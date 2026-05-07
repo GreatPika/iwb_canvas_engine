@@ -101,7 +101,7 @@ Use the donor registry and donor docs to cover these important donor families:
 
 ## Tests
 
-- `test.functional_ledger.row_specific_tests` -> `functional-ledger row-specific tests`
+- `test.functional_ledger.row_specific_tests` -> `test/functional_ledger/row_specific_tests_test.dart`
 
 ## Exit gate
 

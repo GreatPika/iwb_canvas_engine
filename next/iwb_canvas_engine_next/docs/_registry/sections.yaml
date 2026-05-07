@@ -111,8 +111,8 @@
     - test.api_contract.no_undefined_public_type_references
     - test.api_contract.no_old_public_symbols
     - test.api_contract.dto_immutability
-    - test.events.typed_action_payloads
-    - test.surface.interactive_false_pending_line_preserved
+    - test.api.typed_action_payloads
+    - test.flutter_bridge.interactive_false_pending_line_preserved
     - test.api_contract.v1_scope_gate
   do_not_assume:
     - no legacy public API shape
@@ -145,10 +145,10 @@
     - codec.schema_v1_exact
     - codec.known_fields_validated
   tests:
-    - test.schema_v1.known_fields_validation
-    - test.schema_v1.resources_appkey_only
-    - test.schema_v1.reject_unknown_element_kind
-    - test.schema_v1.reject_unknown_resource_source_kind
+    - test.codec.schema_v1.known_fields_validation
+    - test.codec.schema_v1.resources_appkey_only
+    - test.codec.schema_v1.reject_unknown_element_kind
+    - test.codec.schema_v1.reject_unknown_resource_source_kind
   do_not_assume:
     - no schema v7 public entrypoints as next API
     - no legacy SceneBuilder API shape
@@ -173,7 +173,7 @@
     - codec.known_fields_validated
     - api.id_validation_no_extension_type_escape
   tests:
-    - test.validation_limits.constructor_and_schema_limits
+    - test.codec.constructor_and_schema_limits
   do_not_assume:
     - no unvalidated public ids
     - no legacy diagnostics surface leakage
@@ -204,8 +204,8 @@
     - resources.no_same_frame_missing_retry
     - resources.resolver_reentrancy_rejected
   tests:
-    - test.schema_v1.resources_appkey_only
-    - test.schema_v1.reject_unknown_resource_source_kind
+    - test.codec.schema_v1.resources_appkey_only
+    - test.codec.schema_v1.reject_unknown_resource_source_kind
     - test.resources.sync_image_resolver
     - test.resources.app_owned_image_not_disposed
     - test.resources.resource_dirty
@@ -321,11 +321,11 @@
     - edit.no_global_invalidation_except_replacement
     - edit.typed_effects_no_frame_dependency
   tests:
-    - test.events.low_level_mutations_do_not_emit_actions
-    - test.edit_kernel.sync_non_nested_async_stale
-    - test.edit_kernel.rollback
-    - test.edit_kernel.exact_touched_invalidation
-    - test.edit_kernel.typed_effects_no_frame_dependency
+    - test.edit.low_level_mutations_do_not_emit_actions
+    - test.edit.sync_non_nested_async_stale
+    - test.edit.rollback
+    - test.edit.exact_touched_invalidation
+    - test.edit.typed_effects_no_frame_dependency
   do_not_assume:
     - no legacy SceneWriteTxn
     - no legacy controller shell
@@ -354,7 +354,7 @@
     - load.prepares_before_interrupt
     - load.success_interrupts_before_install
   tests:
-    - test.load_document.staged_success_failure
+    - test.edit.staged_document_load_success_failure
   do_not_assume:
     - no interrupt before successful preparation
     - no prepared replacement in public API
@@ -379,8 +379,8 @@
     - edit.stale_handle_rejected
     - edit.operation_matrix_complete
   tests:
-    - test.edit_kernel.sync_non_nested_async_stale
-    - test.edit_kernel.operation_matrix_effects
+    - test.edit.sync_non_nested_async_stale
+    - test.edit.operation_matrix_effects
   do_not_assume:
     - no implicit mutation path outside EditKernel
 -
@@ -433,17 +433,17 @@
     - surface.pointer_samples_normalized_before_runtime
     - surface.interactive_false_pending_line_preserved
   tests:
-    - test.events.typed_action_payloads
-    - test.events.commands_emit_user_actions
-    - test.surface.interactive_false_pointer_routing
-    - test.surface.interactive_false_active_session_cancel
-    - test.surface.interactive_false_pending_line_preserved
-    - test.surface.pointer_adapter_finite_normalization
+    - test.api.typed_action_payloads
+    - test.interaction.commands_emit_user_actions
+    - test.flutter_bridge.interactive_false_pointer_routing
+    - test.flutter_bridge.interactive_false_active_session_cancel
+    - test.flutter_bridge.interactive_false_pending_line_preserved
+    - test.flutter_bridge.pointer_adapter_finite_normalization
     - test.interaction.state_machines
     - test.interaction.move_resolver_reentrancy
     - test.interaction.move_resolver_not_called_on_cancel_cleanup
     - test.interaction.no_stale_terminal_commit
-    - test.surface.widget_paint
+    - test.flutter_bridge.widget_paint
   do_not_assume:
     - no legacy callback graph as structure
     - no reentrant mutation from resolver
@@ -488,7 +488,7 @@
     - test.frame.paint_plan_excludes_preview_delta
     - test.frame.camera_pan_preserves_ordinary_paint_plan
     - test.frame.selected_supplement_staging_no_global_sort
-    - test.surface.widget_paint
+    - test.flutter_bridge.widget_paint
   do_not_assume:
     - no live runtime reads in painters
     - no CanvasDocument projection in paint
@@ -814,10 +814,10 @@
     - test.api_contract.no_old_public_symbols
     - test.api_contract.dto_immutability
     - test.guardrails.import_boundaries
-    - test.schema_v1.known_fields_validation
-    - test.schema_v1.resources_appkey_only
-    - test.schema_v1.reject_unknown_element_kind
-    - test.schema_v1.reject_unknown_resource_source_kind
+    - test.codec.schema_v1.known_fields_validation
+    - test.codec.schema_v1.resources_appkey_only
+    - test.codec.schema_v1.reject_unknown_element_kind
+    - test.codec.schema_v1.reject_unknown_resource_source_kind
     - test.codec.decode_encode_no_runtime_side_effects
     - test.diagnostics.sanitizer_and_public_projection
     - test.resources.sync_image_resolver
@@ -828,25 +828,25 @@
     - test.resources.missing_result_cached_per_revision
     - test.resources.resolver_frame_budget
     - test.resources.resolver_reentrancy_rejected
-    - test.events.typed_action_payloads
-    - test.events.low_level_mutations_do_not_emit_actions
-    - test.events.commands_emit_user_actions
-    - test.surface.interactive_false_pointer_routing
-    - test.surface.interactive_false_active_session_cancel
-    - test.surface.interactive_false_pending_line_preserved
-    - test.surface.pointer_adapter_finite_normalization
+    - test.api.typed_action_payloads
+    - test.edit.low_level_mutations_do_not_emit_actions
+    - test.interaction.commands_emit_user_actions
+    - test.flutter_bridge.interactive_false_pointer_routing
+    - test.flutter_bridge.interactive_false_active_session_cancel
+    - test.flutter_bridge.interactive_false_pending_line_preserved
+    - test.flutter_bridge.pointer_adapter_finite_normalization
     - test.functional_ledger.row_specific_tests
     - test.api_contract.v1_scope_gate
-    - test.validation_limits.constructor_and_schema_limits
+    - test.codec.constructor_and_schema_limits
     - test.store.read_document_projection
     - test.store.no_projection_hot_path
     - test.store.public_document_is_projection_only
-    - test.edit_kernel.sync_non_nested_async_stale
-    - test.edit_kernel.rollback
-    - test.edit_kernel.operation_matrix_effects
-    - test.edit_kernel.exact_touched_invalidation
-    - test.edit_kernel.typed_effects_no_frame_dependency
-    - test.load_document.staged_success_failure
+    - test.edit.sync_non_nested_async_stale
+    - test.edit.rollback
+    - test.edit.operation_matrix_effects
+    - test.edit.exact_touched_invalidation
+    - test.edit.typed_effects_no_frame_dependency
+    - test.edit.staged_document_load_success_failure
     - test.geometry.hit_policy
     - test.geometry.no_legacy_scene_order
     - test.geometry.eraser_exact_budget_no_partial_commit
@@ -865,9 +865,9 @@
     - test.interaction.move_resolver_reentrancy
     - test.interaction.move_resolver_not_called_on_cancel_cleanup
     - test.interaction.no_stale_terminal_commit
-    - test.surface.widget_paint
+    - test.flutter_bridge.widget_paint
     - test.benchmarks.required_cases
-    - test.diagrams.required_present
+    - test.guardrails.required_diagrams_present
     - test.guardrails.blocking_suite
   do_not_assume:
     - no donor reuse without ported or equivalent tests

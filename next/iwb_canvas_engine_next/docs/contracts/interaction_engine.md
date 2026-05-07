@@ -39,17 +39,17 @@ Related diagrams:
 - `state_eraser`
 - `state_pending_text_edit_request`
 Required tests:
-- `test.events.typed_action_payloads`
-- `test.events.commands_emit_user_actions`
-- `test.surface.interactive_false_pointer_routing`
-- `test.surface.interactive_false_active_session_cancel`
-- `test.surface.interactive_false_pending_line_preserved`
-- `test.surface.pointer_adapter_finite_normalization`
+- `test.api.typed_action_payloads`
+- `test.interaction.commands_emit_user_actions`
+- `test.flutter_bridge.interactive_false_pointer_routing`
+- `test.flutter_bridge.interactive_false_active_session_cancel`
+- `test.flutter_bridge.interactive_false_pending_line_preserved`
+- `test.flutter_bridge.pointer_adapter_finite_normalization`
 - `test.interaction.state_machines`
 - `test.interaction.move_resolver_reentrancy`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
 - `test.interaction.no_stale_terminal_commit`
-- `test.surface.widget_paint`
+- `test.flutter_bridge.widget_paint`
 Guardrails:
 - `preview.selected_move_main_repaint`
 - `events.commands_emit_user_actions`
