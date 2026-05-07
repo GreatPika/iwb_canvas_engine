@@ -30,7 +30,7 @@ Guardrails:
 - `frame.paint_plan_excludes_preview_delta`
 Do not assume:
 - no unbounded cache owner sprawl
-- no cache keys tied to old snapshots
+- no cache keys tied to legacy snapshots
 <!-- CONTEXT:END -->
 
 ## 18. Cache policy ledger
@@ -42,7 +42,7 @@ Do not assume:
 | PathGeometryCache | Geometry/Frame | pathData/fillRule/strokeWidth | path update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | StrokePathCache | Frame | pointsKey/thickness/transform scale | stroke update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | ImageResolveCache | Resource | resourceId/resourceRevision | resource dirty/descriptor change | 1024 entries | target/all invalidation, then LRU | resolver calls, budget-exceeded count, hit/miss, null-cache count | yes, sync app resolver only with `kMaxSyncResourceResolverCallsPerFrame = 128` |
-| StaticBackgroundCache | Frame | background/grid/camera bucket/dpr/frameMetaRevision | camera/background/grid | 1 picture per camera bucket | replace and dispose old picture | picture count, rebuild count | yes bounded |
+| StaticBackgroundCache | Frame | background/grid/camera bucket/dpr/frameMetaRevision | camera/background/grid | 1 picture per camera bucket | replace and dispose previous picture | picture count, rebuild count | yes bounded |
 | PaintPlanCache | Frame | structural/bounds/elementVisual/viewport/selection | typed invalidation excluding frameMeta and preview | 16 viewport plans | LRU by viewport/revision tuple | candidate count, hit/miss, full-sort probe, selected-supplement bypass count | yes bounded |
 | SelectedOrderCache | Frame | selectionRevision/structuralRevision | selection/structure | 1 selected-order snapshot | replace on revision change | selected count, rebuild count | yes bounded |
 | SpatialIndex | Spatial | structural/bounds revisions | touched geometry/structure | current index only | invalid/rebuild lifecycle, not cache eviction | fallback count, budget-exceeded count | yes query only |

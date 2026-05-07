@@ -139,7 +139,7 @@ Guardrails:
 - `surface.interactive_false_pending_line_preserved`
 - `diagrams.all_required_present`
 Do not assume:
-- no release with old imports, legacy facade, or unlinked donor reuse
+- no release with legacy imports, legacy facade, or unlinked donor reuse
 <!-- CONTEXT:END -->
 
 ## 27. Final release gates
@@ -178,7 +178,7 @@ Release is blocked unless all statements are true:
 29. all required diagrams exist and match owners.
 30. phase guardrail alignment is green.
 31. benchmark gates pass.
-32. AppCanvasPort, OldEngineAdapter and NextEngineAdapter are not present in the engine package.
+32. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
 ```
 
 ---

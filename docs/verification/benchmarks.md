@@ -19,7 +19,7 @@ Required tests:
 Guardrails:
 - `none`
 Do not assume:
-- no unapproved old feature path regression
+- no unapproved legacy feature path regression
 <!-- CONTEXT:END -->
 
 ## 24. Benchmarks
@@ -27,7 +27,7 @@ Do not assume:
 Benchmark policy:
 
 ```text
-equivalent old feature path -> no unapproved regression;
+equivalent legacy feature path -> no unapproved regression;
 new-only feature path -> own baseline;
 hot input path -> avg + P95 + max gates;
 paint path -> bounded by candidate count, not total scene size;

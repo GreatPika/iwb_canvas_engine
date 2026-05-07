@@ -66,7 +66,7 @@
     - api.no_legacy_public_types
     - core.import_boundaries
   tests:
-    - test.api_contract.no_old_public_symbols
+    - test.api_contract.no_legacy_public_symbols
     - test.guardrails.import_boundaries
   do_not_assume:
     - no legacy package import
@@ -109,7 +109,7 @@
   tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - test.api_contract.no_undefined_public_type_references
-    - test.api_contract.no_old_public_symbols
+    - test.api_contract.no_legacy_public_symbols
     - test.api_contract.dto_immutability
     - test.api.typed_action_payloads
     - test.flutter_bridge.interactive_false_pending_line_preserved
@@ -244,7 +244,7 @@
   id: section_09_accepted_differences
   source: docs/_registry/sections.yaml / section 9
   file: docs/architecture/04_decisions_and_differences.md
-  title: 9. Accepted differences from old engine
+  title: 9. Accepted differences from legacy engine
   phases:
     - P1.5
     - P2
@@ -523,7 +523,7 @@
     - test.geometry.no_legacy_scene_order
     - test.geometry.eraser_exact_budget_no_partial_commit
   do_not_assume:
-    - do not port old SceneNode traversal
+    - do not port legacy SceneNode traversal
     - do not copy legacy scene order logic
 -
   id: section_17_spatial_kernel
@@ -553,7 +553,7 @@
     - test.spatial.stale_generation_rejected
     - test.spatial.fallback_budget_enforced
   do_not_assume:
-    - do not port old Scene or locator maps
+    - do not port legacy Scene or locator maps
     - do not rely on stale structuralRevision
 -
   id: section_18_cache_policy
@@ -586,7 +586,7 @@
     - test.frame.camera_pan_preserves_ordinary_paint_plan
   do_not_assume:
     - no unbounded cache owner sprawl
-    - no cache keys tied to old snapshots
+    - no cache keys tied to legacy snapshots
 -
   id: section_19_codec_boundary
   source: docs/_registry/sections.yaml / section 19
@@ -811,7 +811,7 @@
   tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - test.api_contract.no_undefined_public_type_references
-    - test.api_contract.no_old_public_symbols
+    - test.api_contract.no_legacy_public_symbols
     - test.api_contract.dto_immutability
     - test.guardrails.import_boundaries
     - test.codec.schema_v1.known_fields_validation
@@ -891,7 +891,7 @@
   tests:
     - test.benchmarks.required_cases
   do_not_assume:
-    - no unapproved old feature path regression
+    - no unapproved legacy feature path regression
 
 -
   id: section_27_final_release_gates
@@ -1033,4 +1033,4 @@
   tests:
     - test.guardrails.blocking_suite
   do_not_assume:
-    - no release with old imports, legacy facade, or unlinked donor reuse
+    - no release with legacy imports, legacy facade, or unlinked donor reuse

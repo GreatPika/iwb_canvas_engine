@@ -868,7 +868,7 @@ void _checkNegativeInvariantCoverage() {
     ),
     (
       path: 'docs/contracts/cache_policy.md',
-      text: 'no cache keys tied to old snapshots',
+      text: 'no cache keys tied to legacy snapshots',
       guardrail: 'cache.keys_use_next_revisions_only',
       test: 'test.frame.cache_keys_do_not_use_legacy_snapshot_shape',
     ),
@@ -1277,7 +1277,7 @@ void _checkHotPathDesignContract() {
     _forbidTokens(path, [
       'query viewport plus selected supplement',
       'ordinary and selected candidate handles',
-    ], 'selected-move witness must not use the old direct preview path');
+    ], 'selected-move witness must not use the legacy direct preview path');
   }
 
   _requireTokens('docs/contracts/resources.md', [

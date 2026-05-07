@@ -95,7 +95,7 @@ If any operation throws, both resource and element changes roll back.
 
 ### 7.4 External visual resource repaint
 
-Old `notifySceneChanged()` is replaced by:
+Legacy `notifySceneChanged()` is replaced by:
 
 ```dart
 runtime.resources.markResourceDirty(resourceId);

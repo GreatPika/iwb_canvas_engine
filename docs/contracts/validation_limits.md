@@ -28,7 +28,7 @@ Do not assume:
 
 ## 6. Validation limits
 
-These limits are mandatory for v1. They intentionally preserve old safety limits where an old equivalent exists.
+These limits are mandatory for v1. They intentionally preserve legacy safety limits where a legacy equivalent exists.
 
 | Limit | Value |
 |---|---:|
@@ -78,4 +78,3 @@ Validation is applied at:
 ```
 
 ---
-

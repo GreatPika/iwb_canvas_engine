@@ -2,7 +2,7 @@
 
 ## Build
 
-- old_to_next_functional_matrix.md
+- legacy_to_next_functional_matrix.md
 - docs/donors/ and docs/_registry/donors.yaml
 - legacy oracle file list
 - donor file list with copy/adapt/rewrite-reference decisions

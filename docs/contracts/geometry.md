@@ -30,7 +30,7 @@ Guardrails:
 - `geometry.no_legacy_scene_order`
 - `geometry.eraser_exact_budget_no_partial`
 Do not assume:
-- do not port old SceneNode traversal
+- do not port legacy SceneNode traversal
 - do not copy legacy scene order logic
 <!-- CONTEXT:END -->
 

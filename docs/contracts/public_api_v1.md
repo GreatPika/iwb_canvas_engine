@@ -30,7 +30,7 @@ Related diagrams:
 Required tests:
 - `test.api_contract.public_api_v1_compiles_as_written`
 - `test.api_contract.no_undefined_public_type_references`
-- `test.api_contract.no_old_public_symbols`
+- `test.api_contract.no_legacy_public_symbols`
 - `test.api_contract.dto_immutability`
 - `test.api.typed_action_payloads`
 - `test.flutter_bridge.interactive_false_pending_line_preserved`

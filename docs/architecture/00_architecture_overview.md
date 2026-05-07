@@ -51,7 +51,7 @@ iwb_canvas_engine
 Старый движок используется только как **functional oracle**:
 
 ```text
-old iwb_canvas_engine
+legacy iwb_canvas_engine package
   -> показывает, какие сценарии, edge cases, события, проверки и performance probes нельзя потерять;
   -> не задаёт форму нового публичного API;
   -> не импортируется новым package;
@@ -77,7 +77,7 @@ v1 scope additions over legacy functional behavior:
 Запрещено в новом package:
 
 ```text
-Old public API:
+Legacy public API:
   - реализовывать legacy facade старого API;
   - экспортировать SceneController;
   - экспортировать SceneSnapshot;
@@ -89,7 +89,7 @@ Old public API:
 
 App integration:
   - размещать AppCanvasPort внутри нового package;
-  - размещать OldEngineAdapter внутри нового package;
+  - размещать LegacyEngineAdapter внутри нового package;
   - размещать NextEngineAdapter внутри нового package.
 
 Runtime and proof:

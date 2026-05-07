@@ -10,14 +10,14 @@ Use rule: donor entries are phase-bound implementation inputs, not legacy archit
 
 ## Geometry, hit-test, and eraser donors
 
-Port these as algorithms over new shape structs, not as old `SceneNode` or
+Port these as algorithms over new shape structs, not as legacy `SceneNode` or
 `NodeSnapshot` APIs.
 
 | Donor | What to preserve | Reuse | Risks | Proof to port |
 |---|---|---:|---|---|
-| `lib/src/core/node_geometry.dart` | hit eligibility, candidate bounds, inverse-transform box hit, line/stroke world radius, path fill/stroke metric sampling with `2048` cap | `adapt` | tightly coupled to old node classes | `test/core/node_geometry_test.dart`, `test/core/hit_test_test.dart`, `test/core/hit_test_candidate_bounds_test.dart` |
+| `lib/src/core/node_geometry.dart` | hit eligibility, candidate bounds, inverse-transform box hit, line/stroke world radius, path fill/stroke metric sampling with `2048` cap | `adapt` | tightly coupled to legacy node classes | `test/core/node_geometry_test.dart`, `test/core/hit_test_test.dart`, `test/core/hit_test_candidate_bounds_test.dart` |
 | `lib/src/core/hit_test.dart` | thin primitive hit facade and `kHitSlop` policy | `adapt` | `hitTestTopNode` traversal is legacy scene-order logic | `test/core/hit_test_test.dart` |
-| `lib/src/render/render_geometry_builder.dart` | unified local/world bounds construction and validity-key idea | `adapt` | old snapshot, text layout, and cache keys | `test/render/render_geometry_cache_test.dart`, `test/render/render_hit_bounds_parity_test.dart` |
+| `lib/src/render/render_geometry_builder.dart` | unified local/world bounds construction and validity-key idea | `adapt` | legacy snapshot, text layout, and cache keys | `test/render/render_geometry_cache_test.dart`, `test/render/render_hit_bounds_parity_test.dart` |
 | `lib/src/interactive/internal/interactive_geometry.dart` | segment batching, segment range bounds, rect-distance prefilter | `copy/adapt` | gesture soft-limit helpers depend on input sampling | `test/interactive/core/interactive_draw_path_buffer_test.dart`, eraser guardrail tests |
-| `lib/src/interactive/internal/interactive_draw_eraser_exact_hit.dart` and line/stroke eraser hit files | projected eraser-to-local algorithm, singular transform fallback, batched exact line/stroke checks | `adapt` | tied to old snapshots, delete eligibility, debug counters | `test/interactive/core/interactive_draw_eraser_engine_test.dart`, eraser lifecycle tests |
+| `lib/src/interactive/internal/interactive_draw_eraser_exact_hit.dart` and line/stroke eraser hit files | projected eraser-to-local algorithm, singular transform fallback, batched exact line/stroke checks | `adapt` | tied to legacy snapshots, delete eligibility, debug counters | `test/interactive/core/interactive_draw_eraser_engine_test.dart`, eraser lifecycle tests |
 

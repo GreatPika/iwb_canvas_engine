@@ -92,7 +92,7 @@ Related diagrams:
 Required tests:
 - `test.api_contract.public_api_v1_compiles_as_written`
 - `test.api_contract.no_undefined_public_type_references`
-- `test.api_contract.no_old_public_symbols`
+- `test.api_contract.no_legacy_public_symbols`
 - `test.api_contract.dto_immutability`
 - `test.guardrails.import_boundaries`
 - `test.codec.schema_v1.known_fields_validation`
@@ -163,7 +163,7 @@ Required tests:
 ```text
 test/api_contract/public_api_v1_compiles_as_written_test.dart
 test/api_contract/no_undefined_public_type_references_test.dart
-test/api_contract/no_old_public_symbols_test.dart
+test/api_contract/no_legacy_public_symbols_test.dart
 test/api_contract/dto_immutability_test.dart
 test/api_contract/v1_scope_gate_test.dart
 test/guardrails/import_boundaries_test.dart

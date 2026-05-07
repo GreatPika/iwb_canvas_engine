@@ -41,8 +41,8 @@ trails. Durable target-engine documentation belongs under `docs/`.
 
 Use it only to:
 
-- inspect old behavior;
-- run old tests or examples when needed;
+- inspect legacy behavior;
+- run legacy tests or examples when needed;
 - identify donor code;
 - compare functional behavior;
 - copy or adapt code into the root package when explicitly useful.
@@ -55,13 +55,13 @@ The new engine must not import the legacy package or any `legacy/**` source.
 
 ## Donor Rules
 
-Old code may be used as a donor only through one of these modes:
+Legacy code may be used as a donor only through one of these modes:
 
 - `copy` - move the idea or implementation shape into the root package, then
   make it compile under the new API and package layout.
 - `adapt` - preserve behavior while changing ownership, naming, API, or data
   shape for the new architecture.
-- `rewrite-reference` - use the old code/tests only as behavioral evidence.
+- `rewrite-reference` - use the legacy code/tests only as behavioral evidence.
 
 Every copied or adapted donor must have ported or equivalent tests in the root
 package. If a donor conflicts with the new API, package layout, or no-legacy
@@ -112,5 +112,5 @@ Before changing code, identify whether the change belongs to:
 - workspace-level planning under `plan/`.
 
 Keep these boundaries explicit in final reports. If a command fails after a
-layout change, first suspect stale generated files, package config, or old paths
+layout change, first suspect stale generated files, package config, or stale paths
 before changing implementation code.

@@ -27,7 +27,7 @@ Guardrails:
 - `spatial.stale_candidate_rejected`
 - `spatial.fallback_budget_enforced`
 Do not assume:
-- do not port old Scene or locator maps
+- do not port legacy Scene or locator maps
 - do not rely on stale structuralRevision
 <!-- CONTEXT:END -->
 
@@ -62,7 +62,7 @@ Staged update algorithm:
 
 ```text
 1. compile SpatialDelta from TouchedSet;
-2. prepare removals using old memberships;
+2. prepare removals using previous memberships;
 3. prepare additions using new bounds;
 4. validate ids/generations/revisions;
 5. apply removals;

@@ -56,7 +56,7 @@ documents as the source for current runtime ownership.
 - `verification/` owns proof plans, guardrails, tests, benchmarks, and release
   gates.
 - `implementation/` owns phase-by-phase transition sequencing.
-- `donors/` owns old-engine donor rules and reusable evidence.
+- `donors/` owns legacy-engine donor rules and reusable evidence.
 - `_registry/` owns machine-readable section coverage and donor records.
 
 ## Mechanical checks

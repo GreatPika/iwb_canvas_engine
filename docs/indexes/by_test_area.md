@@ -16,9 +16,9 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 - Guardrails: `api.no_undefined_public_type_references`
 
-## test.api_contract.no_old_public_symbols
+## test.api_contract.no_legacy_public_symbols
 
-- Path: `test/api_contract/no_old_public_symbols_test.dart`
+- Path: `test/api_contract/no_legacy_public_symbols_test.dart`
 - Phases: `P0`, `P2`
 - Sections: `section_03_package_layout`, `section_04_public_api_v1`, `section_23_tests`
 - Guardrails: `api.no_legacy_public_types`

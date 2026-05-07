@@ -3,7 +3,7 @@ Registry id: `section_09_accepted_differences`
 Registry source: `docs/_registry/sections.yaml`
 Document path: `docs/architecture/04_decisions_and_differences.md`
 Owns:
-- 9. Accepted differences from old engine
+- 9. Accepted differences from legacy engine
 Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
 - `section_08_functional_ledger` -> `docs/verification/functional_ledger.md`
@@ -23,7 +23,7 @@ Do not assume:
 - no silent legacy compatibility layer
 <!-- CONTEXT:END -->
 
-## 9. Accepted differences from old engine
+## 9. Accepted differences from legacy engine
 
 | Difference | Decision |
 |---|---|

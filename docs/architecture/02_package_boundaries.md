@@ -14,7 +14,7 @@ Related donors:
 Related diagrams:
 - `c4_container`
 Required tests:
-- `test.api_contract.no_old_public_symbols`
+- `test.api_contract.no_legacy_public_symbols`
 - `test.guardrails.import_boundaries`
 Guardrails:
 - `core.no_legacy_imports`
@@ -163,7 +163,7 @@ lib/src/spatial/**           -> may use only typed spatial delta/read ports, not
 lib/src/resources/**         -> may not import interaction state
 lib/src/codec/**             -> may not import Flutter widgets or interaction state
 lib/src/diagnostics/**       -> may not expose runtime objects, images, closures, or full scene dumps as public diagnostic data
-lib/src/flutter_bridge/**    -> may not import old iwb_canvas_engine
+lib/src/flutter_bridge/**    -> may not import legacy iwb_canvas_engine package
 all lib/**                   -> may not import legacy package or legacy runtime paths
 ```
 

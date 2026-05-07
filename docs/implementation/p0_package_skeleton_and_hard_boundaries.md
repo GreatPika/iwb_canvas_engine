@@ -48,7 +48,7 @@
 
 ## Tests
 
-- `test.api_contract.no_old_public_symbols` -> `test/api_contract/no_old_public_symbols_test.dart`
+- `test.api_contract.no_legacy_public_symbols` -> `test/api_contract/no_legacy_public_symbols_test.dart`
 - `test.guardrails.import_boundaries` -> `test/guardrails/import_boundaries_test.dart`
 - `test.guardrails.required_diagrams_present` -> `test/guardrails/required_diagrams_present_test.dart`
 - `test.guardrails.blocking_suite` -> `test/guardrails/blocking_suite_test.dart`
