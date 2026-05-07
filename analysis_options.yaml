@@ -1,6 +1,10 @@
 analyzer:
   exclude:
     - legacy/**
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.mocks.dart"
+    - build/**
 
   language:
     strict-casts: true
@@ -11,11 +15,72 @@ include: package:flutter_lints/flutter.yaml
 
 linter:
   rules:
-    - avoid_returning_null_for_void
+    # Constructors / factories / object creation
+    prefer_constructors_over_static_methods: true
+    prefer_initializing_formals: true
+    prefer_const_constructors: true
+    prefer_const_constructors_in_immutables: true
+
+    # Classes and mixins
+    avoid_classes_with_only_static_members: true
+    prefer_mixin: true
+
+    # Fields and members
+    prefer_final_fields: true
+    prefer_final_locals: true
+    use_setters_to_change_properties: true
+    avoid_setters_without_getters: true
+    avoid_returning_this: true
+    avoid_returning_null_for_void: true
+
+    # Types and API boundaries
+    always_declare_return_types: true
+    type_annotate_public_apis: true
+    prefer_typing_uninitialized_variables: true
+    omit_local_variable_types: true
+    avoid_types_on_closure_parameters: true
+    type_init_formals: true
+    use_function_type_syntax_for_parameters: true
+    prefer_generic_function_type_aliases: true
+    avoid_private_typedef_functions: true
+    avoid_dynamic_calls: true
+
+    # Parameters
+    avoid_positional_boolean_parameters: true
+    always_put_required_named_parameters_first: true
+
+    # Equality
+    hash_and_equals: true
+    avoid_equals_and_hash_code_on_mutable_classes: true
+    avoid_null_checks_in_equality_operators: true
+
+    # Conversion naming
+    use_to_and_as_if_applicable: true
+
+    # Override hygiene
+    annotate_overrides: true
+    avoid_renaming_method_parameters: true
+    avoid_shadowing_type_parameters: true
+
+    # Async / lifecycle
+    unawaited_futures: true
+    discarded_futures: true
+    avoid_void_async: true
+    cancel_subscriptions: true
+    close_sinks: true
+
+    # Error handling
+    only_throw_errors: true
+    avoid_catches_without_on_clauses: true
+    avoid_catching_errors: true
+
+    # Assertions
+    prefer_asserts_with_message: true
 
 dcm:
   exclude:
     metrics:
+      - docs/**
       - test/**
       - .dart_tool/**
       - build/**
@@ -24,13 +89,20 @@ dcm:
       - "**/*.mocks.dart"
 
   rules:
+    - avoid-assignments-as-conditions
     - avoid-dynamic
+    - avoid-duplicate-exports
+    - avoid-duplicate-named-imports
     - avoid-unused-parameters:
         ignore-inline-functions: true
     - avoid-non-null-assertion:
         skip-checked-fields: true
+    - avoid-nullable-tostring
+    - avoid-passing-async-when-sync-expected
+    - avoid-redundant-async
     - avoid-unrelated-type-assertions
     - avoid-unnecessary-type-assertions
+    - avoid-unnecessary-type-casts
     - avoid-collection-methods-with-unrelated-types:
         strict: true
     - avoid-misused-set-literals
@@ -45,6 +117,10 @@ dcm:
   metrics:
     cyclomatic-complexity:
       threshold: 10
+    halstead-volume:
+      threshold: 1000
+    maintainability-index:
+      threshold: 0.5
     maximum-nesting-level:
       threshold: 4
     number-of-parameters:
