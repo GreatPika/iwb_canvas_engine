@@ -32,6 +32,7 @@ Required tests:
 - `test.api_contract.no_undefined_public_type_references`
 - `test.api_contract.no_legacy_public_symbols`
 - `test.api_contract.dto_immutability`
+- `test.api_contract.public_equality_policy`
 - `test.api.typed_action_payloads`
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
 - `test.api_contract.v1_scope_gate`
@@ -40,6 +41,7 @@ Guardrails:
 - `api.public_api_compiles_as_written`
 - `api.no_undefined_public_type_references`
 - `api.dto_immutability`
+- `api.equality_policy_explicit`
 - `api.id_validation_no_extension_type_escape`
 - `surface.interactive_false_pending_line_preserved`
 Do not assume:
@@ -156,6 +158,73 @@ The root package is Flutter-based. Public API may use:
 - package:flutter/widgets.dart;
 - package:flutter/foundation.dart.
 ```
+
+### 4.1.1 Equality policy
+
+Public equality is part of the API contract. Concrete public classes that are
+not listed here use Dart's default identity equality unless their own section
+explicitly says otherwise. Public enums use normal Dart enum equality. Public
+interfaces, typedefs, and top-level functions do not add an equality contract.
+
+Required value equality:
+
+```text
+CanvasElementId
+CanvasLayerId
+CanvasResourceId
+CanvasActionId
+CanvasTransform
+CanvasOptional and its variants
+CanvasDocumentSummary
+CanvasCamera
+CanvasBackground
+CanvasGrid
+CanvasSelectionStyle
+CanvasGridStyle
+CanvasPointerPolicy
+CanvasPointerSample
+CanvasDrawStyle
+CanvasResourceSource and its variants
+CanvasElementRead
+CanvasMoveResolution and its variants
+CanvasDiagnosticPolicy and its variants
+```
+
+For these types, two independently-created instances with the same public values
+must compare equal with `==` and must have the same `hashCode`.
+`CanvasOptional.value(x)` compares `x` with Dart's normal `==`; it does not add
+special deep equality for arbitrary `List`, `Map`, `Set`, or application-owned
+objects.
+
+Default identity equality:
+
+```text
+CanvasRuntime
+CanvasRuntimeConfig
+CanvasSurface
+CanvasDocument
+CanvasLayer
+CanvasPalette
+CanvasElement and element family types
+CanvasElementUpdate and update family types
+CanvasClearResult
+CanvasPreviewState
+CanvasActionCommitted
+CanvasActionPayload and payload family types
+CanvasTextEditRequested
+CanvasMoveCommitRequest
+CanvasResource and resource family types
+CanvasDataException
+```
+
+These runtime-owned objects, larger snapshots, operation records, event records,
+and exception objects may contain collections, callbacks, source objects, widget
+state, or runtime-specific facts. Callers must compare their ids, revisions, or
+fields explicitly when they need semantic comparison.
+
+Future public types must choose one of these policies in this section before
+implementation. Adding value equality later is an API behavior change and must
+be backed by `test.api_contract.public_equality_policy`.
 
 ### 4.2 Identifier types
 

@@ -50,6 +50,12 @@ Guardrails extracted from split section 22.
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.dto_immutability`, `test.guardrails.blocking_suite`
 
+## api.equality_policy_explicit
+
+- Rule: public value equality is explicit for concrete public classes and covered by API contract tests
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.api_contract.public_equality_policy`, `test.guardrails.blocking_suite`
+
 ## api.id_validation_no_extension_type_escape
 
 - Rule: ids cannot be publicly constructed without validation

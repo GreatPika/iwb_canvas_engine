@@ -25,6 +25,7 @@ Guardrails:
 - `api.public_api_compiles_as_written`
 - `api.no_undefined_public_type_references`
 - `api.dto_immutability`
+- `api.equality_policy_explicit`
 - `api.id_validation_no_extension_type_escape`
 - `core.no_legacy_imports`
 - `core.import_boundaries`
@@ -90,6 +91,7 @@ Mandatory guardrails:
 | `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package |
 | `api.no_undefined_public_type_references` | every exported signature type is exported or from Flutter/Dart SDK |
 | `api.dto_immutability` | DTO collections defensively copied and unmodifiable |
+| `api.equality_policy_explicit` | public value equality is explicit for concrete public classes and covered by API contract tests |
 | `api.id_validation_no_extension_type_escape` | ids cannot be publicly constructed without validation |
 | `core.no_legacy_imports` | no import of legacy package/runtime |
 | `core.import_boundaries` | package-owned source paths obey the forbidden import matrix from `section_03_package_layout` |

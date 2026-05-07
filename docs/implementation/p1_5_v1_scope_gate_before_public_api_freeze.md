@@ -36,6 +36,7 @@
 
 - `codec.known_fields_validated` - known schema v1 fields are validated and canonical encoder writes only v1 fields
 - `api.dto_immutability` - DTO collections defensively copied and unmodifiable
+- `api.equality_policy_explicit` - public value equality is explicit for concrete public classes and covered by API contract tests
 - `api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
 - `api.no_undefined_public_type_references` - every exported signature type is exported or from Flutter/Dart SDK
 - `api.public_api_compiles_as_written` - public API declarations compile in an empty consumer package
@@ -52,6 +53,7 @@
 ## Exit gate
 
 - mandatory v1 scope is green
+- public equality policy is explicit before API freeze
 - public API compiles as written
 - no undefined public type references remain
 - P2 public API freeze is blocked until this gate is green.

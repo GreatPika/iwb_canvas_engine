@@ -104,6 +104,7 @@
     - api.public_api_compiles_as_written
     - api.no_undefined_public_type_references
     - api.dto_immutability
+    - api.equality_policy_explicit
     - api.id_validation_no_extension_type_escape
     - surface.interactive_false_pending_line_preserved
   tests:
@@ -111,6 +112,7 @@
     - test.api_contract.no_undefined_public_type_references
     - test.api_contract.no_legacy_public_symbols
     - test.api_contract.dto_immutability
+    - test.api_contract.public_equality_policy
     - test.api.typed_action_payloads
     - test.flutter_bridge.interactive_false_pending_line_preserved
     - test.api_contract.v1_scope_gate
@@ -665,6 +667,7 @@
     - api.public_api_compiles_as_written
     - api.no_undefined_public_type_references
     - api.dto_immutability
+    - api.equality_policy_explicit
     - api.id_validation_no_extension_type_escape
     - core.no_legacy_imports
     - core.import_boundaries
@@ -813,6 +816,7 @@
     - test.api_contract.no_undefined_public_type_references
     - test.api_contract.no_legacy_public_symbols
     - test.api_contract.dto_immutability
+    - test.api_contract.public_equality_policy
     - test.guardrails.import_boundaries
     - test.codec.schema_v1.known_fields_validation
     - test.codec.schema_v1.resources_appkey_only
@@ -983,6 +987,7 @@
     - api.public_api_compiles_as_written
     - api.no_undefined_public_type_references
     - api.dto_immutability
+    - api.equality_policy_explicit
     - api.id_validation_no_extension_type_escape
     - core.no_legacy_imports
     - core.import_boundaries

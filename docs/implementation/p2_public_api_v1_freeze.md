@@ -6,8 +6,10 @@
 - P1.5 v1 scope gate green
 - id validation implemented
 - CanvasOptional implemented
+- public equality policy implemented
 - public API docs generated
 - DTO immutability tests
+- public equality policy tests
 - public signatures no undefined types.
 
 ## Read first
@@ -53,6 +55,7 @@
 
 - `codec.known_fields_validated` - known schema v1 fields are validated and canonical encoder writes only v1 fields
 - `api.dto_immutability` - DTO collections defensively copied and unmodifiable
+- `api.equality_policy_explicit` - public value equality is explicit for concrete public classes and covered by API contract tests
 - `api.functional_ledger_complete` - every functional ledger row has API + tests
 - `api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
 - `api.no_undefined_public_type_references` - every exported signature type is exported or from Flutter/Dart SDK
@@ -66,6 +69,7 @@
 - `test.api_contract.no_undefined_public_type_references` -> `test/api_contract/no_undefined_public_type_references_test.dart`
 - `test.api_contract.no_legacy_public_symbols` -> `test/api_contract/no_legacy_public_symbols_test.dart`
 - `test.api_contract.dto_immutability` -> `test/api_contract/dto_immutability_test.dart`
+- `test.api_contract.public_equality_policy` -> `test/api_contract/public_equality_policy_test.dart`
 - `test.api.typed_action_payloads` -> `test/api/typed_action_payloads_test.dart`
 - `test.codec.constructor_and_schema_limits` -> `test/codec/constructor_and_schema_limits_test.dart`
 
@@ -74,5 +78,6 @@
 - P1.5 scope gate remains green
 - public API compiles
 - all public constructor validations pass/fail as specified
+- public value equality matches `docs/contracts/public_api_v1.md`
 - legacy public symbols are not exported
 - no public type references internal runtime classes.

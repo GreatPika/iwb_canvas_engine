@@ -43,6 +43,7 @@
 ## Guardrails
 
 - `api.dto_immutability` - DTO collections defensively copied and unmodifiable
+- `api.equality_policy_explicit` - public value equality is explicit for concrete public classes and covered by API contract tests
 - `api.functional_ledger_complete` - every functional ledger row has API + tests
 - `api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
 - `api.no_undefined_public_type_references` - every exported signature type is exported or from Flutter/Dart SDK

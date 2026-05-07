@@ -91,6 +91,7 @@ Guardrails:
 - `api.public_api_compiles_as_written`
 - `api.no_undefined_public_type_references`
 - `api.dto_immutability`
+- `api.equality_policy_explicit`
 - `api.id_validation_no_extension_type_escape`
 - `core.no_legacy_imports`
 - `core.import_boundaries`
@@ -173,7 +174,7 @@ Release is blocked unless all statements are true:
 24. low-level edit emits no user action events tests are green.
 25. interaction stale terminal, resolver-cancel, and interactive=false pending-line tests are green.
 26. surface pointer normalization tests are green.
-27. DTO immutability tests are green.
+27. DTO immutability and public equality policy tests are green.
 28. no CanvasDocument projection in paint/pointer/hit tests are green.
 29. all required diagrams exist and match owners.
 30. phase guardrail alignment is green.
