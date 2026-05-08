@@ -65,6 +65,7 @@
     - core.no_legacy_imports
     - api.no_legacy_public_types
     - core.import_boundaries
+    - core.no_unapproved_part_files
   tests:
     - test.api_contract.no_legacy_public_symbols
     - test.guardrails.import_boundaries
@@ -102,6 +103,9 @@
   guardrails:
     - api.public_types_complete
     - api.public_api_compiles_as_written
+    - api.exported_dartdoc_complete
+    - api.public_class_modifiers_explicit
+    - api.public_signature_shape
     - api.no_undefined_public_type_references
     - api.dto_immutability
     - api.equality_policy_explicit
@@ -665,12 +669,16 @@
     - api.no_legacy_public_types
     - api.public_types_complete
     - api.public_api_compiles_as_written
+    - api.exported_dartdoc_complete
+    - api.public_class_modifiers_explicit
+    - api.public_signature_shape
     - api.no_undefined_public_type_references
     - api.dto_immutability
     - api.equality_policy_explicit
     - api.id_validation_no_extension_type_escape
     - core.no_legacy_imports
     - core.import_boundaries
+    - core.no_unapproved_part_files
     - core.no_scene_controller_shape_dependency
     - core.no_node_spec_patch_shape_dependency
     - core.single_runtime_root
@@ -985,12 +993,16 @@
     - api.no_legacy_public_types
     - api.public_types_complete
     - api.public_api_compiles_as_written
+    - api.exported_dartdoc_complete
+    - api.public_class_modifiers_explicit
+    - api.public_signature_shape
     - api.no_undefined_public_type_references
     - api.dto_immutability
     - api.equality_policy_explicit
     - api.id_validation_no_extension_type_escape
     - core.no_legacy_imports
     - core.import_boundaries
+    - core.no_unapproved_part_files
     - core.no_scene_controller_shape_dependency
     - core.no_node_spec_patch_shape_dependency
     - core.single_runtime_root

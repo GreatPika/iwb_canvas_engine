@@ -23,12 +23,16 @@ Guardrails:
 - `api.no_legacy_public_types`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
+- `api.exported_dartdoc_complete`
+- `api.public_class_modifiers_explicit`
+- `api.public_signature_shape`
 - `api.no_undefined_public_type_references`
 - `api.dto_immutability`
 - `api.equality_policy_explicit`
 - `api.id_validation_no_extension_type_escape`
 - `core.no_legacy_imports`
 - `core.import_boundaries`
+- `core.no_unapproved_part_files`
 - `core.no_scene_controller_shape_dependency`
 - `core.no_node_spec_patch_shape_dependency`
 - `core.single_runtime_root`
@@ -89,12 +93,16 @@ Mandatory guardrails:
 | `api.no_legacy_public_types` | legacy public golden symbols not exported by root package |
 | `api.public_types_complete` | all public signatures reference defined public types |
 | `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package |
+| `api.exported_dartdoc_complete` | exported public declarations have non-empty Dart documentation summaries before API freeze |
+| `api.public_class_modifiers_explicit` | every exported public class chooses an explicit Dart 3 subtype/implementation policy |
+| `api.public_signature_shape` | public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON/metadata boundaries |
 | `api.no_undefined_public_type_references` | every exported signature type is exported or from Flutter/Dart SDK |
 | `api.dto_immutability` | DTO collections defensively copied and unmodifiable |
 | `api.equality_policy_explicit` | public value equality is explicit for concrete public classes and covered by API contract tests |
 | `api.id_validation_no_extension_type_escape` | ids cannot be publicly constructed without validation |
 | `core.no_legacy_imports` | no import of legacy package/runtime |
-| `core.import_boundaries` | package-owned source paths obey the forbidden import matrix from `section_03_package_layout` |
+| `core.import_boundaries` | package-owned source paths obey source boundary rules and the forbidden import matrix from `section_03_package_layout` |
+| `core.no_unapproved_part_files` | production code has no `part` or `part of` files unless generated-code use is explicitly approved |
 | `core.no_scene_controller_shape_dependency` | no `SceneController` concept in core |
 | `core.no_node_spec_patch_shape_dependency` | no legacy NodeSpec/NodePatch/PatchField in core |
 | `core.single_runtime_root` | exactly one production RuntimeRoot |

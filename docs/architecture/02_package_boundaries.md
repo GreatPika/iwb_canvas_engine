@@ -20,6 +20,7 @@ Guardrails:
 - `core.no_legacy_imports`
 - `api.no_legacy_public_types`
 - `core.import_boundaries`
+- `core.no_unapproved_part_files`
 Do not assume:
 - no legacy package import
 - no app adapters in package
@@ -138,6 +139,14 @@ The new package is rooted at the repository top level:
 ```
 
 `lib/iwb_canvas_engine.dart` exports only `src/api/**`.
+
+Source boundary rules:
+
+```text
+lib/iwb_canvas_engine.dart      -> only public barrel for package consumers
+production lib/**               -> no `part` or `part of` files unless generated-code adoption is explicitly approved
+all lib/**                      -> may not import another package's `src/**`
+```
 
 Production-owned тесты зеркалят top-level ownership folders под
 `lib/src/**`: `test/edit/**` покрывает `lib/src/edit/**`, `test/frame/**`

@@ -39,6 +39,9 @@ Required tests:
 Guardrails:
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
+- `api.exported_dartdoc_complete`
+- `api.public_class_modifiers_explicit`
+- `api.public_signature_shape`
 - `api.no_undefined_public_type_references`
 - `api.dto_immutability`
 - `api.equality_policy_explicit`
@@ -159,7 +162,32 @@ The root package is Flutter-based. Public API may use:
 - package:flutter/foundation.dart.
 ```
 
-### 4.1.1 Equality policy
+### 4.1.1 Dart API design constraints
+
+Effective Dart is the baseline for public Dart library design unless this
+contract states a project-specific rule.
+
+Project-specific public API rules:
+
+```text
+- exported public declarations must have a non-empty `///` dartdoc summary
+  before API freeze;
+- public classes must use explicit Dart 3 subtype policy modifiers such as
+  final, sealed, abstract interface, or another deliberate modifier;
+- public signatures must not return FutureOr<T>;
+- public signatures must not return nullable async/container types such as
+  Future<T>?, Stream<T>?, List<T>?, Map<K, V>?, or Set<T>?;
+- use empty collections, Stream.empty(), Future<T?>, or an explicit result type
+  instead of nullable async/container returns;
+- dynamic is allowed only at raw JSON/metadata boundaries and must not leak as a
+  normal public API type;
+- toX() names conversion or copy operations; asX() names backed views or
+  adaptation;
+- the project spelling is Id, not ID, because the public API consistently uses
+  CanvasElementId, CanvasLayerId, CanvasResourceId, and CanvasActionId.
+```
+
+### 4.1.2 Equality policy
 
 Public equality is part of the API contract. Concrete public classes that are
 not listed here use Dart's default identity equality unless their own section

@@ -1815,6 +1815,14 @@ void _checkGuardrailAndTestWitnesses(List<YamlMap> sections) {
   final testIndexSections = _markdownIndexSections(
     'docs/indexes/by_test_area.md',
   );
+  final guardrailIndexTests = _markdownIndexCodeWitnesses(
+    'docs/indexes/by_guardrail.md',
+    'Tests',
+  );
+  final testIndexGuardrails = _markdownIndexCodeWitnesses(
+    'docs/indexes/by_test_area.md',
+    'Guardrails',
+  );
 
   _checkSetEquality(
     'sections.yaml guardrails vs docs/verification/guardrails.md',
@@ -1846,6 +1854,7 @@ void _checkGuardrailAndTestWitnesses(List<YamlMap> sections) {
     registryTestSections,
     testIndexSections,
   );
+  _checkGuardrailTestIndexSymmetry(guardrailIndexTests, testIndexGuardrails);
 }
 
 Set<String> _collectRegistryIds(List<YamlMap> sections, String field) {
@@ -1914,6 +1923,39 @@ Map<String, Set<String>> _markdownIndexSections(String path) {
   return sectionsByHeading;
 }
 
+Map<String, Set<String>> _markdownIndexCodeWitnesses(
+  String path,
+  String label,
+) {
+  _requireFile(path);
+  final text = _read(path);
+  final valuesByHeading = <String, Set<String>>{};
+  final blocks = text.split(RegExp(r'^##\s+', multiLine: true));
+
+  for (final block in blocks.skip(1)) {
+    final lines = block.split('\n');
+    final heading = lines.first.trim();
+    final body = lines.skip(1).join('\n');
+    final match = RegExp(
+      '^- ${RegExp.escape(label)}: (.+)\$',
+      multiLine: true,
+    ).firstMatch(body);
+    if (match == null) {
+      _fail('$path heading $heading has no $label witness line');
+      valuesByHeading[heading] = const <String>{};
+      continue;
+    }
+    final line = _matchGroup(match, 1, '$path $heading $label line');
+    valuesByHeading[heading] = RegExp(r'`([^`]+)`')
+        .allMatches(line)
+        .map((match) => _matchGroup(match, 1, '$path $label reference'))
+        .where((id) => id != 'none')
+        .toSet();
+  }
+
+  return valuesByHeading;
+}
+
 void _checkSetEquality(String label, Set<String> expected, Set<String> actual) {
   final missing = expected.difference(actual).toList()..sort();
   final extra = actual.difference(expected).toList()..sort();
@@ -1922,6 +1964,37 @@ void _checkSetEquality(String label, Set<String> expected, Set<String> actual) {
   }
   for (final id in extra) {
     _fail('$label has stale or unknown $id');
+  }
+}
+
+void _checkGuardrailTestIndexSymmetry(
+  Map<String, Set<String>> guardrailToTests,
+  Map<String, Set<String>> testToGuardrails,
+) {
+  for (final entry in guardrailToTests.entries) {
+    final guardrail = entry.key;
+    for (final test in entry.value) {
+      final testGuardrails = testToGuardrails[test] ?? const <String>{};
+      if (!testGuardrails.contains(guardrail)) {
+        _fail(
+          'docs/indexes/by_test_area.md $test must list $guardrail because '
+          'docs/indexes/by_guardrail.md lists $test',
+        );
+      }
+    }
+  }
+
+  for (final entry in testToGuardrails.entries) {
+    final test = entry.key;
+    for (final guardrail in entry.value) {
+      final guardrailTests = guardrailToTests[guardrail] ?? const <String>{};
+      if (!guardrailTests.contains(test)) {
+        _fail(
+          'docs/indexes/by_guardrail.md $guardrail must list $test because '
+          'docs/indexes/by_test_area.md lists $guardrail',
+        );
+      }
+    }
   }
 }
 

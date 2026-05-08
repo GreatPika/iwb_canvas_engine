@@ -230,6 +230,33 @@ test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart
 test/interaction/no_stale_terminal_commit_test.dart
 ```
 
+Guardrail test ownership:
+
+```text
+test/api_contract/public_api_v1_compiles_as_written_test.dart
+  -> compiles the exported API declarations in an empty consumer package;
+  -> uses analyzer AST over exported public declarations to verify non-empty
+     dartdoc summaries for api.exported_dartdoc_complete;
+  -> uses analyzer AST over exported public classes to verify explicit Dart 3
+     subtype policy modifiers for api.public_class_modifiers_explicit.
+
+test/api_contract/no_undefined_public_type_references_test.dart
+  -> verifies every exported signature type is exported or from Flutter/Dart SDK;
+  -> uses analyzer AST over exported public signatures to reject FutureOr<T>
+     returns, nullable async/container returns, and dynamic outside approved
+     JSON/metadata boundaries for api.public_signature_shape.
+
+test/guardrails/import_boundaries_test.dart
+  -> verifies package-owned source paths obey the forbidden import matrix;
+  -> rejects imports from another package's src/**;
+  -> scans production lib/** Dart files for part/part of directives and allows
+     them only through an explicit generated-code approval list.
+
+test/guardrails/blocking_suite_test.dart
+  -> proves every mandatory blocking guardrail is represented by an executable
+     test and included in the P0/P12 blocking suite.
+```
+
 Functional ledger rows still require row-specific tests.
 Runtime coverage must include api, edit, interaction, frame, spatial, geometry, codec/schema_v1, resources, flutter_bridge, and diagnostics tests.
 

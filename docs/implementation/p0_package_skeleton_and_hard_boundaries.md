@@ -6,6 +6,7 @@
 - create public barrel exporting only src/api/**
 - add `api.no_legacy_public_types` guardrail
 - add `core.no_legacy_imports` guardrail
+- add `core.no_unapproved_part_files` guardrail
 - add RuntimeRoot skeleton
 - add diagram file placeholders
 - add CI target for the root package
@@ -41,7 +42,8 @@
 - `diagrams.all_required_present` - required Mermaid files exist
 - `api.no_legacy_public_types` - legacy public golden symbols not exported by root package
 - `core.no_legacy_imports` - no import of legacy package/runtime
-- `core.import_boundaries` - package-owned source paths obey the forbidden import matrix
+- `core.import_boundaries` - package-owned source paths obey source boundary rules and the forbidden import matrix
+- `core.no_unapproved_part_files` - production code has no `part` or `part of` files unless generated-code use is explicitly approved
 - `core.no_node_spec_patch_shape_dependency` - no legacy NodeSpec/NodePatch/PatchField in core
 - `core.no_scene_controller_shape_dependency` - no SceneController concept in core
 - `core.single_runtime_root` - exactly one production RuntimeRoot
@@ -49,7 +51,7 @@
 ## Tests
 
 - `test.api_contract.no_legacy_public_symbols` -> `test/api_contract/no_legacy_public_symbols_test.dart`
-- `test.guardrails.import_boundaries` -> `test/guardrails/import_boundaries_test.dart`
+- `test.guardrails.import_boundaries` -> `test/guardrails/import_boundaries_test.dart`; also enforces no imports from another package's `src/**` and no unapproved production `part` / `part of` directives
 - `test.guardrails.required_diagrams_present` -> `test/guardrails/required_diagrams_present_test.dart`
 - `test.guardrails.blocking_suite` -> `test/guardrails/blocking_suite_test.dart`
 
@@ -58,5 +60,6 @@
 - root package builds empty public API skeleton
 - legacy package not imported
 - forbidden `lib/src/**` import boundaries are enforced
+- production `lib/**` contains no unapproved `part` or `part of` directives
 - legacy public symbols not exported
 - all required public type names have files.

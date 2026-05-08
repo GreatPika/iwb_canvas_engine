@@ -7,7 +7,8 @@
 - id validation implemented
 - CanvasOptional implemented
 - public equality policy implemented
-- public API docs generated
+- exported public API has non-empty dartdoc summaries
+- public signatures obey Dart API design constraints from `section_04_public_api_v1`
 - DTO immutability tests
 - public equality policy tests
 - public signatures no undefined types.
@@ -56,17 +57,20 @@
 - `codec.known_fields_validated` - known schema v1 fields are validated and canonical encoder writes only v1 fields
 - `api.dto_immutability` - DTO collections defensively copied and unmodifiable
 - `api.equality_policy_explicit` - public value equality is explicit for concrete public classes and covered by API contract tests
+- `api.exported_dartdoc_complete` - exported public declarations have non-empty Dart documentation summaries before API freeze
 - `api.functional_ledger_complete` - every functional ledger row has API + tests
 - `api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
 - `api.no_undefined_public_type_references` - every exported signature type is exported or from Flutter/Dart SDK
+- `api.public_class_modifiers_explicit` - every exported public class chooses an explicit Dart 3 subtype/implementation policy
 - `api.public_api_compiles_as_written` - public API declarations compile in an empty consumer package
+- `api.public_signature_shape` - public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON/metadata boundaries
 - `api.public_types_complete` - all public signatures reference defined public types
 - `api.v1_scope_gate_green_before_freeze` - P1.5 scope gate passed before public API freeze starts
 
 ## Tests
 
-- `test.api_contract.public_api_v1_compiles_as_written` -> `test/api_contract/public_api_v1_compiles_as_written_test.dart`
-- `test.api_contract.no_undefined_public_type_references` -> `test/api_contract/no_undefined_public_type_references_test.dart`
+- `test.api_contract.public_api_v1_compiles_as_written` -> `test/api_contract/public_api_v1_compiles_as_written_test.dart`; also checks exported dartdoc and explicit public class modifiers with analyzer AST
+- `test.api_contract.no_undefined_public_type_references` -> `test/api_contract/no_undefined_public_type_references_test.dart`; also checks public signature shape with analyzer AST
 - `test.api_contract.no_legacy_public_symbols` -> `test/api_contract/no_legacy_public_symbols_test.dart`
 - `test.api_contract.dto_immutability` -> `test/api_contract/dto_immutability_test.dart`
 - `test.api_contract.public_equality_policy` -> `test/api_contract/public_equality_policy_test.dart`
@@ -77,6 +81,9 @@
 
 - P1.5 scope gate remains green
 - public API compiles
+- exported public API has non-empty dartdoc summaries
+- public classes have explicit subtype policy modifiers
+- public signatures avoid `FutureOr`, nullable async/container returns, and unapproved `dynamic`
 - all public constructor validations pass/fail as specified
 - public value equality matches `docs/contracts/public_api_v1.md`
 - legacy public symbols are not exported

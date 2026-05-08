@@ -38,6 +38,24 @@ Guardrails extracted from split section 22.
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.public_api_v1_compiles_as_written`, `test.guardrails.blocking_suite`
 
+## api.exported_dartdoc_complete
+
+- Rule: exported public declarations have non-empty Dart documentation summaries before API freeze
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.api_contract.public_api_v1_compiles_as_written`, `test.guardrails.blocking_suite`
+
+## api.public_class_modifiers_explicit
+
+- Rule: every exported public class chooses an explicit Dart 3 subtype/implementation policy
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.api_contract.public_api_v1_compiles_as_written`, `test.guardrails.blocking_suite`
+
+## api.public_signature_shape
+
+- Rule: public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON/metadata boundaries
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.api_contract.no_undefined_public_type_references`, `test.guardrails.blocking_suite`
+
 ## api.no_undefined_public_type_references
 
 - Rule: every exported signature type is exported or from Flutter/Dart SDK
@@ -192,7 +210,7 @@ Guardrails extracted from split section 22.
 
 - Rule: no record allocation on successful hot path
 - Sections: `section_20_diagnostics_hub`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.blocking_suite`
+- Tests: `test.diagnostics.sanitizer_and_public_projection`, `test.guardrails.blocking_suite`
 
 ## diagrams.all_required_present
 
@@ -226,7 +244,13 @@ Guardrails extracted from split section 22.
 
 ## core.import_boundaries
 
-- Rule: package-owned source paths obey the forbidden import matrix from `section_03_package_layout`
+- Rule: package-owned source paths obey source boundary rules and the forbidden import matrix from `section_03_package_layout`
+- Sections: `section_03_package_layout`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.guardrails.import_boundaries`, `test.guardrails.blocking_suite`
+
+## core.no_unapproved_part_files
+
+- Rule: production code has no `part` or `part of` files unless generated-code use is explicitly approved
 - Sections: `section_03_package_layout`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.guardrails.import_boundaries`, `test.guardrails.blocking_suite`
 
