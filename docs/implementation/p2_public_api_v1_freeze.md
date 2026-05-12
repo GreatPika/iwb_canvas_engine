@@ -1,17 +1,29 @@
 # P2 - public API v1 freeze
 
-## Build
+## Purpose
 
-- all src/api DTOs implemented
+Implement and freeze the public v1 API surface so runtime, codec, resource,
+interaction, frame, and Flutter phases build against stable DTOs, ports, events,
+errors, validation rules, and equality semantics.
+
+## Build scope
+
+- all `src/api` DTOs implemented
 - P1.5 v1 scope gate green
 - id validation implemented
-- CanvasOptional implemented
+- `CanvasOptional` implemented
 - public equality policy implemented
 - exported public API has non-empty dartdoc summaries
 - public signatures obey Dart API design constraints from `section_04_public_api_v1`
 - DTO immutability tests
 - public equality policy tests
 - public signatures no undefined types.
+
+## Dependencies on earlier phases
+
+- P0 package boundaries are enforced.
+- P1 oracle and donor inventory are complete.
+- P1.5 scope gate is green.
 
 ## Read first
 
@@ -52,22 +64,15 @@
 - `dfd_diagnostics_error_projection` -> `docs/diagrams/dfd_diagnostics_error_projection.mmd`
 - `dfd_public_edit` -> `docs/diagrams/dfd_public_edit.mmd`
 
-## Guardrails
+## Contracts satisfied by this phase
 
-- `codec.known_fields_validated` - known schema v1 fields are validated and canonical encoder writes only v1 fields
-- `api.dto_immutability` - DTO collections defensively copied and unmodifiable
-- `api.equality_policy_explicit` - public value equality is explicit for concrete public classes and covered by API contract tests
-- `api.exported_dartdoc_complete` - exported public declarations have non-empty Dart documentation summaries before API freeze
-- `api.functional_ledger_complete` - every functional ledger row has API + tests
-- `api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
-- `api.no_undefined_public_type_references` - every exported signature type is exported or from Flutter/Dart SDK
-- `api.public_class_modifiers_explicit` - every exported public class chooses an explicit Dart 3 subtype/implementation policy
-- `api.public_api_compiles_as_written` - public API declarations compile in an empty consumer package
-- `api.public_signature_shape` - public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON/metadata boundaries
-- `api.public_types_complete` - all public signatures reference defined public types
-- `api.v1_scope_gate_green_before_freeze` - P1.5 scope gate passed before public API freeze starts
+- full public API declarations from `section_04_public_api_v1`
+- validation limit enforcement at public constructors from `section_06_validation_limits`
+- accepted legacy differences from `section_09_accepted_differences`
+- public DTO immutability, equality, id validation, class modifiers, dartdoc,
+  and signature-shape obligations from `section_23_tests`
 
-## Tests
+## Tests and guardrails that prove this phase
 
 - `test.api_contract.public_api_v1_compiles_as_written` -> `test/api_contract/public_api_v1_compiles_as_written_test.dart`; also checks exported dartdoc and explicit public class modifiers with analyzer AST
 - `test.api_contract.no_undefined_public_type_references` -> `test/api_contract/no_undefined_public_type_references_test.dart`; also checks public signature shape with analyzer AST
@@ -76,6 +81,19 @@
 - `test.api_contract.public_equality_policy` -> `test/api_contract/public_equality_policy_test.dart`
 - `test.api.typed_action_payloads` -> `test/api/typed_action_payloads_test.dart`
 - `test.codec.constructor_and_schema_limits` -> `test/codec/constructor_and_schema_limits_test.dart`
+- `api.v1_scope_gate_green_before_freeze`
+- `api.public_types_complete`
+- `api.public_api_compiles_as_written`
+- `api.exported_dartdoc_complete`
+- `api.public_class_modifiers_explicit`
+- `api.public_signature_shape`
+- `api.no_undefined_public_type_references`
+- `api.no_legacy_public_types`
+- `api.dto_immutability`
+- `api.equality_policy_explicit`
+- `api.id_validation_no_extension_type_escape`
+- `api.functional_ledger_complete`
+- `codec.known_fields_validated`
 
 ## Exit gate
 
@@ -88,3 +106,15 @@
 - public value equality matches `docs/contracts/public_api_v1.md`
 - legacy public symbols are not exported
 - no public type references internal runtime classes.
+
+## Risks and trade-offs
+
+- Freezing too little would force runtime phases to invent internal public types.
+- Freezing too much would lock in unproved behavior. The API must expose the v1
+  surface only, while runtime semantics remain proved phase by phase.
+
+## Why this phase belongs here
+
+All runtime phases consume public DTOs, updates, ports, ids, events, and errors.
+They need stable public contracts before internal state or feature behavior is
+implemented.

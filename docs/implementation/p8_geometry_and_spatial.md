@@ -1,19 +1,40 @@
-# P7 - spatial and geometry
+# P8 - geometry and spatial kernels
 
-## Build
+## Purpose
 
-- GeometryPolicy v1
-- HitTestPolicy v1
-- TileIndex
-- OutlierIndex
-- touched spatial update
+Implement geometry, hit-test, paint-admission, and spatial candidate lookup
+before frame rendering and interaction depend on bounded element queries.
+
+## Build scope
+
+- `GeometryPolicy` v1
+- `HitTestPolicy` v1
+- transform, local bounds, hit bounds, and paint bounds policy
 - exact family hit tests
-- paint admission.
+- paint admission
+- eraser geometry primitives and exact-check budget foundations
+- `SpatialKernel`
+- `TileIndex`
+- `OutlierIndex`
+- `SpatialMembership`
+- touched spatial update
+- stale candidate generation/structuralRevision rejection
+- fallback query budget and typed budget-exceeded result
+- no global scene traversal or legacy scene order logic.
+
+## Dependencies on earlier phases
+
+- P2 public geometry and element DTOs are frozen.
+- P4 runtime spine owns committed facts and revisions.
+- P5 edit core produces touched sets and typed invalidation effects.
+- P7 resource/image rows exist for image geometry and paint admission.
 
 ## Read first
 
+- `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 - `section_16_geometry_policy` -> `docs/contracts/geometry.md`
 - `section_17_spatial_kernel` -> `docs/contracts/spatial_kernel.md`
+- `section_23_tests` -> `docs/verification/tests.md`
 
 ## Required donors
 
@@ -43,15 +64,16 @@
 
 - `dfd_cache_invalidation` -> `docs/diagrams/dfd_cache_invalidation.mmd`
 - `dfd_pointer_preview_commit` -> `docs/diagrams/dfd_pointer_preview_commit.mmd`
+- `dfd_spatial_query_budget` -> `docs/diagrams/dfd_spatial_query_budget.mmd`
 
-## Guardrails
+## Contracts satisfied by this phase
 
-- `geometry.no_legacy_scene_order` - geometry and hit-test policy does not reuse legacy SceneNode traversal or scene order logic
-- `spatial.no_full_clone_ordinary_edit` - ordinary spatial edits update touched ids/pages only
-- `spatial.stale_candidate_rejected` - stale generation or structuralRevision candidate handles are rejected before use
-- `spatial.fallback_budget_enforced` - fallback candidate union enforces maxFallbackCandidates and typed budget-exceeded behavior
+- geometry and hit-test policy from `section_16_geometry_policy`
+- spatial index, touched update, stale candidate, and fallback budget contracts
+  from `section_17_spatial_kernel`
+- geometry-dependent invalidation facts from `section_10_runtime_data_model`
 
-## Tests
+## Tests and guardrails that prove this phase
 
 - `test.geometry.hit_policy` -> `test/geometry/hit_policy_test.dart`
 - `test.geometry.no_legacy_scene_order` -> `test/geometry/no_legacy_scene_order_test.dart`
@@ -59,6 +81,10 @@
 - `test.spatial.no_full_clone_for_touched_update` -> `test/spatial/no_full_clone_for_touched_update_test.dart`
 - `test.spatial.stale_generation_rejected` -> `test/spatial/stale_generation_rejected_test.dart`
 - `test.spatial.fallback_budget_enforced` -> `test/spatial/fallback_budget_enforced_test.dart`
+- `geometry.no_legacy_scene_order`
+- `spatial.no_full_clone_ordinary_edit`
+- `spatial.stale_candidate_rejected`
+- `spatial.fallback_budget_enforced`
 
 ## Exit gate
 
@@ -68,4 +94,18 @@
 - touched-only spatial update green
 - no legacy scene order tests green
 - stale candidate rejection tests green
-- fallback budget tests green.
+- fallback budget tests green
+- eraser exact-hit algorithm inputs are available for P12 terminal behavior.
+
+## Risks and trade-offs
+
+- Porting legacy traversal would couple geometry to old scene order. Geometry
+  must operate over next-owned rows and order tokens.
+- Silent full-scene fallback would hide performance regressions. Budget-exceeded
+  results must be typed and non-partial.
+
+## Why this phase belongs here
+
+Frame rendering, selection, move, draw, text hit-testing, and eraser all need
+bounded geometry and spatial queries. P8 follows store/edit/resources and
+precedes frame and interaction behavior.

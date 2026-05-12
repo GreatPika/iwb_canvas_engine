@@ -9,7 +9,7 @@ Must read before editing:
 - `section_17_spatial_kernel` -> `docs/contracts/spatial_kernel.md`
 - `section_18_cache_policy` -> `docs/contracts/cache_policy.md`
 Feeds phases:
-- `P12`
+- `P14`
 Related donors:
 - `direct_scan_resistant_cache`
 Related diagrams:

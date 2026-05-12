@@ -1,11 +1,18 @@
 # P1 - legacy capability inventory and oracle lock
 
-## Build
+## Purpose
 
-- legacy_to_next_functional_matrix.md
-- docs/donors/ and docs/_registry/donors.yaml
+Lock the old engine as a functional oracle and donor inventory before new
+runtime implementation starts, without allowing the legacy public API or legacy
+runtime shape to become the new package architecture.
+
+## Build scope
+
+- `legacy_to_next_functional_matrix.md`
+- `docs/donors/` and `docs/_registry/donors.yaml`
 - legacy oracle file list
-- donor file list with copy/adapt/rewrite-reference decisions
+- donor file list with `copy`, `copy/adapt`, `adapt`, `adapt/rewrite`, and
+  `rewrite-reference` decisions
 - example scenario inventory
 - action/event inventory
 - pointer/preview inventory
@@ -13,9 +20,15 @@
 - codec/limits inventory
 - benchmark baseline inventory.
 
+## Dependencies on earlier phases
+
+- P0 package skeleton and no-legacy guardrails are present.
+
 ## Read first
 
 - `section_08_functional_ledger` -> `docs/verification/functional_ledger.md`
+- `docs/donors/00_reuse_rules.md`
+- `docs/_registry/donors.yaml`
 
 ## Legacy evidence inputs
 
@@ -93,15 +106,20 @@ Use the donor registry and donor docs to cover these important donor families:
 
 ## Diagrams to read or update
 
-- none
+- none.
 
-## Guardrails
+## Contracts satisfied by this phase
 
-- `api.functional_ledger_complete` - every functional ledger row has API + tests
+- functional ledger completeness from `section_08_functional_ledger`
+- donor rule that every implementation donor has a phase, owner, decision, and
+  ported or equivalent proof before use
+- legacy boundary rule that legacy code is oracle/donor evidence only and never
+  a production dependency
 
-## Tests
+## Tests and guardrails that prove this phase
 
 - `test.functional_ledger.row_specific_tests` -> `test/functional_ledger/row_specific_tests_test.dart`
+- `api.functional_ledger_complete`
 
 ## Exit gate
 
@@ -110,3 +128,16 @@ Use the donor registry and donor docs to cover these important donor families:
 - each reusable donor has a decision, target phase and required ported tests
 - copy/adapt donors are linked from the relevant implementation phase
 - no implementation proceeds without green inventory guardrail.
+
+## Risks and trade-offs
+
+- Copying legacy structure would violate the target architecture. P1 records
+  behavior and donor decisions, not new package structure.
+- Skipping donor proof would make later phase closure depend on memory of legacy
+  behavior instead of executable coverage.
+
+## Why this phase belongs here
+
+All implementation phases after P1 rely on knowing which legacy behavior must be
+preserved, which donor code is reusable, and which legacy shells are forbidden.
+That evidence must be closed before public API freeze and runtime work.

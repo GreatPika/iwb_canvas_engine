@@ -8,9 +8,10 @@ Must read before editing:
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 - `section_17_spatial_kernel` -> `docs/contracts/spatial_kernel.md`
 Feeds phases:
-- `P8`
-- `P10`
-- `P12`
+- `P7`
+- `P9`
+- `P13`
+- `P14`
 Related donors:
 - `direct_scan_resistant_cache`
 - `scene_render_caches`

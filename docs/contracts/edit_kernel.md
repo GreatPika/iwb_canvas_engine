@@ -8,7 +8,11 @@ Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 Feeds phases:
+- `P5`
 - `P6`
+- `P10`
+- `P11`
+- `P12`
 Related donors:
 - `interaction_mutation_boundary`
 - `staged_load_runtime_materialization`

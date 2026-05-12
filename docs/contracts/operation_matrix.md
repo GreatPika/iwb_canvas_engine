@@ -8,7 +8,12 @@ Must read before editing:
 - `section_11_edit_kernel` -> `docs/contracts/edit_kernel.md`
 - `section_12_load_document` -> `docs/contracts/load_document.md`
 Feeds phases:
+- `P5`
 - `P6`
+- `P7`
+- `P10`
+- `P11`
+- `P12`
 Related donors:
 - `interaction_mutation_boundary`
 Related diagrams:

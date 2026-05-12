@@ -7,7 +7,7 @@
   decision: copy
   target_phases:
     - P2
-    - P7
+    - P8
   target_owner: GeometryPolicy numeric tolerance foundation
   use_for:
     - clamp and tolerance behavior
@@ -17,7 +17,7 @@
     - "geometry and hit-test tests"
   blocks:
     - P2
-    - P7
+    - P8
   related_sections:
     - section_04_public_api_v1
     - section_16_geometry_policy
@@ -28,8 +28,8 @@
     - lib/src/core/local_bounds_policy.dart
   decision: copy
   target_phases:
-    - P7
     - P8
+    - P9
   target_owner: GeometryPolicy local bounds
   use_for:
     - local bounds policy parity
@@ -39,8 +39,8 @@
     - test/render/render_geometry_cache_test.dart
     - test/render/render_hit_bounds_parity_test.dart
   blocks:
-    - P7
     - P8
+    - P9
   related_sections:
     - section_16_geometry_policy
     - section_15_frame_render_contract
@@ -51,8 +51,8 @@
     - lib/src/core/paint_candidate_admission.dart
   decision: copy
   target_phases:
-    - P7
     - P8
+    - P9
   target_owner: Paint admission policy
   use_for:
     - "edge-touch paint candidate admission"
@@ -62,8 +62,8 @@
     - test/render/scene_painter_bounds_contract_test.dart
     - plan/step_37_paint_admission_edge_touch_parity.md
   blocks:
-    - P7
     - P8
+    - P9
   related_sections:
     - section_16_geometry_policy
     - section_15_frame_render_contract
@@ -74,8 +74,8 @@
     - lib/src/render/cache/scan_resistant_cache.dart
   decision: copy
   target_phases:
-    - P8
-    - P12
+    - P9
+    - P14
   target_owner: Render cache policy
   use_for:
     - "bounded scan-resistant cache behavior"
@@ -85,8 +85,8 @@
     - test/render/scan_resistant_cache_test.dart
     - test/render/render_cache_policy_contract_test.dart
   blocks:
-    - P8
-    - P12
+    - P9
+    - P14
   related_sections:
     - section_18_cache_policy
     - section_24_benchmarks
@@ -97,7 +97,7 @@
     - lib/src/core/pointer_input_tracker.dart
   decision: copy
   target_phases:
-    - P9
+    - P10
   target_owner: Pointer session tap tracking
   use_for:
     - tap timing and pointer tracking
@@ -106,7 +106,7 @@
   required_tests:
     - test/core/pointer_input_test.dart
   blocks:
-    - P9
+    - P10
   related_sections:
     - section_14_interaction_engine
   notes: "Direct-copy candidate with new owner."
@@ -116,7 +116,7 @@
     - lib/src/view/scene_view_pointer_router.dart
   decision: copy
   target_phases:
-    - P10
+    - P13
   target_owner: CanvasSurface pointer adapter
   use_for:
     - Flutter pointer routing behavior
@@ -125,7 +125,7 @@
   required_tests:
     - test/view/scene_view_pointer_router_test.dart
   blocks:
-    - P10
+    - P13
   related_sections:
     - section_14_interaction_engine
   notes: Surface integration donor.
@@ -135,7 +135,7 @@
     - lib/src/interactive/internal/interactive_gesture_machine.dart
   decision: copy
   target_phases:
-    - P9
+    - P10
   target_owner: InteractionEngine gesture ownership
   use_for:
     - "single-pointer ownership policy"
@@ -145,7 +145,7 @@
     - test/interactive/core/interactive_move_session_test.dart
     - "single-pointer policy tests"
   blocks:
-    - P9
+    - P10
   related_sections:
     - section_14_interaction_engine
   notes: Copy behavior into new InteractionEngine owner.
@@ -179,7 +179,7 @@
   target_phases:
     - P2
     - P3
-    - P7
+    - P8
   target_owner: CanvasTransform and geometry math
   use_for:
     - "2D affine math, inverse handling, point and rect transform, canvas matrix layout"
@@ -190,7 +190,7 @@
   blocks:
     - P2
     - P3
-    - P7
+    - P8
   related_sections:
     - section_04_public_api_v1
     - section_05_schema_v1_contract
@@ -202,7 +202,7 @@
     - lib/src/core/geometry.dart
   decision: copy_adapt
   target_phases:
-    - P7
+    - P8
   target_owner: GeometryPolicy v1
   use_for:
     - "AABB, stroke bounds, singular value helpers, distances"
@@ -211,7 +211,7 @@
   required_tests:
     - geometry policy tests
   blocks:
-    - P7
+    - P8
   related_sections:
     - section_16_geometry_policy
   notes: Port as algorithms over next shape structs.
@@ -337,7 +337,9 @@
   decision: copy_adapt
   target_phases:
     - P2
-    - P9
+    - P10
+    - P11
+    - P12
   target_owner: Canvas pointer API and InteractionEngine
   use_for:
     - "pointer phases, policy validation, device kind handling"
@@ -348,7 +350,9 @@
     - interaction pointer lifecycle tests
   blocks:
     - P2
-    - P9
+    - P10
+    - P11
+    - P12
   related_sections:
     - section_04_public_api_v1
     - section_14_interaction_engine
@@ -360,7 +364,9 @@
   decision: adapt
   target_phases:
     - P2
-    - P9
+    - P10
+    - P11
+    - P12
   target_owner: CanvasActionEvent and text edit events
   use_for:
     - "immutable events, timestamp normalization, text edit request evidence"
@@ -370,7 +376,9 @@
     - test/api/typed_action_payloads_test.dart
   blocks:
     - P2
-    - P9
+    - P10
+    - P11
+    - P12
   related_sections:
     - section_04_public_api_v1
     - section_14_interaction_engine
@@ -381,7 +389,7 @@
     - lib/src/core/node_geometry.dart
   decision: adapt
   target_phases:
-    - P7
+    - P8
   target_owner: GeometryPolicy and HitTestPolicy
   use_for:
     - "hit eligibility, candidate bounds, inverse transform hits, line/stroke radius, path fill/stroke sampling cap"
@@ -392,7 +400,7 @@
     - test/core/hit_test_test.dart
     - test/core/hit_test_candidate_bounds_test.dart
   blocks:
-    - P7
+    - P8
   related_sections:
     - section_16_geometry_policy
   notes: Algorithm over next structs.
@@ -402,7 +410,7 @@
     - lib/src/core/hit_test.dart
   decision: adapt
   target_phases:
-    - P7
+    - P8
   target_owner: HitTestPolicy v1
   use_for:
     - primitive hit behavior and hit slop policy
@@ -411,7 +419,7 @@
   required_tests:
     - test/core/hit_test_test.dart
   blocks:
-    - P7
+    - P8
   related_sections:
     - section_16_geometry_policy
   notes: Traversal belongs to next spatial/store order.
@@ -421,8 +429,8 @@
     - lib/src/render/render_geometry_builder.dart
   decision: adapt
   target_phases:
-    - P7
     - P8
+    - P9
   target_owner: RenderElementRecord geometry construction
   use_for:
     - "local/world bounds and validity-key idea"
@@ -432,8 +440,8 @@
     - test/render/render_geometry_cache_test.dart
     - test/render/render_hit_bounds_parity_test.dart
   blocks:
-    - P7
     - P8
+    - P9
   related_sections:
     - section_15_frame_render_contract
     - section_16_geometry_policy
@@ -444,8 +452,10 @@
     - lib/src/interactive/internal/interactive_geometry.dart
   decision: copy_adapt
   target_phases:
-    - P7
-    - P9
+    - P8
+    - P10
+    - P11
+    - P12
   target_owner: Draw and eraser geometry helpers
   use_for:
     - "segment batching, segment bounds, rect-distance prefilter"
@@ -455,8 +465,10 @@
     - test/interactive/core/interactive_draw_path_buffer_test.dart
     - eraser guardrail tests
   blocks:
-    - P7
-    - P9
+    - P8
+    - P10
+    - P11
+    - P12
   related_sections:
     - section_14_interaction_engine
     - section_16_geometry_policy
@@ -468,8 +480,8 @@
     - line/stroke eraser hit files
   decision: adapt
   target_phases:
-    - P7
-    - P9
+    - P8
+    - P12
   target_owner: "Eraser exact-hit engine"
   use_for:
     - "projected eraser-to-local algorithm, singular transform fallback, batched exact checks"
@@ -479,8 +491,8 @@
     - test/interactive/core/interactive_draw_eraser_engine_test.dart
     - eraser lifecycle tests
   blocks:
-    - P7
-    - P9
+    - P8
+    - P12
   related_sections:
     - section_14_interaction_engine
     - section_16_geometry_policy
@@ -491,7 +503,7 @@
     - lib/src/core/scene_spatial_index.dart
   decision: adapt
   target_phases:
-    - P7
+    - P8
   target_owner: SpatialKernel tile and outlier indexes
   use_for:
     - "uniform-grid index, hit/paint entries, outlier fallback, structuralRevision payload concept"
@@ -500,7 +512,7 @@
   required_tests:
     - spatial index tests
   blocks:
-    - P7
+    - P8
   related_sections:
     - section_17_spatial_kernel
   notes: Runtime owner changes completely.
@@ -510,8 +522,8 @@
     - lib/src/controller/internal/spatial_index_cache.dart
   decision: adapt
   target_phases:
-    - P7
     - P8
+    - P9
   target_owner: SpatialKernel invalidation cache
   use_for:
     - "lazy build, epoch invalidation, incremental commit, fallback rebuild, debug counters"
@@ -520,8 +532,8 @@
   required_tests:
     - touched spatial update tests
   blocks:
-    - P7
     - P8
+    - P9
   related_sections:
     - section_17_spatial_kernel
     - section_18_cache_policy
@@ -532,8 +544,8 @@
     - lib/src/controller/scene_store_controller.dart spatial query/resolve paths
   decision: adapt
   target_phases:
-    - P5
-    - P7
+    - P4
+    - P8
   target_owner: DocumentStoreKernel committed read and candidate resolve
   use_for:
     - opaque committed candidates and stale structuralRevision rejection
@@ -543,8 +555,8 @@
     - committed read tests
     - spatial stale candidate tests
   blocks:
-    - P5
-    - P7
+    - P4
+    - P8
   related_sections:
     - section_10_runtime_data_model
     - section_17_spatial_kernel
@@ -555,7 +567,7 @@
     - lib/src/core/snapshot_paint_admission_bounds.dart
   decision: adapt
   target_phases:
-    - P8
+    - P9
   target_owner: FrameEngine paint bounds cache
   use_for:
     - "bounded snapshot-local paint-bounds cache idea"
@@ -564,7 +576,7 @@
   required_tests:
     - paint bounds cache tests
   blocks:
-    - P8
+    - P9
   related_sections:
     - section_15_frame_render_contract
   notes: Frame cache donor.
@@ -574,7 +586,7 @@
     - lib/src/core/scene_snapshot_paint_candidates.dart
   decision: adapt
   target_phases:
-    - P8
+    - P9
   target_owner: FrameEngine fallback candidate enumeration
   use_for:
     - fallback enumeration and selected preview widened visibility rect
@@ -583,7 +595,7 @@
   required_tests:
     - paint candidate tests
   blocks:
-    - P8
+    - P9
   related_sections:
     - section_15_frame_render_contract
   notes: Use only where next fallback needs it.
@@ -593,7 +605,7 @@
     - lib/src/contract/scene_view_render_state.dart
   decision: adapt
   target_phases:
-    - P8
+    - P9
   target_owner: Captured frame model
   use_for:
     - "atomic frame-read and immutable preview snapshot model"
@@ -603,7 +615,7 @@
     - main capture tests
     - overlay capture tests
   blocks:
-    - P8
+    - P9
   related_sections:
     - section_15_frame_render_contract
   notes: Do not leak legacy public surface.
@@ -613,7 +625,7 @@
     - lib/src/interactive/internal/scene_controller_scene_view_runtime.dart
   decision: adapt
   target_phases:
-    - P8
+    - P9
   target_owner: FrameEngine committed fast path
   use_for:
     - committed fast path only when frame snapshot matches committed snapshot
@@ -622,7 +634,7 @@
   required_tests:
     - frame snapshot consistency tests
   blocks:
-    - P8
+    - P9
   related_sections:
     - section_15_frame_render_contract
   notes: "Fast-path behavior only."
@@ -632,7 +644,7 @@
     - lib/src/interactive/internal/scene_controller_paint_candidate_stage.dart
   decision: adapt
   target_phases:
-    - P8
+    - P9
   target_owner: PaintPlan staging
   use_for:
     - "ordered paint plan, selected supplements, preview shifted bounds, merge without global sort"
@@ -641,7 +653,7 @@
   required_tests:
     - selected supplement staging tests
   blocks:
-    - P8
+    - P9
   related_sections:
     - section_15_frame_render_contract
   notes: Requires next order token.
@@ -651,8 +663,8 @@
     - lib/src/render/scene_painter_frame.dart
   decision: adapt
   target_phases:
-    - P8
-    - P10
+    - P9
+    - P13
   target_owner: Main and overlay painters
   use_for:
     - "viewport calculation, halo visibility budget, single paint-plan call"
@@ -662,8 +674,8 @@
     - painter frame tests
     - widget paint tests
   blocks:
-    - P8
-    - P10
+    - P9
+    - P13
   related_sections:
     - section_15_frame_render_contract
   notes: Surface integration donor.
@@ -673,8 +685,8 @@
     - lib/src/render/scene_render_caches.dart
   decision: adapt
   target_phases:
-    - P8
-    - P10
+    - P9
+    - P13
   target_owner: Render cache owner lifecycle
   use_for:
     - "single render-cache owner lifecycle and epoch/controller swap clearing"
@@ -683,8 +695,8 @@
   required_tests:
     - render cache lifecycle tests
   blocks:
-    - P8
-    - P10
+    - P9
+    - P13
   related_sections:
     - section_15_frame_render_contract
     - section_18_cache_policy
@@ -695,8 +707,8 @@
     - lib/src/render/cache/scene_static_layer_cache.dart
   decision: adapt
   target_phases:
-    - P8
-    - P10
+    - P9
+    - P13
   target_owner: Optional static layer cache
   use_for:
     - recorded grid/background cache and Picture.dispose lifecycle
@@ -705,8 +717,8 @@
   required_tests:
     - static layer cache disposal tests
   blocks:
-    - P8
-    - P10
+    - P9
+    - P13
   related_sections:
     - section_15_frame_render_contract
     - section_18_cache_policy
@@ -719,7 +731,7 @@
     - lib/src/render/cache/scene_path_metrics_cache.dart
   decision: adapt
   target_phases:
-    - P8
+    - P9
   target_owner: Render family caches
   use_for:
     - "text layout, stroke path and path metrics cache shapes"
@@ -728,7 +740,7 @@
   required_tests:
     - render cache key tests
   blocks:
-    - P8
+    - P9
   related_sections:
     - section_15_frame_render_contract
     - section_18_cache_policy
@@ -822,7 +834,7 @@
   decision: adapt
   target_phases:
     - P3
-    - P5
+    - P4
   target_owner: Codec and store mapping families
   use_for:
     - mapping families between boundary DTOs and runtime rows
@@ -832,7 +844,7 @@
     - DTO to runtime mapping tests
   blocks:
     - P3
-    - P5
+    - P4
   related_sections:
     - section_05_schema_v1_contract
     - section_10_runtime_data_model
@@ -843,8 +855,8 @@
     - "lib/src/model/document_*.dart"
   decision: adapt
   target_phases:
+    - P4
     - P5
-    - P6
   target_owner: DocumentStoreKernel and EditKernel helpers
   use_for:
     - "pure document edit, clone and selection helpers"
@@ -854,8 +866,8 @@
     - store kernel tests
     - edit kernel tests
   blocks:
+    - P4
     - P5
-    - P6
   related_sections:
     - section_10_runtime_data_model
     - section_11_edit_kernel
@@ -1052,7 +1064,7 @@
     - tool/audit_schema_family_parity.dart
   decision: adapt
   target_phases:
-    - P12
+    - P14
   target_owner: Tooling guardrail
   use_for:
     - "static schema-family parity audit if next keeps field-record schema families"
@@ -1061,7 +1073,7 @@
   required_tests:
     - tooling guardrail smoke tests
   blocks:
-    - P12
+    - P14
   related_sections:
     - section_22_guardrails_machine_checks
   notes: Conditional tooling donor.
@@ -1071,7 +1083,7 @@
     - lib/src/view/scene_view_interactive_pointer_host.dart
   decision: adapt
   target_phases:
-    - P10
+    - P13
   target_owner: CanvasSurface pointer host
   use_for:
     - "finite admission, terminal release in finally, session replacement reset"
@@ -1080,7 +1092,7 @@
   required_tests:
     - surface pointer host tests
   blocks:
-    - P10
+    - P13
   related_sections:
     - section_14_interaction_engine
   notes: Flutter surface donor.
@@ -1090,8 +1102,10 @@
     - lib/src/interactive/internal/scene_controller_pointer_session.dart
   decision: adapt
   target_phases:
-    - P9
     - P10
+    - P13
+    - P11
+    - P12
   target_owner: InteractionEngine pointer session
   use_for:
     - "session detach/dispose, pending tap timer, settings adoption only when raw pointers idle"
@@ -1100,8 +1114,10 @@
   required_tests:
     - pointer session lifecycle tests
   blocks:
-    - P9
     - P10
+    - P13
+    - P11
+    - P12
   related_sections:
     - section_14_interaction_engine
   notes: Timer lifecycle needs careful ownership.
@@ -1111,7 +1127,9 @@
     - lib/src/interactive/internal/interactive_pointer_normalizer.dart
   decision: copy_adapt
   target_phases:
-    - P9
+    - P10
+    - P11
+    - P12
   target_owner: Pointer sample normalizer
   use_for:
     - "non-finite sample filtering and terminal recovery from last finite point"
@@ -1120,7 +1138,9 @@
   required_tests:
     - pointer normalization tests
   blocks:
-    - P9
+    - P10
+    - P11
+    - P12
   related_sections:
     - section_14_interaction_engine
   notes: "Preserve session-token behavior."
@@ -1130,7 +1150,9 @@
     - lib/src/interactive/internal/interactive_event_dispatcher.dart
   decision: adapt
   target_phases:
-    - P9
+    - P10
+    - P11
+    - P12
   target_owner: Interaction event dispatch
   use_for:
     - "monotonic timestamp resolution, stream ownership, deferred notify scheduling"
@@ -1139,7 +1161,9 @@
   required_tests:
     - event dispatch tests
   blocks:
-    - P9
+    - P10
+    - P11
+    - P12
   related_sections:
     - section_14_interaction_engine
   notes: Notification contract must match next API.
@@ -1149,7 +1173,7 @@
     - lib/src/interactive/internal/interactive_double_tap_router.dart
   decision: adapt
   target_phases:
-    - P9
+    - P12
   target_owner: Text edit request router
   use_for:
     - "text double-tap edit-request routing"
@@ -1158,7 +1182,7 @@
   required_tests:
     - text edit request tests
   blocks:
-    - P9
+    - P12
   related_sections:
     - section_14_interaction_engine
   notes: "Depends on new text hit-test."
@@ -1169,7 +1193,9 @@
     - lib/src/interactive/internal/interactive_runtime.dart
   decision: adapt
   target_phases:
-    - P9
+    - P10
+    - P11
+    - P12
   target_owner: InteractionEngine dispatch order and cleanup
   use_for:
     - "dispatch order, reentrancy guard, terminal cleanup, external mutation interruption"
@@ -1179,7 +1205,9 @@
     - interaction state tests
     - terminal cleanup tests
   blocks:
-    - P9
+    - P10
+    - P11
+    - P12
   related_sections:
     - section_14_interaction_engine
   notes: "Behavior only, not structure."
@@ -1190,7 +1218,7 @@
     - move coordinators
   decision: adapt
   target_phases:
-    - P9
+    - P10
   target_owner: Move and marquee interaction machines
   use_for:
     - "move preview, marquee selection, commit-on-up, cancel restore"
@@ -1200,7 +1228,7 @@
     - move preview tests
     - marquee selection tests
   blocks:
-    - P9
+    - P10
   related_sections:
     - section_14_interaction_engine
   notes: "Depends on new selection, hit-test and mutation callbacks."
@@ -1213,7 +1241,8 @@
     - action emitter
   decision: adapt_rewrite
   target_phases:
-    - P9
+    - P11
+    - P12
   target_owner: "Draw, line and eraser machines"
   use_for:
     - "stroke, line, eraser lifecycle, pending line state, exception-safe terminal cleanup"
@@ -1224,7 +1253,8 @@
     - "line two-tap tests"
     - eraser lifecycle tests
   blocks:
-    - P9
+    - P11
+    - P12
   related_sections:
     - section_14_interaction_engine
   notes: Rewrite shell around next models.
@@ -1234,8 +1264,10 @@
     - lib/src/interactive/internal/scene_controller_mutation_boundary.dart
   decision: adapt
   target_phases:
-    - P6
-    - P9
+    - P5
+    - P10
+    - P11
+    - P12
   target_owner: "Interaction-owned mutation bridge into EditKernel"
   use_for:
     - "single interaction-owned bridge into committed writes"
@@ -1245,8 +1277,10 @@
     - mutation boundary tests
     - interaction commit tests
   blocks:
-    - P6
-    - P9
+    - P5
+    - P10
+    - P11
+    - P12
   related_sections:
     - section_11_edit_kernel
     - section_12_load_document
@@ -1262,7 +1296,7 @@
   decision: adapt
   target_phases:
     - P6
-    - P9
+    - P10
   target_owner: loadDocument staged materialization
   use_for:
     - "validate/materialize first, interrupt active interaction only before successful apply, consume prepared replacement once"
@@ -1272,7 +1306,7 @@
     - loadDocument staged tests
   blocks:
     - P6
-    - P9
+    - P10
   related_sections:
     - section_11_edit_kernel
     - section_12_load_document
@@ -1363,7 +1397,9 @@
   required_tests:
     - "none"
   blocks:
-    - P9
+    - P10
+    - P11
+    - P12
   related_sections:
     - section_14_interaction_engine
   notes: Use targeted behavior donor instead.
@@ -1422,8 +1458,8 @@
   required_tests:
     - "none"
   blocks:
-    - P5
-    - P7
+    - P4
+    - P8
   related_sections:
     - section_10_runtime_data_model
     - section_17_spatial_kernel

@@ -36,21 +36,27 @@ are not part of the current contract.
 
 ## Implementation phases
 
-Use these files as the working sequence:
+Use these files as the working sequence. P0-P3 are foundation gates. P4-P14
+are dependency-ordered implementation phases that close one working runtime or
+user-visible behavior slice at a time while preserving the contracts listed in
+each phase file.
 
 1. `docs/implementation/p0_package_skeleton_and_hard_boundaries.md`
 2. `docs/implementation/p1_legacy_oracle_lock.md`
 3. `docs/implementation/p1_5_v1_scope_gate_before_public_api_freeze.md`
 4. `docs/implementation/p2_public_api_v1_freeze.md`
 5. `docs/implementation/p3_schema_v1_dto_validation_and_codec_skeleton.md`
-6. `docs/implementation/p4_resources.md`
-7. `docs/implementation/p5_store_kernel_and_projection_cache.md`
-8. `docs/implementation/p6_edit_kernel.md`
-9. `docs/implementation/p7_spatial_and_geometry.md`
-10. `docs/implementation/p8_frame_engine_and_render_caches.md`
-11. `docs/implementation/p9_interaction_engine.md`
-12. `docs/implementation/p10_flutter_surface.md`
-13. `docs/implementation/p12_benchmarks_diagrams_and_release_readiness.md`
+6. `docs/implementation/p4_runtime_spine.md`
+7. `docs/implementation/p5_edit_core.md`
+8. `docs/implementation/p6_load_document.md`
+9. `docs/implementation/p7_resources_and_images.md`
+10. `docs/implementation/p8_geometry_and_spatial.md`
+11. `docs/implementation/p9_frame_rendering_and_caches.md`
+12. `docs/implementation/p10_selection_and_move.md`
+13. `docs/implementation/p11_draw_tools.md`
+14. `docs/implementation/p12_eraser_and_text_request.md`
+15. `docs/implementation/p13_flutter_surface.md`
+16. `docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md`
 
 ## Donor rule
 

@@ -10,7 +10,9 @@ Must read before editing:
 - `section_14_interaction_engine` -> `docs/contracts/interaction_engine.md`
 Feeds phases:
 - `P6`
-- `P9`
+- `P10`
+- `P11`
+- `P12`
 Related donors:
 - `staged_load_runtime_materialization`
 - `validated_import_draft`

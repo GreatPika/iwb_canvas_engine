@@ -9,8 +9,9 @@ Must read before editing:
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 - `section_18_cache_policy` -> `docs/contracts/cache_policy.md`
 Feeds phases:
-- `P4`
-- `P10`
+- `P7`
+- `P9`
+- `P13`
 Related donors:
 - `none`
 Related diagrams:

@@ -1,21 +1,40 @@
-# P9 - interaction engine
+# P10 - selection, marquee, and selected move
 
-## Build
+## Purpose
 
-- pointer session lifecycle
-- move/select/marquee machine
-- pencil/marker draw machine
-- two-tap line machine
-- eraser machine
-- text double-tap router
-- terminal cleanup
-- synchronous move resolver guard.
+Implement the move-mode interaction slice: selection APIs, marquee selection,
+selected move preview, selected move commit/cancel, move resolver safety, and
+typed user action events.
+
+## Build scope
+
+- `CanvasSelectionPort`
+- selection set/toggle/clear/selectAll behavior
+- selection move/rotate/flip/delete commands
+- pointer session lifecycle needed for move mode
+- pointer sample normalization and terminal cleanup
+- move/select/marquee state machines
+- selected move main-scene preview
+- selected move resolver called only on valid terminal commit
+- selected move cancel paths never call resolver
+- stale terminal samples cannot commit
+- interaction commits only through `EditKernel`
+- typed selection, transform, delete, and move action payloads
+- loadDocument success/failure interaction ordering for active move sessions.
+
+## Dependencies on earlier phases
+
+- P5 edit core owns all committed mutations.
+- P6 loadDocument owns staged replacement and interrupt ordering.
+- P8 geometry/spatial provides hit-testing and marquee candidates.
+- P9 frame rendering provides selected supplement staging and main repaint path.
 
 ## Read first
 
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 - `section_12_load_document` -> `docs/contracts/load_document.md`
 - `section_14_interaction_engine` -> `docs/contracts/interaction_engine.md`
+- `section_16_geometry_policy` -> `docs/contracts/geometry.md`
 - `section_23_tests` -> `docs/verification/tests.md`
 
 ## Required donors
@@ -25,14 +44,11 @@
 - `foundation_pointer_input_contract` - decision: `copy/adapt`; target owner: Canvas pointer API and InteractionEngine
 - `foundation_action_event_immutability` - decision: `adapt`; target owner: CanvasActionEvent and text edit events
 - `geometry_interactive_geometry` - decision: `copy/adapt`; target owner: Draw and eraser geometry helpers
-- `geometry_eraser_exact_hit` - decision: `adapt`; target owner: Eraser exact-hit engine
 - `interaction_pointer_session` - decision: `adapt`; target owner: InteractionEngine pointer session
 - `interaction_pointer_normalizer` - decision: `copy/adapt`; target owner: Pointer sample normalizer
 - `interaction_event_dispatcher` - decision: `adapt`; target owner: Interaction event dispatch
-- `interaction_double_tap_router` - decision: `adapt`; target owner: Text edit request router
 - `interaction_gesture_runtime` - decision: `adapt`; target owner: InteractionEngine dispatch order and cleanup
 - `interaction_move_session` - decision: `adapt`; target owner: Move and marquee interaction machines
-- `interaction_draw_coordinator` - decision: `adapt/rewrite`; target owner: Draw, line and eraser machines
 - `interaction_mutation_boundary` - decision: `adapt`; target owner: Interaction-owned mutation bridge into EditKernel
 - `staged_load_runtime_materialization` - decision: `adapt`; target owner: loadDocument staged materialization
 
@@ -51,40 +67,25 @@
 - `dfd_pointer_preview_commit` -> `docs/diagrams/dfd_pointer_preview_commit.mmd`
 - `dfd_public_edit` -> `docs/diagrams/dfd_public_edit.mmd`
 - `seq_dispose_during_gesture` -> `docs/diagrams/seq_dispose_during_gesture.mmd`
-- `seq_eraser_commit` -> `docs/diagrams/seq_eraser_commit.mmd`
-- `seq_line_two_tap_commit` -> `docs/diagrams/seq_line_two_tap_commit.mmd`
 - `seq_load_document_failure` -> `docs/diagrams/seq_load_document_failure.mmd`
 - `seq_load_document_success` -> `docs/diagrams/seq_load_document_success.mmd`
 - `seq_marquee_select` -> `docs/diagrams/seq_marquee_select.mmd`
-- `seq_pencil_marker_commit` -> `docs/diagrams/seq_pencil_marker_commit.mmd`
 - `seq_selected_move_cancel` -> `docs/diagrams/seq_selected_move_cancel.mmd`
 - `seq_selected_move_preview_commit` -> `docs/diagrams/seq_selected_move_preview_commit.mmd`
-- `seq_text_edit_request` -> `docs/diagrams/seq_text_edit_request.mmd`
-- `state_eraser` -> `docs/diagrams/state_eraser.mmd`
-- `state_pencil_marker_draw` -> `docs/diagrams/state_pencil_marker_draw.mmd`
-- `state_pending_text_edit_request` -> `docs/diagrams/state_pending_text_edit_request.mmd`
 - `state_pointer_session` -> `docs/diagrams/state_pointer_session.mmd`
 - `state_select_marquee` -> `docs/diagrams/state_select_marquee.mmd`
 - `state_selected_move` -> `docs/diagrams/state_selected_move.mmd`
-- `state_two_tap_line` -> `docs/diagrams/state_two_tap_line.mmd`
 
-## Guardrails
+## Contracts satisfied by this phase
 
-- `load.prepares_before_interrupt` - failed load does not interrupt gesture
-- `load.success_interrupts_before_install` - success interrupt happens before atomic install
-- `api.dto_immutability` - DTO collections defensively copied and unmodifiable
-- `api.equality_policy_explicit` - public value equality is explicit for concrete public classes and covered by API contract tests
-- `api.functional_ledger_complete` - every functional ledger row has API + tests
-- `api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
-- `api.no_undefined_public_type_references` - every exported signature type is exported or from Flutter/Dart SDK
-- `api.public_api_compiles_as_written` - public API declarations compile in an empty consumer package
-- `api.public_types_complete` - all public signatures reference defined public types
-- `preview.selected_move_main_repaint` - selected move preview increments main repaint, not overlay
-- `interaction.no_concrete_store_imports` - InteractionEngine uses EditKernel and narrow query ports, not concrete store mutation
-- `interaction.no_resolver_on_cancel_paths` - selected-move resolver is not called on cancel/load/mode/interactive=false/dispose paths
-- `interaction.no_stale_terminal_commit` - stale terminal samples cannot create commit intent
+- pointer session lifecycle, selected move preview target, resolver rules, and
+  move/marquee interaction behavior from `section_14_interaction_engine`
+- load success/failure interaction ordering from `section_12_load_document`
+- selection, command, action event, and move resolver API from
+  `section_04_public_api_v1`
+- selected move repaint/caching interaction with `section_15_frame_render_contract`
 
-## Tests
+## Tests and guardrails that prove this phase
 
 - `test.api.typed_action_payloads` -> `test/api/typed_action_payloads_test.dart`
 - `test.interaction.commands_emit_user_actions` -> `test/interaction/commands_emit_user_actions_test.dart`
@@ -93,14 +94,37 @@
 - `test.interaction.move_resolver_reentrancy` -> `test/interaction/move_resolver_reentrancy_test.dart`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup` -> `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`
 - `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
+- `preview.selected_move_main_repaint`
+- `events.commands_emit_user_actions`
+- `load.prepares_before_interrupt`
+- `load.success_interrupts_before_install`
+- `interaction.no_concrete_store_imports`
+- `interaction.no_resolver_on_cancel_paths`
+- `interaction.no_stale_terminal_commit`
 
 ## Exit gate
 
-- all interaction state tests green
-- pending line preview exposed
-- text edit event emitted
+- selection API behavior is green
+- marquee selection commits through `EditKernel`
+- selected move preview increments main repaint, not overlay repaint
+- selected move commit emits typed move action only after atomic install
 - resolver cannot reenter mutation
-- resolver is not called on cancel cleanup paths
+- resolver is not called on cancel, load, mode change, dispose, or stale terminal cleanup paths
 - stale terminal samples do not commit
-- loadDocument failure preserves gesture
-- loadDocument success clears gesture.
+- loadDocument failure preserves active move gesture
+- loadDocument success clears active move gesture.
+
+## Risks and trade-offs
+
+- Interaction must not read or mutate store directly. Every committed mutation
+  goes through `EditKernel`; every committed fact comes through narrow query
+  ports.
+- Selected move is intentionally separated from draw and eraser to keep preview,
+  resolver, and frame-staging proof focused.
+
+## Why this phase belongs here
+
+Selection and move are the first user-visible interaction paths that need
+geometry, spatial queries, edit commits, load interruption, and frame preview
+support. They should land before draw and eraser machines reuse pointer/session
+infrastructure.

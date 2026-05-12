@@ -73,14 +73,17 @@ const _phaseDocs = {
   'P1.5': 'docs/implementation/p1_5_v1_scope_gate_before_public_api_freeze.md',
   'P2': 'docs/implementation/p2_public_api_v1_freeze.md',
   'P3': 'docs/implementation/p3_schema_v1_dto_validation_and_codec_skeleton.md',
-  'P4': 'docs/implementation/p4_resources.md',
-  'P5': 'docs/implementation/p5_store_kernel_and_projection_cache.md',
-  'P6': 'docs/implementation/p6_edit_kernel.md',
-  'P7': 'docs/implementation/p7_spatial_and_geometry.md',
-  'P8': 'docs/implementation/p8_frame_engine_and_render_caches.md',
-  'P9': 'docs/implementation/p9_interaction_engine.md',
-  'P10': 'docs/implementation/p10_flutter_surface.md',
-  'P12': 'docs/implementation/p12_benchmarks_diagrams_and_release_readiness.md',
+  'P4': 'docs/implementation/p4_runtime_spine.md',
+  'P5': 'docs/implementation/p5_edit_core.md',
+  'P6': 'docs/implementation/p6_load_document.md',
+  'P7': 'docs/implementation/p7_resources_and_images.md',
+  'P8': 'docs/implementation/p8_geometry_and_spatial.md',
+  'P9': 'docs/implementation/p9_frame_rendering_and_caches.md',
+  'P10': 'docs/implementation/p10_selection_and_move.md',
+  'P11': 'docs/implementation/p11_draw_tools.md',
+  'P12': 'docs/implementation/p12_eraser_and_text_request.md',
+  'P13': 'docs/implementation/p13_flutter_surface.md',
+  'P14': 'docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md',
 };
 
 final _errors = <String>[];
@@ -90,6 +93,7 @@ void main() {
   _checkRequiredEntrypoints();
   _checkSectionsRegistry();
   _checkDiagramCatalogRegistrySymmetry();
+  _checkImplementationDiagramPhaseReferences();
   _checkMarkdownPaths();
   _checkNoRetiredActiveReferences();
   _checkImplementationPhaseClarity();
@@ -233,6 +237,50 @@ void _checkDiagramCatalogRegistrySymmetry() {
   }
 }
 
+void _checkImplementationDiagramPhaseReferences() {
+  final catalogPhases = _loadDiagramCatalogPhases('docs/diagrams/README.md');
+
+  for (final entry in _phaseDocs.entries) {
+    final phase = entry.key;
+    final path = entry.value;
+    _requireFile(path);
+    final text = _read(path);
+    final heading = RegExp(
+      r'^## Diagrams to read or update\s*$',
+      multiLine: true,
+    ).firstMatch(text);
+    if (heading == null) {
+      _fail('$path has no "Diagrams to read or update" section');
+      continue;
+    }
+    final rest = text.substring(heading.end);
+    final nextHeading = RegExp(r'^##\s+', multiLine: true).firstMatch(rest);
+    final section = nextHeading == null
+        ? rest
+        : rest.substring(0, nextHeading.start);
+    for (final match in RegExp(
+      r'^- `([^`]+)` -> `docs/diagrams/[^`]+\.mmd`$',
+      multiLine: true,
+    ).allMatches(section)) {
+      final diagramId = _matchGroup(match, 1, '$path diagram reference');
+      final phases = catalogPhases[diagramId];
+      if (phases == null) {
+        _fail(
+          '$path references diagram $diagramId, '
+          'but docs/diagrams/README.md does not catalog it',
+        );
+        continue;
+      }
+      if (!phases.contains(phase)) {
+        _fail(
+          '$path references diagram $diagramId, but '
+          'docs/diagrams/README.md does not list $phase under $diagramId',
+        );
+      }
+    }
+  }
+}
+
 void _checkMarkdownPaths() {
   final roots = [
     Directory('docs/architecture'),
@@ -325,6 +373,48 @@ Map<String, Set<String>> _loadDiagramCatalog(String path) {
     _requireFile(expectedPath, source: path);
 
     catalog[diagramId] = sections;
+  }
+
+  return catalog;
+}
+
+Map<String, Set<String>> _loadDiagramCatalogPhases(String path) {
+  _requireFile(path);
+  final text = _read(path);
+  final catalog = <String, Set<String>>{};
+  final blocks = text.split(RegExp(r'^##\s+', multiLine: true));
+
+  for (final block in blocks.skip(1)) {
+    final lines = block.split('\n');
+    if (lines.isEmpty) {
+      continue;
+    }
+    final diagramId = lines.first.trim();
+    if (diagramId.isEmpty) {
+      continue;
+    }
+
+    final phases = <String>{};
+    for (final line in lines.skip(1)) {
+      final phasesMatch = RegExp(r'^- Related phases: (.+)$').firstMatch(line);
+      if (phasesMatch == null) {
+        continue;
+      }
+      final relatedPhases = _matchGroup(
+        phasesMatch,
+        1,
+        '$path related phases line',
+      );
+      for (final match in RegExp(r'`(P[^`]+)`').allMatches(relatedPhases)) {
+        final phase = _matchGroup(match, 1, '$path phase reference');
+        phases.add(phase);
+        if (!_phaseDocs.containsKey(phase)) {
+          _fail('$path catalog entry $diagramId references unknown phase $phase');
+        }
+      }
+    }
+
+    catalog[diagramId] = phases;
   }
 
   return catalog;
@@ -1183,7 +1273,7 @@ void _checkHotPathDesignContract() {
     'define opacity/saveLayer and render primitive cache miss hot-path policy',
   );
   _requireTokens(
-    'docs/implementation/p10_flutter_surface.md',
+    'docs/implementation/p13_flutter_surface.md',
     [
       'Flutter painters apply ordinary element/stroke opacity through primitive paint alpha',
       'Flutter painters do not call `Canvas.saveLayer` for ordinary opacity in the hot paint path',

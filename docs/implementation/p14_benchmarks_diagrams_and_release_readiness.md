@@ -1,15 +1,26 @@
-# P12 - benchmarks, diagrams, release readiness
+# P14 - benchmarks, diagrams, and release readiness
 
-Sequence note: no P11 phase is currently defined; P12 is the final
-release-readiness gate after P10.
+## Purpose
 
-## Build
+Close the implementation by proving that functional ledger rows, guardrails,
+diagrams, benchmarks, donor use, phase alignment, and final release gates all
+match the target architecture.
+
+## Build scope
 
 - all required diagrams complete
 - benchmark baselines
 - benchmark diff tool
 - all guardrails blocking
-- release checklist.
+- release checklist
+- phase guardrail alignment
+- final functional ledger closure
+- no app adapters inside the engine package.
+
+## Dependencies on earlier phases
+
+- P0-P13 implementation phases are complete and their phase-local exit gates are
+  green.
 
 ## Read first
 
@@ -49,6 +60,7 @@ release-readiness gate after P10.
 - `dfd_public_edit` -> `docs/diagrams/dfd_public_edit.mmd`
 - `dfd_resource_resolution` -> `docs/diagrams/dfd_resource_resolution.mmd`
 - `dfd_schema_v1_decode_encode` -> `docs/diagrams/dfd_schema_v1_decode_encode.mmd`
+- `dfd_spatial_query_budget` -> `docs/diagrams/dfd_spatial_query_budget.mmd`
 - `seq_dispose_during_gesture` -> `docs/diagrams/seq_dispose_during_gesture.mmd`
 - `seq_edit_rollback` -> `docs/diagrams/seq_edit_rollback.mmd`
 - `seq_edit_success` -> `docs/diagrams/seq_edit_success.mmd`
@@ -75,18 +87,26 @@ release-readiness gate after P10.
 - `state_selected_move` -> `docs/diagrams/state_selected_move.mmd`
 - `state_two_tap_line` -> `docs/diagrams/state_two_tap_line.mmd`
 
-## Guardrails
+## Contracts satisfied by this phase
 
-- `diagnostics.disabled_no_alloc_hot_path` - no record allocation on successful hot path
-- `diagrams.all_required_present` - required Mermaid files exist
-- `api.functional_ledger_complete` - every functional ledger row has API + tests
+- functional ledger closure from `section_08_functional_ledger`
+- diagnostics hot-path and sanitizer closure from `section_20_diagnostics_hub`
+- mandatory guardrail suite from `section_22_guardrails_machine_checks`
+- complete required test inventory from `section_23_tests`
+- benchmark policy and required cases from `section_24_benchmarks`
+- final release gates from `section_27_final_release_gates`
 
-## Tests
+## Tests and guardrails that prove this phase
 
 - `test.functional_ledger.row_specific_tests` -> `test/functional_ledger/row_specific_tests_test.dart`
 - `test.benchmarks.required_cases` -> `test/benchmarks/required_cases_test.dart`
 - `test.guardrails.required_diagrams_present` -> `test/guardrails/required_diagrams_present_test.dart`
 - `test.guardrails.blocking_suite` -> `test/guardrails/blocking_suite_test.dart`
+- `diagnostics.disabled_no_alloc_hot_path`
+- `diagrams.all_required_present`
+- `api.functional_ledger_complete`
+- every guardrail listed in `section_22_guardrails_machine_checks`
+- every final release gate listed in `section_27_final_release_gates`
 
 ## Exit gate
 
@@ -97,4 +117,18 @@ release-readiness gate after P10.
 - no legacy imports
 - no legacy facade
 - phase guardrail alignment green
-- no app adapters in package.
+- no app adapters in package
+- all final release gates green.
+
+## Risks and trade-offs
+
+- Treating benchmarks, diagrams, or guardrails as optional release polish would
+  undercut the architecture. They are release blockers.
+- This phase must not introduce new feature behavior. It proves and packages the
+  behavior already implemented in P0-P13.
+
+## Why this phase belongs here
+
+P14 depends on every implementation owner being present. It is the only correct
+place to close cross-cutting release proof, benchmark baselines, diagram
+coverage, and final guardrail alignment.

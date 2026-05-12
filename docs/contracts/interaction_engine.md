@@ -9,8 +9,10 @@ Must read before editing:
 - `section_15_frame_render_contract` -> `docs/contracts/frame_rendering.md`
 - `section_16_geometry_policy` -> `docs/contracts/geometry.md`
 Feeds phases:
-- `P9`
 - `P10`
+- `P11`
+- `P12`
+- `P13`
 Related donors:
 - `interaction_pointer_host`
 - `interaction_pointer_session`

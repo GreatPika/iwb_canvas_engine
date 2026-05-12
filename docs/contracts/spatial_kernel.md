@@ -8,8 +8,10 @@ Must read before editing:
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 - `section_16_geometry_policy` -> `docs/contracts/geometry.md`
 Feeds phases:
-- `P7`
 - `P8`
+- `P9`
+- `P10`
+- `P12`
 Related donors:
 - `spatial_scene_spatial_index`
 - `spatial_index_cache`

@@ -31,7 +31,7 @@
   title: 2. Несущая модель новой библиотеки
   phases:
     - P0
-    - P5
+    - P4
   must_read:
     - section_00_status_and_scope
   donors:
@@ -80,9 +80,10 @@
   phases:
     - P1.5
     - P2
-    - P4
-    - P9
     - P10
+    - P11
+    - P12
+    - P13
   must_read:
     - section_00_status_and_scope
     - section_03_package_layout
@@ -131,6 +132,7 @@
   title: 5. Schema v1 full field contract
   phases:
     - P3
+    - P7
   must_read:
     - section_04_public_api_v1
     - section_06_validation_limits
@@ -189,8 +191,9 @@
   file: docs/contracts/resources.md
   title: 7. Resource lifecycle contract
   phases:
-    - P4
-    - P10
+    - P7
+    - P9
+    - P13
   must_read:
     - section_04_public_api_v1
     - section_10_runtime_data_model
@@ -232,7 +235,7 @@
   title: "8. Functional ledger: legacy capability -> next API -> required test"
   phases:
     - P1
-    - P12
+    - P14
   must_read:
     - section_04_public_api_v1
     - docs/donors/00_reuse_rules.md
@@ -274,9 +277,12 @@
   file: docs/architecture/03_data_model.md
   title: 10. Runtime data model
   phases:
+    - P4
     - P5
     - P6
+    - P7
     - P8
+    - P9
   must_read:
     - section_02_architecture_model
     - section_04_public_api_v1
@@ -304,7 +310,11 @@
   file: docs/contracts/edit_kernel.md
   title: 11. EditKernel implementation contract
   phases:
+    - P5
     - P6
+    - P10
+    - P11
+    - P12
   must_read:
     - section_04_public_api_v1
     - section_10_runtime_data_model
@@ -343,7 +353,9 @@
   title: "12. `loadDocument` staged contract"
   phases:
     - P6
-    - P9
+    - P10
+    - P11
+    - P12
   must_read:
     - section_10_runtime_data_model
     - section_11_edit_kernel
@@ -370,7 +382,12 @@
   file: docs/contracts/operation_matrix.md
   title: 13. Operation matrix
   phases:
+    - P5
     - P6
+    - P7
+    - P10
+    - P11
+    - P12
   must_read:
     - section_11_edit_kernel
     - section_12_load_document
@@ -395,8 +412,10 @@
   file: docs/contracts/interaction_engine.md
   title: 14. InteractionEngine
   phases:
-    - P9
     - P10
+    - P11
+    - P12
+    - P13
   must_read:
     - section_11_edit_kernel
     - section_15_frame_render_contract
@@ -459,8 +478,9 @@
   file: docs/contracts/frame_rendering.md
   title: 15. FrameEngine and render contract
   phases:
-    - P8
+    - P9
     - P10
+    - P13
   must_read:
     - section_10_runtime_data_model
     - section_07_resource_lifecycle
@@ -504,8 +524,11 @@
   file: docs/contracts/geometry.md
   title: 16. Geometry policy v1
   phases:
-    - P7
     - P8
+    - P9
+    - P10
+    - P11
+    - P12
   must_read:
     - section_04_public_api_v1
     - section_10_runtime_data_model
@@ -537,8 +560,10 @@
   file: docs/contracts/spatial_kernel.md
   title: 17. SpatialKernel
   phases:
-    - P7
     - P8
+    - P9
+    - P10
+    - P12
   must_read:
     - section_10_runtime_data_model
     - section_16_geometry_policy
@@ -567,9 +592,10 @@
   file: docs/contracts/cache_policy.md
   title: 18. Cache policy ledger
   phases:
-    - P8
-    - P10
-    - P12
+    - P7
+    - P9
+    - P13
+    - P14
   must_read:
     - section_10_runtime_data_model
     - section_17_spatial_kernel
@@ -631,7 +657,7 @@
   title: 20. DiagnosticsHub
   phases:
     - P3
-    - P12
+    - P14
   must_read:
     - section_06_validation_limits
     - section_19_codec_boundary
@@ -654,7 +680,7 @@
   title: 22. Guardrails and machine checks
   phases:
     - P0
-    - P12
+    - P14
   must_read:
     - section_00_status_and_scope
     - section_03_package_layout
@@ -743,7 +769,10 @@
     - P8
     - P9
     - P10
+    - P11
     - P12
+    - P13
+    - P14
   must_read:
     - section_04_public_api_v1
     - section_22_guardrails_machine_checks
@@ -889,7 +918,7 @@
   file: docs/verification/benchmarks.md
   title: 24. Benchmarks
   phases:
-    - P12
+    - P14
   must_read:
     - section_15_frame_render_contract
     - section_17_spatial_kernel
@@ -911,7 +940,7 @@
   file: docs/verification/release_gates.md
   title: 27. Final release gates
   phases:
-    - P12
+    - P14
   must_read:
     - section_22_guardrails_machine_checks
     - section_23_tests

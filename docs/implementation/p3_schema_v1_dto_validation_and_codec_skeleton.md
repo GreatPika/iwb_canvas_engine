@@ -1,13 +1,26 @@
 # P3 - schema v1 DTO validation and codec skeleton
 
-## Build
+## Purpose
 
-- schema_v1_full_contract tests
+Implement schema v1 validation and encode/decode boundaries before runtime
+materialization, document loading, resources, or frame behavior depends on
+external data shapes.
+
+## Build scope
+
+- schema v1 full-contract tests
 - encode/decode skeleton
 - validation limits
 - metadata validator
 - color/offset/size/transform codecs
 - resource/element JSON codecs.
+
+## Dependencies on earlier phases
+
+- P0 package and guardrail boundaries are enforced.
+- P1 donor and oracle inventories are complete.
+- P1.5 scope gate is green.
+- P2 public DTOs, ids, errors, and validation rules are frozen.
 
 ## Read first
 
@@ -51,17 +64,15 @@
 - `dfd_diagnostics_error_projection` -> `docs/diagrams/dfd_diagnostics_error_projection.mmd`
 - `dfd_schema_v1_decode_encode` -> `docs/diagrams/dfd_schema_v1_decode_encode.mmd`
 
-## Guardrails
+## Contracts satisfied by this phase
 
-- `codec.known_fields_validated` - known schema v1 fields are validated and canonical encoder writes only v1 fields
-- `codec.schema_v1_exact` - only schema v1 read/write
-- `codec.no_runtime_side_effects` - schema v1 decode/encode does not mutate runtime or store state
-- `diagnostics.disabled_no_alloc_hot_path` - no record allocation on successful hot path
-- `diagnostics.sanitized_public_projection` - diagnostics expose only bounded sanitized public data
-- `api.functional_ledger_complete` - every functional ledger row has API + tests
-- `api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
+- schema v1 field contract from `section_05_schema_v1_contract`
+- validation limits from `section_06_validation_limits`
+- codec entrypoint and no-runtime-side-effect contract from `section_19_codec_boundary`
+- diagnostic projection and disabled hot-path policy foundation from
+  `section_20_diagnostics_hub`
 
-## Tests
+## Tests and guardrails that prove this phase
 
 - `test.codec.schema_v1.known_fields_validation` -> `test/codec/schema_v1/known_fields_validation_test.dart`
 - `test.codec.schema_v1.resources_appkey_only` -> `test/codec/schema_v1/resources_appkey_only_test.dart`
@@ -70,6 +81,13 @@
 - `test.codec.decode_encode_no_runtime_side_effects` -> `test/codec/decode_encode_no_runtime_side_effects_test.dart`
 - `test.diagnostics.sanitizer_and_public_projection` -> `test/diagnostics/sanitizer_and_public_projection_test.dart`
 - `test.codec.constructor_and_schema_limits` -> `test/codec/constructor_and_schema_limits_test.dart`
+- `codec.schema_v1_exact`
+- `codec.known_fields_validated`
+- `codec.no_runtime_side_effects`
+- `diagnostics.disabled_no_alloc_hot_path`
+- `diagnostics.sanitized_public_projection`
+- `api.functional_ledger_complete`
+- `api.id_validation_no_extension_type_escape`
 
 ## Exit gate
 
@@ -77,6 +95,19 @@
 - known field validation tests green
 - unknown-field policy tests green
 - limits tests green
-- error payload tests green.
+- error payload tests green
 - codec no-runtime-side-effect tests green
 - diagnostics sanitizer tests green.
+
+## Risks and trade-offs
+
+- Letting runtime decode directly from raw JSON would spread boundary validation
+  across later phases. P3 keeps external shape validation in `CodecBoundary`.
+- Building runtime materialization here would cross ownership too early. P3
+  stops at immutable public DTOs and validated import drafts.
+
+## Why this phase belongs here
+
+Runtime store, edit, load, resources, and frame phases all rely on trusted public
+DTOs or validated import drafts. External data validation must be finished before
+those internal owners are implemented.

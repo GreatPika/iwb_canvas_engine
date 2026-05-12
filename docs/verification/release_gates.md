@@ -9,7 +9,7 @@ Must read before editing:
 - `section_23_tests` -> `docs/verification/tests.md`
 - `section_24_benchmarks` -> `docs/verification/benchmarks.md`
 Feeds phases:
-- `P12`
+- `P14`
 Related donors:
 - `direct_numeric_policy`
 - `direct_local_bounds_policy`

@@ -9,6 +9,7 @@ Must read before editing:
 - `section_06_validation_limits` -> `docs/contracts/validation_limits.md`
 Feeds phases:
 - `P3`
+- `P7`
 Related donors:
 - `codec_guards`
 - `codec_json_require`

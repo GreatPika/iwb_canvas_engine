@@ -9,7 +9,7 @@ Must read before editing:
 - `section_19_codec_boundary` -> `docs/contracts/codec_boundary.md`
 Feeds phases:
 - `P3`
-- `P12`
+- `P14`
 Related donors:
 - `foundation_error_contract`
 - `dto_scene_value_validation`

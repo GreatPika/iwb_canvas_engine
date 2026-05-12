@@ -10,8 +10,9 @@ Must read before editing:
 - `section_17_spatial_kernel` -> `docs/contracts/spatial_kernel.md`
 - `section_18_cache_policy` -> `docs/contracts/cache_policy.md`
 Feeds phases:
-- `P8`
+- `P9`
 - `P10`
+- `P13`
 Related donors:
 - `frame_render_state`
 - `render_geometry_builder`

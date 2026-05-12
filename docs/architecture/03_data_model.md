@@ -8,9 +8,12 @@ Must read before editing:
 - `section_02_architecture_model` -> `docs/architecture/01_runtime_ownership.md`
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 Feeds phases:
+- `P4`
 - `P5`
 - `P6`
+- `P7`
 - `P8`
+- `P9`
 Related donors:
 - `dto_document_helpers`
 - `store_scene_controller_read_paths`

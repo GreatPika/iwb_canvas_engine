@@ -1,10 +1,20 @@
 # P1.5 - v1 scope gate before public API freeze
 
-## Build
+## Purpose
+
+Stop public API freeze until mandatory v1 scope, accepted differences, and
+validation limits are explicit and mechanically checked.
+
+## Build scope
 
 - scope checklist based on legacy functional behavior and approved v1 additions
 - public API draft probe
 - public API compiles as written.
+
+## Dependencies on earlier phases
+
+- P0 package boundaries are enforced.
+- P1 functional ledger and donor inventory are available.
 
 ## Read first
 
@@ -32,23 +42,27 @@
 - `dfd_diagnostics_error_projection` -> `docs/diagrams/dfd_diagnostics_error_projection.mmd`
 - `dfd_public_edit` -> `docs/diagrams/dfd_public_edit.mmd`
 
-## Guardrails
+## Contracts satisfied by this phase
 
-- `codec.known_fields_validated` - known schema v1 fields are validated and canonical encoder writes only v1 fields
-- `api.dto_immutability` - DTO collections defensively copied and unmodifiable
-- `api.equality_policy_explicit` - public value equality is explicit for concrete public classes and covered by API contract tests
-- `api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
-- `api.no_undefined_public_type_references` - every exported signature type is exported or from Flutter/Dart SDK
-- `api.public_api_compiles_as_written` - public API declarations compile in an empty consumer package
-- `api.public_types_complete` - all public signatures reference defined public types
-- `api.v1_scope_gate_green_before_freeze` - P1.5 scope gate passed before public API freeze starts
-- `core.no_legacy_imports` - no import of legacy package/runtime
-- `core.no_node_spec_patch_shape_dependency` - no legacy NodeSpec/NodePatch/PatchField in core
-- `core.no_scene_controller_shape_dependency` - no SceneController concept in core
+- v1 scope additions from `section_00_status_and_scope`
+- accepted differences from legacy from `section_09_accepted_differences`
+- mandatory public API draft coverage from `section_04_public_api_v1`
+- validation limit adoption from `section_06_validation_limits`
 
-## Tests
+## Tests and guardrails that prove this phase
 
 - `test.api_contract.v1_scope_gate` -> `test/api_contract/v1_scope_gate_test.dart`
+- `api.v1_scope_gate_green_before_freeze`
+- `api.public_types_complete`
+- `api.public_api_compiles_as_written`
+- `api.no_undefined_public_type_references`
+- `api.dto_immutability`
+- `api.equality_policy_explicit`
+- `api.id_validation_no_extension_type_escape`
+- `codec.known_fields_validated`
+- `core.no_legacy_imports`
+- `core.no_node_spec_patch_shape_dependency`
+- `core.no_scene_controller_shape_dependency`
 
 ## Exit gate
 
@@ -57,3 +71,16 @@
 - public API compiles as written
 - no undefined public type references remain
 - P2 public API freeze is blocked until this gate is green.
+
+## Risks and trade-offs
+
+- Freezing API before scope closure would make later compatibility changes
+  expensive.
+- Over-expanding scope here would turn v1 into a migration layer. The accepted
+  target is functional compatibility, not legacy API compatibility.
+
+## Why this phase belongs here
+
+P2 cannot freeze stable public declarations until the v1 scope and accepted
+differences have been proved. P1.5 is the explicit gate between oracle evidence
+and API commitment.

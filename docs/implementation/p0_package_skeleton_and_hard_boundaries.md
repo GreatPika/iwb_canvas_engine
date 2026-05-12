@@ -1,16 +1,25 @@
 # P0 - package skeleton and hard boundaries
 
-## Build
+## Purpose
+
+Create the root package skeleton and machine-enforced boundaries before any
+runtime, API, donor, codec, or Flutter implementation can land.
+
+## Build scope
 
 - populate the existing repository-root package skeleton
-- create public barrel exporting only src/api/**
+- create public barrel exporting only `src/api/**`
 - add `api.no_legacy_public_types` guardrail
 - add `core.no_legacy_imports` guardrail
 - add `core.no_unapproved_part_files` guardrail
-- add RuntimeRoot skeleton
+- add `RuntimeRoot` skeleton
 - add diagram file placeholders
 - add CI target for the root package
 - add `api.public_types_complete` guardrail test first, then close with it green.
+
+## Dependencies on earlier phases
+
+- none.
 
 ## Read first
 
@@ -21,7 +30,7 @@
 
 ## Required donors
 
-- none
+- none.
 
 ## Forbidden donor structure
 
@@ -37,23 +46,28 @@
 - `c4_container` -> `docs/diagrams/c4_container.mmd`
 - `c4_component_runtime` -> `docs/diagrams/c4_component_runtime.mmd`
 
-## Guardrails
+## Contracts satisfied by this phase
 
-- `diagrams.all_required_present` - required Mermaid files exist
-- `api.no_legacy_public_types` - legacy public golden symbols not exported by root package
-- `core.no_legacy_imports` - no import of legacy package/runtime
-- `core.import_boundaries` - package-owned source paths obey source boundary rules and the forbidden import matrix
-- `core.no_unapproved_part_files` - production code has no `part` or `part of` files unless generated-code use is explicitly approved
-- `core.no_node_spec_patch_shape_dependency` - no legacy NodeSpec/NodePatch/PatchField in core
-- `core.no_scene_controller_shape_dependency` - no SceneController concept in core
-- `core.single_runtime_root` - exactly one production RuntimeRoot
+- package ownership and public-barrel boundary from `section_03_package_layout`
+- no legacy facade, no legacy imports, and no legacy public API exports from
+  `section_00_status_and_scope`
+- one production `RuntimeRoot` owner from `section_02_architecture_model`
+- blocking guardrail suite presence from `section_22_guardrails_machine_checks`
 
-## Tests
+## Tests and guardrails that prove this phase
 
 - `test.api_contract.no_legacy_public_symbols` -> `test/api_contract/no_legacy_public_symbols_test.dart`
 - `test.guardrails.import_boundaries` -> `test/guardrails/import_boundaries_test.dart`; also enforces no imports from another package's `src/**` and no unapproved production `part` / `part of` directives
 - `test.guardrails.required_diagrams_present` -> `test/guardrails/required_diagrams_present_test.dart`
 - `test.guardrails.blocking_suite` -> `test/guardrails/blocking_suite_test.dart`
+- `diagrams.all_required_present`
+- `api.no_legacy_public_types`
+- `core.no_legacy_imports`
+- `core.import_boundaries`
+- `core.no_unapproved_part_files`
+- `core.no_node_spec_patch_shape_dependency`
+- `core.no_scene_controller_shape_dependency`
+- `core.single_runtime_root`
 
 ## Exit gate
 
@@ -63,3 +77,17 @@
 - production `lib/**` contains no unapproved `part` or `part of` directives
 - legacy public symbols not exported
 - all required public type names have files.
+
+## Risks and trade-offs
+
+- A too-large skeleton would invite placeholder architecture. Keep this phase to
+  package shape, boundaries, and guardrail wiring only.
+- A too-small skeleton would let later phases introduce boundary drift before
+  checks exist. Boundary tests must land before feature implementation.
+
+## Why this phase belongs here
+
+Every later phase depends on package identity, public export shape, import
+rules, required diagram placeholders, and the single runtime-root boundary.
+Those constraints must be executable before donor code or runtime behavior is
+introduced.

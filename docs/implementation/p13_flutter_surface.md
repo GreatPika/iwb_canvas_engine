@@ -1,13 +1,34 @@
-# P10 - Flutter surface
+# P13 - Flutter surface
 
-## Build
+## Purpose
 
-- CanvasSurface widget
+Connect the proved runtime, frame, resource, and interaction behavior to the
+Flutter widget boundary without giving the widget direct ownership of document,
+store, resolver, or interaction internals.
+
+## Build scope
+
+- `CanvasSurface` widget
 - pointer adapter
 - main painter
 - overlay painter
 - synchronous app-owned resource resolver bridge
-- selection/grid style application.
+- selection/grid style application
+- `interactive=false` pointer routing behavior
+- active routed pointer cancel on `interactive=false`
+- pending line preservation when `interactive=false` happens with no active routed pointer
+- pointer adapter finite normalization before runtime routing
+- widget paint for empty and populated documents
+- Flutter painters apply ordinary element/stroke opacity through primitive paint alpha
+- Flutter painters do not call `Canvas.saveLayer` for ordinary opacity in the hot paint path
+- any future Flutter `Canvas.saveLayer` effect must be explicit, budgeted,
+  probed by the frame paint benchmark, and guarded by a contract update.
+
+## Dependencies on earlier phases
+
+- P7 resource resolver boundary is implemented.
+- P9 frame rendering exposes main and overlay frame/painter inputs.
+- P10-P12 interaction machines and preview states are implemented.
 
 ## Read first
 
@@ -64,25 +85,18 @@
 - `state_selected_move` -> `docs/diagrams/state_selected_move.mmd`
 - `state_two_tap_line` -> `docs/diagrams/state_two_tap_line.mmd`
 
-## Guardrails
+## Contracts satisfied by this phase
 
-- `load.prepares_before_interrupt` - failed load does not interrupt gesture
-- `load.success_interrupts_before_install` - success interrupt happens before atomic install
-- `api.dto_immutability` - DTO collections defensively copied and unmodifiable
-- `api.equality_policy_explicit` - public value equality is explicit for concrete public classes and covered by API contract tests
-- `api.functional_ledger_complete` - every functional ledger row has API + tests
-- `api.id_validation_no_extension_type_escape` - ids cannot be publicly constructed without validation
-- `api.no_undefined_public_type_references` - every exported signature type is exported or from Flutter/Dart SDK
-- `api.public_api_compiles_as_written` - public API declarations compile in an empty consumer package
-- `api.public_types_complete` - all public signatures reference defined public types
-- `preview.selected_move_main_repaint` - selected move preview increments main repaint, not overlay
-- `resources.app_key_only` - resource descriptors use appKey only
-- `resources.dirty_no_document_revision` - markResourceDirty does not increment documentRevision
-- `resources.mutation_inside_edit_only` - resource descriptor mutation only via CanvasEdit
-- `surface.pointer_samples_normalized_before_runtime` - Flutter adapters pass only normalized finite pointer samples into runtime routing
-- `surface.interactive_false_pending_line_preserved` - interactive=false cancels active routed pointers but preserves non-active pending line state
+- Flutter surface contract from `section_04_public_api_v1`
+- resource resolver app-owned image and no-dispose rules from
+  `section_07_resource_lifecycle`
+- pointer normalization, `interactive=false`, and pending line preservation from
+  `section_14_interaction_engine`
+- painter capture and no-live-runtime-read contract from
+  `section_15_frame_render_contract`
+- cache and opacity/saveLayer policy from `section_18_cache_policy`
 
-## Tests
+## Tests and guardrails that prove this phase
 
 - `test.resources.sync_image_resolver` -> `test/resources/sync_image_resolver_test.dart`
 - `test.resources.app_owned_image_not_disposed` -> `test/resources/app_owned_image_not_disposed_test.dart`
@@ -91,15 +105,37 @@
 - `test.flutter_bridge.interactive_false_pending_line_preserved` -> `test/flutter_bridge/interactive_false_pending_line_preserved_test.dart`
 - `test.flutter_bridge.pointer_adapter_finite_normalization` -> `test/flutter_bridge/pointer_adapter_finite_normalization_test.dart`
 - `test.flutter_bridge.widget_paint` -> `test/flutter_bridge/widget_paint_test.dart`
+- `surface.pointer_samples_normalized_before_runtime`
+- `surface.interactive_false_pending_line_preserved`
+- `resources.app_key_only`
+- `resources.dirty_no_document_revision`
+- `resources.mutation_inside_edit_only`
+- `preview.selected_move_main_repaint`
+- `load.prepares_before_interrupt`
+- `load.success_interrupts_before_install`
 
 ## Exit gate
 
 - surface paints empty and populated docs
-- interactive=false disables pointer routing
-- interactive=false cancels active pointer sessions but preserves non-active pending line state
+- `interactive=false` disables pointer routing
+- `interactive=false` cancels active pointer sessions but preserves non-active pending line state
 - resource resolver repaint works
-- Flutter painters apply ordinary element/stroke opacity through primitive paint alpha;
-- Flutter painters do not call `Canvas.saveLayer` for ordinary opacity in the hot paint path;
-- any future Flutter `Canvas.saveLayer` effect must be explicit, budgeted, probed by the frame paint benchmark, and guarded by a contract update;
+- Flutter painters apply ordinary element/stroke opacity through primitive paint alpha
+- Flutter painters do not call `Canvas.saveLayer` for ordinary opacity in the hot paint path
+- any future Flutter `Canvas.saveLayer` effect must be explicit, budgeted, probed by the frame paint benchmark, and guarded by a contract update
 - pointer adapter normalization tests green
 - widget tests green.
+
+## Risks and trade-offs
+
+- The widget must not become a second runtime owner. It adapts Flutter pointer and
+  paint boundaries into already-proved runtime ports.
+- Pointer cancellation on `interactive=false` must be narrower than clearing all
+  preview state, because pending line state can exist outside an active routed
+  pointer session.
+
+## Why this phase belongs here
+
+The Flutter surface is last among implementation features because it composes
+runtime, resources, frame, and interaction. Building it earlier would require
+widget-owned shortcuts that the architecture forbids.

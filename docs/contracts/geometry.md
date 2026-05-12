@@ -8,8 +8,11 @@ Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 Feeds phases:
-- `P7`
 - `P8`
+- `P9`
+- `P10`
+- `P11`
+- `P12`
 Related donors:
 - `foundation_core_geometry`
 - `geometry_node_geometry`

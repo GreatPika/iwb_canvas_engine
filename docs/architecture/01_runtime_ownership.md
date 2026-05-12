@@ -8,7 +8,7 @@ Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
 Feeds phases:
 - `P0`
-- `P5`
+- `P4`
 Related donors:
 - `none`
 Related diagrams:
