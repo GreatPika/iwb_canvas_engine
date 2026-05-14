@@ -250,7 +250,7 @@
     - P3
   target_owner: CanvasDataException and DiagnosticsHub
   use_for:
-    - "structured code, path, details, source errors and sanitized diagnostics"
+    - "structured code, path, bounded details, and sanitized diagnostics"
   do_not_copy:
     - legacy exception names if not in v1 API
   required_tests:

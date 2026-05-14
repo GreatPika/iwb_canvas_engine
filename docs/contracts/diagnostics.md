@@ -52,6 +52,10 @@ DiagnosticRecord
   correlationId?
 ```
 
+`DiagnosticRecord.source` is internal provenance only. It is not projected as a
+public `CanvasDataException` field; public exceptions expose only code, message,
+path, and sanitized bounded details.
+
 Sanitizer permits only JSON-like primitives and bounded previews. It forbids runtime objects, handles, paths, canvases, images, closures and full scene dumps.
 
 ---

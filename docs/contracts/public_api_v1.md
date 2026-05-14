@@ -246,10 +246,12 @@ CanvasResource and resource family types
 CanvasDataException
 ```
 
-These runtime-owned objects, larger snapshots, operation records, event records,
-and exception objects may contain collections, callbacks, source objects, widget
-state, or runtime-specific facts. Callers must compare their ids, revisions, or
-fields explicitly when they need semantic comparison.
+These runtime-owned objects, larger snapshots, operation records, and event
+records may contain collections, callbacks, widget state, or runtime-specific
+facts. `CanvasDataException` also uses identity equality, but its public fields
+are limited to the safe diagnostic projection: code, message, path, and
+sanitized bounded details. Callers must compare ids, revisions, or fields
+explicitly when they need semantic comparison.
 
 Future public types must choose one of these policies in this section before
 implementation. Adding value equality later is an API behavior change and must
@@ -1777,14 +1779,12 @@ final class CanvasDataException implements Exception {
     required this.message,
     this.path,
     this.details = const {},
-    this.source,
   });
 
   final CanvasDataErrorCode code;
   final String message;
   final String? path;
   final Map<String, Object?> details;
-  final Object? source;
 }
 
 sealed class CanvasDiagnosticPolicy {
@@ -1815,6 +1815,11 @@ final class _CanvasDiagnosticVerbose extends CanvasDiagnosticPolicy {
   final int maxListEntries;
 }
 ```
+
+`CanvasDataException` must not expose raw input, application objects, runtime
+objects, images, handles, closures, canvases, or full document dumps. Raw failure
+context remains internal to `DiagnosticsHub` or is projected only through
+sanitized bounded `details`.
 
 No public diagnostics stream is exported in v1. Diagnostics are projected only through `CanvasDataException` and test-only/internal sinks.
 

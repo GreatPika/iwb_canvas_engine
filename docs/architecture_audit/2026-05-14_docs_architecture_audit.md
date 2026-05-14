@@ -5,18 +5,6 @@
 
 ## Нужно исправить
 
-### A02. Сузить `CanvasDataException.source`
-
-Приоритет: до P2 public API freeze.
-
-Проблема: `CanvasDataException.source: Object?` может публично протащить runtime objects, app objects, images, closures или тяжелые данные.
-
-Исправление:
-
-- удалить `source` из public exception; или
-- заменить на bounded enum/string source вроде `CanvasDataErrorSource`;
-- если поле остается, явно запретить app/runtime objects и добавить sanitizer/API tests.
-
 ### A03. Добавить лимиты для `CanvasDiagnosticPolicy.verbose`
 
 Приоритет: до P2/P3.
