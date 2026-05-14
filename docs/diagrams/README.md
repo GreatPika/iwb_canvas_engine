@@ -38,6 +38,13 @@ the planned Mermaid file paths under `docs/diagrams/`.
 - Related phases: `P1.5`, `P2`, `P5`, `P6`, `P7`, `P10`, `P11`, `P12`, `P13`, `P14`
 - Related sections: `section_04_public_api_v1`, `section_11_edit_kernel`
 
+## seq_single_active_surface
+
+- Kind: `sequence`
+- Planned path: `docs/diagrams/seq_single_active_surface.mmd`
+- Related phases: `P2`, `P13`, `P14`
+- Related sections: `section_04_public_api_v1`
+
 ## dfd_load_document_success_failure
 
 - Kind: `data_flow`

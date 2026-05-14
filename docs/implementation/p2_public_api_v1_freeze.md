@@ -63,6 +63,7 @@ errors, validation rules, and equality semantics.
 - `c4_context` -> `docs/diagrams/c4_context.mmd`
 - `dfd_diagnostics_error_projection` -> `docs/diagrams/dfd_diagnostics_error_projection.mmd`
 - `dfd_public_edit` -> `docs/diagrams/dfd_public_edit.mmd`
+- `seq_single_active_surface` -> `docs/diagrams/seq_single_active_surface.mmd`
 
 ## Contracts satisfied by this phase
 

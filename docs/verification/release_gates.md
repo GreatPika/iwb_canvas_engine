@@ -178,7 +178,7 @@ Release is blocked unless all statements are true:
 24. action typed payload tests are green.
 25. low-level edit emits no user action events tests are green.
 26. interaction stale terminal, resolver-cancel, and interactive=false pending-line tests are green.
-27. surface pointer normalization tests are green.
+27. surface single-active-surface and pointer normalization tests are green.
 28. DTO immutability and public equality policy tests are green.
 29. no CanvasDocument projection in paint/pointer/hit tests are green.
 30. all required diagrams exist and match owners.

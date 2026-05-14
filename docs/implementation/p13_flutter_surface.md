@@ -9,6 +9,7 @@ store, resolver, or interaction internals.
 ## Build scope
 
 - `CanvasSurface` widget
+- single active `CanvasSurface` attachment gate per `CanvasRuntime`
 - pointer adapter
 - main painter
 - overlay painter
@@ -67,6 +68,7 @@ store, resolver, or interaction internals.
   (includes pointer adapter finite normalization before runtime routing)
 - `dfd_public_edit` -> `docs/diagrams/dfd_public_edit.mmd`
 - `dfd_resource_resolution` -> `docs/diagrams/dfd_resource_resolution.mmd`
+- `seq_single_active_surface` -> `docs/diagrams/seq_single_active_surface.mmd`
 - `seq_dispose_during_gesture` -> `docs/diagrams/seq_dispose_during_gesture.mmd`
 - `seq_eraser_commit` -> `docs/diagrams/seq_eraser_commit.mmd`
 - `seq_line_two_tap_commit` -> `docs/diagrams/seq_line_two_tap_commit.mmd`
@@ -91,6 +93,8 @@ store, resolver, or interaction internals.
 ## Contracts satisfied by this phase
 
 - Flutter surface contract from `section_04_public_api_v1`
+- single active `CanvasSurface` per `CanvasRuntime`, with independent
+  runtimes allowed to host independent active surfaces
 - resource resolver app-owned image and no-dispose rules from
   `section_07_resource_lifecycle`
 - pointer normalization, `interactive=false`, and pending line preservation from
@@ -106,6 +110,7 @@ store, resolver, or interaction internals.
 - `test.flutter_bridge.interactive_false_pointer_routing` -> `test/flutter_bridge/interactive_false_pointer_routing_test.dart`
 - `test.flutter_bridge.interactive_false_active_session_cancel` -> `test/flutter_bridge/interactive_false_active_session_cancel_test.dart`
 - `test.flutter_bridge.interactive_false_pending_line_preserved` -> `test/flutter_bridge/interactive_false_pending_line_preserved_test.dart`
+- `test.flutter_bridge.single_active_surface` -> `test/flutter_bridge/single_active_surface_test.dart`
 - `test.flutter_bridge.pointer_adapter_finite_normalization` -> `test/flutter_bridge/pointer_adapter_finite_normalization_test.dart`
 - `test.flutter_bridge.widget_paint` -> `test/flutter_bridge/widget_paint_test.dart`
 - `surface.pointer_samples_normalized_before_runtime`
@@ -120,6 +125,8 @@ store, resolver, or interaction internals.
 ## Exit gate
 
 - surface paints empty and populated docs
+- second active surface on the same runtime fails fast, while active surfaces
+  backed by different runtimes can coexist
 - `interactive=false` disables pointer routing
 - `interactive=false` cancels active pointer sessions but preserves non-active pending line state
 - resource resolver repaint works
@@ -133,6 +140,10 @@ store, resolver, or interaction internals.
 
 - The widget must not become a second runtime owner. It adapts Flutter pointer and
   paint boundaries into already-proved runtime ports.
+- The single-active-surface gate intentionally does not implement multi-surface
+  shared-runtime collaboration. Apps that need independent simultaneous canvases
+  use one `CanvasRuntime` per `CanvasSurface`; shared-document collaboration
+  needs a future explicit contract for per-surface/user state.
 - Pointer cancellation on `interactive=false` must be narrower than clearing all
   preview state, because pending line state can exist outside an active routed
   pointer session.

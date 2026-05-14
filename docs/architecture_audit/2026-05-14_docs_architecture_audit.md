@@ -5,18 +5,6 @@
 
 ## Нужно исправить
 
-### A04. Определить поведение второго активного `CanvasSurface`
-
-Приоритет: до P13 Flutter surface.
-
-Проблема: public contract говорит, что v1 поддерживает один active `CanvasSurface` на `CanvasRuntime`, но не говорит, что делать со второй active surface.
-
-Исправление:
-
-- выбрать fail-fast behavior для второй active surface;
-- описать deterministic assertion/error в public contract;
-- добавить `test.flutter_bridge.single_active_surface`.
-
 ### A05. Уточнить phase-order edges для ранних фаз
 
 Приоритет: до P6/P7.

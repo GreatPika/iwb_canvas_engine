@@ -1,0 +1,30 @@
+sequenceDiagram
+  autonumber
+  participant App as Application
+  participant SurfaceA as CanvasSurface A
+  participant SurfaceB as CanvasSurface B
+  participant SurfaceC as CanvasSurface C
+  participant RuntimeA as CanvasRuntime A
+  participant RuntimeB as CanvasRuntime B
+
+  App->>SurfaceA: mount with CanvasRuntime A
+  SurfaceA->>RuntimeA: attach surface token
+  RuntimeA-->>SurfaceA: attach accepted
+
+  App->>SurfaceB: mount with CanvasRuntime A
+  SurfaceB->>RuntimeA: attach surface token
+  RuntimeA--x SurfaceB: StateError("CanvasRuntime already has an active CanvasSurface.")
+  Note over RuntimeA,SurfaceB: Rejection happens before pointer routing, paint, repaint-listener, or resourceResolver attachment side effects.
+  Note over SurfaceA,RuntimeA: The existing active surface remains attached and owns the runtime surface boundary.
+
+  App->>SurfaceB: mount with CanvasRuntime B
+  SurfaceB->>RuntimeB: attach surface token
+  RuntimeB-->>SurfaceB: attach accepted
+  Note over RuntimeA,RuntimeB: Independent runtimes may have independent active surfaces at the same time.
+
+  App->>SurfaceA: unmount
+  SurfaceA->>RuntimeA: detach surface token
+  RuntimeA-->>SurfaceA: detach accepted
+  App->>SurfaceC: mount with CanvasRuntime A
+  SurfaceC->>RuntimeA: attach surface token
+  RuntimeA-->>SurfaceC: attach accepted

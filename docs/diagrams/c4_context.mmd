@@ -2,7 +2,7 @@ flowchart LR
   App[Application] --> API[iwb_canvas_engine public API]
   API --> Runtime[CanvasRuntime]
   App --> Surface[CanvasSurface]
-  Surface --> Runtime
+  Surface -->|one active surface per runtime| Runtime
   Runtime --> Flutter[Flutter rendering/input]
   Runtime --> Resolver[App ResourceResolver]
   App --> Storage[App document storage]

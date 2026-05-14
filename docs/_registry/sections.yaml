@@ -101,6 +101,7 @@
   diagrams:
     - c4_context
     - dfd_public_edit
+    - seq_single_active_surface
   guardrails:
     - api.public_types_complete
     - api.public_api_compiles_as_written
@@ -120,6 +121,7 @@
     - test.api_contract.public_equality_policy
     - test.api.typed_action_payloads
     - test.flutter_bridge.interactive_false_pending_line_preserved
+    - test.flutter_bridge.single_active_surface
     - test.api_contract.v1_scope_gate
   do_not_assume:
     - no legacy public API shape
@@ -883,6 +885,7 @@
     - test.flutter_bridge.interactive_false_pointer_routing
     - test.flutter_bridge.interactive_false_active_session_cancel
     - test.flutter_bridge.interactive_false_pending_line_preserved
+    - test.flutter_bridge.single_active_surface
     - test.flutter_bridge.pointer_adapter_finite_normalization
     - test.functional_ledger.row_specific_tests
     - test.api_contract.v1_scope_gate

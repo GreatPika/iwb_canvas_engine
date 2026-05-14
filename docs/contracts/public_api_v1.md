@@ -28,6 +28,7 @@ Related donors:
 Related diagrams:
 - `c4_context`
 - `dfd_public_edit`
+- `seq_single_active_surface`
 Required tests:
 - `test.api_contract.public_api_v1_compiles_as_written`
 - `test.api_contract.no_undefined_public_type_references`
@@ -36,6 +37,7 @@ Required tests:
 - `test.api_contract.public_equality_policy`
 - `test.api.typed_action_payloads`
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
+- `test.flutter_bridge.single_active_surface`
 - `test.api_contract.v1_scope_gate`
 Guardrails:
 - `api.public_types_complete`
@@ -451,6 +453,16 @@ Surface contract:
 
 ```text
 - v1 supports one active CanvasSurface per CanvasRuntime;
+- multiple CanvasSurface widgets may be active at the same time when each uses
+  a different CanvasRuntime;
+- a CanvasSurface is active from successful runtime attachment until detach or
+  dispose completes; interactive=false surfaces are still active;
+- attaching a second active CanvasSurface to the same CanvasRuntime throws
+  StateError('CanvasRuntime already has an active CanvasSurface.') before
+  pointer routing, paint, repaint-listener, or resourceResolver attachment side
+  effects;
+- after the active CanvasSurface detaches, another CanvasSurface may attach to
+  the same CanvasRuntime;
 - interactive=false disables pointer routing on CanvasSurface only;
 - interactive=false still paints document;
 - interactive=false does not mutate runtime mode, document, selection, preview or resources;

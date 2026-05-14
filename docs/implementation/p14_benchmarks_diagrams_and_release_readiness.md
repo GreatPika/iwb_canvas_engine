@@ -78,6 +78,7 @@ match the target architecture.
 - `seq_schema_v1_decode_encode_order` -> `docs/diagrams/seq_schema_v1_decode_encode_order.mmd`
 - `seq_selected_move_cancel` -> `docs/diagrams/seq_selected_move_cancel.mmd`
 - `seq_selected_move_preview_commit` -> `docs/diagrams/seq_selected_move_preview_commit.mmd`
+- `seq_single_active_surface` -> `docs/diagrams/seq_single_active_surface.mmd`
 - `seq_spatial_touched_update` -> `docs/diagrams/seq_spatial_touched_update.mmd`
 - `seq_text_edit_request` -> `docs/diagrams/seq_text_edit_request.mmd`
 - `state_edit_session` -> `docs/diagrams/state_edit_session.mmd`

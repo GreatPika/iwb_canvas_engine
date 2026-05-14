@@ -1,6 +1,6 @@
 flowchart TB
   Public[lib/iwb_canvas_engine.dart exports src/api] --> RuntimeRoot
-  Surface[CanvasSurface public widget] --> RuntimeRoot
+  Surface["CanvasSurface public widget\none active surface per RuntimeRoot"] --> RuntimeRoot
   RuntimeRoot --> Store[DocumentStoreKernel]
   RuntimeRoot --> Edit[EditKernel]
   RuntimeRoot --> InteractionEngine

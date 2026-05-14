@@ -142,6 +142,13 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
 - Guardrails: `surface.interactive_false_pending_line_preserved`
 
+## test.flutter_bridge.single_active_surface
+
+- Path: `test/flutter_bridge/single_active_surface_test.dart`
+- Phases: `P13`
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+- Guardrails: `none`
+
 ## test.functional_ledger.row_specific_tests
 
 - Path: `test/functional_ledger/row_specific_tests_test.dart`
