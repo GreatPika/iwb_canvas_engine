@@ -110,7 +110,7 @@ stateDiagram-v2
     Clears pending start and line overlay preview only. No line
     element, document notification, drawLine action, spatial delta,
     projection eviction, or main-scene preview is produced.
-    overlayRevision advances only when pending preview was visible.
+    previewRevision advances only when pending preview was visible.
   end note
   CleanupOnly --> OverlayCleanup: pending overlay was visible
   CleanupOnly --> Idle: no visible overlay

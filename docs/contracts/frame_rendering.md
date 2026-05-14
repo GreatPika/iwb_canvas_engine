@@ -72,7 +72,7 @@ Overlay frame:
 
 ```text
 CapturedOverlayFrame
-  overlayRevision
+  previewRevision
   cameraOffset
   previewState
   selectionStyle

@@ -50,7 +50,7 @@ sequenceDiagram
     Note over IE,Frame: Marquee drag preview is overlay-only and no selected-move main-scene preview delta is staged.
     IE->>Preview: replace immutable marquee preview snapshot
     Preview->>Frame: request overlay repaint only
-    Frame->>Preview: capture overlayRevision and marqueeRect once
+    Frame->>Preview: capture previewRevision and marqueeRect once
     Frame->>Frame: build marquee fill and stroke overlay primitives
     Frame->>Signals: publish overlay repaint request
     Signals-->>Surface: repaint overlay rectangle preview
@@ -66,6 +66,7 @@ sequenceDiagram
 
   alt next selection equals previous selection
     IE->>Preview: clear marquee preview and active session
+    IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without marquee
@@ -100,6 +101,7 @@ sequenceDiagram
     EK->>EK: close edit session and stale handle
     EK-->>IE: edit result
     IE->>Preview: clear marquee preview and active session
+    IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request overlay repaint cleanup
     Events->>Signals: publish selection revision and action notifications
     Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications

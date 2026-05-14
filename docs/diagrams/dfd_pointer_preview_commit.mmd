@@ -18,7 +18,7 @@ flowchart LR
     TokenGate["Pointer session gate\none active token per runtime"]
     StaleSample["Stale token sample\nignored"]
     TerminalCleanup["Terminal cleanup\nclear active preview/session"]
-    PreviewState["Immutable CanvasPreviewState\npointer-owned preview snapshot"]
+    PreviewState["Immutable CanvasPreviewState\npointer-owned preview snapshot\npreviewRevision"]
     OverlayPreview["Overlay preview kinds\nmarquee, stroke, pending line,\nline, eraser"]
     SelectedMovePreview["Selected move preview\nmain-scene preview delta"]
     SessionPreview["Session-only preview update\ndraw, line, selected move delta"]
@@ -76,13 +76,13 @@ flowchart LR
   CandidatePreview -->|"preview facts"| PreviewState
   PreviewState -->|"marquee/stroke/line/eraser preview snapshot"| OverlayPreview
   PreviewState -->|"selected move delta snapshot"| SelectedMovePreview
-  OverlayPreview -->|"preview revision only"| OverlayRepaint
-  SelectedMovePreview -->|"movePreview/main-scene revision only"| MainRepaint
+  OverlayPreview -->|"previewRevision + overlay repaint only"| OverlayRepaint
+  SelectedMovePreview -->|"previewRevision + main repaint only"| MainRepaint
 
   TokenGate -->|"terminal same-token up"| CommitIntent
   TokenGate -->|"cancel terminal or external cancellation"| CancelIntent
   CancelIntent -->|"discard preview without document mutation"| TerminalCleanup
-  TerminalCleanup -->|"preview cleared"| PreviewState
+  TerminalCleanup -->|"preview cleared\npreviewRevision if active"| PreviewState
   TerminalCleanup -->|"active preview kind"| CleanupByKind
   CleanupByKind -->|"selected move cleanup"| MainRepaint
   CleanupByKind -->|"overlay preview cleanup"| OverlayRepaint

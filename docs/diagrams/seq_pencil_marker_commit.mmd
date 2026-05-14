@@ -28,7 +28,7 @@ sequenceDiagram
   Note over IE: Session stores pointer token, sessionId, tool, color, thickness, opacity, and normalized stroke points.
   IE->>Preview: publish kind pencilStroke or markerStroke with first point
   Preview->>Frame: request overlay repaint only
-  Frame->>Preview: capture overlayRevision and stroke preview once
+  Frame->>Preview: capture previewRevision and stroke preview once
   Frame->>Frame: build immutable stroke overlay primitive
   Frame->>Signals: publish overlay repaint request
   Signals-->>Surface: repaint overlay stroke preview
@@ -41,7 +41,7 @@ sequenceDiagram
     Note over IE,Frame: Pencil and marker preview is overlay-only, no selected-move main-scene preview delta is staged.
     IE->>Preview: replace immutable stroke preview snapshot
     Preview->>Frame: request overlay repaint only
-    Frame->>Preview: capture overlayRevision and strokePoints once
+    Frame->>Preview: capture previewRevision and strokePoints once
     Frame->>Frame: build immutable stroke overlay primitive
     Frame->>Signals: publish overlay repaint request
     Signals-->>Surface: repaint overlay stroke preview
@@ -56,6 +56,7 @@ sequenceDiagram
     Surface->>Tools: handlePointer(CanvasPointerSample terminal)
     Tools->>IE: same-token terminal cleanup sample
     IE->>Preview: clear stroke preview and active session
+    IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without stroke preview
@@ -69,6 +70,7 @@ sequenceDiagram
 
     alt final stroke has no paintable points
       IE->>Preview: clear stroke preview and active session
+      IE->>Preview: bump previewRevision for cleared active preview
       Preview->>Frame: request overlay repaint cleanup
       Frame->>Signals: publish overlay cleanup repaint request
       Signals-->>Surface: repaint overlay without stroke preview
@@ -106,6 +108,7 @@ sequenceDiagram
       EK->>EK: close edit session and stale handle
       EK-->>IE: edit result
       IE->>Preview: clear stroke preview and active session
+      IE->>Preview: bump previewRevision for cleared active preview
       Preview->>Frame: request overlay repaint cleanup
       Events->>Signals: publish document revision and draw action notifications
       Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
@@ -119,6 +122,7 @@ sequenceDiagram
     EK->>EK: rollback draft and close session
     EK-->>IE: terminal failure
     IE->>Preview: clear stroke preview and active session
+    IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without stroke preview

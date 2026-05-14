@@ -13,10 +13,10 @@ sequenceDiagram
   Surface->>Frame: paint overlay request(selectionStyle)
   Frame->>Store: capture cameraOffset once for overlay frame
   Store-->>Frame: cameraOffset
-  Frame->>Preview: capture overlayRevision and immutable previewState once
-  Preview-->>Frame: overlayRevision and immutable previewState
+  Frame->>Preview: capture previewRevision and immutable previewState once
+  Preview-->>Frame: previewRevision and immutable previewState
   Surface-->>Frame: selectionStyle for this paint frame
-  Note over Frame: CapturedOverlayFrame freezes overlayRevision, cameraOffset, immutable previewState, and selectionStyle for this paint frame.
+  Note over Frame: CapturedOverlayFrame freezes previewRevision, cameraOffset, immutable previewState, and selectionStyle for this paint frame.
 
   Frame->>Frame: admit overlay preview kind from captured previewState only
 

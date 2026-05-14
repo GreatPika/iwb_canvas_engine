@@ -47,7 +47,7 @@ Do not assume:
 | PaintPlanCache | Frame | structural/bounds/elementVisual/viewport/selection | typed invalidation excluding frameMeta and preview | 16 viewport plans | LRU by viewport/revision tuple | candidate count, hit/miss, full-sort probe, selected-supplement bypass count | yes bounded |
 | SelectedOrderCache | Frame | selectionRevision/structuralRevision | selection/structure | 1 selected-order snapshot | replace on revision change | selected count, rebuild count | yes bounded |
 | SpatialIndex | Spatial | structural/bounds revisions | touched geometry/structure | current index only | invalid/rebuild lifecycle, not cache eviction | fallback count, budget-exceeded count | yes query only |
-| OverlayStateSnapshot | Interaction | overlayRevision | pointer/tool/load/mode/dispose | 1 overlay snapshot | replace on overlayRevision | overlay revision churn | yes tiny |
+| PreviewStateSnapshot | Interaction | previewRevision | pointer/tool/load/mode/dispose | 1 preview snapshot | replace on previewRevision | preview revision churn | yes tiny |
 | DiagnosticFormattingCache | Diagnostics | diagnostic id | verbose diagnostics only | 128 formatted previews | LRU, disabled on hot success path | allocation count, truncation count | no hot success path |
 
 Cache miss in hot path must be bounded by candidate count, not total scene size.

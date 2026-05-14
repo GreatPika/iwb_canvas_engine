@@ -57,6 +57,7 @@ sequenceDiagram
 
   alt terminal spatial budget exceeded
     IE->>Preview: clear eraser corridor preview
+    IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request overlay cleanup repaint only
     IE->>Diagnostics: increment eraser terminal budget-exceeded probe
     Note over Store,Signals: Terminal budget exceeded is cleanup/no-op: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action. Public document notification is also forbidden.
@@ -66,6 +67,7 @@ sequenceDiagram
     alt terminal candidate/check budget exceeded
       Geometry-->>IE: terminal budget exceeded
       IE->>Preview: clear eraser corridor preview
+      IE->>Preview: bump previewRevision for cleared active preview
       Preview->>Frame: request overlay cleanup repaint only
       IE->>Diagnostics: increment eraser terminal budget-exceeded probe
       Note over Store,Signals: Terminal budget exceeded is cleanup/no-op: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action. Public document notification is also forbidden.
@@ -73,6 +75,7 @@ sequenceDiagram
       Geometry-->>IE: exact deletable non-background ids
       alt terminal exact ids empty
         IE->>Preview: clear eraser corridor preview
+        IE->>Preview: bump previewRevision for cleared active preview
         Preview->>Frame: request overlay cleanup repaint only
         Note over Store,Signals: Empty terminal exact set is cleanup/no-op: no document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, public document notification, or erase action.
       else terminal exact ids non-empty
@@ -90,6 +93,7 @@ sequenceDiagram
         Applier->>Events: materialize erase action after install
         Applier->>Frame: publish committed main repaint bus
         IE->>Preview: clear eraser corridor preview
+        IE->>Preview: bump previewRevision for cleared active preview
         Preview->>Frame: request overlay cleanup repaint
         Events->>Signals: publish document revision and erase action notifications
         Frame->>Signals: publish main repaint and overlay cleanup repaint

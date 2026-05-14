@@ -33,6 +33,7 @@ sequenceDiagram
   IE->>IE: start active selected move session
   Note over IE: Session stores pointer token, sessionId, start position, selected ids, movable ids, and current preview delta.
   IE->>Preview: publish selected move preview with delta Offset.zero
+  IE->>Preview: bump previewRevision for selected move preview
 
   loop pointer move samples for same token
     User->>Surface: pointer move
@@ -40,6 +41,7 @@ sequenceDiagram
     Tools->>IE: normalized finite move sample
     IE->>IE: update active selected move session delta
     IE->>Preview: replace immutable main-scene preview snapshot
+    IE->>Preview: bump previewRevision when selectedMoveDelta changes
     Preview->>Frame: request main-scene repaint only
     Frame->>Store: capture committed frame facts and selection ids once
     Frame->>Preview: capture selectedMoveDelta once
@@ -92,6 +94,7 @@ sequenceDiagram
   end
 
   IE->>Preview: clear selected move preview and active session
+  IE->>Preview: bump previewRevision for cleared active preview
   Preview->>Frame: request main-scene repaint cleanup
   Frame->>Store: capture committed frame facts and selection ids once
   Frame->>Preview: capture no selectedMoveDelta

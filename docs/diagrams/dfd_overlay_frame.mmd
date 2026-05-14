@@ -9,14 +9,14 @@ flowchart LR
   end
 
   subgraph Interaction["InteractionEngine"]
-    OverlaySnapshot["OverlayStateSnapshot\noverlayRevision + immutable previewState"]
+    PreviewSnapshot["PreviewStateSnapshot\npreviewRevision + immutable previewState"]
     SelectedMovePreview["Selected move preview\nmain-scene preview only"]
   end
 
   subgraph Frame["FrameEngine"]
     OverlayRepaint["Overlay repaint request"]
     Capture["Overlay frame capture\nsingle runtime read boundary"]
-    CapturedFrame["CapturedOverlayFrame\noverlayRevision, cameraOffset,\npreviewState, selectionStyle"]
+    CapturedFrame["CapturedOverlayFrame\npreviewRevision, cameraOffset,\npreviewState, selectionStyle"]
     PreviewAdmission["Preview admission from captured previewState\nexclude selected move preview"]
     CapturedOverlayKinds["Captured overlay preview kinds\nmarquee, stroke, pending line,\nline, eraser"]
     MainRepaintReference["Main repaint bus\noutside overlay paint path"]
@@ -36,8 +36,8 @@ flowchart LR
 
   Capture -->|"read camera once"| CameraState
   CameraState -->|"cameraOffset"| CapturedFrame
-  Capture -->|"read overlay state once"| OverlaySnapshot
-  OverlaySnapshot -->|"overlayRevision and previewState"| CapturedFrame
+  Capture -->|"read preview state once"| PreviewSnapshot
+  PreviewSnapshot -->|"previewRevision and previewState"| CapturedFrame
   Surface -->|"selectionStyle"| CapturedFrame
 
   CapturedFrame -->|"captured previewState only"| PreviewAdmission

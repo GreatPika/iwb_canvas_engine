@@ -5,19 +5,6 @@
 
 ## Нужно исправить
 
-### A01. Убрать неоднозначность preview revision для selected move
-
-Приоритет: до P9/P10 selected move и frame preview.
-
-Проблема: `docs/contracts/operation_matrix.md` использует `overlayRevision or movePreviewRevision`, но `movePreviewRevision` нигде не определен. При этом selected move preview рисуется в main scene, а public API обещает `previewRevisionListenable`.
-
-Исправление:
-
-- выбрать один термин для preview revision;
-- минимально: заменить `overlayRevision or movePreviewRevision` на `overlayRevision` и явно написать, что `overlayRevision` означает весь preview state, а не overlay-only repaint;
-- чище: переименовать internal `overlayRevision` в `previewRevision` во всех docs;
-- обновить data model, operation matrix, frame/cache diagrams и tests вокруг selected move preview.
-
 ### A02. Сузить `CanvasDataException.source`
 
 Приоритет: до P2 public API freeze.
@@ -110,4 +97,3 @@
 
 - добавить `docs/indexes/by_phase.md` или убрать обещание phase index;
 - заменить `plan/` wording на `root plan/`.
-

@@ -65,7 +65,7 @@ flowchart LR
     TextPathInvalidation["Text, path, stroke cache invalidation\nonly changed render inputs"]
     MainRepaint["Main repaint bus"]
     OverlayRepaint["Overlay repaint bus\npreview cleanup, load success, camera"]
-    OverlaySnapshot["OverlayStateSnapshot\noverlayRevision"]
+    PreviewSnapshot["PreviewStateSnapshot\npreviewRevision"]
   end
 
   subgraph Forbidden["Forbidden effects"]
@@ -146,10 +146,10 @@ flowchart LR
   StaticFrameInvalidation -->|"background or camera frame changed"| MainRepaint
   TextPathInvalidation -->|"render cache entries changed"| MainRepaint
 
-  PreviewCleanup -->|"preview-only overlay change"| OverlaySnapshot
-  PreviewCleanup -->|"terminal overlay preview cleanup"| OverlaySnapshot
-  OverlaySnapshot -->|"overlayRevision"| OverlayRepaint
-  PreviewCleanup -->|"selected move preview or cleanup"| MainRepaint
+  PreviewCleanup -->|"preview state changes"| PreviewSnapshot
+  LoadSuccess -->|"previewRevision if active preview cleared"| PreviewSnapshot
+  PreviewSnapshot -->|"overlay preview\npreviewRevision + overlay repaint"| OverlayRepaint
+  PreviewSnapshot -->|"selected move preview\npreviewRevision + main repaint"| MainRepaint
   LoadSuccess -->|"load success overlay repaint"| OverlayRepaint
 
   MainRepaint --> Surface

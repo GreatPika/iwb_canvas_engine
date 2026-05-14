@@ -44,9 +44,9 @@ Do not assume:
 | ensureLayer no-op | none | none | none | none | none | none |
 | ensureLayer changed | layer table/order | document, structural, projection | no | evict | main | none |
 | setSelection | selection | selection | none | no | main | none |
-| marquee commit | selection | selection | none | no | main | selectMarquee if changed |
-| selected move preview | preview only | overlayRevision or movePreviewRevision | none | no | main only | none |
-| selected move commit | transforms | document, bounds, elementVisual, projection | touched update | evict | main + preview cleanup | moveSelection |
+| marquee commit | selection | selection, previewRevision if active preview cleared | none | no | main + overlay cleanup | selectMarquee if changed |
+| selected move preview | preview only | previewRevision | none | no | main only | none |
+| selected move commit | transforms | document, bounds, elementVisual, projection, previewRevision if active preview cleared | touched update | evict | main + preview cleanup | moveSelection |
 | rotate/flip selection | transforms | document, bounds, elementVisual, projection | touched update | evict | main | transformSelection |
 | deleteSelection | elements/layers/selection | document, structural, bounds, elementVisual, projection, selection | remove ids | evict | main | deleteElements |
 | CanvasEdit.clearContent | elements, selection, resources when removeUnusedResources removes descriptors | document, structural, bounds, elementVisual, projection, selection, resource if descriptors removed | rebuild empty | evict | main | none |
@@ -57,15 +57,15 @@ Do not assume:
 | setPalette | meta | document, projection | no | evict | none unless UI observes doc | none |
 | upsertResource new/changed | resource table | document, resource, projection | no | evict | main if used | none |
 | markResourceDirty | cache only | resourceVisualRevision | no | no | main | none |
-| loadDocument success | whole document | all document-level + epoch | rebuild | evict | main + overlay | none |
+| loadDocument success | whole document | all document-level + epoch, previewRevision if active preview cleared | rebuild | evict | main + overlay | none |
 | loadDocument failure | none | none | none | none | none | none |
-| pencil/marker preview | preview only | overlayRevision | none | no | overlay | none |
-| pencil/marker commit | add stroke | document, structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawPencil/drawMarker |
-| line first tap | preview pending | overlayRevision | none | no | overlay | none |
-| line preview | preview line | overlayRevision | none | no | overlay | none |
-| line commit | add line | document, structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawLine |
-| eraser preview | preview corridor | overlayRevision | none | no | overlay | none |
-| eraser commit | removed elements | document, structural, bounds, elementVisual, projection, selection if erased ids intersect selection | remove ids | evict | main + overlay cleanup | erase if removed |
+| pencil/marker preview | preview only | previewRevision | none | no | overlay | none |
+| pencil/marker commit | add stroke | document, structural, bounds, elementVisual, projection, previewRevision if active preview cleared | add id | evict | main + overlay cleanup | drawPencil/drawMarker |
+| line first tap | preview pending | previewRevision | none | no | overlay | none |
+| line preview | preview line | previewRevision | none | no | overlay | none |
+| line commit | add line | document, structural, bounds, elementVisual, projection, previewRevision if active preview cleared | add id | evict | main + overlay cleanup | drawLine |
+| eraser preview | preview corridor | previewRevision | none | no | overlay | none |
+| eraser commit | removed elements | document, structural, bounds, elementVisual, projection, selection if erased ids intersect selection, previewRevision if active preview cleared | remove ids | evict | main + overlay cleanup | erase if removed |
 | no-op edit | none | none | none | none | none | none |
 
 ---

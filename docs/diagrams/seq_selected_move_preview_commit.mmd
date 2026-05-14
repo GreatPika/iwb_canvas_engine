@@ -38,6 +38,7 @@ sequenceDiagram
     IE->>IE: start selected move session
     Note over IE: Session stores pointer token, sessionId, start position, selected ids, movable ids, and delta Offset.zero.
     IE->>Preview: publish kind selectedMove, selectedMoveDelta Offset.zero
+    IE->>Preview: bump previewRevision for selected move preview
   else down is not admitted for selected move
     IE-->>Tools: route to other move mode behavior or ignore
   end
@@ -49,6 +50,7 @@ sequenceDiagram
     IE->>IE: compute previewDelta from session start position
     Note over IE,Spatial: No per-delta hit-test. Preview uses selected ids and the session delta captured at pointer down.
     IE->>Preview: replace immutable snapshot with selectedMoveDelta
+    IE->>Preview: bump previewRevision when selectedMoveDelta changes
     Preview->>Frame: request main-scene repaint only
     Frame->>Store: capture committed frame facts and selection ids once
     Frame->>Preview: capture selectedMoveDelta once
@@ -81,6 +83,7 @@ sequenceDiagram
 
   alt proposedDelta is zero or movable set is empty
     IE->>Preview: clear selected move preview and session
+    IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request main-scene repaint cleanup
     IE-->>Tools: finish with no edit and no action event
   else moved selection
@@ -96,10 +99,12 @@ sequenceDiagram
 
     alt CanvasMoveCancel returned
       IE->>Preview: clear selected move preview and session
+      IE->>Preview: bump previewRevision for cleared active preview
       Preview->>Frame: request main-scene repaint cleanup
       IE-->>Tools: finish with no edit and no action event
     else resolver throws or returns non-finite delta
       IE->>Preview: clear selected move preview and session
+      IE->>Preview: bump previewRevision for cleared active preview
       Preview->>Frame: request main-scene repaint cleanup
       Note over EK,Store: No edit opens, no committed state changes, and no action event is published.
       IE-->>Tools: rethrow projected runtime-safe error
@@ -135,6 +140,7 @@ sequenceDiagram
       EK->>EK: close edit session and stale handle
       EK-->>IE: edit result
       IE->>Preview: clear selected move preview and session
+      IE->>Preview: bump previewRevision for cleared active preview
       Preview->>Frame: request main-scene repaint cleanup
       Events->>Signals: publish document and action notifications
       Frame->>Signals: publish committed and cleanup main repaint notifications

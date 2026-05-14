@@ -34,6 +34,7 @@ stateDiagram-v2
       Preview is selectedMoveDelta plus selected
       supplement staging in the main scene. It is not
       marquee, stroke, line, or eraser overlay preview.
+      Changed preview facts advance previewRevision.
     end note
 
     PreviewReady --> PreviewReady: "same token and controllerEpoch finite move / replace selectedMoveDelta"
@@ -162,6 +163,7 @@ stateDiagram-v2
   state "Main-scene cleanup repaint" as MainSceneCleanup
   note right of MainSceneCleanup
     Clear selectedMoveDelta and selected move session.
+    Advance previewRevision only when active preview existed.
     Queue main-scene cleanup repaint for selected move
     preview. Do not use overlay-only cleanup as the
     primary cleanup path.

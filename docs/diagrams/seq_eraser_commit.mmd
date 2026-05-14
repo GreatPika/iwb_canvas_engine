@@ -29,7 +29,7 @@ sequenceDiagram
   Note over IE: Session stores pointer token, sessionId, eraserThickness, and corridor points in world coordinates.
   IE->>Preview: publish kind eraser with first corridor point
   Preview->>Frame: request overlay repaint only
-  Frame->>Preview: capture overlayRevision and eraser corridor once
+  Frame->>Preview: capture previewRevision and eraser corridor once
   Frame->>Frame: build immutable eraser corridor overlay primitive
   Frame->>Signals: publish overlay repaint request
   Signals-->>Surface: repaint overlay eraser corridor
@@ -52,7 +52,7 @@ sequenceDiagram
     Note over IE,Geometry: Read-only candidate refresh can guide terminal intent, but it does not mutate selection, Store, spatial index, or caches.
     IE->>Preview: replace immutable eraser corridor preview snapshot
     Preview->>Frame: request overlay repaint only
-    Frame->>Preview: capture overlayRevision and corridor once
+    Frame->>Preview: capture previewRevision and corridor once
     Frame->>Frame: build immutable eraser corridor overlay primitive
     Frame->>Signals: publish overlay repaint request
     Signals-->>Surface: repaint overlay eraser corridor
@@ -67,6 +67,7 @@ sequenceDiagram
     Surface->>Tools: terminal cleanup request
     Tools->>IE: cleanup active eraser session
     IE->>Preview: clear eraser corridor and active session
+    IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without eraser corridor
@@ -75,6 +76,7 @@ sequenceDiagram
     Surface->>Tools: terminal cleanup request from external load success
     Tools->>IE: cleanup active eraser session
     IE->>Preview: clear eraser corridor and active session
+    IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Frame: defer overlay cleanup to loadDocument post-install repaint scheduling
     Note over EK,Signals: No eraser EditKernel commit, eraser spatial remove, eraser projection eviction, eraser main repaint, or erase action is published.
@@ -89,6 +91,7 @@ sequenceDiagram
     Spatial-->>IE: committed candidate handles with generation and structuralRevision
     alt terminal candidate/check budget exceeded / no partial erase
       IE->>Preview: clear eraser corridor and active session
+      IE->>Preview: bump previewRevision for cleared active preview
       Preview->>Frame: request overlay repaint cleanup
       Frame->>Signals: publish overlay cleanup repaint request
       Signals-->>Surface: repaint overlay without eraser corridor
@@ -99,6 +102,7 @@ sequenceDiagram
 
       alt final erasedElementIds is empty
         IE->>Preview: clear eraser corridor and active session
+        IE->>Preview: bump previewRevision for cleared active preview
         Preview->>Frame: request overlay repaint cleanup
         Frame->>Signals: publish overlay cleanup repaint request
         Signals-->>Surface: repaint overlay without eraser corridor
@@ -136,6 +140,7 @@ sequenceDiagram
         EK->>EK: close edit session and stale handle
         EK-->>IE: edit result
         IE->>Preview: clear eraser corridor and active session
+        IE->>Preview: bump previewRevision for cleared active preview
         Preview->>Frame: request overlay repaint cleanup
         Events->>Signals: publish document revision and erase action notifications
         Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
@@ -150,6 +155,7 @@ sequenceDiagram
     EK->>EK: rollback draft and close session
     EK-->>IE: terminal failure
     IE->>Preview: clear eraser corridor and active session
+    IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without eraser corridor

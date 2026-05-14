@@ -111,7 +111,7 @@ boundsRevision          -> geometry/transform/hit/paint bounds changed
 elementVisualRevision   -> element visual fields, element style fields, and transform-affecting paint changes
 frameMetaRevision       -> camera, background, and grid changes that affect frame capture/static frame caches
 projectionRevision      -> public CanvasDocument projection invalidated
-overlayRevision         -> preview state changed
+previewRevision         -> preview state changed
 ```
 
 `frameMetaRevision` is the v1 aggregate for frame-affecting document meta. It may
@@ -123,7 +123,7 @@ plans.
 In short: v1 aggregate, may split later without public API changes.
 
 No-op edit does not change revisions. Preview cleanup increments
-`overlayRevision` only when it clears or replaces existing preview state; a
+`previewRevision` only when it clears or replaces existing preview state; a
 cleanup request against already-empty preview state is a no-op. Effects-only
 action without state change is not used in v1.
 
