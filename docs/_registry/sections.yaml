@@ -120,6 +120,7 @@
     - test.api_contract.dto_immutability
     - test.api_contract.public_equality_policy
     - test.api.typed_action_payloads
+    - test.runtime.dispose_lifecycle
     - test.flutter_bridge.interactive_false_pending_line_preserved
     - test.flutter_bridge.single_active_surface
     - test.api_contract.v1_scope_gate
@@ -320,6 +321,7 @@
     - store.no_public_document_live_state
     - projection.only_explicit_read_paths
   tests:
+    - test.runtime.dispose_lifecycle
     - test.store.read_document_projection
     - test.store.no_projection_hot_path
     - test.store.public_document_is_projection_only
@@ -908,6 +910,7 @@
     - test.functional_ledger.row_specific_tests
     - test.api_contract.v1_scope_gate
     - test.codec.constructor_and_schema_limits
+    - test.runtime.dispose_lifecycle
     - test.store.read_document_projection
     - test.store.no_projection_hot_path
     - test.store.public_document_is_projection_only

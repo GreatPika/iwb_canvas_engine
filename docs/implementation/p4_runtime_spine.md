@@ -72,6 +72,7 @@ without bypassing ownership.
 
 ## Tests and guardrails that prove this phase
 
+- `test.runtime.dispose_lifecycle` -> `test/runtime/dispose_lifecycle_test.dart`
 - `test.store.read_document_projection` -> `test/store/read_document_projection_test.dart`
 - `test.store.no_projection_hot_path` -> `test/store/no_projection_hot_path_test.dart`
 - `test.store.public_document_is_projection_only` -> `test/store/public_document_is_projection_only_test.dart`
@@ -82,6 +83,9 @@ without bypassing ownership.
 ## Exit gate
 
 - runtime can be constructed and disposed without legacy runtime dependency
+- runtime dispose leaves document and preview revision listenable values readable,
+  does not notify documentRevisionListenable, and delivers no revision
+  listenable notifications after dispose returns
 - runtime config materialization preserves already-validated
   `CanvasDiagnosticPolicy.verbose` preview and list-entry limits without pulling
   schema/codec ownership into RuntimeRoot

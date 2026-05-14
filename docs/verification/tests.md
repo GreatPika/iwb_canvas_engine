@@ -125,6 +125,7 @@ Required tests:
 - `test.functional_ledger.row_specific_tests`
 - `test.api_contract.v1_scope_gate`
 - `test.codec.constructor_and_schema_limits`
+- `test.runtime.dispose_lifecycle`
 - `test.store.read_document_projection`
 - `test.store.no_projection_hot_path`
 - `test.store.public_document_is_projection_only`
@@ -201,6 +202,7 @@ test/api/typed_action_payloads_test.dart
 test/edit/low_level_mutations_do_not_emit_actions_test.dart
 test/interaction/commands_emit_user_actions_test.dart
 
+test/runtime/dispose_lifecycle_test.dart
 test/flutter_bridge/interactive_false_pointer_routing_test.dart
 test/flutter_bridge/interactive_false_active_session_cancel_test.dart
 test/flutter_bridge/interactive_false_pending_line_preserved_test.dart
@@ -266,6 +268,16 @@ test/functional_ledger/legacy_capability_inventory_test.dart
 test/guardrails/blocking_suite_test.dart
   -> proves every mandatory blocking guardrail is represented by an executable
      test and included in the P0/P12 blocking suite.
+
+test/runtime/dispose_lifecycle_test.dart
+  -> proves runtime dispose keeps documentRevisionListenable and
+     previewRevisionListenable values readable;
+  -> verifies dispose does not notify documentRevisionListenable listeners and
+     previewRevisionListenable only notifies when active preview cleanup advances
+     previewRevision during first dispose;
+  -> verifies no revision listenable notifications are delivered after dispose
+     returns, repeated dispose is silent, and listeners can be removed after
+     dispose.
 ```
 
 Legacy capability inventory rows require inventory-only tests. Functional

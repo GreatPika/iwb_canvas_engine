@@ -36,6 +36,7 @@ Required tests:
 - `test.api_contract.dto_immutability`
 - `test.api_contract.public_equality_policy`
 - `test.api.typed_action_payloads`
+- `test.runtime.dispose_lifecycle`
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
 - `test.flutter_bridge.single_active_surface`
 - `test.api_contract.v1_scope_gate`
@@ -403,6 +404,21 @@ Dispose contract:
 - readDocument after dispose is allowed and returns last committed immutable document;
 - actions stream closes;
 - textEditRequests stream closes;
+- documentRevisionListenable.value remains readable after dispose and returns
+  the final committed document revision;
+- previewRevisionListenable.value remains readable after dispose and returns the
+  final preview revision;
+- dispose alone never increments the committed document revision and never
+  notifies documentRevisionListenable listeners;
+- during the first dispose call, previewRevisionListenable may notify listeners
+  only when dispose clears existing preview state and advances previewRevision;
+- after dispose returns, documentRevisionListenable and
+  previewRevisionListenable deliver no further notifications, including on
+  repeated dispose calls;
+- removeListener is allowed after dispose;
+- CanvasRuntime does not own application listeners; CanvasSurface removes only
+  listeners it registered during detach, dispose, or runtime swap, and
+  applications remove listeners they registered directly;
 - mandatory v1 resource caches are cleared without disposing app-provided ui.Image objects.
 ```
 

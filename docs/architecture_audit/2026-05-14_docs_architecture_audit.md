@@ -7,6 +7,9 @@
 
 ### A06. Зафиксировать lifecycle listenables после dispose
 
+Статус: закрыто в root docs. Контракт зафиксирован в public API/runtime data
+model, диаграммах lifecycle, registry и `test.runtime.dispose_lifecycle`.
+
 Приоритет: до runtime/surface lifecycle implementation.
 
 Проблема: streams после dispose описаны, а `documentRevisionListenable` и `previewRevisionListenable` нет.

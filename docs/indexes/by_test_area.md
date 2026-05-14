@@ -184,6 +184,13 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_10_runtime_data_model`, `section_23_tests`
 - Guardrails: `projection.only_explicit_read_paths`
 
+## test.runtime.dispose_lifecycle
+
+- Path: `test/runtime/dispose_lifecycle_test.dart`
+- Phases: `P4`
+- Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_23_tests`
+- Guardrails: `none`
+
 ## test.store.no_projection_hot_path
 
 - Path: `test/store/no_projection_hot_path_test.dart`

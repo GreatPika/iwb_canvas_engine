@@ -51,7 +51,9 @@ stateDiagram-v2
     ResourceCacheCleanup: clear mandatory v1 resource caches
     ResourceCacheCleanup --> CloseStreams: drop resolved-image cache entries
     CloseStreams: close actions and textEditRequests streams
-    CloseStreams --> [*]
+    CloseStreams --> FinalizeRevisionListenables
+    FinalizeRevisionListenables: keep revision values readable and block post-dispose notifications
+    FinalizeRevisionListenables --> [*]
   }
 
   note right of Disposing
@@ -65,6 +67,8 @@ stateDiagram-v2
   state "Disposed runtime" as Disposed
   note right of Disposed
     Last committed immutable document remains readable.
+    Revision listenable values remain readable.
+    Revision listenables deliver no notifications after dispose returns.
     Mutating public operations throw StateError("CanvasRuntime is disposed.").
   end note
 
@@ -80,7 +84,9 @@ stateDiagram-v2
     due solely to dispose;
     no CanvasActionCommitted event from dispose;
     no CanvasTextEditRequested event from dispose;
-    no ValueListenable close claim in v1;
+    no documentRevisionListenable notification from dispose itself;
+    no ValueListenable close or unreadable value state in v1;
+    no revision listenable notification after dispose returns;
     no committed document revision bump by dispose itself;
     previewRevision advances only when dispose clears active preview.
   end note

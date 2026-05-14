@@ -127,6 +127,8 @@ store, resolver, or interaction internals.
 - surface paints empty and populated docs
 - second active surface on the same runtime fails fast, while active surfaces
   backed by different runtimes can coexist
+- surface detach, dispose, and runtime swap remove only the runtime listeners
+  registered by that surface
 - `interactive=false` disables pointer routing
 - `interactive=false` cancels active pointer sessions but preserves non-active pending line state
 - resource resolver repaint works

@@ -22,6 +22,7 @@ Related diagrams:
 - `c4_component_runtime`
 - `dfd_cache_invalidation`
 Required tests:
+- `test.runtime.dispose_lifecycle`
 - `test.store.read_document_projection`
 - `test.store.no_projection_hot_path`
 - `test.store.public_document_is_projection_only`
@@ -126,6 +127,15 @@ No-op edit does not change revisions. Preview cleanup increments
 `previewRevision` only when it clears or replaces existing preview state; a
 cleanup request against already-empty preview state is a no-op. Effects-only
 action without state change is not used in v1.
+
+After `CanvasRuntime.dispose()` returns, public revision listenables are
+terminal read handles. `documentRevisionListenable.value` and
+`previewRevisionListenable.value` remain readable and expose the final revisions.
+Dispose does not increment the committed document revision or notify
+`documentRevisionListenable` listeners. `previewRevisionListenable` may notify
+during the first dispose call only if active preview cleanup advances
+`previewRevision`; no revision listenable may notify after dispose returns.
+Listener owners remain responsible for removing listeners they registered.
 
 ### 10.3 Public document projection
 
