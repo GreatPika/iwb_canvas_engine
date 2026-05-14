@@ -67,7 +67,8 @@ errors, validation rules, and equality semantics.
 ## Contracts satisfied by this phase
 
 - full public API declarations from `section_04_public_api_v1`
-- validation limit enforcement at public constructors from `section_06_validation_limits`
+- validation limit enforcement at public constructors from `section_06_validation_limits`,
+  including `CanvasDiagnosticPolicy.verbose` preview and list-entry limits
 - accepted legacy differences from `section_09_accepted_differences`
 - public DTO immutability, equality, id validation, class modifiers, dartdoc,
   and signature-shape obligations from `section_23_tests`
@@ -103,6 +104,8 @@ errors, validation rules, and equality semantics.
 - public classes have explicit subtype policy modifiers
 - public signatures avoid `FutureOr`, nullable async/container returns, and unapproved `dynamic`
 - all public constructor validations pass/fail as specified
+- `CanvasDiagnosticPolicy.verbose` accepts defaults and boundary values, and
+  rejects zero, negative, and over-limit preview/list-entry values
 - public value equality matches `docs/contracts/public_api_v1.md`
 - legacy public symbols are not exported
 - no public type references internal runtime classes.

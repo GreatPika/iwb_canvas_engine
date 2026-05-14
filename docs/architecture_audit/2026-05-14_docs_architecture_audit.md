@@ -5,18 +5,6 @@
 
 ## Нужно исправить
 
-### A03. Добавить лимиты для `CanvasDiagnosticPolicy.verbose`
-
-Приоритет: до P2/P3.
-
-Проблема: `maxPreviewLength` и `maxListEntries` есть в public constructor, но не имеют validation limits.
-
-Исправление:
-
-- добавить оба лимита в `docs/contracts/validation_limits.md`;
-- валидировать значения в constructor/config path;
-- покрыть constructor/schema limits tests.
-
 ### A04. Определить поведение второго активного `CanvasSurface`
 
 Приоритет: до P13 Flutter surface.

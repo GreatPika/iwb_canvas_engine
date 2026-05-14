@@ -1791,10 +1791,19 @@ sealed class CanvasDiagnosticPolicy {
   const CanvasDiagnosticPolicy();
   const factory CanvasDiagnosticPolicy.disabled() = _CanvasDiagnosticDisabled;
   const factory CanvasDiagnosticPolicy.summary() = _CanvasDiagnosticSummary;
-  const factory CanvasDiagnosticPolicy.verbose({
-    int maxPreviewLength,
-    int maxListEntries,
-  }) = _CanvasDiagnosticVerbose;
+  factory CanvasDiagnosticPolicy.verbose({
+    int maxPreviewLength = 256,
+    int maxListEntries = 32,
+  }) {
+    CanvasDiagnosticPolicyValidators.requireVerboseLimits(
+      maxPreviewLength: maxPreviewLength,
+      maxListEntries: maxListEntries,
+    );
+    return _CanvasDiagnosticVerbose._(
+      maxPreviewLength: maxPreviewLength,
+      maxListEntries: maxListEntries,
+    );
+  }
 }
 
 final class _CanvasDiagnosticDisabled extends CanvasDiagnosticPolicy {
@@ -1806,15 +1815,19 @@ final class _CanvasDiagnosticSummary extends CanvasDiagnosticPolicy {
 }
 
 final class _CanvasDiagnosticVerbose extends CanvasDiagnosticPolicy {
-  const _CanvasDiagnosticVerbose({
-    this.maxPreviewLength = 256,
-    this.maxListEntries = 32,
+  const _CanvasDiagnosticVerbose._({
+    required this.maxPreviewLength,
+    required this.maxListEntries,
   });
 
   final int maxPreviewLength;
   final int maxListEntries;
 }
 ```
+
+`CanvasDiagnosticPolicy.verbose` validates `maxPreviewLength` and
+`maxListEntries` during construction and any runtime config materialization path.
+The limits are owned by `section_06_validation_limits`.
 
 `CanvasDataException` must not expose raw input, application objects, runtime
 objects, images, handles, closures, canvases, or full document dumps. Raw failure

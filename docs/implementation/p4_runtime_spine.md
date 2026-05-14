@@ -20,6 +20,7 @@ without bypassing ownership.
 - `DocumentProjectionCache`
 - `CanvasRuntime.readDocument`
 - `CanvasDocumentSummary`
+- `CanvasRuntimeConfig` materialization for runtime-owned services
 - runtime id generation backed by next-owned admission state
 - narrow immutable read/query ports for later frame, spatial, resource, and
   interaction phases
@@ -37,6 +38,7 @@ without bypassing ownership.
 
 - `section_02_architecture_model` -> `docs/architecture/01_runtime_ownership.md`
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
+- `section_06_validation_limits` -> `docs/contracts/validation_limits.md`
 - `section_23_tests` -> `docs/verification/tests.md`
 
 ## Required donors
@@ -65,6 +67,8 @@ without bypassing ownership.
 - runtime ownership and single composition root from `section_02_architecture_model`
 - committed document tables, revisions, and projection cache from
   `section_10_runtime_data_model`
+- runtime config materialization from public constructor-validated config values,
+  including diagnostic policy limits from `section_06_validation_limits`
 
 ## Tests and guardrails that prove this phase
 
@@ -78,6 +82,9 @@ without bypassing ownership.
 ## Exit gate
 
 - runtime can be constructed and disposed without legacy runtime dependency
+- runtime config materialization preserves already-validated
+  `CanvasDiagnosticPolicy.verbose` preview and list-entry limits without pulling
+  schema/codec ownership into RuntimeRoot
 - `readDocument` projection matches committed DTO state
 - projection lazy counters pass
 - store public document state is projection-only
@@ -88,7 +95,8 @@ without bypassing ownership.
 ## Risks and trade-offs
 
 - Building too much runtime behavior here would create a hidden infrastructure
-  phase. P4 must stop at storage, revisions, projection, and read boundaries.
+  phase. P4 must stop at runtime composition, config materialization, storage,
+  revisions, projection, and read boundaries.
 - Building too little would force later phases to bypass store ownership.
 
 ## Why this phase belongs here

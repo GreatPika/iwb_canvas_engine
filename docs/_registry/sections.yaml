@@ -170,6 +170,7 @@
     - P1.5
     - P2
     - P3
+    - P4
   must_read:
     - section_04_public_api_v1
   donors:

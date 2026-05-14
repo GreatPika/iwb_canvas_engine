@@ -25,9 +25,10 @@ flowchart LR
 
   subgraph DiagnosticsHub["DiagnosticsHub internal"]
     PolicyGate["Diagnostic policy gate\ndisabled, summary, verbose"]
+    VerboseLimitValidation["Verbose policy limit validation\npreview length and list entries"]
     DiagnosticRecord["DiagnosticRecord\ncode, severity, source,\npath, details sanitized map,\nrevision, sessionId, correlationId"]
     RawDetails["Raw error context\nlimits, ids, counts,\nfield values, source error facts"]
-    Sanitizer["Diagnostics sanitizer\nJSON-like primitives and\nbounded previews only"]
+    Sanitizer["Diagnostics sanitizer\nJSON-like primitives,\nbounded preview length,\nand bounded entry counts"]
     SanitizedDetails["Sanitized details map\nbounded strings, lists,\nmaps, numbers, booleans"]
     SummaryProjection["Summary projection\nstable code, path, message"]
     VerboseProjection["Verbose projection\ncapped detail previews"]
@@ -53,7 +54,8 @@ flowchart LR
   RuntimeErrors -->|"safe runtime facts only"| RawDetails
   InternalErrors -->|"fallback facts"| RawDetails
 
-  PolicyGate -->|"controls detail level and sinks"| Sanitizer
+  PolicyGate -->|"controls detail level and sinks"| VerboseLimitValidation
+  VerboseLimitValidation -->|"validated policy limits"| Sanitizer
   DiagnosticRecord -->|"structured record facts"| Sanitizer
   RawDetails -->|"candidate details"| Sanitizer
   Sanitizer -->|"safe details only"| SanitizedDetails

@@ -10,6 +10,7 @@ Feeds phases:
 - `P1.5`
 - `P2`
 - `P3`
+- `P4`
 Related donors:
 - `foundation_contract_limits`
 - `foundation_validators`
@@ -63,6 +64,8 @@ These limits are mandatory for v1. They intentionally preserve legacy safety lim
 | max spatial query cells | `50000` |
 | metadata max depth | `8` |
 | metadata max total encoded bytes | `1MB` |
+| diagnostic verbose preview length | default `256`, range `[1, 4096]` chars |
+| diagnostic verbose list entries | default `32`, range `[1, 128]` |
 
 Validation is applied at:
 
@@ -73,6 +76,7 @@ Validation is applied at:
 - schema decode;
 - loadDocument materialization;
 - resource upsert;
+- runtime config construction and materialization;
 - interaction config mutation;
 - pointer sample routing.
 ```
