@@ -19,6 +19,8 @@ stateDiagram-v2
     The Flutter bridge routes samples to the public tool port.
     Down samples must be normalized and finite before
     InteractionEngine admits a pointer token.
+    Invalid down facts are rejected before runtime routing.
+    Invalid terminal facts for an active route enter cleanup only.
   end note
 
   AdmissionGate --> ActivePointer: finite normalized down / bind token, session id, and controllerEpoch
@@ -52,6 +54,7 @@ stateDiagram-v2
       session id, controllerEpoch, and terminal facts still match.
       Stale terminal facts may release the active token but
       cannot create a commit intent.
+      Invalid terminal facts enter cleanup only.
     end note
 
     TerminalGate --> CleanupOnly: stale token, controllerEpoch mismatch, non-finite facts, or invalid terminal

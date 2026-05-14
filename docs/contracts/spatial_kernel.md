@@ -19,6 +19,9 @@ Related donors:
 Related diagrams:
 - `dfd_cache_invalidation`
 - `dfd_spatial_query_budget`
+- `seq_spatial_touched_update`
+- `seq_hit_test_candidate_resolution`
+- `seq_eraser_exact_budget`
 Required tests:
 - `test.spatial.touched_update`
 - `test.spatial.no_full_clone_for_touched_update`
@@ -57,7 +60,8 @@ maxFallbackCandidates = 4096;
 normal element is not duplicated into all tiles when marked outlier;
 queries union tile candidates + outliers;
 ordinary edit updates only touched ids;
-document replacement rebuilds full index.
+document replacement or staged load rebuilds full index;
+operation-matrix `clearContent` may reset to an empty index without a generic full-scene clone.
 ```
 
 Staged update algorithm:
@@ -76,6 +80,7 @@ Staged update algorithm:
 ```
 
 Full clone of spatial index for ordinary edit is forbidden. Page-level copy is allowed only for touched pages.
+Full rebuild/reset is allowed only for replacement/load paths or the operation-matrix `clearContent` empty reset.
 
 Fallback budget behavior:
 

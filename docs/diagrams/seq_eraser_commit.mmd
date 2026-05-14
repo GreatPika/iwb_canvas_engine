@@ -43,7 +43,7 @@ sequenceDiagram
     IE->>Spatial: query corridor envelope inflated by eraserThickness / 2 + hitPadding + 4.0
     Spatial-->>IE: committed candidate handles from content hit scope
     alt preview candidate/check budget exceeded
-      IE->>Preview: keep corridor-only preview; discard tentative ids
+      IE->>Preview: keep corridor-only preview and discard tentative ids
       Note over IE,Geometry: Preview budget is 512 candidates / 4096 exact checks per sample. Budget exceeded does not return partial tentative ids.
     else preview budget available
       IE->>Geometry: exact eraser segment-to-family checks for deletable non-background candidates
@@ -92,7 +92,7 @@ sequenceDiagram
       Preview->>Frame: request overlay repaint cleanup
       Frame->>Signals: publish overlay cleanup repaint request
       Signals-->>Surface: repaint overlay without eraser corridor
-      Note over Geometry,Signals: Terminal budget is 4096 candidates / 32768 exact checks. Budget exceeded is cleanup/no-op only: no partial erase, document mutation, main repaint, or erase action.
+      Note over Geometry,Signals: Terminal budget is 4096 candidates / 32768 exact checks. Budget exceeded is cleanup/no-op only: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.
     else terminal budget available
       IE->>Geometry: exact eraser checks, require isDeletable and exclude background elements
       Geometry-->>IE: final erasedElementIds in document order

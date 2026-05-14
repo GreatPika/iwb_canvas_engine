@@ -65,6 +65,9 @@ before frame rendering and interaction depend on bounded element queries.
 - `dfd_cache_invalidation` -> `docs/diagrams/dfd_cache_invalidation.mmd`
 - `dfd_pointer_preview_commit` -> `docs/diagrams/dfd_pointer_preview_commit.mmd`
 - `dfd_spatial_query_budget` -> `docs/diagrams/dfd_spatial_query_budget.mmd`
+- `seq_spatial_touched_update` -> `docs/diagrams/seq_spatial_touched_update.mmd`
+- `seq_hit_test_candidate_resolution` -> `docs/diagrams/seq_hit_test_candidate_resolution.mmd`
+- `seq_eraser_exact_budget` -> `docs/diagrams/seq_eraser_exact_budget.mmd`
 
 ## Contracts satisfied by this phase
 

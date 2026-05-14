@@ -149,6 +149,7 @@
     - dto_boundary_schema
   diagrams:
     - dfd_schema_v1_decode_encode
+    - seq_schema_v1_decode_encode_order
   guardrails:
     - codec.schema_v1_exact
     - codec.known_fields_validated
@@ -544,6 +545,8 @@
     - direct_paint_admission
   diagrams:
     - dfd_pointer_preview_commit
+    - seq_hit_test_candidate_resolution
+    - seq_eraser_exact_budget
   guardrails:
     - geometry.no_legacy_scene_order
     - geometry.eraser_exact_budget_no_partial
@@ -574,6 +577,9 @@
   diagrams:
     - dfd_cache_invalidation
     - dfd_spatial_query_budget
+    - seq_spatial_touched_update
+    - seq_hit_test_candidate_resolution
+    - seq_eraser_exact_budget
   guardrails:
     - spatial.no_full_clone_ordinary_edit
     - spatial.stale_candidate_rejected
@@ -641,6 +647,7 @@
     - codec_validation_path_surface
   diagrams:
     - dfd_schema_v1_decode_encode
+    - seq_schema_v1_decode_encode_order
   guardrails:
     - codec.schema_v1_exact
     - codec.known_fields_validated

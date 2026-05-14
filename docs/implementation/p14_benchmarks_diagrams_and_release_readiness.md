@@ -65,6 +65,8 @@ match the target architecture.
 - `seq_edit_rollback` -> `docs/diagrams/seq_edit_rollback.mmd`
 - `seq_edit_success` -> `docs/diagrams/seq_edit_success.mmd`
 - `seq_eraser_commit` -> `docs/diagrams/seq_eraser_commit.mmd`
+- `seq_eraser_exact_budget` -> `docs/diagrams/seq_eraser_exact_budget.mmd`
+- `seq_hit_test_candidate_resolution` -> `docs/diagrams/seq_hit_test_candidate_resolution.mmd`
 - `seq_line_two_tap_commit` -> `docs/diagrams/seq_line_two_tap_commit.mmd`
 - `seq_load_document_failure` -> `docs/diagrams/seq_load_document_failure.mmd`
 - `seq_load_document_success` -> `docs/diagrams/seq_load_document_success.mmd`
@@ -73,8 +75,10 @@ match the target architecture.
 - `seq_overlay_paint` -> `docs/diagrams/seq_overlay_paint.mmd`
 - `seq_pencil_marker_commit` -> `docs/diagrams/seq_pencil_marker_commit.mmd`
 - `seq_resource_resolution` -> `docs/diagrams/seq_resource_resolution.mmd`
+- `seq_schema_v1_decode_encode_order` -> `docs/diagrams/seq_schema_v1_decode_encode_order.mmd`
 - `seq_selected_move_cancel` -> `docs/diagrams/seq_selected_move_cancel.mmd`
 - `seq_selected_move_preview_commit` -> `docs/diagrams/seq_selected_move_preview_commit.mmd`
+- `seq_spatial_touched_update` -> `docs/diagrams/seq_spatial_touched_update.mmd`
 - `seq_text_edit_request` -> `docs/diagrams/seq_text_edit_request.mmd`
 - `state_edit_session` -> `docs/diagrams/state_edit_session.mmd`
 - `state_eraser` -> `docs/diagrams/state_eraser.mmd`

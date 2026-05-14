@@ -42,6 +42,8 @@ flowchart LR
     RenderCaches["Frame render caches\ntext, path, stroke"]
     StaticBackgroundCache["StaticBackgroundCache\nbackground + grid + camera bucket + dpr"]
     ResolvedAssets["Resolved paint assets\nimages or placeholders"]
+    PaintAlphaPolicy["Ordinary opacity policy\nelement/stroke opacity -> primitive paint alpha\nno implicit saveLayer"]
+    ExplicitLayerEffect["Future saveLayer effect\nexplicit RenderElementRecord field,\nbudgeted, metric-counted,\nand guarded by contract update"]
     ProjectionBlocked["No CanvasDocument materialization\nin main paint"]
   end
 
@@ -84,6 +86,9 @@ flowchart LR
 
   Records -->|"text/path/stroke keys"| RenderCaches
   CapturedFrame -->|"background/grid/camera bucket/dpr"| StaticBackgroundCache
+  Records -->|"ordinary opacity render input"| PaintAlphaPolicy
+  PaintAlphaPolicy -->|"primitive paint alpha only"| MainPainter
+  ExplicitLayerEffect -.->|"required before any saveLayer-producing effect\nframe.paint_candidates offscreen-layer metric"| MainPainter
   RenderCaches -->|"bounded cached paint primitives"| MainPainter
   StaticBackgroundCache -->|"bounded static background primitive"| MainPainter
 
@@ -108,6 +113,7 @@ flowchart LR
   PaintedScene --> Surface
 
   MainPainter -.->|"forbidden"| LiveReadBlocked
+  MainPainter -.->|"forbidden ordinary opacity path"| ExplicitLayerEffect
   LiveReadBlocked -.->|"no DocumentStore, SpatialKernel,\nInteractionEngine, or Public API reads"| MainPainter
   Capture -.->|"forbidden in paint hot path"| ProjectionBlocked
   ProjectionCache -.->|"not read by main paint"| ProjectionBlocked

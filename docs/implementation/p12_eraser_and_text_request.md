@@ -62,6 +62,7 @@ double-tap request routing.
 - `dfd_pointer_preview_commit` -> `docs/diagrams/dfd_pointer_preview_commit.mmd`
 - `dfd_public_edit` -> `docs/diagrams/dfd_public_edit.mmd`
 - `seq_eraser_commit` -> `docs/diagrams/seq_eraser_commit.mmd`
+- `seq_eraser_exact_budget` -> `docs/diagrams/seq_eraser_exact_budget.mmd`
 - `seq_text_edit_request` -> `docs/diagrams/seq_text_edit_request.mmd`
 - `state_eraser` -> `docs/diagrams/state_eraser.mmd`
 - `state_pending_text_edit_request` -> `docs/diagrams/state_pending_text_edit_request.mmd`

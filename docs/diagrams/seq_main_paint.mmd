@@ -69,7 +69,7 @@ sequenceDiagram
       else descriptor missing or resolver returns null
         Resources-->>Frame: bounded missing image placeholder
       else per-frame resolver budget exceeded
-        Resources-->>Frame: bounded placeholder; no null/missing cache write
+        Resources-->>Frame: bounded placeholder, no null/missing cache write
       else cache miss and resolver budget available
         Resources->>Resolver: resolveImage(appKey descriptor)
         Resolver-->>Resources: app-owned image or null
@@ -79,6 +79,8 @@ sequenceDiagram
   end
 
   Frame->>Painter: paint immutable records, resolved assets, and bounded frame render caches
+  Note over Frame,Painter: Ordinary element and stroke opacity is applied through primitive paint alpha. It must not call Canvas.saveLayer in the hot ordinary opacity path.
+  Note over Frame,Painter: Any future saveLayer-producing effect must be explicit in RenderElementRecord, budgeted, counted by the frame.paint_candidates offscreen-layer metric, and guarded by a contract update before implementation.
   Painter-->>Surface: draw main scene
 
   Note over Painter: Painter consumes immutable RenderElementRecord data only, it performs no live runtime reads.

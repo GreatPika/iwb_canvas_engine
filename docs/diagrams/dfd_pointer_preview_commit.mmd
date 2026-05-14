@@ -3,8 +3,13 @@ flowchart LR
 
   Surface["CanvasSurface\nFlutter pointer host"]
 
+  subgraph FlutterBridge["Flutter bridge boundary"]
+    PointerAdapter["Pointer adapter\nfinite down/move normalization\nbefore runtime routing"]
+    InvalidDownMoveEvent["Invalid down/move Flutter pointer facts\nrejected before runtime"]
+  end
+
   subgraph API["Public API boundary"]
-    Sample["CanvasPointerSample\nnormalized finite down/move;\nterminal cleanup may use invalid sample"]
+    Sample["CanvasPointerSample\nfinite down/move;\nterminal cleanup may use invalid sample"]
     MoveResolver["CanvasMoveCommitResolver\nselected move terminal only"]
     PublicSignals["Public signals\naction events, preview revision,\nmain/overlay repaint requests"]
   end
@@ -51,11 +56,15 @@ flowchart LR
     Diagnostics["Diagnostics projection\nterminal/edit failures"]
   end
 
-  Surface -->|"routes pointer sample"| Sample
-  Sample -->|"normalized pointer data"| TokenGate
+  Surface -->|"raw Flutter pointer event"| PointerAdapter
+  PointerAdapter -->|"valid finite down/move sample"| Sample
+  PointerAdapter -->|"terminal sample for active route\nfinite or cleanup-only invalid"| Sample
+  PointerAdapter -.->|"non-finite or invalid down/move facts"| InvalidDownMoveEvent
+  InvalidDownMoveEvent -.->|"no runtime route, preview, repaint, edit, or event"| Surface
+  Sample -->|"finite down/move or cleanup-only terminal data"| TokenGate
   TokenGate -.->|"stale non-terminal token"| StaleSample
   StaleSample -.->|"no preview, repaint, edit, or event"| Surface
-  TokenGate -.->|"stale/invalid terminal sample"| TerminalCleanup
+  TokenGate -.->|"stale/invalid terminal sample\ncleanup only, no commit intent"| TerminalCleanup
 
   TokenGate -->|"valid down/move sample\nfor draw/line/move delta"| SessionPreview
   TokenGate -->|"valid sample needing candidates\nhit policy, marquee, eraser"| SpatialQuery

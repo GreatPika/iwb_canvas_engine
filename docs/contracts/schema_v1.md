@@ -23,6 +23,7 @@ Related donors:
 - `dto_boundary_schema`
 Related diagrams:
 - `dfd_schema_v1_decode_encode`
+- `seq_schema_v1_decode_encode_order`
 Required tests:
 - `test.codec.schema_v1.known_fields_validation`
 - `test.codec.schema_v1.resources_appkey_only`

@@ -239,10 +239,12 @@ void _checkDiagramCatalogRegistrySymmetry() {
 
 void _checkImplementationDiagramPhaseReferences() {
   final catalogPhases = _loadDiagramCatalogPhases('docs/diagrams/README.md');
+  final phaseReferences = <String, Set<String>>{};
 
   for (final entry in _phaseDocs.entries) {
     final phase = entry.key;
     final path = entry.value;
+    final references = phaseReferences.putIfAbsent(phase, () => <String>{});
     _requireFile(path);
     final text = _read(path);
     final heading = RegExp(
@@ -263,6 +265,7 @@ void _checkImplementationDiagramPhaseReferences() {
       multiLine: true,
     ).allMatches(section)) {
       final diagramId = _matchGroup(match, 1, '$path diagram reference');
+      references.add(diagramId);
       final phases = catalogPhases[diagramId];
       if (phases == null) {
         _fail(
@@ -277,6 +280,19 @@ void _checkImplementationDiagramPhaseReferences() {
           'docs/diagrams/README.md does not list $phase under $diagramId',
         );
       }
+    }
+  }
+
+  final p14References = phaseReferences['P14'] ?? const <String>{};
+  for (final entry in catalogPhases.entries) {
+    if (!entry.value.contains('P14')) {
+      continue;
+    }
+    if (!p14References.contains(entry.key)) {
+      _fail(
+        'docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md '
+        'must list P14 catalog diagram ${entry.key}',
+      );
     }
   }
 }
@@ -409,7 +425,9 @@ Map<String, Set<String>> _loadDiagramCatalogPhases(String path) {
         final phase = _matchGroup(match, 1, '$path phase reference');
         phases.add(phase);
         if (!_phaseDocs.containsKey(phase)) {
-          _fail('$path catalog entry $diagramId references unknown phase $phase');
+          _fail(
+            '$path catalog entry $diagramId references unknown phase $phase',
+          );
         }
       }
     }
@@ -607,6 +625,7 @@ void _checkSemanticDocumentationProbes() {
 
   final pointerState = _read('docs/diagrams/state_pointer_session.mmd');
   final lineState = _read('docs/diagrams/state_two_tap_line.mmd');
+  final pointerDfd = _read('docs/diagrams/dfd_pointer_preview_commit.mmd');
   if (!pointerState.contains('active routed pointer only')) {
     _fail(
       'state_pointer_session must scope interactive=false cancel to active routed pointer',
@@ -615,6 +634,32 @@ void _checkSemanticDocumentationProbes() {
   if (!lineState.contains('interactive=false with no active routed pointer')) {
     _fail(
       'state_two_tap_line must preserve pending line for non-active interactive=false',
+    );
+  }
+  if (!pointerState.contains(
+        'Invalid down facts are rejected before runtime routing',
+      ) ||
+      !pointerState.contains(
+        'Invalid terminal facts for an active route enter cleanup only',
+      ) ||
+      !pointerState.contains('Invalid terminal facts enter cleanup only') ||
+      !pointerDfd.contains(
+        'subgraph FlutterBridge["Flutter bridge boundary"]',
+      ) ||
+      !pointerDfd.contains(
+        'Pointer adapter\\nfinite down/move normalization\\nbefore runtime routing',
+      ) ||
+      !pointerDfd.contains(
+        'InvalidDownMoveEvent -.->|"no runtime route, preview, repaint, edit, or event"| Surface',
+      ) ||
+      !pointerDfd.contains(
+        'PointerAdapter -->|"terminal sample for active route\\nfinite or cleanup-only invalid"| Sample',
+      ) ||
+      !pointerDfd.contains(
+        'TokenGate -.->|"stale/invalid terminal sample\\ncleanup only, no commit intent"| TerminalCleanup',
+      )) {
+    _fail(
+      'pointer adapter diagrams must reject invalid down/move before runtime and route invalid terminal to cleanup-only',
     );
   }
 
@@ -634,6 +679,19 @@ void _checkSemanticDocumentationProbes() {
   if (!spatialContract.contains('maxFallbackCandidates = 4096') ||
       !cacheInvalidation.contains('SpatialBudgetExceeded')) {
     _fail('spatial fallback must document budget and budget-exceeded path');
+  }
+  if (!spatialContract.contains(
+        'operation-matrix `clearContent` may reset to an empty index',
+      ) ||
+      !cacheInvalidation.contains(
+        'Operation-matrix clearContent\\nempty spatial reset only',
+      ) ||
+      !cacheInvalidation.contains(
+        'Spatial rebuild/reset\\nreplacement/load or clearContent empty reset only',
+      )) {
+    _fail(
+      'spatial clearContent empty reset must be distinct from generic full clone and replacement cache invalidation',
+    );
   }
 
   final cachePolicy = _read('docs/contracts/cache_policy.md');
@@ -1313,6 +1371,10 @@ void _checkHotPathDesignContract() {
     [
       'ordinary committed records only',
       'not stored in PaintPlanCache',
+      'PaintAlphaPolicy["Ordinary opacity policy\\nelement/stroke opacity -> primitive paint alpha\\nno implicit saveLayer"]',
+      'ExplicitLayerEffect["Future saveLayer effect\\nexplicit RenderElementRecord field,\\nbudgeted, metric-counted,\\nand guarded by contract update"]',
+      'frame.paint_candidates offscreen-layer metric',
+      'MainPainter -.->|"forbidden ordinary opacity path"| ExplicitLayerEffect',
       r'ImageResolveCache -->|"cache miss"| ResolverFrameBudget',
       r'ResolverFrameBudget -->|"budget available\nsync read request"| AppResolver',
       r'ResolverFrameBudget -.->|"budget exceeded\nResourceKernel-owned probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder',
@@ -1337,6 +1399,9 @@ void _checkHotPathDesignContract() {
       'else per-frame resolver budget exceeded',
       'else cache miss and resolver budget available',
       'no null/missing cache write',
+      'Ordinary element and stroke opacity is applied through primitive paint alpha',
+      'It must not call Canvas.saveLayer in the hot ordinary opacity path',
+      'Any future saveLayer-producing effect must be explicit in RenderElementRecord, budgeted, counted by the frame.paint_candidates offscreen-layer metric, and guarded by a contract update before implementation',
     ],
     'show ordinary paint plan reuse and budget-gated resolver calls',
   );
@@ -1412,7 +1477,7 @@ void _checkHotPathDesignContract() {
     'docs/diagrams/seq_resource_resolution.mmd',
     [
       'else per-frame resolver budget exceeded',
-      'bounded placeholder; ResourceKernel records probe and at most one pending throttled follow-up repaint; no null/missing cache write',
+      'bounded placeholder, ResourceKernel records probe and at most one pending throttled follow-up repaint, no null/missing cache write',
       'ResourceKernel owns the resolver boundary and budget-exceeded retry scheduler',
       'else cache miss and resolver budget available',
     ],
@@ -1456,6 +1521,66 @@ void _checkHotPathDesignContract() {
     'show spatial query budget without full-scene scan or partial candidates',
   );
   _requireTokens(
+    'docs/diagrams/seq_spatial_touched_update.mmd',
+    [
+      'compile SpatialDelta from touched added/removed/geometry/transform ids',
+      'prepare removals from previous memberships',
+      'prepare additions from new hitBoundsWorld and paintBoundsWorld',
+      'validate ids, generations, structuralRevision, and prepared memberships',
+      'Ordinary edit scope contains touched ids only. Full spatial clone for ordinary edit is forbidden.',
+      'discard prepared delta without applying partial removals/additions',
+      'read new committed bounds and generation for added/geometry/transform ids',
+      'Applier->>Runtime: request rebuild or retry outside hot pointer/paint path',
+      'Full rebuild/reset is reserved for replacement/load or operation-matrix empty reset paths, not ordinary touched edits.',
+      'Runtime->>Spatial: rebuild full spatial index from replacement tables',
+      'Load rebuild is a RuntimeRoot post-install effect, not an ordinary touched update.',
+    ],
+    'show touched spatial update without ordinary full clone or partial stale apply',
+  );
+  _requireOrderedTokens(
+    'docs/diagrams/seq_spatial_touched_update.mmd',
+    [
+      'read previous membership for touched ids',
+      'read new committed bounds and generation for added/geometry/transform ids',
+      'prepare removals from previous memberships',
+      'prepare additions from new hitBoundsWorld and paintBoundsWorld',
+      'validate ids, generations, structuralRevision, and prepared memberships',
+    ],
+    'must prepare and validate a complete touched spatial delta before apply',
+  );
+  _requireOrderedTokens(
+    'docs/diagrams/seq_spatial_touched_update.mmd',
+    [
+      'typed invalid-index result',
+      'Applier->>Runtime: request rebuild or retry outside hot pointer/paint path',
+    ],
+    'must route invalid-index scheduling through the applier/runtime boundary',
+  );
+  _requireTokens(
+    'docs/diagrams/seq_hit_test_candidate_resolution.mmd',
+    [
+      'normalized finite CanvasPointerSample or finite query envelope',
+      'else bounded candidate handles returned',
+      'candidate handles(id, generation, orderToken, structuralRevision)',
+      'stale candidate rejected',
+      'exact family hit with transform, local bounds, hit padding, and slop',
+      'handles in reverse layer order and reverse element order',
+      'first exact hit wins',
+      'Legacy SceneNode traversal and legacy scene order logic are not normative input.',
+    ],
+    'show hit-test candidate resolution with stale rejection and next-owned ordering',
+  );
+  _requireOrderedTokens(
+    'docs/diagrams/seq_hit_test_candidate_resolution.mmd',
+    [
+      'alt spatial query budget exceeded',
+      'typed budget-exceeded result with no partial candidates',
+      'else bounded candidate handles returned',
+      'candidate handles(id, generation, orderToken, structuralRevision)',
+    ],
+    'must not expose candidate handles on the budget-exceeded hit-test path',
+  );
+  _requireTokens(
     'docs/diagrams/state_eraser.mmd',
     [
       'CandidateRefresh --> CorridorPreview: budget exceeded / corridor-only preview, no partial tentative ids',
@@ -1469,9 +1594,119 @@ void _checkHotPathDesignContract() {
       'alt preview candidate/check budget exceeded',
       'alt terminal candidate/check budget exceeded',
       'Terminal budget is 4096 candidates / 32768 exact checks',
-      'no partial erase, document mutation, main repaint, or erase action',
+      'no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action',
     ],
     'show eraser budget exceeded cannot partially commit',
+  );
+  _requireTokens(
+    'docs/diagrams/seq_eraser_exact_budget.mmd',
+    [
+      'alt preview spatial budget exceeded',
+      'else preview spatial candidates returned',
+      'alt preview candidate/check budget exceeded',
+      'Preview budget is 512 candidates / 4096 exact checks per sample.',
+      'publish corridor-only preview, no tentative ids',
+      'Preview budget exceeded produces no document mutation, selection change, spatial update, projection/cache eviction, main repaint, or erase action.',
+      'alt terminal spatial budget exceeded',
+      'else terminal spatial candidates returned',
+      'alt terminal candidate/check budget exceeded',
+      'Terminal budget is 4096 candidates / 32768 exact checks.',
+      'Empty terminal exact set is cleanup/no-op',
+      'no document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, public document notification, or erase action',
+      'CC->>Applier: hand off compiled CommitPlan',
+      'Applier->>SpatialApply: apply touched removals only',
+      'Applier->>Projection: evict by projectionRevision',
+      'Applier->>Events: materialize erase action after install',
+      'Preview->>Frame: request overlay cleanup repaint',
+      'terminal exact checks for deletable non-background candidates',
+      'exact deletable non-background ids',
+      'Terminal budget exceeded is cleanup/no-op: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.',
+    ],
+    'show engine-level eraser exact budget as non-partial preview or cleanup-only terminal behavior',
+  );
+  _requireOrderedTokens(
+    'docs/diagrams/seq_eraser_exact_budget.mmd',
+    [
+      'alt preview spatial budget exceeded',
+      'else preview spatial candidates returned',
+      'IE->>Geometry: preview exact checks for deletable non-background candidates',
+    ],
+    'must run preview exact eraser checks only after spatial candidates exist',
+  );
+  _requireOrderedTokens(
+    'docs/diagrams/seq_eraser_exact_budget.mmd',
+    [
+      'alt terminal spatial budget exceeded',
+      'else terminal spatial candidates returned',
+      'IE->>Geometry: terminal exact checks',
+    ],
+    'must run terminal exact eraser checks only after spatial candidates exist',
+  );
+  _requireOrderedTokens(
+    'docs/diagrams/seq_eraser_exact_budget.mmd',
+    [
+      'EK->>CC: compile exact touched set and staged erase action',
+      'CC->>Applier: hand off compiled CommitPlan',
+      'Applier->>Store: atomic install',
+      'Applier->>SpatialApply: apply touched removals only',
+      'Applier->>Projection: evict by projectionRevision',
+      'Applier->>Events: materialize erase action after install',
+      'Applier->>Frame: publish committed main repaint bus',
+      'Preview->>Frame: request overlay cleanup repaint',
+    ],
+    'must route successful eraser commit effects through CommitApplier',
+  );
+  _requireTokens(
+    'docs/diagrams/seq_schema_v1_decode_encode_order.mmd',
+    [
+      'raw JSON length check',
+      'schemaVersion gate(read exactly {1})',
+      'known v1 field validation and unknown non-metadata policy',
+      'primitive validation(colors, finite numbers, ids)',
+      'resource validation(appKey source only)',
+      'duplicate id checks',
+      'missing resource reference checks',
+      'metadata validation(JSON-only bounded extension area)',
+      'materialize immutable CanvasDocument DTO',
+      'Decode failure does not materialize partial DTOs and does not mutate runtime or store state.',
+      'validate public DTO before writing JSON',
+      'preserve layer/resource/element order',
+      'omit nullable optional family fields only where schema allows',
+      'write uppercase color hex',
+      'preserve metadata only as JSON-compatible values',
+      'performs no runtime/store side effects during decode or encode',
+    ],
+    'show schema v1 decode/encode ordering and no runtime side effects',
+  );
+  _requireOrderedTokens(
+    'docs/diagrams/seq_schema_v1_decode_encode_order.mmd',
+    [
+      'Schema-->>Codec: validated v1 document facts',
+      'Codec->>DTO: materialize immutable CanvasDocument DTO',
+      'DTO-->>Codec: decoded document',
+      'Codec-->>API: decoded document',
+    ],
+    'must keep schema validators as helpers and DTO materialization inside CodecBoundary',
+  );
+  _requireOrderedTokens(
+    'docs/diagrams/seq_schema_v1_decode_encode_order.mmd',
+    [
+      'Schema->>Diagnostics: create codec diagnostic with code, path, and sanitized details',
+      'Diagnostics-->>Codec: CanvasDataException safe public projection',
+      'Codec--x API: throw CanvasDataException',
+      'API--x App: throw CanvasDataException',
+    ],
+    'must project decode failures through CodecBoundary rather than directly from schema validators',
+  );
+  _requireOrderedTokens(
+    'docs/diagrams/seq_schema_v1_decode_encode_order.mmd',
+    [
+      'Codec->>Schema: validate public DTO before writing JSON',
+      'Schema-->>Codec: public DTO accepted',
+      'Codec->>Codec: canonicalize default fields',
+      'Codec->>Codec: preserve layer/resource/element order',
+    ],
+    'must keep canonical encode ownership inside CodecBoundary after DTO validation',
   );
 }
 
@@ -2442,6 +2677,18 @@ void _requireTokens(String path, List<String> tokens, String message) {
     if (!text.contains(token)) {
       _fail('$path $message; missing token: $token');
     }
+  }
+}
+
+void _requireOrderedTokens(String path, List<String> tokens, String message) {
+  final text = _read(path);
+  var offset = 0;
+  for (final token in tokens) {
+    final nextOffset = text.indexOf(token, offset);
+    if (nextOffset == -1) {
+      _fail('$path $message; missing ordered token after $offset: $token');
+    }
+    offset = nextOffset + token.length;
   }
 }
 

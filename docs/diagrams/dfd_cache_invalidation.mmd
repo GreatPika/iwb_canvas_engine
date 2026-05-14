@@ -14,12 +14,14 @@ flowchart LR
 
   subgraph Runtime["RuntimeRoot"]
     ResourceDirtyDispatch["Resource dirty orchestration\nrevision increment + cache eviction"]
+    DeferredSpatialRepair["Deferred invalid-index repair\nrebuild or retry outside hot pointer/paint path"]
   end
 
   subgraph Compiler["Commit compiler"]
     ExactPlan["CommitPlan\nexact revisions and invalidation scopes"]
     OrdinaryScope["Ordinary edit scope\ntouched ids and typed state only"]
     ReplacementScope["Edit documentReplaced scope\nonly CommitPlan full rebuild"]
+    EmptySpatialReset["Operation-matrix clearContent\nempty spatial reset only"]
     ForbiddenGlobal["Forbidden generic global invalidation\nunless documentReplaced"]
   end
 
@@ -42,7 +44,7 @@ flowchart LR
     SpatialIndex["SpatialIndex\nentries by touched id"]
     SpatialDelta["SpatialDelta\nadd, remove, touched update"]
     TouchedSpatialUpdate["Ordinary spatial update\nonly touched ids"]
-    SpatialRebuild["Full spatial rebuild\nreplacement only"]
+    SpatialRebuild["Spatial rebuild/reset\nreplacement/load or clearContent empty reset only"]
     SpatialFallback["Invalid index fallback\nbudgeted query/candidates,\ndiagnostic counter,\ndeferred rebuild"]
     SpatialBudgetExceeded["Fallback budget exceeded\ntyped result, no partial candidates"]
   end
@@ -84,6 +86,7 @@ flowchart LR
   ForbiddenGlobal -.->|"blocked unless replacement scope"| ExactPlan
 
   OrdinaryScope -->|"preflight and commit payload"| CommittedInstall
+  OrdinaryScope -->|"operation-matrix clearContent"| EmptySpatialReset
   ReplacementScope -->|"prepared document replacement"| CommittedInstall
   LoadSuccess -->|"prepared staged replacement\noutside edit CommitPlan"| CommittedInstall
   CommittedInstall -->|"publish typed committed revision changes"| TypedRevisionScope
@@ -105,11 +108,12 @@ flowchart LR
   TouchedSpatialUpdate -->|"bounded candidate updates"| SpatialIndex
   TouchedSpatialUpdate -.->|"forbidden ordinary path"| SpatialFullClone
   ReplacementScope -->|"whole document changed"| SpatialRebuild
+  EmptySpatialReset -->|"all elements removed"| SpatialRebuild
   LoadSuccess -->|"staged whole document replacement"| SpatialRebuild
   SpatialRebuild -->|"rebuild from committed tables"| SpatialIndex
   SpatialDelta -.->|"stale generation or invalid delta"| SpatialFallback
   SpatialFallback -.->|"candidate union > maxFallbackCandidates"| SpatialBudgetExceeded
-  SpatialBudgetExceeded -.->|"schedule rebuild or retry outside hot path"| SpatialRebuild
+  SpatialBudgetExceeded -.->|"schedule rebuild or retry outside hot path"| DeferredSpatialRepair
 
   ReplacementScope -->|"full projection eviction allowed"| ProjectionEvict
   LoadSuccess -->|"full projection eviction typed effect"| ProjectionEvict

@@ -1,0 +1,55 @@
+%% Hit-test candidate resolution sequence
+sequenceDiagram
+  autonumber
+
+  actor Caller as Pointer hit-test caller
+  participant Surface as CanvasSurface
+  participant Interaction as InteractionEngine
+  participant ReadPort as InteractionReadPort
+  participant Spatial as SpatialKernel
+  participant Store as DocumentStoreKernel
+  participant Geometry as GeometryPolicy
+  participant Hit as HitTestPolicy
+  participant Diagnostics as DiagnosticsHub
+
+  Caller->>Surface: hit-test request(point hit)
+  Surface->>Interaction: normalized finite CanvasPointerSample or finite query envelope
+  Interaction->>Spatial: queryHitCandidates(content hit scope, finite envelope, captured structuralRevision)
+  Spatial->>Spatial: revision/generation gate
+
+  alt spatial query budget exceeded
+    Spatial-->>Interaction: typed budget-exceeded result with no partial candidates
+    Interaction->>Diagnostics: record bounded spatial fallback/budget probe
+    Interaction-->>Surface: no hit result, no partial candidates consumed
+  else bounded candidate handles returned
+    Spatial-->>Interaction: candidate handles(id, generation, orderToken, structuralRevision)
+    loop handles in reverse layer order and reverse element order
+      Note over Interaction: orderToken is the committed ordering fact used to preserve hit priority.
+      Interaction->>ReadPort: resolve hit candidate handle
+      ReadPort->>Store: resolve handle by id, generation, structuralRevision
+      alt candidate is stale
+        Store-->>ReadPort: stale candidate rejected
+        ReadPort-->>Interaction: stale candidate rejected
+        Interaction->>Diagnostics: record stale candidate rejection
+      else candidate is current
+        Store-->>ReadPort: immutable hit row and common flags
+        ReadPort-->>Interaction: immutable hit row and common flags
+        Interaction->>Hit: check hit eligibility(point finite, visible, selectable, transform finite)
+        Hit->>Geometry: exact family hit with transform, local bounds, hit padding, and slop
+        Note over Hit,Geometry: Family rules own non-invertible transform fallback to coarse candidate bounds where the geometry contract allows it.
+        alt exact hit accepts visible selectable content element
+          Geometry-->>Hit: exact hit accepted
+          Hit-->>Interaction: first exact hit wins
+          Interaction-->>Surface: hit result for resolved element id
+        else not eligible or exact miss
+          Geometry-->>Hit: miss
+          Hit-->>Interaction: continue candidate scan
+        end
+      end
+    end
+  end
+
+  Note over Interaction,ReadPort: Hit-test resolves committed rows through read-only candidate handles only.
+  Note over Hit,Geometry: Background elements are not pointer-selectable in v1.
+  Note over Caller,Hit: Marquee selection uses the same bounded spatial candidate rules, but selection accumulation is covered by seq_marquee_select.
+  Note over Spatial,Hit: Legacy SceneNode traversal and legacy scene order logic are not normative input.

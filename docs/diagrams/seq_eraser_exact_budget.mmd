@@ -1,0 +1,98 @@
+%% Eraser exact-check budget witness sequence
+sequenceDiagram
+  autonumber
+
+  actor User as User pointer
+  participant Surface as CanvasSurface
+  participant Tools as CanvasToolPort
+  participant IE as InteractionEngine
+  participant Preview as CanvasPreviewState
+  participant Spatial as SpatialKernel
+  participant Geometry as GeometryPolicy
+  participant EK as EditKernel
+  participant Store as DocumentStoreKernel
+  participant CC as CommitCompiler
+  participant Effects as CommitEffects
+  participant Applier as CommitApplier
+  participant SpatialApply as SpatialKernel update
+  participant Projection as DocumentProjectionCache
+  participant Frame as FrameEngine
+  participant Events as EventBuffer
+  participant Diagnostics as DiagnosticsHub
+  participant Signals as Public signals
+
+  User->>Surface: eraser down/move samples
+  Surface->>Tools: handlePointer(normalized finite samples)
+  Tools->>IE: normalized finite eraser sample and finite thickness
+  IE->>IE: append eraser corridor point in world coordinates
+  IE->>Spatial: query erase candidates(corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0)
+  Spatial-->>IE: bounded candidate handles or typed budget-exceeded
+
+  alt preview spatial budget exceeded
+    IE->>Preview: publish corridor-only preview, no tentative ids
+    Preview->>Frame: request overlay repaint for corridor only
+    IE->>Diagnostics: increment eraser preview budget-exceeded probe
+    Note over EK,Signals: Preview budget exceeded produces no document mutation, selection change, spatial update, projection/cache eviction, main repaint, or erase action.
+    else preview spatial candidates returned
+    IE->>Geometry: preview exact checks for deletable non-background candidates(segment-to-family)
+    Note over Geometry: Preview budget is 512 candidates / 4096 exact checks per sample.
+    alt preview candidate/check budget exceeded
+      Geometry-->>IE: preview budget exceeded
+      IE->>Preview: publish corridor-only preview, no tentative ids
+      Preview->>Frame: request overlay repaint for corridor only
+      IE->>Diagnostics: increment eraser preview budget-exceeded probe
+      Note over EK,Signals: Preview budget exceeded produces no document mutation, selection change, spatial update, projection/cache eviction, main repaint, or erase action.
+    else preview budget accepts
+      Geometry-->>IE: tentative ids for preview only
+      IE->>Preview: publish eraser preview with tentative ids
+      Preview->>Frame: request overlay repaint
+    end
+  end
+
+  User->>Surface: eraser terminal up
+  Surface->>Tools: handlePointer(terminal sample)
+  Tools->>IE: same-token terminal eraser intent
+  IE->>Spatial: query terminal erase candidates(corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0)
+  Spatial-->>IE: terminal candidate handles or typed budget-exceeded
+
+  alt terminal spatial budget exceeded
+    IE->>Preview: clear eraser corridor preview
+    Preview->>Frame: request overlay cleanup repaint only
+    IE->>Diagnostics: increment eraser terminal budget-exceeded probe
+    Note over Store,Signals: Terminal budget exceeded is cleanup/no-op: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action. Public document notification is also forbidden.
+  else terminal spatial candidates returned
+    IE->>Geometry: terminal exact checks for deletable non-background candidates(segment-to-family)
+    Note over Geometry: Terminal budget is 4096 candidates / 32768 exact checks.
+    alt terminal candidate/check budget exceeded
+      Geometry-->>IE: terminal budget exceeded
+      IE->>Preview: clear eraser corridor preview
+      Preview->>Frame: request overlay cleanup repaint only
+      IE->>Diagnostics: increment eraser terminal budget-exceeded probe
+      Note over Store,Signals: Terminal budget exceeded is cleanup/no-op: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action. Public document notification is also forbidden.
+    else terminal exact ids accepted
+      Geometry-->>IE: exact deletable non-background ids
+      alt terminal exact ids empty
+        IE->>Preview: clear eraser corridor preview
+        Preview->>Frame: request overlay cleanup repaint only
+        Note over Store,Signals: Empty terminal exact set is cleanup/no-op: no document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, public document notification, or erase action.
+      else terminal exact ids non-empty
+        IE->>EK: open synchronous interaction edit
+        EK->>Store: read committed revision snapshot
+        EK->>EK: remove exact ids in rollback-safe draft, including selection cleanup
+        EK->>CC: compile exact touched set and staged erase action
+        Note over EK,CC: Touched scope is removed ids plus selection only if erased ids intersect selection. Revisions are document, structural, bounds, elementVisual, projection, and conditional selection.
+        CC->>Effects: prepare typed main repaint and invalidation effects
+        CC->>Applier: hand off compiled CommitPlan
+        Applier->>Store: atomic install
+        Store-->>Applier: committed revision facts
+        Applier->>SpatialApply: apply touched removals only
+        Applier->>Projection: evict by projectionRevision
+        Applier->>Events: materialize erase action after install
+        Applier->>Frame: publish committed main repaint bus
+        IE->>Preview: clear eraser corridor preview
+        Preview->>Frame: request overlay cleanup repaint
+        Events->>Signals: publish document revision and erase action notifications
+        Frame->>Signals: publish main repaint and overlay cleanup repaint
+      end
+    end
+  end

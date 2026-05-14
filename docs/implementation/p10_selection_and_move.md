@@ -67,6 +67,7 @@ typed user action events.
 - `dfd_pointer_preview_commit` -> `docs/diagrams/dfd_pointer_preview_commit.mmd`
 - `dfd_public_edit` -> `docs/diagrams/dfd_public_edit.mmd`
 - `seq_dispose_during_gesture` -> `docs/diagrams/seq_dispose_during_gesture.mmd`
+- `seq_hit_test_candidate_resolution` -> `docs/diagrams/seq_hit_test_candidate_resolution.mmd`
 - `seq_load_document_failure` -> `docs/diagrams/seq_load_document_failure.mmd`
 - `seq_load_document_success` -> `docs/diagrams/seq_load_document_success.mmd`
 - `seq_marquee_select` -> `docs/diagrams/seq_marquee_select.mmd`

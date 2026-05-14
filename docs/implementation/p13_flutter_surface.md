@@ -61,14 +61,17 @@ store, resolver, or interaction internals.
 - `c4_context` -> `docs/diagrams/c4_context.mmd`
 - `dfd_cache_invalidation` -> `docs/diagrams/dfd_cache_invalidation.mmd`
 - `dfd_main_paint_frame` -> `docs/diagrams/dfd_main_paint_frame.mmd`
+  (includes primitive-alpha ordinary opacity and explicit saveLayer policy)
 - `dfd_overlay_frame` -> `docs/diagrams/dfd_overlay_frame.mmd`
 - `dfd_pointer_preview_commit` -> `docs/diagrams/dfd_pointer_preview_commit.mmd`
+  (includes pointer adapter finite normalization before runtime routing)
 - `dfd_public_edit` -> `docs/diagrams/dfd_public_edit.mmd`
 - `dfd_resource_resolution` -> `docs/diagrams/dfd_resource_resolution.mmd`
 - `seq_dispose_during_gesture` -> `docs/diagrams/seq_dispose_during_gesture.mmd`
 - `seq_eraser_commit` -> `docs/diagrams/seq_eraser_commit.mmd`
 - `seq_line_two_tap_commit` -> `docs/diagrams/seq_line_two_tap_commit.mmd`
 - `seq_main_paint` -> `docs/diagrams/seq_main_paint.mmd`
+  (includes primitive-alpha ordinary opacity and saveLayer exclusion)
 - `seq_marquee_select` -> `docs/diagrams/seq_marquee_select.mmd`
 - `seq_overlay_paint` -> `docs/diagrams/seq_overlay_paint.mmd`
 - `seq_pencil_marker_commit` -> `docs/diagrams/seq_pencil_marker_commit.mmd`
@@ -92,9 +95,9 @@ store, resolver, or interaction internals.
   `section_07_resource_lifecycle`
 - pointer normalization, `interactive=false`, and pending line preservation from
   `section_14_interaction_engine`
-- painter capture and no-live-runtime-read contract from
+- painter capture, no-live-runtime-read, and opacity/saveLayer policy from
   `section_15_frame_render_contract`
-- cache and opacity/saveLayer policy from `section_18_cache_policy`
+- cache policy from `section_18_cache_policy`
 
 ## Tests and guardrails that prove this phase
 

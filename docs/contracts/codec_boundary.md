@@ -21,6 +21,7 @@ Related donors:
 - `codec_validation_path_surface`
 Related diagrams:
 - `dfd_schema_v1_decode_encode`
+- `seq_schema_v1_decode_encode_order`
 Required tests:
 - `test.codec.decode_encode_no_runtime_side_effects`
 Guardrails:

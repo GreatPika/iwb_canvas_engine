@@ -80,6 +80,13 @@ the planned Mermaid file paths under `docs/diagrams/`.
 - Related phases: `P3`, `P14`
 - Related sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`
 
+## seq_schema_v1_decode_encode_order
+
+- Kind: `sequence`
+- Planned path: `docs/diagrams/seq_schema_v1_decode_encode_order.mmd`
+- Related phases: `P3`, `P14`
+- Related sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`
+
 ## dfd_cache_invalidation
 
 - Kind: `data_flow`
@@ -93,6 +100,27 @@ the planned Mermaid file paths under `docs/diagrams/`.
 - Planned path: `docs/diagrams/dfd_spatial_query_budget.mmd`
 - Related phases: `P8`, `P9`, `P14`
 - Related sections: `section_17_spatial_kernel`
+
+## seq_spatial_touched_update
+
+- Kind: `sequence`
+- Planned path: `docs/diagrams/seq_spatial_touched_update.mmd`
+- Related phases: `P8`, `P14`
+- Related sections: `section_17_spatial_kernel`
+
+## seq_hit_test_candidate_resolution
+
+- Kind: `sequence`
+- Planned path: `docs/diagrams/seq_hit_test_candidate_resolution.mmd`
+- Related phases: `P8`, `P10`, `P14`
+- Related sections: `section_16_geometry_policy`, `section_17_spatial_kernel`
+
+## seq_eraser_exact_budget
+
+- Kind: `sequence`
+- Planned path: `docs/diagrams/seq_eraser_exact_budget.mmd`
+- Related phases: `P8`, `P12`, `P14`
+- Related sections: `section_16_geometry_policy`, `section_17_spatial_kernel`
 
 ## dfd_diagnostics_error_projection
 

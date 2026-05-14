@@ -106,7 +106,7 @@ sequenceDiagram
     Frame->>PlanCache: store ordinary committed records only
   end
   Frame->>Frame: use ordinary committed records without selected move preview delta
-  Note over Frame,PlanCache: Cleanup has no selectedMoveDelta; selected-move preview records are not stored in PaintPlanCache.
+  Note over Frame,PlanCache: Cleanup has no selectedMoveDelta, selected-move preview records are not stored in PaintPlanCache.
   Frame->>Signals: publish main repaint cleanup request
   Signals-->>Surface: repaint main scene without selected move preview
   IE->>IE: return pointer runtime to idle

@@ -35,13 +35,13 @@ sequenceDiagram
           Cache-->>Resources: cached app-owned ui.Image or cached missing/null result
           Resources-->>Frame: app-owned ui.Image or bounded placeholder
         else per-frame resolver budget exceeded
-          Resources-->>Frame: bounded placeholder; ResourceKernel records probe and at most one pending throttled follow-up repaint; no null/missing cache write
+          Resources-->>Frame: bounded placeholder, ResourceKernel records probe and at most one pending throttled follow-up repaint, no null/missing cache write
         else cache miss and resolver budget available
           Resources->>Resolver: resolveImage(CanvasImageResource appKey descriptor)
           Note over Resources,Resolver: Synchronous app-owned resolver boundary only. No async resolver, file, network, asset-bundle, or engine IO loading.
           opt resolver attempts public runtime mutation
             Resolver->>Runtime: reentrant edit/load/resource dirty/pointer mutation
-            Runtime--x Resolver: StateError; mutation rejected without runtime effects
+            Runtime--x Resolver: StateError, mutation rejected without runtime effects
             Note over Runtime,Resources: Resolver reentrancy rejection does not mutate document, selection, preview, caches, repaint, or actions.
           end
           Resolver-->>Resources: app-owned ui.Image or null

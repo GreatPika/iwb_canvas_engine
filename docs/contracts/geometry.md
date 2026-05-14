@@ -25,6 +25,8 @@ Related donors:
 - `direct_paint_admission`
 Related diagrams:
 - `dfd_pointer_preview_commit`
+- `seq_hit_test_candidate_resolution`
+- `seq_eraser_exact_budget`
 Required tests:
 - `test.geometry.hit_policy`
 - `test.geometry.no_legacy_scene_order`

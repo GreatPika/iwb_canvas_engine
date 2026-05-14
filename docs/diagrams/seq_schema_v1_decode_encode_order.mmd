@@ -1,0 +1,86 @@
+%% Schema v1 decode and encode ordering sequence
+sequenceDiagram
+  autonumber
+
+  actor App as Application
+  participant API as Public codec API
+  participant Codec as CodecBoundary
+  participant Schema as Schema v1 validators
+  participant DTO as CanvasDocument DTO
+  participant Diagnostics as DiagnosticsHub
+  participant Runtime as RuntimeRoot
+  participant Store as DocumentStoreKernel
+
+  App->>API: decodeCanvasDocument / decodeCanvasDocumentFromJson(raw Map or string)
+  API->>Codec: decode request
+  alt JSON string input
+    Codec->>Codec: raw JSON length check
+    Codec->>Codec: JSON parse
+  else Map input
+    Codec->>Codec: skip raw length and parse, accept JSON-compatible Map boundary
+  end
+  alt raw length or parse fails
+    Codec->>Diagnostics: create codec diagnostic with code, path, and sanitized details
+    Diagnostics-->>Codec: CanvasDataException safe public projection
+    Codec--x API: throw CanvasDataException
+    API--x App: throw CanvasDataException
+    Note over Codec,Store: Raw boundary failure does not materialize partial DTOs and does not mutate runtime or store state.
+  else raw input accepted
+  Codec->>Codec: root object check
+  alt root-object check fails
+    Codec->>Diagnostics: create codec diagnostic with code, path, and sanitized details
+    Diagnostics-->>Codec: CanvasDataException safe public projection
+    Codec--x API: throw CanvasDataException
+    API--x App: throw CanvasDataException
+    Note over Codec,Store: Root-object failure does not materialize partial DTOs and does not mutate runtime or store state.
+  else root object accepted
+  Codec->>Schema: schemaVersion gate(read exactly {1})
+  Schema->>Schema: known v1 field validation and unknown non-metadata policy
+  Schema->>Schema: primitive validation(colors, finite numbers, ids)
+  Schema->>Schema: resource validation(appKey source only)
+  Schema->>Schema: element validation(known kinds and enums)
+  Schema->>Schema: duplicate id checks
+  Schema->>Schema: missing resource reference checks
+  Schema->>Schema: layer and node count checks
+  Schema->>Schema: metadata validation(JSON-only bounded extension area)
+
+  alt all decode checks accepted
+    Schema-->>Codec: validated v1 document facts
+    Codec->>DTO: materialize immutable CanvasDocument DTO
+    DTO-->>Codec: decoded document
+    Codec-->>API: decoded document
+    API-->>App: CanvasDocument
+  else schema validation check fails
+    Schema->>Diagnostics: create codec diagnostic with code, path, and sanitized details
+    Diagnostics-->>Codec: CanvasDataException safe public projection
+    Codec--x API: throw CanvasDataException
+    API--x App: throw CanvasDataException
+    Note over Codec,Store: Decode failure does not materialize partial DTOs and does not mutate runtime or store state.
+  end
+  end
+  end
+
+  App->>API: encodeCanvasDocument / encodeCanvasDocumentToJson(document)
+  API->>Codec: encode request
+  Codec->>Schema: validate public DTO before writing JSON
+
+  alt DTO validation accepts
+    Schema-->>Codec: public DTO accepted
+    Codec->>Codec: canonicalize default fields
+    Codec->>Codec: preserve layer/resource/element order
+    Codec->>Codec: write uppercase color hex
+    Codec->>Codec: write schemaVersion = 1 and all common element fields
+    Codec->>Codec: omit nullable optional family fields only where schema allows
+    Codec->>Codec: write appKey resource descriptors only
+    Codec->>Codec: preserve metadata only as JSON-compatible values
+    Codec->>Codec: omit unknown non-metadata fields from canonical encode
+    Codec-->>API: canonical schema v1 JSON-compatible Map or JSON string
+    API-->>App: encoded Map or JSON string
+  else DTO validation rejects
+    Schema->>Diagnostics: create codec diagnostic with sanitized path/details
+    Diagnostics-->>Codec: CanvasDataException safe public projection
+    Codec--x API: throw CanvasDataException
+    API--x App: throw CanvasDataException
+  end
+
+  Note over Runtime,Store: CodecBoundary owns schema v1 only and performs no runtime/store side effects during decode or encode.
