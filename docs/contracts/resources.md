@@ -7,7 +7,6 @@ Owns:
 Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
-- `section_18_cache_policy` -> `docs/contracts/cache_policy.md`
 Feeds phases:
 - `P7`
 - `P9`
@@ -67,6 +66,16 @@ dirty ids, and resolver-safe placeholder results.
 Painters and frame paint code never call `CanvasResourceResolver` directly; they
 receive immutable descriptor facts and resolve paint assets only through
 `ResourceKernel`.
+
+### 7.1.1 Image resolve cache policy
+
+`ImageResolveCache` is ResourceKernel-owned core resource policy, not a
+frame/spatial cache prerequisite. Frame rendering may consume the boundary, but
+P7 owns the cache admission, invalidation, and budget semantics.
+
+| Cache | Owner | Key | Invalidated by | Capacity | Eviction | Metric/probe | Hot path allowed? |
+|---|---|---|---|---:|---|---|---|
+| ImageResolveCache | Resource | resourceId/resourceRevision | resource dirty/descriptor change | 1024 entries | target/all invalidation, then LRU | resolver calls, budget-exceeded count, hit/miss, null-cache count | yes, sync app resolver only with `kMaxSyncResourceResolverCallsPerFrame = 128` |
 
 ### 7.2 Atomic operations
 

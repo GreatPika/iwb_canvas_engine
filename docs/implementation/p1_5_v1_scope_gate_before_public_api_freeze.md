@@ -8,19 +8,21 @@ validation limits are explicit and mechanically checked.
 ## Build scope
 
 - scope checklist based on legacy functional behavior and approved v1 additions
+- functional ledger mapping from P1 legacy capabilities to next API targets
 - public API draft probe
 - public API compiles as written.
 
 ## Dependencies on earlier phases
 
 - P0 package boundaries are enforced.
-- P1 functional ledger and donor inventory are available.
+- P1 legacy capability inventory and donor inventory are available.
 
 ## Read first
 
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 - `section_06_validation_limits` -> `docs/contracts/validation_limits.md`
+- `section_08_functional_ledger` -> `docs/verification/functional_ledger.md`
 - `section_09_accepted_differences` -> `docs/architecture/04_decisions_and_differences.md`
 
 ## Required donors
@@ -46,13 +48,16 @@ validation limits are explicit and mechanically checked.
 
 - v1 scope additions from `section_00_status_and_scope`
 - accepted differences from legacy from `section_09_accepted_differences`
+- functional ledger mapping from `section_08_functional_ledger`
 - mandatory public API draft coverage from `section_04_public_api_v1`
 - validation limit adoption from `section_06_validation_limits`
 
 ## Tests and guardrails that prove this phase
 
 - `test.api_contract.v1_scope_gate` -> `test/api_contract/v1_scope_gate_test.dart`
+- `test.functional_ledger.row_specific_tests` -> `test/functional_ledger/row_specific_tests_test.dart`
 - `api.v1_scope_gate_green_before_freeze`
+- `api.functional_ledger_complete`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
 - `api.no_undefined_public_type_references`
@@ -67,6 +72,8 @@ validation limits are explicit and mechanically checked.
 ## Exit gate
 
 - mandatory v1 scope is green
+- functional ledger rows map every P1 legacy capability to a next API target and
+  row-specific test id
 - public equality policy is explicit before API freeze
 - public API compiles as written
 - no undefined public type references remain

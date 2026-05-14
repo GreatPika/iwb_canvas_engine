@@ -5,22 +5,6 @@
 
 ## Нужно исправить
 
-### A05. Уточнить phase-order edges для ранних фаз
-
-Приоритет: до P6/P7.
-
-Проблема: несколько ранних фаз читают поздние контракты как prerequisites:
-
-- `loadDocument` P6 -> `InteractionEngine` P10;
-- `cache_policy` P7 -> `SpatialKernel` P8;
-- `functional_ledger` P1 -> public API P1.5/P2.
-
-Исправление:
-
-- для P6 выделить минимальный ранний interrupt/preview-cleanup boundary вместо зависимости от всего interaction contract;
-- для P7 отделить `ImageResolveCache` core policy от spatial/frame cache policy или явно allowlist'ить edge как navigation-only;
-- для P1 разделить legacy capability inventory и API mapping after scope gate, если phase closure остается неясным.
-
 ### A06. Зафиксировать lifecycle listenables после dispose
 
 Приоритет: до runtime/surface lifecycle implementation.

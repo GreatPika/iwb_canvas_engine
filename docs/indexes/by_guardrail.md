@@ -2,9 +2,15 @@
 
 Guardrails extracted from split section 22.
 
+## oracle.legacy_capability_inventory_complete
+
+- Rule: every P1 legacy capability inventory row has a legacy oracle and evidence focus, without requiring next API mapping
+- Sections: `section_08_legacy_capability_inventory`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
+- Tests: `test.functional_ledger.legacy_capability_inventory`, `test.guardrails.blocking_suite`
+
 ## api.functional_ledger_complete
 
-- Rule: every functional ledger row has API + tests
+- Rule: every legacy capability inventory row has a matching functional ledger API mapping and row-specific test
 - Sections: `section_08_functional_ledger`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
 - Tests: `test.functional_ledger.row_specific_tests`, `test.guardrails.blocking_suite`
 

@@ -45,7 +45,9 @@ documents as the source for current runtime ownership.
 - Implementation sequencing routes to `docs/implementation/`.
 - P1 legacy evidence inputs route to
   `docs/implementation/p1_legacy_oracle_lock.md`.
-- Legacy behavior closure routes to `docs/verification/functional_ledger.md`.
+- Legacy capability inventory routes to
+  `docs/verification/legacy_capability_inventory.md`; next API mapping closure
+  routes to `docs/verification/functional_ledger.md`.
 - Donor decisions route to `docs/donors/` and `docs/_registry/donors.yaml`.
 - Change Contracts route to `plan/`.
 

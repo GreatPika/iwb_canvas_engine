@@ -39,7 +39,6 @@ load have established rollback-safe mutation and replacement boundaries.
 
 - `section_07_resource_lifecycle` -> `docs/contracts/resources.md`
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
-- `section_18_cache_policy` -> `docs/contracts/cache_policy.md`
 - `section_23_tests` -> `docs/verification/tests.md`
 
 ## Required donors
@@ -69,7 +68,7 @@ load have established rollback-safe mutation and replacement boundaries.
   and reentrancy contract from `section_07_resource_lifecycle`
 - resource schema v1 appKey-only contract from `section_05_schema_v1_contract`
 - resource revision and descriptor ownership from `section_10_runtime_data_model`
-- image resolve cache row from `section_18_cache_policy`
+- image resolve cache policy from `section_07_resource_lifecycle`
 
 ## Tests and guardrails that prove this phase
 

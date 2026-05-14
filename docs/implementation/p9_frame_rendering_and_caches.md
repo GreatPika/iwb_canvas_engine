@@ -35,6 +35,7 @@ frame output.
 ## Read first
 
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
+- `section_07_resource_lifecycle` -> `docs/contracts/resources.md`
 - `section_15_frame_render_contract` -> `docs/contracts/frame_rendering.md`
 - `section_16_geometry_policy` -> `docs/contracts/geometry.md`
 - `section_17_spatial_kernel` -> `docs/contracts/spatial_kernel.md`

@@ -8,7 +8,7 @@ runtime shape to become the new package architecture.
 
 ## Build scope
 
-- `legacy_to_next_functional_matrix.md`
+- `docs/verification/legacy_capability_inventory.md`
 - `docs/donors/` and `docs/_registry/donors.yaml`
 - legacy oracle file list
 - donor file list with `copy`, `copy/adapt`, `adapt`, `adapt/rewrite`, and
@@ -26,7 +26,7 @@ runtime shape to become the new package architecture.
 
 ## Read first
 
-- `section_08_functional_ledger` -> `docs/verification/functional_ledger.md`
+- `section_08_legacy_capability_inventory` -> `docs/verification/legacy_capability_inventory.md`
 - `docs/donors/00_reuse_rules.md`
 - `docs/_registry/donors.yaml`
 
@@ -110,7 +110,8 @@ Use the donor registry and donor docs to cover these important donor families:
 
 ## Contracts satisfied by this phase
 
-- functional ledger completeness from `section_08_functional_ledger`
+- legacy capability inventory completeness from
+  `section_08_legacy_capability_inventory`
 - donor rule that every implementation donor has a phase, owner, decision, and
   ported or equivalent proof before use
 - legacy boundary rule that legacy code is oracle/donor evidence only and never
@@ -118,13 +119,13 @@ Use the donor registry and donor docs to cover these important donor families:
 
 ## Tests and guardrails that prove this phase
 
-- `test.functional_ledger.row_specific_tests` -> `test/functional_ledger/row_specific_tests_test.dart`
-- `api.functional_ledger_complete`
+- `test.functional_ledger.legacy_capability_inventory` -> `test/functional_ledger/legacy_capability_inventory_test.dart`
+- `oracle.legacy_capability_inventory_complete`
 
 ## Exit gate
 
-- functional ledger rows are complete
-- each row has oracle file(s), next API target and test id
+- legacy capability inventory rows are complete
+- each row names the legacy oracle and evidence focus
 - each reusable donor has a decision, target phase and required ported tests
 - copy/adapt donors are linked from the relevant implementation phase
 - no implementation proceeds without green inventory guardrail.

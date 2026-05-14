@@ -121,6 +121,7 @@ Required tests:
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
 - `test.flutter_bridge.single_active_surface`
 - `test.flutter_bridge.pointer_adapter_finite_normalization`
+- `test.functional_ledger.legacy_capability_inventory`
 - `test.functional_ledger.row_specific_tests`
 - `test.api_contract.v1_scope_gate`
 - `test.codec.constructor_and_schema_limits`
@@ -156,6 +157,7 @@ Required tests:
 - `test.guardrails.required_diagrams_present`
 - `test.guardrails.blocking_suite`
 Guardrails:
+- `oracle.legacy_capability_inventory_complete`
 - `api.functional_ledger_complete`
 Do not assume:
 - no donor reuse without ported or equivalent tests
@@ -257,12 +259,17 @@ test/guardrails/import_boundaries_test.dart
   -> scans production lib/** Dart files for part/part of directives and allows
      them only through an explicit generated-code approval list.
 
+test/functional_ledger/legacy_capability_inventory_test.dart
+  -> verifies P1 legacy capability inventory rows have a capability, legacy
+     oracle, and evidence focus without requiring next API mapping.
+
 test/guardrails/blocking_suite_test.dart
   -> proves every mandatory blocking guardrail is represented by an executable
      test and included in the P0/P12 blocking suite.
 ```
 
-Functional ledger rows still require row-specific tests.
+Legacy capability inventory rows require inventory-only tests. Functional
+ledger mappings still require row-specific next API tests.
 Runtime coverage must include api, edit, interaction, frame, spatial, geometry, codec/schema_v1, resources, flutter_bridge, and diagnostics tests.
 
 ---

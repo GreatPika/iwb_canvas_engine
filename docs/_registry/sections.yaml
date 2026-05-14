@@ -201,7 +201,6 @@
   must_read:
     - section_04_public_api_v1
     - section_10_runtime_data_model
-    - section_18_cache_policy
   donors:
     - "none"
   diagrams:
@@ -233,16 +232,35 @@
     - no file loading
     - no remote/network loading
 -
-  id: section_08_functional_ledger
-  source: docs/_registry/sections.yaml / section 8
-  file: docs/verification/functional_ledger.md
-  title: "8. Functional ledger: legacy capability -> next API -> required test"
+  id: section_08_legacy_capability_inventory
+  source: docs/_registry/sections.yaml / section 8A
+  file: docs/verification/legacy_capability_inventory.md
+  title: 8A. Legacy capability inventory
   phases:
     - P1
+  must_read:
+    - docs/donors/00_reuse_rules.md
+  donors:
+    - "none"
+  diagrams:
+    - "none"
+  guardrails:
+    - oracle.legacy_capability_inventory_complete
+  tests:
+    - test.functional_ledger.legacy_capability_inventory
+  do_not_assume:
+    - no next API mapping before P1.5 scope gate
+-
+  id: section_08_functional_ledger
+  source: docs/_registry/sections.yaml / section 8B
+  file: docs/verification/functional_ledger.md
+  title: "8B. Functional ledger: legacy capability -> next API -> required test"
+  phases:
+    - P1.5
     - P14
   must_read:
+    - section_08_legacy_capability_inventory
     - section_04_public_api_v1
-    - docs/donors/00_reuse_rules.md
   donors:
     - "none"
   diagrams:
@@ -363,7 +381,6 @@
   must_read:
     - section_10_runtime_data_model
     - section_11_edit_kernel
-    - section_14_interaction_engine
   donors:
     - staged_load_runtime_materialization
     - validated_import_draft
@@ -394,7 +411,6 @@
     - P12
   must_read:
     - section_11_edit_kernel
-    - section_12_load_document
   donors:
     - interaction_mutation_boundary
   diagrams:
@@ -601,7 +617,6 @@
   file: docs/contracts/cache_policy.md
   title: 18. Cache policy ledger
   phases:
-    - P7
     - P9
     - P13
     - P14
@@ -699,6 +714,7 @@
   diagrams:
     - "none"
   guardrails:
+    - oracle.legacy_capability_inventory_complete
     - api.functional_ledger_complete
     - api.integration_surface_complete
     - api.v1_scope_gate_green_before_freeze
@@ -857,6 +873,7 @@
   diagrams:
     - "none"
   guardrails:
+    - oracle.legacy_capability_inventory_complete
     - api.functional_ledger_complete
   tests:
     - test.api_contract.public_api_v1_compiles_as_written
@@ -887,6 +904,7 @@
     - test.flutter_bridge.interactive_false_pending_line_preserved
     - test.flutter_bridge.single_active_surface
     - test.flutter_bridge.pointer_adapter_finite_normalization
+    - test.functional_ledger.legacy_capability_inventory
     - test.functional_ledger.row_specific_tests
     - test.api_contract.v1_scope_gate
     - test.codec.constructor_and_schema_limits
@@ -1027,6 +1045,7 @@
   diagrams:
     - "none"
   guardrails:
+    - oracle.legacy_capability_inventory_complete
     - api.functional_ledger_complete
     - api.integration_surface_complete
     - api.v1_scope_gate_green_before_freeze

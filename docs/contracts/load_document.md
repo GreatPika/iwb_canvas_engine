@@ -7,7 +7,6 @@ Owns:
 Must read before editing:
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 - `section_11_edit_kernel` -> `docs/contracts/edit_kernel.md`
-- `section_14_interaction_engine` -> `docs/contracts/interaction_engine.md`
 Feeds phases:
 - `P6`
 - `P10`
@@ -38,6 +37,20 @@ replacement operation.
 The public API delegates orchestration to `RuntimeRoot`; it does not read from
 or install into `DocumentStoreKernel` directly. `DocumentStoreKernel` owns the
 atomic replacement install once validation and materialization have succeeded.
+
+P6 owns only the minimal early interaction boundary needed by staged
+replacement:
+
+```text
+PreparedDocumentLoad success -> RuntimeRoot requests interrupt/preview cleanup;
+the boundary may clear active preview state and pointer normalization facts;
+the boundary must not read from or mutate DocumentStoreKernel;
+the boundary must not execute terminal resolver or commit paths;
+failure before PreparedDocumentLoad success must not call the boundary.
+```
+
+The full `InteractionEngine` pointer-session state machines remain owned by
+P10-P12 and consume this ordering instead of being prerequisites for P6.
 
 Success ordering:
 

@@ -83,6 +83,7 @@ Related diagrams:
 Required tests:
 - `test.guardrails.blocking_suite`
 Guardrails:
+- `oracle.legacy_capability_inventory_complete`
 - `api.functional_ledger_complete`
 - `api.integration_surface_complete`
 - `api.v1_scope_gate_green_before_freeze`
@@ -152,39 +153,40 @@ Do not assume:
 Release is blocked unless all statements are true:
 
 ```text
-1. api.functional_ledger_complete is green.
-2. P1.5 v1 scope gate is green.
-3. api.public_types_complete is green.
-4. api.public_api_compiles_as_written is green.
-5. public dartdoc, class modifier, and public signature shape guardrails are green.
-6. api.no_legacy_public_types is green.
-7. core.no_legacy_imports is green.
-8. core.import_boundaries and core.no_unapproved_part_files are green.
-9. core.single_runtime_root is green.
-10. store/projection ownership tests are green.
-11. schema v1 encode/decode contract is green.
-12. codec no-runtime-side-effect tests are green.
-13. validation limits are green.
-14. diagnostics disabled hot-path allocation and sanitizer tests are green.
-15. resource lifecycle, resolver-boundary, and resolver-frame-budget tests are green.
-16. edit rollback/stale/nested/async tests are green.
-17. operation matrix and exact touched invalidation tests are green.
-18. loadDocument staged success/failure tests are green.
-19. geometry/spatial parity, eraser exact-budget, stale-candidate, and fallback-budget tests are green.
-20. frame capture, cache-key, cache-policy, frame-meta, paint-plan, and selected supplement staging tests are green.
-21. selected move preview main repaint test is green.
-22. overlay preview repaint split tests are green.
-23. text edit request integration tests are green.
-24. action typed payload tests are green.
-25. low-level edit emits no user action events tests are green.
-26. interaction stale terminal, resolver-cancel, and interactive=false pending-line tests are green.
-27. surface single-active-surface and pointer normalization tests are green.
-28. DTO immutability and public equality policy tests are green.
-29. no CanvasDocument projection in paint/pointer/hit tests are green.
-30. all required diagrams exist and match owners.
-31. phase guardrail alignment is green.
-32. benchmark gates pass.
-33. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
+1. oracle.legacy_capability_inventory_complete is green.
+2. api.functional_ledger_complete is green.
+3. P1.5 v1 scope gate is green.
+4. api.public_types_complete is green.
+5. api.public_api_compiles_as_written is green.
+6. public dartdoc, class modifier, and public signature shape guardrails are green.
+7. api.no_legacy_public_types is green.
+8. core.no_legacy_imports is green.
+9. core.import_boundaries and core.no_unapproved_part_files are green.
+10. core.single_runtime_root is green.
+11. store/projection ownership tests are green.
+12. schema v1 encode/decode contract is green.
+13. codec no-runtime-side-effect tests are green.
+14. validation limits are green.
+15. diagnostics disabled hot-path allocation and sanitizer tests are green.
+16. resource lifecycle, resolver-boundary, and resolver-frame-budget tests are green.
+17. edit rollback/stale/nested/async tests are green.
+18. operation matrix and exact touched invalidation tests are green.
+19. loadDocument staged success/failure tests are green.
+20. geometry/spatial parity, eraser exact-budget, stale-candidate, and fallback-budget tests are green.
+21. frame capture, cache-key, cache-policy, frame-meta, paint-plan, and selected supplement staging tests are green.
+22. selected move preview main repaint test is green.
+23. overlay preview repaint split tests are green.
+24. text edit request integration tests are green.
+25. action typed payload tests are green.
+26. low-level edit emits no user action events tests are green.
+27. interaction stale terminal, resolver-cancel, and interactive=false pending-line tests are green.
+28. surface single-active-surface and pointer normalization tests are green.
+29. DTO immutability and public equality policy tests are green.
+30. no CanvasDocument projection in paint/pointer/hit tests are green.
+31. all required diagrams exist and match owners.
+32. phase guardrail alignment is green.
+33. benchmark gates pass.
+34. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
 ```
 
 ---

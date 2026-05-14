@@ -17,6 +17,7 @@ Related diagrams:
 Required tests:
 - `test.guardrails.blocking_suite`
 Guardrails:
+- `oracle.legacy_capability_inventory_complete`
 - `api.functional_ledger_complete`
 - `api.integration_surface_complete`
 - `api.v1_scope_gate_green_before_freeze`
@@ -87,7 +88,8 @@ Mandatory guardrails:
 
 | Guardrail id | Rule |
 |---|---|
-| `api.functional_ledger_complete` | every functional ledger row has API + tests |
+| `oracle.legacy_capability_inventory_complete` | every P1 legacy capability inventory row has a legacy oracle and evidence focus, without requiring next API mapping |
+| `api.functional_ledger_complete` | every legacy capability inventory row has a matching functional ledger API mapping and row-specific test |
 | `api.integration_surface_complete` | API has enough public surface for app-level `NextEngineAdapter`, but adapter is not in package |
 | `api.v1_scope_gate_green_before_freeze` | P1.5 scope gate passed before public API freeze starts |
 | `api.no_legacy_public_types` | legacy public golden symbols not exported by root package |

@@ -16,8 +16,8 @@ with the phase files under `docs/implementation/`. Start donor work at
   lists what to build, what to read first, which diagrams to use, which donors
   are allowed or forbidden, which guardrails apply, which tests are required,
   and the exit gate for that phase.
-- `verification/`: functional ledger, tests, guardrails, benchmarks, and release
-  gates.
+- `verification/`: legacy capability inventory, functional ledger, tests,
+  guardrails, benchmarks, and release gates.
 - `donors/`: donor inventory sections. Donor use is controlled by
   `_registry/donors.yaml`.
 - `diagrams/`: human-readable catalog and Mermaid diagram files.

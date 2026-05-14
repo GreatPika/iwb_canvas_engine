@@ -86,6 +86,25 @@ const _phaseDocs = {
   'P14': 'docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md',
 };
 
+const _phaseOrder = {
+  'P0': 0,
+  'P1': 10,
+  'P1.5': 15,
+  'P2': 20,
+  'P3': 30,
+  'P4': 40,
+  'P5': 50,
+  'P6': 60,
+  'P7': 70,
+  'P8': 80,
+  'P9': 90,
+  'P10': 100,
+  'P11': 110,
+  'P12': 120,
+  'P13': 130,
+  'P14': 140,
+};
+
 final _errors = <String>[];
 final _sectionIds = <String>{};
 
@@ -694,6 +713,7 @@ void _checkSemanticDocumentationProbes() {
     );
   }
 
+  final resourceContract = _read('docs/contracts/resources.md');
   final cachePolicy = _read('docs/contracts/cache_policy.md');
   if (!cachePolicy.contains('Capacity') ||
       !cachePolicy.contains('Eviction') ||
@@ -702,7 +722,19 @@ void _checkSemanticDocumentationProbes() {
       'cache policy ledger must include capacity, eviction, and metric/probe',
     );
   }
-  _checkCachePolicyRowsHaveCapacityEvictionProbe(cachePolicy);
+  if (!resourceContract.contains(
+    '| ImageResolveCache | Resource | resourceId/resourceRevision |',
+  )) {
+    _fail('ResourceKernel contract must own ImageResolveCache core policy');
+  }
+  _checkCachePolicyRowsHaveCapacityEvictionProbe(
+    'docs/contracts/cache_policy.md',
+    cachePolicy,
+  );
+  _checkCachePolicyRowsHaveCapacityEvictionProbe(
+    'docs/contracts/resources.md',
+    resourceContract,
+  );
   _checkHotPathDesignContract();
 
   final editContract = _read('docs/contracts/edit_kernel.md');
@@ -1436,6 +1468,7 @@ void _checkHotPathDesignContract() {
   }
 
   _requireTokens('docs/contracts/resources.md', [
+    '| ImageResolveCache | Resource | resourceId/resourceRevision | resource dirty/descriptor change | 1024 entries | target/all invalidation, then LRU |',
     'kMaxSyncResourceResolverCallsPerFrame = 128',
     'ResourceKernel owns the budget-exceeded retry scheduler',
     'budget-exceeded results may schedule at most one pending throttled follow-up repaint',
@@ -1731,26 +1764,30 @@ void _checkRequiredBenchmarkCases() {
 }
 
 void _checkFunctionalLedgerCoverage() {
-  final rows = _functionalLedgerRows();
-  if (rows.length < 40) {
+  final inventoryRows = _legacyCapabilityRows();
+  final ledgerRows = _functionalLedgerRows();
+  if (inventoryRows.length < 40) {
     _fail(
-      'functional ledger has only ${rows.length} rows; expected broad legacy capability coverage',
+      'legacy capability inventory has only ${inventoryRows.length} rows; expected broad legacy capability coverage',
     );
   }
+  final inventoryCapabilities = _validateCoverageRows(
+    inventoryRows,
+    label: 'legacy capability inventory',
+  );
+  final ledgerCapabilities = _validateCoverageRows(
+    ledgerRows,
+    label: 'functional ledger',
+  );
+  _checkSetEquality(
+    'legacy capability inventory vs functional ledger capabilities',
+    inventoryCapabilities,
+    ledgerCapabilities,
+  );
+
   final tests = <String>{};
-  for (final row in rows) {
+  for (final row in ledgerRows) {
     final capability = row['Capability'] ?? '';
-    for (final entry in row.entries) {
-      if (entry.value.isEmpty ||
-          RegExp(
-            r'\b(tbd|todo|unknown|not decided)\b',
-            caseSensitive: false,
-          ).hasMatch(entry.value)) {
-        _fail(
-          'functional ledger row $capability has incomplete ${entry.key}: ${entry.value}',
-        );
-      }
-    }
     final testId = _stripBackticks(row['Required test id'] ?? '');
     if (!testId.startsWith('functional.')) {
       _fail(
@@ -1765,11 +1802,43 @@ void _checkFunctionalLedgerCoverage() {
     _loadYamlMapList(_sectionsRegistryPath),
     'tests',
   );
+  if (!registryTests.contains(
+    'test.functional_ledger.legacy_capability_inventory',
+  )) {
+    _fail(
+      'legacy capability inventory rows are not backed by test.functional_ledger.legacy_capability_inventory',
+    );
+  }
   if (!registryTests.contains('test.functional_ledger.row_specific_tests')) {
     _fail(
       'functional ledger rows are not backed by test.functional_ledger.row_specific_tests',
     );
   }
+}
+
+Set<String> _validateCoverageRows(
+  List<Map<String, String>> rows, {
+  required String label,
+}) {
+  final capabilities = <String>{};
+  for (final row in rows) {
+    final capability = row['Capability'] ?? '';
+    if (!capabilities.add(capability)) {
+      _fail('$label has duplicate capability $capability');
+    }
+    for (final entry in row.entries) {
+      if (entry.value.isEmpty ||
+          RegExp(
+            r'\b(tbd|todo|unknown|not decided)\b',
+            caseSensitive: false,
+          ).hasMatch(entry.value)) {
+        _fail(
+          '$label row $capability has incomplete ${entry.key}: ${entry.value}',
+        );
+      }
+    }
+  }
+  return capabilities;
 }
 
 void _checkDonorRiskLens() {
@@ -1856,20 +1925,35 @@ String _stripBackticks(String value) {
 }
 
 List<Map<String, String>> _functionalLedgerRows() {
-  final text = _read('docs/verification/functional_ledger.md');
-  const header =
-      '| Capability | Legacy oracle | Next API v1 | Required test id |';
+  return _markdownTableRows(
+    path: 'docs/verification/functional_ledger.md',
+    header: '| Capability | Next API v1 | Required test id |',
+    columns: ['Capability', 'Next API v1', 'Required test id'],
+    label: 'functional ledger',
+  );
+}
+
+List<Map<String, String>> _legacyCapabilityRows() {
+  return _markdownTableRows(
+    path: 'docs/verification/legacy_capability_inventory.md',
+    header: '| Capability | Legacy oracle | Evidence focus |',
+    columns: ['Capability', 'Legacy oracle', 'Evidence focus'],
+    label: 'legacy capability inventory',
+  );
+}
+
+List<Map<String, String>> _markdownTableRows({
+  required String path,
+  required String header,
+  required List<String> columns,
+  required String label,
+}) {
+  final text = _read(path);
   final start = text.indexOf(header);
   if (start < 0) {
-    _fail('functional ledger table header is missing or changed');
+    _fail('$label table header is missing or changed');
     return const [];
   }
-  final columns = [
-    'Capability',
-    'Legacy oracle',
-    'Next API v1',
-    'Required test id',
-  ];
   final rows = <Map<String, String>>[];
   for (final line in text.substring(start).split('\n').skip(1)) {
     if (!line.startsWith('|')) {
@@ -1884,7 +1968,7 @@ List<Map<String, String>> _functionalLedgerRows() {
     }
     if (cells.length != columns.length) {
       _fail(
-        'functional ledger row has ${cells.length} cells, expected ${columns.length}: $line',
+        '$label row has ${cells.length} cells, expected ${columns.length}: $line',
       );
       continue;
     }
@@ -1964,7 +2048,7 @@ void _checkOwnerCouplingHeatmap(List<YamlMap> sections) {
   }
 }
 
-void _checkCachePolicyRowsHaveCapacityEvictionProbe(String text) {
+void _checkCachePolicyRowsHaveCapacityEvictionProbe(String path, String text) {
   for (final line in text.split('\n')) {
     if (!line.startsWith('| ')) {
       continue;
@@ -1974,14 +2058,14 @@ void _checkCachePolicyRowsHaveCapacityEvictionProbe(String text) {
     }
     final cells = line.split('|').skip(1).map((cell) => cell.trim()).toList();
     if (cells.length < 8) {
-      _fail('cache policy row has too few columns: $line');
+      _fail('$path row has too few columns: $line');
       continue;
     }
     final capacity = cells[4];
     final eviction = cells[5];
     final probe = cells[6];
     if (capacity.isEmpty || eviction.isEmpty || probe.isEmpty) {
-      _fail('cache policy row lacks capacity, eviction, or probe: $line');
+      _fail('$path row lacks capacity, eviction, or probe: $line');
     }
   }
 }
@@ -2462,6 +2546,10 @@ Set<String> _readFirstSectionIds(String path) {
 }
 
 void _checkMustReadGraph(List<YamlMap> sections) {
+  final sectionsById = {
+    for (final section in sections)
+      _stringField(section, 'id', 'section registry entry'): section,
+  };
   final graph = <String, List<String>>{};
   final sectionIds = <String>{};
   for (final section in sections) {
@@ -2483,6 +2571,24 @@ void _checkMustReadGraph(List<YamlMap> sections) {
         _fail(
           '$id must_read points to global catalog $reference; use tests, guardrails, indexes, or phase docs for navigation instead',
         );
+      }
+      if (!_globalCatalogSections.contains(id) &&
+          !_globalCatalogSections.contains(reference)) {
+        final referenceSection = sectionsById[reference];
+        if (referenceSection != null) {
+          final phase = _earliestPhaseOrder(section, id);
+          final referencePhase = _earliestPhaseOrder(
+            referenceSection,
+            reference,
+          );
+          if (phase != null &&
+              referencePhase != null &&
+              referencePhase > phase) {
+            _fail(
+              '$id earliest phase ${_earliestPhaseLabel(section, id)} must_read points to later $reference earliest phase ${_earliestPhaseLabel(referenceSection, reference)}',
+            );
+          }
+        }
       }
     }
     if (!_globalCatalogSections.contains(id) && sectionReferences.length > 4) {
@@ -2522,6 +2628,37 @@ void _checkMustReadGraph(List<YamlMap> sections) {
   for (final id in graph.keys) {
     visit(id);
   }
+}
+
+int? _earliestPhaseOrder(YamlMap section, String id) {
+  int? earliest;
+  for (final phase in _stringListField(section, 'phases', id)) {
+    final order = _phaseOrder[phase];
+    if (order == null) {
+      _fail('$id references unknown phase $phase');
+      continue;
+    }
+    if (earliest == null || order < earliest) {
+      earliest = order;
+    }
+  }
+  return earliest;
+}
+
+String _earliestPhaseLabel(YamlMap section, String id) {
+  String? earliestPhase;
+  int? earliestOrder;
+  for (final phase in _stringListField(section, 'phases', id)) {
+    final order = _phaseOrder[phase];
+    if (order == null) {
+      continue;
+    }
+    if (earliestOrder == null || order < earliestOrder) {
+      earliestOrder = order;
+      earliestPhase = phase;
+    }
+  }
+  return earliestPhase ?? 'unknown';
 }
 
 void _checkStoreDoesNotDispatchRuntimeEffects(String path, String text) {

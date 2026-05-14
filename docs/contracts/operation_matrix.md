@@ -6,7 +6,6 @@ Owns:
 - 13. Operation matrix
 Must read before editing:
 - `section_11_edit_kernel` -> `docs/contracts/edit_kernel.md`
-- `section_12_load_document` -> `docs/contracts/load_document.md`
 Feeds phases:
 - `P5`
 - `P6`
@@ -32,6 +31,14 @@ Do not assume:
 <!-- CONTEXT:END -->
 
 ## 13. Operation matrix
+
+Phase ownership:
+
+```text
+P5 closes edit-owned rows and the generic executable effect shape.
+P6 closes the loadDocument success/failure rows after the staged load contract.
+P7 and P10-P12 close their resource and interaction rows when those owners land.
+```
 
 | Operation | State touched | Revisions | Spatial | Projection | Repaint | Events |
 |---|---|---|---|---|---|---|

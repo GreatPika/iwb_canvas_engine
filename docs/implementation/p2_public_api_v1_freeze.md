@@ -23,7 +23,7 @@ errors, validation rules, and equality semantics.
 
 - P0 package boundaries are enforced.
 - P1 oracle and donor inventory are complete.
-- P1.5 scope gate is green.
+- P1.5 scope gate and functional ledger mapping are green.
 
 ## Read first
 
@@ -71,6 +71,7 @@ errors, validation rules, and equality semantics.
 - validation limit enforcement at public constructors from `section_06_validation_limits`,
   including `CanvasDiagnosticPolicy.verbose` preview and list-entry limits
 - accepted legacy differences from `section_09_accepted_differences`
+- functional ledger mapping remains green from P1.5 before API freeze
 - public DTO immutability, equality, id validation, class modifiers, dartdoc,
   and signature-shape obligations from `section_23_tests`
 
@@ -100,6 +101,7 @@ errors, validation rules, and equality semantics.
 ## Exit gate
 
 - P1.5 scope gate remains green
+- functional ledger mapping remains green
 - public API compiles
 - exported public API has non-empty dartdoc summaries
 - public classes have explicit subtype policy modifiers
