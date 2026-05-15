@@ -20,6 +20,24 @@ architecture rebuild. The current task is to build the new engine described in
   the same change.
 
 
+## DCM metrics exceptions
+
+- Treat DCM metrics as review signals, not design targets. Do not split,
+  wrap, or otherwise reshape cohesive code only to satisfy a metric threshold.
+- When a metric violation is an intentional architecture or readability
+  trade-off, prefer a local DCM suppression comment over broad configuration
+  changes. Use `// ignore: metrics` for a specific declaration, or
+  `// ignore_for_file: type=metrics` only when the entire file has a stable
+  reason to be excluded from metric violations.
+- Every metrics suppression must have a nearby plain-language comment that
+  explains why keeping the code together is clearer or safer than reshaping it
+  for the metric.
+- If the same kind of metrics suppression becomes repeated across several
+  files, stop treating it as a local exception. Revisit the owning abstraction,
+  file boundary, or repository-level DCM configuration before adding more
+  suppressions.
+
+
 ## Verification
 
 After each code change, run these checks from the repository root:
