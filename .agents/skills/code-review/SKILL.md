@@ -6,33 +6,7 @@ description: Review uncommitted code changes after implementation. Use when chec
 # Code Review
 
 You are acting as a reviewer for recently implemented code changes.
-
-## Required workflow
-
-1. Inspect the current repository state first:
-   - `git status --short`
-   - `git diff --stat`
-   - `git diff`
-   - `git diff --cached` when staged changes exist
-2. If the user supplied a specific diff, patch, PR, or commit, review that artifact instead of guessing from unrelated files.
-3. Identify the active plan source before judging intent:
-   - read `PLAN.md` when it exists;
-   - read referenced step documents or contracts when the diff, branch, or user request points to a plan step;
-   - use repository-local instructions and linked contracts as stronger evidence than generic preferences.
-4. Compare the diff to the plan. Flag visible mismatches when the change:
-   - implements behavior outside the planned scope;
-   - skips required checks, tests, migrations, documentation updates, or plan checkbox updates;
-   - changes the architecture, ownership, data flow, or verification strategy promised by the plan;
-   - leaves a planned retirement, cleanup, or guardrail incomplete while presenting the step as done.
-5. Look specifically for hacks, shortcuts, and fragile implementation choices introduced by the diff:
-   - hardcoded special cases where a shared owner or boundary should handle the rule;
-   - duplicated state, sync glue, or one-off call-site patches for a shared invariant;
-   - broad `try`/`catch`, silent fallback, hidden side effect, or swallowed failure;
-   - temporary TODOs, debug leftovers, dead code, or metric-only refactors;
-   - inefficient repeated work, avoidable quadratic behavior, or bypassed established utilities;
-   - opaque abstractions that make the change harder to test or reason about than the local pattern.
-6. Treat a hack, plan mismatch, or inefficiency as a finding only when it is discrete, actionable, introduced or exposed by the reviewed diff, and likely worth fixing before commit.
-7. Do not generate a fix unless the user explicitly asks for implementation after the review.
+Use the reviewed diff as the primary evidence, and use the repository's active plan, local instructions, and linked contracts to understand intended scope and architecture.
 
 Below are some default guidelines for determining whether the original author would appreciate the issue being flagged.
 
@@ -41,7 +15,7 @@ Those guidelines should be considered to override these general instructions.
 
 Here are the general guidelines for determining whether something is a bug and should be flagged.
 
-1. It meaningfully impacts the accuracy, performance, security, or maintainability of the code.
+1. It meaningfully impacts the accuracy, performance, security, reliability, maintainability, plan alignment, or verification confidence of the code.
 2. The bug is discrete and actionable (i.e. not a general issue with the codebase or a combination of multiple issues).
 3. Fixing the bug does not demand a level of rigor that is not present in the rest of the codebase (e.g. one doesn't need very detailed comments and input validation in a repository of one-off scripts in personal projects)
 4. The bug was introduced in the commit (pre-existing bugs should not be flagged).
@@ -49,6 +23,9 @@ Here are the general guidelines for determining whether something is a bug and s
 6. The bug does not rely on unstated assumptions about the codebase or author's intent.
 7. It is not enough to speculate that a change may disrupt another part of the codebase, to be considered a bug, one must identify the other parts of the code that are provably affected.
 8. The bug is clearly not just an intentional change by the original author.
+9. The bug may be a plan mismatch when the diff visibly violates the active plan's scope, required verification, architecture, ownership, cleanup, or checkbox/update obligations.
+10. The bug may be a code smell that creates future risk, including hardcoded special cases, duplicated state, sync glue, one-off call-site patches for shared invariants, silent fallbacks, swallowed failures, inefficient repeated work, bypassed local utilities, or opaque abstractions.
+11. The bug may be a metric-only workaround when code is split, renamed, routed through extra layers, or otherwise reshaped only to make static metrics green without improving correctness, cohesion, readability, or architecture.
 
 When flagging a bug, provide an accompanying finding. Once again, these guidelines are not the final word on how to construct a finding -- defer to any subsequent guidelines that you encounter.
 
@@ -73,6 +50,9 @@ GUIDELINES:
 - Use one finding per distinct issue.
 - Do not include replacement patches, suggestion blocks, or implementation diffs.
 - Keep each location as narrow as possible by naming the most useful diff line.
+- Check the active plan when one exists. Use `PLAN.md`, referenced step documents, contracts, and repository-local instructions as review evidence when they are relevant to the diff.
+- Flag plan mismatches only when the mismatch is visible and actionable from the reviewed change.
+- Flag hacks, fragile shortcuts, future-risk smells, inefficient solutions, and metric-only slicing only when the issue was introduced or exposed by the reviewed diff.
 - At the beginning of each finding, tag the issue with a priority level. For example "[P1] Un-padding slices along wrong tensor dimensions". [P0] - Drop everything to fix. Blocking release, operations, or major usage. Only use for universal issues that do not depend on any assumptions about the inputs. [P1] - Urgent. Should be addressed in the next cycle. [P2] - Normal. To be fixed eventually. [P3] - Low. Nice to have.
 
 Do not include numeric priority fields, confidence scores, correctness verdicts, or JSON.
