@@ -1,0 +1,7 @@
+interface:
+  display_name: "Change Contract Check"
+  short_description: "Проверка Change Contract перед реализацией"
+  default_prompt: "Validate this Change Contract. Return a short report with the verdict, all required fixes, and optional improvements only. Do not include passed sections or verbose audit details unless explicitly requested."
+
+policy:
+  allow_implicit_invocation: false
