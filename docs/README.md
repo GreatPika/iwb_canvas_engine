@@ -21,11 +21,10 @@ with the phase files under `docs/implementation/`. Start donor work at
 - `donors/`: donor inventory sections. Donor use is controlled by
   `_registry/donors.yaml`.
 - `diagrams/`: human-readable catalog and Mermaid diagram files.
-- `indexes/`: human-readable maps by phase, subsystem, guardrail, test area, and
-  donor relation. Use these as reverse lookups, not as the implementation
-  entrypoint.
+- `indexes/`: human-readable maps by subsystem, guardrail, test area, and donor
+  relation. Use these as reverse lookups, not as the implementation entrypoint.
 - `_registry/`: machine-readable section coverage and donor records.
-- `plan/`: workspace-level Change Contracts and audit trails for
+- root `plan/`: workspace-level Change Contracts and audit trails for
   documentation or architecture changes.
 
 ## Source rule
