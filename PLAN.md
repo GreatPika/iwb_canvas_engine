@@ -1,0 +1,21 @@
+language: english
+
+# Plan
+
+This file is the active plan index. Each step has a dedicated document so the
+roadmap can be updated without mixing execution contracts.
+
+Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<number>_<short_snake_case_summary>.md)`
+
+## General Notes
+
+- Step order defines the intended implementation order.
+- Detailed scope, closure rules, and verification live only in the linked step
+  document.
+- Completed step contracts are historical records. They may reference paths,
+  APIs, or checks that were later retired; use the current document map and
+  active step contracts for current navigation.
+- When a step is completed, update both this index and the linked step
+  document in the same change.
+
+## Step Files
