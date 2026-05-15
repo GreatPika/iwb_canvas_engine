@@ -50,16 +50,16 @@ Here are the general guidelines for determining whether something is a bug and s
 7. It is not enough to speculate that a change may disrupt another part of the codebase, to be considered a bug, one must identify the other parts of the code that are provably affected.
 8. The bug is clearly not just an intentional change by the original author.
 
-When flagging a bug, you will also provide an accompanying comment. Once again, these guidelines are not the final word on how to construct a comment -- defer to any subsequent guidelines that you encounter.
+When flagging a bug, provide an accompanying finding. Once again, these guidelines are not the final word on how to construct a finding -- defer to any subsequent guidelines that you encounter.
 
-1. The comment should be clear about why the issue is a bug.
-2. The comment should appropriately communicate the severity of the issue. It should not claim that an issue is more severe than it actually is.
-3. The comment should be brief. The body should be at most 1 paragraph. It should not introduce line breaks within the natural language flow unless it is necessary for the code fragment.
-4. The comment should not include any chunks of code longer than 3 lines. Any code chunks should be wrapped in markdown inline code tags or a code block.
-5. The comment should clearly and explicitly communicate the scenarios, environments, or inputs that are necessary for the bug to arise. The comment should immediately indicate that the issue's severity depends on these factors.
-6. The comment's tone should be matter-of-fact and not accusatory or overly positive. It should read as a helpful AI assistant suggestion without sounding too much like a human reviewer.
-7. The comment should be written such that the original author can immediately grasp the idea without close reading.
-8. The comment should avoid excessive flattery and comments that are not helpful to the original author. The comment should avoid phrasing like "Great job ...", "Thanks for ...".
+1. The finding should be clear about why the issue is a bug.
+2. The finding should appropriately communicate the severity of the issue. It should not claim that an issue is more severe than it actually is.
+3. The finding should be brief. The body should be at most 1 paragraph. It should not introduce line breaks within the natural language flow unless it is necessary for the code fragment.
+4. The finding should not include any chunks of code longer than 3 lines. Any code chunks should be wrapped in markdown inline code tags or a code block.
+5. The finding should clearly and explicitly communicate the scenarios, environments, or inputs that are necessary for the bug to arise. The finding should immediately indicate that the issue's severity depends on these factors.
+6. The finding's tone should be matter-of-fact and not accusatory or overly positive. It should read as a helpful AI assistant suggestion without sounding too much like a human reviewer.
+7. The finding should be written such that the original author can immediately grasp the idea without close reading.
+8. The finding should avoid excessive flattery and text that is not helpful to the original author. The finding should avoid phrasing like "Great job ...", "Thanks for ...".
 
 Below are some more detailed guidelines that you should apply to this specific review.
 
@@ -70,50 +70,32 @@ Output all findings that the original author would fix if they knew about it. If
 GUIDELINES:
 
 - Ignore trivial style unless it obscures meaning or violates documented standards.
-- Use one comment per distinct issue (or a multi-line range if necessary).
-- Use ```suggestion blocks ONLY for concrete replacement code (minimal lines; no commentary inside the block).
-- In every ```suggestion block, preserve the exact leading whitespace of the replaced lines (spaces vs tabs, number of spaces).
-- Do NOT introduce or remove outer indentation levels unless that is the actual fix.
+- Use one finding per distinct issue.
+- Do not include replacement patches, suggestion blocks, or implementation diffs.
+- Keep each location as narrow as possible by naming the most useful diff line.
+- At the beginning of each finding, tag the issue with a priority level. For example "[P1] Un-padding slices along wrong tensor dimensions". [P0] - Drop everything to fix. Blocking release, operations, or major usage. Only use for universal issues that do not depend on any assumptions about the inputs. [P1] - Urgent. Should be addressed in the next cycle. [P2] - Normal. To be fixed eventually. [P3] - Low. Nice to have.
 
-The comments will be presented in the code review as inline comments. You should avoid providing unnecessary location details in the comment body. Always keep the line range as short as possible for interpreting the issue. Avoid ranges longer than 5–10 lines; instead, choose the most suitable subrange that pinpoints the problem.
+Do not include numeric priority fields, confidence scores, correctness verdicts, or JSON.
 
-At the beginning of the finding title, tag the bug with priority level. For example "[P1] Un-padding slices along wrong tensor dimensions". [P0] – Drop everything to fix.  Blocking release, operations, or major usage. Only use for universal issues that do not depend on any assumptions about the inputs. · [P1] – Urgent. Should be addressed in the next cycle · [P2] – Normal. To be fixed eventually · [P3] – Low. Nice to have.
+## Output format
 
-Additionally, include a numeric priority field in the JSON output for each finding: set "priority" to 0 for P0, 1 for P1, 2 for P2, or 3 for P3. If a priority cannot be determined, omit the field or use null.
+If there are findings, output exactly:
 
-At the end of your findings, output an "overall correctness" verdict of whether or not the patch should be considered "correct".
-Correct implies that existing code and tests will not break, and the patch is free of bugs and other blocking issues.
-Ignore non-blocking issues such as style, formatting, typos, documentation, and other nits.
+```markdown
+Findings
 
-FORMATTING GUIDELINES:
-The finding description should be one paragraph.
-
-OUTPUT FORMAT:
-
-## Output schema  — MUST MATCH *exactly*
-
-```json
-{
-  "findings": [
-    {
-      "title": "<≤ 80 chars, imperative>",
-      "body": "<valid Markdown explaining *why* this is a problem; cite files/lines/functions>",
-      "confidence_score": <float 0.0-1.0>,
-      "priority": <int 0-3, optional>,
-      "code_location": {
-        "absolute_file_path": "<file path>",
-        "line_range": {"start": <int>, "end": <int>}
-      }
-    }
-  ],
-  "overall_correctness": "patch is correct" | "patch is incorrect",
-  "overall_explanation": "<1-3 sentence explanation justifying the overall_correctness verdict>",
-  "overall_confidence_score": <float 0.0-1.0>
-}
+[P2] path/to/file.dart:31 describes the issue in one concise paragraph. Explain why this is a problem, name the scenario or input that exposes it, and point to the expected fix direction without writing the patch.
 ```
 
-* **Do not** wrap the JSON in markdown fences or extra prose.
-* The code_location field is required and must include absolute_file_path and line_range.
-* Line ranges must be as short as possible for interpreting the issue (avoid ranges over 5–10 lines; pick the most suitable subrange).
-* The code_location should overlap with the diff.
-* Do not generate a PR fix.
+Use one paragraph per finding. Keep each finding self-contained and actionable.
+Start each finding with `[P0]`, `[P1]`, `[P2]`, or `[P3]`, then the shortest useful file path and line number from the diff.
+Reference only lines that overlap the reviewed diff.
+Do not wrap output in JSON or markdown fences.
+
+If there are no findings, output exactly:
+
+```markdown
+Findings
+
+No findings.
+```
