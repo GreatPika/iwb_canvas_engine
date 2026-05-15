@@ -185,8 +185,11 @@ Release is blocked unless all statements are true:
 30. no CanvasDocument projection in paint/pointer/hit tests are green.
 31. all required diagrams exist and match owners.
 32. phase guardrail alignment is green.
-33. benchmark gates pass.
-34. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
+33. full `dart run tool/guardrails/run.dart` is green.
+34. every mandatory guardrail has a runner entry and executable proof.
+35. changed-aware guardrail routing has conservative fallback coverage.
+36. benchmark gates pass.
+37. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
 ```
 
 ---

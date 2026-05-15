@@ -14,6 +14,11 @@ runtime, API, donor, codec, or Flutter implementation can land.
 - add `core.no_unapproved_part_files` guardrail
 - add `RuntimeRoot` skeleton
 - add diagram file placeholders
+- add the minimal `tool/guardrails/run.dart` entrypoint
+- add runner metadata for hard-boundary guardrails
+- support full guardrail run and explicit `--guardrail=<id>` selection
+- allow `--changed` to fall back to the full blocking suite until impact
+  metadata is complete
 - add CI target for the root package
 - add `api.public_types_complete` guardrail test first, then close with it green.
 
@@ -60,6 +65,8 @@ runtime, API, donor, codec, or Flutter implementation can land.
 - `test.guardrails.import_boundaries` -> `test/guardrails/import_boundaries_test.dart`; also enforces no imports from another package's `src/**` and no unapproved production `part` / `part of` directives
 - `test.guardrails.required_diagrams_present` -> `test/guardrails/required_diagrams_present_test.dart`
 - `test.guardrails.blocking_suite` -> `test/guardrails/blocking_suite_test.dart`
+- `dart run tool/guardrails/run.dart` -> full blocking guardrail suite
+- `dart run tool/guardrails/run.dart --guardrail=core.import_boundaries`
 - `diagrams.all_required_present`
 - `api.no_legacy_public_types`
 - `core.no_legacy_imports`
@@ -77,6 +84,7 @@ runtime, API, donor, codec, or Flutter implementation can land.
 - production `lib/**` contains no unapproved `part` or `part of` directives
 - legacy public symbols not exported
 - all required public type names have files.
+- guardrail runner full run and explicit hard-boundary guardrail selection work.
 
 ## Risks and trade-offs
 
@@ -84,6 +92,8 @@ runtime, API, donor, codec, or Flutter implementation can land.
   package shape, boundaries, and guardrail wiring only.
 - A too-small skeleton would let later phases introduce boundary drift before
   checks exist. Boundary tests must land before feature implementation.
+- Early changed-aware routing can be incomplete. It must fall back to the full
+  blocking suite rather than skipping an unmapped hard-boundary proof.
 
 ## Why this phase belongs here
 

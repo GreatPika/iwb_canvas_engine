@@ -148,17 +148,28 @@ production lib/**               -> no `part` or `part of` files unless generated
 all lib/**                      -> may not import another package's `src/**`
 ```
 
-Production-owned тесты зеркалят top-level ownership folders под
-`lib/src/**`: `test/edit/**` покрывает `lib/src/edit/**`, `test/frame/**`
-покрывает `lib/src/frame/**`, и так далее. Cross-cutting proof areas, которые
-не принадлежат одному production owner, остаются вне зеркала:
-`test/api_contract/**`, `test/functional_ledger/**`, `test/guardrails/**`,
-`test/benchmarks/**`, а shared test fixtures живут под `test/support/**`.
+Production-owned tests mirror the top-level ownership folders under
+`lib/src/**`: `test/edit/**` covers `lib/src/edit/**`, `test/frame/**` covers
+`lib/src/frame/**`, and so on. Cross-cutting proof areas that do not belong to
+one production owner stay outside the mirror: `test/api_contract/**`,
+`test/functional_ledger/**`, `test/guardrails/**`, `test/benchmarks/**`, and
+shared test fixtures live under `test/support/**`.
 
-Зеркало является правилом ownership и навигации, а не правилом "каждому source
-file нужен matching test file". Individual tests называются по behavior,
-contract, invariant или regression, которые они доказывают, даже если несколько
-source files совместно обеспечивают это поведение.
+The mirror is an ownership and navigation rule, not a rule that every source
+file needs a matching test file. Individual tests are named for the behavior,
+contract, invariant, or regression they prove, even when several source files
+jointly provide that behavior.
+
+Guardrail ownership is intentionally split:
+
+```text
+test/guardrails/** -> cross-cutting proof integration with dart test and CI
+tool/guardrails/** -> CLI orchestration, runner metadata, and shared check logic
+```
+
+Production `lib/**` code must not import `tool/**`. Tests may call reusable
+guardrail check logic from `tool/guardrails/**` or execute the guardrail runner
+when a proof needs the same command path as CI.
 
 Forbidden imports:
 

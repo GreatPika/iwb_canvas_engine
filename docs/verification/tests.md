@@ -241,6 +241,17 @@ test/interaction/no_stale_terminal_commit_test.dart
 
 Guardrail test ownership:
 
+`test/guardrails/**` owns executable proof tests that make cross-cutting
+guardrails part of normal `dart test` and CI. `tool/guardrails/**` owns the
+guardrail runner, runner metadata or manifests, and reusable structural check
+logic. Simple guardrails may live entirely as tests. Shared scanner logic,
+changed-aware routing, or logic used by both tests and the runner belongs under
+`tool/guardrails/**`, with a thin test under `test/guardrails/**`.
+
+The runner is only a dispatcher over proof commands. It must not replace
+behavioral tests, and the required guardrail list remains owned by
+`section_22_guardrails_machine_checks`.
+
 ```text
 test/api_contract/public_api_v1_compiles_as_written_test.dart
   -> compiles the exported API declarations in an empty consumer package;
@@ -266,8 +277,10 @@ test/functional_ledger/legacy_capability_inventory_test.dart
      oracle, and evidence focus without requiring next API mapping.
 
 test/guardrails/blocking_suite_test.dart
-  -> proves every mandatory blocking guardrail is represented by an executable
-     test and included in the P0/P12 blocking suite.
+  -> proves every mandatory blocking guardrail from
+     section_22_guardrails_machine_checks is represented by executable proof;
+  -> proves every mandatory blocking guardrail is included in the full
+     guardrail runner suite.
 
 test/runtime/dispose_lifecycle_test.dart
   -> proves runtime dispose keeps documentRevisionListenable and

@@ -84,6 +84,41 @@ Do not assume:
 
 ## 22. Guardrails and machine checks
 
+### Guardrail runner contract
+
+Guardrails are blocking architecture and release rules. They must be executable
+through one project-owned entrypoint so developers and CI do not need to
+remember individual proof commands.
+
+The primary entrypoint is:
+
+```bash
+dart run tool/guardrails/run.dart
+```
+
+A run without arguments executes the full blocking guardrail suite. The runner
+is a thin dispatcher over existing proof commands, such as Dart tests and
+tool-owned structural checks. It must not become a second test framework or a
+second source of truth for required guardrails.
+
+The runner must support these selection modes:
+
+```bash
+dart run tool/guardrails/run.dart --suite=api
+dart run tool/guardrails/run.dart --guardrail=core.import_boundaries
+dart run tool/guardrails/run.dart --changed
+```
+
+`--suite=<name>` runs a named guardrail group. `--guardrail=<id>` runs one
+guardrail id from the registry. `--changed` maps changed paths to guardrail ids
+using runner-owned impact metadata. Changed-aware routing is conservative: if a
+changed path cannot be mapped with confidence, the runner must widen the run to
+the full blocking suite instead of silently skipping a required proof.
+
+Runner metadata may live under `tool/guardrails/**`, but mandatory guardrail ids
+come from `docs/_registry/sections.yaml` and this section. If runner metadata
+omits a mandatory guardrail, `test.guardrails.blocking_suite` must fail.
+
 Mandatory guardrails:
 
 | Guardrail id | Rule |
