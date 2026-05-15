@@ -32,6 +32,12 @@ Guardrails extracted from split section 22.
 - Sections: `section_03_package_layout`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.no_legacy_public_symbols`, `test.guardrails.blocking_suite`
 
+## api.public_exports_complete
+
+- Rule: all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.guardrails.blocking_suite`
+
 ## api.public_types_complete
 
 - Rule: all public signatures reference defined public types

@@ -103,6 +103,7 @@
     - dfd_public_edit
     - seq_single_active_surface
   guardrails:
+    - api.public_exports_complete
     - api.public_types_complete
     - api.public_api_compiles_as_written
     - api.exported_dartdoc_complete
@@ -721,6 +722,7 @@
     - api.integration_surface_complete
     - api.v1_scope_gate_green_before_freeze
     - api.no_legacy_public_types
+    - api.public_exports_complete
     - api.public_types_complete
     - api.public_api_compiles_as_written
     - api.exported_dartdoc_complete
@@ -1053,6 +1055,7 @@
     - api.integration_surface_complete
     - api.v1_scope_gate_green_before_freeze
     - api.no_legacy_public_types
+    - api.public_exports_complete
     - api.public_types_complete
     - api.public_api_compiles_as_written
     - api.exported_dartdoc_complete

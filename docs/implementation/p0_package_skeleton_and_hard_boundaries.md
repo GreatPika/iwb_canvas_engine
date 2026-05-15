@@ -10,6 +10,8 @@ runtime, API, donor, codec, or Flutter implementation can land.
 - populate the existing repository-root package skeleton
 - create public barrel exporting only `src/api/**`
 - add `api.no_legacy_public_types` guardrail
+- add `api.public_exports_complete` guardrail
+- add `api.public_types_complete` guardrail
 - add `core.no_legacy_imports` guardrail
 - add `core.no_unapproved_part_files` guardrail
 - add `RuntimeRoot` skeleton
@@ -20,7 +22,8 @@ runtime, API, donor, codec, or Flutter implementation can land.
 - allow `--changed` to fall back to the full blocking suite until impact
   metadata is complete
 - add CI target for the root package
-- add `api.public_types_complete` guardrail test first, then close with it green.
+- add `api.public_exports_complete` and `api.public_types_complete` guardrail
+  tests first, then close with them green.
 
 ## Dependencies on earlier phases
 
@@ -69,6 +72,8 @@ runtime, API, donor, codec, or Flutter implementation can land.
 - `dart run tool/guardrails/run.dart --guardrail=core.import_boundaries`
 - `diagrams.all_required_present`
 - `api.no_legacy_public_types`
+- `api.public_exports_complete`
+- `api.public_types_complete`
 - `core.no_legacy_imports`
 - `core.import_boundaries`
 - `core.no_unapproved_part_files`
@@ -83,7 +88,8 @@ runtime, API, donor, codec, or Flutter implementation can land.
 - forbidden `lib/src/**` import boundaries are enforced
 - production `lib/**` contains no unapproved `part` or `part of` directives
 - legacy public symbols not exported
-- all required public type names have files.
+- all required public names are exported by the public barrel and all public
+  signatures reference defined public types.
 - guardrail runner full run and explicit hard-boundary guardrail selection work.
 
 ## Risks and trade-offs

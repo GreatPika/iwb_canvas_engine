@@ -12,10 +12,13 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 
 - Populate the repository-root package skeleton required by `docs/architecture/02_package_boundaries.md`.
 - Create `lib/iwb_canvas_engine.dart` as the only public package barrel and export only `lib/src/api/**`.
-- Add the P0 public API skeleton under `lib/src/api/**` so the public type names required by `docs/contracts/public_api_v1.md` have declarations in API-owned files.
+- Add the P0 public API skeleton under `lib/src/api/**` so the public names
+  listed in `docs/_registry/public_api_v1.yaml` have declarations in API-owned
+  files.
 - Add one production `RuntimeRoot` skeleton under `lib/src/runtime/runtime_root.dart`.
 - Add machine-enforced hard-boundary guardrails for P0:
   - `api.no_legacy_public_types`
+  - `api.public_exports_complete`
   - `api.public_types_complete`
   - `core.no_legacy_imports`
   - `core.import_boundaries`
@@ -44,22 +47,33 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 
 ### Inspected Artifacts
 
-- `docs/implementation/p0_package_skeleton_and_hard_boundaries.md` - defines P0 scope, required read-first sections, forbidden donor structures, guardrails, tests, exit gate, and the requirement to add the `api.public_types_complete` guardrail test first.
+- `docs/implementation/p0_package_skeleton_and_hard_boundaries.md` - defines
+  P0 scope, required read-first sections, forbidden donor structures,
+  guardrails, tests, exit gate, and the requirement to add the
+  `api.public_exports_complete` and `api.public_types_complete` guardrail tests
+  first.
 - `PLAN.md` - is the active plan index and links each step to a dedicated `plan/step_<number>_<short_snake_case_summary>.md` file.
 - `.agents/skills/change-contract/assets/change-contract-template.md` - defines the required Change Contract structure.
 - `docs/architecture/00_architecture_overview.md` - locks the new root package as not API-compatible with legacy and forbids legacy facade, legacy runtime fallback, `SceneController`, `SceneSnapshot`, `NodeSpec`, `NodePatch`, `PatchField`, `SceneWriteTxn`, and old schema v7 public entrypoints in the new package.
 - `docs/architecture/01_runtime_ownership.md` - defines one `RuntimeRoot` composition owner and the runtime subsystem ownership model.
 - `docs/architecture/02_package_boundaries.md` - defines the root package layout, public barrel rule, test ownership layout, guardrail ownership split, and forbidden import matrix.
-- `docs/contracts/public_api_v1.md` - lists the normative public v1 names and assigns `api.public_types_complete` to the public API contract.
+- `docs/contracts/public_api_v1.md` - defines the human-readable public API v1
+  semantic contract and assigns `api.public_exports_complete` and
+  `api.public_types_complete` to the public API contract.
 - `docs/verification/guardrails.md` - defines the guardrail runner command contract, mandatory selection modes, conservative `--changed` widening, runner metadata source rule, and P0-relevant guardrail meanings.
 - `docs/verification/tests.md` - lists required test paths, including P0 guardrail tests.
-- `docs/indexes/by_guardrail.md` - maps `api.public_types_complete` to `test.guardrails.blocking_suite` and maps P0 hard-boundary guardrails to their proof tests.
+- `docs/indexes/by_guardrail.md` - maps `api.public_exports_complete`
+  and `api.public_types_complete` to `test.guardrails.blocking_suite` and maps
+  P0 hard-boundary guardrails to their proof tests.
 - `docs/indexes/by_test_area.md` - maps `test.guardrails.required_diagrams_present`, `test.guardrails.blocking_suite`, and `test.guardrails.import_boundaries` to paths and guardrails.
 - `docs/diagrams/README.md` - catalogs the required Mermaid files and their planned paths.
 - `docs/tool/check_docs.dart` - is a root-owned structural documentation checker and a valid precedent for a thin Dart CLI that reads structured repository sources and exits non-zero on violations.
 - `pubspec.yaml` - confirms the repository root is already the `iwb_canvas_engine` Dart/Flutter package.
 - `analysis_options.yaml` - excludes `legacy/**`, enforces strict analyzer settings, and configures DCM rules and metrics for root code.
 - `dart_test.yaml` - currently contains only a `tool` tag.
+- `docs/_registry/**` - contains registry-owned structured inputs, including
+  `sections.yaml` and `public_api_v1.yaml`; the public API registry is the
+  machine-readable inventory for expected public API names.
 - Root `lib/**`, `test/**`, `tool/**`, and `.github/**` - contain no implementation files yet.
 - `plan/**` - contains this Step 1 Change Contract as the first active implementation contract.
 - `legacy/iwb_canvas_engine/lib/iwb_canvas_engine.dart` - shows the legacy public barrel shape, including exports that P0 must explicitly reject for the new package.
@@ -156,7 +170,11 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 
 #### State and Data Ownership
 
-- Public type-name requirements are owned by `docs/contracts/public_api_v1.md`.
+- Public API v1 semantics are owned by `docs/contracts/public_api_v1.md`.
+- The machine-readable public API v1 name inventory is owned by
+  `docs/_registry/public_api_v1.yaml`; guardrails and tests must read expected
+  public names from this registry instead of hardcoding them or parsing
+  Markdown prose.
 - Package layout and forbidden import rules are owned by `docs/architecture/02_package_boundaries.md`.
 - Mandatory guardrail ids and runner behavior are owned by `docs/verification/guardrails.md`.
 - Runner metadata for implemented P0 hard-boundary guardrails is owned by `tool/guardrails/src/guardrail_registry.dart`.
@@ -185,6 +203,11 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 - Make guardrails prose-only or CI-only - rejected because P0 requires executable local guardrails through one project-owned runner.
 - Expand `docs/tool/check_docs.dart` into runtime/package boundary checking - rejected because documentation structural checks and package hard-boundary checks have different owners.
 - Add one-off guardrail scripts without runner metadata - rejected because `test.guardrails.blocking_suite` must make omitted mandatory guardrails visible.
+- Hardcode expected public API names in tests - rejected because tests must prove
+  the contract, not become the hidden contract.
+- Parse expected public API names from `docs/contracts/public_api_v1.md` -
+  rejected because Markdown is the human-readable semantic contract, not a
+  stable machine data format.
 
 #### Why This Level Is Correct
 
@@ -195,15 +218,33 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 ## 5. Locked Decisions
 
 1. The first plan entry for P0 is `plan/step_1_package_skeleton_and_hard_boundaries.md`.
-2. `api.public_types_complete` is proven first through `test/guardrails/blocking_suite_test.dart`, because the inspected guardrail index maps that guardrail to `test.guardrails.blocking_suite`.
-3. P0 does not create a separate `test/guardrails/public_types_complete_test.dart` unless the docs registry and indexes are updated in the same change.
+2. `api.public_exports_complete` and `api.public_types_complete` are proven
+   first through `test/guardrails/blocking_suite_test.dart`, because the
+   inspected guardrail index maps both guardrails to
+   `test.guardrails.blocking_suite`.
+3. P0 does not create separate
+   `test/guardrails/public_exports_complete_test.dart` or
+   `test/guardrails/public_types_complete_test.dart`; the public API guardrail
+   proof stays in `test/guardrails/blocking_suite_test.dart` unless the docs
+   registry and indexes are updated in the same change.
 4. Public skeleton declarations are minimal compileable declarations that satisfy exported-name and boundary checks; they do not lock final behavior, validation, equality, dartdoc completeness, or signature semantics reserved for later phases.
-5. `test/guardrails/import_boundaries_test.dart` owns P0 source-boundary structural proof for `core.import_boundaries` and `core.no_unapproved_part_files`.
-6. `test/api_contract/no_legacy_public_symbols_test.dart` owns direct public-barrel proof for `api.no_legacy_public_types`.
-7. `test/guardrails/blocking_suite_test.dart` owns runner metadata completeness for the P0 hard-boundary guardrails and proves runner selection paths.
-8. `test/guardrails/required_diagrams_present_test.dart` owns `diagrams.all_required_present`.
-9. The P0 runner registers the P0 hard-boundary subset now and preserves the command shape needed for later section 22 guardrails.
-10. The root CI workflow runs root-package checks and `dart run tool/guardrails/run.dart`; it does not call legacy package checks as P0 proof.
+5. `api.public_exports_complete` owns exported-name inventory completeness.
+   Expected P0 public names are stored in
+   `docs/_registry/public_api_v1.yaml`. The public skeleton inventory proof
+   reads that registry and compares it with declarations exported through
+   `lib/iwb_canvas_engine.dart`; it must not hardcode the list in tests and must
+   not parse names out of `docs/contracts/public_api_v1.md`.
+6. `api.public_types_complete` keeps the meaning defined by
+   `docs/verification/guardrails.md` and `docs/indexes/by_guardrail.md`: all
+   exported public signatures reference defined public types. P0 implements the
+   minimal version of that signature-reference check for the skeleton API; it
+   does not redefine the guardrail as exported-name inventory completeness.
+7. `test/guardrails/import_boundaries_test.dart` owns P0 source-boundary structural proof for `core.import_boundaries` and `core.no_unapproved_part_files`.
+8. `test/api_contract/no_legacy_public_symbols_test.dart` owns direct public-barrel proof for `api.no_legacy_public_types`.
+9. `test/guardrails/blocking_suite_test.dart` owns runner metadata completeness for the P0 hard-boundary guardrails and proves runner selection paths.
+10. `test/guardrails/required_diagrams_present_test.dart` owns `diagrams.all_required_present`.
+11. The P0 runner registers the P0 hard-boundary subset now and preserves the command shape needed for later section 22 guardrails.
+12. The root CI workflow runs root-package checks and `dart run tool/guardrails/run.dart`; it does not call legacy package checks as P0 proof.
 
 ## 6. Result Requirements
 
@@ -222,7 +263,9 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 
 ### Required Order
 
-- Add the `api.public_types_complete` proof before adding the public API declarations that make it pass.
+- Add the `api.public_exports_complete` skeleton inventory proof and the
+  `api.public_types_complete` signature-reference proof before adding the
+  public API declarations that make them pass.
 - Add the public barrel and API skeleton before closing `api.no_legacy_public_types`.
 - Add `RuntimeRoot` before closing `core.single_runtime_root`.
 - Add source-boundary checks before adding future subsystem folders beyond the P0 skeleton.
@@ -291,11 +334,14 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 - `.github/workflows/root_package.yml`
 - `docs/implementation/p0_package_skeleton_and_hard_boundaries.md` - read-only P0 phase source.
 - `docs/_registry/sections.yaml` - read-only guardrail and test source.
+- `docs/_registry/public_api_v1.yaml` - machine-readable public-name source for
+  P0 skeleton completeness.
 - `docs/verification/guardrails.md` - read-only runner and guardrail contract source.
 - `docs/indexes/by_guardrail.md` - read-only guardrail-to-test map.
 - `docs/indexes/by_test_area.md` - read-only test path map.
 - `docs/diagrams/README.md` - read-only diagram catalog.
-- `docs/contracts/public_api_v1.md` - read-only public-name source for P0 skeleton completeness.
+- `docs/contracts/public_api_v1.md` - read-only human-readable public API
+  semantic contract.
 - `legacy/iwb_canvas_engine/tool/goldens/public_api_symbols.txt` - read-only legacy public API golden source for `api.no_legacy_public_types`.
 
 ### Analysis Area
@@ -304,6 +350,7 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 - `test/**`
 - `tool/guardrails/**`
 - `.github/workflows/**`
+- `docs/_registry/public_api_v1.yaml`
 - `docs/diagrams/*.mmd`
 - `docs/contracts/public_api_v1.md`
 - `docs/architecture/02_package_boundaries.md`
@@ -314,7 +361,10 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 ### Protected Invariants
 
 - The root public barrel exports only `lib/src/api/**`.
-- Every P0 public name required by `docs/contracts/public_api_v1.md` is declared in API-owned files and exported only through the root barrel.
+- Every P0 public name required by `docs/_registry/public_api_v1.yaml` is
+  declared in API-owned files and exported only through the root barrel.
+- Every exported public signature in the P0 skeleton references only public
+  types that are exported by the root barrel or allowed Dart/Flutter SDK types.
 - No symbol from `legacy/iwb_canvas_engine/tool/goldens/public_api_symbols.txt` is exported by the root package.
 - Production root code imports no legacy package paths and no other package's `src/**`.
 - Production root code has no `part` or `part of` directives in P0.
@@ -326,7 +376,13 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 
 - behavioral proof: package import and guardrail runner commands execute successfully for the P0 skeleton.
 - structural proof: tests include positive and negative scenarios that make public export drift, forbidden imports, unapproved part directives, missing diagrams, missing P0 guardrail metadata, and invalid guardrail selection mechanically visible.
-- public skeleton proof: `api.public_types_complete` fails when a P0 public name required by `docs/contracts/public_api_v1.md` is missing from API-owned declarations or not exported through `lib/iwb_canvas_engine.dart`.
+- public skeleton inventory proof: `api.public_exports_complete` fails when a
+  P0 public name required by `docs/_registry/public_api_v1.yaml` is missing
+  from API-owned declarations or not exported through
+  `lib/iwb_canvas_engine.dart`.
+- public signature-reference proof: `api.public_types_complete` fails when any
+  exported public signature references a type that is not defined by the public
+  barrel or allowed Dart/Flutter SDK imports.
 - legacy public API proof: `api.no_legacy_public_types` reads the full golden list from `legacy/iwb_canvas_engine/tool/goldens/public_api_symbols.txt` and fails if any listed symbol is exported by `lib/iwb_canvas_engine.dart`.
 - for bug fixes, regressions, false positives, false negatives, and invariant-enforcement gaps: one failing reproducer first, plus 1 to 3 guard tests for neighboring branches of the same contract.
 - for refactors: existing locking tests must be named or missing characterization tests must be added before structural edits, plus 1 to 3 guard tests for neighboring branches when needed.
@@ -385,7 +441,14 @@ The root package exposes a compileable empty public API skeleton through one pub
 
 #### Change
 
-- Add the failing `api.public_types_complete` proof in `test/guardrails/blocking_suite_test.dart`.
+- Add the failing `api.public_exports_complete` and
+  `api.public_types_complete` proofs in `test/guardrails/blocking_suite_test.dart`.
+- Use `docs/_registry/public_api_v1.yaml` as the machine-readable expected
+  public-name inventory.
+- Add `tool/guardrails/src/guardrail_definition.dart`.
+- Add the initial `tool/guardrails/src/guardrail_registry.dart` entries for
+  the public API guardrails.
+- Add `tool/guardrails/src/public_api_boundary_check.dart`.
 - Add `test/api_contract/no_legacy_public_symbols_test.dart`.
 - Add `lib/iwb_canvas_engine.dart`.
 - Add the P0 `lib/src/api/**` skeleton files from section 8.
@@ -398,7 +461,12 @@ The root package exposes a compileable empty public API skeleton through one pub
 
 #### Structural Verification
 
-- `api.public_types_complete` fails before public skeleton declarations exist and passes after the API-owned declarations are added.
+- `api.public_exports_complete` reads expected public names from
+  `docs/_registry/public_api_v1.yaml`, fails before public skeleton declarations
+  exist, and passes after the API-owned declarations are added.
+- `api.public_types_complete` fails when a temporary exported skeleton signature
+  references an undefined public type and passes when all exported signature
+  types are public or allowed SDK/Flutter types.
 - `api.no_legacy_public_types` reads all symbols from `legacy/iwb_canvas_engine/tool/goldens/public_api_symbols.txt`, fails against temporary barrels that export golden-listed symbols, and passes against the root barrel.
 - Public barrel verification fails if any export target is outside `lib/src/api/**`.
 
@@ -415,6 +483,7 @@ The root package exposes a compileable empty public API skeleton through one pub
 #### Negative Scenarios
 
 - Missing public skeleton declaration.
+- Exported public signature references an undefined type.
 - Public barrel export outside `lib/src/api/**`.
 - Any exported symbol from `legacy/iwb_canvas_engine/tool/goldens/public_api_symbols.txt`.
 
@@ -434,12 +503,12 @@ Production root code has one runtime composition owner and hard source boundarie
 - Add source-boundary check logic under `tool/guardrails/src/source_boundary_check.dart`.
 - Add path normalization under `tool/guardrails/src/path_normalization.dart`.
 - Add `test/guardrails/import_boundaries_test.dart`.
-- Register source-boundary guardrails in `tool/guardrails/src/guardrail_registry.dart`.
+- Extend `tool/guardrails/src/guardrail_registry.dart` with source-boundary
+  guardrails.
 
 #### Behavioral Verification
 
 - `dart test test/guardrails/import_boundaries_test.dart`
-- `dart run tool/guardrails/run.dart --guardrail=core.import_boundaries`
 
 #### Structural Verification
 
@@ -467,7 +536,8 @@ Production root code has one runtime composition owner and hard source boundarie
 
 #### Closure Evidence
 
-- Source-boundary tests pass and the selected `core.import_boundaries` guardrail succeeds through the runner.
+- Source-boundary tests pass. Runner execution for `core.import_boundaries` is
+  closed in Slice 3, after the runner entrypoint exists.
 
 ### Slice 3. [ ] Runner, Diagrams, Changed Fallback, and CI Target
 
@@ -478,10 +548,9 @@ The P0 hard-boundary guardrails are reachable through one local runner and the r
 #### Change
 
 - Add `tool/guardrails/run.dart`.
-- Add `tool/guardrails/src/guardrail_definition.dart`.
 - Add `tool/guardrails/src/guardrail_runner.dart`.
-- Add `tool/guardrails/src/guardrail_registry.dart`.
-- Add `tool/guardrails/src/public_api_boundary_check.dart`.
+- Finish `tool/guardrails/src/guardrail_registry.dart` metadata for all P0
+  hard-boundary guardrails.
 - Add `tool/guardrails/src/diagram_presence_check.dart`.
 - Add `test/guardrails/required_diagrams_present_test.dart`.
 - Add or finish `test/guardrails/blocking_suite_test.dart`.

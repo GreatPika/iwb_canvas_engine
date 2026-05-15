@@ -22,6 +22,7 @@ Guardrails:
 - `api.integration_surface_complete`
 - `api.v1_scope_gate_green_before_freeze`
 - `api.no_legacy_public_types`
+- `api.public_exports_complete`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
 - `api.exported_dartdoc_complete`
@@ -128,6 +129,7 @@ Mandatory guardrails:
 | `api.integration_surface_complete` | API has enough public surface for app-level `NextEngineAdapter`, but adapter is not in package |
 | `api.v1_scope_gate_green_before_freeze` | P1.5 scope gate passed before public API freeze starts |
 | `api.no_legacy_public_types` | legacy public golden symbols not exported by root package |
+| `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |
 | `api.public_types_complete` | all public signatures reference defined public types |
 | `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package |
 | `api.exported_dartdoc_complete` | exported public declarations have non-empty Dart documentation summaries before API freeze |

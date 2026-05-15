@@ -41,6 +41,7 @@ Required tests:
 - `test.flutter_bridge.single_active_surface`
 - `test.api_contract.v1_scope_gate`
 Guardrails:
+- `api.public_exports_complete`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
 - `api.exported_dartdoc_complete`
@@ -63,91 +64,12 @@ Dart declarations below are normative. Implementation must compile against these
 
 ### 4.1 Public exports
 
-`lib/iwb_canvas_engine.dart` exports exactly these API families:
+`lib/iwb_canvas_engine.dart` exports exactly the public names listed in
+`docs/_registry/public_api_v1.yaml`.
 
-```text
-CanvasRuntime
-CanvasRuntimeConfig
-CanvasSurface
-CanvasDocument
-CanvasDocumentSummary
-CanvasLayer
-CanvasPalette
-CanvasBackground
-CanvasGrid
-CanvasCamera
-CanvasElementKind
-CanvasPathFillRule
-CanvasElement
-CanvasImageElement
-CanvasPathElement
-CanvasTextElement
-CanvasStrokeElement
-CanvasLineElement
-CanvasRectElement
-CanvasElementRead
-CanvasElementUpdate
-CanvasImageElementUpdate
-CanvasPathElementUpdate
-CanvasTextElementUpdate
-CanvasStrokeElementUpdate
-CanvasLineElementUpdate
-CanvasRectElementUpdate
-CanvasEdit
-CanvasEditPort
-CanvasSelectionPort
-CanvasToolPort
-CanvasCommandPort
-CanvasCameraPort
-CanvasResourcePort
-CanvasResource
-CanvasImageResource
-CanvasResourceSource
-CanvasResourceResolver
-CanvasElementId
-CanvasLayerId
-CanvasResourceId
-CanvasActionId
-CanvasOptional
-CanvasClearResult
-CanvasDrawTool
-CanvasInteractionMode
-CanvasDrawStyle
-CanvasPointerPolicy
-CanvasPointerSample
-CanvasPointerLifecyclePhase
-CanvasPreviewState
-CanvasPreviewKind
-CanvasActionCommitted
-CanvasActionType
-CanvasActionPayload
-CanvasTransformActionPayload
-CanvasTransformOperation
-CanvasSelectionActionPayload
-CanvasDeleteActionPayload
-CanvasClearActionPayload
-CanvasDrawStrokeActionPayload
-CanvasDrawLineActionPayload
-CanvasEraseActionPayload
-CanvasTextEditRequested
-CanvasMoveCommitResolver
-CanvasMoveCommitRequest
-CanvasMoveResolution
-CanvasMoveCommit
-CanvasMoveCancel
-CanvasSelectionStyle
-CanvasGridStyle
-CanvasDiagnosticPolicy
-CanvasDataException
-CanvasDataErrorCode
-CanvasTransform
-encodeCanvasDocument
-encodeCanvasDocumentToJson
-decodeCanvasDocument
-decodeCanvasDocumentFromJson
-canvasSchemaVersionWrite
-canvasSchemaVersionsRead
-```
+That registry is the canonical machine-readable inventory for exported-name
+completeness. This document owns the public API semantics, signature rules, and
+declaration contracts for those names.
 
 The legacy public symbols listed in `tool/goldens/public_api_symbols.txt` from
 the legacy package are not exported by this package. Natural concepts may exist
