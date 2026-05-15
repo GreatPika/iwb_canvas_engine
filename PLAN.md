@@ -19,3 +19,5 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
   document in the same change.
 
 ## Step Files
+
+- [ ] [Step 1. P0 package skeleton and hard boundaries](plan/step_1_package_skeleton_and_hard_boundaries.md)
