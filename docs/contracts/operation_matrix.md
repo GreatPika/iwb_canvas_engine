@@ -61,7 +61,7 @@ P7 and P10-P12 close their resource and interaction rows when those owners land.
 | setCameraOffset | meta | document, frameMeta, projection | no | evict | main + overlay | none |
 | setBackgroundColor | meta | document, frameMeta, projection | no | evict | main | none |
 | setGrid | meta | document, frameMeta, projection | no | evict | main | none |
-| setPalette | meta | document, projection | no | evict | none unless UI observes doc | none |
+| setPalette | meta | document, projection | no | evict | no canvas repaint | none |
 | upsertResource new/changed | resource table | document, resource, projection | no | evict | main if used | none |
 | markResourceDirty | cache only | resourceVisualRevision | no | no | main | none |
 | loadDocument success | whole document | all document-level + epoch, previewRevision if active preview cleared | rebuild | evict | main + overlay | none |
@@ -74,5 +74,15 @@ P7 and P10-P12 close their resource and interaction rows when those owners land.
 | eraser preview | preview corridor | previewRevision | none | no | overlay | none |
 | eraser commit | removed elements | document, structural, bounds, elementVisual, projection, selection if erased ids intersect selection, previewRevision if active preview cleared | remove ids | evict | main + overlay cleanup | erase if removed |
 | no-op edit | none | none | none | none | none | none |
+
+Notes:
+
+```text
+- setPalette changes document state and projection, so
+  documentRevisionListenable notifies after atomic install.
+- Palette UI repaint outside the canvas is the application's responsibility.
+- markResourceDirty uses main to mean main repaint intent; an attached
+  CanvasSurface observes that intent if present.
+```
 
 ---

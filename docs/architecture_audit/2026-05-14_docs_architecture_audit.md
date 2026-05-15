@@ -5,36 +5,6 @@
 
 ## Нужно исправить
 
-### A06. Зафиксировать lifecycle listenables после dispose
-
-Статус: закрыто в root docs. Контракт зафиксирован в public API/runtime data
-model, диаграммах lifecycle, registry и `test.runtime.dispose_lifecycle`.
-
-Приоритет: до runtime/surface lifecycle implementation.
-
-Проблема: streams после dispose описаны, а `documentRevisionListenable` и `previewRevisionListenable` нет.
-
-Исправление:
-
-- указать, читаются ли `value` после dispose;
-- указать, возможны ли notifications после dispose;
-- указать, кто снимает listeners;
-- покрыть dispose lifecycle test.
-
-### A07. Уточнить repaint wording для `setPalette` и `markResourceDirty`
-
-Приоритет: до соответствующих edit/resource phases.
-
-Проблема:
-
-- `setPalette`: `none unless UI observes doc` смешивает engine repaint и external UI observation;
-- `markResourceDirty`: wording assumes attached `CanvasSurface`, хотя runtime может быть headless.
-
-Исправление:
-
-- `setPalette`: написать `no canvas repaint; documentRevisionListenable notification after atomic install; external UI repaint is app responsibility`;
-- `markResourceDirty`: написать `publishes main repaint intent; attached surface observes it if present`.
-
 ### A08. Исправить README/index drift
 
 Приоритет: P3 docs cleanup.

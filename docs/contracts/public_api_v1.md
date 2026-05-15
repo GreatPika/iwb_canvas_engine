@@ -1431,7 +1431,8 @@ v1 resource rules:
 - the engine never disposes app-provided ui.Image instances;
 - the engine stores only resource descriptors and render cache references;
 - markResourceDirty invalidates visual cache but does not mutate document;
-- markResourceDirty schedules repaint for the attached CanvasSurface;
+- markResourceDirty publishes main repaint intent; an attached CanvasSurface
+  observes it if present;
 - resolver must return a stable visual result for the same resource descriptor
   unless the app calls markResourceDirty/markAllResourcesDirty.
 ```
