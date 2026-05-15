@@ -69,6 +69,13 @@ forms as snake_case YAML values.
 
 ## Mechanical checks
 
+`docs/tool/check_docs.dart` is a structural checker for documentation
+entrypoints, registries, ids, paths, diagram catalog membership, and phase
+navigation. It is not a semantic contract checker: do not add checks that depend
+on free-form Markdown wording or Mermaid edge text. Runtime and architecture
+invariants belong in structured registries, generated docs, analyzer/lint rules,
+Dart tests, or benchmarks.
+
 Run these commands from the repository root:
 
 ```bash
