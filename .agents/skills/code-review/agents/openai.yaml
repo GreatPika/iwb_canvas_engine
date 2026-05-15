@@ -2,6 +2,3 @@ interface:
   display_name: "Code Review"
   short_description: "Review uncommitted code changes"
   default_prompt: "Use $code-review to review the uncommitted code changes before commit."
-
-policy:
-  allow_implicit_invocation: false
