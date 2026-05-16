@@ -35,6 +35,7 @@ Guardrails:
 Do not assume:
 - no schema v7 public entrypoints as next API
 - no legacy SceneBuilder API shape
+- no raw metadata map exposure after CanvasMetadata materialization
 <!-- CONTEXT:END -->
 
 ## 5. Schema v1 full field contract

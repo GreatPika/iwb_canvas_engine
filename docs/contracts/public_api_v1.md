@@ -30,7 +30,10 @@ Related diagrams:
 - `dfd_public_edit`
 - `seq_single_active_surface`
 Required tests:
+- `test.api_contract.public_readable_union_variants`
 - `test.api_contract.public_api_v1_compiles_as_written`
+- `test.api.canvas_field_update`
+- `test.api_contract.canvas_field_update_static_semantics`
 - `test.api_contract.no_undefined_public_type_references`
 - `test.api_contract.no_legacy_public_symbols`
 - `test.api_contract.dto_immutability`
@@ -44,6 +47,7 @@ Guardrails:
 - `api.public_exports_complete`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
+- `api.resource_source_app_key_publicly_readable`
 - `api.exported_dartdoc_complete`
 - `api.public_class_modifiers_explicit`
 - `api.public_signature_shape`
@@ -56,6 +60,7 @@ Do not assume:
 - no legacy public API shape
 - no PatchField export
 - no SceneController export
+- no raw Map metadata as ordinary public DTO metadata; use CanvasMetadata
 <!-- CONTEXT:END -->
 
 ## 4. Public API v1: полный surface

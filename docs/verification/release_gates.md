@@ -91,6 +91,7 @@ Guardrails:
 - `api.public_exports_complete`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
+- `api.resource_source_app_key_publicly_readable`
 - `api.exported_dartdoc_complete`
 - `api.public_class_modifiers_explicit`
 - `api.public_signature_shape`
