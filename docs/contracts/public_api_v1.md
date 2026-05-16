@@ -1111,7 +1111,7 @@ Edit contract:
 - nested edit is rejected;
 - callback returning Future is rejected;
 - all draft mutations are atomic;
-- exception in callback rolls back document, resources, selection changes, signals and repaint;
+- exception in callback rolls back document, resources, selection-owner changes, signals and repaint;
 - public notifications occur only after atomic install;
 - CanvasEdit handle becomes stale after callback;
 - stale handle operations throw StateError;
@@ -1191,9 +1191,14 @@ abstract interface class CanvasSelectionPort {
 Selection rules:
 
 ```text
-- selection stores element ids only;
-- selecting non-existing ids normalizes them out;
+- CanvasSelectionPort is the public boundary for selection commands;
+- selection is runtime view state owned by the internal selection owner, not by
+  CanvasDocument or DocumentStoreKernel;
+- the selection owner stores content element ids only;
+- selecting non-existing, background, or otherwise ineligible ids normalizes them out;
 - onlySelectable=true selects visible && isSelectable elements;
+- selection-only changes update selectionRevision, not documentRevision;
+- selection-only changes do not evict the public document projection;
 - move/rotate/flip operate only on selected elements with isTransformable=true && isLocked=false;
 - deleteSelection deletes only selected elements with isDeletable=true;
 - selection actions preserve document order in emitted elementIds.

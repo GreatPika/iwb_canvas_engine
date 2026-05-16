@@ -302,6 +302,12 @@ Guardrails extracted from split section 22.
 - Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.frame.paint_plan_excludes_preview_delta`, `test.guardrails.blocking_suite`
 
+## frame.paint_plan_excludes_selection_state
+
+- Rule: PaintPlanCache stores ordinary committed records only and excludes selected ids, selectionRevision, and selection flags from keys and values
+- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.frame.paint_plan_excludes_selection_state`, `test.guardrails.blocking_suite`
+
 ## geometry.no_legacy_scene_order
 
 - Rule: geometry and hit-test policy does not reuse legacy SceneNode traversal or legacy scene order logic
@@ -319,6 +325,12 @@ Guardrails extracted from split section 22.
 - Rule: InteractionEngine uses EditKernel and narrow read-only query ports, not concrete store imports or mutations
 - Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.interaction.state_machines`, `test.guardrails.blocking_suite`
+
+## interaction.no_concrete_selection_imports
+
+- Rule: InteractionEngine uses intent-specific selection query ports and EditKernel commits, not concrete SelectionKernel imports or mutations
+- Sections: `section_03_package_layout`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.guardrails.import_boundaries`, `test.guardrails.selection_boundary_imports`, `test.guardrails.blocking_suite`
 
 ## interaction.no_resolver_on_cancel_paths
 
@@ -373,6 +385,12 @@ Guardrails extracted from split section 22.
 - Rule: DocumentStoreKernel stores compact committed tables, not a live mutable `CanvasDocument`
 - Sections: `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.store.public_document_is_projection_only`, `test.guardrails.blocking_suite`
+
+## selection.owner_separate_from_document
+
+- Rule: selected ids and selectionRevision are owned by the internal selection owner, not DocumentStoreKernel, CommittedDocument, CanvasDocument projection, schema v1, or public DTO state
+- Sections: `section_02_architecture_model`, `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.selection.runtime_owner_separation`, `test.guardrails.blocking_suite`
 
 ## surface.pointer_samples_normalized_before_runtime
 

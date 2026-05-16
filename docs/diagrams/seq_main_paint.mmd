@@ -5,6 +5,7 @@ sequenceDiagram
   participant Surface as CanvasSurface
   participant Frame as FrameEngine
   participant Store as DocumentStoreKernel
+  participant SelectionFacts as SelectionFactsPort
   participant Preview as CanvasPreviewState
   participant Spatial as SpatialKernel
   participant PlanCache as PaintPlanCache
@@ -13,15 +14,17 @@ sequenceDiagram
   participant Painter as Main painter
 
   Surface->>Frame: paint main scene request(viewportRect, cameraOffset, dpr, resolver)
-  Frame->>Store: capture committed tables, revisions, camera, and selection once
-  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, elementVisualRevision, frameMetaRevision, selectionRevision, resourceVisualRevision, cameraOffset, selectionIds
+  Frame->>Store: capture committed tables, document revisions, camera, and resources once
+  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, elementVisualRevision, frameMetaRevision, resourceVisualRevision, cameraOffset
+  Frame->>SelectionFacts: capture selected ids and selectionRevision once
+  SelectionFacts-->>Frame: selectionRevision and selectionIds
   Frame->>Frame: build CapturedMainFrame with viewportRect from paint request
   Frame->>Preview: capture immutable selected move preview once
   Preview-->>Frame: selectedMoveDelta or none
   Note over Frame: CapturedMainFrame freezes the runtime facts used by this main paint frame.
 
-  Frame->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and selection keys
-  Note over Frame,PlanCache: PaintPlanCache excludes frameMetaRevision, selectedMoveDelta, and previewDelta.
+  Frame->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and device keys
+  Note over Frame,PlanCache: PaintPlanCache excludes frameMetaRevision, selectionRevision, selected ids, selectedMoveDelta, and previewDelta.
 
   alt ordinary paint plan cache hit
     PlanCache-->>Frame: ordinary committed RenderElementRecord list
@@ -32,7 +35,7 @@ sequenceDiagram
     loop for each ordinary candidate handle
       Frame->>Store: resolve handle against captured structuralRevision and generation
       alt handle generation and structuralRevision still match the captured frame
-        Store-->>Frame: immutable family row view, common paint fields, selection flags, and resourceId if any
+        Store-->>Frame: immutable family row view, common paint fields, and resourceId if any
         Frame->>Frame: build ordinary committed RenderElementRecord
       else stale candidate
         Store-->>Frame: reject stale candidate
@@ -57,6 +60,7 @@ sequenceDiagram
   end
 
   Note over Frame: No full-scene sort and no CanvasDocument materialization.
+  Note over Frame,SelectionFacts: Selection decoration and selected move supplements are per-frame render concerns outside the ordinary PaintPlanCache.
 
   opt records include image resource ids
     loop for each image resource id in records

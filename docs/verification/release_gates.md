@@ -106,6 +106,7 @@ Guardrails:
 - `core.no_node_spec_patch_shape_dependency`
 - `core.single_runtime_root`
 - `store.no_public_document_live_state`
+- `selection.owner_separate_from_document`
 - `projection.only_explicit_read_paths`
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
@@ -119,6 +120,7 @@ Guardrails:
 - `load.success_interrupts_before_install`
 - `preview.selected_move_main_repaint`
 - `interaction.no_concrete_store_imports`
+- `interaction.no_concrete_selection_imports`
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
 - `geometry.no_legacy_scene_order`
@@ -128,6 +130,7 @@ Guardrails:
 - `spatial.fallback_budget_enforced`
 - `frame.no_global_scene_sort`
 - `frame.paint_plan_excludes_preview_delta`
+- `frame.paint_plan_excludes_selection_state`
 - `cache.keys_use_next_revisions_only`
 - `cache.frame_meta_not_element_visual`
 - `cache.hot_caches_have_capacity_eviction`
@@ -166,7 +169,7 @@ Release is blocked unless all statements are true:
 9. core.no_legacy_imports is green.
 10. core.import_boundaries and core.no_unapproved_part_files are green.
 11. core.single_runtime_root is green.
-12. store/projection ownership tests are green.
+12. store/projection/selection ownership tests are green.
 13. schema v1 encode/decode contract is green.
 14. codec no-runtime-side-effect tests are green.
 15. validation limits are green.
@@ -176,13 +179,13 @@ Release is blocked unless all statements are true:
 19. operation matrix and exact touched invalidation tests are green.
 20. loadDocument staged success/failure tests are green.
 21. geometry/spatial parity, eraser exact-budget, stale-candidate, and fallback-budget tests are green.
-22. frame capture, cache-key, cache-policy, frame-meta, paint-plan, and selected supplement staging tests are green.
+22. frame capture, cache-key, cache-policy, frame-meta, paint-plan, selection-state cache independence, and selected supplement staging tests are green.
 23. selected move preview main repaint test is green.
 24. overlay preview repaint split tests are green.
 25. text edit request integration tests are green.
 26. action typed payload tests are green.
 27. low-level edit emits no user action events tests are green.
-28. interaction stale terminal, resolver-cancel, and interactive=false pending-line tests are green.
+28. interaction stale terminal, selection-boundary import, resolver-cancel, and interactive=false pending-line tests are green.
 29. surface single-active-surface and pointer normalization tests are green.
 30. DTO immutability, `CanvasMetadata` deep-freeze, const-policy, and public equality policy tests are green.
 31. no CanvasDocument projection in paint/pointer/hit tests are green.

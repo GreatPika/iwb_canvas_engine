@@ -9,6 +9,8 @@ typed user action events.
 ## Build scope
 
 - `CanvasSelectionPort`
+- `SelectionKernel` or the equivalent internal selection owner introduced by
+  the runtime spine
 - selection set/toggle/clear/selectAll behavior
 - selection move/rotate/flip/delete commands
 - pointer session lifecycle needed for move mode
@@ -19,6 +21,8 @@ typed user action events.
 - selected move cancel paths never call resolver
 - stale terminal samples cannot commit
 - interaction commits only through `EditKernel`
+- interaction reads selection/document facts only through batched
+  intent-specific immutable query ports
 - typed selection, transform, delete, and move action payloads
 - loadDocument success/failure interaction ordering for active move sessions.
 
@@ -84,6 +88,8 @@ typed user action events.
 - load success/failure interaction ordering from `section_12_load_document`
 - selection, command, action event, and move resolver API from
   `section_04_public_api_v1`
+- selection owner, selectionRevision, and document/selection separation from
+  `section_02_architecture_model` and `section_10_runtime_data_model`
 - selected move repaint/caching interaction with `section_15_frame_render_contract`
 
 ## Tests and guardrails that prove this phase
@@ -95,17 +101,22 @@ typed user action events.
 - `test.interaction.move_resolver_reentrancy` -> `test/interaction/move_resolver_reentrancy_test.dart`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup` -> `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`
 - `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
+- `test.selection.runtime_owner_separation` -> `test/selection/runtime_owner_separation_test.dart`
+- `test.guardrails.selection_boundary_imports` -> `test/guardrails/selection_boundary_imports_test.dart`
 - `preview.selected_move_main_repaint`
 - `events.commands_emit_user_actions`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 - `interaction.no_concrete_store_imports`
+- `interaction.no_concrete_selection_imports`
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
 
 ## Exit gate
 
 - selection API behavior is green
+- selection-only API behavior updates selectionRevision without documentRevision,
+  projection eviction, or spatial updates
 - marquee selection commits through `EditKernel`
 - selected move preview increments main repaint, not overlay repaint
 - selected move commit emits typed move action only after atomic install
@@ -114,12 +125,13 @@ typed user action events.
 - stale terminal samples do not commit
 - loadDocument failure preserves active move gesture
 - loadDocument success clears active move gesture.
+- interaction has no concrete imports of store or selection owners.
 
 ## Risks and trade-offs
 
-- Interaction must not read or mutate store directly. Every committed mutation
-  goes through `EditKernel`; every committed fact comes through narrow query
-  ports.
+- Interaction must not read or mutate store or selection owners directly. Every
+  committed mutation goes through `EditKernel`; every committed document or
+  selection fact comes through narrow query ports.
 - Selected move is intentionally separated from draw and eraser to keep preview,
   resolver, and frame-staging proof focused.
 

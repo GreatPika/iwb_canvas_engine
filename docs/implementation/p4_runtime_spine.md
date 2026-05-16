@@ -15,15 +15,16 @@ without bypassing ownership.
 - `ElementRegistry`
 - `FamilyTables`
 - `LayerTable`
-- `SelectionStore`
+- `SelectionKernel` as the internal runtime owner for selected ids and
+  selectionRevision
 - `RevisionState`
 - `DocumentProjectionCache`
 - `CanvasRuntime.readDocument`
 - `CanvasDocumentSummary`
 - `CanvasRuntimeConfig` materialization for runtime-owned services
 - runtime id generation backed by next-owned admission state
-- narrow immutable read/query ports for later frame, spatial, resource, and
-  interaction phases
+- narrow immutable document and selection read/query ports for later frame,
+  spatial, resource, and interaction phases
 - no edit session, load replacement, paint, resource resolver, pointer routing,
   or Flutter widget behavior yet.
 
@@ -45,7 +46,7 @@ without bypassing ownership.
 
 - `store_scene_controller_read_paths` - decision: `adapt`; target owner: DocumentStoreKernel committed read and candidate resolve
 - `dto_node_boundary_mapping` - decision: `adapt`; target owner: Codec and store mapping families
-- `dto_document_helpers` - decision: `adapt`; target owner: DocumentStoreKernel and EditKernel helpers
+- `dto_document_helpers` - decision: `adapt`; target owner: DocumentStoreKernel, SelectionKernel, and EditKernel helpers
 
 ## Forbidden donor structure
 
@@ -67,6 +68,8 @@ without bypassing ownership.
 - runtime ownership and single composition root from `section_02_architecture_model`
 - committed document tables, revisions, and projection cache from
   `section_10_runtime_data_model`
+- runtime selection ownership and selectionRevision separation from
+  `section_02_architecture_model` and `section_10_runtime_data_model`
 - runtime config materialization from public constructor-validated config values,
   including `CanvasDiagnosticsVerbose` limits from `section_06_validation_limits`
 
@@ -74,10 +77,12 @@ without bypassing ownership.
 
 - `test.runtime.dispose_lifecycle` -> `test/runtime/dispose_lifecycle_test.dart`
 - `test.store.read_document_projection` -> `test/store/read_document_projection_test.dart`
+- `test.selection.runtime_owner_separation` -> `test/selection/runtime_owner_separation_test.dart`
 - `test.store.no_projection_hot_path` -> `test/store/no_projection_hot_path_test.dart`
 - `test.store.public_document_is_projection_only` -> `test/store/public_document_is_projection_only_test.dart`
 - `core.single_runtime_root`
 - `store.no_public_document_live_state`
+- `selection.owner_separate_from_document`
 - `projection.only_explicit_read_paths`
 
 ## Exit gate
@@ -94,6 +99,8 @@ without bypassing ownership.
 - store public document state is projection-only
 - later owners can obtain committed facts only through narrow immutable query
   ports, not concrete store tables
+- later owners can obtain selection facts only through narrow immutable query
+  ports, not concrete selection-owner internals
 - `test/store/no_projection_hot_path_test.dart` passes.
 
 ## Risks and trade-offs
@@ -106,5 +113,5 @@ without bypassing ownership.
 ## Why this phase belongs here
 
 Edit, load, resources, geometry, frame, and interaction all need committed
-state, revisions, and read-only facts. This spine must exist before feature
-phases can be implemented without direct cross-owner shortcuts.
+state, selection state, revisions, and read-only facts. This spine must exist
+before feature phases can be implemented without direct cross-owner shortcuts.

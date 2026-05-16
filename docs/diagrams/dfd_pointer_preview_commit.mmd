@@ -43,8 +43,13 @@ flowchart LR
   end
 
   subgraph Store["DocumentStoreKernel"]
-    Committed["Committed document\nselection, revisions, resources"]
+    Committed["Committed document\ndocument revisions, resources"]
     AtomicInstall["Atomic install"]
+  end
+
+  subgraph Selection["SelectionKernel"]
+    SelectionFacts["Selection facts\nselected ids and selectionRevision"]
+    SelectionEffect["Selection effect\nset/prune/clear"]
   end
 
   subgraph Effects["Committed effects"]
@@ -69,6 +74,7 @@ flowchart LR
   TokenGate -->|"valid down/move sample\nfor draw/line/move delta"| SessionPreview
   TokenGate -->|"valid sample needing candidates\nhit policy, marquee, eraser"| SpatialQuery
   SpatialQuery -->|"read-only candidate lookup"| Candidates
+  SpatialQuery -->|"batched intent-specific selection facts"| SelectionFacts
   Candidates -->|"hit-test, selection, or eraser candidate facts"| SpatialQuery
 
   SessionPreview -->|"pointer/session preview facts"| PreviewState
@@ -100,6 +106,8 @@ flowchart LR
   Touched -->|"compile exact effects"| Compiler
   Compiler -->|"preflighted commit payload"| AtomicInstall
   AtomicInstall -->|"replace committed tables atomically"| Committed
+  AtomicInstall -->|"apply selection effects atomically"| SelectionEffect
+  SelectionEffect -->|"update selected ids/revision"| SelectionFacts
 
   AtomicInstall -->|"apply touched spatial scope"| SpatialDelta
   AtomicInstall -->|"evict changed projections/caches"| ProjectionEvict
@@ -109,7 +117,7 @@ flowchart LR
   EditResult -->|"post-edit interaction cleanup"| TerminalCleanup
 
   InteractionEdit -.->|"edit exception, rejected Future,\nor preflight failure"| Rollback
-  Rollback -.->|"committed document, revisions,\nand action events unchanged"| Diagnostics
+  Rollback -.->|"committed document, selection, revisions,\nand action events unchanged"| Diagnostics
   Rollback -.->|"terminal failure result"| EditResult
   Diagnostics -.->|"projected runtime-safe error"| Surface
   PublicSignals --> Surface

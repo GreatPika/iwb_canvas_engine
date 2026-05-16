@@ -16,11 +16,13 @@ Related diagrams:
 Required tests:
 - `test.api_contract.no_legacy_public_symbols`
 - `test.guardrails.import_boundaries`
+- `test.guardrails.selection_boundary_imports`
 Guardrails:
 - `core.no_legacy_imports`
 - `api.no_legacy_public_types`
 - `core.import_boundaries`
 - `core.no_unapproved_part_files`
+- `interaction.no_concrete_selection_imports`
 Do not assume:
 - no legacy package import
 - no app adapters in package
@@ -53,14 +55,18 @@ The new package is rooted at the repository top level:
       runtime/
         runtime_root.dart
         runtime_config.dart
+        document_facts_port.dart
+        selection_facts_port.dart
+        selection_normalization_port.dart
       store/
         document_store_kernel.dart
         committed_document.dart
         element_registry.dart
         family_tables.dart
-        selection_store.dart
         revision_state.dart
         document_projection_cache.dart
+      selection/
+        selection_kernel.dart
       edit/
         edit_kernel.dart
         edit_session.dart
@@ -176,8 +182,9 @@ Forbidden imports:
 ```text
 lib/src/api/**               -> may not import src/store, src/edit, src/frame concrete internals
 lib/src/store/**             -> may not import src/interaction, src/frame, src/flutter_bridge
+lib/src/selection/**         -> may read document facts only through runtime-supplied immutable query ports
 lib/src/edit/**              -> may not import src/flutter_bridge
-lib/src/interaction/**       -> may not import, read, or mutate src/store directly
+lib/src/interaction/**       -> may not import, read, or mutate src/store or src/selection concrete internals directly
 lib/src/frame/**             -> may not import public document projection as paint input
 lib/src/spatial/**           -> may use only typed spatial delta/read ports, not concrete store tables or interaction/frame state
 lib/src/resources/**         -> may not import interaction state
@@ -187,8 +194,10 @@ lib/src/flutter_bridge/**    -> may not import legacy iwb_canvas_engine package
 all lib/**                   -> may not import legacy package or legacy runtime paths
 ```
 
-Committed facts used by interaction are supplied through narrow read-only query
-ports owned by the runtime/store boundary. Interaction code may depend on those
-intent-specific ports, not on `src/store` tables or concrete store internals.
+Committed document facts and runtime selection facts used by interaction are
+supplied through narrow read-only query ports owned by the runtime/document and
+runtime/selection boundaries. Interaction code may depend on those
+intent-specific ports, not on `src/store`, `src/selection`, or concrete owner
+internals.
 
 ---

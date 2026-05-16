@@ -83,7 +83,7 @@ stateDiagram-v2
   note right of SyncResolverCall
     The resolver is the only external read boundary in paint.
     It is synchronous, app-owned, and must not mutate runtime,
-    Store, CanvasDocument, descriptors, selection, or preview.
+    Store, SelectionKernel, CanvasDocument, descriptors, or preview.
   end note
 
   SyncResolverCall --> ReentrantMutationRejected: app attempts public runtime mutation
@@ -93,7 +93,7 @@ stateDiagram-v2
   state "Reentrant mutation rejected" as ReentrantMutationRejected
   note right of ReentrantMutationRejected
     Public runtime mutation from inside the resolver throws
-    StateError and produces no document, selection, preview,
+    StateError and produces no document, selection-owner, preview,
     cache, repaint, or action effect.
   end note
   ReentrantMutationRejected --> SyncResolverCall: resolver continues or unwinds without accepted mutation

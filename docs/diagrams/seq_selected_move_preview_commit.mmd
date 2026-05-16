@@ -8,6 +8,7 @@ sequenceDiagram
   participant IE as InteractionEngine
   participant ReadPort as InteractionReadPort
   participant Store as DocumentStoreKernel
+  participant SelectionFacts as SelectionFactsPort
   participant Spatial as SpatialKernel
   participant Preview as CanvasPreviewState
   participant Frame as FrameEngine
@@ -28,8 +29,10 @@ sequenceDiagram
   Tools->>IE: normalized finite down sample
   IE->>IE: admit one active pointer token
   IE->>ReadPort: read selected move start facts
-  ReadPort->>Store: read selection ids and transformable flags
-  Store-->>ReadPort: selected ids and movable flags in document order
+  ReadPort->>SelectionFacts: read selected ids and selectionRevision
+  SelectionFacts-->>ReadPort: selected ids
+  ReadPort->>Store: read transformable flags and document order
+  Store-->>ReadPort: movable flags in document order
   ReadPort-->>IE: selected ids and movable flags in document order
   IE->>Spatial: hit-test down position once
   Spatial-->>IE: top visible selectable element id
@@ -52,9 +55,10 @@ sequenceDiagram
     IE->>Preview: replace immutable snapshot with selectedMoveDelta
     IE->>Preview: bump previewRevision when selectedMoveDelta changes
     Preview->>Frame: request main-scene repaint only
-    Frame->>Store: capture committed frame facts and selection ids once
+    Frame->>Store: capture committed frame facts once
+    Frame->>SelectionFacts: capture selected ids once
     Frame->>Preview: capture selectedMoveDelta once
-    Frame->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and selection keys
+    Frame->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and device keys
     alt ordinary paint plan cache hit
       PlanCache-->>Frame: ordinary committed RenderElementRecord list
     else ordinary paint plan cache miss
@@ -88,7 +92,9 @@ sequenceDiagram
     IE-->>Tools: finish with no edit and no action event
   else moved selection
     IE->>ReadPort: read selected move commit facts
-    ReadPort->>Store: read summary, moved element reads, selection bounds
+    ReadPort->>SelectionFacts: read selected ids and selectionRevision
+    SelectionFacts-->>ReadPort: selected ids
+    ReadPort->>Store: read summary, moved element reads, and selected bounds
     Store-->>ReadPort: CanvasMoveCommitRequest inputs
     ReadPort-->>IE: CanvasMoveCommitRequest inputs
 
@@ -112,7 +118,9 @@ sequenceDiagram
       IE->>EK: open synchronous interaction edit
       EK->>EK: reject disposed, nested edit, or resolver reentrant mutation
       EK->>Store: read committed revision snapshot
-      Store-->>EK: committed tables and revision
+      Store-->>EK: committed tables and document revision
+      EK->>SelectionFacts: read selection snapshot
+      SelectionFacts-->>EK: selected ids and selectionRevision
       EK->>Draft: create rollback-safe draft
       IE->>EK: provide transform mutation request and moveSelection action descriptor
       EK->>Draft: for each movable selected id, set transform

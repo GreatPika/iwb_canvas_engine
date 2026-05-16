@@ -57,6 +57,7 @@ sequenceDiagram
   participant CC as CommitCompiler
   participant Applier as CommitApplier
   participant Store as DocumentStoreKernel
+  participant Selection as SelectionKernel
   participant Effects as CommitEffects
   participant Events as EventBuffer
 
@@ -69,10 +70,13 @@ sequenceDiagram
   EK->>EK: reject Future result
   EK->>CC: compile touched set + invalidation
   CC->>Store: preflight invariants
+  CC->>Selection: preflight selection effects
   CC->>Effects: prepare typed RepaintIntent and invalidation effects
   CC->>Applier: hand off compiled CommitPlan
-  Applier->>Store: atomic install
-  Store-->>Applier: committed revision facts
+  Applier->>Store: install document effects
+  Applier->>Selection: install selection effects
+  Store-->>Applier: committed document revision facts
+  Selection-->>Applier: committed selection revision facts
   Applier->>Events: commit buffered events
   Applier->>Effects: publish typed post-install effects through runtime/applier boundary
   EK->>EK: close handle
@@ -106,7 +110,7 @@ Rollback obligations:
 - projection cache unchanged;
 - spatial index unchanged;
 - resource cache unchanged;
-- selection unchanged;
+- selection owner unchanged;
 - preview unchanged unless the public operation itself was a successful external mutation;
 - no actions emitted;
 - no text edit event emitted;
@@ -143,5 +147,12 @@ CommitCompiler must not depend on concrete `FrameEngine`. It produces a
 `CommitPlan` containing typed `RepaintIntent` and invalidation effects. The
 post-install runtime/applier boundary dispatches those effects to frame,
 spatial, resource, projection, and public signal owners.
+
+Selection effects are not draft fields inside committed document state. Edits
+that remove selected elements, clear content, delete selection, or commit a
+marquee selection compile explicit selection-owner effects. The applier
+publishes document and selection effects as one atomic runtime result; if
+preflight or rollback happens before that boundary, both owners remain
+unchanged.
 
 ---

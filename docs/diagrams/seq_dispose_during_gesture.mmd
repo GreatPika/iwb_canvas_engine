@@ -11,6 +11,7 @@ sequenceDiagram
   participant Preview as CanvasPreviewState
   participant Frame as FrameEngine
   participant Store as DocumentStoreKernel
+  participant SelectionFacts as SelectionFactsPort
   participant Spatial as SpatialKernel
   participant Projection as DocumentProjectionCache
   participant Resources as ResourceKernel
@@ -23,7 +24,8 @@ sequenceDiagram
   participant Signals as Public signals
 
   Note over User,Preview: Initial condition: one active routed pointer owns a preview snapshot.
-  Note over Store,Resources: Committed document, selection, spatial indexes, projection cache, and resource descriptors are current before dispose.
+  Note over Store,Resources: Committed document, spatial indexes, projection cache, and resource descriptors are current before dispose.
+  Note over SelectionFacts: Selected ids and selectionRevision are available through the selection facts boundary before dispose.
 
   App->>Runtime: dispose()
 
@@ -42,7 +44,8 @@ sequenceDiagram
       IE->>Preview: bump previewRevision for cleared active preview
       Preview-->>Signals: notify previewRevisionListenable listeners before dispose completes
       Preview->>Frame: request main-scene repaint cleanup
-      Frame->>Store: capture committed frame facts and selection ids once
+      Frame->>Store: capture committed frame facts once
+      Frame->>SelectionFacts: capture selected ids once
       Frame->>Preview: capture no selectedMoveDelta
       Frame->>Spatial: query viewport without preview-shifted selected supplement
       Spatial-->>Frame: ordinary candidate handles only
@@ -73,7 +76,8 @@ sequenceDiagram
     Note over Runtime,Signals: No revision listenable notifications are delivered after dispose completes, including repeated dispose calls.
 
     Note over EK,Store: No terminal commit, no EditKernel commit, no DraftDocument, no TouchedSet, no CommitPlan, and no atomic install.
-    Note over Store,Projection: No document revision, selection, spatial index, projection cache, or resource descriptor mutation occurs due solely to dispose.
+    Note over Store,Projection: No document revision, spatial index, projection cache, or resource descriptor mutation occurs due solely to dispose.
+    Note over SelectionFacts: No selected ids or selectionRevision mutation occurs due solely to dispose.
     Note over Actions,Signals: No CanvasActionCommitted and no text edit request is emitted by dispose.
   end
 

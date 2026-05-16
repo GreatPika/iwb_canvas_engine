@@ -12,21 +12,23 @@ and keep failed loads from interrupting existing runtime or interaction state.
 - `CanvasEditPort.loadDocument`
 - `CanvasEdit.replaceDraftDocument`
 - success path: validate/materialize, interrupt active interaction through a
-  narrow runtime boundary, clear preview, install replacement payload, increment
-  controller epoch and replacement revisions, clear pointer normalization hooks,
-  invalidate projection/spatial/frame/resource caches, and notify after install
+  narrow runtime boundary, clear preview, install replacement document plus
+  selection-owner clear as one atomic runtime result, increment controller epoch
+  and replacement revisions, clear pointer normalization hooks, invalidate
+  projection/spatial/frame/resource caches, and notify after install
 - failure path: validation/materialization failure leaves committed document,
-  selection, preview, pointer normalization, repaint, events, and active gesture
-  state unchanged
-- replacement uses one atomic install boundary and includes cleared selection in
-  the replacement payload.
+  selection owner, preview, pointer normalization, repaint, events, and active
+  gesture state unchanged
+- replacement uses one atomic runtime/applier boundary and includes selection
+  clear as a selection-owner effect.
 - replacement validation consumes public DTOs with frozen `CanvasMetadata` and
   unmodifiable collection ownership; invalid metadata construction or projection
   data fails before interaction interruption.
 
 ## Dependencies on earlier phases
 
-- P4 runtime spine owns store, revisions, projection, and controller epoch.
+- P4 runtime spine owns store, selection owner, revisions, projection, and
+  controller epoch.
 - P5 edit core owns rollback-safe draft mutation and typed effects.
 
 ## Read first
@@ -38,7 +40,7 @@ and keep failed loads from interrupting existing runtime or interaction state.
 
 ## Required donors
 
-- `dto_document_helpers` - decision: `adapt`; target owner: DocumentStoreKernel and EditKernel helpers
+- `dto_document_helpers` - decision: `adapt`; target owner: DocumentStoreKernel, SelectionKernel, and EditKernel helpers
 - `interaction_mutation_boundary` - decision: `adapt`; target owner: Interaction-owned mutation bridge into EditKernel
 - `staged_load_runtime_materialization` - decision: `adapt`; target owner: loadDocument staged materialization
 - `validated_import_draft` - decision: `adapt`; target owner: Validated document import draft
@@ -71,11 +73,13 @@ and keep failed loads from interrupting existing runtime or interaction state.
 ## Tests and guardrails that prove this phase
 
 - `test.edit.staged_document_load_success_failure` -> `test/edit/staged_document_load_success_failure_test.dart`
+- `test.selection.runtime_owner_separation` -> `test/selection/runtime_owner_separation_test.dart`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 - `edit.rollback_no_effects`
 - `edit.stale_handle_rejected`
 - `edit.operation_matrix_complete`
+- `selection.owner_separate_from_document`
 - `core.single_runtime_root`
 
 ## Exit gate
@@ -84,8 +88,8 @@ and keep failed loads from interrupting existing runtime or interaction state.
 - failed load preserves active interaction through the runtime interrupt boundary
 - failed load caused by invalid `CanvasMetadata` or DTO ownership validation
   preserves active interaction through the runtime interrupt boundary
-- successful load interrupts before install and installs one replacement payload
-  with cleared selection
+- successful load interrupts before install and publishes one atomic
+  replacement result: document replacement plus selection-owner clear
 - `replaceDraftDocument` is rollback-safe inside an edit session
 - load success/failure operation matrix effects are executable and green.
 
@@ -94,7 +98,8 @@ and keep failed loads from interrupting existing runtime or interaction state.
 - Interrupting interaction before validation would destroy user state on bad
   input. Validation and materialization must complete first.
 - Implementing load as a normal edit sequence would risk separate selection,
-  epoch, cache, and projection updates. Replacement is one atomic boundary.
+  epoch, cache, and projection updates. Replacement is one atomic runtime
+  boundary.
 
 ## Why this phase belongs here
 

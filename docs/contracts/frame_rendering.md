@@ -34,6 +34,7 @@ Required tests:
 - `test.frame.main_overlay_capture`
 - `test.frame.no_live_runtime_read_in_painters`
 - `test.frame.paint_plan_excludes_preview_delta`
+- `test.frame.paint_plan_excludes_selection_state`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
 - `test.frame.selected_supplement_staging_no_global_sort`
 - `test.flutter_bridge.widget_paint`
@@ -41,6 +42,7 @@ Guardrails:
 - `preview.selected_move_main_repaint`
 - `frame.no_global_scene_sort`
 - `frame.paint_plan_excludes_preview_delta`
+- `frame.paint_plan_excludes_selection_state`
 - `cache.frame_meta_not_element_visual`
 Do not assume:
 - no live runtime reads in painters
@@ -117,9 +119,13 @@ RenderElementRecord
   hitBoundsWorld
   resourceId?
   row-specific immutable view
-  selectionFlags
-  previewDelta
 ```
+
+Ordinary `RenderElementRecord` values cached in `PaintPlanCache` do not include
+selection membership, selection flags, selected-move preview deltas, or any
+other selection-only state. Selection UI is built as a separate decoration pass,
+and selected-move supplement records are per-frame values that are never stored
+in the ordinary paint plan cache.
 
 Family row views:
 
@@ -140,10 +146,11 @@ Algorithm:
 1. Lookup or build the committed ordinary paint plan from PaintPlanCache.
 2. PaintPlanCache stores only ordinary committed RenderElementRecord data.
 3. PaintPlanCache key uses structuralRevision, boundsRevision,
-   elementVisualRevision, viewport, and selectionRevision.
+   elementVisualRevision, viewport, and stable device/pixel inputs.
 4. PaintPlanCache key must not include frameMetaRevision, selectedMoveDelta, or
-   previewDelta.
-5. When selectedMoveDelta is active, filter movable selected ids from the
+   previewDelta, selected ids, selection flags, or selectionRevision.
+5. When selectedMoveDelta is active, read selected ids through the captured
+   selection facts boundary and filter movable selected ids from the
    ordinary record stream for this frame only.
 6. Query visibilityRect shifted by -previewDelta for selected supplement
    candidates.
@@ -154,6 +161,12 @@ Algorithm:
 10. Do not global sort all scene elements.
 11. Do not materialize CanvasDocument.
 ```
+
+Selection decoration reads selected ids and selectionRevision through the same
+captured selection facts boundary and is invalidated separately from ordinary
+paint plans. `selectedOrder` is derived data or a bounded cache keyed by
+`selectionRevision` and `structuralRevision`; it is not a second stored
+selection source of truth.
 
 ### 15.4 Render primitive cache misses
 

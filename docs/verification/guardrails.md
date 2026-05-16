@@ -40,6 +40,7 @@ Guardrails:
 - `core.no_node_spec_patch_shape_dependency`
 - `core.single_runtime_root`
 - `store.no_public_document_live_state`
+- `selection.owner_separate_from_document`
 - `projection.only_explicit_read_paths`
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
@@ -53,6 +54,7 @@ Guardrails:
 - `load.success_interrupts_before_install`
 - `preview.selected_move_main_repaint`
 - `interaction.no_concrete_store_imports`
+- `interaction.no_concrete_selection_imports`
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
 - `geometry.no_legacy_scene_order`
@@ -62,6 +64,7 @@ Guardrails:
 - `spatial.fallback_budget_enforced`
 - `frame.no_global_scene_sort`
 - `frame.paint_plan_excludes_preview_delta`
+- `frame.paint_plan_excludes_selection_state`
 - `cache.keys_use_next_revisions_only`
 - `cache.frame_meta_not_element_visual`
 - `cache.hot_caches_have_capacity_eviction`
@@ -148,6 +151,7 @@ Mandatory guardrails:
 | `core.no_node_spec_patch_shape_dependency` | no legacy NodeSpec/NodePatch/PatchField in core |
 | `core.single_runtime_root` | exactly one production RuntimeRoot |
 | `store.no_public_document_live_state` | DocumentStoreKernel stores compact committed tables, not a live mutable `CanvasDocument` |
+| `selection.owner_separate_from_document` | selected ids and selectionRevision are owned by the internal selection owner, not DocumentStoreKernel, CommittedDocument, CanvasDocument projection, schema v1, or public DTO state |
 | `projection.only_explicit_read_paths` | `CanvasDocument` projection is built only by read/encode/test/tool or explicit draft-read paths, never pointer/hit/paint hot paths |
 | `edit.sync_non_nested` | nested/async edit rejected |
 | `edit.rollback_no_effects` | rollback discards events/repaint/resources/spatial |
@@ -161,6 +165,7 @@ Mandatory guardrails:
 | `load.success_interrupts_before_install` | success interrupt happens before atomic install |
 | `preview.selected_move_main_repaint` | selected move preview increments main repaint, not overlay |
 | `interaction.no_concrete_store_imports` | InteractionEngine uses EditKernel and narrow read-only query ports, not concrete store imports or mutations |
+| `interaction.no_concrete_selection_imports` | InteractionEngine uses intent-specific selection query ports and EditKernel commits, not concrete SelectionKernel imports or mutations |
 | `interaction.no_resolver_on_cancel_paths` | selected-move resolver is not called on cancel, load, mode-change, `interactive=false`, stale terminal, or dispose paths |
 | `interaction.no_stale_terminal_commit` | stale or controllerEpoch-mismatched terminal samples cannot create commit intent |
 | `geometry.no_legacy_scene_order` | geometry and hit-test policy does not reuse legacy SceneNode traversal or legacy scene order logic |
@@ -170,6 +175,7 @@ Mandatory guardrails:
 | `spatial.fallback_budget_enforced` | fallback candidate union enforces maxFallbackCandidates, diagnostic counter, and typed budget-exceeded result |
 | `frame.no_global_scene_sort` | selected supplement staging merges by orderToken and does not globally sort all scene elements |
 | `frame.paint_plan_excludes_preview_delta` | PaintPlanCache stores ordinary committed records only and excludes selectedMoveDelta/previewDelta from keys and values |
+| `frame.paint_plan_excludes_selection_state` | PaintPlanCache stores ordinary committed records only and excludes selected ids, selectionRevision, and selection flags from keys and values |
 | `cache.keys_use_next_revisions_only` | cache keys use next-owned revision facts and stable inputs, not legacy snapshot shapes |
 | `cache.frame_meta_not_element_visual` | camera/background/grid use frameMetaRevision and must not invalidate ordinary element paint plans |
 | `cache.hot_caches_have_capacity_eviction` | hot caches declare capacity, eviction policy, invalidation owner, and metric/probe |

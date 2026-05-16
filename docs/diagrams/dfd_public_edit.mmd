@@ -22,8 +22,13 @@ flowchart LR
   end
 
   subgraph Store["DocumentStoreKernel"]
-    Committed["CommittedDocument tables\nresources, selection, revisions, projection cache"]
+    Committed["CommittedDocument tables\nresources, document revisions, projection cache"]
     Install["Atomic install"]
+  end
+
+  subgraph Selection["SelectionKernel"]
+    SelectionState["Selected ids\nselectionRevision"]
+    SelectionEffects["Selection effects\nset, prune, clear"]
   end
 
   subgraph Effects["Committed effects"]
@@ -40,7 +45,7 @@ flowchart LR
   SessionGate -->|"committed revision snapshot"| Committed
   Committed -->|"draft source data"| Draft
   SessionGate -->|"valid live handle"| EditHandle
-  EditHandle -->|"low-level document/resource/selection mutations"| Draft
+  EditHandle -->|"low-level document/resource mutations\nand selection requests"| Draft
   EditHandle -->|"callback completes"| Finalize
   Finalize -->|"synchronous callback value"| Touched
   Finalize -.->|"Future returned after callback"| Rollback
@@ -53,6 +58,8 @@ flowchart LR
   Compiler -->|"preflight invariants before install"| Committed
   Plan -->|"commit payload for atomic install"| Install
   Install -->|"replace committed tables atomically"| Committed
+  Install -->|"apply selection effects atomically"| SelectionEffects
+  SelectionEffects -->|"update selected ids/revision"| SelectionState
 
   Install -->|"apply spatial update scope"| SpatialDelta
   Install -->|"apply projection eviction scope"| ProjectionEvict

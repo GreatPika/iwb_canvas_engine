@@ -19,6 +19,13 @@ Subsystem-oriented reading map over the section registry.
 - `section_12_load_document`
 - `section_13_operation_matrix`
 
+## selection_runtime
+
+- `section_02_architecture_model`
+- `section_10_runtime_data_model`
+- `section_14_interaction_engine`
+- `section_15_frame_render_contract`
+
 ## interaction
 
 - `section_14_interaction_engine`

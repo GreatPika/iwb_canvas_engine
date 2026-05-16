@@ -8,6 +8,7 @@ sequenceDiagram
   participant Runtime as RuntimeRoot
   participant Stager as Staged load boundary
   participant Store as DocumentStoreKernel
+  participant Selection as SelectionKernel
   participant Interaction as InteractionEngine
   participant Projection as DocumentProjectionCache
   participant Spatial as SpatialKernel
@@ -26,8 +27,10 @@ sequenceDiagram
   Caller->>API: loadDocument(document)
   API->>Runtime: delegate loadDocument(document)
   Runtime->>Runtime: reject disposed runtime before mutation
-  Runtime->>Store: read current committed identity, revisions, and id admission state
+  Runtime->>Store: read current committed identity, document revisions, and id admission state
   Store-->>Runtime: current committed snapshot remains installed
+  Runtime->>Selection: read current selectionRevision
+  Selection-->>Runtime: current selected ids remain installed
 
   Runtime->>Stager: validate public CanvasDocument
   Stager->>Stager: verify DTO invariants, limits, duplicate ids, resource references, and frozen metadata
@@ -42,12 +45,16 @@ sequenceDiagram
   Interaction-->>Runtime: preview cleared and preview signal queued until install
   Note over Interaction,Signals: Preview state may be cleared before install, but no public signal is published before the committed replacement is installed.
 
-  Runtime->>Store: install PreparedDocumentLoad atomically
-  Store->>Store: replace compact committed tables, cleared selection, and id admission in one commit boundary
+  Runtime->>Store: install PreparedDocumentLoad document payload atomically
+  Runtime->>Selection: clear selection in same runtime result
+  Store->>Store: replace compact committed tables and id admission in one commit boundary
+  Selection->>Selection: clear selected ids and increment selectionRevision if needed
   Store->>Store: assign new committed identity
-  Store->>Store: increment controllerEpoch and document/structural/bounds/visual/selection/projection/resource revisions inside the install
+  Store->>Store: increment controllerEpoch and document/structural/bounds/visual/projection/resource revisions inside the install
   Note over Store: Store state is committed tables and revision state, not a live CanvasDocument DTO.
+  Note over Runtime,Selection: Selection clear is not a public post-install mutation; it is part of the same atomic runtime result.
   Store-->>Runtime: committed replacement revision facts
+  Selection-->>Runtime: committed selection revision facts
 
   Runtime->>Interaction: committed load installed with updated epoch and revisions
   Interaction->>Interaction: clear pointer normalization and pending tap history

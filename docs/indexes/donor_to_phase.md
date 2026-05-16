@@ -240,7 +240,7 @@ Every donor is mapped to target phases. `avoid` records are forbidden as structu
 
 - Decision: `adapt`
 - Target phases: `P4`, `P5`
-- Target owner: DocumentStoreKernel and EditKernel helpers
+- Target owner: DocumentStoreKernel, SelectionKernel, and EditKernel helpers
 
 ## codec_guards
 

@@ -857,11 +857,11 @@
   target_phases:
     - P4
     - P5
-  target_owner: DocumentStoreKernel and EditKernel helpers
+  target_owner: DocumentStoreKernel, SelectionKernel, and EditKernel helpers
   use_for:
-    - "pure document edit, clone and selection helpers"
+    - "pure document edit, clone, and selection helper behavior"
   do_not_copy:
-    - ownership that conflicts with store/edit split
+    - ownership that conflicts with store/selection/edit split
   required_tests:
     - store kernel tests
     - edit kernel tests
@@ -1219,11 +1219,11 @@
   decision: adapt
   target_phases:
     - P10
-  target_owner: Move and marquee interaction machines
+  target_owner: Move and marquee interaction machines using SelectionKernel query ports
   use_for:
     - "move preview, marquee selection, commit-on-up, cancel restore"
   do_not_copy:
-    - "legacy selection, hit-test and mutation callback wiring"
+    - "legacy selection ownership, direct hit-test/store reads, and mutation callback wiring"
   required_tests:
     - move preview tests
     - marquee selection tests

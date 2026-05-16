@@ -17,8 +17,8 @@ load, resources, interaction, or commands can mutate committed state.
 - sync/non-nested edit enforcement
 - Future-return rejection
 - stale edit handle enforcement
-- rollback with no committed state, revision, event, repaint, resource, spatial,
-  preview, or projection side effects
+- rollback with no committed state, selection-owner, revision, event, repaint,
+  resource, spatial, preview, or projection side effects
 - low-level `CanvasEdit.removeElement` and `CanvasEdit.clearContent` emit no
   user action events
 - exact touched invalidation for ordinary edits
@@ -27,8 +27,8 @@ load, resources, interaction, or commands can mutate committed state.
 
 ## Dependencies on earlier phases
 
-- P4 runtime spine owns committed store, projection, revisions, and narrow read
-  boundaries.
+- P4 runtime spine owns committed store, selection owner, projection, revisions,
+  and narrow read boundaries.
 
 ## Read first
 
@@ -39,7 +39,7 @@ load, resources, interaction, or commands can mutate committed state.
 
 ## Required donors
 
-- `dto_document_helpers` - decision: `adapt`; target owner: DocumentStoreKernel and EditKernel helpers
+- `dto_document_helpers` - decision: `adapt`; target owner: DocumentStoreKernel, SelectionKernel, and EditKernel helpers
 - `interaction_mutation_boundary` - decision: `adapt`; target owner: Interaction-owned mutation bridge into EditKernel
 
 ## Forbidden donor structure
@@ -67,6 +67,8 @@ load, resources, interaction, or commands can mutate committed state.
   from `section_13_operation_matrix`
 - exact touched invalidation and typed effect boundary from
   `section_11_edit_kernel`
+- cross-owner document and selection rollback/commit atomicity from
+  `section_11_edit_kernel`
 
 ## Tests and guardrails that prove this phase
 
@@ -76,6 +78,7 @@ load, resources, interaction, or commands can mutate committed state.
 - `test.edit.operation_matrix_effects` -> `test/edit/operation_matrix_effects_test.dart`
 - `test.edit.exact_touched_invalidation` -> `test/edit/exact_touched_invalidation_test.dart`
 - `test.edit.typed_effects_no_frame_dependency` -> `test/edit/typed_effects_no_frame_dependency_test.dart`
+- `test.selection.runtime_owner_separation` -> `test/selection/runtime_owner_separation_test.dart`
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
 - `edit.stale_handle_rejected`
@@ -83,12 +86,15 @@ load, resources, interaction, or commands can mutate committed state.
 - `edit.no_global_invalidation_except_replacement`
 - `edit.typed_effects_no_frame_dependency`
 - `events.low_level_edit_no_user_actions`
+- `selection.owner_separate_from_document`
 - `core.single_runtime_root`
 
 ## Exit gate
 
 - sync/non-nested/async/stale tests green
 - rollback tests green
+- rollback tests prove document and selection owners remain unchanged before
+  the atomic install boundary
 - operation matrix tests green for edit-owned operations
 - exact touched invalidation tests green
 - typed effect boundary tests green
@@ -103,5 +109,5 @@ load, resources, interaction, or commands can mutate committed state.
 ## Why this phase belongs here
 
 Every state-changing feature after P5 must use `EditKernel`. Atomic edit and
-rollback behavior must be proven before load, resources, selection, drawing, or
-eraser commits are added.
+rollback behavior across document and selection owners must be proven before
+load, resources, selection, drawing, or eraser commits are added.

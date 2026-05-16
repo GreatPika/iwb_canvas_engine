@@ -5,8 +5,12 @@ flowchart LR
   AppResolver["Application resourceResolver\nsynchronous app-owned image read"]
 
   subgraph Store["DocumentStoreKernel"]
-    Committed["Committed tables\nrevisions, camera, selection,\nresource descriptors"]
+    Committed["Committed tables\ndocument revisions, camera,\nresource descriptors"]
     ProjectionCache["DocumentProjectionCache\nreadDocument/codec/tests only"]
+  end
+
+  subgraph Selection["SelectionKernel"]
+    SelectionFacts["Captured selection facts\nselected ids and selectionRevision"]
   end
 
   subgraph Interaction["InteractionEngine"]
@@ -29,7 +33,7 @@ flowchart LR
   subgraph Frame["FrameEngine"]
     RepaintSignal["Main repaint request"]
     Capture["Main frame capture\nsingle runtime read boundary"]
-    CapturedFrame["CapturedMainFrame\ndocument, structural, bounds,\nelementVisual, frameMeta, selection,\nresourceVisual, camera, viewport,\nselectedMoveDelta"]
+    CapturedFrame["CapturedMainFrame\ndocument, structural, bounds,\nelementVisual, frameMeta, resourceVisual,\nselection, camera, viewport,\nselectedMoveDelta"]
     PaintPlanCache["PaintPlanCache\nordinary committed records only\nno frameMeta, selectedMoveDelta,\nor previewDelta in key/value"]
     OrdinaryPlan["Ordinary committed paint plan\ncached RenderElementRecord list"]
     OrdinaryStage["Ordinary paint candidates\nviewport and halo"]
@@ -37,7 +41,8 @@ flowchart LR
     RecordBuilder["Render record builder\nresolve handles by revision/generation"]
     FilterOrdinary["Filter selected movable ids\nfrom ordinary stream for this frame"]
     Merge["Order-token merge\nno full-scene sort"]
-    Records["Immutable RenderElementRecord list\ncompact row views, selection flags,\npreviewDelta"]
+    SelectionDecoration["Selection decoration plan\nseparate from ordinary records"]
+    Records["Immutable frame record list\nordinary row views plus per-frame\nselection decoration/supplements"]
     DescriptorSnapshots["Descriptor snapshots\nresourceId + appKey descriptor + resourceRevision"]
     RenderCaches["Frame render caches\ntext, path, stroke"]
     StaticBackgroundCache["StaticBackgroundCache\nbackground + grid + camera bucket + dpr"]
@@ -58,10 +63,12 @@ flowchart LR
 
   Capture -->|"read committed frame facts once"| Committed
   Committed -->|"revisioned table snapshot facts"| CapturedFrame
+  Capture -->|"read selected ids once"| SelectionFacts
+  SelectionFacts -->|"selectionRevision and selected ids"| CapturedFrame
   Capture -->|"read immutable selected move preview once"| PreviewSnapshot
   PreviewSnapshot -->|"selectedMoveDelta or none"| CapturedFrame
 
-  CapturedFrame -->|"ordinary cache key\nstructural, bounds, elementVisual,\nviewport, selection"| PaintPlanCache
+  CapturedFrame -->|"ordinary cache key\nstructural, bounds, elementVisual,\nviewport/device inputs"| PaintPlanCache
   PaintPlanCache -->|"cache hit: ordinary committed records"| OrdinaryPlan
   PaintPlanCache -->|"cache miss inputs"| OrdinaryStage
 
@@ -76,13 +83,15 @@ flowchart LR
 
   OrdinaryPlan -->|"ordinary stream"| FilterOrdinary
   CapturedFrame -->|"selection ids and preview delta"| FilterOrdinary
+  CapturedFrame -->|"selection ids and style inputs"| SelectionDecoration
   CapturedFrame -->|"selectedMoveDelta for this frame"| SupplementStage
   SupplementStage -->|"shifted visibility query only"| ShiftedCandidates
   ShiftedCandidates -->|"selected candidate ids with generations"| SupplementStage
   SupplementStage -->|"shifted selected handles"| RecordBuilder
   RecordBuilder -->|"per-frame supplement records\nwith previewDelta"| Merge
   FilterOrdinary -->|"ordinary records excluding\nmoved selected ids"| Merge
-  Merge -->|"ordered frame records\nnot stored in PaintPlanCache"| Records
+  Merge -->|"ordered ordinary and supplement records\nnot stored in PaintPlanCache"| Records
+  SelectionDecoration -->|"selection UI primitives"| Records
 
   Records -->|"text/path/stroke keys"| RenderCaches
   CapturedFrame -->|"background/grid/camera bucket/dpr"| StaticBackgroundCache

@@ -50,7 +50,7 @@ before frame rendering and interaction depend on bounded element queries.
 - `geometry_eraser_exact_hit` - decision: `adapt`; target owner: Eraser exact-hit engine
 - `spatial_scene_spatial_index` - decision: `adapt`; target owner: SpatialKernel tile and outlier indexes
 - `spatial_index_cache` - decision: `adapt`; target owner: SpatialKernel invalidation cache
-- `store_scene_controller_read_paths` - decision: `adapt`; target owner: DocumentStoreKernel committed read and candidate resolve
+- `store_scene_controller_read_paths` - decision: `adapt`; target owner: DocumentStoreKernel committed read and candidate resolve through immutable query ports
 
 ## Forbidden donor structure
 

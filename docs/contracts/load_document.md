@@ -35,8 +35,11 @@ Do not assume:
 `CanvasEditPort.loadDocument(document)` is the next public external document
 replacement operation.
 The public API delegates orchestration to `RuntimeRoot`; it does not read from
-or install into `DocumentStoreKernel` directly. `DocumentStoreKernel` owns the
-atomic replacement install once validation and materialization have succeeded.
+or install into `DocumentStoreKernel` directly. `RuntimeRoot` owns the atomic
+cross-owner replacement operation once validation and materialization have
+succeeded: document replacement is installed into `DocumentStoreKernel`, and
+selection is cleared through the internal selection owner before any public
+notification is published.
 
 P6 owns only the minimal early interaction boundary needed by staged
 replacement:
@@ -59,8 +62,10 @@ Success ordering:
 2. materialize PreparedDocumentLoad;
 3. if validation/materialization succeeds, interrupt active interaction;
 4. clear preview;
-5. atomic install replacement payload, including cleared selection;
-6. increment controllerEpoch and all document-level revisions inside the same install boundary;
+5. atomically install the replacement document and clear selection through the
+   runtime/applier boundary;
+6. increment controllerEpoch, document-level revisions, and selectionRevision
+   inside the same atomic runtime result;
 7. clear pointer normalization and pending tap history;
 8. invalidate projection/spatial/frame/resource caches;
 9. schedule main repaint and overlay repaint;
@@ -68,8 +73,9 @@ Success ordering:
 ```
 
 `PreparedDocumentLoad` owns replacement committed tables, generated id admission
-state, cleared selection, and replacement revision facts. Selection clearing is
-not a separate post-install mutation.
+state, and replacement revision facts. The runtime/applier boundary combines
+that prepared document payload with a selection-owner clear effect. Selection
+clearing is not a separate post-install mutation.
 
 Failure ordering:
 
@@ -79,8 +85,8 @@ Failure ordering:
 3. preview remains unchanged;
 4. pending line remains unchanged;
 5. pointer normalization remains unchanged;
-6. committed document remains unchanged;
-7. selection remains unchanged;
+6. committed document owner remains unchanged;
+7. selection owner remains unchanged;
 8. no repaint;
 9. no action event;
 10. exception is rethrown as CanvasDataException or StateError.

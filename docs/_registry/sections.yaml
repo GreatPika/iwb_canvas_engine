@@ -42,8 +42,10 @@
     - state_runtime_lifecycle
   guardrails:
     - core.single_runtime_root
+    - selection.owner_separate_from_document
   tests:
     - test.guardrails.blocking_suite
+    - test.selection.runtime_owner_separation
   do_not_assume:
     - no legacy facade
     - no SceneController
@@ -66,9 +68,11 @@
     - api.no_legacy_public_types
     - core.import_boundaries
     - core.no_unapproved_part_files
+    - interaction.no_concrete_selection_imports
   tests:
     - test.api_contract.no_legacy_public_symbols
     - test.guardrails.import_boundaries
+    - test.guardrails.selection_boundary_imports
   do_not_assume:
     - no legacy package import
     - no app adapters in package
@@ -328,10 +332,12 @@
   guardrails:
     - core.single_runtime_root
     - store.no_public_document_live_state
+    - selection.owner_separate_from_document
     - projection.only_explicit_read_paths
   tests:
     - test.runtime.dispose_lifecycle
     - test.store.read_document_projection
+    - test.selection.runtime_owner_separation
     - test.store.no_projection_hot_path
     - test.store.public_document_is_projection_only
   do_not_assume:
@@ -485,6 +491,7 @@
     - load.prepares_before_interrupt
     - load.success_interrupts_before_install
     - interaction.no_concrete_store_imports
+    - interaction.no_concrete_selection_imports
     - interaction.no_resolver_on_cancel_paths
     - interaction.no_stale_terminal_commit
     - surface.pointer_samples_normalized_before_runtime
@@ -500,6 +507,7 @@
     - test.interaction.move_resolver_reentrancy
     - test.interaction.move_resolver_not_called_on_cancel_cleanup
     - test.interaction.no_stale_terminal_commit
+    - test.guardrails.selection_boundary_imports
     - test.flutter_bridge.widget_paint
   do_not_assume:
     - no legacy callback graph as structure
@@ -538,12 +546,14 @@
     - preview.selected_move_main_repaint
     - frame.no_global_scene_sort
     - frame.paint_plan_excludes_preview_delta
+    - frame.paint_plan_excludes_selection_state
     - cache.frame_meta_not_element_visual
   tests:
     - test.store.no_projection_hot_path
     - test.frame.main_overlay_capture
     - test.frame.no_live_runtime_read_in_painters
     - test.frame.paint_plan_excludes_preview_delta
+    - test.frame.paint_plan_excludes_selection_state
     - test.frame.camera_pan_preserves_ordinary_paint_plan
     - test.frame.selected_supplement_staging_no_global_sort
     - test.flutter_bridge.widget_paint
@@ -647,10 +657,12 @@
     - cache.hot_caches_have_capacity_eviction
     - cache.frame_meta_not_element_visual
     - frame.paint_plan_excludes_preview_delta
+    - frame.paint_plan_excludes_selection_state
   tests:
     - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
     - test.frame.cache_capacity_eviction_policy
     - test.frame.paint_plan_excludes_preview_delta
+    - test.frame.paint_plan_excludes_selection_state
     - test.frame.camera_pan_preserves_ordinary_paint_plan
   do_not_assume:
     - no unbounded cache owner sprawl
@@ -749,6 +761,7 @@
     - core.no_node_spec_patch_shape_dependency
     - core.single_runtime_root
     - store.no_public_document_live_state
+    - selection.owner_separate_from_document
     - projection.only_explicit_read_paths
     - edit.sync_non_nested
     - edit.rollback_no_effects
@@ -762,6 +775,7 @@
     - load.success_interrupts_before_install
     - preview.selected_move_main_repaint
     - interaction.no_concrete_store_imports
+    - interaction.no_concrete_selection_imports
     - interaction.no_resolver_on_cancel_paths
     - interaction.no_stale_terminal_commit
     - geometry.no_legacy_scene_order
@@ -771,6 +785,7 @@
     - spatial.fallback_budget_enforced
     - frame.no_global_scene_sort
     - frame.paint_plan_excludes_preview_delta
+    - frame.paint_plan_excludes_selection_state
     - cache.keys_use_next_revisions_only
     - cache.frame_meta_not_element_visual
     - cache.hot_caches_have_capacity_eviction
@@ -1087,6 +1102,7 @@
     - core.no_node_spec_patch_shape_dependency
     - core.single_runtime_root
     - store.no_public_document_live_state
+    - selection.owner_separate_from_document
     - projection.only_explicit_read_paths
     - edit.sync_non_nested
     - edit.rollback_no_effects
@@ -1100,6 +1116,7 @@
     - load.success_interrupts_before_install
     - preview.selected_move_main_repaint
     - interaction.no_concrete_store_imports
+    - interaction.no_concrete_selection_imports
     - interaction.no_resolver_on_cancel_paths
     - interaction.no_stale_terminal_commit
     - geometry.no_legacy_scene_order
@@ -1109,6 +1126,7 @@
     - spatial.fallback_budget_enforced
     - frame.no_global_scene_sort
     - frame.paint_plan_excludes_preview_delta
+    - frame.paint_plan_excludes_selection_state
     - cache.keys_use_next_revisions_only
     - cache.frame_meta_not_element_visual
     - cache.hot_caches_have_capacity_eviction

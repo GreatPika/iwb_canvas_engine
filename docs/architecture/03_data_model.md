@@ -24,11 +24,13 @@ Related diagrams:
 Required tests:
 - `test.runtime.dispose_lifecycle`
 - `test.store.read_document_projection`
+- `test.selection.runtime_owner_separation`
 - `test.store.no_projection_hot_path`
 - `test.store.public_document_is_projection_only`
 Guardrails:
 - `core.single_runtime_root`
 - `store.no_public_document_live_state`
+- `selection.owner_separate_from_document`
 - `projection.only_explicit_read_paths`
 Do not assume:
 - no legacy mutable runtime graph
@@ -49,11 +51,14 @@ CommittedDocument
   layerTable: LayerTable
   elementRegistry: ElementRegistry
   familyTables: FamilyTables
-  selection: SelectionStore
   admission: AdmissionState
   revisions: RevisionState
   projectionCache: DocumentProjectionCache
 ```
+
+Selection is runtime view state owned by `SelectionKernel`, not committed
+document content. `CommittedDocument` stores no selected ids, selected order, or
+selection revision.
 
 `DocumentMetaRecord`:
 
@@ -107,13 +112,19 @@ controllerEpoch         -> loadDocument success or full document replacement
 structuralRevision      -> element/layer/resource membership/order/family changes
 resourceRevision        -> resource descriptor changes
 resourceVisualRevision  -> markResourceDirty / resolver visual invalidation
-selectionRevision       -> selected ids changed
 boundsRevision          -> geometry/transform/hit/paint bounds changed
 elementVisualRevision   -> element visual fields, element style fields, and transform-affecting paint changes
 frameMetaRevision       -> camera, background, and grid changes that affect frame capture/static frame caches
 projectionRevision      -> public CanvasDocument projection invalidated
 previewRevision         -> preview state changed
 ```
+
+`SelectionKernel` owns `selectionRevision`. Selection-only changes increment
+`selectionRevision`, schedule the selection UI repaint needed by the runtime,
+and do not increment `documentRevision`, evict `DocumentProjectionCache`, or
+update `SpatialKernel`. Operations that remove or replace document content may
+also produce a selection-prune or selection-clear effect, but the document and
+selection effects are published as one atomic runtime result.
 
 `frameMetaRevision` is the v1 aggregate for frame-affecting document meta. It may
 later be split into `cameraRevision`, `backgroundRevision`, and `gridRevision`

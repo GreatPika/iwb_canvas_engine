@@ -239,12 +239,15 @@ test/frame/no_live_runtime_read_in_painters_test.dart
 test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart
 test/frame/cache_capacity_eviction_policy_test.dart
 test/frame/paint_plan_excludes_preview_delta_test.dart
+test/frame/paint_plan_excludes_selection_state_test.dart
 test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart
 test/frame/selected_supplement_staging_no_global_sort_test.dart
 test/interaction/state_machines_test.dart
 test/interaction/move_resolver_reentrancy_test.dart
 test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart
 test/interaction/no_stale_terminal_commit_test.dart
+test/selection/runtime_owner_separation_test.dart
+test/guardrails/selection_boundary_imports_test.dart
 ```
 
 Guardrail test ownership:
@@ -289,6 +292,8 @@ test/api_contract/dto_immutability_test.dart
 test/guardrails/import_boundaries_test.dart
   -> verifies package-owned source paths obey the forbidden import matrix;
   -> rejects imports from another package's src/**;
+  -> rejects concrete interaction imports of src/store and src/selection owner
+     internals outside approved query-port abstractions;
   -> scans production lib/** Dart files for part/part of directives and allows
      them only through an explicit generated-code approval list.
 
@@ -311,6 +316,28 @@ test/runtime/dispose_lifecycle_test.dart
   -> verifies no revision listenable notifications are delivered after dispose
      returns, repeated dispose is silent, and listeners can be removed after
      dispose.
+
+test/selection/runtime_owner_separation_test.dart
+  -> proves selection-only changes increment selectionRevision without
+     incrementing documentRevision, evicting DocumentProjectionCache, or
+     updating SpatialKernel;
+  -> proves document replacement, delete, clear, and eraser paths publish
+     document and selection effects as one atomic runtime result;
+  -> proves selectedOrder is derived from selectionRevision and
+     structuralRevision, not stored as an independent source of truth.
+
+test/frame/paint_plan_excludes_selection_state_test.dart
+  -> proves ordinary PaintPlanCache keys and cached ordinary records exclude
+     selected ids, selectionRevision, selection flags, and selected-move preview
+     state;
+  -> proves selection changes rebuild selection decoration without evicting the
+     ordinary committed paint plan.
+
+test/guardrails/selection_boundary_imports_test.dart
+  -> proves InteractionEngine does not import concrete SelectionKernel or
+     DocumentStoreKernel internals;
+  -> proves interaction selection/document reads are routed through
+     intent-specific immutable query ports.
 ```
 
 Legacy capability inventory rows require inventory-only tests. Functional

@@ -678,7 +678,7 @@ needed before implementation phases depend on selection behavior.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Lock Architecture Ownership Text
+### Slice 1. [x] Lock Architecture Ownership Text
 
 #### Slice Contract
 
@@ -722,7 +722,7 @@ Update `docs/architecture/01_runtime_ownership.md`,
 
 - Architecture docs agree on selection owner and document-store exclusions.
 
-### Slice 2. [ ] Align Mutation and Replacement Contracts
+### Slice 2. [x] Align Mutation and Replacement Contracts
 
 #### Slice Contract
 
@@ -771,7 +771,7 @@ Update `docs/contracts/public_api_v1.md`,
 - Contract docs use one cross-owner atomicity model and no longer place
   selection in document draft state.
 
-### Slice 3. [ ] Align Frame, Cache, and Diagram Sources
+### Slice 3. [x] Align Frame, Cache, and Diagram Sources
 
 #### Slice Contract
 
@@ -816,7 +816,7 @@ Update `docs/contracts/frame_rendering.md`,
 - Textual contracts and diagrams agree on ordinary paint cache independence
   from selection.
 
-### Slice 4. [ ] Align Phase, Registry, Verification, and Backlog Records
+### Slice 4. [x] Align Phase, Registry, Verification, and Backlog Records
 
 #### Slice Contract
 

@@ -1,102 +1,4 @@
-## 3. Selection выносим из `DocumentStoreKernel`
-
-**Проблема:** selection — это не содержимое документа. Это view/runtime state. Если держать selection в store, она смешивается с committed document state.
-
-**Решение:** вводим отдельный владелец.
-
-```text
-SelectionKernel
-  - selectedIds
-  - selectionRevision
-  - normalizeSelection
-  - clearSelection
-  - selectAllContent
-  - toggleSelection
-  - selectedOrder
-```
-
-`DocumentStoreKernel` хранит только committed document:
-
-```text
-DocumentStoreKernel
-  - elements
-  - layers
-  - resources
-  - background
-  - document metadata
-  - document revisions
-```
-
-`SelectionKernel` читает факты через query-port:
-
-```text
-DocumentFactsPort
-  - exists(id)
-  - isContentElement(id)
-  - isVisible(id)
-  - isSelectable(id)
-  - isLocked(id)
-  - documentOrder(ids)
-```
-
-При `loadDocument` порядок такой:
-
-```text
-RuntimeRoot.prepareReplacement
-InteractionEngine.interruptAfterSuccessfulPrepare
-SelectionKernel.clearForReplacement
-DocumentStoreKernel.installReplacement
-FrameEngine.invalidateForReplacement
-```
-
-**Итог:** document state и view state разделены.
-
----
-
-## 4. Selection scope фиксируем как content-only
-
-**Проблема:** background elements не pointer-selectable, но публичный `setSelection` может случайно выбрать background element программно.
-
-**Решение:** в v1 selection работает только с content elements.
-
-Правило:
-
-```text
-SelectionKernel никогда не хранит background element ids.
-```
-
-Нормализация selection:
-
-```text
-remove non-existing ids
-remove background ids
-remove non-selectable ids
-deduplicate
-sort by document order
-```
-
-`selectAll` выбирает только:
-
-```text
-content elements
-visible
-selectable
-not locked
-```
-
-`deleteSelection` удаляет только content selection.
-
-Background elements удаляются только низкоуровневым edit API:
-
-```dart
-edit.removeElement(backgroundElementId);
-```
-
-**Итог:** pointer selection и programmatic selection больше не расходятся.
-
----
-
-## 5. Public revision/listener model заменяем на единый snapshot
+## 3. Public revision/listener model заменяем на единый snapshot
 
 **Проблема:** public API показывает не все изменения runtime. Например, selection может измениться без `documentRevision`, но приложению всё равно нужен сигнал.
 
@@ -163,7 +65,7 @@ final class CanvasRuntimeSummary {
 
 ---
 
-## 6. Camera разделяем на view camera и persisted document camera
+## 4. Camera разделяем на view camera и persisted document camera
 
 **Проблема:** pan камеры не должен быть document mutation. Камера текущего вида — это view state. Камера в документе — это persisted default.
 
@@ -210,48 +112,7 @@ readDocument -> возвращает persisted document camera.
 
 ---
 
-## 7. `PaintPlanCache` отвязываем от `selectionRevision`
-
-**Проблема:** selection не меняет ordinary committed elements. Значит, изменение selection не должно сбрасывать ordinary paint plan.
-
-**Решение:** разделяем ordinary paint и selection rendering.
-
-```text
-OrdinaryPaintPlanCache key:
-  structuralRevision
-  boundsRevision
-  elementVisualRevision
-  viewportBucket
-  devicePixelRatio
-```
-
-Selection-декорации отдельно:
-
-```text
-SelectionDecorationPlan key:
-  selectionRevision
-  structuralRevision
-  selectionStyleRevision
-  devicePixelRatio
-```
-
-Selected move supplement:
-
-```text
-SelectedMoveSupplement:
-  computed per frame
-  uses selected ids + selectedMoveDelta
-  never stored in OrdinaryPaintPlanCache
-  painted in main-scene phase
-```
-
-`RenderElementRecord` для ordinary cache не содержит selection flags.
-
-**Итог:** выделение не ломает кэш обычной сцены.
-
----
-
-## 8. `frameMetaRevision` сразу разделяем
+## 5. `frameMetaRevision` сразу разделяем
 
 **Проблема:** общий `frameMetaRevision` смешивает camera, background, grid и surface styles. Это даёт лишние invalidation.
 
@@ -307,7 +168,7 @@ final class CapturedMainFrame {
 
 ---
 
-## 9. Resource resolver cache переносим в surface resource session
+## 6. Resource resolver cache переносим в surface resource session
 
 **Проблема:** resolver живёт на `CanvasSurface`, а image cache сейчас относится к runtime. Это разные lifecycle.
 
@@ -366,7 +227,7 @@ SurfaceResourceSession enforces resolver budget.
 
 ---
 
-## 10. `CanvasPreviewState` делаем sealed-union
+## 7. `CanvasPreviewState` делаем sealed-union
 
 **Проблема:** один класс со всеми nullable-полями допускает невозможные состояния.
 
@@ -485,7 +346,7 @@ final class CanvasEraserPreview extends CanvasPreviewState {
 
 ---
 
-## 11. Text edit request снабжаем stale guard
+## 8. Text edit request снабжаем stale guard
 
 **Проблема:** app-owned text editing может завершиться после delete/load/update элемента. Старый request не должен молча применить изменение к новому состоянию.
 
@@ -553,7 +414,7 @@ commitTextEdit выполняет updateElement внутри normal edit transac
 
 ---
 
-## 12. Action events объявляем notification stream, не undo/redo
+## 9. Action events объявляем notification stream, не undo/redo
 
 **Проблема:** payloads action events не содержат enough data для полноценного undo/redo.
 
@@ -595,7 +456,7 @@ Payloads не расширяем до inverse patches в v1.
 
 # Две обязательные правки без отдельного редизайна
 
-## 13. Operation matrix переводим на field-effect taxonomy
+## 10. Operation matrix переводим на field-effect taxonomy
 
 **Проблема:** строки вида `update visual only` и `update geometry/transform` слишком грубые. Реальная логика зависит от конкретного поля.
 
@@ -662,7 +523,7 @@ metadata:
 
 ---
 
-## 14. Non-invertible transform fallback убираем
+## 11. Non-invertible transform fallback убираем
 
 **Проблема:** если transform должен быть invertible, coarse fallback для non-invertible transform скрывает corrupted state.
 

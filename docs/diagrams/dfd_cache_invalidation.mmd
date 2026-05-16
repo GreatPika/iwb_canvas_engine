@@ -34,10 +34,14 @@ flowchart LR
     BoundsRevision["boundsRevision"]
     ElementVisualRevision["elementVisualRevision"]
     FrameMetaRevision["frameMetaRevision"]
-    SelectionRevision["selectionRevision"]
     ProjectionRevision["projectionRevision"]
     ResourceRevision["resourceRevision"]
     ResourceVisualRevision["resourceVisualRevision"]
+  end
+
+  subgraph Selection["SelectionKernel"]
+    SelectionEffect["Selection effect\nset, prune, clear, normalize"]
+    SelectionRevision["selectionRevision"]
   end
 
   subgraph Spatial["SpatialKernel"]
@@ -60,7 +64,8 @@ flowchart LR
   end
 
   subgraph Frame["FrameEngine"]
-    PaintPlanInvalidation["PaintPlanCache invalidation\nstructural, bounds, elementVisual,\nviewport, selection"]
+    PaintPlanInvalidation["PaintPlanCache invalidation\nstructural, bounds, elementVisual,\nviewport/device inputs"]
+    SelectionDecorationInvalidation["Selection decoration invalidation\nselection, structure, style"]
     StaticFrameInvalidation["StaticBackgroundCache invalidation\ncamera, background, grid"]
     TextPathInvalidation["Text, path, stroke cache invalidation\nonly changed render inputs"]
     MainRepaint["Main repaint bus"]
@@ -89,6 +94,9 @@ flowchart LR
   OrdinaryScope -->|"operation-matrix clearContent"| EmptySpatialReset
   ReplacementScope -->|"prepared document replacement"| CommittedInstall
   LoadSuccess -->|"prepared staged replacement\noutside edit CommitPlan"| CommittedInstall
+  OrdinaryScope -->|"selection effect if operation changes selection"| SelectionEffect
+  ReplacementScope -->|"selection clear effect"| SelectionEffect
+  LoadSuccess -->|"selection clear effect"| SelectionEffect
   CommittedInstall -->|"publish typed committed revision changes"| TypedRevisionScope
   TypedRevisionScope -->|"update only counters touched by operation"| RevisionState
 
@@ -97,7 +105,6 @@ flowchart LR
   RevisionState -.->|"geometry/bounds changes"| BoundsRevision
   RevisionState -.->|"element visual changes"| ElementVisualRevision
   RevisionState -.->|"camera/background/grid changes"| FrameMetaRevision
-  RevisionState -.->|"selection changes"| SelectionRevision
   RevisionState -.->|"public projection invalidated"| ProjectionRevision
   RevisionState -.->|"resource descriptor changes"| ResourceRevision
   RevisionState -.->|"external resource visual dirty"| ResourceVisualRevision
@@ -133,16 +140,19 @@ flowchart LR
   ResourceDirtyCall -.->|"forbidden"| DirtySelectionPreview
   ResourceDirtyCall -.->|"forbidden"| DirtyActionEvent
 
+  SelectionEffect -->|"membership changed"| SelectionRevision
   StructuralRevision -->|"structure/order changed"| PaintPlanInvalidation
   BoundsRevision -->|"bounds changed"| PaintPlanInvalidation
   ElementVisualRevision -->|"element visual rows changed"| PaintPlanInvalidation
-  SelectionRevision -->|"selection changed"| PaintPlanInvalidation
+  SelectionRevision -->|"selection changed"| SelectionDecorationInvalidation
+  StructuralRevision -->|"selected order may change"| SelectionDecorationInvalidation
   ReplacementScope -->|"full frame cache reset allowed"| PaintPlanInvalidation
   LoadSuccess -->|"full frame cache reset typed effect"| PaintPlanInvalidation
   FrameMetaRevision -->|"camera/background/grid only"| StaticFrameInvalidation
   FrameMetaRevision -->|"camera changed"| OverlayRepaint
   ElementVisualRevision -->|"changed text, path, or stroke inputs"| TextPathInvalidation
   PaintPlanInvalidation -->|"scene records changed"| MainRepaint
+  SelectionDecorationInvalidation -->|"selection UI changed"| MainRepaint
   StaticFrameInvalidation -->|"background or camera frame changed"| MainRepaint
   TextPathInvalidation -->|"render cache entries changed"| MainRepaint
 

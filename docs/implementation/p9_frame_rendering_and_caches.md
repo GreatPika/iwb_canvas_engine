@@ -15,11 +15,15 @@ frame output.
 - `RenderElementRecord`
 - `PaintPlan`
 - selected supplement staging support for later move preview
+- selection decoration reads through captured selection facts, separate from
+  ordinary paint plans
 - main/overlay repaint buses
 - text/path/stroke/background/resource caches
 - paint-plan cache with ordinary committed records only
 - cache keys based on next-owned revisions, not legacy snapshot shapes
 - `frameMetaRevision` excluded from ordinary element paint-plan invalidation
+- `selectionRevision`, selected ids, selection flags, and selected-move preview
+  deltas excluded from ordinary paint-plan keys and cached ordinary records
 - no live runtime read in painters
 - no `CanvasDocument` projection in paint
 - resource resolver access only through `ResourceKernel`
@@ -28,6 +32,7 @@ frame output.
 ## Dependencies on earlier phases
 
 - P4 runtime spine provides committed tables, projection guardrails, and revisions.
+- P4 runtime spine provides selection-owner facts through immutable query ports.
 - P5 edit core emits typed repaint and invalidation effects.
 - P7 resources provide resolver boundary and image resolve cache behavior.
 - P8 geometry/spatial provides paint bounds, admission, and candidate lookup.
@@ -95,6 +100,8 @@ frame output.
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape` -> `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart`
 - `test.frame.cache_capacity_eviction_policy` -> `test/frame/cache_capacity_eviction_policy_test.dart`
 - `test.frame.paint_plan_excludes_preview_delta` -> `test/frame/paint_plan_excludes_preview_delta_test.dart`
+- `test.frame.paint_plan_excludes_selection_state` -> `test/frame/paint_plan_excludes_selection_state_test.dart`
+- `test.selection.runtime_owner_separation` -> `test/selection/runtime_owner_separation_test.dart`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan` -> `test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart`
 - `test.frame.selected_supplement_staging_no_global_sort` -> `test/frame/selected_supplement_staging_no_global_sort_test.dart`
 - `projection.only_explicit_read_paths`
@@ -102,6 +109,8 @@ frame output.
 - `resources.resolver_frame_budget`
 - `frame.no_global_scene_sort`
 - `frame.paint_plan_excludes_preview_delta`
+- `frame.paint_plan_excludes_selection_state`
+- `selection.owner_separate_from_document`
 - `cache.keys_use_next_revisions_only`
 - `cache.frame_meta_not_element_visual`
 - `cache.hot_caches_have_capacity_eviction`
@@ -111,11 +120,15 @@ frame output.
 - main capture once
 - overlay capture once
 - selected supplement staging support is present without caching preview records
+- selection decoration and selected order are separate from ordinary paint plan
+  cache entries
 - overlay previews can be captured without live runtime reads
 - no live runtime read in painters
 - no `CanvasDocument` projection in paint
 - cache keys are next-revision based
 - `frameMetaRevision` does not invalidate ordinary committed element paint plans
+- `selectionRevision` does not invalidate ordinary committed element paint
+  plans
 - hot cache capacity/eviction policy is explicit
 - selected supplement staging avoids global scene sort
 - ordinary opacity does not require `Canvas.saveLayer` in the hot paint path.

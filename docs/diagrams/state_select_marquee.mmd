@@ -54,7 +54,8 @@ stateDiagram-v2
   note right of SelectionIntent
     Terminal up computes previousSelection, nextSelection,
     and marqueeRectWorld. This state is only an intent;
-    no Store mutation or public notification has happened.
+    no store/selection-owner mutation or public notification
+    has happened.
   end note
 
   SelectionIntent --> NoOpSelection: next selection empty and previous empty
@@ -65,7 +66,7 @@ stateDiagram-v2
   note right of NoOpSelection
     Empty-unchanged and unchanged selection paths clear
     marquee preview/session only. They do not open an edit,
-    mutate Store, increment selection revision, emit an
+    mutate Store, mutate the selection owner, emit an
     action, or notify document listeners.
   end note
 
@@ -73,9 +74,10 @@ stateDiagram-v2
 
   state "EditKernel commit outcome" as EditCommit
   note right of EditCommit
-    Selection mutation is committed only through EditKernel.
+    Selection mutation is committed only through EditKernel
+    and the selection owner.
     Atomic install is the commit boundary; rollback or
-    rejection leaves committed selection and public signals
+    rejection leaves selected ids and public signals
     unchanged.
   end note
 

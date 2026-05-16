@@ -51,6 +51,7 @@ Required tests:
 - `test.interaction.move_resolver_reentrancy`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
 - `test.interaction.no_stale_terminal_commit`
+- `test.guardrails.selection_boundary_imports`
 - `test.flutter_bridge.widget_paint`
 Guardrails:
 - `preview.selected_move_main_repaint`
@@ -58,6 +59,7 @@ Guardrails:
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 - `interaction.no_concrete_store_imports`
+- `interaction.no_concrete_selection_imports`
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
 - `surface.pointer_samples_normalized_before_runtime`
@@ -99,10 +101,21 @@ Rules:
 - terminal exception clears preview and schedules correct repaint;
 - committed facts for gesture decisions are read through narrow read-only
   interaction query ports;
+- selection facts for gesture decisions are read through narrow immutable
+  selection query ports, not by importing or mutating the concrete selection
+  owner;
 - interaction query results are immutable, intent-specific facts and never
-  expose store tables or mutation methods;
+  expose store tables, selection internals, or mutation methods;
 - InteractionEngine commits only through EditKernel.
 ```
+
+Selection-related interaction reads must be batched by intent. Marquee start,
+marquee terminal commit, selected-move start, and selected-move commit each read
+one immutable snapshot that contains the selected ids plus the document facts
+needed for that intent, such as content membership, visibility, lock state,
+transformability, deletability, bounds, and document order. Interaction must not
+loop over concrete owner methods such as per-property `exists`, `isVisible`, or
+`isLocked` reads.
 
 `interactive=false` cancels only an active routed pointer session. Pending line
 start or line preview state that is not currently owned by an active routed

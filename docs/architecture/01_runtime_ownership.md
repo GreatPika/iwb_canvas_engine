@@ -17,8 +17,10 @@ Related diagrams:
 - `state_runtime_lifecycle`
 Required tests:
 - `test.guardrails.blocking_suite`
+- `test.selection.runtime_owner_separation`
 Guardrails:
 - `core.single_runtime_root`
+- `selection.owner_separate_from_document`
 Do not assume:
 - no legacy facade
 - no SceneController
@@ -49,27 +51,31 @@ Canvas engine state
 | Зона | Хранит | Не должна делать |
 |---|---|---|
 | Public API | стабильные DTO, операции, события, ошибки | раскрывать таблицы, handles, caches, runtime internals |
-| DocumentStoreKernel | committed document state, revisions, selection, resource descriptors | читать gesture state или Flutter widget |
-| EditKernel | synchronous edit sessions, draft, touched sets, commit/rollback | выполнять paint или pointer routing |
+| DocumentStoreKernel | committed document state, document revisions, resource descriptors, public document projection cache | читать gesture state, selection state или Flutter widget |
+| SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | хранить committed document content, selected-order cache или быть public API type |
+| EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | выполнять paint или pointer routing |
 | InteractionEngine | pointer sessions, tools, preview state, terminal commit requests | читать или менять DocumentStoreKernel напрямую |
-| FrameEngine | captured main/overlay frames, paint plans, repaint buses | экспортировать public document |
+| FrameEngine | captured main/overlay frames, ordinary paint plans, selection decoration/staging, repaint buses | экспортировать public document или владеть selection |
 | ResourceKernel | resolver boundary, image resolve cache, dirty resource ids | владеть app domain assets или committed descriptors |
 | SpatialKernel | coarse candidate lookup, outlier policy | быть source of truth для сцены |
 | CodecBoundary | schema v1 encode/decode, validation, diagnostics | зависеть от Flutter widget или gestures |
 | DiagnosticsHub | internal diagnostic records, public error projection | добавлять public stream без API-решения |
 
 Gesture decisions may need committed facts such as controller epoch,
-selection ids, movable flags, text snapshots, and bounds. Those facts enter
+selection ids, movable flags, text snapshots, and bounds. Document facts enter
 `InteractionEngine` only through narrow read-only interaction query boundaries
-owned by the runtime/store boundary. The query boundary returns immutable,
-intent-specific facts and never exposes store tables or mutation methods.
-Committed mutations requested by interaction still go through `EditKernel`.
+owned by the runtime/document boundary. Selection facts enter through
+intent-specific selection query boundaries owned by the runtime/selection
+boundary. Query boundaries return immutable, batched, intent-specific facts and
+never expose store tables, selection internals, or mutation methods. Committed
+mutations requested by interaction still go through `EditKernel`.
 
 Composition root:
 
 ```text
 RuntimeRoot
   ├─ DocumentStoreKernel
+  ├─ SelectionKernel
   ├─ EditKernel
   ├─ InteractionEngine
   ├─ FrameEngine

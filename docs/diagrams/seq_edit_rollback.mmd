@@ -6,6 +6,7 @@ sequenceDiagram
   participant API as CanvasEditPort
   participant EK as EditKernel
   participant Store as DocumentStoreKernel
+  participant Selection as SelectionKernel
   participant Draft as DraftDocument
   participant Handle as CanvasEdit handle
   participant Touched as TouchedSet
@@ -17,14 +18,16 @@ sequenceDiagram
   API->>EK: open synchronous edit session
   EK->>EK: reject disposed or nested edit
   EK->>Store: read committed identity and revision snapshot
-  Store-->>EK: committed tables, selection, and revisions
+  Store-->>EK: committed tables and document revisions
+  EK->>Selection: read selection snapshot for draft effects
+  Selection-->>EK: selected ids and selectionRevision
   EK->>Draft: create rollback-safe draft
   EK->>Handle: bind live handle to session
   EK-->>Caller: invoke fn(handle)
 
   alt callback throws
     activate Handle
-    Caller->>Handle: draft document/resource/selection mutations
+    Caller->>Handle: draft document/resource mutations and selection requests
     Handle->>Draft: mutate draft only
     Draft->>Touched: record exact mutation facts
     Caller--x EK: throw original exception
@@ -55,7 +58,8 @@ sequenceDiagram
   EK->>Touched: discard touched set
   EK->>Handle: close session and mark handle stale
   Note over Handle: Any later handle operation throws StateError.
-  Note over EK,Store: Committed document identity, revisions, and selection remain unchanged. InteractionEngine-owned preview is outside Store.
+  Note over EK,Selection: Selection owner remains unchanged.
+  Note over EK,Store: Committed document identity and document revisions remain unchanged. InteractionEngine-owned preview is outside Store.
   Note over Store,Signals: No atomic install runs and no action event, text edit event, public notify, scene repaint, or overlay repaint is published.
   EK--x API: rethrow original exception, async edit rejection, or preflight error
   API--x Caller: propagate safely

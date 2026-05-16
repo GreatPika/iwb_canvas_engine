@@ -12,7 +12,7 @@ flowchart LR
   subgraph Staging["Staged load boundary"]
     Validator["Document validation\npublic DTO invariants\nand frozen metadata"]
     Materializer["PreparedDocumentLoad materialization\nruntime tables and ids"]
-    Prepared["Prepared replacement\ncommitted document payload\nincluding cleared selection"]
+    Prepared["Prepared replacement\ncommitted document payload"]
     Failure["Load failure\nCanvasDataException or StateError"]
   end
 
@@ -24,12 +24,19 @@ flowchart LR
   end
 
   subgraph Store["DocumentStoreKernel"]
-    ExistingCommitted["Existing committed document\nselection, revisions, projection cache"]
+    ExistingCommitted["Existing committed document\nrevisions, projection cache"]
     AtomicInstall["Atomic document install\nreplacement payload boundary"]
-    ReplacementCommitted["Replacement committed document\nselection already cleared"]
+    ReplacementCommitted["Replacement committed document"]
+  end
+
+  subgraph Selection["SelectionKernel"]
+    ExistingSelection["Existing selected ids\nand selectionRevision"]
+    SelectionClear["Selection clear effect\nsame runtime result"]
+    ReplacementSelection["Replacement selection state\nselected ids cleared"]
   end
 
   subgraph Effects["Committed effects"]
+    AtomicRuntimeResult["Atomic runtime result\ndocument replacement + selection clear"]
     Revisions["Document-level revisions\ncontroller epoch"]
     SpatialRebuild["Spatial index rebuild"]
     ProjectionEvict["Projection cache eviction"]
@@ -53,21 +60,26 @@ flowchart LR
 
   Failure -.->|"no interrupt; preview unchanged"| ActivePreview
   Failure -.->|"pointer normalization and tap history unchanged"| PendingInput
-  Failure -.->|"no committed state, selection, revision, cache, repaint, or event change"| ExistingCommitted
+  Failure -.->|"no committed state, revision, cache, repaint, or event change"| ExistingCommitted
+  Failure -.->|"selection owner unchanged"| ExistingSelection
 
   Prepared -->|"success-only interrupt request"| Interrupt
   ActivePreview -->|"clear active gesture state"| Interrupt
   Interrupt -->|"prepared replacement after preview cleanup"| AtomicInstall
-  Prepared -->|"install payload includes cleared selection"| AtomicInstall
-  AtomicInstall -->|"replace committed state and selection atomically"| ReplacementCommitted
-  ReplacementCommitted -->|"after install only"| PostInstallCleanup
+  Prepared -->|"document install payload"| AtomicInstall
+  Prepared -->|"selection clear effect"| SelectionClear
+  AtomicInstall -->|"replace committed state"| ReplacementCommitted
+  SelectionClear -->|"clear selected ids and increment selectionRevision"| ReplacementSelection
+  ReplacementCommitted -->|"document side installed"| AtomicRuntimeResult
+  ReplacementSelection -->|"selection side installed"| AtomicRuntimeResult
+  AtomicRuntimeResult -->|"after install only"| PostInstallCleanup
   PendingInput -->|"clear after atomic install"| PostInstallCleanup
 
-  ReplacementCommitted -->|"increment all document-level revisions and epoch"| Revisions
-  ReplacementCommitted -->|"rebuild from replacement document"| SpatialRebuild
-  ReplacementCommitted -->|"evict public document projection"| ProjectionEvict
-  ReplacementCommitted -->|"evict resolver/resource caches"| ResourceEvict
-  ReplacementCommitted -->|"schedule full document repaint"| Repaint
-  ReplacementCommitted -->|"publish after atomic install"| Notify
+  AtomicRuntimeResult -->|"increment document-level revisions, selectionRevision, and epoch"| Revisions
+  AtomicRuntimeResult -->|"rebuild from replacement document"| SpatialRebuild
+  AtomicRuntimeResult -->|"evict public document projection"| ProjectionEvict
+  AtomicRuntimeResult -->|"evict resolver/resource caches"| ResourceEvict
+  AtomicRuntimeResult -->|"schedule full document repaint"| Repaint
+  AtomicRuntimeResult -->|"publish after atomic install"| Notify
   Notify -->|"success return"| Result
   Result -->|"load completed"| App

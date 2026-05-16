@@ -8,6 +8,8 @@ sequenceDiagram
   participant IE as InteractionEngine
   participant ReadPort as InteractionReadPort
   participant Store as DocumentStoreKernel
+  participant SelectionFacts as SelectionFactsPort
+  participant Selection as SelectionKernel
   participant Spatial as SpatialKernel
   participant Preview as CanvasPreviewState
   participant Frame as FrameEngine
@@ -25,7 +27,9 @@ sequenceDiagram
   Tools->>IE: normalized finite down sample
   IE->>IE: admit one active pointer token
   IE->>ReadPort: read marquee start selection facts
-  ReadPort->>Store: read current selection ids
+  ReadPort->>SelectionFacts: read selected ids and selectionRevision
+  SelectionFacts-->>ReadPort: selected ids
+  ReadPort->>Store: read document order for selected ids
   Store-->>ReadPort: previous selection in document order
   ReadPort-->>IE: previous selection in document order
   IE->>Spatial: hit-test down position once
@@ -76,26 +80,30 @@ sequenceDiagram
     IE->>EK: open synchronous interaction edit
     EK->>EK: reject disposed or nested edit
     EK->>Store: read committed revision snapshot
-    Store-->>EK: committed tables and revision
+    Store-->>EK: committed tables and document revision
+    EK->>Selection: read selection snapshot
+    Selection-->>EK: selected ids and selectionRevision
     EK->>Draft: create rollback-safe draft
     IE->>EK: provide selection mutation request and selectMarquee action descriptor
-    EK->>Draft: set selection to next selected ids
+    EK->>Draft: record selection-owner request for next selected ids
     Draft->>Touched: record selectionChanged only
     EK->>Events: stage CanvasActionCommitted
     Note over Events: type selectMarquee. elementIds are next selection in document order. payload CanvasSelectionActionPayload(previousSelection, nextSelection, marqueeRectWorld).
     EK->>EK: reject Future result before success path
     EK->>CC: compile exact selection revision and repaint intent
     Touched-->>CC: selectionChanged revision fact
-    CC->>Store: preflight invariants
+    CC->>Store: preflight document invariants
     Store-->>CC: preflight accepted
+    CC->>Selection: preflight selection effect
+    Selection-->>CC: preflight accepted
     CC->>Effects: prepare typed main RepaintIntent
     CC->>Events: attach staged selectMarquee event to commit
     CC->>Applier: hand off compiled CommitPlan
-    Applier->>Store: install compiled CommitPlan atomically
-    Store->>Store: replace committed selection and selectionRevision
-    Note over Applier,Store: Atomic install is the commit boundary.
-    Note over Store,Spatial: Selection changes do not update spatial indexes or projection cache.
-    Store-->>Applier: committed revision facts
+    Applier->>Selection: install selection effect atomically
+    Selection->>Selection: replace selected ids and selectionRevision
+    Note over Applier,Selection: Atomic install is the commit boundary.
+    Note over Selection,Spatial: Selection changes do not update spatial indexes or projection cache.
+    Selection-->>Applier: committed selection revision facts
     Applier->>Events: commit buffered action and revision effects
     Applier->>Frame: publish committed main repaint bus
     EK->>EK: close edit session and stale handle

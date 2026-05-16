@@ -8,6 +8,7 @@ sequenceDiagram
   participant Stager as Staged load boundary
   participant Diagnostics as DiagnosticsHub
   participant Store as DocumentStoreKernel
+  participant Selection as SelectionKernel
   participant Interaction as InteractionEngine
   participant Projection as DocumentProjectionCache
   participant Spatial as SpatialKernel
@@ -24,8 +25,10 @@ sequenceDiagram
     API--x Caller: rethrow StateError
     Note over Runtime,Signals: Rejection is a boundary failure. No store, cache, repaint, action, or listener effect is started.
   else runtime accepts public entry
-    Runtime->>Store: read current committed identity, selection, revisions, and id admission state
+    Runtime->>Store: read current committed identity, document revisions, and id admission state
     Store-->>Runtime: current committed state remains installed
+    Runtime->>Selection: read current selectionRevision
+    Selection-->>Runtime: current selected ids remain installed
 
     Runtime->>Stager: validate public CanvasDocument
     Stager->>Stager: verify DTO invariants, limits, duplicate ids, resource references, and CanvasMetadata
@@ -45,7 +48,8 @@ sequenceDiagram
     API--x Caller: rethrow projected exception
 
     Note over Runtime,Interaction: Active gesture is not interrupted. Preview, pending line, pointer normalization, and pending tap history remain unchanged.
-    Note over Store: Committed document identity, selection, controllerEpoch, and all document revisions remain unchanged.
+    Note over Store: Committed document identity, controllerEpoch, and all document revisions remain unchanged.
+    Note over Selection: Selected ids and selectionRevision remain unchanged.
     Note over Projection,Frame: Projection, spatial, resource, paint, static, text, path, stroke, and overlay caches remain unchanged.
     Note over Frame,Signals: No main repaint, overlay repaint, CanvasActionCommitted event, text edit event, public notify, or revision listener publication occurs.
   end
