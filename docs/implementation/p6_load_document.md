@@ -20,6 +20,9 @@ and keep failed loads from interrupting existing runtime or interaction state.
   state unchanged
 - replacement uses one atomic install boundary and includes cleared selection in
   the replacement payload.
+- replacement validation consumes public DTOs with frozen `CanvasMetadata` and
+  unmodifiable collection ownership; invalid metadata construction or projection
+  data fails before interaction interruption.
 
 ## Dependencies on earlier phases
 
@@ -79,6 +82,8 @@ and keep failed loads from interrupting existing runtime or interaction state.
 
 - `loadDocument` staged tests green
 - failed load preserves active interaction through the runtime interrupt boundary
+- failed load caused by invalid `CanvasMetadata` or DTO ownership validation
+  preserves active interaction through the runtime interrupt boundary
 - successful load interrupts before install and installs one replacement payload
   with cleared selection
 - `replaceDraftDocument` is rollback-safe inside an edit session

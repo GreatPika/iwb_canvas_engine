@@ -273,9 +273,9 @@
   target_phases:
     - P2
     - P3
-  target_owner: Public DTO and schema validators
+  target_owner: Public DTO, CanvasMetadata, and schema validators
   use_for:
-    - "finite, range, string, json and svg validation policies"
+    - "finite, range, string, json, metadata and svg validation policies for CanvasMetadata and DTO boundaries"
   do_not_copy:
     - legacy validated wrapper public shape
   required_tests:
@@ -316,9 +316,9 @@
   decision: adapt
   target_phases:
     - P2
-  target_owner: DTO immutability
+  target_owner: DTO immutability and CanvasMetadata deep-freeze
   use_for:
-    - defensive copy and unmodifiable list/map behavior
+    - defensive copy, CanvasMetadata deep-freeze, and unmodifiable list/map behavior
   do_not_copy:
     - legacy DTO shells
   required_tests:
@@ -327,7 +327,7 @@
     - P2
   related_sections:
     - section_04_public_api_v1
-  notes: DTO policy donor.
+  notes: DTO policy donor; adapt into CanvasMetadata and collection-owning DTO constructors without preserving legacy public map metadata.
 -
   id: foundation_pointer_input_contract
   source_paths:

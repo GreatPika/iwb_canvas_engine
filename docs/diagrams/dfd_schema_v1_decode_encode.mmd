@@ -8,7 +8,7 @@ flowchart LR
   subgraph PublicAPI["Public API boundary"]
     DecodeEntry["decodeCanvasDocument\nfrom Map or JSON string"]
     EncodeEntry["encodeCanvasDocument\nfrom CanvasDocument DTO"]
-    PublicDocument["CanvasDocument DTO\nimmutable public projection"]
+    PublicDocument["CanvasDocument DTO\nimmutable public projection\nwith CanvasMetadata"]
     PublicError["CanvasDataException\nsafe code, path, message, details"]
   end
 
@@ -25,13 +25,13 @@ flowchart LR
     ReferenceValidation["Missing resource validation\nimage elements reference known resources"]
     LayerCountValidation["Layer and node count validation\nschema limits"]
     MetadataValidation["Metadata validation\nJSON-only values and bounded extension area"]
-    DecodeMaterializer["DTO materializer\nCanvasDocument immutable DTO"]
+    DecodeMaterializer["DTO materializer\nCanvasDocument immutable DTO\nwith frozen metadata"]
 
     DtoValidation["Public DTO validation\nconstructor/schema limits"]
     CanonicalEncoder["Canonical v1 encoder\nwrite schemaVersion = 1"]
     CanonicalFields["Canonical field writer\nall common fields, uppercase colors"]
     CanonicalResources["Canonical resource writer\nsource.kind = appKey only"]
-    CanonicalMetadata["Metadata writer\npreserve metadata only"]
+    CanonicalMetadata["CanvasMetadata writer\npreserve metadata only"]
     CanonicalMap["JSON-compatible Map\nv1 fields only"]
   end
 
@@ -71,8 +71,8 @@ flowchart LR
   DuplicateIdValidation -->|"unique ids accepted"| ReferenceValidation
   ReferenceValidation -->|"known references accepted"| LayerCountValidation
   LayerCountValidation -->|"bounded layer and node counts"| MetadataValidation
-  MetadataValidation -->|"validated v1 document facts"| DecodeMaterializer
-  DecodeMaterializer -->|"immutable DTO; no runtime side effects"| PublicDocument
+  MetadataValidation -->|"validated and frozen metadata facts"| DecodeMaterializer
+  DecodeMaterializer -->|"immutable DTO with CanvasMetadata; no runtime side effects"| PublicDocument
   PublicDocument -->|"decoded result"| App
 
   VersionGate -.->|"not exactly v1"| UnsupportedVersion
@@ -99,7 +99,7 @@ flowchart LR
   CanonicalEncoder -->|"schemaVersion = 1\npreserve resource/layer/element order"| CanonicalFields
   CanonicalFields -->|"element common fields always written"| CanonicalResources
   CanonicalResources -->|"appKey resource descriptors only"| CanonicalMetadata
-  CanonicalMetadata -->|"metadata preserved\nunknown non-metadata omitted"| CanonicalMap
+  CanonicalMetadata -->|"CanvasMetadata projected to JSON\nunknown non-metadata omitted"| CanonicalMap
   CanonicalMap -->|"Map or encoded string"| JsonOutput
   JsonOutput -->|"encoded result"| App
 

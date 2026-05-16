@@ -88,7 +88,7 @@ Unknown fields policy:
 | Rect | `{ "l": number, "t": number, "r": number, "b": number }` | finite, normalized on encode |
 | CanvasTransform | `{ "a": number, "b": number, "c": number, "d": number, "tx": number, "ty": number }` | finite, scale singular values in `[1e-4, 1e4]` when invertibility needed |
 | enum | lower camel string | unknown value rejected |
-| metadata | JSON object | JSON-only values, limits below |
+| metadata | JSON object | JSON-only values, limits below; materialized as `CanvasMetadata` in public DTOs |
 
 ### 5.3 Resource JSON
 
@@ -236,7 +236,11 @@ Layer flags are not part of v1. Element-level flags handle visibility/lock/delet
 
 ### 5.7 Metadata policy
 
-Metadata is the only extension area.
+Metadata is the only extension area on the wire. Schema v1 keeps metadata as a
+JSON object, but decode materializes accepted metadata into public
+`CanvasMetadata` values. Encode projects `CanvasMetadata` back to canonical
+JSON-compatible object data. Raw `Map<String, Object?>` metadata is a codec
+boundary shape only, not the ordinary public DTO metadata owner.
 
 ```text
 allowed values     -> null, bool, finite num, string, List, Map<String, Object?>;

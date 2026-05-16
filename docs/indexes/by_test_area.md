@@ -36,6 +36,7 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P2`
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 - Guardrails: `api.no_undefined_public_type_references`, `api.public_signature_shape`
+- Proof focus: exported signature types, raw JSON/diagnostic dynamic boundaries, and `CanvasMetadata` use for metadata-bearing DTO signatures
 
 ## test.api_contract.no_legacy_public_symbols
 
@@ -50,6 +51,7 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P2`
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 - Guardrails: `api.dto_immutability`
+- Proof focus: defensive copy, unmodifiable collections, `CanvasMetadata` deep-freeze, invalid public construction rejection, and const-policy drift
 
 ## test.api_contract.public_equality_policy
 

@@ -64,7 +64,7 @@ CanvasDocument decodeCanvasDocumentFromJson(String json);
 9. duplicate id checks;
 10. missing resource reference checks;
 11. layer/node count checks;
-12. metadata validation;
+12. metadata validation and deep-freeze into `CanvasMetadata`;
 13. materialize CanvasDocument immutable DTO;
 14. no runtime/store side effects.
 ```
@@ -78,8 +78,13 @@ CanvasDocument decodeCanvasDocumentFromJson(String json);
 4. uppercase color hex;
 5. include all common element fields;
 6. omit optional nullable family fields only if null where schema says nullable may be omitted;
-7. preserve metadata with JSON-only values;
+7. project `CanvasMetadata` to JSON-only object values and preserve metadata;
 8. return JSON-compatible Map.
 ```
+
+Raw `Map<String, Object?>` values belong to the JSON entry and exit boundary.
+Public metadata-bearing DTOs expose `CanvasMetadata`; the codec is responsible
+for validating and freezing raw metadata before DTO exposure and for projecting
+`CanvasMetadata` back to the schema v1 object shape during encode.
 
 ---

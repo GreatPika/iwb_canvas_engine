@@ -70,7 +70,7 @@ Guardrails extracted from split section 22.
 
 ## api.public_signature_shape
 
-- Rule: public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON/metadata boundaries
+- Rule: public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON or diagnostic boundaries; metadata-bearing DTO signatures use exported `CanvasMetadata`
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.canvas_field_update_static_semantics`, `test.api_contract.no_undefined_public_type_references`, `test.guardrails.blocking_suite`
 
@@ -82,7 +82,7 @@ Guardrails extracted from split section 22.
 
 ## api.dto_immutability
 
-- Rule: DTO collections defensively copied and unmodifiable
+- Rule: DTO collections defensively copied and unmodifiable; `CanvasMetadata` deep-frozen; collection/metadata constructors non-const; scalar-only and marker variants keep only approved const forms
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.dto_immutability`, `test.guardrails.blocking_suite`
 

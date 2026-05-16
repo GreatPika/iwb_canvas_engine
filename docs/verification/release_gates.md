@@ -183,7 +183,7 @@ Release is blocked unless all statements are true:
 27. low-level edit emits no user action events tests are green.
 28. interaction stale terminal, resolver-cancel, and interactive=false pending-line tests are green.
 29. surface single-active-surface and pointer normalization tests are green.
-30. DTO immutability and public equality policy tests are green.
+30. DTO immutability, `CanvasMetadata` deep-freeze, const-policy, and public equality policy tests are green.
 31. no CanvasDocument projection in paint/pointer/hit tests are green.
 32. all required diagrams exist and match owners.
 33. phase guardrail alignment is green.

@@ -21,7 +21,7 @@ flowchart LR
 
   subgraph Store["DocumentStoreKernel"]
     ResourceTable["Committed resource descriptor table\nCanvasImageResource"]
-    AppKeyDescriptor["CanvasResourceSource.appKey only\nCanvasAppKeyResourceSource.key\nid, contentHash, byteLength,\nmimeType, metadata"]
+    AppKeyDescriptor["CanvasResourceSource.appKey only\nCanvasAppKeyResourceSource.key\nid, contentHash, byteLength,\nmimeType, CanvasMetadata"]
     DocumentRevision["documentRevision\nchanges only on committed descriptor mutation"]
     ResourceRevision["resourceRevision\ndescriptor version"]
     ResourceVisualRevision["resourceVisualRevision\nruntime/store visual version"]

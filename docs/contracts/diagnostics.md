@@ -56,7 +56,9 @@ DiagnosticRecord
 public `CanvasDataException` field; public exceptions expose only code, message,
 path, and sanitized bounded details.
 
-Sanitizer permits only JSON-like primitives and bounded previews.
+Sanitizer permits only JSON-like primitives and bounded previews. Diagnostic
+details are intentionally map-shaped public data, but they are not schema
+metadata and must not be represented as `CanvasMetadata`.
 `CanvasDiagnosticPolicy` exposes public readable policy variants:
 `CanvasDiagnosticsDisabled`, `CanvasDiagnosticsSummary`, and
 `CanvasDiagnosticsVerbose`. `CanvasDiagnosticsVerbose.maxPreviewLength` caps

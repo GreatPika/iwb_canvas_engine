@@ -469,7 +469,7 @@ redesign backlog.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Public API and Registry Documentation
+### Slice 1. [x] Public API and Registry Documentation
 
 #### Slice Contract
 
@@ -515,7 +515,7 @@ deep-freeze, and non-const construction where required.
 
 - Public API docs and export registry agree.
 
-### Slice 2. [ ] Cross-Contract Documentation Alignment
+### Slice 2. [x] Cross-Contract Documentation Alignment
 
 #### Slice Contract
 
@@ -581,7 +581,7 @@ descriptor metadata, diagnostics details, or future proof requirements.
 
 - Documentation check passes and targeted search shows the decision propagated.
 
-### Slice 3. [ ] Audit and Redesign Retirement
+### Slice 3. [x] Audit and Redesign Retirement
 
 #### Slice Contract
 

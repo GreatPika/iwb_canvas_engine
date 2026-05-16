@@ -133,6 +133,7 @@
     - no legacy public API shape
     - no PatchField export
     - no SceneController export
+    - no raw Map metadata as ordinary public DTO metadata; use CanvasMetadata
 -
   id: section_05_schema_v1_contract
   source: docs/_registry/sections.yaml / section 5
@@ -169,6 +170,7 @@
   do_not_assume:
     - no schema v7 public entrypoints as next API
     - no legacy SceneBuilder API shape
+    - no raw metadata map exposure after CanvasMetadata materialization
 -
   id: section_06_validation_limits
   source: docs/_registry/sections.yaml / section 6

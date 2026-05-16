@@ -45,8 +45,8 @@ sequenceDiagram
   Schema->>Schema: metadata validation(JSON-only bounded extension area)
 
   alt all decode checks accepted
-    Schema-->>Codec: validated v1 document facts
-    Codec->>DTO: materialize immutable CanvasDocument DTO
+    Schema-->>Codec: validated v1 document facts with frozen metadata
+    Codec->>DTO: materialize immutable CanvasDocument DTO with CanvasMetadata
     DTO-->>Codec: decoded document
     Codec-->>API: decoded document
     API-->>App: CanvasDocument
@@ -72,7 +72,7 @@ sequenceDiagram
     Codec->>Codec: write schemaVersion = 1 and all common element fields
     Codec->>Codec: omit nullable optional family fields only where schema allows
     Codec->>Codec: write appKey resource descriptors only
-    Codec->>Codec: preserve metadata only as JSON-compatible values
+    Codec->>Codec: project CanvasMetadata as JSON-compatible values
     Codec->>Codec: omit unknown non-metadata fields from canonical encode
     Codec-->>API: canonical schema v1 JSON-compatible Map or JSON string
     API-->>App: encoded Map or JSON string

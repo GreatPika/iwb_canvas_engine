@@ -82,6 +82,13 @@ Validation is applied at:
 - pointer sample routing.
 ```
 
+`CanvasMetadata.fromMap` applies the metadata depth, key, string, and total
+encoded-byte limits at public construction and deep-freezes nested list/map
+values before exposure. Metadata accepted through schema decode uses the same
+limits before materializing `CanvasMetadata`. Public DTO constructors that
+accept metadata or caller-owned collections are non-const because this runtime
+validation and defensive ownership transfer must run before the value is exposed.
+
 `CanvasFieldUpdate` carries static nullability guarantees for ordinary public
 API consumers, but boundary materialization still validates dynamic, generated,
 schema, and test-created update values. Invalid clear requests for non-nullable

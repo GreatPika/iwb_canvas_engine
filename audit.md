@@ -7,7 +7,7 @@
 
 ## Порядок выполнения
 
-- [ ] P1: закрыть публичный API до freeze: HOLE-006, HOLE-007 и HOLE-008.
+- [ ] P1: закрыть публичный API до freeze: HOLE-007 и HOLE-008.
 - [ ] P2: расширить operation matrix до полного покрытия публичного API:
       HOLE-002.
 - [ ] P3: уточнить resources/surface lifecycle до реализации P7/P13-зон:
@@ -18,7 +18,6 @@
 ## Блокеры API freeze
 
 - [ ] HOLE-002: `operation_matrix.md` покрывает все публичные state/effect операции.
-- [ ] HOLE-006: публичные DTO совместимы с validation, `const` и defensive copy policy.
 - [ ] HOLE-007: имена публичных error codes совпадают между prose и enum.
 - [ ] HOLE-008: `api.integration_surface_complete` доказан внешним compile fixture.
 
@@ -120,42 +119,6 @@ pointer-owned preview, поэтому текущий текст допускае
 - [ ] Добавить тест `surface.interactive_false_cancels_active_pointer_preview`.
 - [ ] Добавить тест `surface.interactive_false_preserves_non_active_pending_line`.
 - [ ] Добавить тест `surface.interactive_false_does_not_mutate_committed_document_selection_resources`.
-
----
-
-## HOLE-006 — Риск вокруг `const` DTO, validation и defensive copy
-
-Статус: Yellow.
-
-Почему это дыра: публичные DTO требуют runtime validation, collection limits,
-immutability и defensive copy, но часть API описана через `const` constructors.
-В Dart `const` constructor не может сделать ordinary defensive copy arbitrary
-`Iterable`, а validation внутри `const` ограничена.
-
-Нужно закрыть:
-
-- [ ] Проверить public DTO construction boundaries.
-- [ ] Проверить update DTO construction boundaries.
-- [ ] Проверить runtime config construction boundaries.
-- [ ] Проверить pointer sample routing boundaries.
-- [ ] Зафиксировать runtime validation для finite numbers.
-- [ ] Зафиксировать runtime validation для limits.
-- [ ] Зафиксировать runtime validation для collection length.
-- [ ] Зафиксировать runtime validation для allowed values.
-- [ ] Пройти все публичные DTO и разделить их на безопасные `const` DTO и DTO,
-      которым нужен non-const constructor/factory.
-- [ ] Оставить `const` только там, где поля scalar/final и не требуется defensive copy.
-- [ ] Оставить `const` только там, где не требуется runtime validation beyond assert-like checks.
-- [ ] Для DTO с `Iterable`, `List`, `Set` или `Map` обеспечить defensive copy.
-- [ ] Для DTO с коллекциями обеспечить unmodifiable stored collections.
-- [ ] Для DTO со сложными constraints обеспечить runtime validation at construction boundary.
-- [ ] Проверить `CanvasPalette` как конкретный `Iterable<Color>` case.
-- [ ] Исправить policy wording с `List or Map` на `Iterable, List, Set, or Map`.
-- [ ] Обновить `docs/contracts/public_api_v1.md`.
-- [ ] Обновить `docs/contracts/validation_limits.md`.
-- [ ] Добавить тест `api.dto_collection_inputs_are_defensively_copied`.
-- [ ] Добавить тест `api.dto_collections_are_unmodifiable`.
-- [ ] Добавить тест `api.invalid_public_dto_construction_rejected`.
 
 ---
 

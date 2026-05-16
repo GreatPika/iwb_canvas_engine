@@ -19,7 +19,7 @@ sequenceDiagram
     Caller->>Codec: decodeCanvasDocument / decodeCanvasDocumentFromJson
     Codec->>Codec: parse schemaVersion 1 and validate known fields
     Codec->>Codec: validate resources, element ids, references, limits, and metadata
-    Codec-->>Caller: immutable CanvasDocument DTO
+    Codec-->>Caller: immutable CanvasDocument DTO with CanvasMetadata
     Note over Codec,Store: Decode materializes only a public DTO and has no runtime or store side effects.
   end
 
@@ -30,7 +30,7 @@ sequenceDiagram
   Store-->>Runtime: current committed snapshot remains installed
 
   Runtime->>Stager: validate public CanvasDocument
-  Stager->>Stager: verify DTO invariants, limits, duplicate ids, and resource references
+  Stager->>Stager: verify DTO invariants, limits, duplicate ids, resource references, and frozen metadata
   Runtime->>Stager: prepare full document replacement from DTO and current snapshot
   Stager->>Stager: materialize compact tables, resource descriptors, order, meta, and id generator floor
   Stager-->>Runtime: PreparedDocumentLoad replacement payload

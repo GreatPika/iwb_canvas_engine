@@ -5,12 +5,12 @@ flowchart LR
 
   subgraph API["Public API boundary"]
     LoadPort["CanvasEditPort.loadDocument(document)"]
-    PublicDocument["CanvasDocument DTO"]
+    PublicDocument["CanvasDocument DTO\nwith CanvasMetadata"]
     Result["Return or projected exception"]
   end
 
   subgraph Staging["Staged load boundary"]
-    Validator["Document validation\npublic DTO invariants"]
+    Validator["Document validation\npublic DTO invariants\nand frozen metadata"]
     Materializer["PreparedDocumentLoad materialization\nruntime tables and ids"]
     Prepared["Prepared replacement\ncommitted document payload\nincluding cleared selection"]
     Failure["Load failure\nCanvasDataException or StateError"]
@@ -42,7 +42,7 @@ flowchart LR
   App -->|"external document replacement request"| LoadPort
   LoadPort -->|"public document input"| PublicDocument
   PublicDocument -->|"validate before runtime side effects"| Validator
-  Validator -->|"validated DTO data"| Materializer
+  Validator -->|"validated DTO data with CanvasMetadata"| Materializer
   Materializer -->|"prepared runtime document"| Prepared
 
   Validator -.->|"invalid public document"| Failure

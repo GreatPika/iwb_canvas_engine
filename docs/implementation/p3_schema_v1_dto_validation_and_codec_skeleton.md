@@ -12,6 +12,7 @@ external data shapes.
 - encode/decode skeleton
 - validation limits
 - metadata validator
+- `CanvasMetadata` materialization/projection at the schema boundary
 - color/offset/size/transform codecs
 - resource/element JSON codecs.
 
@@ -36,7 +37,7 @@ external data shapes.
 - `foundation_transform2d` - decision: `copy/adapt`; target owner: CanvasTransform and geometry math
 - `foundation_contract_limits` - decision: `copy/adapt`; target owner: Validation limits and public constructors
 - `foundation_error_contract` - decision: `copy/adapt`; target owner: CanvasDataException and DiagnosticsHub
-- `foundation_validators` - decision: `adapt`; target owner: Public DTO and schema validators
+- `foundation_validators` - decision: `adapt`; target owner: Public DTO, `CanvasMetadata`, and schema validators
 - `dto_boundary_schema` - decision: `adapt`; target owner: Typed and JSON schema field groups
 - `dto_scene_value_validation` - decision: `adapt/rewrite`; target owner: Runtime/model validation adapters
 - `dto_node_boundary_mapping` - decision: `adapt`; target owner: Codec and store mapping families
@@ -68,6 +69,8 @@ external data shapes.
 ## Contracts satisfied by this phase
 
 - schema v1 field contract from `section_05_schema_v1_contract`
+- metadata remains a schema v1 JSON object on the wire and materializes to
+  frozen public `CanvasMetadata` inside DTOs
 - schema and public DTO validation limits from `section_06_validation_limits`,
   including `CanvasDiagnosticsVerbose` constructor/schema limit tests
 - codec entrypoint and no-runtime-side-effect contract from `section_19_codec_boundary`
@@ -94,6 +97,8 @@ external data shapes.
 ## Exit gate
 
 - all schema roundtrip tests green
+- metadata roundtrip tests prove `CanvasMetadata` projects to canonical JSON
+  object values without exposing raw maps as public DTO metadata
 - known field validation tests green
 - unknown-field policy tests green
 - limits tests green

@@ -37,8 +37,8 @@ codec, geometry, and interaction slices depend on them.
 | Core geometry | `lib/src/core/geometry.dart` | AABB, line/stroke bounds, singular value helpers, SVG path centering, point/segment distances | `copy/adapt` | P7 geometry |
 | Contract limits | `lib/src/contract/scene_contract_limits.dart` | id/text/svg/stroke/layer/node/json/coordinate limits | `copy/adapt` | P1/P2 scope gate |
 | Error contract | `lib/src/contract/scene_data_exception.dart`, `lib/src/contract/scene_validation_diagnostics.dart` | structured code/path/bounded details and sanitized diagnostics | `copy/adapt` | P2/P3 |
-| Value validators | `lib/src/contract/validated/*.dart`, `lib/src/contract/validated/validated_value_support.dart` | finite/range/string/json/svg validation policies | `adapt` | P2/P3 |
+| Value validators | `lib/src/contract/validated/*.dart`, `lib/src/contract/validated/validated_value_support.dart` | finite/range/string/json/metadata/svg validation policies for `CanvasMetadata` and DTO boundaries | `adapt` | P2/P3 |
 | Tri-state patch semantics | `lib/src/contract/patch_field.dart`, `lib/src/contract/node_patch.dart` | absent/value/explicit-null behavior and non-nullable-null rejection | `copy/adapt` | P2 API freeze |
-| Immutable collection policy | `lib/src/contract/owned_collections.dart`, `lib/src/core/immutable_collections.dart` | defensive copy and immutable list/map behavior | `adapt` | P2 DTOs |
+| Immutable collection policy | `lib/src/contract/owned_collections.dart`, `lib/src/core/immutable_collections.dart` | defensive copy, `CanvasMetadata` deep-freeze, and immutable list/map behavior | `adapt` | P2 DTOs |
 | Pointer input contract | `lib/src/contract/pointer_input.dart`, `lib/src/contract/canvas_pointer_input.dart`, `lib/src/contract/pointer_phase_codec.dart` | pointer phases, policy validation, pointer-device kind handling | `copy/adapt` | P2/P9 |
 | Action event immutability | `lib/src/core/action_events.dart` | immutable events, timestamp normalization behavior, text-edit request shape evidence | `adapt` | P2/P9 |

@@ -78,7 +78,7 @@ Every donor is mapped to target phases. `avoid` records are forbidden as structu
 
 - Decision: `adapt`
 - Target phases: `P2`, `P3`
-- Target owner: Public DTO and schema validators
+- Target owner: Public DTO, `CanvasMetadata`, and schema validators
 
 ## foundation_tri_state_patch_semantics
 
@@ -90,7 +90,7 @@ Every donor is mapped to target phases. `avoid` records are forbidden as structu
 
 - Decision: `adapt`
 - Target phases: `P2`
-- Target owner: DTO immutability
+- Target owner: DTO immutability and `CanvasMetadata` deep-freeze
 
 ## foundation_pointer_input_contract
 

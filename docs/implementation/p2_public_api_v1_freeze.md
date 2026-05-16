@@ -9,13 +9,17 @@ errors, validation rules, and equality semantics.
 ## Build scope
 
 - all `src/api` DTOs implemented
+- `CanvasMetadata` implemented as the public metadata value object for
+  metadata-bearing DTOs
 - P1.5 v1 scope gate green
 - id validation implemented
 - `CanvasFieldUpdate` and its public variants implemented
 - public equality policy implemented
 - exported public API has non-empty dartdoc summaries
 - public signatures obey Dart API design constraints from `section_04_public_api_v1`
-- DTO immutability tests
+- DTO immutability tests, including defensive copies, unmodifiable collections,
+  `CanvasMetadata` deep-freeze, invalid construction rejection, and const-policy
+  drift
 - public equality policy tests
 - public signatures no undefined types.
 
@@ -39,9 +43,9 @@ errors, validation rules, and equality semantics.
 - `foundation_transform2d` - decision: `copy/adapt`; target owner: CanvasTransform and geometry math
 - `foundation_contract_limits` - decision: `copy/adapt`; target owner: Validation limits and public constructors
 - `foundation_error_contract` - decision: `copy/adapt`; target owner: CanvasDataException and DiagnosticsHub
-- `foundation_validators` - decision: `adapt`; target owner: Public DTO and schema validators
+- `foundation_validators` - decision: `adapt`; target owner: Public DTO, `CanvasMetadata`, and schema validators
 - `foundation_tri_state_patch_semantics` - decision: `copy/adapt`; target owner: CanvasFieldUpdate update semantics
-- `foundation_immutable_collections` - decision: `adapt`; target owner: DTO immutability
+- `foundation_immutable_collections` - decision: `adapt`; target owner: DTO immutability and `CanvasMetadata` deep-freeze
 - `foundation_pointer_input_contract` - decision: `copy/adapt`; target owner: Canvas pointer API and InteractionEngine
 - `foundation_action_event_immutability` - decision: `adapt`; target owner: CanvasActionEvent and text edit events
 - `dto_snapshot_behavior` - decision: `adapt`; target owner: CanvasDocument DTOs
@@ -68,6 +72,8 @@ errors, validation rules, and equality semantics.
 ## Contracts satisfied by this phase
 
 - full public API declarations from `section_04_public_api_v1`
+- `CanvasMetadata` replaces raw metadata maps in metadata-bearing public DTOs;
+  raw maps remain only at JSON codec boundaries and diagnostic details
 - validation limit enforcement at public constructors from `section_06_validation_limits`,
   including `CanvasDiagnosticsVerbose` preview and list-entry limits
 - public-readable resource and diagnostics policy variants from
@@ -112,6 +118,8 @@ errors, validation rules, and equality semantics.
 - public classes have explicit subtype policy modifiers
 - public signatures avoid `FutureOr`, nullable async/container returns, and unapproved `dynamic`
 - all public constructor validations pass/fail as specified
+- collection- and metadata-owning public constructors are non-const, while
+  scalar-only DTOs and marker/empty variants keep only approved const forms
 - `CanvasFieldSet(null)` and clear-on-non-nullable update misuse are rejected
   by static analyzer proof for ordinary public consumers
 - `CanvasDiagnosticsVerbose` accepts defaults and boundary values, and

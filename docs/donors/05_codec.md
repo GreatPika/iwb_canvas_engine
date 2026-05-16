@@ -10,15 +10,16 @@ Use rule: donor entries are phase-bound implementation inputs, not legacy archit
 
 ## Codec donors
 
-Use these to build the schema v1 codec. The legacy `SceneBuilder` shape is not
-the next architecture.
+Use these to build the schema v1 codec. The legacy `SceneBuilder` shape and raw
+map metadata DTO exposure are not the next architecture; accepted metadata
+materializes as `CanvasMetadata`.
 
 | Donor | What to preserve | Reuse | Risks | Target phase |
 |---|---|---:|---|---|
 | `lib/src/serialization/codec_guards.dart` | raw JSON length guard, parse guard, non-object root guard | `copy/adapt` | currently `part of scene_codec.dart` | P3 |
 | `lib/src/model/scene_builder_json_require.dart` | path builder and strict field access helpers | `copy/adapt` | rename away from `SceneBuilder` | P3 |
 | `lib/src/model/scene_builder_json_parse.dart` | color/size/offset/transform/enum parsers | `adapt` | legacy enum and transform names | P3 |
-| `lib/src/model/scene_builder_decode_scene_metadata.dart` | schema gate, camera/background/grid/palette validation sequence | `adapt` | legacy schema shape | P3 |
+| `lib/src/model/scene_builder_decode_scene_metadata.dart` | schema gate, camera/background/grid/palette validation sequence, and `CanvasMetadata` materialization behavior | `adapt` | legacy schema shape | P3 |
 | `lib/src/model/scene_builder_decode_layers.dart` | layer/background layer decode loops and node budget pathing | `adapt` | layer model may change | P3 |
 | `lib/src/model/scene_builder_decode_node_common.dart` | common id/revision/transform/flag/opacity/hitPadding decode | `adapt` | legacy common-field behavior may not be schema v1 behavior | P3 |
 | `lib/src/model/scene_builder_decode_image.dart`, `*_path.dart`, `*_text.dart`, `*_stroke.dart`, `*_line.dart`, `*_rect.dart` | family decode validation and diagnostic paths | `adapt` | legacy JSON aliases are not preserved unless approved for schema v1 | P3 |

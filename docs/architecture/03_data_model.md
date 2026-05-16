@@ -66,7 +66,7 @@ gridColor
 palettePenColors
 paletteBackgroundColors
 paletteGridSizes
-metadata
+metadata (`CanvasMetadata` projection facts)
 ```
 
 `ElementRegistry`:
@@ -151,6 +151,8 @@ Listener owners remain responsible for removing listeners they registered.
 - built only by readDocument, encodeCanvasDocument, tests/tools, or explicit edit.readDraftDocument.
 ```
 
-Projection DTOs must deep-copy all public collections and metadata.
+Projection DTOs must deep-copy all public collections and materialize frozen
+`CanvasMetadata` values. Runtime tables may store compact metadata facts, but
+raw metadata maps are not exposed as ordinary public DTO metadata.
 
 ---

@@ -272,7 +272,19 @@ test/api_contract/no_undefined_public_type_references_test.dart
   -> verifies every exported signature type is exported or from Flutter/Dart SDK;
   -> uses analyzer AST over exported public signatures to reject FutureOr<T>
      returns, nullable async/container returns, and dynamic outside approved
-     JSON/metadata boundaries for api.public_signature_shape.
+     JSON or diagnostic boundaries for api.public_signature_shape;
+  -> verifies metadata-bearing DTO signatures use exported CanvasMetadata and
+     raw Map<String, Object?> metadata appears only at codec or diagnostic
+     boundaries.
+
+test/api_contract/dto_immutability_test.dart
+  -> proves public DTO constructors defensively copy caller-owned Iterable, List,
+     Set, Map, and metadata input;
+  -> proves public collection getters and CanvasMetadata projections are
+     unmodifiable and deep-frozen;
+  -> proves invalid public construction is rejected before DTO exposure;
+  -> proves collection/metadata-owning DTO constructors are non-const while
+     scalar-only DTOs and marker/empty variants keep only approved const forms.
 
 test/guardrails/import_boundaries_test.dart
   -> verifies package-owned source paths obey the forbidden import matrix;

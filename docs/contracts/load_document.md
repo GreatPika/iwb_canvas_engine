@@ -55,7 +55,7 @@ P10-P12 and consume this ordering instead of being prerequisites for P6.
 Success ordering:
 
 ```text
-1. validate public CanvasDocument;
+1. validate public CanvasDocument, including `CanvasMetadata` and frozen collection ownership;
 2. materialize PreparedDocumentLoad;
 3. if validation/materialization succeeds, interrupt active interaction;
 4. clear preview;
@@ -74,7 +74,7 @@ not a separate post-install mutation.
 Failure ordering:
 
 ```text
-1. validate/materialize fails;
+1. validate/materialize fails, including invalid `CanvasMetadata` or mutable DTO boundary input;
 2. active gesture is not interrupted;
 3. preview remains unchanged;
 4. pending line remains unchanged;

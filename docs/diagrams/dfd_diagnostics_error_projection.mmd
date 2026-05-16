@@ -11,7 +11,7 @@ flowchart LR
   end
 
   subgraph ErrorSources["Error sources"]
-    ValidationErrors["Validation errors\nschema, DTO, limits,\nids, metadata, references"]
+    ValidationErrors["Validation errors\nschema, DTO, limits,\nids, metadata value validation, references"]
     RuntimeErrors["Runtime errors\nedit, interaction, frame,\nspatial, resource"]
     InternalErrors["Internal diagnostics errors\nsanitized fallback path"]
   end
@@ -29,7 +29,7 @@ flowchart LR
     DiagnosticRecord["DiagnosticRecord\ncode, severity, source,\npath, details sanitized map,\nrevision, sessionId, correlationId"]
     RawDetails["Raw error context\nlimits, ids, counts,\nfield values, source error facts"]
     Sanitizer["Diagnostics sanitizer\nJSON-like primitives,\nbounded preview length,\nand bounded entry counts"]
-    SanitizedDetails["Sanitized details map\nbounded strings, lists,\nmaps, numbers, booleans"]
+    SanitizedDetails["Sanitized details map\nbounded strings, lists,\nmaps, numbers, booleans\nnot CanvasMetadata"]
     SummaryProjection["Summary projection\nstable code, path, message"]
     VerboseProjection["Verbose projection\ncapped detail previews"]
     FormattingCache["DiagnosticFormattingCache\nverbose diagnostics only"]

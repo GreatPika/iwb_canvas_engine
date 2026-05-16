@@ -107,8 +107,8 @@ Project-specific public API rules:
   Future<T>?, Stream<T>?, List<T>?, Map<K, V>?, or Set<T>?;
 - use empty collections, Stream.empty(), Future<T?>, or an explicit result type
   instead of nullable async/container returns;
-- dynamic is allowed only at raw JSON/metadata boundaries and must not leak as a
-  normal public API type;
+- dynamic is allowed only at raw JSON or diagnostic projection boundaries and
+  must not leak as a normal public API type;
 - toX() names conversion or copy operations; asX() names backed views or
   adaptation;
 - the project spelling is Id, not ID, because the public API consistently uses
@@ -131,6 +131,7 @@ CanvasResourceId
 CanvasActionId
 CanvasTransform
 CanvasFieldUpdate and its variants
+CanvasMetadata
 CanvasDocumentSummary
 CanvasCamera
 CanvasBackground
@@ -447,18 +448,38 @@ Validation: all numeric fields finite and non-negative; opacity in `[0, 1]`.
 
 ### 4.8 Document DTOs
 
-All public DTOs are immutable. Any constructor receiving `List` or `Map` must defensively copy. Public getters return unmodifiable views.
+All public DTOs are immutable. Any constructor receiving caller-owned
+`Iterable`, `List`, `Set`, `Map`, or metadata input must defensively copy,
+deep-freeze nested metadata values where applicable, validate at runtime, and
+expose only unmodifiable values. Such constructors are non-const. Safe
+scalar-only DTOs and marker/empty variants may remain `const` when they accept no
+caller-owned mutable input and need no runtime validation beyond safe defaults.
+
+`CanvasMetadata` is the public value object for schema metadata materialized into
+DTOs. Raw `Map<String, Object?>` metadata is allowed only at raw JSON codec
+boundaries. Diagnostic details remain sanitized map-shaped public data, but they
+are not schema metadata and are not `CanvasMetadata`.
 
 ```dart
+final class CanvasMetadata {
+  const CanvasMetadata.empty();
+  CanvasMetadata.fromMap(Map<String, Object?> values);
+
+  bool get isEmpty;
+  Iterable<String> get keys;
+  bool containsKey(String key);
+  Object? operator [](String key);
+}
+
 final class CanvasDocument {
   CanvasDocument({
     CanvasCamera camera = const CanvasCamera(),
     CanvasBackground background = const CanvasBackground(),
-    CanvasPalette palette = const CanvasPalette.defaults(),
+    CanvasPalette? palette,
     Iterable<CanvasResource> resources = const [],
     Iterable<CanvasElement> backgroundElements = const [],
     Iterable<CanvasLayer> layers = const [],
-    Map<String, Object?> metadata = const {},
+    CanvasMetadata metadata = const CanvasMetadata.empty(),
   });
 
   final CanvasCamera camera;
@@ -468,7 +489,7 @@ final class CanvasDocument {
   List<CanvasResource> get resources;
   List<CanvasElement> get backgroundElements;
   List<CanvasLayer> get layers;
-  Map<String, Object?> get metadata;
+  CanvasMetadata get metadata;
 }
 
 final class CanvasDocumentSummary {
@@ -493,12 +514,12 @@ final class CanvasLayer {
   CanvasLayer({
     required CanvasLayerId id,
     Iterable<CanvasElement> elements = const [],
-    Map<String, Object?> metadata = const {},
+    CanvasMetadata metadata = const CanvasMetadata.empty(),
   });
 
   final CanvasLayerId id;
   List<CanvasElement> get elements;
-  Map<String, Object?> get metadata;
+  CanvasMetadata get metadata;
 }
 
 final class CanvasCamera {
@@ -529,13 +550,13 @@ final class CanvasGrid {
 }
 
 final class CanvasPalette {
-  const CanvasPalette({
+  CanvasPalette({
     required Iterable<Color> penColors,
     required Iterable<Color> backgroundColors,
     required Iterable<double> gridSizes,
   });
 
-  const CanvasPalette.defaults();
+  CanvasPalette.defaults();
 
   List<Color> get penColors;
   List<Color> get backgroundColors;
@@ -543,6 +564,11 @@ final class CanvasPalette {
 }
 ```
 
+`CanvasDocument` materializes `CanvasPalette.defaults()` when `palette` is null.
+`CanvasPalette` is non-const because it owns caller-provided iterables and must
+copy and validate them before exposing unmodifiable lists. `CanvasMetadata.empty()`
+is const-safe because it accepts no caller-owned input; `CanvasMetadata.fromMap`
+is non-const because it validates and deep-freezes caller-owned map/list values.
 CanvasCamera v1 stores offset only, matching legacy engine behavior.
 
 ### 4.9 Geometry enums and transform
@@ -650,7 +676,7 @@ sealed class CanvasElement {
     bool isLocked = false,
     bool isDeletable = true,
     bool isTransformable = true,
-    Map<String, Object?> metadata = const {},
+    CanvasMetadata metadata = const CanvasMetadata.empty(),
   });
 
   CanvasElementId get id;
@@ -664,7 +690,7 @@ sealed class CanvasElement {
   bool get isLocked;
   bool get isDeletable;
   bool get isTransformable;
-  Map<String, Object?> get metadata;
+  CanvasMetadata get metadata;
 }
 ```
 
@@ -862,7 +888,7 @@ sealed class CanvasElementUpdate {
   final CanvasFieldUpdate<bool> isLocked;
   final CanvasFieldUpdate<bool> isDeletable;
   final CanvasFieldUpdate<bool> isTransformable;
-  final CanvasFieldUpdate<Map<String, Object?>> metadata;
+  final CanvasFieldUpdate<CanvasMetadata> metadata;
 }
 ```
 
@@ -1300,14 +1326,14 @@ sealed class CanvasResource {
     required this.source,
     this.contentHash,
     this.byteLength,
-    Map<String, Object?> metadata = const {},
+    CanvasMetadata metadata = const CanvasMetadata.empty(),
   });
 
   final CanvasResourceId id;
   final CanvasResourceSource source;
   final String? contentHash;
   final int? byteLength;
-  Map<String, Object?> get metadata;
+  CanvasMetadata get metadata;
 }
 
 final class CanvasImageResource extends CanvasResource {
