@@ -295,11 +295,13 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 - `lib/src/api/canvas_runtime.dart`
 - `lib/src/api/canvas_surface.dart`
 - `lib/src/api/canvas_document.dart`
+- `lib/src/api/canvas_edit.dart`
 - `lib/src/api/canvas_element.dart`
 - `lib/src/api/canvas_element_update.dart`
 - `lib/src/api/canvas_resource.dart`
 - `lib/src/api/canvas_ids.dart`
 - `lib/src/api/canvas_geometry.dart`
+- `lib/src/api/canvas_ports.dart`
 - `lib/src/api/canvas_tools.dart`
 - `lib/src/api/canvas_pointer.dart`
 - `lib/src/api/canvas_preview.dart`
@@ -311,7 +313,11 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 - `tool/guardrails/src/guardrail_definition.dart`
 - `tool/guardrails/src/guardrail_registry.dart`
 - `tool/guardrails/src/guardrail_runner.dart`
-- `tool/guardrails/src/public_api_boundary_check.dart`
+- `tool/guardrails/src/public_api/public_api_boundary_check.dart`
+- `tool/guardrails/src/public_api/public_api_name_inventory.dart`
+- `tool/guardrails/src/public_api/public_export_surface_reader.dart`
+- `tool/guardrails/src/public_api/resolved_public_surface_reader.dart`
+- `tool/guardrails/src/public_api/public_signature_type_check.dart`
 - `tool/guardrails/src/source_boundary_check.dart`
 - `tool/guardrails/src/diagram_presence_check.dart`
 - `tool/guardrails/src/path_normalization.dart`
@@ -322,13 +328,19 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 - `test/guardrails/import_boundaries_test.dart`
 - `test/guardrails/required_diagrams_present_test.dart`
 - `test/guardrails/blocking_suite_test.dart`
+- `test/support/public_api_fixture.dart`
 
 ### Fixtures and Supporting Data
 
-- No persistent fixtures are required for P0; guardrail tests may create temporary source trees for negative scenarios.
+- `test/support/public_api_fixture.dart` owns reusable temporary source-tree
+  setup for public API guardrail scenarios.
+- No persistent source fixtures are required for P0; guardrail tests create
+  temporary source trees for negative scenarios.
 
 ### Registry, Inventory, and Workflow Files
 
+- `pubspec.lock` - dependency resolution refresh for the current Dart SDK/pub
+  resolver; `pubspec.yaml` constraints are unchanged.
 - `PLAN.md`
 - `plan/step_1_package_skeleton_and_hard_boundaries.md`
 - `.github/workflows/root_package.yml`
@@ -349,6 +361,7 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 - `lib/**`
 - `test/**`
 - `tool/guardrails/**`
+- `pubspec.lock`
 - `.github/workflows/**`
 - `docs/_registry/public_api_v1.yaml`
 - `docs/diagrams/*.mmd`
@@ -433,7 +446,7 @@ Deliver P0 by creating the repository-root package skeleton, public API barrel, 
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Public Skeleton and API Boundary Proof
+### Slice 1. [x] Public Skeleton and API Boundary Proof
 
 #### Slice Contract
 
@@ -448,7 +461,10 @@ The root package exposes a compileable empty public API skeleton through one pub
 - Add `tool/guardrails/src/guardrail_definition.dart`.
 - Add the initial `tool/guardrails/src/guardrail_registry.dart` entries for
   the public API guardrails.
-- Add `tool/guardrails/src/public_api_boundary_check.dart`.
+- Add the public API guardrail implementation under
+  `tool/guardrails/src/public_api/**`.
+- Add `test/support/public_api_fixture.dart` for reusable temporary
+  source-tree setup.
 - Add `test/api_contract/no_legacy_public_symbols_test.dart`.
 - Add `lib/iwb_canvas_engine.dart`.
 - Add the P0 `lib/src/api/**` skeleton files from section 8.

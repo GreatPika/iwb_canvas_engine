@@ -39,11 +39,13 @@ The new package is rooted at the repository top level:
         canvas_runtime.dart
         canvas_surface.dart
         canvas_document.dart
+        canvas_edit.dart
         canvas_element.dart
         canvas_element_update.dart
         canvas_resource.dart
         canvas_ids.dart
         canvas_geometry.dart
+        canvas_ports.dart
         canvas_tools.dart
         canvas_pointer.dart
         canvas_preview.dart
