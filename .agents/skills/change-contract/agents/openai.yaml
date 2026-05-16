@@ -1,4 +1,4 @@
 interface:
   display_name: "Change Contract"
-  short_description: "Draft a verifiable change contract"
+  short_description: "Draft a verifiable execution contract"
   default_prompt: "Draft the Change Contract for the requested change."

@@ -10,7 +10,7 @@ Validate the contract, not the code change.
 Use this skill only after a Change Contract already exists.
 Do not start implementation from a contract that fails blocking checks.
 Default to audit-only. Do not rewrite the contract unless the user explicitly asks for repair.
-When the paired authoring skill is available, read its `SKILL.md` and `assets/change-contract-template.md` first.
+When the paired authoring skill is available, read its `SKILL.md`, `references/contract-rules.md`, and the one template from the paired authoring skill's `assets/` directory that should apply to the contract.
 Read `assets/change-contract-validation-report-template.md` and use it as the output format.
 
 Treat the contract as acceptable only when it is specific enough that implementation choices are no longer floating at the wrong level.
@@ -40,11 +40,21 @@ Confirm, when relevant:
 
 When the repository does not contain a formal rule file for the area, accept an explicit statement that no formal local rule was found only if the contract names the dominant local pattern that will govern the change.
 
+## Expected template selection
+
+Validate the contract against exactly one paired authoring template. Use the paired `change-contract` skill routing rules as the source of truth for selection, and read the selected template from that skill's `assets/` directory:
+
+- `assets/architecture-gate-template.md` when repository evidence shows architecture cannot be locked, or when the contract uses `4B. Architecture Decision Gate`; sections 5 through 12 must be absent or empty.
+- `assets/analyzer-contract-template.md` when the architecture is locked and the contract subject is an analyzer, rule engine, bypass detector, static-analysis check, contract-enforcement mechanism, or structural-recognition rule.
+- `assets/full-contract-template.md` for all other locked contracts.
+
+Do not validate a normal feature against the analyzer template merely because it has structural proof. Do not treat analyzer-only headings as optional full-contract headings.
+
 ## Blocking checks
 
 Mark the contract `BLOCKED` when any of the following is true:
 
-1. The numbered structure does not follow the contract template.
+1. The main numbered structure or required template-specific headings do not follow the expected paired authoring template.
 2. Template placeholders, filler text, guessed facts, or unexplained `...` remain.
 3. Section 3 does not prove real inspection of the surrounding code.
 4. Section 4 does not lock one architectural form and does not stop cleanly at `4B. Architecture Decision Gate`.
@@ -97,7 +107,7 @@ Accept either:
 - one fully locked `4A. Locked Architectural Form`; or
 - one real `4B. Architecture Decision Gate` followed by no substantive sections 5 through 12.
 
-In `4A`, require: ownership level, selected form, owner, dependency direction, data ownership, boundaries, seam, rejected alternatives, and why this level is correct.
+In `4A`, require: ownership level, selected form, owner, dependency direction, data ownership, boundaries, seam, rejected alternatives, why this level is correct, and verification strategy.
 Reject unresolved alternatives or wording that defers the core design choice.
 
 ### Section 5. Locked Decisions
@@ -119,16 +129,19 @@ Reject “run everything after each slice” unless the contract proves that is 
 
 Require concrete files justified by sections 4 through 7.
 Cross-check that later slices do not introduce new files, tests, fixtures, or workflow artifacts out of nowhere.
+When the expected template is `assets/analyzer-contract-template.md`, require `Analyzer or Rule Owner Files` to name the analyzer, rule, bypass detector, static-analysis check, contract-enforcement, or structural-recognition owner files.
 
 ### Section 9. Implementation Rules
 
 Require protected invariants, required proof, allowed change surface, and forbidden moves.
-For analyzer, rule-engine, bypass-detection, or structural-analysis work, require the optional recognition, allowed-form, or resolution subsections only when materially relevant.
+When the expected template is `assets/analyzer-contract-template.md`, require recognition forms, allowed non-violations, and resolution rules.
+For non-analyzer locked contracts, reject analyzer-only recognition, allowed-form, or resolution headings unless the contract subject actually requires the analyzer template.
 Reject generic safety language that does not constrain execution.
 
 ### Section 10. Vertical Slices
 
 Require atomic vertical slices.
+Reject slice headings that preserve the template's empty title form, such as `### Slice 1. [ ]`, instead of naming a concrete verifiable result.
 Each slice must close one new verifiable result.
 Preparatory work alone does not count as a closed slice.
 Require executable behavioral verification for every slice.
