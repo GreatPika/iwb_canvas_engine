@@ -1,4 +1,4 @@
-name = "reviewer"
+name = "code_reviewer"
 description = "Read-only reviewer for uncommitted changes. Uses the repository's code-review skill and defaults to reviewing the working tree diff unless the request names another target."
 model = "gpt-5.5"
 model_reasoning_effort = "high"
