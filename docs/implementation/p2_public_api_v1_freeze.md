@@ -69,7 +69,9 @@ errors, validation rules, and equality semantics.
 
 - full public API declarations from `section_04_public_api_v1`
 - validation limit enforcement at public constructors from `section_06_validation_limits`,
-  including `CanvasDiagnosticPolicy.verbose` preview and list-entry limits
+  including `CanvasDiagnosticsVerbose` preview and list-entry limits
+- public-readable resource and diagnostics policy variants from
+  `section_04_public_api_v1`
 - accepted legacy differences from `section_09_accepted_differences`
 - functional ledger mapping remains green from P1.5 before API freeze
 - public DTO immutability, equality, id validation, class modifiers, dartdoc,
@@ -78,6 +80,7 @@ errors, validation rules, and equality semantics.
 ## Tests and guardrails that prove this phase
 
 - `test.api_contract.public_api_v1_compiles_as_written` -> `test/api_contract/public_api_v1_compiles_as_written_test.dart`; also checks exported dartdoc and explicit public class modifiers with analyzer AST
+- `test.api_contract.public_readable_union_variants` -> `test/api_contract/public_readable_union_variants_test.dart`
 - `test.api_contract.no_undefined_public_type_references` -> `test/api_contract/no_undefined_public_type_references_test.dart`; also checks public signature shape with analyzer AST
 - `test.api_contract.no_legacy_public_symbols` -> `test/api_contract/no_legacy_public_symbols_test.dart`
 - `test.api_contract.dto_immutability` -> `test/api_contract/dto_immutability_test.dart`
@@ -107,7 +110,7 @@ errors, validation rules, and equality semantics.
 - public classes have explicit subtype policy modifiers
 - public signatures avoid `FutureOr`, nullable async/container returns, and unapproved `dynamic`
 - all public constructor validations pass/fail as specified
-- `CanvasDiagnosticPolicy.verbose` accepts defaults and boundary values, and
+- `CanvasDiagnosticsVerbose` accepts defaults and boundary values, and
   rejects zero, negative, and over-limit preview/list-entry values
 - public value equality matches `docs/contracts/public_api_v1.md`
 - legacy public symbols are not exported

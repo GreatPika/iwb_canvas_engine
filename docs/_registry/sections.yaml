@@ -106,6 +106,7 @@
     - api.public_exports_complete
     - api.public_types_complete
     - api.public_api_compiles_as_written
+    - api.resource_source_app_key_publicly_readable
     - api.exported_dartdoc_complete
     - api.public_class_modifiers_explicit
     - api.public_signature_shape
@@ -115,6 +116,7 @@
     - api.id_validation_no_extension_type_escape
     - surface.interactive_false_pending_line_preserved
   tests:
+    - test.api_contract.public_readable_union_variants
     - test.api_contract.public_api_v1_compiles_as_written
     - test.api_contract.no_undefined_public_type_references
     - test.api_contract.no_legacy_public_symbols
@@ -210,6 +212,7 @@
     - seq_resource_resolution
     - state_resource_resolution
   guardrails:
+    - api.resource_source_app_key_publicly_readable
     - resources.mutation_inside_edit_only
     - resources.dirty_no_document_revision
     - resources.app_key_only
@@ -218,6 +221,7 @@
     - resources.no_same_frame_missing_retry
     - resources.resolver_reentrancy_rejected
   tests:
+    - test.api_contract.public_readable_union_variants
     - test.codec.schema_v1.resources_appkey_only
     - test.codec.schema_v1.reject_unknown_resource_source_kind
     - test.resources.sync_image_resolver
@@ -725,6 +729,7 @@
     - api.public_exports_complete
     - api.public_types_complete
     - api.public_api_compiles_as_written
+    - api.resource_source_app_key_publicly_readable
     - api.exported_dartdoc_complete
     - api.public_class_modifiers_explicit
     - api.public_signature_shape
@@ -880,6 +885,7 @@
     - oracle.legacy_capability_inventory_complete
     - api.functional_ledger_complete
   tests:
+    - test.api_contract.public_readable_union_variants
     - test.api_contract.public_api_v1_compiles_as_written
     - test.api_contract.no_undefined_public_type_references
     - test.api_contract.no_legacy_public_symbols
@@ -1058,6 +1064,7 @@
     - api.public_exports_complete
     - api.public_types_complete
     - api.public_api_compiles_as_written
+    - api.resource_source_app_key_publicly_readable
     - api.exported_dartdoc_complete
     - api.public_class_modifiers_explicit
     - api.public_signature_shape

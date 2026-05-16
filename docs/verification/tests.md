@@ -93,6 +93,7 @@ Related donors:
 Related diagrams:
 - `none`
 Required tests:
+- `test.api_contract.public_readable_union_variants`
 - `test.api_contract.public_api_v1_compiles_as_written`
 - `test.api_contract.no_undefined_public_type_references`
 - `test.api_contract.no_legacy_public_symbols`
@@ -170,6 +171,7 @@ Required tests:
 
 ```text
 test/api_contract/public_api_v1_compiles_as_written_test.dart
+test/api_contract/public_readable_union_variants_test.dart
 test/api_contract/no_undefined_public_type_references_test.dart
 test/api_contract/no_legacy_public_symbols_test.dart
 test/api_contract/dto_immutability_test.dart

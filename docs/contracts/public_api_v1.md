@@ -75,9 +75,11 @@ The legacy public symbols listed in `tool/goldens/public_api_symbols.txt` from
 the legacy package are not exported by this package. Natural concepts may exist
 under next-owned names, but legacy public shapes are banned.
 
-Factory target classes are private implementation details. Public factories on
-sealed base types may target private classes, but the public barrel exports only
-the sealed base type and stable DTO/port names.
+Factory target classes may be private only for construction-only sealed values.
+Sealed values that application code must read at public boundaries expose their
+concrete variants through the public barrel. In v1, `CanvasResourceSource` and
+`CanvasDiagnosticPolicy` are public-readable unions; their concrete variants are
+stable exported API names.
 
 The root package is Flutter-based. Public API may use:
 
@@ -138,10 +140,11 @@ CanvasGridStyle
 CanvasPointerPolicy
 CanvasPointerSample
 CanvasDrawStyle
-CanvasResourceSource and its variants
+CanvasResourceSource and CanvasAppKeyResourceSource
 CanvasElementRead
 CanvasMoveResolution and its variants
-CanvasDiagnosticPolicy and its variants
+CanvasDiagnosticPolicy, CanvasDiagnosticsDisabled, CanvasDiagnosticsSummary,
+CanvasDiagnosticsVerbose
 ```
 
 For these types, two independently-created instances with the same public values
@@ -1323,14 +1326,17 @@ final class CanvasImageResource extends CanvasResource {
 
 sealed class CanvasResourceSource {
   const CanvasResourceSource();
-  const factory CanvasResourceSource.appKey(String key) = _CanvasAppKeyResourceSource;
+  const factory CanvasResourceSource.appKey(String key) = CanvasAppKeyResourceSource;
 }
 
-final class _CanvasAppKeyResourceSource extends CanvasResourceSource {
-  const _CanvasAppKeyResourceSource(this.key);
+final class CanvasAppKeyResourceSource extends CanvasResourceSource {
+  const CanvasAppKeyResourceSource(this.key);
   final String key;
 }
 ```
+
+Application code may type-test or pattern-match `CanvasImageResource.source` as
+`CanvasAppKeyResourceSource` and read `key` without importing `src/**`.
 
 Resolver:
 
@@ -1740,9 +1746,24 @@ final class CanvasDataException implements Exception {
 
 sealed class CanvasDiagnosticPolicy {
   const CanvasDiagnosticPolicy();
-  const factory CanvasDiagnosticPolicy.disabled() = _CanvasDiagnosticDisabled;
-  const factory CanvasDiagnosticPolicy.summary() = _CanvasDiagnosticSummary;
+  const factory CanvasDiagnosticPolicy.disabled() = CanvasDiagnosticsDisabled;
+  const factory CanvasDiagnosticPolicy.summary() = CanvasDiagnosticsSummary;
   factory CanvasDiagnosticPolicy.verbose({
+    int maxPreviewLength = 256,
+    int maxListEntries = 32,
+  }) = CanvasDiagnosticsVerbose;
+}
+
+final class CanvasDiagnosticsDisabled extends CanvasDiagnosticPolicy {
+  const CanvasDiagnosticsDisabled();
+}
+
+final class CanvasDiagnosticsSummary extends CanvasDiagnosticPolicy {
+  const CanvasDiagnosticsSummary();
+}
+
+final class CanvasDiagnosticsVerbose extends CanvasDiagnosticPolicy {
+  factory CanvasDiagnosticsVerbose({
     int maxPreviewLength = 256,
     int maxListEntries = 32,
   }) {
@@ -1750,23 +1771,13 @@ sealed class CanvasDiagnosticPolicy {
       maxPreviewLength: maxPreviewLength,
       maxListEntries: maxListEntries,
     );
-    return _CanvasDiagnosticVerbose._(
+    return CanvasDiagnosticsVerbose._(
       maxPreviewLength: maxPreviewLength,
       maxListEntries: maxListEntries,
     );
   }
-}
 
-final class _CanvasDiagnosticDisabled extends CanvasDiagnosticPolicy {
-  const _CanvasDiagnosticDisabled();
-}
-
-final class _CanvasDiagnosticSummary extends CanvasDiagnosticPolicy {
-  const _CanvasDiagnosticSummary();
-}
-
-final class _CanvasDiagnosticVerbose extends CanvasDiagnosticPolicy {
-  const _CanvasDiagnosticVerbose._({
+  const CanvasDiagnosticsVerbose._({
     required this.maxPreviewLength,
     required this.maxListEntries,
   });
@@ -1779,6 +1790,10 @@ final class _CanvasDiagnosticVerbose extends CanvasDiagnosticPolicy {
 `CanvasDiagnosticPolicy.verbose` validates `maxPreviewLength` and
 `maxListEntries` during construction and any runtime config materialization path.
 The limits are owned by `section_06_validation_limits`.
+Application code may type-test or pattern-match `CanvasRuntimeConfig.diagnosticPolicy`
+as `CanvasDiagnosticsDisabled`, `CanvasDiagnosticsSummary`, or
+`CanvasDiagnosticsVerbose`; verbose limits are public readable fields on
+`CanvasDiagnosticsVerbose`.
 
 `CanvasDataException` must not expose raw input, application objects, runtime
 objects, images, handles, closures, canvases, or full document dumps. Raw failure

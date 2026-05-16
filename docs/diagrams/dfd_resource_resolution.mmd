@@ -21,7 +21,7 @@ flowchart LR
 
   subgraph Store["DocumentStoreKernel"]
     ResourceTable["Committed resource descriptor table\nCanvasImageResource"]
-    AppKeyDescriptor["CanvasResourceSource.appKey only\nid, appKey, contentHash,\nbyteLength, mimeType, metadata"]
+    AppKeyDescriptor["CanvasResourceSource.appKey only\nCanvasAppKeyResourceSource.key\nid, contentHash, byteLength,\nmimeType, metadata"]
     DocumentRevision["documentRevision\nchanges only on committed descriptor mutation"]
     ResourceRevision["resourceRevision\ndescriptor version"]
     ResourceVisualRevision["resourceVisualRevision\nruntime/store visual version"]
@@ -33,7 +33,7 @@ flowchart LR
     MainPaint["Main paint frame\ncaptured once"]
     RenderRecords["Immutable RenderElementRecord list\nimage resource ids"]
     AssetRequest["Paint asset request\nresourceId -> descriptor"]
-    DescriptorRead["Descriptor snapshot lookup\nresourceId to appKey descriptor"]
+    DescriptorRead["Descriptor snapshot lookup\nresourceId to public appKey descriptor"]
     PaintAsset["Paint asset\nui.Image or bounded placeholder"]
     MainRepaint["Main repaint request"]
   end
@@ -65,14 +65,14 @@ flowchart LR
   CommitPlan -->|"public projection facts changed"| ProjectionRevision
   ProjectionRevision -->|"evict descriptor projection entries"| ProjectionEvict
   CommitPlan -->|"evict descriptor-dependent entries"| ImageResolveCache
-  ResourceTable -->|"stores source.kind = appKey only"| AppKeyDescriptor
+  ResourceTable -->|"stores source.kind = appKey only\npublic source is CanvasAppKeyResourceSource.key"| AppKeyDescriptor
 
   Surface -->|"main paint asks for records"| MainPaint
   MainPaint -->|"image elements carry resource ids"| RenderRecords
   RenderRecords -->|"resourceId"| AssetRequest
   AssetRequest -->|"read committed descriptor snapshot"| DescriptorRead
   DescriptorRead -->|"resourceId lookup"| ResourceTable
-  ResourceTable -->|"CanvasImageResource with appKey"| DescriptorRead
+  ResourceTable -->|"CanvasImageResource with CanvasAppKeyResourceSource.key"| DescriptorRead
   DescriptorRead -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
 
   ResolvePaintAsset -->|"cache lookup and bounded update"| ImageResolveCache
@@ -82,7 +82,7 @@ flowchart LR
   ResolverFrameBudget -.->|"budget exceeded\nResourceKernel-owned probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder
   BudgetPlaceholder -.->|"bounded placeholder\nno cache write"| PaintAsset
   Surface -->|"provides resolver callback\nto resource boundary"| ResolvePaintAsset
-  AppResolver -->|"passes descriptor with appKey"| App
+  AppResolver -->|"passes descriptor; app reads CanvasAppKeyResourceSource.key"| App
   AppResolver -->|"returns app-owned ui.Image or null\nno runtime mutation"| ResolvePaintAsset
   ResolvePaintAsset -->|"store resolved or null result\nby resourceId + resourceRevision"| ImageResolveCache
   ResolvePaintAsset -->|"resolved image"| PaintAsset

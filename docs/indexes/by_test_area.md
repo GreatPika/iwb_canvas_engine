@@ -9,6 +9,13 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 - Guardrails: `api.public_api_compiles_as_written`, `api.exported_dartdoc_complete`, `api.public_class_modifiers_explicit`
 
+## test.api_contract.public_readable_union_variants
+
+- Path: `test/api_contract/public_readable_union_variants_test.dart`
+- Phases: `P2`, `P7`
+- Sections: `section_04_public_api_v1`, `section_07_resource_lifecycle`, `section_23_tests`
+- Guardrails: `api.resource_source_app_key_publicly_readable`, `api.public_exports_complete`, `api.equality_policy_explicit`, `resources.app_key_only`
+
 ## test.api_contract.no_undefined_public_type_references
 
 - Path: `test/api_contract/no_undefined_public_type_references_test.dart`

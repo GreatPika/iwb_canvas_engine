@@ -7,18 +7,17 @@
 
 ## Порядок выполнения
 
-- [ ] P1: закрыть публичный API до freeze: HOLE-001, HOLE-005, HOLE-006,
-      HOLE-007 и HOLE-008.
+- [ ] P1: закрыть публичный API до freeze: HOLE-005, HOLE-006, HOLE-007 и
+      HOLE-008.
 - [ ] P2: расширить operation matrix до полного покрытия публичного API:
       HOLE-002.
 - [ ] P3: уточнить resources/surface lifecycle до реализации P7/P13-зон:
-      HOLE-001, HOLE-003 и HOLE-004.
+      HOLE-003 и HOLE-004.
 - [ ] P4: сделать guardrails исполнимыми: HOLE-008 и DIAG-PROOF.
 - [ ] P5: закрыть release-readiness proof: HOLE-009, HOLE-010 и HOLE-011.
 
 ## Блокеры API freeze
 
-- [ ] HOLE-001: `CanvasResourceSource.appKey` публично доступен app resolver.
 - [ ] HOLE-002: `operation_matrix.md` покрывает все публичные state/effect операции.
 - [ ] HOLE-005: `CanvasOptional.value(null)` имеет однозначную запрещённую или каноническую семантику.
 - [ ] HOLE-006: публичные DTO совместимы с validation, `const` и defensive copy policy.
@@ -27,7 +26,6 @@
 
 ## Блокеры resources/surface lifecycle
 
-- [ ] HOLE-001: app resolver может прочитать source key через публичный API.
 - [ ] HOLE-003: resolved image cache не переживает смену resolver/surface некорректно.
 - [ ] HOLE-004: `interactive=false` имеет однозначную preview/cancel semantics.
 
@@ -39,33 +37,6 @@
 - [ ] HOLE-010: monotonic runtime-created timestamps имеют contract/test/release-gate mapping.
 - [ ] HOLE-011: `docs/tool/check_docs.dart` и наличие `plan/` согласованы.
 - [ ] DIAG-PROOF: disabled diagnostics не allocation-ят records в successful hot paths.
-
----
-
-## HOLE-001 — `CanvasResourceSource.appKey` недоступен публичному resolver
-
-Статус: Red.
-
-Почему это дыра: app-owned `CanvasResourceResolver` получает `CanvasImageResource`,
-но `appKey` находится в приватном `_CanvasAppKeyResourceSource`. Если внешний код
-не может прочитать ключ без доступа к `src/**` и приватным классам, приложение не
-сможет реализовать обязательную роль resolver.
-
-Нужно закрыть:
-
-- [ ] Сделать source key публично читаемым через стабильный public API.
-- [ ] Выбрать форму API:
-  - публичный subtype, например `CanvasAppKeyResourceSource.key`;
-  - или публичный discriminator + accessor;
-  - или другой явно проверяемый pattern matching API.
-- [ ] Запретить решение, при котором app resolver должен импортировать `src/**`.
-- [ ] Обновить `docs/contracts/public_api_v1.md`.
-- [ ] Обновить resource contract, если меняется shape source descriptor.
-- [ ] Добавить тест `api.resource_source_app_key_publicly_readable`.
-- [ ] Тест должен компилировать внешний resolver, который импортирует только
-      `package:iwb_canvas_engine/iwb_canvas_engine.dart` и читает `appKey`.
-
----
 
 ## HOLE-002 — Operation matrix не покрывает все публичные операции
 
@@ -238,8 +209,9 @@ immutability и defensive copy, но часть API описана через `c
 
 Почему это дыра: guardrail должен доказывать, что публичного API достаточно для
 app-level `NextEngineAdapter`, но без конкретного external fixture это легко
-становится субъективной проверкой наличия типов. HOLE-001 показывает, что типы
-могут существовать, но внешний adapter всё равно не сможет выполнить роль.
+становится субъективной проверкой наличия типов. Ранее найденная
+resource-source readability дыра показала, что типы могут существовать, но
+внешний adapter всё равно не сможет выполнить роль.
 
 Нужно закрыть:
 

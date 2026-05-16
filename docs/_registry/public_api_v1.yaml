@@ -38,6 +38,7 @@ public_exports:
   - CanvasResource
   - CanvasImageResource
   - CanvasResourceSource
+  - CanvasAppKeyResourceSource
   - CanvasResourceResolver
   - CanvasElementId
   - CanvasLayerId
@@ -73,6 +74,9 @@ public_exports:
   - CanvasSelectionStyle
   - CanvasGridStyle
   - CanvasDiagnosticPolicy
+  - CanvasDiagnosticsDisabled
+  - CanvasDiagnosticsSummary
+  - CanvasDiagnosticsVerbose
   - CanvasDataException
   - CanvasDataErrorCode
   - CanvasTransform

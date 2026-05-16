@@ -69,7 +69,7 @@ external data shapes.
 
 - schema v1 field contract from `section_05_schema_v1_contract`
 - schema and public DTO validation limits from `section_06_validation_limits`,
-  including diagnostic verbose constructor/schema limit tests
+  including `CanvasDiagnosticsVerbose` constructor/schema limit tests
 - codec entrypoint and no-runtime-side-effect contract from `section_19_codec_boundary`
 - diagnostic projection and disabled hot-path policy foundation from
   `section_20_diagnostics_hub`
@@ -97,7 +97,7 @@ external data shapes.
 - known field validation tests green
 - unknown-field policy tests green
 - limits tests green
-- diagnostic verbose constructor/schema limit tests reject invalid preview and
+- `CanvasDiagnosticsVerbose` constructor/schema limit tests reject invalid preview and
   list-entry limits
 - error payload tests green
 - codec no-runtime-side-effect tests green

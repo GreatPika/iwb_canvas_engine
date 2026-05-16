@@ -68,7 +68,7 @@ without bypassing ownership.
 - committed document tables, revisions, and projection cache from
   `section_10_runtime_data_model`
 - runtime config materialization from public constructor-validated config values,
-  including diagnostic policy limits from `section_06_validation_limits`
+  including `CanvasDiagnosticsVerbose` limits from `section_06_validation_limits`
 
 ## Tests and guardrails that prove this phase
 
@@ -87,7 +87,7 @@ without bypassing ownership.
   does not notify documentRevisionListenable, and delivers no revision
   listenable notifications after dispose returns
 - runtime config materialization preserves already-validated
-  `CanvasDiagnosticPolicy.verbose` preview and list-entry limits without pulling
+  `CanvasDiagnosticsVerbose` preview and list-entry limits without pulling
   schema/codec ownership into RuntimeRoot
 - `readDocument` projection matches committed DTO state
 - projection lazy counters pass

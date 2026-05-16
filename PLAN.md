@@ -21,4 +21,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 ## Step Files
 
 - [ ] [Step 1. P0 package skeleton and hard boundaries](plan/step_1_package_skeleton_and_hard_boundaries.md)
-- [ ] [Step 2. Public readable union variants](plan/step_2_public_readable_union_variants.md)
+- [x] [Step 2. Public readable union variants](plan/step_2_public_readable_union_variants.md)

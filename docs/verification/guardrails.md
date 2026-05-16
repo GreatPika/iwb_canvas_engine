@@ -25,6 +25,7 @@ Guardrails:
 - `api.public_exports_complete`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
+- `api.resource_source_app_key_publicly_readable`
 - `api.exported_dartdoc_complete`
 - `api.public_class_modifiers_explicit`
 - `api.public_signature_shape`
@@ -132,6 +133,7 @@ Mandatory guardrails:
 | `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |
 | `api.public_types_complete` | all public signatures reference defined public types |
 | `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package |
+| `api.resource_source_app_key_publicly_readable` | external resolver code can read `CanvasAppKeyResourceSource.key` from `CanvasImageResource.source` through the public barrel only |
 | `api.exported_dartdoc_complete` | exported public declarations have non-empty Dart documentation summaries before API freeze |
 | `api.public_class_modifiers_explicit` | every exported public class chooses an explicit Dart 3 subtype/implementation policy |
 | `api.public_signature_shape` | public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON/metadata boundaries |

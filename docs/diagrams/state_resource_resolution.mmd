@@ -35,7 +35,8 @@ stateDiagram-v2
   state "appKey descriptor available" as AppKeyDescriptor
   note right of AppKeyDescriptor
     v1 descriptors expose app-owned resource identity:
-    resourceId plus appKey and descriptor metadata.
+    resourceId plus CanvasAppKeyResourceSource.key
+    and descriptor metadata.
   end note
 
   AppKeyDescriptor --> CacheLookup: lookup ImageResolveCache

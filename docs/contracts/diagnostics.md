@@ -57,10 +57,13 @@ public `CanvasDataException` field; public exceptions expose only code, message,
 path, and sanitized bounded details.
 
 Sanitizer permits only JSON-like primitives and bounded previews.
-`CanvasDiagnosticPolicy.verbose.maxPreviewLength` caps string/object previews and
-`CanvasDiagnosticPolicy.verbose.maxListEntries` caps list, set, iterable, and map
-preview entries. Both values are validated against `section_06_validation_limits`
-at policy construction and runtime config materialization. The sanitizer forbids
-runtime objects, handles, paths, canvases, images, closures and full scene dumps.
+`CanvasDiagnosticPolicy` exposes public readable policy variants:
+`CanvasDiagnosticsDisabled`, `CanvasDiagnosticsSummary`, and
+`CanvasDiagnosticsVerbose`. `CanvasDiagnosticsVerbose.maxPreviewLength` caps
+string/object previews and `CanvasDiagnosticsVerbose.maxListEntries` caps list,
+set, iterable, and map preview entries. Both values are validated against
+`section_06_validation_limits` at policy construction and runtime config
+materialization. The sanitizer forbids runtime objects, handles, paths,
+canvases, images, closures and full scene dumps.
 
 ---

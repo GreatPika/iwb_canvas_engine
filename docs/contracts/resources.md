@@ -18,6 +18,7 @@ Related diagrams:
 - `seq_resource_resolution`
 - `state_resource_resolution`
 Required tests:
+- `test.api_contract.public_readable_union_variants`
 - `test.codec.schema_v1.resources_appkey_only`
 - `test.codec.schema_v1.reject_unknown_resource_source_kind`
 - `test.resources.sync_image_resolver`
@@ -29,6 +30,7 @@ Required tests:
 - `test.resources.resolver_frame_budget`
 - `test.resources.resolver_reentrancy_rejected`
 Guardrails:
+- `api.resource_source_app_key_publicly_readable`
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`
 - `resources.app_key_only`
@@ -137,6 +139,9 @@ The repaint intent is runtime-owned and does not require an attached
 
 ```text
 - mandatory v1 supports appKey resource descriptors and dirty invalidation;
+- `CanvasResourceSource.appKey` constructs the public readable
+  `CanvasAppKeyResourceSource`; application resolvers read the app-owned
+  identity from `CanvasAppKeyResourceSource.key` through the public barrel only;
 - resource mutation remains inside CanvasEdit;
 - resolver calls are synchronous and app-owned;
 - resolver calls are bounded by internal `kMaxSyncResourceResolverCallsPerFrame = 128`;

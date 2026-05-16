@@ -1,73 +1,4 @@
-
-## 1. Публичные union-типы делаем с публичными variants
-
-**Проблема:** private variants внутри public API мешают внешнему коду читать состояние. Самый критичный пример — `CanvasResourceSource.appKey`: resolver приложения должен получить ключ ресурса без доступа к `src/**`.
-
-**Решение:** все public union-типы, которые читает приложение, делаем с публичными concrete-классами.
-
-```dart
-sealed class CanvasResourceSource {
-  const CanvasResourceSource();
-
-  CanvasResourceSourceKind get kind;
-}
-
-enum CanvasResourceSourceKind {
-  appKey,
-}
-
-final class CanvasAppKeyResourceSource extends CanvasResourceSource {
-  const CanvasAppKeyResourceSource(this.key);
-
-  final String key;
-
-  @override
-  CanvasResourceSourceKind get kind => CanvasResourceSourceKind.appKey;
-}
-```
-
-Для diagnostic policy:
-
-```dart
-enum CanvasDiagnosticMode {
-  disabled,
-  summary,
-  verbose,
-}
-
-sealed class CanvasDiagnosticPolicy {
-  const CanvasDiagnosticPolicy();
-
-  CanvasDiagnosticMode get mode;
-}
-
-final class CanvasDiagnosticsDisabled extends CanvasDiagnosticPolicy {
-  const CanvasDiagnosticsDisabled();
-
-  @override
-  CanvasDiagnosticMode get mode => CanvasDiagnosticMode.disabled;
-}
-
-final class CanvasDiagnosticsSummary extends CanvasDiagnosticPolicy {
-  const CanvasDiagnosticsSummary();
-
-  @override
-  CanvasDiagnosticMode get mode => CanvasDiagnosticMode.summary;
-}
-
-final class CanvasDiagnosticsVerbose extends CanvasDiagnosticPolicy {
-  const CanvasDiagnosticsVerbose();
-
-  @override
-  CanvasDiagnosticMode get mode => CanvasDiagnosticMode.verbose;
-}
-```
-
-**Итог:** public API становится реально читаемым внешним кодом.
-
----
-
-## 2. `CanvasOptional` заменяем на `CanvasFieldUpdate`
+## 1. `CanvasOptional` заменяем на `CanvasFieldUpdate`
 
 **Проблема:** `CanvasOptional.value(null)` создаёт двусмысленность. Для patch/update-семантики это плохое место.
 
@@ -125,7 +56,7 @@ final class CanvasImageElementUpdate {
 
 ---
 
-## 3. DTO с коллекциями и metadata делаем non-const
+## 2. DTO с коллекциями и metadata делаем non-const
 
 **Проблема:** `const`-конструктор не может надёжно сделать defensive copy для `Iterable`, `List`, `Map`, `Set`. Значит, `const` конфликтует с требованием immutable DTO.
 
@@ -168,7 +99,7 @@ final class CanvasMetadata {
 
 ---
 
-## 4. Selection выносим из `DocumentStoreKernel`
+## 3. Selection выносим из `DocumentStoreKernel`
 
 **Проблема:** selection — это не содержимое документа. Это view/runtime state. Если держать selection в store, она смешивается с committed document state.
 
@@ -223,7 +154,7 @@ FrameEngine.invalidateForReplacement
 
 ---
 
-## 5. Selection scope фиксируем как content-only
+## 4. Selection scope фиксируем как content-only
 
 **Проблема:** background elements не pointer-selectable, но публичный `setSelection` может случайно выбрать background element программно.
 
@@ -266,7 +197,7 @@ edit.removeElement(backgroundElementId);
 
 ---
 
-## 6. Public revision/listener model заменяем на единый snapshot
+## 5. Public revision/listener model заменяем на единый snapshot
 
 **Проблема:** public API показывает не все изменения runtime. Например, selection может измениться без `documentRevision`, но приложению всё равно нужен сигнал.
 
@@ -333,7 +264,7 @@ final class CanvasRuntimeSummary {
 
 ---
 
-## 7. Camera разделяем на view camera и persisted document camera
+## 6. Camera разделяем на view camera и persisted document camera
 
 **Проблема:** pan камеры не должен быть document mutation. Камера текущего вида — это view state. Камера в документе — это persisted default.
 
@@ -380,7 +311,7 @@ readDocument -> возвращает persisted document camera.
 
 ---
 
-## 8. `PaintPlanCache` отвязываем от `selectionRevision`
+## 7. `PaintPlanCache` отвязываем от `selectionRevision`
 
 **Проблема:** selection не меняет ordinary committed elements. Значит, изменение selection не должно сбрасывать ordinary paint plan.
 
@@ -421,7 +352,7 @@ SelectedMoveSupplement:
 
 ---
 
-## 9. `frameMetaRevision` сразу разделяем
+## 8. `frameMetaRevision` сразу разделяем
 
 **Проблема:** общий `frameMetaRevision` смешивает camera, background, grid и surface styles. Это даёт лишние invalidation.
 
@@ -477,7 +408,7 @@ final class CapturedMainFrame {
 
 ---
 
-## 10. Resource resolver cache переносим в surface resource session
+## 9. Resource resolver cache переносим в surface resource session
 
 **Проблема:** resolver живёт на `CanvasSurface`, а image cache сейчас относится к runtime. Это разные lifecycle.
 
@@ -536,7 +467,7 @@ SurfaceResourceSession enforces resolver budget.
 
 ---
 
-## 11. `CanvasPreviewState` делаем sealed-union
+## 10. `CanvasPreviewState` делаем sealed-union
 
 **Проблема:** один класс со всеми nullable-полями допускает невозможные состояния.
 
@@ -655,7 +586,7 @@ final class CanvasEraserPreview extends CanvasPreviewState {
 
 ---
 
-## 12. Text edit request снабжаем stale guard
+## 11. Text edit request снабжаем stale guard
 
 **Проблема:** app-owned text editing может завершиться после delete/load/update элемента. Старый request не должен молча применить изменение к новому состоянию.
 
@@ -723,7 +654,7 @@ commitTextEdit выполняет updateElement внутри normal edit transac
 
 ---
 
-## 13. Action events объявляем notification stream, не undo/redo
+## 12. Action events объявляем notification stream, не undo/redo
 
 **Проблема:** payloads action events не содержат enough data для полноценного undo/redo.
 
@@ -765,7 +696,7 @@ Payloads не расширяем до inverse patches в v1.
 
 # Две обязательные правки без отдельного редизайна
 
-## 14. Operation matrix переводим на field-effect taxonomy
+## 13. Operation matrix переводим на field-effect taxonomy
 
 **Проблема:** строки вида `update visual only` и `update geometry/transform` слишком грубые. Реальная логика зависит от конкретного поля.
 
@@ -832,7 +763,7 @@ metadata:
 
 ---
 
-## 15. Non-invertible transform fallback убираем
+## 14. Non-invertible transform fallback убираем
 
 **Проблема:** если transform должен быть invertible, coarse fallback для non-invertible transform скрывает corrupted state.
 
@@ -856,5 +787,4 @@ no coarse candidate fallback
 **Итог:** corrupted geometry не превращается в странные попадания.
 
 ---
-
 

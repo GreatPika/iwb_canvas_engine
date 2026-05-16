@@ -36,7 +36,7 @@ Guardrails extracted from split section 22.
 
 - Rule: all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.blocking_suite`
+- Tests: `test.api_contract.public_readable_union_variants`, `test.guardrails.blocking_suite`
 
 ## api.public_types_complete
 
@@ -49,6 +49,12 @@ Guardrails extracted from split section 22.
 - Rule: public API declarations compile in an empty consumer package
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.public_api_v1_compiles_as_written`, `test.guardrails.blocking_suite`
+
+## api.resource_source_app_key_publicly_readable
+
+- Rule: external resolver code can read `CanvasAppKeyResourceSource.key` from `CanvasImageResource.source` through the public barrel only
+- Sections: `section_04_public_api_v1`, `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.api_contract.public_readable_union_variants`, `test.guardrails.blocking_suite`
 
 ## api.exported_dartdoc_complete
 
@@ -84,7 +90,7 @@ Guardrails extracted from split section 22.
 
 - Rule: public value equality is explicit for concrete public classes and covered by API contract tests
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.public_equality_policy`, `test.guardrails.blocking_suite`
+- Tests: `test.api_contract.public_readable_union_variants`, `test.api_contract.public_equality_policy`, `test.guardrails.blocking_suite`
 
 ## api.id_validation_no_extension_type_escape
 
@@ -198,7 +204,7 @@ Guardrails extracted from split section 22.
 
 - Rule: resource descriptors use appKey only
 - Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.codec.schema_v1.resources_appkey_only`, `test.codec.schema_v1.reject_unknown_resource_source_kind`, `test.resources.sync_image_resolver`, `test.resources.app_owned_image_not_disposed`, `test.guardrails.blocking_suite`
+- Tests: `test.api_contract.public_readable_union_variants`, `test.codec.schema_v1.resources_appkey_only`, `test.codec.schema_v1.reject_unknown_resource_source_kind`, `test.resources.sync_image_resolver`, `test.resources.app_owned_image_not_disposed`, `test.guardrails.blocking_suite`
 
 ## resources.resolver_reentrancy_rejected
 

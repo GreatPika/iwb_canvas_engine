@@ -10,7 +10,8 @@ load have established rollback-safe mutation and replacement boundaries.
 
 - `ResourceKernel`
 - `CanvasResourceId` runtime support from the P2 API
-- `CanvasResourceSource.appKey` only
+- `CanvasResourceSource.appKey` only, publicly readable as
+  `CanvasAppKeyResourceSource.key`
 - resource descriptor mutation only inside `CanvasEdit`
 - image resource and image element lifecycle
 - `markResourceDirty`
@@ -73,6 +74,7 @@ load have established rollback-safe mutation and replacement boundaries.
 ## Tests and guardrails that prove this phase
 
 - `test.codec.schema_v1.resources_appkey_only` -> `test/codec/schema_v1/resources_appkey_only_test.dart`
+- `test.api_contract.public_readable_union_variants` -> `test/api_contract/public_readable_union_variants_test.dart`
 - `test.codec.schema_v1.reject_unknown_resource_source_kind` -> `test/codec/schema_v1/reject_unknown_resource_source_kind_test.dart`
 - `test.resources.sync_image_resolver` -> `test/resources/sync_image_resolver_test.dart`
 - `test.resources.app_owned_image_not_disposed` -> `test/resources/app_owned_image_not_disposed_test.dart`
