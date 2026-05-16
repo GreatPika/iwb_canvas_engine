@@ -22,3 +22,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 
 - [ ] [Step 1. P0 package skeleton and hard boundaries](plan/step_1_package_skeleton_and_hard_boundaries.md)
 - [x] [Step 2. Public readable union variants](plan/step_2_public_readable_union_variants.md)
+- [ ] [Step 3. CanvasFieldUpdate patch semantics](plan/step_3_canvas_field_update_patch_semantics.md)
