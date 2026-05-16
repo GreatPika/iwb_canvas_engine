@@ -130,7 +130,7 @@ CanvasLayerId
 CanvasResourceId
 CanvasActionId
 CanvasTransform
-CanvasOptional and its variants
+CanvasFieldUpdate and its variants
 CanvasDocumentSummary
 CanvasCamera
 CanvasBackground
@@ -149,7 +149,7 @@ CanvasDiagnosticsVerbose
 
 For these types, two independently-created instances with the same public values
 must compare equal with `==` and must have the same `hashCode`.
-`CanvasOptional.value(x)` compares `x` with Dart's normal `==`; it does not add
+`CanvasFieldSet(x)` compares `x` with Dart's normal `==`; it does not add
 special deep equality for arbitrary `List`, `Map`, `Set`, or application-owned
 objects.
 
@@ -246,42 +246,41 @@ CanvasResourceId CanvasRuntime.generateResourceId(); // r0, r1, ...
 
 Generated ids are unique within the current runtime. `loadDocument` resets id generators so that new generated ids do not collide with loaded ids.
 
-### 4.3 Optional patch field
+### 4.3 Field update patch semantics
 
-The next API does not use legacy `PatchField`. It uses a next-owned optional
-value type.
+The next API does not use legacy `PatchField`. It uses a next-owned field
+update intent type with explicit absent, non-null set, and nullable clear
+semantics.
 
 ```dart
-sealed class CanvasOptional<T> {
-  const CanvasOptional();
-  const factory CanvasOptional.absent() = _CanvasOptionalAbsent<T>;
-  const factory CanvasOptional.value(T value) = _CanvasOptionalValue<T>;
-  const factory CanvasOptional.nullValue() = _CanvasOptionalNull<T>;
+sealed class CanvasFieldUpdate<T> {
+  const CanvasFieldUpdate();
+  const factory CanvasFieldUpdate.absent() = CanvasFieldAbsent<T>;
 }
 
-final class _CanvasOptionalAbsent<T> extends CanvasOptional<T> {
-  const _CanvasOptionalAbsent();
+final class CanvasFieldAbsent<T> extends CanvasFieldUpdate<T> {
+  const CanvasFieldAbsent();
 }
 
-final class _CanvasOptionalValue<T> extends CanvasOptional<T> {
-  const _CanvasOptionalValue(this.value);
+final class CanvasFieldSet<T extends Object> extends CanvasFieldUpdate<T> {
+  const CanvasFieldSet(this.value);
   final T value;
 }
 
-final class _CanvasOptionalNull<T> extends CanvasOptional<T> {
-  const _CanvasOptionalNull();
+final class CanvasFieldClear<T extends Object> extends CanvasFieldUpdate<T?> {
+  const CanvasFieldClear();
 }
 ```
 
 Rules:
 
 ```text
-absent     -> do not touch field;
-value(x)   -> set field to x;
-nullValue  -> set nullable field to null;
-nullValue  -> does not itself know whether the target field is nullable;
-nullable/non-nullable admission is checked by the concrete update constructor;
-nullValue on non-nullable field -> ArgumentError at update construction.
+CanvasFieldAbsent<T> -> do not touch field;
+CanvasFieldSet<T extends Object>(x) -> set field to non-null x;
+CanvasFieldClear<T extends Object> -> set nullable field T? to null;
+CanvasFieldSet(null) -> static error for ordinary public API consumers;
+CanvasFieldClear<T> assigned to CanvasFieldUpdate<T> -> static error;
+dynamic or generated invalid field updates -> validation error before draft mutation.
 ```
 
 ### 4.4 Runtime and public ports
@@ -837,33 +836,33 @@ final class CanvasRectElement extends CanvasElement {
 
 ### 4.11 Element updates
 
-Partial updates use `CanvasOptional`, not legacy `NodePatch`.
+Partial updates use `CanvasFieldUpdate`, not legacy `NodePatch`.
 
 ```dart
 sealed class CanvasElementUpdate {
   CanvasElementUpdate({
     required this.id,
-    this.transform = const CanvasOptional.absent(),
-    this.opacity = const CanvasOptional.absent(),
-    this.hitPadding = const CanvasOptional.absent(),
-    this.isVisible = const CanvasOptional.absent(),
-    this.isSelectable = const CanvasOptional.absent(),
-    this.isLocked = const CanvasOptional.absent(),
-    this.isDeletable = const CanvasOptional.absent(),
-    this.isTransformable = const CanvasOptional.absent(),
-    this.metadata = const CanvasOptional.absent(),
+    this.transform = const CanvasFieldUpdate.absent(),
+    this.opacity = const CanvasFieldUpdate.absent(),
+    this.hitPadding = const CanvasFieldUpdate.absent(),
+    this.isVisible = const CanvasFieldUpdate.absent(),
+    this.isSelectable = const CanvasFieldUpdate.absent(),
+    this.isLocked = const CanvasFieldUpdate.absent(),
+    this.isDeletable = const CanvasFieldUpdate.absent(),
+    this.isTransformable = const CanvasFieldUpdate.absent(),
+    this.metadata = const CanvasFieldUpdate.absent(),
   });
 
   final CanvasElementId id;
-  final CanvasOptional<CanvasTransform> transform;
-  final CanvasOptional<double> opacity;
-  final CanvasOptional<double> hitPadding;
-  final CanvasOptional<bool> isVisible;
-  final CanvasOptional<bool> isSelectable;
-  final CanvasOptional<bool> isLocked;
-  final CanvasOptional<bool> isDeletable;
-  final CanvasOptional<bool> isTransformable;
-  final CanvasOptional<Map<String, Object?>> metadata;
+  final CanvasFieldUpdate<CanvasTransform> transform;
+  final CanvasFieldUpdate<double> opacity;
+  final CanvasFieldUpdate<double> hitPadding;
+  final CanvasFieldUpdate<bool> isVisible;
+  final CanvasFieldUpdate<bool> isSelectable;
+  final CanvasFieldUpdate<bool> isLocked;
+  final CanvasFieldUpdate<bool> isDeletable;
+  final CanvasFieldUpdate<bool> isTransformable;
+  final CanvasFieldUpdate<Map<String, Object?>> metadata;
 }
 ```
 
@@ -882,14 +881,14 @@ final class CanvasImageElementUpdate extends CanvasElementUpdate {
     super.isDeletable,
     super.isTransformable,
     super.metadata,
-    this.resourceId = const CanvasOptional.absent(),
-    this.size = const CanvasOptional.absent(),
-    this.naturalSize = const CanvasOptional.absent(),
+    this.resourceId = const CanvasFieldUpdate.absent(),
+    this.size = const CanvasFieldUpdate.absent(),
+    this.naturalSize = const CanvasFieldUpdate.absent(),
   });
 
-  final CanvasOptional<CanvasResourceId> resourceId;
-  final CanvasOptional<Size> size;
-  final CanvasOptional<Size?> naturalSize;
+  final CanvasFieldUpdate<CanvasResourceId> resourceId;
+  final CanvasFieldUpdate<Size> size;
+  final CanvasFieldUpdate<Size?> naturalSize;
 }
 
 final class CanvasPathElementUpdate extends CanvasElementUpdate {
@@ -904,18 +903,18 @@ final class CanvasPathElementUpdate extends CanvasElementUpdate {
     super.isDeletable,
     super.isTransformable,
     super.metadata,
-    this.svgPathData = const CanvasOptional.absent(),
-    this.fillColor = const CanvasOptional.absent(),
-    this.strokeColor = const CanvasOptional.absent(),
-    this.strokeWidth = const CanvasOptional.absent(),
-    this.fillRule = const CanvasOptional.absent(),
+    this.svgPathData = const CanvasFieldUpdate.absent(),
+    this.fillColor = const CanvasFieldUpdate.absent(),
+    this.strokeColor = const CanvasFieldUpdate.absent(),
+    this.strokeWidth = const CanvasFieldUpdate.absent(),
+    this.fillRule = const CanvasFieldUpdate.absent(),
   });
 
-  final CanvasOptional<String> svgPathData;
-  final CanvasOptional<Color?> fillColor;
-  final CanvasOptional<Color?> strokeColor;
-  final CanvasOptional<double> strokeWidth;
-  final CanvasOptional<CanvasPathFillRule> fillRule;
+  final CanvasFieldUpdate<String> svgPathData;
+  final CanvasFieldUpdate<Color?> fillColor;
+  final CanvasFieldUpdate<Color?> strokeColor;
+  final CanvasFieldUpdate<double> strokeWidth;
+  final CanvasFieldUpdate<CanvasPathFillRule> fillRule;
 }
 
 final class CanvasTextElementUpdate extends CanvasElementUpdate {
@@ -930,30 +929,30 @@ final class CanvasTextElementUpdate extends CanvasElementUpdate {
     super.isDeletable,
     super.isTransformable,
     super.metadata,
-    this.text = const CanvasOptional.absent(),
-    this.fontSize = const CanvasOptional.absent(),
-    this.color = const CanvasOptional.absent(),
-    this.align = const CanvasOptional.absent(),
-    this.textDirection = const CanvasOptional.absent(),
-    this.isBold = const CanvasOptional.absent(),
-    this.isItalic = const CanvasOptional.absent(),
-    this.isUnderline = const CanvasOptional.absent(),
-    this.fontFamily = const CanvasOptional.absent(),
-    this.maxWidth = const CanvasOptional.absent(),
-    this.lineHeight = const CanvasOptional.absent(),
+    this.text = const CanvasFieldUpdate.absent(),
+    this.fontSize = const CanvasFieldUpdate.absent(),
+    this.color = const CanvasFieldUpdate.absent(),
+    this.align = const CanvasFieldUpdate.absent(),
+    this.textDirection = const CanvasFieldUpdate.absent(),
+    this.isBold = const CanvasFieldUpdate.absent(),
+    this.isItalic = const CanvasFieldUpdate.absent(),
+    this.isUnderline = const CanvasFieldUpdate.absent(),
+    this.fontFamily = const CanvasFieldUpdate.absent(),
+    this.maxWidth = const CanvasFieldUpdate.absent(),
+    this.lineHeight = const CanvasFieldUpdate.absent(),
   });
 
-  final CanvasOptional<String> text;
-  final CanvasOptional<double> fontSize;
-  final CanvasOptional<Color> color;
-  final CanvasOptional<TextAlign> align;
-  final CanvasOptional<TextDirection> textDirection;
-  final CanvasOptional<bool> isBold;
-  final CanvasOptional<bool> isItalic;
-  final CanvasOptional<bool> isUnderline;
-  final CanvasOptional<String?> fontFamily;
-  final CanvasOptional<double?> maxWidth;
-  final CanvasOptional<double?> lineHeight;
+  final CanvasFieldUpdate<String> text;
+  final CanvasFieldUpdate<double> fontSize;
+  final CanvasFieldUpdate<Color> color;
+  final CanvasFieldUpdate<TextAlign> align;
+  final CanvasFieldUpdate<TextDirection> textDirection;
+  final CanvasFieldUpdate<bool> isBold;
+  final CanvasFieldUpdate<bool> isItalic;
+  final CanvasFieldUpdate<bool> isUnderline;
+  final CanvasFieldUpdate<String?> fontFamily;
+  final CanvasFieldUpdate<double?> maxWidth;
+  final CanvasFieldUpdate<double?> lineHeight;
 }
 
 final class CanvasStrokeElementUpdate extends CanvasElementUpdate {
@@ -968,14 +967,14 @@ final class CanvasStrokeElementUpdate extends CanvasElementUpdate {
     super.isDeletable,
     super.isTransformable,
     super.metadata,
-    this.points = const CanvasOptional.absent(),
-    this.thickness = const CanvasOptional.absent(),
-    this.color = const CanvasOptional.absent(),
+    this.points = const CanvasFieldUpdate.absent(),
+    this.thickness = const CanvasFieldUpdate.absent(),
+    this.color = const CanvasFieldUpdate.absent(),
   });
 
-  final CanvasOptional<List<Offset>> points;
-  final CanvasOptional<double> thickness;
-  final CanvasOptional<Color> color;
+  final CanvasFieldUpdate<List<Offset>> points;
+  final CanvasFieldUpdate<double> thickness;
+  final CanvasFieldUpdate<Color> color;
 }
 
 final class CanvasLineElementUpdate extends CanvasElementUpdate {
@@ -990,16 +989,16 @@ final class CanvasLineElementUpdate extends CanvasElementUpdate {
     super.isDeletable,
     super.isTransformable,
     super.metadata,
-    this.start = const CanvasOptional.absent(),
-    this.end = const CanvasOptional.absent(),
-    this.thickness = const CanvasOptional.absent(),
-    this.color = const CanvasOptional.absent(),
+    this.start = const CanvasFieldUpdate.absent(),
+    this.end = const CanvasFieldUpdate.absent(),
+    this.thickness = const CanvasFieldUpdate.absent(),
+    this.color = const CanvasFieldUpdate.absent(),
   });
 
-  final CanvasOptional<Offset> start;
-  final CanvasOptional<Offset> end;
-  final CanvasOptional<double> thickness;
-  final CanvasOptional<Color> color;
+  final CanvasFieldUpdate<Offset> start;
+  final CanvasFieldUpdate<Offset> end;
+  final CanvasFieldUpdate<double> thickness;
+  final CanvasFieldUpdate<Color> color;
 }
 
 final class CanvasRectElementUpdate extends CanvasElementUpdate {
@@ -1014,16 +1013,16 @@ final class CanvasRectElementUpdate extends CanvasElementUpdate {
     super.isDeletable,
     super.isTransformable,
     super.metadata,
-    this.size = const CanvasOptional.absent(),
-    this.fillColor = const CanvasOptional.absent(),
-    this.strokeColor = const CanvasOptional.absent(),
-    this.strokeWidth = const CanvasOptional.absent(),
+    this.size = const CanvasFieldUpdate.absent(),
+    this.fillColor = const CanvasFieldUpdate.absent(),
+    this.strokeColor = const CanvasFieldUpdate.absent(),
+    this.strokeWidth = const CanvasFieldUpdate.absent(),
   });
 
-  final CanvasOptional<Size> size;
-  final CanvasOptional<Color?> fillColor;
-  final CanvasOptional<Color?> strokeColor;
-  final CanvasOptional<double> strokeWidth;
+  final CanvasFieldUpdate<Size> size;
+  final CanvasFieldUpdate<Color?> fillColor;
+  final CanvasFieldUpdate<Color?> strokeColor;
+  final CanvasFieldUpdate<double> strokeWidth;
 }
 ```
 
@@ -1035,12 +1034,12 @@ Update semantics:
 - no-op update returns false and emits no action;
 - changed update increments element revision;
 - changed update invalidates only typed touched sets;
-- nullable common/family fields accept CanvasOptional.nullValue() in the
-  concrete update constructor for that field;
-- non-nullable common/family fields reject CanvasOptional.nullValue() in the
-  concrete update constructor before any draft mutation.
-- every concrete update constructor rejects CanvasOptional.nullValue() for
-  non-nullable fields before draft mutation.
+- nullable common/family fields accept `CanvasFieldClear<T>()`, where the field
+  type is `CanvasFieldUpdate<T?>`;
+- non-nullable common/family fields cannot accept `CanvasFieldClear<T>()` in
+  ordinary statically checked code;
+- dynamic or generated clear requests for non-nullable fields are rejected
+  before draft mutation.
 ```
 
 ### 4.12 Edit API

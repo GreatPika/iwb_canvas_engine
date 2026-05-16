@@ -42,13 +42,13 @@ Guardrails extracted from split section 22.
 
 - Rule: all public signatures reference defined public types
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.blocking_suite`
+- Tests: `test.api_contract.canvas_field_update_static_semantics`, `test.guardrails.blocking_suite`
 
 ## api.public_api_compiles_as_written
 
 - Rule: public API declarations compile in an empty consumer package
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.public_api_v1_compiles_as_written`, `test.guardrails.blocking_suite`
+- Tests: `test.api_contract.canvas_field_update_static_semantics`, `test.api_contract.public_api_v1_compiles_as_written`, `test.guardrails.blocking_suite`
 
 ## api.resource_source_app_key_publicly_readable
 
@@ -72,7 +72,7 @@ Guardrails extracted from split section 22.
 
 - Rule: public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON/metadata boundaries
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.no_undefined_public_type_references`, `test.guardrails.blocking_suite`
+- Tests: `test.api_contract.canvas_field_update_static_semantics`, `test.api_contract.no_undefined_public_type_references`, `test.guardrails.blocking_suite`
 
 ## api.no_undefined_public_type_references
 
@@ -90,7 +90,7 @@ Guardrails extracted from split section 22.
 
 - Rule: public value equality is explicit for concrete public classes and covered by API contract tests
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.public_readable_union_variants`, `test.api_contract.public_equality_policy`, `test.guardrails.blocking_suite`
+- Tests: `test.api.canvas_field_update`, `test.api_contract.public_readable_union_variants`, `test.api_contract.public_equality_policy`, `test.guardrails.blocking_suite`
 
 ## api.id_validation_no_extension_type_escape
 
@@ -282,13 +282,13 @@ Guardrails extracted from split section 22.
 
 - Rule: ordinary edits compile exact touched invalidation; only document replacement may use global invalidation
 - Sections: `section_11_edit_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit.exact_touched_invalidation`, `test.guardrails.blocking_suite`
+- Tests: `test.edit.exact_touched_invalidation`, `test.edit.field_update_nullable_semantics`, `test.guardrails.blocking_suite`
 
 ## edit.operation_matrix_complete
 
 - Rule: every operation matrix row has an executable effect assertion for revisions, spatial, projection, repaint, and events
 - Sections: `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit.operation_matrix_effects`, `test.guardrails.blocking_suite`
+- Tests: `test.edit.field_update_nullable_semantics`, `test.edit.operation_matrix_effects`, `test.guardrails.blocking_suite`
 
 ## frame.no_global_scene_sort
 

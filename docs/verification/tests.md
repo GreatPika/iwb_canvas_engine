@@ -95,6 +95,8 @@ Related diagrams:
 Required tests:
 - `test.api_contract.public_readable_union_variants`
 - `test.api_contract.public_api_v1_compiles_as_written`
+- `test.api.canvas_field_update`
+- `test.api_contract.canvas_field_update_static_semantics`
 - `test.api_contract.no_undefined_public_type_references`
 - `test.api_contract.no_legacy_public_symbols`
 - `test.api_contract.dto_immutability`
@@ -132,6 +134,7 @@ Required tests:
 - `test.store.public_document_is_projection_only`
 - `test.edit.sync_non_nested_async_stale`
 - `test.edit.rollback`
+- `test.edit.field_update_nullable_semantics`
 - `test.edit.operation_matrix_effects`
 - `test.edit.exact_touched_invalidation`
 - `test.edit.typed_effects_no_frame_dependency`
@@ -172,6 +175,8 @@ Required tests:
 ```text
 test/api_contract/public_api_v1_compiles_as_written_test.dart
 test/api_contract/public_readable_union_variants_test.dart
+test/api/canvas_field_update_test.dart
+test/api_contract/canvas_field_update_static_semantics_test.dart
 test/api_contract/no_undefined_public_type_references_test.dart
 test/api_contract/no_legacy_public_symbols_test.dart
 test/api_contract/dto_immutability_test.dart
@@ -217,6 +222,7 @@ test/store/no_projection_hot_path_test.dart
 test/store/public_document_is_projection_only_test.dart
 test/edit/sync_non_nested_async_stale_test.dart
 test/edit/rollback_test.dart
+test/edit/field_update_nullable_semantics_test.dart
 test/edit/operation_matrix_effects_test.dart
 test/edit/exact_touched_invalidation_test.dart
 test/edit/typed_effects_no_frame_dependency_test.dart

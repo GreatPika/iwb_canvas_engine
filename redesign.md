@@ -1,61 +1,3 @@
-## 1. `CanvasOptional` заменяем на `CanvasFieldUpdate`
-
-**Проблема:** `CanvasOptional.value(null)` создаёт двусмысленность. Для patch/update-семантики это плохое место.
-
-**Решение:** заменить тип на явный update-контейнер.
-
-```dart
-sealed class CanvasFieldUpdate<T> {
-  const CanvasFieldUpdate();
-}
-
-final class CanvasFieldAbsent<T> extends CanvasFieldUpdate<T> {
-  const CanvasFieldAbsent();
-}
-
-final class CanvasFieldSet<T> extends CanvasFieldUpdate<T> {
-  CanvasFieldSet(this.value) {
-    if (value == null) {
-      throw ArgumentError('Use CanvasFieldClear for nullable fields.');
-    }
-  }
-
-  final T value;
-}
-
-final class CanvasFieldClear<T> extends CanvasFieldUpdate<T> {
-  const CanvasFieldClear();
-}
-```
-
-Правила:
-
-```text
-CanvasFieldAbsent -> поле не меняется.
-CanvasFieldSet(value) -> поле получает новое non-null значение.
-CanvasFieldClear -> nullable-поле получает null.
-CanvasFieldSet(null) -> всегда ошибка.
-CanvasFieldClear для non-nullable поля -> ошибка в update compiler.
-```
-
-Пример:
-
-```dart
-final class CanvasImageElementUpdate {
-  const CanvasImageElementUpdate({
-    this.resourceId = const CanvasFieldAbsent(),
-    this.naturalSize = const CanvasFieldAbsent(),
-  });
-
-  final CanvasFieldUpdate<CanvasResourceId> resourceId;
-  final CanvasFieldUpdate<Size?> naturalSize;
-}
-```
-
-**Итог:** tri-state patch сохраняется, но двусмысленность исчезает.
-
----
-
 ## 2. DTO с коллекциями и metadata делаем non-const
 
 **Проблема:** `const`-конструктор не может надёжно сделать defensive copy для `Iterable`, `List`, `Map`, `Set`. Значит, `const` конфликтует с требованием immutable DTO.
@@ -787,4 +729,3 @@ no coarse candidate fallback
 **Итог:** corrupted geometry не превращается в странные попадания.
 
 ---
-

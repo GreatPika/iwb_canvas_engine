@@ -11,7 +11,7 @@ errors, validation rules, and equality semantics.
 - all `src/api` DTOs implemented
 - P1.5 v1 scope gate green
 - id validation implemented
-- `CanvasOptional` implemented
+- `CanvasFieldUpdate` and its public variants implemented
 - public equality policy implemented
 - exported public API has non-empty dartdoc summaries
 - public signatures obey Dart API design constraints from `section_04_public_api_v1`
@@ -40,7 +40,7 @@ errors, validation rules, and equality semantics.
 - `foundation_contract_limits` - decision: `copy/adapt`; target owner: Validation limits and public constructors
 - `foundation_error_contract` - decision: `copy/adapt`; target owner: CanvasDataException and DiagnosticsHub
 - `foundation_validators` - decision: `adapt`; target owner: Public DTO and schema validators
-- `foundation_tri_state_patch_semantics` - decision: `copy/adapt`; target owner: CanvasOptional update semantics
+- `foundation_tri_state_patch_semantics` - decision: `copy/adapt`; target owner: CanvasFieldUpdate update semantics
 - `foundation_immutable_collections` - decision: `adapt`; target owner: DTO immutability
 - `foundation_pointer_input_contract` - decision: `copy/adapt`; target owner: Canvas pointer API and InteractionEngine
 - `foundation_action_event_immutability` - decision: `adapt`; target owner: CanvasActionEvent and text edit events
@@ -81,10 +81,12 @@ errors, validation rules, and equality semantics.
 
 - `test.api_contract.public_api_v1_compiles_as_written` -> `test/api_contract/public_api_v1_compiles_as_written_test.dart`; also checks exported dartdoc and explicit public class modifiers with analyzer AST
 - `test.api_contract.public_readable_union_variants` -> `test/api_contract/public_readable_union_variants_test.dart`
+- `test.api_contract.canvas_field_update_static_semantics` -> `test/api_contract/canvas_field_update_static_semantics_test.dart`
 - `test.api_contract.no_undefined_public_type_references` -> `test/api_contract/no_undefined_public_type_references_test.dart`; also checks public signature shape with analyzer AST
 - `test.api_contract.no_legacy_public_symbols` -> `test/api_contract/no_legacy_public_symbols_test.dart`
 - `test.api_contract.dto_immutability` -> `test/api_contract/dto_immutability_test.dart`
 - `test.api_contract.public_equality_policy` -> `test/api_contract/public_equality_policy_test.dart`
+- `test.api.canvas_field_update` -> `test/api/canvas_field_update_test.dart`
 - `test.api.typed_action_payloads` -> `test/api/typed_action_payloads_test.dart`
 - `test.codec.constructor_and_schema_limits` -> `test/codec/constructor_and_schema_limits_test.dart`
 - `api.v1_scope_gate_green_before_freeze`
@@ -110,6 +112,8 @@ errors, validation rules, and equality semantics.
 - public classes have explicit subtype policy modifiers
 - public signatures avoid `FutureOr`, nullable async/container returns, and unapproved `dynamic`
 - all public constructor validations pass/fail as specified
+- `CanvasFieldSet(null)` and clear-on-non-nullable update misuse are rejected
+  by static analyzer proof for ordinary public consumers
 - `CanvasDiagnosticsVerbose` accepts defaults and boundary values, and
   rejects zero, negative, and over-limit preview/list-entry values
 - public value equality matches `docs/contracts/public_api_v1.md`

@@ -296,9 +296,9 @@
   decision: copy_adapt
   target_phases:
     - P2
-  target_owner: CanvasOptional update semantics
+  target_owner: CanvasFieldUpdate update semantics
   use_for:
-    - "absent, value, explicit-null behavior and non-nullable-null rejection"
+    - "absent, non-null set, explicit nullable clear behavior and non-nullable clear rejection"
   do_not_copy:
     - PatchField name or NodePatch public API
   required_tests:

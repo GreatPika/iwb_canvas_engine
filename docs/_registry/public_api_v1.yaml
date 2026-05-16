@@ -44,7 +44,10 @@ public_exports:
   - CanvasLayerId
   - CanvasResourceId
   - CanvasActionId
-  - CanvasOptional
+  - CanvasFieldUpdate
+  - CanvasFieldAbsent
+  - CanvasFieldSet
+  - CanvasFieldClear
   - CanvasClearResult
   - CanvasDrawTool
   - CanvasInteractionMode

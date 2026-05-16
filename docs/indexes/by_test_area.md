@@ -16,6 +16,20 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_04_public_api_v1`, `section_07_resource_lifecycle`, `section_23_tests`
 - Guardrails: `api.resource_source_app_key_publicly_readable`, `api.public_exports_complete`, `api.equality_policy_explicit`, `resources.app_key_only`
 
+## test.api.canvas_field_update
+
+- Path: `test/api/canvas_field_update_test.dart`
+- Phases: `P2`
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+- Guardrails: `api.equality_policy_explicit`
+
+## test.api_contract.canvas_field_update_static_semantics
+
+- Path: `test/api_contract/canvas_field_update_static_semantics_test.dart`
+- Phases: `P2`
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+- Guardrails: `api.public_api_compiles_as_written`, `api.public_signature_shape`, `api.public_types_complete`
+
 ## test.api_contract.no_undefined_public_type_references
 
 - Path: `test/api_contract/no_undefined_public_type_references_test.dart`
@@ -218,6 +232,13 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P5`
 - Sections: `section_11_edit_kernel`, `section_23_tests`
 - Guardrails: `edit.rollback_no_effects`
+
+## test.edit.field_update_nullable_semantics
+
+- Path: `test/edit/field_update_nullable_semantics_test.dart`
+- Phases: `P5`
+- Sections: `section_04_public_api_v1`, `section_11_edit_kernel`, `section_23_tests`
+- Guardrails: `edit.operation_matrix_complete`, `edit.no_global_invalidation_except_replacement`
 
 ## test.edit.typed_effects_no_frame_dependency
 

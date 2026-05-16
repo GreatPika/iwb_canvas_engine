@@ -84,7 +84,7 @@ Every donor is mapped to target phases. `avoid` records are forbidden as structu
 
 - Decision: `copy_adapt`
 - Target phases: `P2`
-- Target owner: CanvasOptional update semantics
+- Target owner: CanvasFieldUpdate update semantics
 
 ## foundation_immutable_collections
 

@@ -72,6 +72,7 @@ Validation is applied at:
 ```text
 - public DTO construction;
 - edit/update construction;
+- dynamic or generated `CanvasFieldUpdate` materialization;
 - edit preflight;
 - schema decode;
 - loadDocument materialization;
@@ -80,5 +81,10 @@ Validation is applied at:
 - interaction config mutation;
 - pointer sample routing.
 ```
+
+`CanvasFieldUpdate` carries static nullability guarantees for ordinary public
+API consumers, but boundary materialization still validates dynamic, generated,
+schema, and test-created update values. Invalid clear requests for non-nullable
+fields are rejected before draft mutation or any runtime effect.
 
 ---

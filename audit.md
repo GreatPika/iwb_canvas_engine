@@ -7,8 +7,7 @@
 
 ## Порядок выполнения
 
-- [ ] P1: закрыть публичный API до freeze: HOLE-005, HOLE-006, HOLE-007 и
-      HOLE-008.
+- [ ] P1: закрыть публичный API до freeze: HOLE-006, HOLE-007 и HOLE-008.
 - [ ] P2: расширить operation matrix до полного покрытия публичного API:
       HOLE-002.
 - [ ] P3: уточнить resources/surface lifecycle до реализации P7/P13-зон:
@@ -19,7 +18,6 @@
 ## Блокеры API freeze
 
 - [ ] HOLE-002: `operation_matrix.md` покрывает все публичные state/effect операции.
-- [ ] HOLE-005: `CanvasOptional.value(null)` имеет однозначную запрещённую или каноническую семантику.
 - [ ] HOLE-006: публичные DTO совместимы с validation, `const` и defensive copy policy.
 - [ ] HOLE-007: имена публичных error codes совпадают между prose и enum.
 - [ ] HOLE-008: `api.integration_surface_complete` доказан внешним compile fixture.
@@ -122,28 +120,6 @@ pointer-owned preview, поэтому текущий текст допускае
 - [ ] Добавить тест `surface.interactive_false_cancels_active_pointer_preview`.
 - [ ] Добавить тест `surface.interactive_false_preserves_non_active_pending_line`.
 - [ ] Добавить тест `surface.interactive_false_does_not_mutate_committed_document_selection_resources`.
-
----
-
-## HOLE-005 — `CanvasOptional.value(null)` неоднозначен
-
-Статус: Yellow.
-
-Почему это дыра: для nullable `T` технически возможно
-`CanvasOptional<Size?>.value(null)`. Контракт различает `absent`, `value(x)` и
-`nullValue()`, но явно не говорит, является ли `value(null)` запрещённым,
-эквивалентом `nullValue()` или отдельным состоянием.
-
-Нужно закрыть:
-
-- [ ] Выбрать одно правило:
-  - предпочтительно запретить `CanvasOptional.value(null)` всегда;
-  - или канонизировать `CanvasOptional.value(null)` в `CanvasOptional.nullValue()`.
-- [ ] Зафиксировать правило в `docs/contracts/public_api_v1.md`.
-- [ ] Зафиксировать update compiler behavior для nullable fields.
-- [ ] Добавить тест `api.canvas_optional_value_null_rejected`, если выбран запрет.
-- [ ] Добавить тест `api.canvas_optional_null_value_only_for_nullable_fields`.
-- [ ] Добавить тест `edit.optional_nullable_field_update_semantics`.
 
 ---
 
