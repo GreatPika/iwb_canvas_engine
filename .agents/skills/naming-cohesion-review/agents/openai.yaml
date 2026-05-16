@@ -1,0 +1,4 @@
+interface:
+  display_name: "Naming Cohesion Review"
+  short_description: "Review naming and file cohesion in code changes."
+  default_prompt: "Review the current changes for naming quality and file cohesion."
