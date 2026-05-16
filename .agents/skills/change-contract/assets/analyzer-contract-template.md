@@ -4,6 +4,8 @@
 
 ## 2. Change Boundary
 
+### Change Surface Summary
+
 ### Included in the Change
 
 ### Not Included in the Change
@@ -56,25 +58,19 @@
 
 ## 7. Execution Order and Gates
 
+### Preconditions
+
 ### Required Order
 
 ### Successor Seam and Retirement Gates
 
+### Seam Migration Matrix
+
+### Cross-Slice Finalization
+
 ### Deferred Broad Verification
 
-## 8. File Map
-
-### Analyzer or Rule Owner Files
-
-### Implementation Files
-
-### Test Files
-
-### Fixtures and Supporting Data
-
-### Registry, Inventory, and Workflow Files
-
-## 9. Implementation Rules
+## 8. Implementation Rules
 
 ### Protected Invariants
 
@@ -90,26 +86,28 @@
 
 ### Forbidden Moves
 
-## 10. Vertical Slices
+## 9. Vertical Slices
 
 ### Slice 1. [ ]
 
 #### Slice Contract
 
+#### Files
+
 #### Change
 
-#### Behavioral Verification
+#### Slice Verification
 
-#### Structural Verification
+##### Reproducer Proof
 
-#### Fixtures Used
+##### Semantic Proof
 
-#### Positive Scenarios
+##### Structural Proof
 
-#### Negative Scenarios
+##### Broad Checks
 
-#### Closure Evidence
+#### Closure Gate
 
-## 11. Final Verification
+## 10. Final Verification
 
-## 12. Acceptance Criteria
+## 11. Acceptance Criteria

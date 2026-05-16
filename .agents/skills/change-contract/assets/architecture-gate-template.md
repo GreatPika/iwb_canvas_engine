@@ -4,6 +4,8 @@
 
 ## 2. Change Boundary
 
+### Change Surface Summary
+
 ### Included in the Change
 
 ### Not Included in the Change
