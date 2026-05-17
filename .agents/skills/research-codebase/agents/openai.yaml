@@ -1,0 +1,4 @@
+interface:
+  display_name: "Research Codebase"
+  short_description: "Research and document existing codebase behavior with exact file references."
+  default_prompt: "Research the requested codebase area and save a factual research note."
