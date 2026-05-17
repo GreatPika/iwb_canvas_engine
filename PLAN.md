@@ -26,3 +26,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 4. DTO metadata immutability and const policy](plan/step_4_dto_metadata_immutability_and_const_policy.md)
 - [x] [Step 5. Selection runtime ownership documentation](plan/step_5_selection_runtime_ownership_documentation.md)
 - [x] [Step 6. Public runtime state and view camera ownership](plan/step_6_public_runtime_state_and_view_camera_ownership.md)
+- [ ] [Step 7. Frame cache invalidation facts split](plan/step_7_frame_cache_invalidation_facts_split.md)
