@@ -138,6 +138,7 @@ stateDiagram-v2
     selection, preview, or action streams.
   end note
   DirtySignal --> VisualRevisionChanged: increment resourceVisualRevision
+  VisualRevisionChanged --> DirtyCacheInvalidated: publish CanvasRuntimeState with state.revisions.resourceVisual
   VisualRevisionChanged --> DirtyCacheInvalidated: evict target resource or all entries
   DirtyCacheInvalidated --> RuntimeActive: schedule main repaint
 

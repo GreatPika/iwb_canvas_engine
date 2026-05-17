@@ -55,15 +55,14 @@ projection, resource effects, action events, no-op и rollback semantics. Есл
 - [ ] Добавить строки или явные alias-строки для `setDrawTool`.
 - [ ] Добавить строки или явные alias-строки для `setDrawColor`.
 - [ ] Добавить строки или явные alias-строки для `setPointerPolicy`.
-- [ ] Добавить строки или явные alias-строки для `setOffset`.
-- [ ] Добавить строки или явные alias-строки для `panBy`.
 - [ ] Добавить строки или явные alias-строки для `markAllResourcesDirty`.
 - [ ] Добавить строки или явные alias-строки для text double-tap / text edit request.
 - [ ] Для каждой строки указать touched state.
-- [ ] Для каждой строки указать `documentRevision`.
+- [ ] Для каждой строки указать public `CanvasRuntimeState` revision effects.
+- [ ] Для document-owned строк указать `documentRevision`.
 - [ ] Для каждой строки указать `boundsRevision`.
-- [ ] Для каждой строки указать `frameMetaRevision`.
-- [ ] Для каждой строки указать `previewRevision`.
+- [ ] Для background/grid/surface-style строк указать internal `frameMetaRevision`.
+- [ ] Для preview-owned строк указать `previewRevision`.
 - [ ] Для каждой строки указать spatial effect.
 - [ ] Для каждой строки указать projection effect.
 - [ ] Для каждой строки указать resource effect.
@@ -72,6 +71,10 @@ projection, resource effects, action events, no-op и rollback semantics. Есл
 - [ ] Для каждой строки указать no-op behavior.
 - [ ] Для каждой строки указать rollback behavior.
 - [ ] Добавить или обновить guardrail/test mapping, чтобы новые matrix rows были проверяемыми.
+
+Принято в Step 6: `CanvasCameraPort.setOffset` и `panBy` покрыты как runtime
+view camera операции через public `state.revisions.viewCamera`; они не являются
+document edits. Persisted camera changes remain on `CanvasEdit.setCameraOffset`.
 
 ---
 

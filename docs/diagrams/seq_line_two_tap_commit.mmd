@@ -20,7 +20,8 @@ sequenceDiagram
   participant Spatial as SpatialKernel
   participant Projection as DocumentProjectionCache
   participant Events as EventBuffer
-  participant Signals as Public signals
+  participant Runtime as RuntimeRoot
+  participant Signals as Public state/effects
 
   User->>Surface: first tap in draw mode with line tool
   Surface->>Tools: handlePointer(CanvasPointerSample down/up)
@@ -34,6 +35,8 @@ sequenceDiagram
   IE->>IE: store pending line start bound to current epoch
   IE->>Preview: publish kind pendingLineStart with start, timestamp, color, and thickness
   Note over IE,Preview: Pending line session is epoch-bound. Preview snapshot is immutable and no committed document state is touched.
+  Preview-->>Runtime: preview revision fact
+  Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
   Preview->>Frame: request overlay repaint only
   Frame->>Preview: capture previewRevision and pending line start once
   Frame->>Frame: build immutable pending-line overlay primitive
@@ -47,6 +50,8 @@ sequenceDiagram
     IE->>IE: verify pending line epoch matches current controllerEpoch
     IE->>Preview: replace with kind linePreview using same start and preview end
     Note over IE,Frame: Line preview is overlay-only and no selected-move main-scene preview delta is staged.
+    Preview-->>Runtime: preview revision fact
+    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request overlay repaint only
     Frame->>Preview: capture previewRevision and line preview once
     Frame->>Geometry: build finite line preview bounds from start, end, and thickness
@@ -65,6 +70,8 @@ sequenceDiagram
     Tools->>IE: cleanup pending line state
     IE->>Preview: clear pending line or line preview
     IE->>Preview: bump previewRevision for cleared active preview
+    Preview-->>Runtime: preview cleanup revision fact
+    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without line preview
@@ -80,6 +87,8 @@ sequenceDiagram
     Tools->>IE: invalid terminal sample for cleanup only
     IE->>Preview: clear pending line or line preview
     IE->>Preview: bump previewRevision for cleared active preview
+    Preview-->>Runtime: preview cleanup revision fact
+    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without line preview
@@ -94,6 +103,8 @@ sequenceDiagram
     alt line validation rejects
       IE->>Preview: clear pending line or line preview
       IE->>Preview: bump previewRevision for cleared active preview
+      Preview-->>Runtime: preview cleanup revision fact
+      Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Preview->>Frame: request overlay repaint cleanup
       Frame->>Signals: publish overlay cleanup repaint request
       Signals-->>Surface: repaint overlay without line preview
@@ -114,40 +125,46 @@ sequenceDiagram
       EK->>EK: reject Future result before success path
       EK->>CC: compile exact add-line touched set and invalidation
       Touched-->>CC: added id and revision facts
-      CC->>Store: preflight invariants and finite line row validation
-      Store-->>CC: preflight accepted
-      CC->>Effects: prepare typed main RepaintIntent
-      CC->>Events: attach staged drawLine action to commit
-      CC->>Applier: hand off compiled CommitPlan
-      Applier->>Store: install compiled CommitPlan atomically
-      Store->>Store: replace layer membership, registry, line row, and revision state
-      Note over Applier,Store: Atomic install is the commit boundary. InteractionEngine never mutates Store directly.
-      Store-->>Applier: committed revision facts
-      Applier->>Spatial: apply touched-id spatial add for new line id
-      Spatial-->>Applier: spatial index updated for new paint and hit bounds
-      Applier->>Projection: evict public document projection by projectionRevision
-      Applier->>Events: materialize CanvasActionCommitted drawLine after install
-      Applier->>Frame: publish committed main repaint bus
-      EK->>EK: close edit session and stale handle
-      EK-->>IE: edit result
-      IE->>Preview: clear pending line or line preview
-      IE->>Preview: bump previewRevision for cleared active preview
-      Preview->>Frame: request overlay repaint cleanup
-      Events->>Signals: publish document revision and drawLine action notifications
-      Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
-      Signals-->>Surface: repaint main scene with committed line and overlay without preview
-      IE-->>Tools: terminal handling complete
+      alt commit preflight and install succeed
+        CC->>Store: preflight invariants and finite line row validation
+        Store-->>CC: preflight accepted
+        CC->>Effects: prepare typed main RepaintIntent
+        CC->>Events: attach staged drawLine action to commit
+        CC->>Applier: hand off compiled CommitPlan
+        Applier->>Store: install compiled CommitPlan atomically
+        Store->>Store: replace layer membership, registry, line row, and revision state
+        Note over Applier,Store: Atomic install is the commit boundary. InteractionEngine never mutates Store directly.
+        Store-->>Applier: committed revision facts
+        Applier->>Spatial: apply touched-id spatial add for new line id
+        Spatial-->>Applier: spatial index updated for new paint and hit bounds
+        Applier->>Projection: evict public document projection by projectionRevision
+        Applier->>Events: materialize CanvasActionCommitted drawLine after install
+        Applier->>Frame: publish committed main repaint bus
+        EK->>EK: close edit session and stale handle
+        EK-->>IE: edit result
+        IE->>Preview: clear pending line or line preview
+        IE->>Preview: bump previewRevision for cleared active preview
+        Preview->>Frame: request overlay repaint cleanup
+        Preview-->>Runtime: preview cleanup revision fact
+        Applier-->>Runtime: committed document facts
+        Runtime->>Signals: publish CanvasRuntimeState after document and preview effects
+        Events->>Signals: publish drawLine action notification
+        Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
+        Signals-->>Surface: repaint main scene with committed line and overlay without preview
+        IE-->>Tools: terminal handling complete
+      else edit exception, rejected Future, or preflight failure
+        EK->>Events: discard pending drawLine action
+        EK->>EK: rollback draft and close session
+        EK-->>IE: terminal failure
+        IE->>Preview: clear pending line or line preview
+        IE->>Preview: bump previewRevision for cleared active preview
+        Preview-->>Runtime: preview cleanup revision fact
+        Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+        Preview->>Frame: request overlay repaint cleanup
+        Frame->>Signals: publish overlay cleanup repaint request
+        Signals-->>Surface: repaint overlay without line preview
+        Note over Store,Signals: Rollback keeps committed document revisions, spatial index, projection cache, main repaint, and drawLine action unchanged.
+        Note over Runtime,Signals: Active preview cleanup publishes only preview state.
+      end
     end
-  end
-
-  opt edit exception, rejected Future, or preflight failure
-    EK->>Events: discard pending drawLine action
-    EK->>EK: rollback draft and close session
-    EK-->>IE: terminal failure
-    IE->>Preview: clear pending line or line preview
-    IE->>Preview: bump previewRevision for cleared active preview
-    Preview->>Frame: request overlay repaint cleanup
-    Frame->>Signals: publish overlay cleanup repaint request
-    Signals-->>Surface: repaint overlay without line preview
-    Note over Store,Signals: Rollback keeps committed document revisions, spatial index, projection cache, main repaint, public document notifications, and drawLine action unchanged.
   end

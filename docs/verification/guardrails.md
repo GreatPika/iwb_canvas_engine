@@ -135,14 +135,14 @@ Mandatory guardrails:
 | `api.no_legacy_public_types` | legacy public golden symbols not exported by root package |
 | `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |
 | `api.public_types_complete` | all public signatures reference defined public types |
-| `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package |
+| `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package, including `CanvasRuntime.state` and exported runtime state snapshot types while excluding retired document/preview listener getters |
 | `api.resource_source_app_key_publicly_readable` | external resolver code can read `CanvasAppKeyResourceSource.key` from `CanvasImageResource.source` through the public barrel only |
 | `api.exported_dartdoc_complete` | exported public declarations have non-empty Dart documentation summaries before API freeze |
 | `api.public_class_modifiers_explicit` | every exported public class chooses an explicit Dart 3 subtype/implementation policy |
 | `api.public_signature_shape` | public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON or diagnostic boundaries; metadata-bearing DTO signatures use exported `CanvasMetadata` |
 | `api.no_undefined_public_type_references` | every exported signature type is exported or from Flutter/Dart SDK |
 | `api.dto_immutability` | DTO collections are defensively copied and unmodifiable; `CanvasMetadata` is deep-frozen; collection/metadata constructors are non-const while scalar-only and marker variants keep only approved const forms |
-| `api.equality_policy_explicit` | public value equality is explicit for concrete public classes and covered by API contract tests |
+| `api.equality_policy_explicit` | public value equality is explicit for concrete public classes, including runtime state snapshot types, and covered by API contract tests |
 | `api.id_validation_no_extension_type_escape` | ids cannot be publicly constructed without validation |
 | `core.no_legacy_imports` | no import of legacy package/runtime |
 | `core.import_boundaries` | package-owned source paths obey source boundary rules and the forbidden import matrix from `section_03_package_layout` |
@@ -177,10 +177,10 @@ Mandatory guardrails:
 | `frame.paint_plan_excludes_preview_delta` | PaintPlanCache stores ordinary committed records only and excludes selectedMoveDelta/previewDelta from keys and values |
 | `frame.paint_plan_excludes_selection_state` | PaintPlanCache stores ordinary committed records only and excludes selected ids, selectionRevision, and selection flags from keys and values |
 | `cache.keys_use_next_revisions_only` | cache keys use next-owned revision facts and stable inputs, not legacy snapshot shapes |
-| `cache.frame_meta_not_element_visual` | camera/background/grid use frameMetaRevision and must not invalidate ordinary element paint plans |
+| `cache.frame_meta_not_element_visual` | background/grid frame-meta changes and runtime view camera changes must not invalidate ordinary element paint plans |
 | `cache.hot_caches_have_capacity_eviction` | hot caches declare capacity, eviction policy, invalidation owner, and metric/probe |
 | `resources.mutation_inside_edit_only` | resource descriptor mutation only via CanvasEdit |
-| `resources.dirty_no_document_revision` | markResourceDirty does not increment documentRevision |
+| `resources.dirty_no_document_revision` | markResourceDirty publishes `state.revisions.resourceVisual` and does not increment `state.revisions.document` |
 | `resources.app_key_only` | resource descriptors use appKey only |
 | `resources.resolver_boundary_owned_by_resource_kernel` | painters and frame code never call CanvasResourceResolver directly; ResourceKernel owns resolver access |
 | `resources.resolver_frame_budget` | ResourceKernel enforces per-frame sync resolver call budget and budget-exceeded placeholders are not cached as null/missing |

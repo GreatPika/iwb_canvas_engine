@@ -82,6 +82,7 @@ double-tap request routing.
 - `test.geometry.eraser_exact_budget_no_partial_commit` -> `test/geometry/eraser_exact_budget_no_partial_commit_test.dart`
 - `test.api.typed_action_payloads` -> `test/api/typed_action_payloads_test.dart`
 - `test.interaction.commands_emit_user_actions` -> `test/interaction/commands_emit_user_actions_test.dart`
+- `test.interaction.preview_public_state` -> `test/interaction/preview_public_state_test.dart`
 - `test.interaction.state_machines` -> `test/interaction/state_machines_test.dart`
 - `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
 - `geometry.eraser_exact_budget_no_partial`
@@ -94,6 +95,9 @@ double-tap request routing.
 ## Exit gate
 
 - eraser preview tests green
+- eraser preview and active eraser cleanup publish `state.revisions.preview`
+  without document, selection, resourceVisual, interaction, viewCamera, or action
+  effects; empty cleanup is silent
 - eraser commit tests green
 - eraser exact-check budget exceeded produces no partial erase
 - eraser action is emitted only when elements are erased after atomic install

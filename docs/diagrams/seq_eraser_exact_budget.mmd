@@ -19,7 +19,8 @@ sequenceDiagram
   participant Frame as FrameEngine
   participant Events as EventBuffer
   participant Diagnostics as DiagnosticsHub
-  participant Signals as Public signals
+  participant Runtime as RuntimeRoot
+  participant Signals as Public state/effects
 
   User->>Surface: eraser down/move samples
   Surface->>Tools: handlePointer(normalized finite samples)
@@ -30,6 +31,8 @@ sequenceDiagram
 
   alt preview spatial budget exceeded
     IE->>Preview: publish corridor-only preview, no tentative ids
+    Preview-->>Runtime: preview revision fact
+    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request overlay repaint for corridor only
     IE->>Diagnostics: increment eraser preview budget-exceeded probe
     Note over EK,Signals: Preview budget exceeded produces no document mutation, selection change, spatial update, projection/cache eviction, main repaint, or erase action.
@@ -39,12 +42,16 @@ sequenceDiagram
     alt preview candidate/check budget exceeded
       Geometry-->>IE: preview budget exceeded
       IE->>Preview: publish corridor-only preview, no tentative ids
+      Preview-->>Runtime: preview revision fact
+      Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Preview->>Frame: request overlay repaint for corridor only
       IE->>Diagnostics: increment eraser preview budget-exceeded probe
       Note over EK,Signals: Preview budget exceeded produces no document mutation, selection change, spatial update, projection/cache eviction, main repaint, or erase action.
     else preview budget accepts
       Geometry-->>IE: tentative ids for preview only
       IE->>Preview: publish eraser preview with tentative ids
+      Preview-->>Runtime: preview revision fact
+      Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Preview->>Frame: request overlay repaint
     end
   end
@@ -60,7 +67,9 @@ sequenceDiagram
     IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request overlay cleanup repaint only
     IE->>Diagnostics: increment eraser terminal budget-exceeded probe
-    Note over Store,Signals: Terminal budget exceeded is cleanup/no-op: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action. Public document notification is also forbidden.
+    Preview-->>Runtime: preview cleanup revision fact
+    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+    Note over Store,Signals: Terminal budget exceeded is cleanup/no-op for committed content: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.
   else terminal spatial candidates returned
     IE->>Geometry: terminal exact checks for deletable non-background candidates(segment-to-family)
     Note over Geometry: Terminal budget is 4096 candidates / 32768 exact checks.
@@ -70,14 +79,18 @@ sequenceDiagram
       IE->>Preview: bump previewRevision for cleared active preview
       Preview->>Frame: request overlay cleanup repaint only
       IE->>Diagnostics: increment eraser terminal budget-exceeded probe
-      Note over Store,Signals: Terminal budget exceeded is cleanup/no-op: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action. Public document notification is also forbidden.
+      Preview-->>Runtime: preview cleanup revision fact
+      Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+      Note over Store,Signals: Terminal budget exceeded is cleanup/no-op for committed content: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.
     else terminal exact ids accepted
       Geometry-->>IE: exact deletable non-background ids
       alt terminal exact ids empty
         IE->>Preview: clear eraser corridor preview
         IE->>Preview: bump previewRevision for cleared active preview
         Preview->>Frame: request overlay cleanup repaint only
-        Note over Store,Signals: Empty terminal exact set is cleanup/no-op: no document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, public document notification, or erase action.
+        Preview-->>Runtime: preview cleanup revision fact
+        Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+        Note over Store,Signals: Empty terminal exact set is cleanup/no-op for committed content: no document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.
       else terminal exact ids non-empty
         IE->>EK: open synchronous interaction edit
         EK->>Store: read committed revision snapshot
@@ -95,7 +108,10 @@ sequenceDiagram
         IE->>Preview: clear eraser corridor preview
         IE->>Preview: bump previewRevision for cleared active preview
         Preview->>Frame: request overlay cleanup repaint
-        Events->>Signals: publish document revision and erase action notifications
+        Preview-->>Runtime: preview cleanup revision fact
+        Applier-->>Runtime: committed document and selection facts
+        Runtime->>Signals: publish CanvasRuntimeState after document, selection, and preview effects
+        Events->>Signals: publish erase action notification
         Frame->>Signals: publish main repaint and overlay cleanup repaint
       end
     end

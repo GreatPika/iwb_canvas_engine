@@ -22,7 +22,8 @@ sequenceDiagram
   participant Applier as CommitApplier
   participant Projection as DocumentProjectionCache
   participant Events as EventBuffer
-  participant Signals as Public signals
+  participant Runtime as RuntimeRoot
+  participant Signals as Public state/effects
 
   User->>Surface: pointer down
   Surface->>Tools: handlePointer(CanvasPointerSample down)
@@ -42,6 +43,8 @@ sequenceDiagram
     Note over IE: Session stores pointer token, sessionId, start position, selected ids, movable ids, and delta Offset.zero.
     IE->>Preview: publish kind selectedMove, selectedMoveDelta Offset.zero
     IE->>Preview: bump previewRevision for selected move preview
+    Preview-->>Runtime: preview revision fact
+    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
   else down is not admitted for selected move
     IE-->>Tools: route to other move mode behavior or ignore
   end
@@ -54,6 +57,8 @@ sequenceDiagram
     Note over IE,Spatial: No per-delta hit-test. Preview uses selected ids and the session delta captured at pointer down.
     IE->>Preview: replace immutable snapshot with selectedMoveDelta
     IE->>Preview: bump previewRevision when selectedMoveDelta changes
+    Preview-->>Runtime: preview revision fact
+    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request main-scene repaint only
     Frame->>Store: capture committed frame facts once
     Frame->>SelectionFacts: capture selected ids once
@@ -88,6 +93,8 @@ sequenceDiagram
   alt proposedDelta is zero or movable set is empty
     IE->>Preview: clear selected move preview and session
     IE->>Preview: bump previewRevision for cleared active preview
+    Preview-->>Runtime: preview cleanup revision fact
+    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request main-scene repaint cleanup
     IE-->>Tools: finish with no edit and no action event
   else moved selection
@@ -106,11 +113,15 @@ sequenceDiagram
     alt CanvasMoveCancel returned
       IE->>Preview: clear selected move preview and session
       IE->>Preview: bump previewRevision for cleared active preview
+      Preview-->>Runtime: preview cleanup revision fact
+      Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Preview->>Frame: request main-scene repaint cleanup
       IE-->>Tools: finish with no edit and no action event
     else resolver throws or returns non-finite delta
       IE->>Preview: clear selected move preview and session
       IE->>Preview: bump previewRevision for cleared active preview
+      Preview-->>Runtime: preview cleanup revision fact
+      Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Preview->>Frame: request main-scene repaint cleanup
       Note over EK,Store: No edit opens, no committed state changes, and no action event is published.
       IE-->>Tools: rethrow projected runtime-safe error
@@ -132,27 +143,45 @@ sequenceDiagram
       EK->>CC: compile exact touched set, revisions, invalidation, repaint intent
       Touched-->>CC: transformed ids and revision facts
       Note over CC: Projection revision and eviction are compiler effects, not TouchedSet fields.
-      CC->>Store: preflight invariants
-      Store-->>CC: preflight accepted
-      CC->>Effects: prepare typed main RepaintIntent
-      CC->>Events: attach staged moveSelection event to commit
-      CC->>Applier: hand off compiled CommitPlan
-      Applier->>Store: install compiled CommitPlan atomically
-      Store->>Store: replace transform rows and revision state
-      Note over Applier,Store: Atomic install is the commit boundary.
-      Store-->>Applier: committed revision facts
-      Applier->>Spatial: apply touched-id spatial update
-      Applier->>Projection: evict public projection cache by projectionRevision
-      Applier->>Events: commit buffered action and revision effects
-      Applier->>Frame: publish committed main repaint bus
-      EK->>EK: close edit session and stale handle
-      EK-->>IE: edit result
-      IE->>Preview: clear selected move preview and session
-      IE->>Preview: bump previewRevision for cleared active preview
-      Preview->>Frame: request main-scene repaint cleanup
-      Events->>Signals: publish document and action notifications
-      Frame->>Signals: publish committed and cleanup main repaint notifications
-      Signals-->>Surface: repaint main scene without preview delta
-      IE-->>Tools: terminal handling complete
+      alt commit preflight and install succeed
+        CC->>Store: preflight invariants
+        Store-->>CC: preflight accepted
+        CC->>Effects: prepare typed main RepaintIntent
+        CC->>Events: attach staged moveSelection event to commit
+        CC->>Applier: hand off compiled CommitPlan
+        Applier->>Store: install compiled CommitPlan atomically
+        Store->>Store: replace transform rows and revision state
+        Note over Applier,Store: Atomic install is the commit boundary.
+        Store-->>Applier: committed revision facts
+        Applier->>Spatial: apply touched-id spatial update
+        Applier->>Projection: evict public projection cache by projectionRevision
+        Applier->>Events: commit buffered action event
+        Applier->>Frame: publish committed main repaint bus
+        EK->>EK: close edit session and stale handle
+        EK-->>IE: edit result
+        IE->>Preview: clear selected move preview and session
+        IE->>Preview: bump previewRevision for cleared active preview
+        Preview->>Frame: request main-scene repaint cleanup
+        Preview-->>Runtime: preview cleanup revision fact
+        Applier-->>Runtime: committed document facts
+        Runtime->>Signals: publish CanvasRuntimeState after document and preview effects
+        Events->>Signals: publish move action notification
+        Frame->>Signals: publish committed and cleanup main repaint notifications
+        Signals-->>Surface: repaint main scene without preview delta
+        IE-->>Tools: terminal handling complete
+      else edit exception, rejected Future, or preflight failure
+        EK->>Events: discard pending moveSelection action
+        EK->>EK: rollback draft and close session
+        EK-->>IE: terminal failure
+        IE->>Preview: clear selected move preview and session
+        IE->>Preview: bump previewRevision for cleared active preview
+        Preview-->>Runtime: preview cleanup revision fact
+        Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+        Preview->>Frame: request main-scene repaint cleanup
+        Frame->>Signals: publish cleanup main repaint notification
+        Signals-->>Surface: repaint main scene without preview delta
+        Note over Store,Signals: Rollback keeps committed document revisions, spatial index, projection cache, committed main repaint, and moveSelection action unchanged.
+        Note over Runtime,Signals: Active preview cleanup publishes only preview state.
+      end
     end
   end

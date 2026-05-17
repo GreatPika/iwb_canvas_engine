@@ -3,6 +3,9 @@
 public_exports:
   - CanvasRuntime
   - CanvasRuntimeConfig
+  - CanvasRuntimeState
+  - CanvasRuntimeRevisions
+  - CanvasRuntimeSummary
   - CanvasSurface
   - CanvasDocument
   - CanvasDocumentSummary

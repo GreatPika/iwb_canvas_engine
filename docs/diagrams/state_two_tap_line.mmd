@@ -44,8 +44,9 @@ stateDiagram-v2
   note right of LinePreview
     Preview facts are immutable overlay state. No selected-move
     main-scene preview, resolver call, Store mutation, spatial
-    update, projection eviction, action, or document notification
-    is allowed while previewing.
+    update, projection eviction, action, or document effect is
+    allowed while previewing. Preview changes publish
+    CanvasRuntimeState through state.revisions.preview.
   end note
 
   LinePreview --> LinePreview: finite move with same tool and controllerEpoch / replace overlay preview end
@@ -92,25 +93,27 @@ stateDiagram-v2
   state "Cleanup after successful commit" as CleanupAfterCommit
   note right of CleanupAfterCommit
     Pending start and overlay preview are cleared before public
-    document/action/repaint signals are observed.
+    CanvasRuntimeState, action, and repaint effects are observed.
   end note
 
   CleanupAfterCommit --> PublishCommitSignals: pending line and preview cleared
 
   state "Publish successful commit signals" as PublishCommitSignals
   note right of PublishCommitSignals
-    Publish document revision notification, drawLine action,
-    main repaint for the committed line, and overlay cleanup
-    repaint only after the successful EditKernel outcome.
+    Publish one CanvasRuntimeState with document and preview
+    revisions, drawLine action, main repaint for the committed
+    line, and overlay cleanup repaint only after the successful
+    EditKernel outcome.
   end note
   PublishCommitSignals --> Idle: signals published
 
   state "Cleanup only / no committed effects" as CleanupOnly
   note left of CleanupOnly
     Clears pending start and line overlay preview only. No line
-    element, document notification, drawLine action, spatial delta,
+    element, document effect, drawLine action, spatial delta,
     projection eviction, or main-scene preview is produced.
-    previewRevision advances only when pending preview was visible.
+    previewRevision advances and publishes CanvasRuntimeState only
+    when pending preview was visible.
   end note
   CleanupOnly --> OverlayCleanup: pending overlay was visible
   CleanupOnly --> Idle: no visible overlay

@@ -130,6 +130,8 @@
     - test.api_contract.public_equality_policy
     - test.api.typed_action_payloads
     - test.runtime.dispose_lifecycle
+    - test.runtime.runtime_state_publication
+    - test.runtime.interaction_settings_state
     - test.flutter_bridge.interactive_false_pending_line_preserved
     - test.flutter_bridge.single_active_surface
     - test.api_contract.v1_scope_gate
@@ -336,6 +338,9 @@
     - projection.only_explicit_read_paths
   tests:
     - test.runtime.dispose_lifecycle
+    - test.runtime.runtime_state_publication
+    - test.runtime.load_document_state_publication
+    - test.runtime.interaction_settings_state
     - test.store.read_document_projection
     - test.selection.runtime_owner_separation
     - test.store.no_projection_hot_path
@@ -377,6 +382,7 @@
     - edit.typed_effects_no_frame_dependency
   tests:
     - test.edit.low_level_mutations_do_not_emit_actions
+    - test.runtime.runtime_state_publication
     - test.edit.sync_non_nested_async_stale
     - test.edit.rollback
     - test.edit.field_update_nullable_semantics
@@ -412,6 +418,7 @@
     - load.success_interrupts_before_install
   tests:
     - test.edit.staged_document_load_success_failure
+    - test.runtime.load_document_state_publication
   do_not_assume:
     - no interrupt before successful preparation
     - no prepared replacement in public API
@@ -503,6 +510,8 @@
     - test.flutter_bridge.interactive_false_active_session_cancel
     - test.flutter_bridge.interactive_false_pending_line_preserved
     - test.flutter_bridge.pointer_adapter_finite_normalization
+    - test.runtime.interaction_settings_state
+    - test.interaction.preview_public_state
     - test.interaction.state_machines
     - test.interaction.move_resolver_reentrancy
     - test.interaction.move_resolver_not_called_on_cancel_cleanup
@@ -941,6 +950,9 @@
     - test.api_contract.v1_scope_gate
     - test.codec.constructor_and_schema_limits
     - test.runtime.dispose_lifecycle
+    - test.runtime.runtime_state_publication
+    - test.runtime.load_document_state_publication
+    - test.runtime.interaction_settings_state
     - test.store.read_document_projection
     - test.store.no_projection_hot_path
     - test.store.public_document_is_projection_only
@@ -965,6 +977,7 @@
     - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
     - test.frame.cache_capacity_eviction_policy
     - test.frame.selected_supplement_staging_no_global_sort
+    - test.interaction.preview_public_state
     - test.interaction.state_machines
     - test.interaction.move_resolver_reentrancy
     - test.interaction.move_resolver_not_called_on_cancel_cleanup

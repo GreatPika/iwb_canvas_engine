@@ -4,6 +4,7 @@ sequenceDiagram
 
   participant Surface as CanvasSurface
   participant Frame as FrameEngine
+  participant ViewCamera as Runtime view camera
   participant Store as DocumentStoreKernel
   participant SelectionFacts as SelectionFactsPort
   participant Preview as CanvasPreviewState
@@ -13,9 +14,11 @@ sequenceDiagram
   participant Resolver as CanvasResourceResolver
   participant Painter as Main painter
 
-  Surface->>Frame: paint main scene request(viewportRect, cameraOffset, dpr, resolver)
-  Frame->>Store: capture committed tables, document revisions, camera, and resources once
-  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, elementVisualRevision, frameMetaRevision, resourceVisualRevision, cameraOffset
+  Surface->>Frame: paint main scene request(viewportRect, dpr, resolver)
+  Frame->>Store: capture committed tables, document revisions, and resources once
+  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, elementVisualRevision, frameMetaRevision, resourceVisualRevision
+  Frame->>ViewCamera: capture runtime view camera facts once
+  ViewCamera-->>Frame: viewCameraRevision and viewCameraOffset
   Frame->>SelectionFacts: capture selected ids and selectionRevision once
   SelectionFacts-->>Frame: selectionRevision and selectionIds
   Frame->>Frame: build CapturedMainFrame with viewportRect from paint request
@@ -24,7 +27,7 @@ sequenceDiagram
   Note over Frame: CapturedMainFrame freezes the runtime facts used by this main paint frame.
 
   Frame->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and device keys
-  Note over Frame,PlanCache: PaintPlanCache excludes frameMetaRevision, selectionRevision, selected ids, selectedMoveDelta, and previewDelta.
+  Note over Frame,PlanCache: PaintPlanCache excludes frameMetaRevision, viewCameraRevision, viewCameraOffset, selectionRevision, selected ids, selectedMoveDelta, and previewDelta.
 
   alt ordinary paint plan cache hit
     PlanCache-->>Frame: ordinary committed RenderElementRecord list

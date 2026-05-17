@@ -15,6 +15,7 @@ helpers, and overlay frame capture exist.
 - overlay repaint for draw previews
 - stroke and line commit through `EditKernel`
 - draw style validation and adoption
+- draw mode/style/tool/color changes publish `state.revisions.interaction`
 - typed draw action payloads for pencil, marker, and line
 - terminal cleanup and stale terminal rejection for draw sessions.
 
@@ -75,6 +76,8 @@ helpers, and overlay frame capture exist.
 ## Tests and guardrails that prove this phase
 
 - `test.api.typed_action_payloads` -> `test/api/typed_action_payloads_test.dart`
+- `test.runtime.interaction_settings_state` -> `test/runtime/interaction_settings_state_test.dart`
+- `test.interaction.preview_public_state` -> `test/interaction/preview_public_state_test.dart`
 - `test.interaction.commands_emit_user_actions` -> `test/interaction/commands_emit_user_actions_test.dart`
 - `test.interaction.state_machines` -> `test/interaction/state_machines_test.dart`
 - `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
@@ -92,6 +95,7 @@ helpers, and overlay frame capture exist.
 - line commit tests green
 - draw commits emit typed action payloads only after atomic install
 - draw previews repaint overlay only
+- draw previews publish `state.revisions.preview` without document revision
 - stale terminal samples do not commit
 - loadDocument failure preserves pending draw/line state where the contract requires it
 - loadDocument success clears active draw/line gesture state.

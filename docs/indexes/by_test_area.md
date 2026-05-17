@@ -214,6 +214,35 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_23_tests`
 - Guardrails: `none`
 
+## test.runtime.runtime_state_publication
+
+- Path: `test/runtime/runtime_state_publication_test.dart`
+- Phases: `P5`
+- Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_11_edit_kernel`, `section_23_tests`
+- Guardrails: `none`
+- Focus: ordinary document edits publish one coherent CanvasRuntimeState, while
+  no-op edits and no-op runtime operations remain public-state silent.
+
+## test.runtime.load_document_state_publication
+
+- Path: `test/runtime/load_document_state_publication_test.dart`
+- Phases: `P6`
+- Sections: `section_10_runtime_data_model`, `section_12_load_document`, `section_23_tests`
+- Guardrails: `none`
+- Focus: successful loadDocument publishes exactly one post-install
+  CanvasRuntimeState with document, selection, viewCamera, epoch, and
+  conditional preview cleanup revisions; failed loads publish none.
+
+## test.runtime.interaction_settings_state
+
+- Path: `test/runtime/interaction_settings_state_test.dart`
+- Phases: `P11`
+- Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_14_interaction_engine`, `section_23_tests`
+- Guardrails: `none`
+- Focus: interaction setting changes publish interaction revision changes and
+  only advance selection or preview revisions when the same operation owns
+  draw-mode selection clear or active preview cleanup.
+
 ## test.store.no_projection_hot_path
 
 - Path: `test/store/no_projection_hot_path_test.dart`
@@ -318,6 +347,18 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P9`
 - Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
 - Guardrails: `cache.frame_meta_not_element_visual`
+- Focus: runtime view camera publishes public runtime state without document
+  projection invalidation, while persisted document camera remains edit-owned.
+
+## test.interaction.preview_public_state
+
+- Path: `test/interaction/preview_public_state_test.dart`
+- Phases: `P10`, `P11`, `P12`
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+- Guardrails: `none`
+- Focus: preview-only pointer changes and active preview cleanup publish
+  state.revisions.preview without document, selection, resourceVisual,
+  interaction, viewCamera, or action effects; empty cleanup is silent.
 
 ## test.interaction.state_machines
 

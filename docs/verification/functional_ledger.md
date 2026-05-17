@@ -65,7 +65,7 @@ next API mapping after the scope gate.
 | pending line state | `CanvasPreviewState` | `functional.pending_line_preview` |
 | text edit request | `CanvasTextEditRequested` | `functional.text_edit_request` |
 | action committed event | `CanvasActionCommitted` typed payloads | `functional.action_events` |
-| camera offset | `CanvasCameraPort.offset` | `functional.camera_offset` |
+| camera offset | `CanvasCameraPort.offset` + `CanvasRuntime.state.revisions.viewCamera` | `functional.camera_offset` |
 | background color | `setBackgroundColor` | `functional.background_color` |
 | grid enabled/size/color | `CanvasGrid` | `functional.grid` |
 | palette | `CanvasPalette` | `functional.palette_roundtrip` |

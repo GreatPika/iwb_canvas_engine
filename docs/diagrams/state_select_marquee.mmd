@@ -67,7 +67,9 @@ stateDiagram-v2
     Empty-unchanged and unchanged selection paths clear
     marquee preview/session only. They do not open an edit,
     mutate Store, mutate the selection owner, emit an
-    action, or notify document listeners.
+    action, or publish document/selection state. If an active
+    marquee preview is cleared, Runtime publishes CanvasRuntimeState
+    with an updated preview revision.
   end note
 
   NoOpSelection --> OverlayCleanup: clear marquee preview and release session
@@ -77,17 +79,18 @@ stateDiagram-v2
     Selection mutation is committed only through EditKernel
     and the selection owner.
     Atomic install is the commit boundary; rollback or
-    rejection leaves selected ids and public signals
-    unchanged.
+    rejection leaves selected ids and document/selection state
+    unchanged. Active marquee preview cleanup publishes
+    CanvasRuntimeState with updated preview revision.
   end note
 
   EditCommit --> PostCommitCleanup: commit installed with selectionChanged
-  EditCommit --> OverlayCleanup: rollback, rejection, or exception / no action or document notification
+  EditCommit --> OverlayCleanup: rollback, rejection, or exception / no action or selection state publication
 
   state "Post-commit session cleanup" as PostCommitCleanup
   note right of PostCommitCleanup
     Interaction cleanup runs before action events,
-    document notifications, or repaint signals are
+    state publication, or repaint signals are
     published to observers.
   end note
 
@@ -96,8 +99,8 @@ stateDiagram-v2
   state "Committed overlay cleanup" as CommittedOverlayCleanup
   CommittedOverlayCleanup --> PublicCommitSignals: overlay cleanup queued and session released
 
-  state "Public signals after cleanup" as PublicCommitSignals
-  PublicCommitSignals --> Idle: publish selection revision, selectMarquee action, main repaint, overlay cleanup repaint
+  state "Public state/effects after cleanup" as PublicCommitSignals
+  PublicCommitSignals --> Idle: publish CanvasRuntimeState with selection/preview effects, selectMarquee action, main repaint, overlay cleanup repaint
 
   state "Invalid terminal sample" as InvalidTerminal
   note right of InvalidTerminal

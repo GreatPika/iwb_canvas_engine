@@ -46,7 +46,7 @@ Guardrails extracted from split section 22.
 
 ## api.public_api_compiles_as_written
 
-- Rule: public API declarations compile in an empty consumer package
+- Rule: public API declarations compile in an empty consumer package, including `CanvasRuntime.state` and exported runtime state snapshot types while excluding retired document/preview listener getters
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.canvas_field_update_static_semantics`, `test.api_contract.public_api_v1_compiles_as_written`, `test.guardrails.blocking_suite`
 
@@ -88,7 +88,7 @@ Guardrails extracted from split section 22.
 
 ## api.equality_policy_explicit
 
-- Rule: public value equality is explicit for concrete public classes and covered by API contract tests
+- Rule: public value equality is explicit for concrete public classes, including runtime state snapshot types, and covered by API contract tests
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api.canvas_field_update`, `test.api_contract.public_readable_union_variants`, `test.api_contract.public_equality_policy`, `test.guardrails.blocking_suite`
 
@@ -196,7 +196,7 @@ Guardrails extracted from split section 22.
 
 ## resources.dirty_no_document_revision
 
-- Rule: markResourceDirty does not increment documentRevision
+- Rule: markResourceDirty publishes `state.revisions.resourceVisual` and does not increment `state.revisions.document`
 - Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.resources.resource_dirty`, `test.resources.mark_all_resources_dirty`, `test.guardrails.blocking_suite`
 
@@ -250,7 +250,7 @@ Guardrails extracted from split section 22.
 
 ## cache.frame_meta_not_element_visual
 
-- Rule: camera/background/grid use frameMetaRevision and must not invalidate ordinary element paint plans
+- Rule: background/grid frame-meta changes and runtime view camera changes must not invalidate ordinary element paint plans
 - Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.frame.camera_pan_preserves_ordinary_paint_plan`, `test.guardrails.blocking_suite`
 

@@ -1,170 +1,55 @@
-## 3. Public revision/listener model заменяем на единый snapshot
+## 5. `frameMetaRevision` для background/grid/surface styles разделяем позже
 
-**Проблема:** public API показывает не все изменения runtime. Например, selection может измениться без `documentRevision`, но приложению всё равно нужен сигнал.
+**Статус:** open backlog. Step 6 принял только public runtime state и разделение
+runtime view camera / persisted document camera. Полный split frame-meta
+семейства не принят этим шагом.
 
-**Решение:** вводим единый публичный snapshot ревизий.
+**Проблема:** общий `frameMetaRevision` всё ещё может смешивать background,
+grid и surface-style facts. Это может давать лишние invalidation для static
+frame/cache work, даже после того как camera pan вынесен в runtime view camera.
 
-```dart
-final class CanvasRuntimeRevisions {
-  const CanvasRuntimeRevisions({
-    required this.document,
-    required this.selection,
-    required this.preview,
-    required this.camera,
-    required this.resourceVisual,
-    required this.tools,
-    required this.epoch,
-  });
-
-  final int document;
-  final int selection;
-  final int preview;
-  final int camera;
-  final int resourceVisual;
-  final int tools;
-  final int epoch;
-}
-```
-
-В public runtime:
-
-```dart
-abstract interface class CanvasRuntime {
-  ValueListenable<CanvasRuntimeRevisions> get revisions;
-  CanvasRuntimeSummary get summary;
-}
-```
-
-Summary:
-
-```dart
-final class CanvasRuntimeSummary {
-  const CanvasRuntimeSummary({
-    required this.elementCount,
-    required this.layerCount,
-    required this.resourceCount,
-    required this.selectedCount,
-    required this.documentRevision,
-    required this.selectionRevision,
-    required this.epoch,
-  });
-
-  final int elementCount;
-  final int layerCount;
-  final int resourceCount;
-  final int selectedCount;
-  final int documentRevision;
-  final int selectionRevision;
-  final int epoch;
-}
-```
-
-Старые отдельные listenables убираем из public API.
-
-**Итог:** приложение получает один согласованный сигнал обо всех runtime-изменениях.
-
----
-
-## 4. Camera разделяем на view camera и persisted document camera
-
-**Проблема:** pan камеры не должен быть document mutation. Камера текущего вида — это view state. Камера в документе — это persisted default.
-
-**Решение:** фиксируем две разные сущности.
+**Будущее решение:** рассмотреть отдельные внутренние revision families для
+background, grid и surface style inputs, не добавляя их в public
+`CanvasRuntimeRevisions` без отдельного API-решения.
 
 ```text
-Runtime view camera:
-  - текущая камера surface/runtime
-  - меняется через CanvasCameraPort
-  - меняет cameraRevision
-  - не меняет documentRevision
-  - не инвалидирует document projection
-
-Persisted document camera:
-  - default camera в CanvasDocument
-  - сохраняется в schema
-  - меняется только через CanvasEdit
-  - меняет documentRevision
-```
-
-Public API:
-
-```dart
-abstract interface class CanvasCameraPort {
-  Offset get offset;
-
-  void setOffset(Offset offset);
-  void panBy(Offset delta);
-
-  void persistCurrentOffset();
-}
-```
-
-Поведение:
-
-```text
-setOffset/panBy -> меняет только runtime view camera.
-persistCurrentOffset -> пишет текущую runtime camera в document default camera через edit transaction.
-loadDocument -> runtime view camera инициализируется из document default camera.
-readDocument -> возвращает persisted document camera.
-```
-
-**Итог:** обычный pan больше не выглядит как изменение документа.
-
----
-
-## 5. `frameMetaRevision` сразу разделяем
-
-**Проблема:** общий `frameMetaRevision` смешивает camera, background, grid и surface styles. Это даёт лишние invalidation.
-
-**Решение:** вводим отдельные ревизии.
-
-```text
-cameraRevision
 backgroundRevision
 gridRevision
 surfaceStyleRevision
 ```
 
-Static background cache key:
+Static background cache key candidate:
 
 ```text
 StaticBackgroundCacheKey:
   backgroundRevision
   gridRevision
-  cameraBucket
-  devicePixelRatio
+  surfaceStyleRevision
   gridStrokeWidth
+  viewCameraBucket
+  devicePixelRatio
 ```
 
-Captured main frame:
+CapturedMainFrame backlog fields to preserve when the split is revisited:
 
-```dart
-final class CapturedMainFrame {
-  const CapturedMainFrame({
-    required this.cameraOffset,
-    required this.viewportRect,
-    required this.devicePixelRatio,
-    required this.gridStyle,
-    required this.selectionStyle,
-    required this.cameraRevision,
-    required this.backgroundRevision,
-    required this.gridRevision,
-    required this.surfaceStyleRevision,
-  });
-
-  final Offset cameraOffset;
-  final Rect viewportRect;
-  final double devicePixelRatio;
-  final CanvasGridStyle gridStyle;
-  final CanvasSelectionStyle selectionStyle;
-  final int cameraRevision;
-  final int backgroundRevision;
-  final int gridRevision;
-  final int surfaceStyleRevision;
-}
+```text
+CapturedMainFrame:
+  backgroundRevision
+  surfaceStyleRevision
+  viewCameraRevision
+  viewCameraOffset
+  viewportRect
+  devicePixelRatio
+  gridRevision
+  gridStyle
+  gridStrokeWidth
+  selectionStyleRevision
+  selectionStyle
 ```
 
-**Итог:** camera pan не сбрасывает background/grid кэши шире нужного.
+**Ограничение:** это не должно возвращать camera pan в document/frame-meta
+semantics. Runtime view camera остаётся runtime state, а persisted document
+camera остаётся document/projection state.
 
 ---
 

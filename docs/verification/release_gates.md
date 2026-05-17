@@ -163,7 +163,8 @@ Release is blocked unless all statements are true:
 3. P1.5 v1 scope gate is green.
 4. api.public_exports_complete is green.
 5. api.public_types_complete is green.
-6. api.public_api_compiles_as_written is green.
+6. api.public_api_compiles_as_written is green, including the
+   `CanvasRuntime.state` surface and exported runtime state snapshot types.
 7. public dartdoc, class modifier, and public signature shape guardrails are green.
 8. api.no_legacy_public_types is green.
 9. core.no_legacy_imports is green.
@@ -178,24 +179,30 @@ Release is blocked unless all statements are true:
 18. edit rollback/stale/nested/async tests are green.
 19. operation matrix and exact touched invalidation tests are green.
 20. loadDocument staged success/failure tests are green.
-21. geometry/spatial parity, eraser exact-budget, stale-candidate, and fallback-budget tests are green.
-22. frame capture, cache-key, cache-policy, frame-meta, paint-plan, selection-state cache independence, and selected supplement staging tests are green.
-23. selected move preview main repaint test is green.
-24. overlay preview repaint split tests are green.
-25. text edit request integration tests are green.
-26. action typed payload tests are green.
-27. low-level edit emits no user action events tests are green.
-28. interaction stale terminal, selection-boundary import, resolver-cancel, and interactive=false pending-line tests are green.
-29. surface single-active-surface and pointer normalization tests are green.
-30. DTO immutability, `CanvasMetadata` deep-freeze, const-policy, and public equality policy tests are green.
-31. no CanvasDocument projection in paint/pointer/hit tests are green.
-32. all required diagrams exist and match owners.
-33. phase guardrail alignment is green.
-34. full `dart run tool/guardrails/run.dart` is green.
-35. every mandatory guardrail has a runner entry and executable proof.
-36. changed-aware guardrail routing has conservative fallback coverage.
-37. benchmark gates pass.
-38. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
+21. public runtime state publication, load publication, interaction settings state,
+    preview public state, and dispose lifecycle tests are green.
+22. geometry/spatial parity, eraser exact-budget, stale-candidate, and fallback-budget tests are green.
+23. frame capture, cache-key, cache-policy, frame-meta, paint-plan,
+    runtime-view-camera vs persisted-document-camera separation,
+    selection-state cache independence, and selected supplement staging tests are green.
+24. selected move preview main repaint test is green.
+25. overlay preview repaint split tests are green.
+26. text edit request integration tests are green.
+27. action typed payload tests are green.
+28. low-level edit emits no user action events tests are green.
+29. interaction stale terminal, selection-boundary import, resolver-cancel, and interactive=false pending-line tests are green.
+30. surface single-active-surface and pointer normalization tests are green.
+31. DTO immutability, `CanvasMetadata` deep-freeze, const-policy, and public
+    equality policy tests are green, including runtime state snapshot value
+    equality.
+32. no CanvasDocument projection in paint/pointer/hit tests are green.
+33. all required diagrams exist and match owners.
+34. phase guardrail alignment is green.
+35. full `dart run tool/guardrails/run.dart` is green.
+36. every mandatory guardrail has a runner entry and executable proof.
+37. changed-aware guardrail routing has conservative fallback coverage.
+38. benchmark gates pass.
+39. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
 ```
 
 ---

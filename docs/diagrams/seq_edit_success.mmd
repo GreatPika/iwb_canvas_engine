@@ -15,7 +15,8 @@ sequenceDiagram
   participant Effects as CommitEffects
   participant Frame as FrameEngine
   participant Events as EventBuffer
-  participant Signals as Public signals
+  participant Runtime as RuntimeRoot
+  participant Signals as Public state/effects
 
   Caller->>API: edit(fn)
   API->>EK: open synchronous edit session
@@ -56,13 +57,14 @@ sequenceDiagram
   Note over Applier,Selection: Atomic install is the cross-owner commit boundary.
   Store-->>Applier: committed revision facts
   Selection-->>Applier: committed selection revision facts
+  Applier-->>Runtime: committed runtime facts
 
   Applier->>Events: commit buffered internal effects
   Applier->>Effects: publish typed post-install effects
   Effects->>Frame: dispatch repaint intent through runtime/applier boundary
   EK->>Handle: close session and mark handle stale
   Note over Handle: Any operation after callback throws StateError.
-  Events->>Signals: publish document/revision listeners
+  Runtime->>Signals: publish one CanvasRuntimeState after atomic install
   Frame->>Signals: publish repaint notifications
   EK-->>API: return callback result
   API-->>Caller: callback result

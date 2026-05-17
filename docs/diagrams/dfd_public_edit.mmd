@@ -7,7 +7,7 @@ flowchart LR
     EditPort["CanvasEditPort.edit(fn)"]
     EditHandle["CanvasEdit handle"]
     EditResult["Callback result"]
-    PublicSignals["Post-commit public signals\n(document revision/listeners)\nno user action events"]
+    PublicSignals["Post-commit public state\n(CanvasRuntimeState)\nno user action events"]
   end
 
   subgraph EditKernel["EditKernel"]

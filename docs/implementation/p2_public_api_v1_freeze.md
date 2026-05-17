@@ -14,6 +14,9 @@ errors, validation rules, and equality semantics.
 - P1.5 v1 scope gate green
 - id validation implemented
 - `CanvasFieldUpdate` and its public variants implemented
+- `CanvasRuntime.state`, `CanvasRuntimeState`, `CanvasRuntimeRevisions`, and
+  `CanvasRuntimeSummary` implemented as the single public runtime observation
+  surface
 - public equality policy implemented
 - exported public API has non-empty dartdoc summaries
 - public signatures obey Dart API design constraints from `section_04_public_api_v1`
@@ -114,6 +117,9 @@ errors, validation rules, and equality semantics.
 - P1.5 scope gate remains green
 - functional ledger mapping remains green
 - public API compiles
+- public runtime observation compiles through
+  `ValueListenable<CanvasRuntimeState> get state`, and the retired
+  document/preview listener getters are not exported
 - exported public API has non-empty dartdoc summaries
 - public classes have explicit subtype policy modifiers
 - public signatures avoid `FutureOr`, nullable async/container returns, and unapproved `dynamic`
@@ -125,6 +131,8 @@ errors, validation rules, and equality semantics.
 - `CanvasDiagnosticsVerbose` accepts defaults and boundary values, and
   rejects zero, negative, and over-limit preview/list-entry values
 - public value equality matches `docs/contracts/public_api_v1.md`
+- public value equality covers `CanvasRuntimeState`,
+  `CanvasRuntimeRevisions`, and `CanvasRuntimeSummary`
 - legacy public symbols are not exported
 - no public type references internal runtime classes.
 

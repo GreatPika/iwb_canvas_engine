@@ -697,7 +697,7 @@ mutation.
 
 ## 10. Vertical Slices
 
-### Slice 1. [ ] Public Runtime State API Contract
+### Slice 1. [x] Public Runtime State API Contract
 
 #### Slice Contract
 
@@ -749,8 +749,15 @@ and remove the old separate public revision listener model.
 
 - Public API contract, public export registry, guardrail descriptions, release
   gate descriptions, and documentation checks are updated together.
+- Passed on 2026-05-17:
+  - `rg -n "ValueListenable<CanvasRuntimeState> get state|final class CanvasRuntimeState|final class CanvasRuntimeRevisions|final class CanvasRuntimeSummary" docs/contracts/public_api_v1.md`
+  - `rg -n "CanvasRuntimeState|CanvasRuntimeRevisions|CanvasRuntimeSummary" docs/_registry/public_api_v1.yaml`
+  - `! rg -n "ValueListenable<int> get documentRevisionListenable|ValueListenable<int> get previewRevisionListenable|ValueListenable<CanvasRuntimeRevisions> get revisions|CanvasRuntimeSummary get summary" docs/contracts/public_api_v1.md docs/_registry/public_api_v1.yaml`
+  - `! awk "/final class CanvasRuntimeSummary /,/^}/ { print }" docs/contracts/public_api_v1.md | rg -n "final int (documentRevision|selectionRevision|epoch);|required this\\.(documentRevision|selectionRevision|epoch)"`
+  - `dart run docs/tool/generate_context_capsules.dart --check`
+  - `dart run docs/tool/check_docs.dart`
 
-### Slice 2. [ ] Runtime State Semantics and Dispose Lifecycle
+### Slice 2. [x] Runtime State Semantics and Dispose Lifecycle
 
 #### Slice Contract
 
@@ -816,8 +823,14 @@ changes.
 - Runtime data model, operation matrix, subsystem contracts, verification docs,
   phase docs, diagrams, and documentation checks agree on one state-listenable
   publication model.
+- Passed on 2026-05-17:
+  - `rg -n "CanvasRuntimeState|state\\.revisions|public state|state listenable" docs/architecture/03_data_model.md docs/contracts/operation_matrix.md docs/contracts/edit_kernel.md docs/contracts/load_document.md docs/contracts/resources.md docs/contracts/interaction_engine.md docs/verification/tests.md docs/verification/functional_ledger.md`
+  - `! rg -n "documentRevisionListenable|previewRevisionListenable|document/revision listeners|preview revision listener|revision listenables" docs/architecture/03_data_model.md docs/contracts/operation_matrix.md docs/contracts/edit_kernel.md docs/contracts/load_document.md docs/contracts/resources.md docs/contracts/interaction_engine.md docs/implementation docs/verification docs/diagrams`
+  - `rg -n "selection.*state|preview.*state|resourceVisual|interaction|dispose.*state\\.value|no notifications.*after dispose" docs/architecture/03_data_model.md docs/contracts/operation_matrix.md docs/verification/tests.md`
+  - `dart run docs/tool/generate_context_capsules.dart --check`
+  - `dart run docs/tool/check_docs.dart`
 
-### Slice 3. [ ] View Camera and Persisted Camera Ownership
+### Slice 3. [x] View Camera and Persisted Camera Ownership
 
 #### Slice Contract
 
@@ -878,8 +891,14 @@ document camera without pulling the full frame-meta split into this step.
 
 - Public API, data model, operation matrix, frame/cache contracts, phase docs,
   diagrams, audit checklist, and documentation checks agree on camera ownership.
+- Passed on 2026-05-17:
+  - `rg -n "runtime view camera|viewCamera|persisted document camera|CanvasCameraPort|CanvasEdit\\.setCameraOffset" docs/architecture/01_runtime_ownership.md docs/architecture/03_data_model.md docs/contracts/public_api_v1.md docs/contracts/operation_matrix.md docs/contracts/frame_rendering.md docs/contracts/cache_policy.md docs/implementation/p9_frame_rendering_and_caches.md audit.md`
+  - `! rg -n "setCameraOffset \\| meta \\| document, frameMeta, projection|setOffset.*documentRevision|panBy.*documentRevision|pan.*document mutation|view camera.*projection eviction" docs/contracts/operation_matrix.md docs/contracts/public_api_v1.md docs/architecture/03_data_model.md docs/contracts/frame_rendering.md docs/contracts/cache_policy.md docs/diagrams`
+  - `rg -n "PaintPlanCache key must not include|ordinary paint-plan|ordinary committed paint" docs/contracts/frame_rendering.md docs/contracts/cache_policy.md docs/implementation/p9_frame_rendering_and_caches.md`
+  - `dart run docs/tool/generate_context_capsules.dart --check`
+  - `dart run docs/tool/check_docs.dart`
 
-### Slice 4. [ ] Registry, Index, and Backlog Cleanup
+### Slice 4. [x] Registry, Index, and Backlog Cleanup
 
 #### Slice Contract
 
@@ -934,6 +953,12 @@ slices have passed their slice-local proof.
 
 - Backlog cleanup, registry/index updates, phase docs, and documentation checks
   are complete.
+- Passed on 2026-05-17:
+  - `! rg -n "ValueListenable<CanvasRuntimeRevisions> get revisions|CanvasRuntimeSummary get summary|documentRevisionListenable|previewRevisionListenable" redesign.md audit.md docs/_registry docs/indexes docs/diagrams/README.md docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md`
+  - `! rg -n "Добавить строки или явные alias-строки для .*(setOffset|panBy)|Для каждой строки указать .*(documentRevision|previewRevision|frameMetaRevision)" audit.md`
+  - `rg -n "CanvasRuntime.state|CanvasRuntimeState|view camera|persisted document camera|public runtime state" docs/_registry docs/indexes docs/diagrams/README.md docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md audit.md`
+  - `dart run docs/tool/generate_context_capsules.dart --check`
+  - `dart run docs/tool/check_docs.dart`
 
 ## 11. Final Verification
 

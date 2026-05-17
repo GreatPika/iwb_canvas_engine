@@ -26,6 +26,7 @@ Related diagrams:
 - `state_edit_session`
 Required tests:
 - `test.edit.low_level_mutations_do_not_emit_actions`
+- `test.runtime.runtime_state_publication`
 - `test.edit.sync_non_nested_async_stale`
 - `test.edit.rollback`
 - `test.edit.field_update_nullable_semantics`
@@ -114,7 +115,7 @@ Rollback obligations:
 - preview unchanged unless the public operation itself was a successful external mutation;
 - no actions emitted;
 - no text edit event emitted;
-- no public notify;
+- no public `CanvasRuntimeState` publication;
 - no scene repaint;
 - no overlay repaint.
 ```
@@ -134,7 +135,7 @@ TouchedSet
   layerOrderChanged
   backgroundLayerChanged
   selectionChanged
-  cameraChanged
+  persistedCameraChanged
   backgroundChanged
   gridChanged
   paletteChanged
@@ -146,13 +147,20 @@ CommitCompiler must produce exact invalidation. Generic global invalidation is f
 CommitCompiler must not depend on concrete `FrameEngine`. It produces a
 `CommitPlan` containing typed `RepaintIntent` and invalidation effects. The
 post-install runtime/applier boundary dispatches those effects to frame,
-spatial, resource, projection, and public signal owners.
+spatial, resource, projection, and public state publication owners.
 
 Selection effects are not draft fields inside committed document state. Edits
 that remove selected elements, clear content, delete selection, or commit a
 marquee selection compile explicit selection-owner effects. The applier
-publishes document and selection effects as one atomic runtime result; if
+publishes document and selection effects as one atomic `CanvasRuntimeState`; if
 preflight or rollback happens before that boundary, both owners remain
 unchanged.
+
+After an accepted edit commit, `RuntimeRoot` publishes exactly one public state
+snapshot that combines document, selection-prune, resource-visual, preview
+cleanup, interaction, and epoch effects produced by the operation. A no-op edit
+does not publish a new snapshot. `CanvasEdit.setCameraOffset` is the persisted
+document camera mutation path and advances document/projection effects; it does
+not mutate runtime view camera state.
 
 ---

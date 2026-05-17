@@ -129,6 +129,9 @@ Required tests:
 - `test.api_contract.v1_scope_gate`
 - `test.codec.constructor_and_schema_limits`
 - `test.runtime.dispose_lifecycle`
+- `test.runtime.runtime_state_publication`
+- `test.runtime.load_document_state_publication`
+- `test.runtime.interaction_settings_state`
 - `test.store.read_document_projection`
 - `test.store.no_projection_hot_path`
 - `test.store.public_document_is_projection_only`
@@ -153,6 +156,7 @@ Required tests:
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
 - `test.frame.cache_capacity_eviction_policy`
 - `test.frame.selected_supplement_staging_no_global_sort`
+- `test.interaction.preview_public_state`
 - `test.interaction.state_machines`
 - `test.interaction.move_resolver_reentrancy`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
@@ -210,6 +214,9 @@ test/edit/low_level_mutations_do_not_emit_actions_test.dart
 test/interaction/commands_emit_user_actions_test.dart
 
 test/runtime/dispose_lifecycle_test.dart
+test/runtime/runtime_state_publication_test.dart
+test/runtime/load_document_state_publication_test.dart
+test/runtime/interaction_settings_state_test.dart
 test/flutter_bridge/interactive_false_pointer_routing_test.dart
 test/flutter_bridge/interactive_false_active_session_cancel_test.dart
 test/flutter_bridge/interactive_false_pending_line_preserved_test.dart
@@ -242,6 +249,7 @@ test/frame/paint_plan_excludes_preview_delta_test.dart
 test/frame/paint_plan_excludes_selection_state_test.dart
 test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart
 test/frame/selected_supplement_staging_no_global_sort_test.dart
+test/interaction/preview_public_state_test.dart
 test/interaction/state_machines_test.dart
 test/interaction/move_resolver_reentrancy_test.dart
 test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart
@@ -308,21 +316,40 @@ test/guardrails/blocking_suite_test.dart
      guardrail runner suite.
 
 test/runtime/dispose_lifecycle_test.dart
-  -> proves runtime dispose keeps documentRevisionListenable and
-     previewRevisionListenable values readable;
-  -> verifies dispose does not notify documentRevisionListenable listeners and
-     previewRevisionListenable only notifies when active preview cleanup advances
-     previewRevision during first dispose;
-  -> verifies no revision listenable notifications are delivered after dispose
+  -> proves runtime dispose keeps state.value readable;
+  -> verifies dispose does not increment state.revisions.document and state
+     only notifies during first dispose when active preview cleanup advances
+     state.revisions.preview;
+  -> verifies no public state notifications are delivered after dispose
      returns, repeated dispose is silent, and listeners can be removed after
      dispose.
 
+test/runtime/runtime_state_publication_test.dart
+  -> proves ordinary document edits publish one CanvasRuntimeState with
+     state.revisions.document advanced and unrelated public domains unchanged;
+  -> proves no-op edits and no-op runtime operations do not publish a new
+     CanvasRuntimeState.
+
+test/runtime/load_document_state_publication_test.dart
+  -> proves successful loadDocument publishes exactly one post-install
+     CanvasRuntimeState that includes document, selection, viewCamera, epoch,
+     and conditional preview cleanup revisions;
+  -> proves loadDocument failure publishes no public state snapshot.
+
+test/runtime/interaction_settings_state_test.dart
+  -> proves mode, draw tool, draw style, draw color, and pointer policy changes
+     publish state.revisions.interaction without changing document,
+     resourceVisual, or viewCamera revisions;
+  -> proves selection and preview revisions are unchanged for no-cleanup
+     settings changes, and advance only when the operation also owns draw-mode
+     selection clear or active preview cleanup.
+
 test/selection/runtime_owner_separation_test.dart
-  -> proves selection-only changes increment selectionRevision without
-     incrementing documentRevision, evicting DocumentProjectionCache, or
-     updating SpatialKernel;
+  -> proves selection-only changes publish state.revisions.selection without
+     incrementing state.revisions.document, evicting DocumentProjectionCache,
+     or updating SpatialKernel;
   -> proves document replacement, delete, clear, and eraser paths publish
-     document and selection effects as one atomic runtime result;
+     document and selection effects as one atomic CanvasRuntimeState;
   -> proves selectedOrder is derived from selectionRevision and
      structuralRevision, not stored as an independent source of truth.
 
@@ -332,6 +359,27 @@ test/frame/paint_plan_excludes_selection_state_test.dart
      state;
   -> proves selection changes rebuild selection decoration without evicting the
      ordinary committed paint plan.
+
+test/interaction/preview_public_state_test.dart
+  -> proves preview-only pointer changes publish state.revisions.preview without
+     changing document, selection, resourceVisual, interaction, or viewCamera
+     revisions and without emitting action events;
+  -> proves cleanup against already-empty preview state is public-state silent.
+
+test/resources/resource_dirty_test.dart
+  -> proves markResourceDirty publishes state.revisions.resourceVisual without
+     incrementing state.revisions.document, evicting public document projection,
+     clearing selection, clearing preview, or emitting an action event.
+
+test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart
+  -> proves CanvasCameraPort.setOffset and panBy publish
+     state.revisions.viewCamera without incrementing state.revisions.document,
+     invalidating public document projection, or changing persisted document
+     camera;
+  -> proves camera pan preserves ordinary PaintPlanCache entries while scheduling
+     repaint for the main and overlay surfaces affected by the runtime view;
+  -> proves CanvasEdit.setCameraOffset changes persisted document camera through
+     the document edit path and readDocument returns that persisted camera.
 
 test/guardrails/selection_boundary_imports_test.dart
   -> proves InteractionEngine does not import concrete SelectionKernel or

@@ -14,7 +14,7 @@ sequenceDiagram
   participant Spatial as SpatialKernel
   participant Resources as ResourceKernel
   participant Frame as FrameEngine
-  participant Signals as Public signals
+  participant Signals as Public state/effects
 
   opt caller starts from schema v1 JSON
     Caller->>Codec: decodeCanvasDocument / decodeCanvasDocumentFromJson
@@ -37,13 +37,13 @@ sequenceDiagram
   Runtime->>Stager: prepare full document replacement from DTO and current snapshot
   Stager->>Stager: materialize compact tables, resource descriptors, order, meta, and id generator floor
   Stager-->>Runtime: PreparedDocumentLoad replacement payload
-  Note over Runtime,Store: No interaction interrupt, preview clear, cache eviction, repaint, public notify, or store mutation occurs before preparation succeeds.
+  Note over Runtime,Store: No interaction interrupt, preview clear, cache eviction, repaint, public state publication, or store mutation occurs before preparation succeeds.
 
   Runtime->>Interaction: success-only interrupt active interaction
   Interaction->>Interaction: cancel active gesture and clear preview
   Interaction->>Interaction: bump previewRevision if preview was active
   Interaction-->>Runtime: preview cleared and preview signal queued until install
-  Note over Interaction,Signals: Preview state may be cleared before install, but no public signal is published before the committed replacement is installed.
+  Note over Interaction,Signals: Preview state may be cleared before install, but no public state is published before the committed replacement is installed.
 
   Runtime->>Store: install PreparedDocumentLoad document payload atomically
   Runtime->>Selection: clear selection in same runtime result
@@ -53,8 +53,9 @@ sequenceDiagram
   Store->>Store: increment controllerEpoch and document/structural/bounds/visual/projection/resource revisions inside the install
   Note over Store: Store state is committed tables and revision state, not a live CanvasDocument DTO.
   Note over Runtime,Selection: Selection clear is not a public post-install mutation; it is part of the same atomic runtime result.
-  Store-->>Runtime: committed replacement revision facts
+  Store-->>Runtime: committed replacement revision facts and installed persisted camera
   Selection-->>Runtime: committed selection revision facts
+  Runtime->>Runtime: initialize runtime view camera from installed persisted document camera
 
   Runtime->>Interaction: committed load installed with updated epoch and revisions
   Interaction->>Interaction: clear pointer normalization and pending tap history
@@ -65,8 +66,7 @@ sequenceDiagram
   Frame->>Frame: schedule main repaint for replacement document
   Interaction->>Frame: schedule overlay repaint for cleared preview
 
-  Runtime->>Signals: publish document and revision listeners after install
-  Interaction->>Signals: publish preview revision listener after install
+  Runtime->>Signals: publish one CanvasRuntimeState after install, including required viewCamera revision and preview cleanup revision if changed
   Note over Signals: loadDocument emits no CanvasActionCommitted event.
   Runtime-->>API: loadDocument complete
-  API-->>Caller: return after post-install effects are scheduled and public listeners are notified
+  API-->>Caller: return after post-install effects are scheduled and the state listener is notified

@@ -11,7 +11,7 @@ flowchart LR
   subgraph API["Public API boundary"]
     Sample["CanvasPointerSample\nfinite down/move;\nterminal cleanup may use invalid sample"]
     MoveResolver["CanvasMoveCommitResolver\nselected move terminal only"]
-    PublicSignals["Public signals\naction events, preview revision,\nmain/overlay repaint requests"]
+    PublicSignals["Public state/effects\naction events, CanvasRuntimeState,\nmain/overlay repaint requests"]
   end
 
   subgraph Interaction["InteractionEngine"]
@@ -82,6 +82,7 @@ flowchart LR
   CandidatePreview -->|"preview facts"| PreviewState
   PreviewState -->|"marquee/stroke/line/eraser preview snapshot"| OverlayPreview
   PreviewState -->|"selected move delta snapshot"| SelectedMovePreview
+  PreviewState -->|"publish CanvasRuntimeState with state.revisions.preview when changed"| PublicSignals
   OverlayPreview -->|"previewRevision + overlay repaint only"| OverlayRepaint
   SelectedMovePreview -->|"previewRevision + main repaint only"| MainRepaint
 

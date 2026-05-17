@@ -111,8 +111,8 @@ stateDiagram-v2
     state "Close pointer session" as CloseSession
     note right of CloseSession
       Preview/session cleanup completes and the active token
-      is released before public action, preview, document,
-      or repaint signals are published to observers.
+      is released before public CanvasRuntimeState, action,
+      or repaint effects are published to observers.
     end note
 
     CloseSession --> CleanupTarget: classify cleared preview kind
@@ -130,8 +130,8 @@ stateDiagram-v2
     OverlayCleanup --> PublicSignals: queue overlay cleanup repaint
     NoPreviewCleanup --> PublicSignals: no cleanup repaint
 
-    state "Public signals after close" as PublicSignals
-    PublicSignals --> [*]: publish queued commit/cancel effects
+    state "Public state/effects after close" as PublicSignals
+    PublicSignals --> [*]: publish queued CanvasRuntimeState, action, and repaint effects
   }
 
   ActivePointer --> Idle: terminal or cleanup complete

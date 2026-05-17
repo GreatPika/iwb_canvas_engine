@@ -36,13 +36,15 @@ flowchart LR
   end
 
   subgraph Effects["Committed effects"]
-    AtomicRuntimeResult["Atomic runtime result\ndocument replacement + selection clear"]
+    AtomicRuntimeResult["Atomic runtime result\ndocument replacement + selection clear\n+ runtime view camera initialization"]
     Revisions["Document-level revisions\ncontroller epoch"]
+    ViewCameraInit["Runtime view camera\ninitialized from installed persisted camera"]
+    ViewCameraRevision["state.revisions.viewCamera"]
     SpatialRebuild["Spatial index rebuild"]
     ProjectionEvict["Projection cache eviction"]
     ResourceEvict["Resource cache eviction"]
     Repaint["Main and overlay repaint"]
-    Notify["Public notify after install\nno user action event"]
+    Notify["Public CanvasRuntimeState after install\ndocument, selection, viewCamera, epoch,\nconditional preview cleanup\nno user action event"]
     Diagnostics["Diagnostics projection\nvalidation/materialization failures"]
   end
 
@@ -76,10 +78,13 @@ flowchart LR
   PendingInput -->|"clear after atomic install"| PostInstallCleanup
 
   AtomicRuntimeResult -->|"increment document-level revisions, selectionRevision, and epoch"| Revisions
+  AtomicRuntimeResult -->|"read installed persisted camera"| ViewCameraInit
+  ViewCameraInit -->|"publish public view camera domain"| ViewCameraRevision
   AtomicRuntimeResult -->|"rebuild from replacement document"| SpatialRebuild
   AtomicRuntimeResult -->|"evict public document projection"| ProjectionEvict
   AtomicRuntimeResult -->|"evict resolver/resource caches"| ResourceEvict
   AtomicRuntimeResult -->|"schedule full document repaint"| Repaint
   AtomicRuntimeResult -->|"publish after atomic install"| Notify
+  ViewCameraRevision -->|"included in atomic snapshot"| Notify
   Notify -->|"success return"| Result
   Result -->|"load completed"| App

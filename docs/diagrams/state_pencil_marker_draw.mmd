@@ -61,9 +61,10 @@ stateDiagram-v2
     note left of NoOpTerminal
       Empty stroke paths clean up preview/session only.
       They do not
-      open EditKernel, mutate the document, notify
-      document listeners, repaint main scene, or emit
-      drawPencil/drawMarker.
+      open EditKernel, mutate the document, repaint main
+      scene, or emit drawPencil/drawMarker. Active preview
+      cleanup publishes CanvasRuntimeState with updated
+      preview revision.
     end note
     NoOpTerminal --> CleanupOnly: "clear stroke preview/session only"
 
@@ -106,8 +107,8 @@ stateDiagram-v2
     state "Public commit effects" as PublicCommitEffects
     note right of PublicCommitEffects
       After successful commit and session cleanup,
-      publish the main repaint, document/revision
-      notifications, and drawPencil or drawMarker
+      publish the main repaint, CanvasRuntimeState
+      publication, and drawPencil or drawMarker
       action with CanvasDrawStrokeActionPayload.
     end note
     PublicCommitEffects --> [*]
@@ -124,8 +125,9 @@ stateDiagram-v2
   note right of EditFailureCleanup
     Rejection, rollback, and thrown edit paths clear only
     the stroke preview/session. No add-stroke install,
-    public document notification, main repaint, or
-    drawPencil/drawMarker action is visible.
+    document state publication, main repaint, or
+    drawPencil/drawMarker action is visible. Active preview
+    cleanup publishes CanvasRuntimeState with updated preview revision.
   end note
 
   state "Dispose cleanup" as DisposeCleanup
@@ -161,6 +163,7 @@ stateDiagram-v2
     no selected-move resolver;
     no main-scene stroke preview;
     no direct Store mutation;
-    no action or document notification on cleanup/no-op/failure;
+    no action, document state publication, or main repaint on cleanup/no-op/failure;
+    active preview cleanup may publish preview state;
     no legacy source is normative.
   end note

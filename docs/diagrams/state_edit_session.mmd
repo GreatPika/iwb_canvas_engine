@@ -91,7 +91,7 @@ stateDiagram-v2
     state "Post-commit effects" as PostCommitEffects
     note right of PostCommitEffects
       Apply exact spatial deltas, projection/resource cache
-      invalidation, repaint buses, and revision/listener effects
+      invalidation, repaint buses, and public state effects
       after install. Low-level CanvasEdit emits no user action event.
     end note
     PostCommitEffects --> CloseCommitted: effects staged after install
@@ -107,8 +107,8 @@ stateDiagram-v2
     state "Publish public notifications" as NotifyPublic
     note right of NotifyPublic
       Reachable only after atomic install.
-      Document/revision listeners and repaint notifications
-      observe committed state, never draft state.
+      CanvasRuntimeState and repaint notifications observe
+      committed state, never draft state.
     end note
     NotifyPublic --> ReturnResult: return callback result
 

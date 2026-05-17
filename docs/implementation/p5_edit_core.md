@@ -78,6 +78,7 @@ load, resources, interaction, or commands can mutate committed state.
 - `test.edit.operation_matrix_effects` -> `test/edit/operation_matrix_effects_test.dart`
 - `test.edit.exact_touched_invalidation` -> `test/edit/exact_touched_invalidation_test.dart`
 - `test.edit.typed_effects_no_frame_dependency` -> `test/edit/typed_effects_no_frame_dependency_test.dart`
+- `test.runtime.runtime_state_publication` -> `test/runtime/runtime_state_publication_test.dart`
 - `test.selection.runtime_owner_separation` -> `test/selection/runtime_owner_separation_test.dart`
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
@@ -96,6 +97,8 @@ load, resources, interaction, or commands can mutate committed state.
 - rollback tests prove document and selection owners remain unchanged before
   the atomic install boundary
 - operation matrix tests green for edit-owned operations
+- ordinary document edits publish one coherent `CanvasRuntimeState`, while
+  no-op edits and no-op runtime operations are public-state silent
 - exact touched invalidation tests green
 - typed effect boundary tests green
 - low-level edits produce no user action events.

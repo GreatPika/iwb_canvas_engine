@@ -38,6 +38,11 @@ flowchart LR
     MainRepaint["Main repaint request"]
   end
 
+  subgraph PublicState["Public CanvasRuntimeState"]
+    RuntimeStateRevision["state.revisions\npublic domains"]
+    ResourceVisualState["resourceVisual"]
+  end
+
   subgraph Resources["ResourceKernel"]
     ResolvePaintAsset["Resolve paint asset\nResourceKernel-owned resolver boundary"]
     ImageResolveCache["ImageResolveCache\nresourceId + resourceRevision"]
@@ -94,6 +99,8 @@ flowchart LR
   App -->|"external image contents changed"| DirtyCall
   DirtyCall -->|"delegate dirty signal"| ResourceDirtyDispatch
   ResourceDirtyDispatch -->|"increment visual revision only"| ResourceVisualRevision
+  ResourceVisualRevision -->|"publish public resource visual domain"| ResourceVisualState
+  ResourceVisualState -->|"public runtime state domain"| RuntimeStateRevision
   ResourceDirtyDispatch -->|"explicit cache invalidation request"| DirtySet
   DirtySet -->|"invalidate target or all cache entries"| ImageResolveCache
   ResourceVisualRevision -->|"schedule main repaint"| MainRepaint

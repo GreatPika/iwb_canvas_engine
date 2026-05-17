@@ -118,16 +118,19 @@ Semantics:
 
 ```text
 - does not change document revision;
-- increments resourceVisualRevision;
+- increments `state.revisions.resourceVisual`;
 - invalidates resolved cache entries for target resource;
 - publishes main repaint intent;
+- publishes one `CanvasRuntimeState` when the dirty request changes resource
+  visual state;
 - does not emit action event;
 - does not clear selection;
 - does not clear preview;
 - after dispose throws StateError.
 ```
 
-`resourceVisualRevision` is committed runtime revision state. The public
+`resourceVisualRevision` is committed runtime revision state and maps to the
+public `state.revisions.resourceVisual` domain. The public
 resource port delegates the revision increment to the runtime/store boundary
 and delegates cache invalidation to `ResourceKernel`.
 The repaint intent is runtime-owned and does not require an attached

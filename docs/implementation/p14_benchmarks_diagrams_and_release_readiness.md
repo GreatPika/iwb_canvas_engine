@@ -9,6 +9,8 @@ match the target architecture.
 ## Build scope
 
 - all required diagrams complete
+- public runtime state and view/persisted camera ownership proof remains
+  reflected in diagrams, indexes, guardrails, and release gates
 - benchmark baselines
 - benchmark diff tool
 - all guardrails blocking
@@ -130,6 +132,8 @@ match the target architecture.
 - changed-aware runner routing has conservative fallback coverage
 - no app adapters in package
 - all final release gates green.
+- public runtime state and camera ownership references are consistent across
+  registries, indexes, diagram catalog, and final proof docs.
 
 ## Risks and trade-offs
 

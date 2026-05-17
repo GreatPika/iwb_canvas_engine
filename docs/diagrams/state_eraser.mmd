@@ -97,16 +97,16 @@ stateDiagram-v2
 
     CommitSucceeded --> CleanupBeforeSignals: close edit handle and clear eraser session
 
-    state "Cleanup before public signals" as CleanupBeforeSignals
+    state "Cleanup before public state" as CleanupBeforeSignals
     note right of CleanupBeforeSignals
-      Eraser action and document/repaint notifications are
+      Eraser action and state/repaint notifications are
       published only after successful commit and session cleanup.
     end note
 
     CleanupBeforeSignals --> PublishCommitSignals: overlay cleanup queued
 
-    state "Publish erase action and document signals" as PublishCommitSignals
-    PublishCommitSignals --> [*]: publish main repaint, overlay cleanup, document notification, erase action
+    state "Publish erase action and runtime state" as PublishCommitSignals
+    PublishCommitSignals --> [*]: publish main repaint, overlay cleanup, CanvasRuntimeState, erase action
 
     state "Cleanup only" as CleanupOnly
     note left of CleanupOnly
@@ -114,8 +114,9 @@ stateDiagram-v2
       dispose, stale or invalid terminal, empty erased ids,
       eraser budget exceeded with no partial erase,
       and EditKernel failure clear preview/session only.
-      Empty/no-op cleanup publishes no erase action and no
-      public document notification.
+      Empty/no-op cleanup publishes no erase action or document
+      state. Active preview cleanup publishes CanvasRuntimeState
+      with updated preview revision.
     end note
 
     CleanupOnly --> CleanupOverlay: clear corridor, candidates, token binding, and session facts

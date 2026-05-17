@@ -2,6 +2,10 @@
 
 Every item below is a required Mermaid deliverable. The catalog links docs to
 the planned Mermaid file paths under `docs/diagrams/`.
+Frame, cache, lifecycle, and public edit diagrams use the public runtime state
+model: `CanvasRuntime.state` carries runtime-visible revisions, runtime view
+camera is distinct from persisted document camera, and retired separate public
+listener getters are not diagram seams.
 
 ## c4_context
 

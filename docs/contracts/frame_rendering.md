@@ -64,7 +64,8 @@ CapturedMainFrame
   frameMetaRevision
   selectionRevision
   resourceVisualRevision
-  cameraOffset
+  viewCameraRevision
+  viewCameraOffset
   viewportRect
   selectionIds
   selectedMoveDelta
@@ -75,7 +76,8 @@ Overlay frame:
 ```text
 CapturedOverlayFrame
   previewRevision
-  cameraOffset
+  viewCameraRevision
+  viewCameraOffset
   previewState
   selectionStyle
 ```
@@ -90,7 +92,11 @@ Rules:
 - stale spatial candidate is rejected by structuralRevision/generation check;
 - image resolver is the only external read boundary in paint, and it cannot mutate runtime;
 - v1 resolver calls are synchronous and bounded by the per-frame resolver budget;
-- camera/background/grid changes use frameMetaRevision and must not invalidate ordinary committed element paint plans.
+- runtime view camera changes use `state.revisions.viewCamera`, repaint affected
+  frame surfaces, and must not invalidate ordinary committed element paint
+  plans or public `CanvasDocument` projection;
+- background/grid document changes use internal frame-meta revision facts and
+  must not invalidate ordinary committed element paint plans.
 ```
 
 Opacity and layer policy:
@@ -147,8 +153,9 @@ Algorithm:
 2. PaintPlanCache stores only ordinary committed RenderElementRecord data.
 3. PaintPlanCache key uses structuralRevision, boundsRevision,
    elementVisualRevision, viewport, and stable device/pixel inputs.
-4. PaintPlanCache key must not include frameMetaRevision, selectedMoveDelta, or
-   previewDelta, selected ids, selection flags, or selectionRevision.
+4. PaintPlanCache key must not include frameMetaRevision, viewCameraRevision,
+   viewCameraOffset, selectedMoveDelta, previewDelta, selected ids, selection
+   flags, or selectionRevision.
 5. When selectedMoveDelta is active, read selected ids through the captured
    selection facts boundary and filter movable selected ids from the
    ordinary record stream for this frame only.

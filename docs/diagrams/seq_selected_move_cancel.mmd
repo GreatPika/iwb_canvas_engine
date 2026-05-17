@@ -19,7 +19,8 @@ sequenceDiagram
   participant Touched as TouchedSet
   participant Caches as Projection and resource caches
   participant Events as EventBuffer
-  participant Signals as Public signals
+  participant Runtime as RuntimeRoot
+  participant Signals as Public state/effects
 
   User->>Surface: pointer down on selected movable element
   Surface->>Tools: handlePointer(CanvasPointerSample down)
@@ -37,6 +38,8 @@ sequenceDiagram
   Note over IE: Session stores pointer token, sessionId, start position, selected ids, movable ids, and current preview delta.
   IE->>Preview: publish selected move preview with delta Offset.zero
   IE->>Preview: bump previewRevision for selected move preview
+  Preview-->>Runtime: preview revision fact
+  Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
 
   loop pointer move samples for same token
     User->>Surface: pointer move
@@ -45,6 +48,8 @@ sequenceDiagram
     IE->>IE: update active selected move session delta
     IE->>Preview: replace immutable main-scene preview snapshot
     IE->>Preview: bump previewRevision when selectedMoveDelta changes
+    Preview-->>Runtime: preview revision fact
+    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request main-scene repaint only
     Frame->>Store: capture committed frame facts once
     Frame->>SelectionFacts: capture selected ids once
@@ -101,6 +106,8 @@ sequenceDiagram
 
   IE->>Preview: clear selected move preview and active session
   IE->>Preview: bump previewRevision for cleared active preview
+  Preview-->>Runtime: preview cleanup revision fact
+  Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
   Preview->>Frame: request main-scene repaint cleanup
   Frame->>Store: capture committed frame facts once
   Frame->>SelectionFacts: capture selected ids once
@@ -128,4 +135,5 @@ sequenceDiagram
   Note over SelectionFacts,Spatial: No selection, spatial, or projection state changes.
   Note over Store: No committed document revision changes.
   Note over Caches: No projection cache eviction and no resource cache change.
-  Note over Events,Signals: No action event and no public document notification.
+  Note over Events,Signals: No action event, document state publication, or selection state publication.
+  Note over Runtime,Signals: Preview cleanup publishes CanvasRuntimeState when it clears active preview.

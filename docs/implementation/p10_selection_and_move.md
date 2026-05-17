@@ -97,6 +97,7 @@ typed user action events.
 - `test.api.typed_action_payloads` -> `test/api/typed_action_payloads_test.dart`
 - `test.interaction.commands_emit_user_actions` -> `test/interaction/commands_emit_user_actions_test.dart`
 - `test.edit.staged_document_load_success_failure` -> `test/edit/staged_document_load_success_failure_test.dart`
+- `test.interaction.preview_public_state` -> `test/interaction/preview_public_state_test.dart`
 - `test.interaction.state_machines` -> `test/interaction/state_machines_test.dart`
 - `test.interaction.move_resolver_reentrancy` -> `test/interaction/move_resolver_reentrancy_test.dart`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup` -> `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`
@@ -115,8 +116,10 @@ typed user action events.
 ## Exit gate
 
 - selection API behavior is green
-- selection-only API behavior updates selectionRevision without documentRevision,
-  projection eviction, or spatial updates
+- selection-only API behavior updates `state.revisions.selection` without
+  `state.revisions.document`, projection eviction, or spatial updates
+- preview-only move/marquee cleanup publishes `state.revisions.preview` only
+  when preview state actually changes
 - marquee selection commits through `EditKernel`
 - selected move preview increments main repaint, not overlay repaint
 - selected move commit emits typed move action only after atomic install

@@ -43,7 +43,7 @@ Do not assume:
 | TextLayoutCache | Frame | text/style/font/width/direction/lineHeight | text/style update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | PathGeometryCache | Geometry/Frame | pathData/fillRule/strokeWidth | path update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | StrokePathCache | Frame | pointsKey/thickness/transform scale | stroke update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
-| StaticBackgroundCache | Frame | background/grid/camera bucket/dpr/frameMetaRevision | camera/background/grid | 1 picture per camera bucket | replace and dispose previous picture | picture count, rebuild count | yes bounded |
+| StaticBackgroundCache | Frame | background/grid/view camera bucket/dpr/frameMetaRevision/viewCameraRevision | view camera/background/grid | 1 picture per view-camera bucket | replace and dispose previous picture | picture count, rebuild count | yes bounded |
 | PaintPlanCache | Frame | structural/bounds/elementVisual/viewport/device-pixel inputs | typed invalidation excluding frameMeta, preview, and selection-only changes | 16 viewport plans | LRU by viewport/revision tuple | candidate count, hit/miss, full-sort probe, selected-supplement bypass count | yes bounded |
 | SelectionDecorationPlan | Frame | selectionRevision/structuralRevision/captured selectionStyle/device-pixel inputs | selection/structure/captured style input | 1 current decoration plan | replace on revision or style change | selected count, rebuild count | yes bounded |
 | SelectedOrderCache | Frame | selectionRevision/structuralRevision | selection/structure | 1 selected-order snapshot | replace on revision change | selected count, rebuild count | yes bounded |
@@ -64,9 +64,11 @@ outside the declared cache row.
 `PaintPlanCache` stores ordinary committed records only. It must not store
 selected-move supplement records, `selectedMoveDelta`, or `previewDelta`.
 It also must not store selected ids, selection flags, or selectionRevision in
-ordinary cache keys or cached ordinary records. `frameMetaRevision` is not a
-PaintPlanCache key component because camera, background, and grid changes
-repaint frame surfaces without changing ordinary element paint records.
+ordinary cache keys or cached ordinary records. `frameMetaRevision`,
+`viewCameraRevision`, and `viewCameraOffset` are not PaintPlanCache key
+components because view camera, background, and grid changes repaint frame
+surfaces without changing ordinary element paint records. Runtime view camera
+changes also do not invalidate public `CanvasDocument` projection.
 
 `SelectedOrderCache` is derived data. Its source of truth is the selection owner
 plus document order facts from the document boundary; it may be retained only as

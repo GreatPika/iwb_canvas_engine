@@ -47,6 +47,8 @@ Required tests:
 - `test.flutter_bridge.interactive_false_active_session_cancel`
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
 - `test.flutter_bridge.pointer_adapter_finite_normalization`
+- `test.runtime.interaction_settings_state`
+- `test.interaction.preview_public_state`
 - `test.interaction.state_machines`
 - `test.interaction.move_resolver_reentrancy`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
@@ -107,6 +109,10 @@ Rules:
 - interaction query results are immutable, intent-specific facts and never
   expose store tables, selection internals, or mutation methods;
 - InteractionEngine commits only through EditKernel.
+- public interaction setting changes publish `state.revisions.interaction`;
+- preview changes publish `state.revisions.preview`;
+- interaction cleanup that is already a no-op publishes no new public state
+  snapshot.
 ```
 
 Selection-related interaction reads must be batched by intent. Marquee start,
@@ -121,6 +127,9 @@ loop over concrete owner methods such as per-property `exists`, `isVisible`, or
 start or line preview state that is not currently owned by an active routed
 pointer session is preserved until a line-owned cleanup, mode/tool change,
 successful load, dispose, or terminal line decision.
+If cancellation clears active pointer-owned preview, runtime publishes one
+`CanvasRuntimeState` with an updated preview revision. If no active
+pointer-owned preview changes, cancellation is public-state silent.
 
 ### 14.2 Preview repaint target
 

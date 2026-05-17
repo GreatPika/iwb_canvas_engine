@@ -12,7 +12,7 @@ sequenceDiagram
   participant Touched as TouchedSet
   participant CC as CommitCompiler
   participant Effects as Buffered effects
-  participant Signals as Public signals
+  participant Signals as Public state/effects
 
   Caller->>API: edit(fn)
   API->>EK: open synchronous edit session
@@ -60,6 +60,6 @@ sequenceDiagram
   Note over Handle: Any later handle operation throws StateError.
   Note over EK,Selection: Selection owner remains unchanged.
   Note over EK,Store: Committed document identity and document revisions remain unchanged. InteractionEngine-owned preview is outside Store.
-  Note over Store,Signals: No atomic install runs and no action event, text edit event, public notify, scene repaint, or overlay repaint is published.
+  Note over Store,Signals: No atomic install runs and no action event, text edit event, public state publication, scene repaint, or overlay repaint is published.
   EK--x API: rethrow original exception, async edit rejection, or preflight error
   API--x Caller: propagate safely

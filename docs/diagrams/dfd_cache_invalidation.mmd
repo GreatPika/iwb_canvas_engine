@@ -5,15 +5,17 @@ flowchart LR
   Surface["CanvasSurface\npaint and repaint host"]
 
   subgraph Sources["Invalidation sources"]
-    Touched["TouchedSet\nadded/removed/updated/transformed ids,\ngeometry/element visual changed ids,\nresource descriptor/visual ids,\nlayer order, background layer,\nselection, camera, background, grid,\npalette, documentReplaced"]
+    Touched["TouchedSet\nadded/removed/updated/transformed ids,\ngeometry/element visual changed ids,\nresource descriptor/visual ids,\nlayer order, background layer,\nselection, persisted camera, background, grid,\npalette, documentReplaced"]
     LoadSuccess["Staged load success\ntyped replacement effect"]
     PreviewCleanup["Preview cleanup\nterminal or cancel repaint effect"]
     EmptyOrRollback["Empty touched set or rollback\nno revisions, cache eviction,\nspatial change, repaint, or events"]
     ResourceDirtyCall["CanvasResourcePort\nmarkResourceDirty / markAllResourcesDirty"]
+    ViewCameraCall["CanvasCameraPort\nsetOffset / panBy"]
   end
 
   subgraph Runtime["RuntimeRoot"]
     ResourceDirtyDispatch["Resource dirty orchestration\nrevision increment + cache eviction"]
+    ViewCameraDispatch["Runtime view camera orchestration\nstate.revisions.viewCamera + repaint"]
     DeferredSpatialRepair["Deferred invalid-index repair\nrebuild or retry outside hot pointer/paint path"]
   end
 
@@ -37,6 +39,14 @@ flowchart LR
     ProjectionRevision["projectionRevision"]
     ResourceRevision["resourceRevision"]
     ResourceVisualRevision["resourceVisualRevision"]
+  end
+
+  subgraph PublicState["Public CanvasRuntimeState"]
+    RuntimeStateRevision["state.revisions\npublic domains"]
+    DocumentPublicRevision["document"]
+    SelectionPublicRevision["selection"]
+    PreviewRevision["preview"]
+    ViewCameraRevision["viewCamera"]
   end
 
   subgraph Selection["SelectionKernel"]
@@ -66,10 +76,10 @@ flowchart LR
   subgraph Frame["FrameEngine"]
     PaintPlanInvalidation["PaintPlanCache invalidation\nstructural, bounds, elementVisual,\nviewport/device inputs"]
     SelectionDecorationInvalidation["Selection decoration invalidation\nselection, structure, style"]
-    StaticFrameInvalidation["StaticBackgroundCache invalidation\ncamera, background, grid"]
+    StaticFrameInvalidation["StaticBackgroundCache invalidation\nview camera bucket, background, grid"]
     TextPathInvalidation["Text, path, stroke cache invalidation\nonly changed render inputs"]
     MainRepaint["Main repaint bus"]
-    OverlayRepaint["Overlay repaint bus\npreview cleanup, load success, camera"]
+    OverlayRepaint["Overlay repaint bus\npreview cleanup, load success, view camera"]
     PreviewSnapshot["PreviewStateSnapshot\npreviewRevision"]
   end
 
@@ -101,10 +111,12 @@ flowchart LR
   TypedRevisionScope -->|"update only counters touched by operation"| RevisionState
 
   RevisionState -.->|"document state changes"| DocumentRevision
+  DocumentRevision -->|"public document domain"| DocumentPublicRevision
+  DocumentPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
   RevisionState -.->|"structure/order changes"| StructuralRevision
   RevisionState -.->|"geometry/bounds changes"| BoundsRevision
   RevisionState -.->|"element visual changes"| ElementVisualRevision
-  RevisionState -.->|"camera/background/grid changes"| FrameMetaRevision
+  RevisionState -.->|"background/grid document changes"| FrameMetaRevision
   RevisionState -.->|"public projection invalidated"| ProjectionRevision
   RevisionState -.->|"resource descriptor changes"| ResourceRevision
   RevisionState -.->|"external resource visual dirty"| ResourceVisualRevision
@@ -134,6 +146,7 @@ flowchart LR
 
   ResourceDirtyCall -->|"explicit external visual invalidation"| ResourceDirtyDispatch
   ResourceDirtyDispatch -->|"increment runtime/store visual revision"| ResourceVisualRevision
+  ResourceVisualRevision -->|"public resource visual domain"| RuntimeStateRevision
   ResourceDirtyDispatch -->|"cache entries only"| DirtyResourceEvict
   ResourceVisualRevision -->|"resource visuals changed"| MainRepaint
   ResourceDirtyCall -.->|"forbidden"| DirtyDocumentRevision
@@ -141,6 +154,8 @@ flowchart LR
   ResourceDirtyCall -.->|"forbidden"| DirtyActionEvent
 
   SelectionEffect -->|"membership changed"| SelectionRevision
+  SelectionRevision -->|"public selection domain"| SelectionPublicRevision
+  SelectionPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
   StructuralRevision -->|"structure/order changed"| PaintPlanInvalidation
   BoundsRevision -->|"bounds changed"| PaintPlanInvalidation
   ElementVisualRevision -->|"element visual rows changed"| PaintPlanInvalidation
@@ -148,16 +163,23 @@ flowchart LR
   StructuralRevision -->|"selected order may change"| SelectionDecorationInvalidation
   ReplacementScope -->|"full frame cache reset allowed"| PaintPlanInvalidation
   LoadSuccess -->|"full frame cache reset typed effect"| PaintPlanInvalidation
-  FrameMetaRevision -->|"camera/background/grid only"| StaticFrameInvalidation
-  FrameMetaRevision -->|"camera changed"| OverlayRepaint
+  ViewCameraCall -->|"runtime view camera only"| ViewCameraDispatch
+  ViewCameraDispatch -->|"increment public view camera revision"| ViewCameraRevision
+  ViewCameraRevision -->|"public runtime state domain"| RuntimeStateRevision
+  ViewCameraDispatch -->|"view camera changed"| StaticFrameInvalidation
+  ViewCameraDispatch -->|"view camera changed"| OverlayRepaint
+
+  FrameMetaRevision -->|"background/grid document meta only"| StaticFrameInvalidation
   ElementVisualRevision -->|"changed text, path, or stroke inputs"| TextPathInvalidation
   PaintPlanInvalidation -->|"scene records changed"| MainRepaint
   SelectionDecorationInvalidation -->|"selection UI changed"| MainRepaint
-  StaticFrameInvalidation -->|"background or camera frame changed"| MainRepaint
+  StaticFrameInvalidation -->|"background/grid/view camera frame changed"| MainRepaint
   TextPathInvalidation -->|"render cache entries changed"| MainRepaint
 
   PreviewCleanup -->|"preview state changes"| PreviewSnapshot
   LoadSuccess -->|"previewRevision if active preview cleared"| PreviewSnapshot
+  PreviewSnapshot -->|"public preview domain when changed"| PreviewRevision
+  PreviewRevision -->|"public runtime state domain"| RuntimeStateRevision
   PreviewSnapshot -->|"overlay preview\npreviewRevision + overlay repaint"| OverlayRepaint
   PreviewSnapshot -->|"selected move preview\npreviewRevision + main repaint"| MainRepaint
   LoadSuccess -->|"load success overlay repaint"| OverlayRepaint

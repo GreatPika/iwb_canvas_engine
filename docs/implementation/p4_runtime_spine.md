@@ -18,6 +18,7 @@ without bypassing ownership.
 - `SelectionKernel` as the internal runtime owner for selected ids and
   selectionRevision
 - `RevisionState`
+- public `ValueListenable<CanvasRuntimeState>` state publication foundation
 - `DocumentProjectionCache`
 - `CanvasRuntime.readDocument`
 - `CanvasDocumentSummary`
@@ -68,6 +69,7 @@ without bypassing ownership.
 - runtime ownership and single composition root from `section_02_architecture_model`
 - committed document tables, revisions, and projection cache from
   `section_10_runtime_data_model`
+- public runtime state snapshot ownership from `section_10_runtime_data_model`
 - runtime selection ownership and selectionRevision separation from
   `section_02_architecture_model` and `section_10_runtime_data_model`
 - runtime config materialization from public constructor-validated config values,
@@ -88,9 +90,11 @@ without bypassing ownership.
 ## Exit gate
 
 - runtime can be constructed and disposed without legacy runtime dependency
-- runtime dispose leaves document and preview revision listenable values readable,
-  does not notify documentRevisionListenable, and delivers no revision
-  listenable notifications after dispose returns
+- runtime dispose leaves `state.value` readable, does not increment document
+  revision, and delivers no public state notifications after dispose returns
+- runtime state holder can produce coherent `CanvasRuntimeState` snapshots from
+  owner-provided revision facts, while edit/load/interaction publication proof
+  remains owned by later phases
 - runtime config materialization preserves already-validated
   `CanvasDiagnosticsVerbose` preview and list-entry limits without pulling
   schema/codec ownership into RuntimeRoot

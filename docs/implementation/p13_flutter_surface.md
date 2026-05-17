@@ -129,6 +129,8 @@ store, resolver, or interaction internals.
   backed by different runtimes can coexist
 - surface detach, dispose, and runtime swap remove only the runtime listeners
   registered by that surface
+- surface observes `CanvasRuntime.state` as the public runtime change signal and
+  does not own or mutate public runtime snapshots
 - `interactive=false` disables pointer routing
 - `interactive=false` cancels active pointer sessions but preserves non-active pending line state
 - resource resolver repaint works

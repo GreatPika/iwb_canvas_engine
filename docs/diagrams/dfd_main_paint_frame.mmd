@@ -5,8 +5,12 @@ flowchart LR
   AppResolver["Application resourceResolver\nsynchronous app-owned image read"]
 
   subgraph Store["DocumentStoreKernel"]
-    Committed["Committed tables\ndocument revisions, camera,\nresource descriptors"]
+    Committed["Committed tables\ndocument revisions,\nresource descriptors"]
     ProjectionCache["DocumentProjectionCache\nreadDocument/codec/tests only"]
+  end
+
+  subgraph RuntimeState["Runtime view state"]
+    ViewCamera["Runtime view camera\nviewCameraOffset + viewCameraRevision"]
   end
 
   subgraph Selection["SelectionKernel"]
@@ -33,8 +37,8 @@ flowchart LR
   subgraph Frame["FrameEngine"]
     RepaintSignal["Main repaint request"]
     Capture["Main frame capture\nsingle runtime read boundary"]
-    CapturedFrame["CapturedMainFrame\ndocument, structural, bounds,\nelementVisual, frameMeta, resourceVisual,\nselection, camera, viewport,\nselectedMoveDelta"]
-    PaintPlanCache["PaintPlanCache\nordinary committed records only\nno frameMeta, selectedMoveDelta,\nor previewDelta in key/value"]
+    CapturedFrame["CapturedMainFrame\ndocument, structural, bounds,\nelementVisual, frameMeta, resourceVisual,\nselection, view camera, viewport,\nselectedMoveDelta"]
+    PaintPlanCache["PaintPlanCache\nordinary committed records only\nno frameMeta, view camera,\nselectedMoveDelta, or previewDelta\nin key/value"]
     OrdinaryPlan["Ordinary committed paint plan\ncached RenderElementRecord list"]
     OrdinaryStage["Ordinary paint candidates\nviewport and halo"]
     SupplementStage["Per-frame selected supplement staging\npreview-shifted visibility"]
@@ -45,7 +49,7 @@ flowchart LR
     Records["Immutable frame record list\nordinary row views plus per-frame\nselection decoration/supplements"]
     DescriptorSnapshots["Descriptor snapshots\nresourceId + appKey descriptor + resourceRevision"]
     RenderCaches["Frame render caches\ntext, path, stroke"]
-    StaticBackgroundCache["StaticBackgroundCache\nbackground + grid + camera bucket + dpr"]
+    StaticBackgroundCache["StaticBackgroundCache\nbackground + grid + view camera bucket + dpr"]
     ResolvedAssets["Resolved paint assets\nimages or placeholders"]
     PaintAlphaPolicy["Ordinary opacity policy\nelement/stroke opacity -> primitive paint alpha\nno implicit saveLayer"]
     ExplicitLayerEffect["Future saveLayer effect\nexplicit RenderElementRecord field,\nbudgeted, metric-counted,\nand guarded by contract update"]
@@ -63,6 +67,8 @@ flowchart LR
 
   Capture -->|"read committed frame facts once"| Committed
   Committed -->|"revisioned table snapshot facts"| CapturedFrame
+  Capture -->|"read runtime view camera once"| ViewCamera
+  ViewCamera -->|"viewCameraRevision and viewCameraOffset"| CapturedFrame
   Capture -->|"read selected ids once"| SelectionFacts
   SelectionFacts -->|"selectionRevision and selected ids"| CapturedFrame
   Capture -->|"read immutable selected move preview once"| PreviewSnapshot
@@ -94,7 +100,7 @@ flowchart LR
   SelectionDecoration -->|"selection UI primitives"| Records
 
   Records -->|"text/path/stroke keys"| RenderCaches
-  CapturedFrame -->|"background/grid/camera bucket/dpr"| StaticBackgroundCache
+  CapturedFrame -->|"background/grid/view camera bucket/dpr"| StaticBackgroundCache
   Records -->|"ordinary opacity render input"| PaintAlphaPolicy
   PaintAlphaPolicy -->|"primitive paint alpha only"| MainPainter
   ExplicitLayerEffect -.->|"required before any saveLayer-producing effect\nframe.paint_candidates offscreen-layer metric"| MainPainter

@@ -14,7 +14,7 @@ sequenceDiagram
   participant Spatial as SpatialKernel
   participant Resources as ResourceKernel
   participant Frame as FrameEngine
-  participant Signals as Public signals
+  participant Signals as Public state/effects
 
   Caller->>API: loadDocument(document)
   API->>Runtime: delegate loadDocument(document)
@@ -51,7 +51,7 @@ sequenceDiagram
     Note over Store: Committed document identity, controllerEpoch, and all document revisions remain unchanged.
     Note over Selection: Selected ids and selectionRevision remain unchanged.
     Note over Projection,Frame: Projection, spatial, resource, paint, static, text, path, stroke, and overlay caches remain unchanged.
-    Note over Frame,Signals: No main repaint, overlay repaint, CanvasActionCommitted event, text edit event, public notify, or revision listener publication occurs.
+    Note over Frame,Signals: No main repaint, overlay repaint, CanvasActionCommitted event, text edit event, or public state publication occurs.
   end
 
   Note over Runtime,Store: Failure stops before PreparedDocumentLoad install. There is no atomic install, revision bump, cache invalidation action, or success-path interaction cleanup.

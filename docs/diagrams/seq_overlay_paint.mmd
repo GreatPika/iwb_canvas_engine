@@ -4,19 +4,19 @@ sequenceDiagram
 
   participant Surface as CanvasSurface
   participant Frame as FrameEngine
-  participant Store as DocumentStoreKernel
+  participant Runtime as Runtime view camera
   participant Preview as CanvasPreviewState
   participant MainPath as Main scene preview path
   participant Builder as Overlay primitive builder
   participant Painter as Overlay painter
 
   Surface->>Frame: paint overlay request(selectionStyle)
-  Frame->>Store: capture cameraOffset once for overlay frame
-  Store-->>Frame: cameraOffset
+  Frame->>Runtime: capture viewCameraOffset once for overlay frame
+  Runtime-->>Frame: viewCameraRevision and viewCameraOffset
   Frame->>Preview: capture previewRevision and immutable previewState once
   Preview-->>Frame: previewRevision and immutable previewState
   Surface-->>Frame: selectionStyle for this paint frame
-  Note over Frame: CapturedOverlayFrame freezes previewRevision, cameraOffset, immutable previewState, and selectionStyle for this paint frame.
+  Note over Frame: CapturedOverlayFrame freezes previewRevision, viewCameraRevision, viewCameraOffset, immutable previewState, and selectionStyle for this paint frame.
 
   Frame->>Frame: admit overlay preview kind from captured previewState only
 
@@ -38,11 +38,11 @@ sequenceDiagram
   end
 
   Builder-->>Frame: immutable overlay primitives
-  Note over Builder,Frame: Primitive construction uses captured cameraOffset, previewState, and selectionStyle only.
+  Note over Builder,Frame: Primitive construction uses captured viewCameraOffset, previewState, and selectionStyle only.
   Frame->>Painter: paint captured overlay frame and immutable primitives
   Painter-->>Surface: draw overlay UI
 
   Note over Painter: Overlay painter consumes captured frame facts and immutable primitives only. It performs no live runtime reads.
-  Note over Painter,Store: Forbidden: painter reads from DocumentStoreKernel, Store, InteractionEngine, FrameEngine runtime state, or public document projection.
-  Note over Frame,Store: Forbidden in overlay paint: CanvasDocument materialization, DocumentProjectionCache reads, Store mutation, cache invalidation, repaint scheduling, and action events.
+  Note over Painter,Runtime: Forbidden: painter reads from DocumentStoreKernel, InteractionEngine, FrameEngine runtime state, or public document projection.
+  Note over Frame,Runtime: Forbidden in overlay paint: CanvasDocument materialization, DocumentProjectionCache reads, Store mutation, cache invalidation, repaint scheduling, and action events.
   Note over Surface,Painter: Forbidden: resource resolver reads and selected move rendering in overlay paint.

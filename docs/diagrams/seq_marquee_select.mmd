@@ -20,7 +20,8 @@ sequenceDiagram
   participant Effects as CommitEffects
   participant Applier as CommitApplier
   participant Events as EventBuffer
-  participant Signals as Public signals
+  participant Runtime as RuntimeRoot
+  participant Signals as Public state/effects
 
   User->>Surface: pointer down in move mode
   Surface->>Tools: handlePointer(CanvasPointerSample down)
@@ -41,6 +42,8 @@ sequenceDiagram
     IE->>IE: start marquee session with anchor position
     Note over IE: Session stores pointer token, sessionId, anchor position, and previous selection.
     IE->>Preview: publish kind marquee with zero-area marqueeRect
+    Preview-->>Runtime: preview revision fact
+    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request overlay repaint only
     Frame->>Signals: publish overlay repaint request
     Signals-->>Surface: repaint overlay rectangle preview
@@ -53,6 +56,8 @@ sequenceDiagram
     IE->>IE: normalize rectangle from anchor to current position
     Note over IE,Frame: Marquee drag preview is overlay-only and no selected-move main-scene preview delta is staged.
     IE->>Preview: replace immutable marquee preview snapshot
+    Preview-->>Runtime: preview revision fact
+    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request overlay repaint only
     Frame->>Preview: capture previewRevision and marqueeRect once
     Frame->>Frame: build marquee fill and stroke overlay primitives
@@ -71,6 +76,8 @@ sequenceDiagram
   alt next selection equals previous selection
     IE->>Preview: clear marquee preview and active session
     IE->>Preview: bump previewRevision for cleared active preview
+    Preview-->>Runtime: preview cleanup revision fact
+    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without marquee
@@ -92,27 +99,45 @@ sequenceDiagram
     EK->>EK: reject Future result before success path
     EK->>CC: compile exact selection revision and repaint intent
     Touched-->>CC: selectionChanged revision fact
-    CC->>Store: preflight document invariants
-    Store-->>CC: preflight accepted
-    CC->>Selection: preflight selection effect
-    Selection-->>CC: preflight accepted
-    CC->>Effects: prepare typed main RepaintIntent
-    CC->>Events: attach staged selectMarquee event to commit
-    CC->>Applier: hand off compiled CommitPlan
-    Applier->>Selection: install selection effect atomically
-    Selection->>Selection: replace selected ids and selectionRevision
-    Note over Applier,Selection: Atomic install is the commit boundary.
-    Note over Selection,Spatial: Selection changes do not update spatial indexes or projection cache.
-    Selection-->>Applier: committed selection revision facts
-    Applier->>Events: commit buffered action and revision effects
-    Applier->>Frame: publish committed main repaint bus
-    EK->>EK: close edit session and stale handle
-    EK-->>IE: edit result
-    IE->>Preview: clear marquee preview and active session
-    IE->>Preview: bump previewRevision for cleared active preview
-    Preview->>Frame: request overlay repaint cleanup
-    Events->>Signals: publish selection revision and action notifications
-    Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
-    Signals-->>Surface: repaint main scene selection and overlay without marquee
-    IE-->>Tools: terminal handling complete
+    alt commit preflight and install succeed
+      CC->>Store: preflight document invariants
+      Store-->>CC: preflight accepted
+      CC->>Selection: preflight selection effect
+      Selection-->>CC: preflight accepted
+      CC->>Effects: prepare typed main RepaintIntent
+      CC->>Events: attach staged selectMarquee event to commit
+      CC->>Applier: hand off compiled CommitPlan
+      Applier->>Selection: install selection effect atomically
+      Selection->>Selection: replace selected ids and selectionRevision
+      Note over Applier,Selection: Atomic install is the commit boundary.
+      Note over Selection,Spatial: Selection changes do not update spatial indexes or projection cache.
+      Selection-->>Applier: committed selection revision facts
+      Applier->>Events: commit buffered action event
+      Applier->>Frame: publish committed main repaint bus
+      EK->>EK: close edit session and stale handle
+      EK-->>IE: edit result
+      IE->>Preview: clear marquee preview and active session
+      IE->>Preview: bump previewRevision for cleared active preview
+      Preview->>Frame: request overlay repaint cleanup
+      Preview-->>Runtime: preview cleanup revision fact
+      Applier-->>Runtime: committed selection facts
+      Runtime->>Signals: publish one CanvasRuntimeState with selection and preview effects
+      Events->>Signals: publish selectMarquee action notification
+      Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
+      Signals-->>Surface: repaint main scene selection and overlay without marquee
+      IE-->>Tools: terminal handling complete
+    else edit exception, rejected Future, or preflight failure
+      EK->>Events: discard pending selectMarquee action
+      EK->>EK: rollback draft and close session
+      EK-->>IE: terminal failure
+      IE->>Preview: clear marquee preview and active session
+      IE->>Preview: bump previewRevision for cleared active preview
+      Preview-->>Runtime: preview cleanup revision fact
+      Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+      Preview->>Frame: request overlay repaint cleanup
+      Frame->>Signals: publish overlay cleanup repaint notification
+      Signals-->>Surface: repaint overlay without marquee
+      Note over Selection,Signals: Rollback keeps selection state, document state, main repaint, and selectMarquee action unchanged.
+      Note over Runtime,Signals: Active preview cleanup publishes only preview state.
+    end
   end

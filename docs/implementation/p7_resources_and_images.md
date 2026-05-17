@@ -16,7 +16,7 @@ load have established rollback-safe mutation and replacement boundaries.
 - image resource and image element lifecycle
 - `markResourceDirty`
 - `markAllResourcesDirty`
-- resource visual revision effects without document revision changes
+- resource visual public state revision effects without document revision changes
 - synchronous app-owned image resolver bridge
 - missing/null resolve results cached per frame by resource id and resource
   revision
@@ -96,7 +96,8 @@ load have established rollback-safe mutation and replacement boundaries.
 ## Exit gate
 
 - resource descriptor mutation is rollback-safe
-- resource dirty schedules main repaint intent without document revision
+- resource dirty publishes `state.revisions.resourceVisual` and schedules main
+  repaint intent without document revision
 - resolver image results are app-owned and not disposed by engine
 - painters and frame code can resolve images only through ResourceKernel
 - missing/null resolver results do not retry in the same frame

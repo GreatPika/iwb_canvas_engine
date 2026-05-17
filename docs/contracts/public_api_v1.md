@@ -40,6 +40,8 @@ Required tests:
 - `test.api_contract.public_equality_policy`
 - `test.api.typed_action_payloads`
 - `test.runtime.dispose_lifecycle`
+- `test.runtime.runtime_state_publication`
+- `test.runtime.interaction_settings_state`
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
 - `test.flutter_bridge.single_active_surface`
 - `test.api_contract.v1_scope_gate`
@@ -134,6 +136,9 @@ CanvasElementId
 CanvasLayerId
 CanvasResourceId
 CanvasActionId
+CanvasRuntimeState
+CanvasRuntimeRevisions
+CanvasRuntimeSummary
 CanvasTransform
 CanvasFieldUpdate and its variants
 CanvasMetadata
@@ -299,7 +304,7 @@ final class CanvasRuntime {
   });
 
   CanvasDocument readDocument();
-  CanvasDocumentSummary get summary;
+  ValueListenable<CanvasRuntimeState> get state;
 
   CanvasEditPort get edits;
   CanvasSelectionPort get selection;
@@ -313,9 +318,6 @@ final class CanvasRuntime {
   Stream<CanvasActionCommitted> get actions;
   Stream<CanvasTextEditRequested> get textEditRequests;
 
-  ValueListenable<int> get documentRevisionListenable;
-  ValueListenable<int> get previewRevisionListenable;
-
   CanvasElementId generateElementId();
   CanvasLayerId generateLayerId();
   CanvasResourceId generateResourceId();
@@ -325,6 +327,14 @@ final class CanvasRuntime {
 ```
 
 `CanvasRuntime` is not a Flutter widget. It may be used in tests without mounting UI.
+When `initialDocument` is provided, construction installs that document as the
+initial committed document and initializes the runtime view camera from the
+document's persisted camera. No public state notification is emitted during
+construction; the initial `state.value` and `camera` getters already reflect the
+installed document and runtime view camera.
+`state.value` is the single public runtime observation snapshot. Applications
+that need repaint, cache, badge, toolbar, or save-state updates subscribe to
+`state` and compare the public revision domains they care about.
 
 Dispose contract:
 
@@ -334,16 +344,12 @@ Dispose contract:
 - readDocument after dispose is allowed and returns last committed immutable document;
 - actions stream closes;
 - textEditRequests stream closes;
-- documentRevisionListenable.value remains readable after dispose and returns
-  the final committed document revision;
-- previewRevisionListenable.value remains readable after dispose and returns the
-  final preview revision;
-- dispose alone never increments the committed document revision and never
-  notifies documentRevisionListenable listeners;
-- during the first dispose call, previewRevisionListenable may notify listeners
-  only when dispose clears existing preview state and advances previewRevision;
-- after dispose returns, documentRevisionListenable and
-  previewRevisionListenable deliver no further notifications, including on
+- state.value remains readable after dispose and returns the final runtime
+  snapshot;
+- dispose alone never increments the committed document revision;
+- during the first dispose call, state may notify listeners only when dispose
+  clears existing preview state and advances state.revisions.preview;
+- after dispose returns, state delivers no further notifications, including on
   repeated dispose calls;
 - removeListener is allowed after dispose;
 - CanvasRuntime does not own application listeners; CanvasSurface removes only
@@ -351,6 +357,60 @@ Dispose contract:
   applications remove listeners they registered directly;
 - mandatory v1 resource caches are cleared without disposing app-provided ui.Image objects.
 ```
+
+Runtime state snapshot:
+
+```dart
+final class CanvasRuntimeState {
+  const CanvasRuntimeState({
+    required this.revisions,
+    required this.summary,
+  });
+
+  final CanvasRuntimeRevisions revisions;
+  final CanvasRuntimeSummary summary;
+}
+
+final class CanvasRuntimeRevisions {
+  const CanvasRuntimeRevisions({
+    required this.document,
+    required this.selection,
+    required this.preview,
+    required this.viewCamera,
+    required this.resourceVisual,
+    required this.interaction,
+    required this.epoch,
+  });
+
+  final int document;
+  final int selection;
+  final int preview;
+  final int viewCamera;
+  final int resourceVisual;
+  final int interaction;
+  final int epoch;
+}
+
+final class CanvasRuntimeSummary {
+  const CanvasRuntimeSummary({
+    required this.elementCount,
+    required this.layerCount,
+    required this.resourceCount,
+    required this.selectedCount,
+  });
+
+  final int elementCount;
+  final int layerCount;
+  final int resourceCount;
+  final int selectedCount;
+}
+```
+
+`CanvasRuntimeState` is atomic from the public API perspective: `revisions` and
+`summary` describe the same runtime moment. `CanvasRuntimeRevisions` exposes
+application-observation domains only. Internal cache and projection revisions
+such as structural, bounds, element visual, frame meta, projection, or resource
+descriptor revisions are not public API fields.
 
 ### 4.5 Runtime config
 
@@ -499,20 +559,14 @@ final class CanvasDocument {
 
 final class CanvasDocumentSummary {
   const CanvasDocumentSummary({
-    required this.revision,
-    required this.epoch,
     required this.elementCount,
     required this.layerCount,
     required this.resourceCount,
-    required this.selectedCount,
   });
 
-  final int revision;
-  final int epoch;
   final int elementCount;
   final int layerCount;
   final int resourceCount;
-  final int selectedCount;
 }
 
 final class CanvasLayer {
@@ -574,7 +628,11 @@ final class CanvasPalette {
 copy and validate them before exposing unmodifiable lists. `CanvasMetadata.empty()`
 is const-safe because it accepts no caller-owned input; `CanvasMetadata.fromMap`
 is non-const because it validates and deep-freezes caller-owned map/list values.
-CanvasCamera v1 stores offset only, matching legacy engine behavior.
+`CanvasDocument.camera` stores the persisted document default camera offset,
+matching legacy engine behavior for schema/readDocument round trips. The same
+`CanvasCamera` value type is also used by `CanvasCameraPort.camera` to report
+the runtime view camera; runtime view camera offset is owned by
+`CanvasCameraPort` and published through `CanvasRuntime.state`.
 
 ### 4.9 Geometry enums and transform
 
@@ -1123,6 +1181,13 @@ Edit contract:
 - CanvasEdit.clearContent is a low-level document edit and emits no user action event.
 ```
 
+`CanvasEdit.setCameraOffset` changes the persisted document camera. It is a
+document edit: changed offsets increment `state.revisions.document`, invalidate
+the public `CanvasDocument` projection, and are visible through `readDocument`.
+It never directly mutates the runtime view camera. Runtime construction with an
+`initialDocument` and `loadDocument` both initialize the runtime view camera from
+the installed document's persisted camera.
+
 `CanvasClearResult`:
 
 ```dart
@@ -1312,6 +1377,13 @@ abstract interface class CanvasCameraPort {
 ```
 
 Offset validation: finite x/y within `[-1e7, 1e7]`.
+
+`CanvasCameraPort` owns the runtime view camera. `setOffset` and `panBy` update
+`state.revisions.viewCamera` and repaint affected surfaces without incrementing
+`state.revisions.document`, invalidating public `CanvasDocument` projection, or
+changing the persisted document camera. `camera` and `offset` expose the current
+runtime view camera, while `readDocument().camera` exposes the persisted
+document camera.
 
 ### 4.17 Resource API
 

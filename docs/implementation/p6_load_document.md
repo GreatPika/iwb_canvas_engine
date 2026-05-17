@@ -13,9 +13,11 @@ and keep failed loads from interrupting existing runtime or interaction state.
 - `CanvasEdit.replaceDraftDocument`
 - success path: validate/materialize, interrupt active interaction through a
   narrow runtime boundary, clear preview, install replacement document plus
-  selection-owner clear as one atomic runtime result, increment controller epoch
-  and replacement revisions, clear pointer normalization hooks, invalidate
-  projection/spatial/frame/resource caches, and notify after install
+  selection-owner clear as one atomic runtime result, initialize runtime view
+  camera from the persisted document camera, increment public state revisions
+  for document/selection/view camera/epoch plus preview when cleanup changes it,
+  clear pointer normalization hooks, invalidate projection/spatial/frame/resource
+  caches, and publish one `CanvasRuntimeState` after install
 - failure path: validation/materialization failure leaves committed document,
   selection owner, preview, pointer normalization, repaint, events, and active
   gesture state unchanged
@@ -73,6 +75,7 @@ and keep failed loads from interrupting existing runtime or interaction state.
 ## Tests and guardrails that prove this phase
 
 - `test.edit.staged_document_load_success_failure` -> `test/edit/staged_document_load_success_failure_test.dart`
+- `test.runtime.load_document_state_publication` -> `test/runtime/load_document_state_publication_test.dart`
 - `test.selection.runtime_owner_separation` -> `test/selection/runtime_owner_separation_test.dart`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
@@ -89,7 +92,8 @@ and keep failed loads from interrupting existing runtime or interaction state.
 - failed load caused by invalid `CanvasMetadata` or DTO ownership validation
   preserves active interaction through the runtime interrupt boundary
 - successful load interrupts before install and publishes one atomic
-  replacement result: document replacement plus selection-owner clear
+  `CanvasRuntimeState` for document replacement, selection-owner clear, epoch
+  change, runtime view-camera initialization, and optional preview cleanup
 - `replaceDraftDocument` is rollback-safe inside an edit session
 - load success/failure operation matrix effects are executable and green.
 

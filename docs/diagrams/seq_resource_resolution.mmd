@@ -12,9 +12,10 @@ sequenceDiagram
   participant Resolver as CanvasResourceResolver
   participant Painter as Main painter
   participant Port as CanvasResourcePort
+  participant State as Public runtime state
   participant Signals as Repaint signals
 
-  Surface->>Frame: paint main scene request(viewportRect, cameraOffset, dpr, resolver)
+  Surface->>Frame: paint main scene request(viewportRect, dpr, resolver)
   Frame->>Store: capture committed main-frame facts once
   Store-->>Frame: resourceVisualRevision, compact rows, and frame revisions
   Frame->>Frame: build immutable RenderElementRecord list
@@ -75,9 +76,10 @@ sequenceDiagram
     Store-->>Runtime: documentRevision unchanged
     Runtime->>Resources: invalidate dirty resourceVisual cache for target id or all registered resources
     Resources->>Cache: invalidate ImageResolveCache entries by resourceId or all
+    Runtime->>State: publish CanvasRuntimeState with updated state.revisions.resourceVisual
     Runtime->>Signals: schedule main repaint
     Signals-->>Surface: repaint main scene
 
-    Note over Port,Store: Dirty visual invalidation does not mutate descriptors, document revision, action events, preview, or CanvasDocument projection.
+    Note over Port,Store: Dirty visual invalidation publishes resourceVisual public state only. It does not mutate descriptors, document revision, action events, preview, or CanvasDocument projection.
     Note over Runtime: Dirty visual invalidation does not mutate the selection owner.
   end

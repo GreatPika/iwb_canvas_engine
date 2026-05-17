@@ -108,14 +108,14 @@ stateDiagram-v2
     EditKernelOutcome --> CleanupAfterSuccess: "commit installed"
     EditKernelOutcome --> EditFailureCleanup: "rejected, rolled back, or threw"
 
-    state "Cleanup after successful commit" as CleanupAfterSuccess
-    note left of CleanupAfterSuccess
-      Clear selected move preview/session before public
-      document, repaint, and action signals are published.
-    end note
+  state "Cleanup after successful commit" as CleanupAfterSuccess
+  note left of CleanupAfterSuccess
+    Clear selected move preview/session before public
+    CanvasRuntimeState, repaint, and action effects are published.
+  end note
     CleanupAfterSuccess --> PublicSignals: "publish commit effects after cleanup"
 
-    state "Public signals after cleanup" as PublicSignals
+    state "Public state/effects after cleanup" as PublicSignals
     note right of PublicSignals
       A moveSelection action is visible only after selected
       move cleanup and a successful EditKernel commit.
@@ -142,9 +142,10 @@ stateDiagram-v2
   state "Edit failure cleanup" as EditFailureCleanup
   note right of EditFailureCleanup
     EditKernel was opened but rejected, rolled back, or threw.
-    No successful commit, action event, public document
-    notification, or direct Store mutation by InteractionEngine
-    is allowed.
+    No successful commit, action event, document/selection
+    state publication, or direct Store mutation by InteractionEngine
+    is allowed. Active selected-move preview cleanup publishes
+    CanvasRuntimeState with an updated preview revision.
   end note
 
   state "Dispose cleanup" as DisposeCleanup

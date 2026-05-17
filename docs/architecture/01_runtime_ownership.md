@@ -61,6 +61,29 @@ Canvas engine state
 | CodecBoundary | schema v1 encode/decode, validation, diagnostics | зависеть от Flutter widget или gestures |
 | DiagnosticsHub | internal diagnostic records, public error projection | добавлять public stream без API-решения |
 
+Public runtime observation is owned by `RuntimeRoot`. It publishes the single
+`CanvasRuntime.state` listenable as immutable `CanvasRuntimeState` snapshots
+after accepted document, selection, preview, view camera, resource visual,
+interaction, or epoch changes. Downstream owners contribute facts through their
+own boundaries; they do not own the public snapshot object or depend on Flutter
+widget state to publish core runtime state.
+
+Camera ownership is split deliberately:
+
+```text
+Runtime view camera
+  -> owned by RuntimeRoot/CanvasCameraPort;
+  -> published through state.revisions.viewCamera;
+  -> repaints affected surfaces;
+  -> does not dirty document state or invalidate CanvasDocument projection.
+
+Persisted document camera
+  -> owned by DocumentStoreKernel as committed document content;
+  -> stored in CanvasDocument and schema v1;
+  -> changed only through CanvasEdit.setCameraOffset or document replacement;
+  -> read back through readDocument.
+```
+
 Gesture decisions may need committed facts such as controller epoch,
 selection ids, movable flags, text snapshots, and bounds. Document facts enter
 `InteractionEngine` only through narrow read-only interaction query boundaries

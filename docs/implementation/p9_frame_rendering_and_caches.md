@@ -22,6 +22,8 @@ frame output.
 - paint-plan cache with ordinary committed records only
 - cache keys based on next-owned revisions, not legacy snapshot shapes
 - `frameMetaRevision` excluded from ordinary element paint-plan invalidation
+- runtime view camera revision/offset excluded from ordinary element paint-plan
+  invalidation and public document projection invalidation
 - `selectionRevision`, selected ids, selection flags, and selected-move preview
   deltas excluded from ordinary paint-plan keys and cached ordinary records
 - no live runtime read in painters
@@ -126,7 +128,8 @@ frame output.
 - no live runtime read in painters
 - no `CanvasDocument` projection in paint
 - cache keys are next-revision based
-- `frameMetaRevision` does not invalidate ordinary committed element paint plans
+- `frameMetaRevision` and runtime view-camera changes do not invalidate ordinary
+  committed element paint plans
 - `selectionRevision` does not invalidate ordinary committed element paint
   plans
 - hot cache capacity/eviction policy is explicit
