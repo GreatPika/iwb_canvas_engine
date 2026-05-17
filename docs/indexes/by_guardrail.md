@@ -248,9 +248,9 @@ Guardrails extracted from split section 22.
 - Sections: `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`, `test.guardrails.blocking_suite`
 
-## cache.frame_meta_not_element_visual
+## cache.background_grid_not_element_visual
 
-- Rule: background/grid frame-meta changes and runtime view camera changes must not invalidate ordinary element paint plans
+- Rule: backgroundRevision/gridRevision changes and runtime view camera changes must not invalidate ordinary element paint plans
 - Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.frame.camera_pan_preserves_ordinary_paint_plan`, `test.guardrails.blocking_suite`
 

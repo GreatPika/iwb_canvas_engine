@@ -409,8 +409,10 @@ final class CanvasRuntimeSummary {
 `CanvasRuntimeState` is atomic from the public API perspective: `revisions` and
 `summary` describe the same runtime moment. `CanvasRuntimeRevisions` exposes
 application-observation domains only. Internal cache and projection revisions
-such as structural, bounds, element visual, frame meta, projection, or resource
-descriptor revisions are not public API fields.
+such as structural, bounds, element visual, `backgroundRevision`,
+`gridRevision`, projection, or resource descriptor revisions are not public API
+fields. Surface style values are paint inputs and are also not public runtime
+revision domains.
 
 ### 4.5 Runtime config
 

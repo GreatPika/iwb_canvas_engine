@@ -132,7 +132,7 @@ Guardrails:
 - `frame.paint_plan_excludes_preview_delta`
 - `frame.paint_plan_excludes_selection_state`
 - `cache.keys_use_next_revisions_only`
-- `cache.frame_meta_not_element_visual`
+- `cache.background_grid_not_element_visual`
 - `cache.hot_caches_have_capacity_eviction`
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`

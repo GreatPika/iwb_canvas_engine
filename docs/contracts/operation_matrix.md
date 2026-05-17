@@ -60,8 +60,8 @@ P7 and P10-P12 close their resource and interaction rows when those owners land.
 | command clearContent | elements, selection-owner clear, resources when removeUnusedResources removes descriptors | state.revisions.document, state.revisions.selection; internal structural, bounds, elementVisual, projection, resource | rebuild empty | evict | main | clearContent if removed |
 | CanvasEdit.setCameraOffset | persisted document camera | state.revisions.document; internal projection | no | evict | no immediate view-camera repaint unless current view is explicitly reinitialized by load | none |
 | CanvasCameraPort.setOffset/panBy | runtime view camera | state.revisions.viewCamera | no | no | main + overlay | none |
-| setBackgroundColor | meta | state.revisions.document; internal frameMeta, projection | no | evict | main | none |
-| setGrid | meta | state.revisions.document; internal frameMeta, projection | no | evict | main | none |
+| setBackgroundColor | persisted background metadata | state.revisions.document; internal backgroundRevision, projection | no | evict | main | none |
+| setGrid | persisted grid metadata | state.revisions.document; internal gridRevision, projection | no | evict | main | none |
 | setPalette | meta | state.revisions.document; internal projection | no | evict | no canvas repaint | none |
 | upsertResource new/changed | resource table | state.revisions.document; internal resource, projection | no | evict | main if used | none |
 | markResourceDirty/markAllResourcesDirty | cache only | state.revisions.resourceVisual | no | no | main | none |

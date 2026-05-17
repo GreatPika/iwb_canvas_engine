@@ -123,7 +123,8 @@ resourceRevision        -> resource descriptor changes
 resourceVisualRevision  -> markResourceDirty / resolver visual invalidation
 boundsRevision          -> geometry/transform/hit/paint bounds changed
 elementVisualRevision   -> element visual fields, element style fields, and transform-affecting paint changes
-frameMetaRevision       -> persisted document background and grid changes, plus other document meta changes that affect frame capture/static frame caches
+backgroundRevision      -> persisted document background color changes
+gridRevision            -> persisted CanvasGrid enabled/cellSize/color changes
 projectionRevision      -> public CanvasDocument projection invalidated
 previewRevision         -> preview state changed
 ```
@@ -150,13 +151,13 @@ Persisted document camera changes are ordinary document edits through
 `CanvasEdit.setCameraOffset`; they increment `documentRevision`, invalidate the
 public document projection, and are visible through `readDocument`.
 
-`frameMetaRevision` is the v1 aggregate for frame-affecting persisted document
-meta such as background and grid. It may later be split into background and grid
-revision families without changing the public API. Paint-plan cache keys must
-depend on `elementVisualRevision`, not `frameMetaRevision`; background/grid and
-runtime view-camera changes repaint frame surfaces but must not invalidate
-ordinary committed element paint plans.
-In short: v1 aggregate, may split later without public API changes.
+`backgroundRevision` and `gridRevision` are internal persisted-document metadata
+facts. `CanvasSurface.gridStyle` and `CanvasSurface.selectionStyle` are captured
+paint inputs, not document revision families and not public runtime revisions.
+Paint-plan cache keys must depend on `elementVisualRevision`, not background,
+grid, style-only, or runtime view-camera facts; background/grid and runtime
+view-camera changes repaint frame surfaces but must not invalidate ordinary
+committed element paint plans.
 
 No-op edit does not change revisions. Preview cleanup increments
 `previewRevision` only when it clears or replaces existing preview state; a

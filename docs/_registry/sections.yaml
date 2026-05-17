@@ -556,7 +556,7 @@
     - frame.no_global_scene_sort
     - frame.paint_plan_excludes_preview_delta
     - frame.paint_plan_excludes_selection_state
-    - cache.frame_meta_not_element_visual
+    - cache.background_grid_not_element_visual
   tests:
     - test.store.no_projection_hot_path
     - test.frame.main_overlay_capture
@@ -664,7 +664,7 @@
   guardrails:
     - cache.keys_use_next_revisions_only
     - cache.hot_caches_have_capacity_eviction
-    - cache.frame_meta_not_element_visual
+    - cache.background_grid_not_element_visual
     - frame.paint_plan_excludes_preview_delta
     - frame.paint_plan_excludes_selection_state
   tests:
@@ -796,7 +796,7 @@
     - frame.paint_plan_excludes_preview_delta
     - frame.paint_plan_excludes_selection_state
     - cache.keys_use_next_revisions_only
-    - cache.frame_meta_not_element_visual
+    - cache.background_grid_not_element_visual
     - cache.hot_caches_have_capacity_eviction
     - resources.mutation_inside_edit_only
     - resources.dirty_no_document_revision
@@ -1141,7 +1141,7 @@
     - frame.paint_plan_excludes_preview_delta
     - frame.paint_plan_excludes_selection_state
     - cache.keys_use_next_revisions_only
-    - cache.frame_meta_not_element_visual
+    - cache.background_grid_not_element_visual
     - cache.hot_caches_have_capacity_eviction
     - resources.mutation_inside_edit_only
     - resources.dirty_no_document_revision

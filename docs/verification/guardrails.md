@@ -66,7 +66,7 @@ Guardrails:
 - `frame.paint_plan_excludes_preview_delta`
 - `frame.paint_plan_excludes_selection_state`
 - `cache.keys_use_next_revisions_only`
-- `cache.frame_meta_not_element_visual`
+- `cache.background_grid_not_element_visual`
 - `cache.hot_caches_have_capacity_eviction`
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`
@@ -177,7 +177,7 @@ Mandatory guardrails:
 | `frame.paint_plan_excludes_preview_delta` | PaintPlanCache stores ordinary committed records only and excludes selectedMoveDelta/previewDelta from keys and values |
 | `frame.paint_plan_excludes_selection_state` | PaintPlanCache stores ordinary committed records only and excludes selected ids, selectionRevision, and selection flags from keys and values |
 | `cache.keys_use_next_revisions_only` | cache keys use next-owned revision facts and stable inputs, not legacy snapshot shapes |
-| `cache.frame_meta_not_element_visual` | background/grid frame-meta changes and runtime view camera changes must not invalidate ordinary element paint plans |
+| `cache.background_grid_not_element_visual` | backgroundRevision/gridRevision changes and runtime view camera changes must not invalidate ordinary element paint plans |
 | `cache.hot_caches_have_capacity_eviction` | hot caches declare capacity, eviction policy, invalidation owner, and metric/probe |
 | `resources.mutation_inside_edit_only` | resource descriptor mutation only via CanvasEdit |
 | `resources.dirty_no_document_revision` | markResourceDirty publishes `state.revisions.resourceVisual` and does not increment `state.revisions.document` |

@@ -358,7 +358,9 @@ test/frame/paint_plan_excludes_selection_state_test.dart
      selected ids, selectionRevision, selection flags, and selected-move preview
      state;
   -> proves selection changes rebuild selection decoration without evicting the
-     ordinary committed paint plan.
+     ordinary committed paint plan;
+  -> proves captured selectionStyle changes rebuild SelectionDecorationPlan
+     without entering StaticBackgroundCache or ordinary PaintPlanCache identity.
 
 test/interaction/preview_public_state_test.dart
   -> proves preview-only pointer changes publish state.revisions.preview without
@@ -378,6 +380,8 @@ test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart
      camera;
   -> proves camera pan preserves ordinary PaintPlanCache entries while scheduling
      repaint for the main and overlay surfaces affected by the runtime view;
+  -> proves backgroundRevision and gridRevision invalidate StaticBackgroundCache
+     without invalidating ordinary PaintPlanCache entries;
   -> proves CanvasEdit.setCameraOffset changes persisted document camera through
      the document edit path and readDocument returns that persisted camera.
 

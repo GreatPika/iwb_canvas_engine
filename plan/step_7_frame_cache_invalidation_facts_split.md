@@ -40,7 +40,7 @@ Mode: documentation and architecture contract update. Primary surfaces: runtime 
 - `docs/contracts/frame_rendering.md:77` lists `CapturedOverlayFrame` with `selectionStyle`.
 - `docs/contracts/frame_rendering.md:95` requires runtime view camera changes to repaint frame surfaces without invalidating ordinary paint plans or public document projection.
 - `docs/contracts/frame_rendering.md:98` routes background/grid changes through internal frame-meta facts.
-- `docs/contracts/cache_policy.md:46` keys `StaticBackgroundCache` by background/grid/view-camera-bucket/dpr plus `frameMetaRevision` and `viewCameraRevision`.
+- `docs/contracts/cache_policy.md:46` keys `StaticBackgroundCache` by background/grid/view-camera-bucket/devicePixelRatio plus `frameMetaRevision` and `viewCameraRevision`.
 - `docs/contracts/cache_policy.md:47` keeps `PaintPlanCache` keyed by structural, bounds, element visual, viewport, and device inputs.
 - `docs/contracts/cache_policy.md:64` states ordinary paint-plan records and keys exclude selection-only state, `frameMetaRevision`, runtime view camera facts, and selected-move deltas.
 - `docs/contracts/operation_matrix.md:61` keeps persisted document camera in the document/projection edit path.
@@ -52,7 +52,7 @@ Mode: documentation and architecture contract update. Primary surfaces: runtime 
 - `docs/contracts/public_api_v1.md:489` defines `CanvasSelectionStyle` and `CanvasGridStyle` as public visual style values.
 - `docs/diagrams/seq_main_paint.mmd:17` captures main paint request inputs from `CanvasSurface`, `FrameEngine`, `DocumentStoreKernel`, runtime view camera, and selection facts.
 - `docs/diagrams/dfd_main_paint_frame.mmd:40` describes `CapturedMainFrame` with frame meta.
-- `docs/diagrams/dfd_main_paint_frame.mmd:52` describes `StaticBackgroundCache` as background/grid/view-camera-bucket/dpr owned.
+- `docs/diagrams/dfd_main_paint_frame.mmd:52` describes `StaticBackgroundCache` as background/grid/view-camera-bucket/devicePixelRatio owned.
 - `docs/diagrams/dfd_cache_invalidation.mmd:38` has a `FrameMetaRevision` node.
 - `docs/diagrams/dfd_cache_invalidation.mmd:79` already names static background invalidation as view camera bucket, background, and grid.
 - `docs/verification/guardrails.md:179` requires cache keys to use next-owned revision facts and stable inputs.
@@ -154,7 +154,7 @@ Edit/document boundaries produce typed revision and invalidation facts; frame/ca
 - `backgroundRevision` and `gridRevision` are internal revision counters derived from persisted document metadata changes.
 - Runtime view camera offset/revision is runtime state.
 - Persisted document camera is document/projection state.
-- `gridStyle`, `selectionStyle`, viewport, and device pixel ratio are paint/surface inputs captured for a frame, not stored document state.
+- `gridStyle`, `selectionStyle`, viewportRect, and devicePixelRatio are paint/surface inputs captured for a frame, not stored document state.
 
 #### Entry and Exit Boundaries
 
@@ -188,7 +188,8 @@ Semantic proof is documentation-level until production code exists: targeted sea
 - `CanvasSurface.gridStyle` and `CanvasSurface.selectionStyle` are captured values, not revision families.
 - `StaticBackgroundCache` uses background/grid revisions and stable device/surface inputs; it does not use selection style.
 - `SelectionDecorationPlan` may use captured selection style as a key input; it does not use background/grid revisions.
-- `PaintPlanCache` remains keyed by ordinary committed element facts and stable viewport/device inputs only.
+- `PaintPlanCache` remains keyed by ordinary committed element facts,
+  viewportRect, and devicePixelRatio only.
 - Runtime view camera remains runtime state and must not be folded back into document metadata or frame-meta semantics.
 - Persisted document camera remains document/projection state and is not affected by this split.
 - The obsolete `surfaceStyleRevision` backlog proposal must be closed or rewritten as a rejected alternative.
@@ -197,7 +198,7 @@ Semantic proof is documentation-level until production code exists: targeted sea
 
 - Active architecture docs name `backgroundRevision` and `gridRevision` as the precise persisted document metadata revision families.
 - Active frame rendering docs capture background/grid revision facts without `frameMetaRevision`.
-- Active cache policy docs specify a `StaticBackgroundCache` key that separates background, grid, surface style values, view camera bucket or equivalent camera reuse input, viewport/device inputs, and device pixel ratio.
+- Active cache policy docs specify a `StaticBackgroundCache` key that separates background, grid, surface style values, view camera bucket or equivalent camera reuse input, viewportRect, and devicePixelRatio.
 - Active cache policy docs keep ordinary paint-plan keys free of background, grid, view camera, preview, selection, and style-only facts.
 - Active operation matrix docs route `setBackgroundColor` to `backgroundRevision` and `setGrid` to `gridRevision`.
 - Active diagrams show separate background/grid revision flow into static background invalidation.
@@ -294,7 +295,7 @@ Slice-local proof may run targeted semantic checks and documentation structural 
 
 ## 9. Vertical Slices
 
-### Slice 1. [ ] Lock Background And Grid Revision Ownership
+### Slice 1. [x] Lock Background And Grid Revision Ownership
 
 #### Slice Contract
 
@@ -352,7 +353,7 @@ dart run docs/tool/check_docs.dart
 
 Slice closes when architecture/public API docs make the private background/grid split explicit and do not add public runtime revision fields.
 
-### Slice 2. [ ] Align Frame Capture And Cache Policy
+### Slice 2. [x] Align Frame Capture And Cache Policy
 
 #### Slice Contract
 
@@ -369,7 +370,7 @@ Frame capture and cache policy consume `backgroundRevision` and `gridRevision` s
 
 #### Change
 
-Update frame/cache contracts so `StaticBackgroundCache` is keyed by background revision, grid revision, grid style stroke width where it affects grid recording, viewport/device inputs, device pixel ratio, and the selected view-camera bucket or equivalent captured camera reuse input. Keep raw `viewCameraRevision`, selection style, selected ids, selected-move delta, preview delta, and background/grid revisions out of ordinary `PaintPlanCache` identity.
+Update frame/cache contracts so `StaticBackgroundCache` is keyed by background revision, grid revision, grid style stroke width where it affects grid recording, viewportRect, devicePixelRatio, and the selected view-camera bucket or equivalent captured camera reuse input. Keep raw `viewCameraRevision`, selection style, selected ids, selected-move delta, preview delta, and background/grid revisions out of ordinary `PaintPlanCache` identity.
 
 #### Slice Verification
 
@@ -414,7 +415,7 @@ dart run docs/tool/check_docs.dart
 
 Slice closes when frame/cache docs have one unambiguous cache and capture design and ordinary paint-plan invalidation remains protected.
 
-### Slice 3. [ ] Align Diagrams, Verification, And Backlog
+### Slice 3. [x] Align Diagrams, Verification, And Backlog
 
 #### Slice Contract
 

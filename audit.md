@@ -61,7 +61,6 @@ projection, resource effects, action events, no-op и rollback semantics. Есл
 - [ ] Для каждой строки указать public `CanvasRuntimeState` revision effects.
 - [ ] Для document-owned строк указать `documentRevision`.
 - [ ] Для каждой строки указать `boundsRevision`.
-- [ ] Для background/grid/surface-style строк указать internal `frameMetaRevision`.
 - [ ] Для preview-owned строк указать `previewRevision`.
 - [ ] Для каждой строки указать spatial effect.
 - [ ] Для каждой строки указать projection effect.

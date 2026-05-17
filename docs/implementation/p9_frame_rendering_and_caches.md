@@ -21,7 +21,8 @@ frame output.
 - text/path/stroke/background/resource caches
 - paint-plan cache with ordinary committed records only
 - cache keys based on next-owned revisions, not legacy snapshot shapes
-- `frameMetaRevision` excluded from ordinary element paint-plan invalidation
+- `backgroundRevision` and `gridRevision` excluded from ordinary element
+  paint-plan invalidation
 - runtime view camera revision/offset excluded from ordinary element paint-plan
   invalidation and public document projection invalidation
 - `selectionRevision`, selected ids, selection flags, and selected-move preview
@@ -114,7 +115,7 @@ frame output.
 - `frame.paint_plan_excludes_selection_state`
 - `selection.owner_separate_from_document`
 - `cache.keys_use_next_revisions_only`
-- `cache.frame_meta_not_element_visual`
+- `cache.background_grid_not_element_visual`
 - `cache.hot_caches_have_capacity_eviction`
 
 ## Exit gate
@@ -128,8 +129,8 @@ frame output.
 - no live runtime read in painters
 - no `CanvasDocument` projection in paint
 - cache keys are next-revision based
-- `frameMetaRevision` and runtime view-camera changes do not invalidate ordinary
-  committed element paint plans
+- `backgroundRevision`, `gridRevision`, and runtime view-camera changes do not
+  invalidate ordinary committed element paint plans
 - `selectionRevision` does not invalidate ordinary committed element paint
   plans
 - hot cache capacity/eviction policy is explicit

@@ -35,7 +35,8 @@ flowchart LR
     StructuralRevision["structuralRevision"]
     BoundsRevision["boundsRevision"]
     ElementVisualRevision["elementVisualRevision"]
-    FrameMetaRevision["frameMetaRevision"]
+    BackgroundRevision["backgroundRevision"]
+    GridRevision["gridRevision"]
     ProjectionRevision["projectionRevision"]
     ResourceRevision["resourceRevision"]
     ResourceVisualRevision["resourceVisualRevision"]
@@ -74,7 +75,7 @@ flowchart LR
   end
 
   subgraph Frame["FrameEngine"]
-    PaintPlanInvalidation["PaintPlanCache invalidation\nstructural, bounds, elementVisual,\nviewport/device inputs"]
+    PaintPlanInvalidation["PaintPlanCache invalidation\nstructural, bounds, elementVisual,\nviewportRect, devicePixelRatio"]
     SelectionDecorationInvalidation["Selection decoration invalidation\nselection, structure, style"]
     StaticFrameInvalidation["StaticBackgroundCache invalidation\nview camera bucket, background, grid"]
     TextPathInvalidation["Text, path, stroke cache invalidation\nonly changed render inputs"]
@@ -116,7 +117,8 @@ flowchart LR
   RevisionState -.->|"structure/order changes"| StructuralRevision
   RevisionState -.->|"geometry/bounds changes"| BoundsRevision
   RevisionState -.->|"element visual changes"| ElementVisualRevision
-  RevisionState -.->|"background/grid document changes"| FrameMetaRevision
+  RevisionState -.->|"background document changes"| BackgroundRevision
+  RevisionState -.->|"grid document changes"| GridRevision
   RevisionState -.->|"public projection invalidated"| ProjectionRevision
   RevisionState -.->|"resource descriptor changes"| ResourceRevision
   RevisionState -.->|"external resource visual dirty"| ResourceVisualRevision
@@ -169,7 +171,8 @@ flowchart LR
   ViewCameraDispatch -->|"view camera changed"| StaticFrameInvalidation
   ViewCameraDispatch -->|"view camera changed"| OverlayRepaint
 
-  FrameMetaRevision -->|"background/grid document meta only"| StaticFrameInvalidation
+  BackgroundRevision -->|"background document metadata only"| StaticFrameInvalidation
+  GridRevision -->|"grid document metadata only"| StaticFrameInvalidation
   ElementVisualRevision -->|"changed text, path, or stroke inputs"| TextPathInvalidation
   PaintPlanInvalidation -->|"scene records changed"| MainRepaint
   SelectionDecorationInvalidation -->|"selection UI changed"| MainRepaint

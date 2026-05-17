@@ -27,7 +27,7 @@ Required tests:
 Guardrails:
 - `cache.keys_use_next_revisions_only`
 - `cache.hot_caches_have_capacity_eviction`
-- `cache.frame_meta_not_element_visual`
+- `cache.background_grid_not_element_visual`
 - `frame.paint_plan_excludes_preview_delta`
 - `frame.paint_plan_excludes_selection_state`
 Do not assume:
@@ -43,9 +43,9 @@ Do not assume:
 | TextLayoutCache | Frame | text/style/font/width/direction/lineHeight | text/style update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | PathGeometryCache | Geometry/Frame | pathData/fillRule/strokeWidth | path update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | StrokePathCache | Frame | pointsKey/thickness/transform scale | stroke update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
-| StaticBackgroundCache | Frame | background/grid/view camera bucket/dpr/frameMetaRevision/viewCameraRevision | view camera/background/grid | 1 picture per view-camera bucket | replace and dispose previous picture | picture count, rebuild count | yes bounded |
-| PaintPlanCache | Frame | structural/bounds/elementVisual/viewport/device-pixel inputs | typed invalidation excluding frameMeta, preview, and selection-only changes | 16 viewport plans | LRU by viewport/revision tuple | candidate count, hit/miss, full-sort probe, selected-supplement bypass count | yes bounded |
-| SelectionDecorationPlan | Frame | selectionRevision/structuralRevision/captured selectionStyle/device-pixel inputs | selection/structure/captured style input | 1 current decoration plan | replace on revision or style change | selected count, rebuild count | yes bounded |
+| StaticBackgroundCache | Frame | backgroundRevision, gridRevision, gridStrokeWidth, viewCameraBucket, viewportRect, devicePixelRatio | view camera bucket/background/grid/captured grid style input | 1 latest picture for the current full static-background key | replace and dispose previous picture on key change or invalidation | picture count, rebuild count | yes bounded |
+| PaintPlanCache | Frame | structuralRevision, boundsRevision, elementVisualRevision, viewportRect, devicePixelRatio | typed invalidation excluding background, grid, view camera, preview, selection-only, and style-only changes | 16 viewport plans | LRU by viewport/revision tuple | candidate count, hit/miss, full-sort probe, selected-supplement bypass count | yes bounded |
+| SelectionDecorationPlan | Frame | selectionRevision, structuralRevision, captured selectionStyle, devicePixelRatio | selection/structure/captured style input | 1 current decoration plan | replace on revision or style change | selected count, rebuild count | yes bounded |
 | SelectedOrderCache | Frame | selectionRevision/structuralRevision | selection/structure | 1 selected-order snapshot | replace on revision change | selected count, rebuild count | yes bounded |
 | SpatialIndex | Spatial | structural/bounds revisions | touched geometry/structure | current index only | invalid/rebuild lifecycle, not cache eviction | fallback count, budget-exceeded count | yes query only |
 | PreviewStateSnapshot | Interaction | previewRevision | pointer/tool/load/mode/dispose | 1 preview snapshot | replace on previewRevision | preview revision churn | yes tiny |
@@ -64,11 +64,12 @@ outside the declared cache row.
 `PaintPlanCache` stores ordinary committed records only. It must not store
 selected-move supplement records, `selectedMoveDelta`, or `previewDelta`.
 It also must not store selected ids, selection flags, or selectionRevision in
-ordinary cache keys or cached ordinary records. `frameMetaRevision`,
-`viewCameraRevision`, and `viewCameraOffset` are not PaintPlanCache key
-components because view camera, background, and grid changes repaint frame
-surfaces without changing ordinary element paint records. Runtime view camera
-changes also do not invalidate public `CanvasDocument` projection.
+ordinary cache keys or cached ordinary records. `backgroundRevision`,
+`gridRevision`, `gridStrokeWidth`, `viewCameraRevision`, `viewCameraOffset`, and
+captured style-only inputs are not PaintPlanCache key components because view
+camera, background, grid, and style-only changes repaint frame surfaces or
+decoration plans without changing ordinary element paint records. Runtime view
+camera changes also do not invalidate public `CanvasDocument` projection.
 
 `SelectedOrderCache` is derived data. Its source of truth is the selection owner
 plus document order facts from the document boundary; it may be retained only as

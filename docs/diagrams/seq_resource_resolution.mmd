@@ -15,7 +15,7 @@ sequenceDiagram
   participant State as Public runtime state
   participant Signals as Repaint signals
 
-  Surface->>Frame: paint main scene request(viewportRect, dpr, resolver)
+  Surface->>Frame: paint main scene request(viewportRect, devicePixelRatio, resolver)
   Frame->>Store: capture committed main-frame facts once
   Store-->>Frame: resourceVisualRevision, compact rows, and frame revisions
   Frame->>Frame: build immutable RenderElementRecord list

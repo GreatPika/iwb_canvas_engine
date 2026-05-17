@@ -43,7 +43,7 @@ Guardrails:
 - `frame.no_global_scene_sort`
 - `frame.paint_plan_excludes_preview_delta`
 - `frame.paint_plan_excludes_selection_state`
-- `cache.frame_meta_not_element_visual`
+- `cache.background_grid_not_element_visual`
 Do not assume:
 - no live runtime reads in painters
 - no CanvasDocument projection in paint
@@ -61,12 +61,15 @@ CapturedMainFrame
   structuralRevision
   boundsRevision
   elementVisualRevision
-  frameMetaRevision
+  backgroundRevision
+  gridRevision
+  gridStrokeWidth
   selectionRevision
   resourceVisualRevision
   viewCameraRevision
   viewCameraOffset
   viewportRect
+  devicePixelRatio
   selectionIds
   selectedMoveDelta
 ```
@@ -95,8 +98,9 @@ Rules:
 - runtime view camera changes use `state.revisions.viewCamera`, repaint affected
   frame surfaces, and must not invalidate ordinary committed element paint
   plans or public `CanvasDocument` projection;
-- background/grid document changes use internal frame-meta revision facts and
-  must not invalidate ordinary committed element paint plans.
+- background/grid document changes use internal backgroundRevision/gridRevision
+  facts and captured grid style values where they affect static background
+  output, and must not invalidate ordinary committed element paint plans.
 ```
 
 Opacity and layer policy:
@@ -152,10 +156,11 @@ Algorithm:
 1. Lookup or build the committed ordinary paint plan from PaintPlanCache.
 2. PaintPlanCache stores only ordinary committed RenderElementRecord data.
 3. PaintPlanCache key uses structuralRevision, boundsRevision,
-   elementVisualRevision, viewport, and stable device/pixel inputs.
-4. PaintPlanCache key must not include frameMetaRevision, viewCameraRevision,
-   viewCameraOffset, selectedMoveDelta, previewDelta, selected ids, selection
-   flags, or selectionRevision.
+   elementVisualRevision, viewportRect, and devicePixelRatio.
+4. PaintPlanCache key must not include backgroundRevision, gridRevision,
+   gridStrokeWidth, viewCameraRevision, viewCameraOffset, selectedMoveDelta,
+   previewDelta, selected ids, selection flags, selectionRevision, or captured
+   style-only inputs.
 5. When selectedMoveDelta is active, read selected ids through the captured
    selection facts boundary and filter movable selected ids from the
    ordinary record stream for this frame only.
