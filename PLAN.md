@@ -30,3 +30,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 8. Resource resolver cache surface session](plan/step_8_resource_resolver_cache_surface_session.md)
 - [x] [Step 9. Canvas preview state sealed union](plan/step_9_canvas_preview_state_sealed_union.md)
 - [x] [Step 10. Interaction request text edit stale guard](plan/step_10_interaction_request_text_edit_stale_guard.md)
+- [ ] [Step 11. Operation matrix field-effect taxonomy](plan/step_11_operation_matrix_field_effect_taxonomy.md)
