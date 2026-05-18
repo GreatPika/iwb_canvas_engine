@@ -28,3 +28,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 6. Public runtime state and view camera ownership](plan/step_6_public_runtime_state_and_view_camera_ownership.md)
 - [x] [Step 7. Frame cache invalidation facts split](plan/step_7_frame_cache_invalidation_facts_split.md)
 - [x] [Step 8. Resource resolver cache surface session](plan/step_8_resource_resolver_cache_surface_session.md)
+- [ ] [Step 9. Canvas preview state sealed union](plan/step_9_canvas_preview_state_sealed_union.md)
