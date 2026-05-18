@@ -33,3 +33,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 11. Operation matrix field-effect taxonomy](plan/step_11_operation_matrix_field_effect_taxonomy.md)
 - [x] [Step 12. Non-invertible transform admission](plan/step_12_non_invertible_transform_admission.md)
 - [x] [Step 13. Public error code contract prose](plan/step_13_public_error_code_contract_prose.md)
+- [ ] [Step 14. Public API contract consistency follow-up](plan/step_14_public_api_contract_consistency_followup.md)
