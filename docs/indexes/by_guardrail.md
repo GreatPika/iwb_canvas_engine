@@ -245,9 +245,9 @@ Guardrails extracted from split section 22.
 
 ## surface.interactive_false_pending_line_preserved
 
-- Rule: interactive=false cancels active routed pointers but preserves pending line state not owned by an active routed pointer
+- Rule: interactive=false cancels active routed pointers, preserves pending line state not owned by an active routed pointer, and does not mutate runtime mode, committed document, selection, or resources
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.flutter_bridge.interactive_false_pointer_routing`, `test.flutter_bridge.interactive_false_active_session_cancel`, `test.flutter_bridge.interactive_false_pending_line_preserved`, `test.guardrails.blocking_suite`
+- Tests: `test.flutter_bridge.interactive_false_pointer_routing`, `test.flutter_bridge.interactive_false_active_session_cancel`, `test.flutter_bridge.interactive_false_pending_line_preserved`, `test.flutter_bridge.interactive_false_state_isolation`, `test.guardrails.blocking_suite`
 
 ## cache.keys_use_next_revisions_only
 

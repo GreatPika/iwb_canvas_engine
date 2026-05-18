@@ -46,6 +46,7 @@ Required tests:
 - `test.flutter_bridge.interactive_false_pointer_routing`
 - `test.flutter_bridge.interactive_false_active_session_cancel`
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
+- `test.flutter_bridge.interactive_false_state_isolation`
 - `test.flutter_bridge.pointer_adapter_finite_normalization`
 - `test.runtime.interaction_settings_state`
 - `test.api_contract.preview_state_sealed_union`

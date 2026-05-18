@@ -195,7 +195,7 @@ Release is blocked unless all statements are true:
 26. text edit request and guarded stale text commit integration tests are green.
 27. action typed payload tests are green.
 28. low-level edit emits no user action events tests are green.
-29. interaction stale terminal, selection-boundary import, resolver-cancel, and interactive=false pending-line tests are green.
+29. interaction stale terminal, selection-boundary import, resolver-cancel, and interactive=false routing, cancel, pending-line, and state-isolation tests are green.
 30. surface single-active-surface and pointer normalization tests are green.
 31. DTO immutability, `CanvasMetadata` deep-freeze, validating-constructor
     factory policy, approved const-form policy, and public equality policy tests

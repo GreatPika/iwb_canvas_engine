@@ -179,6 +179,16 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
 - Guardrails: `surface.interactive_false_pending_line_preserved`
 
+## test.flutter_bridge.interactive_false_state_isolation
+
+- Path: `test/flutter_bridge/interactive_false_state_isolation_test.dart`
+- Phases: `P13`
+- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
+- Guardrails: `surface.interactive_false_pending_line_preserved`
+- Focus: toggling interactive=false does not mutate runtime mode, committed
+  document, selection, or resources while active pointer cleanup remains scoped
+  to pointer-owned preview state.
+
 ## test.flutter_bridge.single_active_surface
 
 - Path: `test/flutter_bridge/single_active_surface_test.dart`

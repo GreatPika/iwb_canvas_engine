@@ -115,6 +115,7 @@ store, resolver, or interaction internals.
 - `test.flutter_bridge.interactive_false_pointer_routing` -> `test/flutter_bridge/interactive_false_pointer_routing_test.dart`
 - `test.flutter_bridge.interactive_false_active_session_cancel` -> `test/flutter_bridge/interactive_false_active_session_cancel_test.dart`
 - `test.flutter_bridge.interactive_false_pending_line_preserved` -> `test/flutter_bridge/interactive_false_pending_line_preserved_test.dart`
+- `test.flutter_bridge.interactive_false_state_isolation` -> `test/flutter_bridge/interactive_false_state_isolation_test.dart`
 - `test.flutter_bridge.single_active_surface` -> `test/flutter_bridge/single_active_surface_test.dart`
 - `test.flutter_bridge.surface_resource_session_lifecycle` -> `test/flutter_bridge/surface_resource_session_lifecycle_test.dart`
 - `test.flutter_bridge.pointer_adapter_finite_normalization` -> `test/flutter_bridge/pointer_adapter_finite_normalization_test.dart`
@@ -147,6 +148,7 @@ store, resolver, or interaction internals.
   overlay-only
 - `interactive=false` disables pointer routing
 - `interactive=false` cancels active pointer sessions but preserves non-active pending line state
+- `interactive=false` does not mutate runtime mode, committed document, selection, or resources
 - resource resolver repaint works
 - Flutter painters apply ordinary element/stroke opacity through primitive paint alpha
 - Flutter painters do not call `Canvas.saveLayer` for ordinary opacity in the hot paint path

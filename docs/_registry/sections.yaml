@@ -136,6 +136,7 @@
     - test.runtime.dispose_lifecycle
     - test.runtime.runtime_state_publication
     - test.runtime.interaction_settings_state
+    - test.flutter_bridge.interactive_false_state_isolation
     - test.flutter_bridge.interactive_false_pending_line_preserved
     - test.flutter_bridge.single_active_surface
     - test.flutter_bridge.surface_resource_session_lifecycle
@@ -521,6 +522,7 @@
     - test.flutter_bridge.interactive_false_pointer_routing
     - test.flutter_bridge.interactive_false_active_session_cancel
     - test.flutter_bridge.interactive_false_pending_line_preserved
+    - test.flutter_bridge.interactive_false_state_isolation
     - test.flutter_bridge.pointer_adapter_finite_normalization
     - test.runtime.interaction_settings_state
     - test.api_contract.preview_state_sealed_union
@@ -964,6 +966,7 @@
     - test.flutter_bridge.interactive_false_pointer_routing
     - test.flutter_bridge.interactive_false_active_session_cancel
     - test.flutter_bridge.interactive_false_pending_line_preserved
+    - test.flutter_bridge.interactive_false_state_isolation
     - test.flutter_bridge.single_active_surface
     - test.flutter_bridge.surface_resource_session_lifecycle
     - test.flutter_bridge.pointer_adapter_finite_normalization

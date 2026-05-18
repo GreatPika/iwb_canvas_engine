@@ -125,6 +125,7 @@ Required tests:
 - `test.flutter_bridge.interactive_false_pointer_routing`
 - `test.flutter_bridge.interactive_false_active_session_cancel`
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
+- `test.flutter_bridge.interactive_false_state_isolation`
 - `test.flutter_bridge.single_active_surface`
 - `test.flutter_bridge.surface_resource_session_lifecycle`
 - `test.flutter_bridge.pointer_adapter_finite_normalization`
@@ -228,6 +229,7 @@ test/runtime/interaction_settings_state_test.dart
 test/flutter_bridge/interactive_false_pointer_routing_test.dart
 test/flutter_bridge/interactive_false_active_session_cancel_test.dart
 test/flutter_bridge/interactive_false_pending_line_preserved_test.dart
+test/flutter_bridge/interactive_false_state_isolation_test.dart
 test/flutter_bridge/single_active_surface_test.dart
 test/flutter_bridge/surface_resource_session_lifecycle_test.dart
 test/flutter_bridge/pointer_adapter_finite_normalization_test.dart

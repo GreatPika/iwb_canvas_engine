@@ -44,6 +44,7 @@ Required tests:
 - `test.runtime.dispose_lifecycle`
 - `test.runtime.runtime_state_publication`
 - `test.runtime.interaction_settings_state`
+- `test.flutter_bridge.interactive_false_state_isolation`
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
 - `test.flutter_bridge.single_active_surface`
 - `test.flutter_bridge.surface_resource_session_lifecycle`
@@ -496,7 +497,7 @@ Surface contract:
   the same CanvasRuntime;
 - interactive=false disables pointer routing on CanvasSurface only;
 - interactive=false still paints document;
-- interactive=false does not mutate runtime mode, document, selection, preview or resources;
+- interactive=false does not mutate runtime mode, committed document, selection or resources;
 - if interactive changes from true to false while a pointer session is active,
   CanvasSurface routes cancel cleanup before disabling further routing;
 - pending preview state that is not owned by an active routed pointer session is
