@@ -689,7 +689,7 @@ operation-matrix, architecture, diagram, and verification docs.
 The slice is complete when camera persistence is documented as an explicit edit
 boundary and the runtime camera port remains view-state-only.
 
-### Slice 5. [ ] Finalize registries, indexes, and roadmap status
+### Slice 5. [x] Finalize registries, indexes, and roadmap status
 
 #### Implements
 
