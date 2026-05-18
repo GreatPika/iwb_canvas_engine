@@ -91,5 +91,5 @@ There is no separate analyzer template. Analyzer-specific requirements are profi
 10. Preserve main section numbering and slice checkboxes from the selected template. Use concrete slice titles. Omit optional subsections, bullets, or categories that have no confirmed content. Never emit placeholders, filler, guessed details, `None` filler, or empty optional headings.
 11. In locked contracts, put file ownership inside each slice under `Files`. Do not create a separate global file-list section. Files listed only in `Evidence Map` are evidence, not change targets.
 12. Use `Proof Plan` only for reusable proof IDs or proof groups referenced by more than one slice or by the final gate. Keep unique slice-local checks inside the owning slice.
-13. In each slice, state proof intent before commands: what the command proves, then the command. Reference decision IDs and proof IDs instead of restating the same facts.
+13. In each slice, state proof intent before commands: what the command proves, then the command. Keep decision IDs in `Implements`, obligation labels in `Obligations Covered`, and proof IDs in `Proof`.
 14. Return only the Change Contract. Do not append review, validation, or audit commentary.

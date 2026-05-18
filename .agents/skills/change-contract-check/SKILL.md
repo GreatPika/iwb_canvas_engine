@@ -82,10 +82,11 @@ Mark the contract `BLOCKED` when any of the following is true:
 20. Any slice is only preparatory, horizontal, or non-verifiable.
 21. Any slice lacks executable proof with a stated proof intent and command.
 22. A slice that introduces or depends on the locked architecture lacks structural verification that would make drift visible later.
-23. The contract contradicts itself across sections.
-24. Named files, tests, fixtures, inventories, workflows, or checks appear only as evidence while later sections treat them as change targets.
-25. A locked contract uses a standalone global file inventory instead of slice-local file ownership.
-26. Final gate introduces new scope instead of proving earlier decisions, obligations, and slices.
+23. A slice mixes decision IDs, obligation labels, and proof IDs in the same subsection instead of separating `Implements`, `Obligations Covered`, and `Proof`.
+24. The contract contradicts itself across sections.
+25. Named files, tests, fixtures, inventories, workflows, or checks appear only as evidence while later sections treat them as change targets.
+26. A locked contract uses a standalone global file inventory instead of slice-local file ownership.
+27. Final gate introduces new scope instead of proving earlier decisions, obligations, and slices.
 
 ## Non-blocking weaknesses
 
@@ -146,7 +147,8 @@ Require atomic vertical slices.
 Reject slice headings that preserve the template's empty title form instead of naming a concrete verifiable result.
 Each slice must close one new verifiable result.
 Preparatory work alone does not count as a closed slice.
-Require every slice to contain `Implements`, `Files`, `Change`, `Proof`, and `Closure`.
+Require every slice to contain `Implements`, `Files`, `Change`, `Proof`, and `Closure`. Require `Obligations Covered` when the slice closes part of `BUG_FIX`, `SEAM_MIGRATION`, or `PUBLIC_API_CHANGE`.
+Reject obligation labels or proof IDs in `Implements`. Reject decision IDs or proof IDs in `Obligations Covered`. Reject decision IDs or obligation labels used as proof IDs.
 Require executable proof for every slice, written as proof intent plus command.
 Require executable structural verification for every slice that introduces or depends on the locked form.
 For `ANALYZER_RULE`, require positive and negative fixtures or equivalent analyzer checks.
@@ -164,15 +166,16 @@ Perform these checks explicitly:
 
 1. Every file edited, refreshed, verified, excluded, or finalized by a slice must appear in that slice's `Files` block with a purpose or action.
 2. Every slice file must be supported by section 3 placement, section 4 ordering or finalization gates, section 2 repository evidence, or an explicit proposed-new-file placement rationale.
-3. Every decision ID referenced in a slice or final gate must exist in `Decision Ledger`.
+3. Every decision ID referenced in a slice `Implements` or final gate must exist in `Decision Ledger`.
 4. Every proof ID referenced in a slice or final gate must exist in `Proof Plan`.
-5. Every sequencing dependency in section 6 must be justified by section 4.
-6. Every slice result must support a decision, obligation, or mandate.
-7. Files listed only in evidence must not be treated as change targets unless the owning slice also lists them in `Files`.
-8. Locked contracts must not use a standalone global file inventory.
-9. Seam migration details must be present only when `SEAM_MIGRATION` is listed, and must not become a duplicate file inventory.
-10. Final gate must not compensate for missing slice-local verification.
-11. If `ARCHITECTURE_GATE` is used, no sections after section 3 may contain substantive plan content.
+5. Every obligation label referenced in `Obligations Covered` must be listed in `Contract Obligations`.
+6. Every sequencing dependency in section 6 must be justified by section 4.
+7. Every slice result must support a decision, obligation, or mandate.
+8. Files listed only in evidence must not be treated as change targets unless the owning slice also lists them in `Files`.
+9. Locked contracts must not use a standalone global file inventory.
+10. Seam migration details must be present only when `SEAM_MIGRATION` is listed, and must not become a duplicate file inventory.
+11. Final gate must not compensate for missing slice-local verification.
+12. If `ARCHITECTURE_GATE` is used, no sections after section 3 may contain substantive plan content.
 
 ## Profile and obligation checks
 

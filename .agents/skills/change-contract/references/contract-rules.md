@@ -149,11 +149,14 @@ One slice closes one new verifiable result. Preparatory edits alone never close 
 
 Every slice must contain:
 
-- `Implements`: decision IDs such as `D1`, obligation labels, or proof IDs the slice closes;
+- `Implements`: only decision IDs such as `D1`, or one sentence that the slice relies on the locked architecture without separate decision IDs;
+- `Obligations Covered`: only obligation labels from the header, and only when the slice closes part of `BUG_FIX`, `SEAM_MIGRATION`, or `PUBLIC_API_CHANGE`;
 - `Files`: every file, test, fixture, inventory, workflow, generated artifact, verify-only evidence file, or explicit exclusion the slice relies on;
 - `Change`: the slice-local result, without restating durable decisions;
 - `Proof`: executable proof with intent plus command, using proof IDs from section 5 when reused;
 - `Closure`: the condition that makes the slice complete.
+
+Do not mix categories in one field. `Implements` must not contain obligation labels or proof IDs. `Obligations Covered` must not contain decision IDs or proof IDs. `Proof` is the only slice subsection that may reference proof IDs such as `P1`.
 
 Each file expected to be edited must appear in exactly one slice as a primary edit, alignment, registry/index/workflow, verification, or cleanup/finalization file. A file may appear in multiple slices only when each slice names a different purpose; one slice must be named as the final owner for shared cleanup or finalization. Files listed only in `Evidence Map` are evidence, not change targets.
 

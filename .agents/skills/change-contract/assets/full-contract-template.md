@@ -78,6 +78,8 @@ Reusable proof IDs table, or one sentence that all proof is slice-local.
 
 #### Implements
 
+#### Obligations Covered
+
 #### Files
 
 #### Change
