@@ -29,3 +29,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 7. Frame cache invalidation facts split](plan/step_7_frame_cache_invalidation_facts_split.md)
 - [x] [Step 8. Resource resolver cache surface session](plan/step_8_resource_resolver_cache_surface_session.md)
 - [x] [Step 9. Canvas preview state sealed union](plan/step_9_canvas_preview_state_sealed_union.md)
+- [ ] [Step 10. Interaction request text edit stale guard](plan/step_10_interaction_request_text_edit_stale_guard.md)
