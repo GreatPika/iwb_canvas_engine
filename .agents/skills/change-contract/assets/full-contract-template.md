@@ -1,105 +1,93 @@
 # Change Contract
 
-## 1. Change Mandate
+Contract Mode: FULL
+Contract Profile: BEHAVIOR_CHANGE | REFACTOR | SOURCE_OF_TRUTH_DOCS | ANALYZER_RULE
+Contract Obligations: none | BUG_FIX, SEAM_MIGRATION, PUBLIC_API_CHANGE
 
-## 2. Change Boundary
+## 1. Mandate and Boundary
 
-### Change Surface Summary
+### Mandate
 
-### Included in the Change
+### In Scope
 
-### Not Included in the Change
+### Out of Scope
 
-## 3. Surrounding Code Review
+## 2. Evidence Map
 
-### Inspected Artifacts
+### Baseline Evidence
 
-### Current Entry Path
+### Entry Paths
 
-### Current Owner
+### Current Owners
 
-### Adjacent Abstractions
+### Existing Checks
 
-### Existing Tests
+### Valid Precedents
 
-### Analogous Implementation Path
+### Repository Rules
 
-### Governing Repository Rules
+### Misleading Patterns
 
-### Rejected Misleading Local Patterns
+## 3. Architecture Decision
 
-## 4. Architecture
+### Selected Form
 
-### 4A. Locked Architectural Form
+### Ownership
 
-#### Problem Ownership Level
+### Seam
 
-#### Selected Architectural Form
+### Dependency Direction
 
-#### Owning Layer or Module
+### State and Data Ownership
 
-#### Architectural Dependency / Import Direction
+### Entry and Exit Boundaries
 
-#### State and Data Ownership
+### Verification Strategy
 
-#### Entry and Exit Boundaries
+### Decision Ledger
 
-#### Permitted Extension Seam
+Durable decision IDs table, or one no-ID sentence when no later section needs a decision ID.
 
-#### Rejected Alternatives
+| ID | Decision | Owner | Proof |
+|---|---|---|---|
 
-#### Why This Level Is Correct
+### Rejected Alternatives
 
-#### Verification Strategy
-
-## 5. Locked Decisions
-
-## 6. Result Requirements
-
-## 7. Execution Order and Gates
-
-### Preconditions
+## 4. Execution Guardrails
 
 ### Required Order
 
-### Successor Seam and Retirement Gates
+### Cross-Slice Constraints
 
-### Seam Migration Matrix
-
-### Cross-Slice Finalization
-
-### Deferred Broad Verification
-
-## 8. Implementation Rules
-
-### Protected Invariants
-
-### Required Proof
-
-### Allowed Change Surface
+### Seam Migration
 
 ### Forbidden Moves
 
-## 9. Vertical Slices
+### Deferred Broad Verification
 
-### Slice 1. [ ]
+## 5. Proof Plan
 
-#### Slice Contract
+Reusable proof IDs table, or one sentence that all proof is slice-local.
+
+| ID | Purpose | Command or Check |
+|---|---|---|
+
+## 6. Vertical Slices
+
+### Slice 1. [ ] Title
+
+#### Implements
 
 #### Files
 
 #### Change
 
-#### Slice Verification
+#### Proof
 
-##### Semantic Proof
+#### Closure
 
-##### Structural Proof
+## 7. Final Gate
 
-##### Broad Checks
+### Run Proof Set
 
-#### Closure Gate
-
-## 10. Final Verification
-
-## 11. Acceptance Criteria
+### Done When

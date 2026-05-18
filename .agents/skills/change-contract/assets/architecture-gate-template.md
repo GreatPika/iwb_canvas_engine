@@ -1,36 +1,36 @@
 # Change Contract
 
-## 1. Change Mandate
+Contract Mode: ARCHITECTURE_GATE
+Contract Profile: BEHAVIOR_CHANGE | REFACTOR | SOURCE_OF_TRUTH_DOCS | ANALYZER_RULE
+Contract Obligations: none | BUG_FIX, SEAM_MIGRATION, PUBLIC_API_CHANGE
 
-## 2. Change Boundary
+## 1. Mandate and Boundary
 
-### Change Surface Summary
+### Mandate
 
-### Included in the Change
+### In Scope
 
-### Not Included in the Change
+### Out of Scope
 
-## 3. Surrounding Code Review
+## 2. Evidence Map
 
-### Inspected Artifacts
+### Baseline Evidence
 
-### Current Entry Path
+### Entry Paths
 
-### Current Owner
+### Current Owners
 
-### Adjacent Abstractions
+### Existing Checks
 
-### Existing Tests
+### Valid Precedents
 
-### Analogous Implementation Path
+### Repository Rules
 
-### Governing Repository Rules
+### Misleading Patterns
 
-### Rejected Misleading Local Patterns
+## 3. Architecture Decision
 
-## 4. Architecture
-
-### 4B. Architecture Decision Gate
+### Architecture Gate
 
 #### Blocking Gap
 

@@ -1,197 +1,234 @@
 # Contract Rules
 
-This file extends `SKILL.md` after a template has been selected. Use it to fill the selected template with detailed Change Contract rules: evidence, section ownership, slice-local file ownership, proof obligations, seam-retirement details, analyzer-specific details, and update behavior. Do not use this file to change routing, redefine core terms, add new architecture-lock requirements, or select a different template.
+This file extends `SKILL.md` after a template has been selected. Use it to fill the selected template with detailed Change Contract rules: evidence, information ownership, slice-local file ownership, profile proof obligations, seam-retirement details, analyzer-specific details, and update behavior. Do not use this file to change routing, redefine core terms, add profiles, add obligations, or select a different template.
+
+## Header rule
+
+Every contract must start with the three header fields from the selected template.
+
+- `Contract Mode` must be `FULL` or `ARCHITECTURE_GATE`.
+- `Contract Profile` must be exactly one of `BEHAVIOR_CHANGE`, `REFACTOR`, `SOURCE_OF_TRUTH_DOCS`, or `ANALYZER_RULE`.
+- `Contract Obligations` must be `none` or a comma-separated list in this order: `BUG_FIX`, `SEAM_MIGRATION`, `PUBLIC_API_CHANGE`.
+
+For `ARCHITECTURE_GATE`, choose the profile and obligations using the gate rules in `SKILL.md`.
 
 ## Evidence rule
 
 Inspect and record at least:
 
-- entrypoint or trigger path;
-- current owner module or layer;
-- adjacent abstractions in the same layer;
-- existing tests in the area, or a confirmed absence after targeted inspection;
-- one analogous valid implementation path elsewhere in the repository, or a confirmed absence after targeted inspection;
+- entrypoint, trigger path, or document family;
+- current owner module, layer, document owner, analyzer owner, or seam;
+- existing checks in the area, or a confirmed absence after targeted inspection;
+- one analogous valid implementation or documentation path elsewhere in the repository, or a confirmed absence after targeted inspection;
 - repository rules that govern the area, or a confirmed absence after targeted inspection;
-- nearby patterns that look relevant but are the wrong owner, wrong level, or wrong seam.
+- nearby patterns that look relevant but are the wrong owner, wrong level, stale, or misleading.
+
+`Evidence Map` describes the repository state before execution. Do not reuse baseline facts as target-state requirements. Put target ownership, selected form, rejected alternatives, and future state in `Architecture Decision`.
 
 Choose the owner that solves the problem once without leaking policy into the wrong layer or duplicating it across callers. Prefer the dominant local form already present in the repository.
 
-## Architecture section rule
+## Architecture decision rule
 
-The selected template already determines whether section 4 is a locked architecture or a decision gate. Use the architecture terms and lock-required facts from `SKILL.md`.
+For `FULL` contracts, section 3 must lock one evidence-backed architectural form. State the evidence-backed values for:
 
-When filling 4A, state the evidence-backed values for:
-
-- problem ownership level;
-- selected architectural form;
-- owning layer or module;
+- selected form;
+- ownership;
+- seam;
 - architectural dependency/import direction;
 - state and data ownership;
 - entry and exit boundaries;
-- permitted extension seam;
 - rejected alternatives;
-- why this level is correct;
 - verification strategy.
 
 Do not leave owner, boundaries, seam, architectural dependency/import direction, file placement, execution order, seam retirement timing, or verification strategy to be chosen during implementation.
 
-When filling 4B, state the blocking gap, what is already known, any recommended form supported by evidence, supporting evidence, alternatives considered, and the exact user decision required. Do not include any sections after section 4 in a decision-gate contract.
+For `FULL` contracts, record durable decisions in `Decision Ledger` only when later slices or the final gate need stable decision IDs. Each durable decision gets a stable ID such as `D1`. The ledger is not a summary table: do not restate `Selected Form`, `Ownership`, or `Seam` unless that decision ID is needed later. If no separate durable decision IDs are needed, write one concrete sentence in `Decision Ledger` stating that slices and the final gate rely on the locked architecture directly.
 
-## Shared seam and retirement rule
+For `ARCHITECTURE_GATE` contracts, section 3 must state the blocking gap, what is already known, the recommended form supported by evidence, supporting evidence, alternatives considered, and the exact user decision required. Do not include any sections after section 3 in a gate contract.
 
-When the change creates a successor seam, migrates consumers, or retires a shared support file, the contract must state:
+## Profile proof rules
 
-- the successor seam;
-- the consumer migration order;
-- the retirement gate;
-- the registry, inventory, workflow, or CI references that must move before retirement;
-- which broad verification runs are reserved for the final gate.
+Every slice must have executable proof appropriate to the selected `Contract Profile`. Write proof as intent plus command: first state what the command proves, then give the command. Avoid naked shell snippets whose failure mode is not self-explanatory.
 
-When shared-seam creation, migration, or retirement coordinates more than one retired or changed seam, successor seam, consumer group, registry, inventory, workflow, CI reference, or retirement proof, add a `Seam Migration Matrix` in section 7. Each row should connect the retired or changed seam to its successor, affected consumers or documents, migration slice, and retirement proof. Do not scatter this mapping only across boundary notes, order gates, and slices.
+### BEHAVIOR_CHANGE
 
-## Slice rule
+Use this profile for production/runtime/API/data behavior, persistence, rendering, public semantics, and user-visible behavior changes.
 
-One slice closes one new verifiable result. Preparatory edits alone never close a slice.
+Required proof:
 
-Every slice must have executable semantic proof. Every slice that introduces or depends on the locked architectural form must also have executable structural proof.
+- behavioral verification at the selected owner or public seam;
+- structural verification when the slice introduces or depends on the locked architecture;
+- final broad checks that are relevant to the changed behavior and supported by repository evidence.
 
-Semantic proof demonstrates the behavior, API contract, documentation meaning, or user-visible state that the slice changes. Structural proof demonstrates architecture, import direction, owner boundaries, registries, indexes, generated navigation, analyzer recognition, or other mechanically checkable structure.
+### REFACTOR
 
-Write proof as intent plus command: first state what the command proves, then give the command. Avoid naked shell snippets whose failure mode is not self-explanatory.
+Use this profile when observable behavior must remain unchanged.
 
-Structural verification must make later architectural drift mechanically visible through architectural dependency rules, import rules, architecture tests, custom lints, structure tests, registry/index checks, generated-documentation checks, or negative structural scenarios. Existing structural checks may be reused only when the contract names them explicitly and they already guard the locked form for that slice.
+Required proof:
 
-Before writing a slice, identify and inspect the current owner or support seam, intended successor seam when any, in-scope consumers, slice-local verification units, and any registry, inventory, or CI references that would block retirement of a shared seam.
+- existing locking tests named before edits, or the minimum characterization tests needed before structural edits;
+- 1 to 3 neighboring guard tests when adjacent branches are not already protected;
+- structural verification for the moved, renamed, split, merged, or dependency-sensitive form;
+- final proof that the locked behavior remains green.
 
-Every slice must contain a `Files` block. Put files there, not in a separate global list. Each file expected to be edited must appear in exactly one slice as a primary edit, alignment, registry/index/workflow, verification, or cleanup/finalization file. A file may appear in multiple slices only when each slice names a different purpose; one slice must be named as the final owner for cross-slice cleanup or finalization. Files listed only in section 3 are evidence, not change targets. Files named in `Change Surface Summary` are broad surfaces only, not ownership assignments. When updating a contract that previously used a standalone file list, move those files into the owning slice `Files` blocks in the current template shape.
+If the work intentionally changes observable behavior, reclassify it as `BEHAVIOR_CHANGE`.
 
-For each slice, distinguish file groups only when the categories are relevant: primary edit files, alignment files, registry/index/workflow files, verification files, verify-only evidence files, and excluded files. Give each file or group an action such as create, update, remove, refresh, verify-only, or excluded. Mark new files as proposed only when repository evidence supports placement and naming.
+### SOURCE_OF_TRUTH_DOCS
 
-In section 9, duplicate the slice block as needed and number slices sequentially. Preserve checkbox syntax and give every slice a concrete title derived from the slice contract. Use `Closure Gate` for planned draft slices. Use `Closure Evidence` only when updating an existing executed contract and the slice already has concrete completion evidence.
+Use this profile for normative repository documents such as architecture docs, contracts, diagrams, registries, guardrails, indexes, and roadmap step contracts when production/runtime implementation is out of scope.
 
-## Test-first proof rule
+Required proof:
 
-Before changing implementation, lock existing behavior, defects, or invariants with tests at the owner that currently carries them. For new behavior, put the first executable behavior test at the selected owner or public seam before implementation.
+- targeted semantic search proving selected terminology, ownership, and contract meaning;
+- documentation structural checks for generated navigation, registries, indexes, diagrams catalogs, or context capsules when those artifacts exist;
+- negative proof for retired terminology, stale guardrail IDs, stale registry entries, and rejected future-state proposals.
 
-For bug fixes, regressions, false positives, false negatives, and invariant-enforcement gaps:
+Negative proof must be targeted and bounded to named retired terms, stale IDs, rejected proposals, or active source-of-truth surfaces. Do not use broad repository-wide searches without a stated retired concept and bounded search surface.
 
-1. Reproduce the defect with one failing behavioral or structural test.
-2. Add 1 to 3 guard tests for neighboring branches of the same contract.
-3. Change only the owner of the invariant and only by the minimum edit set needed to make the tests pass.
+Do not invent production tests or runtime behavioral verification for documentation-only contracts.
 
-For refactors:
+### ANALYZER_RULE
 
-1. Name the existing tests that already lock the current behavior and invariants, or add the minimum characterization tests needed to lock them first.
-2. Add 1 to 3 guard tests for neighboring branches of the same contract when adjacent paths are not already protected.
-3. Change only the owner, seam, or structure under refactor and only by the minimum edit set needed to keep the locked behavior green.
+Use this profile when the owned behavior is structural recognition or enforcement.
 
-Do not broaden the change surface until the reproducer or characterization tests and the guard tests are green. If the work intentionally changes observable behavior, do not treat it as a pure refactor; classify it as a bug fix, migration, or behavior change and prove it accordingly.
+Required proof:
 
-## Analyzer, rule-engine, and structural-analysis details
+- recognition forms the analyzer or rule must support;
+- allowed non-violations that must not be flagged;
+- resolution rules for ownership, imports, symbols, generated files, indirection, framework conventions, and repository-specific exceptions when relevant;
+- positive and negative fixtures, or equivalent analyzer checks;
+- false-positive, false-negative, bypass, or structural-drift coverage when repairing a defect.
 
-These details apply only after `SKILL.md` has selected the analyzer contract template. Do not apply them merely because an ordinary implementation has structural verification.
-
-For analyzer changes:
-
-- list analyzer or rule owner files in the owning slice `Files` block;
-- list concrete recognition forms the rule must support;
-- list allowed forms that must not be flagged, to protect against false positives;
-- state how the rule resolves ownership, imports, symbols, generated files, indirection, framework conventions, or repository-specific exceptions;
-- add a failing reproducer for the exact false positive, false negative, bypass, or structural drift;
-- add guard tests for neighboring accepted and rejected forms;
-- prove the fix at the analyzer or rule owner, not by patching each caller or each violating file.
-
-Forbidden shortcuts for analyzer changes:
+Forbidden shortcuts:
 
 - do not whitelist a single observed path when the invariant is structural;
 - do not patch generated output when the source rule or generator owns the behavior;
 - do not move policy into callers when the analyzer owner can enforce it once;
 - do not retire old recognition paths until replacement coverage and consumer migration are proven.
 
+## Obligation rules
+
+For `FULL` contracts, the obligation rules below add proof and sequencing requirements. For `ARCHITECTURE_GATE` contracts, listed obligations are classification metadata for facts already known from the request or repository evidence; detailed obligation proof is deferred until the gate is resolved.
+
+### BUG_FIX
+
+When `BUG_FIX` is present, the contract must require:
+
+- one failing reproducer before the fix;
+- 1 to 3 neighboring guard tests for the same contract;
+- the minimum owner-side fix;
+- no broadened change surface before the reproducer and guard tests are green.
+
+For `ANALYZER_RULE`, the reproducer may be a failing structural fixture or analyzer check. For `SOURCE_OF_TRUTH_DOCS`, the reproducer may be targeted semantic or structural proof that the accepted source of truth currently contradicts the intended contract.
+
+### SEAM_MIGRATION
+
+When `SEAM_MIGRATION` is present, the contract must state:
+
+- retired, renamed, changed, or successor seam;
+- consumer migration order;
+- registry, inventory, workflow, CI, index, or documentation references that must move before retirement;
+- retirement gate;
+- negative proof that the retired seam no longer remains in active source-of-truth surfaces.
+
+Use the `Seam Migration` subsection in section 4 for this mapping. If several seams or consumer groups are involved, use a compact table there.
+
+### PUBLIC_API_CHANGE
+
+When `PUBLIC_API_CHANGE` is present, the contract must state:
+
+- compatibility decision;
+- breaking or non-breaking classification;
+- migration or versioning note;
+- public contract proof;
+- tests or documentation checks that protect the public surface.
+
+## Slice rule
+
+One slice closes one new verifiable result. Preparatory edits alone never close a slice.
+
+Every slice must contain:
+
+- `Implements`: decision IDs such as `D1`, obligation labels, or proof IDs the slice closes;
+- `Files`: every file, test, fixture, inventory, workflow, generated artifact, verify-only evidence file, or explicit exclusion the slice relies on;
+- `Change`: the slice-local result, without restating durable decisions;
+- `Proof`: executable proof with intent plus command, using proof IDs from section 5 when reused;
+- `Closure`: the condition that makes the slice complete.
+
+Each file expected to be edited must appear in exactly one slice as a primary edit, alignment, registry/index/workflow, verification, or cleanup/finalization file. A file may appear in multiple slices only when each slice names a different purpose; one slice must be named as the final owner for shared cleanup or finalization. Files listed only in `Evidence Map` are evidence, not change targets.
+
+For each slice, distinguish file groups only when the categories are relevant. Give each file or group an action such as create, update, remove, refresh, verify-only, or excluded. Mark new files as proposed only when repository evidence supports placement and naming.
+
+Duplicate the slice block as needed and number slices sequentially. Preserve checkbox syntax and give every slice a concrete title derived from the slice result. Use `Closure` for planned draft slices. Use completion evidence only when updating an existing executed contract and the slice already has concrete completion evidence.
+
 ## Template fill rules
 
 The selected template is the document shape, not a source of new requirements.
 
-Retain and fill the main numbered sections from the selected template: sections 1 through 4 for the gate template, and sections 1 through 11 for locked templates. Do not silently omit a main numbered section in a locked contract.
+Retain and fill the main numbered sections from the selected template: sections 1 through 3 for gate contracts, and sections 1 through 7 for locked contracts. Do not silently omit a main numbered section.
 
-Use subsection headings only when they can be filled with concrete content. If a subsection is required to explain the lock but cannot be filled from repository evidence, do not leave it empty; use the architecture decision gate instead.
+Use subsection headings only when they can be filled with concrete content. If a subsection is required to explain the lock but cannot be filled from repository evidence, use the architecture decision gate instead of emitting an empty heading.
 
-Use concrete slice titles. Preserve the checkbox syntax from the template, but replace the empty slice heading with a real slice title and add more slices only when each one closes a distinct verifiable result.
+Section 5 is for reusable proof commands or proof groups referenced by more than one slice or by the final gate. If a command is used once, keep it in the owning slice. If the same command is used by a slice and the final gate, give it a proof ID such as `P1`. If there are no reusable proof groups, write one concrete sentence that all proof is slice-local and keep commands in the slices.
 
-Optional categories that are commonly omitted when not relevant include `Change Surface Summary`, successor-seam retirement gates, `Seam Migration Matrix`, `Cross-Slice Finalization`, deferred broad verification, slice file subcategories, fixtures, and positive or negative scenarios. Analyzer-only recognition categories belong only in the analyzer template and are required there. Do not emit `None` for optional categories; omit the category instead.
+Optional categories that are commonly omitted when not relevant include seam migration details, deferred broad verification, slice file subcategories, analyzer fixtures, positive scenarios, and negative scenarios. Do not emit placeholder text, guessed details, unexplained ellipses, or `None` filler.
 
 ## Updating an existing contract
 
 When updating an existing Change Contract:
 
-- Re-select the current template through `SKILL.md` and convert the output to that template shape.
+- Re-select the current mode, profile, obligations, and template through `SKILL.md`.
+- Convert the output to the current selected template shape.
 - Preserve completed slice evidence and stable decisions that are still supported by repository evidence by placing them in the current owning sections.
 - Patch only content affected by new evidence, changed user direction, or required migration into the current template shape.
 - Do not rewrite stable architecture decisions unless repository evidence contradicts them.
 - If a previous assumption is invalidated, add a correction note in the owning section and update affected slices, slice-local file ownership, gates, and proof obligations.
-- Do not preserve obsolete section numbering, standalone file-list sections, or deprecated proof headings. Move old file-list content into slice `Files` blocks, and express old behavioral or structural verification content under the current `Slice Verification` proof headings.
+- Do not preserve obsolete numbering, standalone file inventories, or deprecated proof headings.
 
-## Section ownership
+Existing historical roadmap step files do not need migration unless the user explicitly asks to update that contract.
 
-Place each fact in the first section that owns it. Later sections may rely on that fact without restating it.
+## Information Ownership
 
-- Section 1 owns the change result.
-- Section 2 owns the compact change-surface summary, included scope, and exclusions.
-- Section 3 owns repository evidence, current owners, adjacent abstractions, tests, precedents, rules, and misleading local patterns.
-- Section 4 owns architectural placement, architectural dependency/import direction, state ownership, entry and exit boundaries, extension seam, and architecture decision gates.
-- Section 5 owns execution-closed decisions that remain after section 4 is fixed.
-- Section 6 owns observable end-state properties.
-- Section 7 owns preconditions, cross-slice order constraints, seam migration matrices, retirement gates, the `Cross-Slice Finalization` list, and final-gate timing.
-- Section 8 owns implementation constraints and proof obligations.
-- Section 9 owns slice-local files, changes, and verification.
-- Sections 10 and 11 own final runs and acceptance conditions.
+Each fact must have exactly one owning location.
+
+- Mode, profile, and obligations live only in the header.
+- Mandate, scope, and exclusions live only in section 1.
+- Repository evidence lives only in section 2.
+- Architecture, seam, state ownership, dependency direction, selected design, rejected alternatives, verification strategy, and durable decisions live only in section 3.
+- Cross-slice order, seam migration, forbidden moves, and deferred verification live only in section 4.
+- Reusable proof commands live only in section 5.
+- File lists live inside the slice that edits, verifies, excludes, or finalizes those files.
+- Slice-local work lives only in section 6.
+- Completion conditions live only in section 7.
+
+Later sections must reference decision IDs and proof IDs instead of restating the same facts.
 
 ## Section guidance
 
-### 1. Change Mandate
+### 1. Mandate and Boundary
 
-State the required result in one short, concrete statement. Do not include implementation mechanics, file lists, or verification details.
+State the required result in one short mandate. Separate included work from exclusions. Use exclusions to prevent scope creep, not to hide unresolved architecture decisions.
 
-### 2. Change Boundary
+### 2. Evidence Map
 
-Start with `Change Surface Summary` when it improves orientation. Keep it compact: mode, primary surfaces, production/test status, and broad change class. Do not list file ownership or per-slice file inventories there.
+Record inspected evidence, not assumptions. Separate baseline evidence from target architecture. Do not present future target owners or entrypoints as current repository facts.
 
-Separate included work from exclusions. Use exclusions to prevent scope creep, not to hide unresolved architecture decisions. Do not put preflight blockers, baseline state checks, or broad-verification deferrals here; put those in section 7.
+### 3. Architecture Decision
 
-### 3. Surrounding Code Review
+For `FULL`, record the locked architecture selected through `SKILL.md` workflow and use the `Decision Ledger` for durable decisions and stable proof references. For `ARCHITECTURE_GATE`, use only the `Architecture Gate` subsection from the gate template and do not add a `Decision Ledger`.
 
-Record inspected evidence, not assumptions. Include the evidence required above. Separate current evidence from target architecture; do not present future target owners or entrypoints as current repository facts. Put target ownership in section 4 unless the repository already defines it.
+### 4. Execution Guardrails
 
-### 4. Architecture
+State cross-slice order, constraints, seam migration details, forbidden moves, and broad verification deferred to the final gate. Do not use this section as a complete file inventory.
 
-Record the locked architecture or decision gate already selected through `SKILL.md` workflow. Do not select a different template from this section.
+### 5. Proof Plan
 
-### 5. Locked Decisions
+Name reusable proof groups with IDs such as `P1`. A one-off command belongs in the owning slice, not in `Proof Plan`. Do not duplicate proof commands across slices and final gate; reference proof IDs when the same command is reused.
 
-Include only decisions that remain after section 4 is fixed. Do not repeat architecture facts.
+### 6. Vertical Slices
 
-### 6. Result Requirements
+One slice closes one new verifiable result. Use the slice `Files` block as the only complete owner for files to edit, refresh, verify, exclude, or finalize in that slice.
 
-State final observable truths. Avoid implementation mechanics.
+### 7. Final Gate
 
-### 7. Execution Order and Gates
-
-State preconditions, cross-slice order constraints, successor-seam migration order, seam migration matrix when useful, retirement gates, `Cross-Slice Finalization`, and broad verification runs reserved for the final gate. Use `Cross-Slice Finalization` only for shared cleanup, registry/index refresh, backlog cleanup, derived navigation, or other files whose final owner matters across slices. Do not use this section as a complete file inventory; files that are edited or verified belong in slice `Files` blocks.
-
-### 8. Implementation Rules
-
-State protected invariants, required proof, allowed change surface, and forbidden moves. When the analyzer contract template was selected, also state recognition forms, allowed non-violations, and resolution rules.
-
-### 9. Vertical Slices
-
-One slice closes one new verifiable result. Each slice must state slice contract, files, change, semantic proof, structural proof when architecture-relevant, broad checks when relevant, and closure gate or evidence depending on whether the contract is planned or already executed.
-
-Use the slice `Files` block as the only complete owner for files to edit, refresh, verify, or exclude in that slice. Keep files from section 3 as evidence unless the same file appears in a slice. Add fixtures, positive scenarios, and negative scenarios only when they materially constrain execution or proof; do not emit `None`.
-
-### 10. Final Verification
-
-Reserve broad or expensive runs for the final gate when earlier slices already carry local proof. Name exact commands, suites, or checks only when supported by repository evidence.
-
-### 11. Acceptance Criteria
-
-State the conditions that must be true for the Change Contract to be considered complete. Keep acceptance criteria tied to mandate, result requirements, gates, and verification.
+State the final proof set and completion conditions. The final gate must prove decisions and obligations already introduced earlier; it must not introduce new scope.

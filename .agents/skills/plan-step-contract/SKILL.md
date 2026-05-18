@@ -16,8 +16,9 @@ the contract is accepted.
 
 1. Create the new step with `change-contract`.
    - Read `.agents/skills/change-contract/SKILL.md`.
-   - Use the change-contract template and rules as the canonical structure for
-     the new step file.
+   - Use the current `change-contract` mode/profile/obligation routing, active
+     template, and rules as the canonical structure for the new step file.
+   - Do not infer the step shape from historical `plan/step_*.md` files.
    - Add the step to the active conversation plan when the plan tool is
      available.
    - Add the step entry to root `PLAN.md`.
