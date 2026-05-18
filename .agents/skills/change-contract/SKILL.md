@@ -7,12 +7,12 @@ description: Draft or update a Change Contract as a normative execution plan bef
 
 Draft a Change Contract, not an overview.
 
-Use only confirmed facts from the request and inspected repository artifacts. The final contract must be executable by another Codex run without relying on conversation memory.
+Use only confirmed facts from the request and inspected repository artifacts. Make the final contract executable in a later run without relying on conversation memory.
 
 ## Internal file contract
 
 - This `SKILL.md` is the only source for routing, core terms, architecture-lock requirements, decision-gate conditions, profile selection, obligation selection, and active template priority.
-- After reading this file and inspecting repository evidence, Codex must already know the contract mode, profile, obligations, whether the architecture is locked, and which active template to select.
+- After reading this file and inspecting repository evidence, you must already know the contract mode, profile, obligations, whether the architecture is locked, and which active template to select.
 - `references/contract-rules.md` explains how to fill the selected template: evidence, information ownership, slice construction, proof obligations, seam-retirement details, analyzer-specific details, and update behavior. It must not change routing, redefine core terms, add new profiles, add new obligations, or select a different template.
 - Files in `assets/` are passive output shapes only. They must not be used to infer routing rules, architecture-lock requirements, profile classification, or obligation classification.
 
@@ -72,7 +72,7 @@ There is no separate analyzer template. Analyzer-specific requirements are profi
 
 ## Source-of-truth rules
 
-- Apply naming rules from the active user-level `AGENTS.md` when those rules are present in Codex context.
+- Apply naming rules from the active user-level `AGENTS.md` when those rules are present in your active instruction context.
 - Do not mention user-level configuration file paths in the Change Contract; the contract should name repository artifacts only.
 - If user-level naming rules are not present, infer names from adjacent repository artifacts and state that naming was inferred from repository-local precedent.
 - Repository-local rules still govern architecture, architectural dependency/import direction, layer boundaries, test commands, fixtures, and placement when they are present.
