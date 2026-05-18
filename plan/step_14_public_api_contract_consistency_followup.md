@@ -725,7 +725,63 @@ The slice is complete when all reusable proof IDs pass, all changed references
 are synchronized, and Step 14 is marked complete in both `PLAN.md` and this step
 file.
 
-## 7. Final Gate
+## 7. Completed Evidence
+
+### P0 Recorded Pre-Fix Signal
+
+P0 was run before Slice 1 owner-side edits. It produced the expected
+contradiction and neighboring-guard signal:
+
+- public validating `const` declarations were present in
+  `docs/contracts/public_api_v1.md` for `CanvasSelectionStyle`,
+  `CanvasGridStyle`, `CanvasCamera`, `CanvasGrid`, `CanvasTransform`,
+  `CanvasPointerPolicy`, `CanvasPointerSample`, `CanvasDrawStyle`,
+  `CanvasResourceSource.appKey`, `CanvasAppKeyResourceSource`, and
+  `CanvasDataException`;
+- codec names were present in `docs/_registry/public_api_v1.yaml` and
+  `docs/contracts/codec_boundary.md`, while absent from
+  `docs/contracts/public_api_v1.md`;
+- `selectionStyle` was present in `docs/contracts/cache_policy.md` and
+  `docs/verification/tests.md`, while absent from the `CapturedMainFrame` block
+  and main paint diagrams;
+- camera operation rows remained split between
+  `CanvasEdit.setCameraOffset` and `CanvasCameraPort.setOffset/panBy` in
+  `docs/contracts/operation_matrix.md`, while the explicit
+  `setCameraOffset(runtime.camera.offset)` persistence example was absent from
+  `docs/contracts/public_api_v1.md` and `docs/verification/tests.md`.
+
+### Final Proof Results
+
+- P1 passed after final edits: the strict validating-constructor factory rule is
+  present in public API, validation, test, and guardrail docs; forbidden public
+  validating `const` forms are absent from `docs/contracts/public_api_v1.md`.
+- P2 passed after final edits: every codec exported name is declared in
+  `docs/contracts/public_api_v1.md`, remains listed in
+  `docs/_registry/public_api_v1.yaml`, and codec behavior ownership remains in
+  `docs/contracts/codec_boundary.md`.
+- P3 passed after final edits: `selectionStyle` is present in
+  `CapturedMainFrame`, both main paint diagrams, cache policy, and verification
+  wording; `PaintPlanCache` and `StaticBackgroundCache` rows still exclude
+  `selectionStyle`.
+- P4 passed after final edits: the explicit
+  `setCameraOffset(runtime.camera.offset)` edit boundary is documented in
+  public API and verification docs; `persistCurrentOffset` is absent from active
+  source-of-truth docs.
+- P5 passed after final edits:
+  `dart run docs/tool/generate_context_capsules.dart --check` and
+  `dart run docs/tool/check_docs.dart` both exited 0.
+- P6 passed after final edits: `git diff --check -- PLAN.md
+  plan/step_14_public_api_contract_consistency_followup.md
+  docs/contracts/public_api_v1.md docs/contracts/validation_limits.md
+  docs/contracts/frame_rendering.md docs/contracts/cache_policy.md
+  docs/diagrams/dfd_main_paint_frame.mmd docs/diagrams/seq_main_paint.mmd
+  docs/verification docs/indexes docs/_registry` exited 0.
+
+`dart analyze`, `dcm analyze .`, and `dcm calculate-metrics .` were not run
+because this step changed source-of-truth documentation only and the contract
+explicitly defers those checks for documentation-only changes.
+
+## 8. Final Gate
 
 ### Run Proof Set
 
