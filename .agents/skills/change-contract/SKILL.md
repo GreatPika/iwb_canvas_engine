@@ -20,13 +20,9 @@ Use only confirmed facts from the request and inspected repository artifacts. Ma
 
 - **Owner**: the module, layer, document family, analyzer, rule, or support seam that should own the behavior, invariant, policy, or migration once. Do not push ownership into callers when a shared owner can solve it once.
 - **Seam**: the boundary where consumers interact with an owner or replacement mechanism. A shared seam has multiple consumers or repository references and cannot be retired without a successor, migration order, and retirement gate.
-- **Locked architecture**: one evidence-backed architectural form selected before implementation. It fixes every lock-required fact below.
 - **Lock-required facts**: owner, owning layer or module, seam, architectural dependency/import direction, state/data ownership, entry and exit boundaries, file placement basis, execution order, rejected alternatives, and verification strategy. For shared-seam creation, migration, or retirement, also lock successor seam, consumer migration order, retirement gate, and final broad-verification timing.
 - **Architecture decision gate**: the stop condition when any lock-required fact is missing, contradicted by repository evidence, or cannot be chosen without a user decision. In this case use `Contract Mode: ARCHITECTURE_GATE`, select the gate template, and stop at section 3.
-- **Vertical slice**: the smallest implementation step that closes one new verifiable result. Preparatory edits alone do not close a slice.
 - **Proof**: executable repository verification that demonstrates the slice or final contract is correct. Semantic proof checks behavior, wording, API shape, documentation meaning, or user-visible contract. Structural proof checks architecture, imports, ownership, layer boundaries, registries, indexes, generated navigation, analyzer recognition, or other mechanically checkable structure.
-- **Contract Profile**: the single primary proof mode for a locked contract. It is selected by the owner and required proof, not by file extension.
-- **Contract Obligation**: an additional proof or sequencing requirement layered onto the profile. Obligations are additive and do not replace the primary profile.
 
 ## Contract modes
 
@@ -79,18 +75,10 @@ There is no separate analyzer template. Analyzer-specific requirements are profi
 
 ## Workflow
 
-1. Inspect active instructions already in context, repository-local rules, surrounding code/docs/tests, owner boundaries, architectural dependency/import direction, layer boundaries, and existing verification before drafting.
+1. Inspect active instructions, repository-local rules, surrounding code/docs/tests, lock-required facts, and existing verification.
 2. Normalize the request into mandate, included scope, and exclusions.
-3. Decide whether every lock-required fact is evidence-backed. Select `Contract Mode: FULL` only when all lock-required facts are locked; otherwise select `Contract Mode: ARCHITECTURE_GATE`.
-4. Select exactly one `Contract Profile` for the selected mode using the priority order above. For gate contracts, use the gate-profile rule above.
-5. Select every applicable `Contract Obligation` using the stable order above, or write `none`. For gate contracts, use the gate-obligation rule above.
-6. Select the active template: `assets/architecture-gate-template.md` for gate contracts, or `assets/full-contract-template.md` for locked contracts.
-7. Read `references/contract-rules.md` to fill the selected template shape. Do not let the reference file change the mode, profile, obligations, or template choice.
-8. When updating an existing contract, convert the output to the current selected template shape. Preserve stable decisions and completed evidence only by placing them in the current owning sections; do not preserve obsolete section numbering, obsolete global file lists, or deprecated proof headings.
-9. For `ARCHITECTURE_GATE`, stop at section 3. Do not include proof plans, slices, or final gates.
-10. Preserve main section numbering and slice checkboxes from the selected template. Use concrete slice titles. Omit optional subsections, bullets, or categories that have no confirmed content. Never emit placeholders, filler, guessed details, `None` filler, or empty optional headings.
-11. In locked contracts, put file ownership inside each slice under `Files`. Each file or grouped file list must name the file role and slice-local responsibility, not just a bare action such as `Update`. Do not create a separate global file-list section. Files listed only in `Evidence Map` are evidence, not change targets.
-12. Use `Proof Plan` as the only owner for reusable proof commands, proof groups referenced by more than one slice, and every proof command referenced by the final gate. Each proof ID must be self-contained: purpose, command or check, and expected signal. Keep unique slice-local checks inside the owning slice only when they are not reused and not part of the final gate.
-13. In each slice, state proof intent before commands: what the command proves, then the command. Keep decision IDs in `Implements`, obligation labels in `Obligations Covered`, and proof IDs in `Proof`. When `Proof` references a proof ID, do not duplicate that proof command in the slice.
-14. In `Final Gate`, aggregate proof IDs, Decision Ledger coverage, Contract Obligations, retired-seam negative proof, out-of-scope protection, and whitespace validation. Do not restate durable decisions from section 3.
-15. Return only the Change Contract. Do not append review, validation, or audit commentary.
+3. Select `Contract Mode`. Use `FULL` only when all lock-required facts are evidence-backed; otherwise use `ARCHITECTURE_GATE`, select the gate template, and stop at section 3.
+4. Select exactly one `Contract Profile`, then select applicable `Contract Obligations` or `none`.
+5. Open the active template for the selected mode, then read `references/contract-rules.md` to fill it. Do not let the reference file change mode, profile, obligations, or template choice.
+6. When updating an existing contract, convert it to the current template and preserve stable content only in current owning sections.
+7. Return only the Change Contract.

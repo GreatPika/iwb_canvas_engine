@@ -184,17 +184,15 @@ Optional categories that are commonly omitted when not relevant include seam mig
 
 ## Updating an existing contract
 
-When updating an existing Change Contract:
+Use only when the user explicitly asks to update an existing Change Contract.
 
-- Re-select the current mode, profile, obligations, and template through `SKILL.md`.
-- Convert the output to the current selected template shape.
-- Preserve completed slice evidence and stable decisions that are still supported by repository evidence by placing them in the current owning sections.
-- Patch only content affected by new evidence, changed user direction, or required migration into the current template shape.
-- Do not rewrite stable architecture decisions unless repository evidence contradicts them.
-- If a previous assumption is invalidated, add a correction note in the owning section and update affected slices, slice-local file ownership, gates, and proof obligations.
+- Re-select mode, profile, obligations, and template through `SKILL.md`, then convert the contract to the current template shape.
+- Preserve only stable decisions and completed evidence still supported by repository evidence, and move them to current owning sections.
+- Patch only content affected by new evidence, changed user direction, or required template migration.
+- When evidence invalidates a prior assumption, add the correction in the owning section and update affected slices, gates, files, and proof.
 - Do not preserve obsolete numbering, standalone file inventories, or deprecated proof headings.
 
-Existing historical roadmap step files do not need migration unless the user explicitly asks to update that contract.
+Historical roadmap step files do not need migration unless the user explicitly asks to update that contract.
 
 ## Information Ownership
 
@@ -211,33 +209,3 @@ Each fact must have exactly one owning location.
 - Completion conditions live only in section 7.
 
 Later sections must reference decision IDs and proof IDs instead of restating the same facts.
-
-## Section guidance
-
-### 1. Mandate and Boundary
-
-State the required result in one short mandate. Separate included work from exclusions. Use exclusions to prevent scope creep, not to hide unresolved architecture decisions.
-
-### 2. Evidence Map
-
-Record inspected evidence, not assumptions. Separate baseline evidence from target architecture. Do not present future target owners or entrypoints as current repository facts.
-
-### 3. Architecture Decision
-
-For `FULL`, record the locked architecture selected through `SKILL.md` workflow and use the `Decision Ledger` for durable decisions and stable proof references. For `ARCHITECTURE_GATE`, use only the `Architecture Gate` subsection from the gate template and do not add a `Decision Ledger`.
-
-### 4. Execution Guardrails
-
-State cross-slice order, constraints, seam migration details, forbidden moves, and broad verification deferred to the final gate. Do not use this section as a complete file inventory.
-
-### 5. Proof Plan
-
-Name reusable proof groups with IDs such as `P1`. A proof ID must include the executable command or check and expected signal. A one-off command belongs in the owning slice when it is not reused and not part of the final gate. Do not duplicate proof commands across slices and final gate; reference proof IDs when the same command is reused.
-
-### 6. Vertical Slices
-
-One slice closes one new verifiable result. Use the slice `Files` block as the only complete owner for files to edit, refresh, verify, exclude, or finalize in that slice.
-
-### 7. Final Gate
-
-State the final proof set and completion conditions by referencing proof IDs, the Decision Ledger, and Contract Obligations. The final gate must not restate durable decision content from section 3 or introduce new scope.

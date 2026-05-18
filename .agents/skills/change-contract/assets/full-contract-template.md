@@ -101,7 +101,7 @@ Expected signal.
 
 ### Run Proof Set
 
-P-
+List the concrete proof IDs from section 5 that must pass before closure.
 
 ### Done When
 
