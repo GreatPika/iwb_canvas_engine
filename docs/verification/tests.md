@@ -430,7 +430,9 @@ test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart
   -> proves backgroundRevision and gridRevision invalidate StaticBackgroundCache
      without invalidating ordinary PaintPlanCache entries;
   -> proves CanvasEdit.setCameraOffset changes persisted document camera through
-     the document edit path and readDocument returns that persisted camera.
+     the explicit edit boundary, including the
+     setCameraOffset(runtime.camera.offset) persistence path, and readDocument
+     returns that persisted camera instead of the runtime view camera.
 
 test/guardrails/selection_boundary_imports_test.dart
   -> proves InteractionEngine does not import concrete SelectionKernel or

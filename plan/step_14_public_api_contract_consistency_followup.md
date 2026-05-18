@@ -645,7 +645,7 @@ exclusion semantics.
 The slice is complete when the frame contract, main DFD, and main sequence all
 show the same captured `selectionStyle` data flow to selection decoration.
 
-### Slice 4. [ ] Document explicit persisted camera edit boundary
+### Slice 4. [x] Document explicit persisted camera edit boundary
 
 #### Implements
 

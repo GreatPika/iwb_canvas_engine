@@ -1350,6 +1350,18 @@ It never directly mutates the runtime view camera. Runtime construction with an
 `initialDocument` and `loadDocument` both initialize the runtime view camera from
 the installed document's persisted camera.
 
+Persisting the current runtime view camera is an explicit edit boundary:
+
+```dart
+runtime.edits.edit((edit) {
+  edit.setCameraOffset(runtime.camera.offset);
+});
+```
+
+`CanvasCameraPort` does not expose a camera persistence helper. Applications
+that want the current view to become document state must cross the document edit
+boundary explicitly.
+
 `CanvasClearResult`:
 
 ```dart
@@ -1655,7 +1667,9 @@ Offset validation: finite x/y within `[-1e7, 1e7]`.
 `state.revisions.document`, invalidating public `CanvasDocument` projection, or
 changing the persisted document camera. `camera` and `offset` expose the current
 runtime view camera, while `readDocument().camera` exposes the persisted
-document camera.
+document camera. Persisting `camera` or `offset` requires the explicit
+`CanvasEdit.setCameraOffset(runtime.camera.offset)` edit shown in the edit
+contract.
 
 ### 4.17 Resource API
 
