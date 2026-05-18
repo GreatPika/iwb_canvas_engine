@@ -39,7 +39,7 @@
 Статус: Red/Yellow.
 
 Почему это дыра: operation matrix должна доказывать revisions, repaint, spatial,
-projection, resource effects, action events, no-op и rollback semantics. Если
+projection, resource effects, user-action notification behavior, no-op и rollback semantics. Если
 публичной операции нет в матрице, у неё нет проверяемого архитектурного поведения.
 
 Нужно закрыть:
@@ -66,7 +66,7 @@ projection, resource effects, action events, no-op и rollback semantics. Есл
 - [ ] Для каждой строки указать projection effect.
 - [ ] Для каждой строки указать resource effect.
 - [ ] Для каждой строки указать repaint target.
-- [ ] Для каждой строки указать action event.
+- [ ] Для каждой строки указать user-action notification behavior.
 - [ ] Для каждой строки указать no-op behavior.
 - [ ] Для каждой строки указать rollback behavior.
 - [ ] Добавить или обновить guardrail/test mapping, чтобы новые matrix rows были проверяемыми.

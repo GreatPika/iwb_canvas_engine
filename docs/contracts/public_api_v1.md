@@ -1242,7 +1242,11 @@ final class CanvasClearResult {
 High-level commands are public user-intent operations. They use EditKernel for
 atomic mutation, but they own user action event emission. This keeps low-level
 `CanvasEdit` usable for programmatic synchronization without polluting the app's
-undo/redo action stream.
+user-action notification stream.
+
+`CanvasActionCommitted` is a user-action notification stream. It is not an
+undo/redo journal. Undo/redo is application-owned, and v1 action payloads do not
+carry inverse patches.
 
 ```dart
 abstract interface class CanvasCommandPort {
