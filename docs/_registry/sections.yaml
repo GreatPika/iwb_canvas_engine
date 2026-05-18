@@ -119,6 +119,7 @@
     - api.dto_immutability
     - api.equality_policy_explicit
     - api.id_validation_no_extension_type_escape
+    - interaction.text_edit_stale_commit_guard
     - surface.interactive_false_pending_line_preserved
   tests:
     - test.api_contract.public_readable_union_variants
@@ -131,6 +132,7 @@
     - test.api_contract.dto_immutability
     - test.api_contract.public_equality_policy
     - test.api.typed_action_payloads
+    - test.interaction.text_edit_stale_commit_guard
     - test.runtime.dispose_lifecycle
     - test.runtime.runtime_state_publication
     - test.runtime.interaction_settings_state
@@ -451,9 +453,12 @@
     - edit.rollback_no_effects
     - edit.stale_handle_rejected
     - edit.operation_matrix_complete
+    - events.commands_emit_user_actions
+    - interaction.text_edit_stale_commit_guard
   tests:
     - test.edit.sync_non_nested_async_stale
     - test.edit.operation_matrix_effects
+    - test.interaction.text_edit_stale_commit_guard
   do_not_assume:
     - no implicit mutation path outside EditKernel
 -
@@ -507,6 +512,7 @@
     - interaction.no_concrete_selection_imports
     - interaction.no_resolver_on_cancel_paths
     - interaction.no_stale_terminal_commit
+    - interaction.text_edit_stale_commit_guard
     - surface.pointer_samples_normalized_before_runtime
     - surface.interactive_false_pending_line_preserved
   tests:
@@ -523,6 +529,7 @@
     - test.interaction.move_resolver_reentrancy
     - test.interaction.move_resolver_not_called_on_cancel_cleanup
     - test.interaction.no_stale_terminal_commit
+    - test.interaction.text_edit_stale_commit_guard
     - test.guardrails.selection_boundary_imports
     - test.flutter_bridge.widget_paint
   do_not_assume:
@@ -797,6 +804,7 @@
     - interaction.no_concrete_selection_imports
     - interaction.no_resolver_on_cancel_paths
     - interaction.no_stale_terminal_commit
+    - interaction.text_edit_stale_commit_guard
     - geometry.no_legacy_scene_order
     - geometry.eraser_exact_budget_no_partial
     - spatial.no_full_clone_ordinary_edit
@@ -996,6 +1004,7 @@
     - test.interaction.move_resolver_reentrancy
     - test.interaction.move_resolver_not_called_on_cancel_cleanup
     - test.interaction.no_stale_terminal_commit
+    - test.interaction.text_edit_stale_commit_guard
     - test.flutter_bridge.widget_paint
     - test.benchmarks.required_cases
     - test.guardrails.required_diagrams_present
@@ -1147,6 +1156,7 @@
     - interaction.no_concrete_selection_imports
     - interaction.no_resolver_on_cancel_paths
     - interaction.no_stale_terminal_commit
+    - interaction.text_edit_stale_commit_guard
     - geometry.no_legacy_scene_order
     - geometry.eraser_exact_budget_no_partial
     - spatial.no_full_clone_ordinary_edit

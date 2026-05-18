@@ -32,12 +32,12 @@ stateDiagram-v2
 
   TopHitFirst --> Idle: "no top hit / no request"
   TopHitFirst --> Idle: "top hit is not text / no request"
-  TopHitFirst --> PendingCandidate: "top hit is text / store id, generation, positions, timestamp, epoch"
+  TopHitFirst --> PendingCandidate: "top hit is text / store id, generation, elementRevision, positions, timestamp, epoch"
 
   state "Pending text tap candidate" as PendingCandidate
   note right of PendingCandidate
     Pending state is input history only:
-    element id, generation, view/world positions,
+    element id, generation, elementRevision, view/world positions,
     timestamp, and controllerEpoch.
     It is not CanvasPreviewState and not Store state.
   end note
@@ -72,30 +72,50 @@ stateDiagram-v2
   note right of CandidateMatch
     The second text hit must match the pending element
     and still be visible, selectable, text, generation-current,
-    and epoch-current.
+    elementRevision-current, and epoch-current.
   end note
 
-  CandidateMatch --> CleanupOnly: "different text, stale generation, hidden, unselectable, or epoch mismatch"
+  CandidateMatch --> CleanupOnly: "different text, stale generation, stale elementRevision, hidden, unselectable, or epoch mismatch"
   CandidateMatch --> EmitRequest: "same current text element"
 
-  state "Emit app-owned text edit request" as EmitRequest
+  state "Issue guarded app-owned text edit request" as EmitRequest
   note right of EmitRequest
-    InteractionEngine emits CanvasTextEditRequested with
-    element id, timestamp, view/world positions, boundsWorld,
-    and immutable text snapshot. This is not an EditKernel
-    commit and not a document/action mutation.
+    InteractionEngine issues CanvasInteractionRequestId
+    through InteractionRequestRegistry, then emits
+    CanvasTextEditRequested with request id, element id,
+    controllerEpoch, documentRevision, elementRevision,
+    timestamp, view/world positions, boundsWorld, and
+    immutable text snapshot. documentRevision is observation-only.
+    This is not an EditKernel commit and not a document/action mutation.
   end note
 
-  EmitRequest --> AppOwnsEditor: "publish textEditRequests event"
+  EmitRequest --> IssuedRequestLive: "request delivered / clear pending tap and keep request id live"
 
-  state "Application owns editor overlay" as AppOwnsEditor
-  note right of AppOwnsEditor
+  state "Issued request remains live" as IssuedRequestLive
+  note right of IssuedRequestLive
     The application owns Flutter editor overlay, IME,
     focus, accessibility, hide/show policy, and later
-    updateElement text commit flow outside this request state.
+    commitTextEdit text commit flow outside this request state.
+    Pending tap history is already cleared.
+    The registry is not an active text-input session and
+    not CanvasPreviewState.
   end note
 
-  AppOwnsEditor --> CleanupOnly: "request delivered"
+  IssuedRequestLive --> RetiredRequest: "commitTextEdit accepted no-op or changed text / retire request"
+  IssuedRequestLive --> RetiredRequest: "commitTextEdit stale rejection / retire known stale request"
+  IssuedRequestLive --> RetiredRequest: "loadDocument success / controllerEpoch makes request stale"
+  IssuedRequestLive --> Disposed: "runtime.dispose() / later commitTextEdit throws StateError"
+
+  state "Retired or stale request id" as RetiredRequest
+  note right of RetiredRequest
+    Retired and epoch-stale request ids cannot commit.
+    Stale rejection uses request id, controllerEpoch,
+    generation, elementRevision, missing element, and
+    current text-family mismatch; documentRevision is not
+    a stale guard, so unrelated document edits do not reject.
+  end note
+
+  RetiredRequest --> Idle: "request lifecycle closed"
 
   state "Cleanup only" as CleanupOnly
   note left of CleanupOnly

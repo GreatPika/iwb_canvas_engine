@@ -160,12 +160,12 @@ Required tests:
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
 - `test.frame.cache_capacity_eviction_policy`
 - `test.frame.selected_supplement_staging_no_global_sort`
-- `test.api_contract.preview_state_sealed_union`
 - `test.interaction.preview_public_state`
 - `test.interaction.state_machines`
 - `test.interaction.move_resolver_reentrancy`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
 - `test.interaction.no_stale_terminal_commit`
+- `test.interaction.text_edit_stale_commit_guard`
 - `test.flutter_bridge.widget_paint`
 - `test.benchmarks.required_cases`
 - `test.guardrails.required_diagrams_present`
@@ -263,6 +263,7 @@ test/interaction/state_machines_test.dart
 test/interaction/move_resolver_reentrancy_test.dart
 test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart
 test/interaction/no_stale_terminal_commit_test.dart
+test/interaction/text_edit_stale_commit_guard_test.dart
 test/selection/runtime_owner_separation_test.dart
 test/guardrails/selection_boundary_imports_test.dart
 ```

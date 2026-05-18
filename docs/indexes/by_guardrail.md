@@ -160,9 +160,10 @@ Guardrails extracted from split section 22.
 
 ## events.commands_emit_user_actions
 
-- Rule: high-level commands and interaction commits own user action events
-- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api.typed_action_payloads`, `test.interaction.commands_emit_user_actions`, `test.guardrails.blocking_suite`
+- Rule: high-level commands and interaction commits own user action events,
+  including changed `commitTextEdit` commits as `editText` notifications
+- Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.api.typed_action_payloads`, `test.interaction.commands_emit_user_actions`, `test.interaction.text_edit_stale_commit_guard`, `test.guardrails.blocking_suite`
 
 ## load.prepares_before_interrupt
 
@@ -349,6 +350,14 @@ Guardrails extracted from split section 22.
 - Rule: stale or controllerEpoch-mismatched terminal samples cannot create commit intent
 - Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.interaction.no_stale_terminal_commit`, `test.guardrails.blocking_suite`
+
+## interaction.text_edit_stale_commit_guard
+
+- Rule: request-originated text commits reject unknown, retired, epoch-stale,
+  generation-stale, revision-stale, missing, or non-text targets while allowing
+  unrelated documentRevision changes
+- Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.interaction.text_edit_stale_commit_guard`, `test.guardrails.blocking_suite`
 
 ## projection.only_explicit_read_paths
 

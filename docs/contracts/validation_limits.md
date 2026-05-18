@@ -41,6 +41,7 @@ These limits are mandatory for v1. They intentionally preserve legacy safety lim
 | max layer id length | `256` |
 | max resource id/appKey length | `1024` |
 | max action id length | `256` |
+| max interaction request id length | `256` |
 | max text length | `100000` |
 | max SVG path data length | `200000` |
 | max stroke points per element | `20000` |
@@ -79,8 +80,14 @@ Validation is applied at:
 - resource upsert;
 - runtime config construction and materialization;
 - interaction config mutation;
+- interaction request id generation and guarded request commit;
 - pointer sample routing.
 ```
+
+`CanvasInteractionRequestId` follows the public id validator contract:
+non-empty trimmed string, length <= 256, and no control characters. It is
+validated at public construction and at the engine boundary that generates
+request ids for emitted interaction requests.
 
 `CanvasMetadata.fromMap` applies the metadata depth, key, string, and total
 encoded-byte limits at public construction and deep-freezes nested list/map

@@ -18,6 +18,9 @@ double-tap request routing.
 - text double-tap router
 - text hit-test read model through narrow query ports
 - `CanvasTextEditRequested` event emission
+- `CanvasInteractionRequestId` issuance through the interaction request registry
+- guarded `CanvasCommandPort.commitTextEdit` semantics for request-originated
+  text changes
 - terminal cleanup and stale terminal rejection for eraser/text routes.
 
 ## Dependencies on earlier phases
@@ -73,7 +76,8 @@ double-tap request routing.
 - eraser policy, exact-check budgets, and no-partial-commit behavior from
   `section_16_geometry_policy`
 - eraser and text interaction behavior from `section_14_interaction_engine`
-- `CanvasEraserPreview`, text edit event, and erase action payload API from
+- `CanvasEraserPreview`, text edit event, guarded text edit commit, editText
+  action payload API, and erase action payload API from
   `section_04_public_api_v1`
 - operation matrix rows for eraser preview/commit and text request behavior from
   `section_13_operation_matrix`
@@ -87,11 +91,13 @@ double-tap request routing.
 - `test.interaction.preview_public_state` -> `test/interaction/preview_public_state_test.dart`
 - `test.interaction.state_machines` -> `test/interaction/state_machines_test.dart`
 - `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
+- `test.interaction.text_edit_stale_commit_guard` -> `test/interaction/text_edit_stale_commit_guard_test.dart`
 - `geometry.eraser_exact_budget_no_partial`
 - `api.preview_state_sealed_union_publicly_readable`
 - `events.commands_emit_user_actions`
 - `interaction.no_concrete_store_imports`
 - `interaction.no_stale_terminal_commit`
+- `interaction.text_edit_stale_commit_guard`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 
@@ -108,6 +114,11 @@ double-tap request routing.
 - eraser action is emitted only when elements are erased after atomic install
 - text double-tap on selectable text emits `CanvasTextEditRequested`
 - text double-tap does not mutate document or selection by itself
+- request-originated text commits use `commitTextEdit`, reject stale request
+  facts without side effects, do not treat unrelated `documentRevision` changes
+  as stale, and emit `editText` only for changed text after atomic install
+- text request ids use the generic `CanvasInteractionRequestId`; the full
+  contextual-action event API remains deferred
 - stale terminal samples do not commit
 - loadDocument success clears eraser/text gesture state and failure preserves it
   where required.

@@ -54,7 +54,7 @@ Canvas engine state
 | DocumentStoreKernel | committed document state, document revisions, resource descriptors, public document projection cache | читать gesture state, selection state или Flutter widget |
 | SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | хранить committed document content, selected-order cache или быть public API type |
 | EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | выполнять paint или pointer routing |
-| InteractionEngine | pointer sessions, tools, preview state, terminal commit requests | читать или менять DocumentStoreKernel напрямую |
+| InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts | читать или менять DocumentStoreKernel напрямую; хранить Flutter text editor session state |
 | FrameEngine | captured main/overlay frames, ordinary paint plans, selection decoration/staging, repaint buses | экспортировать public document или владеть selection |
 | ResourceKernel | resource API, dirty resource ids, resource visual state publication, session invalidation events | владеть app domain assets, resolved image references или committed descriptors |
 | SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame missing/null suppression | владеть committed descriptors, public runtime state или Flutter widget lifecycle |
@@ -94,6 +94,15 @@ boundary. Query boundaries return immutable, batched, intent-specific facts and
 never expose store tables, selection internals, or mutation methods. Committed
 mutations requested by interaction still go through `EditKernel`.
 
+`InteractionRequestRegistry` is the interaction-owned registry for issued
+request guard facts, such as the `CanvasInteractionRequestId`, target element
+id, controllerEpoch, element generation, elementRevision, element family, and
+retired request status. `RuntimeRoot` owns the registry instance lifetime,
+`InteractionEngine` records issued request facts, and guarded command-port
+operations consume those facts through a narrow boundary before delegating
+accepted mutations to `EditKernel`. The registry is not an active text-input
+session, not app overlay state, and not `CanvasPreviewState`.
+
 Composition root:
 
 ```text
@@ -102,6 +111,7 @@ RuntimeRoot
   ├─ SelectionKernel
   ├─ EditKernel
   ├─ InteractionEngine
+  ├─ InteractionRequestRegistry
   ├─ FrameEngine
   ├─ SpatialKernel
   ├─ ResourceKernel

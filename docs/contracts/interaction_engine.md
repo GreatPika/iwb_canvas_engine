@@ -54,6 +54,7 @@ Required tests:
 - `test.interaction.move_resolver_reentrancy`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
 - `test.interaction.no_stale_terminal_commit`
+- `test.interaction.text_edit_stale_commit_guard`
 - `test.guardrails.selection_boundary_imports`
 - `test.flutter_bridge.widget_paint`
 Guardrails:
@@ -66,6 +67,7 @@ Guardrails:
 - `interaction.no_concrete_selection_imports`
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
+- `interaction.text_edit_stale_commit_guard`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
 Do not assume:
@@ -158,6 +160,37 @@ result.
 
 ### 14.3 Text double-tap
 
-Double-tap on a visible selectable text element emits `CanvasTextEditRequested`. It does not mutate document and does not select/deselect by itself.
+Double-tap on a visible selectable text element emits
+`CanvasTextEditRequested`. It does not mutate document and does not
+select/deselect by itself.
+
+Text request emission records an issued request in `InteractionRequestRegistry`
+with a generated `CanvasInteractionRequestId`, target element id,
+controllerEpoch, element generation, elementRevision, element family, and
+retired request status. The emitted `CanvasTextEditRequested` carries the
+request id plus controllerEpoch, documentRevision, elementRevision, timestamp,
+view/world positions, boundsWorld, and an immutable text snapshot.
+
+`documentRevision` is an observation and diagnostics fact only, not a stale
+commit guard. Unrelated document edits after request emission do not reject a
+later text commit while the request id, controllerEpoch, element generation,
+elementRevision, and text element family remain current.
+
+The registry is not an active text-input session and not CanvasPreviewState.
+The application owns the Flutter text editor overlay, IME, focus,
+accessibility, text selection, hide/show policy, and editor lifetime.
+
+Request-originated text changes commit through
+`CanvasCommandPort.commitTextEdit(requestId, newText, timestampMs: ...)`.
+The command retires accepted no-op and changed requests, rejects stale or
+retired request ids with no document/repaint/action effect, validates `newText`
+before retirement or draft mutation, and delegates changed text to EditKernel
+before emitting `CanvasActionType.editText`. Direct
+`CanvasEdit.updateElement(CanvasTextElementUpdate)` remains the programmatic
+non-request synchronization API.
+
+The generic `CanvasInteractionRequestId` is intentionally compatible with a
+future contextual-action request API. This phase does not introduce a full
+contextual-action event for shapes, images, lines, or empty canvas.
 
 ---

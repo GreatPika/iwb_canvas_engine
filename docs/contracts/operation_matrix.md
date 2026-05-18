@@ -21,11 +21,14 @@ Related diagrams:
 Required tests:
 - `test.edit.sync_non_nested_async_stale`
 - `test.edit.operation_matrix_effects`
+- `test.interaction.text_edit_stale_commit_guard`
 Guardrails:
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
 - `edit.stale_handle_rejected`
 - `edit.operation_matrix_complete`
+- `events.commands_emit_user_actions`
+- `interaction.text_edit_stale_commit_guard`
 Do not assume:
 - no implicit mutation path outside EditKernel
 <!-- CONTEXT:END -->
@@ -75,7 +78,10 @@ P7 and P10-P12 close their resource and interaction rows when those owners land.
 | line commit | add line | state.revisions.document, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawLine |
 | eraser preview | preview corridor | state.revisions.preview | none | no | overlay | none |
 | eraser commit | removed elements plus selection-owner prune when erased ids intersect selection | state.revisions.document, state.revisions.selection if pruned, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | remove ids | evict | main + overlay cleanup | erase if removed |
-| text double-tap request | text edit request stream only | none | none | no | none | textEditRequested |
+| text double-tap request | text edit request stream only; InteractionRequestRegistry stores issued request guard facts | none | none | no | none | textEditRequested |
+| commitTextEdit stale rejection | retired request state only when the request id is known and rejected; otherwise none | none | none | no | none | none |
+| commitTextEdit no-op accepted | retired request state | none | none | no | none | none |
+| commitTextEdit changed accepted | text element content through EditKernel plus retired request state | state.revisions.document; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | main | editText |
 | no-op edit | none | none | none | none | none | none |
 | dispose with active preview | preview cleanup and terminal runtime state | state.revisions.preview before dispose returns | none | no | overlay cleanup | stream close only |
 | dispose without active preview | terminal runtime state only | none | none | no | none | stream close only |
@@ -98,6 +104,22 @@ Notes:
   invalidate public document projection. Persisted camera edits remain document
   edits through `CanvasEdit.setCameraOffset`.
 - No-op operations publish no new public state snapshot.
+- Text double-tap request emits `CanvasTextEditRequested` with
+  `CanvasInteractionRequestId`, controller epoch, document revision,
+  elementRevision, immutable text snapshot, and position/bounds facts; request
+  delivery itself has no document, selection, preview, spatial, projection,
+  repaint, or action effect.
+- `commitTextEdit` rejects stale request ids by request id, controller epoch,
+  element generation, elementRevision, missing element, and current text-family
+  mismatch. `documentRevision` is observation-only; unrelated document edits do
+  not reject a still-current text edit.
+- `commitTextEdit` validates `newText` before request retirement and before
+  draft mutation. Changed text commits are normal EditKernel-backed document
+  edits and emit `CanvasActionType.editText` with
+  `CanvasTextEditActionPayload`; the payload contains text lengths and never
+  raw text.
+- Bounds-affecting text layout changes must compile `boundsRevision` and touched
+  spatial updates just like other geometry/bounds edits.
 ```
 
 ---

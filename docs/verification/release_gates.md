@@ -124,6 +124,7 @@ Guardrails:
 - `interaction.no_concrete_selection_imports`
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
+- `interaction.text_edit_stale_commit_guard`
 - `geometry.no_legacy_scene_order`
 - `geometry.eraser_exact_budget_no_partial`
 - `spatial.no_full_clone_ordinary_edit`
@@ -189,7 +190,7 @@ Release is blocked unless all statements are true:
     selection-state cache independence, and selected supplement staging tests are green.
 24. selected move preview main repaint test is green.
 25. overlay preview repaint split tests are green.
-26. text edit request integration tests are green.
+26. text edit request and guarded stale text commit integration tests are green.
 27. action typed payload tests are green.
 28. low-level edit emits no user action events tests are green.
 29. interaction stale terminal, selection-boundary import, resolver-cancel, and interactive=false pending-line tests are green.

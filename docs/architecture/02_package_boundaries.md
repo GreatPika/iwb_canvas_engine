@@ -78,6 +78,7 @@ The new package is rooted at the repository top level:
         staged_document_load.dart
       interaction/
         interaction_engine.dart
+        interaction_request_registry.dart
         pointer_session.dart
         move_machine.dart
         select_machine.dart
@@ -200,5 +201,12 @@ supplied through narrow read-only query ports owned by the runtime/document and
 runtime/selection boundaries. Interaction code may depend on those
 intent-specific ports, not on `src/store`, `src/selection`, or concrete owner
 internals.
+
+`lib/src/interaction/interaction_request_registry.dart` stores only
+engine-issued `CanvasInteractionRequestId` guard facts and retired request
+status for app-owned interaction requests. It must not expose store tables,
+selection internals, Flutter editor overlay state, IME/focus/selection state, or
+mutation methods; guarded mutations still enter through public command ports
+and commit through `EditKernel`.
 
 ---

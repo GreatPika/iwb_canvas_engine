@@ -40,6 +40,7 @@ Required tests:
 - `test.api_contract.dto_immutability`
 - `test.api_contract.public_equality_policy`
 - `test.api.typed_action_payloads`
+- `test.interaction.text_edit_stale_commit_guard`
 - `test.runtime.dispose_lifecycle`
 - `test.runtime.runtime_state_publication`
 - `test.runtime.interaction_settings_state`
@@ -60,6 +61,7 @@ Guardrails:
 - `api.dto_immutability`
 - `api.equality_policy_explicit`
 - `api.id_validation_no_extension_type_escape`
+- `interaction.text_edit_stale_commit_guard`
 - `surface.interactive_false_pending_line_preserved`
 Do not assume:
 - no legacy public API shape
@@ -139,6 +141,7 @@ CanvasElementId
 CanvasLayerId
 CanvasResourceId
 CanvasActionId
+CanvasInteractionRequestId
 CanvasRuntimeState
 CanvasRuntimeRevisions
 CanvasRuntimeSummary
@@ -239,6 +242,18 @@ final class CanvasActionId {
   }
   final String value;
 }
+
+final class CanvasInteractionRequestId {
+  CanvasInteractionRequestId._(this.value);
+  factory CanvasInteractionRequestId(String value) {
+    CanvasIdValidators.requireInteractionRequestId(
+      value,
+      name: 'interactionRequestId',
+    );
+    return CanvasInteractionRequestId._(value);
+  }
+  final String value;
+}
 ```
 
 Validation:
@@ -248,6 +263,7 @@ CanvasElementId  -> non-empty trimmed string, length <= 256, no control characte
 CanvasLayerId    -> non-empty trimmed string, length <= 256, no control characters.
 CanvasResourceId -> non-empty trimmed string, length <= 1024, no control characters.
 CanvasActionId   -> non-empty trimmed string, length <= 256, no control characters.
+CanvasInteractionRequestId -> non-empty trimmed string, length <= 256, no control characters.
 ```
 
 Generated ids:
@@ -257,6 +273,10 @@ CanvasElementId CanvasRuntime.generateElementId();   // e0, e1, ...
 CanvasLayerId CanvasRuntime.generateLayerId();       // l0, l1, ...
 CanvasResourceId CanvasRuntime.generateResourceId(); // r0, r1, ...
 ```
+
+There is no public `CanvasRuntime.generateInteractionRequestId()`. The engine
+generates interaction request ids for emitted interaction requests; application
+code stores the id from the request and passes it back to guarded command seams.
 
 Generated ids are unique within the current runtime. `loadDocument` resets id generators so that new generated ids do not collide with loaded ids.
 
@@ -1227,6 +1247,11 @@ undo/redo action stream.
 ```dart
 abstract interface class CanvasCommandPort {
   bool removeElement(CanvasElementId id, {int? timestampMs});
+  bool commitTextEdit(
+    CanvasInteractionRequestId requestId,
+    String newText, {
+    int? timestampMs,
+  });
   CanvasClearResult clearContent({
     bool removeUnusedResources = false,
     int? timestampMs,
@@ -1239,6 +1264,19 @@ Rules:
 ```text
 - command mutations must go through EditKernel and inherit rollback/stale/dispose checks;
 - removeElement emits deleteElements only when it removes an element;
+- commitTextEdit returns false and performs no mutation, state publication,
+  repaint, or action event when the request id is unknown or retired, the
+  controller epoch changed, the current element is missing, the current element
+  generation no longer matches the issued request, the current elementRevision
+  changed, or the current element is no longer a text element;
+- commitTextEdit validates newText through the existing text validation path
+  before request retirement and before draft mutation;
+- commitTextEdit treats documentRevision as an observation fact, not a stale
+  guard, so unrelated document edits do not reject a still-current text edit;
+- commitTextEdit returns true, retires the request id, and emits no document
+  revision, repaint, or action event when newText equals the current text;
+- commitTextEdit changed-text commits run through EditKernel and emit editText
+  after atomic install;
 - CanvasCommandPort.clearContent emits clearContent only when removedElementIds is not empty;
 - if only unused resources are removed and no elements are removed, no user
   action event is emitted;
@@ -1700,6 +1738,7 @@ enum CanvasActionType {
   drawMarker,
   drawLine,
   erase,
+  editText,
 }
 
 final class CanvasActionCommitted {
@@ -1817,6 +1856,18 @@ final class CanvasEraseActionPayload extends CanvasActionPayload {
   List<CanvasElementId> get erasedElementIds;
   final int corridorPointCount;
 }
+
+final class CanvasTextEditActionPayload extends CanvasActionPayload {
+  const CanvasTextEditActionPayload({
+    required this.requestId,
+    required this.previousTextLength,
+    required this.nextTextLength,
+  });
+
+  final CanvasInteractionRequestId requestId;
+  final int previousTextLength;
+  final int nextTextLength;
+}
 ```
 
 Payload collection rules:
@@ -1828,6 +1879,8 @@ Payload collection rules:
 - CanvasClearActionPayload.removedElementIds defensively copies input;
 - CanvasClearActionPayload.removedResourceIds defensively copies input;
 - CanvasEraseActionPayload.erasedElementIds defensively copies input;
+- CanvasTextEditActionPayload carries text lengths only and never raw previous
+  or next text content;
 - CanvasActionCommitted.elementIds defensively copies input.
 ```
 
@@ -1850,6 +1903,8 @@ Event emission matrix:
 | marker stroke commit | yes | `drawMarker` | `CanvasDrawStrokeActionPayload` |
 | line commit | yes | `drawLine` | `CanvasDrawLineActionPayload` |
 | eraser commit | yes if removed | `erase` | `CanvasEraseActionPayload` |
+| guarded text edit changed commit | yes | `editText` | `CanvasTextEditActionPayload` |
+| guarded text edit stale/no-op commit | no | — | — |
 | loadDocument | no | — | — |
 | set camera/background/grid/palette | no | — | — |
 | markResourceDirty | no | — | — |
@@ -1859,7 +1914,11 @@ Text edit event:
 ```dart
 final class CanvasTextEditRequested {
   CanvasTextEditRequested({
+    required this.requestId,
     required this.elementId,
+    required this.controllerEpoch,
+    required this.documentRevision,
+    required this.elementRevision,
     required this.timestampMs,
     required this.viewPosition,
     required this.worldPosition,
@@ -1867,7 +1926,11 @@ final class CanvasTextEditRequested {
     required this.textSnapshot,
   });
 
+  final CanvasInteractionRequestId requestId;
   final CanvasElementId elementId;
+  final int controllerEpoch;
+  final int documentRevision;
+  final int elementRevision;
   final int timestampMs;
   final Offset viewPosition;
   final Offset worldPosition;
@@ -1880,13 +1943,27 @@ Text editing model:
 
 ```text
 - engine detects double-tap on text;
-- engine emits CanvasTextEditRequested;
+- engine emits CanvasTextEditRequested with requestId, controllerEpoch,
+  documentRevision, elementRevision, element id, timestamp, view/world
+  positions, boundsWorld, and immutable textSnapshot;
 - application displays Flutter text editor overlay;
-- application may hide text element by updateElement(isVisible=false);
-- application commits changed text through updateElement(CanvasTextElementUpdate);
+- application may visually cover or hide the text element in app-owned overlay
+  UI, but must not mutate the target element to hide it as part of the
+  request-originated edit flow because changing the target elementRevision makes
+  the issued request stale;
+- application commits request-originated text changes through
+  CanvasCommandPort.commitTextEdit(requestId, newText);
+- direct CanvasEdit.updateElement(CanvasTextElementUpdate) remains available
+  for programmatic non-request synchronization;
+- documentRevision is emitted as an observation and diagnostics fact, not a
+  stale-rejection guard; unrelated document edits do not reject a still-current
+  text edit;
 - engine does not store active text-input session;
 - IME/focus/accessibility/text selection are application responsibilities;
-- loadDocument/dispose/tool change while editing is application responsibility.
+- loadDocument success changes controllerEpoch, which makes existing
+  interaction request ids stale; after runtime disposal, commitTextEdit follows
+  the existing mutating public operation rule and throws
+  StateError('CanvasRuntime is disposed.').
 ```
 
 ### 4.20 Move commit resolver

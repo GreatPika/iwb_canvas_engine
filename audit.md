@@ -55,7 +55,8 @@ projection, resource effects, action events, no-op и rollback semantics. Есл
 - [ ] Добавить строки или явные alias-строки для `setDrawColor`.
 - [ ] Добавить строки или явные alias-строки для `setPointerPolicy`.
 - [ ] Добавить строки или явные alias-строки для `markAllResourcesDirty`.
-- [ ] Добавить строки или явные alias-строки для text double-tap / text edit request.
+- [x] Добавить строки или явные alias-строки для text double-tap / text edit request
+      и guarded `commitTextEdit`.
 - [ ] Для каждой строки указать touched state.
 - [ ] Для каждой строки указать public `CanvasRuntimeState` revision effects.
 - [ ] Для document-owned строк указать `documentRevision`.

@@ -560,7 +560,7 @@ heading remains unchecked.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Public Guarded Text Commit Seam
+### Slice 1. [x] Public Guarded Text Commit Seam
 
 #### Implements
 
@@ -604,7 +604,7 @@ The public API contract, export registry, and operation matrix agree on the
 successor seam and no longer expose the retired text-specific id or direct
 request commit wording.
 
-### Slice 2. [ ] Interaction Request Lifecycle And Ownership
+### Slice 2. [x] Interaction Request Lifecycle And Ownership
 
 #### Implements
 
@@ -651,7 +651,7 @@ The interaction ownership documents and text request diagrams agree that request
 delivery stays stream-only while later text commit safety is guarded by the
 engine-owned request registry and command seam.
 
-### Slice 3. [ ] Verification, Phase Guidance, And Backlog Retirement
+### Slice 3. [x] Verification, Phase Guidance, And Backlog Retirement
 
 #### Implements
 
@@ -708,7 +708,7 @@ Verification, phase, index, registry, backlog, and audit surfaces agree that
 guarded text commit is the active source-of-truth design and the old
 redesign-only proposal is retired.
 
-### Slice 4. [ ] Roadmap Completion Finalization
+### Slice 4. [x] Roadmap Completion Finalization
 
 #### Implements
 

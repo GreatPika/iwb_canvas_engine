@@ -10,7 +10,10 @@ sequenceDiagram
   participant Store as DocumentStoreKernel
   participant Spatial as SpatialKernel
   participant Geometry as GeometryPolicy
+  participant Registry as InteractionRequestRegistry
   participant Requests as CanvasTextEditRequested stream
+  participant Commands as CanvasCommandPort
+  participant Edit as EditKernel
   participant Frame as FrameEngine
   participant Signals as Public state/effects
   participant App as Application
@@ -31,10 +34,10 @@ sequenceDiagram
     Note over IE,Signals: No document, revision, spatial, projection, resource, selection, preview, repaint, or action effect is produced.
   else first tap top hit is text
     IE->>ReadPort: read immutable text candidate facts
-    ReadPort->>Store: read text element snapshot and boundsWorld
-    Store-->>ReadPort: textSnapshot, boundsWorld, and element generation
-    ReadPort-->>IE: textSnapshot, boundsWorld, and element generation
-    IE->>IE: store pending tap candidate, timestamp, viewPosition, and worldPosition
+    ReadPort->>Store: read text element snapshot, boundsWorld, generation, elementRevision, and controllerEpoch
+    Store-->>ReadPort: textSnapshot, boundsWorld, generation, elementRevision, and epoch
+    ReadPort-->>IE: textSnapshot, boundsWorld, generation, elementRevision, and controllerEpoch
+    IE->>IE: store pending tap candidate, generation, elementRevision, controllerEpoch, timestamp, viewPosition, and worldPosition
     Note over IE: Pending tap state is gesture detection only. It is not document, selection, or preview state.
   end
 
@@ -54,21 +57,40 @@ sequenceDiagram
     Note over IE,Signals: No automatic select/deselect, preview update, repaint request, CanvasActionCommitted, or edit commit occurs.
   else top hit is text and double-tap matches the same current text element
     IE->>ReadPort: read current text edit facts
-    ReadPort->>Store: read current text element snapshot, boundsWorld, and generation
-    Store-->>ReadPort: current textSnapshot and boundsWorld
-    ReadPort-->>IE: current textSnapshot and boundsWorld
-    IE->>IE: verify candidate still visible, selectable, text, and generation-current
-    IE->>Requests: emit CanvasTextEditRequested(elementId, timestampMs, viewPosition, worldPosition, boundsWorld, textSnapshot)
+    ReadPort->>Store: read current text element snapshot, boundsWorld, generation, elementRevision, documentRevision, and controllerEpoch
+    Store-->>ReadPort: current textSnapshot, boundsWorld, generation, revisions, and epoch
+    ReadPort-->>IE: current text edit facts
+    IE->>IE: verify candidate still visible, selectable, text, generation-current, elementRevision-current, and epoch-current
+    IE->>Registry: issue CanvasInteractionRequestId with element id, controllerEpoch, generation, elementRevision, and text family
+    Registry-->>IE: issued request id
+    IE->>Requests: emit CanvasTextEditRequested(requestId, elementId, controllerEpoch, documentRevision, elementRevision, timestampMs, viewPosition, worldPosition, boundsWorld, textSnapshot)
     Requests->>Signals: publish text edit request notification only
     Signals-->>App: deliver CanvasTextEditRequested
     App->>TextOverlay: create and own Flutter text editor overlay
     Note over App,TextOverlay: IME, focus, accessibility, text selection, hide/show policy, and editor lifetime belong to the application.
-    Note over IE,Frame: The engine does not create or own the Flutter text editor overlay and does not write app overlay state into CanvasPreviewState.
+    Note over IE,Frame: InteractionRequestRegistry stores stale-guard facts only. It is not an active text-input session and not CanvasPreviewState.
     IE-->>Tools: clear pending tap candidate and finish double-tap handling
   end
 
-  opt later application text change outside this sequence
-    Note over App: The application commits changed text through updateElement(CanvasTextElementUpdate) on the normal public edit path.
+  opt later application text change after app-owned editor finishes
+    App->>Commands: commitTextEdit(requestId, newText)
+    Commands->>Registry: consume issued request guard facts
+    Registry-->>Commands: request facts or stale/retired
+    Commands->>ReadPort: read current element generation, elementRevision, family, and controllerEpoch
+    ReadPort-->>Commands: current guard facts
+    alt request is unknown, retired, epoch/generation/revision stale, missing, or no longer text
+      Commands-->>App: false
+      Note over Commands,Signals: Stale rejection has no document, revision, repaint, or action effect. documentRevision is observation-only and is not a stale guard.
+    else current text equals newText
+      Commands->>Registry: retire request
+      Commands-->>App: true
+      Note over Commands,Signals: Accepted no-op retires request without document revision, repaint, or action event.
+    else changed text is valid
+      Commands->>Edit: update text inside normal EditKernel transaction
+      Edit-->>Signals: publish document revision, invalidation, repaint, and editText action after atomic install
+      Commands->>Registry: retire request
+      Commands-->>App: true
+    end
   end
 
-  Note over IE,Signals: Forbidden in this sequence: EditKernel commit, DraftDocument, TouchedSet, CommitPlan, atomic install, document or revision changes, spatial updates, projection/cache eviction, resource changes, preview mutation, selection mutation, CanvasActionCommitted, and engine-owned app overlay.
+  Note over IE,Signals: Forbidden during double-tap request delivery before later commitTextEdit: EditKernel commit, DraftDocument, TouchedSet, CommitPlan, atomic install, document or revision changes, spatial updates, projection/cache eviction, resource changes, preview mutation, selection mutation, CanvasActionCommitted, and engine-owned app overlay.

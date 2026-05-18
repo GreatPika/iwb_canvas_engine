@@ -48,6 +48,7 @@ public_exports:
   - CanvasLayerId
   - CanvasResourceId
   - CanvasActionId
+  - CanvasInteractionRequestId
   - CanvasFieldUpdate
   - CanvasFieldAbsent
   - CanvasFieldSet
@@ -81,6 +82,7 @@ public_exports:
   - CanvasDrawStrokeActionPayload
   - CanvasDrawLineActionPayload
   - CanvasEraseActionPayload
+  - CanvasTextEditActionPayload
   - CanvasTextEditRequested
   - CanvasMoveCommitResolver
   - CanvasMoveCommitRequest
