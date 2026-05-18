@@ -131,8 +131,9 @@ errors, validation rules, and equality semantics.
 - public classes have explicit subtype policy modifiers
 - public signatures avoid `FutureOr`, nullable async/container returns, and unapproved `dynamic`
 - all public constructor validations pass/fail as specified
-- collection- and metadata-owning public constructors are non-const, while
-  scalar-only DTOs and marker/empty variants keep only approved const forms
+- public constructors accepting caller-provided values with documented runtime
+  validation or sanitization are non-const factories; const is allowed only for
+  marker, empty, default, or private storage forms
 - `CanvasFieldSet(null)` and clear-on-non-nullable update misuse are rejected
   by static analyzer proof for ordinary public consumers
 - `CanvasDiagnosticsVerbose` accepts defaults and boundary values, and
