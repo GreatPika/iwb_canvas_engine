@@ -101,9 +101,12 @@ request ids for emitted interaction requests.
 `CanvasMetadata.fromMap` applies the metadata depth, key, string, and total
 encoded-byte limits at public construction and deep-freezes nested list/map
 values before exposure. Metadata accepted through schema decode uses the same
-limits before materializing `CanvasMetadata`. Public DTO constructors that
-accept metadata or caller-owned collections are non-const because this runtime
-validation and defensive ownership transfer must run before the value is exposed.
+limits before materializing `CanvasMetadata`. Public constructors that accept
+caller-provided values with documented runtime validation or sanitization are
+non-const factories because validation and defensive ownership transfer must
+run before the value is exposed. Public `const` remains reserved for marker,
+empty, default, or private storage forms where invalid public state cannot be
+constructed.
 
 `CanvasFieldUpdate` carries static nullability guarantees for ordinary public
 API consumers, but boundary materialization still validates dynamic, generated,

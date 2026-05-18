@@ -88,7 +88,7 @@ Guardrails extracted from split section 22.
 
 ## api.dto_immutability
 
-- Rule: DTO collections defensively copied and unmodifiable; `CanvasMetadata` deep-frozen; collection/metadata constructors non-const; scalar-only and marker variants keep only approved const forms
+- Rule: DTO collections defensively copied and unmodifiable; `CanvasMetadata` deep-frozen; public constructors with caller-provided validated or sanitized values non-const factories; marker/empty/default/private storage forms keep only approved const forms
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.dto_immutability`, `test.guardrails.blocking_suite`
 

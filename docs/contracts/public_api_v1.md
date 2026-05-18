@@ -442,9 +442,9 @@ revision domains.
 ```dart
 final class CanvasRuntimeConfig {
   const CanvasRuntimeConfig({
-    this.pointerPolicy = const CanvasPointerPolicy(),
+    this.pointerPolicy = CanvasPointerPolicy.defaultPolicy,
     this.initialMode = CanvasInteractionMode.move,
-    this.initialDrawStyle = const CanvasDrawStyle(),
+    this.initialDrawStyle = CanvasDrawStyle.defaultStyle,
     this.clearSelectionOnDrawModeEnter = false,
     this.moveCommitResolver,
     this.diagnosticPolicy = const CanvasDiagnosticPolicy.disabled(),
@@ -466,8 +466,8 @@ final class CanvasSurface extends StatefulWidget {
   const CanvasSurface({
     required this.runtime,
     this.resourceResolver,
-    this.selectionStyle = const CanvasSelectionStyle(),
-    this.gridStyle = const CanvasGridStyle(),
+    this.selectionStyle = CanvasSelectionStyle.defaultStyle,
+    this.gridStyle = CanvasGridStyle.defaultStyle,
     this.interactive = true,
     super.key,
   });
@@ -523,11 +523,37 @@ Surface contract:
 
 ```dart
 final class CanvasSelectionStyle {
-  const CanvasSelectionStyle({
-    this.color = const Color(0xFF1565C0),
-    this.strokeWidth = 1.0,
-    this.marqueeFillOpacity = 0.15,
-    this.haloWidth = 4.0,
+  factory CanvasSelectionStyle({
+    Color color = const Color(0xFF1565C0),
+    double strokeWidth = 1.0,
+    double marqueeFillOpacity = 0.15,
+    double haloWidth = 4.0,
+  }) {
+    CanvasStyleValidators.requireSelectionStyle(
+      strokeWidth: strokeWidth,
+      marqueeFillOpacity: marqueeFillOpacity,
+      haloWidth: haloWidth,
+    );
+    return CanvasSelectionStyle._(
+      color: color,
+      strokeWidth: strokeWidth,
+      marqueeFillOpacity: marqueeFillOpacity,
+      haloWidth: haloWidth,
+    );
+  }
+
+  static const defaultStyle = CanvasSelectionStyle._(
+    color: Color(0xFF1565C0),
+    strokeWidth: 1.0,
+    marqueeFillOpacity: 0.15,
+    haloWidth: 4.0,
+  );
+
+  const CanvasSelectionStyle._({
+    required this.color,
+    required this.strokeWidth,
+    required this.marqueeFillOpacity,
+    required this.haloWidth,
   });
 
   final Color color;
@@ -537,7 +563,15 @@ final class CanvasSelectionStyle {
 }
 
 final class CanvasGridStyle {
-  const CanvasGridStyle({this.strokeWidth = 1.0});
+  factory CanvasGridStyle({double strokeWidth = 1.0}) {
+    CanvasStyleValidators.requireGridStyle(strokeWidth: strokeWidth);
+    return CanvasGridStyle._(strokeWidth: strokeWidth);
+  }
+
+  static const defaultStyle = CanvasGridStyle._(strokeWidth: 1.0);
+
+  const CanvasGridStyle._({required this.strokeWidth});
+
   final double strokeWidth;
 }
 ```
@@ -549,9 +583,11 @@ Validation: all numeric fields finite and non-negative; opacity in `[0, 1]`.
 All public DTOs are immutable. Any constructor receiving caller-owned
 `Iterable`, `List`, `Set`, `Map`, or metadata input must defensively copy,
 deep-freeze nested metadata values where applicable, validate at runtime, and
-expose only unmodifiable values. Such constructors are non-const. Safe
-scalar-only DTOs and marker/empty variants may remain `const` when they accept no
-caller-owned mutable input and need no runtime validation beyond safe defaults.
+expose only unmodifiable values. Public constructors accepting caller-provided
+values with documented runtime validation or sanitization are non-const
+factories, even when the values are scalar-only. `const` remains available only
+for marker, empty, default, or private storage forms where invalid public state
+cannot be constructed.
 
 `CanvasMetadata` is the public value object for schema metadata materialized into
 DTOs. Raw `Map<String, Object?>` metadata is allowed only at raw JSON codec
@@ -571,7 +607,7 @@ final class CanvasMetadata {
 
 final class CanvasDocument {
   CanvasDocument({
-    CanvasCamera camera = const CanvasCamera(),
+    CanvasCamera camera = CanvasCamera.origin,
     CanvasBackground background = const CanvasBackground(),
     CanvasPalette? palette,
     Iterable<CanvasResource> resources = const [],
@@ -615,14 +651,22 @@ final class CanvasLayer {
 }
 
 final class CanvasCamera {
-  const CanvasCamera({this.offset = Offset.zero});
+  factory CanvasCamera({Offset offset = Offset.zero}) {
+    CanvasGeometryValidators.requireBoundedOffset(offset, name: 'offset');
+    return CanvasCamera._(offset: offset);
+  }
+
+  static const origin = CanvasCamera._(offset: Offset.zero);
+
+  const CanvasCamera._({required this.offset});
+
   final Offset offset;
 }
 
 final class CanvasBackground {
   const CanvasBackground({
     this.color = const Color(0xFFFFFFFF),
-    this.grid = const CanvasGrid(),
+    this.grid = CanvasGrid.disabled,
   });
 
   final Color color;
@@ -630,10 +674,32 @@ final class CanvasBackground {
 }
 
 final class CanvasGrid {
-  const CanvasGrid({
-    this.enabled = false,
-    this.cellSize = 10.0,
-    this.color = const Color(0x1F000000),
+  factory CanvasGrid({
+    bool enabled = false,
+    double cellSize = 10.0,
+    Color color = const Color(0x1F000000),
+  }) {
+    CanvasStyleValidators.requireGrid(
+      enabled: enabled,
+      cellSize: cellSize,
+    );
+    return CanvasGrid._(
+      enabled: enabled,
+      cellSize: cellSize,
+      color: color,
+    );
+  }
+
+  static const disabled = CanvasGrid._(
+    enabled: false,
+    cellSize: 10.0,
+    color: Color(0x1F000000),
+  );
+
+  const CanvasGrid._({
+    required this.enabled,
+    required this.cellSize,
+    required this.color,
   });
 
   final bool enabled;
@@ -661,6 +727,9 @@ final class CanvasPalette {
 copy and validate them before exposing unmodifiable lists. `CanvasMetadata.empty()`
 is const-safe because it accepts no caller-owned input; `CanvasMetadata.fromMap`
 is non-const because it validates and deep-freezes caller-owned map/list values.
+Validated scalar value objects such as `CanvasCamera` and `CanvasGrid` expose
+non-const public factories. Their approved defaults use private const storage
+only for already-validated values that cannot expose invalid public state.
 `CanvasDocument.camera` stores the persisted document default camera offset,
 matching legacy engine behavior for schema/readDocument round trips. The same
 `CanvasCamera` value type is also used by `CanvasCameraPort.camera` to report
@@ -689,16 +758,33 @@ enum CanvasPathFillRule {
 }
 
 final class CanvasTransform {
-  const CanvasTransform({
-    required this.a,
-    required this.b,
-    required this.c,
-    required this.d,
-    required this.tx,
-    required this.ty,
-  });
+  factory CanvasTransform({
+    required double a,
+    required double b,
+    required double c,
+    required double d,
+    required double tx,
+    required double ty,
+  }) {
+    CanvasGeometryValidators.requireFiniteTransformComponents(
+      a: a,
+      b: b,
+      c: c,
+      d: d,
+      tx: tx,
+      ty: ty,
+    );
+    return CanvasTransform._(
+      a: a,
+      b: b,
+      c: c,
+      d: d,
+      tx: tx,
+      ty: ty,
+    );
+  }
 
-  static const identity = CanvasTransform(
+  static const identity = CanvasTransform._(
     a: 1,
     b: 0,
     c: 0,
@@ -706,6 +792,15 @@ final class CanvasTransform {
     tx: 0,
     ty: 0,
   );
+
+  const CanvasTransform._({
+    required this.a,
+    required this.b,
+    required this.c,
+    required this.d,
+    required this.tx,
+    required this.ty,
+  });
 
   factory CanvasTransform.translation(Offset delta);
   factory CanvasTransform.scale(double sx, double sy);
@@ -1349,12 +1444,42 @@ enum CanvasDrawTool { pencil, marker, line, eraser }
 enum CanvasPointerLifecyclePhase { down, move, up, cancel }
 
 final class CanvasPointerPolicy {
-  const CanvasPointerPolicy({
-    this.tapSlop = 8.0,
-    this.doubleTapSlop = 24.0,
-    this.doubleTapMaxDelayMs = 300,
-    this.deferSingleTap = true,
-    this.dragStartSlop,
+  factory CanvasPointerPolicy({
+    double tapSlop = 8.0,
+    double doubleTapSlop = 24.0,
+    int doubleTapMaxDelayMs = 300,
+    bool deferSingleTap = true,
+    double? dragStartSlop,
+  }) {
+    CanvasPointerValidators.requirePointerPolicy(
+      tapSlop: tapSlop,
+      doubleTapSlop: doubleTapSlop,
+      doubleTapMaxDelayMs: doubleTapMaxDelayMs,
+      dragStartSlop: dragStartSlop,
+    );
+    return CanvasPointerPolicy._(
+      tapSlop: tapSlop,
+      doubleTapSlop: doubleTapSlop,
+      doubleTapMaxDelayMs: doubleTapMaxDelayMs,
+      deferSingleTap: deferSingleTap,
+      dragStartSlop: dragStartSlop,
+    );
+  }
+
+  static const defaultPolicy = CanvasPointerPolicy._(
+    tapSlop: 8.0,
+    doubleTapSlop: 24.0,
+    doubleTapMaxDelayMs: 300,
+    deferSingleTap: true,
+    dragStartSlop: null,
+  );
+
+  const CanvasPointerPolicy._({
+    required this.tapSlop,
+    required this.doubleTapSlop,
+    required this.doubleTapMaxDelayMs,
+    required this.deferSingleTap,
+    required this.dragStartSlop,
   });
 
   final double tapSlop;
@@ -1365,10 +1490,31 @@ final class CanvasPointerPolicy {
 }
 
 final class CanvasPointerSample {
-  const CanvasPointerSample({
+  factory CanvasPointerSample({
+    required int pointerId,
+    required Offset position,
+    int? timestampMs,
+    required CanvasPointerLifecyclePhase phase,
+    required PointerDeviceKind kind,
+  }) {
+    CanvasPointerValidators.requirePointerSample(
+      pointerId: pointerId,
+      position: position,
+      phase: phase,
+    );
+    return CanvasPointerSample._(
+      pointerId: pointerId,
+      position: position,
+      timestampMs: timestampMs,
+      phase: phase,
+      kind: kind,
+    );
+  }
+
+  const CanvasPointerSample._({
     required this.pointerId,
     required this.position,
-    this.timestampMs,
+    required this.timestampMs,
     required this.phase,
     required this.kind,
   });
@@ -1381,14 +1527,51 @@ final class CanvasPointerSample {
 }
 
 final class CanvasDrawStyle {
-  const CanvasDrawStyle({
-    this.tool = CanvasDrawTool.pencil,
-    this.color = const Color(0xFF000000),
-    this.pencilThickness = 3.0,
-    this.markerThickness = 12.0,
-    this.markerOpacity = 0.4,
-    this.lineThickness = 3.0,
-    this.eraserThickness = 20.0,
+  factory CanvasDrawStyle({
+    CanvasDrawTool tool = CanvasDrawTool.pencil,
+    Color color = const Color(0xFF000000),
+    double pencilThickness = 3.0,
+    double markerThickness = 12.0,
+    double markerOpacity = 0.4,
+    double lineThickness = 3.0,
+    double eraserThickness = 20.0,
+  }) {
+    CanvasStyleValidators.requireDrawStyle(
+      pencilThickness: pencilThickness,
+      markerThickness: markerThickness,
+      markerOpacity: markerOpacity,
+      lineThickness: lineThickness,
+      eraserThickness: eraserThickness,
+    );
+    return CanvasDrawStyle._(
+      tool: tool,
+      color: color,
+      pencilThickness: pencilThickness,
+      markerThickness: markerThickness,
+      markerOpacity: markerOpacity,
+      lineThickness: lineThickness,
+      eraserThickness: eraserThickness,
+    );
+  }
+
+  static const defaultStyle = CanvasDrawStyle._(
+    tool: CanvasDrawTool.pencil,
+    color: Color(0xFF000000),
+    pencilThickness: 3.0,
+    markerThickness: 12.0,
+    markerOpacity: 0.4,
+    lineThickness: 3.0,
+    eraserThickness: 20.0,
+  );
+
+  const CanvasDrawStyle._({
+    required this.tool,
+    required this.color,
+    required this.pencilThickness,
+    required this.markerThickness,
+    required this.markerOpacity,
+    required this.lineThickness,
+    required this.eraserThickness,
   });
 
   final CanvasDrawTool tool;
@@ -1505,11 +1688,20 @@ final class CanvasImageResource extends CanvasResource {
 
 sealed class CanvasResourceSource {
   const CanvasResourceSource();
-  const factory CanvasResourceSource.appKey(String key) = CanvasAppKeyResourceSource;
+  factory CanvasResourceSource.appKey(String key) {
+    CanvasResourceValidators.requireAppKey(key, name: 'key');
+    return CanvasAppKeyResourceSource._(key);
+  }
 }
 
 final class CanvasAppKeyResourceSource extends CanvasResourceSource {
-  const CanvasAppKeyResourceSource(this.key);
+  factory CanvasAppKeyResourceSource(String key) {
+    CanvasResourceValidators.requireAppKey(key, name: 'key');
+    return CanvasAppKeyResourceSource._(key);
+  }
+
+  const CanvasAppKeyResourceSource._(this.key);
+
   final String key;
 }
 ```
@@ -2084,11 +2276,27 @@ enum CanvasDataErrorCode {
 }
 
 final class CanvasDataException implements Exception {
-  const CanvasDataException({
+  factory CanvasDataException({
+    required CanvasDataErrorCode code,
+    required String message,
+    String? path,
+    Map<String, Object?> details = const {},
+  }) {
+    final sanitizedDetails =
+        CanvasDiagnosticSanitizer.sanitizeDetails(details);
+    return CanvasDataException._(
+      code: code,
+      message: message,
+      path: path,
+      details: sanitizedDetails,
+    );
+  }
+
+  const CanvasDataException._({
     required this.code,
     required this.message,
-    this.path,
-    this.details = const {},
+    required this.path,
+    required this.details,
   });
 
   final CanvasDataErrorCode code;

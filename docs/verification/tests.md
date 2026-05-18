@@ -332,8 +332,9 @@ test/api_contract/dto_immutability_test.dart
   -> proves public collection getters and CanvasMetadata projections are
      unmodifiable and deep-frozen;
   -> proves invalid public construction is rejected before DTO exposure;
-  -> proves collection/metadata-owning DTO constructors are non-const while
-     scalar-only DTOs and marker/empty variants keep only approved const forms.
+  -> proves public constructors accepting caller-provided values with documented
+     runtime validation or sanitization are non-const factories, while
+     marker/empty/default/private storage forms keep only approved const forms.
 
 test/api_contract/preview_state_sealed_union_test.dart
   -> proves CanvasPreviewState is a sealed public union with exported readable

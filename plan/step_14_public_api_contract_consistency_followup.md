@@ -504,7 +504,7 @@ Expected signal: no output and exit 0.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Lock validating constructor policy
+### Slice 1. [x] Lock validating constructor policy
 
 #### Implements
 

@@ -144,7 +144,7 @@ Mandatory guardrails:
 | `api.public_class_modifiers_explicit` | every exported public class chooses an explicit Dart 3 subtype/implementation policy |
 | `api.public_signature_shape` | public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON or diagnostic boundaries; metadata-bearing DTO signatures use exported `CanvasMetadata` |
 | `api.no_undefined_public_type_references` | every exported signature type is exported or from Flutter/Dart SDK |
-| `api.dto_immutability` | DTO collections are defensively copied and unmodifiable; `CanvasMetadata` is deep-frozen; collection/metadata constructors are non-const while scalar-only and marker variants keep only approved const forms |
+| `api.dto_immutability` | DTO collections are defensively copied and unmodifiable; `CanvasMetadata` is deep-frozen; public constructors with caller-provided validated or sanitized values are non-const factories while marker/empty/default/private storage forms keep only approved const forms |
 | `api.equality_policy_explicit` | public value equality is explicit for concrete public classes, including runtime state snapshot types, and covered by API contract tests |
 | `api.id_validation_no_extension_type_escape` | ids cannot be publicly constructed without validation |
 | `core.no_legacy_imports` | no import of legacy package/runtime |

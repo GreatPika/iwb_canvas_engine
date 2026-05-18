@@ -61,7 +61,7 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P2`
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 - Guardrails: `api.dto_immutability`
-- Proof focus: defensive copy, unmodifiable collections, `CanvasMetadata` deep-freeze, invalid public construction rejection, and const-policy drift
+- Proof focus: defensive copy, unmodifiable collections, `CanvasMetadata` deep-freeze, invalid public construction rejection, validating-constructor factory policy, and approved const-form drift
 
 ## test.api_contract.public_equality_policy
 
