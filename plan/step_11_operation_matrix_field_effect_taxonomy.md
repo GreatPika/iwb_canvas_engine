@@ -493,8 +493,34 @@ or explicit alias and that the expanded effect dimensions are present.
 ```sh
 bash -lc 'set -euo pipefail
 matrix=docs/contracts/operation_matrix.md
+rg -n "^### Compact row expanded dimensions$" "$matrix" >/dev/null
 rg -n "^### Operation row details$" "$matrix" >/dev/null
-for term in removeUnusedResource replaceDraftDocument toggleSelection clearSelection selectAll setMode setDrawStyle setDrawTool setDrawColor setPointerPolicy markAllResourcesDirty; do
+compact_block="$(
+  awk '"'"'
+    $0 == "### Compact row expanded dimensions" {found=1; next}
+    found && /^### / {exit}
+    found {print}
+  '"'"' "$matrix"
+)"
+if [ -z "$compact_block" ]; then
+  echo "missing compact row expanded dimensions block" >&2
+  exit 1
+fi
+for label in "Touched state:" "Public state revisions:" "Internal revisions:" "Spatial effect:" "Projection effect:" "Resource effect:" "Repaint target:" "User-action notification:" "No-op behavior:" "Rollback behavior:"; do
+  printf "%s\n" "$compact_block" | rg --fixed-strings "$label" >/dev/null || {
+    echo "missing $label in compact row expanded dimensions block" >&2
+    exit 1
+  }
+done
+printf "%s\n" "$compact_block" | rg --fixed-strings "resolve that owner" >/dev/null || {
+  echo "missing named-owner resolution in compact row expanded dimensions block" >&2
+  exit 1
+}
+printf "%s\n" "$compact_block" | rg --fixed-strings "assert the resource effects enumerated there" >/dev/null || {
+  echo "missing named-owner resource-effect resolution in compact row expanded dimensions block" >&2
+  exit 1
+}
+while IFS= read -r term; do
   block="$(
     awk -v heading="#### $term" '"'"'
       $0 == heading {found=1; next}
@@ -512,7 +538,21 @@ for term in removeUnusedResource replaceDraftDocument toggleSelection clearSelec
       exit 1
     }
   done
-done
+done <<'"'"'TERMS'"'"'
+removeUnusedResource
+replaceDraftDocument
+loadDocument success
+toggleSelection
+clearSelection
+selectAll
+setMode
+setDrawStyle
+setDrawTool
+setDrawColor
+setPointerPolicy
+markResourceDirty
+markAllResourcesDirty
+TERMS
 '
 ```
 
@@ -594,7 +634,7 @@ Expected signal: the public API registry has no diff, and the existing
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Add Element Update Field Taxonomy
+### Slice 1. [x] Add Element Update Field Taxonomy
 
 #### Implements
 
@@ -632,7 +672,7 @@ Run P1 and P6.
 The active contracts prove field-level update behavior without relying on
 `redesign.md` or duplicated operation matrix field rows.
 
-### Slice 2. [ ] Complete Public Operation Matrix Coverage
+### Slice 2. [x] Complete Public Operation Matrix Coverage
 
 #### Implements
 
@@ -674,7 +714,7 @@ Run P2.
 HOLE-002 operation coverage is expressible from active matrix rows or aliases
 without consulting the audit checklist.
 
-### Slice 3. [ ] Update Verification Mapping
+### Slice 3. [x] Update Verification Mapping
 
 #### Implements
 
@@ -714,7 +754,7 @@ Run P4.
 The verification map points future implementation tests at the complete matrix
 contract instead of the old narrower dimensions.
 
-### Slice 4. [ ] Retire Stale Redesign And Audit Notes
+### Slice 4. [x] Retire Stale Redesign And Audit Notes
 
 #### Implements
 

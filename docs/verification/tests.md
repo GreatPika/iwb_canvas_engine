@@ -243,6 +243,12 @@ test/edit/operation_matrix_effects_test.dart
 test/edit/exact_touched_invalidation_test.dart
 test/edit/typed_effects_no_frame_dependency_test.dart
 test/edit/staged_document_load_success_failure_test.dart
+
+`test.edit.operation_matrix_effects` covers expanded operation matrix dimensions:
+touched state, public state revisions, internal revisions, spatial,
+projection, resource effects, repaint, user-action events, no-op behavior, and
+rollback behavior.
+
 test/geometry/hit_policy_test.dart
 test/geometry/no_legacy_scene_order_test.dart
 test/geometry/eraser_exact_budget_no_partial_commit_test.dart

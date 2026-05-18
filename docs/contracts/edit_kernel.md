@@ -149,6 +149,55 @@ CommitCompiler must not depend on concrete `FrameEngine`. It produces a
 post-install runtime/applier boundary dispatches those effects to frame,
 spatial, resource, projection, and public state publication owners.
 
+### 11.4 Element update field-effect taxonomy
+
+`CommitCompiler` owns the field-effect taxonomy for
+`CanvasEdit.updateElement`. It converts the changed fields in a
+`CanvasElementUpdate` into typed `CommitPlan` effects after update-kind
+validation and before atomic install. Every changed persisted element field
+advances public `state.revisions.document`, increments the element revision,
+and invalidates the public `CanvasDocument` projection through internal
+`projectionRevision`.
+
+No-op field updates, absent fields, and field values equal to the current value
+produce no document, internal revision, spatial, projection, resource, repaint,
+selection, event, or public state publication effects. If validation fails or
+the edit rolls back, all effects listed below are discarded by the edit
+rollback contract.
+
+Field taxonomy:
+
+| Field token | Internal revisions | Spatial effect | Projection effect | Resource effect | Repaint target | Selection normalization |
+|---|---|---|---|---|---|---|
+| `CanvasElementUpdate.transform` | bounds, elementVisual, projection | touched update | evict | none | main | none |
+| `CanvasElementUpdate.opacity` | elementVisual, projection | none | evict | none | main | none |
+| `CanvasElementUpdate.hitPadding` | bounds, projection | touched update | evict | none | none | none |
+| `CanvasElementUpdate.isVisible` | bounds, elementVisual, projection | touched update | evict | none | main | prune selected id when it becomes invisible |
+| `CanvasElementUpdate.isSelectable` | projection | none | evict | none | main when selection normalization prunes; otherwise none | prune selected id when it becomes non-selectable |
+| `CanvasElementUpdate.isLocked` | projection | none | evict | none | none | none |
+| `CanvasElementUpdate.isDeletable` | projection | none | evict | none | none | none |
+| `CanvasElementUpdate.isTransformable` | projection | none | evict | none | none | none |
+| `CanvasElementUpdate.metadata` | projection | none | evict | none | none | none |
+| `CanvasImageElementUpdate.resourceId` | elementVisual, projection | none | evict | validate referenced resource id; no descriptor-table mutation | main | none |
+| `CanvasImageElementUpdate.size` | bounds, elementVisual, projection | touched update | evict | none | main | none |
+| `CanvasImageElementUpdate.naturalSize` | elementVisual, projection | none | evict | none | main | none |
+| `CanvasPathElementUpdate.svgPathData` | bounds, elementVisual, projection | touched update | evict | none | main | none |
+| `CanvasPathElementUpdate.fillColor`, `CanvasPathElementUpdate.strokeColor`, `CanvasPathElementUpdate.strokeWidth`, `CanvasPathElementUpdate.fillRule` | elementVisual, projection; bounds also when stroke width changes paint bounds | touched update only when paint bounds change | evict | none | main | none |
+| `CanvasTextElementUpdate.text`, `CanvasTextElementUpdate.fontSize`, `CanvasTextElementUpdate.align`, `CanvasTextElementUpdate.textDirection`, `CanvasTextElementUpdate.isBold`, `CanvasTextElementUpdate.isItalic`, `CanvasTextElementUpdate.fontFamily`, `CanvasTextElementUpdate.maxWidth`, `CanvasTextElementUpdate.lineHeight` | bounds, elementVisual, projection | touched update when layout or paint bounds change | evict | none | main | none |
+| `CanvasTextElementUpdate.color`, `CanvasTextElementUpdate.isUnderline` | elementVisual, projection; bounds also when underline paint bounds change | touched update only when paint bounds change | evict | none | main | none |
+| `CanvasStrokeElementUpdate.points`, `CanvasStrokeElementUpdate.thickness` | bounds, elementVisual, projection | touched update | evict | none | main | none |
+| `CanvasStrokeElementUpdate.color` | elementVisual, projection | none | evict | none | main | none |
+| `CanvasLineElementUpdate.start`, `CanvasLineElementUpdate.end`, `CanvasLineElementUpdate.thickness` | bounds, elementVisual, projection | touched update | evict | none | main | none |
+| `CanvasLineElementUpdate.color` | elementVisual, projection | none | evict | none | main | none |
+| `CanvasRectElementUpdate.size`, `CanvasRectElementUpdate.strokeWidth` | bounds, elementVisual, projection | touched update | evict | none | main | none |
+| `CanvasRectElementUpdate.fillColor`, `CanvasRectElementUpdate.strokeColor` | elementVisual, projection | none | evict | none | main | none |
+
+`CommitCompiler` may implement this taxonomy through an internal pure
+field-effect subroutine, but `CommitCompiler` remains the source-of-truth owner
+for typed invalidation. Resource reference validation is preflighted before
+draft mutation is accepted. Selection normalization effects are installed by
+the selection owner and published atomically with document effects.
+
 Selection effects are not draft fields inside committed document state. Edits
 that remove selected elements, clear content, delete selection, or commit a
 marquee selection compile explicit selection-owner effects. The applier

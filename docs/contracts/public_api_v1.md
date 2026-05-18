@@ -1164,6 +1164,12 @@ Update semantics:
   before draft mutation.
 ```
 
+Changed `CanvasEdit.updateElement` effects are field-granular and are compiled
+by the edit contract's `Element update field-effect taxonomy`. The public API
+owns the update DTO field names and validation shape; the edit contract owns
+document revision, internal revision, spatial, projection, resource, repaint,
+selection-normalization, no-op, and rollback effects for changed fields.
+
 ### 4.12 Edit API
 
 ```dart

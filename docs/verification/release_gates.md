@@ -180,7 +180,9 @@ Release is blocked unless all statements are true:
 16. diagnostics disabled hot-path allocation and sanitizer tests are green.
 17. resource lifecycle, resolver-boundary, and resolver-frame-budget tests are green.
 18. edit rollback/stale/nested/async tests are green.
-19. operation matrix and exact touched invalidation tests are green.
+19. operation matrix and exact touched invalidation tests are green, including
+    expanded operation matrix dimensions for public state revisions, internal revisions,
+    resource effects, no-op behavior, and rollback behavior.
 20. loadDocument staged success/failure tests are green.
 21. public runtime state publication, load publication, interaction settings state,
     preview public state, and dispose lifecycle tests are green.

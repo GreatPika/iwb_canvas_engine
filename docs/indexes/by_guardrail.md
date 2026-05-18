@@ -293,7 +293,7 @@ Guardrails extracted from split section 22.
 
 ## edit.operation_matrix_complete
 
-- Rule: every operation matrix row has an executable effect assertion for revisions, spatial, projection, repaint, and events
+- Rule: every operation matrix row has executable assertions for expanded operation matrix dimensions: touched state, public state revisions, internal revisions, spatial, projection, resource effects, repaint, user-action events, no-op behavior, and rollback behavior
 - Sections: `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.edit.field_update_nullable_semantics`, `test.edit.operation_matrix_effects`, `test.guardrails.blocking_suite`
 

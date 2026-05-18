@@ -451,6 +451,7 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P5`
 - Sections: `section_13_operation_matrix`, `section_23_tests`
 - Guardrails: `edit.operation_matrix_complete`
+- Scope: expanded operation matrix dimensions: touched state, public state revisions, internal revisions, spatial, projection, resource effects, repaint, user-action events, no-op behavior, and rollback behavior
 
 ## test.frame.cache_keys_do_not_use_legacy_snapshot_shape
 

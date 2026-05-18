@@ -8,8 +8,6 @@
 ## Порядок выполнения
 
 - [ ] P1: закрыть публичный API до freeze: HOLE-007 и HOLE-008.
-- [ ] P2: расширить operation matrix до полного покрытия публичного API:
-      HOLE-002.
 - [ ] P3: уточнить resources/surface lifecycle до реализации P7/P13-зон:
       HOLE-004.
 - [ ] P4: сделать guardrails исполнимыми: HOLE-008 и DIAG-PROOF.
@@ -17,7 +15,6 @@
 
 ## Блокеры API freeze
 
-- [ ] HOLE-002: `operation_matrix.md` покрывает все публичные state/effect операции.
 - [ ] HOLE-007: имена публичных error codes совпадают между prose и enum.
 - [ ] HOLE-008: `api.integration_surface_complete` доказан внешним compile fixture.
 
@@ -27,54 +24,10 @@
 
 ## Блокеры release readiness
 
-- [ ] HOLE-002: operation matrix покрывает весь публичный state/event/effect surface.
 - [ ] HOLE-008: integration surface proof исполнимый, а не субъективный.
 - [ ] HOLE-009: benchmark gates имеют численные thresholds и baseline policy.
 - [ ] HOLE-010: monotonic runtime-created timestamps имеют contract/test/release-gate mapping.
 - [ ] DIAG-PROOF: disabled diagnostics не allocation-ят records в successful hot paths.
-
-## HOLE-002 — Operation matrix не покрывает все публичные операции
-
-Статус: Red/Yellow.
-
-Почему это дыра: operation matrix должна доказывать revisions, repaint, spatial,
-projection, resource effects, user-action notification behavior, no-op и rollback semantics. Если
-публичной операции нет в матрице, у неё нет проверяемого архитектурного поведения.
-
-Нужно закрыть:
-
-- [ ] Добавить строки или явные alias-строки для `removeUnusedResource`.
-- [ ] Добавить строки или явные alias-строки для `replaceDraftDocument`.
-- [ ] Добавить строки или явные alias-строки для `toggleSelection`.
-- [ ] Добавить строки или явные alias-строки для `clearSelection`.
-- [ ] Добавить строки или явные alias-строки для `selectAll`.
-- [ ] Добавить строки или явные alias-строки для `setMode`.
-- [ ] Добавить строки или явные alias-строки для `setDrawStyle`.
-- [ ] Добавить строки или явные alias-строки для `setDrawTool`.
-- [ ] Добавить строки или явные alias-строки для `setDrawColor`.
-- [ ] Добавить строки или явные alias-строки для `setPointerPolicy`.
-- [ ] Добавить строки или явные alias-строки для `markAllResourcesDirty`.
-- [x] Добавить строки или явные alias-строки для text double-tap / text edit request
-      и guarded `commitTextEdit`.
-- [ ] Для каждой строки указать touched state.
-- [ ] Для каждой строки указать public `CanvasRuntimeState` revision effects.
-- [ ] Для document-owned строк указать `documentRevision`.
-- [ ] Для каждой строки указать `boundsRevision`.
-- [ ] Для preview-owned строк указать `previewRevision`.
-- [ ] Для каждой строки указать spatial effect.
-- [ ] Для каждой строки указать projection effect.
-- [ ] Для каждой строки указать resource effect.
-- [ ] Для каждой строки указать repaint target.
-- [ ] Для каждой строки указать user-action notification behavior.
-- [ ] Для каждой строки указать no-op behavior.
-- [ ] Для каждой строки указать rollback behavior.
-- [ ] Добавить или обновить guardrail/test mapping, чтобы новые matrix rows были проверяемыми.
-
-Принято в Step 6: `CanvasCameraPort.setOffset` и `panBy` покрыты как runtime
-view camera операции через public `state.revisions.viewCamera`; они не являются
-document edits. Persisted camera changes remain on `CanvasEdit.setCameraOffset`.
-
----
 
 ## HOLE-004 — Противоречие в `interactive=false`
 
