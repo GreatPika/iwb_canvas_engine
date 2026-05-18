@@ -16,6 +16,8 @@ Contract Obligations: none | BUG_FIX, SEAM_MIGRATION, PUBLIC_API_CHANGE
 
 ### Baseline Evidence
 
+These facts describe repository state before execution. They are evidence for the change, not target-state requirements.
+
 ### Entry Paths
 
 ### Current Owners

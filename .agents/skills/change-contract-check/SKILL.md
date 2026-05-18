@@ -75,7 +75,7 @@ Mark the contract `BLOCKED` when any of the following is true:
 13. `FULL` is selected and required profile proof is missing.
 14. `FULL` is selected and a required obligation is missing, or a listed obligation lacks its required proof and sequencing.
 15. `FULL` is selected with `SEAM_MIGRATION`, but successor/retired seam, consumer migration order, retirement gate, or negative proof is missing.
-16. `FULL` is selected with `PUBLIC_API_CHANGE`, but compatibility decision, migration/versioning note, or public contract proof is missing.
+16. `FULL` is selected with `PUBLIC_API_CHANGE`, but public contract owner, compatibility decision, migration/versioning note, export registry/index handling, or public contract proof is missing.
 17. `FULL` is selected with `BUG_FIX`, but the contract does not require a reproducer first plus 1 to 3 neighboring guard tests before the minimal owner-side fix.
 18. `FULL` is selected with `REFACTOR`, but the contract does not name locking tests or minimum characterization tests before structural edits.
 19. Any slice omits the `Files` block or fails to list the files, tests, fixtures, inventories, workflows, checks, verify-only evidence, or explicit exclusions that the slice relies on.
@@ -84,10 +84,14 @@ Mark the contract `BLOCKED` when any of the following is true:
 22. Any slice lacks executable proof with a stated proof intent and command.
 23. A slice that introduces or depends on the locked architecture lacks structural verification that would make drift visible later.
 24. A slice mixes decision IDs, obligation labels, and proof IDs in the same subsection instead of separating `Implements`, `Obligations Covered`, and `Proof`.
-25. The contract contradicts itself across sections.
-26. Named files, tests, fixtures, inventories, workflows, or checks appear only as evidence while later sections treat them as change targets.
-27. A locked contract uses a standalone global file inventory instead of slice-local file ownership.
-28. Final gate introduces new scope instead of proving earlier decisions, obligations, and slices.
+25. A slice lists every header obligation by default instead of only the obligations that slice directly closes.
+26. A proof ID is referenced by a slice or final gate but section 5 does not own the executable command or check and expected signal for that ID.
+27. A reusable or final-gate proof command is duplicated inside slices instead of being owned once by `Proof Plan`.
+28. Final gate restates durable decisions from `Decision Ledger` instead of aggregating decision IDs, proof IDs, and obligations.
+29. The contract contradicts itself across sections.
+30. Named files, tests, fixtures, inventories, workflows, or checks appear only as evidence while later sections treat them as change targets.
+31. A locked contract uses a standalone global file inventory instead of slice-local file ownership.
+32. Final gate introduces new scope instead of proving earlier decisions, obligations, and slices.
 
 ## Non-blocking weaknesses
 
@@ -99,8 +103,9 @@ Use `REVISE` instead of `PASS` when the contract is implementable but weaker tha
 - proof IDs are valid but named unclearly;
 - `Decision Ledger` includes unreferenced summary rows that duplicate section 3 facts;
 - `Proof Plan` contains one-off commands that should live in the owning slice;
+- a proof ID has a command but the expected signal is weak;
 - `SOURCE_OF_TRUTH_DOCS` negative proof is broader than needed but still bounded enough to execute;
-- final completion conditions are redundant but do not expand scope.
+- final completion conditions contain minor redundant wording but do not restate durable decisions or expand scope.
 
 ## Section-by-section review rules
 
@@ -118,12 +123,14 @@ Reject boundaries that silently expand architecture or rollout scope.
 
 Require inspected artifacts with specific revelations.
 Require baseline evidence, entry paths, current owners, existing checks, valid precedents, governing rules, and misleading patterns when relevant.
+Require `Baseline Evidence` to be framed as repository state before execution, not target-state requirements.
 Reject generic claims such as “reviewed relevant files” without named evidence.
 Reject target-state requirements presented as baseline evidence.
 
 ### Section 3. Architecture Decision
 
 For `FULL`, require one locked form with selected form, ownership, seam, dependency direction, state/data ownership, entry/exit boundaries, verification strategy, decision ledger, and rejected alternatives. Accept a concrete no-ID statement in `Decision Ledger` when slices and final gate do not need separate durable decision IDs. Treat ledger rows that merely summarize nearby section 3 facts and are not referenced by slices or final gate as non-blocking duplication.
+Treat large declaration blocks, schemas, signatures, or API snippets in section 3 as acceptable only when exact public/API shape is itself part of the locked contract. Otherwise mark them as duplication that belongs in slice-local change or proof expectations.
 Reject unresolved alternatives or wording that defers the core design choice.
 
 For `ARCHITECTURE_GATE`, require one real gate with blocking gap, known facts, recommended form, supporting evidence, alternatives considered, and exact user decision required.
@@ -140,7 +147,9 @@ Reject using this section as a complete file inventory.
 
 Require reusable proof IDs when commands or proof groups are referenced by more than one slice or by the final gate.
 Accept a concrete statement that proof is slice-local when no reusable proof groups exist.
-Reject duplicated reusable commands scattered across slices and final gate. Treat one-off commands placed in `Proof Plan` as non-blocking drift toward duplication.
+Require every proof ID to be self-contained with purpose, executable command or check, and expected signal.
+Reject proof IDs that point to commands defined in slices.
+Reject duplicated reusable or final-gate commands scattered across slices and final gate. Treat one-off commands placed in `Proof Plan` as non-blocking drift toward duplication only when they are not referenced by the final gate.
 
 ### Section 6. Vertical Slices
 
@@ -150,15 +159,19 @@ Each slice must close one new verifiable result.
 Preparatory work alone does not count as a closed slice.
 Require every slice to contain `Implements`, `Files`, `Change`, `Proof`, and `Closure`. Require `Obligations Covered` when the slice closes part of `BUG_FIX`, `SEAM_MIGRATION`, or `PUBLIC_API_CHANGE`.
 Reject obligation labels or proof IDs in `Implements`. Reject decision IDs or proof IDs in `Obligations Covered`. Reject decision IDs or obligation labels used as proof IDs.
+Reject repeated `Obligations Covered` lists that mirror the header in every slice unless the contract proves that every slice directly closes every listed obligation.
 Require every `Files` bullet or grouped file list to name both the file role and the slice-local responsibility. Reject bare action bullets such as `Update <path>`, `Refresh <path>`, `Edit <path>`, `Remove <path>`, or `Verify <path>` when they do not say what that file must change, align, prove, retire, sync, or preserve.
 Require executable proof for every slice, written as proof intent plus command.
+When a slice references a proof ID, reject duplicated full commands for that same proof in the slice.
 Require executable structural verification for every slice that introduces or depends on the locked form.
 For `ANALYZER_RULE`, require positive and negative fixtures or equivalent analyzer checks.
 Reject slices that mix multiple user-visible results, multiple retirement events, or multiple proof obligations without necessity.
 
 ### Section 7. Final Gate
 
-Require final proof set and completion conditions to reflect earlier decisions, obligations, and slices.
+Require final proof set and completion conditions to reference proof IDs, the Decision Ledger, and Contract Obligations.
+Reject final gate command blocks that are not represented by proof IDs in section 5.
+Reject final completion conditions that restate durable decision content already owned by the Decision Ledger.
 Reject broad final checks that should have been slice-local proof.
 Reject new scope introduced only at the final gate.
 
@@ -170,14 +183,16 @@ Perform these checks explicitly:
 2. Every slice file must be supported by section 3 placement, section 4 ordering or finalization gates, section 2 repository evidence, or an explicit proposed-new-file placement rationale.
 3. Every decision ID referenced in a slice `Implements` or final gate must exist in `Decision Ledger`.
 4. Every proof ID referenced in a slice or final gate must exist in `Proof Plan`.
-5. Every obligation label referenced in `Obligations Covered` must be listed in `Contract Obligations`.
-6. Every sequencing dependency in section 6 must be justified by section 4.
-7. Every slice result must support a decision, obligation, or mandate.
-8. Files listed only in evidence must not be treated as change targets unless the owning slice also lists them in `Files`.
-9. Locked contracts must not use a standalone global file inventory.
-10. Seam migration details must be present only when `SEAM_MIGRATION` is listed, and must not become a duplicate file inventory.
-11. Final gate must not compensate for missing slice-local verification.
-12. If `ARCHITECTURE_GATE` is used, no sections after section 3 may contain substantive plan content.
+5. Every proof ID referenced in a slice or final gate must own its executable command or check in `Proof Plan`.
+6. Every obligation label referenced in `Obligations Covered` must be listed in `Contract Obligations`.
+7. Every obligation listed in `Contract Obligations` must have structural proof, sequencing, or closure content in the owning sections.
+8. Every sequencing dependency in section 6 must be justified by section 4.
+9. Every slice result must support a decision, obligation, or mandate.
+10. Files listed only in evidence must not be treated as change targets unless the owning slice also lists them in `Files`.
+11. Locked contracts must not use a standalone global file inventory.
+12. Seam migration details must be present only when `SEAM_MIGRATION` is listed, and must not become a duplicate file inventory.
+13. Final gate must not compensate for missing slice-local verification.
+14. If `ARCHITECTURE_GATE` is used, no sections after section 3 may contain substantive plan content.
 
 ## Profile and obligation checks
 
@@ -209,7 +224,7 @@ For `FULL`, require successor or retired seam, consumer migration order, retirem
 
 ### PUBLIC_API_CHANGE
 
-For `FULL`, require compatibility decision, migration/versioning note, and public contract proof.
+For `FULL`, require public contract owner, compatibility decision, migration/versioning note, export registry/index handling, and public contract proof.
 
 ## How to report findings
 

@@ -23,7 +23,7 @@ Inspect and record at least:
 - repository rules that govern the area, or a confirmed absence after targeted inspection;
 - nearby patterns that look relevant but are the wrong owner, wrong level, stale, or misleading.
 
-`Evidence Map` describes the repository state before execution. Do not reuse baseline facts as target-state requirements. Put target ownership, selected form, rejected alternatives, and future state in `Architecture Decision`.
+`Evidence Map` describes the repository state before execution. In `Baseline Evidence`, state that these facts are evidence for the change, not target-state requirements. Do not reuse baseline facts as target-state requirements. Put target ownership, selected form, rejected alternatives, and future state in `Architecture Decision`.
 
 Choose the owner that solves the problem once without leaking policy into the wrong layer or duplicating it across callers. Prefer the dominant local form already present in the repository.
 
@@ -41,6 +41,8 @@ For `FULL` contracts, section 3 must lock one evidence-backed architectural form
 - verification strategy.
 
 Do not leave owner, boundaries, seam, architectural dependency/import direction, file placement, execution order, seam retirement timing, or verification strategy to be chosen during implementation.
+
+Put full declaration blocks, schemas, signatures, or API snippets in `Architecture Decision` only when that exact public shape is itself part of the locked contract. Otherwise summarize the selected form in section 3 and put exact snippets in slice-local `Change` or proof expectations.
 
 For `FULL` contracts, record durable decisions in `Decision Ledger` only when later slices or the final gate need stable decision IDs. Each durable decision gets a stable ID such as `D1`. The ledger is not a summary table: do not restate `Selected Form`, `Ownership`, or `Seam` unless that decision ID is needed later. If no separate durable decision IDs are needed, write one concrete sentence in `Decision Ledger` stating that slices and the final gate rely on the locked architecture directly.
 
@@ -108,6 +110,8 @@ Forbidden shortcuts:
 
 ## Obligation rules
 
+Use obligations as structural requirements, not labels. Every obligation listed in the header must add concrete sequencing, proof, or closure content in the owning sections and must be covered by at least one slice only where that slice actually closes part of the obligation.
+
 For `FULL` contracts, the obligation rules below add proof and sequencing requirements. For `ARCHITECTURE_GATE` contracts, listed obligations are classification metadata for facts already known from the request or repository evidence; detailed obligation proof is deferred until the gate is resolved.
 
 ### BUG_FIX
@@ -137,9 +141,11 @@ Use the `Seam Migration` subsection in section 4 for this mapping. If several se
 
 When `PUBLIC_API_CHANGE` is present, the contract must state:
 
+- public contract owner;
 - compatibility decision;
 - breaking or non-breaking classification;
 - migration or versioning note;
+- export registry update, generated public index update, or explicit proof that no such registry or index exists;
 - public contract proof;
 - tests or documentation checks that protect the public surface.
 
@@ -150,13 +156,13 @@ One slice closes one new verifiable result. Preparatory edits alone never close 
 Every slice must contain:
 
 - `Implements`: only decision IDs such as `D1`, or one sentence that the slice relies on the locked architecture without separate decision IDs;
-- `Obligations Covered`: only obligation labels from the header, and only when the slice closes part of `BUG_FIX`, `SEAM_MIGRATION`, or `PUBLIC_API_CHANGE`;
+- `Obligations Covered`: only obligation labels from the header, and only when the slice directly closes part of `BUG_FIX`, `SEAM_MIGRATION`, or `PUBLIC_API_CHANGE`;
 - `Files`: every file, test, fixture, inventory, workflow, generated artifact, verify-only evidence file, or explicit exclusion the slice relies on, with its file role and slice-local responsibility;
 - `Change`: the slice-local result, without restating durable decisions;
 - `Proof`: executable proof with intent plus command, using proof IDs from section 5 when reused;
 - `Closure`: the condition that makes the slice complete.
 
-Do not mix categories in one field. `Implements` must not contain obligation labels or proof IDs. `Obligations Covered` must not contain decision IDs or proof IDs. `Proof` is the only slice subsection that may reference proof IDs such as `P1`.
+Do not mix categories in one field. `Implements` must not contain obligation labels or proof IDs. `Obligations Covered` must not contain decision IDs or proof IDs. `Proof` is the only slice subsection that may reference proof IDs such as `P1`. Do not list every header obligation in every slice. Omit `Obligations Covered` when the slice does not directly close obligation work.
 
 Each file expected to be edited must appear in exactly one slice as a primary edit, alignment, registry/index/workflow, verification, or cleanup/finalization file. A file may appear in multiple slices only when each slice names a different purpose; one slice must be named as the final owner for shared cleanup or finalization. Files listed only in `Evidence Map` are evidence, not change targets.
 
@@ -172,7 +178,7 @@ Retain and fill the main numbered sections from the selected template: sections 
 
 Use subsection headings only when they can be filled with concrete content. If a subsection is required to explain the lock but cannot be filled from repository evidence, use the architecture decision gate instead of emitting an empty heading.
 
-Section 5 is for reusable proof commands or proof groups referenced by more than one slice or by the final gate. If a command is used once, keep it in the owning slice. If the same command is used by a slice and the final gate, give it a proof ID such as `P1`. If there are no reusable proof groups, write one concrete sentence that all proof is slice-local and keep commands in the slices.
+Section 5 is the only owner for reusable proof commands, reusable proof groups, and every proof command referenced by the final gate. Each proof ID must be self-contained: purpose, command or check, and expected signal. Do not define a proof ID as `Defined in Slice` or as a vague description whose executable command lives elsewhere. If a command is used once and is not part of the final gate, keep it in the owning slice without assigning a proof ID. If a command is used by a slice and the final gate, give it a proof ID such as `P1` and reference the ID instead of repeating the command. If there are no reusable proof groups and no final-gate proof commands, write one concrete sentence that all proof is slice-local and keep commands in the slices.
 
 Optional categories that are commonly omitted when not relevant include seam migration details, deferred broad verification, slice file subcategories, analyzer fixtures, positive scenarios, and negative scenarios. Do not emit placeholder text, guessed details, unexplained ellipses, or `None` filler.
 
@@ -199,7 +205,7 @@ Each fact must have exactly one owning location.
 - Repository evidence lives only in section 2.
 - Architecture, seam, state ownership, dependency direction, selected design, rejected alternatives, verification strategy, and durable decisions live only in section 3.
 - Cross-slice order, seam migration, forbidden moves, and deferred verification live only in section 4.
-- Reusable proof commands live only in section 5.
+- Reusable proof commands and final-gate proof commands live only in section 5.
 - File lists live inside the slice that edits, verifies, excludes, or finalizes those files.
 - Slice-local work lives only in section 6.
 - Completion conditions live only in section 7.
@@ -226,7 +232,7 @@ State cross-slice order, constraints, seam migration details, forbidden moves, a
 
 ### 5. Proof Plan
 
-Name reusable proof groups with IDs such as `P1`. A one-off command belongs in the owning slice, not in `Proof Plan`. Do not duplicate proof commands across slices and final gate; reference proof IDs when the same command is reused.
+Name reusable proof groups with IDs such as `P1`. A proof ID must include the executable command or check and expected signal. A one-off command belongs in the owning slice when it is not reused and not part of the final gate. Do not duplicate proof commands across slices and final gate; reference proof IDs when the same command is reused.
 
 ### 6. Vertical Slices
 
@@ -234,4 +240,4 @@ One slice closes one new verifiable result. Use the slice `Files` block as the o
 
 ### 7. Final Gate
 
-State the final proof set and completion conditions. The final gate must prove decisions and obligations already introduced earlier; it must not introduce new scope.
+State the final proof set and completion conditions by referencing proof IDs, the Decision Ledger, and Contract Obligations. The final gate must not restate durable decision content from section 3 or introduce new scope.

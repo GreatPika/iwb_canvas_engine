@@ -16,6 +16,8 @@ Contract Obligations: none | BUG_FIX, SEAM_MIGRATION, PUBLIC_API_CHANGE
 
 ### Baseline Evidence
 
+These facts describe repository state before execution. They are evidence for the change, not target-state requirements.
+
 ### Entry Paths
 
 ### Current Owners
@@ -67,10 +69,15 @@ Durable decision IDs table, or one no-ID sentence when no later section needs a 
 
 ## 5. Proof Plan
 
-Reusable proof IDs table, or one sentence that all proof is slice-local.
+Self-contained reusable proof IDs, or one sentence that all proof is slice-local and not used by the final gate.
 
-| ID | Purpose | Command or Check |
-|---|---|---|
+### P1. Purpose
+
+```sh
+command-or-check
+```
+
+Expected signal.
 
 ## 6. Vertical Slices
 
@@ -94,4 +101,12 @@ Reusable proof IDs table, or one sentence that all proof is slice-local.
 
 ### Run Proof Set
 
+P-
+
 ### Done When
+
+- all referenced Decision Ledger decisions have passing proof;
+- all Contract Obligations are satisfied;
+- all retired seams have negative proof;
+- no out-of-scope files were changed;
+- whitespace validation passes.
