@@ -31,9 +31,9 @@ sequenceDiagram
     Selection-->>Runtime: current selected ids remain installed
 
     Runtime->>Stager: validate public CanvasDocument
-    Stager->>Stager: verify DTO invariants, limits, duplicate ids, resource references, and CanvasMetadata
+    Stager->>Stager: verify DTO invariants, limits, invertible transforms, duplicate ids, resource references, and CanvasMetadata
 
-    alt public document or frozen metadata validation fails
+    alt public document, transform admission, or frozen metadata validation fails
       Stager--x Runtime: validation failure
     else runtime materialization fails
       Runtime->>Stager: prepare full document replacement from DTO and current snapshot

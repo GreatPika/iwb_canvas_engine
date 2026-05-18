@@ -755,6 +755,12 @@ Validation:
   [a,b,0,0, c,d,0,0, 0,0,1,0, tx,ty,0,1].
 ```
 
+`CanvasTransform` remains the general public affine value type, so
+`invert()` may return null for non-invertible math values. Admission into
+`CanvasElement.transform` is stricter: public element DTO construction rejects
+non-invertible element transforms with `fieldMustBeInvertible` before exposing
+the DTO.
+
 ### 4.10 Element DTOs
 
 Common fields for every element:
@@ -1160,8 +1166,13 @@ Update semantics:
   type is `CanvasFieldUpdate<T?>`;
 - non-nullable common/family fields cannot accept `CanvasFieldClear<T>()` in
   ordinary statically checked code;
+- `CanvasElementUpdate.transform` accepts only finite invertible element
+  transforms within the transform singular-value limits;
 - dynamic or generated clear requests for non-nullable fields are rejected
-  before draft mutation.
+  before draft mutation;
+- dynamic or generated `CanvasElementUpdate.transform` values that are
+  non-invertible are rejected with `fieldMustBeInvertible` before draft
+  mutation.
 ```
 
 Changed `CanvasEdit.updateElement` effects are field-granular and are compiled

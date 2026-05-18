@@ -87,9 +87,15 @@ Unknown fields policy:
 | Offset | `{ "x": number, "y": number }` | finite, each in `[-1e7, 1e7]` |
 | Size | `{ "w": number, "h": number }` | finite, `>0`, `<=1e7` |
 | Rect | `{ "l": number, "t": number, "r": number, "b": number }` | finite, normalized on encode |
-| CanvasTransform | `{ "a": number, "b": number, "c": number, "d": number, "tx": number, "ty": number }` | finite, scale singular values in `[1e-4, 1e4]` when invertibility needed |
+| CanvasTransform | `{ "a": number, "b": number, "c": number, "d": number, "tx": number, "ty": number }` | finite; element transform positions require invertibility and scale singular values in `[1e-4, 1e4]` |
 | enum | lower camel string | unknown value rejected |
 | metadata | JSON object | JSON-only values, limits below; materialized as `CanvasMetadata` in public DTOs |
+
+Schema v1 keeps the six-field transform JSON shape and schema version. During
+schema decode, any element transform object that is finite but non-invertible
+is still invalid element input and is rejected with the public
+`fieldMustBeInvertible` data error before an immutable `CanvasDocument` DTO is
+materialized.
 
 ### 5.3 Resource JSON
 

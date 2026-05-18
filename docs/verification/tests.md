@@ -249,6 +249,20 @@ touched state, public state revisions, internal revisions, spatial,
 projection, resource effects, repaint, user-action events, no-op behavior, and
 rollback behavior.
 
+`test.codec.constructor_and_schema_limits` covers element transform admission
+at public DTO construction and schema decode: non-invertible element
+transforms reject with `fieldMustBeInvertible`, while `CanvasTransform` remains
+the general affine value type.
+
+`test.edit.field_update_nullable_semantics` covers
+`CanvasElementUpdate.transform` validation for generated and dynamic field
+updates: a non-invertible transform is rejected before draft mutation.
+
+`test.edit.staged_document_load_success_failure` covers `loadDocument`
+rejection of non-invertible element transforms before `PreparedDocumentLoad`
+success, interaction interruption, repaint, action events, or public state
+publication.
+
 test/geometry/hit_policy_test.dart
 test/geometry/no_legacy_scene_order_test.dart
 test/geometry/eraser_exact_budget_no_partial_commit_test.dart
@@ -273,6 +287,14 @@ test/interaction/text_edit_stale_commit_guard_test.dart
 test/selection/runtime_owner_separation_test.dart
 test/guardrails/selection_boundary_imports_test.dart
 ```
+
+`test.geometry.hit_policy` covers corrupted committed hit rows: a
+non-invertible element transform records only policy-gated diagnostics, returns
+miss, continues candidate scan, and has no coarse fallback acceptance.
+
+`test.diagnostics.sanitizer_and_public_projection` covers corrupted-row
+diagnostic sanitization and the disabled diagnostics no-allocation hot-path
+policy.
 
 Guardrail test ownership:
 

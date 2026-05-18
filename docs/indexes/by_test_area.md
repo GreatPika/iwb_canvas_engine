@@ -220,6 +220,9 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P2`, `P3`
 - Sections: `section_06_validation_limits`, `section_23_tests`
 - Guardrails: `codec.known_fields_validated`, `api.id_validation_no_extension_type_escape`
+- Focus: public DTO construction and schema decode reject non-invertible
+  element transforms with `fieldMustBeInvertible` while `CanvasTransform`
+  remains the general affine value type.
 
 ## test.store.read_document_projection
 
@@ -291,6 +294,8 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P5`
 - Sections: `section_04_public_api_v1`, `section_11_edit_kernel`, `section_23_tests`
 - Guardrails: `edit.operation_matrix_complete`, `edit.no_global_invalidation_except_replacement`
+- Focus: generated and dynamic `CanvasElementUpdate.transform` values reject
+  non-invertible element transforms before draft mutation.
 
 ## test.edit.typed_effects_no_frame_dependency
 
@@ -305,6 +310,9 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P6`, `P10`, `P11`, `P12`
 - Sections: `section_12_load_document`, `section_23_tests`
 - Guardrails: `load.prepares_before_interrupt`, `load.success_interrupts_before_install`
+- Focus: `loadDocument` rejects non-invertible element transforms before
+  `PreparedDocumentLoad` success, interaction interruption, repaint, action
+  events, or public state publication.
 
 ## test.geometry.hit_policy
 
@@ -312,6 +320,9 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P8`
 - Sections: `section_16_geometry_policy`, `section_23_tests`
 - Guardrails: `none`
+- Focus: corrupted committed rows with non-invertible element transforms return
+  miss, record only policy-gated diagnostics, continue candidate scanning, and
+  have no coarse fallback acceptance.
 
 ## test.spatial.touched_update
 
@@ -437,6 +448,8 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P3`, `P14`
 - Sections: `section_20_diagnostics_hub`, `section_23_tests`
 - Guardrails: `diagnostics.disabled_no_alloc_hot_path`, `diagnostics.sanitized_public_projection`
+- Focus: corrupted-row diagnostic details are sanitized and diagnostics
+  disabled hot paths allocate no records.
 
 ## test.edit.exact_touched_invalidation
 

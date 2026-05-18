@@ -60,7 +60,7 @@ CanvasDocument decodeCanvasDocumentFromJson(String json);
 5. known field validation and v1 unknown field policy;
 6. primitive validation;
 7. resources validation;
-8. elements validation;
+8. elements validation, including non-invertible element transform rejection;
 9. duplicate id checks;
 10. missing resource reference checks;
 11. layer/node count checks;
@@ -68,6 +68,11 @@ CanvasDocument decodeCanvasDocumentFromJson(String json);
 13. materialize CanvasDocument immutable DTO;
 14. no runtime/store side effects.
 ```
+
+Decode rejects non-invertible element transforms before DTO materialization.
+This is codec boundary validation, not runtime repair: decode failure does not
+expose a partial `CanvasDocument`, does not call `loadDocument`, and does not
+mutate runtime or store state.
 
 ### 19.3 Encode algorithm
 

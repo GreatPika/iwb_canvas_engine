@@ -84,6 +84,15 @@ Validation is applied at:
 - pointer sample routing.
 ```
 
+Element transform admission uses the same validation boundary list. Every
+`CanvasElement.transform` and changed `CanvasElementUpdate.transform` value
+must be finite, invertible, and within the transform singular-value limits
+before public DTO exposure, generated or dynamic update materialization, edit
+preflight, schema decode materialization, or `loadDocument` materialization.
+Non-invertible element transforms are rejected with `fieldMustBeInvertible`
+before any draft mutation, runtime mutation, repaint, event, or public state
+publication.
+
 `CanvasInteractionRequestId` follows the public id validator contract:
 non-empty trimmed string, length <= 256, and no control characters. It is
 validated at public construction and at the engine boundary that generates

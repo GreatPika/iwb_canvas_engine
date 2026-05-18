@@ -36,7 +36,11 @@ sequenceDiagram
         ReadPort-->>Interaction: immutable hit row and common flags
         Interaction->>Hit: check hit eligibility(point finite, visible, selectable, transform finite)
         Hit->>Geometry: exact family hit with transform, local bounds, hit padding, and slop
-        Note over Hit,Geometry: Family rules own non-invertible transform fallback to coarse candidate bounds where the geometry contract allows it.
+        alt committed row has non-invertible transform
+          Geometry->>Diagnostics: record policy-gated corrupted-row diagnostic
+          Geometry-->>Hit: miss
+          Hit-->>Interaction: continue candidate scan
+        else transform invertible
         alt exact hit accepts visible selectable content element
           Geometry-->>Hit: exact hit accepted
           Hit-->>Interaction: first exact hit wins
@@ -44,6 +48,7 @@ sequenceDiagram
         else not eligible or exact miss
           Geometry-->>Hit: miss
           Hit-->>Interaction: continue candidate scan
+        end
         end
       end
     end

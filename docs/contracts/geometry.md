@@ -72,7 +72,11 @@ Box/image/text/rect hit:
 ```text
 - coarse bounds = transformed local bounds inflated by hitPadding + 4.0;
 - exact hit uses inverse transform and local bounds inflated by scene padding mapped into local space;
-- if transform non-invertible, fall back to coarse candidate bounds.
+- if a committed row has a non-invertible transform, treat it as corrupted
+  internal state: record only policy-gated diagnostics, return miss, and
+  continue the candidate scan;
+- coarse candidate bounds may never accept a non-invertible box/image/text/rect
+  hit.
 ```
 
 Line hit:

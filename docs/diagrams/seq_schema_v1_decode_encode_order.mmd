@@ -38,7 +38,7 @@ sequenceDiagram
   Schema->>Schema: known v1 field validation and unknown non-metadata policy
   Schema->>Schema: primitive validation(colors, finite numbers, ids)
   Schema->>Schema: resource validation(appKey source only)
-  Schema->>Schema: element validation(known kinds and enums)
+  Schema->>Schema: element validation(known kinds, enums, and transform admission)
   Schema->>Schema: duplicate id checks
   Schema->>Schema: missing resource reference checks
   Schema->>Schema: layer and node count checks

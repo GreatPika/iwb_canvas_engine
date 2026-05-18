@@ -440,7 +440,7 @@ unchecked slice headings, and completed slice headings remain present.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Lock Element Transform Admission
+### Slice 1. [x] Lock Element Transform Admission
 
 #### Implements
 
@@ -496,7 +496,7 @@ This slice is complete when the public/data boundary docs consistently describe
 the admitted element transform invariant and no entry path delegates
 non-invertible transform handling to later runtime geometry.
 
-### Slice 2. [ ] Remove Runtime Hit-Test Acceptance Fallback
+### Slice 2. [x] Remove Runtime Hit-Test Acceptance Fallback
 
 #### Implements
 
@@ -535,7 +535,7 @@ This slice is complete when the active geometry contract and hit-test sequence
 contain no coarse acceptance fallback for non-invertible transforms and still
 preserve normal exact-hit and candidate-order behavior for valid rows.
 
-### Slice 3. [ ] Align Verification And Retire Redesign Note
+### Slice 3. [x] Align Verification And Retire Redesign Note
 
 #### Implements
 
@@ -575,7 +575,7 @@ This slice is complete when future executable coverage is documented, the
 resolved redesign note is gone from active source-of-truth surfaces, and the
 documentation structural checks pass.
 
-### Slice 4. [ ] Finalize Step 12 Roadmap State
+### Slice 4. [x] Finalize Step 12 Roadmap State
 
 #### Implements
 
