@@ -89,7 +89,7 @@ There is no separate analyzer template. Analyzer-specific requirements are profi
 8. When updating an existing contract, convert the output to the current selected template shape. Preserve stable decisions and completed evidence only by placing them in the current owning sections; do not preserve obsolete section numbering, obsolete global file lists, or deprecated proof headings.
 9. For `ARCHITECTURE_GATE`, stop at section 3. Do not include proof plans, slices, or final gates.
 10. Preserve main section numbering and slice checkboxes from the selected template. Use concrete slice titles. Omit optional subsections, bullets, or categories that have no confirmed content. Never emit placeholders, filler, guessed details, `None` filler, or empty optional headings.
-11. In locked contracts, put file ownership inside each slice under `Files`. Do not create a separate global file-list section. Files listed only in `Evidence Map` are evidence, not change targets.
+11. In locked contracts, put file ownership inside each slice under `Files`. Each file or grouped file list must name the file role and slice-local responsibility, not just a bare action such as `Update`. Do not create a separate global file-list section. Files listed only in `Evidence Map` are evidence, not change targets.
 12. Use `Proof Plan` only for reusable proof IDs or proof groups referenced by more than one slice or by the final gate. Keep unique slice-local checks inside the owning slice.
 13. In each slice, state proof intent before commands: what the command proves, then the command. Keep decision IDs in `Implements`, obligation labels in `Obligations Covered`, and proof IDs in `Proof`.
 14. Return only the Change Contract. Do not append review, validation, or audit commentary.

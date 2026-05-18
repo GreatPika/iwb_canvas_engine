@@ -79,14 +79,15 @@ Mark the contract `BLOCKED` when any of the following is true:
 17. `FULL` is selected with `BUG_FIX`, but the contract does not require a reproducer first plus 1 to 3 neighboring guard tests before the minimal owner-side fix.
 18. `FULL` is selected with `REFACTOR`, but the contract does not name locking tests or minimum characterization tests before structural edits.
 19. Any slice omits the `Files` block or fails to list the files, tests, fixtures, inventories, workflows, checks, verify-only evidence, or explicit exclusions that the slice relies on.
-20. Any slice is only preparatory, horizontal, or non-verifiable.
-21. Any slice lacks executable proof with a stated proof intent and command.
-22. A slice that introduces or depends on the locked architecture lacks structural verification that would make drift visible later.
-23. A slice mixes decision IDs, obligation labels, and proof IDs in the same subsection instead of separating `Implements`, `Obligations Covered`, and `Proof`.
-24. The contract contradicts itself across sections.
-25. Named files, tests, fixtures, inventories, workflows, or checks appear only as evidence while later sections treat them as change targets.
-26. A locked contract uses a standalone global file inventory instead of slice-local file ownership.
-27. Final gate introduces new scope instead of proving earlier decisions, obligations, and slices.
+20. Any `Files` bullet names only a bare action and path, such as `Update <path>`, without the file role and slice-local responsibility.
+21. Any slice is only preparatory, horizontal, or non-verifiable.
+22. Any slice lacks executable proof with a stated proof intent and command.
+23. A slice that introduces or depends on the locked architecture lacks structural verification that would make drift visible later.
+24. A slice mixes decision IDs, obligation labels, and proof IDs in the same subsection instead of separating `Implements`, `Obligations Covered`, and `Proof`.
+25. The contract contradicts itself across sections.
+26. Named files, tests, fixtures, inventories, workflows, or checks appear only as evidence while later sections treat them as change targets.
+27. A locked contract uses a standalone global file inventory instead of slice-local file ownership.
+28. Final gate introduces new scope instead of proving earlier decisions, obligations, and slices.
 
 ## Non-blocking weaknesses
 
@@ -149,6 +150,7 @@ Each slice must close one new verifiable result.
 Preparatory work alone does not count as a closed slice.
 Require every slice to contain `Implements`, `Files`, `Change`, `Proof`, and `Closure`. Require `Obligations Covered` when the slice closes part of `BUG_FIX`, `SEAM_MIGRATION`, or `PUBLIC_API_CHANGE`.
 Reject obligation labels or proof IDs in `Implements`. Reject decision IDs or proof IDs in `Obligations Covered`. Reject decision IDs or obligation labels used as proof IDs.
+Require every `Files` bullet or grouped file list to name both the file role and the slice-local responsibility. Reject bare action bullets such as `Update <path>`, `Refresh <path>`, `Edit <path>`, `Remove <path>`, or `Verify <path>` when they do not say what that file must change, align, prove, retire, sync, or preserve.
 Require executable proof for every slice, written as proof intent plus command.
 Require executable structural verification for every slice that introduces or depends on the locked form.
 For `ANALYZER_RULE`, require positive and negative fixtures or equivalent analyzer checks.
@@ -164,7 +166,7 @@ Reject new scope introduced only at the final gate.
 
 Perform these checks explicitly:
 
-1. Every file edited, refreshed, verified, excluded, or finalized by a slice must appear in that slice's `Files` block with a purpose or action.
+1. Every file edited, refreshed, verified, excluded, or finalized by a slice must appear in that slice's `Files` block with a role and slice-local responsibility.
 2. Every slice file must be supported by section 3 placement, section 4 ordering or finalization gates, section 2 repository evidence, or an explicit proposed-new-file placement rationale.
 3. Every decision ID referenced in a slice `Implements` or final gate must exist in `Decision Ledger`.
 4. Every proof ID referenced in a slice or final gate must exist in `Proof Plan`.

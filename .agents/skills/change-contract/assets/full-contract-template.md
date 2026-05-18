@@ -82,6 +82,8 @@ Reusable proof IDs table, or one sentence that all proof is slice-local.
 
 #### Files
 
+- File role: `path` — slice-local responsibility.
+
 #### Change
 
 #### Proof

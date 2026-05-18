@@ -151,7 +151,7 @@ Every slice must contain:
 
 - `Implements`: only decision IDs such as `D1`, or one sentence that the slice relies on the locked architecture without separate decision IDs;
 - `Obligations Covered`: only obligation labels from the header, and only when the slice closes part of `BUG_FIX`, `SEAM_MIGRATION`, or `PUBLIC_API_CHANGE`;
-- `Files`: every file, test, fixture, inventory, workflow, generated artifact, verify-only evidence file, or explicit exclusion the slice relies on;
+- `Files`: every file, test, fixture, inventory, workflow, generated artifact, verify-only evidence file, or explicit exclusion the slice relies on, with its file role and slice-local responsibility;
 - `Change`: the slice-local result, without restating durable decisions;
 - `Proof`: executable proof with intent plus command, using proof IDs from section 5 when reused;
 - `Closure`: the condition that makes the slice complete.
@@ -160,7 +160,7 @@ Do not mix categories in one field. `Implements` must not contain obligation lab
 
 Each file expected to be edited must appear in exactly one slice as a primary edit, alignment, registry/index/workflow, verification, or cleanup/finalization file. A file may appear in multiple slices only when each slice names a different purpose; one slice must be named as the final owner for shared cleanup or finalization. Files listed only in `Evidence Map` are evidence, not change targets.
 
-For each slice, distinguish file groups only when the categories are relevant. Give each file or group an action such as create, update, remove, refresh, verify-only, or excluded. Mark new files as proposed only when repository evidence supports placement and naming.
+For each slice, distinguish file groups only when the categories are relevant. Give each file or group a concrete role plus the exact slice-local responsibility it closes, such as primary contract edit, public registry sync, diagram alignment, analyzer fixture coverage, verify-only evidence, finalization, or explicit exclusion. A bare action such as `Update`, `Refresh`, `Edit`, `Remove`, or `Verify` plus a path is insufficient unless the same bullet also states what responsibility that file has in the slice. Mark new files as proposed only when repository evidence supports placement and naming.
 
 Duplicate the slice block as needed and number slices sequentially. Preserve checkbox syntax and give every slice a concrete title derived from the slice result. Use `Closure` for planned draft slices. Use completion evidence only when updating an existing executed contract and the slice already has concrete completion evidence.
 
