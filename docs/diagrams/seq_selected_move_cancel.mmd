@@ -36,7 +36,7 @@ sequenceDiagram
   Spatial-->>IE: top visible selectable element id
   IE->>IE: start active selected move session
   Note over IE: Session stores pointer token, sessionId, start position, selected ids, movable ids, and current preview delta.
-  IE->>Preview: publish selected move preview with delta Offset.zero
+  IE->>Preview: publish CanvasSelectedMovePreview(delta: Offset.zero)
   IE->>Preview: bump previewRevision for selected move preview
   Preview-->>Runtime: preview revision fact
   Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -46,14 +46,14 @@ sequenceDiagram
     Surface->>Tools: handlePointer(CanvasPointerSample move)
     Tools->>IE: normalized finite move sample
     IE->>IE: update active selected move session delta
-    IE->>Preview: replace immutable main-scene preview snapshot
+    IE->>Preview: replace immutable CanvasSelectedMovePreview(delta)
     IE->>Preview: bump previewRevision when selectedMoveDelta changes
     Preview-->>Runtime: preview revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request main-scene repaint only
     Frame->>Store: capture committed frame facts once
     Frame->>SelectionFacts: capture selected ids once
-    Frame->>Preview: capture selectedMoveDelta once
+    Frame->>Preview: capture CanvasSelectedMovePreview.delta once
     Frame->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and device keys
     alt ordinary paint plan cache hit
       PlanCache-->>Frame: ordinary committed RenderElementRecord list
@@ -104,14 +104,14 @@ sequenceDiagram
     IE->>IE: discard selected move commit intent
   end
 
-  IE->>Preview: clear selected move preview and active session
+  IE->>Preview: publish CanvasNoPreview and clear active selected move session
   IE->>Preview: bump previewRevision for cleared active preview
   Preview-->>Runtime: preview cleanup revision fact
   Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
   Preview->>Frame: request main-scene repaint cleanup
   Frame->>Store: capture committed frame facts once
   Frame->>SelectionFacts: capture selected ids once
-  Frame->>Preview: capture no selectedMoveDelta
+  Frame->>Preview: capture CanvasNoPreview for selected move path
   Frame->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and device keys
   alt ordinary paint plan cache hit
     PlanCache-->>Frame: ordinary committed RenderElementRecord list

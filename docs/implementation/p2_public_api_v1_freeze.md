@@ -14,6 +14,8 @@ errors, validation rules, and equality semantics.
 - P1.5 v1 scope gate green
 - id validation implemented
 - `CanvasFieldUpdate` and its public variants implemented
+- `CanvasPreviewState` implemented as a sealed public union with exported
+  readable preview variants, including shared `CanvasStrokePreview` facts
 - `CanvasRuntime.state`, `CanvasRuntimeState`, `CanvasRuntimeRevisions`, and
   `CanvasRuntimeSummary` implemented as the single public runtime observation
   surface
@@ -81,6 +83,9 @@ errors, validation rules, and equality semantics.
   including `CanvasDiagnosticsVerbose` preview and list-entry limits
 - public-readable resource and diagnostics policy variants from
   `section_04_public_api_v1`
+- sealed `CanvasPreviewState` public API, exported preview variants, stable
+  `CanvasPreviewKind` values, and default identity equality policy from
+  `section_04_public_api_v1`
 - accepted legacy differences from `section_09_accepted_differences`
 - functional ledger mapping remains green from P1.5 before API freeze
 - public DTO immutability, equality, id validation, class modifiers, dartdoc,
@@ -90,6 +95,7 @@ errors, validation rules, and equality semantics.
 
 - `test.api_contract.public_api_v1_compiles_as_written` -> `test/api_contract/public_api_v1_compiles_as_written_test.dart`; also checks exported dartdoc and explicit public class modifiers with analyzer AST
 - `test.api_contract.public_readable_union_variants` -> `test/api_contract/public_readable_union_variants_test.dart`
+- `test.api_contract.preview_state_sealed_union` -> `test/api_contract/preview_state_sealed_union_test.dart`
 - `test.api_contract.canvas_field_update_static_semantics` -> `test/api_contract/canvas_field_update_static_semantics_test.dart`
 - `test.api_contract.no_undefined_public_type_references` -> `test/api_contract/no_undefined_public_type_references_test.dart`; also checks public signature shape with analyzer AST
 - `test.api_contract.no_legacy_public_symbols` -> `test/api_contract/no_legacy_public_symbols_test.dart`
@@ -101,6 +107,7 @@ errors, validation rules, and equality semantics.
 - `api.v1_scope_gate_green_before_freeze`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
+- `api.preview_state_sealed_union_publicly_readable`
 - `api.exported_dartdoc_complete`
 - `api.public_class_modifiers_explicit`
 - `api.public_signature_shape`
@@ -133,6 +140,9 @@ errors, validation rules, and equality semantics.
 - public value equality matches `docs/contracts/public_api_v1.md`
 - public value equality covers `CanvasRuntimeState`,
   `CanvasRuntimeRevisions`, and `CanvasRuntimeSummary`
+- `CanvasPreviewState`, `CanvasStrokePreview`, and every concrete preview
+  variant are exported and publicly readable through the sealed preview-state
+  contract
 - legacy public symbols are not exported
 - no public type references internal runtime classes.
 

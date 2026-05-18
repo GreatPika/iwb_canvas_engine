@@ -41,7 +41,7 @@ sequenceDiagram
   else down is admitted for marquee
     IE->>IE: start marquee session with anchor position
     Note over IE: Session stores pointer token, sessionId, anchor position, and previous selection.
-    IE->>Preview: publish kind marquee with zero-area marqueeRect
+    IE->>Preview: publish CanvasMarqueePreview(rect: zero-area rect)
     Preview-->>Runtime: preview revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request overlay repaint only
@@ -55,11 +55,11 @@ sequenceDiagram
     Tools->>IE: normalized finite move sample
     IE->>IE: normalize rectangle from anchor to current position
     Note over IE,Frame: Marquee drag preview is overlay-only and no selected-move main-scene preview delta is staged.
-    IE->>Preview: replace immutable marquee preview snapshot
+    IE->>Preview: replace immutable CanvasMarqueePreview(rect)
     Preview-->>Runtime: preview revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request overlay repaint only
-    Frame->>Preview: capture previewRevision and marqueeRect once
+    Frame->>Preview: capture previewRevision and CanvasMarqueePreview.rect once
     Frame->>Frame: build marquee fill and stroke overlay primitives
     Frame->>Signals: publish overlay repaint request
     Signals-->>Surface: repaint overlay rectangle preview
@@ -74,7 +74,7 @@ sequenceDiagram
   IE->>IE: run exact family inclusion test and order selected ids by document order
 
   alt next selection equals previous selection
-    IE->>Preview: clear marquee preview and active session
+    IE->>Preview: publish CanvasNoPreview and clear marquee session
     IE->>Preview: bump previewRevision for cleared active preview
     Preview-->>Runtime: preview cleanup revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -116,7 +116,7 @@ sequenceDiagram
       Applier->>Frame: publish committed main repaint bus
       EK->>EK: close edit session and stale handle
       EK-->>IE: edit result
-      IE->>Preview: clear marquee preview and active session
+      IE->>Preview: publish CanvasNoPreview and clear marquee session
       IE->>Preview: bump previewRevision for cleared active preview
       Preview->>Frame: request overlay repaint cleanup
       Preview-->>Runtime: preview cleanup revision fact
@@ -130,7 +130,7 @@ sequenceDiagram
       EK->>Events: discard pending selectMarquee action
       EK->>EK: rollback draft and close session
       EK-->>IE: terminal failure
-      IE->>Preview: clear marquee preview and active session
+      IE->>Preview: publish CanvasNoPreview and clear marquee session
       IE->>Preview: bump previewRevision for cleared active preview
       Preview-->>Runtime: preview cleanup revision fact
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview

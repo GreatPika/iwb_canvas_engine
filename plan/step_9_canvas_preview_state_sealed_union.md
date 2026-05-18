@@ -480,7 +480,7 @@ the source-of-truth contract, registry, and documentation structure only.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Public Preview Contract And Registry
+### Slice 1. [x] Public Preview Contract And Registry
 
 #### Implements
 
@@ -517,7 +517,7 @@ rg -n "const factory CanvasPreviewState\\.none\\(\\) = CanvasNoPreview|const fac
 rg -n "  - CanvasNoPreview$|  - CanvasMarqueePreview$|  - CanvasSelectedMovePreview$|  - CanvasStrokePreview$|  - CanvasPencilStrokePreview$|  - CanvasMarkerStrokePreview$|  - CanvasPendingLineStartPreview$|  - CanvasLinePreview$|  - CanvasEraserPreview$" docs/_registry/public_api_v1.yaml
 awk '/Default identity equality:/{flag=1} /These runtime-owned objects/{flag=0} flag' docs/contracts/public_api_v1.md | rg -n "CanvasPreviewState and preview family types"
 ! awk '/Required value equality:/{flag=1} /For these types/{flag=0} flag' docs/contracts/public_api_v1.md | rg -n "CanvasPreviewState|CanvasNoPreview|CanvasMarqueePreview|CanvasSelectedMovePreview|CanvasStrokePreview|CanvasPencilStrokePreview|CanvasMarkerStrokePreview|CanvasPendingLineStartPreview|CanvasLinePreview|CanvasEraserPreview"
-! rg -n "final class CanvasPreviewState|activePointerId|sessionId|selectedIds|CanvasDrawTool tool|CanvasPreviewKind\\.(stroke|pendingLine|line)" docs/contracts/public_api_v1.md docs/_registry/public_api_v1.yaml
+! awk '/### 4\.18 Preview state/{flag=1} /### 4\.19 Action and text events/{flag=0} flag' docs/contracts/public_api_v1.md | rg -n "final class CanvasPreviewState|activePointerId|sessionId|selectedIds|CanvasDrawTool tool|CanvasPreviewKind\\.(stroke|pendingLine|line)($|[^A-Za-z0-9_])"
 ! awk '/### 4\.18 Preview state/{flag=1} /### 4\.19 Action and text events/{flag=0} flag' docs/contracts/public_api_v1.md | rg -n "selectedMoveDelta|marqueeRect|strokePoints|strokeColor|strokeThickness|strokeOpacity|lineStart|lineEnd|lineTimestampMs|lineColor|lineThickness|eraserCorridor|eraserThickness"
 ```
 
@@ -526,18 +526,18 @@ second command must find the locked factory names, required payload parameters,
 and immutable list-copy requirements. The third command must find every concrete
 preview export in the registry. The fourth and fifth commands must prove
 preview family identity equality and absence from required value equality. The
-sixth command must find no retired nullable-bag declaration, no public
-pointer/session/selected-id payload, no tool-discriminated stroke variant, and
-no renamed preview enum values. The seventh command must find no retired
-preview-section field or constructor payload names in the bounded preview-state
-section.
+sixth command is bounded to the preview-state section and must find no retired
+nullable-bag declaration, no public pointer/session/selected-id payload, no
+tool-discriminated stroke variant, and no renamed preview enum values. The
+seventh command must find no retired preview-section field or constructor
+payload names in the bounded preview-state section.
 
 #### Closure
 
 The public API contract and registry agree on the sealed preview hierarchy and
 the retired nullable-bag seam is absent from those files.
 
-### Slice 2. [ ] Verification And Index Mapping
+### Slice 2. [x] Verification And Index Mapping
 
 #### Implements
 
@@ -596,7 +596,7 @@ surfaces. The second command must find no stale or rejected proof names.
 The source-of-truth verification surfaces identify the future executable proof
 for the sealed preview-state public API and map it to the owning sections.
 
-### Slice 3. [ ] Interaction And Frame Alignment
+### Slice 3. [x] Interaction And Frame Alignment
 
 #### Implements
 
@@ -675,7 +675,7 @@ stroke seam.
 Interaction and frame source-of-truth documents agree with the sealed preview
 variant model and preserve existing repaint/cache behavior.
 
-### Slice 4. [ ] Phase Docs, Audit, And Redesign Retirement
+### Slice 4. [x] Phase Docs, Audit, And Redesign Retirement
 
 #### Implements
 

@@ -31,7 +31,7 @@ store, resolver, or interaction internals.
 
 - P7 resource resolver boundary is implemented.
 - P9 frame rendering exposes main and overlay frame/painter inputs.
-- P10-P12 interaction machines and preview states are implemented.
+- P10-P12 interaction machines and sealed `CanvasPreviewState` variants are implemented.
 
 ## Read first
 
@@ -104,6 +104,8 @@ store, resolver, or interaction internals.
   `section_14_interaction_engine`
 - painter capture, no-live-runtime-read, and opacity/saveLayer policy from
   `section_15_frame_render_contract`
+- sealed public preview-state capture and variant admission from
+  `section_04_public_api_v1`
 - cache policy from `section_18_cache_policy`
 
 ## Tests and guardrails that prove this phase
@@ -117,11 +119,13 @@ store, resolver, or interaction internals.
 - `test.flutter_bridge.surface_resource_session_lifecycle` -> `test/flutter_bridge/surface_resource_session_lifecycle_test.dart`
 - `test.flutter_bridge.pointer_adapter_finite_normalization` -> `test/flutter_bridge/pointer_adapter_finite_normalization_test.dart`
 - `test.flutter_bridge.widget_paint` -> `test/flutter_bridge/widget_paint_test.dart`
+- `test.api_contract.preview_state_sealed_union` -> `test/api_contract/preview_state_sealed_union_test.dart`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
 - `resources.app_key_only`
 - `resources.dirty_no_document_revision`
 - `resources.mutation_inside_edit_only`
+- `api.preview_state_sealed_union_publicly_readable`
 - `preview.selected_move_main_repaint`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
@@ -138,6 +142,9 @@ store, resolver, or interaction internals.
   detach/dispose/runtime swap drop the session without disposing app-owned images
 - surface observes `CanvasRuntime.state` as the public runtime change signal and
   does not own or mutate public runtime snapshots
+- surface captures sealed `CanvasPreviewState` variants and routes
+  `CanvasSelectedMovePreview` to the main painter while overlay variants remain
+  overlay-only
 - `interactive=false` disables pointer routing
 - `interactive=false` cancels active pointer sessions but preserves non-active pending line state
 - resource resolver repaint works

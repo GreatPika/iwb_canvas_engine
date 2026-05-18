@@ -22,8 +22,8 @@ sequenceDiagram
   Frame->>SelectionFacts: capture selected ids and selectionRevision once
   SelectionFacts-->>Frame: selectionRevision and selectionIds
   Frame->>Frame: build CapturedMainFrame with viewportRect, devicePixelRatio, and gridStyle.strokeWidth from paint request
-  Frame->>Preview: capture immutable selected move preview once
-  Preview-->>Frame: selectedMoveDelta or none
+  Frame->>Preview: capture CanvasSelectedMovePreview once
+  Preview-->>Frame: delta or CanvasNoPreview
   Note over Frame: CapturedMainFrame freezes the runtime facts used by this main paint frame.
 
   Frame->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewportRect, and devicePixelRatio

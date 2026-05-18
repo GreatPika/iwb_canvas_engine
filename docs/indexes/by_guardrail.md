@@ -56,6 +56,12 @@ Guardrails extracted from split section 22.
 - Sections: `section_04_public_api_v1`, `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.public_readable_union_variants`, `test.guardrails.blocking_suite`
 
+## api.preview_state_sealed_union_publicly_readable
+
+- Rule: external preview consumers can type-test exported sealed CanvasPreviewState variants and read variant payloads through the public barrel only
+- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.api_contract.preview_state_sealed_union`, `test.guardrails.blocking_suite`
+
 ## api.exported_dartdoc_complete
 
 - Rule: exported public declarations have non-empty Dart documentation summaries before API freeze

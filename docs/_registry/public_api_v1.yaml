@@ -60,6 +60,15 @@ public_exports:
   - CanvasPointerSample
   - CanvasPointerLifecyclePhase
   - CanvasPreviewState
+  - CanvasNoPreview
+  - CanvasMarqueePreview
+  - CanvasSelectedMovePreview
+  - CanvasStrokePreview
+  - CanvasPencilStrokePreview
+  - CanvasMarkerStrokePreview
+  - CanvasPendingLineStartPreview
+  - CanvasLinePreview
+  - CanvasEraserPreview
   - CanvasPreviewKind
   - CanvasActionCommitted
   - CanvasActionType

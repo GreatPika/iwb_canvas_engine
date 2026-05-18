@@ -26,6 +26,7 @@ Guardrails:
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
 - `api.resource_source_app_key_publicly_readable`
+- `api.preview_state_sealed_union_publicly_readable`
 - `api.exported_dartdoc_complete`
 - `api.public_class_modifiers_explicit`
 - `api.public_signature_shape`
@@ -137,6 +138,7 @@ Mandatory guardrails:
 | `api.public_types_complete` | all public signatures reference defined public types |
 | `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package, including `CanvasRuntime.state` and exported runtime state snapshot types while excluding retired document/preview listener getters |
 | `api.resource_source_app_key_publicly_readable` | external resolver code can read `CanvasAppKeyResourceSource.key` from `CanvasImageResource.source` through the public barrel only |
+| `api.preview_state_sealed_union_publicly_readable` | external preview consumers can type-test exported sealed CanvasPreviewState variants and read variant payloads through the public barrel only |
 | `api.exported_dartdoc_complete` | exported public declarations have non-empty Dart documentation summaries before API freeze |
 | `api.public_class_modifiers_explicit` | every exported public class chooses an explicit Dart 3 subtype/implementation policy |
 | `api.public_signature_shape` | public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON or diagnostic boundaries; metadata-bearing DTO signatures use exported `CanvasMetadata` |

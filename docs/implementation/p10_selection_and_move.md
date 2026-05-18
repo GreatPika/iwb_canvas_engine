@@ -17,6 +17,8 @@ typed user action events.
 - pointer sample normalization and terminal cleanup
 - move/select/marquee state machines
 - selected move main-scene preview
+- selected move preview uses `CanvasSelectedMovePreview` with a delta-only
+  public payload
 - selected move resolver called only on valid terminal commit
 - selected move cancel paths never call resolver
 - stale terminal samples cannot commit
@@ -88,6 +90,8 @@ typed user action events.
 - load success/failure interaction ordering from `section_12_load_document`
 - selection, command, action event, and move resolver API from
   `section_04_public_api_v1`
+- sealed `CanvasPreviewState` and delta-only `CanvasSelectedMovePreview` public
+  payload from `section_04_public_api_v1`
 - selection owner, selectionRevision, and document/selection separation from
   `section_02_architecture_model` and `section_10_runtime_data_model`
 - selected move repaint/caching interaction with `section_15_frame_render_contract`
@@ -97,6 +101,7 @@ typed user action events.
 - `test.api.typed_action_payloads` -> `test/api/typed_action_payloads_test.dart`
 - `test.interaction.commands_emit_user_actions` -> `test/interaction/commands_emit_user_actions_test.dart`
 - `test.edit.staged_document_load_success_failure` -> `test/edit/staged_document_load_success_failure_test.dart`
+- `test.api_contract.preview_state_sealed_union` -> `test/api_contract/preview_state_sealed_union_test.dart`
 - `test.interaction.preview_public_state` -> `test/interaction/preview_public_state_test.dart`
 - `test.interaction.state_machines` -> `test/interaction/state_machines_test.dart`
 - `test.interaction.move_resolver_reentrancy` -> `test/interaction/move_resolver_reentrancy_test.dart`
@@ -105,6 +110,7 @@ typed user action events.
 - `test.selection.runtime_owner_separation` -> `test/selection/runtime_owner_separation_test.dart`
 - `test.guardrails.selection_boundary_imports` -> `test/guardrails/selection_boundary_imports_test.dart`
 - `preview.selected_move_main_repaint`
+- `api.preview_state_sealed_union_publicly_readable`
 - `events.commands_emit_user_actions`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
@@ -122,6 +128,8 @@ typed user action events.
   when preview state actually changes
 - marquee selection commits through `EditKernel`
 - selected move preview increments main repaint, not overlay repaint
+- selected move preview exposes only `CanvasSelectedMovePreview.delta`; selected
+  ids stay owned by selection capture
 - selected move commit emits typed move action only after atomic install
 - resolver cannot reenter mutation
 - resolver is not called on cancel, load, mode change, dispose, or stale terminal cleanup paths

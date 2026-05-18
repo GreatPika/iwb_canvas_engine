@@ -37,9 +37,11 @@ Required tests:
 - `test.frame.paint_plan_excludes_selection_state`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
 - `test.frame.selected_supplement_staging_no_global_sort`
+- `test.api_contract.preview_state_sealed_union`
 - `test.flutter_bridge.widget_paint`
 Guardrails:
 - `preview.selected_move_main_repaint`
+- `api.preview_state_sealed_union_publicly_readable`
 - `frame.no_global_scene_sort`
 - `frame.paint_plan_excludes_preview_delta`
 - `frame.paint_plan_excludes_selection_state`
@@ -84,6 +86,14 @@ CapturedOverlayFrame
   previewState
   selectionStyle
 ```
+
+Frame consumes public preview state by variant. `CanvasSelectedMovePreview` is
+captured for the main-scene selected supplement path only. `CanvasMarqueePreview`,
+`CanvasPencilStrokePreview`, `CanvasMarkerStrokePreview`,
+`CanvasPendingLineStartPreview`, `CanvasLinePreview`, and `CanvasEraserPreview`
+are admitted by overlay frame capture. `CanvasStrokePreview` supplies the shared
+points, color, thickness, and opacity facts for pencil and marker overlay
+primitives.
 
 Rules:
 
@@ -162,7 +172,7 @@ Algorithm:
    gridStrokeWidth, viewCameraRevision, viewCameraOffset, selectedMoveDelta,
    previewDelta, selected ids, selection flags, selectionRevision, or captured
    style-only inputs.
-5. When selectedMoveDelta is active, read selected ids through the captured
+5. When CanvasSelectedMovePreview is active, read selected ids through the captured
    selection facts boundary and filter movable selected ids from the
    ordinary record stream for this frame only.
 6. Query visibilityRect shifted by -previewDelta for selected supplement

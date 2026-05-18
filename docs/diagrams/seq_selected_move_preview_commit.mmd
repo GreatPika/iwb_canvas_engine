@@ -41,7 +41,7 @@ sequenceDiagram
   alt hit is selected and movable set is not empty
     IE->>IE: start selected move session
     Note over IE: Session stores pointer token, sessionId, start position, selected ids, movable ids, and delta Offset.zero.
-    IE->>Preview: publish kind selectedMove, selectedMoveDelta Offset.zero
+    IE->>Preview: publish CanvasSelectedMovePreview(delta: Offset.zero)
     IE->>Preview: bump previewRevision for selected move preview
     Preview-->>Runtime: preview revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -55,14 +55,14 @@ sequenceDiagram
     Tools->>IE: normalized finite move sample
     IE->>IE: compute previewDelta from session start position
     Note over IE,Spatial: No per-delta hit-test. Preview uses selected ids and the session delta captured at pointer down.
-    IE->>Preview: replace immutable snapshot with selectedMoveDelta
+    IE->>Preview: replace immutable CanvasSelectedMovePreview(delta)
     IE->>Preview: bump previewRevision when selectedMoveDelta changes
     Preview-->>Runtime: preview revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request main-scene repaint only
     Frame->>Store: capture committed frame facts once
     Frame->>SelectionFacts: capture selected ids once
-    Frame->>Preview: capture selectedMoveDelta once
+    Frame->>Preview: capture CanvasSelectedMovePreview.delta once
     Frame->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and device keys
     alt ordinary paint plan cache hit
       PlanCache-->>Frame: ordinary committed RenderElementRecord list
@@ -91,7 +91,7 @@ sequenceDiagram
   IE->>IE: read proposedDelta from selected move session
 
   alt proposedDelta is zero or movable set is empty
-    IE->>Preview: clear selected move preview and session
+    IE->>Preview: publish CanvasNoPreview and clear selected move session
     IE->>Preview: bump previewRevision for cleared active preview
     Preview-->>Runtime: preview cleanup revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -111,14 +111,14 @@ sequenceDiagram
     end
 
     alt CanvasMoveCancel returned
-      IE->>Preview: clear selected move preview and session
+      IE->>Preview: publish CanvasNoPreview and clear selected move session
       IE->>Preview: bump previewRevision for cleared active preview
       Preview-->>Runtime: preview cleanup revision fact
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Preview->>Frame: request main-scene repaint cleanup
       IE-->>Tools: finish with no edit and no action event
     else resolver throws or returns non-finite delta
-      IE->>Preview: clear selected move preview and session
+      IE->>Preview: publish CanvasNoPreview and clear selected move session
       IE->>Preview: bump previewRevision for cleared active preview
       Preview-->>Runtime: preview cleanup revision fact
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -159,7 +159,7 @@ sequenceDiagram
         Applier->>Frame: publish committed main repaint bus
         EK->>EK: close edit session and stale handle
         EK-->>IE: edit result
-        IE->>Preview: clear selected move preview and session
+        IE->>Preview: publish CanvasNoPreview and clear selected move session
         IE->>Preview: bump previewRevision for cleared active preview
         Preview->>Frame: request main-scene repaint cleanup
         Preview-->>Runtime: preview cleanup revision fact
@@ -173,7 +173,7 @@ sequenceDiagram
         EK->>Events: discard pending moveSelection action
         EK->>EK: rollback draft and close session
         EK-->>IE: terminal failure
-        IE->>Preview: clear selected move preview and session
+        IE->>Preview: publish CanvasNoPreview and clear selected move session
         IE->>Preview: bump previewRevision for cleared active preview
         Preview-->>Runtime: preview cleanup revision fact
         Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview

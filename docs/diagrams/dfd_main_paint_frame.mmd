@@ -18,7 +18,7 @@ flowchart LR
   end
 
   subgraph Interaction["InteractionEngine"]
-    PreviewSnapshot["Immutable preview snapshot\nselected move delta if active"]
+    PreviewSnapshot["CanvasSelectedMovePreview snapshot\ndelta if active"]
   end
 
   subgraph Spatial["SpatialKernel"]
@@ -71,8 +71,8 @@ flowchart LR
   ViewCamera -->|"viewCameraRevision and viewCameraOffset"| CapturedFrame
   Capture -->|"read selected ids once"| SelectionFacts
   SelectionFacts -->|"selectionRevision and selected ids"| CapturedFrame
-  Capture -->|"read immutable selected move preview once"| PreviewSnapshot
-  PreviewSnapshot -->|"selectedMoveDelta or none"| CapturedFrame
+  Capture -->|"read CanvasSelectedMovePreview once"| PreviewSnapshot
+  PreviewSnapshot -->|"delta or none"| CapturedFrame
 
   CapturedFrame -->|"ordinary cache key\nstructural, bounds, elementVisual,\nviewportRect, devicePixelRatio"| PaintPlanCache
   PaintPlanCache -->|"cache hit: ordinary committed records"| OrdinaryPlan

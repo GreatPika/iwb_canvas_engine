@@ -31,6 +31,7 @@ Related diagrams:
 - `seq_single_active_surface`
 Required tests:
 - `test.api_contract.public_readable_union_variants`
+- `test.api_contract.preview_state_sealed_union`
 - `test.api_contract.public_api_v1_compiles_as_written`
 - `test.api.canvas_field_update`
 - `test.api_contract.canvas_field_update_static_semantics`
@@ -51,6 +52,7 @@ Guardrails:
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
 - `api.resource_source_app_key_publicly_readable`
+- `api.preview_state_sealed_union_publicly_readable`
 - `api.exported_dartdoc_complete`
 - `api.public_class_modifiers_explicit`
 - `api.public_signature_shape`
@@ -177,7 +179,7 @@ CanvasPalette
 CanvasElement and element family types
 CanvasElementUpdate and update family types
 CanvasClearResult
-CanvasPreviewState
+CanvasPreviewState and preview family types
 CanvasActionCommitted
 CanvasActionPayload and payload family types
 CanvasTextEditRequested
@@ -1487,7 +1489,9 @@ v1 resource rules:
 
 ### 4.18 Preview state
 
-The next API exposes read-only preview state because the legacy example reads pending line and stroke preview state.
+The next API exposes read-only preview state because applications need to
+render pending line, stroke, marquee, eraser, and selected-move previews without
+being able to construct impossible cross-kind states.
 
 ```dart
 enum CanvasPreviewKind {
@@ -1501,42 +1505,166 @@ enum CanvasPreviewKind {
   eraser,
 }
 
-final class CanvasPreviewState {
-  CanvasPreviewState({
-    required this.kind,
-    this.activePointerId,
-    this.sessionId,
-    this.selectedMoveDelta = Offset.zero,
-    this.marqueeRect,
-    Iterable<Offset> strokePoints = const [],
-    this.strokeColor,
-    this.strokeThickness,
-    this.strokeOpacity,
-    this.lineStart,
-    this.lineEnd,
-    this.lineTimestampMs,
-    this.lineColor,
-    this.lineThickness,
-    Iterable<Offset> eraserCorridor = const [],
-    this.eraserThickness,
+sealed class CanvasPreviewState {
+  const CanvasPreviewState();
+
+  const factory CanvasPreviewState.none() = CanvasNoPreview;
+  const factory CanvasPreviewState.marquee({
+    required Rect rect,
+  }) = CanvasMarqueePreview;
+  const factory CanvasPreviewState.selectedMove({
+    required Offset delta,
+  }) = CanvasSelectedMovePreview;
+  factory CanvasPreviewState.pencilStroke({
+    required Iterable<Offset> points,
+    required Color color,
+    required double thickness,
+    required double opacity,
+  }) = CanvasPencilStrokePreview;
+  factory CanvasPreviewState.markerStroke({
+    required Iterable<Offset> points,
+    required Color color,
+    required double thickness,
+    required double opacity,
+  }) = CanvasMarkerStrokePreview;
+  const factory CanvasPreviewState.pendingLineStart({
+    required Offset start,
+    required int timestampMs,
+    required Color color,
+    required double thickness,
+  }) = CanvasPendingLineStartPreview;
+  const factory CanvasPreviewState.linePreview({
+    required Offset start,
+    required Offset end,
+    required Color color,
+    required double thickness,
+  }) = CanvasLinePreview;
+  factory CanvasPreviewState.eraser({
+    required Iterable<Offset> corridor,
+    required double thickness,
+  }) = CanvasEraserPreview;
+
+  CanvasPreviewKind get kind;
+}
+
+final class CanvasNoPreview extends CanvasPreviewState {
+  const CanvasNoPreview();
+
+  @override
+  CanvasPreviewKind get kind => CanvasPreviewKind.none;
+}
+
+final class CanvasMarqueePreview extends CanvasPreviewState {
+  const CanvasMarqueePreview({required this.rect});
+  final Rect rect;
+
+  @override
+  CanvasPreviewKind get kind => CanvasPreviewKind.marquee;
+}
+
+final class CanvasSelectedMovePreview extends CanvasPreviewState {
+  const CanvasSelectedMovePreview({required this.delta});
+  final Offset delta;
+
+  @override
+  CanvasPreviewKind get kind => CanvasPreviewKind.selectedMove;
+}
+
+sealed class CanvasStrokePreview extends CanvasPreviewState {
+  const CanvasStrokePreview();
+  List<Offset> get points;
+  Color get color;
+  double get thickness;
+  double get opacity;
+}
+
+final class CanvasPencilStrokePreview extends CanvasStrokePreview {
+  CanvasPencilStrokePreview({
+    required Iterable<Offset> points,
+    required this.color,
+    required this.thickness,
+    required this.opacity,
+  }) : points = List.unmodifiable(points);
+
+  @override
+  final List<Offset> points;
+  @override
+  final Color color;
+  @override
+  final double thickness;
+  @override
+  final double opacity;
+
+  @override
+  CanvasPreviewKind get kind => CanvasPreviewKind.pencilStroke;
+}
+
+final class CanvasMarkerStrokePreview extends CanvasStrokePreview {
+  CanvasMarkerStrokePreview({
+    required Iterable<Offset> points,
+    required this.color,
+    required this.thickness,
+    required this.opacity,
+  }) : points = List.unmodifiable(points);
+
+  @override
+  final List<Offset> points;
+  @override
+  final Color color;
+  @override
+  final double thickness;
+  @override
+  final double opacity;
+
+  @override
+  CanvasPreviewKind get kind => CanvasPreviewKind.markerStroke;
+}
+
+final class CanvasPendingLineStartPreview extends CanvasPreviewState {
+  const CanvasPendingLineStartPreview({
+    required this.start,
+    required this.timestampMs,
+    required this.color,
+    required this.thickness,
   });
 
-  final CanvasPreviewKind kind;
-  final int? activePointerId;
-  final int? sessionId;
-  final Offset selectedMoveDelta;
-  final Rect? marqueeRect;
-  List<Offset> get strokePoints;
-  final Color? strokeColor;
-  final double? strokeThickness;
-  final double? strokeOpacity;
-  final Offset? lineStart;
-  final Offset? lineEnd;
-  final int? lineTimestampMs;
-  final Color? lineColor;
-  final double? lineThickness;
-  List<Offset> get eraserCorridor;
-  final double? eraserThickness;
+  final Offset start;
+  final int timestampMs;
+  final Color color;
+  final double thickness;
+
+  @override
+  CanvasPreviewKind get kind => CanvasPreviewKind.pendingLineStart;
+}
+
+final class CanvasLinePreview extends CanvasPreviewState {
+  const CanvasLinePreview({
+    required this.start,
+    required this.end,
+    required this.color,
+    required this.thickness,
+  });
+
+  final Offset start;
+  final Offset end;
+  final Color color;
+  final double thickness;
+
+  @override
+  CanvasPreviewKind get kind => CanvasPreviewKind.linePreview;
+}
+
+final class CanvasEraserPreview extends CanvasPreviewState {
+  CanvasEraserPreview({
+    required Iterable<Offset> corridor,
+    required this.thickness,
+  }) : corridor = List.unmodifiable(corridor);
+
+  final List<Offset> corridor;
+  final double thickness;
+
+  @override
+  CanvasPreviewKind get kind => CanvasPreviewKind.eraser;
 }
 ```
 
@@ -1544,12 +1672,19 @@ Rules:
 
 ```text
 - preview state is immutable;
+- CanvasPreviewState variants represent the only valid preview payload shapes;
+- CanvasPreviewKind remains a stable read-only compatibility discriminator;
+- CanvasStrokePreview owns shared pencil and marker preview facts;
+- pencil, marker, and eraser iterable inputs are copied into unmodifiable lists;
+- selected ids, pointer tokens, active pointer ids, and session ids are not
+  public preview payload;
 - every pointer preview update creates a small new snapshot or reuses previous unchanged snapshot;
 - no CanvasDocument materialization in preview getters;
 - pending line start is epoch-bound;
 - loadDocument success clears preview;
 - loadDocument failure preserves preview;
 - selected move preview is main-scene preview, not overlay-only preview.
+- migration is by type testing or pattern matching on concrete preview variants.
 ```
 
 ### 4.19 Action and text events

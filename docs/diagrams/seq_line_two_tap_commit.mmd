@@ -33,12 +33,12 @@ sequenceDiagram
   Store-->>ReadPort: current epoch
   ReadPort-->>IE: epoch for pending line start
   IE->>IE: store pending line start bound to current epoch
-  IE->>Preview: publish kind pendingLineStart with start, timestamp, color, and thickness
+  IE->>Preview: publish CanvasPendingLineStartPreview(start, timestampMs, color, thickness)
   Note over IE,Preview: Pending line session is epoch-bound. Preview snapshot is immutable and no committed document state is touched.
   Preview-->>Runtime: preview revision fact
   Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
   Preview->>Frame: request overlay repaint only
-  Frame->>Preview: capture previewRevision and pending line start once
+  Frame->>Preview: capture previewRevision and CanvasPendingLineStartPreview once
   Frame->>Frame: build immutable pending-line overlay primitive
   Frame->>Signals: publish overlay repaint request
   Signals-->>Surface: repaint overlay pending line start
@@ -48,12 +48,12 @@ sequenceDiagram
     Surface->>Tools: handlePointer(CanvasPointerSample move)
     Tools->>IE: normalized finite move sample
     IE->>IE: verify pending line epoch matches current controllerEpoch
-    IE->>Preview: replace with kind linePreview using same start and preview end
+    IE->>Preview: replace with CanvasLinePreview(start, end, color, thickness)
     Note over IE,Frame: Line preview is overlay-only and no selected-move main-scene preview delta is staged.
     Preview-->>Runtime: preview revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request overlay repaint only
-    Frame->>Preview: capture previewRevision and line preview once
+    Frame->>Preview: capture previewRevision and CanvasLinePreview once
     Frame->>Geometry: build finite line preview bounds from start, end, and thickness
     Frame->>Frame: build immutable line overlay primitive
     Frame->>Signals: publish overlay repaint request
@@ -68,7 +68,7 @@ sequenceDiagram
     User->>Surface: cancel or external interruption
     Surface->>Tools: terminal cleanup request
     Tools->>IE: cleanup pending line state
-    IE->>Preview: clear pending line or line preview
+    IE->>Preview: publish CanvasNoPreview for pending line or line preview
     IE->>Preview: bump previewRevision for cleared active preview
     Preview-->>Runtime: preview cleanup revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -79,13 +79,13 @@ sequenceDiagram
   else interactive=false with pending line but no active routed pointer
     Surface->>Tools: disable future routing only
     Tools->>IE: no active routed pointer cancel
-    IE->>Preview: preserve pending line or line preview
+    IE->>Preview: preserve CanvasPendingLineStartPreview or CanvasLinePreview
     Note over IE,Signals: No pending line cleanup, overlay cleanup repaint, edit, action, or committed mutation is produced.
   else terminal second tap sample is invalid
     User->>Surface: second tap terminal sample
     Surface->>Tools: handlePointer(CanvasPointerSample up)
     Tools->>IE: invalid terminal sample for cleanup only
-    IE->>Preview: clear pending line or line preview
+    IE->>Preview: publish CanvasNoPreview for pending line or line preview
     IE->>Preview: bump previewRevision for cleared active preview
     Preview-->>Runtime: preview cleanup revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -101,7 +101,7 @@ sequenceDiagram
     IE->>Geometry: validate finite line start, end, color, and thickness
 
     alt line validation rejects
-      IE->>Preview: clear pending line or line preview
+      IE->>Preview: publish CanvasNoPreview for pending line or line preview
       IE->>Preview: bump previewRevision for cleared active preview
       Preview-->>Runtime: preview cleanup revision fact
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -142,7 +142,7 @@ sequenceDiagram
         Applier->>Frame: publish committed main repaint bus
         EK->>EK: close edit session and stale handle
         EK-->>IE: edit result
-        IE->>Preview: clear pending line or line preview
+        IE->>Preview: publish CanvasNoPreview for pending line or line preview
         IE->>Preview: bump previewRevision for cleared active preview
         Preview->>Frame: request overlay repaint cleanup
         Preview-->>Runtime: preview cleanup revision fact
@@ -156,7 +156,7 @@ sequenceDiagram
         EK->>Events: discard pending drawLine action
         EK->>EK: rollback draft and close session
         EK-->>IE: terminal failure
-        IE->>Preview: clear pending line or line preview
+        IE->>Preview: publish CanvasNoPreview for pending line or line preview
         IE->>Preview: bump previewRevision for cleared active preview
         Preview-->>Runtime: preview cleanup revision fact
         Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview

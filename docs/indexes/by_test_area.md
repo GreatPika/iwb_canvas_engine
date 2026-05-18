@@ -16,6 +16,16 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_04_public_api_v1`, `section_07_resource_lifecycle`, `section_23_tests`
 - Guardrails: `api.resource_source_app_key_publicly_readable`, `api.public_exports_complete`, `api.equality_policy_explicit`, `resources.app_key_only`
 
+## test.api_contract.preview_state_sealed_union
+
+- Path: `test/api_contract/preview_state_sealed_union_test.dart`
+- Phases: `P2`, `P10`, `P11`, `P12`, `P13`
+- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_23_tests`
+- Guardrails: `api.preview_state_sealed_union_publicly_readable`
+- Focus: public preview state is a sealed union with exported readable variants,
+  stable CanvasPreviewKind values, shared CanvasStrokePreview facts, immutable
+  iterable payloads, and no public pointer/session/selection-owned payload.
+
 ## test.api.canvas_field_update
 
 - Path: `test/api/canvas_field_update_test.dart`

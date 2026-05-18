@@ -94,6 +94,7 @@ Related diagrams:
 - `none`
 Required tests:
 - `test.api_contract.public_readable_union_variants`
+- `test.api_contract.preview_state_sealed_union`
 - `test.api_contract.public_api_v1_compiles_as_written`
 - `test.api.canvas_field_update`
 - `test.api_contract.canvas_field_update_static_semantics`
@@ -159,6 +160,7 @@ Required tests:
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
 - `test.frame.cache_capacity_eviction_policy`
 - `test.frame.selected_supplement_staging_no_global_sort`
+- `test.api_contract.preview_state_sealed_union`
 - `test.interaction.preview_public_state`
 - `test.interaction.state_machines`
 - `test.interaction.move_resolver_reentrancy`
@@ -182,6 +184,7 @@ Required tests:
 ```text
 test/api_contract/public_api_v1_compiles_as_written_test.dart
 test/api_contract/public_readable_union_variants_test.dart
+test/api_contract/preview_state_sealed_union_test.dart
 test/api/canvas_field_update_test.dart
 test/api_contract/canvas_field_update_static_semantics_test.dart
 test/api_contract/no_undefined_public_type_references_test.dart
@@ -302,6 +305,14 @@ test/api_contract/dto_immutability_test.dart
   -> proves invalid public construction is rejected before DTO exposure;
   -> proves collection/metadata-owning DTO constructors are non-const while
      scalar-only DTOs and marker/empty variants keep only approved const forms.
+
+test/api_contract/preview_state_sealed_union_test.dart
+  -> proves CanvasPreviewState is a sealed public union with exported readable
+     concrete variants and stable CanvasPreviewKind values;
+  -> proves CanvasStrokePreview is the shared public pencil/marker preview base;
+  -> proves preview iterable payloads are defensively copied and unmodifiable;
+  -> proves selected ids, pointer tokens, active pointer ids, session ids, and
+     tool-discriminated generic stroke payloads are not public preview state.
 
 test/guardrails/import_boundaries_test.dart
   -> verifies package-owned source paths obey the forbidden import matrix;

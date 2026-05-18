@@ -111,6 +111,7 @@
     - api.public_types_complete
     - api.public_api_compiles_as_written
     - api.resource_source_app_key_publicly_readable
+    - api.preview_state_sealed_union_publicly_readable
     - api.exported_dartdoc_complete
     - api.public_class_modifiers_explicit
     - api.public_signature_shape
@@ -121,6 +122,7 @@
     - surface.interactive_false_pending_line_preserved
   tests:
     - test.api_contract.public_readable_union_variants
+    - test.api_contract.preview_state_sealed_union
     - test.api_contract.public_api_v1_compiles_as_written
     - test.api.canvas_field_update
     - test.api_contract.canvas_field_update_static_semantics
@@ -497,6 +499,7 @@
     - state_pending_text_edit_request
   guardrails:
     - preview.selected_move_main_repaint
+    - api.preview_state_sealed_union_publicly_readable
     - events.commands_emit_user_actions
     - load.prepares_before_interrupt
     - load.success_interrupts_before_install
@@ -514,6 +517,7 @@
     - test.flutter_bridge.interactive_false_pending_line_preserved
     - test.flutter_bridge.pointer_adapter_finite_normalization
     - test.runtime.interaction_settings_state
+    - test.api_contract.preview_state_sealed_union
     - test.interaction.preview_public_state
     - test.interaction.state_machines
     - test.interaction.move_resolver_reentrancy
@@ -556,6 +560,7 @@
     - seq_overlay_paint
   guardrails:
     - preview.selected_move_main_repaint
+    - api.preview_state_sealed_union_publicly_readable
     - frame.no_global_scene_sort
     - frame.paint_plan_excludes_preview_delta
     - frame.paint_plan_excludes_selection_state
@@ -568,6 +573,7 @@
     - test.frame.paint_plan_excludes_selection_state
     - test.frame.camera_pan_preserves_ordinary_paint_plan
     - test.frame.selected_supplement_staging_no_global_sort
+    - test.api_contract.preview_state_sealed_union
     - test.flutter_bridge.widget_paint
   do_not_assume:
     - no live runtime reads in painters
@@ -759,6 +765,7 @@
     - api.public_types_complete
     - api.public_api_compiles_as_written
     - api.resource_source_app_key_publicly_readable
+    - api.preview_state_sealed_union_publicly_readable
     - api.exported_dartdoc_complete
     - api.public_class_modifiers_explicit
     - api.public_signature_shape
@@ -918,6 +925,7 @@
     - api.functional_ledger_complete
   tests:
     - test.api_contract.public_readable_union_variants
+    - test.api_contract.preview_state_sealed_union
     - test.api_contract.public_api_v1_compiles_as_written
     - test.api.canvas_field_update
     - test.api_contract.canvas_field_update_static_semantics
@@ -1107,6 +1115,7 @@
     - api.public_types_complete
     - api.public_api_compiles_as_written
     - api.resource_source_app_key_publicly_readable
+    - api.preview_state_sealed_union_publicly_readable
     - api.exported_dartdoc_complete
     - api.public_class_modifiers_explicit
     - api.public_signature_shape

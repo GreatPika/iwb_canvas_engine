@@ -48,6 +48,7 @@ Required tests:
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
 - `test.flutter_bridge.pointer_adapter_finite_normalization`
 - `test.runtime.interaction_settings_state`
+- `test.api_contract.preview_state_sealed_union`
 - `test.interaction.preview_public_state`
 - `test.interaction.state_machines`
 - `test.interaction.move_resolver_reentrancy`
@@ -57,6 +58,7 @@ Required tests:
 - `test.flutter_bridge.widget_paint`
 Guardrails:
 - `preview.selected_move_main_repaint`
+- `api.preview_state_sealed_union_publicly_readable`
 - `events.commands_emit_user_actions`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
@@ -110,7 +112,8 @@ Rules:
   expose store tables, selection internals, or mutation methods;
 - InteractionEngine commits only through EditKernel.
 - public interaction setting changes publish `state.revisions.interaction`;
-- preview changes publish `state.revisions.preview`;
+- preview changes publish sealed `CanvasPreviewState` variants and
+  `state.revisions.preview`;
 - interaction cleanup that is already a no-op publishes no new public state
   snapshot.
 ```
@@ -133,15 +136,21 @@ pointer-owned preview changes, cancellation is public-state silent.
 
 ### 14.2 Preview repaint target
 
-| Preview kind | Repaint target |
+InteractionEngine is the only producer of public preview variants. It publishes
+`CanvasNoPreview` for cleanup, `CanvasSelectedMovePreview` for the main-scene
+selected move path, and overlay preview variants for marquee, pencil, marker,
+pending line start, line preview, and eraser corridor. Public preview payloads
+do not include selected ids, pointer tokens, active pointer ids, or session ids.
+
+| Preview variant | Repaint target |
 |---|---|
-| marquee | overlay only |
-| pencil stroke | overlay only |
-| marker stroke | overlay only |
-| pending line start | overlay only |
-| line preview | overlay only |
-| eraser corridor | overlay only |
-| selected move preview | main scene only |
+| CanvasMarqueePreview | overlay only |
+| CanvasPencilStrokePreview | overlay only |
+| CanvasMarkerStrokePreview | overlay only |
+| CanvasPendingLineStartPreview | overlay only |
+| CanvasLinePreview | overlay only |
+| CanvasEraserPreview | overlay only |
+| CanvasSelectedMovePreview | main scene only |
 
 This is mandatory. The legacy selected move preview uses main-scene repaint
 through selected supplement staging; next behavior must preserve that functional

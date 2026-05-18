@@ -92,6 +92,7 @@ Guardrails:
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
 - `api.resource_source_app_key_publicly_readable`
+- `api.preview_state_sealed_union_publicly_readable`
 - `api.exported_dartdoc_complete`
 - `api.public_class_modifiers_explicit`
 - `api.public_signature_shape`
@@ -165,7 +166,8 @@ Release is blocked unless all statements are true:
 5. api.public_types_complete is green.
 6. api.public_api_compiles_as_written is green, including the
    `CanvasRuntime.state` surface and exported runtime state snapshot types.
-7. public dartdoc, class modifier, and public signature shape guardrails are green.
+7. public dartdoc, class modifier, public signature shape, and sealed preview
+   state readability guardrails are green.
 8. api.no_legacy_public_types is green.
 9. core.no_legacy_imports is green.
 10. core.import_boundaries and core.no_unapproved_part_files are green.

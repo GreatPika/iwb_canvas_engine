@@ -9,7 +9,7 @@ double-tap request routing.
 ## Build scope
 
 - eraser state machine
-- eraser corridor preview
+- `CanvasEraserPreview` corridor preview
 - eraser exact-hit engine integration
 - eraser terminal commit through `EditKernel`
 - eraser budget-exceeded behavior: corridor-only preview or terminal cleanup/no-op
@@ -73,7 +73,8 @@ double-tap request routing.
 - eraser policy, exact-check budgets, and no-partial-commit behavior from
   `section_16_geometry_policy`
 - eraser and text interaction behavior from `section_14_interaction_engine`
-- text edit event and erase action payload API from `section_04_public_api_v1`
+- `CanvasEraserPreview`, text edit event, and erase action payload API from
+  `section_04_public_api_v1`
 - operation matrix rows for eraser preview/commit and text request behavior from
   `section_13_operation_matrix`
 
@@ -81,11 +82,13 @@ double-tap request routing.
 
 - `test.geometry.eraser_exact_budget_no_partial_commit` -> `test/geometry/eraser_exact_budget_no_partial_commit_test.dart`
 - `test.api.typed_action_payloads` -> `test/api/typed_action_payloads_test.dart`
+- `test.api_contract.preview_state_sealed_union` -> `test/api_contract/preview_state_sealed_union_test.dart`
 - `test.interaction.commands_emit_user_actions` -> `test/interaction/commands_emit_user_actions_test.dart`
 - `test.interaction.preview_public_state` -> `test/interaction/preview_public_state_test.dart`
 - `test.interaction.state_machines` -> `test/interaction/state_machines_test.dart`
 - `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
 - `geometry.eraser_exact_budget_no_partial`
+- `api.preview_state_sealed_union_publicly_readable`
 - `events.commands_emit_user_actions`
 - `interaction.no_concrete_store_imports`
 - `interaction.no_stale_terminal_commit`
@@ -95,6 +98,8 @@ double-tap request routing.
 ## Exit gate
 
 - eraser preview tests green
+- eraser preview publishes `CanvasEraserPreview` with an immutable corridor and
+  thickness, while text requests remain outside preview state
 - eraser preview and active eraser cleanup publish `state.revisions.preview`
   without document, selection, resourceVisual, interaction, viewCamera, or action
   effects; empty cleanup is silent

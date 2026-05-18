@@ -18,19 +18,19 @@ sequenceDiagram
   Surface-->>Frame: selectionStyle for this paint frame
   Note over Frame: CapturedOverlayFrame freezes previewRevision, viewCameraRevision, viewCameraOffset, immutable previewState, and selectionStyle for this paint frame.
 
-  Frame->>Frame: admit overlay preview kind from captured previewState only
+  Frame->>Frame: admit overlay preview variant from captured CanvasPreviewState only
 
-  alt preview kind is marquee
+  alt preview is CanvasMarqueePreview
     Frame->>Builder: build marquee fill and stroke primitive
-  else preview kind is pencil or marker stroke
-    Frame->>Builder: build stroke preview primitive
-  else preview kind is pending line
+  else preview is CanvasPencilStrokePreview or CanvasMarkerStrokePreview
+    Frame->>Builder: build stroke preview primitive from CanvasStrokePreview facts
+  else preview is CanvasPendingLineStartPreview
     Frame->>Builder: build pending line start primitive
-  else preview kind is line
+  else preview is CanvasLinePreview
     Frame->>Builder: build line preview primitive
-  else preview kind is eraser
+  else preview is CanvasEraserPreview
     Frame->>Builder: build eraser corridor primitive
-  else preview kind is selected move
+  else preview is CanvasSelectedMovePreview
     Frame-->>MainPath: reject selected move from overlay admission
     Note over MainPath: Selected move preview is rendered by the main scene selected supplement path, never by overlay paint.
   else no overlay preview

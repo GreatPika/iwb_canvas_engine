@@ -29,11 +29,11 @@ sequenceDiagram
   IE->>IE: admit one active pointer token
   IE->>IE: read finite eraserThickness and start eraser session
   Note over IE: Session stores pointer token, sessionId, eraserThickness, and corridor points in world coordinates.
-  IE->>Preview: publish kind eraser with first corridor point
+  IE->>Preview: publish CanvasEraserPreview(corridor, thickness) with first corridor point
   Preview-->>Runtime: preview revision fact
   Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
   Preview->>Frame: request overlay repaint only
-  Frame->>Preview: capture previewRevision and eraser corridor once
+  Frame->>Preview: capture previewRevision and CanvasEraserPreview.corridor once
   Frame->>Frame: build immutable eraser corridor overlay primitive
   Frame->>Signals: publish overlay repaint request
   Signals-->>Surface: repaint overlay eraser corridor
@@ -54,11 +54,11 @@ sequenceDiagram
       Geometry-->>IE: tentative touched ids for session only
     end
     Note over IE,Geometry: Read-only candidate refresh can guide terminal intent, but it does not mutate selection owner, Store, spatial index, or caches.
-    IE->>Preview: replace immutable eraser corridor preview snapshot
+    IE->>Preview: replace immutable CanvasEraserPreview(corridor, thickness)
     Preview-->>Runtime: preview revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request overlay repaint only
-    Frame->>Preview: capture previewRevision and corridor once
+    Frame->>Preview: capture previewRevision and CanvasEraserPreview.corridor once
     Frame->>Frame: build immutable eraser corridor overlay primitive
     Frame->>Signals: publish overlay repaint request
     Signals-->>Surface: repaint overlay eraser corridor
@@ -72,7 +72,7 @@ sequenceDiagram
     User->>Surface: cancel or external interruption
     Surface->>Tools: terminal cleanup request
     Tools->>IE: cleanup active eraser session
-    IE->>Preview: clear eraser corridor and active session
+    IE->>Preview: publish CanvasNoPreview and clear eraser session
     IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request overlay repaint cleanup
     Preview-->>Runtime: preview cleanup revision fact
@@ -83,7 +83,7 @@ sequenceDiagram
   else loadDocument success interrupts active eraser
     Surface->>Tools: terminal cleanup request from external load success
     Tools->>IE: cleanup active eraser session
-    IE->>Preview: clear eraser corridor and active session
+    IE->>Preview: publish CanvasNoPreview and clear eraser session
     IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request overlay repaint cleanup
     Frame->>Frame: defer overlay cleanup to loadDocument post-install repaint scheduling
@@ -98,7 +98,7 @@ sequenceDiagram
     IE->>Spatial: query final corridor envelope for content hit candidates
     Spatial-->>IE: committed candidate handles with generation and structuralRevision
     alt terminal candidate/check budget exceeded / no partial erase
-      IE->>Preview: clear eraser corridor and active session
+      IE->>Preview: publish CanvasNoPreview and clear eraser session
       IE->>Preview: bump previewRevision for cleared active preview
       Preview->>Frame: request overlay repaint cleanup
       Preview-->>Runtime: preview cleanup revision fact
@@ -111,7 +111,7 @@ sequenceDiagram
       Geometry-->>IE: final erasedElementIds in document order
 
       alt final erasedElementIds is empty
-        IE->>Preview: clear eraser corridor and active session
+        IE->>Preview: publish CanvasNoPreview and clear eraser session
         IE->>Preview: bump previewRevision for cleared active preview
         Preview->>Frame: request overlay repaint cleanup
         Preview-->>Runtime: preview cleanup revision fact
@@ -160,7 +160,7 @@ sequenceDiagram
           Applier->>Frame: publish committed main repaint bus
           EK->>EK: close edit session and stale handle
           EK-->>IE: edit result
-          IE->>Preview: clear eraser corridor and active session
+          IE->>Preview: publish CanvasNoPreview and clear eraser session
           IE->>Preview: bump previewRevision for cleared active preview
           Preview->>Frame: request overlay repaint cleanup
           Preview-->>Runtime: preview cleanup revision fact
@@ -174,7 +174,7 @@ sequenceDiagram
           EK->>Events: discard pending erase action
           EK->>EK: rollback draft and close session
           EK-->>IE: terminal failure
-          IE->>Preview: clear eraser corridor and active session
+          IE->>Preview: publish CanvasNoPreview and clear eraser session
           IE->>Preview: bump previewRevision for cleared active preview
           Preview->>Frame: request overlay repaint cleanup
           Preview-->>Runtime: preview cleanup revision fact
