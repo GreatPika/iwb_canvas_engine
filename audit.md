@@ -13,7 +13,7 @@
 - [ ] P3: уточнить resources/surface lifecycle до реализации P7/P13-зон:
       HOLE-004.
 - [ ] P4: сделать guardrails исполнимыми: HOLE-008 и DIAG-PROOF.
-- [ ] P5: закрыть release-readiness proof: HOLE-009, HOLE-010 и HOLE-011.
+- [ ] P5: закрыть release-readiness proof: HOLE-009 и HOLE-010.
 
 ## Блокеры API freeze
 
@@ -31,7 +31,6 @@
 - [ ] HOLE-008: integration surface proof исполнимый, а не субъективный.
 - [ ] HOLE-009: benchmark gates имеют численные thresholds и baseline policy.
 - [ ] HOLE-010: monotonic runtime-created timestamps имеют contract/test/release-gate mapping.
-- [ ] HOLE-011: `docs/tool/check_docs.dart` и наличие `plan/` согласованы.
 - [ ] DIAG-PROOF: disabled diagnostics не allocation-ят records в successful hot paths.
 
 ## HOLE-002 — Operation matrix не покрывает все публичные операции
@@ -191,25 +190,6 @@ operation matrix, tests и release gates. Если это часть functional 
 - [ ] Добавить operation matrix linkage для операций/events, создающих timestamps.
 - [ ] Добавить release gate linkage.
 - [ ] Добавить тест на monotonic order.
-
----
-
-## HOLE-011 — Структурный checker ожидает `plan/`, но в пакете его нет
-
-Статус: Grey/Yellow.
-
-Почему это дыра: `docs/tool/check_docs.dart` включает `plan` в required dirs, но
-в текущем пакете виден `PLAN.md`, а директории `plan/` нет. Если checker должен
-запускаться из этого корня, документационная проверка должна падать. Если zip
-или docs package намеренно частичный, это нужно явно зафиксировать.
-
-Нужно закрыть одним из вариантов:
-
-- [ ] Добавить `plan/`, если он действительно обязателен.
-- [ ] Убрать `plan` из `requiredDirs`, если canonical roadmap теперь `PLAN.md`.
-- [ ] Документировать, что этот docs package частичный, а `check_docs.dart`
-      запускается из другого полного корня.
-- [ ] Добавить или обновить проверку, которая доказывает выбранное правило.
 
 ---
 
