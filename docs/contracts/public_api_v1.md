@@ -1224,8 +1224,8 @@ Edit contract:
 - CanvasEdit handle becomes stale after callback;
 - stale handle operations throw StateError;
 - readDraftDocument may materialize a public document and is not allowed in hot pointer/paint paths;
-- addElement with id collision throws CanvasDataException duplicateId;
-- addElement with missing resource reference throws CanvasDataException missingReference;
+- addElement with id collision throws CanvasDataException duplicateElementId;
+- addElement with missing resource reference throws CanvasDataException missingResourceReference;
 - removeUnusedResource fails with false if resource is referenced by any background/content element, including invisible or locked elements.
 - CanvasEdit.removeElement is a low-level document edit and emits no user action event;
 - CanvasEdit.clearContent is a low-level document edit and emits no user action event.

@@ -32,4 +32,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 10. Interaction request text edit stale guard](plan/step_10_interaction_request_text_edit_stale_guard.md)
 - [x] [Step 11. Operation matrix field-effect taxonomy](plan/step_11_operation_matrix_field_effect_taxonomy.md)
 - [x] [Step 12. Non-invertible transform admission](plan/step_12_non_invertible_transform_admission.md)
-- [ ] [Step 13. Public error code contract prose](plan/step_13_public_error_code_contract_prose.md)
+- [x] [Step 13. Public error code contract prose](plan/step_13_public_error_code_contract_prose.md)
