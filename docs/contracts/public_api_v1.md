@@ -736,6 +736,23 @@ matching legacy engine behavior for schema/readDocument round trips. The same
 the runtime view camera; runtime view camera offset is owned by
 `CanvasCameraPort` and published through `CanvasRuntime.state`.
 
+### 4.8.1 Codec API
+
+```dart
+const int canvasSchemaVersionWrite = 1;
+const Set<int> canvasSchemaVersionsRead = {1};
+
+Map<String, Object?> encodeCanvasDocument(CanvasDocument document);
+String encodeCanvasDocumentToJson(CanvasDocument document);
+CanvasDocument decodeCanvasDocument(Map<String, Object?> json);
+CanvasDocument decodeCanvasDocumentFromJson(String json);
+```
+
+These are public API declarations for the schema v1 codec surface. The
+`CodecBoundary` contract owns schema v1 decode/encode behavior, validation
+order, canonical encoding, supported versions, JSON boundary parsing, and the
+rule that codec calls have no runtime/store side effects.
+
 ### 4.9 Geometry enums and transform
 
 The current package exposes `Transform2D` as a six-component affine transform

@@ -554,7 +554,7 @@ caller-provided validating public constructors are non-const factories, while
 approved const defaults remain available only through marker/empty/default or
 private storage forms.
 
-### Slice 2. [ ] Declare codec public API in public_api_v1
+### Slice 2. [x] Declare codec public API in public_api_v1
 
 #### Implements
 
