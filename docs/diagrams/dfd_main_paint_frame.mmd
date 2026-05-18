@@ -37,7 +37,7 @@ flowchart LR
   subgraph Frame["FrameEngine"]
     RepaintSignal["Main repaint request"]
     Capture["Main frame capture\nsingle runtime read boundary"]
-    CapturedFrame["CapturedMainFrame\ndocument, structural, bounds,\nelementVisual, backgroundRevision,\ngridRevision, gridStrokeWidth,\nresourceVisual, selection,\nview camera, viewportRect,\ndevicePixelRatio, selectedMoveDelta"]
+    CapturedFrame["CapturedMainFrame\ndocument, structural, bounds,\nelementVisual, backgroundRevision,\ngridRevision, gridStrokeWidth,\nresourceVisual, selection,\nselectionStyle,\nview camera, viewportRect,\ndevicePixelRatio, selectedMoveDelta"]
     PaintPlanCache["PaintPlanCache\nordinary committed records only\nno background/grid, view camera,\nselectedMoveDelta, previewDelta,\nor style-only facts in key/value"]
     OrdinaryPlan["Ordinary committed paint plan\ncached RenderElementRecord list"]
     OrdinaryStage["Ordinary paint candidates\nviewport and halo"]
@@ -63,6 +63,7 @@ flowchart LR
   end
 
   Surface -->|"paint asks for main scene"| RepaintSignal
+  Surface -->|"selectionStyle paint input"| Capture
   RepaintSignal -->|"capture once for this paint"| Capture
 
   Capture -->|"read committed frame facts once"| Committed
@@ -89,7 +90,7 @@ flowchart LR
 
   OrdinaryPlan -->|"ordinary stream"| FilterOrdinary
   CapturedFrame -->|"selection ids and preview delta"| FilterOrdinary
-  CapturedFrame -->|"selection ids and style inputs"| SelectionDecoration
+  CapturedFrame -->|"selection ids and selectionStyle"| SelectionDecoration
   CapturedFrame -->|"selectedMoveDelta for this frame"| SupplementStage
   SupplementStage -->|"shifted visibility query only"| ShiftedCandidates
   ShiftedCandidates -->|"selected candidate ids with generations"| SupplementStage

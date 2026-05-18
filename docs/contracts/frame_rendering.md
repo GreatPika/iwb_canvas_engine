@@ -73,6 +73,7 @@ CapturedMainFrame
   viewportRect
   devicePixelRatio
   selectionIds
+  selectionStyle
   selectedMoveDelta
 ```
 

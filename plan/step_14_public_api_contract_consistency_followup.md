@@ -597,7 +597,7 @@ version constants and encode/decode function signatures, while stating that
 The slice is complete when public codec declarations exist in the public API
 contract and no codec behavior ownership has moved out of the codec boundary.
 
-### Slice 3. [ ] Align main-frame selectionStyle capture
+### Slice 3. [x] Align main-frame selectionStyle capture
 
 #### Implements
 

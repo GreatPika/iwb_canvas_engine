@@ -14,14 +14,14 @@ sequenceDiagram
   participant Resolver as CanvasResourceResolver
   participant Painter as Main painter
 
-  Surface->>Frame: paint main scene request(viewportRect, devicePixelRatio, gridStyle, SurfaceResourceSession)
+  Surface->>Frame: paint main scene request(viewportRect, devicePixelRatio, gridStyle, selectionStyle, SurfaceResourceSession)
   Frame->>Store: capture committed tables, document revisions, and resources once
   Store-->>Frame: documentRevision, structuralRevision, boundsRevision, elementVisualRevision, backgroundRevision, gridRevision, resourceVisualRevision
   Frame->>ViewCamera: capture runtime view camera facts once
   ViewCamera-->>Frame: viewCameraRevision and viewCameraOffset
   Frame->>SelectionFacts: capture selected ids and selectionRevision once
   SelectionFacts-->>Frame: selectionRevision and selectionIds
-  Frame->>Frame: build CapturedMainFrame with viewportRect, devicePixelRatio, and gridStyle.strokeWidth from paint request
+  Frame->>Frame: build CapturedMainFrame with viewportRect, devicePixelRatio, gridStyle.strokeWidth, and selectionStyle from paint request
   Frame->>Preview: capture CanvasSelectedMovePreview once
   Preview-->>Frame: delta or CanvasNoPreview
   Note over Frame: CapturedMainFrame freezes the runtime facts used by this main paint frame.
