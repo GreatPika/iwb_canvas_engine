@@ -9,6 +9,7 @@ load have established rollback-safe mutation and replacement boundaries.
 ## Build scope
 
 - `ResourceKernel`
+- `SurfaceResourceSession`
 - `CanvasResourceId` runtime support from the P2 API
 - `CanvasResourceSource.appKey` only, publicly readable as
   `CanvasAppKeyResourceSource.key`
@@ -18,8 +19,10 @@ load have established rollback-safe mutation and replacement boundaries.
 - `markAllResourcesDirty`
 - resource visual public state revision effects without document revision changes
 - synchronous app-owned image resolver bridge
-- missing/null resolve results cached per frame by resource id and resource
-  revision
+- surface-scoped image resolve cache keyed by resolverGeneration, resource id,
+  and resource revision
+- missing/null resolve results suppressed per frame by resource id and resource
+  revision and resolverGeneration, without durable null/missing cache writes
 - resolver frame budget with bounded placeholders and no null/missing cache write
 - resolver reentrancy guard rejecting public runtime mutation from inside the
   resolver
@@ -81,13 +84,15 @@ load have established rollback-safe mutation and replacement boundaries.
 - `test.resources.resource_dirty` -> `test/resources/resource_dirty_test.dart`
 - `test.resources.mark_all_resources_dirty` -> `test/resources/mark_all_resources_dirty_test.dart`
 - `test.resources.painter_never_calls_resolver_directly` -> `test/resources/painter_never_calls_resolver_directly_test.dart`
-- `test.resources.missing_result_cached_per_revision` -> `test/resources/missing_result_cached_per_revision_test.dart`
+- `test.resources.missing_result_suppressed_per_frame` -> `test/resources/missing_result_suppressed_per_frame_test.dart`
+- `test.resources.surface_session_cache_lifecycle` -> `test/resources/surface_session_cache_lifecycle_test.dart`
+- `test.resources.resolver_swap_starts_fresh_cache` -> `test/resources/resolver_swap_starts_fresh_cache_test.dart`
 - `test.resources.resolver_frame_budget` -> `test/resources/resolver_frame_budget_test.dart`
 - `test.resources.resolver_reentrancy_rejected` -> `test/resources/resolver_reentrancy_rejected_test.dart`
 - `resources.app_key_only`
 - `resources.dirty_no_document_revision`
 - `resources.mutation_inside_edit_only`
-- `resources.resolver_boundary_owned_by_resource_kernel`
+- `resources.resolver_boundary_owned_by_surface_session`
 - `resources.resolver_frame_budget`
 - `resources.no_same_frame_missing_retry`
 - `resources.resolver_reentrancy_rejected`
@@ -99,7 +104,8 @@ load have established rollback-safe mutation and replacement boundaries.
 - resource dirty publishes `state.revisions.resourceVisual` and schedules main
   repaint intent without document revision
 - resolver image results are app-owned and not disposed by engine
-- painters and frame code can resolve images only through ResourceKernel
+- painters and frame code can resolve images only through SurfaceResourceSession
+- resolver swap, detach, dispose, and runtime swap cannot reuse stale session cache entries
 - missing/null resolver results do not retry in the same frame
 - resolver frame budget produces bounded placeholders and no invalid cache write
 - resolver reentrancy is rejected without runtime effects
@@ -108,9 +114,9 @@ load have established rollback-safe mutation and replacement boundaries.
 ## Risks and trade-offs
 
 - Resource descriptors belong to committed state, while resolved images belong
-  to runtime cache. This phase must not merge those owners.
+  to a live surface session. This phase must not merge those owners.
 - The frame paint path is implemented later, so this phase proves the resolver
-  boundary and budget through ResourceKernel-facing tests and typed repaint
+  boundary and budget through SurfaceResourceSession tests and typed repaint
   intents.
 
 ## Why this phase belongs here

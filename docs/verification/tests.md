@@ -113,7 +113,9 @@ Required tests:
 - `test.resources.resource_dirty`
 - `test.resources.mark_all_resources_dirty`
 - `test.resources.painter_never_calls_resolver_directly`
-- `test.resources.missing_result_cached_per_revision`
+- `test.resources.missing_result_suppressed_per_frame`
+- `test.resources.surface_session_cache_lifecycle`
+- `test.resources.resolver_swap_starts_fresh_cache`
 - `test.resources.resolver_frame_budget`
 - `test.resources.resolver_reentrancy_rejected`
 - `test.api.typed_action_payloads`
@@ -123,6 +125,7 @@ Required tests:
 - `test.flutter_bridge.interactive_false_active_session_cancel`
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
 - `test.flutter_bridge.single_active_surface`
+- `test.flutter_bridge.surface_resource_session_lifecycle`
 - `test.flutter_bridge.pointer_adapter_finite_normalization`
 - `test.functional_ledger.legacy_capability_inventory`
 - `test.functional_ledger.row_specific_tests`
@@ -205,7 +208,9 @@ test/resources/app_owned_image_not_disposed_test.dart
 test/resources/resource_dirty_test.dart
 test/resources/mark_all_resources_dirty_test.dart
 test/resources/painter_never_calls_resolver_directly_test.dart
-test/resources/missing_result_cached_per_revision_test.dart
+test/resources/missing_result_suppressed_per_frame_test.dart
+test/resources/surface_session_cache_lifecycle_test.dart
+test/resources/resolver_swap_starts_fresh_cache_test.dart
 test/resources/resolver_frame_budget_test.dart
 test/resources/resolver_reentrancy_rejected_test.dart
 
@@ -221,6 +226,7 @@ test/flutter_bridge/interactive_false_pointer_routing_test.dart
 test/flutter_bridge/interactive_false_active_session_cancel_test.dart
 test/flutter_bridge/interactive_false_pending_line_preserved_test.dart
 test/flutter_bridge/single_active_surface_test.dart
+test/flutter_bridge/surface_resource_session_lifecycle_test.dart
 test/flutter_bridge/pointer_adapter_finite_normalization_test.dart
 test/flutter_bridge/widget_paint_test.dart
 

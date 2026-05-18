@@ -10,11 +10,11 @@ sequenceDiagram
   participant Preview as CanvasPreviewState
   participant Spatial as SpatialKernel
   participant PlanCache as PaintPlanCache
-  participant Resources as ResourceKernel
+  participant Session as SurfaceResourceSession
   participant Resolver as CanvasResourceResolver
   participant Painter as Main painter
 
-  Surface->>Frame: paint main scene request(viewportRect, devicePixelRatio, gridStyle, resolver)
+  Surface->>Frame: paint main scene request(viewportRect, devicePixelRatio, gridStyle, SurfaceResourceSession)
   Frame->>Store: capture committed tables, document revisions, and resources once
   Store-->>Frame: documentRevision, structuralRevision, boundsRevision, elementVisualRevision, backgroundRevision, gridRevision, resourceVisualRevision
   Frame->>ViewCamera: capture runtime view camera facts once
@@ -69,18 +69,18 @@ sequenceDiagram
     loop for each image resource id in records
       Frame->>Store: read committed descriptor snapshot for resource id
       Store-->>Frame: appKey descriptor, resourceRevision, or missing descriptor
-      Frame->>Resources: resolve paint asset(descriptor snapshot, resourceRevision, resolver)
+      Frame->>Session: resolve paint asset(descriptor snapshot, resourceRevision)
 
       alt cached resolved image is current
-        Resources-->>Frame: app-owned image paint asset
+        Session-->>Frame: app-owned image paint asset
       else descriptor missing or resolver returns null
-        Resources-->>Frame: bounded missing image placeholder
+        Session-->>Frame: bounded missing image placeholder
       else per-frame resolver budget exceeded
-        Resources-->>Frame: bounded placeholder, no null/missing cache write
+        Session-->>Frame: bounded placeholder, no null/missing cache write
       else cache miss and resolver budget available
-        Resources->>Resolver: resolveImage(appKey descriptor)
-        Resolver-->>Resources: app-owned image or null
-        Resources-->>Frame: resolved image or bounded placeholder
+        Session->>Resolver: resolveImage(appKey descriptor)
+        Resolver-->>Session: app-owned image or null
+        Session-->>Frame: resolved image or bounded placeholder
       end
     end
   end
@@ -92,5 +92,5 @@ sequenceDiagram
 
   Note over Painter: Painter consumes immutable RenderElementRecord data only, it performs no live runtime reads.
   Note over Frame,Store: Forbidden in main paint: Store mutation, CanvasDocument projection, DocumentProjectionCache read, public API reads, and InteractionEngine mutation.
-  Note over Resources,Resolver: ResourceKernel owns the app resolver boundary, painter never calls the application resolver directly.
+  Note over Session,Resolver: SurfaceResourceSession owns synchronous app resolver calls, painter never calls the application resolver directly.
   Note over Surface,Painter: No legacy scene, controller, snapshot, or public DTO entities participate in this sequence.

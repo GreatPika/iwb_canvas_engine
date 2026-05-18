@@ -11,7 +11,7 @@
 - [ ] P2: расширить operation matrix до полного покрытия публичного API:
       HOLE-002.
 - [ ] P3: уточнить resources/surface lifecycle до реализации P7/P13-зон:
-      HOLE-003 и HOLE-004.
+      HOLE-004.
 - [ ] P4: сделать guardrails исполнимыми: HOLE-008 и DIAG-PROOF.
 - [ ] P5: закрыть release-readiness proof: HOLE-009, HOLE-010 и HOLE-011.
 
@@ -23,7 +23,6 @@
 
 ## Блокеры resources/surface lifecycle
 
-- [ ] HOLE-003: resolved image cache не переживает смену resolver/surface некорректно.
 - [ ] HOLE-004: `interactive=false` имеет однозначную preview/cancel semantics.
 
 ## Блокеры release readiness
@@ -74,32 +73,6 @@ projection, resource effects, action events, no-op и rollback semantics. Есл
 Принято в Step 6: `CanvasCameraPort.setOffset` и `panBy` покрыты как runtime
 view camera операции через public `state.revisions.viewCamera`; они не являются
 document edits. Persisted camera changes remain on `CanvasEdit.setCameraOffset`.
-
----
-
-## HOLE-003 — Resource cache не учитывает смену resolver/surface
-
-Статус: Red/Yellow.
-
-Почему это дыра: resolved image cache описан как cache по
-`resourceId/resourceRevision`. Если runtime переподключается с surface/resolver A
-на surface/resolver B, cache может вернуть image, полученный от старого resolver.
-Это особенно опасно, если одинаковые `appKey` в разных app contexts означают
-разные изображения.
-
-Нужно закрыть:
-
-- [ ] Выбрать одно правило invalidation:
-  - cache key включает `resolverGeneration` или `surfaceGeneration`;
-  - или resolved image cache полностью очищается при attach/detach/swap resolver.
-- [ ] Зафиксировать правило в `docs/contracts/resources.md`.
-- [ ] Зафиксировать surface lifecycle implication в public/surface contract.
-- [ ] Добавить тест `resource.resolver_swap_invalidates_resolved_image_cache`.
-- [ ] Тест должен доказать, что image A от resolver A не возвращается после swap на resolver B.
-- [ ] Тест должен доказать, что resolver B вызывается заново или cache очищен.
-- [ ] Добавить executable proof для resolver reentrancy policy.
-- [ ] Добавить executable proof для resolver budget.
-- [ ] Добавить executable proof для no retry in same frame.
 
 ---
 

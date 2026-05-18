@@ -106,6 +106,7 @@ The new package is rooted at the repository top level:
         resource_kernel.dart
         resource_cache.dart
         resource_resolver_adapter.dart
+        surface_resource_session.dart
       codec/
         schema_v1_encoder.dart
         schema_v1_decoder.dart

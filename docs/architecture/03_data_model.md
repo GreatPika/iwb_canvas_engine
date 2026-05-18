@@ -169,7 +169,10 @@ Interaction setting changes such as mode, draw style, active draw tool, draw
 color, and pointer policy increment the public `state.revisions.interaction`
 without changing document revision. Preview-producing pointer changes increment
 `state.revisions.preview`. Resource dirty operations increment
-`state.revisions.resourceVisual`.
+`state.revisions.resourceVisual`. That public dirty-resource domain is a repaint
+observation signal; per-surface image resolution uses explicit target/all
+session invalidation instead of deriving cache identity from the public
+revision.
 
 After `CanvasRuntime.dispose()` returns, `state` is a terminal read handle.
 `state.value` remains readable and exposes the final runtime snapshot. Dispose

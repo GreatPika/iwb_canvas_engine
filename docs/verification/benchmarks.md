@@ -54,10 +54,10 @@ Required benchmark cases:
 | `frame.main_capture` | 1k/10k/50k/100k | avg/P95/max, alloc bytes |
 | `frame.overlay_capture` | active previews | avg/P95/max, alloc bytes |
 | `frame.paint_candidates` | 1k/10k/50k/100k | candidate count, offscreen-layer/saveLayer count |
-| `resources.resolve_sync` | 1k resources | resolver calls, cache hits, repaint count |
-| `resources.resolve_sync_cold_budget` | 1k uncached image records | resolver calls <= 128, budget placeholders, throttled repaint count |
-| `resources.mark_dirty` | 1k resources | repaint count, cache invalidation cost |
-| `resources.mark_all_dirty` | 1k resources | repaint count, cache invalidation cost |
+| `resources.resolve_sync` | 1k resources | SurfaceResourceSession resolver calls, session cache hits, repaint count |
+| `resources.resolve_sync_cold_budget` | 1k uncached image records | session budget resolver calls <= 128, budget placeholders, throttled repaint count |
+| `resources.mark_dirty` | 1k resources | repaint count, target session cache invalidation cost |
+| `resources.mark_all_dirty` | 1k resources | repaint count, all-entry session cache invalidation cost |
 | `projection.read_document` | 1k/10k/50k/100k | first read/cache hit |
 | `codec.decode_v1` | all fixtures | avg/P95/max, error payload |
 | `load_document.success` | 1k/10k/50k/100k | avg/P95/max, rebuild cost, alloc bytes |

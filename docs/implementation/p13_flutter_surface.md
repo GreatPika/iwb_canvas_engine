@@ -14,6 +14,8 @@ store, resolver, or interaction internals.
 - main painter
 - overlay painter
 - synchronous app-owned resource resolver bridge
+- `SurfaceResourceSession` attach, resolver-swap, detach, dispose, and runtime
+  swap lifecycle wiring
 - selection/grid style application
 - `interactive=false` pointer routing behavior
 - active routed pointer cancel on `interactive=false`
@@ -97,6 +99,7 @@ store, resolver, or interaction internals.
   runtimes allowed to host independent active surfaces
 - resource resolver app-owned image and no-dispose rules from
   `section_07_resource_lifecycle`
+- surface-owned resource session lifecycle from `section_07_resource_lifecycle`
 - pointer normalization, `interactive=false`, and pending line preservation from
   `section_14_interaction_engine`
 - painter capture, no-live-runtime-read, and opacity/saveLayer policy from
@@ -111,6 +114,7 @@ store, resolver, or interaction internals.
 - `test.flutter_bridge.interactive_false_active_session_cancel` -> `test/flutter_bridge/interactive_false_active_session_cancel_test.dart`
 - `test.flutter_bridge.interactive_false_pending_line_preserved` -> `test/flutter_bridge/interactive_false_pending_line_preserved_test.dart`
 - `test.flutter_bridge.single_active_surface` -> `test/flutter_bridge/single_active_surface_test.dart`
+- `test.flutter_bridge.surface_resource_session_lifecycle` -> `test/flutter_bridge/surface_resource_session_lifecycle_test.dart`
 - `test.flutter_bridge.pointer_adapter_finite_normalization` -> `test/flutter_bridge/pointer_adapter_finite_normalization_test.dart`
 - `test.flutter_bridge.widget_paint` -> `test/flutter_bridge/widget_paint_test.dart`
 - `surface.pointer_samples_normalized_before_runtime`
@@ -129,6 +133,9 @@ store, resolver, or interaction internals.
   backed by different runtimes can coexist
 - surface detach, dispose, and runtime swap remove only the runtime listeners
   registered by that surface
+- successful attach creates a `SurfaceResourceSession`, rejected attach creates
+  no session side effects, resolver swap starts a fresh session generation, and
+  detach/dispose/runtime swap drop the session without disposing app-owned images
 - surface observes `CanvasRuntime.state` as the public runtime change signal and
   does not own or mutate public runtime snapshots
 - `interactive=false` disables pointer routing

@@ -29,7 +29,7 @@ frame output.
   deltas excluded from ordinary paint-plan keys and cached ordinary records
 - no live runtime read in painters
 - no `CanvasDocument` projection in paint
-- resource resolver access only through `ResourceKernel`
+- resource image resolution only through `SurfaceResourceSession`
 - ordinary opacity through primitive paint alpha, not implicit `Canvas.saveLayer`.
 
 ## Dependencies on earlier phases
@@ -37,7 +37,8 @@ frame output.
 - P4 runtime spine provides committed tables, projection guardrails, and revisions.
 - P4 runtime spine provides selection-owner facts through immutable query ports.
 - P5 edit core emits typed repaint and invalidation effects.
-- P7 resources provide resolver boundary and image resolve cache behavior.
+- P7 resources provide the `SurfaceResourceSession` boundary and image resolve
+  cache behavior.
 - P8 geometry/spatial provides paint bounds, admission, and candidate lookup.
 
 ## Read first
@@ -108,7 +109,7 @@ frame output.
 - `test.frame.camera_pan_preserves_ordinary_paint_plan` -> `test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart`
 - `test.frame.selected_supplement_staging_no_global_sort` -> `test/frame/selected_supplement_staging_no_global_sort_test.dart`
 - `projection.only_explicit_read_paths`
-- `resources.resolver_boundary_owned_by_resource_kernel`
+- `resources.resolver_boundary_owned_by_surface_session`
 - `resources.resolver_frame_budget`
 - `frame.no_global_scene_sort`
 - `frame.paint_plan_excludes_preview_delta`

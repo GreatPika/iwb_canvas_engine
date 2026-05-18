@@ -360,7 +360,7 @@ Slice-local proof may run targeted semantic checks and documentation structural 
 
 ## 9. Vertical Slices
 
-### Slice 1. [ ] Lock Surface Resource Session Ownership
+### Slice 1. [x] Lock Surface Resource Session Ownership
 
 #### Slice Contract
 
@@ -427,7 +427,7 @@ dart run docs/tool/check_docs.dart
 
 Slice closes when active architecture and resource contracts have one unambiguous owner split and the selected cache key does not include global `resourceVisualRevision`.
 
-### Slice 2. [ ] Align Frame, Surface, And Resource-Resolution Flows
+### Slice 2. [x] Align Frame, Surface, And Resource-Resolution Flows
 
 #### Slice Contract
 
@@ -491,7 +491,7 @@ dart run docs/tool/check_docs.dart
 
 Slice closes when resource resolution flows use the surface session consistently and no active frame/diagram path passes the raw resolver to `ResourceKernel`.
 
-### Slice 3. [ ] Align Verification, Phase Guidance, And Indexes
+### Slice 3. [x] Align Verification, Phase Guidance, And Indexes
 
 #### Slice Contract
 

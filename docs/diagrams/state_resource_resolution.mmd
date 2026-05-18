@@ -1,28 +1,51 @@
 %% Resource resolution and cache lifecycle state diagram
 stateDiagram-v2
-  [*] --> RuntimeActive: CanvasRuntime active
+  [*] --> NoSurface: CanvasRuntime active
 
-  state "Active resource runtime" as RuntimeActive
-  note right of RuntimeActive
-    Resource descriptors are committed document input.
-    App-owned images are external input. DocumentStoreKernel
-    owns descriptor tables. ResourceKernel owns dirty ids,
-    resolved-image cache entries, and resolver calls only.
-    There is no file, network, or asset IO.
+  state "No active surface session" as NoSurface
+  note right of NoSurface
+    Resource descriptors remain committed document input.
+    Runtime resource orchestration can publish dirty-resource
+    repaint state, but there is no image session cache to retain.
   end note
 
-  RuntimeActive --> ResolveRequested: main paint image record carries resourceId
-  RuntimeActive --> DescriptorMutation: CanvasEdit or loadDocument success mutates descriptors
-  RuntimeActive --> DirtySignal: markResourceDirty(id) or markAllResourcesDirty()
-  RuntimeActive --> Disposed: dispose()
+  NoSurface --> ActiveSession: successful CanvasSurface attach / create SurfaceResourceSession
+  NoSurface --> NoSurfaceDirtySignal: markResourceDirty(id) or markAllResourcesDirty()
+  NoSurface --> Disposed: dispose()
+
+  state "No-surface dirty signal" as NoSurfaceDirtySignal
+  note right of NoSurfaceDirtySignal
+    Dirty-resource calls still publish public resourceVisual state
+    and main repaint intent without an attached surface. There is
+    no session cache to invalidate; the next attach starts empty.
+  end note
+  NoSurfaceDirtySignal --> NoSurface: increment public resource visual revision and publish state
+
+  state "Active SurfaceResourceSession" as ActiveSession
+  note right of ActiveSession
+    SurfaceResourceSession owns the surface resolver reference,
+    resolverGeneration, ImageResolveCache, per-frame resolver budget,
+    same-frame missing/null suppression, and budget follow-up throttle.
+    There is no file, network, remote, or asset-bundle IO.
+  end note
+
+  ActiveSession --> ResolveRequested: main paint image record carries resourceId
+  ActiveSession --> ActiveSession: rejected second surface attach / existing session remains alive
+  ActiveSession --> ResolverReplaced: active surface receives different resourceResolver
+  ActiveSession --> DescriptorMutation: CanvasEdit or loadDocument success mutates descriptors
+  ActiveSession --> DirtySignal: markResourceDirty(id) or markAllResourcesDirty()
+  ActiveSession --> NoSurface: detach/runtime swap / drop session
+  ActiveSession --> Disposed: dispose() / drop session
+
+  ResolverReplaced --> ActiveSession: increment resolverGeneration and clear stale cache entries
 
   state "Resolve request" as ResolveRequested
-  ResolveRequested --> DescriptorSnapshot: Frame/Runtime reads descriptor snapshot
+  ResolveRequested --> DescriptorSnapshot: Frame reads descriptor snapshot
 
   state "Descriptor snapshot" as DescriptorSnapshot
   note right of DescriptorSnapshot
     The committed-state owner reads resource descriptors and
-    passes immutable descriptor facts to ResourceKernel.
+    passes immutable descriptor facts to the session boundary.
     The resolver cannot create, remove, or update descriptors.
   end note
 
@@ -44,19 +67,20 @@ stateDiagram-v2
   state "Cache lookup" as CacheLookup
   note right of CacheLookup
     ImageResolveCache admission is keyed strictly by
-    resourceId + resourceRevision. Resource dirty
-    invalidates affected entries and advances visual revision.
+    resolverGeneration + resourceId + resourceRevision.
+    Dirty-resource operations explicitly invalidate affected
+    entries or clear all entries in the active session.
   end note
 
   CacheLookup --> CachedResolved: cache hit with ui.Image
-  CacheLookup --> CachedNull: cache hit with null or missing for resourceId + resourceRevision
+  CacheLookup --> SameFrameSuppressed: same-frame null/missing already seen
   CacheLookup --> CacheMiss: cache miss
 
   state "Cached resolved result" as CachedResolved
   CachedResolved --> ResolvedVisual: use app-owned image reference
 
-  state "Cached null result" as CachedNull
-  CachedNull --> PlaceholderResult: use bounded placeholder
+  state "Same-frame suppressed result" as SameFrameSuppressed
+  SameFrameSuppressed --> PlaceholderResult: use bounded placeholder
 
   state "Cache miss" as CacheMiss
   CacheMiss --> ResolverBudgetGate: check per-frame resolver budget
@@ -66,8 +90,8 @@ stateDiagram-v2
     kMaxSyncResourceResolverCallsPerFrame = 128.
     Budget-exceeded results paint placeholders, increment a
     diagnostic/probe counter, and may schedule at most one
-    pending throttled follow-up repaint. ResourceKernel owns
-    that retry scheduler and clears the pending flag on the next
+    pending throttled follow-up repaint. The session owns
+    that throttle and clears the pending flag on the next
     main frame resource pass. Painters and app resolvers must not
     schedule budget-exceeded follow-up repaints. Budget-exceeded
     results are not cached as null, missing, or resolved images.
@@ -81,8 +105,8 @@ stateDiagram-v2
 
   state "Synchronous app resolver call" as SyncResolverCall
   note right of SyncResolverCall
-    The resolver is the only external read boundary in paint.
-    It is synchronous, app-owned, and must not mutate runtime,
+    The session is the only image resolution boundary in paint.
+    Resolver calls are synchronous, app-owned, and must not mutate runtime,
     Store, SelectionKernel, CanvasDocument, descriptors, or preview.
   end note
 
@@ -99,8 +123,8 @@ stateDiagram-v2
   ReentrantMutationRejected --> SyncResolverCall: resolver continues or unwinds without accepted mutation
 
   state "Null resolver result" as NullResult
-  NullResult --> CacheNullResult: remember null/missing by resourceId + resourceRevision and no same-frame retry
-  CacheNullResult --> PlaceholderResult: return bounded placeholder
+  NullResult --> SameFrameNullSuppression: remember null/missing for current frame key(resolverGeneration, resourceId, resourceRevision) only
+  SameFrameNullSuppression --> PlaceholderResult: return bounded placeholder
 
   state "Resolved resolver result" as ResolvedResult
   ResolvedResult --> CacheResolvedResult: store app-owned image reference
@@ -111,7 +135,7 @@ stateDiagram-v2
     The engine may cache and paint the reference, but the
     application still owns the ui.Image and its disposal.
   end note
-  ResolvedVisual --> RuntimeActive: paint completes
+  ResolvedVisual --> ActiveSession: paint completes
 
   state "Placeholder fallback" as PlaceholderResult
   note right of PlaceholderResult
@@ -119,7 +143,7 @@ stateDiagram-v2
     bounded placeholder. They do not trigger full-document
     repaint loops or repeated resolver retry in the same frame.
   end note
-  PlaceholderResult --> RuntimeActive: paint completes
+  PlaceholderResult --> ActiveSession: paint completes
 
   state "Descriptor mutation path" as DescriptorMutation
   note left of DescriptorMutation
@@ -128,8 +152,8 @@ stateDiagram-v2
     side channel and does not use legacy architecture as source.
   end note
   DescriptorMutation --> DescriptorRevisionChanged: atomic install succeeds
-  DescriptorRevisionChanged --> DescriptorCacheInvalidated: resourceRevision/projection effects
-  DescriptorCacheInvalidated --> RuntimeActive: main repaint if used
+  DescriptorRevisionChanged --> DescriptorCacheInvalidated: invalidate target/all active session entries
+  DescriptorCacheInvalidated --> ActiveSession: main repaint if used
 
   state "Resource dirty signal" as DirtySignal
   note left of DirtySignal
@@ -137,21 +161,22 @@ stateDiagram-v2
     It does not mutate CanvasDocument, resource descriptors,
     selection, preview, or action streams.
   end note
-  DirtySignal --> VisualRevisionChanged: increment resourceVisualRevision
+  DirtySignal --> VisualRevisionChanged: increment public resource visual revision
   VisualRevisionChanged --> DirtyCacheInvalidated: publish CanvasRuntimeState with state.revisions.resourceVisual
-  VisualRevisionChanged --> DirtyCacheInvalidated: evict target resource or all entries
-  DirtyCacheInvalidated --> RuntimeActive: schedule main repaint
+  VisualRevisionChanged --> DirtyCacheInvalidated: evict target resource or all active session entries
+  DirtyCacheInvalidated --> ActiveSession: schedule main repaint
 
   state "Disposed runtime" as Disposed
   note right of Disposed
-    Dispose clears runtime resource caches and dirty state.
-    Later resource resolution cannot revive cache state,
-    revive caches, call the app resolver, or mutate Store.
+    Dispose drops any active SurfaceResourceSession and cache entries
+    without disposing app-owned ui.Image instances. Later resource
+    resolution cannot revive session state, call the app resolver,
+    or mutate Store.
   end note
   Disposed --> Disposed: dispose again / no side effects
   Disposed --> Disposed: later resolve, dirty signal, edit, load, or pointer sample / StateError
 
-  note left of RuntimeActive
+  note left of ActiveSession
     Negative invariants:
     no engine-owned file, network, asset-bundle, or remote load,
     no sync glue between duplicate resource sources,

@@ -6,25 +6,33 @@ sequenceDiagram
   participant SurfaceC as CanvasSurface C
   participant RuntimeA as CanvasRuntime A
   participant RuntimeB as CanvasRuntime B
+  participant SessionA as SurfaceResourceSession A
+  participant SessionB as SurfaceResourceSession B
+  participant SessionC as SurfaceResourceSession C
 
   App->>SurfaceA: mount with CanvasRuntime A
   SurfaceA->>RuntimeA: attach surface token
   RuntimeA-->>SurfaceA: attach accepted
+  SurfaceA->>SessionA: creates SurfaceResourceSession after successful attach
 
   App->>SurfaceB: mount with CanvasRuntime A
   SurfaceB->>RuntimeA: attach surface token
   RuntimeA--x SurfaceB: StateError("CanvasRuntime already has an active CanvasSurface.")
   Note over RuntimeA,SurfaceB: Rejection happens before pointer routing, paint, repaint-listener, or resourceResolver attachment side effects.
+  Note over RuntimeA,SurfaceB: Rejected attach creates no session or SurfaceResourceSession side effects.
   Note over SurfaceA,RuntimeA: The existing active surface remains attached and owns the runtime surface boundary.
 
   App->>SurfaceB: mount with CanvasRuntime B
   SurfaceB->>RuntimeB: attach surface token
   RuntimeB-->>SurfaceB: attach accepted
+  SurfaceB->>SessionB: creates SurfaceResourceSession after successful attach
   Note over RuntimeA,RuntimeB: Independent runtimes may have independent active surfaces at the same time.
 
   App->>SurfaceA: unmount
   SurfaceA->>RuntimeA: detach surface token
+  SurfaceA->>SessionA: drop session without disposing app-owned ui.Image
   RuntimeA-->>SurfaceA: detach accepted
   App->>SurfaceC: mount with CanvasRuntime A
   SurfaceC->>RuntimeA: attach surface token
   RuntimeA-->>SurfaceC: attach accepted
+  SurfaceC->>SessionC: creates SurfaceResourceSession after successful attach

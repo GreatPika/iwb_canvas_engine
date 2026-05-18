@@ -24,7 +24,7 @@ flowchart LR
     AppKeyDescriptor["CanvasResourceSource.appKey only\nCanvasAppKeyResourceSource.key\nid, contentHash, byteLength,\nmimeType, CanvasMetadata"]
     DocumentRevision["documentRevision\nchanges only on committed descriptor mutation"]
     ResourceRevision["resourceRevision\ndescriptor version"]
-    ResourceVisualRevision["resourceVisualRevision\nruntime/store visual version"]
+    ResourceVisualSignal["Resource visual revision\nruntime/store visual version"]
     ProjectionRevision["projectionRevision\npublic document projection version"]
     ProjectionEvict["DocumentProjectionCache eviction\nresource descriptor is projected"]
   end
@@ -43,14 +43,17 @@ flowchart LR
     ResourceVisualState["resourceVisual"]
   end
 
-  subgraph Resources["ResourceKernel"]
-    ResolvePaintAsset["Resolve paint asset\nResourceKernel-owned resolver boundary"]
-    ImageResolveCache["ImageResolveCache\nresourceId + resourceRevision"]
+  subgraph Session["SurfaceResourceSession"]
+    ResolvePaintAsset["Resolve paint asset\nsession resolver boundary"]
+    ImageResolveCache["ImageResolveCache\nresolverGeneration + resourceId + resourceRevision"]
     ResolverFrameBudget["Resolver frame budget\nkMaxSyncResourceResolverCallsPerFrame = 128"]
-    DirtySet["Dirty resource ids\nexplicit visual invalidation"]
-    MissingResult["Missing or unresolved result\ncached by resourceId + resourceRevision\nno same-frame retry"]
+    MissingResult["Missing or unresolved result\nsuppressed for same frame key:\nresolverGeneration + resourceId + resourceRevision\nno immediate retry"]
     BudgetPlaceholder["Budget-exceeded placeholder\nnot cached as null/missing"]
     Placeholder["Bounded missing image placeholder"]
+  end
+
+  subgraph Resources["ResourceKernel"]
+    SessionInvalidationEvent["Target/all invalidation event\nfor attached SurfaceResourceSession"]
   end
 
   subgraph Forbidden["Forbidden paths"]
@@ -69,7 +72,7 @@ flowchart LR
   CommitPlan -->|"committed document state changed"| DocumentRevision
   CommitPlan -->|"public projection facts changed"| ProjectionRevision
   ProjectionRevision -->|"evict descriptor projection entries"| ProjectionEvict
-  CommitPlan -->|"evict descriptor-dependent entries"| ImageResolveCache
+  CommitPlan -->|"emit descriptor-dependent target/all invalidation event"| SessionInvalidationEvent
   ResourceTable -->|"stores source.kind = appKey only\npublic source is CanvasAppKeyResourceSource.key"| AppKeyDescriptor
 
   Surface -->|"main paint asks for records"| MainPaint
@@ -79,17 +82,17 @@ flowchart LR
   DescriptorRead -->|"resourceId lookup"| ResourceTable
   ResourceTable -->|"CanvasImageResource with CanvasAppKeyResourceSource.key"| DescriptorRead
   DescriptorRead -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
+  Surface -->|"owns active SurfaceResourceSession\nwith resolverGeneration"| ResolvePaintAsset
 
   ResolvePaintAsset -->|"cache lookup and bounded update"| ImageResolveCache
-  ImageResolveCache -->|"cache hit: app-owned image\nor null/missing"| ResolvePaintAsset
+  ImageResolveCache -->|"cache hit: app-owned image"| ResolvePaintAsset
   ImageResolveCache -->|"cache miss"| ResolverFrameBudget
   ResolverFrameBudget -->|"budget available\nsync resolve request"| AppResolver
-  ResolverFrameBudget -.->|"budget exceeded\nResourceKernel-owned probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder
+  ResolverFrameBudget -.->|"budget exceeded\nsession probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder
   BudgetPlaceholder -.->|"bounded placeholder\nno cache write"| PaintAsset
-  Surface -->|"provides resolver callback\nto resource boundary"| ResolvePaintAsset
   AppResolver -->|"passes descriptor; app reads CanvasAppKeyResourceSource.key"| App
   AppResolver -->|"returns app-owned ui.Image or null\nno runtime mutation"| ResolvePaintAsset
-  ResolvePaintAsset -->|"store resolved or null result\nby resourceId + resourceRevision"| ImageResolveCache
+  ResolvePaintAsset -->|"store resolved image\nby resolverGeneration + resourceId + resourceRevision"| ImageResolveCache
   ResolvePaintAsset -->|"resolved image"| PaintAsset
   ResolvePaintAsset -.->|"missing resource or null result"| MissingResult
   MissingResult -.->|"bounded placeholder result"| Placeholder
@@ -98,12 +101,12 @@ flowchart LR
 
   App -->|"external image contents changed"| DirtyCall
   DirtyCall -->|"delegate dirty signal"| ResourceDirtyDispatch
-  ResourceDirtyDispatch -->|"increment visual revision only"| ResourceVisualRevision
-  ResourceVisualRevision -->|"publish public resource visual domain"| ResourceVisualState
+  ResourceDirtyDispatch -->|"increment visual revision only"| ResourceVisualSignal
+  ResourceVisualSignal -->|"publish public resource visual domain"| ResourceVisualState
   ResourceVisualState -->|"public runtime state domain"| RuntimeStateRevision
-  ResourceDirtyDispatch -->|"explicit cache invalidation request"| DirtySet
-  DirtySet -->|"invalidate target or all cache entries"| ImageResolveCache
-  ResourceVisualRevision -->|"schedule main repaint"| MainRepaint
+  ResourceDirtyDispatch -->|"emit target/all invalidation event"| SessionInvalidationEvent
+  SessionInvalidationEvent -->|"if attached, session invalidates target or all entries"| ImageResolveCache
+  ResourceVisualSignal -->|"schedule main repaint"| MainRepaint
   MainRepaint --> Surface
 
   DirtyCall -.->|"forbidden"| DirtyDocRevision

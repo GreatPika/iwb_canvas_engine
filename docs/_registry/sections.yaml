@@ -134,6 +134,7 @@
     - test.runtime.interaction_settings_state
     - test.flutter_bridge.interactive_false_pending_line_preserved
     - test.flutter_bridge.single_active_surface
+    - test.flutter_bridge.surface_resource_session_lifecycle
     - test.api_contract.v1_scope_gate
   do_not_assume:
     - no legacy public API shape
@@ -226,7 +227,7 @@
     - resources.mutation_inside_edit_only
     - resources.dirty_no_document_revision
     - resources.app_key_only
-    - resources.resolver_boundary_owned_by_resource_kernel
+    - resources.resolver_boundary_owned_by_surface_session
     - resources.resolver_frame_budget
     - resources.no_same_frame_missing_retry
     - resources.resolver_reentrancy_rejected
@@ -239,7 +240,9 @@
     - test.resources.resource_dirty
     - test.resources.mark_all_resources_dirty
     - test.resources.painter_never_calls_resolver_directly
-    - test.resources.missing_result_cached_per_revision
+    - test.resources.missing_result_suppressed_per_frame
+    - test.resources.surface_session_cache_lifecycle
+    - test.resources.resolver_swap_starts_fresh_cache
     - test.resources.resolver_frame_budget
     - test.resources.resolver_reentrancy_rejected
   do_not_assume:
@@ -801,7 +804,7 @@
     - resources.mutation_inside_edit_only
     - resources.dirty_no_document_revision
     - resources.app_key_only
-    - resources.resolver_boundary_owned_by_resource_kernel
+    - resources.resolver_boundary_owned_by_surface_session
     - resources.resolver_frame_budget
     - resources.no_same_frame_missing_retry
     - resources.resolver_reentrancy_rejected
@@ -934,7 +937,9 @@
     - test.resources.resource_dirty
     - test.resources.mark_all_resources_dirty
     - test.resources.painter_never_calls_resolver_directly
-    - test.resources.missing_result_cached_per_revision
+    - test.resources.missing_result_suppressed_per_frame
+    - test.resources.surface_session_cache_lifecycle
+    - test.resources.resolver_swap_starts_fresh_cache
     - test.resources.resolver_frame_budget
     - test.resources.resolver_reentrancy_rejected
     - test.api.typed_action_payloads
@@ -944,6 +949,7 @@
     - test.flutter_bridge.interactive_false_active_session_cancel
     - test.flutter_bridge.interactive_false_pending_line_preserved
     - test.flutter_bridge.single_active_surface
+    - test.flutter_bridge.surface_resource_session_lifecycle
     - test.flutter_bridge.pointer_adapter_finite_normalization
     - test.functional_ledger.legacy_capability_inventory
     - test.functional_ledger.row_specific_tests
@@ -1146,7 +1152,7 @@
     - resources.mutation_inside_edit_only
     - resources.dirty_no_document_revision
     - resources.app_key_only
-    - resources.resolver_boundary_owned_by_resource_kernel
+    - resources.resolver_boundary_owned_by_surface_session
     - resources.resolver_frame_budget
     - resources.no_same_frame_missing_retry
     - resources.resolver_reentrancy_rejected

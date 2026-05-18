@@ -44,6 +44,7 @@ Required tests:
 - `test.runtime.interaction_settings_state`
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
 - `test.flutter_bridge.single_active_surface`
+- `test.flutter_bridge.surface_resource_session_lifecycle`
 - `test.api_contract.v1_scope_gate`
 Guardrails:
 - `api.public_exports_complete`
@@ -485,6 +486,14 @@ Surface contract:
 - CanvasSurface never mutates committed document directly;
 - CanvasSurface routes pointer samples into InteractionEngine;
 - CanvasSurface resourceResolver is the app-owned synchronous image resolver for that surface;
+- successful attach creates an empty `SurfaceResourceSession` for that active
+  surface before paint can resolve image assets;
+- rejected attach creates no `SurfaceResourceSession` and performs no resolver,
+  cache, pointer routing, paint, or repaint-listener side effects;
+- replacing resourceResolver on the active CanvasSurface refreshes that
+  surface's session generation and prevents old resolver results from being
+  reused;
+- detach, dispose, or runtime swap drops the `SurfaceResourceSession`;
 - CanvasSurface does not own or dispose app-provided ui.Image instances.
 ```
 
@@ -1466,8 +1475,10 @@ v1 resource rules:
 - resourceResolver is synchronous in v1;
 - all ui.Image objects returned by CanvasResourceResolver are app-owned;
 - the engine never disposes app-provided ui.Image instances;
-- the engine stores only resource descriptors and render cache references;
-- markResourceDirty invalidates visual cache but does not mutate document;
+- the runtime stores only resource descriptors and render cache references;
+- resolved image references live only inside the active `SurfaceResourceSession`;
+- markResourceDirty invalidates active session image entries for the target
+  resource but does not mutate document;
 - markResourceDirty publishes main repaint intent; an attached CanvasSurface
   observes it if present;
 - resolver must return a stable visual result for the same resource descriptor

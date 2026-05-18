@@ -137,7 +137,7 @@ Guardrails:
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`
 - `resources.app_key_only`
-- `resources.resolver_boundary_owned_by_resource_kernel`
+- `resources.resolver_boundary_owned_by_surface_session`
 - `resources.resolver_frame_budget`
 - `resources.no_same_frame_missing_retry`
 - `resources.resolver_reentrancy_rejected`

@@ -7,7 +7,7 @@ sequenceDiagram
   participant Runtime as RuntimeRoot
   participant Frame as FrameEngine
   participant Store as DocumentStoreKernel
-  participant Resources as ResourceKernel
+  participant Session as SurfaceResourceSession
   participant Cache as ImageResolveCache
   participant Resolver as CanvasResourceResolver
   participant Painter as Main painter
@@ -15,45 +15,51 @@ sequenceDiagram
   participant State as Public runtime state
   participant Signals as Repaint signals
 
-  Surface->>Frame: paint main scene request(viewportRect, devicePixelRatio, resolver)
+  Surface->>Runtime: successful attach accepted
+  Runtime-->>Surface: active surface token
+  Surface->>Session: creates SurfaceResourceSession(resolver, resolverGeneration)
+
+  Surface->>Frame: paint main scene request(viewportRect, devicePixelRatio, SurfaceResourceSession)
   Frame->>Store: capture committed main-frame facts once
-  Store-->>Frame: resourceVisualRevision, compact rows, and frame revisions
+  Store-->>Frame: compact rows, resource descriptor revisions, and frame revisions
   Frame->>Frame: build immutable RenderElementRecord list
-  Note over Frame: Each image render record carries resourceId from the committed row and uses captured resourceVisualRevision.
+  Note over Frame: Each image render record carries resourceId from the committed row.
 
   opt records contain image resource ids
     loop for each image RenderElementRecord
       Frame->>Store: read committed descriptor snapshot and resourceRevision by resourceId
       Store-->>Frame: CanvasImageResource with CanvasAppKeyResourceSource.key or missing descriptor
-      Frame->>Resources: resolve paint image(descriptor snapshot, resourceRevision, resolver)
+      Frame->>Session: resolve paint image(descriptor snapshot, resourceRevision)
 
       alt descriptor is missing
-        Resources-->>Frame: bounded missing image placeholder
+        Session-->>Frame: bounded missing image placeholder
       else descriptor exists
-        Resources->>Cache: lookup key(resourceId, resourceRevision)
+        Session->>Cache: lookup key(resolverGeneration, resourceId, resourceRevision)
 
         alt cache hit
-          Cache-->>Resources: cached app-owned ui.Image or cached missing/null result
-          Resources-->>Frame: app-owned ui.Image or bounded placeholder
+          Cache-->>Session: cached app-owned ui.Image
+          Session-->>Frame: app-owned ui.Image
+        else same-frame missing/null already seen
+          Session-->>Frame: bounded placeholder without retry
         else per-frame resolver budget exceeded
-          Resources-->>Frame: bounded placeholder, ResourceKernel records probe and at most one pending throttled follow-up repaint, no null/missing cache write
+          Session-->>Frame: bounded placeholder, session records probe and at most one pending throttled follow-up repaint, no cache write
         else cache miss and resolver budget available
-          Resources->>Resolver: resolveImage(CanvasImageResource with CanvasAppKeyResourceSource.key)
+          Session->>Resolver: resolveImage(CanvasImageResource with CanvasAppKeyResourceSource.key)
           Note over Resolver: Resolver reads resource.source as CanvasAppKeyResourceSource.key through public API.
-          Note over Resources,Resolver: Synchronous app-owned resolver boundary only. No async resolver, file, network, asset-bundle, or engine IO loading.
+          Note over Session,Resolver: Synchronous app-owned resolver boundary only. No async resolver, file, network, asset-bundle, or engine IO loading.
           opt resolver attempts public runtime mutation
             Resolver->>Runtime: reentrant edit/load/resource dirty/pointer mutation
             Runtime--x Resolver: StateError, mutation rejected without runtime effects
-            Note over Runtime,Resources: Resolver reentrancy rejection does not mutate document, selection, preview, caches, repaint, or actions.
+            Note over Runtime,Session: Resolver reentrancy rejection does not mutate document, selection, preview, caches, repaint, or actions.
           end
-          Resolver-->>Resources: app-owned ui.Image or null
+          Resolver-->>Session: app-owned ui.Image or null
 
           alt app returns ui.Image
-            Resources->>Cache: store key(resourceId, resourceRevision) -> app-owned ui.Image reference
-            Resources-->>Frame: app-owned ui.Image paint asset
+            Session->>Cache: store key(resolverGeneration, resourceId, resourceRevision) -> app-owned ui.Image reference
+            Session-->>Frame: app-owned ui.Image paint asset
           else app returns null
-            Resources->>Cache: remember missing/null result by resourceId + resourceRevision and no same-frame retry
-            Resources-->>Frame: bounded missing image placeholder
+            Session->>Session: suppress null/missing for current frame key(resolverGeneration, resourceId, resourceRevision)
+            Session-->>Frame: bounded missing image placeholder
           end
         end
       end
@@ -63,10 +69,10 @@ sequenceDiagram
   Frame->>Painter: paint immutable records with resolved image assets or placeholders
   Painter-->>Surface: draw main scene
 
-  Note over Painter,Resolver: Painter never calls CanvasResourceResolver directly. ResourceKernel owns the resolver boundary and budget-exceeded retry scheduler.
-  Note over Resources,Resolver: Returned ui.Image objects are owned by the application. The engine never disposes app-owned images.
+  Note over Painter,Resolver: Painter never calls CanvasResourceResolver directly. SurfaceResourceSession owns synchronous resolver calls and the budget follow-up throttle.
+  Note over Session,Resolver: Returned ui.Image objects are owned by the application. The engine never disposes app-owned images.
   Note over Frame,Store: Main paint does not materialize CanvasDocument and does not read DocumentProjectionCache.
-  Note over Resources,Store: ResourcePort cannot mutate descriptors. Descriptor mutation is only through the CanvasEdit commit path outside this sequence.
+  Note over Port,Store: ResourcePort cannot mutate descriptors. Descriptor mutation is only through the CanvasEdit commit path outside this sequence.
   Note over Surface,Painter: No legacy scene, controller, snapshot, or public DTO entities participate in resource resolution.
 
   opt application reports changed external resource visuals
@@ -74,12 +80,22 @@ sequenceDiagram
     Port->>Runtime: delegate resource dirty signal
     Runtime->>Store: increment resourceVisualRevision only
     Store-->>Runtime: documentRevision unchanged
-    Runtime->>Resources: invalidate dirty resourceVisual cache for target id or all registered resources
-    Resources->>Cache: invalidate ImageResolveCache entries by resourceId or all
+    Runtime->>Session: invalidate target resource entries or clear all entries if attached
+    Session->>Cache: invalidate entries by resourceId or all
     Runtime->>State: publish CanvasRuntimeState with updated state.revisions.resourceVisual
     Runtime->>Signals: schedule main repaint
     Signals-->>Surface: repaint main scene
 
     Note over Port,Store: Dirty visual invalidation publishes resourceVisual public state only. It does not mutate descriptors, document revision, action events, preview, or CanvasDocument projection.
     Note over Runtime: Dirty visual invalidation does not mutate the selection owner.
+  end
+
+  opt active surface receives a different resourceResolver
+    Surface->>Session: replace resolver
+    Session->>Session: increment resolverGeneration and clear stale cache entries
+  end
+
+  opt surface detaches, disposes, or swaps runtime
+    Surface->>Session: drop session
+    Session->>Cache: drop entries without disposing app-owned ui.Image
   end

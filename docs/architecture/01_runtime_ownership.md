@@ -56,7 +56,8 @@ Canvas engine state
 | EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | выполнять paint или pointer routing |
 | InteractionEngine | pointer sessions, tools, preview state, terminal commit requests | читать или менять DocumentStoreKernel напрямую |
 | FrameEngine | captured main/overlay frames, ordinary paint plans, selection decoration/staging, repaint buses | экспортировать public document или владеть selection |
-| ResourceKernel | resolver boundary, image resolve cache, dirty resource ids | владеть app domain assets или committed descriptors |
+| ResourceKernel | resource API, dirty resource ids, resource visual state publication, session invalidation events | владеть app domain assets, resolved image references или committed descriptors |
+| SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame missing/null suppression | владеть committed descriptors, public runtime state или Flutter widget lifecycle |
 | SpatialKernel | coarse candidate lookup, outlier policy | быть source of truth для сцены |
 | CodecBoundary | schema v1 encode/decode, validation, diagnostics | зависеть от Flutter widget или gestures |
 | DiagnosticsHub | internal diagnostic records, public error projection | добавлять public stream без API-решения |
@@ -104,6 +105,7 @@ RuntimeRoot
   ├─ FrameEngine
   ├─ SpatialKernel
   ├─ ResourceKernel
+  ├─ SurfaceResourceSession (owned by active CanvasSurface)
   ├─ CodecBoundary
   └─ DiagnosticsHub
 ```

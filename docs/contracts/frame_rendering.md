@@ -93,7 +93,8 @@ Rules:
 - painters do not live-read runtime;
 - painters do not materialize CanvasDocument;
 - stale spatial candidate is rejected by structuralRevision/generation check;
-- image resolver is the only external read boundary in paint, and it cannot mutate runtime;
+- `SurfaceResourceSession` is the only image resolution boundary in paint, and
+  app resolver callbacks cannot mutate runtime;
 - v1 resolver calls are synchronous and bounded by the per-frame resolver budget;
 - runtime view camera changes use `state.revisions.viewCamera`, repaint affected
   frame surfaces, and must not invalidate ordinary committed element paint

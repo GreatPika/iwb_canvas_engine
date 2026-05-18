@@ -69,7 +69,11 @@ flowchart LR
     NoProjectionHotPath["No CanvasDocument projection\nin paint, pointer, or hit hot paths"]
   end
 
-  subgraph Resources["ResourceKernel"]
+  subgraph ResourceRuntime["Runtime resource dirty orchestration"]
+    ResourceSessionInvalidation["Active session invalidation event\ndescriptor changed or dirty target/all"]
+  end
+
+  subgraph Session["SurfaceResourceSession"]
     DescriptorCacheEvict["ImageResolveCache eviction\nresource descriptor changed"]
     DirtyResourceEvict["ImageResolveCache eviction\nexplicit dirty target or all"]
   end
@@ -141,15 +145,17 @@ flowchart LR
   ProjectionRevision -->|"evict changed public projection entries"| ProjectionEvict
   ProjectionEvict -.->|"hot paths still use compact records"| NoProjectionHotPath
 
-  ReplacementScope -->|"clear resource resolve cache"| DescriptorCacheEvict
-  LoadSuccess -->|"clear resource resolve cache typed effect"| DescriptorCacheEvict
-  ResourceRevision -->|"descriptor upsert/remove"| DescriptorCacheEvict
+  ReplacementScope -->|"clear active resource session cache"| ResourceSessionInvalidation
+  LoadSuccess -->|"clear active resource session cache typed effect"| ResourceSessionInvalidation
+  ResourceRevision -->|"descriptor upsert/remove"| ResourceSessionInvalidation
+  ResourceSessionInvalidation -->|"descriptor changed"| DescriptorCacheEvict
   DescriptorCacheEvict -->|"resource-dependent paint changed"| MainRepaint
 
   ResourceDirtyCall -->|"explicit external visual invalidation"| ResourceDirtyDispatch
   ResourceDirtyDispatch -->|"increment runtime/store visual revision"| ResourceVisualRevision
   ResourceVisualRevision -->|"public resource visual domain"| RuntimeStateRevision
-  ResourceDirtyDispatch -->|"cache entries only"| DirtyResourceEvict
+  ResourceDirtyDispatch -->|"target/all active session entries only"| ResourceSessionInvalidation
+  ResourceSessionInvalidation -->|"dirty target or all"| DirtyResourceEvict
   ResourceVisualRevision -->|"resource visuals changed"| MainRepaint
   ResourceDirtyCall -.->|"forbidden"| DirtyDocumentRevision
   ResourceDirtyCall -.->|"forbidden"| DirtySelectionPreview

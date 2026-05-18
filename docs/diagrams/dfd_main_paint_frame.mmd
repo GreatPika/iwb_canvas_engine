@@ -26,9 +26,9 @@ flowchart LR
     ShiftedCandidates["Selected supplement candidates\nquery shifted by -previewDelta"]
   end
 
-  subgraph Resources["ResourceKernel"]
-    ResolvePaintAsset["Resolve paint asset\nResourceKernel-owned resolver boundary"]
-    ImageResolveCache["ImageResolveCache\nresourceId + resourceRevision"]
+  subgraph Resources["SurfaceResourceSession"]
+    ResolvePaintAsset["Resolve paint asset\nsession resolver boundary"]
+    ImageResolveCache["ImageResolveCache\nresolverGeneration + resourceId + resourceRevision"]
     ResolverFrameBudget["Resolver frame budget\nkMaxSyncResourceResolverCallsPerFrame = 128"]
     BudgetPlaceholder["Budget-exceeded placeholder\nnot cached as null/missing"]
     MissingPlaceholder["Bounded missing image placeholder"]
@@ -110,12 +110,13 @@ flowchart LR
   Records -->|"image resource ids"| DescriptorSnapshots
   DescriptorSnapshots -->|"read committed descriptor facts\nby captured revision"| Committed
   Committed -->|"immutable descriptor snapshots"| DescriptorSnapshots
+  Surface -->|"owns SurfaceResourceSession\nwith resolverGeneration"| ResolvePaintAsset
   DescriptorSnapshots -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
   ResolvePaintAsset -->|"cache lookup and bounded update"| ImageResolveCache
-  ImageResolveCache -->|"cached image, null,\nor missing result"| ResolvePaintAsset
+  ImageResolveCache -->|"cached app-owned image"| ResolvePaintAsset
   ImageResolveCache -->|"cache miss"| ResolverFrameBudget
   ResolverFrameBudget -->|"budget available\nsync read request"| AppResolver
-  ResolverFrameBudget -.->|"budget exceeded\nResourceKernel-owned probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder
+  ResolverFrameBudget -.->|"budget exceeded\nsession probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder
   BudgetPlaceholder -.->|"bounded placeholder\nno cache write"| ResolvedAssets
   AppResolver -->|"app-owned image reference\nno engine IO, no mutation"| ResolvePaintAsset
   ResolvePaintAsset -->|"resolved image"| ResolvedAssets

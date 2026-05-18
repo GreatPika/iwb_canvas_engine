@@ -14,7 +14,7 @@ sequenceDiagram
   participant SelectionFacts as SelectionFactsPort
   participant Spatial as SpatialKernel
   participant Projection as DocumentProjectionCache
-  participant Resources as ResourceKernel
+  participant Session as SurfaceResourceSession
   participant Cache as ImageResolveCache
   participant Resolver as CanvasResourceResolver
   participant MoveResolver as CanvasMoveCommitResolver
@@ -24,7 +24,7 @@ sequenceDiagram
   participant Signals as Public state/effects
 
   Note over User,Preview: Initial condition: one active routed pointer owns a preview snapshot.
-  Note over Store,Resources: Committed document, spatial indexes, projection cache, and resource descriptors are current before dispose.
+  Note over Store,Session: Committed document, spatial indexes, projection cache, resource descriptors, and the active SurfaceResourceSession are current before dispose.
   Note over SelectionFacts: Selected ids and selectionRevision are available through the selection facts boundary before dispose.
 
   App->>Runtime: dispose()
@@ -65,9 +65,9 @@ sequenceDiagram
       Note over Preview,Frame: Marquee, pencil, marker, pending line, line preview, and eraser corridor cleanup target the overlay.
     end
 
-    Runtime->>Resources: clear mandatory v1 runtime resource caches
-    Resources->>Cache: drop resolved-image cache entries
-    Note over Resources,Resolver: App-owned ui.Image instances and the app resolver are not disposed by the engine.
+    Runtime->>Session: drop session for active SurfaceResourceSession
+    Session->>Cache: drop resolved-image cache entries
+    Note over Session,Resolver: App-owned ui.Image instances and the app resolver are not disposed by the engine.
 
     Runtime->>Actions: close stream
     Runtime->>TextRequests: close stream

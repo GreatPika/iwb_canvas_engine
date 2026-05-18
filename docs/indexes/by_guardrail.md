@@ -352,19 +352,19 @@ Guardrails extracted from split section 22.
 
 ## resources.no_same_frame_missing_retry
 
-- Rule: missing/null resource resolve results are cached by resourceId and resourceRevision for the frame instead of retried immediately
+- Rule: missing/null resource resolve results are suppressed by resolverGeneration, resourceId, and resourceRevision for the frame instead of retried immediately; resolver swap clears suppression state
 - Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.resources.missing_result_cached_per_revision`, `test.guardrails.blocking_suite`
+- Tests: `test.resources.missing_result_suppressed_per_frame`, `test.guardrails.blocking_suite`
 
-## resources.resolver_boundary_owned_by_resource_kernel
+## resources.resolver_boundary_owned_by_surface_session
 
-- Rule: painters and frame code never call CanvasResourceResolver directly; ResourceKernel owns resolver access
+- Rule: painters and frame code never call CanvasResourceResolver directly; SurfaceResourceSession owns resolver access for an active surface
 - Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.resources.painter_never_calls_resolver_directly`, `test.guardrails.blocking_suite`
+- Tests: `test.resources.painter_never_calls_resolver_directly`, `test.resources.surface_session_cache_lifecycle`, `test.resources.resolver_swap_starts_fresh_cache`, `test.flutter_bridge.surface_resource_session_lifecycle`, `test.guardrails.blocking_suite`
 
 ## resources.resolver_frame_budget
 
-- Rule: ResourceKernel enforces per-frame sync resolver call budget and budget-exceeded placeholders are not cached as null/missing
+- Rule: SurfaceResourceSession enforces per-frame sync resolver call budget and budget-exceeded placeholders are not cached as null/missing
 - Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.resources.resolver_frame_budget`, `test.guardrails.blocking_suite`
 

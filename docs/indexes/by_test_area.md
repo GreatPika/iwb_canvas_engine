@@ -172,6 +172,13 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 - Guardrails: `none`
 
+## test.flutter_bridge.surface_resource_session_lifecycle
+
+- Path: `test/flutter_bridge/surface_resource_session_lifecycle_test.dart`
+- Phases: `P13`
+- Sections: `section_04_public_api_v1`, `section_07_resource_lifecycle`, `section_23_tests`
+- Guardrails: `resources.resolver_boundary_owned_by_surface_session`
+
 ## test.functional_ledger.legacy_capability_inventory
 
 - Path: `test/functional_ledger/legacy_capability_inventory_test.dart`
@@ -401,7 +408,7 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Path: `test/guardrails/blocking_suite_test.dart`
 - Phases: `P0`, `P14`
 - Sections: `section_02_architecture_model`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
-- Guardrails: `oracle.legacy_capability_inventory_complete`, `api.functional_ledger_complete`, `api.integration_surface_complete`, `api.v1_scope_gate_green_before_freeze`, `api.no_legacy_public_types`, `api.public_exports_complete`, `api.public_types_complete`, `api.public_api_compiles_as_written`, `api.exported_dartdoc_complete`, `api.public_class_modifiers_explicit`, `api.public_signature_shape`, `api.no_undefined_public_type_references`, `api.dto_immutability`, `api.equality_policy_explicit`, `api.id_validation_no_extension_type_escape`, `core.no_legacy_imports`, `core.import_boundaries`, `core.no_unapproved_part_files`, `core.no_scene_controller_shape_dependency`, `core.no_node_spec_patch_shape_dependency`, `core.single_runtime_root`, `store.no_public_document_live_state`, `selection.owner_separate_from_document`, `projection.only_explicit_read_paths`, `edit.sync_non_nested`, `edit.rollback_no_effects`, `edit.stale_handle_rejected`, `edit.operation_matrix_complete`, `edit.no_global_invalidation_except_replacement`, `edit.typed_effects_no_frame_dependency`, `events.low_level_edit_no_user_actions`, `events.commands_emit_user_actions`, `load.prepares_before_interrupt`, `load.success_interrupts_before_install`, `preview.selected_move_main_repaint`, `interaction.no_concrete_store_imports`, `interaction.no_concrete_selection_imports`, `interaction.no_resolver_on_cancel_paths`, `interaction.no_stale_terminal_commit`, `geometry.no_legacy_scene_order`, `geometry.eraser_exact_budget_no_partial`, `spatial.no_full_clone_ordinary_edit`, `spatial.stale_candidate_rejected`, `spatial.fallback_budget_enforced`, `frame.no_global_scene_sort`, `frame.paint_plan_excludes_preview_delta`, `frame.paint_plan_excludes_selection_state`, `cache.keys_use_next_revisions_only`, `cache.background_grid_not_element_visual`, `cache.hot_caches_have_capacity_eviction`, `resources.mutation_inside_edit_only`, `resources.dirty_no_document_revision`, `resources.app_key_only`, `resources.resolver_boundary_owned_by_resource_kernel`, `resources.resolver_frame_budget`, `resources.no_same_frame_missing_retry`, `resources.resolver_reentrancy_rejected`, `codec.schema_v1_exact`, `codec.known_fields_validated`, `codec.no_runtime_side_effects`, `diagnostics.disabled_no_alloc_hot_path`, `diagnostics.sanitized_public_projection`, `surface.pointer_samples_normalized_before_runtime`, `surface.interactive_false_pending_line_preserved`, `diagrams.all_required_present`
+- Guardrails: `oracle.legacy_capability_inventory_complete`, `api.functional_ledger_complete`, `api.integration_surface_complete`, `api.v1_scope_gate_green_before_freeze`, `api.no_legacy_public_types`, `api.public_exports_complete`, `api.public_types_complete`, `api.public_api_compiles_as_written`, `api.exported_dartdoc_complete`, `api.public_class_modifiers_explicit`, `api.public_signature_shape`, `api.no_undefined_public_type_references`, `api.dto_immutability`, `api.equality_policy_explicit`, `api.id_validation_no_extension_type_escape`, `core.no_legacy_imports`, `core.import_boundaries`, `core.no_unapproved_part_files`, `core.no_scene_controller_shape_dependency`, `core.no_node_spec_patch_shape_dependency`, `core.single_runtime_root`, `store.no_public_document_live_state`, `selection.owner_separate_from_document`, `projection.only_explicit_read_paths`, `edit.sync_non_nested`, `edit.rollback_no_effects`, `edit.stale_handle_rejected`, `edit.operation_matrix_complete`, `edit.no_global_invalidation_except_replacement`, `edit.typed_effects_no_frame_dependency`, `events.low_level_edit_no_user_actions`, `events.commands_emit_user_actions`, `load.prepares_before_interrupt`, `load.success_interrupts_before_install`, `preview.selected_move_main_repaint`, `interaction.no_concrete_store_imports`, `interaction.no_concrete_selection_imports`, `interaction.no_resolver_on_cancel_paths`, `interaction.no_stale_terminal_commit`, `geometry.no_legacy_scene_order`, `geometry.eraser_exact_budget_no_partial`, `spatial.no_full_clone_ordinary_edit`, `spatial.stale_candidate_rejected`, `spatial.fallback_budget_enforced`, `frame.no_global_scene_sort`, `frame.paint_plan_excludes_preview_delta`, `frame.paint_plan_excludes_selection_state`, `cache.keys_use_next_revisions_only`, `cache.background_grid_not_element_visual`, `cache.hot_caches_have_capacity_eviction`, `resources.mutation_inside_edit_only`, `resources.dirty_no_document_revision`, `resources.app_key_only`, `resources.resolver_boundary_owned_by_surface_session`, `resources.resolver_frame_budget`, `resources.no_same_frame_missing_retry`, `resources.resolver_reentrancy_rejected`, `codec.schema_v1_exact`, `codec.known_fields_validated`, `codec.no_runtime_side_effects`, `diagnostics.disabled_no_alloc_hot_path`, `diagnostics.sanitized_public_projection`, `surface.pointer_samples_normalized_before_runtime`, `surface.interactive_false_pending_line_preserved`, `diagrams.all_required_present`
 
 ## test.codec.decode_encode_no_runtime_side_effects
 
@@ -494,19 +501,33 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_03_package_layout`, `section_14_interaction_engine`, `section_23_tests`
 - Guardrails: `interaction.no_concrete_selection_imports`
 
-## test.resources.missing_result_cached_per_revision
+## test.resources.missing_result_suppressed_per_frame
 
-- Path: `test/resources/missing_result_cached_per_revision_test.dart`
+- Path: `test/resources/missing_result_suppressed_per_frame_test.dart`
 - Phases: `P7`
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
 - Guardrails: `resources.no_same_frame_missing_retry`
+
+## test.resources.resolver_swap_starts_fresh_cache
+
+- Path: `test/resources/resolver_swap_starts_fresh_cache_test.dart`
+- Phases: `P7`
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+- Guardrails: `resources.resolver_boundary_owned_by_surface_session`
+
+## test.resources.surface_session_cache_lifecycle
+
+- Path: `test/resources/surface_session_cache_lifecycle_test.dart`
+- Phases: `P7`, `P13`
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+- Guardrails: `resources.resolver_boundary_owned_by_surface_session`
 
 ## test.resources.painter_never_calls_resolver_directly
 
 - Path: `test/resources/painter_never_calls_resolver_directly_test.dart`
 - Phases: `P7`
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `resources.resolver_boundary_owned_by_resource_kernel`
+- Guardrails: `resources.resolver_boundary_owned_by_surface_session`
 
 ## test.resources.resolver_frame_budget
 

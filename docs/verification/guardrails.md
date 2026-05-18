@@ -71,7 +71,7 @@ Guardrails:
 - `resources.mutation_inside_edit_only`
 - `resources.dirty_no_document_revision`
 - `resources.app_key_only`
-- `resources.resolver_boundary_owned_by_resource_kernel`
+- `resources.resolver_boundary_owned_by_surface_session`
 - `resources.resolver_frame_budget`
 - `resources.no_same_frame_missing_retry`
 - `resources.resolver_reentrancy_rejected`
@@ -182,9 +182,9 @@ Mandatory guardrails:
 | `resources.mutation_inside_edit_only` | resource descriptor mutation only via CanvasEdit |
 | `resources.dirty_no_document_revision` | markResourceDirty publishes `state.revisions.resourceVisual` and does not increment `state.revisions.document` |
 | `resources.app_key_only` | resource descriptors use appKey only |
-| `resources.resolver_boundary_owned_by_resource_kernel` | painters and frame code never call CanvasResourceResolver directly; ResourceKernel owns resolver access |
-| `resources.resolver_frame_budget` | ResourceKernel enforces per-frame sync resolver call budget and budget-exceeded placeholders are not cached as null/missing |
-| `resources.no_same_frame_missing_retry` | missing/null resource resolve results are cached by resourceId and resourceRevision for the frame instead of retried immediately |
+| `resources.resolver_boundary_owned_by_surface_session` | painters and frame code never call CanvasResourceResolver directly; SurfaceResourceSession owns resolver access for an active surface |
+| `resources.resolver_frame_budget` | SurfaceResourceSession enforces per-frame sync resolver call budget and budget-exceeded placeholders are not cached as null/missing |
+| `resources.no_same_frame_missing_retry` | missing/null resource resolve results are suppressed by resolverGeneration, resourceId, and resourceRevision for the frame instead of retried immediately; resolver swap clears suppression state |
 | `resources.resolver_reentrancy_rejected` | public runtime mutation from inside CanvasResourceResolver throws StateError without runtime effects |
 | `codec.schema_v1_exact` | only schema v1 read/write |
 | `codec.known_fields_validated` | known schema v1 fields are validated and canonical encoder writes only v1 fields |
