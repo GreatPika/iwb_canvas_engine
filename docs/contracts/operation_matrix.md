@@ -72,6 +72,7 @@ P7 and P10-P12 close their resource and interaction rows when those owners land.
 | removeUnusedResource removed | resource table | state.revisions.document; internal resource, projection | no | evict | main if used by stale resource visuals only | none |
 | markResourceDirty/markAllResourcesDirty | cache only | state.revisions.resourceVisual | no | no | main | none |
 | setMode/setDrawStyle/setDrawTool/setDrawColor/setPointerPolicy | interaction settings | state.revisions.interaction, state.revisions.selection if draw-mode entry clears selection, state.revisions.preview if active preview cleared | none | no | main/overlay only for changed affected state | none |
+| CanvasToolPort.handlePointer dispatcher | validates/routes pointer sample to selection, move, draw, line, eraser, context-tap, or cleanup rows | none by itself | none by itself | none by itself | none by itself | none by itself |
 | loadDocument success | whole document plus selection-owner clear, preview cleanup, runtime view camera initialized from persisted document camera | state.revisions.document, state.revisions.selection, state.revisions.preview if active preview cleared, state.revisions.viewCamera, state.revisions.epoch; internal document-level revisions | rebuild | evict | main + overlay | none |
 | loadDocument failure | none | none | none | none | none | none |
 | CanvasEdit.replaceDraftDocument | whole draft document plus selection-owner clear if current selection references replaced content | state.revisions.document, state.revisions.selection if cleared, state.revisions.epoch; internal document-level revisions | rebuild | evict | main | none |
@@ -108,6 +109,11 @@ Notes:
   invalidate public document projection. Persisted camera edits remain document
   edits through `CanvasEdit.setCameraOffset`.
 - No-op operations publish no new public state snapshot.
+- `CanvasToolPort.handlePointer` is the public pointer dispatcher boundary. It
+  validates and routes the pointer sample, but has no standalone document,
+  selection, preview, spatial, projection, repaint, or event effect. Terminal
+  effects are defined only by the selected tool row: marquee, selected move,
+  pencil/marker, line, eraser, context-action tap, or cleanup/no-op.
 - Context-action double-tap request emits `CanvasContextActionRequested` with
   `CanvasInteractionRequestId`, `CanvasContextActionTrigger.doubleTap`,
   controller epoch, document revision, timestamp, view/world positions, and

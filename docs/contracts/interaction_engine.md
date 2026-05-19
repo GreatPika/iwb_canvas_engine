@@ -112,7 +112,7 @@ Rules:
   create a commit intent;
 - terminal exception clears preview and schedules correct repaint;
 - cleanup-capable tool machines return typed cleanup requests to
-  `InteractionEngine`; `InteractionEngine` is the only caller of the future
+  `InteractionEngine`; `InteractionEngine` is the only caller of the target
   `PointerToolCleanupCoordinator`;
 - committed facts for gesture decisions are read through narrow read-only
   interaction query ports;
@@ -129,13 +129,18 @@ Rules:
   snapshot.
 ```
 
-Selection-related interaction reads must be batched by intent. Marquee start,
-marquee terminal commit, selected-move start, and selected-move commit each read
-one immutable snapshot that contains the selected ids plus the document facts
-needed for that intent, such as content membership, visibility, lock state,
-transformability, deletability, bounds, and document order. Interaction must not
-loop over concrete owner methods such as per-property `exists`, `isVisible`, or
-`isLocked` reads.
+Selection-related interaction reads must be batched by intent through
+`InteractionReadPort`. Marquee start, marquee terminal commit,
+selected-move start, and selected-move commit each read one immutable snapshot
+that contains the selected ids plus the document facts needed for that intent,
+such as content membership, visibility, lock state, transformability,
+deletability, bounds, and document order. Context-action and hit-test reads use
+the same read-only boundary for hit/order facts, immutable element snapshots,
+`boundsWorld`, generation, `elementRevision`, family, `controllerEpoch`,
+visibility, and top-hit facts. Interaction must not loop over concrete owner
+methods such as per-property `exists`, `isVisible`, or `isLocked` reads, and the
+port must not expose mutation, draft access, `CanvasDocument` projection, store
+internals, or resource/session internals.
 
 `interactive=false` cancels only an active routed pointer session. Pending line
 start or line preview state that is not currently owned by an active routed
@@ -147,14 +152,14 @@ pointer-owned preview changes, cancellation is public-state silent.
 
 ### 14.2 Pointer cleanup coordinator
 
-The future `PointerToolCleanupCoordinator` is an internal
+The target `PointerToolCleanupCoordinator` is an internal
 `InteractionEngine` collaborator under
 `lib/src/interaction/pointer_tool_cleanup_coordinator.dart`. It is the cleanup
 policy owner for pointer-tool cleanup, not a public API type, state store,
 cache, resolver, edit owner, event dispatcher, context-request emitter, repaint
 notifier, Flutter adapter, resource owner, or runtime publication owner.
 
-Future cleanup-capable tool machines recognize gestures and return terminal
+Cleanup-capable tool machines recognize gestures and return terminal
 commit intents or typed cleanup requests to `InteractionEngine`. The typed
 cleanup request carries both cleanup reason and ownership context so the
 coordinator can distinguish active pointer-owned state from non-owned pending

@@ -55,7 +55,7 @@ Canvas engine state
 | FrameFactsPort | immutable committed frame facts for capture, row resolution, descriptor snapshots, and resourceRevision | expose store tables, public document projections, drafts, mutations, selection facts, or frame-owned render models |
 | SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | хранить committed document content, selected-order cache или быть public API type |
 | EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | выполнять paint или pointer routing |
-| InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts, future pointer cleanup coordinator composition | читать или менять DocumentStoreKernel напрямую; хранить Flutter text editor session state |
+| InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts, target pointer cleanup coordinator composition | читать или менять DocumentStoreKernel напрямую; хранить Flutter text editor session state |
 | FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; target composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
 | ResourceKernel | resource API, dirty resource ids, resource visual state publication, session invalidation events | владеть app domain assets, resolved image references или committed descriptors |
 | SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame missing/null suppression | владеть committed descriptors, public runtime state или Flutter widget lifecycle |
@@ -70,7 +70,7 @@ interaction, or epoch changes. Downstream owners contribute facts through their
 own boundaries; they do not own the public snapshot object or depend on Flutter
 widget state to publish core runtime state.
 
-The future `PointerToolCleanupCoordinator` is an internal
+The target `PointerToolCleanupCoordinator` is an internal
 `InteractionEngine` collaborator and cleanup policy seam. `InteractionEngine`
 owns its composition and is the only caller. Tool machines may return typed
 cleanup requests to `InteractionEngine`, but they must not call the coordinator
@@ -98,12 +98,18 @@ Persisted document camera
 
 Gesture decisions may need committed facts such as controller epoch,
 selection ids, movable flags, text snapshots, and bounds. Document facts enter
-`InteractionEngine` only through narrow read-only interaction query boundaries
-owned by the runtime/document boundary. Selection facts enter through
-intent-specific selection query boundaries owned by the runtime/selection
-boundary. Query boundaries return immutable, batched, intent-specific facts and
-never expose store tables, selection internals, or mutation methods. Committed
-mutations requested by interaction still go through `EditKernel`.
+`InteractionEngine` through `InteractionReadPort`, the target read-only
+interaction query boundary owned by the runtime/document interaction boundary.
+Selection facts enter through intent-specific selection query boundaries owned
+by the runtime/selection boundary and may be batched into `InteractionReadPort`
+responses when the interaction intent needs document order plus selected ids.
+The port returns only immutable, batched, intent-specific facts: hit/order
+facts, immutable element snapshots, `boundsWorld`, element generation,
+`elementRevision`, element family, `controllerEpoch`, visibility, and top-hit
+status. It must not expose mutation APIs, draft access, `CanvasDocument`
+projection, store internals, resource/session internals, selection internals, or
+per-property concrete owner probes. Committed mutations requested by interaction
+still go through `EditKernel`.
 
 Frame capture also uses a narrow intent-specific document boundary.
 `FrameFactsPort` is the accepted committed-state read seam between the
@@ -172,6 +178,7 @@ RuntimeRoot
   ├─ EditKernel
   ├─ InteractionEngine
   │  └─ PointerToolCleanupCoordinator (internal interaction collaborator)
+  ├─ InteractionReadPort
   ├─ InteractionRequestRegistry
   ├─ FrameEngine (frame-internal facade)
   ├─ SpatialKernel

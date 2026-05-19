@@ -81,6 +81,7 @@ The new package is rooted at the repository top level:
         staged_document_load.dart
       interaction/
         interaction_engine.dart
+        interaction_read_port.dart
         interaction_request_registry.dart
         pointer_tool_cleanup_coordinator.dart
         pointer_session.dart
@@ -164,13 +165,18 @@ implementation layout names for the `FrameEngine` internal split, not files
 created by this documentation step. They remain frame-private implementation
 details and are omitted from the public package barrel.
 
-`lib/src/interaction/pointer_tool_cleanup_coordinator.dart` is the future
-internal cleanup policy collaborator for `InteractionEngine`. It is not created
-by this documentation step and is not exported from
-`lib/iwb_canvas_engine.dart`. Future tool-machine files under
+`lib/src/interaction/pointer_tool_cleanup_coordinator.dart` is the target
+internal cleanup policy collaborator for `InteractionEngine`. It is not exported
+from `lib/iwb_canvas_engine.dart`. Cleanup-capable tool-machine files under
 `lib/src/interaction/**` may construct typed cleanup requests for
 `InteractionEngine`, but the coordinator itself remains interaction-internal and
 callable only by `InteractionEngine`.
+
+`lib/src/interaction/interaction_read_port.dart` is the target read-only
+interaction facts boundary. It may expose only immutable, intent-specific facts
+needed by interaction routing and must not expose mutation APIs, draft access,
+`CanvasDocument` projection, concrete store internals, concrete selection
+internals, or resource/session internals.
 
 Source boundary rules:
 
@@ -228,6 +234,7 @@ lib/src/store/**             -> may not import src/interaction, src/frame, src/f
 lib/src/selection/**         -> may read document facts only through runtime-supplied immutable query ports
 lib/src/edit/**              -> may not import src/flutter_bridge
 lib/src/interaction/**       -> may not import, read, or mutate src/store or src/selection concrete internals directly
+lib/src/interaction/interaction_read_port.dart -> may not expose mutation APIs, drafts, CanvasDocument projection, concrete store internals, concrete selection internals, or resource/session internals
 lib/src/interaction/pointer_tool_cleanup_coordinator.dart -> may not import resolver callbacks, EditKernel, repaint buses, Flutter bridge, resource sessions, concrete store internals, or concrete selection internals
 lib/src/frame/**             -> may not import public document projection as paint input
 lib/src/spatial/**           -> may use only typed spatial delta/read ports, not concrete store tables or interaction/frame state
@@ -239,10 +246,10 @@ all lib/**                   -> may not import legacy package or legacy runtime 
 ```
 
 Committed document facts and runtime selection facts used by interaction are
-supplied through narrow read-only query ports owned by the runtime/document and
-runtime/selection boundaries. Interaction code may depend on those
-intent-specific ports, not on `src/store`, `src/selection`, or concrete owner
-internals.
+supplied through `InteractionReadPort` and narrow selection facts ports owned by
+the runtime/document and runtime/selection boundaries. Interaction code may
+depend on those intent-specific ports, not on `src/store`, `src/selection`, or
+concrete owner internals.
 
 `lib/src/interaction/context_action_router.dart` is the future interaction
 route owner for direct `CanvasToolPort.handleDoubleTap` and pointer-sample
