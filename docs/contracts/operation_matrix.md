@@ -371,7 +371,7 @@ Repaint target: main and overlay only for affected changed state.
 
 User-action notification: none.
 
-No-op behavior: no publication when requested mode and cleanup effects are
+No-op behavior: no publication when requested mode and cleanup result is
 unchanged.
 
 Rollback behavior: interaction settings, selection, preview, repaint, and

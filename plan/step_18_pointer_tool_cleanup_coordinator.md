@@ -737,7 +737,7 @@ requirements without adding executable test or guardrail implementation.
 Slice is complete when phase guidance and verification docs record D5 and D6,
 and documentation structure still passes.
 
-### Slice 4. [ ] Roadmap Closure And Negative Proof
+### Slice 4. [x] Roadmap Closure And Negative Proof
 
 #### Implements
 
