@@ -9,6 +9,17 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 - Guardrails: `api.public_api_compiles_as_written`, `api.exported_dartdoc_complete`, `api.public_class_modifiers_explicit`
 
+## test.api_contract.app_next_engine_adapter_compile_fixture
+
+- Path: `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`
+- Fixture: `test/api_contract/fixtures/app_next_engine_adapter_compile_fixture.dart`
+- Phases: `P1.5`, `P2`, `P14`
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
+- Guardrails: `api.integration_surface_complete`
+- Focus: external app-adapter responsibilities compile through only
+  `package:iwb_canvas_engine/iwb_canvas_engine.dart`, with forbidden import
+  checks for `src/**`, legacy symbols, and internal runtime classes.
+
 ## test.api_contract.public_readable_union_variants
 
 - Path: `test/api_contract/public_readable_union_variants_test.dart`

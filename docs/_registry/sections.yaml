@@ -107,6 +107,7 @@
     - dfd_public_edit
     - seq_single_active_surface
   guardrails:
+    - api.integration_surface_complete
     - api.public_exports_complete
     - api.public_types_complete
     - api.public_api_compiles_as_written
@@ -132,6 +133,7 @@
     - test.api_contract.dto_immutability
     - test.api_contract.public_equality_policy
     - test.api.typed_action_payloads
+    - test.api_contract.app_next_engine_adapter_compile_fixture
     - test.interaction.text_edit_stale_commit_guard
     - test.runtime.dispose_lifecycle
     - test.runtime.runtime_state_publication
@@ -834,6 +836,7 @@
     - surface.interactive_false_pending_line_preserved
     - diagrams.all_required_present
   tests:
+    - test.api_contract.app_next_engine_adapter_compile_fixture
     - test.guardrails.blocking_suite
   do_not_assume:
     - no non-blocking critical guardrail
@@ -943,6 +946,7 @@
     - test.api_contract.no_legacy_public_symbols
     - test.api_contract.dto_immutability
     - test.api_contract.public_equality_policy
+    - test.api_contract.app_next_engine_adapter_compile_fixture
     - test.guardrails.import_boundaries
     - test.codec.schema_v1.known_fields_validation
     - test.codec.schema_v1.resources_appkey_only
@@ -1187,6 +1191,7 @@
     - surface.interactive_false_pending_line_preserved
     - diagrams.all_required_present
   tests:
+    - test.api_contract.app_next_engine_adapter_compile_fixture
     - test.guardrails.blocking_suite
   do_not_assume:
     - no release with legacy imports, legacy facade, or unlinked donor reuse

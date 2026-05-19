@@ -156,6 +156,13 @@ production lib/**               -> no `part` or `part of` files unless generated
 all lib/**                      -> may not import another package's `src/**`
 ```
 
+Consumer compile fixtures under `test/api_contract/fixtures/**` model external
+application code. They may import only
+`package:iwb_canvas_engine/iwb_canvas_engine.dart`, must not import `src/**`,
+and must not use legacy public symbols or internal runtime classes. The
+app-adapter fixture is the proof surface for `api.integration_surface_complete`,
+not an adapter implementation shipped by this package.
+
 Production-owned tests mirror the top-level ownership folders under
 `lib/src/**`: `test/edit/**` covers `lib/src/edit/**`, `test/frame/**` covers
 `lib/src/frame/**`, and so on. Cross-cutting proof areas that do not belong to

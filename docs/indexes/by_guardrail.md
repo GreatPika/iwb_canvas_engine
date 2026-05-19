@@ -16,9 +16,9 @@ Guardrails extracted from split section 22.
 
 ## api.integration_surface_complete
 
-- Rule: API has enough public surface for app-level NextEngineAdapter, but adapter is not in package
-- Sections: `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.blocking_suite`
+- Rule: external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level NextEngineAdapter responsibilities, while adapter is not in package
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
+- Tests: `test.api_contract.app_next_engine_adapter_compile_fixture`, `test.guardrails.blocking_suite`
 
 ## api.v1_scope_gate_green_before_freeze
 

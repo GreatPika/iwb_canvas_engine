@@ -99,5 +99,9 @@ Runtime and proof:
 
 Приложение может иметь собственный слой миграции или adapter contract, но он находится **вне** `iwb_canvas_engine`.
 Такой слой не является deliverable движка. Движок обязан предоставить чистый новый API и собственные contract tests; приложение само решает, как адаптировать его к своему integration port.
+При этом полнота public API для внешнего app adapter доказывается не наличием
+типов в контракте, а external compile fixture, который импортирует только
+`package:iwb_canvas_engine/iwb_canvas_engine.dart` и не использует `src/**`,
+legacy symbols или internal runtime classes.
 
 ---

@@ -94,6 +94,7 @@ errors, validation rules, and equality semantics.
 ## Tests and guardrails that prove this phase
 
 - `test.api_contract.public_api_v1_compiles_as_written` -> `test/api_contract/public_api_v1_compiles_as_written_test.dart`; also checks exported dartdoc and explicit public class modifiers with analyzer AST
+- `test.api_contract.app_next_engine_adapter_compile_fixture` -> `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`; proves app-level adapter responsibilities compile from the public barrel only and rejects forbidden fixture imports
 - `test.api_contract.public_readable_union_variants` -> `test/api_contract/public_readable_union_variants_test.dart`
 - `test.api_contract.preview_state_sealed_union` -> `test/api_contract/preview_state_sealed_union_test.dart`
 - `test.api_contract.canvas_field_update_static_semantics` -> `test/api_contract/canvas_field_update_static_semantics_test.dart`
@@ -105,6 +106,7 @@ errors, validation rules, and equality semantics.
 - `test.api.typed_action_payloads` -> `test/api/typed_action_payloads_test.dart`
 - `test.codec.constructor_and_schema_limits` -> `test/codec/constructor_and_schema_limits_test.dart`
 - `api.v1_scope_gate_green_before_freeze`
+- `api.integration_surface_complete`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
 - `api.preview_state_sealed_union_publicly_readable`
@@ -127,6 +129,8 @@ errors, validation rules, and equality semantics.
 - public runtime observation compiles through
   `ValueListenable<CanvasRuntimeState> get state`, and the retired
   document/preview listener getters are not exported
+- external app-adapter compile fixture proves the integration surface through
+  only `package:iwb_canvas_engine/iwb_canvas_engine.dart`
 - exported public API has non-empty dartdoc summaries
 - public classes have explicit subtype policy modifiers
 - public signatures avoid `FutureOr`, nullable async/container returns, and unapproved `dynamic`

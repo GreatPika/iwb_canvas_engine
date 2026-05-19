@@ -108,12 +108,14 @@ match the target architecture.
 ## Tests and guardrails that prove this phase
 
 - `test.functional_ledger.row_specific_tests` -> `test/functional_ledger/row_specific_tests_test.dart`
+- `test.api_contract.app_next_engine_adapter_compile_fixture` -> `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`
 - `test.benchmarks.required_cases` -> `test/benchmarks/required_cases_test.dart`
 - `test.guardrails.required_diagrams_present` -> `test/guardrails/required_diagrams_present_test.dart`
 - `test.guardrails.blocking_suite` -> `test/guardrails/blocking_suite_test.dart`
 - `dart run tool/guardrails/run.dart` -> full blocking guardrail suite
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagrams.all_required_present`
+- `api.integration_surface_complete`
 - `api.functional_ledger_complete`
 - every guardrail listed in `section_22_guardrails_machine_checks`
 - every final release gate listed in `section_27_final_release_gates`
@@ -128,7 +130,8 @@ match the target architecture.
 - no legacy facade
 - phase guardrail alignment green
 - full guardrail runner green
-- every mandatory guardrail has a runner entry and executable proof
+- every mandatory guardrail has a runner entry and executable proof, including
+  the external app-adapter compile fixture for `api.integration_surface_complete`
 - changed-aware runner routing has conservative fallback coverage
 - no app adapters in package
 - all final release gates green.

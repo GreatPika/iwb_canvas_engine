@@ -1,31 +1,6 @@
 
 ---
 
-## HOLE-008 — Guardrail `api.integration_surface_complete` слишком субъективен
-
-Статус: Yellow.
-
-Почему это дыра: guardrail должен доказывать, что публичного API достаточно для
-app-level `NextEngineAdapter`, но без конкретного external fixture это легко
-становится субъективной проверкой наличия типов. Ранее найденная
-resource-source readability дыра показала, что типы могут существовать, но
-внешний adapter всё равно не сможет выполнить роль.
-
-Нужно закрыть:
-
-- [ ] Добавить внешний compile fixture, например `test/fixtures/app_next_engine_adapter_compile_fixture.dart`.
-- [ ] Fixture должен импортировать только `package:iwb_canvas_engine/iwb_canvas_engine.dart`.
-- [ ] Fixture не должен импортировать `src/**`.
-- [ ] Fixture не должен импортировать legacy symbols.
-- [ ] Fixture не должен использовать internal runtime classes.
-- [ ] Fixture должен компилироваться.
-- [ ] Fixture должен реализовать required app adapter operations.
-- [ ] Guardrail `api.integration_surface_complete` должен проверять compile fixture, а не абстрактную полноту.
-- [ ] Добавить forbidden import check для fixture.
-- [ ] Подключить guardrail к конкретному runner/fixture, чтобы он не был prose-only.
-
----
-
 ## HOLE-009 — Benchmark gates недостаточно численные
 
 Статус: Yellow.

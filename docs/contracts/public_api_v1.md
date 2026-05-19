@@ -40,6 +40,7 @@ Required tests:
 - `test.api_contract.dto_immutability`
 - `test.api_contract.public_equality_policy`
 - `test.api.typed_action_payloads`
+- `test.api_contract.app_next_engine_adapter_compile_fixture`
 - `test.interaction.text_edit_stale_commit_guard`
 - `test.runtime.dispose_lifecycle`
 - `test.runtime.runtime_state_publication`
@@ -50,6 +51,7 @@ Required tests:
 - `test.flutter_bridge.surface_resource_session_lifecycle`
 - `test.api_contract.v1_scope_gate`
 Guardrails:
+- `api.integration_surface_complete`
 - `api.public_exports_complete`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
@@ -102,6 +104,20 @@ The root package is Flutter-based. Public API may use:
 - package:flutter/widgets.dart;
 - package:flutter/foundation.dart.
 ```
+
+External adapter proof:
+
+```text
+test.api_contract.app_next_engine_adapter_compile_fixture proves that an
+application-owned adapter can exercise the public integration surface by
+importing only package:iwb_canvas_engine/iwb_canvas_engine.dart.
+```
+
+That fixture must compile without `src/**`, legacy package symbols, or internal
+runtime classes. It covers the external operation families an app-level adapter
+needs: runtime lifecycle, state/document observation, edit/load,
+selection/camera/tools, high-level commands, actions/text-edit requests,
+resources, and `CanvasSurface` construction with public resolver/style inputs.
 
 ### 4.1.1 Dart API design constraints
 

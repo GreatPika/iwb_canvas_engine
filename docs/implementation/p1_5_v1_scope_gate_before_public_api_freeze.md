@@ -10,7 +10,8 @@ validation limits are explicit and mechanically checked.
 - scope checklist based on legacy functional behavior and approved v1 additions
 - functional ledger mapping from P1 legacy capabilities to next API targets
 - public API draft probe
-- public API compiles as written.
+- public API compiles as written
+- external app-adapter surface proof is defined before API freeze.
 
 ## Dependencies on earlier phases
 
@@ -50,12 +51,15 @@ validation limits are explicit and mechanically checked.
 - accepted differences from legacy from `section_09_accepted_differences`
 - functional ledger mapping from `section_08_functional_ledger`
 - mandatory public API draft coverage from `section_04_public_api_v1`
+- external adapter compile-fixture obligation from `section_04_public_api_v1`
 - validation limit adoption from `section_06_validation_limits`
 
 ## Tests and guardrails that prove this phase
 
 - `test.api_contract.v1_scope_gate` -> `test/api_contract/v1_scope_gate_test.dart`
+- `test.api_contract.app_next_engine_adapter_compile_fixture` -> `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`; compiles `test/api_contract/fixtures/app_next_engine_adapter_compile_fixture.dart` and enforces public-barrel-only imports
 - `test.functional_ledger.row_specific_tests` -> `test/functional_ledger/row_specific_tests_test.dart`
+- `api.integration_surface_complete`
 - `api.v1_scope_gate_green_before_freeze`
 - `api.functional_ledger_complete`
 - `api.public_types_complete`
@@ -76,6 +80,8 @@ validation limits are explicit and mechanically checked.
   row-specific test id
 - public equality policy is explicit before API freeze
 - public API compiles as written
+- external app-adapter fixture compiles through only
+  `package:iwb_canvas_engine/iwb_canvas_engine.dart`
 - no undefined public type references remain
 - P2 public API freeze is blocked until this gate is green.
 

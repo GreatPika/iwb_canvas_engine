@@ -102,6 +102,7 @@ Required tests:
 - `test.api_contract.no_legacy_public_symbols`
 - `test.api_contract.dto_immutability`
 - `test.api_contract.public_equality_policy`
+- `test.api_contract.app_next_engine_adapter_compile_fixture`
 - `test.guardrails.import_boundaries`
 - `test.codec.schema_v1.known_fields_validation`
 - `test.codec.schema_v1.resources_appkey_only`
@@ -193,6 +194,7 @@ test/api_contract/no_legacy_public_symbols_test.dart
 test/api_contract/dto_immutability_test.dart
 test/api_contract/public_equality_policy_test.dart
 test/api_contract/v1_scope_gate_test.dart
+test/api_contract/app_next_engine_adapter_compile_fixture_test.dart
 test/guardrails/import_boundaries_test.dart
 test/guardrails/required_diagrams_present_test.dart
 test/guardrails/blocking_suite_test.dart
@@ -312,6 +314,16 @@ behavioral tests, and the required guardrail list remains owned by
 `section_22_guardrails_machine_checks`.
 
 ```text
+test/api_contract/app_next_engine_adapter_compile_fixture_test.dart
+  -> compiles test/api_contract/fixtures/app_next_engine_adapter_compile_fixture.dart;
+  -> proves external application adapter code can use the public integration
+     surface through package:iwb_canvas_engine/iwb_canvas_engine.dart only;
+  -> rejects fixture imports of src/**, legacy package symbols, or internal
+     runtime classes;
+  -> covers runtime lifecycle, state/document observation, edit/load,
+     selection/camera/tools, high-level commands, actions/text-edit requests,
+     resources, and CanvasSurface construction with public resolver/style inputs.
+
 test/api_contract/public_api_v1_compiles_as_written_test.dart
   -> compiles the exported API declarations in an empty consumer package;
   -> uses analyzer AST over exported public declarations to verify non-empty

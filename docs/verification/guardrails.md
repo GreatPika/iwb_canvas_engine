@@ -15,6 +15,7 @@ Related donors:
 Related diagrams:
 - `none`
 Required tests:
+- `test.api_contract.app_next_engine_adapter_compile_fixture`
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `oracle.legacy_capability_inventory_complete`
@@ -132,7 +133,7 @@ Mandatory guardrails:
 |---|---|
 | `oracle.legacy_capability_inventory_complete` | every P1 legacy capability inventory row has a legacy oracle and evidence focus, without requiring next API mapping |
 | `api.functional_ledger_complete` | every legacy capability inventory row has a matching functional ledger API mapping and row-specific test |
-| `api.integration_surface_complete` | API has enough public surface for app-level `NextEngineAdapter`, but adapter is not in package |
+| `api.integration_surface_complete` | external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level `NextEngineAdapter` responsibilities, while the adapter itself is not in package |
 | `api.v1_scope_gate_green_before_freeze` | P1.5 scope gate passed before public API freeze starts |
 | `api.no_legacy_public_types` | legacy public golden symbols not exported by root package |
 | `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |
@@ -198,5 +199,13 @@ Mandatory guardrails:
 | `surface.pointer_samples_normalized_before_runtime` | Flutter surface adapters pass only normalized finite pointer samples into runtime routing |
 | `surface.interactive_false_pending_line_preserved` | interactive=false cancels active routed pointers, preserves pending line state not owned by an active routed pointer, and does not mutate runtime mode, committed document, selection, or resources |
 | `diagrams.all_required_present` | required Mermaid files exist |
+
+`api.integration_surface_complete` is executable only when the guardrail runner
+or its delegated proof compiles
+`test/api_contract/fixtures/app_next_engine_adapter_compile_fixture.dart` and
+checks that the fixture imports only
+`package:iwb_canvas_engine/iwb_canvas_engine.dart`. The fixture must not import
+`src/**`, legacy symbols, or internal runtime classes, and it must exercise the
+required external adapter operation families from the public API contract.
 
 ---

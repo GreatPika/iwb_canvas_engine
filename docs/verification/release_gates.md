@@ -81,6 +81,7 @@ Related donors:
 Related diagrams:
 - `none`
 Required tests:
+- `test.api_contract.app_next_engine_adapter_compile_fixture`
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `oracle.legacy_capability_inventory_complete`
@@ -204,7 +205,8 @@ Release is blocked unless all statements are true:
 33. all required diagrams exist and match owners.
 34. phase guardrail alignment is green.
 35. full `dart run tool/guardrails/run.dart` is green.
-36. every mandatory guardrail has a runner entry and executable proof.
+36. every mandatory guardrail has a runner entry and executable proof, including
+    the `api.integration_surface_complete` external app-adapter compile fixture.
 37. changed-aware guardrail routing has conservative fallback coverage.
 38. benchmark gates pass.
 39. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
