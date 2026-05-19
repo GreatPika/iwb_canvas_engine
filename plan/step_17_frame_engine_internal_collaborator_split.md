@@ -459,7 +459,7 @@ static background cache separation, and overlay preview exclusions.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Lock Source-Of-Truth Ownership Wording
+### Slice 1. [x] Lock Source-Of-Truth Ownership Wording
 
 #### Implements
 
@@ -505,7 +505,7 @@ The selected Candidate A ownership form is documented in the core
 source-of-truth docs without public/runtime leakage or retired all-in-one
 ownership wording.
 
-### Slice 2. [ ] Align Diagrams and Future Graph Proof Requirement
+### Slice 2. [x] Align Diagrams and Future Graph Proof Requirement
 
 #### Implements
 
@@ -556,7 +556,7 @@ Diagrams and verification docs agree with the selected design, and the future
 graph-based diagram check is documented clearly enough that a later
 implementation step does not need to invent the verification strategy.
 
-### Slice 3. [ ] Final Documentation Verification and Roadmap Closure
+### Slice 3. [x] Final Documentation Verification and Roadmap Closure
 
 #### Implements
 
