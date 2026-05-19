@@ -167,9 +167,10 @@ Guardrails extracted from split section 22.
 
 ## events.runtime_created_timestamps_monotonic
 
-- Rule: runtime-created `timestampMs` outputs resolve nullable hints through one
-  runtime-local monotonic cursor for action events, text edit requests, pending
-  line start previews, and selected move resolver requests
+- Rule: runtime-created `timestampMs` outputs resolve nullable and backwards
+  hints through one runtime-local monotonic cursor for stale host timestamps,
+  action events, text edit requests, pending line start previews, and selected
+  move resolver requests
 - Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.interaction.runtime_created_timestamps_monotonic`, `test.guardrails.blocking_suite`
 
