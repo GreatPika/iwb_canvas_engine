@@ -15,6 +15,8 @@ typed user action events.
 - selection move/rotate/flip/delete commands
 - pointer session lifecycle needed for move mode
 - pointer sample normalization and terminal cleanup
+- introduce the internal `PointerToolCleanupCoordinator` under
+  `lib/src/interaction/pointer_tool_cleanup_coordinator.dart`
 - move/select/marquee state machines
 - selected move main-scene preview
 - selected move preview uses `CanvasSelectedMovePreview` with a delta-only
@@ -27,6 +29,17 @@ typed user action events.
   intent-specific immutable query ports
 - typed selection, transform, delete, and move action payloads
 - loadDocument success/failure interaction ordering for active move sessions.
+
+P10 owns the first production introduction of the cleanup coordinator seam.
+Selected move, marquee, load-success interrupt, dispose, stale terminal,
+invalid terminal, no-op terminal, resolver cancel/error, edit failure, and
+post-successful-commit cleanup must return typed cleanup requests to
+`InteractionEngine`; `InteractionEngine` is the only caller of
+`PointerToolCleanupCoordinator`. P10 must prove coordinator-owned
+`PointerCleanupOutcome` behavior for selected-move main repaint, marquee
+overlay repaint, no-preview/no-repaint cleanup, resolver-error cleanup with no
+action emission, and pending line preservation when `interactive=false` does
+not own the pending line.
 
 ## Dependencies on earlier phases
 
@@ -107,6 +120,7 @@ typed user action events.
 - `test.interaction.move_resolver_reentrancy` -> `test/interaction/move_resolver_reentrancy_test.dart`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup` -> `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`
 - `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
+- `test.interaction.pointer_cleanup_coordinator_outcomes` -> `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
 - `test.selection.runtime_owner_separation` -> `test/selection/runtime_owner_separation_test.dart`
 - `test.guardrails.selection_boundary_imports` -> `test/guardrails/selection_boundary_imports_test.dart`
 - `preview.selected_move_main_repaint`
@@ -118,6 +132,7 @@ typed user action events.
 - `interaction.no_concrete_selection_imports`
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
+- `interaction.pointer_cleanup_coordinator_only`
 
 ## Exit gate
 
@@ -134,6 +149,11 @@ typed user action events.
 - resolver cannot reenter mutation
 - resolver is not called on cancel, load, mode change, dispose, or stale terminal cleanup paths
 - stale terminal samples do not commit
+- cleanup-capable move and marquee machines use typed cleanup requests consumed
+  only by `InteractionEngine` through `PointerToolCleanupCoordinator`
+- cleanup outcomes classify selected-move main repaint, marquee overlay
+  repaint, no-preview/no-repaint, resolver-error no-action, and active-token
+  release without tool-local cleanup policy
 - loadDocument failure preserves active move gesture
 - loadDocument success clears active move gesture.
 - interaction has no concrete imports of store or selection owners.

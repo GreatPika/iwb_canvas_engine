@@ -61,6 +61,7 @@ Guardrails:
 - `interaction.no_concrete_selection_imports`
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
+- `interaction.pointer_cleanup_coordinator_only`
 - `interaction.text_edit_stale_commit_guard`
 - `geometry.no_legacy_scene_order`
 - `geometry.eraser_exact_budget_no_partial`
@@ -182,6 +183,7 @@ Mandatory guardrails:
 | `interaction.no_concrete_selection_imports` | InteractionEngine uses intent-specific selection query ports and EditKernel commits, not concrete SelectionKernel imports or mutations |
 | `interaction.no_resolver_on_cancel_paths` | selected-move resolver is not called on cancel, load, mode-change, `interactive=false`, stale terminal, or dispose paths |
 | `interaction.no_stale_terminal_commit` | stale or controllerEpoch-mismatched terminal samples cannot create commit intent |
+| `interaction.pointer_cleanup_coordinator_only` | cleanup-capable tool machines return typed cleanup requests to `InteractionEngine`, `InteractionEngine` is the only caller of `PointerToolCleanupCoordinator`, and no tool machine owns shared preview/session cleanup policy, cleanup-effect publication, or direct coordinator calls |
 | `interaction.text_edit_stale_commit_guard` | request-originated text commits reject unknown, retired, epoch-stale, generation-stale, revision-stale, missing, or non-text targets while allowing unrelated documentRevision changes |
 | `geometry.no_legacy_scene_order` | geometry and hit-test policy does not reuse legacy SceneNode traversal or legacy scene order logic |
 | `geometry.eraser_exact_budget_no_partial` | eraser exact-check budget exceeded paths produce corridor-only preview or terminal no-op cleanup, never partial erase |

@@ -360,6 +360,16 @@ Guardrails extracted from split section 22.
 - Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.interaction.no_stale_terminal_commit`, `test.guardrails.blocking_suite`
 
+## interaction.pointer_cleanup_coordinator_only
+
+- Rule: cleanup-capable tool machines return typed cleanup requests to
+  `InteractionEngine`, `InteractionEngine` is the only caller of
+  `PointerToolCleanupCoordinator`, and no tool machine owns shared
+  preview/session cleanup policy, cleanup-effect publication, or direct
+  coordinator calls
+- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.interaction.pointer_cleanup_coordinator_outcomes`, `test.guardrails.blocking_suite`
+
 ## interaction.text_edit_stale_commit_guard
 
 - Rule: request-originated text commits reject unknown, retired, epoch-stale,

@@ -15,10 +15,21 @@ helpers, and overlay frame capture exist.
   `CanvasPendingLineStartPreview`, and `CanvasLinePreview` preview state
 - overlay repaint for draw previews
 - stroke and line commit through `EditKernel`
+- draw and line cleanup consumes the existing P10
+  `PointerToolCleanupCoordinator` seam
 - draw style validation and adoption
 - draw mode/style/tool/color changes publish `state.revisions.interaction`
 - typed draw action payloads for pencil, marker, and line
 - terminal cleanup and stale terminal rejection for draw sessions.
+
+P11 must not introduce draw-local cleanup policy. Pencil, marker, and line
+machines return typed cleanup requests to `InteractionEngine`; only
+`InteractionEngine` calls `PointerToolCleanupCoordinator`. Draw and line work
+must consume the P10 coordinator for cancel, mode/tool change, load success,
+`interactive=false`, stale terminal, invalid terminal, no-op terminal, edit
+failure, and post-successful-commit cleanup. Line cleanup requests must carry
+ownership context so line-owned cleanup clears pending line state while
+non-owned pending line state remains preserved on `interactive=false`.
 
 ## Dependencies on earlier phases
 
@@ -85,9 +96,11 @@ helpers, and overlay frame capture exist.
 - `test.interaction.commands_emit_user_actions` -> `test/interaction/commands_emit_user_actions_test.dart`
 - `test.interaction.state_machines` -> `test/interaction/state_machines_test.dart`
 - `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
+- `test.interaction.pointer_cleanup_coordinator_outcomes` -> `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
 - `events.commands_emit_user_actions`
 - `api.preview_state_sealed_union_publicly_readable`
 - `interaction.no_concrete_store_imports`
+- `interaction.pointer_cleanup_coordinator_only`
 - `interaction.no_stale_terminal_commit`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
@@ -105,6 +118,11 @@ helpers, and overlay frame capture exist.
 - draw previews repaint overlay only
 - draw previews publish `state.revisions.preview` without document revision
 - stale terminal samples do not commit
+- draw and line cleanup-capable machines consume the existing coordinator seam
+  instead of owning shared preview/session cleanup policy
+- coordinator outcomes preserve non-owned pending line state on
+  `interactive=false`, clear line-owned pending state, and classify overlay or
+  no-preview cleanup without action or text-request emission
 - loadDocument failure preserves pending draw/line state where the contract requires it
 - loadDocument success clears active draw/line gesture state.
 

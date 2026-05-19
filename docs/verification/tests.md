@@ -169,6 +169,7 @@ Required tests:
 - `test.interaction.move_resolver_reentrancy`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
 - `test.interaction.no_stale_terminal_commit`
+- `test.interaction.pointer_cleanup_coordinator_outcomes`
 - `test.interaction.text_edit_stale_commit_guard`
 - `test.flutter_bridge.widget_paint`
 - `test.benchmarks.required_cases`
@@ -298,6 +299,7 @@ test/interaction/state_machines_test.dart
 test/interaction/move_resolver_reentrancy_test.dart
 test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart
 test/interaction/no_stale_terminal_commit_test.dart
+test/interaction/pointer_cleanup_coordinator_outcomes_test.dart
 test/interaction/text_edit_stale_commit_guard_test.dart
 test/selection/runtime_owner_separation_test.dart
 test/guardrails/selection_boundary_imports_test.dart
@@ -441,6 +443,16 @@ test/interaction/preview_public_state_test.dart
      changing document, selection, resourceVisual, interaction, or viewCamera
      revisions and without emitting action events;
   -> proves cleanup against already-empty preview state is public-state silent.
+
+test/interaction/pointer_cleanup_coordinator_outcomes_test.dart
+  -> proves `PointerToolCleanupCoordinator` outcomes for cleanup reason plus
+     ownership context: selected-move cleanup targets main repaint, overlay
+     previews target overlay repaint, no-preview cleanup is public-state silent,
+     active token/session facts are released before public effects, non-owned
+     pending line state is preserved on `interactive=false`, line-owned cleanup
+     clears pending line state, pending text tap cleanup emits no text request,
+     no resolver runs on cleanup-only paths, stale terminal cleanup creates no
+     commit intent, and cleanup emits no user action.
 
 test/resources/resource_dirty_test.dart
   -> proves markResourceDirty publishes state.revisions.resourceVisual without

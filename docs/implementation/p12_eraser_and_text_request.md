@@ -23,6 +23,14 @@ double-tap request routing.
   text changes
 - terminal cleanup and stale terminal rejection for eraser/text routes.
 
+P12 must consume the existing P10 `PointerToolCleanupCoordinator` seam for
+eraser and text-request cleanup. Eraser and text tap routing may create typed
+cleanup requests for `InteractionEngine`, but must not call the coordinator
+directly or own shared cleanup policy. Eraser cleanup outcomes classify overlay
+or no-preview cleanup and emit no erase action or document state on cleanup-only
+paths. Text cleanup outcomes clear pending tap history without preview, repaint,
+action, text request, document, selection, spatial, or projection effects.
+
 ## Dependencies on earlier phases
 
 - P5 edit core owns deletion commits and rollback.
@@ -92,11 +100,13 @@ double-tap request routing.
 - `test.interaction.state_machines` -> `test/interaction/state_machines_test.dart`
 - `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
 - `test.interaction.text_edit_stale_commit_guard` -> `test/interaction/text_edit_stale_commit_guard_test.dart`
+- `test.interaction.pointer_cleanup_coordinator_outcomes` -> `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
 - `geometry.eraser_exact_budget_no_partial`
 - `api.preview_state_sealed_union_publicly_readable`
 - `events.commands_emit_user_actions`
 - `interaction.no_concrete_store_imports`
 - `interaction.no_stale_terminal_commit`
+- `interaction.pointer_cleanup_coordinator_only`
 - `interaction.text_edit_stale_commit_guard`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
@@ -109,11 +119,15 @@ double-tap request routing.
 - eraser preview and active eraser cleanup publish `state.revisions.preview`
   without document, selection, resourceVisual, interaction, viewCamera, or action
   effects; empty cleanup is silent
+- eraser and text cleanup-capable machines consume the existing coordinator seam
+  and do not own shared cleanup policy or call the coordinator directly
 - eraser commit tests green
 - eraser exact-check budget exceeded produces no partial erase
 - eraser action is emitted only when elements are erased after atomic install
 - text double-tap on selectable text emits `CanvasTextEditRequested`
 - text double-tap does not mutate document or selection by itself
+- text cleanup clears pending tap history without preview, repaint, action,
+  text-request, document, selection, spatial, or projection effects
 - request-originated text commits use `commitTextEdit`, reject stale request
   facts without side effects, do not treat unrelated `documentRevision` changes
   as stale, and emit `editText` only for changed text after atomic install

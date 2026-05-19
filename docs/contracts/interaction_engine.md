@@ -56,6 +56,7 @@ Required tests:
 - `test.interaction.move_resolver_reentrancy`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
 - `test.interaction.no_stale_terminal_commit`
+- `test.interaction.pointer_cleanup_coordinator_outcomes`
 - `test.interaction.text_edit_stale_commit_guard`
 - `test.guardrails.selection_boundary_imports`
 - `test.flutter_bridge.widget_paint`
@@ -70,6 +71,7 @@ Guardrails:
 - `interaction.no_concrete_selection_imports`
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
+- `interaction.pointer_cleanup_coordinator_only`
 - `interaction.text_edit_stale_commit_guard`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`

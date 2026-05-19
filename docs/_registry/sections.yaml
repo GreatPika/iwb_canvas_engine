@@ -520,6 +520,7 @@
     - interaction.no_concrete_selection_imports
     - interaction.no_resolver_on_cancel_paths
     - interaction.no_stale_terminal_commit
+    - interaction.pointer_cleanup_coordinator_only
     - interaction.text_edit_stale_commit_guard
     - surface.pointer_samples_normalized_before_runtime
     - surface.interactive_false_pending_line_preserved
@@ -539,6 +540,7 @@
     - test.interaction.move_resolver_reentrancy
     - test.interaction.move_resolver_not_called_on_cancel_cleanup
     - test.interaction.no_stale_terminal_commit
+    - test.interaction.pointer_cleanup_coordinator_outcomes
     - test.interaction.text_edit_stale_commit_guard
     - test.guardrails.selection_boundary_imports
     - test.flutter_bridge.widget_paint
@@ -817,6 +819,7 @@
     - interaction.no_concrete_selection_imports
     - interaction.no_resolver_on_cancel_paths
     - interaction.no_stale_terminal_commit
+    - interaction.pointer_cleanup_coordinator_only
     - interaction.text_edit_stale_commit_guard
     - geometry.no_legacy_scene_order
     - geometry.eraser_exact_budget_no_partial
@@ -1024,6 +1027,7 @@
     - test.interaction.move_resolver_reentrancy
     - test.interaction.move_resolver_not_called_on_cancel_cleanup
     - test.interaction.no_stale_terminal_commit
+    - test.interaction.pointer_cleanup_coordinator_outcomes
     - test.interaction.text_edit_stale_commit_guard
     - test.flutter_bridge.widget_paint
     - test.benchmarks.required_cases
@@ -1177,6 +1181,7 @@
     - interaction.no_concrete_selection_imports
     - interaction.no_resolver_on_cancel_paths
     - interaction.no_stale_terminal_commit
+    - interaction.pointer_cleanup_coordinator_only
     - interaction.text_edit_stale_commit_guard
     - geometry.no_legacy_scene_order
     - geometry.eraser_exact_budget_no_partial
