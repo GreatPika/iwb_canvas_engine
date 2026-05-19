@@ -1684,6 +1684,17 @@ abstract interface class CanvasToolPort {
 }
 ```
 
+`CanvasToolPort.handleDoubleTap` is the direct host-recognized double-tap
+input boundary. It accepts a finite view `position` from the host surface and
+does not require pending first-tap history from engine-owned pointer-sample
+recognition. A valid direct double-tap resolves its timestamp through the same
+runtime-local timestamp cursor used for other timestamped runtime outputs,
+clears any pending context tap history, resolves the current context-action
+target at `position`, and publishes exactly one
+`CanvasContextActionRequested` through `CanvasRuntime.contextActionRequests`
+for either a content-element target or empty canvas. Invalid non-finite
+positions are rejected before request publication.
+
 Validation:
 
 ```text

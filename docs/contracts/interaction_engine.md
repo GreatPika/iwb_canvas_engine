@@ -221,6 +221,25 @@ The trigger is `CanvasContextActionTrigger.doubleTap`, and the target is either
 a content element or empty canvas. Request delivery has no document, selection,
 preview, repaint, spatial, projection, resource, or action effect.
 
+`CanvasToolPort.handleDoubleTap` is a direct host-recognized double-tap event,
+not the second sample in engine-owned pointer-sample recognition. It accepts a
+finite view position from the host surface and does not require pending
+first-tap history. On a valid direct double-tap, the interaction engine resolves
+the request timestamp through the runtime timestamp cursor, clears any pending
+context tap history through `PointerToolCleanupCoordinator`, resolves the
+current context-action target at the supplied position, issues a
+`CanvasInteractionRequestId`, records guard facts in
+`InteractionRequestRegistry`, and emits exactly one context-action request for
+the current content target or empty canvas. A non-finite position is rejected
+before target resolution and request emission.
+
+Engine-owned pointer-sample recognition remains separate: the first tap may
+store a pending context tap candidate, and the second tap must revalidate the
+current target class and target facts before request emission. Direct
+`handleDoubleTap` bypasses that pending candidate requirement while still
+clearing stale pending context tap history before it resolves the current
+target.
+
 Content-element targets carry an immutable public `CanvasElement` snapshot and
 `boundsWorld`. Empty-canvas targets carry no element snapshot. Text editing is
 an application-owned choice after delivery: the application may open a context
