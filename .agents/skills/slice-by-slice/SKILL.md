@@ -33,6 +33,14 @@ slice by slice.
 
 5. Move to the next slice and repeat the same workflow.
 
+6. After every slice has been committed, spawn one final `code_reviewer`.
+   - This must be a different reviewer from the per-slice reviewers.
+   - Ask it to review all slice commits together.
+   - Use this prompt only: `review all slice commits together`
+   - Do not add context, explanations, links, or extra instructions.
+   - If it reports findings, fix them in a follow-up commit after the slice
+     commits, then reuse the same final reviewer until it reports no findings.
+
 ## Completion Criteria
 
 The implementation task is complete only when every slice in the step contract:
@@ -40,4 +48,6 @@ The implementation task is complete only when every slice in the step contract:
 - has been implemented within its stated scope;
 - has passed its required verification;
 - has been approved by its own single reused `code_reviewer`;
-- has been committed before work begins on the next slice.
+- has been committed before work begins on the next slice;
+- the full set of slice commits has been approved by a different final
+  `code_reviewer`.
