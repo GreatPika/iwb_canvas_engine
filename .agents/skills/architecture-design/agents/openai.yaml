@@ -1,0 +1,4 @@
+interface:
+  display_name: "Architecture Design"
+  short_description: "Draft evidence-backed design artifacts"
+  default_prompt: "Use $architecture-design to create a traceable architecture design artifact."
