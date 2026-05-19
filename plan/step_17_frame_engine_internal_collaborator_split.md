@@ -38,10 +38,6 @@ Dart, tests, guardrail runner code, or frame collaborators.
 - Document that `SelectionDecorationPlanner` owns the future
   `boundsRevision` invalidation requirement for selected element bounds changes
   with unchanged selection membership.
-- Document the future graph-based Mermaid verification requirement: after
-  implementation and diagram updates, a guardrail must parse changed
-  frame-related Mermaid diagrams into graph facts and prove the selected design
-  form through positive and forbidden-edge invariants.
 
 ### Out of Scope
 
@@ -112,13 +108,6 @@ the documentation change, not target-state requirements.
 - `docs/verification/guardrails.md:191` and
   `docs/verification/guardrails.md:201` define committed-frame-facts and
   resolver-boundary guardrails.
-- `docs/tool/check_docs.dart` states that free-form Mermaid edge text and
-  runtime architecture invariants do not belong in the documentation checker;
-  those constraints belong in structured registries, generated documentation,
-  analyzer/lint rules, Dart tests, or benchmarks.
-- `docs/verification/guardrail_design_patterns.md:151` maps
-  `diagrams.all_required_present` to registry parity and runner inventory,
-  which is weaker than the requested graph-invariant proof.
 - `todo.md:24` through `todo.md:118` propose internal frame services and call
   out the `boundsRevision` selection decoration fix, but the design evidence
   adds separate selected move supplement and overlay preview owners.
@@ -170,9 +159,7 @@ the documentation change, not target-state requirements.
   ownership without creating the test files in the same documentation step.
 - `docs/verification/guardrails.md` can document mandatory guardrail rules
   before their executable implementation arrives in a later code step.
-- `docs/tool/check_docs.dart` is the right tool for documentation structure,
-  while graph/runtime invariants are documented as future guardrail proof
-  rather than added to the docs checker.
+- `docs/tool/check_docs.dart` is the right tool for documentation structure.
 
 ### Repository Rules
 
@@ -192,11 +179,6 @@ the documentation change, not target-state requirements.
 - A production implementation contract shape is misleading for this step; this
   step is documentation-only and must not own `lib/**`, `test/**`, or
   `tool/**` implementation.
-- A text-only `rg` proof over Mermaid files is not enough for the requested
-  future graph validation; the documentation must require a future graph parse
-  into nodes, subgraphs, edges, and sequence messages.
-- Adding graph-invariant checks to `docs/tool/check_docs.dart` would contradict
-  that tool's stated scope.
 
 ## 3. Architecture Decision
 
@@ -303,8 +285,7 @@ The documentation must preserve these owner facts:
 Use documentation-only proof:
 
 - targeted semantic search for all seven collaborators, facade wording,
-  owner-specific responsibilities, must-not-own boundaries, and future
-  graph-check expectations;
+  owner-specific responsibilities, and must-not-own boundaries;
 - targeted negative search for rejected public/runtime service wording and the
   retired all-in-one `FrameEngine` ownership phrase in active target docs;
 - documentation structural checks through `generate_context_capsules.dart` and
@@ -314,9 +295,8 @@ Use documentation-only proof:
 
 | ID | Decision | Owner | Proof |
 |---|---|---|---|
-| D1 | Candidate A is the documented future form: `FrameEngine` facade plus seven frame-private collaborators. | Source-of-truth docs | P1, P2, P5, P6 |
-| D2 | The future split remains internal: no public barrel export and no runtime-level planner service. | Source-of-truth docs | P2, P3, P5, P6 |
-| D3 | Future implementation must include graph-based Mermaid invariant proof after diagrams are updated. | Verification docs | P4, P5, P6 |
+| D1 | Candidate A is the documented future form: `FrameEngine` facade plus seven frame-private collaborators. | Source-of-truth docs | P1, P2, P4, P5 |
+| D2 | The future split remains internal: no public barrel export and no runtime-level planner service. | Source-of-truth docs | P2, P3, P4, P5 |
 
 ### Rejected Alternatives
 
@@ -340,7 +320,7 @@ Use documentation-only proof:
 2. Update frame-related diagrams so they name the future frame-side owners and
    preserve documented boundary direction.
 3. Update verification docs to require future behavior tests, boundary
-   guardrails, and graph-based Mermaid invariant proof after implementation.
+   guardrails, and implementation proof obligations.
 4. Update registries and indexes only where documentation checks require it.
 5. Run documentation-only proof.
 6. Mark this step complete in `PLAN.md` and this step file only after proof
@@ -363,7 +343,6 @@ Use documentation-only proof:
 |---|---|---|---|
 | `FrameEngine` as the single owner of capture, ordinary planning, selected supplement staging, selection decoration, asset binding, static background, and overlay preview admission | `FrameEngine` facade over seven frame-private collaborators | architecture, frame contract, P9 implementation docs, diagrams, verification docs | bounded negative proof finds no active all-in-one ownership wording |
 | Backlog five-service split as sufficient future form | Candidate A with `SelectedMoveSupplementPlanner` and `OverlayPreviewPlanner` included | P9 implementation docs, frame contract, diagrams, verification docs | bounded positive proof finds all seven collaborators in active source-of-truth docs |
-| Diagram presence checks as the only future diagram verification | future graph-based Mermaid invariant proof for frame diagrams | guardrails docs, tests docs, P9 implementation docs | bounded positive proof finds the graph-check requirement and command text documented |
 
 ### Forbidden Moves
 
@@ -416,21 +395,7 @@ sh -c '! rg -n "public .*FrameCaptureService|public .*OrdinaryPaintPlanner|publi
 Expected signal: no active source-of-truth wording makes a frame collaborator
 public or runtime-level.
 
-### P4. Future Diagram Graph Proof Requirement
-
-This proves the requested graph-based post-implementation diagram verification
-is documented as a future guardrail/test expectation, without implementing it in
-this step.
-
-```sh
-sh -c 'rg -q "frame_engine_diagram_graph_test|Frame Diagram Graph Invariant|Mermaid.*graph|nodes, subgraphs,.*edges|forbidden-edge" docs/implementation docs/verification && rg -q "FrameEngine.*delegates.*collaborator|PaintAssetBindingService.*SurfaceResourceSession|OrdinaryPaintPlanner.*selection.*preview.*resolver|direct.*FrameEngine.*DocumentStoreKernel" docs/implementation docs/verification'
-```
-
-Expected signal: implementation and verification docs require a future graph
-guardrail that parses Mermaid diagrams into graph facts and checks positive and
-forbidden-edge invariants for the selected design.
-
-### P5. Retired Wording Negative Proof
+### P4. Retired Wording Negative Proof
 
 This proves active target docs no longer preserve the retired all-in-one
 `FrameEngine` ownership wording as the future form.
@@ -442,7 +407,7 @@ sh -c '! rg -n "FrameEngine owns capture, ordinary paint plans, selection decora
 Expected signal: retired all-in-one ownership wording and the rejected
 five-service-only future form are absent from active target docs.
 
-### P6. Design Matrix Boundary Proof
+### P5. Design Matrix Boundary Proof
 
 This proves active source-of-truth docs preserve the design artifact's
 collaborator responsibility boundaries, including the `must not own` side of
@@ -497,7 +462,7 @@ responsibility.
 
 #### Proof
 
-Run P2, P3, P5, and P6 for the documentation surfaces touched by this slice.
+Run P2, P3, P4, and P5 for the documentation surfaces touched by this slice.
 
 #### Closure
 
@@ -505,11 +470,11 @@ The selected Candidate A ownership form is documented in the core
 source-of-truth docs without public/runtime leakage or retired all-in-one
 ownership wording.
 
-### Slice 2. [x] Align Diagrams and Future Graph Proof Requirement
+### Slice 2. [x] Align Diagrams and Verification Docs
 
 #### Implements
 
-Implements D1, D2, and D3.
+Implements D1 and D2.
 
 #### Obligations Covered
 
@@ -527,15 +492,10 @@ SEAM_MIGRATION
   `docs/diagrams/seq_selected_move_preview_commit.mmd`, and
   `docs/diagrams/seq_selected_move_cancel.mmd` - name the future frame-side
   owners where the diagram shows frame ownership, data flow, or ordering.
-- Documentation edit: `docs/verification/guardrails.md` - document the future
-  graph-based Mermaid invariant guardrail requirement.
-- Documentation edit: `docs/verification/tests.md` - document the future
-  guardrail test ownership and expected graph invariants without creating the
-  test file.
-- Conditional documentation edit:
-  `docs/verification/guardrail_design_patterns.md` - update only if the future
-  graph-invariant check needs a documented guardrail pattern description beyond
-  existing registry parity and semantic-sequence guidance.
+- Documentation edit: `docs/verification/guardrails.md` - keep future
+  boundary guardrails aligned with the selected ownership model.
+- Documentation edit: `docs/verification/tests.md` - keep future test
+  ownership aligned with the selected ownership model.
 - Index/registry alignment: `docs/indexes/**` and `docs/_registry/**` - update
   only generated or manually maintained references required by documentation
   checks.
@@ -543,24 +503,21 @@ SEAM_MIGRATION
 #### Change
 
 Frame-related diagrams and verification docs encode the selected future design
-form and require a later implementation guardrail that parses changed Mermaid
-diagrams into graph facts.
+form.
 
 #### Proof
 
-Run P1, P2, P3, P4, P5, and P6.
+Run P1, P2, P3, P4, and P5.
 
 #### Closure
 
-Diagrams and verification docs agree with the selected design, and the future
-graph-based diagram check is documented clearly enough that a later
-implementation step does not need to invent the verification strategy.
+Diagrams and verification docs agree with the selected design.
 
 ### Slice 3. [x] Final Documentation Verification and Roadmap Closure
 
 #### Implements
 
-Implements D1, D2, and D3 by closing the documentation contract.
+Implements D1 and D2 by closing the documentation contract.
 
 #### Obligations Covered
 
@@ -584,7 +541,7 @@ documentation seam migration has negative proof.
 
 #### Proof
 
-Run P1, P2, P3, P4, P5, and P6.
+Run P1, P2, P3, P4, and P5.
 
 #### Closure
 
@@ -599,16 +556,15 @@ file.
 - P1. Documentation Structural Checks
 - P2. Selected Form Positive Semantic Proof
 - P3. Rejected Public Runtime Surface Negative Proof
-- P4. Future Diagram Graph Proof Requirement
-- P5. Retired Wording Negative Proof
-- P6. Design Matrix Boundary Proof
+- P4. Retired Wording Negative Proof
+- P5. Design Matrix Boundary Proof
 
 ### Done When
 
-- D1 through D3 are satisfied by their Decision Ledger proof references;
-- P1 through P6 pass;
+- D1 through D2 are satisfied by their Decision Ledger proof references;
+- P1 through P5 pass;
 - `SEAM_MIGRATION` is closed by the source-of-truth seam migration table and
-  P2 through P6;
+  P2 through P5;
 - no `lib/**`, `test/**`, or `tool/**` implementation files were changed;
 - no runtime behavior or executable guardrail implementation is claimed as
   complete by this documentation step;

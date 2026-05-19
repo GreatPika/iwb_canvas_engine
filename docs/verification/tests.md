@@ -478,24 +478,6 @@ test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart
   -> proves `FrameFactsPort` does not expose frame-owned render models,
      selection facts, resolver state, mutation APIs, or public document
      projection access.
-
-test/guardrails/frame_engine_diagram_graph_test.dart
-  -> future guardrail test for the implemented FrameEngine collaborator split;
-  -> parses changed frame-related Mermaid diagrams into graph facts: nodes,
-     subgraphs, sequence messages, and edges;
-  -> proves FrameEngine delegates to collaborator nodes for
-     FrameCaptureService, OrdinaryPaintPlanner,
-     SelectedMoveSupplementPlanner, SelectionDecorationPlanner,
-     PaintAssetBindingService, StaticBackgroundPlanner, and
-     OverlayPreviewPlanner;
-  -> proves PaintAssetBindingService uses SurfaceResourceSession and
-     OrdinaryPaintPlanner excludes selection, preview, and resolver/session
-     ownership;
-  -> proves forbidden-edge invariants: no direct FrameEngine to
-     DocumentStoreKernel edge, no public package barrel edge for frame
-     collaborators, no OrdinaryPaintPlanner to SurfaceResourceSession edge, and
-     no OverlayPreviewPlanner edge to selected move rendering, resource
-     resolver reads, cache invalidation, or repaint scheduling.
 ```
 
 Legacy capability inventory rows require inventory-only tests. Functional

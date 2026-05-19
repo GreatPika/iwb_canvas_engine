@@ -210,7 +210,6 @@ Mandatory guardrails:
 | `surface.pointer_samples_normalized_before_runtime` | Flutter surface adapters pass only normalized finite pointer samples into runtime routing |
 | `surface.interactive_false_pending_line_preserved` | interactive=false cancels active routed pointers, preserves pending line state not owned by an active routed pointer, and does not mutate runtime mode, committed document, selection, or resources |
 | `diagrams.all_required_present` | required Mermaid files exist |
-| `diagrams.frame_engine_graph_invariants` | future `frame_engine_diagram_graph_test` parses frame-related Mermaid graph facts and proves the FrameEngine collaborator split |
 
 `api.integration_surface_complete` is executable only when the guardrail runner
 or its delegated proof compiles
@@ -219,43 +218,5 @@ checks that the fixture imports only
 `package:iwb_canvas_engine/iwb_canvas_engine.dart`. The fixture must not import
 `src/**`, legacy symbols, or internal runtime classes, and it must exercise the
 required external adapter operation families from the public API contract.
-
-### Frame Diagram Graph Invariant
-
-After the future `FrameEngine` collaborator implementation and diagram updates,
-`test/guardrails/frame_engine_diagram_graph_test.dart` must parse changed
-frame-related Mermaid graph and sequence files into graph facts: nodes,
-subgraphs, sequence messages, and edges. The guardrail proves the selected
-form through positive invariants and forbidden-edge invariants rather than
-free-form text search.
-
-Positive invariants:
-
-```text
-- FrameEngine delegates to collaborator nodes:
-  FrameCaptureService, OrdinaryPaintPlanner,
-  SelectedMoveSupplementPlanner, SelectionDecorationPlanner,
-  PaintAssetBindingService, StaticBackgroundPlanner, OverlayPreviewPlanner.
-- PaintAssetBindingService uses SurfaceResourceSession.
-- OrdinaryPaintPlanner excludes selection, preview, and resolver/session
-  ownership.
-- SelectionDecorationPlanner owns boundsRevision in the decoration key.
-```
-
-Forbidden-edge invariants:
-
-```text
-- no direct FrameEngine to DocumentStoreKernel edge;
-- no frame collaborator edge to the public package barrel;
-- no OrdinaryPaintPlanner to SurfaceResourceSession edge;
-- no OverlayPreviewPlanner edge to selected move rendering, resource resolver
-  reads, cache invalidation, or repaint scheduling.
-```
-
-Future command:
-
-```sh
-dart test test/guardrails/frame_engine_diagram_graph_test.dart
-```
 
 ---

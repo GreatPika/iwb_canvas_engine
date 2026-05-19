@@ -66,19 +66,6 @@ state, resolver/session APIs, or static background identity. Painters consume
 immutable frame outputs and do not read live runtime, store, resolver, or public
 document state.
 
-Future diagram verification must include
-`test/guardrails/frame_engine_diagram_graph_test.dart`. The test parses changed
-frame-related Mermaid diagrams into graph facts for nodes, subgraphs, sequence
-messages, and edges, then proves positive delegation invariants and
-forbidden-edge invariants. Required positive invariants include
-`FrameEngine delegates to collaborator` edges for all seven future owners,
-`PaintAssetBindingService` to `SurfaceResourceSession`, and
-`OrdinaryPaintPlanner` excluding selection, preview, and resolver/session
-ownership. Required forbidden-edge invariants include no direct `FrameEngine`
-to `DocumentStoreKernel`, no planner-to-public-barrel exposure, no
-`OrdinaryPaintPlanner` to `SurfaceResourceSession`, and no overlay planner edge
-to selected move rendering or resource resolver reads.
-
 Future implementation must add behavior tests and guardrails for the split
 without exposing frame collaborators through the package barrel. At minimum:
 

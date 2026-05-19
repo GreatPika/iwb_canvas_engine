@@ -7,6 +7,9 @@ sequenceDiagram
   participant Runtime as RuntimeRoot
   participant Resources as ResourceKernel
   participant Frame as FrameEngine facade
+  participant Capture as FrameCaptureService
+  participant Ordinary as OrdinaryPaintPlanner
+  participant Supplement as SelectedMoveSupplementPlanner
   participant Assets as PaintAssetBindingService
   participant Facts as FrameFactsPort
   participant Store as DocumentStoreKernel
@@ -23,12 +26,29 @@ sequenceDiagram
   Surface->>Session: creates SurfaceResourceSession(resolver, resolverGeneration)
 
   Surface->>Frame: paint main scene request(viewportRect, devicePixelRatio, SurfaceResourceSession)
-  Frame->>Facts: capture committed main-frame facts once
+  Frame->>Capture: capture main frame once
+  Capture->>Facts: capture committed main-frame facts once
   Facts->>Store: read committed frame revision facts
   Store-->>Facts: documentRevision, structuralRevision, boundsRevision, elementVisualRevision, backgroundRevision, gridRevision
-  Facts-->>Frame: immutable frame revision facts
-  Frame->>Frame: build immutable RenderElementRecord list after bounded row resolution
-  Note over Frame,Facts: Row facts are resolved through FrameFactsPort for bounded candidate handles with structuralRevision/generation stale rejection.
+  Facts-->>Capture: immutable frame revision facts
+  Capture->>Resources: capture resourceVisualRevision once
+  Resources-->>Capture: resourceVisualRevision
+  Capture-->>Frame: CapturedMainFrame
+  Frame->>Ordinary: build/reuse ordinary committed records
+  Ordinary->>Facts: resolve ordinary row facts by captured revisions
+  Facts->>Store: read committed row snapshots
+  Store-->>Facts: immutable ordinary row facts or stale rejection
+  Facts-->>Ordinary: ordinary row facts
+  Ordinary-->>Frame: ordinary committed records
+  opt selectedMoveDelta is active
+    Frame->>Supplement: stage selected move supplement after ordinary records
+    Supplement->>Facts: resolve selected row facts by captured revisions
+    Facts->>Store: read selected row snapshots
+    Store-->>Facts: immutable selected row facts or stale rejection
+    Facts-->>Supplement: selected row facts
+    Supplement-->>Frame: merged ordinary and supplement records
+  end
+  Note over Ordinary,Supplement: Row facts are resolved through FrameFactsPort for bounded candidate handles with structuralRevision/generation stale rejection.
   Note over Frame: Each image render record carries resourceId from a committed row fact.
 
   opt records contain image resource ids
@@ -81,7 +101,7 @@ sequenceDiagram
 
   Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession; painter never calls CanvasResourceResolver directly.
   Note over Session,Resolver: Returned ui.Image objects are owned by the application. The engine never disposes app-owned images.
-  Note over Frame,Store: Main paint uses FrameFactsPort for committed descriptor facts, does not materialize CanvasDocument, and does not read DocumentProjectionCache.
+  Note over Capture,Store: Main paint uses FrameFactsPort for committed frame and row facts, does not materialize CanvasDocument, and does not read DocumentProjectionCache.
   Note over Port,Store: ResourcePort cannot mutate descriptors. Descriptor mutation is only through the CanvasEdit commit path outside this sequence.
   Note over Surface,Painter: No legacy scene, controller, snapshot, or public DTO entities participate in resource resolution.
 
