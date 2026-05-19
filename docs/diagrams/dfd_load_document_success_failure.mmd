@@ -19,7 +19,9 @@ flowchart LR
   subgraph Interaction["InteractionEngine state"]
     ActivePreview["Active gesture and preview"]
     PendingInput["Pointer normalization and pending tap history"]
-    Interrupt["Success-only interaction interrupt\nclear active gesture and preview"]
+    Interrupt["Success-only interaction interrupt\ntyped cleanup request"]
+    CleanupCoordinator["PointerToolCleanupCoordinator\ncoordinator-owned prepared-load cleanup policy"]
+    CleanupOutcome["PointerCleanupOutcome\ncancel active gesture and clear preview if active"]
     PostInstallCleanup["Post-install input cleanup\nclear pointer normalization and pending tap history"]
   end
 
@@ -66,8 +68,10 @@ flowchart LR
   Failure -.->|"selection owner unchanged"| ExistingSelection
 
   Prepared -->|"success-only interrupt request"| Interrupt
-  ActivePreview -->|"clear active gesture state"| Interrupt
-  Interrupt -->|"prepared replacement after preview cleanup"| AtomicInstall
+  Interrupt -->|"prepared load success cleanup request"| CleanupCoordinator
+  ActivePreview -->|"interaction-owned state and ownership context"| CleanupCoordinator
+  CleanupCoordinator -->|"effect-only cleanup outcome"| CleanupOutcome
+  CleanupOutcome -->|"apply before install; public state waits for atomic result"| AtomicInstall
   Prepared -->|"document install payload"| AtomicInstall
   Prepared -->|"selection clear effect"| SelectionClear
   AtomicInstall -->|"replace committed state"| ReplacementCommitted
