@@ -83,7 +83,11 @@ public_exports:
   - CanvasDrawLineActionPayload
   - CanvasEraseActionPayload
   - CanvasTextEditActionPayload
-  - CanvasTextEditRequested
+  - CanvasContextActionRequested
+  - CanvasContextActionTrigger
+  - CanvasContextActionTarget
+  - CanvasContentElementContextActionTarget
+  - CanvasEmptyCanvasContextActionTarget
   - CanvasMoveCommitResolver
   - CanvasMoveCommitRequest
   - CanvasMoveResolution

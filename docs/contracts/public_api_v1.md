@@ -116,7 +116,7 @@ importing only package:iwb_canvas_engine/iwb_canvas_engine.dart.
 That fixture must compile without `src/**`, legacy package symbols, or internal
 runtime classes. It covers the external operation families an app-level adapter
 needs: runtime lifecycle, state/document observation, edit/load,
-selection/camera/tools, high-level commands, actions/text-edit requests,
+selection/camera/tools, high-level commands, actions/context-action requests,
 resources, and `CanvasSurface` construction with public resolver/style inputs.
 
 ### 4.1.1 Dart API design constraints
@@ -202,7 +202,8 @@ CanvasClearResult
 CanvasPreviewState and preview family types
 CanvasActionCommitted
 CanvasActionPayload and payload family types
-CanvasTextEditRequested
+CanvasContextActionRequested
+CanvasContextActionTarget and target family types
 CanvasMoveCommitRequest
 CanvasResource and resource family types
 CanvasDataException
@@ -356,7 +357,7 @@ final class CanvasRuntime {
   CanvasPreviewState get preview;
 
   Stream<CanvasActionCommitted> get actions;
-  Stream<CanvasTextEditRequested> get textEditRequests;
+  Stream<CanvasContextActionRequested> get contextActionRequests;
 
   CanvasElementId generateElementId();
   CanvasLayerId generateLayerId();
@@ -383,7 +384,7 @@ Dispose contract:
 - after dispose, mutating public operations throw StateError('CanvasRuntime is disposed.');
 - readDocument after dispose is allowed and returns last committed immutable document;
 - actions stream closes;
-- textEditRequests stream closes;
+- contextActionRequests stream closes;
 - state.value remains readable after dispose and returns the final runtime
   snapshot;
 - dispose alone never increments the committed document revision;
@@ -1428,7 +1429,7 @@ Runtime timestamp contract (`runtime_created_timestamps_monotonic`):
 - stale host timestamps and host clock rollback are backwards hints and resolve
   to next;
 - the primary compatibility proof covers CanvasActionCommitted.timestampMs and
-  CanvasTextEditRequested.timestampMs;
+  CanvasContextActionRequested.timestampMs;
 - the same runtime-local resolver also applies to
   CanvasPendingLineStartPreview.timestampMs and
   CanvasMoveCommitRequest.timestampMs because they are timestamped runtime
@@ -1439,7 +1440,7 @@ Runtime timestamp contract (`runtime_created_timestamps_monotonic`):
   revisions, and preview revisions do not persist or reconstruct the timestamp
   cursor;
 - no-op, stale rejection, rollback, cancel, loadDocument, and dispose stream
-  close paths do not create timestamped action or text request outputs.
+  close paths do not create timestamped action or context request outputs.
 ```
 
 ```dart
@@ -1464,9 +1465,10 @@ Rules:
 - removeElement emits deleteElements only when it removes an element;
 - commitTextEdit returns false and performs no mutation, state publication,
   repaint, or action event when the request id is unknown or retired, the
+  request target is empty canvas, the request target is non-text content, the
   controller epoch changed, the current element is missing, the current element
   generation no longer matches the issued request, the current elementRevision
-  changed, or the current element is no longer a text element;
+  changed, or the current element family no longer matches a text element;
 - commitTextEdit validates newText through the existing text validation path
   before request retirement and before draft mutation;
 - commitTextEdit treats documentRevision as an observation fact, not a stale
@@ -2206,44 +2208,67 @@ Event emission matrix:
 | set camera/background/grid/palette | no | — | — |
 | markResourceDirty | no | — | — |
 
-Text edit event:
+Context-action request event:
 
 ```dart
-final class CanvasTextEditRequested {
-  CanvasTextEditRequested({
+enum CanvasContextActionTrigger { doubleTap }
+
+final class CanvasContextActionRequested {
+  CanvasContextActionRequested({
     required this.requestId,
-    required this.elementId,
+    required this.trigger,
+    required this.target,
     required this.controllerEpoch,
     required this.documentRevision,
-    required this.elementRevision,
     required this.timestampMs,
     required this.viewPosition,
     required this.worldPosition,
-    required this.boundsWorld,
-    required this.textSnapshot,
   });
 
   final CanvasInteractionRequestId requestId;
-  final CanvasElementId elementId;
+  final CanvasContextActionTrigger trigger;
+  final CanvasContextActionTarget target;
   final int controllerEpoch;
   final int documentRevision;
-  final int elementRevision;
   final int timestampMs;
   final Offset viewPosition;
   final Offset worldPosition;
+}
+
+sealed class CanvasContextActionTarget {}
+
+final class CanvasContentElementContextActionTarget
+    extends CanvasContextActionTarget {
+  CanvasContentElementContextActionTarget({
+    required this.elementSnapshot,
+    required this.boundsWorld,
+  });
+
+  final CanvasElement elementSnapshot;
   final Rect boundsWorld;
-  final CanvasTextElement textSnapshot;
+}
+
+final class CanvasEmptyCanvasContextActionTarget
+    extends CanvasContextActionTarget {
+  const CanvasEmptyCanvasContextActionTarget();
 }
 ```
 
-Text editing model:
+Context-action and text editing model:
 
 ```text
-- engine detects double-tap on text;
-- engine emits CanvasTextEditRequested with requestId, controllerEpoch,
-  documentRevision, elementRevision, element id, timestamp, view/world
-  positions, boundsWorld, and immutable textSnapshot;
-- application displays Flutter text editor overlay;
+- engine detects an accepted double-tap context target;
+- engine emits exactly one CanvasContextActionRequested through
+  contextActionRequests for the accepted target;
+- trigger is CanvasContextActionTrigger.doubleTap;
+- target is either CanvasContentElementContextActionTarget or
+  CanvasEmptyCanvasContextActionTarget;
+- content-element targets carry an immutable public CanvasElement snapshot and
+  boundsWorld;
+- empty-canvas targets carry no element snapshot;
+- application decides whether to display a context menu first or immediately
+  show a Flutter text editor overlay when the content target snapshot is a
+  CanvasTextElement;
 - application may visually cover or hide the text element in app-owned overlay
   UI, but must not mutate the target element to hide it as part of the
   request-originated edit flow because changing the target elementRevision makes
@@ -2256,7 +2281,8 @@ Text editing model:
   stale-rejection guard; unrelated document edits do not reject a still-current
   text edit;
 - engine does not store active text-input session;
-- IME/focus/accessibility/text selection are application responsibilities;
+- context menus, editor overlay lifetime, IME, focus, accessibility, text
+  selection, and hide/show policy are application responsibilities;
 - loadDocument success changes controllerEpoch, which makes existing
   interaction request ids stale; after runtime disposal, commitTextEdit follows
   the existing mutating public operation rule and throws

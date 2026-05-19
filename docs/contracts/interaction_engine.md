@@ -212,39 +212,45 @@ This is mandatory. The legacy selected move preview uses main-scene repaint
 through selected supplement staging; next behavior must preserve that functional
 result.
 
-### 14.4 Text double-tap
+### 14.4 Double-tap context action
 
-Double-tap on a visible selectable text element emits
-`CanvasTextEditRequested`. It does not mutate document and does not
-select/deselect by itself.
+Double-tap on an accepted context-action target emits exactly one
+`CanvasContextActionRequested` through `CanvasRuntime.contextActionRequests`.
+The trigger is `CanvasContextActionTrigger.doubleTap`, and the target is either
+a content element or empty canvas. Request delivery has no document, selection,
+preview, repaint, spatial, projection, resource, or action effect.
 
-Text request emission records an issued request in `InteractionRequestRegistry`
-with a generated `CanvasInteractionRequestId`, target element id,
-controllerEpoch, element generation, elementRevision, element family, and
-retired request status. The emitted `CanvasTextEditRequested` carries the
-request id plus controllerEpoch, documentRevision, elementRevision, timestamp,
-view/world positions, boundsWorld, and an immutable text snapshot.
+Content-element targets carry an immutable public `CanvasElement` snapshot and
+`boundsWorld`. Empty-canvas targets carry no element snapshot. Text editing is
+an application-owned choice after delivery: the application may open a context
+menu first or immediately show a text editor when the content target snapshot
+is a `CanvasTextElement`.
+
+Context request emission records an issued request in
+`InteractionRequestRegistry` with a generated `CanvasInteractionRequestId`,
+request target kind, controllerEpoch, and retired request status. For
+content-element targets, the registry also stores target element id, element
+generation, elementRevision, and element family.
 
 `documentRevision` is an observation and diagnostics fact only, not a stale
 commit guard. Unrelated document edits after request emission do not reject a
-later text commit while the request id, controllerEpoch, element generation,
-elementRevision, and text element family remain current.
+later text commit while the request id is current and unretired, the request
+target is a text content element, and controllerEpoch, element generation,
+elementRevision, and element family remain current.
 
 The registry is not an active text-input session and not CanvasPreviewState.
-The application owns the Flutter text editor overlay, IME, focus,
-accessibility, text selection, hide/show policy, and editor lifetime.
+The application owns context menus, the Flutter text editor overlay, IME,
+focus, accessibility, text selection, hide/show policy, and editor lifetime.
 
 Request-originated text changes commit through
 `CanvasCommandPort.commitTextEdit(requestId, newText, timestampMs: ...)`.
-The command retires accepted no-op and changed requests, rejects stale or
-retired request ids with no document/repaint/action effect, validates `newText`
-before retirement or draft mutation, and delegates changed text to EditKernel
-before emitting `CanvasActionType.editText`. Direct
+The command accepts only current, unretired context request ids whose target is
+a text content element. It retires accepted no-op and changed requests, rejects
+empty-canvas, non-text, stale, retired, missing, or family-mismatched request
+ids with no document, repaint, or action effect, validates `newText` before
+retirement or draft mutation, and delegates changed text to EditKernel before
+emitting `CanvasActionType.editText`. Direct
 `CanvasEdit.updateElement(CanvasTextElementUpdate)` remains the programmatic
 non-request synchronization API.
-
-The generic `CanvasInteractionRequestId` is intentionally compatible with a
-future contextual-action request API. This phase does not introduce a full
-contextual-action event for shapes, images, lines, or empty canvas.
 
 ---
