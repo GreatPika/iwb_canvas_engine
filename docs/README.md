@@ -4,7 +4,8 @@ This directory is the durable source of truth for the new-engine transition and
 target architecture.
 
 Start architecture work at `architecture/README.md`. Start implementation work
-with the phase files under `docs/implementation/`. Start donor work at
+with the phase files under `docs/implementation/`. Start guardrail design work
+at `verification/guardrail_design_patterns.md`. Start donor work at
 `donors/00_reuse_rules.md` and `_registry/donors.yaml`.
 
 ## Layout
@@ -17,7 +18,9 @@ with the phase files under `docs/implementation/`. Start donor work at
   are allowed or forbidden, which guardrails apply, which tests are required,
   and the exit gate for that phase.
 - `verification/`: legacy capability inventory, functional ledger, tests,
-  guardrails, benchmarks, and release gates.
+  guardrails, guardrail design patterns, benchmarks, and release gates. Use
+  `verification/guardrail_design_patterns.md` before implementing or rewriting
+  mandatory guardrails from `verification/guardrails.md`.
 - `donors/`: donor inventory sections. Donor use is controlled by
   `_registry/donors.yaml`.
 - `diagrams/`: human-readable catalog and Mermaid diagram files.

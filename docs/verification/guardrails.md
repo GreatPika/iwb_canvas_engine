@@ -127,6 +127,12 @@ Runner metadata may live under `tool/guardrails/**`, but mandatory guardrail ids
 come from `docs/_registry/sections.yaml` and this section. If runner metadata
 omits a mandatory guardrail, `test.guardrails.blocking_suite` must fail.
 
+Design guidance for implementing or rewriting individual guardrails lives in
+`docs/verification/guardrail_design_patterns.md`. Each mandatory guardrail must
+choose a pattern from that document before executable proof is added, so new
+checks reuse the legacy-proven scanner, resolver, sequence, parity, behavior,
+and budget patterns instead of inventing bespoke enforcement.
+
 Mandatory guardrails:
 
 | Guardrail id | Rule |
