@@ -140,52 +140,7 @@ ordinary elementVisual
 
 ---
 
-## 2. Ввести `FrameFactsPort`
-
-Это часть разбиения `FrameEngine`.
-
-**Проблема:** сейчас диаграммы допускают:
-
-```text
-FrameEngine -> DocumentStoreKernel
-```
-
-Это можно оставить формально, но лучше сузить.
-
-**Исправить так:**
-
-```text
-FrameEngine -> FrameFactsPort -> DocumentStoreKernel
-```
-
-`FrameFactsPort` отдаёт только то, что нужно для frame capture:
-
-```text
-committed render rows
-documentRevision
-structuralRevision
-boundsRevision
-elementVisualRevision
-backgroundRevision
-gridRevision
-resource descriptors
-```
-
-Не отдаёт:
-
-```text
-CanvasDocument projection
-edit draft
-selection mutable state
-interaction state
-diagnostics internals
-```
-
-Так проще не допустить случайного чтения Store “как удобно”.
-
----
-
-## 3. Ввести `PointerToolCleanupCoordinator`
+## 2. Ввести `PointerToolCleanupCoordinator`
 
 Это не блокер API freeze, но желательно до реализации interaction.
 
