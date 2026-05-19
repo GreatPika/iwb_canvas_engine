@@ -28,8 +28,11 @@ Dart, tests, guardrail runner code, or frame collaborators.
   `PaintAssetBindingService`, `StaticBackgroundPlanner`, and
   `OverlayPreviewPlanner`.
 - Update active architecture, package-boundary, frame-rendering, resource,
-  implementation-phase, verification, diagram, index, and registry source of
-  truth surfaces needed to make the selected form durable.
+  implementation-phase, and diagram source-of-truth surfaces needed to make the
+  selected form durable.
+- Update verification, index, and registry surfaces only when the selected form
+  introduces a new mandatory guardrail, planned test inventory entry, or
+  documentation navigation requirement.
 - Document that future implementation must keep the public package barrel free
   of frame collaborators.
 - Document that future implementation must keep committed document facts behind
@@ -275,8 +278,9 @@ The documentation must preserve these owner facts:
 ### Entry and Exit Boundaries
 
 - Documentation entry: accepted design file plus active docs.
-- Documentation exit: updated architecture, contract, implementation,
-  verification, diagram, index, and registry source-of-truth surfaces.
+- Documentation exit: updated architecture, contract, implementation, and
+  diagram source-of-truth surfaces, plus verification, index, or registry
+  surfaces only when they own a changed required fact.
 - Future implementation entry and exit boundaries must be documented but not
   implemented in this step.
 
@@ -319,8 +323,10 @@ Use documentation-only proof:
    implementation docs to lock the selected future form.
 2. Update frame-related diagrams so they name the future frame-side owners and
    preserve documented boundary direction.
-3. Update verification docs to require future behavior tests, boundary
-   guardrails, and implementation proof obligations.
+3. Record future behavior tests, boundary guardrails, and implementation proof
+   obligations in the owning source-of-truth surface. Update verification docs
+   only if a new mandatory guardrail or planned test inventory entry is
+   introduced.
 4. Update registries and indexes only where documentation checks require it.
 5. Run documentation-only proof.
 6. Mark this step complete in `PLAN.md` and this step file only after proof
@@ -341,8 +347,8 @@ Use documentation-only proof:
 
 | Retired source-of-truth wording | Successor source-of-truth wording | Documentation surfaces | Retirement gate |
 |---|---|---|---|
-| `FrameEngine` as the single owner of capture, ordinary planning, selected supplement staging, selection decoration, asset binding, static background, and overlay preview admission | `FrameEngine` facade over seven frame-private collaborators | architecture, frame contract, P9 implementation docs, diagrams, verification docs | bounded negative proof finds no active all-in-one ownership wording |
-| Backlog five-service split as sufficient future form | Candidate A with `SelectedMoveSupplementPlanner` and `OverlayPreviewPlanner` included | P9 implementation docs, frame contract, diagrams, verification docs | bounded positive proof finds all seven collaborators in active source-of-truth docs |
+| `FrameEngine` as the single owner of capture, ordinary planning, selected supplement staging, selection decoration, asset binding, static background, and overlay preview admission | `FrameEngine` facade over seven frame-private collaborators | architecture, frame contract, P9 implementation docs, diagrams | bounded negative proof finds no active all-in-one ownership wording |
+| Backlog five-service split as sufficient future form | Candidate A with `SelectedMoveSupplementPlanner` and `OverlayPreviewPlanner` included | P9 implementation docs, frame contract, diagrams | bounded positive proof finds all seven collaborators in active source-of-truth docs |
 
 ### Forbidden Moves
 
@@ -470,7 +476,7 @@ The selected Candidate A ownership form is documented in the core
 source-of-truth docs without public/runtime leakage or retired all-in-one
 ownership wording.
 
-### Slice 2. [x] Align Diagrams and Verification Docs
+### Slice 2. [x] Align Diagrams and Conditional Verification Surfaces
 
 #### Implements
 
@@ -492,18 +498,20 @@ SEAM_MIGRATION
   `docs/diagrams/seq_selected_move_preview_commit.mmd`, and
   `docs/diagrams/seq_selected_move_cancel.mmd` - name the future frame-side
   owners where the diagram shows frame ownership, data flow, or ordering.
-- Documentation edit: `docs/verification/guardrails.md` - keep future
-  boundary guardrails aligned with the selected ownership model.
-- Documentation edit: `docs/verification/tests.md` - keep future test
-  ownership aligned with the selected ownership model.
+- Conditional documentation edit: `docs/verification/guardrails.md` - update
+  only if the selected ownership model introduces a new mandatory guardrail id.
+- Conditional documentation edit: `docs/verification/tests.md` - update only if
+  the selected ownership model introduces a new planned test inventory entry.
 - Index/registry alignment: `docs/indexes/**` and `docs/_registry/**` - update
   only generated or manually maintained references required by documentation
   checks.
 
 #### Change
 
-Frame-related diagrams and verification docs encode the selected future design
-form.
+Frame-related diagrams encode the selected future design form. Verification
+docs remain unchanged when existing guardrails and planned tests already cover
+the future proof obligations and P9 owns the collaborator-specific proof
+wording.
 
 #### Proof
 
@@ -511,7 +519,9 @@ Run P1, P2, P3, P4, and P5.
 
 #### Closure
 
-Diagrams and verification docs agree with the selected design.
+Diagrams agree with the selected design, and no verification-doc update is
+required unless a new guardrail id or planned test inventory entry is
+introduced.
 
 ### Slice 3. [x] Final Documentation Verification and Roadmap Closure
 
