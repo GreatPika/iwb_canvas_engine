@@ -503,7 +503,7 @@ Expected signal: no matches.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Public Runtime Timestamp Contract
+### Slice 1. [x] Public Runtime Timestamp Contract
 
 #### Implements
 
@@ -552,7 +552,7 @@ definition, creation site, time source, scope, rollback behavior, and output
 coverage questions, and the functional ledger names
 `runtime_created_timestamps_monotonic`.
 
-### Slice 2. [ ] Operation And Verification Linkage
+### Slice 2. [x] Operation And Verification Linkage
 
 #### Implements
 
@@ -608,7 +608,7 @@ The slice is complete when future executable coverage is named by one stable
 test id, the new guardrail is mandatory, operation rows link to the proof, and
 release gates block on the monotonic timestamp test.
 
-### Slice 3. [ ] Audit Retirement And Documentation Proof
+### Slice 3. [x] Audit Retirement And Documentation Proof
 
 #### Implements
 
