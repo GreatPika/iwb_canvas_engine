@@ -52,7 +52,8 @@ flowchart LR
     OrdinaryPlan["Ordinary committed paint plan\ncached RenderElementRecord list"]
     OrdinaryStage["OrdinaryPaintPlanner\nordinary paint candidates\nviewport and halo"]
     SupplementStage["SelectedMoveSupplementPlanner\nper-frame selected supplement staging\npreview-shifted visibility"]
-    RecordBuilder["OrdinaryPaintPlanner\nrender record builder\nresolve handles by revision/generation"]
+    OrdinaryRecordBuilder["OrdinaryPaintPlanner\nordinary record builder\nresolve handles by revision/generation"]
+    SupplementRecordBuilder["SelectedMoveSupplementPlanner\nsupplement record builder\nresolve shifted handles by revision/generation"]
     FilterOrdinary["SelectedMoveSupplementPlanner\nfilter selected movable ids\nfrom ordinary stream for this frame"]
     Merge["Order-token merge\nno full-scene sort"]
     SelectionDecoration["SelectionDecorationPlanner\nselection decoration plan\nseparate from ordinary records"]
@@ -96,12 +97,12 @@ flowchart LR
   OrdinaryStage -->|"viewport query only"| PaintIndex
   PaintIndex -->|"candidate ids with generations"| OrdinaryStage
 
-  OrdinaryStage -->|"ordinary handles"| RecordBuilder
-  RecordBuilder -->|"request row facts by captured revisions"| RowSnapshots
+  OrdinaryStage -->|"ordinary handles"| OrdinaryRecordBuilder
+  OrdinaryRecordBuilder -->|"request row facts by captured revisions"| RowSnapshots
   RowSnapshots -->|"read committed row snapshots"| Committed
   Committed -->|"immutable row views\nstale generation rejected"| RowSnapshots
-  RowSnapshots -->|"row facts or stale rejection"| RecordBuilder
-  RecordBuilder -->|"ordinary committed records"| OrdinaryPlan
+  RowSnapshots -->|"ordinary row facts or stale rejection"| OrdinaryRecordBuilder
+  OrdinaryRecordBuilder -->|"ordinary committed records"| OrdinaryPlan
   OrdinaryPlan -->|"store ordinary records only"| PaintPlanCache
 
   OrdinaryPlan -->|"ordinary stream"| FilterOrdinary
@@ -110,8 +111,10 @@ flowchart LR
   CapturedFrame -->|"selectedMoveDelta for this frame"| SupplementStage
   SupplementStage -->|"shifted visibility query only"| ShiftedCandidates
   ShiftedCandidates -->|"selected candidate ids with generations"| SupplementStage
-  SupplementStage -->|"shifted selected handles"| RecordBuilder
-  RecordBuilder -->|"per-frame supplement records\nwith previewDelta"| Merge
+  SupplementStage -->|"shifted selected handles"| SupplementRecordBuilder
+  SupplementRecordBuilder -->|"request selected row facts\nby captured revisions"| RowSnapshots
+  RowSnapshots -->|"selected row facts or stale rejection"| SupplementRecordBuilder
+  SupplementRecordBuilder -->|"per-frame supplement records\nwith previewDelta"| Merge
   FilterOrdinary -->|"ordinary records excluding\nmoved selected ids"| Merge
   Merge -->|"ordered ordinary and supplement records\nnot stored in PaintPlanCache"| Records
   SelectionDecoration -->|"selection UI primitives"| Records
