@@ -65,6 +65,7 @@ next API mapping after the scope gate.
 | pending line state | `CanvasPreviewState` | `functional.pending_line_preview` |
 | text edit request | `CanvasTextEditRequested` + guarded `CanvasCommandPort.commitTextEdit` | `functional.text_edit_request` |
 | action committed event | `CanvasActionCommitted` typed payloads | `functional.action_events` |
+| monotonic runtime-created timestamps (`runtime_created_timestamps_monotonic`) | `CanvasActionCommitted.timestampMs`, `CanvasTextEditRequested.timestampMs`, `CanvasPendingLineStartPreview.timestampMs`, and `CanvasMoveCommitRequest.timestampMs` resolve through the runtime timestamp contract | `test.interaction.runtime_created_timestamps_monotonic` |
 | camera offset | `CanvasCameraPort.offset` + `CanvasRuntime.state.revisions.viewCamera` | `functional.camera_offset` |
 | background color | `setBackgroundColor` | `functional.background_color` |
 | grid enabled/size/color | `CanvasGrid` | `functional.grid` |

@@ -1406,6 +1406,42 @@ user-action notification stream.
 undo/redo journal. Undo/redo is application-owned, and v1 action payloads do not
 carry inverse patches.
 
+Runtime timestamp contract (`runtime_created_timestamps_monotonic`):
+
+```text
+- runtime-created timestampMs values are millisecond ordering tokens resolved by
+  one CanvasRuntime, not wall-clock creation facts;
+- nullable timestampMs inputs on command, selection, pointer, and double-tap
+  boundaries are hints;
+- each CanvasRuntime owns one internal timestamp cursor for timestamped runtime
+  outputs;
+- a new CanvasRuntime initializes that cursor to -1, so the first output with a
+  null or backwards hint resolves to 0;
+- when the runtime creates a timestamped output, it computes next as the
+  previous resolved timestamp plus one;
+- a non-null hint greater than or equal to next resolves to the hint value;
+- a null hint or a hint less than next resolves to next;
+- the resolved value becomes the new cursor value before the output is
+  published;
+- the monotonicity scope is one CanvasRuntime only; no global, process-wide, or
+  cross-runtime ordering guarantee is made;
+- stale host timestamps and host clock rollback are backwards hints and resolve
+  to next;
+- the primary compatibility proof covers CanvasActionCommitted.timestampMs and
+  CanvasTextEditRequested.timestampMs;
+- the same runtime-local resolver also applies to
+  CanvasPendingLineStartPreview.timestampMs and
+  CanvasMoveCommitRequest.timestampMs because they are timestamped runtime
+  outputs;
+- CanvasPendingLineStartPreview and CanvasMoveCommitRequest remain preview and
+  resolver-request outputs, not user-action events;
+- CanvasDocument, schema v1 data, resource state, selection state, document
+  revisions, and preview revisions do not persist or reconstruct the timestamp
+  cursor;
+- no-op, stale rejection, rollback, cancel, loadDocument, and dispose stream
+  close paths do not create timestamped action or text request outputs.
+```
+
 ```dart
 abstract interface class CanvasCommandPort {
   bool removeElement(CanvasElementId id, {int? timestampMs});
