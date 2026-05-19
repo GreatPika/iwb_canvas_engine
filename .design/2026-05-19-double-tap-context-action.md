@@ -3,9 +3,9 @@
 ---
 date: 2026-05-19
 designer: Codex
-commit: d93c06d
+commit: 34d3d6b
 branch: new-architecture
-design_question: "Design the documentation change that makes double-tap a general application-owned context signal for content targets and empty canvas, while preserving text editing as an application choice."
+design_question: "Design the documentation follow-up that locks CanvasToolPort.handleDoubleTap as a host-recognized double-tap event inside the current context-action request contract."
 ---
 
 ## Disposition
@@ -14,13 +14,14 @@ READY_FOR_CONTRACT
 
 ## Product Outcome
 
-Double-tap becomes one application-facing context request instead of a text-only
-edit trigger. A double-tap on any visible content element except background gives
-the application a content-target context request. A double-tap on a location with
-no content target gives the application an empty-canvas context request. Text is
-handled through the same request path: the application may open a menu first, or
-it may preserve the old UX by immediately opening its text editor when the
-target element snapshot is text.
+The current docs already define double-tap as one application-facing
+context-action request for content targets and empty canvas. This follow-up
+design locks the missing input-boundary rule: `CanvasToolPort.handleDoubleTap`
+is a host-recognized double-tap event, not "the second tap" of pending
+pointer-sample recognition. It must work without pending first-tap history,
+clear any old pending context tap privately, resolve the current target at the
+provided position, and emit exactly one content-target or empty-canvas context
+request.
 
 Non-goals:
 
@@ -34,59 +35,60 @@ Non-goals:
 ## Target Contract Classification
 
 - Profile: `SOURCE_OF_TRUTH_DOCS`
-- Obligations: `PUBLIC_API_CHANGE`, `SEAM_MIGRATION`
+- Obligations: `PUBLIC_API_CHANGE`
 
 The next step should update normative docs and registries only. Production code
 and tests can follow after the source-of-truth docs are locked.
 
 ## Research Inputs
 
-- `.research/2026-05-19-double-tap-docs-current-contract.md` - current
-  text-only double-tap contract, affected docs, and open questions.
+- `.research/2026-05-19-double-tap-docs-current-contract.md` - historical
+  pre-migration text-only double-tap contract and affected source-of-truth
+  surfaces. The current repository has already migrated the public request seam
+  to context-action names, so this research is background only for why the seam
+  exists.
 
 ## Repository Evidence
 
-- `.research/2026-05-19-double-tap-docs-current-contract.md:13` - current docs
-  describe double-tap as text-edit request only.
-- `.research/2026-05-19-double-tap-docs-current-contract.md:17` - current docs
-  explicitly defer a full contextual-action event for shapes, images, lines, and
-  empty canvas.
-- `.research/2026-05-19-double-tap-docs-current-contract.md:127` - current hit
-  eligibility is narrower than "any content node" because it requires
-  `element.isSelectable`.
+- `.research/2026-05-19-double-tap-docs-current-contract.md:13` - before the
+  context-action migration, docs described double-tap as text-edit request only.
 - `.research/2026-05-19-double-tap-docs-current-contract.md:140` - broadening
   double-tap touches registries, phase docs, verification docs, and release
-  gates.
-- `docs/contracts/interaction_engine.md:215` - current primary section is
-  `Text double-tap`.
-- `docs/contracts/interaction_engine.md:217` - current target is a visible
-  selectable text element.
-- `docs/contracts/interaction_engine.md:221` - text request emission records
-  issued request guard facts in `InteractionRequestRegistry`.
-- `docs/contracts/interaction_engine.md:233` - the registry is not active
+  gates; this remains useful background for impact checking.
+- `docs/contracts/interaction_engine.md:216` - current primary section is
+  `Double-tap context action`.
+- `docs/contracts/interaction_engine.md:218` - current behavior emits exactly
+  one `CanvasContextActionRequested` on an accepted context-action target.
+- `docs/contracts/interaction_engine.md:221` - current target is either a
+  content element or empty canvas, and request delivery is effect-only.
+- `docs/contracts/interaction_engine.md:224` - content targets carry an
+  immutable public `CanvasElement` snapshot and `boundsWorld`.
+- `docs/contracts/interaction_engine.md:230` - context request emission records
+  issued request facts in `InteractionRequestRegistry`.
+- `docs/contracts/interaction_engine.md:242` - the registry is not active
   text-input session or preview state.
-- `docs/contracts/interaction_engine.md:237` - request-originated text changes
-  commit through `CanvasCommandPort.commitTextEdit`.
-- `docs/contracts/interaction_engine.md:246` - `CanvasInteractionRequestId` is
-  already intentionally compatible with a future contextual-action request API.
-- `docs/contracts/interaction_engine.md:248` - the current phase excludes
-  contextual-action events for shapes, images, lines, and empty canvas.
+- `docs/contracts/interaction_engine.md:246` - request-originated text changes
+  still commit through `CanvasCommandPort.commitTextEdit`.
 - `docs/contracts/public_api_v1.md:263` - `CanvasInteractionRequestId` is a
   public value type.
 - `docs/contracts/public_api_v1.md:294` - the engine, not application code,
   generates interaction request ids.
-- `docs/contracts/public_api_v1.md:359` - `CanvasRuntime` currently exposes
-  `textEditRequests`.
-- `docs/contracts/public_api_v1.md:1680` - `CanvasToolPort.handleDoubleTap` is
+- `docs/contracts/public_api_v1.md:361` - `CanvasRuntime` currently exposes
+  `contextActionRequests`.
+- `docs/contracts/public_api_v1.md:1683` - `CanvasToolPort.handleDoubleTap` is
   already the public double-tap entry boundary.
-- `docs/contracts/public_api_v1.md:2212` - `CanvasTextEditRequested` is the
+- `docs/contracts/public_api_v1.md:2212` - the current public section defines
+  the context-action request event.
+- `docs/contracts/public_api_v1.md:2215` - the current public trigger enum
+  includes `CanvasContextActionTrigger.doubleTap`.
+- `docs/contracts/public_api_v1.md:2217` - `CanvasContextActionRequested` is the
   current public request payload.
-- `docs/contracts/public_api_v1.md:2242` - the public text model says the engine
-  detects double-tap on text.
-- `docs/contracts/public_api_v1.md:2246` - the application owns display of the
-  Flutter text editor overlay.
-- `docs/contracts/public_api_v1.md:2251` - request-originated text changes
-  commit through `CanvasCommandPort.commitTextEdit`.
+- `docs/contracts/public_api_v1.md:2243` - the current public target union has
+  `CanvasContentElementContextActionTarget`.
+- `docs/contracts/public_api_v1.md:2254` - the current public target union has
+  `CanvasEmptyCanvasContextActionTarget`.
+- `docs/contracts/public_api_v1.md:2263` - the current public model says the
+  engine detects an accepted double-tap context target.
 - `docs/contracts/public_api_v1.md:898` - `CanvasElement` is a public sealed DTO
   with common element facts.
 - `docs/contracts/public_api_v1.md:913` - every public element snapshot exposes
@@ -98,8 +100,8 @@ and tests can follow after the source-of-truth docs are locked.
   documented as a public contract.
 - `docs/contracts/public_api_v1.md:1414` - nullable timestamps on double-tap
   boundaries are hints.
-- `docs/contracts/public_api_v1.md:1430` - current timestamp compatibility proof
-  names `CanvasTextEditRequested.timestampMs`.
+- `docs/contracts/public_api_v1.md:1433` - current timestamp compatibility proof
+  names `CanvasContextActionRequested.timestampMs`.
 - `docs/contracts/geometry.md:54` - hit eligibility is currently defined as a
   policy.
 - `docs/contracts/geometry.md:57` - current point hit eligibility requires
@@ -113,10 +115,13 @@ and tests can follow after the source-of-truth docs are locked.
   though they are excluded from pointer selection.
 - `docs/architecture/03_data_model.md:88` - committed element handles record
   `locationKind: background | content`.
-- `docs/contracts/operation_matrix.md:84` - the current effect row is text-only
-  and emits `textEditRequested`.
-- `docs/contracts/operation_matrix.md:110` - current request delivery has no
-  document, selection, preview, spatial, projection, repaint, or action effect.
+- `docs/contracts/operation_matrix.md:85` - the current effect row is
+  `context-action double-tap request`.
+- `docs/contracts/operation_matrix.md:111` - current request delivery emits
+  `CanvasContextActionRequested`.
+- `docs/contracts/operation_matrix.md:116` - request delivery itself has no
+  document, selection, preview, repaint, spatial, projection, resource, or
+  action effect.
 - `docs/architecture/01_runtime_ownership.md:153` - `InteractionRequestRegistry`
   is interaction-owned.
 - `docs/architecture/01_runtime_ownership.md:156` - `RuntimeRoot` owns registry
@@ -124,33 +129,37 @@ and tests can follow after the source-of-truth docs are locked.
 - `docs/architecture/01_runtime_ownership.md:159` - the registry is not active
   text-input session, app overlay state, or preview state.
 - `docs/architecture/02_package_boundaries.md:92` - the current package-boundary
-  map names `text_tap_router.dart` under interaction.
-- `docs/architecture/02_package_boundaries.md:247` - the request registry stores
-  only engine-issued guard facts and retired status for app-owned interaction
-  requests.
-- `docs/diagrams/seq_text_edit_request.mmd:33` - no first top hit currently
-  produces no edit request.
-- `docs/diagrams/seq_text_edit_request.mmd:55` - no second top hit or non-text
-  top hit currently finishes without edit request.
-- `docs/diagrams/state_pending_text_edit_request.mmd:33` - no first top hit
-  currently returns to idle with no request.
-- `docs/diagrams/state_pending_text_edit_request.mmd:67` - second no-hit
-  currently clears pending state only.
-- `docs/implementation/p12_eraser_and_text_request.md:18` - P12 currently scopes
-  a text double-tap router.
-- `docs/implementation/p12_eraser_and_text_request.md:127` - the P12 exit gate
-  currently requires text double-tap on selectable text to emit
-  `CanvasTextEditRequested`.
+  map names `context_action_router.dart` under interaction.
+- `docs/architecture/02_package_boundaries.md:247` - the current package-boundary
+  contract makes `context_action_router.dart` the future interaction route owner
+  for double-tap context-action target resolution and request emission.
+- `docs/diagrams/seq_context_action_request.mmd:1` - current durable sequence is
+  `Context-action double-tap request sequence`.
+- `docs/diagrams/seq_context_action_request.mmd:23` - current durable sequence
+  models pointer-sample first tap input.
+- `docs/diagrams/seq_context_action_request.mmd:45` - current durable sequence
+  models pointer-sample second tap input.
+- `docs/diagrams/state_pending_context_action_request.mmd:1` - current durable
+  state diagram is `Pending context-action request state diagram`.
+- `docs/diagrams/state_pending_context_action_request.mmd:53` - current durable
+  state diagram still says `second tap or explicit double-tap`, which can imply
+  direct `handleDoubleTap` belongs to the pending-flow path.
+- `docs/implementation/p12_eraser_and_text_request.md:20` - P12 currently scopes
+  `CanvasContextActionRequested` emission for content-element and empty-canvas
+  targets.
+- `docs/implementation/p12_eraser_and_text_request.md:131` - the P12 exit gate
+  currently requires eligible content double-tap to emit one content-target
+  context request.
 - `docs/implementation/p12_eraser_and_text_request.md:134` - the P12 exit gate
-  currently keeps the full contextual-action event API deferred.
-- `docs/verification/tests.md:261` - runtime-created timestamp tests currently
-  include text edit requests.
-- `docs/verification/tests.md:453` - cleanup tests currently mention pending
-  text tap cleanup emitting no text request.
+  currently requires empty-canvas double-tap to emit one empty-canvas target.
+- `docs/verification/tests.md:263` - runtime-created timestamp tests currently
+  include context-action requests.
+- `docs/verification/tests.md:272` - context-action request tests currently
+  cover content-element, empty-canvas, and text-target commit routing.
 - `docs/verification/functional_ledger.md:66` - the functional ledger currently
-  has a text edit request row.
-- `docs/verification/release_gates.md:200` - release gates currently require
-  text edit request and guarded stale text commit integration tests.
+  has a context-action request row.
+- `docs/verification/functional_ledger.md:68` - timestamp monotonicity now names
+  `CanvasContextActionRequested.timestampMs`.
 - `PLAN.md:5` - the active roadmap is the plan index.
 - `docs/README.md:3` - `docs/` is the durable source of truth for the new-engine
   transition and target architecture.
@@ -160,68 +169,65 @@ and tests can follow after the source-of-truth docs are locked.
 
 ## Design Form Candidates
 
-### Candidate A. Replace Text Request With Context Action Request
+### Candidate A. Lock Direct `handleDoubleTap` Inside The Current Context Seam
 
-- Form: replace the text-only public request seam with
-  `CanvasContextActionRequested`, emitted through
-  `CanvasRuntime.contextActionRequests`. The event carries the double-tap trigger,
-  a content-element or empty-canvas target, positions, timestamp, revision facts,
-  and an engine-issued `CanvasInteractionRequestId`. Text editing remains guarded
-  by `commitTextEdit(requestId, newText)` when the content target snapshot is
-  `CanvasTextElement`.
-- Why it could work: it matches the product outcome, uses the existing
-  `CanvasInteractionRequestId` extension point, keeps application UI ownership,
-  preserves text stale guards, and creates one public stream for node and empty
-  canvas context menus.
-- Gate failures or risks: it is a public API change and requires coordinated
-  docs, registries, diagrams, phase gates, and verification updates. The future
-  contract must explicitly migrate every `textEditRequests` and
-  `CanvasTextEditRequested` reference.
+- Form: keep the existing `CanvasContextActionRequested` /
+  `contextActionRequests` seam and document `CanvasToolPort.handleDoubleTap` as
+  a host-recognized double-tap event. Direct `handleDoubleTap` validates its
+  finite position, resolves timestamp, clears stale pending context tap history,
+  resolves the current target at the supplied position, and emits exactly one
+  content-target or empty-canvas context request.
+- Why it could work: it fixes the ambiguous public input boundary at its owner
+  without introducing a new stream, new method, or second source of truth. It
+  also keeps pointer-sample two-tap recognition separate from host-recognized
+  double-tap input.
+- Gate failures or risks: future docs must update the current context-action
+  sequence/state diagrams, not retired text request diagrams, or the same
+  ambiguity will remain in the durable source of truth.
 
-### Candidate B. Add Context Requests But Keep Text Requests
+### Candidate B. Treat `handleDoubleTap` As The Second Pending Tap
 
-- Form: add `contextActionRequests` for non-text content and empty canvas while
-  preserving `textEditRequests` for text double-tap.
-- Why it could work: smaller compatibility impact if an existing implementation
-  already consumed `textEditRequests`.
-- Gate failures or risks: fails the product outcome because text remains a
-  special engine-level trigger that can bypass the menu. It creates duplicate
-  request streams for the same double-tap gesture and forces applications to
-  merge two sources of truth for context behavior.
+- Form: require `handleDoubleTap` to consume pending first-tap history and emit
+  only when it matches an existing pending content or empty-canvas candidate.
+- Why it could work: it reuses the pointer-sample pending state machine.
+- Gate failures or risks: fails the public boundary. A host-recognized
+  double-tap from Flutter would be dropped unless the engine happened to have
+  seen and stored the first tap, producing host-dependent behavior.
 
-### Candidate C. Keep Public API And Reword Text Docs
+### Candidate C. Add A Separate Host Double-Tap Method
 
-- Form: keep `CanvasTextEditRequested` and describe application menus around it.
-- Why it could work: minimal doc churn.
-- Gate failures or risks: fails root cause and source-of-truth gates. The
-  public payload cannot represent empty canvas or non-text targets, and the
-  current docs explicitly defer contextual action for those cases.
+- Form: keep `handleDoubleTap` as pending-flow input and add a new public method
+  for host-recognized double-tap events.
+- Why it could work: it makes the distinction explicit in API shape.
+- Gate failures or risks: unnecessary public API expansion. The current public
+  API already has `handleDoubleTap`, and adding a near-duplicate method increases
+  compatibility and implementation surface without improving the product
+  behavior.
 
-### Candidate D. Emit A User Action Or Command Callback
+### Candidate D. Leave `handleDoubleTap` Undefined And Rely On Diagrams
 
-- Form: model double-tap as `CanvasActionCommitted` or a command callback.
-- Why it could work: it would reuse an existing public stream shape.
-- Gate failures or risks: wrong owner and wrong effect model. A context menu
-  request is not a committed document/user action, and current contracts say text
-  request delivery has no document, selection, preview, repaint, or action
-  effect.
+- Form: update only high-level prose and let implementers infer direct or
+  pending behavior from context-action diagrams.
+- Why it could work: smallest documentation change.
+- Gate failures or risks: this is the current bug. The state diagram can be read
+  as putting "explicit double-tap" inside pending-flow, while the public API does
+  not specify whether pending first-tap history is required.
 
 ## Known Future Pressures
 
 | Pressure | Evidence | How the selected form responds | Accepted cost or risk |
 |---|---|---|---|
-| Product wants one menu-oriented double-tap signal for content and empty canvas, not text-only editing. | `.research/2026-05-19-double-tap-docs-current-contract.md:6`; user clarification in this design request. | Replaces text-only request with one context request target union. | Public API docs and downstream implementation must migrate from text-specific names. |
-| Current docs already reserved `CanvasInteractionRequestId` for future contextual action but deferred that API. | `docs/contracts/interaction_engine.md:246`; `docs/contracts/interaction_engine.md:248` | Uses the reserved request-id seam now instead of inventing an unrelated identifier. | Registry facts must gain request target kind and non-text/empty mismatch rejection semantics. |
-| Current hit eligibility requires selectable elements, but product wants any content node except background. | `docs/contracts/geometry.md:57`; `.research/2026-05-19-double-tap-docs-current-contract.md:127` | Adds a context-action target policy that uses visible finite content geometry and ignores `isSelectable` for this signal. | Future implementation must keep this separate from selection hit testing to avoid selection behavior drift. |
-| Background is paintable but must not become a content-target menu subject. | `docs/contracts/geometry.md:67`; `docs/contracts/geometry.md:118`; `docs/architecture/03_data_model.md:88` | Background handles are excluded from content targets. If no content target exists at the point, the request is empty-canvas. | Applications that visually rely on background elements will receive empty-canvas context, not background-element context. |
-| Text editing must retain guarded stale commit behavior. | `docs/contracts/interaction_engine.md:237`; `docs/contracts/public_api_v1.md:2251`; `docs/indexes/by_test_area.md:582` | `commitTextEdit` remains and accepts only request ids issued for current text content targets. | The application must retain the original context request id while its menu/editor is open. |
-| Timestamp tests and public timestamp docs currently name text edit requests. | `docs/contracts/public_api_v1.md:1430`; `docs/verification/tests.md:261` | Moves the timestamped runtime output proof to `CanvasContextActionRequested.timestampMs`. | Verification docs and tests need wording and fixture updates. |
-| P12 phase and registries currently name text request routing. | `docs/implementation/p12_eraser_and_text_request.md:18`; `docs/_registry/sections.yaml:503`; `docs/_registry/sections.yaml:511` | Future docs change must rename route ownership from text tap to context action tap while preserving cleanup coordinator use. | Registry churn is unavoidable but local to docs before code is written. |
+| Current public docs already expose context-action requests, so the remaining risk is not stream shape but ambiguous direct double-tap semantics. | `docs/contracts/public_api_v1.md:361`; `docs/contracts/public_api_v1.md:2217`; `docs/contracts/interaction_engine.md:216` | Keeps the current request seam and locks only the direct input-boundary rule. | The future docs change is narrower, but every current source-of-truth mention of `handleDoubleTap` must agree. |
+| `CanvasToolPort.handleDoubleTap` can be implemented as either a second tap after pending first-tap history or as a host-recognized double-tap event unless the docs lock the boundary. | `docs/contracts/public_api_v1.md:1683`; `docs/diagrams/state_pending_context_action_request.mmd:53` | Locks `handleDoubleTap` as a host-recognized double-tap event that does not require pending first-tap history and resolves the current target at the supplied position. | Future docs and tests must cover direct `handleDoubleTap` separately from pointer-sample two-tap recognition. |
+| The current durable state diagram still says pending content and empty-canvas targets can transition on "second tap or explicit double-tap". | `docs/diagrams/state_pending_context_action_request.mmd:53`; `docs/diagrams/state_pending_context_action_request.mmd:54` | Requires current context-action diagrams to separate direct `handleDoubleTap` from pointer-sample pending-flow. | The future docs change must update diagram text and section registry together if diagram IDs or titles change. |
+| Direct `handleDoubleTap` may arrive while pending context tap history exists from pointer samples. | `docs/diagrams/state_pending_context_action_request.mmd:5`; `docs/diagrams/state_pending_context_action_request.mmd:143` | Requires direct `handleDoubleTap` to clear stale pending context tap history through `PointerToolCleanupCoordinator` before current-target emission. | Cleanup remains private and effect-only, so operation matrix and tests must distinguish cleanup from request emission. |
+| Timestamp and effect contracts already name context-action requests. | `docs/contracts/public_api_v1.md:1433`; `docs/contracts/operation_matrix.md:111`; `docs/contracts/operation_matrix.md:116`; `docs/verification/tests.md:263` | Direct `handleDoubleTap` uses the same runtime timestamp cursor and the same no-effect request-delivery contract. | Verification must prove direct host-recognized double-tap emits a timestamped request while invalid/no-op paths do not. |
+| Text editing must retain guarded stale commit behavior after context request delivery. | `docs/contracts/interaction_engine.md:246`; `docs/contracts/interaction_engine.md:248`; `docs/contracts/interaction_engine.md:250` | Keeps `commitTextEdit` unchanged and valid only for current, unretired text content target request ids. | The application must retain the context request id while its menu/editor is open. |
 
 ## Selected Form
 
-Select Candidate A: replace the text-specific double-tap request seam with a
-general context-action request seam.
+Select Candidate A: lock direct `handleDoubleTap` semantics inside the current
+context-action request seam.
 
 The public surface should be documented as:
 
@@ -273,12 +279,22 @@ final class CanvasEmptyCanvasContextActionTarget
 }
 ```
 
-The future Change Contract may refine names, but it must preserve these locked
+The future Change Contract may refine wording, but it must preserve these locked
 semantics:
 
-- `CanvasRuntime.textEditRequests` and `CanvasTextEditRequested` are retired from
-  the target public docs instead of becoming a parallel stream.
-- `CanvasToolPort.handleDoubleTap` remains the public input boundary.
+- `CanvasRuntime.contextActionRequests`, `CanvasContextActionRequested`,
+  `CanvasContextActionTrigger`, and `CanvasContextActionTarget` remain the
+  existing public request seam.
+- `CanvasToolPort.handleDoubleTap` remains the public input boundary for a
+  host-recognized double-tap event. It does not require pending first-tap
+  history and must not be implemented as "the second tap" of engine-owned
+  pointer-sample double-tap recognition.
+- When `handleDoubleTap(position, timestampMs?)` is called, the engine validates
+  the supplied finite view position, resolves `timestampMs` through the runtime
+  timestamp cursor for the emitted request, clears any existing pending context
+  tap history through `PointerToolCleanupCoordinator`, resolves the current
+  context target at `position`, and emits one `CanvasContextActionRequested` for
+  either the eligible content target or empty canvas.
 - The application owns the context menu, text editor overlay, IME, focus,
   accessibility, text selection, hide/show policy, and menu/editor lifetime.
 - The engine emits exactly one context request for a valid double-tap target:
@@ -294,7 +310,10 @@ semantics:
   second tap must revalidate the same current element id, generation,
   elementRevision, family, controllerEpoch, visibility, and top-hit status. For
   empty canvas, the second tap must still have no qualifying content target
-  within the configured double-tap constraints.
+  within the configured double-tap constraints. This matching rule applies to
+  engine-owned two-tap recognition from pointer samples only; direct
+  `handleDoubleTap` performs immediate current-target resolution without a
+  pending first-tap candidate.
 - Request delivery has no document, selection, preview, repaint, spatial,
   projection, resource, or action effect.
 - `InteractionRequestRegistry` stores context request guard facts:
@@ -316,15 +335,15 @@ stream and choose their own menu/editor behavior from the target payload.
 
 | Gate | Result | Evidence |
 |---|---|---|
-| Root cause | pass | Current root cause is a text-only request contract, not just missing prose for non-text targets: `docs/contracts/interaction_engine.md:215`, `docs/contracts/public_api_v1.md:2242`, `.research/2026-05-19-double-tap-docs-current-contract.md:125`. |
-| Ownership | pass | `InteractionEngine` owns request emission and records issued facts; the application owns overlays and UI: `docs/architecture/01_runtime_ownership.md:156`, `docs/contracts/public_api_v1.md:2246`, `docs/contracts/interaction_engine.md:233`. |
-| Source of truth | pass | Replaces the text-specific public stream with one context stream, avoiding parallel text and context streams; docs are the durable source of truth: `docs/README.md:3`, `docs/contracts/public_api_v1.md:359`, `docs/contracts/public_api_v1.md:2212`. |
-| Boundary | pass | Input boundary remains `CanvasToolPort.handleDoubleTap`; output boundary becomes the public request stream; guarded text mutation remains `CanvasCommandPort.commitTextEdit`: `docs/contracts/public_api_v1.md:1680`, `docs/contracts/public_api_v1.md:2251`. |
+| Root cause | pass | Current root cause is ambiguous public input-boundary semantics for `handleDoubleTap`, not missing context-action payload shape: `docs/contracts/public_api_v1.md:1683`, `docs/diagrams/state_pending_context_action_request.mmd:53`, `docs/contracts/public_api_v1.md:2217`. |
+| Ownership | pass | `InteractionEngine` owns request emission and records issued facts; the application owns overlays and UI: `docs/architecture/01_runtime_ownership.md:156`, `docs/contracts/interaction_engine.md:242`, `docs/contracts/interaction_engine.md:243`. |
+| Source of truth | pass | Keeps the current single context request stream and adds the missing direct-input rule to the durable docs; docs are the durable source of truth: `docs/README.md:3`, `docs/contracts/public_api_v1.md:361`, `docs/contracts/public_api_v1.md:2212`. |
+| Boundary | pass | Input boundary remains `CanvasToolPort.handleDoubleTap`, now locked as a host-recognized double-tap event with immediate target resolution; output boundary remains `contextActionRequests`; guarded text mutation remains `CanvasCommandPort.commitTextEdit`: `docs/contracts/public_api_v1.md:1683`, `docs/contracts/public_api_v1.md:361`, `docs/contracts/interaction_engine.md:246`. |
 | Dependency direction | pass | Interaction already uses narrow read paths and registry facts, while command-port commits delegate accepted mutations to `EditKernel`: `docs/architecture/01_runtime_ownership.md:153`, `docs/architecture/01_runtime_ownership.md:156`, `docs/architecture/02_package_boundaries.md:247`. |
-| State/data | pass | Pending tap history remains interaction state only; registry stores guard facts, not app overlay state; app UI state stays outside the engine: `docs/diagrams/state_pending_text_edit_request.mmd:37`, `docs/architecture/01_runtime_ownership.md:159`, `docs/contracts/interaction_engine.md:233`. |
-| Seam | pass | The public request seam migrates from `textEditRequests`/`CanvasTextEditRequested` to `contextActionRequests`/`CanvasContextActionRequested`; `CanvasInteractionRequestId` is the successor id seam already reserved for contextual action: `docs/contracts/public_api_v1.md:359`, `docs/contracts/public_api_v1.md:2212`, `docs/contracts/interaction_engine.md:246`. |
-| Verification | pass | Docs checks exist for registries and navigation, and current verification surfaces name the text request rows that must be migrated: `docs/README.md:75`, `docs/verification/tests.md:261`, `docs/verification/release_gates.md:200`. |
-| Future pressure | pass | Known future pressure from deferred contextual action, broader hit eligibility, timestamp proof, and P12 phase docs is addressed by one target union and one request stream: `docs/contracts/interaction_engine.md:248`, `.research/2026-05-19-double-tap-docs-current-contract.md:140`. |
+| State/data | pass | Pending tap history remains interaction state only; registry stores guard facts, not app overlay state; app UI state stays outside the engine: `docs/diagrams/state_pending_context_action_request.mmd:5`, `docs/architecture/01_runtime_ownership.md:159`, `docs/contracts/interaction_engine.md:242`. |
+| Seam | pass | The current public request seam remains `contextActionRequests`/`CanvasContextActionRequested`; this design clarifies direct input into that seam rather than creating another one: `docs/contracts/public_api_v1.md:361`, `docs/contracts/public_api_v1.md:2217`. |
+| Verification | pass | Docs checks exist for registries and navigation, and current verification surfaces already name context-action request tests that must gain direct `handleDoubleTap` coverage: `docs/README.md:75`, `docs/verification/tests.md:263`, `docs/verification/tests.md:272`. |
+| Future pressure | pass | Known future pressure from direct host-recognized input, pending-flow diagram ambiguity, timestamp proof, and guarded text commit is addressed without adding a duplicate public API: `docs/contracts/public_api_v1.md:1683`, `docs/diagrams/state_pending_context_action_request.mmd:53`, `docs/contracts/public_api_v1.md:1433`, `docs/contracts/interaction_engine.md:246`. |
 
 ## Lock-Required Facts
 
@@ -335,10 +354,10 @@ stream and choose their own menu/editor behavior from the target payload.
   for behavior; `docs/contracts/public_api_v1.md` for public type shape;
   `docs/contracts/geometry.md` for target eligibility; `docs/contracts/operation_matrix.md`
   for effects; diagrams and registries for route/source-of-truth consistency.
-- Seam: replace `CanvasRuntime.textEditRequests` with
-  `CanvasRuntime.contextActionRequests`; replace `CanvasTextEditRequested` with
-  `CanvasContextActionRequested`; keep `CanvasInteractionRequestId` and
-  `CanvasCommandPort.commitTextEdit`.
+- Seam: keep `CanvasRuntime.contextActionRequests`,
+  `CanvasContextActionRequested`, `CanvasInteractionRequestId`, and
+  `CanvasCommandPort.commitTextEdit`; clarify direct `handleDoubleTap` entry
+  semantics into that existing seam.
 - Dependency/import direction: interaction may use narrow read-only query ports
   and the interaction registry; command-port text commit consumes registry facts
   and delegates accepted changed text to `EditKernel`.
@@ -347,34 +366,38 @@ stream and choose their own menu/editor behavior from the target payload.
   state are application state; committed document and selection are not mutated
   by request delivery.
 - Entry boundaries: `CanvasToolPort.handleDoubleTap({required Offset position,
-  int? timestampMs})` and normalized finite tap samples from `CanvasSurface`.
+  int? timestampMs})` as a host-recognized double-tap event, plus normalized
+  finite tap samples from `CanvasSurface` for engine-owned two-tap recognition.
 - Exit boundaries: `CanvasRuntime.contextActionRequests`; later optional
   `CanvasCommandPort.commitTextEdit` only for text content target request ids.
-- File placement basis: future source docs should rename text tap route
-  ownership to context action route ownership; the package-boundary map currently
-  names `text_tap_router.dart`, so a later implementation contract should decide
-  the exact file name after docs are updated.
-- Execution order constraints: first tap records candidate target facts; second
-  tap revalidates current target facts; request id is issued after target
-  revalidation; request delivery happens before cleanup clears pending tap
-  history; no commit/effect occurs until a later command.
-- Rejected alternatives: parallel text and context streams; prose-only rewording;
-  treating request delivery as a committed user action.
+- File placement basis: future source docs must update the current
+  context-action contract and current context-action diagrams; this design does
+  not require a new public API file or a renamed request stream.
+- Execution order constraints: direct `handleDoubleTap` validates the finite
+  position, resolves the request timestamp, clears any pending context tap
+  history through `PointerToolCleanupCoordinator`, resolves the current target at
+  the supplied position, issues the request id, and emits exactly one context
+  request. Engine-owned two-tap recognition from pointer samples still records a
+  first-tap candidate and revalidates the second tap before request emission. No
+  commit/effect occurs until a later command.
+- Rejected alternatives: making `handleDoubleTap` depend on pending first-tap
+  history; adding a second host double-tap method; leaving diagram wording to
+  imply the behavior.
 - Verification strategy: docs checks for source-of-truth consistency, semantic
-  searches for retired text-only references, and later runtime tests for content,
-  empty-canvas, text commit guard, non-selectable content eligibility, background
-  exclusion, cleanup, operation matrix, and timestamp monotonicity.
+  searches for `explicit double-tap` in pending-flow diagrams, and later runtime
+  tests for direct `handleDoubleTap` content, empty-canvas, cleanup,
+  no-effect delivery, and timestamp monotonicity.
 
 ## Diagram Need Assessment
 
 | Design question | Needed? | Diagram kind | Reason |
 |---|---:|---|---|
 | Does the design change ownership, layer, package, or component boundaries? | no | none | Ownership stays with InteractionEngine, registry, command port, and application UI; only the public request seam changes. |
-| Does it change data flow, state ownership, cache ownership, resource movement, or lifecycle movement? | yes | data_flow | The public request stream changes from text-only to content-or-empty context request while text commit remains guarded. |
-| Does it depend on call order, lifecycle order, sync/async ordering, failure ordering, or migration order? | yes | sequence | Double-tap detection must revalidate the second target before issuing the context request and before optional later text commit. |
-| Does it introduce or alter modes, statuses, terminal states, sessions, or transition rules? | yes | state | Pending text tap becomes pending context target, including empty-canvas and non-text content outcomes. |
-| Does it create, replace, migrate, or retire a shared seam? | yes | sequence | The public request seam is migrated from text edit request to context action request. |
-| Does it change public API consumer flow, payload shape, or compatibility behavior? | yes | sequence | Applications consume one context request stream and decide menu/editor behavior. |
+| Does it change data flow, state ownership, cache ownership, resource movement, or lifecycle movement? | yes | data_flow | Direct `handleDoubleTap` now has a locked path that clears pending context tap history, resolves the current target, and emits through the existing context request stream. |
+| Does it depend on call order, lifecycle order, sync/async ordering, failure ordering, or migration order? | yes | sequence | Direct `handleDoubleTap` must validate, resolve timestamp, clear pending history, resolve target, issue id, and emit in that order. Pointer-sample two-tap recognition still revalidates the second target before emission. |
+| Does it introduce or alter modes, statuses, terminal states, sessions, or transition rules? | yes | state | Direct host-recognized double-tap must bypass pending first-tap requirements while still clearing any existing pending context tap history. |
+| Does it create, replace, migrate, or retire a shared seam? | no | none | The context request seam already exists; this design clarifies direct input semantics without replacing the seam. |
+| Does it change public API consumer flow, payload shape, or compatibility behavior? | yes | sequence | Public method behavior is clarified: `handleDoubleTap` is host-recognized direct input and does not require pending first-tap history. |
 | Does it introduce or change analyzer, guardrail, or structural-recognition pipeline behavior? | no | none | Future verification may update docs checks and tests, but no analyzer pipeline is designed here. |
 
 ## Provisional Diagrams
@@ -416,16 +439,16 @@ sequenceDiagram
   participant Edit as EditKernel
 
   Tools->>IE: handleDoubleTap(position, timestampMs?)
-  IE->>IE: validate finite point and double-tap constraints
+  IE->>IE: validate finite point as host-recognized double-tap
+  IE->>IE: resolve timestamp through runtime cursor
+  IE->>IE: clear pending context tap history through cleanup coordinator if present
   IE->>Read: query top context target at worldPosition
   alt top visible finite content element exists
     Read-->>IE: element snapshot, boundsWorld, generation, revision, family, epoch
-    IE->>IE: revalidate same current content target on second tap
     IE->>Registry: issue content context request guard facts
     Registry-->>IE: requestId
     IE->>Requests: CanvasContextActionRequested(content target)
   else no qualifying content target
-    IE->>IE: verify empty-canvas double-tap under slop/delay
     IE->>Registry: issue empty-canvas context request facts
     Registry-->>IE: requestId
     IE->>Requests: CanvasContextActionRequested(empty canvas target)
@@ -445,7 +468,11 @@ sequenceDiagram
 ```mermaid
 stateDiagram-v2
   [*] --> Idle
-  Idle --> FirstTapGate: finite tap or explicit double-tap
+  Idle --> DirectDoubleTap: handleDoubleTap host-recognized event
+  Idle --> FirstTapGate: finite pointer tap sample
+  DirectDoubleTap --> EmitContentRequest: current target is eligible content
+  DirectDoubleTap --> EmitEmptyCanvasRequest: no qualifying content target
+  DirectDoubleTap --> Idle: invalid non-finite position / no request
   FirstTapGate --> PendingContentTarget: top context target is content element
   FirstTapGate --> PendingEmptyTarget: no qualifying content target
   FirstTapGate --> Idle: invalid point, wrong mode, active conflict, or drag
@@ -456,8 +483,8 @@ stateDiagram-v2
   PendingEmptyTarget --> EmitEmptyCanvasRequest: second tap still has no qualifying content target
   PendingEmptyTarget --> CleanupOnly: content appears, slop, delay, mode, epoch, or load success
 
-  EmitContentRequest --> CleanupOnly: issued context request
-  EmitEmptyCanvasRequest --> CleanupOnly: issued context request
+  EmitContentRequest --> CleanupOnly: issued context request and clear pending context tap history if present
+  EmitEmptyCanvasRequest --> CleanupOnly: issued context request and clear pending context tap history if present
   CleanupOnly --> Idle: clear pending context tap history only
 ```
 
@@ -465,35 +492,34 @@ stateDiagram-v2
 
 A later Change Contract must update these source-of-truth surfaces:
 
-- `docs/contracts/interaction_engine.md`: replace `Text double-tap` with general
-  context-action double-tap behavior, request registry facts, text commit guard
-  constraints, and removal of the contextual-action deferral.
-- `docs/contracts/public_api_v1.md`: replace `textEditRequests` and
-  `CanvasTextEditRequested` with `contextActionRequests`,
-  `CanvasContextActionRequested`, `CanvasContextActionTrigger`, and
-  `CanvasContextActionTarget` variants; update the text editing model and
-  timestamp contract.
-- `docs/contracts/geometry.md`: add context-action target eligibility separate
-  from selection hit eligibility, explicitly excluding background targets and
-  not requiring `element.isSelectable`.
-- `docs/contracts/operation_matrix.md`: replace the text double-tap request row
-  with a context-action request row and preserve no-effect request delivery.
-- `docs/architecture/01_runtime_ownership.md` and
-  `docs/architecture/02_package_boundaries.md`: update request registry facts
-  and route/file ownership from text tap to context action tap.
-- `docs/diagrams/seq_text_edit_request.mmd` and
-  `docs/diagrams/state_pending_text_edit_request.mmd`: replace or rename durable
-  diagrams to describe context-action request flow and pending context target
-  state.
-- `docs/diagrams/catalog.md` if diagram filenames or titles change.
-- `docs/_registry/public_api_v1.yaml`: replace exported public request names.
-- `docs/_registry/sections.yaml`: update diagram, guardrail, and test mapping
-  from text request to context action request.
-- `docs/_registry/donors.yaml` and
-  `docs/donors/06_interaction_edit_event_staged_load.md`: rename donor use from
-  text double-tap edit-request routing to context-action double-tap routing.
-- `docs/implementation/p12_eraser_and_text_request.md`: update purpose, build
-  scope, must-read references, and exit gates.
+- `docs/contracts/interaction_engine.md`: add direct `handleDoubleTap`
+  semantics to the current `Double-tap context action` contract, including
+  no pending first-tap requirement, pending-history cleanup, current target
+  resolution, and no-effect delivery.
+- `docs/contracts/public_api_v1.md`: explicitly define
+  `CanvasToolPort.handleDoubleTap` as a host-recognized double-tap event with no
+  pending first-tap requirement while keeping the current
+  `contextActionRequests` and `CanvasContextActionRequested` public seam.
+- `docs/contracts/geometry.md`: no new target policy is required unless the
+  future docs change needs a cross-reference; the current geometry contract
+  already separates context-action target eligibility from selection hit
+  eligibility.
+- `docs/contracts/operation_matrix.md`: preserve the current context-action
+  request row and distinguish direct `handleDoubleTap` pending-history cleanup
+  from request emission effects.
+- `docs/architecture/02_package_boundaries.md`: update only if the direct
+  `handleDoubleTap` clarification changes the current `context_action_router.dart`
+  boundary wording.
+- `docs/diagrams/seq_context_action_request.mmd` and
+  `docs/diagrams/state_pending_context_action_request.mmd`: update current
+  durable diagrams to describe direct `handleDoubleTap` host-recognized flow
+  separately from pointer-sample pending context target state.
+- `docs/diagrams/README.md` if diagram filenames or titles change.
+- `docs/_registry/sections.yaml`: keep diagram/test mapping aligned with the
+  current context-action diagram names if titles or diagram ids change.
+- `docs/implementation/p12_eraser_and_text_request.md`: update exit gates to
+  require direct `handleDoubleTap` coverage when describing context-action
+  request behavior.
 - `docs/verification/tests.md`, `docs/indexes/by_test_area.md`,
   `docs/verification/functional_ledger.md`, `docs/verification/guardrails.md`,
   `docs/indexes/by_guardrail.md`, and `docs/verification/release_gates.md`:
@@ -509,14 +535,20 @@ Future docs-only verification:
 
 - `dart run docs/tool/generate_context_capsules.dart --check`
 - `dart run docs/tool/check_docs.dart`
-- Semantic search proving the target docs no longer define
-  `CanvasTextEditRequested`/`textEditRequests` as the primary double-tap seam.
-- Semantic search proving no source-of-truth doc still says contextual action for
-  shapes, images, lines, or empty canvas is deferred.
+- Semantic search proving current context-action diagrams no longer place
+  "explicit double-tap" inside pending-flow transitions.
+- Semantic search proving every active `handleDoubleTap` description says it is
+  a host-recognized event with no pending first-tap requirement.
 
 Future implementation verification after code exists:
 
 - Context request integration test for visible selectable content target.
+- `test.interaction.handle_double_tap_direct_context_action`: proves
+  `handleDoubleTap` without pending first-tap history emits one context request,
+  privately clears existing pending context tap history, supports content and
+  empty-canvas targets, treats invalid/non-finite position as the documented
+  validation no-op or rejection path, and has no document, selection, preview,
+  repaint, spatial, projection, resource, or action effect.
 - Context request integration test for visible non-selectable content target.
 - Empty-canvas double-tap request integration test.
 - Background-only point produces empty-canvas target, not background target.
@@ -549,17 +581,24 @@ For later implementation, verification should be behavior-first:
 2. Preserve text stale guard behavior by consuming the same
    `CanvasInteractionRequestId` through `commitTextEdit`.
 3. Prove request delivery remains effect-only until a later accepted command.
-4. Prove timestamp and cleanup behavior moved from text request terminology to
-   context request terminology without changing monotonicity or cleanup effects.
+4. Prove timestamp and cleanup behavior for direct `handleDoubleTap` uses the
+   same context request monotonicity and no-effect cleanup rules as the existing
+   context-action seam.
 
 ## Change Contract Handoff
 
 - Required profile: `SOURCE_OF_TRUTH_DOCS`
-- Required obligations: `PUBLIC_API_CHANGE`, `SEAM_MIGRATION`
+- Required obligations: `PUBLIC_API_CHANGE`
 - Decisions to carry forward:
-  - Replace the text-only double-tap request seam with
-    `CanvasContextActionRequested` on `CanvasRuntime.contextActionRequests`.
-  - Keep `CanvasToolPort.handleDoubleTap` as the input boundary.
+  - Keep `CanvasContextActionRequested` on
+    `CanvasRuntime.contextActionRequests` as the current public request seam.
+  - Define `CanvasToolPort.handleDoubleTap` as the direct host-recognized
+    double-tap input boundary.
+  - `handleDoubleTap` does not require pending first-tap history; it validates
+    finite position, resolves the runtime timestamp, clears any pending context
+    tap history through `PointerToolCleanupCoordinator`, resolves the current
+    target at the supplied position, and emits exactly one content-target or
+    empty-canvas context request.
   - Use a target union with content-element and empty-canvas variants.
   - Content target snapshot uses existing immutable public `CanvasElement`
     family DTOs plus `boundsWorld`.
@@ -572,39 +611,44 @@ For later implementation, verification should be behavior-first:
     double-tap location.
   - Request delivery is effect-only and app UI-owned.
 - Evidence to cite:
-  - `docs/contracts/interaction_engine.md:215`
-  - `docs/contracts/interaction_engine.md:217`
+  - `docs/contracts/interaction_engine.md:216`
+  - `docs/contracts/interaction_engine.md:218`
   - `docs/contracts/interaction_engine.md:221`
-  - `docs/contracts/interaction_engine.md:233`
-  - `docs/contracts/interaction_engine.md:237`
+  - `docs/contracts/interaction_engine.md:230`
+  - `docs/contracts/interaction_engine.md:242`
   - `docs/contracts/interaction_engine.md:246`
   - `docs/contracts/interaction_engine.md:248`
   - `docs/contracts/public_api_v1.md:263`
   - `docs/contracts/public_api_v1.md:294`
-  - `docs/contracts/public_api_v1.md:359`
-  - `docs/contracts/public_api_v1.md:1680`
+  - `docs/contracts/public_api_v1.md:361`
+  - `docs/contracts/public_api_v1.md:1683`
   - `docs/contracts/public_api_v1.md:2212`
-  - `docs/contracts/public_api_v1.md:2242`
-  - `docs/contracts/public_api_v1.md:2246`
-  - `docs/contracts/public_api_v1.md:2251`
+  - `docs/contracts/public_api_v1.md:2217`
+  - `docs/contracts/public_api_v1.md:2243`
+  - `docs/contracts/public_api_v1.md:2254`
+  - `docs/contracts/public_api_v1.md:2263`
   - `docs/contracts/public_api_v1.md:898`
   - `docs/contracts/public_api_v1.md:981`
   - `docs/contracts/geometry.md:57`
   - `docs/contracts/geometry.md:63`
   - `docs/contracts/geometry.md:67`
   - `docs/architecture/03_data_model.md:88`
-  - `docs/contracts/operation_matrix.md:84`
-  - `docs/contracts/operation_matrix.md:110`
+  - `docs/contracts/operation_matrix.md:85`
+  - `docs/contracts/operation_matrix.md:111`
+  - `docs/contracts/operation_matrix.md:116`
   - `docs/architecture/01_runtime_ownership.md:153`
   - `docs/architecture/02_package_boundaries.md:247`
-  - `docs/diagrams/seq_text_edit_request.mmd:33`
-  - `docs/diagrams/state_pending_text_edit_request.mmd:67`
-  - `docs/implementation/p12_eraser_and_text_request.md:127`
-  - `docs/verification/tests.md:261`
-  - `docs/verification/release_gates.md:200`
+  - `docs/diagrams/seq_context_action_request.mmd:1`
+  - `docs/diagrams/state_pending_context_action_request.mmd:53`
+  - `docs/implementation/p12_eraser_and_text_request.md:131`
+  - `docs/verification/tests.md:263`
+  - `docs/verification/tests.md:272`
 - Contract constraints or sequencing facts:
-  - Update public API docs and registries before phase/verification docs that
-    reference exported names.
+  - Update `public_api_v1.md` and `interaction_engine.md` before
+    phase/verification docs that reference direct `handleDoubleTap`.
+  - Lock direct `handleDoubleTap` semantics before rewriting context-action
+    diagrams so the sequence and state diagrams cannot imply a pending first-tap
+    requirement.
   - Update diagrams and section registry together to avoid catalog drift.
   - Preserve no-effect request delivery in operation matrix before updating
     verification/release gates.
