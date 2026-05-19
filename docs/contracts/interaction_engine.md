@@ -31,7 +31,7 @@ Related diagrams:
 - `seq_pencil_marker_commit`
 - `seq_line_two_tap_commit`
 - `seq_eraser_commit`
-- `seq_text_edit_request`
+- `seq_context_action_request`
 - `seq_dispose_during_gesture`
 - `state_pointer_session`
 - `state_select_marquee`
@@ -39,7 +39,7 @@ Related diagrams:
 - `state_pencil_marker_draw`
 - `state_two_tap_line`
 - `state_eraser`
-- `state_pending_text_edit_request`
+- `state_pending_context_action_request`
 Required tests:
 - `test.api.typed_action_payloads`
 - `test.interaction.commands_emit_user_actions`

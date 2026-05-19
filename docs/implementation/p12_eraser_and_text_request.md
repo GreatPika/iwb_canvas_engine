@@ -74,9 +74,9 @@ action, text request, document, selection, spatial, or projection effects.
 - `dfd_public_edit` -> `docs/diagrams/dfd_public_edit.mmd`
 - `seq_eraser_commit` -> `docs/diagrams/seq_eraser_commit.mmd`
 - `seq_eraser_exact_budget` -> `docs/diagrams/seq_eraser_exact_budget.mmd`
-- `seq_text_edit_request` -> `docs/diagrams/seq_text_edit_request.mmd`
+- `seq_context_action_request` -> `docs/diagrams/seq_context_action_request.mmd`
 - `state_eraser` -> `docs/diagrams/state_eraser.mmd`
-- `state_pending_text_edit_request` -> `docs/diagrams/state_pending_text_edit_request.mmd`
+- `state_pending_context_action_request` -> `docs/diagrams/state_pending_context_action_request.mmd`
 - `state_pointer_session` -> `docs/diagrams/state_pointer_session.mmd`
 
 ## Contracts satisfied by this phase

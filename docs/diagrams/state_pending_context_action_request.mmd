@@ -1,0 +1,156 @@
+%% Pending context-action request state diagram
+stateDiagram-v2
+  [*] --> Idle
+
+  state "Idle / no pending context tap" as Idle
+  note right of Idle
+    No pending tap candidate exists.
+    There is no document mutation, selection change,
+    preview state, repaint request, or action event.
+  end note
+
+  Idle --> Disposed: "runtime.dispose()"
+  Idle --> FirstTapGate: "finite tap or click admitted"
+  Idle --> Idle: "invalid, stale, drag, active pointer conflict, or wrong mode / ignore"
+
+  state "First tap gate" as FirstTapGate
+  note right of FirstTapGate
+    First tap detection is gesture tracking only.
+    It reads current target data and may remember
+    a content-element or empty-canvas candidate.
+  end note
+
+  FirstTapGate --> TopTargetFirst: "query committed content hit candidates"
+  FirstTapGate --> Idle: "non-finite world position or tapSlop exceeded / no request"
+
+  state "First target resolution" as TopTargetFirst
+  note right of TopTargetFirst
+    Context-action targeting uses visible content,
+    finite invertible transforms, exact geometry,
+    and topmost content paint order.
+    element.isSelectable is not a gate.
+    Background-only coverage resolves as empty canvas.
+  end note
+
+  TopTargetFirst --> PendingContentTarget: "top content target / store id, generation, elementRevision, family, positions, timestamp, epoch"
+  TopTargetFirst --> PendingEmptyCanvas: "no qualifying content target / store empty-canvas candidate"
+
+  state "Pending content target" as PendingContentTarget
+  note right of PendingContentTarget
+    Pending state is input history only:
+    element id, generation, elementRevision, family,
+    view/world positions, timestamp, and controllerEpoch.
+    It is not CanvasPreviewState and not Store state.
+  end note
+
+  state "Pending empty-canvas target" as PendingEmptyCanvas
+  note right of PendingEmptyCanvas
+    Empty-canvas pending state carries positions,
+    timestamp, and controllerEpoch only.
+    It has no element snapshot.
+  end note
+
+  PendingContentTarget --> SecondTapGate: "second tap or explicit double-tap"
+  PendingEmptyCanvas --> SecondTapGate: "second tap or explicit double-tap"
+  PendingContentTarget --> CleanupOnly: "delay exceeded, slop exceeded, invalid sample, mode mismatch, controllerEpoch mismatch, mode change, or interactive=false"
+  PendingEmptyCanvas --> CleanupOnly: "delay exceeded, slop exceeded, invalid sample, mode mismatch, controllerEpoch mismatch, mode change, or interactive=false"
+  PendingContentTarget --> CleanupOnly: "loadDocument success after install"
+  PendingEmptyCanvas --> CleanupOnly: "loadDocument success after install"
+  PendingContentTarget --> PendingContentTarget: "loadDocument validation/materialization failure before install / preserve tap"
+  PendingEmptyCanvas --> PendingEmptyCanvas: "loadDocument validation/materialization failure before install / preserve tap"
+  PendingContentTarget --> DisposeCleanup: "runtime.dispose()"
+  PendingEmptyCanvas --> DisposeCleanup: "runtime.dispose()"
+
+  state "Second tap gate" as SecondTapGate
+  note right of SecondTapGate
+    The second tap must match the same target class
+    and be revalidated against the current document
+    and current epoch.
+  end note
+
+  SecondTapGate --> CleanupOnly: "non-finite world position, tapSlop exceeded, doubleTapSlop exceeded, or delay exceeded"
+  SecondTapGate --> TopTargetSecond: "query current committed content hit candidates"
+
+  state "Second target resolution" as TopTargetSecond
+  note right of TopTargetSecond
+    A content target must still be the same topmost
+    visible content element. An empty-canvas target
+    must still have no qualifying content target.
+  end note
+
+  TopTargetSecond --> CandidateMatch: "same target class"
+  TopTargetSecond --> CleanupOnly: "target class changed / clear pending only"
+
+  state "Candidate match gate" as CandidateMatch
+  note right of CandidateMatch
+    Content targets match by current element id,
+    generation, elementRevision, family,
+    controllerEpoch, visibility, and top-hit status.
+    Empty-canvas targets match by still having no
+    qualifying content target.
+  end note
+
+  CandidateMatch --> CleanupOnly: "different content target, stale generation, stale elementRevision, hidden, family mismatch, epoch mismatch, or new content target"
+  CandidateMatch --> EmitContentRequest: "same current content target"
+  CandidateMatch --> EmitEmptyCanvasRequest: "still empty canvas"
+
+  state "Issue content context request" as EmitContentRequest
+  note right of EmitContentRequest
+    InteractionEngine issues CanvasInteractionRequestId
+    through InteractionRequestRegistry, then emits
+    CanvasContextActionRequested with doubleTap trigger,
+    content target kind, immutable CanvasElement snapshot,
+    boundsWorld, positions, timestamp, controllerEpoch,
+    and documentRevision. documentRevision is observation-only.
+  end note
+
+  state "Issue empty-canvas context request" as EmitEmptyCanvasRequest
+  note right of EmitEmptyCanvasRequest
+    InteractionEngine issues CanvasInteractionRequestId
+    through InteractionRequestRegistry, then emits
+    CanvasContextActionRequested with doubleTap trigger,
+    empty-canvas target kind, positions, timestamp,
+    controllerEpoch, and documentRevision.
+  end note
+
+  EmitContentRequest --> IssuedRequestLive: "request delivered / clear pending tap and keep request id live"
+  EmitEmptyCanvasRequest --> IssuedRequestLive: "request delivered / clear pending tap and keep request id live"
+
+  state "Issued request remains live" as IssuedRequestLive
+  note right of IssuedRequestLive
+    The application owns context menus, editor overlays,
+    IME, focus, accessibility, hide/show policy, and any
+    later commitTextEdit text commit flow.
+    Pending tap history is already cleared.
+    The registry is not an app UI session and not CanvasPreviewState.
+  end note
+
+  IssuedRequestLive --> RetiredRequest: "commitTextEdit accepted no-op or changed text content request / retire request"
+  IssuedRequestLive --> RetiredRequest: "commitTextEdit rejected stale, empty-canvas, non-text, missing, retired, or family-mismatched request"
+  IssuedRequestLive --> RetiredRequest: "loadDocument success / controllerEpoch makes request stale"
+  IssuedRequestLive --> Disposed: "runtime.dispose() / later commitTextEdit throws StateError"
+
+  state "Retired or stale request id" as RetiredRequest
+  note right of RetiredRequest
+    Retired and epoch-stale request ids cannot commit.
+    Text commit acceptance requires a current,
+    unretired text content target request.
+    documentRevision is not a stale guard.
+  end note
+
+  RetiredRequest --> Idle: "request lifecycle closed"
+
+  state "Cleanup only" as CleanupOnly
+  note left of CleanupOnly
+    Cleanup creates a typed request for the
+    PointerToolCleanupCoordinator to clear pending tap history only.
+    It publishes no context request, action event,
+    document revision, selection change, preview update,
+    spatial update, projection eviction, or repaint.
+  end note
+
+  CleanupOnly --> CleanupCoordinator: "typed cleanup request"
+  DisposeCleanup --> CleanupCoordinator: "typed cleanup request before stream close"
+  CleanupCoordinator --> Idle: "pending context target cleared after ordinary cleanup"
+  CleanupCoordinator --> Disposed: "pending context target cleared before runtime streams close"
+  Disposed --> [*]

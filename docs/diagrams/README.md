@@ -210,10 +210,10 @@ listener getters are not diagram seams.
 - Related phases: `P12`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 
-## seq_text_edit_request
+## seq_context_action_request
 
 - Kind: `sequence`
-- Planned path: `docs/diagrams/seq_text_edit_request.mmd`
+- Planned path: `docs/diagrams/seq_context_action_request.mmd`
 - Related phases: `P12`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 
@@ -301,10 +301,10 @@ listener getters are not diagram seams.
 - Related phases: `P12`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 
-## state_pending_text_edit_request
+## state_pending_context_action_request
 
 - Kind: `state`
-- Planned path: `docs/diagrams/state_pending_text_edit_request.mmd`
+- Planned path: `docs/diagrams/state_pending_context_action_request.mmd`
 - Related phases: `P12`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 

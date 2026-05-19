@@ -500,7 +500,7 @@
     - seq_pencil_marker_commit
     - seq_line_two_tap_commit
     - seq_eraser_commit
-    - seq_text_edit_request
+    - seq_context_action_request
     - seq_dispose_during_gesture
     - state_pointer_session
     - state_select_marquee
@@ -508,7 +508,7 @@
     - state_pencil_marker_draw
     - state_two_tap_line
     - state_eraser
-    - state_pending_text_edit_request
+    - state_pending_context_action_request
   guardrails:
     - preview.selected_move_main_repaint
     - api.preview_state_sealed_union_publicly_readable

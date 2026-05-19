@@ -82,10 +82,10 @@ store, resolver, or interaction internals.
 - `seq_resource_resolution` -> `docs/diagrams/seq_resource_resolution.mmd`
 - `seq_selected_move_cancel` -> `docs/diagrams/seq_selected_move_cancel.mmd`
 - `seq_selected_move_preview_commit` -> `docs/diagrams/seq_selected_move_preview_commit.mmd`
-- `seq_text_edit_request` -> `docs/diagrams/seq_text_edit_request.mmd`
+- `seq_context_action_request` -> `docs/diagrams/seq_context_action_request.mmd`
 - `state_eraser` -> `docs/diagrams/state_eraser.mmd`
 - `state_pencil_marker_draw` -> `docs/diagrams/state_pencil_marker_draw.mmd`
-- `state_pending_text_edit_request` -> `docs/diagrams/state_pending_text_edit_request.mmd`
+- `state_pending_context_action_request` -> `docs/diagrams/state_pending_context_action_request.mmd`
 - `state_pointer_session` -> `docs/diagrams/state_pointer_session.mmd`
 - `state_resource_resolution` -> `docs/diagrams/state_resource_resolution.mmd`
 - `state_select_marquee` -> `docs/diagrams/state_select_marquee.mmd`
