@@ -136,6 +136,7 @@
     - test.api_contract.public_equality_policy
     - test.api.typed_action_payloads
     - test.api_contract.app_next_engine_adapter_compile_fixture
+    - test.interaction.context_action_request
     - test.interaction.text_edit_stale_commit_guard
     - test.runtime.dispose_lifecycle
     - test.runtime.runtime_state_publication
@@ -465,6 +466,7 @@
     - test.edit.sync_non_nested_async_stale
     - test.edit.operation_matrix_effects
     - test.interaction.runtime_created_timestamps_monotonic
+    - test.interaction.context_action_request
     - test.interaction.text_edit_stale_commit_guard
   do_not_assume:
     - no implicit mutation path outside EditKernel
@@ -541,6 +543,7 @@
     - test.interaction.move_resolver_not_called_on_cancel_cleanup
     - test.interaction.no_stale_terminal_commit
     - test.interaction.pointer_cleanup_coordinator_outcomes
+    - test.interaction.context_action_request
     - test.interaction.text_edit_stale_commit_guard
     - test.guardrails.selection_boundary_imports
     - test.flutter_bridge.widget_paint
@@ -632,6 +635,7 @@
     - geometry.eraser_exact_budget_no_partial
   tests:
     - test.geometry.hit_policy
+    - test.interaction.context_action_request
     - test.geometry.no_legacy_scene_order
     - test.geometry.eraser_exact_budget_no_partial_commit
   do_not_assume:
@@ -982,6 +986,7 @@
     - test.edit.low_level_mutations_do_not_emit_actions
     - test.interaction.commands_emit_user_actions
     - test.interaction.runtime_created_timestamps_monotonic
+    - test.interaction.context_action_request
     - test.flutter_bridge.interactive_false_pointer_routing
     - test.flutter_bridge.interactive_false_active_session_cancel
     - test.flutter_bridge.interactive_false_pending_line_preserved
@@ -1028,6 +1033,7 @@
     - test.interaction.move_resolver_not_called_on_cancel_cleanup
     - test.interaction.no_stale_terminal_commit
     - test.interaction.pointer_cleanup_coordinator_outcomes
+    - test.interaction.context_action_request
     - test.interaction.text_edit_stale_commit_guard
     - test.flutter_bridge.widget_paint
     - test.benchmarks.required_cases

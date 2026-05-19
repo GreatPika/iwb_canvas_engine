@@ -19,7 +19,7 @@ not donors for the next public API.
 | `lib/src/interactive/internal/scene_controller_pointer_session.dart` | session detach/dispose, pending tap timer, settings adoption only when raw pointers idle | `adapt` | timer lifecycle and current `Listenable` wiring | P9/P10 |
 | `lib/src/interactive/internal/interactive_pointer_normalizer.dart` | non-finite sample filtering and terminal recovery from last finite point | `copy/adapt` | preserve session-token keying | P9 |
 | `lib/src/interactive/internal/interactive_event_dispatcher.dart` | monotonic timestamp resolution, stream ownership, deferred notify scheduling | `adapt` | decide sync/async notification contract first | P9 |
-| `lib/src/interactive/internal/interactive_double_tap_router.dart` | text double-tap edit-request routing | `adapt` | depends on new text hit-test and read model | P9 |
+| `lib/src/interactive/internal/interactive_double_tap_router.dart` | context-action double-tap routing | `adapt` | depends on new context target hit policy and read model | P9 |
 | `lib/src/interactive/internal/interactive_gesture_router.dart`, `interactive_runtime.dart` | dispatch order, reentrancy guard, terminal cleanup, external mutation interruption | `adapt` | legacy callback graph is not a donor | P9 |
 | `lib/src/interactive/internal/interactive_move_session.dart` and move coordinators | move preview, marquee selection, commit-on-up, cancel restore | `adapt` | depends on selection, hit-test, and mutation callbacks | P9 |
 | `lib/src/interactive/internal/interactive_draw_coordinator.dart`, draw engines, terminal router, action emitter | stroke/line/eraser lifecycle, pending line state, exception-safe terminal cleanup | `adapt/rewrite` | eraser internals depend on new geometry/spatial model | P9 |

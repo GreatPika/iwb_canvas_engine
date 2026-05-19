@@ -1,10 +1,10 @@
-# P12 - eraser and text edit request
+# P12 - eraser and context-action request
 
 ## Purpose
 
 Implement the remaining interaction behaviors with the highest deletion and
-hit-test risk: eraser preview/commit with exact-check budgets, and text
-double-tap request routing.
+hit-test risk: eraser preview/commit with exact-check budgets, and
+context-action double-tap request routing.
 
 ## Build scope
 
@@ -15,21 +15,23 @@ double-tap request routing.
 - eraser budget-exceeded behavior: corridor-only preview or terminal cleanup/no-op
   with no partial erase
 - typed erase action payload
-- text double-tap router
-- text hit-test read model through narrow query ports
-- `CanvasTextEditRequested` event emission
+- context-action double-tap router
+- context-action target read model through narrow query ports
+- `CanvasContextActionRequested` event emission for content-element and
+  empty-canvas targets
 - `CanvasInteractionRequestId` issuance through the interaction request registry
 - guarded `CanvasCommandPort.commitTextEdit` semantics for request-originated
-  text changes
-- terminal cleanup and stale terminal rejection for eraser/text routes.
+  text changes from text content-target requests
+- terminal cleanup and stale terminal rejection for eraser/context routes.
 
 P12 must consume the existing P10 `PointerToolCleanupCoordinator` seam for
-eraser and text-request cleanup. Eraser and text tap routing may create typed
-cleanup requests for `InteractionEngine`, but must not call the coordinator
-directly or own shared cleanup policy. Eraser cleanup outcomes classify overlay
-or no-preview cleanup and emit no erase action or document state on cleanup-only
-paths. Text cleanup outcomes clear pending tap history without preview, repaint,
-action, text request, document, selection, spatial, or projection effects.
+eraser and context-request cleanup. Eraser and context-action routing may create
+typed cleanup requests for `InteractionEngine`, but must not call the
+coordinator directly or own shared cleanup policy. Eraser cleanup outcomes
+classify overlay or no-preview cleanup and emit no erase action or document
+state on cleanup-only paths. Context tap cleanup outcomes clear pending tap
+history without preview, repaint, action, context request, document, selection,
+spatial, projection, or resource effects.
 
 ## Dependencies on earlier phases
 
@@ -49,13 +51,13 @@ action, text request, document, selection, spatial, or projection effects.
 ## Required donors
 
 - `foundation_pointer_input_contract` - decision: `copy/adapt`; target owner: Canvas pointer API and InteractionEngine
-- `foundation_action_event_immutability` - decision: `adapt`; target owner: CanvasActionEvent and text edit events
+- `foundation_action_event_immutability` - decision: `adapt`; target owner: CanvasActionEvent and context-action request events
 - `geometry_interactive_geometry` - decision: `copy/adapt`; target owner: Draw and eraser geometry helpers
 - `geometry_eraser_exact_hit` - decision: `adapt`; target owner: Eraser exact-hit engine
 - `interaction_pointer_session` - decision: `adapt`; target owner: InteractionEngine pointer session
 - `interaction_pointer_normalizer` - decision: `copy/adapt`; target owner: Pointer sample normalizer
 - `interaction_event_dispatcher` - decision: `adapt`; target owner: Interaction event dispatch
-- `interaction_double_tap_router` - decision: `adapt`; target owner: Text edit request router
+- `interaction_double_tap_router` - decision: `adapt`; target owner: Context-action double-tap router
 - `interaction_gesture_runtime` - decision: `adapt`; target owner: InteractionEngine dispatch order and cleanup
 - `interaction_draw_coordinator` - decision: `adapt/rewrite`; target owner: Draw, line and eraser machines
 - `interaction_mutation_boundary` - decision: `adapt`; target owner: Interaction-owned mutation bridge into EditKernel
@@ -83,12 +85,13 @@ action, text request, document, selection, spatial, or projection effects.
 
 - eraser policy, exact-check budgets, and no-partial-commit behavior from
   `section_16_geometry_policy`
-- eraser and text interaction behavior from `section_14_interaction_engine`
-- `CanvasEraserPreview`, text edit event, guarded text edit commit, editText
-  action payload API, and erase action payload API from
+- eraser and context-action interaction behavior from
+  `section_14_interaction_engine`
+- `CanvasEraserPreview`, context-action request event, guarded text edit
+  commit, editText action payload API, and erase action payload API from
   `section_04_public_api_v1`
-- operation matrix rows for eraser preview/commit and text request behavior from
-  `section_13_operation_matrix`
+- operation matrix rows for eraser preview/commit and context request behavior
+  from `section_13_operation_matrix`
 
 ## Tests and guardrails that prove this phase
 
@@ -99,6 +102,7 @@ action, text request, document, selection, spatial, or projection effects.
 - `test.interaction.preview_public_state` -> `test/interaction/preview_public_state_test.dart`
 - `test.interaction.state_machines` -> `test/interaction/state_machines_test.dart`
 - `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
+- `test.interaction.context_action_request` -> `test/interaction/context_action_request_test.dart`
 - `test.interaction.text_edit_stale_commit_guard` -> `test/interaction/text_edit_stale_commit_guard_test.dart`
 - `test.interaction.pointer_cleanup_coordinator_outcomes` -> `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
 - `geometry.eraser_exact_budget_no_partial`
@@ -115,36 +119,42 @@ action, text request, document, selection, spatial, or projection effects.
 
 - eraser preview tests green
 - eraser preview publishes `CanvasEraserPreview` with an immutable corridor and
-  thickness, while text requests remain outside preview state
+  thickness, while context-action requests remain outside preview state
 - eraser preview and active eraser cleanup publish `state.revisions.preview`
   without document, selection, resourceVisual, interaction, viewCamera, or action
   effects; empty cleanup is silent
-- eraser and text cleanup-capable machines consume the existing coordinator seam
-  and do not own shared cleanup policy or call the coordinator directly
+- eraser and context cleanup-capable machines consume the existing coordinator
+  seam and do not own shared cleanup policy or call the coordinator directly
 - eraser commit tests green
 - eraser exact-check budget exceeded produces no partial erase
 - eraser action is emitted only when elements are erased after atomic install
-- text double-tap on selectable text emits `CanvasTextEditRequested`
-- text double-tap does not mutate document or selection by itself
-- text cleanup clears pending tap history without preview, repaint, action,
-  text-request, document, selection, spatial, or projection effects
+- double-tap on eligible content emits one `CanvasContextActionRequested` with a
+  content-element target, including non-selectable visible content
+- double-tap on empty canvas or background-only coverage emits one
+  `CanvasContextActionRequested` with an empty-canvas target
+- context-action double-tap request delivery does not mutate document or
+  selection by itself
+- context cleanup clears pending tap history without preview, repaint, action,
+  context request, document, selection, spatial, projection, or resource effects
 - request-originated text commits use `commitTextEdit`, reject stale request
-  facts without side effects, do not treat unrelated `documentRevision` changes
-  as stale, and emit `editText` only for changed text after atomic install
-- text request ids use the generic `CanvasInteractionRequestId`; the full
-  contextual-action event API remains deferred
+  facts, empty-canvas request ids, non-text request ids, retired request ids,
+  missing targets, and family-mismatched targets without side effects, do not
+  treat unrelated `documentRevision` changes as stale, and emit `editText` only
+  for changed text after atomic install
+- context request ids use the generic `CanvasInteractionRequestId`
 - stale terminal samples do not commit
-- loadDocument success clears eraser/text gesture state and failure preserves it
-  where required.
+- loadDocument success clears eraser/context gesture state and failure preserves
+  it where required.
 
 ## Risks and trade-offs
 
 - Eraser deletion is the easiest interaction path to partially mutate state.
   Budget-exceeded terminal behavior must be cleanup/no-op, never partial commit.
-- Text editing UI remains application-owned; the engine only emits the request.
+- Context menus and text editing UI remain application-owned; the engine only
+  emits the request.
 
 ## Why this phase belongs here
 
-Eraser and text request both need geometry, spatial, frame preview, pointer
-session, event dispatch, and edit safety. They should be implemented after move
-and draw tools, when shared interaction machinery is already proven.
+Eraser and context-action request both need geometry, spatial, frame preview,
+pointer session, event dispatch, and edit safety. They should be implemented
+after move and draw tools, when shared interaction machinery is already proven.

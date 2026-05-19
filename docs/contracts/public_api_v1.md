@@ -41,6 +41,7 @@ Required tests:
 - `test.api_contract.public_equality_policy`
 - `test.api.typed_action_payloads`
 - `test.api_contract.app_next_engine_adapter_compile_fixture`
+- `test.interaction.context_action_request`
 - `test.interaction.text_edit_stale_commit_guard`
 - `test.runtime.dispose_lifecycle`
 - `test.runtime.runtime_state_publication`

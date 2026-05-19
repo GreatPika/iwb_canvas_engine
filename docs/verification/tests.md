@@ -124,6 +124,7 @@ Required tests:
 - `test.edit.low_level_mutations_do_not_emit_actions`
 - `test.interaction.commands_emit_user_actions`
 - `test.interaction.runtime_created_timestamps_monotonic`
+- `test.interaction.context_action_request`
 - `test.flutter_bridge.interactive_false_pointer_routing`
 - `test.flutter_bridge.interactive_false_active_session_cancel`
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
@@ -170,6 +171,7 @@ Required tests:
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
 - `test.interaction.no_stale_terminal_commit`
 - `test.interaction.pointer_cleanup_coordinator_outcomes`
+- `test.interaction.context_action_request`
 - `test.interaction.text_edit_stale_commit_guard`
 - `test.flutter_bridge.widget_paint`
 - `test.benchmarks.required_cases`
@@ -259,11 +261,21 @@ projection, resource effects, repaint, user-action events, no-op behavior, and
 rollback behavior.
 
 `test.interaction.runtime_created_timestamps_monotonic` covers the public
-runtime timestamp contract: action events, text edit requests, pending line
-start previews, and selected move resolver requests resolve nullable or
+runtime timestamp contract: action events, context-action requests, pending
+line start previews, and selected move resolver requests resolve nullable or
 backwards `timestampMs` hints through one runtime-local monotonic cursor, while
 no-op, stale rejection, rollback, cancel, loadDocument, and dispose stream-close
-paths create no timestamped action or text request output.
+paths create no timestamped action or context request output.
+
+`test.interaction.context_action_request` covers P12 double-tap context-action
+behavior: selectable and non-selectable visible content targets emit exactly one
+`CanvasContextActionRequested` with a content-element target; empty canvas and
+background-only points emit exactly one empty-canvas target; delivery has no
+document, selection, preview, repaint, spatial, projection, resource, or action
+effect; pending context tap cleanup emits no request or effects; and
+request-originated text commits are accepted only for current text
+content-target request ids while empty-canvas, non-text, stale, retired,
+missing, and family-mismatched request ids are rejected without effects.
 
 `test.codec.constructor_and_schema_limits` covers element transform admission
 at public DTO construction and schema decode: non-invertible element
@@ -300,6 +312,7 @@ test/interaction/move_resolver_reentrancy_test.dart
 test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart
 test/interaction/no_stale_terminal_commit_test.dart
 test/interaction/pointer_cleanup_coordinator_outcomes_test.dart
+test/interaction/context_action_request_test.dart
 test/interaction/text_edit_stale_commit_guard_test.dart
 test/selection/runtime_owner_separation_test.dart
 test/guardrails/selection_boundary_imports_test.dart
@@ -450,9 +463,9 @@ test/interaction/pointer_cleanup_coordinator_outcomes_test.dart
      previews target overlay repaint, no-preview cleanup is public-state silent,
      active token/session facts are released before public effects, non-owned
      pending line state is preserved on `interactive=false`, line-owned cleanup
-     clears pending line state, pending text tap cleanup emits no text request,
-     no resolver runs on cleanup-only paths, stale terminal cleanup creates no
-     commit intent, and cleanup emits no user action.
+     clears pending line state, pending context tap cleanup emits no context
+     request, no resolver runs on cleanup-only paths, stale terminal cleanup
+     creates no commit intent, and cleanup emits no user action.
 
 test/resources/resource_dirty_test.dart
   -> proves markResourceDirty publishes state.revisions.resourceVisual without

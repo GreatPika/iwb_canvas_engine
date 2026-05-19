@@ -57,6 +57,7 @@ Required tests:
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
 - `test.interaction.no_stale_terminal_commit`
 - `test.interaction.pointer_cleanup_coordinator_outcomes`
+- `test.interaction.context_action_request`
 - `test.interaction.text_edit_stale_commit_guard`
 - `test.guardrails.selection_boundary_imports`
 - `test.flutter_bridge.widget_paint`

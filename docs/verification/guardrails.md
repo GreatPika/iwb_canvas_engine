@@ -175,7 +175,7 @@ Mandatory guardrails:
 | `edit.typed_effects_no_frame_dependency` | CommitCompiler produces typed effects and does not depend on concrete FrameEngine |
 | `events.low_level_edit_no_user_actions` | CanvasEdit.removeElement/clearContent emit no user action events |
 | `events.commands_emit_user_actions` | high-level commands and interaction commits own user action events |
-| `events.runtime_created_timestamps_monotonic` | runtime-created `timestampMs` outputs resolve nullable and backwards hints through one runtime-local monotonic cursor, including stale host timestamps, action events, text edit requests, pending line start previews, and selected move resolver requests |
+| `events.runtime_created_timestamps_monotonic` | runtime-created `timestampMs` outputs resolve nullable and backwards hints through one runtime-local monotonic cursor, including stale host timestamps, action events, context-action requests, pending line start previews, and selected move resolver requests |
 | `load.prepares_before_interrupt` | failed load does not interrupt gesture |
 | `load.success_interrupts_before_install` | success interrupt happens before atomic install |
 | `preview.selected_move_main_repaint` | selected move preview increments main repaint, not overlay |
@@ -184,7 +184,7 @@ Mandatory guardrails:
 | `interaction.no_resolver_on_cancel_paths` | selected-move resolver is not called on cancel, load, mode-change, `interactive=false`, stale terminal, or dispose paths |
 | `interaction.no_stale_terminal_commit` | stale or controllerEpoch-mismatched terminal samples cannot create commit intent |
 | `interaction.pointer_cleanup_coordinator_only` | cleanup-capable tool machines return typed cleanup requests to `InteractionEngine`, `InteractionEngine` is the only caller of `PointerToolCleanupCoordinator`, and no tool machine owns shared preview/session cleanup policy, cleanup-effect publication, or direct coordinator calls |
-| `interaction.text_edit_stale_commit_guard` | request-originated text commits reject unknown, retired, epoch-stale, generation-stale, revision-stale, missing, or non-text targets while allowing unrelated documentRevision changes |
+| `interaction.text_edit_stale_commit_guard` | request-originated text commits accept only current text content-target context requests and reject unknown, retired, epoch-stale, generation-stale, revision-stale, missing, empty-canvas, non-text, or family-mismatched targets while allowing unrelated documentRevision changes |
 | `geometry.no_legacy_scene_order` | geometry and hit-test policy does not reuse legacy SceneNode traversal or legacy scene order logic |
 | `geometry.eraser_exact_budget_no_partial` | eraser exact-check budget exceeded paths produce corridor-only preview or terminal no-op cleanup, never partial erase |
 | `spatial.no_full_clone_ordinary_edit` | ordinary spatial updates touch only changed ids/pages; full rebuild is reserved for replacement/load paths |

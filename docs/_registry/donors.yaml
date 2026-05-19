@@ -367,9 +367,9 @@
     - P10
     - P11
     - P12
-  target_owner: CanvasActionEvent and text edit events
+  target_owner: CanvasActionEvent and context-action request events
   use_for:
-    - "immutable events, timestamp normalization, text edit request evidence"
+    - "immutable events, timestamp normalization, context-action request evidence"
   do_not_copy:
     - legacy event public names unless in v1 API
   required_tests:
@@ -1174,18 +1174,18 @@
   decision: adapt
   target_phases:
     - P12
-  target_owner: Text edit request router
+  target_owner: Context-action double-tap router
   use_for:
-    - "text double-tap edit-request routing"
+    - "context-action double-tap routing"
   do_not_copy:
-    - "legacy text hit-test read model"
+    - "legacy text-only hit-test read model"
   required_tests:
-    - text edit request tests
+    - context-action request tests
   blocks:
     - P12
   related_sections:
     - section_14_interaction_engine
-  notes: "Depends on new text hit-test."
+  notes: "Depends on new context-action target hit policy."
 -
   id: interaction_gesture_runtime
   source_paths:

@@ -169,10 +169,10 @@ Guardrails extracted from split section 22.
 
 - Rule: runtime-created `timestampMs` outputs resolve nullable and backwards
   hints through one runtime-local monotonic cursor for stale host timestamps,
-  action events, text edit requests, pending line start previews, and selected
+  action events, context-action requests, pending line start previews, and selected
   move resolver requests
 - Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.interaction.runtime_created_timestamps_monotonic`, `test.guardrails.blocking_suite`
+- Tests: `test.interaction.runtime_created_timestamps_monotonic`, `test.interaction.context_action_request`, `test.guardrails.blocking_suite`
 
 ## load.prepares_before_interrupt
 
@@ -372,11 +372,12 @@ Guardrails extracted from split section 22.
 
 ## interaction.text_edit_stale_commit_guard
 
-- Rule: request-originated text commits reject unknown, retired, epoch-stale,
-  generation-stale, revision-stale, missing, or non-text targets while allowing
-  unrelated documentRevision changes
+- Rule: request-originated text commits accept only current text content-target
+  context requests and reject unknown, retired, epoch-stale, generation-stale,
+  revision-stale, missing, empty-canvas, non-text, or family-mismatched targets
+  while allowing unrelated documentRevision changes
 - Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.interaction.text_edit_stale_commit_guard`, `test.guardrails.blocking_suite`
+- Tests: `test.interaction.context_action_request`, `test.interaction.text_edit_stale_commit_guard`, `test.guardrails.blocking_suite`
 
 ## projection.only_explicit_read_paths
 

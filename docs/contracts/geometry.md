@@ -29,6 +29,7 @@ Related diagrams:
 - `seq_eraser_exact_budget`
 Required tests:
 - `test.geometry.hit_policy`
+- `test.interaction.context_action_request`
 - `test.geometry.no_legacy_scene_order`
 - `test.geometry.eraser_exact_budget_no_partial_commit`
 Guardrails:

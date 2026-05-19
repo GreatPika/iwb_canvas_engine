@@ -22,6 +22,7 @@ Required tests:
 - `test.edit.sync_non_nested_async_stale`
 - `test.edit.operation_matrix_effects`
 - `test.interaction.runtime_created_timestamps_monotonic`
+- `test.interaction.context_action_request`
 - `test.interaction.text_edit_stale_commit_guard`
 Guardrails:
 - `edit.sync_non_nested`
