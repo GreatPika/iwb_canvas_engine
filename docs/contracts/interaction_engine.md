@@ -108,6 +108,9 @@ Rules:
   `controllerEpoch`; stale token or epoch mismatch may clean up only and cannot
   create a commit intent;
 - terminal exception clears preview and schedules correct repaint;
+- cleanup-capable tool machines return typed cleanup requests to
+  `InteractionEngine`; `InteractionEngine` is the only caller of the future
+  `PointerToolCleanupCoordinator`;
 - committed facts for gesture decisions are read through narrow read-only
   interaction query ports;
 - selection facts for gesture decisions are read through narrow immutable
@@ -139,7 +142,53 @@ If cancellation clears active pointer-owned preview, runtime publishes one
 `CanvasRuntimeState` with an updated preview revision. If no active
 pointer-owned preview changes, cancellation is public-state silent.
 
-### 14.2 Preview repaint target
+### 14.2 Pointer cleanup coordinator
+
+The future `PointerToolCleanupCoordinator` is an internal
+`InteractionEngine` collaborator under
+`lib/src/interaction/pointer_tool_cleanup_coordinator.dart`. It is the cleanup
+policy owner for pointer-tool cleanup, not a public API type, state store,
+cache, resolver, edit owner, event dispatcher, text-request emitter, repaint
+notifier, Flutter adapter, resource owner, or runtime publication owner.
+
+Future cleanup-capable tool machines recognize gestures and return terminal
+commit intents or typed cleanup requests to `InteractionEngine`. The typed
+cleanup request carries both cleanup reason and ownership context so the
+coordinator can distinguish active pointer-owned state from non-owned pending
+line state. Tool machines must not call the coordinator directly.
+
+The coordinator owns cleanup policy and outcome calculation for cancel, dispose,
+prepared load success, mode/tool change, active-session `interactive=false`,
+stale terminal, invalid terminal, no-op terminal, resolver cancel/error after
+valid resolver entry, edit failure after a commit intent, and
+post-successful-commit cleanup. It does not own final terminal normalization,
+hit testing, spatial candidate selection, exact eraser checks, commit-intent
+creation, committed document mutation, committed selection mutation, or resource
+mutation.
+
+`PointerCleanupOutcome` is effect-only. It records previous preview kind,
+whether preview changed, whether public state is needed, repaint target, active
+token/session release, pending line cleared or preserved, pending text tap
+cleared, and load/dispose sequencing facts. Runtime/public signal aggregation
+may consume the outcome after cleanup completes, but it must not re-read stale
+active session state to decide cleanup effects.
+
+Pending line preservation is part of the coordinator contract. Non-owned
+pending line state is preserved on `interactive=false`. Pending line state is
+cleared only by line-owned cleanup, mode/tool change, successful load, dispose,
+or a terminal line decision. Pending text tap cleanup clears tap history without
+preview, repaint, action, text-request, document, selection, spatial, or
+projection effects.
+
+The coordinator may depend only on interaction-owned state models and public
+preview value types needed to calculate `CanvasNoPreview` outcomes. It must not
+depend on concrete store internals, concrete selection internals, selected-move
+resolver callbacks, `EditKernel`, action dispatchers, text-request streams,
+frame engine, repaint buses, Flutter widgets/adapters, resource
+resolver/session APIs, public runtime-state publication, or legacy package
+paths.
+
+### 14.3 Preview repaint target
 
 InteractionEngine is the only producer of public preview variants. It publishes
 `CanvasNoPreview` for cleanup, `CanvasSelectedMovePreview` for the main-scene
@@ -161,7 +210,7 @@ This is mandatory. The legacy selected move preview uses main-scene repaint
 through selected supplement staging; next behavior must preserve that functional
 result.
 
-### 14.3 Text double-tap
+### 14.4 Text double-tap
 
 Double-tap on a visible selectable text element emits
 `CanvasTextEditRequested`. It does not mutate document and does not

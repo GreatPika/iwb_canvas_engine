@@ -55,7 +55,7 @@ Canvas engine state
 | FrameFactsPort | immutable committed frame facts for capture, row resolution, descriptor snapshots, and resourceRevision | expose store tables, public document projections, drafts, mutations, selection facts, or frame-owned render models |
 | SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | хранить committed document content, selected-order cache или быть public API type |
 | EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | выполнять paint или pointer routing |
-| InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts | читать или менять DocumentStoreKernel напрямую; хранить Flutter text editor session state |
+| InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts, future pointer cleanup coordinator composition | читать или менять DocumentStoreKernel напрямую; хранить Flutter text editor session state |
 | FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; future composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
 | ResourceKernel | resource API, dirty resource ids, resource visual state publication, session invalidation events | владеть app domain assets, resolved image references или committed descriptors |
 | SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame missing/null suppression | владеть committed descriptors, public runtime state или Flutter widget lifecycle |
@@ -69,6 +69,15 @@ after accepted document, selection, preview, view camera, resource visual,
 interaction, or epoch changes. Downstream owners contribute facts through their
 own boundaries; they do not own the public snapshot object or depend on Flutter
 widget state to publish core runtime state.
+
+The future `PointerToolCleanupCoordinator` is an internal
+`InteractionEngine` collaborator and cleanup policy seam. `InteractionEngine`
+owns its composition and is the only caller. Tool machines may return typed
+cleanup requests to `InteractionEngine`, but they must not call the coordinator
+directly. The coordinator calculates an effect-only `PointerCleanupOutcome`
+from interaction-owned state and request ownership context; it does not publish
+runtime state, emit actions or text requests, schedule repaints, call resolvers,
+open edits, read stores or selection internals, or become a second state store.
 
 Camera ownership is split deliberately:
 
@@ -159,6 +168,7 @@ RuntimeRoot
   ├─ SelectionKernel
   ├─ EditKernel
   ├─ InteractionEngine
+  │  └─ PointerToolCleanupCoordinator (internal interaction collaborator)
   ├─ InteractionRequestRegistry
   ├─ FrameEngine (frame-internal facade)
   ├─ SpatialKernel

@@ -584,7 +584,7 @@ Expected signal: no paths are printed.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Architecture And Contract Source Of Truth
+### Slice 1. [x] Architecture And Contract Source Of Truth
 
 #### Implements
 

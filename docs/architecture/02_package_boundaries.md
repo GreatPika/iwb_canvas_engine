@@ -82,6 +82,7 @@ The new package is rooted at the repository top level:
       interaction/
         interaction_engine.dart
         interaction_request_registry.dart
+        pointer_tool_cleanup_coordinator.dart
         pointer_session.dart
         move_machine.dart
         select_machine.dart
@@ -163,6 +164,14 @@ layout names for the `FrameEngine` internal split, not files created by this
 documentation step. They remain frame-private implementation details and are
 omitted from the public package barrel.
 
+`lib/src/interaction/pointer_tool_cleanup_coordinator.dart` is the future
+internal cleanup policy collaborator for `InteractionEngine`. It is not created
+by this documentation step and is not exported from
+`lib/iwb_canvas_engine.dart`. Future tool-machine files under
+`lib/src/interaction/**` may construct typed cleanup requests for
+`InteractionEngine`, but the coordinator itself remains interaction-internal and
+callable only by `InteractionEngine`.
+
 Source boundary rules:
 
 ```text
@@ -219,6 +228,7 @@ lib/src/store/**             -> may not import src/interaction, src/frame, src/f
 lib/src/selection/**         -> may read document facts only through runtime-supplied immutable query ports
 lib/src/edit/**              -> may not import src/flutter_bridge
 lib/src/interaction/**       -> may not import, read, or mutate src/store or src/selection concrete internals directly
+lib/src/interaction/pointer_tool_cleanup_coordinator.dart -> may not import resolver callbacks, EditKernel, repaint buses, Flutter bridge, resource sessions, concrete store internals, or concrete selection internals
 lib/src/frame/**             -> may not import public document projection as paint input
 lib/src/spatial/**           -> may use only typed spatial delta/read ports, not concrete store tables or interaction/frame state
 lib/src/resources/**         -> may not import interaction state

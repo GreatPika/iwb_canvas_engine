@@ -47,6 +47,8 @@ replacement:
 
 ```text
 PreparedDocumentLoad success -> RuntimeRoot requests interrupt/preview cleanup;
+the future InteractionEngine boundary routes that cleanup through the internal
+PointerToolCleanupCoordinator;
 the boundary may clear active preview state and pointer normalization facts;
 the boundary must not read from or mutate DocumentStoreKernel;
 the boundary must not execute terminal resolver or commit paths;
