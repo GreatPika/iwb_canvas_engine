@@ -6,7 +6,8 @@ sequenceDiagram
   participant Surface as CanvasSurface
   participant Runtime as RuntimeRoot
   participant Resources as ResourceKernel
-  participant Frame as FrameEngine
+  participant Frame as FrameEngine facade
+  participant Assets as PaintAssetBindingService
   participant Facts as FrameFactsPort
   participant Store as DocumentStoreKernel
   participant Session as SurfaceResourceSession
@@ -32,24 +33,25 @@ sequenceDiagram
 
   opt records contain image resource ids
     loop for each image RenderElementRecord
-      Frame->>Facts: read descriptor facts and resourceRevision by resourceId
+      Frame->>Assets: bind descriptor to paint asset
+      Assets->>Facts: read descriptor facts and resourceRevision by resourceId
       Facts->>Store: read descriptor facts from committed state
       Store-->>Facts: CanvasImageResource with CanvasAppKeyResourceSource.key or missing descriptor
-      Facts-->>Frame: immutable descriptor facts or missing descriptor
-      Frame->>Session: resolve paint image(descriptor snapshot, resourceRevision)
+      Facts-->>Assets: immutable descriptor facts or missing descriptor
+      Assets->>Session: resolve paint image(descriptor snapshot, resourceRevision)
 
       alt descriptor is missing
-        Session-->>Frame: bounded missing image placeholder
+        Session-->>Assets: bounded missing image placeholder
       else descriptor exists
         Session->>Cache: lookup key(resolverGeneration, resourceId, resourceRevision)
 
         alt cache hit
           Cache-->>Session: cached app-owned ui.Image
-          Session-->>Frame: app-owned ui.Image
+          Session-->>Assets: app-owned ui.Image
         else same-frame missing/null already seen
-          Session-->>Frame: bounded placeholder without retry
+          Session-->>Assets: bounded placeholder without retry
         else per-frame resolver budget exceeded
-          Session-->>Frame: bounded placeholder, session records probe and at most one pending throttled follow-up repaint, no cache write
+          Session-->>Assets: bounded placeholder, session records probe and at most one pending throttled follow-up repaint, no cache write
         else cache miss and resolver budget available
           Session->>Resolver: resolveImage(CanvasImageResource with CanvasAppKeyResourceSource.key)
           Note over Resolver: Resolver reads resource.source as CanvasAppKeyResourceSource.key through public API.
@@ -63,20 +65,21 @@ sequenceDiagram
 
           alt app returns ui.Image
             Session->>Cache: store key(resolverGeneration, resourceId, resourceRevision) -> app-owned ui.Image reference
-            Session-->>Frame: app-owned ui.Image paint asset
+            Session-->>Assets: app-owned ui.Image paint asset
           else app returns null
             Session->>Session: suppress null/missing for current frame key(resolverGeneration, resourceId, resourceRevision)
-            Session-->>Frame: bounded missing image placeholder
+            Session-->>Assets: bounded missing image placeholder
           end
         end
       end
+      Assets-->>Frame: resolved paint asset or placeholder
     end
   end
 
   Frame->>Painter: paint immutable records with resolved image assets or placeholders
   Painter-->>Surface: draw main scene
 
-  Note over Painter,Resolver: Painter never calls CanvasResourceResolver directly. SurfaceResourceSession owns synchronous resolver calls and the budget follow-up throttle.
+  Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession; painter never calls CanvasResourceResolver directly.
   Note over Session,Resolver: Returned ui.Image objects are owned by the application. The engine never disposes app-owned images.
   Note over Frame,Store: Main paint uses FrameFactsPort for committed descriptor facts, does not materialize CanvasDocument, and does not read DocumentProjectionCache.
   Note over Port,Store: ResourcePort cannot mutate descriptors. Descriptor mutation is only through the CanvasEdit commit path outside this sequence.
