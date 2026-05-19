@@ -151,13 +151,15 @@ Resolver/cache state stays owned by `SurfaceResourceSession`; among the future
 frame collaborators, only `PaintAssetBindingService` receives that session.
 
 `InteractionRequestRegistry` is the interaction-owned registry for issued
-request guard facts, such as the `CanvasInteractionRequestId`, target element
-id, controllerEpoch, element generation, elementRevision, element family, and
-retired request status. `RuntimeRoot` owns the registry instance lifetime,
+request guard facts, such as the `CanvasInteractionRequestId`, context request
+target kind, controllerEpoch, and retired request status. For content-element
+targets, it also stores target element id, element generation, elementRevision,
+and element family. `RuntimeRoot` owns the registry instance lifetime,
 `InteractionEngine` records issued request facts, and guarded command-port
 operations consume those facts through a narrow boundary before delegating
 accepted mutations to `EditKernel`. The registry is not an active text-input
-session, not app overlay state, and not `CanvasPreviewState`.
+session, not a context menu or app overlay state owner, and not
+`CanvasPreviewState`.
 
 Composition root:
 

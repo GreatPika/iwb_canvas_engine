@@ -57,6 +57,26 @@ Hit eligibility:
 point finite && element.isVisible && element.isSelectable && transform finite
 ```
 
+Context-action target eligibility is separate from selection hit eligibility:
+
+```text
+point finite && content element.isVisible && transform finite && transform invertible && exact geometry hit
+```
+
+Context-action target resolution:
+
+```text
+- content layers only;
+- reverse layer order;
+- reverse element order within layer;
+- first exact geometry hit wins as the topmost content target in content paint order;
+- element.isSelectable does not gate context-action targets;
+- non-selectable visible content elements can produce content-element context targets;
+- background elements never produce content-element context targets;
+- a point covered only by background elements resolves as an empty-canvas target
+  when it otherwise satisfies double-tap timing and slop constraints.
+```
+
 Point hit:
 
 ```text

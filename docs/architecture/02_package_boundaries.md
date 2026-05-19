@@ -89,7 +89,7 @@ The new package is rooted at the repository top level:
         draw_machine.dart
         line_machine.dart
         eraser_machine.dart
-        text_tap_router.dart
+        context_action_router.dart
       frame/
         frame_engine.dart
         frame_capture_service.dart
@@ -244,11 +244,18 @@ runtime/selection boundaries. Interaction code may depend on those
 intent-specific ports, not on `src/store`, `src/selection`, or concrete owner
 internals.
 
+`lib/src/interaction/context_action_router.dart` is the future interaction
+route owner for double-tap context-action target resolution and request
+emission. It may read only the narrow interaction query facts needed to
+distinguish content-element and empty-canvas targets; it must not own app menu
+state, editor overlay lifetime, or mutations.
+
 `lib/src/interaction/interaction_request_registry.dart` stores only
-engine-issued `CanvasInteractionRequestId` guard facts and retired request
-status for app-owned interaction requests. It must not expose store tables,
-selection internals, Flutter editor overlay state, IME/focus/selection state, or
-mutation methods; guarded mutations still enter through public command ports
-and commit through `EditKernel`.
+engine-issued `CanvasInteractionRequestId` guard facts, context request target
+kind, controller epoch, retired request status, and content-target guard facts
+for app-owned interaction requests. It must not expose store tables, selection
+internals, Flutter editor overlay state, IME/focus/selection state, context menu
+state, or mutation methods; guarded mutations still enter through public command
+ports and commit through `EditKernel`.
 
 ---
