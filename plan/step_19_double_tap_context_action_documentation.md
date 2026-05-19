@@ -541,7 +541,7 @@ checkbox headings in the linked step document.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Public Context Request Seam
+### Slice 1. [x] Public Context Request Seam
 
 #### Implements
 
@@ -587,7 +587,7 @@ successor context-action seam, the public API registry names the successor
 types, and no active public source-of-truth surface still defines
 `textEditRequests` or `CanvasTextEditRequested` as the target double-tap seam.
 
-### Slice 2. [ ] Target Eligibility and Effect Semantics
+### Slice 2. [x] Target Eligibility and Effect Semantics
 
 #### Implements
 
@@ -637,7 +637,7 @@ that context-action requests use their own target policy, do not require
 selectability, exclude background content targets, and do not mutate document,
 selection, preview, spatial, projection, resource, repaint, or action state.
 
-### Slice 3. [ ] Context Request Diagrams and Registries
+### Slice 3. [x] Context Request Diagrams and Registries
 
 #### Implements
 
@@ -684,7 +684,7 @@ registry entries, contract references, and phase navigation all use successor
 context-action diagram ids and no active durable reference still points to the
 retired text-edit request diagrams.
 
-### Slice 4. [ ] Phase, Donor, Verification, and Index Guidance
+### Slice 4. [x] Phase, Donor, Verification, and Index Guidance
 
 #### Implements
 
@@ -742,7 +742,7 @@ and index surfaces consistently describe context-action request behavior and no
 active downstream source-of-truth surface still treats the full contextual
 action API as deferred.
 
-### Slice 5. [ ] Final Documentation Closure
+### Slice 5. [x] Final Documentation Closure
 
 #### Implements
 

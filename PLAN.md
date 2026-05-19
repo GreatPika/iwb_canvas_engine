@@ -38,4 +38,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 16. FrameFactsPort committed frame facts boundary](plan/step_16_frame_facts_port_committed_frame_facts_boundary.md)
 - [x] [Step 17. FrameEngine internal collaborator split](plan/step_17_frame_engine_internal_collaborator_split.md)
 - [x] [Step 18. Pointer tool cleanup coordinator documentation](plan/step_18_pointer_tool_cleanup_coordinator.md)
-- [ ] [Step 19. Double-tap context action documentation](plan/step_19_double_tap_context_action_documentation.md)
+- [x] [Step 19. Double-tap context action documentation](plan/step_19_double_tap_context_action_documentation.md)
