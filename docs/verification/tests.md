@@ -261,19 +261,28 @@ projection, resource effects, repaint, user-action events, no-op behavior, and
 rollback behavior.
 
 `test.interaction.runtime_created_timestamps_monotonic` covers the public
-runtime timestamp contract: action events, context-action requests, pending
-line start previews, and selected move resolver requests resolve nullable or
+runtime timestamp contract: action events, context-action requests from direct
+host-recognized `handleDoubleTap` and pointer-sample recognition, pending line
+start previews, and selected move resolver requests resolve nullable or
 backwards `timestampMs` hints through one runtime-local monotonic cursor, while
-no-op, stale rejection, rollback, cancel, loadDocument, and dispose stream-close
-paths create no timestamped action or context request output.
+no-op, invalid direct double-tap input, stale rejection, rollback, cancel,
+loadDocument, and dispose stream-close paths create no timestamped action or
+context request output.
 
 `test.interaction.context_action_request` covers P12 double-tap context-action
-behavior: selectable and non-selectable visible content targets emit exactly one
-`CanvasContextActionRequested` with a content-element target; empty canvas and
-background-only points emit exactly one empty-canvas target; delivery has no
-document, selection, preview, repaint, spatial, projection, resource, or action
-effect; pending context tap cleanup emits no request or effects; and
-request-originated text commits are accepted only for current text
+behavior: direct host-recognized `handleDoubleTap` and pointer-sample
+recognition emit exactly one `CanvasContextActionRequested` with a
+content-element target for selectable and non-selectable visible content;
+direct `handleDoubleTap` emits exactly one empty-canvas target for empty canvas
+and background-only points without pending first-tap history; direct
+`handleDoubleTap` rejects non-finite positions before cleanup, target
+resolution, timestamped request emission, or effects; direct `handleDoubleTap`
+clears existing pending context tap history through
+`PointerToolCleanupCoordinator` before current-target resolution; pointer-sample
+recognition still revalidates the second tap against pending target facts;
+delivery has no document, selection, preview, repaint, spatial, projection,
+resource, or action effect; pending context tap cleanup emits no request or
+effects; and request-originated text commits are accepted only for current text
 content-target request ids while empty-canvas, non-text, stale, retired,
 missing, and family-mismatched request ids are rejected without effects.
 

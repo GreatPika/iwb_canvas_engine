@@ -15,7 +15,8 @@ context-action double-tap request routing.
 - eraser budget-exceeded behavior: corridor-only preview or terminal cleanup/no-op
   with no partial erase
 - typed erase action payload
-- context-action double-tap router
+- context-action double-tap router for direct host-recognized
+  `handleDoubleTap` and engine-owned pointer-sample two-tap recognition
 - context-action target read model through narrow query ports
 - `CanvasContextActionRequested` event emission for content-element and
   empty-canvas targets
@@ -129,9 +130,18 @@ spatial, projection, or resource effects.
 - eraser exact-check budget exceeded produces no partial erase
 - eraser action is emitted only when elements are erased after atomic install
 - double-tap on eligible content emits one `CanvasContextActionRequested` with a
-  content-element target, including non-selectable visible content
-- double-tap on empty canvas or background-only coverage emits one
-  `CanvasContextActionRequested` with an empty-canvas target
+  content-element target, including non-selectable visible content, for both
+  direct `handleDoubleTap` and pointer-sample recognition
+- direct `handleDoubleTap` on empty canvas or background-only coverage emits one
+  `CanvasContextActionRequested` with an empty-canvas target without pending
+  first-tap history
+- direct `handleDoubleTap` rejects non-finite positions before timestamped
+  request emission, current-target resolution, cleanup, or effects
+- direct `handleDoubleTap` clears any existing pending context tap history
+  through `PointerToolCleanupCoordinator` before current-target resolution, and
+  still emits at most one request for the current content or empty-canvas target
+- pointer-sample two-tap recognition remains separate and still revalidates the
+  second tap against the pending target class and current target facts
 - context-action double-tap request delivery does not mutate document or
   selection by itself
 - context cleanup clears pending tap history without preview, repaint, action,

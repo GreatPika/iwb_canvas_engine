@@ -179,10 +179,11 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P10`, `P11`, `P12`
 - Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_23_tests`
 - Guardrails: `events.runtime_created_timestamps_monotonic`
-- Focus: action events, context-action requests, pending line start previews, and
-  selected move resolver requests resolve nullable or backwards `timestampMs`
-  hints through one runtime-local monotonic cursor, while no-output paths create
-  no timestamped action or context request.
+- Focus: action events, context-action requests from direct host-recognized
+  `handleDoubleTap` and pointer-sample recognition, pending line start previews,
+  and selected move resolver requests resolve nullable or backwards
+  `timestampMs` hints through one runtime-local monotonic cursor, while
+  no-output paths create no timestamped action or context request.
 
 ## test.flutter_bridge.interactive_false_pointer_routing
 
@@ -583,10 +584,12 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P12`
 - Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_16_geometry_policy`, `section_23_tests`
 - Guardrails: `interaction.text_edit_stale_commit_guard`, `events.runtime_created_timestamps_monotonic`
-- Focus: double-tap context-action request emission for selectable content,
-  non-selectable content, empty canvas, and background-only points; no-effect
-  delivery and cleanup; and guarded `commitTextEdit` acceptance only for
-  current text content-target request ids.
+- Focus: direct host-recognized `handleDoubleTap` and pointer-sample
+  double-tap context-action request emission for selectable content,
+  non-selectable content, empty canvas, and background-only points; direct
+  pending-history cleanup and non-finite position rejection; no-effect delivery
+  and cleanup; and guarded `commitTextEdit` acceptance only for current text
+  content-target request ids.
 
 ## test.interaction.text_edit_stale_commit_guard
 

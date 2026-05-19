@@ -82,7 +82,7 @@ P7 and P10-P12 close their resource and interaction rows when those owners land.
 | line commit | add line | state.revisions.document, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawLine; `runtime_created_timestamps_monotonic` |
 | eraser preview | preview corridor | state.revisions.preview | none | no | overlay | none |
 | eraser commit | removed elements plus selection-owner prune when erased ids intersect selection | state.revisions.document, state.revisions.selection if pruned, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | remove ids | evict | main + overlay cleanup | erase if removed; `runtime_created_timestamps_monotonic` |
-| context-action double-tap request | contextActionRequests stream only; InteractionRequestRegistry stores context request target kind and guard facts | none | none | no | none | CanvasContextActionRequested; `runtime_created_timestamps_monotonic` |
+| context-action double-tap request | contextActionRequests stream only; direct `handleDoubleTap` clears pending context tap history before current-target resolution; InteractionRequestRegistry stores context request target kind and guard facts | none | none | no | none | CanvasContextActionRequested; `runtime_created_timestamps_monotonic` |
 | commitTextEdit stale rejection | retired request state only when the request id is known and rejected; otherwise none | none | none | no | none | none |
 | commitTextEdit no-op accepted | retired request state | none | none | no | none | none |
 | commitTextEdit changed accepted | text element content through EditKernel plus retired request state | state.revisions.document; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | main | editText; `runtime_created_timestamps_monotonic` |
@@ -111,10 +111,13 @@ Notes:
 - Context-action double-tap request emits `CanvasContextActionRequested` with
   `CanvasInteractionRequestId`, `CanvasContextActionTrigger.doubleTap`,
   controller epoch, document revision, timestamp, view/world positions, and
-  either a content-element target or empty-canvas target. Content targets carry
-  an immutable public `CanvasElement` snapshot and boundsWorld; empty-canvas
-  targets carry no element snapshot. Request delivery itself has no document,
-  selection, preview, repaint, spatial, projection, resource, or action effect.
+  either a content-element target or empty-canvas target. Direct
+  `CanvasToolPort.handleDoubleTap` is a host-recognized input that does not
+  require pending first-tap history; pointer-sample recognition remains a
+  separate two-tap path. Content targets carry an immutable public
+  `CanvasElement` snapshot and boundsWorld; empty-canvas targets carry no
+  element snapshot. Request delivery itself has no document, selection,
+  preview, repaint, spatial, projection, resource, or action effect.
 - `commitTextEdit` rejects stale request ids by request id, controller epoch,
   target kind, element generation, elementRevision, missing element,
   empty-canvas target, non-text target, and current text-family mismatch.

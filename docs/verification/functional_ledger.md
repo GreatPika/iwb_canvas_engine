@@ -63,7 +63,7 @@ next API mapping after the scope gate.
 | eraser thickness | `CanvasDrawStyle.eraserThickness` | `functional.eraser_thickness` |
 | pointer settings | `CanvasPointerPolicy` | `functional.pointer_policy` |
 | pending line state | `CanvasPreviewState` | `functional.pending_line_preview` |
-| context-action request | `CanvasContextActionRequested` + guarded `CanvasCommandPort.commitTextEdit` for text content targets | `functional.context_action_request` |
+| context-action request | direct `CanvasToolPort.handleDoubleTap`, pointer-sample two-tap recognition, `CanvasContextActionRequested`, and guarded `CanvasCommandPort.commitTextEdit` for text content targets | `functional.context_action_request` |
 | action committed event | `CanvasActionCommitted` typed payloads | `functional.action_events` |
 | monotonic runtime-created timestamps (`runtime_created_timestamps_monotonic`) | `CanvasActionCommitted.timestampMs`, `CanvasContextActionRequested.timestampMs`, `CanvasPendingLineStartPreview.timestampMs`, and `CanvasMoveCommitRequest.timestampMs` resolve through the runtime timestamp contract | `test.interaction.runtime_created_timestamps_monotonic` |
 | camera offset | `CanvasCameraPort.offset` + `CanvasRuntime.state.revisions.viewCamera` | `functional.camera_offset` |

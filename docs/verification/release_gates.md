@@ -197,7 +197,8 @@ Release is blocked unless all statements are true:
     selection-state cache independence, and selected supplement staging tests are green.
 24. selected move preview main repaint test is green.
 25. overlay preview repaint split tests are green.
-26. context-action request and guarded text commit integration tests are green.
+26. direct `handleDoubleTap`, pointer-sample context-action request, and guarded
+    text commit integration tests are green.
 27. action typed payload tests are green.
 28. runtime-created timestamp monotonicity tests are green.
 29. low-level edit emits no user action events tests are green.

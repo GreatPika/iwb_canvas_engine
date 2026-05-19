@@ -245,10 +245,13 @@ intent-specific ports, not on `src/store`, `src/selection`, or concrete owner
 internals.
 
 `lib/src/interaction/context_action_router.dart` is the future interaction
-route owner for double-tap context-action target resolution and request
-emission. It may read only the narrow interaction query facts needed to
-distinguish content-element and empty-canvas targets; it must not own app menu
-state, editor overlay lifetime, or mutations.
+route owner for direct `CanvasToolPort.handleDoubleTap` and pointer-sample
+double-tap context-action target resolution and request emission. Direct
+`handleDoubleTap` enters as a host-recognized input that clears pending context
+tap history through the interaction cleanup coordinator before current-target
+resolution. The router may read only the narrow interaction query facts needed
+to distinguish content-element and empty-canvas targets; it must not own app
+menu state, editor overlay lifetime, or mutations.
 
 `lib/src/interaction/interaction_request_registry.dart` stores only
 engine-issued `CanvasInteractionRequestId` guard facts, context request target
