@@ -7,6 +7,7 @@ sequenceDiagram
   participant Runtime as RuntimeRoot
   participant Resources as ResourceKernel
   participant Frame as FrameEngine
+  participant Facts as FrameFactsPort
   participant Store as DocumentStoreKernel
   participant Session as SurfaceResourceSession
   participant Cache as ImageResolveCache
@@ -21,15 +22,19 @@ sequenceDiagram
   Surface->>Session: creates SurfaceResourceSession(resolver, resolverGeneration)
 
   Surface->>Frame: paint main scene request(viewportRect, devicePixelRatio, SurfaceResourceSession)
-  Frame->>Store: capture committed main-frame facts once
-  Store-->>Frame: compact rows, resource descriptor revisions, and frame revisions
+  Frame->>Facts: capture committed main-frame facts once
+  Facts->>Store: read compact rows, resource descriptor revisions, and frame revisions
+  Store-->>Facts: committed frame facts
+  Facts-->>Frame: immutable frame facts and row facts
   Frame->>Frame: build immutable RenderElementRecord list
   Note over Frame: Each image render record carries resourceId from the committed row.
 
   opt records contain image resource ids
     loop for each image RenderElementRecord
-      Frame->>Store: read committed descriptor snapshot and resourceRevision by resourceId
-      Store-->>Frame: CanvasImageResource with CanvasAppKeyResourceSource.key or missing descriptor
+      Frame->>Facts: read descriptor facts and resourceRevision by resourceId
+      Facts->>Store: read descriptor facts from committed state
+      Store-->>Facts: CanvasImageResource with CanvasAppKeyResourceSource.key or missing descriptor
+      Facts-->>Frame: immutable descriptor facts or missing descriptor
       Frame->>Session: resolve paint image(descriptor snapshot, resourceRevision)
 
       alt descriptor is missing
@@ -72,7 +77,7 @@ sequenceDiagram
 
   Note over Painter,Resolver: Painter never calls CanvasResourceResolver directly. SurfaceResourceSession owns synchronous resolver calls and the budget follow-up throttle.
   Note over Session,Resolver: Returned ui.Image objects are owned by the application. The engine never disposes app-owned images.
-  Note over Frame,Store: Main paint does not materialize CanvasDocument and does not read DocumentProjectionCache.
+  Note over Frame,Store: Main paint uses FrameFactsPort for committed descriptor facts, does not materialize CanvasDocument, and does not read DocumentProjectionCache.
   Note over Port,Store: ResourcePort cannot mutate descriptors. Descriptor mutation is only through the CanvasEdit commit path outside this sequence.
   Note over Surface,Painter: No legacy scene, controller, snapshot, or public DTO entities participate in resource resolution.
 

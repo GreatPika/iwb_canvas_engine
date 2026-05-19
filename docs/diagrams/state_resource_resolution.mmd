@@ -40,12 +40,13 @@ stateDiagram-v2
   ResolverReplaced --> ActiveSession: increment resolverGeneration and clear stale cache entries
 
   state "Resolve request" as ResolveRequested
-  ResolveRequested --> DescriptorSnapshot: Frame reads descriptor snapshot
+  ResolveRequested --> DescriptorSnapshot: Frame asks FrameFactsPort for descriptor facts
 
   state "Descriptor snapshot" as DescriptorSnapshot
   note right of DescriptorSnapshot
-    The committed-state owner reads resource descriptors and
-    passes immutable descriptor facts to the session boundary.
+    FrameFactsPort reads committed resource descriptors from the
+    committed-state owner and passes immutable descriptor facts
+    to the session boundary.
     The resolver cannot create, remove, or update descriptors.
   end note
 

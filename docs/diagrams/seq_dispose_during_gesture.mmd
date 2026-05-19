@@ -10,6 +10,7 @@ sequenceDiagram
   participant IE as InteractionEngine
   participant Preview as CanvasPreviewState
   participant Frame as FrameEngine
+  participant Facts as FrameFactsPort
   participant Store as DocumentStoreKernel
   participant SelectionFacts as SelectionFactsPort
   participant Spatial as SpatialKernel
@@ -45,7 +46,10 @@ sequenceDiagram
       Preview-->>Runtime: preview cleanup revision fact
       Runtime->>Signals: publish CanvasRuntimeState before dispose completes
       Preview->>Frame: request main-scene repaint cleanup
-      Frame->>Store: capture committed frame facts once
+      Frame->>Facts: capture committed frame facts once
+      Facts->>Store: read committed revision facts
+      Store-->>Facts: immutable committed frame facts
+      Facts-->>Frame: committed frame facts
       Frame->>SelectionFacts: capture selected ids once
       Frame->>Preview: capture no selectedMoveDelta
       Frame->>Spatial: query viewport without preview-shifted selected supplement

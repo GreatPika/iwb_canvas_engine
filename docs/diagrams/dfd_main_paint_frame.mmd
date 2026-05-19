@@ -9,6 +9,12 @@ flowchart LR
     ProjectionCache["DocumentProjectionCache\nreadDocument/codec/tests only"]
   end
 
+  subgraph FrameFactsPort["FrameFactsPort"]
+    CommittedFrameFacts["Committed frame facts\ndocument/structural/bounds/\nelementVisual/background/grid revisions"]
+    RowSnapshots["Committed row snapshots\nstale structuralRevision/generation rejected"]
+    DescriptorFacts["Descriptor facts\nresourceId + appKey descriptor + resourceRevision"]
+  end
+
   subgraph RuntimeState["Runtime view state"]
     ViewCamera["Runtime view camera\nviewCameraOffset + viewCameraRevision"]
   end
@@ -51,7 +57,6 @@ flowchart LR
     Merge["Order-token merge\nno full-scene sort"]
     SelectionDecoration["Selection decoration plan\nseparate from ordinary records"]
     Records["Immutable frame record list\nordinary row views plus per-frame\nselection decoration/supplements"]
-    DescriptorSnapshots["Descriptor snapshots\nresourceId + appKey descriptor + resourceRevision"]
     RenderCaches["Frame render caches\ntext, path, stroke"]
     StaticBackgroundCache["StaticBackgroundCache\nbackgroundRevision + gridRevision\n+ gridStrokeWidth + view camera bucket\n+ viewportRect + devicePixelRatio"]
     ResolvedAssets["Resolved paint assets\nimages or placeholders"]
@@ -70,8 +75,10 @@ flowchart LR
   Surface -->|"selectionStyle paint input"| Capture
   RepaintSignal -->|"capture once for this paint"| Capture
 
-  Capture -->|"read committed frame facts once"| Committed
-  Committed -->|"revisioned table snapshot facts"| CapturedFrame
+  Capture -->|"request committed frame facts once"| CommittedFrameFacts
+  CommittedFrameFacts -->|"read revision facts"| Committed
+  Committed -->|"revisioned table snapshot facts"| CommittedFrameFacts
+  CommittedFrameFacts -->|"immutable committed facts"| CapturedFrame
   Capture -->|"read runtime view camera once"| ViewCamera
   ViewCamera -->|"viewCameraRevision and viewCameraOffset"| CapturedFrame
   Capture -->|"read resource visual facts once"| ResourceVisualRevision
@@ -89,8 +96,10 @@ flowchart LR
   PaintIndex -->|"candidate ids with generations"| OrdinaryStage
 
   OrdinaryStage -->|"ordinary handles"| RecordBuilder
-  RecordBuilder -->|"resolve row data by captured revisions"| Committed
-  Committed -->|"immutable row views\nstale generation rejected"| RecordBuilder
+  RecordBuilder -->|"request row facts by captured revisions"| RowSnapshots
+  RowSnapshots -->|"read committed row snapshots"| Committed
+  Committed -->|"immutable row views\nstale generation rejected"| RowSnapshots
+  RowSnapshots -->|"row facts or stale rejection"| RecordBuilder
   RecordBuilder -->|"ordinary committed records"| OrdinaryPlan
   OrdinaryPlan -->|"store ordinary records only"| PaintPlanCache
 
@@ -114,11 +123,11 @@ flowchart LR
   RenderCaches -->|"bounded cached paint primitives"| MainPainter
   StaticBackgroundCache -->|"bounded static background primitive"| MainPainter
 
-  Records -->|"image resource ids"| DescriptorSnapshots
-  DescriptorSnapshots -->|"read committed descriptor facts\nby captured revision"| Committed
-  Committed -->|"immutable descriptor snapshots"| DescriptorSnapshots
+  Records -->|"image resource ids"| DescriptorFacts
+  DescriptorFacts -->|"read committed descriptor facts\nby captured revision"| Committed
+  Committed -->|"immutable descriptor facts"| DescriptorFacts
   Surface -->|"owns SurfaceResourceSession\nwith resolverGeneration"| ResolvePaintAsset
-  DescriptorSnapshots -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
+  DescriptorFacts -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
   ResolvePaintAsset -->|"cache lookup and bounded update"| ImageResolveCache
   ImageResolveCache -->|"cached app-owned image"| ResolvePaintAsset
   ImageResolveCache -->|"cache miss"| ResolverFrameBudget

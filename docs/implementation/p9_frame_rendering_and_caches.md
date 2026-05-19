@@ -30,11 +30,14 @@ frame output.
 - no live runtime read in painters
 - no `CanvasDocument` projection in paint
 - resource image resolution only through `SurfaceResourceSession`
+- committed frame facts, row snapshot resolution, and descriptor snapshot
+  lookup only through `FrameFactsPort`
 - ordinary opacity through primitive paint alpha, not implicit `Canvas.saveLayer`.
 
 ## Dependencies on earlier phases
 
-- P4 runtime spine provides committed tables, projection guardrails, and revisions.
+- P4 runtime spine provides committed tables, projection guardrails, revisions,
+  and `FrameFactsPort` for frame-facing committed facts.
 - P4 runtime spine provides selection-owner facts through immutable query ports.
 - P5 edit core emits typed repaint and invalidation effects.
 - P7 resources provide the `SurfaceResourceSession` boundary and image resolve
@@ -129,6 +132,9 @@ frame output.
 - overlay previews can be captured without live runtime reads
 - no live runtime read in painters
 - no `CanvasDocument` projection in paint
+- no concrete `DocumentStoreKernel` imports in frame code for committed frame
+  facts; frame capture, row resolution, and descriptor lookup use
+  `FrameFactsPort`
 - cache keys are next-revision based
 - `backgroundRevision`, `gridRevision`, and runtime view-camera changes do not
   invalidate ordinary committed element paint plans

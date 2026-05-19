@@ -76,9 +76,9 @@ SurfaceResourceSession:
 ```
 
 Paint/resource resolution receives immutable descriptor snapshots and
-`resourceRevision` from an allowed committed-state reader such as `FrameEngine`
-or `RuntimeRoot`. The resource module must not import, read, or mutate
-`DocumentStoreKernel`; it owns session policy, resolver-safe placeholder
+`resourceRevision` through `FrameFactsPort`, which is backed by the committed
+document owner for frame paint. The resource module must not import, read, or
+mutate `DocumentStoreKernel`; it owns session policy, resolver-safe placeholder
 results, and dirty invalidation boundaries through narrow inputs only.
 Painters and frame paint code never call `CanvasResourceResolver` directly; they
 receive immutable descriptor facts and resolved paint assets or placeholders

@@ -101,6 +101,15 @@ Rules:
 ```text
 - main paint captures main frame once;
 - overlay paint captures overlay frame once;
+- committed frame facts enter FrameEngine through FrameFactsPort;
+- FrameFactsPort supplies documentRevision, structuralRevision, boundsRevision,
+  elementVisualRevision, backgroundRevision, gridRevision, immutable committed
+  render-row facts, immutable resource descriptor snapshots, and resourceRevision;
+- FrameFactsPort rejects stale row facts by captured structuralRevision and
+  generation before FrameEngine builds render records;
+- FrameFactsPort must not return RenderElementRecord, PaintPlan, selected
+  supplement records, selection decoration plans, selection facts, or resolver
+  state;
 - painters do not live-read runtime;
 - painters do not materialize CanvasDocument;
 - stale spatial candidate is rejected by structuralRevision/generation check;
@@ -178,8 +187,8 @@ Algorithm:
    ordinary record stream for this frame only.
 6. Query visibilityRect shifted by -previewDelta for selected supplement
    candidates.
-7. Resolve selected handles and create shifted RenderElementRecord instances
-   with previewDelta for this frame only.
+7. Resolve selected handles through `FrameFactsPort` and create shifted
+   RenderElementRecord instances with previewDelta for this frame only.
 8. Merge filtered ordinary records and supplement records by orderToken.
 9. Do not store selected supplement records in PaintPlanCache.
 10. Do not global sort all scene elements.

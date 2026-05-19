@@ -5,6 +5,7 @@ sequenceDiagram
   participant Surface as CanvasSurface
   participant Frame as FrameEngine
   participant ViewCamera as Runtime view camera
+  participant Facts as FrameFactsPort
   participant Store as DocumentStoreKernel
   participant Resources as ResourceKernel
   participant SelectionFacts as SelectionFactsPort
@@ -16,8 +17,10 @@ sequenceDiagram
   participant Painter as Main painter
 
   Surface->>Frame: paint main scene request(viewportRect, devicePixelRatio, gridStyle, selectionStyle, SurfaceResourceSession)
-  Frame->>Store: capture committed tables, document revisions, and resources once
-  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, elementVisualRevision, backgroundRevision, gridRevision
+  Frame->>Facts: capture committed frame facts once
+  Facts->>Store: read committed revision facts
+  Store-->>Facts: documentRevision, structuralRevision, boundsRevision, elementVisualRevision, backgroundRevision, gridRevision
+  Facts-->>Frame: immutable committed frame facts
   Frame->>Resources: capture resource visual facts once
   Resources-->>Frame: resourceVisualRevision
   Frame->>ViewCamera: capture runtime view camera facts once
@@ -39,12 +42,15 @@ sequenceDiagram
     Spatial-->>Frame: ordinary candidate handles with id, generation, orderToken, and structuralRevision
 
     loop for each ordinary candidate handle
-      Frame->>Store: resolve handle against captured structuralRevision and generation
+      Frame->>Facts: resolve handle against captured structuralRevision and generation
+      Facts->>Store: read committed row snapshot
       alt handle generation and structuralRevision still match the captured frame
-        Store-->>Frame: immutable family row view, common paint fields, and resourceId if any
+        Store-->>Facts: immutable family row view, common paint fields, and resourceId if any
+        Facts-->>Frame: immutable committed row facts
         Frame->>Frame: build ordinary committed RenderElementRecord
       else stale candidate
-        Store-->>Frame: reject stale candidate
+        Store-->>Facts: reject stale candidate
+        Facts-->>Frame: stale candidate rejection
         Frame->>Frame: skip record for stale generation or structuralRevision
       end
     end
@@ -57,8 +63,10 @@ sequenceDiagram
     Frame->>Spatial: query selected supplement using visibilityRect shifted by -selectedMoveDelta
     Spatial-->>Frame: selected candidate handles with id, generation, orderToken, and structuralRevision
     loop for each selected supplement candidate handle
-      Frame->>Store: resolve handle against captured structuralRevision and generation
-      Store-->>Frame: immutable selected row view or stale rejection
+      Frame->>Facts: resolve handle against captured structuralRevision and generation
+      Facts->>Store: read committed selected row snapshot
+      Store-->>Facts: immutable selected row view or stale rejection
+      Facts-->>Frame: selected row facts or stale rejection
       Frame->>Frame: build per-frame supplement RenderElementRecord with previewDelta
     end
     Frame->>Frame: merge filtered ordinary records and supplement records by orderToken
@@ -70,8 +78,10 @@ sequenceDiagram
 
   opt records include image resource ids
     loop for each image resource id in records
-      Frame->>Store: read committed descriptor snapshot for resource id
-      Store-->>Frame: appKey descriptor, resourceRevision, or missing descriptor
+      Frame->>Facts: read descriptor facts by resourceId
+      Facts->>Store: read descriptor facts from committed state
+      Store-->>Facts: appKey descriptor, resourceRevision, or missing descriptor
+      Facts-->>Frame: immutable descriptor facts or missing descriptor
       Frame->>Session: resolve paint asset(descriptor snapshot, resourceRevision)
 
       alt cached resolved image is current
@@ -94,6 +104,6 @@ sequenceDiagram
   Painter-->>Surface: draw main scene
 
   Note over Painter: Painter consumes immutable RenderElementRecord data only, it performs no live runtime reads.
-  Note over Frame,Store: Forbidden in main paint: Store mutation, CanvasDocument projection, DocumentProjectionCache read, public API reads, and InteractionEngine mutation.
+  Note over Frame,Store: Forbidden in main paint: direct FrameEngine store reads, Store mutation, CanvasDocument projection, DocumentProjectionCache read, public API reads, and InteractionEngine mutation.
   Note over Session,Resolver: SurfaceResourceSession owns synchronous app resolver calls, painter never calls the application resolver directly.
   Note over Surface,Painter: No legacy scene, controller, snapshot, or public DTO entities participate in this sequence.

@@ -28,11 +28,14 @@ flowchart LR
     ProjectionEvict["DocumentProjectionCache eviction\nresource descriptor is projected"]
   end
 
+  subgraph FrameFactsPort["FrameFactsPort"]
+    DescriptorFacts["Descriptor facts lookup\nresourceId -> immutable appKey descriptor + resourceRevision"]
+  end
+
   subgraph Frame["FrameEngine"]
     MainPaint["Main paint frame\ncaptured once"]
     RenderRecords["Immutable RenderElementRecord list\nimage resource ids"]
     AssetRequest["Paint asset request\nresourceId -> descriptor"]
-    DescriptorRead["Descriptor snapshot lookup\nresourceId to public appKey descriptor"]
     PaintAsset["Paint asset\nui.Image or bounded placeholder"]
     MainRepaint["Main repaint request"]
   end
@@ -78,10 +81,10 @@ flowchart LR
   Surface -->|"main paint asks for records"| MainPaint
   MainPaint -->|"image elements carry resource ids"| RenderRecords
   RenderRecords -->|"resourceId"| AssetRequest
-  AssetRequest -->|"read committed descriptor snapshot"| DescriptorRead
-  DescriptorRead -->|"resourceId lookup"| ResourceTable
-  ResourceTable -->|"CanvasImageResource with CanvasAppKeyResourceSource.key"| DescriptorRead
-  DescriptorRead -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
+  AssetRequest -->|"request descriptor facts through FrameFactsPort"| DescriptorFacts
+  DescriptorFacts -->|"resourceId lookup"| ResourceTable
+  ResourceTable -->|"CanvasImageResource with CanvasAppKeyResourceSource.key"| DescriptorFacts
+  DescriptorFacts -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
   Surface -->|"owns active SurfaceResourceSession\nwith resolverGeneration"| ResolvePaintAsset
 
   ResolvePaintAsset -->|"cache lookup and bounded update"| ImageResolveCache
