@@ -13,6 +13,10 @@ flowchart LR
     ViewCamera["Runtime view camera\nviewCameraOffset + viewCameraRevision"]
   end
 
+  subgraph ResourceRuntime["ResourceKernel"]
+    ResourceVisualRevision["resourceVisualRevision"]
+  end
+
   subgraph Selection["SelectionKernel"]
     SelectionFacts["Captured selection facts\nselected ids and selectionRevision"]
   end
@@ -70,6 +74,8 @@ flowchart LR
   Committed -->|"revisioned table snapshot facts"| CapturedFrame
   Capture -->|"read runtime view camera once"| ViewCamera
   ViewCamera -->|"viewCameraRevision and viewCameraOffset"| CapturedFrame
+  Capture -->|"read resource visual facts once"| ResourceVisualRevision
+  ResourceVisualRevision -->|"resourceVisualRevision"| CapturedFrame
   Capture -->|"read selected ids once"| SelectionFacts
   SelectionFacts -->|"selectionRevision and selected ids"| CapturedFrame
   Capture -->|"read CanvasSelectedMovePreview once"| PreviewSnapshot
@@ -90,7 +96,7 @@ flowchart LR
 
   OrdinaryPlan -->|"ordinary stream"| FilterOrdinary
   CapturedFrame -->|"selection ids and preview delta"| FilterOrdinary
-  CapturedFrame -->|"selection ids and selectionStyle"| SelectionDecoration
+  CapturedFrame -->|"selection ids, selectionRevision,\nboundsRevision, selectionStyle,\nand devicePixelRatio"| SelectionDecoration
   CapturedFrame -->|"selectedMoveDelta for this frame"| SupplementStage
   SupplementStage -->|"shifted visibility query only"| ShiftedCandidates
   ShiftedCandidates -->|"selected candidate ids with generations"| SupplementStage

@@ -420,6 +420,8 @@ test/frame/paint_plan_excludes_selection_state_test.dart
      state;
   -> proves selection changes rebuild selection decoration without evicting the
      ordinary committed paint plan;
+  -> proves selected element bounds changes rebuild SelectionDecorationPlan even
+     when selection membership is unchanged;
   -> proves captured selectionStyle changes rebuild SelectionDecorationPlan
      without entering StaticBackgroundCache or ordinary PaintPlanCache identity.
 

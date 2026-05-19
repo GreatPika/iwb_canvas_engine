@@ -39,7 +39,6 @@ flowchart LR
     GridRevision["gridRevision"]
     ProjectionRevision["projectionRevision"]
     ResourceRevision["resourceRevision"]
-    ResourceVisualRevision["resourceVisualRevision"]
   end
 
   subgraph PublicState["Public CanvasRuntimeState"]
@@ -48,6 +47,7 @@ flowchart LR
     SelectionPublicRevision["selection"]
     PreviewRevision["preview"]
     ViewCameraRevision["viewCamera"]
+    ResourceVisualPublicRevision["resourceVisual"]
   end
 
   subgraph Selection["SelectionKernel"]
@@ -69,7 +69,8 @@ flowchart LR
     NoProjectionHotPath["No CanvasDocument projection\nin paint, pointer, or hit hot paths"]
   end
 
-  subgraph ResourceRuntime["Runtime resource dirty orchestration"]
+  subgraph ResourceRuntime["ResourceKernel / runtime resource dirty orchestration"]
+    ResourceVisualRevision["resourceVisualRevision"]
     ResourceSessionInvalidation["Active session invalidation event\ndescriptor changed or dirty target/all"]
   end
 
@@ -80,7 +81,7 @@ flowchart LR
 
   subgraph Frame["FrameEngine"]
     PaintPlanInvalidation["PaintPlanCache invalidation\nstructural, bounds, elementVisual,\nviewportRect, devicePixelRatio"]
-    SelectionDecorationInvalidation["Selection decoration invalidation\nselection, structure, style"]
+    SelectionDecorationInvalidation["Selection decoration invalidation\nselection, structure, bounds, style, DPR"]
     StaticFrameInvalidation["StaticBackgroundCache invalidation\nview camera bucket, background, grid"]
     TextPathInvalidation["Text, path, stroke cache invalidation\nonly changed render inputs"]
     MainRepaint["Main repaint bus"]
@@ -125,7 +126,6 @@ flowchart LR
   RevisionState -.->|"grid document changes"| GridRevision
   RevisionState -.->|"public projection invalidated"| ProjectionRevision
   RevisionState -.->|"resource descriptor changes"| ResourceRevision
-  RevisionState -.->|"external resource visual dirty"| ResourceVisualRevision
 
   OrdinaryScope -->|"added or removed ids"| SpatialDelta
   OrdinaryScope -->|"geometry or transform changed ids"| SpatialDelta
@@ -152,8 +152,9 @@ flowchart LR
   DescriptorCacheEvict -->|"resource-dependent paint changed"| MainRepaint
 
   ResourceDirtyCall -->|"explicit external visual invalidation"| ResourceDirtyDispatch
-  ResourceDirtyDispatch -->|"increment runtime/store visual revision"| ResourceVisualRevision
-  ResourceVisualRevision -->|"public resource visual domain"| RuntimeStateRevision
+  ResourceDirtyDispatch -->|"increment runtime resource visual revision"| ResourceVisualRevision
+  ResourceVisualRevision -->|"public resource visual domain"| ResourceVisualPublicRevision
+  ResourceVisualPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
   ResourceDirtyDispatch -->|"target/all active session entries only"| ResourceSessionInvalidation
   ResourceSessionInvalidation -->|"dirty target or all"| DirtyResourceEvict
   ResourceVisualRevision -->|"resource visuals changed"| MainRepaint
@@ -166,6 +167,7 @@ flowchart LR
   SelectionPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
   StructuralRevision -->|"structure/order changed"| PaintPlanInvalidation
   BoundsRevision -->|"bounds changed"| PaintPlanInvalidation
+  BoundsRevision -->|"selection bounds changed"| SelectionDecorationInvalidation
   ElementVisualRevision -->|"element visual rows changed"| PaintPlanInvalidation
   SelectionRevision -->|"selection changed"| SelectionDecorationInvalidation
   StructuralRevision -->|"selected order may change"| SelectionDecorationInvalidation

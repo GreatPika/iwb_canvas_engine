@@ -5,6 +5,7 @@ sequenceDiagram
   participant App as Application
   participant Surface as CanvasSurface
   participant Runtime as RuntimeRoot
+  participant Resources as ResourceKernel
   participant Frame as FrameEngine
   participant Store as DocumentStoreKernel
   participant Session as SurfaceResourceSession
@@ -78,15 +79,15 @@ sequenceDiagram
   opt application reports changed external resource visuals
     App->>Port: markResourceDirty(resourceId) or markAllResourcesDirty()
     Port->>Runtime: delegate resource dirty signal
-    Runtime->>Store: increment resourceVisualRevision only
-    Store-->>Runtime: documentRevision unchanged
+    Runtime->>Resources: increment resourceVisualRevision
+    Resources-->>Runtime: resourceVisualRevision and target/all invalidation event
     Runtime->>Session: invalidate target resource entries or clear all entries if attached
     Session->>Cache: invalidate entries by resourceId or all
     Runtime->>State: publish CanvasRuntimeState with updated state.revisions.resourceVisual
     Runtime->>Signals: schedule main repaint
     Signals-->>Surface: repaint main scene
 
-    Note over Port,Store: Dirty visual invalidation publishes resourceVisual public state only. It does not mutate descriptors, document revision, action events, preview, or CanvasDocument projection.
+    Note over Port,Resources: Dirty visual invalidation publishes resourceVisual public state only. It does not mutate descriptors, document revision, action events, preview, or CanvasDocument projection.
     Note over Runtime: Dirty visual invalidation does not mutate the selection owner.
   end
 

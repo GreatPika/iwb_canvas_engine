@@ -6,6 +6,7 @@ sequenceDiagram
   participant Frame as FrameEngine
   participant ViewCamera as Runtime view camera
   participant Store as DocumentStoreKernel
+  participant Resources as ResourceKernel
   participant SelectionFacts as SelectionFactsPort
   participant Preview as CanvasPreviewState
   participant Spatial as SpatialKernel
@@ -16,7 +17,9 @@ sequenceDiagram
 
   Surface->>Frame: paint main scene request(viewportRect, devicePixelRatio, gridStyle, selectionStyle, SurfaceResourceSession)
   Frame->>Store: capture committed tables, document revisions, and resources once
-  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, elementVisualRevision, backgroundRevision, gridRevision, resourceVisualRevision
+  Store-->>Frame: documentRevision, structuralRevision, boundsRevision, elementVisualRevision, backgroundRevision, gridRevision
+  Frame->>Resources: capture resource visual facts once
+  Resources-->>Frame: resourceVisualRevision
   Frame->>ViewCamera: capture runtime view camera facts once
   ViewCamera-->>Frame: viewCameraRevision and viewCameraOffset
   Frame->>SelectionFacts: capture selected ids and selectionRevision once

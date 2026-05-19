@@ -120,7 +120,7 @@ documentRevision        -> any committed document state change
 controllerEpoch         -> loadDocument success or full document replacement
 structuralRevision      -> element/layer/resource membership/order/family changes
 resourceRevision        -> resource descriptor changes
-resourceVisualRevision  -> markResourceDirty / resolver visual invalidation
+resourceVisualRevision  -> ResourceKernel/RuntimeRoot markResourceDirty visual invalidation
 boundsRevision          -> geometry/transform/hit/paint bounds changed
 elementVisualRevision   -> element visual fields, element style fields, and transform-affecting paint changes
 backgroundRevision      -> persisted document background color changes
@@ -172,7 +172,8 @@ without changing document revision. Preview-producing pointer changes increment
 `state.revisions.resourceVisual`. That public dirty-resource domain is a repaint
 observation signal; per-surface image resolution uses explicit target/all
 session invalidation instead of deriving cache identity from the public
-revision.
+revision. `resourceVisualRevision` is runtime resource state owned by
+ResourceKernel/RuntimeRoot orchestration, not committed document store state.
 
 After `CanvasRuntime.dispose()` returns, `state` is a terminal read handle.
 `state.value` remains readable and exposes the final runtime snapshot. Dispose

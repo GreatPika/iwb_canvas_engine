@@ -11,7 +11,7 @@ flowchart LR
   end
 
   subgraph Runtime["RuntimeRoot"]
-    ResourceDirtyDispatch["Resource dirty orchestration\nrevision increment + cache invalidation"]
+    ResourceDirtyDispatch["Resource dirty orchestration\nResourceKernel delegation"]
   end
 
   subgraph Edit["EditKernel"]
@@ -24,7 +24,6 @@ flowchart LR
     AppKeyDescriptor["CanvasResourceSource.appKey only\nCanvasAppKeyResourceSource.key\nid, contentHash, byteLength,\nmimeType, CanvasMetadata"]
     DocumentRevision["documentRevision\nchanges only on committed descriptor mutation"]
     ResourceRevision["resourceRevision\ndescriptor version"]
-    ResourceVisualSignal["Resource visual revision\nruntime/store visual version"]
     ProjectionRevision["projectionRevision\npublic document projection version"]
     ProjectionEvict["DocumentProjectionCache eviction\nresource descriptor is projected"]
   end
@@ -53,6 +52,7 @@ flowchart LR
   end
 
   subgraph Resources["ResourceKernel"]
+    ResourceVisualSignal["Resource visual revision\nResourceKernel runtime visual version"]
     SessionInvalidationEvent["Target/all invalidation event\nfor attached SurfaceResourceSession"]
   end
 
@@ -101,7 +101,7 @@ flowchart LR
 
   App -->|"external image contents changed"| DirtyCall
   DirtyCall -->|"delegate dirty signal"| ResourceDirtyDispatch
-  ResourceDirtyDispatch -->|"increment visual revision only"| ResourceVisualSignal
+  ResourceDirtyDispatch -->|"increment ResourceKernel visual revision only"| ResourceVisualSignal
   ResourceVisualSignal -->|"publish public resource visual domain"| ResourceVisualState
   ResourceVisualState -->|"public runtime state domain"| RuntimeStateRevision
   ResourceDirtyDispatch -->|"emit target/all invalidation event"| SessionInvalidationEvent

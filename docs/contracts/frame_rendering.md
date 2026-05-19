@@ -188,9 +188,10 @@ Algorithm:
 
 Selection decoration reads selected ids and selectionRevision through the same
 captured selection facts boundary and is invalidated separately from ordinary
-paint plans. `selectedOrder` is derived data or a bounded cache keyed by
-`selectionRevision` and `structuralRevision`; it is not a second stored
-selection source of truth.
+paint plans. Its decoration key includes `boundsRevision` because selected
+element bounds can change without changing selection membership. `selectedOrder`
+is derived data or a bounded cache keyed by `selectionRevision` and
+`structuralRevision`; it is not a second stored selection source of truth.
 
 ### 15.4 Render primitive cache misses
 

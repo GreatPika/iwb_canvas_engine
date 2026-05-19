@@ -158,12 +158,12 @@ Semantics:
 - after dispose throws StateError.
 ```
 
-`resourceVisualRevision` is committed runtime revision state and maps to the
-public `state.revisions.resourceVisual` domain. The public
-resource port delegates the revision increment to the runtime/store boundary
-and delegates target invalidation to the attached resource session, if any.
-The repaint intent is runtime-owned and does not require an attached
-`CanvasSurface`; an attached surface observes it if present.
+`resourceVisualRevision` is runtime resource revision state and maps to the
+public `state.revisions.resourceVisual` domain. The public resource port
+delegates the revision increment to ResourceKernel/RuntimeRoot orchestration and
+delegates target invalidation to the attached resource session, if any. The
+repaint intent is runtime-owned and does not require an attached `CanvasSurface`;
+an attached surface observes it if present.
 
 `markAllResourcesDirty` applies the same rule to every registered resource and
 clears the active session cache if a session exists.
