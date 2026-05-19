@@ -14,10 +14,13 @@ repository naming rules; apply them to the current diff.
    relevant contracts.
 2. For each new or renamed file, ask: "What is this file's single reason to
    change?" Then check whether its declarations all share that reason.
-3. Treat public API symbol names as contract-owned. Flag their placement or file
+3. For each new or renamed directory, ask: "What stable owner or subdomain does
+   this directory introduce?" Then check whether its immediate children are
+   facets of that owner instead of unrelated files collected for neatness.
+4. Treat public API symbol names as contract-owned. Flag their placement or file
    owner first; flag the symbol name only when the source of truth itself is
    being changed or contradicted.
-4. Report only actionable naming/cohesion findings, not taste preferences.
+5. Report only actionable naming/cohesion findings, not taste preferences.
 
 ## Decision Test
 
@@ -29,6 +32,15 @@ repository naming rules; apply them to the current diff.
   consumed together and still have one reason to change.
 - Prefer a split when multiple public or boundary-facing declarations could
   reasonably evolve independently.
+- Create a directory when several files share a stable owner, lifecycle,
+  dependency boundary, or source-of-truth contract, and each child file names a
+  distinct facet of that owner.
+- Prefer a directory over scattered flat files when related files need repeated
+  prefixes, are usually reviewed together, or become hard to find without their
+  shared parent owner.
+- Do not create a directory only because there are many files, two files happen
+  to be adjacent, or a vague bucket such as `common`, `shared`, `state`, or
+  `types` would hide unrelated owners.
 - Be skeptical of weak umbrella words unless the local source of truth makes
   that umbrella the clearest owner.
 
@@ -38,6 +50,9 @@ repository naming rules; apply them to the current diff.
   owner.
 - A grouped file uses an umbrella name where the repository already has a more
   precise owner.
+- Several flat files share a real owner through repeated prefixes or shared
+  review scope, but the parent directory does not name that owner.
+- A new directory collects unrelated files and lacks one clear reason to change.
 - A reusable fixture lives outside the repository-approved fixture location.
 
 ## Review Output
