@@ -37,3 +37,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 15. Runtime-created timestamp monotonic proof mapping](plan/step_15_runtime_created_timestamp_monotonic_proof_mapping.md)
 - [x] [Step 16. FrameFactsPort committed frame facts boundary](plan/step_16_frame_facts_port_committed_frame_facts_boundary.md)
 - [x] [Step 17. FrameEngine internal collaborator split](plan/step_17_frame_engine_internal_collaborator_split.md)
+- [ ] [Step 18. Pointer tool cleanup coordinator documentation](plan/step_18_pointer_tool_cleanup_coordinator.md)
