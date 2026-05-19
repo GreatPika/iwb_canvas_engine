@@ -17,9 +17,11 @@ slice by slice.
 2. After the slice implementation and verification are complete, spawn exactly
    one `code_reviewer` subagent for that slice.
    - The reviewer name must include the slice number.
-   - Use this prompt only: `review slice N`
-   - Replace `N` with the slice number.
-   - Do not add context, explanations, links, or extra instructions.
+   - Give it the absolute path to the step contract file.
+   - Use this prompt only: `review slice N against STEP_FILE`
+   - Replace `N` and `STEP_FILE` with the slice number and concrete step file
+     path.
+   - Do not add other context, explanations, links, or extra instructions.
 
 3. If the reviewer reports findings, fix them in the same slice scope.
    - Reuse the same `code_reviewer` for every follow-up review of that slice.
