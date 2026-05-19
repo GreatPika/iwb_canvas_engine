@@ -6,6 +6,7 @@ sequenceDiagram
   participant Surface as CanvasSurface
   participant Tools as CanvasToolPort
   participant IE as InteractionEngine
+  participant Cleanup as PointerToolCleanupCoordinator
   participant Preview as CanvasPreviewState
   participant Spatial as SpatialKernel
   participant Geometry as GeometryPolicy
@@ -63,7 +64,9 @@ sequenceDiagram
   Spatial-->>IE: terminal candidate handles or typed budget-exceeded
 
   alt terminal spatial budget exceeded
-    IE->>Preview: clear eraser corridor preview
+    IE->>Cleanup: typed cleanup request for eraser no-op cleanup
+        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+        IE->>Preview: apply outcome: clear eraser corridor preview
     IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request overlay cleanup repaint only
     IE->>Diagnostics: increment eraser terminal budget-exceeded probe
@@ -75,7 +78,9 @@ sequenceDiagram
     Note over Geometry: Terminal budget is 4096 candidates / 32768 exact checks.
     alt terminal candidate/check budget exceeded
       Geometry-->>IE: terminal budget exceeded
-      IE->>Preview: clear eraser corridor preview
+      IE->>Cleanup: typed cleanup request for eraser no-op cleanup
+        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+        IE->>Preview: apply outcome: clear eraser corridor preview
       IE->>Preview: bump previewRevision for cleared active preview
       Preview->>Frame: request overlay cleanup repaint only
       IE->>Diagnostics: increment eraser terminal budget-exceeded probe
@@ -85,7 +90,9 @@ sequenceDiagram
     else terminal exact ids accepted
       Geometry-->>IE: exact deletable non-background ids
       alt terminal exact ids empty
-        IE->>Preview: clear eraser corridor preview
+        IE->>Cleanup: typed cleanup request for eraser no-op cleanup
+        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+        IE->>Preview: apply outcome: clear eraser corridor preview
         IE->>Preview: bump previewRevision for cleared active preview
         Preview->>Frame: request overlay cleanup repaint only
         Preview-->>Runtime: preview cleanup revision fact
@@ -105,7 +112,9 @@ sequenceDiagram
         Applier->>Projection: evict by projectionRevision
         Applier->>Events: materialize erase action after install
         Applier->>Frame: publish committed main repaint bus
-        IE->>Preview: clear eraser corridor preview
+        IE->>Cleanup: typed cleanup request for eraser no-op cleanup
+        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+        IE->>Preview: apply outcome: clear eraser corridor preview
         IE->>Preview: bump previewRevision for cleared active preview
         Preview->>Frame: request overlay cleanup repaint
         Preview-->>Runtime: preview cleanup revision fact

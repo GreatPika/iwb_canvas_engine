@@ -6,6 +6,7 @@ sequenceDiagram
   participant Surface as CanvasSurface
   participant Tools as CanvasToolPort
   participant IE as InteractionEngine
+  participant Cleanup as PointerToolCleanupCoordinator
   participant Preview as CanvasPreviewState
   participant Frame as FrameEngine
   participant EK as EditKernel
@@ -60,7 +61,9 @@ sequenceDiagram
     User->>Surface: pointer up or cancel
     Surface->>Tools: handlePointer(CanvasPointerSample terminal)
     Tools->>IE: same-token terminal cleanup sample
-    IE->>Preview: publish CanvasNoPreview and clear stroke session
+    IE->>Cleanup: typed cleanup request for stroke session
+        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+        IE->>Preview: apply outcome: publish CanvasNoPreview and clear stroke session
     IE->>Preview: bump previewRevision for cleared active preview
     Preview-->>Runtime: preview cleanup revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -76,7 +79,9 @@ sequenceDiagram
     IE->>IE: normalize, cap, and resample final points to max stroke points per element
 
     alt final stroke has no paintable points
-      IE->>Preview: publish CanvasNoPreview and clear stroke session
+      IE->>Cleanup: typed cleanup request for stroke session
+        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+        IE->>Preview: apply outcome: publish CanvasNoPreview and clear stroke session
       IE->>Preview: bump previewRevision for cleared active preview
       Preview-->>Runtime: preview cleanup revision fact
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -117,7 +122,9 @@ sequenceDiagram
         Applier->>Frame: publish committed main repaint bus
         EK->>EK: close edit session and stale handle
         EK-->>IE: edit result
-        IE->>Preview: publish CanvasNoPreview and clear stroke session
+        IE->>Cleanup: typed cleanup request for stroke session
+        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+        IE->>Preview: apply outcome: publish CanvasNoPreview and clear stroke session
         IE->>Preview: bump previewRevision for cleared active preview
         Preview->>Frame: request overlay repaint cleanup
         Preview-->>Runtime: preview cleanup revision fact
@@ -131,7 +138,9 @@ sequenceDiagram
         EK->>Events: discard pending draw action
         EK->>EK: rollback draft and close session
         EK-->>IE: terminal failure
-        IE->>Preview: publish CanvasNoPreview and clear stroke session
+        IE->>Cleanup: typed cleanup request for stroke session
+        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+        IE->>Preview: apply outcome: publish CanvasNoPreview and clear stroke session
         IE->>Preview: bump previewRevision for cleared active preview
         Preview-->>Runtime: preview cleanup revision fact
         Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview

@@ -6,6 +6,7 @@ sequenceDiagram
   participant Surface as CanvasSurface
   participant Tools as CanvasToolPort
   participant IE as InteractionEngine
+  participant Cleanup as PointerToolCleanupCoordinator
   participant ReadPort as InteractionReadPort
   participant Preview as CanvasPreviewState
   participant Frame as FrameEngine
@@ -68,7 +69,9 @@ sequenceDiagram
     User->>Surface: cancel or external interruption
     Surface->>Tools: terminal cleanup request
     Tools->>IE: cleanup pending line state
-    IE->>Preview: publish CanvasNoPreview for pending line or line preview
+    IE->>Cleanup: typed cleanup request for line-owned pending state
+        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, pending line cleared)
+        IE->>Preview: apply outcome: publish CanvasNoPreview for pending line or line preview
     IE->>Preview: bump previewRevision for cleared active preview
     Preview-->>Runtime: preview cleanup revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -85,7 +88,9 @@ sequenceDiagram
     User->>Surface: second tap terminal sample
     Surface->>Tools: handlePointer(CanvasPointerSample up)
     Tools->>IE: invalid terminal sample for cleanup only
-    IE->>Preview: publish CanvasNoPreview for pending line or line preview
+    IE->>Cleanup: typed cleanup request for line-owned pending state
+        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, pending line cleared)
+        IE->>Preview: apply outcome: publish CanvasNoPreview for pending line or line preview
     IE->>Preview: bump previewRevision for cleared active preview
     Preview-->>Runtime: preview cleanup revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -101,7 +106,9 @@ sequenceDiagram
     IE->>Geometry: validate finite line start, end, color, and thickness
 
     alt line validation rejects
-      IE->>Preview: publish CanvasNoPreview for pending line or line preview
+      IE->>Cleanup: typed cleanup request for line-owned pending state
+        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, pending line cleared)
+        IE->>Preview: apply outcome: publish CanvasNoPreview for pending line or line preview
       IE->>Preview: bump previewRevision for cleared active preview
       Preview-->>Runtime: preview cleanup revision fact
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -142,7 +149,9 @@ sequenceDiagram
         Applier->>Frame: publish committed main repaint bus
         EK->>EK: close edit session and stale handle
         EK-->>IE: edit result
-        IE->>Preview: publish CanvasNoPreview for pending line or line preview
+        IE->>Cleanup: typed cleanup request for line-owned pending state
+        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, pending line cleared)
+        IE->>Preview: apply outcome: publish CanvasNoPreview for pending line or line preview
         IE->>Preview: bump previewRevision for cleared active preview
         Preview->>Frame: request overlay repaint cleanup
         Preview-->>Runtime: preview cleanup revision fact
@@ -156,7 +165,9 @@ sequenceDiagram
         EK->>Events: discard pending drawLine action
         EK->>EK: rollback draft and close session
         EK-->>IE: terminal failure
-        IE->>Preview: publish CanvasNoPreview for pending line or line preview
+        IE->>Cleanup: typed cleanup request for line-owned pending state
+        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, pending line cleared)
+        IE->>Preview: apply outcome: publish CanvasNoPreview for pending line or line preview
         IE->>Preview: bump previewRevision for cleared active preview
         Preview-->>Runtime: preview cleanup revision fact
         Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview

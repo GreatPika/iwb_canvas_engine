@@ -6,6 +6,7 @@ sequenceDiagram
   participant Surface as CanvasSurface
   participant Tools as CanvasToolPort
   participant IE as InteractionEngine
+  participant Cleanup as PointerToolCleanupCoordinator
   participant ReadPort as InteractionReadPort
   participant Store as DocumentStoreKernel
   participant Facts as FrameFactsPort
@@ -126,7 +127,9 @@ sequenceDiagram
     IE->>IE: discard selected move commit intent
   end
 
-  IE->>Preview: publish CanvasNoPreview and clear active selected move session
+  IE->>Cleanup: typed cleanup request for selected move cancel
+  Cleanup-->>IE: PointerCleanupOutcome(main repaint target, preview changed)
+  IE->>Preview: apply outcome: publish CanvasNoPreview and clear active selected move session
   IE->>Preview: bump previewRevision for cleared active preview
   Preview-->>Runtime: preview cleanup revision fact
   Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview

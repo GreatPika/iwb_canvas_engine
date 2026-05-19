@@ -6,6 +6,7 @@ sequenceDiagram
   participant Surface as CanvasSurface
   participant Tools as CanvasToolPort
   participant IE as InteractionEngine
+  participant Cleanup as PointerToolCleanupCoordinator
   participant ReadPort as InteractionReadPort
   participant Store as DocumentStoreKernel
   participant SelectionFacts as SelectionFactsPort
@@ -74,7 +75,9 @@ sequenceDiagram
   IE->>IE: run exact family inclusion test and order selected ids by document order
 
   alt next selection equals previous selection
-    IE->>Preview: publish CanvasNoPreview and clear marquee session
+    IE->>Cleanup: typed cleanup request for marquee session
+      Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+      IE->>Preview: apply outcome: publish CanvasNoPreview and clear marquee session
     IE->>Preview: bump previewRevision for cleared active preview
     Preview-->>Runtime: preview cleanup revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -116,7 +119,9 @@ sequenceDiagram
       Applier->>Frame: publish committed main repaint bus
       EK->>EK: close edit session and stale handle
       EK-->>IE: edit result
-      IE->>Preview: publish CanvasNoPreview and clear marquee session
+      IE->>Cleanup: typed cleanup request for marquee session
+      Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+      IE->>Preview: apply outcome: publish CanvasNoPreview and clear marquee session
       IE->>Preview: bump previewRevision for cleared active preview
       Preview->>Frame: request overlay repaint cleanup
       Preview-->>Runtime: preview cleanup revision fact
@@ -130,7 +135,9 @@ sequenceDiagram
       EK->>Events: discard pending selectMarquee action
       EK->>EK: rollback draft and close session
       EK-->>IE: terminal failure
-      IE->>Preview: publish CanvasNoPreview and clear marquee session
+      IE->>Cleanup: typed cleanup request for marquee session
+      Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+      IE->>Preview: apply outcome: publish CanvasNoPreview and clear marquee session
       IE->>Preview: bump previewRevision for cleared active preview
       Preview-->>Runtime: preview cleanup revision fact
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview

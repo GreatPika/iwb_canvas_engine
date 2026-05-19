@@ -10,6 +10,7 @@ sequenceDiagram
   participant Store as DocumentStoreKernel
   participant Selection as SelectionKernel
   participant Interaction as InteractionEngine
+  participant Cleanup as PointerToolCleanupCoordinator
   participant Projection as DocumentProjectionCache
   participant Spatial as SpatialKernel
   participant Resources as ResourceKernel
@@ -40,7 +41,9 @@ sequenceDiagram
   Note over Runtime,Store: No interaction interrupt, preview clear, cache eviction, repaint, public state publication, or store mutation occurs before preparation succeeds.
 
   Runtime->>Interaction: success-only interrupt active interaction
-  Interaction->>Interaction: cancel active gesture and clear preview
+  Interaction->>Cleanup: typed cleanup request for prepared load success
+  Cleanup-->>Interaction: PointerCleanupOutcome(load sequencing, preview changed if active)
+  Interaction->>Interaction: apply outcome: cancel active gesture and clear preview
   Interaction->>Interaction: bump previewRevision if preview was active
   Interaction-->>Runtime: preview cleared and preview signal queued until install
   Note over Interaction,Signals: Preview state may be cleared before install, but no public state is published before the committed replacement is installed.
@@ -64,7 +67,7 @@ sequenceDiagram
   Runtime->>Resources: clear image resolve cache for replaced descriptors
   Runtime->>Frame: reset replacement-scoped paint, static, text, path, and stroke caches
   Frame->>Frame: schedule main repaint for replacement document
-  Interaction->>Frame: schedule overlay repaint for cleared preview
+  Interaction->>Frame: schedule overlay repaint from PointerCleanupOutcome if preview changed
 
   Runtime->>Signals: publish one CanvasRuntimeState after install, including required viewCamera revision and preview cleanup revision if changed
   Note over Signals: loadDocument emits no CanvasActionCommitted event.

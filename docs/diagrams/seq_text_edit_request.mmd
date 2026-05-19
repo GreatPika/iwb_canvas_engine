@@ -6,6 +6,7 @@ sequenceDiagram
   participant Surface as CanvasSurface
   participant Tools as CanvasToolPort
   participant IE as InteractionEngine
+  participant Cleanup as PointerToolCleanupCoordinator
   participant ReadPort as InteractionReadPort
   participant Store as DocumentStoreKernel
   participant Spatial as SpatialKernel
@@ -52,7 +53,9 @@ sequenceDiagram
   Geometry-->>IE: top visible selectable content element or none
 
   alt no top hit, top hit is not text, no matching pending first tap, delay exceeded, slop exceeded, or candidate changed
-    IE->>IE: replace or clear pending tap candidate
+    IE->>Cleanup: typed cleanup request for pending text tap when needed
+    Cleanup-->>IE: PointerCleanupOutcome(no preview, no repaint, pending tap cleared)
+    IE->>IE: apply outcome: replace or clear pending tap candidate
     IE-->>Tools: finish tap without edit request
     Note over IE,Signals: No automatic select/deselect, preview update, repaint request, CanvasActionCommitted, or edit commit occurs.
   else top hit is text and double-tap matches the same current text element
@@ -69,7 +72,9 @@ sequenceDiagram
     App->>TextOverlay: create and own Flutter text editor overlay
     Note over App,TextOverlay: IME, focus, accessibility, text selection, hide/show policy, and editor lifetime belong to the application.
     Note over IE,Frame: InteractionRequestRegistry stores stale-guard facts only. It is not an active text-input session and not CanvasPreviewState.
-    IE-->>Tools: clear pending tap candidate and finish double-tap handling
+    IE->>Cleanup: typed cleanup request for successful text tap cleanup
+    Cleanup-->>IE: PointerCleanupOutcome(no preview, no repaint, pending tap cleared)
+    IE-->>Tools: apply outcome: clear pending tap candidate and finish double-tap handling
   end
 
   opt later application text change after app-owned editor finishes

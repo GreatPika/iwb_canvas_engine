@@ -8,6 +8,7 @@ sequenceDiagram
   participant Runtime as CanvasRuntime
   participant Tools as CanvasToolPort
   participant IE as InteractionEngine
+  participant Cleanup as PointerToolCleanupCoordinator
   participant Preview as CanvasPreviewState
   participant Frame as FrameEngine
   participant Facts as FrameFactsPort
@@ -41,7 +42,9 @@ sequenceDiagram
     Note over IE,MoveResolver: Move commit resolver is not called when dispose cancels a gesture.
 
     alt active preview is selected move
-      IE->>Preview: clear selected move preview and active session
+      IE->>Cleanup: typed cleanup request for dispose selected move cleanup
+      Cleanup-->>IE: PointerCleanupOutcome(main repaint target, preview changed)
+      IE->>Preview: apply outcome: clear selected move preview and active session
       IE->>Preview: bump preview revision for cleared active preview
       Preview-->>Runtime: preview cleanup revision fact
       Runtime->>Signals: publish CanvasRuntimeState before dispose completes
@@ -58,7 +61,9 @@ sequenceDiagram
       Signals-->>Surface: repaint main scene without selected move preview
       Note over Preview,Frame: Selected move cleanup is main-scene cleanup, not overlay-only cleanup.
     else active preview is overlay-only
-      IE->>Preview: clear overlay preview and active session
+      IE->>Cleanup: typed cleanup request for dispose overlay cleanup
+      Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+      IE->>Preview: apply outcome: clear overlay preview and active session
       IE->>Preview: bump preview revision for cleared active preview
       Preview-->>Runtime: preview cleanup revision fact
       Runtime->>Signals: publish CanvasRuntimeState before dispose completes
