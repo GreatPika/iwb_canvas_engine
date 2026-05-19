@@ -72,7 +72,7 @@ stateDiagram-v2
     with an updated preview revision.
   end note
 
-  NoOpSelection --> OverlayCleanup: clear marquee preview and release session
+  NoOpSelection --> CleanupCoordinator: no-op selection cleanup request
 
   state "EditKernel commit outcome" as EditCommit
   note right of EditCommit
@@ -85,7 +85,7 @@ stateDiagram-v2
   end note
 
   EditCommit --> PostCommitCleanup: commit installed with selectionChanged
-  EditCommit --> OverlayCleanup: rollback, rejection, or exception / no action or selection state publication
+  EditCommit --> CleanupCoordinator: rollback, rejection, or exception / no action or selection state publication
 
   state "Post-commit session cleanup" as PostCommitCleanup
   note right of PostCommitCleanup
@@ -94,7 +94,7 @@ stateDiagram-v2
     published to observers.
   end note
 
-  PostCommitCleanup --> CommittedOverlayCleanup: clear marquee preview and release session
+  PostCommitCleanup --> CleanupCoordinator: post-success cleanup request
 
   state "Committed overlay cleanup" as CommittedOverlayCleanup
   CommittedOverlayCleanup --> PublicCommitSignals: overlay cleanup queued and session released
@@ -109,22 +109,35 @@ stateDiagram-v2
     create a commit intent.
   end note
 
-  InvalidTerminal --> OverlayCleanup: cleanup only
+  InvalidTerminal --> CleanupCoordinator: cleanup-only request
 
   state "Cleanup only" as CleanupOnly
   note left of CleanupOnly
     Cancel, mode change, interactive=false, load success,
     dispose, stale terminal, invalid terminal, no-op, and
-    edit failure clear marquee overlay/session state only.
+    edit failure create typed cleanup requests for marquee
+    overlay/session state only.
     Load failure preserves the active marquee when the
     generic pointer session preserves it.
   end note
 
-  CleanupOnly --> OverlayCleanup: clear marquee preview and release session
+  CleanupOnly --> CleanupCoordinator: typed cleanup request
+
+  state "PointerToolCleanupCoordinator" as CleanupCoordinator
+  note left of CleanupCoordinator
+    Coordinator-owned marquee cleanup clears marquee preview
+    and session facts and returns an effect-only
+    PointerCleanupOutcome. It does not use selected-move
+    resolver or main-scene cleanup policy.
+  end note
+
+  CleanupCoordinator --> OverlayCleanup: outcome repaint target is overlay
+  CleanupCoordinator --> CommittedOverlayCleanup: post-success outcome
 
   state "Overlay cleanup repaint" as OverlayCleanup
   note right of OverlayCleanup
-    Marquee cleanup requests overlay repaint only.
+    Marquee cleanup requests overlay repaint only from the
+    coordinator-owned outcome.
     It never uses selected-move resolver, delta staging,
     selected supplement cleanup, or main-scene preview cleanup.
   end note

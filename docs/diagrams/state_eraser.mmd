@@ -95,15 +95,16 @@ stateDiagram-v2
       main repaint, and deferred erase action materialization.
     end note
 
-    CommitSucceeded --> CleanupBeforeSignals: close edit handle and clear eraser session
+    CommitSucceeded --> CleanupBeforeSignals: close edit handle and request eraser cleanup
 
     state "Cleanup before public state" as CleanupBeforeSignals
     note right of CleanupBeforeSignals
       Eraser action and state/repaint notifications are
-      published only after successful commit and session cleanup.
+      published only after successful commit and coordinator-owned
+      session cleanup.
     end note
 
-    CleanupBeforeSignals --> PublishCommitSignals: overlay cleanup queued
+    CleanupBeforeSignals --> CleanupCoordinator: post-success cleanup request
 
     state "Publish erase action and runtime state" as PublishCommitSignals
     PublishCommitSignals --> [*]: publish main repaint, overlay cleanup, CanvasRuntimeState, erase action
@@ -113,16 +114,29 @@ stateDiagram-v2
       Cancel, mode change, load success, interactive=false,
       dispose, stale or invalid terminal, empty erased ids,
       eraser budget exceeded with no partial erase,
-      and EditKernel failure clear preview/session only.
+      and EditKernel failure create typed cleanup requests for
+      preview/session only.
       Empty/no-op cleanup publishes no erase action or document
       state. Active preview cleanup publishes CanvasRuntimeState
       with updated preview revision.
     end note
 
-    CleanupOnly --> CleanupOverlay: clear corridor, candidates, token binding, and session facts
+    CleanupOnly --> CleanupCoordinator: typed cleanup request
+
+    state "PointerToolCleanupCoordinator" as CleanupCoordinator
+    note left of CleanupCoordinator
+      Coordinator-owned eraser cleanup clears corridor,
+      candidates, token binding, and session facts and returns
+      an effect-only PointerCleanupOutcome. It does not run exact
+      eraser checks, open edits, emit erase actions, or publish
+      document state directly.
+    end note
+
+    CleanupCoordinator --> CleanupOverlay: outcome repaint target is overlay
 
     state "Overlay cleanup repaint" as CleanupOverlay
-    CleanupOverlay --> [*]: request overlay repaint only
+    CleanupOverlay --> [*]: request overlay repaint only from coordinator-owned outcome
+    CleanupOverlay --> PublishCommitSignals: successful commit effects after cleanup
   }
 
   Previewing --> Idle: eraser session closed

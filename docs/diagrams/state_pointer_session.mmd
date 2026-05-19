@@ -76,7 +76,7 @@ stateDiagram-v2
       then rethrow through the pointer handling boundary as a
       runtime-safe error. They are not cancel/no-op outcomes.
     end note
-    ResolverErrorCleanup --> CloseSession: clear preview/session and rethrow
+    ResolverErrorCleanup --> CleanupCoordinator: typed cleanup request and rethrow after cleanup
 
     state "Commit intent" as CommitIntent
     note right of CommitIntent
@@ -93,20 +93,33 @@ stateDiagram-v2
       publication belong to the EditKernel commit outcome path.
     end note
 
-    EditKernelCommit --> CloseSession: commit installed
-    EditKernelCommit --> CloseSession: rejected, rolled back, or threw
+    EditKernelCommit --> CleanupCoordinator: post-success cleanup request
+    EditKernelCommit --> CleanupCoordinator: edit failure cleanup request
 
     state "Cleanup only" as CleanupOnly
     note left of CleanupOnly
       Cancel, load success, mode change, active-pointer interactive=false,
       dispose, stale terminal, invalid terminal, no-op, and
-      non-committing paths clear preview/session state only.
+      non-committing paths create typed cleanup requests with
+      cleanup reason and ownership context.
       The selected-move resolver is not called on cancel,
       load, mode, interactive=false, or dispose paths.
     end note
 
-    CleanupOnly --> CloseSession: clear preview/session state
-    DisposeCleanup --> CloseSession: clear preview/session before stream close
+    CleanupOnly --> CleanupCoordinator: typed cleanup request
+    DisposeCleanup --> CleanupCoordinator: typed cleanup request before stream close
+
+    state "PointerToolCleanupCoordinator" as CleanupCoordinator
+    note left of CleanupCoordinator
+      The coordinator owns shared cleanup policy and returns
+      an effect-only PointerCleanupOutcome. It clears or
+      preserves pending line state from ownership context,
+      clears pending text tap history when requested, and
+      does not call resolvers, open edits, emit actions,
+      publish state, or schedule repaint directly.
+    end note
+
+    CleanupCoordinator --> CloseSession: clear preview/session state and release active token
 
     state "Close pointer session" as CloseSession
     note right of CloseSession
@@ -115,7 +128,7 @@ stateDiagram-v2
       or repaint effects are published to observers.
     end note
 
-    CloseSession --> CleanupTarget: classify cleared preview kind
+    CloseSession --> CleanupTarget: classify outcome previous preview kind
 
     state CleanupTarget <<choice>>
     CleanupTarget --> MainSceneCleanup: selected-move preview was active
@@ -131,7 +144,11 @@ stateDiagram-v2
     NoPreviewCleanup --> PublicSignals: no cleanup repaint
 
     state "Public state/effects after close" as PublicSignals
-    PublicSignals --> [*]: publish queued CanvasRuntimeState, action, and repaint effects
+    PublicSignals --> [*]: publish queued CanvasRuntimeState and repaint effects; action only after successful commit
+    PublicSignals --> RuntimeSafeError: resolver error exits after cleanup effects
+
+    state "Runtime-safe error boundary" as RuntimeSafeError
+    RuntimeSafeError --> [*]
   }
 
   ActivePointer --> Idle: terminal or cleanup complete

@@ -29,18 +29,27 @@ stateDiagram-v2
     EnterGuard --> StopRouting: reject reentrant mutation and new pointer routing
     StopRouting: stop public pointer routing
 
-    StopRouting --> GestureDecision
-    state GestureDecision <<choice>>
-    GestureDecision --> SelectedMoveCleanup: active selected move preview
-    GestureDecision --> OverlayCleanup: active overlay preview
-    GestureDecision --> NoGestureCleanup: no active preview
+    StopRouting --> CleanupCoordinator: dispose cleanup request with ownership context
 
-    SelectedMoveCleanup: clear selected move preview and active session
+    state "PointerToolCleanupCoordinator" as CleanupCoordinator
+    note right of CleanupCoordinator
+      Dispose cleanup uses the coordinator-owned policy to
+      close active preview/session state and return an
+      effect-only PointerCleanupOutcome before streams close.
+    end note
+
+    CleanupCoordinator --> GestureDecision
+    state GestureDecision <<choice>>
+    GestureDecision --> SelectedMoveCleanup: outcome selected-move preview
+    GestureDecision --> OverlayCleanup: outcome overlay preview
+    GestureDecision --> NoGestureCleanup: outcome no active preview
+
+    SelectedMoveCleanup: coordinator-owned selected move cleanup
     SelectedMoveCleanup --> MainCleanupRepaint: request main-scene repaint cleanup
     MainCleanupRepaint: repaint main scene without selected move preview
     MainCleanupRepaint --> ResourceCacheCleanup
 
-    OverlayCleanup: clear overlay preview and active session
+    OverlayCleanup: coordinator-owned overlay cleanup
     OverlayCleanup --> OverlayCleanupRepaint: request overlay repaint cleanup
     OverlayCleanupRepaint: repaint overlay without preview primitives
     OverlayCleanupRepaint --> ResourceCacheCleanup

@@ -98,11 +98,12 @@ stateDiagram-v2
 
     state "Cleanup after successful commit" as CleanupAfterCommit
     note left of CleanupAfterCommit
-      Clear stroke preview/session before publishing
+      Stroke preview/session cleanup runs through the
+      PointerToolCleanupCoordinator before publishing
       public commit effects. Cleanup repaint target is
       overlay only.
     end note
-    CleanupAfterCommit --> PublicCommitEffects: "queue overlay cleanup repaint"
+    CleanupAfterCommit --> CleanupCoordinator: "post-success cleanup request"
 
     state "Public commit effects" as PublicCommitEffects
     note right of PublicCommitEffects
@@ -118,7 +119,8 @@ stateDiagram-v2
   note right of CleanupOnly
     Cancel, mode change, load success, interactive=false,
     stale terminal, invalid terminal, and empty stroke paths
-    clear only the stroke preview and active stroke session.
+    create typed cleanup requests for the stroke preview and
+    active stroke session.
   end note
 
   state "Edit failure cleanup" as EditFailureCleanup
@@ -138,13 +140,25 @@ stateDiagram-v2
     commit intent.
   end note
 
-  CleanupOnly --> OverlayCleanup: "clear pencil/marker preview"
-  EditFailureCleanup --> OverlayCleanup: "clear pencil/marker preview"
-  DisposeCleanup --> OverlayCleanup: "clear pencil/marker preview before stream close"
+  CleanupOnly --> CleanupCoordinator: "typed cleanup request"
+  EditFailureCleanup --> CleanupCoordinator: "typed cleanup request after edit failure"
+  DisposeCleanup --> CleanupCoordinator: "typed cleanup request before stream close"
+
+  state "PointerToolCleanupCoordinator" as CleanupCoordinator
+  note left of CleanupCoordinator
+    Coordinator-owned draw cleanup clears stroke preview/session
+    state and returns an effect-only PointerCleanupOutcome.
+    It does not create add-stroke intents, emit actions,
+    publish state, or schedule repaint directly.
+  end note
+
+  CleanupCoordinator --> OverlayCleanup: "outcome repaint target is overlay"
+  CleanupCoordinator --> NoPreviewCleanup: "outcome no active preview"
 
   state "Overlay cleanup repaint" as OverlayCleanup
   note right of OverlayCleanup
-    Stroke preview cleanup uses overlay repaint only.
+    Stroke preview cleanup uses overlay repaint only from
+    the coordinator-owned outcome.
     It does not use selected-move main-scene preview,
     a selected-move resolver, or a main-scene cleanup
     target.
@@ -152,6 +166,14 @@ stateDiagram-v2
 
   OverlayCleanup --> Idle: "cleanup complete with no public commit effects"
   OverlayCleanup --> Disposed: "dispose cleanup published before stream close"
+  OverlayCleanup --> PublicCommitEffects: "successful commit effects after cleanup"
+
+  state "No-preview cleanup" as NoPreviewCleanup
+  note right of NoPreviewCleanup
+    Admission cleanup before stroke preview creation is
+    public-state silent and requests no repaint.
+  end note
+  NoPreviewCleanup --> Idle: "no cleanup repaint"
   Drafting --> Idle: "terminal handling complete"
 
   state "Disposed runtime" as Disposed

@@ -92,11 +92,12 @@ stateDiagram-v2
 
   state "Cleanup after successful commit" as CleanupAfterCommit
   note right of CleanupAfterCommit
-    Pending start and overlay preview are cleared before public
-    CanvasRuntimeState, action, and repaint effects are observed.
+    Pending start and overlay preview are cleared through the
+    PointerToolCleanupCoordinator before public CanvasRuntimeState,
+    action, and repaint effects are observed.
   end note
 
-  CleanupAfterCommit --> PublishCommitSignals: pending line and preview cleared
+  CleanupAfterCommit --> CleanupCoordinator: typed cleanup request after successful commit
 
   state "Publish successful commit signals" as PublishCommitSignals
   note right of PublishCommitSignals
@@ -109,14 +110,25 @@ stateDiagram-v2
 
   state "Cleanup only / no committed effects" as CleanupOnly
   note left of CleanupOnly
-    Clears pending start and line overlay preview only. No line
+    Creates a typed cleanup request for pending start and line
+    overlay preview only. No line
     element, document effect, drawLine action, spatial delta,
     projection eviction, or main-scene preview is produced.
     previewRevision advances and publishes CanvasRuntimeState only
     when pending preview was visible.
   end note
-  CleanupOnly --> OverlayCleanup: pending overlay was visible
-  CleanupOnly --> Idle: no visible overlay
+  CleanupOnly --> CleanupCoordinator: line-owned cleanup request
+
+  state "PointerToolCleanupCoordinator" as CleanupCoordinator
+  note left of CleanupCoordinator
+    Coordinator-owned line cleanup uses request ownership context
+    to clear line-owned pending state and preserve non-owned
+    pending line state on interactive=false. It returns an
+    effect-only PointerCleanupOutcome and emits no drawLine action.
+  end note
+  CleanupCoordinator --> OverlayCleanup: outcome says pending overlay was visible
+  CleanupCoordinator --> Idle: outcome says no visible overlay
+  CleanupCoordinator --> PublishCommitSignals: post-success cleanup outcome
 
   state "Overlay cleanup repaint" as OverlayCleanup
   OverlayCleanup --> Idle: overlay cleanup published
@@ -128,7 +140,7 @@ stateDiagram-v2
     queues overlay cleanup, then closes streams.
     Later samples cannot revive or commit it.
   end note
-  DisposeCleanup --> OverlayCleanup: pending line cleared before stream close
+  DisposeCleanup --> CleanupCoordinator: typed cleanup request before stream close
 
   state "Disposed runtime" as Disposed
   Disposed --> Disposed: later pointer/edit operation / StateError

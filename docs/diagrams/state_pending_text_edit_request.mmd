@@ -119,14 +119,26 @@ stateDiagram-v2
 
   state "Cleanup only" as CleanupOnly
   note left of CleanupOnly
-    Cleanup clears pending tap history only.
+    Cleanup creates a typed request for the
+    PointerToolCleanupCoordinator to clear pending tap history only.
     It publishes no text request, action event,
     document revision, selection change, preview update,
     spatial update, projection eviction, or repaint.
   end note
 
-  CleanupOnly --> Idle: "pending candidate cleared"
-  DisposeCleanup --> Disposed: "clear pending tap and close textEditRequests stream"
+  CleanupOnly --> CleanupCoordinator: "typed cleanup request"
+  DisposeCleanup --> CleanupCoordinator: "typed cleanup request before stream close"
+
+  state "PointerToolCleanupCoordinator" as CleanupCoordinator
+  note left of CleanupCoordinator
+    Coordinator-owned text cleanup clears pending tap history
+    and returns an effect-only PointerCleanupOutcome with no
+    preview, repaint, action, text-request, document, selection,
+    spatial, or projection effect.
+  end note
+
+  CleanupCoordinator --> Idle: "pending candidate cleared"
+  CleanupCoordinator --> Disposed: "pending tap cleared before stream close"
 
   state "Disposed runtime" as Disposed
   Disposed --> Disposed: "later mutating operation or pointer sample / StateError"

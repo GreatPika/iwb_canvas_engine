@@ -631,7 +631,7 @@ implementation scope.
 Slice is complete when architecture and contract docs lock D1 through D4 and
 documentation structure still passes.
 
-### Slice 2. [ ] Diagram Cleanup Routing
+### Slice 2. [x] Diagram Cleanup Routing
 
 #### Implements
 

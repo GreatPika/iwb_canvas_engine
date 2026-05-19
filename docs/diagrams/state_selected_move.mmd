@@ -87,7 +87,7 @@ stateDiagram-v2
       pointer handling boundary as runtime-safe errors.
       They are not cancel/no-op outcomes.
     end note
-    ResolverErrorCleanup --> MainSceneCleanup: "clear preview/session and rethrow"
+    ResolverErrorCleanup --> CleanupCoordinator: "typed cleanup request and rethrow"
 
     state "Selected move commit intent" as CommitIntent
     note right of CommitIntent
@@ -110,10 +110,11 @@ stateDiagram-v2
 
   state "Cleanup after successful commit" as CleanupAfterSuccess
   note left of CleanupAfterSuccess
-    Clear selected move preview/session before public
-    CanvasRuntimeState, repaint, and action effects are published.
+    Selected move preview/session cleanup runs through the
+    PointerToolCleanupCoordinator before public CanvasRuntimeState,
+    repaint, and action effects are published.
   end note
-    CleanupAfterSuccess --> PublicSignals: "publish commit effects after cleanup"
+    CleanupAfterSuccess --> CleanupCoordinator: "post-success cleanup request"
 
     state "Public state/effects after cleanup" as PublicSignals
     note right of PublicSignals
@@ -156,23 +157,46 @@ stateDiagram-v2
     the resolver, open an edit, emit an action, or return to idle.
   end note
 
-  PreResolverCleanup --> MainSceneCleanup: "clear selected move preview/session"
-  ResolverCleanup --> MainSceneCleanup: "clear selected move preview/session"
-  EditFailureCleanup --> MainSceneCleanup: "clear selected move preview/session"
-  DisposeCleanup --> MainSceneCleanup: "clear selected move preview/session before stream close"
+  PreResolverCleanup --> CleanupCoordinator: "typed cleanup request"
+  ResolverCleanup --> CleanupCoordinator: "typed cleanup request after resolver cancel"
+  EditFailureCleanup --> CleanupCoordinator: "typed cleanup request after edit failure"
+  DisposeCleanup --> CleanupCoordinator: "typed cleanup request before stream close"
+
+  state "PointerToolCleanupCoordinator" as CleanupCoordinator
+  note left of CleanupCoordinator
+    Coordinator-owned selected-move cleanup clears the
+    selected move preview/session and returns an effect-only
+    PointerCleanupOutcome. It does not call the resolver,
+    open edits, emit actions, or publish state directly.
+  end note
+
+  CleanupCoordinator --> MainSceneCleanup: "outcome repaint target is main scene"
+  CleanupCoordinator --> NoPreviewCleanup: "outcome no active preview"
 
   state "Main-scene cleanup repaint" as MainSceneCleanup
   note right of MainSceneCleanup
     Clear selectedMoveDelta and selected move session.
     Advance previewRevision only when active preview existed.
-    Queue main-scene cleanup repaint for selected move
-    preview. Do not use overlay-only cleanup as the
-    primary cleanup path.
+    Queue main-scene cleanup repaint from the coordinator-owned
+    PointerCleanupOutcome. Do not use overlay-only cleanup as
+    the primary cleanup path.
   end note
 
   MainSceneCleanup --> Idle: "cleanup published no action or committed document mutation"
   MainSceneCleanup --> Disposed: "dispose cleanup published before stream close"
+  MainSceneCleanup --> RuntimeSafeError: "resolver error exits after cleanup"
+  MainSceneCleanup --> PublicSignals: "successful commit effects after cleanup"
   ActivePreview --> Idle: "terminal cleanup complete"
+
+  state "No-preview cleanup" as NoPreviewCleanup
+  note right of NoPreviewCleanup
+    Admission no-op cleanup with no active selected move
+    preview is public-state silent and requests no repaint.
+  end note
+  NoPreviewCleanup --> Idle: "no cleanup repaint"
+
+  state "Runtime-safe error boundary" as RuntimeSafeError
+  RuntimeSafeError --> [*]
 
   state "Disposed runtime" as Disposed
   Disposed --> Disposed: pointer sample or mutating operation / StateError
