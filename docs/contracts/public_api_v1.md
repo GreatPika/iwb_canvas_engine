@@ -2236,7 +2236,9 @@ final class CanvasContextActionRequested {
   final Offset worldPosition;
 }
 
-sealed class CanvasContextActionTarget {}
+sealed class CanvasContextActionTarget {
+  const CanvasContextActionTarget();
+}
 
 final class CanvasContentElementContextActionTarget
     extends CanvasContextActionTarget {

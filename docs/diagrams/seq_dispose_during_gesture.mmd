@@ -22,7 +22,7 @@ sequenceDiagram
   participant MoveResolver as CanvasMoveCommitResolver
   participant EK as EditKernel
   participant Actions as CanvasActionCommitted stream
-  participant TextRequests as CanvasTextEditRequested stream
+  participant ContextRequests as CanvasContextActionRequested stream
   participant Signals as Public state/effects
 
   Note over User,Preview: Initial condition: one active routed pointer owns a preview snapshot.
@@ -79,7 +79,7 @@ sequenceDiagram
     Note over Session,Resolver: App-owned ui.Image instances and the app resolver are not disposed by the engine.
 
     Runtime->>Actions: close stream
-    Runtime->>TextRequests: close stream
+    Runtime->>ContextRequests: close stream
     Note over Runtime,Signals: state.value remains readable after dispose. Dispose does not increment document revisions. state notifies only when dispose clears active preview.
 
     Runtime->>Runtime: transition to disposed
@@ -89,7 +89,7 @@ sequenceDiagram
     Note over EK,Store: No terminal commit, no EditKernel commit, no DraftDocument, no TouchedSet, no CommitPlan, and no atomic install.
     Note over Store,Projection: No document revision, spatial index, projection cache, or resource descriptor mutation occurs due solely to dispose.
     Note over SelectionFacts: No selected ids or selectionRevision mutation occurs due solely to dispose.
-    Note over Actions,Signals: No CanvasActionCommitted and no text edit request is emitted by dispose.
+    Note over Actions,Signals: No CanvasActionCommitted and no context-action request is emitted by dispose.
   end
 
   User->>Surface: later pointer move or terminal sample

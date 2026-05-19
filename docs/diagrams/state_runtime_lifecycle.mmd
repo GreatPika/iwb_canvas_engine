@@ -59,7 +59,7 @@ stateDiagram-v2
 
     ResourceCacheCleanup: clear mandatory v1 resource caches
     ResourceCacheCleanup --> CloseStreams: drop resolved-image cache entries
-    CloseStreams: close actions and textEditRequests streams
+    CloseStreams: close actions and contextActionRequests streams
     CloseStreams --> FinalizeStateListenable
     FinalizeStateListenable: keep CanvasRuntimeState state.value readable and block post-dispose notifications
     FinalizeStateListenable --> [*]
@@ -92,7 +92,7 @@ stateDiagram-v2
     projection cache, or resource descriptor mutation
     due solely to dispose;
     no CanvasActionCommitted event from dispose;
-    no CanvasTextEditRequested event from dispose;
+    no CanvasContextActionRequested event from dispose;
     no document revision notification from dispose itself;
     no ValueListenable close or unreadable value state in v1;
     no public state notification after dispose returns;
