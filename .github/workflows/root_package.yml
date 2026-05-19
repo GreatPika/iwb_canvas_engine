@@ -1,0 +1,40 @@
+name: Root package
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - new-architecture
+
+jobs:
+  root-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Install DCM
+        uses: CQLabs/setup-dcm@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Analyze Dart
+        run: dart analyze
+
+      - name: Analyze DCM
+        run: dcm analyze .
+
+      - name: Calculate DCM metrics
+        run: dcm calculate-metrics .
+
+      - name: Run guardrails
+        run: dart run tool/guardrails/run.dart
