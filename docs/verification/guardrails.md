@@ -52,6 +52,7 @@ Guardrails:
 - `edit.typed_effects_no_frame_dependency`
 - `events.low_level_edit_no_user_actions`
 - `events.commands_emit_user_actions`
+- `events.runtime_created_timestamps_monotonic`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 - `preview.selected_move_main_repaint`
@@ -171,6 +172,7 @@ Mandatory guardrails:
 | `edit.typed_effects_no_frame_dependency` | CommitCompiler produces typed effects and does not depend on concrete FrameEngine |
 | `events.low_level_edit_no_user_actions` | CanvasEdit.removeElement/clearContent emit no user action events |
 | `events.commands_emit_user_actions` | high-level commands and interaction commits own user action events |
+| `events.runtime_created_timestamps_monotonic` | runtime-created `timestampMs` outputs resolve nullable hints through one runtime-local monotonic cursor, including action events, text edit requests, pending line start previews, and selected move resolver requests |
 | `load.prepares_before_interrupt` | failed load does not interrupt gesture |
 | `load.success_interrupts_before_install` | success interrupt happens before atomic install |
 | `preview.selected_move_main_repaint` | selected move preview increments main repaint, not overlay |

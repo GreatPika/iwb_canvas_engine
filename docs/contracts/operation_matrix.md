@@ -21,6 +21,7 @@ Related diagrams:
 Required tests:
 - `test.edit.sync_non_nested_async_stale`
 - `test.edit.operation_matrix_effects`
+- `test.interaction.runtime_created_timestamps_monotonic`
 - `test.interaction.text_edit_stale_commit_guard`
 Guardrails:
 - `edit.sync_non_nested`
@@ -28,6 +29,7 @@ Guardrails:
 - `edit.stale_handle_rejected`
 - `edit.operation_matrix_complete`
 - `events.commands_emit_user_actions`
+- `events.runtime_created_timestamps_monotonic`
 - `interaction.text_edit_stale_commit_guard`
 Do not assume:
 - no implicit mutation path outside EditKernel
@@ -49,17 +51,17 @@ P7 and P10-P12 close their resource and interaction rows when those owners land.
 | addBackgroundElement | background layer, registry, family row | state.revisions.document; internal structural, bounds, elementVisual, projection | add paint only | evict | main | none |
 | CanvasEdit.updateElement | changed element fields plus selection-owner prune when the Element update field-effect taxonomy requires normalization | state.revisions.document, state.revisions.selection if pruned; internal revisions from the Element update field-effect taxonomy | taxonomy-defined touched update or none | evict when any persisted field changes | taxonomy-defined main or none | none |
 | CanvasEdit.removeElement | registry/layer membership, plus selection-owner prune when removed id was selected | state.revisions.document, state.revisions.selection if pruned; internal structural, bounds, elementVisual, projection | remove id | evict | main | none |
-| command removeElement | registry/layer membership, plus selection-owner prune when removed id was selected | state.revisions.document, state.revisions.selection if pruned; internal structural, bounds, elementVisual, projection | remove id | evict | main | deleteElements if removed |
+| command removeElement | registry/layer membership, plus selection-owner prune when removed id was selected | state.revisions.document, state.revisions.selection if pruned; internal structural, bounds, elementVisual, projection | remove id | evict | main | deleteElements if removed; `runtime_created_timestamps_monotonic` |
 | ensureLayer no-op | none | none | none | none | none | none |
 | ensureLayer changed | layer table/order | state.revisions.document; internal structural, projection | no | evict | main | none |
 | setSelection/toggleSelection/clearSelection/selectAll | selection owner | state.revisions.selection | none | no | main | none |
-| marquee commit | selection owner | state.revisions.selection, state.revisions.preview if active preview cleared | none | no | main + overlay cleanup | selectMarquee if changed |
+| marquee commit | selection owner | state.revisions.selection, state.revisions.preview if active preview cleared | none | no | main + overlay cleanup | selectMarquee if changed; `runtime_created_timestamps_monotonic` |
 | selected move preview | preview only | state.revisions.preview | none | no | main only | none |
-| selected move commit | transforms | state.revisions.document, state.revisions.preview if active preview cleared; internal bounds, elementVisual, projection | touched update | evict | main + preview cleanup | moveSelection |
-| rotate/flip selection | transforms | state.revisions.document; internal bounds, elementVisual, projection | touched update | evict | main | transformSelection |
-| deleteSelection | elements/layers plus selection-owner prune | state.revisions.document, state.revisions.selection; internal structural, bounds, elementVisual, projection | remove ids | evict | main | deleteElements |
+| selected move commit | transforms | state.revisions.document, state.revisions.preview if active preview cleared; internal bounds, elementVisual, projection | touched update | evict | main + preview cleanup | moveSelection; resolver request timestamp proof `runtime_created_timestamps_monotonic` |
+| rotate/flip selection | transforms | state.revisions.document; internal bounds, elementVisual, projection | touched update | evict | main | transformSelection; `runtime_created_timestamps_monotonic` |
+| deleteSelection | elements/layers plus selection-owner prune | state.revisions.document, state.revisions.selection; internal structural, bounds, elementVisual, projection | remove ids | evict | main | deleteElements; `runtime_created_timestamps_monotonic` |
 | CanvasEdit.clearContent | elements, selection-owner clear, resources when removeUnusedResources removes descriptors | state.revisions.document, state.revisions.selection; internal structural, bounds, elementVisual, projection, resource | rebuild empty | evict | main | none |
-| command clearContent | elements, selection-owner clear, resources when removeUnusedResources removes descriptors | state.revisions.document, state.revisions.selection; internal structural, bounds, elementVisual, projection, resource | rebuild empty | evict | main | clearContent if removed |
+| command clearContent | elements, selection-owner clear, resources when removeUnusedResources removes descriptors | state.revisions.document, state.revisions.selection; internal structural, bounds, elementVisual, projection, resource | rebuild empty | evict | main | clearContent if removed; `runtime_created_timestamps_monotonic` |
 | CanvasEdit.setCameraOffset | persisted document camera | state.revisions.document; internal projection | no | evict | no immediate view-camera repaint unless current view is explicitly reinitialized by load | none |
 | CanvasCameraPort.setOffset/panBy | runtime view camera | state.revisions.viewCamera | no | no | main + overlay | none |
 | setBackgroundColor | persisted background metadata | state.revisions.document; internal backgroundRevision, projection | no | evict | main | none |
@@ -73,16 +75,16 @@ P7 and P10-P12 close their resource and interaction rows when those owners land.
 | loadDocument failure | none | none | none | none | none | none |
 | CanvasEdit.replaceDraftDocument | whole draft document plus selection-owner clear if current selection references replaced content | state.revisions.document, state.revisions.selection if cleared, state.revisions.epoch; internal document-level revisions | rebuild | evict | main | none |
 | pencil/marker preview | preview only | state.revisions.preview | none | no | overlay | none |
-| pencil/marker commit | add stroke | state.revisions.document, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawPencil/drawMarker |
-| line first tap | preview pending | state.revisions.preview | none | no | overlay | none |
+| pencil/marker commit | add stroke | state.revisions.document, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawPencil/drawMarker; `runtime_created_timestamps_monotonic` |
+| line first tap | preview pending | state.revisions.preview | none | no | overlay | none; timestamped preview `runtime_created_timestamps_monotonic` |
 | line preview | preview line | state.revisions.preview | none | no | overlay | none |
-| line commit | add line | state.revisions.document, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawLine |
+| line commit | add line | state.revisions.document, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawLine; `runtime_created_timestamps_monotonic` |
 | eraser preview | preview corridor | state.revisions.preview | none | no | overlay | none |
-| eraser commit | removed elements plus selection-owner prune when erased ids intersect selection | state.revisions.document, state.revisions.selection if pruned, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | remove ids | evict | main + overlay cleanup | erase if removed |
-| text double-tap request | text edit request stream only; InteractionRequestRegistry stores issued request guard facts | none | none | no | none | textEditRequested |
+| eraser commit | removed elements plus selection-owner prune when erased ids intersect selection | state.revisions.document, state.revisions.selection if pruned, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | remove ids | evict | main + overlay cleanup | erase if removed; `runtime_created_timestamps_monotonic` |
+| text double-tap request | text edit request stream only; InteractionRequestRegistry stores issued request guard facts | none | none | no | none | textEditRequested; `runtime_created_timestamps_monotonic` |
 | commitTextEdit stale rejection | retired request state only when the request id is known and rejected; otherwise none | none | none | no | none | none |
 | commitTextEdit no-op accepted | retired request state | none | none | no | none | none |
-| commitTextEdit changed accepted | text element content through EditKernel plus retired request state | state.revisions.document; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | main | editText |
+| commitTextEdit changed accepted | text element content through EditKernel plus retired request state | state.revisions.document; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | main | editText; `runtime_created_timestamps_monotonic` |
 | no-op edit | none | none | none | none | none | none |
 | dispose with active preview | preview cleanup and terminal runtime state | state.revisions.preview before dispose returns | none | no | overlay cleanup | stream close only |
 | dispose without active preview | terminal runtime state only | none | none | no | none | stream close only |
@@ -121,6 +123,10 @@ Notes:
   raw text.
 - Bounds-affecting text layout changes must compile `boundsRevision` and touched
   spatial updates just like other geometry/bounds edits.
+- Rows that name `runtime_created_timestamps_monotonic` resolve timestampMs
+  through the public runtime timestamp contract before publishing the
+  timestamped action, request, preview, or resolver request output. Preview and
+  resolver request rows remain non-user-action outputs.
 ```
 
 ### Compact row expanded dimensions

@@ -118,6 +118,7 @@ Guardrails:
 - `edit.typed_effects_no_frame_dependency`
 - `events.low_level_edit_no_user_actions`
 - `events.commands_emit_user_actions`
+- `events.runtime_created_timestamps_monotonic`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 - `preview.selected_move_main_repaint`
@@ -195,21 +196,22 @@ Release is blocked unless all statements are true:
 25. overlay preview repaint split tests are green.
 26. text edit request and guarded stale text commit integration tests are green.
 27. action typed payload tests are green.
-28. low-level edit emits no user action events tests are green.
-29. interaction stale terminal, selection-boundary import, resolver-cancel, and interactive=false routing, cancel, pending-line, and state-isolation tests are green.
-30. surface single-active-surface and pointer normalization tests are green.
-31. DTO immutability, `CanvasMetadata` deep-freeze, validating-constructor
+28. runtime-created timestamp monotonicity tests are green.
+29. low-level edit emits no user action events tests are green.
+30. interaction stale terminal, selection-boundary import, resolver-cancel, and interactive=false routing, cancel, pending-line, and state-isolation tests are green.
+31. surface single-active-surface and pointer normalization tests are green.
+32. DTO immutability, `CanvasMetadata` deep-freeze, validating-constructor
     factory policy, approved const-form policy, and public equality policy tests
     are green, including runtime state snapshot value equality.
-32. no CanvasDocument projection in paint/pointer/hit tests are green.
-33. all required diagrams exist and match owners.
-34. phase guardrail alignment is green.
-35. full `dart run tool/guardrails/run.dart` is green.
-36. every mandatory guardrail has a runner entry and executable proof, including
+33. no CanvasDocument projection in paint/pointer/hit tests are green.
+34. all required diagrams exist and match owners.
+35. phase guardrail alignment is green.
+36. full `dart run tool/guardrails/run.dart` is green.
+37. every mandatory guardrail has a runner entry and executable proof, including
     the `api.integration_surface_complete` external app-adapter compile fixture.
-37. changed-aware guardrail routing has conservative fallback coverage.
-38. benchmark gates pass.
-39. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
+38. changed-aware guardrail routing has conservative fallback coverage.
+39. benchmark gates pass.
+40. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
 ```
 
 ---

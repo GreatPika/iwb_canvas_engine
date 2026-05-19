@@ -165,6 +165,14 @@ Guardrails extracted from split section 22.
 - Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api.typed_action_payloads`, `test.interaction.commands_emit_user_actions`, `test.interaction.text_edit_stale_commit_guard`, `test.guardrails.blocking_suite`
 
+## events.runtime_created_timestamps_monotonic
+
+- Rule: runtime-created `timestampMs` outputs resolve nullable hints through one
+  runtime-local monotonic cursor for action events, text edit requests, pending
+  line start previews, and selected move resolver requests
+- Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.interaction.runtime_created_timestamps_monotonic`, `test.guardrails.blocking_suite`
+
 ## load.prepares_before_interrupt
 
 - Rule: failed load does not interrupt gesture

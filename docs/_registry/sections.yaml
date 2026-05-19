@@ -457,10 +457,12 @@
     - edit.stale_handle_rejected
     - edit.operation_matrix_complete
     - events.commands_emit_user_actions
+    - events.runtime_created_timestamps_monotonic
     - interaction.text_edit_stale_commit_guard
   tests:
     - test.edit.sync_non_nested_async_stale
     - test.edit.operation_matrix_effects
+    - test.interaction.runtime_created_timestamps_monotonic
     - test.interaction.text_edit_stale_commit_guard
   do_not_assume:
     - no implicit mutation path outside EditKernel
@@ -509,6 +511,7 @@
     - preview.selected_move_main_repaint
     - api.preview_state_sealed_union_publicly_readable
     - events.commands_emit_user_actions
+    - events.runtime_created_timestamps_monotonic
     - load.prepares_before_interrupt
     - load.success_interrupts_before_install
     - interaction.no_concrete_store_imports
@@ -521,6 +524,7 @@
   tests:
     - test.api.typed_action_payloads
     - test.interaction.commands_emit_user_actions
+    - test.interaction.runtime_created_timestamps_monotonic
     - test.flutter_bridge.interactive_false_pointer_routing
     - test.flutter_bridge.interactive_false_active_session_cancel
     - test.flutter_bridge.interactive_false_pending_line_preserved
@@ -801,6 +805,7 @@
     - edit.typed_effects_no_frame_dependency
     - events.low_level_edit_no_user_actions
     - events.commands_emit_user_actions
+    - events.runtime_created_timestamps_monotonic
     - load.prepares_before_interrupt
     - load.success_interrupts_before_install
     - preview.selected_move_main_repaint
@@ -967,6 +972,7 @@
     - test.api.typed_action_payloads
     - test.edit.low_level_mutations_do_not_emit_actions
     - test.interaction.commands_emit_user_actions
+    - test.interaction.runtime_created_timestamps_monotonic
     - test.flutter_bridge.interactive_false_pointer_routing
     - test.flutter_bridge.interactive_false_active_session_cancel
     - test.flutter_bridge.interactive_false_pending_line_preserved
@@ -1156,6 +1162,7 @@
     - edit.typed_effects_no_frame_dependency
     - events.low_level_edit_no_user_actions
     - events.commands_emit_user_actions
+    - events.runtime_created_timestamps_monotonic
     - load.prepares_before_interrupt
     - load.success_interrupts_before_install
     - preview.selected_move_main_repaint

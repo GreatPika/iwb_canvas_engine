@@ -123,6 +123,7 @@ Required tests:
 - `test.api.typed_action_payloads`
 - `test.edit.low_level_mutations_do_not_emit_actions`
 - `test.interaction.commands_emit_user_actions`
+- `test.interaction.runtime_created_timestamps_monotonic`
 - `test.flutter_bridge.interactive_false_pointer_routing`
 - `test.flutter_bridge.interactive_false_active_session_cancel`
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
@@ -223,6 +224,7 @@ test/resources/resolver_reentrancy_rejected_test.dart
 test/api/typed_action_payloads_test.dart
 test/edit/low_level_mutations_do_not_emit_actions_test.dart
 test/interaction/commands_emit_user_actions_test.dart
+test/interaction/runtime_created_timestamps_monotonic_test.dart
 
 test/runtime/dispose_lifecycle_test.dart
 test/runtime/runtime_state_publication_test.dart
@@ -252,6 +254,13 @@ test/edit/staged_document_load_success_failure_test.dart
 touched state, public state revisions, internal revisions, spatial,
 projection, resource effects, repaint, user-action events, no-op behavior, and
 rollback behavior.
+
+`test.interaction.runtime_created_timestamps_monotonic` covers the public
+runtime timestamp contract: action events, text edit requests, pending line
+start previews, and selected move resolver requests resolve nullable or
+backwards `timestampMs` hints through one runtime-local monotonic cursor, while
+no-op, stale rejection, rollback, cancel, loadDocument, and dispose stream-close
+paths create no timestamped action or text request output.
 
 `test.codec.constructor_and_schema_limits` covers element transform admission
 at public DTO construction and schema decode: non-invertible element

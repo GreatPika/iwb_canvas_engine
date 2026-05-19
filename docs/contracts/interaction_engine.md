@@ -43,6 +43,7 @@ Related diagrams:
 Required tests:
 - `test.api.typed_action_payloads`
 - `test.interaction.commands_emit_user_actions`
+- `test.interaction.runtime_created_timestamps_monotonic`
 - `test.flutter_bridge.interactive_false_pointer_routing`
 - `test.flutter_bridge.interactive_false_active_session_cancel`
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
@@ -62,6 +63,7 @@ Guardrails:
 - `preview.selected_move_main_repaint`
 - `api.preview_state_sealed_union_publicly_readable`
 - `events.commands_emit_user_actions`
+- `events.runtime_created_timestamps_monotonic`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 - `interaction.no_concrete_store_imports`
