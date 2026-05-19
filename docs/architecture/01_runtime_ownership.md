@@ -56,7 +56,7 @@ Canvas engine state
 | SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | хранить committed document content, selected-order cache или быть public API type |
 | EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | выполнять paint или pointer routing |
 | InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts | читать или менять DocumentStoreKernel напрямую; хранить Flutter text editor session state |
-| FrameEngine | captured main/overlay frames, ordinary paint plans, selection decoration/staging, repaint buses | read concrete DocumentStoreKernel internals, export public document, or own selection |
+| FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; future composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
 | ResourceKernel | resource API, dirty resource ids, resource visual state publication, session invalidation events | владеть app domain assets, resolved image references или committed descriptors |
 | SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame missing/null suppression | владеть committed descriptors, public runtime state или Flutter widget lifecycle |
 | SpatialKernel | coarse candidate lookup, outlier policy | быть source of truth для сцены |
@@ -96,8 +96,8 @@ never expose store tables, selection internals, or mutation methods. Committed
 mutations requested by interaction still go through `EditKernel`.
 
 Frame capture also uses a narrow intent-specific document boundary.
-`FrameFactsPort` is the accepted committed-state read seam between
-`FrameEngine` and `DocumentStoreKernel`:
+`FrameFactsPort` is the accepted committed-state read seam between the
+frame-internal facade and `DocumentStoreKernel`:
 
 ```text
 FrameEngine -> FrameFactsPort -> DocumentStoreKernel
@@ -112,6 +112,34 @@ state and must not return `CanvasDocument`, `CommittedDocument`, raw family
 tables, `DocumentProjectionCache`, drafts, mutation APIs, selection facts,
 `RenderElementRecord`, `PaintPlan`, selected supplement records, decoration
 plans, or frame cache classes.
+
+The selected future frame form keeps `FrameEngine` as the orchestration facade
+and splits its internal work across seven frame-private collaborators:
+`FrameCaptureService`, `OrdinaryPaintPlanner`,
+`SelectedMoveSupplementPlanner`, `SelectionDecorationPlanner`,
+`PaintAssetBindingService`, `StaticBackgroundPlanner`, and
+`OverlayPreviewPlanner`. The collaborators remain implementation details under
+`lib/src/frame/**`; package consumers continue to see only the public API
+barrel.
+
+Future ownership boundaries:
+
+| Future collaborator | Owns | Must not own |
+|---|---|---|
+| `FrameCaptureService` | one-time capture of main/overlay live frame facts into `CapturedMainFrame` and `CapturedOverlayFrame` | record planning, resolver/session calls, cache mutation beyond captured-frame construction |
+| `OrdinaryPaintPlanner` | ordinary committed `PaintPlanCache` lookup/build using structure, bounds, element visual, viewport, and DPR | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
+| `SelectedMoveSupplementPlanner` | per-frame selected move filtering, shifted candidate lookup, row resolution, and merge by `orderToken` | ordinary `PaintPlanCache` writes, overlay rendering, global scene sort |
+| `SelectionDecorationPlanner` | selection UI decoration and `SelectionDecorationPlan` key including `boundsRevision` | ordinary record cache identity, selected move supplement records, static background identity |
+| `PaintAssetBindingService` | descriptor-to-asset binding for records with image resource ids, using immutable descriptor facts and `SurfaceResourceSession` | ordinary paint plan construction, painter resolver calls, app resolver ownership |
+| `StaticBackgroundPlanner` | static background/grid plan and cache identity | selection, preview, resource visual, ordinary element visual identity |
+| `OverlayPreviewPlanner` | immutable overlay primitives admitted from `CapturedOverlayFrame` | selected move rendering, resource resolver reads, cache invalidation, repaint scheduling |
+
+Committed document facts stay store-owned and enter frame code only through
+`FrameFactsPort`. Selection facts stay selection-owned and enter frame code as
+captured selection facts. Preview and view-camera facts stay
+runtime/interaction-owned and are captured at frame boundaries.
+Resolver/cache state stays owned by `SurfaceResourceSession`; among the future
+frame collaborators, only `PaintAssetBindingService` receives that session.
 
 `InteractionRequestRegistry` is the interaction-owned registry for issued
 request guard facts, such as the `CanvasInteractionRequestId`, target element
@@ -132,7 +160,7 @@ RuntimeRoot
   ├─ EditKernel
   ├─ InteractionEngine
   ├─ InteractionRequestRegistry
-  ├─ FrameEngine
+  ├─ FrameEngine (frame-internal facade)
   ├─ SpatialKernel
   ├─ ResourceKernel
   ├─ SurfaceResourceSession (owned by active CanvasSurface)

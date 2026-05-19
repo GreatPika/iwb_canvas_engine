@@ -80,9 +80,13 @@ Paint/resource resolution receives immutable descriptor snapshots and
 document owner for frame paint. The resource module must not import, read, or
 mutate `DocumentStoreKernel`; it owns session policy, resolver-safe placeholder
 results, and dirty invalidation boundaries through narrow inputs only.
-Painters and frame paint code never call `CanvasResourceResolver` directly; they
-receive immutable descriptor facts and resolved paint assets or placeholders
-through `SurfaceResourceSession`.
+Ordinary frame planning receives immutable descriptor facts only and never
+receives resolver/session APIs. In the future frame split,
+`PaintAssetBindingService` is the only frame collaborator that receives
+`SurfaceResourceSession`; after ordinary and supplement records are known, it
+performs descriptor-to-asset binding and produces resolved paint assets or
+placeholders for painter inputs. This keeps resolver access out of capture,
+ordinary planning, painters, and app resolver ownership.
 
 `CanvasSurface` creates an empty `SurfaceResourceSession` only after successful
 single-active-surface attachment. Rejected attachment creates no session and

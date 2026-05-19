@@ -126,6 +126,30 @@ Rules:
   output, and must not invalidate ordinary committed element paint plans.
 ```
 
+Future internal split:
+
+`FrameEngine` remains the frame-internal facade for orchestration order,
+collaborator composition, painter input assembly, and repaint bus coordination.
+It delegates future frame-owned derived data construction to seven
+frame-private collaborators:
+
+| Future collaborator | Owns | Must not own |
+|---|---|---|
+| `FrameCaptureService` | one-time capture of main/overlay live frame facts into `CapturedMainFrame` and `CapturedOverlayFrame` | record planning, resolver/session calls, cache mutation beyond captured-frame construction |
+| `OrdinaryPaintPlanner` | ordinary committed `PaintPlanCache` lookup/build using structure, bounds, element visual, viewport, and DPR | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
+| `SelectedMoveSupplementPlanner` | per-frame selected move filtering, shifted candidate lookup, row resolution, and merge by `orderToken` | ordinary `PaintPlanCache` writes, overlay rendering, global scene sort |
+| `SelectionDecorationPlanner` | selection UI decoration and `SelectionDecorationPlan` key including `boundsRevision` | ordinary record cache identity, selected move supplement records, static background identity |
+| `PaintAssetBindingService` | descriptor-to-asset binding for records with image resource ids, using immutable descriptor facts and `SurfaceResourceSession` | ordinary paint plan construction, painter resolver calls, app resolver ownership |
+| `StaticBackgroundPlanner` | static background/grid plan and cache identity | selection, preview, resource visual, ordinary element visual identity |
+| `OverlayPreviewPlanner` | immutable overlay primitives admitted from `CapturedOverlayFrame` | selected move rendering, resource resolver reads, cache invalidation, repaint scheduling |
+
+`OrdinaryPaintPlanner` builds only ordinary committed record plans and excludes
+selection revision, selection style, selected move delta, preview state,
+resolver/session access, and static background identity from its cache inputs.
+`PaintAssetBindingService` is the only future frame collaborator that receives
+`SurfaceResourceSession`; painters remain immutable-output consumers and never
+receive store, runtime, resolver, or public document read access.
+
 Opacity and layer policy:
 
 ```text
@@ -201,12 +225,22 @@ Algorithm:
 13. Do not materialize CanvasDocument.
 ```
 
+Future ownership: `OrdinaryPaintPlanner` owns steps 1 through 4, while
+`SelectedMoveSupplementPlanner` owns steps 5 through 12. The supplement planner
+consumes captured selection facts and ordinary records for the current frame,
+but does not write the ordinary `PaintPlanCache`, does not render overlays, and
+does not global sort the scene.
+
 Selection decoration reads selected ids and selectionRevision through the same
 captured selection facts boundary and is invalidated separately from ordinary
 paint plans. Its decoration key includes `boundsRevision` because selected
 element bounds can change without changing selection membership. `selectedOrder`
 is derived data or a bounded cache keyed by `selectionRevision` and
 `structuralRevision`; it is not a second stored selection source of truth.
+Future ownership: `SelectionDecorationPlanner` owns the decoration key,
+including `boundsRevision`, and keeps selection decoration state out of
+ordinary record cache identity, selected move supplement records, and static
+background identity.
 
 ### 15.4 Render primitive cache misses
 

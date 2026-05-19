@@ -91,8 +91,15 @@ The new package is rooted at the repository top level:
         text_tap_router.dart
       frame/
         frame_engine.dart
+        frame_capture_service.dart
         captured_main_frame.dart
         captured_overlay_frame.dart
+        ordinary_paint_planner.dart
+        selected_move_supplement_planner.dart
+        selection_decoration_planner.dart
+        paint_asset_binding_service.dart
+        static_background_planner.dart
+        overlay_preview_planner.dart
         paint_plan.dart
         render_element_record.dart
         repaint_bus.dart
@@ -151,6 +158,11 @@ The new package is rooted at the repository top level:
 
 `lib/iwb_canvas_engine.dart` exports only `src/api/**`.
 
+The future frame collaborator files listed under `lib/src/frame/**` are target
+layout names for the `FrameEngine` internal split, not files created by this
+documentation step. They remain frame-private implementation details and are
+omitted from the public package barrel.
+
 Source boundary rules:
 
 ```text
@@ -158,6 +170,7 @@ lib/iwb_canvas_engine.dart      -> only public barrel for package consumers
 production lib/**               -> no `part` or `part of` files unless generated-code adoption is explicitly approved
 all lib/**                      -> may not import another package's `src/**`
 lib/src/frame/**                -> obtains committed document facts through `runtime/frame_facts_port.dart`, not concrete store files
+lib/src/frame/**                -> keeps frame collaborators package-internal; no root barrel export for collaborator files
 ```
 
 `FrameFactsPort` is the frame-intent committed facts boundary under

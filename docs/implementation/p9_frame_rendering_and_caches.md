@@ -10,6 +10,11 @@ frame output.
 ## Build scope
 
 - `FrameEngine`
+- future `FrameEngine` internal collaborator split:
+  `FrameCaptureService`, `OrdinaryPaintPlanner`,
+  `SelectedMoveSupplementPlanner`, `SelectionDecorationPlanner`,
+  `PaintAssetBindingService`, `StaticBackgroundPlanner`, and
+  `OverlayPreviewPlanner`
 - `CapturedMainFrame`
 - `CapturedOverlayFrame`
 - `RenderElementRecord`
@@ -33,6 +38,52 @@ frame output.
 - committed frame facts, row snapshot resolution, and descriptor snapshot
   lookup only through `FrameFactsPort`
 - ordinary opacity through primitive paint alpha, not implicit `Canvas.saveLayer`.
+
+## Future FrameEngine internal split
+
+Candidate A is the accepted future frame rendering form: `FrameEngine` remains
+the frame-internal facade and delegates focused work to seven frame-private
+collaborators. The split is larger than the backlog's five-service sketch
+because selected move supplement staging and overlay preview primitive
+admission need explicit owners.
+
+| Future collaborator | Owns | Must not own |
+|---|---|---|
+| `FrameCaptureService` | one-time capture of main/overlay live frame facts into `CapturedMainFrame` and `CapturedOverlayFrame` | record planning, resolver/session calls, cache mutation beyond captured-frame construction |
+| `OrdinaryPaintPlanner` | ordinary committed `PaintPlanCache` lookup/build using structure, bounds, element visual, viewport, and DPR | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
+| `SelectedMoveSupplementPlanner` | per-frame selected move filtering, shifted candidate lookup, row resolution, and merge by `orderToken` | ordinary `PaintPlanCache` writes, overlay rendering, global scene sort |
+| `SelectionDecorationPlanner` | selection UI decoration and `SelectionDecorationPlan` key including `boundsRevision` | ordinary record cache identity, selected move supplement records, static background identity |
+| `PaintAssetBindingService` | descriptor-to-asset binding for records with image resource ids, using immutable descriptor facts and `SurfaceResourceSession` | ordinary paint plan construction, painter resolver calls, app resolver ownership |
+| `StaticBackgroundPlanner` | static background/grid plan and cache identity | selection, preview, resource visual, ordinary element visual identity |
+| `OverlayPreviewPlanner` | immutable overlay primitives admitted from `CapturedOverlayFrame` | selected move rendering, resource resolver reads, cache invalidation, repaint scheduling |
+
+Future implementation keeps committed document facts behind `FrameFactsPort`,
+selection facts behind the selection facts boundary, and resolver/session access
+isolated to `SurfaceResourceSession`. `PaintAssetBindingService` is the only
+frame collaborator that receives the session. `OrdinaryPaintPlanner` must not
+depend on selection revision, selection style, selected move delta, preview
+state, resolver/session APIs, or static background identity. Painters consume
+immutable frame outputs and do not read live runtime, store, resolver, or public
+document state.
+
+Future implementation must add behavior tests and guardrails for the split
+without exposing frame collaborators through the package barrel. At minimum:
+
+- `FrameCaptureService` captures main and overlay live frame facts once.
+- `OrdinaryPaintPlanner` keeps ordinary cache identity free of selection,
+  preview, resolver/session, and static background facts.
+- `SelectedMoveSupplementPlanner` stages selected move records without ordinary
+  `PaintPlanCache` writes or global scene sort.
+- `SelectionDecorationPlanner` includes `boundsRevision` so selected element
+  bounds changes invalidate decoration even when selection membership is
+  unchanged.
+- `PaintAssetBindingService` binds image descriptors through
+  `SurfaceResourceSession` after record planning.
+- `StaticBackgroundPlanner` proves background/grid cache identity does not
+  invalidate ordinary element paint plans.
+- `OverlayPreviewPlanner` admits immutable overlay primitives from
+  `CapturedOverlayFrame` without selected move rendering, resource resolver
+  reads, cache invalidation, or repaint scheduling ownership.
 
 ## Dependencies on earlier phases
 
