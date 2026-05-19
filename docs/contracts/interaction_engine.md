@@ -171,7 +171,7 @@ mutation.
 
 `PointerCleanupOutcome` is effect-only. It records previous preview kind,
 whether preview changed, whether public state is needed, repaint target, active
-token/session release, pending line cleared or preserved, pending text tap
+token/session release, pending line cleared or preserved, pending context tap
 cleared, and load/dispose sequencing facts. Runtime/public signal aggregation
 may consume the outcome after cleanup completes, but it must not re-read stale
 active session state to decide cleanup effects.
@@ -179,14 +179,14 @@ active session state to decide cleanup effects.
 Pending line preservation is part of the coordinator contract. Non-owned
 pending line state is preserved on `interactive=false`. Pending line state is
 cleared only by line-owned cleanup, mode/tool change, successful load, dispose,
-or a terminal line decision. Pending text tap cleanup clears tap history without
-preview, repaint, action, text-request, document, selection, spatial, or
+or a terminal line decision. Pending context tap cleanup clears tap history without
+preview, repaint, action, context request, document, selection, spatial, or
 projection effects.
 
 The coordinator may depend only on interaction-owned state models and public
 preview value types needed to calculate `CanvasNoPreview` outcomes. It must not
 depend on concrete store internals, concrete selection internals, selected-move
-resolver callbacks, `EditKernel`, action dispatchers, text-request streams,
+resolver callbacks, `EditKernel`, action dispatchers, context-action streams,
 frame engine, repaint buses, Flutter widgets/adapters, resource
 resolver/session APIs, public runtime-state publication, or legacy package
 paths.

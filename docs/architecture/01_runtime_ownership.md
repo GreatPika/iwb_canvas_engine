@@ -76,8 +76,9 @@ owns its composition and is the only caller. Tool machines may return typed
 cleanup requests to `InteractionEngine`, but they must not call the coordinator
 directly. The coordinator calculates an effect-only `PointerCleanupOutcome`
 from interaction-owned state and request ownership context; it does not publish
-runtime state, emit actions or text requests, schedule repaints, call resolvers,
-open edits, read stores or selection internals, or become a second state store.
+runtime state, emit actions or context requests, schedule repaints, call
+resolvers, open edits, read stores or selection internals, or become a second
+state store.
 
 Camera ownership is split deliberately:
 
