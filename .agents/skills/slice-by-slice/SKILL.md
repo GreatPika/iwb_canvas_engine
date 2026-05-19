@@ -1,6 +1,6 @@
 ---
 name: slice-by-slice
-description: Use when implementing a step contract slice by slice: complete one contract slice, review it with one reused code_reviewer for that slice, fix all findings, commit, then continue to the next slice until every slice is complete.
+description: "Use when implementing a step contract slice by slice: complete one contract slice, review it with one reused code_reviewer for that slice, fix all findings, commit, then continue to the next slice until every slice is complete."
 ---
 
 # Slice By Slice
