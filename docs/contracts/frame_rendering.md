@@ -189,12 +189,16 @@ Algorithm:
    ordinary record stream for this frame only.
 6. Query visibilityRect shifted by -previewDelta for selected supplement
    candidates.
-7. Resolve selected handles through `FrameFactsPort` and create shifted
-   RenderElementRecord instances with previewDelta for this frame only.
-8. Merge filtered ordinary records and supplement records by orderToken.
-9. Do not store selected supplement records in PaintPlanCache.
-10. Do not global sort all scene elements.
-11. Do not materialize CanvasDocument.
+7. Resolve selected handles through `FrameFactsPort` against the captured
+   structuralRevision and generation.
+8. If the selected row facts are current, create shifted RenderElementRecord
+   instances with previewDelta for this frame only.
+9. If `FrameFactsPort` rejects a stale selected candidate, skip that candidate
+   and do not build a supplement RenderElementRecord for it.
+10. Merge filtered ordinary records and supplement records by orderToken.
+11. Do not store selected supplement records in PaintPlanCache.
+12. Do not global sort all scene elements.
+13. Do not materialize CanvasDocument.
 ```
 
 Selection decoration reads selected ids and selectionRevision through the same

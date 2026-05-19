@@ -66,8 +66,13 @@ sequenceDiagram
       Frame->>Facts: resolve handle against captured structuralRevision and generation
       Facts->>Store: read committed selected row snapshot
       Store-->>Facts: immutable selected row view or stale rejection
-      Facts-->>Frame: selected row facts or stale rejection
-      Frame->>Frame: build per-frame supplement RenderElementRecord with previewDelta
+      alt selected row facts are current
+        Facts-->>Frame: selected row facts
+        Frame->>Frame: build per-frame supplement RenderElementRecord with previewDelta
+      else stale selected candidate
+        Facts-->>Frame: stale candidate rejection
+        Frame->>Frame: skip selected supplement candidate
+      end
     end
     Frame->>Frame: merge filtered ordinary records and supplement records by orderToken
     Note over Frame,PlanCache: Selected supplement records are per-frame and are not stored in PaintPlanCache.

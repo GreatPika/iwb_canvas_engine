@@ -85,8 +85,13 @@ sequenceDiagram
     Frame->>Facts: resolve selected supplement handles against captured revisions
     Facts->>Store: read selected row snapshots
     Store-->>Facts: selected row views or stale rejection
-    Facts-->>Frame: selected row facts or stale rejection
-    Frame->>Frame: build per-frame supplement records with previewDelta
+    alt selected row facts are current
+      Facts-->>Frame: selected row facts
+      Frame->>Frame: build per-frame supplement records with previewDelta
+    else stale selected candidate
+      Facts-->>Frame: stale candidate rejection
+      Frame->>Frame: skip selected supplement candidate
+    end
     Frame->>Frame: merge filtered ordinary records and supplement by orderToken
     Note over Frame,PlanCache: Selected supplement records are per-frame and are not stored in PaintPlanCache.
     Frame->>Signals: publish main repaint request
