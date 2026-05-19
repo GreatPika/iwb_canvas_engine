@@ -159,6 +159,12 @@ grid, style-only, or runtime view-camera facts; background/grid and runtime
 view-camera changes repaint frame surfaces but must not invalidate ordinary
 committed element paint plans.
 
+Frame-facing committed revision facts enter `FrameEngine` through
+`FrameFactsPort`. `DocumentStoreKernel` remains the owner of revision state,
+resource descriptors, compact row tables, and projection policy; the port only
+returns immutable committed facts needed for frame capture, stale row rejection,
+and descriptor snapshot lookup.
+
 No-op edit does not change revisions. Preview cleanup increments
 `previewRevision` only when it clears or replaces existing preview state; a
 cleanup request against already-empty preview state is a no-op. Effects-only

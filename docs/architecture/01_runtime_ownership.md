@@ -52,10 +52,11 @@ Canvas engine state
 |---|---|---|
 | Public API | стабильные DTO, операции, события, ошибки | раскрывать таблицы, handles, caches, runtime internals |
 | DocumentStoreKernel | committed document state, document revisions, resource descriptors, public document projection cache | читать gesture state, selection state или Flutter widget |
+| FrameFactsPort | immutable committed frame facts for capture, row resolution, descriptor snapshots, and resourceRevision | expose store tables, public document projections, drafts, mutations, selection facts, or frame-owned render models |
 | SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | хранить committed document content, selected-order cache или быть public API type |
 | EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | выполнять paint или pointer routing |
 | InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts | читать или менять DocumentStoreKernel напрямую; хранить Flutter text editor session state |
-| FrameEngine | captured main/overlay frames, ordinary paint plans, selection decoration/staging, repaint buses | экспортировать public document или владеть selection |
+| FrameEngine | captured main/overlay frames, ordinary paint plans, selection decoration/staging, repaint buses | read concrete DocumentStoreKernel internals, export public document, or own selection |
 | ResourceKernel | resource API, dirty resource ids, resource visual state publication, session invalidation events | владеть app domain assets, resolved image references или committed descriptors |
 | SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame missing/null suppression | владеть committed descriptors, public runtime state или Flutter widget lifecycle |
 | SpatialKernel | coarse candidate lookup, outlier policy | быть source of truth для сцены |
@@ -94,6 +95,24 @@ boundary. Query boundaries return immutable, batched, intent-specific facts and
 never expose store tables, selection internals, or mutation methods. Committed
 mutations requested by interaction still go through `EditKernel`.
 
+Frame capture also uses a narrow intent-specific document boundary.
+`FrameFactsPort` is the accepted committed-state read seam between
+`FrameEngine` and `DocumentStoreKernel`:
+
+```text
+FrameEngine -> FrameFactsPort -> DocumentStoreKernel
+```
+
+The port supplies only immutable frame-facing facts: `documentRevision`,
+`structuralRevision`, `boundsRevision`, `elementVisualRevision`,
+`backgroundRevision`, `gridRevision`, committed render-row facts resolved
+against the captured structural revision and generation, immutable resource
+descriptor snapshots, and `resourceRevision`. It does not own mutable document
+state and must not return `CanvasDocument`, `CommittedDocument`, raw family
+tables, `DocumentProjectionCache`, drafts, mutation APIs, selection facts,
+`RenderElementRecord`, `PaintPlan`, selected supplement records, decoration
+plans, or frame cache classes.
+
 `InteractionRequestRegistry` is the interaction-owned registry for issued
 request guard facts, such as the `CanvasInteractionRequestId`, target element
 id, controllerEpoch, element generation, elementRevision, element family, and
@@ -108,6 +127,7 @@ Composition root:
 ```text
 RuntimeRoot
   ├─ DocumentStoreKernel
+  ├─ FrameFactsPort
   ├─ SelectionKernel
   ├─ EditKernel
   ├─ InteractionEngine

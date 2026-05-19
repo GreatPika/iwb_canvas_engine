@@ -24,8 +24,8 @@ without bypassing ownership.
 - `CanvasDocumentSummary`
 - `CanvasRuntimeConfig` materialization for runtime-owned services
 - runtime id generation backed by next-owned admission state
-- narrow immutable document and selection read/query ports for later frame,
-  spatial, resource, and interaction phases
+- narrow immutable document, frame, and selection read/query ports for later
+  frame, spatial, resource, and interaction phases
 - no edit session, load replacement, paint, resource resolver, pointer routing,
   or Flutter widget behavior yet.
 
@@ -45,7 +45,7 @@ without bypassing ownership.
 
 ## Required donors
 
-- `store_scene_controller_read_paths` - decision: `adapt`; target owner: DocumentStoreKernel committed read and candidate resolve
+- `store_scene_controller_read_paths` - decision: `adapt`; target owner: DocumentStoreKernel committed read and candidate resolve through immutable query ports
 - `dto_node_boundary_mapping` - decision: `adapt`; target owner: Codec and store mapping families
 - `dto_document_helpers` - decision: `adapt`; target owner: DocumentStoreKernel, SelectionKernel, and EditKernel helpers
 
@@ -102,7 +102,8 @@ without bypassing ownership.
 - projection lazy counters pass
 - store public document state is projection-only
 - later owners can obtain committed facts only through narrow immutable query
-  ports, not concrete store tables
+  ports, including `FrameFactsPort` for frame capture, row resolution, and
+  descriptor snapshots, not concrete store tables
 - later owners can obtain selection facts only through narrow immutable query
   ports, not concrete selection-owner internals
 - `test/store/no_projection_hot_path_test.dart` passes.

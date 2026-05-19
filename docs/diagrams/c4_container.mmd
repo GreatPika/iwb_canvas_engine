@@ -2,6 +2,7 @@ flowchart TB
   Public[lib/iwb_canvas_engine.dart exports src/api] --> RuntimeRoot
   Surface["CanvasSurface public widget\none active surface per RuntimeRoot"] --> RuntimeRoot
   RuntimeRoot --> Store[DocumentStoreKernel]
+  RuntimeRoot --> FrameFacts[FrameFactsPort]
   RuntimeRoot --> Selection[SelectionKernel]
   RuntimeRoot --> Edit[EditKernel]
   RuntimeRoot --> InteractionEngine
@@ -12,7 +13,8 @@ flowchart TB
   RuntimeRoot --> Diagnostics[DiagnosticsHub]
   Edit --> Store
   Edit --> Selection
-  FrameEngine --> Store
+  FrameFacts --> Store
+  FrameEngine --> FrameFacts
   FrameEngine --> SelectionFacts[SelectionFactsPort]
   FrameEngine --> Spatial
   FrameEngine --> Resource

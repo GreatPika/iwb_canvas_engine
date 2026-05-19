@@ -56,6 +56,7 @@ The new package is rooted at the repository top level:
         runtime_root.dart
         runtime_config.dart
         document_facts_port.dart
+        frame_facts_port.dart
         selection_facts_port.dart
         selection_normalization_port.dart
       store/
@@ -154,7 +155,16 @@ Source boundary rules:
 lib/iwb_canvas_engine.dart      -> only public barrel for package consumers
 production lib/**               -> no `part` or `part of` files unless generated-code adoption is explicitly approved
 all lib/**                      -> may not import another package's `src/**`
+lib/src/frame/**                -> obtains committed document facts through `runtime/frame_facts_port.dart`, not concrete store files
 ```
+
+`FrameFactsPort` is the frame-intent committed facts boundary under
+`lib/src/runtime/`. It may be backed by `DocumentStoreKernel` through
+`RuntimeRoot` composition, but frame-owned code must not import
+`lib/src/store/document_store_kernel.dart`, `committed_document.dart`,
+`family_tables.dart`, resource tables, `document_projection_cache.dart`, drafts,
+or public projection internals to capture frames, resolve render-row snapshots,
+or read descriptor snapshots.
 
 Consumer compile fixtures under `test/api_contract/fixtures/**` model external
 application code. They may import only
