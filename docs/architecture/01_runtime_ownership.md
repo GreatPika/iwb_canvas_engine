@@ -56,7 +56,7 @@ Canvas engine state
 | SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | хранить committed document content, selected-order cache или быть public API type |
 | EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | выполнять paint или pointer routing |
 | InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts, future pointer cleanup coordinator composition | читать или менять DocumentStoreKernel напрямую; хранить Flutter text editor session state |
-| FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; future composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
+| FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; target composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
 | ResourceKernel | resource API, dirty resource ids, resource visual state publication, session invalidation events | владеть app domain assets, resolved image references или committed descriptors |
 | SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame missing/null suppression | владеть committed descriptors, public runtime state или Flutter widget lifecycle |
 | SpatialKernel | coarse candidate lookup, outlier policy | быть source of truth для сцены |
@@ -123,7 +123,7 @@ tables, `DocumentProjectionCache`, drafts, mutation APIs, selection facts,
 `RenderElementRecord`, `PaintPlan`, selected supplement records, decoration
 plans, or frame cache classes.
 
-The selected future frame form keeps `FrameEngine` as the orchestration facade
+The selected target frame form keeps `FrameEngine` as the orchestration facade
 and splits its internal work across seven frame-private collaborators:
 `FrameCaptureService`, `OrdinaryPaintPlanner`,
 `SelectedMoveSupplementPlanner`, `SelectionDecorationPlanner`,
@@ -132,9 +132,9 @@ and splits its internal work across seven frame-private collaborators:
 `lib/src/frame/**`; package consumers continue to see only the public API
 barrel.
 
-Future ownership boundaries:
+Target ownership boundaries:
 
-| Future collaborator | Owns | Must not own |
+| Target collaborator | Owns | Must not own |
 |---|---|---|
 | `FrameCaptureService` | one-time capture of main/overlay live frame facts into `CapturedMainFrame` and `CapturedOverlayFrame` | record planning, resolver/session calls, cache mutation beyond captured-frame construction |
 | `OrdinaryPaintPlanner` | ordinary committed `PaintPlanCache` lookup/build using structure, bounds, element visual, viewport, and DPR | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
@@ -148,7 +148,7 @@ Committed document facts stay store-owned and enter frame code only through
 `FrameFactsPort`. Selection facts stay selection-owned and enter frame code as
 captured selection facts. Preview and view-camera facts stay
 runtime/interaction-owned and are captured at frame boundaries.
-Resolver/cache state stays owned by `SurfaceResourceSession`; among the future
+Resolver/cache state stays owned by `SurfaceResourceSession`; among the target
 frame collaborators, only `PaintAssetBindingService` receives that session.
 
 `InteractionRequestRegistry` is the interaction-owned registry for issued

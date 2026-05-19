@@ -11,11 +11,13 @@ flowchart LR
     EmptyOrRollback["Empty touched set or rollback\nno revisions, cache eviction,\nspatial change, repaint, or events"]
     ResourceDirtyCall["CanvasResourcePort\nmarkResourceDirty / markAllResourcesDirty"]
     ViewCameraCall["CanvasCameraPort\nsetOffset / panBy"]
+    InteractionConfigCall["CanvasInteractionPort\nsetMode / setDrawStyle / setDrawTool /\nsetDrawColor / setPointerPolicy"]
   end
 
   subgraph Runtime["RuntimeRoot"]
     ResourceDirtyDispatch["Resource dirty orchestration\nrevision increment + cache eviction"]
     ViewCameraDispatch["Runtime view camera orchestration\nstate.revisions.viewCamera + repaint"]
+    InteractionConfigDispatch["Interaction config orchestration\nstate.revisions.interaction + affected cleanup"]
     DeferredSpatialRepair["Deferred invalid-index repair\nrebuild or retry outside hot pointer/paint path"]
   end
 
@@ -48,6 +50,8 @@ flowchart LR
     PreviewRevision["preview"]
     ViewCameraRevision["viewCamera"]
     ResourceVisualPublicRevision["resourceVisual"]
+    InteractionPublicRevision["interaction"]
+    EpochPublicRevision["epoch"]
   end
 
   subgraph Selection["SelectionKernel"]
@@ -97,6 +101,7 @@ flowchart LR
   end
 
   App -->|"committed edit or terminal commit"| Touched
+  App -->|"interaction config change"| InteractionConfigCall
   Touched -->|"no changed facts"| EmptyOrRollback
   EmptyOrRollback -.->|"return without side effects"| App
   Touched -->|"non-empty exact facts"| ExactPlan
@@ -119,6 +124,9 @@ flowchart LR
   RevisionState -.->|"document state changes"| DocumentRevision
   DocumentRevision -->|"public document domain"| DocumentPublicRevision
   DocumentPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
+  ReplacementScope -->|"replaceDraftDocument / full replacement epoch"| EpochPublicRevision
+  LoadSuccess -->|"load success epoch"| EpochPublicRevision
+  EpochPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
   RevisionState -.->|"structure/order changes"| StructuralRevision
   RevisionState -.->|"geometry/bounds changes"| BoundsRevision
   RevisionState -.->|"element visual changes"| ElementVisualRevision
@@ -178,6 +186,11 @@ flowchart LR
   ViewCameraRevision -->|"public runtime state domain"| RuntimeStateRevision
   ViewCameraDispatch -->|"view camera changed"| StaticFrameInvalidation
   ViewCameraDispatch -->|"view camera changed"| OverlayRepaint
+  InteractionConfigCall -->|"interaction settings changed"| InteractionConfigDispatch
+  InteractionConfigDispatch -->|"increment public interaction revision"| InteractionPublicRevision
+  InteractionPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
+  InteractionConfigDispatch -->|"selection changed by mode entry"| SelectionEffect
+  InteractionConfigDispatch -->|"active preview cleared"| PreviewCleanup
 
   BackgroundRevision -->|"background document metadata only"| StaticFrameInvalidation
   GridRevision -->|"grid document metadata only"| StaticFrameInvalidation

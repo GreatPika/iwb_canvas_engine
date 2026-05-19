@@ -103,6 +103,9 @@ load have established rollback-safe mutation and replacement boundaries.
 - resource descriptor mutation is rollback-safe
 - resource dirty publishes `state.revisions.resourceVisual` and schedules main
   repaint intent without document revision
+- target resource dirty evicts the target active-session image cache entry and
+  resolves that image again on the next paint
+- mark-all resource dirty clears the active-session image cache
 - resolver image results are app-owned and not disposed by engine
 - painters and frame code can resolve images only through SurfaceResourceSession
 - resolver swap, detach, dispose, and runtime swap cannot reuse stale session cache entries

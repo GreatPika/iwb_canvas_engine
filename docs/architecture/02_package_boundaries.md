@@ -159,10 +159,10 @@ The new package is rooted at the repository top level:
 
 `lib/iwb_canvas_engine.dart` exports only `src/api/**`.
 
-The future frame collaborator files listed under `lib/src/frame/**` are target
-layout names for the `FrameEngine` internal split, not files created by this
-documentation step. They remain frame-private implementation details and are
-omitted from the public package barrel.
+The target frame collaborator files listed under `lib/src/frame/**` are
+implementation layout names for the `FrameEngine` internal split, not files
+created by this documentation step. They remain frame-private implementation
+details and are omitted from the public package barrel.
 
 `lib/src/interaction/pointer_tool_cleanup_coordinator.dart` is the future
 internal cleanup policy collaborator for `InteractionEngine`. It is not created

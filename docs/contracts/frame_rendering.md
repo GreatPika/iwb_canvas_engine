@@ -126,14 +126,14 @@ Rules:
   output, and must not invalidate ordinary committed element paint plans.
 ```
 
-Future internal split:
+Accepted internal split:
 
 `FrameEngine` remains the frame-internal facade for orchestration order,
 collaborator composition, painter input assembly, and repaint bus coordination.
-It delegates future frame-owned derived data construction to seven
+It delegates target frame-owned derived data construction to seven
 frame-private collaborators:
 
-| Future collaborator | Owns | Must not own |
+| Target collaborator | Owns | Must not own |
 |---|---|---|
 | `FrameCaptureService` | one-time capture of main/overlay live frame facts into `CapturedMainFrame` and `CapturedOverlayFrame` | record planning, resolver/session calls, cache mutation beyond captured-frame construction |
 | `OrdinaryPaintPlanner` | ordinary committed `PaintPlanCache` lookup/build using structure, bounds, element visual, viewport, and DPR | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
@@ -146,7 +146,7 @@ frame-private collaborators:
 `OrdinaryPaintPlanner` builds only ordinary committed record plans and excludes
 selection revision, selection style, selected move delta, preview state,
 resolver/session access, and static background identity from its cache inputs.
-`PaintAssetBindingService` is the only future frame collaborator that receives
+`PaintAssetBindingService` is the only target frame collaborator that receives
 `SurfaceResourceSession`; painters remain immutable-output consumers and never
 receive store, runtime, resolver, or public document read access.
 

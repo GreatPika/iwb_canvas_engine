@@ -39,15 +39,15 @@ frame output.
   lookup only through `FrameFactsPort`
 - ordinary opacity through primitive paint alpha, not implicit `Canvas.saveLayer`.
 
-## Future FrameEngine internal split
+## Target FrameEngine internal split
 
-Candidate A is the accepted future frame rendering form: `FrameEngine` remains
+Candidate A is the accepted target frame rendering form: `FrameEngine` remains
 the frame-internal facade and delegates focused work to seven frame-private
 collaborators. The split is larger than the backlog's five-service sketch
 because selected move supplement staging and overlay preview primitive
 admission need explicit owners.
 
-| Future collaborator | Owns | Must not own |
+| Target collaborator | Owns | Must not own |
 |---|---|---|
 | `FrameCaptureService` | one-time capture of main/overlay live frame facts into `CapturedMainFrame` and `CapturedOverlayFrame` | record planning, resolver/session calls, cache mutation beyond captured-frame construction |
 | `OrdinaryPaintPlanner` | ordinary committed `PaintPlanCache` lookup/build using structure, bounds, element visual, viewport, and DPR | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
@@ -57,7 +57,7 @@ admission need explicit owners.
 | `StaticBackgroundPlanner` | static background/grid plan and cache identity | selection, preview, resource visual, ordinary element visual identity |
 | `OverlayPreviewPlanner` | immutable overlay primitives admitted from `CapturedOverlayFrame` | selected move rendering, resource resolver reads, cache invalidation, repaint scheduling |
 
-Future implementation keeps committed document facts behind `FrameFactsPort`,
+Implementation target keeps committed document facts behind `FrameFactsPort`,
 selection facts behind the selection facts boundary, and resolver/session access
 isolated to `SurfaceResourceSession`. `PaintAssetBindingService` is the only
 frame collaborator that receives the session. `OrdinaryPaintPlanner` must not
@@ -66,7 +66,7 @@ state, resolver/session APIs, or static background identity. Painters consume
 immutable frame outputs and do not read live runtime, store, resolver, or public
 document state.
 
-Future implementation must add behavior tests and guardrails for the split
+Implementation must add behavior tests and guardrails for the split
 without exposing frame collaborators through the package barrel. At minimum:
 
 - `FrameCaptureService` captures main and overlay live frame facts once.

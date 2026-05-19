@@ -82,7 +82,7 @@ mutate `DocumentStoreKernel`; it owns session policy, resolver-safe placeholder
 results, and dirty invalidation boundaries through narrow inputs only.
 Ordinary frame planning receives immutable row facts and resource ids needed to
 build records, but it does not receive descriptor snapshots or resolver/session
-APIs. In the future frame split, `PaintAssetBindingService` is the only frame
+APIs. In the target frame split, `PaintAssetBindingService` is the only frame
 collaborator that receives `SurfaceResourceSession`; after ordinary and
 supplement records are known, it reads descriptor facts through
 `FrameFactsPort`, performs descriptor-to-asset binding, and produces resolved

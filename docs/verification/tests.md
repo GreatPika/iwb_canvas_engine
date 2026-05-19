@@ -472,6 +472,14 @@ test/resources/resource_dirty_test.dart
   -> proves markResourceDirty publishes state.revisions.resourceVisual without
      incrementing state.revisions.document, evicting public document projection,
      clearing selection, clearing preview, or emitting an action event.
+  -> proves markResourceDirty(resourceId) evicts the target ImageResolveCache
+     entry in the active SurfaceResourceSession and the next paint resolves that
+     dirty target again instead of reusing the previous resolved image.
+
+test/resources/mark_all_resources_dirty_test.dart
+  -> proves markAllResourcesDirty() clears the active SurfaceResourceSession
+     ImageResolveCache while preserving document revision, public document
+     projection, selection, preview, and action-event behavior.
 
 test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart
   -> proves CanvasCameraPort.setOffset and panBy publish

@@ -129,6 +129,8 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P7`
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
 - Guardrails: `resources.dirty_no_document_revision`
+- Focus: target dirty-resource invalidation evicts the active session cache entry
+  and forces the next paint to resolve the target image again.
 
 ## test.resources.mark_all_resources_dirty
 
@@ -136,6 +138,8 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P7`
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
 - Guardrails: `resources.dirty_no_document_revision`
+- Focus: mark-all dirty-resource invalidation clears the active session image
+  resolve cache without changing document-side state.
 
 ## test.resources.resolver_reentrancy_rejected
 
