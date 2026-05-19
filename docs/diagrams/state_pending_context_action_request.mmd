@@ -11,7 +11,29 @@ stateDiagram-v2
 
   Idle --> Disposed: "runtime.dispose()"
   Idle --> FirstTapGate: "finite tap or click admitted"
+  Idle --> DirectDoubleTapGate: "host-recognized handleDoubleTap with finite position"
   Idle --> Idle: "invalid, stale, drag, active pointer conflict, or wrong mode / ignore"
+
+  state "Direct double-tap gate" as DirectDoubleTapGate
+  note right of DirectDoubleTapGate
+    Direct handleDoubleTap is a host-recognized
+    input event. It does not require pending
+    first-tap history, but clears stale pending
+    context tap history through PointerToolCleanupCoordinator
+    before resolving the current target.
+  end note
+
+  DirectDoubleTapGate --> DirectTopTarget: "resolve timestamp and query current content hit candidates"
+
+  state "Direct current target resolution" as DirectTopTarget
+  note right of DirectTopTarget
+    Direct double-tap resolves the current
+    context-action target at the supplied position:
+    top visible content element or empty canvas.
+  end note
+
+  DirectTopTarget --> EmitContentRequest: "current content target"
+  DirectTopTarget --> EmitEmptyCanvasRequest: "current empty-canvas target"
 
   state "First tap gate" as FirstTapGate
   note right of FirstTapGate
@@ -50,8 +72,10 @@ stateDiagram-v2
     It has no element snapshot.
   end note
 
-  PendingContentTarget --> SecondTapGate: "second tap or explicit double-tap"
-  PendingEmptyCanvas --> SecondTapGate: "second tap or explicit double-tap"
+  PendingContentTarget --> SecondTapGate: "second tap"
+  PendingEmptyCanvas --> SecondTapGate: "second tap"
+  PendingContentTarget --> DirectDoubleTapGate: "host-recognized finite handleDoubleTap / clear pending context tap"
+  PendingEmptyCanvas --> DirectDoubleTapGate: "host-recognized finite handleDoubleTap / clear pending context tap"
   PendingContentTarget --> CleanupOnly: "delay exceeded, slop exceeded, invalid sample, mode mismatch, controllerEpoch mismatch, mode change, or interactive=false"
   PendingEmptyCanvas --> CleanupOnly: "delay exceeded, slop exceeded, invalid sample, mode mismatch, controllerEpoch mismatch, mode change, or interactive=false"
   PendingContentTarget --> CleanupOnly: "loadDocument success after install"

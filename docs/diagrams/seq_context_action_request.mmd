@@ -20,6 +20,45 @@ sequenceDiagram
   participant App as Application
   participant AppUI as App-owned menu or text editor
 
+  opt direct host-recognized handleDoubleTap
+    User->>Surface: host-recognized direct double-tap on canvas
+    Surface->>Tools: handleDoubleTap(position, timestampMs?)
+    Tools->>IE: host position and timestamp hint
+    alt non-finite position
+      IE-->>Tools: reject before target resolution or request emission
+      Note over IE,Signals: Invalid direct handleDoubleTap produces no context request, document mutation, selection change, preview update, repaint, or action event.
+    else finite position
+      IE->>IE: resolve timestamp through runtime cursor
+      IE->>Cleanup: clear pending context tap history when present
+      Cleanup-->>IE: PointerCleanupOutcome(no preview, no repaint, pending tap cleared)
+      IE->>IE: convert viewPosition to finite worldPosition
+      IE->>Spatial: query point hit candidates at worldPosition
+      Spatial-->>IE: committed content handles in hit order
+      IE->>Geometry: exact context-action hit for visible content elements
+      Geometry-->>IE: top visible content element or no content target
+      alt current content target found
+        IE->>ReadPort: read immutable current content target facts
+        ReadPort->>Store: read element snapshot, boundsWorld, generation, elementRevision, family, documentRevision, and controllerEpoch
+        Store-->>ReadPort: current target facts
+        ReadPort-->>IE: current target facts
+        IE->>Registry: issue request id with content target kind and guard facts
+        Registry-->>IE: issued request id
+        IE->>Requests: emit CanvasContextActionRequested(doubleTap, content element target)
+        Requests->>Signals: publish context-action request notification only
+        Signals-->>App: deliver CanvasContextActionRequested
+        App->>AppUI: open menu or text editor when target snapshot is CanvasTextElement
+      else current empty-canvas target
+        IE->>Registry: issue request id with empty-canvas target kind
+        Registry-->>IE: issued request id
+        IE->>Requests: emit CanvasContextActionRequested(doubleTap, empty-canvas target)
+        Requests->>Signals: publish context-action request notification only
+        Signals-->>App: deliver CanvasContextActionRequested
+        App->>AppUI: open app-owned empty-canvas context UI
+      end
+    end
+    Note over IE,Signals: Direct handleDoubleTap is independent of pending first-tap history and has no document, selection, preview, repaint, spatial, projection, resource, or action effect.
+  end
+
   User->>Surface: first tap on canvas
   Surface->>Tools: handlePointer(CanvasPointerSample down/up)
   Tools->>IE: normalized finite tap sample
