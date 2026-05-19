@@ -1,0 +1,4 @@
+interface:
+  display_name: "Slice By Slice"
+  short_description: "Implement contracts one slice at a time"
+  default_prompt: "Use $slice-by-slice to implement the accepted step contract one slice at a time."
