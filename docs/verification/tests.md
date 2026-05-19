@@ -347,8 +347,9 @@ test/api_contract/app_next_engine_adapter_compile_fixture_test.dart
   -> rejects fixture imports of src/**, legacy package symbols, or internal
      runtime classes;
   -> covers runtime lifecycle, state/document observation, edit/load,
-     selection/camera/tools, high-level commands, actions/text-edit requests,
-     resources, and CanvasSurface construction with public resolver/style inputs.
+     selection/camera/tools, high-level commands, actions/context-action
+     requests, guarded text commit, resources, and CanvasSurface construction
+     with public resolver/style inputs.
 
 test/api_contract/public_api_v1_compiles_as_written_test.dart
   -> compiles the exported API declarations in an empty consumer package;

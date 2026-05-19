@@ -41,4 +41,4 @@ codec, geometry, and interaction slices depend on them.
 | Tri-state patch semantics | `lib/src/contract/patch_field.dart`, `lib/src/contract/node_patch.dart` | absent/value/explicit-null behavior and non-nullable-null rejection | `copy/adapt` | P2 API freeze |
 | Immutable collection policy | `lib/src/contract/owned_collections.dart`, `lib/src/core/immutable_collections.dart` | defensive copy, `CanvasMetadata` deep-freeze, and immutable list/map behavior | `adapt` | P2 DTOs |
 | Pointer input contract | `lib/src/contract/pointer_input.dart`, `lib/src/contract/canvas_pointer_input.dart`, `lib/src/contract/pointer_phase_codec.dart` | pointer phases, policy validation, pointer-device kind handling | `copy/adapt` | P2/P9 |
-| Action event immutability | `lib/src/core/action_events.dart` | immutable events, timestamp normalization behavior, text-edit request shape evidence | `adapt` | P2/P9 |
+| Action event immutability | `lib/src/core/action_events.dart` | immutable events, timestamp normalization behavior, context-action request shape evidence | `adapt` | P2/P9 |
