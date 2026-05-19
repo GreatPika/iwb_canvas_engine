@@ -23,11 +23,12 @@ sequenceDiagram
 
   Surface->>Frame: paint main scene request(viewportRect, devicePixelRatio, SurfaceResourceSession)
   Frame->>Facts: capture committed main-frame facts once
-  Facts->>Store: read compact rows, resource descriptor revisions, and frame revisions
-  Store-->>Facts: committed frame facts
-  Facts-->>Frame: immutable frame facts and row facts
-  Frame->>Frame: build immutable RenderElementRecord list
-  Note over Frame: Each image render record carries resourceId from the committed row.
+  Facts->>Store: read committed frame revision facts
+  Store-->>Facts: documentRevision, structuralRevision, boundsRevision, elementVisualRevision, backgroundRevision, gridRevision
+  Facts-->>Frame: immutable frame revision facts
+  Frame->>Frame: build immutable RenderElementRecord list after bounded row resolution
+  Note over Frame,Facts: Row facts are resolved through FrameFactsPort for bounded candidate handles with structuralRevision/generation stale rejection.
+  Note over Frame: Each image render record carries resourceId from a committed row fact.
 
   opt records contain image resource ids
     loop for each image RenderElementRecord

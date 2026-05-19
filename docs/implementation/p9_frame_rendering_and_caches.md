@@ -104,6 +104,7 @@ frame output.
 - `test.store.no_projection_hot_path` -> `test/store/no_projection_hot_path_test.dart`
 - `test.frame.main_overlay_capture` -> `test/frame/main_overlay_capture_test.dart`
 - `test.frame.no_live_runtime_read_in_painters` -> `test/frame/no_live_runtime_read_in_painters_test.dart`
+- `test.guardrails.frame_committed_facts_via_frame_facts_port` -> `test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart`
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape` -> `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart`
 - `test.frame.cache_capacity_eviction_policy` -> `test/frame/cache_capacity_eviction_policy_test.dart`
 - `test.frame.paint_plan_excludes_preview_delta` -> `test/frame/paint_plan_excludes_preview_delta_test.dart`
@@ -114,6 +115,7 @@ frame output.
 - `projection.only_explicit_read_paths`
 - `resources.resolver_boundary_owned_by_surface_session`
 - `resources.resolver_frame_budget`
+- `frame.committed_facts_via_frame_facts_port`
 - `frame.no_global_scene_sort`
 - `frame.paint_plan_excludes_preview_delta`
 - `frame.paint_plan_excludes_selection_state`

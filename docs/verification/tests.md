@@ -198,6 +198,7 @@ test/api_contract/public_equality_policy_test.dart
 test/api_contract/v1_scope_gate_test.dart
 test/api_contract/app_next_engine_adapter_compile_fixture_test.dart
 test/guardrails/import_boundaries_test.dart
+test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart
 test/guardrails/required_diagrams_present_test.dart
 test/guardrails/blocking_suite_test.dart
 test/functional_ledger/row_specific_tests_test.dart
