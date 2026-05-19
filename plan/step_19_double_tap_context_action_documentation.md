@@ -561,7 +561,7 @@ menu/editor behavior, target eligibility, and guarded text commit semantics.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Public And Interaction Contract Lock
+### Slice 1. [x] Public And Interaction Contract Lock
 
 #### Implements
 
@@ -602,7 +602,7 @@ The slice is closed when the public method semantics, retained public request
 seam, timestamp behavior, no duplicate method/stream, and interaction execution
 order are documented and proven by P2 and P4.
 
-### Slice 2. [ ] Diagram And State-Flow Alignment
+### Slice 2. [x] Diagram And State-Flow Alignment
 
 #### Implements
 
@@ -639,7 +639,7 @@ The slice is closed when the context-action sequence and state diagrams have no
 stale "explicit double-tap" pending-flow wording and any affected diagram
 catalog or registry entries remain structurally valid.
 
-### Slice 3. [ ] Downstream Guidance And Verification Alignment
+### Slice 3. [x] Downstream Guidance And Verification Alignment
 
 #### Implements
 
@@ -691,7 +691,7 @@ The slice is closed when downstream source-of-truth surfaces require direct
 semantics, and contain no stale wording that makes direct double-tap dependent
 on pending first-tap history.
 
-### Slice 4. [ ] Final Documentation Gate And Roadmap Closure
+### Slice 4. [x] Final Documentation Gate And Roadmap Closure
 
 #### Implements
 
