@@ -10,12 +10,7 @@ void main() {
     final missing = mandatoryGuardrailIds().difference(inventory.keys.toSet());
 
     expect(missing, isEmpty);
-    expect(
-      inventory.values
-          .where((entry) => entry.status == GuardrailStatus.deferred)
-          .every((entry) => entry.deferredPhase != null),
-      isTrue,
-    );
+    expect(_allDeferredEntriesOwnPhase(inventory), isTrue);
   });
 
   test('blocking suite covers P0 hard-boundary guardrails', () {
@@ -36,10 +31,25 @@ void main() {
     final result = await _runGuardrails(['--changed']);
 
     expect(result.exitCode, 0);
-    for (final id in _p0GuardrailIds) {
-      expect(result.stdout, contains('ran $id'));
-    }
+    expect(
+      _ranGuardrails(result.stdout as String),
+      containsAll(_p0GuardrailIds),
+    );
   });
+}
+
+bool _allDeferredEntriesOwnPhase(Map<String, GuardrailEntry> inventory) {
+  return inventory.values
+      .where((entry) => entry.status == GuardrailStatus.deferred)
+      .every((entry) => entry.deferredPhase != null);
+}
+
+Set<String> _ranGuardrails(String stdout) {
+  return stdout
+      .split('\n')
+      .where((line) => line.startsWith('ran '))
+      .map((line) => line.substring('ran '.length))
+      .toSet();
 }
 
 Future<ProcessResult> _runGuardrails(List<String> arguments) {

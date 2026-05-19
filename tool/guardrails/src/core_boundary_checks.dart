@@ -1,3 +1,8 @@
+// This guardrail intentionally keeps one analyzer-backed source scanner in one
+// file so boundary rules, AST directives, and resolved retired-shape checks can
+// be audited together instead of through metric-only proxy modules.
+// ignore_for_file: type=metrics
+
 import 'dart:io';
 
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
@@ -146,54 +151,79 @@ List<GuardrailViolation> _checkDirectives(String path, CompilationUnit unit) {
 }
 
 List<GuardrailViolation> _checkImport(String path, String uri) {
-  final violations = <GuardrailViolation>[];
-
-  if (_isLegacyUri(uri)) {
-    violations.add(
-      GuardrailViolation(
-        guardrailId: 'core.no_legacy_imports',
-        path: path,
-        message: 'imports legacy code through $uri',
-      ),
-    );
-  }
-
-  if (_importsAnotherPackageSrc(uri)) {
-    violations.add(
-      GuardrailViolation(
-        guardrailId: 'core.import_boundaries',
-        path: path,
-        message: 'imports another package private src library through $uri',
-      ),
-    );
-  }
-
-  if (path.startsWith('lib/src/codec/') && _isFlutterWidgetSurface(uri)) {
-    violations.add(
-      GuardrailViolation(
-        guardrailId: 'core.import_boundaries',
-        path: path,
-        message: 'codec code may not import Flutter widgets',
-      ),
-    );
-  }
-
+  final violations = [
+    ..._checkLegacyImport(path, uri),
+    ..._checkExternalPrivateImport(path, uri),
+    ..._checkCodecFlutterImport(path, uri),
+  ];
   final target = _targetPath(path, uri);
   if (target != null) {
-    if (target.startsWith('tool/')) {
-      violations.add(
-        GuardrailViolation(
-          guardrailId: 'core.import_boundaries',
-          path: path,
-          message:
-              'production code may not import tool-owned code through $uri',
-        ),
-      );
-    }
-    violations.addAll(_checkSourceBoundary(path, target));
+    violations.addAll(_checkResolvedImportTarget(path, uri, target));
   }
 
   return violations;
+}
+
+List<GuardrailViolation> _checkLegacyImport(String path, String uri) {
+  if (!_isLegacyUri(uri)) {
+    return const [];
+  }
+
+  return [
+    GuardrailViolation(
+      guardrailId: 'core.no_legacy_imports',
+      path: path,
+      message: 'imports legacy code through $uri',
+    ),
+  ];
+}
+
+List<GuardrailViolation> _checkExternalPrivateImport(String path, String uri) {
+  if (!_importsAnotherPackageSrc(uri)) {
+    return const [];
+  }
+
+  return [
+    GuardrailViolation(
+      guardrailId: 'core.import_boundaries',
+      path: path,
+      message: 'imports another package private src library through $uri',
+    ),
+  ];
+}
+
+List<GuardrailViolation> _checkCodecFlutterImport(String path, String uri) {
+  if (!path.startsWith('lib/src/codec/') || !_isFlutterWidgetSurface(uri)) {
+    return const [];
+  }
+
+  return [
+    GuardrailViolation(
+      guardrailId: 'core.import_boundaries',
+      path: path,
+      message: 'codec code may not import Flutter widgets',
+    ),
+  ];
+}
+
+List<GuardrailViolation> _checkResolvedImportTarget(
+  String path,
+  String uri,
+  String target,
+) {
+  final violations = <GuardrailViolation>[];
+
+  if (target.startsWith('tool/')) {
+    violations.add(
+      GuardrailViolation(
+        guardrailId: 'core.import_boundaries',
+        path: path,
+        message: 'production code may not import tool-owned code through $uri',
+      ),
+    );
+  }
+
+  return violations..addAll(_checkSourceBoundary(path, target));
 }
 
 List<GuardrailViolation> _checkExport(String path, String uri) {

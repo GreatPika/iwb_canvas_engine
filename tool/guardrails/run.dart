@@ -19,42 +19,56 @@ Future<void> main(List<String> arguments) async {
 
 List<String>? _selectGuardrails(List<String> arguments) {
   if (arguments.isEmpty) {
-    return blockingGuardrailIds().toList()..sort();
+    return _sorted(blockingGuardrailIds());
   }
 
   if (arguments.length != 1) {
-    stderr.writeln('Use one of: --suite=<name>, --guardrail=<id>, --changed');
+    _printUsage();
     return null;
   }
 
   final argument = arguments.single;
   if (argument == '--changed') {
-    return blockingGuardrailIds().toList()..sort();
+    return _sorted(blockingGuardrailIds());
   }
 
   if (argument.startsWith('--suite=')) {
-    final suite = argument.substring('--suite='.length);
-    final ids = suiteGuardrailIds(suite).toList()..sort();
-    if (ids.isEmpty) {
-      stderr.writeln('Unknown or empty guardrail suite: $suite');
-      return null;
-    }
-
-    return ids;
+    return _selectSuite(argument.substring('--suite='.length));
   }
 
   if (argument.startsWith('--guardrail=')) {
-    final id = argument.substring('--guardrail='.length);
-    final entry = guardrailInventory()[id];
-    if (entry == null || entry.status != GuardrailStatus.executable) {
-      stderr.writeln('Unknown or deferred guardrail: $id');
-      return null;
-    }
-
-    return [id];
+    return _selectGuardrail(argument.substring('--guardrail='.length));
   }
 
   stderr.writeln('Unknown argument: $argument');
 
   return null;
+}
+
+List<String>? _selectSuite(String suite) {
+  final ids = _sorted(suiteGuardrailIds(suite));
+  if (ids.isEmpty) {
+    stderr.writeln('Unknown or empty guardrail suite: $suite');
+    return null;
+  }
+
+  return ids;
+}
+
+List<String>? _selectGuardrail(String id) {
+  final entry = guardrailInventory()[id];
+  if (entry == null || entry.status != GuardrailStatus.executable) {
+    stderr.writeln('Unknown or deferred guardrail: $id');
+    return null;
+  }
+
+  return [id];
+}
+
+List<String> _sorted(Set<String> ids) {
+  return ids.toList()..sort();
+}
+
+void _printUsage() {
+  stderr.writeln('Use one of: --suite=<name>, --guardrail=<id>, --changed');
 }

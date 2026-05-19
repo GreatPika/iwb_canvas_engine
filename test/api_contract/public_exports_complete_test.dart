@@ -1,5 +1,6 @@
 import 'package:test/test.dart';
 
+import '../support/public_api_registry.dart';
 import '../support/public_api_surface.dart';
 
 void main() {

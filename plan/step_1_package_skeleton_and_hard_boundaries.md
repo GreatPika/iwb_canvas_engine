@@ -438,7 +438,7 @@ Expected signal: every command exits successfully from the repository root.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Public API skeleton and completeness guardrails
+### Slice 1. [x] Public API skeleton and completeness guardrails
 
 #### Implements
 
@@ -488,7 +488,7 @@ The public barrel exports all P0 public names, exported signatures are
 self-contained, and legacy public symbols are absent from the effective
 namespace.
 
-### Slice 2. [ ] Core boundary and runtime-root guardrails
+### Slice 2. [x] Core boundary and runtime-root guardrails
 
 #### Implements
 
@@ -534,7 +534,7 @@ retired shape dependencies, unapproved production `part` directives, missing
 P0 diagrams, and any production state where `RuntimeRoot` is absent or
 duplicated.
 
-### Slice 3. [ ] Guardrail runner and conservative selection metadata
+### Slice 3. [x] Guardrail runner and conservative selection metadata
 
 #### Implements
 
@@ -592,7 +592,7 @@ The P0 blocking suite, mandatory-id inventory, and explicit P0 guardrail
 selections work through `tool/guardrails/run.dart`, and incomplete changed-path
 impact metadata cannot skip hard-boundary proof.
 
-### Slice 4. [ ] Root package CI target
+### Slice 4. [x] Root package CI target
 
 #### Implements
 
@@ -622,7 +622,7 @@ Run P8.
 The root workflow exists, invokes the repository-owned guardrail runner, and
 keeps guardrail ownership in `tool/guardrails/**`.
 
-### Slice 5. [ ] Final P0 closure
+### Slice 5. [x] Final P0 closure
 
 #### Implements
 

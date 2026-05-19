@@ -1,3 +1,8 @@
+// This file owns the P0 runtime-facing public API skeleton. Its imports and
+// port method counts mirror one public contract surface and should stay
+// together until a later semantic implementation gives a real split point.
+// ignore_for_file: type=metrics
+
 import 'dart:async';
 import 'dart:ui';
 
