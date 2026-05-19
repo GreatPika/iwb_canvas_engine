@@ -151,7 +151,7 @@ The future `PointerToolCleanupCoordinator` is an internal
 `InteractionEngine` collaborator under
 `lib/src/interaction/pointer_tool_cleanup_coordinator.dart`. It is the cleanup
 policy owner for pointer-tool cleanup, not a public API type, state store,
-cache, resolver, edit owner, event dispatcher, text-request emitter, repaint
+cache, resolver, edit owner, event dispatcher, context-request emitter, repaint
 notifier, Flutter adapter, resource owner, or runtime publication owner.
 
 Future cleanup-capable tool machines recognize gestures and return terminal
