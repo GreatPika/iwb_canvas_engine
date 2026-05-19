@@ -49,6 +49,8 @@ Use the `codebase_researcher` subagent for factual investigation.
 
 Routing rules:
 
+- Spawn each researcher with a clean context. Do not fork the current chat
+  context into research subagents.
 - Use 2 to 4 parallel tasks for independent investigation areas.
 - Never spawn more than 4 parallel tasks because of context overflow risk.
 - Use sequential tasks when one area depends on another area's findings.
@@ -145,9 +147,10 @@ Use this structure:
 2. Read files completely before making claims about them.
 3. Use the `codebase_researcher` subagent for parallel investigation.
 4. Use at most 4 parallel tasks.
-5. Maintain objectivity; only facts, no opinions.
-6. Preserve exact repository paths.
-7. Do not infer ownership, data flow, or conventions from names alone.
+5. Spawn research subagents with clean context, not by forking the current chat.
+6. Maintain objectivity; only facts, no opinions.
+7. Preserve exact repository paths.
+8. Do not infer ownership, data flow, or conventions from names alone.
 
 ## Good vs Bad Research
 
