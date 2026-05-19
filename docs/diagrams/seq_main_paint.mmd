@@ -3,7 +3,13 @@ sequenceDiagram
   autonumber
 
   participant Surface as CanvasSurface
-  participant Frame as FrameEngine
+  participant Frame as FrameEngine facade
+  participant Capture as FrameCaptureService
+  participant Ordinary as OrdinaryPaintPlanner
+  participant Supplement as SelectedMoveSupplementPlanner
+  participant Decoration as SelectionDecorationPlanner
+  participant Background as StaticBackgroundPlanner
+  participant Assets as PaintAssetBindingService
   participant ViewCamera as Runtime view camera
   participant Facts as FrameFactsPort
   participant Store as DocumentStoreKernel
@@ -17,89 +23,100 @@ sequenceDiagram
   participant Painter as Main painter
 
   Surface->>Frame: paint main scene request(viewportRect, devicePixelRatio, gridStyle, selectionStyle, SurfaceResourceSession)
-  Frame->>Facts: capture committed frame facts once
+  Frame->>Capture: capture main frame once
+  Capture->>Facts: capture committed frame facts once
   Facts->>Store: read committed revision facts
   Store-->>Facts: documentRevision, structuralRevision, boundsRevision, elementVisualRevision, backgroundRevision, gridRevision
-  Facts-->>Frame: immutable committed frame facts
-  Frame->>Resources: capture resource visual facts once
-  Resources-->>Frame: resourceVisualRevision
-  Frame->>ViewCamera: capture runtime view camera facts once
-  ViewCamera-->>Frame: viewCameraRevision and viewCameraOffset
-  Frame->>SelectionFacts: capture selected ids and selectionRevision once
-  SelectionFacts-->>Frame: selectionRevision and selectionIds
-  Frame->>Frame: build CapturedMainFrame with viewportRect, devicePixelRatio, gridStyle.strokeWidth, and selectionStyle from paint request
-  Frame->>Preview: capture CanvasSelectedMovePreview once
-  Preview-->>Frame: delta or CanvasNoPreview
-  Note over Frame: CapturedMainFrame freezes the runtime facts used by this main paint frame.
+  Facts-->>Capture: immutable committed frame facts
+  Capture->>Resources: capture resource visual facts once
+  Resources-->>Capture: resourceVisualRevision
+  Capture->>ViewCamera: capture runtime view camera facts once
+  ViewCamera-->>Capture: viewCameraRevision and viewCameraOffset
+  Capture->>SelectionFacts: capture selected ids and selectionRevision once
+  SelectionFacts-->>Capture: selectionRevision and selectionIds
+  Capture->>Preview: capture CanvasSelectedMovePreview once
+  Preview-->>Capture: delta or CanvasNoPreview
+  Capture-->>Frame: CapturedMainFrame
+  Note over Capture: CapturedMainFrame freezes the runtime facts used by this main paint frame.
 
-  Frame->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewportRect, and devicePixelRatio
-  Note over Frame,PlanCache: PaintPlanCache excludes backgroundRevision, gridRevision, viewCameraRevision, viewCameraOffset, selectionRevision, selected ids, selectedMoveDelta, previewDelta, and style-only inputs.
+  Frame->>Ordinary: plan ordinary committed records
+  Ordinary->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewportRect, and devicePixelRatio
+  Note over Ordinary,PlanCache: PaintPlanCache excludes backgroundRevision, gridRevision, viewCameraRevision, viewCameraOffset, selectionRevision, selected ids, selectedMoveDelta, previewDelta, and style-only inputs.
 
   alt ordinary paint plan cache hit
-    PlanCache-->>Frame: ordinary committed RenderElementRecord list
+    PlanCache-->>Ordinary: ordinary committed RenderElementRecord list
   else paint plan cache miss
-    Frame->>Spatial: query paint candidates bounded by captured viewportRect
-    Spatial-->>Frame: ordinary candidate handles with id, generation, orderToken, and structuralRevision
+    Ordinary->>Spatial: query paint candidates bounded by captured viewportRect
+    Spatial-->>Ordinary: ordinary candidate handles with id, generation, orderToken, and structuralRevision
 
     loop for each ordinary candidate handle
-      Frame->>Facts: resolve handle against captured structuralRevision and generation
+      Ordinary->>Facts: resolve handle against captured structuralRevision and generation
       Facts->>Store: read committed row snapshot
       alt handle generation and structuralRevision still match the captured frame
         Store-->>Facts: immutable family row view, common paint fields, and resourceId if any
-        Facts-->>Frame: immutable committed row facts
-        Frame->>Frame: build ordinary committed RenderElementRecord
+        Facts-->>Ordinary: immutable committed row facts
+        Ordinary->>Ordinary: build ordinary committed RenderElementRecord
       else stale candidate
         Store-->>Facts: reject stale candidate
-        Facts-->>Frame: stale candidate rejection
-        Frame->>Frame: skip record for stale generation or structuralRevision
+        Facts-->>Ordinary: stale candidate rejection
+        Ordinary->>Ordinary: skip record for stale generation or structuralRevision
       end
     end
 
-    Frame->>PlanCache: store ordinary committed records only
+    Ordinary->>PlanCache: store ordinary committed records only
   end
+  Ordinary-->>Frame: ordinary committed records
 
   opt selectedMoveDelta is active
-    Frame->>Frame: filter movable selected ids from ordinary records for this frame
-    Frame->>Spatial: query selected supplement using visibilityRect shifted by -selectedMoveDelta
-    Spatial-->>Frame: selected candidate handles with id, generation, orderToken, and structuralRevision
+    Frame->>Supplement: stage selected move supplement
+    Supplement->>Supplement: filter movable selected ids from ordinary records for this frame
+    Supplement->>Spatial: query selected supplement using visibilityRect shifted by -selectedMoveDelta
+    Spatial-->>Supplement: selected candidate handles with id, generation, orderToken, and structuralRevision
     loop for each selected supplement candidate handle
-      Frame->>Facts: resolve handle against captured structuralRevision and generation
+      Supplement->>Facts: resolve handle against captured structuralRevision and generation
       Facts->>Store: read committed selected row snapshot
       Store-->>Facts: immutable selected row view or stale rejection
       alt selected row facts are current
-        Facts-->>Frame: selected row facts
-        Frame->>Frame: build per-frame supplement RenderElementRecord with previewDelta
+        Facts-->>Supplement: selected row facts
+        Supplement->>Supplement: build per-frame supplement RenderElementRecord with previewDelta
       else stale selected candidate
-        Facts-->>Frame: stale candidate rejection
-        Frame->>Frame: skip selected supplement candidate
+        Facts-->>Supplement: stale candidate rejection
+        Supplement->>Supplement: skip selected supplement candidate
       end
     end
-    Frame->>Frame: merge filtered ordinary records and supplement records by orderToken
-    Note over Frame,PlanCache: Selected supplement records are per-frame and are not stored in PaintPlanCache.
+    Supplement->>Supplement: merge filtered ordinary records and supplement records by orderToken
+    Supplement-->>Frame: merged records with per-frame supplement
+    Note over Supplement,PlanCache: Selected supplement records are per-frame and are not stored in PaintPlanCache.
   end
 
-  Note over Frame: No full-scene sort and no CanvasDocument materialization.
-  Note over Frame,SelectionFacts: Selection decoration and selected move supplements are per-frame render concerns outside the ordinary PaintPlanCache.
+  Frame->>Decoration: build selection decoration plan
+  Decoration-->>Frame: selection UI primitives
+  Frame->>Background: build static background plan
+  Background-->>Frame: static background primitive
+  Note over Supplement: No full-scene sort and no CanvasDocument materialization.
+  Note over Decoration,SelectionFacts: Selection decoration and selected move supplements are per-frame render concerns outside the ordinary PaintPlanCache.
 
   opt records include image resource ids
     loop for each image resource id in records
-      Frame->>Facts: read descriptor facts by resourceId
+      Frame->>Assets: bind descriptor to paint asset
+      Assets->>Facts: read descriptor facts by resourceId
       Facts->>Store: read descriptor facts from committed state
       Store-->>Facts: appKey descriptor, resourceRevision, or missing descriptor
-      Facts-->>Frame: immutable descriptor facts or missing descriptor
-      Frame->>Session: resolve paint asset(descriptor snapshot, resourceRevision)
+      Facts-->>Assets: immutable descriptor facts or missing descriptor
+      Assets->>Session: resolve paint asset(descriptor snapshot, resourceRevision)
 
       alt cached resolved image is current
-        Session-->>Frame: app-owned image paint asset
+        Session-->>Assets: app-owned image paint asset
       else descriptor missing or resolver returns null
-        Session-->>Frame: bounded missing image placeholder
+        Session-->>Assets: bounded missing image placeholder
       else per-frame resolver budget exceeded
-        Session-->>Frame: bounded placeholder, no null/missing cache write
+        Session-->>Assets: bounded placeholder, no null/missing cache write
       else cache miss and resolver budget available
         Session->>Resolver: resolveImage(appKey descriptor)
         Resolver-->>Session: app-owned image or null
-        Session-->>Frame: resolved image or bounded placeholder
+        Session-->>Assets: resolved image or bounded placeholder
       end
+      Assets-->>Frame: resolved paint asset or placeholder
     end
   end
 
@@ -110,5 +127,5 @@ sequenceDiagram
 
   Note over Painter: Painter consumes immutable RenderElementRecord data only, it performs no live runtime reads.
   Note over Frame,Store: Forbidden in main paint: direct FrameEngine store reads, Store mutation, CanvasDocument projection, DocumentProjectionCache read, public API reads, and InteractionEngine mutation.
-  Note over Session,Resolver: SurfaceResourceSession owns synchronous app resolver calls, painter never calls the application resolver directly.
+  Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession; painter never calls the application resolver directly.
   Note over Surface,Painter: No legacy scene, controller, snapshot, or public DTO entities participate in this sequence.

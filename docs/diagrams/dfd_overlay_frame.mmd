@@ -16,14 +16,14 @@ flowchart LR
     SelectedMovePreview["Selected move preview\nmain-scene preview only"]
   end
 
-  subgraph Frame["FrameEngine"]
+  subgraph Frame["FrameEngine facade and frame-private collaborators"]
     OverlayRepaint["Overlay repaint request"]
-    Capture["Overlay frame capture\nsingle runtime read boundary"]
+    Capture["FrameCaptureService\noverlay frame capture\nsingle runtime read boundary"]
     CapturedFrame["CapturedOverlayFrame\npreviewRevision, viewCameraRevision,\nviewCameraOffset, previewState,\nselectionStyle"]
-    PreviewAdmission["Preview admission from captured sealed variant\nexclude CanvasSelectedMovePreview"]
+    PreviewAdmission["OverlayPreviewPlanner\npreview admission from captured sealed variant\nexclude CanvasSelectedMovePreview"]
     CapturedOverlayKinds["Captured overlay preview variants\nmarquee, pencil, marker,\npending line start, line preview, eraser"]
     MainRepaintReference["Main repaint bus\noutside overlay paint path"]
-    PrimitiveBuilder["One-shot overlay primitive builder\ncamera-adjusted immutable data"]
+    PrimitiveBuilder["OverlayPreviewPlanner\none-shot overlay primitive builder\ncamera-adjusted immutable data"]
     OverlayPrimitives["Immutable overlay primitives\nmarquee fill/stroke, stroke preview,\npending line, eraser corridor,\nselection UI style"]
     ProjectionBlocked["No CanvasDocument materialization\nin overlay paint"]
   end

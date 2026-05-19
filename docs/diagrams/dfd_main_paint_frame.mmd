@@ -44,21 +44,22 @@ flowchart LR
     MissingPlaceholder["Bounded missing image placeholder"]
   end
 
-  subgraph Frame["FrameEngine"]
+  subgraph Frame["FrameEngine facade and frame-private collaborators"]
     RepaintSignal["Main repaint request"]
-    Capture["Main frame capture\nsingle runtime read boundary"]
+    Capture["FrameCaptureService\nmain frame capture\nsingle runtime read boundary"]
     CapturedFrame["CapturedMainFrame\ndocument, structural, bounds,\nelementVisual, backgroundRevision,\ngridRevision, gridStrokeWidth,\nresourceVisual, selection,\nselectionStyle,\nview camera, viewportRect,\ndevicePixelRatio, selectedMoveDelta"]
     PaintPlanCache["PaintPlanCache\nordinary committed records only\nno background/grid, view camera,\nselectedMoveDelta, previewDelta,\nor style-only facts in key/value"]
     OrdinaryPlan["Ordinary committed paint plan\ncached RenderElementRecord list"]
-    OrdinaryStage["Ordinary paint candidates\nviewport and halo"]
-    SupplementStage["Per-frame selected supplement staging\npreview-shifted visibility"]
-    RecordBuilder["Render record builder\nresolve handles by revision/generation"]
-    FilterOrdinary["Filter selected movable ids\nfrom ordinary stream for this frame"]
+    OrdinaryStage["OrdinaryPaintPlanner\nordinary paint candidates\nviewport and halo"]
+    SupplementStage["SelectedMoveSupplementPlanner\nper-frame selected supplement staging\npreview-shifted visibility"]
+    RecordBuilder["OrdinaryPaintPlanner\nrender record builder\nresolve handles by revision/generation"]
+    FilterOrdinary["SelectedMoveSupplementPlanner\nfilter selected movable ids\nfrom ordinary stream for this frame"]
     Merge["Order-token merge\nno full-scene sort"]
-    SelectionDecoration["Selection decoration plan\nseparate from ordinary records"]
+    SelectionDecoration["SelectionDecorationPlanner\nselection decoration plan\nseparate from ordinary records"]
     Records["Immutable frame record list\nordinary row views plus per-frame\nselection decoration/supplements"]
     RenderCaches["Frame render caches\ntext, path, stroke"]
-    StaticBackgroundCache["StaticBackgroundCache\nbackgroundRevision + gridRevision\n+ gridStrokeWidth + view camera bucket\n+ viewportRect + devicePixelRatio"]
+    StaticBackgroundCache["StaticBackgroundPlanner\nStaticBackgroundCache\nbackgroundRevision + gridRevision\n+ gridStrokeWidth + view camera bucket\n+ viewportRect + devicePixelRatio"]
+    AssetBinding["PaintAssetBindingService\ndescriptor-to-asset binding\nthrough SurfaceResourceSession"]
     ResolvedAssets["Resolved paint assets\nimages or placeholders"]
     PaintAlphaPolicy["Ordinary opacity policy\nelement/stroke opacity -> primitive paint alpha\nno implicit saveLayer"]
     ExplicitLayerEffect["Future saveLayer effect\nexplicit RenderElementRecord field,\nbudgeted, metric-counted,\nand guarded by contract update"]
@@ -123,11 +124,13 @@ flowchart LR
   RenderCaches -->|"bounded cached paint primitives"| MainPainter
   StaticBackgroundCache -->|"bounded static background primitive"| MainPainter
 
-  Records -->|"image resource ids"| DescriptorFacts
+  Records -->|"image resource ids"| AssetBinding
+  AssetBinding -->|"request descriptor facts"| DescriptorFacts
   DescriptorFacts -->|"read committed descriptor facts\nby captured revision"| Committed
   Committed -->|"immutable descriptor facts"| DescriptorFacts
-  Surface -->|"owns SurfaceResourceSession\nwith resolverGeneration"| ResolvePaintAsset
-  DescriptorFacts -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
+  Surface -->|"owns SurfaceResourceSession\nwith resolverGeneration"| AssetBinding
+  DescriptorFacts -->|"descriptor snapshot + resourceRevision"| AssetBinding
+  AssetBinding -->|"resolve via session only"| ResolvePaintAsset
   ResolvePaintAsset -->|"cache lookup and bounded update"| ImageResolveCache
   ImageResolveCache -->|"cached app-owned image"| ResolvePaintAsset
   ImageResolveCache -->|"cache miss"| ResolverFrameBudget

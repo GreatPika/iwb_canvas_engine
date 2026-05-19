@@ -3,7 +3,9 @@ sequenceDiagram
   autonumber
 
   participant Surface as CanvasSurface
-  participant Frame as FrameEngine
+  participant Frame as FrameEngine facade
+  participant Capture as FrameCaptureService
+  participant Overlay as OverlayPreviewPlanner
   participant Runtime as Runtime view camera
   participant Preview as CanvasPreviewState
   participant MainPath as Main scene preview path
@@ -11,34 +13,37 @@ sequenceDiagram
   participant Painter as Overlay painter
 
   Surface->>Frame: paint overlay request(selectionStyle)
-  Frame->>Runtime: capture viewCameraOffset once for overlay frame
-  Runtime-->>Frame: viewCameraRevision and viewCameraOffset
-  Frame->>Preview: capture previewRevision and immutable previewState once
-  Preview-->>Frame: previewRevision and immutable previewState
-  Surface-->>Frame: selectionStyle for this paint frame
-  Note over Frame: CapturedOverlayFrame freezes previewRevision, viewCameraRevision, viewCameraOffset, immutable previewState, and selectionStyle for this paint frame.
+  Frame->>Capture: capture overlay frame once
+  Capture->>Runtime: capture viewCameraOffset once for overlay frame
+  Runtime-->>Capture: viewCameraRevision and viewCameraOffset
+  Capture->>Preview: capture previewRevision and immutable previewState once
+  Preview-->>Capture: previewRevision and immutable previewState
+  Surface-->>Capture: selectionStyle for this paint frame
+  Capture-->>Frame: CapturedOverlayFrame
+  Note over Capture: CapturedOverlayFrame freezes previewRevision, viewCameraRevision, viewCameraOffset, immutable previewState, and selectionStyle for this paint frame.
 
-  Frame->>Frame: admit overlay preview variant from captured CanvasPreviewState only
+  Frame->>Overlay: admit overlay preview variant from captured CanvasPreviewState only
 
   alt preview is CanvasMarqueePreview
-    Frame->>Builder: build marquee fill and stroke primitive
+    Overlay->>Builder: build marquee fill and stroke primitive
   else preview is CanvasPencilStrokePreview or CanvasMarkerStrokePreview
-    Frame->>Builder: build stroke preview primitive from CanvasStrokePreview facts
+    Overlay->>Builder: build stroke preview primitive from CanvasStrokePreview facts
   else preview is CanvasPendingLineStartPreview
-    Frame->>Builder: build pending line start primitive
+    Overlay->>Builder: build pending line start primitive
   else preview is CanvasLinePreview
-    Frame->>Builder: build line preview primitive
+    Overlay->>Builder: build line preview primitive
   else preview is CanvasEraserPreview
-    Frame->>Builder: build eraser corridor primitive
+    Overlay->>Builder: build eraser corridor primitive
   else preview is CanvasSelectedMovePreview
-    Frame-->>MainPath: reject selected move from overlay admission
+    Overlay-->>MainPath: reject selected move from overlay admission
     Note over MainPath: Selected move preview is rendered by the main scene selected supplement path, never by overlay paint.
   else no overlay preview
-    Frame->>Builder: build empty overlay primitive list
+    Overlay->>Builder: build empty overlay primitive list
   end
 
-  Builder-->>Frame: immutable overlay primitives
-  Note over Builder,Frame: Primitive construction uses captured viewCameraOffset, previewState, and selectionStyle only.
+  Builder-->>Overlay: immutable overlay primitives
+  Overlay-->>Frame: immutable overlay primitives
+  Note over Builder,Overlay: Primitive construction uses captured viewCameraOffset, previewState, and selectionStyle only.
   Frame->>Painter: paint captured overlay frame and immutable primitives
   Painter-->>Surface: draw overlay UI
 

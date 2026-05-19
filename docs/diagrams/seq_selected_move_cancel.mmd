@@ -12,7 +12,10 @@ sequenceDiagram
   participant SelectionFacts as SelectionFactsPort
   participant Spatial as SpatialKernel
   participant Preview as CanvasPreviewState
-  participant Frame as FrameEngine
+  participant Frame as FrameEngine facade
+  participant Capture as FrameCaptureService
+  participant Ordinary as OrdinaryPaintPlanner
+  participant Supplement as SelectedMoveSupplementPlanner
   participant PlanCache as PaintPlanCache
   participant Resolver as CanvasMoveCommitResolver
   participant EK as EditKernel
@@ -52,39 +55,45 @@ sequenceDiagram
     Preview-->>Runtime: preview revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request main-scene repaint only
-    Frame->>Facts: capture committed frame facts once
+    Frame->>Capture: capture main frame once
+    Capture->>Facts: capture committed frame facts once
     Facts->>Store: read committed revision facts
     Store-->>Facts: immutable committed frame facts
-    Facts-->>Frame: committed frame facts
-    Frame->>SelectionFacts: capture selected ids once
-    Frame->>Preview: capture CanvasSelectedMovePreview.delta once
-    Frame->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and device keys
+    Facts-->>Capture: committed frame facts
+    Capture->>SelectionFacts: capture selected ids once
+    Capture->>Preview: capture CanvasSelectedMovePreview.delta once
+    Capture-->>Frame: CapturedMainFrame
+    Frame->>Ordinary: lookup/build ordinary paint plan
+    Ordinary->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and device keys
     alt ordinary paint plan cache hit
-      PlanCache-->>Frame: ordinary committed RenderElementRecord list
+      PlanCache-->>Ordinary: ordinary committed RenderElementRecord list
     else ordinary paint plan cache miss
-      Frame->>Spatial: query ordinary viewport candidates
-      Spatial-->>Frame: ordinary candidate handles
-      Frame->>Facts: resolve ordinary handles against captured revisions
+      Ordinary->>Spatial: query ordinary viewport candidates
+      Spatial-->>Ordinary: ordinary candidate handles
+      Ordinary->>Facts: resolve ordinary handles against captured revisions
       Facts->>Store: read committed row snapshots
       Store-->>Facts: ordinary committed row views
-      Facts-->>Frame: ordinary row facts or stale rejection
-      Frame->>PlanCache: store ordinary committed records only
+      Facts-->>Ordinary: ordinary row facts or stale rejection
+      Ordinary->>PlanCache: store ordinary committed records only
     end
-    Frame->>Frame: filter movable selected ids from ordinary records for this frame
-    Frame->>Spatial: query selected supplement shifted by -previewDelta
-    Spatial-->>Frame: selected supplement candidate handles
-    Frame->>Facts: resolve selected supplement handles against captured revisions
+    Ordinary-->>Frame: ordinary committed records
+    Frame->>Supplement: stage selected move supplement
+    Supplement->>Supplement: filter movable selected ids from ordinary records for this frame
+    Supplement->>Spatial: query selected supplement shifted by -previewDelta
+    Spatial-->>Supplement: selected supplement candidate handles
+    Supplement->>Facts: resolve selected supplement handles against captured revisions
     Facts->>Store: read selected row snapshots
     Store-->>Facts: selected row views or stale rejection
     alt selected row facts are current
-      Facts-->>Frame: selected row facts
-      Frame->>Frame: build per-frame supplement records with previewDelta
+      Facts-->>Supplement: selected row facts
+      Supplement->>Supplement: build per-frame supplement records with previewDelta
     else stale selected candidate
-      Facts-->>Frame: stale candidate rejection
-      Frame->>Frame: skip selected supplement candidate
+      Facts-->>Supplement: stale candidate rejection
+      Supplement->>Supplement: skip selected supplement candidate
     end
-    Frame->>Frame: merge filtered ordinary records and supplement by orderToken
-    Note over Frame,PlanCache: Selected supplement records are per-frame and are not stored in PaintPlanCache.
+    Supplement->>Supplement: merge filtered ordinary records and supplement by orderToken
+    Supplement-->>Frame: merged selected move preview records
+    Note over Supplement,PlanCache: Selected supplement records are per-frame and are not stored in PaintPlanCache.
     Frame->>Signals: publish main repaint request
     Signals-->>Surface: repaint main scene with selected move preview
   end
@@ -122,26 +131,30 @@ sequenceDiagram
   Preview-->>Runtime: preview cleanup revision fact
   Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
   Preview->>Frame: request main-scene repaint cleanup
-  Frame->>Facts: capture committed frame facts once
+  Frame->>Capture: capture main frame once
+  Capture->>Facts: capture committed frame facts once
   Facts->>Store: read committed revision facts
   Store-->>Facts: immutable committed frame facts
-  Facts-->>Frame: committed frame facts
-  Frame->>SelectionFacts: capture selected ids once
-  Frame->>Preview: capture CanvasNoPreview for selected move path
-  Frame->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and device keys
+  Facts-->>Capture: committed frame facts
+  Capture->>SelectionFacts: capture selected ids once
+  Capture->>Preview: capture CanvasNoPreview for selected move path
+  Capture-->>Frame: CapturedMainFrame
+  Frame->>Ordinary: lookup/build ordinary paint plan
+  Ordinary->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewport, and device keys
   alt ordinary paint plan cache hit
-    PlanCache-->>Frame: ordinary committed RenderElementRecord list
+    PlanCache-->>Ordinary: ordinary committed RenderElementRecord list
   else ordinary paint plan cache miss
-    Frame->>Spatial: query ordinary viewport candidates
-    Spatial-->>Frame: ordinary candidate handles
-    Frame->>Facts: resolve ordinary handles against captured revisions
+    Ordinary->>Spatial: query ordinary viewport candidates
+    Spatial-->>Ordinary: ordinary candidate handles
+    Ordinary->>Facts: resolve ordinary handles against captured revisions
     Facts->>Store: read committed row snapshots
     Store-->>Facts: ordinary committed row views
-    Facts-->>Frame: ordinary row facts or stale rejection
-    Frame->>PlanCache: store ordinary committed records only
+    Facts-->>Ordinary: ordinary row facts or stale rejection
+    Ordinary->>PlanCache: store ordinary committed records only
   end
-  Frame->>Frame: use ordinary committed records without selected move preview delta
-  Note over Frame,PlanCache: Cleanup has no selectedMoveDelta, selected-move preview records are not stored in PaintPlanCache.
+  Ordinary-->>Frame: ordinary committed records
+  Frame->>Ordinary: use ordinary committed records without selected move preview delta
+  Note over Ordinary,PlanCache: Cleanup has no selectedMoveDelta, selected-move preview records are not stored in PaintPlanCache.
   Frame->>Signals: publish main repaint cleanup request
   Signals-->>Surface: repaint main scene without selected move preview
   IE->>IE: return pointer runtime to idle
