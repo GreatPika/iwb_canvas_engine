@@ -481,7 +481,7 @@ Expected signal: both commands exit successfully.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Lock FrameFactsPort Ownership And Package Boundary
+### Slice 1. [x] Lock FrameFactsPort Ownership And Package Boundary
 
 #### Implements
 
@@ -531,7 +531,7 @@ Run P2 to confirm component/container diagrams no longer accept direct
 Slice 1 is complete when architecture docs and owner diagrams agree that
 `FrameEngine` receives committed document facts only through `FrameFactsPort`.
 
-### Slice 2. [ ] Route Frame And Resource Capture Through The Port
+### Slice 2. [x] Route Frame And Resource Capture Through The Port
 
 #### Implements
 
@@ -600,7 +600,7 @@ Slice 2 is complete when main paint and resource resolution docs no longer leave
 any accepted path where `FrameEngine` reads committed document rows or
 descriptors directly from `DocumentStoreKernel`.
 
-### Slice 3. [ ] Add Verification And Index Coverage
+### Slice 3. [x] Add Verification And Index Coverage
 
 #### Implements
 
@@ -647,7 +647,7 @@ confirm documentation structure remains coherent.
 Slice 3 is complete when the new boundary has guardrail/test/index coverage and
 documentation tooling passes.
 
-### Slice 4. [ ] Final Semantic Retirement Check
+### Slice 4. [x] Final Semantic Retirement Check
 
 #### Implements
 

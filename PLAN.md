@@ -35,4 +35,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 13. Public error code contract prose](plan/step_13_public_error_code_contract_prose.md)
 - [x] [Step 14. Public API contract consistency follow-up](plan/step_14_public_api_contract_consistency_followup.md)
 - [x] [Step 15. Runtime-created timestamp monotonic proof mapping](plan/step_15_runtime_created_timestamp_monotonic_proof_mapping.md)
-- [ ] [Step 16. FrameFactsPort committed frame facts boundary](plan/step_16_frame_facts_port_committed_frame_facts_boundary.md)
+- [x] [Step 16. FrameFactsPort committed frame facts boundary](plan/step_16_frame_facts_port_committed_frame_facts_boundary.md)
