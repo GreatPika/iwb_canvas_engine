@@ -68,10 +68,12 @@
     - api.no_legacy_public_types
     - core.import_boundaries
     - core.no_unapproved_part_files
+    - frame.committed_facts_via_frame_facts_port
     - interaction.no_concrete_selection_imports
   tests:
     - test.api_contract.no_legacy_public_symbols
     - test.guardrails.import_boundaries
+    - test.guardrails.frame_committed_facts_via_frame_facts_port
     - test.guardrails.selection_boundary_imports
   do_not_assume:
     - no legacy package import
@@ -576,6 +578,7 @@
   guardrails:
     - preview.selected_move_main_repaint
     - api.preview_state_sealed_union_publicly_readable
+    - frame.committed_facts_via_frame_facts_port
     - frame.no_global_scene_sort
     - frame.paint_plan_excludes_preview_delta
     - frame.paint_plan_excludes_selection_state
@@ -584,6 +587,7 @@
     - test.store.no_projection_hot_path
     - test.frame.main_overlay_capture
     - test.frame.no_live_runtime_read_in_painters
+    - test.guardrails.frame_committed_facts_via_frame_facts_port
     - test.frame.paint_plan_excludes_preview_delta
     - test.frame.paint_plan_excludes_selection_state
     - test.frame.camera_pan_preserves_ordinary_paint_plan
@@ -819,6 +823,7 @@
     - spatial.no_full_clone_ordinary_edit
     - spatial.stale_candidate_rejected
     - spatial.fallback_budget_enforced
+    - frame.committed_facts_via_frame_facts_port
     - frame.no_global_scene_sort
     - frame.paint_plan_excludes_preview_delta
     - frame.paint_plan_excludes_selection_state
@@ -842,6 +847,7 @@
     - diagrams.all_required_present
   tests:
     - test.api_contract.app_next_engine_adapter_compile_fixture
+    - test.guardrails.frame_committed_facts_via_frame_facts_port
     - test.guardrails.blocking_suite
   do_not_assume:
     - no non-blocking critical guardrail
@@ -1007,6 +1013,7 @@
     - test.spatial.fallback_budget_enforced
     - test.frame.main_overlay_capture
     - test.frame.no_live_runtime_read_in_painters
+    - test.guardrails.frame_committed_facts_via_frame_facts_port
     - test.frame.paint_plan_excludes_preview_delta
     - test.frame.camera_pan_preserves_ordinary_paint_plan
     - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
@@ -1176,6 +1183,7 @@
     - spatial.no_full_clone_ordinary_edit
     - spatial.stale_candidate_rejected
     - spatial.fallback_budget_enforced
+    - frame.committed_facts_via_frame_facts_port
     - frame.no_global_scene_sort
     - frame.paint_plan_excludes_preview_delta
     - frame.paint_plan_excludes_selection_state
@@ -1199,6 +1207,7 @@
     - diagrams.all_required_present
   tests:
     - test.api_contract.app_next_engine_adapter_compile_fixture
+    - test.guardrails.frame_committed_facts_via_frame_facts_port
     - test.guardrails.blocking_suite
   do_not_assume:
     - no release with legacy imports, legacy facade, or unlinked donor reuse

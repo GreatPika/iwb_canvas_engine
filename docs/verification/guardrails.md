@@ -16,6 +16,7 @@ Related diagrams:
 - `none`
 Required tests:
 - `test.api_contract.app_next_engine_adapter_compile_fixture`
+- `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `oracle.legacy_capability_inventory_complete`
@@ -66,6 +67,7 @@ Guardrails:
 - `spatial.no_full_clone_ordinary_edit`
 - `spatial.stale_candidate_rejected`
 - `spatial.fallback_budget_enforced`
+- `frame.committed_facts_via_frame_facts_port`
 - `frame.no_global_scene_sort`
 - `frame.paint_plan_excludes_preview_delta`
 - `frame.paint_plan_excludes_selection_state`
@@ -186,6 +188,7 @@ Mandatory guardrails:
 | `spatial.no_full_clone_ordinary_edit` | ordinary spatial updates touch only changed ids/pages; full rebuild is reserved for replacement/load paths |
 | `spatial.stale_candidate_rejected` | stale candidate handles are rejected by generation and structuralRevision checks before frame/hit use |
 | `spatial.fallback_budget_enforced` | fallback candidate union enforces maxFallbackCandidates, diagnostic counter, and typed budget-exceeded result |
+| `frame.committed_facts_via_frame_facts_port` | production frame code obtains committed frame facts, row snapshots, and descriptor snapshots through `FrameFactsPort`, and `lib/src/frame/**` does not import concrete store internals |
 | `frame.no_global_scene_sort` | selected supplement staging merges by orderToken and does not globally sort all scene elements |
 | `frame.paint_plan_excludes_preview_delta` | PaintPlanCache stores ordinary committed records only and excludes selectedMoveDelta/previewDelta from keys and values |
 | `frame.paint_plan_excludes_selection_state` | PaintPlanCache stores ordinary committed records only and excludes selected ids, selectionRevision, and selection flags from keys and values |

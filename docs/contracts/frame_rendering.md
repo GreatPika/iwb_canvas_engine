@@ -33,6 +33,7 @@ Required tests:
 - `test.store.no_projection_hot_path`
 - `test.frame.main_overlay_capture`
 - `test.frame.no_live_runtime_read_in_painters`
+- `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.frame.paint_plan_excludes_preview_delta`
 - `test.frame.paint_plan_excludes_selection_state`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
@@ -42,6 +43,7 @@ Required tests:
 Guardrails:
 - `preview.selected_move_main_repaint`
 - `api.preview_state_sealed_union_publicly_readable`
+- `frame.committed_facts_via_frame_facts_port`
 - `frame.no_global_scene_sort`
 - `frame.paint_plan_excludes_preview_delta`
 - `frame.paint_plan_excludes_selection_state`

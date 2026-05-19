@@ -374,6 +374,12 @@ Guardrails extracted from split section 22.
 - Sections: `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.store.read_document_projection`, `test.store.no_projection_hot_path`, `test.guardrails.blocking_suite`
 
+## frame.committed_facts_via_frame_facts_port
+
+- Rule: production frame code obtains committed frame facts, row snapshots, and descriptor snapshots through `FrameFactsPort`, and `lib/src/frame/**` does not import concrete store internals
+- Sections: `section_03_package_layout`, `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.frame.main_overlay_capture`, `test.frame.no_live_runtime_read_in_painters`, `test.guardrails.frame_committed_facts_via_frame_facts_port`, `test.guardrails.blocking_suite`
+
 ## resources.no_same_frame_missing_retry
 
 - Rule: missing/null resource resolve results are suppressed by resolverGeneration, resourceId, and resourceRevision for the frame instead of retried immediately; resolver swap clears suppression state

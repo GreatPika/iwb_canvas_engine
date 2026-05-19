@@ -158,6 +158,7 @@ Required tests:
 - `test.spatial.fallback_budget_enforced`
 - `test.frame.main_overlay_capture`
 - `test.frame.no_live_runtime_read_in_painters`
+- `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.frame.paint_plan_excludes_preview_delta`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
@@ -464,6 +465,18 @@ test/guardrails/selection_boundary_imports_test.dart
      DocumentStoreKernel internals;
   -> proves interaction selection/document reads are routed through
      intent-specific immutable query ports.
+
+test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart
+  -> proves production `lib/src/frame/**` code does not import concrete
+     `DocumentStoreKernel`, `CommittedDocument`, family tables, resource
+     tables, `DocumentProjectionCache`, drafts, or public projection internals
+     for frame capture, row resolution, or descriptor lookup;
+  -> proves frame committed facts, immutable row snapshots with stale
+     structuralRevision/generation rejection, immutable descriptor snapshots,
+     and `resourceRevision` are obtained through `FrameFactsPort`;
+  -> proves `FrameFactsPort` does not expose frame-owned render models,
+     selection facts, resolver state, mutation APIs, or public document
+     projection access.
 ```
 
 Legacy capability inventory rows require inventory-only tests. Functional

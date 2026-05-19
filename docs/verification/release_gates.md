@@ -82,6 +82,7 @@ Related diagrams:
 - `none`
 Required tests:
 - `test.api_contract.app_next_engine_adapter_compile_fixture`
+- `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `oracle.legacy_capability_inventory_complete`
@@ -132,6 +133,7 @@ Guardrails:
 - `spatial.no_full_clone_ordinary_edit`
 - `spatial.stale_candidate_rejected`
 - `spatial.fallback_budget_enforced`
+- `frame.committed_facts_via_frame_facts_port`
 - `frame.no_global_scene_sort`
 - `frame.paint_plan_excludes_preview_delta`
 - `frame.paint_plan_excludes_selection_state`
