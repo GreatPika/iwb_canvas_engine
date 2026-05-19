@@ -598,8 +598,9 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_23_tests`
 - Guardrails: `interaction.text_edit_stale_commit_guard`, `events.commands_emit_user_actions`
 - Focus: `CanvasInteractionRequestId`-keyed text commits accept only current
-  text content-target context requests, reject stale, empty-canvas, non-text,
-  missing, retired, and family-mismatched request facts without effects, allow
+  text content-target context requests, treat unknown/already-retired ids as
+  no-ops, privately retire known live rejected stale, empty-canvas, non-text,
+  missing, and family-mismatched request facts without public effects, allow
   unrelated `documentRevision` changes, retire accepted requests, and emit
   `editText` only for changed text.
 

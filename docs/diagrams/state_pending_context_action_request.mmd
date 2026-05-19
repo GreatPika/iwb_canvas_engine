@@ -150,13 +150,14 @@ stateDiagram-v2
   end note
 
   IssuedRequestLive --> RetiredRequest: "commitTextEdit accepted no-op or changed text content request / retire request"
-  IssuedRequestLive --> RetiredRequest: "commitTextEdit rejected stale, empty-canvas, non-text, missing, retired, or family-mismatched request"
+  IssuedRequestLive --> RetiredRequest: "commitTextEdit rejects known live stale, empty-canvas, non-text, missing, or family-mismatched request / privately retire request"
   IssuedRequestLive --> RetiredRequest: "loadDocument success / controllerEpoch makes request stale"
   IssuedRequestLive --> Disposed: "runtime.dispose() / later commitTextEdit throws StateError"
 
   state "Retired or stale request id" as RetiredRequest
   note right of RetiredRequest
     Retired and epoch-stale request ids cannot commit.
+    Unknown and already-retired ids do nothing.
     Text commit acceptance requires a current,
     unretired text content target request.
     documentRevision is not a stale guard.

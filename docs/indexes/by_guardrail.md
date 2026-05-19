@@ -373,9 +373,10 @@ Guardrails extracted from split section 22.
 ## interaction.text_edit_stale_commit_guard
 
 - Rule: request-originated text commits accept only current text content-target
-  context requests and reject unknown, retired, epoch-stale, generation-stale,
-  revision-stale, missing, empty-canvas, non-text, or family-mismatched targets
-  while allowing unrelated documentRevision changes
+  context requests, treat unknown/already-retired ids as no-ops, privately
+  retire known live rejected epoch-stale, generation-stale, revision-stale,
+  missing, empty-canvas, non-text, or family-mismatched targets without public
+  effects, and allow unrelated documentRevision changes
 - Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.interaction.context_action_request`, `test.interaction.text_edit_stale_commit_guard`, `test.guardrails.blocking_suite`
 

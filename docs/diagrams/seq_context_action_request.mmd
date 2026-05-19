@@ -131,9 +131,13 @@ sequenceDiagram
     Registry-->>Commands: request facts or stale/retired
     Commands->>ReadPort: read current element generation, elementRevision, family, and controllerEpoch
     ReadPort-->>Commands: current guard facts
-    alt request is empty-canvas, non-text, unknown, retired, stale, missing, or family-mismatched
+    alt request is unknown or already retired
       Commands-->>App: false
-      Note over Commands,Signals: Rejection has no document, revision, repaint, or action effect. documentRevision is observation-only and is not a stale guard.
+      Note over Commands,Signals: Unknown or already-retired request ids are pure no-ops with no private retirement, document, revision, repaint, or action effect.
+    else known live request is empty-canvas, non-text, stale, missing, or family-mismatched
+      Commands->>Registry: privately retire request
+      Commands-->>App: false
+      Note over Commands,Signals: Known rejected request retirement is private registry state only. Rejection has no public state, document, selection, preview, repaint, or action effect. documentRevision is observation-only and is not a stale guard.
     else current text equals newText
       Commands->>Registry: retire request
       Commands-->>App: true

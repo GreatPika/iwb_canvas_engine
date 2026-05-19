@@ -283,8 +283,9 @@ recognition still revalidates the second tap against pending target facts;
 delivery has no document, selection, preview, repaint, spatial, projection,
 resource, or action effect; pending context tap cleanup emits no request or
 effects; and request-originated text commits are accepted only for current text
-content-target request ids while empty-canvas, non-text, stale, retired,
-missing, and family-mismatched request ids are rejected without effects.
+content-target request ids while unknown/already-retired ids are no-ops and
+known live empty-canvas, non-text, stale, missing, and family-mismatched request
+ids are privately retired without public effects.
 
 `test.codec.constructor_and_schema_limits` covers element transform admission
 at public DTO construction and schema decode: non-invertible element

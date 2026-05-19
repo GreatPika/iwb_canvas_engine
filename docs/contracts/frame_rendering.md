@@ -225,7 +225,7 @@ Algorithm:
 13. Do not materialize CanvasDocument.
 ```
 
-Future ownership: `OrdinaryPaintPlanner` owns steps 1 through 4, while
+Accepted internal ownership: `OrdinaryPaintPlanner` owns steps 1 through 4, while
 `SelectedMoveSupplementPlanner` owns steps 5 through 12. The supplement planner
 consumes captured selection facts and ordinary records for the current frame,
 but does not write the ordinary `PaintPlanCache`, does not render overlays, and
@@ -237,7 +237,7 @@ paint plans. Its decoration key includes `boundsRevision` because selected
 element bounds can change without changing selection membership. `selectedOrder`
 is derived data or a bounded cache keyed by `selectionRevision` and
 `structuralRevision`; it is not a second stored selection source of truth.
-Future ownership: `SelectionDecorationPlanner` owns the decoration key,
+Accepted internal ownership: `SelectionDecorationPlanner` owns the decoration key,
 including `boundsRevision`, and keeps selection decoration state out of
 ordinary record cache identity, selected move supplement records, and static
 background identity.

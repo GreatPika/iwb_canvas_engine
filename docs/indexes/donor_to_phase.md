@@ -330,7 +330,7 @@ Every donor is mapped to target phases. `avoid` records are forbidden as structu
 
 - Decision: `adapt`
 - Target phases: `P12`
-- Target owner: Text edit request router
+- Target owner: Context-action double-tap router
 
 ## interaction_gesture_runtime
 

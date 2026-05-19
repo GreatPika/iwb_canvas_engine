@@ -123,6 +123,11 @@ Notes:
   empty-canvas target, non-text target, and current text-family mismatch.
   `documentRevision` is observation-only; unrelated document edits do not
   reject a still-current text edit.
+- For `commitTextEdit` stale rejection, known live rejected request ids retire
+  privately in InteractionRequestRegistry, while unknown or already-retired ids
+  do nothing. That private registry retirement does not publish public
+  `CanvasRuntimeState` and has no document, selection, preview, spatial,
+  projection, resource, repaint, or action effect.
 - `commitTextEdit` validates `newText` before request retirement and before
   draft mutation. Changed text commits are normal EditKernel-backed document
   edits and emit `CanvasActionType.editText` with

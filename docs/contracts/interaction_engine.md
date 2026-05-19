@@ -265,9 +265,11 @@ focus, accessibility, text selection, hide/show policy, and editor lifetime.
 Request-originated text changes commit through
 `CanvasCommandPort.commitTextEdit(requestId, newText, timestampMs: ...)`.
 The command accepts only current, unretired context request ids whose target is
-a text content element. It retires accepted no-op and changed requests, rejects
-empty-canvas, non-text, stale, retired, missing, or family-mismatched request
-ids with no document, repaint, or action effect, validates `newText` before
+a text content element. It retires accepted no-op and changed requests,
+privately retires known live rejected request ids, treats unknown and
+already-retired ids as no-ops, rejects empty-canvas, non-text, stale, missing,
+or family-mismatched request ids with no public state, document, selection,
+preview, repaint, or action effect, validates `newText` before
 retirement or draft mutation, and delegates changed text to EditKernel before
 emitting `CanvasActionType.editText`. Direct
 `CanvasEdit.updateElement(CanvasTextElementUpdate)` remains the programmatic

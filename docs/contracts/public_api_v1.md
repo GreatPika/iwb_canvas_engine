@@ -1464,12 +1464,19 @@ Rules:
 ```text
 - command mutations must go through EditKernel and inherit rollback/stale/dispose checks;
 - removeElement emits deleteElements only when it removes an element;
-- commitTextEdit returns false and performs no mutation, state publication,
-  repaint, or action event when the request id is unknown or retired, the
-  request target is empty canvas, the request target is non-text content, the
-  controller epoch changed, the current element is missing, the current element
-  generation no longer matches the issued request, the current elementRevision
-  changed, or the current element family no longer matches a text element;
+- commitTextEdit returns false when the request id is unknown or already
+  retired; unknown and already-retired request ids perform no mutation, private
+  request retirement, public state snapshot, document, selection, preview,
+  spatial, projection, resource, repaint, or action effect;
+- commitTextEdit returns false and privately retires a known live request id in
+  InteractionRequestRegistry when the request target is empty canvas, the
+  request target is non-text content, the controller epoch changed, the current
+  element is missing, the current element generation no longer matches the
+  issued request, the current elementRevision changed, or the current element
+  family no longer matches a text element;
+- commitTextEdit private request retirement has no public state snapshot,
+  document, selection, preview, spatial, projection, resource, repaint, or
+  action effect;
 - commitTextEdit validates newText through the existing text validation path
   before request retirement and before draft mutation;
 - commitTextEdit treats documentRevision as an observation fact, not a stale
