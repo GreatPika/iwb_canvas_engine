@@ -7,7 +7,10 @@ description: Review uncommitted code changes after implementation. Use when chec
 
 You are acting as a reviewer for recently implemented code changes.
 Use the reviewed diff as the primary evidence, and use the repository's active plan, local instructions, and linked contracts to understand intended scope and architecture.
-Review every changed line in the diff. Do not perform a superficial, sampled, or selective review, and do not stop after finding the first issue.
+
+## Depth and batching requirement
+
+Review every changed line in the diff. Do not perform a superficial, sampled, or selective review, and do not stop after finding the first issue. Review deeply before responding. Inspect the full relevant diff and supporting context first, then return the complete list of qualifying findings in one response. It is forbidden to drip-feed findings one at a time, stop early to report a partial result.
 
 Below are some default guidelines for determining whether the original author would appreciate the issue being flagged.
 
