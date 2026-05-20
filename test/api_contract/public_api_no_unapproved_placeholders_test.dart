@@ -6,6 +6,13 @@ import '../../tool/guardrails/src/public_api_placeholder_allowlist.dart';
 import '../../tool/guardrails/src/repository_paths.dart';
 
 void main() {
+  _testAllowlistedPlaceholders();
+  _testAllowlistMetadata();
+  _testPlaceholderDetector();
+  _testExportCombinators();
+}
+
+void _testAllowlistedPlaceholders() {
   test('exported public placeholders are explicitly allowlisted', () {
     final discovered = _discoverPublicApiPlaceholders();
     final allowlisted = {
@@ -16,7 +23,9 @@ void main() {
     expect(discovered.difference(allowlisted), isEmpty);
     expect(allowlisted.difference(discovered), isEmpty);
   });
+}
 
+void _testAllowlistMetadata() {
   test(
     'allowlist entries carry owner phase, reason, and removal condition',
     () {
@@ -27,7 +36,9 @@ void main() {
       }
     },
   );
+}
 
+void _testPlaceholderDetector() {
   test('detector covers block bodies and ignores private helpers', () {
     expect(
       _unimplementedPlaceholdersInSource('''
@@ -73,6 +84,22 @@ void _topLevelPrivate() {
   });
 }
 
+void _testExportCombinators() {
+  test('detector covers root exports with combinators', () {
+    final paths = _exportedPublicApiPathsFromBarrel('''
+export 'src/api/visible.dart';
+export 'src/api/shown.dart' show PublicType;
+export 'src/api/hidden.dart' hide PrivateType;
+''').map((file) => file.path).toList();
+
+    expect(paths, [
+      endsWith('lib/src/api/visible.dart'),
+      endsWith('lib/src/api/shown.dart'),
+      endsWith('lib/src/api/hidden.dart'),
+    ]);
+  });
+}
+
 Set<String> _discoverPublicApiPlaceholders() {
   final placeholders = <String>{};
   for (final file in _exportedPublicApiFiles()) {
@@ -88,8 +115,14 @@ List<File> _exportedPublicApiFiles() {
     '$repositoryRoot/lib/iwb_canvas_engine.dart',
   ).readAsStringSync();
 
+  return _exportedPublicApiPathsFromBarrel(barrel);
+}
+
+List<File> _exportedPublicApiPathsFromBarrel(String barrel) {
   return [
-    for (final match in RegExp(r"export '([^']+)';").allMatches(barrel))
+    for (final match in RegExp(
+      r"export\s+'([^']+)'\s*(?:show\s+[^;]+|hide\s+[^;]+)?;",
+    ).allMatches(barrel))
       File('$repositoryRoot/lib/${match.group(1)}'),
   ];
 }
