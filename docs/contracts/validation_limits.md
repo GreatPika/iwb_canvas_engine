@@ -94,7 +94,8 @@ before any draft mutation, runtime mutation, repaint, event, or public state
 publication.
 
 `CanvasInteractionRequestId` follows the public id validator contract:
-non-empty trimmed string, length <= 256, and no control characters. It is
+non-empty canonical string, no leading/trailing whitespace, length <= 256, and
+no control characters. It is
 validated at public construction and at the engine boundary that generates
 request ids for emitted interaction requests.
 

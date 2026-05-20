@@ -11,6 +11,44 @@ String validateCanvasIdValue(
   required String path,
   required int maxLength,
 }) {
+  if (value.isEmpty) {
+    throw CanvasDataException(
+      code: CanvasDataErrorCode.fieldMustNotBeEmpty,
+      message: '$path must not be empty.',
+      path: path,
+    );
+  }
+  if (value != value.trim()) {
+    throw CanvasDataException(
+      code: CanvasDataErrorCode.invalidFieldType,
+      message: '$path must not contain leading or trailing whitespace.',
+      path: path,
+    );
+  }
+  if (value.length > maxLength) {
+    throw CanvasDataException(
+      code: CanvasDataErrorCode.fieldMaxLength,
+      message: '$path must be at most $maxLength characters.',
+      path: path,
+      details: {'maxLength': maxLength, 'actualLength': value.length},
+    );
+  }
+  if (value.runes.any(_isControlCharacter)) {
+    throw CanvasDataException(
+      code: CanvasDataErrorCode.invalidFieldType,
+      message: '$path must not contain control characters.',
+      path: path,
+    );
+  }
+
+  return value;
+}
+
+String validateCanvasAppKeyValue(
+  String value, {
+  required String path,
+  required int maxLength,
+}) {
   final trimmed = value.trim();
   if (trimmed.isEmpty) {
     throw CanvasDataException(

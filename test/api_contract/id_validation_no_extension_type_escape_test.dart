@@ -16,7 +16,10 @@ void main() {
     expect(source, isNot(contains('extension type CanvasLayerId')));
     expect(source, isNot(contains('extension type CanvasResourceId')));
     expect(source, isNot(contains('extension type CanvasActionId')));
-    expect(source, isNot(contains('extension type CanvasInteractionRequestId')));
+    expect(
+      source,
+      isNot(contains('extension type CanvasInteractionRequestId')),
+    );
   });
 }
 
@@ -27,25 +30,23 @@ Future<bool> _runFlutterConsumerTest(String testSource) async {
 
   try {
     await Directory('${packageDir.path}/test').create();
-    await File('${packageDir.path}/pubspec.yaml').writeAsString(
-      _pubspecSource(),
-    );
-    await File('${packageDir.path}/test/id_validation_test.dart').writeAsString(
-      testSource,
-    );
+    await File(
+      '${packageDir.path}/pubspec.yaml',
+    ).writeAsString(_pubspecSource());
+    await File(
+      '${packageDir.path}/test/id_validation_test.dart',
+    ).writeAsString(testSource);
 
-    final pubGet = await Process.run(
-      'flutter',
-      ['pub', 'get'],
-      workingDirectory: packageDir.path,
-    );
+    final pubGet = await Process.run('flutter', [
+      'pub',
+      'get',
+    ], workingDirectory: packageDir.path);
     expect(pubGet.exitCode, 0, reason: _processOutput(pubGet));
 
-    final test = await Process.run(
-      'flutter',
-      ['test', 'test/id_validation_test.dart'],
-      workingDirectory: packageDir.path,
-    );
+    final test = await Process.run('flutter', [
+      'test',
+      'test/id_validation_test.dart',
+    ], workingDirectory: packageDir.path);
     expect(test.exitCode, 0, reason: _processOutput(test));
 
     return true;
@@ -90,25 +91,50 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
   test('ids validate at public construction', () {
-    expect(() => CanvasElementId('element-1'), returnsNormally);
-    expect(() => CanvasLayerId('layer-1'), returnsNormally);
-    expect(() => CanvasResourceId('resource-1'), returnsNormally);
-    expect(() => CanvasActionId('action-1'), returnsNormally);
-    expect(() => CanvasInteractionRequestId('request-1'), returnsNormally);
+    expect(CanvasElementId('element-1').value, 'element-1');
+    expect(CanvasLayerId('layer-1').value, 'layer-1');
+    expect(CanvasResourceId('resource-1').value, 'resource-1');
+    expect(CanvasActionId('action-1').value, 'action-1');
+    expect(CanvasInteractionRequestId('request-1').value, 'request-1');
 
     expect(() => CanvasElementId(''), throwsA(isA<CanvasDataException>()));
     expect(() => CanvasLayerId('   '), throwsA(isA<CanvasDataException>()));
+    expect(
+      () => CanvasElementId(' element-1'),
+      throwsA(isA<CanvasDataException>()),
+    );
+    expect(
+      () => CanvasLayerId('layer-1 '),
+      throwsA(isA<CanvasDataException>()),
+    );
+    expect(
+      () => CanvasResourceId('\\tresource-1'),
+      throwsA(isA<CanvasDataException>()),
+    );
+    expect(
+      () => CanvasActionId('action-1\\n'),
+      throwsA(isA<CanvasDataException>()),
+    );
     expect(
       () => CanvasResourceId('r' * 1025),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => CanvasActionId('bad\\nid'),
+      () => CanvasInteractionRequestId('bad\\nid'),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
       () => CanvasInteractionRequestId('i' * 257),
       throwsA(isA<CanvasDataException>()),
+    );
+
+    expect(
+      CanvasResourceSource.appKey(' asset-main '),
+      isA<CanvasAppKeyResourceSource>().having(
+        (source) => source.key,
+        'key',
+        'asset-main',
+      ),
     );
   });
 }

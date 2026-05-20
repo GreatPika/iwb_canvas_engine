@@ -282,11 +282,11 @@ final class CanvasInteractionRequestId {
 Validation:
 
 ```text
-CanvasElementId  -> non-empty trimmed string, length <= 256, no control characters.
-CanvasLayerId    -> non-empty trimmed string, length <= 256, no control characters.
-CanvasResourceId -> non-empty trimmed string, length <= 1024, no control characters.
-CanvasActionId   -> non-empty trimmed string, length <= 256, no control characters.
-CanvasInteractionRequestId -> non-empty trimmed string, length <= 256, no control characters.
+CanvasElementId  -> non-empty canonical string, no leading/trailing whitespace, length <= 256, no control characters.
+CanvasLayerId    -> non-empty canonical string, no leading/trailing whitespace, length <= 256, no control characters.
+CanvasResourceId -> non-empty canonical string, no leading/trailing whitespace, length <= 1024, no control characters.
+CanvasActionId   -> non-empty canonical string, no leading/trailing whitespace, length <= 256, no control characters.
+CanvasInteractionRequestId -> non-empty canonical string, no leading/trailing whitespace, length <= 256, no control characters.
 ```
 
 Generated ids:

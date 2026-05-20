@@ -71,7 +71,7 @@ sealed class CanvasResourceSource {
 final class CanvasAppKeyResourceSource extends CanvasResourceSource {
   factory CanvasAppKeyResourceSource(String key) {
     return CanvasAppKeyResourceSource._(
-      validateCanvasIdValue(
+      validateCanvasAppKeyValue(
         key,
         path: 'resource.source.appKey',
         maxLength: canvasMaxResourceAppKeyLength,
