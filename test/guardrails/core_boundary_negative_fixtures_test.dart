@@ -107,6 +107,16 @@ const _fixtures = [
     guardrailIds: ['core.import_boundaries'],
   ),
   _Fixture(
+    path: 'lib/src/interaction/bad_store_import.dart',
+    content: "import '../store/document_store_kernel.dart';",
+    guardrailIds: ['core.import_boundaries'],
+  ),
+  _Fixture(
+    path: 'lib/src/interaction/bad_selection_import.dart',
+    content: "import '../selection/selection_kernel.dart';",
+    guardrailIds: ['core.import_boundaries'],
+  ),
+  _Fixture(
     path: 'lib/src/runtime/bad_part.dart',
     content: "part 'generated.dart';",
     guardrailIds: ['core.no_unapproved_part_files'],

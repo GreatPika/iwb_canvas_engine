@@ -448,12 +448,12 @@ const _boundaryRules = [
     ],
   ),
   _BoundaryRule(
-    guardrailId: 'interaction.no_concrete_store_imports',
+    guardrailId: 'core.import_boundaries',
     owner: 'lib/src/interaction/',
     forbiddenTargets: ['lib/src/store/'],
   ),
   _BoundaryRule(
-    guardrailId: 'interaction.no_concrete_selection_imports',
+    guardrailId: 'core.import_boundaries',
     owner: 'lib/src/interaction/',
     forbiddenTargets: ['lib/src/selection/'],
   ),
