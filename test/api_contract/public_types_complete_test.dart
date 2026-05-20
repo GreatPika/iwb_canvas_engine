@@ -19,4 +19,17 @@ void main() {
     expect(message, contains('_HiddenInterface'));
     expect(message, contains('_HiddenMixin'));
   });
+
+  test('public typedef bounds and named extensions are rejected', () async {
+    final violations = await checkPublicTypesComplete(
+      libraryPath:
+          '$repositoryRoot/test/api_contract/fixtures/'
+          'public_type_reference_violations.dart',
+    );
+    final message = violations.map((violation) => violation.message).join('\n');
+
+    expect(message, contains('HiddenPublicBound'));
+    expect(message, contains('exported named extension PublicStringAccessors'));
+    expect(message, isNot(contains('ApprovedPublicBound')));
+  });
 }

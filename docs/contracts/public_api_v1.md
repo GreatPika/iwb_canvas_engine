@@ -91,6 +91,11 @@ The legacy public symbols listed in `tool/goldens/public_api_symbols.txt` from
 the legacy package are not exported by this package. Natural concepts may exist
 under next-owned names, but legacy public shapes are banned.
 
+The root package does not expose named extension declarations in Public API v1.
+Adding one later is a public API decision that requires an explicit registry and
+signature traversal update; this clarification does not remove any approved v1
+API, require a migration, or change the package version.
+
 Factory target classes may be private only for construction-only sealed values.
 Sealed values that application code must read at public boundaries expose their
 concrete variants through the public barrel. In v1, `CanvasResourceSource` and

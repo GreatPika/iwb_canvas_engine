@@ -3,9 +3,14 @@ import 'package:analyzer/dart/element/type.dart';
 
 Set<String> collectUndefinedTypeReferences({
   required Iterable<Element> exportedElements,
+  required Iterable<String> exportedNamedExtensionNames,
   required Set<String> publicNames,
 }) {
   final visitor = _PublicTypeReferenceVisitor(publicNames);
+
+  for (final name in exportedNamedExtensionNames) {
+    visitor.rejectNamedExtension(name);
+  }
 
   for (final element in exportedElements) {
     visitor.visitExportedElement(element);
@@ -24,17 +29,28 @@ final class _PublicTypeReferenceVisitor {
   final Set<String> violations = {};
   final Set<DartType> _visitedTypes = {};
 
+  void rejectNamedExtension(String name) {
+    violations.add('exported named extension $name');
+  }
+
   void visitExportedElement(Element element) {
     switch (element) {
       case InterfaceElement():
         _visitInterfaceElement(element);
       case TypeAliasElement():
-        _visitType(element.aliasedType);
+        _visitTypeAliasElement(element);
       case TopLevelFunctionElement():
         _visitExecutable(element);
       case TopLevelVariableElement():
         _visitType(element.type);
     }
+  }
+
+  void _visitTypeAliasElement(TypeAliasElement element) {
+    for (final typeParameter in element.typeParameters) {
+      _visitNullableType(typeParameter.bound);
+    }
+    _visitType(element.aliasedType);
   }
 
   void _visitInterfaceElement(InterfaceElement element) {
@@ -120,6 +136,9 @@ final class _PublicTypeReferenceVisitor {
 
   void _visitFunctionType(FunctionType type) {
     _visitType(type.returnType);
+    for (final typeParameter in type.typeParameters) {
+      _visitNullableType(typeParameter.bound);
+    }
     for (final parameter in type.formalParameters) {
       _visitType(parameter.type);
     }

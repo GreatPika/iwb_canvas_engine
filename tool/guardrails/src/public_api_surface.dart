@@ -10,10 +10,12 @@ final class PublicApiSurface {
   PublicApiSurface._({
     required this.exportedNames,
     required this.exportedElements,
+    required this.exportedNamedExtensionNames,
   });
 
   final Set<String> exportedNames;
   final Map<String, Element> exportedElements;
+  final Set<String> exportedNamedExtensionNames;
 }
 
 Future<PublicApiSurface> resolvePublicApiSurface({String? libraryPath}) async {
@@ -42,6 +44,7 @@ Future<PublicApiSurface> resolvePublicApiSurface({String? libraryPath}) async {
     return PublicApiSurface._(
       exportedNames: publicEntries.keys.toSet(),
       exportedElements: publicEntries,
+      exportedNamedExtensionNames: _namedExtensionNames(publicEntries),
     );
   } finally {
     await collection.dispose();
@@ -51,12 +54,20 @@ Future<PublicApiSurface> resolvePublicApiSurface({String? libraryPath}) async {
 Set<String> collectUndefinedPublicTypeReferences(PublicApiSurface surface) {
   return collectUndefinedTypeReferences(
     exportedElements: surface.exportedElements.values,
+    exportedNamedExtensionNames: surface.exportedNamedExtensionNames,
     publicNames: surface.exportedNames,
   );
 }
 
 bool _isPublicExportName(String name) {
   return !name.startsWith('_') && !name.endsWith('=');
+}
+
+Set<String> _namedExtensionNames(Map<String, Element> elements) {
+  return {
+    for (final entry in elements.entries)
+      if (entry.value is ExtensionElement) entry.key,
+  };
 }
 
 void _throwOnErrorDiagnostics(ResolvedLibraryResult result) {
