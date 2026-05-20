@@ -31,6 +31,8 @@ void _expectFixtureImportsOnlyRootBarrel() {
   expect(source, isNot(contains('SceneController')));
   expect(source, isNot(contains('NodeSpec')));
   expect(source, isNot(contains('NodePatch')));
+  expect(source, contains('resourceResolver:'));
+  expect(source, contains('implements CanvasResourceResolver'));
 }
 
 Future<void> _expectFixtureCompilesFromExternalPackage() async {

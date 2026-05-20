@@ -14,6 +14,7 @@ final class AppNextEngineAdapterCompileFixture {
   CanvasSurface createSurface() {
     return CanvasSurface(
       runtime: runtime,
+      resourceResolver: const AppNextEngineAdapterResourceResolver(),
       selectionStyle: CanvasSelectionStyle.defaultStyle,
       gridStyle: CanvasGridStyle.defaultStyle,
       interactive: false,
@@ -152,6 +153,18 @@ final class AppNextEngineAdapterCompileFixture {
 
   void dispose() {
     runtime.dispose();
+  }
+}
+
+final class AppNextEngineAdapterResourceResolver
+    implements CanvasResourceResolver {
+  const AppNextEngineAdapterResourceResolver();
+
+  @override
+  Never resolveImage(CanvasImageResource resource) {
+    _use(resource);
+
+    return _compileOnly();
   }
 }
 
