@@ -569,7 +569,7 @@ This proves no temporary P1 scope-review marker remains unresolved in active
 source-of-truth files after implementation.
 
 ```sh
-rg -n "P1_SCOPE_GAP|P1_TODO|P1_REVIEW_PENDING" PLAN.md plan docs lib test tool
+rg -n "P1_SCOPE_GA[P]|P1_TOD[O]|P1_REVIEW_PENDIN[G]" PLAN.md plan docs lib test tool
 ```
 
 Expected signal: exits 1 with no matches.
@@ -672,10 +672,10 @@ Scope checklist result:
 
 | Source category | Closed | Existing owner |
 |---|---|---|
-| Approved v1 additions | [ ] | `docs/architecture/00_architecture_overview.md` |
-| Accepted legacy differences | [ ] | `docs/architecture/04_decisions_and_differences.md` |
-| Legacy capability inventory review | [ ] | `docs/verification/legacy_capability_inventory.md` |
-| Donor registry review | [ ] | `docs/_registry/donors.yaml` |
+| Approved v1 additions | [x] | `docs/architecture/00_architecture_overview.md` |
+| Accepted legacy differences | [x] | `docs/architecture/04_decisions_and_differences.md` |
+| Legacy capability inventory review | [x] | `docs/verification/legacy_capability_inventory.md` |
+| Donor registry review | [x] | `docs/_registry/donors.yaml` |
 
 #### Proof
 
