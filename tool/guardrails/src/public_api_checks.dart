@@ -29,6 +29,25 @@ Future<List<GuardrailViolation>> checkPublicExportsComplete() async {
 
 Future<List<GuardrailViolation>> checkPublicTypesComplete({
   String? libraryPath,
+}) {
+  return _checkUndefinedPublicTypeReferences(
+    guardrailId: 'api.public_types_complete',
+    libraryPath: libraryPath,
+  );
+}
+
+Future<List<GuardrailViolation>> checkNoUndefinedPublicTypeReferences({
+  String? libraryPath,
+}) {
+  return _checkUndefinedPublicTypeReferences(
+    guardrailId: 'api.no_undefined_public_type_references',
+    libraryPath: libraryPath,
+  );
+}
+
+Future<List<GuardrailViolation>> _checkUndefinedPublicTypeReferences({
+  required String guardrailId,
+  String? libraryPath,
 }) async {
   final surface = await resolvePublicApiSurface(libraryPath: libraryPath);
   final undefined = collectUndefinedPublicTypeReferences(surface);
@@ -39,7 +58,7 @@ Future<List<GuardrailViolation>> checkPublicTypesComplete({
 
   return [
     GuardrailViolation(
-      guardrailId: 'api.public_types_complete',
+      guardrailId: guardrailId,
       path: _displayPath(libraryPath),
       message: 'undefined public type references: ${_list(undefined)}',
     ),
