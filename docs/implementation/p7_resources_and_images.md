@@ -96,7 +96,6 @@ load have established rollback-safe mutation and replacement boundaries.
 - `resources.resolver_frame_budget`
 - `resources.no_same_frame_missing_retry`
 - `resources.resolver_reentrancy_rejected`
-- `api.functional_ledger_complete`
 
 ## Exit gate
 

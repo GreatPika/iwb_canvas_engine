@@ -6,7 +6,6 @@ Owns:
 - 9. Accepted differences from legacy engine
 Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
-- `section_08_functional_ledger` -> `docs/verification/functional_ledger.md`
 Feeds phases:
 - `P1.5`
 - `P2`
@@ -15,9 +14,12 @@ Related donors:
 Related diagrams:
 - `none`
 Required tests:
-- `test.api_contract.v1_scope_gate`
+- `test.api_contract.no_legacy_public_symbols`
+- `test.api_contract.app_next_engine_adapter_compile_fixture`
 Guardrails:
-- `api.v1_scope_gate_green_before_freeze`
+- `api.no_legacy_public_types`
+- `core.no_scene_controller_shape_dependency`
+- `core.no_node_spec_patch_shape_dependency`
 Do not assume:
 - accepted differences are explicit only
 - no silent legacy compatibility layer

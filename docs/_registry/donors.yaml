@@ -1353,7 +1353,9 @@
   do_not_copy:
     - legacy public API shape
   required_tests:
-    - functional ledger row tests
+    - test.api_contract.app_next_engine_adapter_compile_fixture
+    - test.interaction.context_action_request
+    - test.interaction.commands_emit_user_actions
   blocks:
     - P1
     - P2
@@ -1370,7 +1372,7 @@
     - avoid
   target_owner: No next owner
   use_for:
-    - behavioral evidence only through functional ledger
+    - behavioral evidence only; do not copy facade structure
   do_not_copy:
     - legacy public API shape
     - controller facade files

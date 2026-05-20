@@ -18,7 +18,8 @@
     - core.no_scene_controller_shape_dependency
     - core.no_node_spec_patch_shape_dependency
   tests:
-    - test.api_contract.v1_scope_gate
+    - test.api_contract.no_legacy_public_symbols
+    - test.api_contract.app_next_engine_adapter_compile_fixture
   do_not_assume:
     - no legacy facade
     - no SceneController
@@ -145,7 +146,6 @@
     - test.flutter_bridge.interactive_false_pending_line_preserved
     - test.flutter_bridge.single_active_surface
     - test.flutter_bridge.surface_resource_session_lifecycle
-    - test.api_contract.v1_scope_gate
   do_not_assume:
     - no legacy public API shape
     - no PatchField export
@@ -276,30 +276,9 @@
   guardrails:
     - oracle.legacy_capability_inventory_complete
   tests:
-    - test.functional_ledger.legacy_capability_inventory
+    - test.oracle.legacy_capability_inventory
   do_not_assume:
-    - no next API mapping before P1.5 scope gate
--
-  id: section_08_functional_ledger
-  source: docs/_registry/sections.yaml / section 8B
-  file: docs/verification/functional_ledger.md
-  title: "8B. Functional ledger: legacy capability -> next API -> required test"
-  phases:
-    - P1.5
-    - P14
-  must_read:
-    - section_08_legacy_capability_inventory
-    - section_04_public_api_v1
-  donors:
-    - "none"
-  diagrams:
-    - "none"
-  guardrails:
-    - api.functional_ledger_complete
-  tests:
-    - test.functional_ledger.row_specific_tests
-  do_not_assume:
-    - do not prove next API completeness by legacy public API ledger
+    - no next API mapping table as release proof
 -
   id: section_09_accepted_differences
   source: docs/_registry/sections.yaml / section 9
@@ -310,15 +289,17 @@
     - P2
   must_read:
     - section_00_status_and_scope
-    - section_08_functional_ledger
   donors:
     - "none"
   diagrams:
     - "none"
   guardrails:
-    - api.v1_scope_gate_green_before_freeze
+    - api.no_legacy_public_types
+    - core.no_scene_controller_shape_dependency
+    - core.no_node_spec_patch_shape_dependency
   tests:
-    - test.api_contract.v1_scope_gate
+    - test.api_contract.no_legacy_public_symbols
+    - test.api_contract.app_next_engine_adapter_compile_fixture
   do_not_assume:
     - accepted differences are explicit only
     - no silent legacy compatibility layer
@@ -782,9 +763,7 @@
     - "none"
   guardrails:
     - oracle.legacy_capability_inventory_complete
-    - api.functional_ledger_complete
     - api.integration_surface_complete
-    - api.v1_scope_gate_green_before_freeze
     - api.no_legacy_public_types
     - api.public_exports_complete
     - api.public_types_complete
@@ -952,7 +931,6 @@
     - "none"
   guardrails:
     - oracle.legacy_capability_inventory_complete
-    - api.functional_ledger_complete
   tests:
     - test.api_contract.public_readable_union_variants
     - test.api_contract.preview_state_sealed_union
@@ -993,9 +971,7 @@
     - test.flutter_bridge.single_active_surface
     - test.flutter_bridge.surface_resource_session_lifecycle
     - test.flutter_bridge.pointer_adapter_finite_normalization
-    - test.functional_ledger.legacy_capability_inventory
-    - test.functional_ledger.row_specific_tests
-    - test.api_contract.v1_scope_gate
+    - test.oracle.legacy_capability_inventory
     - test.codec.constructor_and_schema_limits
     - test.runtime.dispose_lifecycle
     - test.runtime.runtime_state_publication
@@ -1144,9 +1120,7 @@
     - "none"
   guardrails:
     - oracle.legacy_capability_inventory_complete
-    - api.functional_ledger_complete
     - api.integration_surface_complete
-    - api.v1_scope_gate_green_before_freeze
     - api.no_legacy_public_types
     - api.public_exports_complete
     - api.public_types_complete

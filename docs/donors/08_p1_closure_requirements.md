@@ -18,7 +18,5 @@ P1 donor inventory is closed only when:
 - every `adapt` donor names the legacy behavior to preserve and the legacy
   shell to reject;
 - every `rewrite-reference` donor is listed only as behavior/test evidence;
-- the functional ledger links capabilities to donor files where reuse is
-  expected;
 - implementation phases do not import donor files from the legacy package at
   runtime.

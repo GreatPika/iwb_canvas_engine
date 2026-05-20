@@ -68,9 +68,8 @@ the change, not target-state requirements.
 - `docs/verification/legacy_capability_inventory.md:62` through
   `docs/verification/legacy_capability_inventory.md:63` record
   runtime-created timestamps as a monotonic legacy capability.
-- `docs/verification/functional_ledger.md:66` and
-  `docs/verification/functional_ledger.md:67` currently map text edit requests
-  and action committed events, but no separate row names
+- `docs/verification/tests.md` currently names the neighboring action and
+  context request proofs, but no separate proof names
   `runtime_created_timestamps_monotonic`.
 - `docs/contracts/public_api_v1.md:1411`,
   `docs/contracts/public_api_v1.md:1415`,
@@ -133,8 +132,8 @@ the change, not target-state requirements.
   semantics and timestamp-bearing public shapes.
 - Operation entry path: `docs/contracts/operation_matrix.md` owns operation and
   event linkage.
-- Verification entry path: `docs/verification/functional_ledger.md`,
-  `docs/verification/guardrails.md`, `docs/verification/tests.md`,
+- Verification entry path: `docs/verification/guardrails.md`,
+  `docs/verification/tests.md`,
   `docs/indexes/by_guardrail.md`, `docs/indexes/by_test_area.md`,
   `docs/_registry/sections.yaml`, and `docs/verification/release_gates.md` own
   the proof mapping.
@@ -147,8 +146,6 @@ the change, not target-state requirements.
   public input hints, public event shapes, and runtime-output shapes.
 - `docs/contracts/operation_matrix.md` owns operation rows, user-action event
   cells, and operation-level proof linkage.
-- `docs/verification/functional_ledger.md` owns legacy capability to next API
-  and required test mapping.
 - `docs/verification/guardrails.md` owns mandatory guardrail ids and rules.
 - `docs/verification/tests.md` owns required test ids and paths.
 - `docs/indexes/**` and `docs/_registry/sections.yaml` own generated or
@@ -352,8 +349,8 @@ do not promise global or wall-clock timestamp semantics.
    guardrail id, and test id are absent from active source-of-truth surfaces.
 2. Run P1 before edits as the neighboring guard check for the existing action,
    command-event, and operation-matrix proof mapping that this step extends.
-3. Update public API timestamp semantics and functional ledger mapping first so
-   operation and verification docs can reference the accepted public contract.
+3. Update public API timestamp semantics first so operation and verification
+   docs can reference the accepted public contract.
 4. Add operation-matrix linkage for timestamped runtime outputs.
 5. Add guardrail, test, index, section-registry, and release-gate linkage.
 6. Remove the open HOLE-010 entry from `audit.md` only after the active
@@ -425,19 +422,18 @@ Expected signal before and after the fix: matches include
 `docs/verification/tests.md`, `docs/indexes/by_guardrail.md`,
 `docs/indexes/by_test_area.md`, and `docs/_registry/sections.yaml`.
 
-### P2. Public Timestamp Contract And Ledger Mapping Are Present
+### P2. Public Timestamp Contract Is Present
 
-This proves the public timestamp contract and functional ledger row exist after
-Slice 1 without requiring operation-matrix, guardrail, index, registry, or
-release-gate edits that belong to Slice 2.
+This proves the public timestamp contract exists after Slice 1 without
+requiring operation-matrix, guardrail, index, registry, or release-gate edits
+that belong to Slice 2.
 
 ```sh
-rg -n "runtime_created_timestamps_monotonic|Runtime timestamp contract|runtime-local|timestampMs.*hint|CanvasActionCommitted\\.timestampMs|CanvasTextEditRequested\\.timestampMs" docs/contracts/public_api_v1.md docs/verification/functional_ledger.md
+rg -n "Runtime timestamp contract|runtime-local|timestampMs.*hint|CanvasActionCommitted\\.timestampMs|CanvasTextEditRequested\\.timestampMs" docs/contracts/public_api_v1.md
 ```
 
-Expected signal after Slice 1: matches include both
-`docs/contracts/public_api_v1.md` and
-`docs/verification/functional_ledger.md`.
+Expected signal after Slice 1: matches include
+`docs/contracts/public_api_v1.md`.
 
 ### P3. Full Runtime Timestamp Mapping Is Present
 
@@ -449,8 +445,8 @@ rg -n "runtime_created_timestamps_monotonic|events\\.runtime_created_timestamps_
 ```
 
 Expected signal: matches include `docs/contracts/public_api_v1.md`,
-`docs/contracts/operation_matrix.md`, `docs/verification/functional_ledger.md`,
-`docs/verification/guardrails.md`, `docs/verification/tests.md`,
+`docs/contracts/operation_matrix.md`, `docs/verification/guardrails.md`,
+`docs/verification/tests.md`,
 `docs/indexes/by_guardrail.md`, `docs/indexes/by_test_area.md`,
 `docs/_registry/sections.yaml`, and `docs/verification/release_gates.md`.
 
@@ -519,9 +515,6 @@ BUG_FIX, PUBLIC_API_CHANGE
   runtime timestamp contract, input-hint semantics, runtime-local resolver
   algorithm, scope, wall-clock rollback behavior, and timestamped output
   coverage.
-- Ledger mapping edit: `docs/verification/functional_ledger.md` — add
-  `runtime_created_timestamps_monotonic` as the row-specific mapping for the
-  legacy monotonic timestamp capability.
 - Verify-only evidence: `docs/verification/legacy_capability_inventory.md` —
   remains the legacy capability source and must not be rewritten unless the
   wording becomes contradictory.
@@ -533,24 +526,22 @@ BUG_FIX, PUBLIC_API_CHANGE
 Public API v1 must state that runtime-created `timestampMs` values are
 runtime-local millisecond ordering tokens. Nullable input timestamps are hints;
 resolved output timestamps are non-null and monotonic within one runtime by the
-selected resolver algorithm. The functional ledger must expose the dedicated
-mapping id and required test id instead of relying only on the broader action
-event row.
+selected resolver algorithm. Required tests and guardrails must expose the
+dedicated proof id instead of relying only on the broader action event row.
 
 #### Proof
 
 - Run P0 before the slice as the required failing reproducer for the accepted
   missing mapping.
 - Run P1 before the slice as the neighboring event proof mapping guard.
-- Run P2 after the slice to verify public contract and ledger mapping presence.
+- Run P2 after the slice to verify public contract presence.
 - Run P4 after the slice to verify rejected positive clock promises are absent.
 
 #### Closure
 
 The slice is complete when public contract wording answers the HOLE-010
 definition, creation site, time source, scope, rollback behavior, and output
-coverage questions, and the functional ledger names
-`runtime_created_timestamps_monotonic`.
+coverage questions.
 
 ### Slice 2. [x] Operation And Verification Linkage
 

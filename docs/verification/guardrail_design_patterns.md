@@ -13,7 +13,7 @@ pattern selection for those ids.
 Choose the guardrail pattern from the invariant owner, not from the first
 syntax shape that looks easy to scan.
 
-- If the invariant is already encoded in a registry, phase file, ledger, or
+- If the invariant is already encoded in a registry, phase file, or
   manifest, make the guardrail a parity check against that source of truth.
 - If the invariant is about import/export/part directives, file placement, or
   simple declaration shape, use parsed AST scans with precise offset diagnostics.
@@ -62,7 +62,7 @@ not a claim that every future executable rule has already been proven in legacy.
 | Pattern id | Pattern | Use when | Implementation shape | Legacy evidence |
 |---|---|---|---|---|
 | `runner_inventory` | Fixed inventory plus fail-fast dispatcher | A guardrail must be mandatory, selectable, and included in the full suite | One metadata-bearing rule inventory, runner selection by id/suite, and a blocking-suite proof that inventory and executable entries match | `.research/2026-05-19-legacy-ast-guardrail-patterns.md` sections 1 and 9 |
-| `registry_parity` | Source-of-truth parity | The accepted rule is already listed in a registry, phase, ledger, or public API inventory | Compare structured docs or manifests with generated/public facts; fail on missing, stale, or extra entries | `.research/2026-05-19-legacy-ast-guardrail-patterns.md` sections 7 and 9 |
+| `registry_parity` | Source-of-truth parity | The accepted rule is already listed in a registry, phase, contract, or public API inventory | Compare structured docs or manifests with generated/public facts; fail on missing, stale, or extra entries | `.research/2026-05-19-legacy-ast-guardrail-patterns.md` sections 7 and 9 |
 | `parsed_ast_directive` | Parsed AST directive and declaration scan | The rule depends on imports, exports, parts, directives, comments, or shallow declarations | Use analyzer parsed units, directive nodes, visitors, offsets, and line mapping; avoid string-only scans | `.research/2026-05-19-legacy-ast-guardrail-patterns.md` sections 2 and 9 |
 | `resolved_element_identity` | Resolver-backed ownership and identity | The rule must distinguish the actual referenced symbol, owner, accessor, constructor, or source path | Use resolved units/libraries, analyzer elements, repo-relative source paths, and element-backed diagnostics | `.research/2026-05-19-legacy-ast-guardrail-patterns.md` sections 3, 4, and 5 |
 | `resolved_public_surface` | Resolved public surface and signature traversal | The rule protects exported API shape or rejects type leaks hidden behind aliases/generics/functions/records | Collect the effective exported namespace, sort elements deterministically, traverse `DartType` shapes with caller-owned classifiers | `.research/2026-05-19-legacy-ast-guardrail-patterns.md` sections 7 and 8 |
@@ -81,9 +81,7 @@ indirection, runtime behavior, or runner coverage.
 | Guardrail id | Primary pattern | Secondary pattern | Confidence | Design note |
 |---|---|---|---|---|
 | `oracle.legacy_capability_inventory_complete` | `registry_parity` | `runner_inventory` | `derived from legacy pattern` | Compare inventory rows with required oracle/evidence fields and include the proof in the blocking suite. |
-| `api.functional_ledger_complete` | `registry_parity` | `runner_inventory` | `derived from legacy pattern` | Compare capability inventory rows with functional-ledger mappings and row-specific proof names. |
 | `api.integration_surface_complete` | `behavioral_seam_test` | `parsed_ast_directive`, `runner_inventory` | `derived from legacy pattern` | Compile the external app fixture and AST-check that it imports only the public barrel. |
-| `api.v1_scope_gate_green_before_freeze` | `registry_parity` | `runner_inventory` | `new-engine extrapolation` | Treat the scope gate result as a release-order artifact, not a production behavior test. |
 | `api.no_legacy_public_types` | `negative_legacy_shape` | `resolved_public_surface` | `strong legacy precedent` | Reject legacy exported symbols through the effective public namespace, not just root-barrel text. |
 | `api.public_exports_complete` | `registry_parity` | `resolved_public_surface` | `strong legacy precedent` | Compare `public_api_v1.yaml` names with the resolved root public exports. |
 | `api.public_types_complete` | `resolved_public_surface` | `registry_parity` | `strong legacy precedent` | Resolve exported signatures and verify every referenced public type exists in the accepted inventory. |

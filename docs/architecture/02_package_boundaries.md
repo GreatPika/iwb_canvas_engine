@@ -136,7 +136,7 @@ The new package is rooted at the repository top level:
         image_bridge.dart
   test/
     api_contract/
-    functional_ledger/
+    oracle/
     api/
     runtime/
     store/
@@ -207,7 +207,7 @@ Production-owned tests mirror the top-level ownership folders under
 `lib/src/**`: `test/edit/**` covers `lib/src/edit/**`, `test/frame/**` covers
 `lib/src/frame/**`, and so on. Cross-cutting proof areas that do not belong to
 one production owner stay outside the mirror: `test/api_contract/**`,
-`test/functional_ledger/**`, `test/guardrails/**`, `test/benchmarks/**`, and
+`test/oracle/**`, `test/guardrails/**`, `test/benchmarks/**`, and
 shared test fixtures live under `test/support/**`.
 
 The mirror is an ownership and navigation rule, not a rule that every source

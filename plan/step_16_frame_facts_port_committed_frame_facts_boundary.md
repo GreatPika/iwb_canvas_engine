@@ -615,7 +615,7 @@ SEAM_MIGRATION
 - Guardrail owner: `docs/verification/guardrails.md` — add
   `frame.committed_facts_via_frame_facts_port` with enforcement expectations
   for frame committed facts and concrete store import blocking.
-- Test ledger owner: `docs/verification/tests.md` — map the new guardrail to
+- Test inventory owner: `docs/verification/tests.md` — map the new guardrail to
   planned frame/guardrail proof without inventing production tests outside the
   documentation plan.
 - Guardrail index owner: `docs/indexes/by_guardrail.md` — add the new guardrail

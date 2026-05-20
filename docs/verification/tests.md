@@ -132,9 +132,7 @@ Required tests:
 - `test.flutter_bridge.single_active_surface`
 - `test.flutter_bridge.surface_resource_session_lifecycle`
 - `test.flutter_bridge.pointer_adapter_finite_normalization`
-- `test.functional_ledger.legacy_capability_inventory`
-- `test.functional_ledger.row_specific_tests`
-- `test.api_contract.v1_scope_gate`
+- `test.oracle.legacy_capability_inventory`
 - `test.codec.constructor_and_schema_limits`
 - `test.runtime.dispose_lifecycle`
 - `test.runtime.runtime_state_publication`
@@ -178,7 +176,6 @@ Required tests:
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `oracle.legacy_capability_inventory_complete`
-- `api.functional_ledger_complete`
 Do not assume:
 - no donor reuse without ported or equivalent tests
 <!-- CONTEXT:END -->
@@ -197,12 +194,11 @@ test/api_contract/no_undefined_public_type_references_test.dart
 test/api_contract/no_legacy_public_symbols_test.dart
 test/api_contract/dto_immutability_test.dart
 test/api_contract/public_equality_policy_test.dart
-test/api_contract/v1_scope_gate_test.dart
 test/api_contract/app_next_engine_adapter_compile_fixture_test.dart
 test/guardrails/import_boundaries_test.dart
 test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart
 test/guardrails/blocking_suite_test.dart
-test/functional_ledger/row_specific_tests_test.dart
+test/oracle/legacy_capability_inventory_test.dart
 test/benchmarks/required_cases_test.dart
 
 test/codec/schema_v1/known_fields_validation_test.dart
@@ -401,7 +397,7 @@ test/guardrails/import_boundaries_test.dart
   -> scans production lib/** Dart files for part/part of directives and allows
      them only through an explicit generated-code approval list.
 
-test/functional_ledger/legacy_capability_inventory_test.dart
+test/oracle/legacy_capability_inventory_test.dart
   -> verifies P1 legacy capability inventory rows have a capability, legacy
      oracle, and evidence focus without requiring next API mapping.
 
@@ -524,8 +520,9 @@ test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart
      projection access.
 ```
 
-Legacy capability inventory rows require inventory-only tests. Functional
-ledger mappings still require row-specific next API tests.
+Legacy capability inventory rows require inventory-only tests. Next API
+behavior is proved by focused API, subsystem, and integration tests, not by
+mapping rows.
 Runtime coverage must include api, edit, interaction, frame, spatial, geometry, codec/schema_v1, resources, flutter_bridge, and diagnostics tests.
 
 ---

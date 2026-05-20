@@ -20,9 +20,7 @@ Required tests:
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `oracle.legacy_capability_inventory_complete`
-- `api.functional_ledger_complete`
 - `api.integration_surface_complete`
-- `api.v1_scope_gate_green_before_freeze`
 - `api.no_legacy_public_types`
 - `api.public_exports_complete`
 - `api.public_types_complete`
@@ -139,9 +137,7 @@ Mandatory guardrails:
 | Guardrail id | Rule |
 |---|---|
 | `oracle.legacy_capability_inventory_complete` | every P1 legacy capability inventory row has a legacy oracle and evidence focus, without requiring next API mapping |
-| `api.functional_ledger_complete` | every legacy capability inventory row has a matching functional ledger API mapping and row-specific test |
 | `api.integration_surface_complete` | external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level `NextEngineAdapter` responsibilities, while the adapter itself is not in package |
-| `api.v1_scope_gate_green_before_freeze` | P1.5 scope gate passed before public API freeze starts |
 | `api.no_legacy_public_types` | legacy public golden symbols not exported by root package |
 | `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |
 | `api.public_types_complete` | all public signatures reference defined public types |

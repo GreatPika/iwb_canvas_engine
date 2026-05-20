@@ -17,8 +17,8 @@ at `verification/guardrail_design_patterns.md`. Start donor work at
   lists what to build, what to read first, which diagrams to use, which donors
   are allowed or forbidden, which guardrails apply, which tests are required,
   and the exit gate for that phase.
-- `verification/`: legacy capability inventory, functional ledger, tests,
-  guardrails, guardrail design patterns, benchmarks, and release gates. Use
+- `verification/`: legacy capability inventory, tests, guardrails, guardrail
+  design patterns, benchmarks, and release gates. Use
   `verification/guardrail_design_patterns.md` before implementing or rewriting
   mandatory guardrails from `verification/guardrails.md`.
 - `donors/`: donor inventory sections. Donor use is controlled by

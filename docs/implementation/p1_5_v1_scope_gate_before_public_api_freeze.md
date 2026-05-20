@@ -3,15 +3,16 @@
 ## Purpose
 
 Stop public API freeze until mandatory v1 scope, accepted differences, and
-validation limits are explicit and mechanically checked.
+validation limits are explicit and backed by checks that exercise the public
+API or package boundaries directly.
 
 ## Build scope
 
 - scope checklist based on legacy functional behavior and approved v1 additions
-- functional ledger mapping from P1 legacy capabilities to next API targets
 - public API draft probe
 - public API compiles as written
-- external app-adapter surface proof is defined before API freeze.
+- external app-adapter surface proof compiles through the public barrel only
+- legacy public/runtime shapes are rejected before API freeze.
 
 ## Dependencies on earlier phases
 
@@ -23,7 +24,6 @@ validation limits are explicit and mechanically checked.
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 - `section_06_validation_limits` -> `docs/contracts/validation_limits.md`
-- `section_08_functional_ledger` -> `docs/verification/functional_ledger.md`
 - `section_09_accepted_differences` -> `docs/architecture/04_decisions_and_differences.md`
 
 ## Required donors
@@ -49,19 +49,17 @@ validation limits are explicit and mechanically checked.
 
 - v1 scope additions from `section_00_status_and_scope`
 - accepted differences from legacy from `section_09_accepted_differences`
-- functional ledger mapping from `section_08_functional_ledger`
 - mandatory public API draft coverage from `section_04_public_api_v1`
 - external adapter compile-fixture obligation from `section_04_public_api_v1`
 - validation limit adoption from `section_06_validation_limits`
 
 ## Tests and guardrails that prove this phase
 
-- `test.api_contract.v1_scope_gate` -> `test/api_contract/v1_scope_gate_test.dart`
 - `test.api_contract.app_next_engine_adapter_compile_fixture` -> `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`; compiles `test/api_contract/fixtures/app_next_engine_adapter_compile_fixture.dart` and enforces public-barrel-only imports
-- `test.functional_ledger.row_specific_tests` -> `test/functional_ledger/row_specific_tests_test.dart`
+- `test.api_contract.no_legacy_public_symbols` -> `test/api_contract/no_legacy_public_symbols_test.dart`
+- `test.codec.constructor_and_schema_limits` -> `test/codec/constructor_and_schema_limits_test.dart`
 - `api.integration_surface_complete`
-- `api.v1_scope_gate_green_before_freeze`
-- `api.functional_ledger_complete`
+- `api.no_legacy_public_types`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
 - `api.no_undefined_public_type_references`
@@ -76,13 +74,15 @@ validation limits are explicit and mechanically checked.
 ## Exit gate
 
 - mandatory v1 scope is green
-- functional ledger rows map every P1 legacy capability to a next API target and
-  row-specific test id
+- accepted differences from the legacy engine are explicit
 - public equality policy is explicit before API freeze
 - public API compiles as written
 - external app-adapter fixture compiles through only
   `package:iwb_canvas_engine/iwb_canvas_engine.dart`
 - no undefined public type references remain
+- legacy public/runtime shapes are rejected by public-symbol and package-boundary
+  checks
+- validation limits are adopted by public constructors and boundary checks
 - P2 public API freeze is blocked until this gate is green.
 
 ## Risks and trade-offs

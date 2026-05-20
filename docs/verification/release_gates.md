@@ -86,9 +86,7 @@ Required tests:
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `oracle.legacy_capability_inventory_complete`
-- `api.functional_ledger_complete`
 - `api.integration_surface_complete`
-- `api.v1_scope_gate_green_before_freeze`
 - `api.no_legacy_public_types`
 - `api.public_exports_complete`
 - `api.public_types_complete`
@@ -165,55 +163,54 @@ Release is blocked unless all statements are true:
 
 ```text
 1. oracle.legacy_capability_inventory_complete is green.
-2. api.functional_ledger_complete is green.
-3. P1.5 v1 scope gate is green.
-4. api.public_exports_complete is green.
-5. api.public_types_complete is green.
-6. api.public_api_compiles_as_written is green, including the
+2. P1.5 public API, external-adapter, legacy-ban, and validation checks are green.
+3. api.public_exports_complete is green.
+4. api.public_types_complete is green.
+5. api.public_api_compiles_as_written is green, including the
    `CanvasRuntime.state` surface and exported runtime state snapshot types.
-7. public dartdoc, class modifier, public signature shape, and sealed preview
+6. public dartdoc, class modifier, public signature shape, and sealed preview
    state readability guardrails are green.
-8. api.no_legacy_public_types is green.
-9. core.no_legacy_imports is green.
-10. core.import_boundaries and core.no_unapproved_part_files are green.
-11. core.single_runtime_root is green.
-12. store/projection/selection ownership tests are green.
-13. schema v1 encode/decode contract is green.
-14. codec no-runtime-side-effect tests are green.
-15. validation limits are green.
-16. diagnostics disabled hot-path allocation and sanitizer tests are green.
-17. resource lifecycle, resolver-boundary, and resolver-frame-budget tests are green.
-18. edit rollback/stale/nested/async tests are green.
-19. operation matrix and exact touched invalidation tests are green, including
+7. api.no_legacy_public_types is green.
+8. core.no_legacy_imports is green.
+9. core.import_boundaries and core.no_unapproved_part_files are green.
+10. core.single_runtime_root is green.
+11. store/projection/selection ownership tests are green.
+12. schema v1 encode/decode contract is green.
+13. codec no-runtime-side-effect tests are green.
+14. validation limits are green.
+15. diagnostics disabled hot-path allocation and sanitizer tests are green.
+16. resource lifecycle, resolver-boundary, and resolver-frame-budget tests are green.
+17. edit rollback/stale/nested/async tests are green.
+18. operation matrix and exact touched invalidation tests are green, including
     expanded operation matrix dimensions for public state revisions, internal revisions,
     resource effects, no-op behavior, and rollback behavior.
-20. loadDocument staged success/failure tests are green.
-21. public runtime state publication, load publication, interaction settings state,
+19. loadDocument staged success/failure tests are green.
+20. public runtime state publication, load publication, interaction settings state,
     preview public state, and dispose lifecycle tests are green.
-22. geometry/spatial parity, eraser exact-budget, stale-candidate, and fallback-budget tests are green.
-23. frame capture, cache-key, cache-policy, frame-meta, paint-plan,
+21. geometry/spatial parity, eraser exact-budget, stale-candidate, and fallback-budget tests are green.
+22. frame capture, cache-key, cache-policy, frame-meta, paint-plan,
     runtime-view-camera vs persisted-document-camera separation,
     selection-state cache independence, and selected supplement staging tests are green.
-24. selected move preview main repaint test is green.
-25. overlay preview repaint split tests are green.
-26. direct `handleDoubleTap`, pointer-sample context-action request, and guarded
+23. selected move preview main repaint test is green.
+24. overlay preview repaint split tests are green.
+25. direct `handleDoubleTap`, pointer-sample context-action request, and guarded
     text commit integration tests are green.
-27. action typed payload tests are green.
-28. runtime-created timestamp monotonicity tests are green.
-29. low-level edit emits no user action events tests are green.
-30. interaction stale terminal, selection-boundary import, resolver-cancel, and interactive=false routing, cancel, pending-line, and state-isolation tests are green.
-31. surface single-active-surface and pointer normalization tests are green.
-32. DTO immutability, `CanvasMetadata` deep-freeze, validating-constructor
+26. action typed payload tests are green.
+27. runtime-created timestamp monotonicity tests are green.
+28. low-level edit emits no user action events tests are green.
+29. interaction stale terminal, selection-boundary import, resolver-cancel, and interactive=false routing, cancel, pending-line, and state-isolation tests are green.
+30. surface single-active-surface and pointer normalization tests are green.
+31. DTO immutability, `CanvasMetadata` deep-freeze, validating-constructor
     factory policy, approved const-form policy, and public equality policy tests
     are green, including runtime state snapshot value equality.
-33. no CanvasDocument projection in paint/pointer/hit tests are green.
-34. all required diagrams exist and match owners.
-35. phase guardrail alignment is green.
-36. full `dart run tool/guardrails/run.dart` is green.
-37. every mandatory guardrail has a runner entry and executable proof, including
+32. no CanvasDocument projection in paint/pointer/hit tests are green.
+33. all required diagrams exist and match owners.
+34. phase guardrail alignment is green.
+35. full `dart run tool/guardrails/run.dart` is green.
+36. every mandatory guardrail has a runner entry and executable proof, including
     the `api.integration_surface_complete` external app-adapter compile fixture.
-38. benchmark gates pass.
-39. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
+37. benchmark gates pass.
+38. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
 ```
 
 ---

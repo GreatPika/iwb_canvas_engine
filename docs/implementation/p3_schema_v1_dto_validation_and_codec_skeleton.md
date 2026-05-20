@@ -20,7 +20,7 @@ external data shapes.
 
 - P0 package and guardrail boundaries are enforced.
 - P1 donor and oracle inventories are complete.
-- P1.5 scope gate is green.
+- P1.5 public API, external-adapter, legacy-ban, and validation checks are green.
 - P2 public DTOs, ids, errors, and validation rules are frozen.
 
 ## Read first
@@ -91,7 +91,6 @@ external data shapes.
 - `codec.no_runtime_side_effects`
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagnostics.sanitized_public_projection`
-- `api.functional_ledger_complete`
 - `api.id_validation_no_extension_type_escape`
 
 ## Exit gate

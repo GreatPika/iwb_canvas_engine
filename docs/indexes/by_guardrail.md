@@ -6,13 +6,7 @@ Guardrails extracted from split section 22.
 
 - Rule: every P1 legacy capability inventory row has a legacy oracle and evidence focus, without requiring next API mapping
 - Sections: `section_08_legacy_capability_inventory`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
-- Tests: `test.functional_ledger.legacy_capability_inventory`
-
-## api.functional_ledger_complete
-
-- Rule: every legacy capability inventory row has a matching functional ledger API mapping and row-specific test
-- Sections: `section_08_functional_ledger`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
-- Tests: `test.functional_ledger.row_specific_tests`
+- Tests: `test.oracle.legacy_capability_inventory`
 
 ## api.integration_surface_complete
 
@@ -20,16 +14,10 @@ Guardrails extracted from split section 22.
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
 - Tests: `test.api_contract.app_next_engine_adapter_compile_fixture`
 
-## api.v1_scope_gate_green_before_freeze
-
-- Rule: P1.5 scope gate passed before public API freeze starts
-- Sections: `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.v1_scope_gate`
-
 ## api.no_legacy_public_types
 
 - Rule: legacy public golden symbols not exported by root package
-- Sections: `section_03_package_layout`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Sections: `section_03_package_layout`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.api_contract.no_legacy_public_symbols`, `test.guardrails.blocking_suite`
 
 ## api.public_exports_complete
@@ -113,13 +101,13 @@ Guardrails extracted from split section 22.
 ## core.no_scene_controller_shape_dependency
 
 - Rule: no SceneController concept in core
-- Sections: `section_00_status_and_scope`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Sections: `section_00_status_and_scope`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.guardrails.blocking_suite`
 
 ## core.no_node_spec_patch_shape_dependency
 
 - Rule: no legacy NodeSpec/NodePatch/PatchField in core
-- Sections: `section_00_status_and_scope`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Sections: `section_00_status_and_scope`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.guardrails.blocking_suite`
 
 ## core.single_runtime_root

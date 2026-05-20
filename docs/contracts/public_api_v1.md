@@ -50,7 +50,6 @@ Required tests:
 - `test.flutter_bridge.interactive_false_pending_line_preserved`
 - `test.flutter_bridge.single_active_surface`
 - `test.flutter_bridge.surface_resource_session_lifecycle`
-- `test.api_contract.v1_scope_gate`
 Guardrails:
 - `api.integration_surface_complete`
 - `api.public_exports_complete`

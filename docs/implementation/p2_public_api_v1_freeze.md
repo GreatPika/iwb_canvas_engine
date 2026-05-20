@@ -11,7 +11,7 @@ errors, validation rules, and equality semantics.
 - all `src/api` DTOs implemented
 - `CanvasMetadata` implemented as the public metadata value object for
   metadata-bearing DTOs
-- P1.5 v1 scope gate green
+- P1.5 public API, external-adapter, legacy-ban, and validation checks are green
 - id validation implemented
 - `CanvasFieldUpdate` and its public variants implemented
 - `CanvasPreviewState` implemented as a sealed public union with exported
@@ -32,7 +32,7 @@ errors, validation rules, and equality semantics.
 
 - P0 package boundaries are enforced.
 - P1 oracle and donor inventory are complete.
-- P1.5 scope gate and functional ledger mapping are green.
+- P1.5 public API, external-adapter, legacy-ban, and validation checks are green.
 
 ## Read first
 
@@ -87,7 +87,6 @@ errors, validation rules, and equality semantics.
   `CanvasPreviewKind` values, and default identity equality policy from
   `section_04_public_api_v1`
 - accepted legacy differences from `section_09_accepted_differences`
-- functional ledger mapping remains green from P1.5 before API freeze
 - public DTO immutability, equality, id validation, class modifiers, dartdoc,
   and signature-shape obligations from `section_23_tests`
 
@@ -105,7 +104,6 @@ errors, validation rules, and equality semantics.
 - `test.api.canvas_field_update` -> `test/api/canvas_field_update_test.dart`
 - `test.api.typed_action_payloads` -> `test/api/typed_action_payloads_test.dart`
 - `test.codec.constructor_and_schema_limits` -> `test/codec/constructor_and_schema_limits_test.dart`
-- `api.v1_scope_gate_green_before_freeze`
 - `api.integration_surface_complete`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
@@ -118,13 +116,11 @@ errors, validation rules, and equality semantics.
 - `api.dto_immutability`
 - `api.equality_policy_explicit`
 - `api.id_validation_no_extension_type_escape`
-- `api.functional_ledger_complete`
 - `codec.known_fields_validated`
 
 ## Exit gate
 
-- P1.5 scope gate remains green
-- functional ledger mapping remains green
+- P1.5 public API, external-adapter, legacy-ban, and validation checks remain green
 - public API compiles
 - public runtime observation compiles through
   `ValueListenable<CanvasRuntimeState> get state`, and the retired

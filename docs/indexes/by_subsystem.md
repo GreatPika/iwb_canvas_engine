@@ -44,7 +44,6 @@ Subsystem-oriented reading map over the section registry.
 ## legacy_evidence
 
 - `section_08_legacy_capability_inventory`
-- `section_08_functional_ledger`
 
 ## quality_gates
 

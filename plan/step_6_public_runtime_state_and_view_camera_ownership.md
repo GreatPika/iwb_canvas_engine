@@ -143,11 +143,9 @@ mutation.
   `test/runtime/dispose_lifecycle_test.dart` in terms of two old public revision
   listenables and describes future selection/frame tests that must also prove
   public state behavior.
-- `docs/verification/guardrails.md`,
-  `docs/verification/functional_ledger.md`, and
-  `docs/verification/release_gates.md` - own future guardrail, functional, and
-  release proof descriptions for public exports/signatures and runtime-visible
-  state effects.
+- `docs/verification/guardrails.md` and
+  `docs/verification/release_gates.md` - own future guardrail and release proof
+  descriptions for public exports/signatures and runtime-visible state effects.
 - `docs/diagrams/dfd_public_edit.mmd`, `docs/diagrams/seq_edit_success.mmd`,
   `docs/diagrams/seq_load_document_success.mmd`,
   `docs/diagrams/seq_load_document_failure.mmd`,
@@ -596,8 +594,6 @@ mutation.
 - `docs/verification/tests.md` - update future test inventory.
 - `docs/verification/guardrails.md` - update guardrail proof descriptions when
   public API shape references change.
-- `docs/verification/functional_ledger.md` - update functional rows for runtime
-  state observation.
 - `docs/verification/release_gates.md` - update release gate references.
 - `docs/diagrams/README.md` - keep diagram catalog entries aligned if diagram
   descriptions change.
@@ -784,15 +780,14 @@ changes.
   `docs/implementation/p11_draw_tools.md`, and
   `docs/implementation/p13_flutter_surface.md` where they describe runtime
   revision lifecycle, listener cleanup, or proof obligations.
-- Update `docs/verification/tests.md` and
-  `docs/verification/functional_ledger.md` to name future proof for public
-  state notification domains.
+- Update `docs/verification/tests.md` to name future proof for public state
+  notification domains.
 - Update lifecycle, edit, load, resource, pointer, and interaction diagrams that
   describe public signals or old revision listenables.
 
 #### Behavioral Verification
 
-- `bash -lc 'rg -n "CanvasRuntimeState|state\\.revisions|public state|state listenable" docs/architecture/03_data_model.md docs/contracts/operation_matrix.md docs/contracts/edit_kernel.md docs/contracts/load_document.md docs/contracts/resources.md docs/contracts/interaction_engine.md docs/verification/tests.md docs/verification/functional_ledger.md'`
+- `bash -lc 'rg -n "CanvasRuntimeState|state\\.revisions|public state|state listenable" docs/architecture/03_data_model.md docs/contracts/operation_matrix.md docs/contracts/edit_kernel.md docs/contracts/load_document.md docs/contracts/resources.md docs/contracts/interaction_engine.md docs/verification/tests.md'`
 - `bash -lc '! rg -n "documentRevisionListenable|previewRevisionListenable|document/revision listeners|preview revision listener|revision listenables" docs/architecture/03_data_model.md docs/contracts/operation_matrix.md docs/contracts/edit_kernel.md docs/contracts/load_document.md docs/contracts/resources.md docs/contracts/interaction_engine.md docs/implementation docs/verification docs/diagrams'`
 - `bash -lc 'rg -n "selection.*state|preview.*state|resourceVisual|interaction|dispose.*state\\.value|no notifications.*after dispose" docs/architecture/03_data_model.md docs/contracts/operation_matrix.md docs/verification/tests.md'`
 
@@ -824,7 +819,7 @@ changes.
   phase docs, diagrams, and documentation checks agree on one state-listenable
   publication model.
 - Passed on 2026-05-17:
-  - `rg -n "CanvasRuntimeState|state\\.revisions|public state|state listenable" docs/architecture/03_data_model.md docs/contracts/operation_matrix.md docs/contracts/edit_kernel.md docs/contracts/load_document.md docs/contracts/resources.md docs/contracts/interaction_engine.md docs/verification/tests.md docs/verification/functional_ledger.md`
+  - `rg -n "CanvasRuntimeState|state\\.revisions|public state|state listenable" docs/architecture/03_data_model.md docs/contracts/operation_matrix.md docs/contracts/edit_kernel.md docs/contracts/load_document.md docs/contracts/resources.md docs/contracts/interaction_engine.md docs/verification/tests.md`
   - `! rg -n "documentRevisionListenable|previewRevisionListenable|document/revision listeners|preview revision listener|revision listenables" docs/architecture/03_data_model.md docs/contracts/operation_matrix.md docs/contracts/edit_kernel.md docs/contracts/load_document.md docs/contracts/resources.md docs/contracts/interaction_engine.md docs/implementation docs/verification docs/diagrams`
   - `rg -n "selection.*state|preview.*state|resourceVisual|interaction|dispose.*state\\.value|no notifications.*after dispose" docs/architecture/03_data_model.md docs/contracts/operation_matrix.md docs/verification/tests.md`
   - `dart run docs/tool/generate_context_capsules.dart --check`

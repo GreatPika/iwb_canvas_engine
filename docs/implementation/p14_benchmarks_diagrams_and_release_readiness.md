@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Close the implementation by proving that functional ledger rows, guardrails,
-diagrams, benchmarks, donor use, phase alignment, and final release gates all
-match the target architecture.
+Close the implementation by proving that guardrails, diagrams, benchmarks,
+donor use, phase alignment, and final release gates all match the target
+architecture.
 
 ## Build scope
 
@@ -17,7 +17,6 @@ match the target architecture.
 - full guardrail runner closure
 - release checklist
 - phase guardrail alignment
-- final functional ledger closure
 - no app adapters inside the engine package.
 
 ## Dependencies on earlier phases
@@ -27,7 +26,6 @@ match the target architecture.
 
 ## Read first
 
-- `section_08_functional_ledger` -> `docs/verification/functional_ledger.md`
 - `section_18_cache_policy` -> `docs/contracts/cache_policy.md`
 - `section_20_diagnostics_hub` -> `docs/contracts/diagnostics.md`
 - `section_22_guardrails_machine_checks` -> `docs/verification/guardrails.md`
@@ -97,7 +95,6 @@ match the target architecture.
 
 ## Contracts satisfied by this phase
 
-- functional ledger closure from `section_08_functional_ledger`
 - diagnostics hot-path and sanitizer closure from `section_20_diagnostics_hub`
 - mandatory guardrail suite from `section_22_guardrails_machine_checks`
 - complete required test inventory from `section_23_tests`
@@ -106,20 +103,17 @@ match the target architecture.
 
 ## Tests and guardrails that prove this phase
 
-- `test.functional_ledger.row_specific_tests` -> `test/functional_ledger/row_specific_tests_test.dart`
 - `test.api_contract.app_next_engine_adapter_compile_fixture` -> `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`
 - `test.benchmarks.required_cases` -> `test/benchmarks/required_cases_test.dart`
 - `test.guardrails.blocking_suite` -> `test/guardrails/blocking_suite_test.dart`
 - `dart run tool/guardrails/run.dart` -> full blocking guardrail suite
 - `diagnostics.disabled_no_alloc_hot_path`
 - `api.integration_surface_complete`
-- `api.functional_ledger_complete`
 - every guardrail listed in `section_22_guardrails_machine_checks`
 - every final release gate listed in `section_27_final_release_gates`
 
 ## Exit gate
 
-- functional ledger complete
 - schema tests green
 - interaction/frame/spatial/resource tests green
 - benchmarks pass

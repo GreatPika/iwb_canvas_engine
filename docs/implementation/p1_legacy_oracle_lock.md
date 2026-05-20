@@ -119,7 +119,7 @@ Use the donor registry and donor docs to cover these important donor families:
 
 ## Tests and guardrails that prove this phase
 
-- `test.functional_ledger.legacy_capability_inventory` -> `test/functional_ledger/legacy_capability_inventory_test.dart`
+- `test.oracle.legacy_capability_inventory` -> `test/oracle/legacy_capability_inventory_test.dart`
 - `oracle.legacy_capability_inventory_complete`
 
 ## Exit gate

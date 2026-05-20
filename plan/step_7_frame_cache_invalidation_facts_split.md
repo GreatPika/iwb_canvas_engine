@@ -91,7 +91,7 @@ The current owner is the architecture/documentation source of truth for the new 
 
 ### Existing Tests
 
-No root-package `test/**` Dart files exist yet. The planned verification ledger already names future tests in `docs/verification/tests.md`, including `test.frame.main_overlay_capture`, `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`, `test.frame.cache_capacity_eviction_policy`, `test.frame.paint_plan_excludes_preview_delta`, `test.frame.paint_plan_excludes_selection_state`, and `test.frame.camera_pan_preserves_ordinary_paint_plan`.
+No root-package `test/**` Dart files exist yet. The planned verification docs already name future tests in `docs/verification/tests.md`, including `test.frame.main_overlay_capture`, `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`, `test.frame.cache_capacity_eviction_policy`, `test.frame.paint_plan_excludes_preview_delta`, `test.frame.paint_plan_excludes_selection_state`, and `test.frame.camera_pan_preserves_ordinary_paint_plan`.
 
 ### Analogous Implementation Path
 
@@ -218,7 +218,7 @@ Semantic proof is documentation-level until production code exists: targeted sea
 
 1. Lock the internal revision ownership in architecture and public API explanatory text.
 2. Align frame rendering, cache policy, and operation matrix contracts.
-3. Align diagrams, verification ledgers, indexes, implementation-phase guidance, and backlog cleanup.
+3. Align diagrams, verification docs, indexes, implementation-phase guidance, and backlog cleanup.
 4. Run documentation structural checks and targeted semantic searches.
 
 ### Successor Seam and Retirement Gates
@@ -419,7 +419,7 @@ Slice closes when frame/cache docs have one unambiguous cache and capture design
 
 #### Slice Contract
 
-Diagrams, guardrails, test ledger, indexes, release gates, and backlog notes use the selected background/grid split and no longer present `surfaceStyleRevision` as future accepted architecture.
+Diagrams, guardrails, test inventory, indexes, release gates, and backlog notes use the selected background/grid split and no longer present `surfaceStyleRevision` as future accepted architecture.
 
 #### Files
 

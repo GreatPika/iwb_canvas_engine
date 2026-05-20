@@ -13,19 +13,19 @@ Related donors:
 Related diagrams:
 - `none`
 Required tests:
-- `test.functional_ledger.legacy_capability_inventory`
+- `test.oracle.legacy_capability_inventory`
 Guardrails:
 - `oracle.legacy_capability_inventory_complete`
 Do not assume:
-- no next API mapping before P1.5 scope gate
+- no next API mapping table as release proof
 <!-- CONTEXT:END -->
 
 ## 8A. Legacy capability inventory
 
 This inventory is the P1 legacy-oracle closure point. It records which legacy
 capabilities must be preserved or explicitly rejected before any new public API
-mapping is frozen. It does not choose next API names or signatures; that mapping
-belongs to `section_08_functional_ledger` after the P1.5 scope gate.
+shape is frozen. It does not choose next API names or signatures, and it is not
+a release-proof mapping table.
 
 ## Evidence closure checklist
 
@@ -108,7 +108,7 @@ are covered by rows and tests, or by an explicit accepted difference:
 | external image repaint | `notifySceneChanged` | external visual resource repaint |
 | save/restore | schema codec | document persistence behavior |
 
-All inventory capabilities must have a matching functional ledger row before
-the P1.5 scope gate can close.
+Inventory rows feed later behavior tests and accepted-difference decisions. They
+must not be treated as proof that the next public API is complete.
 
 ---

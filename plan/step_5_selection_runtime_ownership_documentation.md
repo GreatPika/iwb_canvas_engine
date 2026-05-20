@@ -556,8 +556,6 @@ needed before implementation phases depend on selection behavior.
 - `docs/verification/guardrails.md` - future structural guardrail wording.
 - `docs/verification/tests.md` - future test inventory for selection owner
   behavior and cache independence.
-- `docs/verification/functional_ledger.md` - update only if selection behavior
-  ownership wording appears there.
 - `docs/tool/generate_context_capsules.dart` - no expected change; used as a
   required workflow check.
 - `docs/tool/check_docs.dart` - no expected change unless the documentation

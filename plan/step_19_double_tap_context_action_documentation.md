@@ -657,9 +657,6 @@ PUBLIC_API_CHANGE
 - Verification contract edit: `docs/verification/tests.md` - add direct
   `handleDoubleTap` behavior expectations to the context-action and timestamp
   test descriptions.
-- Functional ledger alignment: `docs/verification/functional_ledger.md` -
-  update only if the ledger needs to distinguish direct host-recognized
-  double-tap from pointer-sample two-tap recognition.
 - Guardrail index alignment: `docs/verification/guardrails.md` and
   `docs/indexes/by_guardrail.md` - update only if existing guardrail references
   need direct double-tap wording.

@@ -15,7 +15,8 @@ Related diagrams:
 - `c4_context`
 - `c4_container`
 Required tests:
-- `test.api_contract.v1_scope_gate`
+- `test.api_contract.no_legacy_public_symbols`
+- `test.api_contract.app_next_engine_adapter_compile_fixture`
 Guardrails:
 - `core.no_legacy_imports`
 - `core.no_scene_controller_shape_dependency`

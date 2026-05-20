@@ -414,9 +414,8 @@ this step does not create `lib/**` or `test/**`.
    interaction, diagram, operation-matrix, verification, or cleanup documents.
 4. Align interaction ownership and text request diagrams after the public
    request id and guarded commit seam are present.
-5. Add verification, guardrail, functional-ledger, release-gate, phase, and
-   index mappings after the successor seam is named in public and interaction
-   contracts.
+5. Add verification, guardrail, release-gate, phase, and index mappings after
+   the successor seam is named in public and interaction contracts.
 6. Retire the accepted text stale-guard block from `redesign.md` and update the
    relevant `audit.md` text-edit request coverage only after successor docs and
    verification mappings exist.
@@ -669,8 +668,6 @@ BUG_FIX, SEAM_MIGRATION, PUBLIC_API_CHANGE
 - Guardrail registry owner: `docs/verification/guardrails.md` — add
   `interaction.text_edit_stale_commit_guard` and align command/action guardrail
   wording for `editText`.
-- Functional ledger owner: `docs/verification/functional_ledger.md` — map text
-  edit request plus guarded commit to the functional text edit capability.
 - Release gate owner: `docs/verification/release_gates.md` — include stale text
   commit and guarded command/action proof in the interaction/action gates.
 - Generated-style test index owner: `docs/indexes/by_test_area.md` — map the
