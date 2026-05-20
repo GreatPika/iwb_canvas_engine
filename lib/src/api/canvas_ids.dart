@@ -4,6 +4,7 @@ import 'canvas_contract_limits.dart';
 import 'canvas_value_validators.dart';
 
 @immutable
+/// Public API v1 declaration for [CanvasElementId].
 final class CanvasElementId {
   factory CanvasElementId(String value) {
     return CanvasElementId._(
@@ -28,6 +29,7 @@ final class CanvasElementId {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasLayerId].
 final class CanvasLayerId {
   factory CanvasLayerId(String value) {
     return CanvasLayerId._(
@@ -52,6 +54,7 @@ final class CanvasLayerId {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasResourceId].
 final class CanvasResourceId {
   factory CanvasResourceId(String value) {
     return CanvasResourceId._(
@@ -76,6 +79,7 @@ final class CanvasResourceId {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasActionId].
 final class CanvasActionId {
   factory CanvasActionId(String value) {
     return CanvasActionId._(
@@ -100,6 +104,7 @@ final class CanvasActionId {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasInteractionRequestId].
 final class CanvasInteractionRequestId {
   factory CanvasInteractionRequestId(String value) {
     return CanvasInteractionRequestId._(

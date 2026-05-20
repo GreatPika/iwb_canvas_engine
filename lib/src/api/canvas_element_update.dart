@@ -9,6 +9,7 @@ import 'canvas_geometry.dart';
 import 'canvas_ids.dart';
 import 'canvas_value_validators.dart';
 
+/// Public API v1 declaration for [CanvasElementUpdate].
 sealed class CanvasElementUpdate {
   CanvasElementUpdate({
     required this.id,
@@ -49,6 +50,7 @@ sealed class CanvasElementUpdate {
   final CanvasFieldUpdate<CanvasMetadata> metadata;
 }
 
+/// Public API v1 declaration for [CanvasImageElementUpdate].
 final class CanvasImageElementUpdate extends CanvasElementUpdate {
   CanvasImageElementUpdate({
     required super.id,
@@ -78,6 +80,7 @@ final class CanvasImageElementUpdate extends CanvasElementUpdate {
   final CanvasFieldUpdate<Size?> naturalSize;
 }
 
+/// Public API v1 declaration for [CanvasPathElementUpdate].
 final class CanvasPathElementUpdate extends CanvasElementUpdate {
   CanvasPathElementUpdate({
     required super.id,
@@ -113,6 +116,7 @@ final class CanvasPathElementUpdate extends CanvasElementUpdate {
   final CanvasFieldUpdate<CanvasPathFillRule> fillRule;
 }
 
+/// Public API v1 declaration for [CanvasTextElementUpdate].
 final class CanvasTextElementUpdate extends CanvasElementUpdate {
   CanvasTextElementUpdate({
     required super.id,
@@ -166,6 +170,7 @@ final class CanvasTextElementUpdate extends CanvasElementUpdate {
   final CanvasFieldUpdate<double?> lineHeight;
 }
 
+/// Public API v1 declaration for [CanvasStrokeElementUpdate].
 final class CanvasStrokeElementUpdate extends CanvasElementUpdate {
   CanvasStrokeElementUpdate({
     required super.id,
@@ -197,6 +202,7 @@ final class CanvasStrokeElementUpdate extends CanvasElementUpdate {
   final CanvasFieldUpdate<Color> color;
 }
 
+/// Public API v1 declaration for [CanvasLineElementUpdate].
 final class CanvasLineElementUpdate extends CanvasElementUpdate {
   CanvasLineElementUpdate({
     required super.id,
@@ -231,6 +237,7 @@ final class CanvasLineElementUpdate extends CanvasElementUpdate {
   final CanvasFieldUpdate<Color> color;
 }
 
+/// Public API v1 declaration for [CanvasRectElementUpdate].
 final class CanvasRectElementUpdate extends CanvasElementUpdate {
   CanvasRectElementUpdate({
     required super.id,

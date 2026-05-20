@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+/// Public API v1 declaration for [CanvasPreviewKind].
 enum CanvasPreviewKind {
   none,
   marquee,
@@ -11,6 +12,7 @@ enum CanvasPreviewKind {
   eraser,
 }
 
+/// Public API v1 declaration for [CanvasPreviewState].
 sealed class CanvasPreviewState {
   const CanvasPreviewState();
   const factory CanvasPreviewState.none() = CanvasNoPreview;
@@ -50,12 +52,14 @@ sealed class CanvasPreviewState {
   CanvasPreviewKind get kind;
 }
 
+/// Public API v1 declaration for [CanvasNoPreview].
 final class CanvasNoPreview extends CanvasPreviewState {
   const CanvasNoPreview();
   @override
   CanvasPreviewKind get kind => CanvasPreviewKind.none;
 }
 
+/// Public API v1 declaration for [CanvasMarqueePreview].
 final class CanvasMarqueePreview extends CanvasPreviewState {
   const CanvasMarqueePreview({required this.rect});
   final Rect rect;
@@ -63,6 +67,7 @@ final class CanvasMarqueePreview extends CanvasPreviewState {
   CanvasPreviewKind get kind => CanvasPreviewKind.marquee;
 }
 
+/// Public API v1 declaration for [CanvasSelectedMovePreview].
 final class CanvasSelectedMovePreview extends CanvasPreviewState {
   const CanvasSelectedMovePreview({required this.delta});
   final Offset delta;
@@ -70,6 +75,7 @@ final class CanvasSelectedMovePreview extends CanvasPreviewState {
   CanvasPreviewKind get kind => CanvasPreviewKind.selectedMove;
 }
 
+/// Public API v1 declaration for [CanvasStrokePreview].
 sealed class CanvasStrokePreview extends CanvasPreviewState {
   const CanvasStrokePreview();
   List<Offset> get points;
@@ -78,6 +84,7 @@ sealed class CanvasStrokePreview extends CanvasPreviewState {
   double get opacity;
 }
 
+/// Public API v1 declaration for [CanvasPencilStrokePreview].
 final class CanvasPencilStrokePreview extends CanvasStrokePreview {
   CanvasPencilStrokePreview({
     required Iterable<Offset> points,
@@ -98,6 +105,7 @@ final class CanvasPencilStrokePreview extends CanvasStrokePreview {
   CanvasPreviewKind get kind => CanvasPreviewKind.pencilStroke;
 }
 
+/// Public API v1 declaration for [CanvasMarkerStrokePreview].
 final class CanvasMarkerStrokePreview extends CanvasStrokePreview {
   CanvasMarkerStrokePreview({
     required Iterable<Offset> points,
@@ -118,6 +126,7 @@ final class CanvasMarkerStrokePreview extends CanvasStrokePreview {
   CanvasPreviewKind get kind => CanvasPreviewKind.markerStroke;
 }
 
+/// Public API v1 declaration for [CanvasPendingLineStartPreview].
 final class CanvasPendingLineStartPreview extends CanvasPreviewState {
   const CanvasPendingLineStartPreview({
     required this.start,
@@ -134,6 +143,7 @@ final class CanvasPendingLineStartPreview extends CanvasPreviewState {
   CanvasPreviewKind get kind => CanvasPreviewKind.pendingLineStart;
 }
 
+/// Public API v1 declaration for [CanvasLinePreview].
 final class CanvasLinePreview extends CanvasPreviewState {
   const CanvasLinePreview({
     required this.start,
@@ -150,6 +160,7 @@ final class CanvasLinePreview extends CanvasPreviewState {
   CanvasPreviewKind get kind => CanvasPreviewKind.linePreview;
 }
 
+/// Public API v1 declaration for [CanvasEraserPreview].
 final class CanvasEraserPreview extends CanvasPreviewState {
   CanvasEraserPreview({
     required Iterable<Offset> corridor,

@@ -4,6 +4,7 @@ import 'canvas_resource.dart';
 import 'canvas_runtime.dart';
 import 'canvas_value_validators.dart';
 
+/// Public API v1 declaration for [CanvasSurface].
 final class CanvasSurface extends StatefulWidget {
   const CanvasSurface({
     required this.runtime,
@@ -25,6 +26,7 @@ final class CanvasSurface extends StatefulWidget {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasSelectionStyle].
 final class CanvasSelectionStyle {
   factory CanvasSelectionStyle({
     Color color = const Color(0xFF1565C0),
@@ -83,6 +85,7 @@ final class CanvasSelectionStyle {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasGridStyle].
 final class CanvasGridStyle {
   factory CanvasGridStyle({double strokeWidth = 1.0}) {
     validateNonNegativeDouble(strokeWidth, path: 'gridStyle.strokeWidth');

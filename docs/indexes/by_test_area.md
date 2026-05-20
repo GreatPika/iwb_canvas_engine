@@ -7,7 +7,14 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Path: `test/api_contract/public_api_v1_compiles_as_written_test.dart`
 - Phases: `P2`
 - Sections: `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `api.public_api_compiles_as_written`, `api.exported_dartdoc_complete`, `api.public_class_modifiers_explicit`
+- Guardrails: `api.public_api_compiles_as_written`
+
+## test.guardrails.public_api_declaration_checks
+
+- Path: `test/guardrails/public_api_declaration_checks_test.dart`
+- Phases: `P2`
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
+- Guardrails: `api.exported_dartdoc_complete`, `api.public_class_modifiers_explicit`
 
 ## test.api_contract.app_next_engine_adapter_compile_fixture
 

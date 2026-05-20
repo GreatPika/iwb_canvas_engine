@@ -358,10 +358,14 @@ test/api_contract/app_next_engine_adapter_compile_fixture_test.dart
 
 test/api_contract/public_api_v1_compiles_as_written_test.dart
   -> compiles the exported API declarations in an empty consumer package;
-  -> uses analyzer AST over exported public declarations to verify non-empty
-     dartdoc summaries for api.exported_dartdoc_complete;
-  -> uses analyzer AST over exported public classes to verify explicit Dart 3
-     subtype policy modifiers for api.public_class_modifiers_explicit.
+  -> instantiates and calls P2-owned public constructors, getters, methods,
+     defaults, and return shapes through the public barrel.
+
+test/guardrails/public_api_declaration_checks_test.dart
+  -> checks exported public declarations for non-empty dartdoc summaries for
+     api.exported_dartdoc_complete;
+  -> checks exported public classes for explicit Dart 3 subtype policy
+     modifiers for api.public_class_modifiers_explicit.
 
 test/api_contract/no_undefined_public_type_references_test.dart
   -> verifies every exported signature type is exported or from Flutter/Dart SDK;

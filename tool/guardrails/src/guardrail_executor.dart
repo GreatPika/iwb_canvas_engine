@@ -5,6 +5,7 @@ import 'guardrail_registry.dart';
 import 'guardrail_violation.dart';
 import 'public_api_checks.dart';
 import 'public_api_contract_checks.dart';
+import 'public_api_declaration_checks.dart';
 
 typedef GuardrailProofRunner =
     Future<int> Function(String guardrailId, String path);
@@ -153,6 +154,10 @@ const _testProofPaths = {
       'test/api_contract/public_readable_union_variants_test.dart',
   'api.preview_state_sealed_union_publicly_readable':
       'test/api_contract/public_readable_union_variants_test.dart',
+  'api.exported_dartdoc_complete':
+      'test/guardrails/public_api_declaration_checks_test.dart',
+  'api.public_class_modifiers_explicit':
+      'test/guardrails/public_api_declaration_checks_test.dart',
   'api.dto_immutability': 'test/api_contract/dto_immutability_test.dart',
   'api.equality_policy_explicit':
       'test/api_contract/public_equality_policy_test.dart',
@@ -168,6 +173,8 @@ _violationChecks = {
   'api.public_exports_complete': checkPublicExportsComplete,
   'api.public_types_complete': checkPublicTypesComplete,
   'api.public_signature_shape': checkPublicSignatureShape,
+  'api.exported_dartdoc_complete': checkExportedDartdocComplete,
+  'api.public_class_modifiers_explicit': checkPublicClassModifiersExplicit,
   'api.no_undefined_public_type_references':
       checkNoUndefinedPublicTypeReferences,
   'core.single_runtime_root': () async => checkSingleRuntimeRoot(),
@@ -178,6 +185,8 @@ const _structuralDescriptions = {
   'api.public_exports_complete': 'public registry parity check',
   'api.public_types_complete': 'resolved public type closure check',
   'api.public_signature_shape': 'resolved public signature shape check',
+  'api.exported_dartdoc_complete': 'exported public dartdoc summary check',
+  'api.public_class_modifiers_explicit': 'exported public class modifier check',
   'api.no_undefined_public_type_references':
       'resolved undefined public type reference check',
   'core.single_runtime_root': 'single runtime root declaration check',

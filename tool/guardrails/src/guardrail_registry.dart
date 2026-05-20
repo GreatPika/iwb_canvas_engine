@@ -43,6 +43,14 @@ const _blockingEntries = [
     id: 'api.preview_state_sealed_union_publicly_readable',
     suites: {'blocking', 'api'},
   ),
+  GuardrailEntry(
+    id: 'api.exported_dartdoc_complete',
+    suites: {'blocking', 'api'},
+  ),
+  GuardrailEntry(
+    id: 'api.public_class_modifiers_explicit',
+    suites: {'blocking', 'api'},
+  ),
   GuardrailEntry(id: 'api.public_signature_shape', suites: {'blocking', 'api'}),
   GuardrailEntry(
     id: 'api.no_undefined_public_type_references',

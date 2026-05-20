@@ -8,6 +8,7 @@ import 'canvas_geometry.dart';
 import 'canvas_ids.dart';
 import 'canvas_tools.dart';
 
+/// Public API v1 declaration for [CanvasActionType].
 enum CanvasActionType {
   moveSelection,
   selectMarquee,
@@ -21,6 +22,7 @@ enum CanvasActionType {
   editText,
 }
 
+/// Public API v1 declaration for [CanvasActionCommitted].
 final class CanvasActionCommitted {
   CanvasActionCommitted({
     required this.actionId,
@@ -38,10 +40,12 @@ final class CanvasActionCommitted {
   List<CanvasElementId> get elementIds => _elementIds;
 }
 
+/// Public API v1 declaration for [CanvasActionPayload].
 sealed class CanvasActionPayload {
   const CanvasActionPayload();
 }
 
+/// Public API v1 declaration for [CanvasTransformOperation].
 enum CanvasTransformOperation {
   move,
   rotateClockwise,
@@ -50,6 +54,7 @@ enum CanvasTransformOperation {
   flipHorizontal,
 }
 
+/// Public API v1 declaration for [CanvasTransformActionPayload].
 final class CanvasTransformActionPayload extends CanvasActionPayload {
   const CanvasTransformActionPayload({
     required this.delta,
@@ -62,6 +67,7 @@ final class CanvasTransformActionPayload extends CanvasActionPayload {
   final Offset? pivotWorld;
 }
 
+/// Public API v1 declaration for [CanvasSelectionActionPayload].
 final class CanvasSelectionActionPayload extends CanvasActionPayload {
   CanvasSelectionActionPayload({
     required Iterable<CanvasElementId> previousSelection,
@@ -77,6 +83,7 @@ final class CanvasSelectionActionPayload extends CanvasActionPayload {
   List<CanvasElementId> get nextSelection => _nextSelection;
 }
 
+/// Public API v1 declaration for [CanvasDeleteActionPayload].
 final class CanvasDeleteActionPayload extends CanvasActionPayload {
   CanvasDeleteActionPayload({
     required Iterable<CanvasElementId> removedElementIds,
@@ -86,6 +93,7 @@ final class CanvasDeleteActionPayload extends CanvasActionPayload {
   List<CanvasElementId> get removedElementIds => _removedElementIds;
 }
 
+/// Public API v1 declaration for [CanvasClearActionPayload].
 final class CanvasClearActionPayload extends CanvasActionPayload {
   CanvasClearActionPayload({
     required Iterable<CanvasElementId> removedElementIds,
@@ -99,6 +107,7 @@ final class CanvasClearActionPayload extends CanvasActionPayload {
   List<CanvasResourceId> get removedResourceIds => _removedResourceIds;
 }
 
+/// Public API v1 declaration for [CanvasDrawStrokeActionPayload].
 final class CanvasDrawStrokeActionPayload extends CanvasActionPayload {
   const CanvasDrawStrokeActionPayload({
     required this.tool,
@@ -115,6 +124,7 @@ final class CanvasDrawStrokeActionPayload extends CanvasActionPayload {
   final int pointCount;
 }
 
+/// Public API v1 declaration for [CanvasDrawLineActionPayload].
 final class CanvasDrawLineActionPayload extends CanvasActionPayload {
   const CanvasDrawLineActionPayload({
     required this.color,
@@ -131,6 +141,7 @@ final class CanvasDrawLineActionPayload extends CanvasActionPayload {
   final Offset endWorld;
 }
 
+/// Public API v1 declaration for [CanvasEraseActionPayload].
 final class CanvasEraseActionPayload extends CanvasActionPayload {
   CanvasEraseActionPayload({
     required this.eraserThickness,
@@ -144,6 +155,7 @@ final class CanvasEraseActionPayload extends CanvasActionPayload {
   List<CanvasElementId> get erasedElementIds => _erasedElementIds;
 }
 
+/// Public API v1 declaration for [CanvasTextEditActionPayload].
 final class CanvasTextEditActionPayload extends CanvasActionPayload {
   const CanvasTextEditActionPayload({
     required this.requestId,
@@ -156,8 +168,10 @@ final class CanvasTextEditActionPayload extends CanvasActionPayload {
   final int nextTextLength;
 }
 
+/// Public API v1 declaration for [CanvasContextActionTrigger].
 enum CanvasContextActionTrigger { doubleTap }
 
+/// Public API v1 declaration for [CanvasContextActionRequested].
 final class CanvasContextActionRequested {
   const CanvasContextActionRequested({
     required this.requestId,
@@ -180,10 +194,12 @@ final class CanvasContextActionRequested {
   final Offset worldPosition;
 }
 
+/// Public API v1 declaration for [CanvasContextActionTarget].
 sealed class CanvasContextActionTarget {
   const CanvasContextActionTarget();
 }
 
+/// Public API v1 declaration for [CanvasContentElementContextActionTarget].
 final class CanvasContentElementContextActionTarget
     extends CanvasContextActionTarget {
   const CanvasContentElementContextActionTarget({
@@ -195,14 +211,17 @@ final class CanvasContentElementContextActionTarget
   final Rect boundsWorld;
 }
 
+/// Public API v1 declaration for [CanvasEmptyCanvasContextActionTarget].
 final class CanvasEmptyCanvasContextActionTarget
     extends CanvasContextActionTarget {
   const CanvasEmptyCanvasContextActionTarget();
 }
 
+/// Public API v1 declaration for [CanvasMoveCommitResolver].
 typedef CanvasMoveCommitResolver =
     CanvasMoveResolution Function(CanvasMoveCommitRequest request);
 
+/// Public API v1 declaration for [CanvasMoveCommitRequest].
 final class CanvasMoveCommitRequest {
   CanvasMoveCommitRequest({
     required this.documentSummary,
@@ -221,6 +240,7 @@ final class CanvasMoveCommitRequest {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasElementRead].
 final class CanvasElementRead {
   const CanvasElementRead({
     required this.id,
@@ -267,11 +287,13 @@ final class CanvasElementRead {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasMoveResolution].
 sealed class CanvasMoveResolution {
   const CanvasMoveResolution();
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasMoveCommit].
 final class CanvasMoveCommit extends CanvasMoveResolution {
   const CanvasMoveCommit({required this.delta});
   final Offset delta;
@@ -286,6 +308,7 @@ final class CanvasMoveCommit extends CanvasMoveResolution {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasMoveCancel].
 final class CanvasMoveCancel extends CanvasMoveResolution {
   const CanvasMoveCancel({this.reason});
   final String? reason;

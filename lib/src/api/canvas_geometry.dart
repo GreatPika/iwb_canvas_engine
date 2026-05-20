@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'canvas_value_validators.dart';
 
+/// Public API v1 declaration for [CanvasTransform].
 @immutable
 // This registry-owned public value object stays cohesive so the transform API
 // remains visible as one contract surface instead of being split by metric.

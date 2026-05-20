@@ -4,6 +4,7 @@ import 'canvas_diagnostic_policy_limits.dart';
 import 'canvas_value_validators.dart';
 
 @immutable
+/// Public API v1 declaration for [CanvasDiagnosticPolicy].
 sealed class CanvasDiagnosticPolicy {
   const CanvasDiagnosticPolicy();
   const factory CanvasDiagnosticPolicy.disabled() = CanvasDiagnosticsDisabled;
@@ -15,6 +16,7 @@ sealed class CanvasDiagnosticPolicy {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasDiagnosticsDisabled].
 final class CanvasDiagnosticsDisabled extends CanvasDiagnosticPolicy {
   const CanvasDiagnosticsDisabled();
 
@@ -28,6 +30,7 @@ final class CanvasDiagnosticsDisabled extends CanvasDiagnosticPolicy {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasDiagnosticsSummary].
 final class CanvasDiagnosticsSummary extends CanvasDiagnosticPolicy {
   const CanvasDiagnosticsSummary();
 
@@ -41,6 +44,7 @@ final class CanvasDiagnosticsSummary extends CanvasDiagnosticPolicy {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasDiagnosticsVerbose].
 final class CanvasDiagnosticsVerbose extends CanvasDiagnosticPolicy {
   factory CanvasDiagnosticsVerbose({
     int maxPreviewLength = canvasDiagnosticVerbosePreviewLengthDefault,

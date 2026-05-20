@@ -1,5 +1,6 @@
 import 'canvas_error_details_sanitizer.dart';
 
+/// Public API v1 declaration for [CanvasDataErrorCode].
 enum CanvasDataErrorCode {
   invalidJson,
   unsupportedSchemaVersion,
@@ -23,6 +24,7 @@ enum CanvasDataErrorCode {
   invalidMetadata,
 }
 
+/// Public API v1 declaration for [CanvasDataException].
 final class CanvasDataException implements Exception {
   factory CanvasDataException({
     required CanvasDataErrorCode code,

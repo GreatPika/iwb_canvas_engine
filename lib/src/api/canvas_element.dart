@@ -7,10 +7,13 @@ import 'canvas_geometry.dart';
 import 'canvas_ids.dart';
 import 'canvas_value_validators.dart';
 
+/// Public API v1 declaration for [CanvasElementKind].
 enum CanvasElementKind { image, path, text, stroke, line, rect }
 
+/// Public API v1 declaration for [CanvasPathFillRule].
 enum CanvasPathFillRule { nonZero, evenOdd }
 
+/// Public API v1 declaration for [CanvasElement].
 sealed class CanvasElement {
   CanvasElement({
     required this.id,
@@ -49,6 +52,7 @@ sealed class CanvasElement {
   final CanvasMetadata metadata;
 }
 
+/// Public API v1 declaration for [CanvasImageElement].
 final class CanvasImageElement extends CanvasElement {
   CanvasImageElement({
     required super.id,
@@ -80,6 +84,7 @@ final class CanvasImageElement extends CanvasElement {
   CanvasElementKind get kind => CanvasElementKind.image;
 }
 
+/// Public API v1 declaration for [CanvasPathElement].
 final class CanvasPathElement extends CanvasElement {
   CanvasPathElement({
     required super.id,
@@ -129,6 +134,7 @@ final class CanvasPathElement extends CanvasElement {
   CanvasElementKind get kind => CanvasElementKind.path;
 }
 
+/// Public API v1 declaration for [CanvasTextElement].
 final class CanvasTextElement extends CanvasElement {
   CanvasTextElement({
     required super.id,
@@ -208,6 +214,7 @@ final class CanvasTextElement extends CanvasElement {
   CanvasElementKind get kind => CanvasElementKind.text;
 }
 
+/// Public API v1 declaration for [CanvasStrokeElement].
 final class CanvasStrokeElement extends CanvasElement {
   CanvasStrokeElement({
     required super.id,
@@ -257,6 +264,7 @@ final class CanvasStrokeElement extends CanvasElement {
   CanvasElementKind get kind => CanvasElementKind.stroke;
 }
 
+/// Public API v1 declaration for [CanvasLineElement].
 final class CanvasLineElement extends CanvasElement {
   CanvasLineElement({
     required super.id,
@@ -292,6 +300,7 @@ final class CanvasLineElement extends CanvasElement {
   CanvasElementKind get kind => CanvasElementKind.line;
 }
 
+/// Public API v1 declaration for [CanvasRectElement].
 final class CanvasRectElement extends CanvasElement {
   CanvasRectElement({
     required super.id,

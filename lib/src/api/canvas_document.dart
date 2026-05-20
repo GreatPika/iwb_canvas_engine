@@ -12,6 +12,7 @@ import 'canvas_value_equality.dart';
 import 'canvas_value_validators.dart';
 
 @immutable
+/// Public API v1 declaration for [CanvasMetadata].
 final class CanvasMetadata {
   const CanvasMetadata.empty() : _values = const {}, _encodedByteLength = 0;
   factory CanvasMetadata.fromMap(Map<String, Object?> values) {
@@ -40,6 +41,7 @@ final class CanvasMetadata {
   int get hashCode => canvasJsonMapHash(_values);
 }
 
+/// Public API v1 declaration for [CanvasDocument].
 final class CanvasDocument {
   CanvasDocument({
     this.camera = CanvasCamera.origin,
@@ -98,6 +100,7 @@ final class CanvasDocument {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasDocumentSummary].
 final class CanvasDocumentSummary {
   const CanvasDocumentSummary({
     required this.elementCount,
@@ -121,6 +124,7 @@ final class CanvasDocumentSummary {
   int get hashCode => Object.hash(elementCount, layerCount, resourceCount);
 }
 
+/// Public API v1 declaration for [CanvasLayer].
 final class CanvasLayer {
   CanvasLayer({
     required this.id,
@@ -143,6 +147,7 @@ final class CanvasLayer {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasCamera].
 final class CanvasCamera {
   factory CanvasCamera({Offset offset = Offset.zero}) {
     validateOffset(offset, path: 'camera.offset');
@@ -164,6 +169,7 @@ final class CanvasCamera {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasBackground].
 final class CanvasBackground {
   const CanvasBackground({
     this.color = const Color(0xFFFFFFFF),
@@ -185,6 +191,7 @@ final class CanvasBackground {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasGrid].
 final class CanvasGrid {
   factory CanvasGrid({
     bool enabled = false,
@@ -239,6 +246,7 @@ final class CanvasGrid {
   int get hashCode => Object.hash(enabled, cellSize, color);
 }
 
+/// Public API v1 declaration for [CanvasPalette].
 final class CanvasPalette {
   CanvasPalette({
     required Iterable<Color> penColors,

@@ -6,11 +6,14 @@ import 'canvas_contract_limits.dart';
 import 'canvas_pointer.dart';
 import 'canvas_value_validators.dart';
 
+/// Public API v1 declaration for [CanvasInteractionMode].
 enum CanvasInteractionMode { move, draw }
 
+/// Public API v1 declaration for [CanvasDrawTool].
 enum CanvasDrawTool { pencil, marker, line, eraser }
 
 @immutable
+/// Public API v1 declaration for [CanvasDrawStyle].
 final class CanvasDrawStyle {
   factory CanvasDrawStyle({
     CanvasDrawTool tool = CanvasDrawTool.pencil,
@@ -104,6 +107,7 @@ final class CanvasDrawStyle {
   }
 }
 
+/// Public API v1 declaration for [CanvasToolPort].
 abstract interface class CanvasToolPort {
   CanvasInteractionMode get mode;
   CanvasDrawStyle get drawStyle;

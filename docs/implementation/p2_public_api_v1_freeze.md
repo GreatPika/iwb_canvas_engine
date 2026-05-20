@@ -91,7 +91,8 @@ errors, validation rules, and equality semantics.
 
 ## Tests and guardrails that prove this phase
 
-- `test.api_contract.public_api_v1_compiles_as_written` -> `test/api_contract/public_api_v1_compiles_as_written_test.dart`; also checks exported dartdoc and explicit public class modifiers with analyzer AST
+- `test.api_contract.public_api_v1_compiles_as_written` -> `test/api_contract/public_api_v1_compiles_as_written_test.dart`; compiles the public barrel from an empty consumer and exercises P2-owned constructor, getter, method, default, and return shapes
+- `test.guardrails.public_api_declaration_checks` -> `test/guardrails/public_api_declaration_checks_test.dart`; checks exported dartdoc summaries and explicit public class modifiers
 - `test.api_contract.app_next_engine_adapter_compile_fixture` -> `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`; proves app-level adapter responsibilities compile from the public barrel only and rejects forbidden fixture imports
 - `test.api_contract.public_readable_union_variants` -> `test/api_contract/public_readable_union_variants_test.dart`
 - `test.api_contract.preview_state_sealed_union` -> `test/api_contract/preview_state_sealed_union_test.dart`

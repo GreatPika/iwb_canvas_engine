@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 
 @immutable
+/// Public API v1 declaration for [CanvasFieldUpdate].
 sealed class CanvasFieldUpdate<T> {
   const CanvasFieldUpdate();
   const factory CanvasFieldUpdate.absent() = CanvasFieldAbsent<T>;
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasFieldAbsent].
 final class CanvasFieldAbsent<T> extends CanvasFieldUpdate<T> {
   const CanvasFieldAbsent();
 
@@ -20,6 +22,7 @@ final class CanvasFieldAbsent<T> extends CanvasFieldUpdate<T> {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasFieldSet].
 final class CanvasFieldSet<T extends Object> extends CanvasFieldUpdate<T> {
   const CanvasFieldSet(this.value);
   final T value;
@@ -34,6 +37,7 @@ final class CanvasFieldSet<T extends Object> extends CanvasFieldUpdate<T> {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasFieldClear].
 final class CanvasFieldClear<T extends Object> extends CanvasFieldUpdate<T?> {
   const CanvasFieldClear();
 

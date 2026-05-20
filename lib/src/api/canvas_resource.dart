@@ -8,6 +8,7 @@ import 'canvas_errors.dart';
 import 'canvas_ids.dart';
 import 'canvas_value_validators.dart';
 
+/// Public API v1 declaration for [CanvasResource].
 sealed class CanvasResource {
   CanvasResource({
     required this.id,
@@ -42,6 +43,7 @@ sealed class CanvasResource {
   final CanvasMetadata metadata;
 }
 
+/// Public API v1 declaration for [CanvasImageResource].
 final class CanvasImageResource extends CanvasResource {
   CanvasImageResource({
     required super.id,
@@ -62,12 +64,14 @@ final class CanvasImageResource extends CanvasResource {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasResourceSource].
 sealed class CanvasResourceSource {
   const CanvasResourceSource();
   factory CanvasResourceSource.appKey(String key) = CanvasAppKeyResourceSource;
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasAppKeyResourceSource].
 final class CanvasAppKeyResourceSource extends CanvasResourceSource {
   factory CanvasAppKeyResourceSource(String key) {
     return CanvasAppKeyResourceSource._(
@@ -91,10 +95,12 @@ final class CanvasAppKeyResourceSource extends CanvasResourceSource {
   int get hashCode => key.hashCode;
 }
 
+/// Public API v1 declaration for [CanvasResourceResolver].
 abstract interface class CanvasResourceResolver {
   ui.Image? resolveImage(CanvasImageResource resource);
 }
 
+/// Public API v1 declaration for [CanvasResourcePort].
 abstract interface class CanvasResourcePort {
   List<CanvasResource> get resources;
   CanvasResource? resourceById(CanvasResourceId id);

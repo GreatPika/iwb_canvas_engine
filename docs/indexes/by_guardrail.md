@@ -48,13 +48,13 @@ Guardrails extracted from split section 22.
 
 - Rule: exported public declarations have non-empty Dart documentation summaries before API freeze
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.public_api_v1_compiles_as_written`
+- Tests: `test.guardrails.public_api_declaration_checks`
 
 ## api.public_class_modifiers_explicit
 
 - Rule: every exported public class chooses an explicit Dart 3 subtype/implementation policy
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.public_api_v1_compiles_as_written`
+- Tests: `test.guardrails.public_api_declaration_checks`
 
 ## api.public_signature_shape
 

@@ -138,6 +138,8 @@ const _expectedApiIds = {
   'api.public_api_compiles_as_written',
   'api.resource_source_app_key_publicly_readable',
   'api.preview_state_sealed_union_publicly_readable',
+  'api.exported_dartdoc_complete',
+  'api.public_class_modifiers_explicit',
   'api.public_signature_shape',
   'api.no_undefined_public_type_references',
   'api.dto_immutability',

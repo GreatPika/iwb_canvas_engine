@@ -18,6 +18,7 @@ import 'canvas_preview.dart';
 import 'canvas_resource.dart';
 import 'canvas_tools.dart';
 
+/// Public API v1 declaration for [CanvasRuntime].
 final class CanvasRuntime {
   CanvasRuntime({
     CanvasDocument? initialDocument,
@@ -77,6 +78,7 @@ int _documentElementCount(CanvasDocument document) {
       );
 }
 
+/// Public API v1 declaration for [CanvasRuntimeConfig].
 final class CanvasRuntimeConfig {
   const CanvasRuntimeConfig({
     this.pointerPolicy = CanvasPointerPolicy.defaultPolicy,
@@ -96,6 +98,7 @@ final class CanvasRuntimeConfig {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasRuntimeState].
 final class CanvasRuntimeState {
   const CanvasRuntimeState({required this.revisions, required this.summary});
   final CanvasRuntimeRevisions revisions;
@@ -113,6 +116,7 @@ final class CanvasRuntimeState {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasRuntimeRevisions].
 final class CanvasRuntimeRevisions {
   const CanvasRuntimeRevisions({
     required this.document,
@@ -159,6 +163,7 @@ final class CanvasRuntimeRevisions {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasRuntimeSummary].
 final class CanvasRuntimeSummary {
   const CanvasRuntimeSummary({
     required this.elementCount,
@@ -187,11 +192,13 @@ final class CanvasRuntimeSummary {
   }
 }
 
+/// Public API v1 declaration for [CanvasEditPort].
 abstract interface class CanvasEditPort {
   T edit<T>(T Function(CanvasEdit edit) fn);
   void loadDocument(CanvasDocument document);
 }
 
+/// Public API v1 declaration for [CanvasEdit].
 abstract interface class CanvasEdit {
   CanvasDocument readDraftDocument();
   CanvasDocumentSummary get draftSummary;
@@ -214,6 +221,7 @@ abstract interface class CanvasEdit {
   void replaceDraftDocument(CanvasDocument document);
 }
 
+/// Public API v1 declaration for [CanvasClearResult].
 final class CanvasClearResult {
   CanvasClearResult({
     required Iterable<CanvasElementId> removedElementIds,
@@ -229,6 +237,7 @@ final class CanvasClearResult {
   List<CanvasResourceId> get removedResourceIds => _removedResourceIds;
 }
 
+/// Public API v1 declaration for [CanvasCommandPort].
 abstract interface class CanvasCommandPort {
   bool removeElement(CanvasElementId id, {int? timestampMs});
   bool commitTextEdit(
@@ -242,6 +251,7 @@ abstract interface class CanvasCommandPort {
   });
 }
 
+/// Public API v1 declaration for [CanvasSelectionPort].
 abstract interface class CanvasSelectionPort {
   Set<CanvasElementId> get selectedElementIds;
   void setSelection(Iterable<CanvasElementId> ids);
@@ -256,6 +266,7 @@ abstract interface class CanvasSelectionPort {
   void deleteSelection({int? timestampMs});
 }
 
+/// Public API v1 declaration for [CanvasCameraPort].
 abstract interface class CanvasCameraPort {
   CanvasCamera get camera;
   Offset get offset;

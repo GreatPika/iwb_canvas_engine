@@ -5,9 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'canvas_contract_limits.dart';
 import 'canvas_value_validators.dart';
 
+/// Public API v1 declaration for [CanvasPointerLifecyclePhase].
 enum CanvasPointerLifecyclePhase { down, move, up, cancel }
 
 @immutable
+/// Public API v1 declaration for [CanvasPointerPolicy].
 final class CanvasPointerPolicy {
   factory CanvasPointerPolicy({
     double tapSlop = 8.0,
@@ -85,6 +87,7 @@ final class CanvasPointerPolicy {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasPointerSample].
 final class CanvasPointerSample {
   factory CanvasPointerSample({
     required int pointerId,
