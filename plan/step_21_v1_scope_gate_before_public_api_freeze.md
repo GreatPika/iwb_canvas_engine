@@ -220,6 +220,8 @@ markdown-only guardrail.
 - Executable guardrail ids and suite routing stay owned by
   `tool/guardrails/src/guardrail_registry.dart` and delegated check modules
   under `tool/guardrails/src/**`.
+- Guardrail implementation pattern selection stays owned by
+  `docs/verification/guardrail_design_patterns.md`.
 - P1 scope gap disposition stays in existing source-of-truth owners:
   v1 scope in `docs/architecture/00_architecture_overview.md`, accepted
   differences in `docs/architecture/04_decisions_and_differences.md`, donor
@@ -333,6 +335,32 @@ checks required after code changes.
 6. Register executable P1 guardrails and update guardrail runner tests.
 7. Run the final proof set and then mark Step 21 complete in `PLAN.md` and this
    file in the same implementation change.
+
+### P1 Guardrail Pattern Map
+
+Use `docs/verification/guardrail_design_patterns.md` as the source of truth for
+pattern meaning and bypass analysis. This step applies the following pattern
+selection to the executable P1 guardrail set:
+
+| Guardrail id | Primary pattern | Secondary pattern |
+|---|---|---|
+| `api.integration_surface_complete` | `behavioral_seam_test` | `parsed_ast_directive`, `runner_inventory` |
+| `api.no_legacy_public_types` | `negative_legacy_shape` | `resolved_public_surface` |
+| `api.public_exports_complete` | `registry_parity` | `resolved_public_surface` |
+| `api.public_types_complete` | `resolved_public_surface` | `registry_parity` |
+| `api.public_api_compiles_as_written` | `behavioral_seam_test` | `resolved_public_surface` |
+| `api.no_undefined_public_type_references` | `resolved_public_surface` | `registry_parity` |
+| `api.dto_immutability` | `behavioral_seam_test` | `resolved_public_surface`, `parsed_ast_directive` |
+| `api.equality_policy_explicit` | `behavioral_seam_test` | `registry_parity` |
+| `api.id_validation_no_extension_type_escape` | `behavioral_seam_test` | `resolved_public_surface`, `parsed_ast_directive` |
+| `codec.known_fields_validated` | `behavioral_seam_test` | `registry_parity` |
+| `core.no_legacy_imports` | `parsed_ast_directive` | `negative_legacy_shape` |
+| `core.no_scene_controller_shape_dependency` | `negative_legacy_shape` | `resolved_element_identity` |
+| `core.no_node_spec_patch_shape_dependency` | `negative_legacy_shape` | `resolved_element_identity` |
+
+If implementation evidence shows that a listed pattern cannot prove the
+owner-level invariant for this step, stop for a contract revision instead of
+silently substituting a weaker check.
 
 ### Cross-Slice Constraints
 
