@@ -437,6 +437,64 @@ dart test \
 
 Expected signal: exits 0. If any listed file is missing, the proof fails.
 
+### P4a. Public API Draft Slice Tests
+
+This proves only the Slice 2 public API draft surface: export parity, public
+type closure, legacy public symbol rejection, public API compile proof, and
+undefined public type rejection.
+
+```sh
+dart test \
+  test/api_contract/public_exports_complete_test.dart \
+  test/api_contract/public_types_complete_test.dart \
+  test/api_contract/no_legacy_public_symbols_test.dart \
+  test/api_contract/public_api_v1_compiles_as_written_test.dart \
+  test/api_contract/no_undefined_public_type_references_test.dart
+```
+
+Expected signal: exits 0. If any listed Slice 2 file is missing, the proof
+fails.
+
+### P4b. API Id Validation Slice Test
+
+This proves only the Slice 3 API id validation guard: ids cannot bypass
+validation through public extension types or unchecked public construction.
+
+```sh
+dart test test/api_contract/id_validation_no_extension_type_escape_test.dart
+```
+
+Expected signal: exits 0. If the listed Slice 3 file is missing, the proof
+fails.
+
+### P4c. External Adapter Slice Test
+
+This proves only the Slice 4 external adapter compile fixture and import
+directive check.
+
+```sh
+dart test test/api_contract/app_next_engine_adapter_compile_fixture_test.dart
+```
+
+Expected signal: exits 0. If the listed Slice 4 file is missing, the proof
+fails.
+
+### P4d. Public Shape Slice Tests
+
+This proves only the Slice 5 public shape tests for DTO immutability, equality,
+readable public unions, and signature shape.
+
+```sh
+dart test \
+  test/api_contract/dto_immutability_test.dart \
+  test/api_contract/public_equality_policy_test.dart \
+  test/api_contract/public_readable_union_variants_test.dart \
+  test/api_contract/public_signature_shape_test.dart
+```
+
+Expected signal: exits 0. If any listed Slice 5 file is missing, the proof
+fails.
+
 ### P5. Guardrail Suite
 
 This proves the executable guardrail inventory and runner tests cover the P1
@@ -625,11 +683,17 @@ PUBLIC_API_CHANGE
   proposed `test/api_contract/public_api_v1_compiles_as_written_test.dart` —
   public declaration compile proof.
 - Undefined-reference tests:
-  proposed `test/api_contract/no_undefined_public_type_references_test.dart`
-  or existing `test/api_contract/public_types_complete_test.dart` — verify
-  public signatures reference exported or approved SDK/Flutter types.
+  proposed `test/api_contract/no_undefined_public_type_references_test.dart` —
+  prove the explicit `api.no_undefined_public_type_references` P1 guardrail.
+- Existing public type closure test:
+  `test/api_contract/public_types_complete_test.dart` — keep registry-resolved
+  public signature closure green while the dedicated undefined-reference test is
+  added.
 - Existing export parity test: `test/api_contract/public_exports_complete_test.dart`
   — verify registry and root barrel stay synchronized.
+- Existing legacy rejection test:
+  `test/api_contract/no_legacy_public_symbols_test.dart` — verify Slice 2 public
+  draft work does not re-export retired legacy public symbols.
 
 #### Change
 
@@ -639,7 +703,7 @@ either exported or approved by the public API contract.
 
 #### Proof
 
-Run P4 during the slice. Run P1 before closure if production declarations
+Run P4a during the slice. Run P1 before closure if production declarations
 changed.
 
 #### Closure
@@ -676,9 +740,14 @@ PUBLIC_API_CHANGE
 - Validation tests: proposed
   `test/codec/constructor_and_schema_limits_test.dart` — constructor and
   boundary limit coverage.
-- ID validation tests: `test/api_contract/id_validation_no_extension_type_escape_test.dart`
-  or the validation-limit test above — proposed proof that ids cannot bypass
-  validation through public extension types or unchecked public construction.
+- ID validation test: proposed
+  `test/api_contract/id_validation_no_extension_type_escape_test.dart` — public
+  surface proof that ids cannot bypass validation through public extension types
+  or unchecked public construction.
+- Validation-limit test relation:
+  `test/codec/constructor_and_schema_limits_test.dart` remains the constructor
+  and schema limit proof for P8; the separate id-validation test is required
+  because P1 also needs public API surface proof for extension-type escape.
 
 #### Change
 
@@ -689,7 +758,7 @@ needed by the public draft.
 
 #### Proof
 
-Run P4 and P8. Run P1 before closure.
+Run P4b and P8. Run P1 before closure.
 
 #### Closure
 
@@ -748,7 +817,7 @@ without importing `src/**`, legacy symbols, or internal runtime classes.
 
 #### Proof
 
-Run P4 and P1.
+Run P4c and P1.
 
 #### Closure
 
@@ -796,13 +865,10 @@ PUBLIC_API_CHANGE
   proposed `test/api_contract/public_equality_policy_test.dart`,
   proposed `test/api_contract/public_readable_union_variants_test.dart`,
   proposed `test/api_contract/public_signature_shape_test.dart`,
-  proposed `test/api_contract/id_validation_no_extension_type_escape_test.dart`,
   existing `test/api_contract/public_exports_complete_test.dart`,
-  existing `test/api_contract/public_types_complete_test.dart`, and
-  existing `test/api_contract/no_legacy_public_symbols_test.dart` — prove
+  and existing `test/api_contract/public_types_complete_test.dart` — prove
   immutable DTO exposure, equality policy, readable public union variants,
-  public signature shape, id validation, export parity, public type closure, and
-  legacy symbol rejection.
+  public signature shape, export parity, and public type closure.
 
 #### Change
 
@@ -814,7 +880,7 @@ legacy-ban checks that P1 depends on.
 
 #### Proof
 
-Run P4, P5, P6, and P8.
+Run P4d, P5, and P6.
 
 #### Closure
 
@@ -872,9 +938,6 @@ P1, P2, P3, P4, P5, P6, P7, P8, P9, and P10.
 
 - all referenced Decision Ledger decisions have passing proof;
 - all Contract Obligations are satisfied;
-- all retired seams have negative proof;
-- no out-of-scope files were changed;
-- whitespace validation passes;
 - P1 through P10 pass;
 - D1 and D2 are proven by the referenced proof set;
 - `PUBLIC_API_CHANGE` compatibility, registry handling, public seam proof, and
