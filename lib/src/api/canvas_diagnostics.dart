@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import 'canvas_contract_limits.dart';
+import 'canvas_diagnostic_policy_limits.dart';
 import 'canvas_value_validators.dart';
 
 @immutable
