@@ -40,6 +40,15 @@ Confirm, when relevant:
 
 When the repository does not contain a formal rule file for the area, accept an explicit statement that no formal local rule was found only if the contract names the dominant local pattern that will govern the change.
 
+When the review request includes `against phase PHASE_FILE`, read that concrete
+`docs/implementation/...` document and treat it as the source input for the
+contract. When the review request includes `against design DESIGN_FILE`, read
+that concrete `.design/...` document and treat it as the source input for the
+contract. Source input documents are not optional background context: verify
+that the contract preserves their mandatory decisions, constraints, scope,
+gates, sequencing requirements, and proof expectations, or explicitly and
+correctly justifies any intentional narrowing.
+
 ## Expected template selection
 
 Validate the contract against exactly one paired authoring template. Use the paired `change-contract` skill routing rules as the source of truth for selection, and read the selected template from that skill's `assets/` directory:
@@ -92,6 +101,10 @@ Mark the contract `BLOCKED` when any of the following is true:
 30. Named files, tests, fixtures, inventories, workflows, or checks appear only as evidence while later sections treat them as change targets.
 31. A locked contract uses a standalone global file inventory instead of slice-local file ownership.
 32. Final gate introduces new scope instead of proving earlier decisions, obligations, and slices.
+33. The review request includes a phase or design source input, but the
+    contract contradicts that source, drops mandatory decisions, constraints,
+    gates, sequencing, or proof expectations from that source, or expands the
+    source scope without explicit justification.
 
 ## Non-blocking weaknesses
 
@@ -193,6 +206,9 @@ Perform these checks explicitly:
 12. Seam migration details must be present only when `SEAM_MIGRATION` is listed, and must not become a duplicate file inventory.
 13. Final gate must not compensate for missing slice-local verification.
 14. If `ARCHITECTURE_GATE` is used, no sections after section 3 may contain substantive plan content.
+15. When a phase or design source input is provided, the contract's mandate,
+    evidence, architecture decision, slices, proof plan, and final gate must be
+    consistent with that source input.
 
 ## Profile and obligation checks
 
@@ -249,4 +265,6 @@ Do not return the report until all answers are yes:
 4. Did you check information ownership and cross-section consistency, not just local section quality?
 5. Did you enforce profile and obligation proof rules when applicable?
 6. Did you avoid rewriting the contract unless repair was explicitly requested?
-7. Did your verdict match the strongest defect you found?
+7. If a phase or design source input was provided, did you read it and verify
+   contract consistency against it?
+8. Did your verdict match the strongest defect you found?
