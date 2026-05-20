@@ -1,5 +1,7 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
+
 import 'canvas_contract_limits.dart';
 import 'canvas_document.dart';
 import 'canvas_errors.dart';
@@ -59,11 +61,13 @@ final class CanvasImageResource extends CanvasResource {
   final String? mimeType;
 }
 
+@immutable
 sealed class CanvasResourceSource {
   const CanvasResourceSource();
   factory CanvasResourceSource.appKey(String key) = CanvasAppKeyResourceSource;
 }
 
+@immutable
 final class CanvasAppKeyResourceSource extends CanvasResourceSource {
   factory CanvasAppKeyResourceSource(String key) {
     return CanvasAppKeyResourceSource._(
@@ -77,6 +81,14 @@ final class CanvasAppKeyResourceSource extends CanvasResourceSource {
 
   const CanvasAppKeyResourceSource._(this.key);
   final String key;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasAppKeyResourceSource && other.key == key;
+  }
+
+  @override
+  int get hashCode => key.hashCode;
 }
 
 abstract interface class CanvasResourceResolver {

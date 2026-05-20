@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
+
 import 'canvas_contract_limits.dart';
 import 'canvas_pointer.dart';
 import 'canvas_value_validators.dart';
@@ -8,6 +10,7 @@ enum CanvasInteractionMode { move, draw }
 
 enum CanvasDrawTool { pencil, marker, line, eraser }
 
+@immutable
 final class CanvasDrawStyle {
   factory CanvasDrawStyle({
     CanvasDrawTool tool = CanvasDrawTool.pencil,
@@ -74,6 +77,31 @@ final class CanvasDrawStyle {
   final double markerOpacity;
   final double lineThickness;
   final double eraserThickness;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasDrawStyle &&
+        other.tool == tool &&
+        other.color == color &&
+        other.pencilThickness == pencilThickness &&
+        other.markerThickness == markerThickness &&
+        other.markerOpacity == markerOpacity &&
+        other.lineThickness == lineThickness &&
+        other.eraserThickness == eraserThickness;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      tool,
+      color,
+      pencilThickness,
+      markerThickness,
+      markerOpacity,
+      lineThickness,
+      eraserThickness,
+    );
+  }
 }
 
 abstract interface class CanvasToolPort {

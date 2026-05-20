@@ -415,7 +415,6 @@ const _boundaryRules = [
       'lib/src/frame/',
       'lib/src/interaction/',
       'lib/src/resources/',
-      'lib/src/codec/',
       'lib/src/diagnostics/',
       'lib/src/spatial/',
       'lib/src/geometry/',

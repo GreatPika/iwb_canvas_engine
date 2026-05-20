@@ -23,6 +23,7 @@ final class CanvasSurface extends StatefulWidget {
   State<CanvasSurface> createState() => _CanvasSurfaceState();
 }
 
+@immutable
 final class CanvasSelectionStyle {
   const CanvasSelectionStyle({
     this.color = const Color(0xFF1565C0),
@@ -36,12 +37,35 @@ final class CanvasSelectionStyle {
   final double strokeWidth;
   final double marqueeFillOpacity;
   final double haloWidth;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasSelectionStyle &&
+        other.color == color &&
+        other.strokeWidth == strokeWidth &&
+        other.marqueeFillOpacity == marqueeFillOpacity &&
+        other.haloWidth == haloWidth;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(color, strokeWidth, marqueeFillOpacity, haloWidth);
+  }
 }
 
+@immutable
 final class CanvasGridStyle {
   const CanvasGridStyle({this.strokeWidth = 1.0});
   static const defaultStyle = CanvasGridStyle();
   final double strokeWidth;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasGridStyle && other.strokeWidth == strokeWidth;
+  }
+
+  @override
+  int get hashCode => strokeWidth.hashCode;
 }
 
 final class _CanvasSurfaceState extends State<CanvasSurface> {

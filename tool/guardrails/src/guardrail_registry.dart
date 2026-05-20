@@ -21,12 +21,46 @@ Set<String> suiteGuardrailIds(String suite) {
 }
 
 const _blockingEntries = [
+  GuardrailEntry(
+    id: 'api.integration_surface_complete',
+    suites: {'blocking', 'api'},
+  ),
   GuardrailEntry(id: 'api.no_legacy_public_types', suites: {'blocking', 'api'}),
   GuardrailEntry(
     id: 'api.public_exports_complete',
     suites: {'blocking', 'api'},
   ),
   GuardrailEntry(id: 'api.public_types_complete', suites: {'blocking', 'api'}),
+  GuardrailEntry(
+    id: 'api.public_api_compiles_as_written',
+    suites: {'blocking', 'api'},
+  ),
+  GuardrailEntry(
+    id: 'api.resource_source_app_key_publicly_readable',
+    suites: {'blocking', 'api'},
+  ),
+  GuardrailEntry(
+    id: 'api.preview_state_sealed_union_publicly_readable',
+    suites: {'blocking', 'api'},
+  ),
+  GuardrailEntry(id: 'api.public_signature_shape', suites: {'blocking', 'api'}),
+  GuardrailEntry(
+    id: 'api.no_undefined_public_type_references',
+    suites: {'blocking', 'api'},
+  ),
+  GuardrailEntry(id: 'api.dto_immutability', suites: {'blocking', 'api'}),
+  GuardrailEntry(
+    id: 'api.equality_policy_explicit',
+    suites: {'blocking', 'api'},
+  ),
+  GuardrailEntry(
+    id: 'api.id_validation_no_extension_type_escape',
+    suites: {'blocking', 'api'},
+  ),
+  GuardrailEntry(
+    id: 'codec.known_fields_validated',
+    suites: {'blocking', 'codec'},
+  ),
   GuardrailEntry(id: 'core.no_legacy_imports', suites: {'blocking', 'core'}),
   GuardrailEntry(id: 'core.import_boundaries', suites: {'blocking', 'core'}),
   GuardrailEntry(

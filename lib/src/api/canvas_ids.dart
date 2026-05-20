@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
+
 import 'canvas_contract_limits.dart';
 import 'canvas_value_validators.dart';
 
+@immutable
 final class CanvasElementId {
   factory CanvasElementId(String value) {
     return CanvasElementId._(
@@ -14,8 +17,17 @@ final class CanvasElementId {
 
   const CanvasElementId._(this.value);
   final String value;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasElementId && other.value == value;
+  }
+
+  @override
+  int get hashCode => value.hashCode;
 }
 
+@immutable
 final class CanvasLayerId {
   factory CanvasLayerId(String value) {
     return CanvasLayerId._(
@@ -29,8 +41,17 @@ final class CanvasLayerId {
 
   const CanvasLayerId._(this.value);
   final String value;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasLayerId && other.value == value;
+  }
+
+  @override
+  int get hashCode => value.hashCode;
 }
 
+@immutable
 final class CanvasResourceId {
   factory CanvasResourceId(String value) {
     return CanvasResourceId._(
@@ -44,8 +65,17 @@ final class CanvasResourceId {
 
   const CanvasResourceId._(this.value);
   final String value;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasResourceId && other.value == value;
+  }
+
+  @override
+  int get hashCode => value.hashCode;
 }
 
+@immutable
 final class CanvasActionId {
   factory CanvasActionId(String value) {
     return CanvasActionId._(
@@ -59,8 +89,17 @@ final class CanvasActionId {
 
   const CanvasActionId._(this.value);
   final String value;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasActionId && other.value == value;
+  }
+
+  @override
+  int get hashCode => value.hashCode;
 }
 
+@immutable
 final class CanvasInteractionRequestId {
   factory CanvasInteractionRequestId(String value) {
     return CanvasInteractionRequestId._(
@@ -74,4 +113,12 @@ final class CanvasInteractionRequestId {
 
   const CanvasInteractionRequestId._(this.value);
   final String value;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasInteractionRequestId && other.value == value;
+  }
+
+  @override
+  int get hashCode => value.hashCode;
 }

@@ -4,9 +4,18 @@ import 'src/guardrail_executor.dart';
 import 'src/guardrail_registry.dart';
 
 Future<void> main(List<String> arguments) async {
-  final selection = _selectGuardrails(arguments);
+  final dryRun = arguments.contains('--dry-run');
+  final selectionArguments = arguments
+      .where((arg) => arg != '--dry-run')
+      .toList();
+  final selection = _selectGuardrails(selectionArguments);
   if (selection == null) {
     exitCode = 64;
+    return;
+  }
+
+  if (dryRun) {
+    exitCode = _printDryRun(selection);
     return;
   }
 
@@ -15,6 +24,20 @@ Future<void> main(List<String> arguments) async {
     stdout.writeln('ran $id');
   }
   exitCode = result.exitCode;
+}
+
+int _printDryRun(List<String> selection) {
+  for (final id in selection) {
+    final route = guardrailRouteFor(id);
+    if (route == null) {
+      stderr.writeln('Unknown guardrail route: $id');
+
+      return 64;
+    }
+    stdout.writeln('would run $id via ${route.description}');
+  }
+
+  return 0;
 }
 
 List<String>? _selectGuardrails(List<String> arguments) {

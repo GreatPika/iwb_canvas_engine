@@ -1,8 +1,10 @@
-import 'dart:typed_data';
 import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
 
 import 'canvas_value_validators.dart';
 
+@immutable
 // This registry-owned public value object stays cohesive so the transform API
 // remains visible as one contract surface instead of being split by metric.
 // ignore: metrics
@@ -30,7 +32,14 @@ final class CanvasTransform {
     required this.ty,
   });
 
-  static const identity = CanvasTransform._(a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0);
+  static const identity = CanvasTransform._(
+    a: 1,
+    b: 0,
+    c: 0,
+    d: 1,
+    tx: 0,
+    ty: 0,
+  );
 
   factory CanvasTransform.translation(Offset delta) =>
       CanvasTransform(a: 1, b: 0, c: 0, d: 1, tx: delta.dx, ty: delta.dy);
@@ -72,4 +81,18 @@ final class CanvasTransform {
   Float64List toCanvasTransform() => throw UnimplementedError();
   void writeToCanvasTransform(Float64List out) => throw UnimplementedError();
   Map<String, double> toJsonMap() => throw UnimplementedError();
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasTransform &&
+        other.a == a &&
+        other.b == b &&
+        other.c == c &&
+        other.d == d &&
+        other.tx == tx &&
+        other.ty == ty;
+  }
+
+  @override
+  int get hashCode => Object.hash(a, b, c, d, tx, ty);
 }

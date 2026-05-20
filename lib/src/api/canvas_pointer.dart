@@ -1,10 +1,13 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
+
 import 'canvas_contract_limits.dart';
 import 'canvas_value_validators.dart';
 
 enum CanvasPointerLifecyclePhase { down, move, up, cancel }
 
+@immutable
 final class CanvasPointerPolicy {
   factory CanvasPointerPolicy({
     double tapSlop = 8.0,
@@ -58,8 +61,30 @@ final class CanvasPointerPolicy {
   final int doubleTapMaxDelayMs;
   final bool deferSingleTap;
   final double? dragStartSlop;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasPointerPolicy &&
+        other.tapSlop == tapSlop &&
+        other.doubleTapSlop == doubleTapSlop &&
+        other.doubleTapMaxDelayMs == doubleTapMaxDelayMs &&
+        other.deferSingleTap == deferSingleTap &&
+        other.dragStartSlop == dragStartSlop;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      tapSlop,
+      doubleTapSlop,
+      doubleTapMaxDelayMs,
+      deferSingleTap,
+      dragStartSlop,
+    );
+  }
 }
 
+@immutable
 final class CanvasPointerSample {
   factory CanvasPointerSample({
     required int pointerId,
@@ -96,4 +121,18 @@ final class CanvasPointerSample {
   final int? timestampMs;
   final CanvasPointerLifecyclePhase phase;
   final PointerDeviceKind kind;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasPointerSample &&
+        other.pointerId == pointerId &&
+        other.position == position &&
+        other.timestampMs == timestampMs &&
+        other.phase == phase &&
+        other.kind == kind;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(pointerId, position, timestampMs, phase, kind);
 }

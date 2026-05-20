@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
+
 import 'canvas_document.dart';
 import 'canvas_element.dart';
 import 'canvas_geometry.dart';
@@ -218,6 +220,7 @@ final class CanvasMoveCommitRequest {
   List<CanvasElementRead> get movedElements => _movedElements;
 }
 
+@immutable
 final class CanvasElementRead {
   const CanvasElementRead({
     required this.id,
@@ -236,18 +239,62 @@ final class CanvasElementRead {
   final CanvasTransform transform;
   final bool isLocked;
   final bool isTransformable;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasElementRead &&
+        other.id == id &&
+        other.kind == kind &&
+        other.revision == revision &&
+        other.boundsWorld == boundsWorld &&
+        other.transform == transform &&
+        other.isLocked == isLocked &&
+        other.isTransformable == isTransformable;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      kind,
+      revision,
+      boundsWorld,
+      transform,
+      isLocked,
+      isTransformable,
+    );
+  }
 }
 
+@immutable
 sealed class CanvasMoveResolution {
   const CanvasMoveResolution();
 }
 
+@immutable
 final class CanvasMoveCommit extends CanvasMoveResolution {
   const CanvasMoveCommit({required this.delta});
   final Offset delta;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasMoveCommit && other.delta == delta;
+  }
+
+  @override
+  int get hashCode => delta.hashCode;
 }
 
+@immutable
 final class CanvasMoveCancel extends CanvasMoveResolution {
   const CanvasMoveCancel({this.reason});
   final String? reason;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasMoveCancel && other.reason == reason;
+  }
+
+  @override
+  int get hashCode => reason.hashCode;
 }

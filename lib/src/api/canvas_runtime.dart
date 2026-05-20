@@ -60,12 +60,24 @@ final class CanvasRuntimeConfig {
   final CanvasDiagnosticPolicy diagnosticPolicy;
 }
 
+@immutable
 final class CanvasRuntimeState {
   const CanvasRuntimeState({required this.revisions, required this.summary});
   final CanvasRuntimeRevisions revisions;
   final CanvasRuntimeSummary summary;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasRuntimeState &&
+        other.revisions == revisions &&
+        other.summary == summary;
+  }
+
+  @override
+  int get hashCode => Object.hash(revisions, summary);
 }
 
+@immutable
 final class CanvasRuntimeRevisions {
   const CanvasRuntimeRevisions({
     required this.document,
@@ -84,8 +96,34 @@ final class CanvasRuntimeRevisions {
   final int resourceVisual;
   final int interaction;
   final int epoch;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasRuntimeRevisions &&
+        other.document == document &&
+        other.selection == selection &&
+        other.preview == preview &&
+        other.viewCamera == viewCamera &&
+        other.resourceVisual == resourceVisual &&
+        other.interaction == interaction &&
+        other.epoch == epoch;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      document,
+      selection,
+      preview,
+      viewCamera,
+      resourceVisual,
+      interaction,
+      epoch,
+    );
+  }
 }
 
+@immutable
 final class CanvasRuntimeSummary {
   const CanvasRuntimeSummary({
     required this.elementCount,
@@ -98,6 +136,20 @@ final class CanvasRuntimeSummary {
   final int layerCount;
   final int resourceCount;
   final int selectedCount;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasRuntimeSummary &&
+        other.elementCount == elementCount &&
+        other.layerCount == layerCount &&
+        other.resourceCount == resourceCount &&
+        other.selectedCount == selectedCount;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(elementCount, layerCount, resourceCount, selectedCount);
+  }
 }
 
 abstract interface class CanvasEditPort {

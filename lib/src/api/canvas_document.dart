@@ -1,24 +1,23 @@
 import 'dart:convert';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
+
 import 'canvas_contract_limits.dart';
 import 'canvas_element.dart';
 import 'canvas_errors.dart';
 import 'canvas_ids.dart';
 import 'canvas_resource.dart';
+import 'canvas_value_equality.dart';
 import 'canvas_value_validators.dart';
 
+@immutable
 final class CanvasMetadata {
-  const CanvasMetadata.empty()
-    : _values = const {},
-      _encodedByteLength = 0;
+  const CanvasMetadata.empty() : _values = const {}, _encodedByteLength = 0;
   factory CanvasMetadata.fromMap(Map<String, Object?> values) {
     final frozen = freezeCanvasMetadata(values);
 
-    return CanvasMetadata._(
-      frozen,
-      utf8.encode(jsonEncode(frozen)).length,
-    );
+    return CanvasMetadata._(frozen, utf8.encode(jsonEncode(frozen)).length);
   }
 
   const CanvasMetadata._(this._values, this._encodedByteLength);
@@ -30,6 +29,15 @@ final class CanvasMetadata {
   Iterable<String> get keys => _values.keys;
   bool containsKey(String key) => _values.containsKey(key);
   Object? operator [](String key) => _values[key];
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasMetadata &&
+        canvasJsonMapEquals(other._values, _values);
+  }
+
+  @override
+  int get hashCode => canvasJsonMapHash(_values);
 }
 
 final class CanvasDocument {
@@ -89,6 +97,7 @@ final class CanvasDocument {
   List<CanvasLayer> get layers => _layers;
 }
 
+@immutable
 final class CanvasDocumentSummary {
   const CanvasDocumentSummary({
     required this.elementCount,
@@ -99,6 +108,17 @@ final class CanvasDocumentSummary {
   final int elementCount;
   final int layerCount;
   final int resourceCount;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasDocumentSummary &&
+        other.elementCount == elementCount &&
+        other.layerCount == layerCount &&
+        other.resourceCount == resourceCount;
+  }
+
+  @override
+  int get hashCode => Object.hash(elementCount, layerCount, resourceCount);
 }
 
 final class CanvasLayer {
@@ -122,6 +142,7 @@ final class CanvasLayer {
   List<CanvasElement> get elements => _elements;
 }
 
+@immutable
 final class CanvasCamera {
   factory CanvasCamera({Offset offset = Offset.zero}) {
     validateOffset(offset, path: 'camera.offset');
@@ -132,8 +153,17 @@ final class CanvasCamera {
   const CanvasCamera._({this.offset = Offset.zero});
   static const origin = CanvasCamera._();
   final Offset offset;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasCamera && other.offset == offset;
+  }
+
+  @override
+  int get hashCode => offset.hashCode;
 }
 
+@immutable
 final class CanvasBackground {
   const CanvasBackground({
     this.color = const Color(0xFFFFFFFF),
@@ -142,8 +172,19 @@ final class CanvasBackground {
 
   final Color color;
   final CanvasGrid grid;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasBackground &&
+        other.color == color &&
+        other.grid == grid;
+  }
+
+  @override
+  int get hashCode => Object.hash(color, grid);
 }
 
+@immutable
 final class CanvasGrid {
   factory CanvasGrid({
     bool enabled = false,
@@ -185,6 +226,17 @@ final class CanvasGrid {
   final bool enabled;
   final double cellSize;
   final Color color;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasGrid &&
+        other.enabled == enabled &&
+        other.cellSize == cellSize &&
+        other.color == color;
+  }
+
+  @override
+  int get hashCode => Object.hash(enabled, cellSize, color);
 }
 
 final class CanvasPalette {
@@ -196,10 +248,7 @@ final class CanvasPalette {
        _backgroundColors = List.unmodifiable(backgroundColors),
        _gridSizes = List.unmodifiable(gridSizes) {
     _validatePaletteList(_penColors, path: 'palette.penColors');
-    _validatePaletteList(
-      _backgroundColors,
-      path: 'palette.backgroundColors',
-    );
+    _validatePaletteList(_backgroundColors, path: 'palette.backgroundColors');
     _validatePaletteList(_gridSizes, path: 'palette.gridSizes');
     for (final gridSize in _gridSizes) {
       validatePositiveDouble(
