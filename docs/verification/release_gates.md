@@ -212,9 +212,8 @@ Release is blocked unless all statements are true:
 36. full `dart run tool/guardrails/run.dart` is green.
 37. every mandatory guardrail has a runner entry and executable proof, including
     the `api.integration_surface_complete` external app-adapter compile fixture.
-38. changed-aware guardrail routing has conservative fallback coverage.
-39. benchmark gates pass.
-40. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
+38. benchmark gates pass.
+39. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
 ```
 
 ---

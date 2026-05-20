@@ -117,14 +117,10 @@ The runner must support these selection modes:
 ```bash
 dart run tool/guardrails/run.dart --suite=api
 dart run tool/guardrails/run.dart --guardrail=core.import_boundaries
-dart run tool/guardrails/run.dart --changed
 ```
 
 `--suite=<name>` runs a named guardrail group. `--guardrail=<id>` runs one
-guardrail id from the registry. `--changed` maps changed paths to guardrail ids
-using runner-owned impact metadata. Changed-aware routing is conservative: if a
-changed path cannot be mapped with confidence, the runner must widen the run to
-the full blocking suite instead of silently skipping a required proof.
+guardrail id from the executable runner inventory.
 
 Runner metadata lives under `tool/guardrails/**` and owns the executable
 guardrail ids, suite membership, and dispatch routing for checks that can run

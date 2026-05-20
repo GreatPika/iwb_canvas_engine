@@ -28,10 +28,6 @@ List<String>? _selectGuardrails(List<String> arguments) {
   }
 
   final argument = arguments.single;
-  if (argument == '--changed') {
-    return _sorted(blockingGuardrailIds());
-  }
-
   if (argument.startsWith('--suite=')) {
     return _selectSuite(argument.substring('--suite='.length));
   }
@@ -70,5 +66,5 @@ List<String> _sorted(Set<String> ids) {
 }
 
 void _printUsage() {
-  stderr.writeln('Use one of: --suite=<name>, --guardrail=<id>, --changed');
+  stderr.writeln('Use one of: --suite=<name>, --guardrail=<id>');
 }

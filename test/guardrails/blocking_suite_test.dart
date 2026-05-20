@@ -29,24 +29,6 @@ void main() {
     expect(result.stdout, contains('ran api.public_exports_complete'));
     expect(result.stdout, isNot(contains('ran api.public_types_complete')));
   });
-
-  test('--changed conservatively falls back to the blocking suite', () async {
-    final result = await _runGuardrails(['--changed']);
-
-    expect(result.exitCode, 0);
-    expect(
-      _ranGuardrails(result.stdout as String),
-      containsAll(_expectedBlockingHardBoundaryIds),
-    );
-  });
-}
-
-Set<String> _ranGuardrails(String stdout) {
-  return stdout
-      .split('\n')
-      .where((line) => line.startsWith('ran '))
-      .map((line) => line.substring('ran '.length))
-      .toSet();
 }
 
 Future<ProcessResult> _runGuardrails(List<String> arguments) {

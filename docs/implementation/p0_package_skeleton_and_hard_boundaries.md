@@ -19,8 +19,6 @@ runtime, API, donor, codec, or Flutter implementation can land.
 - add the minimal `tool/guardrails/run.dart` entrypoint
 - add runner metadata for hard-boundary guardrails
 - support full guardrail run and explicit `--guardrail=<id>` selection
-- allow `--changed` to fall back to the full blocking suite until impact
-  metadata is complete
 - add CI target for the root package
 - add `api.public_exports_complete` and `api.public_types_complete` guardrail
   tests first, then close with them green.
@@ -96,8 +94,8 @@ runtime, API, donor, codec, or Flutter implementation can land.
   package shape, boundaries, and guardrail wiring only.
 - A too-small skeleton would let later phases introduce boundary drift before
   checks exist. Boundary tests must land before feature implementation.
-- Early changed-aware routing can be incomplete. It must fall back to the full
-  blocking suite rather than skipping an unmapped hard-boundary proof.
+- Changed-path routing is intentionally absent until impact metadata can map
+  files to checks confidently.
 
 ## Why this phase belongs here
 

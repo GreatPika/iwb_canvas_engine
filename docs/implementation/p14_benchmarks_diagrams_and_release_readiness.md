@@ -15,7 +15,6 @@ match the target architecture.
 - benchmark diff tool
 - all guardrails blocking
 - full guardrail runner closure
-- changed-aware guardrail routing fallback coverage
 - release checklist
 - phase guardrail alignment
 - final functional ledger closure
@@ -130,7 +129,6 @@ match the target architecture.
 - full guardrail runner green
 - every mandatory guardrail has a runner entry and executable proof, including
   the external app-adapter compile fixture for `api.integration_surface_complete`
-- changed-aware runner routing has conservative fallback coverage
 - no app adapters in package
 - all final release gates green.
 - public runtime state and camera ownership references are consistent across
@@ -140,8 +138,8 @@ match the target architecture.
 
 - Treating benchmarks, diagrams, or guardrails as optional release polish would
   undercut the architecture. They are release blockers.
-- Treating changed-aware runner output as authoritative without fallback
-  coverage would risk false green release checks.
+- Treating future changed-path runner output as authoritative before impact
+  metadata exists would risk false green release checks.
 - This phase must not introduce new feature behavior. It proves and packages the
   behavior already implemented in P0-P13.
 

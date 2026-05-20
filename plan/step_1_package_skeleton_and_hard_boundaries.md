@@ -25,9 +25,8 @@ Flutter surface implementation land.
   `core.no_scene_controller_shape_dependency`,
   `core.no_node_spec_patch_shape_dependency`, and
   `core.single_runtime_root`.
-- Support `dart run tool/guardrails/run.dart`, explicit
-  `--guardrail=<id>` selection, and conservative `--changed` routing that falls
-  back to the full blocking suite until impact metadata is complete.
+- Support `dart run tool/guardrails/run.dart` and explicit
+  `--guardrail=<id>` selection.
 - Add `api.public_exports_complete` and `api.public_types_complete` tests
   before completing the public skeleton, then close the slice only when those
   checks are green.
@@ -101,7 +100,7 @@ the change, not target-state requirements.
 - `docs/architecture/02_package_boundaries.md` gives the target folder layout
   and states that `lib/iwb_canvas_engine.dart` exports only `src/api/**`.
 - `docs/verification/guardrails.md` gives the supported runner modes:
-  full suite, `--suite=<name>`, `--guardrail=<id>`, and `--changed`.
+  full suite, `--suite=<name>`, and `--guardrail=<id>`.
 - `docs/verification/guardrail_design_patterns.md` maps P0 guardrails to
   `runner_inventory`, `registry_parity`, `parsed_ast_directive`,
   `resolved_public_surface`, `negative_legacy_shape`, and
@@ -186,7 +185,7 @@ Both seams must be created once and protected by tests in this step.
 
 No durable runtime state is introduced in P0. Public API DTO and port
 declarations are shape-only skeletons. Runner metadata owns guardrail ids,
-suite membership, command dispatch data, and changed-path impact metadata. The
+suite membership, and command dispatch data. The
 public exported-name inventory remains owned by
 `docs/_registry/public_api_v1.yaml`; implementation must not duplicate it as a
 second canonical list.
@@ -215,8 +214,6 @@ proof is P1, P2, P3, and the public API portions of P9.
 - Developers and CI enter hard-boundary checks through
   `dart run tool/guardrails/run.dart`.
 - `--guardrail=<id>` exits after the selected guardrail result.
-- `--changed` exits through the full blocking suite whenever changed files
-  cannot be confidently mapped by runner-owned impact metadata.
 - Public API compile fixtures under `test/api_contract/fixtures/**` model
   external consumers and may import only the public barrel.
 
@@ -235,7 +232,7 @@ verification must include `dart analyze`, `dcm analyze .`,
 | D1 | The only public import seam is the root barrel exporting `lib/src/api/**` declarations listed by `docs/_registry/public_api_v1.yaml`. | `lib/iwb_canvas_engine.dart`, `lib/src/api/**` | P1, P2, P9 |
 | D2 | P0 creates exactly one production `RuntimeRoot` declaration and keeps it internal. | `lib/src/runtime/runtime_root.dart` | P5, P9 |
 | D3 | Hard-boundary guardrails are implemented as project-owned checks dispatched through one runner. | `tool/guardrails/**`, `test/guardrails/**` | P3, P4, P7, P9 |
-| D4 | Changed-aware guardrail routing is conservative and widens to the full blocking suite when impact metadata is incomplete. | `tool/guardrails/**` | P7, P9 |
+| D4 | Guardrail runner selection is explicit and does not expose incomplete changed-path routing. | `tool/guardrails/**` | P7, P9 |
 | D5 | Root CI invokes repository-owned checks and does not duplicate guardrail logic. | `.github/workflows/**` | P8, P9 |
 
 ### Rejected Alternatives
@@ -246,8 +243,7 @@ verification must include `dart analyze`, `dcm analyze .`,
   diagnostic implementation files from the public barrel.
 - Do not implement guardrails as prose-only checklist items or workflow-local
   shell snippets; the repository-owned runner is the guardrail seam.
-- Do not make `--changed` skip unmapped checks. Until impact metadata is
-  complete, uncertain routing must widen to the full blocking suite.
+- Do not add changed-path selection until runner-owned impact metadata can map changed files confidently.
 - Do not add placeholder runtime behavior to satisfy public exports. P0 must
   stop at compileable skeleton declarations and hard-boundary enforcement.
 
@@ -262,8 +258,7 @@ verification must include `dart analyze`, `dcm analyze .`,
    `api.public_exports_complete` and `api.public_types_complete` pass.
 3. Add core import, legacy-shape, retired-shape, part-file,
    single-runtime-root, and diagram presence guardrails.
-4. Add the guardrail runner, metadata, selection modes, and conservative
-   `--changed` fallback.
+4. Add the guardrail runner, metadata, and selection modes.
 5. Add the root CI target after the local runner command is green.
 6. Run final broad verification.
 
@@ -307,8 +302,7 @@ required.
   explicit generated-code approval list is added and tested.
 - Do not put app adapters, legacy facade classes, or public schema v7 entry
   points in the root package.
-- Do not make CI the owner of guardrail ids, suite membership, or changed-path
-  impact metadata.
+- Do not make CI the owner of guardrail ids or suite membership.
 - Do not weaken DCM or analyzer configuration to make the empty skeleton pass.
 
 ### Deferred Broad Verification
@@ -386,7 +380,7 @@ rejects zero or duplicate production runtime roots.
 
 Proves the repository-owned runner executes the P0 hard-boundary blocking
 suite, inventories executable guardrail ids, supports explicit guardrail
-selection, and widens incomplete changed-path routing to the blocking suite.
+selection.
 
 ```sh
 dart test test/guardrails/blocking_suite_test.dart
@@ -394,8 +388,7 @@ dart test test/guardrails/blocking_suite_test.dart
 
 Expected signal: the test passes only when runner metadata covers the
 executable P0 hard-boundary suite, `--guardrail=<id>` dispatches a single
-selected P0 guardrail, and `--changed` cannot silently skip unmapped
-hard-boundary checks.
+selected P0 guardrail, and incomplete changed-path routing is not exposed as a runner mode.
 
 ### P8. Root CI target
 
@@ -511,7 +504,7 @@ The tests reject forbidden production imports, legacy package dependencies,
 retired shape dependencies, unapproved production `part` directives, and any
 production state where `RuntimeRoot` is absent or duplicated.
 
-### Slice 3. [x] Guardrail runner and conservative selection metadata
+### Slice 3. [x] Guardrail runner and explicit selection metadata
 
 #### Implements
 
@@ -525,13 +518,12 @@ SEAM_MIGRATION
 
 - Runner entrypoint:
   `tool/guardrails/run.dart` — command-line dispatcher for the blocking suite,
-  suite selection, guardrail selection, and changed-path mode.
+  suite selection, and guardrail selection.
 - Runner metadata and checks:
-  `tool/guardrails/**` — guardrail ids, suite membership, command mapping, and
-  changed-path impact metadata.
+  `tool/guardrails/**` — guardrail ids, suite membership, and command mapping.
 - Runner integration proof:
   `test/guardrails/blocking_suite_test.dart` — proves inventory coverage,
-  dispatch behavior, and conservative changed fallback.
+  dispatch behavior.
 - Verify-only guardrail registry:
   `docs/verification/guardrails.md` — source-of-truth context for future
   mandatory guardrails that are not executable in this P0 runner slice.
@@ -543,8 +535,8 @@ SEAM_MIGRATION
 
 Create the project-owned guardrail runner seam. The runner dispatches existing
 proof commands and check functions, supports `--guardrail=<id>`, inventories
-the executable hard-boundary suite, and makes `--changed` fall back to the
-blocking suite when impact metadata does not confidently cover a changed path.
+the executable hard-boundary suite, and leaves changed-path routing unexposed
+until impact metadata exists.
 
 #### Proof
 
@@ -564,8 +556,7 @@ selected guardrail path.
 #### Closure
 
 The P0 blocking suite, executable-id inventory, and explicit P0 guardrail
-selections work through `tool/guardrails/run.dart`, and incomplete changed-path
-impact metadata cannot skip hard-boundary proof.
+selections work through `tool/guardrails/run.dart`.
 
 ### Slice 4. [x] Root package CI target
 
