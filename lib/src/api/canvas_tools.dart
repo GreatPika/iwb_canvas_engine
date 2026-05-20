@@ -1,13 +1,62 @@
 import 'dart:ui';
 
+import 'canvas_contract_limits.dart';
 import 'canvas_pointer.dart';
+import 'canvas_value_validators.dart';
 
 enum CanvasInteractionMode { move, draw }
 
 enum CanvasDrawTool { pencil, marker, line, eraser }
 
 final class CanvasDrawStyle {
-  const CanvasDrawStyle({
+  factory CanvasDrawStyle({
+    CanvasDrawTool tool = CanvasDrawTool.pencil,
+    Color color = const Color(0xFF000000),
+    double pencilThickness = 3.0,
+    double markerThickness = 12.0,
+    double markerOpacity = 0.4,
+    double lineThickness = 3.0,
+    double eraserThickness = 20.0,
+  }) {
+    validatePositiveDouble(
+      pencilThickness,
+      path: 'drawStyle.pencilThickness',
+      max: canvasMaxThickness,
+    );
+    validatePositiveDouble(
+      markerThickness,
+      path: 'drawStyle.markerThickness',
+      max: canvasMaxThickness,
+    );
+    validateDoubleRange(
+      markerOpacity,
+      path: 'drawStyle.markerOpacity',
+      min: 0,
+      max: 1,
+    );
+    validatePositiveDouble(
+      lineThickness,
+      path: 'drawStyle.lineThickness',
+      max: canvasMaxThickness,
+    );
+    validatePositiveDouble(
+      eraserThickness,
+      path: 'drawStyle.eraserThickness',
+      max: canvasMaxThickness,
+    );
+
+    return CanvasDrawStyle._(
+      tool: tool,
+      color: color,
+      pencilThickness: pencilThickness,
+      markerThickness: markerThickness,
+      markerOpacity: markerOpacity,
+      lineThickness: lineThickness,
+      eraserThickness: eraserThickness,
+    );
+  }
+
+  const CanvasDrawStyle._({
     this.tool = CanvasDrawTool.pencil,
     this.color = const Color(0xFF000000),
     this.pencilThickness = 3.0,
@@ -17,7 +66,7 @@ final class CanvasDrawStyle {
     this.eraserThickness = 20.0,
   });
 
-  static const defaultStyle = CanvasDrawStyle();
+  static const defaultStyle = CanvasDrawStyle._();
   final CanvasDrawTool tool;
   final Color color;
   final double pencilThickness;

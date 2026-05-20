@@ -1,24 +1,77 @@
+import 'canvas_contract_limits.dart';
+import 'canvas_value_validators.dart';
+
 final class CanvasElementId {
-  const CanvasElementId(this.value);
+  factory CanvasElementId(String value) {
+    return CanvasElementId._(
+      validateCanvasIdValue(
+        value,
+        path: 'element.id',
+        maxLength: canvasMaxElementIdLength,
+      ),
+    );
+  }
+
+  const CanvasElementId._(this.value);
   final String value;
 }
 
 final class CanvasLayerId {
-  const CanvasLayerId(this.value);
+  factory CanvasLayerId(String value) {
+    return CanvasLayerId._(
+      validateCanvasIdValue(
+        value,
+        path: 'layer.id',
+        maxLength: canvasMaxLayerIdLength,
+      ),
+    );
+  }
+
+  const CanvasLayerId._(this.value);
   final String value;
 }
 
 final class CanvasResourceId {
-  const CanvasResourceId(this.value);
+  factory CanvasResourceId(String value) {
+    return CanvasResourceId._(
+      validateCanvasIdValue(
+        value,
+        path: 'resource.id',
+        maxLength: canvasMaxResourceIdLength,
+      ),
+    );
+  }
+
+  const CanvasResourceId._(this.value);
   final String value;
 }
 
 final class CanvasActionId {
-  const CanvasActionId(this.value);
+  factory CanvasActionId(String value) {
+    return CanvasActionId._(
+      validateCanvasIdValue(
+        value,
+        path: 'action.id',
+        maxLength: canvasMaxActionIdLength,
+      ),
+    );
+  }
+
+  const CanvasActionId._(this.value);
   final String value;
 }
 
 final class CanvasInteractionRequestId {
-  const CanvasInteractionRequestId(this.value);
+  factory CanvasInteractionRequestId(String value) {
+    return CanvasInteractionRequestId._(
+      validateCanvasIdValue(
+        value,
+        path: 'interactionRequest.id',
+        maxLength: canvasMaxInteractionRequestIdLength,
+      ),
+    );
+  }
+
+  const CanvasInteractionRequestId._(this.value);
   final String value;
 }

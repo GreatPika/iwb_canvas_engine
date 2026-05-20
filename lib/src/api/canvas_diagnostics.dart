@@ -1,3 +1,6 @@
+import 'canvas_contract_limits.dart';
+import 'canvas_value_validators.dart';
+
 sealed class CanvasDiagnosticPolicy {
   const CanvasDiagnosticPolicy();
   const factory CanvasDiagnosticPolicy.disabled() = CanvasDiagnosticsDisabled;
@@ -17,9 +20,32 @@ final class CanvasDiagnosticsSummary extends CanvasDiagnosticPolicy {
 }
 
 final class CanvasDiagnosticsVerbose extends CanvasDiagnosticPolicy {
-  const CanvasDiagnosticsVerbose({
-    this.maxPreviewLength = 256,
-    this.maxListEntries = 32,
+  factory CanvasDiagnosticsVerbose({
+    int maxPreviewLength = canvasDiagnosticVerbosePreviewLengthDefault,
+    int maxListEntries = canvasDiagnosticVerboseListEntriesDefault,
+  }) {
+    validateIntegerRange(
+      maxPreviewLength,
+      path: 'diagnostics.maxPreviewLength',
+      min: canvasDiagnosticVerbosePreviewLengthMin,
+      max: canvasDiagnosticVerbosePreviewLengthMax,
+    );
+    validateIntegerRange(
+      maxListEntries,
+      path: 'diagnostics.maxListEntries',
+      min: canvasDiagnosticVerboseListEntriesMin,
+      max: canvasDiagnosticVerboseListEntriesMax,
+    );
+
+    return CanvasDiagnosticsVerbose._(
+      maxPreviewLength: maxPreviewLength,
+      maxListEntries: maxListEntries,
+    );
+  }
+
+  const CanvasDiagnosticsVerbose._({
+    this.maxPreviewLength = canvasDiagnosticVerbosePreviewLengthDefault,
+    this.maxListEntries = canvasDiagnosticVerboseListEntriesDefault,
   });
 
   final int maxPreviewLength;

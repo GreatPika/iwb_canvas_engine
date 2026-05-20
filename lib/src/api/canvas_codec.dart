@@ -1,3 +1,4 @@
+import '../codec/schema_v1_decoder.dart';
 import 'canvas_document.dart';
 
 const int canvasSchemaVersionWrite = 1;
@@ -10,7 +11,7 @@ String encodeCanvasDocumentToJson(CanvasDocument document) =>
     throw UnimplementedError();
 
 CanvasDocument decodeCanvasDocument(Map<String, Object?> json) =>
-    throw UnimplementedError();
+    decodeSchemaV1Document(json);
 
 CanvasDocument decodeCanvasDocumentFromJson(String json) =>
-    throw UnimplementedError();
+    decodeSchemaV1DocumentFromJson(json);

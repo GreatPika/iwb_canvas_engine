@@ -1,9 +1,50 @@
 import 'dart:ui';
 
+import 'canvas_contract_limits.dart';
+import 'canvas_value_validators.dart';
+
 enum CanvasPointerLifecyclePhase { down, move, up, cancel }
 
 final class CanvasPointerPolicy {
-  const CanvasPointerPolicy({
+  factory CanvasPointerPolicy({
+    double tapSlop = 8.0,
+    double doubleTapSlop = 24.0,
+    int doubleTapMaxDelayMs = 300,
+    bool deferSingleTap = true,
+    double? dragStartSlop,
+  }) {
+    validateNonNegativeDouble(
+      tapSlop,
+      path: 'pointerPolicy.tapSlop',
+      max: canvasMaxPositiveSize,
+    );
+    validateNonNegativeDouble(
+      doubleTapSlop,
+      path: 'pointerPolicy.doubleTapSlop',
+      max: canvasMaxPositiveSize,
+    );
+    validateNonNegativeInt(
+      doubleTapMaxDelayMs,
+      path: 'pointerPolicy.doubleTapMaxDelayMs',
+    );
+    if (dragStartSlop != null) {
+      validateNonNegativeDouble(
+        dragStartSlop,
+        path: 'pointerPolicy.dragStartSlop',
+        max: canvasMaxPositiveSize,
+      );
+    }
+
+    return CanvasPointerPolicy._(
+      tapSlop: tapSlop,
+      doubleTapSlop: doubleTapSlop,
+      doubleTapMaxDelayMs: doubleTapMaxDelayMs,
+      deferSingleTap: deferSingleTap,
+      dragStartSlop: dragStartSlop,
+    );
+  }
+
+  const CanvasPointerPolicy._({
     this.tapSlop = 8.0,
     this.doubleTapSlop = 24.0,
     this.doubleTapMaxDelayMs = 300,
@@ -11,7 +52,7 @@ final class CanvasPointerPolicy {
     this.dragStartSlop,
   });
 
-  static const defaultPolicy = CanvasPointerPolicy();
+  static const defaultPolicy = CanvasPointerPolicy._();
   final double tapSlop;
   final double doubleTapSlop;
   final int doubleTapMaxDelayMs;
@@ -20,7 +61,29 @@ final class CanvasPointerPolicy {
 }
 
 final class CanvasPointerSample {
-  const CanvasPointerSample({
+  factory CanvasPointerSample({
+    required int pointerId,
+    required Offset position,
+    required CanvasPointerLifecyclePhase phase,
+    required PointerDeviceKind kind,
+    int? timestampMs,
+  }) {
+    validateNonNegativeInt(pointerId, path: 'pointer.pointerId');
+    validateOffset(position, path: 'pointer.position');
+    if (timestampMs != null) {
+      validateNonNegativeInt(timestampMs, path: 'pointer.timestampMs');
+    }
+
+    return CanvasPointerSample._(
+      pointerId: pointerId,
+      position: position,
+      phase: phase,
+      kind: kind,
+      timestampMs: timestampMs,
+    );
+  }
+
+  const CanvasPointerSample._({
     required this.pointerId,
     required this.position,
     required this.phase,

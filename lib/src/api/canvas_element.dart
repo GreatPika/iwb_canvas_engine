@@ -1,15 +1,18 @@
 import 'dart:ui';
 
+import 'canvas_contract_limits.dart';
 import 'canvas_document.dart';
+import 'canvas_errors.dart';
 import 'canvas_geometry.dart';
 import 'canvas_ids.dart';
+import 'canvas_value_validators.dart';
 
 enum CanvasElementKind { image, path, text, stroke, line, rect }
 
 enum CanvasPathFillRule { nonZero, evenOdd }
 
 sealed class CanvasElement {
-  const CanvasElement({
+  CanvasElement({
     required this.id,
     this.revision = 0,
     this.transform = CanvasTransform.identity,
@@ -21,7 +24,16 @@ sealed class CanvasElement {
     this.isDeletable = true,
     this.isTransformable = true,
     this.metadata = const CanvasMetadata.empty(),
-  });
+  }) {
+    validateNonNegativeInt(revision, path: 'element.revision');
+    validateElementTransformAdmission(transform, path: 'element.transform');
+    validateDoubleRange(opacity, path: 'element.opacity', min: 0, max: 1);
+    validateNonNegativeDouble(
+      hitPadding,
+      path: 'element.hitPadding',
+      max: canvasMaxHitPadding,
+    );
+  }
 
   final CanvasElementId id;
   CanvasElementKind get kind;
@@ -38,7 +50,7 @@ sealed class CanvasElement {
 }
 
 final class CanvasImageElement extends CanvasElement {
-  const CanvasImageElement({
+  CanvasImageElement({
     required super.id,
     required this.resourceId,
     required this.size,
@@ -53,7 +65,13 @@ final class CanvasImageElement extends CanvasElement {
     super.isDeletable,
     super.isTransformable,
     super.metadata,
-  });
+  }) {
+    validateSize(size, path: 'image.size');
+    final naturalSize = this.naturalSize;
+    if (naturalSize != null) {
+      validateSize(naturalSize, path: 'image.naturalSize');
+    }
+  }
 
   final CanvasResourceId resourceId;
   final Size size;
@@ -63,7 +81,7 @@ final class CanvasImageElement extends CanvasElement {
 }
 
 final class CanvasPathElement extends CanvasElement {
-  const CanvasPathElement({
+  CanvasPathElement({
     required super.id,
     required this.svgPathData,
     this.fillColor,
@@ -80,7 +98,27 @@ final class CanvasPathElement extends CanvasElement {
     super.isDeletable,
     super.isTransformable,
     super.metadata,
-  });
+  }) {
+    if (svgPathData.isEmpty) {
+      throw const CanvasDataException(
+        code: CanvasDataErrorCode.fieldMustNotBeEmpty,
+        message: 'path data must not be empty.',
+        path: 'path.svgPathData',
+      );
+    }
+    if (svgPathData.length > canvasMaxSvgPathDataLength) {
+      throw const CanvasDataException(
+        code: CanvasDataErrorCode.fieldMaxLength,
+        message: 'path data exceeds the maximum length.',
+        path: 'path.svgPathData',
+      );
+    }
+    validateNonNegativeDouble(
+      strokeWidth,
+      path: 'path.strokeWidth',
+      max: canvasMaxThickness,
+    );
+  }
 
   final String svgPathData;
   final Color? fillColor;
@@ -92,7 +130,7 @@ final class CanvasPathElement extends CanvasElement {
 }
 
 final class CanvasTextElement extends CanvasElement {
-  const CanvasTextElement({
+  CanvasTextElement({
     required super.id,
     required this.text,
     required this.color,
@@ -115,7 +153,45 @@ final class CanvasTextElement extends CanvasElement {
     super.isDeletable,
     super.isTransformable,
     super.metadata,
-  });
+  }) {
+    if (text.length > canvasMaxTextLength) {
+      throw const CanvasDataException(
+        code: CanvasDataErrorCode.fieldMaxLength,
+        message: 'text exceeds the maximum length.',
+        path: 'text.text',
+      );
+    }
+    validatePositiveDouble(
+      fontSize,
+      path: 'text.fontSize',
+      max: canvasMaxThickness,
+    );
+    final fontFamily = this.fontFamily;
+    if (fontFamily != null &&
+        (fontFamily.isEmpty || fontFamily.length > canvasMaxFontFamilyLength)) {
+      throw const CanvasDataException(
+        code: CanvasDataErrorCode.fieldMaxLength,
+        message: 'font family length is invalid.',
+        path: 'text.fontFamily',
+      );
+    }
+    final maxWidth = this.maxWidth;
+    if (maxWidth != null) {
+      validatePositiveDouble(
+        maxWidth,
+        path: 'text.maxWidth',
+        max: canvasMaxPositiveSize,
+      );
+    }
+    final lineHeight = this.lineHeight;
+    if (lineHeight != null) {
+      validatePositiveDouble(
+        lineHeight,
+        path: 'text.lineHeight',
+        max: canvasMaxPositiveSize,
+      );
+    }
+  }
 
   final String text;
   final double fontSize;
@@ -148,7 +224,30 @@ final class CanvasStrokeElement extends CanvasElement {
     super.isDeletable,
     super.isTransformable,
     super.metadata,
-  }) : _points = List.unmodifiable(points);
+  }) : _points = List.unmodifiable(points) {
+    if (_points.isEmpty) {
+      throw const CanvasDataException(
+        code: CanvasDataErrorCode.fieldMustNotBeEmpty,
+        message: 'stroke points must not be empty.',
+        path: 'stroke.points',
+      );
+    }
+    if (_points.length > canvasMaxStrokePointsPerElement) {
+      throw const CanvasDataException(
+        code: CanvasDataErrorCode.maxItems,
+        message: 'stroke points exceed the maximum count.',
+        path: 'stroke.points',
+      );
+    }
+    for (final point in _points) {
+      validateOffset(point, path: 'stroke.points');
+    }
+    validatePositiveDouble(
+      thickness,
+      path: 'stroke.thickness',
+      max: canvasMaxThickness,
+    );
+  }
 
   final List<Offset> _points;
   List<Offset> get points => _points;
@@ -159,7 +258,7 @@ final class CanvasStrokeElement extends CanvasElement {
 }
 
 final class CanvasLineElement extends CanvasElement {
-  const CanvasLineElement({
+  CanvasLineElement({
     required super.id,
     required this.start,
     required this.end,
@@ -175,7 +274,15 @@ final class CanvasLineElement extends CanvasElement {
     super.isDeletable,
     super.isTransformable,
     super.metadata,
-  });
+  }) {
+    validateOffset(start, path: 'line.start');
+    validateOffset(end, path: 'line.end');
+    validatePositiveDouble(
+      thickness,
+      path: 'line.thickness',
+      max: canvasMaxThickness,
+    );
+  }
 
   final Offset start;
   final Offset end;
@@ -186,7 +293,7 @@ final class CanvasLineElement extends CanvasElement {
 }
 
 final class CanvasRectElement extends CanvasElement {
-  const CanvasRectElement({
+  CanvasRectElement({
     required super.id,
     required this.size,
     this.fillColor,
@@ -202,7 +309,14 @@ final class CanvasRectElement extends CanvasElement {
     super.isDeletable,
     super.isTransformable,
     super.metadata,
-  });
+  }) {
+    validateSize(size, path: 'rect.size');
+    validateNonNegativeDouble(
+      strokeWidth,
+      path: 'rect.strokeWidth',
+      max: canvasMaxThickness,
+    );
+  }
 
   final Size size;
   final Color? fillColor;

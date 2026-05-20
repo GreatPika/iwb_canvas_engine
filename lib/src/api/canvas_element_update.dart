@@ -1,13 +1,16 @@
 import 'dart:ui';
 
+import 'canvas_contract_limits.dart';
 import 'canvas_document.dart';
 import 'canvas_element.dart';
+import 'canvas_errors.dart';
 import 'canvas_field_update.dart';
 import 'canvas_geometry.dart';
 import 'canvas_ids.dart';
+import 'canvas_value_validators.dart';
 
 sealed class CanvasElementUpdate {
-  const CanvasElementUpdate({
+  CanvasElementUpdate({
     required this.id,
     this.transform = const CanvasFieldUpdate.absent(),
     this.opacity = const CanvasFieldUpdate.absent(),
@@ -18,7 +21,21 @@ sealed class CanvasElementUpdate {
     this.isDeletable = const CanvasFieldUpdate.absent(),
     this.isTransformable = const CanvasFieldUpdate.absent(),
     this.metadata = const CanvasFieldUpdate.absent(),
-  });
+  }) {
+    _validateSet(transform, (value) {
+      validateElementTransformAdmission(value, path: 'update.transform');
+    });
+    _validateSet(opacity, (value) {
+      validateDoubleRange(value, path: 'update.opacity', min: 0, max: 1);
+    });
+    _validateSet(hitPadding, (value) {
+      validateNonNegativeDouble(
+        value,
+        path: 'update.hitPadding',
+        max: canvasMaxHitPadding,
+      );
+    });
+  }
 
   final CanvasElementId id;
   final CanvasFieldUpdate<CanvasTransform> transform;
@@ -33,7 +50,7 @@ sealed class CanvasElementUpdate {
 }
 
 final class CanvasImageElementUpdate extends CanvasElementUpdate {
-  const CanvasImageElementUpdate({
+  CanvasImageElementUpdate({
     required super.id,
     super.transform,
     super.opacity,
@@ -47,7 +64,14 @@ final class CanvasImageElementUpdate extends CanvasElementUpdate {
     this.resourceId = const CanvasFieldUpdate.absent(),
     this.size = const CanvasFieldUpdate.absent(),
     this.naturalSize = const CanvasFieldUpdate.absent(),
-  });
+  }) {
+    _validateSet(size, (value) => validateSize(value, path: 'image.size'));
+    _validateSet(naturalSize, (value) {
+      if (value != null) {
+        validateSize(value, path: 'image.naturalSize');
+      }
+    });
+  }
 
   final CanvasFieldUpdate<CanvasResourceId> resourceId;
   final CanvasFieldUpdate<Size> size;
@@ -55,7 +79,7 @@ final class CanvasImageElementUpdate extends CanvasElementUpdate {
 }
 
 final class CanvasPathElementUpdate extends CanvasElementUpdate {
-  const CanvasPathElementUpdate({
+  CanvasPathElementUpdate({
     required super.id,
     super.transform,
     super.opacity,
@@ -71,7 +95,16 @@ final class CanvasPathElementUpdate extends CanvasElementUpdate {
     this.strokeColor = const CanvasFieldUpdate.absent(),
     this.strokeWidth = const CanvasFieldUpdate.absent(),
     this.fillRule = const CanvasFieldUpdate.absent(),
-  });
+  }) {
+    _validateSet(svgPathData, _validateSvgPathData);
+    _validateSet(strokeWidth, (value) {
+      validateNonNegativeDouble(
+        value,
+        path: 'path.strokeWidth',
+        max: canvasMaxThickness,
+      );
+    });
+  }
 
   final CanvasFieldUpdate<String> svgPathData;
   final CanvasFieldUpdate<Color?> fillColor;
@@ -81,7 +114,7 @@ final class CanvasPathElementUpdate extends CanvasElementUpdate {
 }
 
 final class CanvasTextElementUpdate extends CanvasElementUpdate {
-  const CanvasTextElementUpdate({
+  CanvasTextElementUpdate({
     required super.id,
     super.transform,
     super.opacity,
@@ -103,7 +136,22 @@ final class CanvasTextElementUpdate extends CanvasElementUpdate {
     this.fontFamily = const CanvasFieldUpdate.absent(),
     this.maxWidth = const CanvasFieldUpdate.absent(),
     this.lineHeight = const CanvasFieldUpdate.absent(),
-  });
+  }) {
+    _validateSet(text, _validateText);
+    _validateSet(fontSize, (value) {
+      validatePositiveDouble(
+        value,
+        path: 'text.fontSize',
+        max: canvasMaxThickness,
+      );
+    });
+    _validateSet(fontFamily, _validateNullableFontFamily);
+    _validateSet(maxWidth, _validateNullablePositiveDimension('text.maxWidth'));
+    _validateSet(
+      lineHeight,
+      _validateNullablePositiveDimension('text.lineHeight'),
+    );
+  }
 
   final CanvasFieldUpdate<String> text;
   final CanvasFieldUpdate<double> fontSize;
@@ -119,7 +167,7 @@ final class CanvasTextElementUpdate extends CanvasElementUpdate {
 }
 
 final class CanvasStrokeElementUpdate extends CanvasElementUpdate {
-  const CanvasStrokeElementUpdate({
+  CanvasStrokeElementUpdate({
     required super.id,
     super.transform,
     super.opacity,
@@ -130,10 +178,19 @@ final class CanvasStrokeElementUpdate extends CanvasElementUpdate {
     super.isDeletable,
     super.isTransformable,
     super.metadata,
-    this.points = const CanvasFieldUpdate.absent(),
+    CanvasFieldUpdate<List<Offset>> points = const CanvasFieldUpdate.absent(),
     this.thickness = const CanvasFieldUpdate.absent(),
     this.color = const CanvasFieldUpdate.absent(),
-  });
+  }) : points = _freezeStrokePointsUpdate(points) {
+    _validateSet(points, _validateStrokePoints);
+    _validateSet(thickness, (value) {
+      validatePositiveDouble(
+        value,
+        path: 'stroke.thickness',
+        max: canvasMaxThickness,
+      );
+    });
+  }
 
   final CanvasFieldUpdate<List<Offset>> points;
   final CanvasFieldUpdate<double> thickness;
@@ -141,7 +198,7 @@ final class CanvasStrokeElementUpdate extends CanvasElementUpdate {
 }
 
 final class CanvasLineElementUpdate extends CanvasElementUpdate {
-  const CanvasLineElementUpdate({
+  CanvasLineElementUpdate({
     required super.id,
     super.transform,
     super.opacity,
@@ -156,7 +213,17 @@ final class CanvasLineElementUpdate extends CanvasElementUpdate {
     this.end = const CanvasFieldUpdate.absent(),
     this.thickness = const CanvasFieldUpdate.absent(),
     this.color = const CanvasFieldUpdate.absent(),
-  });
+  }) {
+    _validateSet(start, (value) => validateOffset(value, path: 'line.start'));
+    _validateSet(end, (value) => validateOffset(value, path: 'line.end'));
+    _validateSet(thickness, (value) {
+      validatePositiveDouble(
+        value,
+        path: 'line.thickness',
+        max: canvasMaxThickness,
+      );
+    });
+  }
 
   final CanvasFieldUpdate<Offset> start;
   final CanvasFieldUpdate<Offset> end;
@@ -165,7 +232,7 @@ final class CanvasLineElementUpdate extends CanvasElementUpdate {
 }
 
 final class CanvasRectElementUpdate extends CanvasElementUpdate {
-  const CanvasRectElementUpdate({
+  CanvasRectElementUpdate({
     required super.id,
     super.transform,
     super.opacity,
@@ -180,10 +247,102 @@ final class CanvasRectElementUpdate extends CanvasElementUpdate {
     this.fillColor = const CanvasFieldUpdate.absent(),
     this.strokeColor = const CanvasFieldUpdate.absent(),
     this.strokeWidth = const CanvasFieldUpdate.absent(),
-  });
+  }) {
+    _validateSet(size, (value) => validateSize(value, path: 'rect.size'));
+    _validateSet(strokeWidth, (value) {
+      validateNonNegativeDouble(
+        value,
+        path: 'rect.strokeWidth',
+        max: canvasMaxThickness,
+      );
+    });
+  }
 
   final CanvasFieldUpdate<Size> size;
   final CanvasFieldUpdate<Color?> fillColor;
   final CanvasFieldUpdate<Color?> strokeColor;
   final CanvasFieldUpdate<double> strokeWidth;
+}
+
+void _validateSet<T>(CanvasFieldUpdate<T> update, void Function(T value) check) {
+  if (update case CanvasFieldSet<Object>(:final value)) {
+    check(value as T);
+  }
+}
+
+void _validateSvgPathData(String value) {
+  if (value.isEmpty) {
+    throw const CanvasDataException(
+      code: CanvasDataErrorCode.fieldMustNotBeEmpty,
+      message: 'path data must not be empty.',
+      path: 'path.svgPathData',
+    );
+  }
+  if (value.length > canvasMaxSvgPathDataLength) {
+    throw const CanvasDataException(
+      code: CanvasDataErrorCode.fieldMaxLength,
+      message: 'path data exceeds the maximum length.',
+      path: 'path.svgPathData',
+    );
+  }
+}
+
+void _validateText(String value) {
+  if (value.length > canvasMaxTextLength) {
+    throw const CanvasDataException(
+      code: CanvasDataErrorCode.fieldMaxLength,
+      message: 'text exceeds the maximum length.',
+      path: 'text.text',
+    );
+  }
+}
+
+void _validateNullableFontFamily(String? value) {
+  if (value != null &&
+      (value.isEmpty || value.length > canvasMaxFontFamilyLength)) {
+    throw const CanvasDataException(
+      code: CanvasDataErrorCode.fieldMaxLength,
+      message: 'font family length is invalid.',
+      path: 'text.fontFamily',
+    );
+  }
+}
+
+void Function(double?) _validateNullablePositiveDimension(String path) {
+  return (value) {
+    if (value != null) {
+      validatePositiveDouble(value, path: path, max: canvasMaxPositiveSize);
+    }
+  };
+}
+
+void _validateStrokePoints(List<Offset> value) {
+  if (value.isEmpty) {
+    throw const CanvasDataException(
+      code: CanvasDataErrorCode.fieldMustNotBeEmpty,
+      message: 'stroke points must not be empty.',
+      path: 'stroke.points',
+    );
+  }
+  if (value.length > canvasMaxStrokePointsPerElement) {
+    throw const CanvasDataException(
+      code: CanvasDataErrorCode.maxItems,
+      message: 'stroke points exceed the maximum count.',
+      path: 'stroke.points',
+    );
+  }
+  for (final point in value) {
+    validateOffset(point, path: 'stroke.points');
+  }
+}
+
+CanvasFieldUpdate<List<Offset>> _freezeStrokePointsUpdate(
+  CanvasFieldUpdate<List<Offset>> update,
+) {
+  return switch (update) {
+    CanvasFieldSet<List<Offset>>(:final value) => CanvasFieldSet(
+      List<Offset>.unmodifiable(value),
+    ),
+    _ => update,
+  };
 }

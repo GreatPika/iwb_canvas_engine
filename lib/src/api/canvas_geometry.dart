@@ -1,11 +1,27 @@
 import 'dart:typed_data';
 import 'dart:ui';
 
+import 'canvas_value_validators.dart';
+
 // This registry-owned public value object stays cohesive so the transform API
 // remains visible as one contract surface instead of being split by metric.
 // ignore: metrics
 final class CanvasTransform {
-  const CanvasTransform({
+  factory CanvasTransform({
+    required double a,
+    required double b,
+    required double c,
+    required double d,
+    required double tx,
+    required double ty,
+  }) {
+    final transform = CanvasTransform._(a: a, b: b, c: c, d: d, tx: tx, ty: ty);
+    validateCanvasTransform(transform, path: 'transform');
+
+    return transform;
+  }
+
+  const CanvasTransform._({
     required this.a,
     required this.b,
     required this.c,
@@ -14,12 +30,12 @@ final class CanvasTransform {
     required this.ty,
   });
 
-  static const identity = CanvasTransform(a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0);
+  static const identity = CanvasTransform._(a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0);
 
   factory CanvasTransform.translation(Offset delta) =>
-      throw UnimplementedError();
+      CanvasTransform(a: 1, b: 0, c: 0, d: 1, tx: delta.dx, ty: delta.dy);
   factory CanvasTransform.scale(double sx, double sy) =>
-      throw UnimplementedError();
+      CanvasTransform(a: sx, b: 0, c: 0, d: sy, tx: 0, ty: 0);
   factory CanvasTransform.rotationRadians(double radians) =>
       throw UnimplementedError();
   factory CanvasTransform.rotationDegrees(double degrees) =>
@@ -38,9 +54,15 @@ final class CanvasTransform {
   final double tx;
   final double ty;
 
-  Offset get translation => throw UnimplementedError();
-  bool get isFinite => throw UnimplementedError();
-  bool get isInvertible => throw UnimplementedError();
+  Offset get translation => Offset(tx, ty);
+  bool get isFinite =>
+      a.isFinite &&
+      b.isFinite &&
+      c.isFinite &&
+      d.isFinite &&
+      tx.isFinite &&
+      ty.isFinite;
+  bool get isInvertible => a * d - b * c != 0;
   CanvasTransform withTranslation(Offset translation) =>
       throw UnimplementedError();
   CanvasTransform multiply(CanvasTransform other) => throw UnimplementedError();
