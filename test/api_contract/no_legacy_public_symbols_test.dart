@@ -1,28 +1,9 @@
 import 'package:test/test.dart';
 
-import '../support/public_api_surface.dart';
+import '../../tool/guardrails/src/public_api_checks.dart';
 
 void main() {
   test('root public surface does not export retired legacy symbols', () async {
-    final surface = await resolvePublicApiSurface();
-
-    expect(surface.exportedNames.intersection(_legacySymbols), isEmpty);
+    expect(await checkNoLegacyPublicTypes(), isEmpty);
   });
 }
-
-const _legacySymbols = {
-  'SceneController',
-  'SceneSnapshot',
-  'NodeSpec',
-  'NodePatch',
-  'PatchField',
-  'SceneWriteTxn',
-  'SceneBuilder',
-  'SceneCodec',
-  'decodeScene',
-  'decodeSceneFromJson',
-  'encodeScene',
-  'encodeSceneToJson',
-  'schemaVersionWrite',
-  'schemaVersionsRead',
-};

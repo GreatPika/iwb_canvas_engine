@@ -3,7 +3,7 @@ import 'dart:io';
 import 'core_boundary_checks.dart';
 import 'guardrail_registry.dart';
 import 'guardrail_violation.dart';
-import 'repository_paths.dart';
+import 'public_api_checks.dart';
 
 final class GuardrailRunResult {
   const GuardrailRunResult({
@@ -32,15 +32,11 @@ Future<GuardrailRunResult> runGuardrails(Iterable<String> ids) async {
 Future<int> _runGuardrail(String id) async {
   switch (id) {
     case 'api.no_legacy_public_types':
-      return _runDartTest(
-        'test/api_contract/no_legacy_public_symbols_test.dart',
-      );
+      return _reportViolations(id, await checkNoLegacyPublicTypes());
     case 'api.public_exports_complete':
-      return _runDartTest(
-        'test/api_contract/public_exports_complete_test.dart',
-      );
+      return _reportViolations(id, await checkPublicExportsComplete());
     case 'api.public_types_complete':
-      return _runDartTest('test/api_contract/public_types_complete_test.dart');
+      return _reportViolations(id, await checkPublicTypesComplete());
     case 'core.no_legacy_imports':
     case 'core.import_boundaries':
     case 'core.no_unapproved_part_files':
@@ -57,17 +53,6 @@ Future<int> _runGuardrail(String id) async {
   stderr.writeln('Unknown guardrail: $id');
 
   return 64;
-}
-
-Future<int> _runDartTest(String path) async {
-  final result = await Process.run('dart', [
-    'test',
-    path,
-  ], workingDirectory: repositoryRoot);
-  stdout.write(result.stdout);
-  stderr.write(result.stderr);
-
-  return result.exitCode;
 }
 
 int _reportViolations(String id, Iterable<GuardrailViolation> violations) {

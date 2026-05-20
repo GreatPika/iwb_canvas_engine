@@ -1,11 +1,10 @@
-import 'dart:io';
-
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/error.dart';
 
 import 'public_api_type_references.dart';
+import 'repository_paths.dart';
 
 final class PublicApiSurface {
   PublicApiSurface._({
@@ -19,9 +18,11 @@ final class PublicApiSurface {
 
 Future<PublicApiSurface> resolvePublicApiSurface({String? libraryPath}) async {
   final resolvedLibraryPath =
-      libraryPath ?? '$repoRoot/lib/iwb_canvas_engine.dart';
+      libraryPath ?? '$repositoryRoot/lib/iwb_canvas_engine.dart';
   final collection = AnalysisContextCollection(
-    includedPaths: [if (libraryPath == null) repoRoot else resolvedLibraryPath],
+    includedPaths: [
+      if (libraryPath == null) repositoryRoot else resolvedLibraryPath,
+    ],
   );
   try {
     final context = collection.contextFor(resolvedLibraryPath);
@@ -53,8 +54,6 @@ Set<String> collectUndefinedPublicTypeReferences(PublicApiSurface surface) {
     publicNames: surface.exportedNames,
   );
 }
-
-String get repoRoot => Directory.current.absolute.path;
 
 bool _isPublicExportName(String name) {
   return !name.startsWith('_') && !name.endsWith('=');
