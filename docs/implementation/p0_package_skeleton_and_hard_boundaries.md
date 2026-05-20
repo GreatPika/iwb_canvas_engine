@@ -63,9 +63,13 @@ runtime, API, donor, codec, or Flutter implementation can land.
 ## Tests and guardrails that prove this phase
 
 - `test.api_contract.no_legacy_public_symbols` -> `test/api_contract/no_legacy_public_symbols_test.dart`
+- `test.api_contract.public_exports_complete` -> `test/api_contract/public_exports_complete_test.dart`
+- `test.api_contract.public_types_complete` -> `test/api_contract/public_types_complete_test.dart`
 - `test.guardrails.import_boundaries` -> `test/guardrails/import_boundaries_test.dart`; also enforces no imports from another package's `src/**` and no unapproved production `part` / `part of` directives
-- `test.guardrails.blocking_suite` -> `test/guardrails/blocking_suite_test.dart`
+- `test.guardrails.blocking_suite` -> `test/guardrails/blocking_suite_test.dart`; proves full runner, `--suite=api`, `--suite=core`, explicit guardrail selection, and unknown or empty suite rejection
 - `dart run tool/guardrails/run.dart` -> full blocking guardrail suite
+- `dart run tool/guardrails/run.dart --suite=api`
+- `dart run tool/guardrails/run.dart --suite=core`
 - `dart run tool/guardrails/run.dart --guardrail=core.import_boundaries`
 - `api.no_legacy_public_types`
 - `api.public_exports_complete`

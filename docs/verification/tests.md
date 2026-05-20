@@ -406,10 +406,12 @@ test/functional_ledger/legacy_capability_inventory_test.dart
      oracle, and evidence focus without requiring next API mapping.
 
 test/guardrails/blocking_suite_test.dart
-  -> proves every mandatory blocking guardrail from
-     section_22_guardrails_machine_checks is represented by executable proof;
-  -> proves every mandatory blocking guardrail is included in the full
-     guardrail runner suite.
+  -> proves the executable P0 hard-boundary guardrail ids are represented in
+     runner inventory;
+  -> proves the full guardrail runner, `--suite=api`, `--suite=core`, and
+     explicit `--guardrail=<id>` selection modes execute the intended P0 ids;
+  -> proves unknown or empty suite selection fails instead of silently running
+     an unintended guardrail set.
 
 test/runtime/dispose_lifecycle_test.dart
   -> proves runtime dispose keeps state.value readable;

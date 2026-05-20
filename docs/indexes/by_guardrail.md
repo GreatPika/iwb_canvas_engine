@@ -36,13 +36,13 @@ Guardrails extracted from split section 22.
 
 - Rule: all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.public_readable_union_variants`, `test.guardrails.blocking_suite`
+- Tests: `test.api_contract.public_exports_complete`, `test.guardrails.blocking_suite`
 
 ## api.public_types_complete
 
 - Rule: all public signatures reference defined public types
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.canvas_field_update_static_semantics`, `test.guardrails.blocking_suite`
+- Tests: `test.api_contract.public_types_complete`, `test.guardrails.blocking_suite`
 
 ## api.public_api_compiles_as_written
 
@@ -334,13 +334,13 @@ Guardrails extracted from split section 22.
 
 - Rule: InteractionEngine uses EditKernel and narrow read-only query ports, not concrete store imports or mutations
 - Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.interaction.state_machines`, `test.guardrails.blocking_suite`
+- Tests: `test.interaction.state_machines`
 
 ## interaction.no_concrete_selection_imports
 
 - Rule: InteractionEngine uses intent-specific selection query ports and EditKernel commits, not concrete SelectionKernel imports or mutations
 - Sections: `section_03_package_layout`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.import_boundaries`, `test.guardrails.selection_boundary_imports`, `test.guardrails.blocking_suite`
+- Tests: `test.guardrails.import_boundaries`, `test.guardrails.selection_boundary_imports`
 
 ## interaction.no_resolver_on_cancel_paths
 
