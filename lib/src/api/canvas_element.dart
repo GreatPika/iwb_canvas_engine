@@ -100,14 +100,14 @@ final class CanvasPathElement extends CanvasElement {
     super.metadata,
   }) {
     if (svgPathData.isEmpty) {
-      throw const CanvasDataException(
+      throw CanvasDataException(
         code: CanvasDataErrorCode.fieldMustNotBeEmpty,
         message: 'path data must not be empty.',
         path: 'path.svgPathData',
       );
     }
     if (svgPathData.length > canvasMaxSvgPathDataLength) {
-      throw const CanvasDataException(
+      throw CanvasDataException(
         code: CanvasDataErrorCode.fieldMaxLength,
         message: 'path data exceeds the maximum length.',
         path: 'path.svgPathData',
@@ -155,7 +155,7 @@ final class CanvasTextElement extends CanvasElement {
     super.metadata,
   }) {
     if (text.length > canvasMaxTextLength) {
-      throw const CanvasDataException(
+      throw CanvasDataException(
         code: CanvasDataErrorCode.fieldMaxLength,
         message: 'text exceeds the maximum length.',
         path: 'text.text',
@@ -169,7 +169,7 @@ final class CanvasTextElement extends CanvasElement {
     final fontFamily = this.fontFamily;
     if (fontFamily != null &&
         (fontFamily.isEmpty || fontFamily.length > canvasMaxFontFamilyLength)) {
-      throw const CanvasDataException(
+      throw CanvasDataException(
         code: CanvasDataErrorCode.fieldMaxLength,
         message: 'font family length is invalid.',
         path: 'text.fontFamily',
@@ -226,14 +226,14 @@ final class CanvasStrokeElement extends CanvasElement {
     super.metadata,
   }) : _points = List.unmodifiable(points) {
     if (_points.isEmpty) {
-      throw const CanvasDataException(
+      throw CanvasDataException(
         code: CanvasDataErrorCode.fieldMustNotBeEmpty,
         message: 'stroke points must not be empty.',
         path: 'stroke.points',
       );
     }
     if (_points.length > canvasMaxStrokePointsPerElement) {
-      throw const CanvasDataException(
+      throw CanvasDataException(
         code: CanvasDataErrorCode.maxItems,
         message: 'stroke points exceed the maximum count.',
         path: 'stroke.points',

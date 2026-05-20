@@ -20,7 +20,7 @@ sealed class CanvasResource {
     if (byteLength != null) {
       validateNonNegativeInt(byteLength, path: 'resource.byteLength');
       if (byteLength > canvasMaxRawJsonLength) {
-        throw const CanvasDataException(
+        throw CanvasDataException(
           code: CanvasDataErrorCode.fieldMustBeInRange,
           message: 'resource.byteLength exceeds the maximum length.',
           path: 'resource.byteLength',

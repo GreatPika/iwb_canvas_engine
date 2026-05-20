@@ -199,7 +199,7 @@ Map<String, Object?> freezeCanvasMetadata(Map<String, Object?> values) {
 
 void validateRawJsonLength(String source) {
   if (source.length > canvasMaxRawJsonLength) {
-    throw const CanvasDataException(
+    throw CanvasDataException(
       code: CanvasDataErrorCode.maxRawJsonLength,
       message: 'raw JSON exceeds the maximum length.',
       path: r'$',
@@ -326,8 +326,12 @@ Object? _freezeMetadataValue(
     String() => _freezeMetadataString(value, path: path),
     num() => _freezeMetadataNumber(value, path: path),
     List<Object?>() => _freezeMetadataList(value, path: path, depth: depth),
-    Map<String, Object?>() => _freezeMetadataMap(value, path: path, depth: depth),
-    _ => throw const CanvasDataException(
+    Map<String, Object?>() => _freezeMetadataMap(
+      value,
+      path: path,
+      depth: depth,
+    ),
+    _ => throw CanvasDataException(
       code: CanvasDataErrorCode.invalidMetadata,
       message: 'metadata contains an unsupported value.',
       path: 'metadata',
@@ -395,7 +399,7 @@ Map<String, Object?> _freezeMetadataMap(
         entry.value,
         path: '$path.${entry.key}',
         depth: depth + 1,
-    ),
+      ),
   });
 }
 

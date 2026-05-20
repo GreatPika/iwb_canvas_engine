@@ -46,14 +46,14 @@ CanvasDocument decodeSchemaV1DocumentFromJson(String json) {
   try {
     decoded = jsonDecode(json);
   } on FormatException catch (_) {
-    throw const CanvasDataException(
+    throw CanvasDataException(
       code: CanvasDataErrorCode.invalidJson,
       message: 'canvas document JSON is malformed.',
       path: r'$',
     );
   }
   if (decoded is! Map<String, Object?>) {
-    throw const CanvasDataException(
+    throw CanvasDataException(
       code: CanvasDataErrorCode.invalidJson,
       message: 'canvas document JSON must decode to an object.',
       path: r'$',
@@ -150,7 +150,10 @@ CanvasResource _readResource(Object? value) {
       map['contentHash'],
       path: 'resource.contentHash',
     ),
-    byteLength: _readNullableInt(map['byteLength'], path: 'resource.byteLength'),
+    byteLength: _readNullableInt(
+      map['byteLength'],
+      path: 'resource.byteLength',
+    ),
     metadata: _readMetadata(map, key: 'metadata', path: 'resource.metadata'),
   );
 }
@@ -176,9 +179,11 @@ CanvasLayer _readLayer(Object? value) {
 
   return CanvasLayer(
     id: CanvasLayerId(_readString(map['id'], path: 'layer.id')),
-    elements: _readList(map, key: 'elements', path: 'layer.elements').map(
-      _readElement,
-    ),
+    elements: _readList(
+      map,
+      key: 'elements',
+      path: 'layer.elements',
+    ).map(_readElement),
     metadata: _readMetadata(map, key: 'metadata', path: 'layer.metadata'),
   );
 }
@@ -229,7 +234,10 @@ CanvasImageElement _readImageElement(
       _readString(map['resourceId'], path: 'image.resourceId'),
     ),
     size: _readSize(map['size'], path: 'image.size'),
-    naturalSize: _readNullableSize(map['naturalSize'], path: 'image.naturalSize'),
+    naturalSize: _readNullableSize(
+      map['naturalSize'],
+      path: 'image.naturalSize',
+    ),
     revision: common.revision,
     transform: common.transform,
     opacity: common.opacity,
@@ -308,9 +316,10 @@ CanvasStrokeElement _readStrokeElement(
 ) {
   return CanvasStrokeElement(
     id: common.id,
-    points: _readRequiredList(map['points'], path: 'stroke.points').map(
-      (value) => _readRequiredOffset(value, path: 'stroke.points'),
-    ),
+    points: _readRequiredList(
+      map['points'],
+      path: 'stroke.points',
+    ).map((value) => _readRequiredOffset(value, path: 'stroke.points')),
     thickness: _readDouble(map['thickness'], path: 'stroke.thickness'),
     color: _readColor(map['color'], path: 'stroke.color'),
     revision: common.revision,
@@ -386,7 +395,7 @@ void _validateDocumentReferences(
   }
   for (final layer in document.layers) {
     if (!layerIds.add(layer.id.value)) {
-      throw const CanvasDataException(
+      throw CanvasDataException(
         code: CanvasDataErrorCode.duplicateLayerId,
         message: 'duplicate layer id.',
         path: 'layers.id',
@@ -404,7 +413,7 @@ void _validateElementReferences(
   Set<String> resourceIds,
 ) {
   if (!elementIds.add(element.id.value)) {
-    throw const CanvasDataException(
+    throw CanvasDataException(
       code: CanvasDataErrorCode.duplicateElementId,
       message: 'duplicate element id.',
       path: 'elements.id',
@@ -412,7 +421,7 @@ void _validateElementReferences(
   }
   if (element is CanvasImageElement &&
       !resourceIds.contains(element.resourceId.value)) {
-    throw const CanvasDataException(
+    throw CanvasDataException(
       code: CanvasDataErrorCode.missingResourceReference,
       message: 'image element references a missing resource.',
       path: 'image.resourceId',
@@ -673,10 +682,7 @@ Size? _readNullableSize(Object? value, {required String path}) {
 }
 
 CanvasTransform _readTransform(Object? value) {
-  final map = _readRequiredMap(
-    value,
-    path: 'element.transform',
-  );
+  final map = _readRequiredMap(value, path: 'element.transform');
 
   return CanvasTransform(
     a: _readDouble(map['a'], path: 'transform.a'),
@@ -723,7 +729,7 @@ CanvasPathFillRule _readFillRule(
   return switch (map[key]) {
     'nonZero' => CanvasPathFillRule.nonZero,
     'evenOdd' => CanvasPathFillRule.evenOdd,
-    _ => throw const CanvasDataException(
+    _ => throw CanvasDataException(
       code: CanvasDataErrorCode.invalidFieldType,
       message: 'unknown path fill rule.',
       path: 'path.fillRule',
@@ -743,7 +749,7 @@ TextAlign _readTextAlign(Map<String, Object?> map, {required String key}) {
     'justify' => TextAlign.justify,
     'start' => TextAlign.start,
     'end' => TextAlign.end,
-    _ => throw const CanvasDataException(
+    _ => throw CanvasDataException(
       code: CanvasDataErrorCode.invalidFieldType,
       message: 'unknown text alignment.',
       path: 'text.align',
@@ -762,7 +768,7 @@ TextDirection _readTextDirection(
   return switch (map[key]) {
     'ltr' => TextDirection.ltr,
     'rtl' => TextDirection.rtl,
-    _ => throw const CanvasDataException(
+    _ => throw CanvasDataException(
       code: CanvasDataErrorCode.invalidFieldType,
       message: 'unknown text direction.',
       path: 'text.textDirection',
@@ -867,7 +873,10 @@ final class _TextElementFields {
         path: 'text.fontFamily',
       ),
       maxWidth = _readNullableDouble(map['maxWidth'], path: 'text.maxWidth'),
-      lineHeight = _readNullableDouble(map['lineHeight'], path: 'text.lineHeight');
+      lineHeight = _readNullableDouble(
+        map['lineHeight'],
+        path: 'text.lineHeight',
+      );
 
   final String value;
   final double fontSize;

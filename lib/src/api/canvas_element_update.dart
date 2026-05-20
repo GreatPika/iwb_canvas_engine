@@ -264,7 +264,10 @@ final class CanvasRectElementUpdate extends CanvasElementUpdate {
   final CanvasFieldUpdate<double> strokeWidth;
 }
 
-void _validateSet<T>(CanvasFieldUpdate<T> update, void Function(T value) check) {
+void _validateSet<T>(
+  CanvasFieldUpdate<T> update,
+  void Function(T value) check,
+) {
   if (update case CanvasFieldSet<Object>(:final value)) {
     check(value as T);
   }
@@ -272,14 +275,14 @@ void _validateSet<T>(CanvasFieldUpdate<T> update, void Function(T value) check) 
 
 void _validateSvgPathData(String value) {
   if (value.isEmpty) {
-    throw const CanvasDataException(
+    throw CanvasDataException(
       code: CanvasDataErrorCode.fieldMustNotBeEmpty,
       message: 'path data must not be empty.',
       path: 'path.svgPathData',
     );
   }
   if (value.length > canvasMaxSvgPathDataLength) {
-    throw const CanvasDataException(
+    throw CanvasDataException(
       code: CanvasDataErrorCode.fieldMaxLength,
       message: 'path data exceeds the maximum length.',
       path: 'path.svgPathData',
@@ -289,7 +292,7 @@ void _validateSvgPathData(String value) {
 
 void _validateText(String value) {
   if (value.length > canvasMaxTextLength) {
-    throw const CanvasDataException(
+    throw CanvasDataException(
       code: CanvasDataErrorCode.fieldMaxLength,
       message: 'text exceeds the maximum length.',
       path: 'text.text',
@@ -300,7 +303,7 @@ void _validateText(String value) {
 void _validateNullableFontFamily(String? value) {
   if (value != null &&
       (value.isEmpty || value.length > canvasMaxFontFamilyLength)) {
-    throw const CanvasDataException(
+    throw CanvasDataException(
       code: CanvasDataErrorCode.fieldMaxLength,
       message: 'font family length is invalid.',
       path: 'text.fontFamily',
@@ -318,14 +321,14 @@ void Function(double?) _validateNullablePositiveDimension(String path) {
 
 void _validateStrokePoints(List<Offset> value) {
   if (value.isEmpty) {
-    throw const CanvasDataException(
+    throw CanvasDataException(
       code: CanvasDataErrorCode.fieldMustNotBeEmpty,
       message: 'stroke points must not be empty.',
       path: 'stroke.points',
     );
   }
   if (value.length > canvasMaxStrokePointsPerElement) {
-    throw const CanvasDataException(
+    throw CanvasDataException(
       code: CanvasDataErrorCode.maxItems,
       message: 'stroke points exceed the maximum count.',
       path: 'stroke.points',

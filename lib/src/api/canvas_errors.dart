@@ -1,3 +1,5 @@
+import 'canvas_error_details_sanitizer.dart';
+
 enum CanvasDataErrorCode {
   invalidJson,
   unsupportedSchemaVersion,
@@ -22,11 +24,25 @@ enum CanvasDataErrorCode {
 }
 
 final class CanvasDataException implements Exception {
-  const CanvasDataException({
+  factory CanvasDataException({
+    required CanvasDataErrorCode code,
+    required String message,
+    String? path,
+    Map<String, Object?> details = const {},
+  }) {
+    return CanvasDataException._(
+      code: code,
+      message: message,
+      path: path,
+      details: sanitizeCanvasErrorDetails(details),
+    );
+  }
+
+  const CanvasDataException._({
     required this.code,
     required this.message,
-    this.path,
-    this.details = const {},
+    required this.path,
+    required this.details,
   });
 
   final CanvasDataErrorCode code;

@@ -54,14 +54,14 @@ final class CanvasDocument {
        _backgroundElements = List.unmodifiable(backgroundElements),
        _layers = List.unmodifiable(layers) {
     if (_resources.length > canvasMaxResources) {
-      throw const CanvasDataException(
+      throw CanvasDataException(
         code: CanvasDataErrorCode.maxItems,
         message: 'document resources exceed the maximum count.',
         path: 'resources',
       );
     }
     if (_layers.length > canvasMaxContentLayers) {
-      throw const CanvasDataException(
+      throw CanvasDataException(
         code: CanvasDataErrorCode.maxItems,
         message: 'document layers exceed the maximum count.',
         path: 'layers',
@@ -71,7 +71,7 @@ final class CanvasDocument {
         _backgroundElements.length +
         _layers.fold<int>(0, (count, layer) => count + layer.elements.length);
     if (totalElements > canvasMaxTotalElements) {
-      throw const CanvasDataException(
+      throw CanvasDataException(
         code: CanvasDataErrorCode.maxNodes,
         message: 'document elements exceed the maximum count.',
         path: 'elements',
@@ -128,7 +128,7 @@ final class CanvasLayer {
     this.metadata = const CanvasMetadata.empty(),
   }) : _elements = List.unmodifiable(elements) {
     if (_elements.length > canvasMaxTotalElements) {
-      throw const CanvasDataException(
+      throw CanvasDataException(
         code: CanvasDataErrorCode.maxNodes,
         message: 'layer elements exceed the maximum count.',
         path: 'layer.elements',

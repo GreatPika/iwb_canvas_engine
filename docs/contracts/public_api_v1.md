@@ -2417,13 +2417,11 @@ final class CanvasDataException implements Exception {
     String? path,
     Map<String, Object?> details = const {},
   }) {
-    final sanitizedDetails =
-        CanvasDiagnosticSanitizer.sanitizeDetails(details);
     return CanvasDataException._(
       code: code,
       message: message,
       path: path,
-      details: sanitizedDetails,
+      details: sanitizeCanvasErrorDetails(details),
     );
   }
 
@@ -2494,7 +2492,9 @@ as `CanvasDiagnosticsDisabled`, `CanvasDiagnosticsSummary`, or
 `CanvasDataException` must not expose raw input, application objects, runtime
 objects, images, handles, closures, canvases, or full document dumps. Raw failure
 context remains internal to `DiagnosticsHub` or is projected only through
-sanitized bounded `details`.
+sanitized, bounded, deeply immutable `details`. The public factory sanitizes
+details once at construction, so later caller mutation cannot change public
+exception state.
 
 No public diagnostics stream is exported in v1. Diagnostics are projected only through `CanvasDataException` and test-only/internal sinks.
 

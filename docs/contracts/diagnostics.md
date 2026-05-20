@@ -64,9 +64,12 @@ details may include sanitized field path, element id, and source facts, but
 must not include runtime objects, handles, full scene dumps, or unsanitized
 field values.
 
-Sanitizer permits only JSON-like primitives and bounded previews. Diagnostic
-details are intentionally map-shaped public data, but they are not schema
-metadata and must not be represented as `CanvasMetadata`.
+Sanitizer permits only JSON-like primitives and bounded previews. Public
+exception details are deeply immutable snapshots: caller-owned maps and lists
+are copied at `CanvasDataException` construction, later caller mutation is not
+observable, and unsupported objects are replaced by bounded type previews.
+Diagnostic details are intentionally map-shaped public data, but they are not
+schema metadata and must not be represented as `CanvasMetadata`.
 `CanvasDiagnosticPolicy` exposes public readable policy variants:
 `CanvasDiagnosticsDisabled`, `CanvasDiagnosticsSummary`, and
 `CanvasDiagnosticsVerbose`. `CanvasDiagnosticsVerbose.maxPreviewLength` caps
