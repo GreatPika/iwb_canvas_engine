@@ -42,7 +42,7 @@ Guardrails extracted from split section 22.
 
 - Rule: external preview consumers can type-test exported sealed CanvasPreviewState variants and read variant payloads through the public barrel only
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.preview_state_sealed_union`
+- Tests: `test.api_contract.public_readable_union_variants`, `test.api_contract.preview_state_sealed_union`
 
 ## api.exported_dartdoc_complete
 
@@ -60,7 +60,7 @@ Guardrails extracted from split section 22.
 
 - Rule: public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON or diagnostic boundaries; metadata-bearing DTO signatures use exported `CanvasMetadata`
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.canvas_field_update_static_semantics`, `test.api_contract.no_undefined_public_type_references`
+- Tests: `test.api_contract.public_signature_shape`, `test.api_contract.canvas_field_update_static_semantics`
 
 ## api.no_undefined_public_type_references
 
@@ -84,7 +84,7 @@ Guardrails extracted from split section 22.
 
 - Rule: ids cannot be publicly constructed without validation
 - Sections: `section_04_public_api_v1`, `section_06_validation_limits`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.codec.constructor_and_schema_limits`
+- Tests: `test.api_contract.id_validation_no_extension_type_escape`, `test.codec.constructor_and_schema_limits`
 
 ## core.no_legacy_imports
 

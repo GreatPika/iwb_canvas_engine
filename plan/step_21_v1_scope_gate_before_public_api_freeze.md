@@ -616,7 +616,7 @@ Expected signal: exits 0.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Close Scope Inputs
+### Slice 1. [x] Close Scope Inputs
 
 #### Implements
 
@@ -688,7 +688,7 @@ The scope review has no unresolved P1 marker, and no new parallel inventory or
 markdown-only guardrail has been created. All four scope checklist rows in this
 contract are checked.
 
-### Slice 2. [ ] Compile Public API Draft
+### Slice 2. [x] Compile Public API Draft
 
 #### Implements
 
@@ -739,7 +739,7 @@ changed.
 The public API draft compiles through the root barrel, export parity remains
 green, and undefined public type references are rejected by test coverage.
 
-### Slice 3. [ ] Adopt Validation Limits
+### Slice 3. [x] Adopt Validation Limits
 
 #### Implements
 
@@ -794,7 +794,7 @@ Invalid public construction and P1 boundary materialization paths fail before
 public exposure or runtime mutation, and tests cover both accepted and rejected
 limit cases.
 
-### Slice 4. [ ] Prove External Adapter Surface
+### Slice 4. [x] Prove External Adapter Surface
 
 #### Implements
 
@@ -852,7 +852,7 @@ Run P4c and P1.
 The fixture compiles as an external consumer, and its import check proves the
 root public barrel is the only package seam it uses.
 
-### Slice 5. [ ] Harden Public Shape Guardrails
+### Slice 5. [x] Harden Public Shape Guardrails
 
 #### Implements
 
@@ -915,7 +915,7 @@ Run P4d, P5, and P6.
 P1 guardrail ids are executable through tests and the runner, positive public
 surfaces pass, and negative fixtures catch legacy or invalid public shapes.
 
-### Slice 6. [ ] Finalize P1 Gate
+### Slice 6. [x] Finalize P1 Gate
 
 #### Implements
 

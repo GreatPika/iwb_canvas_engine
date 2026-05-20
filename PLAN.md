@@ -40,4 +40,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 18. Pointer tool cleanup coordinator documentation](plan/step_18_pointer_tool_cleanup_coordinator.md)
 - [x] [Step 19. Direct double-tap context action documentation](plan/step_19_double_tap_context_action_documentation.md)
 - [x] [Step 20. Guardrail proof hardening](plan/step_20_guardrail_proof_hardening.md)
-- [ ] [Step 21. P1 v1 scope gate before public API freeze](plan/step_21_v1_scope_gate_before_public_api_freeze.md)
+- [x] [Step 21. P1 v1 scope gate before public API freeze](plan/step_21_v1_scope_gate_before_public_api_freeze.md)

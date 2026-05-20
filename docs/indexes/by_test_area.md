@@ -23,9 +23,9 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 ## test.api_contract.public_readable_union_variants
 
 - Path: `test/api_contract/public_readable_union_variants_test.dart`
-- Phases: `P2`, `P7`
-- Sections: `section_04_public_api_v1`, `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `api.resource_source_app_key_publicly_readable`, `api.equality_policy_explicit`, `resources.app_key_only`
+- Phases: `P1`, `P2`, `P7`
+- Sections: `section_04_public_api_v1`, `section_07_resource_lifecycle`, `section_14_interaction_engine`, `section_23_tests`
+- Guardrails: `api.resource_source_app_key_publicly_readable`, `api.preview_state_sealed_union_publicly_readable`, `api.equality_policy_explicit`, `resources.app_key_only`
 
 ## test.api_contract.public_exports_complete
 
@@ -70,8 +70,7 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Path: `test/api_contract/no_undefined_public_type_references_test.dart`
 - Phases: `P2`
 - Sections: `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `api.no_undefined_public_type_references`, `api.public_signature_shape`
-- Proof focus: exported signature types, raw JSON/diagnostic dynamic boundaries, and `CanvasMetadata` use for metadata-bearing DTO signatures
+- Guardrails: `api.no_undefined_public_type_references`
 
 ## test.api_contract.no_legacy_public_symbols
 
@@ -91,9 +90,28 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 ## test.api_contract.public_equality_policy
 
 - Path: `test/api_contract/public_equality_policy_test.dart`
-- Phases: `P2`
+- Phases: `P1`, `P2`
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 - Guardrails: `api.equality_policy_explicit`
+
+## test.api_contract.public_signature_shape
+
+- Path: `test/api_contract/public_signature_shape_test.dart`
+- Phases: `P1`, `P2`
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_23_tests`
+- Guardrails: `api.public_signature_shape`
+- Focus: resolved public-surface traversal rejects `FutureOr`, nullable
+  async/container returns, forbidden generic bounds, and `dynamic` signature
+  leakage outside approved JSON or diagnostic boundaries.
+
+## test.api_contract.id_validation_no_extension_type_escape
+
+- Path: `test/api_contract/id_validation_no_extension_type_escape_test.dart`
+- Phases: `P1`, `P2`
+- Sections: `section_04_public_api_v1`, `section_06_validation_limits`, `section_23_tests`
+- Guardrails: `api.id_validation_no_extension_type_escape`
+- Focus: ids validate at public construction from an external consumer package
+  and v1 does not expose id extension types.
 
 ## test.codec.schema_v1.known_fields_validation
 

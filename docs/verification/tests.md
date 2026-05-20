@@ -194,6 +194,8 @@ test/api_contract/no_undefined_public_type_references_test.dart
 test/api_contract/no_legacy_public_symbols_test.dart
 test/api_contract/dto_immutability_test.dart
 test/api_contract/public_equality_policy_test.dart
+test/api_contract/public_signature_shape_test.dart
+test/api_contract/id_validation_no_extension_type_escape_test.dart
 test/api_contract/app_next_engine_adapter_compile_fixture_test.dart
 test/guardrails/import_boundaries_test.dart
 test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart
@@ -363,12 +365,12 @@ test/api_contract/public_api_v1_compiles_as_written_test.dart
 
 test/api_contract/no_undefined_public_type_references_test.dart
   -> verifies every exported signature type is exported or from Flutter/Dart SDK;
-  -> uses analyzer AST over exported public signatures to reject FutureOr<T>
-     returns, nullable async/container returns, and dynamic outside approved
-     JSON or diagnostic boundaries for api.public_signature_shape;
-  -> verifies metadata-bearing DTO signatures use exported CanvasMetadata and
-     raw Map<String, Object?> metadata appears only at codec or diagnostic
-     boundaries.
+
+test/api_contract/public_signature_shape_test.dart
+  -> uses resolved analyzer public-surface traversal to reject FutureOr<T>,
+     nullable async/container returns, generic bounds with forbidden public
+     shape, and dynamic outside approved JSON or diagnostic boundaries for
+     api.public_signature_shape.
 
 test/api_contract/dto_immutability_test.dart
   -> proves public DTO constructors defensively copy caller-owned Iterable, List,
@@ -379,6 +381,12 @@ test/api_contract/dto_immutability_test.dart
   -> proves public constructors accepting caller-provided values with documented
      runtime validation or sanitization are non-const factories, while
      marker/empty/default/private storage forms keep only approved const forms.
+
+test/api_contract/id_validation_no_extension_type_escape_test.dart
+  -> proves public id constructors validate invalid values from an external
+     consumer package;
+  -> proves v1 ids are public classes, not public extension types with unchecked
+     value escape.
 
 test/api_contract/preview_state_sealed_union_test.dart
   -> proves CanvasPreviewState is a sealed public union with exported readable
