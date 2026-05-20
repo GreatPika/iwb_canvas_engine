@@ -1,24 +1,22 @@
-# P1 - legacy capability inventory and oracle lock
+# P1 - legacy oracle and donor closure
 
 ## Purpose
 
-Lock the old engine as a functional oracle and donor inventory before new
-runtime implementation starts, without allowing the legacy public API or legacy
-runtime shape to become the new package architecture.
+Close the existing legacy capability inventory and donor registry before public
+API freeze and runtime implementation start, without allowing the legacy public
+API or legacy runtime shape to become the new package architecture.
 
 ## Build scope
 
-- `docs/verification/legacy_capability_inventory.md`
-- `docs/donors/` and `docs/_registry/donors.yaml`
-- legacy oracle file list
-- donor file list with `copy`, `copy/adapt`, `adapt`, `adapt/rewrite`, and
-  `rewrite-reference` decisions
-- example scenario inventory
-- action/event inventory
-- pointer/preview inventory
-- geometry/spatial inventory
-- codec/limits inventory
-- benchmark baseline inventory.
+- audit and complete `docs/verification/legacy_capability_inventory.md`
+- audit and complete `docs/_registry/donors.yaml`
+- keep `docs/donors/` aligned with the donor registry
+- close the legacy oracle evidence file list used by the inventory
+- close donor decisions with `copy`, `copy/adapt`, `adapt`, `adapt/rewrite`,
+  `rewrite-reference`, or `avoid`
+- verify each reusable donor names its target phase, target owner, behavior to
+  preserve, structure not to copy, and required ported or equivalent proof
+- verify each forbidden legacy structure is represented as an `avoid` donor.
 
 ## Dependencies on earlier phases
 
@@ -32,7 +30,7 @@ runtime shape to become the new package architecture.
 
 ## Legacy evidence inputs
 
-Use these workspace paths when checking legacy behavior for the P1 inventory:
+Use these workspace paths when auditing and completing the P1 inventory:
 
 ```text
 legacy/iwb_canvas_engine/lib/iwb_canvas_engine.dart
@@ -75,10 +73,16 @@ legacy/iwb_canvas_engine/tool/goldens/public_api_symbols.txt
 These files identify the legacy behavior surface and supporting evidence for P1.
 Specific reusable implementation donors are owned by `docs/_registry/donors.yaml`.
 
-## Donor inventory focus
+## Closure focus
 
-P1 must close the donor inventory before deep runtime implementation starts.
-Use the donor registry and donor docs to cover these important donor families:
+P1 must not create separate topic inventories for scenarios, actions, pointer
+behavior, geometry, codec, or benchmarks. Those concerns already have durable
+owners: `docs/verification/legacy_capability_inventory.md`,
+`docs/_registry/donors.yaml`, `docs/donors/`, subsystem contracts, and P14
+benchmark gates.
+
+Close the existing inventory and donor registry for these important behavior and
+donor families:
 
 - geometry kernel: `Transform2D`, numeric policy, geometry helpers, and local
   bounds;
@@ -91,6 +95,10 @@ Use the donor registry and donor docs to cover these important donor families:
   decode/encode behavior;
 - interaction/edit: pointer tracker/router/normalizer, gesture ownership,
   action/text events, mutation boundary, and staged `loadDocument` semantics.
+
+Benchmark baselines are not closed in P1. P1 may identify legacy paths that
+later benchmark work should treat as equivalent feature paths, but benchmark
+cases and gates remain owned by `section_24_benchmarks` and P14.
 
 ## Required donors
 
@@ -113,7 +121,7 @@ Use the donor registry and donor docs to cover these important donor families:
 - legacy capability inventory completeness from
   `section_08_legacy_capability_inventory`
 - donor rule that every implementation donor has a phase, owner, decision, and
-  ported or equivalent proof before use
+  required ported or equivalent proof before use
 - legacy boundary rule that legacy code is oracle/donor evidence only and never
   a production dependency
 
@@ -126,19 +134,32 @@ Use the donor registry and donor docs to cover these important donor families:
 
 - legacy capability inventory rows are complete
 - each row names the legacy oracle and evidence focus
-- each reusable donor has a decision, target phase and required ported tests
-- copy/adapt donors are linked from the relevant implementation phase
+- every checklist item in `section_08_legacy_capability_inventory` is covered by
+  an inventory row, later owning test, or explicit accepted difference
+- each reusable donor has a decision, target phase, target owner, structure not
+  to copy, and required ported or equivalent proof
+- each `copy` and `copy/adapt` donor names concrete proof to port before its
+  implementation slice closes
+- each `adapt`, `adapt/rewrite`, and `rewrite-reference` donor names the legacy
+  behavior to preserve without copying the legacy shell
+- each forbidden legacy shell is represented as an `avoid` donor and linked to
+  the phase or guardrail it blocks
+- no new standalone topic inventory is introduced for information already owned
+  by the legacy inventory, donor registry, contracts, or P14 benchmark gates
 - no implementation proceeds without green inventory guardrail.
 
 ## Risks and trade-offs
 
 - Copying legacy structure would violate the target architecture. P1 records
   behavior and donor decisions, not new package structure.
-- Skipping donor proof would make later phase closure depend on memory of legacy
-  behavior instead of executable coverage.
+- Treating P1 as a place to create parallel topic inventories would duplicate
+  source-of-truth docs and create manual synchronization work.
+- Skipping donor proof obligations would make later phase closure depend on
+  memory of legacy behavior instead of executable coverage.
 
 ## Why this phase belongs here
 
 All implementation phases after P1 rely on knowing which legacy behavior must be
 preserved, which donor code is reusable, and which legacy shells are forbidden.
-That evidence must be closed before public API freeze and runtime work.
+That evidence must be closed in the existing inventory and donor registry before
+public API freeze and runtime work.
