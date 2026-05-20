@@ -549,7 +549,7 @@ pass after the public freeze hardening changes.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Sanitize Public Error Details
+### Slice 1. [x] Sanitize Public Error Details
 
 #### Implements
 
@@ -593,7 +593,7 @@ Slice closes when `CanvasDataException.details` cannot expose mutable caller
 maps, application/runtime objects, or unbounded nested details through public
 exception state.
 
-### Slice 2. [ ] Reject Non-Canonical Public Id Whitespace
+### Slice 2. [x] Reject Non-Canonical Public Id Whitespace
 
 #### Implements
 
@@ -633,7 +633,7 @@ Run `P2`.
 Slice closes when public id constructors reject boundary-whitespace ids and all
 accepted ids preserve their original value exactly.
 
-### Slice 3. [ ] Remove False Public Placeholder Readiness
+### Slice 3. [x] Remove False Public Placeholder Readiness
 
 #### Implements
 
@@ -699,7 +699,7 @@ Slice closes when no exported public placeholder remains outside
 and not allowlisted, and `CanvasTransform` public value helpers are fully
 covered by behavior tests.
 
-### Slice 4. [ ] Prove Public API Contract Shape As Written
+### Slice 4. [x] Prove Public API Contract Shape As Written
 
 #### Implements
 
@@ -760,7 +760,7 @@ Slice closes when a signature-shape drift in a P2-owned public constructor,
 method, getter, default, or return type would fail the public API consumer
 proof, and guardrail documentation matches runner inventory.
 
-### Slice 5. [ ] Add Public API Import-Cycle Detector
+### Slice 5. [x] Add Public API Import-Cycle Detector
 
 #### Implements
 
@@ -798,7 +798,7 @@ Slice closes when the detector correctly recognizes acyclic and cyclic public
 API import graphs in fixtures without relying on LSP, IDE state, or a manually
 maintained dependency inventory.
 
-### Slice 6. [ ] Break Public API Ownership Cycles
+### Slice 6. [x] Break Public API Ownership Cycles
 
 #### Implements
 
@@ -863,7 +863,7 @@ cycle, the `canvas_document`/`canvas_element_update` metadata seam, and the
 codec decoder metadata seam, and the `canvas_value_validators`/`canvas_geometry`
 cycle are gone without changing root-barrel public semantics.
 
-### Slice 7. [ ] Register Public API Import-Cycle Guardrail
+### Slice 7. [x] Register Public API Import-Cycle Guardrail
 
 #### Implements
 
@@ -913,7 +913,7 @@ Slice closes when `api.no_public_api_import_cycles` is selectable through the
 runner, included in the API and blocking suites, passes the live public API
 graph, and is documented in the owning source-of-truth files.
 
-### Slice 8. [ ] Preserve Full P2 Phase Proof
+### Slice 8. [x] Preserve Full P2 Phase Proof
 
 #### Implements
 
