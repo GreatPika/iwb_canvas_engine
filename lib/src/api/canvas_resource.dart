@@ -3,9 +3,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 
 import 'canvas_contract_limits.dart';
-import 'canvas_document.dart';
 import 'canvas_errors.dart';
 import 'canvas_ids.dart';
+import 'canvas_metadata.dart';
 import 'canvas_value_validators.dart';
 
 /// Public API v1 declaration for [CanvasResource].

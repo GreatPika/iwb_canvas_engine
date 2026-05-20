@@ -1,3 +1,7 @@
+// The schema decoder imports each public API value owner directly so ownership
+// stays visible after metadata moved out of the document owner.
+// ignore_for_file: number-of-imports
+
 import 'dart:convert';
 import 'dart:ui';
 
@@ -6,6 +10,7 @@ import '../api/canvas_element.dart';
 import '../api/canvas_errors.dart';
 import '../api/canvas_geometry.dart';
 import '../api/canvas_ids.dart';
+import '../api/canvas_metadata.dart';
 import '../api/canvas_resource.dart';
 import '../api/canvas_value_validators.dart';
 import 'schema_v1_validation.dart';

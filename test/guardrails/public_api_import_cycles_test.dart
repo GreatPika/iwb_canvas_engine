@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:test/test.dart';
 
 import '../../tool/guardrails/src/public_api_import_cycle_checks.dart';
+import '../../tool/guardrails/src/repository_paths.dart';
 
 void main() {
   test('fixture import-cycle detection', () {
@@ -11,6 +14,21 @@ void main() {
     _expectDiagnosticsFollowRealEdges();
     _expectSelfCycleDiagnostics();
     _expectAllowlistStructureRequired();
+  });
+
+  test('live source graph and metadata seam are clean', () async {
+    expect(await checkNoPublicApiImportCycles(), isEmpty);
+
+    for (final path in _metadataOnlyPublicApiConsumers) {
+      final content = File('$repositoryRoot/$path').readAsStringSync();
+      expect(content, contains("import 'canvas_metadata.dart';"));
+      expect(content, isNot(contains("import 'canvas_document.dart';")));
+    }
+
+    final decoder = File(
+      '$repositoryRoot/lib/src/codec/schema_v1_decoder.dart',
+    ).readAsStringSync();
+    expect(decoder, contains("import '../api/canvas_metadata.dart';"));
   });
 }
 
@@ -51,6 +69,12 @@ const _acyclicSources = {
   'lib/src/api/c.dart': '',
   'lib/src/internal/ignored.dart': "import '../api/a.dart';",
 };
+
+const _metadataOnlyPublicApiConsumers = [
+  'lib/src/api/canvas_element.dart',
+  'lib/src/api/canvas_element_update.dart',
+  'lib/src/api/canvas_resource.dart',
+];
 
 void _expectCycleDiagnostics() {
   final cyclic = checkPublicApiImportCyclesInSources({

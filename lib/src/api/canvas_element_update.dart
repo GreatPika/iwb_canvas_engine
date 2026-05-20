@@ -1,12 +1,13 @@
 import 'dart:ui';
 
 import 'canvas_contract_limits.dart';
-import 'canvas_document.dart';
 import 'canvas_element.dart';
 import 'canvas_errors.dart';
 import 'canvas_field_update.dart';
 import 'canvas_geometry.dart';
 import 'canvas_ids.dart';
+import 'canvas_metadata.dart';
+import 'canvas_transform_admission.dart';
 import 'canvas_value_validators.dart';
 
 /// Public API v1 declaration for [CanvasElementUpdate].

@@ -20,7 +20,7 @@ final class CanvasTransform {
     required double ty,
   }) {
     final transform = CanvasTransform._(a: a, b: b, c: c, d: d, tx: tx, ty: ty);
-    validateCanvasTransform(transform, path: 'transform');
+    _validateCanvasTransform(transform, path: 'transform');
 
     return transform;
   }
@@ -209,4 +209,23 @@ final class CanvasTransform {
 
   @override
   int get hashCode => Object.hash(a, b, c, d, tx, ty);
+}
+
+void _validateCanvasTransform(CanvasTransform value, {required String path}) {
+  _validateTransformEntries(value, path: path);
+  validateOffset(value.translation, path: '$path.translation');
+}
+
+void _validateTransformEntries(CanvasTransform value, {required String path}) {
+  final entries = {
+    'a': value.a,
+    'b': value.b,
+    'c': value.c,
+    'd': value.d,
+    'tx': value.tx,
+    'ty': value.ty,
+  };
+  for (final entry in entries.entries) {
+    validateFiniteDouble(entry.value, path: '$path.${entry.key}');
+  }
 }

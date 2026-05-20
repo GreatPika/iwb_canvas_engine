@@ -8,6 +8,7 @@ export 'src/api/canvas_errors.dart';
 export 'src/api/canvas_field_update.dart';
 export 'src/api/canvas_geometry.dart';
 export 'src/api/canvas_ids.dart';
+export 'src/api/canvas_metadata.dart' show CanvasMetadata;
 export 'src/api/canvas_pointer.dart';
 export 'src/api/canvas_preview.dart';
 export 'src/api/canvas_resource.dart';
