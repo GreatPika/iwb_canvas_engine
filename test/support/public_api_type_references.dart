@@ -38,6 +38,7 @@ final class _PublicTypeReferenceVisitor {
   }
 
   void _visitInterfaceElement(InterfaceElement element) {
+    _visitDeclaredSupertypes(element);
     for (final typeParameter in element.typeParameters) {
       _visitNullableType(typeParameter.bound);
     }
@@ -52,6 +53,21 @@ final class _PublicTypeReferenceVisitor {
     }
     for (final constructor in element.constructors.where(_isPublicExecutable)) {
       _visitExecutable(constructor);
+    }
+  }
+
+  void _visitDeclaredSupertypes(InterfaceElement element) {
+    _visitNullableType(element.supertype);
+    for (final type in element.interfaces) {
+      _visitType(type);
+    }
+    for (final type in element.mixins) {
+      _visitType(type);
+    }
+    if (element case MixinElement(:final superclassConstraints)) {
+      for (final type in superclassConstraints) {
+        _visitType(type);
+      }
     }
   }
 

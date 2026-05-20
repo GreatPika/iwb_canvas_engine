@@ -19,4 +19,10 @@ const _legacySymbols = {
   'SceneWriteTxn',
   'SceneBuilder',
   'SceneCodec',
+  'decodeScene',
+  'decodeSceneFromJson',
+  'encodeScene',
+  'encodeSceneToJson',
+  'schemaVersionWrite',
+  'schemaVersionsRead',
 };

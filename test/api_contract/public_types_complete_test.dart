@@ -8,4 +8,16 @@ void main() {
 
     expect(collectUndefinedPublicTypeReferences(surface), isEmpty);
   });
+
+  test('public declarations cannot inherit private surface types', () async {
+    final surface = await resolvePublicApiSurface(
+      libraryPath:
+          '$repoRoot/test/api_contract/fixtures/private_supertypes.dart',
+    );
+
+    expect(
+      collectUndefinedPublicTypeReferences(surface),
+      containsAll({'_HiddenBase', '_HiddenInterface', '_HiddenMixin'}),
+    );
+  });
 }

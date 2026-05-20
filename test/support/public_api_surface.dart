@@ -17,14 +17,19 @@ final class PublicApiSurface {
   final Map<String, Element> exportedElements;
 }
 
-Future<PublicApiSurface> resolvePublicApiSurface() async {
-  final collection = AnalysisContextCollection(includedPaths: [repoRoot]);
+Future<PublicApiSurface> resolvePublicApiSurface({String? libraryPath}) async {
+  final resolvedLibraryPath =
+      libraryPath ?? '$repoRoot/lib/iwb_canvas_engine.dart';
+  final collection = AnalysisContextCollection(
+    includedPaths: [if (libraryPath == null) repoRoot else resolvedLibraryPath],
+  );
   try {
-    final libraryPath = '$repoRoot/lib/iwb_canvas_engine.dart';
-    final context = collection.contextFor(libraryPath);
-    final result = await context.currentSession.getResolvedLibrary(libraryPath);
+    final context = collection.contextFor(resolvedLibraryPath);
+    final result = await context.currentSession.getResolvedLibrary(
+      resolvedLibraryPath,
+    );
     if (result is! ResolvedLibraryResult) {
-      throw StateError('Could not resolve $libraryPath: $result');
+      throw StateError('Could not resolve $resolvedLibraryPath: $result');
     }
     _throwOnErrorDiagnostics(result);
     final namespace = result.element.exportNamespace;
