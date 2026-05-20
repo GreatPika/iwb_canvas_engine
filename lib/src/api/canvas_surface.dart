@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'canvas_resource.dart';
 import 'canvas_runtime.dart';
+import 'canvas_value_validators.dart';
 
 final class CanvasSurface extends StatefulWidget {
   const CanvasSurface({
@@ -25,14 +26,42 @@ final class CanvasSurface extends StatefulWidget {
 
 @immutable
 final class CanvasSelectionStyle {
-  const CanvasSelectionStyle({
-    this.color = const Color(0xFF1565C0),
-    this.strokeWidth = 1.0,
-    this.marqueeFillOpacity = 0.15,
-    this.haloWidth = 4.0,
+  factory CanvasSelectionStyle({
+    Color color = const Color(0xFF1565C0),
+    double strokeWidth = 1.0,
+    double marqueeFillOpacity = 0.15,
+    double haloWidth = 4.0,
+  }) {
+    validatePositiveDouble(strokeWidth, path: 'selectionStyle.strokeWidth');
+    validateDoubleRange(
+      marqueeFillOpacity,
+      path: 'selectionStyle.marqueeFillOpacity',
+      min: 0,
+      max: 1,
+    );
+    validateNonNegativeDouble(haloWidth, path: 'selectionStyle.haloWidth');
+
+    return CanvasSelectionStyle._(
+      color: color,
+      strokeWidth: strokeWidth,
+      marqueeFillOpacity: marqueeFillOpacity,
+      haloWidth: haloWidth,
+    );
+  }
+
+  const CanvasSelectionStyle._({
+    required this.color,
+    required this.strokeWidth,
+    required this.marqueeFillOpacity,
+    required this.haloWidth,
   });
 
-  static const defaultStyle = CanvasSelectionStyle();
+  static const defaultStyle = CanvasSelectionStyle._(
+    color: Color(0xFF1565C0),
+    strokeWidth: 1.0,
+    marqueeFillOpacity: 0.15,
+    haloWidth: 4.0,
+  );
   final Color color;
   final double strokeWidth;
   final double marqueeFillOpacity;
@@ -55,8 +84,15 @@ final class CanvasSelectionStyle {
 
 @immutable
 final class CanvasGridStyle {
-  const CanvasGridStyle({this.strokeWidth = 1.0});
-  static const defaultStyle = CanvasGridStyle();
+  factory CanvasGridStyle({double strokeWidth = 1.0}) {
+    validatePositiveDouble(strokeWidth, path: 'gridStyle.strokeWidth');
+
+    return CanvasGridStyle._(strokeWidth: strokeWidth);
+  }
+
+  const CanvasGridStyle._({required this.strokeWidth});
+
+  static const defaultStyle = CanvasGridStyle._(strokeWidth: 1.0);
   final double strokeWidth;
 
   @override

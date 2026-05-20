@@ -20,25 +20,23 @@ Future<bool> _runFlutterConsumerTest(String testSource) async {
 
   try {
     await Directory('${packageDir.path}/test').create();
-    await File('${packageDir.path}/pubspec.yaml').writeAsString(
-      _pubspecSource(),
-    );
+    await File(
+      '${packageDir.path}/pubspec.yaml',
+    ).writeAsString(_pubspecSource());
     await File(
       '${packageDir.path}/test/validation_limits_test.dart',
     ).writeAsString(testSource);
 
-    final pubGet = await Process.run(
-      'flutter',
-      ['pub', 'get'],
-      workingDirectory: packageDir.path,
-    );
+    final pubGet = await Process.run('flutter', [
+      'pub',
+      'get',
+    ], workingDirectory: packageDir.path);
     expect(pubGet.exitCode, 0, reason: _processOutput(pubGet));
 
-    final test = await Process.run(
-      'flutter',
-      ['test', 'test/validation_limits_test.dart'],
-      workingDirectory: packageDir.path,
-    );
+    final test = await Process.run('flutter', [
+      'test',
+      'test/validation_limits_test.dart',
+    ], workingDirectory: packageDir.path);
     expect(test.exitCode, 0, reason: _processOutput(test));
 
     return true;
@@ -115,6 +113,22 @@ void main() {
     );
     expect(
       () => CanvasDrawStyle(markerOpacity: 2),
+      throwsA(isA<CanvasDataException>()),
+    );
+    expect(
+      () => CanvasSelectionStyle(strokeWidth: double.nan),
+      throwsA(isA<CanvasDataException>()),
+    );
+    expect(
+      () => CanvasSelectionStyle(marqueeFillOpacity: 2),
+      throwsA(isA<CanvasDataException>()),
+    );
+    expect(
+      () => CanvasSelectionStyle(haloWidth: -1),
+      throwsA(isA<CanvasDataException>()),
+    );
+    expect(
+      () => CanvasGridStyle(strokeWidth: -1),
       throwsA(isA<CanvasDataException>()),
     );
   });
