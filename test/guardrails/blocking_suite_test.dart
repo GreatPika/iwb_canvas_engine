@@ -13,17 +13,23 @@ void main() {
     'blocking suite contains only executable inventory entries',
     () => expect(_blockingSuiteUsesInventoryEntries(), isTrue),
   );
+  test(
+    'default runner selection runs executable blocking guardrails',
+    () async {
+      expect(await _selectedGuardrailIds(), _expectedBlockingHardBoundaryIds);
+    },
+  );
   test('explicit guardrail selection runs one guardrail path', () async {
     expect(
-      await _selectedGuardrailIds('--guardrail=api.public_exports_complete'),
+      await _selectedGuardrailIds(['--guardrail=api.public_exports_complete']),
       {'api.public_exports_complete'},
     );
   });
   test('api suite selection runs only api guardrails', () async {
-    expect(await _selectedGuardrailIds('--suite=api'), _expectedApiIds);
+    expect(await _selectedGuardrailIds(['--suite=api']), _expectedApiIds);
   });
   test('core suite selection runs only core guardrails', () async {
-    expect(await _selectedGuardrailIds('--suite=core'), _expectedCoreIds);
+    expect(await _selectedGuardrailIds(['--suite=core']), _expectedCoreIds);
   });
   test('unknown or empty suite selection fails', () async {
     expect(await _badSuiteSelectionsFail(), isTrue);
@@ -54,8 +60,10 @@ Future<bool> _badSuiteSelectionsFail() async {
   });
 }
 
-Future<Set<String>> _selectedGuardrailIds(String argument) async {
-  final result = await _runGuardrails([argument]);
+Future<Set<String>> _selectedGuardrailIds([
+  List<String> arguments = const [],
+]) async {
+  final result = await _runGuardrails(arguments);
 
   if (result.exitCode != 0) {
     throw StateError('${result.stdout}\n${result.stderr}');
