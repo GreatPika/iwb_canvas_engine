@@ -51,6 +51,10 @@ const _blockingEntries = [
     id: 'api.public_class_modifiers_explicit',
     suites: {'blocking', 'api'},
   ),
+  GuardrailEntry(
+    id: 'api.no_public_api_import_cycles',
+    suites: {'blocking', 'api'},
+  ),
   GuardrailEntry(id: 'api.public_signature_shape', suites: {'blocking', 'api'}),
   GuardrailEntry(
     id: 'api.no_undefined_public_type_references',

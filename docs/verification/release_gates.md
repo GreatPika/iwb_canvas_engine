@@ -94,6 +94,7 @@ Guardrails:
 - `api.preview_state_sealed_union_publicly_readable`
 - `api.exported_dartdoc_complete`
 - `api.public_class_modifiers_explicit`
+- `api.no_public_api_import_cycles`
 - `api.public_signature_shape`
 - `api.no_undefined_public_type_references`
 - `api.dto_immutability`

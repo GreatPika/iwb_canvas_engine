@@ -93,6 +93,7 @@ errors, validation rules, and equality semantics.
 
 - `test.api_contract.public_api_v1_compiles_as_written` -> `test/api_contract/public_api_v1_compiles_as_written_test.dart`; compiles the public barrel from an empty consumer and exercises P2-owned constructor, getter, method, default, and return shapes
 - `test.guardrails.public_api_declaration_checks` -> `test/guardrails/public_api_declaration_checks_test.dart`; checks exported dartdoc summaries and explicit public class modifiers
+- `test.guardrails.public_api_import_cycles` -> `test/guardrails/public_api_import_cycles_test.dart`; checks public API import-cycle fixtures and the live public API import graph
 - `test.api_contract.app_next_engine_adapter_compile_fixture` -> `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`; proves app-level adapter responsibilities compile from the public barrel only and rejects forbidden fixture imports
 - `test.api_contract.public_readable_union_variants` -> `test/api_contract/public_readable_union_variants_test.dart`
 - `test.api_contract.preview_state_sealed_union` -> `test/api_contract/preview_state_sealed_union_test.dart`
@@ -110,6 +111,7 @@ errors, validation rules, and equality semantics.
 - `api.preview_state_sealed_union_publicly_readable`
 - `api.exported_dartdoc_complete`
 - `api.public_class_modifiers_explicit`
+- `api.no_public_api_import_cycles`
 - `api.public_signature_shape`
 - `api.no_undefined_public_type_references`
 - `api.no_legacy_public_types`

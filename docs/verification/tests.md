@@ -97,6 +97,7 @@ Required tests:
 - `test.api_contract.public_readable_union_variants`
 - `test.api_contract.preview_state_sealed_union`
 - `test.api_contract.public_api_v1_compiles_as_written`
+- `test.guardrails.public_api_import_cycles`
 - `test.api.canvas_field_update`
 - `test.api_contract.canvas_field_update_static_semantics`
 - `test.api_contract.no_undefined_public_type_references`
@@ -366,6 +367,10 @@ test/guardrails/public_api_declaration_checks_test.dart
      api.exported_dartdoc_complete;
   -> checks exported public classes for explicit Dart 3 subtype policy
      modifiers for api.public_class_modifiers_explicit.
+
+test/guardrails/public_api_import_cycles_test.dart
+  -> checks import-cycle fixtures and the live public API import graph for
+     api.no_public_api_import_cycles.
 
 test/api_contract/no_undefined_public_type_references_test.dart
   -> verifies every exported signature type is exported or from Flutter/Dart SDK;

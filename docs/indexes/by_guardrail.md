@@ -56,6 +56,12 @@ Guardrails extracted from split section 22.
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.guardrails.public_api_declaration_checks`
 
+## api.no_public_api_import_cycles
+
+- Rule: public API implementation files under `lib/src/api/**` form an acyclic parsed import graph
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Tests: `test.guardrails.public_api_import_cycles`
+
 ## api.public_signature_shape
 
 - Rule: public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON or diagnostic boundaries; metadata-bearing DTO signatures use exported `CanvasMetadata`

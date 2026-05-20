@@ -33,6 +33,7 @@ Required tests:
 - `test.api_contract.public_readable_union_variants`
 - `test.api_contract.preview_state_sealed_union`
 - `test.api_contract.public_api_v1_compiles_as_written`
+- `test.guardrails.public_api_import_cycles`
 - `test.api.canvas_field_update`
 - `test.api_contract.canvas_field_update_static_semantics`
 - `test.api_contract.no_undefined_public_type_references`
@@ -59,6 +60,7 @@ Guardrails:
 - `api.preview_state_sealed_union_publicly_readable`
 - `api.exported_dartdoc_complete`
 - `api.public_class_modifiers_explicit`
+- `api.no_public_api_import_cycles`
 - `api.public_signature_shape`
 - `api.no_undefined_public_type_references`
 - `api.dto_immutability`
