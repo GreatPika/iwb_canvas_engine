@@ -32,7 +32,7 @@ final class CanvasSelectionStyle {
     double marqueeFillOpacity = 0.15,
     double haloWidth = 4.0,
   }) {
-    validatePositiveDouble(strokeWidth, path: 'selectionStyle.strokeWidth');
+    validateNonNegativeDouble(strokeWidth, path: 'selectionStyle.strokeWidth');
     validateDoubleRange(
       marqueeFillOpacity,
       path: 'selectionStyle.marqueeFillOpacity',
@@ -85,7 +85,7 @@ final class CanvasSelectionStyle {
 @immutable
 final class CanvasGridStyle {
   factory CanvasGridStyle({double strokeWidth = 1.0}) {
-    validatePositiveDouble(strokeWidth, path: 'gridStyle.strokeWidth');
+    validateNonNegativeDouble(strokeWidth, path: 'gridStyle.strokeWidth');
 
     return CanvasGridStyle._(strokeWidth: strokeWidth);
   }

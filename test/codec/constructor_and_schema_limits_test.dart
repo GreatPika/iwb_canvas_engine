@@ -115,8 +115,14 @@ void main() {
       () => CanvasDrawStyle(markerOpacity: 2),
       throwsA(isA<CanvasDataException>()),
     );
+    expect(CanvasSelectionStyle(strokeWidth: 0), isA<CanvasSelectionStyle>());
+    expect(CanvasGridStyle(strokeWidth: 0), isA<CanvasGridStyle>());
     expect(
       () => CanvasSelectionStyle(strokeWidth: double.nan),
+      throwsA(isA<CanvasDataException>()),
+    );
+    expect(
+      () => CanvasSelectionStyle(strokeWidth: -1),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
