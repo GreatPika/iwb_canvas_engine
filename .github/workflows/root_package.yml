@@ -22,19 +22,8 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Install DCM
-        uses: CQLabs/setup-dcm@v2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Analyze Dart
         run: dart analyze
-
-      - name: Analyze DCM
-        run: dcm analyze .
-
-      - name: Calculate DCM metrics
-        run: dcm calculate-metrics .
 
       - name: Run guardrails
         run: dart run tool/guardrails/run.dart

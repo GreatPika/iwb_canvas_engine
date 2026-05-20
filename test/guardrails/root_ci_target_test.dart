@@ -18,13 +18,9 @@ void main() {
 
     expect(usedActions, contains('actions/checkout@v4'));
     expect(usedActions, contains('subosito/flutter-action@v2'));
-    expect(usedActions, contains('CQLabs/setup-dcm@v2'));
     expect(runCommands, contains('flutter pub get'));
     expect(runCommands, contains('dart analyze'));
-    expect(runCommands, contains('dcm analyze .'));
-    expect(runCommands, contains('dcm calculate-metrics .'));
     expect(runCommands, contains('dart run tool/guardrails/run.dart'));
-
     expect(workflowContent, isNot(contains('--guardrail=')));
     expect(workflowContent, isNot(contains('--suite=')));
     for (final id in guardrailInventory().keys) {

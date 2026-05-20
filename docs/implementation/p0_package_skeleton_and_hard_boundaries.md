@@ -66,11 +66,9 @@ runtime, API, donor, codec, or Flutter implementation can land.
 
 - `test.api_contract.no_legacy_public_symbols` -> `test/api_contract/no_legacy_public_symbols_test.dart`
 - `test.guardrails.import_boundaries` -> `test/guardrails/import_boundaries_test.dart`; also enforces no imports from another package's `src/**` and no unapproved production `part` / `part of` directives
-- `test.guardrails.required_diagrams_present` -> `test/guardrails/required_diagrams_present_test.dart`
 - `test.guardrails.blocking_suite` -> `test/guardrails/blocking_suite_test.dart`
 - `dart run tool/guardrails/run.dart` -> full blocking guardrail suite
 - `dart run tool/guardrails/run.dart --guardrail=core.import_boundaries`
-- `diagrams.all_required_present`
 - `api.no_legacy_public_types`
 - `api.public_exports_complete`
 - `api.public_types_complete`

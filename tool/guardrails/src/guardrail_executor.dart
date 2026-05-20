@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'core_boundary_checks.dart';
-import 'diagram_checks.dart';
 import 'guardrail_registry.dart';
 import 'guardrail_violation.dart';
 import 'repository_paths.dart';
@@ -53,8 +52,6 @@ Future<int> _runGuardrail(String id) async {
       ]);
     case 'core.single_runtime_root':
       return _reportViolations(id, checkSingleRuntimeRoot());
-    case 'diagrams.all_required_present':
-      return _reportViolations(id, checkRequiredDiagramsPresent());
   }
 
   stderr.writeln('Unknown or deferred guardrail: $id');

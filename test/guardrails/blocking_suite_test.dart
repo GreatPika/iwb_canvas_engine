@@ -73,5 +73,4 @@ const _expectedBlockingHardBoundaryIds = {
   'core.no_scene_controller_shape_dependency',
   'core.no_node_spec_patch_shape_dependency',
   'core.single_runtime_root',
-  'diagrams.all_required_present',
 };

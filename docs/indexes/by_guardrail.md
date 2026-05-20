@@ -246,12 +246,6 @@ Guardrails extracted from split section 22.
 - Sections: `section_20_diagnostics_hub`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.diagnostics.sanitizer_and_public_projection`, `test.guardrails.blocking_suite`
 
-## diagrams.all_required_present
-
-- Rule: required Mermaid files exist
-- Sections: `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.required_diagrams_present`, `test.guardrails.blocking_suite`
-
 ## surface.interactive_false_pending_line_preserved
 
 - Rule: interactive=false cancels active routed pointers, preserves pending line state not owned by an active routed pointer, and does not mutate runtime mode, committed document, selection, or resources

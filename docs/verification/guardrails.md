@@ -89,7 +89,6 @@ Guardrails:
 - `diagnostics.sanitized_public_projection`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
-- `diagrams.all_required_present`
 Do not assume:
 - no non-blocking critical guardrail
 <!-- CONTEXT:END -->
@@ -211,7 +210,6 @@ Mandatory guardrails:
 | `diagnostics.sanitized_public_projection` | diagnostic details expose only sanitized bounded public data and never runtime objects, images, closures, or full scene dumps |
 | `surface.pointer_samples_normalized_before_runtime` | Flutter surface adapters pass only normalized finite pointer samples into runtime routing |
 | `surface.interactive_false_pending_line_preserved` | interactive=false cancels active routed pointers, preserves pending line state not owned by an active routed pointer, and does not mutate runtime mode, committed document, selection, or resources |
-| `diagrams.all_required_present` | required Mermaid files exist |
 
 `api.integration_surface_complete` is executable only when the guardrail runner
 or its delegated proof compiles

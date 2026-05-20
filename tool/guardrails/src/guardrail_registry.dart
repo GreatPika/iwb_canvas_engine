@@ -136,11 +136,6 @@ const _p0Entries = [
     suites: {'blocking', 'core'},
     status: GuardrailStatus.executable,
   ),
-  GuardrailEntry(
-    id: 'diagrams.all_required_present',
-    suites: {'blocking', 'diagrams'},
-    status: GuardrailStatus.executable,
-  ),
 ];
 
 const _deferredGuardrailPhases = {

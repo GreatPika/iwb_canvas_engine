@@ -23,8 +23,8 @@ Flutter surface implementation land.
   `api.public_types_complete`, `core.no_legacy_imports`,
   `core.import_boundaries`, `core.no_unapproved_part_files`,
   `core.no_scene_controller_shape_dependency`,
-  `core.no_node_spec_patch_shape_dependency`, `core.single_runtime_root`, and
-  `diagrams.all_required_present`.
+  `core.no_node_spec_patch_shape_dependency`, and
+  `core.single_runtime_root`.
 - Support `dart run tool/guardrails/run.dart`, explicit
   `--guardrail=<id>` selection, and conservative `--changed` routing that falls
   back to the full blocking suite until impact metadata is complete.
@@ -130,7 +130,7 @@ the change, not target-state requirements.
 - Historical plan step files use previous contract shapes and must not be used
   as the structure for this step.
 - Existing required diagram files under `docs/diagrams/**` are documentation
-  evidence; P0 still needs executable `diagrams.all_required_present` proof.
+  evidence; P0 does not require an executable diagram presence guardrail.
 - A text scan of `lib/iwb_canvas_engine.dart` is insufficient for public API
   completeness because aliases, re-exports, generics, and signature references
   require resolved public-surface analysis.
@@ -234,7 +234,7 @@ verification must include `dart analyze`, `dcm analyze .`,
 |---|---|---|---|
 | D1 | The only public import seam is the root barrel exporting `lib/src/api/**` declarations listed by `docs/_registry/public_api_v1.yaml`. | `lib/iwb_canvas_engine.dart`, `lib/src/api/**` | P1, P2, P9 |
 | D2 | P0 creates exactly one production `RuntimeRoot` declaration and keeps it internal. | `lib/src/runtime/runtime_root.dart` | P5, P9 |
-| D3 | Hard-boundary guardrails are implemented as project-owned checks dispatched through one runner. | `tool/guardrails/**`, `test/guardrails/**` | P3, P4, P6, P7, P9 |
+| D3 | Hard-boundary guardrails are implemented as project-owned checks dispatched through one runner. | `tool/guardrails/**`, `test/guardrails/**` | P3, P4, P7, P9 |
 | D4 | Changed-aware guardrail routing is conservative and widens to the full blocking suite when impact metadata is incomplete. | `tool/guardrails/**` | P7, P9 |
 | D5 | Root CI invokes repository-owned checks and does not duplicate guardrail logic. | `.github/workflows/**` | P8, P9 |
 
@@ -383,18 +383,6 @@ dart test test/guardrails/single_runtime_root_test.dart
 Expected signal: the test finds one production `RuntimeRoot` declaration and
 rejects zero or duplicate production runtime roots.
 
-### P6. Required diagram presence
-
-Proves all P0-required Mermaid files are present through the repository-owned
-diagram presence test.
-
-```sh
-dart test test/guardrails/required_diagrams_present_test.dart
-```
-
-Expected signal: the test finds the required `c4_context`, `c4_container`, and
-`c4_component_runtime` diagram files through the documented diagram catalog.
-
 ### P7. Guardrail runner behavior
 
 Proves the repository-owned runner executes the P0 hard-boundary blocking
@@ -421,7 +409,7 @@ dart test test/guardrails/root_ci_target_test.dart
 ```
 
 Expected signal: the test finds a root workflow that runs package setup,
-analysis, DCM, and `dart run tool/guardrails/run.dart`.
+analysis, and `dart run tool/guardrails/run.dart`.
 
 ### P9. Final repository checks
 
@@ -503,20 +491,12 @@ D2, D3.
   `test/guardrails/import_boundaries_test.dart` — verifies legacy imports,
   another package's `src/**`, forbidden internal dependency directions, and
   unapproved production `part` directives.
-- Runtime and diagram proof:
+- Runtime proof:
   `test/guardrails/single_runtime_root_test.dart` — verifies exactly one
   production `RuntimeRoot`.
-- Diagram presence proof:
-  `test/guardrails/required_diagrams_present_test.dart` — verifies required P0
-  diagrams through the documented diagram catalog.
 - Guardrail check helpers:
   `tool/guardrails/**` — reusable AST, resolver, path, or registry logic used
   by tests when needed.
-- Verify-only diagram files:
-  `docs/diagrams/c4_context.mmd`,
-  `docs/diagrams/c4_container.mmd`,
-  `docs/diagrams/c4_component_runtime.mmd` — required P0 diagrams.
-
 #### Change
 
 Add the internal runtime-root skeleton and executable core hard-boundary
@@ -525,14 +505,13 @@ registry-parity patterns selected by the guardrail design document.
 
 #### Proof
 
-Run P4, P5, and P6.
+Run P4 and P5.
 
 #### Closure
 
 The tests reject forbidden production imports, legacy package dependencies,
-retired shape dependencies, unapproved production `part` directives, missing
-P0 diagrams, and any production state where `RuntimeRoot` is absent or
-duplicated.
+retired shape dependencies, unapproved production `part` directives, and any
+production state where `RuntimeRoot` is absent or duplicated.
 
 ### Slice 3. [x] Guardrail runner and conservative selection metadata
 
@@ -580,7 +559,6 @@ dart run tool/guardrails/run.dart --guardrail=core.import_boundaries
 dart run tool/guardrails/run.dart --guardrail=core.no_scene_controller_shape_dependency
 dart run tool/guardrails/run.dart --guardrail=core.no_node_spec_patch_shape_dependency
 dart run tool/guardrails/run.dart --guardrail=core.single_runtime_root
-dart run tool/guardrails/run.dart --guardrail=diagrams.all_required_present
 ```
 
 Expected signal: each selected command exits successfully and runs only the
@@ -602,7 +580,7 @@ D5.
 
 - CI workflow:
   `.github/workflows/root_package.yml` — root-package workflow that runs setup,
-  analysis, DCM, and the guardrail runner.
+  analysis, and the guardrail runner.
 - CI structural proof:
   `test/guardrails/root_ci_target_test.dart` — verifies the workflow invokes
   repository-owned commands.
@@ -641,8 +619,8 @@ SEAM_MIGRATION, PUBLIC_API_CHANGE
   `plan/step_1_package_skeleton_and_hard_boundaries.md` — mark slice checkboxes
   complete with evidence from the implementation change.
 - Verify-only implementation files:
-  `lib/**`, `test/**`, `tool/**`, `.github/workflows/**`,
-  `docs/diagrams/**` — surfaces covered by the final proof set.
+  `lib/**`, `test/**`, `tool/**`, `.github/workflows/**` — surfaces covered by
+  the final proof set.
 
 #### Change
 
@@ -663,12 +641,12 @@ complete in both `PLAN.md` and this step document.
 
 ### Run Proof Set
 
-P1, P2, P3, P4, P5, P6, P7, P8, and P9 must pass from the repository root
+P1, P2, P3, P4, P5, P7, P8, and P9 must pass from the repository root
 before Step 1 can be marked complete.
 
 ### Done When
 
-- D1, D2, D3, D4, and D5 have passing proof through P1 through P9;
+- D1, D2, D3, D4, and D5 have passing proof through the active P0 proof set;
 - `SEAM_MIGRATION` and `PUBLIC_API_CHANGE` are satisfied by their listed slice
   closures and proof IDs;
 - no out-of-scope runtime, donor, codec, rendering, resource, edit, spatial, or

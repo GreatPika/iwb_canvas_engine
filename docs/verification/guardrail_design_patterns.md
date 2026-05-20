@@ -149,4 +149,3 @@ indirection, runtime behavior, or runner coverage.
 | `diagnostics.sanitized_public_projection` | `behavioral_seam_test` | `resolved_public_surface` | `derived from legacy pattern` | Prove details are bounded public data and public signatures do not expose runtime objects. |
 | `surface.pointer_samples_normalized_before_runtime` | `semantic_sequence` | `behavioral_seam_test` | `strong legacy precedent` | Prove the Flutter boundary normalizes finite samples before runtime routing. |
 | `surface.interactive_false_pending_line_preserved` | `semantic_sequence` | `behavioral_seam_test` | `derived from legacy pattern` | Prove interactive=false cancellation order and pending-line preservation. |
-| `diagrams.all_required_present` | `registry_parity` | `runner_inventory` | `strong legacy precedent` | Compare required diagram registry/catalog entries with files and include the check in the blocking suite. |

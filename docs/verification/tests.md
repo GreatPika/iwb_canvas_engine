@@ -175,7 +175,6 @@ Required tests:
 - `test.interaction.text_edit_stale_commit_guard`
 - `test.flutter_bridge.widget_paint`
 - `test.benchmarks.required_cases`
-- `test.guardrails.required_diagrams_present`
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `oracle.legacy_capability_inventory_complete`
@@ -202,7 +201,6 @@ test/api_contract/v1_scope_gate_test.dart
 test/api_contract/app_next_engine_adapter_compile_fixture_test.dart
 test/guardrails/import_boundaries_test.dart
 test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart
-test/guardrails/required_diagrams_present_test.dart
 test/guardrails/blocking_suite_test.dart
 test/functional_ledger/row_specific_tests_test.dart
 test/benchmarks/required_cases_test.dart

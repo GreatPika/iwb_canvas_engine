@@ -851,7 +851,6 @@
     - diagnostics.sanitized_public_projection
     - surface.pointer_samples_normalized_before_runtime
     - surface.interactive_false_pending_line_preserved
-    - diagrams.all_required_present
   tests:
     - test.api_contract.app_next_engine_adapter_compile_fixture
     - test.guardrails.frame_committed_facts_via_frame_facts_port
@@ -1037,7 +1036,6 @@
     - test.interaction.text_edit_stale_commit_guard
     - test.flutter_bridge.widget_paint
     - test.benchmarks.required_cases
-    - test.guardrails.required_diagrams_present
     - test.guardrails.blocking_suite
   do_not_assume:
     - no donor reuse without ported or equivalent tests
@@ -1215,7 +1213,6 @@
     - diagnostics.sanitized_public_projection
     - surface.pointer_samples_normalized_before_runtime
     - surface.interactive_false_pending_line_preserved
-    - diagrams.all_required_present
   tests:
     - test.api_contract.app_next_engine_adapter_compile_fixture
     - test.guardrails.frame_committed_facts_via_frame_facts_port

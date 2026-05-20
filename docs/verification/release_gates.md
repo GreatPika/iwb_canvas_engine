@@ -155,7 +155,6 @@ Guardrails:
 - `diagnostics.sanitized_public_projection`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
-- `diagrams.all_required_present`
 Do not assume:
 - no release with legacy imports, legacy facade, or unlinked donor reuse
 <!-- CONTEXT:END -->
