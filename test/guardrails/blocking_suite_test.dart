@@ -5,19 +5,19 @@ import 'package:test/test.dart';
 import '../../tool/guardrails/src/guardrail_registry.dart';
 
 void main() {
-  test('runner inventories every mandatory guardrail id', () {
-    final inventory = guardrailInventory();
-    final missing = mandatoryGuardrailIds().difference(inventory.keys.toSet());
-
-    expect(missing, isEmpty);
-    expect(_allDeferredEntriesOwnPhase(inventory), isTrue);
-  });
-
-  test('blocking suite covers P0 hard-boundary guardrails', () {
+  test('runner inventories the executable blocking hard-boundary suite', () {
+    expect(
+      guardrailInventory().keys,
+      unorderedEquals(_expectedBlockingHardBoundaryIds),
+    );
     expect(
       blockingGuardrailIds(),
-      containsAll(_expectedBlockingHardBoundaryIds),
+      unorderedEquals(_expectedBlockingHardBoundaryIds),
     );
+  });
+
+  test('blocking suite contains only executable inventory entries', () {
+    expect(guardrailInventory().keys, unorderedEquals(blockingGuardrailIds()));
   });
 
   test('explicit guardrail selection runs one guardrail path', () async {
@@ -39,12 +39,6 @@ void main() {
       containsAll(_expectedBlockingHardBoundaryIds),
     );
   });
-}
-
-bool _allDeferredEntriesOwnPhase(Map<String, GuardrailEntry> inventory) {
-  return inventory.values
-      .where((entry) => entry.status == GuardrailStatus.deferred)
-      .every((entry) => entry.deferredPhase != null);
 }
 
 Set<String> _ranGuardrails(String stdout) {

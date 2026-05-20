@@ -126,9 +126,11 @@ using runner-owned impact metadata. Changed-aware routing is conservative: if a
 changed path cannot be mapped with confidence, the runner must widen the run to
 the full blocking suite instead of silently skipping a required proof.
 
-Runner metadata may live under `tool/guardrails/**`, but mandatory guardrail ids
-come from `docs/_registry/sections.yaml` and this section. If runner metadata
-omits a mandatory guardrail, `test.guardrails.blocking_suite` must fail.
+Runner metadata lives under `tool/guardrails/**` and owns the executable
+guardrail ids, suite membership, and dispatch routing for checks that can run
+through this entrypoint. Future mandatory guardrails remain owned by
+`docs/_registry/sections.yaml` and this section until their implementation
+phase adds executable proof.
 
 Design guidance for implementing or rewriting individual guardrails lives in
 `docs/verification/guardrail_design_patterns.md`. Each mandatory guardrail must

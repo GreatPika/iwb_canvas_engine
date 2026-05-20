@@ -54,7 +54,7 @@ Future<int> _runGuardrail(String id) async {
       return _reportViolations(id, checkSingleRuntimeRoot());
   }
 
-  stderr.writeln('Unknown or deferred guardrail: $id');
+  stderr.writeln('Unknown guardrail: $id');
 
   return 64;
 }

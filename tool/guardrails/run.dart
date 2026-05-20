@@ -57,8 +57,8 @@ List<String>? _selectSuite(String suite) {
 
 List<String>? _selectGuardrail(String id) {
   final entry = guardrailInventory()[id];
-  if (entry == null || entry.status != GuardrailStatus.executable) {
-    stderr.writeln('Unknown or deferred guardrail: $id');
+  if (entry == null) {
+    stderr.writeln('Unknown guardrail: $id');
     return null;
   }
 

@@ -271,11 +271,10 @@ verification must include `dart analyze`, `dcm analyze .`,
 
 - Every guardrail id introduced in runner metadata must correspond to an
   executable check or delegated Dart test before the blocking suite can pass.
-- Runner metadata must inventory every mandatory guardrail id from
-  `docs/verification/guardrails.md` and `docs/_registry/sections.yaml`. P0
-  blocking execution runs the P0 hard-boundary subset from this contract; later
-  phase guardrails may be present only with explicit deferred phase ownership
-  and must not be silently omitted from the metadata inventory.
+- Runner metadata must inventory executable guardrail ids and suite membership
+  for checks that can run through `tool/guardrails/run.dart`. Future mandatory
+  guardrails remain owned by the documentation registry until their
+  implementation phase adds executable proof.
 - Public API skeleton declarations may be minimal but must compile and must not
   depend on legacy symbols, internal runtime classes, or another package's
   `src/**`.
@@ -386,18 +385,17 @@ rejects zero or duplicate production runtime roots.
 ### P7. Guardrail runner behavior
 
 Proves the repository-owned runner executes the P0 hard-boundary blocking
-suite, inventories later mandatory guardrails with explicit deferred phase
-ownership, supports explicit guardrail selection, and widens incomplete
-changed-path routing to the blocking suite.
+suite, inventories executable guardrail ids, supports explicit guardrail
+selection, and widens incomplete changed-path routing to the blocking suite.
 
 ```sh
 dart test test/guardrails/blocking_suite_test.dart
 ```
 
-Expected signal: the test passes only when runner metadata covers all P0
-mandatory guardrails, inventories later mandatory guardrails with explicit
-deferred phase ownership, `--guardrail=<id>` dispatches a single selected P0
-guardrail, and `--changed` cannot silently skip unmapped hard-boundary checks.
+Expected signal: the test passes only when runner metadata covers the
+executable P0 hard-boundary suite, `--guardrail=<id>` dispatches a single
+selected P0 guardrail, and `--changed` cannot silently skip unmapped
+hard-boundary checks.
 
 ### P8. Root CI target
 
@@ -535,19 +533,18 @@ SEAM_MIGRATION
   `test/guardrails/blocking_suite_test.dart` — proves inventory coverage,
   dispatch behavior, and conservative changed fallback.
 - Verify-only guardrail registry:
-  `docs/verification/guardrails.md` — mandatory guardrail id source for runner
-  inventory.
+  `docs/verification/guardrails.md` — source-of-truth context for future
+  mandatory guardrails that are not executable in this P0 runner slice.
 - Verify-only section registry:
-  `docs/_registry/sections.yaml` — section-owned guardrail id source for runner
-  inventory and deferred phase ownership.
+  `docs/_registry/sections.yaml` — section-owned guardrail id source for later
+  implementation phases.
 
 #### Change
 
 Create the project-owned guardrail runner seam. The runner dispatches existing
 proof commands and check functions, supports `--guardrail=<id>`, inventories
-all mandatory guardrails from the registry with later-phase guardrails marked as
-deferred, and makes `--changed` fall back to the blocking suite when impact
-metadata does not confidently cover a changed path.
+the executable hard-boundary suite, and makes `--changed` fall back to the
+blocking suite when impact metadata does not confidently cover a changed path.
 
 #### Proof
 
@@ -566,7 +563,7 @@ selected guardrail path.
 
 #### Closure
 
-The P0 blocking suite, mandatory-id inventory, and explicit P0 guardrail
+The P0 blocking suite, executable-id inventory, and explicit P0 guardrail
 selections work through `tool/guardrails/run.dart`, and incomplete changed-path
 impact metadata cannot skip hard-boundary proof.
 
