@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'guardrail_violation.dart';
 import 'public_api_registry.dart';
 import 'public_api_surface.dart';
@@ -44,9 +46,12 @@ Future<List<GuardrailViolation>> checkPublicTypesComplete({
   ];
 }
 
-Future<List<GuardrailViolation>> checkNoLegacyPublicTypes() async {
-  final surface = await resolvePublicApiSurface();
-  final exportedLegacy = surface.exportedNames.intersection(_legacySymbols);
+Future<List<GuardrailViolation>> checkNoLegacyPublicTypes({
+  String? libraryPath,
+}) async {
+  final surface = await resolvePublicApiSurface(libraryPath: libraryPath);
+  final legacySymbols = await _readLegacyPublicSymbols();
+  final exportedLegacy = surface.exportedNames.intersection(legacySymbols);
 
   if (exportedLegacy.isEmpty) {
     return const [];
@@ -55,7 +60,7 @@ Future<List<GuardrailViolation>> checkNoLegacyPublicTypes() async {
   return [
     GuardrailViolation(
       guardrailId: 'api.no_legacy_public_types',
-      path: 'lib/iwb_canvas_engine.dart',
+      path: _displayPath(libraryPath),
       message: 'exports retired legacy symbols: ${_list(exportedLegacy)}',
     ),
   ];
@@ -79,19 +84,15 @@ String _list(Iterable<String> names) {
   return sorted.join(', ');
 }
 
-const _legacySymbols = {
-  'SceneController',
-  'SceneSnapshot',
-  'NodeSpec',
-  'NodePatch',
-  'PatchField',
-  'SceneWriteTxn',
-  'SceneBuilder',
-  'SceneCodec',
-  'decodeScene',
-  'decodeSceneFromJson',
-  'encodeScene',
-  'encodeSceneToJson',
-  'schemaVersionWrite',
-  'schemaVersionsRead',
-};
+Future<Set<String>> _readLegacyPublicSymbols() async {
+  final golden = File(
+    '$repositoryRoot/legacy/iwb_canvas_engine/tool/goldens/'
+    'public_api_symbols.txt',
+  );
+  final lines = await golden.readAsLines();
+
+  return lines
+      .map((line) => line.trim())
+      .where((line) => line.isNotEmpty)
+      .toSet();
+}
