@@ -22,10 +22,17 @@ final class CanvasRuntime {
   CanvasRuntime({
     CanvasDocument? initialDocument,
     CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
-  });
+  }) {
+    final document = initialDocument ?? CanvasDocument();
+    _document = document;
+    _state = ValueNotifier<CanvasRuntimeState>(_initialRuntimeState(document));
+  }
 
-  CanvasDocument readDocument() => throw UnimplementedError();
-  ValueListenable<CanvasRuntimeState> get state => throw UnimplementedError();
+  late final CanvasDocument _document;
+  late final ValueNotifier<CanvasRuntimeState> _state;
+
+  CanvasDocument readDocument() => _document;
+  ValueListenable<CanvasRuntimeState> get state => _state;
   CanvasEditPort get edits => throw UnimplementedError();
   CanvasSelectionPort get selection => throw UnimplementedError();
   CanvasToolPort get tools => throw UnimplementedError();
@@ -40,6 +47,34 @@ final class CanvasRuntime {
   CanvasLayerId generateLayerId() => throw UnimplementedError();
   CanvasResourceId generateResourceId() => throw UnimplementedError();
   void dispose() => throw UnimplementedError();
+}
+
+CanvasRuntimeState _initialRuntimeState(CanvasDocument document) {
+  return CanvasRuntimeState(
+    revisions: const CanvasRuntimeRevisions(
+      document: 0,
+      selection: 0,
+      preview: 0,
+      viewCamera: 0,
+      resourceVisual: 0,
+      interaction: 0,
+      epoch: 0,
+    ),
+    summary: CanvasRuntimeSummary(
+      elementCount: _documentElementCount(document),
+      layerCount: document.layers.length,
+      resourceCount: document.resources.length,
+      selectedCount: 0,
+    ),
+  );
+}
+
+int _documentElementCount(CanvasDocument document) {
+  return document.backgroundElements.length +
+      document.layers.fold<int>(
+        0,
+        (count, layer) => count + layer.elements.length,
+      );
 }
 
 final class CanvasRuntimeConfig {

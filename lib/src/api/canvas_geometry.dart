@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -45,16 +46,37 @@ final class CanvasTransform {
       CanvasTransform(a: 1, b: 0, c: 0, d: 1, tx: delta.dx, ty: delta.dy);
   factory CanvasTransform.scale(double sx, double sy) =>
       CanvasTransform(a: sx, b: 0, c: 0, d: sy, tx: 0, ty: 0);
-  factory CanvasTransform.rotationRadians(double radians) =>
-      throw UnimplementedError();
-  factory CanvasTransform.rotationDegrees(double degrees) =>
-      throw UnimplementedError();
+  factory CanvasTransform.rotationRadians(double radians) {
+    validateFiniteDouble(radians, path: 'transform.rotationRadians');
+
+    return CanvasTransform(
+      a: math.cos(radians),
+      b: math.sin(radians),
+      c: -math.sin(radians),
+      d: math.cos(radians),
+      tx: 0,
+      ty: 0,
+    );
+  }
+
+  factory CanvasTransform.rotationDegrees(double degrees) {
+    validateFiniteDouble(degrees, path: 'transform.rotationDegrees');
+
+    return CanvasTransform.rotationRadians(degrees * math.pi / 180);
+  }
+
   factory CanvasTransform.trs({
     Offset translation = Offset.zero,
     double rotationDegrees = 0,
     double scaleX = 1,
     double scaleY = 1,
-  }) => throw UnimplementedError();
+  }) {
+    final translate = CanvasTransform.translation(translation);
+    final rotate = CanvasTransform.rotationDegrees(rotationDegrees);
+    final scale = CanvasTransform.scale(scaleX, scaleY);
+
+    return translate.multiply(rotate).multiply(scale);
+  }
 
   final double a;
   final double b;
@@ -72,15 +94,106 @@ final class CanvasTransform {
       tx.isFinite &&
       ty.isFinite;
   bool get isInvertible => a * d - b * c != 0;
-  CanvasTransform withTranslation(Offset translation) =>
-      throw UnimplementedError();
-  CanvasTransform multiply(CanvasTransform other) => throw UnimplementedError();
-  Offset applyToPoint(Offset point) => throw UnimplementedError();
-  Rect applyToRect(Rect rect) => throw UnimplementedError();
-  CanvasTransform? invert() => throw UnimplementedError();
-  Float64List toCanvasTransform() => throw UnimplementedError();
-  void writeToCanvasTransform(Float64List out) => throw UnimplementedError();
-  Map<String, double> toJsonMap() => throw UnimplementedError();
+  CanvasTransform withTranslation(Offset translation) => CanvasTransform(
+    a: a,
+    b: b,
+    c: c,
+    d: d,
+    tx: translation.dx,
+    ty: translation.dy,
+  );
+  CanvasTransform multiply(CanvasTransform other) {
+    return CanvasTransform(
+      a: a * other.a + c * other.b,
+      b: b * other.a + d * other.b,
+      c: a * other.c + c * other.d,
+      d: b * other.c + d * other.d,
+      tx: a * other.tx + c * other.ty + tx,
+      ty: b * other.tx + d * other.ty + ty,
+    );
+  }
+
+  Offset applyToPoint(Offset point) {
+    validateOffset(point, path: 'point');
+
+    return Offset(
+      a * point.dx + c * point.dy + tx,
+      b * point.dx + d * point.dy + ty,
+    );
+  }
+
+  Rect applyToRect(Rect rect) {
+    final points = [
+      applyToPoint(rect.topLeft),
+      applyToPoint(rect.topRight),
+      applyToPoint(rect.bottomLeft),
+      applyToPoint(rect.bottomRight),
+    ];
+    final xs = points.map((point) => point.dx);
+    final ys = points.map((point) => point.dy);
+
+    return Rect.fromLTRB(
+      xs.reduce(math.min),
+      ys.reduce(math.min),
+      xs.reduce(math.max),
+      ys.reduce(math.max),
+    );
+  }
+
+  CanvasTransform? invert() {
+    final determinant = a * d - b * c;
+    if (determinant == 0) {
+      return null;
+    }
+
+    final inverseA = d / determinant;
+    final inverseB = -b / determinant;
+    final inverseC = -c / determinant;
+    final inverseD = a / determinant;
+
+    return CanvasTransform(
+      a: inverseA,
+      b: inverseB,
+      c: inverseC,
+      d: inverseD,
+      tx: -(inverseA * tx + inverseC * ty),
+      ty: -(inverseB * tx + inverseD * ty),
+    );
+  }
+
+  Float64List toCanvasTransform() {
+    final matrix = Float64List(16);
+    writeToCanvasTransform(matrix);
+
+    return matrix;
+  }
+
+  void writeToCanvasTransform(Float64List out) {
+    if (out.length != 16) {
+      throw ArgumentError.value(out.length, 'out.length', 'must be 16');
+    }
+    out
+      ..[0] = a
+      ..[1] = b
+      ..[2] = 0
+      ..[3] = 0
+      ..[4] = c
+      ..[5] = d
+      ..[6] = 0
+      ..[7] = 0
+      ..[8] = 0
+      ..[9] = 0
+      ..[10] = 1
+      ..[11] = 0
+      ..[12] = tx
+      ..[13] = ty
+      ..[14] = 0
+      ..[15] = 1;
+  }
+
+  Map<String, double> toJsonMap() {
+    return {'a': a, 'b': b, 'c': c, 'd': d, 'tx': tx, 'ty': ty};
+  }
 
   @override
   bool operator ==(Object other) {
