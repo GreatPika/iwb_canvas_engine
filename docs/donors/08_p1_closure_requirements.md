@@ -8,9 +8,9 @@ Feeds indexes:
 Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 
-## P1 closure requirements
+## P1 scope-gate donor review requirements
 
-P1 donor inventory is closed only when:
+P1 donor review is closed only when:
 
 - every donor intended for P2-P12 is represented in this file or a later
   machine-readable donor registry;

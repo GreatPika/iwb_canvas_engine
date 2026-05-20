@@ -2,12 +2,6 @@
 
 Guardrails extracted from split section 22.
 
-## oracle.legacy_capability_inventory_complete
-
-- Rule: every P1 legacy capability inventory row has a legacy oracle and evidence focus, without requiring next API mapping
-- Sections: `section_08_legacy_capability_inventory`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
-- Tests: `test.oracle.legacy_capability_inventory`
-
 ## api.integration_surface_complete
 
 - Rule: external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level NextEngineAdapter responsibilities, while adapter is not in package

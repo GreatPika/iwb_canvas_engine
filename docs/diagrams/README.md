@@ -11,14 +11,14 @@ listener getters are not diagram seams.
 
 - Kind: `c4`
 - Planned path: `docs/diagrams/c4_context.mmd`
-- Related phases: `P0`, `P1.5`, `P2`, `P7`, `P10`, `P13`, `P14`
+- Related phases: `P0`, `P1`, `P2`, `P7`, `P10`, `P13`, `P14`
 - Related sections: `section_00_status_and_scope`, `section_04_public_api_v1`
 
 ## c4_container
 
 - Kind: `c4`
 - Planned path: `docs/diagrams/c4_container.mmd`
-- Related phases: `P0`, `P1.5`, `P4`, `P14`
+- Related phases: `P0`, `P1`, `P4`, `P14`
 - Related sections: `section_00_status_and_scope`, `section_02_architecture_model`, `section_03_package_layout`
 
 ## c4_component_runtime
@@ -39,7 +39,7 @@ listener getters are not diagram seams.
 
 - Kind: `data_flow`
 - Planned path: `docs/diagrams/dfd_public_edit.mmd`
-- Related phases: `P1.5`, `P2`, `P5`, `P6`, `P7`, `P10`, `P11`, `P12`, `P13`, `P14`
+- Related phases: `P1`, `P2`, `P5`, `P6`, `P7`, `P10`, `P11`, `P12`, `P13`, `P14`
 - Related sections: `section_04_public_api_v1`, `section_11_edit_kernel`
 
 ## seq_single_active_surface
@@ -137,7 +137,7 @@ listener getters are not diagram seams.
 
 - Kind: `data_flow`
 - Planned path: `docs/diagrams/dfd_diagnostics_error_projection.mmd`
-- Related phases: `P1.5`, `P2`, `P3`, `P14`
+- Related phases: `P1`, `P2`, `P3`, `P14`
 - Related sections: `section_06_validation_limits`, `section_20_diagnostics_hub`
 
 ## seq_edit_success

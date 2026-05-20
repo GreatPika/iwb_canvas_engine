@@ -80,7 +80,6 @@ indirection, runtime behavior, or runner coverage.
 
 | Guardrail id | Primary pattern | Secondary pattern | Confidence | Design note |
 |---|---|---|---|---|
-| `oracle.legacy_capability_inventory_complete` | `registry_parity` | `runner_inventory` | `derived from legacy pattern` | Compare inventory rows with required oracle/evidence fields and include the proof in the blocking suite. |
 | `api.integration_surface_complete` | `behavioral_seam_test` | `parsed_ast_directive`, `runner_inventory` | `derived from legacy pattern` | Compile the external app fixture and AST-check that it imports only the public barrel. |
 | `api.no_legacy_public_types` | `negative_legacy_shape` | `resolved_public_surface` | `strong legacy precedent` | Reject legacy exported symbols through the effective public namespace, not just root-barrel text. |
 | `api.public_exports_complete` | `registry_parity` | `resolved_public_surface` | `strong legacy precedent` | Compare `public_api_v1.yaml` names with the resolved root public exports. |

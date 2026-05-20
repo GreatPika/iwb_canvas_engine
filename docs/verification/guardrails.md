@@ -19,7 +19,6 @@ Required tests:
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.guardrails.blocking_suite`
 Guardrails:
-- `oracle.legacy_capability_inventory_complete`
 - `api.integration_surface_complete`
 - `api.no_legacy_public_types`
 - `api.public_exports_complete`
@@ -136,7 +135,6 @@ Mandatory guardrails:
 
 | Guardrail id | Rule |
 |---|---|
-| `oracle.legacy_capability_inventory_complete` | every P1 legacy capability inventory row has a legacy oracle and evidence focus, without requiring next API mapping |
 | `api.integration_surface_complete` | external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level `NextEngineAdapter` responsibilities, while the adapter itself is not in package |
 | `api.no_legacy_public_types` | legacy public golden symbols not exported by root package |
 | `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |

@@ -16,8 +16,7 @@ const _diagramCatalogPath = 'docs/diagrams/README.md';
 
 const _phaseDocs = {
   'P0': 'docs/implementation/p0_package_skeleton_and_hard_boundaries.md',
-  'P1': 'docs/implementation/p1_legacy_oracle_lock.md',
-  'P1.5': 'docs/implementation/p1_5_v1_scope_gate_before_public_api_freeze.md',
+  'P1': 'docs/implementation/p1_v1_scope_gate_before_public_api_freeze.md',
   'P2': 'docs/implementation/p2_public_api_v1_freeze.md',
   'P3': 'docs/implementation/p3_schema_v1_dto_validation_and_codec_skeleton.md',
   'P4': 'docs/implementation/p4_runtime_spine.md',

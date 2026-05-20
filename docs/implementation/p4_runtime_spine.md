@@ -32,7 +32,7 @@ without bypassing ownership.
 ## Dependencies on earlier phases
 
 - P0 package boundaries and single-root guardrail are present.
-- P1 donor inventory identifies store/read donors.
+- Donor registry identifies store/read donors.
 - P2 public runtime and DTO API is frozen.
 - P3 codec DTO validation exists for later import/load paths.
 

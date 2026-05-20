@@ -46,8 +46,6 @@ documents as the source for current runtime ownership.
   `docs/verification/guardrail_design_patterns.md`; mandatory guardrail ids
   remain owned by `docs/verification/guardrails.md`.
 - Implementation sequencing routes to `docs/implementation/`.
-- P1 legacy evidence inputs route to
-  `docs/implementation/p1_legacy_oracle_lock.md`.
 - Legacy capability inventory routes to
   `docs/verification/legacy_capability_inventory.md`; it is oracle/audit input,
   not a next-API mapping proof.

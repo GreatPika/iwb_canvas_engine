@@ -8,7 +8,7 @@ Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
 - `section_03_package_layout` -> `docs/architecture/02_package_boundaries.md`
 Feeds phases:
-- `P1.5`
+- `P1`
 - `P2`
 - `P10`
 - `P11`

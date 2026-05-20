@@ -1,4 +1,4 @@
-# P1.5 - v1 scope gate before public API freeze
+# P1 - v1 scope gate before public API freeze
 
 ## Purpose
 
@@ -8,7 +8,10 @@ API or package boundaries directly.
 
 ## Build scope
 
-- scope checklist based on legacy functional behavior and approved v1 additions
+- scope checklist based on the existing legacy capability inventory, donor
+  registry, accepted differences, and approved v1 additions
+- legacy capability inventory and donor registry review as scope inputs, without
+  creating parallel topic inventories or markdown-only guardrails
 - public API draft probe
 - public API compiles as written
 - external app-adapter surface proof compiles through the public barrel only
@@ -17,14 +20,18 @@ API or package boundaries directly.
 ## Dependencies on earlier phases
 
 - P0 package boundaries are enforced.
-- P1 legacy capability inventory and donor inventory are available.
+- Existing legacy capability inventory and donor registry are available as
+  review inputs.
 
 ## Read first
 
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 - `section_06_validation_limits` -> `docs/contracts/validation_limits.md`
+- `section_08_legacy_capability_inventory` -> `docs/verification/legacy_capability_inventory.md`
 - `section_09_accepted_differences` -> `docs/architecture/04_decisions_and_differences.md`
+- `docs/donors/00_reuse_rules.md`
+- `docs/_registry/donors.yaml`
 
 ## Required donors
 
@@ -52,6 +59,8 @@ API or package boundaries directly.
 - mandatory public API draft coverage from `section_04_public_api_v1`
 - external adapter compile-fixture obligation from `section_04_public_api_v1`
 - validation limit adoption from `section_06_validation_limits`
+- legacy capability and donor registry review as input to the scope decision,
+  not as standalone executable proof
 
 ## Tests and guardrails that prove this phase
 
@@ -75,6 +84,9 @@ API or package boundaries directly.
 
 - mandatory v1 scope is green
 - accepted differences from the legacy engine are explicit
+- legacy capability inventory and donor registry have been reviewed for scope
+  decisions, and any gap is either mapped to v1 scope, recorded as an accepted
+  difference, or assigned to a later owning phase/test
 - public equality policy is explicit before API freeze
 - public API compiles as written
 - external app-adapter fixture compiles through only
@@ -91,9 +103,12 @@ API or package boundaries directly.
   expensive.
 - Over-expanding scope here would turn v1 into a migration layer. The accepted
   target is functional compatibility, not legacy API compatibility.
+- Treating legacy inventory review as a markdown-parsing guardrail would create
+  false confidence; P1 uses it as decision input and relies on API/boundary
+  checks for executable proof.
 
 ## Why this phase belongs here
 
 P2 cannot freeze stable public declarations until the v1 scope and accepted
-differences have been proved. P1.5 is the explicit gate between oracle evidence
+differences have been proved. P1 is the explicit gate between oracle evidence
 and API commitment.

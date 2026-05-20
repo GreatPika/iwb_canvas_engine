@@ -11,7 +11,7 @@ errors, validation rules, and equality semantics.
 - all `src/api` DTOs implemented
 - `CanvasMetadata` implemented as the public metadata value object for
   metadata-bearing DTOs
-- P1.5 public API, external-adapter, legacy-ban, and validation checks are green
+- P1 public API, external-adapter, legacy-ban, and validation checks are green
 - id validation implemented
 - `CanvasFieldUpdate` and its public variants implemented
 - `CanvasPreviewState` implemented as a sealed public union with exported
@@ -31,8 +31,7 @@ errors, validation rules, and equality semantics.
 ## Dependencies on earlier phases
 
 - P0 package boundaries are enforced.
-- P1 oracle and donor inventory are complete.
-- P1.5 public API, external-adapter, legacy-ban, and validation checks are green.
+- P1 public API, external-adapter, legacy-ban, and validation checks are green.
 
 ## Read first
 
@@ -120,7 +119,7 @@ errors, validation rules, and equality semantics.
 
 ## Exit gate
 
-- P1.5 public API, external-adapter, legacy-ban, and validation checks remain green
+- P1 public API, external-adapter, legacy-ban, and validation checks remain green
 - public API compiles
 - public runtime observation compiles through
   `ValueListenable<CanvasRuntimeState> get state`, and the retired

@@ -221,7 +221,7 @@
     - lib/src/contract/scene_contract_limits.dart
   decision: copy_adapt
   target_phases:
-    - P1.5
+    - P1
     - P2
     - P3
   target_owner: Validation limits and public constructors
@@ -232,7 +232,7 @@
   required_tests:
     - validation limits tests
   blocks:
-    - P1.5
+    - P1
     - P2
     - P3
   related_sections:

@@ -8,7 +8,7 @@ Must read before editing:
 - `none`
 Feeds phases:
 - `P0`
-- `P1.5`
+- `P1`
 Related donors:
 - `none`
 Related diagrams:

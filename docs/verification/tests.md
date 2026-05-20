@@ -9,6 +9,7 @@ Must read before editing:
 - `section_22_guardrails_machine_checks` -> `docs/verification/guardrails.md`
 Feeds phases:
 - `P0`
+- `P1`
 - `P2`
 - `P3`
 - `P4`
@@ -132,7 +133,6 @@ Required tests:
 - `test.flutter_bridge.single_active_surface`
 - `test.flutter_bridge.surface_resource_session_lifecycle`
 - `test.flutter_bridge.pointer_adapter_finite_normalization`
-- `test.oracle.legacy_capability_inventory`
 - `test.codec.constructor_and_schema_limits`
 - `test.runtime.dispose_lifecycle`
 - `test.runtime.runtime_state_publication`
@@ -175,7 +175,7 @@ Required tests:
 - `test.benchmarks.required_cases`
 - `test.guardrails.blocking_suite`
 Guardrails:
-- `oracle.legacy_capability_inventory_complete`
+- `none`
 Do not assume:
 - no donor reuse without ported or equivalent tests
 <!-- CONTEXT:END -->
@@ -198,7 +198,6 @@ test/api_contract/app_next_engine_adapter_compile_fixture_test.dart
 test/guardrails/import_boundaries_test.dart
 test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart
 test/guardrails/blocking_suite_test.dart
-test/oracle/legacy_capability_inventory_test.dart
 test/benchmarks/required_cases_test.dart
 
 test/codec/schema_v1/known_fields_validation_test.dart
@@ -396,10 +395,6 @@ test/guardrails/import_boundaries_test.dart
      internals outside approved query-port abstractions;
   -> scans production lib/** Dart files for part/part of directives and allows
      them only through an explicit generated-code approval list.
-
-test/oracle/legacy_capability_inventory_test.dart
-  -> verifies P1 legacy capability inventory rows have a capability, legacy
-     oracle, and evidence focus without requiring next API mapping.
 
 test/guardrails/blocking_suite_test.dart
   -> proves the executable P0 hard-boundary guardrail ids are represented in

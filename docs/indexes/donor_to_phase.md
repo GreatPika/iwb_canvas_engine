@@ -65,7 +65,7 @@ Every donor is mapped to target phases. `avoid` records are forbidden as structu
 ## foundation_contract_limits
 
 - Decision: `copy_adapt`
-- Target phases: `P1.5`, `P2`, `P3`
+- Target phases: `P1`, `P2`, `P3`
 - Target owner: Validation limits and public constructors
 
 ## foundation_error_contract

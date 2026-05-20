@@ -11,7 +11,7 @@ Coverage summary for context capsules and registries.
 - `section_05_schema_v1_contract`: must_read=linked, donors=linked, diagrams=linked, tests=linked, guardrails=linked
 - `section_06_validation_limits`: must_read=linked, donors=linked, diagrams=linked, tests=linked, guardrails=linked
 - `section_07_resource_lifecycle`: must_read=linked, donors=explicit none, diagrams=linked, tests=linked, guardrails=linked
-- `section_08_legacy_capability_inventory`: must_read=linked, donors=explicit none, diagrams=explicit none, tests=linked, guardrails=linked
+- `section_08_legacy_capability_inventory`: must_read=linked, donors=explicit none, diagrams=explicit none, tests=explicit none, guardrails=explicit none
 - `section_09_accepted_differences`: must_read=linked, donors=explicit none, diagrams=explicit none, tests=linked, guardrails=linked
 - `section_10_runtime_data_model`: must_read=linked, donors=linked, diagrams=linked, tests=linked, guardrails=linked
 - `section_11_edit_kernel`: must_read=linked, donors=linked, diagrams=linked, tests=linked, guardrails=linked

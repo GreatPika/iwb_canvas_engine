@@ -13,19 +13,19 @@ Related donors:
 Related diagrams:
 - `none`
 Required tests:
-- `test.oracle.legacy_capability_inventory`
+- `none`
 Guardrails:
-- `oracle.legacy_capability_inventory_complete`
+- `none`
 Do not assume:
 - no next API mapping table as release proof
 <!-- CONTEXT:END -->
 
 ## 8A. Legacy capability inventory
 
-This inventory is the P1 legacy-oracle closure point. It records which legacy
-capabilities must be preserved or explicitly rejected before any new public API
-shape is frozen. It does not choose next API names or signatures, and it is not
-a release-proof mapping table.
+This inventory is evidence input for the P1 v1 scope gate. It records which
+legacy capabilities must be considered before any new public API shape is
+frozen. It does not choose next API names or signatures, and it is not a
+release-proof mapping table or executable guardrail.
 
 ## Evidence closure checklist
 

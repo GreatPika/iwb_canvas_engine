@@ -7,7 +7,7 @@ Owns:
 Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 Feeds phases:
-- `P1.5`
+- `P1`
 - `P2`
 - `P3`
 - `P4`

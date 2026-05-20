@@ -13,7 +13,7 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 
 - Path: `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`
 - Fixture: `test/api_contract/fixtures/app_next_engine_adapter_compile_fixture.dart`
-- Phases: `P1.5`, `P2`, `P14`
+- Phases: `P1`, `P2`, `P14`
 - Sections: `section_04_public_api_v1`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
 - Guardrails: `api.integration_surface_complete`
 - Focus: external app-adapter responsibilities compile through only
@@ -76,7 +76,7 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 ## test.api_contract.no_legacy_public_symbols
 
 - Path: `test/api_contract/no_legacy_public_symbols_test.dart`
-- Phases: `P0`, `P1.5`, `P2`
+- Phases: `P0`, `P1`, `P2`
 - Sections: `section_03_package_layout`, `section_04_public_api_v1`, `section_09_accepted_differences`, `section_23_tests`
 - Guardrails: `api.no_legacy_public_types`
 
@@ -244,17 +244,10 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_04_public_api_v1`, `section_07_resource_lifecycle`, `section_23_tests`
 - Guardrails: `resources.resolver_boundary_owned_by_surface_session`
 
-## test.oracle.legacy_capability_inventory
-
-- Path: `test/oracle/legacy_capability_inventory_test.dart`
-- Phases: `P1`
-- Sections: `section_08_legacy_capability_inventory`, `section_23_tests`
-- Guardrails: `oracle.legacy_capability_inventory_complete`
-
 ## test.codec.constructor_and_schema_limits
 
 - Path: `test/codec/constructor_and_schema_limits_test.dart`
-- Phases: `P1.5`, `P2`, `P3`
+- Phases: `P1`, `P2`, `P3`
 - Sections: `section_06_validation_limits`, `section_23_tests`
 - Guardrails: `codec.known_fields_validated`, `api.id_validation_no_extension_type_escape`
 - Focus: public DTO construction and schema decode reject non-invertible

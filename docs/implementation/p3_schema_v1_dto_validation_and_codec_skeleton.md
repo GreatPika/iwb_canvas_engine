@@ -19,8 +19,7 @@ external data shapes.
 ## Dependencies on earlier phases
 
 - P0 package and guardrail boundaries are enforced.
-- P1 donor and oracle inventories are complete.
-- P1.5 public API, external-adapter, legacy-ban, and validation checks are green.
+- P1 public API, external-adapter, legacy-ban, and validation checks are green.
 - P2 public DTOs, ids, errors, and validation rules are frozen.
 
 ## Read first
