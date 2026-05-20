@@ -41,6 +41,13 @@ the contract is accepted.
      path.
    - Do not include a phase document unless that specific implementation phase
      document is the contract input.
+   - If the step contract is authored from a specific architecture design
+     document under `.design`, include that concrete design document path in
+     the same prompt using this exact form:
+     `review step N at STEP_FILE against design DESIGN_FILE`
+   - Replace `DESIGN_FILE` with the concrete `.design/...` document path.
+   - Do not include a design document unless that specific design document is
+     the contract input.
    - Do not spawn another primary `contract_reviewer` for later review rounds.
 
 3. If the primary `contract_reviewer` reports findings, repair the same step
@@ -73,6 +80,13 @@ the contract is accepted.
      path.
    - Do not include a phase document unless that specific implementation phase
      document is the contract input.
+   - If the step contract is authored from a specific architecture design
+     document under `.design`, include that concrete design document path in
+     the same prompt using this exact form:
+     `final review step N at STEP_FILE against design DESIGN_FILE`
+   - Replace `DESIGN_FILE` with the concrete `.design/...` document path.
+   - Do not include a design document unless that specific design document is
+     the contract input.
    - If it reports findings, repair the same step file and any related
      `PLAN.md` entry needed to satisfy the findings, then reuse the same final
      reviewer with the same exact final prompt form until it reports no
