@@ -5,57 +5,62 @@ import 'package:test/test.dart';
 import '../../tool/guardrails/src/guardrail_registry.dart';
 
 void main() {
-  test('runner inventories the executable blocking hard-boundary suite', () {
-    expect(
-      guardrailInventory().keys,
-      unorderedEquals(_expectedBlockingHardBoundaryIds),
-    );
-    expect(
-      blockingGuardrailIds(),
-      unorderedEquals(_expectedBlockingHardBoundaryIds),
-    );
-  });
-
-  test('blocking suite contains only executable inventory entries', () {
-    expect(guardrailInventory().keys, unorderedEquals(blockingGuardrailIds()));
-  });
-
+  test(
+    'runner inventories the executable blocking hard-boundary suite',
+    () => expect(_blockingInventoryMatchesExpectedIds(), isTrue),
+  );
+  test(
+    'blocking suite contains only executable inventory entries',
+    () => expect(_blockingSuiteUsesInventoryEntries(), isTrue),
+  );
   test('explicit guardrail selection runs one guardrail path', () async {
-    final result = await _runGuardrails([
-      '--guardrail=api.public_exports_complete',
-    ]);
-
-    expect(result.exitCode, 0);
-    expect(result.stdout, contains('ran api.public_exports_complete'));
-    expect(result.stdout, isNot(contains('ran api.public_types_complete')));
+    expect(
+      await _selectedGuardrailIds('--guardrail=api.public_exports_complete'),
+      {'api.public_exports_complete'},
+    );
   });
-
   test('api suite selection runs only api guardrails', () async {
-    final result = await _runGuardrails(['--suite=api']);
-
-    expect(result.exitCode, 0);
-    expect(_ranGuardrailIds(result), unorderedEquals(_expectedApiIds));
+    expect(await _selectedGuardrailIds('--suite=api'), _expectedApiIds);
   });
-
   test('core suite selection runs only core guardrails', () async {
-    final result = await _runGuardrails(['--suite=core']);
-
-    expect(result.exitCode, 0);
-    expect(_ranGuardrailIds(result), unorderedEquals(_expectedCoreIds));
+    expect(await _selectedGuardrailIds('--suite=core'), _expectedCoreIds);
   });
-
   test('unknown or empty suite selection fails', () async {
-    for (final argument in ['--suite=interaction', '--suite=']) {
-      final result = await _runGuardrails([argument]);
-
-      expect(result.exitCode, 64, reason: argument);
-      expect(
-        result.stderr,
-        contains('Unknown or empty guardrail suite'),
-        reason: argument,
-      );
-    }
+    expect(await _badSuiteSelectionsFail(), isTrue);
   });
+}
+
+bool _blockingInventoryMatchesExpectedIds() {
+  return _setEquals(
+        guardrailInventory().keys,
+        _expectedBlockingHardBoundaryIds,
+      ) &&
+      _setEquals(blockingGuardrailIds(), _expectedBlockingHardBoundaryIds);
+}
+
+bool _blockingSuiteUsesInventoryEntries() {
+  return _setEquals(guardrailInventory().keys, blockingGuardrailIds());
+}
+
+Future<bool> _badSuiteSelectionsFail() async {
+  final results = await Future.wait([
+    _runGuardrails(['--suite=interaction']),
+    _runGuardrails(['--suite=']),
+  ]);
+
+  return results.every((result) {
+    return result.exitCode == 64 &&
+        result.stderr.toString().contains('Unknown or empty guardrail suite');
+  });
+}
+
+Future<Set<String>> _selectedGuardrailIds(String argument) async {
+  final result = await _runGuardrails([argument]);
+
+  if (result.exitCode != 0) {
+    throw StateError('${result.stdout}\n${result.stderr}');
+  }
+  return _ranGuardrailIds(result);
 }
 
 Future<ProcessResult> _runGuardrails(List<String> arguments) {
@@ -73,6 +78,13 @@ Set<String> _ranGuardrailIds(ProcessResult result) {
       .where((line) => line.startsWith('ran '))
       .map((line) => line.substring('ran '.length))
       .toSet();
+}
+
+bool _setEquals(Iterable<String> left, Iterable<String> right) {
+  final leftSet = left.toSet();
+  final rightSet = right.toSet();
+
+  return leftSet.length == rightSet.length && leftSet.containsAll(rightSet);
 }
 
 const _expectedApiIds = {

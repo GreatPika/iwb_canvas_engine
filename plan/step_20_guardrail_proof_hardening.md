@@ -499,7 +499,7 @@ remaining unchecked slice checkboxes.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Golden-driven legacy public symbol rejection
+### Slice 1. [x] Golden-driven legacy public symbol rejection
 
 #### Implements
 
@@ -543,7 +543,7 @@ The root public surface remains clean, the fixture fails with
 `api.no_legacy_public_types`, and no duplicate legacy-symbol list remains in
 guardrail code.
 
-### Slice 2. [ ] P0 import matrix violations use the blocking core id
+### Slice 2. [x] P0 import matrix violations use the blocking core id
 
 #### Implements
 
@@ -587,7 +587,7 @@ Run P3 and P8.
 An interaction file importing concrete store or selection internals fails under
 the full runner and under `--guardrail=core.import_boundaries`.
 
-### Slice 3. [ ] Public type traversal hardening and extension rejection
+### Slice 3. [x] Public type traversal hardening and extension rejection
 
 #### Implements
 
@@ -635,7 +635,7 @@ The guardrail rejects hidden typedef bounds and exported named extensions, the
 public API contract states the compatibility decision, and no public export
 registry change is made.
 
-### Slice 4. [ ] Runner suite selection proof
+### Slice 4. [x] Runner suite selection proof
 
 #### Implements
 
@@ -671,7 +671,7 @@ Run P4 and P8.
 Removing `api` or `core` suite labels from runner metadata makes
 `test/guardrails/blocking_suite_test.dart` fail.
 
-### Slice 5. [ ] Active proof-map alignment
+### Slice 5. [x] Active proof-map alignment
 
 #### Implements
 
@@ -720,7 +720,7 @@ The active proof-map documents no longer overclaim blocking-suite coverage,
 guardrails, and the P0 phase brief includes the hardened suite-selection proof
 surface.
 
-### Slice 6. [ ] Roadmap closure
+### Slice 6. [x] Roadmap closure
 
 #### Implements
 
