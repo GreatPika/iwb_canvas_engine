@@ -14,7 +14,10 @@ void main() {
   });
 
   test('blocking suite covers P0 hard-boundary guardrails', () {
-    expect(blockingGuardrailIds(), containsAll(_p0GuardrailIds));
+    expect(
+      blockingGuardrailIds(),
+      containsAll(_expectedBlockingHardBoundaryIds),
+    );
   });
 
   test('explicit guardrail selection runs one guardrail path', () async {
@@ -33,7 +36,7 @@ void main() {
     expect(result.exitCode, 0);
     expect(
       _ranGuardrails(result.stdout as String),
-      containsAll(_p0GuardrailIds),
+      containsAll(_expectedBlockingHardBoundaryIds),
     );
   });
 }
@@ -60,7 +63,7 @@ Future<ProcessResult> _runGuardrails(List<String> arguments) {
   ], workingDirectory: Directory.current.path);
 }
 
-const _p0GuardrailIds = {
+const _expectedBlockingHardBoundaryIds = {
   'api.no_legacy_public_types',
   'api.public_exports_complete',
   'api.public_types_complete',

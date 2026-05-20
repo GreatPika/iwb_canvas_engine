@@ -4,6 +4,10 @@ import 'canvas_document.dart';
 import 'canvas_geometry.dart';
 import 'canvas_ids.dart';
 
+enum CanvasElementKind { image, path, text, stroke, line, rect }
+
+enum CanvasPathFillRule { nonZero, evenOdd }
+
 sealed class CanvasElement {
   const CanvasElement({
     required this.id,

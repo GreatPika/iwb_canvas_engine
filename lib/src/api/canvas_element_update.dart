@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'canvas_document.dart';
+import 'canvas_element.dart';
 import 'canvas_field_update.dart';
 import 'canvas_geometry.dart';
 import 'canvas_ids.dart';

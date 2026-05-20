@@ -1,10 +1,6 @@
 import 'dart:typed_data';
 import 'dart:ui';
 
-enum CanvasElementKind { image, path, text, stroke, line, rect }
-
-enum CanvasPathFillRule { nonZero, evenOdd }
-
 // This registry-owned public value object stays cohesive so the transform API
 // remains visible as one contract surface instead of being split by metric.
 // ignore: metrics
