@@ -78,6 +78,14 @@ const _blockingEntries = [
     id: 'codec.no_runtime_side_effects',
     suites: {'blocking', 'codec'},
   ),
+  GuardrailEntry(
+    id: 'diagnostics.disabled_no_alloc_hot_path',
+    suites: {'blocking', 'diagnostics'},
+  ),
+  GuardrailEntry(
+    id: 'diagnostics.sanitized_public_projection',
+    suites: {'blocking', 'diagnostics'},
+  ),
   GuardrailEntry(id: 'core.no_legacy_imports', suites: {'blocking', 'core'}),
   GuardrailEntry(id: 'core.import_boundaries', suites: {'blocking', 'core'}),
   GuardrailEntry(

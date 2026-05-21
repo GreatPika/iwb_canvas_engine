@@ -38,6 +38,15 @@ void main() {
   test('codec suite selection routes only codec guardrails', () async {
     expect(await _selectedGuardrailIds(['--suite=codec']), _expectedCodecIds);
   });
+  test(
+    'diagnostics suite selection routes only diagnostics guardrails',
+    () async {
+      expect(
+        await _selectedGuardrailIds(['--suite=diagnostics']),
+        _expectedDiagnosticsIds,
+      );
+    },
+  );
   test('shared proof files run once for all covered guardrail ids', () async {
     final proofRuns = <String, int>{};
     final result = await runGuardrailsWithProofRunner(
@@ -163,8 +172,14 @@ const _expectedCoreIds = {
   'core.single_runtime_root',
 };
 
+const _expectedDiagnosticsIds = {
+  'diagnostics.disabled_no_alloc_hot_path',
+  'diagnostics.sanitized_public_projection',
+};
+
 const _expectedBlockingHardBoundaryIds = {
   ..._expectedApiIds,
   ..._expectedCodecIds,
   ..._expectedCoreIds,
+  ..._expectedDiagnosticsIds,
 };

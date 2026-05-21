@@ -187,6 +187,13 @@ const _testProofPaths = {
     'test/codec/decode_encode_no_runtime_side_effects_test.dart',
     'test/guardrails/codec_no_runtime_imports_test.dart',
   ],
+  'diagnostics.disabled_no_alloc_hot_path': [
+    'test/diagnostics/disabled_no_alloc_hot_path_test.dart',
+  ],
+  'diagnostics.sanitized_public_projection': [
+    'test/diagnostics/sanitizer_and_public_projection_test.dart',
+    'test/diagnostics/diagnostics_public_surface_test.dart',
+  ],
 };
 
 final Map<String, Future<List<GuardrailViolation>> Function()>

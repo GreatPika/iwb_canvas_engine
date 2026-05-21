@@ -527,6 +527,18 @@ const _boundaryRules = [
   ),
   _BoundaryRule(
     guardrailId: 'core.import_boundaries',
+    owner: 'lib/src/diagnostics/',
+    forbiddenTargets: [
+      'lib/src/codec/',
+      'lib/src/runtime/',
+      'lib/src/store/',
+      'lib/src/edit/',
+      'lib/src/frame/',
+      'lib/src/surface/',
+    ],
+  ),
+  _BoundaryRule(
+    guardrailId: 'core.import_boundaries',
     owner: 'lib/src/frame/',
     forbiddenTargets: [
       'lib/src/store/',
