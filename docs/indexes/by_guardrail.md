@@ -220,19 +220,19 @@ Guardrails extracted from split section 22.
 
 - Rule: only schema v1 read/write
 - Sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: none
+- Tests: `test.codec.schema_v1.known_fields_validation`, `test.codec.schema_v1.canonical_encode_roundtrip`
 
 ## codec.known_fields_validated
 
 - Rule: known schema v1 fields are validated and canonical encoder writes only v1 fields
 - Sections: `section_05_schema_v1_contract`, `section_06_validation_limits`, `section_19_codec_boundary`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.codec.schema_v1.known_fields_validation`, `test.codec.schema_v1.reject_unknown_element_kind`, `test.codec.constructor_and_schema_limits`
+- Tests: `test.codec.schema_v1.known_fields_validation`, `test.codec.schema_v1.canonical_encode_roundtrip`, `test.codec.schema_v1.metadata_projection`, `test.codec.schema_v1.resources_appkey_only`, `test.codec.schema_v1.reject_unknown_element_kind`, `test.codec.schema_v1.reject_unknown_resource_source_kind`, `test.codec.constructor_and_schema_limits`
 
 ## diagnostics.disabled_no_alloc_hot_path
 
 - Rule: no record allocation on successful hot path
 - Sections: `section_20_diagnostics_hub`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.diagnostics.sanitizer_and_public_projection`
+- Tests: `test.diagnostics.disabled_no_alloc_hot_path`
 
 ## surface.interactive_false_pending_line_preserved
 
@@ -256,7 +256,7 @@ Guardrails extracted from split section 22.
 
 - Rule: schema v1 decode/encode validates and materializes DTOs without mutating runtime or store state
 - Sections: `section_19_codec_boundary`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.codec.decode_encode_no_runtime_side_effects`
+- Tests: `test.codec.decode_encode_no_runtime_side_effects`, `test.guardrails.codec_no_runtime_imports`
 
 ## core.import_boundaries
 
@@ -274,7 +274,7 @@ Guardrails extracted from split section 22.
 
 - Rule: diagnostic details expose only sanitized bounded public data and never runtime objects, images, closures, or full scene dumps
 - Sections: `section_20_diagnostics_hub`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.diagnostics.sanitizer_and_public_projection`
+- Tests: `test.diagnostics.sanitizer_and_public_projection`, `test.diagnostics.diagnostics_public_surface`
 
 ## edit.no_global_invalidation_except_replacement
 

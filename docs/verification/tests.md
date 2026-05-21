@@ -110,11 +110,16 @@ Required tests:
 - `test.api_contract.app_next_engine_adapter_compile_fixture`
 - `test.guardrails.import_boundaries`
 - `test.codec.schema_v1.known_fields_validation`
+- `test.codec.schema_v1.canonical_encode_roundtrip`
+- `test.codec.schema_v1.metadata_projection`
 - `test.codec.schema_v1.resources_appkey_only`
 - `test.codec.schema_v1.reject_unknown_element_kind`
 - `test.codec.schema_v1.reject_unknown_resource_source_kind`
 - `test.codec.decode_encode_no_runtime_side_effects`
+- `test.guardrails.codec_no_runtime_imports`
 - `test.diagnostics.sanitizer_and_public_projection`
+- `test.diagnostics.disabled_no_alloc_hot_path`
+- `test.diagnostics.diagnostics_public_surface`
 - `test.resources.sync_image_resolver`
 - `test.resources.app_owned_image_not_disposed`
 - `test.resources.resource_dirty`

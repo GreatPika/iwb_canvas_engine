@@ -152,6 +152,20 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Path: `test/codec/schema_v1/known_fields_validation_test.dart`
 - Phases: `P3`
 - Sections: `section_05_schema_v1_contract`, `section_23_tests`
+- Guardrails: `codec.schema_v1_exact`, `codec.known_fields_validated`
+
+## test.codec.schema_v1.canonical_encode_roundtrip
+
+- Path: `test/codec/schema_v1/canonical_encode_roundtrip_test.dart`
+- Phases: `P3`
+- Sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`, `section_23_tests`
+- Guardrails: `codec.schema_v1_exact`, `codec.known_fields_validated`
+
+## test.codec.schema_v1.metadata_projection
+
+- Path: `test/codec/schema_v1/metadata_projection_test.dart`
+- Phases: `P3`
+- Sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`, `section_23_tests`
 - Guardrails: `codec.known_fields_validated`
 
 ## test.codec.schema_v1.resources_appkey_only
@@ -159,7 +173,7 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Path: `test/codec/schema_v1/resources_appkey_only_test.dart`
 - Phases: `P3`, `P7`
 - Sections: `section_05_schema_v1_contract`, `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `resources.app_key_only`
+- Guardrails: `codec.known_fields_validated`, `resources.app_key_only`
 
 ## test.codec.schema_v1.reject_unknown_element_kind
 
@@ -173,7 +187,7 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Path: `test/codec/schema_v1/reject_unknown_resource_source_kind_test.dart`
 - Phases: `P3`, `P7`
 - Sections: `section_05_schema_v1_contract`, `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `resources.app_key_only`
+- Guardrails: `codec.known_fields_validated`, `resources.app_key_only`
 
 ## test.resources.sync_image_resolver
 
@@ -537,14 +551,39 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_19_codec_boundary`, `section_23_tests`
 - Guardrails: `codec.no_runtime_side_effects`
 
+## test.guardrails.codec_no_runtime_imports
+
+- Path: `test/guardrails/codec_no_runtime_imports_test.dart`
+- Phases: `P3`
+- Sections: `section_19_codec_boundary`, `section_22_guardrails_machine_checks`, `section_23_tests`
+- Guardrails: `codec.no_runtime_side_effects`
+
 ## test.diagnostics.sanitizer_and_public_projection
 
 - Path: `test/diagnostics/sanitizer_and_public_projection_test.dart`
 - Phases: `P3`, `P14`
 - Sections: `section_20_diagnostics_hub`, `section_23_tests`
-- Guardrails: `diagnostics.disabled_no_alloc_hot_path`, `diagnostics.sanitized_public_projection`
-- Focus: corrupted-row diagnostic details are sanitized and diagnostics
-  disabled hot paths allocate no records.
+- Guardrails: `diagnostics.sanitized_public_projection`
+- Focus: public diagnostic details are sanitized, bounded, and deeply frozen.
+
+## test.diagnostics.disabled_no_alloc_hot_path
+
+- Path: `test/diagnostics/disabled_no_alloc_hot_path_test.dart`
+- Phases: `P3`, `P14`
+- Sections: `section_20_diagnostics_hub`, `section_23_tests`
+- Guardrails: `diagnostics.disabled_no_alloc_hot_path`
+- Focus: P3 schema/codec success paths allocate no `DiagnosticRecord` instances
+  while diagnostics are disabled; pointer and paint hot-path proof remains
+  deferred.
+
+## test.diagnostics.diagnostics_public_surface
+
+- Path: `test/diagnostics/diagnostics_public_surface_test.dart`
+- Phases: `P3`, `P14`
+- Sections: `section_20_diagnostics_hub`, `section_23_tests`
+- Guardrails: `diagnostics.sanitized_public_projection`
+- Focus: the resolved root public diagnostics surface exposes only sanitized
+  public data shapes and no runtime objects.
 
 ## test.edit.exact_touched_invalidation
 

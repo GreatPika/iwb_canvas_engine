@@ -17,6 +17,8 @@ Related diagrams:
 - `dfd_diagnostics_error_projection`
 Required tests:
 - `test.diagnostics.sanitizer_and_public_projection`
+- `test.diagnostics.disabled_no_alloc_hot_path`
+- `test.diagnostics.diagnostics_public_surface`
 Guardrails:
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagnostics.sanitized_public_projection`

@@ -24,6 +24,9 @@ Related diagrams:
 - `seq_schema_v1_decode_encode_order`
 Required tests:
 - `test.codec.decode_encode_no_runtime_side_effects`
+- `test.codec.schema_v1.canonical_encode_roundtrip`
+- `test.codec.schema_v1.metadata_projection`
+- `test.guardrails.codec_no_runtime_imports`
 Guardrails:
 - `codec.schema_v1_exact`
 - `codec.known_fields_validated`

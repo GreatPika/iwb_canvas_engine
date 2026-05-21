@@ -26,6 +26,8 @@ Related diagrams:
 - `seq_schema_v1_decode_encode_order`
 Required tests:
 - `test.codec.schema_v1.known_fields_validation`
+- `test.codec.schema_v1.canonical_encode_roundtrip`
+- `test.codec.schema_v1.metadata_projection`
 - `test.codec.schema_v1.resources_appkey_only`
 - `test.codec.schema_v1.reject_unknown_element_kind`
 - `test.codec.schema_v1.reject_unknown_resource_source_kind`

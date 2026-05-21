@@ -536,7 +536,7 @@ repository rules.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Lock schema v1 exactness tests and constants
+### Slice 1. [x] Lock schema v1 exactness tests and constants
 
 #### Implements
 
@@ -580,7 +580,7 @@ Run `P1` and `P5`.
 The schema v1 exactness tests fail before the owner-side implementation where
 coverage is new, then pass after the codec owner enforces D1.
 
-### Slice 2. [ ] Implement canonical schema v1 encode and metadata projection
+### Slice 2. [x] Implement canonical schema v1 encode and metadata projection
 
 #### Implements
 
@@ -637,7 +637,7 @@ through `CanvasMetadata`, canonical encode omits unknown non-metadata input
 fields, and an internal validated import draft exists without runtime
 materialization, legacy public import draft naming, or forbidden codec imports.
 
-### Slice 3. [ ] Prove codec no-runtime-side-effect boundary
+### Slice 3. [x] Prove codec no-runtime-side-effect boundary
 
 #### Implements
 
@@ -676,7 +676,7 @@ The no-runtime-side-effect test passes, codec code has no runtime/store mutation
 imports, and the guardrail runner can select the no-side-effect proof when P3
 makes it executable.
 
-### Slice 4. [ ] Lock diagnostics proof for P3 codec boundaries
+### Slice 4. [x] Lock diagnostics proof for P3 codec boundaries
 
 #### Implements
 
@@ -720,7 +720,7 @@ entries dispatch to real proof, the disabled-allocation probe exists for the P3
 schema/codec subset, and deferred pointer/paint hot-path proof is explicit
 rather than silently claimed.
 
-### Slice 5. [ ] Finalize guardrail inventory and roadmap closure
+### Slice 5. [x] Finalize guardrail inventory and roadmap closure
 
 #### Implements
 
