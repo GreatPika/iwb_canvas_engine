@@ -23,7 +23,7 @@ Guardrails:
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagnostics.sanitized_public_projection`
 Do not assume:
-- no diagnostic allocations on successful hot path
+- full pointer/paint no-allocation proof exists before runtime owners exist
 <!-- CONTEXT:END -->
 
 ## 20. DiagnosticsHub

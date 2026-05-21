@@ -1,11 +1,11 @@
 import 'package:test/test.dart';
 
-import 'schema_v1/schema_v1_consumer_harness.dart';
+import '../support/flutter_consumer_test_harness.dart';
 
 void main() {
   test('validated import draft wraps immutable DTO facts only', () async {
     await expectLater(
-      runSchemaV1ConsumerTest(
+      runFlutterConsumerTest(
         packageName: 'iwb_canvas_engine_validated_import_draft',
         testFileName: 'validated_import_draft_test.dart',
         testSource: _validatedImportDraftSource,

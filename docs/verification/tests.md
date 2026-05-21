@@ -191,75 +191,106 @@ Do not assume:
 
 ## 23. Tests
 
+### Required Test Inventory
+
 Required tests:
 
-```text
-test/api_contract/public_api_v1_compiles_as_written_test.dart
-test/api_contract/public_api_no_unapproved_placeholders_test.dart
-test/api_contract/public_readable_union_variants_test.dart
-test/api_contract/preview_state_sealed_union_test.dart
-test/api/canvas_transform_test.dart
-test/api/canvas_field_update_test.dart
-test/api_contract/canvas_field_update_static_semantics_test.dart
-test/api_contract/no_undefined_public_type_references_test.dart
-test/api_contract/no_legacy_public_symbols_test.dart
-test/api_contract/dto_immutability_test.dart
-test/api_contract/public_equality_policy_test.dart
-test/api_contract/public_signature_shape_test.dart
-test/api_contract/id_validation_no_extension_type_escape_test.dart
-test/api_contract/app_next_engine_adapter_compile_fixture_test.dart
-test/guardrails/import_boundaries_test.dart
-test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart
-test/guardrails/blocking_suite_test.dart
-test/benchmarks/required_cases_test.dart
+- `test/api_contract/public_api_v1_compiles_as_written_test.dart`
+- `test/api_contract/public_api_no_unapproved_placeholders_test.dart`
+- `test/api_contract/public_readable_union_variants_test.dart`
+- `test/api_contract/preview_state_sealed_union_test.dart`
+- `test/api/canvas_transform_test.dart`
+- `test/api/canvas_field_update_test.dart`
+- `test/api_contract/canvas_field_update_static_semantics_test.dart`
+- `test/api_contract/no_undefined_public_type_references_test.dart`
+- `test/api_contract/no_legacy_public_symbols_test.dart`
+- `test/api_contract/dto_immutability_test.dart`
+- `test/api_contract/public_equality_policy_test.dart`
+- `test/api_contract/public_signature_shape_test.dart`
+- `test/api_contract/id_validation_no_extension_type_escape_test.dart`
+- `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`
+- `test/guardrails/public_api_declaration_checks_test.dart`
+- `test/guardrails/public_api_import_cycles_test.dart`
+- `test/guardrails/import_boundaries_test.dart`
+- `test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart`
+- `test/guardrails/blocking_suite_test.dart`
+- `test/benchmarks/required_cases_test.dart`
+- `test/codec/schema_v1/known_fields_validation_test.dart`
+- `test/codec/schema_v1/canonical_encode_roundtrip_test.dart`
+- `test/codec/schema_v1/metadata_projection_test.dart`
+- `test/codec/schema_v1/resources_appkey_only_test.dart`
+- `test/codec/schema_v1/reject_unknown_element_kind_test.dart`
+- `test/codec/schema_v1/reject_unknown_resource_source_kind_test.dart`
+- `test/codec/decode_encode_no_runtime_side_effects_test.dart`
+- `test/guardrails/codec_no_runtime_imports_test.dart`
+- `test/codec/validated_import_draft_test.dart`
+- `test/codec/constructor_and_schema_limits_test.dart`
+- `test/diagnostics/sanitizer_and_public_projection_test.dart`
+- `test/diagnostics/disabled_no_alloc_hot_path_test.dart`
+- `test/diagnostics/diagnostics_public_surface_test.dart`
+- `test/resources/sync_image_resolver_test.dart`
+- `test/resources/app_owned_image_not_disposed_test.dart`
+- `test/resources/resource_dirty_test.dart`
+- `test/resources/mark_all_resources_dirty_test.dart`
+- `test/resources/painter_never_calls_resolver_directly_test.dart`
+- `test/resources/missing_result_suppressed_per_frame_test.dart`
+- `test/resources/surface_session_cache_lifecycle_test.dart`
+- `test/resources/resolver_swap_starts_fresh_cache_test.dart`
+- `test/resources/resolver_frame_budget_test.dart`
+- `test/resources/resolver_reentrancy_rejected_test.dart`
+- `test/api/typed_action_payloads_test.dart`
+- `test/edit/low_level_mutations_do_not_emit_actions_test.dart`
+- `test/interaction/commands_emit_user_actions_test.dart`
+- `test/interaction/runtime_created_timestamps_monotonic_test.dart`
+- `test/runtime/dispose_lifecycle_test.dart`
+- `test/runtime/runtime_state_publication_test.dart`
+- `test/runtime/load_document_state_publication_test.dart`
+- `test/runtime/interaction_settings_state_test.dart`
+- `test/flutter_bridge/interactive_false_pointer_routing_test.dart`
+- `test/flutter_bridge/interactive_false_active_session_cancel_test.dart`
+- `test/flutter_bridge/interactive_false_pending_line_preserved_test.dart`
+- `test/flutter_bridge/interactive_false_state_isolation_test.dart`
+- `test/flutter_bridge/single_active_surface_test.dart`
+- `test/flutter_bridge/surface_resource_session_lifecycle_test.dart`
+- `test/flutter_bridge/pointer_adapter_finite_normalization_test.dart`
+- `test/flutter_bridge/widget_paint_test.dart`
+- `test/store/read_document_projection_test.dart`
+- `test/store/no_projection_hot_path_test.dart`
+- `test/store/public_document_is_projection_only_test.dart`
+- `test/edit/sync_non_nested_async_stale_test.dart`
+- `test/edit/rollback_test.dart`
+- `test/edit/field_update_nullable_semantics_test.dart`
+- `test/edit/operation_matrix_effects_test.dart`
+- `test/edit/exact_touched_invalidation_test.dart`
+- `test/edit/typed_effects_no_frame_dependency_test.dart`
+- `test/edit/staged_document_load_success_failure_test.dart`
+- `test/geometry/hit_policy_test.dart`
+- `test/geometry/no_legacy_scene_order_test.dart`
+- `test/geometry/eraser_exact_budget_no_partial_commit_test.dart`
+- `test/spatial/touched_update_test.dart`
+- `test/spatial/no_full_clone_for_touched_update_test.dart`
+- `test/spatial/stale_generation_rejected_test.dart`
+- `test/spatial/fallback_budget_enforced_test.dart`
+- `test/frame/main_overlay_capture_test.dart`
+- `test/frame/no_live_runtime_read_in_painters_test.dart`
+- `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart`
+- `test/frame/cache_capacity_eviction_policy_test.dart`
+- `test/frame/paint_plan_excludes_preview_delta_test.dart`
+- `test/frame/paint_plan_excludes_selection_state_test.dart`
+- `test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart`
+- `test/frame/selected_supplement_staging_no_global_sort_test.dart`
+- `test/interaction/preview_public_state_test.dart`
+- `test/interaction/state_machines_test.dart`
+- `test/interaction/move_resolver_reentrancy_test.dart`
+- `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`
+- `test/interaction/no_stale_terminal_commit_test.dart`
+- `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
+- `test/interaction/context_action_request_test.dart`
+- `test/interaction/text_edit_stale_commit_guard_test.dart`
+- `test/selection/runtime_owner_separation_test.dart`
+- `test/guardrails/selection_boundary_imports_test.dart`
 
-test/codec/schema_v1/known_fields_validation_test.dart
-test/codec/schema_v1/resources_appkey_only_test.dart
-test/codec/schema_v1/reject_unknown_element_kind_test.dart
-test/codec/schema_v1/reject_unknown_resource_source_kind_test.dart
-test/codec/decode_encode_no_runtime_side_effects_test.dart
-test/codec/constructor_and_schema_limits_test.dart
-test/diagnostics/sanitizer_and_public_projection_test.dart
-
-test/resources/sync_image_resolver_test.dart
-test/resources/app_owned_image_not_disposed_test.dart
-test/resources/resource_dirty_test.dart
-test/resources/mark_all_resources_dirty_test.dart
-test/resources/painter_never_calls_resolver_directly_test.dart
-test/resources/missing_result_suppressed_per_frame_test.dart
-test/resources/surface_session_cache_lifecycle_test.dart
-test/resources/resolver_swap_starts_fresh_cache_test.dart
-test/resources/resolver_frame_budget_test.dart
-test/resources/resolver_reentrancy_rejected_test.dart
-
-test/api/typed_action_payloads_test.dart
-test/edit/low_level_mutations_do_not_emit_actions_test.dart
-test/interaction/commands_emit_user_actions_test.dart
-test/interaction/runtime_created_timestamps_monotonic_test.dart
-
-test/runtime/dispose_lifecycle_test.dart
-test/runtime/runtime_state_publication_test.dart
-test/runtime/load_document_state_publication_test.dart
-test/runtime/interaction_settings_state_test.dart
-test/flutter_bridge/interactive_false_pointer_routing_test.dart
-test/flutter_bridge/interactive_false_active_session_cancel_test.dart
-test/flutter_bridge/interactive_false_pending_line_preserved_test.dart
-test/flutter_bridge/interactive_false_state_isolation_test.dart
-test/flutter_bridge/single_active_surface_test.dart
-test/flutter_bridge/surface_resource_session_lifecycle_test.dart
-test/flutter_bridge/pointer_adapter_finite_normalization_test.dart
-test/flutter_bridge/widget_paint_test.dart
-
-test/store/read_document_projection_test.dart
-test/store/no_projection_hot_path_test.dart
-test/store/public_document_is_projection_only_test.dart
-test/edit/sync_non_nested_async_stale_test.dart
-test/edit/rollback_test.dart
-test/edit/field_update_nullable_semantics_test.dart
-test/edit/operation_matrix_effects_test.dart
-test/edit/exact_touched_invalidation_test.dart
-test/edit/typed_effects_no_frame_dependency_test.dart
-test/edit/staged_document_load_success_failure_test.dart
+### Behavioral Coverage Notes
 
 `test.edit.operation_matrix_effects` covers expanded operation matrix dimensions:
 touched state, public state revisions, internal revisions, spatial,
@@ -307,42 +338,42 @@ rejection of non-invertible element transforms before `PreparedDocumentLoad`
 success, interaction interruption, repaint, action events, or public state
 publication.
 
-test/geometry/hit_policy_test.dart
-test/geometry/no_legacy_scene_order_test.dart
-test/geometry/eraser_exact_budget_no_partial_commit_test.dart
-test/spatial/touched_update_test.dart
-test/spatial/no_full_clone_for_touched_update_test.dart
-test/spatial/stale_generation_rejected_test.dart
-test/spatial/fallback_budget_enforced_test.dart
-test/frame/main_overlay_capture_test.dart
-test/frame/no_live_runtime_read_in_painters_test.dart
-test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart
-test/frame/cache_capacity_eviction_policy_test.dart
-test/frame/paint_plan_excludes_preview_delta_test.dart
-test/frame/paint_plan_excludes_selection_state_test.dart
-test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart
-test/frame/selected_supplement_staging_no_global_sort_test.dart
-test/interaction/preview_public_state_test.dart
-test/interaction/state_machines_test.dart
-test/interaction/move_resolver_reentrancy_test.dart
-test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart
-test/interaction/no_stale_terminal_commit_test.dart
-test/interaction/pointer_cleanup_coordinator_outcomes_test.dart
-test/interaction/context_action_request_test.dart
-test/interaction/text_edit_stale_commit_guard_test.dart
-test/selection/runtime_owner_separation_test.dart
-test/guardrails/selection_boundary_imports_test.dart
-```
-
 `test.geometry.hit_policy` covers corrupted committed hit rows: a
 non-invertible element transform records only policy-gated diagnostics, returns
 miss, continues candidate scan, and has no coarse fallback acceptance.
 
 `test.diagnostics.sanitizer_and_public_projection` covers corrupted-row
-diagnostic sanitization and the disabled diagnostics no-allocation hot-path
-policy.
+diagnostic sanitization. `test.diagnostics.disabled_no_alloc_hot_path` covers
+only the schema/codec disabled-diagnostics no-allocation subset; pointer and
+paint hot-path proof remains deferred until those runtime owners exist.
 
-Guardrail test ownership:
+### Test Shape Rules
+
+In-package unit and behavior tests run directly in the package under test. They
+should use ordinary `test(...)` bodies and must not create temporary Flutter
+consumer packages unless the behavior being proved is external consumer access.
+
+External consumer behavior tests prove that ordinary package users can import
+`package:iwb_canvas_engine/iwb_canvas_engine.dart` and execute public behavior
+from a temporary Flutter consumer package. These tests must use
+`test/support/flutter_consumer_test_harness.dart`; the feature test owns only
+the package name, generated test file name, and consumer test source. Do not
+duplicate temp-directory, pubspec, process-output, or cleanup logic in feature
+tests.
+
+Compile/static/analyzer tests may keep local runners when they are not ordinary
+consumer behavior tests, such as compile-only fixtures, analyzer static
+semantics checks, AST/import scans, or tests that must write more than one
+generated file before running a command. Those local runners must keep the
+custom behavior visible in the test file instead of hiding it behind the generic
+consumer harness.
+
+Guardrail tests are executable proofs for repository guardrails. Behavioral
+proof belongs in tests; shared scanner logic, runner metadata, or reusable
+structural checks belong in tooling. A guardrail runner may dispatch proofs, but
+it must not replace the behavioral test that proves the rule.
+
+### Guardrail Test Ownership
 
 `test/guardrails/**` owns executable proof tests that make cross-cutting
 guardrails part of normal `dart test` and CI. `tool/guardrails/**` owns the
@@ -355,192 +386,192 @@ The runner is only a dispatcher over proof commands. It must not replace
 behavioral tests, and the required guardrail list remains owned by
 `section_22_guardrails_machine_checks`.
 
-```text
-test/api_contract/app_next_engine_adapter_compile_fixture_test.dart
-  -> compiles test/api_contract/fixtures/app_next_engine_adapter_compile_fixture.dart;
-  -> proves external application adapter code can use the public integration
-     surface through package:iwb_canvas_engine/iwb_canvas_engine.dart only;
-  -> rejects fixture imports of src/**, legacy package symbols, or internal
-     runtime classes;
-  -> covers runtime lifecycle, state/document observation, edit/load,
-     selection/camera/tools, high-level commands, actions/context-action
-     requests, guarded text commit, resources, and CanvasSurface construction
-     with public resolver/style inputs.
+### Test Responsibilities
 
-test/api_contract/public_api_v1_compiles_as_written_test.dart
-  -> compiles the exported API declarations in an empty consumer package;
-  -> instantiates and calls P2-owned public constructors, getters, methods,
-     defaults, and return shapes through the public barrel.
+#### `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`
+- compiles test/api_contract/fixtures/app_next_engine_adapter_compile_fixture.dart;
+- proves external application adapter code can use the public integration
+  surface through package:iwb_canvas_engine/iwb_canvas_engine.dart only;
+- rejects fixture imports of src/\*\*, legacy package symbols, or internal
+  runtime classes;
+- covers runtime lifecycle, state/document observation, edit/load,
+  selection/camera/tools, high-level commands, actions/context-action
+  requests, guarded text commit, resources, and CanvasSurface construction
+  with public resolver/style inputs.
 
-test/guardrails/public_api_declaration_checks_test.dart
-  -> checks exported public declarations for non-empty dartdoc summaries for
-     api.exported_dartdoc_complete;
-  -> checks exported public classes for explicit Dart 3 subtype policy
-     modifiers for api.public_class_modifiers_explicit.
+#### `test/api_contract/public_api_v1_compiles_as_written_test.dart`
+- compiles the exported API declarations in an empty consumer package;
+- instantiates and calls P2-owned public constructors, getters, methods,
+  defaults, and return shapes through the public barrel.
 
-test/guardrails/public_api_import_cycles_test.dart
-  -> checks import-cycle fixtures and the live public API import graph for
-     api.no_public_api_import_cycles.
+#### `test/guardrails/public_api_declaration_checks_test.dart`
+- checks exported public declarations for non-empty dartdoc summaries for
+  api.exported_dartdoc_complete;
+- checks exported public classes for explicit Dart 3 subtype policy
+  modifiers for api.public_class_modifiers_explicit.
 
-test/api_contract/no_undefined_public_type_references_test.dart
-  -> verifies every exported signature type is exported or from Flutter/Dart SDK;
+#### `test/guardrails/public_api_import_cycles_test.dart`
+- checks import-cycle fixtures and the live public API import graph for
+  api.no_public_api_import_cycles.
 
-test/api_contract/public_signature_shape_test.dart
-  -> uses resolved analyzer public-surface traversal to reject FutureOr<T>,
-     nullable async/container returns, generic bounds with forbidden public
-     shape, and dynamic outside approved JSON or diagnostic boundaries for
-     api.public_signature_shape.
+#### `test/api_contract/no_undefined_public_type_references_test.dart`
+- verifies every exported signature type is exported or from Flutter/Dart SDK;
 
-test/api_contract/dto_immutability_test.dart
-  -> proves public DTO constructors defensively copy caller-owned Iterable, List,
-     Set, Map, and metadata input;
-  -> proves public collection getters and CanvasMetadata projections are
-     unmodifiable and deep-frozen;
-  -> proves invalid public construction is rejected before DTO exposure;
-  -> proves public constructors accepting caller-provided values with documented
-     runtime validation or sanitization are non-const factories, while
-     marker/empty/default/private storage forms keep only approved const forms.
+#### `test/api_contract/public_signature_shape_test.dart`
+- uses resolved analyzer public-surface traversal to reject FutureOr<T>,
+  nullable async/container returns, generic bounds with forbidden public
+  shape, and dynamic outside approved JSON or diagnostic boundaries for
+  api.public_signature_shape.
 
-test/api_contract/id_validation_no_extension_type_escape_test.dart
-  -> proves public id constructors validate invalid values from an external
-     consumer package;
-  -> proves v1 ids are public classes, not public extension types with unchecked
-     value escape.
+#### `test/api_contract/dto_immutability_test.dart`
+- proves public DTO constructors defensively copy caller-owned Iterable, List,
+  Set, Map, and metadata input;
+- proves public collection getters and CanvasMetadata projections are
+  unmodifiable and deep-frozen;
+- proves invalid public construction is rejected before DTO exposure;
+- proves public constructors accepting caller-provided values with documented
+  runtime validation or sanitization are non-const factories, while
+  marker/empty/default/private storage forms keep only approved const forms.
 
-test/api_contract/preview_state_sealed_union_test.dart
-  -> proves CanvasPreviewState is a sealed public union with exported readable
-     concrete variants and stable CanvasPreviewKind values;
-  -> proves CanvasStrokePreview is the shared public pencil/marker preview base;
-  -> proves preview iterable payloads are defensively copied and unmodifiable;
-  -> proves selected ids, pointer tokens, active pointer ids, session ids, and
-     tool-discriminated generic stroke payloads are not public preview state.
+#### `test/api_contract/id_validation_no_extension_type_escape_test.dart`
+- proves public id constructors validate invalid values from an external
+  consumer package;
+- proves v1 ids are public classes, not public extension types with unchecked
+  value escape.
 
-test/guardrails/import_boundaries_test.dart
-  -> verifies package-owned source paths obey the forbidden import matrix;
-  -> rejects imports from another package's src/**;
-  -> rejects concrete interaction imports of src/store and src/selection owner
-     internals outside approved query-port abstractions;
-  -> scans production lib/** Dart files for part/part of directives and allows
-     them only through an explicit generated-code approval list.
+#### `test/api_contract/preview_state_sealed_union_test.dart`
+- proves CanvasPreviewState is a sealed public union with exported readable
+  concrete variants and stable CanvasPreviewKind values;
+- proves CanvasStrokePreview is the shared public pencil/marker preview base;
+- proves preview iterable payloads are defensively copied and unmodifiable;
+- proves selected ids, pointer tokens, active pointer ids, session ids, and
+  tool-discriminated generic stroke payloads are not public preview state.
 
-test/guardrails/blocking_suite_test.dart
-  -> proves the executable P0 hard-boundary guardrail ids are represented in
-     runner inventory;
-  -> proves the full guardrail runner, `--suite=api`, `--suite=core`, and
-     explicit `--guardrail=<id>` selection modes execute the intended P0 ids;
-  -> proves unknown or empty suite selection fails instead of silently running
-     an unintended guardrail set.
+#### `test/guardrails/import_boundaries_test.dart`
+- verifies package-owned source paths obey the forbidden import matrix;
+- rejects imports from another package's src/**;
+- rejects concrete interaction imports of src/store and src/selection owner
+  internals outside approved query-port abstractions;
+- scans production lib/** Dart files for part/part of directives and allows
+  them only through an explicit generated-code approval list.
 
-test/runtime/dispose_lifecycle_test.dart
-  -> proves runtime dispose keeps state.value readable;
-  -> verifies dispose does not increment state.revisions.document and state
-     only notifies during first dispose when active preview cleanup advances
-     state.revisions.preview;
-  -> verifies no public state notifications are delivered after dispose
-     returns, repeated dispose is silent, and listeners can be removed after
-     dispose.
+#### `test/guardrails/blocking_suite_test.dart`
+- proves the executable P0 hard-boundary guardrail ids are represented in
+  runner inventory;
+- proves the full guardrail runner, `--suite=api`, `--suite=core`, and
+  explicit `--guardrail=<id>` selection modes execute the intended P0 ids;
+- proves unknown or empty suite selection fails instead of silently running
+  an unintended guardrail set.
 
-test/runtime/runtime_state_publication_test.dart
-  -> proves ordinary document edits publish one CanvasRuntimeState with
-     state.revisions.document advanced and unrelated public domains unchanged;
-  -> proves no-op edits and no-op runtime operations do not publish a new
-     CanvasRuntimeState.
+#### `test/runtime/dispose_lifecycle_test.dart`
+- proves runtime dispose keeps state.value readable;
+- verifies dispose does not increment state.revisions.document and state
+  only notifies during first dispose when active preview cleanup advances
+  state.revisions.preview;
+- verifies no public state notifications are delivered after dispose
+  returns, repeated dispose is silent, and listeners can be removed after
+  dispose.
 
-test/runtime/load_document_state_publication_test.dart
-  -> proves successful loadDocument publishes exactly one post-install
-     CanvasRuntimeState that includes document, selection, viewCamera, epoch,
-     and conditional preview cleanup revisions;
-  -> proves loadDocument failure publishes no public state snapshot.
+#### `test/runtime/runtime_state_publication_test.dart`
+- proves ordinary document edits publish one CanvasRuntimeState with
+  state.revisions.document advanced and unrelated public domains unchanged;
+- proves no-op edits and no-op runtime operations do not publish a new
+  CanvasRuntimeState.
 
-test/runtime/interaction_settings_state_test.dart
-  -> proves mode, draw tool, draw style, draw color, and pointer policy changes
-     publish state.revisions.interaction without changing document,
-     resourceVisual, or viewCamera revisions;
-  -> proves selection and preview revisions are unchanged for no-cleanup
-     settings changes, and advance only when the operation also owns draw-mode
-     selection clear or active preview cleanup.
+#### `test/runtime/load_document_state_publication_test.dart`
+- proves successful loadDocument publishes exactly one post-install
+  CanvasRuntimeState that includes document, selection, viewCamera, epoch,
+  and conditional preview cleanup revisions;
+- proves loadDocument failure publishes no public state snapshot.
 
-test/selection/runtime_owner_separation_test.dart
-  -> proves selection-only changes publish state.revisions.selection without
-     incrementing state.revisions.document, evicting DocumentProjectionCache,
-     or updating SpatialKernel;
-  -> proves document replacement, delete, clear, and eraser paths publish
-     document and selection effects as one atomic CanvasRuntimeState;
-  -> proves selectedOrder is derived from selectionRevision and
-     structuralRevision, not stored as an independent source of truth.
+#### `test/runtime/interaction_settings_state_test.dart`
+- proves mode, draw tool, draw style, draw color, and pointer policy changes
+  publish state.revisions.interaction without changing document,
+  resourceVisual, or viewCamera revisions;
+- proves selection and preview revisions are unchanged for no-cleanup
+  settings changes, and advance only when the operation also owns draw-mode
+  selection clear or active preview cleanup.
 
-test/frame/paint_plan_excludes_selection_state_test.dart
-  -> proves ordinary PaintPlanCache keys and cached ordinary records exclude
-     selected ids, selectionRevision, selection flags, and selected-move preview
-     state;
-  -> proves selection changes rebuild selection decoration without evicting the
-     ordinary committed paint plan;
-  -> proves selected element bounds changes rebuild SelectionDecorationPlan even
-     when selection membership is unchanged;
-  -> proves captured selectionStyle changes rebuild SelectionDecorationPlan
-     without entering StaticBackgroundCache or ordinary PaintPlanCache identity.
+#### `test/selection/runtime_owner_separation_test.dart`
+- proves selection-only changes publish state.revisions.selection without
+  incrementing state.revisions.document, evicting DocumentProjectionCache,
+  or updating SpatialKernel;
+- proves document replacement, delete, clear, and eraser paths publish
+  document and selection effects as one atomic CanvasRuntimeState;
+- proves selectedOrder is derived from selectionRevision and
+  structuralRevision, not stored as an independent source of truth.
 
-test/interaction/preview_public_state_test.dart
-  -> proves preview-only pointer changes publish state.revisions.preview without
-     changing document, selection, resourceVisual, interaction, or viewCamera
-     revisions and without emitting action events;
-  -> proves cleanup against already-empty preview state is public-state silent.
+#### `test/frame/paint_plan_excludes_selection_state_test.dart`
+- proves ordinary PaintPlanCache keys and cached ordinary records exclude
+  selected ids, selectionRevision, selection flags, and selected-move preview
+  state;
+- proves selection changes rebuild selection decoration without evicting the
+  ordinary committed paint plan;
+- proves selected element bounds changes rebuild SelectionDecorationPlan even
+  when selection membership is unchanged;
+- proves captured selectionStyle changes rebuild SelectionDecorationPlan
+  without entering StaticBackgroundCache or ordinary PaintPlanCache identity.
 
-test/interaction/pointer_cleanup_coordinator_outcomes_test.dart
-  -> proves `PointerToolCleanupCoordinator` outcomes for cleanup reason plus
-     ownership context: selected-move cleanup targets main repaint, overlay
-     previews target overlay repaint, no-preview cleanup is public-state silent,
-     active token/session facts are released before public effects, non-owned
-     pending line state is preserved on `interactive=false`, line-owned cleanup
-     clears pending line state, pending context tap cleanup emits no context
-     request, no resolver runs on cleanup-only paths, stale terminal cleanup
-     creates no commit intent, and cleanup emits no user action.
+#### `test/interaction/preview_public_state_test.dart`
+- proves preview-only pointer changes publish state.revisions.preview without
+  changing document, selection, resourceVisual, interaction, or viewCamera
+  revisions and without emitting action events;
+- proves cleanup against already-empty preview state is public-state silent.
 
-test/resources/resource_dirty_test.dart
-  -> proves markResourceDirty publishes state.revisions.resourceVisual without
-     incrementing state.revisions.document, evicting public document projection,
-     clearing selection, clearing preview, or emitting an action event.
-  -> proves markResourceDirty(resourceId) evicts the target ImageResolveCache
-     entry in the active SurfaceResourceSession and the next paint resolves that
-     dirty target again instead of reusing the previous resolved image.
+#### `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
+- proves `PointerToolCleanupCoordinator` outcomes for cleanup reason plus
+  ownership context: selected-move cleanup targets main repaint, overlay
+  previews target overlay repaint, no-preview cleanup is public-state silent,
+  active token/session facts are released before public effects, non-owned
+  pending line state is preserved on `interactive=false`, line-owned cleanup
+  clears pending line state, pending context tap cleanup emits no context
+  request, no resolver runs on cleanup-only paths, stale terminal cleanup
+  creates no commit intent, and cleanup emits no user action.
 
-test/resources/mark_all_resources_dirty_test.dart
-  -> proves markAllResourcesDirty() clears the active SurfaceResourceSession
-     ImageResolveCache while preserving document revision, public document
-     projection, selection, preview, and action-event behavior.
+#### `test/resources/resource_dirty_test.dart`
+- proves markResourceDirty publishes state.revisions.resourceVisual without
+  incrementing state.revisions.document, evicting public document projection,
+  clearing selection, clearing preview, or emitting an action event.
+- proves markResourceDirty(resourceId) evicts the target ImageResolveCache
+  entry in the active SurfaceResourceSession and the next paint resolves that
+  dirty target again instead of reusing the previous resolved image.
 
-test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart
-  -> proves CanvasCameraPort.setOffset and panBy publish
-     state.revisions.viewCamera without incrementing state.revisions.document,
-     invalidating public document projection, or changing persisted document
-     camera;
-  -> proves camera pan preserves ordinary PaintPlanCache entries while scheduling
-     repaint for the main and overlay surfaces affected by the runtime view;
-  -> proves backgroundRevision and gridRevision invalidate StaticBackgroundCache
-     without invalidating ordinary PaintPlanCache entries;
-  -> proves CanvasEdit.setCameraOffset changes persisted document camera through
-     the explicit edit boundary, including the
-     setCameraOffset(runtime.camera.offset) persistence path, and readDocument
-     returns that persisted camera instead of the runtime view camera.
+#### `test/resources/mark_all_resources_dirty_test.dart`
+- proves markAllResourcesDirty() clears the active SurfaceResourceSession
+  ImageResolveCache while preserving document revision, public document
+  projection, selection, preview, and action-event behavior.
 
-test/guardrails/selection_boundary_imports_test.dart
-  -> proves InteractionEngine does not import concrete SelectionKernel or
-     DocumentStoreKernel internals;
-  -> proves interaction selection/document reads are routed through
-     intent-specific immutable query ports.
+#### `test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart`
+- proves CanvasCameraPort.setOffset and panBy publish
+  state.revisions.viewCamera without incrementing state.revisions.document,
+  invalidating public document projection, or changing persisted document
+  camera;
+- proves camera pan preserves ordinary PaintPlanCache entries while scheduling
+  repaint for the main and overlay surfaces affected by the runtime view;
+- proves backgroundRevision and gridRevision invalidate StaticBackgroundCache
+  without invalidating ordinary PaintPlanCache entries;
+- proves CanvasEdit.setCameraOffset changes persisted document camera through
+  the explicit edit boundary, including the
+  setCameraOffset(runtime.camera.offset) persistence path, and readDocument
+  returns that persisted camera instead of the runtime view camera.
 
-test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart
-  -> proves production `lib/src/frame/**` code does not import concrete
-     `DocumentStoreKernel`, `CommittedDocument`, family tables, resource
-     tables, `DocumentProjectionCache`, drafts, or public projection internals
-     for frame capture, row resolution, or descriptor lookup;
-  -> proves frame committed facts, immutable row snapshots with stale
-     structuralRevision/generation rejection, immutable descriptor snapshots,
-     and `resourceRevision` are obtained through `FrameFactsPort`;
-  -> proves `FrameFactsPort` does not expose frame-owned render models,
-     selection facts, resolver state, mutation APIs, or public document
-     projection access.
-```
+#### `test/guardrails/selection_boundary_imports_test.dart`
+- proves InteractionEngine does not import concrete SelectionKernel or
+  DocumentStoreKernel internals;
+- proves interaction selection/document reads are routed through
+  intent-specific immutable query ports.
+
+#### `test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart`
+- proves production `lib/src/frame/**` code does not import concrete
+  `DocumentStoreKernel`, `CommittedDocument`, family tables, resource
+  tables, `DocumentProjectionCache`, drafts, or public projection internals
+  for frame capture, row resolution, or descriptor lookup;
+- proves frame committed facts, immutable row snapshots with stale
+  structuralRevision/generation rejection, immutable descriptor snapshots,
+  and `resourceRevision` are obtained through `FrameFactsPort`;
+- proves `FrameFactsPort` does not expose frame-owned render models,
+  selection facts, resolver state, mutation APIs, or public document
+  projection access.
 
 Legacy capability inventory rows require inventory-only tests. Next API
 behavior is proved by focused API, subsystem, and integration tests, not by

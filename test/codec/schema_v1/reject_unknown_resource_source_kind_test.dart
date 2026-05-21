@@ -1,11 +1,11 @@
 import 'package:test/test.dart';
 
-import 'schema_v1_consumer_harness.dart';
+import '../../support/flutter_consumer_test_harness.dart';
 
 void main() {
   test('schema v1 rejects unknown resource source kinds', () async {
     await expectLater(
-      runSchemaV1ConsumerTest(
+      runFlutterConsumerTest(
         packageName: 'iwb_canvas_engine_schema_v1_resource_source',
         testFileName: 'reject_unknown_resource_source_kind_test.dart',
         testSource: _rejectUnknownResourceSourceKindSource,

@@ -1,11 +1,11 @@
 import 'package:test/test.dart';
 
-import 'schema_v1_consumer_harness.dart';
+import '../../support/flutter_consumer_test_harness.dart';
 
 void main() {
   test('schema v1 image resources use only appKey sources', () async {
     await expectLater(
-      runSchemaV1ConsumerTest(
+      runFlutterConsumerTest(
         packageName: 'iwb_canvas_engine_schema_v1_resources_appkey',
         testFileName: 'resources_appkey_only_test.dart',
         testSource: _resourcesAppKeyOnlySource,

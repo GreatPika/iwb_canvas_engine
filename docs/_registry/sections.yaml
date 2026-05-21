@@ -757,7 +757,7 @@
     - test.diagnostics.disabled_no_alloc_hot_path
     - test.diagnostics.diagnostics_public_surface
   do_not_assume:
-    - no diagnostic allocations on successful hot path
+    - full pointer/paint no-allocation proof exists before runtime owners exist
 -
   id: section_22_guardrails_machine_checks
   source: docs/_registry/sections.yaml / section 22

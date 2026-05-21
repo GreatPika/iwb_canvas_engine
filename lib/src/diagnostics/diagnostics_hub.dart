@@ -1,3 +1,4 @@
+import '../api/canvas_error_details_sanitizer.dart';
 import '../api/canvas_diagnostics.dart';
 import '../api/canvas_errors.dart';
 
@@ -31,17 +32,30 @@ final class DiagnosticsHub {
     }
 
     _records.add(
-      DiagnosticRecord(
+      DiagnosticRecord._(
         code: event.code,
         severity: event.severity,
         source: event.source,
         path: event.path,
-        details: event.details(),
+        details: _sanitizeDetails(event.details()),
         revision: event.revision,
         sessionId: event.sessionId,
         correlationId: event.correlationId,
       ),
     );
+  }
+
+  Map<String, Object?> _sanitizeDetails(Map<String, Object?> details) {
+    final policy = _policy;
+    if (policy is CanvasDiagnosticsVerbose) {
+      return sanitizeCanvasErrorDetailsWithLimits(
+        details,
+        maxPreviewLength: policy.maxPreviewLength,
+        maxListEntries: policy.maxListEntries,
+      );
+    }
+
+    return sanitizeCanvasErrorDetails(details);
   }
 }
 
@@ -68,21 +82,16 @@ final class DiagnosticEvent {
 }
 
 final class DiagnosticRecord {
-  DiagnosticRecord({
+  DiagnosticRecord._({
     required this.code,
     required this.severity,
     required this.source,
+    required this.details,
     this.path,
-    Map<String, Object?> details = const {},
     this.revision,
     this.sessionId,
     this.correlationId,
-  }) : details = CanvasDataException(
-         code: code,
-         message: 'Diagnostic record projection.',
-         path: path,
-         details: details,
-       ).details {
+  }) {
     DiagnosticRecordAllocationProbe.instance.recordAllocation();
   }
 

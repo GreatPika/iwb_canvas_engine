@@ -1,78 +1,18 @@
-import 'dart:io';
-
 import 'package:test/test.dart';
 
-import '../../tool/guardrails/src/repository_paths.dart';
+import '../support/flutter_consumer_test_harness.dart';
 
 void main() {
   test('public constructors and schema boundary enforce limits', () async {
-    expect(
-      await _runFlutterConsumerTest(_constructorAndSchemaLimitsTestSource),
-      isTrue,
+    await expectLater(
+      runFlutterConsumerTest(
+        packageName: 'iwb_canvas_engine_validation_limits_consumer',
+        testFileName: 'validation_limits_test.dart',
+        testSource: _constructorAndSchemaLimitsTestSource,
+      ),
+      completes,
     );
   });
-}
-
-Future<bool> _runFlutterConsumerTest(String testSource) async {
-  final packageDir = await Directory.systemTemp.createTemp(
-    'iwb_canvas_engine_validation_limits_consumer_',
-  );
-
-  try {
-    await Directory('${packageDir.path}/test').create();
-    await File(
-      '${packageDir.path}/pubspec.yaml',
-    ).writeAsString(_pubspecSource());
-    await File(
-      '${packageDir.path}/test/validation_limits_test.dart',
-    ).writeAsString(testSource);
-
-    final pubGet = await Process.run('flutter', [
-      'pub',
-      'get',
-    ], workingDirectory: packageDir.path);
-    expect(pubGet.exitCode, 0, reason: _processOutput(pubGet));
-
-    final test = await Process.run('flutter', [
-      'test',
-      'test/validation_limits_test.dart',
-    ], workingDirectory: packageDir.path);
-    expect(test.exitCode, 0, reason: _processOutput(test));
-
-    return true;
-  } finally {
-    await packageDir.delete(recursive: true);
-  }
-}
-
-String _pubspecSource() {
-  return '''
-name: iwb_canvas_engine_validation_limits_consumer
-publish_to: none
-
-environment:
-  sdk: ^3.10.4
-
-dependencies:
-  flutter:
-    sdk: flutter
-  iwb_canvas_engine:
-    path: $repositoryRoot
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-''';
-}
-
-String _processOutput(ProcessResult result) {
-  return '''
-stdout:
-${result.stdout}
-
-stderr:
-${result.stderr}
-''';
 }
 
 const _constructorAndSchemaLimitsTestSource = '''

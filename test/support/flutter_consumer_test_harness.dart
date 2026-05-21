@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-import '../../../tool/guardrails/src/repository_paths.dart';
+import '../../tool/guardrails/src/repository_paths.dart';
 
-Future<void> runSchemaV1ConsumerTest({
+Future<void> runFlutterConsumerTest({
   required String packageName,
   required String testFileName,
   required String testSource,

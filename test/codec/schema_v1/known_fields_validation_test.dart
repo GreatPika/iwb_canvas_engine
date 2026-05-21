@@ -1,11 +1,11 @@
 import 'package:test/test.dart';
 
-import 'schema_v1_consumer_harness.dart';
+import '../../support/flutter_consumer_test_harness.dart';
 
 void main() {
   test('schema v1 exactness and known fields are validated', () async {
     await expectLater(
-      runSchemaV1ConsumerTest(
+      runFlutterConsumerTest(
         packageName: 'iwb_canvas_engine_schema_v1_known_fields',
         testFileName: 'known_fields_validation_test.dart',
         testSource: _knownFieldsValidationSource,

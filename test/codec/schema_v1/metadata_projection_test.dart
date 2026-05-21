@@ -1,11 +1,11 @@
 import 'package:test/test.dart';
 
-import 'schema_v1_consumer_harness.dart';
+import '../../support/flutter_consumer_test_harness.dart';
 
 void main() {
   test('schema v1 metadata projects through CanvasMetadata only', () async {
     await expectLater(
-      runSchemaV1ConsumerTest(
+      runFlutterConsumerTest(
         packageName: 'iwb_canvas_engine_schema_v1_metadata_projection',
         testFileName: 'metadata_projection_test.dart',
         testSource: _metadataProjectionSource,

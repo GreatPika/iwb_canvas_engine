@@ -1,11 +1,11 @@
 import 'package:test/test.dart';
 
-import 'schema_v1/schema_v1_consumer_harness.dart';
+import '../support/flutter_consumer_test_harness.dart';
 
 void main() {
   test('public codec operations do not mutate runtime observations', () async {
     await expectLater(
-      runSchemaV1ConsumerTest(
+      runFlutterConsumerTest(
         packageName: 'iwb_canvas_engine_codec_no_runtime_side_effects',
         testFileName: 'decode_encode_no_runtime_side_effects_test.dart',
         testSource: _decodeEncodeNoRuntimeSideEffectsSource,

@@ -5,9 +5,8 @@ import '../api/canvas_ids.dart';
 import '../api/canvas_resource.dart';
 
 final class ValidatedImportDraft {
-  ValidatedImportDraft.fromDocument(CanvasDocument document)
-    : document = document,
-      resourceIds = _validatedResourceIds(document.resources),
+  ValidatedImportDraft.fromDocument(this.document)
+    : resourceIds = _validatedResourceIds(document.resources),
       layerIds = _validatedLayerIds(document.layers),
       elementIds = _validatedElementIds(document);
 

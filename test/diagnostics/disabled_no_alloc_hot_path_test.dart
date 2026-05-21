@@ -1,13 +1,13 @@
 import 'package:test/test.dart';
 
-import '../codec/schema_v1/schema_v1_consumer_harness.dart';
+import '../support/flutter_consumer_test_harness.dart';
 
 void main() {
   test(
     'disabled diagnostics do not allocate records on codec success',
     () async {
       await expectLater(
-        runSchemaV1ConsumerTest(
+        runFlutterConsumerTest(
           packageName: 'iwb_canvas_engine_diagnostics_no_alloc',
           testFileName: 'disabled_no_alloc_hot_path_test.dart',
           testSource: _disabledNoAllocHotPathSource,
@@ -48,6 +48,34 @@ void main() {
     expect(detailsBuilt, isFalse);
     expect(hub.recordCount, 0);
     expect(DiagnosticRecord.allocations.count, 0);
+  });
+
+  test('enabled diagnostics apply verbose policy limits to records', () {
+    final hub = DiagnosticsHub(
+      policy: CanvasDiagnosticPolicy.verbose(
+        maxPreviewLength: 4,
+        maxListEntries: 2,
+      ),
+    );
+
+    hub.record(DiagnosticEvent(
+      code: CanvasDataErrorCode.invalidJson,
+      severity: DiagnosticSeverity.warning,
+      source: DiagnosticSource.codec,
+      details: () {
+        return {
+          'text': 'abcdef',
+          'items': [1, 2, 3],
+          'nested': {'first': 1, 'second': 2, 'third': 3},
+        };
+      },
+    ));
+
+    expect(hub.recordCount, 1);
+    expect(hub.records.single.details, {
+      'text': 'abcd<truncated>',
+      'item<truncated>': [1, 2],
+    });
   });
 
   test('successful schema codec operations do not allocate diagnostic records', () {

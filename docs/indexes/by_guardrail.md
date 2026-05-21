@@ -230,7 +230,9 @@ Guardrails extracted from split section 22.
 
 ## diagnostics.disabled_no_alloc_hot_path
 
-- Rule: no record allocation on successful hot path
+- Rule: schema/codec success paths allocate no diagnostic records while
+  diagnostics are disabled; pointer/paint hot-path proof remains deferred until
+  those runtime owners exist
 - Sections: `section_20_diagnostics_hub`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 - Tests: `test.diagnostics.disabled_no_alloc_hot_path`
 

@@ -572,9 +572,9 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Phases: `P3`, `P14`
 - Sections: `section_20_diagnostics_hub`, `section_23_tests`
 - Guardrails: `diagnostics.disabled_no_alloc_hot_path`
-- Focus: P3 schema/codec success paths allocate no `DiagnosticRecord` instances
+- Focus: schema/codec success paths allocate no `DiagnosticRecord` instances
   while diagnostics are disabled; pointer and paint hot-path proof remains
-  deferred.
+  deferred until those runtime owners exist.
 
 ## test.diagnostics.diagnostics_public_surface
 
