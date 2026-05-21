@@ -109,4 +109,8 @@ const _blockingEntries = [
     id: 'projection.only_explicit_read_paths',
     suites: {'blocking', 'store', 'projection'},
   ),
+  GuardrailEntry(
+    id: 'selection.owner_separate_from_document',
+    suites: {'blocking', 'selection'},
+  ),
 ];

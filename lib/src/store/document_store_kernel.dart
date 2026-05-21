@@ -3,6 +3,10 @@ import '../api/canvas_ids.dart';
 import 'committed_document.dart';
 import 'document_projection_cache.dart';
 
+// DocumentStoreKernel is the single owner for committed document facts, read
+// projection, id admission, and selection normalization inputs; splitting these
+// accessors would obscure the shared committed-state source of truth.
+// ignore: metrics
 final class DocumentStoreKernel {
   DocumentStoreKernel(CanvasDocument initialDocument)
     : _document = CommittedDocument(initialDocument);
@@ -18,6 +22,22 @@ final class DocumentStoreKernel {
   CanvasDocumentSummary get documentSummary => _document.summary;
   int get documentRevision => _document.revisions.documentRevision;
   int get projectionBuildCount => _projectionCache.buildCount;
+  Set<CanvasElementId> get selectableElementIds {
+    return Set.unmodifiable(_document.elements.selectableElementIds);
+  }
+
+  Set<CanvasElementId> get contentElementIds {
+    return Set.unmodifiable(_document.elements.contentElementIds);
+  }
+
+  Set<CanvasElementId> normalizeSelection(Iterable<CanvasElementId> ids) {
+    final selectable = _document.elements.selectableElementIds;
+
+    return {
+      for (final id in ids)
+        if (selectable.contains(id)) id,
+    };
+  }
 
   CanvasElementId generateElementId() {
     return CanvasElementId(_elementIds.nextValue(_document.admittedElementIds));

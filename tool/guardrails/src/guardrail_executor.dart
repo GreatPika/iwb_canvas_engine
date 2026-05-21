@@ -200,6 +200,10 @@ const _testProofPaths = {
   'projection.only_explicit_read_paths': [
     'test/store/no_projection_hot_path_test.dart',
   ],
+  'selection.owner_separate_from_document': [
+    'test/selection/runtime_owner_separation_test.dart',
+    'test/guardrails/selection_boundary_checks_test.dart',
+  ],
 };
 
 final Map<String, Future<List<GuardrailViolation>> Function()>

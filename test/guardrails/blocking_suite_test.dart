@@ -59,6 +59,12 @@ void main() {
       );
     },
   );
+  test('selection suite selection routes only selection guardrails', () async {
+    expect(
+      await _selectedGuardrailIds(['--suite=selection']),
+      _expectedSelectionIds,
+    );
+  });
   test('shared proof files run once for all covered guardrail ids', () async {
     final proofRuns = <String, int>{};
     final result = await runGuardrailsWithProofRunner(
@@ -196,10 +202,13 @@ const _expectedStoreIds = {
 
 const _expectedProjectionIds = {'projection.only_explicit_read_paths'};
 
+const _expectedSelectionIds = {'selection.owner_separate_from_document'};
+
 const _expectedBlockingHardBoundaryIds = {
   ..._expectedApiIds,
   ..._expectedCodecIds,
   ..._expectedCoreIds,
   ..._expectedDiagnosticsIds,
   ..._expectedStoreIds,
+  ..._expectedSelectionIds,
 };

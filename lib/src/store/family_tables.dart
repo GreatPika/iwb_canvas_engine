@@ -51,6 +51,21 @@ final class FamilyTables {
       ...rectRows.keys,
     };
   }
+
+  bool isSelectionEligible(CanvasElementId id) {
+    final common = _commonById(id.value);
+
+    return common != null && common.isVisible && common.isSelectable;
+  }
+
+  ElementCommonRow? _commonById(String id) {
+    return imageRows[id]?.common ??
+        pathRows[id]?.common ??
+        textRows[id]?.common ??
+        strokeRows[id]?.common ??
+        lineRows[id]?.common ??
+        rectRows[id]?.common;
+  }
 }
 
 final class _AdmittedRows {

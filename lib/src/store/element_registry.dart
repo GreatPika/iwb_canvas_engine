@@ -40,4 +40,19 @@ final class ElementRegistry {
 
   Set<String> get admittedElementIds => familyTables.admittedElementIds;
   Set<String> get admittedLayerIds => layerTable.admittedIds;
+
+  Set<CanvasElementId> get contentElementIds {
+    return {
+      for (final row in layerTable.rows)
+        for (final id in row.elementIds) id,
+    };
+  }
+
+  Set<CanvasElementId> get selectableElementIds {
+    return {
+      for (final row in layerTable.rows)
+        for (final id in row.elementIds)
+          if (familyTables.isSelectionEligible(id)) id,
+    };
+  }
 }
