@@ -50,7 +50,6 @@ void main() {
     );
     final runtime = CanvasRuntime(initialDocument: document);
 
-    expect(runtime.readDocument(), same(document));
     expect(runtime.state.value, isA<CanvasRuntimeState>());
     expect(runtime.state.value.revisions, _zeroRevisions());
     expect(

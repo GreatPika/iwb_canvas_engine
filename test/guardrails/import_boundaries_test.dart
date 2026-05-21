@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:test/test.dart';
 
 import '../../tool/guardrails/src/core_boundary_checks.dart';
+import '../../tool/guardrails/src/guardrail_violation.dart';
 import '../../tool/guardrails/src/repository_paths.dart';
 
 void main() {
@@ -26,6 +27,29 @@ void main() {
       expect(output, contains('bad_import_boundary_fixture.dart'));
     },
   );
+
+  test('api facade may import only the runtime composition root', () {
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/api/canvas_runtime.dart',
+        content: "import '../runtime/runtime_root.dart';\n",
+      ),
+      isEmpty,
+    );
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/api/canvas_runtime.dart',
+        content: "import '../runtime/runtime_config.dart';\n",
+      ),
+      contains(
+        isA<GuardrailViolation>().having(
+          (violation) => violation.guardrailId,
+          'guardrailId',
+          'core.import_boundaries',
+        ),
+      ),
+    );
+  });
 }
 
 Future<ProcessResult> _withTemporaryInteractionStoreImport(

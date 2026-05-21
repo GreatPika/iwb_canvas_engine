@@ -17,6 +17,7 @@ import 'canvas_pointer.dart';
 import 'canvas_preview.dart';
 import 'canvas_resource.dart';
 import 'canvas_tools.dart';
+import '../runtime/runtime_root.dart';
 
 /// Public API v1 declaration for [CanvasRuntime].
 final class CanvasRuntime {
@@ -26,14 +27,14 @@ final class CanvasRuntime {
   }) {
     final document = initialDocument ?? CanvasDocument();
     _document = document;
-    _state = ValueNotifier<CanvasRuntimeState>(_initialRuntimeState(document));
+    _root = RuntimeRoot(initialDocument: document, config: config);
   }
 
   late final CanvasDocument _document;
-  late final ValueNotifier<CanvasRuntimeState> _state;
+  late final RuntimeRoot _root;
 
   CanvasDocument readDocument() => _document;
-  ValueListenable<CanvasRuntimeState> get state => _state;
+  ValueListenable<CanvasRuntimeState> get state => _root.state;
   CanvasEditPort get edits => throw UnimplementedError();
   CanvasSelectionPort get selection => throw UnimplementedError();
   CanvasToolPort get tools => throw UnimplementedError();
@@ -47,35 +48,9 @@ final class CanvasRuntime {
   CanvasElementId generateElementId() => throw UnimplementedError();
   CanvasLayerId generateLayerId() => throw UnimplementedError();
   CanvasResourceId generateResourceId() => throw UnimplementedError();
-  void dispose() => throw UnimplementedError();
-}
-
-CanvasRuntimeState _initialRuntimeState(CanvasDocument document) {
-  return CanvasRuntimeState(
-    revisions: const CanvasRuntimeRevisions(
-      document: 0,
-      selection: 0,
-      preview: 0,
-      viewCamera: 0,
-      resourceVisual: 0,
-      interaction: 0,
-      epoch: 0,
-    ),
-    summary: CanvasRuntimeSummary(
-      elementCount: _documentElementCount(document),
-      layerCount: document.layers.length,
-      resourceCount: document.resources.length,
-      selectedCount: 0,
-    ),
-  );
-}
-
-int _documentElementCount(CanvasDocument document) {
-  return document.backgroundElements.length +
-      document.layers.fold<int>(
-        0,
-        (count, layer) => count + layer.elements.length,
-      );
+  void dispose() {
+    _root.dispose();
+  }
 }
 
 /// Public API v1 declaration for [CanvasRuntimeConfig].

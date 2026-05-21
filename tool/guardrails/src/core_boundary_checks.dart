@@ -577,6 +577,9 @@ final class _BoundaryRule {
       if (!target.startsWith(prefix)) {
         continue;
       }
+      if (_isAllowedBoundaryImport(path, target)) {
+        continue;
+      }
       yield GuardrailViolation(
         guardrailId: guardrailId,
         path: path,
@@ -584,6 +587,11 @@ final class _BoundaryRule {
       );
     }
   }
+}
+
+bool _isAllowedBoundaryImport(String path, String target) {
+  return path == 'lib/src/api/canvas_runtime.dart' &&
+      target == 'lib/src/runtime/runtime_root.dart';
 }
 
 const _runtimeRootPath = 'lib/src/runtime/runtime_root.dart';
