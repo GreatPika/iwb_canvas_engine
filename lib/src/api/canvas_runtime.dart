@@ -1,6 +1,8 @@
 // Runtime-facing public ports stay together so the package exposes one coherent
 // runtime contract instead of metric-shaped fragments.
-// ignore_for_file: type=metrics
+// This public surface imports the domain types it exposes directly; splitting
+// declarations by import count would make the runtime API harder to audit.
+// ignore_for_file: number-of-imports
 
 import 'dart:async';
 import 'dart:ui';
@@ -20,6 +22,9 @@ import 'canvas_tools.dart';
 import '../runtime/runtime_root.dart';
 
 /// Public API v1 declaration for [CanvasRuntime].
+// The facade intentionally exposes the complete runtime port set from one
+// public entrypoint; splitting it would fragment the consumer contract.
+// ignore: coupling-between-object-classes, number-of-methods
 final class CanvasRuntime {
   CanvasRuntime({
     CanvasDocument? initialDocument,
@@ -172,6 +177,9 @@ abstract interface class CanvasEditPort {
 }
 
 /// Public API v1 declaration for [CanvasEdit].
+// The edit port is a single public transaction surface, so its method list
+// stays together instead of being split by metrics.
+// ignore: number-of-methods
 abstract interface class CanvasEdit {
   CanvasDocument readDraftDocument();
   CanvasDocumentSummary get draftSummary;
@@ -225,6 +233,9 @@ abstract interface class CanvasCommandPort {
 }
 
 /// Public API v1 declaration for [CanvasSelectionPort].
+// Selection commands remain one public port so runtime implementations can
+// enforce selection ownership through a single consumer-facing contract.
+// ignore: number-of-methods
 abstract interface class CanvasSelectionPort {
   Set<CanvasElementId> get selectedElementIds;
   void setSelection(Iterable<CanvasElementId> ids);

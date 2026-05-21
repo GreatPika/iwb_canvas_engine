@@ -48,7 +48,7 @@ sequenceDiagram
     Facts-->>Supplement: selected row facts
     Supplement-->>Frame: merged ordinary and supplement records
   end
-  Note over Ordinary,Supplement: Row facts are resolved through FrameFactsPort for bounded candidate handles with structuralRevision/generation stale rejection.
+  Note over Ordinary,Supplement: Row facts are resolved through FrameFactsPort for bounded candidate handles with structuralRevision/generation/orderToken stale rejection.
   Note over Frame: Each image render record carries resourceId from a committed row fact.
 
   opt records contain image resource ids

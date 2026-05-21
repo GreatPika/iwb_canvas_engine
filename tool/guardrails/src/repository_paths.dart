@@ -2,6 +2,13 @@ import 'dart:io';
 
 String get repositoryRoot => Directory.current.absolute.path;
 
+final class GuardrailSourceFile {
+  const GuardrailSourceFile({required this.path, required this.absolutePath});
+
+  final String path;
+  final String absolutePath;
+}
+
 Iterable<File> dartFilesUnder(String relativeDirectory) {
   final root = Directory('$repositoryRoot/$relativeDirectory');
   if (!root.existsSync()) {
@@ -19,4 +26,13 @@ String relativePath(File file) {
   final prefix = '$repositoryRoot/';
 
   return path.startsWith(prefix) ? path.substring(prefix.length) : path;
+}
+
+Iterable<GuardrailSourceFile> dartSourceFilesUnder(String relativeDirectory) {
+  return dartFilesUnder(relativeDirectory).map((file) {
+    return GuardrailSourceFile(
+      path: relativePath(file),
+      absolutePath: file.absolute.path,
+    );
+  });
 }

@@ -11,7 +11,7 @@ flowchart LR
 
   subgraph FrameFactsPort["FrameFactsPort"]
     CommittedFrameFacts["Committed frame facts\ndocument/structural/bounds/\nelementVisual/background/grid revisions"]
-    RowSnapshots["Committed row snapshots\nstale structuralRevision/generation rejected"]
+    RowSnapshots["Committed row snapshots\nstale structuralRevision/generation/orderToken rejected"]
     DescriptorFacts["Descriptor facts\nresourceId + appKey descriptor + resourceRevision"]
   end
 
@@ -32,8 +32,8 @@ flowchart LR
   end
 
   subgraph Spatial["SpatialKernel"]
-    PaintIndex["Paint spatial index\ncandidate ids and generations"]
-    ShiftedCandidates["Selected supplement candidates\nquery shifted by -previewDelta"]
+    PaintIndex["Paint spatial index\ncandidate ids, generations,\nand order tokens"]
+    ShiftedCandidates["Selected supplement candidates\nquery shifted by -previewDelta\nwith order tokens"]
   end
 
   subgraph Resources["SurfaceResourceSession"]
@@ -52,8 +52,8 @@ flowchart LR
     OrdinaryPlan["Ordinary committed paint plan\ncached RenderElementRecord list"]
     OrdinaryStage["OrdinaryPaintPlanner\nordinary paint candidates\nviewport and halo"]
     SupplementStage["SelectedMoveSupplementPlanner\nper-frame selected supplement staging\npreview-shifted visibility"]
-    OrdinaryRecordBuilder["OrdinaryPaintPlanner\nordinary record builder\nresolve handles by revision/generation"]
-    SupplementRecordBuilder["SelectedMoveSupplementPlanner\nsupplement record builder\nresolve shifted handles by revision/generation"]
+    OrdinaryRecordBuilder["OrdinaryPaintPlanner\nordinary record builder\nresolve handles by revision/generation/orderToken"]
+    SupplementRecordBuilder["SelectedMoveSupplementPlanner\nsupplement record builder\nresolve shifted handles by revision/generation/orderToken"]
     FilterOrdinary["SelectedMoveSupplementPlanner\nfilter selected movable ids\nfrom ordinary stream for this frame"]
     Merge["Order-token merge\nno full-scene sort"]
     SelectionDecoration["SelectionDecorationPlanner\nselection decoration plan\nseparate from ordinary records"]
@@ -95,12 +95,12 @@ flowchart LR
   PaintPlanCache -->|"cache miss inputs"| OrdinaryStage
 
   OrdinaryStage -->|"viewport query only"| PaintIndex
-  PaintIndex -->|"candidate ids with generations"| OrdinaryStage
+  PaintIndex -->|"candidate ids with generations and order tokens"| OrdinaryStage
 
   OrdinaryStage -->|"ordinary handles"| OrdinaryRecordBuilder
   OrdinaryRecordBuilder -->|"request row facts by captured revisions"| RowSnapshots
   RowSnapshots -->|"read committed row snapshots"| Committed
-  Committed -->|"immutable row views\nstale generation rejected"| RowSnapshots
+  Committed -->|"immutable row views\nstale revision/generation/orderToken rejected"| RowSnapshots
   RowSnapshots -->|"ordinary row facts or stale rejection"| OrdinaryRecordBuilder
   OrdinaryRecordBuilder -->|"ordinary committed records"| OrdinaryPlan
   OrdinaryPlan -->|"store ordinary records only"| PaintPlanCache
@@ -110,7 +110,7 @@ flowchart LR
   CapturedFrame -->|"selection ids, selectionRevision,\nboundsRevision, selectionStyle,\nand devicePixelRatio"| SelectionDecoration
   CapturedFrame -->|"selectedMoveDelta for this frame"| SupplementStage
   SupplementStage -->|"shifted visibility query only"| ShiftedCandidates
-  ShiftedCandidates -->|"selected candidate ids with generations"| SupplementStage
+  ShiftedCandidates -->|"selected candidate ids with generations and order tokens"| SupplementStage
   SupplementStage -->|"shifted selected handles"| SupplementRecordBuilder
   SupplementRecordBuilder -->|"request selected row facts\nby captured revisions"| RowSnapshots
   RowSnapshots -->|"selected row facts or stale rejection"| SupplementRecordBuilder

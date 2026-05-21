@@ -5,30 +5,60 @@ import 'family_tables.dart';
 import 'layer_table.dart';
 
 final class ElementRegistry {
+  // The constructor materializes one committed element registry snapshot:
+  // family rows, layer rows, content order, frame order, and admitted ids must
+  // stay aligned from the same input pass instead of drifting through
+  // metric-shaped builders.
+  // ignore: halstead-volume
   ElementRegistry({
     required Iterable<CanvasElement> backgroundElements,
     required Iterable<CanvasLayer> layers,
     required Set<String> resourceIds,
-  }) : backgroundElementIds = List.unmodifiable(
-         backgroundElements.map((element) => element.id),
-       ),
-       familyTables = FamilyTables([
-         ...backgroundElements,
-         for (final layer in layers) ...layer.elements,
-       ], resourceIds: resourceIds),
-       layerTable = LayerTable(
-         layers.map(
-           (layer) => LayerRow(
-             id: layer.id,
-             elementIds: layer.elements.map((element) => element.id),
-             metadata: layer.metadata,
-           ),
-         ),
-       );
+  }) {
+    final backgroundElementList = List<CanvasElement>.unmodifiable(
+      backgroundElements,
+    );
+    final layerList = List<CanvasLayer>.unmodifiable(layers);
+    final layerRows = LayerTable(
+      layerList.map(
+        (layer) => LayerRow(
+          id: layer.id,
+          elementIds: layer.elements.map((element) => element.id),
+          metadata: layer.metadata,
+        ),
+      ),
+    );
+    final families = FamilyTables([
+      ...backgroundElementList,
+      for (final layer in layerList) ...layer.elements,
+    ], resourceIds: resourceIds);
+    final contentOrder = List<CanvasElementId>.unmodifiable([
+      for (final row in layerRows.rows)
+        for (final id in row.elementIds) id,
+    ]);
+    final frameOrder = List<CanvasElementId>.unmodifiable([
+      for (final element in backgroundElementList) element.id,
+      ...contentOrder,
+    ]);
 
-  final List<CanvasElementId> backgroundElementIds;
-  final FamilyTables familyTables;
-  final LayerTable layerTable;
+    backgroundElementIds = List<CanvasElementId>.unmodifiable(
+      backgroundElementList.map((element) => element.id),
+    );
+    familyTables = families;
+    layerTable = layerRows;
+    contentElementOrder = contentOrder;
+    frameElementOrder = frameOrder;
+    admittedElementIds = Set.unmodifiable(families.admittedElementIds);
+    admittedLayerIds = Set.unmodifiable(layerRows.admittedIds);
+  }
+
+  late final List<CanvasElementId> backgroundElementIds;
+  late final FamilyTables familyTables;
+  late final LayerTable layerTable;
+  late final List<CanvasElementId> contentElementOrder;
+  late final List<CanvasElementId> frameElementOrder;
+  late final Set<String> admittedElementIds;
+  late final Set<String> admittedLayerIds;
 
   int get elementCount {
     return backgroundElementIds.length +
@@ -38,22 +68,8 @@ final class ElementRegistry {
         );
   }
 
-  Set<String> get admittedElementIds => familyTables.admittedElementIds;
-  Set<String> get admittedLayerIds => layerTable.admittedIds;
-
   Set<CanvasElementId> get contentElementIds {
     return {for (final id in contentElementOrder) id};
-  }
-
-  List<CanvasElementId> get contentElementOrder {
-    return List.unmodifiable([
-      for (final row in layerTable.rows)
-        for (final id in row.elementIds) id,
-    ]);
-  }
-
-  List<CanvasElementId> get frameElementOrder {
-    return List.unmodifiable([...backgroundElementIds, ...contentElementOrder]);
   }
 
   Set<CanvasElementId> get selectableElementIds {
@@ -64,7 +80,13 @@ final class ElementRegistry {
     };
   }
 
-  ElementFrameFacts? elementFrameFacts(CanvasElementId id) {
+  FamilyElementFacts? elementFrameFacts(CanvasElementId id) {
     return familyTables.elementFrameFacts(id);
+  }
+
+  bool frameOrderMatches(int orderToken, CanvasElementId id) {
+    return orderToken >= 0 &&
+        orderToken < frameElementOrder.length &&
+        frameElementOrder[orderToken] == id;
   }
 }

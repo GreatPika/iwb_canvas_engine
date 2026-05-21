@@ -370,6 +370,13 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_10_runtime_data_model`, `section_15_frame_render_contract`, `section_23_tests`
 - Guardrails: `projection.only_explicit_read_paths`
 
+## test.guardrails.store_projection_checks
+
+- Path: `test/guardrails/store_projection_checks_test.dart`
+- Phases: `P4`
+- Sections: `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_23_tests`
+- Guardrails: `store.no_public_document_live_state`, `projection.only_explicit_read_paths`
+
 ## test.edit.sync_non_nested_async_stale
 
 - Path: `test/edit/sync_non_nested_async_stale_test.dart`
@@ -691,6 +698,13 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Path: `test/selection/runtime_owner_separation_test.dart`
 - Phases: `P4`, `P5`, `P6`, `P9`, `P10`
 - Sections: `section_02_architecture_model`, `section_10_runtime_data_model`, `section_23_tests`
+- Guardrails: `selection.owner_separate_from_document`
+
+## test.guardrails.selection_boundary_checks
+
+- Path: `test/guardrails/selection_boundary_checks_test.dart`
+- Phases: `P4`
+- Sections: `section_02_architecture_model`, `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_23_tests`
 - Guardrails: `selection.owner_separate_from_document`
 
 ## test.guardrails.selection_boundary_imports

@@ -50,16 +50,16 @@ sequenceDiagram
     Spatial-->>Ordinary: ordinary candidate handles with id, generation, orderToken, and structuralRevision
 
     loop for each ordinary candidate handle
-      Ordinary->>Facts: resolve handle against captured structuralRevision and generation
+      Ordinary->>Facts: resolve handle against captured structuralRevision, generation, and orderToken
       Facts->>Store: read committed row snapshot
-      alt handle generation and structuralRevision still match the captured frame
+      alt handle generation, structuralRevision, and orderToken still match the captured frame
         Store-->>Facts: immutable family row view, common paint fields, and resourceId if any
         Facts-->>Ordinary: immutable committed row facts
         Ordinary->>Ordinary: build ordinary committed RenderElementRecord
       else stale candidate
         Store-->>Facts: reject stale candidate
         Facts-->>Ordinary: stale candidate rejection
-        Ordinary->>Ordinary: skip record for stale generation or structuralRevision
+        Ordinary->>Ordinary: skip record for stale generation, structuralRevision, or orderToken
       end
     end
 
@@ -73,7 +73,7 @@ sequenceDiagram
     Supplement->>Spatial: query selected supplement using visibilityRect shifted by -selectedMoveDelta
     Spatial-->>Supplement: selected candidate handles with id, generation, orderToken, and structuralRevision
     loop for each selected supplement candidate handle
-      Supplement->>Facts: resolve handle against captured structuralRevision and generation
+      Supplement->>Facts: resolve handle against captured structuralRevision, generation, and orderToken
       Facts->>Store: read committed selected row snapshot
       Store-->>Facts: immutable selected row view or stale rejection
       alt selected row facts are current

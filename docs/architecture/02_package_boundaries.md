@@ -60,14 +60,16 @@ The new package is rooted at the repository top level:
         document_facts_port.dart
         frame_facts_port.dart
         selection_facts_port.dart
-        selection_normalization_port.dart
+        selection_membership_port.dart
       store/
         document_store_kernel.dart
         committed_document.dart
         element_registry.dart
         family_tables.dart
+        layer_table.dart
         revision_state.dart
         document_projection_cache.dart
+        resource_table.dart
       selection/
         selection_kernel.dart
       edit/

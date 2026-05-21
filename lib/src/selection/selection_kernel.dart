@@ -2,13 +2,13 @@ import 'dart:collection';
 
 import '../api/canvas_ids.dart';
 import '../runtime/selection_facts_port.dart';
-import '../runtime/selection_normalization_port.dart';
+import '../runtime/selection_membership_port.dart';
 
 final class SelectionKernel implements SelectionFactsPort {
-  SelectionKernel({required SelectionNormalizationPort normalization})
-    : _normalization = normalization;
+  SelectionKernel({required SelectionMembershipPort membership})
+    : _membership = membership;
 
-  final SelectionNormalizationPort _normalization;
+  final SelectionMembershipPort _membership;
   final LinkedHashSet<CanvasElementId> _selectedIds = LinkedHashSet();
   int _selectionRevision = 0;
 
@@ -23,7 +23,7 @@ final class SelectionKernel implements SelectionFactsPort {
   }
 
   bool setSelection(Iterable<CanvasElementId> ids) {
-    return _replaceSelection(_normalization.normalizeSelection(ids));
+    return _replaceSelection(_membership.normalizeSelection(ids));
   }
 
   bool toggleSelection(CanvasElementId id) {
@@ -33,7 +33,7 @@ final class SelectionKernel implements SelectionFactsPort {
       return _replaceSelection(next);
     }
 
-    final normalized = _normalization.normalizeSelection([id]);
+    final normalized = _membership.normalizeSelection([id]);
     if (normalized.isEmpty) {
       return false;
     }
@@ -53,7 +53,7 @@ final class SelectionKernel implements SelectionFactsPort {
 
   bool selectAll({required bool onlySelectable}) {
     return _replaceSelection(
-      _normalization.allSelectableElementIds(onlySelectable: onlySelectable),
+      _membership.selectAllElementIds(onlySelectable: onlySelectable),
     );
   }
 

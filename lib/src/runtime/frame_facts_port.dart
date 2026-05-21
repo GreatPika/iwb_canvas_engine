@@ -30,11 +30,13 @@ final class FrameElementHandle {
     required this.id,
     required this.structuralRevision,
     required this.generation,
+    required this.orderToken,
   });
 
   final CanvasElementId id;
   final int structuralRevision;
   final int generation;
+  final int orderToken;
 }
 
 final class FrameElementFacts {

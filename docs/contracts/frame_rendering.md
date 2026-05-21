@@ -107,14 +107,15 @@ Rules:
 - FrameFactsPort supplies documentRevision, structuralRevision, boundsRevision,
   elementVisualRevision, backgroundRevision, gridRevision, immutable committed
   render-row facts, immutable resource descriptor snapshots, and resourceRevision;
-- FrameFactsPort rejects stale row facts by captured structuralRevision and
-  generation before FrameEngine builds render records;
+- FrameFactsPort rejects stale row facts by captured structuralRevision,
+  generation, and orderToken before FrameEngine builds render records;
 - FrameFactsPort must not return RenderElementRecord, PaintPlan, selected
   supplement records, selection decoration plans, selection facts, or resolver
   state;
 - painters do not live-read runtime;
 - painters do not materialize CanvasDocument;
-- stale spatial candidate is rejected by structuralRevision/generation check;
+- stale spatial candidate is rejected by structuralRevision/generation/orderToken
+  check;
 - `SurfaceResourceSession` is the only image resolution boundary in paint, and
   app resolver callbacks cannot mutate runtime;
 - v1 resolver calls are synchronous and bounded by the per-frame resolver budget;
@@ -214,7 +215,7 @@ Algorithm:
 6. Query visibilityRect shifted by -previewDelta for selected supplement
    candidates.
 7. Resolve selected handles through `FrameFactsPort` against the captured
-   structuralRevision and generation.
+   structuralRevision, generation, and orderToken.
 8. If the selected row facts are current, create shifted RenderElementRecord
    instances with previewDelta for this frame only.
 9. If `FrameFactsPort` rejects a stale selected candidate, skip that candidate

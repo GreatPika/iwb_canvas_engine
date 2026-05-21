@@ -20,13 +20,6 @@ const publicApiPlaceholderAllowlist = <PublicApiPlaceholder>[
     removalCondition: 'Remove when CanvasEditPort is backed by edit core.',
   ),
   PublicApiPlaceholder(
-    declarationId: 'CanvasRuntime.selection',
-    ownerPhase: 'P10',
-    reason: 'Selection behavior is owned by the selection phase.',
-    removalCondition:
-        'Remove when CanvasSelectionPort is backed by runtime state.',
-  ),
-  PublicApiPlaceholder(
     declarationId: 'CanvasRuntime.tools',
     ownerPhase: 'P11',
     reason: 'Tool behavior is owned by draw tools.',
@@ -74,32 +67,6 @@ const publicApiPlaceholderAllowlist = <PublicApiPlaceholder>[
         'Context action request emission is owned by text request handling.',
     removalCondition:
         'Remove when text request runtime behavior is implemented.',
-  ),
-  PublicApiPlaceholder(
-    declarationId: 'CanvasRuntime.generateElementId',
-    ownerPhase: 'P4',
-    reason: 'Id generation is owned by runtime spine document ownership.',
-    removalCondition:
-        'Remove when runtime owns committed document id allocation.',
-  ),
-  PublicApiPlaceholder(
-    declarationId: 'CanvasRuntime.generateLayerId',
-    ownerPhase: 'P4',
-    reason: 'Id generation is owned by runtime spine document ownership.',
-    removalCondition:
-        'Remove when runtime owns committed document id allocation.',
-  ),
-  PublicApiPlaceholder(
-    declarationId: 'CanvasRuntime.generateResourceId',
-    ownerPhase: 'P7',
-    reason: 'Resource id generation is owned by resources and images.',
-    removalCondition: 'Remove when runtime owns resource id allocation.',
-  ),
-  PublicApiPlaceholder(
-    declarationId: 'CanvasRuntime.dispose',
-    ownerPhase: 'P4',
-    reason: 'Lifecycle behavior is owned by runtime spine.',
-    removalCondition: 'Remove when runtime disposal closes streams and state.',
   ),
   PublicApiPlaceholder(
     declarationId: 'CanvasSurface.build',

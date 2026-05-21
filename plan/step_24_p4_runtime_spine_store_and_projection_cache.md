@@ -243,9 +243,10 @@ composition, runtime-owned counters, disposed admission, `ValueNotifier` state
 publication, and public facade wiring. `DocumentStoreKernel` owns the admission
 state that backs collision-aware runtime id generation.
 `DocumentStoreKernel` owns `CommittedDocument`, `ElementRegistry`,
-`FamilyTables`, `LayerTable`, `RevisionState`, `DocumentProjectionCache`, id
-admission facts, and committed document summary facts. `SelectionKernel` owns
-selected ids and `selectionRevision`. Runtime read-port files under
+`FamilyTables`, `LayerTable`, `ResourceTable`, `RevisionState`,
+`DocumentProjectionCache`, id admission facts, and committed document summary
+facts. `SelectionKernel` owns selected ids and `selectionRevision`. Runtime
+read-port files under
 `lib/src/runtime/**` own the immutable query seams; they do not own concrete
 store or selection internals.
 Tests own executable proof, and `tool/guardrails/**` owns reusable guardrail
@@ -259,7 +260,7 @@ The primary seams are:
 CanvasRuntime public facade -> RuntimeRoot -> DocumentStoreKernel
 CanvasRuntime.readDocument -> DocumentProjectionCache -> public CanvasDocument
 RuntimeRoot -> SelectionKernel -> SelectionFactsPort
-RuntimeRoot -> SelectionKernel -> SelectionNormalizationPort
+RuntimeRoot -> SelectionKernel -> SelectionMembershipPort
 FrameEngine/later owners -> FrameFactsPort -> DocumentStoreKernel
 Later interaction/spatial/resource owners -> narrow immutable read ports
 ```
@@ -330,7 +331,7 @@ deferred broad verification instead of implemented as placeholders.
 
 | Donor id | P4 adaptation target | Slice ownership | Proof |
 |---|---|---|---|
-| `store_scene_controller_read_paths` | Adapt committed read, row/candidate resolve, descriptor lookup, and stale structuralRevision/generation rejection into store-owned immutable query-port facts; do not copy the controller facade shell. | Slice 2 for committed store facts and Slice 4 for document/frame read ports. | P2, P4 |
+| `store_scene_controller_read_paths` | Adapt committed read, row/candidate resolve, descriptor lookup, and stale structuralRevision/generation/orderToken rejection into store-owned immutable query-port facts; do not copy the controller facade shell. | Slice 2 for committed store facts and Slice 4 for document/frame read ports. | P2, P4 |
 | `dto_node_boundary_mapping` | Keep codec-owned validated DTO family mapping under the existing P3 codec boundary, and adapt only the store-side mapping from public DTO families into committed row/fact families; do not move codec ownership into runtime/store and do not copy legacy node names or runtime shapes. | Slice 2 store tables, Slice 4 read-port fact projection, and P12 codec boundary verification. | P2, P4, P12 |
 | `dto_document_helpers` | Adapt pure document summary/projection and selection normalization helper behavior under the store and selection owners; do not copy ownership that conflicts with the store/selection/edit split. | Slice 2 document summary/projection and Slice 3 selection normalization. | P2, P3 |
 
@@ -458,8 +459,27 @@ deferred broad verification instead of implemented as placeholders.
 |---|---|---|
 | `core.single_runtime_root` | Primary `resolved_element_identity`, secondary `parsed_ast_directive` | Prove production declarations resolve to exactly one `RuntimeRoot` owner after composition. |
 | `store.no_public_document_live_state` | Primary `behavioral_seam_test`, secondary `resolved_element_identity` | Prove store/public projection behavior and block concrete live public document storage as committed state. |
-| `selection.owner_separate_from_document` | Primary `resolved_element_identity`, secondary `behavioral_seam_test` | Prove selected ids and `selectionRevision` are selection-owned and not stored in committed document/projection/schema facts. |
+| `selection.owner_separate_from_document` | Primary `resolved_element_identity`, secondary `behavioral_seam_test` | Prove selection-named state and selection owner types stay selection-owned; ordinary store element-id facts remain allowed only when they are not selection state. |
 | `projection.only_explicit_read_paths` | Primary `behavioral_seam_test`, secondary `resolved_element_identity` and `parsed_ast_directive` | Prove projection cache builds only through explicit P4 read paths and add structural protection against bypass calls where P4 owners exist. |
+
+P4 guardrails must apply these patterns as separate proof layers, not as one
+substitute for another:
+
+- `behavioral_seam_test` belongs in owner-level tests under `test/runtime/**`,
+  `test/store/**`, or `test/selection/**`; it proves runtime behavior, cache
+  counters, publication, rejection, and ownership effects at the seam.
+- `resolved_element_identity` belongs in reusable analyzer-backed checks under
+  `tool/guardrails/**`; for P4 it is a simple structural production scan over
+  current `lib/**`, not a custom Dart flow/type analyzer. It blocks direct
+  `CanvasDocument` state declarations, direct projection bypasses, and direct
+  selection-owner leakage required by the Step 24 obligations.
+- Negative fixture tests under `test/guardrails/**` prove the analyzer-backed
+  checker catches representative bad shapes. They do not replace the production
+  scan.
+- `tool/guardrails/src/guardrail_executor.dart` remains a dispatcher: for every
+  P4 guardrail id that has both seam tests and analyzer checks, the runner must
+  execute the selected proof tests and then run the production structural scan
+  before reporting success.
 
 ### Test Form Selection
 
@@ -475,7 +495,7 @@ deferred broad verification instead of implemented as placeholders.
 | `test.store.public_document_is_projection_only` | `test/store/public_document_is_projection_only_test.dart` | In-package unit and behavior test | Prove public document DTOs are projection-only and cannot mutate committed store state. |
 | `test.selection.runtime_owner_separation` | `test/selection/runtime_owner_separation_test.dart` | In-package unit and behavior test | Prove P4 selection owner separation, `selectionRevision` independence from document revision, and no projection/cache ownership of selected ids. |
 | P4 contract-local read-port surface proof | `test/guardrails/runtime_read_port_surface_test.dart` | Guardrail test | Prove P4-created read ports, especially `FrameFactsPort`, expose immutable facts only and do not leak public projections, store tables, drafts, mutation APIs, selection facts, or frame render models. |
-| P4 contract-local read-port committed facts proof | `test/runtime/runtime_read_ports_test.dart` | In-package unit and behavior test | Prove document, frame, and selection read/query ports return committed facts from `DocumentStoreKernel` and `SelectionKernel`, including frame capture revisions, row resolution, descriptor snapshots, and stale structuralRevision/generation rejection where P4 facts exist. |
+| P4 contract-local read-port committed facts proof | `test/runtime/runtime_read_ports_test.dart` | In-package unit and behavior test | Prove document, frame, and selection read/query ports return committed facts from `DocumentStoreKernel` and `SelectionKernel`, including frame capture revisions, row resolution, descriptor snapshots, and stale structuralRevision/generation/orderToken rejection where P4 facts exist. |
 | `test.guardrails.blocking_suite` | `test/guardrails/blocking_suite_test.dart` | Guardrail test | Prove new P4 executable guardrail ids are represented in runner inventory and selectable. |
 
 ### P1. Runtime State, Config, And Lifecycle Proof
@@ -536,7 +556,7 @@ document/selection read ports expose immutable facts without `CanvasDocument`,
 store tables, drafts, mutation APIs, selection facts on the frame port, or frame
 render models. The same proof shows P4 read ports return committed facts from
 store/selection owners, including frame-facing revisions, row resolution,
-descriptor snapshots, and stale structuralRevision/generation rejection where
+descriptor snapshots, and stale structuralRevision/generation/orderToken rejection where
 P4 facts exist.
 
 ### P5. Runtime Root Guardrail Proof
@@ -747,6 +767,8 @@ SEAM_MIGRATION
   family-specific compact row tables mapped from public DTO families.
 - Proposed layer table owner: `lib/src/store/layer_table.dart` — own content
   layer membership and order facts.
+- Proposed resource table owner: `lib/src/store/resource_table.dart` — own
+  resource admission, admitted resource ids, and committed resource DTO copying.
 - Proposed revision owner: `lib/src/store/revision_state.dart` — own private
   committed document revision facts and public projection revision.
 - Proposed projection owner: `lib/src/store/document_projection_cache.dart` —
@@ -834,10 +856,10 @@ SEAM_MIGRATION
 - Proposed selection read seam: `lib/src/runtime/selection_facts_port.dart` —
   expose immutable selection facts for runtime and future owners without
   exposing `SelectionKernel` internals.
-- Proposed selection normalization seam:
-  `lib/src/runtime/selection_normalization_port.dart` — expose runtime-owned
-  normalization requests to `SelectionKernel` without making document state or
-  selected-order cache a second source of truth.
+- Proposed selection membership seam:
+  `lib/src/runtime/selection_membership_port.dart` — expose runtime-owned
+  normalization and select-all membership requests to `SelectionKernel` without
+  making document state or selected-order cache a second source of truth.
 - Verify-only donor registry: `docs/_registry/donors.yaml` — confirms
   `dto_document_helpers` is an allowed P4/P5 adaptation for pure selection
   helper behavior, while ownership that conflicts with the store/selection/edit
@@ -918,7 +940,7 @@ SEAM_MIGRATION
 - Read-port committed facts proof: `test/runtime/runtime_read_ports_test.dart`
   — verify document, frame, and selection read/query ports return committed
   facts from their owners, including frame capture revisions, row resolution,
-  descriptor snapshots, and stale structuralRevision/generation rejection where
+  descriptor snapshots, and stale structuralRevision/generation/orderToken rejection where
   P4 facts exist.
 
 #### Change

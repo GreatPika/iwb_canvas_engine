@@ -4,10 +4,11 @@ import 'package:test/test.dart';
 
 import '../../tool/guardrails/src/guardrail_executor.dart';
 import '../../tool/guardrails/src/guardrail_registry.dart';
+import '../../tool/guardrails/src/guardrail_violation.dart';
 
 // The runner inventory proof stays in one suite so expected ids, suite routing,
 // and command selection cannot drift through separate metric-shaped tests.
-// ignore: metrics
+// ignore: halstead-volume, maintainability-index, source-lines-of-code
 void main() {
   test(
     'runner inventories the executable blocking hard-boundary suite',
@@ -88,6 +89,17 @@ void main() {
       'test/api_contract/public_readable_union_variants_test.dart': 1,
     });
   });
+  for (final scanCase in _p4StructuralScanCases) {
+    test('${scanCase.id} runs proof tests before structural scan', () async {
+      await expectLater(_expectProofBeforeStructuralScan(scanCase), completes);
+    });
+  }
+  test('P4 guardrails all have runner-level structural scan proof', () {
+    expect(
+      _p4StructuralScanCases.map((scanCase) => scanCase.id).toSet(),
+      _p4StructuralGuardrailIds,
+    );
+  });
   test('unknown or empty suite selection fails', () async {
     expect(await _badSuiteSelectionsFail(), isTrue);
   });
@@ -157,6 +169,54 @@ bool _setEquals(Iterable<String> left, Iterable<String> right) {
   return leftSet.length == rightSet.length && leftSet.containsAll(rightSet);
 }
 
+Future<void> _expectProofBeforeStructuralScan(
+  _StructuralScanCase scanCase,
+) async {
+  final proofPaths = <String>[];
+  List<String>? pathsObservedByStructuralScan;
+  var violationCreated = false;
+
+  final result = await runGuardrailsWithProofRunner(
+    [scanCase.id],
+    runDartTest: (_, path) async {
+      proofPaths.add(path);
+      violationCreated = true;
+
+      return 0;
+    },
+    violationChecks: {
+      scanCase.id: () async {
+        pathsObservedByStructuralScan = List.of(proofPaths);
+
+        return [
+          GuardrailViolation(
+            guardrailId: scanCase.id,
+            path: scanCase.violationPath,
+            message: 'test structural violation',
+          ),
+        ];
+      },
+    },
+  );
+
+  expect(result.exitCode, 1);
+  expect(proofPaths, scanCase.proofPaths);
+  expect(pathsObservedByStructuralScan, scanCase.proofPaths);
+  expect(violationCreated, isTrue);
+}
+
+final class _StructuralScanCase {
+  const _StructuralScanCase({
+    required this.id,
+    required this.proofPaths,
+    required this.violationPath,
+  });
+
+  final String id;
+  final List<String> proofPaths;
+  final String violationPath;
+}
+
 const _expectedApiIds = {
   'api.integration_surface_complete',
   'api.no_legacy_public_types',
@@ -203,6 +263,39 @@ const _expectedStoreIds = {
 const _expectedProjectionIds = {'projection.only_explicit_read_paths'};
 
 const _expectedSelectionIds = {'selection.owner_separate_from_document'};
+
+const _p4StructuralGuardrailIds = {
+  'store.no_public_document_live_state',
+  'projection.only_explicit_read_paths',
+  'selection.owner_separate_from_document',
+};
+
+const _p4StructuralScanCases = [
+  _StructuralScanCase(
+    id: 'store.no_public_document_live_state',
+    proofPaths: [
+      'test/store/public_document_is_projection_only_test.dart',
+      'test/guardrails/store_projection_checks_test.dart',
+    ],
+    violationPath: 'lib/src/store/bad_runner_live_document.dart',
+  ),
+  _StructuralScanCase(
+    id: 'projection.only_explicit_read_paths',
+    proofPaths: [
+      'test/store/no_projection_hot_path_test.dart',
+      'test/guardrails/store_projection_checks_test.dart',
+    ],
+    violationPath: 'lib/src/runtime/bad_runner_projection.dart',
+  ),
+  _StructuralScanCase(
+    id: 'selection.owner_separate_from_document',
+    proofPaths: [
+      'test/selection/runtime_owner_separation_test.dart',
+      'test/guardrails/selection_boundary_checks_test.dart',
+    ],
+    violationPath: 'lib/src/runtime/bad_runner_selection.dart',
+  ),
+];
 
 const _expectedBlockingHardBoundaryIds = {
   ..._expectedApiIds,

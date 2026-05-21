@@ -368,7 +368,7 @@ Guardrails extracted from split section 22.
 
 - Rule: `CanvasDocument` projection is built only by read/encode/test/tool or explicit draft-read paths, never pointer/hit/paint hot paths
 - Sections: `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.store.read_document_projection`, `test.store.no_projection_hot_path`
+- Tests: `test.store.read_document_projection`, `test.store.no_projection_hot_path`, `test.guardrails.store_projection_checks`
 
 ## frame.committed_facts_via_frame_facts_port
 
@@ -410,13 +410,13 @@ Guardrails extracted from split section 22.
 
 - Rule: DocumentStoreKernel stores compact committed tables, not a live mutable `CanvasDocument`
 - Sections: `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.store.public_document_is_projection_only`
+- Tests: `test.store.public_document_is_projection_only`, `test.guardrails.store_projection_checks`
 
 ## selection.owner_separate_from_document
 
 - Rule: selected ids and selectionRevision are owned by the internal selection owner, not DocumentStoreKernel, CommittedDocument, CanvasDocument projection, schema v1, or public DTO state
 - Sections: `section_02_architecture_model`, `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.selection.runtime_owner_separation`
+- Tests: `test.selection.runtime_owner_separation`, `test.guardrails.selection_boundary_checks`
 
 ## surface.pointer_samples_normalized_before_runtime
 

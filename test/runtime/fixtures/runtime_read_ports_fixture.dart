@@ -48,6 +48,7 @@ void _verifyFrameElementFacts(RuntimeRoot root) {
 
   final handles = frame.elementHandles(revisions.structuralRevision);
   _verifyFrameHandles(handles);
+  expect(frame.elementHandles(revisions.structuralRevision + 1), isEmpty);
   _verifyResolvedFrameElement(frame, handles[1]);
   _verifyStaleFrameHandle(frame, handles[1]);
 }
@@ -91,6 +92,7 @@ void _verifyStaleFrameHandle(FrameFactsPort frame, FrameElementHandle handle) {
       id: handle.id,
       structuralRevision: handle.structuralRevision + 1,
       generation: handle.generation,
+      orderToken: handle.orderToken,
     ),
   );
   expect(stale, isNull);
@@ -99,9 +101,19 @@ void _verifyStaleFrameHandle(FrameFactsPort frame, FrameElementHandle handle) {
       id: handle.id,
       structuralRevision: handle.structuralRevision,
       generation: handle.generation + 1,
+      orderToken: handle.orderToken,
     ),
   );
   expect(staleGeneration, isNull);
+  final staleOrderToken = frame.resolveElement(
+    FrameElementHandle(
+      id: handle.id,
+      structuralRevision: handle.structuralRevision,
+      generation: handle.generation,
+      orderToken: handle.orderToken + 1,
+    ),
+  );
+  expect(staleOrderToken, isNull);
 }
 
 void _verifyResourceDescriptorFacts(RuntimeRoot root) {

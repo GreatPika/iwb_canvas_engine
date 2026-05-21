@@ -1,7 +1,9 @@
 // RuntimeRoot is the composition root for public facade ports, store facts, and
 // selection state; its imports reflect owned seams that are meant to meet here
 // instead of being hidden behind metric-only wrapper files.
-// ignore_for_file: type=metrics
+// The composition root directly names each owned seam so dependency direction is
+// visible at the facade boundary.
+// ignore_for_file: number-of-imports
 
 import 'dart:ui';
 
@@ -16,8 +18,11 @@ import 'document_facts_port.dart';
 import 'frame_facts_port.dart';
 import 'runtime_config.dart';
 import 'selection_facts_port.dart';
-import 'selection_normalization_port.dart';
+import 'selection_membership_port.dart';
 
+// RuntimeRoot is intentionally the one place where public runtime behavior,
+// store read facts, and selection ownership meet.
+// ignore: coupling-between-object-classes, number-of-methods
 final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   RuntimeRoot({
     required CanvasDocument initialDocument,
@@ -30,7 +35,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   RuntimeRoot._({required DocumentStoreKernel store, required this.config})
     : _store = store,
       _selection = SelectionKernel(
-        normalization: _StoreSelectionNormalization(store),
+        membership: _StoreSelectionMembership(store),
       ),
       _state = ValueNotifier<CanvasRuntimeState>(_runtimeState(store, null));
 
@@ -105,17 +110,22 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
           id: handle.id,
           structuralRevision: handle.structuralRevision,
           generation: handle.generation,
+          orderToken: handle.orderToken,
         ),
     ]);
   }
 
   @override
+  // The resolver copies every frame fact field explicitly so the public read
+  // port cannot accidentally expose the store-owned fact object.
+  // ignore: halstead-volume, source-lines-of-code
   FrameElementFacts? resolveElement(FrameElementHandle handle) {
     final facts = _store.resolveElement(
       StoreElementHandle(
         id: handle.id,
         structuralRevision: handle.structuralRevision,
         generation: handle.generation,
+        orderToken: handle.orderToken,
       ),
     );
     if (facts == null) {
@@ -261,8 +271,8 @@ CanvasRuntimeState _runtimeState(
   );
 }
 
-final class _StoreSelectionNormalization implements SelectionNormalizationPort {
-  const _StoreSelectionNormalization(this.store);
+final class _StoreSelectionMembership implements SelectionMembershipPort {
+  const _StoreSelectionMembership(this.store);
 
   final DocumentStoreKernel store;
 
@@ -272,7 +282,7 @@ final class _StoreSelectionNormalization implements SelectionNormalizationPort {
   }
 
   @override
-  Set<CanvasElementId> allSelectableElementIds({required bool onlySelectable}) {
+  Set<CanvasElementId> selectAllElementIds({required bool onlySelectable}) {
     return onlySelectable
         ? store.selectableElementIds
         : store.contentElementIds;
@@ -282,7 +292,7 @@ final class _StoreSelectionNormalization implements SelectionNormalizationPort {
 // The public selection port is one interface; keeping its adapter whole makes
 // unsupported later-phase commands and selection-only commands auditable
 // together instead of scattering facade behavior across metric-shaped classes.
-// ignore: metrics
+// ignore: number-of-methods
 final class _RuntimeSelectionPort implements CanvasSelectionPort {
   const _RuntimeSelectionPort(this.root);
 

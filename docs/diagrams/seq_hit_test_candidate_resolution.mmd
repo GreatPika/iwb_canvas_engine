@@ -26,7 +26,7 @@ sequenceDiagram
     loop handles in reverse layer order and reverse element order
       Note over Interaction: orderToken is the committed ordering fact used to preserve hit priority.
       Interaction->>ReadPort: resolve hit candidate handle
-      ReadPort->>Store: resolve handle by id, generation, structuralRevision
+      ReadPort->>Store: resolve handle by id, generation, orderToken, structuralRevision
       alt candidate is stale
         Store-->>ReadPort: stale candidate rejected
         ReadPort-->>Interaction: stale candidate rejected

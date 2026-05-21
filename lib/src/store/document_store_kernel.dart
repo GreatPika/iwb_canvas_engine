@@ -5,24 +5,37 @@ import '../api/canvas_element.dart';
 import '../api/canvas_geometry.dart';
 import '../api/canvas_ids.dart';
 import '../api/canvas_metadata.dart';
-import '../api/canvas_resource.dart';
 import 'committed_document.dart';
 import 'document_projection_cache.dart';
 import 'family_tables.dart';
+import 'resource_table.dart';
 
 // DocumentStoreKernel is the single owner for committed document facts, read
 // projection, id admission, and selection normalization inputs; splitting these
 // accessors would obscure the shared committed-state source of truth.
-// ignore: metrics
+// ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class DocumentStoreKernel {
   DocumentStoreKernel(CanvasDocument initialDocument)
-    : _document = CommittedDocument(initialDocument);
+    : _document = CommittedDocument(initialDocument) {
+    _elementIds = _IdAdmission(
+      prefix: 'e',
+      admittedIds: _document.admittedElementIds,
+    );
+    _layerIds = _IdAdmission(
+      prefix: 'l',
+      admittedIds: _document.admittedLayerIds,
+    );
+    _resourceIds = _IdAdmission(
+      prefix: 'r',
+      admittedIds: _document.admittedResourceIds,
+    );
+  }
 
   final CommittedDocument _document;
   final DocumentProjectionCache _projectionCache = DocumentProjectionCache();
-  final _IdAdmission _elementIds = _IdAdmission(prefix: 'e');
-  final _IdAdmission _layerIds = _IdAdmission(prefix: 'l');
-  final _IdAdmission _resourceIds = _IdAdmission(prefix: 'r');
+  late final _IdAdmission _elementIds;
+  late final _IdAdmission _layerIds;
+  late final _IdAdmission _resourceIds;
 
   CanvasDocument readDocument() => _projectionCache.projectionFor(_document);
 
@@ -44,12 +57,17 @@ final class DocumentStoreKernel {
   }
 
   List<StoreElementHandle> elementHandles(int structuralRevision) {
+    if (structuralRevision != _document.revisions.structuralRevision) {
+      return const [];
+    }
+
     return List.unmodifiable([
       for (final indexed in _document.elements.frameElementOrder.indexed)
         StoreElementHandle(
           id: indexed.$2,
           structuralRevision: structuralRevision,
           generation: 0,
+          orderToken: indexed.$1,
         ),
     ]);
   }
@@ -63,32 +81,18 @@ final class DocumentStoreKernel {
     if (facts == null) {
       return null;
     }
-    final orderToken = _document.elements.frameElementOrder.indexOf(handle.id);
-    if (orderToken < 0) {
+    if (!_document.elements.frameOrderMatches(handle.orderToken, handle.id)) {
       return null;
     }
 
-    return StoreElementFacts.fromFrameFacts(facts, orderToken: orderToken);
+    return StoreElementFacts.fromFamilyFacts(
+      facts,
+      orderToken: handle.orderToken,
+    );
   }
 
   StoreResourceDescriptorFacts? resourceDescriptor(CanvasResourceId id) {
-    for (final resource in _document.resources) {
-      if (resource.id != id) {
-        continue;
-      }
-      final source = resource.source;
-      if (resource is CanvasImageResource &&
-          source is CanvasAppKeyResourceSource) {
-        return StoreResourceDescriptorFacts(
-          id: resource.id,
-          appKey: source.key,
-          resourceRevision: _document.revisions.resourceRevision,
-          metadata: resource.metadata,
-        );
-      }
-    }
-
-    return null;
+    return _document.resourceDescriptor(id);
   }
 
   Set<CanvasElementId> normalizeSelection(Iterable<CanvasElementId> ids) {
@@ -101,17 +105,15 @@ final class DocumentStoreKernel {
   }
 
   CanvasElementId generateElementId() {
-    return CanvasElementId(_elementIds.nextValue(_document.admittedElementIds));
+    return CanvasElementId(_elementIds.nextValue());
   }
 
   CanvasLayerId generateLayerId() {
-    return CanvasLayerId(_layerIds.nextValue(_document.admittedLayerIds));
+    return CanvasLayerId(_layerIds.nextValue());
   }
 
   CanvasResourceId generateResourceId() {
-    return CanvasResourceId(
-      _resourceIds.nextValue(_document.admittedResourceIds),
-    );
+    return CanvasResourceId(_resourceIds.nextValue());
   }
 }
 
@@ -120,11 +122,13 @@ final class StoreElementHandle {
     required this.id,
     required this.structuralRevision,
     required this.generation,
+    required this.orderToken,
   });
 
   final CanvasElementId id;
   final int structuralRevision;
   final int generation;
+  final int orderToken;
 }
 
 final class StoreElementFacts {
@@ -172,9 +176,9 @@ final class StoreElementFacts {
   // This mapper intentionally lists every immutable row field crossing from the
   // family tables into the store fact; splitting it would make the read-port
   // contract harder to audit.
-  // ignore: metrics
-  factory StoreElementFacts.fromFrameFacts(
-    ElementFrameFacts facts, {
+  // ignore: halstead-volume, source-lines-of-code
+  factory StoreElementFacts.fromFamilyFacts(
+    FamilyElementFacts facts, {
     required int orderToken,
   }) {
     return StoreElementFacts(
@@ -259,35 +263,21 @@ final class StoreElementFacts {
   final double? thickness;
 }
 
-final class StoreResourceDescriptorFacts {
-  const StoreResourceDescriptorFacts({
-    required this.id,
-    required this.appKey,
-    required this.resourceRevision,
-    required this.metadata,
-  });
-
-  final CanvasResourceId id;
-  final String appKey;
-  final int resourceRevision;
-  final CanvasMetadata metadata;
-}
-
 final class _IdAdmission {
-  _IdAdmission({required this.prefix});
+  _IdAdmission({required this.prefix, required Iterable<String> admittedIds})
+    : _reserved = Set.of(admittedIds);
 
   final String prefix;
-  final Set<String> _generated = {};
+  final Set<String> _reserved;
   int _next = 0;
 
-  String nextValue(Set<String> committedIds) {
+  String nextValue() {
     while (true) {
       final candidate = '$prefix$_next';
       _next += 1;
-      if (committedIds.contains(candidate) || _generated.contains(candidate)) {
+      if (!_reserved.add(candidate)) {
         continue;
       }
-      _generated.add(candidate);
 
       return candidate;
     }

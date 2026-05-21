@@ -567,7 +567,7 @@ behavioral tests, and the required guardrail list remains owned by
   tables, `DocumentProjectionCache`, drafts, or public projection internals
   for frame capture, row resolution, or descriptor lookup;
 - proves frame committed facts, immutable row snapshots with stale
-  structuralRevision/generation rejection, immutable descriptor snapshots,
+  structuralRevision/generation/orderToken rejection, immutable descriptor snapshots,
   and `resourceRevision` are obtained through `FrameFactsPort`;
 - proves `FrameFactsPort` does not expose frame-owned render models,
   selection facts, resolver state, mutation APIs, or public document

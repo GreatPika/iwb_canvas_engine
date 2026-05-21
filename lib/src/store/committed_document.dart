@@ -1,28 +1,30 @@
 import '../api/canvas_document.dart';
-import '../api/canvas_errors.dart';
+import '../api/canvas_ids.dart';
 import '../api/canvas_metadata.dart';
-import '../api/canvas_resource.dart';
 import 'element_registry.dart';
-import 'family_tables.dart';
 import 'revision_state.dart';
+import 'resource_table.dart';
 
 final class CommittedDocument {
   factory CommittedDocument(CanvasDocument document) {
-    final resources = List<CanvasResource>.unmodifiable(
-      _admitResources(document.resources),
+    const revisions = RevisionState();
+    final resourceTable = ResourceTable(
+      document.resources,
+      resourceRevision: revisions.resourceRevision,
     );
 
     return CommittedDocument._(
       camera: document.camera,
       background: document.background,
       palette: document.palette,
-      resources: resources,
       elements: ElementRegistry(
         backgroundElements: document.backgroundElements,
         layers: document.layers,
-        resourceIds: {for (final resource in resources) resource.id.value},
+        resourceIds: resourceTable.admittedIds,
       ),
       metadata: document.metadata,
+      resourceTable: resourceTable,
+      revisions: revisions,
     );
   }
 
@@ -30,47 +32,33 @@ final class CommittedDocument {
     required this.camera,
     required this.background,
     required this.palette,
-    required this.resources,
     required this.elements,
     required this.metadata,
+    required this.resourceTable,
+    required this.revisions,
   });
 
   final CanvasCamera camera;
   final CanvasBackground background;
   final CanvasPalette palette;
-  final List<CanvasResource> resources;
   final ElementRegistry elements;
   final CanvasMetadata metadata;
-  final RevisionState revisions = const RevisionState();
+  final ResourceTable resourceTable;
+  final RevisionState revisions;
 
   CanvasDocumentSummary get summary {
     return CanvasDocumentSummary(
       elementCount: elements.elementCount,
       layerCount: elements.layerTable.rows.length,
-      resourceCount: resources.length,
+      resourceCount: resourceTable.rows.length,
     );
   }
 
   Set<String> get admittedElementIds => elements.admittedElementIds;
   Set<String> get admittedLayerIds => elements.admittedLayerIds;
-  Set<String> get admittedResourceIds {
-    return {for (final resource in resources) resource.id.value};
-  }
-}
+  Set<String> get admittedResourceIds => resourceTable.admittedIds;
 
-List<CanvasResource> _admitResources(Iterable<CanvasResource> resources) {
-  final admittedIds = <String>{};
-  final admittedResources = <CanvasResource>[];
-  for (final resource in resources) {
-    if (!admittedIds.add(resource.id.value)) {
-      throw CanvasDataException(
-        code: CanvasDataErrorCode.duplicateResourceId,
-        message: 'duplicate resource id.',
-        path: 'resources.id',
-      );
-    }
-    admittedResources.add(copyResource(resource));
+  StoreResourceDescriptorFacts? resourceDescriptor(CanvasResourceId id) {
+    return resourceTable.descriptors[id];
   }
-
-  return admittedResources;
 }

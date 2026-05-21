@@ -7,9 +7,12 @@ import 'public_api_checks.dart';
 import 'public_api_contract_checks.dart';
 import 'public_api_declaration_checks.dart';
 import 'public_api_import_cycle_checks.dart';
+import 'selection_boundary_checks.dart';
+import 'store_projection_checks.dart';
 
 typedef GuardrailProofRunner =
     Future<int> Function(String guardrailId, String path);
+typedef GuardrailViolationRunner = Future<List<GuardrailViolation>> Function();
 
 final class GuardrailRoute {
   const GuardrailRoute._({required this.kind, required this.target});
@@ -43,9 +46,11 @@ Future<GuardrailRunResult> runGuardrails(Iterable<String> ids) {
 Future<GuardrailRunResult> runGuardrailsWithProofRunner(
   Iterable<String> ids, {
   required GuardrailProofRunner runDartTest,
+  Map<String, GuardrailViolationRunner>? violationChecks,
 }) async {
   final ran = <String>[];
   final proofExitCodes = <String, Future<int>>{};
+  final structuralChecks = violationChecks ?? _violationChecks;
 
   for (final id in ids) {
     ran.add(id);
@@ -53,6 +58,7 @@ Future<GuardrailRunResult> runGuardrailsWithProofRunner(
       id,
       proofExitCodes: proofExitCodes,
       runDartTest: runDartTest,
+      violationChecks: structuralChecks,
     );
     if (exitCode != 0) {
       return GuardrailRunResult(ranGuardrailIds: ran, exitCode: exitCode);
@@ -83,6 +89,7 @@ Future<int> _runGuardrail(
   String id, {
   required Map<String, Future<int>> proofExitCodes,
   required GuardrailProofRunner runDartTest,
+  required Map<String, GuardrailViolationRunner> violationChecks,
 }) async {
   final proofPath = _testProofPaths[id];
   if (proofPath != null) {
@@ -97,10 +104,15 @@ Future<int> _runGuardrail(
       }
     }
 
+    final violationCheck = violationChecks[id];
+    if (violationCheck != null) {
+      return _reportViolations(id, await violationCheck());
+    }
+
     return 0;
   }
 
-  final violationCheck = _violationChecks[id];
+  final violationCheck = violationChecks[id];
   if (violationCheck != null) {
     return _reportViolations(id, await violationCheck());
   }
@@ -196,9 +208,11 @@ const _testProofPaths = {
   ],
   'store.no_public_document_live_state': [
     'test/store/public_document_is_projection_only_test.dart',
+    'test/guardrails/store_projection_checks_test.dart',
   ],
   'projection.only_explicit_read_paths': [
     'test/store/no_projection_hot_path_test.dart',
+    'test/guardrails/store_projection_checks_test.dart',
   ],
   'selection.owner_separate_from_document': [
     'test/selection/runtime_owner_separation_test.dart',
@@ -206,8 +220,7 @@ const _testProofPaths = {
   ],
 };
 
-final Map<String, Future<List<GuardrailViolation>> Function()>
-_violationChecks = {
+final Map<String, GuardrailViolationRunner> _violationChecks = {
   'api.no_legacy_public_types': checkNoLegacyPublicTypes,
   'api.public_exports_complete': checkPublicExportsComplete,
   'api.public_types_complete': checkPublicTypesComplete,
@@ -218,6 +231,9 @@ _violationChecks = {
   'api.no_undefined_public_type_references':
       checkNoUndefinedPublicTypeReferences,
   'core.single_runtime_root': () async => checkSingleRuntimeRoot(),
+  'store.no_public_document_live_state': checkNoPublicDocumentLiveState,
+  'projection.only_explicit_read_paths': checkProjectionOnlyExplicitReadPaths,
+  'selection.owner_separate_from_document': checkSelectionOwnerSeparation,
 };
 
 const _structuralDescriptions = {
@@ -231,6 +247,12 @@ const _structuralDescriptions = {
   'api.no_undefined_public_type_references':
       'resolved undefined public type reference check',
   'core.single_runtime_root': 'single runtime root declaration check',
+  'store.no_public_document_live_state':
+      'resolved public document live-state check',
+  'projection.only_explicit_read_paths':
+      'resolved public projection read-path check',
+  'selection.owner_separate_from_document':
+      'resolved selection ownership boundary check',
 };
 
 const _coreBoundaryIds = {

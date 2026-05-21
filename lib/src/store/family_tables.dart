@@ -2,15 +2,16 @@ import 'dart:ui';
 
 // Family-specific row tables stay together so admission and projection cannot
 // drift across element kinds; splitting them would obscure the shared id owner.
-// ignore_for_file: type=metrics
 
 import '../api/canvas_element.dart';
 import '../api/canvas_errors.dart';
 import '../api/canvas_geometry.dart';
 import '../api/canvas_ids.dart';
 import '../api/canvas_metadata.dart';
-import '../api/canvas_resource.dart';
 
+// The family tables are the single admission and projection owner for all
+// element kinds; splitting by kind would reintroduce cross-table drift.
+// ignore: coupling-between-object-classes, weighted-methods-per-class
 final class FamilyTables {
   FamilyTables(
     Iterable<CanvasElement> elements, {
@@ -32,6 +33,9 @@ final class FamilyTables {
   final Map<String, LineRow> lineRows;
   final Map<String, RectRow> rectRows;
 
+  // The lookup deliberately checks every family table in one place so missing
+  // ids fail at the caller-owned admission boundary.
+  // ignore: cyclomatic-complexity
   CanvasElement elementById(String id) {
     return imageRows[id]?.toElement() ??
         pathRows[id]?.toElement() ??
@@ -58,7 +62,10 @@ final class FamilyTables {
     return common != null && common.isVisible && common.isSelectable;
   }
 
-  ElementFrameFacts? elementFrameFacts(CanvasElementId id) {
+  // Frame fact lookup has to preserve the same family ordering as admission and
+  // projection to avoid divergent element-kind behavior.
+  // ignore: cyclomatic-complexity
+  FamilyElementFacts? elementFrameFacts(CanvasElementId id) {
     final value = id.value;
 
     return _imageFrameFacts(value) ??
@@ -72,7 +79,7 @@ final class FamilyTables {
         _commonFrameFacts(rectRows[value]?.common, CanvasElementKind.rect);
   }
 
-  ElementFrameFacts? _imageFrameFacts(String id) {
+  FamilyElementFacts? _imageFrameFacts(String id) {
     final row = imageRows[id];
     if (row == null) {
       return null;
@@ -85,7 +92,10 @@ final class FamilyTables {
     );
   }
 
-  ElementFrameFacts? _commonFrameFacts(
+  // This is the single element-family materialization point; extracting per
+  // field would duplicate table lookup rules and hide kind-specific fallbacks.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
+  FamilyElementFacts? _commonFrameFacts(
     ElementCommonRow? common,
     CanvasElementKind kind, {
     CanvasResourceId? resourceId,
@@ -94,7 +104,7 @@ final class FamilyTables {
       return null;
     }
 
-    return ElementFrameFacts(
+    return FamilyElementFacts(
       id: common.id,
       kind: kind,
       revision: common.revision,
@@ -149,6 +159,8 @@ final class FamilyTables {
     );
   }
 
+  // Common-row lookup mirrors the admitted family order in one explicit list.
+  // ignore: cyclomatic-complexity
   ElementCommonRow? _commonById(String id) {
     return imageRows[id]?.common ??
         pathRows[id]?.common ??
@@ -159,8 +171,8 @@ final class FamilyTables {
   }
 }
 
-final class ElementFrameFacts {
-  ElementFrameFacts({
+final class FamilyElementFacts {
+  FamilyElementFacts({
     required this.id,
     required this.kind,
     required this.revision,
@@ -239,6 +251,9 @@ final class ElementFrameFacts {
   final double? thickness;
 }
 
+// Admission stores every family table together so duplicate id detection and
+// row insertion remain one atomic step.
+// ignore: coupling-between-object-classes
 final class _AdmittedRows {
   final Map<String, ImageRow> imageRows = {};
   final Map<String, PathRow> pathRows = {};
@@ -547,17 +562,4 @@ final class RectRow {
       metadata: common.metadata,
     );
   }
-}
-
-CanvasResource copyResource(CanvasResource resource) {
-  return switch (resource) {
-    CanvasImageResource() => CanvasImageResource(
-      id: resource.id,
-      source: resource.source,
-      mimeType: resource.mimeType,
-      contentHash: resource.contentHash,
-      byteLength: resource.byteLength,
-      metadata: resource.metadata,
-    ),
-  };
 }

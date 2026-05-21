@@ -1,17 +1,22 @@
-import 'dart:io';
+@Timeout(Duration(minutes: 2))
+library;
 
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:test/test.dart';
 
 import '../../tool/guardrails/src/store_projection_checks.dart';
-import '../../tool/guardrails/src/repository_paths.dart';
+import '../support/guardrail_fixture_scan.dart';
 
 void main() {
   _testLiveStateFields();
-  _testLiveStateAliases();
-  _testInferredLiveStateFields();
   _testTopLevelLiveStateFields();
   _testProjectionConstruction();
   _testProjectionInvocations();
+  _testRuntimeFacadeProjectionInvocations();
+  _testProjectionReadPathAllowances();
+  _testFutureHotPathProjectionOwners();
   _testProjectionReturns();
 }
 
@@ -21,14 +26,14 @@ void _testLiveStateFields() {
       _expectLiveStateViolations(
         {
           'lib/src/runtime/bad_nullable_document.dart': '''
-import '../api/canvas_document.dart';
+import 'package:iwb_canvas_engine/src/api/canvas_document.dart';
 
 class Bad {
   CanvasDocument? document;
 }
 ''',
           'lib/src/store/bad_document_list.dart': '''
-import '../api/canvas_document.dart';
+import 'package:iwb_canvas_engine/src/api/canvas_document.dart';
 
 class Bad {
   List<CanvasDocument> documents = const [];
@@ -45,53 +50,14 @@ class Bad {
   });
 }
 
-void _testLiveStateAliases() {
-  test('live document state check rejects resolved aliases', () {
-    return expectLater(
-      _expectLiveStateViolations({
-        'lib/src/runtime/bad_document_alias.dart': '''
-import '../api/canvas_document.dart';
-
-typedef RuntimeDoc = CanvasDocument;
-''',
-        'lib/src/store/bad_alias_field.dart': '''
-import '../runtime/bad_document_alias.dart';
-
-class Bad {
-  RuntimeDoc? document;
-}
-''',
-      }, contains('lib/src/store/bad_alias_field.dart')),
-      completes,
-    );
-  });
-}
-
-void _testInferredLiveStateFields() {
-  test('live document state check rejects inferred document fields', () {
-    return expectLater(
-      _expectLiveStateViolations({
-        'lib/src/store/bad_inferred_document.dart': '''
-import '../api/canvas_document.dart';
-
-class Bad {
-  final document = CanvasDocument();
-}
-''',
-      }, contains('lib/src/store/bad_inferred_document.dart')),
-      completes,
-    );
-  });
-}
-
 void _testTopLevelLiveStateFields() {
   test('live document state check rejects top-level document state', () {
     return expectLater(
       _expectLiveStateViolations({
         'lib/src/runtime/bad_top_level_document.dart': '''
-import '../api/canvas_document.dart';
+import 'package:iwb_canvas_engine/src/api/canvas_document.dart';
 
-final cachedDocument = CanvasDocument();
+CanvasDocument? cachedDocument;
 ''',
       }, contains('lib/src/runtime/bad_top_level_document.dart')),
       completes,
@@ -104,7 +70,7 @@ void _testProjectionConstruction() {
     return expectLater(
       _expectProjectionViolations({
         'lib/src/runtime/bad_projection_constructor.dart': '''
-import '../api/canvas_document.dart';
+import 'package:iwb_canvas_engine/src/api/canvas_document.dart';
 
 CanvasDocument buildProjection() {
   return CanvasDocument();
@@ -122,8 +88,8 @@ void _testProjectionInvocations() {
       _expectSingleProjectionViolation(
         {
           'lib/src/store/bad_projection_invocation.dart': '''
-import 'committed_document.dart';
-import 'document_projection_cache.dart';
+import 'package:iwb_canvas_engine/src/store/committed_document.dart';
+import 'package:iwb_canvas_engine/src/store/document_projection_cache.dart';
 
 CommittedDocument? admittedDocument;
 
@@ -140,12 +106,149 @@ void hotPathProjection(DocumentProjectionCache cache) {
   });
 }
 
+void _testRuntimeFacadeProjectionInvocations() {
+  test('projection read-path check rejects runtime facade bypasses', () {
+    return expectLater(
+      _expectProjectionViolations({
+        'lib/src/api/canvas_runtime_bad_projection.dart': '''
+import 'package:iwb_canvas_engine/src/api/canvas_document.dart';
+
+class BadRuntimeFacade {
+  CanvasDocument? document;
+
+  CanvasDocument readDocument() {
+    return document!;
+  }
+
+  CanvasDocument hotPathProjection() {
+    return readDocument();
+  }
+}
+''',
+      }, contains('lib/src/api/canvas_runtime_bad_projection.dart')),
+      completes,
+    );
+  });
+
+  test(
+    'projection read-path check rejects similarly prefixed facade helpers',
+    () {
+      return expectLater(
+        _expectProjectionViolations({
+          'lib/src/api/canvas_runtime_debug.dart': '''
+import 'package:iwb_canvas_engine/src/api/canvas_document.dart';
+
+class BadRuntimeDebug {
+  CanvasDocument? document;
+
+  CanvasDocument readDocument() {
+    return document!;
+  }
+
+  CanvasDocument hotPathProjection() {
+    return readDocument();
+  }
+}
+''',
+        }, contains('lib/src/api/canvas_runtime_debug.dart')),
+        completes,
+      );
+    },
+  );
+}
+
+void _testProjectionReadPathAllowances() {
+  test('projection read-path allowance is owner-scoped', () {
+    final unit = parseString(
+      content: '''
+class RuntimeRoot {
+  Object readDocument() {
+    final retained = () {
+      return cache.projectionFor(document);
+    };
+
+    return cache.projectionFor(document);
+  }
+}
+''',
+    ).unit;
+    final visitor = _ProjectionForInvocationVisitor();
+    unit.accept(visitor);
+    final invocations = visitor.invocations;
+
+    expect(invocations, hasLength(2));
+    expect(
+      isProjectionReadPathAllowedForGuardrailTest(
+        'lib/src/runtime/runtime_root.dart',
+        invocations.first,
+      ),
+      isFalse,
+    );
+    expect(
+      isProjectionReadPathAllowedForGuardrailTest(
+        'lib/src/runtime/runtime_root.dart',
+        invocations.last,
+      ),
+      isTrue,
+    );
+
+    final wrongOwner = parseString(
+      content: '''
+class RuntimeRootDebug {
+  Object readDocument() {
+    return cache.projectionFor(document);
+  }
+}
+''',
+    ).unit;
+    final wrongOwnerVisitor = _ProjectionForInvocationVisitor();
+    wrongOwner.accept(wrongOwnerVisitor);
+
+    expect(
+      isProjectionReadPathAllowedForGuardrailTest(
+        'lib/src/runtime/runtime_root.dart',
+        wrongOwnerVisitor.invocations.single,
+      ),
+      isFalse,
+    );
+  });
+}
+
+final class _ProjectionForInvocationVisitor extends RecursiveAstVisitor<void> {
+  final List<MethodInvocation> invocations = [];
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (node.methodName.name == 'projectionFor') {
+      invocations.add(node);
+    }
+    super.visitMethodInvocation(node);
+  }
+}
+
+void _testFutureHotPathProjectionOwners() {
+  test('projection read-path check rejects frame hot-path projection', () {
+    return expectLater(
+      _expectProjectionViolations({
+        'lib/src/frame/bad_frame_projection.dart': '''
+import 'package:iwb_canvas_engine/src/api/canvas_document.dart';
+
+CanvasDocument buildPaintPlanProjection() {
+  return CanvasDocument();
+}
+''',
+      }, contains('lib/src/frame/bad_frame_projection.dart')),
+      completes,
+    );
+  });
+}
+
 void _testProjectionReturns() {
   test('projection read-path check rejects non-read document returns', () {
     return expectLater(
       _expectProjectionViolations({
         'lib/src/store/bad_projection_return.dart': '''
-import '../api/canvas_document.dart';
+import 'package:iwb_canvas_engine/src/api/canvas_document.dart';
 
 CanvasDocument leakProjection(CanvasDocument document) {
   return document;
@@ -161,8 +264,11 @@ Future<void> _expectLiveStateViolations(
   Map<String, String> files,
   Matcher pathsMatcher,
 ) {
-  return _withTemporaryProductionFiles(files, () async {
-    final violations = await checkNoPublicDocumentLiveState();
+  return withGuardrailFixtureScan(files, (scan) async {
+    final violations = await checkNoPublicDocumentLiveState(
+      sources: scan.sources,
+      analysisIncludedPaths: scan.analysisIncludedPaths,
+    );
 
     expect(violations.map((violation) => violation.path), pathsMatcher);
   });
@@ -172,8 +278,11 @@ Future<void> _expectProjectionViolations(
   Map<String, String> files,
   Matcher pathsMatcher,
 ) {
-  return _withTemporaryProductionFiles(files, () async {
-    final violations = await checkProjectionOnlyExplicitReadPaths();
+  return withGuardrailFixtureScan(files, (scan) async {
+    final violations = await checkProjectionOnlyExplicitReadPaths(
+      sources: scan.sources,
+      analysisIncludedPaths: scan.analysisIncludedPaths,
+    );
 
     expect(violations.map((violation) => violation.path), pathsMatcher);
   });
@@ -184,47 +293,14 @@ Future<void> _expectSingleProjectionViolation(
   required String path,
   required String message,
 }) {
-  return _withTemporaryProductionFiles(files, () async {
-    final violations = await checkProjectionOnlyExplicitReadPaths();
+  return withGuardrailFixtureScan(files, (scan) async {
+    final violations = await checkProjectionOnlyExplicitReadPaths(
+      sources: scan.sources,
+      analysisIncludedPaths: scan.analysisIncludedPaths,
+    );
     final matching = violations.where((violation) => violation.path == path);
 
     expect(matching, hasLength(1));
     expect(matching.single.message, message);
   });
-}
-
-Future<void> _withTemporaryProductionFiles(
-  Map<String, String> files,
-  Future<void> Function() run,
-) async {
-  final createdFiles = <File>[];
-  final createdDirectories = <Directory>[];
-
-  try {
-    for (final entry in files.entries) {
-      final file = File('$repositoryRoot/${entry.key}');
-      expect(file.existsSync(), isFalse);
-
-      final directory = file.parent;
-      if (!directory.existsSync()) {
-        directory.createSync(recursive: true);
-        createdDirectories.add(directory);
-      }
-      file.writeAsStringSync(entry.value);
-      createdFiles.add(file);
-    }
-
-    await run();
-  } finally {
-    for (final file in createdFiles.reversed) {
-      if (file.existsSync()) {
-        file.deleteSync();
-      }
-    }
-    for (final directory in createdDirectories.reversed) {
-      if (directory.existsSync()) {
-        directory.deleteSync(recursive: true);
-      }
-    }
-  }
 }

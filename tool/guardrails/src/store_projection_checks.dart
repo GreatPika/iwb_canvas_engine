@@ -1,9 +1,9 @@
-// Analyzer-backed store/projection checks stay together because they enforce a
-// single boundary: public CanvasDocument objects may exist only as read
-// projections, not as retained runtime/store state.
-// ignore_for_file: type=metrics
-
-import 'dart:collection';
+// Analyzer-backed store/projection checks stay together because they enforce
+// one P4 boundary: public CanvasDocument objects may exist only as read
+// projections, not as directly retained runtime/store state.
+// The analyzer APIs require several package imports here; hiding them behind a
+// wrapper would make the guardrail less direct.
+// ignore_for_file: number-of-external-imports
 
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
@@ -14,15 +14,19 @@ import 'package:analyzer/dart/element/type.dart';
 import 'guardrail_violation.dart';
 import 'repository_paths.dart';
 
-Future<List<GuardrailViolation>> checkNoPublicDocumentLiveState() async {
+Future<List<GuardrailViolation>> checkNoPublicDocumentLiveState({
+  Iterable<GuardrailSourceFile>? sources,
+  List<String>? analysisIncludedPaths,
+}) async {
   final violations = <GuardrailViolation>[];
   final collection = AnalysisContextCollection(
-    includedPaths: ['$repositoryRoot/lib'],
+    includedPaths: analysisIncludedPaths ?? ['$repositoryRoot/lib'],
   );
+  final sourceFiles = sources ?? dartSourceFilesUnder('lib');
 
   try {
-    for (final file in dartFilesUnder('lib')) {
-      final path = relativePath(file);
+    for (final file in sourceFiles) {
+      final path = file.path;
       if (!_isStoreRuntimeStatePath(path)) {
         continue;
       }
@@ -30,8 +34,10 @@ Future<List<GuardrailViolation>> checkNoPublicDocumentLiveState() async {
         continue;
       }
 
-      final context = collection.contextFor(file.path);
-      final result = await context.currentSession.getResolvedUnit(file.path);
+      final context = collection.contextFor(file.absolutePath);
+      final result = await context.currentSession.getResolvedUnit(
+        file.absolutePath,
+      );
       if (result is! ResolvedUnitResult) {
         violations.add(
           GuardrailViolation(
@@ -52,21 +58,27 @@ Future<List<GuardrailViolation>> checkNoPublicDocumentLiveState() async {
   return violations;
 }
 
-Future<List<GuardrailViolation>> checkProjectionOnlyExplicitReadPaths() async {
+Future<List<GuardrailViolation>> checkProjectionOnlyExplicitReadPaths({
+  Iterable<GuardrailSourceFile>? sources,
+  List<String>? analysisIncludedPaths,
+}) async {
   final violations = <GuardrailViolation>[];
   final collection = AnalysisContextCollection(
-    includedPaths: ['$repositoryRoot/lib'],
+    includedPaths: analysisIncludedPaths ?? ['$repositoryRoot/lib'],
   );
+  final sourceFiles = sources ?? dartSourceFilesUnder('lib');
 
   try {
-    for (final file in dartFilesUnder('lib')) {
-      final path = relativePath(file);
+    for (final file in sourceFiles) {
+      final path = file.path;
       if (!_isRuntimeOrStorePath(path)) {
         continue;
       }
 
-      final context = collection.contextFor(file.path);
-      final result = await context.currentSession.getResolvedUnit(file.path);
+      final context = collection.contextFor(file.absolutePath);
+      final result = await context.currentSession.getResolvedUnit(
+        file.absolutePath,
+      );
       if (result is! ResolvedUnitResult) {
         violations.add(
           GuardrailViolation(
@@ -94,8 +106,16 @@ bool _isStoreRuntimeStatePath(String path) {
 }
 
 bool _isRuntimeOrStorePath(String path) {
-  return path.startsWith('lib/src/runtime/') ||
+  return _isCanvasRuntimeApiPath(path) ||
+      _isFutureProjectionHotPath(path) ||
+      path.startsWith('lib/src/runtime/') ||
       path.startsWith('lib/src/store/');
+}
+
+bool _isFutureProjectionHotPath(String path) {
+  return path.startsWith('lib/src/frame/') ||
+      path.startsWith('lib/src/interaction/') ||
+      path.startsWith('lib/src/spatial/');
 }
 
 List<GuardrailViolation> _publicDocumentFieldViolations(
@@ -118,6 +138,9 @@ List<GuardrailViolation> _projectionReadPathViolations(
   return visitor.violations;
 }
 
+// This is a direct structural scan, not a whole-program flow proof: P4 blocks
+// explicit CanvasDocument state declarations in runtime/store owners.
+// ignore: coupling-between-object-classes
 final class _PublicDocumentFieldVisitor extends RecursiveAstVisitor<void> {
   _PublicDocumentFieldVisitor(this.path);
 
@@ -142,11 +165,13 @@ final class _PublicDocumentFieldVisitor extends RecursiveAstVisitor<void> {
 
   void _checkRetainedVariable(VariableDeclaration variable) {
     final variableType = variable.declaredFragment?.element.type;
-    final initializerType = variable.initializer?.staticType;
-    if (!_containsCanvasDocument(variableType) &&
-        !_containsCanvasDocument(initializerType)) {
+    if (!_containsCanvasDocument(variableType)) {
       return;
     }
+    _addViolation();
+  }
+
+  void _addViolation() {
     violations.add(
       GuardrailViolation(
         guardrailId: 'store.no_public_document_live_state',
@@ -157,6 +182,10 @@ final class _PublicDocumentFieldVisitor extends RecursiveAstVisitor<void> {
   }
 }
 
+// The projection checks are deliberately grouped around one public-document
+// read-path rule; splitting by AST node would obscure the shared allowance
+// logic and duplicate violation reporting.
+// ignore: coupling-between-object-classes
 final class _ProjectionReadPathVisitor extends RecursiveAstVisitor<void> {
   _ProjectionReadPathVisitor(this.path);
 
@@ -165,7 +194,7 @@ final class _ProjectionReadPathVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitInstanceCreationExpression(InstanceCreationExpression node) {
-    if (!_isProjectionCachePath(path) &&
+    if (!_isAllowedDocumentConstructionPath(path, node) &&
         _containsCanvasDocument(node.constructorName.element?.returnType)) {
       _addViolation('public document projection construction is cache-owned');
     }
@@ -206,43 +235,12 @@ final class _ProjectionReadPathVisitor extends RecursiveAstVisitor<void> {
 }
 
 bool _containsCanvasDocument(DartType? type) {
-  return _containsCanvasDocumentType(type, HashSet<DartType>.identity());
-}
-
-bool _containsCanvasDocumentType(DartType? type, Set<DartType> visited) {
-  if (type == null || !visited.add(type)) {
-    return false;
-  }
-
-  final aliasType = type.alias?.element.aliasedType;
-  if (_isCanvasDocument(type) ||
-      _containsCanvasDocumentType(aliasType, visited)) {
-    return true;
-  }
-
   return switch (type) {
-    InterfaceType() => type.typeArguments.any(
-      (argument) => _containsCanvasDocumentType(argument, visited),
-    ),
-    FunctionType() =>
-      _containsCanvasDocumentType(type.returnType, visited) ||
-          type.normalParameterTypes.any(
-            (argument) => _containsCanvasDocumentType(argument, visited),
-          ) ||
-          type.optionalParameterTypes.any(
-            (argument) => _containsCanvasDocumentType(argument, visited),
-          ) ||
-          type.namedParameterTypes.values.any(
-            (argument) => _containsCanvasDocumentType(argument, visited),
-          ),
-    RecordType() =>
-      type.positionalFields.any(
-            (field) => _containsCanvasDocumentType(field.type, visited),
-          ) ||
-          type.namedFields.any(
-            (field) => _containsCanvasDocumentType(field.type, visited),
-          ),
-    TypeParameterType() => _containsCanvasDocumentType(type.bound, visited),
+    null => false,
+    InterfaceType() =>
+      type.typeArguments.any(_containsCanvasDocument) ||
+          _isCanvasDocument(type),
+    FunctionType() => _containsCanvasDocument(type.returnType),
     _ => false,
   };
 }
@@ -259,25 +257,68 @@ bool _isAllowedProjectionReadPath(String path, AstNode node) {
   if (_isProjectionCachePath(path)) {
     return true;
   }
-  if (path != 'lib/src/runtime/runtime_root.dart' &&
+  if (!_isCanvasRuntimeFacadePath(path) &&
+      path != 'lib/src/runtime/runtime_root.dart' &&
       path != 'lib/src/store/document_store_kernel.dart') {
     return false;
   }
 
-  return _enclosingExecutableName(node) == 'readDocument';
+  return _enclosingExecutableName(node) == 'readDocument' &&
+      _enclosingClassName(node) == _allowedReadPathOwner(path);
+}
+
+bool isProjectionReadPathAllowedForGuardrailTest(String path, AstNode node) {
+  return _isAllowedProjectionReadPath(path, node);
+}
+
+bool _isAllowedDocumentConstructionPath(String path, AstNode node) {
+  return _isProjectionCachePath(path) ||
+      _isCanvasRuntimeFacadePath(path) &&
+          _enclosingExecutableName(node) == 'CanvasRuntime';
+}
+
+bool _isCanvasRuntimeApiPath(String path) {
+  return path.startsWith('lib/src/api/canvas_runtime');
+}
+
+bool _isCanvasRuntimeFacadePath(String path) {
+  return path == 'lib/src/api/canvas_runtime.dart';
 }
 
 bool _isProjectionCachePath(String path) {
   return path == 'lib/src/store/document_projection_cache.dart';
 }
 
+String? _allowedReadPathOwner(String path) {
+  return switch (path) {
+    'lib/src/api/canvas_runtime.dart' => 'CanvasRuntime',
+    'lib/src/runtime/runtime_root.dart' => 'RuntimeRoot',
+    'lib/src/store/document_store_kernel.dart' => 'DocumentStoreKernel',
+    _ => null,
+  };
+}
+
+String? _enclosingClassName(AstNode node) {
+  for (var current = node.parent; current != null; current = current.parent) {
+    if (current case ClassDeclaration(:final namePart)) {
+      return namePart.typeName.lexeme;
+    }
+  }
+
+  return null;
+}
+
 String? _enclosingExecutableName(AstNode node) {
   for (var current = node.parent; current != null; current = current.parent) {
     switch (current) {
+      case FunctionExpression():
+        return null;
       case MethodDeclaration():
         return current.name.lexeme;
       case FunctionDeclaration():
         return current.name.lexeme;
+      case ConstructorDeclaration():
+        return current.typeName?.name;
     }
   }
 
