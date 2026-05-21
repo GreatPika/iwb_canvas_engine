@@ -194,13 +194,6 @@ CanvasLayer _readLayer(Object? value) {
 }
 
 Iterable<Object?> _readBackgroundElements(Map<String, Object?> json) {
-  if (json.containsKey('backgroundElements')) {
-    return _readList(
-      json,
-      key: 'backgroundElements',
-      path: 'backgroundElements',
-    );
-  }
   if (!json.containsKey('backgroundLayer')) {
     return const [];
   }

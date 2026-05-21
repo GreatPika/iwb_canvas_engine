@@ -6,7 +6,6 @@ const Set<String> canvasSchemaV1RootFields = {
   'background',
   'palette',
   'resources',
-  'backgroundElements',
   'backgroundLayer',
   'layers',
   'metadata',

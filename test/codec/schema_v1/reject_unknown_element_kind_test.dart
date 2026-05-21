@@ -24,12 +24,14 @@ void main() {
     expect(
       () => decodeCanvasDocument({
         'schemaVersion': 1,
-        'backgroundElements': [
-          {
-            'id': 'video-1',
-            'kind': 'video',
-          },
-        ],
+        'backgroundLayer': {
+          'elements': [
+            {
+              'id': 'video-1',
+              'kind': 'video',
+            },
+          ],
+        },
       }),
       throwsA(
         isA<CanvasDataException>()
@@ -37,6 +39,22 @@ void main() {
             .having((error) => error.path, 'path', 'element.kind'),
       ),
     );
+  });
+
+  test('legacy root backgroundElements is ignored as an unknown field', () {
+    final document = decodeCanvasDocument({
+      'schemaVersion': 1,
+      'backgroundElements': [
+        {
+          'id': 'rect-legacy',
+          'kind': 'rect',
+          'size': {'w': 1, 'h': 1},
+        },
+      ],
+      'backgroundLayer': {'elements': []},
+    });
+
+    expect(document.backgroundElements, isEmpty);
   });
 }
 ''';

@@ -301,21 +301,21 @@ void main() {
     expect(
       () => decodeCanvasDocument({
         'schemaVersion': 1,
-        'backgroundElements': [
+        'backgroundLayer': {'elements': [
           {
             'id': 'image-1',
             'kind': 'image',
             'resourceId': 'missing-resource',
             'size': {'w': 1, 'h': 1},
           },
-        ],
+        ]},
       }),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
       () => decodeCanvasDocument({
         'schemaVersion': 1,
-        'backgroundElements': [
+        'backgroundLayer': {'elements': [
           {
             'id': 'text-null-transform',
             'kind': 'text',
@@ -323,7 +323,7 @@ void main() {
             'color': '#FF000000',
             'transform': null,
           },
-        ],
+        ]},
       }),
       throwsA(isA<CanvasDataException>()),
     );
@@ -338,21 +338,21 @@ void main() {
     expect(
       () => decodeCanvasDocument({
         'schemaVersion': 1,
-        'backgroundElements': [
+        'backgroundLayer': {'elements': [
           {
             'id': 'text-missing-color',
             'kind': 'text',
             'text': 'missing color',
             'textDirection': 'ltr',
           },
-        ],
+        ]},
       }),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
       () => decodeCanvasDocument({
         'schemaVersion': 1,
-        'backgroundElements': [
+        'backgroundLayer': {'elements': [
           {
             'id': 'text-null-known-field',
             'kind': 'text',
@@ -360,14 +360,14 @@ void main() {
             'color': '#FF000000',
             'isBold': null,
           },
-        ],
+        ]},
       }),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
       () => decodeCanvasDocument({
         'schemaVersion': 1,
-        'backgroundElements': [
+        'backgroundLayer': {'elements': [
           {
             'id': 'text-null-enum',
             'kind': 'text',
@@ -375,7 +375,7 @@ void main() {
             'color': '#FF000000',
             'align': null,
           },
-        ],
+        ]},
       }),
       throwsA(isA<CanvasDataException>()),
     );
