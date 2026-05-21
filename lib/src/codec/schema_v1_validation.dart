@@ -14,7 +14,7 @@ const Set<String> canvasSchemaV1RootFields = {
 
 void validateSchemaV1Root(Map<String, Object?> json) {
   final version = json['schemaVersion'];
-  if (version != 1) {
+  if (version is! int || version != 1) {
     throw CanvasDataException(
       code: version == null
           ? CanvasDataErrorCode.missingField

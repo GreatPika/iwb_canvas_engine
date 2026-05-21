@@ -148,7 +148,10 @@ const _expectedApiIds = {
   'api.id_validation_no_extension_type_escape',
 };
 
-const _expectedCodecIds = {'codec.known_fields_validated'};
+const _expectedCodecIds = {
+  'codec.schema_v1_exact',
+  'codec.known_fields_validated',
+};
 
 const _expectedCoreIds = {
   'core.no_legacy_imports',

@@ -466,8 +466,21 @@ Map<String, Object?> _readMap(
 }
 
 Map<String, Object?> _readRequiredMap(Object? value, {required String path}) {
-  if (value is Map<String, Object?>) {
-    return value;
+  if (value is Map<Object?, Object?>) {
+    final result = <String, Object?>{};
+    for (final entry in value.entries) {
+      final key = entry.key;
+      if (key is! String) {
+        throw CanvasDataException(
+          code: CanvasDataErrorCode.invalidFieldType,
+          message: '$path keys must be strings.',
+          path: path,
+        );
+      }
+      result[key] = entry.value;
+    }
+
+    return result;
   }
 
   throw CanvasDataException(

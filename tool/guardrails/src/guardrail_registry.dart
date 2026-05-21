@@ -69,6 +69,7 @@ const _blockingEntries = [
     id: 'api.id_validation_no_extension_type_escape',
     suites: {'blocking', 'api'},
   ),
+  GuardrailEntry(id: 'codec.schema_v1_exact', suites: {'blocking', 'codec'}),
   GuardrailEntry(
     id: 'codec.known_fields_validated',
     suites: {'blocking', 'codec'},

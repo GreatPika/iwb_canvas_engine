@@ -166,8 +166,8 @@ const _testProofPaths = {
       'test/api_contract/public_equality_policy_test.dart',
   'api.id_validation_no_extension_type_escape':
       'test/api_contract/id_validation_no_extension_type_escape_test.dart',
-  'codec.known_fields_validated':
-      'test/codec/constructor_and_schema_limits_test.dart',
+  'codec.schema_v1_exact': 'test/codec/schema_v1',
+  'codec.known_fields_validated': 'test/codec/schema_v1',
 };
 
 final Map<String, Future<List<GuardrailViolation>> Function()>
