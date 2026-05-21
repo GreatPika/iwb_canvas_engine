@@ -664,7 +664,7 @@ contract are marked complete.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Runtime root lifecycle and public state foundation
+### Slice 1. [x] Runtime root lifecycle and public state foundation
 
 #### Implements
 
@@ -723,7 +723,7 @@ All P4-supported runtime lifecycle/state/config behavior routes through
 `RuntimeRoot`, without changing the document read or id-generation seams before
 Slice 2 owns the store/projection/admission replacement.
 
-### Slice 2. [ ] Committed document store and projection cache
+### Slice 2. [x] Committed document store and projection cache
 
 #### Implements
 
@@ -817,7 +817,7 @@ slice's code changes.
 and no P4 runtime/store path treats public `CanvasDocument` as live committed
 state.
 
-### Slice 3. [ ] Selection owner and selection facts boundary
+### Slice 3. [x] Selection owner and selection facts boundary
 
 #### Implements
 
@@ -885,7 +885,7 @@ slice's code changes.
 P4 selection state has one owner and can be read only through an immutable
 selection facts seam.
 
-### Slice 4. [ ] Immutable document and frame facts read ports
+### Slice 4. [x] Immutable document and frame facts read ports
 
 #### Implements
 
@@ -939,7 +939,7 @@ The P4 read-port surface is available, its declarations are immutable and
 facts-only, and future owners can adopt it without importing concrete store or
 selection internals.
 
-### Slice 5. [ ] P4 guardrail blocking-suite consolidation
+### Slice 5. [x] P4 guardrail blocking-suite consolidation
 
 #### Implements
 
@@ -985,7 +985,7 @@ changes.
 Every P4 guardrail id is selectable through the runner, has an owner-level proof
 matching the selected pattern, and is included in the blocking suite.
 
-### Slice 6. [ ] Roadmap closure after final gate
+### Slice 6. [x] Roadmap closure after final gate
 
 #### Implements
 
