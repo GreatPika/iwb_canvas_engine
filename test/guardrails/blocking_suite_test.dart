@@ -151,6 +151,7 @@ const _expectedApiIds = {
 const _expectedCodecIds = {
   'codec.schema_v1_exact',
   'codec.known_fields_validated',
+  'codec.no_runtime_side_effects',
 };
 
 const _expectedCoreIds = {

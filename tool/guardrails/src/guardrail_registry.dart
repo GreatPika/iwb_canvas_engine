@@ -74,6 +74,10 @@ const _blockingEntries = [
     id: 'codec.known_fields_validated',
     suites: {'blocking', 'codec'},
   ),
+  GuardrailEntry(
+    id: 'codec.no_runtime_side_effects',
+    suites: {'blocking', 'codec'},
+  ),
   GuardrailEntry(id: 'core.no_legacy_imports', suites: {'blocking', 'core'}),
   GuardrailEntry(id: 'core.import_boundaries', suites: {'blocking', 'core'}),
   GuardrailEntry(

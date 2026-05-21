@@ -63,9 +63,9 @@ Future<GuardrailRunResult> runGuardrailsWithProofRunner(
 }
 
 GuardrailRoute? guardrailRouteFor(String id) {
-  final proofPath = _testProofPaths[id];
-  if (proofPath != null) {
-    return GuardrailRoute.dartTest(proofPath);
+  final proofPaths = _testProofPaths[id];
+  if (proofPaths != null) {
+    return GuardrailRoute.dartTest(proofPaths.join(', '));
   }
 
   if (_violationChecks.containsKey(id)) {
@@ -86,12 +86,18 @@ Future<int> _runGuardrail(
 }) async {
   final proofPath = _testProofPaths[id];
   if (proofPath != null) {
-    final cacheKey = 'dart-test:$proofPath';
+    for (final path in proofPath) {
+      final cacheKey = 'dart-test:$path';
+      final exitCode = await proofExitCodes.putIfAbsent(
+        cacheKey,
+        () => runDartTest(id, path),
+      );
+      if (exitCode != 0) {
+        return exitCode;
+      }
+    }
 
-    return proofExitCodes.putIfAbsent(
-      cacheKey,
-      () => runDartTest(id, proofPath),
-    );
+    return 0;
   }
 
   final violationCheck = _violationChecks[id];
@@ -147,27 +153,40 @@ Iterable<GuardrailViolation> _negativeFixtureViolationsFor(String id) {
 }
 
 const _testProofPaths = {
-  'api.integration_surface_complete':
-      'test/api_contract/app_next_engine_adapter_compile_fixture_test.dart',
-  'api.public_api_compiles_as_written':
-      'test/api_contract/public_api_v1_compiles_as_written_test.dart',
-  'api.resource_source_app_key_publicly_readable':
-      'test/api_contract/public_readable_union_variants_test.dart',
-  'api.preview_state_sealed_union_publicly_readable':
-      'test/api_contract/public_readable_union_variants_test.dart',
-  'api.exported_dartdoc_complete':
-      'test/guardrails/public_api_declaration_checks_test.dart',
-  'api.public_class_modifiers_explicit':
-      'test/guardrails/public_api_declaration_checks_test.dart',
-  'api.no_public_api_import_cycles':
-      'test/guardrails/public_api_import_cycles_test.dart',
-  'api.dto_immutability': 'test/api_contract/dto_immutability_test.dart',
-  'api.equality_policy_explicit':
-      'test/api_contract/public_equality_policy_test.dart',
-  'api.id_validation_no_extension_type_escape':
-      'test/api_contract/id_validation_no_extension_type_escape_test.dart',
-  'codec.schema_v1_exact': 'test/codec/schema_v1',
-  'codec.known_fields_validated': 'test/codec/schema_v1',
+  'api.integration_surface_complete': [
+    'test/api_contract/app_next_engine_adapter_compile_fixture_test.dart',
+  ],
+  'api.public_api_compiles_as_written': [
+    'test/api_contract/public_api_v1_compiles_as_written_test.dart',
+  ],
+  'api.resource_source_app_key_publicly_readable': [
+    'test/api_contract/public_readable_union_variants_test.dart',
+  ],
+  'api.preview_state_sealed_union_publicly_readable': [
+    'test/api_contract/public_readable_union_variants_test.dart',
+  ],
+  'api.exported_dartdoc_complete': [
+    'test/guardrails/public_api_declaration_checks_test.dart',
+  ],
+  'api.public_class_modifiers_explicit': [
+    'test/guardrails/public_api_declaration_checks_test.dart',
+  ],
+  'api.no_public_api_import_cycles': [
+    'test/guardrails/public_api_import_cycles_test.dart',
+  ],
+  'api.dto_immutability': ['test/api_contract/dto_immutability_test.dart'],
+  'api.equality_policy_explicit': [
+    'test/api_contract/public_equality_policy_test.dart',
+  ],
+  'api.id_validation_no_extension_type_escape': [
+    'test/api_contract/id_validation_no_extension_type_escape_test.dart',
+  ],
+  'codec.schema_v1_exact': ['test/codec/schema_v1'],
+  'codec.known_fields_validated': ['test/codec/schema_v1'],
+  'codec.no_runtime_side_effects': [
+    'test/codec/decode_encode_no_runtime_side_effects_test.dart',
+    'test/guardrails/codec_no_runtime_imports_test.dart',
+  ],
 };
 
 final Map<String, Future<List<GuardrailViolation>> Function()>
