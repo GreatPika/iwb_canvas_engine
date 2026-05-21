@@ -26,14 +26,12 @@ final class CanvasRuntime {
     CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
   }) {
     final document = initialDocument ?? CanvasDocument();
-    _document = document;
     _root = RuntimeRoot(initialDocument: document, config: config);
   }
 
-  late final CanvasDocument _document;
   late final RuntimeRoot _root;
 
-  CanvasDocument readDocument() => _document;
+  CanvasDocument readDocument() => _root.readDocument();
   ValueListenable<CanvasRuntimeState> get state => _root.state;
   CanvasEditPort get edits => throw UnimplementedError();
   CanvasSelectionPort get selection => throw UnimplementedError();
@@ -45,9 +43,9 @@ final class CanvasRuntime {
   Stream<CanvasActionCommitted> get actions => throw UnimplementedError();
   Stream<CanvasContextActionRequested> get contextActionRequests =>
       throw UnimplementedError();
-  CanvasElementId generateElementId() => throw UnimplementedError();
-  CanvasLayerId generateLayerId() => throw UnimplementedError();
-  CanvasResourceId generateResourceId() => throw UnimplementedError();
+  CanvasElementId generateElementId() => _root.generateElementId();
+  CanvasLayerId generateLayerId() => _root.generateLayerId();
+  CanvasResourceId generateResourceId() => _root.generateResourceId();
   void dispose() {
     _root.dispose();
   }

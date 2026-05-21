@@ -47,6 +47,18 @@ void main() {
       );
     },
   );
+  test('store suite selection routes only store guardrails', () async {
+    expect(await _selectedGuardrailIds(['--suite=store']), _expectedStoreIds);
+  });
+  test(
+    'projection suite selection routes only projection guardrails',
+    () async {
+      expect(
+        await _selectedGuardrailIds(['--suite=projection']),
+        _expectedProjectionIds,
+      );
+    },
+  );
   test('shared proof files run once for all covered guardrail ids', () async {
     final proofRuns = <String, int>{};
     final result = await runGuardrailsWithProofRunner(
@@ -177,9 +189,17 @@ const _expectedDiagnosticsIds = {
   'diagnostics.sanitized_public_projection',
 };
 
+const _expectedStoreIds = {
+  'store.no_public_document_live_state',
+  'projection.only_explicit_read_paths',
+};
+
+const _expectedProjectionIds = {'projection.only_explicit_read_paths'};
+
 const _expectedBlockingHardBoundaryIds = {
   ..._expectedApiIds,
   ..._expectedCodecIds,
   ..._expectedCoreIds,
   ..._expectedDiagnosticsIds,
+  ..._expectedStoreIds,
 };

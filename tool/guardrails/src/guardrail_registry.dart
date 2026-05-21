@@ -101,4 +101,12 @@ const _blockingEntries = [
     suites: {'blocking', 'core'},
   ),
   GuardrailEntry(id: 'core.single_runtime_root', suites: {'blocking', 'core'}),
+  GuardrailEntry(
+    id: 'store.no_public_document_live_state',
+    suites: {'blocking', 'store'},
+  ),
+  GuardrailEntry(
+    id: 'projection.only_explicit_read_paths',
+    suites: {'blocking', 'store', 'projection'},
+  ),
 ];

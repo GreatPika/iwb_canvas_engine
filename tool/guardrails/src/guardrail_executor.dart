@@ -194,6 +194,12 @@ const _testProofPaths = {
     'test/diagnostics/sanitizer_and_public_projection_test.dart',
     'test/diagnostics/diagnostics_public_surface_test.dart',
   ],
+  'store.no_public_document_live_state': [
+    'test/store/public_document_is_projection_only_test.dart',
+  ],
+  'projection.only_explicit_read_paths': [
+    'test/store/no_projection_hot_path_test.dart',
+  ],
 };
 
 final Map<String, Future<List<GuardrailViolation>> Function()>
