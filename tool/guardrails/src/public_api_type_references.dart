@@ -155,11 +155,11 @@ final class _PublicTypeReferenceVisitor {
 }
 
 bool _isPublicField(FieldElement field) {
-  return field.isPublic && !field.isSynthetic;
+  return field.isPublic && field.nonSynthetic == field;
 }
 
 bool _isPublicExecutable(ExecutableElement element) {
-  return element.isPublic && !element.isSynthetic;
+  return element.isPublic && element.nonSynthetic == element;
 }
 
 bool _isApprovedExternalType(String? uri) {

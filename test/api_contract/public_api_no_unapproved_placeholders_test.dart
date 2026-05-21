@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:test/test.dart';
 
 import '../../tool/guardrails/src/public_api_placeholder_allowlist.dart';
@@ -44,7 +46,7 @@ void _testPlaceholderDetector() {
       _unimplementedPlaceholdersInSource('''
 final class PublicApi {
   Object get expressionGetter => throw UnimplementedError();
-  void blockMethod() {
+  void blockMethod({required int count}) {
     throw UnimplementedError();
   }
   void _privateMethod() {
@@ -86,17 +88,40 @@ void _topLevelPrivate() {
 
 void _testExportCombinators() {
   test('detector covers root exports with combinators', () {
-    final paths = _exportedPublicApiPathsFromBarrel('''
+    final exportedFiles = _exportedPublicApiFilesFromBarrel('''
 export 'src/api/visible.dart';
 export 'src/api/shown.dart' show PublicType;
-export 'src/api/hidden.dart' hide PrivateType;
-''').map((file) => file.path).toList();
+export 'src/api/hidden.dart' hide PublicType;
+''');
 
-    expect(paths, [
+    expect(exportedFiles.map((file) => file.file.path), [
       endsWith('lib/src/api/visible.dart'),
       endsWith('lib/src/api/shown.dart'),
       endsWith('lib/src/api/hidden.dart'),
     ]);
+    expect(exportedFiles[0].includesTopLevelName('PublicType'), isTrue);
+    expect(exportedFiles[1].includesTopLevelName('PublicType'), isTrue);
+    expect(exportedFiles[1].includesTopLevelName('publicHelper'), isFalse);
+    expect(exportedFiles[2].includesTopLevelName('PublicType'), isFalse);
+    expect(exportedFiles[2].includesTopLevelName('publicHelper'), isTrue);
+  });
+
+  test('detector ignores placeholders hidden by root export combinators', () {
+    const source = '''
+final class ExportedType {
+  void method() => throw UnimplementedError();
+}
+
+void publicHelper({required int count}) => throw UnimplementedError();
+''';
+
+    expect(
+      _unimplementedPlaceholdersInSource(
+        source,
+        isExportedTopLevelName: (name) => name == 'ExportedType',
+      ),
+      {'ExportedType.method'},
+    );
   });
 }
 
@@ -110,92 +135,47 @@ Set<String> _discoverPublicApiPlaceholders() {
   return placeholders;
 }
 
-List<File> _exportedPublicApiFiles() {
+List<_ExportedPublicApiFile> _exportedPublicApiFiles() {
   final barrel = File(
     '$repositoryRoot/lib/iwb_canvas_engine.dart',
   ).readAsStringSync();
 
-  return _exportedPublicApiPathsFromBarrel(barrel);
+  return _exportedPublicApiFilesFromBarrel(barrel);
 }
 
-List<File> _exportedPublicApiPathsFromBarrel(String barrel) {
+List<_ExportedPublicApiFile> _exportedPublicApiFilesFromBarrel(String barrel) {
+  final unit = parseString(
+    content: barrel,
+    path: '$repositoryRoot/lib/iwb_canvas_engine.dart',
+  ).unit;
+
   return [
-    for (final match in RegExp(
-      r"export\s+'([^']+)'\s*(?:show\s+[^;]+|hide\s+[^;]+)?;",
-    ).allMatches(barrel))
-      File('$repositoryRoot/lib/${match.group(1)}'),
+    for (final directive in unit.directives)
+      if (directive is ExportDirective)
+        if (directive.uri.stringValue case final path?)
+          _ExportedPublicApiFile(
+            file: File('$repositoryRoot/lib/$path'),
+            combinators: directive.combinators,
+          ),
   ];
 }
 
-Set<String> _unimplementedPlaceholders(File file) {
-  return _unimplementedPlaceholdersInSource(file.readAsStringSync());
-}
-
-Set<String> _unimplementedPlaceholdersInSource(String source) {
-  final placeholders = <String>{};
-  _addCallablePlaceholders(source, placeholders);
-  _addConstructorPlaceholders(source, placeholders);
-
-  return placeholders;
-}
-
-void _addCallablePlaceholders(String source, Set<String> placeholders) {
-  for (final match in _callableSignatures().allMatches(source)) {
-    final name = match.group(1) ?? match.group(2);
-    if (name == null || name.startsWith('_')) {
-      continue;
-    }
-    final className = _enclosingClassName(source, match.start);
-    if (className != null && className.startsWith('_')) {
-      continue;
-    }
-    if (className == name) {
-      continue;
-    }
-    placeholders.add(className == null ? name : '$className.$name');
-  }
-}
-
-void _addConstructorPlaceholders(String source, Set<String> placeholders) {
-  for (final match in _constructorSignatures().allMatches(source)) {
-    final className = match.group(1);
-    final constructorName = match.group(2);
-    final enclosingClassName = _enclosingClassName(source, match.start);
-    if (!_isPublicConstructorPlaceholder(
-      className,
-      constructorName,
-      enclosingClassName,
-    )) {
-      continue;
-    }
-    placeholders.add('$className.${constructorName ?? 'new'}');
-  }
-}
-
-bool _isPublicConstructorPlaceholder(
-  String? className,
-  String? constructorName,
-  String? enclosingClassName,
-) {
-  return className != null &&
-      enclosingClassName != null &&
-      className == enclosingClassName &&
-      !className.startsWith('_') &&
-      !(constructorName?.startsWith('_') ?? false);
-}
-
-RegExp _callableSignatures() {
-  return RegExp(
-    r'(?:[A-Za-z0-9_<>,? ]+)\s+get\s+([a-zA-Z0-9_]+)\s*(?:=>\s*throw UnimplementedError\(\)|\{\s*throw UnimplementedError\(\);\s*\})|'
-    r'(?:[A-Za-z0-9_<>,? ]+|void)\s+([a-zA-Z0-9_]+)\([^;{}]*\)\s*(?:=>\s*throw UnimplementedError\(\)|\{\s*throw UnimplementedError\(\);\s*\})',
-    multiLine: true,
+Set<String> _unimplementedPlaceholders(_ExportedPublicApiFile file) {
+  return _unimplementedPlaceholdersInSource(
+    file.file.readAsStringSync(),
+    isExportedTopLevelName: file.includesTopLevelName,
   );
 }
 
-RegExp _constructorSignatures() {
-  return RegExp(
-    r'(?:factory\s+)?([A-Za-z0-9_]+)(?:\.([A-Za-z0-9_]+))?\([^;{}]*\)\s*(?:=>\s*throw UnimplementedError\(\)|\{\s*throw UnimplementedError\(\);\s*\})',
-    multiLine: true,
+Set<String> _unimplementedPlaceholdersInSource(
+  String source, {
+  bool Function(String name) isExportedTopLevelName = _isPublicTopLevelName,
+}) {
+  final unit = parseString(content: source).unit;
+
+  return _PublicPlaceholderCollector().collect(
+    unit,
+    isExportedTopLevelName: isExportedTopLevelName,
   );
 }
 
@@ -212,38 +192,166 @@ Set<String> _surfacePlaceholders() {
   };
 }
 
-String? _enclosingClassName(String source, int offset) {
-  final declarations = RegExp(
-    r'(?:abstract\s+interface\s+class|base\s+class|final\s+class|sealed\s+class|class)\s+([A-Za-z0-9_]+)[^{]*\{',
-  ).allMatches(source.substring(0, offset));
-  if (declarations.isEmpty) {
-    return null;
+final class _PublicPlaceholderCollector {
+  Set<String> collect(
+    CompilationUnit unit, {
+    required bool Function(String name) isExportedTopLevelName,
+  }) {
+    final placeholders = <String>{};
+    for (final declaration in unit.declarations) {
+      switch (declaration) {
+        case FunctionDeclaration():
+          _addTopLevelPlaceholder(
+            declaration,
+            placeholders,
+            isExportedTopLevelName: isExportedTopLevelName,
+          );
+        case ClassDeclaration():
+          _addClassPlaceholders(
+            declaration,
+            placeholders,
+            isExportedTopLevelName: isExportedTopLevelName,
+          );
+      }
+    }
+
+    return placeholders;
   }
 
-  final declaration = declarations.last;
-  final className = declaration.group(1);
-  if (className == null) {
-    return null;
+  void _addTopLevelPlaceholder(
+    FunctionDeclaration declaration,
+    Set<String> placeholders, {
+    required bool Function(String name) isExportedTopLevelName,
+  }) {
+    final name = declaration.name.lexeme;
+    if (!isExportedTopLevelName(name) ||
+        !_isUnimplementedBody(declaration.functionExpression.body)) {
+      return;
+    }
+    placeholders.add(name);
   }
 
-  final bodyStart = declaration.end - 1;
-  final body = source.substring(bodyStart, offset);
-
-  return _hasOpenBody(body) ? className : null;
-}
-
-bool _hasOpenBody(String body) {
-  var depth = 0;
-  for (final unit in body.codeUnits) {
-    if (unit == _openBrace) {
-      depth++;
-    } else if (unit == _closeBrace) {
-      depth--;
+  void _addClassPlaceholders(
+    ClassDeclaration declaration,
+    Set<String> placeholders, {
+    required bool Function(String name) isExportedTopLevelName,
+  }) {
+    final className = declaration.namePart.typeName.lexeme;
+    if (!isExportedTopLevelName(className)) {
+      return;
+    }
+    for (final member in declaration.body.members) {
+      switch (member) {
+        case MethodDeclaration():
+          _addMethodPlaceholder(className, member, placeholders);
+        case ConstructorDeclaration():
+          _addConstructorPlaceholder(className, member, placeholders);
+        default:
+          break;
+      }
     }
   }
 
-  return depth > 0;
+  void _addMethodPlaceholder(
+    String className,
+    MethodDeclaration declaration,
+    Set<String> placeholders,
+  ) {
+    final name = declaration.name.lexeme;
+    if (_isPrivateName(name) || !_isUnimplementedBody(declaration.body)) {
+      return;
+    }
+    placeholders.add('$className.$name');
+  }
+
+  void _addConstructorPlaceholder(
+    String className,
+    ConstructorDeclaration declaration,
+    Set<String> placeholders,
+  ) {
+    final constructorName = declaration.name?.lexeme;
+    if (_isPrivateName(constructorName) ||
+        !_isUnimplementedBody(declaration.body)) {
+      return;
+    }
+    placeholders.add('$className.${constructorName ?? 'new'}');
+  }
 }
 
-const int _openBrace = 0x7B;
-const int _closeBrace = 0x7D;
+bool _isUnimplementedBody(FunctionBody body) {
+  return switch (body) {
+    ExpressionFunctionBody(:final expression) => _isUnimplementedThrow(
+      expression,
+    ),
+    BlockFunctionBody(:final block) => switch (block.statements) {
+      [ExpressionStatement(:final expression)] => _isUnimplementedThrow(
+        expression,
+      ),
+      _ => false,
+    },
+    _ => false,
+  };
+}
+
+bool _isUnimplementedThrow(Expression expression) {
+  return expression is ThrowExpression &&
+      _isUnimplementedError(expression.expression);
+}
+
+bool _isUnimplementedError(Expression expression) {
+  return switch (expression) {
+    InstanceCreationExpression() =>
+      expression.constructorName.type.toSource() == 'UnimplementedError',
+    MethodInvocation(:final target, :final methodName) =>
+      target == null && methodName.name == 'UnimplementedError',
+    _ => false,
+  };
+}
+
+bool _isPrivateName(String? name) => name?.startsWith('_') ?? false;
+
+bool _isPublicTopLevelName(String name) => !_isPrivateName(name);
+
+final class _ExportedPublicApiFile {
+  _ExportedPublicApiFile({
+    required this.file,
+    required NodeList<Combinator> combinators,
+  }) : shownNames = _shownNames(combinators),
+       hiddenNames = _hiddenNames(combinators);
+
+  final File file;
+  final Set<String>? shownNames;
+  final Set<String> hiddenNames;
+
+  bool includesTopLevelName(String name) {
+    if (_isPrivateName(name)) {
+      return false;
+    }
+    if (shownNames case final shownNames? when !shownNames.contains(name)) {
+      return false;
+    }
+
+    return !hiddenNames.contains(name);
+  }
+}
+
+Set<String>? _shownNames(NodeList<Combinator> combinators) {
+  Set<String>? shownNames;
+  for (final combinator in combinators) {
+    if (combinator is! ShowCombinator) {
+      continue;
+    }
+    final names = combinator.shownNames.map((name) => name.name).toSet();
+    shownNames = shownNames == null ? names : shownNames.intersection(names);
+  }
+
+  return shownNames;
+}
+
+Set<String> _hiddenNames(NodeList<Combinator> combinators) {
+  return {
+    for (final combinator in combinators)
+      if (combinator is HideCombinator)
+        for (final name in combinator.hiddenNames) name.name,
+  };
+}

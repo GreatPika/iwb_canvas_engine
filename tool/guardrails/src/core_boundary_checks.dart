@@ -282,8 +282,9 @@ List<GuardrailViolation> _checkRetiredShapeDeclarations(
 
 Iterable<String> _topLevelDeclarationNames(CompilationUnit unit) sync* {
   for (final declaration in unit.declarations) {
-    if (declaration case NamedCompilationUnitMember(:final name)) {
-      yield name.lexeme;
+    final name = _compilationUnitDeclarationName(declaration);
+    if (name != null) {
+      yield name;
     }
     if (declaration case TopLevelVariableDeclaration(:final variables)) {
       for (final variable in variables.variables) {
@@ -545,9 +546,7 @@ Iterable<String> _runtimeRootDeclarations(
   CompilationUnit unit,
 ) sync* {
   for (final declaration in unit.declarations) {
-    if (declaration case NamedCompilationUnitMember(
-      :final name,
-    ) when name.lexeme == 'RuntimeRoot') {
+    if (_compilationUnitDeclarationName(declaration) == 'RuntimeRoot') {
       yield path;
     }
     if (declaration case TopLevelVariableDeclaration(:final variables)) {
@@ -558,6 +557,18 @@ Iterable<String> _runtimeRootDeclarations(
       }
     }
   }
+}
+
+String? _compilationUnitDeclarationName(CompilationUnitMember declaration) {
+  return switch (declaration) {
+    ClassDeclaration(:final namePart) => namePart.typeName.lexeme,
+    ClassTypeAlias(:final name) => name.lexeme,
+    EnumDeclaration(:final namePart) => namePart.typeName.lexeme,
+    FunctionDeclaration(:final name) => name.lexeme,
+    GenericTypeAlias(:final name) => name.lexeme,
+    MixinDeclaration(:final name) => name.lexeme,
+    _ => null,
+  };
 }
 
 ParseStringResult _parseFile(File file) {

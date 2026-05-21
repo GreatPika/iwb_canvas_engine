@@ -9,6 +9,16 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 - Guardrails: `api.public_api_compiles_as_written`
 
+## test.api_contract.public_api_no_unapproved_placeholders
+
+- Path: `test/api_contract/public_api_no_unapproved_placeholders_test.dart`
+- Phases: `P2`
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+- Guardrails: `none`
+- Focus: exported public `UnimplementedError` placeholders must either be
+  removed or explicitly allowlisted with owner phase, reason, and removal
+  condition.
+
 ## test.guardrails.public_api_declaration_checks
 
 - Path: `test/guardrails/public_api_declaration_checks_test.dart`
@@ -57,6 +67,16 @@ Explicit and phase-required tests from the registry, linked to phases, sections 
 - Focus: public preview state is a sealed union with exported readable variants,
   stable CanvasPreviewKind values, shared CanvasStrokePreview facts, immutable
   iterable payloads, and no public pointer/session/selection-owned payload.
+
+## test.api.canvas_transform
+
+- Path: `test/api/canvas_transform_test.dart`
+- Phases: `P2`
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+- Guardrails: `none`
+- Focus: executable public `CanvasTransform` value behavior for rotation, TRS,
+  multiplication, point/rect application, inversion, matrix conversion, and
+  JSON projection from a Flutter consumer package.
 
 ## test.api.canvas_field_update
 

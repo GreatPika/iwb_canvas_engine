@@ -111,9 +111,9 @@ List<String> _importUris({required String path, required String content}) {
 
 List<String> _directiveImportUris(ImportDirective directive) {
   return [
-    if (directive.uri.stringValue case final importUri?) importUri,
+    ?directive.uri.stringValue,
     for (final configuration in directive.configurations)
-      if (configuration.uri.stringValue case final importUri?) importUri,
+      ?configuration.uri.stringValue,
   ];
 }
 
