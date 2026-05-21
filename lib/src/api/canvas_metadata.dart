@@ -39,3 +39,25 @@ final class CanvasMetadata {
 int canvasMetadataEncodedByteLength(CanvasMetadata metadata) {
   return metadata._encodedByteLength;
 }
+
+@internal
+Map<String, Object?> canvasMetadataToJsonObject(CanvasMetadata metadata) {
+  return Map<String, Object?>.unmodifiable({
+    for (final entry in metadata._values.entries)
+      entry.key: _copyMetadataJsonValue(entry.value),
+  });
+}
+
+Object? _copyMetadataJsonValue(Object? value) {
+  return switch (value) {
+    null || bool() || num() || String() => value,
+    List<Object?>() => List<Object?>.unmodifiable(
+      value.map(_copyMetadataJsonValue),
+    ),
+    Map<String, Object?>() => Map<String, Object?>.unmodifiable({
+      for (final entry in value.entries)
+        entry.key: _copyMetadataJsonValue(entry.value),
+    }),
+    _ => value,
+  };
+}

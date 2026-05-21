@@ -49,6 +49,33 @@ Future<List<GuardrailViolation>> checkCoreBoundaries() async {
   return violations;
 }
 
+Future<List<GuardrailViolation>> checkCodecNoRuntimeImports() async {
+  final violations = <GuardrailViolation>[];
+  for (final file in dartFilesUnder('lib/src/codec')) {
+    final path = relativePath(file);
+    final unit = _parseFile(file).unit;
+    for (final directive in unit.directives.whereType<ImportDirective>()) {
+      final uri = directive.uri.stringValue;
+      if (uri == null) {
+        continue;
+      }
+      final target = _targetPath(path, uri);
+      if (target == null || !_isCodecRuntimeMutationTarget(target)) {
+        continue;
+      }
+      violations.add(
+        GuardrailViolation(
+          guardrailId: 'codec.no_runtime_side_effects',
+          path: path,
+          message: 'codec code may not import runtime mutation owner $target',
+        ),
+      );
+    }
+  }
+
+  return violations;
+}
+
 List<GuardrailViolation> checkCoreBoundaryFile({
   required String path,
   required String content,
@@ -399,6 +426,14 @@ bool _isFlutterWidgetSurface(String uri) {
   return uri == 'package:flutter/widgets.dart' ||
       uri == 'package:flutter/material.dart' ||
       uri == 'package:flutter/cupertino.dart';
+}
+
+bool _isCodecRuntimeMutationTarget(String target) {
+  return target.startsWith('lib/src/runtime/') ||
+      target.startsWith('lib/src/store/') ||
+      target.startsWith('lib/src/edit/') ||
+      target.startsWith('lib/src/frame/') ||
+      target.startsWith('lib/src/surface/');
 }
 
 const _sceneControllerShapeNames = {'SceneController', 'SceneSnapshot'};

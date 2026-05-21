@@ -102,19 +102,6 @@ const publicApiPlaceholderAllowlist = <PublicApiPlaceholder>[
     removalCondition: 'Remove when runtime disposal closes streams and state.',
   ),
   PublicApiPlaceholder(
-    declarationId: 'encodeCanvasDocument',
-    ownerPhase: 'P3',
-    reason: 'Schema v1 encoding is owned by codec skeleton and validation.',
-    removalCondition: 'Remove when schema v1 document encoding is implemented.',
-  ),
-  PublicApiPlaceholder(
-    declarationId: 'encodeCanvasDocumentToJson',
-    ownerPhase: 'P3',
-    reason:
-        'Schema v1 JSON encoding is owned by codec skeleton and validation.',
-    removalCondition: 'Remove when schema v1 JSON encoding is implemented.',
-  ),
-  PublicApiPlaceholder(
     declarationId: 'CanvasSurface.build',
     ownerPhase: 'P13',
     reason: 'Flutter surface rendering is owned by the Flutter surface phase.',
