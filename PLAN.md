@@ -42,3 +42,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 20. Guardrail proof hardening](plan/step_20_guardrail_proof_hardening.md)
 - [x] [Step 21. P1 v1 scope gate before public API freeze](plan/step_21_v1_scope_gate_before_public_api_freeze.md)
 - [x] [Step 22. P2 public API freeze hardening](plan/step_22_p2_public_api_freeze_hardening.md)
+- [ ] [Step 23. P3 schema v1 DTO validation and codec skeleton](plan/step_23_p3_schema_v1_dto_validation_and_codec_skeleton.md)

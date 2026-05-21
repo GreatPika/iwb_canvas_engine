@@ -33,7 +33,10 @@ Required tests:
 - `test.api_contract.public_readable_union_variants`
 - `test.api_contract.preview_state_sealed_union`
 - `test.api_contract.public_api_v1_compiles_as_written`
+- `test.api_contract.public_api_no_unapproved_placeholders`
+- `test.guardrails.public_api_declaration_checks`
 - `test.guardrails.public_api_import_cycles`
+- `test.api.canvas_transform`
 - `test.api.canvas_field_update`
 - `test.api_contract.canvas_field_update_static_semantics`
 - `test.api_contract.no_undefined_public_type_references`
