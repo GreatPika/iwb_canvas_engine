@@ -42,10 +42,18 @@ final class ElementRegistry {
   Set<String> get admittedLayerIds => layerTable.admittedIds;
 
   Set<CanvasElementId> get contentElementIds {
-    return {
+    return {for (final id in contentElementOrder) id};
+  }
+
+  List<CanvasElementId> get contentElementOrder {
+    return List.unmodifiable([
       for (final row in layerTable.rows)
         for (final id in row.elementIds) id,
-    };
+    ]);
+  }
+
+  List<CanvasElementId> get frameElementOrder {
+    return List.unmodifiable([...backgroundElementIds, ...contentElementOrder]);
   }
 
   Set<CanvasElementId> get selectableElementIds {
@@ -54,5 +62,9 @@ final class ElementRegistry {
         for (final id in row.elementIds)
           if (familyTables.isSelectionEligible(id)) id,
     };
+  }
+
+  ElementFrameFacts? elementFrameFacts(CanvasElementId id) {
+    return familyTables.elementFrameFacts(id);
   }
 }

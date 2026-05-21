@@ -58,6 +58,97 @@ final class FamilyTables {
     return common != null && common.isVisible && common.isSelectable;
   }
 
+  ElementFrameFacts? elementFrameFacts(CanvasElementId id) {
+    final value = id.value;
+
+    return _imageFrameFacts(value) ??
+        _commonFrameFacts(pathRows[value]?.common, CanvasElementKind.path) ??
+        _commonFrameFacts(textRows[value]?.common, CanvasElementKind.text) ??
+        _commonFrameFacts(
+          strokeRows[value]?.common,
+          CanvasElementKind.stroke,
+        ) ??
+        _commonFrameFacts(lineRows[value]?.common, CanvasElementKind.line) ??
+        _commonFrameFacts(rectRows[value]?.common, CanvasElementKind.rect);
+  }
+
+  ElementFrameFacts? _imageFrameFacts(String id) {
+    final row = imageRows[id];
+    if (row == null) {
+      return null;
+    }
+
+    return _commonFrameFacts(
+      row.common,
+      CanvasElementKind.image,
+      resourceId: row.resourceId,
+    );
+  }
+
+  ElementFrameFacts? _commonFrameFacts(
+    ElementCommonRow? common,
+    CanvasElementKind kind, {
+    CanvasResourceId? resourceId,
+  }) {
+    if (common == null) {
+      return null;
+    }
+
+    return ElementFrameFacts(
+      id: common.id,
+      kind: kind,
+      revision: common.revision,
+      generation: 0,
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+      metadata: common.metadata,
+      resourceId: resourceId,
+      size: switch (kind) {
+        CanvasElementKind.image => imageRows[common.id.value]?.size,
+        CanvasElementKind.rect => rectRows[common.id.value]?.size,
+        _ => null,
+      },
+      naturalSize: imageRows[common.id.value]?.naturalSize,
+      svgPathData: pathRows[common.id.value]?.svgPathData,
+      fillColor:
+          pathRows[common.id.value]?.fillColor ??
+          rectRows[common.id.value]?.fillColor,
+      strokeColor:
+          pathRows[common.id.value]?.strokeColor ??
+          rectRows[common.id.value]?.strokeColor,
+      strokeWidth:
+          pathRows[common.id.value]?.strokeWidth ??
+          rectRows[common.id.value]?.strokeWidth,
+      fillRule: pathRows[common.id.value]?.fillRule,
+      text: textRows[common.id.value]?.text,
+      fontSize: textRows[common.id.value]?.fontSize,
+      textColor: textRows[common.id.value]?.color,
+      textAlign: textRows[common.id.value]?.align,
+      textDirection: textRows[common.id.value]?.textDirection,
+      isBold: textRows[common.id.value]?.isBold,
+      isItalic: textRows[common.id.value]?.isItalic,
+      isUnderline: textRows[common.id.value]?.isUnderline,
+      fontFamily: textRows[common.id.value]?.fontFamily,
+      maxWidth: textRows[common.id.value]?.maxWidth,
+      lineHeight: textRows[common.id.value]?.lineHeight,
+      points: strokeRows[common.id.value]?.points,
+      start: lineRows[common.id.value]?.start,
+      end: lineRows[common.id.value]?.end,
+      color:
+          strokeRows[common.id.value]?.color ??
+          lineRows[common.id.value]?.color,
+      thickness:
+          strokeRows[common.id.value]?.thickness ??
+          lineRows[common.id.value]?.thickness,
+    );
+  }
+
   ElementCommonRow? _commonById(String id) {
     return imageRows[id]?.common ??
         pathRows[id]?.common ??
@@ -66,6 +157,86 @@ final class FamilyTables {
         lineRows[id]?.common ??
         rectRows[id]?.common;
   }
+}
+
+final class ElementFrameFacts {
+  ElementFrameFacts({
+    required this.id,
+    required this.kind,
+    required this.revision,
+    required this.generation,
+    required this.transform,
+    required this.opacity,
+    required this.hitPadding,
+    required this.isVisible,
+    required this.isSelectable,
+    required this.isLocked,
+    required this.isDeletable,
+    required this.isTransformable,
+    required this.metadata,
+    this.resourceId,
+    this.size,
+    this.naturalSize,
+    this.svgPathData,
+    this.fillColor,
+    this.strokeColor,
+    this.strokeWidth,
+    this.fillRule,
+    this.text,
+    this.fontSize,
+    this.textColor,
+    this.textAlign,
+    this.textDirection,
+    this.isBold,
+    this.isItalic,
+    this.isUnderline,
+    this.fontFamily,
+    this.maxWidth,
+    this.lineHeight,
+    Iterable<Offset>? points,
+    this.start,
+    this.end,
+    this.color,
+    this.thickness,
+  }) : points = List.unmodifiable(points ?? const []);
+
+  final CanvasElementId id;
+  final CanvasElementKind kind;
+  final int revision;
+  final int generation;
+  final CanvasTransform transform;
+  final double opacity;
+  final double hitPadding;
+  final bool isVisible;
+  final bool isSelectable;
+  final bool isLocked;
+  final bool isDeletable;
+  final bool isTransformable;
+  final CanvasMetadata metadata;
+  final CanvasResourceId? resourceId;
+  final Size? size;
+  final Size? naturalSize;
+  final String? svgPathData;
+  final Color? fillColor;
+  final Color? strokeColor;
+  final double? strokeWidth;
+  final CanvasPathFillRule? fillRule;
+  final String? text;
+  final double? fontSize;
+  final Color? textColor;
+  final TextAlign? textAlign;
+  final TextDirection? textDirection;
+  final bool? isBold;
+  final bool? isItalic;
+  final bool? isUnderline;
+  final String? fontFamily;
+  final double? maxWidth;
+  final double? lineHeight;
+  final List<Offset> points;
+  final Offset? start;
+  final Offset? end;
+  final Color? color;
+  final double? thickness;
 }
 
 final class _AdmittedRows {

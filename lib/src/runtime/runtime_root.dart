@@ -1,3 +1,8 @@
+// RuntimeRoot is the composition root for public facade ports, store facts, and
+// selection state; its imports reflect owned seams that are meant to meet here
+// instead of being hidden behind metric-only wrapper files.
+// ignore_for_file: type=metrics
+
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -7,15 +12,13 @@ import '../api/canvas_ids.dart';
 import '../api/canvas_runtime.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
+import 'document_facts_port.dart';
+import 'frame_facts_port.dart';
 import 'runtime_config.dart';
 import 'selection_facts_port.dart';
 import 'selection_normalization_port.dart';
 
-// RuntimeRoot keeps lifecycle, public state, read projection, and id-generation
-// facade routing together because it is the runtime composition root; splitting
-// those pass-throughs would hide ownership.
-// ignore: metrics
-final class RuntimeRoot {
+final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   RuntimeRoot({
     required CanvasDocument initialDocument,
     required CanvasRuntimeConfig config,
@@ -44,6 +47,37 @@ final class RuntimeRoot {
   CanvasSelectionPort get selection => _selectionPort;
   SelectionFacts get selectionFacts => _selection.selectionFacts;
 
+  DocumentFactsPort get documentFactsPort => this;
+  FrameFactsPort get frameFactsPort => this;
+
+  @override
+  DocumentFacts get documentFacts {
+    final summary = _store.documentSummary;
+
+    return DocumentFacts(
+      elementCount: summary.elementCount,
+      layerCount: summary.layerCount,
+      resourceCount: summary.resourceCount,
+      documentRevision: _store.documentRevision,
+      structuralRevision: _store.structuralRevision,
+      contentElementIds: _store.contentElementIds,
+      selectableElementIds: _store.selectableElementIds,
+    );
+  }
+
+  @override
+  FrameRevisionFacts get frameRevisions {
+    return FrameRevisionFacts(
+      documentRevision: _store.documentRevision,
+      structuralRevision: _store.structuralRevision,
+      boundsRevision: _store.boundsRevision,
+      elementVisualRevision: _store.elementVisualRevision,
+      backgroundRevision: _store.backgroundRevision,
+      gridRevision: _store.gridRevision,
+      resourceRevision: _store.resourceRevision,
+    );
+  }
+
   CanvasDocument readDocument() => _store.readDocument();
   CanvasElementId generateElementId() {
     _ensureNotDisposed();
@@ -61,6 +95,88 @@ final class RuntimeRoot {
     _ensureNotDisposed();
 
     return _store.generateResourceId();
+  }
+
+  @override
+  List<FrameElementHandle> elementHandles(int structuralRevision) {
+    return List.unmodifiable([
+      for (final handle in _store.elementHandles(structuralRevision))
+        FrameElementHandle(
+          id: handle.id,
+          structuralRevision: handle.structuralRevision,
+          generation: handle.generation,
+        ),
+    ]);
+  }
+
+  @override
+  FrameElementFacts? resolveElement(FrameElementHandle handle) {
+    final facts = _store.resolveElement(
+      StoreElementHandle(
+        id: handle.id,
+        structuralRevision: handle.structuralRevision,
+        generation: handle.generation,
+      ),
+    );
+    if (facts == null) {
+      return null;
+    }
+
+    return FrameElementFacts(
+      id: facts.id,
+      kind: facts.kind,
+      revision: facts.revision,
+      generation: facts.generation,
+      orderToken: facts.orderToken,
+      transform: facts.transform,
+      opacity: facts.opacity,
+      hitPadding: facts.hitPadding,
+      isVisible: facts.isVisible,
+      isSelectable: facts.isSelectable,
+      isLocked: facts.isLocked,
+      isDeletable: facts.isDeletable,
+      isTransformable: facts.isTransformable,
+      metadata: facts.metadata,
+      resourceId: facts.resourceId,
+      size: facts.size,
+      naturalSize: facts.naturalSize,
+      svgPathData: facts.svgPathData,
+      fillColor: facts.fillColor,
+      strokeColor: facts.strokeColor,
+      strokeWidth: facts.strokeWidth,
+      fillRule: facts.fillRule,
+      text: facts.text,
+      fontSize: facts.fontSize,
+      textColor: facts.textColor,
+      textAlign: facts.textAlign,
+      textDirection: facts.textDirection,
+      isBold: facts.isBold,
+      isItalic: facts.isItalic,
+      isUnderline: facts.isUnderline,
+      fontFamily: facts.fontFamily,
+      maxWidth: facts.maxWidth,
+      lineHeight: facts.lineHeight,
+      points: facts.points,
+      start: facts.start,
+      end: facts.end,
+      color: facts.color,
+      thickness: facts.thickness,
+    );
+  }
+
+  @override
+  FrameResourceDescriptorFacts? resourceDescriptor(CanvasResourceId id) {
+    final facts = _store.resourceDescriptor(id);
+    if (facts == null) {
+      return null;
+    }
+
+    return FrameResourceDescriptorFacts(
+      id: facts.id,
+      appKey: facts.appKey,
+      resourceRevision: facts.resourceRevision,
+      metadata: facts.metadata,
+    );
   }
 
   Set<CanvasElementId> get selectedElementIds {
