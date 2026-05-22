@@ -553,10 +553,12 @@ edges:
       - path: docs/contracts/diagnostics.md
       - path: docs/implementation/p3_schema_v1_dto_validation_and_codec_skeleton.md
     evidence:
-      - Codec failure paths must be graph-visible as diagnostic events.
+      - Codec failure paths must route through an explicit graph-checkable diagnostics bridge, not only import DiagnosticsHub.
     actual:
-      imports:
-        - lib/src/diagnostics/diagnostics_hub.dart
+      delegationMembers:
+        - recordSchemaV1FailureDiagnostic
+      delegationTargets:
+        - DiagnosticsHub
       sensitiveThrowOwner: codec.schema_v1
   - id: edit.kernel.mutates_store
     from: edit.kernel

@@ -125,7 +125,9 @@ The graph extractor is not a general Dart call-graph analyzer. It extracts only
 named graph facts declared in `docs/architecture/architecture_graph.yaml`, such
 as covered imports, declarations, implemented interfaces, graph-owned
 composition fields, public placeholders, sensitive throws, and explicitly named
-delegation members.
+delegation members. If a future implementation chooses block-bodied internal
+logic for a graph-critical route, keep a small named graph-checkable bridge for
+the route instead of relying on broad call-body scanning.
 
 The runner must support these selection modes:
 
