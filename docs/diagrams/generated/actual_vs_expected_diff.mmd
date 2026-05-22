@@ -1,0 +1,29 @@
+%% GENERATED FILE. Do not edit by hand.
+%% Source: docs/architecture/architecture_graph.yaml
+%% View: Actual vs expected selected phase diff
+%% Selected phase: P4
+flowchart LR
+  api_camera_port["Public camera port\nP4"]:::ok
+  api_canvas_runtime["Canvas runtime facade\nP4"]:::ok
+  api_public_surface["Public package surface\nP0"]:::ok
+  codec_schema_v1["Schema v1 codec\nP3"]:::ok
+  diagnostics_hub["Diagnostics hub\nP3"]:::ok
+  runtime_root["Runtime composition root\nP4"]:::ok
+  runtime_view_camera["Runtime-owned view camera\nP4"]:::ok
+  selection_kernel["Selection kernel\nP4"]:::ok
+  store_document_kernel["Document store kernel\nP4"]:::ok
+  api_camera_port -->|facade_port P4| runtime_view_camera
+  api_canvas_runtime -->|composes P4| runtime_root
+  api_canvas_runtime -->|facade_port P4| api_camera_port
+  api_public_surface -->|exports P2| api_canvas_runtime
+  codec_schema_v1 -->|diagnostic_route P3| diagnostics_hub
+  codec_schema_v1 -->|data_boundary P3| api_public_surface
+  runtime_root -->|composes P4| selection_kernel
+  runtime_root -->|composes P4| store_document_kernel
+  violation_codec_schema_v1_failures_report_to_diagnostics["missing_required_edge"]:::violation
+  violation_codec_schema_v1_failures_report_to_diagnostics -.-> codec_schema_v1_failures_report_to_diagnostics
+  violation_runtime_canvas_runtime_camera_closed_phase_placeholder["closed_phase_placeholder"]:::violation
+  violation_runtime_canvas_runtime_camera_closed_phase_placeholder -.-> runtime_canvas_runtime_camera_closed_phase_placeholder
+  classDef ok fill:#f8fafc,stroke:#64748b,color:#0f172a
+  classDef violation fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+  linkStyle 4 stroke:#dc2626,stroke-width:3px,color:#7f1d1d

@@ -1,0 +1,22 @@
+%% GENERATED FILE. Do not edit by hand.
+%% Source: docs/architecture/architecture_graph.yaml
+%% View: Selected phase architecture graph
+%% Selected phase: P4
+flowchart LR
+  api_camera_port["Public camera port\nP4"]
+  api_canvas_runtime["Canvas runtime facade\nP4"]
+  api_public_surface["Public package surface\nP0"]
+  codec_schema_v1["Schema v1 codec\nP3"]
+  diagnostics_hub["Diagnostics hub\nP3"]
+  runtime_root["Runtime composition root\nP4"]
+  runtime_view_camera["Runtime-owned view camera\nP4"]
+  selection_kernel["Selection kernel\nP4"]
+  store_document_kernel["Document store kernel\nP4"]
+  api_camera_port -->|facade_port P4| runtime_view_camera
+  api_canvas_runtime -->|composes P4| runtime_root
+  api_canvas_runtime -->|facade_port P4| api_camera_port
+  api_public_surface -->|exports P2| api_canvas_runtime
+  codec_schema_v1 -->|diagnostic_route P3| diagnostics_hub
+  codec_schema_v1 -->|data_boundary P3| api_public_surface
+  runtime_root -->|composes P4| selection_kernel
+  runtime_root -->|composes P4| store_document_kernel
