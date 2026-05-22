@@ -13,6 +13,10 @@ architecture obligations, implemented code facts, placeholders, forbidden
 dependencies, and graph-backed diagram views comparable by tool. The checker
 must prove the process gap that allowed P0-P4 verification to pass while P3
 codec diagnostics routing and P4 camera ownership obligations remained missing.
+It must also prove that generated full and future graph views are honest
+target-architecture views: they must not render architecture owners as
+unconnected boxes unless the graph explicitly allows and explains that
+isolation.
 
 ### In Scope
 
@@ -37,6 +41,19 @@ codec diagnostics routing and P4 camera ownership obligations remained missing.
   an explicit selected phase for current-phase views, while the
   actual-vs-expected diff view must be reproducible from `architecture_graph.yaml`
   plus the analyzer-derived actual graph for the selected phase.
+- Populate future-phase graph entries with all graph-checkable major owners,
+  seams, and planned edges already present in repository source-of-truth
+  artifacts. Missing private helper details remain out of scope, but missing
+  SSOT-backed architecture edges are a contract failure.
+- Add machine-checkable SSOT coverage data to the expected graph using
+  registry section ids from `docs/_registry/sections.yaml`, so every
+  registry-owned architecture section is classified as graph-backed obligations
+  or explicitly non-graph-checkable semantics. The implementation must not
+  claim full target-graph alignment from sourceDoc citations alone.
+- Enforce generated full and future graph view connectivity: every rendered
+  architecture node must have at least one incident rendered edge unless the
+  graph entry explicitly marks isolation as allowed, cites source documents, and
+  explains why the node belongs in that view while disconnected.
 - Update architecture, diagram, and verification documentation only where needed
   to route readers to the new graph source, generated graph views, and
   standalone closure command.
@@ -88,6 +105,22 @@ the change, not target-state requirements.
 - `.research/2026-05-22-p0-p4-architecture-closure.md:163` records that the
   actual P0-P4 code graph currently contains API, codec, diagnostics, runtime,
   selection, and store owners while P5+ production owners are absent.
+- `.design/2026-05-22-architecture-graph-closure-checker.md:153` requires the
+  expected graph to encode graph-checkable obligations already present in
+  architecture docs, contracts, implementation phase documents, operation
+  matrices, guardrail inventories, and diagram catalog phase metadata.
+- `.design/2026-05-22-architecture-graph-closure-checker.md:336` and
+  `.design/2026-05-22-architecture-graph-closure-checker.md:337` require
+  validation of `architecture_graph.yaml` and proof that expected graph entries
+  trace to SSOT evidence rather than extracted implementation facts.
+- `docs/architecture/architecture_graph.yaml:367`,
+  `docs/architecture/architecture_graph.yaml:383`, and
+  `docs/architecture/architecture_graph.yaml:415` currently define future
+  nodes such as `draw.tools`, `eraser_text.request`, and `release.measurement`.
+  `docs/diagrams/generated/full_architecture.mmd:11`,
+  `docs/diagrams/generated/full_architecture.mmd:13`, and
+  `docs/diagrams/generated/full_architecture.mmd:19` currently render those
+  nodes in the full graph view without matching incident edges.
 
 ### Entry Paths
 
@@ -143,6 +176,15 @@ the change, not target-state requirements.
 - Public placeholder checks can detect unapproved placeholders, but the
   current allowlist has no selected-phase closure rule that fails a P4-owned
   placeholder after P4 is closed.
+- `test/architecture_graph/architecture_graph_schema_test.dart` validates
+  schema shape and sourceDoc traceability, and
+  `test/architecture_graph/generated_graph_views_test.dart` validates
+  deterministic generated output, but neither currently rejects isolated nodes
+  in full or future generated graph views.
+- Existing sourceDoc citation checks can prove every graph entry cites a file,
+  but they cannot prove every graph-checkable obligation in the SSOT files was
+  reviewed and either represented by graph ids or explicitly excluded as
+  non-graph semantics.
 
 ### Valid Precedents
 
@@ -197,6 +239,9 @@ the change, not target-state requirements.
 - Wiring the strict graph checker into the full blocking guardrail suite before
   the known P3/P4 drifts are fixed would make the repository's normal blocking
   proof fail by design.
+- A generated file named `full_architecture.mmd` looks like a complete target
+  architecture diagram to readers. Rendering a sparse seed graph under that
+  name is misleading even when the YAML source is technically reproducible.
 
 ## 3. Architecture Decision
 
@@ -210,6 +255,10 @@ and compared against the expected graph for a selected phase.
 The first implementation must cover P0-P14 with one uniform schema and one
 quality target. Already-closed phases may have richer bootstrap evidence because
 their code exists now, but that is not a permanent lower bar for later phases.
+For future phases, the graph does not need private helper-level implementation
+details before the phase is active, but it must include every graph-checkable
+major owner, seam, forbidden dependency, placeholder, and planned edge already
+declared in the repository's source-of-truth documents.
 
 ### Ownership
 
@@ -245,6 +294,27 @@ coverage:
 
 The checker may fail unknown architecture seams only inside declared coverage.
 It must not infer repository-wide coverage from the presence of the graph file.
+The expected graph schema must include source-coverage data keyed by
+`docs/_registry/sections.yaml` section ids, not by parsed Markdown headings.
+`docs/_registry/sections.yaml` remains the source of truth for the architecture
+section inventory, including section id, file, title, phases, related diagrams,
+guardrails, tests, and read-order metadata. Every registry section whose file
+is under `docs/architecture/**`, `docs/contracts/**`, `docs/verification/**`,
+or whose phases include `P0` through `P14` must have one explicit disposition:
+`graph_obligation` with one or more graph ids, `non_graph_semantics` with a
+reason, `superseded` with the successor source, or `out_of_graph_scope` with a
+reason. A graph id referenced by source coverage must exist in nodes, edges,
+placeholders, forbidden edges, or views. A graph entry must reference at least
+one existing registry section id in addition to any diagnostic `sourceDocs`
+paths. This is the mechanical completeness gate for claiming the target graph
+matches the architecture SSOT; plain sourceDoc citations and duplicate heading
+lists are not enough.
+The graph schema must also own view-level connectivity intent for expected full
+and future views. A rendered architecture node in those views is valid only when
+it has at least one incident rendered edge, or when the node carries an explicit
+isolation allowance with source documents and a plain-language reason. This
+allowance is an exception for real standalone measurement or release scope, not
+a substitute for missing future-phase architecture edges.
 
 `tool/architecture_graph/**` owns schema parsing, validation, analyzer-backed
 actual graph extraction, phase comparison, report formatting, and generated
@@ -284,6 +354,9 @@ from `architecture_graph.yaml` plus the selected phase where relevant.
 `actual_vs_expected_diff.mmd` is generated from `architecture_graph.yaml` plus
 the analyzer-derived actual graph for the selected phase. Extracted actual facts
 must never rewrite expected graph obligations automatically.
+`full_architecture.mmd` and `future_target.mmd` must render honest connected
+target views: generated output must not hide graph incompleteness behind a
+valid Mermaid render.
 
 ### Entry and Exit Boundaries
 
@@ -310,12 +383,12 @@ Exit boundaries:
 ### Verification Strategy
 
 Use analyzer-rule proof: schema tests, extractor fixtures, checker fixtures,
-known-drift regression tests, generated view reproducibility tests, targeted
-negative proof for forbidden shortcuts, and the existing broad repository
-checks. The strict production P4 checker run is expected to exit non-zero until
-the codec diagnostics and camera drift are fixed in later implementation work;
-the proof must assert that non-zero result and the named graph ids instead of
-pretending P4 is graph-clean.
+known-drift regression tests, generated view reproducibility tests, full/future
+view connectivity tests, targeted negative proof for forbidden shortcuts, and
+the existing broad repository checks. The strict production P4 checker run is
+expected to exit non-zero until the codec diagnostics and camera drift are fixed
+in later implementation work; the proof must assert that non-zero result and
+the named graph ids instead of pretending P4 is graph-clean.
 
 ### Decision Ledger
 
@@ -326,6 +399,8 @@ pretending P4 is graph-clean.
 | D3 | Phase closure is strict for the selected phase and must report known P3/P4 drift rather than suppressing it. | `tool/architecture_graph/check.dart` | P3, P5 |
 | D4 | Expected-only generated graph views are derived from the expected graph; the actual-vs-expected diff view is derived from the expected graph plus analyzer-derived actual graph for the selected phase. | `docs/diagrams/generated/**` | P4, P6 |
 | D5 | Default blocking guardrail integration is deferred while known selected-phase graph violations remain. | `tool/guardrails/**` and `docs/verification/guardrails.md` | P7, P11 |
+| D6 | Full and future generated graph views must be connected target-architecture views, with explicit source-backed isolation allowances only for nodes that are intentionally standalone in that view. | `docs/architecture/architecture_graph.yaml` and `tool/architecture_graph/**` | P6, P14 |
+| D7 | Target-graph completeness is proven through machine-checkable coverage of registry-owned architecture sections from `docs/_registry/sections.yaml`, not through unstructured prose review, parsed Markdown headings, or sourceDoc citations alone. | `docs/architecture/architecture_graph.yaml` and `tool/architecture_graph/**` | P15 |
 
 ### Rejected Alternatives
 
@@ -339,6 +414,18 @@ pretending P4 is graph-clean.
   closure gate and cannot fail on missing planned obligations.
 - Immediate default blocking guardrail integration is rejected because the
   selected strict checker must currently report known P3/P4 violations.
+- Renaming the sparse output instead of repairing graph completeness is rejected
+  because the design already selected generated full/future graph views from the
+  expected graph; the defect is the missing graph-checkable obligations and
+  missing guardrail, not only the file name.
+- Claiming full alignment from sourceDoc citations alone is rejected because it
+  only proves that graph entries point to documents. It does not prove that all
+  registry-owned graph-checkable sections were represented or explicitly
+  excluded.
+- Parsing Markdown headings into a second section inventory is rejected because
+  `docs/_registry/sections.yaml` already owns section ids, files, titles,
+  phases, diagrams, guardrails, tests, and read-order metadata. Duplicating that
+  inventory would create synchronization work without a stronger guarantee.
 
 ## 4. Execution Guardrails
 
@@ -359,9 +446,18 @@ pretending P4 is graph-clean.
    graph inputs are available and after the failing drift fixtures exist.
 5. Add generated graph views after graph ids, node/edge coverage, and phase
    filtering are stable enough to render reproducibly.
-6. Update navigation and verification documentation after the commands and
+6. Repair the expected graph and generated-view validation before Step 25
+   closure: audit repository source-of-truth artifacts for future-phase
+   graph-checkable major edges, add missing planned edges or explicit
+   source-backed isolation allowances, and prove full/future generated views do
+   not contain unexplained isolated architecture nodes.
+7. Add source-coverage validation before claiming target-graph completeness:
+   every registry-owned architecture section from `docs/_registry/sections.yaml`
+   must be mapped to graph ids or to a source-backed non-graph disposition, and
+   every graph entry must reference at least one existing registry section id.
+8. Update navigation and verification documentation after the commands and
    generated outputs exist.
-7. Run broad verification last. The strict P4 graph checker proof must assert
+9. Run broad verification last. The strict P4 graph checker proof must assert
    the expected non-zero known-drift report with both named graph ids:
    `runtime.canvas_runtime.camera.closed_phase_placeholder` and
    `codec.schema_v1.failures.report_to_diagnostics`. The default blocking
@@ -373,11 +469,22 @@ pretending P4 is graph-clean.
 - Do not edit production runtime behavior to make the new checker green.
 - Do not add expected graph entries by scraping actual code. Every expected node
   or edge must cite repository source-of-truth evidence.
+- Do not claim the target graph fully matches architecture documents unless
+  source-coverage validation proves every registry-owned architecture section
+  has a graph id mapping or an explicit non-graph/superseded/out-of-scope
+  disposition.
 - Do not make line numbers in `sourceDocs` hard schema blockers. Validate
   source document path existence, and treat line references as diagnostic
   evidence unless an entry explicitly marks a line anchor as `stableAnchor`.
 - Do not require helper-level implementation details outside declared graph
   coverage scope.
+- Do not treat future-phase architecture owners as complete merely because they
+  are present as nodes. If the SSOT already declares their architecture seams,
+  the expected graph must encode the corresponding planned edges.
+- Do not keep a node in `full_architecture.mmd` or `future_target.mmd` without
+  an incident rendered edge unless the graph entry has an explicit
+  source-backed isolation allowance and the schema/view tests enforce that
+  allowance.
 - Do not add a new dependency while `analyzer`, `test`, and `yaml` are
   sufficient for the slice.
 - Do not make generated Mermaid files sources of truth. Expected-only generated
@@ -391,7 +498,9 @@ pretending P4 is graph-clean.
 | Seam or consumer | Migration action | Retirement gate | Negative proof |
 |---|---|---|---|
 | Graph-checkable architecture obligations scattered across phase docs, architecture docs, contracts, guardrails, operation matrix rows, diagram catalog metadata, and code review | Add `docs/architecture/architecture_graph.yaml` as the structured expected graph for graph-checkable obligations, with citations back to the existing SSOT surfaces. | A later phase contract may rely on graph ids only after schema tests, sourceDoc path validation, and selected-phase checker fixtures pass. | P1 and P3 prove expected obligations are graph-owned and phase-checked instead of inferred from current code. |
+| Unstructured SSOT prose or duplicate Markdown heading inventory as implicit completeness proof | Add source-coverage data to `architecture_graph.yaml` keyed by `docs/_registry/sections.yaml` section ids, so every registry-owned architecture section is mapped to graph ids or an explicit non-graph disposition. | The target graph may be described as aligned with the architecture SSOT only when registry-section source-coverage validation passes. | P15 proves registry sections are exhaustively triaged and cross-linked to graph ids. |
 | Manual graph-like architecture and diff views | Generate only graph-backed views under `docs/diagrams/generated/**`; keep non-graph semantic diagrams handwritten. | Generated view files compare cleanly against the generator output. No manual diagram is removed unless a later contract gives it a graph-backed successor. | P4 and P6 prove generated views are derived artifacts. |
+| Sparse generated full/future target views | Migrate from node-presence-only rendering to connected target-view rendering, backed by planned edges or explicit isolation allowances in `architecture_graph.yaml`. | `full_architecture.mmd` and `future_target.mmd` have no unexplained isolated architecture nodes, and any allowed isolation has source-backed schema data. | P4, P6, and P14 prove generated views are connected or explicitly justified. |
 | Default blocking guardrail suite as the closure entrypoint | Keep the new strict checker standalone in this step; do not add it to `_blockingEntries` while known P3/P4 graph violations remain. | A later contract may add runner integration only after selected-phase graph violations are fixed or the selected guardrail phase is changed. | P7 and P11 prove the current blocking guardrail suite remains green and does not include the failing standalone graph checker. |
 
 ### Forbidden Moves
@@ -401,9 +510,17 @@ pretending P4 is graph-clean.
 - Do not add one-off allowlists for the known camera or codec drift inside the
   graph checker.
 - Do not treat P14 as a normal production implementation phase; model it as
-  measurement and release-alignment scope.
+  measurement and release-alignment scope. If `release.measurement` cannot be
+  connected honestly in a runtime/full architecture view, remove it from that
+  view and represent it only in a release or verification graph view owned by
+  the graph schema.
 - Do not delete or rewrite existing manual diagrams unless the slice has a
   graph-backed successor and this contract explicitly assigns that file.
+- Do not use a manual checklist, chat summary, or reviewer memory as proof that
+  target graph content matches architecture docs. The proof must be executable
+  source-coverage validation over `docs/_registry/sections.yaml`.
+- Do not parse Markdown headings to create a second section inventory for graph
+  coverage. Use registry section ids from `docs/_registry/sections.yaml`.
 - Do not mark Step 25 complete in `PLAN.md` or this file until all final-gate
   proof obligations are satisfied.
 
@@ -488,11 +605,12 @@ suppressing it. The report must include both stable graph ids:
 bypassing `DiagnosticsHub`.
 
 ```sh
-sh -c 'set +e; output=$(dart run tool/architecture_graph/check.dart --phase P4 2>&1); status=$?; printf "%s\n" "$output"; test "$status" -ne 0 && printf "%s\n" "$output" | grep -F "runtime.canvas_runtime.camera.closed_phase_placeholder" && printf "%s\n" "$output" | grep -F "codec.schema_v1.failures.report_to_diagnostics"'
+sh -c 'set +e; output=$(dart run tool/architecture_graph/check.dart --phase P4 2>&1); status=$?; printf "%s\n" "$output"; test "$status" -ne 0 && printf "%s\n" "$output" | grep -F "Architecture graph closure failed for P4." && printf "%s\n" "$output" | grep -F "Violations:" && printf "%s\n" "$output" | grep -F "runtime.canvas_runtime.camera.closed_phase_placeholder" && printf "%s\n" "$output" | grep -F "codec.schema_v1.failures.report_to_diagnostics"'
 ```
 
 Expected signal: the command exits successfully only when the checker itself
-exits non-zero and its output names both required graph ids:
+exits non-zero, prints the stable closure-failure report header for P4, prints
+the violation count marker, and names both required graph ids:
 `runtime.canvas_runtime.camera.closed_phase_placeholder` and
 `codec.schema_v1.failures.report_to_diagnostics`.
 
@@ -582,9 +700,45 @@ sh -c '! rg -n "[[:blank:]]+$" PLAN.md plan/step_25_architecture_graph_closure_c
 Expected signal: no trailing-whitespace matches are reported in the contract's
 owned roadmap, documentation, generated view, tool, or test surfaces.
 
+### P14. Full And Future View Connectivity
+
+Proves expected full and future generated graph views do not render
+architecture nodes as disconnected boxes unless the graph explicitly allows that
+isolation with sourceDocs and an explanation.
+
+```sh
+dart test test/architecture_graph/generated_graph_views_test.dart --name "full and future graph views reject unexplained isolated nodes"
+```
+
+Expected signal: the focused generated-view connectivity test passes, including
+at least one negative fixture or constructed graph case where an unexplained
+isolated rendered node is rejected.
+
+### P15. SSOT Source Coverage Completeness
+
+Proves every registry-owned architecture section from
+`docs/_registry/sections.yaml` is explicitly classified in
+`architecture_graph.yaml` and every graph-checkable section maps to existing
+graph ids. The test must fail when a registry-owned architecture section is
+absent from source coverage, when a `graph_obligation` entry has no graph ids,
+when a referenced graph id does not exist, when a graph entry lacks an existing
+registry section id, or when a non-graph disposition omits its reason or
+successor.
+
+```sh
+dart test test/architecture_graph/architecture_graph_schema_test.dart --name "expected graph source coverage is complete"
+```
+
+Expected signal: the focused source-coverage test passes for architecture
+sections registered in `docs/_registry/sections.yaml`, including sections whose
+files live under `docs/architecture/**`, `docs/contracts/**`,
+`docs/verification/**`, or whose phases include `P0` through `P14`. Its
+negative fixture or constructed graph case proves an omitted graph-checkable
+registry section is rejected.
+
 ## 6. Vertical Slices
 
-### Slice 1. [x] Expected graph schema and P0-P14 seed graph
+### Slice 1. [x] Expected graph schema and P0-P14 expected graph
 
 #### Implements
 
@@ -622,10 +776,10 @@ and camera ownership obligations as required selected-phase facts. P5-P13
 future owners must be represented as future or deferred obligations with their
 own `phaseRequiredBy`. P14 must be represented as measurement and
 release-alignment scope rather than a normal production component phase.
-P5-P13 seed graph entries must include known major owners and seams from
-source-of-truth artifacts, but absence of detailed internal edges is not a
-contract failure until the owning phase becomes active or a later phase contract
-adds those obligations.
+P5-P13 expected graph entries must include known major owners and seams from
+source-of-truth artifacts. Absence of private helper details is acceptable
+before the owning phase becomes active, but absence of SSOT-backed
+architecture-level planned edges is a contract failure.
 
 #### Proof
 
@@ -808,7 +962,97 @@ and `actual_vs_expected_diff.mmd` is reproducible from `architecture_graph.yaml`
 plus the analyzer-derived actual graph for the selected phase. All generated
 views remain limited to the graph semantics this contract owns.
 
-### Slice 5. [x] Documentation routing and non-blocking rollout finalization
+### Slice 5. [ ] Full and future graph completeness repair
+
+#### Implements
+
+D1, D4, D6, D7
+
+#### Obligations Covered
+
+BUG_FIX, SEAM_MIGRATION
+
+#### Files
+
+- Primary expected graph source of truth:
+  `docs/architecture/architecture_graph.yaml` - repair future-phase planned
+  edges, source-coverage data, and any explicit view-isolation metadata from
+  repository SSOT evidence.
+- Generated view implementation owner:
+  `tool/architecture_graph/**` - enforce full/future rendered-node
+  connectivity and support explicit source-backed isolation allowances if the
+  schema needs them.
+- Generated view proof:
+  `test/architecture_graph/generated_graph_views_test.dart` - add negative and
+  positive coverage for unexplained isolated nodes in `full_architecture.mmd`
+  and `future_target.mmd`.
+- Schema proof:
+  `test/architecture_graph/architecture_graph_schema_test.dart` - validate
+  source-coverage completeness and any explicit isolation allowance fields,
+  including required sourceDocs and explanation text.
+- Derived graph views:
+  `docs/diagrams/generated/full_architecture.mmd` - regenerated connected full
+  target graph view.
+- Derived graph views:
+  `docs/diagrams/generated/future_target.mmd` - regenerated connected future
+  target graph view.
+- Derived graph views:
+  `docs/diagrams/generated/current_phase.mmd` and
+  `docs/diagrams/generated/actual_vs_expected_diff.mmd` - regenerated only if
+  deterministic generator output changes.
+- Source-of-truth evidence inputs:
+  `docs/_registry/sections.yaml` - verify-only source of the architecture
+  section inventory and section ids that graph coverage must use.
+- Source-of-truth evidence inputs:
+  files referenced by covered `docs/_registry/sections.yaml` entries -
+  verify-only audit surfaces for graph-checkable future-phase owners, seams,
+  planned edges, release/measurement scope, and diagram-view metadata.
+- Explicit exclusions:
+  `lib/**` - no production behavior changes in this repair slice.
+- Explicit exclusions:
+  handwritten diagrams outside `docs/diagrams/generated/**` - no manual
+  sequence, state, lifecycle, or detailed data-flow diagram replacement in this
+  repair slice.
+
+#### Change
+
+Audit repository source-of-truth documents for graph-checkable future-phase
+architecture obligations that should already be represented in
+`architecture_graph.yaml`. Add missing planned edges for future owners such as
+`draw.tools` and `eraser_text.request` when the SSOT already defines their
+major seams. Resolve `release.measurement` explicitly: either connect it
+through a release/verification relationship that belongs in the generated view,
+or exclude it from runtime full/future architecture views and represent it only
+in a release or verification view owned by the graph schema.
+
+Add owner-side validation so generated full and future graph views reject
+unexplained isolated architecture nodes. If any isolated node is intentionally
+valid, encode the allowance in `architecture_graph.yaml` with sourceDocs and a
+plain-language reason, and prove the renderer/schema accepts only that explicit
+case.
+
+Add source-coverage data to `architecture_graph.yaml` for every registry-owned
+architecture section selected from `docs/_registry/sections.yaml`. Every
+graph-checkable registry section must map to one or more graph ids; every
+non-graph section must have an explicit disposition and reason. The schema test
+must make missing source coverage, dangling graph id references, graph entries
+without registry section ids, and reasonless non-graph dispositions fail.
+
+#### Proof
+
+Run P1, P4, P6, P14, and P15.
+
+#### Closure
+
+`full_architecture.mmd` and `future_target.mmd` no longer contain unexplained
+isolated architecture nodes. Every rendered future-phase architecture owner is
+connected by SSOT-backed planned edges or has a schema-validated
+source-backed isolation allowance. Source-coverage validation proves every
+registry-owned architecture section is either represented by graph ids or
+explicitly classified as non-graph/superseded/out-of-scope. The generated files
+are reproducible from the repaired graph source and generator.
+
+### Slice 6. [ ] Documentation routing and non-blocking rollout finalization
 
 #### Implements
 
@@ -870,7 +1114,7 @@ dependency.
 
 ### Run Proof Set
 
-Run P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, and P13.
+Run P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, and P15.
 
 ### Done When
 
@@ -886,6 +1130,13 @@ Run P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, and P13.
   `architecture_graph.yaml`, and `actual_vs_expected_diff.mmd` is reproducible
   from `architecture_graph.yaml` plus the analyzer-derived actual graph for the
   selected phase;
+- `full_architecture.mmd` and `future_target.mmd` contain no unexplained
+  isolated architecture nodes, and any intentionally isolated rendered node is
+  backed by explicit graph schema data, sourceDocs, and explanation text;
+- source-coverage validation proves every registry-owned architecture section
+  from `docs/_registry/sections.yaml` is mapped to graph ids or explicitly
+  classified with a
+  source-backed non-graph/superseded/out-of-scope disposition;
 - no production runtime behavior, public API, schema, or persistence format was
   changed;
 - no out-of-scope files were changed;
