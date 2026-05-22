@@ -962,7 +962,7 @@ and `actual_vs_expected_diff.mmd` is reproducible from `architecture_graph.yaml`
 plus the analyzer-derived actual graph for the selected phase. All generated
 views remain limited to the graph semantics this contract owns.
 
-### Slice 5. [ ] Full and future graph completeness repair
+### Slice 5. [x] Full and future graph completeness repair
 
 #### Implements
 

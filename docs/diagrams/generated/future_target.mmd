@@ -12,11 +12,15 @@ flowchart LR
   geometry_spatial_index["Geometry and spatial index<br/>required by P8"]
   interaction_selection_move["Selection and move interaction owner<br/>required by P10"]
   load_document_pipeline["Load document pipeline<br/>required by P6"]
-  release_measurement["Measurement and release alignment<br/>required by P14"]
   resource_resolver["Resource resolver<br/>required by P7"]
   runtime_root["Runtime composition root<br/>required by P4"]
   store_document_kernel["Document store kernel<br/>required by P4"]
+  draw_tools -->|commits through by P11| edit_kernel
+  draw_tools -->|publishes preview through by P11| interaction_selection_move
   edit_kernel -->|changes data through by P5| store_document_kernel
+  eraser_text_request -->|commits through by P12| edit_kernel
+  eraser_text_request -->|publishes preview through by P12| interaction_selection_move
+  eraser_text_request -->|queries hits through by P12| geometry_spatial_index
   flutter_surface -->|is shown through by P13| api_canvas_runtime
   geometry_spatial_index -->|reads data through by P10| interaction_selection_move
   load_document_pipeline -->|changes data through by P6| store_document_kernel

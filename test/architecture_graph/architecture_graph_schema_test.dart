@@ -191,6 +191,100 @@ void main() {
       contains('required.text'),
     );
   });
+
+  test('expected graph source coverage is complete', () {
+    final graph = loadExpectedArchitectureGraph();
+
+    expect(_diagnosticIds(graph), isNot(contains('source_coverage.section')));
+    expect(
+      graph.sourceCoverage.map((coverage) => coverage.sectionId),
+      containsAll([
+        'section_02_architecture_model',
+        'section_14_interaction_engine',
+        'section_27_final_release_gates',
+      ]),
+    );
+    expect(
+      _diagnosticIds(
+        _graphWith(sourceCoverage: graph.sourceCoverage.skip(1).toList()),
+      ),
+      contains('source_coverage.missing_section'),
+    );
+    final invalidCoverage = ArchitectureSourceCoverage(
+      sectionId: graph.sourceCoverage.first.sectionId,
+      disposition: 'graph_obligation',
+      graphIds: const ['missing.graph_id'],
+      reason: null,
+      successorSource: null,
+    );
+    final emptyGraphIdsCoverage = ArchitectureSourceCoverage(
+      sectionId: graph.sourceCoverage.first.sectionId,
+      disposition: 'graph_obligation',
+      graphIds: const [],
+      reason: null,
+      successorSource: null,
+    );
+
+    expect(
+      _diagnosticIds(
+        _graphWith(
+          sourceCoverage: [invalidCoverage, ...graph.sourceCoverage.skip(1)],
+        ),
+      ),
+      contains('source_coverage.graph_id'),
+    );
+    expect(
+      _diagnosticIds(
+        _graphWith(
+          sourceCoverage: [
+            emptyGraphIdsCoverage,
+            ...graph.sourceCoverage.skip(1),
+          ],
+        ),
+      ),
+      contains('required.non_empty'),
+    );
+    final extraNode = _nodeWith(graph.nodes.first, id: 'missing.coverage');
+
+    expect(
+      _diagnosticIds(_graphWith(nodes: [...graph.nodes, extraNode])),
+      contains('source_coverage.missing_graph_entry'),
+    );
+    final reasonlessCoverage = ArchitectureSourceCoverage(
+      sectionId: graph.sourceCoverage.first.sectionId,
+      disposition: 'non_graph_semantics',
+      graphIds: const [],
+      reason: '',
+      successorSource: null,
+    );
+    final supersededWithoutSuccessor = ArchitectureSourceCoverage(
+      sectionId: graph.sourceCoverage.first.sectionId,
+      disposition: 'superseded',
+      graphIds: const [],
+      reason: null,
+      successorSource: '',
+    );
+
+    expect(
+      _diagnosticIds(
+        _graphWith(
+          sourceCoverage: [reasonlessCoverage, ...graph.sourceCoverage.skip(1)],
+        ),
+      ),
+      contains('required.text'),
+    );
+    expect(
+      _diagnosticIds(
+        _graphWith(
+          sourceCoverage: [
+            supersededWithoutSuccessor,
+            ...graph.sourceCoverage.skip(1),
+          ],
+        ),
+      ),
+      contains('required.text'),
+    );
+  });
 }
 
 ExpectedArchitectureGraph _validGraph() => loadExpectedArchitectureGraph();
@@ -205,6 +299,7 @@ ExpectedArchitectureGraph _graphWith({
   List<ArchitecturePhase>? phases,
   ArchitectureCoverage? coverage,
   List<ArchitectureNode>? nodes,
+  List<ArchitectureSourceCoverage>? sourceCoverage,
 }) {
   final graph = _validGraph();
 
@@ -217,6 +312,7 @@ ExpectedArchitectureGraph _graphWith({
     placeholders: graph.placeholders,
     forbiddenEdges: graph.forbiddenEdges,
     views: graph.views,
+    sourceCoverage: sourceCoverage ?? graph.sourceCoverage,
   );
 }
 
@@ -239,5 +335,6 @@ ArchitectureNode _nodeWith(
     sourceDocs: sourceDocs ?? node.sourceDocs,
     evidence: evidence ?? node.evidence,
     actual: node.actual,
+    isolationAllowances: node.isolationAllowances,
   );
 }

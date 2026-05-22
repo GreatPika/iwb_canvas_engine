@@ -14,6 +14,7 @@ final class ExpectedArchitectureGraph {
     required this.placeholders,
     required this.forbiddenEdges,
     required this.views,
+    required this.sourceCoverage,
   });
 
   final int schemaVersion;
@@ -24,6 +25,7 @@ final class ExpectedArchitectureGraph {
   final List<ArchitecturePlaceholder> placeholders;
   final List<ArchitectureForbiddenEdge> forbiddenEdges;
   final List<ArchitectureView> views;
+  final List<ArchitectureSourceCoverage> sourceCoverage;
 
   Set<String> get phaseIds => phases.map((phase) => phase.id).toSet();
 
@@ -101,6 +103,7 @@ final class ArchitectureNode {
     required this.sourceDocs,
     required this.evidence,
     required this.actual,
+    this.isolationAllowances = const [],
   });
 
   final String id;
@@ -114,6 +117,7 @@ final class ArchitectureNode {
   final List<SourceDoc> sourceDocs;
   final List<String> evidence;
   final ActualExpectation actual;
+  final List<ArchitectureIsolationAllowance> isolationAllowances;
 }
 
 final class ArchitectureEdge {
@@ -191,6 +195,7 @@ final class ArchitectureView {
     required this.kind,
     required this.output,
     required this.sourceDocs,
+    this.excludedNodeKinds = const [],
   });
 
   final String id;
@@ -198,6 +203,35 @@ final class ArchitectureView {
   final String kind;
   final String output;
   final List<SourceDoc> sourceDocs;
+  final List<String> excludedNodeKinds;
+}
+
+final class ArchitectureIsolationAllowance {
+  const ArchitectureIsolationAllowance({
+    required this.views,
+    required this.sourceDocs,
+    required this.reason,
+  });
+
+  final List<String> views;
+  final List<SourceDoc> sourceDocs;
+  final String reason;
+}
+
+final class ArchitectureSourceCoverage {
+  const ArchitectureSourceCoverage({
+    required this.sectionId,
+    required this.disposition,
+    required this.graphIds,
+    required this.reason,
+    required this.successorSource,
+  });
+
+  final String sectionId;
+  final String disposition;
+  final List<String> graphIds;
+  final String? reason;
+  final String? successorSource;
 }
 
 final class ActualExpectation {
@@ -290,6 +324,11 @@ ExpectedArchitectureGraph loadExpectedArchitectureGraph({
       'views',
       path,
     ).map((entry) => _view(entry, '$path/views')).toList(),
+    sourceCoverage: _requiredMaps(
+      root,
+      'sourceCoverage',
+      path,
+    ).map((entry) => _sourceCoverage(entry, '$path/sourceCoverage')).toList(),
   );
 }
 
@@ -324,6 +363,7 @@ final class ArchitectureGraphValidator {
     _placeholders();
     _forbiddenEdges();
     _views();
+    _sourceCoverage();
 
     return _diagnostics;
   }
@@ -398,6 +438,20 @@ final class ArchitectureGraphValidator {
       _requiredText(node.owner, '${node.id}.owner');
       _sourceDocs(node.sourceDocs, node.id);
       _requiredNonEmpty(node.evidence, '${node.id}.evidence');
+      for (final allowance in node.isolationAllowances) {
+        _requiredNonEmpty(
+          allowance.views,
+          '${node.id}.isolationAllowances.views',
+        );
+        for (final view in allowance.views) {
+          _requiredText(view, '${node.id}.isolationAllowances.views');
+        }
+        _sourceDocs(allowance.sourceDocs, node.id);
+        _requiredText(
+          allowance.reason,
+          '${node.id}.isolationAllowances.reason',
+        );
+      }
     }
   }
 
@@ -452,12 +506,120 @@ final class ArchitectureGraphValidator {
         'expected_full',
         'expected_current_phase',
         'expected_future',
+        'expected_release_verification',
         'actual_vs_expected_diff',
       }, view.id);
       _requiredText(view.title, '${view.id}.title');
       _requiredText(view.output, '${view.id}.output');
       _sourceDocs(view.sourceDocs, view.id);
+      for (final kind in view.excludedNodeKinds) {
+        _requiredText(kind, '${view.id}.excludedNodeKinds');
+      }
     }
+  }
+
+  void _sourceCoverage() {
+    final registrySections = _selectedRegistrySections();
+    final registryIds = registrySections.map((section) => section.id).toSet();
+    final coveredSections = <String>{};
+    final graphIds = _allGraphIds();
+    final graphBackedIds = <String>{};
+
+    for (final coverage in graph.sourceCoverage) {
+      if (!coveredSections.add(coverage.sectionId)) {
+        _add(
+          'source_coverage.duplicate',
+          coverage.sectionId,
+          'duplicate source coverage entry',
+        );
+      }
+      if (!registryIds.contains(coverage.sectionId)) {
+        _add(
+          'source_coverage.section',
+          coverage.sectionId,
+          'unknown registry section id',
+        );
+      }
+      _allowed(coverage.disposition, const {
+        'graph_obligation',
+        'non_graph_semantics',
+        'superseded',
+        'out_of_graph_scope',
+      }, coverage.sectionId);
+      switch (coverage.disposition) {
+        case 'graph_obligation':
+          _requiredNonEmpty(
+            coverage.graphIds,
+            '${coverage.sectionId}.graphIds',
+          );
+          for (final graphId in coverage.graphIds) {
+            if (!graphIds.contains(graphId)) {
+              _add(
+                'source_coverage.graph_id',
+                coverage.sectionId,
+                'unknown graph id: $graphId',
+              );
+            } else {
+              graphBackedIds.add(graphId);
+            }
+          }
+        case 'non_graph_semantics' || 'out_of_graph_scope':
+          _requiredText(coverage.reason ?? '', '${coverage.sectionId}.reason');
+        case 'superseded':
+          _requiredText(
+            coverage.successorSource ?? '',
+            '${coverage.sectionId}.successorSource',
+          );
+      }
+    }
+
+    for (final section in registrySections) {
+      if (!coveredSections.contains(section.id)) {
+        _add(
+          'source_coverage.missing_section',
+          section.id,
+          'missing source coverage for ${section.file}',
+        );
+      }
+    }
+    for (final graphId in graphIds) {
+      if (!graphBackedIds.contains(graphId)) {
+        _add(
+          'source_coverage.missing_graph_entry',
+          graphId,
+          'graph entry is not mapped to a registry section',
+        );
+      }
+    }
+  }
+
+  Set<String> _allGraphIds() {
+    return {
+      for (final node in graph.nodes) node.id,
+      for (final edge in graph.edges) edge.id,
+      for (final placeholder in graph.placeholders) placeholder.id,
+      for (final edge in graph.forbiddenEdges) edge.id,
+      for (final view in graph.views) view.id,
+    };
+  }
+
+  List<_RegistrySection> _selectedRegistrySections() {
+    final file = File('$repositoryRoot/docs/_registry/sections.yaml');
+    final yaml = loadYaml(file.readAsStringSync());
+    final entries = _normalizeYaml(yaml);
+    if (entries is! List<Object?>) {
+      throw const FormatException('Expected registry section list.');
+    }
+
+    return entries
+        .map((entry) => _registrySection(_normalizeMap(entry, 'sections')))
+        .where((section) {
+          return section.file.startsWith('docs/architecture/') ||
+              section.file.startsWith('docs/contracts/') ||
+              section.file.startsWith('docs/verification/') ||
+              section.phases.any(_isKnownPhase);
+        })
+        .toList();
   }
 
   void _unique(String id) {
@@ -529,6 +691,18 @@ final class ArchitectureGraphValidator {
   }
 }
 
+final class _RegistrySection {
+  const _RegistrySection({
+    required this.id,
+    required this.file,
+    required this.phases,
+  });
+
+  final String id;
+  final String file;
+  final List<String> phases;
+}
+
 bool _sameOrderedValues(List<String> actual, List<String> expected) {
   if (actual.length != expected.length) {
     return false;
@@ -587,6 +761,7 @@ ArchitectureNode _node(Map<String, Object?> yaml, String path) {
     sourceDocs: _sourceDocs(yaml, path),
     evidence: _requiredStrings(yaml, 'evidence', path),
     actual: _actualExpectation(yaml),
+    isolationAllowances: _isolationAllowances(yaml, path),
   );
 }
 
@@ -640,6 +815,41 @@ ArchitectureView _view(Map<String, Object?> yaml, String path) {
     kind: _requiredString(yaml, 'kind', path),
     output: _requiredString(yaml, 'output', path),
     sourceDocs: _sourceDocs(yaml, path),
+    excludedNodeKinds: _optionalStrings(yaml, 'excludedNodeKinds'),
+  );
+}
+
+ArchitectureSourceCoverage _sourceCoverage(
+  Map<String, Object?> yaml,
+  String path,
+) {
+  return ArchitectureSourceCoverage(
+    sectionId: _requiredString(yaml, 'sectionId', path),
+    disposition: _requiredString(yaml, 'disposition', path),
+    graphIds: _optionalStrings(yaml, 'graphIds'),
+    reason: _optionalString(yaml, 'reason'),
+    successorSource: _optionalString(yaml, 'successorSource'),
+  );
+}
+
+List<ArchitectureIsolationAllowance> _isolationAllowances(
+  Map<String, Object?> yaml,
+  String path,
+) {
+  return _optionalMaps(yaml, 'isolationAllowances').map((entry) {
+    return ArchitectureIsolationAllowance(
+      views: _requiredStrings(entry, 'views', path),
+      sourceDocs: _sourceDocs(entry, path),
+      reason: _requiredString(entry, 'reason', path),
+    );
+  }).toList();
+}
+
+_RegistrySection _registrySection(Map<String, Object?> yaml) {
+  return _RegistrySection(
+    id: _requiredString(yaml, 'id', 'docs/_registry/sections.yaml'),
+    file: _requiredString(yaml, 'file', 'docs/_registry/sections.yaml'),
+    phases: _requiredStrings(yaml, 'phases', 'docs/_registry/sections.yaml'),
   );
 }
 
@@ -729,6 +939,20 @@ List<Map<String, Object?>> _requiredMaps(
   throw FormatException('Expected list at $path/$key.');
 }
 
+List<Map<String, Object?>> _optionalMaps(
+  Map<String, Object?> yaml,
+  String key,
+) {
+  final value = yaml[key];
+  if (value == null) {
+    return const [];
+  }
+  if (value is List<Object?>) {
+    return value.map((entry) => _normalizeMap(entry, key)).toList();
+  }
+  throw FormatException('Expected list at $key.');
+}
+
 List<String> _requiredStrings(
   Map<String, Object?> yaml,
   String key,
@@ -800,4 +1024,10 @@ bool? _optionalBool(Map<String, Object?> yaml, String key) {
     return value as bool?;
   }
   throw FormatException('Expected boolean at $key.');
+}
+
+bool _isKnownPhase(String value) {
+  final match = RegExp(r'^P([0-9]|1[0-4])$').firstMatch(value);
+
+  return match != null;
 }

@@ -15,6 +15,10 @@ const _edgeKindLabels = {
   'read_port': 'reads from',
   'resource_boundary': 'resolves resources through',
   'ui_boundary': 'is shown through',
+  'tool_commit': 'commits through',
+  'preview_boundary': 'publishes preview through',
+  'hit_test_boundary': 'queries hits through',
+  'verification_scope': 'is verified by',
 };
 
 Map<String, String> renderGraphViews({
@@ -80,12 +84,17 @@ List<String> checkGraphViews({
 }
 
 String _renderExpectedView({
+  required String viewId,
   required String title,
   required List<ArchitectureNode> nodes,
   required List<ArchitectureEdge> edges,
   required String selectedPhase,
+  required bool enforceConnectivity,
 }) {
   final nodeIds = nodes.map((node) => node.id).toSet();
+  if (enforceConnectivity) {
+    _checkRenderedConnectivity(viewId: viewId, nodes: nodes, edges: edges);
+  }
   final buffer = _header(title, selectedPhase);
   for (final node
       in nodes.toList()..sort((left, right) => left.id.compareTo(right.id))) {
@@ -112,19 +121,20 @@ String _renderView(
 ) {
   return switch (view.kind) {
     'expected_full' => _renderExpectedView(
+      viewId: view.id,
       title: view.title,
-      nodes: expected.nodes,
+      nodes: _includedNodes(expected.nodes, view),
       edges: expected.edges,
       selectedPhase: selectedPhase,
+      enforceConnectivity: true,
     ),
     'expected_current_phase' => _renderExpectedView(
+      viewId: view.id,
       title: view.title,
-      nodes: expected.nodes
-          .where(
-            (node) =>
-                _phaseIndex(node.phaseRequiredBy) <= _phaseIndex(selectedPhase),
-          )
-          .toList(),
+      nodes: _includedNodes(
+        expected.nodes,
+        view,
+      ).where(_isRequiredBy(selectedPhase)).toList(),
       edges: expected.edges
           .where(
             (edge) =>
@@ -132,11 +142,13 @@ String _renderView(
           )
           .toList(),
       selectedPhase: selectedPhase,
+      enforceConnectivity: false,
     ),
     'expected_future' => _renderExpectedView(
+      viewId: view.id,
       title: view.title,
       nodes: _futureNodesWithEdgeEndpoints(
-        expected.nodes,
+        _includedNodes(expected.nodes, view),
         expected.edges
             .where(
               (edge) =>
@@ -153,6 +165,20 @@ String _renderView(
           )
           .toList(),
       selectedPhase: selectedPhase,
+      enforceConnectivity: true,
+    ),
+    'expected_release_verification' => _renderExpectedView(
+      viewId: view.id,
+      title: view.title,
+      nodes: _includedNodes(
+        expected.nodes,
+        view,
+      ).where((node) => node.status == 'measurement').toList(),
+      edges: expected.edges
+          .where((edge) => edge.status == 'measurement')
+          .toList(),
+      selectedPhase: selectedPhase,
+      enforceConnectivity: true,
     ),
     'actual_vs_expected_diff' => _renderDiffView(
       title: view.title,
@@ -162,6 +188,22 @@ String _renderView(
     ),
     _ => throw UnsupportedError('Unsupported graph view kind: ${view.kind}'),
   };
+}
+
+List<ArchitectureNode> _includedNodes(
+  List<ArchitectureNode> nodes,
+  ArchitectureView view,
+) {
+  final excludedKinds = view.excludedNodeKinds.toSet();
+
+  return nodes
+      .where((node) => !excludedKinds.contains(node.kind))
+      .toList(growable: false);
+}
+
+bool Function(ArchitectureNode) _isRequiredBy(String selectedPhase) {
+  return (node) =>
+      _phaseIndex(node.phaseRequiredBy) <= _phaseIndex(selectedPhase);
 }
 
 List<ArchitectureNode> _futureNodesWithEdgeEndpoints(
@@ -178,6 +220,41 @@ List<ArchitectureNode> _futureNodesWithEdgeEndpoints(
     return _phaseIndex(node.phaseRequiredBy) > _phaseIndex(selectedPhase) ||
         endpointIds.contains(node.id);
   }).toList();
+}
+
+void _checkRenderedConnectivity({
+  required String viewId,
+  required List<ArchitectureNode> nodes,
+  required List<ArchitectureEdge> edges,
+}) {
+  final nodeIds = nodes.map((node) => node.id).toSet();
+  final connectedNodeIds = <String>{};
+  for (final edge in edges) {
+    if (nodeIds.contains(edge.from) && nodeIds.contains(edge.to)) {
+      connectedNodeIds
+        ..add(edge.from)
+        ..add(edge.to);
+    }
+  }
+
+  final isolatedNodes = nodes.where((node) {
+    return !connectedNodeIds.contains(node.id) &&
+        !_allowsIsolation(node, viewId);
+  }).toList();
+  if (isolatedNodes.isEmpty) {
+    return;
+  }
+
+  final ids = isolatedNodes.map((node) => node.id).join(', ');
+  throw StateError(
+    'Generated graph view $viewId contains unexplained isolated nodes: $ids',
+  );
+}
+
+bool _allowsIsolation(ArchitectureNode node, String viewId) {
+  return node.isolationAllowances.any(
+    (allowance) => allowance.views.contains(viewId),
+  );
 }
 
 String _renderDiffView({

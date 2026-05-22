@@ -48,6 +48,10 @@ void main() {
     );
     expect(
       first['docs/diagrams/generated/future_target.mmd'],
+      isNot(contains('release_measurement')),
+    );
+    expect(
+      first['docs/diagrams/generated/release_verification.mmd'],
       contains('release_measurement'),
     );
     expect(
@@ -117,4 +121,101 @@ void main() {
       directory.deleteSync(recursive: true);
     }
   });
+
+  test('full and future graph views reject unexplained isolated nodes', () {
+    final expected = loadExpectedArchitectureGraph();
+    final actual = extractActualArchitectureGraph(expectedGraph: expected);
+    final isolatedNode = ArchitectureNode(
+      id: 'test.isolated_node',
+      label: 'Isolated test node',
+      kind: 'test_owner',
+      owner: 'test',
+      phaseIntroduced: 'P5',
+      phaseRequiredBy: 'P5',
+      status: 'future',
+      coverageScope: 'architectureOwners',
+      sourceDocs: expected.nodes.first.sourceDocs,
+      evidence: const ['Constructed negative fixture.'],
+      actual: const ActualExpectation.empty(),
+    );
+    final graph = _graphWith(
+      expected,
+      nodes: [...expected.nodes, isolatedNode],
+    );
+
+    expect(
+      () => renderGraphViews(
+        expected: graph,
+        actual: actual,
+        selectedPhase: 'P4',
+      ),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          contains('test.isolated_node'),
+        ),
+      ),
+    );
+
+    final fullAllowedNode = ArchitectureNode(
+      id: 'test.future_isolated_node',
+      label: 'Future isolated test node',
+      kind: 'test_owner',
+      owner: 'test',
+      phaseIntroduced: 'P5',
+      phaseRequiredBy: 'P5',
+      status: 'future',
+      coverageScope: 'architectureOwners',
+      sourceDocs: expected.nodes.first.sourceDocs,
+      evidence: const ['Constructed negative fixture.'],
+      actual: const ActualExpectation.empty(),
+      isolationAllowances: [
+        ArchitectureIsolationAllowance(
+          views: const ['full_architecture'],
+          sourceDocs: expected.nodes.first.sourceDocs,
+          reason: 'Constructed allowance for the full-view branch only.',
+        ),
+      ],
+    );
+    final futureGraph = _graphWith(
+      expected,
+      nodes: [...expected.nodes, fullAllowedNode],
+    );
+
+    expect(
+      () => renderGraphViews(
+        expected: futureGraph,
+        actual: actual,
+        selectedPhase: 'P4',
+      ),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          allOf(
+            contains('future_target'),
+            contains('test.future_isolated_node'),
+          ),
+        ),
+      ),
+    );
+  });
+}
+
+ExpectedArchitectureGraph _graphWith(
+  ExpectedArchitectureGraph graph, {
+  List<ArchitectureNode>? nodes,
+}) {
+  return ExpectedArchitectureGraph(
+    schemaVersion: graph.schemaVersion,
+    phases: graph.phases,
+    coverage: graph.coverage,
+    nodes: nodes ?? graph.nodes,
+    edges: graph.edges,
+    placeholders: graph.placeholders,
+    forbiddenEdges: graph.forbiddenEdges,
+    views: graph.views,
+    sourceCoverage: graph.sourceCoverage,
+  );
 }

@@ -497,6 +497,7 @@ ExpectedArchitectureGraph _fixtureGraph() {
       ),
     ],
     views: const [],
+    sourceCoverage: const [],
   );
 }
 
@@ -530,6 +531,7 @@ ExpectedArchitectureGraph _fixtureGraphWithDiagnosticRoute() {
     placeholders: graph.placeholders,
     forbiddenEdges: graph.forbiddenEdges,
     views: graph.views,
+    sourceCoverage: graph.sourceCoverage,
   );
 }
 

@@ -423,6 +423,13 @@ nodes:
     sourceDocs:
       - path: docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md
       - path: docs/verification/benchmarks.md
+    isolationAllowances:
+      - views:
+          - release_verification
+        sourceDocs:
+          - path: docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md
+          - path: docs/verification/benchmarks.md
+        reason: P14 is release measurement and alignment scope, not a runtime production owner with architecture dependencies.
     evidence:
       - P14 is release measurement scope, not a normal production owner.
     actual:
@@ -616,6 +623,77 @@ edges:
     actual:
       delegationTargets:
         - InteractionEngine
+  - id: draw.tools.commit_through_edit_kernel
+    from: draw.tools
+    to: edit.kernel
+    kind: tool_commit
+    phaseRequiredBy: P11
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p11_draw_tools.md
+      - path: docs/contracts/operation_matrix.md
+    evidence:
+      - Pencil, marker, and line terminal commits install document changes through EditKernel.
+    actual:
+      delegationTargets:
+        - EditKernel
+  - id: draw.tools.publish_preview_through_interaction
+    from: draw.tools
+    to: interaction.selection_move
+    kind: preview_boundary
+    phaseRequiredBy: P11
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p11_draw_tools.md
+      - path: docs/contracts/interaction_engine.md
+    evidence:
+      - Draw tool machines return preview and cleanup requests to InteractionEngine instead of owning runtime publication.
+    actual:
+      delegationTargets:
+        - InteractionEngine
+  - id: eraser_text.request.commit_through_edit_kernel
+    from: eraser_text.request
+    to: edit.kernel
+    kind: tool_commit
+    phaseRequiredBy: P12
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p12_eraser_and_text_request.md
+      - path: docs/contracts/operation_matrix.md
+    evidence:
+      - Eraser and request-originated text changes commit through EditKernel when they mutate document content.
+    actual:
+      delegationTargets:
+        - EditKernel
+  - id: eraser_text.request.query_spatial_geometry
+    from: eraser_text.request
+    to: geometry.spatial_index
+    kind: hit_test_boundary
+    phaseRequiredBy: P12
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p12_eraser_and_text_request.md
+      - path: docs/contracts/geometry.md
+      - path: docs/contracts/spatial_kernel.md
+    evidence:
+      - Eraser exact checks and context-action target resolution consume geometry and spatial query facts.
+    actual:
+      delegationTargets:
+        - SpatialIndex
+  - id: eraser_text.request.publish_through_interaction
+    from: eraser_text.request
+    to: interaction.selection_move
+    kind: preview_boundary
+    phaseRequiredBy: P12
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p12_eraser_and_text_request.md
+      - path: docs/contracts/interaction_engine.md
+    evidence:
+      - Eraser preview, cleanup, and context-action request emission remain InteractionEngine-owned effects.
+    actual:
+      delegationTargets:
+        - InteractionEngine
   - id: flutter.surface.drives_runtime_ports
     from: flutter.surface
     to: api.canvas_runtime
@@ -736,18 +814,24 @@ views:
     title: Full architecture graph
     kind: expected_full
     output: docs/diagrams/generated/full_architecture.mmd
+    excludedNodeKinds:
+      - measurement_scope
     sourceDocs:
       - path: docs/architecture/00_architecture_overview.md
   - id: current_phase
     title: Selected phase architecture graph
     kind: expected_current_phase
     output: docs/diagrams/generated/current_phase.mmd
+    excludedNodeKinds:
+      - measurement_scope
     sourceDocs:
       - path: docs/architecture/00_architecture_overview.md
   - id: future_target
     title: Future target architecture graph
     kind: expected_future
     output: docs/diagrams/generated/future_target.mmd
+    excludedNodeKinds:
+      - measurement_scope
     sourceDocs:
       - path: docs/architecture/00_architecture_overview.md
   - id: actual_vs_expected_diff
@@ -756,3 +840,182 @@ views:
     output: docs/diagrams/generated/actual_vs_expected_diff.mmd
     sourceDocs:
       - path: docs/verification/release_gates.md
+  - id: release_verification
+    title: Release verification graph
+    kind: expected_release_verification
+    output: docs/diagrams/generated/release_verification.mmd
+    sourceDocs:
+      - path: docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md
+      - path: docs/verification/benchmarks.md
+sourceCoverage:
+  - sectionId: section_00_status_and_scope
+    disposition: graph_obligation
+    graphIds:
+      - api.public_surface
+      - api.public_surface.exports_runtime
+      - codec.schema_v1.forbidden_runtime_dependency
+      - full_architecture
+      - current_phase
+  - sectionId: section_02_architecture_model
+    disposition: graph_obligation
+    graphIds:
+      - runtime.root
+      - runtime.view_camera
+      - store.document_kernel
+      - selection.kernel
+      - frame.renderer
+      - interaction.selection_move
+      - resource.resolver
+      - diagnostics.hub
+      - api.canvas_runtime.composes_runtime_root
+      - runtime.root.owns_store
+      - runtime.root.owns_selection
+      - runtime.root.exposes_frame_facts
+      - api.canvas_runtime.camera.routes_to_runtime_view_camera
+      - runtime.canvas_runtime.camera.closed_phase_placeholder
+  - sectionId: section_03_package_layout
+    disposition: graph_obligation
+    graphIds:
+      - api.public_surface
+      - api.canvas_runtime
+      - flutter.surface
+      - api.canvas_runtime.composes_runtime_root
+      - api.public_surface.exports_runtime
+      - flutter.surface.drives_runtime_ports
+      - codec.schema_v1.forbidden_runtime_dependency
+  - sectionId: section_04_public_api_v1
+    disposition: graph_obligation
+    graphIds:
+      - api.public_surface
+      - api.canvas_runtime
+      - api.camera_port
+      - flutter.surface
+      - api.canvas_runtime.exposes_camera
+      - runtime.canvas_runtime.camera.closed_phase_placeholder
+      - api.canvas_runtime.edit.future_placeholder
+      - api.canvas_runtime.tools.future_placeholder
+      - api.canvas_runtime.commands.future_placeholder
+      - api.canvas_runtime.resources.future_placeholder
+      - api.canvas_runtime.preview.future_placeholder
+      - api.canvas_runtime.actions.future_placeholder
+      - api.canvas_runtime.context_action_requests.future_placeholder
+  - sectionId: section_05_schema_v1_contract
+    disposition: graph_obligation
+    graphIds:
+      - codec.schema_v1
+      - codec.schema_v1.uses_public_dto
+  - sectionId: section_06_validation_limits
+    disposition: graph_obligation
+    graphIds:
+      - diagnostics.hub
+      - codec.schema_v1.failures.report_to_diagnostics
+  - sectionId: section_07_resource_lifecycle
+    disposition: graph_obligation
+    graphIds:
+      - resource.resolver
+      - resource.resolver.feeds_frame_renderer
+      - api.canvas_runtime.resources.future_placeholder
+  - sectionId: section_08_legacy_capability_inventory
+    disposition: non_graph_semantics
+    reason: Legacy donor classification is migration evidence, not a target architecture topology obligation.
+  - sectionId: section_09_accepted_differences
+    disposition: non_graph_semantics
+    reason: Accepted differences record deliberate semantic deltas rather than graph-checkable owners or edges.
+  - sectionId: section_10_runtime_data_model
+    disposition: graph_obligation
+    graphIds:
+      - store.document_kernel
+      - selection.kernel
+      - runtime.view_camera
+      - runtime.root.owns_store
+      - runtime.root.owns_selection
+  - sectionId: section_11_edit_kernel
+    disposition: graph_obligation
+    graphIds:
+      - edit.kernel
+      - edit.kernel.mutates_store
+      - draw.tools.commit_through_edit_kernel
+      - eraser_text.request.commit_through_edit_kernel
+  - sectionId: section_12_load_document
+    disposition: graph_obligation
+    graphIds:
+      - load_document.pipeline
+      - load_document.pipeline.replaces_store_document
+  - sectionId: section_13_operation_matrix
+    disposition: graph_obligation
+    graphIds:
+      - edit.kernel.mutates_store
+      - load_document.pipeline.replaces_store_document
+      - draw.tools.commit_through_edit_kernel
+      - eraser_text.request.commit_through_edit_kernel
+      - api.canvas_runtime.actions.future_placeholder
+  - sectionId: section_14_interaction_engine
+    disposition: graph_obligation
+    graphIds:
+      - interaction.selection_move
+      - draw.tools
+      - eraser_text.request
+      - geometry.spatial_index.feeds_interaction
+      - draw.tools.publish_preview_through_interaction
+      - eraser_text.request.publish_through_interaction
+      - api.canvas_runtime.commands.future_placeholder
+      - api.canvas_runtime.context_action_requests.future_placeholder
+  - sectionId: section_15_frame_render_contract
+    disposition: graph_obligation
+    graphIds:
+      - frame.renderer
+      - runtime.root.exposes_frame_facts
+      - resource.resolver.feeds_frame_renderer
+      - api.canvas_runtime.preview.future_placeholder
+  - sectionId: section_16_geometry_policy
+    disposition: graph_obligation
+    graphIds:
+      - geometry.spatial_index
+      - geometry.spatial_index.feeds_interaction
+      - eraser_text.request.query_spatial_geometry
+  - sectionId: section_17_spatial_kernel
+    disposition: graph_obligation
+    graphIds:
+      - geometry.spatial_index
+      - geometry.spatial_index.feeds_interaction
+      - eraser_text.request.query_spatial_geometry
+  - sectionId: section_18_cache_policy
+    disposition: graph_obligation
+    graphIds:
+      - store.document_kernel
+      - frame.renderer
+      - runtime.root.exposes_frame_facts
+  - sectionId: section_19_codec_boundary
+    disposition: graph_obligation
+    graphIds:
+      - codec.schema_v1
+      - codec.schema_v1.uses_public_dto
+      - codec.schema_v1.failures.report_to_diagnostics
+      - codec.schema_v1.forbidden_runtime_dependency
+  - sectionId: section_20_diagnostics_hub
+    disposition: graph_obligation
+    graphIds:
+      - diagnostics.hub
+      - codec.schema_v1.failures.report_to_diagnostics
+  - sectionId: section_22_guardrails_machine_checks
+    disposition: graph_obligation
+    graphIds:
+      - release.measurement
+      - release_verification
+      - actual_vs_expected_diff
+  - sectionId: section_23_tests
+    disposition: non_graph_semantics
+    reason: Test inventory completeness is executable proof coverage, not an architecture graph topology fact.
+  - sectionId: section_24_benchmarks
+    disposition: graph_obligation
+    graphIds:
+      - release.measurement
+      - release_verification
+  - sectionId: section_27_final_release_gates
+    disposition: graph_obligation
+    graphIds:
+      - release.measurement
+      - full_architecture
+      - future_target
+      - actual_vs_expected_diff
+      - release_verification
