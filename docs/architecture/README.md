@@ -1,80 +1,45 @@
 # Architecture entrypoint
 
-This is the first stop for target-system architecture work in
-`iwb_canvas_engine`.
-
-Use this folder to understand current system shape, ownership boundaries,
-package boundaries, and architecture-level decisions. Do not use planning
-documents as the source for current runtime ownership.
+This router points architecture work to the current target-system owners and to
+the generated navigation that supports phase, subsystem, and diagram lookup.
 
 ## Read path
 
-1. Read `00_architecture_overview.md` for scope and non-goals.
-2. Read `01_runtime_ownership.md` and `02_package_boundaries.md` for the target
-   runtime shape.
-3. Read `03_data_model.md` and `04_decisions_and_differences.md` for state
-   ownership and accepted differences from the legacy engine.
-4. Read `architecture_graph.yaml` for graph-checkable phase obligations,
-   placeholders, forbidden dependencies, and generated graph view definitions.
-5. Read `docs/diagrams/catalog.md` and the Mermaid files in `docs/diagrams/`
-   when changing architecture.
+1. `docs/architecture/00_architecture_overview.md`
+2. `docs/architecture/01_runtime_ownership.md`
+3. `docs/architecture/02_package_boundaries.md`
+4. `docs/architecture/03_data_model.md`
+5. `docs/architecture/04_decisions_and_differences.md`
+6. `docs/architecture/architecture_graph.yaml`
+7. `docs/diagrams/catalog.md`
 
-## Role routing
+## Work routes
 
-- Architecture ownership and package boundary work starts in
-  `docs/architecture/01_runtime_ownership.md` and
-  `docs/architecture/02_package_boundaries.md`.
-- Public API work routes to `docs/contracts/public_api_v1.md`.
-- Schema and JSON compatibility work routes to
-  `docs/contracts/schema_v1.md` and
-  `docs/contracts/codec_boundary.md`.
-- Validation work routes to `docs/contracts/validation_limits.md`.
-- Runtime state and document model work starts in
-  `docs/architecture/03_data_model.md`, then routes to
-  `docs/contracts/edit_kernel.md`,
-  `docs/contracts/load_document.md`, and
-  `docs/contracts/operation_matrix.md`.
-- Interaction work routes to `docs/contracts/interaction_engine.md`.
-- Rendering work routes to `docs/contracts/frame_rendering.md`,
-  `docs/contracts/cache_policy.md`, and
-  `docs/verification/tests.md`.
-- Geometry and spatial work routes to `docs/contracts/geometry.md` and
-  `docs/contracts/spatial_kernel.md`.
-- Resource lifecycle work routes to `docs/contracts/resources.md`.
-- Diagnostics work routes to `docs/contracts/diagnostics.md`.
-- Test, benchmark, guardrail, and release-readiness work routes to
-  `docs/verification/`.
-- Guardrail pattern selection routes to
-  `docs/verification/guardrail_design_patterns.md`; mandatory guardrail ids
-  remain owned by `docs/verification/guardrails.md`.
-- Phase-aware graph closure work routes to
-  `docs/architecture/architecture_graph.yaml` and the standalone checker:
-  `dart run tool/architecture_graph/check.dart --phase Px`.
-  The extractor is intentionally limited to named graph facts from that YAML
-  and must not grow into a general call-graph or block-body analyzer.
-- Implementation sequencing routes to `docs/implementation/`.
-- Legacy capability inventory routes to
-  `docs/verification/legacy_capability_inventory.md`; it is oracle/audit input,
-  not a next-API mapping proof.
-- Donor decisions route to `docs/donors/` and `docs/_registry/donors.yaml`.
-- Change Contracts route to `plan/`.
+- Public API: `docs/contracts/public_api_v1.md`
+- Schema and codec: `docs/contracts/schema_v1.md` and `docs/contracts/codec_boundary.md`
+- Validation and diagnostics: `docs/contracts/validation_limits.md` and `docs/contracts/diagnostics.md`
+- Runtime, edit, load, and operations: `docs/contracts/edit_kernel.md`, `docs/contracts/load_document.md`, and `docs/contracts/operation_matrix.md`
+- Interaction: `docs/contracts/interaction_engine.md`
+- Frame, cache, geometry, and spatial work: `docs/contracts/frame_rendering.md`, `docs/contracts/cache_policy.md`, `docs/contracts/geometry.md`, and `docs/contracts/spatial_kernel.md`
+- Resources: `docs/contracts/resources.md`
+- Verification: `docs/verification/`
+- Implementation phases: `docs/indexes/by_phase.md`
+- Subsystems: `docs/indexes/by_subsystem.md`
+- Diagrams: `docs/diagrams/catalog.md`
 
-## Role boundaries
+## Boundary
 
-- `architecture/` owns current target-system shape.
-- `contracts/` owns subsystem-level normative behavior and invariants.
-- `verification/` owns proof plans, guardrails, tests, benchmarks, and release
-  gates.
-- `implementation/` owns phase-by-phase transition sequencing.
-- `donors/` owns legacy-engine donor rules and reusable evidence.
-- `_registry/` owns machine-readable section coverage and donor records.
+- `docs/architecture/` owns target-system shape.
+- `docs/contracts/` owns subsystem behavior and invariants.
+- `docs/verification/` owns proof plans, guardrails, tests, benchmarks, and release gates.
+- `docs/implementation/` owns phase sequencing.
+- `docs/donors/` owns donor rules and evidence.
+- `docs/_registry/` owns relationship metadata for generated navigation.
 
-## Mechanical checks
-
-Run these commands from the repository root:
+## Checks
 
 ```bash
-dart run docs/tool/generate_context_capsules.dart --check
+dart run docs/tool/sync_generated_docs.dart --check
 dart run docs/tool/check_docs.dart
 dart run tool/architecture_graph/generate_views.dart --phase P4 --check
 ```

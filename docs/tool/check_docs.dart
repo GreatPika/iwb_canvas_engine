@@ -86,10 +86,25 @@ const _generatedIndexPaths = [
   'docs/indexes/donor_to_phase.md',
 ];
 
+const _rootReadmeGroups = [
+  'Start by task',
+  'Source of truth',
+  'Checks',
+  'Local entrypoints',
+];
+
+const _architectureReadmeGroups = [
+  'Read path',
+  'Work routes',
+  'Boundary',
+  'Checks',
+];
+
 final _errors = <String>[];
 
 void main() {
   _checkRequiredEntrypoints();
+  _checkPortalReadmes();
   _checkGeneratedIndexes();
 
   final sections = _loadSections();
@@ -370,6 +385,115 @@ void _checkGeneratedIndexes() {
   }
 }
 
+void _checkPortalReadmes() {
+  _checkReadmeShape(
+    path: 'docs/README.md',
+    expectedTitle: 'iwb_canvas_engine documentation',
+    expectedGroups: _rootReadmeGroups,
+  );
+  _checkReadmeShape(
+    path: 'docs/architecture/README.md',
+    expectedTitle: 'Architecture entrypoint',
+    expectedGroups: _architectureReadmeGroups,
+  );
+}
+
+void _checkReadmeShape({
+  required String path,
+  required String expectedTitle,
+  required List<String> expectedGroups,
+}) {
+  final text = _read(path);
+  final titleMatches = RegExp(
+    r'^#\s+(.+)$',
+    multiLine: true,
+  ).allMatches(text).toList();
+  final titleMatch = titleMatches.isEmpty ? null : titleMatches.first;
+  if (titleMatch == null || titleMatch.start != 0) {
+    _fail('$path must start with one H1 title');
+    return;
+  }
+  if (titleMatches.length != 1) {
+    _fail('$path must contain exactly one H1 title');
+  }
+  final title = _matchGroup(titleMatch, 1, '$path title');
+  if (title != expectedTitle) {
+    _fail('$path title must be "$expectedTitle"');
+  }
+
+  final groups = RegExp(r'^##\s+(.+)$', multiLine: true)
+      .allMatches(text)
+      .map((match) => _matchGroup(match, 1, '$path group'))
+      .toList();
+  if (!_sameStringList(groups, expectedGroups)) {
+    _fail('$path groups must be exactly ${expectedGroups.join(', ')}');
+  }
+
+  final firstGroup = RegExp(r'^##\s+', multiLine: true).firstMatch(text);
+  if (firstGroup == null) {
+    _fail('$path must contain portal groups');
+  } else {
+    _checkIntroParagraph(
+      path,
+      text.substring(titleMatch.end, firstGroup.start),
+    );
+  }
+  _checkReadmeNestedHeadings(path, text);
+
+  for (final retiredPath in const [
+    _retiredDiagramReadmePath,
+    'docs/indexes/context_coverage.md',
+  ]) {
+    if (text.contains(retiredPath)) {
+      _fail('$path links to retired path $retiredPath');
+    }
+  }
+}
+
+void _checkReadmeNestedHeadings(String path, String text) {
+  for (final match in RegExp(
+    r'^(#{3,6})\s+(.+)$',
+    multiLine: true,
+  ).allMatches(text)) {
+    final heading = _matchGroup(match, 2, '$path nested heading');
+    _fail('$path must not contain nested heading "$heading"');
+  }
+
+  for (final match in RegExp(
+    r'^#+\s+(.+)$',
+    multiLine: true,
+  ).allMatches(text)) {
+    final heading = _matchGroup(match, 1, '$path heading').toLowerCase();
+    if (heading.contains('catalog') ||
+        heading.contains('reverse lookup') ||
+        heading.contains('manual')) {
+      _fail('$path must not contain manual catalog or reverse-lookup headings');
+    }
+  }
+}
+
+void _checkIntroParagraph(String path, String intro) {
+  final blocks = intro
+      .trim()
+      .split(RegExp(r'\n\s*\n'))
+      .where((block) => block.trim().isNotEmpty)
+      .toList();
+  if (blocks.length != 1) {
+    _fail('$path must have exactly one intro paragraph before portal groups');
+    return;
+  }
+
+  final block = blocks.single;
+  if (block.length > 280) {
+    _fail('$path intro paragraph must stay short');
+  }
+  if (RegExp(r'^\s*(#|-|\d+\.|```)', multiLine: true).hasMatch(block)) {
+    _fail(
+      '$path intro must be a paragraph, not a list, heading, or code block',
+    );
+  }
+}
+
 void _checkExplicitCoverage(_SectionEntry section) {
   final coverage = {
     'must_read': section.mustRead,
@@ -385,6 +509,18 @@ void _checkExplicitCoverage(_SectionEntry section) {
       _fail('${section.id} has no explicit ${entry.key} coverage');
     }
   }
+}
+
+bool _sameStringList(List<String> actual, List<String> expected) {
+  if (actual.length != expected.length) {
+    return false;
+  }
+  for (var index = 0; index < actual.length; index++) {
+    if (actual[index] != expected[index]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void _checkDonorReferences(
