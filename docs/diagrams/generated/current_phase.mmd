@@ -12,7 +12,7 @@ flowchart LR
   runtime_view_camera["Runtime-owned view camera\nP4"]
   selection_kernel["Selection kernel\nP4"]
   store_document_kernel["Document store kernel\nP4"]
-  api_camera_port -->|facade_port P4| runtime_view_camera
+  api_canvas_runtime -->|facade_port P4| runtime_view_camera
   api_canvas_runtime -->|composes P4| runtime_root
   api_canvas_runtime -->|facade_port P4| api_camera_port
   api_public_surface -->|exports P2| api_canvas_runtime

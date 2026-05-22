@@ -338,6 +338,7 @@ final class _PhaseClosureChecker {
     for (final target in expectation.delegationTargets) {
       if (!actual.delegations.any((fact) {
         return _delegationMatchesFrom(fact, fromNode) &&
+            _delegationMemberMatches(fact, expectation) &&
             fact.targetType == target;
       })) {
         missing.add('delegation:$target');
@@ -402,6 +403,14 @@ final class _PhaseClosureChecker {
       declaration: declaration,
       node: node,
     );
+  }
+
+  bool _delegationMemberMatches(
+    DelegationFact fact,
+    ActualExpectation expectation,
+  ) {
+    return expectation.delegationMembers.isEmpty ||
+        expectation.delegationMembers.contains(fact.member);
   }
 
   bool _interfaceMatchesFrom(

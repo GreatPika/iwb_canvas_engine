@@ -216,7 +216,7 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
   final List<SensitiveThrowCoverage> sensitiveThrows;
   final List<PlaceholderCoverage> placeholderCoverage;
   final Set<String> compositionTypes;
-  final Map<String, String> _fieldTypes = {};
+  final Map<String, String> _targetTypes = {};
   String? _currentDeclaration;
 
   @override
@@ -275,6 +275,9 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
   @override
   void visitFunctionDeclaration(FunctionDeclaration node) {
     _addDeclaration(node.name.lexeme, 'function', node);
+    _withParameterTypes(node.functionExpression.parameters, () {
+      _delegation(node.name.lexeme, node, node.functionExpression.body);
+    });
     super.visitFunctionDeclaration(node);
   }
 
@@ -291,7 +294,7 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
     if (owner != null && type != null) {
       for (final variable in node.fields.variables) {
         final fieldType = _withoutNullability(type);
-        _fieldTypes[variable.name.lexeme] = fieldType;
+        _targetTypes[variable.name.lexeme] = fieldType;
         if (!compositionTypes.contains(fieldType)) {
           continue;
         }
@@ -378,7 +381,7 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
     );
   }
 
-  void _delegation(String member, MethodDeclaration node, FunctionBody body) {
+  void _delegation(String member, AstNode node, FunctionBody body) {
     final expression = switch (body) {
       ExpressionFunctionBody(:final expression) => expression,
       _ => null,
@@ -403,7 +406,7 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
         line: _line(node),
         member: _qualifiedMember(member),
         target: targetName,
-        targetType: _fieldTypes[targetName],
+        targetType: _targetTypes[targetName],
       ),
     );
   }
@@ -442,6 +445,53 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
   }
 
   int _line(AstNode node) => lineInfo.getLocation(node.offset).lineNumber;
+
+  void _withParameterTypes(
+    FormalParameterList? parameters,
+    void Function() fn,
+  ) {
+    if (parameters == null) {
+      fn();
+      return;
+    }
+    final oldValues = <String, String?>{};
+    for (final parameter in parameters.parameters) {
+      final name = parameter.name?.lexeme;
+      final type = _parameterType(parameter);
+      if (name == null || type == null) {
+        continue;
+      }
+      oldValues[name] = _targetTypes[name];
+      _targetTypes[name] = type;
+    }
+    fn();
+    for (final entry in oldValues.entries) {
+      final oldValue = entry.value;
+      if (oldValue == null) {
+        _targetTypes.remove(entry.key);
+      } else {
+        _targetTypes[entry.key] = oldValue;
+      }
+    }
+  }
+
+  String? _parameterType(FormalParameter parameter) {
+    final NormalFormalParameter? normal;
+    if (parameter is DefaultFormalParameter) {
+      normal = parameter.parameter;
+    } else if (parameter is NormalFormalParameter) {
+      normal = parameter;
+    } else {
+      normal = null;
+    }
+
+    return switch (normal) {
+      SimpleFormalParameter(:final type?) => _withoutNullability(
+        type.toSource(),
+      ),
+      _ => null,
+    };
+  }
 
   bool _isPlaceholderCovered() {
     return placeholderCoverage.any((entry) => _matchesGlob(path, entry.under));

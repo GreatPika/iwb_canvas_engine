@@ -207,6 +207,7 @@ final class ActualExpectation {
     this.imports = const [],
     this.implementedInterfaces = const [],
     this.compositionFields = const [],
+    this.delegationMembers = const [],
     this.delegationTargets = const [],
     this.sensitiveThrowOwner,
   });
@@ -217,6 +218,7 @@ final class ActualExpectation {
       imports = const [],
       implementedInterfaces = const [],
       compositionFields = const [],
+      delegationMembers = const [],
       delegationTargets = const [],
       sensitiveThrowOwner = null;
 
@@ -225,6 +227,7 @@ final class ActualExpectation {
   final List<String> imports;
   final List<String> implementedInterfaces;
   final List<String> compositionFields;
+  final List<String> delegationMembers;
   final List<String> delegationTargets;
   final String? sensitiveThrowOwner;
 }
@@ -649,6 +652,7 @@ ActualExpectation _actualExpectation(Map<String, Object?> yaml) {
     imports: _optionalStrings(actual, 'imports'),
     implementedInterfaces: _optionalStrings(actual, 'implementedInterfaces'),
     compositionFields: _optionalStrings(actual, 'compositionFields'),
+    delegationMembers: _optionalStrings(actual, 'delegationMembers'),
     delegationTargets: _optionalStrings(actual, 'delegationTargets'),
     sensitiveThrowOwner: _optionalString(actual, 'sensitiveThrowOwner'),
   );

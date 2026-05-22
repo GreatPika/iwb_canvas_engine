@@ -511,8 +511,10 @@ edges:
     actual:
       delegationTargets:
         - RuntimeRoot
-  - id: api.camera_port.routes_to_runtime_view_camera
-    from: api.camera_port
+      delegationMembers:
+        - CanvasRuntime.camera
+  - id: api.canvas_runtime.camera.routes_to_runtime_view_camera
+    from: api.canvas_runtime
     to: runtime.view_camera
     kind: facade_port
     phaseRequiredBy: P4
@@ -523,8 +525,10 @@ edges:
     evidence:
       - The public camera port must route to runtime-owned view camera state.
     actual:
-      declarations:
-        - CanvasCameraPort
+      delegationTargets:
+        - RuntimeRoot
+      delegationMembers:
+        - CanvasRuntime.camera
   - id: codec.schema_v1.uses_public_dto
     from: codec.schema_v1
     to: api.public_surface

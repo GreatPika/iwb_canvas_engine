@@ -28,3 +28,5 @@ void topLevelFail() {
 void topLevelOtherFail() {
   throw OtherFixtureException();
 }
+
+String topLevelDelegates(ExportedFixture dependency) => dependency.toString();

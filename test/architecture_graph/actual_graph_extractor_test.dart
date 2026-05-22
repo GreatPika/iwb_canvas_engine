@@ -155,4 +155,13 @@ void main() {
       contains('null:OtherFixtureException'),
     );
   });
+
+  test('extracts simple delegations from top-level functions', () {
+    final graph = extractActualArchitectureGraphFromPaths(paths: [fixture]);
+
+    expect(
+      graph.delegations.map((fact) => '${fact.member}:${fact.targetType}'),
+      contains('topLevelDelegates:ExportedFixture'),
+    );
+  });
 }
