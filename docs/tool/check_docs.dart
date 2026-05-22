@@ -182,7 +182,7 @@ class _DiagramEntry {
   const _DiagramEntry({
     required this.id,
     required this.kind,
-    required this.plannedPath,
+    required this.file,
     required this.classification,
     required this.relatedSections,
     required this.relatedPhases,
@@ -191,7 +191,7 @@ class _DiagramEntry {
 
   final String id;
   final String kind;
-  final String plannedPath;
+  final String file;
   final String classification;
   final Set<String> relatedSections;
   final Set<String> relatedPhases;
@@ -622,7 +622,7 @@ Map<String, _DiagramEntry> _loadDiagramCatalog() {
   for (final entry in _loadYamlMapList(_diagramsRegistryPath)) {
     final diagramId = _stringField(entry, 'id', 'diagram registry entry');
     final kind = _stringField(entry, 'kind', diagramId);
-    final plannedPath = _stringField(entry, 'planned_path', diagramId);
+    final file = _stringField(entry, 'file', diagramId);
     final classification = _stringField(entry, 'classification', diagramId);
     final phases = _stringListField(entry, 'related_phases', diagramId).toSet();
     final sections = _stringListField(
@@ -640,14 +640,13 @@ Map<String, _DiagramEntry> _loadDiagramCatalog() {
       _fail('$_diagramsRegistryPath contains duplicate diagram id $diagramId');
       continue;
     }
-    if (!seenPaths.add(plannedPath)) {
-      _fail('$_diagramsRegistryPath contains duplicate path $plannedPath');
+    if (!seenPaths.add(file)) {
+      _fail('$_diagramsRegistryPath contains duplicate path $file');
     }
-    if (!plannedPath.startsWith('docs/diagrams/') ||
-        !plannedPath.endsWith('.mmd')) {
-      _fail('$diagramId planned_path must be a docs/diagrams/*.mmd path');
+    if (!file.startsWith('docs/diagrams/') || !file.endsWith('.mmd')) {
+      _fail('$diagramId file must be a docs/diagrams/*.mmd path');
     }
-    _requireFile(plannedPath, source: _diagramsRegistryPath);
+    _requireFile(file, source: _diagramsRegistryPath);
 
     if (sections.isEmpty) {
       _fail('$_diagramsRegistryPath entry $diagramId has no related sections');
@@ -678,7 +677,7 @@ Map<String, _DiagramEntry> _loadDiagramCatalog() {
     catalog[diagramId] = _DiagramEntry(
       id: diagramId,
       kind: kind,
-      plannedPath: plannedPath,
+      file: file,
       classification: classification,
       relatedSections: sections,
       relatedPhases: phases,
@@ -738,9 +737,7 @@ void _checkDiagramCatalogRegistrySymmetry(
     }
   }
 
-  final catalogedFiles = catalog.values
-      .map((diagram) => diagram.plannedPath)
-      .toSet();
+  final catalogedFiles = catalog.values.map((diagram) => diagram.file).toSet();
   final diagramDir = Directory('docs/diagrams');
   if (!diagramDir.existsSync()) {
     return;
@@ -782,10 +779,10 @@ void _checkImplementationDiagramPhaseReferences(
         _fail('$path references uncataloged diagram $diagramId');
         continue;
       }
-      if (diagram.plannedPath != diagramPath) {
+      if (diagram.file != diagramPath) {
         _fail(
           '$path references $diagramId at $diagramPath, '
-          'but $_diagramCatalogPath plans ${diagram.plannedPath}',
+          'but $_diagramCatalogPath lists ${diagram.file}',
         );
       }
       if (!diagram.relatedPhases.contains(phase)) {

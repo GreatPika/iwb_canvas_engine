@@ -2,7 +2,7 @@
 # Diagram catalog
 
 Every item below is a required Mermaid deliverable. The catalog links docs to
-the planned Mermaid file paths under `docs/diagrams/`.
+the Mermaid files under `docs/diagrams/`.
 Frame, cache, lifecycle, and public edit diagrams use the public runtime state
 model: `CanvasRuntime.state` carries runtime-visible revisions, runtime view
 camera is distinct from persisted document camera, and retired separate public
@@ -57,7 +57,7 @@ Current generated outputs:
 
 - Kind: `c4`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/c4_context.mmd`
+- File: `docs/diagrams/c4_context.mmd`
 - Related phases: `P0`, `P1`, `P2`, `P7`, `P10`, `P13`, `P14`
 - Related sections: `section_00_status_and_scope`, `section_04_public_api_v1`
 - Graph view source: `none`
@@ -66,7 +66,7 @@ Current generated outputs:
 
 - Kind: `c4`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/c4_container.mmd`
+- File: `docs/diagrams/c4_container.mmd`
 - Related phases: `P0`, `P1`, `P4`, `P14`
 - Related sections: `section_00_status_and_scope`, `section_02_architecture_model`, `section_03_package_layout`
 - Graph view source: `none`
@@ -75,7 +75,7 @@ Current generated outputs:
 
 - Kind: `c4`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/c4_component_runtime.mmd`
+- File: `docs/diagrams/c4_component_runtime.mmd`
 - Related phases: `P0`, `P4`, `P5`, `P6`, `P9`, `P14`
 - Related sections: `section_02_architecture_model`, `section_10_runtime_data_model`
 - Graph view source: `none`
@@ -84,7 +84,7 @@ Current generated outputs:
 
 - Kind: `c4`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/c4_code_edit_kernel.mmd`
+- File: `docs/diagrams/c4_code_edit_kernel.mmd`
 - Related phases: `P5`, `P14`
 - Related sections: `section_11_edit_kernel`
 - Graph view source: `none`
@@ -93,7 +93,7 @@ Current generated outputs:
 
 - Kind: `data_flow`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/dfd_public_edit.mmd`
+- File: `docs/diagrams/dfd_public_edit.mmd`
 - Related phases: `P1`, `P2`, `P5`, `P6`, `P7`, `P10`, `P11`, `P12`, `P13`, `P14`
 - Related sections: `section_04_public_api_v1`, `section_11_edit_kernel`
 - Graph view source: `none`
@@ -102,7 +102,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_single_active_surface.mmd`
+- File: `docs/diagrams/seq_single_active_surface.mmd`
 - Related phases: `P2`, `P13`, `P14`
 - Related sections: `section_04_public_api_v1`
 - Graph view source: `none`
@@ -111,7 +111,7 @@ Current generated outputs:
 
 - Kind: `data_flow`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/dfd_load_document_success_failure.mmd`
+- File: `docs/diagrams/dfd_load_document_success_failure.mmd`
 - Related phases: `P6`, `P10`, `P11`, `P12`, `P14`
 - Related sections: `section_12_load_document`
 - Graph view source: `none`
@@ -120,7 +120,7 @@ Current generated outputs:
 
 - Kind: `data_flow`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/dfd_pointer_preview_commit.mmd`
+- File: `docs/diagrams/dfd_pointer_preview_commit.mmd`
 - Related phases: `P8`, `P9`, `P10`, `P11`, `P12`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`, `section_16_geometry_policy`
 - Graph view source: `none`
@@ -129,7 +129,7 @@ Current generated outputs:
 
 - Kind: `data_flow`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/dfd_main_paint_frame.mmd`
+- File: `docs/diagrams/dfd_main_paint_frame.mmd`
 - Related phases: `P9`, `P13`, `P14`
 - Related sections: `section_15_frame_render_contract`
 - Graph view source: `none`
@@ -138,7 +138,7 @@ Current generated outputs:
 
 - Kind: `data_flow`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/dfd_overlay_frame.mmd`
+- File: `docs/diagrams/dfd_overlay_frame.mmd`
 - Related phases: `P9`, `P13`, `P14`
 - Related sections: `section_15_frame_render_contract`
 - Graph view source: `none`
@@ -147,7 +147,7 @@ Current generated outputs:
 
 - Kind: `data_flow`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/dfd_resource_resolution.mmd`
+- File: `docs/diagrams/dfd_resource_resolution.mmd`
 - Related phases: `P7`, `P9`, `P13`, `P14`
 - Related sections: `section_07_resource_lifecycle`
 - Graph view source: `none`
@@ -156,7 +156,7 @@ Current generated outputs:
 
 - Kind: `data_flow`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/dfd_schema_v1_decode_encode.mmd`
+- File: `docs/diagrams/dfd_schema_v1_decode_encode.mmd`
 - Related phases: `P3`, `P14`
 - Related sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`
 - Graph view source: `none`
@@ -165,7 +165,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_schema_v1_decode_encode_order.mmd`
+- File: `docs/diagrams/seq_schema_v1_decode_encode_order.mmd`
 - Related phases: `P3`, `P14`
 - Related sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`
 - Graph view source: `none`
@@ -174,7 +174,7 @@ Current generated outputs:
 
 - Kind: `data_flow`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/dfd_cache_invalidation.mmd`
+- File: `docs/diagrams/dfd_cache_invalidation.mmd`
 - Related phases: `P4`, `P5`, `P6`, `P7`, `P8`, `P9`, `P13`, `P14`
 - Related sections: `section_10_runtime_data_model`, `section_17_spatial_kernel`, `section_18_cache_policy`
 - Graph view source: `none`
@@ -183,7 +183,7 @@ Current generated outputs:
 
 - Kind: `data_flow`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/dfd_spatial_query_budget.mmd`
+- File: `docs/diagrams/dfd_spatial_query_budget.mmd`
 - Related phases: `P8`, `P9`, `P14`
 - Related sections: `section_17_spatial_kernel`
 - Graph view source: `none`
@@ -192,7 +192,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_spatial_touched_update.mmd`
+- File: `docs/diagrams/seq_spatial_touched_update.mmd`
 - Related phases: `P8`, `P14`
 - Related sections: `section_17_spatial_kernel`
 - Graph view source: `none`
@@ -201,7 +201,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_hit_test_candidate_resolution.mmd`
+- File: `docs/diagrams/seq_hit_test_candidate_resolution.mmd`
 - Related phases: `P8`, `P10`, `P14`
 - Related sections: `section_16_geometry_policy`, `section_17_spatial_kernel`
 - Graph view source: `none`
@@ -210,7 +210,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_eraser_exact_budget.mmd`
+- File: `docs/diagrams/seq_eraser_exact_budget.mmd`
 - Related phases: `P8`, `P12`, `P14`
 - Related sections: `section_16_geometry_policy`, `section_17_spatial_kernel`
 - Graph view source: `none`
@@ -219,7 +219,7 @@ Current generated outputs:
 
 - Kind: `data_flow`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/dfd_diagnostics_error_projection.mmd`
+- File: `docs/diagrams/dfd_diagnostics_error_projection.mmd`
 - Related phases: `P1`, `P2`, `P3`, `P14`
 - Related sections: `section_06_validation_limits`, `section_20_diagnostics_hub`
 - Graph view source: `none`
@@ -228,7 +228,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_edit_success.mmd`
+- File: `docs/diagrams/seq_edit_success.mmd`
 - Related phases: `P5`, `P14`
 - Related sections: `section_11_edit_kernel`, `section_13_operation_matrix`
 - Graph view source: `none`
@@ -237,7 +237,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_edit_rollback.mmd`
+- File: `docs/diagrams/seq_edit_rollback.mmd`
 - Related phases: `P5`, `P14`
 - Related sections: `section_11_edit_kernel`, `section_13_operation_matrix`
 - Graph view source: `none`
@@ -246,7 +246,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_load_document_success.mmd`
+- File: `docs/diagrams/seq_load_document_success.mmd`
 - Related phases: `P6`, `P10`, `P11`, `P12`, `P14`
 - Related sections: `section_12_load_document`
 - Graph view source: `none`
@@ -255,7 +255,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_load_document_failure.mmd`
+- File: `docs/diagrams/seq_load_document_failure.mmd`
 - Related phases: `P6`, `P10`, `P11`, `P12`, `P14`
 - Related sections: `section_12_load_document`
 - Graph view source: `none`
@@ -264,7 +264,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_selected_move_preview_commit.mmd`
+- File: `docs/diagrams/seq_selected_move_preview_commit.mmd`
 - Related phases: `P9`, `P10`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -273,7 +273,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_selected_move_cancel.mmd`
+- File: `docs/diagrams/seq_selected_move_cancel.mmd`
 - Related phases: `P9`, `P10`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -282,7 +282,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_marquee_select.mmd`
+- File: `docs/diagrams/seq_marquee_select.mmd`
 - Related phases: `P10`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -291,7 +291,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_pencil_marker_commit.mmd`
+- File: `docs/diagrams/seq_pencil_marker_commit.mmd`
 - Related phases: `P11`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -300,7 +300,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_line_two_tap_commit.mmd`
+- File: `docs/diagrams/seq_line_two_tap_commit.mmd`
 - Related phases: `P11`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -309,7 +309,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_eraser_commit.mmd`
+- File: `docs/diagrams/seq_eraser_commit.mmd`
 - Related phases: `P12`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -318,7 +318,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_context_action_request.mmd`
+- File: `docs/diagrams/seq_context_action_request.mmd`
 - Related phases: `P12`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -327,7 +327,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_main_paint.mmd`
+- File: `docs/diagrams/seq_main_paint.mmd`
 - Related phases: `P9`, `P13`, `P14`
 - Related sections: `section_15_frame_render_contract`
 - Graph view source: `none`
@@ -336,7 +336,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_overlay_paint.mmd`
+- File: `docs/diagrams/seq_overlay_paint.mmd`
 - Related phases: `P9`, `P13`, `P14`
 - Related sections: `section_15_frame_render_contract`
 - Graph view source: `none`
@@ -345,7 +345,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_resource_resolution.mmd`
+- File: `docs/diagrams/seq_resource_resolution.mmd`
 - Related phases: `P7`, `P9`, `P13`, `P14`
 - Related sections: `section_07_resource_lifecycle`
 - Graph view source: `none`
@@ -354,7 +354,7 @@ Current generated outputs:
 
 - Kind: `sequence`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/seq_dispose_during_gesture.mmd`
+- File: `docs/diagrams/seq_dispose_during_gesture.mmd`
 - Related phases: `P10`, `P11`, `P12`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -363,7 +363,7 @@ Current generated outputs:
 
 - Kind: `state`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/state_runtime_lifecycle.mmd`
+- File: `docs/diagrams/state_runtime_lifecycle.mmd`
 - Related phases: `P4`, `P6`, `P14`
 - Related sections: `section_02_architecture_model`
 - Graph view source: `none`
@@ -372,7 +372,7 @@ Current generated outputs:
 
 - Kind: `state`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/state_edit_session.mmd`
+- File: `docs/diagrams/state_edit_session.mmd`
 - Related phases: `P5`, `P6`, `P14`
 - Related sections: `section_11_edit_kernel`
 - Graph view source: `none`
@@ -381,7 +381,7 @@ Current generated outputs:
 
 - Kind: `state`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/state_pointer_session.mmd`
+- File: `docs/diagrams/state_pointer_session.mmd`
 - Related phases: `P10`, `P11`, `P12`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -390,7 +390,7 @@ Current generated outputs:
 
 - Kind: `state`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/state_select_marquee.mmd`
+- File: `docs/diagrams/state_select_marquee.mmd`
 - Related phases: `P10`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -399,7 +399,7 @@ Current generated outputs:
 
 - Kind: `state`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/state_selected_move.mmd`
+- File: `docs/diagrams/state_selected_move.mmd`
 - Related phases: `P10`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -408,7 +408,7 @@ Current generated outputs:
 
 - Kind: `state`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/state_pencil_marker_draw.mmd`
+- File: `docs/diagrams/state_pencil_marker_draw.mmd`
 - Related phases: `P11`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -417,7 +417,7 @@ Current generated outputs:
 
 - Kind: `state`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/state_two_tap_line.mmd`
+- File: `docs/diagrams/state_two_tap_line.mmd`
 - Related phases: `P11`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -426,7 +426,7 @@ Current generated outputs:
 
 - Kind: `state`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/state_eraser.mmd`
+- File: `docs/diagrams/state_eraser.mmd`
 - Related phases: `P12`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -435,7 +435,7 @@ Current generated outputs:
 
 - Kind: `state`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/state_pending_context_action_request.mmd`
+- File: `docs/diagrams/state_pending_context_action_request.mmd`
 - Related phases: `P12`, `P13`, `P14`
 - Related sections: `section_14_interaction_engine`
 - Graph view source: `none`
@@ -444,7 +444,7 @@ Current generated outputs:
 
 - Kind: `state`
 - Classification: `semantic`
-- Planned path: `docs/diagrams/state_resource_resolution.mmd`
+- File: `docs/diagrams/state_resource_resolution.mmd`
 - Related phases: `P7`, `P13`, `P14`
 - Related sections: `section_07_resource_lifecycle`
 - Graph view source: `none`

@@ -93,7 +93,7 @@ class _DiagramEntry {
   const _DiagramEntry({
     required this.id,
     required this.kind,
-    required this.plannedPath,
+    required this.file,
     required this.classification,
     required this.relatedPhases,
     required this.relatedSections,
@@ -102,7 +102,7 @@ class _DiagramEntry {
 
   final String id;
   final String kind;
-  final String plannedPath;
+  final String file;
   final String classification;
   final List<String> relatedPhases;
   final List<String> relatedSections;
@@ -226,19 +226,19 @@ List<_DiagramEntry> _loadDiagrams(List<String> errors) {
       );
       continue;
     }
-    if (entry.plannedPath.isEmpty) {
-      errors.add('${entry.id} must have a planned_path');
+    if (entry.file.isEmpty) {
+      errors.add('${entry.id} must have a file');
       continue;
     }
     if (!seenIds.add(entry.id)) {
       errors.add('duplicate diagram id ${entry.id}');
       continue;
     }
-    if (!seenPaths.add(entry.plannedPath)) {
-      errors.add('duplicate diagram path ${entry.plannedPath}');
+    if (!seenPaths.add(entry.file)) {
+      errors.add('duplicate diagram path ${entry.file}');
     }
-    if (!File(entry.plannedPath).existsSync()) {
-      errors.add('${entry.id} references missing file ${entry.plannedPath}');
+    if (!File(entry.file).existsSync()) {
+      errors.add('${entry.id} references missing file ${entry.file}');
     }
     if (entry.relatedPhases.isEmpty) {
       errors.add('${entry.id} must have at least one related phase');
@@ -319,7 +319,7 @@ _DiagramEntry _diagramEntry(YamlMap map, List<String> errors) {
   return _DiagramEntry(
     id: id,
     kind: _stringField(map, 'kind', id, errors),
-    plannedPath: _stringField(map, 'planned_path', id, errors),
+    file: _stringField(map, 'file', id, errors),
     classification: _stringField(map, 'classification', id, errors),
     relatedPhases: _stringListField(map, 'related_phases', id, errors),
     relatedSections: _stringListField(map, 'related_sections', id, errors),
@@ -480,7 +480,7 @@ String _renderDiagramCatalog(List<_DiagramEntry> diagrams) {
     ..writeln(
       'Every item below is a required Mermaid deliverable. The catalog links docs to',
     )
-    ..writeln('the planned Mermaid file paths under `docs/diagrams/`.')
+    ..writeln('the Mermaid files under `docs/diagrams/`.')
     ..writeln(
       'Frame, cache, lifecycle, and public edit diagrams use the public runtime state',
     )
@@ -519,7 +519,7 @@ String _renderDiagramCatalog(List<_DiagramEntry> diagrams) {
 
   for (final diagram in generated) {
     buffer
-      ..writeln('- `${diagram.plannedPath}`')
+      ..writeln('- `${diagram.file}`')
       ..writeln('  - Kind: `${diagram.kind}`')
       ..writeln('  - Classification: `${diagram.classification}`')
       ..writeln('  - Related phases: ${_codeList(diagram.relatedPhases)}')
@@ -534,7 +534,7 @@ String _renderDiagramCatalog(List<_DiagramEntry> diagrams) {
       ..writeln()
       ..writeln('- Kind: `${diagram.kind}`')
       ..writeln('- Classification: `${diagram.classification}`')
-      ..writeln('- Planned path: `${diagram.plannedPath}`')
+      ..writeln('- File: `${diagram.file}`')
       ..writeln('- Related phases: ${_codeList(diagram.relatedPhases)}')
       ..writeln('- Related sections: ${_codeList(diagram.relatedSections)}')
       ..writeln('- Graph view source: `${diagram.graphViewSource}`');

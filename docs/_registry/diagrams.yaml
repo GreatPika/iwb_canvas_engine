@@ -1,7 +1,7 @@
 -
   id: c4_context
   kind: c4
-  planned_path: docs/diagrams/c4_context.mmd
+  file: docs/diagrams/c4_context.mmd
   classification: semantic
   related_phases:
     - P0
@@ -18,7 +18,7 @@
 -
   id: c4_container
   kind: c4
-  planned_path: docs/diagrams/c4_container.mmd
+  file: docs/diagrams/c4_container.mmd
   classification: semantic
   related_phases:
     - P0
@@ -33,7 +33,7 @@
 -
   id: c4_component_runtime
   kind: c4
-  planned_path: docs/diagrams/c4_component_runtime.mmd
+  file: docs/diagrams/c4_component_runtime.mmd
   classification: semantic
   related_phases:
     - P0
@@ -49,7 +49,7 @@
 -
   id: c4_code_edit_kernel
   kind: c4
-  planned_path: docs/diagrams/c4_code_edit_kernel.mmd
+  file: docs/diagrams/c4_code_edit_kernel.mmd
   classification: semantic
   related_phases:
     - P5
@@ -60,7 +60,7 @@
 -
   id: dfd_public_edit
   kind: data_flow
-  planned_path: docs/diagrams/dfd_public_edit.mmd
+  file: docs/diagrams/dfd_public_edit.mmd
   classification: semantic
   related_phases:
     - P1
@@ -80,7 +80,7 @@
 -
   id: seq_single_active_surface
   kind: sequence
-  planned_path: docs/diagrams/seq_single_active_surface.mmd
+  file: docs/diagrams/seq_single_active_surface.mmd
   classification: semantic
   related_phases:
     - P2
@@ -92,7 +92,7 @@
 -
   id: dfd_load_document_success_failure
   kind: data_flow
-  planned_path: docs/diagrams/dfd_load_document_success_failure.mmd
+  file: docs/diagrams/dfd_load_document_success_failure.mmd
   classification: semantic
   related_phases:
     - P6
@@ -106,7 +106,7 @@
 -
   id: dfd_pointer_preview_commit
   kind: data_flow
-  planned_path: docs/diagrams/dfd_pointer_preview_commit.mmd
+  file: docs/diagrams/dfd_pointer_preview_commit.mmd
   classification: semantic
   related_phases:
     - P8
@@ -123,7 +123,7 @@
 -
   id: dfd_main_paint_frame
   kind: data_flow
-  planned_path: docs/diagrams/dfd_main_paint_frame.mmd
+  file: docs/diagrams/dfd_main_paint_frame.mmd
   classification: semantic
   related_phases:
     - P9
@@ -135,7 +135,7 @@
 -
   id: dfd_overlay_frame
   kind: data_flow
-  planned_path: docs/diagrams/dfd_overlay_frame.mmd
+  file: docs/diagrams/dfd_overlay_frame.mmd
   classification: semantic
   related_phases:
     - P9
@@ -147,7 +147,7 @@
 -
   id: dfd_resource_resolution
   kind: data_flow
-  planned_path: docs/diagrams/dfd_resource_resolution.mmd
+  file: docs/diagrams/dfd_resource_resolution.mmd
   classification: semantic
   related_phases:
     - P7
@@ -160,7 +160,7 @@
 -
   id: dfd_schema_v1_decode_encode
   kind: data_flow
-  planned_path: docs/diagrams/dfd_schema_v1_decode_encode.mmd
+  file: docs/diagrams/dfd_schema_v1_decode_encode.mmd
   classification: semantic
   related_phases:
     - P3
@@ -172,7 +172,7 @@
 -
   id: seq_schema_v1_decode_encode_order
   kind: sequence
-  planned_path: docs/diagrams/seq_schema_v1_decode_encode_order.mmd
+  file: docs/diagrams/seq_schema_v1_decode_encode_order.mmd
   classification: semantic
   related_phases:
     - P3
@@ -184,7 +184,7 @@
 -
   id: dfd_cache_invalidation
   kind: data_flow
-  planned_path: docs/diagrams/dfd_cache_invalidation.mmd
+  file: docs/diagrams/dfd_cache_invalidation.mmd
   classification: semantic
   related_phases:
     - P4
@@ -203,7 +203,7 @@
 -
   id: dfd_spatial_query_budget
   kind: data_flow
-  planned_path: docs/diagrams/dfd_spatial_query_budget.mmd
+  file: docs/diagrams/dfd_spatial_query_budget.mmd
   classification: semantic
   related_phases:
     - P8
@@ -215,7 +215,7 @@
 -
   id: seq_spatial_touched_update
   kind: sequence
-  planned_path: docs/diagrams/seq_spatial_touched_update.mmd
+  file: docs/diagrams/seq_spatial_touched_update.mmd
   classification: semantic
   related_phases:
     - P8
@@ -226,7 +226,7 @@
 -
   id: seq_hit_test_candidate_resolution
   kind: sequence
-  planned_path: docs/diagrams/seq_hit_test_candidate_resolution.mmd
+  file: docs/diagrams/seq_hit_test_candidate_resolution.mmd
   classification: semantic
   related_phases:
     - P8
@@ -239,7 +239,7 @@
 -
   id: seq_eraser_exact_budget
   kind: sequence
-  planned_path: docs/diagrams/seq_eraser_exact_budget.mmd
+  file: docs/diagrams/seq_eraser_exact_budget.mmd
   classification: semantic
   related_phases:
     - P8
@@ -252,7 +252,7 @@
 -
   id: dfd_diagnostics_error_projection
   kind: data_flow
-  planned_path: docs/diagrams/dfd_diagnostics_error_projection.mmd
+  file: docs/diagrams/dfd_diagnostics_error_projection.mmd
   classification: semantic
   related_phases:
     - P1
@@ -266,7 +266,7 @@
 -
   id: seq_edit_success
   kind: sequence
-  planned_path: docs/diagrams/seq_edit_success.mmd
+  file: docs/diagrams/seq_edit_success.mmd
   classification: semantic
   related_phases:
     - P5
@@ -278,7 +278,7 @@
 -
   id: seq_edit_rollback
   kind: sequence
-  planned_path: docs/diagrams/seq_edit_rollback.mmd
+  file: docs/diagrams/seq_edit_rollback.mmd
   classification: semantic
   related_phases:
     - P5
@@ -290,7 +290,7 @@
 -
   id: seq_load_document_success
   kind: sequence
-  planned_path: docs/diagrams/seq_load_document_success.mmd
+  file: docs/diagrams/seq_load_document_success.mmd
   classification: semantic
   related_phases:
     - P6
@@ -304,7 +304,7 @@
 -
   id: seq_load_document_failure
   kind: sequence
-  planned_path: docs/diagrams/seq_load_document_failure.mmd
+  file: docs/diagrams/seq_load_document_failure.mmd
   classification: semantic
   related_phases:
     - P6
@@ -318,7 +318,7 @@
 -
   id: seq_selected_move_preview_commit
   kind: sequence
-  planned_path: docs/diagrams/seq_selected_move_preview_commit.mmd
+  file: docs/diagrams/seq_selected_move_preview_commit.mmd
   classification: semantic
   related_phases:
     - P9
@@ -331,7 +331,7 @@
 -
   id: seq_selected_move_cancel
   kind: sequence
-  planned_path: docs/diagrams/seq_selected_move_cancel.mmd
+  file: docs/diagrams/seq_selected_move_cancel.mmd
   classification: semantic
   related_phases:
     - P9
@@ -344,7 +344,7 @@
 -
   id: seq_marquee_select
   kind: sequence
-  planned_path: docs/diagrams/seq_marquee_select.mmd
+  file: docs/diagrams/seq_marquee_select.mmd
   classification: semantic
   related_phases:
     - P10
@@ -356,7 +356,7 @@
 -
   id: seq_pencil_marker_commit
   kind: sequence
-  planned_path: docs/diagrams/seq_pencil_marker_commit.mmd
+  file: docs/diagrams/seq_pencil_marker_commit.mmd
   classification: semantic
   related_phases:
     - P11
@@ -368,7 +368,7 @@
 -
   id: seq_line_two_tap_commit
   kind: sequence
-  planned_path: docs/diagrams/seq_line_two_tap_commit.mmd
+  file: docs/diagrams/seq_line_two_tap_commit.mmd
   classification: semantic
   related_phases:
     - P11
@@ -380,7 +380,7 @@
 -
   id: seq_eraser_commit
   kind: sequence
-  planned_path: docs/diagrams/seq_eraser_commit.mmd
+  file: docs/diagrams/seq_eraser_commit.mmd
   classification: semantic
   related_phases:
     - P12
@@ -392,7 +392,7 @@
 -
   id: seq_context_action_request
   kind: sequence
-  planned_path: docs/diagrams/seq_context_action_request.mmd
+  file: docs/diagrams/seq_context_action_request.mmd
   classification: semantic
   related_phases:
     - P12
@@ -404,7 +404,7 @@
 -
   id: seq_main_paint
   kind: sequence
-  planned_path: docs/diagrams/seq_main_paint.mmd
+  file: docs/diagrams/seq_main_paint.mmd
   classification: semantic
   related_phases:
     - P9
@@ -416,7 +416,7 @@
 -
   id: seq_overlay_paint
   kind: sequence
-  planned_path: docs/diagrams/seq_overlay_paint.mmd
+  file: docs/diagrams/seq_overlay_paint.mmd
   classification: semantic
   related_phases:
     - P9
@@ -428,7 +428,7 @@
 -
   id: seq_resource_resolution
   kind: sequence
-  planned_path: docs/diagrams/seq_resource_resolution.mmd
+  file: docs/diagrams/seq_resource_resolution.mmd
   classification: semantic
   related_phases:
     - P7
@@ -441,7 +441,7 @@
 -
   id: seq_dispose_during_gesture
   kind: sequence
-  planned_path: docs/diagrams/seq_dispose_during_gesture.mmd
+  file: docs/diagrams/seq_dispose_during_gesture.mmd
   classification: semantic
   related_phases:
     - P10
@@ -455,7 +455,7 @@
 -
   id: state_runtime_lifecycle
   kind: state
-  planned_path: docs/diagrams/state_runtime_lifecycle.mmd
+  file: docs/diagrams/state_runtime_lifecycle.mmd
   classification: semantic
   related_phases:
     - P4
@@ -467,7 +467,7 @@
 -
   id: state_edit_session
   kind: state
-  planned_path: docs/diagrams/state_edit_session.mmd
+  file: docs/diagrams/state_edit_session.mmd
   classification: semantic
   related_phases:
     - P5
@@ -479,7 +479,7 @@
 -
   id: state_pointer_session
   kind: state
-  planned_path: docs/diagrams/state_pointer_session.mmd
+  file: docs/diagrams/state_pointer_session.mmd
   classification: semantic
   related_phases:
     - P10
@@ -493,7 +493,7 @@
 -
   id: state_select_marquee
   kind: state
-  planned_path: docs/diagrams/state_select_marquee.mmd
+  file: docs/diagrams/state_select_marquee.mmd
   classification: semantic
   related_phases:
     - P10
@@ -505,7 +505,7 @@
 -
   id: state_selected_move
   kind: state
-  planned_path: docs/diagrams/state_selected_move.mmd
+  file: docs/diagrams/state_selected_move.mmd
   classification: semantic
   related_phases:
     - P10
@@ -517,7 +517,7 @@
 -
   id: state_pencil_marker_draw
   kind: state
-  planned_path: docs/diagrams/state_pencil_marker_draw.mmd
+  file: docs/diagrams/state_pencil_marker_draw.mmd
   classification: semantic
   related_phases:
     - P11
@@ -529,7 +529,7 @@
 -
   id: state_two_tap_line
   kind: state
-  planned_path: docs/diagrams/state_two_tap_line.mmd
+  file: docs/diagrams/state_two_tap_line.mmd
   classification: semantic
   related_phases:
     - P11
@@ -541,7 +541,7 @@
 -
   id: state_eraser
   kind: state
-  planned_path: docs/diagrams/state_eraser.mmd
+  file: docs/diagrams/state_eraser.mmd
   classification: semantic
   related_phases:
     - P12
@@ -553,7 +553,7 @@
 -
   id: state_pending_context_action_request
   kind: state
-  planned_path: docs/diagrams/state_pending_context_action_request.mmd
+  file: docs/diagrams/state_pending_context_action_request.mmd
   classification: semantic
   related_phases:
     - P12
@@ -565,7 +565,7 @@
 -
   id: state_resource_resolution
   kind: state
-  planned_path: docs/diagrams/state_resource_resolution.mmd
+  file: docs/diagrams/state_resource_resolution.mmd
   classification: semantic
   related_phases:
     - P7
@@ -577,7 +577,7 @@
 -
   id: generated/full_architecture
   kind: architecture_graph_view
-  planned_path: docs/diagrams/generated/full_architecture.mmd
+  file: docs/diagrams/generated/full_architecture.mmd
   classification: generated
   related_phases:
     - P4
@@ -587,7 +587,7 @@
 -
   id: generated/current_phase
   kind: architecture_graph_view
-  planned_path: docs/diagrams/generated/current_phase.mmd
+  file: docs/diagrams/generated/current_phase.mmd
   classification: generated
   related_phases:
     - P4
@@ -597,7 +597,7 @@
 -
   id: generated/future_target
   kind: architecture_graph_view
-  planned_path: docs/diagrams/generated/future_target.mmd
+  file: docs/diagrams/generated/future_target.mmd
   classification: generated
   related_phases:
     - P4
@@ -607,7 +607,7 @@
 -
   id: generated/actual_vs_expected_diff
   kind: architecture_graph_view
-  planned_path: docs/diagrams/generated/actual_vs_expected_diff.mmd
+  file: docs/diagrams/generated/actual_vs_expected_diff.mmd
   classification: generated
   related_phases:
     - P4
@@ -617,7 +617,7 @@
 -
   id: generated/release_verification
   kind: architecture_graph_view
-  planned_path: docs/diagrams/generated/release_verification.mmd
+  file: docs/diagrams/generated/release_verification.mmd
   classification: generated
   related_phases:
     - P4

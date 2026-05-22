@@ -57,7 +57,7 @@ In Scope:
 - Rewrite `docs/architecture/README.md` as the architecture local router with
   exactly the content groups required by the design.
 - Add `docs/_registry/diagrams.yaml` as the structured owner for diagram id,
-  kind, planned path, semantic/generated classification, related phases,
+  kind, file path, semantic/generated classification, related phases,
   related sections, graph-view source metadata, and any diagram catalog
   metadata currently maintained in Markdown.
 - Add one generated-docs command under `docs/tool/` with write and `--check`
@@ -161,7 +161,7 @@ command without yet deleting existing reader entrypoints.
 Change:
 
 Create `docs/_registry/diagrams.yaml` as the structured owner for diagram id,
-kind, planned path, related phase, related section, semantic/generated
+kind, file path, related phase, related section, semantic/generated
 classification, and graph-view source metadata currently maintained in
 `docs/diagrams/README.md`. Convert `docs/diagrams/README.md` into a temporary
 generated compatibility catalog rendered from `docs/_registry/diagrams.yaml`
@@ -270,7 +270,7 @@ From the repository root, `dart run docs/tool/sync_generated_docs.dart --check`
 fails when `docs/diagrams/catalog.md` is stale or not generated from the diagram
 registry. `dart run docs/tool/check_docs.dart` exits 0 and proves
 `docs/tool/check_docs.dart` reads `docs/_registry/diagrams.yaml`, validates
-registry/catalog/section symmetry, requires diagram id, kind, planned path,
+registry/catalog/section symmetry, requires diagram id, kind, file path,
 semantic/generated classification, related phases, related sections, and
 graph-view source metadata where applicable, rejects orphan or missing `.mmd`
 files, and no longer requires or links to `docs/diagrams/README.md`. Because
