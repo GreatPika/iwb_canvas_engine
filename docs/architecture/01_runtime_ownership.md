@@ -75,6 +75,11 @@ interaction, or epoch changes. Downstream owners contribute facts through their
 own boundaries; they do not own the public snapshot object or depend on Flutter
 widget state to publish core runtime state.
 
+Frame, cache, lifecycle, and public edit diagrams use this public runtime state
+model: `CanvasRuntime.state` carries runtime-visible revisions, runtime view
+camera is distinct from persisted document camera, and retired separate public
+listener getters are not diagram seams.
+
 The target `PointerToolCleanupCoordinator` is an internal
 `InteractionEngine` collaborator and cleanup policy seam. `InteractionEngine`
 owns its composition and is the only caller. Tool machines may return typed

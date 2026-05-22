@@ -481,16 +481,6 @@ String _renderDiagramCatalog(List<_DiagramEntry> diagrams) {
       'Every item below is a required Mermaid deliverable. The catalog links docs to',
     )
     ..writeln('the Mermaid files under `docs/diagrams/`.')
-    ..writeln(
-      'Frame, cache, lifecycle, and public edit diagrams use the public runtime state',
-    )
-    ..writeln(
-      'model: `CanvasRuntime.state` carries runtime-visible revisions, runtime view',
-    )
-    ..writeln(
-      'camera is distinct from persisted document camera, and retired separate public',
-    )
-    ..writeln('listener getters are not diagram seams.')
     ..writeln()
     ..writeln(
       'Generated graph-backed Mermaid files live under the generated diagrams',
