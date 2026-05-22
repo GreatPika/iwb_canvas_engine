@@ -133,6 +133,70 @@ void main() {
     expect(_ids(report), isNot(contains('fixture.required_edge')));
   });
 
+  test(
+    'does not close a required node with declarations from another owner',
+    () {
+      final report = checkPhaseClosure(
+        expected: _fixtureGraph(),
+        actual: _actualGraph(
+          declarations: const [
+            DeclarationFact(
+              path: 'lib/src/codec/wrong.dart',
+              line: 1,
+              name: 'FixtureRuntime',
+              kind: 'class',
+            ),
+          ],
+        ),
+        selectedPhase: 'P4',
+      );
+
+      expect(_ids(report), contains('fixture.required_node'));
+    },
+  );
+
+  test('compares implemented interface expectations', () {
+    final missingReport = checkPhaseClosure(
+      expected: _fixtureGraph(),
+      actual: _actualGraph(
+        declarations: const [
+          DeclarationFact(
+            path: 'lib/src/runtime/root.dart',
+            line: 1,
+            name: 'FixtureRuntime',
+            kind: 'class',
+          ),
+        ],
+      ),
+      selectedPhase: 'P4',
+    );
+    final passingReport = checkPhaseClosure(
+      expected: _fixtureGraph(),
+      actual: _actualGraph(
+        declarations: const [
+          DeclarationFact(
+            path: 'lib/src/runtime/root.dart',
+            line: 1,
+            name: 'FixtureRuntime',
+            kind: 'class',
+          ),
+        ],
+        implementedInterfaces: const [
+          ImplementedInterfaceFact(
+            path: 'lib/src/runtime/root.dart',
+            line: 2,
+            declaration: 'FixtureRuntime',
+            interface: 'FixturePort',
+          ),
+        ],
+      ),
+      selectedPhase: 'P4',
+    );
+
+    expect(_ids(missingReport), contains('fixture.required_node'));
+    expect(_ids(passingReport), isNot(contains('fixture.required_node')));
+  });
+
   test('does not close an edge with evidence from an unrelated owner path', () {
     final report = checkPhaseClosure(
       expected: _fixtureGraph(),
@@ -243,10 +307,7 @@ ExpectedArchitectureGraph _fixtureGraph() {
         evidence: ['fixture'],
         actual: ActualExpectation(
           declarations: ['FixtureRuntime'],
-          exports: [],
-          imports: [],
-          compositionFields: [],
-          delegationTargets: [],
+          implementedInterfaces: ['FixturePort'],
         ),
       ),
       ArchitectureNode(
@@ -286,13 +347,7 @@ ExpectedArchitectureGraph _fixtureGraph() {
         coverageScope: 'architectureOwners',
         sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
         evidence: ['fixture'],
-        actual: ActualExpectation(
-          declarations: ['FutureRuntime'],
-          exports: [],
-          imports: [],
-          compositionFields: [],
-          delegationTargets: [],
-        ),
+        actual: ActualExpectation(declarations: ['FutureRuntime']),
       ),
     ],
     edges: const [
@@ -305,13 +360,7 @@ ExpectedArchitectureGraph _fixtureGraph() {
         status: 'required',
         sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
         evidence: ['fixture'],
-        actual: ActualExpectation(
-          declarations: [],
-          exports: [],
-          imports: [],
-          compositionFields: ['FixtureRuntime'],
-          delegationTargets: [],
-        ),
+        actual: ActualExpectation(compositionFields: ['FixtureRuntime']),
       ),
       ArchitectureEdge(
         id: 'fixture.future_edge',
@@ -322,13 +371,7 @@ ExpectedArchitectureGraph _fixtureGraph() {
         status: 'future',
         sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
         evidence: ['fixture'],
-        actual: ActualExpectation(
-          declarations: [],
-          exports: [],
-          imports: [],
-          compositionFields: ['FutureRuntime'],
-          delegationTargets: [],
-        ),
+        actual: ActualExpectation(compositionFields: ['FutureRuntime']),
       ),
     ],
     placeholders: const [
@@ -374,12 +417,13 @@ ActualArchitectureGraph _actualGraph({
   List<DeclarationFact> declarations = const [],
   List<CompositionFieldFact> compositionFields = const [],
   List<PlaceholderFact> placeholders = const [],
+  List<ImplementedInterfaceFact> implementedInterfaces = const [],
 }) {
   return ActualArchitectureGraph(
     exports: const [],
     imports: imports,
     declarations: declarations,
-    implementedInterfaces: const [],
+    implementedInterfaces: implementedInterfaces,
     compositionFields: compositionFields,
     placeholders: placeholders,
     exceptionThrows: const [],

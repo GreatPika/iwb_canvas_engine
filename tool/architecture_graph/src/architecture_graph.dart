@@ -202,11 +202,12 @@ final class ArchitectureView {
 
 final class ActualExpectation {
   const ActualExpectation({
-    required this.declarations,
-    required this.exports,
-    required this.imports,
-    required this.compositionFields,
-    required this.delegationTargets,
+    this.declarations = const [],
+    this.exports = const [],
+    this.imports = const [],
+    this.implementedInterfaces = const [],
+    this.compositionFields = const [],
+    this.delegationTargets = const [],
     this.sensitiveThrowOwner,
   });
 
@@ -214,6 +215,7 @@ final class ActualExpectation {
     : declarations = const [],
       exports = const [],
       imports = const [],
+      implementedInterfaces = const [],
       compositionFields = const [],
       delegationTargets = const [],
       sensitiveThrowOwner = null;
@@ -221,6 +223,7 @@ final class ActualExpectation {
   final List<String> declarations;
   final List<String> exports;
   final List<String> imports;
+  final List<String> implementedInterfaces;
   final List<String> compositionFields;
   final List<String> delegationTargets;
   final String? sensitiveThrowOwner;
@@ -644,6 +647,7 @@ ActualExpectation _actualExpectation(Map<String, Object?> yaml) {
     declarations: _optionalStrings(actual, 'declarations'),
     exports: _optionalStrings(actual, 'exports'),
     imports: _optionalStrings(actual, 'imports'),
+    implementedInterfaces: _optionalStrings(actual, 'implementedInterfaces'),
     compositionFields: _optionalStrings(actual, 'compositionFields'),
     delegationTargets: _optionalStrings(actual, 'delegationTargets'),
     sensitiveThrowOwner: _optionalString(actual, 'sensitiveThrowOwner'),

@@ -217,6 +217,9 @@ nodes:
     actual:
       declarations:
         - RuntimeRoot
+      implementedInterfaces:
+        - DocumentFactsPort
+        - FrameFactsPort
   - id: runtime.view_camera
     label: Runtime-owned view camera
     kind: runtime_state_owner
@@ -278,6 +281,9 @@ nodes:
       - path: docs/contracts/edit_kernel.md
     evidence:
       - Edit mutation semantics become required in P5.
+    actual:
+      declarations:
+        - EditKernel
   - id: load_document.pipeline
     label: Load document pipeline
     kind: load_owner
@@ -291,6 +297,9 @@ nodes:
       - path: docs/contracts/load_document.md
     evidence:
       - Loading validated documents is future-phase runtime behavior.
+    actual:
+      declarations:
+        - LoadDocumentPipeline
   - id: resource.resolver
     label: Resource resolver
     kind: resource_owner
@@ -304,6 +313,9 @@ nodes:
       - path: docs/contracts/resources.md
     evidence:
       - Resource resolution remains future-phase image loading scope.
+    actual:
+      declarations:
+        - ResourceResolver
   - id: geometry.spatial_index
     label: Geometry and spatial index
     kind: spatial_owner
@@ -317,6 +329,9 @@ nodes:
       - path: docs/contracts/spatial_kernel.md
     evidence:
       - Spatial query ownership becomes required in P8.
+    actual:
+      declarations:
+        - SpatialIndex
   - id: frame.renderer
     label: Frame renderer and cache owner
     kind: frame_owner
@@ -330,6 +345,9 @@ nodes:
       - path: docs/contracts/frame_rendering.md
     evidence:
       - Frame rendering and cache invalidation are future-phase obligations.
+    actual:
+      declarations:
+        - FrameRenderer
   - id: interaction.selection_move
     label: Selection and move interaction owner
     kind: interaction_owner
@@ -343,6 +361,9 @@ nodes:
       - path: docs/contracts/interaction_engine.md
     evidence:
       - Move interaction semantics are future-phase behavior.
+    actual:
+      declarations:
+        - InteractionEngine
   - id: draw.tools
     label: Draw tool owner
     kind: tool_owner
@@ -356,6 +377,9 @@ nodes:
       - path: docs/contracts/operation_matrix.md
     evidence:
       - Drawing tools become required in P11.
+    actual:
+      declarations:
+        - DrawToolController
   - id: eraser_text.request
     label: Eraser and text request owner
     kind: interaction_owner
@@ -369,6 +393,9 @@ nodes:
       - path: docs/contracts/interaction_engine.md
     evidence:
       - Eraser and text request flows are future-phase interaction scope.
+    actual:
+      declarations:
+        - EraserTextRequestCoordinator
   - id: flutter.surface
     label: Flutter surface integration
     kind: surface_owner
@@ -382,6 +409,9 @@ nodes:
       - path: docs/architecture/02_package_boundaries.md
     evidence:
       - Flutter widget integration remains future-phase public surface scope.
+    actual:
+      declarations:
+        - CanvasSurface
   - id: release.measurement
     label: Measurement and release alignment
     kind: measurement_scope
@@ -395,6 +425,9 @@ nodes:
       - path: docs/verification/benchmarks.md
     evidence:
       - P14 is release measurement scope, not a normal production owner.
+    actual:
+      declarations:
+        - ReleaseReadiness
 edges:
   - id: api.public_surface.exports_runtime
     from: api.public_surface
@@ -516,6 +549,9 @@ edges:
       - path: docs/contracts/edit_kernel.md
     evidence:
       - Edit behavior is future-phase controlled mutation over committed state.
+    actual:
+      compositionFields:
+        - DocumentStoreKernel
   - id: load_document.pipeline.replaces_store_document
     from: load_document.pipeline
     to: store.document_kernel
@@ -526,6 +562,9 @@ edges:
       - path: docs/contracts/load_document.md
     evidence:
       - Load document will admit validated documents into runtime state.
+    actual:
+      compositionFields:
+        - DocumentStoreKernel
   - id: resource.resolver.feeds_frame_renderer
     from: resource.resolver
     to: frame.renderer
@@ -537,6 +576,9 @@ edges:
       - path: docs/contracts/frame_rendering.md
     evidence:
       - Frame rendering will consume resource visual facts after resource scope.
+    actual:
+      delegationTargets:
+        - FrameRenderer
   - id: geometry.spatial_index.feeds_interaction
     from: geometry.spatial_index
     to: interaction.selection_move
@@ -548,6 +590,9 @@ edges:
       - path: docs/contracts/interaction_engine.md
     evidence:
       - Interaction hit testing will consume spatial query results.
+    actual:
+      delegationTargets:
+        - InteractionEngine
   - id: flutter.surface.drives_runtime_ports
     from: flutter.surface
     to: api.canvas_runtime
@@ -559,6 +604,9 @@ edges:
       - path: docs/architecture/02_package_boundaries.md
     evidence:
       - Flutter surface integration drives public runtime ports, not internals.
+    actual:
+      delegationTargets:
+        - CanvasRuntime
 placeholders:
   - id: runtime.canvas_runtime.camera.closed_phase_placeholder
     node: api.canvas_runtime

@@ -111,7 +111,7 @@ final class _PhaseClosureChecker {
       if (!_isRequiredBySelectedPhase(node.phaseRequiredBy, node.status)) {
         continue;
       }
-      final missingFacts = _missingActualExpectations(node.actual);
+      final missingFacts = _missingNodeExpectations(node);
       if (missingFacts.isEmpty) {
         continue;
       }
@@ -245,36 +245,57 @@ final class _PhaseClosureChecker {
     }
   }
 
-  List<String> _missingActualExpectations(ActualExpectation expectation) {
+  List<String> _missingNodeExpectations(ArchitectureNode node) {
+    final expectation = node.actual;
     final missing = <String>[];
     for (final declaration in expectation.declarations) {
-      if (!actual.declarations.any((fact) => fact.name == declaration)) {
+      if (!actual.declarations.any((fact) {
+        return _factMatchesNode(fact.path, node) && fact.name == declaration;
+      })) {
         missing.add('declaration:$declaration');
       }
     }
     for (final export in expectation.exports) {
-      if (!actual.exports.any((fact) => fact.uri == export)) {
+      if (!actual.exports.any((fact) {
+        return _factMatchesNode(fact.path, node) && fact.uri == export;
+      })) {
         missing.add('export:$export');
       }
     }
     for (final import in expectation.imports) {
-      if (!actual.imports.any((fact) => fact.uri == import)) {
+      if (!actual.imports.any((fact) {
+        return _factMatchesNode(fact.path, node) && fact.uri == import;
+      })) {
         missing.add('import:$import');
       }
     }
+    for (final interface in expectation.implementedInterfaces) {
+      if (!actual.implementedInterfaces.any((fact) {
+        return _factMatchesNode(fact.path, node) && fact.interface == interface;
+      })) {
+        missing.add('implements:$interface');
+      }
+    }
     for (final field in expectation.compositionFields) {
-      if (!actual.compositionFields.any((fact) => fact.type == field)) {
+      if (!actual.compositionFields.any((fact) {
+        return _factMatchesNode(fact.path, node) && fact.type == field;
+      })) {
         missing.add('composition:$field');
       }
     }
     for (final target in expectation.delegationTargets) {
-      if (!actual.delegations.any((fact) => fact.targetType == target)) {
+      if (!actual.delegations.any((fact) {
+        return _factMatchesNode(fact.path, node) && fact.targetType == target;
+      })) {
         missing.add('delegation:$target');
       }
     }
     final sensitiveOwner = expectation.sensitiveThrowOwner;
     if (sensitiveOwner != null &&
-        !actual.exceptionThrows.any((fact) => fact.owner == sensitiveOwner)) {
+        !actual.exceptionThrows.any((fact) {
+          return _factMatchesNode(fact.path, node) &&
+              fact.owner == sensitiveOwner;
+        })) {
       missing.add('sensitiveThrowOwner:$sensitiveOwner');
     }
 
@@ -312,6 +333,14 @@ final class _PhaseClosureChecker {
             fact.targetType == target;
       })) {
         missing.add('delegation:$target');
+      }
+    }
+    for (final interface in expectation.implementedInterfaces) {
+      if (!actual.implementedInterfaces.any((fact) {
+        return _matchesFromNode(fact.path, fromNode) &&
+            fact.interface == interface;
+      })) {
+        missing.add('implements:$interface');
       }
     }
     final sensitiveOwner = expectation.sensitiveThrowOwner;
