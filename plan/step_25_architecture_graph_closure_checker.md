@@ -584,7 +584,7 @@ owned roadmap, documentation, generated view, tool, or test surfaces.
 
 ## 6. Vertical Slices
 
-### Slice 1. [ ] Expected graph schema and P0-P14 seed graph
+### Slice 1. [x] Expected graph schema and P0-P14 seed graph
 
 #### Implements
 
@@ -637,7 +637,7 @@ The expected graph parses, validates, cites repository source-of-truth evidence,
 and represents current, future, deferred, and forbidden facts without reading
 implementation code as the expected-obligation source.
 
-### Slice 2. [ ] Analyzer-backed actual graph extractor
+### Slice 2. [x] Analyzer-backed actual graph extractor
 
 #### Implements
 
@@ -682,7 +682,7 @@ The extractor recognizes the locked architecture-level facts, ignores allowed
 non-violations outside coverage scope, and emits stable evidence for later
 comparison.
 
-### Slice 3. [ ] Phase closure comparator and strict standalone checker
+### Slice 3. [x] Phase closure comparator and strict standalone checker
 
 #### Implements
 
@@ -746,7 +746,7 @@ The checker is strict, phase-aware, standalone, and produces actionable
 violations with graph ids, paths, selected phase, expected facts, actual
 evidence, and messages. It does not suppress the known P3/P4 drift.
 
-### Slice 4. [ ] Generated graph-backed architecture views
+### Slice 4. [x] Generated graph-backed architecture views
 
 #### Implements
 
@@ -808,7 +808,7 @@ and `actual_vs_expected_diff.mmd` is reproducible from `architecture_graph.yaml`
 plus the analyzer-derived actual graph for the selected phase. All generated
 views remain limited to the graph semantics this contract owns.
 
-### Slice 5. [ ] Documentation routing and non-blocking rollout finalization
+### Slice 5. [x] Documentation routing and non-blocking rollout finalization
 
 #### Implements
 

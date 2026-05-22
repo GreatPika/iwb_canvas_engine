@@ -44,4 +44,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 22. P2 public API freeze hardening](plan/step_22_p2_public_api_freeze_hardening.md)
 - [x] [Step 23. P3 schema v1 DTO validation and codec skeleton](plan/step_23_p3_schema_v1_dto_validation_and_codec_skeleton.md)
 - [x] [Step 24. P4 runtime spine, store, and projection cache](plan/step_24_p4_runtime_spine_store_and_projection_cache.md)
-- [ ] [Step 25. Architecture graph closure checker](plan/step_25_architecture_graph_closure_checker.md)
+- [x] [Step 25. Architecture graph closure checker](plan/step_25_architecture_graph_closure_checker.md)

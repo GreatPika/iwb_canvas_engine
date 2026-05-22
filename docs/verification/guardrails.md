@@ -110,6 +110,17 @@ is a thin dispatcher over existing proof commands, such as Dart tests and
 tool-owned structural checks. It must not become a second test framework or a
 second source of truth for required guardrails.
 
+The phase-aware architecture graph checker is currently a standalone strict
+closure command:
+
+```bash
+dart run tool/architecture_graph/check.dart --phase Px
+```
+
+It is intentionally not part of the default blocking guardrail suite while the
+selected P4 run is expected to report known graph violations for codec
+diagnostics routing and `CanvasRuntime.camera` ownership.
+
 The runner must support these selection modes:
 
 ```bash

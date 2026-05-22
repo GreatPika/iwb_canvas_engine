@@ -14,7 +14,9 @@ documents as the source for current runtime ownership.
    runtime shape.
 3. Read `03_data_model.md` and `04_decisions_and_differences.md` for state
    ownership and accepted differences from the legacy engine.
-4. Read `docs/diagrams/README.md` and the Mermaid files in `docs/diagrams/`
+4. Read `architecture_graph.yaml` for graph-checkable phase obligations,
+   placeholders, forbidden dependencies, and generated graph view definitions.
+5. Read `docs/diagrams/README.md` and the Mermaid files in `docs/diagrams/`
    when changing architecture.
 
 ## Role routing
@@ -45,6 +47,9 @@ documents as the source for current runtime ownership.
 - Guardrail pattern selection routes to
   `docs/verification/guardrail_design_patterns.md`; mandatory guardrail ids
   remain owned by `docs/verification/guardrails.md`.
+- Phase-aware graph closure work routes to
+  `docs/architecture/architecture_graph.yaml` and the standalone checker:
+  `dart run tool/architecture_graph/check.dart --phase Px`.
 - Implementation sequencing routes to `docs/implementation/`.
 - Legacy capability inventory routes to
   `docs/verification/legacy_capability_inventory.md`; it is oracle/audit input,
@@ -69,4 +74,5 @@ Run these commands from the repository root:
 ```bash
 dart run docs/tool/generate_context_capsules.dart --check
 dart run docs/tool/check_docs.dart
+dart run tool/architecture_graph/generate_views.dart --phase P4 --check
 ```

@@ -161,6 +161,20 @@ Do not assume:
 
 Release is blocked unless all statements are true:
 
+For phase-closure work before P14, graph-checkable architecture obligations are
+checked by the standalone selected-phase command:
+
+```bash
+dart run tool/architecture_graph/check.dart --phase Px
+```
+
+For the current P4 closure audit this strict command is expected to exit
+non-zero and report the known graph ids
+`runtime.canvas_runtime.camera.closed_phase_placeholder` and
+`codec.schema_v1.failures.report_to_diagnostics`. Do not treat a non-zero P4
+graph-closure result as part of the default blocking guardrail suite until a
+later contract fixes or rephases those selected-phase violations.
+
 ```text
 1. P1 public API, external-adapter, legacy-ban, and validation checks are green.
 2. api.public_exports_complete is green.
@@ -204,7 +218,8 @@ Release is blocked unless all statements are true:
     are green, including runtime state snapshot value equality.
 31. no CanvasDocument projection in paint/pointer/hit tests are green.
 32. all required diagrams exist and match owners.
-33. phase guardrail alignment is green.
+33. phase guardrail alignment is green, and generated graph views match
+    `docs/architecture/architecture_graph.yaml`.
 34. full `dart run tool/guardrails/run.dart` is green.
 35. every mandatory guardrail has a runner entry and executable proof, including
     the `api.integration_surface_complete` external app-adapter compile fixture.

@@ -7,6 +7,18 @@ model: `CanvasRuntime.state` carries runtime-visible revisions, runtime view
 camera is distinct from persisted document camera, and retired separate public
 listener getters are not diagram seams.
 
+Generated graph-backed Mermaid files live under the generated diagrams
+subdirectory. Their source of truth is
+`docs/architecture/architecture_graph.yaml`; regenerate or check them with:
+
+```bash
+dart run tool/architecture_graph/generate_views.dart --phase P4
+dart run tool/architecture_graph/generate_views.dart --phase P4 --check
+```
+
+Handwritten sequence, state, C4, lifecycle, and data-flow diagrams remain
+semantic diagrams and are not replaced by the generated topology views.
+
 ## c4_context
 
 - Kind: `c4`
