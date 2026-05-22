@@ -210,6 +210,7 @@ final class ActualExpectation {
     this.delegationMembers = const [],
     this.delegationTargets = const [],
     this.sensitiveThrowOwner,
+    this.sensitiveThrowRoutes = const [],
   });
 
   const ActualExpectation.empty()
@@ -220,7 +221,8 @@ final class ActualExpectation {
       compositionFields = const [],
       delegationMembers = const [],
       delegationTargets = const [],
-      sensitiveThrowOwner = null;
+      sensitiveThrowOwner = null,
+      sensitiveThrowRoutes = const [];
 
   final List<String> declarations;
   final List<String> exports;
@@ -230,6 +232,7 @@ final class ActualExpectation {
   final List<String> delegationMembers;
   final List<String> delegationTargets;
   final String? sensitiveThrowOwner;
+  final List<String> sensitiveThrowRoutes;
 }
 
 final class ArchitectureGraphDiagnostic {
@@ -655,6 +658,7 @@ ActualExpectation _actualExpectation(Map<String, Object?> yaml) {
     delegationMembers: _optionalStrings(actual, 'delegationMembers'),
     delegationTargets: _optionalStrings(actual, 'delegationTargets'),
     sensitiveThrowOwner: _optionalString(actual, 'sensitiveThrowOwner'),
+    sensitiveThrowRoutes: _optionalStrings(actual, 'sensitiveThrowRoutes'),
   );
 }
 

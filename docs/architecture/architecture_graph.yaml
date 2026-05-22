@@ -560,6 +560,8 @@ edges:
       delegationTargets:
         - DiagnosticsHub
       sensitiveThrowOwner: codec.schema_v1
+      sensitiveThrowRoutes:
+        - recordSchemaV1FailureDiagnostic
   - id: edit.kernel.mutates_store
     from: edit.kernel
     to: store.document_kernel

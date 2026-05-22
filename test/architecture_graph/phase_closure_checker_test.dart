@@ -268,6 +268,51 @@ void main() {
     expect(_ids(report), contains('fixture.required_edge'));
   });
 
+  test('requires sensitive throwing members to call the declared route', () {
+    final expected = _fixtureGraphWithDiagnosticRoute();
+    const exceptionThrow = ExceptionThrowFact(
+      path: 'lib/src/codec/decoder.dart',
+      line: 10,
+      exception: 'FixtureException',
+      owner: 'fixture.codec',
+      member: 'decodeFixture',
+    );
+    const routeDelegation = DelegationFact(
+      path: 'lib/src/codec/decoder.dart',
+      line: 20,
+      member: 'recordFixtureRoute',
+      target: 'hub',
+      targetType: 'FixtureDiagnostics',
+    );
+    final missingRoute = checkPhaseClosure(
+      expected: expected,
+      actual: _actualGraph(
+        exceptionThrows: const [exceptionThrow],
+        delegations: const [routeDelegation],
+      ),
+      selectedPhase: 'P4',
+    );
+    final routed = checkPhaseClosure(
+      expected: expected,
+      actual: _actualGraph(
+        exceptionThrows: const [exceptionThrow],
+        delegations: const [routeDelegation],
+        memberCalls: const [
+          MemberCallFact(
+            path: 'lib/src/codec/decoder.dart',
+            line: 11,
+            member: 'decodeFixture',
+            target: 'recordFixtureRoute',
+          ),
+        ],
+      ),
+      selectedPhase: 'P4',
+    );
+
+    expect(_ids(missingRoute), contains('fixture.codec_reports_diagnostics'));
+    expect(_ids(routed), isNot(contains('fixture.codec_reports_diagnostics')));
+  });
+
   test('fails unknown architecture seams inside declared coverage', () {
     final report = checkPhaseClosure(
       expected: _fixtureGraph(),
@@ -455,12 +500,48 @@ ExpectedArchitectureGraph _fixtureGraph() {
   );
 }
 
+ExpectedArchitectureGraph _fixtureGraphWithDiagnosticRoute() {
+  final graph = _fixtureGraph();
+
+  return ExpectedArchitectureGraph(
+    schemaVersion: graph.schemaVersion,
+    phases: graph.phases,
+    coverage: graph.coverage,
+    nodes: graph.nodes,
+    edges: [
+      ...graph.edges,
+      const ArchitectureEdge(
+        id: 'fixture.codec_reports_diagnostics',
+        from: 'fixture.codec',
+        to: 'fixture.required_node',
+        kind: 'diagnostic_route',
+        phaseRequiredBy: 'P4',
+        status: 'required',
+        sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
+        evidence: ['fixture'],
+        actual: ActualExpectation(
+          delegationMembers: ['recordFixtureRoute'],
+          delegationTargets: ['FixtureDiagnostics'],
+          sensitiveThrowOwner: 'fixture.codec',
+          sensitiveThrowRoutes: ['recordFixtureRoute'],
+        ),
+      ),
+    ],
+    placeholders: graph.placeholders,
+    forbiddenEdges: graph.forbiddenEdges,
+    views: graph.views,
+  );
+}
+
 ActualArchitectureGraph _actualGraph({
   List<ImportFact> imports = const [],
   List<DeclarationFact> declarations = const [],
   List<CompositionFieldFact> compositionFields = const [],
   List<PlaceholderFact> placeholders = const [],
   List<ImplementedInterfaceFact> implementedInterfaces = const [],
+  List<ExceptionThrowFact> exceptionThrows = const [],
+  List<DelegationFact> delegations = const [],
+  List<MemberCallFact> memberCalls = const [],
 }) {
   return ActualArchitectureGraph(
     exports: const [],
@@ -469,7 +550,8 @@ ActualArchitectureGraph _actualGraph({
     implementedInterfaces: implementedInterfaces,
     compositionFields: compositionFields,
     placeholders: placeholders,
-    exceptionThrows: const [],
-    delegations: const [],
+    exceptionThrows: exceptionThrows,
+    delegations: delegations,
+    memberCalls: memberCalls,
   );
 }

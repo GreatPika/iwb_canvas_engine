@@ -127,7 +127,9 @@ as covered imports, declarations, implemented interfaces, graph-owned
 composition fields, public placeholders, sensitive throws, and explicitly named
 delegation members. If a future implementation chooses block-bodied internal
 logic for a graph-critical route, keep a small named graph-checkable bridge for
-the route instead of relying on broad call-body scanning.
+the route instead of relying on broad call-body scanning. Sensitive-throw routes
+must also name the bridge call target, so an unused bridge declaration cannot
+close the architecture edge.
 
 The runner must support these selection modes:
 

@@ -30,3 +30,11 @@ void topLevelOtherFail() {
 }
 
 String topLevelDelegates(ExportedFixture dependency) => dependency.toString();
+
+String topLevelCallsRoute(ExportedFixture dependency) {
+  recordFixtureRoute();
+
+  return dependency.toString();
+}
+
+void recordFixtureRoute() {}

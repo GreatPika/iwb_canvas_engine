@@ -17,6 +17,7 @@ final class ActualArchitectureGraph {
     required this.placeholders,
     required this.exceptionThrows,
     required this.delegations,
+    required this.memberCalls,
   });
 
   final List<ExportFact> exports;
@@ -27,6 +28,7 @@ final class ActualArchitectureGraph {
   final List<PlaceholderFact> placeholders;
   final List<ExceptionThrowFact> exceptionThrows;
   final List<DelegationFact> delegations;
+  final List<MemberCallFact> memberCalls;
 }
 
 sealed class ActualGraphFact {
@@ -112,10 +114,12 @@ final class ExceptionThrowFact extends ActualGraphFact {
     required super.line,
     required this.exception,
     required this.owner,
+    required this.member,
   });
 
   final String exception;
   final String? owner;
+  final String? member;
 }
 
 final class DelegationFact extends ActualGraphFact {
@@ -130,6 +134,18 @@ final class DelegationFact extends ActualGraphFact {
   final String member;
   final String target;
   final String? targetType;
+}
+
+final class MemberCallFact extends ActualGraphFact {
+  const MemberCallFact({
+    required super.path,
+    required super.line,
+    required this.member,
+    required this.target,
+  });
+
+  final String member;
+  final String target;
 }
 
 ActualArchitectureGraph extractActualArchitectureGraph({
@@ -147,6 +163,7 @@ ActualArchitectureGraph extractActualArchitectureGraph({
     compositionTypes: _architectureCompositionTypes(expected),
     delegationMembers: _architectureDelegationMembers(expected),
     delegationTargetTypes: _architectureDelegationTargetTypes(expected),
+    memberCallTargets: _architectureMemberCallTargets(expected),
   );
 }
 
@@ -158,6 +175,7 @@ ActualArchitectureGraph extractActualArchitectureGraphFromPaths({
   Set<String> compositionTypes = const {},
   Set<String> delegationMembers = const {},
   Set<String> delegationTargetTypes = const {},
+  Set<String> memberCallTargets = const {},
 }) {
   final collector = _ActualGraphCollector();
   for (final path in paths.toSet().toList()..sort()) {
@@ -175,6 +193,7 @@ ActualArchitectureGraph extractActualArchitectureGraphFromPaths({
       compositionTypes: compositionTypes,
       delegationMembers: delegationMembers,
       delegationTargetTypes: delegationTargetTypes,
+      memberCallTargets: memberCallTargets,
     );
     result.unit.visitChildren(visitor);
   }
@@ -191,6 +210,7 @@ final class _ActualGraphCollector {
   final List<PlaceholderFact> placeholders = [];
   final List<ExceptionThrowFact> exceptionThrows = [];
   final List<DelegationFact> delegations = [];
+  final List<MemberCallFact> memberCalls = [];
 
   ActualArchitectureGraph toGraph() {
     return ActualArchitectureGraph(
@@ -202,6 +222,7 @@ final class _ActualGraphCollector {
       placeholders: placeholders,
       exceptionThrows: exceptionThrows,
       delegations: delegations,
+      memberCalls: memberCalls,
     );
   }
 }
@@ -216,6 +237,7 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
     required this.compositionTypes,
     required this.delegationMembers,
     required this.delegationTargetTypes,
+    required this.memberCallTargets,
   });
 
   final String path;
@@ -226,8 +248,10 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
   final Set<String> compositionTypes;
   final Set<String> delegationMembers;
   final Set<String> delegationTargetTypes;
+  final Set<String> memberCallTargets;
   final Map<String, String> _targetTypes = {};
   String? _currentDeclaration;
+  String? _currentMember;
 
   @override
   void visitExportDirective(ExportDirective node) {
@@ -285,10 +309,13 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
   @override
   void visitFunctionDeclaration(FunctionDeclaration node) {
     _addDeclaration(node.name.lexeme, 'function', node);
+    final previousMember = _currentMember;
+    _currentMember = node.name.lexeme;
     _withParameterTypes(node.functionExpression.parameters, () {
       _delegation(node.name.lexeme, node, node.functionExpression.body);
+      super.visitFunctionDeclaration(node);
     });
-    super.visitFunctionDeclaration(node);
+    _currentMember = previousMember;
   }
 
   @override
@@ -324,9 +351,29 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
+    final previousMember = _currentMember;
+    _currentMember = _qualifiedMember(node.name.lexeme);
     _placeholder(node.name.lexeme, node);
     _delegation(node.name.lexeme, node, node.body);
     super.visitMethodDeclaration(node);
+    _currentMember = previousMember;
+  }
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    final member = _currentMember;
+    final target = node.methodName.name;
+    if (member != null && memberCallTargets.contains(target)) {
+      collector.memberCalls.add(
+        MemberCallFact(
+          path: path,
+          line: _line(node),
+          member: member,
+          target: target,
+        ),
+      );
+    }
+    super.visitMethodInvocation(node);
   }
 
   @override
@@ -339,6 +386,7 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
           line: _line(node),
           exception: exception,
           owner: _currentDeclaration ?? _sensitiveOwner(path, exception),
+          member: _currentMember,
         ),
       );
     }
@@ -645,5 +693,12 @@ Set<String> _architectureDelegationTargetTypes(
   return {
     for (final node in graph.nodes) ...node.actual.delegationTargets,
     for (final edge in graph.edges) ...edge.actual.delegationTargets,
+  };
+}
+
+Set<String> _architectureMemberCallTargets(ExpectedArchitectureGraph graph) {
+  return {
+    for (final node in graph.nodes) ...node.actual.sensitiveThrowRoutes,
+    for (final edge in graph.edges) ...edge.actual.sensitiveThrowRoutes,
   };
 }

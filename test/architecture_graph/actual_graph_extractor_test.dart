@@ -73,6 +73,10 @@ void main() {
       contains('FixtureOwner:FixtureException'),
     );
     expect(
+      graph.exceptionThrows.map((fact) => '${fact.member}:${fact.exception}'),
+      contains('FixtureOwner.fail:FixtureException'),
+    );
+    expect(
       graph.delegations.map((fact) => '${fact.member}:${fact.targetType}'),
       contains('FixtureOwner.exposed:ExportedFixture'),
     );
@@ -175,5 +179,21 @@ void main() {
     final graph = extractActualArchitectureGraphFromPaths(paths: [fixture]);
 
     expect(graph.delegations, isEmpty);
+  });
+
+  test('extracts only named member calls for graph routes', () {
+    final graph = extractActualArchitectureGraphFromPaths(
+      paths: [fixture],
+      memberCallTargets: const {'recordFixtureRoute'},
+    );
+
+    expect(
+      graph.memberCalls.map((fact) => '${fact.member}:${fact.target}'),
+      contains('topLevelCallsRoute:recordFixtureRoute'),
+    );
+    expect(
+      graph.memberCalls.map((fact) => '${fact.member}:${fact.target}'),
+      isNot(contains('topLevelDelegates:toString')),
+    );
   });
 }

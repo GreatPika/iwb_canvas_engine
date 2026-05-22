@@ -298,6 +298,9 @@ final class _PhaseClosureChecker {
         })) {
       missing.add('sensitiveThrowOwner:$sensitiveOwner');
     }
+    missing.addAll(
+      _missingSensitiveThrowRoutes(expectation: expectation, fromNode: node),
+    );
 
     return missing;
   }
@@ -360,8 +363,44 @@ final class _PhaseClosureChecker {
         })) {
       missing.add('sensitiveThrowOwner:$sensitiveOwner');
     }
+    missing.addAll(
+      _missingSensitiveThrowRoutes(
+        expectation: expectation,
+        fromNode: fromNode,
+      ),
+    );
 
     return missing;
+  }
+
+  List<String> _missingSensitiveThrowRoutes({
+    required ActualExpectation expectation,
+    required ArchitectureNode? fromNode,
+  }) {
+    final sensitiveOwner = expectation.sensitiveThrowOwner;
+    if (sensitiveOwner == null || expectation.sensitiveThrowRoutes.isEmpty) {
+      return const [];
+    }
+    final sensitiveThrows = actual.exceptionThrows.where((fact) {
+      return _matchesFromNode(fact.path, fromNode) &&
+          fact.owner == sensitiveOwner &&
+          fact.member != null;
+    });
+    final missing = <String>{};
+    for (final throwFact in sensitiveThrows) {
+      for (final route in expectation.sensitiveThrowRoutes) {
+        final hasRoute = actual.memberCalls.any((call) {
+          return call.path == throwFact.path &&
+              call.member == throwFact.member &&
+              call.target == route;
+        });
+        if (!hasRoute) {
+          missing.add('sensitiveThrowRoute:${throwFact.member}:$route');
+        }
+      }
+    }
+
+    return missing.toList()..sort();
   }
 
   bool _isArchitectureOwnerPath(String path) {
