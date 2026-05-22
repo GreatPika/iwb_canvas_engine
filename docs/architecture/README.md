@@ -16,7 +16,7 @@ documents as the source for current runtime ownership.
    ownership and accepted differences from the legacy engine.
 4. Read `architecture_graph.yaml` for graph-checkable phase obligations,
    placeholders, forbidden dependencies, and generated graph view definitions.
-5. Read `docs/diagrams/README.md` and the Mermaid files in `docs/diagrams/`
+5. Read `docs/diagrams/catalog.md` and the Mermaid files in `docs/diagrams/`
    when changing architecture.
 
 ## Role routing

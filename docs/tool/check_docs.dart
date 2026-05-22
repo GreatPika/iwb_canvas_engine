@@ -13,7 +13,10 @@ import 'package:yaml/yaml.dart';
 const _sectionsRegistryPath = 'docs/_registry/sections.yaml';
 const _donorsRegistryPath = 'docs/_registry/donors.yaml';
 const _diagramsRegistryPath = 'docs/_registry/diagrams.yaml';
-const _diagramCatalogPath = 'docs/diagrams/README.md';
+const _diagramCatalogPath = 'docs/diagrams/catalog.md';
+const _retiredDiagramReadmePath = 'docs/diagrams/README.md';
+const _diagramCatalogMarker =
+    '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/diagrams.yaml -->';
 const _generatedIndexMarker =
     '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml and docs/_registry/donors.yaml -->';
 
@@ -162,15 +165,23 @@ class _DonorEntry {
 class _DiagramEntry {
   const _DiagramEntry({
     required this.id,
+    required this.kind,
     required this.plannedPath,
+    required this.classification,
     required this.relatedSections,
     required this.relatedPhases,
+    required this.graphViewSource,
   });
 
   final String id;
+  final String kind;
   final String plannedPath;
+  final String classification;
   final Set<String> relatedSections;
   final Set<String> relatedPhases;
+  final String graphViewSource;
+
+  bool get isGenerated => classification == 'generated';
 }
 
 void _checkRequiredEntrypoints() {
@@ -443,95 +454,76 @@ void _checkDonorReferences(
 
 Map<String, _DiagramEntry> _loadDiagramCatalog() {
   final catalog = <String, _DiagramEntry>{};
-  final text = _read(_diagramCatalogPath);
-  final blocks = text.split(RegExp(r'^##\s+', multiLine: true));
+  final seenPaths = <String>{};
 
-  for (final block in blocks.skip(1)) {
-    final lines = block.split('\n');
-    if (lines.isEmpty) {
-      continue;
-    }
-    final diagramId = lines.first.trim();
+  if (File(_retiredDiagramReadmePath).existsSync()) {
+    _fail('$_retiredDiagramReadmePath must not remain as an entrypoint');
+  }
+  final catalogText = _read(_diagramCatalogPath);
+  if (!catalogText.startsWith(_diagramCatalogMarker)) {
+    _fail('$_diagramCatalogPath must start with the generated catalog marker');
+  }
+
+  for (final entry in _loadYamlMapList(_diagramsRegistryPath)) {
+    final diagramId = _stringField(entry, 'id', 'diagram registry entry');
+    final kind = _stringField(entry, 'kind', diagramId);
+    final plannedPath = _stringField(entry, 'planned_path', diagramId);
+    final classification = _stringField(entry, 'classification', diagramId);
+    final phases = _stringListField(entry, 'related_phases', diagramId).toSet();
+    final sections = _stringListField(
+      entry,
+      'related_sections',
+      diagramId,
+    ).toSet();
+    final graphViewSource = _stringField(entry, 'graph_view_source', diagramId);
+
     if (diagramId.isEmpty) {
-      _fail('$_diagramCatalogPath contains an empty diagram heading');
       continue;
     }
     if (catalog.containsKey(diagramId)) {
-      _fail('$_diagramCatalogPath contains duplicate diagram entry $diagramId');
+      _fail('$_diagramsRegistryPath contains duplicate diagram id $diagramId');
       continue;
     }
-
-    String? plannedPath;
-    final phases = <String>{};
-    final sections = <String>{};
-
-    for (final line in lines.skip(1)) {
-      final plannedPathMatch = RegExp(
-        r'^- Planned path: `(docs/diagrams/[^`]+\.mmd)`$',
-      ).firstMatch(line);
-      if (plannedPathMatch != null) {
-        plannedPath = _matchGroup(
-          plannedPathMatch,
-          1,
-          '$_diagramCatalogPath planned path',
-        );
-        continue;
-      }
-
-      final phasesMatch = RegExp(r'^- Related phases: (.+)$').firstMatch(line);
-      if (phasesMatch != null) {
-        phases.addAll(
-          _backtickedValues(
-            _matchGroup(phasesMatch, 1, '$_diagramCatalogPath phases'),
-          ),
-        );
-        continue;
-      }
-
-      final sectionsMatch = RegExp(
-        r'^- Related sections: (.+)$',
-      ).firstMatch(line);
-      if (sectionsMatch != null) {
-        sections.addAll(
-          _backtickedValues(
-            _matchGroup(sectionsMatch, 1, '$_diagramCatalogPath sections'),
-          ),
-        );
-      }
+    if (!seenPaths.add(plannedPath)) {
+      _fail('$_diagramsRegistryPath contains duplicate path $plannedPath');
     }
-
-    final expectedPath = 'docs/diagrams/$diagramId.mmd';
-    if (plannedPath == null) {
-      _fail(
-        '$_diagramCatalogPath catalog entry $diagramId has no planned path',
-      );
-      plannedPath = expectedPath;
-    } else if (plannedPath != expectedPath) {
-      _fail(
-        '$_diagramCatalogPath catalog entry $diagramId planned path must be '
-        '$expectedPath, not $plannedPath',
-      );
+    if (!plannedPath.startsWith('docs/diagrams/') ||
+        !plannedPath.endsWith('.mmd')) {
+      _fail('$diagramId planned_path must be a docs/diagrams/*.mmd path');
     }
-    _requireFile(expectedPath, source: _diagramCatalogPath);
+    _requireFile(plannedPath, source: _diagramsRegistryPath);
 
     if (sections.isEmpty) {
-      _fail(
-        '$_diagramCatalogPath catalog entry $diagramId has no related sections',
-      );
+      _fail('$_diagramsRegistryPath entry $diagramId has no related sections');
     }
     for (final phase in phases) {
       if (!_phaseDocs.containsKey(phase)) {
         _fail(
-          '$_diagramCatalogPath catalog entry $diagramId has unknown phase $phase',
+          '$_diagramsRegistryPath entry $diagramId has unknown phase $phase',
         );
       }
+    }
+    if (classification != 'semantic' && classification != 'generated') {
+      _fail('$diagramId classification must be semantic or generated');
+    }
+    if (classification == 'generated' &&
+        graphViewSource != 'docs/architecture/architecture_graph.yaml') {
+      _fail(
+        '$diagramId generated diagram must name graph-view source metadata',
+      );
+    }
+    if (classification == 'semantic' && graphViewSource != 'none') {
+      _fail('$diagramId semantic diagram must use graph_view_source: none');
     }
 
     catalog[diagramId] = _DiagramEntry(
       id: diagramId,
+      kind: kind,
       plannedPath: plannedPath,
+      classification: classification,
       relatedSections: sections,
       relatedPhases: phases,
+      graphViewSource: graphViewSource,
     );
   }
 
@@ -568,7 +560,7 @@ void _checkDiagramCatalogRegistrySymmetry(
         _fail('$_diagramCatalogPath references unknown section id $sectionId');
         continue;
       }
-      if (!registrySections.contains(sectionId)) {
+      if (!diagram.isGenerated && !registrySections.contains(sectionId)) {
         _fail(
           'diagram ${diagram.id} is related to $sectionId in '
           '$_diagramCatalogPath, but $sectionId does not list ${diagram.id} '
@@ -577,6 +569,9 @@ void _checkDiagramCatalogRegistrySymmetry(
       }
     }
 
+    if (diagram.isGenerated) {
+      continue;
+    }
     for (final sectionId in registrySections) {
       if (!diagram.relatedSections.contains(sectionId)) {
         _fail(
@@ -594,7 +589,7 @@ void _checkDiagramCatalogRegistrySymmetry(
   if (!diagramDir.existsSync()) {
     return;
   }
-  for (final file in diagramDir.listSync().whereType<File>()) {
+  for (final file in diagramDir.listSync(recursive: true).whereType<File>()) {
     if (!file.path.endsWith('.mmd')) {
       continue;
     }
@@ -831,13 +826,6 @@ void _checkDocumentPathsInText(String sourcePath, String text) {
       _requirePath(path, source: sourcePath);
     }
   }
-}
-
-List<String> _backtickedValues(String text) {
-  return RegExp(r'`([^`]+)`')
-      .allMatches(text)
-      .map((match) => _matchGroup(match, 1, 'backticked value'))
-      .toList();
 }
 
 String _matchGroup(Match match, int group, String context) {

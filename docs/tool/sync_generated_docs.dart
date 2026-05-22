@@ -5,7 +5,8 @@ import 'package:yaml/yaml.dart';
 const _sectionsRegistryPath = 'docs/_registry/sections.yaml';
 const _donorsRegistryPath = 'docs/_registry/donors.yaml';
 const _diagramRegistryPath = 'docs/_registry/diagrams.yaml';
-const _diagramCompatibilityCatalogPath = 'docs/diagrams/README.md';
+const _diagramCatalogPath = 'docs/diagrams/catalog.md';
+const _retiredDiagramReadmePath = 'docs/diagrams/README.md';
 const _contextCoveragePath = 'docs/indexes/context_coverage.md';
 const _diagramGeneratedMarker =
     '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/diagrams.yaml -->';
@@ -162,7 +163,7 @@ _GeneratedDocsSyncResult _syncGeneratedDocs({required bool checkOnly}) {
   final sections = _loadSections(errors);
   final donors = _loadDonors(errors);
   if (errors.isEmpty) {
-    _syncDiagramCompatibilityCatalog(
+    _syncDiagramCatalog(
       diagrams,
       checkOnly: checkOnly,
       errors: errors,
@@ -357,15 +358,24 @@ void _checkExplicitCoverage(_SectionEntry section, List<String> errors) {
   }
 }
 
-void _syncDiagramCompatibilityCatalog(
+void _syncDiagramCatalog(
   List<_DiagramEntry> diagrams, {
   required bool checkOnly,
   required List<String> errors,
   required List<String> changedFiles,
 }) {
-  final expected = _renderDiagramCompatibilityCatalog(diagrams);
+  if (File(_retiredDiagramReadmePath).existsSync()) {
+    if (checkOnly) {
+      errors.add('$_retiredDiagramReadmePath must not remain as an entrypoint');
+    } else {
+      File(_retiredDiagramReadmePath).deleteSync();
+      changedFiles.add(_retiredDiagramReadmePath);
+    }
+  }
+
+  final expected = _renderDiagramCatalog(diagrams);
   _syncGeneratedFile(
-    _diagramCompatibilityCatalogPath,
+    _diagramCatalogPath,
     expected,
     checkOnly: checkOnly,
     errors: errors,
@@ -447,7 +457,7 @@ void _syncGeneratedFile(
   changedFiles.add(path);
 }
 
-String _renderDiagramCompatibilityCatalog(List<_DiagramEntry> diagrams) {
+String _renderDiagramCatalog(List<_DiagramEntry> diagrams) {
   final generated = diagrams.where((diagram) => diagram.isGenerated).toList();
   final semantic = diagrams.where((diagram) => !diagram.isGenerated).toList();
   final buffer = StringBuffer()
