@@ -50,6 +50,8 @@ void main() {
     final graph = extractActualArchitectureGraphFromPaths(
       paths: [fixture],
       compositionTypes: const {'ExportedFixture'},
+      delegationMembers: const {'FixtureOwner.exposed'},
+      delegationTargetTypes: const {'ExportedFixture'},
       placeholderCoverage: const [
         PlaceholderCoverage(under: 'test/architecture_graph/fixtures/**'),
       ],
@@ -157,11 +159,21 @@ void main() {
   });
 
   test('extracts simple delegations from top-level functions', () {
-    final graph = extractActualArchitectureGraphFromPaths(paths: [fixture]);
+    final graph = extractActualArchitectureGraphFromPaths(
+      paths: [fixture],
+      delegationMembers: const {'topLevelDelegates'},
+      delegationTargetTypes: const {'ExportedFixture'},
+    );
 
     expect(
       graph.delegations.map((fact) => '${fact.member}:${fact.targetType}'),
       contains('topLevelDelegates:ExportedFixture'),
     );
+  });
+
+  test('does not extract delegations that are not named graph facts', () {
+    final graph = extractActualArchitectureGraphFromPaths(paths: [fixture]);
+
+    expect(graph.delegations, isEmpty);
   });
 }

@@ -396,7 +396,7 @@ final class _PhaseClosureChecker {
   bool _delegationMatchesFrom(DelegationFact fact, ArchitectureNode? node) {
     final declaration = fact.member.contains('.')
         ? fact.member.substring(0, fact.member.indexOf('.'))
-        : null;
+        : fact.member;
 
     return _matchesFromDeclaration(
       path: fact.path,

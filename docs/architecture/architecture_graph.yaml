@@ -555,8 +555,8 @@ edges:
     evidence:
       - Codec failure paths must be graph-visible as diagnostic events.
     actual:
-      delegationTargets:
-        - DiagnosticsHub
+      imports:
+        - lib/src/diagnostics/diagnostics_hub.dart
       sensitiveThrowOwner: codec.schema_v1
   - id: edit.kernel.mutates_store
     from: edit.kernel

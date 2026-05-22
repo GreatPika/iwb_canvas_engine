@@ -145,6 +145,8 @@ ActualArchitectureGraph extractActualArchitectureGraph({
     sensitiveThrows: expected.coverage.sensitiveThrows,
     placeholderCoverage: expected.coverage.placeholders,
     compositionTypes: _architectureCompositionTypes(expected),
+    delegationMembers: _architectureDelegationMembers(expected),
+    delegationTargetTypes: _architectureDelegationTargetTypes(expected),
   );
 }
 
@@ -154,6 +156,8 @@ ActualArchitectureGraph extractActualArchitectureGraphFromPaths({
   List<SensitiveThrowCoverage> sensitiveThrows = const [],
   List<PlaceholderCoverage> placeholderCoverage = const [],
   Set<String> compositionTypes = const {},
+  Set<String> delegationMembers = const {},
+  Set<String> delegationTargetTypes = const {},
 }) {
   final collector = _ActualGraphCollector();
   for (final path in paths.toSet().toList()..sort()) {
@@ -169,6 +173,8 @@ ActualArchitectureGraph extractActualArchitectureGraphFromPaths({
       sensitiveThrows: sensitiveThrows,
       placeholderCoverage: placeholderCoverage,
       compositionTypes: compositionTypes,
+      delegationMembers: delegationMembers,
+      delegationTargetTypes: delegationTargetTypes,
     );
     result.unit.visitChildren(visitor);
   }
@@ -208,6 +214,8 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
     required this.sensitiveThrows,
     required this.placeholderCoverage,
     required this.compositionTypes,
+    required this.delegationMembers,
+    required this.delegationTargetTypes,
   });
 
   final String path;
@@ -216,6 +224,8 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
   final List<SensitiveThrowCoverage> sensitiveThrows;
   final List<PlaceholderCoverage> placeholderCoverage;
   final Set<String> compositionTypes;
+  final Set<String> delegationMembers;
+  final Set<String> delegationTargetTypes;
   final Map<String, String> _targetTypes = {};
   String? _currentDeclaration;
 
@@ -400,13 +410,20 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
     if (targetName == null) {
       return;
     }
+    final qualifiedMember = _qualifiedMember(member);
+    final targetType = _targetTypes[targetName];
+    if (!delegationMembers.contains(qualifiedMember) ||
+        targetType == null ||
+        !delegationTargetTypes.contains(targetType)) {
+      return;
+    }
     collector.delegations.add(
       DelegationFact(
         path: path,
         line: _line(node),
-        member: _qualifiedMember(member),
+        member: qualifiedMember,
         target: targetName,
-        targetType: _targetTypes[targetName],
+        targetType: targetType,
       ),
     );
   }
@@ -613,4 +630,20 @@ bool _matchesGlob(String path, String pattern) {
 
 Set<String> _architectureCompositionTypes(ExpectedArchitectureGraph graph) {
   return {for (final edge in graph.edges) ...edge.actual.compositionFields};
+}
+
+Set<String> _architectureDelegationMembers(ExpectedArchitectureGraph graph) {
+  return {
+    for (final node in graph.nodes) ...node.actual.delegationMembers,
+    for (final edge in graph.edges) ...edge.actual.delegationMembers,
+  };
+}
+
+Set<String> _architectureDelegationTargetTypes(
+  ExpectedArchitectureGraph graph,
+) {
+  return {
+    for (final node in graph.nodes) ...node.actual.delegationTargets,
+    for (final edge in graph.edges) ...edge.actual.delegationTargets,
+  };
 }

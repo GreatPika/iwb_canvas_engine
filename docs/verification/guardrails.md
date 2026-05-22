@@ -121,6 +121,12 @@ It is intentionally not part of the default blocking guardrail suite while the
 selected P4 run is expected to report known graph violations for codec
 diagnostics routing and `CanvasRuntime.camera` ownership.
 
+The graph extractor is not a general Dart call-graph analyzer. It extracts only
+named graph facts declared in `docs/architecture/architecture_graph.yaml`, such
+as covered imports, declarations, implemented interfaces, graph-owned
+composition fields, public placeholders, sensitive throws, and explicitly named
+delegation members.
+
 The runner must support these selection modes:
 
 ```bash

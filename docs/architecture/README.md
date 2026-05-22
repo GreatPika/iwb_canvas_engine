@@ -50,6 +50,8 @@ documents as the source for current runtime ownership.
 - Phase-aware graph closure work routes to
   `docs/architecture/architecture_graph.yaml` and the standalone checker:
   `dart run tool/architecture_graph/check.dart --phase Px`.
+  The extractor is intentionally limited to named graph facts from that YAML
+  and must not grow into a general call-graph or block-body analyzer.
 - Implementation sequencing routes to `docs/implementation/`.
 - Legacy capability inventory routes to
   `docs/verification/legacy_capability_inventory.md`; it is oracle/audit input,
