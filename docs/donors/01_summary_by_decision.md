@@ -2,7 +2,6 @@
 Registry id: `donors_01_summary_by_decision`
 Source: `docs/_registry/donors.yaml / Summary by decision`
 Canonical source: `docs/_registry/donors.yaml`
-Feeds registry: `docs/_registry/donors.yaml`
 Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 

@@ -511,7 +511,13 @@ String _renderDiagramCatalog(List<_DiagramEntry> diagrams) {
     ..writeln();
 
   for (final diagram in generated) {
-    buffer.writeln('- `${diagram.plannedPath}`');
+    buffer
+      ..writeln('- `${diagram.plannedPath}`')
+      ..writeln('  - Kind: `${diagram.kind}`')
+      ..writeln('  - Classification: `${diagram.classification}`')
+      ..writeln('  - Related phases: ${_codeList(diagram.relatedPhases)}')
+      ..writeln('  - Related sections: ${_codeList(diagram.relatedSections)}')
+      ..writeln('  - Graph view source: `${diagram.graphViewSource}`');
   }
 
   for (final diagram in semantic) {
@@ -520,9 +526,11 @@ String _renderDiagramCatalog(List<_DiagramEntry> diagrams) {
       ..writeln('## ${diagram.id}')
       ..writeln()
       ..writeln('- Kind: `${diagram.kind}`')
+      ..writeln('- Classification: `${diagram.classification}`')
       ..writeln('- Planned path: `${diagram.plannedPath}`')
       ..writeln('- Related phases: ${_codeList(diagram.relatedPhases)}')
-      ..writeln('- Related sections: ${_codeList(diagram.relatedSections)}');
+      ..writeln('- Related sections: ${_codeList(diagram.relatedSections)}')
+      ..writeln('- Graph view source: `${diagram.graphViewSource}`');
   }
 
   return buffer.toString();

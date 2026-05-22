@@ -2,7 +2,6 @@
 Registry id: `donors_03_spatial_frame_render_cache`
 Source: `docs/_registry/donors.yaml / Spatial, frame, render, and cache donors`
 Canonical source: `docs/_registry/donors.yaml`
-Feeds registry: `docs/_registry/donors.yaml`
 Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 
@@ -25,4 +24,3 @@ copy legacy controller shells.
 | `lib/src/render/scene_render_caches.dart` | single render-cache owner lifecycle and epoch/controller swap clearing | `adapt` | lifecycle belongs to new frame/surface owner | P8/P10 |
 | `lib/src/render/cache/scene_static_layer_cache.dart` | recorded grid/background cache and explicit `Picture.dispose` lifecycle | `adapt` | only if next keeps static layer cache | P8/P10 |
 | `lib/src/render/cache/scene_text_layout_cache.dart`, `scene_stroke_path_cache.dart`, `scene_path_metrics_cache.dart` | text layout, stroke path, path metrics cache shapes | `adapt` | legacy keys depend on snapshots/revisions | P8 |
-

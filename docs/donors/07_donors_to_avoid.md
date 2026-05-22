@@ -2,7 +2,6 @@
 Registry id: `donors_07_donors_to_avoid`
 Source: `docs/_registry/donors.yaml / Donors to avoid as structure`
 Canonical source: `docs/_registry/donors.yaml`
-Feeds registry: `docs/_registry/donors.yaml`
 Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 
@@ -21,4 +20,3 @@ not shape the root package structure.
   flow, but coupled to legacy `SceneSnapshot`.
 - `lib/src/controller/scene_store_controller.dart` as a whole: useful committed
   read and spatial resolution semantics, but mixed with legacy controller facade.
-

@@ -2,7 +2,6 @@
 Registry id: `donors_02_geometry_hit_test_eraser`
 Source: `docs/_registry/donors.yaml / Geometry, hit-test, and eraser donors`
 Canonical source: `docs/_registry/donors.yaml`
-Feeds registry: `docs/_registry/donors.yaml`
 Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 
@@ -18,4 +17,3 @@ Port these as algorithms over new shape structs, not as legacy `SceneNode` or
 | `lib/src/render/render_geometry_builder.dart` | unified local/world bounds construction and validity-key idea | `adapt` | legacy snapshot, text layout, and cache keys | `test/render/render_geometry_cache_test.dart`, `test/render/render_hit_bounds_parity_test.dart` |
 | `lib/src/interactive/internal/interactive_geometry.dart` | segment batching, segment range bounds, rect-distance prefilter | `copy/adapt` | gesture soft-limit helpers depend on input sampling | `test/interactive/core/interactive_draw_path_buffer_test.dart`, eraser guardrail tests |
 | `lib/src/interactive/internal/interactive_draw_eraser_exact_hit.dart` and line/stroke eraser hit files | projected eraser-to-local algorithm, singular transform fallback, batched exact line/stroke checks | `adapt` | tied to legacy snapshots, delete eligibility, debug counters | `test/interactive/core/interactive_draw_eraser_engine_test.dart`, eraser lifecycle tests |
-
