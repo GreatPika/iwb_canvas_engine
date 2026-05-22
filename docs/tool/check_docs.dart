@@ -651,6 +651,9 @@ Map<String, _DiagramEntry> _loadDiagramCatalog() {
     if (sections.isEmpty) {
       _fail('$_diagramsRegistryPath entry $diagramId has no related sections');
     }
+    if (phases.isEmpty) {
+      _fail('$_diagramsRegistryPath entry $diagramId has no related phases');
+    }
     for (final phase in phases) {
       if (!_phaseDocs.containsKey(phase)) {
         _fail(

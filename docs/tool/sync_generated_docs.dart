@@ -233,6 +233,12 @@ List<_DiagramEntry> _loadDiagrams(List<String> errors) {
     if (!File(entry.plannedPath).existsSync()) {
       errors.add('${entry.id} references missing file ${entry.plannedPath}');
     }
+    if (entry.relatedPhases.isEmpty) {
+      errors.add('${entry.id} must have at least one related phase');
+    }
+    if (entry.relatedSections.isEmpty) {
+      errors.add('${entry.id} must have at least one related section');
+    }
     if (entry.classification != 'semantic' &&
         entry.classification != 'generated') {
       errors.add('${entry.id} classification must be semantic or generated');

@@ -3,7 +3,6 @@ Registry id: `donors_03_spatial_frame_render_cache`
 Source: `docs/_registry/donors.yaml / Spatial, frame, render, and cache donors`
 Canonical source: `docs/_registry/donors.yaml`
 Feeds registry: `docs/_registry/donors.yaml`
-Generated navigation: `docs/indexes/donor_to_phase.md`
 Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 
