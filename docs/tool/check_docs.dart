@@ -719,7 +719,7 @@ void _checkDiagramCatalogRegistrySymmetry(
         _fail('$_diagramCatalogPath references unknown section id $sectionId');
         continue;
       }
-      if (!diagram.isGenerated && !registrySections.contains(sectionId)) {
+      if (!registrySections.contains(sectionId)) {
         _fail(
           'diagram ${diagram.id} is related to $sectionId in '
           '$_diagramCatalogPath, but $sectionId does not list ${diagram.id} '
@@ -728,9 +728,6 @@ void _checkDiagramCatalogRegistrySymmetry(
       }
     }
 
-    if (diagram.isGenerated) {
-      continue;
-    }
     for (final sectionId in registrySections) {
       if (!diagram.relatedSections.contains(sectionId)) {
         _fail(
@@ -1040,6 +1037,9 @@ List<YamlMap> _loadYamlMapList(String path) {
 String _stringField(YamlMap map, String field, String owner) {
   final value = map[field];
   if (value is String) {
+    if (value.isEmpty) {
+      _fail('$owner must have non-empty string field $field');
+    }
     return value;
   }
   _fail('$owner must have string field $field');
@@ -1056,6 +1056,10 @@ List<String> _stringListField(YamlMap map, String field, String owner) {
   final seen = <String>{};
   for (final item in value) {
     if (item is String) {
+      if (item.isEmpty) {
+        _fail('$owner field $field contains an empty value');
+        continue;
+      }
       if (!seen.add(item)) {
         _fail('$owner field $field contains duplicate value $item');
       }

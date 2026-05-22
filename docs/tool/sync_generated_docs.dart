@@ -693,6 +693,9 @@ String _stringField(
 ) {
   final value = map[field];
   if (value is String) {
+    if (value.isEmpty) {
+      errors.add('$owner must have non-empty string field $field');
+    }
     return value;
   }
   errors.add('$owner must have string field $field');
@@ -715,6 +718,10 @@ List<String> _stringListField(
   final seen = <String>{};
   for (final item in value) {
     if (item is String) {
+      if (item.isEmpty) {
+        errors.add('$owner field $field contains an empty value');
+        continue;
+      }
       if (!seen.add(item)) {
         errors.add('$owner field $field contains duplicate value $item');
       }
