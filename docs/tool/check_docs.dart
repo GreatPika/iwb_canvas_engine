@@ -633,6 +633,7 @@ Map<String, _DiagramEntry> _loadDiagramCatalog() {
     final graphViewSource = _stringField(entry, 'graph_view_source', diagramId);
 
     if (diagramId.isEmpty) {
+      _fail('$_diagramsRegistryPath contains a diagram entry with empty id');
       continue;
     }
     if (catalog.containsKey(diagramId)) {

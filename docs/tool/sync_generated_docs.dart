@@ -220,7 +220,14 @@ List<_DiagramEntry> _loadDiagrams(List<String> errors) {
       continue;
     }
     final entry = _diagramEntry(item, errors);
-    if (entry.id.isEmpty || entry.plannedPath.isEmpty) {
+    if (entry.id.isEmpty) {
+      errors.add(
+        '$_diagramRegistryPath contains a diagram entry with empty id',
+      );
+      continue;
+    }
+    if (entry.plannedPath.isEmpty) {
+      errors.add('${entry.id} must have a planned_path');
       continue;
     }
     if (!seenIds.add(entry.id)) {
