@@ -1,6 +1,6 @@
 ---
 name: plan-step-contract
-description: Use when adding a new PLAN.md step that must be drafted with the change-contract skill, validated by one reused primary contract_reviewer, and then approved by a different final contract_reviewer before planning work is complete.
+description: Use when adding a new PLAN.md step that must be drafted with the change-contract skill, validated by one reused primary contract_reviewer, and then approved by a different second contract_reviewer before planning work is complete.
 ---
 
 # Plan Step Contract Mode
@@ -63,11 +63,11 @@ the contract is accepted.
    remain.
 
 5. After the primary `contract_reviewer` accepts the step contract, spawn one
-   final `contract_reviewer`.
+   second `contract_reviewer`.
    - This must be a different reviewer from the primary reviewer.
    - Give it the absolute path to the created step contract file.
    - Use this prompt only:
-     `final review step N at STEP_FILE`
+     `review step N at STEP_FILE`
    - Replace `N` and `STEP_FILE` with the step number and concrete step file
      path.
    - Do not add other context, explanations, links, comments, or extra
@@ -75,7 +75,7 @@ the contract is accepted.
    - If the step contract is authored from a specific implementation phase
      document under `docs/implementation`, include that concrete phase document
      path in the same prompt using this exact form:
-     `final review step N at STEP_FILE against phase PHASE_FILE`
+     `review step N at STEP_FILE against phase PHASE_FILE`
    - Replace `PHASE_FILE` with the concrete `docs/implementation/...` document
      path.
    - Do not include a phase document unless that specific implementation phase
@@ -83,23 +83,23 @@ the contract is accepted.
    - If the step contract is authored from a specific architecture design
      document under `.design`, include that concrete design document path in
      the same prompt using this exact form:
-     `final review step N at STEP_FILE against design DESIGN_FILE`
+     `review step N at STEP_FILE against design DESIGN_FILE`
    - Replace `DESIGN_FILE` with the concrete `.design/...` document path.
    - Do not include a design document unless that specific design document is
      the contract input.
    - If it reports findings, repair the same step file and any related
-     `PLAN.md` entry needed to satisfy the findings, then reuse the same final
-     reviewer with the same exact final prompt form until it reports no
+     `PLAN.md` entry needed to satisfy the findings, then reuse the same
+     second reviewer with the same exact prompt form until it reports no
      findings.
    - Do not add other context, explanations, links, comments, or extra
-     instructions to follow-up final review requests.
+     instructions to follow-up review requests.
 
 ## Reviewer Reuse Rule
 
 There must be only one primary `contract_reviewer` subagent for the primary
-validation loop, followed by one different final `contract_reviewer` after the
+validation loop, followed by one different second `contract_reviewer` after the
 primary reviewer accepts the contract. Reuse the same primary reviewer for
-primary follow-up review requests and the same final reviewer for final
+primary follow-up review requests and the same second reviewer for second
 follow-up review requests. Starting a fresh reviewer for each revision
 invalidates this workflow because review state, prior findings, and convergence
 history are lost.
@@ -114,5 +114,5 @@ The planning task is complete only when:
   available;
 - the single reused primary `contract_reviewer` has approved the step file with
   no remaining findings;
-- a different final `contract_reviewer` has approved the same final step file
+- a different second `contract_reviewer` has approved the same step file
   with no remaining findings.
