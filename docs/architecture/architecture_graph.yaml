@@ -439,6 +439,9 @@ edges:
       - path: docs/contracts/public_api_v1.md
     evidence:
       - The package public surface exports the runtime facade.
+    actual:
+      exports:
+        - lib/src/api/canvas_runtime.dart
   - id: api.canvas_runtime.composes_runtime_root
     from: api.canvas_runtime
     to: runtime.root
@@ -491,6 +494,9 @@ edges:
       - path: docs/implementation/p9_frame_rendering_and_caches.md
     evidence:
       - Frame rendering will consume runtime frame facts in P9.
+    actual:
+      implementedInterfaces:
+        - FrameFactsPort
   - id: api.canvas_runtime.exposes_camera
     from: api.canvas_runtime
     to: api.camera_port
@@ -502,6 +508,9 @@ edges:
       - path: docs/implementation/p4_runtime_spine.md
     evidence:
       - The camera public port is visible on the facade.
+    actual:
+      delegationTargets:
+        - RuntimeRoot
   - id: api.camera_port.routes_to_runtime_view_camera
     from: api.camera_port
     to: runtime.view_camera
@@ -513,6 +522,9 @@ edges:
       - path: docs/implementation/p4_runtime_spine.md
     evidence:
       - The public camera port must route to runtime-owned view camera state.
+    actual:
+      declarations:
+        - CanvasCameraPort
   - id: codec.schema_v1.uses_public_dto
     from: codec.schema_v1
     to: api.public_surface
@@ -524,6 +536,9 @@ edges:
       - path: docs/contracts/codec_boundary.md
     evidence:
       - Schema v1 codec reads and writes public DTOs without runtime side effects.
+    actual:
+      imports:
+        - lib/src/api/canvas_document.dart
   - id: codec.schema_v1.failures.report_to_diagnostics
     from: codec.schema_v1
     to: diagnostics.hub

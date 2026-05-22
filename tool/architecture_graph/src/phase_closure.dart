@@ -306,6 +306,14 @@ final class _PhaseClosureChecker {
     final expectation = edge.actual;
     final fromNode = _node(edge.from);
     final missing = <String>[];
+    for (final declaration in expectation.declarations) {
+      if (!actual.declarations.any((fact) {
+        return _matchesFromNode(fact.path, fromNode) &&
+            fact.name == declaration;
+      })) {
+        missing.add('declaration:$declaration');
+      }
+    }
     for (final export in expectation.exports) {
       if (!actual.exports.any((fact) {
         return _matchesFromNode(fact.path, fromNode) && fact.uri == export;
@@ -322,14 +330,14 @@ final class _PhaseClosureChecker {
     }
     for (final field in expectation.compositionFields) {
       if (!actual.compositionFields.any((fact) {
-        return _matchesFromNode(fact.path, fromNode) && fact.type == field;
+        return _compositionMatchesFrom(fact, fromNode) && fact.type == field;
       })) {
         missing.add('composition:$field');
       }
     }
     for (final target in expectation.delegationTargets) {
       if (!actual.delegations.any((fact) {
-        return _matchesFromNode(fact.path, fromNode) &&
+        return _delegationMatchesFrom(fact, fromNode) &&
             fact.targetType == target;
       })) {
         missing.add('delegation:$target');
@@ -337,7 +345,7 @@ final class _PhaseClosureChecker {
     }
     for (final interface in expectation.implementedInterfaces) {
       if (!actual.implementedInterfaces.any((fact) {
-        return _matchesFromNode(fact.path, fromNode) &&
+        return _interfaceMatchesFrom(fact, fromNode) &&
             fact.interface == interface;
       })) {
         missing.add('implements:$interface');
@@ -371,6 +379,56 @@ final class _PhaseClosureChecker {
 
   bool _matchesFromNode(String path, ArchitectureNode? node) {
     return node == null || _factMatchesNode(path, node);
+  }
+
+  bool _compositionMatchesFrom(
+    CompositionFieldFact fact,
+    ArchitectureNode? node,
+  ) {
+    return _matchesFromDeclaration(
+      path: fact.path,
+      declaration: fact.declaration,
+      node: node,
+    );
+  }
+
+  bool _delegationMatchesFrom(DelegationFact fact, ArchitectureNode? node) {
+    final declaration = fact.member.contains('.')
+        ? fact.member.substring(0, fact.member.indexOf('.'))
+        : null;
+
+    return _matchesFromDeclaration(
+      path: fact.path,
+      declaration: declaration,
+      node: node,
+    );
+  }
+
+  bool _interfaceMatchesFrom(
+    ImplementedInterfaceFact fact,
+    ArchitectureNode? node,
+  ) {
+    return _matchesFromDeclaration(
+      path: fact.path,
+      declaration: fact.declaration,
+      node: node,
+    );
+  }
+
+  bool _matchesFromDeclaration({
+    required String path,
+    required String? declaration,
+    required ArchitectureNode? node,
+  }) {
+    if (!_matchesFromNode(path, node)) {
+      return false;
+    }
+    if (node == null || node.actual.declarations.isEmpty) {
+      return true;
+    }
+
+    return declaration != null &&
+        node.actual.declarations.contains(declaration);
   }
 
   List<String> _ownerPathPrefixes(ArchitectureNode node) {

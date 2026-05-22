@@ -72,6 +72,12 @@ void main() {
       actual: _actualGraph(
         declarations: const [
           DeclarationFact(
+            path: 'lib/src/api/facade.dart',
+            line: 1,
+            name: 'FixtureFacade',
+            kind: 'class',
+          ),
+          DeclarationFact(
             path: 'lib/src/runtime/root.dart',
             line: 1,
             name: 'FixtureRuntime',
@@ -132,6 +138,43 @@ void main() {
 
     expect(_ids(report), isNot(contains('fixture.required_edge')));
   });
+
+  test(
+    'does not close an edge with evidence from another class in the owner path',
+    () {
+      final report = checkPhaseClosure(
+        expected: _fixtureGraph(),
+        actual: _actualGraph(
+          declarations: const [
+            DeclarationFact(
+              path: 'lib/src/api/facade.dart',
+              line: 1,
+              name: 'FixtureFacade',
+              kind: 'class',
+            ),
+            DeclarationFact(
+              path: 'lib/src/runtime/root.dart',
+              line: 1,
+              name: 'FixtureRuntime',
+              kind: 'class',
+            ),
+          ],
+          compositionFields: const [
+            CompositionFieldFact(
+              path: 'lib/src/api/facade.dart',
+              line: 2,
+              declaration: 'OtherFacade',
+              field: '_runtime',
+              type: 'FixtureRuntime',
+            ),
+          ],
+        ),
+        selectedPhase: 'P4',
+      );
+
+      expect(_ids(report), contains('fixture.required_edge'));
+    },
+  );
 
   test(
     'does not close a required node with declarations from another owner',
@@ -321,7 +364,7 @@ ExpectedArchitectureGraph _fixtureGraph() {
         coverageScope: 'publicSurfaces',
         sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
         evidence: ['fixture'],
-        actual: ActualExpectation.empty(),
+        actual: ActualExpectation(declarations: ['FixtureFacade']),
       ),
       ArchitectureNode(
         id: 'fixture.codec',
