@@ -1,0 +1,621 @@
+schemaVersion: 1
+phases:
+  - id: P0
+    title: Package skeleton and hard boundaries
+    status: closed
+    sourceDocs:
+      - path: docs/implementation/p0_package_skeleton_and_hard_boundaries.md
+  - id: P1
+    title: V1 scope gate before public API freeze
+    status: closed
+    sourceDocs:
+      - path: docs/implementation/p1_v1_scope_gate_before_public_api_freeze.md
+  - id: P2
+    title: Public API v1 freeze
+    status: closed
+    sourceDocs:
+      - path: docs/implementation/p2_public_api_v1_freeze.md
+  - id: P3
+    title: Schema v1 DTO validation and codec skeleton
+    status: closed
+    sourceDocs:
+      - path: docs/implementation/p3_schema_v1_dto_validation_and_codec_skeleton.md
+      - path: docs/contracts/codec_boundary.md
+  - id: P4
+    title: Runtime spine, store, and projection cache
+    status: closed
+    sourceDocs:
+      - path: docs/implementation/p4_runtime_spine.md
+      - path: docs/architecture/01_runtime_ownership.md
+  - id: P5
+    title: Edit core
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p5_edit_core.md
+      - path: docs/contracts/edit_kernel.md
+  - id: P6
+    title: Load document
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p6_load_document.md
+      - path: docs/contracts/load_document.md
+  - id: P7
+    title: Resources and images
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p7_resources_and_images.md
+      - path: docs/contracts/resources.md
+  - id: P8
+    title: Geometry and spatial
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p8_geometry_and_spatial.md
+      - path: docs/contracts/spatial_kernel.md
+  - id: P9
+    title: Frame rendering and caches
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p9_frame_rendering_and_caches.md
+      - path: docs/contracts/frame_rendering.md
+      - path: docs/contracts/cache_policy.md
+  - id: P10
+    title: Selection and move
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p10_selection_and_move.md
+      - path: docs/contracts/interaction_engine.md
+  - id: P11
+    title: Draw tools
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p11_draw_tools.md
+      - path: docs/contracts/operation_matrix.md
+  - id: P12
+    title: Eraser and text request
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p12_eraser_and_text_request.md
+      - path: docs/contracts/interaction_engine.md
+  - id: P13
+    title: Flutter surface
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p13_flutter_surface.md
+      - path: docs/architecture/02_package_boundaries.md
+  - id: P14
+    title: Benchmarks, diagrams, and release readiness
+    status: measurement
+    sourceDocs:
+      - path: docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md
+      - path: docs/verification/benchmarks.md
+coverage:
+  publicSurfaces:
+    - lib/iwb_canvas_engine.dart
+    - lib/src/api/**
+  architectureOwners:
+    - lib/src/runtime/**
+    - lib/src/codec/**
+    - lib/src/diagnostics/**
+    - lib/src/store/**
+    - lib/src/selection/**
+    - lib/src/edit/**
+    - lib/src/load_document/**
+    - lib/src/resources/**
+    - lib/src/geometry/**
+    - lib/src/frame/**
+    - lib/src/interaction/**
+    - lib/src/tools/**
+    - lib/src/surface/**
+  sensitiveThrows:
+    - owner: codec.schema_v1
+      under: lib/src/codec/**
+      exception: CanvasDataException
+  placeholders:
+    - under: lib/src/api/**
+  ignored:
+    - "**/*_helper.dart"
+    - "**/fixtures/**"
+nodes:
+  - id: api.public_surface
+    label: Public package surface
+    kind: public_surface
+    owner: api
+    phaseIntroduced: P0
+    phaseRequiredBy: P0
+    status: required
+    coverageScope: publicSurfaces
+    sourceDocs:
+      - path: docs/implementation/p0_package_skeleton_and_hard_boundaries.md
+      - path: docs/contracts/public_api_v1.md
+    evidence:
+      - Public consumers enter through the package export and API declarations.
+    actual:
+      declarations:
+        - CanvasRuntime
+      exports:
+        - lib/src/api/canvas_runtime.dart
+  - id: api.canvas_runtime
+    label: Canvas runtime facade
+    kind: facade
+    owner: api
+    phaseIntroduced: P2
+    phaseRequiredBy: P4
+    status: required
+    coverageScope: publicSurfaces
+    sourceDocs:
+      - path: docs/implementation/p2_public_api_v1_freeze.md
+      - path: docs/implementation/p4_runtime_spine.md
+    evidence:
+      - CanvasRuntime is the public facade for runtime state and ports.
+    actual:
+      declarations:
+        - CanvasRuntime
+  - id: api.camera_port
+    label: Public camera port
+    kind: public_port
+    owner: api
+    phaseIntroduced: P2
+    phaseRequiredBy: P4
+    status: required
+    coverageScope: publicSurfaces
+    sourceDocs:
+      - path: docs/implementation/p2_public_api_v1_freeze.md
+      - path: docs/architecture/01_runtime_ownership.md
+    evidence:
+      - The public camera port is the API contract, not proof of runtime camera ownership.
+    actual:
+      declarations:
+        - CanvasCameraPort
+  - id: diagnostics.hub
+    label: Diagnostics hub
+    kind: diagnostics_owner
+    owner: diagnostics
+    phaseIntroduced: P3
+    phaseRequiredBy: P3
+    status: required
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/contracts/diagnostics.md
+      - path: docs/implementation/p3_schema_v1_dto_validation_and_codec_skeleton.md
+    evidence:
+      - DiagnosticsHub owns runtime diagnostic recording and sanitized projection.
+    actual:
+      declarations:
+        - DiagnosticsHub
+  - id: codec.schema_v1
+    label: Schema v1 codec
+    kind: codec_owner
+    owner: codec
+    phaseIntroduced: P3
+    phaseRequiredBy: P3
+    status: required
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/contracts/schema_v1.md
+      - path: docs/contracts/codec_boundary.md
+      - path: docs/implementation/p3_schema_v1_dto_validation_and_codec_skeleton.md
+    evidence:
+      - Schema v1 decode and encode own JSON boundary validation.
+    actual:
+      declarations:
+        - decodeSchemaV1Document
+        - decodeSchemaV1DocumentFromJson
+        - encodeSchemaV1Document
+  - id: runtime.root
+    label: Runtime composition root
+    kind: runtime_owner
+    owner: runtime
+    phaseIntroduced: P4
+    phaseRequiredBy: P4
+    status: required
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/implementation/p4_runtime_spine.md
+      - path: docs/architecture/01_runtime_ownership.md
+    evidence:
+      - RuntimeRoot composes store, selection, config, facts, and public state.
+    actual:
+      declarations:
+        - RuntimeRoot
+  - id: runtime.view_camera
+    label: Runtime-owned view camera
+    kind: runtime_state_owner
+    owner: runtime
+    phaseIntroduced: P4
+    phaseRequiredBy: P4
+    status: required
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/architecture/01_runtime_ownership.md
+      - path: docs/implementation/p4_runtime_spine.md
+    evidence:
+      - View camera ownership must live in runtime state, not as a facade placeholder.
+    actual:
+      declarations:
+        - RuntimeRoot
+  - id: store.document_kernel
+    label: Document store kernel
+    kind: store_owner
+    owner: store
+    phaseIntroduced: P4
+    phaseRequiredBy: P4
+    status: required
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/implementation/p4_runtime_spine.md
+      - path: docs/contracts/cache_policy.md
+    evidence:
+      - DocumentStoreKernel owns committed document facts and projection cache input.
+    actual:
+      declarations:
+        - DocumentStoreKernel
+  - id: selection.kernel
+    label: Selection kernel
+    kind: selection_owner
+    owner: selection
+    phaseIntroduced: P4
+    phaseRequiredBy: P4
+    status: required
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/implementation/p4_runtime_spine.md
+      - path: docs/implementation/p10_selection_and_move.md
+    evidence:
+      - Selection state is owned behind runtime read ports.
+    actual:
+      declarations:
+        - SelectionKernel
+  - id: edit.kernel
+    label: Edit kernel
+    kind: edit_owner
+    owner: edit
+    phaseIntroduced: P5
+    phaseRequiredBy: P5
+    status: future
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/implementation/p5_edit_core.md
+      - path: docs/contracts/edit_kernel.md
+    evidence:
+      - Edit mutation semantics become required in P5.
+  - id: load_document.pipeline
+    label: Load document pipeline
+    kind: load_owner
+    owner: load_document
+    phaseIntroduced: P6
+    phaseRequiredBy: P6
+    status: future
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/implementation/p6_load_document.md
+      - path: docs/contracts/load_document.md
+    evidence:
+      - Loading validated documents is future-phase runtime behavior.
+  - id: resource.resolver
+    label: Resource resolver
+    kind: resource_owner
+    owner: resource
+    phaseIntroduced: P7
+    phaseRequiredBy: P7
+    status: future
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/implementation/p7_resources_and_images.md
+      - path: docs/contracts/resources.md
+    evidence:
+      - Resource resolution remains future-phase image loading scope.
+  - id: geometry.spatial_index
+    label: Geometry and spatial index
+    kind: spatial_owner
+    owner: spatial
+    phaseIntroduced: P8
+    phaseRequiredBy: P8
+    status: future
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/implementation/p8_geometry_and_spatial.md
+      - path: docs/contracts/spatial_kernel.md
+    evidence:
+      - Spatial query ownership becomes required in P8.
+  - id: frame.renderer
+    label: Frame renderer and cache owner
+    kind: frame_owner
+    owner: frame
+    phaseIntroduced: P9
+    phaseRequiredBy: P9
+    status: future
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/implementation/p9_frame_rendering_and_caches.md
+      - path: docs/contracts/frame_rendering.md
+    evidence:
+      - Frame rendering and cache invalidation are future-phase obligations.
+  - id: interaction.selection_move
+    label: Selection and move interaction owner
+    kind: interaction_owner
+    owner: interaction
+    phaseIntroduced: P10
+    phaseRequiredBy: P10
+    status: future
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/implementation/p10_selection_and_move.md
+      - path: docs/contracts/interaction_engine.md
+    evidence:
+      - Move interaction semantics are future-phase behavior.
+  - id: draw.tools
+    label: Draw tool owner
+    kind: tool_owner
+    owner: tools
+    phaseIntroduced: P11
+    phaseRequiredBy: P11
+    status: future
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/implementation/p11_draw_tools.md
+      - path: docs/contracts/operation_matrix.md
+    evidence:
+      - Drawing tools become required in P11.
+  - id: eraser_text.request
+    label: Eraser and text request owner
+    kind: interaction_owner
+    owner: interaction
+    phaseIntroduced: P12
+    phaseRequiredBy: P12
+    status: future
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/implementation/p12_eraser_and_text_request.md
+      - path: docs/contracts/interaction_engine.md
+    evidence:
+      - Eraser and text request flows are future-phase interaction scope.
+  - id: flutter.surface
+    label: Flutter surface integration
+    kind: surface_owner
+    owner: surface
+    phaseIntroduced: P13
+    phaseRequiredBy: P13
+    status: future
+    coverageScope: publicSurfaces
+    sourceDocs:
+      - path: docs/implementation/p13_flutter_surface.md
+      - path: docs/architecture/02_package_boundaries.md
+    evidence:
+      - Flutter widget integration remains future-phase public surface scope.
+  - id: release.measurement
+    label: Measurement and release alignment
+    kind: measurement_scope
+    owner: release
+    phaseIntroduced: P14
+    phaseRequiredBy: P14
+    status: measurement
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md
+      - path: docs/verification/benchmarks.md
+    evidence:
+      - P14 is release measurement scope, not a normal production owner.
+edges:
+  - id: api.public_surface.exports_runtime
+    from: api.public_surface
+    to: api.canvas_runtime
+    kind: exports
+    phaseRequiredBy: P2
+    status: required
+    sourceDocs:
+      - path: docs/contracts/public_api_v1.md
+    evidence:
+      - The package public surface exports the runtime facade.
+  - id: api.canvas_runtime.composes_runtime_root
+    from: api.canvas_runtime
+    to: runtime.root
+    kind: composes
+    phaseRequiredBy: P4
+    status: required
+    sourceDocs:
+      - path: docs/implementation/p4_runtime_spine.md
+    evidence:
+      - CanvasRuntime delegates implemented runtime behavior to RuntimeRoot.
+    actual:
+      imports:
+        - lib/src/runtime/runtime_root.dart
+      compositionFields:
+        - RuntimeRoot
+  - id: runtime.root.owns_store
+    from: runtime.root
+    to: store.document_kernel
+    kind: composes
+    phaseRequiredBy: P4
+    status: required
+    sourceDocs:
+      - path: docs/implementation/p4_runtime_spine.md
+    evidence:
+      - RuntimeRoot composes DocumentStoreKernel as the committed document owner.
+    actual:
+      compositionFields:
+        - DocumentStoreKernel
+  - id: runtime.root.owns_selection
+    from: runtime.root
+    to: selection.kernel
+    kind: composes
+    phaseRequiredBy: P4
+    status: required
+    sourceDocs:
+      - path: docs/implementation/p4_runtime_spine.md
+    evidence:
+      - RuntimeRoot composes SelectionKernel behind the public selection port.
+    actual:
+      compositionFields:
+        - SelectionKernel
+  - id: runtime.root.exposes_frame_facts
+    from: runtime.root
+    to: frame.renderer
+    kind: read_port
+    phaseRequiredBy: P9
+    status: future
+    sourceDocs:
+      - path: docs/contracts/frame_rendering.md
+      - path: docs/implementation/p9_frame_rendering_and_caches.md
+    evidence:
+      - Frame rendering will consume runtime frame facts in P9.
+  - id: api.canvas_runtime.exposes_camera
+    from: api.canvas_runtime
+    to: api.camera_port
+    kind: facade_port
+    phaseRequiredBy: P4
+    status: required
+    sourceDocs:
+      - path: docs/architecture/01_runtime_ownership.md
+      - path: docs/implementation/p4_runtime_spine.md
+    evidence:
+      - The camera public port is visible on the facade.
+  - id: api.camera_port.routes_to_runtime_view_camera
+    from: api.camera_port
+    to: runtime.view_camera
+    kind: facade_port
+    phaseRequiredBy: P4
+    status: required
+    sourceDocs:
+      - path: docs/architecture/01_runtime_ownership.md
+      - path: docs/implementation/p4_runtime_spine.md
+    evidence:
+      - The public camera port must route to runtime-owned view camera state.
+  - id: codec.schema_v1.uses_public_dto
+    from: codec.schema_v1
+    to: api.public_surface
+    kind: data_boundary
+    phaseRequiredBy: P3
+    status: required
+    sourceDocs:
+      - path: docs/contracts/schema_v1.md
+      - path: docs/contracts/codec_boundary.md
+    evidence:
+      - Schema v1 codec reads and writes public DTOs without runtime side effects.
+  - id: codec.schema_v1.failures.report_to_diagnostics
+    from: codec.schema_v1
+    to: diagnostics.hub
+    kind: diagnostic_route
+    phaseRequiredBy: P3
+    status: required
+    sourceDocs:
+      - path: docs/contracts/diagnostics.md
+      - path: docs/implementation/p3_schema_v1_dto_validation_and_codec_skeleton.md
+    evidence:
+      - Codec failure paths must be graph-visible as diagnostic events.
+    actual:
+      delegationTargets:
+        - DiagnosticsHub
+      sensitiveThrowOwner: codec.schema_v1
+  - id: edit.kernel.mutates_store
+    from: edit.kernel
+    to: store.document_kernel
+    kind: mutation_boundary
+    phaseRequiredBy: P5
+    status: future
+    sourceDocs:
+      - path: docs/contracts/edit_kernel.md
+    evidence:
+      - Edit behavior is future-phase controlled mutation over committed state.
+  - id: load_document.pipeline.replaces_store_document
+    from: load_document.pipeline
+    to: store.document_kernel
+    kind: mutation_boundary
+    phaseRequiredBy: P6
+    status: future
+    sourceDocs:
+      - path: docs/contracts/load_document.md
+    evidence:
+      - Load document will admit validated documents into runtime state.
+  - id: resource.resolver.feeds_frame_renderer
+    from: resource.resolver
+    to: frame.renderer
+    kind: resource_boundary
+    phaseRequiredBy: P9
+    status: future
+    sourceDocs:
+      - path: docs/contracts/resources.md
+      - path: docs/contracts/frame_rendering.md
+    evidence:
+      - Frame rendering will consume resource visual facts after resource scope.
+  - id: geometry.spatial_index.feeds_interaction
+    from: geometry.spatial_index
+    to: interaction.selection_move
+    kind: query_boundary
+    phaseRequiredBy: P10
+    status: future
+    sourceDocs:
+      - path: docs/contracts/spatial_kernel.md
+      - path: docs/contracts/interaction_engine.md
+    evidence:
+      - Interaction hit testing will consume spatial query results.
+  - id: flutter.surface.drives_runtime_ports
+    from: flutter.surface
+    to: api.canvas_runtime
+    kind: ui_boundary
+    phaseRequiredBy: P13
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p13_flutter_surface.md
+      - path: docs/architecture/02_package_boundaries.md
+    evidence:
+      - Flutter surface integration drives public runtime ports, not internals.
+placeholders:
+  - id: runtime.canvas_runtime.camera.closed_phase_placeholder
+    node: api.canvas_runtime
+    member: CanvasRuntime.camera
+    path: lib/src/api/canvas_runtime.dart
+    phaseRequiredBy: P4
+    status: forbidden_after_phase
+    sourceDocs:
+      - path: docs/architecture/01_runtime_ownership.md
+      - path: docs/implementation/p4_runtime_spine.md
+    evidence:
+      - Closed P4 camera ownership cannot remain a public facade placeholder.
+  - id: api.canvas_runtime.edit.future_placeholder
+    node: api.canvas_runtime
+    member: CanvasRuntime.edits
+    path: lib/src/api/canvas_runtime.dart
+    phaseRequiredBy: P5
+    status: deferred_until_phase
+    sourceDocs:
+      - path: docs/implementation/p5_edit_core.md
+      - path: docs/contracts/edit_kernel.md
+    evidence:
+      - Edit port placeholder is future P5 scope and must not fail P4 closure.
+forbiddenEdges:
+  - id: codec.schema_v1.forbidden_runtime_dependency
+    from: codec.schema_v1
+    to: runtime.root
+    kind: forbidden_import
+    phaseRequiredBy: P3
+    status: forbidden
+    sourceDocs:
+      - path: docs/contracts/codec_boundary.md
+      - path: docs/architecture/02_package_boundaries.md
+    evidence:
+      - Codec boundary must remain independent from runtime composition.
+views:
+  - id: full_architecture
+    title: Full architecture graph
+    kind: expected_full
+    output: docs/diagrams/generated/full_architecture.mmd
+    sourceDocs:
+      - path: docs/architecture/00_architecture_overview.md
+  - id: current_phase
+    title: Selected phase architecture graph
+    kind: expected_current_phase
+    output: docs/diagrams/generated/current_phase.mmd
+    sourceDocs:
+      - path: docs/architecture/00_architecture_overview.md
+  - id: future_target
+    title: Future target architecture graph
+    kind: expected_future
+    output: docs/diagrams/generated/future_target.mmd
+    sourceDocs:
+      - path: docs/architecture/00_architecture_overview.md
+  - id: actual_vs_expected_diff
+    title: Actual vs expected selected phase diff
+    kind: actual_vs_expected_diff
+    output: docs/diagrams/generated/actual_vs_expected_diff.mmd
+    sourceDocs:
+      - path: docs/verification/release_gates.md
