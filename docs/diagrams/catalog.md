@@ -18,31 +18,36 @@ semantic diagrams and are not replaced by the generated topology views.
 
 Current generated outputs:
 
-- `docs/diagrams/generated/full_architecture.mmd`
+- `generated/full_architecture`
+  - File: `docs/diagrams/generated/full_architecture.mmd`
   - Kind: `architecture_graph_view`
   - Classification: `generated`
   - Related phases: `P4`
   - Related sections: `section_02_architecture_model`
   - Graph view source: `docs/architecture/architecture_graph.yaml`
-- `docs/diagrams/generated/current_phase.mmd`
+- `generated/current_phase`
+  - File: `docs/diagrams/generated/current_phase.mmd`
   - Kind: `architecture_graph_view`
   - Classification: `generated`
   - Related phases: `P4`
   - Related sections: `section_02_architecture_model`
   - Graph view source: `docs/architecture/architecture_graph.yaml`
-- `docs/diagrams/generated/future_target.mmd`
+- `generated/future_target`
+  - File: `docs/diagrams/generated/future_target.mmd`
   - Kind: `architecture_graph_view`
   - Classification: `generated`
   - Related phases: `P4`
   - Related sections: `section_02_architecture_model`
   - Graph view source: `docs/architecture/architecture_graph.yaml`
-- `docs/diagrams/generated/actual_vs_expected_diff.mmd`
+- `generated/actual_vs_expected_diff`
+  - File: `docs/diagrams/generated/actual_vs_expected_diff.mmd`
   - Kind: `architecture_graph_view`
   - Classification: `generated`
   - Related phases: `P4`
   - Related sections: `section_02_architecture_model`
   - Graph view source: `docs/architecture/architecture_graph.yaml`
-- `docs/diagrams/generated/release_verification.mmd`
+- `generated/release_verification`
+  - File: `docs/diagrams/generated/release_verification.mmd`
   - Kind: `architecture_graph_view`
   - Classification: `generated`
   - Related phases: `P4`

@@ -100,6 +100,20 @@ const _architectureReadmeGroups = [
   'Checks',
 ];
 
+const _rootReadmeTaskRoutes = [
+  '- Understand architecture: `docs/architecture/README.md`',
+  '- Implement a phase: `docs/indexes/by_phase.md`',
+  '- Verify behavior: `docs/verification/`',
+  '- Check subsystem contracts: `docs/indexes/by_subsystem.md`',
+  '- Find guardrail coverage: `docs/indexes/by_guardrail.md`',
+  '- Find test coverage: `docs/indexes/by_test_area.md`',
+  '- Review donor decisions: `docs/indexes/donor_to_phase.md`',
+  '- Update diagrams: `docs/diagrams/catalog.md`',
+  '- Prepare release work: `docs/verification/release_gates.md`',
+  '- Use generated lookup: `docs/indexes/`',
+  '- Find Change Contracts: `PLAN.md` and `plan/`',
+];
+
 final _errors = <String>[];
 
 void main() {
@@ -410,11 +424,21 @@ void _checkPortalReadmes() {
     expectedTitle: 'iwb_canvas_engine documentation',
     expectedGroups: _rootReadmeGroups,
   );
+  _checkRootReadmeTaskRoutes();
   _checkReadmeShape(
     path: 'docs/architecture/README.md',
     expectedTitle: 'Architecture entrypoint',
     expectedGroups: _architectureReadmeGroups,
   );
+}
+
+void _checkRootReadmeTaskRoutes() {
+  final text = _read('docs/README.md');
+  for (final route in _rootReadmeTaskRoutes) {
+    if (!text.contains(route)) {
+      _fail('docs/README.md Start by task must contain route: $route');
+    }
+  }
 }
 
 void _checkReadmeShape({

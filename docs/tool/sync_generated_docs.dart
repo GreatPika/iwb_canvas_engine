@@ -509,7 +509,8 @@ String _renderDiagramCatalog(List<_DiagramEntry> diagrams) {
 
   for (final diagram in generated) {
     buffer
-      ..writeln('- `${diagram.file}`')
+      ..writeln('- `${diagram.id}`')
+      ..writeln('  - File: `${diagram.file}`')
       ..writeln('  - Kind: `${diagram.kind}`')
       ..writeln('  - Classification: `${diagram.classification}`')
       ..writeln('  - Related phases: ${_codeList(diagram.relatedPhases)}')

@@ -8,11 +8,15 @@ drift checks.
 
 - Understand architecture: `docs/architecture/README.md`
 - Implement a phase: `docs/indexes/by_phase.md`
-- Check subsystem contracts: `docs/architecture/README.md`
+- Verify behavior: `docs/verification/`
+- Check subsystem contracts: `docs/indexes/by_subsystem.md`
 - Find guardrail coverage: `docs/indexes/by_guardrail.md`
 - Find test coverage: `docs/indexes/by_test_area.md`
 - Review donor decisions: `docs/indexes/donor_to_phase.md`
 - Update diagrams: `docs/diagrams/catalog.md`
+- Prepare release work: `docs/verification/release_gates.md`
+- Use generated lookup: `docs/indexes/`
+- Find Change Contracts: `PLAN.md` and `plan/`
 
 ## Source of truth
 
