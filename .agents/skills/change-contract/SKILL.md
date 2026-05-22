@@ -1,84 +1,251 @@
 ---
 name: change-contract
-description: Draft or update a Change Contract as a normative execution plan before implementation. Use when a feature, fix, refactor, migration, rule/analyzer change, source-of-truth documentation change, or shared-seam retirement needs repository-evidence-backed architecture, execution order, gates, slice-local file ownership, vertical slices, and proof obligations; stop at an architecture decision gate when the owner, seam, architectural dependency/import direction, state ownership, boundary, or verification strategy cannot be locked.
+description: Create a Change Contract before code implementation. Use when a coding task needs an evidence-backed owner, work boundary, execution order, execution units, and completion checks before changes are made. Do not use to implement code, run the implementation, or review an already written contract.
 ---
 
 # Change Contract
 
-Draft a Change Contract, not an overview.
+Create a short Change Contract for the implementer.
 
-Use only confirmed facts from the request and inspected repository artifacts. Make the final contract executable in a later run without relying on conversation memory.
+Do not edit code. Do not implement the change. Do not run the work.
 
-## Internal file contract
+Output only one of:
 
-- This `SKILL.md` is the only source for routing, core terms, architecture-lock requirements, decision-gate conditions, profile selection, obligation selection, and active template priority.
-- After reading this file and inspecting repository evidence, you must already know the contract mode, profile, obligations, whether the architecture is locked, and which active template to select.
-- `references/contract-rules.md` explains how to fill the selected template: evidence, information ownership, slice construction, proof obligations, seam-retirement details, analyzer-specific details, and update behavior. It must not change routing, redefine core terms, add new profiles, add new obligations, or select a different template.
-- Files in `assets/` are passive output shapes only. They must not be used to infer routing rules, architecture-lock requirements, profile classification, or obligation classification.
+- `Change Contract`
+- `Contract Blocker`
 
-## Core terms
+## Purpose
 
-- **Owner**: the module, layer, document family, analyzer, rule, or support seam that should own the behavior, invariant, policy, or migration once. Do not push ownership into callers when a shared owner can solve it once.
-- **Seam**: the boundary where consumers interact with an owner or replacement mechanism. A shared seam has multiple consumers or repository references and cannot be retired without a successor, migration order, and retirement gate.
-- **Lock-required facts**: owner, owning layer or module, seam, architectural dependency/import direction, state/data ownership, entry and exit boundaries, file placement basis, execution order, rejected alternatives, and verification strategy. For shared-seam creation, migration, or retirement, also lock successor seam, consumer migration order, retirement gate, and final broad-verification timing.
-- **Architecture decision gate**: the stop condition when any lock-required fact is missing, contradicted by repository evidence, or cannot be chosen without a user decision. In this case use `Contract Mode: ARCHITECTURE_GATE`, select the gate template, and stop at section 3.
-- **Proof**: executable repository verification that demonstrates the slice or final contract is correct. Semantic proof checks behavior, wording, API shape, documentation meaning, or user-visible contract. Structural proof checks architecture, imports, ownership, layer boundaries, registries, indexes, generated navigation, analyzer recognition, or other mechanically checkable structure.
+Convert the user's coding task into an executable change plan.
 
-## Contract modes
+The contract must define:
 
-Select exactly one mode before selecting a profile.
+- what must change;
+- where the change is owned;
+- what is in scope;
+- what is out of scope;
+- the required order of work;
+- how each execution unit is considered complete.
 
-- `FULL`: all lock-required facts are evidence-backed and the contract can define slices and proof.
-- `ARCHITECTURE_GATE`: at least one lock-required fact is missing, contradicted, or requires a user decision. The contract must stop at section 3 and must not include proof plans, slices, or final gates.
+## Decision Closure
 
-## Contract profiles
+A full contract must settle the decisions that belong before implementation.
 
-Every contract must write exactly one `Contract Profile`.
+Output `Contract Blocker` instead of a full contract when the implementer would
+still need to choose:
 
-For `FULL` contracts, select the profile that owns the locked proof mode.
-For `ARCHITECTURE_GATE` contracts, select the profile that would govern the requested work if the gate were resolved, using the known request and repository evidence. If the blocking gap prevents confident classification, use `BEHAVIOR_CHANGE` as the conservative default and state the profile uncertainty in `Architecture Gate`.
+- the owner or owning layer;
+- the work boundary;
+- the source of truth;
+- compatibility behavior;
+- execution order;
+- migration, replacement, or retirement strategy;
+- the completion signal for any execution unit.
 
-Use this priority order:
+Implementation details may remain open only when they are local tactics inside
+an already fixed owner, boundary, order, and completion signal.
 
-1. `ANALYZER_RULE`: the owned behavior is an analyzer, rule engine, bypass detector, static-analysis check, contract-enforcement mechanism, structural-recognition rule, or its fixtures.
-2. `SOURCE_OF_TRUTH_DOCS`: the owned change updates normative repository source-of-truth documents such as architecture docs, contracts, diagrams, registries, guardrails, indexes, or roadmap step contracts, without production/runtime implementation in scope.
-3. `REFACTOR`: the owned change alters implementation form, placement, naming, decomposition, dependency direction, or ownership while preserving observable behavior.
-4. `BEHAVIOR_CHANGE`: the owned change alters observable production/runtime/API/data behavior, persistence, rendering, public semantics, or user-visible behavior. This is the default locked profile when no earlier profile applies.
+## Evidence
 
-Do not choose a profile by file extension. Markdown can be source-of-truth docs, analyzer fixtures, or historical evidence. Dart can be behavior, refactor, or analyzer work. The owner and proof mode decide.
+Before writing the contract, inspect the repository enough to identify the relevant facts.
 
-## Contract obligations
+Include only evidence that the implementer needs to understand:
 
-List obligations in this stable order: `BUG_FIX`, `SEAM_MIGRATION`, `PUBLIC_API_CHANGE`. If none apply, write `Contract Obligations: none`.
+- the owner of the change;
+- the work boundary;
+- the execution order;
+- exclusions from scope;
+- the source of truth;
+- compatibility constraints.
 
-For `ARCHITECTURE_GATE` contracts, list only obligations already proven by the request or repository evidence. If an obligation depends entirely on the unresolved user decision, omit it until the gate is resolved.
+Do not include research logs, long code quotes, raw search output, or intermediate reasoning.
 
-- `BUG_FIX`: add when the change repairs existing wrong behavior, a regression, false positive, false negative, invariant gap, or contradiction with an accepted contract.
-- `SEAM_MIGRATION`: add when the change creates, renames, replaces, migrates, or retires a shared seam with multiple consumers or repository references.
-- `PUBLIC_API_CHANGE`: add when the change modifies exported API, public contract, data format, config schema, persistence format, or compatibility promise.
+Evidence format:
 
-## Active templates
+    - `path/to/file` / `surface`: observed fact -> contract consequence.
 
-Select exactly one active template.
+## Repository Source Inputs
 
-- `assets/architecture-gate-template.md` for `Contract Mode: ARCHITECTURE_GATE`.
-- `assets/full-contract-template.md` for every `Contract Mode: FULL` contract, including `ANALYZER_RULE`.
+When the request names a source input, read it:
 
-There is no separate analyzer template. Analyzer-specific requirements are profile rules inside the unified locked template.
+- `against phase PHASE_FILE`: read the concrete `docs/implementation/...` document.
+- `against design DESIGN_FILE`: read the concrete `.design/...` document.
+- any other explicit source input file: read that file.
 
-## Source-of-truth rules
+Preserve mandatory decisions, scope, gates, sequencing, and proof expectations.
 
-- Apply naming rules from the active user-level `AGENTS.md` when those rules are present in your active instruction context.
-- Do not mention user-level configuration file paths in the Change Contract; the contract should name repository artifacts only.
-- If user-level naming rules are not present, infer names from adjacent repository artifacts and state that naming was inferred from repository-local precedent.
-- Repository-local rules still govern architecture, architectural dependency/import direction, layer boundaries, test commands, fixtures, and placement when they are present.
+If the contract intentionally narrows or excludes anything from a source input, state that exclusion in `Out of Scope` and support it with evidence or an explicit user requirement.
 
-## Workflow
+Inspect when relevant:
 
-1. Inspect active instructions, repository-local rules, surrounding code/docs/tests, lock-required facts, and existing verification.
-2. Normalize the request into mandate, included scope, and exclusions.
-3. Select `Contract Mode`. Use `FULL` only when all lock-required facts are evidence-backed; otherwise use `ARCHITECTURE_GATE`, select the gate template, and stop at section 3.
-4. Select exactly one `Contract Profile`, then select applicable `Contract Obligations` or `none`.
-5. Open the active template for the selected mode, then read `references/contract-rules.md` to fill it. Do not let the reference file change mode, profile, obligations, or template choice.
-6. When updating an existing contract, convert it to the current template and preserve stable content only in current owning sections.
-7. Return only the Change Contract.
+- `PLAN.md` for active roadmap scope and step-contract status;
+- `docs/README.md` as the documentation entry point;
+- repository instructions for plan workflow, DCM metrics exceptions, and verification commands.
+
+## Contract Blocker
+
+If the owner, boundary, work order, source of truth, compatibility constraint, or completion check cannot be determined from repository evidence or explicit user requirements, do not write a full contract.
+
+Output:
+
+    # Contract Blocker
+
+    ## Goal
+
+    [One short paragraph.]
+
+    ## Blocking Questions
+
+    - Question:
+      Blocks because:
+      Needed evidence or decision:
+
+    ## Evidence
+
+    - `path/to/file` / `surface`: observed fact -> why it blocks the contract.
+
+Do not include execution units in a blocker.
+
+## Execution Unit
+
+An execution unit is a small bounded piece of work with:
+
+- one owner;
+- a clear boundary;
+- a concrete change;
+- a completion check;
+- explicit dependencies, if any.
+
+Each execution unit heading must start with an unchecked checkbox:
+`### [ ] Unit N: [short title]`.
+
+The checkbox is for later implementation tracking. Do not mark a unit complete
+when creating the contract.
+
+Execution units should be small and roughly balanced when possible.
+
+Correct boundaries, dependency order, and independent completion checks are more important than equal size.
+
+Do not split a unit if the resulting parts cannot be completed and checked separately.
+
+Do not merge units that have different owners, different boundaries, or different completion checks.
+
+## Splitting Work
+
+First choose the natural split axis for the task:
+
+- behavior change: split by user flow, API call, command, event, or observable behavior;
+- refactor: split by owner, module, seam, or dependency boundary;
+- migration: split by adding the new path, migrating consumers, then removing the old path;
+- rule, analyzer, or style check: split by rule, allowed case, forbidden case, fixture, or integration point;
+- documentation: split by source-of-truth surface and dependent references;
+- build, test, or CI change: split by affected verification surface.
+
+Then construct execution units with this procedure:
+
+1. List the main affected surfaces: files, modules, APIs, docs, schemas, tests, build steps, CI jobs, generated outputs, registries, or consumers.
+2. Group those surfaces by the owner that should be responsible for the change.
+3. Inside each owner group, identify concrete changes that can be completed separately.
+4. For each candidate unit, define its completion check.
+5. If a candidate has no separate completion check, do not keep it as a separate unit. Merge it into the nearest unit that owns the same outcome, or output `Contract Blocker` if no valid owner exists.
+6. If a candidate has more than one owner, split it by owner.
+7. If a candidate has multiple independent completion checks, consider splitting it by those checks.
+8. If two adjacent candidates have the same owner, same boundary, same risk, and same completion check, merge them.
+9. Order units so that owners and boundaries are established before consumers are changed.
+10. Remove old paths only after replacement paths and consumers are in place.
+
+A valid execution unit is not created from a file list alone. It is created from this chain:
+
+    owner -> boundary -> concrete change -> completion check
+
+## Output Format
+
+When enough evidence exists, output:
+
+    # Change Contract
+
+    ## Goal
+
+    [One short paragraph describing the intended final state.]
+
+    ## Evidence
+
+    - `path/to/file` / `surface`: observed fact -> contract consequence.
+
+    ## Boundaries
+
+    Owner:
+
+    In Scope:
+
+    Out of Scope:
+
+    Source of Truth:
+
+    Compatibility:
+
+    Order Constraints:
+
+    ## Execution Units
+
+    ### [ ] Unit 1: [short title]
+
+    Owner:
+
+    Boundary:
+
+    Change:
+
+    Completion Check:
+
+    Depends On:
+
+    ### [ ] Unit 2: [short title]
+
+    Owner:
+
+    Boundary:
+
+    Change:
+
+    Completion Check:
+
+    Depends On:
+
+Add more units only when needed.
+
+## Completion Check
+
+Each `Completion Check` must tell the implementer how to know that the unit is complete.
+
+Each check must name an observable or executable signal and the bounded surface
+where that signal applies.
+
+A completion check may be:
+
+- a test, command, or check with an expected signal;
+- a specific behavior visible through a user flow, API, CLI, event, or output;
+- removal of an old import, symbol, path, registry entry, or call site from a bounded surface;
+- migration of named consumers to a new owner, seam, API, schema, or path;
+- an updated source-of-truth document plus required dependent references;
+- an analyzer rule, lint rule, fixture, or build integration that proves the rule is active;
+- preservation of a public signature, format, schema, or compatibility promise.
+
+Do not use vague checks such as "verify correctness", "add tests as needed",
+"ensure it works", "update callers where necessary", or "clean up related code".
+If the exact signal cannot be named, output `Contract Blocker`.
+
+Do not run the checks in this skill. Only specify them.
+
+## Final Constraints
+
+Before answering, ensure that:
+
+- every decision is supported by repository evidence or an explicit user requirement;
+- owner and boundary are clear;
+- source of truth, compatibility, order, and completion signals are settled;
+- every execution unit has a concrete change and completion check;
+- dependencies between units are explicit;
+- no execution unit is named like “update everything”, “fix architecture”, or “add tests where needed”;
+- the contract contains no implementation work;
+- the answer contains no methodology explanation outside the required output format.

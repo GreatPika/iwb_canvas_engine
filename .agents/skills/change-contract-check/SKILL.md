@@ -1,270 +1,183 @@
 ---
 name: change-contract-check
-description: Validate a drafted or updated Change Contract before implementation begins. Use immediately after writing or revising a Change Contract for a feature, bug fix, refactor, migration, source-of-truth documentation update, analyzer/rule change, or seam retirement. Check template compliance, repository evidence, architecture lock, information ownership, cross-section consistency, slice proof, profile proof obligations, retirement gates, and contradictions. Return a blocking validation report, not a rewritten contract, unless repair is explicitly requested.
+description: Validate a drafted or updated Change Contract before implementation begins. Use after a Change Contract or Contract Blocker exists. Check repository evidence, owner, boundary, scope, work order, execution units, completion checks, repository source-input consistency, and contradictions. Return a blocking validation report, not a rewritten contract, unless repair is explicitly requested.
 ---
 
 # Validate Change Contract
 
 Validate the contract, not the code change.
 
-Use this skill only after a Change Contract already exists.
-Do not start implementation from a contract that fails blocking checks.
+Use this skill only after a `Change Contract` or `Contract Blocker` already exists.
 Default to audit-only. Do not rewrite the contract unless the user explicitly asks for repair.
-When the paired authoring skill is available, read its `SKILL.md`, `references/contract-rules.md`, and the one active template from the paired authoring skill's `assets/` directory that should apply to the contract.
-Read `assets/change-contract-validation-report-template.md` and use it as the output format.
+Validate only the short contract shape defined here. Do not require any fields not listed here.
 
-Treat the contract as acceptable only when it is specific enough that implementation choices are no longer floating at the wrong level.
-Reject vague approval language such as “looks good overall” when any blocking rule is still open.
+A contract fails if the implementer must make design decisions that the contract was supposed to settle.
+
+## Decision Closure Rule
+
+A full contract is not implementable when the implementer must choose the owner,
+boundary, source of truth, compatibility behavior, execution order, migration or
+retirement strategy, or completion signal.
+
+Treat vague deferrals as unresolved decisions when they appear in required
+fields or execution units. Examples include "as needed", "if applicable",
+"where necessary", "choose the appropriate", "verify correctness", "ensure it
+works", "add tests as needed", and "clean up related code".
+
+These phrases are acceptable only when the contract also gives the exact
+condition, bounded surface, and completion signal that make the optional work
+non-ambiguous.
+
+## Accepted Inputs
+
+Accept exactly one of these shapes.
+
+### Change Contract
+
+Required sections:
+
+- `# Change Contract`
+- `## Goal`
+- `## Evidence`
+- `## Boundaries`
+- `## Execution Units`
+
+Required `Boundaries` fields:
+
+- `Owner`
+- `In Scope`
+- `Out of Scope`
+- `Source of Truth`
+- `Compatibility`
+- `Order Constraints`
+
+Each execution unit must include:
+
+- a heading that starts with `### [ ] Unit N:`;
+- `Owner`
+- `Boundary`
+- `Change`
+- `Completion Check`
+- `Depends On`
+
+### Contract Blocker
+
+Required sections:
+
+- `# Contract Blocker`
+- `## Goal`
+- `## Blocking Questions`
+- `## Evidence`
+
+Each blocking question must include:
+
+- `Question`
+- `Blocks because`
+- `Needed evidence or decision`
+
+A `Contract Blocker` must not include execution units.
 
 ## Verdicts
 
 Return exactly one verdict:
 
-- `PASS` — the contract is implementable as written; only minor wording issues may remain.
-- `REVISE` — the contract has non-blocking weaknesses or small gaps, but the architecture and proof strategy are mostly locked.
-- `BLOCKED` — implementation must not start because the contract leaves architecture, ownership, verification, sequencing, or retirement conditions unresolved.
+- `PASS` - the contract is implementable as written; only minor wording issues may remain.
+- `REVISE` - the contract is implementable, but has non-blocking weaknesses or small gaps.
+- `BLOCKED` - implementation must not start because owner, boundary, source of truth, compatibility, sequencing, or completion checks are unresolved or contradicted.
 
-Use `BLOCKED` whenever the contract would force implementation-time design decisions or cannot be verified slice by slice.
+Use `BLOCKED` whenever implementation-time design decisions remain.
 
-## What to inspect
+## Repository Evidence Rule
 
-Inspect the contract itself and re-check the repository evidence behind it.
-Do not trust `Evidence Map` at face value.
+Re-check the repository evidence behind the contract. Do not trust the contract's evidence at face value.
+
 Confirm, when relevant:
 
-- named paths, modules, packages, layers, documents, analyzers, fixtures, and tests actually exist or are justified as new artifacts;
-- the claimed current owner and entry path match the repository;
-- the analogous implementation or documentation path is actually analogous;
-- the cited repository rules govern the area;
-- the rejected misleading patterns are real and are actually the wrong owner, wrong level, stale, or misleading.
+- named paths, modules, packages, layers, documents, analyzers, fixtures, tests, build steps, CI jobs, generated outputs, registries, and consumers exist or are justified as new artifacts;
+- the claimed owner and work boundary match the repository;
+- the claimed source of truth governs the work;
+- compatibility constraints match public APIs, data formats, schemas, config, persistence, docs, generated outputs, or external consumers;
+- completion checks are executable or observable enough to prove the unit is done.
 
-When the repository does not contain a formal rule file for the area, accept an explicit statement that no formal local rule was found only if the contract names the dominant local pattern that will govern the change.
+Evidence must connect observed facts to contract consequences.
 
-When the review request includes `against phase PHASE_FILE`, read that concrete
-`docs/implementation/...` document and treat it as the source input for the
-contract. When the review request includes `against design DESIGN_FILE`, read
-that concrete `.design/...` document and treat it as the source input for the
-contract. Source input documents are not optional background context: verify
-that the contract preserves their mandatory decisions, constraints, scope,
-gates, sequencing requirements, and proof expectations, or explicitly and
-correctly justifies any intentional narrowing.
+## Repository Source Inputs
 
-## Expected template selection
+When the review request names a source input, read it and verify that the contract preserves mandatory decisions, scope, gates, sequencing, and proof expectations:
 
-Validate the contract against exactly one paired authoring template. Use the paired `change-contract` skill routing rules as the source of truth for selection, and read the selected template from that skill's `assets/` directory:
+- `against phase PHASE_FILE`: read the concrete `docs/implementation/...` document.
+- `against design DESIGN_FILE`: read the concrete `.design/...` document.
+- any other explicit source input file: read that file.
 
-- `assets/architecture-gate-template.md` when `Contract Mode: ARCHITECTURE_GATE`.
-- `assets/full-contract-template.md` when `Contract Mode: FULL`.
+If the contract intentionally narrows or excludes source-input content, the narrowing must appear in `Out of Scope` and be supported by evidence or an explicit user requirement.
 
-Do not validate a locked analyzer contract against a separate shape. `ANALYZER_RULE` is a profile inside the unified locked template.
+Check when relevant:
 
-For every drafted or updated contract, require the current paired template shape:
+- `PLAN.md` for active roadmap scope and step-contract status;
+- `docs/README.md` as the documentation entry point;
+- repository instructions for plan workflow, DCM metrics exceptions, and verification commands.
 
-- gate contracts contain header fields and sections 1 through 3 only;
-- locked contracts contain header fields and sections 1 through 7.
+## Blocking Criteria
 
-Do not accept preserved older numbering, standalone file inventories, or deprecated proof headings as a separate valid contract shape.
+Mark the contract `BLOCKED` when any category applies:
 
-## Blocking checks
+1. Shape is invalid: wrong top-level output, missing required sections, missing required fields, empty headings, placeholders, filler, or guessed facts.
+2. Evidence is insufficient: repository inspection is not real, cited facts cannot be verified, source inputs were not read, or evidence does not support the contract consequence.
+3. Owner or boundary is unresolved: ownership is wrong, vague, split across unrelated owners, pushed into callers instead of the owning layer, or left for implementation.
+4. Scope is unsafe: in-scope and out-of-scope work are missing, contradictory, silently expanded, or inconsistent with source inputs.
+5. Source of truth or compatibility is wrong: the contract misses or contradicts governing docs, public APIs, data formats, schemas, config, persistence, generated outputs, registries, or external consumers.
+6. Order is unsafe: required sequencing is missing, dependencies are circular or vague, consumers move before owners exist, migration or retirement strategy is deferred, or old paths are retired before replacement and migration checks are in place.
+7. Execution units are invalid: a unit heading lacks the unchecked `[ ]` checkbox, a unit lacks owner, boundary, concrete change, completion check, or dependency; a unit is only preparatory; units are split or merged against owner, boundary, or completion-check logic.
+8. Completion checks are inadequate: checks are vague, non-observable, lack an expected signal, omit the bounded surface being checked, or fail to prove the unit's change.
+9. Cross-section consistency fails: goal, evidence, boundaries, units, dependencies, completion checks, and source inputs contradict each other.
+10. A `Contract Blocker` is invalid: it includes execution units, asks for decisions the repository already determines, or does not identify the exact missing evidence or decision.
 
-Mark the contract `BLOCKED` when any of the following is true:
+## Non-Blocking Criteria
 
-1. The header omits `Contract Mode`, `Contract Profile`, or `Contract Obligations`.
-2. `Contract Mode`, `Contract Profile`, or `Contract Obligations` contains unsupported values or obligation ordering.
-3. The main numbered structure does not follow the selected active template.
-4. Template placeholders, filler text, guessed facts, unexplained ellipses, or empty required headings remain.
-5. `Evidence Map` does not prove real inspection of the surrounding repository state.
-6. `ARCHITECTURE_GATE` is selected but section 3 does not identify a real blocking gap and exact user decision.
-7. `ARCHITECTURE_GATE` is selected but any substantive section after section 3 is present.
-8. `FULL` is selected but section 3 does not lock one architectural form.
-9. `FULL` is selected but section 3 leaves owner, boundaries, seam, dependency direction, state ownership, file placement, execution order, or verification strategy to implementation-time choice.
-10. `FULL` is selected and `Decision Ledger` has malformed decision IDs or omits a decision ID referenced by a slice or final gate.
-11. `FULL` is selected and the selected `Contract Profile` does not match the owner and required proof mode.
-12. `ARCHITECTURE_GATE` is selected and the selected `Contract Profile` is neither supported by known request/repository evidence nor a documented `BEHAVIOR_CHANGE` fallback for unresolved profile uncertainty.
-13. `FULL` is selected and required profile proof is missing.
-14. `FULL` is selected and a required obligation is missing, or a listed obligation lacks its required proof and sequencing.
-15. `FULL` is selected with `SEAM_MIGRATION`, but successor/retired seam, consumer migration order, retirement gate, or negative proof is missing.
-16. `FULL` is selected with `PUBLIC_API_CHANGE`, but public contract owner, compatibility decision, migration/versioning note, export registry/index handling, or public contract proof is missing.
-17. `FULL` is selected with `BUG_FIX`, but the contract does not require a reproducer first plus 1 to 3 neighboring guard tests before the minimal owner-side fix.
-18. `FULL` is selected with `REFACTOR`, but the contract does not name locking tests or minimum characterization tests before structural edits.
-19. Any slice omits the `Files` block or fails to list the files, tests, fixtures, inventories, workflows, checks, verify-only evidence, or explicit exclusions that the slice relies on.
-20. Any `Files` bullet names only a bare action and path, such as `Update <path>`, without the file role and slice-local responsibility.
-21. Any slice is only preparatory, horizontal, or non-verifiable.
-22. Any slice lacks executable proof with a stated proof intent and command.
-23. A slice that introduces or depends on the locked architecture lacks structural verification that would make drift visible later.
-24. A slice mixes decision IDs, obligation labels, and proof IDs in the same subsection instead of separating `Implements`, `Obligations Covered`, and `Proof`.
-25. A slice lists every header obligation by default instead of only the obligations that slice directly closes.
-26. A proof ID is referenced by a slice or final gate but section 5 does not own the executable command or check and expected signal for that ID.
-27. A reusable or final-gate proof command is duplicated inside slices instead of being owned once by `Proof Plan`.
-28. Final gate restates durable decisions from `Decision Ledger` instead of aggregating decision IDs, proof IDs, and obligations.
-29. The contract contradicts itself across sections.
-30. Named files, tests, fixtures, inventories, workflows, or checks appear only as evidence while later sections treat them as change targets.
-31. A locked contract uses a standalone global file inventory instead of slice-local file ownership.
-32. Final gate introduces new scope instead of proving earlier decisions, obligations, and slices.
-33. The review request includes a phase or design source input, but the
-    contract contradicts that source, drops mandatory decisions, constraints,
-    gates, sequencing, or proof expectations from that source, or expands the
-    source scope without explicit justification.
+Use `REVISE` instead of `PASS` when the contract is implementable but weaker than it should be:
 
-## Non-blocking weaknesses
+- evidence is valid but thinner than nearby repository context would allow;
+- the precedent is valid but not the closest one;
+- an execution unit is slightly oversized but still has one owner and one completion check;
+- a completion check is executable but its expected signal could be clearer;
+- `Depends On` is understandable but should name a specific unit;
+- wording is redundant but does not change scope, ownership, order, or verification.
 
-Use `REVISE` instead of `PASS` when the contract is implementable but weaker than it should be, for example:
+## Required Output Format
 
-- precedent is valid but not the closest one;
-- repository rule citation is thin but directionally correct;
-- a slice is slightly oversized but still closes one verifiable result;
-- proof IDs are valid but named unclearly;
-- `Decision Ledger` includes unreferenced summary rows that duplicate section 3 facts;
-- `Proof Plan` contains one-off commands that should live in the owning slice;
-- a proof ID has a command but the expected signal is weak;
-- `SOURCE_OF_TRUTH_DOCS` negative proof is broader than needed but still bounded enough to execute;
-- final completion conditions contain minor redundant wording but do not restate durable decisions or expand scope.
+Output this format only:
 
-## Section-by-section review rules
+```md
+# Change Contract Validation
 
-### Header
+Verdict: `PASS | REVISE | BLOCKED`
 
-Verify the mode, profile, and obligations first. Reject profile selection by file extension. The selected profile must follow the paired authoring skill priority order: `ANALYZER_RULE`, `SOURCE_OF_TRUTH_DOCS`, `REFACTOR`, `BEHAVIOR_CHANGE`. For `ARCHITECTURE_GATE`, accept the conservative `BEHAVIOR_CHANGE` fallback only when section 3 documents that the blocking gap prevents confident profile classification.
+## Required Fixes
 
-### Section 1. Mandate and Boundary
+- `<short issue title>`
+  Severity: `blocking`
+  Location: `<section, field, execution unit, or file>`
+  Issue: `<what is wrong>`
+  Evidence: `<contract or repository evidence>`
+  Minimal Repair: `<smallest acceptable repair>`
 
-Verify that the mandate states one concrete result, not an execution plan.
-Verify that included scope and exclusions are explicit.
-Reject boundaries that silently expand architecture or rollout scope.
+## Optional Improvements
 
-### Section 2. Evidence Map
+- `<short improvement>`
+  Severity: `non-blocking`
+  Location: `<section, field, execution unit, or file>`
+  Issue: `<what is weak>`
+  Minimal Repair: `<small improvement>`
 
-Require inspected artifacts with specific revelations.
-Require baseline evidence, entry paths, current owners, existing checks, valid precedents, governing rules, and misleading patterns when relevant.
-Require `Baseline Evidence` to be framed as repository state before execution, not target-state requirements.
-Reject generic claims such as “reviewed relevant files” without named evidence.
-Reject target-state requirements presented as baseline evidence.
+## Summary
 
-### Section 3. Architecture Decision
+`<one short paragraph>`
+```
 
-For `FULL`, require one locked form with selected form, ownership, seam, dependency direction, state/data ownership, entry/exit boundaries, verification strategy, decision ledger, and rejected alternatives. Accept a concrete no-ID statement in `Decision Ledger` when slices and final gate do not need separate durable decision IDs. Treat ledger rows that merely summarize nearby section 3 facts and are not referenced by slices or final gate as non-blocking duplication.
-Treat large declaration blocks, schemas, signatures, or API snippets in section 3 as acceptable only when exact public/API shape is itself part of the locked contract. Otherwise mark them as duplication that belongs in slice-local change or proof expectations.
-Reject unresolved alternatives or wording that defers the core design choice.
+Omit empty `Required Fixes` or `Optional Improvements` sections.
+Do not list passed sections unless the user explicitly asks for a full audit.
 
-For `ARCHITECTURE_GATE`, require one real gate with blocking gap, known facts, recommended form, supporting evidence, alternatives considered, and exact user decision required.
+## Repair Rule
 
-### Section 4. Execution Guardrails
-
-Require cross-slice order and constraints when sequencing matters.
-Require seam migration details when `FULL` is selected with `SEAM_MIGRATION`.
-Require forbidden moves that materially constrain execution.
-Require deferred broad verification only when broad checks are intentionally held for the final gate.
-Reject using this section as a complete file inventory.
-
-### Section 5. Proof Plan
-
-Require reusable proof IDs when commands or proof groups are referenced by more than one slice or by the final gate.
-Accept a concrete statement that proof is slice-local when no reusable proof groups exist.
-Require every proof ID to be self-contained with purpose, executable command or check, and expected signal.
-Reject proof IDs that point to commands defined in slices.
-Reject duplicated reusable or final-gate commands scattered across slices and final gate. Treat one-off commands placed in `Proof Plan` as non-blocking drift toward duplication only when they are not referenced by the final gate.
-
-### Section 6. Vertical Slices
-
-Require atomic vertical slices.
-Reject slice headings that preserve the template's empty title form instead of naming a concrete verifiable result.
-Each slice must close one new verifiable result.
-Preparatory work alone does not count as a closed slice.
-Require every slice to contain `Implements`, `Files`, `Change`, `Proof`, and `Closure`. Require `Obligations Covered` when the slice closes part of `BUG_FIX`, `SEAM_MIGRATION`, or `PUBLIC_API_CHANGE`.
-Reject obligation labels or proof IDs in `Implements`. Reject decision IDs or proof IDs in `Obligations Covered`. Reject decision IDs or obligation labels used as proof IDs.
-Reject repeated `Obligations Covered` lists that mirror the header in every slice unless the contract proves that every slice directly closes every listed obligation.
-Require every `Files` bullet or grouped file list to name both the file role and the slice-local responsibility. Reject bare action bullets such as `Update <path>`, `Refresh <path>`, `Edit <path>`, `Remove <path>`, or `Verify <path>` when they do not say what that file must change, align, prove, retire, sync, or preserve.
-Require executable proof for every slice, written as proof intent plus command.
-When a slice references a proof ID, reject duplicated full commands for that same proof in the slice.
-Require executable structural verification for every slice that introduces or depends on the locked form.
-For `ANALYZER_RULE`, require positive and negative fixtures or equivalent analyzer checks.
-Reject slices that mix multiple user-visible results, multiple retirement events, or multiple proof obligations without necessity.
-
-### Section 7. Final Gate
-
-Require final proof set and completion conditions to reference proof IDs, the Decision Ledger, and Contract Obligations.
-Reject final gate command blocks that are not represented by proof IDs in section 5.
-Reject final completion conditions that restate durable decision content already owned by the Decision Ledger.
-Reject broad final checks that should have been slice-local proof.
-Reject new scope introduced only at the final gate.
-
-## Cross-section consistency checks
-
-Perform these checks explicitly:
-
-1. Every file edited, refreshed, verified, excluded, or finalized by a slice must appear in that slice's `Files` block with a role and slice-local responsibility.
-2. Every slice file must be supported by section 3 placement, section 4 ordering or finalization gates, section 2 repository evidence, or an explicit proposed-new-file placement rationale.
-3. Every decision ID referenced in a slice `Implements` or final gate must exist in `Decision Ledger`.
-4. Every proof ID referenced in a slice or final gate must exist in `Proof Plan`.
-5. Every proof ID referenced in a slice or final gate must own its executable command or check in `Proof Plan`.
-6. Every obligation label referenced in `Obligations Covered` must be listed in `Contract Obligations`.
-7. Every obligation listed in `Contract Obligations` must have structural proof, sequencing, or closure content in the owning sections.
-8. Every sequencing dependency in section 6 must be justified by section 4.
-9. Every slice result must support a decision, obligation, or mandate.
-10. Files listed only in evidence must not be treated as change targets unless the owning slice also lists them in `Files`.
-11. Locked contracts must not use a standalone global file inventory.
-12. Seam migration details must be present only when `SEAM_MIGRATION` is listed, and must not become a duplicate file inventory.
-13. Final gate must not compensate for missing slice-local verification.
-14. If `ARCHITECTURE_GATE` is used, no sections after section 3 may contain substantive plan content.
-15. When a phase or design source input is provided, the contract's mandate,
-    evidence, architecture decision, slices, proof plan, and final gate must be
-    consistent with that source input.
-
-## Profile and obligation checks
-
-Infer the profile and obligations from the contract and repository evidence, then compare them to the header. For `ARCHITECTURE_GATE`, validate only header classification and known facts; do not require profile proof, obligation proof, slices, proof plan, or final gate content.
-
-### BEHAVIOR_CHANGE
-
-For `FULL`, require behavioral verification at the owner or public seam. Require structural proof when the slice introduces or depends on locked architecture.
-
-### REFACTOR
-
-For `FULL`, require existing locking tests or minimum characterization tests first. Require proof that observable behavior remains unchanged.
-
-### SOURCE_OF_TRUTH_DOCS
-
-For `FULL`, require targeted semantic proof, documentation structural checks when applicable, and negative proof for retired terminology or stale references. Reject invented runtime tests for documentation-only contracts. Treat overly broad but bounded negative proof as a weakness; treat repository-wide negative proof without a named retired concept and bounded source-of-truth surface as missing targeted proof.
-
-### ANALYZER_RULE
-
-For `FULL`, require recognition forms, allowed non-violations, resolution rules when relevant, and positive/negative fixtures or equivalent analyzer checks.
-
-### BUG_FIX
-
-For `FULL`, require one reproducer first, 1 to 3 neighboring guard tests, and the minimum owner-side fix.
-
-### SEAM_MIGRATION
-
-For `FULL`, require successor or retired seam, consumer migration order, retirement gate, and negative proof.
-
-### PUBLIC_API_CHANGE
-
-For `FULL`, require public contract owner, compatibility decision, migration/versioning note, export registry/index handling, and public contract proof.
-
-## How to report findings
-
-For every finding, provide:
-
-- severity: `blocking` or `non-blocking`;
-- location: header, section number, subsection, or file;
-- rule violated or satisfied;
-- concrete evidence from the contract and, when relevant, from the repository;
-- minimal repair instruction.
-
-Prefer the smallest repair that makes the contract acceptable.
-When multiple issues stem from one upstream defect, identify the root issue first.
-
-## Self-check before returning
-
-Do not return the report until all answers are yes:
-
-1. Did you verify the contract against both the active template shape and the writer-skill rules when available?
-2. Did you re-inspect repository evidence instead of trusting the contract summary?
-3. Did you distinguish blocking defects from non-blocking weaknesses?
-4. Did you check information ownership and cross-section consistency, not just local section quality?
-5. Did you enforce profile and obligation proof rules when applicable?
-6. Did you avoid rewriting the contract unless repair was explicitly requested?
-7. If a phase or design source input was provided, did you read it and verify
-   contract consistency against it?
-8. Did your verdict match the strongest defect you found?
+Do not rewrite the contract unless the user explicitly asks for repair.
+When repair is requested, make the smallest change that resolves the findings and preserves evidence-backed scope.
