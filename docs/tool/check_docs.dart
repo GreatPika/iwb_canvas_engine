@@ -105,6 +105,7 @@ final _errors = <String>[];
 void main() {
   _checkRequiredEntrypoints();
   _checkPortalReadmes();
+  _checkReadmeInventory();
   _checkGeneratedIndexes();
 
   final sections = _loadSections();
@@ -382,6 +383,24 @@ void _checkGeneratedIndexes() {
   }
   if (File('docs/indexes/context_coverage.md').existsSync()) {
     _fail('docs/indexes/context_coverage.md must not remain as an entrypoint');
+  }
+}
+
+void _checkReadmeInventory() {
+  const allowed = {'docs/README.md', 'docs/architecture/README.md'};
+  final docsDirectory = Directory('docs');
+  if (!docsDirectory.existsSync()) {
+    return;
+  }
+
+  for (final file
+      in docsDirectory.listSync(recursive: true).whereType<File>()) {
+    if (!file.path.endsWith('/README.md')) {
+      continue;
+    }
+    if (!allowed.contains(file.path)) {
+      _fail('${file.path} is not an approved docs README');
+    }
   }
 }
 
@@ -801,6 +820,7 @@ void _checkMarkdownPaths(Set<String> sectionIds) {
       final text = file.readAsStringSync();
       _checkSectionIdsInText(file.path, text, sectionIds);
       _checkDocumentPathsInText(file.path, text);
+      _checkRetiredSourceClaims(file.path, text);
     }
   }
 
@@ -808,6 +828,23 @@ void _checkMarkdownPaths(Set<String> sectionIds) {
   final text = _read(readme);
   _checkSectionIdsInText(readme, text, sectionIds);
   _checkDocumentPathsInText(readme, text);
+  _checkRetiredSourceClaims(readme, text);
+}
+
+void _checkRetiredSourceClaims(String sourcePath, String text) {
+  if (sourcePath == 'docs/diagrams/catalog.md' ||
+      _generatedIndexPaths.contains(sourcePath)) {
+    return;
+  }
+  if (text.contains('Feeds indexes')) {
+    _fail('$sourcePath contains retired "Feeds indexes" source claim');
+  }
+  if (text.contains(_retiredDiagramReadmePath)) {
+    _fail('$sourcePath links to retired diagram README');
+  }
+  if (text.contains('docs/indexes/context_coverage.md')) {
+    _fail('$sourcePath links to retired context coverage index');
+  }
 }
 
 void _checkMustReadGraph(List<_SectionEntry> sections, Set<String> sectionIds) {

@@ -3,8 +3,7 @@ Registry id: `donors_06_interaction_edit_event_staged_load`
 Source: `docs/_registry/donors.yaml / Interaction, edit, event, and staged-load donors`
 Canonical source: `docs/_registry/donors.yaml`
 Feeds registry: `docs/_registry/donors.yaml`
-Feeds indexes:
-- `docs/indexes/donor_to_phase.md`
+Generated navigation: `docs/indexes/donor_to_phase.md`
 Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 

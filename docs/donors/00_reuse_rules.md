@@ -3,8 +3,7 @@ Registry id: `donors_00_reuse_rules`
 Source: `docs/_registry/donors.yaml / Reuse rules`
 Canonical source: `docs/_registry/donors.yaml`
 Feeds registry: `docs/_registry/donors.yaml`
-Feeds indexes:
-- `docs/indexes/donor_to_phase.md`
+Generated navigation: `docs/indexes/donor_to_phase.md`
 Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 

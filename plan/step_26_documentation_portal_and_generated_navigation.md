@@ -147,7 +147,7 @@ Order Constraints:
 
 ## Execution Units
 
-### [ ] Unit 1: Generated docs command and diagram registry owner
+### [x] Unit 1: Generated docs command and diagram registry owner
 
 Owner:
 
@@ -188,7 +188,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Generated reverse navigation indexes
+### [x] Unit 2: Generated reverse navigation indexes
 
 Owner:
 
@@ -244,7 +244,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Generated diagram catalog migration
+### [x] Unit 3: Generated diagram catalog migration
 
 Owner:
 
@@ -281,7 +281,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 4: Task portal and architecture router
+### [x] Unit 4: Task portal and architecture router
 
 Owner:
 
@@ -320,7 +320,7 @@ Depends On:
 
 Units 2 and 3.
 
-### [ ] Unit 5: Structural enforcement and retired seam proof
+### [x] Unit 5: Structural enforcement and retired seam proof
 
 Owner:
 

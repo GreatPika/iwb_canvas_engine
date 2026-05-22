@@ -3,8 +3,7 @@ Registry id: `donors_08_p1_closure_requirements`
 Source: `docs/_registry/donors.yaml / P1 closure requirements`
 Canonical source: `docs/_registry/donors.yaml`
 Feeds registry: `docs/_registry/donors.yaml`
-Feeds indexes:
-- `docs/indexes/donor_to_phase.md`
+Generated navigation: `docs/indexes/donor_to_phase.md`
 Use rule: donor entries are phase-bound implementation inputs, not legacy architecture to copy.
 <!-- CONTEXT:END -->
 
