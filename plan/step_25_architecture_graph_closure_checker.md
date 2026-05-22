@@ -1052,7 +1052,7 @@ registry-owned architecture section is either represented by graph ids or
 explicitly classified as non-graph/superseded/out-of-scope. The generated files
 are reproducible from the repaired graph source and generator.
 
-### Slice 6. [ ] Documentation routing and non-blocking rollout finalization
+### Slice 6. [x] Documentation routing and non-blocking rollout finalization
 
 #### Implements
 

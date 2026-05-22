@@ -19,6 +19,14 @@ dart run tool/architecture_graph/generate_views.dart --phase P4 --check
 Handwritten sequence, state, C4, lifecycle, and data-flow diagrams remain
 semantic diagrams and are not replaced by the generated topology views.
 
+Current generated outputs:
+
+- `docs/diagrams/generated/full_architecture.mmd`
+- `docs/diagrams/generated/current_phase.mmd`
+- `docs/diagrams/generated/future_target.mmd`
+- `docs/diagrams/generated/actual_vs_expected_diff.mmd`
+- `docs/diagrams/generated/release_verification.mmd`
+
 ## c4_context
 
 - Kind: `c4`
