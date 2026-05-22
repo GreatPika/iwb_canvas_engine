@@ -1,0 +1,566 @@
+import 'dart:io';
+
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/source/line_info.dart';
+
+import 'architecture_graph.dart';
+
+final class ActualArchitectureGraph {
+  const ActualArchitectureGraph({
+    required this.exports,
+    required this.imports,
+    required this.declarations,
+    required this.implementedInterfaces,
+    required this.compositionFields,
+    required this.placeholders,
+    required this.exceptionThrows,
+    required this.delegations,
+  });
+
+  final List<ExportFact> exports;
+  final List<ImportFact> imports;
+  final List<DeclarationFact> declarations;
+  final List<ImplementedInterfaceFact> implementedInterfaces;
+  final List<CompositionFieldFact> compositionFields;
+  final List<PlaceholderFact> placeholders;
+  final List<ExceptionThrowFact> exceptionThrows;
+  final List<DelegationFact> delegations;
+}
+
+sealed class ActualGraphFact {
+  const ActualGraphFact({required this.path, required this.line});
+
+  final String path;
+  final int line;
+}
+
+final class ExportFact extends ActualGraphFact {
+  const ExportFact({
+    required super.path,
+    required super.line,
+    required this.uri,
+  });
+
+  final String uri;
+}
+
+final class ImportFact extends ActualGraphFact {
+  const ImportFact({
+    required super.path,
+    required super.line,
+    required this.uri,
+  });
+
+  final String uri;
+}
+
+final class DeclarationFact extends ActualGraphFact {
+  const DeclarationFact({
+    required super.path,
+    required super.line,
+    required this.name,
+    required this.kind,
+  });
+
+  final String name;
+  final String kind;
+}
+
+final class ImplementedInterfaceFact extends ActualGraphFact {
+  const ImplementedInterfaceFact({
+    required super.path,
+    required super.line,
+    required this.declaration,
+    required this.interface,
+  });
+
+  final String declaration;
+  final String interface;
+}
+
+final class CompositionFieldFact extends ActualGraphFact {
+  const CompositionFieldFact({
+    required super.path,
+    required super.line,
+    required this.declaration,
+    required this.field,
+    required this.type,
+  });
+
+  final String declaration;
+  final String field;
+  final String type;
+}
+
+final class PlaceholderFact extends ActualGraphFact {
+  const PlaceholderFact({
+    required super.path,
+    required super.line,
+    required this.member,
+    required this.throwType,
+  });
+
+  final String member;
+  final String throwType;
+}
+
+final class ExceptionThrowFact extends ActualGraphFact {
+  const ExceptionThrowFact({
+    required super.path,
+    required super.line,
+    required this.exception,
+    required this.owner,
+  });
+
+  final String exception;
+  final String? owner;
+}
+
+final class DelegationFact extends ActualGraphFact {
+  const DelegationFact({
+    required super.path,
+    required super.line,
+    required this.member,
+    required this.target,
+    required this.targetType,
+  });
+
+  final String member;
+  final String target;
+  final String? targetType;
+}
+
+ActualArchitectureGraph extractActualArchitectureGraph({
+  ExpectedArchitectureGraph? expectedGraph,
+  String repositoryRoot = '.',
+}) {
+  final expected = expectedGraph ?? loadExpectedArchitectureGraph();
+  final paths = _coveredDartPaths(expected.coverage, repositoryRoot);
+
+  return extractActualArchitectureGraphFromPaths(
+    paths: paths,
+    repositoryRoot: repositoryRoot,
+    sensitiveThrows: expected.coverage.sensitiveThrows,
+    placeholderCoverage: expected.coverage.placeholders,
+    compositionTypes: _architectureCompositionTypes(expected),
+  );
+}
+
+ActualArchitectureGraph extractActualArchitectureGraphFromPaths({
+  required Iterable<String> paths,
+  String repositoryRoot = '.',
+  List<SensitiveThrowCoverage> sensitiveThrows = const [],
+  List<PlaceholderCoverage> placeholderCoverage = const [],
+  Set<String> compositionTypes = const {},
+}) {
+  final collector = _ActualGraphCollector();
+  for (final path in paths.toSet().toList()..sort()) {
+    final file = File('$repositoryRoot/$path');
+    if (!file.existsSync() || !path.endsWith('.dart')) {
+      continue;
+    }
+    final result = parseString(content: file.readAsStringSync(), path: path);
+    final visitor = _ActualGraphVisitor(
+      path: path,
+      lineInfo: result.lineInfo,
+      collector: collector,
+      sensitiveThrows: sensitiveThrows,
+      placeholderCoverage: placeholderCoverage,
+      compositionTypes: compositionTypes,
+    );
+    result.unit.visitChildren(visitor);
+  }
+
+  return collector.toGraph();
+}
+
+final class _ActualGraphCollector {
+  final List<ExportFact> exports = [];
+  final List<ImportFact> imports = [];
+  final List<DeclarationFact> declarations = [];
+  final List<ImplementedInterfaceFact> implementedInterfaces = [];
+  final List<CompositionFieldFact> compositionFields = [];
+  final List<PlaceholderFact> placeholders = [];
+  final List<ExceptionThrowFact> exceptionThrows = [];
+  final List<DelegationFact> delegations = [];
+
+  ActualArchitectureGraph toGraph() {
+    return ActualArchitectureGraph(
+      exports: exports,
+      imports: imports,
+      declarations: declarations,
+      implementedInterfaces: implementedInterfaces,
+      compositionFields: compositionFields,
+      placeholders: placeholders,
+      exceptionThrows: exceptionThrows,
+      delegations: delegations,
+    );
+  }
+}
+
+final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
+  _ActualGraphVisitor({
+    required this.path,
+    required this.lineInfo,
+    required this.collector,
+    required this.sensitiveThrows,
+    required this.placeholderCoverage,
+    required this.compositionTypes,
+  });
+
+  final String path;
+  final LineInfo lineInfo;
+  final _ActualGraphCollector collector;
+  final List<SensitiveThrowCoverage> sensitiveThrows;
+  final List<PlaceholderCoverage> placeholderCoverage;
+  final Set<String> compositionTypes;
+  final Map<String, String> _fieldTypes = {};
+  String? _currentDeclaration;
+
+  @override
+  void visitExportDirective(ExportDirective node) {
+    collector.exports.add(
+      ExportFact(
+        path: path,
+        line: _line(node),
+        uri: normalizeDirectiveUri(
+          sourcePath: path,
+          uri: node.uri.stringValue ?? '',
+        ),
+      ),
+    );
+    super.visitExportDirective(node);
+  }
+
+  @override
+  void visitImportDirective(ImportDirective node) {
+    collector.imports.add(
+      ImportFact(
+        path: path,
+        line: _line(node),
+        uri: normalizeDirectiveUri(
+          sourcePath: path,
+          uri: node.uri.stringValue ?? '',
+        ),
+      ),
+    );
+    super.visitImportDirective(node);
+  }
+
+  @override
+  void visitClassDeclaration(ClassDeclaration node) {
+    final name = node.namePart.typeName.lexeme;
+    _addDeclaration(name, 'class', node);
+    final previous = _currentDeclaration;
+    _currentDeclaration = name;
+    _implementedInterfaces(node);
+    super.visitClassDeclaration(node);
+    _currentDeclaration = previous;
+  }
+
+  @override
+  void visitEnumDeclaration(EnumDeclaration node) {
+    _addDeclaration(node.namePart.typeName.lexeme, 'enum', node);
+    super.visitEnumDeclaration(node);
+  }
+
+  @override
+  void visitMixinDeclaration(MixinDeclaration node) {
+    _addDeclaration(node.name.lexeme, 'mixin', node);
+    super.visitMixinDeclaration(node);
+  }
+
+  @override
+  void visitFunctionDeclaration(FunctionDeclaration node) {
+    _addDeclaration(node.name.lexeme, 'function', node);
+    super.visitFunctionDeclaration(node);
+  }
+
+  @override
+  void visitGenericTypeAlias(GenericTypeAlias node) {
+    _addDeclaration(node.name.lexeme, 'typedef', node);
+    super.visitGenericTypeAlias(node);
+  }
+
+  @override
+  void visitFieldDeclaration(FieldDeclaration node) {
+    final owner = _currentDeclaration;
+    final type = node.fields.type?.toSource();
+    if (owner != null && type != null) {
+      for (final variable in node.fields.variables) {
+        final fieldType = _withoutNullability(type);
+        _fieldTypes[variable.name.lexeme] = fieldType;
+        if (!compositionTypes.contains(fieldType)) {
+          continue;
+        }
+        collector.compositionFields.add(
+          CompositionFieldFact(
+            path: path,
+            line: _line(node),
+            declaration: owner,
+            field: variable.name.lexeme,
+            type: fieldType,
+          ),
+        );
+      }
+    }
+    super.visitFieldDeclaration(node);
+  }
+
+  @override
+  void visitMethodDeclaration(MethodDeclaration node) {
+    _placeholder(node.name.lexeme, node);
+    _delegation(node.name.lexeme, node, node.body);
+    super.visitMethodDeclaration(node);
+  }
+
+  @override
+  void visitThrowExpression(ThrowExpression node) {
+    final exception = _throwType(node.expression);
+    if (exception != null) {
+      collector.exceptionThrows.add(
+        ExceptionThrowFact(
+          path: path,
+          line: _line(node),
+          exception: exception,
+          owner: _currentDeclaration ?? _sensitiveOwner(path, exception),
+        ),
+      );
+    }
+    super.visitThrowExpression(node);
+  }
+
+  void _addDeclaration(String name, String kind, AstNode node) {
+    collector.declarations.add(
+      DeclarationFact(path: path, line: _line(node), name: name, kind: kind),
+    );
+  }
+
+  void _implementedInterfaces(ClassDeclaration node) {
+    final implementsClause = node.implementsClause;
+    if (implementsClause == null) {
+      return;
+    }
+    for (final interface in implementsClause.interfaces) {
+      collector.implementedInterfaces.add(
+        ImplementedInterfaceFact(
+          path: path,
+          line: _line(interface),
+          declaration: node.namePart.typeName.lexeme,
+          interface: interface.name.lexeme,
+        ),
+      );
+    }
+  }
+
+  void _placeholder(String member, MethodDeclaration node) {
+    if (!_isPlaceholderCovered()) {
+      return;
+    }
+    final body = node.body;
+    final throwType = switch (body) {
+      ExpressionFunctionBody(:final expression) => _throwType(expression),
+      BlockFunctionBody(:final block) => _blockPlaceholderThrow(block),
+      _ => null,
+    };
+    if (throwType == null || throwType != 'UnimplementedError') {
+      return;
+    }
+    collector.placeholders.add(
+      PlaceholderFact(
+        path: path,
+        line: _line(node),
+        member: _qualifiedMember(member),
+        throwType: throwType,
+      ),
+    );
+  }
+
+  void _delegation(String member, MethodDeclaration node, FunctionBody body) {
+    final expression = switch (body) {
+      ExpressionFunctionBody(:final expression) => expression,
+      _ => null,
+    };
+    if (expression is! MethodInvocation &&
+        expression is! PropertyAccess &&
+        expression is! SimpleIdentifier) {
+      return;
+    }
+    final targetName = switch (expression) {
+      MethodInvocation(:final target?) => target.toSource(),
+      PropertyAccess(:final target?) => target.toSource(),
+      SimpleIdentifier(:final name) => name,
+      _ => null,
+    };
+    if (targetName == null) {
+      return;
+    }
+    collector.delegations.add(
+      DelegationFact(
+        path: path,
+        line: _line(node),
+        member: _qualifiedMember(member),
+        target: targetName,
+        targetType: _fieldTypes[targetName],
+      ),
+    );
+  }
+
+  String? _blockPlaceholderThrow(Block block) {
+    if (block.statements.length != 1) {
+      return null;
+    }
+    final statement = block.statements.single;
+    if (statement is ExpressionStatement &&
+        statement.expression is ThrowExpression) {
+      return _throwType((statement.expression as ThrowExpression).expression);
+    }
+
+    return null;
+  }
+
+  String? _throwType(Expression expression) {
+    if (expression is ThrowExpression) {
+      return _throwType(expression.expression);
+    }
+    if (expression is InstanceCreationExpression) {
+      return expression.constructorName.type.name.lexeme;
+    }
+    if (expression is MethodInvocation && expression.target == null) {
+      return expression.methodName.name;
+    }
+
+    return null;
+  }
+
+  String _qualifiedMember(String member) {
+    final owner = _currentDeclaration;
+
+    return owner == null ? member : '$owner.$member';
+  }
+
+  int _line(AstNode node) => lineInfo.getLocation(node.offset).lineNumber;
+
+  bool _isPlaceholderCovered() {
+    return placeholderCoverage.any((entry) => _matchesGlob(path, entry.under));
+  }
+
+  String? _sensitiveOwner(String path, String exception) {
+    for (final entry in sensitiveThrows) {
+      if (_matchesGlob(path, entry.under) && entry.exception == exception) {
+        return entry.owner;
+      }
+    }
+
+    return null;
+  }
+}
+
+String normalizeDirectiveUri({
+  required String sourcePath,
+  required String uri,
+}) {
+  if (uri.startsWith('dart:')) {
+    return uri;
+  }
+  const packagePrefix = 'package:iwb_canvas_engine/';
+  if (uri.startsWith(packagePrefix)) {
+    return 'lib/${uri.substring(packagePrefix.length)}';
+  }
+  if (uri.startsWith('package:')) {
+    return uri;
+  }
+  final segments = sourcePath.split('/')..removeLast();
+  for (final segment in uri.split('/')) {
+    if (segment.isEmpty || segment == '.') {
+      continue;
+    }
+    if (segment == '..') {
+      if (segments.isNotEmpty) {
+        segments.removeLast();
+      }
+    } else {
+      segments.add(segment);
+    }
+  }
+
+  return segments.join('/');
+}
+
+List<String> _coveredDartPaths(
+  ArchitectureCoverage coverage,
+  String repositoryRoot,
+) {
+  final included = <String>{};
+  for (final pattern in [
+    ...coverage.publicSurfaces,
+    ...coverage.architectureOwners,
+  ]) {
+    included.addAll(_expandPattern(pattern, repositoryRoot));
+  }
+
+  return included.where((path) => !_isIgnored(path, coverage.ignored)).toList();
+}
+
+List<String> _expandPattern(String pattern, String repositoryRoot) {
+  if (pattern.endsWith('/**')) {
+    final directory = Directory(
+      '$repositoryRoot/${pattern.substring(0, pattern.length - 3)}',
+    );
+    if (!directory.existsSync()) {
+      return const [];
+    }
+
+    return directory
+        .listSync(recursive: true)
+        .whereType<File>()
+        .map((file) => _relativePath(file.path, repositoryRoot))
+        .where((path) => path.endsWith('.dart'))
+        .toList();
+  }
+  if (File('$repositoryRoot/$pattern').existsSync()) {
+    return [pattern];
+  }
+
+  return const [];
+}
+
+bool _isIgnored(String path, List<String> ignoredPatterns) {
+  return ignoredPatterns.any((pattern) {
+    if (pattern == '**/fixtures/**') {
+      return path.contains('/fixtures/');
+    }
+    if (pattern == '**/*_helper.dart') {
+      return path.endsWith('_helper.dart');
+    }
+
+    return path == pattern;
+  });
+}
+
+String _relativePath(String path, String repositoryRoot) {
+  final rootPrefix = '${Directory(repositoryRoot).absolute.path}/';
+  final absolutePath = File(path).absolute.path;
+
+  return absolutePath.startsWith(rootPrefix)
+      ? absolutePath.substring(rootPrefix.length)
+      : path;
+}
+
+String _withoutNullability(String type) {
+  return type.endsWith('?') ? type.substring(0, type.length - 1) : type;
+}
+
+bool _matchesGlob(String path, String pattern) {
+  if (pattern.endsWith('/**')) {
+    return path.startsWith(pattern.substring(0, pattern.length - 3));
+  }
+
+  return path == pattern;
+}
+
+Set<String> _architectureCompositionTypes(ExpectedArchitectureGraph graph) {
+  return {for (final edge in graph.edges) ...edge.actual.compositionFields};
+}
