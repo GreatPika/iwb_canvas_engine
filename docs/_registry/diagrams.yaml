@@ -1,0 +1,626 @@
+-
+  id: c4_context
+  kind: c4
+  planned_path: docs/diagrams/c4_context.mmd
+  classification: semantic
+  related_phases:
+    - P0
+    - P1
+    - P2
+    - P7
+    - P10
+    - P13
+    - P14
+  related_sections:
+    - section_00_status_and_scope
+    - section_04_public_api_v1
+  graph_view_source: none
+-
+  id: c4_container
+  kind: c4
+  planned_path: docs/diagrams/c4_container.mmd
+  classification: semantic
+  related_phases:
+    - P0
+    - P1
+    - P4
+    - P14
+  related_sections:
+    - section_00_status_and_scope
+    - section_02_architecture_model
+    - section_03_package_layout
+  graph_view_source: none
+-
+  id: c4_component_runtime
+  kind: c4
+  planned_path: docs/diagrams/c4_component_runtime.mmd
+  classification: semantic
+  related_phases:
+    - P0
+    - P4
+    - P5
+    - P6
+    - P9
+    - P14
+  related_sections:
+    - section_02_architecture_model
+    - section_10_runtime_data_model
+  graph_view_source: none
+-
+  id: c4_code_edit_kernel
+  kind: c4
+  planned_path: docs/diagrams/c4_code_edit_kernel.mmd
+  classification: semantic
+  related_phases:
+    - P5
+    - P14
+  related_sections:
+    - section_11_edit_kernel
+  graph_view_source: none
+-
+  id: dfd_public_edit
+  kind: data_flow
+  planned_path: docs/diagrams/dfd_public_edit.mmd
+  classification: semantic
+  related_phases:
+    - P1
+    - P2
+    - P5
+    - P6
+    - P7
+    - P10
+    - P11
+    - P12
+    - P13
+    - P14
+  related_sections:
+    - section_04_public_api_v1
+    - section_11_edit_kernel
+  graph_view_source: none
+-
+  id: seq_single_active_surface
+  kind: sequence
+  planned_path: docs/diagrams/seq_single_active_surface.mmd
+  classification: semantic
+  related_phases:
+    - P2
+    - P13
+    - P14
+  related_sections:
+    - section_04_public_api_v1
+  graph_view_source: none
+-
+  id: dfd_load_document_success_failure
+  kind: data_flow
+  planned_path: docs/diagrams/dfd_load_document_success_failure.mmd
+  classification: semantic
+  related_phases:
+    - P6
+    - P10
+    - P11
+    - P12
+    - P14
+  related_sections:
+    - section_12_load_document
+  graph_view_source: none
+-
+  id: dfd_pointer_preview_commit
+  kind: data_flow
+  planned_path: docs/diagrams/dfd_pointer_preview_commit.mmd
+  classification: semantic
+  related_phases:
+    - P8
+    - P9
+    - P10
+    - P11
+    - P12
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+    - section_16_geometry_policy
+  graph_view_source: none
+-
+  id: dfd_main_paint_frame
+  kind: data_flow
+  planned_path: docs/diagrams/dfd_main_paint_frame.mmd
+  classification: semantic
+  related_phases:
+    - P9
+    - P13
+    - P14
+  related_sections:
+    - section_15_frame_render_contract
+  graph_view_source: none
+-
+  id: dfd_overlay_frame
+  kind: data_flow
+  planned_path: docs/diagrams/dfd_overlay_frame.mmd
+  classification: semantic
+  related_phases:
+    - P9
+    - P13
+    - P14
+  related_sections:
+    - section_15_frame_render_contract
+  graph_view_source: none
+-
+  id: dfd_resource_resolution
+  kind: data_flow
+  planned_path: docs/diagrams/dfd_resource_resolution.mmd
+  classification: semantic
+  related_phases:
+    - P7
+    - P9
+    - P13
+    - P14
+  related_sections:
+    - section_07_resource_lifecycle
+  graph_view_source: none
+-
+  id: dfd_schema_v1_decode_encode
+  kind: data_flow
+  planned_path: docs/diagrams/dfd_schema_v1_decode_encode.mmd
+  classification: semantic
+  related_phases:
+    - P3
+    - P14
+  related_sections:
+    - section_05_schema_v1_contract
+    - section_19_codec_boundary
+  graph_view_source: none
+-
+  id: seq_schema_v1_decode_encode_order
+  kind: sequence
+  planned_path: docs/diagrams/seq_schema_v1_decode_encode_order.mmd
+  classification: semantic
+  related_phases:
+    - P3
+    - P14
+  related_sections:
+    - section_05_schema_v1_contract
+    - section_19_codec_boundary
+  graph_view_source: none
+-
+  id: dfd_cache_invalidation
+  kind: data_flow
+  planned_path: docs/diagrams/dfd_cache_invalidation.mmd
+  classification: semantic
+  related_phases:
+    - P4
+    - P5
+    - P6
+    - P7
+    - P8
+    - P9
+    - P13
+    - P14
+  related_sections:
+    - section_10_runtime_data_model
+    - section_17_spatial_kernel
+    - section_18_cache_policy
+  graph_view_source: none
+-
+  id: dfd_spatial_query_budget
+  kind: data_flow
+  planned_path: docs/diagrams/dfd_spatial_query_budget.mmd
+  classification: semantic
+  related_phases:
+    - P8
+    - P9
+    - P14
+  related_sections:
+    - section_17_spatial_kernel
+  graph_view_source: none
+-
+  id: seq_spatial_touched_update
+  kind: sequence
+  planned_path: docs/diagrams/seq_spatial_touched_update.mmd
+  classification: semantic
+  related_phases:
+    - P8
+    - P14
+  related_sections:
+    - section_17_spatial_kernel
+  graph_view_source: none
+-
+  id: seq_hit_test_candidate_resolution
+  kind: sequence
+  planned_path: docs/diagrams/seq_hit_test_candidate_resolution.mmd
+  classification: semantic
+  related_phases:
+    - P8
+    - P10
+    - P14
+  related_sections:
+    - section_16_geometry_policy
+    - section_17_spatial_kernel
+  graph_view_source: none
+-
+  id: seq_eraser_exact_budget
+  kind: sequence
+  planned_path: docs/diagrams/seq_eraser_exact_budget.mmd
+  classification: semantic
+  related_phases:
+    - P8
+    - P12
+    - P14
+  related_sections:
+    - section_16_geometry_policy
+    - section_17_spatial_kernel
+  graph_view_source: none
+-
+  id: dfd_diagnostics_error_projection
+  kind: data_flow
+  planned_path: docs/diagrams/dfd_diagnostics_error_projection.mmd
+  classification: semantic
+  related_phases:
+    - P1
+    - P2
+    - P3
+    - P14
+  related_sections:
+    - section_06_validation_limits
+    - section_20_diagnostics_hub
+  graph_view_source: none
+-
+  id: seq_edit_success
+  kind: sequence
+  planned_path: docs/diagrams/seq_edit_success.mmd
+  classification: semantic
+  related_phases:
+    - P5
+    - P14
+  related_sections:
+    - section_11_edit_kernel
+    - section_13_operation_matrix
+  graph_view_source: none
+-
+  id: seq_edit_rollback
+  kind: sequence
+  planned_path: docs/diagrams/seq_edit_rollback.mmd
+  classification: semantic
+  related_phases:
+    - P5
+    - P14
+  related_sections:
+    - section_11_edit_kernel
+    - section_13_operation_matrix
+  graph_view_source: none
+-
+  id: seq_load_document_success
+  kind: sequence
+  planned_path: docs/diagrams/seq_load_document_success.mmd
+  classification: semantic
+  related_phases:
+    - P6
+    - P10
+    - P11
+    - P12
+    - P14
+  related_sections:
+    - section_12_load_document
+  graph_view_source: none
+-
+  id: seq_load_document_failure
+  kind: sequence
+  planned_path: docs/diagrams/seq_load_document_failure.mmd
+  classification: semantic
+  related_phases:
+    - P6
+    - P10
+    - P11
+    - P12
+    - P14
+  related_sections:
+    - section_12_load_document
+  graph_view_source: none
+-
+  id: seq_selected_move_preview_commit
+  kind: sequence
+  planned_path: docs/diagrams/seq_selected_move_preview_commit.mmd
+  classification: semantic
+  related_phases:
+    - P9
+    - P10
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: seq_selected_move_cancel
+  kind: sequence
+  planned_path: docs/diagrams/seq_selected_move_cancel.mmd
+  classification: semantic
+  related_phases:
+    - P9
+    - P10
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: seq_marquee_select
+  kind: sequence
+  planned_path: docs/diagrams/seq_marquee_select.mmd
+  classification: semantic
+  related_phases:
+    - P10
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: seq_pencil_marker_commit
+  kind: sequence
+  planned_path: docs/diagrams/seq_pencil_marker_commit.mmd
+  classification: semantic
+  related_phases:
+    - P11
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: seq_line_two_tap_commit
+  kind: sequence
+  planned_path: docs/diagrams/seq_line_two_tap_commit.mmd
+  classification: semantic
+  related_phases:
+    - P11
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: seq_eraser_commit
+  kind: sequence
+  planned_path: docs/diagrams/seq_eraser_commit.mmd
+  classification: semantic
+  related_phases:
+    - P12
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: seq_context_action_request
+  kind: sequence
+  planned_path: docs/diagrams/seq_context_action_request.mmd
+  classification: semantic
+  related_phases:
+    - P12
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: seq_main_paint
+  kind: sequence
+  planned_path: docs/diagrams/seq_main_paint.mmd
+  classification: semantic
+  related_phases:
+    - P9
+    - P13
+    - P14
+  related_sections:
+    - section_15_frame_render_contract
+  graph_view_source: none
+-
+  id: seq_overlay_paint
+  kind: sequence
+  planned_path: docs/diagrams/seq_overlay_paint.mmd
+  classification: semantic
+  related_phases:
+    - P9
+    - P13
+    - P14
+  related_sections:
+    - section_15_frame_render_contract
+  graph_view_source: none
+-
+  id: seq_resource_resolution
+  kind: sequence
+  planned_path: docs/diagrams/seq_resource_resolution.mmd
+  classification: semantic
+  related_phases:
+    - P7
+    - P9
+    - P13
+    - P14
+  related_sections:
+    - section_07_resource_lifecycle
+  graph_view_source: none
+-
+  id: seq_dispose_during_gesture
+  kind: sequence
+  planned_path: docs/diagrams/seq_dispose_during_gesture.mmd
+  classification: semantic
+  related_phases:
+    - P10
+    - P11
+    - P12
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: state_runtime_lifecycle
+  kind: state
+  planned_path: docs/diagrams/state_runtime_lifecycle.mmd
+  classification: semantic
+  related_phases:
+    - P4
+    - P6
+    - P14
+  related_sections:
+    - section_02_architecture_model
+  graph_view_source: none
+-
+  id: state_edit_session
+  kind: state
+  planned_path: docs/diagrams/state_edit_session.mmd
+  classification: semantic
+  related_phases:
+    - P5
+    - P6
+    - P14
+  related_sections:
+    - section_11_edit_kernel
+  graph_view_source: none
+-
+  id: state_pointer_session
+  kind: state
+  planned_path: docs/diagrams/state_pointer_session.mmd
+  classification: semantic
+  related_phases:
+    - P10
+    - P11
+    - P12
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: state_select_marquee
+  kind: state
+  planned_path: docs/diagrams/state_select_marquee.mmd
+  classification: semantic
+  related_phases:
+    - P10
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: state_selected_move
+  kind: state
+  planned_path: docs/diagrams/state_selected_move.mmd
+  classification: semantic
+  related_phases:
+    - P10
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: state_pencil_marker_draw
+  kind: state
+  planned_path: docs/diagrams/state_pencil_marker_draw.mmd
+  classification: semantic
+  related_phases:
+    - P11
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: state_two_tap_line
+  kind: state
+  planned_path: docs/diagrams/state_two_tap_line.mmd
+  classification: semantic
+  related_phases:
+    - P11
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: state_eraser
+  kind: state
+  planned_path: docs/diagrams/state_eraser.mmd
+  classification: semantic
+  related_phases:
+    - P12
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: state_pending_context_action_request
+  kind: state
+  planned_path: docs/diagrams/state_pending_context_action_request.mmd
+  classification: semantic
+  related_phases:
+    - P12
+    - P13
+    - P14
+  related_sections:
+    - section_14_interaction_engine
+  graph_view_source: none
+-
+  id: state_resource_resolution
+  kind: state
+  planned_path: docs/diagrams/state_resource_resolution.mmd
+  classification: semantic
+  related_phases:
+    - P7
+    - P13
+    - P14
+  related_sections:
+    - section_07_resource_lifecycle
+  graph_view_source: none
+-
+  id: generated/full_architecture
+  kind: architecture_graph_view
+  planned_path: docs/diagrams/generated/full_architecture.mmd
+  classification: generated
+  related_phases:
+    - P4
+  related_sections:
+    - section_02_architecture_model
+  graph_view_source: docs/architecture/architecture_graph.yaml
+-
+  id: generated/current_phase
+  kind: architecture_graph_view
+  planned_path: docs/diagrams/generated/current_phase.mmd
+  classification: generated
+  related_phases:
+    - P4
+  related_sections:
+    - section_02_architecture_model
+  graph_view_source: docs/architecture/architecture_graph.yaml
+-
+  id: generated/future_target
+  kind: architecture_graph_view
+  planned_path: docs/diagrams/generated/future_target.mmd
+  classification: generated
+  related_phases:
+    - P4
+  related_sections:
+    - section_02_architecture_model
+  graph_view_source: docs/architecture/architecture_graph.yaml
+-
+  id: generated/actual_vs_expected_diff
+  kind: architecture_graph_view
+  planned_path: docs/diagrams/generated/actual_vs_expected_diff.mmd
+  classification: generated
+  related_phases:
+    - P4
+  related_sections:
+    - section_02_architecture_model
+  graph_view_source: docs/architecture/architecture_graph.yaml
+-
+  id: generated/release_verification
+  kind: architecture_graph_view
+  planned_path: docs/diagrams/generated/release_verification.mmd
+  classification: generated
+  related_phases:
+    - P4
+  related_sections:
+    - section_02_architecture_model
+  graph_view_source: docs/architecture/architecture_graph.yaml

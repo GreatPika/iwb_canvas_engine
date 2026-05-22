@@ -30,6 +30,8 @@ Required tests:
 - `test.selection.runtime_owner_separation`
 - `test.store.no_projection_hot_path`
 - `test.store.public_document_is_projection_only`
+- `test.guardrails.store_projection_checks`
+- `test.guardrails.selection_boundary_checks`
 Guardrails:
 - `core.single_runtime_root`
 - `store.no_public_document_live_state`

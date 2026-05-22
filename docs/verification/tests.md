@@ -109,6 +109,8 @@ Required tests:
 - `test.api_contract.public_equality_policy`
 - `test.api_contract.app_next_engine_adapter_compile_fixture`
 - `test.guardrails.import_boundaries`
+- `test.guardrails.store_projection_checks`
+- `test.guardrails.selection_boundary_checks`
 - `test.codec.schema_v1.known_fields_validation`
 - `test.codec.schema_v1.canonical_encode_roundtrip`
 - `test.codec.schema_v1.metadata_projection`
@@ -167,6 +169,8 @@ Required tests:
 - `test.frame.main_overlay_capture`
 - `test.frame.no_live_runtime_read_in_painters`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
+- `test.guardrails.store_projection_checks`
+- `test.guardrails.selection_boundary_checks`
 - `test.frame.paint_plan_excludes_preview_delta`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`

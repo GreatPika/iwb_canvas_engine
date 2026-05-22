@@ -1,3 +1,4 @@
+<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/diagrams.yaml -->
 # Diagram catalog
 
 Every item below is a required Mermaid deliverable. The catalog links docs to

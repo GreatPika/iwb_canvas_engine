@@ -12,6 +12,7 @@ import 'package:yaml/yaml.dart';
 
 const _sectionsRegistryPath = 'docs/_registry/sections.yaml';
 const _donorsRegistryPath = 'docs/_registry/donors.yaml';
+const _diagramsRegistryPath = 'docs/_registry/diagrams.yaml';
 const _diagramCatalogPath = 'docs/diagrams/README.md';
 
 const _phaseDocs = {
@@ -165,6 +166,7 @@ void _checkRequiredEntrypoints() {
     'docs/architecture/README.md',
     _sectionsRegistryPath,
     _donorsRegistryPath,
+    _diagramsRegistryPath,
     _diagramCatalogPath,
   ];
   const requiredDirs = [
