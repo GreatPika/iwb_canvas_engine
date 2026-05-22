@@ -169,8 +169,6 @@ Required tests:
 - `test.frame.main_overlay_capture`
 - `test.frame.no_live_runtime_read_in_painters`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
-- `test.guardrails.store_projection_checks`
-- `test.guardrails.selection_boundary_checks`
 - `test.frame.paint_plan_excludes_preview_delta`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
@@ -182,7 +180,6 @@ Required tests:
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
 - `test.interaction.no_stale_terminal_commit`
 - `test.interaction.pointer_cleanup_coordinator_outcomes`
-- `test.interaction.context_action_request`
 - `test.interaction.text_edit_stale_commit_guard`
 - `test.flutter_bridge.widget_paint`
 - `test.benchmarks.required_cases`

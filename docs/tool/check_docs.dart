@@ -14,6 +14,8 @@ const _sectionsRegistryPath = 'docs/_registry/sections.yaml';
 const _donorsRegistryPath = 'docs/_registry/donors.yaml';
 const _diagramsRegistryPath = 'docs/_registry/diagrams.yaml';
 const _diagramCatalogPath = 'docs/diagrams/README.md';
+const _generatedIndexMarker =
+    '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml and docs/_registry/donors.yaml -->';
 
 const _phaseDocs = {
   'P0': 'docs/implementation/p0_package_skeleton_and_hard_boundaries.md',
@@ -73,10 +75,19 @@ const _markdownRoots = [
   'docs/indexes',
 ];
 
+const _generatedIndexPaths = [
+  'docs/indexes/by_phase.md',
+  'docs/indexes/by_subsystem.md',
+  'docs/indexes/by_guardrail.md',
+  'docs/indexes/by_test_area.md',
+  'docs/indexes/donor_to_phase.md',
+];
+
 final _errors = <String>[];
 
 void main() {
   _checkRequiredEntrypoints();
+  _checkGeneratedIndexes();
 
   final sections = _loadSections();
   final donors = _loadDonors();
@@ -110,6 +121,7 @@ class _SectionEntry {
     required this.file,
     required this.title,
     required this.phases,
+    required this.subsystems,
     required this.mustRead,
     required this.donors,
     required this.diagrams,
@@ -122,6 +134,7 @@ class _SectionEntry {
   final String file;
   final String title;
   final List<String> phases;
+  final List<String> subsystems;
   final List<String> mustRead;
   final List<String> donors;
   final List<String> diagrams;
@@ -202,6 +215,7 @@ List<_SectionEntry> _loadSections() {
       file: file,
       title: title,
       phases: _stringListField(entry, 'phases', id),
+      subsystems: _stringListField(entry, 'subsystems', id),
       mustRead: _stringListField(entry, 'must_read', id),
       donors: _stringListField(entry, 'donors', id),
       diagrams: _stringListField(entry, 'diagrams', id),
@@ -273,6 +287,7 @@ void _checkSectionReferences(
 ) {
   for (final section in sections) {
     _checkNoneSentinel(section.id, 'must_read', section.mustRead);
+    _checkNoneSentinel(section.id, 'subsystems', section.subsystems);
     _checkNoneSentinel(section.id, 'donors', section.donors);
     _checkNoneSentinel(section.id, 'diagrams', section.diagrams);
     _checkNoneSentinel(section.id, 'guardrails', section.guardrails);
@@ -282,6 +297,7 @@ void _checkSectionReferences(
     if (section.phases.isEmpty) {
       _fail('${section.id} has no phases');
     }
+    _checkExplicitCoverage(section);
     for (final phase in section.phases) {
       if (!_phaseDocs.containsKey(phase)) {
         _fail('${section.id} references unknown phase $phase');
@@ -310,6 +326,52 @@ void _checkSectionReferences(
       if (!donorIds.contains(donorId)) {
         _fail('${section.id} references unknown donor id $donorId');
       }
+    }
+  }
+}
+
+void _checkGeneratedIndexes() {
+  final allowed = _generatedIndexPaths.toSet();
+  final directory = Directory('docs/indexes');
+  if (directory.existsSync()) {
+    for (final file in directory.listSync().whereType<File>()) {
+      if (!file.path.endsWith('.md')) {
+        continue;
+      }
+      if (!allowed.contains(file.path)) {
+        _fail('${file.path} is not a locked generated index');
+      }
+    }
+  }
+
+  for (final path in _generatedIndexPaths) {
+    _requireFile(path);
+    if (!File(path).existsSync()) {
+      continue;
+    }
+    final text = _read(path);
+    if (!text.startsWith(_generatedIndexMarker)) {
+      _fail('$path must start with the generated index marker');
+    }
+  }
+  if (File('docs/indexes/context_coverage.md').existsSync()) {
+    _fail('docs/indexes/context_coverage.md must not remain as an entrypoint');
+  }
+}
+
+void _checkExplicitCoverage(_SectionEntry section) {
+  final coverage = {
+    'must_read': section.mustRead,
+    'subsystems': section.subsystems,
+    'donors': section.donors,
+    'diagrams': section.diagrams,
+    'tests': section.tests,
+    'guardrails': section.guardrails,
+  };
+
+  for (final entry in coverage.entries) {
+    if (entry.value.isEmpty) {
+      _fail('${section.id} has no explicit ${entry.key} coverage');
     }
   }
 }
@@ -826,8 +888,12 @@ List<String> _stringListField(YamlMap map, String field, String owner) {
     return const [];
   }
   final items = <String>[];
+  final seen = <String>{};
   for (final item in value) {
     if (item is String) {
+      if (!seen.add(item)) {
+        _fail('$owner field $field contains duplicate value $item');
+      }
       items.add(item);
     } else {
       _fail('$owner field $field must contain only strings');

@@ -1,6 +1,7 @@
+<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml and docs/_registry/donors.yaml -->
 # Donor to phase
 
-Every donor is mapped to target phases. `avoid` records are forbidden as structure.
+Donor targets generated from `docs/_registry/donors.yaml`.
 
 ## direct_numeric_policy
 
@@ -78,7 +79,7 @@ Every donor is mapped to target phases. `avoid` records are forbidden as structu
 
 - Decision: `adapt`
 - Target phases: `P2`, `P3`
-- Target owner: Public DTO, `CanvasMetadata`, and schema validators
+- Target owner: Public DTO, CanvasMetadata, and schema validators
 
 ## foundation_tri_state_patch_semantics
 
@@ -90,7 +91,7 @@ Every donor is mapped to target phases. `avoid` records are forbidden as structu
 
 - Decision: `adapt`
 - Target phases: `P2`
-- Target owner: DTO immutability and `CanvasMetadata` deep-freeze
+- Target owner: DTO immutability and CanvasMetadata deep-freeze
 
 ## foundation_pointer_input_contract
 
@@ -102,7 +103,7 @@ Every donor is mapped to target phases. `avoid` records are forbidden as structu
 
 - Decision: `adapt`
 - Target phases: `P2`, `P10`, `P11`, `P12`
-- Target owner: CanvasActionEvent and text edit events
+- Target owner: CanvasActionEvent and context-action request events
 
 ## geometry_node_geometry
 
@@ -311,7 +312,7 @@ Every donor is mapped to target phases. `avoid` records are forbidden as structu
 ## interaction_pointer_session
 
 - Decision: `adapt`
-- Target phases: `P10`, `P11`, `P12`, `P13`
+- Target phases: `P10`, `P13`, `P11`, `P12`
 - Target owner: InteractionEngine pointer session
 
 ## interaction_pointer_normalizer
@@ -342,7 +343,7 @@ Every donor is mapped to target phases. `avoid` records are forbidden as structu
 
 - Decision: `adapt`
 - Target phases: `P10`
-- Target owner: Move and marquee interaction machines
+- Target owner: Move and marquee interaction machines using SelectionKernel query ports
 
 ## interaction_draw_coordinator
 
@@ -403,3 +404,4 @@ Every donor is mapped to target phases. `avoid` records are forbidden as structu
 - Decision: `avoid`
 - Target phases: `avoid`
 - Target owner: No next owner
+

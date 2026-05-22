@@ -1,778 +1,377 @@
+<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml and docs/_registry/donors.yaml -->
 # By test area
 
-Explicit and phase-required tests from the registry, linked to phases, sections and guardrails.
-
-## test.api_contract.public_api_v1_compiles_as_written
-
-- Path: `test/api_contract/public_api_v1_compiles_as_written_test.dart`
-- Phases: `P2`
-- Sections: `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `api.public_api_compiles_as_written`
-
-## test.api_contract.public_api_no_unapproved_placeholders
-
-- Path: `test/api_contract/public_api_no_unapproved_placeholders_test.dart`
-- Phases: `P2`
-- Sections: `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `none`
-- Focus: exported public `UnimplementedError` placeholders must either be
-  removed or explicitly allowlisted with owner phase, reason, and removal
-  condition.
-
-## test.guardrails.public_api_declaration_checks
-
-- Path: `test/guardrails/public_api_declaration_checks_test.dart`
-- Phases: `P2`
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
-- Guardrails: `api.exported_dartdoc_complete`, `api.public_class_modifiers_explicit`
-
-## test.guardrails.public_api_import_cycles
-
-- Path: `test/guardrails/public_api_import_cycles_test.dart`
-- Phases: `P2`
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
-- Guardrails: `api.no_public_api_import_cycles`
-
-## test.api_contract.app_next_engine_adapter_compile_fixture
-
-- Path: `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`
-- Fixture: `test/api_contract/fixtures/app_next_engine_adapter_compile_fixture.dart`
-- Phases: `P1`, `P2`, `P14`
-- Sections: `section_04_public_api_v1`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
-- Guardrails: `api.integration_surface_complete`
-- Focus: external app-adapter responsibilities compile through only
-  `package:iwb_canvas_engine/iwb_canvas_engine.dart`, with forbidden import
-  checks for `src/**`, legacy symbols, and internal runtime classes.
-
-## test.api_contract.public_readable_union_variants
-
-- Path: `test/api_contract/public_readable_union_variants_test.dart`
-- Phases: `P1`, `P2`, `P7`
-- Sections: `section_04_public_api_v1`, `section_07_resource_lifecycle`, `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `api.resource_source_app_key_publicly_readable`, `api.preview_state_sealed_union_publicly_readable`, `api.equality_policy_explicit`, `resources.app_key_only`
-
-## test.api_contract.public_exports_complete
-
-- Path: `test/api_contract/public_exports_complete_test.dart`
-- Phases: `P0`
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_23_tests`
-- Guardrails: `api.public_exports_complete`
-
-## test.api_contract.preview_state_sealed_union
-
-- Path: `test/api_contract/preview_state_sealed_union_test.dart`
-- Phases: `P2`, `P10`, `P11`, `P12`, `P13`
-- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_23_tests`
-- Guardrails: `api.preview_state_sealed_union_publicly_readable`
-- Focus: public preview state is a sealed union with exported readable variants,
-  stable CanvasPreviewKind values, shared CanvasStrokePreview facts, immutable
-  iterable payloads, and no public pointer/session/selection-owned payload.
-
-## test.api.canvas_transform
-
-- Path: `test/api/canvas_transform_test.dart`
-- Phases: `P2`
-- Sections: `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `none`
-- Focus: executable public `CanvasTransform` value behavior for rotation, TRS,
-  multiplication, point/rect application, inversion, matrix conversion, and
-  JSON projection from a Flutter consumer package.
+Test coverage generated from `docs/_registry/sections.yaml`.
 
 ## test.api.canvas_field_update
 
-- Path: `test/api/canvas_field_update_test.dart`
-- Phases: `P2`
 - Sections: `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `api.equality_policy_explicit`
 
-## test.api_contract.canvas_field_update_static_semantics
+## test.api.canvas_transform
 
-- Path: `test/api_contract/canvas_field_update_static_semantics_test.dart`
-- Phases: `P2`
 - Sections: `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `api.public_api_compiles_as_written`, `api.public_signature_shape`
-
-## test.api_contract.public_types_complete
-
-- Path: `test/api_contract/public_types_complete_test.dart`
-- Phases: `P0`
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_23_tests`
-- Guardrails: `api.public_types_complete`
-
-## test.api_contract.no_undefined_public_type_references
-
-- Path: `test/api_contract/no_undefined_public_type_references_test.dart`
-- Phases: `P2`
-- Sections: `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `api.no_undefined_public_type_references`
-
-## test.api_contract.no_legacy_public_symbols
-
-- Path: `test/api_contract/no_legacy_public_symbols_test.dart`
-- Phases: `P0`, `P1`, `P2`
-- Sections: `section_03_package_layout`, `section_04_public_api_v1`, `section_09_accepted_differences`, `section_23_tests`
-- Guardrails: `api.no_legacy_public_types`
-
-## test.api_contract.dto_immutability
-
-- Path: `test/api_contract/dto_immutability_test.dart`
-- Phases: `P2`
-- Sections: `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `api.dto_immutability`
-- Proof focus: defensive copy, unmodifiable collections, `CanvasMetadata` deep-freeze, invalid public construction rejection, validating-constructor factory policy, and approved const-form drift
-
-## test.api_contract.public_equality_policy
-
-- Path: `test/api_contract/public_equality_policy_test.dart`
-- Phases: `P1`, `P2`
-- Sections: `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `api.equality_policy_explicit`
-
-## test.api_contract.public_signature_shape
-
-- Path: `test/api_contract/public_signature_shape_test.dart`
-- Phases: `P1`, `P2`
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_23_tests`
-- Guardrails: `api.public_signature_shape`
-- Focus: resolved public-surface traversal rejects `FutureOr`, nullable
-  async/container returns, forbidden generic bounds, and `dynamic` signature
-  leakage outside approved JSON or diagnostic boundaries.
-
-## test.api_contract.id_validation_no_extension_type_escape
-
-- Path: `test/api_contract/id_validation_no_extension_type_escape_test.dart`
-- Phases: `P1`, `P2`
-- Sections: `section_04_public_api_v1`, `section_06_validation_limits`, `section_23_tests`
-- Guardrails: `api.id_validation_no_extension_type_escape`
-- Focus: ids validate at public construction from an external consumer package
-  and v1 does not expose id extension types.
-
-## test.codec.schema_v1.known_fields_validation
-
-- Path: `test/codec/schema_v1/known_fields_validation_test.dart`
-- Phases: `P3`
-- Sections: `section_05_schema_v1_contract`, `section_23_tests`
-- Guardrails: `codec.schema_v1_exact`, `codec.known_fields_validated`
-
-## test.codec.schema_v1.canonical_encode_roundtrip
-
-- Path: `test/codec/schema_v1/canonical_encode_roundtrip_test.dart`
-- Phases: `P3`
-- Sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`, `section_23_tests`
-- Guardrails: `codec.schema_v1_exact`, `codec.known_fields_validated`
-
-## test.codec.schema_v1.metadata_projection
-
-- Path: `test/codec/schema_v1/metadata_projection_test.dart`
-- Phases: `P3`
-- Sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`, `section_23_tests`
-- Guardrails: `codec.known_fields_validated`
-
-## test.codec.schema_v1.resources_appkey_only
-
-- Path: `test/codec/schema_v1/resources_appkey_only_test.dart`
-- Phases: `P3`, `P7`
-- Sections: `section_05_schema_v1_contract`, `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `codec.known_fields_validated`, `resources.app_key_only`
-
-## test.codec.schema_v1.reject_unknown_element_kind
-
-- Path: `test/codec/schema_v1/reject_unknown_element_kind_test.dart`
-- Phases: `P3`
-- Sections: `section_05_schema_v1_contract`, `section_23_tests`
-- Guardrails: `codec.known_fields_validated`
-
-## test.codec.schema_v1.reject_unknown_resource_source_kind
-
-- Path: `test/codec/schema_v1/reject_unknown_resource_source_kind_test.dart`
-- Phases: `P3`, `P7`
-- Sections: `section_05_schema_v1_contract`, `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `codec.known_fields_validated`, `resources.app_key_only`
-
-## test.resources.sync_image_resolver
-
-- Path: `test/resources/sync_image_resolver_test.dart`
-- Phases: `P7`, `P13`
-- Sections: `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `resources.app_key_only`
-
-## test.resources.app_owned_image_not_disposed
-
-- Path: `test/resources/app_owned_image_not_disposed_test.dart`
-- Phases: `P7`, `P13`
-- Sections: `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `resources.app_key_only`
-
-## test.resources.resource_dirty
-
-- Path: `test/resources/resource_dirty_test.dart`
-- Phases: `P7`
-- Sections: `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `resources.dirty_no_document_revision`
-- Focus: target dirty-resource invalidation evicts the active session cache entry
-  and forces the next paint to resolve the target image again.
-
-## test.resources.mark_all_resources_dirty
-
-- Path: `test/resources/mark_all_resources_dirty_test.dart`
-- Phases: `P7`
-- Sections: `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `resources.dirty_no_document_revision`
-- Focus: mark-all dirty-resource invalidation clears the active session image
-  resolve cache without changing document-side state.
-
-## test.resources.resolver_reentrancy_rejected
-
-- Path: `test/resources/resolver_reentrancy_rejected_test.dart`
-- Phases: `P7`
-- Sections: `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `resources.resolver_reentrancy_rejected`
 
 ## test.api.typed_action_payloads
 
-- Path: `test/api/typed_action_payloads_test.dart`
-- Phases: `P2`, `P10`, `P11`, `P12`
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `events.commands_emit_user_actions`
-- Focus: command and interaction action payload shapes, including
-  `CanvasTextEditActionPayload` for `editText` without raw text content.
 
-## test.edit.low_level_mutations_do_not_emit_actions
+## test.api_contract.app_next_engine_adapter_compile_fixture
 
-- Path: `test/edit/low_level_mutations_do_not_emit_actions_test.dart`
-- Phases: `P5`
-- Sections: `section_11_edit_kernel`, `section_23_tests`
-- Guardrails: `events.low_level_edit_no_user_actions`
+- Sections: `section_00_status_and_scope`, `section_04_public_api_v1`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
 
-## test.interaction.commands_emit_user_actions
+## test.api_contract.canvas_field_update_static_semantics
 
-- Path: `test/interaction/commands_emit_user_actions_test.dart`
-- Phases: `P10`, `P11`, `P12`
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `events.commands_emit_user_actions`
-- Focus: high-level commands and changed interaction commits, including
-  `commitTextEdit`, emit user action notifications only after atomic install.
-
-## test.interaction.runtime_created_timestamps_monotonic
-
-- Path: `test/interaction/runtime_created_timestamps_monotonic_test.dart`
-- Phases: `P10`, `P11`, `P12`
-- Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `events.runtime_created_timestamps_monotonic`
-- Focus: action events, context-action requests from direct host-recognized
-  `handleDoubleTap` and pointer-sample recognition, pending line start previews,
-  and selected move resolver requests resolve nullable or backwards
-  `timestampMs` hints through one runtime-local monotonic cursor, while
-  no-output paths create no timestamped action or context request.
-
-## test.flutter_bridge.interactive_false_pointer_routing
-
-- Path: `test/flutter_bridge/interactive_false_pointer_routing_test.dart`
-- Phases: `P13`
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `surface.interactive_false_pending_line_preserved`
-
-## test.flutter_bridge.interactive_false_active_session_cancel
-
-- Path: `test/flutter_bridge/interactive_false_active_session_cancel_test.dart`
-- Phases: `P13`
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `surface.interactive_false_pending_line_preserved`
-
-## test.flutter_bridge.interactive_false_pending_line_preserved
-
-- Path: `test/flutter_bridge/interactive_false_pending_line_preserved_test.dart`
-- Phases: `P13`
-- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `surface.interactive_false_pending_line_preserved`
-
-## test.flutter_bridge.interactive_false_state_isolation
-
-- Path: `test/flutter_bridge/interactive_false_state_isolation_test.dart`
-- Phases: `P13`
-- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `surface.interactive_false_pending_line_preserved`
-- Focus: toggling interactive=false does not mutate runtime mode, committed
-  document, selection, or resources while active pointer cleanup remains scoped
-  to pointer-owned preview state.
-
-## test.flutter_bridge.single_active_surface
-
-- Path: `test/flutter_bridge/single_active_surface_test.dart`
-- Phases: `P13`
 - Sections: `section_04_public_api_v1`, `section_23_tests`
-- Guardrails: `none`
 
-## test.flutter_bridge.surface_resource_session_lifecycle
+## test.api_contract.dto_immutability
 
-- Path: `test/flutter_bridge/surface_resource_session_lifecycle_test.dart`
-- Phases: `P13`
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
+## test.api_contract.no_legacy_public_symbols
+
+- Sections: `section_00_status_and_scope`, `section_03_package_layout`, `section_04_public_api_v1`, `section_09_accepted_differences`, `section_23_tests`
+
+## test.api_contract.no_undefined_public_type_references
+
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
+## test.api_contract.preview_state_sealed_union
+
+- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_23_tests`
+
+## test.api_contract.public_api_no_unapproved_placeholders
+
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
+## test.api_contract.public_api_v1_compiles_as_written
+
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
+## test.api_contract.public_equality_policy
+
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
+## test.api_contract.public_readable_union_variants
+
 - Sections: `section_04_public_api_v1`, `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `resources.resolver_boundary_owned_by_surface_session`
-
-## test.codec.constructor_and_schema_limits
-
-- Path: `test/codec/constructor_and_schema_limits_test.dart`
-- Phases: `P1`, `P2`, `P3`
-- Sections: `section_06_validation_limits`, `section_23_tests`
-- Guardrails: `codec.known_fields_validated`, `api.id_validation_no_extension_type_escape`
-- Focus: public DTO construction and schema decode reject non-invertible
-  element transforms with `fieldMustBeInvertible` while `CanvasTransform`
-  remains the general affine value type.
-
-## test.store.read_document_projection
-
-- Path: `test/store/read_document_projection_test.dart`
-- Phases: `P4`
-- Sections: `section_10_runtime_data_model`, `section_23_tests`
-- Guardrails: `projection.only_explicit_read_paths`
-
-## test.runtime.dispose_lifecycle
-
-- Path: `test/runtime/dispose_lifecycle_test.dart`
-- Phases: `P4`
-- Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_23_tests`
-- Guardrails: `none`
-
-## test.runtime.runtime_state_publication
-
-- Path: `test/runtime/runtime_state_publication_test.dart`
-- Phases: `P5`
-- Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_11_edit_kernel`, `section_23_tests`
-- Guardrails: `none`
-- Focus: ordinary document edits publish one coherent CanvasRuntimeState, while
-  no-op edits and no-op runtime operations remain public-state silent.
-
-## test.runtime.load_document_state_publication
-
-- Path: `test/runtime/load_document_state_publication_test.dart`
-- Phases: `P6`
-- Sections: `section_10_runtime_data_model`, `section_12_load_document`, `section_23_tests`
-- Guardrails: `none`
-- Focus: successful loadDocument publishes exactly one post-install
-  CanvasRuntimeState with document, selection, viewCamera, epoch, and
-  conditional preview cleanup revisions; failed loads publish none.
-
-## test.runtime.interaction_settings_state
-
-- Path: `test/runtime/interaction_settings_state_test.dart`
-- Phases: `P11`
-- Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `none`
-- Focus: interaction setting changes publish interaction revision changes and
-  only advance selection or preview revisions when the same operation owns
-  draw-mode selection clear or active preview cleanup.
-
-## test.store.no_projection_hot_path
-
-- Path: `test/store/no_projection_hot_path_test.dart`
-- Phases: `P4`, `P9`
-- Sections: `section_10_runtime_data_model`, `section_15_frame_render_contract`, `section_23_tests`
-- Guardrails: `projection.only_explicit_read_paths`
-
-## test.guardrails.store_projection_checks
-
-- Path: `test/guardrails/store_projection_checks_test.dart`
-- Phases: `P4`
-- Sections: `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_23_tests`
-- Guardrails: `store.no_public_document_live_state`, `projection.only_explicit_read_paths`
-
-## test.edit.sync_non_nested_async_stale
-
-- Path: `test/edit/sync_non_nested_async_stale_test.dart`
-- Phases: `P5`
-- Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_23_tests`
-- Guardrails: `edit.sync_non_nested`, `edit.stale_handle_rejected`
-
-## test.edit.rollback
-
-- Path: `test/edit/rollback_test.dart`
-- Phases: `P5`
-- Sections: `section_11_edit_kernel`, `section_23_tests`
-- Guardrails: `edit.rollback_no_effects`
-
-## test.edit.field_update_nullable_semantics
-
-- Path: `test/edit/field_update_nullable_semantics_test.dart`
-- Phases: `P5`
-- Sections: `section_04_public_api_v1`, `section_11_edit_kernel`, `section_23_tests`
-- Guardrails: `edit.operation_matrix_complete`, `edit.no_global_invalidation_except_replacement`
-- Focus: generated and dynamic `CanvasElementUpdate.transform` values reject
-  non-invertible element transforms before draft mutation.
-
-## test.edit.typed_effects_no_frame_dependency
-
-- Path: `test/edit/typed_effects_no_frame_dependency_test.dart`
-- Phases: `P5`
-- Sections: `section_11_edit_kernel`, `section_23_tests`
-- Guardrails: `edit.typed_effects_no_frame_dependency`
-
-## test.edit.staged_document_load_success_failure
-
-- Path: `test/edit/staged_document_load_success_failure_test.dart`
-- Phases: `P6`, `P10`, `P11`, `P12`
-- Sections: `section_12_load_document`, `section_23_tests`
-- Guardrails: `load.prepares_before_interrupt`, `load.success_interrupts_before_install`
-- Focus: `loadDocument` rejects non-invertible element transforms before
-  `PreparedDocumentLoad` success, interaction interruption, repaint, action
-  events, or public state publication.
-
-## test.geometry.hit_policy
-
-- Path: `test/geometry/hit_policy_test.dart`
-- Phases: `P8`
-- Sections: `section_16_geometry_policy`, `section_23_tests`
-- Guardrails: `none`
-- Focus: corrupted committed rows with non-invertible element transforms return
-  miss, record only policy-gated diagnostics, continue candidate scanning, and
-  have no coarse fallback acceptance.
-
-## test.spatial.touched_update
-
-- Path: `test/spatial/touched_update_test.dart`
-- Phases: `P8`
-- Sections: `section_17_spatial_kernel`, `section_23_tests`
-- Guardrails: `none`
-
-## test.spatial.fallback_budget_enforced
-
-- Path: `test/spatial/fallback_budget_enforced_test.dart`
-- Phases: `P8`
-- Sections: `section_17_spatial_kernel`, `section_23_tests`
-- Guardrails: `spatial.fallback_budget_enforced`
-
-## test.frame.main_overlay_capture
-
-- Path: `test/frame/main_overlay_capture_test.dart`
-- Phases: `P9`
-- Sections: `section_15_frame_render_contract`, `section_23_tests`
-- Guardrails: `preview.selected_move_main_repaint`, `frame.committed_facts_via_frame_facts_port`
-- Focus: main frame capture obtains committed frame revision facts through
-  `FrameFactsPort` while selection facts remain behind `SelectionFactsPort`.
-
-## test.frame.no_live_runtime_read_in_painters
-
-- Path: `test/frame/no_live_runtime_read_in_painters_test.dart`
-- Phases: `P9`
-- Sections: `section_15_frame_render_contract`, `section_23_tests`
-- Guardrails: `frame.committed_facts_via_frame_facts_port`
-- Focus: painters receive immutable frame records and resolved assets only;
-  production frame code obtains committed row facts and descriptor facts through
-  `FrameFactsPort` instead of concrete store imports.
-
-## test.frame.cache_capacity_eviction_policy
-
-- Path: `test/frame/cache_capacity_eviction_policy_test.dart`
-- Phases: `P9`
-- Sections: `section_18_cache_policy`, `section_23_tests`
-- Guardrails: `cache.hot_caches_have_capacity_eviction`
-
-## test.frame.paint_plan_excludes_preview_delta
-
-- Path: `test/frame/paint_plan_excludes_preview_delta_test.dart`
-- Phases: `P9`
-- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
-- Guardrails: `frame.paint_plan_excludes_preview_delta`
-
-## test.frame.paint_plan_excludes_selection_state
-
-- Path: `test/frame/paint_plan_excludes_selection_state_test.dart`
-- Phases: `P9`
-- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
-- Guardrails: `frame.paint_plan_excludes_selection_state`
-
-## test.frame.camera_pan_preserves_ordinary_paint_plan
-
-- Path: `test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart`
-- Phases: `P9`
-- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
-- Guardrails: `cache.background_grid_not_element_visual`
-- Focus: runtime view camera preserves ordinary paint plans while backgroundRevision
-  and gridRevision invalidate StaticBackgroundCache without entering ordinary
-  PaintPlanCache identity; persisted document camera remains edit-owned.
-
-## test.interaction.preview_public_state
-
-- Path: `test/interaction/preview_public_state_test.dart`
-- Phases: `P10`, `P11`, `P12`
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `none`
-- Focus: preview-only pointer changes and active preview cleanup publish
-  state.revisions.preview without document, selection, resourceVisual,
-  interaction, viewCamera, or action effects; empty cleanup is silent.
-
-## test.interaction.state_machines
-
-- Path: `test/interaction/state_machines_test.dart`
-- Phases: `P10`, `P11`, `P12`
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `interaction.no_concrete_store_imports`
-
-## test.interaction.move_resolver_reentrancy
-
-- Path: `test/interaction/move_resolver_reentrancy_test.dart`
-- Phases: `P10`
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `none`
-
-## test.flutter_bridge.widget_paint
-
-- Path: `test/flutter_bridge/widget_paint_test.dart`
-- Phases: `P13`
-- Sections: `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_23_tests`
-- Guardrails: `none`
 
 ## test.benchmarks.required_cases
 
-- Path: `test/benchmarks/required_cases_test.dart`
-- Phases: `P14`
-- Sections: `section_24_benchmarks`, `section_23_tests`
-- Guardrails: `none`
+- Sections: `section_23_tests`, `section_24_benchmarks`
 
-## test.guardrails.frame_committed_facts_via_frame_facts_port
+## test.codec.constructor_and_schema_limits
 
-- Path: `test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart`
-- Phases: `P9`, `P14`
-- Sections: `section_03_package_layout`, `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_23_tests`
-- Guardrails: `frame.committed_facts_via_frame_facts_port`
-- Focus: production `lib/src/frame/**` imports no concrete store internals for
-  committed frame reads, and frame capture, row resolution, descriptor lookup,
-  and `resourceRevision` access route through `FrameFactsPort`.
-
-## test.guardrails.blocking_suite
-
-- Path: `test/guardrails/blocking_suite_test.dart`
-- Phases: `P0`, `P14`
-- Sections: `section_02_architecture_model`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
-- Guardrails: `api.no_legacy_public_types`, `api.public_exports_complete`, `api.public_types_complete`, `core.no_legacy_imports`, `core.import_boundaries`, `core.no_unapproved_part_files`, `core.no_scene_controller_shape_dependency`, `core.no_node_spec_patch_shape_dependency`, `core.single_runtime_root`
-- Focus: executable P0 blocking runner inventory, full runner selection,
-  `--suite=api`, `--suite=core`, explicit `--guardrail=<id>` selection, and
-  unknown or empty suite rejection. Later release-readiness guardrails are
-  mapped to their dedicated proof tests instead of this P0 runner inventory
-  proof.
+- Sections: `section_06_validation_limits`, `section_23_tests`
 
 ## test.codec.decode_encode_no_runtime_side_effects
 
-- Path: `test/codec/decode_encode_no_runtime_side_effects_test.dart`
-- Phases: `P3`
 - Sections: `section_19_codec_boundary`, `section_23_tests`
-- Guardrails: `codec.no_runtime_side_effects`
 
-## test.guardrails.codec_no_runtime_imports
+## test.codec.schema_v1.canonical_encode_roundtrip
 
-- Path: `test/guardrails/codec_no_runtime_imports_test.dart`
-- Phases: `P3`
-- Sections: `section_19_codec_boundary`, `section_22_guardrails_machine_checks`, `section_23_tests`
-- Guardrails: `codec.no_runtime_side_effects`
+- Sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`, `section_23_tests`
 
-## test.diagnostics.sanitizer_and_public_projection
+## test.codec.schema_v1.known_fields_validation
 
-- Path: `test/diagnostics/sanitizer_and_public_projection_test.dart`
-- Phases: `P3`, `P14`
-- Sections: `section_20_diagnostics_hub`, `section_23_tests`
-- Guardrails: `diagnostics.sanitized_public_projection`
-- Focus: public diagnostic details are sanitized, bounded, and deeply frozen.
+- Sections: `section_05_schema_v1_contract`, `section_23_tests`
 
-## test.diagnostics.disabled_no_alloc_hot_path
+## test.codec.schema_v1.metadata_projection
 
-- Path: `test/diagnostics/disabled_no_alloc_hot_path_test.dart`
-- Phases: `P3`, `P14`
-- Sections: `section_20_diagnostics_hub`, `section_23_tests`
-- Guardrails: `diagnostics.disabled_no_alloc_hot_path`
-- Focus: schema/codec success paths allocate no `DiagnosticRecord` instances
-  while diagnostics are disabled; pointer and paint hot-path proof remains
-  deferred until those runtime owners exist.
+- Sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`, `section_23_tests`
+
+## test.codec.schema_v1.reject_unknown_element_kind
+
+- Sections: `section_05_schema_v1_contract`, `section_23_tests`
+
+## test.codec.schema_v1.reject_unknown_resource_source_kind
+
+- Sections: `section_05_schema_v1_contract`, `section_07_resource_lifecycle`, `section_23_tests`
+
+## test.codec.schema_v1.resources_appkey_only
+
+- Sections: `section_05_schema_v1_contract`, `section_07_resource_lifecycle`, `section_23_tests`
 
 ## test.diagnostics.diagnostics_public_surface
 
-- Path: `test/diagnostics/diagnostics_public_surface_test.dart`
-- Phases: `P3`, `P14`
 - Sections: `section_20_diagnostics_hub`, `section_23_tests`
-- Guardrails: `diagnostics.sanitized_public_projection`
-- Focus: the resolved root public diagnostics surface exposes only sanitized
-  public data shapes and no runtime objects.
+
+## test.diagnostics.disabled_no_alloc_hot_path
+
+- Sections: `section_20_diagnostics_hub`, `section_23_tests`
+
+## test.diagnostics.sanitizer_and_public_projection
+
+- Sections: `section_20_diagnostics_hub`, `section_23_tests`
 
 ## test.edit.exact_touched_invalidation
 
-- Path: `test/edit/exact_touched_invalidation_test.dart`
-- Phases: `P5`
 - Sections: `section_11_edit_kernel`, `section_23_tests`
-- Guardrails: `edit.no_global_invalidation_except_replacement`
+
+## test.edit.field_update_nullable_semantics
+
+- Sections: `section_11_edit_kernel`, `section_23_tests`
+
+## test.edit.low_level_mutations_do_not_emit_actions
+
+- Sections: `section_11_edit_kernel`, `section_23_tests`
 
 ## test.edit.operation_matrix_effects
 
-- Path: `test/edit/operation_matrix_effects_test.dart`
-- Phases: `P5`
 - Sections: `section_13_operation_matrix`, `section_23_tests`
-- Guardrails: `edit.operation_matrix_complete`
-- Scope: expanded operation matrix dimensions: touched state, public state revisions, internal revisions, spatial, projection, resource effects, repaint, user-action events, no-op behavior, and rollback behavior
 
-## test.frame.cache_keys_do_not_use_legacy_snapshot_shape
+## test.edit.rollback
 
-- Path: `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart`
-- Phases: `P9`
-- Sections: `section_18_cache_policy`, `section_23_tests`
-- Guardrails: `cache.keys_use_next_revisions_only`
+- Sections: `section_11_edit_kernel`, `section_23_tests`
 
-## test.frame.selected_supplement_staging_no_global_sort
+## test.edit.staged_document_load_success_failure
 
-- Path: `test/frame/selected_supplement_staging_no_global_sort_test.dart`
-- Phases: `P9`
-- Sections: `section_15_frame_render_contract`, `section_23_tests`
-- Guardrails: `frame.no_global_scene_sort`
+- Sections: `section_12_load_document`, `section_23_tests`
 
-## test.geometry.no_legacy_scene_order
+## test.edit.sync_non_nested_async_stale
 
-- Path: `test/geometry/no_legacy_scene_order_test.dart`
-- Phases: `P8`
-- Sections: `section_16_geometry_policy`, `section_23_tests`
-- Guardrails: `geometry.no_legacy_scene_order`
+- Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_23_tests`
 
-## test.geometry.eraser_exact_budget_no_partial_commit
+## test.edit.typed_effects_no_frame_dependency
 
-- Path: `test/geometry/eraser_exact_budget_no_partial_commit_test.dart`
-- Phases: `P12`
-- Sections: `section_16_geometry_policy`, `section_23_tests`
-- Guardrails: `geometry.eraser_exact_budget_no_partial`
+- Sections: `section_11_edit_kernel`, `section_23_tests`
 
-## test.guardrails.import_boundaries
+## test.flutter_bridge.interactive_false_active_session_cancel
 
-- Path: `test/guardrails/import_boundaries_test.dart`
-- Phases: `P0`
-- Sections: `section_03_package_layout`, `section_23_tests`
-- Guardrails: `core.import_boundaries`, `core.no_unapproved_part_files`
-
-## test.interaction.move_resolver_not_called_on_cancel_cleanup
-
-- Path: `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`
-- Phases: `P10`, `P11`, `P12`
 - Sections: `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `interaction.no_resolver_on_cancel_paths`
 
-## test.interaction.no_stale_terminal_commit
+## test.flutter_bridge.interactive_false_pending_line_preserved
 
-- Path: `test/interaction/no_stale_terminal_commit_test.dart`
-- Phases: `P10`
+- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
+
+## test.flutter_bridge.interactive_false_pointer_routing
+
 - Sections: `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `interaction.no_stale_terminal_commit`
 
-## test.interaction.pointer_cleanup_coordinator_outcomes
+## test.flutter_bridge.interactive_false_state_isolation
 
-- Path: `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
-- Phases: `P10`, `P11`, `P12`
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `interaction.pointer_cleanup_coordinator_only`
-- Focus: coordinator outcomes for cleanup reason plus ownership context,
-  including main/overlay/no-preview repaint classification, active token/session
-  release, pending line preservation/clearing, pending context tap cleanup, no
-  resolver on cleanup-only paths, no stale terminal commit, and no user action.
-
-## test.interaction.context_action_request
-
-- Path: `test/interaction/context_action_request_test.dart`
-- Phases: `P12`
-- Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_16_geometry_policy`, `section_23_tests`
-- Guardrails: `interaction.text_edit_stale_commit_guard`, `events.runtime_created_timestamps_monotonic`
-- Focus: direct host-recognized `handleDoubleTap` and pointer-sample
-  double-tap context-action request emission for selectable content,
-  non-selectable content, empty canvas, and background-only points; direct
-  pending-history cleanup and non-finite position rejection; no-effect delivery
-  and cleanup; and guarded `commitTextEdit` acceptance only for current text
-  content-target request ids.
-
-## test.interaction.text_edit_stale_commit_guard
-
-- Path: `test/interaction/text_edit_stale_commit_guard_test.dart`
-- Phases: `P12`
-- Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `interaction.text_edit_stale_commit_guard`, `events.commands_emit_user_actions`
-- Focus: `CanvasInteractionRequestId`-keyed text commits accept only current
-  text content-target context requests, treat unknown/already-retired ids as
-  no-ops, privately retire known live rejected stale, empty-canvas, non-text,
-  missing, and family-mismatched request facts without public effects, allow
-  unrelated `documentRevision` changes, retire accepted requests, and emit
-  `editText` only for changed text.
-
-## test.selection.runtime_owner_separation
-
-- Path: `test/selection/runtime_owner_separation_test.dart`
-- Phases: `P4`, `P5`, `P6`, `P9`, `P10`
-- Sections: `section_02_architecture_model`, `section_10_runtime_data_model`, `section_23_tests`
-- Guardrails: `selection.owner_separate_from_document`
-
-## test.guardrails.selection_boundary_checks
-
-- Path: `test/guardrails/selection_boundary_checks_test.dart`
-- Phases: `P4`
-- Sections: `section_02_architecture_model`, `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_23_tests`
-- Guardrails: `selection.owner_separate_from_document`
-
-## test.guardrails.selection_boundary_imports
-
-- Path: `test/guardrails/selection_boundary_imports_test.dart`
-- Phases: `P0`, `P10`
-- Sections: `section_03_package_layout`, `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `interaction.no_concrete_selection_imports`
-
-## test.resources.missing_result_suppressed_per_frame
-
-- Path: `test/resources/missing_result_suppressed_per_frame_test.dart`
-- Phases: `P7`
-- Sections: `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `resources.no_same_frame_missing_retry`
-
-## test.resources.resolver_swap_starts_fresh_cache
-
-- Path: `test/resources/resolver_swap_starts_fresh_cache_test.dart`
-- Phases: `P7`
-- Sections: `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `resources.resolver_boundary_owned_by_surface_session`
-
-## test.resources.surface_session_cache_lifecycle
-
-- Path: `test/resources/surface_session_cache_lifecycle_test.dart`
-- Phases: `P7`, `P13`
-- Sections: `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `resources.resolver_boundary_owned_by_surface_session`
-
-## test.resources.painter_never_calls_resolver_directly
-
-- Path: `test/resources/painter_never_calls_resolver_directly_test.dart`
-- Phases: `P7`
-- Sections: `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `resources.resolver_boundary_owned_by_surface_session`
-
-## test.resources.resolver_frame_budget
-
-- Path: `test/resources/resolver_frame_budget_test.dart`
-- Phases: `P7`, `P9`, `P13`
-- Sections: `section_07_resource_lifecycle`, `section_23_tests`
-- Guardrails: `resources.resolver_frame_budget`
-
-## test.spatial.no_full_clone_for_touched_update
-
-- Path: `test/spatial/no_full_clone_for_touched_update_test.dart`
-- Phases: `P8`
-- Sections: `section_17_spatial_kernel`, `section_23_tests`
-- Guardrails: `spatial.no_full_clone_ordinary_edit`
-
-## test.spatial.stale_generation_rejected
-
-- Path: `test/spatial/stale_generation_rejected_test.dart`
-- Phases: `P8`
-- Sections: `section_17_spatial_kernel`, `section_23_tests`
-- Guardrails: `spatial.stale_candidate_rejected`
-
-## test.store.public_document_is_projection_only
-
-- Path: `test/store/public_document_is_projection_only_test.dart`
-- Phases: `P4`
-- Sections: `section_10_runtime_data_model`, `section_23_tests`
-- Guardrails: `store.no_public_document_live_state`
+- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
 
 ## test.flutter_bridge.pointer_adapter_finite_normalization
 
-- Path: `test/flutter_bridge/pointer_adapter_finite_normalization_test.dart`
-- Phases: `P13`
 - Sections: `section_14_interaction_engine`, `section_23_tests`
-- Guardrails: `surface.pointer_samples_normalized_before_runtime`
+
+## test.flutter_bridge.single_active_surface
+
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
+## test.flutter_bridge.surface_resource_session_lifecycle
+
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
+## test.flutter_bridge.widget_paint
+
+- Sections: `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_23_tests`
+
+## test.frame.cache_capacity_eviction_policy
+
+- Sections: `section_18_cache_policy`, `section_23_tests`
+
+## test.frame.cache_keys_do_not_use_legacy_snapshot_shape
+
+- Sections: `section_18_cache_policy`, `section_23_tests`
+
+## test.frame.camera_pan_preserves_ordinary_paint_plan
+
+- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
+
+## test.frame.main_overlay_capture
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+
+## test.frame.no_live_runtime_read_in_painters
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+
+## test.frame.paint_plan_excludes_preview_delta
+
+- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
+
+## test.frame.paint_plan_excludes_selection_state
+
+- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`
+
+## test.frame.selected_supplement_staging_no_global_sort
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+
+## test.geometry.eraser_exact_budget_no_partial_commit
+
+- Sections: `section_16_geometry_policy`, `section_23_tests`
+
+## test.geometry.hit_policy
+
+- Sections: `section_16_geometry_policy`, `section_23_tests`
+
+## test.geometry.no_legacy_scene_order
+
+- Sections: `section_16_geometry_policy`, `section_23_tests`
+
+## test.guardrails.blocking_suite
+
+- Sections: `section_02_architecture_model`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
+
+## test.guardrails.codec_no_runtime_imports
+
+- Sections: `section_19_codec_boundary`, `section_23_tests`
+
+## test.guardrails.frame_committed_facts_via_frame_facts_port
+
+- Sections: `section_03_package_layout`, `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
+
+## test.guardrails.import_boundaries
+
+- Sections: `section_03_package_layout`, `section_23_tests`
+
+## test.guardrails.public_api_declaration_checks
+
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
+## test.guardrails.public_api_import_cycles
+
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
+## test.guardrails.selection_boundary_checks
+
+- Sections: `section_10_runtime_data_model`, `section_23_tests`
+
+## test.guardrails.selection_boundary_imports
+
+- Sections: `section_03_package_layout`, `section_14_interaction_engine`
+
+## test.guardrails.store_projection_checks
+
+- Sections: `section_10_runtime_data_model`, `section_23_tests`
+
+## test.interaction.commands_emit_user_actions
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.interaction.context_action_request
+
+- Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_16_geometry_policy`, `section_23_tests`
+
+## test.interaction.move_resolver_not_called_on_cancel_cleanup
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.interaction.move_resolver_reentrancy
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.interaction.no_stale_terminal_commit
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.interaction.pointer_cleanup_coordinator_outcomes
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.interaction.preview_public_state
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.interaction.runtime_created_timestamps_monotonic
+
+- Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_23_tests`
+
+## test.interaction.state_machines
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.interaction.text_edit_stale_commit_guard
+
+- Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_23_tests`
+
+## test.resources.app_owned_image_not_disposed
+
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+
+## test.resources.mark_all_resources_dirty
+
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+
+## test.resources.missing_result_suppressed_per_frame
+
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+
+## test.resources.painter_never_calls_resolver_directly
+
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+
+## test.resources.resolver_frame_budget
+
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+
+## test.resources.resolver_reentrancy_rejected
+
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+
+## test.resources.resolver_swap_starts_fresh_cache
+
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+
+## test.resources.resource_dirty
+
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+
+## test.resources.surface_session_cache_lifecycle
+
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+
+## test.resources.sync_image_resolver
+
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+
+## test.runtime.dispose_lifecycle
+
+- Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_23_tests`
+
+## test.runtime.interaction_settings_state
+
+- Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_14_interaction_engine`, `section_23_tests`
+
+## test.runtime.load_document_state_publication
+
+- Sections: `section_10_runtime_data_model`, `section_12_load_document`, `section_23_tests`
+
+## test.runtime.runtime_state_publication
+
+- Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_11_edit_kernel`, `section_23_tests`
+
+## test.selection.runtime_owner_separation
+
+- Sections: `section_02_architecture_model`, `section_10_runtime_data_model`
+
+## test.spatial.fallback_budget_enforced
+
+- Sections: `section_17_spatial_kernel`, `section_23_tests`
+
+## test.spatial.no_full_clone_for_touched_update
+
+- Sections: `section_17_spatial_kernel`, `section_23_tests`
+
+## test.spatial.stale_generation_rejected
+
+- Sections: `section_17_spatial_kernel`, `section_23_tests`
+
+## test.spatial.touched_update
+
+- Sections: `section_17_spatial_kernel`, `section_23_tests`
+
+## test.store.no_projection_hot_path
+
+- Sections: `section_10_runtime_data_model`, `section_15_frame_render_contract`, `section_23_tests`
+
+## test.store.public_document_is_projection_only
+
+- Sections: `section_10_runtime_data_model`, `section_23_tests`
+
+## test.store.read_document_projection
+
+- Sections: `section_10_runtime_data_model`, `section_23_tests`
+

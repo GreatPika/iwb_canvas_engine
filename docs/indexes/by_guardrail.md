@@ -1,425 +1,277 @@
+<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml and docs/_registry/donors.yaml -->
 # By guardrail
 
-Guardrails extracted from split section 22.
-
-## api.integration_surface_complete
-
-- Rule: external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level NextEngineAdapter responsibilities, while adapter is not in package
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
-- Tests: `test.api_contract.app_next_engine_adapter_compile_fixture`
-
-## api.no_legacy_public_types
-
-- Rule: legacy public golden symbols not exported by root package
-- Sections: `section_03_package_layout`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.no_legacy_public_symbols`, `test.guardrails.blocking_suite`
-
-## api.public_exports_complete
-
-- Rule: all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.public_exports_complete`, `test.guardrails.blocking_suite`
-
-## api.public_types_complete
-
-- Rule: all public signatures reference defined public types
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.public_types_complete`, `test.guardrails.blocking_suite`
-
-## api.public_api_compiles_as_written
-
-- Rule: public API declarations compile in an empty consumer package, including `CanvasRuntime.state` and exported runtime state snapshot types while excluding retired document/preview listener getters
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.canvas_field_update_static_semantics`, `test.api_contract.public_api_v1_compiles_as_written`
-
-## api.resource_source_app_key_publicly_readable
-
-- Rule: external resolver code can read `CanvasAppKeyResourceSource.key` from `CanvasImageResource.source` through the public barrel only
-- Sections: `section_04_public_api_v1`, `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.public_readable_union_variants`
-
-## api.preview_state_sealed_union_publicly_readable
-
-- Rule: external preview consumers can type-test exported sealed CanvasPreviewState variants and read variant payloads through the public barrel only
-- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.public_readable_union_variants`, `test.api_contract.preview_state_sealed_union`
-
-## api.exported_dartdoc_complete
-
-- Rule: exported public declarations have non-empty Dart documentation summaries before API freeze
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.public_api_declaration_checks`
-
-## api.public_class_modifiers_explicit
-
-- Rule: every exported public class chooses an explicit Dart 3 subtype/implementation policy
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.public_api_declaration_checks`
-
-## api.no_public_api_import_cycles
-
-- Rule: public API implementation files under `lib/src/api/**` form an acyclic parsed import graph
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.public_api_import_cycles`
-
-## api.public_signature_shape
-
-- Rule: public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON or diagnostic boundaries; metadata-bearing DTO signatures use exported `CanvasMetadata`
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.public_signature_shape`, `test.api_contract.canvas_field_update_static_semantics`
-
-## api.no_undefined_public_type_references
-
-- Rule: every exported signature type is exported or from Flutter/Dart SDK
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.no_undefined_public_type_references`
+Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 ## api.dto_immutability
 
-- Rule: DTO collections defensively copied and unmodifiable; `CanvasMetadata` deep-frozen; public constructors with caller-provided validated or sanitized values non-const factories; marker/empty/default/private storage forms keep only approved const forms
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.dto_immutability`
 
 ## api.equality_policy_explicit
 
-- Rule: public value equality is explicit for concrete public classes, including runtime state snapshot types, and covered by API contract tests
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api.canvas_field_update`, `test.api_contract.public_readable_union_variants`, `test.api_contract.public_equality_policy`
+
+## api.exported_dartdoc_complete
+
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## api.id_validation_no_extension_type_escape
 
-- Rule: ids cannot be publicly constructed without validation
 - Sections: `section_04_public_api_v1`, `section_06_validation_limits`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.id_validation_no_extension_type_escape`, `test.codec.constructor_and_schema_limits`
 
-## core.no_legacy_imports
+## api.integration_surface_complete
 
-- Rule: no import of legacy package/runtime
-- Sections: `section_00_status_and_scope`, `section_03_package_layout`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.blocking_suite`
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## core.no_scene_controller_shape_dependency
+## api.no_legacy_public_types
 
-- Rule: no SceneController concept in core
-- Sections: `section_00_status_and_scope`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.blocking_suite`
+- Sections: `section_03_package_layout`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## core.no_node_spec_patch_shape_dependency
+## api.no_public_api_import_cycles
 
-- Rule: no legacy NodeSpec/NodePatch/PatchField in core
-- Sections: `section_00_status_and_scope`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.blocking_suite`
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## core.single_runtime_root
+## api.no_undefined_public_type_references
 
-- Rule: exactly one production RuntimeRoot
-- Sections: `section_02_architecture_model`, `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.blocking_suite`
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## edit.sync_non_nested
+## api.preview_state_sealed_union_publicly_readable
 
-- Rule: nested/async edit rejected
-- Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit.sync_non_nested_async_stale`
+- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## edit.rollback_no_effects
+## api.public_api_compiles_as_written
 
-- Rule: rollback discards events/repaint/resources/spatial
-- Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit.rollback`
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## edit.stale_handle_rejected
+## api.public_class_modifiers_explicit
 
-- Rule: stale edit handle throws
-- Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit.sync_non_nested_async_stale`
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## edit.typed_effects_no_frame_dependency
+## api.public_exports_complete
 
-- Rule: CommitCompiler produces typed effects and does not depend on concrete FrameEngine
-- Sections: `section_11_edit_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit.typed_effects_no_frame_dependency`
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## events.low_level_edit_no_user_actions
+## api.public_signature_shape
 
-- Rule: CanvasEdit.removeElement/clearContent emit no user action events
-- Sections: `section_11_edit_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit.low_level_mutations_do_not_emit_actions`
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## events.commands_emit_user_actions
+## api.public_types_complete
 
-- Rule: high-level commands and interaction commits own user action events,
-  including changed `commitTextEdit` commits as `editText` notifications
-- Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api.typed_action_payloads`, `test.interaction.commands_emit_user_actions`, `test.interaction.text_edit_stale_commit_guard`
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## events.runtime_created_timestamps_monotonic
+## api.resource_source_app_key_publicly_readable
 
-- Rule: runtime-created `timestampMs` outputs resolve nullable and backwards
-  hints through one runtime-local monotonic cursor for stale host timestamps,
-  action events, context-action requests, pending line start previews, and selected
-  move resolver requests
-- Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.interaction.runtime_created_timestamps_monotonic`, `test.interaction.context_action_request`
-
-## load.prepares_before_interrupt
-
-- Rule: failed load does not interrupt gesture
-- Sections: `section_12_load_document`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit.staged_document_load_success_failure`
-
-## load.success_interrupts_before_install
-
-- Rule: success interrupt happens before atomic install
-- Sections: `section_12_load_document`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit.staged_document_load_success_failure`
-
-## preview.selected_move_main_repaint
-
-- Rule: selected move preview increments main repaint, not overlay
-- Sections: `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.frame.main_overlay_capture`
-
-## spatial.fallback_budget_enforced
-
-- Rule: fallback candidate union enforces maxFallbackCandidates, diagnostic counter, and typed budget-exceeded result
-- Sections: `section_17_spatial_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.spatial.fallback_budget_enforced`
-
-## cache.hot_caches_have_capacity_eviction
-
-- Rule: hot caches declare capacity, eviction policy, invalidation owner, and metric/probe
-- Sections: `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.frame.cache_capacity_eviction_policy`
-
-## resources.mutation_inside_edit_only
-
-- Rule: resource descriptor mutation only via CanvasEdit
-- Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: none
-
-## resources.dirty_no_document_revision
-
-- Rule: markResourceDirty publishes `state.revisions.resourceVisual` and does not increment `state.revisions.document`
-- Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.resources.resource_dirty`, `test.resources.mark_all_resources_dirty`
-
-## resources.app_key_only
-
-- Rule: resource descriptors use appKey only
-- Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.api_contract.public_readable_union_variants`, `test.codec.schema_v1.resources_appkey_only`, `test.codec.schema_v1.reject_unknown_resource_source_kind`, `test.resources.sync_image_resolver`, `test.resources.app_owned_image_not_disposed`
-
-## resources.resolver_reentrancy_rejected
-
-- Rule: public runtime mutation from inside CanvasResourceResolver throws StateError without runtime effects
-- Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.resources.resolver_reentrancy_rejected`
-
-## codec.schema_v1_exact
-
-- Rule: only schema v1 read/write
-- Sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.codec.schema_v1.known_fields_validation`, `test.codec.schema_v1.canonical_encode_roundtrip`
-
-## codec.known_fields_validated
-
-- Rule: known schema v1 fields are validated and canonical encoder writes only v1 fields
-- Sections: `section_05_schema_v1_contract`, `section_06_validation_limits`, `section_19_codec_boundary`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.codec.schema_v1.known_fields_validation`, `test.codec.schema_v1.canonical_encode_roundtrip`, `test.codec.schema_v1.metadata_projection`, `test.codec.schema_v1.resources_appkey_only`, `test.codec.schema_v1.reject_unknown_element_kind`, `test.codec.schema_v1.reject_unknown_resource_source_kind`, `test.codec.constructor_and_schema_limits`
-
-## diagnostics.disabled_no_alloc_hot_path
-
-- Rule: schema/codec success paths allocate no diagnostic records while
-  diagnostics are disabled; pointer/paint hot-path proof remains deferred until
-  those runtime owners exist
-- Sections: `section_20_diagnostics_hub`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.diagnostics.disabled_no_alloc_hot_path`
-
-## surface.interactive_false_pending_line_preserved
-
-- Rule: interactive=false cancels active routed pointers, preserves pending line state not owned by an active routed pointer, and does not mutate runtime mode, committed document, selection, or resources
-- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.flutter_bridge.interactive_false_pointer_routing`, `test.flutter_bridge.interactive_false_active_session_cancel`, `test.flutter_bridge.interactive_false_pending_line_preserved`, `test.flutter_bridge.interactive_false_state_isolation`
-
-## cache.keys_use_next_revisions_only
-
-- Rule: cache keys use next-owned revision facts and stable inputs, not legacy snapshot shapes
-- Sections: `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
+- Sections: `section_04_public_api_v1`, `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## cache.background_grid_not_element_visual
 
-- Rule: backgroundRevision/gridRevision changes and runtime view camera changes must not invalidate ordinary element paint plans
 - Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.frame.camera_pan_preserves_ordinary_paint_plan`
+
+## cache.hot_caches_have_capacity_eviction
+
+- Sections: `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## cache.keys_use_next_revisions_only
+
+- Sections: `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## codec.known_fields_validated
+
+- Sections: `section_05_schema_v1_contract`, `section_06_validation_limits`, `section_19_codec_boundary`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## codec.no_runtime_side_effects
 
-- Rule: schema v1 decode/encode validates and materializes DTOs without mutating runtime or store state
 - Sections: `section_19_codec_boundary`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.codec.decode_encode_no_runtime_side_effects`, `test.guardrails.codec_no_runtime_imports`
+
+## codec.schema_v1_exact
+
+- Sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## core.import_boundaries
 
-- Rule: package-owned source paths obey source boundary rules and the forbidden import matrix from `section_03_package_layout`
 - Sections: `section_03_package_layout`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.import_boundaries`, `test.guardrails.blocking_suite`
+
+## core.no_legacy_imports
+
+- Sections: `section_00_status_and_scope`, `section_03_package_layout`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## core.no_node_spec_patch_shape_dependency
+
+- Sections: `section_00_status_and_scope`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## core.no_scene_controller_shape_dependency
+
+- Sections: `section_00_status_and_scope`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## core.no_unapproved_part_files
 
-- Rule: production code has no `part` or `part of` files unless generated-code use is explicitly approved
 - Sections: `section_03_package_layout`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.import_boundaries`, `test.guardrails.blocking_suite`
+
+## core.single_runtime_root
+
+- Sections: `section_02_architecture_model`, `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## diagnostics.disabled_no_alloc_hot_path
+
+- Sections: `section_20_diagnostics_hub`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## diagnostics.sanitized_public_projection
 
-- Rule: diagnostic details expose only sanitized bounded public data and never runtime objects, images, closures, or full scene dumps
 - Sections: `section_20_diagnostics_hub`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.diagnostics.sanitizer_and_public_projection`, `test.diagnostics.diagnostics_public_surface`
 
 ## edit.no_global_invalidation_except_replacement
 
-- Rule: ordinary edits compile exact touched invalidation; only document replacement may use global invalidation
 - Sections: `section_11_edit_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit.exact_touched_invalidation`, `test.edit.field_update_nullable_semantics`
 
 ## edit.operation_matrix_complete
 
-- Rule: every operation matrix row has executable assertions for expanded operation matrix dimensions: touched state, public state revisions, internal revisions, spatial, projection, resource effects, repaint, user-action events, no-op behavior, and rollback behavior
 - Sections: `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.edit.field_update_nullable_semantics`, `test.edit.operation_matrix_effects`
 
-## frame.no_global_scene_sort
+## edit.rollback_no_effects
 
-- Rule: selected supplement staging merges by orderToken and does not globally sort all scene elements
-- Sections: `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.frame.selected_supplement_staging_no_global_sort`
+- Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## frame.paint_plan_excludes_preview_delta
+## edit.stale_handle_rejected
 
-- Rule: PaintPlanCache stores ordinary committed records only and excludes selectedMoveDelta/previewDelta from keys and values
-- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.frame.paint_plan_excludes_preview_delta`
+- Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## frame.paint_plan_excludes_selection_state
+## edit.sync_non_nested
 
-- Rule: PaintPlanCache stores ordinary committed records only and excludes selected ids, selectionRevision, and selection flags from keys and values
-- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.frame.paint_plan_excludes_selection_state`
+- Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## geometry.no_legacy_scene_order
+## edit.typed_effects_no_frame_dependency
 
-- Rule: geometry and hit-test policy does not reuse legacy SceneNode traversal or legacy scene order logic
-- Sections: `section_16_geometry_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.geometry.no_legacy_scene_order`
+- Sections: `section_11_edit_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## geometry.eraser_exact_budget_no_partial
+## events.commands_emit_user_actions
 
-- Rule: eraser exact-check budget exceeded paths produce corridor-only preview or terminal no-op cleanup, never partial erase
-- Sections: `section_16_geometry_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.geometry.eraser_exact_budget_no_partial_commit`
+- Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## interaction.no_concrete_store_imports
+## events.low_level_edit_no_user_actions
 
-- Rule: InteractionEngine uses EditKernel and narrow read-only query ports, not concrete store imports or mutations
-- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.interaction.state_machines`
+- Sections: `section_11_edit_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## interaction.no_concrete_selection_imports
+## events.runtime_created_timestamps_monotonic
 
-- Rule: InteractionEngine uses intent-specific selection query ports and EditKernel commits, not concrete SelectionKernel imports or mutations
-- Sections: `section_03_package_layout`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.guardrails.import_boundaries`, `test.guardrails.selection_boundary_imports`
-
-## interaction.no_resolver_on_cancel_paths
-
-- Rule: selected-move resolver is not called on cancel, load, mode-change, `interactive=false`, stale terminal, or dispose paths
-- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.interaction.move_resolver_not_called_on_cancel_cleanup`
-
-## interaction.no_stale_terminal_commit
-
-- Rule: stale or controllerEpoch-mismatched terminal samples cannot create commit intent
-- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.interaction.no_stale_terminal_commit`
-
-## interaction.pointer_cleanup_coordinator_only
-
-- Rule: cleanup-capable tool machines return typed cleanup requests to
-  `InteractionEngine`, `InteractionEngine` is the only caller of
-  `PointerToolCleanupCoordinator`, and no tool machine owns shared
-  preview/session cleanup policy, cleanup-effect publication, or direct
-  coordinator calls
-- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.interaction.pointer_cleanup_coordinator_outcomes`
-
-## interaction.text_edit_stale_commit_guard
-
-- Rule: request-originated text commits accept only current text content-target
-  context requests, treat unknown/already-retired ids as no-ops, privately
-  retire known live rejected epoch-stale, generation-stale, revision-stale,
-  missing, empty-canvas, non-text, or family-mismatched targets without public
-  effects, and allow unrelated documentRevision changes
-- Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.interaction.context_action_request`, `test.interaction.text_edit_stale_commit_guard`
-
-## projection.only_explicit_read_paths
-
-- Rule: `CanvasDocument` projection is built only by read/encode/test/tool or explicit draft-read paths, never pointer/hit/paint hot paths
-- Sections: `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.store.read_document_projection`, `test.store.no_projection_hot_path`, `test.guardrails.store_projection_checks`
+- Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## frame.committed_facts_via_frame_facts_port
 
-- Rule: production frame code obtains committed frame facts, row snapshots, and descriptor snapshots through `FrameFactsPort`, and `lib/src/frame/**` does not import concrete store internals
 - Sections: `section_03_package_layout`, `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.frame.main_overlay_capture`, `test.frame.no_live_runtime_read_in_painters`, `test.guardrails.frame_committed_facts_via_frame_facts_port`
+
+## frame.no_global_scene_sort
+
+- Sections: `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## frame.paint_plan_excludes_preview_delta
+
+- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## frame.paint_plan_excludes_selection_state
+
+- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## geometry.eraser_exact_budget_no_partial
+
+- Sections: `section_16_geometry_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## geometry.no_legacy_scene_order
+
+- Sections: `section_16_geometry_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## interaction.no_concrete_selection_imports
+
+- Sections: `section_03_package_layout`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## interaction.no_concrete_store_imports
+
+- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## interaction.no_resolver_on_cancel_paths
+
+- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## interaction.no_stale_terminal_commit
+
+- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## interaction.pointer_cleanup_coordinator_only
+
+- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## interaction.text_edit_stale_commit_guard
+
+- Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## load.prepares_before_interrupt
+
+- Sections: `section_12_load_document`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## load.success_interrupts_before_install
+
+- Sections: `section_12_load_document`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## preview.selected_move_main_repaint
+
+- Sections: `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## projection.only_explicit_read_paths
+
+- Sections: `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## resources.app_key_only
+
+- Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## resources.dirty_no_document_revision
+
+- Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## resources.mutation_inside_edit_only
+
+- Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## resources.no_same_frame_missing_retry
 
-- Rule: missing/null resource resolve results are suppressed by resolverGeneration, resourceId, and resourceRevision for the frame instead of retried immediately; resolver swap clears suppression state
 - Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.resources.missing_result_suppressed_per_frame`
 
 ## resources.resolver_boundary_owned_by_surface_session
 
-- Rule: painters and frame code never call CanvasResourceResolver directly; SurfaceResourceSession owns resolver access for an active surface
 - Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.resources.painter_never_calls_resolver_directly`, `test.resources.surface_session_cache_lifecycle`, `test.resources.resolver_swap_starts_fresh_cache`, `test.flutter_bridge.surface_resource_session_lifecycle`
 
 ## resources.resolver_frame_budget
 
-- Rule: SurfaceResourceSession enforces per-frame sync resolver call budget and budget-exceeded placeholders are not cached as null/missing
 - Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.resources.resolver_frame_budget`
 
-## spatial.no_full_clone_ordinary_edit
+## resources.resolver_reentrancy_rejected
 
-- Rule: ordinary spatial updates touch only changed ids/pages; full rebuild is reserved for replacement/load paths
-- Sections: `section_17_spatial_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.spatial.no_full_clone_for_touched_update`
-
-## spatial.stale_candidate_rejected
-
-- Rule: stale candidate handles are rejected by generation and structuralRevision checks before frame/hit use
-- Sections: `section_17_spatial_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.spatial.stale_generation_rejected`
-
-## store.no_public_document_live_state
-
-- Rule: DocumentStoreKernel stores compact committed tables, not a live mutable `CanvasDocument`
-- Sections: `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.store.public_document_is_projection_only`, `test.guardrails.store_projection_checks`
+- Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## selection.owner_separate_from_document
 
-- Rule: selected ids and selectionRevision are owned by the internal selection owner, not DocumentStoreKernel, CommittedDocument, CanvasDocument projection, schema v1, or public DTO state
 - Sections: `section_02_architecture_model`, `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.selection.runtime_owner_separation`, `test.guardrails.selection_boundary_checks`
+
+## spatial.fallback_budget_enforced
+
+- Sections: `section_17_spatial_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## spatial.no_full_clone_ordinary_edit
+
+- Sections: `section_17_spatial_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## spatial.stale_candidate_rejected
+
+- Sections: `section_17_spatial_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## store.no_public_document_live_state
+
+- Sections: `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## surface.interactive_false_pending_line_preserved
+
+- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## surface.pointer_samples_normalized_before_runtime
 
-- Rule: Flutter surface adapters pass only normalized finite pointer samples into runtime routing
 - Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-- Tests: `test.flutter_bridge.pointer_adapter_finite_normalization`
+

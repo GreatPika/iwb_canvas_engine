@@ -2,10 +2,41 @@ import 'dart:io';
 
 import 'package:yaml/yaml.dart';
 
+const _sectionsRegistryPath = 'docs/_registry/sections.yaml';
+const _donorsRegistryPath = 'docs/_registry/donors.yaml';
 const _diagramRegistryPath = 'docs/_registry/diagrams.yaml';
 const _diagramCompatibilityCatalogPath = 'docs/diagrams/README.md';
-const _generatedMarker =
+const _contextCoveragePath = 'docs/indexes/context_coverage.md';
+const _diagramGeneratedMarker =
     '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/diagrams.yaml -->';
+const _indexGeneratedMarker =
+    '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml and docs/_registry/donors.yaml -->';
+
+const _generatedIndexPaths = [
+  'docs/indexes/by_phase.md',
+  'docs/indexes/by_subsystem.md',
+  'docs/indexes/by_guardrail.md',
+  'docs/indexes/by_test_area.md',
+  'docs/indexes/donor_to_phase.md',
+];
+
+const _phaseOrder = [
+  'P0',
+  'P1',
+  'P2',
+  'P3',
+  'P4',
+  'P5',
+  'P6',
+  'P7',
+  'P8',
+  'P9',
+  'P10',
+  'P11',
+  'P12',
+  'P13',
+  'P14',
+];
 
 void main(List<String> arguments) {
   final checkOnly = arguments.contains('--check');
@@ -79,6 +110,44 @@ class _DiagramEntry {
   bool get isGenerated => classification == 'generated';
 }
 
+class _SectionEntry {
+  const _SectionEntry({
+    required this.id,
+    required this.title,
+    required this.phases,
+    required this.subsystems,
+    required this.mustRead,
+    required this.donors,
+    required this.diagrams,
+    required this.guardrails,
+    required this.tests,
+  });
+
+  final String id;
+  final String title;
+  final List<String> phases;
+  final List<String> subsystems;
+  final List<String> mustRead;
+  final List<String> donors;
+  final List<String> diagrams;
+  final List<String> guardrails;
+  final List<String> tests;
+}
+
+class _DonorEntry {
+  const _DonorEntry({
+    required this.id,
+    required this.decision,
+    required this.targetPhases,
+    required this.targetOwner,
+  });
+
+  final String id;
+  final String decision;
+  final List<String> targetPhases;
+  final String targetOwner;
+}
+
 _GeneratedDocsSyncResult _syncGeneratedDocs({required bool checkOnly}) {
   final errors = <String>[];
   final changedFiles = <String>[];
@@ -90,9 +159,18 @@ _GeneratedDocsSyncResult _syncGeneratedDocs({required bool checkOnly}) {
   }
 
   final diagrams = _loadDiagrams(errors);
+  final sections = _loadSections(errors);
+  final donors = _loadDonors(errors);
   if (errors.isEmpty) {
     _syncDiagramCompatibilityCatalog(
       diagrams,
+      checkOnly: checkOnly,
+      errors: errors,
+      changedFiles: changedFiles,
+    );
+    _syncGeneratedIndexes(
+      sections,
+      donors,
       checkOnly: checkOnly,
       errors: errors,
       changedFiles: changedFiles,
@@ -173,6 +251,55 @@ List<_DiagramEntry> _loadDiagrams(List<String> errors) {
   return entries;
 }
 
+List<_SectionEntry> _loadSections(List<String> errors) {
+  final entries = <_SectionEntry>[];
+  final seenIds = <String>{};
+  final yaml = _loadYamlList(_sectionsRegistryPath, errors);
+
+  for (final item in yaml) {
+    if (item is! YamlMap) {
+      errors.add('$_sectionsRegistryPath must contain only YAML map entries');
+      continue;
+    }
+    final entry = _sectionEntry(item, errors);
+    if (entry.id.isEmpty) {
+      continue;
+    }
+    if (!seenIds.add(entry.id)) {
+      errors.add('duplicate section id ${entry.id}');
+      continue;
+    }
+    _checkExplicitCoverage(entry, errors);
+    entries.add(entry);
+  }
+
+  return entries;
+}
+
+List<_DonorEntry> _loadDonors(List<String> errors) {
+  final entries = <_DonorEntry>[];
+  final seenIds = <String>{};
+  final yaml = _loadYamlList(_donorsRegistryPath, errors);
+
+  for (final item in yaml) {
+    if (item is! YamlMap) {
+      errors.add('$_donorsRegistryPath must contain only YAML map entries');
+      continue;
+    }
+    final entry = _donorEntry(item, errors);
+    if (entry.id.isEmpty) {
+      continue;
+    }
+    if (!seenIds.add(entry.id)) {
+      errors.add('duplicate donor id ${entry.id}');
+      continue;
+    }
+    entries.add(entry);
+  }
+
+  return entries;
+}
+
 _DiagramEntry _diagramEntry(YamlMap map, List<String> errors) {
   final id = _stringField(map, 'id', 'diagram entry', errors);
   return _DiagramEntry(
@@ -186,6 +313,50 @@ _DiagramEntry _diagramEntry(YamlMap map, List<String> errors) {
   );
 }
 
+_SectionEntry _sectionEntry(YamlMap map, List<String> errors) {
+  final id = _stringField(map, 'id', 'section entry', errors);
+  return _SectionEntry(
+    id: id,
+    title: _stringField(map, 'title', id, errors),
+    phases: _stringListField(map, 'phases', id, errors),
+    subsystems: _stringListField(map, 'subsystems', id, errors),
+    mustRead: _stringListField(map, 'must_read', id, errors),
+    donors: _stringListField(map, 'donors', id, errors),
+    diagrams: _stringListField(map, 'diagrams', id, errors),
+    guardrails: _stringListField(map, 'guardrails', id, errors),
+    tests: _stringListField(map, 'tests', id, errors),
+  );
+}
+
+_DonorEntry _donorEntry(YamlMap map, List<String> errors) {
+  final id = _stringField(map, 'id', 'donor entry', errors);
+  return _DonorEntry(
+    id: id,
+    decision: _stringField(map, 'decision', id, errors),
+    targetPhases: _stringListField(map, 'target_phases', id, errors),
+    targetOwner: _stringField(map, 'target_owner', id, errors),
+  );
+}
+
+void _checkExplicitCoverage(_SectionEntry section, List<String> errors) {
+  final coverageFields = {
+    'must_read': section.mustRead,
+    'donors': section.donors,
+    'diagrams': section.diagrams,
+    'guardrails': section.guardrails,
+    'tests': section.tests,
+  };
+
+  for (final entry in coverageFields.entries) {
+    if (entry.value.isEmpty) {
+      errors.add('${section.id} must have explicit ${entry.key} coverage');
+    }
+  }
+  if (section.subsystems.isEmpty) {
+    errors.add('${section.id} must have explicit subsystems coverage');
+  }
+}
+
 void _syncDiagramCompatibilityCatalog(
   List<_DiagramEntry> diagrams, {
   required bool checkOnly,
@@ -193,28 +364,94 @@ void _syncDiagramCompatibilityCatalog(
   required List<String> changedFiles,
 }) {
   final expected = _renderDiagramCompatibilityCatalog(diagrams);
-  final file = File(_diagramCompatibilityCatalogPath);
-  final actual = file.existsSync() ? file.readAsStringSync() : '';
+  _syncGeneratedFile(
+    _diagramCompatibilityCatalogPath,
+    expected,
+    checkOnly: checkOnly,
+    errors: errors,
+    changedFiles: changedFiles,
+  );
+}
 
+void _syncGeneratedIndexes(
+  List<_SectionEntry> sections,
+  List<_DonorEntry> donors, {
+  required bool checkOnly,
+  required List<String> errors,
+  required List<String> changedFiles,
+}) {
+  if (File(_contextCoveragePath).existsSync()) {
+    if (checkOnly) {
+      errors.add('$_contextCoveragePath must not remain as an entrypoint');
+    } else {
+      File(_contextCoveragePath).deleteSync();
+      changedFiles.add(_contextCoveragePath);
+    }
+  }
+
+  _checkIndexInventory(errors);
+
+  final outputs = {
+    'docs/indexes/by_phase.md': _renderByPhaseIndex(sections),
+    'docs/indexes/by_subsystem.md': _renderBySubsystemIndex(sections),
+    'docs/indexes/by_guardrail.md': _renderByGuardrailIndex(sections),
+    'docs/indexes/by_test_area.md': _renderByTestAreaIndex(sections),
+    'docs/indexes/donor_to_phase.md': _renderDonorToPhaseIndex(donors),
+  };
+
+  for (final entry in outputs.entries) {
+    _syncGeneratedFile(
+      entry.key,
+      entry.value,
+      checkOnly: checkOnly,
+      errors: errors,
+      changedFiles: changedFiles,
+    );
+  }
+}
+
+void _checkIndexInventory(List<String> errors) {
+  final allowed = _generatedIndexPaths.toSet();
+  final directory = Directory('docs/indexes');
+  if (!directory.existsSync()) {
+    return;
+  }
+
+  for (final file in directory.listSync().whereType<File>()) {
+    if (!file.path.endsWith('.md')) {
+      continue;
+    }
+    if (!allowed.contains(file.path)) {
+      errors.add('${file.path} is not a locked generated index');
+    }
+  }
+}
+
+void _syncGeneratedFile(
+  String path,
+  String expected, {
+  required bool checkOnly,
+  required List<String> errors,
+  required List<String> changedFiles,
+}) {
+  final file = File(path);
+  final actual = file.existsSync() ? file.readAsStringSync() : '';
   if (actual == expected) {
     return;
   }
   if (checkOnly) {
-    errors.add(
-      '$_diagramCompatibilityCatalogPath is not generated from $_diagramRegistryPath',
-    );
+    errors.add('$path is not generated from registry data');
     return;
   }
-
   file.writeAsStringSync(expected);
-  changedFiles.add(_diagramCompatibilityCatalogPath);
+  changedFiles.add(path);
 }
 
 String _renderDiagramCompatibilityCatalog(List<_DiagramEntry> diagrams) {
   final generated = diagrams.where((diagram) => diagram.isGenerated).toList();
   final semantic = diagrams.where((diagram) => !diagram.isGenerated).toList();
   final buffer = StringBuffer()
-    ..writeln(_generatedMarker)
+    ..writeln(_diagramGeneratedMarker)
     ..writeln('# Diagram catalog')
     ..writeln()
     ..writeln(
@@ -275,6 +512,134 @@ String _renderDiagramCompatibilityCatalog(List<_DiagramEntry> diagrams) {
   return buffer.toString();
 }
 
+String _renderByPhaseIndex(List<_SectionEntry> sections) {
+  final buffer = _indexBuffer(
+    'By phase',
+    'Sections grouped by implementation phase from `$_sectionsRegistryPath`.',
+  );
+  for (final phase in _phaseOrder) {
+    final entries = sections
+        .where((section) => section.phases.contains(phase))
+        .toList();
+    if (entries.isEmpty) {
+      continue;
+    }
+    _writeHeading(buffer, phase);
+    _writeSectionBullets(buffer, entries);
+  }
+  return buffer.toString();
+}
+
+String _renderBySubsystemIndex(List<_SectionEntry> sections) {
+  final subsystems = <String, List<_SectionEntry>>{};
+  for (final section in sections) {
+    for (final subsystem in section.subsystems) {
+      if (subsystem == 'none') {
+        continue;
+      }
+      subsystems.putIfAbsent(subsystem, () => []).add(section);
+    }
+  }
+
+  final buffer = _indexBuffer(
+    'By subsystem',
+    'Sections grouped by subsystem from `$_sectionsRegistryPath`.',
+  );
+  for (final subsystem in subsystems.keys.toList()..sort()) {
+    _writeHeading(buffer, subsystem);
+    _writeSectionBullets(buffer, subsystems[subsystem] ?? const []);
+  }
+  return buffer.toString();
+}
+
+String _renderByGuardrailIndex(List<_SectionEntry> sections) {
+  final guardrails = <String, List<_SectionEntry>>{};
+  for (final section in sections) {
+    for (final guardrail in section.guardrails) {
+      if (guardrail == 'none') {
+        continue;
+      }
+      guardrails.putIfAbsent(guardrail, () => []).add(section);
+    }
+  }
+
+  final buffer = _indexBuffer(
+    'By guardrail',
+    'Guardrail coverage generated from `$_sectionsRegistryPath`.',
+  );
+  for (final guardrail in guardrails.keys.toList()..sort()) {
+    final entries = guardrails[guardrail] ?? const <_SectionEntry>[];
+    _writeHeading(buffer, guardrail);
+    buffer
+      ..writeln('- Sections: ${_sectionCodeList(entries)}')
+      ..writeln();
+  }
+  return buffer.toString();
+}
+
+String _renderByTestAreaIndex(List<_SectionEntry> sections) {
+  final tests = <String, List<_SectionEntry>>{};
+  for (final section in sections) {
+    for (final test in section.tests) {
+      if (test == 'none') {
+        continue;
+      }
+      tests.putIfAbsent(test, () => []).add(section);
+    }
+  }
+
+  final buffer = _indexBuffer(
+    'By test area',
+    'Test coverage generated from `$_sectionsRegistryPath`.',
+  );
+  for (final test in tests.keys.toList()..sort()) {
+    final entries = tests[test] ?? const <_SectionEntry>[];
+    _writeHeading(buffer, test);
+    buffer
+      ..writeln('- Sections: ${_sectionCodeList(entries)}')
+      ..writeln();
+  }
+  return buffer.toString();
+}
+
+String _renderDonorToPhaseIndex(List<_DonorEntry> donors) {
+  final buffer = _indexBuffer(
+    'Donor to phase',
+    'Donor targets generated from `$_donorsRegistryPath`.',
+  );
+  for (final donor in donors) {
+    _writeHeading(buffer, donor.id);
+    buffer
+      ..writeln('- Decision: `${donor.decision}`')
+      ..writeln('- Target phases: ${_codeList(donor.targetPhases)}')
+      ..writeln('- Target owner: ${donor.targetOwner}')
+      ..writeln();
+  }
+  return buffer.toString();
+}
+
+StringBuffer _indexBuffer(String title, String description) {
+  return StringBuffer()
+    ..writeln(_indexGeneratedMarker)
+    ..writeln('# $title')
+    ..writeln()
+    ..writeln(description)
+    ..writeln();
+}
+
+void _writeHeading(StringBuffer buffer, String heading) {
+  buffer
+    ..writeln('## $heading')
+    ..writeln();
+}
+
+void _writeSectionBullets(StringBuffer buffer, List<_SectionEntry> sections) {
+  for (final section in sections) {
+    buffer.writeln('- `${section.id}` - ${section.title}');
+  }
+  buffer.writeln();
+}
+
 YamlList _loadYamlList(String path, List<String> errors) {
   final file = File(path);
   if (!file.existsSync()) {
@@ -316,8 +681,12 @@ List<String> _stringListField(
   }
 
   final values = <String>[];
+  final seen = <String>{};
   for (final item in value) {
     if (item is String) {
+      if (!seen.add(item)) {
+        errors.add('$owner field $field contains duplicate value $item');
+      }
       values.add(item);
     } else {
       errors.add('$owner field $field must contain only strings');
@@ -327,5 +696,12 @@ List<String> _stringListField(
 }
 
 String _codeList(List<String> values) {
+  if (values.isEmpty) {
+    return '`none`';
+  }
   return values.map((value) => '`$value`').join(', ');
+}
+
+String _sectionCodeList(List<_SectionEntry> sections) {
+  return _codeList(sections.map((section) => section.id).toList());
 }

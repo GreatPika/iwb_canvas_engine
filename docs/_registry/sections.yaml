@@ -6,6 +6,8 @@
   phases:
     - P0
     - P1
+  subsystems:
+    - none
   must_read:
     - "none"
   donors:
@@ -33,6 +35,8 @@
   phases:
     - P0
     - P4
+  subsystems:
+    - selection_runtime
   must_read:
     - section_00_status_and_scope
   donors:
@@ -57,6 +61,8 @@
   title: 3. Package layout
   phases:
     - P0
+  subsystems:
+    - none
   must_read:
     - section_00_status_and_scope
     - section_02_architecture_model
@@ -91,6 +97,8 @@
     - P11
     - P12
     - P13
+  subsystems:
+    - public_api
   must_read:
     - section_00_status_and_scope
     - section_03_package_layout
@@ -164,6 +172,8 @@
   phases:
     - P3
     - P7
+  subsystems:
+    - schema_codec
   must_read:
     - section_04_public_api_v1
     - section_06_validation_limits
@@ -205,6 +215,8 @@
     - P2
     - P3
     - P4
+  subsystems:
+    - public_api
   must_read:
     - section_04_public_api_v1
   donors:
@@ -230,6 +242,8 @@
     - P7
     - P9
     - P13
+  subsystems:
+    - resources
   must_read:
     - section_04_public_api_v1
     - section_10_runtime_data_model
@@ -274,6 +288,8 @@
   title: 8A. Legacy capability inventory
   phases:
     - P1
+  subsystems:
+    - legacy_evidence
   must_read:
     - docs/donors/00_reuse_rules.md
   donors:
@@ -294,6 +310,8 @@
   phases:
     - P1
     - P2
+  subsystems:
+    - none
   must_read:
     - section_00_status_and_scope
   donors:
@@ -322,6 +340,9 @@
     - P7
     - P8
     - P9
+  subsystems:
+    - runtime_store_edit
+    - selection_runtime
   must_read:
     - section_02_architecture_model
     - section_04_public_api_v1
@@ -362,6 +383,8 @@
     - P10
     - P11
     - P12
+  subsystems:
+    - runtime_store_edit
   must_read:
     - section_04_public_api_v1
     - section_10_runtime_data_model
@@ -405,6 +428,8 @@
     - P10
     - P11
     - P12
+  subsystems:
+    - runtime_store_edit
   must_read:
     - section_10_runtime_data_model
     - section_11_edit_kernel
@@ -437,6 +462,8 @@
     - P10
     - P11
     - P12
+  subsystems:
+    - runtime_store_edit
   must_read:
     - section_11_edit_kernel
   donors:
@@ -470,6 +497,9 @@
     - P11
     - P12
     - P13
+  subsystems:
+    - selection_runtime
+    - interaction
   must_read:
     - section_11_edit_kernel
     - section_15_frame_render_contract
@@ -549,6 +579,9 @@
     - P9
     - P10
     - P13
+  subsystems:
+    - selection_runtime
+    - frame_render_spatial_geometry
   must_read:
     - section_10_runtime_data_model
     - section_07_resource_lifecycle
@@ -603,6 +636,8 @@
     - P10
     - P11
     - P12
+  subsystems:
+    - frame_render_spatial_geometry
   must_read:
     - section_04_public_api_v1
     - section_10_runtime_data_model
@@ -641,6 +676,8 @@
     - P9
     - P10
     - P12
+  subsystems:
+    - frame_render_spatial_geometry
   must_read:
     - section_10_runtime_data_model
     - section_16_geometry_policy
@@ -675,6 +712,8 @@
     - P9
     - P13
     - P14
+  subsystems:
+    - frame_render_spatial_geometry
   must_read:
     - section_10_runtime_data_model
     - section_17_spatial_kernel
@@ -707,6 +746,8 @@
   title: 19. CodecBoundary
   phases:
     - P3
+  subsystems:
+    - schema_codec
   must_read:
     - section_05_schema_v1_contract
     - section_06_validation_limits
@@ -743,6 +784,8 @@
   phases:
     - P3
     - P14
+  subsystems:
+    - none
   must_read:
     - section_06_validation_limits
     - section_19_codec_boundary
@@ -768,6 +811,8 @@
   phases:
     - P0
     - P14
+  subsystems:
+    - quality_gates
   must_read:
     - section_00_status_and_scope
     - section_03_package_layout
@@ -871,6 +916,8 @@
     - P12
     - P13
     - P14
+  subsystems:
+    - quality_gates
   must_read:
     - section_04_public_api_v1
     - section_22_guardrails_machine_checks
@@ -1022,8 +1069,6 @@
     - test.frame.main_overlay_capture
     - test.frame.no_live_runtime_read_in_painters
     - test.guardrails.frame_committed_facts_via_frame_facts_port
-    - test.guardrails.store_projection_checks
-    - test.guardrails.selection_boundary_checks
     - test.frame.paint_plan_excludes_preview_delta
     - test.frame.camera_pan_preserves_ordinary_paint_plan
     - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
@@ -1035,7 +1080,6 @@
     - test.interaction.move_resolver_not_called_on_cancel_cleanup
     - test.interaction.no_stale_terminal_commit
     - test.interaction.pointer_cleanup_coordinator_outcomes
-    - test.interaction.context_action_request
     - test.interaction.text_edit_stale_commit_guard
     - test.flutter_bridge.widget_paint
     - test.benchmarks.required_cases
@@ -1049,6 +1093,8 @@
   title: 24. Benchmarks
   phases:
     - P14
+  subsystems:
+    - quality_gates
   must_read:
     - section_15_frame_render_contract
     - section_17_spatial_kernel
@@ -1071,6 +1117,8 @@
   title: 27. Final release gates
   phases:
     - P14
+  subsystems:
+    - quality_gates
   must_read:
     - section_22_guardrails_machine_checks
     - section_23_tests
