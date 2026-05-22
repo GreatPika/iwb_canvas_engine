@@ -58,6 +58,22 @@ void main() {
       first['docs/diagrams/generated/actual_vs_expected_diff.mmd'],
       contains('linkStyle'),
     );
+    expect(
+      first['docs/diagrams/generated/current_phase.mmd'],
+      contains('public API forwards to by P4'),
+    );
+    expect(
+      first['docs/diagrams/generated/current_phase.mmd'],
+      isNot(contains(r'\n')),
+    );
+    expect(
+      first['docs/diagrams/generated/current_phase.mmd'],
+      isNot(contains('facade_port P4')),
+    );
+    expect(
+      first['docs/diagrams/generated/actual_vs_expected_diff.mmd'],
+      contains('Missing required link'),
+    );
   });
 
   test('checked-in generated graph views are current', () {

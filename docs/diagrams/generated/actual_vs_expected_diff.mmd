@@ -3,31 +3,34 @@
 %% View: Actual vs expected selected phase diff
 %% Selected phase: P4
 flowchart LR
-  api_camera_port["Public camera port\nP4"]:::ok
-  api_canvas_runtime["Canvas runtime facade\nP4"]:::ok
-  api_public_surface["Public package surface\nP0"]:::ok
-  codec_schema_v1["Schema v1 codec\nP3"]:::ok
-  diagnostics_hub["Diagnostics hub\nP3"]:::ok
-  runtime_root["Runtime composition root\nP4"]:::ok
-  runtime_view_camera["Runtime-owned view camera\nP4"]:::ok
-  selection_kernel["Selection kernel\nP4"]:::ok
-  store_document_kernel["Document store kernel\nP4"]:::ok
-  api_canvas_runtime -->|facade_port P4| runtime_view_camera
-  api_canvas_runtime -->|composes P4| runtime_root
-  api_canvas_runtime -->|facade_port P4| api_camera_port
-  api_public_surface -->|exports P2| api_canvas_runtime
-  codec_schema_v1 -->|diagnostic_route P3| diagnostics_hub
-  codec_schema_v1 -->|data_boundary P3| api_public_surface
-  runtime_root -->|composes P4| selection_kernel
-  runtime_root -->|composes P4| store_document_kernel
-  violation_api_canvas_runtime_camera_routes_to_runtime_view_camera["missing_required_edge"]:::violation
-  violation_api_canvas_runtime_camera_routes_to_runtime_view_camera -.-> api_canvas_runtime_camera_routes_to_runtime_view_camera
-  violation_api_canvas_runtime_exposes_camera["missing_required_edge"]:::violation
-  violation_api_canvas_runtime_exposes_camera -.-> api_canvas_runtime_exposes_camera
-  violation_codec_schema_v1_failures_report_to_diagnostics["missing_required_edge"]:::violation
-  violation_codec_schema_v1_failures_report_to_diagnostics -.-> codec_schema_v1_failures_report_to_diagnostics
-  violation_runtime_canvas_runtime_camera_closed_phase_placeholder["closed_phase_placeholder"]:::violation
-  violation_runtime_canvas_runtime_camera_closed_phase_placeholder -.-> runtime_canvas_runtime_camera_closed_phase_placeholder
+  api_camera_port["Public camera port<br/>required by P4"]:::ok
+  api_canvas_runtime["Canvas runtime facade<br/>required by P4"]:::ok
+  api_public_surface["Public package surface<br/>required by P0"]:::ok
+  codec_schema_v1["Schema v1 codec<br/>required by P3"]:::ok
+  diagnostics_hub["Diagnostics hub<br/>required by P3"]:::ok
+  runtime_root["Runtime composition root<br/>required by P4"]:::ok
+  runtime_view_camera["Runtime-owned view camera<br/>required by P4"]:::ok
+  selection_kernel["Selection kernel<br/>required by P4"]:::ok
+  store_document_kernel["Document store kernel<br/>required by P4"]:::ok
+  api_canvas_runtime -->|public API forwards to by P4| runtime_view_camera
+  api_canvas_runtime -->|owns and creates by P4| runtime_root
+  api_canvas_runtime -->|public API forwards to by P4| api_camera_port
+  api_public_surface -->|exports by P2| api_canvas_runtime
+  codec_schema_v1 -->|reports errors to by P3| diagnostics_hub
+  codec_schema_v1 -->|uses public data by P3| api_public_surface
+  runtime_root -->|owns and creates by P4| selection_kernel
+  runtime_root -->|owns and creates by P4| store_document_kernel
+  violation_api_canvas_runtime_camera_routes_to_runtime_view_camera["Missing required link"]:::violation
+  violation_api_canvas_runtime_camera_routes_to_runtime_view_camera -.-> api_canvas_runtime
+  violation_api_canvas_runtime_camera_routes_to_runtime_view_camera -.-> runtime_view_camera
+  violation_api_canvas_runtime_exposes_camera["Missing required link"]:::violation
+  violation_api_canvas_runtime_exposes_camera -.-> api_canvas_runtime
+  violation_api_canvas_runtime_exposes_camera -.-> api_camera_port
+  violation_codec_schema_v1_failures_report_to_diagnostics["Missing required link"]:::violation
+  violation_codec_schema_v1_failures_report_to_diagnostics -.-> codec_schema_v1
+  violation_codec_schema_v1_failures_report_to_diagnostics -.-> diagnostics_hub
+  violation_runtime_canvas_runtime_camera_closed_phase_placeholder["Old placeholder remains"]:::violation
+  violation_runtime_canvas_runtime_camera_closed_phase_placeholder -.-> api_canvas_runtime
   classDef ok fill:#f8fafc,stroke:#64748b,color:#0f172a
   classDef violation fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
   linkStyle 0 stroke:#dc2626,stroke-width:3px,color:#7f1d1d

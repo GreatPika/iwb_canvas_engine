@@ -4,6 +4,19 @@ import 'actual_graph.dart';
 import 'architecture_graph.dart';
 import 'phase_closure.dart';
 
+const _edgeKindLabels = {
+  'exports': 'exports',
+  'composes': 'owns and creates',
+  'facade_port': 'public API forwards to',
+  'data_boundary': 'uses public data',
+  'diagnostic_route': 'reports errors to',
+  'mutation_boundary': 'changes data through',
+  'query_boundary': 'reads data through',
+  'read_port': 'reads from',
+  'resource_boundary': 'resolves resources through',
+  'ui_boundary': 'is shown through',
+};
+
 Map<String, String> renderGraphViews({
   required ExpectedArchitectureGraph expected,
   required ActualArchitectureGraph actual,
@@ -84,7 +97,7 @@ String _renderExpectedView({
     return nodeIds.contains(edge.from) && nodeIds.contains(edge.to);
   }).toList()..sort((left, right) => left.id.compareTo(right.id))) {
     buffer.writeln(
-      '  ${_mermaidId(edge.from)} -->|${edge.kind} ${edge.phaseRequiredBy}| ${_mermaidId(edge.to)}',
+      '  ${_mermaidId(edge.from)} -->|${_edgeLabel(edge)}| ${_mermaidId(edge.to)}',
     );
   }
 
@@ -192,7 +205,7 @@ String _renderDiffView({
     return _phaseIndex(edge.phaseRequiredBy) <= _phaseIndex(selectedPhase);
   }).toList()..sort((left, right) => left.id.compareTo(right.id))) {
     buffer.writeln(
-      '  ${_mermaidId(edge.from)} -->|${edge.kind} ${edge.phaseRequiredBy}| ${_mermaidId(edge.to)}',
+      '  ${_mermaidId(edge.from)} -->|${_edgeLabel(edge)}| ${_mermaidId(edge.to)}',
     );
     if (violationIds.contains(edge.id)) {
       linkStyles.add(
@@ -205,9 +218,12 @@ String _renderDiffView({
       in report.violations.toList()
         ..sort((left, right) => left.graphId.compareTo(right.graphId))) {
     final violationNode = _mermaidId('violation.${violation.graphId}');
-    buffer
-      ..writeln('  $violationNode["${_escape(violation.status)}"]:::violation')
-      ..writeln('  $violationNode -.-> ${_mermaidId(violation.graphId)}');
+    buffer.writeln(
+      '  $violationNode["${_violationLabel(violation.status)}"]:::violation',
+    );
+    for (final target in _violationTargets(violation, expected)) {
+      buffer.writeln('  $violationNode -.-> ${_mermaidId(target)}');
+    }
   }
   buffer
     ..writeln('  classDef ok fill:#f8fafc,stroke:#64748b,color:#0f172a')
@@ -229,7 +245,50 @@ StringBuffer _header(String title, String selectedPhase) {
 }
 
 String _label(String label, String phaseRequiredBy) {
-  return '${_escape(label)}\\n$phaseRequiredBy';
+  return '${_escape(label)}<br/>required by $phaseRequiredBy';
+}
+
+String _edgeLabel(ArchitectureEdge edge) {
+  return '${_edgeKindLabel(edge.kind)} by ${edge.phaseRequiredBy}';
+}
+
+String _edgeKindLabel(String kind) {
+  return _edgeKindLabels[kind] ?? kind.replaceAll('_', ' ');
+}
+
+String _violationLabel(String status) {
+  return switch (status) {
+    'missing_required_node' => 'Missing required box',
+    'missing_required_edge' => 'Missing required link',
+    'forbidden_edge' => 'Forbidden link exists',
+    'closed_phase_placeholder' => 'Old placeholder remains',
+    'expired_placeholder_deferral' => 'Placeholder is overdue',
+    'untracked_placeholder' => 'Untracked placeholder',
+    'unknown_architecture_seam' => 'Unknown architecture box',
+    'unknown_phase' => 'Unknown phase',
+    _ => status.replaceAll('_', ' '),
+  };
+}
+
+List<String> _violationTargets(
+  PhaseClosureViolation violation,
+  ExpectedArchitectureGraph expected,
+) {
+  for (final edge in expected.edges) {
+    if (edge.id == violation.graphId) {
+      return [edge.from, edge.to];
+    }
+  }
+  for (final placeholder in expected.placeholders) {
+    if (placeholder.id == violation.graphId) {
+      return [placeholder.node];
+    }
+  }
+  if (expected.nodes.any((node) => node.id == violation.graphId)) {
+    return [violation.graphId];
+  }
+
+  return const [];
 }
 
 String _escape(String value) {
