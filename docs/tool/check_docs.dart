@@ -120,6 +120,7 @@ void main() {
   _checkRequiredEntrypoints();
   _checkPortalReadmes();
   _checkReadmeInventory();
+  _checkGeneratedDocsParity();
   _checkGeneratedIndexes();
 
   final sections = _loadSections();
@@ -415,6 +416,20 @@ void _checkReadmeInventory() {
     if (!allowed.contains(file.path)) {
       _fail('${file.path} is not an approved docs README');
     }
+  }
+}
+
+void _checkGeneratedDocsParity() {
+  final result = Process.runSync(Platform.resolvedExecutable, [
+    'run',
+    'docs/tool/sync_generated_docs.dart',
+    '--check',
+  ]);
+  if (result.exitCode != 0) {
+    _fail(
+      'generated docs are stale; run '
+      '`dart run docs/tool/sync_generated_docs.dart`',
+    );
   }
 }
 
