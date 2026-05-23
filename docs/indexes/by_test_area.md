@@ -347,6 +347,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_02_architecture_model`, `section_10_runtime_data_model`
 
+## test.smoke.public_incremental_smoke
+
+- Sections: `section_23_tests`
+
 ## test.spatial.fallback_budget_enforced
 
 - Sections: `section_17_spatial_kernel`, `section_23_tests`

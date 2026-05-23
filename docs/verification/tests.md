@@ -147,6 +147,7 @@ Required tests:
 - `test.codec.constructor_and_schema_limits`
 - `test.runtime.dispose_lifecycle`
 - `test.runtime.runtime_state_publication`
+- `test.smoke.public_incremental_smoke`
 - `test.runtime.load_document_state_publication`
 - `test.runtime.interaction_settings_state`
 - `test.store.read_document_projection`
@@ -245,6 +246,7 @@ Required tests:
 - `test/interaction/runtime_created_timestamps_monotonic_test.dart`
 - `test/runtime/dispose_lifecycle_test.dart`
 - `test/runtime/runtime_state_publication_test.dart`
+- `test/smoke/public_incremental_smoke_test.dart`
 - `test/runtime/load_document_state_publication_test.dart`
 - `test/runtime/interaction_settings_state_test.dart`
 - `test/flutter_bridge/interactive_false_pointer_routing_test.dart`
@@ -478,6 +480,16 @@ behavioral tests, and the required guardrail list remains owned by
   state.revisions.document advanced and unrelated public domains unchanged;
 - proves no-op edits and no-op runtime operations do not publish a new
   CanvasRuntimeState.
+
+#### `test/smoke/public_incremental_smoke_test.dart`
+- proves an external Flutter consumer can import only the root public barrel,
+  decode a small schema v1 document, construct CanvasRuntime, observe initial
+  state and readDocument output, and perform one public selection operation;
+- uses the shared Flutter consumer harness as the package-boundary proof;
+- stays intentionally coarse so focused codec, runtime, selection, and cache
+  tests own detailed diagnostics;
+- must expand only by appending the next real public user step after a future
+  phase exposes one.
 
 #### `test/runtime/load_document_state_publication_test.dart`
 - proves successful loadDocument publishes exactly one post-install

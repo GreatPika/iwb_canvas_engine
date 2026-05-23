@@ -1052,6 +1052,7 @@
     - test.codec.constructor_and_schema_limits
     - test.runtime.dispose_lifecycle
     - test.runtime.runtime_state_publication
+    - test.smoke.public_incremental_smoke
     - test.runtime.load_document_state_publication
     - test.runtime.interaction_settings_state
     - test.store.read_document_projection
