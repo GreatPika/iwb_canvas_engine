@@ -284,6 +284,9 @@ final class ArchitectureGraphDiagnostic {
   String toString() => '$id: $path: $message';
 }
 
+// The loader mirrors the top-level YAML schema in one visible construction so
+// added sections change the schema boundary in exactly one auditable place.
+// ignore: halstead-volume, source-lines-of-code
 ExpectedArchitectureGraph loadExpectedArchitectureGraph({
   String path = architectureGraphPath,
 }) {

@@ -316,6 +316,8 @@ ExpectedArchitectureGraph _graphWith({
   );
 }
 
+// This fixture helper keeps schema-case variation local to the test data.
+// ignore: number-of-parameters
 ArchitectureNode _nodeWith(
   ArchitectureNode node, {
   String? id,

@@ -22,7 +22,7 @@ import 'selection_membership_port.dart';
 
 // RuntimeRoot is intentionally the one place where public runtime behavior,
 // store read facts, and selection ownership meet.
-// ignore: coupling-between-object-classes, number-of-methods
+// ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   RuntimeRoot({
     required CanvasDocument initialDocument,

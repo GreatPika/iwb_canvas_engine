@@ -528,6 +528,9 @@ ExpectedArchitectureGraph _fixtureGraphWithDiagnosticRoute() {
   );
 }
 
+// The fixture builder keeps fact lists independent so each test states only the
+// evidence it contributes without introducing a mutable builder layer.
+// ignore: number-of-parameters
 ActualArchitectureGraph _actualGraph({
   List<ImportFact> imports = const [],
   List<DeclarationFact> declarations = const [],

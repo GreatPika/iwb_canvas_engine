@@ -17,6 +17,9 @@ import '../diagnostics/diagnostics_hub.dart';
 import 'schema_v1_diagnostics.dart';
 import 'schema_v1_validation.dart';
 
+// The root decoder keeps the schema sections in document order so boundary
+// validation, defaulting, construction, and reference checks are auditable.
+// ignore: halstead-volume, source-lines-of-code
 CanvasDocument decodeSchemaV1Document(
   Map<String, Object?> json, {
   DiagnosticsHub? diagnostics,
@@ -973,6 +976,9 @@ int? _readNullableInt(
   return _readInt(value, path: path, diagnostics: diagnostics);
 }
 
+// Default field readers keep key, error path, default, and diagnostics explicit
+// at each boundary instead of hiding schema context inside a parameter object.
+// ignore: number-of-parameters
 int _readIntDefault(
   Map<String, Object?> map, {
   required String key,
@@ -1020,6 +1026,9 @@ double? _readNullableDouble(
   return _readDouble(value, path: path, diagnostics: diagnostics);
 }
 
+// Default field readers keep key, error path, default, and diagnostics explicit
+// at each boundary instead of hiding schema context inside a parameter object.
+// ignore: number-of-parameters
 double _readDoubleDefault(
   Map<String, Object?> map, {
   required String key,
@@ -1053,6 +1062,9 @@ bool _readBool(
   );
 }
 
+// Default field readers keep key, error path, default, and diagnostics explicit
+// at each boundary instead of hiding schema context inside a parameter object.
+// ignore: number-of-parameters
 bool _readBoolDefault(
   Map<String, Object?> map, {
   required String key,

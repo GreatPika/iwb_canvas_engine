@@ -25,10 +25,11 @@ architecture rebuild. The current task is to build the new engine described in
 - Treat DCM metrics as review signals, not design targets. Do not split,
   wrap, or otherwise reshape cohesive code only to satisfy a metric threshold.
 - When a metric violation is an intentional architecture or readability
-  trade-off, prefer a local DCM suppression comment over broad configuration
-  changes. Use `// ignore: metrics` for a specific declaration, or
-  `// ignore_for_file: type=metrics` only when the entire file has a stable
-  reason to be excluded from metric violations.
+  trade-off, suppress only the specific metric on the specific declaration that
+  needs the exception. Use exact metric names such as
+  `// ignore: halstead-volume, source-lines-of-code`; do not use broad
+  `// ignore: metrics`, file-level metric suppression, or repository-level
+  threshold/configuration changes to silence localized exceptions.
 - Every metrics suppression must have a nearby plain-language comment that
   explains why keeping the code together is clearer or safer than reshaping it
   for the metric.
