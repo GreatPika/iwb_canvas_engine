@@ -211,8 +211,12 @@ final class _ActualGraphCollector {
   final List<ExceptionThrowFact> exceptionThrows = [];
   final List<DelegationFact> delegations = [];
   final List<MemberCallFact> memberCalls = [];
+  final Set<String> materializationRouteHelpers = {};
+  final List<_PendingMaterializationRouteFact> materializationRoutes = [];
 
   ActualArchitectureGraph toGraph() {
+    _promoteMaterializationRoutes();
+
     return ActualArchitectureGraph(
       exports: exports,
       imports: imports,
@@ -225,6 +229,28 @@ final class _ActualGraphCollector {
       memberCalls: memberCalls,
     );
   }
+
+  void _promoteMaterializationRoutes() {
+    for (final pending in materializationRoutes) {
+      if (!materializationRouteHelpers.contains(pending.helperName)) {
+        continue;
+      }
+      memberCalls.add(pending.memberCall);
+      exceptionThrows.add(pending.exceptionThrow);
+    }
+  }
+}
+
+final class _PendingMaterializationRouteFact {
+  const _PendingMaterializationRouteFact({
+    required this.helperName,
+    required this.memberCall,
+    required this.exceptionThrow,
+  });
+
+  final String helperName;
+  final MemberCallFact memberCall;
+  final ExceptionThrowFact exceptionThrow;
 }
 
 final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
@@ -373,7 +399,7 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
         ),
       );
     }
-    _materializationRoute(member, node);
+    _pendingMaterializationRoute(member, node);
     super.visitMethodInvocation(node);
   }
 
@@ -381,6 +407,7 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
   void visitThrowExpression(ThrowExpression node) {
     final exception = _throwType(node.expression);
     if (exception != null) {
+      _verifiedMaterializationRouteHelper(node.expression, exception);
       collector.exceptionThrows.add(
         ExceptionThrowFact(
           path: path,
@@ -527,7 +554,7 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
     return null;
   }
 
-  void _materializationRoute(String? member, MethodInvocation node) {
+  void _pendingMaterializationRoute(String? member, MethodInvocation node) {
     if (member == null || node.methodName.name != '_materialize') {
       return;
     }
@@ -536,24 +563,51 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
       if (exception == null) {
         continue;
       }
-      collector.memberCalls.add(
-        MemberCallFact(
-          path: path,
-          line: _line(node),
-          member: member,
-          target: route,
-        ),
-      );
-      collector.exceptionThrows.add(
-        ExceptionThrowFact(
-          path: path,
-          line: _line(node),
-          exception: exception,
-          owner: _currentDeclaration ?? _sensitiveOwner(path, exception),
-          member: member,
+      collector.materializationRoutes.add(
+        _PendingMaterializationRouteFact(
+          helperName: node.methodName.name,
+          memberCall: MemberCallFact(
+            path: path,
+            line: _line(node),
+            member: member,
+            target: route,
+          ),
+          exceptionThrow: ExceptionThrowFact(
+            path: path,
+            line: _line(node),
+            exception: exception,
+            owner: _currentDeclaration ?? _sensitiveOwner(path, exception),
+            member: member,
+          ),
         ),
       );
     }
+  }
+
+  void _verifiedMaterializationRouteHelper(
+    Expression expression,
+    String exception,
+  ) {
+    if (_currentMember != '_materialize' ||
+        _sensitiveOwner(path, exception) == null) {
+      return;
+    }
+    final route = _throwRoute(expression);
+    if (route != null && memberCallTargets.contains(route)) {
+      collector.materializationRouteHelpers.add(_currentMember!);
+    }
+  }
+
+  String? _throwRoute(Expression expression) {
+    final thrown = expression is ThrowExpression
+        ? expression.expression
+        : expression;
+
+    return switch (thrown) {
+      MethodInvocation(:final target, :final methodName) when target == null =>
+        methodName.name,
+      _ => null,
+    };
   }
 
   String _qualifiedMember(String member) {

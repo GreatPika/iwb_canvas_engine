@@ -6,6 +6,8 @@ import '../../tool/architecture_graph/src/architecture_graph.dart';
 void main() {
   const fixture = 'test/architecture_graph/fixtures/actual_graph_fixture.dart';
   const helper = 'test/architecture_graph/fixtures/actual_graph_helper.dart';
+  const unroutedMaterialize =
+      'test/architecture_graph/fixtures/unrouted_materialize_fixture.dart';
 
   test('extracts architecture-level declarations and directives', () {
     final graph = extractActualArchitectureGraphFromPaths(paths: [fixture]);
@@ -247,4 +249,30 @@ void main() {
       contains('topLevelMaterializesThroughRoute:FixtureException'),
     );
   });
+
+  test(
+    'does not expand materialization helpers without a routed throw body',
+    () {
+      final graph = extractActualArchitectureGraphFromPaths(
+        paths: [unroutedMaterialize],
+        memberCallTargets: const {'recordFixtureRoute'},
+        sensitiveThrows: const [
+          SensitiveThrowCoverage(
+            owner: 'fixture.owner',
+            under: 'test/architecture_graph/fixtures/**',
+            exception: 'FixtureException',
+          ),
+        ],
+      );
+
+      expect(
+        graph.memberCalls.map((fact) => '${fact.member}:${fact.target}'),
+        isNot(contains('topLevelUnroutedMaterializes:recordFixtureRoute')),
+      );
+      expect(
+        graph.exceptionThrows.map((fact) => '${fact.member}:${fact.exception}'),
+        isNot(contains('topLevelUnroutedMaterializes:FixtureException')),
+      );
+    },
+  );
 }
