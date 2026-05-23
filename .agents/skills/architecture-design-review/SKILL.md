@@ -129,8 +129,12 @@ Mark the review `BLOCKED` when any of these are true:
 26. Diagram assessment omits a required trigger from the fixed matrix or misses
     a diagram needed to understand ownership, state flow, sequence, seam,
     public API, or analyzer pipeline decisions.
-27. A provisional diagram contradicts the selected form, repository evidence, or
-    source-of-truth docs.
+27. A provisional diagram contradicts, reorders, omits, or overstates an
+    architecture-relevant fact about ownership, boundaries, ordering, effects,
+    rollback/no-op behavior, or public observation. If repository docs or
+    durable diagrams disagree with each other, mark the review `BLOCKED` with
+    `CONTRADICTS_REPO` unless the artifact explicitly routes the contradiction
+    to source-of-truth repair before Change Contract authoring.
 28. The artifact treats provisional `.design/` diagrams as durable
     `docs/diagrams/*.mmd` deliverables.
 29. A durable docs, diagram, registry, contract, or roadmap impact is implied by
@@ -156,6 +160,11 @@ example:
 - valid evidence is thin but sufficient;
 - one candidate comparison is terse but the rejected form is still clear;
 - a diagram reason is weak but the diagram does not mislead;
+- a provisional diagram has a minor wording issue only when the intended owner,
+  boundary, ordering, rollback/no-op behavior, effects, and public observation
+  semantics remain unambiguous from the diagram itself and the surrounding text.
+  If a vague label could support more than one implementation interpretation,
+  mark it `REVISE`;
 - future pressure was checked but could be worded more concretely;
 - source-of-truth impact and verification impact are slightly mixed but the
   future contract handoff remains usable;
@@ -178,11 +187,17 @@ example:
 6. Reconstruct the viable alternatives from the artifact and evidence. If a
    materially better form is visible, mark the review `BLOCKED`.
 7. Check the diagram need assessment against the fixed trigger matrix.
-8. Confirm source-of-truth and verification impacts match the selected form,
+8. Audit every provisional diagram semantically. Check ordering, arrows, state
+   transitions, ownership labels, boundaries, rollback/no-op paths, and
+   side-effect labels against the selected form and the strongest repository
+   evidence. Do not trust any single doc or diagram blindly, including
+   source-of-truth docs; when sources disagree, report the contradiction and
+   explain which source is stronger or what evidence is missing.
+9. Confirm source-of-truth and verification impacts match the selected form,
    profile, and obligations.
-9. Confirm the handoff contains only facts needed by a future Change Contract:
+10. Confirm the handoff contains only facts needed by a future Change Contract:
    profile, obligations, decisions, evidence, and sequencing constraints.
-10. Return the verdict and findings. Do not repair the artifact in this review
+11. Return the verdict and findings. Do not repair the artifact in this review
    workflow. If the user asks for repair, return the review verdict first and
    handle edits only in a separate authoring workflow.
 
@@ -225,5 +240,7 @@ Before returning, confirm:
 - Did you review the `.design/` artifact rather than a future contract?
 - Did you check the paired template shape when available?
 - Did you re-check cited evidence?
+- Did you read diagrams as architecture claims, not decoration, and compare them
+  critically against code, contracts, diagrams, and registry evidence?
 - Did you avoid requiring slices, proof IDs, final gates, or step traceability?
 - Did the verdict match the strongest finding?
