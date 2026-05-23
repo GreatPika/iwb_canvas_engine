@@ -83,36 +83,6 @@ List<String> checkGraphViews({
   return stale;
 }
 
-String _renderExpectedView({
-  required String viewId,
-  required String title,
-  required List<ArchitectureNode> nodes,
-  required List<ArchitectureEdge> edges,
-  required String selectedPhase,
-  required bool enforceConnectivity,
-}) {
-  final nodeIds = nodes.map((node) => node.id).toSet();
-  if (enforceConnectivity) {
-    _checkRenderedConnectivity(viewId: viewId, nodes: nodes, edges: edges);
-  }
-  final buffer = _header(title, selectedPhase);
-  for (final node
-      in nodes.toList()..sort((left, right) => left.id.compareTo(right.id))) {
-    buffer.writeln(
-      '  ${_mermaidId(node.id)}["${_label(node.label, node.phaseRequiredBy)}"]',
-    );
-  }
-  for (final edge in edges.where((edge) {
-    return nodeIds.contains(edge.from) && nodeIds.contains(edge.to);
-  }).toList()..sort((left, right) => left.id.compareTo(right.id))) {
-    buffer.writeln(
-      '  ${_mermaidId(edge.from)} -->|${_edgeLabel(edge)}| ${_mermaidId(edge.to)}',
-    );
-  }
-
-  return buffer.toString();
-}
-
 String _renderView(
   ArchitectureView view,
   ExpectedArchitectureGraph expected,
@@ -120,7 +90,39 @@ String _renderView(
   String selectedPhase,
 ) {
   return switch (view.kind) {
-    'expected_full' => _renderExpectedView(
+    'expected_full' => _renderFullExpectedView(view, expected, selectedPhase),
+    'expected_current_phase' => _renderCurrentPhaseView(
+      view,
+      expected,
+      selectedPhase,
+    ),
+    'expected_future' => _renderFutureExpectedView(
+      view,
+      expected,
+      selectedPhase,
+    ),
+    'expected_release_verification' => _renderReleaseVerificationView(
+      view,
+      expected,
+      selectedPhase,
+    ),
+    'actual_vs_expected_diff' => _renderDiffView(
+      title: view.title,
+      expected: expected,
+      report: report,
+      selectedPhase: selectedPhase,
+    ),
+    _ => throw UnsupportedError('Unsupported graph view kind: ${view.kind}'),
+  };
+}
+
+String _renderFullExpectedView(
+  ArchitectureView view,
+  ExpectedArchitectureGraph expected,
+  String selectedPhase,
+) {
+  return _renderExpectedGraphView(
+    _ExpectedViewRequest(
       viewId: view.id,
       title: view.title,
       nodes: _includedNodes(expected.nodes, view),
@@ -128,46 +130,59 @@ String _renderView(
       selectedPhase: selectedPhase,
       enforceConnectivity: true,
     ),
-    'expected_current_phase' => _renderExpectedView(
+  );
+}
+
+String _renderCurrentPhaseView(
+  ArchitectureView view,
+  ExpectedArchitectureGraph expected,
+  String selectedPhase,
+) {
+  return _renderExpectedGraphView(
+    _ExpectedViewRequest(
       viewId: view.id,
       title: view.title,
       nodes: _includedNodes(
         expected.nodes,
         view,
       ).where(_isRequiredBy(selectedPhase)).toList(),
-      edges: expected.edges
-          .where(
-            (edge) =>
-                _phaseIndex(edge.phaseRequiredBy) <= _phaseIndex(selectedPhase),
-          )
-          .toList(),
+      edges: _edgesBeforeOrAt(expected.edges, selectedPhase),
       selectedPhase: selectedPhase,
       enforceConnectivity: false,
     ),
-    'expected_future' => _renderExpectedView(
+  );
+}
+
+String _renderFutureExpectedView(
+  ArchitectureView view,
+  ExpectedArchitectureGraph expected,
+  String selectedPhase,
+) {
+  final futureEdges = _futureEdges(expected.edges, selectedPhase);
+
+  return _renderExpectedGraphView(
+    _ExpectedViewRequest(
       viewId: view.id,
       title: view.title,
       nodes: _futureNodesWithEdgeEndpoints(
         _includedNodes(expected.nodes, view),
-        expected.edges
-            .where(
-              (edge) =>
-                  _phaseIndex(edge.phaseRequiredBy) >
-                  _phaseIndex(selectedPhase),
-            )
-            .toList(),
+        futureEdges,
         selectedPhase,
       ),
-      edges: expected.edges
-          .where(
-            (edge) =>
-                _phaseIndex(edge.phaseRequiredBy) > _phaseIndex(selectedPhase),
-          )
-          .toList(),
+      edges: futureEdges,
       selectedPhase: selectedPhase,
       enforceConnectivity: true,
     ),
-    'expected_release_verification' => _renderExpectedView(
+  );
+}
+
+String _renderReleaseVerificationView(
+  ArchitectureView view,
+  ExpectedArchitectureGraph expected,
+  String selectedPhase,
+) {
+  return _renderExpectedGraphView(
+    _ExpectedViewRequest(
       viewId: view.id,
       title: view.title,
       nodes: _includedNodes(
@@ -180,14 +195,63 @@ String _renderView(
       selectedPhase: selectedPhase,
       enforceConnectivity: true,
     ),
-    'actual_vs_expected_diff' => _renderDiffView(
-      title: view.title,
-      expected: expected,
-      report: report,
-      selectedPhase: selectedPhase,
-    ),
-    _ => throw UnsupportedError('Unsupported graph view kind: ${view.kind}'),
-  };
+  );
+}
+
+String _renderExpectedGraphView(_ExpectedViewRequest request) {
+  if (request.enforceConnectivity) {
+    _checkRenderedConnectivity(
+      viewId: request.viewId,
+      nodes: request.nodes,
+      edges: request.edges,
+    );
+  }
+  final buffer = _header(request.title, request.selectedPhase);
+  _writeExpectedNodes(buffer, request.nodes);
+  _writeExpectedEdges(buffer, request.nodes, request.edges);
+
+  return buffer.toString();
+}
+
+final class _ExpectedViewRequest {
+  const _ExpectedViewRequest({
+    required this.viewId,
+    required this.title,
+    required this.nodes,
+    required this.edges,
+    required this.selectedPhase,
+    required this.enforceConnectivity,
+  });
+
+  final String viewId;
+  final String title;
+  final List<ArchitectureNode> nodes;
+  final List<ArchitectureEdge> edges;
+  final String selectedPhase;
+  final bool enforceConnectivity;
+}
+
+void _writeExpectedNodes(StringBuffer buffer, List<ArchitectureNode> nodes) {
+  for (final node in _sortedNodes(nodes)) {
+    buffer.writeln(
+      '  ${_mermaidId(node.id)}["${_label(node.label, node.phaseRequiredBy)}"]',
+    );
+  }
+}
+
+void _writeExpectedEdges(
+  StringBuffer buffer,
+  List<ArchitectureNode> nodes,
+  List<ArchitectureEdge> edges,
+) {
+  final nodeIds = nodes.map((node) => node.id).toSet();
+  for (final edge in _sortedEdges(edges).where((edge) {
+    return nodeIds.contains(edge.from) && nodeIds.contains(edge.to);
+  })) {
+    buffer.writeln(
+      '  ${_mermaidId(edge.from)} -->|${_edgeLabel(edge)}| ${_mermaidId(edge.to)}',
+    );
+  }
 }
 
 List<ArchitectureNode> _includedNodes(
@@ -220,6 +284,46 @@ List<ArchitectureNode> _futureNodesWithEdgeEndpoints(
     return _phaseIndex(node.phaseRequiredBy) > _phaseIndex(selectedPhase) ||
         endpointIds.contains(node.id);
   }).toList();
+}
+
+List<ArchitectureNode> _activeNodes(
+  List<ArchitectureNode> nodes,
+  String selectedPhase,
+) {
+  return nodes.where(_isRequiredBy(selectedPhase)).toList();
+}
+
+List<ArchitectureEdge> _edgesBeforeOrAt(
+  List<ArchitectureEdge> edges,
+  String selectedPhase,
+) {
+  return edges.where((edge) {
+    return _phaseIndex(edge.phaseRequiredBy) <= _phaseIndex(selectedPhase);
+  }).toList();
+}
+
+List<ArchitectureEdge> _futureEdges(
+  List<ArchitectureEdge> edges,
+  String selectedPhase,
+) {
+  return edges.where((edge) {
+    return _phaseIndex(edge.phaseRequiredBy) > _phaseIndex(selectedPhase);
+  }).toList();
+}
+
+List<ArchitectureNode> _sortedNodes(List<ArchitectureNode> nodes) {
+  return nodes.toList()..sort((left, right) => left.id.compareTo(right.id));
+}
+
+List<ArchitectureEdge> _sortedEdges(List<ArchitectureEdge> edges) {
+  return edges.toList()..sort((left, right) => left.id.compareTo(right.id));
+}
+
+List<PhaseClosureViolation> _sortedViolations(
+  List<PhaseClosureViolation> violations,
+) {
+  return violations.toList()
+    ..sort((left, right) => left.graphId.compareTo(right.graphId));
 }
 
 void _checkRenderedConnectivity({
@@ -267,33 +371,76 @@ String _renderDiffView({
       .map((violation) => violation.graphId)
       .toSet();
   final buffer = _header(title, selectedPhase);
-  final activeNodes = expected.nodes.where((node) {
-    return _phaseIndex(node.phaseRequiredBy) <= _phaseIndex(selectedPhase);
-  }).toList()..sort((left, right) => left.id.compareTo(right.id));
-  for (final node in activeNodes) {
+  _writeDiffNodes(buffer, expected.nodes, violationIds, selectedPhase);
+  final linkStyles = <String>[];
+  _writeDiffEdges(
+    _DiffEdgeWriteRequest(
+      buffer: buffer,
+      edges: expected.edges,
+      violationIds: violationIds,
+      selectedPhase: selectedPhase,
+      linkStyles: linkStyles,
+    ),
+  );
+  _writeViolationNodes(buffer, report.violations, expected);
+  _writeDiffClassDefs(buffer, linkStyles);
+
+  return buffer.toString();
+}
+
+void _writeDiffNodes(
+  StringBuffer buffer,
+  List<ArchitectureNode> nodes,
+  Set<String> violationIds,
+  String selectedPhase,
+) {
+  for (final node in _sortedNodes(_activeNodes(nodes, selectedPhase))) {
     final className = violationIds.contains(node.id) ? 'violation' : 'ok';
     buffer.writeln(
       '  ${_mermaidId(node.id)}["${_label(node.label, node.phaseRequiredBy)}"]:::$className',
     );
   }
-  final linkStyles = <String>[];
+}
+
+void _writeDiffEdges(_DiffEdgeWriteRequest request) {
   var linkIndex = 0;
-  for (final edge in expected.edges.where((edge) {
-    return _phaseIndex(edge.phaseRequiredBy) <= _phaseIndex(selectedPhase);
-  }).toList()..sort((left, right) => left.id.compareTo(right.id))) {
-    buffer.writeln(
+  for (final edge in _sortedEdges(
+    _edgesBeforeOrAt(request.edges, request.selectedPhase),
+  )) {
+    request.buffer.writeln(
       '  ${_mermaidId(edge.from)} -->|${_edgeLabel(edge)}| ${_mermaidId(edge.to)}',
     );
-    if (violationIds.contains(edge.id)) {
-      linkStyles.add(
+    if (request.violationIds.contains(edge.id)) {
+      request.linkStyles.add(
         '  linkStyle $linkIndex stroke:#dc2626,stroke-width:3px,color:#7f1d1d',
       );
     }
     linkIndex++;
   }
-  for (final violation
-      in report.violations.toList()
-        ..sort((left, right) => left.graphId.compareTo(right.graphId))) {
+}
+
+final class _DiffEdgeWriteRequest {
+  const _DiffEdgeWriteRequest({
+    required this.buffer,
+    required this.edges,
+    required this.violationIds,
+    required this.selectedPhase,
+    required this.linkStyles,
+  });
+
+  final StringBuffer buffer;
+  final List<ArchitectureEdge> edges;
+  final Set<String> violationIds;
+  final String selectedPhase;
+  final List<String> linkStyles;
+}
+
+void _writeViolationNodes(
+  StringBuffer buffer,
+  List<PhaseClosureViolation> violations,
+  ExpectedArchitectureGraph expected,
+) {
+  for (final violation in _sortedViolations(violations)) {
     final violationNode = _mermaidId('violation.${violation.graphId}');
     buffer.writeln(
       '  $violationNode["${_violationLabel(violation.status)}"]:::violation',
@@ -302,14 +449,15 @@ String _renderDiffView({
       buffer.writeln('  $violationNode -.-> ${_mermaidId(target)}');
     }
   }
+}
+
+void _writeDiffClassDefs(StringBuffer buffer, List<String> linkStyles) {
   buffer
     ..writeln('  classDef ok fill:#f8fafc,stroke:#64748b,color:#0f172a')
     ..writeln('  classDef violation fill:#fee2e2,stroke:#dc2626,color:#7f1d1d');
   for (final linkStyle in linkStyles) {
     buffer.writeln(linkStyle);
   }
-
-  return buffer.toString();
 }
 
 StringBuffer _header(String title, String selectedPhase) {

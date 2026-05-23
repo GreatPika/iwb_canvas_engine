@@ -354,310 +354,63 @@ final class ArchitectureGraphValidator {
   final ExpectedArchitectureGraph graph;
   final String repositoryRoot;
 
-  final List<ArchitectureGraphDiagnostic> _diagnostics = [];
-  final Set<String> _ids = {};
-
   List<ArchitectureGraphDiagnostic> validate() {
-    _schemaVersion();
-    _phases();
-    _coverage();
-    _nodes();
-    _edges();
-    _placeholders();
-    _forbiddenEdges();
-    _views();
-    _sourceCoverage();
-
-    return _diagnostics;
-  }
-
-  void _schemaVersion() {
-    if (graph.schemaVersion != 1) {
-      _add('schema.version', architectureGraphPath, 'schemaVersion must be 1');
-    }
-  }
-
-  void _phases() {
-    final expectedIds = [for (var index = 0; index <= 14; index++) 'P$index'];
-    final actualIds = graph.phases.map((phase) => phase.id).toList();
-    if (!_sameOrderedValues(actualIds, expectedIds)) {
-      _add('phase.inventory', architectureGraphPath, 'phases must be P0-P14');
-    }
-    for (final phase in graph.phases) {
-      _allowed(phase.status, const {
-        'closed',
-        'future',
-        'measurement',
-      }, phase.id);
-      _sourceDocs(phase.sourceDocs, phase.id);
-    }
-  }
-
-  void _coverage() {
-    _requiredNonEmpty(graph.coverage.publicSurfaces, 'coverage.publicSurfaces');
-    for (final path in graph.coverage.publicSurfaces) {
-      _requiredText(path, 'coverage.publicSurfaces');
-    }
-    _requiredNonEmpty(
-      graph.coverage.architectureOwners,
-      'coverage.architectureOwners',
+    final context = _ArchitectureGraphValidationContext(
+      graph: graph,
+      repositoryRoot: repositoryRoot,
     );
-    for (final path in graph.coverage.architectureOwners) {
-      _requiredText(path, 'coverage.architectureOwners');
-    }
-    _requiredNonEmpty(
-      graph.coverage.sensitiveThrows,
-      'coverage.sensitiveThrows',
-    );
-    for (final entry in graph.coverage.sensitiveThrows) {
-      _requiredText(entry.owner, 'coverage.sensitiveThrows.owner');
-      _requiredText(entry.under, 'coverage.sensitiveThrows.under');
-      _requiredText(entry.exception, 'coverage.sensitiveThrows.exception');
-    }
-    _requiredNonEmpty(graph.coverage.placeholders, 'coverage.placeholders');
-    for (final entry in graph.coverage.placeholders) {
-      _requiredText(entry.under, 'coverage.placeholders.under');
-    }
-    _requiredNonEmpty(graph.coverage.ignored, 'coverage.ignored');
-    for (final path in graph.coverage.ignored) {
-      _requiredText(path, 'coverage.ignored');
+    _PhaseAndCoverageValidator(context).validate();
+    _GraphEntryValidator(context).validate();
+    _SourceCoverageValidator(context).validate();
+
+    return context.diagnostics;
+  }
+}
+
+final class _ArchitectureGraphValidationContext {
+  _ArchitectureGraphValidationContext({
+    required this.graph,
+    required this.repositoryRoot,
+  });
+
+  final ExpectedArchitectureGraph graph;
+  final String repositoryRoot;
+  final List<ArchitectureGraphDiagnostic> diagnostics = [];
+  final Set<String> ids = {};
+
+  void unique(String id) {
+    if (!ids.add(id)) {
+      add('graph.id.duplicate', architectureGraphPath, 'duplicate id: $id');
     }
   }
 
-  void _nodes() {
-    final coverageScopes = {'publicSurfaces', 'architectureOwners'};
-    for (final node in graph.nodes) {
-      _unique(node.id);
-      _phaseRef(node.phaseIntroduced, node.id);
-      _phaseRef(node.phaseRequiredBy, node.id);
-      _allowed(node.status, const {
-        'required',
-        'future',
-        'measurement',
-      }, node.id);
-      _allowed(node.coverageScope, coverageScopes, node.id);
-      _requiredText(node.label, '${node.id}.label');
-      _requiredText(node.kind, '${node.id}.kind');
-      _requiredText(node.owner, '${node.id}.owner');
-      _sourceDocs(node.sourceDocs, node.id);
-      _requiredNonEmpty(node.evidence, '${node.id}.evidence');
-      for (final allowance in node.isolationAllowances) {
-        _requiredNonEmpty(
-          allowance.views,
-          '${node.id}.isolationAllowances.views',
-        );
-        for (final view in allowance.views) {
-          _requiredText(view, '${node.id}.isolationAllowances.views');
-        }
-        _sourceDocs(allowance.sourceDocs, node.id);
-        _requiredText(
-          allowance.reason,
-          '${node.id}.isolationAllowances.reason',
-        );
-      }
-    }
-  }
-
-  void _edges() {
-    final nodeIds = graph.nodes.map((node) => node.id).toSet();
-    for (final edge in graph.edges) {
-      _unique(edge.id);
-      _phaseRef(edge.phaseRequiredBy, edge.id);
-      _nodeRef(edge.from, nodeIds, edge.id);
-      _nodeRef(edge.to, nodeIds, edge.id);
-      _allowed(edge.status, const {'required', 'future'}, edge.id);
-      _requiredText(edge.kind, '${edge.id}.kind');
-      _sourceDocs(edge.sourceDocs, edge.id);
-      _requiredNonEmpty(edge.evidence, '${edge.id}.evidence');
-    }
-  }
-
-  void _placeholders() {
-    final nodeIds = graph.nodes.map((node) => node.id).toSet();
-    for (final placeholder in graph.placeholders) {
-      _unique(placeholder.id);
-      _nodeRef(placeholder.node, nodeIds, placeholder.id);
-      _phaseRef(placeholder.phaseRequiredBy, placeholder.id);
-      _allowed(placeholder.status, const {
-        'forbidden_after_phase',
-        'deferred_until_phase',
-      }, placeholder.id);
-      _requiredText(placeholder.member, '${placeholder.id}.member');
-      _requiredText(placeholder.path, '${placeholder.id}.path');
-      _sourceDocs(placeholder.sourceDocs, placeholder.id);
-      _requiredNonEmpty(placeholder.evidence, '${placeholder.id}.evidence');
-    }
-  }
-
-  void _forbiddenEdges() {
-    final nodeIds = graph.nodes.map((node) => node.id).toSet();
-    for (final edge in graph.forbiddenEdges) {
-      _unique(edge.id);
-      _phaseRef(edge.phaseRequiredBy, edge.id);
-      _nodeRef(edge.from, nodeIds, edge.id);
-      _nodeRef(edge.to, nodeIds, edge.id);
-      _allowed(edge.status, const {'forbidden'}, edge.id);
-      _sourceDocs(edge.sourceDocs, edge.id);
-      _requiredNonEmpty(edge.evidence, '${edge.id}.evidence');
-    }
-  }
-
-  void _views() {
-    for (final view in graph.views) {
-      _unique(view.id);
-      _allowed(view.kind, const {
-        'expected_full',
-        'expected_current_phase',
-        'expected_future',
-        'expected_release_verification',
-        'actual_vs_expected_diff',
-      }, view.id);
-      _requiredText(view.title, '${view.id}.title');
-      _requiredText(view.output, '${view.id}.output');
-      _sourceDocs(view.sourceDocs, view.id);
-      for (final kind in view.excludedNodeKinds) {
-        _requiredText(kind, '${view.id}.excludedNodeKinds');
-      }
-    }
-  }
-
-  void _sourceCoverage() {
-    final registrySections = _selectedRegistrySections();
-    final registryIds = registrySections.map((section) => section.id).toSet();
-    final coveredSections = <String>{};
-    final graphIds = _allGraphIds();
-    final graphBackedIds = <String>{};
-
-    for (final coverage in graph.sourceCoverage) {
-      if (!coveredSections.add(coverage.sectionId)) {
-        _add(
-          'source_coverage.duplicate',
-          coverage.sectionId,
-          'duplicate source coverage entry',
-        );
-      }
-      if (!registryIds.contains(coverage.sectionId)) {
-        _add(
-          'source_coverage.section',
-          coverage.sectionId,
-          'unknown registry section id',
-        );
-      }
-      _allowed(coverage.disposition, const {
-        'graph_obligation',
-        'non_graph_semantics',
-        'superseded',
-        'out_of_graph_scope',
-      }, coverage.sectionId);
-      switch (coverage.disposition) {
-        case 'graph_obligation':
-          _requiredNonEmpty(
-            coverage.graphIds,
-            '${coverage.sectionId}.graphIds',
-          );
-          for (final graphId in coverage.graphIds) {
-            if (!graphIds.contains(graphId)) {
-              _add(
-                'source_coverage.graph_id',
-                coverage.sectionId,
-                'unknown graph id: $graphId',
-              );
-            } else {
-              graphBackedIds.add(graphId);
-            }
-          }
-        case 'non_graph_semantics' || 'out_of_graph_scope':
-          _requiredText(coverage.reason ?? '', '${coverage.sectionId}.reason');
-        case 'superseded':
-          _requiredText(
-            coverage.successorSource ?? '',
-            '${coverage.sectionId}.successorSource',
-          );
-      }
-    }
-
-    for (final section in registrySections) {
-      if (!coveredSections.contains(section.id)) {
-        _add(
-          'source_coverage.missing_section',
-          section.id,
-          'missing source coverage for ${section.file}',
-        );
-      }
-    }
-    for (final graphId in graphIds) {
-      if (!graphBackedIds.contains(graphId)) {
-        _add(
-          'source_coverage.missing_graph_entry',
-          graphId,
-          'graph entry is not mapped to a registry section',
-        );
-      }
-    }
-  }
-
-  Set<String> _allGraphIds() {
-    return {
-      for (final node in graph.nodes) node.id,
-      for (final edge in graph.edges) edge.id,
-      for (final placeholder in graph.placeholders) placeholder.id,
-      for (final edge in graph.forbiddenEdges) edge.id,
-      for (final view in graph.views) view.id,
-    };
-  }
-
-  List<_RegistrySection> _selectedRegistrySections() {
-    final file = File('$repositoryRoot/docs/_registry/sections.yaml');
-    final yaml = loadYaml(file.readAsStringSync());
-    final entries = _normalizeYaml(yaml);
-    if (entries is! List<Object?>) {
-      throw const FormatException('Expected registry section list.');
-    }
-
-    return entries
-        .map((entry) => _registrySection(_normalizeMap(entry, 'sections')))
-        .where((section) {
-          return section.file.startsWith('docs/architecture/') ||
-              section.file.startsWith('docs/contracts/') ||
-              section.file.startsWith('docs/verification/') ||
-              section.phases.any(_isKnownPhase);
-        })
-        .toList();
-  }
-
-  void _unique(String id) {
-    if (!_ids.add(id)) {
-      _add('graph.id.duplicate', architectureGraphPath, 'duplicate id: $id');
-    }
-  }
-
-  void _phaseRef(String id, String owner) {
+  void phaseRef(String id, String owner) {
     if (!graph.phaseIds.contains(id)) {
-      _add('phase.reference', owner, 'unknown phase: $id');
+      add('phase.reference', owner, 'unknown phase: $id');
     }
   }
 
-  void _nodeRef(String id, Set<String> nodeIds, String owner) {
+  void nodeRef(String id, Set<String> nodeIds, String owner) {
     if (!nodeIds.contains(id)) {
-      _add('node.reference', owner, 'unknown node: $id');
+      add('node.reference', owner, 'unknown node: $id');
     }
   }
 
-  void _allowed(String value, Set<String> values, String owner) {
+  void allowed(String value, Set<String> values, String owner) {
     if (!values.contains(value)) {
-      _add('enum.value', owner, 'unsupported value: $value');
+      add('enum.value', owner, 'unsupported value: $value');
     }
   }
 
-  void _sourceDocs(List<SourceDoc> sourceDocs, String owner) {
-    _requiredNonEmpty(sourceDocs, '$owner.sourceDocs');
+  void sourceDocs(List<SourceDoc> sourceDocs, String owner) {
+    requiredNonEmpty(sourceDocs, '$owner.sourceDocs');
     for (final sourceDoc in sourceDocs) {
       final file = File('$repositoryRoot/${sourceDoc.path}');
       if (!file.existsSync()) {
-        _add('source_doc.path', owner, 'missing sourceDoc: ${sourceDoc.path}');
+        add('source_doc.path', owner, 'missing sourceDoc: ${sourceDoc.path}');
       }
       if (sourceDoc.stableAnchor && sourceDoc.line == null) {
-        _add('source_doc.anchor', owner, 'stableAnchor requires line');
+        add('source_doc.anchor', owner, 'stableAnchor requires line');
       }
       final stableAnchorLine = sourceDoc.line;
       if (sourceDoc.stableAnchor &&
@@ -665,7 +418,7 @@ final class ArchitectureGraphValidator {
           file.existsSync()) {
         final lineCount = file.readAsLinesSync().length;
         if (stableAnchorLine < 1 || stableAnchorLine > lineCount) {
-          _add(
+          add(
             'source_doc.anchor',
             owner,
             'stableAnchor line $stableAnchorLine is outside ${sourceDoc.path}',
@@ -675,23 +428,375 @@ final class ArchitectureGraphValidator {
     }
   }
 
-  void _requiredNonEmpty(Iterable<Object> values, String path) {
+  void requiredNonEmpty(Iterable<Object> values, String path) {
     if (values.isEmpty) {
-      _add('required.non_empty', path, 'must not be empty');
+      add('required.non_empty', path, 'must not be empty');
     }
   }
 
-  void _requiredText(String value, String path) {
+  void requiredText(String value, String path) {
     if (value.trim().isEmpty) {
-      _add('required.text', path, 'must not be empty');
+      add('required.text', path, 'must not be empty');
     }
   }
 
-  void _add(String id, String path, String message) {
-    _diagnostics.add(
+  void add(String id, String path, String message) {
+    diagnostics.add(
       ArchitectureGraphDiagnostic(id: id, path: path, message: message),
     );
   }
+}
+
+final class _PhaseAndCoverageValidator {
+  const _PhaseAndCoverageValidator(this.context);
+
+  final _ArchitectureGraphValidationContext context;
+
+  ExpectedArchitectureGraph get graph => context.graph;
+
+  void validate() {
+    _schemaVersion();
+    _phases();
+    _coverage();
+  }
+
+  void _schemaVersion() {
+    if (graph.schemaVersion != 1) {
+      context.add(
+        'schema.version',
+        architectureGraphPath,
+        'schemaVersion must be 1',
+      );
+    }
+  }
+
+  void _phases() {
+    final expectedIds = [for (var index = 0; index <= 14; index++) 'P$index'];
+    final actualIds = graph.phases.map((phase) => phase.id).toList();
+    if (!_sameOrderedValues(actualIds, expectedIds)) {
+      context.add(
+        'phase.inventory',
+        architectureGraphPath,
+        'phases must be P0-P14',
+      );
+    }
+    for (final phase in graph.phases) {
+      context.allowed(phase.status, const {
+        'closed',
+        'future',
+        'measurement',
+      }, phase.id);
+      context.sourceDocs(phase.sourceDocs, phase.id);
+    }
+  }
+
+  void _coverage() {
+    _textList(graph.coverage.publicSurfaces, 'coverage.publicSurfaces');
+    _textList(graph.coverage.architectureOwners, 'coverage.architectureOwners');
+    context.requiredNonEmpty(
+      graph.coverage.sensitiveThrows,
+      'coverage.sensitiveThrows',
+    );
+    for (final entry in graph.coverage.sensitiveThrows) {
+      context.requiredText(entry.owner, 'coverage.sensitiveThrows.owner');
+      context.requiredText(entry.under, 'coverage.sensitiveThrows.under');
+      context.requiredText(
+        entry.exception,
+        'coverage.sensitiveThrows.exception',
+      );
+    }
+    context.requiredNonEmpty(
+      graph.coverage.placeholders,
+      'coverage.placeholders',
+    );
+    for (final entry in graph.coverage.placeholders) {
+      context.requiredText(entry.under, 'coverage.placeholders.under');
+    }
+    _textList(graph.coverage.ignored, 'coverage.ignored');
+  }
+
+  void _textList(List<String> values, String path) {
+    context.requiredNonEmpty(values, path);
+    for (final value in values) {
+      context.requiredText(value, path);
+    }
+  }
+}
+
+final class _GraphEntryValidator {
+  const _GraphEntryValidator(this.context);
+
+  final _ArchitectureGraphValidationContext context;
+
+  ExpectedArchitectureGraph get graph => context.graph;
+
+  void validate() {
+    _nodes();
+    _edges();
+    _placeholders();
+    _forbiddenEdges();
+    _views();
+  }
+
+  void _nodes() {
+    final coverageScopes = {'publicSurfaces', 'architectureOwners'};
+    for (final node in graph.nodes) {
+      context.unique(node.id);
+      context.phaseRef(node.phaseIntroduced, node.id);
+      context.phaseRef(node.phaseRequiredBy, node.id);
+      context.allowed(node.status, const {
+        'required',
+        'future',
+        'measurement',
+      }, node.id);
+      context.allowed(node.coverageScope, coverageScopes, node.id);
+      context.requiredText(node.label, '${node.id}.label');
+      context.requiredText(node.kind, '${node.id}.kind');
+      context.requiredText(node.owner, '${node.id}.owner');
+      context.sourceDocs(node.sourceDocs, node.id);
+      context.requiredNonEmpty(node.evidence, '${node.id}.evidence');
+      _isolationAllowances(node);
+    }
+  }
+
+  void _isolationAllowances(ArchitectureNode node) {
+    for (final allowance in node.isolationAllowances) {
+      context.requiredNonEmpty(
+        allowance.views,
+        '${node.id}.isolationAllowances.views',
+      );
+      for (final view in allowance.views) {
+        context.requiredText(view, '${node.id}.isolationAllowances.views');
+      }
+      context.sourceDocs(allowance.sourceDocs, node.id);
+      context.requiredText(
+        allowance.reason,
+        '${node.id}.isolationAllowances.reason',
+      );
+    }
+  }
+
+  void _edges() {
+    final nodeIds = graph.nodes.map((node) => node.id).toSet();
+    for (final edge in graph.edges) {
+      context.unique(edge.id);
+      context.phaseRef(edge.phaseRequiredBy, edge.id);
+      context.nodeRef(edge.from, nodeIds, edge.id);
+      context.nodeRef(edge.to, nodeIds, edge.id);
+      context.allowed(edge.status, const {'required', 'future'}, edge.id);
+      context.requiredText(edge.kind, '${edge.id}.kind');
+      context.sourceDocs(edge.sourceDocs, edge.id);
+      context.requiredNonEmpty(edge.evidence, '${edge.id}.evidence');
+    }
+  }
+
+  void _placeholders() {
+    final nodeIds = graph.nodes.map((node) => node.id).toSet();
+    for (final placeholder in graph.placeholders) {
+      context.unique(placeholder.id);
+      context.nodeRef(placeholder.node, nodeIds, placeholder.id);
+      context.phaseRef(placeholder.phaseRequiredBy, placeholder.id);
+      context.allowed(placeholder.status, const {
+        'forbidden_after_phase',
+        'deferred_until_phase',
+      }, placeholder.id);
+      context.requiredText(placeholder.member, '${placeholder.id}.member');
+      context.requiredText(placeholder.path, '${placeholder.id}.path');
+      context.sourceDocs(placeholder.sourceDocs, placeholder.id);
+      context.requiredNonEmpty(
+        placeholder.evidence,
+        '${placeholder.id}.evidence',
+      );
+    }
+  }
+
+  void _forbiddenEdges() {
+    final nodeIds = graph.nodes.map((node) => node.id).toSet();
+    for (final edge in graph.forbiddenEdges) {
+      context.unique(edge.id);
+      context.phaseRef(edge.phaseRequiredBy, edge.id);
+      context.nodeRef(edge.from, nodeIds, edge.id);
+      context.nodeRef(edge.to, nodeIds, edge.id);
+      context.allowed(edge.status, const {'forbidden'}, edge.id);
+      context.sourceDocs(edge.sourceDocs, edge.id);
+      context.requiredNonEmpty(edge.evidence, '${edge.id}.evidence');
+    }
+  }
+
+  void _views() {
+    for (final view in graph.views) {
+      context.unique(view.id);
+      context.allowed(view.kind, const {
+        'expected_full',
+        'expected_current_phase',
+        'expected_future',
+        'expected_release_verification',
+        'actual_vs_expected_diff',
+      }, view.id);
+      context.requiredText(view.title, '${view.id}.title');
+      context.requiredText(view.output, '${view.id}.output');
+      context.sourceDocs(view.sourceDocs, view.id);
+      for (final kind in view.excludedNodeKinds) {
+        context.requiredText(kind, '${view.id}.excludedNodeKinds');
+      }
+    }
+  }
+}
+
+final class _SourceCoverageValidator {
+  const _SourceCoverageValidator(this.context);
+
+  final _ArchitectureGraphValidationContext context;
+
+  void _sourceCoverage() {
+    final state = _SourceCoverageState(
+      registrySections: _selectedRegistrySections(context.repositoryRoot),
+      graphIds: _allGraphIds(context.graph),
+    );
+    for (final coverage in context.graph.sourceCoverage) {
+      _coverageEntry(coverage, state);
+    }
+    _missingRegistrySections(state);
+    _missingGraphEntries(state);
+  }
+
+  void _coverageEntry(
+    ArchitectureSourceCoverage coverage,
+    _SourceCoverageState state,
+  ) {
+    _coverageSection(coverage, state);
+    context.allowed(coverage.disposition, const {
+      'graph_obligation',
+      'non_graph_semantics',
+      'superseded',
+      'out_of_graph_scope',
+    }, coverage.sectionId);
+    switch (coverage.disposition) {
+      case 'graph_obligation':
+        _graphObligationCoverage(coverage, state);
+      case 'non_graph_semantics' || 'out_of_graph_scope':
+        context.requiredText(
+          coverage.reason ?? '',
+          '${coverage.sectionId}.reason',
+        );
+      case 'superseded':
+        context.requiredText(
+          coverage.successorSource ?? '',
+          '${coverage.sectionId}.successorSource',
+        );
+    }
+  }
+
+  void _coverageSection(
+    ArchitectureSourceCoverage coverage,
+    _SourceCoverageState state,
+  ) {
+    if (!state.coveredSections.add(coverage.sectionId)) {
+      context.add(
+        'source_coverage.duplicate',
+        coverage.sectionId,
+        'duplicate source coverage entry',
+      );
+    }
+    if (!state.registryIds.contains(coverage.sectionId)) {
+      context.add(
+        'source_coverage.section',
+        coverage.sectionId,
+        'unknown registry section id',
+      );
+    }
+  }
+
+  void _graphObligationCoverage(
+    ArchitectureSourceCoverage coverage,
+    _SourceCoverageState state,
+  ) {
+    context.requiredNonEmpty(
+      coverage.graphIds,
+      '${coverage.sectionId}.graphIds',
+    );
+    for (final graphId in coverage.graphIds) {
+      if (!state.graphIds.contains(graphId)) {
+        context.add(
+          'source_coverage.graph_id',
+          coverage.sectionId,
+          'unknown graph id: $graphId',
+        );
+      } else {
+        state.graphBackedIds.add(graphId);
+      }
+    }
+  }
+
+  void _missingRegistrySections(_SourceCoverageState state) {
+    for (final section in state.registrySections) {
+      if (state.coveredSections.contains(section.id)) {
+        continue;
+      }
+      context.add(
+        'source_coverage.missing_section',
+        section.id,
+        'missing source coverage for ${section.file}',
+      );
+    }
+  }
+
+  void _missingGraphEntries(_SourceCoverageState state) {
+    for (final graphId in state.graphIds) {
+      if (state.graphBackedIds.contains(graphId)) {
+        continue;
+      }
+      context.add(
+        'source_coverage.missing_graph_entry',
+        graphId,
+        'graph entry is not mapped to a registry section',
+      );
+    }
+  }
+
+  void validate() {
+    _sourceCoverage();
+  }
+}
+
+Set<String> _allGraphIds(ExpectedArchitectureGraph graph) {
+  return {
+    for (final node in graph.nodes) node.id,
+    for (final edge in graph.edges) edge.id,
+    for (final placeholder in graph.placeholders) placeholder.id,
+    for (final edge in graph.forbiddenEdges) edge.id,
+    for (final view in graph.views) view.id,
+  };
+}
+
+List<_RegistrySection> _selectedRegistrySections(String repositoryRoot) {
+  final file = File('$repositoryRoot/docs/_registry/sections.yaml');
+  final yaml = loadYaml(file.readAsStringSync());
+  final entries = _normalizeYaml(yaml);
+  if (entries is! List<Object?>) {
+    throw const FormatException('Expected registry section list.');
+  }
+
+  return entries
+      .map((entry) => _registrySection(_normalizeMap(entry, 'sections')))
+      .where((section) {
+        return section.file.startsWith('docs/architecture/') ||
+            section.file.startsWith('docs/contracts/') ||
+            section.file.startsWith('docs/verification/') ||
+            section.phases.any(_isKnownPhase);
+      })
+      .toList();
+}
+
+final class _SourceCoverageState {
+  _SourceCoverageState({required this.registrySections, required this.graphIds})
+    : registryIds = registrySections.map((section) => section.id).toSet();
+
+  final List<_RegistrySection> registrySections;
+  final Set<String> registryIds;
+  final Set<String> graphIds;
+  final Set<String> coveredSections = {};
+  final Set<String> graphBackedIds = {};
 }
 
 final class _RegistrySection {

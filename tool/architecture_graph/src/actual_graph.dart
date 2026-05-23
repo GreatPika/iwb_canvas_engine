@@ -148,6 +148,24 @@ final class MemberCallFact extends ActualGraphFact {
   final String target;
 }
 
+final class ActualGraphExtractionOptions {
+  const ActualGraphExtractionOptions({
+    this.sensitiveThrows = const [],
+    this.placeholderCoverage = const [],
+    this.compositionTypes = const {},
+    this.delegationMembers = const {},
+    this.delegationTargetTypes = const {},
+    this.memberCallTargets = const {},
+  });
+
+  final List<SensitiveThrowCoverage> sensitiveThrows;
+  final List<PlaceholderCoverage> placeholderCoverage;
+  final Set<String> compositionTypes;
+  final Set<String> delegationMembers;
+  final Set<String> delegationTargetTypes;
+  final Set<String> memberCallTargets;
+}
+
 ActualArchitectureGraph extractActualArchitectureGraph({
   ExpectedArchitectureGraph? expectedGraph,
   String repositoryRoot = '.',
@@ -158,47 +176,144 @@ ActualArchitectureGraph extractActualArchitectureGraph({
   return extractActualArchitectureGraphFromPaths(
     paths: paths,
     repositoryRoot: repositoryRoot,
-    sensitiveThrows: expected.coverage.sensitiveThrows,
-    placeholderCoverage: expected.coverage.placeholders,
-    compositionTypes: _architectureCompositionTypes(expected),
-    delegationMembers: _architectureDelegationMembers(expected),
-    delegationTargetTypes: _architectureDelegationTargetTypes(expected),
-    memberCallTargets: _architectureMemberCallTargets(expected),
+    options: ActualGraphExtractionOptions(
+      sensitiveThrows: expected.coverage.sensitiveThrows,
+      placeholderCoverage: expected.coverage.placeholders,
+      compositionTypes: _architectureCompositionTypes(expected),
+      delegationMembers: _architectureDelegationMembers(expected),
+      delegationTargetTypes: _architectureDelegationTargetTypes(expected),
+      memberCallTargets: _architectureMemberCallTargets(expected),
+    ),
   );
 }
 
 ActualArchitectureGraph extractActualArchitectureGraphFromPaths({
   required Iterable<String> paths,
   String repositoryRoot = '.',
-  List<SensitiveThrowCoverage> sensitiveThrows = const [],
-  List<PlaceholderCoverage> placeholderCoverage = const [],
-  Set<String> compositionTypes = const {},
-  Set<String> delegationMembers = const {},
-  Set<String> delegationTargetTypes = const {},
-  Set<String> memberCallTargets = const {},
+  ActualGraphExtractionOptions options = const ActualGraphExtractionOptions(),
 }) {
   final collector = _ActualGraphCollector();
   for (final path in paths.toSet().toList()..sort()) {
-    final file = File('$repositoryRoot/$path');
-    if (!file.existsSync() || !path.endsWith('.dart')) {
-      continue;
-    }
-    final result = parseString(content: file.readAsStringSync(), path: path);
-    final visitor = _ActualGraphVisitor(
+    _extractActualGraphFromFile(
       path: path,
-      lineInfo: result.lineInfo,
+      repositoryRoot: repositoryRoot,
       collector: collector,
-      sensitiveThrows: sensitiveThrows,
-      placeholderCoverage: placeholderCoverage,
-      compositionTypes: compositionTypes,
-      delegationMembers: delegationMembers,
-      delegationTargetTypes: delegationTargetTypes,
-      memberCallTargets: memberCallTargets,
+      options: options,
     );
-    result.unit.visitChildren(visitor);
   }
 
   return collector.toGraph();
+}
+
+void _extractActualGraphFromFile({
+  required String path,
+  required String repositoryRoot,
+  required _ActualGraphCollector collector,
+  required ActualGraphExtractionOptions options,
+}) {
+  final file = File('$repositoryRoot/$path');
+  if (!file.existsSync() || !path.endsWith('.dart')) {
+    return;
+  }
+  final result = parseString(content: file.readAsStringSync(), path: path);
+  final parsed = _ParsedGraphFile(
+    path: path,
+    unit: result.unit,
+    lineInfo: result.lineInfo,
+    collector: collector,
+    options: options,
+  );
+  _visitSurfaceFacts(parsed);
+  _visitBehaviorFacts(parsed);
+}
+
+final class _ParsedGraphFile {
+  const _ParsedGraphFile({
+    required this.path,
+    required this.unit,
+    required this.lineInfo,
+    required this.collector,
+    required this.options,
+  });
+
+  final String path;
+  final CompilationUnit unit;
+  final LineInfo lineInfo;
+  final _ActualGraphCollector collector;
+  final ActualGraphExtractionOptions options;
+}
+
+void _visitSurfaceFacts(_ParsedGraphFile file) {
+  file.unit.visitChildren(
+    _DirectiveGraphVisitor(
+      path: file.path,
+      lineInfo: file.lineInfo,
+      collector: file.collector,
+    ),
+  );
+  file.unit.visitChildren(
+    _TypeDeclarationInventoryVisitor(
+      sink: _DeclarationFactSink(file.path, file.lineInfo, file.collector),
+    ),
+  );
+  file.unit.visitChildren(
+    _TopLevelDeclarationInventoryVisitor(
+      sink: _DeclarationFactSink(file.path, file.lineInfo, file.collector),
+    ),
+  );
+}
+
+void _visitBehaviorFacts(_ParsedGraphFile file) {
+  _visitCompositionAndPlaceholders(file);
+  _visitDelegationsAndRoutes(file);
+}
+
+void _visitCompositionAndPlaceholders(_ParsedGraphFile file) {
+  file.unit.visitChildren(
+    _CompositionFieldVisitor(
+      sink: _CompositionFactSink(file.path, file.lineInfo, file.collector),
+      compositionTypes: file.options.compositionTypes,
+    ),
+  );
+  file.unit.visitChildren(
+    _PlaceholderVisitor(
+      path: file.path,
+      lineInfo: file.lineInfo,
+      collector: file.collector,
+      options: file.options,
+    ),
+  );
+}
+
+void _visitDelegationsAndRoutes(_ParsedGraphFile file) {
+  file.unit.visitChildren(
+    _TopLevelDelegationVisitor(
+      sink: _DelegationFactSink(
+        file.path,
+        file.lineInfo,
+        file.collector,
+        file.options,
+      ),
+    ),
+  );
+  file.unit.visitChildren(
+    _MemberDelegationVisitor(
+      sink: _DelegationFactSink(
+        file.path,
+        file.lineInfo,
+        file.collector,
+        file.options,
+      ),
+    ),
+  );
+  file.unit.visitChildren(
+    _ThrowRouteVisitor(
+      path: file.path,
+      lineInfo: file.lineInfo,
+      collector: file.collector,
+      options: file.options,
+    ),
+  );
 }
 
 final class _ActualGraphCollector {
@@ -253,31 +368,16 @@ final class _PendingMaterializationRouteFact {
   final ExceptionThrowFact exceptionThrow;
 }
 
-final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
-  _ActualGraphVisitor({
+final class _DirectiveGraphVisitor extends RecursiveAstVisitor<void> {
+  _DirectiveGraphVisitor({
     required this.path,
     required this.lineInfo,
     required this.collector,
-    required this.sensitiveThrows,
-    required this.placeholderCoverage,
-    required this.compositionTypes,
-    required this.delegationMembers,
-    required this.delegationTargetTypes,
-    required this.memberCallTargets,
   });
 
   final String path;
   final LineInfo lineInfo;
   final _ActualGraphCollector collector;
-  final List<SensitiveThrowCoverage> sensitiveThrows;
-  final List<PlaceholderCoverage> placeholderCoverage;
-  final Set<String> compositionTypes;
-  final Set<String> delegationMembers;
-  final Set<String> delegationTargetTypes;
-  final Set<String> memberCallTargets;
-  final Map<String, String> _targetTypes = {};
-  String? _currentDeclaration;
-  String? _currentMember;
 
   @override
   void visitExportDirective(ExportDirective node) {
@@ -309,125 +409,68 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
     super.visitImportDirective(node);
   }
 
+  int _line(AstNode node) => lineInfo.getLocation(node.offset).lineNumber;
+}
+
+final class _TypeDeclarationInventoryVisitor extends RecursiveAstVisitor<void> {
+  const _TypeDeclarationInventoryVisitor({required this.sink});
+
+  final _DeclarationFactSink sink;
+
   @override
   void visitClassDeclaration(ClassDeclaration node) {
     final name = node.namePart.typeName.lexeme;
-    _addDeclaration(name, 'class', node);
-    final previous = _currentDeclaration;
-    _currentDeclaration = name;
-    _implementedInterfaces(node);
+    sink.addDeclaration(name, 'class', node);
+    sink.addImplementedInterfaces(node);
     super.visitClassDeclaration(node);
-    _currentDeclaration = previous;
   }
 
   @override
   void visitEnumDeclaration(EnumDeclaration node) {
-    _addDeclaration(node.namePart.typeName.lexeme, 'enum', node);
+    sink.addDeclaration(node.namePart.typeName.lexeme, 'enum', node);
     super.visitEnumDeclaration(node);
   }
 
   @override
   void visitMixinDeclaration(MixinDeclaration node) {
-    _addDeclaration(node.name.lexeme, 'mixin', node);
+    sink.addDeclaration(node.name.lexeme, 'mixin', node);
     super.visitMixinDeclaration(node);
   }
+}
+
+final class _TopLevelDeclarationInventoryVisitor
+    extends RecursiveAstVisitor<void> {
+  const _TopLevelDeclarationInventoryVisitor({required this.sink});
+
+  final _DeclarationFactSink sink;
 
   @override
   void visitFunctionDeclaration(FunctionDeclaration node) {
-    _addDeclaration(node.name.lexeme, 'function', node);
-    final previousMember = _currentMember;
-    _currentMember = node.name.lexeme;
-    _withParameterTypes(node.functionExpression.parameters, () {
-      _delegation(node.name.lexeme, node, node.functionExpression.body);
-      super.visitFunctionDeclaration(node);
-    });
-    _currentMember = previousMember;
+    sink.addDeclaration(node.name.lexeme, 'function', node);
+    super.visitFunctionDeclaration(node);
   }
 
   @override
   void visitGenericTypeAlias(GenericTypeAlias node) {
-    _addDeclaration(node.name.lexeme, 'typedef', node);
+    sink.addDeclaration(node.name.lexeme, 'typedef', node);
     super.visitGenericTypeAlias(node);
   }
+}
 
-  @override
-  void visitFieldDeclaration(FieldDeclaration node) {
-    final owner = _currentDeclaration;
-    final type = node.fields.type?.toSource();
-    if (owner != null && type != null) {
-      for (final variable in node.fields.variables) {
-        final fieldType = _withoutNullability(type);
-        _targetTypes[variable.name.lexeme] = fieldType;
-        if (!compositionTypes.contains(fieldType)) {
-          continue;
-        }
-        collector.compositionFields.add(
-          CompositionFieldFact(
-            path: path,
-            line: _line(node),
-            declaration: owner,
-            field: variable.name.lexeme,
-            type: fieldType,
-          ),
-        );
-      }
-    }
-    super.visitFieldDeclaration(node);
-  }
+final class _DeclarationFactSink {
+  const _DeclarationFactSink(this.path, this.lineInfo, this.collector);
 
-  @override
-  void visitMethodDeclaration(MethodDeclaration node) {
-    final previousMember = _currentMember;
-    _currentMember = _qualifiedMember(node.name.lexeme);
-    _placeholder(node.name.lexeme, node);
-    _delegation(node.name.lexeme, node, node.body);
-    super.visitMethodDeclaration(node);
-    _currentMember = previousMember;
-  }
+  final String path;
+  final LineInfo lineInfo;
+  final _ActualGraphCollector collector;
 
-  @override
-  void visitMethodInvocation(MethodInvocation node) {
-    final member = _currentMember;
-    final target = node.methodName.name;
-    if (member != null && memberCallTargets.contains(target)) {
-      collector.memberCalls.add(
-        MemberCallFact(
-          path: path,
-          line: _line(node),
-          member: member,
-          target: target,
-        ),
-      );
-    }
-    _pendingMaterializationRoute(member, node);
-    super.visitMethodInvocation(node);
-  }
-
-  @override
-  void visitThrowExpression(ThrowExpression node) {
-    final exception = _throwType(node.expression);
-    if (exception != null) {
-      _verifiedMaterializationRouteHelper(node.expression, exception);
-      collector.exceptionThrows.add(
-        ExceptionThrowFact(
-          path: path,
-          line: _line(node),
-          exception: exception,
-          owner: _currentDeclaration ?? _sensitiveOwner(path, exception),
-          member: _currentMember,
-        ),
-      );
-    }
-    super.visitThrowExpression(node);
-  }
-
-  void _addDeclaration(String name, String kind, AstNode node) {
+  void addDeclaration(String name, String kind, AstNode node) {
     collector.declarations.add(
       DeclarationFact(path: path, line: _line(node), name: name, kind: kind),
     );
   }
 
-  void _implementedInterfaces(ClassDeclaration node) {
+  void addImplementedInterfaces(ClassDeclaration node) {
     final implementsClause = node.implementsClause;
     if (implementsClause == null) {
       return;
@@ -444,181 +487,122 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
     }
   }
 
-  void _placeholder(String member, MethodDeclaration node) {
-    if (!_isPlaceholderCovered()) {
-      return;
-    }
-    final body = node.body;
-    final throwType = switch (body) {
-      ExpressionFunctionBody(:final expression) => _throwType(expression),
-      BlockFunctionBody(:final block) => _blockPlaceholderThrow(block),
-      _ => null,
-    };
-    if (throwType == null || throwType != 'UnimplementedError') {
-      return;
-    }
-    collector.placeholders.add(
-      PlaceholderFact(
-        path: path,
-        line: _line(node),
-        member: _qualifiedMember(member),
-        throwType: throwType,
-      ),
-    );
+  int _line(AstNode node) => lineInfo.getLocation(node.offset).lineNumber;
+}
+
+final class _CompositionFieldVisitor extends RecursiveAstVisitor<void> {
+  _CompositionFieldVisitor({
+    required this.sink,
+    required this.compositionTypes,
+  });
+
+  final _CompositionFactSink sink;
+  final Set<String> compositionTypes;
+  String? _currentDeclaration;
+
+  @override
+  void visitClassDeclaration(ClassDeclaration node) {
+    final previous = _currentDeclaration;
+    _currentDeclaration = node.namePart.typeName.lexeme;
+    super.visitClassDeclaration(node);
+    _currentDeclaration = previous;
   }
 
-  void _delegation(String member, AstNode node, FunctionBody body) {
-    final expression = switch (body) {
-      ExpressionFunctionBody(:final expression) => expression,
-      _ => null,
-    };
-    if (expression is! MethodInvocation &&
-        expression is! PropertyAccess &&
-        expression is! SimpleIdentifier) {
-      return;
-    }
-    final targetName = switch (expression) {
-      MethodInvocation(:final target?) => target.toSource(),
-      PropertyAccess(:final target?) => target.toSource(),
-      SimpleIdentifier(:final name) => name,
-      _ => null,
-    };
-    if (targetName == null) {
-      return;
-    }
-    final qualifiedMember = _qualifiedMember(member);
-    final targetType = _targetTypes[targetName];
-    if (!delegationMembers.contains(qualifiedMember) ||
-        targetType == null ||
-        !delegationTargetTypes.contains(targetType)) {
-      return;
-    }
-    collector.delegations.add(
-      DelegationFact(
-        path: path,
-        line: _line(node),
-        member: qualifiedMember,
-        target: targetName,
-        targetType: targetType,
-      ),
-    );
-  }
-
-  String? _blockPlaceholderThrow(Block block) {
-    if (block.statements.length != 1) {
-      return null;
-    }
-    final statement = block.statements.single;
-    if (statement is ExpressionStatement &&
-        statement.expression is ThrowExpression) {
-      return _throwType((statement.expression as ThrowExpression).expression);
-    }
-
-    return null;
-  }
-
-  String? _throwType(Expression expression) {
-    if (expression is ThrowExpression) {
-      return _throwType(expression.expression);
-    }
-    if (expression is InstanceCreationExpression) {
-      return expression.constructorName.type.name.lexeme;
-    }
-    if (expression is MethodInvocation && expression.target == null) {
-      final routeException = _sensitiveThrowRouteException(
-        expression.methodName.name,
+  @override
+  void visitFieldDeclaration(FieldDeclaration node) {
+    final owner = _currentDeclaration;
+    final type = node.fields.type?.toSource();
+    if (owner != null && type != null) {
+      _recordCompositionFields(
+        node: node,
+        owner: owner,
+        fieldType: _withoutNullability(type),
       );
-      if (routeException != null) {
-        return routeException;
-      }
-
-      return expression.methodName.name;
     }
-
-    return null;
+    super.visitFieldDeclaration(node);
   }
 
-  String? _sensitiveThrowRouteException(String methodName) {
-    if (!memberCallTargets.contains(methodName)) {
-      return null;
-    }
-
-    final exceptions = {
-      for (final entry in sensitiveThrows)
-        if (_matchesGlob(path, entry.under)) entry.exception,
-    };
-    if (exceptions.length == 1) {
-      return exceptions.single;
-    }
-
-    return null;
-  }
-
-  void _pendingMaterializationRoute(String? member, MethodInvocation node) {
-    if (member == null || node.methodName.name != '_materialize') {
-      return;
-    }
-    for (final route in memberCallTargets) {
-      final exception = _sensitiveThrowRouteException(route);
-      if (exception == null) {
+  void _recordCompositionFields({
+    required FieldDeclaration node,
+    required String owner,
+    required String fieldType,
+  }) {
+    for (final variable in node.fields.variables) {
+      if (!compositionTypes.contains(fieldType)) {
         continue;
       }
-      collector.materializationRoutes.add(
-        _PendingMaterializationRouteFact(
-          helperKey: _materializationRouteHelperKey(
-            node.methodName.name,
-            route,
-          ),
-          memberCall: MemberCallFact(
-            path: path,
-            line: _line(node),
-            member: member,
-            target: route,
-          ),
-          exceptionThrow: ExceptionThrowFact(
-            path: path,
-            line: _line(node),
-            exception: exception,
-            owner: _currentDeclaration ?? _sensitiveOwner(path, exception),
-            member: member,
-          ),
-        ),
+      sink.addField(
+        node: node,
+        owner: owner,
+        variable: variable,
+        type: fieldType,
       );
     }
   }
+}
 
-  void _verifiedMaterializationRouteHelper(
-    Expression expression,
-    String exception,
-  ) {
-    final member = _currentMember;
-    if (member == null ||
-        member != '_materialize' ||
-        _sensitiveOwner(path, exception) == null) {
-      return;
-    }
-    final route = _throwRoute(expression);
-    if (route != null && memberCallTargets.contains(route)) {
-      collector.materializationRouteHelperKeys.add(
-        _materializationRouteHelperKey(member, route),
-      );
-    }
+final class _CompositionFactSink {
+  const _CompositionFactSink(this.path, this.lineInfo, this.collector);
+
+  final String path;
+  final LineInfo lineInfo;
+  final _ActualGraphCollector collector;
+
+  void addField({
+    required FieldDeclaration node,
+    required String owner,
+    required VariableDeclaration variable,
+    required String type,
+  }) {
+    collector.compositionFields.add(
+      CompositionFieldFact(
+        path: path,
+        line: _line(node),
+        declaration: owner,
+        field: variable.name.lexeme,
+        type: type,
+      ),
+    );
   }
 
-  String _materializationRouteHelperKey(String helperName, String routeTarget) {
-    return '$path::$helperName::$routeTarget';
+  int _line(AstNode node) => lineInfo.getLocation(node.offset).lineNumber;
+}
+
+final class _PlaceholderVisitor extends RecursiveAstVisitor<void> {
+  _PlaceholderVisitor({
+    required this.path,
+    required this.lineInfo,
+    required this.collector,
+    required this.options,
+  });
+
+  final String path;
+  final LineInfo lineInfo;
+  final _ActualGraphCollector collector;
+  final ActualGraphExtractionOptions options;
+  String? _currentDeclaration;
+
+  @override
+  void visitClassDeclaration(ClassDeclaration node) {
+    final previous = _currentDeclaration;
+    _currentDeclaration = node.namePart.typeName.lexeme;
+    super.visitClassDeclaration(node);
+    _currentDeclaration = previous;
   }
 
-  String? _throwRoute(Expression expression) {
-    final thrown = expression is ThrowExpression
-        ? expression.expression
-        : expression;
-
-    return switch (thrown) {
-      MethodInvocation(:final target, :final methodName) when target == null =>
-        methodName.name,
-      _ => null,
-    };
+  @override
+  void visitMethodDeclaration(MethodDeclaration node) {
+    _recordPlaceholder(
+      _PlaceholderCandidate(
+        path: path,
+        lineInfo: lineInfo,
+        collector: collector,
+        options: options,
+        qualifiedMember: _qualifiedMember(node.name.lexeme),
+        node: node,
+      ),
+    );
+    super.visitMethodDeclaration(node);
   }
 
   String _qualifiedMember(String member) {
@@ -626,13 +610,190 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
 
     return owner == null ? member : '$owner.$member';
   }
+}
 
-  int _line(AstNode node) => lineInfo.getLocation(node.offset).lineNumber;
+final class _TopLevelDelegationVisitor extends RecursiveAstVisitor<void> {
+  _TopLevelDelegationVisitor({required this.sink})
+    : _targets = _TargetTypeScope();
 
-  void _withParameterTypes(
-    FormalParameterList? parameters,
-    void Function() fn,
-  ) {
+  final _DelegationFactSink sink;
+  final _TargetTypeScope _targets;
+
+  @override
+  void visitFunctionDeclaration(FunctionDeclaration node) {
+    _targets.withParameterTypes(node.functionExpression.parameters, () {
+      _recordDelegation(
+        _DelegationCandidate(
+          sink: sink,
+          qualifiedMember: node.name.lexeme,
+          targetTypes: _targets.values,
+          node: node,
+          body: node.functionExpression.body,
+        ),
+      );
+      super.visitFunctionDeclaration(node);
+    });
+  }
+}
+
+final class _MemberDelegationVisitor extends RecursiveAstVisitor<void> {
+  _MemberDelegationVisitor({required this.sink})
+    : _targets = _TargetTypeScope();
+
+  final _DelegationFactSink sink;
+  final _TargetTypeScope _targets;
+  String? _currentDeclaration;
+
+  @override
+  void visitClassDeclaration(ClassDeclaration node) {
+    final previous = _currentDeclaration;
+    _currentDeclaration = node.namePart.typeName.lexeme;
+    super.visitClassDeclaration(node);
+    _currentDeclaration = previous;
+  }
+
+  @override
+  void visitFieldDeclaration(FieldDeclaration node) {
+    _targets.recordFieldTypes(node);
+    super.visitFieldDeclaration(node);
+  }
+
+  @override
+  void visitMethodDeclaration(MethodDeclaration node) {
+    _recordDelegation(
+      _DelegationCandidate(
+        sink: sink,
+        qualifiedMember: _qualifiedMember(node.name.lexeme),
+        targetTypes: _targets.values,
+        node: node,
+        body: node.body,
+      ),
+    );
+    super.visitMethodDeclaration(node);
+  }
+
+  String _qualifiedMember(String member) {
+    final owner = _currentDeclaration;
+
+    return owner == null ? member : '$owner.$member';
+  }
+}
+
+final class _ThrowRouteVisitor extends RecursiveAstVisitor<void> {
+  _ThrowRouteVisitor({
+    required this.path,
+    required this.lineInfo,
+    required this.collector,
+    required this.options,
+  }) : _throws = _ThrowRouteRecorder(path, lineInfo, collector, options);
+
+  final String path;
+  final LineInfo lineInfo;
+  final _ActualGraphCollector collector;
+  final ActualGraphExtractionOptions options;
+  final _ThrowRouteRecorder _throws;
+  String? _currentDeclaration;
+  String? _currentMember;
+
+  @override
+  void visitClassDeclaration(ClassDeclaration node) {
+    final previous = _currentDeclaration;
+    _currentDeclaration = node.namePart.typeName.lexeme;
+    super.visitClassDeclaration(node);
+    _currentDeclaration = previous;
+  }
+
+  @override
+  void visitFunctionDeclaration(FunctionDeclaration node) {
+    final previousMember = _currentMember;
+    _currentMember = node.name.lexeme;
+    super.visitFunctionDeclaration(node);
+    _currentMember = previousMember;
+  }
+
+  @override
+  void visitMethodDeclaration(MethodDeclaration node) {
+    final previousMember = _currentMember;
+    _currentMember = _qualifiedMember(node.name.lexeme);
+    super.visitMethodDeclaration(node);
+    _currentMember = previousMember;
+  }
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    _throws.recordCall(
+      member: _currentMember,
+      owner: _currentDeclaration,
+      node: node,
+    );
+    super.visitMethodInvocation(node);
+  }
+
+  @override
+  void visitThrowExpression(ThrowExpression node) {
+    _throws.recordThrow(
+      owner: _currentDeclaration,
+      member: _currentMember,
+      node: node,
+    );
+    super.visitThrowExpression(node);
+  }
+
+  String _qualifiedMember(String member) {
+    final owner = _currentDeclaration;
+
+    return owner == null ? member : '$owner.$member';
+  }
+}
+
+final class _DelegationCandidate {
+  const _DelegationCandidate({
+    required this.sink,
+    required this.qualifiedMember,
+    required this.targetTypes,
+    required this.node,
+    required this.body,
+  });
+
+  final _DelegationFactSink sink;
+  final String qualifiedMember;
+  final Map<String, String> targetTypes;
+  final AstNode node;
+  final FunctionBody body;
+}
+
+final class _PlaceholderCandidate {
+  const _PlaceholderCandidate({
+    required this.path,
+    required this.lineInfo,
+    required this.collector,
+    required this.options,
+    required this.qualifiedMember,
+    required this.node,
+  });
+
+  final String path;
+  final LineInfo lineInfo;
+  final _ActualGraphCollector collector;
+  final ActualGraphExtractionOptions options;
+  final String qualifiedMember;
+  final MethodDeclaration node;
+}
+
+final class _TargetTypeScope {
+  final Map<String, String> values = {};
+
+  void recordFieldTypes(FieldDeclaration node) {
+    final type = node.fields.type?.toSource();
+    if (type == null) {
+      return;
+    }
+    for (final variable in node.fields.variables) {
+      values[variable.name.lexeme] = _withoutNullability(type);
+    }
+  }
+
+  void withParameterTypes(FormalParameterList? parameters, void Function() fn) {
     if (parameters == null) {
       fn();
       return;
@@ -644,16 +805,16 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
       if (name == null || type == null) {
         continue;
       }
-      oldValues[name] = _targetTypes[name];
-      _targetTypes[name] = type;
+      oldValues[name] = values[name];
+      values[name] = type;
     }
     fn();
     for (final entry in oldValues.entries) {
       final oldValue = entry.value;
       if (oldValue == null) {
-        _targetTypes.remove(entry.key);
+        values.remove(entry.key);
       } else {
-        _targetTypes[entry.key] = oldValue;
+        values[entry.key] = oldValue;
       }
     }
   }
@@ -675,13 +836,246 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
       _ => null,
     };
   }
+}
 
-  bool _isPlaceholderCovered() {
-    return placeholderCoverage.any((entry) => _matchesGlob(path, entry.under));
+void _recordPlaceholder(_PlaceholderCandidate candidate) {
+  if (!_isPlaceholderCovered(candidate.path, candidate.options)) {
+    return;
+  }
+  final throwType = _placeholderThrow(candidate.node.body, candidate);
+  if (throwType == null || throwType != 'UnimplementedError') {
+    return;
+  }
+  candidate.collector.placeholders.add(
+    PlaceholderFact(
+      path: candidate.path,
+      line: _line(candidate.lineInfo, candidate.node),
+      member: candidate.qualifiedMember,
+      throwType: throwType,
+    ),
+  );
+}
+
+String? _placeholderThrow(FunctionBody body, _PlaceholderCandidate candidate) {
+  return switch (body) {
+    ExpressionFunctionBody(:final expression) => _throwType(
+      expression,
+      candidate.options,
+      candidate.path,
+    ),
+    BlockFunctionBody(:final block) => _blockThrow(block, candidate),
+    _ => null,
+  };
+}
+
+String? _blockThrow(Block block, _PlaceholderCandidate candidate) {
+  if (block.statements.length != 1) {
+    return null;
+  }
+  final statement = block.statements.single;
+  if (statement is ExpressionStatement &&
+      statement.expression is ThrowExpression) {
+    return _throwType(
+      (statement.expression as ThrowExpression).expression,
+      candidate.options,
+      candidate.path,
+    );
   }
 
-  String? _sensitiveOwner(String path, String exception) {
-    for (final entry in sensitiveThrows) {
+  return null;
+}
+
+bool _isPlaceholderCovered(String path, ActualGraphExtractionOptions options) {
+  return options.placeholderCoverage.any(
+    (entry) => _matchesGlob(path, entry.under),
+  );
+}
+
+void _recordDelegation(_DelegationCandidate candidate) {
+  final targetName = _delegationTarget(candidate.body);
+  final targetType = targetName == null
+      ? null
+      : candidate.targetTypes[targetName];
+  if (!candidate.sink.options.delegationMembers.contains(
+        candidate.qualifiedMember,
+      ) ||
+      targetName == null ||
+      targetType == null ||
+      !candidate.sink.options.delegationTargetTypes.contains(targetType)) {
+    return;
+  }
+  candidate.sink.addDelegation(
+    DelegationFact(
+      path: candidate.sink.path,
+      line: candidate.sink.line(candidate.node),
+      member: candidate.qualifiedMember,
+      target: targetName,
+      targetType: targetType,
+    ),
+  );
+}
+
+final class _DelegationFactSink {
+  const _DelegationFactSink(
+    this.path,
+    this.lineInfo,
+    this.collector,
+    this.options,
+  );
+
+  final String path;
+  final LineInfo lineInfo;
+  final _ActualGraphCollector collector;
+  final ActualGraphExtractionOptions options;
+
+  void addDelegation(DelegationFact fact) {
+    collector.delegations.add(fact);
+  }
+
+  int line(AstNode node) => lineInfo.getLocation(node.offset).lineNumber;
+}
+
+String? _delegationTarget(FunctionBody body) {
+  final expression = switch (body) {
+    ExpressionFunctionBody(:final expression) => expression,
+    _ => null,
+  };
+
+  return switch (expression) {
+    MethodInvocation(:final target?) => target.toSource(),
+    PropertyAccess(:final target?) => target.toSource(),
+    SimpleIdentifier(:final name) => name,
+    _ => null,
+  };
+}
+
+final class _ThrowRouteRecorder {
+  const _ThrowRouteRecorder(
+    this.path,
+    this.lineInfo,
+    this.collector,
+    this.options,
+  );
+
+  final String path;
+  final LineInfo lineInfo;
+  final _ActualGraphCollector collector;
+  final ActualGraphExtractionOptions options;
+
+  void recordCall({
+    required String? member,
+    required String? owner,
+    required MethodInvocation node,
+  }) {
+    final target = node.methodName.name;
+    if (member != null && options.memberCallTargets.contains(target)) {
+      collector.memberCalls.add(
+        MemberCallFact(
+          path: path,
+          line: _line(node),
+          member: member,
+          target: target,
+        ),
+      );
+    }
+    _pendingMaterializationRoute(member: member, owner: owner, node: node);
+  }
+
+  void recordThrow({
+    required String? owner,
+    required String? member,
+    required ThrowExpression node,
+  }) {
+    final exception = _throwType(node.expression, options, path);
+    if (exception == null) {
+      return;
+    }
+    _verifiedMaterializationRouteHelper(member, node.expression, exception);
+    collector.exceptionThrows.add(
+      ExceptionThrowFact(
+        path: path,
+        line: _line(node),
+        exception: exception,
+        owner: owner ?? _sensitiveOwner(exception),
+        member: member,
+      ),
+    );
+  }
+
+  void _pendingMaterializationRoute({
+    required String? member,
+    required String? owner,
+    required MethodInvocation node,
+  }) {
+    if (member == null || node.methodName.name != '_materialize') {
+      return;
+    }
+    for (final route in options.memberCallTargets) {
+      final exception = _sensitiveThrowRouteException(route);
+      if (exception == null) {
+        continue;
+      }
+      collector.materializationRoutes.add(
+        _PendingMaterializationRouteFact(
+          helperKey: _materializationRouteHelperKey(
+            node.methodName.name,
+            route,
+          ),
+          memberCall: MemberCallFact(
+            path: path,
+            line: _line(node),
+            member: member,
+            target: route,
+          ),
+          exceptionThrow: ExceptionThrowFact(
+            path: path,
+            line: _line(node),
+            exception: exception,
+            owner: owner ?? _sensitiveOwner(exception),
+            member: member,
+          ),
+        ),
+      );
+    }
+  }
+
+  void _verifiedMaterializationRouteHelper(
+    String? member,
+    Expression expression,
+    String exception,
+  ) {
+    if (member == null ||
+        member != '_materialize' ||
+        _sensitiveOwner(exception) == null) {
+      return;
+    }
+    final helperName = member;
+    final route = _throwRoute(expression);
+    if (route != null && options.memberCallTargets.contains(route)) {
+      collector.materializationRouteHelperKeys.add(
+        _materializationRouteHelperKey(helperName, route),
+      );
+    }
+  }
+
+  String? _sensitiveThrowRouteException(String methodName) {
+    if (!options.memberCallTargets.contains(methodName)) {
+      return null;
+    }
+
+    final exceptions = {
+      for (final entry in options.sensitiveThrows)
+        if (_matchesGlob(path, entry.under)) entry.exception,
+    };
+    if (exceptions.length == 1) {
+      return exceptions.single;
+    }
+
+    return null;
+  }
+
+  String? _sensitiveOwner(String exception) {
+    for (final entry in options.sensitiveThrows) {
       if (_matchesGlob(path, entry.under) && entry.exception == exception) {
         return entry.owner;
       }
@@ -689,6 +1083,71 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
 
     return null;
   }
+
+  String _materializationRouteHelperKey(String helperName, String routeTarget) {
+    return '$path::$helperName::$routeTarget';
+  }
+
+  int _line(AstNode node) => lineInfo.getLocation(node.offset).lineNumber;
+}
+
+String? _throwType(
+  Expression expression,
+  ActualGraphExtractionOptions options,
+  String path,
+) {
+  if (expression is ThrowExpression) {
+    return _throwType(expression.expression, options, path);
+  }
+  if (expression is InstanceCreationExpression) {
+    return expression.constructorName.type.name.lexeme;
+  }
+  if (expression is MethodInvocation && expression.target == null) {
+    final routeException = _routeException(
+      expression.methodName.name,
+      options,
+      path,
+    );
+    if (routeException != null) {
+      return routeException;
+    }
+
+    return expression.methodName.name;
+  }
+
+  return null;
+}
+
+String? _routeException(
+  String methodName,
+  ActualGraphExtractionOptions options,
+  String path,
+) {
+  if (!options.memberCallTargets.contains(methodName)) {
+    return null;
+  }
+
+  final exceptions = {
+    for (final entry in options.sensitiveThrows)
+      if (_matchesGlob(path, entry.under)) entry.exception,
+  };
+  if (exceptions.length == 1) {
+    return exceptions.single;
+  }
+
+  return null;
+}
+
+String? _throwRoute(Expression expression) {
+  final thrown = expression is ThrowExpression
+      ? expression.expression
+      : expression;
+
+  return switch (thrown) {
+    MethodInvocation(:final target, :final methodName) when target == null =>
+      methodName.name,
+    _ => null,
+  };
 }
 
 String normalizeDirectiveUri({
@@ -784,6 +1243,10 @@ String _relativePath(String path, String repositoryRoot) {
 
 String _withoutNullability(String type) {
   return type.endsWith('?') ? type.substring(0, type.length - 1) : type;
+}
+
+int _line(LineInfo lineInfo, AstNode node) {
+  return lineInfo.getLocation(node.offset).lineNumber;
 }
 
 bool _matchesGlob(String path, String pattern) {

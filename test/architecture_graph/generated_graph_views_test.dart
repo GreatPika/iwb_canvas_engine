@@ -7,6 +7,19 @@ import '../../tool/architecture_graph/src/architecture_graph.dart';
 import '../../tool/architecture_graph/src/graph_views.dart';
 
 void main() {
+  group('rendered views', () {
+    _registerRenderedViewsTest();
+  });
+  group('reproducibility', () {
+    _registerCheckedInViewsTest();
+    _registerOrphanViewTest();
+  });
+  group('connectivity guard', () {
+    _registerIsolatedNodeTest();
+  });
+}
+
+void _registerRenderedViewsTest() {
   test('renders deterministic expected-only and diff graph views', () {
     final expected = loadExpectedArchitectureGraph();
     final actual = extractActualArchitectureGraph(expectedGraph: expected);
@@ -26,60 +39,78 @@ void main() {
       first.keys.toSet(),
       expected.views.map((view) => view.output).toSet(),
     );
-    expect(
-      first['docs/diagrams/generated/full_architecture.mmd'],
-      contains('api_canvas_runtime'),
-    );
-    expect(
-      first['docs/diagrams/generated/current_phase.mmd'],
-      isNot(contains('edit_kernel')),
-    );
-    expect(
-      first['docs/diagrams/generated/future_target.mmd'],
-      contains('edit_kernel'),
-    );
-    expect(
-      first['docs/diagrams/generated/future_target.mmd'],
-      contains('store_document_kernel'),
-    );
-    expect(
-      first['docs/diagrams/generated/future_target.mmd'],
-      contains('draw_tools'),
-    );
-    expect(
-      first['docs/diagrams/generated/future_target.mmd'],
-      isNot(contains('release_measurement')),
-    );
-    expect(
-      first['docs/diagrams/generated/release_verification.mmd'],
-      contains('release_measurement'),
-    );
-    expect(
-      first['docs/diagrams/generated/actual_vs_expected_diff.mmd'],
-      isNot(contains('violation_')),
-    );
-    expect(
-      first['docs/diagrams/generated/actual_vs_expected_diff.mmd'],
-      isNot(contains('linkStyle')),
-    );
-    expect(
-      first['docs/diagrams/generated/current_phase.mmd'],
-      contains('public API forwards to by P4'),
-    );
-    expect(
-      first['docs/diagrams/generated/current_phase.mmd'],
-      isNot(contains(r'\n')),
-    );
-    expect(
-      first['docs/diagrams/generated/current_phase.mmd'],
-      isNot(contains('facade_port P4')),
-    );
-    expect(
-      first['docs/diagrams/generated/actual_vs_expected_diff.mmd'],
-      isNot(contains('Missing required link')),
-    );
+    _expectCurrentPhaseView(first);
+    _expectFutureView(first);
+    _expectReleaseView(first);
+    _expectDiffView(first);
   });
+}
 
+void _expectCurrentPhaseView(Map<String, String> views) {
+  expect(
+    views['docs/diagrams/generated/full_architecture.mmd'],
+    contains('api_canvas_runtime'),
+  );
+  expect(
+    views['docs/diagrams/generated/current_phase.mmd'],
+    isNot(contains('edit_kernel')),
+  );
+  expect(
+    views['docs/diagrams/generated/current_phase.mmd'],
+    contains('public API forwards to by P4'),
+  );
+  expect(
+    views['docs/diagrams/generated/current_phase.mmd'],
+    isNot(contains(r'\n')),
+  );
+  expect(
+    views['docs/diagrams/generated/current_phase.mmd'],
+    isNot(contains('facade_port P4')),
+  );
+}
+
+void _expectFutureView(Map<String, String> views) {
+  expect(
+    views['docs/diagrams/generated/future_target.mmd'],
+    contains('edit_kernel'),
+  );
+  expect(
+    views['docs/diagrams/generated/future_target.mmd'],
+    contains('store_document_kernel'),
+  );
+  expect(
+    views['docs/diagrams/generated/future_target.mmd'],
+    contains('draw_tools'),
+  );
+  expect(
+    views['docs/diagrams/generated/future_target.mmd'],
+    isNot(contains('release_measurement')),
+  );
+}
+
+void _expectReleaseView(Map<String, String> views) {
+  expect(
+    views['docs/diagrams/generated/release_verification.mmd'],
+    contains('release_measurement'),
+  );
+}
+
+void _expectDiffView(Map<String, String> views) {
+  expect(
+    views['docs/diagrams/generated/actual_vs_expected_diff.mmd'],
+    isNot(contains('violation_')),
+  );
+  expect(
+    views['docs/diagrams/generated/actual_vs_expected_diff.mmd'],
+    isNot(contains('linkStyle')),
+  );
+  expect(
+    views['docs/diagrams/generated/actual_vs_expected_diff.mmd'],
+    isNot(contains('Missing required link')),
+  );
+}
+
+void _registerCheckedInViewsTest() {
   test('checked-in generated graph views are current', () {
     final expected = loadExpectedArchitectureGraph();
     final actual = extractActualArchitectureGraph(expectedGraph: expected);
@@ -97,7 +128,9 @@ void main() {
       );
     }
   });
+}
 
+void _registerOrphanViewTest() {
   test('reproducibility check reports orphan generated Mermaid files', () {
     final directory = Directory.systemTemp.createTempSync('graph_views_');
     try {
@@ -121,26 +154,15 @@ void main() {
       directory.deleteSync(recursive: true);
     }
   });
+}
 
+void _registerIsolatedNodeTest() {
   test('full and future graph views reject unexplained isolated nodes', () {
     final expected = loadExpectedArchitectureGraph();
     final actual = extractActualArchitectureGraph(expectedGraph: expected);
-    final isolatedNode = ArchitectureNode(
-      id: 'test.isolated_node',
-      label: 'Isolated test node',
-      kind: 'test_owner',
-      owner: 'test',
-      phaseIntroduced: 'P5',
-      phaseRequiredBy: 'P5',
-      status: 'future',
-      coverageScope: 'architectureOwners',
-      sourceDocs: expected.nodes.first.sourceDocs,
-      evidence: const ['Constructed negative fixture.'],
-      actual: const ActualExpectation.empty(),
-    );
     final graph = _graphWith(
       expected,
-      nodes: [...expected.nodes, isolatedNode],
+      nodes: [...expected.nodes, _isolatedNode(expected)],
     );
 
     expect(
@@ -158,49 +180,72 @@ void main() {
       ),
     );
 
-    final fullAllowedNode = ArchitectureNode(
-      id: 'test.future_isolated_node',
-      label: 'Future isolated test node',
-      kind: 'test_owner',
-      owner: 'test',
-      phaseIntroduced: 'P5',
-      phaseRequiredBy: 'P5',
-      status: 'future',
-      coverageScope: 'architectureOwners',
-      sourceDocs: expected.nodes.first.sourceDocs,
-      evidence: const ['Constructed negative fixture.'],
-      actual: const ActualExpectation.empty(),
-      isolationAllowances: [
-        ArchitectureIsolationAllowance(
-          views: const ['full_architecture'],
-          sourceDocs: expected.nodes.first.sourceDocs,
-          reason: 'Constructed allowance for the full-view branch only.',
-        ),
-      ],
-    );
     final futureGraph = _graphWith(
       expected,
-      nodes: [...expected.nodes, fullAllowedNode],
+      nodes: [...expected.nodes, _fullAllowedNode(expected)],
     );
 
-    expect(
-      () => renderGraphViews(
-        expected: futureGraph,
-        actual: actual,
-        selectedPhase: 'P4',
-      ),
-      throwsA(
-        isA<StateError>().having(
-          (error) => error.message,
-          'message',
-          allOf(
-            contains('future_target'),
-            contains('test.future_isolated_node'),
-          ),
-        ),
-      ),
-    );
+    _expectFutureIsolationFailure(futureGraph, actual);
   });
+}
+
+void _expectFutureIsolationFailure(
+  ExpectedArchitectureGraph futureGraph,
+  ActualArchitectureGraph actual,
+) {
+  expect(
+    () => renderGraphViews(
+      expected: futureGraph,
+      actual: actual,
+      selectedPhase: 'P4',
+    ),
+    throwsA(
+      isA<StateError>().having(
+        (error) => error.message,
+        'message',
+        allOf(contains('future_target'), contains('test.future_isolated_node')),
+      ),
+    ),
+  );
+}
+
+ArchitectureNode _isolatedNode(ExpectedArchitectureGraph expected) {
+  return ArchitectureNode(
+    id: 'test.isolated_node',
+    label: 'Isolated test node',
+    kind: 'test_owner',
+    owner: 'test',
+    phaseIntroduced: 'P5',
+    phaseRequiredBy: 'P5',
+    status: 'future',
+    coverageScope: 'architectureOwners',
+    sourceDocs: expected.nodes.first.sourceDocs,
+    evidence: const ['Constructed negative fixture.'],
+    actual: const ActualExpectation.empty(),
+  );
+}
+
+ArchitectureNode _fullAllowedNode(ExpectedArchitectureGraph expected) {
+  return ArchitectureNode(
+    id: 'test.future_isolated_node',
+    label: 'Future isolated test node',
+    kind: 'test_owner',
+    owner: 'test',
+    phaseIntroduced: 'P5',
+    phaseRequiredBy: 'P5',
+    status: 'future',
+    coverageScope: 'architectureOwners',
+    sourceDocs: expected.nodes.first.sourceDocs,
+    evidence: const ['Constructed negative fixture.'],
+    actual: const ActualExpectation.empty(),
+    isolationAllowances: [
+      ArchitectureIsolationAllowance(
+        views: const ['full_architecture'],
+        sourceDocs: expected.nodes.first.sourceDocs,
+        reason: 'Constructed allowance for the full-view branch only.',
+      ),
+    ],
+  );
 }
 
 ExpectedArchitectureGraph _graphWith(

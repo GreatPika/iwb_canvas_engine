@@ -214,51 +214,24 @@ CanvasPalette _readPalette(
     path: 'palette',
     diagnostics: diagnostics,
   );
-  final penColors =
-      _readList(
-            map,
-            key: 'penColors',
-            path: 'palette.penColors',
-            diagnostics: diagnostics,
-          )
-          .map(
-            (value) => _readColor(
-              value,
-              path: 'palette.penColors',
-              diagnostics: diagnostics,
-            ),
-          )
-          .toList();
-  final backgroundColors =
-      _readList(
-            map,
-            key: 'backgroundColors',
-            path: 'palette.backgroundColors',
-            diagnostics: diagnostics,
-          )
-          .map(
-            (value) => _readColor(
-              value,
-              path: 'palette.backgroundColors',
-              diagnostics: diagnostics,
-            ),
-          )
-          .toList();
-  final gridSizes =
-      _readList(
-            map,
-            key: 'gridSizes',
-            path: 'palette.gridSizes',
-            diagnostics: diagnostics,
-          )
-          .map(
-            (value) => _readDouble(
-              value,
-              path: 'palette.gridSizes',
-              diagnostics: diagnostics,
-            ),
-          )
-          .toList();
+  final penColors = _readColorList(
+    map,
+    key: 'penColors',
+    path: 'palette.penColors',
+    diagnostics: diagnostics,
+  );
+  final backgroundColors = _readColorList(
+    map,
+    key: 'backgroundColors',
+    path: 'palette.backgroundColors',
+    diagnostics: diagnostics,
+  );
+  final gridSizes = _readDoubleList(
+    map,
+    key: 'gridSizes',
+    path: 'palette.gridSizes',
+    diagnostics: diagnostics,
+  );
 
   return _materialize(
     diagnostics,
@@ -294,45 +267,89 @@ CanvasResource _readResource(
       ),
     );
   }
-  final idValue = _readString(
-    map['id'],
-    path: 'resource.id',
-    diagnostics: diagnostics,
-  );
-  final source = _readResourceSource(map['source'], diagnostics: diagnostics);
-  final mimeType = _readNullableString(
-    map['mimeType'],
-    path: 'resource.mimeType',
-    diagnostics: diagnostics,
-  );
-  final contentHash = _readNullableString(
-    map['contentHash'],
-    path: 'resource.contentHash',
-    diagnostics: diagnostics,
-  );
-  final byteLength = _readNullableInt(
-    map['byteLength'],
-    path: 'resource.byteLength',
-    diagnostics: diagnostics,
-  );
-  final metadata = _readMetadata(
-    map,
-    key: 'metadata',
-    path: 'resource.metadata',
-    diagnostics: diagnostics,
-  );
+
+  return _readImageResource(map, diagnostics: diagnostics);
+}
+
+CanvasImageResource _readImageResource(
+  Map<String, Object?> map, {
+  required DiagnosticsHub? diagnostics,
+}) {
+  final fields = _ImageResourceFields(map, diagnostics: diagnostics);
 
   return _materialize(
     diagnostics,
     () => CanvasImageResource(
-      id: CanvasResourceId(idValue),
-      source: source,
-      mimeType: mimeType,
-      contentHash: contentHash,
-      byteLength: byteLength,
-      metadata: metadata,
+      id: CanvasResourceId(fields.id),
+      source: fields.source,
+      mimeType: fields.mimeType,
+      contentHash: fields.contentHash,
+      byteLength: fields.byteLength,
+      metadata: fields.metadata,
     ),
   );
+}
+
+List<Color> _readColorList(
+  Map<String, Object?> map, {
+  required String key,
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
+  return _readList(map, key: key, path: path, diagnostics: diagnostics)
+      .map((value) => _readColor(value, path: path, diagnostics: diagnostics))
+      .toList();
+}
+
+List<double> _readDoubleList(
+  Map<String, Object?> map, {
+  required String key,
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
+  return _readList(map, key: key, path: path, diagnostics: diagnostics)
+      .map((value) => _readDouble(value, path: path, diagnostics: diagnostics))
+      .toList();
+}
+
+final class _ImageResourceFields {
+  _ImageResourceFields(
+    Map<String, Object?> map, {
+    required DiagnosticsHub? diagnostics,
+  }) : id = _readString(
+         map['id'],
+         path: 'resource.id',
+         diagnostics: diagnostics,
+       ),
+       source = _readResourceSource(map['source'], diagnostics: diagnostics),
+       mimeType = _readNullableString(
+         map['mimeType'],
+         path: 'resource.mimeType',
+         diagnostics: diagnostics,
+       ),
+       contentHash = _readNullableString(
+         map['contentHash'],
+         path: 'resource.contentHash',
+         diagnostics: diagnostics,
+       ),
+       byteLength = _readNullableInt(
+         map['byteLength'],
+         path: 'resource.byteLength',
+         diagnostics: diagnostics,
+       ),
+       metadata = _readMetadata(
+         map,
+         key: 'metadata',
+         path: 'resource.metadata',
+         diagnostics: diagnostics,
+       );
+
+  final String id;
+  final CanvasResourceSource source;
+  final String? mimeType;
+  final String? contentHash;
+  final int? byteLength;
+  final CanvasMetadata metadata;
 }
 
 CanvasResourceSource _readResourceSource(
@@ -506,41 +523,17 @@ CanvasPathElement _readPathElement(
   _ElementCommon common, {
   required DiagnosticsHub? diagnostics,
 }) {
-  final svgPathData = _readString(
-    map['svgPathData'],
-    path: 'path.svgPathData',
-    diagnostics: diagnostics,
-  );
-  final fillColor = _readNullableColor(
-    map['fillColor'],
-    path: 'path.fillColor',
-    diagnostics: diagnostics,
-  );
-  final strokeColor = _readNullableColor(
-    map['strokeColor'],
-    path: 'path.strokeColor',
-    diagnostics: diagnostics,
-  );
-  final strokeWidth = _readDouble(
-    map['strokeWidth'],
-    path: 'path.strokeWidth',
-    diagnostics: diagnostics,
-  );
-  final fillRule = _readFillRule(
-    map,
-    key: 'fillRule',
-    diagnostics: diagnostics,
-  );
+  final path = _PathElementFields(map, diagnostics: diagnostics);
 
   return _materialize(
     diagnostics,
     () => CanvasPathElement(
       id: common.id,
-      svgPathData: svgPathData,
-      fillColor: fillColor,
-      strokeColor: strokeColor,
-      strokeWidth: strokeWidth,
-      fillRule: fillRule,
+      svgPathData: path.svgPathData,
+      fillColor: path.fillColor,
+      strokeColor: path.strokeColor,
+      strokeWidth: path.strokeWidth,
+      fillRule: path.fillRule,
       revision: common.revision,
       transform: common.transform,
       opacity: common.opacity,
@@ -596,39 +589,15 @@ CanvasStrokeElement _readStrokeElement(
   _ElementCommon common, {
   required DiagnosticsHub? diagnostics,
 }) {
-  final points =
-      _readRequiredList(
-            map['points'],
-            path: 'stroke.points',
-            diagnostics: diagnostics,
-          )
-          .map(
-            (value) => _readRequiredOffset(
-              value,
-              path: 'stroke.points',
-              diagnostics: diagnostics,
-            ),
-          )
-          .toList();
-
-  final thickness = _readDouble(
-    map['thickness'],
-    path: 'stroke.thickness',
-    diagnostics: diagnostics,
-  );
-  final color = _readColor(
-    map['color'],
-    path: 'stroke.color',
-    diagnostics: diagnostics,
-  );
+  final stroke = _StrokeElementFields(map, diagnostics: diagnostics);
 
   return _materialize(
     diagnostics,
     () => CanvasStrokeElement(
       id: common.id,
-      points: points,
-      thickness: thickness,
-      color: color,
+      points: stroke.points,
+      thickness: stroke.thickness,
+      color: stroke.color,
       revision: common.revision,
       transform: common.transform,
       opacity: common.opacity,
@@ -1126,6 +1095,19 @@ Offset _readRequiredOffset(
   );
 }
 
+List<Offset> _readOffsetList(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
+  return _readRequiredList(value, path: path, diagnostics: diagnostics)
+      .map(
+        (value) =>
+            _readRequiredOffset(value, path: path, diagnostics: diagnostics),
+      )
+      .toList();
+}
+
 Offset _readOffsetDefault(
   Map<String, Object?> parent, {
   required String key,
@@ -1428,6 +1410,64 @@ T _materialize<T>(DiagnosticsHub? diagnostics, T Function() create) {
   } on CanvasDataException catch (exception) {
     throw recordSchemaV1FailureDiagnostic(diagnostics, exception);
   }
+}
+
+final class _PathElementFields {
+  _PathElementFields(
+    Map<String, Object?> map, {
+    required DiagnosticsHub? diagnostics,
+  }) : svgPathData = _readString(
+         map['svgPathData'],
+         path: 'path.svgPathData',
+         diagnostics: diagnostics,
+       ),
+       fillColor = _readNullableColor(
+         map['fillColor'],
+         path: 'path.fillColor',
+         diagnostics: diagnostics,
+       ),
+       strokeColor = _readNullableColor(
+         map['strokeColor'],
+         path: 'path.strokeColor',
+         diagnostics: diagnostics,
+       ),
+       strokeWidth = _readDouble(
+         map['strokeWidth'],
+         path: 'path.strokeWidth',
+         diagnostics: diagnostics,
+       ),
+       fillRule = _readFillRule(map, key: 'fillRule', diagnostics: diagnostics);
+
+  final String svgPathData;
+  final Color? fillColor;
+  final Color? strokeColor;
+  final double strokeWidth;
+  final CanvasPathFillRule fillRule;
+}
+
+final class _StrokeElementFields {
+  _StrokeElementFields(
+    Map<String, Object?> map, {
+    required DiagnosticsHub? diagnostics,
+  }) : points = _readOffsetList(
+         map['points'],
+         path: 'stroke.points',
+         diagnostics: diagnostics,
+       ),
+       thickness = _readDouble(
+         map['thickness'],
+         path: 'stroke.thickness',
+         diagnostics: diagnostics,
+       ),
+       color = _readColor(
+         map['color'],
+         path: 'stroke.color',
+         diagnostics: diagnostics,
+       );
+
+  final List<Offset> points;
+  final double thickness;
+  final Color color;
 }
 
 final class _TextElementFields {

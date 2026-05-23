@@ -5,13 +5,43 @@ import 'package:test/test.dart';
 import '../../tool/architecture_graph/src/architecture_graph.dart';
 
 void main() {
+  group('expected graph shape', () {
+    _registerGraphValidationTest();
+    _registerPhaseInventoryTest();
+    _registerClosureIdsTest();
+    _registerCoverageCategoryTest();
+    _registerSourceDocumentTest();
+  });
+  group('schema diagnostics', () {
+    _registerEnumDiagnosticTest();
+    _registerPhaseReferenceDiagnosticTest();
+    _registerDuplicateGraphIdTest();
+    _registerMissingSourceDocTest();
+    _registerMissingCitationTest();
+    _registerMissingAnchorLineTest();
+    _registerOutOfBoundsAnchorTest();
+    _registerMalformedCoverageTest();
+  });
+  group('source coverage diagnostics', () {
+    _registerSourceCoverageCompletenessTest();
+    _registerMissingSourceCoverageTest();
+    _registerUnknownCoverageGraphIdTest();
+    _registerEmptyCoverageGraphIdsTest();
+    _registerMissingGraphEntryCoverageTest();
+    _registerCoverageDispositionTextTest();
+  });
+}
+
+void _registerGraphValidationTest() {
   test('expected architecture graph parses and validates', () {
     final graph = loadExpectedArchitectureGraph();
     final diagnostics = validateExpectedArchitectureGraph(graph);
 
     expect(diagnostics, isEmpty);
   });
+}
 
+void _registerPhaseInventoryTest() {
   test('expected architecture graph models all phases uniformly', () {
     final graph = loadExpectedArchitectureGraph();
 
@@ -24,7 +54,9 @@ void main() {
       contains('P14'),
     );
   });
+}
 
+void _registerClosureIdsTest() {
   test('expected architecture graph owns P3 and P4 closure ids', () {
     final graph = loadExpectedArchitectureGraph();
 
@@ -37,7 +69,9 @@ void main() {
       contains('runtime.canvas_runtime.camera.closed_phase_placeholder'),
     );
   });
+}
 
+void _registerCoverageCategoryTest() {
   test('expected architecture graph has explicit coverage categories', () {
     final graph = loadExpectedArchitectureGraph();
 
@@ -50,7 +84,9 @@ void main() {
     expect(graph.coverage.placeholders.single.under, 'lib/src/api/**');
     expect(graph.coverage.ignored, contains('**/fixtures/**'));
   });
+}
 
+void _registerSourceDocumentTest() {
   test('source document paths exist but line evidence is not mandatory', () {
     final graph = loadExpectedArchitectureGraph();
     final sourceDocs = [
@@ -68,7 +104,9 @@ void main() {
       expect(File(sourceDoc.path).existsSync(), isTrue, reason: sourceDoc.path);
     }
   });
+}
 
+void _registerEnumDiagnosticTest() {
   test('schema validation rejects unsupported enum values', () {
     final graph = _graphWith(
       phases: [
@@ -84,7 +122,9 @@ void main() {
 
     expect(_diagnosticIds(graph), contains('enum.value'));
   });
+}
 
+void _registerPhaseReferenceDiagnosticTest() {
   test('schema validation rejects unknown phase references', () {
     final graph = _validGraph();
     final invalidNode = _nodeWith(graph.nodes.first, phaseRequiredBy: 'P99');
@@ -94,7 +134,9 @@ void main() {
       contains('phase.reference'),
     );
   });
+}
 
+void _registerDuplicateGraphIdTest() {
   test('schema validation rejects duplicate graph ids', () {
     final graph = _validGraph();
     final duplicate = _nodeWith(graph.nodes.last, id: graph.nodes.first.id);
@@ -104,7 +146,9 @@ void main() {
       contains('graph.id.duplicate'),
     );
   });
+}
 
+void _registerMissingSourceDocTest() {
   test('schema validation rejects missing source documents', () {
     final graph = _validGraph();
     final invalidNode = _nodeWith(
@@ -117,7 +161,9 @@ void main() {
       contains('source_doc.path'),
     );
   });
+}
 
+void _registerMissingCitationTest() {
   test('schema validation rejects obligations without citations', () {
     final graph = _validGraph();
     final invalidNode = _nodeWith(
@@ -131,7 +177,9 @@ void main() {
       contains('required.non_empty'),
     );
   });
+}
 
+void _registerMissingAnchorLineTest() {
   test('schema validation rejects stable anchors without a line', () {
     final graph = _validGraph();
     final invalidNode = _nodeWith(
@@ -149,7 +197,9 @@ void main() {
       contains('source_doc.anchor'),
     );
   });
+}
 
+void _registerOutOfBoundsAnchorTest() {
   test(
     'schema validation rejects stable anchors outside source file bounds',
     () {
@@ -173,7 +223,9 @@ void main() {
       );
     },
   );
+}
 
+void _registerMalformedCoverageTest() {
   test('schema validation rejects malformed coverage entries', () {
     final graph = _validGraph();
     final invalidCoverage = ArchitectureCoverage(
@@ -191,7 +243,9 @@ void main() {
       contains('required.text'),
     );
   });
+}
 
+void _registerSourceCoverageCompletenessTest() {
   test('expected graph source coverage is complete', () {
     final graph = loadExpectedArchitectureGraph();
 
@@ -204,87 +258,143 @@ void main() {
         'section_27_final_release_gates',
       ]),
     );
+  });
+}
+
+void _registerMissingSourceCoverageTest() {
+  test('schema validation rejects missing registry section coverage', () {
+    final graph = loadExpectedArchitectureGraph();
+
     expect(
       _diagnosticIds(
-        _graphWith(sourceCoverage: graph.sourceCoverage.skip(1).toList()),
+        _graphWith(sourceCoverage: _withoutFirstSourceCoverage(graph)),
       ),
       contains('source_coverage.missing_section'),
     );
-    final invalidCoverage = ArchitectureSourceCoverage(
-      sectionId: graph.sourceCoverage.first.sectionId,
-      disposition: 'graph_obligation',
-      graphIds: const ['missing.graph_id'],
-      reason: null,
-      successorSource: null,
-    );
-    final emptyGraphIdsCoverage = ArchitectureSourceCoverage(
-      sectionId: graph.sourceCoverage.first.sectionId,
-      disposition: 'graph_obligation',
-      graphIds: const [],
-      reason: null,
-      successorSource: null,
-    );
+  });
+}
+
+void _registerUnknownCoverageGraphIdTest() {
+  test('schema validation rejects unknown source coverage graph ids', () {
+    final graph = loadExpectedArchitectureGraph();
 
     expect(
       _diagnosticIds(
         _graphWith(
-          sourceCoverage: [invalidCoverage, ...graph.sourceCoverage.skip(1)],
+          sourceCoverage: [
+            _sourceCoverageWith(graph, graphIds: const ['missing.graph_id']),
+            ...graph.sourceCoverage.skip(1),
+          ],
         ),
       ),
       contains('source_coverage.graph_id'),
     );
+  });
+}
+
+void _registerEmptyCoverageGraphIdsTest() {
+  test('schema validation rejects empty graph-obligation coverage ids', () {
+    final graph = loadExpectedArchitectureGraph();
+
     expect(
       _diagnosticIds(
         _graphWith(
           sourceCoverage: [
-            emptyGraphIdsCoverage,
+            _sourceCoverageWith(graph, graphIds: const []),
             ...graph.sourceCoverage.skip(1),
           ],
         ),
       ),
       contains('required.non_empty'),
     );
+  });
+}
+
+void _registerMissingGraphEntryCoverageTest() {
+  test('schema validation rejects graph entries without source coverage', () {
+    final graph = loadExpectedArchitectureGraph();
     final extraNode = _nodeWith(graph.nodes.first, id: 'missing.coverage');
 
     expect(
       _diagnosticIds(_graphWith(nodes: [...graph.nodes, extraNode])),
       contains('source_coverage.missing_graph_entry'),
     );
-    final reasonlessCoverage = ArchitectureSourceCoverage(
-      sectionId: graph.sourceCoverage.first.sectionId,
-      disposition: 'non_graph_semantics',
-      graphIds: const [],
-      reason: '',
-      successorSource: null,
-    );
-    final supersededWithoutSuccessor = ArchitectureSourceCoverage(
-      sectionId: graph.sourceCoverage.first.sectionId,
-      disposition: 'superseded',
-      graphIds: const [],
-      reason: null,
-      successorSource: '',
-    );
-
-    expect(
-      _diagnosticIds(
-        _graphWith(
-          sourceCoverage: [reasonlessCoverage, ...graph.sourceCoverage.skip(1)],
-        ),
-      ),
-      contains('required.text'),
-    );
-    expect(
-      _diagnosticIds(
-        _graphWith(
-          sourceCoverage: [
-            supersededWithoutSuccessor,
-            ...graph.sourceCoverage.skip(1),
-          ],
-        ),
-      ),
-      contains('required.text'),
-    );
   });
+}
+
+void _registerCoverageDispositionTextTest() {
+  test(
+    'schema validation rejects disposition entries without required text',
+    () {
+      final graph = loadExpectedArchitectureGraph();
+
+      expect(
+        _diagnosticIds(
+          _graphWith(
+            sourceCoverage: [
+              _reasonlessSourceCoverage(graph),
+              ...graph.sourceCoverage.skip(1),
+            ],
+          ),
+        ),
+        contains('required.text'),
+      );
+      expect(
+        _diagnosticIds(
+          _graphWith(
+            sourceCoverage: [
+              _supersededSourceCoverageWithoutSuccessor(graph),
+              ...graph.sourceCoverage.skip(1),
+            ],
+          ),
+        ),
+        contains('required.text'),
+      );
+    },
+  );
+}
+
+ArchitectureSourceCoverage _reasonlessSourceCoverage(
+  ExpectedArchitectureGraph graph,
+) {
+  return ArchitectureSourceCoverage(
+    sectionId: graph.sourceCoverage.first.sectionId,
+    disposition: 'non_graph_semantics',
+    graphIds: const [],
+    reason: '',
+    successorSource: null,
+  );
+}
+
+ArchitectureSourceCoverage _supersededSourceCoverageWithoutSuccessor(
+  ExpectedArchitectureGraph graph,
+) {
+  return ArchitectureSourceCoverage(
+    sectionId: graph.sourceCoverage.first.sectionId,
+    disposition: 'superseded',
+    graphIds: const [],
+    reason: null,
+    successorSource: '',
+  );
+}
+
+List<ArchitectureSourceCoverage> _withoutFirstSourceCoverage(
+  ExpectedArchitectureGraph graph,
+) {
+  return graph.sourceCoverage.skip(1).toList();
+}
+
+ArchitectureSourceCoverage _sourceCoverageWith(
+  ExpectedArchitectureGraph graph, {
+  required List<String> graphIds,
+}) {
+  return ArchitectureSourceCoverage(
+    sectionId: graph.sourceCoverage.first.sectionId,
+    disposition: 'graph_obligation',
+    graphIds: graphIds,
+    reason: null,
+    successorSource: null,
+  );
 }
 
 ExpectedArchitectureGraph _validGraph() => loadExpectedArchitectureGraph();

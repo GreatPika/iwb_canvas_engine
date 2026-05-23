@@ -3,14 +3,54 @@ import 'package:test/test.dart';
 import '../../tool/architecture_graph/src/actual_graph.dart';
 import '../../tool/architecture_graph/src/architecture_graph.dart';
 
-void main() {
-  const fixture = 'test/architecture_graph/fixtures/actual_graph_fixture.dart';
-  const helper = 'test/architecture_graph/fixtures/actual_graph_helper.dart';
-  const unroutedMaterialize =
-      'test/architecture_graph/fixtures/unrouted_materialize_fixture.dart';
+const _fixture = 'test/architecture_graph/fixtures/actual_graph_fixture.dart';
+const _helper = 'test/architecture_graph/fixtures/actual_graph_helper.dart';
+const _unroutedMaterialize =
+    'test/architecture_graph/fixtures/unrouted_materialize_fixture.dart';
+const _coveredBehaviorOptions = ActualGraphExtractionOptions(
+  compositionTypes: {'ExportedFixture'},
+  delegationMembers: {'FixtureOwner.exposed'},
+  delegationTargetTypes: {'ExportedFixture'},
+  placeholderCoverage: [
+    PlaceholderCoverage(under: 'test/architecture_graph/fixtures/**'),
+  ],
+  sensitiveThrows: [
+    SensitiveThrowCoverage(
+      owner: 'fixture.owner',
+      under: 'test/architecture_graph/fixtures/**',
+      exception: 'FixtureException',
+    ),
+  ],
+);
 
+void main() {
+  group('surface facts', () {
+    _registerDirectiveAndDeclarationTest();
+    _registerCompositionSurfaceTest();
+  });
+  group('coverage filters', () {
+    _registerCoveredBehaviorTest();
+    _registerHelperInputTest();
+    _registerCompositionFilterTest();
+    _registerExplicitHelperInputTest();
+    _registerPlaceholderCoverageTest();
+  });
+  group('routes and throws', () {
+    _registerDirectiveUriNormalizationTest();
+    _registerSensitiveThrowOwnerTest();
+    _registerTopLevelDelegationTest();
+    _registerUnnamedDelegationFilterTest();
+    _registerNamedMemberCallTest();
+    _registerSensitiveThrowRouteTest();
+    _registerMaterializationRouteTest();
+    _registerVerifiedMaterializationRouteTest();
+    _registerUnroutedMaterializationTest();
+  });
+}
+
+void _registerDirectiveAndDeclarationTest() {
   test('extracts architecture-level declarations and directives', () {
-    final graph = extractActualArchitectureGraphFromPaths(paths: [fixture]);
+    final graph = extractActualArchitectureGraphFromPaths(paths: [_fixture]);
 
     expect(
       graph.exports.map((fact) => fact.uri),
@@ -29,11 +69,15 @@ void main() {
       contains('FixturePort'),
     );
   });
+}
 
+void _registerCompositionSurfaceTest() {
   test('extracts implemented interfaces and composition fields', () {
     final graph = extractActualArchitectureGraphFromPaths(
-      paths: [fixture],
-      compositionTypes: const {'ExportedFixture'},
+      paths: [_fixture],
+      options: const ActualGraphExtractionOptions(
+        compositionTypes: {'ExportedFixture'},
+      ),
     );
 
     expect(
@@ -47,23 +91,13 @@ void main() {
       contains('dependency:ExportedFixture'),
     );
   });
+}
 
+void _registerCoveredBehaviorTest() {
   test('extracts placeholders, exception throws, and simple delegations', () {
     final graph = extractActualArchitectureGraphFromPaths(
-      paths: [fixture],
-      compositionTypes: const {'ExportedFixture'},
-      delegationMembers: const {'FixtureOwner.exposed'},
-      delegationTargetTypes: const {'ExportedFixture'},
-      placeholderCoverage: const [
-        PlaceholderCoverage(under: 'test/architecture_graph/fixtures/**'),
-      ],
-      sensitiveThrows: const [
-        SensitiveThrowCoverage(
-          owner: 'fixture.owner',
-          under: 'test/architecture_graph/fixtures/**',
-          exception: 'FixtureException',
-        ),
-      ],
+      paths: [_fixture],
+      options: _coveredBehaviorOptions,
     );
 
     expect(
@@ -83,41 +117,51 @@ void main() {
       contains('FixtureOwner.exposed:ExportedFixture'),
     );
   });
+}
 
+void _registerHelperInputTest() {
   test('ignores helper-level files outside declared extraction input', () {
-    final graph = extractActualArchitectureGraphFromPaths(paths: [fixture]);
+    final graph = extractActualArchitectureGraphFromPaths(paths: [_fixture]);
 
     expect(
       graph.declarations.map((fact) => fact.name),
       isNot(contains('IgnoredHelperFixture')),
     );
   });
+}
 
+void _registerCompositionFilterTest() {
   test('does not treat non-architecture fields as composition facts', () {
-    final graph = extractActualArchitectureGraphFromPaths(paths: [fixture]);
+    final graph = extractActualArchitectureGraphFromPaths(paths: [_fixture]);
 
     expect(graph.compositionFields, isEmpty);
   });
+}
 
+void _registerExplicitHelperInputTest() {
   test(
     'allows explicit helper input without inventing placeholder violations',
     () {
-      final graph = extractActualArchitectureGraphFromPaths(paths: [helper]);
+      final graph = extractActualArchitectureGraphFromPaths(paths: [_helper]);
 
       expect(graph.placeholders, isEmpty);
       expect(graph.exceptionThrows, isEmpty);
     },
   );
+}
 
+void _registerPlaceholderCoverageTest() {
   test(
     'does not extract placeholders outside declared placeholder coverage',
     () {
-      final graph = extractActualArchitectureGraphFromPaths(paths: [fixture]);
+      final graph = extractActualArchitectureGraphFromPaths(paths: [_fixture]);
 
       expect(graph.placeholders, isEmpty);
     },
   );
+}
 
+void _registerDirectiveUriNormalizationTest() {
   test('normalizes directive URIs to repository-relative paths', () {
     expect(
       normalizeDirectiveUri(
@@ -141,17 +185,21 @@ void main() {
       'lib/src/api/canvas_document.dart',
     );
   });
+}
 
+void _registerSensitiveThrowOwnerTest() {
   test('assigns sensitive throw owner from coverage for top-level throws', () {
     final graph = extractActualArchitectureGraphFromPaths(
-      paths: [fixture],
-      sensitiveThrows: const [
-        SensitiveThrowCoverage(
-          owner: 'fixture.owner',
-          under: 'test/architecture_graph/fixtures/**',
-          exception: 'FixtureException',
-        ),
-      ],
+      paths: [_fixture],
+      options: const ActualGraphExtractionOptions(
+        sensitiveThrows: [
+          SensitiveThrowCoverage(
+            owner: 'fixture.owner',
+            under: 'test/architecture_graph/fixtures/**',
+            exception: 'FixtureException',
+          ),
+        ],
+      ),
     );
 
     expect(
@@ -163,12 +211,16 @@ void main() {
       contains('null:OtherFixtureException'),
     );
   });
+}
 
+void _registerTopLevelDelegationTest() {
   test('extracts simple delegations from top-level functions', () {
     final graph = extractActualArchitectureGraphFromPaths(
-      paths: [fixture],
-      delegationMembers: const {'topLevelDelegates'},
-      delegationTargetTypes: const {'ExportedFixture'},
+      paths: [_fixture],
+      options: const ActualGraphExtractionOptions(
+        delegationMembers: {'topLevelDelegates'},
+        delegationTargetTypes: {'ExportedFixture'},
+      ),
     );
 
     expect(
@@ -176,17 +228,23 @@ void main() {
       contains('topLevelDelegates:ExportedFixture'),
     );
   });
+}
 
+void _registerUnnamedDelegationFilterTest() {
   test('does not extract delegations that are not named graph facts', () {
-    final graph = extractActualArchitectureGraphFromPaths(paths: [fixture]);
+    final graph = extractActualArchitectureGraphFromPaths(paths: [_fixture]);
 
     expect(graph.delegations, isEmpty);
   });
+}
 
+void _registerNamedMemberCallTest() {
   test('extracts only named member calls for graph routes', () {
     final graph = extractActualArchitectureGraphFromPaths(
-      paths: [fixture],
-      memberCallTargets: const {'recordFixtureRoute'},
+      paths: [_fixture],
+      options: const ActualGraphExtractionOptions(
+        memberCallTargets: {'recordFixtureRoute'},
+      ),
     );
 
     expect(
@@ -198,23 +256,27 @@ void main() {
       isNot(contains('topLevelDelegates:toString')),
     );
   });
+}
 
+void _registerSensitiveThrowRouteTest() {
   test('treats named sensitive throw routes as covered exception throws', () {
     final graph = extractActualArchitectureGraphFromPaths(
-      paths: [fixture],
-      memberCallTargets: const {'recordFixtureRoute'},
-      sensitiveThrows: const [
-        SensitiveThrowCoverage(
-          owner: 'other.owner',
-          under: 'test/architecture_graph/other/**',
-          exception: 'OtherFixtureException',
-        ),
-        SensitiveThrowCoverage(
-          owner: 'fixture.owner',
-          under: 'test/architecture_graph/fixtures/**',
-          exception: 'FixtureException',
-        ),
-      ],
+      paths: [_fixture],
+      options: const ActualGraphExtractionOptions(
+        memberCallTargets: {'recordFixtureRoute'},
+        sensitiveThrows: [
+          SensitiveThrowCoverage(
+            owner: 'other.owner',
+            under: 'test/architecture_graph/other/**',
+            exception: 'OtherFixtureException',
+          ),
+          SensitiveThrowCoverage(
+            owner: 'fixture.owner',
+            under: 'test/architecture_graph/fixtures/**',
+            exception: 'FixtureException',
+          ),
+        ],
+      ),
     );
 
     expect(
@@ -226,18 +288,22 @@ void main() {
       contains('fixture.owner:FixtureException'),
     );
   });
+}
 
+void _registerMaterializationRouteTest() {
   test('expands explicit materialization routes to the caller member', () {
     final graph = extractActualArchitectureGraphFromPaths(
-      paths: [fixture],
-      memberCallTargets: const {'recordFixtureRoute'},
-      sensitiveThrows: const [
-        SensitiveThrowCoverage(
-          owner: 'fixture.owner',
-          under: 'test/architecture_graph/fixtures/**',
-          exception: 'FixtureException',
-        ),
-      ],
+      paths: [_fixture],
+      options: const ActualGraphExtractionOptions(
+        memberCallTargets: {'recordFixtureRoute'},
+        sensitiveThrows: [
+          SensitiveThrowCoverage(
+            owner: 'fixture.owner',
+            under: 'test/architecture_graph/fixtures/**',
+            exception: 'FixtureException',
+          ),
+        ],
+      ),
     );
 
     expect(
@@ -249,21 +315,25 @@ void main() {
       contains('topLevelMaterializesThroughRoute:FixtureException'),
     );
   });
+}
 
+void _registerVerifiedMaterializationRouteTest() {
   test('expands materialization routes only for verified route targets', () {
     final graph = extractActualArchitectureGraphFromPaths(
-      paths: [fixture],
-      memberCallTargets: const {
-        'recordFixtureRoute',
-        'recordUnverifiedFixtureRoute',
-      },
-      sensitiveThrows: const [
-        SensitiveThrowCoverage(
-          owner: 'fixture.owner',
-          under: 'test/architecture_graph/fixtures/**',
-          exception: 'FixtureException',
-        ),
-      ],
+      paths: [_fixture],
+      options: const ActualGraphExtractionOptions(
+        memberCallTargets: {
+          'recordFixtureRoute',
+          'recordUnverifiedFixtureRoute',
+        },
+        sensitiveThrows: [
+          SensitiveThrowCoverage(
+            owner: 'fixture.owner',
+            under: 'test/architecture_graph/fixtures/**',
+            exception: 'FixtureException',
+          ),
+        ],
+      ),
     );
 
     expect(
@@ -289,20 +359,24 @@ void main() {
       1,
     );
   });
+}
 
+void _registerUnroutedMaterializationTest() {
   test(
     'does not expand materialization helpers without a routed throw body',
     () {
       final graph = extractActualArchitectureGraphFromPaths(
-        paths: [fixture, unroutedMaterialize],
-        memberCallTargets: const {'recordFixtureRoute'},
-        sensitiveThrows: const [
-          SensitiveThrowCoverage(
-            owner: 'fixture.owner',
-            under: 'test/architecture_graph/fixtures/**',
-            exception: 'FixtureException',
-          ),
-        ],
+        paths: [_fixture, _unroutedMaterialize],
+        options: const ActualGraphExtractionOptions(
+          memberCallTargets: {'recordFixtureRoute'},
+          sensitiveThrows: [
+            SensitiveThrowCoverage(
+              owner: 'fixture.owner',
+              under: 'test/architecture_graph/fixtures/**',
+              exception: 'FixtureException',
+            ),
+          ],
+        ),
       );
 
       expect(

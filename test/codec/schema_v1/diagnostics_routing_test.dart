@@ -125,6 +125,39 @@ void main() {
     expect(hub.records.single.path, 'camera.offset.dx');
   });
 
+  test('internal decode records resource id materialization failures', () {
+    final hub = DiagnosticsHub(policy: const CanvasDiagnosticPolicy.summary());
+
+    expect(
+      () => decodeSchemaV1Document(
+        {
+          'schemaVersion': 1,
+          'resources': [
+            {
+              'kind': 'image',
+              'id': '',
+              'source': {'kind': 'appKey', 'key': 'resource-1'},
+            },
+          ],
+        },
+        diagnostics: hub,
+      ),
+      throwsA(
+        isA<CanvasDataException>()
+            .having(
+              (error) => error.code,
+              'code',
+              CanvasDataErrorCode.fieldMustNotBeEmpty,
+            )
+            .having((error) => error.path, 'path', 'resource.id'),
+      ),
+    );
+
+    expect(hub.recordCount, 1);
+    expect(hub.records.single.code, CanvasDataErrorCode.fieldMustNotBeEmpty);
+    expect(hub.records.single.path, 'resource.id');
+  });
+
   test('internal encode records schema validation failures when enabled', () {
     final hub = DiagnosticsHub(policy: const CanvasDiagnosticPolicy.summary());
     final document = CanvasDocument(
