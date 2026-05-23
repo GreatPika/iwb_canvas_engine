@@ -46,3 +46,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 24. P4 runtime spine, store, and projection cache](plan/step_24_p4_runtime_spine_store_and_projection_cache.md)
 - [x] [Step 25. Architecture graph closure checker](plan/step_25_architecture_graph_closure_checker.md)
 - [x] [Step 26. Documentation portal and generated navigation](plan/step_26_documentation_portal_and_generated_navigation.md)
+- [ ] [Step 27. P3/P4 graph closure repair](plan/step_27_p3_p4_graph_closure_repair.md)
