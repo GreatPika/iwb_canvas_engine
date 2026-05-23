@@ -62,7 +62,7 @@ Implement runtime camera ownership before removing the camera placeholder allowl
 
 ## Execution Units
 
-### [ ] Unit 1: Runtime-Owned Camera Port
+### [x] Unit 1: Runtime-Owned Camera Port
 
 Owner:
 
@@ -84,7 +84,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Schema V1 Failure Diagnostics Route
+### [x] Unit 2: Schema V1 Failure Diagnostics Route
 
 Owner:
 
@@ -106,7 +106,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 3: Verification Exception Retirement
+### [x] Unit 3: Verification Exception Retirement
 
 Owner:
 
@@ -128,7 +128,7 @@ Depends On:
 
 Units 1 and 2.
 
-### [ ] Unit 4: Code-To-Architecture Conformance Review
+### [x] Unit 4: Code-To-Architecture Conformance Review
 
 Owner:
 
@@ -150,7 +150,7 @@ Depends On:
 
 Units 1 and 2.
 
-### [ ] Unit 5: Repository-Wide Closure Verification
+### [x] Unit 5: Repository-Wide Closure Verification
 
 Owner:
 
