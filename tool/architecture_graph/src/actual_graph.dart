@@ -588,14 +588,16 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
     Expression expression,
     String exception,
   ) {
-    if (_currentMember != '_materialize' ||
+    final member = _currentMember;
+    if (member == null ||
+        member != '_materialize' ||
         _sensitiveOwner(path, exception) == null) {
       return;
     }
     final route = _throwRoute(expression);
     if (route != null && memberCallTargets.contains(route)) {
       collector.materializationRouteHelperKeys.add(
-        _materializationRouteHelperKey(_currentMember!),
+        _materializationRouteHelperKey(member),
       );
     }
   }
