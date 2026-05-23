@@ -9,10 +9,14 @@ import '../api/canvas_element.dart';
 import '../api/canvas_geometry.dart';
 import '../api/canvas_metadata.dart';
 import '../api/canvas_resource.dart';
+import '../diagnostics/diagnostics_hub.dart';
 import 'validated_import_draft.dart';
 
-Map<String, Object?> encodeSchemaV1Document(CanvasDocument document) {
-  ValidatedImportDraft.fromDocument(document);
+Map<String, Object?> encodeSchemaV1Document(
+  CanvasDocument document, {
+  DiagnosticsHub? diagnostics,
+}) {
+  ValidatedImportDraft.fromDocument(document, diagnostics: diagnostics);
 
   return {
     'schemaVersion': 1,

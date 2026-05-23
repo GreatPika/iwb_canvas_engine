@@ -373,6 +373,7 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
         ),
       );
     }
+    _materializationRoute(member, node);
     super.visitMethodInvocation(node);
   }
 
@@ -524,6 +525,35 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
     }
 
     return null;
+  }
+
+  void _materializationRoute(String? member, MethodInvocation node) {
+    if (member == null || node.methodName.name != '_materialize') {
+      return;
+    }
+    for (final route in memberCallTargets) {
+      final exception = _sensitiveThrowRouteException(route);
+      if (exception == null) {
+        continue;
+      }
+      collector.memberCalls.add(
+        MemberCallFact(
+          path: path,
+          line: _line(node),
+          member: member,
+          target: route,
+        ),
+      );
+      collector.exceptionThrows.add(
+        ExceptionThrowFact(
+          path: path,
+          line: _line(node),
+          exception: exception,
+          owner: _currentDeclaration ?? _sensitiveOwner(path, exception),
+          member: member,
+        ),
+      );
+    }
   }
 
   String _qualifiedMember(String member) {

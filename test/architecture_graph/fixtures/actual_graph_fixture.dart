@@ -41,4 +41,14 @@ Never topLevelThrowsThroughRoute() {
   throw recordFixtureRoute();
 }
 
+String topLevelMaterializesThroughRoute() => _materialize(() => 'ok');
+
+T _materialize<T>(T Function() create) {
+  try {
+    return create();
+  } on FixtureException catch (_) {
+    throw recordFixtureRoute();
+  }
+}
+
 FixtureException recordFixtureRoute() => FixtureException();

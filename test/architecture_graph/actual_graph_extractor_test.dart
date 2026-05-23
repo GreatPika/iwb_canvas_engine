@@ -224,4 +224,27 @@ void main() {
       contains('fixture.owner:FixtureException'),
     );
   });
+
+  test('expands explicit materialization routes to the caller member', () {
+    final graph = extractActualArchitectureGraphFromPaths(
+      paths: [fixture],
+      memberCallTargets: const {'recordFixtureRoute'},
+      sensitiveThrows: const [
+        SensitiveThrowCoverage(
+          owner: 'fixture.owner',
+          under: 'test/architecture_graph/fixtures/**',
+          exception: 'FixtureException',
+        ),
+      ],
+    );
+
+    expect(
+      graph.memberCalls.map((fact) => '${fact.member}:${fact.target}'),
+      contains('topLevelMaterializesThroughRoute:recordFixtureRoute'),
+    );
+    expect(
+      graph.exceptionThrows.map((fact) => '${fact.member}:${fact.exception}'),
+      contains('topLevelMaterializesThroughRoute:FixtureException'),
+    );
+  });
 }

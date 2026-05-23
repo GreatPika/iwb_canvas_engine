@@ -3,13 +3,19 @@ import '../api/canvas_element.dart';
 import '../api/canvas_errors.dart';
 import '../api/canvas_ids.dart';
 import '../api/canvas_resource.dart';
+import '../diagnostics/diagnostics_hub.dart';
 import 'schema_v1_diagnostics.dart';
 
 final class ValidatedImportDraft {
-  ValidatedImportDraft.fromDocument(this.document)
-    : resourceIds = _validatedResourceIds(document.resources),
-      layerIds = _validatedLayerIds(document.layers),
-      elementIds = _validatedElementIds(document);
+  ValidatedImportDraft.fromDocument(
+    this.document, {
+    DiagnosticsHub? diagnostics,
+  }) : resourceIds = _validatedResourceIds(
+         document.resources,
+         diagnostics: diagnostics,
+       ),
+       layerIds = _validatedLayerIds(document.layers, diagnostics: diagnostics),
+       elementIds = _validatedElementIds(document, diagnostics: diagnostics);
 
   final CanvasDocument document;
   final Set<CanvasResourceId> resourceIds;
@@ -17,12 +23,15 @@ final class ValidatedImportDraft {
   final Set<CanvasElementId> elementIds;
 }
 
-Set<CanvasResourceId> _validatedResourceIds(List<CanvasResource> resources) {
+Set<CanvasResourceId> _validatedResourceIds(
+  List<CanvasResource> resources, {
+  required DiagnosticsHub? diagnostics,
+}) {
   final ids = <CanvasResourceId>{};
   for (final resource in resources) {
     if (!ids.add(resource.id)) {
       throw recordSchemaV1FailureDiagnostic(
-        null,
+        diagnostics,
         CanvasDataException(
           code: CanvasDataErrorCode.duplicateResourceId,
           message: 'duplicate resource id.',
@@ -35,12 +44,15 @@ Set<CanvasResourceId> _validatedResourceIds(List<CanvasResource> resources) {
   return Set.unmodifiable(ids);
 }
 
-Set<CanvasLayerId> _validatedLayerIds(List<CanvasLayer> layers) {
+Set<CanvasLayerId> _validatedLayerIds(
+  List<CanvasLayer> layers, {
+  required DiagnosticsHub? diagnostics,
+}) {
   final ids = <CanvasLayerId>{};
   for (final layer in layers) {
     if (!ids.add(layer.id)) {
       throw recordSchemaV1FailureDiagnostic(
-        null,
+        diagnostics,
         CanvasDataException(
           code: CanvasDataErrorCode.duplicateLayerId,
           message: 'duplicate layer id.',
@@ -53,13 +65,16 @@ Set<CanvasLayerId> _validatedLayerIds(List<CanvasLayer> layers) {
   return Set.unmodifiable(ids);
 }
 
-Set<CanvasElementId> _validatedElementIds(CanvasDocument document) {
+Set<CanvasElementId> _validatedElementIds(
+  CanvasDocument document, {
+  required DiagnosticsHub? diagnostics,
+}) {
   final ids = <CanvasElementId>{};
   final resourceIds = document.resources.map((resource) => resource.id).toSet();
   for (final element in _allElements(document)) {
     if (!ids.add(element.id)) {
       throw recordSchemaV1FailureDiagnostic(
-        null,
+        diagnostics,
         CanvasDataException(
           code: CanvasDataErrorCode.duplicateElementId,
           message: 'duplicate element id.',
@@ -70,7 +85,7 @@ Set<CanvasElementId> _validatedElementIds(CanvasDocument document) {
     if (element is CanvasImageElement &&
         !resourceIds.contains(element.resourceId)) {
       throw recordSchemaV1FailureDiagnostic(
-        null,
+        diagnostics,
         CanvasDataException(
           code: CanvasDataErrorCode.missingResourceReference,
           message: 'image element references a missing resource.',

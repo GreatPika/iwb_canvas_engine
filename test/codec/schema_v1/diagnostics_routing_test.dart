@@ -34,9 +34,10 @@ void main() {
 
 const _diagnosticsRoutingSource = r'''
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/codec/schema_v1_decoder.dart';
-import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
+	import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+	import 'package:iwb_canvas_engine/src/codec/schema_v1_decoder.dart';
+	import 'package:iwb_canvas_engine/src/codec/schema_v1_encoder.dart';
+	import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
 
 void main() {
   test('public decode functions stay parameter-free and preserve failures', () {
@@ -122,6 +123,39 @@ void main() {
     expect(hub.recordCount, 1);
     expect(hub.records.single.code, CanvasDataErrorCode.fieldMustBeFinite);
     expect(hub.records.single.path, 'camera.offset.dx');
+  });
+
+  test('internal encode records schema validation failures when enabled', () {
+    final hub = DiagnosticsHub(policy: const CanvasDiagnosticPolicy.summary());
+    final document = CanvasDocument(
+      resources: [
+        CanvasImageResource(
+          id: CanvasResourceId('resource-1'),
+          source: CanvasResourceSource.appKey('resource-1'),
+        ),
+        CanvasImageResource(
+          id: CanvasResourceId('resource-1'),
+          source: CanvasResourceSource.appKey('resource-1-copy'),
+        ),
+      ],
+    );
+
+    expect(
+      () => encodeSchemaV1Document(document, diagnostics: hub),
+      throwsA(
+        isA<CanvasDataException>()
+            .having(
+              (error) => error.code,
+              'code',
+              CanvasDataErrorCode.duplicateResourceId,
+            )
+            .having((error) => error.path, 'path', 'resources.id'),
+      ),
+    );
+
+    expect(hub.recordCount, 1);
+    expect(hub.records.single.code, CanvasDataErrorCode.duplicateResourceId);
+    expect(hub.records.single.path, 'resources.id');
   });
 
   test('internal decode without enabled diagnostics records nothing', () {
