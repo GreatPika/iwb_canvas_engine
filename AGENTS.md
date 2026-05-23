@@ -41,10 +41,38 @@ architecture rebuild. The current task is to build the new engine described in
 
 ## Verification
 
-After each code change, run these checks from the repository root:
+After each Dart code change, including production, test, and tool code, run
+these checks from the repository root:
 
 - `dart analyze`
 - `dcm analyze .`
 - `dcm calculate-metrics .`
 
-Do not run these checks for documentation-only changes.
+Also run the focused tests that cover the changed behavior or changed tool.
+
+For architecture changes, run the architecture graph checks from the repository
+root:
+
+- `dart run tool/architecture_graph/check.dart --phase Px`
+- `dart run tool/architecture_graph/generate_views.dart --phase P4 --check`
+
+Run the architecture checks when changing architecture-owned production seams,
+`docs/architecture/architecture_graph.yaml`, generated architecture diagrams,
+architecture documentation, phase closure state, or a plan step whose completion
+depends on architecture graph closure. Use the phase named by the active step
+contract for `Px`; use `P4` for generated graph views while the generated
+documentation is selected on P4.
+
+For documentation-only changes, do not run the Dart/DCM code checks above.
+Instead, run the documentation checks from the repository root:
+
+- `dart run docs/tool/sync_generated_docs.dart --check`
+- `dart run docs/tool/check_docs.dart`
+
+Run the documentation checks when changing anything under `docs/` or changing
+documentation generation/checking tools. If the generated-docs check reports
+stale output, run `dart run docs/tool/sync_generated_docs.dart`, review the
+generated diff, and then rerun the documentation checks.
+
+For mixed code and documentation changes, run the relevant code checks, focused
+tests, architecture checks when triggered above, and documentation checks.
