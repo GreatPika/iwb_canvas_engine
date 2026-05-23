@@ -332,7 +332,7 @@ void main() {
     expect(_ids(report), contains('architecture.unknown.ExtraRuntimeSeam'));
   });
 
-  test('reports known P3 and P4 drift ids in the production graph', () {
+  test('production graph closes selected P4 obligations', () {
     final expected = loadExpectedArchitectureGraph();
     final actual = extractActualArchitectureGraph(expectedGraph: expected);
     final report = checkPhaseClosure(
@@ -341,14 +341,7 @@ void main() {
       selectedPhase: 'P4',
     );
 
-    expect(
-      _ids(report),
-      contains('runtime.canvas_runtime.camera.closed_phase_placeholder'),
-    );
-    expect(
-      _ids(report),
-      contains('codec.schema_v1.failures.report_to_diagnostics'),
-    );
+    expect(_ids(report), isEmpty);
   });
 }
 

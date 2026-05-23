@@ -56,11 +56,11 @@ void main() {
     );
     expect(
       first['docs/diagrams/generated/actual_vs_expected_diff.mmd'],
-      contains('runtime_canvas_runtime_camera_closed_phase_placeholder'),
+      isNot(contains('violation_')),
     );
     expect(
       first['docs/diagrams/generated/actual_vs_expected_diff.mmd'],
-      contains('linkStyle'),
+      isNot(contains('linkStyle')),
     );
     expect(
       first['docs/diagrams/generated/current_phase.mmd'],
@@ -76,7 +76,7 @@ void main() {
     );
     expect(
       first['docs/diagrams/generated/actual_vs_expected_diff.mmd'],
-      contains('Missing required link'),
+      isNot(contains('Missing required link')),
     );
   });
 

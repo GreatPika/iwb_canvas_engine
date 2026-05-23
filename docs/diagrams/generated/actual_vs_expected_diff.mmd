@@ -20,19 +20,5 @@ flowchart LR
   codec_schema_v1 -->|uses public data by P3| api_public_surface
   runtime_root -->|owns and creates by P4| selection_kernel
   runtime_root -->|owns and creates by P4| store_document_kernel
-  violation_api_canvas_runtime_camera_routes_to_runtime_view_camera["Missing required link"]:::violation
-  violation_api_canvas_runtime_camera_routes_to_runtime_view_camera -.-> api_canvas_runtime
-  violation_api_canvas_runtime_camera_routes_to_runtime_view_camera -.-> runtime_view_camera
-  violation_api_canvas_runtime_exposes_camera["Missing required link"]:::violation
-  violation_api_canvas_runtime_exposes_camera -.-> api_canvas_runtime
-  violation_api_canvas_runtime_exposes_camera -.-> api_camera_port
-  violation_codec_schema_v1_failures_report_to_diagnostics["Missing required link"]:::violation
-  violation_codec_schema_v1_failures_report_to_diagnostics -.-> codec_schema_v1
-  violation_codec_schema_v1_failures_report_to_diagnostics -.-> diagnostics_hub
-  violation_runtime_canvas_runtime_camera_closed_phase_placeholder["Old placeholder remains"]:::violation
-  violation_runtime_canvas_runtime_camera_closed_phase_placeholder -.-> api_canvas_runtime
   classDef ok fill:#f8fafc,stroke:#64748b,color:#0f172a
   classDef violation fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
-  linkStyle 0 stroke:#dc2626,stroke-width:3px,color:#7f1d1d
-  linkStyle 2 stroke:#dc2626,stroke-width:3px,color:#7f1d1d
-  linkStyle 4 stroke:#dc2626,stroke-width:3px,color:#7f1d1d

@@ -161,19 +161,16 @@ Do not assume:
 
 Release is blocked unless all statements are true:
 
-For phase-closure work before P14, graph-checkable architecture obligations are
-checked by the standalone selected-phase command:
+For phase-closure work, graph-checkable architecture obligations are checked by
+the standalone selected-phase command:
 
 ```bash
 dart run tool/architecture_graph/check.dart --phase Px
 ```
 
-For the current P4 closure audit this strict command is expected to exit
-non-zero and report the known graph ids
-`runtime.canvas_runtime.camera.closed_phase_placeholder` and
-`codec.schema_v1.failures.report_to_diagnostics`. Do not treat a non-zero P4
-graph-closure result as part of the default blocking guardrail suite until a
-later contract fixes or rephases those selected-phase violations.
+A non-zero selected-phase graph-closure result is a blocking release-gate
+failure for that phase. Repair the implementation or resolve the accepted phase
+obligations before continuing dependent phase work.
 
 ```text
 1. P1 public API, external-adapter, legacy-ban, and validation checks are green.

@@ -25,7 +25,7 @@ void main() {
     );
   });
 
-  test('expected architecture graph owns known P3 and P4 drift ids', () {
+  test('expected architecture graph owns P3 and P4 closure ids', () {
     final graph = loadExpectedArchitectureGraph();
 
     expect(
