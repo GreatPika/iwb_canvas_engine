@@ -51,7 +51,7 @@ Create the smoke test before updating the verification inventory so the document
 
 ## Execution Units
 
-### [ ] Unit 1: Add public consumer smoke proof
+### [x] Unit 1: Add public consumer smoke proof
 
 Owner:
 
@@ -73,7 +73,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Register smoke proof in verification source of truth
+### [x] Unit 2: Register smoke proof in verification source of truth
 
 Owner:
 
@@ -95,7 +95,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Run focused and required code checks
+### [x] Unit 3: Run focused and required code checks
 
 Owner:
 
@@ -116,3 +116,18 @@ From the repository root, `dart test test/smoke/public_incremental_smoke_test.da
 Depends On:
 
 Unit 1 and Unit 2.
+
+## Completion Evidence
+
+Primary workspace verification completed from the repository root on
+2026-05-23:
+
+- `dart test test/smoke/public_incremental_smoke_test.dart` passed.
+- `dart analyze` passed.
+- `dcm analyze .` passed.
+- `dcm calculate-metrics .` passed.
+- `dart run docs/tool/sync_generated_docs.dart --check` passed.
+- `dart run docs/tool/check_docs.dart` passed.
+- `dart run tool/architecture_graph/generate_views.dart --phase P4 --check`
+  passed.
+- `dart run tool/architecture_graph/check.dart --phase P4` passed.
