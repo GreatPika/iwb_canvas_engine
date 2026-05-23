@@ -3,6 +3,7 @@ import '../api/canvas_element.dart';
 import '../api/canvas_errors.dart';
 import '../api/canvas_ids.dart';
 import '../api/canvas_resource.dart';
+import 'schema_v1_diagnostics.dart';
 
 final class ValidatedImportDraft {
   ValidatedImportDraft.fromDocument(this.document)
@@ -20,10 +21,13 @@ Set<CanvasResourceId> _validatedResourceIds(List<CanvasResource> resources) {
   final ids = <CanvasResourceId>{};
   for (final resource in resources) {
     if (!ids.add(resource.id)) {
-      throw CanvasDataException(
-        code: CanvasDataErrorCode.duplicateResourceId,
-        message: 'duplicate resource id.',
-        path: 'resources.id',
+      throw recordSchemaV1FailureDiagnostic(
+        null,
+        CanvasDataException(
+          code: CanvasDataErrorCode.duplicateResourceId,
+          message: 'duplicate resource id.',
+          path: 'resources.id',
+        ),
       );
     }
   }
@@ -35,10 +39,13 @@ Set<CanvasLayerId> _validatedLayerIds(List<CanvasLayer> layers) {
   final ids = <CanvasLayerId>{};
   for (final layer in layers) {
     if (!ids.add(layer.id)) {
-      throw CanvasDataException(
-        code: CanvasDataErrorCode.duplicateLayerId,
-        message: 'duplicate layer id.',
-        path: 'layers.id',
+      throw recordSchemaV1FailureDiagnostic(
+        null,
+        CanvasDataException(
+          code: CanvasDataErrorCode.duplicateLayerId,
+          message: 'duplicate layer id.',
+          path: 'layers.id',
+        ),
       );
     }
   }
@@ -51,18 +58,24 @@ Set<CanvasElementId> _validatedElementIds(CanvasDocument document) {
   final resourceIds = document.resources.map((resource) => resource.id).toSet();
   for (final element in _allElements(document)) {
     if (!ids.add(element.id)) {
-      throw CanvasDataException(
-        code: CanvasDataErrorCode.duplicateElementId,
-        message: 'duplicate element id.',
-        path: 'elements.id',
+      throw recordSchemaV1FailureDiagnostic(
+        null,
+        CanvasDataException(
+          code: CanvasDataErrorCode.duplicateElementId,
+          message: 'duplicate element id.',
+          path: 'elements.id',
+        ),
       );
     }
     if (element is CanvasImageElement &&
         !resourceIds.contains(element.resourceId)) {
-      throw CanvasDataException(
-        code: CanvasDataErrorCode.missingResourceReference,
-        message: 'image element references a missing resource.',
-        path: 'image.resourceId',
+      throw recordSchemaV1FailureDiagnostic(
+        null,
+        CanvasDataException(
+          code: CanvasDataErrorCode.missingResourceReference,
+          message: 'image element references a missing resource.',
+          path: 'image.resourceId',
+        ),
       );
     }
   }

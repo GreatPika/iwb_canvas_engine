@@ -37,4 +37,8 @@ String topLevelCallsRoute(ExportedFixture dependency) {
   return dependency.toString();
 }
 
-void recordFixtureRoute() {}
+Never topLevelThrowsThroughRoute() {
+  throw recordFixtureRoute();
+}
+
+FixtureException recordFixtureRoute() => FixtureException();

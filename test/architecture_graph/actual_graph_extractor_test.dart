@@ -196,4 +196,32 @@ void main() {
       isNot(contains('topLevelDelegates:toString')),
     );
   });
+
+  test('treats named sensitive throw routes as covered exception throws', () {
+    final graph = extractActualArchitectureGraphFromPaths(
+      paths: [fixture],
+      memberCallTargets: const {'recordFixtureRoute'},
+      sensitiveThrows: const [
+        SensitiveThrowCoverage(
+          owner: 'other.owner',
+          under: 'test/architecture_graph/other/**',
+          exception: 'OtherFixtureException',
+        ),
+        SensitiveThrowCoverage(
+          owner: 'fixture.owner',
+          under: 'test/architecture_graph/fixtures/**',
+          exception: 'FixtureException',
+        ),
+      ],
+    );
+
+    expect(
+      graph.exceptionThrows.map((fact) => '${fact.member}:${fact.exception}'),
+      contains('topLevelThrowsThroughRoute:FixtureException'),
+    );
+    expect(
+      graph.exceptionThrows.map((fact) => '${fact.owner}:${fact.exception}'),
+      contains('fixture.owner:FixtureException'),
+    );
+  });
 }

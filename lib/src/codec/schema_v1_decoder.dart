@@ -13,64 +13,115 @@ import '../api/canvas_ids.dart';
 import '../api/canvas_metadata.dart';
 import '../api/canvas_resource.dart';
 import '../api/canvas_value_validators.dart';
+import '../diagnostics/diagnostics_hub.dart';
+import 'schema_v1_diagnostics.dart';
 import 'schema_v1_validation.dart';
 
-CanvasDocument decodeSchemaV1Document(Map<String, Object?> json) {
-  validateSchemaV1Root(json);
+CanvasDocument decodeSchemaV1Document(
+  Map<String, Object?> json, {
+  DiagnosticsHub? diagnostics,
+}) {
+  validateSchemaV1Root(json, diagnostics: diagnostics);
 
   final resources = _readList(
     json,
     key: 'resources',
     path: 'resources',
-  ).map(_readResource).toList();
+    diagnostics: diagnostics,
+  ).map((value) => _readResource(value, diagnostics: diagnostics)).toList();
   final resourceIds = _uniqueIds(
     resources.map((resource) => resource.id.value),
     path: 'resources.id',
     code: CanvasDataErrorCode.duplicateResourceId,
+    diagnostics: diagnostics,
   );
-  final backgroundElements = _readBackgroundElements(json).map(_readElement);
-  final layers = _readList(json, key: 'layers', path: 'layers').map(_readLayer);
+  final backgroundElements = _readBackgroundElements(
+    json,
+    diagnostics: diagnostics,
+  ).map((value) => _readElement(value, diagnostics: diagnostics));
+  final layers = _readList(
+    json,
+    key: 'layers',
+    path: 'layers',
+    diagnostics: diagnostics,
+  ).map((value) => _readLayer(value, diagnostics: diagnostics));
   final document = CanvasDocument(
-    camera: _readCamera(json, key: 'camera'),
-    background: _readBackground(json, key: 'background'),
-    palette: _readPalette(json, key: 'palette'),
+    camera: _readCamera(json, key: 'camera', diagnostics: diagnostics),
+    background: _readBackground(
+      json,
+      key: 'background',
+      diagnostics: diagnostics,
+    ),
+    palette: _readPalette(json, key: 'palette', diagnostics: diagnostics),
     resources: resources,
     backgroundElements: backgroundElements,
     layers: layers,
-    metadata: _readMetadata(json, key: 'metadata', path: 'metadata'),
+    metadata: _readMetadata(
+      json,
+      key: 'metadata',
+      path: 'metadata',
+      diagnostics: diagnostics,
+    ),
   );
 
-  _validateDocumentReferences(document, resourceIds);
+  _validateDocumentReferences(document, resourceIds, diagnostics: diagnostics);
 
   return document;
 }
 
-CanvasDocument decodeSchemaV1DocumentFromJson(String json) {
-  validateRawJsonLength(json);
+CanvasDocument decodeSchemaV1DocumentFromJson(
+  String json, {
+  DiagnosticsHub? diagnostics,
+}) {
+  try {
+    validateRawJsonLength(json);
+  } on CanvasDataException catch (exception) {
+    throw recordSchemaV1FailureDiagnostic(diagnostics, exception);
+  }
   final Object? decoded;
   try {
     decoded = jsonDecode(json);
   } on FormatException catch (_) {
-    throw CanvasDataException(
-      code: CanvasDataErrorCode.invalidJson,
-      message: 'canvas document JSON is malformed.',
-      path: r'$',
+    throw recordSchemaV1FailureDiagnostic(
+      diagnostics,
+      CanvasDataException(
+        code: CanvasDataErrorCode.invalidJson,
+        message: 'canvas document JSON is malformed.',
+        path: r'$',
+      ),
     );
   }
   if (decoded is! Map<String, Object?>) {
-    throw CanvasDataException(
-      code: CanvasDataErrorCode.invalidJson,
-      message: 'canvas document JSON must decode to an object.',
-      path: r'$',
+    throw recordSchemaV1FailureDiagnostic(
+      diagnostics,
+      CanvasDataException(
+        code: CanvasDataErrorCode.invalidJson,
+        message: 'canvas document JSON must decode to an object.',
+        path: r'$',
+      ),
     );
   }
 
-  return decodeSchemaV1Document(decoded);
+  return decodeSchemaV1Document(decoded, diagnostics: diagnostics);
 }
 
-CanvasCamera _readCamera(Map<String, Object?> parent, {required String key}) {
-  final map = _readMap(parent, key: key, path: 'camera');
-  final offset = _readOffsetDefault(map, key: 'offset', path: 'camera.offset');
+CanvasCamera _readCamera(
+  Map<String, Object?> parent, {
+  required String key,
+  required DiagnosticsHub? diagnostics,
+}) {
+  final map = _readMap(
+    parent,
+    key: key,
+    path: 'camera',
+    diagnostics: diagnostics,
+  );
+  final offset = _readOffsetDefault(
+    map,
+    key: 'offset',
+    path: 'camera.offset',
+    diagnostics: diagnostics,
+  );
 
   return CanvasCamera(offset: offset);
 }
@@ -78,19 +129,38 @@ CanvasCamera _readCamera(Map<String, Object?> parent, {required String key}) {
 CanvasBackground _readBackground(
   Map<String, Object?> parent, {
   required String key,
+  required DiagnosticsHub? diagnostics,
 }) {
-  final map = _readMap(parent, key: key, path: 'background');
+  final map = _readMap(
+    parent,
+    key: key,
+    path: 'background',
+    diagnostics: diagnostics,
+  );
 
   return CanvasBackground(
     color: map.containsKey('color')
-        ? _readColor(map['color'], path: 'background.color')
+        ? _readColor(
+            map['color'],
+            path: 'background.color',
+            diagnostics: diagnostics,
+          )
         : const Color(0xFFFFFFFF),
-    grid: _readGrid(map, key: 'grid'),
+    grid: _readGrid(map, key: 'grid', diagnostics: diagnostics),
   );
 }
 
-CanvasGrid _readGrid(Map<String, Object?> parent, {required String key}) {
-  final map = _readMap(parent, key: key, path: 'background.grid');
+CanvasGrid _readGrid(
+  Map<String, Object?> parent, {
+  required String key,
+  required DiagnosticsHub? diagnostics,
+}) {
+  final map = _readMap(
+    parent,
+    key: key,
+    path: 'background.grid',
+    diagnostics: diagnostics,
+  );
 
   return CanvasGrid(
     enabled: _readBoolDefault(
@@ -98,36 +168,75 @@ CanvasGrid _readGrid(Map<String, Object?> parent, {required String key}) {
       key: 'enabled',
       path: 'background.grid.enabled',
       defaultValue: false,
+      diagnostics: diagnostics,
     ),
     cellSize: _readDoubleDefault(
       map,
       key: 'cellSize',
       path: 'background.grid.cellSize',
       defaultValue: 10.0,
+      diagnostics: diagnostics,
     ),
     color: map.containsKey('color')
-        ? _readColor(map['color'], path: 'background.grid.color')
+        ? _readColor(
+            map['color'],
+            path: 'background.grid.color',
+            diagnostics: diagnostics,
+          )
         : const Color(0x1F000000),
   );
 }
 
-CanvasPalette _readPalette(Map<String, Object?> parent, {required String key}) {
-  final map = _readMap(parent, key: key, path: 'palette');
-  final penColors = _readList(
-    map,
-    key: 'penColors',
-    path: 'palette.penColors',
-  ).map((value) => _readColor(value, path: 'palette.penColors'));
-  final backgroundColors = _readList(
-    map,
-    key: 'backgroundColors',
-    path: 'palette.backgroundColors',
-  ).map((value) => _readColor(value, path: 'palette.backgroundColors'));
-  final gridSizes = _readList(
-    map,
-    key: 'gridSizes',
-    path: 'palette.gridSizes',
-  ).map((value) => _readDouble(value, path: 'palette.gridSizes'));
+CanvasPalette _readPalette(
+  Map<String, Object?> parent, {
+  required String key,
+  required DiagnosticsHub? diagnostics,
+}) {
+  final map = _readMap(
+    parent,
+    key: key,
+    path: 'palette',
+    diagnostics: diagnostics,
+  );
+  final penColors =
+      _readList(
+        map,
+        key: 'penColors',
+        path: 'palette.penColors',
+        diagnostics: diagnostics,
+      ).map(
+        (value) => _readColor(
+          value,
+          path: 'palette.penColors',
+          diagnostics: diagnostics,
+        ),
+      );
+  final backgroundColors =
+      _readList(
+        map,
+        key: 'backgroundColors',
+        path: 'palette.backgroundColors',
+        diagnostics: diagnostics,
+      ).map(
+        (value) => _readColor(
+          value,
+          path: 'palette.backgroundColors',
+          diagnostics: diagnostics,
+        ),
+      );
+  final gridSizes =
+      _readList(
+        map,
+        key: 'gridSizes',
+        path: 'palette.gridSizes',
+        diagnostics: diagnostics,
+      ).map(
+        (value) => _readDouble(
+          value,
+          path: 'palette.gridSizes',
+          diagnostics: diagnostics,
+        ),
+      );
 
   return CanvasPalette(
     penColors: penColors,
@@ -136,105 +245,195 @@ CanvasPalette _readPalette(Map<String, Object?> parent, {required String key}) {
   );
 }
 
-CanvasResource _readResource(Object? value) {
-  final map = _readRequiredMap(value, path: 'resources[]');
-  final kind = _readString(map['kind'], path: 'resource.kind');
+CanvasResource _readResource(
+  Object? value, {
+  required DiagnosticsHub? diagnostics,
+}) {
+  final map = _readRequiredMap(
+    value,
+    path: 'resources[]',
+    diagnostics: diagnostics,
+  );
+  final kind = _readString(
+    map['kind'],
+    path: 'resource.kind',
+    diagnostics: diagnostics,
+  );
   if (kind != 'image') {
-    throw CanvasDataException(
-      code: CanvasDataErrorCode.invalidFieldType,
-      message: 'unknown resource kind: $kind.',
-      path: 'resource.kind',
+    throw recordSchemaV1FailureDiagnostic(
+      diagnostics,
+      CanvasDataException(
+        code: CanvasDataErrorCode.invalidFieldType,
+        message: 'unknown resource kind: $kind.',
+        path: 'resource.kind',
+      ),
     );
   }
 
   return CanvasImageResource(
-    id: CanvasResourceId(_readString(map['id'], path: 'resource.id')),
-    source: _readResourceSource(map['source']),
-    mimeType: _readNullableString(map['mimeType'], path: 'resource.mimeType'),
+    id: CanvasResourceId(
+      _readString(map['id'], path: 'resource.id', diagnostics: diagnostics),
+    ),
+    source: _readResourceSource(map['source'], diagnostics: diagnostics),
+    mimeType: _readNullableString(
+      map['mimeType'],
+      path: 'resource.mimeType',
+      diagnostics: diagnostics,
+    ),
     contentHash: _readNullableString(
       map['contentHash'],
       path: 'resource.contentHash',
+      diagnostics: diagnostics,
     ),
     byteLength: _readNullableInt(
       map['byteLength'],
       path: 'resource.byteLength',
+      diagnostics: diagnostics,
     ),
-    metadata: _readMetadata(map, key: 'metadata', path: 'resource.metadata'),
+    metadata: _readMetadata(
+      map,
+      key: 'metadata',
+      path: 'resource.metadata',
+      diagnostics: diagnostics,
+    ),
   );
 }
 
-CanvasResourceSource _readResourceSource(Object? value) {
-  final map = _readRequiredMap(value, path: 'resource.source');
-  final kind = _readString(map['kind'], path: 'resource.source.kind');
+CanvasResourceSource _readResourceSource(
+  Object? value, {
+  required DiagnosticsHub? diagnostics,
+}) {
+  final map = _readRequiredMap(
+    value,
+    path: 'resource.source',
+    diagnostics: diagnostics,
+  );
+  final kind = _readString(
+    map['kind'],
+    path: 'resource.source.kind',
+    diagnostics: diagnostics,
+  );
   if (kind != 'appKey') {
-    throw CanvasDataException(
-      code: CanvasDataErrorCode.invalidFieldType,
-      message: 'unknown resource source kind: $kind.',
-      path: 'resource.source.kind',
+    throw recordSchemaV1FailureDiagnostic(
+      diagnostics,
+      CanvasDataException(
+        code: CanvasDataErrorCode.invalidFieldType,
+        message: 'unknown resource source kind: $kind.',
+        path: 'resource.source.kind',
+      ),
     );
   }
 
   return CanvasResourceSource.appKey(
-    _readString(map['key'], path: 'resource.source.key'),
+    _readString(
+      map['key'],
+      path: 'resource.source.key',
+      diagnostics: diagnostics,
+    ),
   );
 }
 
-CanvasLayer _readLayer(Object? value) {
-  final map = _readRequiredMap(value, path: 'layers[]');
+CanvasLayer _readLayer(Object? value, {required DiagnosticsHub? diagnostics}) {
+  final map = _readRequiredMap(
+    value,
+    path: 'layers[]',
+    diagnostics: diagnostics,
+  );
 
   return CanvasLayer(
-    id: CanvasLayerId(_readString(map['id'], path: 'layer.id')),
+    id: CanvasLayerId(
+      _readString(map['id'], path: 'layer.id', diagnostics: diagnostics),
+    ),
     elements: _readList(
       map,
       key: 'elements',
       path: 'layer.elements',
-    ).map(_readElement),
-    metadata: _readMetadata(map, key: 'metadata', path: 'layer.metadata'),
+      diagnostics: diagnostics,
+    ).map((value) => _readElement(value, diagnostics: diagnostics)),
+    metadata: _readMetadata(
+      map,
+      key: 'metadata',
+      path: 'layer.metadata',
+      diagnostics: diagnostics,
+    ),
   );
 }
 
-Iterable<Object?> _readBackgroundElements(Map<String, Object?> json) {
+Iterable<Object?> _readBackgroundElements(
+  Map<String, Object?> json, {
+  required DiagnosticsHub? diagnostics,
+}) {
   if (!json.containsKey('backgroundLayer')) {
     return const [];
   }
 
-  final map = _readMap(json, key: 'backgroundLayer', path: 'backgroundLayer');
+  final map = _readMap(
+    json,
+    key: 'backgroundLayer',
+    path: 'backgroundLayer',
+    diagnostics: diagnostics,
+  );
 
-  return _readList(map, key: 'elements', path: 'backgroundLayer.elements');
+  return _readList(
+    map,
+    key: 'elements',
+    path: 'backgroundLayer.elements',
+    diagnostics: diagnostics,
+  );
 }
 
-CanvasElement _readElement(Object? value) {
-  final map = _readRequiredMap(value, path: 'elements[]');
-  final common = _ElementCommon(map);
+CanvasElement _readElement(
+  Object? value, {
+  required DiagnosticsHub? diagnostics,
+}) {
+  final map = _readRequiredMap(
+    value,
+    path: 'elements[]',
+    diagnostics: diagnostics,
+  );
+  final common = _ElementCommon(map, diagnostics: diagnostics);
 
-  return switch (_readString(map['kind'], path: 'element.kind')) {
-    'image' => _readImageElement(map, common),
-    'path' => _readPathElement(map, common),
-    'text' => _readTextElement(map, common),
-    'stroke' => _readStrokeElement(map, common),
-    'line' => _readLineElement(map, common),
-    'rect' => _readRectElement(map, common),
-    final kind => throw CanvasDataException(
-      code: CanvasDataErrorCode.invalidFieldType,
-      message: 'unknown element kind: $kind.',
-      path: 'element.kind',
+  return switch (_readString(
+    map['kind'],
+    path: 'element.kind',
+    diagnostics: diagnostics,
+  )) {
+    'image' => _readImageElement(map, common, diagnostics: diagnostics),
+    'path' => _readPathElement(map, common, diagnostics: diagnostics),
+    'text' => _readTextElement(map, common, diagnostics: diagnostics),
+    'stroke' => _readStrokeElement(map, common, diagnostics: diagnostics),
+    'line' => _readLineElement(map, common, diagnostics: diagnostics),
+    'rect' => _readRectElement(map, common, diagnostics: diagnostics),
+    final kind => throw recordSchemaV1FailureDiagnostic(
+      diagnostics,
+      CanvasDataException(
+        code: CanvasDataErrorCode.invalidFieldType,
+        message: 'unknown element kind: $kind.',
+        path: 'element.kind',
+      ),
     ),
   };
 }
 
 CanvasImageElement _readImageElement(
   Map<String, Object?> map,
-  _ElementCommon common,
-) {
+  _ElementCommon common, {
+  required DiagnosticsHub? diagnostics,
+}) {
   return CanvasImageElement(
     id: common.id,
     resourceId: CanvasResourceId(
-      _readString(map['resourceId'], path: 'image.resourceId'),
+      _readString(
+        map['resourceId'],
+        path: 'image.resourceId',
+        diagnostics: diagnostics,
+      ),
     ),
-    size: _readSize(map['size'], path: 'image.size'),
+    size: _readSize(map['size'], path: 'image.size', diagnostics: diagnostics),
     naturalSize: _readNullableSize(
       map['naturalSize'],
       path: 'image.naturalSize',
+      diagnostics: diagnostics,
     ),
     revision: common.revision,
     transform: common.transform,
@@ -251,18 +450,32 @@ CanvasImageElement _readImageElement(
 
 CanvasPathElement _readPathElement(
   Map<String, Object?> map,
-  _ElementCommon common,
-) {
+  _ElementCommon common, {
+  required DiagnosticsHub? diagnostics,
+}) {
   return CanvasPathElement(
     id: common.id,
-    svgPathData: _readString(map['svgPathData'], path: 'path.svgPathData'),
-    fillColor: _readNullableColor(map['fillColor'], path: 'path.fillColor'),
+    svgPathData: _readString(
+      map['svgPathData'],
+      path: 'path.svgPathData',
+      diagnostics: diagnostics,
+    ),
+    fillColor: _readNullableColor(
+      map['fillColor'],
+      path: 'path.fillColor',
+      diagnostics: diagnostics,
+    ),
     strokeColor: _readNullableColor(
       map['strokeColor'],
       path: 'path.strokeColor',
+      diagnostics: diagnostics,
     ),
-    strokeWidth: _readDouble(map['strokeWidth'], path: 'path.strokeWidth'),
-    fillRule: _readFillRule(map, key: 'fillRule'),
+    strokeWidth: _readDouble(
+      map['strokeWidth'],
+      path: 'path.strokeWidth',
+      diagnostics: diagnostics,
+    ),
+    fillRule: _readFillRule(map, key: 'fillRule', diagnostics: diagnostics),
     revision: common.revision,
     transform: common.transform,
     opacity: common.opacity,
@@ -278,9 +491,10 @@ CanvasPathElement _readPathElement(
 
 CanvasTextElement _readTextElement(
   Map<String, Object?> map,
-  _ElementCommon common,
-) {
-  final text = _TextElementFields(map);
+  _ElementCommon common, {
+  required DiagnosticsHub? diagnostics,
+}) {
+  final text = _TextElementFields(map, diagnostics: diagnostics);
 
   return CanvasTextElement(
     id: common.id,
@@ -310,16 +524,33 @@ CanvasTextElement _readTextElement(
 
 CanvasStrokeElement _readStrokeElement(
   Map<String, Object?> map,
-  _ElementCommon common,
-) {
+  _ElementCommon common, {
+  required DiagnosticsHub? diagnostics,
+}) {
   return CanvasStrokeElement(
     id: common.id,
-    points: _readRequiredList(
-      map['points'],
-      path: 'stroke.points',
-    ).map((value) => _readRequiredOffset(value, path: 'stroke.points')),
-    thickness: _readDouble(map['thickness'], path: 'stroke.thickness'),
-    color: _readColor(map['color'], path: 'stroke.color'),
+    points:
+        _readRequiredList(
+          map['points'],
+          path: 'stroke.points',
+          diagnostics: diagnostics,
+        ).map(
+          (value) => _readRequiredOffset(
+            value,
+            path: 'stroke.points',
+            diagnostics: diagnostics,
+          ),
+        ),
+    thickness: _readDouble(
+      map['thickness'],
+      path: 'stroke.thickness',
+      diagnostics: diagnostics,
+    ),
+    color: _readColor(
+      map['color'],
+      path: 'stroke.color',
+      diagnostics: diagnostics,
+    ),
     revision: common.revision,
     transform: common.transform,
     opacity: common.opacity,
@@ -335,14 +566,31 @@ CanvasStrokeElement _readStrokeElement(
 
 CanvasLineElement _readLineElement(
   Map<String, Object?> map,
-  _ElementCommon common,
-) {
+  _ElementCommon common, {
+  required DiagnosticsHub? diagnostics,
+}) {
   return CanvasLineElement(
     id: common.id,
-    start: _readRequiredOffset(map['start'], path: 'line.start'),
-    end: _readRequiredOffset(map['end'], path: 'line.end'),
-    thickness: _readDouble(map['thickness'], path: 'line.thickness'),
-    color: _readColor(map['color'], path: 'line.color'),
+    start: _readRequiredOffset(
+      map['start'],
+      path: 'line.start',
+      diagnostics: diagnostics,
+    ),
+    end: _readRequiredOffset(
+      map['end'],
+      path: 'line.end',
+      diagnostics: diagnostics,
+    ),
+    thickness: _readDouble(
+      map['thickness'],
+      path: 'line.thickness',
+      diagnostics: diagnostics,
+    ),
+    color: _readColor(
+      map['color'],
+      path: 'line.color',
+      diagnostics: diagnostics,
+    ),
     revision: common.revision,
     transform: common.transform,
     opacity: common.opacity,
@@ -358,17 +606,27 @@ CanvasLineElement _readLineElement(
 
 CanvasRectElement _readRectElement(
   Map<String, Object?> map,
-  _ElementCommon common,
-) {
+  _ElementCommon common, {
+  required DiagnosticsHub? diagnostics,
+}) {
   return CanvasRectElement(
     id: common.id,
-    size: _readSize(map['size'], path: 'rect.size'),
-    fillColor: _readNullableColor(map['fillColor'], path: 'rect.fillColor'),
+    size: _readSize(map['size'], path: 'rect.size', diagnostics: diagnostics),
+    fillColor: _readNullableColor(
+      map['fillColor'],
+      path: 'rect.fillColor',
+      diagnostics: diagnostics,
+    ),
     strokeColor: _readNullableColor(
       map['strokeColor'],
       path: 'rect.strokeColor',
+      diagnostics: diagnostics,
     ),
-    strokeWidth: _readDouble(map['strokeWidth'], path: 'rect.strokeWidth'),
+    strokeWidth: _readDouble(
+      map['strokeWidth'],
+      path: 'rect.strokeWidth',
+      diagnostics: diagnostics,
+    ),
     revision: common.revision,
     transform: common.transform,
     opacity: common.opacity,
@@ -384,23 +642,37 @@ CanvasRectElement _readRectElement(
 
 void _validateDocumentReferences(
   CanvasDocument document,
-  Set<String> resourceIds,
-) {
+  Set<String> resourceIds, {
+  required DiagnosticsHub? diagnostics,
+}) {
   final elementIds = <String>{};
   final layerIds = <String>{};
   for (final element in document.backgroundElements) {
-    _validateElementReferences(element, elementIds, resourceIds);
+    _validateElementReferences(
+      element,
+      elementIds,
+      resourceIds,
+      diagnostics: diagnostics,
+    );
   }
   for (final layer in document.layers) {
     if (!layerIds.add(layer.id.value)) {
-      throw CanvasDataException(
-        code: CanvasDataErrorCode.duplicateLayerId,
-        message: 'duplicate layer id.',
-        path: 'layers.id',
+      throw recordSchemaV1FailureDiagnostic(
+        diagnostics,
+        CanvasDataException(
+          code: CanvasDataErrorCode.duplicateLayerId,
+          message: 'duplicate layer id.',
+          path: 'layers.id',
+        ),
       );
     }
     for (final element in layer.elements) {
-      _validateElementReferences(element, elementIds, resourceIds);
+      _validateElementReferences(
+        element,
+        elementIds,
+        resourceIds,
+        diagnostics: diagnostics,
+      );
     }
   }
 }
@@ -408,21 +680,28 @@ void _validateDocumentReferences(
 void _validateElementReferences(
   CanvasElement element,
   Set<String> elementIds,
-  Set<String> resourceIds,
-) {
+  Set<String> resourceIds, {
+  required DiagnosticsHub? diagnostics,
+}) {
   if (!elementIds.add(element.id.value)) {
-    throw CanvasDataException(
-      code: CanvasDataErrorCode.duplicateElementId,
-      message: 'duplicate element id.',
-      path: 'elements.id',
+    throw recordSchemaV1FailureDiagnostic(
+      diagnostics,
+      CanvasDataException(
+        code: CanvasDataErrorCode.duplicateElementId,
+        message: 'duplicate element id.',
+        path: 'elements.id',
+      ),
     );
   }
   if (element is CanvasImageElement &&
       !resourceIds.contains(element.resourceId.value)) {
-    throw CanvasDataException(
-      code: CanvasDataErrorCode.missingResourceReference,
-      message: 'image element references a missing resource.',
-      path: 'image.resourceId',
+    throw recordSchemaV1FailureDiagnostic(
+      diagnostics,
+      CanvasDataException(
+        code: CanvasDataErrorCode.missingResourceReference,
+        message: 'image element references a missing resource.',
+        path: 'image.resourceId',
+      ),
     );
   }
 }
@@ -431,14 +710,18 @@ Set<String> _uniqueIds(
   Iterable<String> ids, {
   required String path,
   required CanvasDataErrorCode code,
+  required DiagnosticsHub? diagnostics,
 }) {
   final seen = <String>{};
   for (final id in ids) {
     if (!seen.add(id)) {
-      throw CanvasDataException(
-        code: code,
-        message: 'duplicate id: $id.',
-        path: path,
+      throw recordSchemaV1FailureDiagnostic(
+        diagnostics,
+        CanvasDataException(
+          code: code,
+          message: 'duplicate id: $id.',
+          path: path,
+        ),
       );
     }
   }
@@ -450,24 +733,32 @@ Map<String, Object?> _readMap(
   Map<String, Object?> parent, {
   required String key,
   required String path,
+  required DiagnosticsHub? diagnostics,
 }) {
   if (!parent.containsKey(key)) {
     return const {};
   }
 
-  return _readRequiredMap(parent[key], path: path);
+  return _readRequiredMap(parent[key], path: path, diagnostics: diagnostics);
 }
 
-Map<String, Object?> _readRequiredMap(Object? value, {required String path}) {
+Map<String, Object?> _readRequiredMap(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
   if (value is Map<Object?, Object?>) {
     final result = <String, Object?>{};
     for (final entry in value.entries) {
       final key = entry.key;
       if (key is! String) {
-        throw CanvasDataException(
-          code: CanvasDataErrorCode.invalidFieldType,
-          message: '$path keys must be strings.',
-          path: path,
+        throw recordSchemaV1FailureDiagnostic(
+          diagnostics,
+          CanvasDataException(
+            code: CanvasDataErrorCode.invalidFieldType,
+            message: '$path keys must be strings.',
+            path: path,
+          ),
         );
       }
       result[key] = entry.value;
@@ -476,12 +767,15 @@ Map<String, Object?> _readRequiredMap(Object? value, {required String path}) {
     return result;
   }
 
-  throw CanvasDataException(
-    code: value == null
-        ? CanvasDataErrorCode.missingField
-        : CanvasDataErrorCode.invalidFieldType,
-    message: '$path must be an object.',
-    path: path,
+  throw recordSchemaV1FailureDiagnostic(
+    diagnostics,
+    CanvasDataException(
+      code: value == null
+          ? CanvasDataErrorCode.missingField
+          : CanvasDataErrorCode.invalidFieldType,
+      message: '$path must be an object.',
+      path: path,
+    ),
   );
 }
 
@@ -489,68 +783,98 @@ List<Object?> _readList(
   Map<String, Object?> parent, {
   required String key,
   required String path,
+  required DiagnosticsHub? diagnostics,
 }) {
   if (!parent.containsKey(key)) {
     return const [];
   }
 
-  return _readRequiredList(parent[key], path: path);
+  return _readRequiredList(parent[key], path: path, diagnostics: diagnostics);
 }
 
-List<Object?> _readRequiredList(Object? value, {required String path}) {
+List<Object?> _readRequiredList(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
   if (value is List<Object?>) {
     return value;
   }
 
-  throw CanvasDataException(
-    code: CanvasDataErrorCode.invalidFieldType,
-    message: '$path must be a list.',
-    path: path,
+  throw recordSchemaV1FailureDiagnostic(
+    diagnostics,
+    CanvasDataException(
+      code: CanvasDataErrorCode.invalidFieldType,
+      message: '$path must be a list.',
+      path: path,
+    ),
   );
 }
 
-String _readString(Object? value, {required String path}) {
+String _readString(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
   if (value is String) {
     return value;
   }
 
-  throw CanvasDataException(
-    code: value == null
-        ? CanvasDataErrorCode.missingField
-        : CanvasDataErrorCode.invalidFieldType,
-    message: '$path must be a string.',
-    path: path,
+  throw recordSchemaV1FailureDiagnostic(
+    diagnostics,
+    CanvasDataException(
+      code: value == null
+          ? CanvasDataErrorCode.missingField
+          : CanvasDataErrorCode.invalidFieldType,
+      message: '$path must be a string.',
+      path: path,
+    ),
   );
 }
 
-String? _readNullableString(Object? value, {required String path}) {
+String? _readNullableString(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
   if (value == null) {
     return null;
   }
 
-  return _readString(value, path: path);
+  return _readString(value, path: path, diagnostics: diagnostics);
 }
 
-int _readInt(Object? value, {required String path}) {
+int _readInt(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
   if (value is int) {
     return value;
   }
 
-  throw CanvasDataException(
-    code: value == null
-        ? CanvasDataErrorCode.missingField
-        : CanvasDataErrorCode.invalidFieldType,
-    message: '$path must be an int.',
-    path: path,
+  throw recordSchemaV1FailureDiagnostic(
+    diagnostics,
+    CanvasDataException(
+      code: value == null
+          ? CanvasDataErrorCode.missingField
+          : CanvasDataErrorCode.invalidFieldType,
+      message: '$path must be an int.',
+      path: path,
+    ),
   );
 }
 
-int? _readNullableInt(Object? value, {required String path}) {
+int? _readNullableInt(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
   if (value == null) {
     return null;
   }
 
-  return _readInt(value, path: path);
+  return _readInt(value, path: path, diagnostics: diagnostics);
 }
 
 int _readIntDefault(
@@ -558,34 +882,46 @@ int _readIntDefault(
   required String key,
   required String path,
   required int defaultValue,
+  required DiagnosticsHub? diagnostics,
 }) {
   if (!map.containsKey(key)) {
     return defaultValue;
   }
 
-  return _readInt(map[key], path: path);
+  return _readInt(map[key], path: path, diagnostics: diagnostics);
 }
 
-double _readDouble(Object? value, {required String path}) {
+double _readDouble(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
   if (value is num) {
     return value.toDouble();
   }
 
-  throw CanvasDataException(
-    code: value == null
-        ? CanvasDataErrorCode.missingField
-        : CanvasDataErrorCode.invalidFieldType,
-    message: '$path must be a number.',
-    path: path,
+  throw recordSchemaV1FailureDiagnostic(
+    diagnostics,
+    CanvasDataException(
+      code: value == null
+          ? CanvasDataErrorCode.missingField
+          : CanvasDataErrorCode.invalidFieldType,
+      message: '$path must be a number.',
+      path: path,
+    ),
   );
 }
 
-double? _readNullableDouble(Object? value, {required String path}) {
+double? _readNullableDouble(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
   if (value == null) {
     return null;
   }
 
-  return _readDouble(value, path: path);
+  return _readDouble(value, path: path, diagnostics: diagnostics);
 }
 
 double _readDoubleDefault(
@@ -593,23 +929,31 @@ double _readDoubleDefault(
   required String key,
   required String path,
   required double defaultValue,
+  required DiagnosticsHub? diagnostics,
 }) {
   if (!map.containsKey(key)) {
     return defaultValue;
   }
 
-  return _readDouble(map[key], path: path);
+  return _readDouble(map[key], path: path, diagnostics: diagnostics);
 }
 
-bool _readBool(Object? value, {required String path}) {
+bool _readBool(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
   if (value is bool) {
     return value;
   }
 
-  throw CanvasDataException(
-    code: CanvasDataErrorCode.invalidFieldType,
-    message: '$path must be a bool.',
-    path: path,
+  throw recordSchemaV1FailureDiagnostic(
+    diagnostics,
+    CanvasDataException(
+      code: CanvasDataErrorCode.invalidFieldType,
+      message: '$path must be a bool.',
+      path: path,
+    ),
   );
 }
 
@@ -618,43 +962,59 @@ bool _readBoolDefault(
   required String key,
   required String path,
   required bool defaultValue,
+  required DiagnosticsHub? diagnostics,
 }) {
   if (!map.containsKey(key)) {
     return defaultValue;
   }
 
-  return _readBool(map[key], path: path);
+  return _readBool(map[key], path: path, diagnostics: diagnostics);
 }
 
-Color _readColor(Object? value, {required String path}) {
+Color _readColor(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
   if (value is! String ||
       value.length != 9 ||
       !value.startsWith('#') ||
       int.tryParse(value.substring(1), radix: 16) == null) {
-    throw CanvasDataException(
-      code: CanvasDataErrorCode.invalidFieldType,
-      message: '$path must be #AARRGGBB.',
-      path: path,
+    throw recordSchemaV1FailureDiagnostic(
+      diagnostics,
+      CanvasDataException(
+        code: CanvasDataErrorCode.invalidFieldType,
+        message: '$path must be #AARRGGBB.',
+        path: path,
+      ),
     );
   }
 
   return Color(int.parse(value.substring(1), radix: 16));
 }
 
-Color? _readNullableColor(Object? value, {required String path}) {
+Color? _readNullableColor(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
   if (value == null) {
     return null;
   }
 
-  return _readColor(value, path: path);
+  return _readColor(value, path: path, diagnostics: diagnostics);
 }
 
-Offset _readRequiredOffset(Object? value, {required String path}) {
-  final map = _readRequiredMap(value, path: path);
+Offset _readRequiredOffset(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
+  final map = _readRequiredMap(value, path: path, diagnostics: diagnostics);
 
   return Offset(
-    _readDouble(map['x'], path: '$path.x'),
-    _readDouble(map['y'], path: '$path.y'),
+    _readDouble(map['x'], path: '$path.x', diagnostics: diagnostics),
+    _readDouble(map['y'], path: '$path.y', diagnostics: diagnostics),
   );
 }
 
@@ -662,69 +1022,95 @@ Offset _readOffsetDefault(
   Map<String, Object?> parent, {
   required String key,
   required String path,
+  required DiagnosticsHub? diagnostics,
 }) {
   if (!parent.containsKey(key)) {
     return Offset.zero;
   }
 
-  final map = _readRequiredMap(parent[key], path: path);
+  final map = _readRequiredMap(
+    parent[key],
+    path: path,
+    diagnostics: diagnostics,
+  );
 
   return Offset(
-    _readDouble(map['x'], path: '$path.x'),
-    _readDouble(map['y'], path: '$path.y'),
+    _readDouble(map['x'], path: '$path.x', diagnostics: diagnostics),
+    _readDouble(map['y'], path: '$path.y', diagnostics: diagnostics),
   );
 }
 
-Size _readSize(Object? value, {required String path}) {
-  final map = _readRequiredMap(value, path: path);
+Size _readSize(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
+  final map = _readRequiredMap(value, path: path, diagnostics: diagnostics);
 
   return Size(
-    _readDouble(map['w'], path: '$path.w'),
-    _readDouble(map['h'], path: '$path.h'),
+    _readDouble(map['w'], path: '$path.w', diagnostics: diagnostics),
+    _readDouble(map['h'], path: '$path.h', diagnostics: diagnostics),
   );
 }
 
-Size? _readNullableSize(Object? value, {required String path}) {
+Size? _readNullableSize(
+  Object? value, {
+  required String path,
+  required DiagnosticsHub? diagnostics,
+}) {
   if (value == null) {
     return null;
   }
 
-  return _readSize(value, path: path);
+  return _readSize(value, path: path, diagnostics: diagnostics);
 }
 
-CanvasTransform _readTransform(Object? value) {
-  final map = _readRequiredMap(value, path: 'element.transform');
+CanvasTransform _readTransform(
+  Object? value, {
+  required DiagnosticsHub? diagnostics,
+}) {
+  final map = _readRequiredMap(
+    value,
+    path: 'element.transform',
+    diagnostics: diagnostics,
+  );
 
   return CanvasTransform(
-    a: _readDouble(map['a'], path: 'transform.a'),
-    b: _readDouble(map['b'], path: 'transform.b'),
-    c: _readDouble(map['c'], path: 'transform.c'),
-    d: _readDouble(map['d'], path: 'transform.d'),
-    tx: _readDouble(map['tx'], path: 'transform.tx'),
-    ty: _readDouble(map['ty'], path: 'transform.ty'),
+    a: _readDouble(map['a'], path: 'transform.a', diagnostics: diagnostics),
+    b: _readDouble(map['b'], path: 'transform.b', diagnostics: diagnostics),
+    c: _readDouble(map['c'], path: 'transform.c', diagnostics: diagnostics),
+    d: _readDouble(map['d'], path: 'transform.d', diagnostics: diagnostics),
+    tx: _readDouble(map['tx'], path: 'transform.tx', diagnostics: diagnostics),
+    ty: _readDouble(map['ty'], path: 'transform.ty', diagnostics: diagnostics),
   );
 }
 
 CanvasTransform _readTransformDefault(
   Map<String, Object?> map, {
   required String key,
+  required DiagnosticsHub? diagnostics,
 }) {
   if (!map.containsKey(key)) {
     return CanvasTransform.identity;
   }
 
-  return _readTransform(map[key]);
+  return _readTransform(map[key], diagnostics: diagnostics);
 }
 
 CanvasMetadata _readMetadata(
   Map<String, Object?> parent, {
   required String key,
   required String path,
+  required DiagnosticsHub? diagnostics,
 }) {
   if (!parent.containsKey(key)) {
     return const CanvasMetadata.empty();
   }
-  final map = _readRequiredMap(parent[key], path: path);
+  final map = _readRequiredMap(
+    parent[key],
+    path: path,
+    diagnostics: diagnostics,
+  );
 
   return CanvasMetadata.fromMap(map);
 }
@@ -732,6 +1118,7 @@ CanvasMetadata _readMetadata(
 CanvasPathFillRule _readFillRule(
   Map<String, Object?> map, {
   required String key,
+  required DiagnosticsHub? diagnostics,
 }) {
   if (!map.containsKey(key)) {
     return CanvasPathFillRule.nonZero;
@@ -740,15 +1127,22 @@ CanvasPathFillRule _readFillRule(
   return switch (map[key]) {
     'nonZero' => CanvasPathFillRule.nonZero,
     'evenOdd' => CanvasPathFillRule.evenOdd,
-    _ => throw CanvasDataException(
-      code: CanvasDataErrorCode.invalidFieldType,
-      message: 'unknown path fill rule.',
-      path: 'path.fillRule',
+    _ => throw recordSchemaV1FailureDiagnostic(
+      diagnostics,
+      CanvasDataException(
+        code: CanvasDataErrorCode.invalidFieldType,
+        message: 'unknown path fill rule.',
+        path: 'path.fillRule',
+      ),
     ),
   };
 }
 
-TextAlign _readTextAlign(Map<String, Object?> map, {required String key}) {
+TextAlign _readTextAlign(
+  Map<String, Object?> map, {
+  required String key,
+  required DiagnosticsHub? diagnostics,
+}) {
   if (!map.containsKey(key)) {
     return TextAlign.left;
   }
@@ -760,10 +1154,13 @@ TextAlign _readTextAlign(Map<String, Object?> map, {required String key}) {
     'justify' => TextAlign.justify,
     'start' => TextAlign.start,
     'end' => TextAlign.end,
-    _ => throw CanvasDataException(
-      code: CanvasDataErrorCode.invalidFieldType,
-      message: 'unknown text alignment.',
-      path: 'text.align',
+    _ => throw recordSchemaV1FailureDiagnostic(
+      diagnostics,
+      CanvasDataException(
+        code: CanvasDataErrorCode.invalidFieldType,
+        message: 'unknown text alignment.',
+        path: 'text.align',
+      ),
     ),
   };
 }
@@ -771,6 +1168,7 @@ TextAlign _readTextAlign(Map<String, Object?> map, {required String key}) {
 TextDirection _readTextDirection(
   Map<String, Object?> map, {
   required String key,
+  required DiagnosticsHub? diagnostics,
 }) {
   if (!map.containsKey(key)) {
     return TextDirection.ltr;
@@ -779,67 +1177,91 @@ TextDirection _readTextDirection(
   return switch (map[key]) {
     'ltr' => TextDirection.ltr,
     'rtl' => TextDirection.rtl,
-    _ => throw CanvasDataException(
-      code: CanvasDataErrorCode.invalidFieldType,
-      message: 'unknown text direction.',
-      path: 'text.textDirection',
+    _ => throw recordSchemaV1FailureDiagnostic(
+      diagnostics,
+      CanvasDataException(
+        code: CanvasDataErrorCode.invalidFieldType,
+        message: 'unknown text direction.',
+        path: 'text.textDirection',
+      ),
     ),
   };
 }
 
 final class _ElementCommon {
-  _ElementCommon(Map<String, Object?> map)
-    : id = CanvasElementId(_readString(map['id'], path: 'element.id')),
-      revision = _readIntDefault(
-        map,
-        key: 'revision',
-        path: 'element.revision',
-        defaultValue: 0,
-      ),
-      transform = _readTransformDefault(map, key: 'transform'),
-      opacity = _readDoubleDefault(
-        map,
-        key: 'opacity',
-        path: 'element.opacity',
-        defaultValue: 1.0,
-      ),
-      hitPadding = _readDoubleDefault(
-        map,
-        key: 'hitPadding',
-        path: 'element.hitPadding',
-        defaultValue: 0.0,
-      ),
-      isVisible = _readBoolDefault(
-        map,
-        key: 'isVisible',
-        path: 'element.isVisible',
-        defaultValue: true,
-      ),
-      isSelectable = _readBoolDefault(
-        map,
-        key: 'isSelectable',
-        path: 'element.isSelectable',
-        defaultValue: true,
-      ),
-      isLocked = _readBoolDefault(
-        map,
-        key: 'isLocked',
-        path: 'element.isLocked',
-        defaultValue: false,
-      ),
-      isDeletable = _readBoolDefault(
-        map,
-        key: 'isDeletable',
-        path: 'element.isDeletable',
-        defaultValue: true,
-      ),
-      isTransformable = _readBoolDefault(
-        map,
-        key: 'isTransformable',
-        path: 'element.isTransformable',
-        defaultValue: true,
-      ),
-      metadata = _readMetadata(map, key: 'metadata', path: 'element.metadata');
+  _ElementCommon(
+    Map<String, Object?> map, {
+    required DiagnosticsHub? diagnostics,
+  }) : id = CanvasElementId(
+         _readString(map['id'], path: 'element.id', diagnostics: diagnostics),
+       ),
+       revision = _readIntDefault(
+         map,
+         key: 'revision',
+         path: 'element.revision',
+         defaultValue: 0,
+         diagnostics: diagnostics,
+       ),
+       transform = _readTransformDefault(
+         map,
+         key: 'transform',
+         diagnostics: diagnostics,
+       ),
+       opacity = _readDoubleDefault(
+         map,
+         key: 'opacity',
+         path: 'element.opacity',
+         defaultValue: 1.0,
+         diagnostics: diagnostics,
+       ),
+       hitPadding = _readDoubleDefault(
+         map,
+         key: 'hitPadding',
+         path: 'element.hitPadding',
+         defaultValue: 0.0,
+         diagnostics: diagnostics,
+       ),
+       isVisible = _readBoolDefault(
+         map,
+         key: 'isVisible',
+         path: 'element.isVisible',
+         defaultValue: true,
+         diagnostics: diagnostics,
+       ),
+       isSelectable = _readBoolDefault(
+         map,
+         key: 'isSelectable',
+         path: 'element.isSelectable',
+         defaultValue: true,
+         diagnostics: diagnostics,
+       ),
+       isLocked = _readBoolDefault(
+         map,
+         key: 'isLocked',
+         path: 'element.isLocked',
+         defaultValue: false,
+         diagnostics: diagnostics,
+       ),
+       isDeletable = _readBoolDefault(
+         map,
+         key: 'isDeletable',
+         path: 'element.isDeletable',
+         defaultValue: true,
+         diagnostics: diagnostics,
+       ),
+       isTransformable = _readBoolDefault(
+         map,
+         key: 'isTransformable',
+         path: 'element.isTransformable',
+         defaultValue: true,
+         diagnostics: diagnostics,
+       ),
+       metadata = _readMetadata(
+         map,
+         key: 'metadata',
+         path: 'element.metadata',
+         diagnostics: diagnostics,
+       );
 
   final CanvasElementId id;
   final int revision;
@@ -855,39 +1277,66 @@ final class _ElementCommon {
 }
 
 final class _TextElementFields {
-  _TextElementFields(Map<String, Object?> map)
-    : value = _readString(map['text'], path: 'text.text'),
-      fontSize = _readDouble(map['fontSize'], path: 'text.fontSize'),
-      color = _readColor(map['color'], path: 'text.color'),
-      align = _readTextAlign(map, key: 'align'),
-      textDirection = _readTextDirection(map, key: 'textDirection'),
-      isBold = _readBoolDefault(
-        map,
-        key: 'isBold',
-        path: 'text.isBold',
-        defaultValue: false,
-      ),
-      isItalic = _readBoolDefault(
-        map,
-        key: 'isItalic',
-        path: 'text.isItalic',
-        defaultValue: false,
-      ),
-      isUnderline = _readBoolDefault(
-        map,
-        key: 'isUnderline',
-        path: 'text.isUnderline',
-        defaultValue: false,
-      ),
-      fontFamily = _readNullableString(
-        map['fontFamily'],
-        path: 'text.fontFamily',
-      ),
-      maxWidth = _readNullableDouble(map['maxWidth'], path: 'text.maxWidth'),
-      lineHeight = _readNullableDouble(
-        map['lineHeight'],
-        path: 'text.lineHeight',
-      );
+  _TextElementFields(
+    Map<String, Object?> map, {
+    required DiagnosticsHub? diagnostics,
+  }) : value = _readString(
+         map['text'],
+         path: 'text.text',
+         diagnostics: diagnostics,
+       ),
+       fontSize = _readDouble(
+         map['fontSize'],
+         path: 'text.fontSize',
+         diagnostics: diagnostics,
+       ),
+       color = _readColor(
+         map['color'],
+         path: 'text.color',
+         diagnostics: diagnostics,
+       ),
+       align = _readTextAlign(map, key: 'align', diagnostics: diagnostics),
+       textDirection = _readTextDirection(
+         map,
+         key: 'textDirection',
+         diagnostics: diagnostics,
+       ),
+       isBold = _readBoolDefault(
+         map,
+         key: 'isBold',
+         path: 'text.isBold',
+         defaultValue: false,
+         diagnostics: diagnostics,
+       ),
+       isItalic = _readBoolDefault(
+         map,
+         key: 'isItalic',
+         path: 'text.isItalic',
+         defaultValue: false,
+         diagnostics: diagnostics,
+       ),
+       isUnderline = _readBoolDefault(
+         map,
+         key: 'isUnderline',
+         path: 'text.isUnderline',
+         defaultValue: false,
+         diagnostics: diagnostics,
+       ),
+       fontFamily = _readNullableString(
+         map['fontFamily'],
+         path: 'text.fontFamily',
+         diagnostics: diagnostics,
+       ),
+       maxWidth = _readNullableDouble(
+         map['maxWidth'],
+         path: 'text.maxWidth',
+         diagnostics: diagnostics,
+       ),
+       lineHeight = _readNullableDouble(
+         map['lineHeight'],
+         path: 'text.lineHeight',
+         diagnostics: diagnostics,
+       );
 
   final String value;
   final double fontSize;

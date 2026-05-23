@@ -497,7 +497,30 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
       return expression.constructorName.type.name.lexeme;
     }
     if (expression is MethodInvocation && expression.target == null) {
+      final routeException = _sensitiveThrowRouteException(
+        expression.methodName.name,
+      );
+      if (routeException != null) {
+        return routeException;
+      }
+
       return expression.methodName.name;
+    }
+
+    return null;
+  }
+
+  String? _sensitiveThrowRouteException(String methodName) {
+    if (!memberCallTargets.contains(methodName)) {
+      return null;
+    }
+
+    final exceptions = {
+      for (final entry in sensitiveThrows)
+        if (_matchesGlob(path, entry.under)) entry.exception,
+    };
+    if (exceptions.length == 1) {
+      return exceptions.single;
     }
 
     return null;

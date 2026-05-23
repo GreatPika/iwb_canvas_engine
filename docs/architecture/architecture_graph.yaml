@@ -201,6 +201,7 @@ nodes:
         - decodeSchemaV1Document
         - decodeSchemaV1DocumentFromJson
         - encodeSchemaV1Document
+        - recordSchemaV1FailureDiagnostic
   - id: runtime.root
     label: Runtime composition root
     kind: runtime_owner
