@@ -52,3 +52,5 @@ T _materialize<T>(T Function() create) {
 }
 
 FixtureException recordFixtureRoute() => FixtureException();
+
+FixtureException recordUnverifiedFixtureRoute() => FixtureException();

@@ -565,7 +565,10 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
       }
       collector.materializationRoutes.add(
         _PendingMaterializationRouteFact(
-          helperKey: _materializationRouteHelperKey(node.methodName.name),
+          helperKey: _materializationRouteHelperKey(
+            node.methodName.name,
+            route,
+          ),
           memberCall: MemberCallFact(
             path: path,
             line: _line(node),
@@ -597,13 +600,13 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
     final route = _throwRoute(expression);
     if (route != null && memberCallTargets.contains(route)) {
       collector.materializationRouteHelperKeys.add(
-        _materializationRouteHelperKey(member),
+        _materializationRouteHelperKey(member, route),
       );
     }
   }
 
-  String _materializationRouteHelperKey(String helperName) {
-    return '$path::$helperName';
+  String _materializationRouteHelperKey(String helperName, String routeTarget) {
+    return '$path::$helperName::$routeTarget';
   }
 
   String? _throwRoute(Expression expression) {

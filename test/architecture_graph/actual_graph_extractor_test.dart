@@ -250,6 +250,46 @@ void main() {
     );
   });
 
+  test('expands materialization routes only for verified route targets', () {
+    final graph = extractActualArchitectureGraphFromPaths(
+      paths: [fixture],
+      memberCallTargets: const {
+        'recordFixtureRoute',
+        'recordUnverifiedFixtureRoute',
+      },
+      sensitiveThrows: const [
+        SensitiveThrowCoverage(
+          owner: 'fixture.owner',
+          under: 'test/architecture_graph/fixtures/**',
+          exception: 'FixtureException',
+        ),
+      ],
+    );
+
+    expect(
+      graph.memberCalls.map((fact) => '${fact.member}:${fact.target}'),
+      contains('topLevelMaterializesThroughRoute:recordFixtureRoute'),
+    );
+    expect(
+      graph.memberCalls.map((fact) => '${fact.member}:${fact.target}'),
+      isNot(
+        contains(
+          'topLevelMaterializesThroughRoute:recordUnverifiedFixtureRoute',
+        ),
+      ),
+    );
+    expect(
+      graph.exceptionThrows
+          .where(
+            (fact) =>
+                fact.member == 'topLevelMaterializesThroughRoute' &&
+                fact.exception == 'FixtureException',
+          )
+          .length,
+      1,
+    );
+  });
+
   test(
     'does not expand materialization helpers without a routed throw body',
     () {
