@@ -95,6 +95,35 @@ void main() {
     );
   });
 
+  test('internal decode records constructor materialization failures', () {
+    final hub = DiagnosticsHub(policy: const CanvasDiagnosticPolicy.summary());
+
+    expect(
+      () => decodeSchemaV1Document(
+        {
+          'schemaVersion': 1,
+          'camera': {
+            'offset': {'x': double.nan, 'y': 0},
+          },
+        },
+        diagnostics: hub,
+      ),
+      throwsA(
+        isA<CanvasDataException>()
+            .having(
+              (error) => error.code,
+              'code',
+              CanvasDataErrorCode.fieldMustBeFinite,
+            )
+            .having((error) => error.path, 'path', 'camera.offset.dx'),
+      ),
+    );
+
+    expect(hub.recordCount, 1);
+    expect(hub.records.single.code, CanvasDataErrorCode.fieldMustBeFinite);
+    expect(hub.records.single.path, 'camera.offset.dx');
+  });
+
   test('internal decode without enabled diagnostics records nothing', () {
     final disabledHub = DiagnosticsHub(
       policy: const CanvasDiagnosticPolicy.disabled(),

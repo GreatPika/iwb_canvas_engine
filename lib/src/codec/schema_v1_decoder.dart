@@ -38,29 +38,36 @@ CanvasDocument decodeSchemaV1Document(
   final backgroundElements = _readBackgroundElements(
     json,
     diagnostics: diagnostics,
-  ).map((value) => _readElement(value, diagnostics: diagnostics));
+  ).map((value) => _readElement(value, diagnostics: diagnostics)).toList();
   final layers = _readList(
     json,
     key: 'layers',
     path: 'layers',
     diagnostics: diagnostics,
-  ).map((value) => _readLayer(value, diagnostics: diagnostics));
-  final document = CanvasDocument(
-    camera: _readCamera(json, key: 'camera', diagnostics: diagnostics),
-    background: _readBackground(
-      json,
-      key: 'background',
-      diagnostics: diagnostics,
-    ),
-    palette: _readPalette(json, key: 'palette', diagnostics: diagnostics),
-    resources: resources,
-    backgroundElements: backgroundElements,
-    layers: layers,
-    metadata: _readMetadata(
-      json,
-      key: 'metadata',
-      path: 'metadata',
-      diagnostics: diagnostics,
+  ).map((value) => _readLayer(value, diagnostics: diagnostics)).toList();
+  final camera = _readCamera(json, key: 'camera', diagnostics: diagnostics);
+  final background = _readBackground(
+    json,
+    key: 'background',
+    diagnostics: diagnostics,
+  );
+  final palette = _readPalette(json, key: 'palette', diagnostics: diagnostics);
+  final metadata = _readMetadata(
+    json,
+    key: 'metadata',
+    path: 'metadata',
+    diagnostics: diagnostics,
+  );
+  final document = _materialize(
+    diagnostics,
+    () => CanvasDocument(
+      camera: camera,
+      background: background,
+      palette: palette,
+      resources: resources,
+      backgroundElements: backgroundElements,
+      layers: layers,
+      metadata: metadata,
     ),
   );
 
@@ -123,7 +130,7 @@ CanvasCamera _readCamera(
     diagnostics: diagnostics,
   );
 
-  return CanvasCamera(offset: offset);
+  return _materialize(diagnostics, () => CanvasCamera(offset: offset));
 }
 
 CanvasBackground _readBackground(
@@ -138,15 +145,18 @@ CanvasBackground _readBackground(
     diagnostics: diagnostics,
   );
 
-  return CanvasBackground(
-    color: map.containsKey('color')
-        ? _readColor(
-            map['color'],
-            path: 'background.color',
-            diagnostics: diagnostics,
-          )
-        : const Color(0xFFFFFFFF),
-    grid: _readGrid(map, key: 'grid', diagnostics: diagnostics),
+  final color = map.containsKey('color')
+      ? _readColor(
+          map['color'],
+          path: 'background.color',
+          diagnostics: diagnostics,
+        )
+      : const Color(0xFFFFFFFF);
+  final grid = _readGrid(map, key: 'grid', diagnostics: diagnostics);
+
+  return _materialize(
+    diagnostics,
+    () => CanvasBackground(color: color, grid: grid),
   );
 }
 
@@ -162,28 +172,31 @@ CanvasGrid _readGrid(
     diagnostics: diagnostics,
   );
 
-  return CanvasGrid(
-    enabled: _readBoolDefault(
-      map,
-      key: 'enabled',
-      path: 'background.grid.enabled',
-      defaultValue: false,
-      diagnostics: diagnostics,
-    ),
-    cellSize: _readDoubleDefault(
-      map,
-      key: 'cellSize',
-      path: 'background.grid.cellSize',
-      defaultValue: 10.0,
-      diagnostics: diagnostics,
-    ),
-    color: map.containsKey('color')
-        ? _readColor(
-            map['color'],
-            path: 'background.grid.color',
-            diagnostics: diagnostics,
-          )
-        : const Color(0x1F000000),
+  final enabled = _readBoolDefault(
+    map,
+    key: 'enabled',
+    path: 'background.grid.enabled',
+    defaultValue: false,
+    diagnostics: diagnostics,
+  );
+  final cellSize = _readDoubleDefault(
+    map,
+    key: 'cellSize',
+    path: 'background.grid.cellSize',
+    defaultValue: 10.0,
+    diagnostics: diagnostics,
+  );
+  final color = map.containsKey('color')
+      ? _readColor(
+          map['color'],
+          path: 'background.grid.color',
+          diagnostics: diagnostics,
+        )
+      : const Color(0x1F000000);
+
+  return _materialize(
+    diagnostics,
+    () => CanvasGrid(enabled: enabled, cellSize: cellSize, color: color),
   );
 }
 
@@ -200,48 +213,57 @@ CanvasPalette _readPalette(
   );
   final penColors =
       _readList(
-        map,
-        key: 'penColors',
-        path: 'palette.penColors',
-        diagnostics: diagnostics,
-      ).map(
-        (value) => _readColor(
-          value,
-          path: 'palette.penColors',
-          diagnostics: diagnostics,
-        ),
-      );
+            map,
+            key: 'penColors',
+            path: 'palette.penColors',
+            diagnostics: diagnostics,
+          )
+          .map(
+            (value) => _readColor(
+              value,
+              path: 'palette.penColors',
+              diagnostics: diagnostics,
+            ),
+          )
+          .toList();
   final backgroundColors =
       _readList(
-        map,
-        key: 'backgroundColors',
-        path: 'palette.backgroundColors',
-        diagnostics: diagnostics,
-      ).map(
-        (value) => _readColor(
-          value,
-          path: 'palette.backgroundColors',
-          diagnostics: diagnostics,
-        ),
-      );
+            map,
+            key: 'backgroundColors',
+            path: 'palette.backgroundColors',
+            diagnostics: diagnostics,
+          )
+          .map(
+            (value) => _readColor(
+              value,
+              path: 'palette.backgroundColors',
+              diagnostics: diagnostics,
+            ),
+          )
+          .toList();
   final gridSizes =
       _readList(
-        map,
-        key: 'gridSizes',
-        path: 'palette.gridSizes',
-        diagnostics: diagnostics,
-      ).map(
-        (value) => _readDouble(
-          value,
-          path: 'palette.gridSizes',
-          diagnostics: diagnostics,
-        ),
-      );
+            map,
+            key: 'gridSizes',
+            path: 'palette.gridSizes',
+            diagnostics: diagnostics,
+          )
+          .map(
+            (value) => _readDouble(
+              value,
+              path: 'palette.gridSizes',
+              diagnostics: diagnostics,
+            ),
+          )
+          .toList();
 
-  return CanvasPalette(
-    penColors: penColors,
-    backgroundColors: backgroundColors,
-    gridSizes: gridSizes,
+  return _materialize(
+    diagnostics,
+    () => CanvasPalette(
+      penColors: penColors,
+      backgroundColors: backgroundColors,
+      gridSizes: gridSizes,
+    ),
   );
 }
 
@@ -269,32 +291,43 @@ CanvasResource _readResource(
       ),
     );
   }
+  final idValue = _readString(
+    map['id'],
+    path: 'resource.id',
+    diagnostics: diagnostics,
+  );
+  final source = _readResourceSource(map['source'], diagnostics: diagnostics);
+  final mimeType = _readNullableString(
+    map['mimeType'],
+    path: 'resource.mimeType',
+    diagnostics: diagnostics,
+  );
+  final contentHash = _readNullableString(
+    map['contentHash'],
+    path: 'resource.contentHash',
+    diagnostics: diagnostics,
+  );
+  final byteLength = _readNullableInt(
+    map['byteLength'],
+    path: 'resource.byteLength',
+    diagnostics: diagnostics,
+  );
+  final metadata = _readMetadata(
+    map,
+    key: 'metadata',
+    path: 'resource.metadata',
+    diagnostics: diagnostics,
+  );
 
-  return CanvasImageResource(
-    id: CanvasResourceId(
-      _readString(map['id'], path: 'resource.id', diagnostics: diagnostics),
-    ),
-    source: _readResourceSource(map['source'], diagnostics: diagnostics),
-    mimeType: _readNullableString(
-      map['mimeType'],
-      path: 'resource.mimeType',
-      diagnostics: diagnostics,
-    ),
-    contentHash: _readNullableString(
-      map['contentHash'],
-      path: 'resource.contentHash',
-      diagnostics: diagnostics,
-    ),
-    byteLength: _readNullableInt(
-      map['byteLength'],
-      path: 'resource.byteLength',
-      diagnostics: diagnostics,
-    ),
-    metadata: _readMetadata(
-      map,
-      key: 'metadata',
-      path: 'resource.metadata',
-      diagnostics: diagnostics,
+  return _materialize(
+    diagnostics,
+    () => CanvasImageResource(
+      id: CanvasResourceId(idValue),
+      source: source,
+      mimeType: mimeType,
+      contentHash: contentHash,
+      byteLength: byteLength,
+      metadata: metadata,
     ),
   );
 }
@@ -323,14 +356,13 @@ CanvasResourceSource _readResourceSource(
       ),
     );
   }
-
-  return CanvasResourceSource.appKey(
-    _readString(
-      map['key'],
-      path: 'resource.source.key',
-      diagnostics: diagnostics,
-    ),
+  final keyValue = _readString(
+    map['key'],
+    path: 'resource.source.key',
+    diagnostics: diagnostics,
   );
+
+  return _materialize(diagnostics, () => CanvasResourceSource.appKey(keyValue));
 }
 
 CanvasLayer _readLayer(Object? value, {required DiagnosticsHub? diagnostics}) {
@@ -340,21 +372,30 @@ CanvasLayer _readLayer(Object? value, {required DiagnosticsHub? diagnostics}) {
     diagnostics: diagnostics,
   );
 
-  return CanvasLayer(
-    id: CanvasLayerId(
-      _readString(map['id'], path: 'layer.id', diagnostics: diagnostics),
-    ),
-    elements: _readList(
-      map,
-      key: 'elements',
-      path: 'layer.elements',
-      diagnostics: diagnostics,
-    ).map((value) => _readElement(value, diagnostics: diagnostics)),
-    metadata: _readMetadata(
-      map,
-      key: 'metadata',
-      path: 'layer.metadata',
-      diagnostics: diagnostics,
+  final idValue = _readString(
+    map['id'],
+    path: 'layer.id',
+    diagnostics: diagnostics,
+  );
+  final elements = _readList(
+    map,
+    key: 'elements',
+    path: 'layer.elements',
+    diagnostics: diagnostics,
+  ).map((value) => _readElement(value, diagnostics: diagnostics)).toList();
+  final metadata = _readMetadata(
+    map,
+    key: 'metadata',
+    path: 'layer.metadata',
+    diagnostics: diagnostics,
+  );
+
+  return _materialize(
+    diagnostics,
+    () => CanvasLayer(
+      id: CanvasLayerId(idValue),
+      elements: elements,
+      metadata: metadata,
     ),
   );
 }
@@ -420,31 +461,40 @@ CanvasImageElement _readImageElement(
   _ElementCommon common, {
   required DiagnosticsHub? diagnostics,
 }) {
-  return CanvasImageElement(
-    id: common.id,
-    resourceId: CanvasResourceId(
-      _readString(
-        map['resourceId'],
-        path: 'image.resourceId',
-        diagnostics: diagnostics,
-      ),
+  final resourceIdValue = _readString(
+    map['resourceId'],
+    path: 'image.resourceId',
+    diagnostics: diagnostics,
+  );
+  final size = _readSize(
+    map['size'],
+    path: 'image.size',
+    diagnostics: diagnostics,
+  );
+  final naturalSize = _readNullableSize(
+    map['naturalSize'],
+    path: 'image.naturalSize',
+    diagnostics: diagnostics,
+  );
+
+  return _materialize(
+    diagnostics,
+    () => CanvasImageElement(
+      id: common.id,
+      resourceId: CanvasResourceId(resourceIdValue),
+      size: size,
+      naturalSize: naturalSize,
+      revision: common.revision,
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+      metadata: common.metadata,
     ),
-    size: _readSize(map['size'], path: 'image.size', diagnostics: diagnostics),
-    naturalSize: _readNullableSize(
-      map['naturalSize'],
-      path: 'image.naturalSize',
-      diagnostics: diagnostics,
-    ),
-    revision: common.revision,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-    metadata: common.metadata,
   );
 }
 
@@ -453,39 +503,52 @@ CanvasPathElement _readPathElement(
   _ElementCommon common, {
   required DiagnosticsHub? diagnostics,
 }) {
-  return CanvasPathElement(
-    id: common.id,
-    svgPathData: _readString(
-      map['svgPathData'],
-      path: 'path.svgPathData',
-      diagnostics: diagnostics,
+  final svgPathData = _readString(
+    map['svgPathData'],
+    path: 'path.svgPathData',
+    diagnostics: diagnostics,
+  );
+  final fillColor = _readNullableColor(
+    map['fillColor'],
+    path: 'path.fillColor',
+    diagnostics: diagnostics,
+  );
+  final strokeColor = _readNullableColor(
+    map['strokeColor'],
+    path: 'path.strokeColor',
+    diagnostics: diagnostics,
+  );
+  final strokeWidth = _readDouble(
+    map['strokeWidth'],
+    path: 'path.strokeWidth',
+    diagnostics: diagnostics,
+  );
+  final fillRule = _readFillRule(
+    map,
+    key: 'fillRule',
+    diagnostics: diagnostics,
+  );
+
+  return _materialize(
+    diagnostics,
+    () => CanvasPathElement(
+      id: common.id,
+      svgPathData: svgPathData,
+      fillColor: fillColor,
+      strokeColor: strokeColor,
+      strokeWidth: strokeWidth,
+      fillRule: fillRule,
+      revision: common.revision,
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+      metadata: common.metadata,
     ),
-    fillColor: _readNullableColor(
-      map['fillColor'],
-      path: 'path.fillColor',
-      diagnostics: diagnostics,
-    ),
-    strokeColor: _readNullableColor(
-      map['strokeColor'],
-      path: 'path.strokeColor',
-      diagnostics: diagnostics,
-    ),
-    strokeWidth: _readDouble(
-      map['strokeWidth'],
-      path: 'path.strokeWidth',
-      diagnostics: diagnostics,
-    ),
-    fillRule: _readFillRule(map, key: 'fillRule', diagnostics: diagnostics),
-    revision: common.revision,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-    metadata: common.metadata,
   );
 }
 
@@ -496,29 +559,32 @@ CanvasTextElement _readTextElement(
 }) {
   final text = _TextElementFields(map, diagnostics: diagnostics);
 
-  return CanvasTextElement(
-    id: common.id,
-    text: text.value,
-    fontSize: text.fontSize,
-    color: text.color,
-    align: text.align,
-    textDirection: text.textDirection,
-    isBold: text.isBold,
-    isItalic: text.isItalic,
-    isUnderline: text.isUnderline,
-    fontFamily: text.fontFamily,
-    maxWidth: text.maxWidth,
-    lineHeight: text.lineHeight,
-    revision: common.revision,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-    metadata: common.metadata,
+  return _materialize(
+    diagnostics,
+    () => CanvasTextElement(
+      id: common.id,
+      text: text.value,
+      fontSize: text.fontSize,
+      color: text.color,
+      align: text.align,
+      textDirection: text.textDirection,
+      isBold: text.isBold,
+      isItalic: text.isItalic,
+      isUnderline: text.isUnderline,
+      fontFamily: text.fontFamily,
+      maxWidth: text.maxWidth,
+      lineHeight: text.lineHeight,
+      revision: common.revision,
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+      metadata: common.metadata,
+    ),
   );
 }
 
@@ -527,40 +593,50 @@ CanvasStrokeElement _readStrokeElement(
   _ElementCommon common, {
   required DiagnosticsHub? diagnostics,
 }) {
-  return CanvasStrokeElement(
-    id: common.id,
-    points:
-        _readRequiredList(
-          map['points'],
-          path: 'stroke.points',
-          diagnostics: diagnostics,
-        ).map(
-          (value) => _readRequiredOffset(
-            value,
+  final points =
+      _readRequiredList(
+            map['points'],
             path: 'stroke.points',
             diagnostics: diagnostics,
-          ),
-        ),
-    thickness: _readDouble(
-      map['thickness'],
-      path: 'stroke.thickness',
-      diagnostics: diagnostics,
+          )
+          .map(
+            (value) => _readRequiredOffset(
+              value,
+              path: 'stroke.points',
+              diagnostics: diagnostics,
+            ),
+          )
+          .toList();
+
+  final thickness = _readDouble(
+    map['thickness'],
+    path: 'stroke.thickness',
+    diagnostics: diagnostics,
+  );
+  final color = _readColor(
+    map['color'],
+    path: 'stroke.color',
+    diagnostics: diagnostics,
+  );
+
+  return _materialize(
+    diagnostics,
+    () => CanvasStrokeElement(
+      id: common.id,
+      points: points,
+      thickness: thickness,
+      color: color,
+      revision: common.revision,
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+      metadata: common.metadata,
     ),
-    color: _readColor(
-      map['color'],
-      path: 'stroke.color',
-      diagnostics: diagnostics,
-    ),
-    revision: common.revision,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-    metadata: common.metadata,
   );
 }
 
@@ -569,38 +645,46 @@ CanvasLineElement _readLineElement(
   _ElementCommon common, {
   required DiagnosticsHub? diagnostics,
 }) {
-  return CanvasLineElement(
-    id: common.id,
-    start: _readRequiredOffset(
-      map['start'],
-      path: 'line.start',
-      diagnostics: diagnostics,
+  final start = _readRequiredOffset(
+    map['start'],
+    path: 'line.start',
+    diagnostics: diagnostics,
+  );
+  final end = _readRequiredOffset(
+    map['end'],
+    path: 'line.end',
+    diagnostics: diagnostics,
+  );
+  final thickness = _readDouble(
+    map['thickness'],
+    path: 'line.thickness',
+    diagnostics: diagnostics,
+  );
+  final color = _readColor(
+    map['color'],
+    path: 'line.color',
+    diagnostics: diagnostics,
+  );
+
+  return _materialize(
+    diagnostics,
+    () => CanvasLineElement(
+      id: common.id,
+      start: start,
+      end: end,
+      thickness: thickness,
+      color: color,
+      revision: common.revision,
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+      metadata: common.metadata,
     ),
-    end: _readRequiredOffset(
-      map['end'],
-      path: 'line.end',
-      diagnostics: diagnostics,
-    ),
-    thickness: _readDouble(
-      map['thickness'],
-      path: 'line.thickness',
-      diagnostics: diagnostics,
-    ),
-    color: _readColor(
-      map['color'],
-      path: 'line.color',
-      diagnostics: diagnostics,
-    ),
-    revision: common.revision,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-    metadata: common.metadata,
   );
 }
 
@@ -609,34 +693,46 @@ CanvasRectElement _readRectElement(
   _ElementCommon common, {
   required DiagnosticsHub? diagnostics,
 }) {
-  return CanvasRectElement(
-    id: common.id,
-    size: _readSize(map['size'], path: 'rect.size', diagnostics: diagnostics),
-    fillColor: _readNullableColor(
-      map['fillColor'],
-      path: 'rect.fillColor',
-      diagnostics: diagnostics,
+  final size = _readSize(
+    map['size'],
+    path: 'rect.size',
+    diagnostics: diagnostics,
+  );
+  final fillColor = _readNullableColor(
+    map['fillColor'],
+    path: 'rect.fillColor',
+    diagnostics: diagnostics,
+  );
+  final strokeColor = _readNullableColor(
+    map['strokeColor'],
+    path: 'rect.strokeColor',
+    diagnostics: diagnostics,
+  );
+  final strokeWidth = _readDouble(
+    map['strokeWidth'],
+    path: 'rect.strokeWidth',
+    diagnostics: diagnostics,
+  );
+
+  return _materialize(
+    diagnostics,
+    () => CanvasRectElement(
+      id: common.id,
+      size: size,
+      fillColor: fillColor,
+      strokeColor: strokeColor,
+      strokeWidth: strokeWidth,
+      revision: common.revision,
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+      metadata: common.metadata,
     ),
-    strokeColor: _readNullableColor(
-      map['strokeColor'],
-      path: 'rect.strokeColor',
-      diagnostics: diagnostics,
-    ),
-    strokeWidth: _readDouble(
-      map['strokeWidth'],
-      path: 'rect.strokeWidth',
-      diagnostics: diagnostics,
-    ),
-    revision: common.revision,
-    transform: common.transform,
-    opacity: common.opacity,
-    hitPadding: common.hitPadding,
-    isVisible: common.isVisible,
-    isSelectable: common.isSelectable,
-    isLocked: common.isLocked,
-    isDeletable: common.isDeletable,
-    isTransformable: common.isTransformable,
-    metadata: common.metadata,
   );
 }
 
@@ -1075,13 +1171,40 @@ CanvasTransform _readTransform(
     diagnostics: diagnostics,
   );
 
-  return CanvasTransform(
-    a: _readDouble(map['a'], path: 'transform.a', diagnostics: diagnostics),
-    b: _readDouble(map['b'], path: 'transform.b', diagnostics: diagnostics),
-    c: _readDouble(map['c'], path: 'transform.c', diagnostics: diagnostics),
-    d: _readDouble(map['d'], path: 'transform.d', diagnostics: diagnostics),
-    tx: _readDouble(map['tx'], path: 'transform.tx', diagnostics: diagnostics),
-    ty: _readDouble(map['ty'], path: 'transform.ty', diagnostics: diagnostics),
+  final a = _readDouble(
+    map['a'],
+    path: 'transform.a',
+    diagnostics: diagnostics,
+  );
+  final b = _readDouble(
+    map['b'],
+    path: 'transform.b',
+    diagnostics: diagnostics,
+  );
+  final c = _readDouble(
+    map['c'],
+    path: 'transform.c',
+    diagnostics: diagnostics,
+  );
+  final d = _readDouble(
+    map['d'],
+    path: 'transform.d',
+    diagnostics: diagnostics,
+  );
+  final tx = _readDouble(
+    map['tx'],
+    path: 'transform.tx',
+    diagnostics: diagnostics,
+  );
+  final ty = _readDouble(
+    map['ty'],
+    path: 'transform.ty',
+    diagnostics: diagnostics,
+  );
+
+  return _materialize(
+    diagnostics,
+    () => CanvasTransform(a: a, b: b, c: c, d: d, tx: tx, ty: ty),
   );
 }
 
@@ -1112,7 +1235,7 @@ CanvasMetadata _readMetadata(
     diagnostics: diagnostics,
   );
 
-  return CanvasMetadata.fromMap(map);
+  return _materialize(diagnostics, () => CanvasMetadata.fromMap(map));
 }
 
 CanvasPathFillRule _readFillRule(
@@ -1192,9 +1315,7 @@ final class _ElementCommon {
   _ElementCommon(
     Map<String, Object?> map, {
     required DiagnosticsHub? diagnostics,
-  }) : id = CanvasElementId(
-         _readString(map['id'], path: 'element.id', diagnostics: diagnostics),
-       ),
+  }) : id = _readElementId(map, diagnostics: diagnostics),
        revision = _readIntDefault(
          map,
          key: 'revision',
@@ -1274,6 +1395,27 @@ final class _ElementCommon {
   final bool isDeletable;
   final bool isTransformable;
   final CanvasMetadata metadata;
+}
+
+CanvasElementId _readElementId(
+  Map<String, Object?> map, {
+  required DiagnosticsHub? diagnostics,
+}) {
+  final value = _readString(
+    map['id'],
+    path: 'element.id',
+    diagnostics: diagnostics,
+  );
+
+  return _materialize(diagnostics, () => CanvasElementId(value));
+}
+
+T _materialize<T>(DiagnosticsHub? diagnostics, T Function() create) {
+  try {
+    return create();
+  } on CanvasDataException catch (exception) {
+    throw recordSchemaV1FailureDiagnostic(diagnostics, exception);
+  }
 }
 
 final class _TextElementFields {
