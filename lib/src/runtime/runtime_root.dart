@@ -30,26 +30,39 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   }) : this._(
          store: DocumentStoreKernel(initialDocument),
          config: RuntimeConfig.from(config),
+         initialViewCamera: initialDocument.camera,
        );
 
-  RuntimeRoot._({required DocumentStoreKernel store, required this.config})
-    : _store = store,
-      _selection = SelectionKernel(
-        membership: _StoreSelectionMembership(store),
-      ),
-      _state = ValueNotifier<CanvasRuntimeState>(_runtimeState(store, null));
+  RuntimeRoot._({
+    required DocumentStoreKernel store,
+    required this.config,
+    required CanvasCamera initialViewCamera,
+  }) : _store = store,
+       _viewCamera = initialViewCamera,
+       _selection = SelectionKernel(
+         membership: _StoreSelectionMembership(store),
+       ),
+       _state = ValueNotifier<CanvasRuntimeState>(
+         _runtimeState(store, null, 0),
+       );
 
   final RuntimeConfig config;
   final DocumentStoreKernel _store;
+  CanvasCamera _viewCamera;
   final SelectionKernel _selection;
   final ValueNotifier<CanvasRuntimeState> _state;
+  int _viewCameraRevision = 0;
   bool _isDisposed = false;
   late final CanvasSelectionPort _selectionPort = _RuntimeSelectionPort(this);
+  late final CanvasCameraPort _cameraPort = _RuntimeCameraPort(this);
 
   ValueListenable<CanvasRuntimeState> get state => _state;
   bool get isDisposed => _isDisposed;
   int get projectionBuildCount => _store.projectionBuildCount;
   CanvasSelectionPort get selection => _selectionPort;
+  CanvasCameraPort cameraPort() => _cameraPort;
+  CanvasCamera get viewCamera => _viewCamera;
+  Offset get viewCameraOffset => _viewCamera.offset;
   SelectionFacts get selectionFacts => _selection.selectionFacts;
 
   DocumentFactsPort get documentFactsPort => this;
@@ -215,6 +228,21 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     );
   }
 
+  void setCameraOffset(Offset offset) {
+    _ensureNotDisposed();
+    final camera = CanvasCamera(offset: offset);
+    if (camera == _viewCamera) {
+      return;
+    }
+    _viewCamera = camera;
+    _viewCameraRevision += 1;
+    _publishRuntimeState();
+  }
+
+  void panCameraBy(Offset delta) {
+    setCameraOffset(_viewCamera.offset + delta);
+  }
+
   Never rejectSelectionDocumentMutation() {
     _ensureNotDisposed();
     throw UnsupportedError(
@@ -240,13 +268,22 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     if (!didChange) {
       return;
     }
-    _state.value = _runtimeState(_store, _selection.selectionFacts);
+    _publishRuntimeState();
+  }
+
+  void _publishRuntimeState() {
+    _state.value = _runtimeState(
+      _store,
+      _selection.selectionFacts,
+      _viewCameraRevision,
+    );
   }
 }
 
 CanvasRuntimeState _runtimeState(
   DocumentStoreKernel store,
   SelectionFacts? selectionFacts,
+  int viewCameraRevision,
 ) {
   final selection =
       selectionFacts ??
@@ -257,7 +294,7 @@ CanvasRuntimeState _runtimeState(
       document: store.documentRevision,
       selection: selection.selectionRevision,
       preview: 0,
-      viewCamera: 0,
+      viewCamera: viewCameraRevision,
       resourceVisual: 0,
       interaction: 0,
       epoch: 0,
@@ -286,6 +323,28 @@ final class _StoreSelectionMembership implements SelectionMembershipPort {
     return onlySelectable
         ? store.selectableElementIds
         : store.contentElementIds;
+  }
+}
+
+final class _RuntimeCameraPort implements CanvasCameraPort {
+  const _RuntimeCameraPort(this.root);
+
+  final RuntimeRoot root;
+
+  @override
+  CanvasCamera get camera => root.viewCamera;
+
+  @override
+  Offset get offset => root.viewCameraOffset;
+
+  @override
+  void setOffset(Offset offset) {
+    root.setCameraOffset(offset);
+  }
+
+  @override
+  void panBy(Offset delta) {
+    root.panCameraBy(delta);
   }
 }
 

@@ -34,13 +34,6 @@ const publicApiPlaceholderAllowlist = <PublicApiPlaceholder>[
         'Remove when CanvasCommandPort executes committed mutations.',
   ),
   PublicApiPlaceholder(
-    declarationId: 'CanvasRuntime.camera',
-    ownerPhase: 'P4',
-    reason: 'Runtime camera mutation is owned by the runtime spine.',
-    removalCondition:
-        'Remove when CanvasCameraPort is backed by runtime state.',
-  ),
-  PublicApiPlaceholder(
     declarationId: 'CanvasRuntime.resources',
     ownerPhase: 'P7',
     reason: 'Resource runtime behavior is owned by resources and images.',
