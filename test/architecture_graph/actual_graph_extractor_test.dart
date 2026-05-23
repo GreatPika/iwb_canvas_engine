@@ -254,7 +254,7 @@ void main() {
     'does not expand materialization helpers without a routed throw body',
     () {
       final graph = extractActualArchitectureGraphFromPaths(
-        paths: [unroutedMaterialize],
+        paths: [fixture, unroutedMaterialize],
         memberCallTargets: const {'recordFixtureRoute'},
         sensitiveThrows: const [
           SensitiveThrowCoverage(

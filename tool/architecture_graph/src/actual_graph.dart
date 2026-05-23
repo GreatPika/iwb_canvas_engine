@@ -211,7 +211,7 @@ final class _ActualGraphCollector {
   final List<ExceptionThrowFact> exceptionThrows = [];
   final List<DelegationFact> delegations = [];
   final List<MemberCallFact> memberCalls = [];
-  final Set<String> materializationRouteHelpers = {};
+  final Set<String> materializationRouteHelperKeys = {};
   final List<_PendingMaterializationRouteFact> materializationRoutes = [];
 
   ActualArchitectureGraph toGraph() {
@@ -232,7 +232,7 @@ final class _ActualGraphCollector {
 
   void _promoteMaterializationRoutes() {
     for (final pending in materializationRoutes) {
-      if (!materializationRouteHelpers.contains(pending.helperName)) {
+      if (!materializationRouteHelperKeys.contains(pending.helperKey)) {
         continue;
       }
       memberCalls.add(pending.memberCall);
@@ -243,12 +243,12 @@ final class _ActualGraphCollector {
 
 final class _PendingMaterializationRouteFact {
   const _PendingMaterializationRouteFact({
-    required this.helperName,
+    required this.helperKey,
     required this.memberCall,
     required this.exceptionThrow,
   });
 
-  final String helperName;
+  final String helperKey;
   final MemberCallFact memberCall;
   final ExceptionThrowFact exceptionThrow;
 }
@@ -565,7 +565,7 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
       }
       collector.materializationRoutes.add(
         _PendingMaterializationRouteFact(
-          helperName: node.methodName.name,
+          helperKey: _materializationRouteHelperKey(node.methodName.name),
           memberCall: MemberCallFact(
             path: path,
             line: _line(node),
@@ -594,8 +594,14 @@ final class _ActualGraphVisitor extends RecursiveAstVisitor<void> {
     }
     final route = _throwRoute(expression);
     if (route != null && memberCallTargets.contains(route)) {
-      collector.materializationRouteHelpers.add(_currentMember!);
+      collector.materializationRouteHelperKeys.add(
+        _materializationRouteHelperKey(_currentMember!),
+      );
     }
+  }
+
+  String _materializationRouteHelperKey(String helperName) {
+    return '$path::$helperName';
   }
 
   String? _throwRoute(Expression expression) {
