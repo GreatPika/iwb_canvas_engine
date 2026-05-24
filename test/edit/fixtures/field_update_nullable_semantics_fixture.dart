@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
@@ -23,6 +24,10 @@ void main() {
 
   test('geometry updates advance bounds revision', () {
     expect(_expectGeometryUpdateAdvancesBoundsRevision, returnsNormally);
+  });
+
+  test('visibility updates request selection pruning', () {
+    expect(_expectVisibilityUpdateTouchesSelection, returnsNormally);
   });
 }
 
@@ -134,6 +139,23 @@ void _expectGeometryUpdateAdvancesBoundsRevision() {
   expect(root.documentFacts.documentRevision, 1);
   expect(root.frameRevisions.boundsRevision, 1);
   expect(root.frameRevisions.elementVisualRevision, 1);
+}
+
+void _expectVisibilityUpdateTouchesSelection() {
+  final draft = DraftDocument(
+    _document(),
+    selectedElementIds: [CanvasElementId('rect-1')],
+  );
+
+  draft.updateElement(
+    CanvasRectElementUpdate(
+      id: CanvasElementId('rect-1'),
+      isVisible: const CanvasFieldSet(false),
+    ),
+  );
+
+  expect(draft.touchedSet.selection, isTrue);
+  expect(draft.touchedSet.geometryElementIds, {CanvasElementId('rect-1')});
 }
 
 CanvasDocument _document() {

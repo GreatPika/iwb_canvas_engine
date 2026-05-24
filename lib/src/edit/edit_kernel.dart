@@ -1,17 +1,24 @@
 import 'dart:async';
 import 'dart:ui';
 
+// EditKernel is the public CanvasEdit adapter and must name every DTO that the
+// handle accepts; wrapping those imports would make the mutation boundary less
+// auditable without reducing coupling.
+// ignore_for_file: number-of-imports
+
 import '../api/canvas_document.dart';
 import '../api/canvas_element.dart';
 import '../api/canvas_element_update.dart';
 import '../api/canvas_ids.dart';
 import '../api/canvas_resource.dart';
 import '../api/canvas_runtime.dart';
+import 'commit_plan.dart';
 import '../store/store_revision_delta.dart';
 import 'draft_document.dart';
 
 typedef RuntimeDisposedReader = bool Function();
 typedef DraftDocumentReader = CanvasDocument Function();
+typedef SelectedElementIdsReader = Set<CanvasElementId> Function();
 typedef DocumentInstaller =
     void Function(CanvasDocument document, StoreRevisionDelta delta);
 
@@ -19,13 +26,16 @@ final class EditKernel {
   EditKernel({
     required RuntimeDisposedReader isRuntimeDisposed,
     required DraftDocumentReader readDocument,
+    required SelectedElementIdsReader selectedElementIds,
     required DocumentInstaller installDocument,
   }) : _isRuntimeDisposed = isRuntimeDisposed,
        _readDocument = readDocument,
+       _selectedElementIds = selectedElementIds,
        _installDocument = installDocument;
 
   final RuntimeDisposedReader _isRuntimeDisposed;
   final DraftDocumentReader _readDocument;
+  final SelectedElementIdsReader _selectedElementIds;
   final DocumentInstaller _installDocument;
   late final CanvasEditPort port = _EditKernelPort(this);
   bool _isSessionOpen = false;
@@ -37,7 +47,12 @@ final class EditKernel {
     }
 
     _isSessionOpen = true;
-    final session = EditSession(draft: DraftDocument(_readDocument()));
+    final session = EditSession(
+      draft: DraftDocument(
+        _readDocument(),
+        selectedElementIds: _selectedElementIds(),
+      ),
+    );
 
     try {
       final result = fn(session);
@@ -46,8 +61,9 @@ final class EditKernel {
           'CanvasRuntime edit callbacks must complete synchronously.',
         );
       }
-      if (session.didChange) {
-        _installDocument(session.readDraftDocument(), session.revisionDelta);
+      final plan = session.commitPlan;
+      if (plan.hasChanges) {
+        _installDocument(session.readDraftDocument(), plan.revisionDelta);
       }
 
       return result;
@@ -96,6 +112,7 @@ final class EditSession implements CanvasEdit {
 
   bool get didChange => _draft.didChange;
   StoreRevisionDelta get revisionDelta => _draft.revisionDelta;
+  CommitPlan get commitPlan => _draft.commitPlan;
 
   void close() {
     _isClosed = true;

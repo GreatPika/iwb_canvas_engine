@@ -12,6 +12,9 @@ import '../api/canvas_resource.dart';
 import '../api/canvas_runtime.dart';
 import '../store/resource_table.dart';
 import '../store/store_revision_delta.dart';
+import 'commit_compiler.dart';
+import 'commit_plan.dart';
+import 'touched_set.dart';
 
 // The draft boundary directly names the public DTOs it can mutate so rollback
 // admission remains auditable in one owner instead of being split into sync
@@ -23,23 +26,26 @@ import '../store/store_revision_delta.dart';
 // revision buffers during rollback.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class DraftDocument {
-  DraftDocument(CanvasDocument document)
-    : camera = document.camera,
-      background = document.background,
-      palette = _copyPalette(document.palette),
-      metadata = document.metadata,
-      resources = document.resources
-          .map<CanvasResource>(ResourceTable.copy)
-          .toList(),
-      backgroundElements = List.of(document.backgroundElements),
-      _layers = [
-        for (final layer in document.layers)
-          _DraftLayer(
-            id: layer.id,
-            elements: List.of(layer.elements),
-            metadata: layer.metadata,
-          ),
-      ];
+  DraftDocument(
+    CanvasDocument document, {
+    Iterable<CanvasElementId> selectedElementIds = const [],
+  }) : _selectedElementIds = Set.unmodifiable(selectedElementIds),
+       camera = document.camera,
+       background = document.background,
+       palette = _copyPalette(document.palette),
+       metadata = document.metadata,
+       resources = document.resources
+           .map<CanvasResource>(ResourceTable.copy)
+           .toList(),
+       backgroundElements = List.of(document.backgroundElements),
+       _layers = [
+         for (final layer in document.layers)
+           _DraftLayer(
+             id: layer.id,
+             elements: List.of(layer.elements),
+             metadata: layer.metadata,
+           ),
+       ];
 
   CanvasCamera camera;
   CanvasBackground background;
@@ -48,10 +54,19 @@ final class DraftDocument {
   final List<CanvasResource> resources;
   final List<CanvasElement> backgroundElements;
   final List<_DraftLayer> _layers;
+  final Set<CanvasElementId> _selectedElementIds;
   StoreRevisionDelta _revisionDelta = const StoreRevisionDelta();
+  final TouchedSetBuilder _touchedSet = TouchedSetBuilder();
 
   bool get didChange => _revisionDelta.hasChanges;
   StoreRevisionDelta get revisionDelta => _revisionDelta;
+  TouchedSet get touchedSet => _touchedSet.build();
+  CommitPlan get commitPlan {
+    return const CommitCompiler().compile(
+      revisionDelta: _revisionDelta,
+      touchedSet: touchedSet,
+    );
+  }
 
   CanvasDocument readDocument() => _materialize();
 
@@ -69,6 +84,7 @@ final class DraftDocument {
     }
     final targetIndex = _clampedInsertIndex(index, _layers.length);
     _layers.insert(targetIndex, _DraftLayer(id: id));
+    _touchedSet.touchLayer(id);
     _markLayerStructural();
 
     return true;
@@ -83,6 +99,7 @@ final class DraftDocument {
     final layer = _layerForElementAdd(layerId);
     final targetIndex = _clampedInsertIndex(index, layer.elements.length);
     layer.elements.insert(targetIndex, element);
+    _touchedSet.touchAddedElement(element.id);
     _markStructural();
 
     return element.id;
@@ -92,11 +109,16 @@ final class DraftDocument {
     _admitElement(element);
     final targetIndex = _clampedInsertIndex(index, backgroundElements.length);
     backgroundElements.insert(targetIndex, element);
+    _touchedSet.touchAddedElement(element.id);
+    _touchedSet.touchBackgroundLayer();
     _markStructural();
 
     return element.id;
   }
 
+  // Update admission, draft replacement, touched taxonomy, and revision delta
+  // are kept together so preflight cannot diverge from rollback-visible state.
+  // ignore: halstead-volume
   bool updateElement(CanvasElementUpdate update) {
     final target = _findElement(update.id);
     if (target == null) {
@@ -116,7 +138,25 @@ final class DraftDocument {
     }
     _validateElementResourceReferences(updated);
     target.replace(updated);
-    _markElementUpdate(before, updated);
+    final compiledUpdate = const CommitCompiler().compileElementUpdate(
+      before: before,
+      after: updated,
+    );
+    _touchedSet.touchUpdatedElement(updated.id);
+    if (compiledUpdate.touchesGeometry) {
+      _touchedSet.touchGeometryElement(updated.id);
+    }
+    if (compiledUpdate.transformsElement) {
+      _touchedSet.touchTransformedElement(updated.id);
+    }
+    if (compiledUpdate.touchesVisual) {
+      _touchedSet.touchVisualElement(updated.id);
+    }
+    if (compiledUpdate.prunesSelection &&
+        _selectedElementIds.contains(updated.id)) {
+      _touchedSet.touchSelection();
+    }
+    _markElementUpdate(compiledUpdate.revisionDelta);
 
     return true;
   }
@@ -127,6 +167,10 @@ final class DraftDocument {
       return false;
     }
     target.remove();
+    _touchedSet.touchRemovedElement(id);
+    if (_selectedElementIds.contains(id)) {
+      _touchedSet.touchSelection();
+    }
     _markStructural();
 
     return true;
@@ -136,6 +180,10 @@ final class DraftDocument {
     final index = resources.indexWhere((row) => row.id == resource.id);
     if (index == -1) {
       resources.add(ResourceTable.copy(resource));
+      _touchedSet.touchResourceDescriptor(resource.id);
+      if (_isResourceReferenced(resource.id)) {
+        _touchedSet.touchResourceVisual(resource.id);
+      }
       _markResource();
 
       return true;
@@ -144,6 +192,10 @@ final class DraftDocument {
       return false;
     }
     resources[index] = ResourceTable.copy(resource);
+    _touchedSet.touchResourceDescriptor(resource.id);
+    if (_isResourceReferenced(resource.id)) {
+      _touchedSet.touchResourceVisual(resource.id);
+    }
     _markResource();
 
     return true;
@@ -155,6 +207,7 @@ final class DraftDocument {
       return false;
     }
     resources.removeAt(index);
+    _touchedSet.touchResourceDescriptor(id);
     _markResource();
 
     return true;
@@ -165,6 +218,7 @@ final class DraftDocument {
       return;
     }
     background = CanvasBackground(color: color, grid: background.grid);
+    _touchedSet.touchBackground();
     _markBackground();
   }
 
@@ -173,6 +227,7 @@ final class DraftDocument {
       return;
     }
     background = CanvasBackground(color: background.color, grid: grid);
+    _touchedSet.touchGrid();
     _markGrid();
   }
 
@@ -181,6 +236,7 @@ final class DraftDocument {
       return;
     }
     palette = _copyPalette(nextPalette);
+    _touchedSet.touchPalette();
     _markProjectionOnly();
   }
 
@@ -190,6 +246,7 @@ final class DraftDocument {
       return;
     }
     camera = nextCamera;
+    _touchedSet.touchPersistedCamera();
     _markProjectionOnly();
   }
 
@@ -211,9 +268,14 @@ final class DraftDocument {
     }
 
     if (removedElementIds.isNotEmpty) {
+      _touchedSet.touchRemovedElements(removedElementIds);
+      if (_intersectsSelection(removedElementIds)) {
+        _touchedSet.touchSelection();
+      }
       _markStructural();
     }
     if (removedResourceIds.isNotEmpty) {
+      _touchedSet.touchResourceDescriptors(removedResourceIds);
       _markResource();
     }
 
@@ -289,6 +351,7 @@ final class DraftDocument {
       if (_layers.isEmpty) {
         final layer = _DraftLayer(id: CanvasLayerId('default-layer'));
         _layers.add(layer);
+        _touchedSet.touchLayer(layer.id);
         _markStructural();
 
         return layer;
@@ -303,6 +366,7 @@ final class DraftDocument {
     }
     final layer = _DraftLayer(id: layerId);
     _layers.add(layer);
+    _touchedSet.touchLayer(layer.id);
     _markStructural();
 
     return layer;
@@ -362,6 +426,10 @@ final class DraftDocument {
     }
   }
 
+  bool _intersectsSelection(Iterable<CanvasElementId> ids) {
+    return ids.any(_selectedElementIds.contains);
+  }
+
   void _markStructural() {
     _revisionDelta = _revisionDelta.merge(
       const StoreRevisionDelta.structural(),
@@ -374,8 +442,8 @@ final class DraftDocument {
     );
   }
 
-  void _markElementUpdate(CanvasElement before, CanvasElement after) {
-    _revisionDelta = _revisionDelta.merge(_elementUpdateDelta(before, after));
+  void _markElementUpdate(StoreRevisionDelta delta) {
+    _revisionDelta = _revisionDelta.merge(delta);
   }
 
   void _markBackground() {
@@ -717,165 +785,6 @@ List<T> _requiredListField<T extends Object>(
       path: 'update',
     ),
   };
-}
-
-StoreRevisionDelta _elementUpdateDelta(
-  CanvasElement before,
-  CanvasElement after,
-) {
-  var delta = const StoreRevisionDelta();
-  if (before.transform != after.transform ||
-      before.isVisible != after.isVisible) {
-    delta = delta.merge(const StoreRevisionDelta.elementBounds());
-  }
-  if (before.opacity != after.opacity) {
-    delta = delta.merge(const StoreRevisionDelta.elementVisual());
-  }
-  if (before.hitPadding != after.hitPadding) {
-    delta = delta.merge(const StoreRevisionDelta.elementBoundsOnly());
-  }
-  if (before.isSelectable != after.isSelectable ||
-      before.isLocked != after.isLocked ||
-      before.isDeletable != after.isDeletable ||
-      before.isTransformable != after.isTransformable ||
-      before.metadata != after.metadata) {
-    delta = delta.merge(const StoreRevisionDelta.projectionOnly());
-  }
-
-  return delta.merge(_familyElementUpdateDelta(before, after));
-}
-
-StoreRevisionDelta _familyElementUpdateDelta(
-  CanvasElement before,
-  CanvasElement after,
-) {
-  return switch ((before, after)) {
-    (final CanvasImageElement before, final CanvasImageElement after) =>
-      _imageUpdateDelta(before, after),
-    (final CanvasPathElement before, final CanvasPathElement after) =>
-      _pathUpdateDelta(before, after),
-    (final CanvasTextElement before, final CanvasTextElement after) =>
-      _textUpdateDelta(before, after),
-    (final CanvasStrokeElement before, final CanvasStrokeElement after) =>
-      _strokeUpdateDelta(before, after),
-    (final CanvasLineElement before, final CanvasLineElement after) =>
-      _lineUpdateDelta(before, after),
-    (final CanvasRectElement before, final CanvasRectElement after) =>
-      _rectUpdateDelta(before, after),
-    _ => const StoreRevisionDelta(),
-  };
-}
-
-StoreRevisionDelta _imageUpdateDelta(
-  CanvasImageElement before,
-  CanvasImageElement after,
-) {
-  var delta = const StoreRevisionDelta();
-  if (before.size != after.size) {
-    delta = delta.merge(const StoreRevisionDelta.elementBounds());
-  }
-  if (before.resourceId != after.resourceId ||
-      before.naturalSize != after.naturalSize) {
-    delta = delta.merge(const StoreRevisionDelta.elementVisual());
-  }
-
-  return delta;
-}
-
-StoreRevisionDelta _pathUpdateDelta(
-  CanvasPathElement before,
-  CanvasPathElement after,
-) {
-  var delta = const StoreRevisionDelta();
-  if (before.svgPathData != after.svgPathData ||
-      before.strokeWidth != after.strokeWidth) {
-    delta = delta.merge(const StoreRevisionDelta.elementBounds());
-  }
-  if (before.fillColor != after.fillColor ||
-      before.strokeColor != after.strokeColor ||
-      before.fillRule != after.fillRule) {
-    delta = delta.merge(const StoreRevisionDelta.elementVisual());
-  }
-
-  return delta;
-}
-
-StoreRevisionDelta _textUpdateDelta(
-  CanvasTextElement before,
-  CanvasTextElement after,
-) {
-  var delta = const StoreRevisionDelta();
-  if (_anyChanged([
-    before.text != after.text,
-    before.fontSize != after.fontSize,
-    before.align != after.align,
-    before.textDirection != after.textDirection,
-    before.isBold != after.isBold,
-    before.isItalic != after.isItalic,
-    before.fontFamily != after.fontFamily,
-    before.maxWidth != after.maxWidth,
-    before.lineHeight != after.lineHeight,
-  ])) {
-    delta = delta.merge(const StoreRevisionDelta.elementBounds());
-  }
-  if (before.color != after.color || before.isUnderline != after.isUnderline) {
-    delta = delta.merge(const StoreRevisionDelta.elementVisual());
-  }
-
-  return delta;
-}
-
-bool _anyChanged(Iterable<bool> changes) {
-  return changes.any((changed) => changed);
-}
-
-StoreRevisionDelta _strokeUpdateDelta(
-  CanvasStrokeElement before,
-  CanvasStrokeElement after,
-) {
-  var delta = const StoreRevisionDelta();
-  if (!_sameList(before.points, after.points) ||
-      before.thickness != after.thickness) {
-    delta = delta.merge(const StoreRevisionDelta.elementBounds());
-  }
-  if (before.color != after.color) {
-    delta = delta.merge(const StoreRevisionDelta.elementVisual());
-  }
-
-  return delta;
-}
-
-StoreRevisionDelta _lineUpdateDelta(
-  CanvasLineElement before,
-  CanvasLineElement after,
-) {
-  var delta = const StoreRevisionDelta();
-  if (before.start != after.start ||
-      before.end != after.end ||
-      before.thickness != after.thickness) {
-    delta = delta.merge(const StoreRevisionDelta.elementBounds());
-  }
-  if (before.color != after.color) {
-    delta = delta.merge(const StoreRevisionDelta.elementVisual());
-  }
-
-  return delta;
-}
-
-StoreRevisionDelta _rectUpdateDelta(
-  CanvasRectElement before,
-  CanvasRectElement after,
-) {
-  var delta = const StoreRevisionDelta();
-  if (before.size != after.size || before.strokeWidth != after.strokeWidth) {
-    delta = delta.merge(const StoreRevisionDelta.elementBounds());
-  }
-  if (before.fillColor != after.fillColor ||
-      before.strokeColor != after.strokeColor) {
-    delta = delta.merge(const StoreRevisionDelta.elementVisual());
-  }
-
-  return delta;
 }
 
 // Equality for no-op detection intentionally mirrors all public element

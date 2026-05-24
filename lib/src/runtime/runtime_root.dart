@@ -57,6 +57,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   late final EditKernel _editKernel = EditKernel(
     isRuntimeDisposed: () => _isDisposed,
     readDocument: _store.readDocument,
+    selectedElementIds: () => _selection.selectedElementIds,
     installDocument: _store.installDocument,
   );
   late final CanvasEditPort _editPort = _editKernel.port;
