@@ -38,7 +38,7 @@ final class CanvasRuntime {
 
   CanvasDocument readDocument() => _root.readDocument();
   ValueListenable<CanvasRuntimeState> get state => _root.state;
-  CanvasEditPort get edits => throw UnimplementedError();
+  CanvasEditPort get edits => _root.edits;
   CanvasSelectionPort get selection => _root.selection;
   CanvasToolPort get tools => throw UnimplementedError();
   CanvasCommandPort get commands => throw UnimplementedError();

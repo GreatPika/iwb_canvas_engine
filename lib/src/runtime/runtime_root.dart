@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart';
 import '../api/canvas_document.dart';
 import '../api/canvas_ids.dart';
 import '../api/canvas_runtime.dart';
+import '../edit/edit_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
 import 'document_facts_port.dart';
@@ -53,12 +54,19 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   final ValueNotifier<CanvasRuntimeState> _state;
   int _viewCameraRevision = 0;
   bool _isDisposed = false;
+  late final EditKernel _editKernel = EditKernel(
+    isRuntimeDisposed: () => _isDisposed,
+    readDocument: _store.readDocument,
+    readSummary: () => _store.documentSummary,
+  );
+  late final CanvasEditPort _editPort = _editKernel.port;
   late final CanvasSelectionPort _selectionPort = _RuntimeSelectionPort(this);
   late final CanvasCameraPort _cameraPort = _RuntimeCameraPort(this);
 
   ValueListenable<CanvasRuntimeState> get state => _state;
   bool get isDisposed => _isDisposed;
   int get projectionBuildCount => _store.projectionBuildCount;
+  CanvasEditPort get edits => _editPort;
   CanvasSelectionPort get selection => _selectionPort;
   CanvasCameraPort cameraPort() => _cameraPort;
   CanvasCamera get viewCamera => _viewCamera;
