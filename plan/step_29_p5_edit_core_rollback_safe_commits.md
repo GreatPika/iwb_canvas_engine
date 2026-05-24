@@ -621,7 +621,7 @@ test/guardrails/blocking_suite_test.dart`,
 `dart run tool/guardrails/run.dart`,
 `dart analyze`, `dcm analyze .`, `dcm calculate-metrics .`,
 `dart run tool/architecture_graph/check.dart --phase P5`, and
-`dart run tool/architecture_graph/generate_views.dart --phase P4 --check`.
+`dart run tool/architecture_graph/generate_views.dart --phase P5 --check`.
 `tool/guardrails/src/guardrail_registry.dart` contains executable entries for
 `edit.sync_non_nested`, `edit.rollback_no_effects`,
 `edit.stale_handle_rejected`, `edit.operation_matrix_complete`,

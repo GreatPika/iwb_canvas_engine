@@ -191,7 +191,7 @@ List<_CommandResult> _runDelegatedGenerators({required bool checkOnly}) {
     'run',
     'tool/architecture_graph/generate_views.dart',
     '--phase',
-    'P4',
+    'P5',
     if (checkOnly) '--check',
   ];
 
@@ -491,9 +491,9 @@ String _renderDiagramCatalog(List<_DiagramEntry> diagrams) {
     )
     ..writeln()
     ..writeln('```bash')
-    ..writeln('dart run tool/architecture_graph/generate_views.dart --phase P4')
+    ..writeln('dart run tool/architecture_graph/generate_views.dart --phase P5')
     ..writeln(
-      'dart run tool/architecture_graph/generate_views.dart --phase P4 --check',
+      'dart run tool/architecture_graph/generate_views.dart --phase P5 --check',
     )
     ..writeln('```')
     ..writeln()

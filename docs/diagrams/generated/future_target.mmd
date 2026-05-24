@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Future target architecture graph
-%% Selected phase: P4
+%% Selected phase: P5
 flowchart LR
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]
   draw_tools["Draw tool owner<br/>required by P11"]
@@ -17,7 +17,6 @@ flowchart LR
   store_document_kernel["Document store kernel<br/>required by P4"]
   draw_tools -->|commits through by P11| edit_kernel
   draw_tools -->|publishes preview through by P11| interaction_selection_move
-  edit_kernel -->|changes data through by P5| store_document_kernel
   eraser_text_request -->|commits through by P12| edit_kernel
   eraser_text_request -->|publishes preview through by P12| interaction_selection_move
   eraser_text_request -->|queries hits through by P12| geometry_spatial_index

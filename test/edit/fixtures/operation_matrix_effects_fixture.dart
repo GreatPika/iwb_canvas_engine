@@ -28,6 +28,10 @@ void main() {
   test('removeUnusedResource removes only unused descriptors', () {
     expect(_expectUnusedResourceRemovalInstalls, returnsNormally);
   });
+
+  test('P5 operation matrix rows install expected public effects', () {
+    expect(_expectP5OperationRowsInstallEffects, returnsNormally);
+  });
 }
 
 void _expectAddElementInstallsAfterCommit() {
@@ -160,6 +164,182 @@ void _expectUnusedResourceRemovalInstalls() {
   expect(root.readDocument().resources, isEmpty);
   expect(root.documentFacts.documentRevision, 1);
   expect(root.frameRevisions.resourceRevision, 1);
+}
+
+void _expectP5OperationRowsInstallEffects() {
+  _expectBackgroundElementRow();
+  _expectRemoveElementRow();
+  _expectClearContentRow();
+  _expectPersistedCameraRow();
+  _expectBackgroundRow();
+  _expectGridRow();
+  _expectPaletteRow();
+  _expectUpsertResourceRow();
+}
+
+void _expectBackgroundElementRow() {
+  final root = RuntimeRoot(
+    initialDocument: _documentWithUnusedResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+
+  final id = root.edits.edit((edit) {
+    return edit.addBackgroundElement(_rect('background-1'));
+  });
+
+  expect(id, CanvasElementId('background-1'));
+  expect(root.readDocument().backgroundElements.single.id, id);
+  _expectFrameRevisions(root, structural: 1, bounds: 1, elementVisual: 1);
+}
+
+void _expectRemoveElementRow() {
+  final root = RuntimeRoot(
+    initialDocument: _documentWithUnusedResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+
+  final removed = root.edits.edit((edit) {
+    return edit.removeElement(CanvasElementId('rect-1'));
+  });
+
+  expect(removed, isTrue);
+  expect(root.readDocument().layers.single.elements, isEmpty);
+  _expectFrameRevisions(root, structural: 1, bounds: 1, elementVisual: 1);
+}
+
+void _expectClearContentRow() {
+  final root = RuntimeRoot(
+    initialDocument: _documentWithReferencedResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+
+  final result = root.edits.edit((edit) {
+    return edit.clearContent(removeUnusedResources: true);
+  });
+
+  expect(result.didClearContent, isTrue);
+  expect(result.removedElementIds, {CanvasElementId('image-1')});
+  expect(result.removedResourceIds, {CanvasResourceId('resource-1')});
+  expect(root.readDocument().layers.single.elements, isEmpty);
+  expect(root.readDocument().resources, isEmpty);
+  _expectFrameRevisions(
+    root,
+    structural: 1,
+    bounds: 1,
+    elementVisual: 1,
+    resource: 1,
+  );
+}
+
+void _expectPersistedCameraRow() {
+  final root = RuntimeRoot(
+    initialDocument: _documentWithUnusedResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+
+  root.edits.edit((edit) {
+    edit.setCameraOffset(const Offset(6, 7));
+  });
+
+  expect(root.readDocument().camera.offset, const Offset(6, 7));
+  _expectFrameRevisions(root);
+}
+
+void _expectBackgroundRow() {
+  final root = RuntimeRoot(
+    initialDocument: _documentWithUnusedResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+
+  root.edits.edit((edit) {
+    edit.setBackgroundColor(const Color(0xFF112233));
+  });
+
+  expect(root.readDocument().background.color, const Color(0xFF112233));
+  _expectFrameRevisions(root, background: 1);
+}
+
+void _expectGridRow() {
+  final root = RuntimeRoot(
+    initialDocument: _documentWithUnusedResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+  final grid = CanvasGrid(enabled: true, cellSize: 24);
+
+  root.edits.edit((edit) {
+    edit.setGrid(grid);
+  });
+
+  expect(root.readDocument().background.grid, grid);
+  _expectFrameRevisions(root, grid: 1);
+}
+
+void _expectPaletteRow() {
+  final root = RuntimeRoot(
+    initialDocument: _documentWithUnusedResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+  final palette = CanvasPalette(
+    penColors: const [Color(0xFF000000), Color(0xFFFFFFFF)],
+    backgroundColors: const [Color(0xFF112233)],
+    gridSizes: const [8, 16],
+  );
+
+  root.edits.edit((edit) {
+    edit.setPalette(palette);
+  });
+
+  final installed = root.readDocument().palette;
+  expect(installed.penColors, palette.penColors);
+  expect(installed.backgroundColors, palette.backgroundColors);
+  expect(installed.gridSizes, palette.gridSizes);
+  _expectFrameRevisions(root);
+}
+
+void _expectUpsertResourceRow() {
+  final root = RuntimeRoot(
+    initialDocument: _documentWithReferencedResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+
+  final changed = root.edits.edit((edit) {
+    return edit.upsertResource(
+      CanvasImageResource(
+        id: CanvasResourceId('resource-1'),
+        source: CanvasResourceSource.appKey('resource-1-updated'),
+      ),
+    );
+  });
+
+  expect(changed, isTrue);
+  expect(
+    root.resourceDescriptor(CanvasResourceId('resource-1'))?.appKey,
+    'resource-1-updated',
+  );
+  _expectFrameRevisions(root, resource: 1);
+}
+
+// Revision-family names are part of the matrix proof. Keeping them as explicit
+// call-site parameters makes each row's expected effects auditable.
+// ignore: number-of-parameters
+void _expectFrameRevisions(
+  RuntimeRoot root, {
+  int structural = 0,
+  int bounds = 0,
+  int elementVisual = 0,
+  int background = 0,
+  int grid = 0,
+  int resource = 0,
+}) {
+  expect(root.documentFacts.documentRevision, 1);
+  expect(root.frameRevisions.documentRevision, 1);
+  expect(root.documentFacts.structuralRevision, structural);
+  expect(root.frameRevisions.structuralRevision, structural);
+  expect(root.frameRevisions.boundsRevision, bounds);
+  expect(root.frameRevisions.elementVisualRevision, elementVisual);
+  expect(root.frameRevisions.backgroundRevision, background);
+  expect(root.frameRevisions.gridRevision, grid);
+  expect(root.frameRevisions.resourceRevision, resource);
 }
 
 Matcher _throwsCanvasDataCode(CanvasDataErrorCode code) {

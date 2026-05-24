@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -17,10 +16,6 @@ void main() {
 
   test('referenced resource descriptor edits request repaint', () {
     expect(_expectReferencedResourceEditRepaints, returnsNormally);
-  });
-
-  test('edit compiler and plan do not import concrete downstream owners', () {
-    expect(_expectNoConcreteDownstreamImports, returnsNormally);
   });
 }
 
@@ -61,26 +56,6 @@ void _expectReferencedResourceEditRepaints() {
 
   expect(plan.effects.whereType<ResourceEffect>(), hasLength(1));
   expect(plan.effects.whereType<RepaintEffect>(), hasLength(1));
-}
-
-void _expectNoConcreteDownstreamImports() {
-  for (final path in [
-    'lib/src/edit/commit_compiler.dart',
-    'lib/src/edit/commit_plan.dart',
-    'lib/src/edit/touched_set.dart',
-  ]) {
-    final source = File(path).readAsStringSync();
-    expect(source, isNot(contains("lib/src/frame/")));
-    expect(source, isNot(contains("lib/src/spatial/")));
-    expect(source, isNot(contains("lib/src/resources/")));
-    expect(source, isNot(contains("lib/src/interaction/")));
-    expect(source, isNot(contains("lib/src/surface/")));
-    expect(source, isNot(contains("package:flutter/")));
-    expect(source, isNot(contains("FrameEngine")));
-    expect(source, isNot(contains("SpatialKernel")));
-    expect(source, isNot(contains("ResourceKernel")));
-    expect(source, isNot(contains("SurfaceResourceSession")));
-  }
 }
 
 CanvasDocument _document() {

@@ -1,13 +1,14 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Actual vs expected selected phase diff
-%% Selected phase: P4
+%% Selected phase: P5
 flowchart LR
   api_camera_port["Public camera port<br/>required by P4"]:::ok
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]:::ok
   api_public_surface["Public package surface<br/>required by P0"]:::ok
   codec_schema_v1["Schema v1 codec<br/>required by P3"]:::ok
   diagnostics_hub["Diagnostics hub<br/>required by P3"]:::ok
+  edit_kernel["Edit kernel<br/>required by P5"]:::ok
   runtime_root["Runtime composition root<br/>required by P4"]:::ok
   runtime_view_camera["Runtime-owned view camera<br/>required by P4"]:::ok
   selection_kernel["Selection kernel<br/>required by P4"]:::ok
@@ -18,6 +19,7 @@ flowchart LR
   api_public_surface -->|exports by P2| api_canvas_runtime
   codec_schema_v1 -->|reports errors to by P3| diagnostics_hub
   codec_schema_v1 -->|uses public data by P3| api_public_surface
+  edit_kernel -->|changes data through by P5| store_document_kernel
   runtime_root -->|owns and creates by P4| selection_kernel
   runtime_root -->|owns and creates by P4| store_document_kernel
   classDef ok fill:#f8fafc,stroke:#64748b,color:#0f172a

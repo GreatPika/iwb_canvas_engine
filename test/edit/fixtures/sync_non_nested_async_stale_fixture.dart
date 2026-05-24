@@ -123,18 +123,87 @@ void _expectExceptionClosesHandle() {
 
 void _expectStaleHandleRejected() {
   final runtime = CanvasRuntime(initialDocument: _document());
+  final beforeState = runtime.state.value;
   late CanvasEdit captured;
   runtime.edits.edit((edit) {
     captured = edit;
   });
 
+  _expectStaleReadEntriesRejected(captured);
+  _expectStaleElementEntriesRejected(captured);
+  _expectStaleResourceEntriesRejected(captured);
+  _expectStaleDocumentEntriesRejected(captured);
+  expect(runtime.state.value, same(beforeState));
+  _expectSameDocumentShape(runtime.readDocument(), _document());
+}
+
+void _expectStaleReadEntriesRejected(CanvasEdit captured) {
   expect(() => captured.readDraftDocument(), throwsStateError);
   expect(() => captured.draftSummary, throwsStateError);
+}
+
+void _expectStaleElementEntriesRejected(CanvasEdit captured) {
   expect(
     () => captured.ensureLayer(CanvasLayerId('next-layer')),
     throwsStateError,
   );
   expect(() => captured.addElement(_rect('next')), throwsStateError);
+  expect(
+    () => captured.addBackgroundElement(_rect('next-background')),
+    throwsStateError,
+  );
+  expect(
+    () => captured.updateElement(
+      CanvasRectElementUpdate(
+        id: CanvasElementId('element-1'),
+        fillColor: const CanvasFieldSet(Color(0xFF00FF00)),
+      ),
+    ),
+    throwsStateError,
+  );
+  expect(
+    () => captured.removeElement(CanvasElementId('element-1')),
+    throwsStateError,
+  );
+}
+
+void _expectStaleResourceEntriesRejected(CanvasEdit captured) {
+  expect(
+    () => captured.upsertResource(
+      CanvasImageResource(
+        id: CanvasResourceId('resource-2'),
+        source: CanvasResourceSource.appKey('resource-2'),
+      ),
+    ),
+    throwsStateError,
+  );
+  expect(
+    () => captured.removeUnusedResource(CanvasResourceId('resource-1')),
+    throwsStateError,
+  );
+}
+
+void _expectStaleDocumentEntriesRejected(CanvasEdit captured) {
+  expect(
+    () => captured.setBackgroundColor(const Color(0xFF000000)),
+    throwsStateError,
+  );
+  expect(
+    () => captured.setGrid(CanvasGrid(enabled: true, cellSize: 8)),
+    throwsStateError,
+  );
+  expect(
+    () => captured.setPalette(
+      CanvasPalette(
+        penColors: const [Color(0xFF000000)],
+        backgroundColors: const [],
+        gridSizes: const [8],
+      ),
+    ),
+    throwsStateError,
+  );
+  expect(() => captured.setCameraOffset(const Offset(1, 2)), throwsStateError);
+  expect(() => captured.clearContent(), throwsStateError);
   expect(
     () => captured.replaceDraftDocument(CanvasDocument()),
     throwsStateError,
