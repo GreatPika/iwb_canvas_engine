@@ -76,7 +76,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     },
     readDocument: _store.readDocument,
     selectedElementIds: () => _selection.selectedElementIds,
-    installDocument: _applyEditCommit,
+    installCommit: _applyEditCommit,
     deliverApplyResult: _deliverEditCommitResult,
   );
   late final CanvasEditPort _editPort = _editKernel.port;
@@ -344,15 +344,14 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   }
 
   void _deliverEditCommitResult(CommitApplyResult applyResult) {
-    if (applyResult.shouldPublishState) {
-      _publishRuntimeState();
-    }
-    if (applyResult.effects.isEmpty) {
-      return;
-    }
     _isDeliveringCommitEffects = true;
     try {
-      _commitEffectObserver(applyResult.effects);
+      if (applyResult.shouldPublishState) {
+        _publishRuntimeState();
+      }
+      if (applyResult.effects.isNotEmpty) {
+        _commitEffectObserver(applyResult.effects);
+      }
     } on Object {
       // Observer failures are contained post-commit notifications. A future
       // diagnostics seam can report them without changing commit acceptance.

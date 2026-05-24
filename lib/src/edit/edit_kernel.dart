@@ -11,7 +11,7 @@ import 'edit_session.dart';
 typedef RuntimeDisposedReader = bool Function();
 typedef DraftDocumentReader = CanvasDocument Function();
 typedef SelectedElementIdsReader = Set<CanvasElementId> Function();
-typedef DocumentInstaller =
+typedef CommitInstaller =
     CommitApplyResult Function(CanvasDocument document, CommitPlan plan);
 typedef CommitApplyResultDelivery = void Function(CommitApplyResult result);
 
@@ -20,18 +20,18 @@ final class EditKernel {
     required RuntimeDisposedReader isRuntimeDisposed,
     required DraftDocumentReader readDocument,
     required SelectedElementIdsReader selectedElementIds,
-    required DocumentInstaller installDocument,
+    required CommitInstaller installCommit,
     required CommitApplyResultDelivery deliverApplyResult,
   }) : _isRuntimeDisposed = isRuntimeDisposed,
        _readDocument = readDocument,
        _selectedElementIds = selectedElementIds,
-       _installDocument = installDocument,
+       _installCommit = installCommit,
        _deliverApplyResult = deliverApplyResult;
 
   final RuntimeDisposedReader _isRuntimeDisposed;
   final DraftDocumentReader _readDocument;
   final SelectedElementIdsReader _selectedElementIds;
-  final DocumentInstaller _installDocument;
+  final CommitInstaller _installCommit;
   final CommitApplyResultDelivery _deliverApplyResult;
   late final CanvasEditPort port = _EditKernelPort(this);
   bool _isSessionOpen = false;
@@ -92,7 +92,7 @@ final class EditKernel {
   CommitApplyResult _installCommittedDocument(
     CanvasDocument document,
     CommitPlan plan,
-  ) => _installDocument.call(document, plan);
+  ) => _installCommit.call(document, plan);
 }
 
 final class _EditKernelPort implements CanvasEditPort {

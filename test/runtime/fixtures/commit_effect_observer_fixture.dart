@@ -45,6 +45,7 @@ final class _ObserverDeliveryScenario {
   final List<CanvasRuntimeState> snapshots = <CanvasRuntimeState>[];
   final List<List<CommitEffect>> effectBatches = <List<CommitEffect>>[];
   bool nestedEditCallbackRan = false;
+  int guardedPublicationWindows = 0;
 
   void run() {
     final callbackResult = root.edits.edit((edit) {
@@ -76,6 +77,8 @@ final class _ObserverDeliveryScenario {
   void _recordState() {
     events.add('state');
     snapshots.add(root.state.value);
+    guardedPublicationWindows += 1;
+    _expectDeliveryGuardedMutations();
   }
 
   void _expectInstalledAndPublishedBeforeObserver() {
@@ -111,6 +114,7 @@ final class _ObserverDeliveryScenario {
     expect(callbackResult, 'accepted');
     expect(events, ['state', 'observer']);
     expect(nestedEditCallbackRan, isFalse);
+    expect(guardedPublicationWindows, 1);
   }
 
   void _expectDeliveredEffects() {

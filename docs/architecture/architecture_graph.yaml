@@ -579,12 +579,12 @@ edges:
     sourceDocs:
       - path: docs/contracts/edit_kernel.md
     evidence:
-      - Edit behavior commits through the runtime-composed DocumentInstaller seam into the committed store owner.
+      - Edit behavior commits through the runtime-composed CommitInstaller seam into the committed store owner and returns a post-install apply result.
     actual:
       delegationMembers:
         - EditKernel._installCommittedDocument
       delegationTargets:
-        - DocumentInstaller
+        - CommitInstaller
   - id: load_document.pipeline.replaces_store_document
     from: load_document.pipeline
     to: store.document_kernel
