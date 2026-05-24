@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 
 import '../support/flutter_consumer_test_harness.dart';
+import '../support/flutter_in_package_test_harness.dart';
 
 void main() {
   test('CanvasRuntime publishes initial public state', () async {
@@ -13,6 +14,18 @@ void main() {
       completes,
     );
   });
+
+  test(
+    'RuntimeRoot delivers commit effects after public state publication',
+    () {
+      return expectLater(
+        runFlutterInPackageTest(
+          'test/runtime/fixtures/commit_effect_observer_fixture.dart',
+        ),
+        completes,
+      );
+    },
+  );
 }
 
 const _runtimeStateSource = '''

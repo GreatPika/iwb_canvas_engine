@@ -3,6 +3,7 @@ import 'dart:async';
 import '../api/canvas_document.dart';
 import '../api/canvas_ids.dart';
 import '../api/canvas_runtime.dart';
+import 'commit_applier.dart';
 import 'commit_plan.dart';
 import 'draft_document.dart';
 import 'edit_session.dart';
@@ -11,7 +12,8 @@ typedef RuntimeDisposedReader = bool Function();
 typedef DraftDocumentReader = CanvasDocument Function();
 typedef SelectedElementIdsReader = Set<CanvasElementId> Function();
 typedef DocumentInstaller =
-    void Function(CanvasDocument document, CommitPlan plan);
+    CommitApplyResult Function(CanvasDocument document, CommitPlan plan);
+typedef CommitApplyResultDelivery = void Function(CommitApplyResult result);
 
 final class EditKernel {
   EditKernel({
@@ -19,15 +21,18 @@ final class EditKernel {
     required DraftDocumentReader readDocument,
     required SelectedElementIdsReader selectedElementIds,
     required DocumentInstaller installDocument,
+    required CommitApplyResultDelivery deliverApplyResult,
   }) : _isRuntimeDisposed = isRuntimeDisposed,
        _readDocument = readDocument,
        _selectedElementIds = selectedElementIds,
-       _installDocument = installDocument;
+       _installDocument = installDocument,
+       _deliverApplyResult = deliverApplyResult;
 
   final RuntimeDisposedReader _isRuntimeDisposed;
   final DraftDocumentReader _readDocument;
   final SelectedElementIdsReader _selectedElementIds;
   final DocumentInstaller _installDocument;
+  final CommitApplyResultDelivery _deliverApplyResult;
   late final CanvasEditPort port = _EditKernelPort(this);
   bool _isSessionOpen = false;
   bool get hasOpenSession => _isSessionOpen;
@@ -55,7 +60,13 @@ final class EditKernel {
       }
       final plan = session.commitPlan;
       if (plan.hasChanges) {
-        _installCommittedDocument(session.readDraftDocument(), plan);
+        final applyResult = _installCommittedDocument(
+          session.readDraftDocument(),
+          plan,
+        );
+        session.close();
+        _isSessionOpen = false;
+        _deliverApplyResult(applyResult);
       }
 
       return result;
@@ -78,8 +89,12 @@ final class EditKernel {
     }
   }
 
-  void _installCommittedDocument(CanvasDocument document, CommitPlan plan) =>
-      _installDocument.call(document, plan);
+  CommitApplyResult _installCommittedDocument(
+    CanvasDocument document,
+    CommitPlan plan,
+  ) {
+    return _installDocument.call(document, plan);
+  }
 }
 
 final class _EditKernelPort implements CanvasEditPort {

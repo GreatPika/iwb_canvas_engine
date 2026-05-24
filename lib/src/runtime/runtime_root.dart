@@ -19,6 +19,7 @@ import '../edit/commit_plan.dart';
 import '../edit/edit_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
+import 'commit_effect_observer.dart';
 import 'document_facts_port.dart';
 import 'frame_facts_port.dart';
 import 'runtime_config.dart';
@@ -32,18 +33,22 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   RuntimeRoot({
     required CanvasDocument initialDocument,
     required CanvasRuntimeConfig config,
+    CommitEffectObserver? commitEffectObserver,
   }) : this._(
          store: DocumentStoreKernel(initialDocument),
          config: RuntimeConfig.from(config),
          initialViewCamera: initialDocument.camera,
+         commitEffectObserver: commitEffectObserver ?? _ignoreCommitEffects,
        );
 
   RuntimeRoot._({
     required DocumentStoreKernel store,
     required this.config,
     required CanvasCamera initialViewCamera,
+    required CommitEffectObserver commitEffectObserver,
   }) : _store = store,
        _viewCamera = initialViewCamera,
+       _commitEffectObserver = commitEffectObserver,
        _selection = SelectionKernel(
          membership: _StoreSelectionMembership(store),
        ),
@@ -54,6 +59,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   final RuntimeConfig config;
   final DocumentStoreKernel _store;
   CanvasCamera _viewCamera;
+  final CommitEffectObserver _commitEffectObserver;
   final SelectionKernel _selection;
   final ValueNotifier<CanvasRuntimeState> _state;
   final StreamController<CanvasActionCommitted> _actions =
@@ -61,11 +67,17 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   final CommitApplier _commitApplier = const CommitApplier();
   int _viewCameraRevision = 0;
   bool _isDisposed = false;
+  bool _isDeliveringCommitEffects = false;
   late final EditKernel _editKernel = EditKernel(
-    isRuntimeDisposed: () => _isDisposed,
+    isRuntimeDisposed: () {
+      _ensureNotDeliveringCommitEffects();
+
+      return _isDisposed;
+    },
     readDocument: _store.readDocument,
     selectedElementIds: () => _selection.selectedElementIds,
     installDocument: _applyEditCommit,
+    deliverApplyResult: _deliverEditCommitResult,
   );
   late final CanvasEditPort _editPort = _editKernel.port;
   late final CanvasSelectionPort _selectionPort = _RuntimeSelectionPort(this);
@@ -284,15 +296,25 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   }
 
   void _ensureNotDisposed() {
+    _ensureNotDeliveringCommitEffects();
     if (_isDisposed) {
       throw StateError('CanvasRuntime is disposed.');
     }
   }
 
   void _ensureNoActiveEditSession() {
+    _ensureNotDeliveringCommitEffects();
     if (_editKernel.hasOpenSession) {
       throw StateError(
         'CanvasRuntime public mutations cannot run inside an active edit callback.',
+      );
+    }
+  }
+
+  void _ensureNotDeliveringCommitEffects() {
+    if (_isDeliveringCommitEffects) {
+      throw StateError(
+        'CanvasRuntime public mutations cannot run during post-commit effect delivery.',
       );
     }
   }
@@ -312,18 +334,35 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     );
   }
 
-  void _applyEditCommit(CanvasDocument document, CommitPlan plan) {
-    final applyResult = _commitApplier.apply(
+  CommitApplyResult _applyEditCommit(CanvasDocument document, CommitPlan plan) {
+    return _commitApplier.apply(
       document: document,
       plan: plan,
       installDocument: _store.installDocument,
       installSelectionEffects: _selection.pruneSelection,
     );
+  }
+
+  void _deliverEditCommitResult(CommitApplyResult applyResult) {
     if (applyResult.shouldPublishState) {
       _publishRuntimeState();
     }
+    if (applyResult.effects.isEmpty) {
+      return;
+    }
+    _isDeliveringCommitEffects = true;
+    try {
+      _commitEffectObserver(applyResult.effects);
+    } on Object {
+      // Observer failures are contained post-commit notifications. A future
+      // diagnostics seam can report them without changing commit acceptance.
+    } finally {
+      _isDeliveringCommitEffects = false;
+    }
   }
 }
+
+void _ignoreCommitEffects(List<CommitEffect> _) {}
 
 CanvasRuntimeState _runtimeState(
   DocumentStoreKernel store,
