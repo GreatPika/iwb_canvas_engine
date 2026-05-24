@@ -59,8 +59,7 @@ List<CommitEffect> _effectsFor(
 ) {
   return [
     if (revisionDelta.projection) const ProjectionEffect(),
-    if (revisionDelta.bounds || revisionDelta.structural)
-      SpatialEffect(touchedSet: touchedSet),
+    if (revisionDelta.bounds) SpatialEffect(touchedSet: touchedSet),
     if (revisionDelta.resource) ResourceEffect(touchedSet: touchedSet),
     if (_needsMainRepaint(revisionDelta, touchedSet))
       const RepaintEffect(mainCanvas: true),

@@ -1383,7 +1383,7 @@ final class _ExpectedPlanEffects {
           structural: true,
         ),
         projectionEffect: true,
-        spatialEffect: true,
+        spatialEffect: false,
         resourceEffect: false,
         repaintEffect: true,
         selectionEffect: false,
