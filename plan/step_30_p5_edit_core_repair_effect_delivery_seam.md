@@ -203,7 +203,7 @@ Preserve and rerun existing Step 29 focused tests after adding the repair.
 
 ## Execution Units
 
-### [ ] Unit 1: Durable repair wording
+### [x] Unit 1: Durable repair wording
 
 Owner:
 
@@ -255,7 +255,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Commit apply result boundary
+### [x] Unit 2: Commit apply result boundary
 
 Owner:
 
@@ -292,7 +292,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Runtime effect delivery seam
+### [x] Unit 3: Runtime effect delivery seam
 
 Owner:
 
@@ -361,7 +361,7 @@ Depends On:
 
 Unit 2.
 
-### [ ] Unit 4: Negative paths and replacement split proof
+### [x] Unit 4: Negative paths and replacement split proof
 
 Owner:
 
@@ -402,7 +402,7 @@ Depends On:
 
 Units 2 and 3.
 
-### [ ] Unit 5: Repair verification and graph consistency
+### [x] Unit 5: Repair verification and graph consistency
 
 Owner:
 

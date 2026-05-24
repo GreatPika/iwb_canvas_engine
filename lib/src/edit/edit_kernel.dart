@@ -92,9 +92,7 @@ final class EditKernel {
   CommitApplyResult _installCommittedDocument(
     CanvasDocument document,
     CommitPlan plan,
-  ) {
-    return _installDocument.call(document, plan);
-  }
+  ) => _installDocument.call(document, plan);
 }
 
 final class _EditKernelPort implements CanvasEditPort {
