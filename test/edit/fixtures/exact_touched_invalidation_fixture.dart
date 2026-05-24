@@ -17,6 +17,10 @@ void main() {
     expect(_expectImplicitLayerAndBackgroundTouches, returnsNormally);
   });
 
+  test('background layer removals and clears record their owner', () {
+    expect(_expectBackgroundLayerRemovalTouches, returnsNormally);
+  });
+
   test('document metadata edits record their own flags only', () {
     expect(_expectDocumentFlagTouches, returnsNormally);
   });
@@ -72,6 +76,26 @@ void _expectImplicitLayerAndBackgroundTouches() {
   });
 }
 
+void _expectBackgroundLayerRemovalTouches() {
+  final removeDraft = DraftDocument(_documentWithBackgroundElement());
+
+  removeDraft.removeElement(CanvasElementId('background-1'));
+
+  expect(removeDraft.touchedSet.backgroundLayerChanged, isTrue);
+  expect(removeDraft.touchedSet.removedElementIds, {
+    CanvasElementId('background-1'),
+  });
+
+  final clearDraft = DraftDocument(_documentWithBackgroundElement());
+
+  clearDraft.clearContent(removeUnusedResources: false);
+
+  expect(clearDraft.touchedSet.backgroundLayerChanged, isTrue);
+  expect(clearDraft.touchedSet.removedElementIds, {
+    CanvasElementId('background-1'),
+  });
+}
+
 void _expectDocumentFlagTouches() {
   final draft = DraftDocument(_document());
 
@@ -116,6 +140,10 @@ CanvasDocument _document() {
       CanvasLayer(id: CanvasLayerId('layer-1'), elements: [_rect('rect-1')]),
     ],
   );
+}
+
+CanvasDocument _documentWithBackgroundElement() {
+  return CanvasDocument(backgroundElements: [_rect('background-1')]);
 }
 
 CanvasRectElement _rect(String id) {

@@ -29,10 +29,57 @@ void main() {
     expect(_expectUnusedResourceRemovalInstalls, returnsNormally);
   });
 
-  test('P5 operation matrix rows install expected public effects', () {
-    expect(_expectP5OperationRowsInstallEffects, returnsNormally);
+  test('edit operation matrix rows install expected public effects', () {
+    expect(_expectEditOperationRowsInstallEffects, returnsNormally);
   });
 }
+
+final _editOperationMatrixCases = [
+  const _EditOperationMatrixCase(
+    'addElement content',
+    _expectAddElementInstallsAfterCommit,
+  ),
+  const _EditOperationMatrixCase(
+    'addBackgroundElement',
+    _expectBackgroundElementRow,
+  ),
+  const _EditOperationMatrixCase(
+    'CanvasEdit.updateElement',
+    _expectUpdateElementRow,
+  ),
+  const _EditOperationMatrixCase(
+    'CanvasEdit.removeElement',
+    _expectRemoveElementRow,
+  ),
+  const _EditOperationMatrixCase(
+    'ensureLayer no-op',
+    _expectEnsureLayerNoOpRow,
+  ),
+  const _EditOperationMatrixCase(
+    'ensureLayer changed',
+    _expectEnsureLayerRevisionFamilies,
+  ),
+  const _EditOperationMatrixCase(
+    'CanvasEdit.clearContent',
+    _expectClearContentRow,
+  ),
+  const _EditOperationMatrixCase(
+    'CanvasEdit.setCameraOffset',
+    _expectPersistedCameraRow,
+  ),
+  const _EditOperationMatrixCase('setBackgroundColor', _expectBackgroundRow),
+  const _EditOperationMatrixCase('setGrid', _expectGridRow),
+  const _EditOperationMatrixCase('setPalette', _expectPaletteRow),
+  const _EditOperationMatrixCase(
+    'upsertResource new/changed',
+    _expectUpsertResourceRow,
+  ),
+  const _EditOperationMatrixCase(
+    'removeUnusedResource removed',
+    _expectUnusedResourceRemovalInstalls,
+  ),
+  const _EditOperationMatrixCase('no-op edit', _expectNoOpEditRow),
+];
 
 void _expectAddElementInstallsAfterCommit() {
   final root = RuntimeRoot(
@@ -55,6 +102,22 @@ void _expectAddElementInstallsAfterCommit() {
   expect(root.readDocument().layers.single.elements, hasLength(2));
   expect(root.documentFacts.documentRevision, 1);
   expect(root.documentFacts.structuralRevision, 1);
+}
+
+void _expectEnsureLayerNoOpRow() {
+  final root = RuntimeRoot(
+    initialDocument: _documentWithUnusedResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+
+  final changed = root.edits.edit((edit) {
+    return edit.ensureLayer(CanvasLayerId('layer-1'));
+  });
+
+  expect(changed, isFalse);
+  expect(root.documentFacts.documentRevision, 0);
+  expect(root.documentFacts.structuralRevision, 0);
+  expect(root.frameRevisions.documentRevision, 0);
 }
 
 void _expectEnsureLayerRevisionFamilies() {
@@ -166,15 +229,11 @@ void _expectUnusedResourceRemovalInstalls() {
   expect(root.frameRevisions.resourceRevision, 1);
 }
 
-void _expectP5OperationRowsInstallEffects() {
-  _expectBackgroundElementRow();
-  _expectRemoveElementRow();
-  _expectClearContentRow();
-  _expectPersistedCameraRow();
-  _expectBackgroundRow();
-  _expectGridRow();
-  _expectPaletteRow();
-  _expectUpsertResourceRow();
+void _expectEditOperationRowsInstallEffects() {
+  for (final operationCase in _editOperationMatrixCases) {
+    expect(operationCase.row, isNotEmpty);
+    operationCase.run();
+  }
 }
 
 void _expectBackgroundElementRow() {
@@ -190,6 +249,25 @@ void _expectBackgroundElementRow() {
   expect(id, CanvasElementId('background-1'));
   expect(root.readDocument().backgroundElements.single.id, id);
   _expectFrameRevisions(root, structural: 1, bounds: 1, elementVisual: 1);
+}
+
+void _expectUpdateElementRow() {
+  final root = RuntimeRoot(
+    initialDocument: _documentWithUnusedResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+
+  final changed = root.edits.edit((edit) {
+    return edit.updateElement(
+      CanvasRectElementUpdate(
+        id: CanvasElementId('rect-1'),
+        fillColor: const CanvasFieldSet(Color(0xFF0000FF)),
+      ),
+    );
+  });
+
+  expect(changed, isTrue);
+  _expectFrameRevisions(root, elementVisual: 1);
 }
 
 void _expectRemoveElementRow() {
@@ -319,6 +397,25 @@ void _expectUpsertResourceRow() {
   _expectFrameRevisions(root, resource: 1);
 }
 
+void _expectNoOpEditRow() {
+  final root = RuntimeRoot(
+    initialDocument: _documentWithUnusedResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+  var notifications = 0;
+  root.state.addListener(() {
+    notifications += 1;
+  });
+
+  root.edits.edit((edit) {
+    expect(edit.draftSummary.elementCount, 1);
+  });
+
+  expect(notifications, 0);
+  expect(root.documentFacts.documentRevision, 0);
+  expect(root.frameRevisions.documentRevision, 0);
+}
+
 // Revision-family names are part of the matrix proof. Keeping them as explicit
 // call-site parameters makes each row's expected effects auditable.
 // ignore: number-of-parameters
@@ -390,4 +487,11 @@ CanvasDocument _documentWithReferencedResource() {
 
 CanvasRectElement _rect(String id) {
   return CanvasRectElement(id: CanvasElementId(id), size: const Size(1, 1));
+}
+
+final class _EditOperationMatrixCase {
+  const _EditOperationMatrixCase(this.row, this.run);
+
+  final String row;
+  final void Function() run;
 }

@@ -168,6 +168,9 @@ final class DraftDocument {
     }
     target.remove();
     _touchedSet.touchRemovedElement(id);
+    if (target.isBackgroundLayer) {
+      _touchedSet.touchBackgroundLayer();
+    }
     if (_selectedElementIds.contains(id)) {
       _touchedSet.touchSelection();
     }
@@ -251,39 +254,19 @@ final class DraftDocument {
   }
 
   CanvasClearResult clearContent({required bool removeUnusedResources}) {
-    final removedElementIds = [
-      for (final element in backgroundElements) element.id,
-      for (final layer in _layers)
-        for (final element in layer.elements) element.id,
-    ];
-    backgroundElements.clear();
-    for (final layer in _layers) {
-      layer.elements.clear();
-    }
+    final clearedElements = _clearElements();
+    final removedResourceIds = _clearResources(
+      removeUnusedResources: removeUnusedResources,
+    );
 
-    final removedResourceIds = <CanvasResourceId>[];
-    if (removeUnusedResources) {
-      removedResourceIds.addAll(resources.map((resource) => resource.id));
-      resources.clear();
-    }
-
-    if (removedElementIds.isNotEmpty) {
-      _touchedSet.touchRemovedElements(removedElementIds);
-      if (_intersectsSelection(removedElementIds)) {
-        _touchedSet.touchSelection();
-      }
-      _markStructural();
-    }
-    if (removedResourceIds.isNotEmpty) {
-      _touchedSet.touchResourceDescriptors(removedResourceIds);
-      _markResource();
-    }
+    _markRemovedElements(clearedElements);
+    _markRemovedResources(removedResourceIds);
 
     return CanvasClearResult(
-      removedElementIds: removedElementIds,
+      removedElementIds: clearedElements.allIds,
       removedResourceIds: removedResourceIds,
       didClearContent:
-          removedElementIds.isNotEmpty || removedResourceIds.isNotEmpty,
+          clearedElements.allIds.isNotEmpty || removedResourceIds.isNotEmpty,
     );
   }
 
@@ -335,6 +318,64 @@ final class DraftDocument {
     }
   }
 
+  _ClearedElements _clearElements() {
+    final removedBackgroundElementIds = [
+      for (final element in backgroundElements) element.id,
+    ];
+    final removedContentElementIds = [
+      for (final layer in _layers)
+        for (final element in layer.elements) element.id,
+    ];
+    final removedElementIds = [
+      ...removedBackgroundElementIds,
+      ...removedContentElementIds,
+    ];
+    backgroundElements.clear();
+    for (final layer in _layers) {
+      layer.elements.clear();
+    }
+
+    return _ClearedElements(
+      backgroundIds: removedBackgroundElementIds,
+      allIds: removedElementIds,
+    );
+  }
+
+  List<CanvasResourceId> _clearResources({
+    required bool removeUnusedResources,
+  }) {
+    if (removeUnusedResources) {
+      final removedResourceIds = [
+        for (final resource in resources) resource.id,
+      ];
+      resources.clear();
+
+      return removedResourceIds;
+    }
+
+    return const [];
+  }
+
+  void _markRemovedElements(_ClearedElements clearedElements) {
+    if (clearedElements.allIds.isNotEmpty) {
+      _touchedSet.touchRemovedElements(clearedElements.allIds);
+      if (clearedElements.backgroundIds.isNotEmpty) {
+        _touchedSet.touchBackgroundLayer();
+      }
+      if (_intersectsSelection(clearedElements.allIds)) {
+        _touchedSet.touchSelection();
+      }
+      _markStructural();
+    }
+  }
+
+  void _markRemovedResources(List<CanvasResourceId> removedResourceIds) {
+    if (removedResourceIds.isNotEmpty) {
+      _touchedSet.touchResourceDescriptors(removedResourceIds);
+      _markResource();
+    }
+  }
+
   bool _hasElementId(CanvasElementId id) {
     return backgroundElements.any((element) => element.id == id) ||
         _layers.any(
@@ -381,6 +422,7 @@ final class DraftDocument {
         read: () => backgroundElements[backgroundIndex],
         write: (element) => backgroundElements[backgroundIndex] = element,
         removeAt: () => backgroundElements.removeAt(backgroundIndex),
+        isBackgroundLayer: true,
       );
     }
 
@@ -391,6 +433,7 @@ final class DraftDocument {
           read: () => layer.elements[index],
           write: (element) => layer.elements[index] = element,
           removeAt: () => layer.elements.removeAt(index),
+          isBackgroundLayer: false,
         );
       }
     }
@@ -479,11 +522,19 @@ final class _DraftLayer {
   final CanvasMetadata metadata;
 }
 
+final class _ClearedElements {
+  const _ClearedElements({required this.backgroundIds, required this.allIds});
+
+  final List<CanvasElementId> backgroundIds;
+  final List<CanvasElementId> allIds;
+}
+
 final class _ElementTarget {
   const _ElementTarget({
     required CanvasElement Function() read,
     required void Function(CanvasElement element) write,
     required void Function() removeAt,
+    required this.isBackgroundLayer,
   }) : _read = read,
        _write = write,
        _removeAt = removeAt;
@@ -491,6 +542,7 @@ final class _ElementTarget {
   final CanvasElement Function() _read;
   final void Function(CanvasElement element) _write;
   final void Function() _removeAt;
+  final bool isBackgroundLayer;
 
   CanvasElement get element => _read();
 
