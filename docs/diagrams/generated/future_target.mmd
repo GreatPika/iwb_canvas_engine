@@ -22,6 +22,7 @@ flowchart LR
   eraser_text_request -->|queries hits through by P12| geometry_spatial_index
   flutter_surface -->|is shown through by P13| api_canvas_runtime
   geometry_spatial_index -->|reads data through by P10| interaction_selection_move
+  interaction_selection_move -->|action stream boundary by P10| api_canvas_runtime
   load_document_pipeline -->|changes data through by P6| store_document_kernel
   resource_resolver -->|resolves resources through by P9| frame_renderer
   runtime_root -->|reads from by P9| frame_renderer

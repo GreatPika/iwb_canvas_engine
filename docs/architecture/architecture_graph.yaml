@@ -626,6 +626,21 @@ edges:
     actual:
       delegationTargets:
         - InteractionEngine
+  - id: interaction.selection_move.emits_user_actions
+    from: interaction.selection_move
+    to: api.canvas_runtime
+    kind: action_stream_boundary
+    phaseRequiredBy: P10
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p10_selection_and_move.md
+      - path: docs/contracts/operation_matrix.md
+      - path: docs/contracts/interaction_engine.md
+    evidence:
+      - CanvasRuntime.actions is a concrete P5 stream; P10 interaction commands own typed user-action event emission through that stream.
+    actual:
+      delegationTargets:
+        - CanvasRuntime
   - id: draw.tools.commit_through_edit_kernel
     from: draw.tools
     to: edit.kernel
@@ -767,17 +782,6 @@ placeholders:
       - path: docs/contracts/frame_rendering.md
     evidence:
       - Preview state implementation is future frame-rendering scope and must not fail P4 closure.
-  - id: api.canvas_runtime.actions.future_placeholder
-    node: api.canvas_runtime
-    member: CanvasRuntime.actions
-    path: lib/src/api/canvas_runtime.dart
-    phaseRequiredBy: P10
-    status: deferred_until_phase
-    sourceDocs:
-      - path: docs/implementation/p10_selection_and_move.md
-      - path: docs/contracts/operation_matrix.md
-    evidence:
-      - Action stream implementation is future mutation/action scope and must not fail P4 closure.
   - id: api.canvas_runtime.context_action_requests.future_placeholder
     node: api.canvas_runtime
     member: CanvasRuntime.contextActionRequests
@@ -888,7 +892,6 @@ sourceCoverage:
       - api.canvas_runtime.commands.future_placeholder
       - api.canvas_runtime.resources.future_placeholder
       - api.canvas_runtime.preview.future_placeholder
-      - api.canvas_runtime.actions.future_placeholder
       - api.canvas_runtime.context_action_requests.future_placeholder
   - sectionId: section_05_schema_v1_contract
     disposition: graph_obligation
@@ -939,7 +942,7 @@ sourceCoverage:
       - load_document.pipeline.replaces_store_document
       - draw.tools.commit_through_edit_kernel
       - eraser_text.request.commit_through_edit_kernel
-      - api.canvas_runtime.actions.future_placeholder
+      - interaction.selection_move.emits_user_actions
   - sectionId: section_14_interaction_engine
     disposition: graph_obligation
     graphIds:
@@ -947,6 +950,7 @@ sourceCoverage:
       - draw.tools
       - eraser_text.request
       - geometry.spatial_index.feeds_interaction
+      - interaction.selection_move.emits_user_actions
       - draw.tools.publish_preview_through_interaction
       - eraser_text.request.publish_through_interaction
       - api.canvas_runtime.commands.future_placeholder

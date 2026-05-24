@@ -14,12 +14,6 @@ final class PublicApiPlaceholder {
 
 const publicApiPlaceholderAllowlist = <PublicApiPlaceholder>[
   PublicApiPlaceholder(
-    declarationId: 'CanvasRuntime.edits',
-    ownerPhase: 'P5',
-    reason: 'Edit mutation behavior is owned by the edit core phase.',
-    removalCondition: 'Remove when CanvasEditPort is backed by edit core.',
-  ),
-  PublicApiPlaceholder(
     declarationId: 'CanvasRuntime.tools',
     ownerPhase: 'P11',
     reason: 'Tool behavior is owned by draw tools.',
@@ -46,12 +40,6 @@ const publicApiPlaceholderAllowlist = <PublicApiPlaceholder>[
     reason: 'Preview production is owned by draw tools.',
     removalCondition:
         'Remove when runtime publishes real CanvasPreviewState values.',
-  ),
-  PublicApiPlaceholder(
-    declarationId: 'CanvasRuntime.actions',
-    ownerPhase: 'P5',
-    reason: 'Action stream events depend on committed edit operations.',
-    removalCondition: 'Remove when committed actions are emitted by edit core.',
   ),
   PublicApiPlaceholder(
     declarationId: 'CanvasRuntime.contextActionRequests',
