@@ -5,6 +5,7 @@
 // visible at the facade boundary.
 // ignore_for_file: number-of-imports
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -12,6 +13,9 @@ import 'package:flutter/foundation.dart';
 import '../api/canvas_document.dart';
 import '../api/canvas_ids.dart';
 import '../api/canvas_runtime.dart';
+import '../api/canvas_actions.dart';
+import '../edit/commit_applier.dart';
+import '../edit/commit_plan.dart';
 import '../edit/edit_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
@@ -52,13 +56,16 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   CanvasCamera _viewCamera;
   final SelectionKernel _selection;
   final ValueNotifier<CanvasRuntimeState> _state;
+  final StreamController<CanvasActionCommitted> _actions =
+      StreamController<CanvasActionCommitted>.broadcast();
+  final CommitApplier _commitApplier = const CommitApplier();
   int _viewCameraRevision = 0;
   bool _isDisposed = false;
   late final EditKernel _editKernel = EditKernel(
     isRuntimeDisposed: () => _isDisposed,
     readDocument: _store.readDocument,
     selectedElementIds: () => _selection.selectedElementIds,
-    installDocument: _store.installDocument,
+    installDocument: _applyEditCommit,
   );
   late final CanvasEditPort _editPort = _editKernel.port;
   late final CanvasSelectionPort _selectionPort = _RuntimeSelectionPort(this);
@@ -68,6 +75,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   bool get isDisposed => _isDisposed;
   int get projectionBuildCount => _store.projectionBuildCount;
   CanvasEditPort get edits => _editPort;
+  Stream<CanvasActionCommitted> get actions => _actions.stream;
   CanvasSelectionPort get selection => _selectionPort;
   CanvasCameraPort cameraPort() => _cameraPort;
   CanvasCamera get viewCamera => _viewCamera;
@@ -265,6 +273,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     }
     _isDisposed = true;
     _state.dispose();
+    unawaited(_actions.close());
   }
 
   void _ensureNotDisposed() {
@@ -286,6 +295,18 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
       _selection.selectionFacts,
       _viewCameraRevision,
     );
+  }
+
+  void _applyEditCommit(CanvasDocument document, CommitPlan plan) {
+    final shouldPublish = _commitApplier.apply(
+      document: document,
+      plan: plan,
+      installDocument: _store.installDocument,
+      installSelectionEffects: _selection.pruneSelection,
+    );
+    if (shouldPublish) {
+      _publishRuntimeState();
+    }
   }
 }
 

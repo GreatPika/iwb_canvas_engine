@@ -20,7 +20,7 @@ typedef RuntimeDisposedReader = bool Function();
 typedef DraftDocumentReader = CanvasDocument Function();
 typedef SelectedElementIdsReader = Set<CanvasElementId> Function();
 typedef DocumentInstaller =
-    void Function(CanvasDocument document, StoreRevisionDelta delta);
+    void Function(CanvasDocument document, CommitPlan plan);
 
 final class EditKernel {
   EditKernel({
@@ -63,7 +63,7 @@ final class EditKernel {
       }
       final plan = session.commitPlan;
       if (plan.hasChanges) {
-        _installDocument(session.readDraftDocument(), plan.revisionDelta);
+        _installDocument(session.readDraftDocument(), plan);
       }
 
       return result;

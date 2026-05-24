@@ -100,6 +100,45 @@ void main() {
       ),
     );
   });
+
+  test('document edits publish exactly one coherent state snapshot', () {
+    final runtime = CanvasRuntime(initialDocument: _document());
+    final snapshots = <CanvasRuntimeState>[];
+    runtime.state.addListener(() {
+      snapshots.add(runtime.state.value);
+    });
+
+    runtime.edits.edit((edit) {
+      edit.addElement(
+        CanvasRectElement(
+          id: CanvasElementId('element-2'),
+          size: const Size(3, 3),
+        ),
+        layerId: CanvasLayerId('layer-1'),
+      );
+    });
+
+    expect(snapshots, hasLength(1));
+    expect(snapshots.single.revisions.document, 1);
+    expect(snapshots.single.summary.elementCount, 3);
+
+    runtime.edits.edit((edit) {});
+    expect(snapshots, hasLength(1));
+  });
+
+  test('persisted camera edits do not mutate runtime view camera', () {
+    final runtime = CanvasRuntime(initialDocument: _document());
+    final beforeViewCameraRevision = runtime.state.value.revisions.viewCamera;
+
+    runtime.edits.edit((edit) {
+      edit.setCameraOffset(const Offset(10, 20));
+    });
+
+    expect(runtime.readDocument().camera.offset, const Offset(10, 20));
+    expect(runtime.camera.offset, Offset.zero);
+    expect(runtime.state.value.revisions.document, 1);
+    expect(runtime.state.value.revisions.viewCamera, beforeViewCameraRevision);
+  });
 }
 
 CanvasRuntimeRevisions _zeroRevisions() {
@@ -111,6 +150,34 @@ CanvasRuntimeRevisions _zeroRevisions() {
     resourceVisual: 0,
     interaction: 0,
     epoch: 0,
+  );
+}
+
+CanvasDocument _document() {
+  return CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('resource-1'),
+        source: CanvasResourceSource.appKey('resource-1'),
+      ),
+    ],
+    backgroundElements: [
+      CanvasRectElement(
+        id: CanvasElementId('background-1'),
+        size: const Size(1, 1),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-1'),
+        elements: [
+          CanvasRectElement(
+            id: CanvasElementId('element-1'),
+            size: const Size(2, 2),
+          ),
+        ],
+      ),
+    ],
   );
 }
 ''';

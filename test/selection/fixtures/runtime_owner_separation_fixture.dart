@@ -20,6 +20,7 @@ void main() {
       _verifySelectionNormalization(root, selection, firstProjection);
       _verifyToggleAndNoOpBehavior(root, selection);
       _verifyClearAndSelectAll(root, selection);
+      _verifyEditPrunesSelectionAtomically(root, selection);
       _verifyRejectedMutationCommands(root, selection);
 
       root.dispose();
@@ -123,6 +124,28 @@ void _verifyRejectedMutationCommands(
   expect(() => selection.deleteSelection(), throwsUnsupportedError);
   expect(root.state.value, stateBeforeRejectedCommand);
   expect(root.projectionBuildCount, 1);
+}
+
+void _verifyEditPrunesSelectionAtomically(
+  RuntimeRoot root,
+  CanvasSelectionPort selection,
+) {
+  selection.setSelection([CanvasElementId('element-a')]);
+  final beforeDocumentRevision = root.state.value.revisions.document;
+  final snapshots = <CanvasRuntimeState>[];
+  root.state.addListener(() {
+    snapshots.add(root.state.value);
+  });
+
+  root.edits.edit((edit) {
+    edit.removeElement(CanvasElementId('element-a'));
+  });
+
+  expect(selection.selectedElementIds, isEmpty);
+  expect(root.state.value.revisions.document, beforeDocumentRevision + 1);
+  expect(root.state.value.revisions.selection, 7);
+  expect(snapshots, hasLength(1));
+  expect(snapshots.single.summary.selectedCount, 0);
 }
 
 CanvasDocument _document() {

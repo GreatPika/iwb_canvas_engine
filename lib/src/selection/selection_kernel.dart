@@ -57,6 +57,10 @@ final class SelectionKernel implements SelectionFactsPort {
     );
   }
 
+  bool pruneSelection() {
+    return _replaceSelection(_membership.normalizeSelection(_selectedIds));
+  }
+
   bool _replaceSelection(Iterable<CanvasElementId> ids) {
     final next = LinkedHashSet<CanvasElementId>.of(ids);
     if (_sameMembership(_selectedIds, next)) {
