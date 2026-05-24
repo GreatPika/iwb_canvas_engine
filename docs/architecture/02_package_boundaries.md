@@ -68,6 +68,7 @@ The new package is rooted at the repository top level:
         family_tables.dart
         layer_table.dart
         revision_state.dart
+        store_revision_delta.dart
         document_projection_cache.dart
         resource_table.dart
       selection/
