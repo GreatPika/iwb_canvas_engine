@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
   test('successful synchronous edit preserves callback result', () {
@@ -34,7 +36,8 @@ void main() {
 }
 
 void _expectSynchronousResultPreserved() {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final effectBatches = <List<CommitEffect>>[];
+  final runtime = _runtimeRoot(effectBatches);
   final beforeState = runtime.state.value;
   var notifications = 0;
   runtime.state.addListener(() {
@@ -58,6 +61,7 @@ void _expectSynchronousResultPreserved() {
   expect(result, 'result');
   expect(runtime.state.value, beforeState);
   expect(notifications, 0);
+  expect(effectBatches, isEmpty);
 }
 
 void _expectDisposedRuntimeRejected() {
@@ -71,7 +75,8 @@ void _expectDisposedRuntimeRejected() {
 }
 
 void _expectNestedEditRejected() {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final effectBatches = <List<CommitEffect>>[];
+  final runtime = _runtimeRoot(effectBatches);
   late CanvasEdit captured;
 
   runtime.edits.edit((edit) {
@@ -81,10 +86,12 @@ void _expectNestedEditRejected() {
   });
 
   expect(() => captured.readDraftDocument(), throwsStateError);
+  expect(effectBatches, isEmpty);
 }
 
 void _expectFutureCallbackRejected() {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final effectBatches = <List<CommitEffect>>[];
+  final runtime = _runtimeRoot(effectBatches);
   final beforeState = runtime.state.value;
   var notifications = 0;
   runtime.state.addListener(() {
@@ -98,10 +105,12 @@ void _expectFutureCallbackRejected() {
 
   expect(runtime.state.value, beforeState);
   expect(notifications, 0);
+  expect(effectBatches, isEmpty);
 }
 
 void _expectExceptionClosesHandle() {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final effectBatches = <List<CommitEffect>>[];
+  final runtime = _runtimeRoot(effectBatches);
   final beforeState = runtime.state.value;
   CanvasEdit? captured;
 
@@ -119,10 +128,12 @@ void _expectExceptionClosesHandle() {
   }
   expect(runtime.state.value, beforeState);
   expect(() => staleHandle.draftSummary, throwsStateError);
+  expect(effectBatches, isEmpty);
 }
 
 void _expectStaleHandleRejected() {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final effectBatches = <List<CommitEffect>>[];
+  final runtime = _runtimeRoot(effectBatches);
   final beforeState = runtime.state.value;
   late CanvasEdit captured;
   runtime.edits.edit((edit) {
@@ -135,6 +146,7 @@ void _expectStaleHandleRejected() {
   _expectStaleDocumentEntriesRejected(captured);
   expect(runtime.state.value, same(beforeState));
   _expectSameDocumentShape(runtime.readDocument(), _document());
+  expect(effectBatches, isEmpty);
 }
 
 void _expectStaleReadEntriesRejected(CanvasEdit captured) {
@@ -211,7 +223,8 @@ void _expectStaleDocumentEntriesRejected(CanvasEdit captured) {
 }
 
 void _expectP6PathsRejected() {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final effectBatches = <List<CommitEffect>>[];
+  final runtime = _runtimeRoot(effectBatches);
   final beforeState = runtime.state.value;
 
   expect(
@@ -231,6 +244,15 @@ void _expectP6PathsRejected() {
   expect(runtime.readDocument().backgroundElements, hasLength(1));
   expect(runtime.readDocument().layers, hasLength(1));
   expect(runtime.readDocument().layers.single.elements, hasLength(1));
+  expect(effectBatches, isEmpty);
+}
+
+RuntimeRoot _runtimeRoot(List<List<CommitEffect>> effectBatches) {
+  return RuntimeRoot(
+    initialDocument: _document(),
+    config: const CanvasRuntimeConfig(),
+    commitEffectObserver: effectBatches.add,
+  );
 }
 
 Matcher _throwsP6UnsupportedError() {

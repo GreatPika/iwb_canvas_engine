@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
@@ -54,10 +55,8 @@ void _expectNullableClearUpdatesField() {
 }
 
 void _expectDynamicNonNullableClearRejected() {
-  final root = RuntimeRoot(
-    initialDocument: _document(),
-    config: const CanvasRuntimeConfig(),
-  );
+  final effectBatches = <List<CommitEffect>>[];
+  final root = _runtimeRoot(effectBatches);
   final before = root.readDocument().layers.single.elements.single;
 
   expect(
@@ -74,13 +73,12 @@ void _expectDynamicNonNullableClearRejected() {
 
   expect(root.readDocument().layers.single.elements.single, same(before));
   expect(root.documentFacts.documentRevision, 0);
+  expect(effectBatches, isEmpty);
 }
 
 void _expectNonInvertibleTransformRejected() {
-  final root = RuntimeRoot(
-    initialDocument: _document(),
-    config: const CanvasRuntimeConfig(),
-  );
+  final effectBatches = <List<CommitEffect>>[];
+  final root = _runtimeRoot(effectBatches);
 
   expect(
     () => root.edits.edit((edit) {
@@ -97,13 +95,12 @@ void _expectNonInvertibleTransformRejected() {
   );
 
   expect(root.documentFacts.documentRevision, 0);
+  expect(effectBatches, isEmpty);
 }
 
 void _expectMismatchedUpdateKindRejected() {
-  final root = RuntimeRoot(
-    initialDocument: _document(),
-    config: const CanvasRuntimeConfig(),
-  );
+  final effectBatches = <List<CommitEffect>>[];
+  final root = _runtimeRoot(effectBatches);
 
   expect(
     () => root.edits.edit((edit) {
@@ -118,6 +115,7 @@ void _expectMismatchedUpdateKindRejected() {
   );
 
   expect(root.documentFacts.documentRevision, 0);
+  expect(effectBatches, isEmpty);
 }
 
 void _expectGeometryUpdateAdvancesBoundsRevision() {
@@ -173,5 +171,13 @@ CanvasDocument _document() {
         ],
       ),
     ],
+  );
+}
+
+RuntimeRoot _runtimeRoot(List<List<CommitEffect>> effectBatches) {
+  return RuntimeRoot(
+    initialDocument: _document(),
+    config: const CanvasRuntimeConfig(),
+    commitEffectObserver: effectBatches.add,
   );
 }
