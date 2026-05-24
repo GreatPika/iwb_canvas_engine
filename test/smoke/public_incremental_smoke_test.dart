@@ -54,6 +54,22 @@ void main() {
     expect(selectedState.revisions.selection, 1);
     expect(selectedState.revisions.document, 0);
     expect(runtime.selection.selectedElementIds, {CanvasElementId('element-a')});
+
+    runtime.edits.edit((edit) {
+      edit.addElement(
+        CanvasRectElement(
+          id: CanvasElementId('element-b'),
+          size: const Size(12, 8),
+        ),
+        layerId: CanvasLayerId('layer-a'),
+      );
+    });
+
+    final editedState = runtime.state.value;
+    expect(editedState.summary.elementCount, 2);
+    expect(editedState.revisions.document, 1);
+    expect(editedState.revisions.selection, 1);
+    expect(runtime.readDocument().layers.single.elements, hasLength(2));
   });
 }
 

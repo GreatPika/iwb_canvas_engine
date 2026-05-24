@@ -63,7 +63,7 @@ final class EditKernel {
       }
       final plan = session.commitPlan;
       if (plan.hasChanges) {
-        _installDocument(session.readDraftDocument(), plan);
+        _installCommittedDocument(session.readDraftDocument(), plan);
       }
 
       return result;
@@ -85,6 +85,9 @@ final class EditKernel {
       throw StateError('CanvasRuntime is disposed.');
     }
   }
+
+  void _installCommittedDocument(CanvasDocument document, CommitPlan plan) =>
+      _installDocument.call(document, plan);
 }
 
 final class _EditKernelPort implements CanvasEditPort {

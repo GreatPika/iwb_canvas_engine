@@ -218,6 +218,28 @@ const _testProofPaths = {
     'test/selection/runtime_owner_separation_test.dart',
     'test/guardrails/selection_boundary_checks_test.dart',
   ],
+  'edit.sync_non_nested': ['test/edit/sync_non_nested_async_stale_test.dart'],
+  'edit.rollback_no_effects': [
+    'test/edit/rollback_test.dart',
+    'test/edit/operation_matrix_effects_test.dart',
+  ],
+  'edit.stale_handle_rejected': [
+    'test/edit/sync_non_nested_async_stale_test.dart',
+  ],
+  'edit.operation_matrix_complete': [
+    'test/edit/operation_matrix_effects_test.dart',
+    'test/edit/field_update_nullable_semantics_test.dart',
+    'test/edit/exact_touched_invalidation_test.dart',
+  ],
+  'edit.no_global_invalidation_except_replacement': [
+    'test/edit/exact_touched_invalidation_test.dart',
+  ],
+  'edit.typed_effects_no_frame_dependency': [
+    'test/edit/typed_effects_no_frame_dependency_test.dart',
+  ],
+  'events.low_level_edit_no_user_actions': [
+    'test/edit/low_level_mutations_do_not_emit_actions_test.dart',
+  ],
 };
 
 final Map<String, GuardrailViolationRunner> _violationChecks = {

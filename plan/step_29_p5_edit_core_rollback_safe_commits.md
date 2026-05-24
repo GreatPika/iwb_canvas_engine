@@ -322,7 +322,7 @@ documentation checks triggered by changed docs, and P5 graph checks pass.
 
 ## Execution Units
 
-### [ ] Unit 1: Edit session lifecycle and public facade
+### [x] Unit 1: Edit session lifecycle and public facade
 
 Owner:
 
@@ -366,7 +366,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Store-owned draft mutation and committed document install
+### [x] Unit 2: Store-owned draft mutation and committed document install
 
 Owner:
 
@@ -432,7 +432,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Commit compiler, touched set, and typed effect plan
+### [x] Unit 3: Commit compiler, touched set, and typed effect plan
 
 Owner:
 
@@ -476,7 +476,7 @@ Depends On:
 
 Unit 2.
 
-### [ ] Unit 4: Atomic commit applier and runtime publication
+### [x] Unit 4: Atomic commit applier and runtime publication
 
 Owner:
 
@@ -521,7 +521,7 @@ Depends On:
 
 Units 1, 2, and 3.
 
-### [ ] Unit 5: P5 architecture closure and repository verification
+### [x] Unit 5: P5 architecture closure and repository verification
 
 Owner:
 

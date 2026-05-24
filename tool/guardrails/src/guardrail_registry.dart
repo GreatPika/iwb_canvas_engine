@@ -113,4 +113,26 @@ const _blockingEntries = [
     id: 'selection.owner_separate_from_document',
     suites: {'blocking', 'selection'},
   ),
+  GuardrailEntry(id: 'edit.sync_non_nested', suites: {'blocking', 'edit'}),
+  GuardrailEntry(id: 'edit.rollback_no_effects', suites: {'blocking', 'edit'}),
+  GuardrailEntry(
+    id: 'edit.stale_handle_rejected',
+    suites: {'blocking', 'edit'},
+  ),
+  GuardrailEntry(
+    id: 'edit.operation_matrix_complete',
+    suites: {'blocking', 'edit'},
+  ),
+  GuardrailEntry(
+    id: 'edit.no_global_invalidation_except_replacement',
+    suites: {'blocking', 'edit'},
+  ),
+  GuardrailEntry(
+    id: 'edit.typed_effects_no_frame_dependency',
+    suites: {'blocking', 'edit'},
+  ),
+  GuardrailEntry(
+    id: 'events.low_level_edit_no_user_actions',
+    suites: {'blocking', 'events'},
+  ),
 ];

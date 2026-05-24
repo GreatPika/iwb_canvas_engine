@@ -66,6 +66,12 @@ void main() {
       _expectedSelectionIds,
     );
   });
+  test('edit suite selection routes only edit guardrails', () async {
+    expect(await _selectedGuardrailIds(['--suite=edit']), _expectedEditIds);
+  });
+  test('events suite selection routes only event guardrails', () async {
+    expect(await _selectedGuardrailIds(['--suite=events']), _expectedEventIds);
+  });
   test('shared proof files run once for all covered guardrail ids', () async {
     final proofRuns = <String, int>{};
     final result = await runGuardrailsWithProofRunner(
@@ -264,6 +270,17 @@ const _expectedProjectionIds = {'projection.only_explicit_read_paths'};
 
 const _expectedSelectionIds = {'selection.owner_separate_from_document'};
 
+const _expectedEditIds = {
+  'edit.sync_non_nested',
+  'edit.rollback_no_effects',
+  'edit.stale_handle_rejected',
+  'edit.operation_matrix_complete',
+  'edit.no_global_invalidation_except_replacement',
+  'edit.typed_effects_no_frame_dependency',
+};
+
+const _expectedEventIds = {'events.low_level_edit_no_user_actions'};
+
 const _p4StructuralGuardrailIds = {
   'store.no_public_document_live_state',
   'projection.only_explicit_read_paths',
@@ -304,4 +321,6 @@ const _expectedBlockingHardBoundaryIds = {
   ..._expectedDiagnosticsIds,
   ..._expectedStoreIds,
   ..._expectedSelectionIds,
+  ..._expectedEditIds,
+  ..._expectedEventIds,
 };

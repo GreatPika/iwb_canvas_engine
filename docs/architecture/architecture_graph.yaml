@@ -29,7 +29,7 @@ phases:
       - path: docs/architecture/01_runtime_ownership.md
   - id: P5
     title: Edit core
-    status: future
+    status: closed
     sourceDocs:
       - path: docs/implementation/p5_edit_core.md
       - path: docs/contracts/edit_kernel.md
@@ -275,7 +275,7 @@ nodes:
     owner: edit
     phaseIntroduced: P5
     phaseRequiredBy: P5
-    status: future
+    status: required
     coverageScope: architectureOwners
     sourceDocs:
       - path: docs/implementation/p5_edit_core.md
@@ -575,14 +575,16 @@ edges:
     to: store.document_kernel
     kind: mutation_boundary
     phaseRequiredBy: P5
-    status: future
+    status: required
     sourceDocs:
       - path: docs/contracts/edit_kernel.md
     evidence:
-      - Edit behavior is future-phase controlled mutation over committed state.
+      - Edit behavior commits through the runtime-composed DocumentInstaller seam into the committed store owner.
     actual:
-      compositionFields:
-        - DocumentStoreKernel
+      delegationMembers:
+        - EditKernel._installCommittedDocument
+      delegationTargets:
+        - DocumentInstaller
   - id: load_document.pipeline.replaces_store_document
     from: load_document.pipeline
     to: store.document_kernel
@@ -721,17 +723,6 @@ placeholders:
       - path: docs/implementation/p4_runtime_spine.md
     evidence:
       - Closed P4 camera ownership cannot remain a public facade placeholder.
-  - id: api.canvas_runtime.edit.future_placeholder
-    node: api.canvas_runtime
-    member: CanvasRuntime.edits
-    path: lib/src/api/canvas_runtime.dart
-    phaseRequiredBy: P5
-    status: deferred_until_phase
-    sourceDocs:
-      - path: docs/implementation/p5_edit_core.md
-      - path: docs/contracts/edit_kernel.md
-    evidence:
-      - Edit port placeholder is future P5 scope and must not fail P4 closure.
   - id: api.canvas_runtime.tools.future_placeholder
     node: api.canvas_runtime
     member: CanvasRuntime.tools
@@ -893,7 +884,6 @@ sourceCoverage:
       - flutter.surface
       - api.canvas_runtime.exposes_camera
       - runtime.canvas_runtime.camera.closed_phase_placeholder
-      - api.canvas_runtime.edit.future_placeholder
       - api.canvas_runtime.tools.future_placeholder
       - api.canvas_runtime.commands.future_placeholder
       - api.canvas_runtime.resources.future_placeholder
