@@ -18,6 +18,10 @@ A contract fails if the implementer must make design decisions that the contract
 A full contract is not implementable when the implementer must choose the owner,
 boundary, source of truth, compatibility behavior, execution order, migration or
 retirement strategy, or completion signal.
+For contracts involving callback, listener, observer, delivery, transaction,
+rollback/no-op, atomicity, public-state publication, or guard windows, the
+temporal invariant and every synchronous reentry/interleaving proof surface are
+also decisions that must be settled before implementation.
 
 Treat vague deferrals as unresolved decisions when they appear in required
 fields or execution units. Examples include "as needed", "if applicable",
@@ -98,6 +102,9 @@ Confirm, when relevant:
 - the claimed source of truth governs the work;
 - compatibility constraints match public APIs, data formats, schemas, config, persistence, docs, generated outputs, or external consumers;
 - completion checks are executable or observable enough to prove the unit is done.
+- when temporal/callback/guard obligations are present or inherited from a
+  source input, completion checks name every synchronous callback surface and
+  the expected rejection or no-mutation signal.
 
 Evidence must connect observed facts to contract consequences.
 
@@ -131,6 +138,14 @@ Mark the contract `BLOCKED` when any category applies:
 8. Completion checks are inadequate: checks are vague, non-observable, lack an expected signal, omit the bounded surface being checked, or fail to prove the unit's change.
 9. Cross-section consistency fails: goal, evidence, boundaries, units, dependencies, completion checks, and source inputs contradict each other.
 10. A `Contract Blocker` is invalid: it includes execution units, asks for decisions the repository already determines, or does not identify the exact missing evidence or decision.
+11. Temporal/callback proof is missing: the contract includes or inherits call
+    ordering, observer/listener/callback delivery, transaction, rollback, or
+    no-op boundaries, public-state publication, atomicity, or mutation guard
+    obligations, but completion checks do not prove every synchronous callback
+    surface that can run user or runtime code before the next sequence step.
+    Vague wording such as "guard observer delivery" is insufficient when state
+    listeners, diagnostics, action streams, repaint callbacks, or other
+    synchronous surfaces can also run.
 
 ## Non-Blocking Criteria
 

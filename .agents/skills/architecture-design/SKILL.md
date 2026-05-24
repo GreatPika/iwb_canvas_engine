@@ -113,6 +113,12 @@ Reject any candidate form that fails one of these gates:
   owners when relevant.
 - **Seam**: for shared seams, names successor or retired seam, consumer order,
   retirement gate, and negative proof strategy.
+- **Temporal/reentrancy**: for call ordering, post-commit delivery,
+  transaction, rollback, or no-op boundaries, observers, listeners, callbacks,
+  guards, or public-state publication, names the temporal invariant, every
+  synchronous callback surface in the window, the guard owner, the allowed
+  public observation order, and the verification strategy for
+  reentrant/interleaved mutation attempts.
 - **Verification**: can be proven by executable, structural, semantic, analyzer,
   or documentation checks appropriate to the profile.
 - **Future pressure**: does not make an obvious near-future change harder without
@@ -169,6 +175,8 @@ clear enough:
   `data_flow`;
 - call ordering, lifecycle ordering, sync/async interaction, failure path, or
   migration order -> `sequence`;
+- observer/listener/callback delivery, guard windows, public-state publication,
+  or reentrancy-sensitive ordering -> `sequence`;
 - modes, statuses, terminal states, sessions, or transition rules -> `state`;
 - analyzer or guardrail pipeline -> `data_flow` or `sequence` only if a
   multi-stage recognition path is part of the design.
@@ -187,6 +195,12 @@ Before writing the `.design/` artifact, open
 `assets/design-artifact-template.md` and use it as the artifact shape. The
 template is passive output structure only; routing, gate semantics, profile
 selection, obligations, and design-form rules are owned by this `SKILL.md`.
+
+When a design has temporal/reentrancy pressure, record the invariant,
+synchronous callback surfaces, guard owner, public observation order, and
+verification strategy in the existing selected form, hard gate, lock-required
+facts, verification impact, and handoff sections. Do not add ad hoc template
+sections.
 
 ## Completion Criteria
 

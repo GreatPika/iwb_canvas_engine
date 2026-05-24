@@ -29,6 +29,11 @@ Here are the general guidelines for determining whether something is a bug and s
 8. The bug is clearly not just an intentional change by the original author.
 9. The bug may be a plan mismatch when the diff visibly violates the active plan's scope, required verification, architecture, ownership, cleanup, or checkbox/update obligations.
 10. The bug may be a code smell that creates future risk, including hardcoded special cases, duplicated state, sync glue, one-off call-site patches for shared invariants, silent fallbacks, swallowed failures, inefficient repeated work, bypassed local utilities, or opaque abstractions.
+11. The bug may be a temporal/reentrancy gap when a diff introduces or changes
+    observer/listener/callback delivery, public-state publication,
+    transaction/rollback/no-op ordering, post-commit notification, or mutation
+    guards without guarding every synchronous callback surface that can reenter
+    before the next sequence step.
 
 When flagging a bug, provide an accompanying finding. Once again, these guidelines are not the final word on how to construct a finding -- defer to any subsequent guidelines that you encounter.
 
@@ -56,6 +61,11 @@ GUIDELINES:
 - Check the active plan when one exists. Use `PLAN.md`, referenced step documents, contracts, and repository-local instructions as review evidence when they are relevant to the diff.
 - Flag plan mismatches only when the mismatch is visible and actionable from the reviewed change.
 - Flag hacks, fragile shortcuts, future-risk smells, and inefficient solutions only when the issue was introduced or exposed by the reviewed diff.
+- For changes that add or alter observers, listeners, callbacks,
+  notifications, state publication, transactions, rollback/no-op ordering, or
+  mutation guards, verify guard placement covers the full synchronous execution
+  window and focused tests cover happy-path delivery plus
+  reentrant/interleaved mutation attempts from every callback surface.
 - At the beginning of each finding, tag the issue with a priority level. For example "[P1] Un-padding slices along wrong tensor dimensions". [P0] - Drop everything to fix. Blocking release, operations, or major usage. Only use for universal issues that do not depend on any assumptions about the inputs. [P1] - Urgent. Should be addressed in the next cycle. [P2] - Normal. To be fixed eventually. [P3] - Low. Nice to have.
 
 Do not include numeric priority fields, confidence scores, correctness verdicts, or JSON.

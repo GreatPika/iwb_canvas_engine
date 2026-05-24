@@ -39,6 +39,9 @@ still need to choose:
 - the source of truth;
 - compatibility behavior;
 - execution order;
+- temporal/reentrancy behavior for callback, listener, observer, delivery,
+  transaction, rollback, no-op, atomicity, guard, or public-state publication
+  windows;
 - migration, replacement, or retirement strategy;
 - the completion signal for any execution unit.
 
@@ -73,6 +76,10 @@ When the request names a source input, read it:
 - any other explicit source input file: read that file.
 
 Preserve mandatory decisions, scope, gates, sequencing, and proof expectations.
+If a source input or design mentions temporal ordering, observers, listeners,
+callbacks, post-commit delivery, rollback/no-op behavior, atomicity, public
+state publication, or mutation guards, preserve the named synchronous callback
+surfaces and reentrant/interleaving proof expectations.
 
 If the contract intentionally narrows or excludes anything from a source input, state that exclusion in `Out of Scope` and support it with evidence or an explicit user requirement.
 
@@ -158,6 +165,27 @@ A valid execution unit is not created from a file list alone. It is created from
 
     owner -> boundary -> concrete change -> completion check
 
+## Temporal And Callback Windows
+
+When the change introduces or modifies call ordering, observer/listener/callback
+delivery, post-commit notification, transaction, rollback, or no-op boundaries,
+public-state publication, atomic install, or mutation guards, the contract must
+make the synchronous execution window decision-complete.
+
+Name:
+
+- the temporal invariant;
+- every synchronous callback surface that can run user or runtime code before
+  the next sequence step;
+- the guard or boundary owner;
+- the allowed public observation order;
+- the expected rejection or no-mutation behavior for reentrant/interleaved
+  mutation attempts.
+
+Execution unit completion checks must prove those surfaces explicitly. Do not
+write vague checks such as "guard observer delivery" or "test reentrancy"; name
+the callback surface and expected signal.
+
 ## Output Format
 
 When enough evidence exists, output:
@@ -234,6 +262,10 @@ A completion check may be:
 Do not use vague checks such as "verify correctness", "add tests as needed",
 "ensure it works", "update callers where necessary", or "clean up related code".
 If the exact signal cannot be named, output `Contract Blocker`.
+
+For temporal/callback/guard work, a completion check is inadequate unless it
+names the specific callback surface, the reentrant or interleaved action being
+attempted, and the expected rejection/no-mutation signal.
 
 Do not run the checks in this skill. Only specify them.
 

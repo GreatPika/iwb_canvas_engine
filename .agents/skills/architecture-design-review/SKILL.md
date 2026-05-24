@@ -151,6 +151,12 @@ Mark the review `BLOCKED` when any of these are true:
 34. A materially better form is visible from repository evidence because it has a
     stronger owner fit, lower future migration cost, clearer verification, or
     less source-of-truth risk, and the artifact does not reject it with evidence.
+35. The selected form introduces or changes call ordering, post-commit
+    delivery, observer/listener/callback invocation, transaction, rollback, or
+    no-op boundaries, public-state publication, or runtime mutation guards, but
+    does not name the temporal invariant, every synchronous callback surface in
+    that window, the guard owner, the allowed public observation order, and a
+    verification strategy for reentrant/interleaved mutation attempts.
 
 ## Non-Blocking Weaknesses
 
@@ -182,8 +188,8 @@ example:
    of research inputs.
 5. Verify every hard gate row from the authoring skill: root cause, ownership,
    source of truth, boundary, dependency direction, state/data, seam,
-   verification, and future pressure. A `READY_FOR_CONTRACT` artifact must pass
-   every applicable gate with evidence.
+   temporal/reentrancy, verification, and future pressure. A
+   `READY_FOR_CONTRACT` artifact must pass every applicable gate with evidence.
 6. Reconstruct the viable alternatives from the artifact and evidence. If a
    materially better form is visible, mark the review `BLOCKED`.
 7. Check the diagram need assessment against the fixed trigger matrix.
@@ -193,11 +199,17 @@ example:
    evidence. Do not trust any single doc or diagram blindly, including
    source-of-truth docs; when sources disagree, report the contradiction and
    explain which source is stronger or what evidence is missing.
-9. Confirm source-of-truth and verification impacts match the selected form,
+9. For designs with ordering, delivery, observer/listener/callback surfaces,
+   public-state publication, transactions, rollback/no-op paths, or mutation
+   guards, reconstruct the full synchronous execution window. Check every
+   callback surface that can run user or runtime code before the next sequence
+   step. If the artifact does not identify those surfaces and route them to
+   verification, mark `BLOCKED` with `INSUFFICIENT_VERIFICATION`.
+10. Confirm source-of-truth and verification impacts match the selected form,
    profile, and obligations.
-10. Confirm the handoff contains only facts needed by a future Change Contract:
+11. Confirm the handoff contains only facts needed by a future Change Contract:
    profile, obligations, decisions, evidence, and sequencing constraints.
-11. Return the verdict and findings. Do not repair the artifact in this review
+12. Return the verdict and findings. Do not repair the artifact in this review
    workflow. If the user asks for repair, return the review verdict first and
    handle edits only in a separate authoring workflow.
 
