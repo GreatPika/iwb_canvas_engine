@@ -2,7 +2,12 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_compiler.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
+import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
+import 'package:iwb_canvas_engine/src/edit/touched_set.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 void main() {
   test('accepted content add installs after callback commit', () {
@@ -32,53 +37,378 @@ void main() {
   test('edit operation matrix rows install expected public effects', () {
     expect(_expectEditOperationRowsInstallEffects, returnsNormally);
   });
+
+  test('edit operation matrix rows compile expected typed effects', () {
+    expect(_expectEditOperationRowsCompileEffects, returnsNormally);
+  });
+
+  test('edit operation matrix rows rollback without public effects', () {
+    return expectLater(_expectEditOperationRowsRollback(), completes);
+  });
+
+  test('edit operation matrix rows emit no user actions', () {
+    return expectLater(_expectEditOperationRowsEmitNoActions(), completes);
+  });
+
+  test('updateElement taxonomy tokens compile expected effects', () {
+    expect(_expectUpdateTaxonomyEffects, returnsNormally);
+  });
 }
 
 final _editOperationMatrixCases = [
   const _EditOperationMatrixCase(
     'addElement content',
     _expectAddElementInstallsAfterCommit,
+    _documentWithUnusedResource,
+    _draftAddElement,
+    _editAddElement,
+    _ExpectedPlanEffects.structural(),
   ),
   const _EditOperationMatrixCase(
     'addBackgroundElement',
     _expectBackgroundElementRow,
+    _documentWithUnusedResource,
+    _draftAddBackgroundElement,
+    _editAddBackgroundElement,
+    _ExpectedPlanEffects.structural(),
   ),
   const _EditOperationMatrixCase(
     'CanvasEdit.updateElement',
     _expectUpdateElementRow,
+    _documentWithUnusedResource,
+    _draftUpdateElementVisual,
+    _editUpdateElementVisual,
+    _ExpectedPlanEffects.elementVisual(),
   ),
   const _EditOperationMatrixCase(
     'CanvasEdit.removeElement',
     _expectRemoveElementRow,
+    _documentWithUnusedResource,
+    _draftRemoveElement,
+    _editRemoveElement,
+    _ExpectedPlanEffects.structural(),
   ),
   const _EditOperationMatrixCase(
     'ensureLayer no-op',
     _expectEnsureLayerNoOpRow,
+    _documentWithUnusedResource,
+    _draftEnsureLayerNoOp,
+    _editEnsureLayerNoOp,
+    _ExpectedPlanEffects.empty(),
   ),
   const _EditOperationMatrixCase(
     'ensureLayer changed',
     _expectEnsureLayerRevisionFamilies,
+    _documentWithUnusedResource,
+    _draftEnsureLayerChanged,
+    _editEnsureLayerChanged,
+    _ExpectedPlanEffects.layerStructural(),
   ),
   const _EditOperationMatrixCase(
     'CanvasEdit.clearContent',
     _expectClearContentRow,
+    _documentWithReferencedResource,
+    _draftClearContent,
+    _editClearContent,
+    _ExpectedPlanEffects.clearContent(),
+    selectedElementIds: {'image-1'},
   ),
   const _EditOperationMatrixCase(
     'CanvasEdit.setCameraOffset',
     _expectPersistedCameraRow,
+    _documentWithUnusedResource,
+    _draftSetCameraOffset,
+    _editSetCameraOffset,
+    _ExpectedPlanEffects.projectionOnly(),
   ),
-  const _EditOperationMatrixCase('setBackgroundColor', _expectBackgroundRow),
-  const _EditOperationMatrixCase('setGrid', _expectGridRow),
-  const _EditOperationMatrixCase('setPalette', _expectPaletteRow),
+  const _EditOperationMatrixCase(
+    'setBackgroundColor',
+    _expectBackgroundRow,
+    _documentWithUnusedResource,
+    _draftSetBackgroundColor,
+    _editSetBackgroundColor,
+    _ExpectedPlanEffects.background(),
+  ),
+  const _EditOperationMatrixCase(
+    'setGrid',
+    _expectGridRow,
+    _documentWithUnusedResource,
+    _draftSetGrid,
+    _editSetGrid,
+    _ExpectedPlanEffects.grid(),
+  ),
+  const _EditOperationMatrixCase(
+    'setPalette',
+    _expectPaletteRow,
+    _documentWithUnusedResource,
+    _draftSetPalette,
+    _editSetPalette,
+    _ExpectedPlanEffects.projectionOnly(),
+  ),
   const _EditOperationMatrixCase(
     'upsertResource new/changed',
     _expectUpsertResourceRow,
+    _documentWithReferencedResource,
+    _draftUpsertReferencedResource,
+    _editUpsertReferencedResource,
+    _ExpectedPlanEffects.referencedResource(),
   ),
   const _EditOperationMatrixCase(
     'removeUnusedResource removed',
     _expectUnusedResourceRemovalInstalls,
+    _documentWithUnusedResource,
+    _draftRemoveUnusedResource,
+    _editRemoveUnusedResource,
+    _ExpectedPlanEffects.unusedResourceRemoval(),
   ),
-  const _EditOperationMatrixCase('no-op edit', _expectNoOpEditRow),
+  const _EditOperationMatrixCase(
+    'no-op edit',
+    _expectNoOpEditRow,
+    _documentWithUnusedResource,
+    _draftNoOp,
+    _editNoOp,
+    _ExpectedPlanEffects.empty(),
+  ),
+];
+
+final _updateTaxonomyCases = [
+  _UpdateTaxonomyCase(
+    'CanvasElementUpdate.transform',
+    _rectElement(),
+    _rectElement(transform: CanvasTransform.translation(const Offset(1, 2))),
+    const _ExpectedRevisionDelta.elementBounds(),
+    transformsElement: true,
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasElementUpdate.opacity',
+    _rectElement(),
+    _rectElement(opacity: 0.5),
+    const _ExpectedRevisionDelta.elementVisual(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasElementUpdate.hitPadding',
+    _rectElement(),
+    _rectElement(hitPadding: 4),
+    const _ExpectedRevisionDelta.elementBoundsOnly(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasElementUpdate.isVisible',
+    _rectElement(),
+    _rectElement(isVisible: false),
+    const _ExpectedRevisionDelta.elementBounds(),
+    prunesSelection: true,
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasElementUpdate.isSelectable',
+    _rectElement(),
+    _rectElement(isSelectable: false),
+    const _ExpectedRevisionDelta.projectionOnly(),
+    prunesSelection: true,
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasElementUpdate.isLocked',
+    _rectElement(),
+    _rectElement(isLocked: true),
+    const _ExpectedRevisionDelta.projectionOnly(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasElementUpdate.isDeletable',
+    _rectElement(),
+    _rectElement(isDeletable: false),
+    const _ExpectedRevisionDelta.projectionOnly(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasElementUpdate.isTransformable',
+    _rectElement(),
+    _rectElement(isTransformable: false),
+    const _ExpectedRevisionDelta.projectionOnly(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasElementUpdate.metadata',
+    _rectElement(),
+    _rectElement(metadata: CanvasMetadata.fromMap({'role': 'button'})),
+    const _ExpectedRevisionDelta.projectionOnly(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasImageElementUpdate.resourceId',
+    _imageElement(),
+    _imageElement(resourceId: CanvasResourceId('resource-2')),
+    const _ExpectedRevisionDelta.elementVisual(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasImageElementUpdate.size',
+    _imageElement(),
+    _imageElement(size: const Size(2, 2)),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasImageElementUpdate.naturalSize',
+    _imageElement(),
+    _imageElement(naturalSize: const Size(4, 4)),
+    const _ExpectedRevisionDelta.elementVisual(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasPathElementUpdate.svgPathData',
+    _pathElement(),
+    _pathElement(svgPathData: 'M 0 0 L 2 2'),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasPathElementUpdate.fillColor',
+    _pathElement(),
+    _pathElement(fillColor: const Color(0xFF0000FF)),
+    const _ExpectedRevisionDelta.elementVisual(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasPathElementUpdate.strokeColor',
+    _pathElement(),
+    _pathElement(strokeColor: const Color(0xFF00FF00)),
+    const _ExpectedRevisionDelta.elementVisual(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasPathElementUpdate.strokeWidth',
+    _pathElement(),
+    _pathElement(strokeWidth: 2),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasPathElementUpdate.fillRule',
+    _pathElement(),
+    _pathElement(fillRule: CanvasPathFillRule.evenOdd),
+    const _ExpectedRevisionDelta.elementVisual(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasTextElementUpdate.text',
+    _textElement(),
+    _textElement(text: 'changed'),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasTextElementUpdate.fontSize',
+    _textElement(),
+    _textElement(fontSize: 32),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasTextElementUpdate.align',
+    _textElement(),
+    _textElement(align: TextAlign.center),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasTextElementUpdate.textDirection',
+    _textElement(),
+    _textElement(textDirection: TextDirection.rtl),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasTextElementUpdate.isBold',
+    _textElement(),
+    _textElement(isBold: true),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasTextElementUpdate.isItalic',
+    _textElement(),
+    _textElement(isItalic: true),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasTextElementUpdate.fontFamily',
+    _textElement(),
+    _textElement(fontFamily: 'Inter'),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasTextElementUpdate.maxWidth',
+    _textElement(),
+    _textElement(maxWidth: 42),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasTextElementUpdate.lineHeight',
+    _textElement(),
+    _textElement(lineHeight: 1.4),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasTextElementUpdate.color',
+    _textElement(),
+    _textElement(color: const Color(0xFF0000FF)),
+    const _ExpectedRevisionDelta.elementVisual(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasTextElementUpdate.isUnderline',
+    _textElement(),
+    _textElement(isUnderline: true),
+    const _ExpectedRevisionDelta.elementVisual(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasStrokeElementUpdate.points',
+    _strokeElement(),
+    _strokeElement(points: const [Offset.zero, Offset(2, 2)]),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasStrokeElementUpdate.thickness',
+    _strokeElement(),
+    _strokeElement(thickness: 3),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasStrokeElementUpdate.color',
+    _strokeElement(),
+    _strokeElement(color: const Color(0xFF0000FF)),
+    const _ExpectedRevisionDelta.elementVisual(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasLineElementUpdate.start',
+    _lineElement(),
+    _lineElement(start: const Offset(1, 1)),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasLineElementUpdate.end',
+    _lineElement(),
+    _lineElement(end: const Offset(3, 3)),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasLineElementUpdate.thickness',
+    _lineElement(),
+    _lineElement(thickness: 3),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasLineElementUpdate.color',
+    _lineElement(),
+    _lineElement(color: const Color(0xFF0000FF)),
+    const _ExpectedRevisionDelta.elementVisual(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasRectElementUpdate.size',
+    _rectElement(),
+    _rectElement(size: const Size(2, 2)),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasRectElementUpdate.strokeWidth',
+    _rectElement(),
+    _rectElement(strokeWidth: 2),
+    const _ExpectedRevisionDelta.elementBounds(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasRectElementUpdate.fillColor',
+    _rectElement(),
+    _rectElement(fillColor: const Color(0xFF0000FF)),
+    const _ExpectedRevisionDelta.elementVisual(),
+  ),
+  _UpdateTaxonomyCase(
+    'CanvasRectElementUpdate.strokeColor',
+    _rectElement(),
+    _rectElement(strokeColor: const Color(0xFF00FF00)),
+    const _ExpectedRevisionDelta.elementVisual(),
+  ),
 ];
 
 void _expectAddElementInstallsAfterCommit() {
@@ -234,6 +564,186 @@ void _expectEditOperationRowsInstallEffects() {
     expect(operationCase.row, isNotEmpty);
     operationCase.run();
   }
+}
+
+void _expectEditOperationRowsCompileEffects() {
+  for (final operationCase in _editOperationMatrixCases) {
+    final draft = DraftDocument(
+      operationCase.document(),
+      selectedElementIds: [
+        for (final id in operationCase.selectedElementIds) CanvasElementId(id),
+      ],
+    );
+    operationCase.mutateDraft(draft);
+    _expectPlanEffects(
+      operationCase.row,
+      draft.commitPlan,
+      operationCase.expectedPlanEffects,
+    );
+  }
+}
+
+Future<void> _expectEditOperationRowsRollback() async {
+  for (final operationCase in _editOperationMatrixCases) {
+    final root = RuntimeRoot(
+      initialDocument: operationCase.document(),
+      config: const CanvasRuntimeConfig(),
+    );
+    final actions = <CanvasActionCommitted>[];
+    final subscription = root.actions.listen(actions.add);
+    final beforeDocument = root.readDocument();
+    final beforeState = root.state.value;
+
+    expect(
+      () => root.edits.edit((edit) {
+        operationCase.mutateEdit(edit);
+        throw StateError('rollback ${operationCase.row}');
+      }),
+      throwsStateError,
+      reason: operationCase.row,
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(root.readDocument(), beforeDocument, reason: operationCase.row);
+    expect(root.state.value, beforeState, reason: operationCase.row);
+    expect(actions, isEmpty, reason: operationCase.row);
+    await subscription.cancel();
+  }
+}
+
+Future<void> _expectEditOperationRowsEmitNoActions() async {
+  for (final operationCase in _editOperationMatrixCases) {
+    final root = RuntimeRoot(
+      initialDocument: operationCase.document(),
+      config: const CanvasRuntimeConfig(),
+    );
+    final actions = <CanvasActionCommitted>[];
+    final subscription = root.actions.listen(actions.add);
+
+    root.edits.edit(operationCase.mutateEdit);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(actions, isEmpty, reason: operationCase.row);
+    await subscription.cancel();
+  }
+}
+
+void _expectUpdateTaxonomyEffects() {
+  for (final taxonomyCase in _updateTaxonomyCases) {
+    final result = const CommitCompiler().compileElementUpdate(
+      before: taxonomyCase.before,
+      after: taxonomyCase.after,
+    );
+    _expectTaxonomyCompileResult(taxonomyCase, result);
+    _expectTaxonomyPlanEffects(taxonomyCase, result);
+  }
+}
+
+void _expectTaxonomyCompileResult(
+  _UpdateTaxonomyCase taxonomyCase,
+  ElementUpdateCompileResult result,
+) {
+  expect(
+    result.revisionDelta,
+    _matchesRevisionDelta(taxonomyCase.expectedDelta),
+    reason: taxonomyCase.token,
+  );
+  expect(
+    result.touchesGeometry,
+    taxonomyCase.expectedDelta.bounds,
+    reason: taxonomyCase.token,
+  );
+  expect(
+    result.touchesVisual,
+    taxonomyCase.expectedDelta.elementVisual,
+    reason: taxonomyCase.token,
+  );
+  expect(
+    result.transformsElement,
+    taxonomyCase.transformsElement,
+    reason: taxonomyCase.token,
+  );
+  expect(
+    result.prunesSelection,
+    taxonomyCase.prunesSelection,
+    reason: taxonomyCase.token,
+  );
+}
+
+void _expectTaxonomyPlanEffects(
+  _UpdateTaxonomyCase taxonomyCase,
+  ElementUpdateCompileResult result,
+) {
+  final plan = const CommitCompiler().compile(
+    revisionDelta: result.revisionDelta,
+    touchedSet: result.prunesSelection
+        ? TouchedSet(selection: true)
+        : TouchedSet(),
+  );
+  expect(
+    plan.effects.whereType<ProjectionEffect>(),
+    hasLength(1),
+    reason: taxonomyCase.token,
+  );
+  expect(
+    plan.effects.whereType<SpatialEffect>(),
+    taxonomyCase.expectedDelta.bounds ? hasLength(1) : isEmpty,
+    reason: taxonomyCase.token,
+  );
+  expect(
+    plan.effects.whereType<RepaintEffect>(),
+    taxonomyCase.expectedDelta.elementVisual || result.prunesSelection
+        ? hasLength(1)
+        : isEmpty,
+    reason: taxonomyCase.token,
+  );
+  expect(
+    plan.effects.whereType<SelectionEffect>(),
+    result.prunesSelection ? hasLength(1) : isEmpty,
+    reason: taxonomyCase.token,
+  );
+}
+
+void _expectPlanEffects(
+  String row,
+  CommitPlan plan,
+  _ExpectedPlanEffects expected,
+) {
+  expect(
+    plan.revisionDelta,
+    _matchesRevisionDelta(expected.delta),
+    reason: row,
+  );
+  expect(
+    plan.effects.whereType<ProjectionEffect>(),
+    expected.projectionEffect ? hasLength(1) : isEmpty,
+    reason: row,
+  );
+  expect(
+    plan.effects.whereType<SpatialEffect>(),
+    expected.spatialEffect ? hasLength(1) : isEmpty,
+    reason: row,
+  );
+  expect(
+    plan.effects.whereType<ResourceEffect>(),
+    expected.resourceEffect ? hasLength(1) : isEmpty,
+    reason: row,
+  );
+  expect(
+    plan.effects.whereType<RepaintEffect>(),
+    expected.repaintEffect ? hasLength(1) : isEmpty,
+    reason: row,
+  );
+  expect(
+    plan.effects.whereType<SelectionEffect>(),
+    expected.selectionEffect ? hasLength(1) : isEmpty,
+    reason: row,
+  );
+  expect(
+    plan.effects.whereType<PublicStateEffect>(),
+    expected.publicStateEffect ? hasLength(1) : isEmpty,
+    reason: row,
+  );
 }
 
 void _expectBackgroundElementRow() {
@@ -416,6 +926,150 @@ void _expectNoOpEditRow() {
   expect(root.frameRevisions.documentRevision, 0);
 }
 
+void _draftAddElement(DraftDocument draft) {
+  draft.addElement(_rect('rect-2'), layerId: CanvasLayerId('layer-1'));
+}
+
+void _editAddElement(CanvasEdit edit) {
+  edit.addElement(_rect('rect-2'), layerId: CanvasLayerId('layer-1'));
+}
+
+void _draftAddBackgroundElement(DraftDocument draft) {
+  draft.addBackgroundElement(_rect('background-1'));
+}
+
+void _editAddBackgroundElement(CanvasEdit edit) {
+  edit.addBackgroundElement(_rect('background-1'));
+}
+
+void _draftUpdateElementVisual(DraftDocument draft) {
+  draft.updateElement(
+    CanvasRectElementUpdate(
+      id: CanvasElementId('rect-1'),
+      fillColor: const CanvasFieldSet(Color(0xFF0000FF)),
+    ),
+  );
+}
+
+void _editUpdateElementVisual(CanvasEdit edit) {
+  edit.updateElement(
+    CanvasRectElementUpdate(
+      id: CanvasElementId('rect-1'),
+      fillColor: const CanvasFieldSet(Color(0xFF0000FF)),
+    ),
+  );
+}
+
+void _draftRemoveElement(DraftDocument draft) {
+  draft.removeElement(CanvasElementId('rect-1'));
+}
+
+void _editRemoveElement(CanvasEdit edit) {
+  edit.removeElement(CanvasElementId('rect-1'));
+}
+
+void _draftEnsureLayerNoOp(DraftDocument draft) {
+  draft.ensureLayer(CanvasLayerId('layer-1'));
+}
+
+void _editEnsureLayerNoOp(CanvasEdit edit) {
+  edit.ensureLayer(CanvasLayerId('layer-1'));
+}
+
+void _draftEnsureLayerChanged(DraftDocument draft) {
+  draft.ensureLayer(CanvasLayerId('layer-2'));
+}
+
+void _editEnsureLayerChanged(CanvasEdit edit) {
+  edit.ensureLayer(CanvasLayerId('layer-2'));
+}
+
+void _draftClearContent(DraftDocument draft) {
+  draft.clearContent(removeUnusedResources: true);
+}
+
+void _editClearContent(CanvasEdit edit) {
+  edit.clearContent(removeUnusedResources: true);
+}
+
+void _draftSetCameraOffset(DraftDocument draft) {
+  draft.setCameraOffset(const Offset(6, 7));
+}
+
+void _editSetCameraOffset(CanvasEdit edit) {
+  edit.setCameraOffset(const Offset(6, 7));
+}
+
+void _draftSetBackgroundColor(DraftDocument draft) {
+  draft.setBackgroundColor(const Color(0xFF112233));
+}
+
+void _editSetBackgroundColor(CanvasEdit edit) {
+  edit.setBackgroundColor(const Color(0xFF112233));
+}
+
+void _draftSetGrid(DraftDocument draft) {
+  draft.setGrid(CanvasGrid(enabled: true, cellSize: 24));
+}
+
+void _editSetGrid(CanvasEdit edit) {
+  edit.setGrid(CanvasGrid(enabled: true, cellSize: 24));
+}
+
+void _draftSetPalette(DraftDocument draft) {
+  draft.setPalette(
+    CanvasPalette(
+      penColors: const [Color(0xFF000000), Color(0xFFFFFFFF)],
+      backgroundColors: const [Color(0xFF112233)],
+      gridSizes: const [8, 16],
+    ),
+  );
+}
+
+void _editSetPalette(CanvasEdit edit) {
+  edit.setPalette(
+    CanvasPalette(
+      penColors: const [Color(0xFF000000), Color(0xFFFFFFFF)],
+      backgroundColors: const [Color(0xFF112233)],
+      gridSizes: const [8, 16],
+    ),
+  );
+}
+
+void _draftUpsertReferencedResource(DraftDocument draft) {
+  draft.upsertResource(
+    CanvasImageResource(
+      id: CanvasResourceId('resource-1'),
+      source: CanvasResourceSource.appKey('resource-1-updated'),
+    ),
+  );
+}
+
+void _editUpsertReferencedResource(CanvasEdit edit) {
+  edit.upsertResource(
+    CanvasImageResource(
+      id: CanvasResourceId('resource-1'),
+      source: CanvasResourceSource.appKey('resource-1-updated'),
+    ),
+  );
+}
+
+void _draftRemoveUnusedResource(DraftDocument draft) {
+  draft.removeUnusedResource(CanvasResourceId('resource-1'));
+}
+
+void _editRemoveUnusedResource(CanvasEdit edit) {
+  edit.removeUnusedResource(CanvasResourceId('resource-1'));
+}
+
+void _draftNoOp(DraftDocument draft) {
+  expect(draft.summary.elementCount, 1);
+}
+
+void _editNoOp(CanvasEdit edit) {
+  expect(edit.draftSummary.elementCount, 1);
+}
+
 // Revision-family names are part of the matrix proof. Keeping them as explicit
 // call-site parameters makes each row's expected effects auditable.
 // ignore: number-of-parameters
@@ -437,6 +1091,22 @@ void _expectFrameRevisions(
   expect(root.frameRevisions.backgroundRevision, background);
   expect(root.frameRevisions.gridRevision, grid);
   expect(root.frameRevisions.resourceRevision, resource);
+}
+
+Matcher _matchesRevisionDelta(_ExpectedRevisionDelta expected) {
+  return isA<StoreRevisionDelta>()
+      .having((delta) => delta.document, 'document', expected.document)
+      .having((delta) => delta.projection, 'projection', expected.projection)
+      .having((delta) => delta.structural, 'structural', expected.structural)
+      .having((delta) => delta.bounds, 'bounds', expected.bounds)
+      .having(
+        (delta) => delta.elementVisual,
+        'elementVisual',
+        expected.elementVisual,
+      )
+      .having((delta) => delta.background, 'background', expected.background)
+      .having((delta) => delta.grid, 'grid', expected.grid)
+      .having((delta) => delta.resource, 'resource', expected.resource);
 }
 
 Matcher _throwsCanvasDataCode(CanvasDataErrorCode code) {
@@ -489,9 +1159,379 @@ CanvasRectElement _rect(String id) {
   return CanvasRectElement(id: CanvasElementId(id), size: const Size(1, 1));
 }
 
+// Taxonomy fixtures need compact element builders so each field-effect case can
+// name the one changed field without hiding expected deltas behind setup noise.
+// ignore: number-of-parameters
+CanvasRectElement _rectElement({
+  String id = 'rect-1',
+  Size size = const Size(1, 1),
+  Color? fillColor,
+  Color? strokeColor,
+  double strokeWidth = 0,
+  CanvasTransform transform = CanvasTransform.identity,
+  double opacity = 1,
+  double hitPadding = 0,
+  bool isVisible = true,
+  bool isSelectable = true,
+  bool isLocked = false,
+  bool isDeletable = true,
+  bool isTransformable = true,
+  CanvasMetadata metadata = const CanvasMetadata.empty(),
+}) {
+  return CanvasRectElement(
+    id: CanvasElementId(id),
+    size: size,
+    fillColor: fillColor,
+    strokeColor: strokeColor,
+    strokeWidth: strokeWidth,
+    transform: transform,
+    opacity: opacity,
+    hitPadding: hitPadding,
+    isVisible: isVisible,
+    isSelectable: isSelectable,
+    isLocked: isLocked,
+    isDeletable: isDeletable,
+    isTransformable: isTransformable,
+    metadata: metadata,
+  );
+}
+
+CanvasImageElement _imageElement({
+  String id = 'image-1',
+  CanvasResourceId? resourceId,
+  Size size = const Size(1, 1),
+  Size? naturalSize,
+}) {
+  return CanvasImageElement(
+    id: CanvasElementId(id),
+    resourceId: resourceId ?? CanvasResourceId('resource-1'),
+    size: size,
+    naturalSize: naturalSize,
+  );
+}
+
+// The path builder keeps every taxonomy-owned field visible at call sites.
+// ignore: number-of-parameters
+CanvasPathElement _pathElement({
+  String id = 'path-1',
+  String svgPathData = 'M 0 0 L 1 1',
+  Color? fillColor,
+  Color? strokeColor,
+  double strokeWidth = 0,
+  CanvasPathFillRule fillRule = CanvasPathFillRule.nonZero,
+}) {
+  return CanvasPathElement(
+    id: CanvasElementId(id),
+    svgPathData: svgPathData,
+    fillColor: fillColor,
+    strokeColor: strokeColor,
+    strokeWidth: strokeWidth,
+    fillRule: fillRule,
+  );
+}
+
+// The text builder keeps every taxonomy-owned field visible at call sites.
+// ignore: number-of-parameters
+CanvasTextElement _textElement({
+  String id = 'text-1',
+  String text = 'text',
+  double fontSize = 24,
+  Color color = const Color(0xFF000000),
+  TextAlign align = TextAlign.left,
+  TextDirection textDirection = TextDirection.ltr,
+  bool isBold = false,
+  bool isItalic = false,
+  bool isUnderline = false,
+  String? fontFamily,
+  double? maxWidth,
+  double? lineHeight,
+}) {
+  return CanvasTextElement(
+    id: CanvasElementId(id),
+    text: text,
+    fontSize: fontSize,
+    color: color,
+    align: align,
+    textDirection: textDirection,
+    isBold: isBold,
+    isItalic: isItalic,
+    isUnderline: isUnderline,
+    fontFamily: fontFamily,
+    maxWidth: maxWidth,
+    lineHeight: lineHeight,
+  );
+}
+
+CanvasStrokeElement _strokeElement({
+  String id = 'stroke-1',
+  Iterable<Offset> points = const [Offset.zero, Offset(1, 1)],
+  double thickness = 1,
+  Color color = const Color(0xFF000000),
+}) {
+  return CanvasStrokeElement(
+    id: CanvasElementId(id),
+    points: points,
+    thickness: thickness,
+    color: color,
+  );
+}
+
+// The line builder keeps every taxonomy-owned field visible at call sites.
+// ignore: number-of-parameters
+CanvasLineElement _lineElement({
+  String id = 'line-1',
+  Offset start = Offset.zero,
+  Offset end = const Offset(1, 1),
+  double thickness = 1,
+  Color color = const Color(0xFF000000),
+}) {
+  return CanvasLineElement(
+    id: CanvasElementId(id),
+    start: start,
+    end: end,
+    thickness: thickness,
+    color: color,
+  );
+}
+
 final class _EditOperationMatrixCase {
-  const _EditOperationMatrixCase(this.row, this.run);
+  const _EditOperationMatrixCase(
+    this.row,
+    this.run,
+    this.document,
+    this.mutateDraft,
+    this.mutateEdit,
+    this.expectedPlanEffects, {
+    this.selectedElementIds = const {},
+  });
 
   final String row;
   final void Function() run;
+  final CanvasDocument Function() document;
+  final void Function(DraftDocument draft) mutateDraft;
+  final void Function(CanvasEdit edit) mutateEdit;
+  final _ExpectedPlanEffects expectedPlanEffects;
+  final Set<String> selectedElementIds;
+}
+
+final class _UpdateTaxonomyCase {
+  const _UpdateTaxonomyCase(
+    this.token,
+    this.before,
+    this.after,
+    this.expectedDelta, {
+    this.transformsElement = false,
+    this.prunesSelection = false,
+  });
+
+  final String token;
+  final CanvasElement before;
+  final CanvasElement after;
+  final _ExpectedRevisionDelta expectedDelta;
+  final bool transformsElement;
+  final bool prunesSelection;
+}
+
+// Named constructors mirror operation-matrix effect families; keeping the
+// expected effect vocabulary together makes each row assertion auditable.
+// ignore: number-of-methods
+final class _ExpectedPlanEffects {
+  const _ExpectedPlanEffects({
+    required this.delta,
+    required this.projectionEffect,
+    required this.spatialEffect,
+    required this.resourceEffect,
+    required this.repaintEffect,
+    required this.selectionEffect,
+    required this.publicStateEffect,
+  });
+
+  const _ExpectedPlanEffects.empty()
+    : this(
+        delta: const _ExpectedRevisionDelta(),
+        projectionEffect: false,
+        spatialEffect: false,
+        resourceEffect: false,
+        repaintEffect: false,
+        selectionEffect: false,
+        publicStateEffect: false,
+      );
+
+  const _ExpectedPlanEffects.structural()
+    : this(
+        delta: const _ExpectedRevisionDelta(
+          document: true,
+          projection: true,
+          structural: true,
+          bounds: true,
+          elementVisual: true,
+        ),
+        projectionEffect: true,
+        spatialEffect: true,
+        resourceEffect: false,
+        repaintEffect: true,
+        selectionEffect: false,
+        publicStateEffect: true,
+      );
+
+  const _ExpectedPlanEffects.layerStructural()
+    : this(
+        delta: const _ExpectedRevisionDelta(
+          document: true,
+          projection: true,
+          structural: true,
+        ),
+        projectionEffect: true,
+        spatialEffect: true,
+        resourceEffect: false,
+        repaintEffect: true,
+        selectionEffect: false,
+        publicStateEffect: true,
+      );
+
+  const _ExpectedPlanEffects.elementVisual()
+    : this(
+        delta: const _ExpectedRevisionDelta(
+          document: true,
+          projection: true,
+          elementVisual: true,
+        ),
+        projectionEffect: true,
+        spatialEffect: false,
+        resourceEffect: false,
+        repaintEffect: true,
+        selectionEffect: false,
+        publicStateEffect: true,
+      );
+
+  const _ExpectedPlanEffects.projectionOnly()
+    : this(
+        delta: const _ExpectedRevisionDelta(document: true, projection: true),
+        projectionEffect: true,
+        spatialEffect: false,
+        resourceEffect: false,
+        repaintEffect: false,
+        selectionEffect: false,
+        publicStateEffect: true,
+      );
+
+  const _ExpectedPlanEffects.background()
+    : this(
+        delta: const _ExpectedRevisionDelta(
+          document: true,
+          projection: true,
+          background: true,
+        ),
+        projectionEffect: true,
+        spatialEffect: false,
+        resourceEffect: false,
+        repaintEffect: true,
+        selectionEffect: false,
+        publicStateEffect: true,
+      );
+
+  const _ExpectedPlanEffects.grid()
+    : this(
+        delta: const _ExpectedRevisionDelta(
+          document: true,
+          projection: true,
+          grid: true,
+        ),
+        projectionEffect: true,
+        spatialEffect: false,
+        resourceEffect: false,
+        repaintEffect: true,
+        selectionEffect: false,
+        publicStateEffect: true,
+      );
+
+  const _ExpectedPlanEffects.clearContent()
+    : this(
+        delta: const _ExpectedRevisionDelta(
+          document: true,
+          projection: true,
+          structural: true,
+          bounds: true,
+          elementVisual: true,
+          resource: true,
+        ),
+        projectionEffect: true,
+        spatialEffect: true,
+        resourceEffect: true,
+        repaintEffect: true,
+        selectionEffect: true,
+        publicStateEffect: true,
+      );
+
+  const _ExpectedPlanEffects.referencedResource()
+    : this(
+        delta: const _ExpectedRevisionDelta(
+          document: true,
+          projection: true,
+          resource: true,
+        ),
+        projectionEffect: true,
+        spatialEffect: false,
+        resourceEffect: true,
+        repaintEffect: true,
+        selectionEffect: false,
+        publicStateEffect: true,
+      );
+
+  const _ExpectedPlanEffects.unusedResourceRemoval()
+    : this(
+        delta: const _ExpectedRevisionDelta(
+          document: true,
+          projection: true,
+          resource: true,
+        ),
+        projectionEffect: true,
+        spatialEffect: false,
+        resourceEffect: true,
+        repaintEffect: false,
+        selectionEffect: false,
+        publicStateEffect: true,
+      );
+
+  final _ExpectedRevisionDelta delta;
+  final bool projectionEffect;
+  final bool spatialEffect;
+  final bool resourceEffect;
+  final bool repaintEffect;
+  final bool selectionEffect;
+  final bool publicStateEffect;
+}
+
+final class _ExpectedRevisionDelta {
+  const _ExpectedRevisionDelta({
+    this.document = false,
+    this.projection = false,
+    this.structural = false,
+    this.bounds = false,
+    this.elementVisual = false,
+    this.background = false,
+    this.grid = false,
+    this.resource = false,
+  });
+
+  const _ExpectedRevisionDelta.projectionOnly()
+    : this(document: true, projection: true);
+
+  const _ExpectedRevisionDelta.elementVisual()
+    : this(document: true, projection: true, elementVisual: true);
+
+  const _ExpectedRevisionDelta.elementBoundsOnly()
+    : this(document: true, projection: true, bounds: true);
+
+  const _ExpectedRevisionDelta.elementBounds()
+    : this(document: true, projection: true, bounds: true, elementVisual: true);
+
+  final bool document;
+  final bool projection;
+  final bool structural;
+  final bool bounds;
+  final bool elementVisual;
+  final bool background;
+  final bool grid;
+  final bool resource;
 }

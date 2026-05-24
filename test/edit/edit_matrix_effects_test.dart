@@ -22,8 +22,11 @@ void main() {
     expect(_implementedEditMethodsMissingFromOperationMatrix(), isEmpty);
   });
 
-  test('updateElement taxonomy rows are implemented by CommitCompiler', () {
-    expect(_missingCompilerTaxonomyFields(), isEmpty);
+  test('updateElement taxonomy fixture covers every field token', () {
+    expect(
+      _updateTaxonomyTokensCoveredByFixture(),
+      _updateElementTaxonomyTokens(),
+    );
   });
 }
 
@@ -34,6 +37,15 @@ Set<String> _operationMatrixRowsCoveredByFixture() {
   final rowPattern = RegExp(r"_EditOperationMatrixCase\(\s*'([^']+)'");
 
   return {for (final match in rowPattern.allMatches(source)) ?match.group(1)};
+}
+
+Set<String> _updateTaxonomyTokensCoveredByFixture() {
+  final source = File(
+    'test/edit/fixtures/edit_matrix_effects_fixture.dart',
+  ).readAsStringSync();
+  final tokenPattern = RegExp(r"_UpdateTaxonomyCase\(\s*'([^']+)'");
+
+  return {for (final match in tokenPattern.allMatches(source)) ?match.group(1)};
 }
 
 Set<String> _editOwnedRowsFromOperationMatrix() {
@@ -127,21 +139,6 @@ Set<String> _firstCaptureGroups(RegExp pattern, String source) {
   return values;
 }
 
-List<String> _missingCompilerTaxonomyFields() {
-  final compilerSource = File(
-    'lib/src/edit/commit_compiler.dart',
-  ).readAsStringSync();
-
-  return [
-    for (final token in _updateElementTaxonomyTokens())
-      if (!_compilerFunctionForToken(
-        compilerSource,
-        token,
-      ).contains(_fieldComparisonForToken(token)))
-        token,
-  ];
-}
-
 Set<String> _updateElementTaxonomyTokens() {
   final source = File('docs/contracts/edit_kernel.md').readAsStringSync();
   final taxonomyStart = source.indexOf('Field taxonomy:');
@@ -157,43 +154,6 @@ Set<String> _updateElementTaxonomyTokens() {
     for (final row in rows)
       for (final match in tokenPattern.allMatches(row)) ?match.group(1),
   };
-}
-
-String _compilerFunctionForToken(String source, String token) {
-  return _functionBody(source, _taxonomyFunctionName(token));
-}
-
-String _taxonomyFunctionName(String token) {
-  return switch (token.substring(0, token.indexOf('.'))) {
-    'CanvasElementUpdate' => '_elementUpdateDelta',
-    'CanvasImageElementUpdate' => '_imageUpdateDelta',
-    'CanvasPathElementUpdate' => '_pathUpdateDelta',
-    'CanvasTextElementUpdate' => '_textUpdateDelta',
-    'CanvasStrokeElementUpdate' => '_strokeUpdateDelta',
-    'CanvasLineElementUpdate' => '_lineUpdateDelta',
-    'CanvasRectElementUpdate' => '_rectUpdateDelta',
-    final owner => throw StateError('Unknown update taxonomy owner: $owner'),
-  };
-}
-
-String _fieldComparisonForToken(String token) {
-  final field = token.substring(token.indexOf('.') + 1);
-  if (field == 'points') {
-    return '_sameList(before.points, after.points)';
-  }
-
-  return 'before.$field != after.$field';
-}
-
-String _functionBody(String source, String functionName) {
-  final declaration = RegExp(
-    'StoreRevisionDelta\\s+$functionName\\s*\\(',
-  ).firstMatch(source);
-  if (declaration == null) {
-    throw StateError('Missing compiler taxonomy function: $functionName');
-  }
-
-  return _balancedBody(source, source.indexOf('{', declaration.start));
 }
 
 String _balancedBody(String source, int bodyStart) {

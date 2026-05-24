@@ -74,7 +74,6 @@ bool _needsMainRepaint(
   TouchedSet touchedSet,
 ) {
   return revisionDelta.structural ||
-      revisionDelta.bounds ||
       revisionDelta.elementVisual ||
       revisionDelta.background ||
       revisionDelta.grid ||
