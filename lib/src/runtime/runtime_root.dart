@@ -313,13 +313,13 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   }
 
   void _applyEditCommit(CanvasDocument document, CommitPlan plan) {
-    final shouldPublish = _commitApplier.apply(
+    final applyResult = _commitApplier.apply(
       document: document,
       plan: plan,
       installDocument: _store.installDocument,
       installSelectionEffects: _selection.pruneSelection,
     );
-    if (shouldPublish) {
+    if (applyResult.shouldPublishState) {
       _publishRuntimeState();
     }
   }

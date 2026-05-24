@@ -2,12 +2,23 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
+import 'package:iwb_canvas_engine/src/edit/touched_set.dart';
+import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 void main() {
   test('commit plan emits typed descriptions for future owners', () {
     expect(_expectTypedEffects, returnsNormally);
+  });
+
+  test('commit applier returns immutable post-install apply result', () {
+    expect(_expectPostInstallApplyResult, returnsNormally);
+  });
+
+  test('commit applier skips installers for empty plans', () {
+    expect(_expectEmptyApplyResult, returnsNormally);
   });
 
   test('unused resource descriptor edits do not request repaint', () {
@@ -31,6 +42,54 @@ void _expectTypedEffects() {
   expect(plan.effects.whereType<SpatialEffect>(), hasLength(1));
   expect(plan.effects.whereType<RepaintEffect>(), hasLength(1));
   expect(plan.effects.whereType<PublicStateEffect>(), hasLength(1));
+}
+
+void _expectPostInstallApplyResult() {
+  final events = <String>[];
+  final effects = [const ProjectionEffect(), const PublicStateEffect()];
+  final plan = CommitPlan(
+    revisionDelta: const StoreRevisionDelta.structural(),
+    touchedSet: TouchedSet(selection: true),
+    effects: effects,
+  );
+
+  final result = const CommitApplier().apply(
+    document: CanvasDocument(),
+    plan: plan,
+    installDocument: (_, _) => events.add('document'),
+    installSelectionEffects: () {
+      events.add('selection');
+
+      return true;
+    },
+  );
+
+  expect(events, ['document', 'selection']);
+  expect(result.shouldPublishState, isTrue);
+  expect(result.effects, effects);
+  expect(
+    () => result.effects.add(const RepaintEffect(mainCanvas: true)),
+    throwsUnsupportedError,
+  );
+}
+
+void _expectEmptyApplyResult() {
+  final events = <String>[];
+
+  final result = const CommitApplier().apply(
+    document: CanvasDocument(),
+    plan: CommitPlan.empty(),
+    installDocument: (_, _) => events.add('document'),
+    installSelectionEffects: () {
+      events.add('selection');
+
+      return true;
+    },
+  );
+
+  expect(events, isEmpty);
+  expect(result.shouldPublishState, isFalse);
+  expect(result.effects, isEmpty);
 }
 
 void _expectUnusedResourceEditDoesNotRepaint() {
