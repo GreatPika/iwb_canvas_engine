@@ -59,6 +59,7 @@ sequenceDiagram
   participant Applier as CommitApplier
   participant Store as DocumentStoreKernel
   participant Selection as SelectionKernel
+  participant Runtime as RuntimeRoot
   participant Effects as CommitEffects
   participant Events as EventBuffer
 
@@ -79,10 +80,41 @@ sequenceDiagram
   Store-->>Applier: committed document revision facts
   Selection-->>Applier: committed selection revision facts
   Applier->>Events: commit buffered events
-  Applier->>Effects: publish typed post-install effects through runtime/applier boundary
+  Applier-->>EK: immutable CommitApplyResult
   EK->>EK: close handle
+  EK->>Runtime: deliver accepted apply result
+  Runtime->>Runtime: publish public state when required
+  Runtime->>Effects: observe typed post-install effects
   EK-->>Caller: return callback result
 ```
+
+`CommitApplier` returns an immutable `CommitApplyResult` after document and
+selection effects have both installed. The result is the runtime/applier seam:
+it carries the public-state publication decision and the immutable typed
+post-install `CommitEffect` list selected by the accepted `CommitPlan`.
+`CommitPlan.effects` alone does not satisfy P5 effect-delivery closure; a
+successful edit must carry those effects across the apply-result boundary after
+atomic install.
+
+`EditKernel` closes and stales the active edit handle, clears the active-session
+state, and only then asks `RuntimeRoot` to consume the accepted apply result.
+`RuntimeRoot` publishes the public state snapshot first when the result requires
+publication, then invokes the internal synchronous observer seam. The observer
+type is owned by `lib/src/runtime/commit_effect_observer.dart` and has this
+exact signature:
+
+```dart
+typedef CommitEffectObserver = void Function(List<CommitEffect> effects);
+```
+
+Empty effect lists are not delivered. Observer failures are contained
+post-commit notification failures: they do not roll back accepted document,
+selection, revision, projection, resource, or public-state changes; they do not
+rethrow from public edit calls; and they do not replace the edit callback
+result. Observer delivery is not a reentrant mutation window. Public runtime
+mutations attempted while the observer is running are rejected with `StateError`
+before draft creation, committed-state mutation, public-state publication, or
+additional effect delivery.
 
 ### 11.2 Rollback sequence
 

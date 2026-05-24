@@ -42,7 +42,12 @@ Phase ownership:
 
 ```text
 P5 closes edit-owned rows and the generic executable effect shape.
+P5 reserves the documentReplaced invalidation/effect shape and the only generic
+global-invalidation exception, but does not make CanvasEdit.replaceDraftDocument
+executable.
 P6 closes the loadDocument success/failure rows after the staged load contract.
+P6 also owns CanvasEdit.replaceDraftDocument success/failure behavior and any
+load-driven draft replacement execution.
 P7 and P10-P12 close their resource and interaction rows when those owners land.
 ```
 
@@ -229,6 +234,12 @@ Rollback behavior: descriptor table, document revision, projection, resource
 cache, repaint, and notifications remain unchanged.
 
 #### replaceDraftDocument
+
+Phase ownership: this row is a reserved replacement effect shape for P6. P5
+keeps the `documentReplaced` invalidation/effect shape available for future
+replacement and for the generic global-invalidation exception, but executable
+`CanvasEdit.replaceDraftDocument` remains excluded from P5 operation-matrix
+closure and throws `UnsupportedError` before draft or committed-state mutation.
 
 Touched state: whole draft document; selection owner when replacement makes the
 current selection invalid.
