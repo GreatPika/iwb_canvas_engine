@@ -156,7 +156,7 @@ Required tests:
 - `test.edit.sync_non_nested_async_stale`
 - `test.edit.rollback`
 - `test.edit.field_update_nullable_semantics`
-- `test.edit.operation_matrix_effects`
+- `test.edit.edit_matrix_effects`
 - `test.edit.exact_touched_invalidation`
 - `test.edit.typed_effects_no_frame_dependency`
 - `test.edit.staged_document_load_success_failure`
@@ -263,7 +263,7 @@ Required tests:
 - `test/edit/sync_non_nested_async_stale_test.dart`
 - `test/edit/rollback_test.dart`
 - `test/edit/field_update_nullable_semantics_test.dart`
-- `test/edit/operation_matrix_effects_test.dart`
+- `test/edit/edit_matrix_effects_test.dart`
 - `test/edit/exact_touched_invalidation_test.dart`
 - `test/edit/typed_effects_no_frame_dependency_test.dart`
 - `test/edit/staged_document_load_success_failure_test.dart`
@@ -295,7 +295,7 @@ Required tests:
 
 ### Behavioral Coverage Notes
 
-`test.edit.operation_matrix_effects` covers expanded operation matrix dimensions:
+`test.edit.edit_matrix_effects` covers expanded operation matrix dimensions:
 touched state, public state revisions, internal revisions, spatial,
 projection, resource effects, repaint, user-action events, no-op behavior, and
 rollback behavior.

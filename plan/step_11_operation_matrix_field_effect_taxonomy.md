@@ -146,8 +146,8 @@ the change, not target-state requirements.
   as the guardrail requiring executable assertions for every operation matrix
   row.
 - `docs/indexes/by_test_area.md:448` through `docs/indexes/by_test_area.md:453`
-  map `test.edit.operation_matrix_effects` to
-  `test/edit/operation_matrix_effects_test.dart`, section 13, and
+  map `test.edit.edit_matrix_effects` to
+  `test/edit/edit_matrix_effects_test.dart`, section 13, and
   `edit.operation_matrix_complete`.
 - `docs/verification/release_gates.md:183` requires operation matrix and exact
   touched invalidation tests to be green.
@@ -585,7 +585,7 @@ the expanded matrix dimensions.
 ```sh
 bash -lc 'set -euo pipefail
 for file in docs/verification/guardrails.md docs/indexes/by_guardrail.md docs/verification/tests.md docs/indexes/by_test_area.md docs/verification/release_gates.md; do
-  rg -n "test.edit.operation_matrix_effects|edit.operation_matrix_complete|operation matrix" "$file" >/dev/null
+  rg -n "test.edit.edit_matrix_effects|edit.operation_matrix_complete|operation matrix" "$file" >/dev/null
   rg -n "expanded operation matrix dimensions" "$file" >/dev/null || {
     echo "missing expanded operation matrix dimensions marker in $file" >&2
     exit 1
@@ -729,7 +729,7 @@ BUG_FIX, PUBLIC_API_CHANGE
 - Guardrail wording: `docs/verification/guardrails.md` — updates
   `edit.operation_matrix_complete` to include expanded dimensions.
 - Test catalog wording: `docs/verification/tests.md` — keeps
-  `test.edit.operation_matrix_effects` aligned with the matrix contract.
+  `test.edit.edit_matrix_effects` aligned with the matrix contract.
 - Guardrail index: `docs/indexes/by_guardrail.md` — mirrors guardrail wording
   and test mapping.
 - Test-area index: `docs/indexes/by_test_area.md` — keeps the operation matrix

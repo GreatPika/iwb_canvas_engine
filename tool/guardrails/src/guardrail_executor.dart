@@ -221,13 +221,13 @@ const _testProofPaths = {
   'edit.sync_non_nested': ['test/edit/sync_non_nested_async_stale_test.dart'],
   'edit.rollback_no_effects': [
     'test/edit/rollback_test.dart',
-    'test/edit/operation_matrix_effects_test.dart',
+    'test/edit/edit_matrix_effects_test.dart',
   ],
   'edit.stale_handle_rejected': [
     'test/edit/sync_non_nested_async_stale_test.dart',
   ],
   'edit.operation_matrix_complete': [
-    'test/edit/operation_matrix_effects_test.dart',
+    'test/edit/edit_matrix_effects_test.dart',
     'test/edit/field_update_nullable_semantics_test.dart',
     'test/edit/exact_touched_invalidation_test.dart',
   ],

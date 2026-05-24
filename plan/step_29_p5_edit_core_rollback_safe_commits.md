@@ -413,7 +413,7 @@ frame/resource facts before a successful install or after rollback.
 `dart test test/edit/field_update_nullable_semantics_test.dart` passes and
 proves generated and dynamic non-nullable clear requests and non-invertible
 transform updates reject before draft mutation.
-`dart test test/edit/operation_matrix_effects_test.dart` passes and proves
+`dart test test/edit/edit_matrix_effects_test.dart` passes and proves
 accepted document edits become visible through `CanvasRuntime.readDocument()`
 only after commit; duplicate element ids throw `CanvasDataException` with
 `CanvasDataErrorCode.duplicateElementId`; missing resource references throw
@@ -463,7 +463,7 @@ Completion Check:
 
 `dart test test/edit/exact_touched_invalidation_test.dart`,
 `dart test test/edit/typed_effects_no_frame_dependency_test.dart`, and
-`dart test test/edit/operation_matrix_effects_test.dart` pass. The typed-effect
+`dart test test/edit/edit_matrix_effects_test.dart` pass. The typed-effect
 test proves `CommitCompiler` and `CommitPlan` do not import concrete
 `lib/src/frame/**`, `lib/src/spatial/**`, `lib/src/resources/**`,
 `lib/src/interaction/**`, `lib/src/surface/**`, or Flutter widget owners. The
@@ -610,7 +610,7 @@ From the repository root, the implementation handoff reports all of these
 commands passing after Units 1-4 are complete:
 `dart test test/edit/sync_non_nested_async_stale_test.dart
 test/edit/rollback_test.dart test/edit/field_update_nullable_semantics_test.dart
-test/edit/operation_matrix_effects_test.dart
+test/edit/edit_matrix_effects_test.dart
 test/edit/exact_touched_invalidation_test.dart
 test/edit/typed_effects_no_frame_dependency_test.dart
 test/edit/low_level_mutations_do_not_emit_actions_test.dart

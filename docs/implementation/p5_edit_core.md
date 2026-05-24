@@ -75,7 +75,7 @@ load, resources, interaction, or commands can mutate committed state.
 - `test.edit.low_level_mutations_do_not_emit_actions` -> `test/edit/low_level_mutations_do_not_emit_actions_test.dart`
 - `test.edit.sync_non_nested_async_stale` -> `test/edit/sync_non_nested_async_stale_test.dart`
 - `test.edit.rollback` -> `test/edit/rollback_test.dart`
-- `test.edit.operation_matrix_effects` -> `test/edit/operation_matrix_effects_test.dart`
+- `test.edit.edit_matrix_effects` -> `test/edit/edit_matrix_effects_test.dart`
 - `test.edit.exact_touched_invalidation` -> `test/edit/exact_touched_invalidation_test.dart`
 - `test.edit.typed_effects_no_frame_dependency` -> `test/edit/typed_effects_no_frame_dependency_test.dart`
 - `test.runtime.runtime_state_publication` -> `test/runtime/runtime_state_publication_test.dart`

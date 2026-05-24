@@ -103,6 +103,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_20_diagnostics_hub`, `section_23_tests`
 
+## test.edit.edit_matrix_effects
+
+- Sections: `section_13_operation_matrix`, `section_23_tests`
+
 ## test.edit.exact_touched_invalidation
 
 - Sections: `section_11_edit_kernel`, `section_23_tests`
@@ -114,10 +118,6 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.edit.low_level_mutations_do_not_emit_actions
 
 - Sections: `section_11_edit_kernel`, `section_23_tests`
-
-## test.edit.operation_matrix_effects
-
-- Sections: `section_13_operation_matrix`, `section_23_tests`
 
 ## test.edit.rollback
 

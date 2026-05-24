@@ -8,7 +8,7 @@ void main() {
   test('edit document and resource rows install through the store', () {
     return expectLater(
       runFlutterInPackageTest(
-        'test/edit/fixtures/operation_matrix_effects_fixture.dart',
+        'test/edit/fixtures/edit_matrix_effects_fixture.dart',
       ),
       completes,
     );
@@ -28,7 +28,7 @@ void main() {
 
 Set<String> _operationMatrixRowsCoveredByFixture() {
   final source = File(
-    'test/edit/fixtures/operation_matrix_effects_fixture.dart',
+    'test/edit/fixtures/edit_matrix_effects_fixture.dart',
   ).readAsStringSync();
   final rowPattern = RegExp(r"_EditOperationMatrixCase\(\s*'([^']+)'");
 

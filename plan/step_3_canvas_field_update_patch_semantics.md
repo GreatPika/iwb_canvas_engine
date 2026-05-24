@@ -398,7 +398,7 @@ freeze, and make field set/clear semantics mechanically provable.
 - `test/api_contract/dto_immutability_test.dart`
 - `test/api_contract/canvas_field_update_static_semantics_test.dart`
 - `test/edit/field_update_nullable_semantics_test.dart`
-- `test/edit/operation_matrix_effects_test.dart`
+- `test/edit/edit_matrix_effects_test.dart`
 - `test/edit/exact_touched_invalidation_test.dart`
 - `test/edit/typed_effects_no_frame_dependency_test.dart`
 
@@ -674,7 +674,7 @@ touched invalidation behavior unchanged.
 #### Behavioral Verification
 
 - `dart test test/edit/field_update_nullable_semantics_test.dart`
-- `dart test test/edit/operation_matrix_effects_test.dart`
+- `dart test test/edit/edit_matrix_effects_test.dart`
 - `dart test test/edit/exact_touched_invalidation_test.dart`
 
 #### Structural Verification
@@ -772,7 +772,7 @@ redesign item from `redesign.md`; and mark this plan step complete in both
 - `dart test test/api_contract/dto_immutability_test.dart`
 - `dart test test/api_contract/canvas_field_update_static_semantics_test.dart`
 - `dart test test/edit/field_update_nullable_semantics_test.dart`
-- `dart test test/edit/operation_matrix_effects_test.dart`
+- `dart test test/edit/edit_matrix_effects_test.dart`
 - `dart test test/edit/exact_touched_invalidation_test.dart`
 - `dart test test/api_contract/no_legacy_public_symbols_test.dart`
 - `dart test test/edit/typed_effects_no_frame_dependency_test.dart`

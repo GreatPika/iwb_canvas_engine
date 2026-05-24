@@ -486,7 +486,7 @@
     - interaction.text_edit_stale_commit_guard
   tests:
     - test.edit.sync_non_nested_async_stale
-    - test.edit.operation_matrix_effects
+    - test.edit.edit_matrix_effects
     - test.interaction.runtime_created_timestamps_monotonic
     - test.interaction.context_action_request
     - test.interaction.text_edit_stale_commit_guard
@@ -1061,7 +1061,7 @@
     - test.edit.sync_non_nested_async_stale
     - test.edit.rollback
     - test.edit.field_update_nullable_semantics
-    - test.edit.operation_matrix_effects
+    - test.edit.edit_matrix_effects
     - test.edit.exact_touched_invalidation
     - test.edit.typed_effects_no_frame_dependency
     - test.edit.staged_document_load_success_failure

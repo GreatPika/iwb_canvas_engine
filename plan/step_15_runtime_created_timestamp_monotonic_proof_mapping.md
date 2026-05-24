@@ -414,7 +414,7 @@ the fix, so the new timestamp proof extends the established mapping rather than
 creating an orphan contract.
 
 ```sh
-rg -n "events\\.commands_emit_user_actions|test\\.interaction\\.commands_emit_user_actions|test\\.edit\\.operation_matrix_effects|edit\\.operation_matrix_complete" docs/contracts/operation_matrix.md docs/verification docs/indexes docs/_registry
+rg -n "events\\.commands_emit_user_actions|test\\.interaction\\.commands_emit_user_actions|test\\.edit\\.edit_matrix_effects|edit\\.operation_matrix_complete" docs/contracts/operation_matrix.md docs/verification docs/indexes docs/_registry
 ```
 
 Expected signal before and after the fix: matches include
