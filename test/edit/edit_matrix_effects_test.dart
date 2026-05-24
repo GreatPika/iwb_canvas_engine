@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:test/test.dart';
 
 import '../support/flutter_in_package_test_harness.dart';
@@ -106,15 +108,13 @@ Set<String> _operationMatrixOperationRows() {
 
 Set<String> _implementedEditMutationNames() {
   final apiSource = File('lib/src/api/canvas_runtime.dart').readAsStringSync();
-  final editInterface = _declarationBody(apiSource, 'CanvasEdit');
-  final mutationPattern = RegExp(
-    r'(?:bool|void|CanvasElementId|CanvasClearResult)\s+([A-Za-z0-9_]+)\s*\(',
-  );
   final unsupported = _unsupportedEditMethods();
 
   return {
-    for (final method in _firstCaptureGroups(mutationPattern, editInterface))
-      if (!unsupported.contains(method)) method,
+    for (final method in _canvasEditMethodNames(apiSource))
+      if (!_readOnlyEditMethods.contains(method) &&
+          !unsupported.contains(method))
+        method,
   };
 }
 
@@ -156,23 +156,6 @@ Set<String> _updateElementTaxonomyTokens() {
   };
 }
 
-String _balancedBody(String source, int bodyStart) {
-  var depth = 0;
-  for (var index = bodyStart; index < source.length; index += 1) {
-    final character = source[index];
-    if (character == '{') {
-      depth += 1;
-    } else if (character == '}') {
-      depth -= 1;
-      if (depth == 0) {
-        return source.substring(bodyStart, index + 1);
-      }
-    }
-  }
-
-  throw StateError('Unclosed declaration body.');
-}
-
 Set<String> _markdownTableFirstColumnFromSource(String source) {
   return {
     for (final line in source.split('\n'))
@@ -184,13 +167,17 @@ Set<String> _markdownTableFirstColumnFromSource(String source) {
   };
 }
 
-String _declarationBody(String source, String declarationName) {
-  final declaration = RegExp(
-    'abstract interface class $declarationName\\s*{',
-  ).firstMatch(source);
-  if (declaration == null) {
-    throw StateError('Missing declaration: $declarationName');
-  }
+Set<String> _canvasEditMethodNames(String source) {
+  final unit = parseString(content: source).unit;
+  final declaration = unit.declarations
+      .whereType<ClassDeclaration>()
+      .firstWhere((node) => node.namePart.typeName.lexeme == 'CanvasEdit');
 
-  return _balancedBody(source, source.indexOf('{', declaration.start));
+  return {
+    for (final member
+        in declaration.body.members.whereType<MethodDeclaration>())
+      if (!member.isGetter && !member.isSetter) member.name.lexeme,
+  };
 }
+
+const _readOnlyEditMethods = {'readDraftDocument'};

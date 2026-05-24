@@ -714,6 +714,7 @@ void _expectPlanEffects(
     _matchesRevisionDelta(expected.delta),
     reason: row,
   );
+  expect(plan.documentReplaced, isFalse, reason: row);
   expect(
     plan.effects.whereType<ProjectionEffect>(),
     expected.projectionEffect ? hasLength(1) : isEmpty,

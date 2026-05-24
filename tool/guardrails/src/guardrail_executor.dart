@@ -233,6 +233,7 @@ const _testProofPaths = {
   ],
   'edit.no_global_invalidation_except_replacement': [
     'test/edit/exact_touched_invalidation_test.dart',
+    'test/edit/edit_matrix_effects_test.dart',
   ],
   'edit.typed_effects_no_frame_dependency': [
     'test/edit/typed_effects_no_frame_dependency_test.dart',
