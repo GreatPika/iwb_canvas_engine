@@ -1,5 +1,10 @@
 import 'dart:ui';
 
+// DocumentStoreKernel directly names the DTO, fact, projection, and revision
+// owners it coordinates; hiding one import behind a wrapper would obscure the
+// committed-store boundary instead of simplifying it.
+// ignore_for_file: number-of-imports
+
 import '../api/canvas_document.dart';
 import '../api/canvas_element.dart';
 import '../api/canvas_geometry.dart';
@@ -9,6 +14,7 @@ import 'committed_document.dart';
 import 'document_projection_cache.dart';
 import 'family_tables.dart';
 import 'resource_table.dart';
+import 'store_revision_delta.dart';
 
 // DocumentStoreKernel is the single owner for committed document facts, read
 // projection, id admission, and selection normalization inputs; splitting these
@@ -31,7 +37,7 @@ final class DocumentStoreKernel {
     );
   }
 
-  final CommittedDocument _document;
+  CommittedDocument _document;
   final DocumentProjectionCache _projectionCache = DocumentProjectionCache();
   late final _IdAdmission _elementIds;
   late final _IdAdmission _layerIds;
@@ -114,6 +120,19 @@ final class DocumentStoreKernel {
 
   CanvasResourceId generateResourceId() {
     return CanvasResourceId(_resourceIds.nextValue());
+  }
+
+  void installDocument(CanvasDocument document, StoreRevisionDelta delta) {
+    if (!delta.hasChanges) {
+      return;
+    }
+    _document = CommittedDocument.withRevisions(
+      document,
+      revisions: delta.advance(_document.revisions),
+    );
+    _elementIds.admitAll(_document.admittedElementIds);
+    _layerIds.admitAll(_document.admittedLayerIds);
+    _resourceIds.admitAll(_document.admittedResourceIds);
   }
 }
 
@@ -281,5 +300,9 @@ final class _IdAdmission {
 
       return candidate;
     }
+  }
+
+  void admitAll(Iterable<String> ids) {
+    _reserved.addAll(ids);
   }
 }

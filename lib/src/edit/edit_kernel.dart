@@ -7,23 +7,26 @@ import '../api/canvas_element_update.dart';
 import '../api/canvas_ids.dart';
 import '../api/canvas_resource.dart';
 import '../api/canvas_runtime.dart';
+import '../store/store_revision_delta.dart';
+import 'draft_document.dart';
 
 typedef RuntimeDisposedReader = bool Function();
 typedef DraftDocumentReader = CanvasDocument Function();
-typedef DraftSummaryReader = CanvasDocumentSummary Function();
+typedef DocumentInstaller =
+    void Function(CanvasDocument document, StoreRevisionDelta delta);
 
 final class EditKernel {
   EditKernel({
     required RuntimeDisposedReader isRuntimeDisposed,
     required DraftDocumentReader readDocument,
-    required DraftSummaryReader readSummary,
+    required DocumentInstaller installDocument,
   }) : _isRuntimeDisposed = isRuntimeDisposed,
        _readDocument = readDocument,
-       _readSummary = readSummary;
+       _installDocument = installDocument;
 
   final RuntimeDisposedReader _isRuntimeDisposed;
   final DraftDocumentReader _readDocument;
-  final DraftSummaryReader _readSummary;
+  final DocumentInstaller _installDocument;
   late final CanvasEditPort port = _EditKernelPort(this);
   bool _isSessionOpen = false;
 
@@ -34,10 +37,7 @@ final class EditKernel {
     }
 
     _isSessionOpen = true;
-    final session = EditSession(
-      readDocument: _readDocument,
-      readSummary: _readSummary,
-    );
+    final session = EditSession(draft: DraftDocument(_readDocument()));
 
     try {
       final result = fn(session);
@@ -45,6 +45,9 @@ final class EditKernel {
         throw StateError(
           'CanvasRuntime edit callbacks must complete synchronously.',
         );
+      }
+      if (session.didChange) {
+        _installDocument(session.readDraftDocument(), session.revisionDelta);
       }
 
       return result;
@@ -83,18 +86,16 @@ final class _EditKernelPort implements CanvasEditPort {
 }
 
 // CanvasEdit is intentionally represented by one session handle: the stale
-// guard must be uniform across every public handle entry point.
-// ignore: number-of-methods
+// guard and draft reference must stay uniform across every public entry point.
+// ignore: coupling-between-object-classes, number-of-methods
 final class EditSession implements CanvasEdit {
-  EditSession({
-    required DraftDocumentReader readDocument,
-    required DraftSummaryReader readSummary,
-  }) : _readDocument = readDocument,
-       _readSummary = readSummary;
+  EditSession({required DraftDocument draft}) : _draft = draft;
 
-  final DraftDocumentReader _readDocument;
-  final DraftSummaryReader _readSummary;
+  final DraftDocument _draft;
   bool _isClosed = false;
+
+  bool get didChange => _draft.didChange;
+  StoreRevisionDelta get revisionDelta => _draft.revisionDelta;
 
   void close() {
     _isClosed = true;
@@ -104,20 +105,20 @@ final class EditSession implements CanvasEdit {
   CanvasDocument readDraftDocument() {
     _ensureActive();
 
-    return _readDocument();
+    return _draft.readDocument();
   }
 
   @override
   CanvasDocumentSummary get draftSummary {
     _ensureActive();
 
-    return _readSummary();
+    return _draft.summary;
   }
 
   @override
   bool ensureLayer(CanvasLayerId id, {int? index}) {
     _ensureActive();
-    _rejectDocumentMutation();
+    return _draft.ensureLayer(id, index: index);
   }
 
   @override
@@ -127,67 +128,67 @@ final class EditSession implements CanvasEdit {
     int? index,
   }) {
     _ensureActive();
-    _rejectDocumentMutation();
+    return _draft.addElement(element, layerId: layerId, index: index);
   }
 
   @override
   CanvasElementId addBackgroundElement(CanvasElement element, {int? index}) {
     _ensureActive();
-    _rejectDocumentMutation();
+    return _draft.addBackgroundElement(element, index: index);
   }
 
   @override
   bool updateElement(CanvasElementUpdate update) {
     _ensureActive();
-    _rejectDocumentMutation();
+    return _draft.updateElement(update);
   }
 
   @override
   bool removeElement(CanvasElementId id) {
     _ensureActive();
-    _rejectDocumentMutation();
+    return _draft.removeElement(id);
   }
 
   @override
   bool upsertResource(CanvasResource resource) {
     _ensureActive();
-    _rejectDocumentMutation();
+    return _draft.upsertResource(resource);
   }
 
   @override
   bool removeUnusedResource(CanvasResourceId id) {
     _ensureActive();
-    _rejectDocumentMutation();
+    return _draft.removeUnusedResource(id);
   }
 
   @override
   void setBackgroundColor(Color color) {
     _ensureActive();
-    _rejectDocumentMutation();
+    _draft.setBackgroundColor(color);
   }
 
   @override
   void setGrid(CanvasGrid grid) {
     _ensureActive();
-    _rejectDocumentMutation();
+    _draft.setGrid(grid);
   }
 
   @override
   void setPalette(CanvasPalette palette) {
     _ensureActive();
-    _rejectDocumentMutation();
+    _draft.setPalette(palette);
   }
 
   @override
   void setCameraOffset(Offset offset) {
     _ensureActive();
-    _rejectDocumentMutation();
+    _draft.setCameraOffset(offset);
   }
 
   @override
   CanvasClearResult clearContent({bool removeUnusedResources = false}) {
     _ensureActive();
-    _rejectDocumentMutation();
+    return _draft.clearContent(removeUnusedResources: removeUnusedResources);
   }
 
   @override
@@ -202,11 +203,5 @@ final class EditSession implements CanvasEdit {
     if (_isClosed) {
       throw StateError('CanvasEdit handle is stale.');
     }
-  }
-
-  Never _rejectDocumentMutation() {
-    throw UnsupportedError(
-      'CanvasEdit document mutations are owned by later P5 edit units.',
-    );
   }
 }

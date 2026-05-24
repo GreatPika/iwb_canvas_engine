@@ -7,7 +7,16 @@ import 'resource_table.dart';
 
 final class CommittedDocument {
   factory CommittedDocument(CanvasDocument document) {
-    const revisions = RevisionState();
+    return CommittedDocument.withRevisions(
+      document,
+      revisions: const RevisionState(),
+    );
+  }
+
+  factory CommittedDocument.withRevisions(
+    CanvasDocument document, {
+    required RevisionState revisions,
+  }) {
     final resourceTable = ResourceTable(
       document.resources,
       resourceRevision: revisions.resourceRevision,

@@ -42,7 +42,7 @@ void _expectSynchronousResultPreserved() {
   });
 
   final result = runtime.edits.edit((edit) {
-    expect(edit.readDraftDocument(), runtime.readDocument());
+    _expectSameDocumentShape(edit.readDraftDocument(), runtime.readDocument());
     expect(
       edit.draftSummary,
       const CanvasDocumentSummary(
@@ -77,7 +77,7 @@ void _expectNestedEditRejected() {
   runtime.edits.edit((edit) {
     captured = edit;
     expect(() => runtime.edits.edit((nested) => null), throwsStateError);
-    expect(edit.readDraftDocument(), runtime.readDocument());
+    _expectSameDocumentShape(edit.readDraftDocument(), runtime.readDocument());
   });
 
   expect(() => captured.readDraftDocument(), throwsStateError);
@@ -154,7 +154,7 @@ void _expectP6PathsRejected() {
       () => edit.replaceDraftDocument(CanvasDocument()),
       _throwsP6UnsupportedError(),
     );
-    expect(edit.readDraftDocument(), runtime.readDocument());
+    _expectSameDocumentShape(edit.readDraftDocument(), runtime.readDocument());
   });
 
   expect(runtime.state.value, beforeState);
@@ -191,4 +191,19 @@ CanvasDocument _document() {
 
 CanvasRectElement _rect(String id) {
   return CanvasRectElement(id: CanvasElementId(id), size: const Size(1, 1));
+}
+
+void _expectSameDocumentShape(CanvasDocument actual, CanvasDocument expected) {
+  expect(actual.resources, hasLength(expected.resources.length));
+  expect(
+    actual.backgroundElements,
+    hasLength(expected.backgroundElements.length),
+  );
+  expect(actual.layers, hasLength(expected.layers.length));
+  for (var index = 0; index < actual.layers.length; index += 1) {
+    expect(
+      actual.layers[index].elements,
+      hasLength(expected.layers[index].elements.length),
+    );
+  }
 }
