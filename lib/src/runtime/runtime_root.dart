@@ -225,21 +225,25 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
 
   void setSelection(Iterable<CanvasElementId> ids) {
     _ensureNotDisposed();
+    _ensureNoActiveEditSession();
     _publishSelectionChange(_selection.setSelection(ids));
   }
 
   void toggleSelection(CanvasElementId id) {
     _ensureNotDisposed();
+    _ensureNoActiveEditSession();
     _publishSelectionChange(_selection.toggleSelection(id));
   }
 
   void clearSelection() {
     _ensureNotDisposed();
+    _ensureNoActiveEditSession();
     _publishSelectionChange(_selection.clearSelection());
   }
 
   void selectAll({required bool onlySelectable}) {
     _ensureNotDisposed();
+    _ensureNoActiveEditSession();
     _publishSelectionChange(
       _selection.selectAll(onlySelectable: onlySelectable),
     );
@@ -247,6 +251,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
 
   void setCameraOffset(Offset offset) {
     _ensureNotDisposed();
+    _ensureNoActiveEditSession();
     final camera = CanvasCamera(offset: offset);
     if (camera == _viewCamera) {
       return;
@@ -262,6 +267,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
 
   Never rejectSelectionDocumentMutation() {
     _ensureNotDisposed();
+    _ensureNoActiveEditSession();
     throw UnsupportedError(
       'Selection document mutation is owned by later edit phases.',
     );
@@ -271,6 +277,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     if (_isDisposed) {
       return;
     }
+    _ensureNoActiveEditSession();
     _isDisposed = true;
     _state.dispose();
     unawaited(_actions.close());
@@ -279,6 +286,14 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   void _ensureNotDisposed() {
     if (_isDisposed) {
       throw StateError('CanvasRuntime is disposed.');
+    }
+  }
+
+  void _ensureNoActiveEditSession() {
+    if (_editKernel.hasOpenSession) {
+      throw StateError(
+        'CanvasRuntime public mutations cannot run inside an active edit callback.',
+      );
     }
   }
 

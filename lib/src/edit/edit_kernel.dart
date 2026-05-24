@@ -30,6 +30,7 @@ final class EditKernel {
   final DocumentInstaller _installDocument;
   late final CanvasEditPort port = _EditKernelPort(this);
   bool _isSessionOpen = false;
+  bool get hasOpenSession => _isSessionOpen;
 
   T edit<T>(T Function(CanvasEdit edit) fn) {
     _ensureRuntimeActive();

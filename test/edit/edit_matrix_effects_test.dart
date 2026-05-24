@@ -19,6 +19,7 @@ void main() {
       _operationMatrixRowsCoveredByFixture(),
       _editOwnedRowsFromOperationMatrix(),
     );
+    expect(_implementedEditMethodsMissingFromOperationMatrix(), isEmpty);
   });
 
   test('updateElement taxonomy rows are implemented by CommitCompiler', () {
@@ -36,13 +37,94 @@ Set<String> _operationMatrixRowsCoveredByFixture() {
 }
 
 Set<String> _editOwnedRowsFromOperationMatrix() {
-  final rows = _markdownTableFirstColumn('docs/contracts/operation_matrix.md');
+  final rows = _operationMatrixOperationRows();
+  final editMethods = _implementedEditMutationNames();
 
-  return rows.where(_isEditOwnedOperationRow).toSet();
+  return {
+    for (final row in rows)
+      if (_isEditOwnedOperationRow(row, editMethods)) row,
+  };
 }
 
-bool _isEditOwnedOperationRow(String row) {
-  return _editOwnedOperationMatrixRows.contains(row);
+Set<String> _implementedEditMethodsMissingFromOperationMatrix() {
+  final rows = _operationMatrixOperationRows();
+
+  return {
+    for (final method in _implementedEditMutationNames())
+      if (!_operationRowsContainEditMethod(rows, method)) method,
+  };
+}
+
+bool _isEditOwnedOperationRow(String row, Set<String> editMethods) {
+  if (row == 'no-op edit') {
+    return true;
+  }
+
+  final method = _editMethodNameFromOperationRow(row);
+
+  return method != null && editMethods.contains(method);
+}
+
+bool _operationRowsContainEditMethod(Set<String> rows, String method) {
+  return rows.any((row) => _editMethodNameFromOperationRow(row) == method);
+}
+
+String? _editMethodNameFromOperationRow(String row) {
+  const qualifiedPrefix = 'CanvasEdit.';
+  final operation = row.startsWith(qualifiedPrefix)
+      ? row.substring(qualifiedPrefix.length)
+      : row;
+  final method = operation.split(' ').first;
+  if (!RegExp(r'^[a-z][A-Za-z0-9]+$').hasMatch(method)) {
+    return null;
+  }
+
+  return method;
+}
+
+Set<String> _operationMatrixOperationRows() {
+  final source = File('docs/contracts/operation_matrix.md').readAsStringSync();
+  final tableStart = source.indexOf('| Operation | State touched |');
+  final tableEnd = source.indexOf('\nNotes:', tableStart);
+
+  return _markdownTableFirstColumnFromSource(
+    source.substring(tableStart, tableEnd),
+  );
+}
+
+Set<String> _implementedEditMutationNames() {
+  final apiSource = File('lib/src/api/canvas_runtime.dart').readAsStringSync();
+  final editInterface = _declarationBody(apiSource, 'CanvasEdit');
+  final mutationPattern = RegExp(
+    r'(?:bool|void|CanvasElementId|CanvasClearResult)\s+([A-Za-z0-9_]+)\s*\(',
+  );
+  final unsupported = _unsupportedEditMethods();
+
+  return {
+    for (final method in _firstCaptureGroups(mutationPattern, editInterface))
+      if (!unsupported.contains(method)) method,
+  };
+}
+
+Set<String> _unsupportedEditMethods() {
+  final source = File('lib/src/edit/edit_session.dart').readAsStringSync();
+  final unsupportedPattern = RegExp(
+    r'CanvasEdit\.([A-Za-z0-9_]+) is owned by ',
+  );
+
+  return _firstCaptureGroups(unsupportedPattern, source);
+}
+
+Set<String> _firstCaptureGroups(RegExp pattern, String source) {
+  final values = <String>{};
+  for (final match in pattern.allMatches(source)) {
+    final value = match.group(1);
+    if (value != null) {
+      values.add(value);
+    }
+  }
+
+  return values;
 }
 
 List<String> _missingCompilerTaxonomyFields() {
@@ -110,7 +192,11 @@ String _functionBody(String source, String functionName) {
   if (declaration == null) {
     throw StateError('Missing compiler taxonomy function: $functionName');
   }
-  final bodyStart = source.indexOf('{', declaration.start);
+
+  return _balancedBody(source, source.indexOf('{', declaration.start));
+}
+
+String _balancedBody(String source, int bodyStart) {
   var depth = 0;
   for (var index = bodyStart; index < source.length; index += 1) {
     final character = source[index];
@@ -124,11 +210,7 @@ String _functionBody(String source, String functionName) {
     }
   }
 
-  throw StateError('Unclosed compiler taxonomy function: $functionName');
-}
-
-Set<String> _markdownTableFirstColumn(String path) {
-  return _markdownTableFirstColumnFromSource(File(path).readAsStringSync());
+  throw StateError('Unclosed declaration body.');
 }
 
 Set<String> _markdownTableFirstColumnFromSource(String source) {
@@ -142,19 +224,13 @@ Set<String> _markdownTableFirstColumnFromSource(String source) {
   };
 }
 
-const _editOwnedOperationMatrixRows = {
-  'addElement content',
-  'addBackgroundElement',
-  'CanvasEdit.updateElement',
-  'CanvasEdit.removeElement',
-  'ensureLayer no-op',
-  'ensureLayer changed',
-  'CanvasEdit.clearContent',
-  'CanvasEdit.setCameraOffset',
-  'setBackgroundColor',
-  'setGrid',
-  'setPalette',
-  'upsertResource new/changed',
-  'removeUnusedResource removed',
-  'no-op edit',
-};
+String _declarationBody(String source, String declarationName) {
+  final declaration = RegExp(
+    'abstract interface class $declarationName\\s*{',
+  ).firstMatch(source);
+  if (declaration == null) {
+    throw StateError('Missing declaration: $declarationName');
+  }
+
+  return _balancedBody(source, source.indexOf('{', declaration.start));
+}

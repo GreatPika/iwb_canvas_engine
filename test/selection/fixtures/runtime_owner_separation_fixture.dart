@@ -132,6 +132,7 @@ void _verifyEditPrunesSelectionAtomically(
 ) {
   selection.setSelection([CanvasElementId('element-a')]);
   final beforeDocumentRevision = root.state.value.revisions.document;
+  final beforeSelectionRevision = root.state.value.revisions.selection;
   final snapshots = <CanvasRuntimeState>[];
   root.state.addListener(() {
     snapshots.add(root.state.value);
@@ -143,7 +144,7 @@ void _verifyEditPrunesSelectionAtomically(
 
   expect(selection.selectedElementIds, isEmpty);
   expect(root.state.value.revisions.document, beforeDocumentRevision + 1);
-  expect(root.state.value.revisions.selection, 7);
+  expect(root.state.value.revisions.selection, beforeSelectionRevision + 1);
   expect(snapshots, hasLength(1));
   expect(snapshots.single.summary.selectedCount, 0);
 }

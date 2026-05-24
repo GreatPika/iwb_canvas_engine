@@ -12,6 +12,10 @@ void main() {
   test('validation failure leaves committed store facts unchanged', () {
     expect(_expectValidationFailureRollsBack, returnsNormally);
   });
+
+  test('live runtime mutations are rejected inside edit callbacks', () {
+    expect(_expectLiveRuntimeMutationsRejectedDuringEdit, returnsNormally);
+  });
 }
 
 void _expectCallbackThrowRollsBack() {
@@ -68,6 +72,43 @@ void _expectValidationFailureRollsBack() {
 
   expect(root.readDocument().layers.single.elements, hasLength(1));
   expect(root.documentFacts.documentRevision, beforeFacts.documentRevision);
+}
+
+void _expectLiveRuntimeMutationsRejectedDuringEdit() {
+  final root = RuntimeRoot(
+    initialDocument: _document(),
+    config: const CanvasRuntimeConfig(),
+  );
+  root.selection.setSelection([CanvasElementId('element-1')]);
+  root.cameraPort().setOffset(const Offset(4, 5));
+  final beforeState = root.state.value;
+
+  _expectLiveMutationRejectedDuringEdit(
+    root,
+    () => root.selection.clearSelection(),
+  );
+  _expectLiveMutationRejectedDuringEdit(
+    root,
+    () => root.cameraPort().panBy(const Offset(1, 1)),
+  );
+  _expectLiveMutationRejectedDuringEdit(root, root.dispose);
+
+  expect(root.isDisposed, isFalse);
+  expect(root.state.value, beforeState);
+  expect(root.readDocument().layers.single.elements, hasLength(1));
+}
+
+void _expectLiveMutationRejectedDuringEdit(
+  RuntimeRoot root,
+  void Function() mutate,
+) {
+  expect(
+    () => root.edits.edit((edit) {
+      edit.addElement(_rect('new'), layerId: CanvasLayerId('layer-1'));
+      mutate();
+    }),
+    throwsStateError,
+  );
 }
 
 CanvasDocument _document() {
