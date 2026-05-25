@@ -223,7 +223,7 @@ Mandatory guardrails:
 | `codec.known_fields_validated` | known schema v1 fields are validated and canonical encoder writes only v1 fields |
 | `codec.no_runtime_side_effects` | schema v1 decode/encode validates and materializes DTOs without mutating runtime or store state |
 | `diagnostics.disabled_no_alloc_hot_path` | schema/codec success paths allocate no diagnostic records while diagnostics are disabled; pointer/paint hot-path proof remains deferred until those runtime owners exist |
-| `diagnostics.sanitized_public_projection` | diagnostic details expose only sanitized bounded public data and never runtime objects, images, closures, or full scene dumps |
+| `diagnostics.sanitized_public_projection` | diagnostic details expose only sanitized bounded public data; the guard uses `diagnostics_public_surface` registry membership plus analyzer-resolved public signature traversal to prevent runtime objects, images, closures, or full scene dumps from leaking |
 | `surface.pointer_samples_normalized_before_runtime` | Flutter surface adapters pass only normalized finite pointer samples into runtime routing |
 | `surface.interactive_false_pending_line_preserved` | interactive=false cancels active routed pointers, preserves pending line state not owned by an active routed pointer, and does not mutate runtime mode, committed document, selection, or resources |
 

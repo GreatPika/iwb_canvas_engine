@@ -91,6 +91,14 @@ That registry is the canonical machine-readable inventory for exported-name
 completeness. This document owns the public API semantics, signature rules, and
 declaration contracts for those names.
 
+The registry also owns the `diagnostics_public_surface` membership
+classification for diagnostics-facing Public API v1 declarations. That group is
+metadata over exported names, must remain a subset of `public_exports`, and
+initially contains `CanvasDiagnosticPolicy`, `CanvasDiagnosticsDisabled`,
+`CanvasDiagnosticsSummary`, `CanvasDiagnosticsVerbose`, `CanvasDataException`,
+and `CanvasDataErrorCode`. The classification does not add public API names or
+change this document's semantic ownership of those declarations.
+
 The legacy public symbols listed in `tool/goldens/public_api_symbols.txt` from
 the legacy package are not exported by this package. Natural concepts may exist
 under next-owned names, but legacy public shapes are banned.
@@ -2504,6 +2512,11 @@ sanitized, bounded, deeply immutable `details`. The public factory sanitizes
 details once at construction, so later caller mutation cannot change public
 exception state.
 
-No public diagnostics stream is exported in v1. Diagnostics are projected only through `CanvasDataException` and test-only/internal sinks.
+No public diagnostics stream is exported in v1. Diagnostics are projected only
+through `CanvasDataException` and test-only/internal sinks. Public diagnostics
+policy and exception declarations are classified in
+`docs/_registry/public_api_v1.yaml` under `diagnostics_public_surface` so
+`diagnostics.sanitized_public_projection` can traverse the registry-owned
+diagnostics public surface with analyzer-resolved signatures.
 
 ---

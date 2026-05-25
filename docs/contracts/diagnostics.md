@@ -58,6 +58,15 @@ DiagnosticRecord
 public `CanvasDataException` field; public exceptions expose only code, message,
 path, and sanitized bounded details.
 
+Diagnostics-facing Public API v1 declarations are classified by
+`diagnostics_public_surface` inside `docs/_registry/public_api_v1.yaml`. That
+membership group initially contains `CanvasDiagnosticPolicy`,
+`CanvasDiagnosticsDisabled`, `CanvasDiagnosticsSummary`,
+`CanvasDiagnosticsVerbose`, `CanvasDataException`, and `CanvasDataErrorCode`,
+and it must remain a subset of `public_exports`. The classification is
+inventory metadata for guardrail proof; it does not create a public diagnostics
+stream or add public API names.
+
 Runtime corruption diagnostics, such as a committed hit-test row with a
 non-invertible element transform, are policy-gated internal records. When
 diagnostics are disabled, the hot path remains branch-only with no
@@ -72,6 +81,10 @@ are copied at `CanvasDataException` construction, later caller mutation is not
 observable, and unsupported objects are replaced by bounded type previews.
 Diagnostic details are intentionally map-shaped public data, but they are not
 schema metadata and must not be represented as `CanvasMetadata`.
+`diagnostics.sanitized_public_projection` uses the registry-owned
+`diagnostics_public_surface` membership plus analyzer-resolved public signature
+traversal to prove these public declarations do not expose runtime objects,
+images, handles, closures, canvases, or full scene dumps.
 `CanvasDiagnosticPolicy` exposes public readable policy variants:
 `CanvasDiagnosticsDisabled`, `CanvasDiagnosticsSummary`, and
 `CanvasDiagnosticsVerbose`. `CanvasDiagnosticsVerbose.maxPreviewLength` caps
