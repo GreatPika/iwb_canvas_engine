@@ -56,7 +56,7 @@ First strengthen the canonical roundtrip fixture and add field-equivalence helpe
 
 ## Execution Units
 
-### [ ] Unit 1: Full DTO roundtrip equivalence proof
+### [x] Unit 1: Full DTO roundtrip equivalence proof
 
 Owner:
 
@@ -78,7 +78,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: All-owner metadata projection proof
+### [x] Unit 2: All-owner metadata projection proof
 
 Owner:
 
@@ -100,7 +100,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Schema v1 proof closure verification
+### [x] Unit 3: Schema v1 proof closure verification
 
 Owner:
 
