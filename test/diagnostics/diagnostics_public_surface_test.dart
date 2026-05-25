@@ -1,13 +1,22 @@
+import 'dart:io';
+
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:test/test.dart';
 
+import '../../tool/guardrails/src/public_api_registry.dart';
 import '../../tool/guardrails/src/public_api_surface.dart';
+import '../../tool/guardrails/src/repository_paths.dart';
 
 void main() {
   test(
     'public diagnostics surface exposes only sanitized data shapes',
     () async {
+      final registry = readPublicApiRegistryFromYaml(
+        File(
+          '$repositoryRoot/docs/_registry/public_api_v1.yaml',
+        ).readAsStringSync(),
+      );
       final surface = await resolvePublicApiSurface();
 
       expect(_canvasDataExceptionFields(surface), {
@@ -16,7 +25,17 @@ void main() {
         'path': 'String?',
         'details': 'Map<String, Object?>',
       });
-      expect(_diagnosticsRuntimeLeaks(surface), isEmpty);
+      expect(
+        _missingDiagnosticsPublicSurface(
+          surface,
+          registry.diagnosticsPublicSurface,
+        ),
+        isEmpty,
+      );
+      expect(
+        _diagnosticsRuntimeLeaks(surface, registry.diagnosticsPublicSurface),
+        isEmpty,
+      );
     },
   );
 }
@@ -41,13 +60,26 @@ MapEntry<String, String>? _fieldTypeEntry(FieldElement field) {
   return MapEntry(name, field.type.getDisplayString());
 }
 
-Set<String> _diagnosticsRuntimeLeaks(PublicApiSurface surface) {
+Set<String> _missingDiagnosticsPublicSurface(
+  PublicApiSurface surface,
+  Set<String> diagnosticsPublicSurface,
+) {
+  return diagnosticsPublicSurface.difference(
+    surface.exportedElements.keys.toSet(),
+  );
+}
+
+Set<String> _diagnosticsRuntimeLeaks(
+  PublicApiSurface surface,
+  Set<String> diagnosticsPublicSurface,
+) {
   final leaks = <String>{};
-  for (final entry in surface.exportedElements.entries) {
-    if (!_isDiagnosticsSurfaceName(entry.key)) {
+  for (final name in diagnosticsPublicSurface) {
+    final element = surface.exportedElements[name];
+    if (element == null) {
       continue;
     }
-    leaks.addAll(_runtimeLeakTypesInElement(entry.key, entry.value));
+    leaks.addAll(_runtimeLeakTypesInElement(name, element));
   }
 
   return leaks;
@@ -123,13 +155,6 @@ Iterable<String> _runtimeLeakTypeNames(String owner, DartType type) sync* {
         yield* _runtimeLeakTypeNames(owner, field.type);
       }
   }
-}
-
-bool _isDiagnosticsSurfaceName(String name) {
-  return name == 'CanvasDataException' ||
-      name == 'CanvasDataErrorCode' ||
-      name.startsWith('CanvasDiagnostic') ||
-      name.startsWith('CanvasDiagnostics');
 }
 
 bool _isRuntimeLeakType(String type) {
