@@ -40,7 +40,10 @@ not this review.
 
 Return exactly one verdict:
 
-- `PASS`: the design can be converted into a Change Contract.
+- `PASS`: the design can be converted into a Change Contract without requiring
+  the contract author to make a new architecture decision about owner, source of
+  truth, boundary, proof seam, fixture strategy, migration order, compatibility
+  posture, or durable documentation impact.
 - `REVISE`: the design direction is sound, but the artifact needs non-blocking
   repair before contract authoring.
 - `BLOCKED`: do not write a Change Contract yet.
@@ -56,6 +59,27 @@ For `BLOCKED`, include exactly one primary route:
 
 Use `BLOCKED` when the artifact would force contract authoring to make the core
 architecture decision.
+
+## Substance And Executability Standard
+
+Do not treat template compliance, populated hard-gate rows, or cited evidence as
+sufficient for `PASS`.
+
+A `READY_FOR_CONTRACT` design is passable only when the future Change Contract
+can be authored as execution planning, not architecture discovery. Review the
+selected form as an implementable system change:
+
+- Can the chosen owner actually accept the responsibility without creating a
+  second source of truth?
+- Can the proposed verification be built using existing test/tool seams, or does
+  the artifact name the small seam that must be introduced?
+- Can negative proof be written without polluting production source-of-truth
+  files, public API, schemas, durable docs, or real registries with fixture-only
+  data?
+- Are required source-of-truth updates mandatory when the selected form changes
+  what a registry, contract, guardrail, or diagram means?
+- Would two competent implementers produce the same architecture from this
+  artifact, even if their code organization differs?
 
 ## What Not To Review
 
@@ -157,6 +181,22 @@ Mark the review `BLOCKED` when any of these are true:
     does not name the temporal invariant, every synchronous callback surface in
     that window, the guard owner, the allowed public observation order, and a
     verification strategy for reentrant/interleaved mutation attempts.
+36. The artifact is formally complete but leaves the future Change Contract to
+    decide how the selected form can be implemented or proven at the owning
+    seam.
+37. The verification strategy requires a negative fixture, bypass proof, or
+    structural proof but does not identify a feasible proof mechanism using
+    existing repository seams, or explicitly name the small seam that must be
+    introduced.
+38. The proof strategy would require fixture-only data to be added to a real
+    production source of truth, public API registry, schema, durable contract,
+    or public surface.
+39. A selected form changes the normative meaning of a registry, contract,
+    guardrail, generated index, or diagram, but the source-of-truth update is
+    optional, conditional, or left for the contract author to rediscover.
+40. The handoff contains correct decisions but is not operational enough to
+    write a Change Contract without re-reading broad repository context to infer
+    proof seams, source-of-truth updates, or sequencing constraints.
 
 ## Non-Blocking Weaknesses
 
@@ -192,24 +232,31 @@ example:
    `READY_FOR_CONTRACT` artifact must pass every applicable gate with evidence.
 6. Reconstruct the viable alternatives from the artifact and evidence. If a
    materially better form is visible, mark the review `BLOCKED`.
-7. Check the diagram need assessment against the fixed trigger matrix.
-8. Audit every provisional diagram semantically. Check ordering, arrows, state
+7. Before accepting `READY_FOR_CONTRACT`, mentally simulate authoring the next
+   Change Contract. Do not require actual slices, proof IDs, final gates, or an
+   exact file inventory, but confirm that the artifact gives enough locked facts
+   to derive them mechanically. If contract authoring would require choosing the
+   proof seam, deciding whether docs are normative, inventing a fixture strategy,
+   or selecting between materially different implementation owners, return
+   `REVISE` or `BLOCKED` according to severity.
+8. Check the diagram need assessment against the fixed trigger matrix.
+9. Audit every provisional diagram semantically. Check ordering, arrows, state
    transitions, ownership labels, boundaries, rollback/no-op paths, and
    side-effect labels against the selected form and the strongest repository
    evidence. Do not trust any single doc or diagram blindly, including
    source-of-truth docs; when sources disagree, report the contradiction and
    explain which source is stronger or what evidence is missing.
-9. For designs with ordering, delivery, observer/listener/callback surfaces,
+10. For designs with ordering, delivery, observer/listener/callback surfaces,
    public-state publication, transactions, rollback/no-op paths, or mutation
    guards, reconstruct the full synchronous execution window. Check every
    callback surface that can run user or runtime code before the next sequence
    step. If the artifact does not identify those surfaces and route them to
    verification, mark `BLOCKED` with `INSUFFICIENT_VERIFICATION`.
-10. Confirm source-of-truth and verification impacts match the selected form,
+11. Confirm source-of-truth and verification impacts match the selected form,
    profile, and obligations.
-11. Confirm the handoff contains only facts needed by a future Change Contract:
+12. Confirm the handoff contains only facts needed by a future Change Contract:
    profile, obligations, decisions, evidence, and sequencing constraints.
-12. Return the verdict and findings. Do not repair the artifact in this review
+13. Return the verdict and findings. Do not repair the artifact in this review
    workflow. If the user asks for repair, return the review verdict first and
    handle edits only in a separate authoring workflow.
 
@@ -241,7 +288,8 @@ No findings.
 
 Contract Readiness
 
-The design can be converted into a Change Contract.
+The design can be converted into a Change Contract without new architecture
+decision-making.
 ```
 
 ## Self-Check
@@ -254,5 +302,12 @@ Before returning, confirm:
 - Did you re-check cited evidence?
 - Did you read diagrams as architecture claims, not decoration, and compare them
   critically against code, contracts, diagrams, and registry evidence?
+- Could a future Change Contract be written from this artifact as planning work,
+  without making a new architecture decision?
+- Did you verify that every required proof is practically constructible in this
+  repository?
+- Did you check that negative fixtures do not contaminate real source-of-truth
+  surfaces?
+- Did you distinguish "evidence exists" from "the selected form is executable"?
 - Did you avoid requiring slices, proof IDs, final gates, or step traceability?
 - Did the verdict match the strongest finding?
