@@ -10,7 +10,7 @@ import '../../tool/guardrails/src/repository_paths.dart';
 
 void main() {
   _testRealPublicDiagnosticsSurface();
-  _testNonPrefixDiagnosticsMembership();
+  _testExplicitDiagnosticsMembership();
 }
 
 void _testRealPublicDiagnosticsSurface() {
@@ -45,9 +45,9 @@ void _testRealPublicDiagnosticsSurface() {
   );
 }
 
-void _testNonPrefixDiagnosticsMembership() {
+void _testExplicitDiagnosticsMembership() {
   test(
-    'fixture diagnostics membership scans non-prefix public names',
+    'explicit diagnostics membership scans non-prefix public names',
     () async {
       final registrySource = File(
         '$repositoryRoot/docs/_registry/public_api_v1.yaml',

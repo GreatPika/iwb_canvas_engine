@@ -83,8 +83,8 @@ Diagnostic details are intentionally map-shaped public data, but they are not
 schema metadata and must not be represented as `CanvasMetadata`.
 `diagnostics.sanitized_public_projection` uses the registry-owned
 `diagnostics_public_surface` membership plus analyzer-resolved public signature
-traversal to prove these public declarations do not expose runtime objects,
-images, handles, closures, canvases, or full scene dumps.
+traversal to prove explicitly classified diagnostics declarations do not expose
+the runtime-like public types matched by the guard classifier.
 `CanvasDiagnosticPolicy` exposes public readable policy variants:
 `CanvasDiagnosticsDisabled`, `CanvasDiagnosticsSummary`, and
 `CanvasDiagnosticsVerbose`. `CanvasDiagnosticsVerbose.maxPreviewLength` caps

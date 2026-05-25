@@ -2,22 +2,6 @@
 
 This file captures the remaining review findings to hand off before starting P6.
 
-## P2
-
-### 2. Diagnostics public surface guard is name-based
-
-- Severity: P2
-- Location:
-  - `test/diagnostics/diagnostics_public_surface_test.dart:128`
-- Problem:
-  The diagnostics leak scan only checks public types whose names are
-  `CanvasDataException`, `CanvasDataErrorCode`, `CanvasDiagnostic*`, or
-  `CanvasDiagnostics*`. A new diagnostics-facing public type with another name
-  could miss the sanitizer/leak scan.
-- Suggested work:
-  Bind the check to a registry or contract-owned diagnostics surface inventory
-  instead of relying only on name prefixes.
-
 ### 3. Schema v1 roundtrip proof is partial
 
 - Severity: P2
