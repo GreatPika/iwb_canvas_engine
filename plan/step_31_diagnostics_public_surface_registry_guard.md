@@ -55,7 +55,7 @@ Update the registry schema/reader and its tests first, then update the required 
 
 ## Execution Units
 
-### [ ] Unit 1: Registry membership owner
+### [x] Unit 1: Registry membership owner
 
 Owner:
 
@@ -77,7 +77,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Source-of-truth documentation
+### [x] Unit 2: Source-of-truth documentation
 
 Owner:
 
@@ -99,7 +99,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Diagnostics leak guard migration
+### [x] Unit 3: Diagnostics leak guard migration
 
 Owner:
 
@@ -121,7 +121,7 @@ Depends On:
 
 Units 1 and 2.
 
-### [ ] Unit 4: Non-prefix bypass proof
+### [x] Unit 4: Non-prefix bypass proof
 
 Owner:
 
@@ -143,7 +143,7 @@ Depends On:
 
 Unit 3.
 
-### [ ] Unit 5: Guardrail closure verification
+### [x] Unit 5: Guardrail closure verification
 
 Owner:
 
