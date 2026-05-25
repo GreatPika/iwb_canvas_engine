@@ -108,3 +108,10 @@ public_exports:
   - decodeCanvasDocumentFromJson
   - canvasSchemaVersionWrite
   - canvasSchemaVersionsRead
+diagnostics_public_surface:
+  - CanvasDiagnosticPolicy
+  - CanvasDiagnosticsDisabled
+  - CanvasDiagnosticsSummary
+  - CanvasDiagnosticsVerbose
+  - CanvasDataException
+  - CanvasDataErrorCode
