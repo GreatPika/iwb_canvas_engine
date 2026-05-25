@@ -9,6 +9,11 @@ import '../../tool/guardrails/src/public_api_surface.dart';
 import '../../tool/guardrails/src/repository_paths.dart';
 
 void main() {
+  _testRealPublicDiagnosticsSurface();
+  _testNonPrefixDiagnosticsMembership();
+}
+
+void _testRealPublicDiagnosticsSurface() {
   test(
     'public diagnostics surface exposes only sanitized data shapes',
     () async {
@@ -35,6 +40,28 @@ void main() {
       expect(
         _diagnosticsRuntimeLeaks(surface, registry.diagnosticsPublicSurface),
         isEmpty,
+      );
+    },
+  );
+}
+
+void _testNonPrefixDiagnosticsMembership() {
+  test(
+    'fixture diagnostics membership scans non-prefix public names',
+    () async {
+      final registrySource = File(
+        '$repositoryRoot/docs/_registry/public_api_v1.yaml',
+      ).readAsStringSync();
+      final surface = await resolvePublicApiSurface(
+        libraryPath:
+            '$repositoryRoot/test/diagnostics/fixtures/'
+            'non_prefix_diagnostics_surface_fixture.dart',
+      );
+
+      expect(registrySource, isNot(contains('CanvasIssueReport')));
+      expect(
+        _diagnosticsRuntimeLeaks(surface, {'CanvasIssueReport'}),
+        contains('CanvasIssueReport.runtime:CanvasRuntime'),
       );
     },
   );
