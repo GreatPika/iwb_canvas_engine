@@ -42,34 +42,73 @@ void main() {
           mimeType: 'image/png',
           contentHash: 'hash-a',
           byteLength: 42,
+          metadata: CanvasMetadata.fromMap({
+            'owner': 'resource',
+            'variants': ['thumbnail', 'full'],
+          }),
         ),
       ],
       backgroundElements: [
         CanvasRectElement(
           id: CanvasElementId('rect-a'),
+          revision: 11,
+          transform: CanvasTransform(a: 1, b: 0, c: 0, d: 1, tx: 5, ty: -3),
+          opacity: 0.75,
+          hitPadding: 4,
+          isVisible: false,
+          isSelectable: false,
+          isLocked: true,
+          isDeletable: false,
+          isTransformable: false,
           size: const Size(20, 10),
           fillColor: const Color(0x330000ff),
           strokeColor: const Color(0xff0000ff),
           strokeWidth: 2,
+          metadata: CanvasMetadata.fromMap({
+            'owner': 'backgroundElement',
+            'nested': {'z': 0},
+          }),
         ),
       ],
       layers: [
         CanvasLayer(
           id: CanvasLayerId('layer-a'),
+          metadata: CanvasMetadata.fromMap({
+            'owner': 'layer',
+            'visible': true,
+          }),
           elements: [
             CanvasTextElement(
               id: CanvasElementId('text-a'),
               text: 'hello',
               fontSize: 18,
               color: const Color(0xffabcdef),
-              textDirection: TextDirection.ltr,
+              align: TextAlign.right,
+              textDirection: TextDirection.rtl,
               isBold: true,
+              isItalic: true,
+              isUnderline: true,
+              fontFamily: 'Inter',
+              maxWidth: 240,
+              lineHeight: 1.5,
+              revision: 21,
+              transform: CanvasTransform(a: 1, b: 0, c: 0, d: 1, tx: 1, ty: 2),
+              opacity: 0.9,
+              hitPadding: 1.5,
+              isSelectable: false,
+              metadata: CanvasMetadata.fromMap({'owner': 'text'}),
             ),
             CanvasImageElement(
               id: CanvasElementId('image-element-a'),
               resourceId: CanvasResourceId('image-a'),
               size: const Size(64, 32),
               naturalSize: const Size(128, 64),
+              revision: 22,
+              transform: CanvasTransform(a: 1.2, b: 0, c: 0, d: 1.1, tx: 3, ty: 4),
+              opacity: 0.8,
+              hitPadding: 2,
+              isLocked: true,
+              metadata: CanvasMetadata.fromMap({'owner': 'imageElement'}),
             ),
             CanvasPathElement(
               id: CanvasElementId('path-a'),
@@ -78,12 +117,24 @@ void main() {
               strokeColor: const Color(0xff000000),
               strokeWidth: 1,
               fillRule: CanvasPathFillRule.evenOdd,
+              revision: 23,
+              transform: CanvasTransform(a: 0.9, b: 0.1, c: -0.1, d: 0.9, tx: 5, ty: 6),
+              opacity: 0.7,
+              hitPadding: 3,
+              isDeletable: false,
+              metadata: CanvasMetadata.fromMap({'owner': 'path'}),
             ),
             CanvasStrokeElement(
               id: CanvasElementId('stroke-a'),
-              points: const [Offset(0, 0), Offset(1, 1)],
+              points: const [Offset(0, 0), Offset(1, 1), Offset(2, 1.5)],
               thickness: 3,
               color: const Color(0xff123456),
+              revision: 24,
+              transform: CanvasTransform(a: 1, b: 0, c: 0.2, d: 1, tx: 7, ty: 8),
+              opacity: 0.6,
+              hitPadding: 4,
+              isTransformable: false,
+              metadata: CanvasMetadata.fromMap({'owner': 'stroke'}),
             ),
             CanvasLineElement(
               id: CanvasElementId('line-a'),
@@ -91,10 +142,20 @@ void main() {
               end: const Offset(3, 4),
               thickness: 2,
               color: const Color(0xff654321),
+              revision: 25,
+              transform: CanvasTransform(a: 1, b: -0.1, c: 0.1, d: 1, tx: 9, ty: 10),
+              opacity: 0.5,
+              hitPadding: 5,
+              isVisible: false,
+              metadata: CanvasMetadata.fromMap({'owner': 'line'}),
             ),
           ],
         ),
       ],
+      metadata: CanvasMetadata.fromMap({
+        'owner': 'document',
+        'flags': {'canonical': true},
+      }),
     );
 
     final encoded = encodeCanvasDocument(document);
@@ -120,7 +181,10 @@ void main() {
       'mimeType': 'image/png',
       'contentHash': 'hash-a',
       'byteLength': 42,
-      'metadata': {},
+      'metadata': {
+        'owner': 'resource',
+        'variants': ['thumbnail', 'full'],
+      },
     });
 
     final backgroundLayer = encoded['backgroundLayer'] as Map<String, Object?>;
@@ -145,23 +209,20 @@ void main() {
     final text = elements.first as Map<String, Object?>;
     _expectKeys(text, _textElementKeys);
     expect(text['color'], '#FFABCDEF');
-    expect(text['fontFamily'], isNull);
-    expect(text['maxWidth'], isNull);
-    expect(text['lineHeight'], isNull);
+    expect(text['fontFamily'], 'Inter');
+    expect(text['maxWidth'], 240);
+    expect(text['lineHeight'], 1.5);
     _expectKeys(elements[1] as Map<String, Object?>, _imageElementKeys);
     _expectKeys(elements[2] as Map<String, Object?>, _pathElementKeys);
     _expectKeys(elements[3] as Map<String, Object?>, _strokeElementKeys);
     _expectKeys(elements[4] as Map<String, Object?>, _lineElementKeys);
 
     final decoded = decodeCanvasDocument(encoded);
-    expect(decoded.layers.single.elements.map((element) => element.id.value), [
-      'text-a',
-      'image-element-a',
-      'path-a',
-      'stroke-a',
-      'line-a',
-    ]);
-    expect(decodeCanvasDocumentFromJson(encodeCanvasDocumentToJson(document)), isA<CanvasDocument>());
+    _expectDocumentEquivalent(decoded, document);
+    _expectDocumentEquivalent(
+      decodeCanvasDocumentFromJson(encodeCanvasDocumentToJson(document)),
+      document,
+    );
     expect(jsonDecode(encodeCanvasDocumentToJson(document)), isA<Map<String, Object?>>());
   });
 
@@ -191,6 +252,129 @@ void main() {
 
 void _expectKeys(Map<String, Object?> value, Set<String> expected) {
   expect(value.keys.toSet(), expected);
+}
+
+void _expectDocumentEquivalent(CanvasDocument actual, CanvasDocument expected) {
+  expect(actual.camera, expected.camera);
+  expect(actual.background, expected.background);
+  expect(actual.palette.penColors, expected.palette.penColors);
+  expect(actual.palette.backgroundColors, expected.palette.backgroundColors);
+  expect(actual.palette.gridSizes, expected.palette.gridSizes);
+  expect(actual.metadata, expected.metadata);
+  _expectResourcesEquivalent(actual.resources, expected.resources);
+  _expectElementsEquivalent(actual.backgroundElements, expected.backgroundElements);
+  _expectLayersEquivalent(actual.layers, expected.layers);
+}
+
+void _expectResourcesEquivalent(
+  List<CanvasResource> actual,
+  List<CanvasResource> expected,
+) {
+  expect(actual, hasLength(expected.length));
+  for (var index = 0; index < expected.length; index += 1) {
+    _expectResourceEquivalent(actual[index], expected[index]);
+  }
+}
+
+void _expectResourceEquivalent(CanvasResource actual, CanvasResource expected) {
+  expect(actual.id.value, expected.id.value);
+  _expectResourceSourceEquivalent(actual.source, expected.source);
+  expect(actual.contentHash, expected.contentHash);
+  expect(actual.byteLength, expected.byteLength);
+  expect(actual.metadata, expected.metadata);
+
+  expect(actual, isA<CanvasImageResource>());
+  expect(expected, isA<CanvasImageResource>());
+  expect(
+    (actual as CanvasImageResource).mimeType,
+    (expected as CanvasImageResource).mimeType,
+  );
+}
+
+void _expectResourceSourceEquivalent(
+  CanvasResourceSource actual,
+  CanvasResourceSource expected,
+) {
+  expect(actual, isA<CanvasAppKeyResourceSource>());
+  expect(expected, isA<CanvasAppKeyResourceSource>());
+  expect(
+    (actual as CanvasAppKeyResourceSource).key,
+    (expected as CanvasAppKeyResourceSource).key,
+  );
+}
+
+void _expectLayersEquivalent(List<CanvasLayer> actual, List<CanvasLayer> expected) {
+  expect(actual, hasLength(expected.length));
+  for (var index = 0; index < expected.length; index += 1) {
+    expect(actual[index].id.value, expected[index].id.value);
+    expect(actual[index].metadata, expected[index].metadata);
+    _expectElementsEquivalent(actual[index].elements, expected[index].elements);
+  }
+}
+
+void _expectElementsEquivalent(
+  List<CanvasElement> actual,
+  List<CanvasElement> expected,
+) {
+  expect(actual, hasLength(expected.length));
+  for (var index = 0; index < expected.length; index += 1) {
+    _expectElementEquivalent(actual[index], expected[index]);
+  }
+}
+
+void _expectElementEquivalent(CanvasElement actual, CanvasElement expected) {
+  expect(actual.id.value, expected.id.value);
+  expect(actual.kind, expected.kind);
+  expect(actual.revision, expected.revision);
+  expect(actual.transform, expected.transform);
+  expect(actual.opacity, expected.opacity);
+  expect(actual.hitPadding, expected.hitPadding);
+  expect(actual.isVisible, expected.isVisible);
+  expect(actual.isSelectable, expected.isSelectable);
+  expect(actual.isLocked, expected.isLocked);
+  expect(actual.isDeletable, expected.isDeletable);
+  expect(actual.isTransformable, expected.isTransformable);
+  expect(actual.metadata, expected.metadata);
+
+  if (actual is CanvasImageElement && expected is CanvasImageElement) {
+    expect(actual.resourceId.value, expected.resourceId.value);
+    expect(actual.size, expected.size);
+    expect(actual.naturalSize, expected.naturalSize);
+  } else if (actual is CanvasPathElement && expected is CanvasPathElement) {
+    expect(actual.svgPathData, expected.svgPathData);
+    expect(actual.fillColor, expected.fillColor);
+    expect(actual.strokeColor, expected.strokeColor);
+    expect(actual.strokeWidth, expected.strokeWidth);
+    expect(actual.fillRule, expected.fillRule);
+  } else if (actual is CanvasTextElement && expected is CanvasTextElement) {
+    expect(actual.text, expected.text);
+    expect(actual.fontSize, expected.fontSize);
+    expect(actual.color, expected.color);
+    expect(actual.align, expected.align);
+    expect(actual.textDirection, expected.textDirection);
+    expect(actual.isBold, expected.isBold);
+    expect(actual.isItalic, expected.isItalic);
+    expect(actual.isUnderline, expected.isUnderline);
+    expect(actual.fontFamily, expected.fontFamily);
+    expect(actual.maxWidth, expected.maxWidth);
+    expect(actual.lineHeight, expected.lineHeight);
+  } else if (actual is CanvasStrokeElement && expected is CanvasStrokeElement) {
+    expect(actual.points, expected.points);
+    expect(actual.thickness, expected.thickness);
+    expect(actual.color, expected.color);
+  } else if (actual is CanvasLineElement && expected is CanvasLineElement) {
+    expect(actual.start, expected.start);
+    expect(actual.end, expected.end);
+    expect(actual.thickness, expected.thickness);
+    expect(actual.color, expected.color);
+  } else if (actual is CanvasRectElement && expected is CanvasRectElement) {
+    expect(actual.size, expected.size);
+    expect(actual.fillColor, expected.fillColor);
+    expect(actual.strokeColor, expected.strokeColor);
+    expect(actual.strokeWidth, expected.strokeWidth);
+  } else {
+    fail('unexpected element pair: ${actual.runtimeType} vs ${expected.runtimeType}');
+  }
 }
 
 const _rootKeys = {
