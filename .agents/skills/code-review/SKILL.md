@@ -34,6 +34,10 @@ Here are the general guidelines for determining whether something is a bug and s
     transaction/rollback/no-op ordering, post-commit notification, or mutation
     guards without guarding every synchronous callback surface that can reenter
     before the next sequence step.
+12. The bug may be contract drift when the diff visibly implements a different
+    owner, source of truth, proof seam, fixture strategy, required
+    source-of-truth update, or sequencing constraint than the active contract or
+    linked design selected.
 
 When flagging a bug, provide an accompanying finding. Once again, these guidelines are not the final word on how to construct a finding -- defer to any subsequent guidelines that you encounter.
 
@@ -60,7 +64,17 @@ GUIDELINES:
 - Keep each location as narrow as possible by naming the most useful diff line.
 - Check the active plan when one exists. Use `PLAN.md`, referenced step documents, contracts, and repository-local instructions as review evidence when they are relevant to the diff.
 - Flag plan mismatches only when the mismatch is visible and actionable from the reviewed change.
+- For changes implementing a Change Contract or design-backed task, flag visible
+  drift from the selected owner, source of truth, proof seam, fixture strategy,
+  required source-of-truth updates, or sequencing constraints.
 - Flag hacks, fragile shortcuts, future-risk smells, and inefficient solutions only when the issue was introduced or exposed by the reviewed diff.
+- For structural, bypass, negative-fixture, analyzer, or guardrail changes,
+  verify that the proof exercises the production seam or the contract-named
+  test seam. Flag self-referential proofs that would pass while the forbidden
+  shape still bypasses the real path.
+- Flag fixture-only names, values, schemas, or public declarations added to real
+  production source-of-truth surfaces unless the contract explicitly makes them
+  durable product/API data.
 - For changes that add or alter observers, listeners, callbacks,
   notifications, state publication, transactions, rollback/no-op ordering, or
   mutation guards, verify guard placement covers the full synchronous execution
