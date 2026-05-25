@@ -16,8 +16,9 @@ A contract fails if the implementer must make design decisions that the contract
 ## Decision Closure Rule
 
 A full contract is not implementable when the implementer must choose the owner,
-boundary, source of truth, compatibility behavior, execution order, migration or
-retirement strategy, or completion signal.
+boundary, source of truth, compatibility behavior, execution order, proof seam
+or fixture strategy, mandatory source-of-truth updates, migration or retirement
+strategy, or completion signal.
 For contracts involving callback, listener, observer, delivery, transaction,
 rollback/no-op, atomicity, public-state publication, or guard windows, the
 temporal invariant and every synchronous reentry/interleaving proof surface are
@@ -110,13 +111,21 @@ Evidence must connect observed facts to contract consequences.
 
 ## Repository Source Inputs
 
-When the review request names a source input, read it and verify that the contract preserves mandatory decisions, scope, gates, sequencing, and proof expectations:
+When the review request names a source input, read it and verify that the
+contract preserves mandatory decisions, scope, gates, sequencing, selected form
+decisions when present, lock-required facts, source-of-truth impacts,
+verification strategies, handoff constraints, and proof expectations:
 
 - `against phase PHASE_FILE`: read the concrete `docs/implementation/...` document.
 - `against design DESIGN_FILE`: read the concrete `.design/...` document.
 - any other explicit source input file: read that file.
 
 If the contract intentionally narrows or excludes source-input content, the narrowing must appear in `Out of Scope` and be supported by evidence or an explicit user requirement.
+
+For `against design DESIGN_FILE`, block the contract if it replaces the selected
+architecture form, makes a required source-of-truth update optional, drops a
+required proof seam or fixture strategy, or loses a handoff constraint without
+explicit redesign authority.
 
 Check when relevant:
 
@@ -146,6 +155,17 @@ Mark the contract `BLOCKED` when any category applies:
     Vague wording such as "guard observer delivery" is insufficient when state
     listeners, diagnostics, action streams, repaint callbacks, or other
     synchronous surfaces can also run.
+12. Proof or fixture strategy is unresolved: a structural, bypass, negative, or
+    fixture proof is required, but the contract omits the proof seam, fixture
+    mechanism, bounded surface, or expected pass/fail signal.
+13. Fixture-only data contaminates a real source of truth: the contract requires
+    test-only names, values, schemas, or fixtures to be added to production
+    registries, public APIs, durable contracts, real schemas, generated docs, or
+    public surfaces.
+14. Source-input obligations are weakened: a source-of-truth update, registry
+    change, verification strategy, handoff constraint, or sequencing fact
+    required by a design or phase source is made optional, conditional, or left
+    for implementation to rediscover.
 
 ## Non-Blocking Criteria
 

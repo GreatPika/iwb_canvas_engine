@@ -39,6 +39,9 @@ still need to choose:
 - the source of truth;
 - compatibility behavior;
 - execution order;
+- the proof seam or fixture strategy for structural, bypass, or negative proof;
+- mandatory source-of-truth updates when the change alters what a registry,
+  contract, guardrail, generated output, or diagram means;
 - temporal/reentrancy behavior for callback, listener, observer, delivery,
   transaction, rollback, no-op, atomicity, guard, or public-state publication
   windows;
@@ -75,7 +78,15 @@ When the request names a source input, read it:
 - `against design DESIGN_FILE`: read the concrete `.design/...` document.
 - any other explicit source input file: read that file.
 
-Preserve mandatory decisions, scope, gates, sequencing, and proof expectations.
+Preserve mandatory decisions, scope, gates, sequencing, proof expectations,
+selected form decisions when present, lock-required facts, source-of-truth
+impacts, verification strategies, and handoff constraints.
+When using `against design DESIGN_FILE`, output `Contract Blocker` if the design
+uses `NEEDS_RESEARCH` or `ARCHITECTURE_GATE`, or if it otherwise records
+unresolved owner, boundary, source-of-truth, proof, or user decisions.
+Do not replace the design's selected architecture form with a different owner,
+source of truth, proof strategy, or fixture strategy unless the user explicitly
+asks for redesign.
 If a source input or design mentions temporal ordering, observers, listeners,
 callbacks, post-commit delivery, rollback/no-op behavior, atomicity, public
 state publication, or mutation guards, preserve the named synchronous callback
@@ -262,6 +273,12 @@ A completion check may be:
 Do not use vague checks such as "verify correctness", "add tests as needed",
 "ensure it works", "update callers where necessary", or "clean up related code".
 If the exact signal cannot be named, output `Contract Blocker`.
+
+For negative, bypass, fixture, or structural-recognition proof, a completion
+check must name the proof seam or fixture mechanism, the bounded surface, and
+the expected pass/fail signal. Fixture-only data must not be added to real
+production source-of-truth files, public API registries, schemas, durable
+contracts, or public surfaces.
 
 For temporal/callback/guard work, a completion check is inadequate unless it
 names the specific callback surface, the reentrant or interleaved action being
