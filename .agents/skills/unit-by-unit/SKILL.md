@@ -1,6 +1,6 @@
 ---
 name: unit-by-unit
-description: "Use when implementing a step contract unit by unit: complete one contract execution unit, review it with one reused code_reviewer for that unit, fix all findings, commit, then continue to the next unit until every unit is complete."
+description: "Use when implementing a step contract unit by unit: complete one contract execution unit, review it with a fresh code_reviewer for each review request, fix all findings, commit, then continue to the next unit until every unit is complete."
 ---
 
 # Unit By Unit
@@ -14,9 +14,8 @@ unit by unit.
    - Stay inside the unit scope and its proof obligations.
    - Run the relevant verification required for that unit.
 
-2. After the unit implementation and verification are complete, spawn exactly
-   one `code_reviewer` subagent for that unit.
-   - The reviewer name must include the unit number.
+2. After the unit implementation and verification are complete, spawn a new
+   clean `code_reviewer` subagent for that unit review request.
    - Give it the absolute path to the step contract file.
    - Use this prompt only: `review unit N against STEP_FILE`
    - Replace `N` and `STEP_FILE` with the unit number and concrete step file
@@ -24,19 +23,22 @@ unit by unit.
    - Do not add other context, explanations, links, or extra instructions.
 
 3. If the reviewer reports findings, fix them in the same unit scope.
-   - Reuse the same `code_reviewer` for every follow-up review of that unit.
-   - Do not spawn a second reviewer for the same unit.
-   - Continue the fix and re-review loop until that same reviewer reports no
-     findings.
+   - For every follow-up review request, spawn a new clean `code_reviewer`.
+   - Use the same unit review prompt and constraints from step 2.
+   - Continue the fix and re-review loop until the latest fresh reviewer
+     reports no findings.
 
 4. Commit the approved unit.
-   - Commit only after the unit reviewer has no remaining findings.
+   - Commit only after the latest fresh unit reviewer has no remaining
+     findings.
    - Use the repository commit-message rules.
 
 5. Move to the next unit and repeat the same workflow.
 
-6. After every unit has been committed, spawn one final `code_reviewer`.
-   - This must be a different reviewer from the per-unit reviewers.
+6. After every unit has been committed, start final review by spawning a new
+   clean final `code_reviewer`.
+   - This must be a new clean reviewer, separate from all previous review
+     requests.
    - Give it the first and last unit commit hashes and the absolute path to
      the step contract file.
    - Use this prompt only:
@@ -45,7 +47,8 @@ unit by unit.
      commit hashes and step file path.
    - Do not add other context, explanations, links, or extra instructions.
    - If it reports findings, fix them in a follow-up commit after the unit
-     commits, then reuse the same final reviewer until it reports no findings.
+     commits, then spawn a new clean final `code_reviewer` for each follow-up
+     review request until the latest fresh reviewer reports no findings.
 
 ## Completion Criteria
 
@@ -53,7 +56,10 @@ The implementation task is complete only when every unit in the step contract:
 
 - has been implemented within its stated scope;
 - has passed its required verification;
-- has been approved by its own single reused `code_reviewer`;
+- has been approved by a fresh `code_reviewer` review request after its latest
+  changes;
 - has been committed before work begins on the next unit;
-- the full set of unit commits has been approved by a different final
+- every unit and final follow-up review request used a new clean
+  `code_reviewer`;
+- the full set of unit commits has been approved by a fresh final
   `code_reviewer` using the explicit unit commit range and step contract file.
