@@ -5,8 +5,12 @@ Set<String> collectUndefinedTypeReferences({
   required Iterable<Element> exportedElements,
   required Iterable<String> exportedNamedExtensionNames,
   required Set<String> publicNames,
+  required Set<String> approvedExternalTypeKeys,
 }) {
-  final visitor = _PublicTypeReferenceVisitor(publicNames);
+  final visitor = _PublicTypeReferenceVisitor(
+    publicNames: publicNames,
+    approvedExternalTypeKeys: approvedExternalTypeKeys,
+  );
 
   for (final name in exportedNamedExtensionNames) {
     visitor.rejectNamedExtension(name);
@@ -23,9 +27,13 @@ Set<String> collectUndefinedTypeReferences({
 // intentionally touches several analyzer element/type variants in one traversal.
 // ignore: metrics
 final class _PublicTypeReferenceVisitor {
-  _PublicTypeReferenceVisitor(this.publicNames);
+  _PublicTypeReferenceVisitor({
+    required this.publicNames,
+    required this.approvedExternalTypeKeys,
+  });
 
   final Set<String> publicNames;
+  final Set<String> approvedExternalTypeKeys;
   final Set<String> violations = {};
   final Set<DartType> _visitedTypes = {};
 
@@ -125,8 +133,8 @@ final class _PublicTypeReferenceVisitor {
   void _visitInterfaceType(InterfaceType type) {
     final element = type.element;
     final name = element.name;
-    final uri = element.library.uri.toString();
-    if (!_isApprovedExternalType(uri) && !publicNames.contains(name)) {
+    if (!_isApprovedExternalType(element, approvedExternalTypeKeys) &&
+        !publicNames.contains(name)) {
       violations.add(type.getDisplayString());
     }
     for (final typeArgument in type.typeArguments) {
@@ -162,14 +170,33 @@ bool _isPublicExecutable(ExecutableElement element) {
   return element.isPublic && element.nonSynthetic == element;
 }
 
-bool _isApprovedExternalType(String? uri) {
-  return uri == null ||
-      uri == 'dart:async' ||
+bool _isApprovedExternalType(
+  InterfaceElement element,
+  Set<String> approvedExternalTypeKeys,
+) {
+  final uri = element.library.uri.toString();
+
+  return uri == 'dart:async' ||
       uri == 'dart:core' ||
       uri == 'dart:typed_data' ||
       uri == 'dart:ui' ||
       uri == 'package:flutter/foundation.dart' ||
       uri == 'package:flutter/widgets.dart' ||
-      uri.startsWith('package:flutter/src/foundation/') ||
-      uri.startsWith('package:flutter/src/widgets/');
+      _isApprovedFlutterSrcType(element, approvedExternalTypeKeys);
+}
+
+bool _isApprovedFlutterSrcType(
+  InterfaceElement element,
+  Set<String> approvedExternalTypeKeys,
+) {
+  final uri = element.library.uri.toString();
+
+  // Analyzer reports many public Flutter declarations by their defining src
+  // URI, so approval is based on public barrel export membership.
+  return uri.startsWith('package:flutter/src/') &&
+      approvedExternalTypeKeys.contains(externalTypeKey(element));
+}
+
+String externalTypeKey(InterfaceElement element) {
+  return '${element.library.uri}#${element.name}';
 }

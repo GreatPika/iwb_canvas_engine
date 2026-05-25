@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
+import 'package:analyzer/dart/analysis/session.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/error.dart';
 
@@ -11,11 +12,13 @@ final class PublicApiSurface {
     required this.exportedNames,
     required this.exportedElements,
     required this.exportedNamedExtensionNames,
+    required this.approvedExternalTypeKeys,
   });
 
   final Set<String> exportedNames;
   final Map<String, Element> exportedElements;
   final Set<String> exportedNamedExtensionNames;
+  final Set<String> approvedExternalTypeKeys;
 }
 
 Future<PublicApiSurface> resolvePublicApiSurface({String? libraryPath}) async {
@@ -45,6 +48,9 @@ Future<PublicApiSurface> resolvePublicApiSurface({String? libraryPath}) async {
       exportedNames: publicEntries.keys.toSet(),
       exportedElements: publicEntries,
       exportedNamedExtensionNames: _namedExtensionNames(publicEntries),
+      approvedExternalTypeKeys: await _approvedExternalTypeKeys(
+        context.currentSession,
+      ),
     );
   } finally {
     await collection.dispose();
@@ -56,7 +62,28 @@ Set<String> collectUndefinedPublicTypeReferences(PublicApiSurface surface) {
     exportedElements: surface.exportedElements.values,
     exportedNamedExtensionNames: surface.exportedNamedExtensionNames,
     publicNames: surface.exportedNames,
+    approvedExternalTypeKeys: surface.approvedExternalTypeKeys,
   );
+}
+
+Future<Set<String>> _approvedExternalTypeKeys(AnalysisSession session) async {
+  final keys = <String>{};
+
+  for (final uri in _approvedFlutterPublicTypeUris) {
+    final result = await session.getLibraryByUri(uri);
+    if (result is! LibraryElementResult) {
+      throw StateError(
+        'Could not resolve approved public API library $uri: $result',
+      );
+    }
+    for (final element in result.element.exportNamespace.definedNames2.values) {
+      if (element is InterfaceElement) {
+        keys.add(externalTypeKey(element));
+      }
+    }
+  }
+
+  return keys;
 }
 
 bool _isPublicExportName(String name) {
@@ -86,3 +113,8 @@ void _throwOnErrorDiagnostics(ResolvedLibraryResult result) {
     throw StateError(errors.join('\n'));
   }
 }
+
+const _approvedFlutterPublicTypeUris = {
+  'package:flutter/foundation.dart',
+  'package:flutter/widgets.dart',
+};

@@ -57,6 +57,11 @@ const _fixtures = [
     guardrailIds: ['core.import_boundaries'],
   ),
   _Fixture(
+    path: 'lib/src/api/bad_flutter_src_import.dart',
+    content: "import 'package:flutter/src/widgets/framework.dart';",
+    guardrailIds: ['core.import_boundaries'],
+  ),
+  _Fixture(
     path: 'lib/src/codec/bad_flutter_widgets_import.dart',
     content: "import 'package:flutter/widgets.dart';",
     guardrailIds: ['core.import_boundaries'],

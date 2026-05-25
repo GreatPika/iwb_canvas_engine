@@ -2,19 +2,6 @@
 
 This file captures the remaining review findings to hand off before starting P6.
 
-### 6. Public type reference guard allows Flutter src paths
-
-- Severity: P2
-- Location:
-  - `tool/guardrails/src/public_api_type_references.dart:165`
-- Problem:
-  The contract allows public API types from `package:flutter/widgets.dart` and
-  `package:flutter/foundation.dart`, but the guardrail also allows
-  `package:flutter/src/widgets/**` and `package:flutter/src/foundation/**`.
-- Suggested work:
-  Reject direct `package:flutter/src/**` exposure, or prove that analyzer
-  resolves public Flutter types to `src` URIs and encode that exception narrowly.
-
 ## P3 / Cleanup
 
 ### 1. Root CI guardrail proof does not check bypass flags
