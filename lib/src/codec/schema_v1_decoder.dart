@@ -5,6 +5,7 @@
 import 'dart:convert';
 import 'dart:ui';
 
+import '../api/canvas_contract_limits.dart';
 import '../api/canvas_document.dart';
 import '../api/canvas_element.dart';
 import '../api/canvas_errors.dart';
@@ -382,7 +383,15 @@ CanvasResourceSource _readResourceSource(
     diagnostics: diagnostics,
   );
 
-  return _materialize(diagnostics, () => CanvasResourceSource.appKey(keyValue));
+  return _materialize(diagnostics, () {
+    final key = validateCanvasAppKeyValue(
+      keyValue,
+      path: 'resource.source.key',
+      maxLength: canvasMaxResourceAppKeyLength,
+    );
+
+    return CanvasResourceSource.appKey(key);
+  });
 }
 
 CanvasLayer _readLayer(Object? value, {required DiagnosticsHub? diagnostics}) {

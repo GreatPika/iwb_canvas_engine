@@ -158,6 +158,56 @@ void main() {
     expect(hub.records.single.path, 'resource.id');
   });
 
+  test('internal decode reports appKey value failures at JSON key path', () {
+    final emptyHub = DiagnosticsHub(
+      policy: const CanvasDiagnosticPolicy.summary(),
+    );
+    final controlHub = DiagnosticsHub(
+      policy: const CanvasDiagnosticPolicy.summary(),
+    );
+
+    expect(
+      () => decodeSchemaV1Document(
+        _invalidResourceAppKeyDocument('   '),
+        diagnostics: emptyHub,
+      ),
+      throwsA(
+        isA<CanvasDataException>()
+            .having(
+              (error) => error.code,
+              'code',
+              CanvasDataErrorCode.fieldMustNotBeEmpty,
+            )
+            .having((error) => error.path, 'path', 'resource.source.key'),
+      ),
+    );
+    expect(emptyHub.recordCount, 1);
+    expect(
+      emptyHub.records.single.code,
+      CanvasDataErrorCode.fieldMustNotBeEmpty,
+    );
+    expect(emptyHub.records.single.path, 'resource.source.key');
+
+    expect(
+      () => decodeSchemaV1Document(
+        _invalidResourceAppKeyDocument('asset-\u0001'),
+        diagnostics: controlHub,
+      ),
+      throwsA(
+        isA<CanvasDataException>()
+            .having(
+              (error) => error.code,
+              'code',
+              CanvasDataErrorCode.invalidFieldType,
+            )
+            .having((error) => error.path, 'path', 'resource.source.key'),
+      ),
+    );
+    expect(controlHub.recordCount, 1);
+    expect(controlHub.records.single.code, CanvasDataErrorCode.invalidFieldType);
+    expect(controlHub.records.single.path, 'resource.source.key');
+  });
+
   test('internal encode records schema validation failures when enabled', () {
     final hub = DiagnosticsHub(policy: const CanvasDiagnosticPolicy.summary());
     final document = CanvasDocument(
@@ -220,6 +270,19 @@ Map<String, Object?> _invalidResourceKindDocument() {
         'kind': 'video',
         'id': 'resource-1',
         'source': {'kind': 'appKey', 'key': 'resource-1'},
+      },
+    ],
+  };
+}
+
+Map<String, Object?> _invalidResourceAppKeyDocument(String key) {
+  return {
+    'schemaVersion': 1,
+    'resources': [
+      {
+        'kind': 'image',
+        'id': 'resource-1',
+        'source': {'kind': 'appKey', 'key': key},
       },
     ],
   };

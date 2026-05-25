@@ -2,21 +2,6 @@
 
 This file captures the remaining review findings to hand off before starting P6.
 
-### 5. JSON boundary path can become DTO-level path for appKey validation
-
-- Severity: P2
-- Location:
-  - `lib/src/api/canvas_resource.dart:76`
-  - `lib/src/codec/schema_v1_decoder.dart:379`
-- Problem:
-  The decoder reads `resource.source.key`, but materialization through
-  `CanvasResourceSource.appKey` can report `resource.source.appKey` for some
-  value-validation failures, such as empty or control-character keys. That is a
-  DTO-level path, not the JSON boundary path.
-- Suggested work:
-  Validate appKey at the codec boundary with the JSON path, or add a path
-  override path for codec materialization.
-
 ### 6. Public type reference guard allows Flutter src paths
 
 - Severity: P2
