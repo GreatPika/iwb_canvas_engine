@@ -51,3 +51,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 29. P5 edit core rollback-safe commits](plan/step_29_p5_edit_core_rollback_safe_commits.md)
 - [x] [Step 30. P5 edit core repair effect delivery seam](plan/step_30_p5_edit_core_repair_effect_delivery_seam.md)
 - [x] [Step 31. Diagnostics public surface registry guard](plan/step_31_diagnostics_public_surface_registry_guard.md)
+- [ ] [Step 32. Schema v1 roundtrip and metadata proof hardening](plan/step_32_schema_v1_roundtrip_and_metadata_proof_hardening.md)
