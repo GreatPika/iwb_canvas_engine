@@ -115,19 +115,22 @@ The root package is Flutter-based. Public API may use:
 - package:flutter/foundation.dart.
 ```
 
-External adapter proof:
+External adapter static proof:
 
 ```text
 test.api_contract.app_next_engine_adapter_compile_fixture proves that an
-application-owned adapter can exercise the public integration surface by
-importing only package:iwb_canvas_engine/iwb_canvas_engine.dart.
+application-owned adapter can statically reference the public app-facing surface
+from an external package by importing only
+package:iwb_canvas_engine/iwb_canvas_engine.dart.
 ```
 
 That fixture must compile without `src/**`, legacy package symbols, or internal
-runtime classes. It covers the external operation families an app-level adapter
-needs: runtime lifecycle, state/document observation, edit/load,
-selection/camera/tools, high-level commands, actions/context-action requests,
-resources, and `CanvasSurface` construction with public resolver/style inputs.
+runtime classes. It is compile-time coverage for the external operation
+families an app-level adapter needs: runtime lifecycle, state/document
+observation, edit/load, selection/camera/tools, high-level commands,
+actions/context-action requests, resources, and `CanvasSurface` construction
+with public resolver/style inputs. Behavioral integration remains covered by the
+focused runtime, interaction, and surface tests for those operation families.
 
 ### 4.1.1 Dart API design constraints
 

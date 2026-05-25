@@ -4,20 +4,6 @@ This file captures the remaining review findings to hand off before starting P6.
 
 ## P2
 
-### 1. Public adapter proof overclaims integration coverage
-
-- Severity: P2
-- Location:
-  - `docs/contracts/public_api_v1.md:121`
-  - `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart:15`
-- Problem:
-  The proof compiles and analyzes an external consumer package and checks
-  root-barrel imports, but some documentation wording sounds like a broader
-  integration or behavioral proof.
-- Suggested work:
-  Narrow the wording to compile/static proof, or add behavioral assertions if
-  the intended guarantee is true integration coverage.
-
 ### 2. Diagnostics public surface guard is name-based
 
 - Severity: P2
