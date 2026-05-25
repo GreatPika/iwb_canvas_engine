@@ -2,31 +2,6 @@
 
 This file captures the remaining review findings to hand off before starting P6.
 
-### 3. Schema v1 roundtrip proof is partial
-
-- Severity: P2
-- Location:
-  - `test/codec/schema_v1/canonical_encode_roundtrip_test.dart:26`
-- Problem:
-  The test is named as a roundtrip proof, but after decoding it mostly checks
-  ids/order and JSON shape, not full DTO equivalence. A field could be dropped
-  or changed and the test might still pass.
-- Suggested work:
-  Compare the decoded document with the source document across all schema-owned
-  DTO fields, or add a focused equivalence helper.
-
-### 4. Metadata projection proof covers only root metadata
-
-- Severity: P2
-- Location:
-  - `test/codec/schema_v1/metadata_projection_test.dart:18`
-- Problem:
-  The codec supports metadata on document, resource, layer, and element owners,
-  but the proof only checks root document metadata.
-- Suggested work:
-  Add resource, layer, and element metadata decode, encode, and immutability
-  coverage.
-
 ### 5. JSON boundary path can become DTO-level path for appKey validation
 
 - Severity: P2
