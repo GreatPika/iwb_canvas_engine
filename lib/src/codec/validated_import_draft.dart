@@ -3,6 +3,7 @@ import '../api/canvas_element.dart';
 import '../api/canvas_errors.dart';
 import '../api/canvas_ids.dart';
 import '../api/canvas_resource.dart';
+import '../api/canvas_transform_admission.dart';
 import '../diagnostics/diagnostics_hub.dart';
 import 'schema_v1_diagnostics.dart';
 
@@ -72,6 +73,14 @@ Set<CanvasElementId> _validatedElementIds(
   final ids = <CanvasElementId>{};
   final resourceIds = document.resources.map((resource) => resource.id).toSet();
   for (final element in _allElements(document)) {
+    try {
+      validateElementTransformAdmission(
+        element.transform,
+        path: 'element.transform',
+      );
+    } on CanvasDataException catch (error) {
+      throw recordSchemaV1FailureDiagnostic(diagnostics, error);
+    }
     if (!ids.add(element.id)) {
       throw recordSchemaV1FailureDiagnostic(
         diagnostics,

@@ -39,9 +39,9 @@ final class DocumentStoreKernel {
 
   CommittedDocument _document;
   final DocumentProjectionCache _projectionCache = DocumentProjectionCache();
-  late final _IdAdmission _elementIds;
-  late final _IdAdmission _layerIds;
-  late final _IdAdmission _resourceIds;
+  late _IdAdmission _elementIds;
+  late _IdAdmission _layerIds;
+  late _IdAdmission _resourceIds;
 
   CanvasDocument readDocument() => _projectionCache.projectionFor(_document);
 
@@ -133,6 +133,28 @@ final class DocumentStoreKernel {
     _elementIds.admitAll(_document.admittedElementIds);
     _layerIds.admitAll(_document.admittedLayerIds);
     _resourceIds.admitAll(_document.admittedResourceIds);
+  }
+
+  void replaceDocument(CanvasDocument document, StoreRevisionDelta delta) {
+    if (!delta.hasChanges) {
+      return;
+    }
+    _document = CommittedDocument.withRevisions(
+      document,
+      revisions: delta.advance(_document.revisions),
+    );
+    _elementIds = _IdAdmission(
+      prefix: 'e',
+      admittedIds: _document.admittedElementIds,
+    );
+    _layerIds = _IdAdmission(
+      prefix: 'l',
+      admittedIds: _document.admittedLayerIds,
+    );
+    _resourceIds = _IdAdmission(
+      prefix: 'r',
+      admittedIds: _document.admittedResourceIds,
+    );
   }
 }
 
