@@ -1,7 +1,7 @@
 name = "contract_reviewer"
 description = "Read-only reviewer for Change Contracts. Uses the repository's change-contract-check skill and defaults to validating the requested or active Change Contract, not uncommitted code changes."
 model = "gpt-5.5"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 nickname_candidates = ["Contract Reviewer", "Change Contract Check", "Contract Review"]
 
