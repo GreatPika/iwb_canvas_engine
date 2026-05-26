@@ -9,7 +9,7 @@ const _ownerPathPrefixes = {
   'store': ['lib/src/store/'],
   'selection': ['lib/src/selection/'],
   'edit': ['lib/src/edit/'],
-  'load_document': ['lib/src/load_document/'],
+  'load_document': ['lib/src/edit/staged_document_load.dart'],
   'resource': ['lib/src/resources/'],
   'spatial': ['lib/src/geometry/'],
   'frame': ['lib/src/frame/'],

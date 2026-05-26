@@ -35,7 +35,7 @@ phases:
       - path: docs/contracts/edit_kernel.md
   - id: P6
     title: Load document
-    status: future
+    status: closed
     sourceDocs:
       - path: docs/implementation/p6_load_document.md
       - path: docs/contracts/load_document.md
@@ -99,7 +99,7 @@ coverage:
     - lib/src/store/**
     - lib/src/selection/**
     - lib/src/edit/**
-    - lib/src/load_document/**
+    - lib/src/edit/staged_document_load.dart
     - lib/src/resources/**
     - lib/src/geometry/**
     - lib/src/frame/**
@@ -291,13 +291,13 @@ nodes:
     owner: load_document
     phaseIntroduced: P6
     phaseRequiredBy: P6
-    status: future
+    status: required
     coverageScope: architectureOwners
     sourceDocs:
       - path: docs/implementation/p6_load_document.md
       - path: docs/contracts/load_document.md
     evidence:
-      - Loading validated documents is future-phase runtime behavior.
+      - Loading validated documents is implemented as a staged runtime pipeline.
     actual:
       declarations:
         - LoadDocumentPipeline
@@ -590,11 +590,11 @@ edges:
     to: store.document_kernel
     kind: mutation_boundary
     phaseRequiredBy: P6
-    status: future
+    status: required
     sourceDocs:
       - path: docs/contracts/load_document.md
     evidence:
-      - Load document will admit validated documents into runtime state.
+      - Load document admits validated replacement documents into runtime state through the pipeline-owned store boundary.
     actual:
       compositionFields:
         - DocumentStoreKernel
