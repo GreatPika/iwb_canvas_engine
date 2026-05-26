@@ -70,6 +70,41 @@ void main() {
     expect(editedState.revisions.document, 1);
     expect(editedState.revisions.selection, 1);
     expect(runtime.readDocument().layers.single.elements, hasLength(2));
+
+    final secondDocument = decodeCanvasDocument(_secondSchemaV1Document());
+    final loadSnapshots = <CanvasRuntimeState>[];
+    runtime.state.addListener(() {
+      loadSnapshots.add(runtime.state.value);
+    });
+
+    runtime.edits.loadDocument(secondDocument);
+
+    expect(loadSnapshots, hasLength(1));
+    final loadedState = loadSnapshots.single;
+    expect(
+      loadedState.summary,
+      const CanvasRuntimeSummary(
+        elementCount: 1,
+        layerCount: 1,
+        resourceCount: 0,
+        selectedCount: 0,
+      ),
+    );
+    expect(loadedState.revisions.document, 2);
+    expect(loadedState.revisions.selection, 2);
+    expect(loadedState.revisions.viewCamera, 1);
+    expect(loadedState.revisions.epoch, 1);
+    expect(runtime.selection.selectedElementIds, isEmpty);
+    expect(runtime.camera.offset, const Offset(-8, 12));
+
+    final loadedDocument = runtime.readDocument();
+    expect(loadedDocument.camera, CanvasCamera(offset: const Offset(-8, 12)));
+    expect(loadedDocument.layers.single.id, CanvasLayerId('layer-second'));
+    expect(
+      loadedDocument.layers.single.elements.single.id,
+      CanvasElementId('element-second'),
+    );
+    expect(loadedDocument.metadata['source'], 'public incremental smoke load');
   });
 }
 
@@ -121,6 +156,57 @@ Map<String, Object?> _smallSchemaV1Document() {
       },
     ],
     'metadata': {'source': 'public incremental smoke'},
+  };
+}
+
+Map<String, Object?> _secondSchemaV1Document() {
+  return {
+    'schemaVersion': 1,
+    'camera': {
+      'offset': {'x': -8.0, 'y': 12.0},
+    },
+    'background': {
+      'color': '#FFFFFFFF',
+      'grid': {
+        'enabled': true,
+        'cellSize': 16.0,
+        'color': '#14000000',
+      },
+    },
+    'palette': {
+      'penColors': ['#FF000000'],
+      'backgroundColors': ['#FFFFFFFF'],
+      'gridSizes': [8.0, 16.0],
+    },
+    'resources': [],
+    'backgroundLayer': {'elements': []},
+    'layers': [
+      {
+        'id': 'layer-second',
+        'elements': [
+          {
+            'id': 'element-second',
+            'kind': 'rect',
+            'revision': 0,
+            'transform': {'a': 1.0, 'b': 0.0, 'c': 0.0, 'd': 1.0, 'tx': 4.0, 'ty': 6.0},
+            'opacity': 1.0,
+            'hitPadding': 0.0,
+            'isVisible': true,
+            'isSelectable': true,
+            'isLocked': false,
+            'isDeletable': true,
+            'isTransformable': true,
+            'metadata': {'label': 'Loaded smoke element'},
+            'size': {'w': 18.0, 'h': 14.0},
+            'fillColor': '#3300FF00',
+            'strokeColor': '#FF00AA00',
+            'strokeWidth': 1.0,
+          },
+        ],
+        'metadata': {'name': 'Loaded smoke layer'},
+      },
+    ],
+    'metadata': {'source': 'public incremental smoke load'},
   };
 }
 
