@@ -12,15 +12,25 @@ void main() {
     expect(workflowFile.existsSync(), isTrue);
 
     final workflowContent = workflowFile.readAsStringSync();
-    final steps = _workflowSteps(workflowContent);
+    final rootPackageJob = _rootPackageJob(workflowContent);
+    final steps = _workflowSteps(rootPackageJob);
+    final guardrailStep = _stepNamed(steps, 'Run guardrails');
     final runCommands = _runCommands(steps);
     final usedActions = _usedActions(steps);
 
+    expect(rootPackageJob.containsKey('continue-on-error'), isFalse);
+    expect(rootPackageJob.containsKey('if'), isFalse);
+    expect(guardrailStep.containsKey('continue-on-error'), isFalse);
+    expect(guardrailStep.containsKey('if'), isFalse);
     expect(usedActions, contains('actions/checkout@v4'));
     expect(usedActions, contains('subosito/flutter-action@v2'));
     expect(runCommands, contains('flutter pub get'));
     expect(runCommands, contains('dart analyze'));
     expect(runCommands, contains('dart run tool/guardrails/run.dart'));
+    expect(
+      (guardrailStep['run'] as String).trim(),
+      equals('dart run tool/guardrails/run.dart'),
+    );
     expect(workflowContent, isNot(contains('--guardrail=')));
     expect(workflowContent, isNot(contains('--suite=')));
     for (final id in guardrailInventory().keys) {
@@ -29,12 +39,19 @@ void main() {
   });
 }
 
-List<YamlMap> _workflowSteps(String workflowContent) {
+YamlMap _rootPackageJob(String workflowContent) {
   final workflow = loadYaml(workflowContent) as YamlMap;
   final jobs = workflow['jobs'] as YamlMap;
-  final rootPackageJob = jobs['root-package'] as YamlMap;
 
+  return jobs['root-package'] as YamlMap;
+}
+
+List<YamlMap> _workflowSteps(YamlMap rootPackageJob) {
   return (rootPackageJob['steps'] as YamlList).cast<YamlMap>();
+}
+
+YamlMap _stepNamed(List<YamlMap> steps, String name) {
+  return steps.singleWhere((step) => step['name'] == name);
 }
 
 Set<String> _runCommands(List<YamlMap> steps) {
