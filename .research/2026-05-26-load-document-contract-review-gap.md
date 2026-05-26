@@ -8,12 +8,46 @@ research_question: "Why did the P6 loadDocument contract/review workflow allow a
 
 # Research: LoadDocument Contract Review Gap
 
-## Summary
+## Current Status After Commit 4d5d6544
+
+Commit `4d5d6544` supersedes the durable-doc portion of this snapshot. The load
+contract, operation matrix, public API notes, guardrail docs, and load/state
+diagrams now model successful load cleanup as a prepared `PointerCleanupOutcome`
+before the document install commit point (`docs/contracts/load_document.md:49`,
+`docs/contracts/load_document.md:70`, `docs/contracts/load_document.md:88`,
+`docs/diagrams/seq_load_document_success.mmd:43`,
+`docs/diagrams/seq_load_document_success.mmd:69`,
+`docs/verification/guardrails.md:195`).
+
+The remaining live gap is narrower than the original research question: durable
+docs no longer bless post-install interaction cleanup, but current runtime code
+and the ordering fixture still do. `RuntimeRoot._loadDocument` still calls
+`_loadInteractionBoundary.clearPostInstallFacts()` after
+`_loadPipeline.consume(preparedLoad)`, selection clear, camera assignment, and
+revision increments (`lib/src/runtime/runtime_root.dart:373`,
+`lib/src/runtime/runtime_root.dart:382`). The injectable ordering fixture still
+expects `interrupt`, `post-install-cleanup`, `state`, `observer`, and its
+post-install callback observes the replacement document
+(`test/runtime/fixtures/load_document_ordering_fixture.dart:57`,
+`test/runtime/fixtures/load_document_ordering_fixture.dart:68`).
+
+Use this file as historical root-cause research for how the gap entered the
+design. Do not use the older durable-doc references below as the current
+contract. Current implementation work should replace the two-method
+`LoadInteractionBoundary` shape with a prepared cleanup outcome produced before
+install, and update the ordering proof so no interaction owner boundary call can
+finish load cleanup after install.
+
+## Original Snapshot Summary
+
+This summary describes the repository at commit `65fb2038`. Commit `4d5d6544`
+supersedes the current durable-doc facts described here; the root-cause narrative
+below remains useful, but the current source of truth is the status note above.
 
 The repository-visible workflow for P6 includes a design artifact marked
 `READY_FOR_CONTRACT`, a completed Step 36 Change Contract, blocking guardrail
 inventory entries, executable load ordering tests, and runtime implementation.
-The observable source chain repeatedly describes `loadDocument` as staged,
+At that snapshot, the observable source chain repeatedly describes `loadDocument` as staged,
 validated, atomic replacement, but it also records pointer-normalization and
 pending-tap cleanup as a post-install interaction step in the design, contract,
 phase guide, and durable diagrams (`.design/2026-05-26-p6-load-document.md:443`,
@@ -135,31 +169,43 @@ separate call after the store consume path (`lib/src/runtime/runtime_root.dart:4
   `.design/2026-05-26-p6-load-document.md:617`,
   `.design/2026-05-26-p6-load-document.md:618`).
 
-### 4. Durable Docs Carry Two Cleanup Placements
+### 4. Durable Docs Carried Two Cleanup Placements In Original Snapshot
 
-- **Location**: primary `docs/contracts/load_document.md:49`; additional
+- **Original snapshot references**: primary `docs/contracts/load_document.md:49`; additional
   `docs/contracts/load_document.md:75`,
   `docs/diagrams/seq_load_document_success.mmd:63`,
   `docs/diagrams/dfd_load_document_success_failure.mmd:81`.
-- **Description**: The load contract says `PreparedDocumentLoad success` leads to
-  runtime interrupt/preview cleanup and the boundary may clear active preview
-  state and pointer normalization facts (`docs/contracts/load_document.md:49`,
+- **Current status**: Superseded by commit `4d5d6544`. Current durable docs now
+  require prepared cleanup before install and forbid a post-install interaction
+  owner cleanup call (`docs/contracts/load_document.md:49`,
+  `docs/contracts/load_document.md:56`,
+  `docs/contracts/load_document.md:70`,
+  `docs/contracts/load_document.md:88`,
+  `docs/diagrams/seq_load_document_success.mmd:43`,
+  `docs/diagrams/seq_load_document_success.mmd:69`,
+  `docs/diagrams/dfd_load_document_success_failure.mmd:89`).
+- **Description**: In the original snapshot, the load contract says
+  `PreparedDocumentLoad success` leads to runtime interrupt/preview cleanup and
+  the boundary may clear active preview state and pointer normalization facts
+  (`docs/contracts/load_document.md:49`,
   `docs/contracts/load_document.md:52`). The same success ordering later places
   "clear pointer normalization and pending tap history" after atomic install,
   runtime camera initialization, and revision increments
   (`docs/contracts/load_document.md:68`,
   `docs/contracts/load_document.md:75`).
-- **Dependencies**: The sequence diagram installs the prepared document and
-  clears selection in the same runtime result, then notifies interaction that the
-  committed load is installed and clears pointer normalization and pending tap
-  history (`docs/diagrams/seq_load_document_success.mmd:51`,
+- **Dependencies**: In the original snapshot, the sequence diagram installs the
+  prepared document and clears selection in the same runtime result, then
+  notifies interaction that the committed load is installed and clears pointer
+  normalization and pending tap history
+  (`docs/diagrams/seq_load_document_success.mmd:51`,
   `docs/diagrams/seq_load_document_success.mmd:64`). The DFD declares a
   `Post-install input cleanup` node and routes `AtomicRuntimeResult` to it
   "after install only" (`docs/diagrams/dfd_load_document_success_failure.mmd:25`,
   `docs/diagrams/dfd_load_document_success_failure.mmd:81`).
-- **Data flow**: durable docs describe preparation -> interrupt/preview cleanup
-  -> atomic install/selection clear -> post-install pending input cleanup ->
-  cache/repaint/publication (`docs/diagrams/dfd_load_document_success_failure.mmd:70`,
+- **Data flow**: At that snapshot, durable docs described preparation ->
+  interrupt/preview cleanup -> atomic install/selection clear -> post-install
+  pending input cleanup -> cache/repaint/publication
+  (`docs/diagrams/dfd_load_document_success_failure.mmd:70`,
   `docs/diagrams/dfd_load_document_success_failure.mmd:93`).
 
 ### 5. The Step 36 Contract Preserved That Post-Install Shape
@@ -193,7 +239,7 @@ separate call after the store consume path (`lib/src/runtime/runtime_root.dart:4
   `plan/step_36_p6_load_document.md:232`,
   `plan/step_36_p6_load_document.md:359`).
 
-### 6. Guardrail Names And Routes Prove A Narrower Property Than Full Failure Atomicity
+### 6. Guardrail Text Now Names The Missing Invariant
 
 - **Location**: primary `tool/guardrails/src/guardrail_executor.dart:232`;
   additional `docs/verification/guardrails.md:194`,
@@ -205,12 +251,13 @@ separate call after the store consume path (`lib/src/runtime/runtime_root.dart:4
   to `test/runtime/load_document_ordering_test.dart`
   (`tool/guardrails/src/guardrail_executor.dart:232`,
   `tool/guardrails/src/guardrail_executor.dart:237`).
-- **Dependencies**: The guardrail documentation defines the two load rules as
-  "failed load does not interrupt gesture" and "success interrupt happens before
-  atomic install" (`docs/verification/guardrails.md:194`,
-  `docs/verification/guardrails.md:195`). The design-pattern ledger describes
-  them as semantic sequence plus behavioral seam tests for failed-load no
-  interrupt and success interrupt-before-install
+- **Current status**: Superseded by commit `4d5d6544` for the docs wording. The
+  guardrail documentation now defines `load.success_interrupts_before_install` as
+  successful load preparing interaction cleanup before atomic install and
+  performing no post-install interaction owner call to finish load cleanup
+  (`docs/verification/guardrails.md:194`,
+  `docs/verification/guardrails.md:195`). The design-pattern ledger now repeats
+  that prepared-cleanup/no-post-install-owner-call invariant
   (`docs/verification/guardrail_design_patterns.md:116`,
   `docs/verification/guardrail_design_patterns.md:117`).
 - **Data flow**: guardrail id -> executor proof path -> wrapper test -> Flutter
@@ -268,7 +315,7 @@ separate call after the store consume path (`lib/src/runtime/runtime_root.dart:4
   `lib/src/runtime/runtime_root.dart:377`,
   `test/runtime/fixtures/load_document_ordering_fixture.dart:34`).
 
-### 9. RuntimeRoot Implements The Documented Post-Install Boundary
+### 9. RuntimeRoot Still Implements The Historical Post-Install Boundary
 
 - **Location**: primary `lib/src/runtime/runtime_root.dart:373`; additional
   `lib/src/edit/staged_document_load.dart:70`,
@@ -282,6 +329,8 @@ separate call after the store consume path (`lib/src/runtime/runtime_root.dart:4
   validates ownership/one-shot use and calls `_store.replaceDocument(...)`
   (`lib/src/edit/staged_document_load.dart:70`,
   `lib/src/edit/staged_document_load.dart:82`).
+  After commit `4d5d6544`, this runtime shape is implementation/test drift from
+  the current durable docs rather than a documented target shape.
 - **Dependencies**: `LoadInteractionBoundary` declares two `void` methods,
   `interruptPreparedLoad()` and `clearPostInstallFacts()`
   (`lib/src/runtime/runtime_root.dart:487`,
@@ -321,16 +370,26 @@ separate call after the store consume path (`lib/src/runtime/runtime_root.dart:4
   interrupt/preview cleanup before install.
 - `.design/2026-05-26-p6-load-document.md:767` - handoff constraints place
   pointer normalization and pending tap clear after atomic install.
-- `docs/contracts/load_document.md:49` - prepared-load success leads to runtime
-  interrupt/preview cleanup.
-- `docs/contracts/load_document.md:52` - early boundary may clear pointer
-  normalization facts.
-- `docs/contracts/load_document.md:75` - success ordering clears pointer
-  normalization and pending tap history after install/revision steps.
-- `docs/diagrams/seq_load_document_success.mmd:63` - sequence notifies interaction
-  after committed load install.
-- `docs/diagrams/dfd_load_document_success_failure.mmd:81` - DFD routes atomic
-  runtime result to post-install cleanup after install only.
+- `docs/contracts/load_document.md:49` - current contract requests prepared load
+  cleanup after prepared-load success.
+- `docs/contracts/load_document.md:56` - current contract forbids a second
+  post-install interaction-boundary call to finish load cleanup.
+- `docs/contracts/load_document.md:70` - current success ordering produces a
+  `PointerCleanupOutcome` before the document install commit point.
+- `docs/contracts/load_document.md:88` - current contract says pointer
+  normalization and pending tap cleanup are not separate post-install owner calls.
+- `docs/diagrams/seq_load_document_success.mmd:43` - current sequence requests
+  prepared load cleanup before install.
+- `docs/diagrams/seq_load_document_success.mmd:69` - current sequence states that
+  no interaction owner call runs after install.
+- `docs/diagrams/dfd_load_document_success_failure.mmd:73` - current DFD routes
+  pending input into prepared cleanup before install.
+- `docs/diagrams/dfd_load_document_success_failure.mmd:89` - current DFD consumes
+  prepared cleanup facts with no post-install interaction call.
+- `docs/contracts/operation_matrix.md:307` - current matrix says publication
+  consumes an already prepared cleanup outcome after install.
+- `docs/contracts/public_api_v1.md:2061` - current public API notes say prepared
+  cleanup before install clears preview.
 - `plan/step_36_p6_load_document.md:104` - Step 36 in-scope cleanup boundary
   includes post-install pointer cleanup.
 - `plan/step_36_p6_load_document.md:170` - Step 36 order constraints begin.
@@ -355,20 +414,20 @@ separate call after the store consume path (`lib/src/runtime/runtime_root.dart:4
 
 ## Observed Architecture Facts
 
-- Pattern observed: source inputs and implementation all preserve the same
-  post-install interaction cleanup slot; it appears in `.design`, durable
-  contract, phase guide, sequence diagram, DFD, Step 36 contract, ordering
-  fixture, and runtime code
+- Superseded by commit `4d5d6544`: source inputs and implementation no longer all
+  preserve the same post-install interaction cleanup slot. The historical gap
+  still appears in `.design`, Step 36 contract, ordering fixture, and runtime
+  code, but current durable docs and diagrams now require prepared cleanup before
+  install and no post-install interaction owner cleanup call
   (`.design/2026-05-26-p6-load-document.md:448`,
-  `docs/contracts/load_document.md:75`,
-  `docs/implementation/p6_load_document.md:19`,
-  `docs/diagrams/seq_load_document_success.mmd:64`,
-  `docs/diagrams/dfd_load_document_success_failure.mmd:81`,
   `plan/step_36_p6_load_document.md:256`,
   `test/runtime/fixtures/load_document_ordering_fixture.dart:57`,
-  `lib/src/runtime/runtime_root.dart:382`).
-- Pattern observed: the named guardrails prove specific ordering claims, not a
-  general "no owner-boundary calls after irreversible install" invariant
+  `lib/src/runtime/runtime_root.dart:382`,
+  `docs/contracts/load_document.md:56`,
+  `docs/diagrams/seq_load_document_success.mmd:69`).
+- Updated by commit `4d5d6544`: guardrail docs now name the no-post-install owner
+  call invariant, but the current runner still maps the load guardrails to the
+  existing ordering test and must be checked against the fixture behavior above
   (`docs/verification/guardrails.md:194`,
   `docs/verification/guardrails.md:195`,
   `tool/guardrails/src/guardrail_executor.dart:232`,
