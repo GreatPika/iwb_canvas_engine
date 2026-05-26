@@ -111,7 +111,7 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_11_edit_kernel`, `section_23_tests`
 
-## test.edit.field_update_nullable_semantics
+## test.edit.field_update_admission_effects
 
 - Sections: `section_11_edit_kernel`, `section_23_tests`
 

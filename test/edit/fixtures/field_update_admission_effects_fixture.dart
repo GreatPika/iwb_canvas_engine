@@ -7,27 +7,27 @@ import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
-  test('nullable clears update nullable element fields', () {
+  test('field update admission and effects allow nullable clears', () {
     expect(_expectNullableClearUpdatesField, returnsNormally);
   });
 
-  test('dynamic non-nullable clear requests reject before install', () {
+  test('field update admission rejects dynamic non-nullable clears', () {
     expect(_expectDynamicNonNullableClearRejected, returnsNormally);
   });
 
-  test('non-invertible transform updates reject before draft mutation', () {
+  test('field update admission rejects non-invertible transforms', () {
     expect(_expectNonInvertibleTransformRejected, returnsNormally);
   });
 
-  test('mismatched update kind rejects before draft mutation', () {
+  test('field update admission rejects mismatched update kinds', () {
     expect(_expectMismatchedUpdateKindRejected, returnsNormally);
   });
 
-  test('geometry updates advance bounds revision', () {
+  test('field update effects advance geometry revisions', () {
     expect(_expectGeometryUpdateAdvancesBoundsRevision, returnsNormally);
   });
 
-  test('visibility updates request selection pruning', () {
+  test('field update effects request selection pruning', () {
     expect(_expectVisibilityUpdateTouchesSelection, returnsNormally);
   });
 }

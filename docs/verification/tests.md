@@ -155,7 +155,7 @@ Required tests:
 - `test.store.public_document_is_projection_only`
 - `test.edit.sync_non_nested_async_stale`
 - `test.edit.rollback`
-- `test.edit.field_update_nullable_semantics`
+- `test.edit.field_update_admission_effects`
 - `test.edit.edit_matrix_effects`
 - `test.edit.exact_touched_invalidation`
 - `test.edit.typed_effects_no_frame_dependency`
@@ -262,7 +262,7 @@ Required tests:
 - `test/store/public_document_is_projection_only_test.dart`
 - `test/edit/sync_non_nested_async_stale_test.dart`
 - `test/edit/rollback_test.dart`
-- `test/edit/field_update_nullable_semantics_test.dart`
+- `test/edit/field_update_admission_effects_test.dart`
 - `test/edit/edit_matrix_effects_test.dart`
 - `test/edit/exact_touched_invalidation_test.dart`
 - `test/edit/typed_effects_no_frame_dependency_test.dart`
@@ -332,9 +332,10 @@ at public DTO construction and schema decode: non-invertible element
 transforms reject with `fieldMustBeInvertible`, while `CanvasTransform` remains
 the general affine value type.
 
-`test.edit.field_update_nullable_semantics` covers
-`CanvasElementUpdate.transform` validation for generated and dynamic field
-updates: a non-invertible transform is rejected before draft mutation.
+`test.edit.field_update_admission_effects` covers field-update admission and
+effects: nullable clears, dynamic non-nullable clear rejection,
+non-invertible transform rejection, mismatched update-kind rejection, geometry
+revision effects, and selection pruning.
 
 `test.edit.staged_document_load_success_failure` covers `loadDocument`
 rejection of non-invertible element transforms before `PreparedDocumentLoad`

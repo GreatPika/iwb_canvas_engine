@@ -216,7 +216,7 @@ const _testProofPaths = {
   ],
   'edit.operation_matrix_complete': [
     'test/edit/edit_matrix_effects_test.dart',
-    'test/edit/field_update_nullable_semantics_test.dart',
+    'test/edit/field_update_admission_effects_test.dart',
     'test/edit/exact_touched_invalidation_test.dart',
   ],
   'edit.no_global_invalidation_except_replacement': [

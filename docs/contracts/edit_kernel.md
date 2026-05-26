@@ -29,7 +29,7 @@ Required tests:
 - `test.runtime.runtime_state_publication`
 - `test.edit.sync_non_nested_async_stale`
 - `test.edit.rollback`
-- `test.edit.field_update_nullable_semantics`
+- `test.edit.field_update_admission_effects`
 - `test.edit.exact_touched_invalidation`
 - `test.edit.typed_effects_no_frame_dependency`
 Guardrails:
