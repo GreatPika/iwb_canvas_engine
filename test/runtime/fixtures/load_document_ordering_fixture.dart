@@ -8,18 +8,27 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
   test('failed load prepares before interaction interruption', () {
-    expect(_expectFailedLoadDoesNotInterrupt, returnsNormally);
+    return expectLater(_expectFailedLoadDoesNotInterrupt(), completes);
   });
 
   test('successful load interrupts before install and publishes once', () {
     expect(_expectSuccessOrderingAndGuards, returnsNormally);
   });
+
+  test('prepared cleanup failure stays before install and publication', () {
+    return expectLater(
+      _expectPreparedCleanupFailureHasNoSideEffects(),
+      completes,
+    );
+  });
 }
 
-void _expectFailedLoadDoesNotInterrupt() {
+Future<void> _expectFailedLoadDoesNotInterrupt() async {
   final boundary = _RecordingLoadBoundary();
   final root = _runtimeRoot(boundary);
+  final actionEvents = <CanvasActionCommitted>[];
   final beforeState = root.state.value;
+  root.actions.listen(actionEvents.add);
 
   expect(
     () => root.edits.loadDocument(_invalidReplacementDocument()),
@@ -31,14 +40,41 @@ void _expectFailedLoadDoesNotInterrupt() {
       ),
     ),
   );
+  await _drainActionStream();
 
   expect(boundary.events, isEmpty);
   expect(root.readDocument().layers.single.elements.single.id.value, 'old');
   expect(root.state.value, beforeState);
+  expect(actionEvents, isEmpty);
 }
 
 void _expectSuccessOrderingAndGuards() {
   _SuccessfulLoadOrderingScenario().run();
+}
+
+Future<void> _expectPreparedCleanupFailureHasNoSideEffects() async {
+  final boundary = _RecordingLoadBoundary();
+  final effectBatches = <List<CommitEffect>>[];
+  final actionEvents = <CanvasActionCommitted>[];
+  final events = <String>[];
+  final root = _runtimeRoot(
+    boundary,
+    observeEffects: (effects) =>
+        _recordLoadFailureObserver(events, effectBatches, effects),
+  );
+  _prepareExistingRuntimeFacts(root);
+  final before = _RuntimeFactsSnapshot.capture(root);
+  _recordLoadFailurePublicSignals(root, events, actionEvents);
+  boundary.onPrepareCleanup = () => _throwFromPreparedCleanup(events);
+
+  _expectPreparedCleanupLoadThrows(root);
+  await _drainActionStream();
+
+  expect(events, ['prepared-cleanup']);
+  expect(boundary.events, ['prepared-cleanup']);
+  before.expectStillCurrent(root);
+  expect(effectBatches, isEmpty);
+  expect(actionEvents, isEmpty);
 }
 
 final class _SuccessfulLoadOrderingScenario {
@@ -117,6 +153,87 @@ void _expectGuarded(void Function() action) {
       ),
     ),
   );
+}
+
+void _prepareExistingRuntimeFacts(RuntimeRoot root) {
+  root.selection.setSelection([CanvasElementId('old')]);
+  root.cameraPort().setOffset(const Offset(4, 5));
+}
+
+void _recordLoadFailurePublicSignals(
+  RuntimeRoot root,
+  List<String> events,
+  List<CanvasActionCommitted> actionEvents,
+) {
+  root.state.addListener(() {
+    events.add('state');
+  });
+  root.actions.listen((action) {
+    events.add('action');
+    actionEvents.add(action);
+  });
+}
+
+void _recordLoadFailureObserver(
+  List<String> events,
+  List<List<CommitEffect>> effectBatches,
+  List<CommitEffect> effects,
+) {
+  events.add('observer');
+  effectBatches.add(effects);
+}
+
+Never _throwFromPreparedCleanup(List<String> events) {
+  events.add('prepared-cleanup');
+  throw StateError('prepared cleanup failed');
+}
+
+void _expectPreparedCleanupLoadThrows(RuntimeRoot root) {
+  expect(
+    () => root.edits.loadDocument(_replacementDocument()),
+    throwsA(
+      isA<StateError>().having(
+        (error) => error.message,
+        'message',
+        'prepared cleanup failed',
+      ),
+    ),
+  );
+}
+
+Future<void> _drainActionStream() {
+  return Future<void>.delayed(Duration.zero);
+}
+
+final class _RuntimeFactsSnapshot {
+  const _RuntimeFactsSnapshot({
+    required this.state,
+    required this.document,
+    required this.selection,
+    required this.cameraOffset,
+  });
+
+  factory _RuntimeFactsSnapshot.capture(RuntimeRoot root) {
+    return _RuntimeFactsSnapshot(
+      state: root.state.value,
+      document: root.readDocument(),
+      selection: root.selectedElementIds,
+      cameraOffset: root.cameraPort().offset,
+    );
+  }
+
+  final CanvasRuntimeState state;
+  final CanvasDocument document;
+  final Set<CanvasElementId> selection;
+  final Offset cameraOffset;
+
+  void expectStillCurrent(RuntimeRoot root) {
+    expect(root.state.value, state);
+    expect(root.readDocument(), same(document));
+    expect(root.readDocument().layers.single.elements.single.id.value, 'old');
+    expect(root.selectedElementIds, selection);
+    expect(root.cameraPort().offset, cameraOffset);
+  }
 }
 
 CanvasDocument _initialDocument() {

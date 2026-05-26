@@ -96,7 +96,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
       StreamController<CanvasActionCommitted>.broadcast();
   final CommitApplier _commitApplier = const CommitApplier();
   int _viewCameraRevision = 0;
-  final int _previewRevision = 0;
+  int _previewRevision = 0;
   int _epochRevision = 0;
   bool _isDisposed = false;
   bool _isDeliveringCommitEffects = false;
@@ -374,11 +374,14 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   void _loadDocument(CanvasDocument document) {
     final preparedLoad = _loadPipeline.prepare(document);
 
-    _loadInteractionBoundary.prepareLoadCleanup();
+    final cleanupOutcome = _loadInteractionBoundary.prepareLoadCleanup();
     _loadPipeline.consume(preparedLoad);
     final didClearSelection = _selection.clearForDocumentReplacement();
     _viewCamera = preparedLoad.document.camera;
     _viewCameraRevision += 1;
+    if (cleanupOutcome.previewChanged) {
+      _previewRevision += 1;
+    }
     _epochRevision += 1;
     _deliverLoadResult(_loadEffects(didClearSelection: didClearSelection));
   }
