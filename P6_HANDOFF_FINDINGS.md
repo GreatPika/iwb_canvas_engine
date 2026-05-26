@@ -4,29 +4,6 @@ This file captures the remaining review findings to hand off before starting P6.
 
 ## P3 / Cleanup
 
-### 1. Root CI guardrail proof does not check bypass flags
-
-- Severity: P3
-- Location:
-  - `test/guardrails/root_ci_target_test.dart:9`
-- Problem:
-  The workflow test checks that the full guardrail runner command is present,
-  but does not check bypass-style settings such as `continue-on-error`.
-- Suggested work:
-  Assert that the root-package job and guardrail step do not use bypass settings.
-
-### 2. Blocking suite expected ids are hand-maintained in the test
-
-- Severity: P3
-- Location:
-  - `test/guardrails/blocking_suite_test.dart:103`
-- Problem:
-  The "all P4 guardrails" proof compares against manually maintained sets in the
-  same test file.
-- Suggested work:
-  Derive expected phase or suite ids from the registry/source of truth where
-  possible.
-
 ### 3. CanvasSurface placeholder detector is a raw substring
 
 - Severity: P3
@@ -62,17 +39,6 @@ This file captures the remaining review findings to hand off before starting P6.
 - Suggested work:
   Consume it for canonical field checks, or remove/rename it so it does not imply
   enforcement.
-
-### 6. Negative fixture hook in guardrail runner is dead
-
-- Severity: P3
-- Location:
-  - `tool/guardrails/src/guardrail_executor.dart:159`
-- Problem:
-  `_negativeFixtureViolationsFor` is wired into the runner flow but always
-  returns an empty list.
-- Suggested work:
-  Remove it until needed, or connect it to real negative fixture checks.
 
 ### 7. Document summary fixture claim is broader than its body
 

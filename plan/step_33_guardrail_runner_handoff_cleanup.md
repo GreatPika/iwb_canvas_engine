@@ -63,7 +63,7 @@ Order Constraints:
 
 ## Execution Units
 
-### [ ] Unit 1: Root CI Bypass Proof
+### [x] Unit 1: Root CI Bypass Proof
 
 Owner:
 
@@ -92,7 +92,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Registry-Owned Suite And Structural-Proof Expectations
+### [x] Unit 2: Registry-Owned Suite And Structural-Proof Expectations
 
 Owner:
 
@@ -123,7 +123,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Dead Negative Fixture Hook Removal
+### [x] Unit 3: Dead Negative Fixture Hook Removal
 
 Owner:
 
@@ -145,7 +145,7 @@ Depends On:
 
 Unit 2.
 
-### [ ] Unit 4: Handoff Closure And Final Verification
+### [x] Unit 4: Handoff Closure And Final Verification
 
 Owner:
 
