@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'core_boundary_checks.dart';
-import 'guardrail_registry.dart';
 import 'guardrail_violation.dart';
 import 'public_api_checks.dart';
 import 'public_api_contract_checks.dart';
@@ -118,10 +117,7 @@ Future<int> _runGuardrail(
   }
 
   if (_coreBoundaryIds.contains(id)) {
-    return _reportViolations(id, [
-      ...await checkCoreBoundaries(),
-      ..._negativeFixtureViolationsFor(id),
-    ]);
+    return _reportViolations(id, await checkCoreBoundaries());
   }
 
   stderr.writeln('Unknown guardrail: $id');
@@ -154,14 +150,6 @@ int _reportViolations(String id, Iterable<GuardrailViolation> violations) {
   }
 
   return 1;
-}
-
-Iterable<GuardrailViolation> _negativeFixtureViolationsFor(String id) {
-  if (!blockingGuardrailIds().contains(id)) {
-    return const [];
-  }
-
-  return const [];
 }
 
 const _testProofPaths = {
