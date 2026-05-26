@@ -192,7 +192,7 @@ Mandatory guardrails:
 | `events.commands_emit_user_actions` | high-level commands and interaction commits own user action events |
 | `events.runtime_created_timestamps_monotonic` | runtime-created `timestampMs` outputs resolve nullable and backwards hints through one runtime-local monotonic cursor, including stale host timestamps, action events, context-action requests, pending line start previews, and selected move resolver requests |
 | `load.prepares_before_interrupt` | failed load does not interrupt gesture |
-| `load.success_interrupts_before_install` | success interrupt happens before atomic install |
+| `load.success_interrupts_before_install` | successful load prepares interaction cleanup before atomic install and performs no post-install interaction owner call to finish load cleanup |
 | `preview.selected_move_main_repaint` | selected move preview increments main repaint, not overlay |
 | `interaction.no_concrete_store_imports` | InteractionEngine uses EditKernel and narrow read-only query ports, not concrete store imports or mutations |
 | `interaction.no_concrete_selection_imports` | InteractionEngine uses intent-specific selection query ports and EditKernel commits, not concrete SelectionKernel imports or mutations |

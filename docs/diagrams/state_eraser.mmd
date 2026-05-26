@@ -40,7 +40,7 @@ stateDiagram-v2
     CorridorPreview --> CleanupOnly: same-token cancel
     CorridorPreview --> CleanupOnly: mode change
     CorridorPreview --> CleanupOnly: interactive=false
-    CorridorPreview --> CleanupOnly: loadDocument success after prepared replacement
+    CorridorPreview --> CleanupOnly: loadDocument prepared cleanup before install
     CorridorPreview --> CorridorPreview: loadDocument failure / preserve if pointer session preserves
     CorridorPreview --> CleanupOnly: runtime.dispose()
 
@@ -111,7 +111,7 @@ stateDiagram-v2
 
     state "Cleanup only" as CleanupOnly
     note left of CleanupOnly
-      Cancel, mode change, load success, interactive=false,
+      Cancel, mode change, prepared load cleanup, interactive=false,
       dispose, stale or invalid terminal, empty erased ids,
       eraser budget exceeded with no partial erase,
       and EditKernel failure create typed cleanup requests for

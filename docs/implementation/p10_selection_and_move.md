@@ -28,7 +28,8 @@ typed user action events.
 - interaction reads selection/document facts only through batched
   intent-specific immutable query ports
 - typed selection, transform, delete, and move action payloads
-- loadDocument success/failure interaction ordering for active move sessions.
+- loadDocument success/failure interaction ordering for active move sessions,
+  including prepared cleanup before document install on success.
 
 P10 owns the first production introduction of the cleanup coordinator seam.
 Selected move, marquee, load-success interrupt, dispose, stale terminal,
@@ -155,7 +156,7 @@ not own the pending line.
   repaint, no-preview/no-repaint, resolver-error no-action, and active-token
   release without tool-local cleanup policy
 - loadDocument failure preserves active move gesture
-- loadDocument success clears active move gesture.
+- loadDocument prepared cleanup before install clears active move gesture.
 - interaction has no concrete imports of store or selection owners.
 
 ## Risks and trade-offs

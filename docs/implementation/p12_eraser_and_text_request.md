@@ -153,8 +153,8 @@ spatial, projection, or resource effects.
   for changed text after atomic install
 - context request ids use the generic `CanvasInteractionRequestId`
 - stale terminal samples do not commit
-- loadDocument success clears eraser/context gesture state and failure preserves
-  it where required.
+- loadDocument prepared cleanup before install clears eraser/context gesture
+  state on success, and failure preserves it where required.
 
 ## Risks and trade-offs
 

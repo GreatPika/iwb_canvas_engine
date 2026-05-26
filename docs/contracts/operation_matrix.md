@@ -78,7 +78,7 @@ P7 and P10-P12 close their resource and interaction rows when those owners land.
 | markResourceDirty/markAllResourcesDirty | cache only | state.revisions.resourceVisual | no | no | main | none |
 | setMode/setDrawStyle/setDrawTool/setDrawColor/setPointerPolicy | interaction settings | state.revisions.interaction, state.revisions.selection if draw-mode entry clears selection, state.revisions.preview if active preview cleared | none | no | main/overlay only for changed affected state | none |
 | CanvasToolPort.handlePointer dispatcher | validates/routes pointer sample to selection, move, draw, line, eraser, context-tap, or cleanup rows | none by itself | none by itself | none by itself | none by itself | none by itself |
-| loadDocument success | whole document plus selection-owner clear, preview cleanup, runtime view camera initialized from persisted document camera | state.revisions.document, state.revisions.selection, state.revisions.preview if active preview cleared, state.revisions.viewCamera, state.revisions.epoch; internal document-level revisions | rebuild | evict | main + overlay | none |
+| loadDocument success | whole document plus selection-owner clear, prepared interaction cleanup outcome, runtime view camera initialized from persisted document camera | state.revisions.document, state.revisions.selection, state.revisions.preview if active preview cleared, state.revisions.viewCamera, state.revisions.epoch; internal document-level revisions | rebuild | evict | main + overlay | none |
 | loadDocument failure | none | none | none | none | none | none |
 | CanvasEdit.replaceDraftDocument | whole draft document plus selection-owner clear if current selection references replaced content | state.revisions.document, state.revisions.selection if cleared, state.revisions.epoch; internal document-level revisions | rebuild | evict | main | none |
 | pencil/marker preview | preview only | state.revisions.preview | none | no | overlay | none |
@@ -271,9 +271,10 @@ unchanged.
 
 #### loadDocument success
 
-Touched state: whole document; selection owner clear; preview cleanup when an
-active preview exists; runtime view camera initialized from persisted document
-camera; pointer normalization and pending tap history cleared.
+Touched state: whole document; selection owner clear; prepared interaction
+cleanup outcome for preview cleanup when an active preview exists, pointer
+normalization, and pending tap history; runtime view camera initialized from
+persisted document camera.
 
 Public state revisions: `state.revisions.document`, `state.revisions.selection`,
 `state.revisions.viewCamera`, `state.revisions.epoch`, and
@@ -303,6 +304,9 @@ Rollback behavior: validation/materialization failure leaves active gesture,
 preview, pending line, pointer normalization, committed document, selection,
 runtime view camera, spatial state, projection, resources, repaint,
 notifications, and public state publication unchanged.
+After successful document install, runtime load publication consumes the already
+prepared interaction cleanup outcome and does not call an interaction owner
+boundary to finish cleanup.
 
 #### toggleSelection
 

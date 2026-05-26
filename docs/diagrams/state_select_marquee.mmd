@@ -34,7 +34,7 @@ stateDiagram-v2
   DragPreview --> DragPreview: stale move, controllerEpoch mismatch, or non-finite move / ignore
   DragPreview --> CandidateQuery: same-token finite up
   DragPreview --> InvalidTerminal: stale, invalid, or non-finite up
-  DragPreview --> CleanupOnly: cancel, mode change, interactive=false, load success
+  DragPreview --> CleanupOnly: cancel, mode change, interactive=false, loadDocument prepared cleanup before install
   DragPreview --> CleanupOnly: runtime.dispose()
   DragPreview --> DragPreview: load failure / preserve session and preview
 
@@ -113,10 +113,9 @@ stateDiagram-v2
 
   state "Cleanup only" as CleanupOnly
   note left of CleanupOnly
-    Cancel, mode change, interactive=false, load success,
-    dispose, stale terminal, invalid terminal, no-op, and
-    edit failure create typed cleanup requests for marquee
-    overlay/session state only.
+    Cancel, mode change, interactive=false, prepared load cleanup,
+    dispose, stale terminal, invalid terminal, no-op, and edit failure
+    create typed cleanup requests for marquee overlay/session state only.
     Load failure preserves the active marquee when the
     generic pointer session preserves it.
   end note

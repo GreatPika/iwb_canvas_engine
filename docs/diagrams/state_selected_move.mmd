@@ -42,7 +42,7 @@ stateDiagram-v2
     PreviewReady --> PreResolverCleanup: "same-token cancel"
     PreviewReady --> PreResolverCleanup: "mode change"
     PreviewReady --> PreResolverCleanup: "interactive=false"
-    PreviewReady --> PreResolverCleanup: "loadDocument success"
+    PreviewReady --> PreResolverCleanup: "loadDocument prepared cleanup before install"
     PreviewReady --> PreviewReady: "loadDocument failure / preserve if generic session preserves"
     PreviewReady --> DisposeCleanup: "runtime.dispose()"
     PreviewReady --> TerminalGate: "same-token pointer up"
@@ -127,7 +127,7 @@ stateDiagram-v2
 
   state "Pre-resolver cleanup" as PreResolverCleanup
   note right of PreResolverCleanup
-    Cancel, mode change, load success, interactive=false,
+    Cancel, mode change, prepared load cleanup, interactive=false,
     stale terminal, invalid terminal, zero move, empty movable
     set, and admission no-op paths have not called the resolver
     or opened an edit. They emit no action.

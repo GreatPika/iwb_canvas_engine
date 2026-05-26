@@ -12,12 +12,14 @@ and keep failed loads from interrupting existing runtime or interaction state.
 - `CanvasEditPort.loadDocument`
 - `CanvasEdit.replaceDraftDocument`
 - success path: validate/materialize, interrupt active interaction through a
-  narrow runtime boundary, clear preview, install replacement document plus
-  selection-owner clear as one atomic runtime result, initialize runtime view
-  camera from the persisted document camera, increment public state revisions
-  for document/selection/view camera/epoch plus preview when cleanup changes it,
-  clear pointer normalization hooks, invalidate projection/spatial/frame/resource
-  caches, and publish one `CanvasRuntimeState` after install
+  narrow runtime boundary, prepare an interaction cleanup outcome for preview,
+  pointer normalization, and pending tap history before the document install
+  commit point, install replacement document plus selection-owner clear as one
+  atomic runtime result, initialize runtime view camera from the persisted
+  document camera, increment public state revisions for
+  document/selection/view camera/epoch plus preview when cleanup changes it,
+  invalidate projection/spatial/frame/resource caches, and publish one
+  `CanvasRuntimeState` after install
 - failure path: validation/materialization failure leaves committed document,
   selection owner, preview, pointer normalization, repaint, events, and active
   gesture state unchanged
@@ -94,6 +96,8 @@ and keep failed loads from interrupting existing runtime or interaction state.
 - successful load interrupts before install and publishes one atomic
   `CanvasRuntimeState` for document replacement, selection-owner clear, epoch
   change, runtime view-camera initialization, and optional preview cleanup
+- no load interaction owner call runs after replacement install to finish
+  pointer normalization or pending tap cleanup
 - `replaceDraftDocument` is rollback-safe inside an edit session
 - load success/failure operation matrix effects are executable and green.
 

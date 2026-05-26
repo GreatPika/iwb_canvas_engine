@@ -19,7 +19,7 @@ stateDiagram-v2
 
   Active --> Active: readDocument() / return current immutable document
   Active --> Active: successful edit or command / atomic commit and typed effects
-  Active --> Active: loadDocument success / success-only interaction interrupt, atomic replacement, cache invalidation
+  Active --> Active: loadDocument success / prepared interaction cleanup before install, atomic replacement, cache invalidation
   Active --> Active: loadDocument failure / no interrupt, no mutation, no repaint, no events
   Active --> Disposing: dispose() first call
 

@@ -21,8 +21,7 @@ flowchart LR
     PendingInput["Pointer normalization and pending tap history"]
     Interrupt["Success-only interaction interrupt\ntyped cleanup request"]
     CleanupCoordinator["PointerToolCleanupCoordinator\ncoordinator-owned prepared-load cleanup policy"]
-    CleanupOutcome["PointerCleanupOutcome\ncancel active gesture and clear preview if active"]
-    PostInstallCleanup["Post-install input cleanup\nclear pointer normalization and pending tap history"]
+    CleanupOutcome["PointerCleanupOutcome\npreview, pointer normalization,\nand pending tap cleanup facts"]
   end
 
   subgraph Store["DocumentStoreKernel"]
@@ -71,15 +70,14 @@ flowchart LR
   Interrupt -->|"prepared load success cleanup request"| CleanupCoordinator
   ActivePreview -->|"interaction-owned state and ownership context"| CleanupCoordinator
   CleanupCoordinator -->|"effect-only cleanup outcome"| CleanupOutcome
-  CleanupOutcome -->|"apply before install; public state waits for atomic result"| AtomicInstall
+  PendingInput -->|"prepared cleanup before install"| CleanupCoordinator
+  CleanupOutcome -->|"prepared before install; public state waits for atomic result"| AtomicInstall
   Prepared -->|"document install payload"| AtomicInstall
   Prepared -->|"selection clear effect"| SelectionClear
   AtomicInstall -->|"replace committed state"| ReplacementCommitted
   SelectionClear -->|"clear selected ids and increment selectionRevision"| ReplacementSelection
   ReplacementCommitted -->|"document side installed"| AtomicRuntimeResult
   ReplacementSelection -->|"selection side installed"| AtomicRuntimeResult
-  AtomicRuntimeResult -->|"after install only"| PostInstallCleanup
-  PendingInput -->|"clear after atomic install"| PostInstallCleanup
 
   AtomicRuntimeResult -->|"increment document-level revisions, selectionRevision, and epoch"| Revisions
   AtomicRuntimeResult -->|"read installed persisted camera"| ViewCameraInit
@@ -88,7 +86,9 @@ flowchart LR
   AtomicRuntimeResult -->|"evict public document projection"| ProjectionEvict
   AtomicRuntimeResult -->|"evict resolver/resource caches"| ResourceEvict
   AtomicRuntimeResult -->|"schedule full document repaint"| Repaint
+  CleanupOutcome -->|"consume prepared cleanup facts; no post-install interaction call"| Repaint
   AtomicRuntimeResult -->|"publish after atomic install"| Notify
+  CleanupOutcome -->|"included in atomic snapshot when preview changed"| Notify
   ViewCameraRevision -->|"included in atomic snapshot"| Notify
   Notify -->|"success return"| Result
   Result -->|"load completed"| App

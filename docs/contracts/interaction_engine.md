@@ -145,7 +145,7 @@ internals, or resource/session internals.
 `interactive=false` cancels only an active routed pointer session. Pending line
 start or line preview state that is not currently owned by an active routed
 pointer session is preserved until a line-owned cleanup, mode/tool change,
-successful load, dispose, or terminal line decision.
+prepared load cleanup, dispose, or terminal line decision.
 If cancellation clears active pointer-owned preview, runtime publishes one
 `CanvasRuntimeState` with an updated preview revision. If no active
 pointer-owned preview changes, cancellation is public-state silent.
@@ -180,13 +180,18 @@ token/session release, pending line cleared or preserved, pending context tap
 cleared, and load/dispose sequencing facts. Runtime/public signal aggregation
 may consume the outcome after cleanup completes, but it must not re-read stale
 active session state to decide cleanup effects.
+For successful `loadDocument`, the load cleanup outcome is produced before
+RuntimeRoot crosses the document install commit point. RuntimeRoot may consume
+that prepared outcome after install for publication and repaint aggregation, but
+must not call back into the interaction owner after install to finish pointer
+normalization or pending context tap cleanup.
 
 Pending line preservation is part of the coordinator contract. Non-owned
 pending line state is preserved on `interactive=false`. Pending line state is
-cleared only by line-owned cleanup, mode/tool change, successful load, dispose,
-or a terminal line decision. Pending context tap cleanup clears tap history without
-preview, repaint, action, context request, document, selection, spatial, or
-projection effects.
+cleared only by line-owned cleanup, mode/tool change, prepared load cleanup,
+dispose, or a terminal line decision. Pending context tap cleanup clears tap
+history without preview, repaint, action, context request, document, selection,
+spatial, or projection effects.
 
 The coordinator may depend only on interaction-owned state models and public
 preview value types needed to calculate `CanvasNoPreview` outcomes. It must not

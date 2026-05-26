@@ -83,15 +83,15 @@ sequenceDiagram
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without eraser corridor
     Note over EK,Signals: No EditKernel commit, Store mutation, spatial remove, projection eviction, main repaint, or erase action is published.
-  else loadDocument success interrupts active eraser
-    Surface->>Tools: terminal cleanup request from external load success
+  else loadDocument prepared cleanup before install interrupts active eraser
+    Surface->>Tools: prepared cleanup request from external load success before install
     Tools->>IE: cleanup active eraser session
     IE->>Cleanup: typed cleanup request for eraser session
         Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
         IE->>Preview: apply outcome: publish CanvasNoPreview and clear eraser session
     IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request overlay repaint cleanup
-    Frame->>Frame: defer overlay cleanup to loadDocument post-install repaint scheduling
+    Frame->>Frame: defer overlay repaint to loadDocument replacement repaint scheduling
     Note over EK,Signals: No eraser EditKernel commit, eraser spatial remove, eraser projection eviction, eraser main repaint, or erase action is published.
     Note over Signals: No public eraser repaint signal is published before the successful load install boundary.
     Note over Store,Frame: The loadDocument success Store mutation, spatial rebuild, projection eviction, and main plus overlay repaint are external load effects covered by seq_load_document_success.

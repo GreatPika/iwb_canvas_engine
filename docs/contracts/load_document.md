@@ -46,12 +46,15 @@ P6 owns only the minimal early interaction boundary needed by staged
 replacement:
 
 ```text
-PreparedDocumentLoad success -> RuntimeRoot requests interrupt/preview cleanup;
+PreparedDocumentLoad success -> RuntimeRoot requests prepared load cleanup;
 the target InteractionEngine boundary routes that cleanup through the internal
 PointerToolCleanupCoordinator;
-the boundary may clear active preview state and pointer normalization facts;
+the boundary returns a PointerCleanupOutcome before document install;
+the outcome covers active preview, pointer normalization, and pending tap facts;
 the boundary must not read from or mutate DocumentStoreKernel;
 the boundary must not execute terminal resolver or commit paths;
+RuntimeRoot must not call the interaction boundary again after document install
+to finish load cleanup;
 failure before PreparedDocumentLoad success must not call the boundary.
 ```
 
@@ -63,8 +66,10 @@ Success ordering:
 ```text
 1. validate public CanvasDocument, including `CanvasMetadata`, frozen collection ownership, and invertible element transforms;
 2. materialize PreparedDocumentLoad;
-3. if validation/materialization succeeds, interrupt active interaction;
-4. clear preview;
+3. if validation/materialization succeeds, request prepared interaction cleanup;
+4. produce the PointerCleanupOutcome that describes active preview cleanup,
+   pointer normalization cleanup, and pending tap history cleanup before the
+   document install commit point;
 5. atomically install the replacement document and clear selection through the
    runtime/applier boundary;
 6. initialize runtime view camera from the persisted document camera;
@@ -72,16 +77,17 @@ Success ordering:
    `state.revisions.selection`, `state.revisions.viewCamera`, and
    `state.revisions.preview` if active preview cleanup changed preview state
    inside the same atomic runtime result;
-8. clear pointer normalization and pending tap history;
-9. invalidate projection/spatial/frame/resource caches;
-10. schedule main repaint and overlay repaint;
-11. publish one `CanvasRuntimeState` after install.
+8. invalidate projection/spatial/frame/resource caches;
+9. schedule main repaint and overlay repaint;
+10. publish one `CanvasRuntimeState` after install.
 ```
 
 `PreparedDocumentLoad` owns replacement committed tables, generated id admission
 state, and replacement revision facts. The runtime/applier boundary combines
 that prepared document payload with a selection-owner clear effect. Selection
-clearing is not a separate post-install mutation.
+clearing is not a separate post-install mutation. Pointer normalization and
+pending tap cleanup are also not separate post-install owner calls; they are
+carried by the prepared interaction cleanup outcome before document install.
 The public `CanvasRuntimeState` published after install is the first public
 observation of the replacement document, cleared selection, optional preview
 cleanup, incremented epoch, and runtime view camera initialized from the

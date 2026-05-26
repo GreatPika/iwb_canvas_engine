@@ -40,12 +40,12 @@ sequenceDiagram
   Stager-->>Runtime: PreparedDocumentLoad replacement payload
   Note over Runtime,Store: No interaction interrupt, preview clear, cache eviction, repaint, public state publication, or store mutation occurs before preparation succeeds.
 
-  Runtime->>Interaction: success-only interrupt active interaction
+  Runtime->>Interaction: success-only request for prepared load cleanup
   Interaction->>Cleanup: typed cleanup request for prepared load success
-  Cleanup-->>Interaction: PointerCleanupOutcome(load sequencing, preview changed if active)
-  Interaction->>Interaction: apply outcome: cancel active gesture and clear preview
+  Cleanup-->>Interaction: PointerCleanupOutcome(load sequencing, preview, pointer normalization, pending tap facts)
+  Interaction->>Interaction: stage prepared outcome before install
   Interaction->>Interaction: bump previewRevision if preview was active
-  Interaction-->>Runtime: preview cleared and preview signal queued until install
+  Interaction-->>Runtime: prepared cleanup outcome queued until install
   Note over Interaction,Signals: Preview state may be cleared before install, but no public state is published before the committed replacement is installed.
 
   Runtime->>Store: install PreparedDocumentLoad document payload atomically
@@ -60,14 +60,13 @@ sequenceDiagram
   Selection-->>Runtime: committed selection revision facts
   Runtime->>Runtime: initialize runtime view camera from installed persisted document camera
 
-  Runtime->>Interaction: committed load installed with updated epoch and revisions
-  Interaction->>Interaction: clear pointer normalization and pending tap history
   Store->>Projection: evict public document projection by projectionRevision
   Runtime->>Spatial: rebuild full spatial index from replacement tables
   Runtime->>Resources: clear image resolve cache for replaced descriptors
   Runtime->>Frame: reset replacement-scoped paint, static, text, path, and stroke caches
   Frame->>Frame: schedule main repaint for replacement document
-  Interaction->>Frame: schedule overlay repaint from PointerCleanupOutcome if preview changed
+  Runtime->>Frame: schedule overlay repaint from prepared PointerCleanupOutcome if preview changed
+  Note over Runtime,Interaction: No interaction owner call runs after install; runtime consumes the already prepared cleanup outcome.
 
   Runtime->>Signals: publish one CanvasRuntimeState after install, including required viewCamera revision and preview cleanup revision if changed
   Note over Signals: loadDocument emits no CanvasActionCommitted event.

@@ -542,7 +542,8 @@ Surface contract:
   preserved when interactive becomes false;
 - pending line start and line preview are not active routed pointer sessions after
   their tap sample has completed; `interactive=false` preserves them until line
-  cleanup, mode/tool change, successful load, dispose, or terminal line decision;
+  cleanup, mode/tool change, prepared load cleanup, dispose, or terminal line
+  decision;
 - toggling interactive back to true resumes routing only for subsequent pointer events;
 - CanvasSurface never mutates committed document directly;
 - CanvasSurface routes pointer samples into InteractionEngine;
@@ -2057,7 +2058,7 @@ Rules:
 - every pointer preview update creates a small new snapshot or reuses previous unchanged snapshot;
 - no CanvasDocument materialization in preview getters;
 - pending line start is epoch-bound;
-- loadDocument success clears preview;
+- loadDocument prepared cleanup before install clears preview;
 - loadDocument failure preserves preview;
 - selected move preview is main-scene preview, not overlay-only preview.
 - migration is by type testing or pattern matching on concrete preview variants.

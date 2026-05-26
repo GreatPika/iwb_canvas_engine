@@ -44,7 +44,7 @@ stateDiagram-v2
     Routing --> CleanupOnly: same-token cancel
     Routing --> CleanupOnly: mode/tool change cancels session
     Routing --> CleanupOnly: interactive=false routes cancel for active routed pointer only
-    Routing --> CleanupOnly: loadDocument success interrupts after preparation
+    Routing --> CleanupOnly: loadDocument prepared cleanup before install interrupts session
     Routing --> Routing: loadDocument failure / preserve active session
     Routing --> DisposeCleanup: runtime.dispose() interrupts session
 
@@ -98,8 +98,8 @@ stateDiagram-v2
 
     state "Cleanup only" as CleanupOnly
     note left of CleanupOnly
-      Cancel, load success, mode change, active-pointer interactive=false,
-      dispose, stale terminal, invalid terminal, no-op, and
+      Cancel, prepared load cleanup, mode change,
+      active-pointer interactive=false, dispose, stale terminal, invalid terminal, no-op, and
       non-committing paths create typed cleanup requests with
       cleanup reason and ownership context.
       The selected-move resolver is not called on cancel,

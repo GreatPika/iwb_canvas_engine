@@ -25,9 +25,9 @@ helpers, and overlay frame capture exist.
 P11 must not introduce draw-local cleanup policy. Pencil, marker, and line
 machines return typed cleanup requests to `InteractionEngine`; only
 `InteractionEngine` calls `PointerToolCleanupCoordinator`. Draw and line work
-must consume the P10 coordinator for cancel, mode/tool change, load success,
-`interactive=false`, stale terminal, invalid terminal, no-op terminal, edit
-failure, and post-successful-commit cleanup. Line cleanup requests must carry
+must consume the P10 coordinator for cancel, mode/tool change, prepared load
+cleanup, `interactive=false`, stale terminal, invalid terminal, no-op terminal,
+edit failure, and post-successful-commit cleanup. Line cleanup requests must carry
 ownership context so line-owned cleanup clears pending line state while
 non-owned pending line state remains preserved on `interactive=false`.
 
@@ -124,7 +124,7 @@ non-owned pending line state remains preserved on `interactive=false`.
   `interactive=false`, clear line-owned pending state, and classify overlay or
   no-preview cleanup without action or context-request emission
 - loadDocument failure preserves pending draw/line state where the contract requires it
-- loadDocument success clears active draw/line gesture state.
+- loadDocument prepared cleanup before install clears active draw/line gesture state.
 
 ## Risks and trade-offs
 
