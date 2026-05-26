@@ -229,6 +229,12 @@ const _testProofPaths = {
   'events.low_level_edit_no_user_actions': [
     'test/edit/low_level_mutations_do_not_emit_actions_test.dart',
   ],
+  'load.prepares_before_interrupt': [
+    'test/runtime/load_document_ordering_test.dart',
+  ],
+  'load.success_interrupts_before_install': [
+    'test/runtime/load_document_ordering_test.dart',
+  ],
 };
 
 final Map<String, GuardrailViolationRunner> _violationChecks = {

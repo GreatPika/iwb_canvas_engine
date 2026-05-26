@@ -150,4 +150,12 @@ const _blockingEntries = [
     id: 'events.low_level_edit_no_user_actions',
     suites: {'blocking', 'events'},
   ),
+  GuardrailEntry(
+    id: 'load.prepares_before_interrupt',
+    suites: {'blocking', 'load'},
+  ),
+  GuardrailEntry(
+    id: 'load.success_interrupts_before_install',
+    suites: {'blocking', 'load'},
+  ),
 ];

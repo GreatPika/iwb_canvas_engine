@@ -90,6 +90,12 @@ void main() {
       suiteGuardrailIds('events'),
     );
   });
+  test('load suite selection routes only load guardrails', () async {
+    expect(
+      await _selectedGuardrailIds(['--suite=load']),
+      suiteGuardrailIds('load'),
+    );
+  });
   test('shared proof files run once for all covered guardrail ids', () async {
     final proofRuns = <String, int>{};
     final result = await runGuardrailsWithProofRunner(

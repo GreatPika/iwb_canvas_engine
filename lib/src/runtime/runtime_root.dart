@@ -41,6 +41,22 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
          store: DocumentStoreKernel(initialDocument),
          config: RuntimeConfig.from(config),
          diagnosticPolicy: config.diagnosticPolicy,
+         loadInteractionBoundary: const _NoopLoadInteractionBoundary(),
+         initialViewCamera: initialDocument.camera,
+         commitEffectObserver: commitEffectObserver ?? _ignoreCommitEffects,
+       );
+
+  @visibleForTesting
+  RuntimeRoot.test({
+    required CanvasDocument initialDocument,
+    required CanvasRuntimeConfig config,
+    required LoadInteractionBoundary loadInteractionBoundary,
+    CommitEffectObserver? commitEffectObserver,
+  }) : this._(
+         store: DocumentStoreKernel(initialDocument),
+         config: RuntimeConfig.from(config),
+         diagnosticPolicy: config.diagnosticPolicy,
+         loadInteractionBoundary: loadInteractionBoundary,
          initialViewCamera: initialDocument.camera,
          commitEffectObserver: commitEffectObserver ?? _ignoreCommitEffects,
        );
@@ -49,10 +65,12 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     required DocumentStoreKernel store,
     required this.config,
     required CanvasDiagnosticPolicy diagnosticPolicy,
+    required LoadInteractionBoundary loadInteractionBoundary,
     required CanvasCamera initialViewCamera,
     required CommitEffectObserver commitEffectObserver,
   }) : _store = store,
        _viewCamera = initialViewCamera,
+       _loadInteractionBoundary = loadInteractionBoundary,
        _loadPipeline = LoadDocumentPipeline(
          store: store,
          diagnosticPolicy: diagnosticPolicy,
@@ -68,6 +86,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   final RuntimeConfig config;
   final DocumentStoreKernel _store;
   CanvasCamera _viewCamera;
+  final LoadInteractionBoundary _loadInteractionBoundary;
   final LoadDocumentPipeline _loadPipeline;
   final CommitEffectObserver _commitEffectObserver;
   final SelectionKernel _selection;
@@ -354,13 +373,13 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   void _loadDocument(CanvasDocument document) {
     final preparedLoad = _loadPipeline.prepare(document);
 
-    _interruptInteractionForPreparedLoad();
+    _loadInteractionBoundary.interruptPreparedLoad();
     _loadPipeline.consume(preparedLoad);
     final didClearSelection = _selection.clearSelection();
     _viewCamera = preparedLoad.document.camera;
     _viewCameraRevision += 1;
     _epochRevision += 1;
-    _clearPostInstallInteractionFacts();
+    _loadInteractionBoundary.clearPostInstallFacts();
     _deliverLoadResult(_loadEffects(didClearSelection: didClearSelection));
   }
 
@@ -410,10 +429,6 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
       _isDeliveringCommitEffects = false;
     }
   }
-
-  void _interruptInteractionForPreparedLoad() {}
-
-  void _clearPostInstallInteractionFacts() {}
 }
 
 void _ignoreCommitEffects(List<CommitEffect> _) {}
@@ -467,6 +482,21 @@ final class _RuntimeRevisionFacts {
   final int viewCamera;
   final int preview;
   final int epoch;
+}
+
+abstract interface class LoadInteractionBoundary {
+  void interruptPreparedLoad();
+  void clearPostInstallFacts();
+}
+
+final class _NoopLoadInteractionBoundary implements LoadInteractionBoundary {
+  const _NoopLoadInteractionBoundary();
+
+  @override
+  void interruptPreparedLoad() {}
+
+  @override
+  void clearPostInstallFacts() {}
 }
 
 final class _StoreSelectionMembership implements SelectionMembershipPort {
