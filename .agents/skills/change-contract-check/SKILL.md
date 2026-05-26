@@ -23,6 +23,10 @@ For contracts involving callback, listener, observer, delivery, transaction,
 rollback/no-op, atomicity, public-state publication, or guard windows, the
 temporal invariant and every synchronous reentry/interleaving proof surface are
 also decisions that must be settled before implementation.
+For contracts that rely on all-or-nothing behavior, the irreversible point, the
+fallible work that must happen before it, the later infallible or
+failure-contained work, and the proof of that boundary are also decisions that
+must be settled before implementation.
 
 Treat vague deferrals as unresolved decisions when they appear in required
 fields or execution units. Examples include "as needed", "if applicable",
@@ -106,6 +110,10 @@ Confirm, when relevant:
 - when temporal/callback/guard obligations are present or inherited from a
   source input, completion checks name every synchronous callback surface and
   the expected rejection or no-mutation signal.
+- when all-or-nothing obligations are present or inherited from a source input,
+  completion checks name the irreversible point or bounded seam, the fallible
+  action being exercised or structurally excluded, and the expected rollback,
+  no-mutation, containment, or publication signal.
 
 Evidence must connect observed facts to contract consequences.
 
@@ -166,6 +174,11 @@ Mark the contract `BLOCKED` when any category applies:
     change, verification strategy, handoff constraint, or sequencing fact
     required by a design or phase source is made optional, conditional, or left
     for implementation to rediscover.
+15. All-or-nothing proof is missing: the contract relies on all-or-nothing
+    behavior, but does not identify the irreversible point, the fallible work
+    that must happen before it, the later work that is infallible or
+    failure-contained, and a proof that fails if fallible work is placed on the
+    wrong side of that point.
 
 ## Non-Blocking Criteria
 

@@ -45,6 +45,9 @@ still need to choose:
 - temporal/reentrancy behavior for callback, listener, observer, delivery,
   transaction, rollback, no-op, atomicity, guard, or public-state publication
   windows;
+- for all-or-nothing behavior: the irreversible point, the fallible work that
+  must complete before it, and the later work that is infallible,
+  failure-contained, or already part of the accepted result;
 - migration, replacement, or retirement strategy;
 - the completion signal for any execution unit.
 
@@ -91,6 +94,10 @@ If a source input or design mentions temporal ordering, observers, listeners,
 callbacks, post-commit delivery, rollback/no-op behavior, atomicity, public
 state publication, or mutation guards, preserve the named synchronous callback
 surfaces and reentrant/interleaving proof expectations.
+If a source input or design relies on all-or-nothing behavior, preserve or
+settle the failure-domain split: fallible work before the irreversible point,
+the irreversible point itself, and later work that is infallible,
+failure-contained, or included in the accepted result.
 
 If the contract intentionally narrows or excludes anything from a source input, state that exclusion in `Out of Scope` and support it with evidence or an explicit user requirement.
 
@@ -197,6 +204,25 @@ Execution unit completion checks must prove those surfaces explicitly. Do not
 write vague checks such as "guard observer delivery" or "test reentrancy"; name
 the callback surface and expected signal.
 
+## All-Or-Nothing Behavior
+
+When correctness relies on a change either fully taking effect or leaving prior
+state unchanged, the contract must make the failure domain decision-complete.
+
+Name:
+
+- the irreversible point;
+- the fallible work that must complete before that point;
+- the later work that is allowed because it is infallible, failure-contained, or
+  already part of the accepted result;
+- the expected failure projection before and after the irreversible point;
+- the proof surface that would fail if fallible work moved to the wrong side of
+  that point.
+
+Execution unit completion checks must prove this boundary when it is material to
+the contract. Do not rely only on happy-path event order when the guarantee is
+all-or-nothing behavior.
+
 ## Output Format
 
 When enough evidence exists, output:
@@ -283,6 +309,11 @@ contracts, or public surfaces.
 For temporal/callback/guard work, a completion check is inadequate unless it
 names the specific callback surface, the reentrant or interleaved action being
 attempted, and the expected rejection/no-mutation signal.
+
+For all-or-nothing behavior, a completion check is inadequate unless it names
+the irreversible point or bounded seam, the fallible action being exercised or
+structurally excluded, and the expected no-mutation, rollback, containment, or
+publication signal.
 
 Do not run the checks in this skill. Only specify them.
 

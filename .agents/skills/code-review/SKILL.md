@@ -34,7 +34,10 @@ Here are the general guidelines for determining whether something is a bug and s
     transaction/rollback/no-op ordering, post-commit notification, or mutation
     guards without guarding every synchronous callback surface that can reenter
     before the next sequence step.
-12. The bug may be contract drift when the diff visibly implements a different
+12. The bug may be an all-or-nothing gap when a diff relies on a change either
+    fully taking effect or leaving prior state unchanged, but places fallible
+    work after an irreversible mutation without containment or proof.
+13. The bug may be contract drift when the diff visibly implements a different
     owner, source of truth, proof seam, fixture strategy, required
     source-of-truth update, or sequencing constraint than the active contract or
     linked design selected.
@@ -80,6 +83,10 @@ GUIDELINES:
   mutation guards, verify guard placement covers the full synchronous execution
   window and focused tests cover happy-path delivery plus
   reentrant/interleaved mutation attempts from every callback surface.
+- For changes that add or alter all-or-nothing behavior, identify the
+  irreversible point and verify that fallible work happens before it, or is
+  explicitly infallible, failure-contained, or already part of the accepted
+  result with focused proof.
 - At the beginning of each finding, tag the issue with a priority level. For example "[P1] Un-padding slices along wrong tensor dimensions". [P0] - Drop everything to fix. Blocking release, operations, or major usage. Only use for universal issues that do not depend on any assumptions about the inputs. [P1] - Urgent. Should be addressed in the next cycle. [P2] - Normal. To be fixed eventually. [P3] - Low. Nice to have.
 
 Do not include numeric priority fields, confidence scores, correctness verdicts, or JSON.

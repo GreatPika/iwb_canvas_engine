@@ -181,20 +181,24 @@ Mark the review `BLOCKED` when any of these are true:
     does not name the temporal invariant, every synchronous callback surface in
     that window, the guard owner, the allowed public observation order, and a
     verification strategy for reentrant/interleaved mutation attempts.
-36. The artifact is formally complete but leaves the future Change Contract to
+36. The selected form relies on all-or-nothing behavior, but does not identify
+    the irreversible point, what fallible work must happen before it, what later
+    work is infallible, failure-contained, or already accepted, and how that
+    boundary will be proven.
+37. The artifact is formally complete but leaves the future Change Contract to
     decide how the selected form can be implemented or proven at the owning
     seam.
-37. The verification strategy requires a negative fixture, bypass proof, or
+38. The verification strategy requires a negative fixture, bypass proof, or
     structural proof but does not identify a feasible proof mechanism using
     existing repository seams, or explicitly name the small seam that must be
     introduced.
-38. The proof strategy would require fixture-only data to be added to a real
+39. The proof strategy would require fixture-only data to be added to a real
     production source of truth, public API registry, schema, durable contract,
     or public surface.
-39. A selected form changes the normative meaning of a registry, contract,
+40. A selected form changes the normative meaning of a registry, contract,
     guardrail, generated index, or diagram, but the source-of-truth update is
     optional, conditional, or left for the contract author to rediscover.
-40. The handoff contains correct decisions but is not operational enough to
+41. The handoff contains correct decisions but is not operational enough to
     write a Change Contract without re-reading broad repository context to infer
     proof seams, source-of-truth updates, or sequencing constraints.
 
@@ -247,17 +251,21 @@ example:
    source-of-truth docs; when sources disagree, report the contradiction and
    explain which source is stronger or what evidence is missing.
 10. For designs with ordering, delivery, observer/listener/callback surfaces,
-   public-state publication, transactions, rollback/no-op paths, or mutation
-   guards, reconstruct the full synchronous execution window. Check every
-   callback surface that can run user or runtime code before the next sequence
-   step. If the artifact does not identify those surfaces and route them to
-   verification, mark `BLOCKED` with `INSUFFICIENT_VERIFICATION`.
-11. Confirm source-of-truth and verification impacts match the selected form,
-   profile, and obligations.
-12. Confirm the handoff contains only facts needed by a future Change Contract:
-   profile, obligations, decisions, evidence, and sequencing constraints.
-13. Return the verdict and findings. Do not repair the artifact in this review
-   workflow. If the user asks for repair, return the review verdict first and
+    public-state publication, transactions, rollback/no-op paths, or mutation
+    guards, reconstruct the full synchronous execution window. Check every
+    callback surface that can run user or runtime code before the next sequence
+    step. If the artifact does not identify those surfaces and route them to
+    verification, mark `BLOCKED` with `INSUFFICIENT_VERIFICATION`.
+11. For designs that rely on all-or-nothing behavior, reconstruct the failure
+    domains around the irreversible point. Check that fallible work is before
+    that point, and that later work is infallible, failure-contained, or already
+    included in the accepted result.
+12. Confirm source-of-truth and verification impacts match the selected form,
+    profile, and obligations.
+13. Confirm the handoff contains only facts needed by a future Change Contract:
+    profile, obligations, decisions, evidence, and sequencing constraints.
+14. Return the verdict and findings. Do not repair the artifact in this review
+    workflow. If the user asks for repair, return the review verdict first and
    handle edits only in a separate authoring workflow.
 
 ## Output Format

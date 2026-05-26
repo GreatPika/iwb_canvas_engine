@@ -119,6 +119,10 @@ Reject any candidate form that fails one of these gates:
   synchronous callback surface in the window, the guard owner, the allowed
   public observation order, and the verification strategy for
   reentrant/interleaved mutation attempts.
+- **All-or-nothing behavior**: when correctness relies on a change either fully
+  taking effect or leaving prior state unchanged, names the irreversible point,
+  places fallible work before it, and proves later work is infallible,
+  failure-contained, or already part of the accepted result.
 - **Verification**: can be proven by executable, structural, semantic, analyzer,
   or documentation checks appropriate to the profile.
 - **Future pressure**: does not make an obvious near-future change harder without
@@ -199,8 +203,10 @@ selection, obligations, and design-form rules are owned by this `SKILL.md`.
 When a design has temporal/reentrancy pressure, record the invariant,
 synchronous callback surfaces, guard owner, public observation order, and
 verification strategy in the existing selected form, hard gate, lock-required
-facts, verification impact, and handoff sections. Do not add ad hoc template
-sections.
+facts, verification impact, and handoff sections. When a design relies on
+all-or-nothing behavior, also record the irreversible point, fallible work before
+that point, the later failure-containment rule, and the proof strategy in those
+same sections. Do not add ad hoc template sections.
 
 ## Completion Criteria
 
