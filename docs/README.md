@@ -33,7 +33,7 @@ drift checks.
 ```bash
 dart run docs/tool/sync_generated_docs.dart --check
 dart run docs/tool/check_docs.dart
-dart run tool/architecture_graph/generate_views.dart --phase P5 --check
+dart run tool/architecture_graph/generate_views.dart --phase P6 --check
 ```
 
 ## Local entrypoints

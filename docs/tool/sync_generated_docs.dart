@@ -12,6 +12,7 @@ const _diagramGeneratedMarker =
     '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/diagrams.yaml -->';
 const _indexGeneratedMarker =
     '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml and docs/_registry/donors.yaml -->';
+const _selectedArchitectureGraphPhase = 'P6';
 
 const _generatedIndexPaths = [
   'docs/indexes/by_phase.md',
@@ -191,7 +192,7 @@ List<_CommandResult> _runDelegatedGenerators({required bool checkOnly}) {
     'run',
     'tool/architecture_graph/generate_views.dart',
     '--phase',
-    'P5',
+    _selectedArchitectureGraphPhase,
     if (checkOnly) '--check',
   ];
 
@@ -491,9 +492,11 @@ String _renderDiagramCatalog(List<_DiagramEntry> diagrams) {
     )
     ..writeln()
     ..writeln('```bash')
-    ..writeln('dart run tool/architecture_graph/generate_views.dart --phase P5')
     ..writeln(
-      'dart run tool/architecture_graph/generate_views.dart --phase P5 --check',
+      'dart run tool/architecture_graph/generate_views.dart --phase $_selectedArchitectureGraphPhase',
+    )
+    ..writeln(
+      'dart run tool/architecture_graph/generate_views.dart --phase $_selectedArchitectureGraphPhase --check',
     )
     ..writeln('```')
     ..writeln()

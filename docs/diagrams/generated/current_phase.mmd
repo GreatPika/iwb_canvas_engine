@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Selected phase architecture graph
-%% Selected phase: P5
+%% Selected phase: P6
 flowchart LR
   api_camera_port["Public camera port<br/>required by P4"]
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]
@@ -9,6 +9,7 @@ flowchart LR
   codec_schema_v1["Schema v1 codec<br/>required by P3"]
   diagnostics_hub["Diagnostics hub<br/>required by P3"]
   edit_kernel["Edit kernel<br/>required by P5"]
+  load_document_pipeline["Load document pipeline<br/>required by P6"]
   runtime_root["Runtime composition root<br/>required by P4"]
   runtime_view_camera["Runtime-owned view camera<br/>required by P4"]
   selection_kernel["Selection kernel<br/>required by P4"]
@@ -20,5 +21,6 @@ flowchart LR
   codec_schema_v1 -->|reports errors to by P3| diagnostics_hub
   codec_schema_v1 -->|uses public data by P3| api_public_surface
   edit_kernel -->|changes data through by P5| store_document_kernel
+  load_document_pipeline -->|changes data through by P6| store_document_kernel
   runtime_root -->|owns and creates by P4| selection_kernel
   runtime_root -->|owns and creates by P4| store_document_kernel

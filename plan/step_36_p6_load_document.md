@@ -383,7 +383,7 @@ prose-only enforcement when tests or graph checks can enforce the constraint.
 Completion Check:
 
 `dart run tool/architecture_graph/check.dart --phase P6`,
-`dart run tool/architecture_graph/generate_views.dart --phase P5 --check`,
+`dart run tool/architecture_graph/generate_views.dart --phase P6 --check`,
 `dart run docs/tool/sync_generated_docs.dart --check`, and
 `dart run docs/tool/check_docs.dart` pass, or the implementer updates generated
 docs first and then reruns these checks successfully.
@@ -430,7 +430,7 @@ dart test test/codec/validated_import_draft_test.dart test/runtime/load_document
 dart run tool/guardrails/run.dart --guardrail=load.prepares_before_interrupt
 dart run tool/guardrails/run.dart --guardrail=load.success_interrupts_before_install
 dart run tool/architecture_graph/check.dart --phase P6
-dart run tool/architecture_graph/generate_views.dart --phase P5 --check
+dart run tool/architecture_graph/generate_views.dart --phase P6 --check
 dart run docs/tool/sync_generated_docs.dart --check
 dart run docs/tool/check_docs.dart
 ```

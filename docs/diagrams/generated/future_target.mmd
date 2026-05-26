@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Future target architecture graph
-%% Selected phase: P5
+%% Selected phase: P6
 flowchart LR
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]
   draw_tools["Draw tool owner<br/>required by P11"]
@@ -11,10 +11,8 @@ flowchart LR
   frame_renderer["Frame renderer and cache owner<br/>required by P9"]
   geometry_spatial_index["Geometry and spatial index<br/>required by P8"]
   interaction_selection_move["Selection and move interaction owner<br/>required by P10"]
-  load_document_pipeline["Load document pipeline<br/>required by P6"]
   resource_resolver["Resource resolver<br/>required by P7"]
   runtime_root["Runtime composition root<br/>required by P4"]
-  store_document_kernel["Document store kernel<br/>required by P4"]
   draw_tools -->|commits through by P11| edit_kernel
   draw_tools -->|publishes preview through by P11| interaction_selection_move
   eraser_text_request -->|commits through by P12| edit_kernel
@@ -23,6 +21,5 @@ flowchart LR
   flutter_surface -->|is shown through by P13| api_canvas_runtime
   geometry_spatial_index -->|reads data through by P10| interaction_selection_move
   interaction_selection_move -->|action stream boundary by P10| api_canvas_runtime
-  load_document_pipeline -->|changes data through by P6| store_document_kernel
   resource_resolver -->|resolves resources through by P9| frame_renderer
   runtime_root -->|reads from by P9| frame_renderer
