@@ -126,7 +126,6 @@ Required tests:
 - `test.resources.app_owned_image_not_disposed`
 - `test.resources.resource_dirty`
 - `test.resources.mark_all_resources_dirty`
-- `test.resources.painter_never_calls_resolver_directly`
 - `test.resources.missing_result_suppressed_per_frame`
 - `test.resources.surface_session_cache_lifecycle`
 - `test.resources.resolver_swap_starts_fresh_cache`
@@ -234,7 +233,6 @@ Required tests:
 - `test/resources/app_owned_image_not_disposed_test.dart`
 - `test/resources/resource_dirty_test.dart`
 - `test/resources/mark_all_resources_dirty_test.dart`
-- `test/resources/painter_never_calls_resolver_directly_test.dart`
 - `test/resources/missing_result_suppressed_per_frame_test.dart`
 - `test/resources/surface_session_cache_lifecycle_test.dart`
 - `test/resources/resolver_swap_starts_fresh_cache_test.dart`

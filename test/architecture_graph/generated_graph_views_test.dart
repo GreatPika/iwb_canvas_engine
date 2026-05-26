@@ -6,6 +6,8 @@ import '../../tool/architecture_graph/src/actual_graph.dart';
 import '../../tool/architecture_graph/src/architecture_graph.dart';
 import '../../tool/architecture_graph/src/graph_views.dart';
 
+const _selectedArchitectureGraphPhase = 'P6';
+
 void main() {
   group('rendered views', () {
     _registerRenderedViewsTest();
@@ -26,12 +28,12 @@ void _registerRenderedViewsTest() {
     final first = renderGraphViews(
       expected: expected,
       actual: actual,
-      selectedPhase: 'P4',
+      selectedPhase: _selectedArchitectureGraphPhase,
     );
     final second = renderGraphViews(
       expected: expected,
       actual: actual,
-      selectedPhase: 'P4',
+      selectedPhase: _selectedArchitectureGraphPhase,
     );
 
     expect(first, second);
@@ -53,11 +55,19 @@ void _expectCurrentPhaseView(Map<String, String> views) {
   );
   expect(
     views['docs/diagrams/generated/current_phase.mmd'],
-    isNot(contains('edit_kernel')),
+    contains('load_document_pipeline'),
+  );
+  expect(
+    views['docs/diagrams/generated/current_phase.mmd'],
+    contains('edit_kernel'),
   );
   expect(
     views['docs/diagrams/generated/current_phase.mmd'],
     contains('public API forwards to by P4'),
+  );
+  expect(
+    views['docs/diagrams/generated/current_phase.mmd'],
+    isNot(contains('resource_kernel')),
   );
   expect(
     views['docs/diagrams/generated/current_phase.mmd'],
@@ -76,7 +86,19 @@ void _expectFutureView(Map<String, String> views) {
   );
   expect(
     views['docs/diagrams/generated/future_target.mmd'],
-    contains('store_document_kernel'),
+    isNot(contains('store_document_kernel')),
+  );
+  expect(
+    views['docs/diagrams/generated/future_target.mmd'],
+    contains('resource_kernel'),
+  );
+  expect(
+    views['docs/diagrams/generated/future_target.mmd'],
+    contains('resource_surface_session'),
+  );
+  expect(
+    views['docs/diagrams/generated/future_target.mmd'],
+    contains('invalidates resource session through by P7'),
   );
   expect(
     views['docs/diagrams/generated/future_target.mmd'],
@@ -117,7 +139,7 @@ void _registerCheckedInViewsTest() {
     final views = renderGraphViews(
       expected: expected,
       actual: actual,
-      selectedPhase: 'P4',
+      selectedPhase: _selectedArchitectureGraphPhase,
     );
 
     for (final entry in views.entries) {
@@ -139,7 +161,7 @@ void _registerOrphanViewTest() {
       final views = renderGraphViews(
         expected: expected,
         actual: actual,
-        selectedPhase: 'P4',
+        selectedPhase: _selectedArchitectureGraphPhase,
       );
       writeGraphViews(views: views, repositoryRoot: directory.path);
       File('${directory.path}/docs/diagrams/generated/old/orphan.mmd')

@@ -12,9 +12,9 @@ copy legacy controller shells.
 
 | Donor | What to preserve | Reuse | Risks | Target phase |
 |---|---|---:|---|---|
-| `lib/src/core/scene_spatial_index.dart` | uniform-grid index, separate hit/paint entries, outlier fallback, `structuralRevision` candidate payload | `adapt` | legacy `Scene`, `SceneNode`, locator maps, background sentinel | P7 |
-| `lib/src/controller/internal/spatial_index_cache.dart` | lazy build, epoch invalidation, incremental commit, fallback rebuild, debug counters | `adapt` | legacy `ChangeSet` and controller revisions | P7/P8 |
-| `lib/src/controller/scene_store_controller.dart` spatial query/resolve paths | opaque committed candidates and stale `structuralRevision` rejection | `adapt` | current file is mixed controller facade | P5/P7 |
+| `lib/src/core/scene_spatial_index.dart` | uniform-grid index, separate hit/paint entries, outlier fallback, `structuralRevision` candidate payload | `adapt` | legacy `Scene`, `SceneNode`, locator maps, background sentinel | P8 |
+| `lib/src/controller/internal/spatial_index_cache.dart` | lazy build, epoch invalidation, incremental commit, fallback rebuild, debug counters | `adapt` | legacy `ChangeSet` and controller revisions | P8/P9 |
+| `lib/src/controller/scene_store_controller.dart` spatial query/resolve paths | opaque committed candidates and stale `structuralRevision` rejection | `adapt` | current file is mixed controller facade | P4/P8 |
 | `lib/src/core/snapshot_paint_admission_bounds.dart` | bounded snapshot-local paint-bounds cache keyed by node revision/validity | `adapt` | validity keys must be rebuilt for next shapes | P8 |
 | `lib/src/core/scene_snapshot_paint_candidates.dart` | snapshot fallback enumeration and selected preview widened visibility rect | `adapt` | only valid for non-committed fallback paths | P8 |
 | `lib/src/contract/scene_view_render_state.dart` | atomic frame-read and immutable preview snapshot model | `adapt` | legacy contract path/name must not leak | P8 |

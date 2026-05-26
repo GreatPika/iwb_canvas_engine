@@ -301,8 +301,8 @@ nodes:
     actual:
       declarations:
         - LoadDocumentPipeline
-  - id: resource.resolver
-    label: Resource resolver
+  - id: resource.kernel
+    label: Resource kernel
     kind: resource_owner
     owner: resource
     phaseIntroduced: P7
@@ -313,10 +313,26 @@ nodes:
       - path: docs/implementation/p7_resources_and_images.md
       - path: docs/contracts/resources.md
     evidence:
-      - Resource resolution remains future-phase image loading scope.
+      - ResourceKernel owns the non-surface resource API, resource visual state publication, dirty-resource orchestration, session invalidation events, and resolver reentrancy rejection.
     actual:
       declarations:
-        - ResourceResolver
+        - ResourceKernel
+  - id: resource.surface_session
+    label: Surface resource session
+    kind: resource_owner
+    owner: resource
+    phaseIntroduced: P7
+    phaseRequiredBy: P7
+    status: future
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/implementation/p7_resources_and_images.md
+      - path: docs/contracts/resources.md
+    evidence:
+      - SurfaceResourceSession owns the surface-scoped resolver reference, resolverGeneration, ImageResolveCache, per-frame resolver budget, same-frame missing/null suppression, and bounded placeholder policy.
+    actual:
+      declarations:
+        - SurfaceResourceSession
   - id: geometry.spatial_index
     label: Geometry and spatial index
     kind: spatial_owner
@@ -598,9 +614,38 @@ edges:
     actual:
       compositionFields:
         - DocumentStoreKernel
-  - id: resource.resolver.feeds_frame_renderer
-    from: resource.resolver
-    to: frame.renderer
+  - id: runtime.root.owns_resource_kernel
+    from: runtime.root
+    to: resource.kernel
+    kind: composition
+    phaseRequiredBy: P7
+    status: future
+    sourceDocs:
+      - path: docs/architecture/01_runtime_ownership.md
+      - path: docs/contracts/resources.md
+      - path: docs/implementation/p7_resources_and_images.md
+    evidence:
+      - RuntimeRoot composes and coordinates ResourceKernel for the public resource port, resource visual state publication, dirty-resource orchestration, and session invalidation events.
+    actual:
+      compositionFields:
+        - ResourceKernel
+  - id: resource.kernel.invalidates_surface_session
+    from: resource.kernel
+    to: resource.surface_session
+    kind: resource_invalidation
+    phaseRequiredBy: P7
+    status: future
+    sourceDocs:
+      - path: docs/contracts/resources.md
+      - path: docs/implementation/p7_resources_and_images.md
+    evidence:
+      - Resource dirty target/all invalidation and descriptor changes must notify the attached SurfaceResourceSession without making ResourceKernel own app image references or session cache entries.
+    actual:
+      delegationTargets:
+        - SurfaceResourceSession
+  - id: frame.renderer.uses_surface_resource_session
+    from: frame.renderer
+    to: resource.surface_session
     kind: resource_boundary
     phaseRequiredBy: P9
     status: future
@@ -608,10 +653,10 @@ edges:
       - path: docs/contracts/resources.md
       - path: docs/contracts/frame_rendering.md
     evidence:
-      - Frame rendering will consume resource visual facts after resource scope.
+      - PaintAssetBindingService binds image descriptors through SurfaceResourceSession after ordinary record planning; painters and ordinary planners do not call CanvasResourceResolver directly.
     actual:
       delegationTargets:
-        - FrameRenderer
+        - SurfaceResourceSession
   - id: geometry.spatial_index.feeds_interaction
     from: geometry.spatial_index
     to: interaction.selection_move
@@ -861,11 +906,13 @@ sourceCoverage:
       - selection.kernel
       - frame.renderer
       - interaction.selection_move
-      - resource.resolver
+      - resource.kernel
+      - resource.surface_session
       - diagnostics.hub
       - api.canvas_runtime.composes_runtime_root
       - runtime.root.owns_store
       - runtime.root.owns_selection
+      - runtime.root.owns_resource_kernel
       - runtime.root.exposes_frame_facts
       - api.canvas_runtime.camera.routes_to_runtime_view_camera
       - runtime.canvas_runtime.camera.closed_phase_placeholder
@@ -906,8 +953,11 @@ sourceCoverage:
   - sectionId: section_07_resource_lifecycle
     disposition: graph_obligation
     graphIds:
-      - resource.resolver
-      - resource.resolver.feeds_frame_renderer
+      - resource.kernel
+      - resource.surface_session
+      - runtime.root.owns_resource_kernel
+      - resource.kernel.invalidates_surface_session
+      - frame.renderer.uses_surface_resource_session
       - api.canvas_runtime.resources.future_placeholder
   - sectionId: section_08_legacy_capability_inventory
     disposition: non_graph_semantics
@@ -960,7 +1010,7 @@ sourceCoverage:
     graphIds:
       - frame.renderer
       - runtime.root.exposes_frame_facts
-      - resource.resolver.feeds_frame_renderer
+      - frame.renderer.uses_surface_resource_session
       - api.canvas_runtime.preview.future_placeholder
   - sectionId: section_16_geometry_policy
     disposition: graph_obligation

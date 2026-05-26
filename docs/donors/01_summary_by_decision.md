@@ -31,7 +31,7 @@ codec, geometry, and interaction slices depend on them.
 | Area | Donor | What to preserve | Reuse | Target phase |
 |---|---|---|---:|---|
 | Affine transform | `lib/src/contract/transform2d.dart` | robust 2D affine math, inverse handling, `applyToPoint`, `applyToRect`, canvas matrix layout | `copy/adapt` | P2/P3 foundation |
-| Core geometry | `lib/src/core/geometry.dart` | AABB, line/stroke bounds, singular value helpers, SVG path centering, point/segment distances | `copy/adapt` | P7 geometry |
+| Core geometry | `lib/src/core/geometry.dart` | AABB, line/stroke bounds, singular value helpers, SVG path centering, point/segment distances | `copy/adapt` | P8 geometry |
 | Contract limits | `lib/src/contract/scene_contract_limits.dart` | id/text/svg/stroke/layer/node/json/coordinate limits | `copy/adapt` | P1/P2 scope gate |
 | Error contract | `lib/src/contract/scene_data_exception.dart`, `lib/src/contract/scene_validation_diagnostics.dart` | structured code/path/bounded details and sanitized diagnostics | `copy/adapt` | P2/P3 |
 | Value validators | `lib/src/contract/validated/*.dart`, `lib/src/contract/validated/validated_value_support.dart` | finite/range/string/json/metadata/svg validation policies for `CanvasMetadata` and DTO boundaries | `adapt` | P2/P3 |

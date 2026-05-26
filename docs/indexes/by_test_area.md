@@ -299,10 +299,6 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
 
-## test.resources.painter_never_calls_resolver_directly
-
-- Sections: `section_07_resource_lifecycle`, `section_23_tests`
-
 ## test.resources.resolver_frame_budget
 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`

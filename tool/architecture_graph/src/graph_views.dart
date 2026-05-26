@@ -14,6 +14,7 @@ const _edgeKindLabels = {
   'query_boundary': 'reads data through',
   'read_port': 'reads from',
   'resource_boundary': 'resolves resources through',
+  'resource_invalidation': 'invalidates resource session through',
   'ui_boundary': 'is shown through',
   'tool_commit': 'commits through',
   'preview_boundary': 'publishes preview through',

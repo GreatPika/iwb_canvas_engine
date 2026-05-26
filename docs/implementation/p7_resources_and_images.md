@@ -83,7 +83,6 @@ load have established rollback-safe mutation and replacement boundaries.
 - `test.resources.app_owned_image_not_disposed` -> `test/resources/app_owned_image_not_disposed_test.dart`
 - `test.resources.resource_dirty` -> `test/resources/resource_dirty_test.dart`
 - `test.resources.mark_all_resources_dirty` -> `test/resources/mark_all_resources_dirty_test.dart`
-- `test.resources.painter_never_calls_resolver_directly` -> `test/resources/painter_never_calls_resolver_directly_test.dart`
 - `test.resources.missing_result_suppressed_per_frame` -> `test/resources/missing_result_suppressed_per_frame_test.dart`
 - `test.resources.surface_session_cache_lifecycle` -> `test/resources/surface_session_cache_lifecycle_test.dart`
 - `test.resources.resolver_swap_starts_fresh_cache` -> `test/resources/resolver_swap_starts_fresh_cache_test.dart`
@@ -106,7 +105,8 @@ load have established rollback-safe mutation and replacement boundaries.
   resolves that image again on the next paint
 - mark-all resource dirty clears the active-session image cache
 - resolver image results are app-owned and not disposed by engine
-- painters and frame code can resolve images only through SurfaceResourceSession
+- the P7 resource/session surface exposes image resolution only through
+  SurfaceResourceSession; later frame and widget wiring must keep that boundary
 - resolver swap, detach, dispose, and runtime swap cannot reuse stale session cache entries
 - missing/null resolver results do not retry in the same frame
 - resolver frame budget produces bounded placeholders and no invalid cache write

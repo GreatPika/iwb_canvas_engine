@@ -4,7 +4,7 @@ flowchart LR
   App --> Surface[CanvasSurface]
   Surface -->|one active surface per runtime| Runtime
   Runtime --> Flutter[Flutter rendering/input]
-  Runtime --> Resolver[App ResourceResolver]
+  Runtime --> Resolver[App CanvasResourceResolver]
   App --> Storage[App document storage]
   Storage --> API
   JsonDocument[Schema v1 JSON document] --> API
