@@ -84,6 +84,29 @@ void _topLevelPrivate() {
       },
     );
   });
+
+  test('surface detector covers structurally empty CanvasSurface state', () {
+    const source = '''
+final class CanvasSurface extends StatefulWidget {}
+
+final class _CanvasSurfaceState extends State<CanvasSurface> {
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox
+        .shrink();
+  }
+}
+''';
+
+    final discovered = _surfacePlaceholdersInSource(source);
+    final allowlisted = {
+      for (final placeholder in publicApiPlaceholderAllowlist)
+        placeholder.declarationId,
+    };
+
+    expect(discovered, {'CanvasSurface.build'});
+    expect(discovered.difference(allowlisted), isEmpty);
+  });
 }
 
 void _testExportCombinators() {
@@ -184,12 +207,72 @@ Set<String> _surfacePlaceholders() {
     '$repositoryRoot/lib/src/api/canvas_surface.dart',
   ).readAsStringSync();
 
-  return {
-    if (source.contains(
-      'Widget build(BuildContext context) => const SizedBox.shrink();',
-    ))
-      'CanvasSurface.build',
+  return _surfacePlaceholdersInSource(source);
+}
+
+Set<String> _surfacePlaceholdersInSource(String source) {
+  final unit = parseString(content: source).unit;
+
+  return {if (_hasCanvasSurfaceEmptyStateBuild(unit)) 'CanvasSurface.build'};
+}
+
+bool _hasCanvasSurfaceEmptyStateBuild(CompilationUnit unit) {
+  for (final declaration in unit.declarations) {
+    if (declaration is! ClassDeclaration ||
+        declaration.namePart.typeName.lexeme != '_CanvasSurfaceState' ||
+        !_extendsCanvasSurfaceState(declaration)) {
+      continue;
+    }
+    for (final member in declaration.body.members) {
+      if (member is MethodDeclaration &&
+          member.name.lexeme == 'build' &&
+          _returnsConstSizedBoxShrink(member.body)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool _extendsCanvasSurfaceState(ClassDeclaration declaration) {
+  final superclass = declaration.extendsClause?.superclass;
+  final typeArguments = superclass?.typeArguments?.arguments;
+
+  return superclass?.name.lexeme == 'State' &&
+      typeArguments != null &&
+      typeArguments.length == 1 &&
+      typeArguments.single.toSource() == 'CanvasSurface';
+}
+
+bool _returnsConstSizedBoxShrink(FunctionBody body) {
+  return switch (body) {
+    ExpressionFunctionBody(:final expression) => _isConstSizedBoxShrink(
+      expression,
+    ),
+    BlockFunctionBody(:final block) => switch (block.statements) {
+      [ReturnStatement(:final expression?)] => _isConstSizedBoxShrink(
+        expression,
+      ),
+      _ => false,
+    },
+    _ => false,
   };
+}
+
+bool _isConstSizedBoxShrink(Expression expression) {
+  if (expression is! InstanceCreationExpression ||
+      !expression.isConst ||
+      expression.argumentList.arguments.isNotEmpty) {
+    return false;
+  }
+
+  final constructorName = expression.constructorName;
+  final type = constructorName.type;
+  final typeName = type.importPrefix?.name.lexeme ?? type.name.lexeme;
+  final namedConstructor = constructorName.name?.name ?? type.name.lexeme;
+
+  return typeName == 'SizedBox' && namedConstructor == 'shrink';
 }
 
 final class _PublicPlaceholderCollector {
