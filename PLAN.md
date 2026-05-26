@@ -53,4 +53,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 31. Diagnostics public surface registry guard](plan/step_31_diagnostics_public_surface_registry_guard.md)
 - [x] [Step 32. Schema v1 roundtrip and metadata proof hardening](plan/step_32_schema_v1_roundtrip_and_metadata_proof_hardening.md)
 - [x] [Step 33. Guardrail runner handoff cleanup](plan/step_33_guardrail_runner_handoff_cleanup.md)
-- [ ] [Step 34. Fixture naming scope cleanup](plan/step_34_fixture_naming_scope_cleanup.md)
+- [x] [Step 34. Fixture naming scope cleanup](plan/step_34_fixture_naming_scope_cleanup.md)

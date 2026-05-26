@@ -64,7 +64,7 @@ Order Constraints:
 
 ## Execution Units
 
-### [ ] Unit 1: Field Update Admission/Effects Fixture Rename
+### [x] Unit 1: Field Update Admission/Effects Fixture Rename
 
 Owner:
 
@@ -86,7 +86,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Document Summary Coherence Fixture Rename
+### [x] Unit 2: Document Summary Coherence Fixture Rename
 
 Owner:
 
@@ -112,7 +112,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Handoff Closure And Verification
+### [x] Unit 3: Handoff Closure And Verification
 
 Owner:
 
