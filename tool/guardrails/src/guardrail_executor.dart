@@ -231,9 +231,11 @@ const _testProofPaths = {
   ],
   'load.prepares_before_interrupt': [
     'test/runtime/load_document_ordering_test.dart',
+    'test/runtime/load_document_ordering_fixture_shape_test.dart',
   ],
   'load.success_interrupts_before_install': [
     'test/runtime/load_document_ordering_test.dart',
+    'test/runtime/load_document_ordering_fixture_shape_test.dart',
   ],
 };
 
