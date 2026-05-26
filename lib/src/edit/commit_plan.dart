@@ -44,9 +44,10 @@ final class ResourceEffect extends CommitEffect {
 }
 
 final class RepaintEffect extends CommitEffect {
-  const RepaintEffect({required this.mainCanvas});
+  const RepaintEffect({required this.mainCanvas, this.overlayCanvas = false});
 
   final bool mainCanvas;
+  final bool overlayCanvas;
 }
 
 final class SelectionEffect extends CommitEffect {

@@ -375,7 +375,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
 
     _loadInteractionBoundary.interruptPreparedLoad();
     _loadPipeline.consume(preparedLoad);
-    final didClearSelection = _selection.clearSelection();
+    final didClearSelection = _selection.clearForDocumentReplacement();
     _viewCamera = preparedLoad.document.camera;
     _viewCameraRevision += 1;
     _epochRevision += 1;
@@ -438,7 +438,7 @@ List<CommitEffect> _loadEffects({required bool didClearSelection}) {
     const ProjectionEffect(),
     SpatialEffect(touchedSet: TouchedSet(documentReplaced: true)),
     ResourceEffect(touchedSet: TouchedSet(documentReplaced: true)),
-    const RepaintEffect(mainCanvas: true),
+    const RepaintEffect(mainCanvas: true, overlayCanvas: true),
     if (didClearSelection) const SelectionEffect(),
     const PublicStateEffect(),
   ]);

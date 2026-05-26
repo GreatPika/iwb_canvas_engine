@@ -10,6 +10,10 @@ void main() {
     expect(_expectSuccessfulLoadStatePublication, returnsNormally);
   });
 
+  test('successful load records selection clear when already empty', () {
+    expect(_expectSuccessfulLoadClearsEmptySelection, returnsNormally);
+  });
+
   test('failed load publishes no state and leaves runtime facts unchanged', () {
     expect(_expectFailedLoadHasNoSideEffects, returnsNormally);
   });
@@ -29,6 +33,16 @@ void _expectSuccessfulLoadStatePublication() {
   expect(snapshots, hasLength(1));
   _expectReplacementDocumentInstalled(root);
   _expectReplacementState(snapshots.single);
+  _expectLoadEffects(effectBatches.single);
+}
+
+void _expectSuccessfulLoadClearsEmptySelection() {
+  final effectBatches = <List<CommitEffect>>[];
+  final root = _runtimeRoot(effectBatches);
+
+  root.edits.loadDocument(_replacementDocument());
+
+  expect(root.state.value.revisions.selection, 1);
   _expectLoadEffects(effectBatches.single);
 }
 
@@ -104,7 +118,9 @@ void _expectLoadEffects(List<CommitEffect> effects) {
   expect(effects.whereType<ProjectionEffect>(), hasLength(1));
   expect(effects.whereType<SpatialEffect>(), hasLength(1));
   expect(effects.whereType<ResourceEffect>(), hasLength(1));
-  expect(effects.whereType<RepaintEffect>(), hasLength(1));
+  final repaintEffect = effects.whereType<RepaintEffect>().single;
+  expect(repaintEffect.mainCanvas, isTrue);
+  expect(repaintEffect.overlayCanvas, isTrue);
   expect(effects.whereType<SelectionEffect>(), hasLength(1));
   expect(effects.whereType<PublicStateEffect>(), hasLength(1));
   expect(() => effects.add(const PublicStateEffect()), throwsUnsupportedError);

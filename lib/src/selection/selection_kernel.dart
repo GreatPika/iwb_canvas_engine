@@ -51,6 +51,13 @@ final class SelectionKernel implements SelectionFactsPort {
     return _replaceSelection(const {});
   }
 
+  bool clearForDocumentReplacement() {
+    _selectedIds.clear();
+    _selectionRevision += 1;
+
+    return true;
+  }
+
   bool selectAll({required bool onlySelectable}) {
     return _replaceSelection(
       _membership.selectAllElementIds(onlySelectable: onlySelectable),
