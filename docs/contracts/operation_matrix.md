@@ -235,11 +235,11 @@ cache, repaint, and notifications remain unchanged.
 
 #### replaceDraftDocument
 
-Phase ownership: this row is a reserved replacement effect shape for P6. P5
-keeps the `documentReplaced` invalidation/effect shape available for future
-replacement and for the generic global-invalidation exception, but executable
-`CanvasEdit.replaceDraftDocument` remains excluded from P5 operation-matrix
-closure and throws `UnsupportedError` before draft or committed-state mutation.
+Phase ownership: P6 closes this executable edit-session replacement row. P5
+kept only the `documentReplaced` invalidation/effect shape reserved for the
+generic global-invalidation exception; P6 makes
+`CanvasEdit.replaceDraftDocument` replace the whole draft document through the
+edit commit path.
 
 Touched state: whole draft document; selection owner when replacement makes the
 current selection invalid.
