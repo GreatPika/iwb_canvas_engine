@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
+import 'package:iwb_canvas_engine/src/runtime/load_interaction_boundary.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
@@ -46,26 +47,19 @@ final class _SuccessfulLoadOrderingScenario {
   late final RuntimeRoot root;
 
   void run() {
-    boundary
-      ..onInterrupt = _recordInterrupt
-      ..onPostInstallCleanup = _recordPostInstallCleanup;
+    boundary.onPrepareCleanup = _recordPrepareCleanup;
     root = _runtimeRoot(boundary, observeEffects: _recordObserver);
     root.state.addListener(_recordState);
 
     root.edits.loadDocument(_replacementDocument());
 
-    expect(events, ['interrupt', 'post-install-cleanup', 'state', 'observer']);
-    expect(boundary.events, ['interrupt', 'post-install-cleanup']);
+    expect(events, ['prepared-cleanup', 'state', 'observer']);
+    expect(boundary.events, ['prepared-cleanup']);
   }
 
-  void _recordInterrupt() {
-    events.add('interrupt');
+  void _recordPrepareCleanup() {
+    events.add('prepared-cleanup');
     expect(root.readDocument().layers.single.elements.single.id.value, 'old');
-  }
-
-  void _recordPostInstallCleanup() {
-    events.add('post-install-cleanup');
-    expect(root.readDocument().backgroundElements.single.id.value, 'new');
   }
 
   void _recordState() {
@@ -170,18 +164,13 @@ CanvasDocument _invalidReplacementDocument() {
 
 final class _RecordingLoadBoundary implements LoadInteractionBoundary {
   final List<String> events = [];
-  void Function()? onInterrupt;
-  void Function()? onPostInstallCleanup;
+  void Function()? onPrepareCleanup;
 
   @override
-  void interruptPreparedLoad() {
-    events.add('interrupt');
-    onInterrupt?.call();
-  }
+  PointerCleanupOutcome prepareLoadCleanup() {
+    events.add('prepared-cleanup');
+    onPrepareCleanup?.call();
 
-  @override
-  void clearPostInstallFacts() {
-    events.add('post-install-cleanup');
-    onPostInstallCleanup?.call();
+    return PointerCleanupOutcome.noChange;
   }
 }

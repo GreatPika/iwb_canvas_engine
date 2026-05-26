@@ -25,6 +25,7 @@ import '../store/document_store_kernel.dart';
 import 'commit_effect_observer.dart';
 import 'document_facts_port.dart';
 import 'frame_facts_port.dart';
+import 'load_interaction_boundary.dart';
 import 'runtime_config.dart';
 import 'selection_facts_port.dart';
 import 'selection_membership_port.dart';
@@ -41,7 +42,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
          store: DocumentStoreKernel(initialDocument),
          config: RuntimeConfig.from(config),
          diagnosticPolicy: config.diagnosticPolicy,
-         loadInteractionBoundary: const _NoopLoadInteractionBoundary(),
+         loadInteractionBoundary: noopLoadInteractionBoundary,
          initialViewCamera: initialDocument.camera,
          commitEffectObserver: commitEffectObserver ?? _ignoreCommitEffects,
        );
@@ -373,13 +374,12 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   void _loadDocument(CanvasDocument document) {
     final preparedLoad = _loadPipeline.prepare(document);
 
-    _loadInteractionBoundary.interruptPreparedLoad();
+    _loadInteractionBoundary.prepareLoadCleanup();
     _loadPipeline.consume(preparedLoad);
     final didClearSelection = _selection.clearForDocumentReplacement();
     _viewCamera = preparedLoad.document.camera;
     _viewCameraRevision += 1;
     _epochRevision += 1;
-    _loadInteractionBoundary.clearPostInstallFacts();
     _deliverLoadResult(_loadEffects(didClearSelection: didClearSelection));
   }
 
@@ -482,21 +482,6 @@ final class _RuntimeRevisionFacts {
   final int viewCamera;
   final int preview;
   final int epoch;
-}
-
-abstract interface class LoadInteractionBoundary {
-  void interruptPreparedLoad();
-  void clearPostInstallFacts();
-}
-
-final class _NoopLoadInteractionBoundary implements LoadInteractionBoundary {
-  const _NoopLoadInteractionBoundary();
-
-  @override
-  void interruptPreparedLoad() {}
-
-  @override
-  void clearPostInstallFacts() {}
 }
 
 final class _StoreSelectionMembership implements SelectionMembershipPort {
