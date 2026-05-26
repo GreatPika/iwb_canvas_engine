@@ -2,17 +2,6 @@ import '../api/canvas_errors.dart';
 import '../diagnostics/diagnostics_hub.dart';
 import 'schema_v1_diagnostics.dart';
 
-const Set<String> canvasSchemaV1RootFields = {
-  'schemaVersion',
-  'camera',
-  'background',
-  'palette',
-  'resources',
-  'backgroundLayer',
-  'layers',
-  'metadata',
-};
-
 void validateSchemaV1Root(
   Map<String, Object?> json, {
   DiagnosticsHub? diagnostics,
