@@ -183,7 +183,7 @@ and be proved separately from external load.
 
 ## Execution Units
 
-### [ ] Unit 1: Prepared Load Pipeline And Consume Boundary
+### [x] Unit 1: Prepared Load Pipeline And Consume Boundary
 
 Owner:
 
@@ -229,7 +229,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Runtime External Load Commit
+### [x] Unit 2: Runtime External Load Commit
 
 Owner:
 
@@ -272,7 +272,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Draft Replacement In Edit Sessions
+### [x] Unit 3: Draft Replacement In Edit Sessions
 
 Owner:
 
@@ -315,7 +315,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 4: Ordering, Guards, And Operation Proofs
+### [x] Unit 4: Ordering, Guards, And Operation Proofs
 
 Owner:
 
@@ -358,7 +358,7 @@ Depends On:
 
 Units 2 and 3.
 
-### [ ] Unit 5: Architecture And Documentation Closure
+### [x] Unit 5: Architecture And Documentation Closure
 
 Owner:
 
@@ -392,7 +392,7 @@ Depends On:
 
 Units 1, 2, 3, and 4.
 
-### [ ] Unit 6: Close Roadmap Step State
+### [x] Unit 6: Close Roadmap Step State
 
 Owner:
 
