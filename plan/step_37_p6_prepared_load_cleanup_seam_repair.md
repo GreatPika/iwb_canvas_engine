@@ -101,7 +101,7 @@ callback surface must keep throwing the existing post-commit delivery `StateErro
 
 ## Execution Units
 
-### [ ] Unit 1: Prepared cleanup seam
+### [x] Unit 1: Prepared cleanup seam
 
 Owner:
 
@@ -156,7 +156,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Runtime load ordering and failure boundary
+### [x] Unit 2: Runtime load ordering and failure boundary
 
 Owner:
 
@@ -202,7 +202,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Ordering fixture and guardrail proof
+### [x] Unit 3: Ordering fixture and guardrail proof
 
 Owner:
 
@@ -239,7 +239,7 @@ Depends On:
 
 Units 1 and 2.
 
-### [ ] Unit 4: Public P6 smoke append
+### [x] Unit 4: Public P6 smoke append
 
 Owner:
 
@@ -278,7 +278,7 @@ Depends On:
 
 Units 1, 2, and 3.
 
-### [ ] Unit 5: Publication and verification closure
+### [x] Unit 5: Publication and verification closure
 
 Owner:
 
@@ -325,8 +325,9 @@ Run `dart test test/smoke/public_incremental_smoke_test.dart` so the public
 incremental smoke includes the P6 load step expected by the smoke expansion
 rule.
 Run `dart run tool/architecture_graph/check.dart --phase P6` and
-`dart run tool/architecture_graph/generate_views.dart --phase P5 --check`
-because this step changes a production load/interaction seam. Run
+`dart run tool/architecture_graph/generate_views.dart --phase P6 --check`
+because this step changes a production load/interaction seam and the repository
+generated-docs sync tool selects P6 for architecture graph views. Run
 `dart run docs/tool/sync_generated_docs.dart --check` and
 `dart run docs/tool/check_docs.dart` only if docs or generated documentation
 tools changed. Before the implementation change is considered complete,

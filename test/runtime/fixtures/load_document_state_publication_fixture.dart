@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
+import 'package:iwb_canvas_engine/src/runtime/load_interaction_boundary.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
@@ -12,6 +13,10 @@ void main() {
 
   test('successful load records selection clear when already empty', () {
     expect(_expectSuccessfulLoadClearsEmptySelection, returnsNormally);
+  });
+
+  test('successful load publishes prepared cleanup preview outcome', () {
+    expect(_expectSuccessfulLoadPublishesPreviewCleanup, returnsNormally);
   });
 
   test('failed load publishes no state and leaves runtime facts unchanged', () {
@@ -43,6 +48,30 @@ void _expectSuccessfulLoadClearsEmptySelection() {
   root.edits.loadDocument(_replacementDocument());
 
   expect(root.state.value.revisions.selection, 1);
+  _expectLoadEffects(effectBatches.single);
+}
+
+void _expectSuccessfulLoadPublishesPreviewCleanup() {
+  final effectBatches = <List<CommitEffect>>[];
+  final root = _runtimeRoot(
+    effectBatches,
+    loadInteractionBoundary: const _PreviewChangedLoadBoundary(),
+  );
+  root.selection.setSelection([CanvasElementId('old-element')]);
+  final beforePreviewRevision = root.state.value.revisions.preview;
+  final snapshots = <CanvasRuntimeState>[];
+  root.state.addListener(() {
+    snapshots.add(root.state.value);
+  });
+
+  root.edits.loadDocument(_replacementDocument());
+
+  expect(snapshots, hasLength(1));
+  final loadedState = snapshots.single;
+  _expectReplacementDocumentInstalled(root);
+  _expectReplacementState(loadedState, expectedPreviewRevision: 1);
+  expect(loadedState.revisions.preview, beforePreviewRevision + 1);
+  expect(effectBatches, hasLength(1));
   _expectLoadEffects(effectBatches.single);
 }
 
@@ -80,7 +109,19 @@ void _expectDuplicateElementLoadRejected(RuntimeRoot root) {
   );
 }
 
-RuntimeRoot _runtimeRoot(List<List<CommitEffect>> effectBatches) {
+RuntimeRoot _runtimeRoot(
+  List<List<CommitEffect>> effectBatches, {
+  LoadInteractionBoundary? loadInteractionBoundary,
+}) {
+  if (loadInteractionBoundary != null) {
+    return RuntimeRoot.test(
+      initialDocument: _initialDocument(),
+      config: const CanvasRuntimeConfig(),
+      loadInteractionBoundary: loadInteractionBoundary,
+      commitEffectObserver: effectBatches.add,
+    );
+  }
+
   return RuntimeRoot(
     initialDocument: _initialDocument(),
     config: const CanvasRuntimeConfig(),
@@ -97,7 +138,10 @@ void _expectReplacementDocumentInstalled(RuntimeRoot root) {
   expect(root.generateElementId(), CanvasElementId('e0'));
 }
 
-void _expectReplacementState(CanvasRuntimeState state) {
+void _expectReplacementState(
+  CanvasRuntimeState state, {
+  int expectedPreviewRevision = 0,
+}) {
   expect(
     state.summary,
     const CanvasRuntimeSummary(
@@ -111,7 +155,7 @@ void _expectReplacementState(CanvasRuntimeState state) {
   expect(state.revisions.selection, 2);
   expect(state.revisions.viewCamera, 1);
   expect(state.revisions.epoch, 1);
-  expect(state.revisions.preview, 0);
+  expect(state.revisions.preview, expectedPreviewRevision);
 }
 
 void _expectLoadEffects(List<CommitEffect> effects) {
@@ -149,6 +193,15 @@ final class _RuntimeFactsSnapshot {
     expect(root.state.value, state);
     expect(root.readDocument(), same(document));
     expect(root.selectedElementIds, selection);
+  }
+}
+
+final class _PreviewChangedLoadBoundary implements LoadInteractionBoundary {
+  const _PreviewChangedLoadBoundary();
+
+  @override
+  PointerCleanupOutcome prepareLoadCleanup() {
+    return const PointerCleanupOutcome(previewChanged: true);
   }
 }
 
