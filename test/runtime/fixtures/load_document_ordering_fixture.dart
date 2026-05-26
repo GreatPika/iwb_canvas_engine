@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -83,33 +84,94 @@ final class _SuccessfulLoadOrderingScenario {
   late final RuntimeRoot root;
 
   void run() {
-    boundary.onPrepareCleanup = _recordPrepareCleanup;
-    root = _runtimeRoot(boundary, observeEffects: _recordObserver);
-    root.state.addListener(_recordState);
+    boundary.onPrepareCleanup = () =>
+        _recordSuccessfulPrepareCleanup(events, root);
+    root = _runtimeRoot(
+      boundary,
+      observeEffects: (effects) =>
+          _recordSuccessfulObserver(events, root, effects),
+    );
+    root.state.addListener(() => _recordSuccessfulState(events, root));
 
     root.edits.loadDocument(_replacementDocument());
 
     expect(events, ['prepared-cleanup', 'state', 'observer']);
     expect(boundary.events, ['prepared-cleanup']);
+    _expectFixtureHasNoDeferredCleanupSurface();
+    _expectNoInteractionEventBetweenCleanupAndPublication(events);
   }
+}
 
-  void _recordPrepareCleanup() {
-    events.add('prepared-cleanup');
-    expect(root.readDocument().layers.single.elements.single.id.value, 'old');
-  }
+void _expectFixtureHasNoDeferredCleanupSurface() {
+  final source = File(
+    'test/runtime/fixtures/load_document_ordering_fixture.dart',
+  ).readAsStringSync();
 
-  void _recordState() {
-    events.add('state');
-    _expectPublishedLoadState(root);
-    _expectDeliveryGuards(root);
-  }
+  expect(
+    source,
+    isNot(
+      contains(
+        'post-install-'
+        'cleanup',
+      ),
+    ),
+  );
+  expect(
+    source,
+    isNot(
+      contains(
+        'PostInstall'
+        'Cleanup',
+      ),
+    ),
+  );
+  expect(
+    source,
+    isNot(
+      contains(
+        'clearPostInstall'
+        'Facts',
+      ),
+    ),
+  );
+}
 
-  void _recordObserver(List<CommitEffect> effects) {
-    events.add('observer');
-    expect(effects.whereType<PublicStateEffect>(), hasLength(1));
-    _expectPublishedLoadState(root);
-    _expectDeliveryGuards(root);
-  }
+void _recordSuccessfulPrepareCleanup(List<String> events, RuntimeRoot root) {
+  events.add('prepared-cleanup');
+  expect(root.readDocument().layers.single.elements.single.id.value, 'old');
+  expect(root.state.value.revisions.document, 0);
+}
+
+void _recordSuccessfulState(List<String> events, RuntimeRoot root) {
+  events.add('state');
+  _expectPublishedLoadState(root);
+  _expectDeliveryGuards(root);
+}
+
+void _recordSuccessfulObserver(
+  List<String> events,
+  RuntimeRoot root,
+  List<CommitEffect> effects,
+) {
+  events.add('observer');
+  expect(effects.whereType<PublicStateEffect>(), hasLength(1));
+  _expectPublishedLoadState(root);
+  _expectDeliveryGuards(root);
+}
+
+void _expectNoInteractionEventBetweenCleanupAndPublication(
+  List<String> events,
+) {
+  final publicationIndex = events.indexOf('state');
+  final interactionEventsBeforePublication = events
+      .take(publicationIndex)
+      .where(_isInteractionBoundaryEvent);
+
+  expect(interactionEventsBeforePublication, ['prepared-cleanup']);
+}
+
+bool _isInteractionBoundaryEvent(String event) {
+  return event == 'prepared-cleanup';
 }
 
 RuntimeRoot _runtimeRoot(
