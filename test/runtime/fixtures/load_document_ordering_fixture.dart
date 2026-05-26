@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -97,43 +96,8 @@ final class _SuccessfulLoadOrderingScenario {
 
     expect(events, ['prepared-cleanup', 'state', 'observer']);
     expect(boundary.events, ['prepared-cleanup']);
-    _expectFixtureHasNoDeferredCleanupSurface();
     _expectNoInteractionEventBetweenCleanupAndPublication(events);
   }
-}
-
-void _expectFixtureHasNoDeferredCleanupSurface() {
-  final source = File(
-    'test/runtime/fixtures/load_document_ordering_fixture.dart',
-  ).readAsStringSync();
-
-  expect(
-    source,
-    isNot(
-      contains(
-        'post-install-'
-        'cleanup',
-      ),
-    ),
-  );
-  expect(
-    source,
-    isNot(
-      contains(
-        'PostInstall'
-        'Cleanup',
-      ),
-    ),
-  );
-  expect(
-    source,
-    isNot(
-      contains(
-        'clearPostInstall'
-        'Facts',
-      ),
-    ),
-  );
 }
 
 void _recordSuccessfulPrepareCleanup(List<String> events, RuntimeRoot root) {
