@@ -3,9 +3,9 @@
 ---
 date: 2026-05-26
 designer: Codex
-commit: 324a1193
+commit: 4d5d6544
 branch: new-architecture
-design_question: "Use Research: P6 Load Document Current State and produce an architecturally clean design through architecture-design-workflow."
+design_question: "Repair the P6 loadDocument design after research found that the old design still allowed post-install interaction cleanup."
 ---
 
 ## Disposition
@@ -14,582 +14,340 @@ READY_FOR_CONTRACT
 
 ## Product Outcome
 
-P6 should make full document loading reliable for users: a valid replacement
-document appears as one committed runtime change, while invalid input leaves the
-current document, selection, camera, preview, gesture state, and notifications
-unchanged. This design does not implement P6, update the roadmap, or edit durable
-architecture docs; it locks the form for a future Change Contract.
+Full document loading remains a single reliable replacement operation: a valid
+document is installed once, invalid input leaves the current runtime untouched,
+and interaction cleanup cannot observe or fail after the replacement document is
+already committed. This design repairs the old P6 design artifact only; it does
+not implement code, draft a Change Contract, or edit durable source-of-truth
+docs.
 
 ## Target Contract Classification
 
 - Profile: BEHAVIOR_CHANGE
-- Obligations: SEAM_MIGRATION, PUBLIC_API_CHANGE
+- Obligations: BUG_FIX, SEAM_MIGRATION
 
 ## Research Inputs
 
-- `.research/2026-05-26-p6-load-document-current-state.md` - confirms the
-  current P6 placeholders, existing P5 edit path, P6 contracts, relevant
-  guardrails, and missing P6 staged-load tests.
+- `.research/2026-05-26-load-document-contract-review-gap.md` - identifies the
+  remaining live gap after durable docs were repaired: runtime code and the
+  ordering fixture still accept post-install interaction cleanup, while current
+  load-document docs require a prepared cleanup outcome before install.
 
 ## Repository Evidence
 
-- `docs/implementation/p6_load_document.md:5` - P6 purpose is staged,
-  validated, atomic full document replacement.
-- `docs/implementation/p6_load_document.md:10` - P6 build scope includes
-  `PreparedDocumentLoad`.
-- `docs/implementation/p6_load_document.md:12` - P6 build scope includes
-  `CanvasEditPort.loadDocument`.
-- `docs/implementation/p6_load_document.md:13` - P6 build scope includes
-  `CanvasEdit.replaceDraftDocument`.
-- `docs/implementation/p6_load_document.md:14` - the success path validates and
-  materializes before interaction interruption.
-- `docs/implementation/p6_load_document.md:21` - the failure path leaves
-  committed document, selection, preview, pointer normalization, repaint, events,
-  and active gesture state unchanged.
-- `docs/implementation/p6_load_document.md:24` - replacement uses one atomic
-  runtime/applier boundary and selection clear is a selection-owner effect.
-- `docs/implementation/p6_load_document.md:45` - donor ownership targets
-  `DocumentStoreKernel`, `SelectionKernel`, and `EditKernel` helpers.
-- `docs/implementation/p6_load_document.md:46` - the interaction mutation
-  boundary is adapted into an interaction-owned bridge into `EditKernel`.
-- `docs/implementation/p6_load_document.md:47` - staged load runtime
-  materialization targets load-document staged materialization.
-- `docs/implementation/p6_load_document.md:52` - scene-controller facades are a
-  forbidden donor structure.
-- `docs/implementation/p6_load_document.md:90` - exit gates require staged-load
-  tests to pass.
-- `docs/implementation/p6_load_document.md:94` - successful load must interrupt
-  before install and publish one atomic `CanvasRuntimeState`.
-- `docs/implementation/p6_load_document.md:97` - `replaceDraftDocument` must be
-  rollback-safe inside an edit session.
-- `docs/implementation/p6_load_document.md:102` - interrupting before
-  validation would destroy user state on bad input.
-- `docs/implementation/p6_load_document.md:104` - implementing load as a normal
-  edit sequence would risk split selection, epoch, cache, and projection
-  updates.
 - `docs/contracts/load_document.md:36` - `CanvasEditPort.loadDocument(document)`
-  is the next public external document replacement operation.
-- `docs/contracts/load_document.md:38` - the public API delegates orchestration
+  is the public external document replacement operation.
+- `docs/contracts/load_document.md:38` - public API delegates load orchestration
   to `RuntimeRoot`.
-- `docs/contracts/load_document.md:39` - the public API must not directly read
-  from or install into `DocumentStoreKernel`.
 - `docs/contracts/load_document.md:45` - P6 owns only the minimal early
   interaction boundary needed by staged replacement.
-- `docs/contracts/load_document.md:49` - `PreparedDocumentLoad success` precedes
-  runtime interrupt and preview cleanup.
-- `docs/contracts/load_document.md:53` - the interaction cleanup boundary must
-  not mutate `DocumentStoreKernel`.
-- `docs/contracts/load_document.md:55` - failure before prepared-load success
-  must not call the interaction boundary.
-- `docs/contracts/load_document.md:61` - the staged-load success ordering begins.
-- `docs/contracts/load_document.md:64` - success validates the public
-  `CanvasDocument`, metadata, frozen ownership, and invertible transforms.
-- `docs/contracts/load_document.md:65` - success materializes
-  `PreparedDocumentLoad`.
-- `docs/contracts/load_document.md:66` - only successful
-  validation/materialization interrupts active interaction.
-- `docs/contracts/load_document.md:68` - replacement document install and
-  selection clear are atomic through the runtime/applier boundary.
-- `docs/contracts/load_document.md:70` - runtime view camera initializes from the
-  persisted document camera.
-- `docs/contracts/load_document.md:71` - success increments epoch, document,
-  selection, view-camera, and optional preview revisions.
-- `docs/contracts/load_document.md:76` - success invalidates projection, spatial,
-  frame, and resource caches.
-- `docs/contracts/load_document.md:78` - success publishes one
-  `CanvasRuntimeState` after install.
-- `docs/diagrams/seq_load_document_success.mmd:63` - the durable success
-  sequence notifies interaction after committed load install.
-- `docs/diagrams/seq_load_document_success.mmd:64` - post-install interaction
-  cleanup clears pointer normalization and pending tap history.
-- `docs/diagrams/dfd_load_document_success_failure.mmd:81` - the durable data
-  flow sends the atomic runtime result to post-install cleanup only after
-  install.
-- `docs/diagrams/dfd_load_document_success_failure.mmd:82` - pending input is
-  cleared after atomic install.
-- `docs/contracts/load_document.md:81` - `PreparedDocumentLoad` owns replacement
+- `docs/contracts/load_document.md:49` - successful preparation leads to a
+  runtime request for prepared load cleanup.
+- `docs/contracts/load_document.md:52` - the interaction boundary returns a
+  `PointerCleanupOutcome` before document install.
+- `docs/contracts/load_document.md:53` - the prepared outcome covers preview,
+  pointer-normalization, and pending-tap facts.
+- `docs/contracts/load_document.md:56` - `RuntimeRoot` must not call the
+  interaction boundary again after document install to finish load cleanup.
+- `docs/contracts/load_document.md:67` - success ordering validates public input
+  before materializing the prepared load.
+- `docs/contracts/load_document.md:69` - only after preparation succeeds may
+  runtime request prepared interaction cleanup.
+- `docs/contracts/load_document.md:70` - the cleanup outcome must describe
+  preview, pointer-normalization, and pending-tap cleanup before the commit
+  point.
+- `docs/contracts/load_document.md:73` - atomic install combines replacement
+  document install and selection clear through the runtime/applier boundary.
+- `docs/contracts/load_document.md:80` - cache invalidation and repaint happen
+  after the atomic result.
+- `docs/contracts/load_document.md:85` - `PreparedDocumentLoad` owns replacement
   committed tables, generated id admission state, and replacement revision facts.
-- `docs/contracts/load_document.md:90` - the failure ordering begins.
-- `docs/contracts/load_document.md:93` - validation/materialization failure
-  includes invalid metadata, mutable DTO boundary input, and non-invertible
-  element transform input.
-- `docs/contracts/load_document.md:94` - failure does not interrupt active
-  gesture state.
-- `docs/contracts/load_document.md:98` - failure leaves the committed document
-  owner unchanged.
-- `docs/contracts/load_document.md:99` - failure leaves the selection owner
-  unchanged.
-- `docs/contracts/load_document.md:102` - failure publishes no public state.
-- `docs/contracts/load_document.md:107` - `CanvasEdit.replaceDraftDocument` is
-  different from external `loadDocument`.
-- `docs/contracts/load_document.md:110` - `replaceDraftDocument` is only valid
-  inside an edit callback.
-- `docs/contracts/load_document.md:112` - `replaceDraftDocument` must be
-  rollback-safe.
-- `docs/contracts/load_document.md:113` - `replaceDraftDocument` participates in
-  the same atomic edit session.
-- `docs/contracts/operation_matrix.md:44` - P5 closes edit-owned rows and the
-  generic executable effect shape.
-- `docs/contracts/operation_matrix.md:48` - P6 closes `loadDocument`
-  success/failure rows.
-- `docs/contracts/operation_matrix.md:49` - P6 owns
-  `CanvasEdit.replaceDraftDocument` success/failure behavior.
-- `docs/contracts/operation_matrix.md:81` - `loadDocument success` touches whole
-  document, selection-owner clear, preview cleanup, runtime view camera, epoch,
-  cache invalidation, and main plus overlay repaint.
-- `docs/contracts/operation_matrix.md:82` - `loadDocument failure` has no state,
-  revision, spatial, projection, repaint, or event effects.
-- `docs/contracts/operation_matrix.md:83` - `replaceDraftDocument` replaces the
-  whole draft, clears selection when needed, rebuilds spatial state, evicts
-  projection, repaints main, and emits no event.
-- `docs/contracts/diagnostics.md:31` - `DiagnosticsHub` is internal.
-- `docs/contracts/public_api_v1.md:489` - public runtime config includes
-  `diagnosticPolicy`.
-- `docs/contracts/public_api_v1.md:2503` - application code may read or
-  pattern-match `CanvasRuntimeConfig.diagnosticPolicy`.
-- `docs/contracts/public_api_v1.md:2510` - diagnostic context remains internal
-  to `DiagnosticsHub` or projected only through approved public surfaces.
-- `docs/contracts/edit_kernel.md:91` - `CommitApplyResult` is the
-  runtime/applier seam after document and selection effects install.
-- `docs/contracts/edit_kernel.md:99` - `EditKernel` closes and stales the active
-  edit handle before `RuntimeRoot` consumes the accepted apply result.
-- `docs/contracts/edit_kernel.md:101` - `RuntimeRoot` publishes public state
-  before invoking the internal synchronous observer seam.
-- `docs/contracts/edit_kernel.md:114` - public runtime mutations attempted
-  during observer delivery are rejected.
-- `docs/contracts/edit_kernel.md:141` - rollback keeps committed document
-  identity unchanged.
-- `docs/contracts/edit_kernel.md:146` - rollback keeps the selection owner
-  unchanged.
-- `docs/contracts/edit_kernel.md:150` - rollback performs no public
-  `CanvasRuntimeState` publication.
-- `docs/architecture/03_data_model.md:112` - runtime view camera is not stored
-  in `CommittedDocument`.
-- `docs/architecture/03_data_model.md:113` - runtime view camera is owned by
-  `RuntimeRoot` through the camera boundary.
-- `docs/architecture/03_data_model.md:114` - construction and `loadDocument`
-  initialize runtime view camera from the persisted camera offset.
-- `docs/architecture/03_data_model.md:121` - `documentRevision` changes for any
-  committed document state change.
-- `docs/architecture/03_data_model.md:122` - controller epoch changes for
-  `loadDocument` success or full document replacement.
-- `docs/architecture/architecture_graph.yaml:36` - P6 is `Load document`.
-- `docs/architecture/architecture_graph.yaml:38` - P6 is currently future.
+- `docs/contracts/load_document.md:88` - pointer-normalization and pending-tap
+  cleanup are not separate post-install owner calls.
+- `docs/contracts/load_document.md:96` - failure ordering starts before any
+  interaction side effect.
+- `docs/implementation/p6_load_document.md:14` - the P6 success path prepares an
+  interaction cleanup outcome before document install.
+- `docs/implementation/p6_load_document.md:23` - failure leaves committed
+  document, selection, preview, pointer normalization, repaint, events, and
+  active gesture state unchanged.
+- `docs/implementation/p6_load_document.md:96` - the P6 exit gate requires one
+  atomic post-install state for the replacement.
+- `docs/implementation/p6_load_document.md:99` - the P6 exit gate forbids a
+  post-install interaction owner call to finish pointer-normalization or
+  pending-tap cleanup.
+- `docs/contracts/operation_matrix.md:274` - load success touches whole
+  document, selection clear, prepared interaction cleanup outcome, and runtime
+  view camera initialization.
+- `docs/contracts/operation_matrix.md:307` - after successful install, runtime
+  consumes the already prepared cleanup outcome and does not call interaction to
+  finish cleanup.
+- `docs/contracts/interaction_engine.md:177` - `PointerCleanupOutcome` is
+  effect-only.
+- `docs/contracts/interaction_engine.md:181` - runtime/public signal aggregation
+  may consume the outcome after cleanup completes without re-reading stale active
+  session state.
+- `docs/contracts/interaction_engine.md:183` - successful `loadDocument`
+  produces the cleanup outcome before the document install commit point.
+- `docs/contracts/interaction_engine.md:185` - runtime may consume the prepared
+  outcome after install for publication and repaint aggregation.
+- `docs/contracts/interaction_engine.md:186` - runtime must not call back into
+  the interaction owner after install to finish pointer-normalization or pending
+  context-tap cleanup.
+- `docs/architecture/01_runtime_ownership.md:83` - the target cleanup
+  coordinator is an internal `InteractionEngine` collaborator.
+- `docs/architecture/01_runtime_ownership.md:87` - the coordinator calculates an
+  effect-only `PointerCleanupOutcome`.
+- `docs/architecture/01_runtime_ownership.md:89` - the coordinator does not
+  publish runtime state, emit actions, schedule repaints, call resolvers, open
+  edits, or read store/selection internals.
+- `docs/diagrams/seq_load_document_success.mmd:43` - the success sequence sends
+  a success-only prepared load cleanup request before install.
+- `docs/diagrams/seq_load_document_success.mmd:48` - the prepared cleanup outcome
+  is queued until install.
+- `docs/diagrams/seq_load_document_success.mmd:69` - the success sequence states
+  that no interaction owner call runs after install.
+- `docs/diagrams/dfd_load_document_success_failure.mmd:74` - the prepared cleanup
+  outcome reaches atomic install before the replacement is committed.
+- `docs/diagrams/dfd_load_document_success_failure.mmd:89` - repaint consumes
+  prepared cleanup facts with no post-install interaction call.
+- `docs/verification/guardrails.md:194` - failed load must not interrupt gesture.
+- `docs/verification/guardrails.md:195` - successful load must prepare
+  interaction cleanup before atomic install and perform no post-install
+  interaction owner cleanup call.
 - `docs/architecture/architecture_graph.yaml:288` - the graph declares the
-  future `load_document.pipeline` node.
+  `load_document.pipeline` owner.
 - `docs/architecture/architecture_graph.yaml:291` - the pipeline owner is
   `load_document`.
-- `docs/architecture/architecture_graph.yaml:292` - the pipeline is introduced
-  in P6.
-- `docs/architecture/architecture_graph.yaml:303` - expected declaration is
+- `docs/architecture/architecture_graph.yaml:303` - the expected declaration is
   `LoadDocumentPipeline`.
 - `docs/architecture/architecture_graph.yaml:588` - the graph declares the
-  future load-document to store mutation boundary edge.
-- `docs/architecture/architecture_graph.yaml:590` - that edge targets
-  `store.document_kernel`.
-- `docs/architecture/architecture_graph.yaml:597` - the graph says load
-  document admits validated documents into runtime state.
-- `docs/architecture/architecture_graph.yaml:599` - the graph expects the load
-  pipeline's actual composition field to include `DocumentStoreKernel`.
-- `docs/contracts/cache_policy.md:42` - `DocumentProjectionCache` is store-owned
-  and invalidated by document/projection change.
-- `docs/contracts/cache_policy.md:52` - `PreviewStateSnapshot` is
-  interaction-owned and invalidated by pointer, tool, load, mode, or dispose.
-- `lib/src/api/canvas_runtime.dart:41` - public `CanvasRuntime.edits` delegates
-  to `RuntimeRoot.edits`.
-- `lib/src/api/canvas_runtime.dart:45` - public camera operations use the
-  runtime camera port.
-- `lib/src/api/canvas_runtime.dart:47` - public preview is still unimplemented.
-- `lib/src/api/canvas_runtime.dart:175` - `CanvasEditPort` declares `edit`.
-- `lib/src/api/canvas_runtime.dart:176` - `CanvasEditPort` declares
-  `loadDocument`.
-- `lib/src/api/canvas_runtime.dart:202` - `CanvasEdit` declares
-  `replaceDraftDocument`.
-- `lib/src/edit/edit_kernel.dart:40` - `EditKernel.edit` is the synchronous edit
-  session entry point.
-- `lib/src/edit/edit_kernel.dart:42` - nested edit sessions are rejected.
-- `lib/src/edit/edit_kernel.dart:56` - async edit callback results are rejected.
-- `lib/src/edit/edit_kernel.dart:61` - accepted edit sessions compile a
-  `CommitPlan`.
-- `lib/src/edit/edit_kernel.dart:63` - changed plans install the committed
-  document through the kernel install seam.
-- `lib/src/edit/edit_kernel.dart:67` - the edit session is closed before
-  delivery.
-- `lib/src/edit/edit_kernel.dart:79` - current `loadDocument` only checks
-  runtime activity before throwing.
-- `lib/src/edit/edit_kernel.dart:81` - current `loadDocument` throws the P6
-  placeholder `UnsupportedError`.
-- `lib/src/edit/edit_session.dart:126` - current `replaceDraftDocument` checks
-  handle activity before throwing.
-- `lib/src/edit/edit_session.dart:128` - current `replaceDraftDocument` throws
-  the P6 placeholder `UnsupportedError`.
-- `lib/src/runtime/runtime_root.dart:38` - `RuntimeRoot` creates
-  `DocumentStoreKernel` from the initial document.
-- `lib/src/runtime/runtime_root.dart:40` - `RuntimeRoot` initializes view camera
-  from the initial document camera.
-- `lib/src/runtime/runtime_root.dart:52` - `RuntimeRoot` creates
-  `SelectionKernel`.
-- `lib/src/runtime/runtime_root.dart:55` - `RuntimeRoot` owns the state notifier.
-- `lib/src/runtime/runtime_root.dart:67` - `RuntimeRoot` owns
-  `CommitApplier`.
-- `lib/src/runtime/runtime_root.dart:71` - `RuntimeRoot` creates `EditKernel`.
-- `lib/src/runtime/runtime_root.dart:79` - `EditKernel` installs commits through
-  `_applyEditCommit`.
-- `lib/src/runtime/runtime_root.dart:80` - `EditKernel` delivers accepted apply
-  results through `_deliverEditCommitResult`.
-- `lib/src/runtime/runtime_root.dart:264` - runtime view-camera mutation starts
-  in `RuntimeRoot.setCameraOffset`.
-- `lib/src/runtime/runtime_root.dart:271` - runtime view-camera mutation replaces
-  `_viewCamera`.
-- `lib/src/runtime/runtime_root.dart:272` - runtime view-camera mutation
-  increments `_viewCameraRevision`.
-- `lib/src/runtime/runtime_root.dart:329` - runtime state publication assigns
-  the notifier value.
-- `lib/src/runtime/runtime_root.dart:337` - edit commit application enters the
-  `CommitApplier`.
-- `lib/src/runtime/runtime_root.dart:341` - edit commit document install uses
-  `_store.installDocument`.
-- `lib/src/runtime/runtime_root.dart:342` - edit commit selection install uses
-  `_selection.pruneSelection`.
-- `lib/src/runtime/runtime_root.dart:346` - accepted apply-result delivery
-  begins.
-- `lib/src/runtime/runtime_root.dart:349` - delivery publishes state when
-  required.
-- `lib/src/runtime/runtime_root.dart:352` - delivery invokes the commit-effect
-  observer after publication.
-- `lib/src/runtime/runtime_root.dart:377` - public runtime state document
-  revision comes from the store.
-- `lib/src/runtime/runtime_root.dart:378` - public runtime state selection
-  revision comes from the selection owner.
-- `lib/src/runtime/runtime_root.dart:379` - preview revision is currently
-  hard-coded to zero.
-- `lib/src/runtime/runtime_root.dart:380` - view-camera revision comes from
-  `_viewCameraRevision`.
-- `lib/src/runtime/runtime_root.dart:383` - epoch revision is currently
-  hard-coded to zero.
-- `lib/src/edit/commit_applier.dart:22` - `CommitApplier.apply` is the current
-  atomic apply entry.
-- `lib/src/edit/commit_applier.dart:32` - `CommitApplier` installs the document
-  before selection effects.
-- `lib/src/edit/commit_applier.dart:33` - `CommitApplier` then installs selection
-  effects.
-- `lib/src/edit/commit_applier.dart:37` - publication depends on document or
-  selection changes.
-- `lib/src/store/document_store_kernel.dart:19` - `DocumentStoreKernel` is the
-  single owner for committed document facts, read projection, id admission, and
-  selection normalization inputs.
-- `lib/src/store/document_store_kernel.dart:40` - committed document storage is
-  private to `DocumentStoreKernel`.
-- `lib/src/store/document_store_kernel.dart:41` - projection cache is private to
-  `DocumentStoreKernel`.
-- `lib/src/store/document_store_kernel.dart:46` - document readback uses the
-  projection cache.
-- `lib/src/store/document_store_kernel.dart:125` - current document install
-  accepts a `CanvasDocument` and `StoreRevisionDelta`.
-- `lib/src/store/document_store_kernel.dart:129` - current install replaces the
-  committed document.
-- `lib/src/store/document_store_kernel.dart:133` - install admits replacement
-  element ids.
-- `lib/src/store/document_store_kernel.dart:134` - install admits replacement
-  layer ids.
-- `lib/src/store/document_store_kernel.dart:135` - install admits replacement
-  resource ids.
-- `lib/src/codec/validated_import_draft.dart:9` - `ValidatedImportDraft`
-  declaration exists.
-- `lib/src/codec/validated_import_draft.dart:10` - import draft materializes from
-  a `CanvasDocument`.
-- `lib/src/codec/validated_import_draft.dart:12` - import-draft validation
-  accepts an optional `DiagnosticsHub`.
-- `lib/src/codec/validated_import_draft.dart:20` - the import draft stores the
-  public document.
-- `lib/src/codec/validated_import_draft.dart:31` - validation rejects duplicate
-  resource ids.
-- `lib/src/codec/validated_import_draft.dart:52` - validation rejects duplicate
-  layer ids.
-- `lib/src/codec/validated_import_draft.dart:75` - validation rejects duplicate
-  element ids.
-- `lib/src/codec/validated_import_draft.dart:85` - validation rejects missing
-  image resource references.
-- `lib/src/diagnostics/diagnostics_hub.dart:19` - `DiagnosticsHub` is the
-  internal diagnostics recorder.
-- `lib/src/diagnostics/diagnostics_hub.dart:25` - disabled diagnostics are a
-  no-record path.
-- `lib/src/diagnostics/diagnostics_hub.dart:29` - diagnostics recording enters
-  through `DiagnosticsHub.record`.
-- `lib/src/codec/schema_v1_diagnostics.dart:4` - schema validation failures are
-  routed through `recordSchemaV1FailureDiagnostic`.
-- `lib/src/codec/schema_v1_diagnostics.dart:14` - absent diagnostics hub returns
-  the original exception without recording.
-- `lib/src/codec/schema_v1_diagnostics.dart:18` - present diagnostics hub records
-  validation failure diagnostics.
-- `lib/src/runtime/runtime_config.dart:14` - runtime config materializes
-  diagnostics from public `CanvasRuntimeConfig.diagnosticPolicy`.
-- `test/runtime/fixtures/commit_effect_observer_fixture.dart:73` - observer
-  delivery asserts install and publication occurred before observer work.
-- `test/runtime/fixtures/commit_effect_observer_fixture.dart:77` - the state
-  listener records synchronous publication callbacks.
-- `test/runtime/fixtures/commit_effect_observer_fixture.dart:81` - the state
-  listener verifies guarded public mutations during publication.
-- `test/runtime/fixtures/commit_effect_observer_fixture.dart:96` - observer
-  delivery verifies guarded public mutations.
-- `test/runtime/fixtures/commit_effect_observer_fixture.dart:102` - the guard
-  includes `root.edits.loadDocument(CanvasDocument())`.
+  pipeline-to-store mutation boundary.
+- `docs/architecture/architecture_graph.yaml:597` - load document admits
+  validated replacements through the pipeline-owned store boundary.
+- `lib/src/runtime/runtime_root.dart:373` - current runtime load orchestration
+  prepares the load.
+- `lib/src/runtime/runtime_root.dart:376` - current runtime calls the interaction
+  boundary before consuming the prepared load.
+- `lib/src/runtime/runtime_root.dart:377` - current runtime consumes the prepared
+  load into the store after the pre-install interrupt.
+- `lib/src/runtime/runtime_root.dart:382` - current runtime still calls
+  `clearPostInstallFacts()` after install and runtime revision updates.
+- `lib/src/runtime/runtime_root.dart:487` - current `LoadInteractionBoundary` is
+  the load interaction seam.
+- `lib/src/runtime/runtime_root.dart:489` - current seam still exposes
+  `clearPostInstallFacts()`.
+- `test/runtime/fixtures/load_document_ordering_fixture.dart:57` - current
+  fixture expects `post-install-cleanup` after interrupt and before publication.
+- `test/runtime/fixtures/load_document_ordering_fixture.dart:67` - current
+  fixture callback observes the replacement document during post-install cleanup.
+- `test/runtime/fixtures/load_document_ordering_fixture.dart:183` - current
+  recording boundary implements the post-install cleanup method.
 
 ## Design Form Candidates
 
-### Candidate A. Runtime-Orchestrated LoadDocumentPipeline
+### Candidate A. Prepared Cleanup Outcome Seam
 
-- Form: create the P6 `LoadDocumentPipeline` as the load-document owner that
-  prepares a replacement payload before side effects, then lets `RuntimeRoot`
-  orchestrate success-only interaction cleanup, atomic document/selection/camera
-  install, revision increments, cache/effect output, and single state
-  publication.
-- Why it could work: it matches the architecture graph owner
-  (`docs/architecture/architecture_graph.yaml:288`,
-  `docs/architecture/architecture_graph.yaml:291`,
-  `docs/architecture/architecture_graph.yaml:303`), the load contract's
-  `RuntimeRoot` orchestration rule (`docs/contracts/load_document.md:38`), the
-  P6 requirement for preparation before interaction interruption
-  (`docs/contracts/load_document.md:64`, `docs/contracts/load_document.md:66`),
-  and the existing runtime/applier seam for document plus selection install
-  (`docs/contracts/edit_kernel.md:91`, `lib/src/runtime/runtime_root.dart:337`).
-- Gate failures or risks: requires extending the current apply result/revision
-  path to carry epoch, view-camera, preview cleanup, and load-specific effects;
-  this is expected P6 behavior because those revisions are currently hard-coded
-  or runtime-owned (`lib/src/runtime/runtime_root.dart:379`,
-  `lib/src/runtime/runtime_root.dart:380`,
-  `lib/src/runtime/runtime_root.dart:383`).
+- Form: replace the two-method `LoadInteractionBoundary` shape with one
+  success-only prepared-load cleanup call that returns a `PointerCleanupOutcome`
+  before document install. `RuntimeRoot` carries that immutable outcome through
+  the atomic install and consumes it later for preview revision, repaint, and
+  state/effect facts without calling the interaction owner again.
+- Why it could work: it directly matches the current load contract's pre-install
+  cleanup rule (`docs/contracts/load_document.md:52`,
+  `docs/contracts/load_document.md:56`), keeps `RuntimeRoot` as orchestrator
+  (`docs/contracts/load_document.md:38`), preserves the graph-declared load
+  owner (`docs/architecture/architecture_graph.yaml:288`), and fixes the current
+  runtime/test gap at the shared seam rather than at one downstream assertion
+  (`lib/src/runtime/runtime_root.dart:382`,
+  `test/runtime/fixtures/load_document_ordering_fixture.dart:57`).
+- Gate failures or risks: the future implementation must make the outcome
+  payload concrete enough to drive preview revision and repaint/effect facts
+  without importing full P10-P12 interaction state into P6. The interaction
+  boundary must also complete cleanup/outcome calculation before returning; after
+  it returns, runtime must not need any fallible interaction owner work to
+  publish the load result.
 
-### Candidate B. Treat External Load as a Normal Edit Session
+### Candidate B. Keep Two Methods And Move The Second Call Earlier
 
-- Form: implement `CanvasEditPort.loadDocument` by opening an edit session and
-  calling `CanvasEdit.replaceDraftDocument`.
-- Why it could work: it would reuse the existing synchronous edit session,
-  rollback, commit-plan, and delivery path (`lib/src/edit/edit_kernel.dart:40`,
-  `lib/src/edit/edit_kernel.dart:61`, `lib/src/runtime/runtime_root.dart:346`).
-- Gate failures or risks: the P6 implementation guide explicitly says normal
-  edit sequencing risks separate selection, epoch, cache, and projection updates
-  (`docs/implementation/p6_load_document.md:104`); external load also has
-  success-only interaction interruption and preview cleanup that
-  `replaceDraftDocument` must not own (`docs/contracts/load_document.md:107`,
-  `docs/contracts/load_document.md:110`). This fails root-cause and boundary
-  gates for external load.
+- Form: keep `interruptPreparedLoad()` and `clearPostInstallFacts()`, but call
+  both before document install.
+- Why it could work: it would remove the post-install owner call from runtime
+  order with a small code diff.
+- Gate failures or risks: the seam name and method split would still encode a
+  second cleanup phase, making future reviews and fixtures prone to reintroduce
+  post-install cleanup. This fails the seam and source-of-truth gates because
+  the contract describes one prepared cleanup outcome, not two imperative owner
+  calls (`docs/contracts/load_document.md:49`,
+  `docs/contracts/load_document.md:88`).
 
-### Candidate C. Store-Owned Replacement Install
+### Candidate C. Keep Post-Install Cleanup But Contain Failures
 
-- Form: put prepared replacement and atomic install behavior primarily in
-  `DocumentStoreKernel`, with runtime calling a broad store replacement API.
-- Why it could work: `DocumentStoreKernel` already owns committed document,
-  projection, id admission, and replacement install of a committed document
-  (`lib/src/store/document_store_kernel.dart:19`,
-  `lib/src/store/document_store_kernel.dart:125`,
-  `lib/src/store/document_store_kernel.dart:129`).
-- Gate failures or risks: the load contract says the public API delegates
-  orchestration to `RuntimeRoot`, not direct store install
-  (`docs/contracts/load_document.md:38`, `docs/contracts/load_document.md:39`);
-  selection clear, view-camera initialization, epoch, preview cleanup, repaint,
-  and state publication cross owners that the store must not own
-  (`docs/contracts/load_document.md:68`, `docs/contracts/load_document.md:70`,
-  `docs/contracts/load_document.md:71`). This fails ownership, source-of-truth,
-  and state/data gates.
+- Form: keep `clearPostInstallFacts()` after install and catch or ignore any
+  interaction failure.
+- Why it could work: it could prevent post-install cleanup exceptions from
+  aborting public load delivery.
+- Gate failures or risks: it preserves the root defect. The interaction owner
+  would still observe the replacement document after commit, contradicting the
+  explicit no-post-install-call rule (`docs/contracts/load_document.md:56`) and
+  the current fixture evidence (`test/runtime/fixtures/load_document_ordering_fixture.dart:67`).
 
-### Candidate D. Interaction-Owned Staged Load Bridge
+### Candidate D. Runtime-Owned Pointer Cleanup
 
-- Form: route load success through an interaction mutation bridge that performs
-  document replacement after interrupting the active gesture.
-- Why it could work: P6 has an interaction mutation boundary donor and the
-  success path needs interaction interruption (`docs/implementation/p6_load_document.md:46`,
-  `docs/contracts/load_document.md:66`).
-- Gate failures or risks: P6 owns only the minimal early interaction cleanup
-  boundary; that boundary must not mutate `DocumentStoreKernel`
-  (`docs/contracts/load_document.md:45`, `docs/contracts/load_document.md:53`).
-  Full interaction state machines remain P10-P12-owned
-  (`docs/contracts/load_document.md:58`). This fails ownership and dependency
-  direction gates if it owns replacement.
+- Form: remove the interaction boundary from load success and let `RuntimeRoot`
+  clear pointer-normalization and pending-tap facts directly.
+- Why it could work: it would eliminate the post-install interaction callback
+  risk.
+- Gate failures or risks: it moves interaction state ownership into runtime,
+  contrary to the contract's interaction boundary and coordinator ownership
+  (`docs/contracts/load_document.md:50`,
+  `docs/contracts/load_document.md:61`). This fails ownership and dependency
+  direction gates.
 
 ## Known Future Pressures
 
 | Pressure | Evidence | How the selected form responds | Accepted cost or risk |
 |---|---|---|---|
-| P10-P12 interaction features will consume load interrupt ordering but are not P6 prerequisites. | `docs/contracts/load_document.md:58`; `docs/implementation/p10_selection_and_move.md:47` | Keeps P6 interaction scope to a narrow success-only cleanup boundary, with no full pointer-session implementation. | P6 may need a placeholder or minimal internal cleanup adapter that later phases extend without changing load ordering. |
-| P7 resources and P9 frame/render caches must react to load invalidation later. | `docs/contracts/load_document.md:76`; `docs/contracts/cache_policy.md:42`; `docs/contracts/cache_policy.md:52` | Emits load-specific typed invalidation/repaint facts from the atomic runtime result instead of requiring those later owners to inspect store state directly. | Some P6 effects will be consumed by future owners; tests must prove shape and delivery even where later owners are still absent. |
-| The architecture graph already expects a P6 `LoadDocumentPipeline`. | `docs/architecture/architecture_graph.yaml:288`; `docs/architecture/architecture_graph.yaml:303` | Selects that owner rather than hiding the behavior in `EditKernel`, `RuntimeRoot`, or `DocumentStoreKernel`. | A future contract must update graph status and P6 closure proof when the declaration lands. |
-| Public `preview` and epoch revisions are not yet runtime-owned mutable counters. | `lib/src/api/canvas_runtime.dart:47`; `lib/src/runtime/runtime_root.dart:379`; `lib/src/runtime/runtime_root.dart:383`; `docs/contracts/load_document.md:71` | Makes `RuntimeRoot` the revision coordinator for load-owned preview cleanup and epoch publication without moving preview or interaction state into the store. | P6 must add narrowly scoped revision state or apply-result fields; broad preview implementation stays deferred. |
-| `replaceDraftDocument` must become executable without proving external load behavior by accident. | `docs/contracts/load_document.md:107`; `docs/contracts/load_document.md:114`; `docs/contracts/operation_matrix.md:49`; `docs/contracts/operation_matrix.md:83` | Implements draft replacement inside the edit transaction path, but shares prepared-document validation/materialization helpers with external load. | Future tests must separately prove external load success/failure and draft replacement rollback. |
-| Validation diagnostics must not be lost when load validation moves out of schema decoding. | `lib/src/codec/validated_import_draft.dart:12`; `lib/src/diagnostics/diagnostics_hub.dart:19`; `lib/src/runtime/runtime_config.dart:14`; `docs/contracts/public_api_v1.md:489` | Threads the existing internal diagnostics hub through P6 preparation/materialization when runtime diagnostics are enabled, while keeping exception semantics unchanged. | The pipeline must accept optional diagnostics context without making diagnostics a public load payload or a second validation source of truth. |
+| P10-P12 interaction state machines consume the load ordering but are not P6 prerequisites. | `docs/contracts/load_document.md:61`; `docs/implementation/p6_load_document.md:14` | Keeps P6 at a narrow interaction boundary that returns an effect-only cleanup outcome. | The P6 adapter may initially return a minimal outcome; later interaction phases can enrich it without changing load order. |
+| Current runtime and fixture still encode the old two-phase cleanup shape. | `lib/src/runtime/runtime_root.dart:382`; `test/runtime/fixtures/load_document_ordering_fixture.dart:57` | Migrates the shared seam and updates ordering proof to make post-install interaction cleanup unrepresentable. | Focused tests must change with the seam; old fixture expectations are intentionally invalidated. |
+| Completed Step 36 still contains stale post-install wording even though durable docs now reject it. | `PLAN.md:58`; `plan/step_36_p6_load_document.md:104`; `docs/contracts/load_document.md:56` | Treats current contracts, diagrams, and guardrail inventory as the stronger source for new work and requires future planning to supersede or repair stale Step 36 wording before relying on it. | A future contract may need a small source-of-truth cleanup in `plan/step_36_p6_load_document.md` or a new superseding plan step. |
+| Load success still needs one public publication after install and guarded callback windows. | `docs/contracts/load_document.md:80`; `lib/src/runtime/runtime_root.dart:418`; `lib/src/runtime/runtime_root.dart:421` | Preserves `RuntimeRoot` delivery ownership; only the interaction cleanup owner call moves before install. | The outcome must be immutable effect-only data after install so delivery can remain failure-contained. |
+| Guardrails now require negative proof against post-install interaction owner cleanup. | `docs/verification/guardrails.md:195`; `docs/verification/guardrail_design_patterns.md:117` | Makes the negative proof a seam-level fixture requirement, not prose. | Future tests should fail if any load interaction boundary callback runs after install. |
 
 ## Selected Form
 
-Use Candidate A: a P6 `LoadDocumentPipeline` with `RuntimeRoot` orchestration.
+Use Candidate A: a prepared cleanup outcome seam.
 
-The future implementation should split preparation from commitment:
+The future implementation should repair the existing P6 architecture as follows:
 
-1. `CanvasEditPort.loadDocument(document)` remains the public external entry and
-   delegates into `EditKernel`/runtime-owned P6 orchestration rather than
-   directly touching the store.
-2. `LoadDocumentPipeline` is composed with `DocumentStoreKernel` as the graph
-   expects, but `RuntimeRoot` remains the orchestrator that decides when the
-   pipeline may prepare or consume a prepared load.
-3. `LoadDocumentPipeline.prepare(document)` validates the public
-   `CanvasDocument`, consumes the existing import-draft validation facts, and
-   creates a `PreparedDocumentLoad` with committed replacement materialization,
-   id-admission facts, and replacement revision facts before any runtime or
-   interaction side effect. Preparation must accept the runtime's optional
-   internal diagnostics context materialized from
-   `CanvasRuntimeConfig.diagnosticPolicy` and route validation failures through
-   existing `DiagnosticsHub` helpers when diagnostics are enabled; disabled
-   diagnostics pass no effective recording surface. Diagnostics recording must
-   not change the thrown `CanvasDataException` or `StateError`.
-4. After preparation succeeds, `RuntimeRoot` calls only the minimal interaction
-   cleanup boundary allowed by the load contract, then asks the pipeline to
-   consume the prepared load through the graph-backed store mutation boundary.
-   RuntimeRoot combines that store replacement with selection-owner clear,
-   runtime view-camera initialization, epoch and revision increments, and the
-   post-install pointer-normalization/pending-tap cleanup before cache/effect
-   invalidation, repaint effects, and one public state publication.
-5. `CanvasEdit.replaceDraftDocument(document)` becomes an edit-session mutation:
-   it uses the same validation/materialization helper but does not interrupt
-   interaction or clear preview, and it stays rollback-safe by affecting only the
-   draft until the edit callback successfully compiles and applies.
+1. `RuntimeRoot` still orchestrates external `loadDocument` and still prepares
+   the replacement document before any side effect.
+2. After `PreparedDocumentLoad` succeeds, `RuntimeRoot` calls the load
+   interaction boundary once, before install, to interrupt active interaction and
+   receive a `PointerCleanupOutcome`.
+3. `RuntimeRoot` then commits the replacement document, selection clear, runtime
+   camera initialization, and load revisions as one accepted runtime result.
+4. After the commit point, runtime may consume the already prepared cleanup
+   outcome for preview revision, repaint, state/effect publication, and observer
+   delivery, but it must not call the interaction owner again to finish load
+   cleanup.
+5. Failed preparation must not call the interaction boundary and must leave the
+   existing document, selection, camera, preview, pointer-normalization,
+   pending-tap history, repaint, events, and public state unchanged.
 
-This form fixes the root cause at the load-document owner while preserving
-existing owner boundaries: store owns committed document/projection/id admission,
-selection owns selected ids, runtime owns view camera/state publication/epoch,
-interaction owns preview cleanup, and edit owns transaction rollback.
+This fixes the root cause at the shared load/interaction seam. It does not move
+interaction state into runtime, does not make load a normal edit session, and
+does not ask downstream fixtures to paper over a wrong owner boundary.
 
 ## Hard Gate Check
 
 | Gate | Result | Evidence |
 |---|---|---|
-| Root cause | pass | P6 is explicitly about staged, validated, atomic replacement: `docs/implementation/p6_load_document.md:5`; validation before interruption avoids destroying user state on bad input: `docs/implementation/p6_load_document.md:102`; the selected form prepares before side effects and commits once. |
-| Ownership | pass | The graph names `load_document.pipeline` with owner `load_document`: `docs/architecture/architecture_graph.yaml:288`, `docs/architecture/architecture_graph.yaml:291`; the graph also expects the pipeline to compose `DocumentStoreKernel` for the replacement mutation boundary: `docs/architecture/architecture_graph.yaml:588`, `docs/architecture/architecture_graph.yaml:599`; `RuntimeRoot` owns orchestration: `docs/contracts/load_document.md:38`; store, selection, runtime camera, and interaction cleanup retain their own responsibilities: `lib/src/store/document_store_kernel.dart:19`, `docs/architecture/03_data_model.md:113`, `docs/contracts/load_document.md:45`. |
-| Source of truth | pass | Committed document stays private to `DocumentStoreKernel`: `lib/src/store/document_store_kernel.dart:40`; selection owner stays separate: `docs/contracts/load_document.md:42`; runtime view camera stays runtime-owned, not store-owned: `docs/architecture/03_data_model.md:112`; prepared payload is consumed once as handoff data, not a second durable document source. |
-| Boundary | pass | Public load is `CanvasEditPort.loadDocument`: `lib/src/api/canvas_runtime.dart:176`; external load delegates from public runtime to root/edit port: `lib/src/api/canvas_runtime.dart:41`; success crosses the interaction cleanup boundary only after `PreparedDocumentLoad`: `docs/contracts/load_document.md:49`, `docs/contracts/load_document.md:55`; atomic install crosses the runtime/applier boundary: `docs/contracts/load_document.md:68`. |
-| Dependency direction | pass | Public API delegates inward to `RuntimeRoot`: `lib/src/api/canvas_runtime.dart:41`; runtime composes store, selection, commit applier, and edit kernel: `lib/src/runtime/runtime_root.dart:38`, `lib/src/runtime/runtime_root.dart:52`, `lib/src/runtime/runtime_root.dart:67`, `lib/src/runtime/runtime_root.dart:71`; the selected form adds the P6 owner and graph-required store mutation edge instead of reversing store or interaction dependencies: `docs/architecture/architecture_graph.yaml:288`, `docs/architecture/architecture_graph.yaml:588`. |
-| State/data | pass | Store owns document/projection/id admission: `lib/src/store/document_store_kernel.dart:19`; selection revisions come from selection facts: `lib/src/runtime/runtime_root.dart:378`; view-camera revision is runtime state: `lib/src/runtime/runtime_root.dart:380`; epoch and preview revisions are currently missing mutable runtime state and must be added at runtime orchestration: `lib/src/runtime/runtime_root.dart:379`, `lib/src/runtime/runtime_root.dart:383`. |
-| Seam | pass | The existing runtime/applier seam is `CommitApplyResult`: `docs/contracts/edit_kernel.md:91`; P6 adds a load-specific prepared seam (`PreparedDocumentLoad`) and graph-backed owner (`LoadDocumentPipeline`) rather than retiring the edit seam: `docs/contracts/load_document.md:81`, `docs/architecture/architecture_graph.yaml:303`. Draft replacement adopts shared preparation helpers but remains in the edit-session seam: `docs/contracts/load_document.md:110`, `docs/contracts/load_document.md:113`. |
-| Temporal/reentrancy | pass | Failure must not call the interaction boundary before preparation succeeds: `docs/contracts/load_document.md:55`; success publishes one state after install: `docs/contracts/load_document.md:78`; `RuntimeRoot` already keeps the delivery guard active across synchronous state publication and commit-effect observer delivery: `lib/src/runtime/runtime_root.dart:346`, `lib/src/runtime/runtime_root.dart:347`, `lib/src/runtime/runtime_root.dart:349`, `lib/src/runtime/runtime_root.dart:352`, `lib/src/runtime/runtime_root.dart:359`; the fixture verifies guarded public mutations during the state listener and observer windows, including `loadDocument`: `test/runtime/fixtures/commit_effect_observer_fixture.dart:77`, `test/runtime/fixtures/commit_effect_observer_fixture.dart:81`, `test/runtime/fixtures/commit_effect_observer_fixture.dart:96`, `test/runtime/fixtures/commit_effect_observer_fixture.dart:102`. |
-| Observability | pass | Diagnostics remain internal to `DiagnosticsHub`: `docs/contracts/diagnostics.md:31`; runtime config carries `diagnosticPolicy`: `lib/src/api/canvas_runtime.dart:67`; validation can accept optional diagnostics: `lib/src/codec/validated_import_draft.dart:12`; absent diagnostics must preserve exception behavior without recording: `lib/src/codec/schema_v1_diagnostics.dart:14`. |
-| Verification | pass | P6 docs name staged-load and state-publication tests: `docs/implementation/p6_load_document.md:77`, `docs/implementation/p6_load_document.md:78`; exit gates require success/failure proof and operation-matrix closure: `docs/implementation/p6_load_document.md:90`, `docs/implementation/p6_load_document.md:98`; graph closure can prove `LoadDocumentPipeline`: `docs/architecture/architecture_graph.yaml:303`; diagnostics routing tests should cover enabled and disabled policies. |
-| Future pressure | pass | Future interaction, resource, frame/cache, graph, preview/epoch, and draft replacement pressures are named above and are absorbed by keeping one load owner plus narrow owner-specific boundaries. |
+| Root cause | pass | The defect is a shared seam/order gap: current runtime calls `clearPostInstallFacts()` after install (`lib/src/runtime/runtime_root.dart:382`) while the contract forbids post-install interaction cleanup (`docs/contracts/load_document.md:56`). Candidate A retires that post-install seam. |
+| Ownership | pass | `RuntimeRoot` owns orchestration (`docs/contracts/load_document.md:38`), load preparation belongs to `load_document.pipeline` (`docs/architecture/architecture_graph.yaml:288`), and interaction cleanup remains behind the interaction boundary (`docs/contracts/load_document.md:45`). |
+| Source of truth | pass | Current durable contract, diagrams, operation matrix, and guardrail inventory agree on prepared cleanup before install and no post-install owner call (`docs/contracts/load_document.md:52`, `docs/diagrams/seq_load_document_success.mmd:69`, `docs/contracts/operation_matrix.md:307`, `docs/verification/guardrails.md:195`). |
+| Boundary | pass | Entry boundary is public `CanvasEditPort.loadDocument` (`docs/contracts/load_document.md:36`); exit boundaries are one prepared cleanup outcome before install, one atomic runtime replacement result, and one public state publication after install (`docs/contracts/load_document.md:70`, `docs/contracts/load_document.md:73`, `docs/contracts/load_document.md:80`). |
+| Dependency direction | pass | Public API delegates inward to runtime (`lib/src/api/canvas_runtime.dart:41`); the graph keeps load-to-store mutation under the pipeline owner (`docs/architecture/architecture_graph.yaml:588`); interaction does not mutate store (`docs/contracts/load_document.md:54`). |
+| State/data | pass | `PreparedDocumentLoad` owns replacement payload facts (`docs/contracts/load_document.md:85`); `PointerCleanupOutcome` is effect-only cleanup data produced before install (`docs/contracts/interaction_engine.md:177`, `docs/contracts/interaction_engine.md:183`); current failure ordering leaves prior runtime and interaction state unchanged (`docs/contracts/load_document.md:96`). |
+| Seam | pass | The successor seam is one prepared cleanup outcome returned before install. The retired seam is the current post-install `clearPostInstallFacts()` method (`lib/src/runtime/runtime_root.dart:489`), with negative proof that no interaction boundary callback runs after install. |
+| Temporal/reentrancy | pass | Temporal invariant: validation/materialization and the only interaction owner call happen before the install commit point; after install, runtime consumes immutable effect-only prepared facts and publishes exactly one state. Callback surfaces after install are synchronous state listeners and commit-effect observer delivery (`lib/src/runtime/runtime_root.dart:418`, `lib/src/runtime/runtime_root.dart:421`, `lib/src/runtime/runtime_root.dart:423`); `RuntimeRoot` owns the guard for that window. |
+| All-or-nothing behavior | pass | The irreversible point is atomic document install plus selection clear (`docs/contracts/load_document.md:73`). Validation, materialization, and prepared interaction cleanup/outcome calculation happen before that point (`docs/contracts/load_document.md:67`, `docs/contracts/load_document.md:70`). After the outcome is returned, runtime may consume it for publication/repaint without re-reading interaction state (`docs/contracts/interaction_engine.md:181`, `docs/contracts/interaction_engine.md:185`), and observer failure is already contained by runtime delivery (`lib/src/runtime/runtime_root.dart:425`). |
+| Verification | pass | Existing guardrail IDs name the required positive and negative ordering proof (`docs/verification/guardrails.md:194`, `docs/verification/guardrails.md:195`); the current fixture names the stale behavior to replace (`test/runtime/fixtures/load_document_ordering_fixture.dart:57`). |
+| Future pressure | pass | P10-P12 interaction ownership, stale Step 36 wording, runtime delivery guard windows, and guardrail proof pressure are identified above with a bounded response. |
 
 ## Lock-Required Facts
 
-- Owner: `load_document.pipeline` / future `LoadDocumentPipeline` owns P6
-  preparation, replacement payload creation, and the graph-backed store
-  replacement mutation boundary under `RuntimeRoot` orchestration.
-- Owning layer/module/document family: runtime/edit internal implementation,
-  with source-of-truth contract family `docs/contracts/load_document.md`,
-  `docs/contracts/edit_kernel.md`, and `docs/contracts/operation_matrix.md`.
-- Seam: `PreparedDocumentLoad` is the pre-side-effect prepared payload;
-  `LoadDocumentPipeline` consumes it once to replace the store document through
-  its `DocumentStoreKernel` composition field; the runtime/applier result is the
-  atomic post-preparation cross-owner install and publication seam.
-- Dependency/import direction: public API -> `RuntimeRoot`/edit port ->
-  `LoadDocumentPipeline` preparation -> success-only interaction cleanup ->
-  `LoadDocumentPipeline` store replacement plus runtime/applier selection clear
-  -> runtime camera/revision state -> post-install pointer normalization and
-  pending tap cleanup -> cache/effect/repaint/publication.
-- State/data ownership: committed document/projection/id admission remain store
-  state; selected ids and selection revision remain selection state; runtime
-  view camera and epoch remain runtime state; preview cleanup remains interaction
-  state; prepared load is transient handoff data; diagnostics records remain
-  internal `DiagnosticsHub` state and are not part of the prepared load's public
-  payload.
-- Entry boundaries: `CanvasEditPort.loadDocument(CanvasDocument)` for external
-  replacement and `CanvasEdit.replaceDraftDocument(CanvasDocument)` for draft
-  replacement.
-- Exit boundaries: one public `CanvasRuntimeState` publication after successful
-  external install; no publication, repaint, action, interruption, or mutation on
-  failed external preparation.
-- File placement basis: future `LoadDocumentPipeline` belongs under the internal
-  load-document owner and is composed by runtime with `DocumentStoreKernel`; it
-  does not belong under public API, interaction, or a legacy scene-controller
-  facade. `PreparedDocumentLoad` belongs with that pipeline or a focused
-  companion file because it is consumed as its handoff payload.
-- Execution order constraints: validate/materialize -> interrupt/preview cleanup
-  -> atomic install and selection clear -> view-camera/epoch/revision updates ->
-  post-install pointer normalization and pending tap cleanup -> cache/effect
-  invalidation -> repaint scheduling -> one state publication; on preparation
-  failure, none of those side effects run.
-- Diagnostics constraints: load preparation must thread optional internal
-  diagnostics context from runtime configuration into validation/materialization
-  helpers. Diagnostics must be best-effort observation only: disabled diagnostics
-  allocate/record nothing, enabled diagnostics record sanitized validation
-  failures, and public failure semantics remain `CanvasDataException` or
-  `StateError` with no load side effects.
-- Reentrancy constraints: `RuntimeRoot` owns the load delivery guard. The guard
-  must be active before the public `CanvasRuntimeState` value is assigned, remain
-  active through synchronous state listeners and any post-publication effect
-  observer delivery, and clear only after those callback surfaces return. Public
-  runtime mutations attempted from either callback surface must reject before any
-  second load, edit, selection, camera, id generation, dispose, or publication
-  begins. Allowed public observation order is installed committed state, one
-  state listener snapshot, then post-publication effects/observer work, then
-  return to the original public caller.
-- Rejected alternatives: external load as normal edit session; store-owned broad
-  replacement; interaction-owned document replacement.
-- Verification strategy: behavior tests for load success/failure and draft
-  replacement rollback, operation-matrix tests for effect/revision rows,
-  observer/reentrancy tests for delivery windows, guardrails for owner
-  boundaries, architecture graph P6 closure for the new owner and mutation edge,
-  and documentation checks only when future docs are updated.
+- Owner: `RuntimeRoot` orchestrates external load; `load_document.pipeline`
+  prepares/consumes the document payload; interaction owns cleanup state behind a
+  narrow boundary.
+- Owning layer/module/document family: runtime/edit internal implementation, with
+  durable source-of-truth in `docs/contracts/load_document.md`,
+  `docs/contracts/operation_matrix.md`, load success/failure diagrams, and
+  guardrail inventory.
+- Seam: replace the two-method `LoadInteractionBoundary` with a single
+  pre-install prepared cleanup call that returns `PointerCleanupOutcome`.
+- Successor/retired seam: successor is the pre-install outcome-returning seam;
+  retired seam is post-install `clearPostInstallFacts()`.
+- Consumer order: prepare document -> request prepared interaction cleanup and
+  capture outcome -> install document and selection clear atomically -> update
+  camera/revisions -> consume prepared cleanup outcome for effects/publication ->
+  publish one state -> deliver observer effects.
+- Retirement gate: no runtime code, fixture, or guardrail proof may require or
+  expose a load interaction owner call after document install.
+- Dependency/import direction: public API -> runtime orchestration ->
+  load-document pipeline and interaction boundary -> store/selection owners;
+  interaction must not import or mutate `DocumentStoreKernel`.
+- State/data ownership: committed document and id admission stay store-owned;
+  selected ids stay selection-owned; camera, epoch, and publication stay
+  runtime-owned; cleanup facts are transient interaction-owned effect-only
+  outcome data.
+- Entry boundaries: `CanvasEditPort.loadDocument(CanvasDocument)`.
+- Exit boundaries: successful call returns after one installed runtime state and
+  post-publication effects are delivered; failed preparation rethrows without
+  mutation, repaint, action event, cleanup, or publication.
+- File placement basis: future code changes should be near the existing runtime
+  load seam and interaction boundary, with tests in load ordering/state
+  publication fixtures. Do not create a broad runtime-owned pointer cleanup
+  module.
+- Execution order constraints: validate/materialize -> pre-install interaction
+  cleanup and outcome calculation -> atomic install/selection clear -> runtime
+  camera/revisions -> cache/effect/repaint from committed result plus prepared
+  outcome -> one public state publication -> observer delivery.
+- Rejected alternatives: moving only one fixture assertion, keeping two cleanup
+  methods, swallowing post-install cleanup failures, or making runtime own
+  pointer cleanup.
+- Verification strategy: focused ordering tests must prove failure does not
+  call interaction, success calls interaction only before install, the
+  interaction callback cannot observe the replacement document, and no
+  post-install interaction owner callback exists. Reentrancy tests must keep the
+  existing load delivery guard over synchronous state listeners and observer
+  callbacks.
 
 ## Diagram Need Assessment
 
 | Design question | Needed? | Diagram kind | Reason |
 |---|---:|---|---|
-| Does the design change ownership, layer, package, or component boundaries? | yes | c4 | Future implementation creates the graph-declared `LoadDocumentPipeline` owner and must show it between public edit/runtime orchestration and store/selection/interaction boundaries. |
-| Does it change data flow, state ownership, cache ownership, resource movement, or lifecycle movement? | yes | data_flow | Prepared payload creation, one-shot consumption, split interaction cleanup, cache invalidation, and state ownership across store/selection/runtime/interaction need a flow view. |
-| Does it depend on call order, lifecycle order, sync/async ordering, failure ordering, or migration order? | yes | sequence | Correctness depends on validation before interruption, post-install pointer cleanup before invalidation/repaint, and one publication after install; failure ordering must prove no side effects. |
-| Does it introduce or alter modes, statuses, terminal states, sessions, or transition rules? | no | none | The selected form does not add a durable state machine; it consumes the existing runtime lifecycle and edit-session rules. |
-| Does it create, replace, migrate, or retire a shared seam? | yes | sequence | It adds `PreparedDocumentLoad` as a pre-side-effect seam and extends the runtime/applier result for load replacement without retiring the edit commit seam. |
-| Does it change public API consumer flow, payload shape, or compatibility behavior? | yes | sequence | Existing public placeholders become executable behavior for `loadDocument` and `replaceDraftDocument`, but public method signatures remain the same. |
-| Does it introduce or change analyzer, guardrail, or structural-recognition pipeline behavior? | no | none | Future implementation should use existing guardrail patterns and P6 graph closure; this design does not define a new analyzer pipeline. |
+| Does the design change ownership, layer, package, or component boundaries? | yes | c4 | The design changes the load/interaction seam shape but keeps runtime, load pipeline, store, selection, and interaction owners separate. |
+| Does it change data flow, state ownership, cache ownership, resource movement, or lifecycle movement? | yes | data_flow | Cleanup facts move from a post-install imperative call to a pre-install outcome consumed later by runtime. |
+| Does it depend on call order, lifecycle order, sync/async ordering, failure ordering, or migration order? | yes | sequence | Correctness depends on the pre-install cleanup outcome, the install commit point, and no owner callback after install. |
+| Does it introduce or alter modes, statuses, terminal states, sessions, or transition rules? | no | none | It does not introduce a durable state machine; it repairs ordering across existing load and interaction boundaries. |
+| Does it create, replace, migrate, or retire a shared seam? | yes | sequence | It retires post-install `clearPostInstallFacts()` and replaces it with a prepared outcome seam. |
+| Does it change public API consumer flow, payload shape, or compatibility behavior? | no | none | Public method signatures and return shape do not change; the observable success/failure contract remains the current load-document contract. |
+| Does it introduce or change analyzer, guardrail, or structural-recognition pipeline behavior? | no | none | The design relies on existing guardrail IDs and focused tests, not a new analyzer pipeline. |
 
 ## Provisional Diagrams
 
 ```mermaid
 C4Component
-  title P6 load document ownership
+  title P6 load document repaired interaction seam
   Person(Caller, "Runtime consumer")
   Component(API, "CanvasEditPort", "Public API", "External load entry")
-  Component(Runtime, "RuntimeRoot", "Runtime owner", "Orchestrates ordering, state publication, camera, epoch")
-  Component(Pipeline, "LoadDocumentPipeline", "Load owner", "Prepares and consumes validated document loads")
-  Component(Store, "DocumentStoreKernel", "Store owner", "Committed document, projection, id admission")
+  Component(Runtime, "RuntimeRoot", "Runtime owner", "Load orchestration, commit point, publication guard")
+  Component(Pipeline, "LoadDocumentPipeline", "Load owner", "PreparedDocumentLoad creation and store replacement boundary")
+  Component(Interaction, "Load interaction boundary", "Interaction owner", "Pre-install prepared cleanup outcome")
+  Component(Store, "DocumentStoreKernel", "Store owner", "Committed document and id admission")
   Component(Selection, "SelectionKernel", "Selection owner", "Selected ids and selection revision")
-  Component(Interaction, "Interaction cleanup boundary", "Interaction owner", "Pre-install preview cleanup and post-install pointer cleanup")
-  Component(Diagnostics, "DiagnosticsHub", "Diagnostics owner", "Internal policy-gated validation failure records")
 
   Rel(Caller, API, "calls loadDocument")
-  Rel(API, Runtime, "delegates orchestration")
-  Rel(Runtime, Pipeline, "prepare, then consume prepared load")
-  Rel(Runtime, Diagnostics, "materializes optional internal context from diagnosticPolicy")
-  Rel(Pipeline, Diagnostics, "records validation failure when enabled")
+  Rel(API, Runtime, "delegates")
+  Rel(Runtime, Pipeline, "prepare before side effects")
+  Rel(Runtime, Interaction, "request prepared cleanup outcome before install")
+  Rel(Runtime, Pipeline, "consume prepared load at commit point")
   Rel(Pipeline, Store, "replace committed document")
-  Rel(Runtime, Selection, "clear selection owner")
-  Rel(Runtime, Interaction, "interrupt and cleanup preview after preparation success")
-  Rel(Runtime, Interaction, "clear pointer normalization after install")
+  Rel(Runtime, Selection, "clear selection in same runtime result")
 ```
 
 ```mermaid
 flowchart LR
-  Policy[CanvasRuntimeConfig diagnosticPolicy] --> DiagnosticContext[Optional internal DiagnosticsHub context]
-  Input[Public CanvasDocument] --> Validate[Validate DTO metadata ownership transforms and references]
-  DiagnosticContext --> Validate
-  Validate --> Prepared[PreparedDocumentLoad]
-  Prepared --> Cleanup[Success-only interrupt and preview cleanup]
-  Cleanup --> StoreReplace[LoadDocumentPipeline replaces store document]
-  StoreReplace --> SelectionClear[SelectionKernel clear]
-  SelectionClear --> RuntimeFacts[RuntimeRoot sets view camera epoch and revisions]
-  RuntimeFacts --> PostInstallCleanup[Interaction clears pointer normalization and pending tap history]
-  PostInstallCleanup --> Effects[Projection spatial frame resource invalidation and repaint effects]
-  Effects --> Publication[One CanvasRuntimeState publication]
+  Input[Public CanvasDocument] --> Prepare[Validate and materialize PreparedDocumentLoad]
+  Prepare --> Cleanup[Interaction returns PointerCleanupOutcome before install]
+  Cleanup --> Commit[Atomic document install and selection clear]
+  Commit --> RuntimeFacts[Runtime camera epoch and revision facts]
+  RuntimeFacts --> Effects[Cache repaint and effect facts consume prepared outcome]
+  Effects --> Publish[One CanvasRuntimeState publication]
 
-  Validate -. enabled diagnostics .-> Diagnostics[Record sanitized validation failure through DiagnosticsHub]
-  Diagnostics -. observational only .-> Failure[Throw CanvasDataException or StateError]
-  Validate -. disabled diagnostics or non-diagnostic failure .-> Failure
-  Failure -. no side effects .-> ExistingState[Existing document selection camera preview gesture repaint actions and state remain unchanged]
+  Prepare -. validation or materialization failure .-> Failure[Throw CanvasDataException or StateError]
+  Failure -. no side effects .-> Existing[Existing document selection camera preview pointer facts repaint actions and state unchanged]
 ```
 
 ```mermaid
@@ -598,27 +356,27 @@ sequenceDiagram
   participant API as CanvasEditPort
   participant Runtime as RuntimeRoot
   participant Pipeline as LoadDocumentPipeline
-  participant Diagnostics as DiagnosticsHub
-  participant Interaction as Interaction cleanup boundary
+  participant Interaction as Load interaction boundary
   participant Store as DocumentStoreKernel
   participant Selection as SelectionKernel
-  participant Effects as Cache/repaint effects
   participant State as CanvasRuntimeState
+  participant Observer as Commit effect observer
 
-  Caller->>API: loadDocument(CanvasDocument)
+  Caller->>API: loadDocument(document)
   API->>Runtime: delegate orchestration
   Runtime->>Pipeline: prepare(document)
   Pipeline-->>Runtime: PreparedDocumentLoad
-  Runtime->>Interaction: interrupt and cleanup preview
+  Runtime->>Interaction: prepareLoadCleanup(prepared load context)
+  Interaction-->>Runtime: PointerCleanupOutcome
   Runtime->>Pipeline: consume prepared load
-  Pipeline->>Store: install replacement committed document
+  Pipeline->>Store: install replacement document
   Runtime->>Selection: clear selection owner
-  Runtime->>Runtime: initialize view camera and epoch/revisions
-  Runtime->>Interaction: committed load installed
-  Interaction->>Interaction: clear pointer normalization and pending tap history
-  Runtime->>Effects: invalidate projection/spatial/frame/resource caches
-  Runtime->>Effects: schedule main and overlay repaint
-  Runtime->>State: publish one snapshot
+  Runtime->>Runtime: apply camera, epoch, and cleanup outcome facts
+  Note over Runtime,Interaction: No interaction owner call after install
+  Runtime->>State: publish one installed snapshot
+  Runtime->>Observer: deliver post-publication effects
+  Runtime-->>API: return
+  API-->>Caller: return
 ```
 
 ```mermaid
@@ -627,155 +385,116 @@ sequenceDiagram
   participant API as CanvasEditPort
   participant Runtime as RuntimeRoot
   participant Pipeline as LoadDocumentPipeline
-  participant Diagnostics as DiagnosticsHub
-  participant Interaction as Interaction cleanup boundary
-  participant Store as DocumentStoreKernel
-  participant Selection as SelectionKernel
+  participant Interaction as Load interaction boundary
   participant State as CanvasRuntimeState
 
   Caller->>API: loadDocument(invalid document)
   API->>Runtime: delegate orchestration
-  Runtime->>Pipeline: prepare(document, optional diagnostics context)
-  Pipeline->>Diagnostics: record sanitized validation failure when enabled
+  Runtime->>Pipeline: prepare(document)
   Pipeline--xRuntime: CanvasDataException or StateError
-  Runtime-->>Caller: rethrow
-  Note over Interaction,State: no interrupt, no mutation, no repaint, no action, no state publication
+  Runtime-->>API: rethrow
+  API-->>Caller: rethrow
+  Note over Interaction,State: no cleanup call, no install, no repaint, no action, no state publication
 ```
 
 ## Source-Of-Truth Impact
 
-A future Change Contract should update only after implementation scope is locked:
+A future Change Contract should treat the current load contract, operation
+matrix, load diagrams, and guardrail inventory as the normative cleanup-ordering
+source. Those durable docs already encode prepared cleanup before install and no
+post-install interaction owner call.
 
-- `PLAN.md` and a P6 step document for the selected work boundary and checklist.
-- `docs/implementation/p6_load_document.md` if implementation discovers a
-  source-of-truth correction to the P6 phase guide.
-- `docs/contracts/load_document.md`, `docs/contracts/edit_kernel.md`, and
-  `docs/contracts/operation_matrix.md` only if implementation evidence requires
-  contract clarification rather than code-only fulfillment.
-- `docs/architecture/architecture_graph.yaml` and generated graph views to move
-  `load_document.pipeline` and its mutation edge from future to implemented P6
-  evidence.
-- Existing load-related diagrams named by P6 docs:
-  `dfd_load_document_success_failure`, `seq_load_document_success`,
-  `seq_load_document_failure`, `dfd_public_edit`, `state_runtime_lifecycle`, and
-  `state_edit_session`.
+Future source-of-truth work is limited to:
+
+- Do not use the stale completed Step 36 cleanup wording as normative input for
+  any future Change Contract. A future contract must either repair that wording,
+  create a superseding plan step, or explicitly classify Step 36 as historical
+  superseded evidence before relying on roadmap/plan evidence for cleanup order.
+- Update `PLAN.md` only if the future workflow records this repair as new
+  roadmap work or links to a superseding plan step.
+- Update durable docs or generated diagrams only if implementation discovers new
+  drift beyond the already-correct load cleanup ordering.
 
 ## Verification Impact
 
 Future proof should include:
 
-- Add `test/edit/staged_document_load_success_failure_test.dart` or the
-  repository-equivalent focused test named by P6 docs.
-- Add `test/runtime/load_document_state_publication_test.dart` or the
-  repository-equivalent focused test named by P6 docs.
-- Add or extend diagnostics routing coverage for P6 load preparation to prove
-  enabled diagnostics record validation failures through `DiagnosticsHub`,
-  disabled diagnostics do not record, and both modes preserve the same thrown
-  exception and no-side-effect failure behavior.
-- Extend edit rollback/stale-handle coverage to prove
-  `replaceDraftDocument` rollback and stale rejection.
-- Extend operation-matrix/effect tests to prove `loadDocument success`,
-  `loadDocument failure`, and `CanvasEdit.replaceDraftDocument` rows.
-- Extend observer/reentrancy tests to prove load cannot mutate during
-  synchronous state-listener publication or post-commit observer delivery and
-  cannot split publication windows.
-- Run `dart analyze`, `dcm analyze .`, `dcm calculate-metrics .`, focused P6
-  tests, `dart run tool/architecture_graph/check.dart --phase P6`, and
-  `dart run tool/architecture_graph/generate_views.dart --phase P5 --check` for
-  the future code/docs change.
-- If future implementation edits docs or generated diagrams, run
-  `dart run docs/tool/sync_generated_docs.dart --check` and
-  `dart run docs/tool/check_docs.dart`.
+- Update load ordering tests so success proves the interaction cleanup callback
+  runs before install and cannot observe the replacement document.
+- Remove or replace fixture expectations for `post-install-cleanup`.
+- Add negative proof that no load interaction boundary call can run after
+  install to finish pointer-normalization or pending-tap cleanup.
+- Preserve failure proof that invalid load does not interrupt interaction or
+  mutate document, selection, camera, preview, pointer-normalization,
+  pending-tap history, repaint, actions, or state.
+- Preserve one-publication and observer/reentrancy proof for load success.
+- Run `dart analyze`, `dcm analyze .`, `dcm calculate-metrics .`, and focused
+  load runtime tests for the future Dart change.
+- Run architecture graph and docs checks only if the future contract edits graph
+  or documentation artifacts.
 
 ## Verification Strategy
 
-Prove behavior at the owner boundaries, not just through public smoke tests.
-Preparation-failure tests must assert no interaction interruption, preview
-change, committed document change, selection change, view-camera change,
-publication, repaint effect, or action event. Success tests must assert exactly
-one public state publication after install and cover document, selection,
-view-camera, epoch, optional preview, cache/effect, and repaint facts. They must
-also assert the load delivery guard covers synchronous state listeners and any
-post-publication observer callbacks, with public runtime mutations rejected
-before a second mutation or publication can begin. Draft replacement tests must
-show rollback and no external interaction cleanup. Diagnostics tests must prove
-that P6 validation failures use existing internal `DiagnosticsHub` routing when
-enabled, record nothing when disabled, and never change exception type or
-side-effect behavior. Structural proof must close the P6 graph owner and
-mutation edge and keep store, selection, runtime, diagnostics, and interaction
-boundary guardrails green.
+Prove the repaired seam at the ordering fixture, not only through public smoke
+tests. The success fixture should record a pre-install cleanup event, assert the
+current document is still the old document inside that callback, then assert the
+first public state publication observes the replacement document. The recording
+boundary should no longer expose a post-install cleanup method. A negative test
+or structural assertion should fail if `RuntimeRoot` can call an interaction
+owner boundary after install. Failure fixtures should keep asserting no
+interaction call and no runtime side effects before rethrow. Existing delivery
+guard tests should continue to assert that public mutations are rejected during
+synchronous state-listener and observer callbacks.
 
 ## Change Contract Handoff
 
 - Required profile: BEHAVIOR_CHANGE
-- Required obligations: SEAM_MIGRATION, PUBLIC_API_CHANGE
+- Required obligations: BUG_FIX, SEAM_MIGRATION
 - Decisions to carry forward:
-  - Implement a graph-backed `LoadDocumentPipeline` owner for P6 preparation and
-    the graph-required store replacement mutation boundary.
-  - Compose the pipeline with `DocumentStoreKernel` as graph evidence requires,
-    while keeping external `loadDocument` orchestration in `RuntimeRoot`; do not
-    install from the public API or from interaction.
-  - Use `PreparedDocumentLoad` as a transient pre-side-effect payload consumed
-    once by `LoadDocumentPipeline` under `RuntimeRoot` orchestration.
-  - Share validation/materialization helpers between external load and draft
-    replacement, but keep external load side effects out of
-    `replaceDraftDocument`.
-  - Thread optional internal `DiagnosticsHub` context through load preparation
-    and validation/materialization helpers. Do not expose diagnostics through the
-    public load payload and do not let diagnostics alter failure semantics.
-  - Add runtime-owned epoch and load-time view-camera publication behavior
-    without moving camera or preview state into the document store.
+  - Repair the load/interaction seam to return a `PointerCleanupOutcome` before
+    document install.
+  - Remove the post-install `clearPostInstallFacts()` load boundary from runtime
+    code and fixtures.
+  - Keep `RuntimeRoot` as orchestrator and keep interaction state behind the
+    interaction boundary.
+  - Treat prepared cleanup outcome data as immutable effect-only accepted facts
+    after the install commit point.
+  - Do not move pointer-normalization or pending-tap ownership into runtime.
+  - Preserve one public state publication and existing post-publication delivery
+    guard behavior.
+  - Treat stale Step 36 post-install cleanup wording as superseded by current
+    load contracts, operation matrix, diagrams, and guardrail inventory unless a
+    future contract repairs or supersedes that plan artifact.
 - Evidence to cite:
-  - `docs/implementation/p6_load_document.md:5`
-  - `docs/implementation/p6_load_document.md:24`
-  - `docs/contracts/load_document.md:36`
-  - `docs/contracts/load_document.md:61`
-  - `docs/contracts/load_document.md:81`
-  - `docs/contracts/load_document.md:90`
-  - `docs/contracts/load_document.md:107`
-  - `docs/contracts/operation_matrix.md:48`
-  - `docs/contracts/operation_matrix.md:81`
-  - `docs/contracts/operation_matrix.md:83`
-  - `docs/architecture/architecture_graph.yaml:288`
-  - `docs/architecture/architecture_graph.yaml:303`
-  - `docs/architecture/architecture_graph.yaml:588`
-  - `docs/architecture/architecture_graph.yaml:599`
-  - `docs/contracts/diagnostics.md:31`
-  - `docs/contracts/public_api_v1.md:489`
-  - `lib/src/codec/validated_import_draft.dart:12`
-  - `lib/src/diagnostics/diagnostics_hub.dart:19`
-  - `lib/src/codec/schema_v1_diagnostics.dart:14`
-  - `lib/src/codec/schema_v1_diagnostics.dart:18`
-  - `lib/src/edit/edit_kernel.dart:79`
-  - `lib/src/edit/edit_session.dart:126`
-  - `lib/src/runtime/runtime_root.dart:346`
-  - `lib/src/runtime/runtime_root.dart:349`
-  - `test/runtime/fixtures/commit_effect_observer_fixture.dart:77`
-  - `test/runtime/fixtures/commit_effect_observer_fixture.dart:81`
-  - `lib/src/runtime/runtime_root.dart:337`
-  - `lib/src/store/document_store_kernel.dart:125`
+  - `docs/contracts/load_document.md:49`
+  - `docs/contracts/load_document.md:52`
+  - `docs/contracts/load_document.md:56`
+  - `docs/contracts/load_document.md:70`
+  - `docs/contracts/load_document.md:88`
+  - `docs/contracts/operation_matrix.md:307`
+  - `docs/contracts/interaction_engine.md:177`
+  - `docs/contracts/interaction_engine.md:183`
+  - `docs/contracts/interaction_engine.md:185`
+  - `docs/diagrams/seq_load_document_success.mmd:69`
+  - `docs/verification/guardrails.md:195`
+  - `lib/src/runtime/runtime_root.dart:382`
+  - `lib/src/runtime/runtime_root.dart:487`
+  - `lib/src/runtime/runtime_root.dart:489`
+  - `test/runtime/fixtures/load_document_ordering_fixture.dart:57`
+  - `test/runtime/fixtures/load_document_ordering_fixture.dart:67`
+  - `test/runtime/fixtures/load_document_ordering_fixture.dart:183`
 - Contract constraints or sequencing facts:
-  - Prepare and validate before any interaction or runtime side effect.
-  - On preparation failure, rethrow `CanvasDataException` or `StateError` with
-    no mutation, publication, repaint, event, or interaction cleanup.
-  - Diagnostics routing is observational: enabled runtime diagnostics should
-    record sanitized validation failure details through internal `DiagnosticsHub`;
-    disabled diagnostics should record nothing; neither mode may change the
-    thrown exception or no-side-effect guarantees.
-  - On success, interaction cleanup runs before install and only after
-    preparation success for interrupt/preview cleanup; pointer normalization and
-    pending tap history clear after atomic install and before cache invalidation,
-    repaint scheduling, or state publication.
-  - Atomic install combines document replacement, selection-owner clear,
-    runtime view-camera initialization, epoch/revision updates, cache/effect
-    invalidation, repaint scheduling, and one public state publication.
-  - `RuntimeRoot` must guard the whole load delivery window: public state
-    assignment, synchronous state listeners, and post-publication observer/effect
-    callbacks. The permitted observation order is installed state, one state
-    listener snapshot, post-publication observer/effect callbacks, then return to
-    the original caller.
-  - `replaceDraftDocument` is edit-session-only, rollback-safe, and separately
-    verified from external `loadDocument`.
+  - Validation and materialization happen before interaction cleanup.
+  - Failed preparation calls no interaction boundary and makes no runtime side
+    effects.
+  - Successful preparation calls the interaction boundary exactly once before
+    install to obtain a `PointerCleanupOutcome`.
+  - The document install commit point occurs only after the cleanup outcome is
+    prepared.
+  - After install, runtime consumes prepared cleanup facts but does not call the
+    interaction owner to finish cleanup.
+  - Public observation order is installed state publication, synchronous state
+    listeners, post-publication effect observer, then return to caller.
 
 ## Open Decisions
 
