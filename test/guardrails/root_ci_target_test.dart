@@ -15,28 +15,47 @@ void main() {
     final rootPackageJob = _rootPackageJob(workflowContent);
     final steps = _workflowSteps(rootPackageJob);
     final guardrailStep = _stepNamed(steps, 'Run guardrails');
-    final runCommands = _runCommands(steps);
-    final usedActions = _usedActions(steps);
 
-    expect(rootPackageJob.containsKey('continue-on-error'), isFalse);
-    expect(rootPackageJob.containsKey('if'), isFalse);
-    expect(guardrailStep.containsKey('continue-on-error'), isFalse);
-    expect(guardrailStep.containsKey('if'), isFalse);
-    expect(usedActions, contains('actions/checkout@v4'));
-    expect(usedActions, contains('subosito/flutter-action@v2'));
-    expect(runCommands, contains('flutter pub get'));
-    expect(runCommands, contains('dart analyze'));
-    expect(runCommands, contains('dart run tool/guardrails/run.dart'));
-    expect(
-      (guardrailStep['run'] as String).trim(),
-      equals('dart run tool/guardrails/run.dart'),
-    );
-    expect(workflowContent, isNot(contains('--guardrail=')));
-    expect(workflowContent, isNot(contains('--suite=')));
-    for (final id in guardrailInventory().keys) {
-      expect(workflowContent, isNot(contains(id)));
-    }
+    _expectRootPackageChecks(steps);
+    _expectGuardrailRunnerCannotBeBypassed(rootPackageJob, guardrailStep);
+    _expectFullGuardrailRunnerSelection(workflowContent, guardrailStep);
   });
+}
+
+void _expectRootPackageChecks(List<YamlMap> steps) {
+  final runCommands = _runCommands(steps);
+  final usedActions = _usedActions(steps);
+
+  expect(usedActions, contains('actions/checkout@v4'));
+  expect(usedActions, contains('subosito/flutter-action@v2'));
+  expect(runCommands, contains('flutter pub get'));
+  expect(runCommands, contains('dart analyze'));
+  expect(runCommands, contains('dart run tool/guardrails/run.dart'));
+}
+
+void _expectGuardrailRunnerCannotBeBypassed(
+  YamlMap rootPackageJob,
+  YamlMap guardrailStep,
+) {
+  expect(rootPackageJob.containsKey('continue-on-error'), isFalse);
+  expect(rootPackageJob.containsKey('if'), isFalse);
+  expect(guardrailStep.containsKey('continue-on-error'), isFalse);
+  expect(guardrailStep.containsKey('if'), isFalse);
+}
+
+void _expectFullGuardrailRunnerSelection(
+  String workflowContent,
+  YamlMap guardrailStep,
+) {
+  expect(
+    (guardrailStep['run'] as String).trim(),
+    equals('dart run tool/guardrails/run.dart'),
+  );
+  expect(workflowContent, isNot(contains('--guardrail=')));
+  expect(workflowContent, isNot(contains('--suite=')));
+  for (final id in guardrailInventory().keys) {
+    expect(workflowContent, isNot(contains(id)));
+  }
 }
 
 YamlMap _rootPackageJob(String workflowContent) {
