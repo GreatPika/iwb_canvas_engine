@@ -1,8 +1,13 @@
 final class GuardrailEntry {
-  const GuardrailEntry({required this.id, required this.suites});
+  const GuardrailEntry({
+    required this.id,
+    required this.suites,
+    this.requiresRunnerStructuralProof = false,
+  });
 
   final String id;
   final Set<String> suites;
+  final bool requiresRunnerStructuralProof;
 }
 
 Map<String, GuardrailEntry> guardrailInventory() {
@@ -16,6 +21,13 @@ Set<String> blockingGuardrailIds() {
 Set<String> suiteGuardrailIds(String suite) {
   return guardrailInventory().values
       .where((entry) => entry.suites.contains(suite))
+      .map((entry) => entry.id)
+      .toSet();
+}
+
+Set<String> runnerStructuralProofGuardrailIds() {
+  return guardrailInventory().values
+      .where((entry) => entry.requiresRunnerStructuralProof)
       .map((entry) => entry.id)
       .toSet();
 }
@@ -104,14 +116,17 @@ const _blockingEntries = [
   GuardrailEntry(
     id: 'store.no_public_document_live_state',
     suites: {'blocking', 'store'},
+    requiresRunnerStructuralProof: true,
   ),
   GuardrailEntry(
     id: 'projection.only_explicit_read_paths',
     suites: {'blocking', 'store', 'projection'},
+    requiresRunnerStructuralProof: true,
   ),
   GuardrailEntry(
     id: 'selection.owner_separate_from_document',
     suites: {'blocking', 'selection'},
+    requiresRunnerStructuralProof: true,
   ),
   GuardrailEntry(id: 'edit.sync_non_nested', suites: {'blocking', 'edit'}),
   GuardrailEntry(id: 'edit.rollback_no_effects', suites: {'blocking', 'edit'}),
