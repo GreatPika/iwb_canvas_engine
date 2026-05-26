@@ -119,7 +119,7 @@ pass.
 
 ## Execution Units
 
-### [ ] Unit 1: Structural CanvasSurface Placeholder Detection
+### [x] Unit 1: Structural CanvasSurface Placeholder Detection
 
 Owner:
 
@@ -149,7 +149,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Retire Misleading Schema Root Field Registry
+### [x] Unit 2: Retire Misleading Schema Root Field Registry
 
 Owner:
 
@@ -176,7 +176,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 3: Delete Retired P6 Handoff File
+### [x] Unit 3: Delete Retired P6 Handoff File
 
 Owner:
 
@@ -201,7 +201,7 @@ Depends On:
 
 Units 1 and 2.
 
-### [ ] Unit 4: Close Roadmap Step State
+### [x] Unit 4: Close Roadmap Step State
 
 Owner:
 
