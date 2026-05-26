@@ -15,8 +15,8 @@ void main() {
     () => expect(_blockingInventoryMatchesExpectedIds(), isTrue),
   );
   test(
-    'blocking suite contains only executable inventory entries',
-    () => expect(_blockingSuiteUsesInventoryEntries(), isTrue),
+    'guardrail inventory entries have executable runner routes',
+    () => expect(_inventoryEntriesHaveRunnerRoutes(), isTrue),
   );
   test(
     'default runner selection routes executable blocking guardrails',
@@ -134,8 +134,8 @@ bool _blockingInventoryMatchesExpectedIds() {
       _setEquals(blockingGuardrailIds(), suiteGuardrailIds('blocking'));
 }
 
-bool _blockingSuiteUsesInventoryEntries() {
-  return _setEquals(guardrailInventory().keys, blockingGuardrailIds());
+bool _inventoryEntriesHaveRunnerRoutes() {
+  return guardrailInventory().keys.every((id) => guardrailRouteFor(id) != null);
 }
 
 Future<bool> _badSuiteSelectionsFail() async {
