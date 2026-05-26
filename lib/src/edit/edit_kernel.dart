@@ -14,6 +14,7 @@ typedef SelectedElementIdsReader = Set<CanvasElementId> Function();
 typedef CommitInstaller =
     CommitApplyResult Function(CanvasDocument document, CommitPlan plan);
 typedef CommitApplyResultDelivery = void Function(CommitApplyResult result);
+typedef DocumentLoadInstaller = void Function(CanvasDocument document);
 
 final class EditKernel {
   EditKernel({
@@ -22,17 +23,20 @@ final class EditKernel {
     required SelectedElementIdsReader selectedElementIds,
     required CommitInstaller installCommit,
     required CommitApplyResultDelivery deliverApplyResult,
+    required DocumentLoadInstaller installLoadedDocument,
   }) : _isRuntimeDisposed = isRuntimeDisposed,
        _readDocument = readDocument,
        _selectedElementIds = selectedElementIds,
        _installCommit = installCommit,
-       _deliverApplyResult = deliverApplyResult;
+       _deliverApplyResult = deliverApplyResult,
+       _installLoadedDocument = installLoadedDocument;
 
   final RuntimeDisposedReader _isRuntimeDisposed;
   final DraftDocumentReader _readDocument;
   final SelectedElementIdsReader _selectedElementIds;
   final CommitInstaller _installCommit;
   final CommitApplyResultDelivery _deliverApplyResult;
+  final DocumentLoadInstaller _installLoadedDocument;
   late final CanvasEditPort port = _EditKernelPort(this);
   bool _isSessionOpen = false;
   bool get hasOpenSession => _isSessionOpen;
@@ -76,11 +80,14 @@ final class EditKernel {
     }
   }
 
-  void loadDocument(CanvasDocument _) {
+  void loadDocument(CanvasDocument document) {
     _ensureRuntimeActive();
-    throw UnsupportedError(
-      'CanvasEditPort.loadDocument is owned by P6 document loading.',
-    );
+    if (_isSessionOpen) {
+      throw StateError(
+        'CanvasRuntime public mutations cannot run inside an active edit callback.',
+      );
+    }
+    _installLoadedDocument(document);
   }
 
   void _ensureRuntimeActive() {

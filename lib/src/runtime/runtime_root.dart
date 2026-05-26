@@ -10,6 +10,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
+import '../api/canvas_diagnostics.dart';
 import '../api/canvas_document.dart';
 import '../api/canvas_ids.dart';
 import '../api/canvas_runtime.dart';
@@ -17,6 +18,8 @@ import '../api/canvas_actions.dart';
 import '../edit/commit_applier.dart';
 import '../edit/commit_plan.dart';
 import '../edit/edit_kernel.dart';
+import '../edit/staged_document_load.dart';
+import '../edit/touched_set.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
 import 'commit_effect_observer.dart';
@@ -37,6 +40,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   }) : this._(
          store: DocumentStoreKernel(initialDocument),
          config: RuntimeConfig.from(config),
+         diagnosticPolicy: config.diagnosticPolicy,
          initialViewCamera: initialDocument.camera,
          commitEffectObserver: commitEffectObserver ?? _ignoreCommitEffects,
        );
@@ -44,21 +48,27 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   RuntimeRoot._({
     required DocumentStoreKernel store,
     required this.config,
+    required CanvasDiagnosticPolicy diagnosticPolicy,
     required CanvasCamera initialViewCamera,
     required CommitEffectObserver commitEffectObserver,
   }) : _store = store,
        _viewCamera = initialViewCamera,
+       _loadPipeline = LoadDocumentPipeline(
+         store: store,
+         diagnosticPolicy: diagnosticPolicy,
+       ),
        _commitEffectObserver = commitEffectObserver,
        _selection = SelectionKernel(
          membership: _StoreSelectionMembership(store),
        ),
        _state = ValueNotifier<CanvasRuntimeState>(
-         _runtimeState(store, null, 0),
+         _runtimeState(store, null, const _RuntimeRevisionFacts()),
        );
 
   final RuntimeConfig config;
   final DocumentStoreKernel _store;
   CanvasCamera _viewCamera;
+  final LoadDocumentPipeline _loadPipeline;
   final CommitEffectObserver _commitEffectObserver;
   final SelectionKernel _selection;
   final ValueNotifier<CanvasRuntimeState> _state;
@@ -66,6 +76,8 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
       StreamController<CanvasActionCommitted>.broadcast();
   final CommitApplier _commitApplier = const CommitApplier();
   int _viewCameraRevision = 0;
+  final int _previewRevision = 0;
+  int _epochRevision = 0;
   bool _isDisposed = false;
   bool _isDeliveringCommitEffects = false;
   late final EditKernel _editKernel = EditKernel(
@@ -78,6 +90,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     selectedElementIds: () => _selection.selectedElementIds,
     installCommit: _applyEditCommit,
     deliverApplyResult: _deliverEditCommitResult,
+    installLoadedDocument: _loadDocument,
   );
   late final CanvasEditPort _editPort = _editKernel.port;
   late final CanvasSelectionPort _selectionPort = _RuntimeSelectionPort(this);
@@ -330,8 +343,25 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     _state.value = _runtimeState(
       _store,
       _selection.selectionFacts,
-      _viewCameraRevision,
+      _RuntimeRevisionFacts(
+        viewCamera: _viewCameraRevision,
+        preview: _previewRevision,
+        epoch: _epochRevision,
+      ),
     );
+  }
+
+  void _loadDocument(CanvasDocument document) {
+    final preparedLoad = _loadPipeline.prepare(document);
+
+    _interruptInteractionForPreparedLoad();
+    _loadPipeline.consume(preparedLoad);
+    final didClearSelection = _selection.clearSelection();
+    _viewCamera = preparedLoad.document.camera;
+    _viewCameraRevision += 1;
+    _epochRevision += 1;
+    _clearPostInstallInteractionFacts();
+    _deliverLoadResult(_loadEffects(didClearSelection: didClearSelection));
   }
 
   CommitApplyResult _applyEditCommit(CanvasDocument document, CommitPlan plan) {
@@ -359,14 +389,44 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
       _isDeliveringCommitEffects = false;
     }
   }
+
+  void _deliverLoadResult(List<CommitEffect> effects) {
+    _isDeliveringCommitEffects = true;
+    try {
+      _publishRuntimeState();
+      if (effects.isNotEmpty) {
+        _commitEffectObserver(effects);
+      }
+    } on Object {
+      // Observer failures are contained post-load notifications. A future
+      // diagnostics seam can report them without changing load acceptance.
+    } finally {
+      _isDeliveringCommitEffects = false;
+    }
+  }
+
+  void _interruptInteractionForPreparedLoad() {}
+
+  void _clearPostInstallInteractionFacts() {}
 }
 
 void _ignoreCommitEffects(List<CommitEffect> _) {}
 
+List<CommitEffect> _loadEffects({required bool didClearSelection}) {
+  return List.unmodifiable([
+    const ProjectionEffect(),
+    SpatialEffect(touchedSet: TouchedSet(documentReplaced: true)),
+    ResourceEffect(touchedSet: TouchedSet(documentReplaced: true)),
+    const RepaintEffect(mainCanvas: true),
+    if (didClearSelection) const SelectionEffect(),
+    const PublicStateEffect(),
+  ]);
+}
+
 CanvasRuntimeState _runtimeState(
   DocumentStoreKernel store,
   SelectionFacts? selectionFacts,
-  int viewCameraRevision,
+  _RuntimeRevisionFacts runtimeRevisions,
 ) {
   final selection =
       selectionFacts ??
@@ -376,11 +436,11 @@ CanvasRuntimeState _runtimeState(
     revisions: CanvasRuntimeRevisions(
       document: store.documentRevision,
       selection: selection.selectionRevision,
-      preview: 0,
-      viewCamera: viewCameraRevision,
+      preview: runtimeRevisions.preview,
+      viewCamera: runtimeRevisions.viewCamera,
       resourceVisual: 0,
       interaction: 0,
-      epoch: 0,
+      epoch: runtimeRevisions.epoch,
     ),
     summary: CanvasRuntimeSummary(
       elementCount: store.documentSummary.elementCount,
@@ -389,6 +449,18 @@ CanvasRuntimeState _runtimeState(
       selectedCount: selection.selectedCount,
     ),
   );
+}
+
+final class _RuntimeRevisionFacts {
+  const _RuntimeRevisionFacts({
+    this.viewCamera = 0,
+    this.preview = 0,
+    this.epoch = 0,
+  });
+
+  final int viewCamera;
+  final int preview;
+  final int epoch;
 }
 
 final class _StoreSelectionMembership implements SelectionMembershipPort {

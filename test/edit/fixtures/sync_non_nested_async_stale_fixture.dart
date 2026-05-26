@@ -30,8 +30,8 @@ void main() {
     expect(_expectStaleHandleRejected, returnsNormally);
   });
 
-  test('P6-owned load and replacement paths reject before side effects', () {
-    expect(_expectP6PathsRejected, returnsNormally);
+  test('load and draft replacement guards reject before side effects', () {
+    expect(_expectLoadAndReplacementGuards, returnsNormally);
   });
 }
 
@@ -222,16 +222,16 @@ void _expectStaleDocumentEntriesRejected(CanvasEdit captured) {
   );
 }
 
-void _expectP6PathsRejected() {
+void _expectLoadAndReplacementGuards() {
   final effectBatches = <List<CommitEffect>>[];
   final runtime = _runtimeRoot(effectBatches);
   final beforeState = runtime.state.value;
 
-  expect(
-    () => runtime.edits.loadDocument(CanvasDocument()),
-    _throwsP6UnsupportedError(),
-  );
   runtime.edits.edit((edit) {
+    expect(
+      () => runtime.edits.loadDocument(CanvasDocument()),
+      throwsStateError,
+    );
     expect(
       () => edit.replaceDraftDocument(CanvasDocument()),
       _throwsP6UnsupportedError(),
