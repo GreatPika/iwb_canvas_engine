@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
-  test('runtime summary and document projection use the same store facts', () {
+  test('document summary coherence matches initial projection counts', () {
     final runtime = CanvasRuntime(initialDocument: _document());
 
     final document = runtime.readDocument();
