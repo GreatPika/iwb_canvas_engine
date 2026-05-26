@@ -56,7 +56,10 @@ void _expectPostInstallApplyResult() {
   final result = const CommitApplier().apply(
     document: CanvasDocument(),
     plan: plan,
-    installDocument: (_, _) => events.add('document'),
+    documentInstallers: CommitDocumentInstallers(
+      installDocument: (_, _) => events.add('document'),
+      replaceDocument: (_, _) => events.add('replacement'),
+    ),
     installSelectionEffects: () {
       events.add('selection');
 
@@ -79,7 +82,10 @@ void _expectEmptyApplyResult() {
   final result = const CommitApplier().apply(
     document: CanvasDocument(),
     plan: CommitPlan.empty(),
-    installDocument: (_, _) => events.add('document'),
+    documentInstallers: CommitDocumentInstallers(
+      installDocument: (_, _) => events.add('document'),
+      replaceDocument: (_, _) => events.add('replacement'),
+    ),
     installSelectionEffects: () {
       events.add('selection');
 

@@ -14,6 +14,7 @@ import '../store/resource_table.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_compiler.dart';
 import 'commit_plan.dart';
+import 'staged_document_load.dart';
 import 'touched_set.dart';
 
 // The draft boundary directly names the public DTOs it can mutate so rollback
@@ -270,6 +271,35 @@ final class DraftDocument {
     );
   }
 
+  void replaceDocument(CanvasDocument document) {
+    final preparedLoad = prepareDraftReplacement(document);
+    camera = preparedLoad.document.camera;
+    background = preparedLoad.document.background;
+    palette = _copyPalette(preparedLoad.document.palette);
+    metadata = preparedLoad.document.metadata;
+    resources
+      ..clear()
+      ..addAll(preparedLoad.document.resources.map(ResourceTable.copy));
+    backgroundElements
+      ..clear()
+      ..addAll(preparedLoad.document.backgroundElements);
+    _layers
+      ..clear()
+      ..addAll([
+        for (final layer in preparedLoad.document.layers)
+          _DraftLayer(
+            id: layer.id,
+            elements: List.of(layer.elements),
+            metadata: layer.metadata,
+          ),
+      ]);
+    _touchedSet.touchDocumentReplacement();
+    if (!_selectionValidForReplacement()) {
+      _touchedSet.touchSelection();
+    }
+    _revisionDelta = _revisionDelta.merge(preparedLoad.revisionDelta);
+  }
+
   CanvasDocument _materialize() {
     return CanvasDocument(
       camera: camera,
@@ -471,6 +501,21 @@ final class DraftDocument {
 
   bool _intersectsSelection(Iterable<CanvasElementId> ids) {
     return ids.any(_selectedElementIds.contains);
+  }
+
+  bool _selectionValidForReplacement() {
+    final selectableIds = <CanvasElementId>{
+      for (final element in _contentElements())
+        if (element.isVisible && element.isSelectable) element.id,
+    };
+
+    return _selectedElementIds.every(selectableIds.contains);
+  }
+
+  Iterable<CanvasElement> _contentElements() sync* {
+    for (final layer in _layers) {
+      yield* layer.elements;
+    }
   }
 
   void _markStructural() {

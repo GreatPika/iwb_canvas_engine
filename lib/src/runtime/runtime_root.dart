@@ -368,7 +368,10 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     return _commitApplier.apply(
       document: document,
       plan: plan,
-      installDocument: _store.installDocument,
+      documentInstallers: CommitDocumentInstallers(
+        installDocument: _store.installDocument,
+        replaceDocument: _store.replaceDocument,
+      ),
       installSelectionEffects: _selection.pruneSelection,
     );
   }
@@ -377,6 +380,9 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     _isDeliveringCommitEffects = true;
     try {
       if (applyResult.shouldPublishState) {
+        if (applyResult.replacedDocument) {
+          _epochRevision += 1;
+        }
         _publishRuntimeState();
       }
       if (applyResult.effects.isNotEmpty) {

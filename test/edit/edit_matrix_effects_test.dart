@@ -24,21 +24,6 @@ void main() {
     expect(_implementedEditMethodsMissingFromOperationMatrix(), isEmpty);
   });
 
-  test('replaceDraftDocument is a reserved P6 row, not P5 closure', () {
-    expect(
-      _operationMatrixOperationRows(),
-      contains('CanvasEdit.replaceDraftDocument'),
-    );
-    expect(
-      _implementedEditMutationNames(),
-      isNot(contains('replaceDraftDocument')),
-    );
-    expect(
-      _editOwnedRowsFromOperationMatrix(),
-      isNot(contains('CanvasEdit.replaceDraftDocument')),
-    );
-  });
-
   test('updateElement taxonomy fixture covers every field token', () {
     expect(
       _updateTaxonomyTokensCoveredByFixture(),

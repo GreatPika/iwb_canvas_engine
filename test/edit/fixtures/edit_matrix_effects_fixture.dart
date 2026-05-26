@@ -162,6 +162,15 @@ final _editOperationMatrixCases = [
     _ExpectedPlanEffects.unusedResourceRemoval(),
   ),
   const _EditOperationMatrixCase(
+    'CanvasEdit.replaceDraftDocument',
+    _expectReplaceDraftDocumentRow,
+    _documentWithUnusedResource,
+    _draftReplaceDocument,
+    _editReplaceDocument,
+    _ExpectedPlanEffects.documentReplacement(selectionEffect: true),
+    selectedElementIds: {'rect-1'},
+  ),
+  const _EditOperationMatrixCase(
     'no-op edit',
     _expectNoOpEditRow,
     _documentWithUnusedResource,
@@ -714,7 +723,7 @@ void _expectPlanEffects(
     _matchesRevisionDelta(expected.delta),
     reason: row,
   );
-  expect(plan.documentReplaced, isFalse, reason: row);
+  expect(plan.documentReplaced, expected.documentReplaced, reason: row);
   expect(
     plan.effects.whereType<ProjectionEffect>(),
     expected.projectionEffect ? hasLength(1) : isEmpty,
@@ -927,6 +936,61 @@ void _expectNoOpEditRow() {
   expect(root.frameRevisions.documentRevision, 0);
 }
 
+void _expectReplaceDraftDocumentRow() {
+  _expectReplacementClearsRemovedSelection();
+  _expectReplacementClearsIneligibleSelection();
+}
+
+void _expectReplacementClearsRemovedSelection() {
+  final root = RuntimeRoot(
+    initialDocument: _documentWithUnusedResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+  root.selection.setSelection([CanvasElementId('rect-1')]);
+  final beforeSelectionRevision = root.state.value.revisions.selection;
+
+  root.edits.edit(_editReplaceDocument);
+
+  expect(root.readDocument().backgroundElements.single.id.value, 'replacement');
+  expect(root.readDocument().layers, isEmpty);
+  expect(root.selectedElementIds, isEmpty);
+  _expectFrameRevisions(
+    root,
+    structural: 1,
+    bounds: 1,
+    elementVisual: 1,
+    background: 1,
+    grid: 1,
+    resource: 1,
+  );
+  expect(root.state.value.revisions.selection, beforeSelectionRevision + 1);
+  expect(root.state.value.revisions.epoch, 1);
+  expect(root.generateElementId(), CanvasElementId('e0'));
+}
+
+void _expectReplacementClearsIneligibleSelection() {
+  final root = RuntimeRoot(
+    initialDocument: _documentWithUnusedResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+  root.selection.setSelection([CanvasElementId('rect-1')]);
+
+  root.edits.edit((edit) {
+    edit.replaceDraftDocument(
+      CanvasDocument(
+        backgroundElements: [
+          CanvasRectElement(
+            id: CanvasElementId('rect-1'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
+    );
+  });
+
+  expect(root.selectedElementIds, isEmpty);
+}
+
 void _draftAddElement(DraftDocument draft) {
   draft.addElement(_rect('rect-2'), layerId: CanvasLayerId('layer-1'));
 }
@@ -1063,6 +1127,14 @@ void _editRemoveUnusedResource(CanvasEdit edit) {
   edit.removeUnusedResource(CanvasResourceId('resource-1'));
 }
 
+void _draftReplaceDocument(DraftDocument draft) {
+  draft.replaceDocument(_replacementDocument());
+}
+
+void _editReplaceDocument(CanvasEdit edit) {
+  edit.replaceDraftDocument(_replacementDocument());
+}
+
 void _draftNoOp(DraftDocument draft) {
   expect(draft.summary.elementCount, 1);
 }
@@ -1151,6 +1223,17 @@ CanvasDocument _documentWithReferencedResource() {
             isDeletable: false,
           ),
         ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _replacementDocument() {
+  return CanvasDocument(
+    backgroundElements: [
+      CanvasRectElement(
+        id: CanvasElementId('replacement'),
+        size: const Size(1, 1),
       ),
     ],
   );
@@ -1345,11 +1428,13 @@ final class _ExpectedPlanEffects {
     required this.repaintEffect,
     required this.selectionEffect,
     required this.publicStateEffect,
+    this.documentReplaced = false,
   });
 
   const _ExpectedPlanEffects.empty()
     : this(
         delta: const _ExpectedRevisionDelta(),
+        documentReplaced: false,
         projectionEffect: false,
         spatialEffect: false,
         resourceEffect: false,
@@ -1357,6 +1442,28 @@ final class _ExpectedPlanEffects {
         selectionEffect: false,
         publicStateEffect: false,
       );
+
+  const _ExpectedPlanEffects.documentReplacement({
+    required bool selectionEffect,
+  }) : this(
+         delta: const _ExpectedRevisionDelta(
+           document: true,
+           projection: true,
+           structural: true,
+           bounds: true,
+           elementVisual: true,
+           background: true,
+           grid: true,
+           resource: true,
+         ),
+         documentReplaced: true,
+         projectionEffect: true,
+         spatialEffect: true,
+         resourceEffect: true,
+         repaintEffect: true,
+         selectionEffect: selectionEffect,
+         publicStateEffect: true,
+       );
 
   const _ExpectedPlanEffects.structural()
     : this(
@@ -1495,6 +1602,7 @@ final class _ExpectedPlanEffects {
       );
 
   final _ExpectedRevisionDelta delta;
+  final bool documentReplaced;
   final bool projectionEffect;
   final bool spatialEffect;
   final bool resourceEffect;

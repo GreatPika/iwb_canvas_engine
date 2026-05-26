@@ -14,6 +14,10 @@ void main() {
     expect(_expectValidationFailureRollsBack, returnsNormally);
   });
 
+  test('draft replacement rolls back on callback and validation failure', () {
+    expect(_expectDraftReplacementRollsBack, returnsNormally);
+  });
+
   test('live runtime mutations are rejected inside edit callbacks', () {
     expect(_expectLiveRuntimeMutationsRejectedDuringEdit, returnsNormally);
   });
@@ -73,6 +77,57 @@ void _expectValidationFailureRollsBack() {
   expect(effectBatches, isEmpty);
 }
 
+void _expectDraftReplacementRollsBack() {
+  _expectDraftReplacementCallbackThrowRollsBack();
+  _expectDraftReplacementValidationFailureRollsBack();
+}
+
+void _expectDraftReplacementCallbackThrowRollsBack() {
+  final callbackRoot = _runtimeRoot(<List<CommitEffect>>[]);
+  callbackRoot.selection.setSelection([CanvasElementId('element-1')]);
+  final beforeCallbackState = callbackRoot.state.value;
+
+  expect(
+    () => callbackRoot.edits.edit((edit) {
+      edit.replaceDraftDocument(_replacementDocument());
+      expect(
+        edit.readDraftDocument().backgroundElements.single.id.value,
+        'replacement',
+      );
+      throw StateError('rollback replacement');
+    }),
+    throwsStateError,
+  );
+  expect(
+    callbackRoot.readDocument().layers.single.elements.single.id.value,
+    'element-1',
+  );
+  expect(callbackRoot.selectedElementIds, {CanvasElementId('element-1')});
+  expect(callbackRoot.state.value, beforeCallbackState);
+}
+
+void _expectDraftReplacementValidationFailureRollsBack() {
+  final validationRoot = _runtimeRoot(<List<CommitEffect>>[]);
+  final beforeValidationState = validationRoot.state.value;
+  expect(
+    () => validationRoot.edits.edit((edit) {
+      edit.replaceDraftDocument(_invalidReplacementDocument());
+    }),
+    throwsA(
+      isA<CanvasDataException>().having(
+        (error) => error.code,
+        'code',
+        CanvasDataErrorCode.duplicateElementId,
+      ),
+    ),
+  );
+  expect(
+    validationRoot.readDocument().layers.single.elements.single.id.value,
+    'element-1',
+  );
+  expect(validationRoot.state.value, beforeValidationState);
+}
+
 void _expectLiveRuntimeMutationsRejectedDuringEdit() {
   final effectBatches = <List<CommitEffect>>[];
   final root = _runtimeRoot(effectBatches);
@@ -127,6 +182,39 @@ CanvasDocument _document() {
     ],
     layers: [
       CanvasLayer(id: CanvasLayerId('layer-1'), elements: [_rect('element-1')]),
+    ],
+  );
+}
+
+CanvasDocument _replacementDocument() {
+  return CanvasDocument(
+    backgroundElements: [
+      CanvasRectElement(
+        id: CanvasElementId('replacement'),
+        size: const Size(1, 1),
+      ),
+    ],
+  );
+}
+
+CanvasDocument _invalidReplacementDocument() {
+  return CanvasDocument(
+    backgroundElements: [
+      CanvasRectElement(
+        id: CanvasElementId('duplicate'),
+        size: const Size(1, 1),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer'),
+        elements: [
+          CanvasRectElement(
+            id: CanvasElementId('duplicate'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
     ],
   );
 }

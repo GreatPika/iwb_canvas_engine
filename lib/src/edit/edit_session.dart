@@ -125,9 +125,7 @@ final class EditSession implements CanvasEdit {
   @override
   void replaceDraftDocument(CanvasDocument document) {
     _ensureActive();
-    throw UnsupportedError(
-      'CanvasEdit.replaceDraftDocument is owned by P6 document loading.',
-    );
+    _draft.replaceDocument(document);
   }
 
   void _ensureActive() {

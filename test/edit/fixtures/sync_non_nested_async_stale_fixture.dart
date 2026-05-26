@@ -223,28 +223,52 @@ void _expectStaleDocumentEntriesRejected(CanvasEdit captured) {
 }
 
 void _expectLoadAndReplacementGuards() {
-  final effectBatches = <List<CommitEffect>>[];
-  final runtime = _runtimeRoot(effectBatches);
-  final beforeState = runtime.state.value;
+  _expectExternalLoadRejectedDuringEdit();
+  _expectReplacementCommitsInsideEdit();
+}
+
+void _expectExternalLoadRejectedDuringEdit() {
+  final runtime = _runtimeRoot(<List<CommitEffect>>[]);
 
   runtime.edits.edit((edit) {
     expect(
       () => runtime.edits.loadDocument(CanvasDocument()),
       throwsStateError,
     );
-    expect(
-      () => edit.replaceDraftDocument(CanvasDocument()),
-      _throwsP6UnsupportedError(),
-    );
     _expectSameDocumentShape(edit.readDraftDocument(), runtime.readDocument());
   });
+}
 
-  expect(runtime.state.value, beforeState);
-  expect(runtime.readDocument().resources, hasLength(1));
+void _expectReplacementCommitsInsideEdit() {
+  final effectBatches = <List<CommitEffect>>[];
+  final runtime = _runtimeRoot(effectBatches);
+  final beforeEpoch = runtime.state.value.revisions.epoch;
+
+  runtime.edits.edit((edit) {
+    edit.replaceDraftDocument(
+      CanvasDocument(
+        backgroundElements: [
+          CanvasRectElement(
+            id: CanvasElementId('replacement'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
+    );
+    expect(
+      edit.readDraftDocument().backgroundElements.single.id.value,
+      'replacement',
+    );
+  });
+
+  expect(runtime.state.value.revisions.epoch, beforeEpoch + 1);
+  expect(
+    runtime.readDocument().backgroundElements.single.id.value,
+    'replacement',
+  );
   expect(runtime.readDocument().backgroundElements, hasLength(1));
-  expect(runtime.readDocument().layers, hasLength(1));
-  expect(runtime.readDocument().layers.single.elements, hasLength(1));
-  expect(effectBatches, isEmpty);
+  expect(runtime.readDocument().layers, isEmpty);
+  expect(effectBatches, hasLength(1));
 }
 
 RuntimeRoot _runtimeRoot(List<List<CommitEffect>> effectBatches) {
@@ -252,16 +276,6 @@ RuntimeRoot _runtimeRoot(List<List<CommitEffect>> effectBatches) {
     initialDocument: _document(),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: effectBatches.add,
-  );
-}
-
-Matcher _throwsP6UnsupportedError() {
-  return throwsA(
-    isA<UnsupportedError>().having(
-      (error) => error.message,
-      'message',
-      contains('P6'),
-    ),
   );
 }
 

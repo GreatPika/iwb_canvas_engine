@@ -82,6 +82,19 @@ final class LoadDocumentPipeline {
   }
 }
 
+PreparedDocumentLoad prepareDraftReplacement(CanvasDocument document) {
+  final draft = ValidatedImportDraft.fromDocument(document);
+
+  return PreparedDocumentLoad._(
+    document: draft.document,
+    resourceIds: draft.resourceIds,
+    layerIds: draft.layerIds,
+    elementIds: draft.elementIds,
+    revisionDelta: _replacementRevisionDelta,
+    ownerToken: _draftReplacementOwnerToken,
+  );
+}
+
 const _replacementRevisionDelta = StoreRevisionDelta(
   document: true,
   projection: true,
@@ -92,6 +105,8 @@ const _replacementRevisionDelta = StoreRevisionDelta(
   grid: true,
   resource: true,
 );
+
+final Object _draftReplacementOwnerToken = Object();
 
 DiagnosticsHub? _diagnosticsHubFor(CanvasDiagnosticPolicy policy) {
   if (policy is CanvasDiagnosticsDisabled) {

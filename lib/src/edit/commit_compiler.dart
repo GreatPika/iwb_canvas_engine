@@ -57,6 +57,17 @@ List<CommitEffect> _effectsFor(
   StoreRevisionDelta revisionDelta,
   TouchedSet touchedSet,
 ) {
+  if (touchedSet.documentReplaced) {
+    return [
+      const ProjectionEffect(),
+      SpatialEffect(touchedSet: touchedSet),
+      ResourceEffect(touchedSet: touchedSet),
+      const RepaintEffect(mainCanvas: true),
+      if (touchedSet.selection) const SelectionEffect(),
+      const PublicStateEffect(),
+    ];
+  }
+
   return [
     if (revisionDelta.projection) const ProjectionEffect(),
     if (revisionDelta.bounds) SpatialEffect(touchedSet: touchedSet),
