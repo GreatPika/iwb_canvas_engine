@@ -9,6 +9,7 @@ import 'package:test/test.dart';
 
 void main() {
   _testMovedValueDeclarations();
+  _testSurfaceValueDeclarations();
   _testConstAndEqualityShape();
   _testValidationHelperShape();
   _testErrorSanitizationBehavior();
@@ -56,6 +57,19 @@ void _testMovedValueDeclarations() {
       ]),
     );
     expect(_topLevelNames(geometry), contains('CanvasTransform'));
+  });
+}
+
+void _testSurfaceValueDeclarations() {
+  test('surface style values are contract-owned wrapper exports', () {
+    final surface = _contractSource('canvas_surface.dart');
+
+    expect(
+      _topLevelNames(surface),
+      containsAll(['CanvasSelectionStyle', 'CanvasGridStyle']),
+    );
+    expect(surface, contains('static const defaultStyle'));
+    expect(surface, contains('bool operator ==(Object other)'));
   });
 }
 
