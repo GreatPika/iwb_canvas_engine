@@ -249,9 +249,13 @@ bool _isCanvasDocument(DartType type) {
   final element = type.element;
 
   return element?.name == 'CanvasDocument' &&
-      element?.library?.uri.toString() ==
-          'package:iwb_canvas_engine/src/api/canvas_document.dart';
+      _canvasDocumentLibraryUris.contains(element?.library?.uri.toString());
 }
+
+const _canvasDocumentLibraryUris = {
+  'package:iwb_canvas_engine/src/api/canvas_document.dart',
+  'package:iwb_canvas_engine/src/contracts/public/canvas_document.dart',
+};
 
 bool _isAllowedProjectionReadPath(String path, AstNode node) {
   if (_isProjectionCachePath(path)) {

@@ -107,7 +107,9 @@ Set<String> _operationMatrixOperationRows() {
 }
 
 Set<String> _implementedEditMutationNames() {
-  final apiSource = File('lib/src/api/canvas_runtime.dart').readAsStringSync();
+  final apiSource = File(
+    'lib/src/contracts/public/canvas_runtime.dart',
+  ).readAsStringSync();
   final unsupported = _unsupportedEditMethods();
 
   return {

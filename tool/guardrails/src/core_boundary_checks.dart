@@ -254,6 +254,10 @@ List<GuardrailViolation> _checkResolvedImportTarget(
 }
 
 List<GuardrailViolation> _checkExport(String path, String uri) {
+  if (path.startsWith('lib/src/api/')) {
+    return _checkApiFacadeExport(path, uri);
+  }
+
   if (path != 'lib/iwb_canvas_engine.dart') {
     return const [
       GuardrailViolation(
@@ -275,6 +279,23 @@ List<GuardrailViolation> _checkExport(String path, String uri) {
   }
 
   return const [];
+}
+
+List<GuardrailViolation> _checkApiFacadeExport(String path, String uri) {
+  final target = _targetPath(path, uri);
+  if (target != null && target.startsWith('lib/src/contracts/public/')) {
+    return const [];
+  }
+
+  return [
+    GuardrailViolation(
+      guardrailId: 'core.import_boundaries',
+      path: path,
+      message:
+          'api facade files may export only public contract declarations '
+          'through $uri',
+    ),
+  ];
 }
 
 List<GuardrailViolation> _checkSourceBoundary(String path, String target) {
@@ -444,6 +465,7 @@ const _boundaryRules = [
     guardrailId: 'core.import_boundaries',
     owner: 'lib/src/api/',
     forbiddenTargets: [
+      'lib/src/contracts/internal/',
       'lib/src/runtime/',
       'lib/src/store/',
       'lib/src/selection/',

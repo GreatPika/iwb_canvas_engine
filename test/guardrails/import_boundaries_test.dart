@@ -8,6 +8,7 @@ void main() {
   _testProductionBoundaries();
   _testRunnerRejectsInjectedCoreBoundaryViolation();
   _testApiFacadeRuntimeRootImport();
+  _testApiContractWrapperExports();
 }
 
 void _testProductionBoundaries() {
@@ -63,6 +64,44 @@ void _testApiFacadeRuntimeRootImport() {
       checkCoreBoundaryFile(
         path: 'lib/src/api/canvas_runtime.dart',
         content: "import '../runtime/runtime_config.dart';\n",
+      ),
+      contains(
+        isA<GuardrailViolation>().having(
+          (violation) => violation.guardrailId,
+          'guardrailId',
+          'core.import_boundaries',
+        ),
+      ),
+    );
+  });
+}
+
+void _testApiContractWrapperExports() {
+  test('api facade may export public contracts but not internal contracts', () {
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/api/canvas_ids.dart',
+        content: "export '../contracts/public/canvas_ids.dart';\n",
+      ),
+      isEmpty,
+    );
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/api/bad_internal_contract_import.dart',
+        content: "import '../contracts/internal/owner_port.dart';\n",
+      ),
+      contains(
+        isA<GuardrailViolation>().having(
+          (violation) => violation.guardrailId,
+          'guardrailId',
+          'core.import_boundaries',
+        ),
+      ),
+    );
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/api/bad_internal_contract_export.dart',
+        content: "export '../contracts/internal/owner_port.dart';\n",
       ),
       contains(
         isA<GuardrailViolation>().having(

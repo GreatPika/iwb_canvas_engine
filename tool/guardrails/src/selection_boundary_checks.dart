@@ -183,7 +183,7 @@ bool _isSelectionOwnerType(DartType type) {
       uri ==
           'package:iwb_canvas_engine/src/runtime/selection_membership_port.dart' ||
       element?.name == 'CanvasSelectionPort' &&
-          uri == 'package:iwb_canvas_engine/src/api/canvas_runtime.dart';
+          _canvasRuntimeLibraryUris.contains(uri);
 }
 
 bool _carriesCanvasElementId(DartType type) {
@@ -204,9 +204,18 @@ bool _isCanvasElementId(DartType type) {
   final element = type.element;
 
   return element?.name == 'CanvasElementId' &&
-      element?.library?.uri.toString() ==
-          'package:iwb_canvas_engine/src/api/canvas_ids.dart';
+      _canvasIdLibraryUris.contains(element?.library?.uri.toString());
 }
+
+const _canvasRuntimeLibraryUris = {
+  'package:iwb_canvas_engine/src/api/canvas_runtime.dart',
+  'package:iwb_canvas_engine/src/contracts/public/canvas_runtime.dart',
+};
+
+const _canvasIdLibraryUris = {
+  'package:iwb_canvas_engine/src/api/canvas_ids.dart',
+  'package:iwb_canvas_engine/src/contracts/public/canvas_ids.dart',
+};
 
 bool _isSelectionRevisionName(String name) {
   final lower = name.toLowerCase();

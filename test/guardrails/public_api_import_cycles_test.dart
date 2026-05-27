@@ -16,10 +16,10 @@ void main() {
     _expectAllowlistStructureRequired();
   });
 
-  test('live source graph and metadata seam are clean', () async {
+  test('live source graph and contract wrapper seams are clean', () async {
     expect(await checkNoPublicApiImportCycles(), isEmpty);
 
-    for (final path in _metadataOnlyPublicApiConsumers) {
+    for (final path in _metadataOnlyPublicContractConsumers) {
       final content = File('$repositoryRoot/$path').readAsStringSync();
       expect(content, contains("import 'canvas_metadata.dart';"));
       expect(content, isNot(contains("import 'canvas_document.dart';")));
@@ -29,6 +29,11 @@ void main() {
       '$repositoryRoot/lib/src/codec/schema_v1_decoder.dart',
     ).readAsStringSync();
     expect(decoder, contains("import '../api/canvas_metadata.dart';"));
+
+    for (final entry in _publicApiContractWrappers.entries) {
+      final content = File('$repositoryRoot/${entry.key}').readAsStringSync();
+      expect(content.trim(), "export '../contracts/public/${entry.value}';");
+    }
   });
 }
 
@@ -70,11 +75,37 @@ const _acyclicSources = {
   'lib/src/internal/ignored.dart': "import '../api/a.dart';",
 };
 
-const _metadataOnlyPublicApiConsumers = [
-  'lib/src/api/canvas_element.dart',
-  'lib/src/api/canvas_element_update.dart',
-  'lib/src/api/canvas_resource.dart',
+const _metadataOnlyPublicContractConsumers = [
+  'lib/src/contracts/public/canvas_element.dart',
+  'lib/src/contracts/public/canvas_element_update.dart',
+  'lib/src/contracts/public/canvas_resource.dart',
 ];
+
+const _publicApiContractWrappers = {
+  'lib/src/api/canvas_actions.dart': 'canvas_actions.dart',
+  'lib/src/api/canvas_contract_limits.dart': 'canvas_contract_limits.dart',
+  'lib/src/api/canvas_diagnostic_policy_limits.dart':
+      'canvas_diagnostic_policy_limits.dart',
+  'lib/src/api/canvas_diagnostics.dart': 'canvas_diagnostics.dart',
+  'lib/src/api/canvas_document.dart': 'canvas_document.dart',
+  'lib/src/api/canvas_element.dart': 'canvas_element.dart',
+  'lib/src/api/canvas_element_update.dart': 'canvas_element_update.dart',
+  'lib/src/api/canvas_error_details_sanitizer.dart':
+      'canvas_error_details_sanitizer.dart',
+  'lib/src/api/canvas_errors.dart': 'canvas_errors.dart',
+  'lib/src/api/canvas_field_update.dart': 'canvas_field_update.dart',
+  'lib/src/api/canvas_geometry.dart': 'canvas_geometry.dart',
+  'lib/src/api/canvas_ids.dart': 'canvas_ids.dart',
+  'lib/src/api/canvas_metadata.dart': 'canvas_metadata.dart',
+  'lib/src/api/canvas_pointer.dart': 'canvas_pointer.dart',
+  'lib/src/api/canvas_preview.dart': 'canvas_preview.dart',
+  'lib/src/api/canvas_resource.dart': 'canvas_resource.dart',
+  'lib/src/api/canvas_tools.dart': 'canvas_tools.dart',
+  'lib/src/api/canvas_transform_admission.dart':
+      'canvas_transform_admission.dart',
+  'lib/src/api/canvas_value_equality.dart': 'canvas_value_equality.dart',
+  'lib/src/api/canvas_value_validators.dart': 'canvas_value_validators.dart',
+};
 
 void _expectCycleDiagnostics() {
   final cyclic = checkPublicApiImportCyclesInSources({
