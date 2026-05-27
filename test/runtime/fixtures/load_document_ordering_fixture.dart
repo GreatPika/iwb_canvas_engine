@@ -2,8 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
-import 'package:iwb_canvas_engine/src/runtime/load_interaction_boundary.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/load_interaction_boundary.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
@@ -54,7 +54,7 @@ void _expectSuccessOrderingAndGuards() {
 
 Future<void> _expectPreparedCleanupFailureHasNoSideEffects() async {
   final boundary = _RecordingLoadBoundary();
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final actionEvents = <CanvasActionCommitted>[];
   final events = <String>[];
   final root = _runtimeRoot(
@@ -115,10 +115,10 @@ void _recordSuccessfulState(List<String> events, RuntimeRoot root) {
 void _recordSuccessfulObserver(
   List<String> events,
   RuntimeRoot root,
-  List<CommitEffect> effects,
+  List<CommitDeliveryEffect> effects,
 ) {
   events.add('observer');
-  expect(effects.whereType<PublicStateEffect>(), hasLength(1));
+  expect(effects.whereType<PublicStateDeliveryEffect>(), hasLength(1));
   _expectPublishedLoadState(root);
   _expectDeliveryGuards(root);
 }
@@ -140,7 +140,7 @@ bool _isInteractionBoundaryEvent(String event) {
 
 RuntimeRoot _runtimeRoot(
   _RecordingLoadBoundary boundary, {
-  void Function(List<CommitEffect> effects)? observeEffects,
+  void Function(List<CommitDeliveryEffect> effects)? observeEffects,
 }) {
   return RuntimeRoot.test(
     initialDocument: _initialDocument(),
@@ -202,8 +202,8 @@ void _recordLoadFailurePublicSignals(
 
 void _recordLoadFailureObserver(
   List<String> events,
-  List<List<CommitEffect>> effectBatches,
-  List<CommitEffect> effects,
+  List<List<CommitDeliveryEffect>> effectBatches,
+  List<CommitDeliveryEffect> effects,
 ) {
   events.add('observer');
   effectBatches.add(effects);

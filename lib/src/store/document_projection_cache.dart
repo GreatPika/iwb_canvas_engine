@@ -1,4 +1,4 @@
-import '../api/canvas_document.dart';
+import '../contracts/public/canvas_document.dart';
 import 'committed_document.dart';
 import 'resource_table.dart';
 

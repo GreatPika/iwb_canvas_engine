@@ -5,15 +5,15 @@
 import 'dart:convert';
 import 'dart:ui';
 
-import '../api/canvas_contract_limits.dart';
-import '../api/canvas_document.dart';
-import '../api/canvas_element.dart';
-import '../api/canvas_errors.dart';
-import '../api/canvas_geometry.dart';
-import '../api/canvas_ids.dart';
-import '../api/canvas_metadata.dart';
-import '../api/canvas_resource.dart';
-import '../api/canvas_value_validators.dart';
+import '../contracts/public/canvas_contract_limits.dart';
+import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_element.dart';
+import '../contracts/public/canvas_errors.dart';
+import '../contracts/public/canvas_geometry.dart';
+import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_metadata.dart';
+import '../contracts/public/canvas_resource.dart';
+import '../contracts/public/canvas_value_validators.dart';
 import '../diagnostics/diagnostics_hub.dart';
 import 'schema_v1_diagnostics.dart';
 import 'schema_v1_validation.dart';

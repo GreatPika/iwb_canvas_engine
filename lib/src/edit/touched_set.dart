@@ -1,4 +1,4 @@
-import '../api/canvas_ids.dart';
+import '../contracts/public/canvas_ids.dart';
 
 final class TouchedSet {
   TouchedSet({

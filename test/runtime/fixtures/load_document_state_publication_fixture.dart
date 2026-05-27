@@ -2,8 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
-import 'package:iwb_canvas_engine/src/runtime/load_interaction_boundary.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/load_interaction_boundary.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
@@ -25,7 +25,7 @@ void main() {
 }
 
 void _expectSuccessfulLoadStatePublication() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = _runtimeRoot(effectBatches);
   root.selection.setSelection([CanvasElementId('old-element')]);
   final snapshots = <CanvasRuntimeState>[];
@@ -42,7 +42,7 @@ void _expectSuccessfulLoadStatePublication() {
 }
 
 void _expectSuccessfulLoadClearsEmptySelection() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = _runtimeRoot(effectBatches);
 
   root.edits.loadDocument(_replacementDocument());
@@ -52,7 +52,7 @@ void _expectSuccessfulLoadClearsEmptySelection() {
 }
 
 void _expectSuccessfulLoadPublishesPreviewCleanup() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = _runtimeRoot(
     effectBatches,
     loadInteractionBoundary: const _PreviewChangedLoadBoundary(),
@@ -76,7 +76,7 @@ void _expectSuccessfulLoadPublishesPreviewCleanup() {
 }
 
 void _expectFailedLoadHasNoSideEffects() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = _runtimeRoot(effectBatches);
   root.selection.setSelection([CanvasElementId('old-element')]);
   root.cameraPort().setOffset(const Offset(3, 4));
@@ -110,7 +110,7 @@ void _expectDuplicateElementLoadRejected(RuntimeRoot root) {
 }
 
 RuntimeRoot _runtimeRoot(
-  List<List<CommitEffect>> effectBatches, {
+  List<List<CommitDeliveryEffect>> effectBatches, {
   LoadInteractionBoundary? loadInteractionBoundary,
 }) {
   if (loadInteractionBoundary != null) {
@@ -158,16 +158,19 @@ void _expectReplacementState(
   expect(state.revisions.preview, expectedPreviewRevision);
 }
 
-void _expectLoadEffects(List<CommitEffect> effects) {
-  expect(effects.whereType<ProjectionEffect>(), hasLength(1));
-  expect(effects.whereType<SpatialEffect>(), hasLength(1));
-  expect(effects.whereType<ResourceEffect>(), hasLength(1));
-  final repaintEffect = effects.whereType<RepaintEffect>().single;
+void _expectLoadEffects(List<CommitDeliveryEffect> effects) {
+  expect(effects.whereType<ProjectionDeliveryEffect>(), hasLength(1));
+  expect(effects.whereType<SpatialDeliveryEffect>(), hasLength(1));
+  expect(effects.whereType<ResourceDeliveryEffect>(), hasLength(1));
+  final repaintEffect = effects.whereType<RepaintDeliveryEffect>().single;
   expect(repaintEffect.mainCanvas, isTrue);
   expect(repaintEffect.overlayCanvas, isTrue);
-  expect(effects.whereType<SelectionEffect>(), hasLength(1));
-  expect(effects.whereType<PublicStateEffect>(), hasLength(1));
-  expect(() => effects.add(const PublicStateEffect()), throwsUnsupportedError);
+  expect(effects.whereType<SelectionDeliveryEffect>(), hasLength(1));
+  expect(effects.whereType<PublicStateDeliveryEffect>(), hasLength(1));
+  expect(
+    () => effects.add(const PublicStateDeliveryEffect()),
+    throwsUnsupportedError,
+  );
 }
 
 final class _RuntimeFactsSnapshot {

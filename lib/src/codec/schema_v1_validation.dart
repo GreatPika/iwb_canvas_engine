@@ -1,4 +1,4 @@
-import '../api/canvas_errors.dart';
+import '../contracts/public/canvas_errors.dart';
 import '../diagnostics/diagnostics_hub.dart';
 import 'schema_v1_diagnostics.dart';
 

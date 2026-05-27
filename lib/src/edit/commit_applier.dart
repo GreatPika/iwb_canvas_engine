@@ -1,6 +1,8 @@
-import '../api/canvas_document.dart';
+import '../contracts/internal/commit_delivery.dart';
+import '../contracts/public/canvas_document.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_plan.dart';
+import 'touched_set.dart';
 
 typedef DocumentInstall =
     void Function(CanvasDocument document, StoreRevisionDelta delta);
@@ -18,29 +20,17 @@ final class CommitDocumentInstallers {
   final DocumentReplace replaceDocument;
 }
 
-final class CommitApplyResult {
-  CommitApplyResult({
-    required this.shouldPublishState,
-    this.replacedDocument = false,
-    Iterable<CommitEffect> effects = const [],
-  }) : effects = List.unmodifiable(effects);
-
-  final bool shouldPublishState;
-  final bool replacedDocument;
-  final List<CommitEffect> effects;
-}
-
 final class CommitApplier {
   const CommitApplier();
 
-  CommitApplyResult apply({
+  CommitDeliveryResult apply({
     required CanvasDocument document,
     required CommitPlan plan,
     required CommitDocumentInstallers documentInstallers,
     required SelectionEffectInstall installSelectionEffects,
   }) {
     if (!plan.hasChanges) {
-      return CommitApplyResult(shouldPublishState: false);
+      return CommitDeliveryResult(shouldPublishState: false);
     }
 
     if (plan.documentReplaced) {
@@ -51,10 +41,54 @@ final class CommitApplier {
     final didChangeSelection =
         plan.touchedSet.selection && installSelectionEffects();
 
-    return CommitApplyResult(
+    return CommitDeliveryResult(
       shouldPublishState: plan.revisionDelta.document || didChangeSelection,
       replacedDocument: plan.documentReplaced,
-      effects: plan.effects,
+      effects: _deliveryEffectsFor(plan.effects),
     );
   }
+}
+
+List<CommitDeliveryEffect> _deliveryEffectsFor(List<CommitEffect> effects) {
+  return List.unmodifiable(effects.map(_deliveryEffectFor));
+}
+
+CommitDeliveryEffect _deliveryEffectFor(CommitEffect effect) {
+  return switch (effect) {
+    ProjectionEffect() => const ProjectionDeliveryEffect(),
+    SpatialEffect(:final touchedSet) => SpatialDeliveryEffect(
+      touchedFacts: _deliveryTouchedFacts(touchedSet),
+    ),
+    ResourceEffect(:final touchedSet) => ResourceDeliveryEffect(
+      touchedFacts: _deliveryTouchedFacts(touchedSet),
+    ),
+    RepaintEffect(:final mainCanvas, :final overlayCanvas) =>
+      RepaintDeliveryEffect(
+        mainCanvas: mainCanvas,
+        overlayCanvas: overlayCanvas,
+      ),
+    SelectionEffect() => const SelectionDeliveryEffect(),
+    PublicStateEffect() => const PublicStateDeliveryEffect(),
+  };
+}
+
+CommitDeliveryTouchedFacts _deliveryTouchedFacts(TouchedSet touchedSet) {
+  return CommitDeliveryTouchedFacts(
+    addedElementIds: touchedSet.addedElementIds,
+    removedElementIds: touchedSet.removedElementIds,
+    updatedElementIds: touchedSet.updatedElementIds,
+    transformedElementIds: touchedSet.transformedElementIds,
+    geometryElementIds: touchedSet.geometryElementIds,
+    visualElementIds: touchedSet.visualElementIds,
+    resourceDescriptorChangedIds: touchedSet.resourceDescriptorChangedIds,
+    resourceVisualChangedIds: touchedSet.resourceVisualChangedIds,
+    layerIds: touchedSet.layerIds,
+    backgroundLayerChanged: touchedSet.backgroundLayerChanged,
+    selection: touchedSet.selection,
+    persistedCamera: touchedSet.persistedCamera,
+    background: touchedSet.background,
+    grid: touchedSet.grid,
+    palette: touchedSet.palette,
+    documentReplaced: touchedSet.documentReplaced,
+  );
 }

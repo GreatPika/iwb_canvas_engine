@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import '../api/canvas_document.dart';
-import '../api/canvas_ids.dart';
-import '../api/canvas_runtime.dart';
-import 'commit_applier.dart';
+import '../contracts/internal/commit_delivery.dart';
+import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_runtime.dart';
 import 'commit_plan.dart';
 import 'draft_document.dart';
 import 'edit_session.dart';
@@ -12,8 +12,7 @@ typedef RuntimeDisposedReader = bool Function();
 typedef DraftDocumentReader = CanvasDocument Function();
 typedef SelectedElementIdsReader = Set<CanvasElementId> Function();
 typedef CommitInstaller =
-    CommitApplyResult Function(CanvasDocument document, CommitPlan plan);
-typedef CommitApplyResultDelivery = void Function(CommitApplyResult result);
+    CommitDeliveryResult Function(CanvasDocument document, CommitPlan plan);
 typedef DocumentLoadInstaller = void Function(CanvasDocument document);
 
 final class EditKernel {
@@ -96,7 +95,7 @@ final class EditKernel {
     }
   }
 
-  CommitApplyResult _installCommittedDocument(
+  CommitDeliveryResult _installCommittedDocument(
     CanvasDocument document,
     CommitPlan plan,
   ) => _installCommit.call(document, plan);

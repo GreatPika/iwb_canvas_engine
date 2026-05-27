@@ -1,7 +1,7 @@
-import '../api/canvas_errors.dart';
-import '../api/canvas_ids.dart';
-import '../api/canvas_metadata.dart';
-import '../api/canvas_resource.dart';
+import '../contracts/public/canvas_errors.dart';
+import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_metadata.dart';
+import '../contracts/public/canvas_resource.dart';
 
 final class ResourceTable {
   factory ResourceTable(

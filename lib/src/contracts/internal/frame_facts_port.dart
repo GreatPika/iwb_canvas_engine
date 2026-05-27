@@ -1,9 +1,9 @@
 import 'dart:ui';
 
-import '../api/canvas_element.dart';
-import '../api/canvas_geometry.dart';
-import '../api/canvas_ids.dart';
-import '../api/canvas_metadata.dart';
+import '../public/canvas_element.dart';
+import '../public/canvas_geometry.dart';
+import '../public/canvas_ids.dart';
+import '../public/canvas_metadata.dart';
 
 final class FrameRevisionFacts {
   const FrameRevisionFacts({

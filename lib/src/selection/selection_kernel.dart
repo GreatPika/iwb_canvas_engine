@@ -1,8 +1,8 @@
 import 'dart:collection';
 
-import '../api/canvas_ids.dart';
-import '../runtime/selection_facts_port.dart';
-import '../runtime/selection_membership_port.dart';
+import '../contracts/internal/selection_facts_port.dart';
+import '../contracts/internal/selection_membership_port.dart';
+import '../contracts/public/canvas_ids.dart';
 
 final class SelectionKernel implements SelectionFactsPort {
   SelectionKernel({required SelectionMembershipPort membership})

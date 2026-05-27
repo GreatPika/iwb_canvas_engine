@@ -1,6 +1,6 @@
-import '../api/canvas_document.dart';
-import '../api/canvas_element.dart';
-import '../api/canvas_ids.dart';
+import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_element.dart';
+import '../contracts/public/canvas_ids.dart';
 import 'family_tables.dart';
 import 'layer_table.dart';
 

@@ -1,6 +1,6 @@
-import '../api/canvas_error_details_sanitizer.dart';
-import '../api/canvas_diagnostics.dart';
-import '../api/canvas_errors.dart';
+import '../contracts/public/canvas_error_details_sanitizer.dart';
+import '../contracts/public/canvas_diagnostics.dart';
+import '../contracts/public/canvas_errors.dart';
 
 typedef DiagnosticDetailsBuilder = Map<String, Object?> Function();
 

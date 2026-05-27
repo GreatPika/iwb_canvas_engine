@@ -3,11 +3,11 @@ import 'dart:ui';
 // Family-specific row tables stay together so admission and projection cannot
 // drift across element kinds; splitting them would obscure the shared id owner.
 
-import '../api/canvas_element.dart';
-import '../api/canvas_errors.dart';
-import '../api/canvas_geometry.dart';
-import '../api/canvas_ids.dart';
-import '../api/canvas_metadata.dart';
+import '../contracts/public/canvas_element.dart';
+import '../contracts/public/canvas_errors.dart';
+import '../contracts/public/canvas_geometry.dart';
+import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_metadata.dart';
 
 // The family tables are the single admission and projection owner for all
 // element kinds; splitting by kind would reintroduce cross-table drift.

@@ -1,9 +1,9 @@
-import '../api/canvas_document.dart';
-import '../api/canvas_element.dart';
-import '../api/canvas_errors.dart';
-import '../api/canvas_ids.dart';
-import '../api/canvas_resource.dart';
-import '../api/canvas_transform_admission.dart';
+import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_element.dart';
+import '../contracts/public/canvas_errors.dart';
+import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_resource.dart';
+import '../contracts/public/canvas_transform_admission.dart';
 import '../diagnostics/diagnostics_hub.dart';
 import 'schema_v1_diagnostics.dart';
 

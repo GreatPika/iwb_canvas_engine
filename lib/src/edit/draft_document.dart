@@ -1,15 +1,15 @@
 import 'dart:ui';
 
-import '../api/canvas_document.dart';
-import '../api/canvas_element.dart';
-import '../api/canvas_element_update.dart';
-import '../api/canvas_errors.dart';
-import '../api/canvas_field_update.dart';
-import '../api/canvas_geometry.dart';
-import '../api/canvas_ids.dart';
-import '../api/canvas_metadata.dart';
-import '../api/canvas_resource.dart';
-import '../api/canvas_runtime.dart';
+import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_element.dart';
+import '../contracts/public/canvas_element_update.dart';
+import '../contracts/public/canvas_errors.dart';
+import '../contracts/public/canvas_field_update.dart';
+import '../contracts/public/canvas_geometry.dart';
+import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_metadata.dart';
+import '../contracts/public/canvas_resource.dart';
+import '../contracts/public/canvas_runtime.dart';
 import '../store/resource_table.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_compiler.dart';

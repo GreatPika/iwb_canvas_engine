@@ -1,8 +1,8 @@
-import '../api/canvas_actions.dart';
-import '../api/canvas_diagnostics.dart';
-import '../api/canvas_pointer.dart';
-import '../api/canvas_runtime.dart';
-import '../api/canvas_tools.dart';
+import '../contracts/public/canvas_actions.dart';
+import '../contracts/public/canvas_diagnostics.dart';
+import '../contracts/public/canvas_pointer.dart';
+import '../contracts/public/canvas_runtime.dart';
+import '../contracts/public/canvas_tools.dart';
 
 final class RuntimeConfig {
   RuntimeConfig.from(CanvasRuntimeConfig config)

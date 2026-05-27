@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
@@ -67,11 +68,23 @@ void _expectPostInstallApplyResult() {
     },
   );
 
+  _expectPostInstallEvents(events, result);
+  _expectDeliveryEffects(result.effects);
+}
+
+void _expectPostInstallEvents(
+  List<String> events,
+  CommitDeliveryResult result,
+) {
   expect(events, ['document', 'selection']);
   expect(result.shouldPublishState, isTrue);
-  expect(result.effects, effects);
+}
+
+void _expectDeliveryEffects(List<CommitDeliveryEffect> effects) {
+  expect(effects.whereType<ProjectionDeliveryEffect>(), hasLength(1));
+  expect(effects.whereType<PublicStateDeliveryEffect>(), hasLength(1));
   expect(
-    () => result.effects.add(const RepaintEffect(mainCanvas: true)),
+    () => effects.add(const RepaintDeliveryEffect(mainCanvas: true)),
     throwsUnsupportedError,
   );
 }

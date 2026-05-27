@@ -1,6 +1,6 @@
-import '../api/canvas_document.dart';
-import '../api/canvas_ids.dart';
-import '../api/canvas_metadata.dart';
+import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_metadata.dart';
 import 'element_registry.dart';
 import 'revision_state.dart';
 import 'resource_table.dart';

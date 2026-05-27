@@ -7,7 +7,7 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:iwb_canvas_engine/src/runtime/load_interaction_boundary.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/load_interaction_boundary.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -98,7 +98,7 @@ final class _CompileTimeLoadBoundary implements LoadInteractionBoundary {
 CompilationUnit _loadInteractionBoundaryUnit() {
   return parseFile(
     path:
-        '${Directory.current.path}/lib/src/runtime/load_interaction_boundary.dart',
+        '${Directory.current.path}/lib/src/contracts/internal/load_interaction_boundary.dart',
     featureSet: FeatureSet.latestLanguageVersion(),
   ).unit;
 }

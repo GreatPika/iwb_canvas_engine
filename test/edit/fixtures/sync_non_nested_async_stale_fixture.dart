@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
@@ -36,7 +36,7 @@ void main() {
 }
 
 void _expectSynchronousResultPreserved() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final runtime = _runtimeRoot(effectBatches);
   final beforeState = runtime.state.value;
   var notifications = 0;
@@ -75,7 +75,7 @@ void _expectDisposedRuntimeRejected() {
 }
 
 void _expectNestedEditRejected() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final runtime = _runtimeRoot(effectBatches);
   late CanvasEdit captured;
 
@@ -90,7 +90,7 @@ void _expectNestedEditRejected() {
 }
 
 void _expectFutureCallbackRejected() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final runtime = _runtimeRoot(effectBatches);
   final beforeState = runtime.state.value;
   var notifications = 0;
@@ -109,7 +109,7 @@ void _expectFutureCallbackRejected() {
 }
 
 void _expectExceptionClosesHandle() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final runtime = _runtimeRoot(effectBatches);
   final beforeState = runtime.state.value;
   CanvasEdit? captured;
@@ -132,7 +132,7 @@ void _expectExceptionClosesHandle() {
 }
 
 void _expectStaleHandleRejected() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final runtime = _runtimeRoot(effectBatches);
   final beforeState = runtime.state.value;
   late CanvasEdit captured;
@@ -228,7 +228,7 @@ void _expectLoadAndReplacementGuards() {
 }
 
 void _expectExternalLoadRejectedDuringEdit() {
-  final runtime = _runtimeRoot(<List<CommitEffect>>[]);
+  final runtime = _runtimeRoot(<List<CommitDeliveryEffect>>[]);
 
   runtime.edits.edit((edit) {
     expect(
@@ -240,7 +240,7 @@ void _expectExternalLoadRejectedDuringEdit() {
 }
 
 void _expectReplacementCommitsInsideEdit() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final runtime = _runtimeRoot(effectBatches);
   final beforeEpoch = runtime.state.value.revisions.epoch;
 
@@ -271,7 +271,7 @@ void _expectReplacementCommitsInsideEdit() {
   expect(effectBatches, hasLength(1));
 }
 
-RuntimeRoot _runtimeRoot(List<List<CommitEffect>> effectBatches) {
+RuntimeRoot _runtimeRoot(List<List<CommitDeliveryEffect>> effectBatches) {
   return RuntimeRoot(
     initialDocument: _document(),
     config: const CanvasRuntimeConfig(),

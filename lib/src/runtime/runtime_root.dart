@@ -10,25 +10,25 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
-import '../api/canvas_diagnostics.dart';
-import '../api/canvas_document.dart';
-import '../api/canvas_ids.dart';
-import '../api/canvas_runtime.dart';
-import '../api/canvas_actions.dart';
+import '../contracts/internal/commit_delivery.dart';
+import '../contracts/internal/document_facts_port.dart';
+import '../contracts/internal/frame_facts_port.dart';
+import '../contracts/internal/load_interaction_boundary.dart';
+import '../contracts/internal/selection_facts_port.dart';
+import '../contracts/internal/selection_membership_port.dart';
+import '../contracts/public/canvas_actions.dart';
+import '../contracts/public/canvas_diagnostics.dart';
+import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_runtime.dart';
 import '../edit/commit_applier.dart';
 import '../edit/commit_plan.dart';
 import '../edit/edit_kernel.dart';
 import '../edit/staged_document_load.dart';
-import '../edit/touched_set.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
-import 'commit_effect_observer.dart';
-import 'document_facts_port.dart';
-import 'frame_facts_port.dart';
-import 'load_interaction_boundary.dart';
+import 'noop_load_interaction_boundary.dart';
 import 'runtime_config.dart';
-import 'selection_facts_port.dart';
-import 'selection_membership_port.dart';
 
 // RuntimeRoot is intentionally the one place where public runtime behavior,
 // store read facts, and selection ownership meet.
@@ -386,7 +386,10 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     _deliverLoadResult(_loadEffects(didClearSelection: didClearSelection));
   }
 
-  CommitApplyResult _applyEditCommit(CanvasDocument document, CommitPlan plan) {
+  CommitDeliveryResult _applyEditCommit(
+    CanvasDocument document,
+    CommitPlan plan,
+  ) {
     return _commitApplier.apply(
       document: document,
       plan: plan,
@@ -398,7 +401,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     );
   }
 
-  void _deliverEditCommitResult(CommitApplyResult applyResult) {
+  void _deliverEditCommitResult(CommitDeliveryResult applyResult) {
     _isDeliveringCommitEffects = true;
     try {
       if (applyResult.shouldPublishState) {
@@ -418,7 +421,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     }
   }
 
-  void _deliverLoadResult(List<CommitEffect> effects) {
+  void _deliverLoadResult(List<CommitDeliveryEffect> effects) {
     _isDeliveringCommitEffects = true;
     try {
       _publishRuntimeState();
@@ -434,16 +437,20 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   }
 }
 
-void _ignoreCommitEffects(List<CommitEffect> _) {}
+void _ignoreCommitEffects(List<CommitDeliveryEffect> _) {}
 
-List<CommitEffect> _loadEffects({required bool didClearSelection}) {
+List<CommitDeliveryEffect> _loadEffects({required bool didClearSelection}) {
   return List.unmodifiable([
-    const ProjectionEffect(),
-    SpatialEffect(touchedSet: TouchedSet(documentReplaced: true)),
-    ResourceEffect(touchedSet: TouchedSet(documentReplaced: true)),
-    const RepaintEffect(mainCanvas: true, overlayCanvas: true),
-    if (didClearSelection) const SelectionEffect(),
-    const PublicStateEffect(),
+    const ProjectionDeliveryEffect(),
+    SpatialDeliveryEffect(
+      touchedFacts: CommitDeliveryTouchedFacts(documentReplaced: true),
+    ),
+    ResourceDeliveryEffect(
+      touchedFacts: CommitDeliveryTouchedFacts(documentReplaced: true),
+    ),
+    const RepaintDeliveryEffect(mainCanvas: true, overlayCanvas: true),
+    if (didClearSelection) const SelectionDeliveryEffect(),
+    const PublicStateDeliveryEffect(),
   ]);
 }
 

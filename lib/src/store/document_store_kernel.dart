@@ -5,11 +5,11 @@ import 'dart:ui';
 // committed-store boundary instead of simplifying it.
 // ignore_for_file: number-of-imports
 
-import '../api/canvas_document.dart';
-import '../api/canvas_element.dart';
-import '../api/canvas_geometry.dart';
-import '../api/canvas_ids.dart';
-import '../api/canvas_metadata.dart';
+import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_element.dart';
+import '../contracts/public/canvas_geometry.dart';
+import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_metadata.dart';
 import 'committed_document.dart';
 import 'document_projection_cache.dart';
 import 'family_tables.dart';

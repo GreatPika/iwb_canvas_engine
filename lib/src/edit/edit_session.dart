@@ -5,12 +5,12 @@ import 'dart:ui';
 // boundary less auditable.
 // ignore_for_file: number-of-imports
 
-import '../api/canvas_document.dart';
-import '../api/canvas_element.dart';
-import '../api/canvas_element_update.dart';
-import '../api/canvas_ids.dart';
-import '../api/canvas_resource.dart';
-import '../api/canvas_runtime.dart';
+import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_element.dart';
+import '../contracts/public/canvas_element_update.dart';
+import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_resource.dart';
+import '../contracts/public/canvas_runtime.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_plan.dart';
 import 'draft_document.dart';

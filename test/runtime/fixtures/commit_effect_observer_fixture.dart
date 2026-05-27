@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
@@ -43,7 +43,8 @@ final class _ObserverDeliveryScenario {
   CanvasEdit? editHandle;
   final List<String> events = <String>[];
   final List<CanvasRuntimeState> snapshots = <CanvasRuntimeState>[];
-  final List<List<CommitEffect>> effectBatches = <List<CommitEffect>>[];
+  final List<List<CommitDeliveryEffect>> effectBatches =
+      <List<CommitDeliveryEffect>>[];
   bool nestedEditCallbackRan = false;
   int guardedPublicationWindows = 0;
 
@@ -66,7 +67,7 @@ final class _ObserverDeliveryScenario {
     _expectPostObserverState();
   }
 
-  void _observeEffects(List<CommitEffect> effects) {
+  void _observeEffects(List<CommitDeliveryEffect> effects) {
     events.add('observer');
     effectBatches.add(effects);
 
@@ -119,12 +120,24 @@ final class _ObserverDeliveryScenario {
 
   void _expectDeliveredEffects() {
     expect(effectBatches, hasLength(1));
-    expect(effectBatches.single.whereType<ProjectionEffect>(), hasLength(1));
-    expect(effectBatches.single.whereType<SpatialEffect>(), hasLength(1));
-    expect(effectBatches.single.whereType<RepaintEffect>(), hasLength(1));
-    expect(effectBatches.single.whereType<PublicStateEffect>(), hasLength(1));
     expect(
-      () => effectBatches.single.add(const SelectionEffect()),
+      effectBatches.single.whereType<ProjectionDeliveryEffect>(),
+      hasLength(1),
+    );
+    expect(
+      effectBatches.single.whereType<SpatialDeliveryEffect>(),
+      hasLength(1),
+    );
+    expect(
+      effectBatches.single.whereType<RepaintDeliveryEffect>(),
+      hasLength(1),
+    );
+    expect(
+      effectBatches.single.whereType<PublicStateDeliveryEffect>(),
+      hasLength(1),
+    );
+    expect(
+      () => effectBatches.single.add(const SelectionDeliveryEffect()),
       throwsUnsupportedError,
     );
   }
@@ -178,7 +191,7 @@ final class _ObserverFailureScenario {
     expect(root.state.value.summary.elementCount, 2);
   }
 
-  void _throwFromObserver(List<CommitEffect> _) {
+  void _throwFromObserver(List<CommitDeliveryEffect> _) {
     observerCalls += 1;
     throw StateError('observer failed');
   }

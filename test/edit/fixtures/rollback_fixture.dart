@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
@@ -24,7 +24,7 @@ void main() {
 }
 
 void _expectCallbackThrowRollsBack() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = _runtimeRoot(effectBatches);
   root.readDocument();
   final beforeBuilds = root.projectionBuildCount;
@@ -47,7 +47,7 @@ void _expectCallbackThrowRollsBack() {
 }
 
 void _expectValidationFailureRollsBack() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = _runtimeRoot(effectBatches);
   root.readDocument();
   final beforeFacts = root.documentFacts;
@@ -83,7 +83,7 @@ void _expectDraftReplacementRollsBack() {
 }
 
 void _expectDraftReplacementCallbackThrowRollsBack() {
-  final callbackRoot = _runtimeRoot(<List<CommitEffect>>[]);
+  final callbackRoot = _runtimeRoot(<List<CommitDeliveryEffect>>[]);
   callbackRoot.selection.setSelection([CanvasElementId('element-1')]);
   final beforeCallbackState = callbackRoot.state.value;
 
@@ -107,7 +107,7 @@ void _expectDraftReplacementCallbackThrowRollsBack() {
 }
 
 void _expectDraftReplacementValidationFailureRollsBack() {
-  final validationRoot = _runtimeRoot(<List<CommitEffect>>[]);
+  final validationRoot = _runtimeRoot(<List<CommitDeliveryEffect>>[]);
   final beforeValidationState = validationRoot.state.value;
   expect(
     () => validationRoot.edits.edit((edit) {
@@ -129,7 +129,7 @@ void _expectDraftReplacementValidationFailureRollsBack() {
 }
 
 void _expectLiveRuntimeMutationsRejectedDuringEdit() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = _runtimeRoot(effectBatches);
   root.selection.setSelection([CanvasElementId('element-1')]);
   root.cameraPort().setOffset(const Offset(4, 5));
@@ -151,7 +151,7 @@ void _expectLiveRuntimeMutationsRejectedDuringEdit() {
   expect(effectBatches, isEmpty);
 }
 
-RuntimeRoot _runtimeRoot(List<List<CommitEffect>> effectBatches) {
+RuntimeRoot _runtimeRoot(List<List<CommitDeliveryEffect>> effectBatches) {
   return RuntimeRoot(
     initialDocument: _document(),
     config: const CanvasRuntimeConfig(),

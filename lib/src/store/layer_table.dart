@@ -1,6 +1,6 @@
-import '../api/canvas_ids.dart';
-import '../api/canvas_metadata.dart';
-import '../api/canvas_errors.dart';
+import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_metadata.dart';
+import '../contracts/public/canvas_errors.dart';
 
 final class LayerRow {
   LayerRow({

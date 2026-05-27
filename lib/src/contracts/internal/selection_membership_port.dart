@@ -1,4 +1,4 @@
-import '../api/canvas_ids.dart';
+import '../public/canvas_ids.dart';
 
 abstract interface class SelectionMembershipPort {
   Set<CanvasElementId> normalizeSelection(Iterable<CanvasElementId> ids);

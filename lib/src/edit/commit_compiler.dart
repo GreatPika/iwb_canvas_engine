@@ -1,4 +1,4 @@
-import '../api/canvas_element.dart';
+import '../contracts/public/canvas_element.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_plan.dart';
 import 'touched_set.dart';

@@ -1,6 +1,6 @@
-import '../api/canvas_diagnostics.dart';
-import '../api/canvas_document.dart';
-import '../api/canvas_ids.dart';
+import '../contracts/public/canvas_diagnostics.dart';
+import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_ids.dart';
 import '../codec/validated_import_draft.dart';
 import '../diagnostics/diagnostics_hub.dart';
 import '../store/document_store_kernel.dart';

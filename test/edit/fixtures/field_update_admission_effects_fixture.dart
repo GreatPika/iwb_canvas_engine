@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
@@ -55,7 +55,7 @@ void _expectNullableClearUpdatesField() {
 }
 
 void _expectDynamicNonNullableClearRejected() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = _runtimeRoot(effectBatches);
   final before = root.readDocument().layers.single.elements.single;
 
@@ -77,7 +77,7 @@ void _expectDynamicNonNullableClearRejected() {
 }
 
 void _expectNonInvertibleTransformRejected() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = _runtimeRoot(effectBatches);
 
   expect(
@@ -99,7 +99,7 @@ void _expectNonInvertibleTransformRejected() {
 }
 
 void _expectMismatchedUpdateKindRejected() {
-  final effectBatches = <List<CommitEffect>>[];
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = _runtimeRoot(effectBatches);
 
   expect(
@@ -174,7 +174,7 @@ CanvasDocument _document() {
   );
 }
 
-RuntimeRoot _runtimeRoot(List<List<CommitEffect>> effectBatches) {
+RuntimeRoot _runtimeRoot(List<List<CommitDeliveryEffect>> effectBatches) {
   return RuntimeRoot(
     initialDocument: _document(),
     config: const CanvasRuntimeConfig(),

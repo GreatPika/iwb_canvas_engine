@@ -178,10 +178,7 @@ bool _isSelectionOwnerType(DartType type) {
 
   return uri ==
           'package:iwb_canvas_engine/src/selection/selection_kernel.dart' ||
-      uri ==
-          'package:iwb_canvas_engine/src/runtime/selection_facts_port.dart' ||
-      uri ==
-          'package:iwb_canvas_engine/src/runtime/selection_membership_port.dart' ||
+      _selectionContractLibraryUris.contains(uri) ||
       element?.name == 'CanvasSelectionPort' &&
           _canvasRuntimeLibraryUris.contains(uri);
 }
@@ -215,6 +212,11 @@ const _canvasRuntimeLibraryUris = {
 const _canvasIdLibraryUris = {
   'package:iwb_canvas_engine/src/api/canvas_ids.dart',
   'package:iwb_canvas_engine/src/contracts/public/canvas_ids.dart',
+};
+
+const _selectionContractLibraryUris = {
+  'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart',
+  'package:iwb_canvas_engine/src/contracts/internal/selection_membership_port.dart',
 };
 
 bool _isSelectionRevisionName(String name) {
@@ -251,7 +253,7 @@ bool _isRuntimeSelectionReadPortState(
   String name,
   String className,
 ) {
-  return path == 'lib/src/runtime/selection_facts_port.dart' &&
+  return path == 'lib/src/contracts/internal/selection_facts_port.dart' &&
       className == 'SelectionFacts' &&
       (name == 'selectedElementIds' || name == 'selectionRevision');
 }

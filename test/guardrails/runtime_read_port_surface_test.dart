@@ -60,7 +60,7 @@ Future<void> _expectDocumentPortSurface(
   Set<String> forbiddenReadPortTypes,
 ) async {
   final documentPort = await _resolve(
-    'lib/src/runtime/document_facts_port.dart',
+    'lib/src/contracts/internal/document_facts_port.dart',
   );
 
   expect(documentPort.declarations, isNotEmpty);
@@ -71,7 +71,9 @@ Future<void> _expectDocumentPortSurface(
 }
 
 Future<void> _expectFramePortSurface(Set<String> forbiddenReadPortTypes) async {
-  final framePort = await _resolve('lib/src/runtime/frame_facts_port.dart');
+  final framePort = await _resolve(
+    'lib/src/contracts/internal/frame_facts_port.dart',
+  );
 
   expect(framePort.declarations, isNotEmpty);
   _expectNoTypeReferences(framePort, {
@@ -93,10 +95,10 @@ Future<void> _expectSelectionPortSurfaces(
   Set<String> forbiddenReadPortTypes,
 ) async {
   final selectionFactsPort = await _resolve(
-    'lib/src/runtime/selection_facts_port.dart',
+    'lib/src/contracts/internal/selection_facts_port.dart',
   );
   final selectionMembershipPort = await _resolve(
-    'lib/src/runtime/selection_membership_port.dart',
+    'lib/src/contracts/internal/selection_membership_port.dart',
   );
 
   expect(selectionFactsPort.declarations, isNotEmpty);
