@@ -11,3 +11,7 @@ final class ResourceDirtyOutcome {
   bool get hasDirtyResources =>
       allResourcesDirty || dirtyResourceIds.isNotEmpty;
 }
+
+abstract interface class ResourceDirtyOutcomeSink {
+  void deliverResourceDirtyOutcome(ResourceDirtyOutcome outcome);
+}

@@ -15,6 +15,7 @@ import '../contracts/internal/document_facts_port.dart';
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/load_interaction_boundary.dart';
 import '../contracts/internal/resource_catalog_port.dart';
+import '../contracts/internal/resource_dirty_outcome.dart';
 import '../contracts/internal/resolver_mutation_guard.dart';
 import '../contracts/internal/selection_facts_port.dart';
 import '../contracts/internal/selection_membership_port.dart';
@@ -39,7 +40,11 @@ import 'runtime_config.dart';
 // store read facts, and selection ownership meet.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class RuntimeRoot
-    implements DocumentFactsPort, FrameFactsPort, ResolverMutationGuard {
+    implements
+        DocumentFactsPort,
+        FrameFactsPort,
+        ResolverMutationGuard,
+        ResourceDirtyOutcomeSink {
   RuntimeRoot({
     required CanvasDocument initialDocument,
     required CanvasRuntimeConfig config,
@@ -128,6 +133,7 @@ final class RuntimeRoot
   late final ResourceKernel _resourceKernel = ResourceKernel(
     catalog: _resourceCatalogPort,
     mutationGuard: this,
+    dirtyOutcomeSink: this,
   );
 
   ValueListenable<CanvasRuntimeState> get state => _state;
@@ -369,6 +375,14 @@ final class RuntimeRoot
     }
   }
 
+  @override
+  void deliverResourceDirtyOutcome(ResourceDirtyOutcome outcome) {
+    if (!outcome.hasDirtyResources) {
+      return;
+    }
+    _deliverResourceDirtyResult(_resourceDirtyEffects(outcome));
+  }
+
   void _ensureNotDisposed() {
     _ensureNotDeliveringCommitEffects();
     if (_isDisposed) {
@@ -408,6 +422,7 @@ final class RuntimeRoot
         viewCamera: _viewCameraRevision,
         preview: _previewRevision,
         epoch: _epochRevision,
+        resourceVisual: _resourceKernel.resourceVisualRevision,
       ),
     );
   }
@@ -476,6 +491,21 @@ final class RuntimeRoot
       _isDeliveringCommitEffects = false;
     }
   }
+
+  void _deliverResourceDirtyResult(List<CommitDeliveryEffect> effects) {
+    _isDeliveringCommitEffects = true;
+    try {
+      _publishRuntimeState();
+      if (effects.isNotEmpty) {
+        _commitEffectObserver(effects);
+      }
+    } on Object {
+      // Observer failures are contained post-dirty notifications. A future
+      // diagnostics seam can report them without changing dirty acceptance.
+    } finally {
+      _isDeliveringCommitEffects = false;
+    }
+  }
 }
 
 void _ignoreCommitEffects(List<CommitDeliveryEffect> _) {}
@@ -487,6 +517,19 @@ List<CommitDeliveryEffect> _loadEffects({required bool didClearSelection}) {
     ResourceDeliveryEffect(touchedSet: TouchedSet(documentReplaced: true)),
     const RepaintDeliveryEffect(mainCanvas: true, overlayCanvas: true),
     if (didClearSelection) const SelectionDeliveryEffect(),
+    const PublicStateDeliveryEffect(),
+  ]);
+}
+
+List<CommitDeliveryEffect> _resourceDirtyEffects(ResourceDirtyOutcome outcome) {
+  return List.unmodifiable([
+    ResourceDeliveryEffect(
+      touchedSet: TouchedSet(
+        resourceVisualChangedIds: outcome.dirtyResourceIds,
+        allResourceVisualsChanged: outcome.allResourcesDirty,
+      ),
+    ),
+    const RepaintDeliveryEffect(mainCanvas: true),
     const PublicStateDeliveryEffect(),
   ]);
 }
@@ -506,7 +549,7 @@ CanvasRuntimeState _runtimeState(
       selection: selection.selectionRevision,
       preview: runtimeRevisions.preview,
       viewCamera: runtimeRevisions.viewCamera,
-      resourceVisual: 0,
+      resourceVisual: runtimeRevisions.resourceVisual,
       interaction: 0,
       epoch: runtimeRevisions.epoch,
     ),
@@ -524,11 +567,13 @@ final class _RuntimeRevisionFacts {
     this.viewCamera = 0,
     this.preview = 0,
     this.epoch = 0,
+    this.resourceVisual = 0,
   });
 
   final int viewCamera;
   final int preview;
   final int epoch;
+  final int resourceVisual;
 }
 
 final class _StoreSelectionMembership implements SelectionMembershipPort {

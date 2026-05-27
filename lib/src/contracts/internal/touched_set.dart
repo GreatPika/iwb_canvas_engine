@@ -11,6 +11,7 @@ final class TouchedSet {
     Iterable<CanvasResourceId> resourceDescriptorChangedIds = const [],
     Iterable<CanvasResourceId> resourceVisualChangedIds = const [],
     Iterable<CanvasLayerId> layerIds = const [],
+    this.allResourceVisualsChanged = false,
     this.backgroundLayerChanged = false,
     this.selection = false,
     this.persistedCamera = false,
@@ -39,6 +40,7 @@ final class TouchedSet {
   final Set<CanvasResourceId> resourceDescriptorChangedIds;
   final Set<CanvasResourceId> resourceVisualChangedIds;
   final Set<CanvasLayerId> layerIds;
+  final bool allResourceVisualsChanged;
   final bool backgroundLayerChanged;
   final bool selection;
   final bool persistedCamera;
@@ -78,6 +80,7 @@ final class TouchedSet {
           layerIds,
         ].any((ids) => ids.isNotEmpty) ||
         [
+          allResourceVisualsChanged,
           selection,
           backgroundLayerChanged,
           persistedCamera,

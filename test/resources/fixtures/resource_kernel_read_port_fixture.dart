@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/resource_catalog_port.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/resource_dirty_outcome.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/resolver_mutation_guard.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_kernel.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
@@ -22,6 +23,7 @@ void _expectKernelCatalogDelegation() {
   final kernel = ResourceKernel(
     catalog: catalog,
     mutationGuard: const _AllowingMutationGuard(),
+    dirtyOutcomeSink: _IgnoringDirtySink(),
   );
 
   expect(kernel.resources.single.id, CanvasResourceId('resource-a'));
@@ -94,6 +96,11 @@ final class _AllowingMutationGuard implements ResolverMutationGuard {
 
   @override
   T runResolverCallback<T>(T Function() callback) => callback();
+}
+
+final class _IgnoringDirtySink implements ResourceDirtyOutcomeSink {
+  @override
+  void deliverResourceDirtyOutcome(ResourceDirtyOutcome outcome) {}
 }
 
 CanvasDocument _document() {
