@@ -14,6 +14,7 @@ import '../contracts/internal/commit_delivery.dart';
 import '../contracts/internal/document_facts_port.dart';
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/load_interaction_boundary.dart';
+import '../contracts/internal/resource_catalog_port.dart';
 import '../contracts/internal/selection_facts_port.dart';
 import '../contracts/internal/selection_membership_port.dart';
 import '../contracts/internal/touched_set.dart';
@@ -21,6 +22,7 @@ import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_diagnostics.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_runtime.dart';
 import '../edit/commit_applier.dart';
 import '../edit/commit_plan.dart';
@@ -116,6 +118,9 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   late final CanvasEditPort _editPort = _editKernel.port;
   late final CanvasSelectionPort _selectionPort = _RuntimeSelectionPort(this);
   late final CanvasCameraPort _cameraPort = _RuntimeCameraPort(this);
+  late final ResourceCatalogPort _resourceCatalogPort = _StoreResourceCatalog(
+    _store,
+  );
 
   ValueListenable<CanvasRuntimeState> get state => _state;
   bool get isDisposed => _isDisposed;
@@ -124,6 +129,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   Stream<CanvasActionCommitted> get actions => _actions.stream;
   CanvasSelectionPort get selection => _selectionPort;
   CanvasCameraPort cameraPort() => _cameraPort;
+  ResourceCatalogPort get resourceCatalogPort => _resourceCatalogPort;
   CanvasCamera get viewCamera => _viewCamera;
   Offset get viewCameraOffset => _viewCamera.offset;
   SelectionFacts get selectionFacts => _selection.selectionFacts;
@@ -506,6 +512,20 @@ final class _StoreSelectionMembership implements SelectionMembershipPort {
     return onlySelectable
         ? store.selectableElementIds
         : store.contentElementIds;
+  }
+}
+
+final class _StoreResourceCatalog implements ResourceCatalogPort {
+  const _StoreResourceCatalog(this.store);
+
+  final DocumentStoreKernel store;
+
+  @override
+  List<CanvasResource> get resources => store.resources;
+
+  @override
+  CanvasResource? resourceById(CanvasResourceId id) {
+    return store.resourceById(id);
   }
 }
 

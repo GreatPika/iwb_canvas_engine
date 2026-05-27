@@ -48,8 +48,15 @@ void _testCommitDeliveryShape() {
 
 void _testResourceHandoffShape() {
   test('P7 resource handoff seams are declaration-only', () {
+    final catalog = _contractSource('resource_catalog_port.dart');
     final dirtyOutcome = _contractSource('resource_dirty_outcome.dart');
     final resolverGuard = _contractSource('resolver_mutation_guard.dart');
+    final catalogUnit = _parse(catalog);
+
+    expect(_topLevelNames(catalogUnit), contains('ResourceCatalogPort'));
+    _expectResourceCatalogPortShape(catalogUnit);
+    _expectResourceCatalogImports(catalog);
+    _expectResourceCatalogDoesNotNameImplementationOwners(catalog);
 
     expect(dirtyOutcome, contains('final class ResourceDirtyOutcome'));
     expect(dirtyOutcome, contains('Set<CanvasResourceId> dirtyResourceIds'));
@@ -83,6 +90,9 @@ void _testDocumentAndFramePortShape() {
         'FrameResourceDescriptorFacts',
         'FrameFactsPort',
       ]),
+    );
+    _expectFrameResourceDescriptorSeamShape(
+      _parse(_contractSource('frame_facts_port.dart')),
     );
   });
 }
@@ -206,6 +216,74 @@ void _expectBoundaryMethodShape(CompilationUnit unit) {
   expect(methods, hasLength(1));
   expect(methods.single.name.lexeme, 'prepareLoadCleanup');
   expect(methods.single.returnType?.toSource(), 'PointerCleanupOutcome');
+}
+
+void _expectResourceCatalogPortShape(CompilationUnit unit) {
+  final declaration = _classDeclaration(unit, 'ResourceCatalogPort');
+  final methods = declaration.body.members
+      .whereType<MethodDeclaration>()
+      .toList();
+  final resourcesGetter = methods.singleWhere(
+    (method) => method.name.lexeme == 'resources',
+  );
+  final lookupMethod = methods.singleWhere(
+    (method) => method.name.lexeme == 'resourceById',
+  );
+
+  expect(methods, hasLength(2));
+  expect(resourcesGetter.isGetter, isTrue);
+  expect(resourcesGetter.returnType?.toSource(), 'List<CanvasResource>');
+  expect(lookupMethod.returnType?.toSource(), 'CanvasResource?');
+  expect(
+    lookupMethod.parameters?.parameters.single.toSource(),
+    'CanvasResourceId id',
+  );
+}
+
+void _expectResourceCatalogImports(String source) {
+  final imports = RegExp(
+    r"import '([^']+)';",
+  ).allMatches(source).map((match) => match.group(1)).toSet();
+
+  expect(imports, {
+    '../public/canvas_ids.dart',
+    '../public/canvas_resource.dart',
+  });
+}
+
+void _expectResourceCatalogDoesNotNameImplementationOwners(String source) {
+  const forbiddenNames = [
+    'DocumentStoreKernel',
+    'RuntimeRoot',
+    'FrameFactsPort',
+    'ResourceKernel',
+    'SurfaceResourceSession',
+    'Resolver',
+    'resolver',
+    'Cache',
+    'cache',
+    'callback',
+    'Callback',
+  ];
+
+  for (final name in forbiddenNames) {
+    expect(source, isNot(contains(name)));
+  }
+}
+
+void _expectFrameResourceDescriptorSeamShape(CompilationUnit unit) {
+  final declaration = _classDeclaration(unit, 'FrameFactsPort');
+  final descriptorMethods = declaration.body.members
+      .whereType<MethodDeclaration>()
+      .where((method) => method.name.lexeme.contains('resourceDescriptor'))
+      .toList();
+
+  expect(descriptorMethods, hasLength(1));
+  expect(descriptorMethods.single.name.lexeme, 'resourceDescriptor');
+  expect(
+    descriptorMethods.single.returnType?.toSource(),
+    'FrameResourceDescriptorFacts?',
+  );
 }
 
 void _expectPointerCleanupOutcomeShape(CompilationUnit unit) {

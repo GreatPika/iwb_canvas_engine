@@ -10,6 +10,7 @@ import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_geometry.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
+import '../contracts/public/canvas_resource.dart';
 import 'committed_document.dart';
 import 'document_projection_cache.dart';
 import 'family_tables.dart';
@@ -54,6 +55,22 @@ final class DocumentStoreKernel {
   int get gridRevision => _document.revisions.gridRevision;
   int get resourceRevision => _document.revisions.resourceRevision;
   int get projectionBuildCount => _projectionCache.buildCount;
+  List<CanvasResource> get resources {
+    return List.unmodifiable(
+      _document.resourceTable.rows.map(ResourceTable.copy),
+    );
+  }
+
+  CanvasResource? resourceById(CanvasResourceId id) {
+    for (final resource in _document.resourceTable.rows) {
+      if (resource.id == id) {
+        return ResourceTable.copy(resource);
+      }
+    }
+
+    return null;
+  }
+
   Set<CanvasElementId> get selectableElementIds {
     return Set.unmodifiable(_document.elements.selectableElementIds);
   }
