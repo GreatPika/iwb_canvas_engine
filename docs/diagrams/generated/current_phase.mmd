@@ -7,6 +7,8 @@ flowchart LR
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]
   api_public_surface["Public package surface<br/>required by P0"]
   codec_schema_v1["Schema v1 codec<br/>required by P3"]
+  contracts_internal_ports["Internal owner ports and fact contracts<br/>required by P6"]
+  contracts_public["Public contract declarations<br/>required by P6"]
   diagnostics_hub["Diagnostics hub<br/>required by P3"]
   edit_kernel["Edit kernel<br/>required by P5"]
   load_document_pipeline["Load document pipeline<br/>required by P6"]
@@ -18,8 +20,10 @@ flowchart LR
   api_canvas_runtime -->|owns and creates by P4| runtime_root
   api_canvas_runtime -->|public API forwards to by P4| api_camera_port
   api_public_surface -->|exports by P2| api_canvas_runtime
+  api_public_surface -->|wrapper export by P6| contracts_public
   codec_schema_v1 -->|reports errors to by P3| diagnostics_hub
-  codec_schema_v1 -->|uses public data by P3| api_public_surface
+  codec_schema_v1 -->|uses public data by P3| contracts_public
+  contracts_internal_ports -->|contract dependency by P6| contracts_public
   edit_kernel -->|changes data through by P5| store_document_kernel
   load_document_pipeline -->|changes data through by P6| store_document_kernel
   runtime_root -->|owns and creates by P4| selection_kernel

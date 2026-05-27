@@ -1,6 +1,8 @@
 C4Component
 title Runtime owner component view
-Container(PublicAPI, "Public API", "lib/src/api/", "Stable DTOs, operations, events, and errors.")
+Container(PublicAPI, "Public API facade", "lib/src/api/", "Wrapper exports and named facade bridges.")
+Container(ContractsPublic, "Public contracts", "lib/src/contracts/public/", "Stable DTOs, operations, events, errors, runtime state, and public ports.")
+Container(ContractsInternal, "Internal contracts", "lib/src/contracts/internal/", "Owner ports, immutable facts, delivery effects, and guard seams.")
 Container(RuntimeRoot, "RuntimeRoot", "lib/src/runtime/", "Composition root for document, edit, interaction, frame, spatial, resource, codec, and diagnostic services.")
 Container_Boundary(runtime_components, "RuntimeRoot internals") {
   Component(DocumentStoreKernel, "DocumentStoreKernel", "lib/src/store/", "Committed document state, document revisions, resource descriptors, and projection cache.")
@@ -25,7 +27,9 @@ Container_Boundary(runtime_components, "RuntimeRoot internals") {
   Component(CodecBoundary, "CodecBoundary", "lib/src/codec/", "Schema v1 JSON decode, encode, validation, and diagnostics.")
   Component(DiagnosticsHub, "DiagnosticsHub", "lib/src/diagnostics/", "Structured validation and runtime error projection.")
 }
-Rel(PublicAPI, RuntimeRoot, "creates and drives")
+Rel(PublicAPI, ContractsPublic, "wrapper exports")
+Rel(ContractsInternal, ContractsPublic, "uses public ids and DTO facts")
+Rel(PublicAPI, RuntimeRoot, "CanvasRuntime named facade bridge")
 Rel(RuntimeRoot, DocumentStoreKernel, "coordinates")
 Rel(RuntimeRoot, SelectionKernel, "coordinates")
 Rel(RuntimeRoot, EditKernel, "coordinates")

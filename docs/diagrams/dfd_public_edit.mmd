@@ -3,11 +3,16 @@ flowchart LR
 
   App["Application code"]
 
-  subgraph API["Public API boundary"]
+  subgraph API["Public API facade"]
     EditPort["CanvasEditPort.edit(fn)"]
     EditHandle["CanvasEdit handle"]
     EditResult["Callback result"]
     PublicSignals["Post-commit public state\n(CanvasRuntimeState)\nno user action events"]
+  end
+
+  subgraph Contracts["Contract declarations"]
+    PublicContracts["contracts/public\nCanvasEditPort, ids, events, errors"]
+    InternalContracts["contracts/internal\nCommitDeliveryEffect and owner facts"]
   end
 
   subgraph EditKernel["EditKernel"]
@@ -41,6 +46,8 @@ flowchart LR
   end
 
   App -->|"synchronous edit callback"| EditPort
+  EditPort -->|"declared by"| PublicContracts
+  PostInstallEffects -->|"typed through"| InternalContracts
   EditPort -->|"open edit session"| SessionGate
   SessionGate -->|"committed revision snapshot"| Committed
   Committed -->|"draft source data"| Draft

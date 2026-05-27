@@ -167,7 +167,7 @@ Mandatory guardrails:
 | `api.preview_state_sealed_union_publicly_readable` | external preview consumers can type-test exported sealed CanvasPreviewState variants and read variant payloads through the public barrel only |
 | `api.exported_dartdoc_complete` | exported public declarations have non-empty Dart documentation summaries before API freeze |
 | `api.public_class_modifiers_explicit` | every exported public class chooses an explicit Dart 3 subtype/implementation policy |
-| `api.no_public_api_import_cycles` | public API implementation files under `lib/src/api/**` form an acyclic parsed import graph |
+| `api.no_public_api_import_cycles` | public API wrapper files and re-exported `contracts/public/**` declarations form an acyclic parsed import/export reachability graph |
 | `api.public_signature_shape` | public signatures avoid `FutureOr`, nullable async/container returns, and `dynamic` outside approved JSON or diagnostic boundaries; metadata-bearing DTO signatures use exported `CanvasMetadata` |
 | `api.no_undefined_public_type_references` | every exported signature type is exported or from Flutter/Dart SDK |
 | `api.dto_immutability` | DTO collections are defensively copied and unmodifiable; `CanvasMetadata` is deep-frozen; public constructors with caller-provided validated or sanitized values are non-const factories while marker/empty/default/private storage forms keep only approved const forms |
@@ -175,6 +175,7 @@ Mandatory guardrails:
 | `api.id_validation_no_extension_type_escape` | ids cannot be publicly constructed without validation |
 | `core.no_legacy_imports` | no import of legacy package/runtime |
 | `core.import_boundaries` | package-owned source paths obey source boundary rules and the forbidden import matrix from `section_03_package_layout` |
+| `core.owner_dag_import_boundaries` | production import/export directives obey the selected owner-DAG: implementation-to-API, contracts-to-API, contracts-to-implementation, `resources -> runtime/frame`, `selection -> runtime`, and `codec -> runtime/store/edit/frame` edges are rejected; API wrapper exports to `contracts/public/**` and named facade bridges are the only API exceptions |
 | `core.no_unapproved_part_files` | production code has no `part` or `part of` files unless generated-code use is explicitly approved |
 | `core.no_scene_controller_shape_dependency` | no `SceneController` concept in core |
 | `core.no_node_spec_patch_shape_dependency` | no legacy NodeSpec/NodePatch/PatchField in core |

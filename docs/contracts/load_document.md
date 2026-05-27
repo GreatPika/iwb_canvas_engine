@@ -34,13 +34,13 @@ Do not assume:
 ## 12. `loadDocument` staged contract
 
 `CanvasEditPort.loadDocument(document)` is the next public external document
-replacement operation.
-The public API delegates orchestration to `RuntimeRoot`; it does not read from
-or install into `DocumentStoreKernel` directly. `RuntimeRoot` owns the atomic
-cross-owner replacement operation once validation and materialization have
-succeeded: document replacement is installed into `DocumentStoreKernel`, and
-selection is cleared through the internal selection owner before any public
-state notification is published.
+replacement operation. The `CanvasEditPort` declaration lives in
+`contracts/public/**`; the public API facade delegates orchestration to
+`RuntimeRoot`; it does not read from or install into `DocumentStoreKernel`
+directly. `RuntimeRoot` owns the atomic cross-owner replacement operation once
+validation and materialization have succeeded: document replacement is installed
+into `DocumentStoreKernel`, and selection is cleared through the internal
+selection owner before any public state notification is published.
 
 P6 owns only the minimal early interaction boundary needed by staged
 replacement:
@@ -49,7 +49,7 @@ replacement:
 PreparedDocumentLoad success -> RuntimeRoot requests prepared load cleanup;
 the target InteractionEngine boundary routes that cleanup through the internal
 PointerToolCleanupCoordinator;
-the boundary returns a PointerCleanupOutcome before document install;
+the `contracts/internal/**` boundary returns a PointerCleanupOutcome before document install;
 the outcome covers active preview, pointer normalization, and pending tap facts;
 the boundary must not read from or mutate DocumentStoreKernel;
 the boundary must not execute terminal resolver or commit paths;
@@ -64,7 +64,7 @@ P10-P12 and consume this ordering instead of being prerequisites for P6.
 Success ordering:
 
 ```text
-1. validate public CanvasDocument, including `CanvasMetadata`, frozen collection ownership, and invertible element transforms;
+1. validate `contracts/public` CanvasDocument, including `CanvasMetadata`, frozen collection ownership, and invertible element transforms;
 2. materialize PreparedDocumentLoad;
 3. if validation/materialization succeeds, request prepared interaction cleanup;
 4. produce the PointerCleanupOutcome that describes active preview cleanup,

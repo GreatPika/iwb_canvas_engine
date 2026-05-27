@@ -54,13 +54,27 @@ The new package is rooted at the repository top level:
         canvas_events.dart
         canvas_errors.dart
         canvas_diagnostics.dart
+      contracts/
+        public/
+          canvas_document.dart
+          canvas_element.dart
+          canvas_resource.dart
+          canvas_runtime.dart
+          canvas_ids.dart
+          canvas_errors.dart
+          canvas_diagnostics.dart
+        internal/
+          commit_delivery.dart
+          document_facts_port.dart
+          frame_facts_port.dart
+          load_interaction_boundary.dart
+          resource_dirty_outcome.dart
+          resolver_mutation_guard.dart
+          selection_facts_port.dart
+          selection_membership_port.dart
       runtime/
         runtime_root.dart
         runtime_config.dart
-        document_facts_port.dart
-        frame_facts_port.dart
-        selection_facts_port.dart
-        selection_membership_port.dart
       store/
         document_store_kernel.dart
         committed_document.dart
@@ -161,7 +175,11 @@ The new package is rooted at the repository top level:
     diagrams/
 ```
 
-`lib/iwb_canvas_engine.dart` exports only `src/api/**`.
+`lib/iwb_canvas_engine.dart` exports only `src/api/**`. The files under
+`lib/src/api/**` are facade or wrapper-export files: stable declarations live
+under `lib/src/contracts/public/**`, non-exported cross-owner seams live under
+`lib/src/contracts/internal/**`, and implementation owners consume those
+contract files instead of using the API facade as a type library.
 
 The target frame collaborator files listed under `lib/src/frame/**` are
 implementation layout names for the `FrameEngine` internal split, not files
@@ -187,12 +205,14 @@ Source boundary rules:
 lib/iwb_canvas_engine.dart      -> only public barrel for package consumers
 production lib/**               -> no `part` or `part of` files unless generated-code adoption is explicitly approved
 all lib/**                      -> may not import another package's `src/**`
-lib/src/frame/**                -> obtains committed document facts through `runtime/frame_facts_port.dart`, not concrete store files
+lib/src/frame/**                -> obtains committed document facts through `contracts/internal/frame_facts_port.dart`, not concrete store files
 lib/src/frame/**                -> keeps frame collaborators package-internal; no root barrel export for collaborator files
+lib/src/contracts/public/**     -> declaration-only public DTOs, values, errors, policies, runtime state/config types, and public port interfaces; no API or implementation imports
+lib/src/contracts/internal/**   -> declaration-only owner ports, immutable facts, delivery effects, resource dirty outcomes, and resolver mutation guards; may depend on contracts/public but not API or implementation owners
 ```
 
 `FrameFactsPort` is the frame-intent committed facts boundary under
-`lib/src/runtime/`. It may be backed by `DocumentStoreKernel` through
+`lib/src/contracts/internal/`. It may be backed by `DocumentStoreKernel` through
 `RuntimeRoot` composition, but frame-owned code must not import
 `lib/src/store/document_store_kernel.dart`, `committed_document.dart`,
 `family_tables.dart`, resource tables, `document_projection_cache.dart`, drafts,
@@ -232,17 +252,21 @@ when a proof needs the same command path as CI.
 Forbidden imports:
 
 ```text
-lib/src/api/**               -> may not import src/store, src/edit, src/frame concrete internals
+lib/src/api/**               -> may not import/export contracts/internal; only named facade bridges may import runtime/codec implementation
+lib/src/contracts/public/**  -> may not import/export src/api or implementation owners
+lib/src/contracts/internal/** -> may not import/export src/api or implementation owners
+lib/src/runtime/**           -> may not import src/api or the root public barrel as a type library
+lib/src/api/**               -> may not import src/store, src/edit, src/frame concrete internals outside named facade bridges
 lib/src/store/**             -> may not import src/interaction, src/frame, src/flutter_bridge
-lib/src/selection/**         -> may read document facts only through runtime-supplied immutable query ports
+lib/src/selection/**         -> may read document facts only through contracts/internal immutable query ports and must not import runtime
 lib/src/edit/**              -> may not import src/flutter_bridge
 lib/src/interaction/**       -> may not import, read, or mutate src/store or src/selection concrete internals directly
 lib/src/interaction/interaction_read_port.dart -> may not expose mutation APIs, drafts, CanvasDocument projection, concrete store internals, concrete selection internals, or resource/session internals
 lib/src/interaction/pointer_tool_cleanup_coordinator.dart -> may not import resolver callbacks, EditKernel, repaint buses, Flutter bridge, resource sessions, concrete store internals, or concrete selection internals
 lib/src/frame/**             -> may not import public document projection as paint input
 lib/src/spatial/**           -> may use only typed spatial delta/read ports, not concrete store tables or interaction/frame state
-lib/src/resources/**         -> may not import interaction state
-lib/src/codec/**             -> may not import Flutter widgets or interaction state
+lib/src/resources/**         -> may not import runtime, frame, or interaction state
+lib/src/codec/**             -> may not import runtime, store, edit, frame, Flutter widgets, or interaction state
 lib/src/diagnostics/**       -> may not expose runtime objects, images, closures, or full scene dumps as public diagnostic data
 lib/src/flutter_bridge/**    -> may not import legacy iwb_canvas_engine package
 all lib/**                   -> may not import legacy package or legacy runtime paths

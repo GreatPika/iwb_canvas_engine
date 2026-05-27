@@ -6,7 +6,7 @@ sequenceDiagram
   participant API as Public codec API
   participant Codec as CodecBoundary
   participant Schema as Schema v1 validators
-  participant DTO as CanvasDocument DTO
+  participant DTO as contracts/public CanvasDocument DTO
   participant Diagnostics as DiagnosticsHub
   participant Runtime as RuntimeRoot
   participant Store as DocumentStoreKernel
@@ -46,7 +46,7 @@ sequenceDiagram
 
   alt all decode checks accepted
     Schema-->>Codec: validated v1 document facts with frozen metadata
-    Codec->>DTO: materialize immutable CanvasDocument DTO with CanvasMetadata
+    Codec->>DTO: materialize immutable contract-owned CanvasDocument DTO with CanvasMetadata
     DTO-->>Codec: decoded document
     Codec-->>API: decoded document
     API-->>App: CanvasDocument
@@ -62,7 +62,7 @@ sequenceDiagram
 
   App->>API: encodeCanvasDocument / encodeCanvasDocumentToJson(document)
   API->>Codec: encode request
-  Codec->>Schema: validate public DTO before writing JSON
+  Codec->>Schema: validate contracts/public DTO before writing JSON
 
   alt DTO validation accepts
     Schema-->>Codec: public DTO accepted

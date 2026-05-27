@@ -122,8 +122,9 @@ per-property concrete owner probes. Committed mutations requested by interaction
 still go through `EditKernel`.
 
 Frame capture also uses a narrow intent-specific document boundary.
-`FrameFactsPort` is the accepted committed-state read seam between the
-frame-internal facade and `DocumentStoreKernel`:
+`FrameFactsPort` is owned by `lib/src/contracts/internal/**` and is the
+accepted committed-state read seam between the frame-internal facade and
+`DocumentStoreKernel`:
 
 ```text
 FrameEngine -> FrameFactsPort -> DocumentStoreKernel
@@ -160,12 +161,13 @@ Target ownership boundaries:
 | `StaticBackgroundPlanner` | static background/grid plan and cache identity | selection, preview, resource visual, ordinary element visual identity |
 | `OverlayPreviewPlanner` | immutable overlay primitives admitted from `CapturedOverlayFrame` | selected move rendering, resource resolver reads, cache invalidation, repaint scheduling |
 
-Committed document facts stay store-owned and enter frame code only through
-`FrameFactsPort`. Selection facts stay selection-owned and enter frame code as
-captured selection facts. Preview and view-camera facts stay
-runtime/interaction-owned and are captured at frame boundaries.
-Resolver/cache state stays owned by `SurfaceResourceSession`; among the target
-frame collaborators, only `PaintAssetBindingService` receives that session.
+Committed document facts stay store-owned and enter frame code only through the
+contract-owned `FrameFactsPort`. Selection facts stay selection-owned and enter
+frame code through contract-owned selection fact seams. Preview and view-camera
+facts stay runtime/interaction-owned and are captured at frame boundaries.
+Resolver/cache state stays owned by `SurfaceResourceSession` under
+`lib/src/resources/**`; among the target frame collaborators, only
+`PaintAssetBindingService` receives that session.
 
 `InteractionRequestRegistry` is the interaction-owned registry for issued
 request guard facts, such as the `CanvasInteractionRequestId`, context request
@@ -183,7 +185,7 @@ Composition root:
 ```text
 RuntimeRoot
   ├─ DocumentStoreKernel
-  ├─ FrameFactsPort
+  ├─ FrameFactsPort (contracts/internal seam implemented by runtime/store facts)
   ├─ SelectionKernel
   ├─ EditKernel
   ├─ InteractionEngine

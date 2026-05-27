@@ -25,6 +25,7 @@ void main() {
   });
   group('architecture inventory', () {
     _registerForbiddenEdgeTest();
+    _registerContractLayerForbiddenEdgeTest();
     _registerUnknownSeamTest();
     _registerProductionClosureTest();
   });
@@ -146,6 +147,27 @@ void _registerForbiddenEdgeTest() {
   });
 }
 
+void _registerContractLayerForbiddenEdgeTest() {
+  test('production graph forbidden edges cover contract DAG boundaries', () {
+    final expected = loadExpectedArchitectureGraph();
+    final activeForbiddenEdges = _activeForbiddenEdges(expected);
+    final actual = _withImports(
+      extractActualArchitectureGraph(expectedGraph: expected),
+      _forbiddenEdgeProbeImports(expected, activeForbiddenEdges),
+    );
+    final report = checkPhaseClosure(
+      expected: expected,
+      actual: actual,
+      selectedPhase: 'P6',
+    );
+
+    expect(
+      _ids(report),
+      containsAll(activeForbiddenEdges.map((edge) => edge.id)),
+    );
+  });
+}
+
 void _registerUnknownSeamTest() {
   test('fails unknown architecture seams inside declared coverage', () {
     final report = checkPhaseClosure(
@@ -168,13 +190,13 @@ void _registerUnknownSeamTest() {
 }
 
 void _registerProductionClosureTest() {
-  test('production graph closes selected P4 obligations', () {
+  test('production graph closes selected P6 obligations', () {
     final expected = loadExpectedArchitectureGraph();
     final actual = extractActualArchitectureGraph(expectedGraph: expected);
     final report = checkPhaseClosure(
       expected: expected,
       actual: actual,
-      selectedPhase: 'P4',
+      selectedPhase: 'P6',
     );
 
     expect(_ids(report), isEmpty);
@@ -411,6 +433,66 @@ const _diagnosticRouteCall = MemberCallFact(
 
 Set<String> _ids(PhaseClosureReport report) {
   return report.violations.map((violation) => violation.graphId).toSet();
+}
+
+List<ArchitectureForbiddenEdge> _activeForbiddenEdges(
+  ExpectedArchitectureGraph expected,
+) {
+  return expected.forbiddenEdges.where((edge) {
+    return _fixturePhaseIndex(edge.phaseRequiredBy) <= _fixturePhaseIndex('P6');
+  }).toList();
+}
+
+List<ImportFact> _forbiddenEdgeProbeImports(
+  ExpectedArchitectureGraph expected,
+  List<ArchitectureForbiddenEdge> edges,
+) {
+  final nodes = {for (final node in expected.nodes) node.id: node};
+
+  return [
+    for (final (index, edge) in edges.indexed)
+      ImportFact(
+        path: _samplePathForNode(nodes[edge.from]!),
+        line: index + 1,
+        uri: _samplePathForNode(nodes[edge.to]!),
+      ),
+  ];
+}
+
+String _samplePathForNode(ArchitectureNode node) {
+  final path = _ownerForbiddenProbePaths[node.owner];
+  if (path == null) {
+    throw StateError('Missing forbidden-edge probe path for ${node.owner}');
+  }
+
+  return path;
+}
+
+const _ownerForbiddenProbePaths = {
+  'api': 'lib/src/api/forbidden_probe.dart',
+  'contracts_public': 'lib/src/contracts/public/forbidden_probe.dart',
+  'contracts_internal': 'lib/src/contracts/internal/forbidden_probe.dart',
+  'codec': 'lib/src/codec/forbidden_probe.dart',
+  'diagnostics': 'lib/src/diagnostics/forbidden_probe.dart',
+  'runtime': 'lib/src/runtime/forbidden_probe.dart',
+  'store': 'lib/src/store/forbidden_probe.dart',
+  'selection': 'lib/src/selection/forbidden_probe.dart',
+  'edit': 'lib/src/edit/forbidden_probe.dart',
+  'load_document': 'lib/src/edit/staged_document_load.dart',
+  'resource': 'lib/src/resources/forbidden_probe.dart',
+  'spatial': 'lib/src/geometry/forbidden_probe.dart',
+  'frame': 'lib/src/frame/forbidden_probe.dart',
+  'interaction': 'lib/src/interaction/forbidden_probe.dart',
+  'tools': 'lib/src/tools/forbidden_probe.dart',
+  'surface': 'lib/src/surface/forbidden_probe.dart',
+};
+
+int _fixturePhaseIndex(String phase) {
+  if (!phase.startsWith('P')) {
+    return -1;
+  }
+
+  return int.parse(phase.substring(1));
 }
 
 ExpectedArchitectureGraph _fixtureGraph() {
@@ -655,5 +737,22 @@ ActualArchitectureGraph _actualGraph({
     exceptionThrows: exceptionThrows,
     delegations: delegations,
     memberCalls: memberCalls,
+  );
+}
+
+ActualArchitectureGraph _withImports(
+  ActualArchitectureGraph actual,
+  List<ImportFact> imports,
+) {
+  return ActualArchitectureGraph(
+    exports: actual.exports,
+    imports: [...actual.imports, ...imports],
+    declarations: actual.declarations,
+    implementedInterfaces: actual.implementedInterfaces,
+    compositionFields: actual.compositionFields,
+    placeholders: actual.placeholders,
+    exceptionThrows: actual.exceptionThrows,
+    delegations: actual.delegations,
+    memberCalls: actual.memberCalls,
   );
 }

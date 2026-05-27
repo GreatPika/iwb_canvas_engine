@@ -9,7 +9,7 @@ flowchart LR
     LoadSuccess["Staged load success\ntyped replacement effect"]
     PreviewCleanup["Preview cleanup\nterminal or cancel repaint effect"]
     EmptyOrRollback["Empty touched set or rollback\nno revisions, cache eviction,\nspatial change, repaint, or events"]
-    ResourceDirtyCall["CanvasResourcePort\nmarkResourceDirty / markAllResourcesDirty"]
+    ResourceDirtyCall["contracts/public CanvasResourcePort\nmarkResourceDirty / markAllResourcesDirty"]
     ViewCameraCall["CanvasCameraPort\nsetOffset / panBy"]
     InteractionConfigCall["CanvasInteractionPort\nsetMode / setDrawStyle / setDrawTool /\nsetDrawColor / setPointerPolicy"]
   end
@@ -73,12 +73,12 @@ flowchart LR
     NoProjectionHotPath["No CanvasDocument projection\nin paint, pointer, or hit hot paths"]
   end
 
-  subgraph ResourceRuntime["ResourceKernel / runtime resource dirty orchestration"]
+  subgraph ResourceRuntime["ResourceKernel / contract-owned dirty outcome"]
     ResourceVisualRevision["resourceVisualRevision"]
     ResourceSessionInvalidation["Active session invalidation event\ndescriptor changed or dirty target/all"]
   end
 
-  subgraph Session["SurfaceResourceSession"]
+  subgraph Session["lib/src/resources SurfaceResourceSession"]
     DescriptorCacheEvict["ImageResolveCache eviction\nresource descriptor changed"]
     DirtyResourceEvict["ImageResolveCache eviction\nexplicit dirty target or all"]
   end

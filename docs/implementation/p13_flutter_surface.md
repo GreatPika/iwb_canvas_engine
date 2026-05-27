@@ -15,7 +15,7 @@ store, resolver, or interaction internals.
 - overlay painter
 - synchronous app-owned resource resolver bridge
 - `SurfaceResourceSession` attach, resolver-swap, detach, dispose, and runtime
-  swap lifecycle wiring
+  swap lifecycle wiring through the `lib/src/resources/**` session owner
 - selection/grid style application
 - `interactive=false` pointer routing behavior
 - active routed pointer cancel on `interactive=false`
@@ -99,7 +99,8 @@ store, resolver, or interaction internals.
   runtimes allowed to host independent active surfaces
 - resource resolver app-owned image and no-dispose rules from
   `section_07_resource_lifecycle`
-- surface-owned resource session lifecycle from `section_07_resource_lifecycle`
+- `lib/src/resources/**` surface resource session lifecycle from
+  `section_07_resource_lifecycle`
 - pointer normalization, `interactive=false`, and pending line preservation from
   `section_14_interaction_engine`
 - painter capture, no-live-runtime-read, and opacity/saveLayer policy from
@@ -138,9 +139,10 @@ store, resolver, or interaction internals.
   backed by different runtimes can coexist
 - surface detach, dispose, and runtime swap remove only the runtime listeners
   registered by that surface
-- successful attach creates a `SurfaceResourceSession`, rejected attach creates
-  no session side effects, resolver swap starts a fresh session generation, and
-  detach/dispose/runtime swap drop the session without disposing app-owned images
+- successful attach creates a `SurfaceResourceSession` owned by
+  `lib/src/resources/**`, rejected attach creates no session side effects,
+  resolver swap starts a fresh session generation, and detach/dispose/runtime
+  swap drop the session without disposing app-owned images
 - surface observes `CanvasRuntime.state` as the public runtime change signal and
   does not own or mutate public runtime snapshots
 - surface captures sealed `CanvasPreviewState` variants and routes

@@ -51,9 +51,14 @@ Do not assume:
 ### 7.1 Resource state
 
 `DocumentStoreKernel` owns resource descriptors as part of committed document.
-`ResourceKernel` owns the non-surface resource API and dirty-resource
-orchestration. Each active `CanvasSurface` owns one `SurfaceResourceSession`
-instance for synchronous resolver lifecycle and resolved-image cache state.
+Resource declarations such as `CanvasResource`, `CanvasResourcePort`, and
+`CanvasResourceResolver` live in `lib/src/contracts/public/**`; dirty-resource
+outcomes and resolver mutation guard seams live in
+`lib/src/contracts/internal/**`. `ResourceKernel` owns the non-surface resource
+implementation API and dirty-resource orchestration. Each active
+`CanvasSurface` owns one `SurfaceResourceSession` instance under
+`lib/src/resources/**` for synchronous resolver lifecycle and resolved-image
+cache state.
 
 ```text
 Committed document:
@@ -75,10 +80,11 @@ SurfaceResourceSession:
 ```
 
 Paint/resource resolution receives immutable descriptor snapshots and
-`resourceRevision` through `FrameFactsPort`, which is backed by the committed
-document owner for frame paint. The resource module must not import, read, or
-mutate `DocumentStoreKernel`; it owns session policy, resolver-safe placeholder
-results, and dirty invalidation boundaries through narrow inputs only.
+`resourceRevision` through the `contracts/internal/**` `FrameFactsPort`, which
+is backed by the committed document owner for frame paint. The resource module
+must not import, read, or mutate `DocumentStoreKernel` or `RuntimeRoot`; it owns
+session policy, resolver-safe placeholder results, and dirty invalidation
+boundaries through narrow contract inputs only.
 Ordinary frame planning receives immutable row facts and resource ids needed to
 build records, but it does not receive descriptor snapshots or resolver/session
 APIs. In the target frame split, `PaintAssetBindingService` is the only frame

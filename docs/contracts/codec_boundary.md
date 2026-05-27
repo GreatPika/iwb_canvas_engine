@@ -68,7 +68,7 @@ CanvasDocument decodeCanvasDocumentFromJson(String json);
 10. missing resource reference checks;
 11. layer/node count checks;
 12. metadata validation and deep-freeze into `CanvasMetadata`;
-13. materialize CanvasDocument immutable DTO;
+13. materialize `contracts/public` CanvasDocument immutable DTO;
 14. no runtime/store side effects.
 ```
 
@@ -80,7 +80,7 @@ mutate runtime or store state.
 ### 19.3 Encode algorithm
 
 ```text
-1. validate public DTO;
+1. validate `contracts/public` DTO;
 2. canonicalize default fields;
 3. sort nothing: preserve layer/resource/element order;
 4. uppercase color hex;
@@ -91,8 +91,9 @@ mutate runtime or store state.
 ```
 
 Raw `Map<String, Object?>` values belong to the JSON entry and exit boundary.
-Public metadata-bearing DTOs expose `CanvasMetadata`; the codec is responsible
-for validating and freezing raw metadata before DTO exposure and for projecting
-`CanvasMetadata` back to the schema v1 object shape during encode.
+Public contract metadata-bearing DTOs expose `CanvasMetadata`; the codec imports
+`lib/src/contracts/public/**` declarations directly, validates and freezes raw
+metadata before DTO exposure, and projects `CanvasMetadata` back to the schema
+v1 object shape during encode without importing API facade wrappers.
 
 ---

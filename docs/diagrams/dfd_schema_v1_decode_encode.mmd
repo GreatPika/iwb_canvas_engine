@@ -5,11 +5,16 @@ flowchart LR
   JsonInput["External JSON\nMap or JSON string"]
   JsonOutput["Canonical schema v1 JSON\nMap or JSON string"]
 
-  subgraph PublicAPI["Public API boundary"]
+  subgraph PublicAPI["Public API facade"]
     DecodeEntry["decodeCanvasDocument\nfrom Map or JSON string"]
     EncodeEntry["encodeCanvasDocument\nfrom CanvasDocument DTO"]
     PublicDocument["CanvasDocument DTO\nimmutable public projection\nwith CanvasMetadata"]
     PublicError["CanvasDataException\nsafe code, path, message, details"]
+  end
+
+  subgraph Contracts["contracts/public declarations"]
+    ContractDocument["CanvasDocument DTO\ncontract-owned"]
+    ContractError["CanvasDataException\ncontract-owned"]
   end
 
   subgraph Codec["CodecBoundary"]
@@ -72,7 +77,8 @@ flowchart LR
   ReferenceValidation -->|"known references accepted"| LayerCountValidation
   LayerCountValidation -->|"bounded layer and node counts"| MetadataValidation
   MetadataValidation -->|"validated and frozen metadata facts"| DecodeMaterializer
-  DecodeMaterializer -->|"immutable DTO with CanvasMetadata; no runtime side effects"| PublicDocument
+  DecodeMaterializer -->|"immutable contract DTO with CanvasMetadata; no runtime side effects"| ContractDocument
+  ContractDocument -->|"exported through API wrapper"| PublicDocument
   PublicDocument -->|"decoded result"| App
 
   VersionGate -.->|"not exactly v1"| UnsupportedVersion
@@ -87,7 +93,8 @@ flowchart LR
   UnknownKind -.->|"codec failure"| DiagnosticRecord
   InvalidKnownField -.->|"codec failure"| DiagnosticRecord
   DiagnosticRecord -->|"safe projection only"| Sanitizer
-  Sanitizer -->|"CanvasDataErrorCode, path, bounded details"| PublicError
+  Sanitizer -->|"CanvasDataErrorCode, path, bounded details"| ContractError
+  ContractError -->|"exported through API wrapper"| PublicError
   Sanitizer -.->|"when enabled"| InternalSink
   PublicError -.->|"throw projected error"| App
 

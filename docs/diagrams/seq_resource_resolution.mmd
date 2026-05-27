@@ -11,13 +11,14 @@ sequenceDiagram
   participant Ordinary as OrdinaryPaintPlanner
   participant Supplement as SelectedMoveSupplementPlanner
   participant Assets as PaintAssetBindingService
-  participant Facts as FrameFactsPort
+  participant Facts as contracts/internal FrameFactsPort
   participant Store as DocumentStoreKernel
   participant Session as SurfaceResourceSession
   participant Cache as ImageResolveCache
-  participant Resolver as CanvasResourceResolver
+  participant Resolver as contracts/public CanvasResourceResolver
   participant Painter as Main painter
-  participant Port as CanvasResourcePort
+  participant Port as contracts/public CanvasResourcePort
+  participant Guards as contracts/internal guard seams
   participant State as Public runtime state
   participant Signals as Repaint signals
 
@@ -77,6 +78,7 @@ sequenceDiagram
           Note over Resolver: Resolver reads resource.source as CanvasAppKeyResourceSource.key through public API.
           Note over Session,Resolver: Synchronous app-owned resolver boundary only. No async resolver, file, network, asset-bundle, or engine IO loading.
           opt resolver attempts public runtime mutation
+            Session->>Guards: enter resolver callback and enforce mutation guard
             Resolver->>Runtime: reentrant edit/load/resource dirty/pointer mutation
             Runtime--x Resolver: StateError, mutation rejected without runtime effects
             Note over Runtime,Session: Resolver reentrancy rejection does not mutate document, selection, preview, caches, repaint, or actions.
@@ -109,7 +111,7 @@ sequenceDiagram
     App->>Port: markResourceDirty(resourceId) or markAllResourcesDirty()
     Port->>Runtime: delegate resource dirty signal
     Runtime->>Resources: increment resourceVisualRevision
-    Resources-->>Runtime: resourceVisualRevision and target/all invalidation event
+    Resources-->>Runtime: ResourceDirtyOutcome with resourceVisualRevision and target/all invalidation
     Runtime->>Session: invalidate target resource entries or clear all entries if attached
     Session->>Cache: invalidate entries by resourceId or all
     Runtime->>State: publish CanvasRuntimeState with updated state.revisions.resourceVisual

@@ -20,7 +20,9 @@ external data shapes.
 
 - P0 package and guardrail boundaries are enforced.
 - P1 public API, external-adapter, legacy-ban, and validation checks are green.
-- P2 public DTOs, ids, errors, and validation rules are frozen.
+- P2 public contract DTOs, ids, errors, and validation rules are frozen under
+  `lib/src/contracts/public/**`; `src/api/**` is only the public facade/wrapper
+  surface.
 
 ## Read first
 
@@ -70,7 +72,7 @@ external data shapes.
 - schema v1 field contract from `section_05_schema_v1_contract`
 - metadata remains a schema v1 JSON object on the wire and materializes to
   frozen public `CanvasMetadata` inside DTOs
-- schema and public DTO validation limits from `section_06_validation_limits`,
+- schema and public contract DTO validation limits from `section_06_validation_limits`,
   including `CanvasDiagnosticsVerbose` constructor/schema limit tests
 - codec entrypoint and no-runtime-side-effect contract from `section_19_codec_boundary`
 - diagnostic projection and disabled hot-path policy foundation from
@@ -111,10 +113,10 @@ external data shapes.
 - Letting runtime decode directly from raw JSON would spread boundary validation
   across later phases. P3 keeps external shape validation in `CodecBoundary`.
 - Building runtime materialization here would cross ownership too early. P3
-  stops at immutable public DTOs and validated import drafts.
+  stops at immutable public contract DTOs and validated import drafts.
 
 ## Why this phase belongs here
 
-Runtime store, edit, load, resources, and frame phases all rely on trusted public
-DTOs or validated import drafts. External data validation must be finished before
-those internal owners are implemented.
+Runtime store, edit, load, resources, and frame phases all rely on trusted
+`contracts/public/**` DTOs or validated import drafts. External data validation
+must be finished before those internal owners are implemented.

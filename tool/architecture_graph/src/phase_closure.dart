@@ -3,6 +3,8 @@ import 'architecture_graph.dart';
 
 const _ownerPathPrefixes = {
   'api': ['lib/src/api/', 'lib/iwb_canvas_engine.dart'],
+  'contracts_public': ['lib/src/contracts/public/'],
+  'contracts_internal': ['lib/src/contracts/internal/'],
   'codec': ['lib/src/codec/'],
   'diagnostics': ['lib/src/diagnostics/'],
   'runtime': ['lib/src/runtime/'],

@@ -93,6 +93,8 @@ coverage:
     - lib/iwb_canvas_engine.dart
     - lib/src/api/**
   architectureOwners:
+    - lib/src/contracts/public/**
+    - lib/src/contracts/internal/**
     - lib/src/runtime/**
     - lib/src/codec/**
     - lib/src/diagnostics/**
@@ -153,19 +155,60 @@ nodes:
   - id: api.camera_port
     label: Public camera port
     kind: public_port
-    owner: api
+    owner: contracts_public
     phaseIntroduced: P2
     phaseRequiredBy: P4
     status: required
-    coverageScope: publicSurfaces
+    coverageScope: architectureOwners
     sourceDocs:
       - path: docs/implementation/p2_public_api_v1_freeze.md
       - path: docs/architecture/01_runtime_ownership.md
     evidence:
-      - The public camera port is the API contract, not proof of runtime camera ownership.
+      - The public camera port declaration is contract-owned, not proof of runtime camera ownership.
     actual:
       declarations:
         - CanvasCameraPort
+  - id: contracts.public
+    label: Public contract declarations
+    kind: contract_owner
+    owner: contracts_public
+    phaseIntroduced: P6
+    phaseRequiredBy: P6
+    status: required
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/contracts/public_api_v1.md
+    evidence:
+      - Public DTOs, values, errors, policies, runtime state/config types, and public port interfaces live below the API facade in contracts/public.
+    actual:
+      declarations:
+        - CanvasDocument
+        - CanvasRuntimeState
+        - CanvasResourcePort
+        - CanvasResourceResolver
+        - CanvasDataException
+  - id: contracts.internal_ports
+    label: Internal owner ports and fact contracts
+    kind: contract_owner
+    owner: contracts_internal
+    phaseIntroduced: P6
+    phaseRequiredBy: P6
+    status: required
+    coverageScope: architectureOwners
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/contracts/edit_kernel.md
+      - path: docs/contracts/load_document.md
+      - path: docs/contracts/resources.md
+    evidence:
+      - Internal ports, immutable facts, delivery effects, resource dirty outcomes, and resolver mutation guards are declaration-only contracts shared by implementation owners.
+    actual:
+      declarations:
+        - CommitDeliveryResult
+        - FrameFactsPort
+        - ResourceDirtyOutcome
+        - ResolverMutationGuard
   - id: diagnostics.hub
     label: Diagnostics hub
     kind: diagnostics_owner
@@ -466,6 +509,35 @@ edges:
     actual:
       exports:
         - lib/src/api/canvas_runtime.dart
+  - id: api.public_surface.wrapper_exports_contracts
+    from: api.public_surface
+    to: contracts.public
+    kind: wrapper_export
+    phaseRequiredBy: P6
+    status: required
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/contracts/public_api_v1.md
+    evidence:
+      - API declaration files are compatibility wrappers that re-export public contract declarations.
+    actual:
+      exports:
+        - lib/src/contracts/public/canvas_document.dart
+  - id: contracts.internal_ports.uses_public_contracts
+    from: contracts.internal_ports
+    to: contracts.public
+    kind: contract_dependency
+    phaseRequiredBy: P6
+    status: required
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/contracts/edit_kernel.md
+      - path: docs/contracts/resources.md
+    evidence:
+      - Internal owner facts and delivery seams may depend on public contract IDs and immutable DTO facts while staying independent from implementation owners.
+    actual:
+      imports:
+        - lib/src/contracts/public/canvas_ids.dart
   - id: api.canvas_runtime.composes_runtime_root
     from: api.canvas_runtime
     to: runtime.root
@@ -553,9 +625,9 @@ edges:
         - RuntimeRoot
       delegationMembers:
         - CanvasRuntime.camera
-  - id: codec.schema_v1.uses_public_dto
+  - id: codec.schema_v1.uses_public_contracts
     from: codec.schema_v1
-    to: api.public_surface
+    to: contracts.public
     kind: data_boundary
     phaseRequiredBy: P3
     status: required
@@ -563,10 +635,10 @@ edges:
       - path: docs/contracts/schema_v1.md
       - path: docs/contracts/codec_boundary.md
     evidence:
-      - Schema v1 codec reads and writes public DTOs without runtime side effects.
+      - Schema v1 codec reads and writes public contract DTOs without runtime side effects.
     actual:
       imports:
-        - lib/src/api/canvas_document.dart
+        - lib/src/contracts/public/canvas_document.dart
   - id: codec.schema_v1.failures.report_to_diagnostics
     from: codec.schema_v1
     to: diagnostics.hub
@@ -850,6 +922,567 @@ forbiddenEdges:
       - path: docs/architecture/02_package_boundaries.md
     evidence:
       - Codec boundary must remain independent from runtime composition.
+  - id: runtime.root.forbidden_api_dependency
+    from: runtime.root
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: edit.kernel.forbidden_api_dependency
+    from: edit.kernel
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: store.document_kernel.forbidden_api_dependency
+    from: store.document_kernel
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: selection.kernel.forbidden_api_dependency
+    from: selection.kernel
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: codec.schema_v1.forbidden_api_dependency
+    from: codec.schema_v1
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: diagnostics.hub.forbidden_api_dependency
+    from: diagnostics.hub
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: load_document.pipeline.forbidden_api_dependency
+    from: load_document.pipeline
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: resource.kernel.forbidden_api_dependency
+    from: resource.kernel
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: resource.surface_session.forbidden_api_dependency
+    from: resource.surface_session
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: geometry.spatial_index.forbidden_api_dependency
+    from: geometry.spatial_index
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: frame.renderer.forbidden_api_dependency
+    from: frame.renderer
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: interaction.selection_move.forbidden_api_dependency
+    from: interaction.selection_move
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: draw.tools.forbidden_api_dependency
+    from: draw.tools
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: eraser_text.request.forbidden_api_dependency
+    from: eraser_text.request
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: flutter.surface.forbidden_api_dependency
+    from: flutter.surface
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Implementation owners consume contracts, not API facade wrappers.
+  - id: contracts.public.forbidden_api_dependency
+    from: contracts.public
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend upward on the API facade.
+  - id: contracts.internal_ports.forbidden_api_dependency
+    from: contracts.internal_ports
+    to: api.public_surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend upward on the API facade.
+  - id: contracts.public.forbidden_runtime_dependency
+    from: contracts.public
+    to: runtime.root
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend on implementation owners.
+  - id: contracts.public.forbidden_edit_dependency
+    from: contracts.public
+    to: edit.kernel
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend on implementation owners.
+  - id: contracts.public.forbidden_store_dependency
+    from: contracts.public
+    to: store.document_kernel
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend on implementation owners.
+  - id: contracts.public.forbidden_selection_dependency
+    from: contracts.public
+    to: selection.kernel
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend on implementation owners.
+  - id: contracts.public.forbidden_codec_dependency
+    from: contracts.public
+    to: codec.schema_v1
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend on implementation owners.
+  - id: contracts.public.forbidden_diagnostics_dependency
+    from: contracts.public
+    to: diagnostics.hub
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend on implementation owners.
+  - id: contracts.public.forbidden_resource_kernel_dependency
+    from: contracts.public
+    to: resource.kernel
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend on implementation owners.
+  - id: contracts.public.forbidden_surface_session_dependency
+    from: contracts.public
+    to: resource.surface_session
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend on implementation owners.
+  - id: contracts.public.forbidden_frame_dependency
+    from: contracts.public
+    to: frame.renderer
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend on implementation owners.
+  - id: contracts.public.forbidden_interaction_dependency
+    from: contracts.public
+    to: interaction.selection_move
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend on implementation owners.
+  - id: contracts.public.forbidden_tools_dependency
+    from: contracts.public
+    to: draw.tools
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend on implementation owners.
+  - id: contracts.public.forbidden_spatial_dependency
+    from: contracts.public
+    to: geometry.spatial_index
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend on implementation owners.
+  - id: contracts.public.forbidden_flutter_surface_dependency
+    from: contracts.public
+    to: flutter.surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Contract owners must not depend on implementation owners.
+  - id: contracts.internal_ports.forbidden_runtime_dependency
+    from: contracts.internal_ports
+    to: runtime.root
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Internal contract seams must not depend on implementation owners.
+  - id: contracts.internal_ports.forbidden_edit_dependency
+    from: contracts.internal_ports
+    to: edit.kernel
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Internal contract seams must not depend on implementation owners.
+  - id: contracts.internal_ports.forbidden_store_dependency
+    from: contracts.internal_ports
+    to: store.document_kernel
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Internal contract seams must not depend on implementation owners.
+  - id: contracts.internal_ports.forbidden_selection_dependency
+    from: contracts.internal_ports
+    to: selection.kernel
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Internal contract seams must not depend on implementation owners.
+  - id: contracts.internal_ports.forbidden_codec_dependency
+    from: contracts.internal_ports
+    to: codec.schema_v1
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Internal contract seams must not depend on implementation owners.
+  - id: contracts.internal_ports.forbidden_diagnostics_dependency
+    from: contracts.internal_ports
+    to: diagnostics.hub
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Internal contract seams must not depend on implementation owners.
+  - id: contracts.internal_ports.forbidden_resource_kernel_dependency
+    from: contracts.internal_ports
+    to: resource.kernel
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Internal contract seams must not depend on implementation owners.
+  - id: contracts.internal_ports.forbidden_surface_session_dependency
+    from: contracts.internal_ports
+    to: resource.surface_session
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Internal contract seams must not depend on implementation owners.
+  - id: contracts.internal_ports.forbidden_frame_dependency
+    from: contracts.internal_ports
+    to: frame.renderer
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Internal contract seams must not depend on implementation owners.
+  - id: contracts.internal_ports.forbidden_interaction_dependency
+    from: contracts.internal_ports
+    to: interaction.selection_move
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Internal contract seams must not depend on implementation owners.
+  - id: contracts.internal_ports.forbidden_tools_dependency
+    from: contracts.internal_ports
+    to: draw.tools
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Internal contract seams must not depend on implementation owners.
+  - id: contracts.internal_ports.forbidden_spatial_dependency
+    from: contracts.internal_ports
+    to: geometry.spatial_index
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Internal contract seams must not depend on implementation owners.
+  - id: contracts.internal_ports.forbidden_flutter_surface_dependency
+    from: contracts.internal_ports
+    to: flutter.surface
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Internal contract seams must not depend on implementation owners.
+  - id: resource.kernel.forbidden_runtime_dependency
+    from: resource.kernel
+    to: runtime.root
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/contracts/resources.md
+      - path: docs/implementation/p7_resources_and_images.md
+    evidence:
+      - P7 resource implementation must route runtime-facing collaboration through contract-owned seams instead of importing runtime.
+  - id: resource.kernel.forbidden_frame_dependency
+    from: resource.kernel
+    to: frame.renderer
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/contracts/resources.md
+      - path: docs/implementation/p7_resources_and_images.md
+    evidence:
+      - P7 resource implementation must not depend on frame rendering.
+  - id: resource.surface_session.forbidden_runtime_dependency
+    from: resource.surface_session
+    to: runtime.root
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/contracts/resources.md
+      - path: docs/implementation/p7_resources_and_images.md
+    evidence:
+      - Surface resource sessions are surface/resource-owned and must not import runtime.
+  - id: resource.surface_session.forbidden_frame_dependency
+    from: resource.surface_session
+    to: frame.renderer
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/contracts/resources.md
+      - path: docs/implementation/p7_resources_and_images.md
+    evidence:
+      - Frame code consumes the surface session boundary; the session must not depend back on frame.
+  - id: selection.kernel.forbidden_runtime_dependency
+    from: selection.kernel
+    to: runtime.root
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/architecture/02_package_boundaries.md
+      - path: docs/verification/guardrails.md
+    evidence:
+      - Selection owns selection facts behind contract seams and must not import runtime.
+  - id: codec.schema_v1.forbidden_store_dependency
+    from: codec.schema_v1
+    to: store.document_kernel
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/contracts/codec_boundary.md
+      - path: docs/architecture/02_package_boundaries.md
+    evidence:
+      - Codec must stay a boundary translator and must not depend on store state.
+  - id: codec.schema_v1.forbidden_edit_dependency
+    from: codec.schema_v1
+    to: edit.kernel
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/contracts/codec_boundary.md
+      - path: docs/architecture/02_package_boundaries.md
+    evidence:
+      - Codec must stay a boundary translator and must not depend on edit behavior.
+  - id: codec.schema_v1.forbidden_frame_dependency
+    from: codec.schema_v1
+    to: frame.renderer
+    kind: forbidden_import
+    phaseRequiredBy: P6
+    status: forbidden
+    sourceDocs:
+      - path: docs/contracts/codec_boundary.md
+      - path: docs/architecture/02_package_boundaries.md
+    evidence:
+      - Codec must stay independent from frame rendering.
 views:
   - id: full_architecture
     title: Full architecture graph
@@ -921,9 +1554,13 @@ sourceCoverage:
     graphIds:
       - api.public_surface
       - api.canvas_runtime
+      - contracts.public
+      - contracts.internal_ports
       - flutter.surface
       - api.canvas_runtime.composes_runtime_root
       - api.public_surface.exports_runtime
+      - api.public_surface.wrapper_exports_contracts
+      - contracts.internal_ports.uses_public_contracts
       - flutter.surface.drives_runtime_ports
       - codec.schema_v1.forbidden_runtime_dependency
   - sectionId: section_04_public_api_v1
@@ -944,7 +1581,7 @@ sourceCoverage:
     disposition: graph_obligation
     graphIds:
       - codec.schema_v1
-      - codec.schema_v1.uses_public_dto
+      - codec.schema_v1.uses_public_contracts
   - sectionId: section_06_validation_limits
     disposition: graph_obligation
     graphIds:
@@ -1034,7 +1671,7 @@ sourceCoverage:
     disposition: graph_obligation
     graphIds:
       - codec.schema_v1
-      - codec.schema_v1.uses_public_dto
+      - codec.schema_v1.uses_public_contracts
       - codec.schema_v1.failures.report_to_diagnostics
       - codec.schema_v1.forbidden_runtime_dependency
   - sectionId: section_20_diagnostics_hub
@@ -1048,6 +1685,57 @@ sourceCoverage:
       - release.measurement
       - release_verification
       - actual_vs_expected_diff
+      - runtime.root.forbidden_api_dependency
+      - edit.kernel.forbidden_api_dependency
+      - store.document_kernel.forbidden_api_dependency
+      - selection.kernel.forbidden_api_dependency
+      - codec.schema_v1.forbidden_api_dependency
+      - diagnostics.hub.forbidden_api_dependency
+      - load_document.pipeline.forbidden_api_dependency
+      - resource.kernel.forbidden_api_dependency
+      - resource.surface_session.forbidden_api_dependency
+      - geometry.spatial_index.forbidden_api_dependency
+      - frame.renderer.forbidden_api_dependency
+      - interaction.selection_move.forbidden_api_dependency
+      - draw.tools.forbidden_api_dependency
+      - eraser_text.request.forbidden_api_dependency
+      - flutter.surface.forbidden_api_dependency
+      - contracts.public.forbidden_api_dependency
+      - contracts.internal_ports.forbidden_api_dependency
+      - contracts.public.forbidden_runtime_dependency
+      - contracts.public.forbidden_edit_dependency
+      - contracts.public.forbidden_store_dependency
+      - contracts.public.forbidden_selection_dependency
+      - contracts.public.forbidden_codec_dependency
+      - contracts.public.forbidden_diagnostics_dependency
+      - contracts.public.forbidden_resource_kernel_dependency
+      - contracts.public.forbidden_surface_session_dependency
+      - contracts.public.forbidden_frame_dependency
+      - contracts.public.forbidden_interaction_dependency
+      - contracts.public.forbidden_tools_dependency
+      - contracts.public.forbidden_spatial_dependency
+      - contracts.public.forbidden_flutter_surface_dependency
+      - contracts.internal_ports.forbidden_runtime_dependency
+      - contracts.internal_ports.forbidden_edit_dependency
+      - contracts.internal_ports.forbidden_store_dependency
+      - contracts.internal_ports.forbidden_selection_dependency
+      - contracts.internal_ports.forbidden_codec_dependency
+      - contracts.internal_ports.forbidden_diagnostics_dependency
+      - contracts.internal_ports.forbidden_resource_kernel_dependency
+      - contracts.internal_ports.forbidden_surface_session_dependency
+      - contracts.internal_ports.forbidden_frame_dependency
+      - contracts.internal_ports.forbidden_interaction_dependency
+      - contracts.internal_ports.forbidden_tools_dependency
+      - contracts.internal_ports.forbidden_spatial_dependency
+      - contracts.internal_ports.forbidden_flutter_surface_dependency
+      - resource.kernel.forbidden_runtime_dependency
+      - resource.kernel.forbidden_frame_dependency
+      - resource.surface_session.forbidden_runtime_dependency
+      - resource.surface_session.forbidden_frame_dependency
+      - selection.kernel.forbidden_runtime_dependency
+      - codec.schema_v1.forbidden_store_dependency
+      - codec.schema_v1.forbidden_edit_dependency
+      - codec.schema_v1.forbidden_frame_dependency
   - sectionId: section_23_tests
     disposition: non_graph_semantics
     reason: Test inventory completeness is executable proof coverage, not an architecture graph topology fact.

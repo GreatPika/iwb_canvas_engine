@@ -10,22 +10,23 @@ load have established rollback-safe mutation and replacement boundaries.
 
 - `ResourceKernel`
 - `SurfaceResourceSession`
-- `CanvasResourceId` runtime support from the P2 API
+- `CanvasResourceId` and resource DTO support from `contracts/public/**`
 - `CanvasResourceSource.appKey` only, publicly readable as
   `CanvasAppKeyResourceSource.key`
 - resource descriptor mutation only inside `CanvasEdit`
 - image resource and image element lifecycle
 - `markResourceDirty`
 - `markAllResourcesDirty`
-- resource visual public state revision effects without document revision changes
+- resource visual public state revision effects through contract-owned
+  `ResourceDirtyOutcome` without document revision changes
 - synchronous app-owned image resolver bridge
 - surface-scoped image resolve cache keyed by resolverGeneration, resource id,
   and resource revision
 - missing/null resolve results suppressed per frame by resource id and resource
   revision and resolverGeneration, without durable null/missing cache writes
 - resolver frame budget with bounded placeholders and no null/missing cache write
-- resolver reentrancy guard rejecting public runtime mutation from inside the
-  resolver
+- resolver reentrancy guard through contract-owned `ResolverMutationGuard`,
+  rejecting public runtime mutation from inside the resolver
 - no engine IO
 - no asset-bundle loading
 - no file loading
@@ -33,9 +34,11 @@ load have established rollback-safe mutation and replacement boundaries.
 
 ## Dependencies on earlier phases
 
-- P2 public resource API is frozen.
+- P2 public resource API is frozen and its declarations are owned by
+  `contracts/public/**`.
 - P3 resource schema and validation are implemented.
-- P4 runtime spine owns resource descriptors and revisions.
+- P4 runtime spine exposes descriptor facts through `contracts/internal/**`
+  seams; P7 must not import runtime to read them.
 - P5 edit core provides rollback-safe resource mutations.
 - P6 load replacement invalidates resource state correctly.
 
@@ -99,6 +102,14 @@ load have established rollback-safe mutation and replacement boundaries.
 ## Exit gate
 
 - resource descriptor mutation is rollback-safe
+- `ResourceKernel` owns resource/session implementation under
+  `lib/src/resources/**`, while resource DTOs and `CanvasResourcePort` remain in
+  `contracts/public/**`
+- dirty-resource outcomes are carried by `ResourceDirtyOutcome` and resolver
+  reentrancy is rejected through `ResolverMutationGuard`, both owned by
+  `contracts/internal/**`
+- descriptor facts that later frame code needs are exposed through the
+  `contracts/internal/**` `FrameFactsPort`, not by importing runtime or frame
 - resource dirty publishes `state.revisions.resourceVisual` and schedules main
   repaint intent without document revision
 - target resource dirty evicts the target active-session image cache entry and
@@ -106,11 +117,14 @@ load have established rollback-safe mutation and replacement boundaries.
 - mark-all resource dirty clears the active-session image cache
 - resolver image results are app-owned and not disposed by engine
 - the P7 resource/session surface exposes image resolution only through
-  SurfaceResourceSession; later frame and widget wiring must keep that boundary
+  `SurfaceResourceSession`; later frame and widget wiring must keep that
+  `lib/src/resources/**` boundary
 - resolver swap, detach, dispose, and runtime swap cannot reuse stale session cache entries
 - missing/null resolver results do not retry in the same frame
 - resolver frame budget produces bounded placeholders and no invalid cache write
-- resolver reentrancy is rejected without runtime effects
+- resolver reentrancy is rejected through the contract-owned guard seam with no
+  resource visual revision, no public state publication, no action/effect
+  emission, and no runtime mutation
 - resource surface matches the v1 appKey/synchronous image contract.
 
 ## Risks and trade-offs

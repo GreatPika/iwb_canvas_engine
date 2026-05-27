@@ -9,7 +9,7 @@ flowchart LR
     ProjectionCache["DocumentProjectionCache\nreadDocument/codec/tests only"]
   end
 
-  subgraph FrameFactsPort["FrameFactsPort"]
+  subgraph FrameFactsPort["contracts/internal FrameFactsPort"]
     CommittedFrameFacts["Committed frame facts\ndocument/structural/bounds/\nelementVisual/background/grid revisions"]
     RowSnapshots["Committed row snapshots\nstale structuralRevision/generation/orderToken rejected"]
     DescriptorFacts["Descriptor facts\nresourceId + appKey descriptor + resourceRevision"]
@@ -36,7 +36,7 @@ flowchart LR
     ShiftedCandidates["Selected supplement candidates\nquery shifted by -previewDelta\nwith order tokens"]
   end
 
-  subgraph Resources["SurfaceResourceSession"]
+  subgraph Resources["lib/src/resources SurfaceResourceSession"]
     ResolvePaintAsset["Resolve paint asset\nsession resolver boundary"]
     ImageResolveCache["ImageResolveCache\nresolverGeneration + resourceId + resourceRevision"]
     ResolverFrameBudget["Resolver frame budget\nkMaxSyncResourceResolverCallsPerFrame = 128"]
@@ -152,6 +152,6 @@ flowchart LR
 
   MainPainter -.->|"forbidden"| LiveReadBlocked
   MainPainter -.->|"forbidden ordinary opacity path"| ExplicitLayerEffect
-  LiveReadBlocked -.->|"no DocumentStore, SpatialKernel,\nInteractionEngine, or Public API reads"| MainPainter
+  LiveReadBlocked -.->|"no DocumentStore, SpatialKernel,\nInteractionEngine, or Public API facade reads"| MainPainter
   Capture -.->|"forbidden in paint hot path"| ProjectionBlocked
   ProjectionCache -.->|"not read by main paint"| ProjectionBlocked

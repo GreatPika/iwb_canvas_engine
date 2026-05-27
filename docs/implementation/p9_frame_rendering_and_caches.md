@@ -34,9 +34,10 @@ frame output.
   deltas excluded from ordinary paint-plan keys and cached ordinary records
 - no live runtime read in painters
 - no `CanvasDocument` projection in paint
-- resource image resolution only through `SurfaceResourceSession`
+- resource image resolution only through `SurfaceResourceSession` owned by
+  `lib/src/resources/**`
 - committed frame facts, row snapshot resolution, and descriptor snapshot
-  lookup only through `FrameFactsPort`
+  lookup only through `FrameFactsPort` owned by `contracts/internal/**`
 - ordinary opacity through primitive paint alpha, not implicit `Canvas.saveLayer`.
 
 ## Target FrameEngine internal split
@@ -88,11 +89,12 @@ without exposing frame collaborators through the package barrel. At minimum:
 ## Dependencies on earlier phases
 
 - P4 runtime spine provides committed tables, projection guardrails, revisions,
-  and `FrameFactsPort` for frame-facing committed facts.
+  and the `contracts/internal/**` `FrameFactsPort` for frame-facing committed
+  facts.
 - P4 runtime spine provides selection-owner facts through immutable query ports.
 - P5 edit core emits typed repaint and invalidation effects.
-- P7 resources provide the `SurfaceResourceSession` boundary and image resolve
-  cache behavior.
+- P7 resources provide the `lib/src/resources/**` `SurfaceResourceSession`
+  boundary and image resolve cache behavior.
 - P8 geometry/spatial provides paint bounds, admission, and candidate lookup.
 
 ## Read first

@@ -1,8 +1,11 @@
 flowchart TB
-  Public[lib/iwb_canvas_engine.dart exports src/api] --> RuntimeRoot
+  Public[lib/iwb_canvas_engine.dart exports src/api wrappers] --> API[lib/src/api facade]
+  API --> ContractsPublic[contracts/public declarations]
+  ContractsInternal[contracts/internal owner seams] --> ContractsPublic
+  API --> RuntimeRoot
   Surface["CanvasSurface public widget\none active surface per RuntimeRoot"] --> RuntimeRoot
   RuntimeRoot --> Store[DocumentStoreKernel]
-  RuntimeRoot --> FrameFacts[FrameFactsPort]
+  RuntimeRoot --> FrameFacts[contracts/internal FrameFactsPort]
   RuntimeRoot --> Selection[SelectionKernel]
   RuntimeRoot --> Edit[EditKernel]
   RuntimeRoot --> InteractionEngine

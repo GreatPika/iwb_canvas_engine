@@ -8,7 +8,9 @@ errors, validation rules, and equality semantics.
 
 ## Build scope
 
-- all `src/api` DTOs implemented
+- public DTOs implemented and, after the Step 38 architecture repair, owned by
+  `lib/src/contracts/public/**` with `src/api/**` kept as facade/wrapper-export
+  compatibility files
 - `CanvasMetadata` implemented as the public metadata value object for
   metadata-bearing DTOs
 - P1 public API, external-adapter, legacy-ban, and validation checks are green
@@ -157,6 +159,6 @@ errors, validation rules, and equality semantics.
 
 ## Why this phase belongs here
 
-All runtime phases consume public DTOs, updates, ports, ids, events, and errors.
-They need stable public contracts before internal state or feature behavior is
-implemented.
+All runtime phases consume `contracts/public/**` DTOs, updates, ports, ids,
+events, and errors through stable public contracts. `src/api/**` remains the
+package facade/wrapper layer, not the implementation type library.

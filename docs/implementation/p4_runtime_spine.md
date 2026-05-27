@@ -101,9 +101,9 @@ without bypassing ownership.
 - `readDocument` projection matches committed DTO state
 - projection lazy counters pass
 - store public document state is projection-only
-- later owners can obtain committed facts only through narrow immutable query
-  ports, including `FrameFactsPort` for frame capture, row resolution, and
-  descriptor snapshots, not concrete store tables
+- later owners can obtain committed facts only through narrow immutable
+  `contracts/internal/**` query ports, including `FrameFactsPort` for frame
+  capture, row resolution, and descriptor snapshots, not concrete store tables
 - later owners can obtain selection facts only through narrow immutable query
   ports, not concrete selection-owner internals
 - `test/store/no_projection_hot_path_test.dart` passes.

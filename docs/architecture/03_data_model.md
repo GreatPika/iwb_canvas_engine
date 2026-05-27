@@ -161,11 +161,11 @@ grid, style-only, or runtime view-camera facts; background/grid and runtime
 view-camera changes repaint frame surfaces but must not invalidate ordinary
 committed element paint plans.
 
-Frame-facing committed revision facts enter `FrameEngine` through
-`FrameFactsPort`. `DocumentStoreKernel` remains the owner of revision state,
-resource descriptors, compact row tables, and projection policy; the port only
-returns immutable committed facts needed for frame capture, stale row rejection,
-and descriptor snapshot lookup.
+Frame-facing committed revision facts enter `FrameEngine` through the
+`contracts/internal/**` `FrameFactsPort`. `DocumentStoreKernel` remains the
+owner of revision state, resource descriptors, compact row tables, and
+projection policy; the port only returns immutable committed facts needed for
+frame capture, stale row rejection, and descriptor snapshot lookup.
 
 No-op edit does not change revisions. Preview cleanup increments
 `previewRevision` only when it clears or replaces existing preview state; a
@@ -180,8 +180,9 @@ without changing document revision. Preview-producing pointer changes increment
 `state.revisions.resourceVisual`. That public dirty-resource domain is a repaint
 observation signal; per-surface image resolution uses explicit target/all
 session invalidation instead of deriving cache identity from the public
-revision. `resourceVisualRevision` is runtime resource state owned by
-ResourceKernel/RuntimeRoot orchestration, not committed document store state.
+revision. `resourceVisualRevision` is runtime resource state coordinated by
+`ResourceKernel` and `RuntimeRoot` through contract-owned dirty-resource
+outcomes, not committed document store state.
 
 After `CanvasRuntime.dispose()` returns, `state` is a terminal read handle.
 `state.value` remains readable and exposes the final runtime snapshot. Dispose

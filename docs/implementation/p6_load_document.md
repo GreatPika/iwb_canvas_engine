@@ -25,9 +25,9 @@ and keep failed loads from interrupting existing runtime or interaction state.
   gesture state unchanged
 - replacement uses one atomic runtime/applier boundary and includes selection
   clear as a selection-owner effect.
-- replacement validation consumes public DTOs with frozen `CanvasMetadata` and
-  unmodifiable collection ownership; invalid metadata construction or projection
-  data fails before interaction interruption.
+- replacement validation consumes `contracts/public/**` DTOs with frozen
+  `CanvasMetadata` and unmodifiable collection ownership; invalid metadata
+  construction or projection data fails before interaction interruption.
 
 ## Dependencies on earlier phases
 

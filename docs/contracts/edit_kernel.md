@@ -88,24 +88,19 @@ sequenceDiagram
   EK-->>Caller: return callback result
 ```
 
-`CommitApplier` returns an immutable `CommitApplyResult` after document and
-selection effects have both installed. The result is the runtime/applier seam:
-it carries the public-state publication decision and the immutable typed
-post-install `CommitEffect` list selected by the accepted `CommitPlan`.
-`CommitPlan.effects` alone does not satisfy P5 effect-delivery closure; a
-successful edit must carry those effects across the apply-result boundary after
-atomic install.
+`CommitApplier` returns the contract-owned immutable commit delivery payloads
+after document and selection effects have both installed. The runtime/applier
+seam lives in `lib/src/contracts/internal/commit_delivery.dart`: it carries the
+public-state publication decision and immutable typed post-install delivery
+effects selected by the accepted edit plan, without exposing edit-owned
+`TouchedSet`, store revision deltas, or API facade wrappers.
 
 `EditKernel` closes and stales the active edit handle, clears the active-session
 state, and only then asks `RuntimeRoot` to consume the accepted apply result.
 `RuntimeRoot` publishes the public state snapshot first when the result requires
 publication, then invokes the internal synchronous observer seam. The observer
-type is owned by `lib/src/runtime/commit_effect_observer.dart` and has this
-exact signature:
-
-```dart
-typedef CommitEffectObserver = void Function(List<CommitEffect> effects);
-```
+typedef and delivery payloads are owned by `contracts/internal/**`, while edit
+keeps planning and install details private.
 
 Empty effect lists are not delivered. Observer failures are contained
 post-commit notification failures: they do not roll back accepted document,

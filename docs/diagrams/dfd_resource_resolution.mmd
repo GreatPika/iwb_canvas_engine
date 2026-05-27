@@ -5,9 +5,14 @@ flowchart LR
   Surface["CanvasSurface\npaint host with resourceResolver"]
   AppResolver["CanvasResourceResolver.resolveImage\nsynchronous app boundary"]
 
-  subgraph PublicAPI["Public API"]
+  subgraph PublicAPI["Public API facade"]
     EditCall["CanvasEdit mutation\nupsert/remove resource descriptors"]
     DirtyCall["CanvasResourcePort\nmarkResourceDirty / markAllResourcesDirty"]
+  end
+
+  subgraph Contracts["Contract seams"]
+    PublicResourceContracts["contracts/public\nCanvasResource, CanvasResourcePort,\nCanvasResourceResolver"]
+    InternalResourceContracts["contracts/internal\nResourceDirtyOutcome,\nResolverMutationGuard, FrameFactsPort"]
   end
 
   subgraph Runtime["RuntimeRoot"]
@@ -104,6 +109,8 @@ flowchart LR
 
   App -->|"external image contents changed"| DirtyCall
   DirtyCall -->|"delegate dirty signal"| ResourceDirtyDispatch
+  DirtyCall -->|"declared by"| PublicResourceContracts
+  ResourceDirtyDispatch -->|"ResourceDirtyOutcome"| InternalResourceContracts
   ResourceDirtyDispatch -->|"increment ResourceKernel visual revision only"| ResourceVisualSignal
   ResourceVisualSignal -->|"publish public resource visual domain"| ResourceVisualState
   ResourceVisualState -->|"public runtime state domain"| RuntimeStateRevision
