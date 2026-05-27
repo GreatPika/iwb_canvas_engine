@@ -239,16 +239,17 @@ implementation imports in the same unit. For edit/runtime commit delivery,
 create one explicit contract-owned delivery seam, for example
 `lib/src/contracts/internal/commit_delivery.dart`, containing
 `CommitDeliveryResult`, sealed `CommitDeliveryEffect`,
-`CommitDeliveryTouchedFacts`, `CommitEffectObserver`, and
-`CommitApplyResultDelivery`. `CommitDeliveryResult` carries only
+`CommitEffectObserver`, and `CommitApplyResultDelivery`. Move the immutable
+`TouchedSet` value into `contracts/internal/**` as the single touched-fact
+source used by edit plans and runtime delivery effects.
+`CommitDeliveryResult` carries only
 `shouldPublishState`, `replacedDocument`, and immutable
-`List<CommitDeliveryEffect>`. `CommitDeliveryTouchedFacts` carries only
-contract/public IDs and booleans needed by spatial/resource delivery effects;
-it must not expose `TouchedSet` or store revision state. Edit maps its private
-`TouchedSet` and `StoreRevisionDelta` into these delivery payloads at the
-runtime delivery boundary. Keep edit-local planning and store-install internals
+`List<CommitDeliveryEffect>`. `TouchedSet` carries only contract/public IDs and
+booleans needed by spatial/resource delivery effects; it must not expose store
+revision state or callbacks. Edit keeps its mutable `TouchedSetBuilder` and
+`StoreRevisionDelta` private. Keep edit-local planning and store-install internals
 owned by their current implementation owners: `CommitPlan`, `CommitInstaller`,
-`CommitDocumentInstallers`, `CommitApplier`, `TouchedSet`, and
+`CommitDocumentInstallers`, `CommitApplier`, `TouchedSetBuilder`, and
 `StoreRevisionDelta` do not move to contracts and must not be referenced by
 `contracts/internal/**`. Create the minimal contract-owned P7 handoff seams in
 `contracts/internal/**` without implementing P7 behavior: a resource dirty
@@ -287,8 +288,8 @@ prints no matches after those seams move to contracts. `rg -n "\\.\\./edit/(comm
 prints no matches; any remaining `runtime -> edit` imports must be limited to
 the allowed runtime composition path and must not make `contracts/**` import
 edit/store planning types.
-`rg -n "CommitPlan|CommitInstaller|CommitDocumentInstallers|CommitApplier|TouchedSet|StoreRevisionDelta|store_revision_delta|touched_set|lib/src/api|package:iwb_canvas_engine/src/api|\\.\\./api/" lib/src/contracts/internal`
-prints no matches. `rg -n "class CommitDeliveryResult|sealed class CommitDeliveryEffect|class CommitDeliveryTouchedFacts|typedef CommitEffectObserver|typedef CommitApplyResultDelivery" lib/src/contracts/internal`
+`rg -n "CommitPlan|CommitInstaller|CommitDocumentInstallers|CommitApplier|TouchedSetBuilder|StoreRevisionDelta|store_revision_delta|lib/src/api|package:iwb_canvas_engine/src/api|\\.\\./api/" lib/src/contracts/internal`
+prints no matches. `rg -n "class CommitDeliveryResult|sealed class CommitDeliveryEffect|final class TouchedSet|typedef CommitEffectObserver|typedef CommitApplyResultDelivery" lib/src/contracts/internal`
 shows the explicit commit delivery seam declarations.
 `rg -n "class ResourceDirtyOutcome|abstract interface class ResolverMutationGuard|runResolverCallback|ensureRuntimeMutationAllowed" lib/src/contracts/internal`
 shows the explicit declaration-only P7 handoff seams.
@@ -304,9 +305,9 @@ prints no matches, proving the migration did not leave internal shim exports.
 internal seam declarations named above are value-only or interface/typedef-only
 contracts with no implementation-owner imports, callbacks only where the
 existing seam is explicitly a callback seam, and no store/selection/runtime
-state reads hidden behind getters. The same test proves
-`CommitDeliveryTouchedFacts` is immutable and contains no `TouchedSet`,
-`StoreRevisionDelta`, lazy owner reads, or callback/function fields, and that
+state reads hidden behind getters. The same test proves `TouchedSet` is
+immutable and contains no `StoreRevisionDelta`, lazy owner reads, or
+callback/function fields, and that
 `ResourceDirtyOutcome` and `ResolverMutationGuard` are declaration-only P7
 handoff seams with no P7 resource runtime implementation. Run
 `dart test test/codec/decode_encode_no_runtime_side_effects_test.dart`,

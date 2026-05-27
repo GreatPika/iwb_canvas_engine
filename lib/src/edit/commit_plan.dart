@@ -1,5 +1,5 @@
+import '../contracts/internal/touched_set.dart';
 import '../store/store_revision_delta.dart';
-import 'touched_set.dart';
 
 final class CommitPlan {
   CommitPlan({

@@ -102,24 +102,34 @@ void _testExportFixtureEdges() {
 }
 
 void _testRootBarrelFixtureEdges() {
-  test(
-    'implementation owners cannot use the root barrel as a type library',
-    () {
-      final packageImport = checkOwnerDagFile(
-        path: 'lib/src/runtime/bad_root_barrel.dart',
-        content: "import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';\n",
-      );
-      final relativeImport = checkOwnerDagFile(
-        path: 'lib/src/runtime/bad_root_barrel.dart',
-        content: "import '../../iwb_canvas_engine.dart';\n",
-      );
+  test('owner files cannot use the root barrel as a type library', () {
+    final packageImport = checkOwnerDagFile(
+      path: 'lib/src/runtime/bad_root_barrel.dart',
+      content: "import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';\n",
+    );
+    final relativeImport = checkOwnerDagFile(
+      path: 'lib/src/runtime/bad_root_barrel.dart',
+      content: "import '../../iwb_canvas_engine.dart';\n",
+    );
 
-      expect(packageImport, hasLength(1));
-      expect(packageImport.single.guardrailId, ownerDagGuardrailId);
-      expect(relativeImport, hasLength(1));
-      expect(relativeImport.single.guardrailId, ownerDagGuardrailId);
-    },
-  );
+    final apiPackageImport = checkOwnerDagFile(
+      path: 'lib/src/api/bad_root_barrel.dart',
+      content: "import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';\n",
+    );
+    final apiRelativeImport = checkOwnerDagFile(
+      path: 'lib/src/api/bad_root_barrel.dart',
+      content: "import '../../iwb_canvas_engine.dart';\n",
+    );
+
+    expect(packageImport, hasLength(1));
+    expect(packageImport.single.guardrailId, ownerDagGuardrailId);
+    expect(relativeImport, hasLength(1));
+    expect(relativeImport.single.guardrailId, ownerDagGuardrailId);
+    expect(apiPackageImport, hasLength(1));
+    expect(apiPackageImport.single.guardrailId, ownerDagGuardrailId);
+    expect(apiRelativeImport, hasLength(1));
+    expect(apiRelativeImport.single.guardrailId, ownerDagGuardrailId);
+  });
 }
 
 void _testPackageDotSegmentFixtureEdges() {

@@ -19,25 +19,30 @@ void _testCommitDeliveryShape() {
   test('commit delivery is value-only and hides edit/store internals', () {
     final source = _contractSource('commit_delivery.dart');
     final unit = _parse(source);
+    final touchedSet = _parse(_contractSource('touched_set.dart'));
 
     expect(
       _topLevelNames(unit),
       containsAll([
         'CommitDeliveryResult',
         'CommitDeliveryEffect',
-        'CommitDeliveryTouchedFacts',
         'CommitEffectObserver',
         'CommitApplyResultDelivery',
       ]),
     );
-    expect(source, isNot(contains('TouchedSet')));
+    expect(_topLevelNames(touchedSet), contains('TouchedSet'));
+    expect(source, contains('final TouchedSet touchedSet'));
+    expect(source, isNot(contains('CommitDeliveryTouchedFacts')));
     expect(source, isNot(contains('StoreRevisionDelta')));
 
     _expectOnlyFinalFields(unit, 'CommitDeliveryResult');
-    _expectOnlyFinalFields(unit, 'CommitDeliveryTouchedFacts');
-    _expectNoFunctionFields(unit, 'CommitDeliveryTouchedFacts');
+    _expectOnlyFinalFields(touchedSet, 'TouchedSet');
+    _expectNoFunctionFields(touchedSet, 'TouchedSet');
     expect(source, contains('effects = List.unmodifiable(effects)'));
-    expect(source, contains('Set.unmodifiable(addedElementIds)'));
+    expect(
+      _contractSource('touched_set.dart'),
+      contains('Set.unmodifiable(addedElementIds)'),
+    );
   });
 }
 
@@ -128,8 +133,8 @@ void _testInternalContractsDoNotImportImplementationOwners() {
   test('internal contracts do not import API or implementation owners', () {
     final forbidden = RegExp(
       r"(\.\./api/|package:iwb_canvas_engine/src/api|"
-      r"\.\./(runtime|edit|store|selection|codec|diagnostics|resources|frame|interaction|spatial|flutter_bridge)/|"
-      r"package:iwb_canvas_engine/src/(runtime|edit|store|selection|codec|diagnostics|resources|frame|interaction|spatial|flutter_bridge))",
+      r"\.\./(runtime|edit|store|selection|codec|diagnostics|resources|frame|interaction|geometry|flutter_bridge)/|"
+      r"package:iwb_canvas_engine/src/(runtime|edit|store|selection|codec|diagnostics|resources|frame|interaction|geometry|flutter_bridge))",
     );
 
     for (final file in Directory('lib/src/contracts/internal').listSync()) {

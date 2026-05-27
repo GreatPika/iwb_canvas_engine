@@ -1,7 +1,7 @@
+import '../contracts/internal/touched_set.dart';
 import '../contracts/public/canvas_element.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_plan.dart';
-import 'touched_set.dart';
 
 final class CommitCompiler {
   const CommitCompiler();

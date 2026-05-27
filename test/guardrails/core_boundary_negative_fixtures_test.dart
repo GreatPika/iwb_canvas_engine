@@ -82,12 +82,12 @@ const _fixtures = [
     guardrailIds: ['core.import_boundaries'],
   ),
   _Fixture(
-    path: 'lib/src/spatial/bad_store_import.dart',
+    path: 'lib/src/geometry/bad_store_import.dart',
     content: "import '../store/document_store_kernel.dart';",
     guardrailIds: ['core.import_boundaries'],
   ),
   _Fixture(
-    path: 'lib/src/spatial/bad_interaction_import.dart',
+    path: 'lib/src/geometry/bad_interaction_import.dart',
     content: "import '../interaction/interaction_engine.dart';",
     guardrailIds: ['core.import_boundaries'],
   ),

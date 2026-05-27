@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../contracts/internal/touched_set.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_element_update.dart';
@@ -15,7 +16,7 @@ import '../store/store_revision_delta.dart';
 import 'commit_compiler.dart';
 import 'commit_plan.dart';
 import 'staged_document_load.dart';
-import 'touched_set.dart';
+import 'touched_set_builder.dart';
 
 // The draft boundary directly names the public DTOs it can mutate so rollback
 // admission remains auditable in one owner instead of being split into sync

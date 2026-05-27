@@ -474,7 +474,6 @@ const _boundaryRules = [
       'lib/src/interaction/',
       'lib/src/resources/',
       'lib/src/diagnostics/',
-      'lib/src/spatial/',
       'lib/src/geometry/',
       'lib/src/flutter_bridge/',
     ],
@@ -570,7 +569,7 @@ const _boundaryRules = [
   ),
   _BoundaryRule(
     guardrailId: 'core.import_boundaries',
-    owner: 'lib/src/spatial/',
+    owner: 'lib/src/geometry/',
     forbiddenTargets: [
       'lib/src/store/',
       'lib/src/interaction/',

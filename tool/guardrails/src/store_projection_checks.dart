@@ -115,7 +115,7 @@ bool _isRuntimeOrStorePath(String path) {
 bool _isFutureProjectionHotPath(String path) {
   return path.startsWith('lib/src/frame/') ||
       path.startsWith('lib/src/interaction/') ||
-      path.startsWith('lib/src/spatial/');
+      path.startsWith('lib/src/geometry/');
 }
 
 List<GuardrailViolation> _publicDocumentFieldViolations(

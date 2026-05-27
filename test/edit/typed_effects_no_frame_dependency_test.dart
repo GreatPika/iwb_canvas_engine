@@ -168,7 +168,7 @@ bool _isForbiddenOwnerName(String name) {
 
 const _forbiddenRelativeImports = {
   '../frame/',
-  '../spatial/',
+  '../geometry/',
   '../resources/',
   '../interaction/',
   '../surface/',
@@ -176,7 +176,7 @@ const _forbiddenRelativeImports = {
 
 const _forbiddenLibraryFragments = {
   '/src/frame/',
-  '/src/spatial/',
+  '/src/geometry/',
   '/src/resources/',
   '/src/interaction/',
   '/src/surface/',

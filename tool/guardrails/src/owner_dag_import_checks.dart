@@ -74,37 +74,64 @@ List<GuardrailViolation> ownerDagViolationsForFile({
   final violations = <GuardrailViolation>[];
   for (final directive in unit.directives) {
     for (final reference in _directiveReferences(directive)) {
-      final target = _targetPath(path, reference.uri);
-      final targetOwner = target == null ? null : ownerForPath(target);
-      if (target == null || targetOwner == null) {
-        continue;
-      }
-
-      final query = OwnerEdgeQuery(
-        sourcePath: path,
+      final violation = _ownerDagViolationForReference(
+        path: path,
         sourceOwner: sourceOwner,
-        targetPath: target,
-        targetOwner: targetOwner,
-        directiveKind: reference.kind,
+        reference: reference,
       );
-      if (_isAllowedOwnerEdge(query)) {
-        continue;
+      if (violation != null) {
+        violations.add(violation);
       }
-
-      violations.add(
-        GuardrailViolation(
-          guardrailId: ownerDagGuardrailId,
-          path: path,
-          message:
-              '${sourceOwner.name} owner may not reference '
-              '${targetOwner.name} owner through ${reference.kind} '
-              '${reference.uri}',
-        ),
-      );
     }
   }
 
   return violations;
+}
+
+GuardrailViolation? _ownerDagViolationForReference({
+  required String path,
+  required Owner sourceOwner,
+  required ({String kind, String uri}) reference,
+}) {
+  final target = _targetPath(path, reference.uri);
+  final targetOwner = target == null ? null : ownerForPath(target);
+  if (target == null || targetOwner == null) {
+    return null;
+  }
+  if (_isApiFacadeRootBarrelReference(path, target)) {
+    return GuardrailViolation(
+      guardrailId: ownerDagGuardrailId,
+      path: path,
+      message:
+          'api facade files may not import the package root barrel '
+          'through ${reference.kind} ${reference.uri}',
+    );
+  }
+
+  final query = OwnerEdgeQuery(
+    sourcePath: path,
+    sourceOwner: sourceOwner,
+    targetPath: target,
+    targetOwner: targetOwner,
+    directiveKind: reference.kind,
+  );
+  if (_isAllowedOwnerEdge(query)) {
+    return null;
+  }
+
+  return GuardrailViolation(
+    guardrailId: ownerDagGuardrailId,
+    path: path,
+    message:
+        '${sourceOwner.name} owner may not reference '
+        '${targetOwner.name} owner through ${reference.kind} '
+        '${reference.uri}',
+  );
+}
+
+bool _isApiFacadeRootBarrelReference(String sourcePath, String targetPath) {
+  return sourcePath.startsWith('lib/src/api/') &&
+      targetPath == 'lib/iwb_canvas_engine.dart';
 }
 
 Iterable<({String kind, String uri})> _directiveReferences(

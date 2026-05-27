@@ -16,6 +16,7 @@ import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/load_interaction_boundary.dart';
 import '../contracts/internal/selection_facts_port.dart';
 import '../contracts/internal/selection_membership_port.dart';
+import '../contracts/internal/touched_set.dart';
 import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_diagnostics.dart';
 import '../contracts/public/canvas_document.dart';
@@ -442,12 +443,8 @@ void _ignoreCommitEffects(List<CommitDeliveryEffect> _) {}
 List<CommitDeliveryEffect> _loadEffects({required bool didClearSelection}) {
   return List.unmodifiable([
     const ProjectionDeliveryEffect(),
-    SpatialDeliveryEffect(
-      touchedFacts: CommitDeliveryTouchedFacts(documentReplaced: true),
-    ),
-    ResourceDeliveryEffect(
-      touchedFacts: CommitDeliveryTouchedFacts(documentReplaced: true),
-    ),
+    SpatialDeliveryEffect(touchedSet: TouchedSet(documentReplaced: true)),
+    ResourceDeliveryEffect(touchedSet: TouchedSet(documentReplaced: true)),
     const RepaintDeliveryEffect(mainCanvas: true, overlayCanvas: true),
     if (didClearSelection) const SelectionDeliveryEffect(),
     const PublicStateDeliveryEffect(),

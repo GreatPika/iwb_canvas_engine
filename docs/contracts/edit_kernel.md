@@ -92,8 +92,10 @@ sequenceDiagram
 after document and selection effects have both installed. The runtime/applier
 seam lives in `lib/src/contracts/internal/commit_delivery.dart`: it carries the
 public-state publication decision and immutable typed post-install delivery
-effects selected by the accepted edit plan, without exposing edit-owned
-`TouchedSet`, store revision deltas, or API facade wrappers.
+effects selected by the accepted edit plan. Spatial and resource delivery
+effects carry the shared immutable `TouchedSet` from
+`lib/src/contracts/internal/touched_set.dart`; edit keeps only the mutable
+builder and store revision deltas private.
 
 `EditKernel` closes and stales the active edit handle, clears the active-session
 state, and only then asks `RuntimeRoot` to consume the accepted apply result.

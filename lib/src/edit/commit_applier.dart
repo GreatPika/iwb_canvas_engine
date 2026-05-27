@@ -2,7 +2,6 @@ import '../contracts/internal/commit_delivery.dart';
 import '../contracts/public/canvas_document.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_plan.dart';
-import 'touched_set.dart';
 
 typedef DocumentInstall =
     void Function(CanvasDocument document, StoreRevisionDelta delta);
@@ -57,10 +56,10 @@ CommitDeliveryEffect _deliveryEffectFor(CommitEffect effect) {
   return switch (effect) {
     ProjectionEffect() => const ProjectionDeliveryEffect(),
     SpatialEffect(:final touchedSet) => SpatialDeliveryEffect(
-      touchedFacts: _deliveryTouchedFacts(touchedSet),
+      touchedSet: touchedSet,
     ),
     ResourceEffect(:final touchedSet) => ResourceDeliveryEffect(
-      touchedFacts: _deliveryTouchedFacts(touchedSet),
+      touchedSet: touchedSet,
     ),
     RepaintEffect(:final mainCanvas, :final overlayCanvas) =>
       RepaintDeliveryEffect(
@@ -70,25 +69,4 @@ CommitDeliveryEffect _deliveryEffectFor(CommitEffect effect) {
     SelectionEffect() => const SelectionDeliveryEffect(),
     PublicStateEffect() => const PublicStateDeliveryEffect(),
   };
-}
-
-CommitDeliveryTouchedFacts _deliveryTouchedFacts(TouchedSet touchedSet) {
-  return CommitDeliveryTouchedFacts(
-    addedElementIds: touchedSet.addedElementIds,
-    removedElementIds: touchedSet.removedElementIds,
-    updatedElementIds: touchedSet.updatedElementIds,
-    transformedElementIds: touchedSet.transformedElementIds,
-    geometryElementIds: touchedSet.geometryElementIds,
-    visualElementIds: touchedSet.visualElementIds,
-    resourceDescriptorChangedIds: touchedSet.resourceDescriptorChangedIds,
-    resourceVisualChangedIds: touchedSet.resourceVisualChangedIds,
-    layerIds: touchedSet.layerIds,
-    backgroundLayerChanged: touchedSet.backgroundLayerChanged,
-    selection: touchedSet.selection,
-    persistedCamera: touchedSet.persistedCamera,
-    background: touchedSet.background,
-    grid: touchedSet.grid,
-    palette: touchedSet.palette,
-    documentReplaced: touchedSet.documentReplaced,
-  );
 }
