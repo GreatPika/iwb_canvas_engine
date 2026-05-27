@@ -280,6 +280,12 @@ const _expectedAllowedOwnerEdges = [
     targetOwner: 'contracts/internal',
   ),
   _ExpectedAllowedOwnerEdge(sourceOwner: 'runtime', targetOwner: 'edit'),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'resources',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/resources/resource_kernel.dart',
+  ),
   _ExpectedAllowedOwnerEdge(sourceOwner: 'runtime', targetOwner: 'selection'),
   _ExpectedAllowedOwnerEdge(sourceOwner: 'runtime', targetOwner: 'store'),
   _ExpectedAllowedOwnerEdge(

@@ -9,6 +9,7 @@ void main() {
   _testRunnerRejectsInjectedCoreBoundaryViolation();
   _testApiFacadeRuntimeRootImport();
   _testApiContractWrapperExports();
+  _testFrameCannotUseResourceCatalogPort();
 }
 
 void _testProductionBoundaries() {
@@ -110,6 +111,31 @@ void _testApiContractWrapperExports() {
           'core.import_boundaries',
         ),
       ),
+    );
+  });
+}
+
+void _testFrameCannotUseResourceCatalogPort() {
+  test('frame code cannot import the resource catalog port', () {
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/frame/bad_resource_catalog_import.dart',
+        content: "import '../contracts/internal/resource_catalog_port.dart';\n",
+      ),
+      contains(
+        isA<GuardrailViolation>().having(
+          (violation) => violation.guardrailId,
+          'guardrailId',
+          'core.import_boundaries',
+        ),
+      ),
+    );
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/frame/good_frame_facts_import.dart',
+        content: "import '../contracts/internal/frame_facts_port.dart';\n",
+      ),
+      isEmpty,
     );
   });
 }

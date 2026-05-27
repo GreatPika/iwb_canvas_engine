@@ -15,6 +15,7 @@ import '../contracts/internal/document_facts_port.dart';
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/load_interaction_boundary.dart';
 import '../contracts/internal/resource_catalog_port.dart';
+import '../contracts/internal/resolver_mutation_guard.dart';
 import '../contracts/internal/selection_facts_port.dart';
 import '../contracts/internal/selection_membership_port.dart';
 import '../contracts/internal/touched_set.dart';
@@ -28,6 +29,7 @@ import '../edit/commit_applier.dart';
 import '../edit/commit_plan.dart';
 import '../edit/edit_kernel.dart';
 import '../edit/staged_document_load.dart';
+import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
 import 'noop_load_interaction_boundary.dart';
@@ -36,7 +38,8 @@ import 'runtime_config.dart';
 // RuntimeRoot is intentionally the one place where public runtime behavior,
 // store read facts, and selection ownership meet.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
-final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
+final class RuntimeRoot
+    implements DocumentFactsPort, FrameFactsPort, ResolverMutationGuard {
   RuntimeRoot({
     required CanvasDocument initialDocument,
     required CanvasRuntimeConfig config,
@@ -103,6 +106,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   int _epochRevision = 0;
   bool _isDisposed = false;
   bool _isDeliveringCommitEffects = false;
+  bool _isRunningResolverCallback = false;
   late final EditKernel _editKernel = EditKernel(
     isRuntimeDisposed: () {
       _ensureNotDeliveringCommitEffects();
@@ -121,6 +125,10 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   late final ResourceCatalogPort _resourceCatalogPort = _StoreResourceCatalog(
     _store,
   );
+  late final ResourceKernel _resourceKernel = ResourceKernel(
+    catalog: _resourceCatalogPort,
+    mutationGuard: this,
+  );
 
   ValueListenable<CanvasRuntimeState> get state => _state;
   bool get isDisposed => _isDisposed;
@@ -129,6 +137,7 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
   Stream<CanvasActionCommitted> get actions => _actions.stream;
   CanvasSelectionPort get selection => _selectionPort;
   CanvasCameraPort cameraPort() => _cameraPort;
+  CanvasResourcePort get resources => _resourceKernel;
   ResourceCatalogPort get resourceCatalogPort => _resourceCatalogPort;
   CanvasCamera get viewCamera => _viewCamera;
   Offset get viewCameraOffset => _viewCamera.offset;
@@ -333,6 +342,31 @@ final class RuntimeRoot implements DocumentFactsPort, FrameFactsPort {
     _isDisposed = true;
     _state.dispose();
     unawaited(_actions.close());
+  }
+
+  @override
+  T runResolverCallback<T>(T Function() callback) {
+    _ensureNotDisposed();
+    if (_isRunningResolverCallback) {
+      throw StateError('Nested resource resolver callbacks are not supported.');
+    }
+    _isRunningResolverCallback = true;
+    try {
+      return callback();
+    } finally {
+      _isRunningResolverCallback = false;
+    }
+  }
+
+  @override
+  void ensureRuntimeMutationAllowed() {
+    _ensureNotDisposed();
+    _ensureNoActiveEditSession();
+    if (_isRunningResolverCallback) {
+      throw StateError(
+        'CanvasRuntime public mutations cannot run during resource resolver callbacks.',
+      );
+    }
   }
 
   void _ensureNotDisposed() {

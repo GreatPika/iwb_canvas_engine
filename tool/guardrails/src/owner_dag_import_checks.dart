@@ -351,6 +351,12 @@ const ownerDagAllowedEdges = [
   OwnerEdge(source: runtimeOwner, target: contractsPublicOwner),
   OwnerEdge(source: runtimeOwner, target: contractsInternalOwner),
   OwnerEdge(source: runtimeOwner, target: editOwner),
+  OwnerEdge(
+    source: runtimeOwner,
+    target: resourcesOwner,
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/resources/resource_kernel.dart',
+  ),
   OwnerEdge(source: runtimeOwner, target: selectionOwner),
   OwnerEdge(source: runtimeOwner, target: storeOwner),
   OwnerEdge(source: editOwner, target: contractsPublicOwner),

@@ -84,6 +84,14 @@ void main() {
     final editedDocument = runtime.readDocument();
     expect(editedDocument.layers.single.elements, hasLength(2));
     expect(editedDocument.resources.single.id, CanvasResourceId('resource-a'));
+    final resources = runtime.resources;
+    expect(resources.resources.single.id, CanvasResourceId('resource-a'));
+    expect(
+      resources.resourceById(CanvasResourceId('resource-a'))?.id,
+      CanvasResourceId('resource-a'),
+    );
+    expect(resources.resourceById(CanvasResourceId('missing')), isNull);
+    expect(() => resources.resources.clear(), throwsUnsupportedError);
 
     final secondDocument = decodeCanvasDocument(_secondSchemaV1Document());
     final loadSnapshots = <CanvasRuntimeState>[];

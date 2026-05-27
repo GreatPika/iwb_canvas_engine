@@ -35,7 +35,7 @@ final class CanvasRuntime {
   CanvasToolPort get tools => throw UnimplementedError();
   CanvasCommandPort get commands => throw UnimplementedError();
   CanvasCameraPort get camera => _root.cameraPort();
-  CanvasResourcePort get resources => throw UnimplementedError();
+  CanvasResourcePort get resources => _root.resources;
   CanvasPreviewState get preview => throw UnimplementedError();
   Stream<CanvasActionCommitted> get actions => _root.actions;
   Stream<CanvasContextActionRequested> get contextActionRequests =>

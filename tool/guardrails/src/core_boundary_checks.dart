@@ -562,6 +562,7 @@ const _boundaryRules = [
     guardrailId: 'core.import_boundaries',
     owner: 'lib/src/frame/',
     forbiddenTargets: [
+      'lib/src/contracts/internal/resource_catalog_port.dart',
       'lib/src/store/',
       'lib/src/edit/',
       'lib/src/api/canvas_document.dart',
