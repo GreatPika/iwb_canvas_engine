@@ -88,6 +88,7 @@ Guardrails:
 - `api.integration_surface_complete`
 - `api.no_legacy_public_types`
 - `api.public_exports_complete`
+- `api.facades_do_not_export_internal`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
 - `api.resource_source_app_key_publicly_readable`
@@ -175,10 +176,11 @@ obligations before continuing dependent phase work.
 ```text
 1. P1 public API, external-adapter, legacy-ban, and validation checks are green.
 2. api.public_exports_complete is green.
-3. api.public_types_complete is green.
-4. api.public_api_compiles_as_written is green, including the
+3. api.facades_do_not_export_internal is green.
+4. api.public_types_complete is green.
+5. api.public_api_compiles_as_written is green, including the
    `CanvasRuntime.state` surface and exported runtime state snapshot types.
-5. public dartdoc, class modifier, public signature shape, and sealed preview
+6. public dartdoc, class modifier, public signature shape, and sealed preview
    state readability guardrails are green.
 6. api.no_legacy_public_types is green.
 7. core.no_legacy_imports is green.

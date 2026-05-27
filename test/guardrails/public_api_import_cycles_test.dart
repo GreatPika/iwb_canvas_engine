@@ -37,9 +37,17 @@ void main() {
 
     for (final entry in _publicApiContractWrappers.entries) {
       final content = File('$repositoryRoot/${entry.key}').readAsStringSync();
-      expect(content.trim(), "export '../contracts/public/${entry.value}';");
+      expect(content.trim(), _expectedWrapperExport(entry));
     }
   });
+}
+
+String _expectedWrapperExport(MapEntry<String, String> wrapper) {
+  if (wrapper.key == 'lib/src/api/canvas_metadata.dart') {
+    return "export '../contracts/public/${wrapper.value}' show CanvasMetadata;";
+  }
+
+  return "export '../contracts/public/${wrapper.value}';";
 }
 
 void _expectImportResolution() {

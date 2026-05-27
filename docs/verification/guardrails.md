@@ -22,6 +22,7 @@ Guardrails:
 - `api.integration_surface_complete`
 - `api.no_legacy_public_types`
 - `api.public_exports_complete`
+- `api.facades_do_not_export_internal`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
 - `api.resource_source_app_key_publicly_readable`
@@ -161,6 +162,7 @@ Mandatory guardrails:
 | `api.integration_surface_complete` | external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level `NextEngineAdapter` responsibilities, while the adapter itself is not in package |
 | `api.no_legacy_public_types` | legacy public golden symbols not exported by root package |
 | `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |
+| `api.facades_do_not_export_internal` | `lib/src/api/**` facade exports do not expose declarations marked `@internal` |
 | `api.public_types_complete` | all public signatures reference defined public types |
 | `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package, including `CanvasRuntime.state` and exported runtime state snapshot types while excluding retired document/preview listener getters |
 | `api.resource_source_app_key_publicly_readable` | external resolver code can read `CanvasAppKeyResourceSource.key` from `CanvasImageResource.source` through the public barrel only |

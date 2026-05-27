@@ -57,6 +57,7 @@ Required tests:
 Guardrails:
 - `api.integration_surface_complete`
 - `api.public_exports_complete`
+- `api.facades_do_not_export_internal`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
 - `api.resource_source_app_key_publicly_readable`

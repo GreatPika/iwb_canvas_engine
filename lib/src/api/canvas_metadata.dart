@@ -1,1 +1,1 @@
-export '../contracts/public/canvas_metadata.dart';
+export '../contracts/public/canvas_metadata.dart' show CanvasMetadata;

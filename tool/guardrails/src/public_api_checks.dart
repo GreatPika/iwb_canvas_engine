@@ -1,5 +1,10 @@
 import 'dart:io';
 
+import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
+import 'package:analyzer/dart/analysis/results.dart';
+import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/error/error.dart';
+
 import 'guardrail_violation.dart';
 import 'public_api_registry.dart';
 import 'public_api_surface.dart';
@@ -27,6 +32,44 @@ Future<List<GuardrailViolation>> checkPublicExportsComplete() async {
   ];
 }
 
+Future<List<GuardrailViolation>> checkApiFacadesDoNotExportInternal({
+  List<String>? facadePaths,
+}) async {
+  final paths = facadePaths ?? _apiFacadePaths();
+  final collection = AnalysisContextCollection(includedPaths: [repositoryRoot]);
+  final violations = <GuardrailViolation>[];
+
+  try {
+    for (final path in paths) {
+      final context = collection.contextFor(path);
+      final result = await context.currentSession.getResolvedLibrary(path);
+      if (result is! ResolvedLibraryResult) {
+        throw StateError('Could not resolve $path: $result');
+      }
+      _throwOnErrorDiagnostics(result);
+
+      final leaked = _exportedInternalNames(
+        result.element.exportNamespace.definedNames2,
+      );
+      if (leaked.isEmpty) {
+        continue;
+      }
+
+      violations.add(
+        GuardrailViolation(
+          guardrailId: 'api.facades_do_not_export_internal',
+          path: _displayPath(path),
+          message: 'API facade exports @internal names: ${_list(leaked)}',
+        ),
+      );
+    }
+  } finally {
+    await collection.dispose();
+  }
+
+  return violations;
+}
+
 Future<List<GuardrailViolation>> checkPublicTypesComplete({
   String? libraryPath,
 }) {
@@ -34,6 +77,49 @@ Future<List<GuardrailViolation>> checkPublicTypesComplete({
     guardrailId: 'api.public_types_complete',
     libraryPath: libraryPath,
   );
+}
+
+List<String> _apiFacadePaths() {
+  final directory = Directory('$repositoryRoot/lib/src/api');
+  final files =
+      directory
+          .listSync()
+          .whereType<File>()
+          .map((file) => file.path)
+          .where((path) => path.endsWith('.dart'))
+          .toList()
+        ..sort();
+
+  return files;
+}
+
+Set<String> _exportedInternalNames(Map<String, Element> elements) {
+  return {
+    for (final entry in elements.entries)
+      if (_isPublicExportName(entry.key) && entry.value.metadata.hasInternal)
+        entry.key,
+  };
+}
+
+bool _isPublicExportName(String name) {
+  return !name.startsWith('_') && !name.endsWith('=');
+}
+
+void _throwOnErrorDiagnostics(ResolvedLibraryResult result) {
+  final errors = result.units
+      .expand((unit) => unit.diagnostics)
+      .where((diagnostic) {
+        return diagnostic.diagnosticCode.severity == DiagnosticSeverity.ERROR;
+      })
+      .map((diagnostic) {
+        return '${diagnostic.source.fullName}:${diagnostic.offset}: '
+            '${diagnostic.message}';
+      })
+      .toList();
+
+  if (errors.isNotEmpty) {
+    throw StateError(errors.join('\n'));
+  }
 }
 
 Future<List<GuardrailViolation>> checkNoUndefinedPublicTypeReferences({

@@ -15,6 +15,10 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
+## api.facades_do_not_export_internal
+
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
 ## api.id_validation_no_extension_type_escape
 
 - Sections: `section_04_public_api_v1`, `section_06_validation_limits`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`

@@ -42,6 +42,10 @@ const _blockingEntries = [
     id: 'api.public_exports_complete',
     suites: {'blocking', 'api'},
   ),
+  GuardrailEntry(
+    id: 'api.facades_do_not_export_internal',
+    suites: {'blocking', 'api'},
+  ),
   GuardrailEntry(id: 'api.public_types_complete', suites: {'blocking', 'api'}),
   GuardrailEntry(
     id: 'api.public_api_compiles_as_written',

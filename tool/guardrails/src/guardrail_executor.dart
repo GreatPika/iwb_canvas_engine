@@ -160,6 +160,9 @@ const _testProofPaths = {
   'api.public_api_compiles_as_written': [
     'test/api_contract/public_api_v1_compiles_as_written_test.dart',
   ],
+  'api.facades_do_not_export_internal': [
+    'test/api_contract/api_facades_do_not_export_internal_test.dart',
+  ],
   'api.resource_source_app_key_publicly_readable': [
     'test/api_contract/public_readable_union_variants_test.dart',
   ],
@@ -246,6 +249,7 @@ const _testProofPaths = {
 final Map<String, GuardrailViolationRunner> _violationChecks = {
   'api.no_legacy_public_types': checkNoLegacyPublicTypes,
   'api.public_exports_complete': checkPublicExportsComplete,
+  'api.facades_do_not_export_internal': checkApiFacadesDoNotExportInternal,
   'api.public_types_complete': checkPublicTypesComplete,
   'api.public_signature_shape': checkPublicSignatureShape,
   'api.exported_dartdoc_complete': checkExportedDartdocComplete,
@@ -263,6 +267,8 @@ final Map<String, GuardrailViolationRunner> _violationChecks = {
 const _structuralDescriptions = {
   'api.no_legacy_public_types': 'resolved public legacy symbol check',
   'api.public_exports_complete': 'public registry parity check',
+  'api.facades_do_not_export_internal':
+      'resolved src/api facade internal export check',
   'api.public_types_complete': 'resolved public type closure check',
   'api.public_signature_shape': 'resolved public signature shape check',
   'api.exported_dartdoc_complete': 'exported public dartdoc summary check',
