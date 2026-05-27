@@ -147,7 +147,7 @@ graph.
 
 ## Execution Units
 
-### [ ] Unit 1: Public contract declarations and API wrappers
+### [x] Unit 1: Public contract declarations and API wrappers
 
 Owner:
 
@@ -212,7 +212,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Internal owner import migration
+### [x] Unit 2: Internal owner import migration
 
 Owner:
 
@@ -327,7 +327,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Public facade compatibility proof
+### [x] Unit 3: Public facade compatibility proof
 
 Owner:
 
@@ -366,7 +366,7 @@ Depends On:
 
 Units 1 and 2.
 
-### [ ] Unit 4: Mechanical owner-DAG guardrails
+### [x] Unit 4: Mechanical owner-DAG guardrails
 
 Owner:
 
@@ -430,7 +430,7 @@ Depends On:
 
 Units 1, 2, 3, and 6.
 
-### [ ] Unit 5: Architecture graph, diagrams, and durable docs
+### [x] Unit 5: Architecture graph, diagrams, and durable docs
 
 Owner:
 
@@ -559,7 +559,7 @@ Depends On:
 
 Units 1, 2, 3, and 4.
 
-### [ ] Unit 6: Public incremental smoke and behavior preservation
+### [x] Unit 6: Public incremental smoke and behavior preservation
 
 Owner:
 
@@ -604,7 +604,7 @@ Depends On:
 
 Units 1, 2, and 3.
 
-### [ ] Unit 7: Repository verification and roadmap closure
+### [x] Unit 7: Repository verification and roadmap closure
 
 Owner:
 
