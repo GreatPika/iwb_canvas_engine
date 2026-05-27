@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'core_boundary_checks.dart';
 import 'guardrail_violation.dart';
+import 'owner_dag_import_checks.dart';
 import 'public_api_checks.dart';
 import 'public_api_contract_checks.dart';
 import 'public_api_declaration_checks.dart';
@@ -174,6 +175,9 @@ const _testProofPaths = {
   'api.no_public_api_import_cycles': [
     'test/guardrails/public_api_import_cycles_test.dart',
   ],
+  'core.owner_dag_import_boundaries': [
+    'test/guardrails/owner_dag_import_boundaries_test.dart',
+  ],
   'api.dto_immutability': ['test/api_contract/dto_immutability_test.dart'],
   'api.equality_policy_explicit': [
     'test/api_contract/public_equality_policy_test.dart',
@@ -253,6 +257,7 @@ final Map<String, GuardrailViolationRunner> _violationChecks = {
   'store.no_public_document_live_state': checkNoPublicDocumentLiveState,
   'projection.only_explicit_read_paths': checkProjectionOnlyExplicitReadPaths,
   'selection.owner_separate_from_document': checkSelectionOwnerSeparation,
+  ownerDagGuardrailId: checkOwnerDagImportBoundaries,
 };
 
 const _structuralDescriptions = {
@@ -272,6 +277,7 @@ const _structuralDescriptions = {
       'resolved public projection read-path check',
   'selection.owner_separate_from_document':
       'resolved selection ownership boundary check',
+  ownerDagGuardrailId: 'owner DAG import/export boundary check',
 };
 
 const _coreBoundaryIds = {

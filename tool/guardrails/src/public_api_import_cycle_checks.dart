@@ -8,11 +8,22 @@ import 'repository_paths.dart';
 
 const _guardrailId = 'api.no_public_api_import_cycles';
 const _publicApiDirectory = 'lib/src/api';
+const _publicContractsDirectory = 'lib/src/contracts/public';
 const _packageImportPrefix = 'package:iwb_canvas_engine/';
 
 Future<List<GuardrailViolation>> checkNoPublicApiImportCycles() async {
   final sources = <String, String>{};
-  final directory = Directory('$repositoryRoot/$_publicApiDirectory');
+  await _readSourcesUnder(_publicApiDirectory, sources);
+  await _readSourcesUnder(_publicContractsDirectory, sources);
+
+  return checkPublicApiImportCyclesInSources(sources);
+}
+
+Future<void> _readSourcesUnder(
+  String directoryPath,
+  Map<String, String> sources,
+) async {
+  final directory = Directory('$repositoryRoot/$directoryPath');
   await for (final entity in directory.list(recursive: true)) {
     if (entity is! File || !entity.path.endsWith('.dart')) {
       continue;
@@ -20,8 +31,6 @@ Future<List<GuardrailViolation>> checkNoPublicApiImportCycles() async {
     final repoPath = _repoRelativePath(entity.path);
     sources[repoPath] = await entity.readAsString();
   }
-
-  return checkPublicApiImportCyclesInSources(sources);
 }
 
 List<GuardrailViolation> checkPublicApiImportCyclesInSources(
@@ -33,21 +42,23 @@ List<GuardrailViolation> checkPublicApiImportCyclesInSources(
     return allowlistViolations;
   }
 
-  final publicSources = Map.fromEntries(
-    sources.entries.where((entry) => _isPublicApiSource(entry.key)),
+  final publicReachabilitySources = Map.fromEntries(
+    sources.entries.where((entry) => _isPublicReachabilitySource(entry.key)),
   );
-  final graph = {for (final path in publicSources.keys) path: <String>{}};
+  final graph = {
+    for (final path in publicReachabilitySources.keys) path: <String>{},
+  };
 
-  for (final entry in publicSources.entries) {
-    for (final importUri in _importUris(
+  for (final entry in publicReachabilitySources.entries) {
+    for (final directiveUri in _directiveUris(
       path: entry.key,
       content: entry.value,
     )) {
       final target = resolvePublicApiImportTarget(
         importerPath: entry.key,
-        importUri: importUri,
+        importUri: directiveUri,
       );
-      if (target != null && publicSources.containsKey(target)) {
+      if (target != null && publicReachabilitySources.containsKey(target)) {
         graph[entry.key]!.add(target);
       }
     }
@@ -74,14 +85,14 @@ String? resolvePublicApiImportTarget({
 
     final packagePath = importUri.substring(_packageImportPrefix.length);
 
-    return _publicApiTargetOrNull('lib/$packagePath');
+    return _publicReachabilityTargetOrNull('lib/$packagePath');
   }
 
   if (Uri.tryParse(importUri)?.hasScheme ?? false) {
     return null;
   }
 
-  return _publicApiTargetOrNull(
+  return _publicReachabilityTargetOrNull(
     _normalizeRepoPath('${_directoryName(importerPath)}/$importUri'),
   );
 }
@@ -100,20 +111,36 @@ final class PublicApiImportCycleAllowlistEntry {
   final String removalCondition;
 }
 
-List<String> _importUris({required String path, required String content}) {
+List<String> _directiveUris({required String path, required String content}) {
   final parseResult = parseString(content: content, path: path);
 
   return [
     for (final directive in parseResult.unit.directives)
-      if (directive is ImportDirective) ..._directiveImportUris(directive),
+      ..._directiveUriLiterals(directive),
   ];
 }
 
-List<String> _directiveImportUris(ImportDirective directive) {
+List<String> _directiveUriLiterals(Directive directive) {
+  return switch (directive) {
+    ImportDirective(:final uri, :final configurations) => _literalDirectiveUris(
+      uri,
+      configurations,
+    ),
+    ExportDirective(:final uri, :final configurations) => _literalDirectiveUris(
+      uri,
+      configurations,
+    ),
+    _ => const [],
+  };
+}
+
+List<String> _literalDirectiveUris(
+  StringLiteral uri,
+  NodeList<Configuration> configurations,
+) {
   return [
-    ?directive.uri.stringValue,
-    for (final configuration in directive.configurations)
-      ?configuration.uri.stringValue,
+    ?uri.stringValue,
+    for (final configuration in configurations) ?configuration.uri.stringValue,
   ];
 }
 
@@ -149,17 +176,19 @@ List<List<String>> _findImportCycles(Map<String, Set<String>> graph) {
   return finder.findCycles();
 }
 
-String? _publicApiTargetOrNull(String path) {
+String? _publicReachabilityTargetOrNull(String path) {
   final normalized = _normalizeRepoPath(path);
-  if (_isPublicApiSource(normalized)) {
+  if (_isPublicReachabilitySource(normalized)) {
     return normalized;
   }
 
   return null;
 }
 
-bool _isPublicApiSource(String path) {
-  return path.startsWith('$_publicApiDirectory/') && path.endsWith('.dart');
+bool _isPublicReachabilitySource(String path) {
+  return path.endsWith('.dart') &&
+      (path.startsWith('$_publicApiDirectory/') ||
+          path.startsWith('$_publicContractsDirectory/'));
 }
 
 String _repoRelativePath(String path) {

@@ -247,6 +247,11 @@ final class _StructuralScanCase {
 
 const _runnerStructuralScanCases = [
   _StructuralScanCase(
+    id: 'core.owner_dag_import_boundaries',
+    proofPaths: ['test/guardrails/owner_dag_import_boundaries_test.dart'],
+    violationPath: 'lib/src/runtime/bad_runner_owner_dag.dart',
+  ),
+  _StructuralScanCase(
     id: 'store.no_public_document_live_state',
     proofPaths: [
       'test/store/public_document_is_projection_only_test.dart',

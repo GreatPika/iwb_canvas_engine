@@ -114,6 +114,11 @@ const _blockingEntries = [
   ),
   GuardrailEntry(id: 'core.single_runtime_root', suites: {'blocking', 'core'}),
   GuardrailEntry(
+    id: 'core.owner_dag_import_boundaries',
+    suites: {'blocking', 'core'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
     id: 'store.no_public_document_live_state',
     suites: {'blocking', 'store'},
     requiresRunnerStructuralProof: true,

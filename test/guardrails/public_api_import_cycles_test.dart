@@ -9,8 +9,10 @@ void main() {
   test('fixture import-cycle detection', () {
     expect(checkPublicApiImportCyclesInSources(_acyclicSources), isEmpty);
     _expectImportResolution();
+    _expectPublicContractResolution();
     _expectCycleDiagnostics();
     _expectConditionalImportCycles();
+    _expectWrapperExportedContractCycles();
     _expectDiagnosticsFollowRealEdges();
     _expectSelfCycleDiagnostics();
     _expectAllowlistStructureRequired();
@@ -71,8 +73,35 @@ void _expectImportResolution() {
   );
 }
 
+void _expectPublicContractResolution() {
+  expect(
+    resolvePublicApiImportTarget(
+      importerPath: 'lib/src/api/a.dart',
+      importUri: '../contracts/public/a.dart',
+    ),
+    'lib/src/contracts/public/a.dart',
+  );
+  expect(
+    resolvePublicApiImportTarget(
+      importerPath: 'lib/src/contracts/public/a.dart',
+      importUri: 'package:iwb_canvas_engine/src/contracts/public/b.dart',
+    ),
+    'lib/src/contracts/public/b.dart',
+  );
+  expect(
+    resolvePublicApiImportTarget(
+      importerPath: 'lib/src/api/a.dart',
+      importUri: '../contracts/internal/a.dart',
+    ),
+    isNull,
+  );
+}
+
 const _acyclicSources = {
-  'lib/src/api/a.dart': "import 'b.dart';",
+  'lib/src/api/a.dart': "export '../contracts/public/a.dart';",
+  'lib/src/contracts/public/a.dart': "import 'b.dart';",
+  'lib/src/contracts/public/b.dart': '',
+  'lib/src/api/wrapper.dart': "import 'b.dart';",
   'lib/src/api/b.dart': "import 'package:iwb_canvas_engine/src/api/c.dart';",
   'lib/src/api/c.dart': '',
   'lib/src/internal/ignored.dart': "import '../api/a.dart';",
@@ -140,6 +169,22 @@ void _expectConditionalImportCycles() {
     cyclic.single.message,
     'public API import cycle: lib/src/api/a.dart -> '
     'lib/src/api/real.dart -> lib/src/api/a.dart',
+  );
+}
+
+void _expectWrapperExportedContractCycles() {
+  final cyclic = checkPublicApiImportCyclesInSources({
+    'lib/src/api/a.dart': "export '../contracts/public/a.dart';",
+    'lib/src/contracts/public/a.dart': "import 'b.dart';",
+    'lib/src/contracts/public/b.dart': "export 'a.dart';",
+  });
+
+  expect(cyclic, hasLength(1));
+  expect(cyclic.single.guardrailId, 'api.no_public_api_import_cycles');
+  expect(
+    cyclic.single.message,
+    'public API import cycle: lib/src/contracts/public/a.dart -> '
+    'lib/src/contracts/public/b.dart -> lib/src/contracts/public/a.dart',
   );
 }
 
