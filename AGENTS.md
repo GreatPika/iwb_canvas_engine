@@ -54,14 +54,14 @@ For architecture changes, run the architecture graph checks from the repository
 root:
 
 - `dart run tool/architecture_graph/check.dart --phase Px`
-- `dart run tool/architecture_graph/generate_views.dart --phase P5 --check`
+- `dart run tool/architecture_graph/generate_views.dart --phase P6 --check`
 
 Run the architecture checks when changing architecture-owned production seams,
 `docs/architecture/architecture_graph.yaml`, generated architecture diagrams,
 architecture documentation, phase closure state, or a plan step whose completion
 depends on architecture graph closure. Use the phase named by the active step
-contract for `Px`; use `P5` for generated graph views while the generated
-documentation is selected on P5.
+contract for `Px`; use `P6` for generated graph views while the generated
+documentation is selected on P6.
 
 For documentation-only changes, do not run the Dart/DCM code checks above.
 Instead, run the documentation checks from the repository root:

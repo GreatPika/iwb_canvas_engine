@@ -57,3 +57,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 35. P6 handoff cleanup](plan/step_35_p6_handoff_cleanup.md)
 - [x] [Step 36. P6 load document](plan/step_36_p6_load_document.md)
 - [x] [Step 37. P6 prepared load cleanup seam repair](plan/step_37_p6_prepared_load_cleanup_seam_repair.md)
+- [ ] [Step 38. Acyclic runtime public API architecture](plan/step_38_acyclic_runtime_public_api_architecture.md)
