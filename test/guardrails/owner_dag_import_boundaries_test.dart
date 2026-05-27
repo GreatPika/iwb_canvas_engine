@@ -249,8 +249,9 @@ const _ownerFixtureSources = {
   'resources': 'lib/src/resources/bad.dart',
   'frame': 'lib/src/frame/bad.dart',
   'interaction': 'lib/src/interaction/bad.dart',
-  'spatial': 'lib/src/spatial/bad.dart',
-  'flutter_bridge': 'lib/src/flutter_bridge/bad.dart',
+  'spatial': 'lib/src/geometry/bad.dart',
+  'tools': 'lib/src/tools/bad.dart',
+  'surface': 'lib/src/surface/bad.dart',
 };
 
 const _ownerFixtureTargets = {
@@ -266,8 +267,9 @@ const _ownerFixtureTargets = {
   'resources': 'lib/src/resources/resource_kernel.dart',
   'frame': 'lib/src/frame/frame_renderer.dart',
   'interaction': 'lib/src/interaction/interaction_engine.dart',
-  'spatial': 'lib/src/spatial/spatial_index.dart',
-  'flutter_bridge': 'lib/src/flutter_bridge/flutter_surface.dart',
+  'spatial': 'lib/src/geometry/spatial_index.dart',
+  'tools': 'lib/src/tools/draw_tool_kernel.dart',
+  'surface': 'lib/src/surface/flutter_surface.dart',
 };
 
 const _requiredForbiddenEdges = [
@@ -301,7 +303,8 @@ const _requiredForbiddenEdges = [
   _RequiredForbiddenEdge(source: 'contracts/public', target: 'frame'),
   _RequiredForbiddenEdge(source: 'contracts/public', target: 'interaction'),
   _RequiredForbiddenEdge(source: 'contracts/public', target: 'spatial'),
-  _RequiredForbiddenEdge(source: 'contracts/public', target: 'flutter_bridge'),
+  _RequiredForbiddenEdge(source: 'contracts/public', target: 'tools'),
+  _RequiredForbiddenEdge(source: 'contracts/public', target: 'surface'),
   _RequiredForbiddenEdge(source: 'contracts/internal', target: 'runtime'),
   _RequiredForbiddenEdge(source: 'contracts/internal', target: 'api'),
   _RequiredForbiddenEdge(source: 'contracts/internal', target: 'edit'),
@@ -313,10 +316,8 @@ const _requiredForbiddenEdges = [
   _RequiredForbiddenEdge(source: 'contracts/internal', target: 'frame'),
   _RequiredForbiddenEdge(source: 'contracts/internal', target: 'interaction'),
   _RequiredForbiddenEdge(source: 'contracts/internal', target: 'spatial'),
-  _RequiredForbiddenEdge(
-    source: 'contracts/internal',
-    target: 'flutter_bridge',
-  ),
+  _RequiredForbiddenEdge(source: 'contracts/internal', target: 'tools'),
+  _RequiredForbiddenEdge(source: 'contracts/internal', target: 'surface'),
   _RequiredForbiddenEdge(
     source: 'api',
     target: 'contracts/internal',

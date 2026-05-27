@@ -122,16 +122,18 @@ The new package is rooted at the repository top level:
         paint_plan.dart
         render_element_record.dart
         repaint_bus.dart
-      spatial/
-        spatial_kernel.dart
-        tile_index.dart
-        outlier_index.dart
-        spatial_membership.dart
       geometry/
         geometry_policy.dart
         hit_test_policy.dart
         bounds_policy.dart
         path_geometry.dart
+        spatial_kernel.dart
+        tile_index.dart
+        outlier_index.dart
+        spatial_membership.dart
+      tools/
+        draw_tool_kernel.dart
+        tool_preview_coordinator.dart
       resources/
         resource_kernel.dart
         resource_cache.dart
@@ -145,7 +147,7 @@ The new package is rooted at the repository top level:
       diagnostics/
         diagnostics_hub.dart
         diagnostics_sanitizer.dart
-      flutter_bridge/
+      surface/
         canvas_surface_widget.dart
         pointer_adapter.dart
         main_painter.dart
@@ -162,10 +164,11 @@ The new package is rooted at the repository top level:
     frame/
     spatial/
     geometry/
+    tools/
     resources/
     codec/
     diagnostics/
-    flutter_bridge/
+    surface/
     guardrails/
     benchmarks/
     support/
@@ -257,18 +260,19 @@ lib/src/contracts/public/**  -> may not import/export src/api or implementation 
 lib/src/contracts/internal/** -> may not import/export src/api or implementation owners
 lib/src/runtime/**           -> may not import src/api or the root public barrel as a type library
 lib/src/api/**               -> may not import src/store, src/edit, src/frame concrete internals outside named facade bridges
-lib/src/store/**             -> may not import src/interaction, src/frame, src/flutter_bridge
+lib/src/store/**             -> may not import src/interaction, src/frame, src/surface
 lib/src/selection/**         -> may read document facts only through contracts/internal immutable query ports and must not import runtime
-lib/src/edit/**              -> may not import src/flutter_bridge
+lib/src/edit/**              -> may not import src/surface
 lib/src/interaction/**       -> may not import, read, or mutate src/store or src/selection concrete internals directly
 lib/src/interaction/interaction_read_port.dart -> may not expose mutation APIs, drafts, CanvasDocument projection, concrete store internals, concrete selection internals, or resource/session internals
 lib/src/interaction/pointer_tool_cleanup_coordinator.dart -> may not import resolver callbacks, EditKernel, repaint buses, Flutter bridge, resource sessions, concrete store internals, or concrete selection internals
 lib/src/frame/**             -> may not import public document projection as paint input
-lib/src/spatial/**           -> may use only typed spatial delta/read ports, not concrete store tables or interaction/frame state
+lib/src/geometry/**          -> may use only typed geometry/spatial delta/read ports, not concrete store tables or interaction/frame state
 lib/src/resources/**         -> may not import runtime, frame, or interaction state
 lib/src/codec/**             -> may not import runtime, store, edit, frame, Flutter widgets, or interaction state
 lib/src/diagnostics/**       -> may not expose runtime objects, images, closures, or full scene dumps as public diagnostic data
-lib/src/flutter_bridge/**    -> may not import legacy iwb_canvas_engine package
+lib/src/tools/**             -> may not import runtime, frame, or surface internals
+lib/src/surface/**           -> may not import legacy iwb_canvas_engine package
 all lib/**                   -> may not import legacy package or legacy runtime paths
 ```
 

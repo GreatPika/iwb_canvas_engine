@@ -274,11 +274,9 @@ const interactionOwner = Owner(
   name: 'interaction',
   prefixes: ['lib/src/interaction/'],
 );
-const spatialOwner = Owner(name: 'spatial', prefixes: ['lib/src/spatial/']);
-const flutterBridgeOwner = Owner(
-  name: 'flutter_bridge',
-  prefixes: ['lib/src/flutter_bridge/'],
-);
+const spatialOwner = Owner(name: 'spatial', prefixes: ['lib/src/geometry/']);
+const toolsOwner = Owner(name: 'tools', prefixes: ['lib/src/tools/']);
+const surfaceOwner = Owner(name: 'surface', prefixes: ['lib/src/surface/']);
 
 const ownerDagOwners = [
   contractsPublicOwner,
@@ -294,7 +292,8 @@ const ownerDagOwners = [
   frameOwner,
   interactionOwner,
   spatialOwner,
-  flutterBridgeOwner,
+  toolsOwner,
+  surfaceOwner,
 ];
 
 const ownerDagAllowedEdges = [
@@ -346,8 +345,10 @@ const ownerDagAllowedEdges = [
   OwnerEdge(source: interactionOwner, target: contractsInternalOwner),
   OwnerEdge(source: spatialOwner, target: contractsPublicOwner),
   OwnerEdge(source: spatialOwner, target: contractsInternalOwner),
-  OwnerEdge(source: flutterBridgeOwner, target: contractsPublicOwner),
-  OwnerEdge(source: flutterBridgeOwner, target: contractsInternalOwner),
+  OwnerEdge(source: toolsOwner, target: contractsPublicOwner),
+  OwnerEdge(source: toolsOwner, target: contractsInternalOwner),
+  OwnerEdge(source: surfaceOwner, target: contractsPublicOwner),
+  OwnerEdge(source: surfaceOwner, target: contractsInternalOwner),
 ];
 
 final class _OwnerDagCycleFinder {
