@@ -10,6 +10,7 @@ void main() {
   _testApiFacadeRuntimeRootImport();
   _testApiContractWrapperExports();
   _testFrameCannotUseResourceCatalogPort();
+  _testResourcesCannotImportFlutterWidgets();
 }
 
 void _testProductionBoundaries() {
@@ -136,6 +137,24 @@ void _testFrameCannotUseResourceCatalogPort() {
         content: "import '../contracts/internal/frame_facts_port.dart';\n",
       ),
       isEmpty,
+    );
+  });
+}
+
+void _testResourcesCannotImportFlutterWidgets() {
+  test('resource code cannot import Flutter widgets', () {
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/resources/bad_flutter_import.dart',
+        content: "import 'package:flutter/widgets.dart';\n",
+      ),
+      contains(
+        isA<GuardrailViolation>().having(
+          (violation) => violation.guardrailId,
+          'guardrailId',
+          'core.import_boundaries',
+        ),
+      ),
     );
   });
 }

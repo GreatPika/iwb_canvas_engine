@@ -527,8 +527,8 @@ Repaint target: main.
 
 User-action notification: none.
 
-No-op behavior: no publication when the target resource has no registered
-resource visual state to dirty.
+No-op behavior: no catalog hit means no `resourceVisualRevision`, no public
+state publication, no repaint/effect delivery, and no action event.
 
 Rollback behavior: resource visual state, session cache, repaint, and
 notifications remain unchanged.
@@ -546,8 +546,8 @@ Spatial effect: none.
 
 Projection effect: none.
 
-Resource effect: mark every registered resource dirty and clear the active
-surface resource session cache if attached.
+Resource effect: mark all registered resources dirty and send all-resource
+invalidation to the active surface resource session if attached.
 
 Repaint target: main.
 

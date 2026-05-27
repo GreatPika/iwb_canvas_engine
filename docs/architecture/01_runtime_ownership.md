@@ -62,7 +62,7 @@ Canvas engine state
 | EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | выполнять paint или pointer routing |
 | InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts, target pointer cleanup coordinator composition | читать или менять DocumentStoreKernel напрямую; хранить Flutter text editor session state |
 | FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; target composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
-| ResourceKernel | resource API, dirty resource ids, resource visual state publication, session invalidation events | владеть app domain assets, resolved image references или committed descriptors |
+| ResourceKernel | resource API, committed catalog reads through `ResourceCatalogPort`, dirty resource ids, resource visual state publication, dirty outcomes for future session invalidation | владеть app domain assets, resolved image references или committed descriptors |
 | SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame missing/null suppression | владеть committed descriptors, public runtime state или Flutter widget lifecycle |
 | SpatialKernel | coarse candidate lookup, outlier policy | быть source of truth для сцены |
 | CodecBoundary | schema v1 encode/decode, validation, diagnostics | зависеть от Flutter widget или gestures |
@@ -165,9 +165,11 @@ Committed document facts stay store-owned and enter frame code only through the
 contract-owned `FrameFactsPort`. Selection facts stay selection-owned and enter
 frame code through contract-owned selection fact seams. Preview and view-camera
 facts stay runtime/interaction-owned and are captured at frame boundaries.
-Resolver/cache state stays owned by `SurfaceResourceSession` under
+Resolver/cache state stays owned by the future `SurfaceResourceSession` under
 `lib/src/resources/**`; among the target frame collaborators, only
-`PaintAssetBindingService` receives that session.
+`PaintAssetBindingService` receives that session. Committed resource catalog
+reads for the public resource port go through `ResourceCatalogPort`, while
+frame descriptor lookup stays on `FrameFactsPort`.
 
 `InteractionRequestRegistry` is the interaction-owned registry for issued
 request guard facts, such as the `CanvasInteractionRequestId`, context request

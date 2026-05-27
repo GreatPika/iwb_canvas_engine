@@ -154,7 +154,7 @@ only after code and focused tests establish the enforced behavior.
 
 ## Execution Units
 
-### [ ] Unit 1: Resource catalog read seam
+### [x] Unit 1: Resource catalog read seam
 
 Owner:
 
@@ -197,7 +197,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: ResourceKernel read port wiring
+### [x] Unit 2: ResourceKernel read port wiring
 
 Owner:
 
@@ -242,7 +242,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Public dirty revision orchestration
+### [x] Unit 3: Public dirty revision orchestration
 
 Owner:
 
@@ -306,7 +306,7 @@ Depends On:
 
 Unit 2.
 
-### [ ] Unit 4: Resource seam enforcement and source-of-truth closure
+### [x] Unit 4: Resource seam enforcement and source-of-truth closure
 
 Owner:
 

@@ -267,9 +267,9 @@ lib/src/edit/**              -> may not import src/surface
 lib/src/interaction/**       -> may not import, read, or mutate src/store or src/selection concrete internals directly
 lib/src/interaction/interaction_read_port.dart -> may not expose mutation APIs, drafts, CanvasDocument projection, concrete store internals, concrete selection internals, or resource/session internals
 lib/src/interaction/pointer_tool_cleanup_coordinator.dart -> may not import resolver callbacks, EditKernel, repaint buses, Flutter bridge, resource sessions, concrete store internals, or concrete selection internals
-lib/src/frame/**             -> may not import public document projection as paint input
+lib/src/frame/**             -> may not import public document projection as paint input or ResourceCatalogPort as an asset-binding seam
 lib/src/geometry/**          -> may use only typed geometry/spatial delta/read ports, not concrete store tables or interaction/frame state
-lib/src/resources/**         -> may not import runtime, frame, or interaction state
+lib/src/resources/**         -> may not import runtime, store, frame, surface, interaction, Flutter, or cache/session owners outside resource-owned seams
 lib/src/codec/**             -> may not import runtime, store, edit, frame, Flutter widgets, or interaction state
 lib/src/diagnostics/**       -> may not expose runtime objects, images, closures, or full scene dumps as public diagnostic data
 lib/src/tools/**             -> may not import runtime, frame, or surface internals

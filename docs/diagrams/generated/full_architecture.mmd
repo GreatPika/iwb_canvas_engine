@@ -19,7 +19,7 @@ flowchart LR
   interaction_selection_move["Selection and move interaction owner<br/>required by P10"]
   load_document_pipeline["Load document pipeline<br/>required by P6"]
   resource_kernel["Resource kernel<br/>required by P7"]
-  resource_surface_session["Surface resource session<br/>required by P7"]
+  resource_surface_session["Surface resource session<br/>required by P13"]
   runtime_root["Runtime composition root<br/>required by P4"]
   runtime_view_camera["Runtime-owned view camera<br/>required by P4"]
   selection_kernel["Selection kernel<br/>required by P4"]
@@ -43,7 +43,7 @@ flowchart LR
   geometry_spatial_index -->|reads data through by P10| interaction_selection_move
   interaction_selection_move -->|action stream boundary by P10| api_canvas_runtime
   load_document_pipeline -->|changes data through by P6| store_document_kernel
-  resource_kernel -->|invalidates resource session through by P7| resource_surface_session
+  resource_kernel -->|invalidates resource session through by P13| resource_surface_session
   runtime_root -->|reads from by P9| frame_renderer
   runtime_root -->|composition by P7| resource_kernel
   runtime_root -->|owns and creates by P4| selection_kernel

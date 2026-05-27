@@ -202,11 +202,12 @@ nodes:
       - path: docs/contracts/load_document.md
       - path: docs/contracts/resources.md
     evidence:
-      - Internal ports, immutable facts, delivery effects, resource dirty outcomes, and resolver mutation guards are declaration-only contracts shared by implementation owners.
+      - Internal ports, immutable facts, delivery effects, the resource catalog seam, resource dirty outcomes, and resolver mutation guards are declaration-only contracts shared by implementation owners.
     actual:
       declarations:
         - CommitDeliveryResult
         - FrameFactsPort
+        - ResourceCatalogPort
         - ResourceDirtyOutcome
         - ResolverMutationGuard
   - id: diagnostics.hub
@@ -350,13 +351,13 @@ nodes:
     owner: resource
     phaseIntroduced: P7
     phaseRequiredBy: P7
-    status: future
+    status: required
     coverageScope: architectureOwners
     sourceDocs:
       - path: docs/implementation/p7_resources_and_images.md
       - path: docs/contracts/resources.md
     evidence:
-      - ResourceKernel owns the non-surface resource API, resource visual state publication, dirty-resource orchestration, session invalidation events, and resolver reentrancy rejection.
+      - ResourceKernel owns the implemented non-surface resource API, committed catalog reads through ResourceCatalogPort, resourceVisualRevision, dirty-resource no-op and acceptance decisions, and dirty outcomes; resolver/cache/session behavior remains future resource work.
     actual:
       declarations:
         - ResourceKernel
@@ -365,8 +366,8 @@ nodes:
     kind: resource_owner
     owner: resource
     phaseIntroduced: P7
-    phaseRequiredBy: P7
-    status: future
+    phaseRequiredBy: P13
+    status: required
     coverageScope: architectureOwners
     sourceDocs:
       - path: docs/implementation/p7_resources_and_images.md
@@ -691,7 +692,7 @@ edges:
     to: resource.kernel
     kind: composition
     phaseRequiredBy: P7
-    status: future
+    status: required
     sourceDocs:
       - path: docs/architecture/01_runtime_ownership.md
       - path: docs/contracts/resources.md
@@ -705,7 +706,7 @@ edges:
     from: resource.kernel
     to: resource.surface_session
     kind: resource_invalidation
-    phaseRequiredBy: P7
+    phaseRequiredBy: P13
     status: future
     sourceDocs:
       - path: docs/contracts/resources.md
@@ -877,17 +878,6 @@ placeholders:
       - path: docs/contracts/interaction_engine.md
     evidence:
       - Command port implementation is future interaction-command scope and must not fail P4 closure.
-  - id: api.canvas_runtime.resources.future_placeholder
-    node: api.canvas_runtime
-    member: CanvasRuntime.resources
-    path: lib/src/api/canvas_runtime.dart
-    phaseRequiredBy: P7
-    status: deferred_until_phase
-    sourceDocs:
-      - path: docs/implementation/p7_resources_and_images.md
-      - path: docs/contracts/resources.md
-    evidence:
-      - Resource port implementation is future P7 scope and must not fail P4 closure.
   - id: api.canvas_runtime.preview.future_placeholder
     node: api.canvas_runtime
     member: CanvasRuntime.preview
@@ -1574,7 +1564,6 @@ sourceCoverage:
       - runtime.canvas_runtime.camera.closed_phase_placeholder
       - api.canvas_runtime.tools.future_placeholder
       - api.canvas_runtime.commands.future_placeholder
-      - api.canvas_runtime.resources.future_placeholder
       - api.canvas_runtime.preview.future_placeholder
       - api.canvas_runtime.context_action_requests.future_placeholder
   - sectionId: section_05_schema_v1_contract
@@ -1595,7 +1584,6 @@ sourceCoverage:
       - runtime.root.owns_resource_kernel
       - resource.kernel.invalidates_surface_session
       - frame.renderer.uses_surface_resource_session
-      - api.canvas_runtime.resources.future_placeholder
   - sectionId: section_08_legacy_capability_inventory
     disposition: non_graph_semantics
     reason: Legacy donor classification is migration evidence, not a target architecture topology obligation.

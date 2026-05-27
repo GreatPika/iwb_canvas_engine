@@ -52,10 +52,14 @@ Do not assume:
 
 `DocumentStoreKernel` owns resource descriptors as part of committed document.
 Resource declarations such as `CanvasResource`, `CanvasResourcePort`, and
-`CanvasResourceResolver` live in `lib/src/contracts/public/**`; dirty-resource
-outcomes and resolver mutation guard seams live in
-`lib/src/contracts/internal/**`. `ResourceKernel` owns the non-surface resource
-implementation API and dirty-resource orchestration. Each active
+`CanvasResourceResolver` live in `lib/src/contracts/public/**`;
+`ResourceCatalogPort`, dirty-resource outcomes, and resolver mutation guard
+seams live in `lib/src/contracts/internal/**`. `ResourceCatalogPort` is the
+runtime-backed read seam for committed public resource descriptors; frame code
+continues to use `FrameFactsPort` for descriptor facts and must not use the
+catalog seam for asset binding. `ResourceKernel` owns the implemented
+non-surface resource API, catalog read delegation, `resourceVisualRevision`,
+and dirty-resource no-op/acceptance orchestration. Each active future
 `CanvasSurface` owns one `SurfaceResourceSession` instance under
 `lib/src/resources/**` for synchronous resolver lifecycle and resolved-image
 cache state.
@@ -159,25 +163,28 @@ Semantics:
 ```text
 - does not change document revision;
 - increments `state.revisions.resourceVisual`;
-- sends target invalidation to the active `SurfaceResourceSession` if attached;
+- sends target/all dirty outcome to the runtime-owned publication boundary; a
+  later attached `SurfaceResourceSession` consumes that boundary for cache
+  invalidation;
 - publishes main repaint intent;
 - publishes one `CanvasRuntimeState` when the dirty request changes resource
   visual state;
 - does not emit action event;
 - does not clear selection;
 - does not clear preview;
+- missing target resource ids and empty mark-all catalogs are complete no-ops;
 - after dispose throws StateError.
 ```
 
 `resourceVisualRevision` is runtime resource revision state and maps to the
 public `state.revisions.resourceVisual` domain. The public resource port
 delegates the revision increment to ResourceKernel/RuntimeRoot orchestration and
-delegates target invalidation to the attached resource session, if any. The
+emits target/all dirty outcomes for the attached resource session, if any. The
 repaint intent is runtime-owned and does not require an attached `CanvasSurface`;
 an attached surface observes it if present.
 
 `markAllResourcesDirty` applies the same rule to every registered resource and
-clears the active session cache if a session exists.
+will clear the active session cache when that future session exists.
 
 ### 7.5 v1 resource boundary
 

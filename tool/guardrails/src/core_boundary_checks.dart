@@ -182,6 +182,7 @@ List<GuardrailViolation> _checkImport(String path, String uri) {
     ..._checkLegacyImport(path, uri),
     ..._checkExternalPrivateImport(path, uri),
     ..._checkCodecFlutterImport(path, uri),
+    ..._checkResourceFlutterImport(path, uri),
   ];
   final target = _targetPath(path, uri);
   if (target != null) {
@@ -229,6 +230,20 @@ List<GuardrailViolation> _checkCodecFlutterImport(String path, String uri) {
       guardrailId: 'core.import_boundaries',
       path: path,
       message: 'codec code may not import Flutter widgets',
+    ),
+  ];
+}
+
+List<GuardrailViolation> _checkResourceFlutterImport(String path, String uri) {
+  if (!path.startsWith('lib/src/resources/') || !_isFlutterWidgetSurface(uri)) {
+    return const [];
+  }
+
+  return [
+    GuardrailViolation(
+      guardrailId: 'core.import_boundaries',
+      path: path,
+      message: 'resource code may not import Flutter widgets',
     ),
   ];
 }

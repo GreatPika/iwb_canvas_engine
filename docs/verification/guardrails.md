@@ -177,7 +177,7 @@ Mandatory guardrails:
 | `api.id_validation_no_extension_type_escape` | ids cannot be publicly constructed without validation |
 | `core.no_legacy_imports` | no import of legacy package/runtime |
 | `core.import_boundaries` | package-owned source paths obey source boundary rules and the forbidden import matrix from `section_03_package_layout` |
-| `core.owner_dag_import_boundaries` | production import/export directives obey the selected owner-DAG: implementation-to-API, contracts-to-API, contracts-to-implementation, `resources -> runtime/frame`, `selection -> runtime`, and `codec -> runtime/store/edit/frame` edges are rejected; API wrapper exports to `contracts/public/**` and named facade bridges are the only API exceptions |
+| `core.owner_dag_import_boundaries` | production import/export directives obey the selected owner-DAG: implementation-to-API, contracts-to-API, contracts-to-implementation, `resources -> runtime/store/frame/surface`, `selection -> runtime`, and `codec -> runtime/store/edit/frame` edges are rejected; API wrapper exports to `contracts/public/**` and named facade bridges are the only API exceptions |
 | `core.no_unapproved_part_files` | production code has no `part` or `part of` files unless generated-code use is explicitly approved |
 | `core.no_scene_controller_shape_dependency` | no `SceneController` concept in core |
 | `core.no_node_spec_patch_shape_dependency` | no legacy NodeSpec/NodePatch/PatchField in core |
@@ -216,7 +216,7 @@ Mandatory guardrails:
 | `cache.background_grid_not_element_visual` | backgroundRevision/gridRevision changes and runtime view camera changes must not invalidate ordinary element paint plans |
 | `cache.hot_caches_have_capacity_eviction` | hot caches declare capacity, eviction policy, invalidation owner, and metric/probe |
 | `resources.mutation_inside_edit_only` | resource descriptor mutation only via CanvasEdit |
-| `resources.dirty_no_document_revision` | markResourceDirty publishes `state.revisions.resourceVisual` and does not increment `state.revisions.document` |
+| `resources.dirty_no_document_revision` | markResourceDirty/markAllResourcesDirty publish `state.revisions.resourceVisual` for accepted dirty calls, prove missing/empty no-ops, and do not increment `state.revisions.document` |
 | `resources.app_key_only` | resource descriptors use appKey only |
 | `resources.resolver_boundary_owned_by_surface_session` | painters and frame code never call CanvasResourceResolver directly; SurfaceResourceSession owns resolver access for an active surface |
 | `resources.resolver_frame_budget` | SurfaceResourceSession enforces per-frame sync resolver call budget and budget-exceeded placeholders are not cached as null/missing |

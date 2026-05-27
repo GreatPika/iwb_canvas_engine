@@ -242,6 +242,10 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/diagnostics/diagnostics_public_surface_test.dart`
 - `test/resources/sync_image_resolver_test.dart`
 - `test/resources/app_owned_image_not_disposed_test.dart`
+- `test/runtime/resource_catalog_port_test.dart`
+- `test/resources/resource_kernel_read_port_test.dart`
+- `test/resources/resource_dirty_port_test.dart`
+- `test/runtime/resource_dirty_state_publication_test.dart`
 - `test/resources/resource_dirty_test.dart`
 - `test/resources/mark_all_resources_dirty_test.dart`
 - `test/resources/missing_result_suppressed_per_frame_test.dart`
@@ -552,6 +556,12 @@ behavioral tests, and the required guardrail list remains owned by
   creates no commit intent, and cleanup emits no user action.
 
 #### `test/resources/resource_dirty_test.dart`
+- current narrow proof lives in `test/resources/resource_dirty_port_test.dart`
+  and `test/runtime/resource_dirty_state_publication_test.dart`: committed
+  catalog dirty calls publish `state.revisions.resourceVisual`, leave document,
+  resource, selection, preview, view-camera, interaction, epoch, action, and
+  public document projection state unchanged, prove missing-target and empty
+  mark-all no-ops, and prove guard rejection before dirty side effects.
 - proves markResourceDirty publishes state.revisions.resourceVisual without
   incrementing state.revisions.document, evicting public document projection,
   clearing selection, clearing preview, or emitting an action event.

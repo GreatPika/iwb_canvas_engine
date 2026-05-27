@@ -28,13 +28,6 @@ const publicApiPlaceholderAllowlist = <PublicApiPlaceholder>[
         'Remove when CanvasCommandPort executes committed mutations.',
   ),
   PublicApiPlaceholder(
-    declarationId: 'CanvasRuntime.resources',
-    ownerPhase: 'P7',
-    reason: 'Resource runtime behavior is owned by resources and images.',
-    removalCondition:
-        'Remove when CanvasResourcePort is backed by resource state.',
-  ),
-  PublicApiPlaceholder(
     declarationId: 'CanvasRuntime.preview',
     ownerPhase: 'P11',
     reason: 'Preview production is owned by draw tools.',
