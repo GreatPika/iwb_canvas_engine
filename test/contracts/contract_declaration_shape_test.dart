@@ -62,7 +62,7 @@ void _testMovedValueDeclarations() {
 
 void _testSurfaceValueDeclarations() {
   test('surface style values are contract-owned wrapper exports', () {
-    final surface = _contractSource('canvas_surface.dart');
+    final surface = _contractSource('canvas_surface_styles.dart');
 
     expect(
       _topLevelNames(surface),

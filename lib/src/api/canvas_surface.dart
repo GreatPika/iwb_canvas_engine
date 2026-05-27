@@ -1,10 +1,10 @@
 import 'package:flutter/widgets.dart';
 
-import '../contracts/public/canvas_surface.dart';
+import '../contracts/public/canvas_surface_styles.dart';
 import 'canvas_resource.dart';
 import 'canvas_runtime.dart';
 
-export '../contracts/public/canvas_surface.dart';
+export '../contracts/public/canvas_surface_styles.dart';
 
 /// Public API v1 declaration for [CanvasSurface].
 final class CanvasSurface extends StatefulWidget {

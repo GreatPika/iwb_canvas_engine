@@ -63,7 +63,7 @@ The new package is rooted at the repository top level:
           canvas_ids.dart
           canvas_errors.dart
           canvas_diagnostics.dart
-          canvas_surface.dart
+          canvas_surface_styles.dart
         internal/
           commit_delivery.dart
           document_facts_port.dart

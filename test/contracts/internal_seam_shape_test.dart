@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/load_interaction_boundary.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -95,12 +96,16 @@ void _testSelectionPortShape() {
 }
 
 void _testLoadBoundaryShape() {
-  test('load boundary contract has no noop implementation', () {
-    final loadBoundarySource = _contractSource(
-      'load_interaction_boundary.dart',
+  test('load boundary contract exposes prepared cleanup only', () {
+    final boundary = _CompileTimeLoadBoundary();
+    final loadBoundary = _parse(
+      _contractSource('load_interaction_boundary.dart'),
     );
-    final loadBoundary = _parse(loadBoundarySource);
 
+    expect(
+      boundary.prepareLoadCleanup(),
+      const PointerCleanupOutcome(previewChanged: true),
+    );
     expect(
       _topLevelNames(loadBoundary),
       containsAll(['PointerCleanupOutcome', 'LoadInteractionBoundary']),
@@ -109,7 +114,13 @@ void _testLoadBoundaryShape() {
       _topLevelNames(loadBoundary),
       isNot(contains('_NoopLoadInteractionBoundary')),
     );
-    expect(loadBoundarySource, isNot(contains('noopLoadInteractionBoundary')));
+    expect(
+      _contractSource('load_interaction_boundary.dart'),
+      isNot(contains('noopLoadInteractionBoundary')),
+    );
+
+    _expectBoundaryMethodShape(loadBoundary);
+    _expectPointerCleanupOutcomeShape(loadBoundary);
   });
 }
 
@@ -179,6 +190,64 @@ void _expectNoFunctionFields(CompilationUnit unit, String className) {
   ];
 
   expect(fieldTypes.any((type) => type.contains('Function')), isFalse);
+}
+
+void _expectBoundaryMethodShape(CompilationUnit unit) {
+  final declaration = _classDeclaration(unit, 'LoadInteractionBoundary');
+  final methods = declaration.body.members
+      .whereType<MethodDeclaration>()
+      .toList();
+
+  expect(methods, hasLength(1));
+  expect(methods.single.name.lexeme, 'prepareLoadCleanup');
+  expect(methods.single.returnType?.toSource(), 'PointerCleanupOutcome');
+}
+
+void _expectPointerCleanupOutcomeShape(CompilationUnit unit) {
+  final declaration = _classDeclaration(unit, 'PointerCleanupOutcome');
+
+  _expectConstConstructor(declaration);
+  _expectValueOnlyFields(declaration);
+}
+
+void _expectConstConstructor(ClassDeclaration declaration) {
+  expect(
+    declaration.body.members.whereType<ConstructorDeclaration>().any(
+      (constructor) => constructor.constKeyword != null,
+    ),
+    isTrue,
+  );
+}
+
+void _expectValueOnlyFields(ClassDeclaration declaration) {
+  expect(declaration.body.members.whereType<MethodDeclaration>(), isEmpty);
+  final fields = declaration.body.members
+      .whereType<FieldDeclaration>()
+      .toList();
+
+  expect(fields, hasLength(2));
+  for (final field in fields) {
+    expect(field.fields.isFinal || field.fields.isConst, isTrue);
+  }
+  expect(_fieldTypesByName(fields), {
+    'previewChanged': 'bool',
+    'noChange': 'PointerCleanupOutcome',
+  });
+}
+
+Map<String, String> _fieldTypesByName(List<FieldDeclaration> fields) {
+  return {
+    for (final field in fields)
+      for (final variable in field.fields.variables)
+        variable.name.lexeme: field.fields.type?.toSource() ?? '',
+  };
+}
+
+final class _CompileTimeLoadBoundary implements LoadInteractionBoundary {
+  @override
+  PointerCleanupOutcome prepareLoadCleanup() {
+    return const PointerCleanupOutcome(previewChanged: true);
+  }
 }
 
 ClassDeclaration _classDeclaration(CompilationUnit unit, String className) {

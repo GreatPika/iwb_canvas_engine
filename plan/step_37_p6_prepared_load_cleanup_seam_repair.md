@@ -138,9 +138,10 @@ prints no production or load ordering fixture references, while
 `rg -n "PointerCleanupOutcome|abstract interface class LoadInteractionBoundary|class _NoopLoadInteractionBoundary" lib/src/runtime`
 shows the focused runtime seam file, private no-op implementation, and
 `noopLoadInteractionBoundary` const access point used by `RuntimeRoot`.
-Add `test/runtime/load_interaction_boundary_shape_test.dart` as the focused
-seam-shape proof. The test implements `LoadInteractionBoundary` with exactly
-one override, `prepareLoadCleanup()` returning `PointerCleanupOutcome`; it must
+The focused seam-shape proof now lives with the contract owner in
+`test/contracts/internal_seam_shape_test.dart` after the Step 38 contract-layer
+migration. The proof implements `LoadInteractionBoundary` with exactly one
+override, `prepareLoadCleanup()` returning `PointerCleanupOutcome`; it must
 fail to compile if `LoadInteractionBoundary` exposes any second cleanup phase
 under any name. The same seam-shape proof must assert the outcome is
 value-only: a `const` constructor, final data fields, no setters, no
