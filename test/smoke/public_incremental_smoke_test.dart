@@ -55,7 +55,18 @@ void main() {
     expect(selectedState.revisions.document, 0);
     expect(runtime.selection.selectedElementIds, {CanvasElementId('element-a')});
 
+    final imageResource = CanvasImageResource(
+      id: CanvasResourceId('resource-a'),
+      source: CanvasResourceSource.appKey('smoke-image'),
+      mimeType: 'image/png',
+      byteLength: 24,
+      metadata: CanvasMetadata.fromMap({'label': 'Smoke image'}),
+    );
+    expect(imageResource.source, CanvasResourceSource.appKey('smoke-image'));
+    expect(imageResource.metadata['label'], 'Smoke image');
+
     runtime.edits.edit((edit) {
+      expect(edit.upsertResource(imageResource), isTrue);
       edit.addElement(
         CanvasRectElement(
           id: CanvasElementId('element-b'),
@@ -67,9 +78,12 @@ void main() {
 
     final editedState = runtime.state.value;
     expect(editedState.summary.elementCount, 2);
+    expect(editedState.summary.resourceCount, 1);
     expect(editedState.revisions.document, 1);
     expect(editedState.revisions.selection, 1);
-    expect(runtime.readDocument().layers.single.elements, hasLength(2));
+    final editedDocument = runtime.readDocument();
+    expect(editedDocument.layers.single.elements, hasLength(2));
+    expect(editedDocument.resources.single.id, CanvasResourceId('resource-a'));
 
     final secondDocument = decodeCanvasDocument(_secondSchemaV1Document());
     final loadSnapshots = <CanvasRuntimeState>[];
