@@ -111,7 +111,7 @@ sequenceDiagram
     App->>Port: markResourceDirty(resourceId) or markAllResourcesDirty()
     Port->>Runtime: delegate resource dirty signal
     Runtime->>Resources: increment resourceVisualRevision
-    Resources-->>Runtime: ResourceDirtyOutcome with resourceVisualRevision and target/all invalidation
+    Resources-->>Runtime: ResourceDirtyOutcome with target/all invalidation
     Runtime->>Session: invalidate target resource entries or clear all entries if attached
     Session->>Cache: invalidate entries by resourceId or all
     Runtime->>State: publish CanvasRuntimeState with updated state.revisions.resourceVisual

@@ -11,7 +11,9 @@ void main() {
   _testRootBarrelFixtureEdges();
   _testPackageDotSegmentFixtureEdges();
   _testRequiredForbiddenEdges();
-  _testOwnerFixtureMatrix();
+  _testOwnerFixtureInventory();
+  _testOwnerPolicyInventory();
+  _testOwnerPolicyMatrix();
 }
 
 void _testProductionOwnerDag() {
@@ -156,40 +158,40 @@ void _testRequiredForbiddenEdges() {
   });
 }
 
-void _testOwnerFixtureMatrix() {
-  test('fixture matrix matches the selected DAG table', () {
-    for (final source in _ownerFixtureSources.entries) {
-      for (final target in _ownerFixtureTargets.entries) {
-        expect(
-          _fixtureFor(source.key, target.key, 'import')?.allowed,
-          _OwnerDagFixture(
-            sourceOwner: source.key,
-            targetOwner: target.key,
-            sourcePath: source.value,
-            targetPath: target.value,
-            directiveKind: 'import',
-          ).allowed,
-          reason: '${source.key} -> ${target.key}',
-        );
-      }
+void _testOwnerFixtureInventory() {
+  test('owner fixtures cover every selected owner', () {
+    final ownerNames = ownerDagOwners.map((owner) => owner.name).toSet();
+
+    expect(_ownerFixtureSources.keys.toSet(), ownerNames);
+    expect(_ownerFixtureTargets.keys.toSet(), ownerNames);
+    for (final entry in _ownerFixtureSources.entries) {
+      expect(ownerForPath(entry.value)?.name, entry.key);
+    }
+    for (final entry in _ownerFixtureTargets.entries) {
+      expect(ownerForPath(entry.value)?.name, entry.key);
     }
   });
 }
 
-_OwnerDagFixture? _fixtureFor(
-  String sourceOwner,
-  String targetOwner,
-  String directiveKind,
-) {
-  for (final fixture in _matrixFixtures) {
-    if (fixture.sourceOwner == sourceOwner &&
-        fixture.targetOwner == targetOwner &&
-        fixture.directiveKind == directiveKind) {
-      return fixture;
-    }
-  }
+void _testOwnerPolicyInventory() {
+  test('allowed owner edges match the independent policy table', () {
+    expect(
+      ownerDagAllowedEdges.map(_allowedEdgeKey).toSet(),
+      _expectedAllowedOwnerEdges.map(_expectedEdgeKey).toSet(),
+    );
+  });
+}
 
-  return null;
+void _testOwnerPolicyMatrix() {
+  test('selected owner DAG matches the independent policy table', () {
+    for (final fixture in _fixtures) {
+      expect(
+        _selectedDagAllows(fixture),
+        fixture.allowed,
+        reason: fixture.label,
+      );
+    }
+  });
 }
 
 final _fixtures = [..._matrixFixtures, ..._bridgeFixtures];
@@ -214,7 +216,6 @@ const _bridgeFixtures = [
     sourcePath: 'lib/src/api/canvas_runtime.dart',
     targetPath: 'lib/src/runtime/runtime_root.dart',
     directiveKind: 'import',
-    explicitAllowed: true,
   ),
   _OwnerDagFixture(
     sourceOwner: 'api',
@@ -222,7 +223,6 @@ const _bridgeFixtures = [
     sourcePath: 'lib/src/api/canvas_codec.dart',
     targetPath: 'lib/src/codec/schema_v1_encoder.dart',
     directiveKind: 'import',
-    explicitAllowed: true,
   ),
   _OwnerDagFixture(
     sourceOwner: 'api',
@@ -230,7 +230,127 @@ const _bridgeFixtures = [
     sourcePath: 'lib/src/api/canvas_codec.dart',
     targetPath: 'lib/src/codec/schema_v1_decoder.dart',
     directiveKind: 'import',
-    explicitAllowed: true,
+  ),
+];
+
+const _expectedAllowedOwnerEdges = [
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'contracts/internal',
+    targetOwner: 'contracts/public',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'api',
+    targetOwner: 'contracts/public',
+    directiveKinds: {'import', 'export'},
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'api',
+    targetOwner: 'runtime',
+    sourcePath: 'lib/src/api/canvas_runtime.dart',
+    targetPath: 'lib/src/runtime/runtime_root.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'api',
+    targetOwner: 'codec',
+    sourcePath: 'lib/src/api/canvas_codec.dart',
+    targetPath: 'lib/src/codec/schema_v1_encoder.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'api',
+    targetOwner: 'codec',
+    sourcePath: 'lib/src/api/canvas_codec.dart',
+    targetPath: 'lib/src/codec/schema_v1_decoder.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'contracts/public',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'contracts/internal',
+  ),
+  _ExpectedAllowedOwnerEdge(sourceOwner: 'runtime', targetOwner: 'edit'),
+  _ExpectedAllowedOwnerEdge(sourceOwner: 'runtime', targetOwner: 'selection'),
+  _ExpectedAllowedOwnerEdge(sourceOwner: 'runtime', targetOwner: 'store'),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'edit',
+    targetOwner: 'contracts/public',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'edit',
+    targetOwner: 'contracts/internal',
+  ),
+  _ExpectedAllowedOwnerEdge(sourceOwner: 'edit', targetOwner: 'store'),
+  _ExpectedAllowedOwnerEdge(sourceOwner: 'edit', targetOwner: 'codec'),
+  _ExpectedAllowedOwnerEdge(sourceOwner: 'edit', targetOwner: 'diagnostics'),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'store',
+    targetOwner: 'contracts/public',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'selection',
+    targetOwner: 'contracts/public',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'selection',
+    targetOwner: 'contracts/internal',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'codec',
+    targetOwner: 'contracts/public',
+  ),
+  _ExpectedAllowedOwnerEdge(sourceOwner: 'codec', targetOwner: 'diagnostics'),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'diagnostics',
+    targetOwner: 'contracts/public',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'resources',
+    targetOwner: 'contracts/public',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'resources',
+    targetOwner: 'contracts/internal',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'frame',
+    targetOwner: 'contracts/public',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'frame',
+    targetOwner: 'contracts/internal',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'interaction',
+    targetOwner: 'contracts/public',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'interaction',
+    targetOwner: 'contracts/internal',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'spatial',
+    targetOwner: 'contracts/public',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'spatial',
+    targetOwner: 'contracts/internal',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'tools',
+    targetOwner: 'contracts/public',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'tools',
+    targetOwner: 'contracts/internal',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'contracts/public',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'contracts/internal',
   ),
 ];
 
@@ -273,6 +393,18 @@ const _ownerFixtureTargets = {
 };
 
 const _requiredForbiddenEdges = [
+  _RequiredForbiddenEdge(source: 'api', target: 'runtime'),
+  _RequiredForbiddenEdge(source: 'api', target: 'edit'),
+  _RequiredForbiddenEdge(source: 'api', target: 'store'),
+  _RequiredForbiddenEdge(source: 'api', target: 'selection'),
+  _RequiredForbiddenEdge(source: 'api', target: 'codec'),
+  _RequiredForbiddenEdge(source: 'api', target: 'diagnostics'),
+  _RequiredForbiddenEdge(source: 'api', target: 'resources'),
+  _RequiredForbiddenEdge(source: 'api', target: 'frame'),
+  _RequiredForbiddenEdge(source: 'api', target: 'interaction'),
+  _RequiredForbiddenEdge(source: 'api', target: 'spatial'),
+  _RequiredForbiddenEdge(source: 'api', target: 'tools'),
+  _RequiredForbiddenEdge(source: 'api', target: 'surface'),
   _RequiredForbiddenEdge(source: 'runtime', target: 'api'),
   _RequiredForbiddenEdge(source: 'edit', target: 'api'),
   _RequiredForbiddenEdge(source: 'store', target: 'api'),
@@ -337,7 +469,6 @@ final class _OwnerDagFixture {
     required this.sourcePath,
     required this.targetPath,
     required this.directiveKind,
-    this.explicitAllowed,
   });
 
   final String sourceOwner;
@@ -345,11 +476,10 @@ final class _OwnerDagFixture {
   final String sourcePath;
   final String targetPath;
   final String directiveKind;
-  final bool? explicitAllowed;
 
   String get label => '$sourceOwner $directiveKind -> $targetOwner';
 
-  bool get allowed => explicitAllowed ?? _selectedDagAllows(this);
+  bool get allowed => _expectedOwnerPolicyAllows(this);
 
   String get content {
     return _fixtureDirective(
@@ -358,6 +488,62 @@ final class _OwnerDagFixture {
       targetPath: targetPath,
     );
   }
+}
+
+final class _ExpectedAllowedOwnerEdge {
+  const _ExpectedAllowedOwnerEdge({
+    required this.sourceOwner,
+    required this.targetOwner,
+    this.sourcePath,
+    this.targetPath,
+    this.directiveKinds = const {'import'},
+  });
+
+  final String sourceOwner;
+  final String targetOwner;
+  final String? sourcePath;
+  final String? targetPath;
+  final Set<String> directiveKinds;
+
+  bool allows(_OwnerDagFixture fixture) {
+    return fixture.sourceOwner == sourceOwner &&
+        fixture.targetOwner == targetOwner &&
+        directiveKinds.contains(fixture.directiveKind) &&
+        (sourcePath == null || sourcePath == fixture.sourcePath) &&
+        (targetPath == null || targetPath == fixture.targetPath);
+  }
+}
+
+String _allowedEdgeKey(OwnerEdge edge) {
+  return [
+    edge.source.name,
+    edge.target.name,
+    edge.sourcePath ?? '*',
+    edge.targetPath ?? '*',
+    _directiveKindKey(edge.directiveKinds),
+  ].join('|');
+}
+
+String _expectedEdgeKey(_ExpectedAllowedOwnerEdge edge) {
+  return [
+    edge.sourceOwner,
+    edge.targetOwner,
+    edge.sourcePath ?? '*',
+    edge.targetPath ?? '*',
+    _directiveKindKey(edge.directiveKinds),
+  ].join('|');
+}
+
+String _directiveKindKey(Set<String> directiveKinds) {
+  return (directiveKinds.toList()..sort()).join(',');
+}
+
+bool _expectedOwnerPolicyAllows(_OwnerDagFixture fixture) {
+  if (fixture.sourceOwner == fixture.targetOwner) {
+    return true;
+  }
+
+  return _expectedAllowedOwnerEdges.any((edge) => edge.allows(fixture));
 }
 
 bool _selectedDagAllows(_OwnerDagFixture fixture) {

@@ -148,12 +148,13 @@ void _registerForbiddenEdgeTest() {
 }
 
 void _registerContractLayerForbiddenEdgeTest() {
-  test('production graph forbidden edges cover contract DAG boundaries', () {
+  test('step 38 required forbidden edges are present and executable', () {
     final expected = loadExpectedArchitectureGraph();
-    final activeForbiddenEdges = _activeForbiddenEdges(expected);
+    _expectRequiredForbiddenEdgesMatchClosedGraph(expected);
+    final requiredForbiddenEdges = _requiredStep38ForbiddenEdges(expected);
     final actual = _withImports(
       extractActualArchitectureGraph(expectedGraph: expected),
-      _forbiddenEdgeProbeImports(expected, activeForbiddenEdges),
+      _forbiddenEdgeProbeImports(expected, requiredForbiddenEdges),
     );
     final report = checkPhaseClosure(
       expected: expected,
@@ -163,7 +164,7 @@ void _registerContractLayerForbiddenEdgeTest() {
 
     expect(
       _ids(report),
-      containsAll(activeForbiddenEdges.map((edge) => edge.id)),
+      containsAll(_requiredStep38ForbiddenGraphEdges.map((edge) => edge.id)),
     );
   });
 }
@@ -435,12 +436,319 @@ Set<String> _ids(PhaseClosureReport report) {
   return report.violations.map((violation) => violation.graphId).toSet();
 }
 
-List<ArchitectureForbiddenEdge> _activeForbiddenEdges(
+void _expectRequiredForbiddenEdgesMatchClosedGraph(
   ExpectedArchitectureGraph expected,
 ) {
-  return expected.forbiddenEdges.where((edge) {
-    return _fixturePhaseIndex(edge.phaseRequiredBy) <= _fixturePhaseIndex('P6');
-  }).toList();
+  final closedForbiddenIds = {
+    for (final edge in expected.forbiddenEdges)
+      if (_phaseIndex(edge.phaseRequiredBy) <= _phaseIndex('P6')) edge.id,
+  };
+  final requiredIds = {
+    for (final edge in _requiredStep38ForbiddenGraphEdges) edge.id,
+  };
+
+  expect(requiredIds, closedForbiddenIds);
+}
+
+List<ArchitectureForbiddenEdge> _requiredStep38ForbiddenEdges(
+  ExpectedArchitectureGraph expected,
+) {
+  final edges = {for (final edge in expected.forbiddenEdges) edge.id: edge};
+
+  return [
+    for (final required in _requiredStep38ForbiddenGraphEdges)
+      _requiredStep38ForbiddenEdge(edges, required),
+  ];
+}
+
+ArchitectureForbiddenEdge _requiredStep38ForbiddenEdge(
+  Map<String, ArchitectureForbiddenEdge> edges,
+  _RequiredForbiddenGraphEdge required,
+) {
+  final edge = edges[required.id];
+  if (edge == null) {
+    throw StateError('Missing Step 38 forbidden graph edge ${required.id}');
+  }
+
+  expect(edge.from, required.from, reason: required.id);
+  expect(edge.to, required.to, reason: required.id);
+
+  return edge;
+}
+
+const _requiredStep38ForbiddenGraphEdges = [
+  _RequiredForbiddenGraphEdge(
+    id: 'runtime.root.forbidden_api_dependency',
+    from: 'runtime.root',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'edit.kernel.forbidden_api_dependency',
+    from: 'edit.kernel',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'store.document_kernel.forbidden_api_dependency',
+    from: 'store.document_kernel',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'selection.kernel.forbidden_api_dependency',
+    from: 'selection.kernel',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'codec.schema_v1.forbidden_api_dependency',
+    from: 'codec.schema_v1',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'diagnostics.hub.forbidden_api_dependency',
+    from: 'diagnostics.hub',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'load_document.pipeline.forbidden_api_dependency',
+    from: 'load_document.pipeline',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'resource.kernel.forbidden_api_dependency',
+    from: 'resource.kernel',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'resource.surface_session.forbidden_api_dependency',
+    from: 'resource.surface_session',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'geometry.spatial_index.forbidden_api_dependency',
+    from: 'geometry.spatial_index',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'frame.renderer.forbidden_api_dependency',
+    from: 'frame.renderer',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'interaction.selection_move.forbidden_api_dependency',
+    from: 'interaction.selection_move',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'draw.tools.forbidden_api_dependency',
+    from: 'draw.tools',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'eraser_text.request.forbidden_api_dependency',
+    from: 'eraser_text.request',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'flutter.surface.forbidden_api_dependency',
+    from: 'flutter.surface',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.public.forbidden_api_dependency',
+    from: 'contracts.public',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.internal_ports.forbidden_api_dependency',
+    from: 'contracts.internal_ports',
+    to: 'api.public_surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.public.forbidden_runtime_dependency',
+    from: 'contracts.public',
+    to: 'runtime.root',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.public.forbidden_edit_dependency',
+    from: 'contracts.public',
+    to: 'edit.kernel',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.public.forbidden_store_dependency',
+    from: 'contracts.public',
+    to: 'store.document_kernel',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.public.forbidden_selection_dependency',
+    from: 'contracts.public',
+    to: 'selection.kernel',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.public.forbidden_codec_dependency',
+    from: 'contracts.public',
+    to: 'codec.schema_v1',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.public.forbidden_diagnostics_dependency',
+    from: 'contracts.public',
+    to: 'diagnostics.hub',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.public.forbidden_resource_kernel_dependency',
+    from: 'contracts.public',
+    to: 'resource.kernel',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.public.forbidden_surface_session_dependency',
+    from: 'contracts.public',
+    to: 'resource.surface_session',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.public.forbidden_frame_dependency',
+    from: 'contracts.public',
+    to: 'frame.renderer',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.public.forbidden_interaction_dependency',
+    from: 'contracts.public',
+    to: 'interaction.selection_move',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.public.forbidden_tools_dependency',
+    from: 'contracts.public',
+    to: 'draw.tools',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.public.forbidden_spatial_dependency',
+    from: 'contracts.public',
+    to: 'geometry.spatial_index',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.public.forbidden_flutter_surface_dependency',
+    from: 'contracts.public',
+    to: 'flutter.surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.internal_ports.forbidden_runtime_dependency',
+    from: 'contracts.internal_ports',
+    to: 'runtime.root',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.internal_ports.forbidden_edit_dependency',
+    from: 'contracts.internal_ports',
+    to: 'edit.kernel',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.internal_ports.forbidden_store_dependency',
+    from: 'contracts.internal_ports',
+    to: 'store.document_kernel',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.internal_ports.forbidden_selection_dependency',
+    from: 'contracts.internal_ports',
+    to: 'selection.kernel',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.internal_ports.forbidden_codec_dependency',
+    from: 'contracts.internal_ports',
+    to: 'codec.schema_v1',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.internal_ports.forbidden_diagnostics_dependency',
+    from: 'contracts.internal_ports',
+    to: 'diagnostics.hub',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.internal_ports.forbidden_resource_kernel_dependency',
+    from: 'contracts.internal_ports',
+    to: 'resource.kernel',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.internal_ports.forbidden_surface_session_dependency',
+    from: 'contracts.internal_ports',
+    to: 'resource.surface_session',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.internal_ports.forbidden_frame_dependency',
+    from: 'contracts.internal_ports',
+    to: 'frame.renderer',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.internal_ports.forbidden_interaction_dependency',
+    from: 'contracts.internal_ports',
+    to: 'interaction.selection_move',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.internal_ports.forbidden_tools_dependency',
+    from: 'contracts.internal_ports',
+    to: 'draw.tools',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.internal_ports.forbidden_spatial_dependency',
+    from: 'contracts.internal_ports',
+    to: 'geometry.spatial_index',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'contracts.internal_ports.forbidden_flutter_surface_dependency',
+    from: 'contracts.internal_ports',
+    to: 'flutter.surface',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'resource.kernel.forbidden_runtime_dependency',
+    from: 'resource.kernel',
+    to: 'runtime.root',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'resource.kernel.forbidden_frame_dependency',
+    from: 'resource.kernel',
+    to: 'frame.renderer',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'resource.surface_session.forbidden_runtime_dependency',
+    from: 'resource.surface_session',
+    to: 'runtime.root',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'resource.surface_session.forbidden_frame_dependency',
+    from: 'resource.surface_session',
+    to: 'frame.renderer',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'selection.kernel.forbidden_runtime_dependency',
+    from: 'selection.kernel',
+    to: 'runtime.root',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'codec.schema_v1.forbidden_runtime_dependency',
+    from: 'codec.schema_v1',
+    to: 'runtime.root',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'codec.schema_v1.forbidden_store_dependency',
+    from: 'codec.schema_v1',
+    to: 'store.document_kernel',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'codec.schema_v1.forbidden_edit_dependency',
+    from: 'codec.schema_v1',
+    to: 'edit.kernel',
+  ),
+  _RequiredForbiddenGraphEdge(
+    id: 'codec.schema_v1.forbidden_frame_dependency',
+    from: 'codec.schema_v1',
+    to: 'frame.renderer',
+  ),
+];
+
+final class _RequiredForbiddenGraphEdge {
+  const _RequiredForbiddenGraphEdge({
+    required this.id,
+    required this.from,
+    required this.to,
+  });
+
+  final String id;
+  final String from;
+  final String to;
 }
 
 List<ImportFact> _forbiddenEdgeProbeImports(
@@ -487,7 +795,7 @@ const _ownerForbiddenProbePaths = {
   'surface': 'lib/src/surface/forbidden_probe.dart',
 };
 
-int _fixturePhaseIndex(String phase) {
+int _phaseIndex(String phase) {
   if (!phase.startsWith('P')) {
     return -1;
   }
