@@ -55,7 +55,7 @@ Tile policy:
 ```text
 cellSize = 256;
 if covered tile count > 1024 -> outlier only;
-if query tile count > 50000 -> fallback candidate union, diagnostic counter incremented;
+if query tile count > 50000 -> fallback candidate union, non-hub budget counter incremented;
 maxFallbackCandidates = 4096;
 normal element is not duplicated into all tiles when marked outlier;
 queries union tile candidates + outliers;
@@ -85,7 +85,8 @@ Full rebuild/reset is allowed only for replacement/load paths or the operation-m
 Fallback budget behavior:
 
 ```text
-- fallback increments a diagnostic counter whenever the query tile or candidate budget is hit;
+- pure SpatialKernel fallback increments a non-hub budget counter whenever the query tile or candidate budget is hit;
+- this counter is not a DiagnosticsHub write; only interaction-observed user-facing reliability events route through the planned P10 `interaction` row in `section_20_diagnostics_hub`;
 - budget-exceeded fallback does not return partial hit/paint candidates as valid results;
 - RuntimeRoot schedules rebuild or retry outside the hot pointer/paint path;
 - no fallback path may scan the full scene silently.
@@ -95,7 +96,7 @@ Spatial query hot path:
 
 ```text
 query request -> revision/generation gate -> tile/outlier union -> candidate budget gate -> typed result;
-query tile count > 50000 -> fallback candidate union with diagnostic counter;
+query tile count > 50000 -> fallback candidate union with non-hub budget counter;
 fallback candidate count > maxFallbackCandidates -> typed budget-exceeded result;
 budget-exceeded result contains no partial candidates and does not mutate indexes;
 invalid index can request rebuild/retry only outside the hot pointer/paint path.

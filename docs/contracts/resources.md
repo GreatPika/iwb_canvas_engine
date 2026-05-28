@@ -213,7 +213,9 @@ paints a bounded placeholder rectangle.
 image size determines placeholder bounds;
 no full-document repaint loop;
 no repeated resolver retry in same frame;
-diagnostic emitted only if verbose diagnostics enabled or schema missing reference occurs at load time.
+normal placeholder painting does not write `DiagnosticsHub`;
+schema missing-reference validation at load time uses the staged-load codec-bridge row in `section_20_diagnostics_hub`;
+any future verbose missing-placeholder diagnostic must be added to the routing table before implementation.
 ```
 
 Resolver reentrancy:
@@ -232,7 +234,7 @@ kMaxSyncResourceResolverCallsPerFrame = 128;
 the counter resets for each main paint frame;
 cache hits and missing descriptors do not consume the resolver-call budget;
 after the budget is exhausted, SurfaceResourceSession returns a bounded placeholder;
-budget-exceeded results increment a diagnostic/probe counter;
+budget-exceeded results increment a resource-owned metric/probe counter only; this is not a DiagnosticsHub write;
 SurfaceResourceSession owns the budget-exceeded follow-up throttle;
 budget-exceeded results may schedule at most one pending throttled follow-up repaint;
 the pending follow-up repaint flag is cleared by the next main frame resource pass;

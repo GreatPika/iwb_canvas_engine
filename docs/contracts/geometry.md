@@ -94,8 +94,10 @@ Box/image/text/rect hit:
 - coarse bounds = transformed local bounds inflated by hitPadding + 4.0;
 - exact hit uses inverse transform and local bounds inflated by scene padding mapped into local space;
 - if a committed row has a non-invertible transform, treat it as corrupted
-  internal state: record only policy-gated diagnostics, return miss, and
-  continue the candidate scan;
+  internal state: the planned P8 `section_20_diagnostics_hub` row records
+  policy-gated `spatial` diagnostics only when that future route is
+  implemented; the hit path returns miss and continues the candidate scan
+  without state mutation;
 - coarse candidate bounds may never accept a non-invertible box/image/text/rect
   hit.
 ```
@@ -171,7 +173,7 @@ kMaxEraserTerminalCandidates = 4096;
 kMaxEraserTerminalExactChecks = 32768;
 preview budget exceeded -> corridor-only preview, no tentative ids;
 terminal budget exceeded -> cleanup/no-op, no partial erase;
-budget exceeded increments diagnostic/probe counters;
+budget exceeded increments eraser-owned metric/probe counters only; this is not a DiagnosticsHub write;
 budget exceeded does not mutate document, selection, spatial index, projection,
 cache, repaint main scene, or emit erase action.
 ```

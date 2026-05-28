@@ -207,7 +207,7 @@ Mandatory guardrails:
 | `geometry.eraser_exact_budget_no_partial` | eraser exact-check budget exceeded paths produce corridor-only preview or terminal no-op cleanup, never partial erase |
 | `spatial.no_full_clone_ordinary_edit` | ordinary spatial updates touch only changed ids/pages; full rebuild is reserved for replacement/load paths |
 | `spatial.stale_candidate_rejected` | stale candidate handles are rejected by generation and structuralRevision checks before frame/hit use |
-| `spatial.fallback_budget_enforced` | fallback candidate union enforces maxFallbackCandidates, diagnostic counter, and typed budget-exceeded result |
+| `spatial.fallback_budget_enforced` | fallback candidate union enforces maxFallbackCandidates, non-hub budget counter, and typed budget-exceeded result |
 | `frame.committed_facts_via_frame_facts_port` | production frame code obtains committed frame facts, row snapshots, and descriptor snapshots through `FrameFactsPort`, and `lib/src/frame/**` does not import concrete store internals |
 | `frame.no_global_scene_sort` | selected supplement staging merges by orderToken and does not globally sort all scene elements |
 | `frame.paint_plan_excludes_preview_delta` | PaintPlanCache stores ordinary committed records only and excludes selectedMoveDelta/previewDelta from keys and values |

@@ -355,14 +355,17 @@ rejection of non-invertible element transforms before `PreparedDocumentLoad`
 success, interaction interruption, repaint, action events, or public state
 publication.
 
-`test.geometry.hit_policy` covers corrupted committed hit rows: a
-non-invertible element transform records only policy-gated diagnostics, returns
-miss, continues candidate scan, and has no coarse fallback acceptance.
+P8 `test.geometry.hit_policy` coverage for corrupted committed hit rows must
+follow the planned `section_20_diagnostics_hub` geometry row: a
+non-invertible element transform records only policy-gated `spatial`
+diagnostics when that route is implemented, returns miss, continues candidate
+scan, and has no coarse fallback acceptance.
 
-`test.diagnostics.sanitizer_and_public_projection` covers corrupted-row
-diagnostic sanitization. `test.diagnostics.disabled_no_alloc_hot_path` covers
-only the schema/codec disabled-diagnostics no-allocation subset; pointer and
-paint hot-path proof remains deferred until those runtime owners exist.
+Future diagnostics sanitizer coverage must cover corrupted-row diagnostic
+sanitization when the P8 route is implemented.
+`test.diagnostics.disabled_no_alloc_hot_path` covers only the schema/codec
+disabled-diagnostics no-allocation subset; pointer and paint hot-path proof
+remains deferred until those runtime owners exist.
 
 ### Test Shape Rules
 

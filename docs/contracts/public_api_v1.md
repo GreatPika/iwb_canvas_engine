@@ -2321,8 +2321,8 @@ Context-action and text editing model:
 - direct CanvasEdit.updateElement(CanvasTextElementUpdate) remains available
   for programmatic non-request synchronization;
 - documentRevision is emitted as an observation and diagnostics fact, not a
-  stale-rejection guard; unrelated document edits do not reject a still-current
-  text edit;
+  DiagnosticsHub write and not a stale-rejection guard; unrelated document
+  edits do not reject a still-current text edit;
 - engine does not store active text-input session;
 - context menus, editor overlay lifetime, IME, focus, accessibility, text
   selection, and hide/show policy are application responsibilities;

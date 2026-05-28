@@ -128,7 +128,7 @@ indirection, runtime behavior, or runner coverage.
 | `geometry.eraser_exact_budget_no_partial` | `budget_probe` | `behavioral_seam_test`, `effect_matrix` | `derived from legacy pattern` | Use budget-exceeded proof and matrix coverage to reject partial erase behavior and leaked effects. |
 | `spatial.no_full_clone_ordinary_edit` | `budget_probe` | `effect_matrix`, `behavioral_seam_test` | `derived from legacy pattern` | Prove ordinary spatial updates are touched-id/page bounded and reserve full rebuild for replacement/load. |
 | `spatial.stale_candidate_rejected` | `behavioral_seam_test` | `semantic_sequence` | `derived from legacy pattern` | Prove generation and structuralRevision checks reject stale candidates before use. |
-| `spatial.fallback_budget_enforced` | `budget_probe` | `behavioral_seam_test` | `derived from legacy pattern` | Assert fallback candidate limits, diagnostics, and typed budget-exceeded results. |
+| `spatial.fallback_budget_enforced` | `budget_probe` | `behavioral_seam_test` | `derived from legacy pattern` | Assert fallback candidate limits, non-hub budget counters, and typed budget-exceeded results. |
 | `frame.no_global_scene_sort` | `behavioral_seam_test` | `budget_probe`, `negative_legacy_shape` | `derived from legacy pattern` | Prove selected supplement staging merges by orderToken and does not hide a full-scene sort. |
 | `frame.paint_plan_excludes_preview_delta` | `behavioral_seam_test` | `effect_matrix` | `derived from legacy pattern` | Prove paint-plan keys and values exclude preview deltas. |
 | `frame.paint_plan_excludes_selection_state` | `behavioral_seam_test` | `effect_matrix` | `derived from legacy pattern` | Prove paint-plan keys and values exclude selected ids, selection revision, and selection flags. |

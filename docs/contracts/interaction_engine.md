@@ -262,11 +262,12 @@ request target kind, controllerEpoch, and retired request status. For
 content-element targets, the registry also stores target element id, element
 generation, elementRevision, and element family.
 
-`documentRevision` is an observation and diagnostics fact only, not a stale
-commit guard. Unrelated document edits after request emission do not reject a
-later text commit while the request id is current and unretired, the request
-target is a text content element, and controllerEpoch, element generation,
-elementRevision, and element family remain current.
+`documentRevision` is an observation and diagnostics fact only, not a
+DiagnosticsHub write and not a stale commit guard. Unrelated document edits
+after request emission do not reject a later text commit while the request id
+is current and unretired, the request target is a text content element, and
+controllerEpoch, element generation, elementRevision, and element family remain
+current.
 
 The registry is not an active text-input session and not CanvasPreviewState.
 The application owns context menus, the Flutter text editor overlay, IME,
