@@ -59,3 +59,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 37. P6 prepared load cleanup seam repair](plan/step_37_p6_prepared_load_cleanup_seam_repair.md)
 - [x] [Step 38. Acyclic runtime public API architecture](plan/step_38_acyclic_runtime_public_api_architecture.md)
 - [x] [Step 39. P7 resource kernel read seam and dirty orchestration](plan/step_39_p7_resource_kernel_read_seam_and_dirty_orchestration.md)
+- [ ] [Step 40. DiagnosticsHub SSOT routing table](plan/step_40_diagnostics_hub_ssot_routing_table.md)
