@@ -32,22 +32,22 @@ flowchart LR
   codec_schema_v1 -->|reports errors to by P3| diagnostics_hub
   codec_schema_v1 -->|uses public data by P3| contracts_public
   contracts_internal_ports -->|contract dependency by P6| contracts_public
-  draw_tools -->|commits through by P11| edit_kernel
-  draw_tools -->|publishes preview through by P11| interaction_selection_move
+  draw_tools -->|planned commits through by P11| edit_kernel
+  draw_tools -->|planned publishes preview through by P11| interaction_selection_move
   edit_kernel -->|changes data through by P5| store_document_kernel
-  eraser_text_request -->|commits through by P12| edit_kernel
-  eraser_text_request -->|publishes preview through by P12| interaction_selection_move
-  eraser_text_request -->|queries hits through by P12| geometry_spatial_index
-  flutter_surface -->|is shown through by P13| api_canvas_runtime
-  frame_renderer -->|resolves resources through by P9| resource_surface_session
-  geometry_spatial_index -->|reports errors to by P8| diagnostics_hub
-  geometry_spatial_index -->|reads data through by P10| interaction_selection_move
-  interaction_selection_move -->|action stream boundary by P10| api_canvas_runtime
-  interaction_selection_move -->|reports errors to by P10| diagnostics_hub
+  eraser_text_request -->|planned commits through by P12| edit_kernel
+  eraser_text_request -->|planned publishes preview through by P12| interaction_selection_move
+  eraser_text_request -->|planned queries hits through by P12| geometry_spatial_index
+  flutter_surface -->|planned is shown through by P13| api_canvas_runtime
+  frame_renderer -->|planned resolves resources through by P9| resource_surface_session
+  geometry_spatial_index -->|planned reports errors to by P8| diagnostics_hub
+  geometry_spatial_index -->|planned reads data through by P10| interaction_selection_move
+  interaction_selection_move -->|planned action stream boundary by P10| api_canvas_runtime
+  interaction_selection_move -->|planned reports errors to by P10| diagnostics_hub
   load_document_pipeline -->|changes data through by P6| store_document_kernel
-  resource_kernel -->|invalidates resource session through by P13| resource_surface_session
-  runtime_root -->|reads from by P9| frame_renderer
-  runtime_root -->|reports errors to by P14| diagnostics_hub
+  resource_kernel -->|planned invalidates resource session through by P13| resource_surface_session
+  runtime_root -->|planned reads from by P9| frame_renderer
+  runtime_root -->|planned reports errors to by P14| diagnostics_hub
   runtime_root -->|composition by P7| resource_kernel
   runtime_root -->|owns and creates by P4| selection_kernel
   runtime_root -->|owns and creates by P4| store_document_kernel

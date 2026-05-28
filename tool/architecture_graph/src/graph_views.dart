@@ -475,7 +475,12 @@ String _label(String label, String phaseRequiredBy) {
 }
 
 String _edgeLabel(ArchitectureEdge edge) {
-  return '${_edgeKindLabel(edge.kind)} by ${edge.phaseRequiredBy}';
+  final label = _edgeKindLabel(edge.kind);
+  if (edge.status == 'future') {
+    return 'planned $label by ${edge.phaseRequiredBy}';
+  }
+
+  return '$label by ${edge.phaseRequiredBy}';
 }
 
 String _edgeKindLabel(String kind) {

@@ -13,7 +13,7 @@ flowchart TB
   RuntimeRoot --> Spatial[SpatialKernel]
   RuntimeRoot --> Resource[ResourceKernel]
   RuntimeRoot --> Codec[CodecBoundary]
-  RuntimeRoot --> Diagnostics[DiagnosticsHub]
+  RuntimeRoot -->|composition; future observer route only| Diagnostics[DiagnosticsHub]
   Edit --> Store
   Edit --> Selection
   FrameFacts --> Store
