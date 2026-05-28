@@ -438,8 +438,6 @@
   related_sections:
     - section_07_resource_lifecycle
   graph_view_source: none
-  reviewed_behaviors:
-    - p7_resource_session_resolver_lifecycle
 -
   id: seq_dispose_during_gesture
   kind: sequence
