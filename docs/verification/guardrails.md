@@ -218,7 +218,7 @@ Mandatory guardrails:
 | `resources.mutation_inside_edit_only` | resource descriptor mutation only via CanvasEdit |
 | `resources.dirty_no_document_revision` | markResourceDirty/markAllResourcesDirty publish `state.revisions.resourceVisual` for accepted dirty calls, prove missing/empty no-ops, and do not increment `state.revisions.document` |
 | `resources.app_key_only` | resource descriptors use appKey only |
-| `resources.resolver_boundary_owned_by_surface_session` | painters and frame code never call CanvasResourceResolver directly; SurfaceResourceSession owns resolver access for an active surface |
+| `resources.resolver_boundary_owned_by_surface_session` | frame, painter, and non-session resource code cannot hold typed `CanvasResourceResolver` references; `SurfaceResourceSession` owns typed resolver access for an active surface |
 | `resources.resolver_frame_budget` | SurfaceResourceSession enforces per-frame sync resolver call budget and budget-exceeded placeholders are not cached as null/missing |
 | `resources.no_same_frame_missing_retry` | null resource resolve results are suppressed by resolverGeneration, resourceId, and resourceRevision for the frame instead of retried immediately; missing descriptors and absent resolvers return bounded placeholders without resolver calls |
 | `resources.resolver_reentrancy_rejected` | public runtime mutation from inside CanvasResourceResolver throws StateError without runtime effects |

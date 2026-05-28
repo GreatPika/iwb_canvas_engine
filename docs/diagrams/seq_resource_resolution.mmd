@@ -72,7 +72,7 @@ sequenceDiagram
         else same-frame null result already seen
           Session-->>Assets: bounded placeholder without retry
         else per-frame resolver budget exceeded
-          Session-->>Assets: bounded placeholder, session records non-hub probe and at most one pending throttled follow-up repaint, no cache write
+          Session-->>Assets: bounded placeholder, session records at most one pending throttled follow-up repaint, no cache write
         else cache miss and resolver budget available
           Session->>Resolver: resolveImage(CanvasImageResource with CanvasAppKeyResourceSource.key)
           Note over Resolver: Resolver reads resource.source as CanvasAppKeyResourceSource.key through public API.
@@ -101,7 +101,7 @@ sequenceDiagram
   Frame->>Painter: paint immutable records with resolved image assets or placeholders
   Painter-->>Surface: draw main scene
 
-  Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession; painter never calls CanvasResourceResolver directly.
+  Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession; painter owns no typed CanvasResourceResolver reference.
   Note over Session,Resolver: Returned ui.Image objects are owned by the application. The engine never disposes app-owned images.
   Note over Capture,Store: Main paint uses FrameFactsPort for committed frame and row facts, does not materialize CanvasDocument, and does not read DocumentProjectionCache.
   Note over Port,Store: ResourcePort cannot mutate descriptors. Descriptor mutation is only through the CanvasEdit commit path outside this sequence.

@@ -90,8 +90,7 @@ stateDiagram-v2
   state "Resolver budget gate" as ResolverBudgetGate
   note right of ResolverBudgetGate
     kMaxSyncResourceResolverCallsPerFrame = 128.
-    Budget-exceeded results paint placeholders, increment a
-    non-hub session metric/probe counter, and may schedule at most one
+    Budget-exceeded results paint placeholders and may schedule at most one
     pending throttled follow-up repaint. The session owns
     that throttle and clears the pending flag on the next
     main frame resource pass. Painters and app resolvers must not

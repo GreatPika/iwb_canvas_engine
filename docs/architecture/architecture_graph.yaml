@@ -762,7 +762,7 @@ edges:
       - path: docs/contracts/resources.md
       - path: docs/contracts/frame_rendering.md
     evidence:
-      - PaintAssetBindingService binds image descriptors through SurfaceResourceSession after ordinary record planning; painters and ordinary planners do not call CanvasResourceResolver directly.
+      - PaintAssetBindingService binds image descriptors through SurfaceResourceSession after ordinary record planning; painters and ordinary planners do not own typed CanvasResourceResolver references.
     actual:
       delegationTargets:
         - SurfaceResourceSession

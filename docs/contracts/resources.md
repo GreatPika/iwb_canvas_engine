@@ -119,7 +119,7 @@ primitive and cache policy, while P13 wires the instance lifecycle to
 
 | Cache | Owner | Key | Invalidated by | Capacity | Eviction | Metric/probe | Hot path allowed? |
 |---|---|---|---|---:|---|---|---|
-| ImageResolveCache | SurfaceResourceSession | resolverGeneration + resourceId + resourceRevision | resolver replacement, descriptor change, resource dirty target/all, detach/dispose/runtime swap | 1024 entries per active session | target/all invalidation, generation reset, then LRU | resolver calls, budget-exceeded count, hit/miss, same-frame null-result suppression count | yes, sync app resolver only with `kMaxSyncResourceResolverCallsPerFrame = 128` |
+| ImageResolveCache | SurfaceResourceSession | resolverGeneration + resourceId + resourceRevision | resolver replacement, descriptor change, resource dirty target/all, detach/dispose/runtime swap | 1024 entries per active session | target/all invalidation, generation reset, then LRU | resolver-call budget and pending budget follow-up flag | yes, sync app resolver only with `kMaxSyncResourceResolverCallsPerFrame = 128` |
 
 The public dirty-resource revision is a repaint observation signal only. Cache
 identity is the table key above; dirty-resource calls invalidate target entries
@@ -240,7 +240,6 @@ kMaxSyncResourceResolverCallsPerFrame = 128;
 the counter resets for each main paint frame;
 cache hits and missing descriptors do not consume the resolver-call budget;
 after the budget is exhausted, SurfaceResourceSession returns a bounded placeholder;
-budget-exceeded results increment a resource-owned metric/probe counter only; this is not a DiagnosticsHub write;
 SurfaceResourceSession owns the budget-exceeded follow-up throttle;
 budget-exceeded results may schedule at most one pending throttled follow-up repaint;
 the pending follow-up repaint flag is cleared by the next main frame resource pass;
