@@ -189,7 +189,9 @@ not require an attached `CanvasSurface`; an attached surface observes it if
 present.
 
 `markAllResourcesDirty` applies the same rule to every registered resource and
-will clear the active session cache when that future session exists.
+clears the active session cache when a `ResourceSessionInvalidationSink` is
+attached. With no attached session, the dirty publication still completes and
+there is no session cache work to perform.
 
 ### 7.5 v1 resource boundary
 
