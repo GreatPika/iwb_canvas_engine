@@ -58,6 +58,42 @@ DiagnosticRecord
 public `CanvasDataException` field; public exceptions expose only code, message,
 path, and sanitized bounded details.
 
+DiagnosticsHub routing table status vocabulary:
+
+- `implemented`: production code writes this row today and focused tests prove
+  the route.
+- `implemented through codec bridge`: production load or runtime behavior
+  reaches DiagnosticsHub only through the codec/schema v1 bridge, with no
+  separate runtime diagnostics source.
+- `diagram drift to reconcile`: durable diagrams or prose may currently imply a
+  writer that production code does not implement; dependent diagrams must be
+  corrected before they can be treated as proof.
+- `planned P8`, `planned P10`, `planned P14`, or `planned/internal`: the row is
+  the approved future routing posture, but no implementation is claimed until a
+  later phase contract adds code and tests.
+- `deferred`: the approved posture is known, but the repository has not yet
+  assigned a required implementation phase.
+- `not a DiagnosticsHub write`: the named probe, metric, or counter is outside
+  DiagnosticsHub and must not allocate a `DiagnosticRecord`.
+- `forbidden in v1`: the route or public surface is intentionally absent from
+  public API v1.
+
+DiagnosticsHub routing table:
+
+| Writer / owner | Trigger | Diagnostic source | Severity and code family | Path and details | Timing and policy gate | Phase/status | Proof surface |
+|---|---|---|---|---|---|---|---|
+| `CodecBoundary` through `recordSchemaV1FailureDiagnostic` | Raw decode failure, schema validation failure, or encode DTO rejection | `codec` | `DiagnosticSeverity.error` plus the existing `CanvasDataErrorCode` supplied by the codec/schema failure | Uses the codec/schema failure path when available. Details are sanitized JSON-like values and include the current codec `message` placement inside `details`. | Records before the public error is projected or thrown. The disabled policy is checked before `DiagnosticRecord` allocation or detail-string interpolation. | `implemented` | Codec diagnostics routing tests, disabled no-allocation tests, and graph edge `codec.schema_v1.failures.report_to_diagnostics`. |
+| Staged load through the codec bridge | Load-time schema or DTO validation failure | `codec` | `DiagnosticSeverity.error` plus the same existing `CanvasDataErrorCode` emitted by the codec or validated-import failure | Follows the codec row path and details policy, including sanitized JSON-like detail values. | Records before the failed load is projected or thrown, and before any accepted document mutation. There is no separate runtime source for staged load validation failure diagnostics. | `implemented through codec bridge` | Staged-load diagnostics tests plus the codec diagnostics routing proof. |
+| Edit/commit validation or runtime failure diagrams | Existing diagram claims for edit-owned or commit-owned DiagnosticsHub writes, unless a later approved contract adds a route | `not applicable` | `not applicable` | `not applicable` | `not applicable` for current implementation. | `diagram drift to reconcile` | Semantic diagram search must show no durable diagram claims an implemented edit-owned DiagnosticsHub writer. |
+| `SpatialKernel` or geometry/spatial budget proof code | Pure spatial query tile budget exhaustion or fallback candidate budget exhaustion outside an interaction-observed reliability event | `not applicable` | `not applicable` | `not applicable` | Bounded spatial query or budget path only. No `DiagnosticRecord` is allocated. | `planned P8` classification row, `not a DiagnosticsHub write` | Spatial docs, diagrams, future P8 budget tests, and semantic search showing no hub route or graph edge. |
+| `InteractionEngine` through the interaction/query boundary | Interaction-observed hit-test fallback, query budget, or stale candidate rejection that affects user-facing selection reliability | `interaction` | `DiagnosticSeverity.warning` plus a future internal diagnostics reliability code seam with no public API export | Bounded interaction/query facts only. Details must not contain runtime objects. | Records only on the budget/reliability path and must not mutate committed state. | `planned P10` | Future graph edge `interaction.selection_move.reliability_events.report_to_diagnostics`, future focused interaction tests, and semantic diagram search. |
+| Geometry policy or a geometry-owned bridge | Corrupted committed spatial or hit-test row, such as a non-invertible element transform | `spatial` | `DiagnosticSeverity.error` plus a future internal diagnostics corruption code seam with no public API export | Sanitized field path, element id, and bounded source facts only. | Records only under policy, returns miss, and must not mutate state. | `planned P8` | Future graph edge `geometry.spatial_index.corrupted_rows.report_to_diagnostics`, future geometry tests, and semantic diagram search. |
+| `SurfaceResourceSession` or resource-owned budget/probe code | Resolver budget or session protection, including resource/session budget probes | `not applicable` | `not applicable` | `not applicable` | Bounded resource/session or paint budget path with no `DiagnosticRecord`, no cache write for a budget placeholder, and at most one pending throttled follow-up repaint where the resource contract says so. | `not a DiagnosticsHub write` | Resources docs, diagrams, future resource tests, and semantic search showing no hub route or graph edge. |
+| Eraser/geometry budget proof code | Preview or terminal eraser budget exhaustion | `not applicable` | `not applicable` | `not applicable` | Preview/terminal budget or cleanup/no-op path. Must preserve no-partial-erase behavior and allocate no `DiagnosticRecord`. | `not a DiagnosticsHub write` | Eraser/geometry docs, diagrams, future eraser tests, and semantic search showing no hub route or graph edge. |
+| `RuntimeRoot` | Failure-contained observer delivery after accepted commit, accepted load, or accepted resource-dirty publication | `diagnostics` | `DiagnosticSeverity.error` plus a future internal diagnostics observer code seam with no public API export | Sanitized observer surface name plus bounded error summary only. | Records post-acceptance and must not roll back or alter the accepted commit, load, dirty result, public state publication, action delivery, or repaint acceptance. | `planned P14` or `deferred` | Future graph edge `runtime.root.observer_failures.report_to_diagnostics`, runtime observer containment tests, and semantic diagram search. |
+| `DiagnosticsHub` or diagnostics-owned fallback boundary | Diagnostics sanitizer/formatting failure or internal self-protection | `diagnostics` | `DiagnosticSeverity.error` plus a future internal diagnostics self-protection code seam with no public API export | Sanitized fallback facts only. No runtime objects, handles, scene dumps, recursive public exposure, or unsanitized original payload. | Inside diagnostics failure containment. Must not create recursive records. | `planned/internal` | Diagnostics sanitizer/self-protection tests or a documented future test seam plus semantic search. |
+| No writer | Public diagnostics stream | `not applicable` | `not applicable` | `not applicable` | No public stream route exists in v1. | `forbidden in v1` | Public API contract wording, `diagnostics_public_surface` registry metadata, and public API guardrails. |
+
 Diagnostics-facing Public API v1 declarations are classified by
 `diagnostics_public_surface` inside `docs/_registry/public_api_v1.yaml`. That
 membership group initially contains `CanvasDiagnosticPolicy`,
@@ -67,10 +103,10 @@ and it must remain a subset of `public_exports`. The classification is
 inventory metadata for guardrail proof; it does not create a public diagnostics
 stream or add public API names.
 
-Runtime corruption diagnostics, such as a committed hit-test row with a
-non-invertible element transform, are policy-gated internal records. When
-diagnostics are disabled, the hot path remains branch-only with no
-`DiagnosticRecord` allocation and no detail-string interpolation. When enabled,
+The geometry corrupted-row routing table row is planned P8, not implemented
+today. When a later contract implements that policy-gated internal record,
+diagnostics-disabled hot paths must remain branch-only with no
+`DiagnosticRecord` allocation and no detail-string interpolation. Enabled
 details may include sanitized field path, element id, and source facts, but
 must not include runtime objects, handles, full scene dumps, or unsanitized
 field values.
