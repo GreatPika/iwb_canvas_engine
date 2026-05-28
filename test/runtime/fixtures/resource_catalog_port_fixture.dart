@@ -24,6 +24,7 @@ void main() {
 
 void _expectCatalogPortShape(ResourceCatalogPort catalog) {
   expect(catalog, isA<ResourceCatalogPort>());
+  expect(catalog.resourceCount, 1);
 }
 
 void _expectCatalogCopies(ResourceCatalogPort catalog, RuntimeRoot root) {

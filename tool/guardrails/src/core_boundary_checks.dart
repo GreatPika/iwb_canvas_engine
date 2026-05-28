@@ -235,7 +235,7 @@ List<GuardrailViolation> _checkCodecFlutterImport(String path, String uri) {
 }
 
 List<GuardrailViolation> _checkResourceFlutterImport(String path, String uri) {
-  if (!path.startsWith('lib/src/resources/') || !_isFlutterWidgetSurface(uri)) {
+  if (!path.startsWith('lib/src/resources/') || !_isFlutterPackage(uri)) {
     return const [];
   }
 
@@ -243,7 +243,7 @@ List<GuardrailViolation> _checkResourceFlutterImport(String path, String uri) {
     GuardrailViolation(
       guardrailId: 'core.import_boundaries',
       path: path,
-      message: 'resource code may not import Flutter widgets',
+      message: 'resource code may not import Flutter packages',
     ),
   ];
 }
@@ -462,6 +462,10 @@ bool _isFlutterWidgetSurface(String uri) {
   return uri == 'package:flutter/widgets.dart' ||
       uri == 'package:flutter/material.dart' ||
       uri == 'package:flutter/cupertino.dart';
+}
+
+bool _isFlutterPackage(String uri) {
+  return uri.startsWith('package:flutter/');
 }
 
 bool _isCodecRuntimeMutationTarget(String target) {

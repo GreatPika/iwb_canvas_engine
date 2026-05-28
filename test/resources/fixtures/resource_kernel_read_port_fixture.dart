@@ -68,6 +68,9 @@ final class _FakeResourceCatalog implements ResourceCatalogPort {
   int resourcesReadCount = 0;
 
   @override
+  int get resourceCount => _resources.length;
+
+  @override
   List<CanvasResource> get resources {
     resourcesReadCount += 1;
 

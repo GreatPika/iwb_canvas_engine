@@ -45,8 +45,7 @@ final class ResourceKernel implements CanvasResourcePort {
   @override
   void markAllResourcesDirty() {
     _mutationGuard.ensureRuntimeMutationAllowed();
-    final resources = _catalog.resources;
-    if (resources.isEmpty) {
+    if (_catalog.resourceCount == 0) {
       return;
     }
 

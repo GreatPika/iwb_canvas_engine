@@ -10,7 +10,7 @@ void main() {
   _testApiFacadeRuntimeRootImport();
   _testApiContractWrapperExports();
   _testFrameCannotUseResourceCatalogPort();
-  _testResourcesCannotImportFlutterWidgets();
+  _testResourcesCannotImportFlutterPackages();
 }
 
 void _testProductionBoundaries() {
@@ -141,12 +141,25 @@ void _testFrameCannotUseResourceCatalogPort() {
   });
 }
 
-void _testResourcesCannotImportFlutterWidgets() {
-  test('resource code cannot import Flutter widgets', () {
+void _testResourcesCannotImportFlutterPackages() {
+  test('resource code cannot import Flutter packages', () {
     expect(
       checkCoreBoundaryFile(
-        path: 'lib/src/resources/bad_flutter_import.dart',
+        path: 'lib/src/resources/bad_flutter_widgets_import.dart',
         content: "import 'package:flutter/widgets.dart';\n",
+      ),
+      contains(
+        isA<GuardrailViolation>().having(
+          (violation) => violation.guardrailId,
+          'guardrailId',
+          'core.import_boundaries',
+        ),
+      ),
+    );
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/resources/bad_flutter_services_import.dart',
+        content: "import 'package:flutter/services.dart';\n",
       ),
       contains(
         isA<GuardrailViolation>().having(

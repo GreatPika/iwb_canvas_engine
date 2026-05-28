@@ -55,6 +55,7 @@ final class DocumentStoreKernel {
   int get gridRevision => _document.revisions.gridRevision;
   int get resourceRevision => _document.revisions.resourceRevision;
   int get projectionBuildCount => _projectionCache.buildCount;
+  int get resourceCount => _document.resourceTable.rows.length;
   List<CanvasResource> get resources {
     return List.unmodifiable(
       _document.resourceTable.rows.map(ResourceTable.copy),

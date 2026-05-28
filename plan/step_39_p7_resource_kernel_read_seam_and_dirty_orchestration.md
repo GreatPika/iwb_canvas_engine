@@ -47,7 +47,7 @@ public facade handoff from `CanvasRuntime.resources`.
 In Scope:
 
 - Add `ResourceCatalogPort` under `lib/src/contracts/internal/**` with read-only
-  public resource list and lookup by `CanvasResourceId`.
+  public resource count, list, and lookup by `CanvasResourceId`.
 - Implement the store-backed catalog boundary in `RuntimeRoot` and
   `DocumentStoreKernel` so public resource reads return copied immutable
   `CanvasResource` descriptors from committed state without exposing
@@ -164,7 +164,7 @@ store adapter boundary.
 Boundary:
 
 Only the read-only committed catalog seam and store-backed public resource
-copying surface: `ResourceCatalogPort`, store resource list/lookup accessors,
+copying surface: `ResourceCatalogPort`, store resource count/list/lookup accessors,
 runtime implementation of the catalog port, and focused seam/store tests. This
 unit must not add `ResourceKernel`, wire `CanvasRuntime.resources`, or implement
 dirty behavior.
@@ -172,7 +172,7 @@ dirty behavior.
 Change:
 
 Add `ResourceCatalogPort` under `contracts/internal/**` with immutable public
-catalog list and lookup methods. Extend the store read boundary so
+catalog count, list, and lookup methods. Extend the store read boundary so
 `RuntimeRoot` can implement the port by reading committed `CanvasResource`
 rows and returning copied public descriptors. Keep descriptor facts for frame
 lookup on `FrameFactsPort` unchanged, and keep `ResourceCatalogPort` free of
@@ -183,7 +183,7 @@ Completion Check:
 `dart test test/contracts/internal_seam_shape_test.dart
 test/runtime/resource_catalog_port_test.dart` passes with coverage that
 `ResourceCatalogPort` exists under `contracts/internal/**`, imports only public
-resource/id declarations, exposes list and id lookup methods, does not name
+resource/id declarations, exposes count, list, and id lookup methods, does not name
 `DocumentStoreKernel`, `RuntimeRoot`, `FrameFactsPort`, `ResourceKernel`,
 `SurfaceResourceSession`, resolver, cache, or callback types, and leaves
 `FrameFactsPort.resourceDescriptor` as the only frame descriptor-fact lookup
@@ -297,7 +297,8 @@ catalog reads, resource revision changes, invalidation state changes, public
 state publication, repaint/effect emission, or action emission. That guard-order
 proof uses a spy or failing `ResourceCatalogPort` and covers both
 `markResourceDirty` and `markAllResourcesDirty`, proving rejected calls do not
-invoke `ResourceCatalogPort.resourceById` or `ResourceCatalogPort.resources`.
+invoke `ResourceCatalogPort.resourceById`, `ResourceCatalogPort.resourceCount`,
+or `ResourceCatalogPort.resources`.
 Failure-containment tests prove post-publication commit/effect observer failure
 does not roll back the accepted `resourceVisualRevision`; `ValueNotifier`
 listener behavior remains framework-owned and is not changed by this step.

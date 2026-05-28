@@ -44,8 +44,9 @@ void _expectSingleTargetDirtyRules() {
 
 void _expectMarkAllDirtyRules() {
   final emptySink = _RecordingDirtySink();
+  final emptyCatalog = _FakeResourceCatalog(const []);
   final emptyKernel = ResourceKernel(
-    catalog: _FakeResourceCatalog(const []),
+    catalog: emptyCatalog,
     mutationGuard: const _AllowingMutationGuard(),
     dirtyOutcomeSink: emptySink,
   );
@@ -54,10 +55,13 @@ void _expectMarkAllDirtyRules() {
 
   expect(emptyKernel.resourceVisualRevision, 0);
   expect(emptySink.outcomes, isEmpty);
+  expect(emptyCatalog.resourceCountReadCount, 1);
+  expect(emptyCatalog.resourcesReadCount, 0);
 
   final sink = _RecordingDirtySink();
+  final catalog = _FakeResourceCatalog([_resource('resource-a')]);
   final kernel = ResourceKernel(
-    catalog: _FakeResourceCatalog([_resource('resource-a')]),
+    catalog: catalog,
     mutationGuard: const _AllowingMutationGuard(),
     dirtyOutcomeSink: sink,
   );
@@ -68,6 +72,8 @@ void _expectMarkAllDirtyRules() {
   expect(sink.outcomes, hasLength(1));
   expect(sink.outcomes.single.dirtyResourceIds, isEmpty);
   expect(sink.outcomes.single.allResourcesDirty, isTrue);
+  expect(catalog.resourceCountReadCount, 1);
+  expect(catalog.resourcesReadCount, 0);
 }
 
 void _expectGuardBeforeCatalogRead() {
@@ -96,9 +102,22 @@ final class _FakeResourceCatalog implements ResourceCatalogPort {
     : _resources = List.unmodifiable(resources);
 
   final List<CanvasResource> _resources;
+  int resourceCountReadCount = 0;
+  int resourcesReadCount = 0;
 
   @override
-  List<CanvasResource> get resources => _resources;
+  int get resourceCount {
+    resourceCountReadCount += 1;
+
+    return _resources.length;
+  }
+
+  @override
+  List<CanvasResource> get resources {
+    resourcesReadCount += 1;
+
+    return _resources;
+  }
 
   @override
   CanvasResource? resourceById(CanvasResourceId id) {
@@ -114,6 +133,11 @@ final class _FakeResourceCatalog implements ResourceCatalogPort {
 
 final class _ThrowingResourceCatalog implements ResourceCatalogPort {
   const _ThrowingResourceCatalog();
+
+  @override
+  int get resourceCount {
+    throw StateError('catalog count should not run');
+  }
 
   @override
   List<CanvasResource> get resources {

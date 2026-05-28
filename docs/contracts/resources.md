@@ -55,9 +55,10 @@ Resource declarations such as `CanvasResource`, `CanvasResourcePort`, and
 `CanvasResourceResolver` live in `lib/src/contracts/public/**`;
 `ResourceCatalogPort`, dirty-resource outcomes, and resolver mutation guard
 seams live in `lib/src/contracts/internal/**`. `ResourceCatalogPort` is the
-runtime-backed read seam for committed public resource descriptors; frame code
-continues to use `FrameFactsPort` for descriptor facts and must not use the
-catalog seam for asset binding. `ResourceKernel` owns the implemented
+runtime-backed count/list/lookup seam for committed public resource
+descriptors; frame code continues to use `FrameFactsPort` for descriptor facts
+and must not use the catalog seam for asset binding. `ResourceKernel` owns the
+implemented
 non-surface resource API, catalog read delegation, `resourceVisualRevision`,
 and dirty-resource no-op/acceptance orchestration. Each active future
 `CanvasSurface` owns one `SurfaceResourceSession` instance under

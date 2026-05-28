@@ -226,11 +226,16 @@ void _expectResourceCatalogPortShape(CompilationUnit unit) {
   final resourcesGetter = methods.singleWhere(
     (method) => method.name.lexeme == 'resources',
   );
+  final countGetter = methods.singleWhere(
+    (method) => method.name.lexeme == 'resourceCount',
+  );
   final lookupMethod = methods.singleWhere(
     (method) => method.name.lexeme == 'resourceById',
   );
 
-  expect(methods, hasLength(2));
+  expect(methods, hasLength(3));
+  expect(countGetter.isGetter, isTrue);
+  expect(countGetter.returnType?.toSource(), 'int');
   expect(resourcesGetter.isGetter, isTrue);
   expect(resourcesGetter.returnType?.toSource(), 'List<CanvasResource>');
   expect(lookupMethod.returnType?.toSource(), 'CanvasResource?');

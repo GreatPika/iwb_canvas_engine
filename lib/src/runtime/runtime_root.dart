@@ -600,6 +600,9 @@ final class _StoreResourceCatalog implements ResourceCatalogPort {
   final DocumentStoreKernel store;
 
   @override
+  int get resourceCount => store.resourceCount;
+
+  @override
   List<CanvasResource> get resources => store.resources;
 
   @override
