@@ -220,6 +220,7 @@ void bad(CanvasResourceResolver resolver) {}
       for (final path in [
         'lib/src/frame/bad_resolver_call.dart',
         'lib/src/surface/main_painter.dart',
+        'lib/src/resources/bad_resolver_owner.dart',
       ]) {
         expect(
           checkCoreBoundaryFile(path: path, content: badResolverReference),
@@ -232,6 +233,13 @@ void bad(CanvasResourceResolver resolver) {}
           ),
         );
       }
+      expect(
+        checkCoreBoundaryFile(
+          path: 'lib/src/resources/surface_resource_session.dart',
+          content: badResolverReference,
+        ),
+        isEmpty,
+      );
       expect(
         checkCoreBoundaryFile(
           path: 'lib/src/surface/canvas_surface.dart',

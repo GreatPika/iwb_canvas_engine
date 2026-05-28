@@ -82,7 +82,7 @@ SurfaceResourceSession:
   resolverGeneration;
   ImageResolveCache;
   per-frame resolver-call budget;
-  same-frame missing/null suppression;
+  same-frame null-result suppression;
   budget-exceeded follow-up throttle.
 ```
 
@@ -119,7 +119,7 @@ primitive and cache policy, while P13 wires the instance lifecycle to
 
 | Cache | Owner | Key | Invalidated by | Capacity | Eviction | Metric/probe | Hot path allowed? |
 |---|---|---|---|---:|---|---|---|
-| ImageResolveCache | SurfaceResourceSession | resolverGeneration + resourceId + resourceRevision | resolver replacement, descriptor change, resource dirty target/all, detach/dispose/runtime swap | 1024 entries per active session | target/all invalidation, generation reset, then LRU | resolver calls, budget-exceeded count, hit/miss, same-frame null/missing suppression count | yes, sync app resolver only with `kMaxSyncResourceResolverCallsPerFrame = 128` |
+| ImageResolveCache | SurfaceResourceSession | resolverGeneration + resourceId + resourceRevision | resolver replacement, descriptor change, resource dirty target/all, detach/dispose/runtime swap | 1024 entries per active session | target/all invalidation, generation reset, then LRU | resolver calls, budget-exceeded count, hit/miss, same-frame null-result suppression count | yes, sync app resolver only with `kMaxSyncResourceResolverCallsPerFrame = 128` |
 
 The public dirty-resource revision is a repaint observation signal only. Cache
 identity is the table key above; dirty-resource calls invalidate target entries
@@ -244,10 +244,12 @@ budget-exceeded results may schedule at most one pending throttled follow-up rep
 the pending follow-up repaint flag is cleared by the next main frame resource pass;
 painters and app resolvers must not schedule budget-exceeded follow-up repaints;
 budget-exceeded results are not cached as null, missing, or resolved images.
-null or missing resolver results are suppressed only within the same frame and
-resolverGeneration + resourceId + resourceRevision identity; they are not
-durable cross-frame cache entries, and resolver replacement clears suppression
-state before the next resolve.
+null resolver results are suppressed only within the same frame and
+resolverGeneration + resourceId + resourceRevision identity. Missing
+descriptors and absent resolvers return bounded placeholders without resolver
+calls, budget use, or cache writes. Placeholder outcomes are not durable
+cross-frame cache entries, and resolver replacement clears null-result
+suppression state before the next resolve.
 ```
 
 ---

@@ -220,7 +220,7 @@ Mandatory guardrails:
 | `resources.app_key_only` | resource descriptors use appKey only |
 | `resources.resolver_boundary_owned_by_surface_session` | painters and frame code never call CanvasResourceResolver directly; SurfaceResourceSession owns resolver access for an active surface |
 | `resources.resolver_frame_budget` | SurfaceResourceSession enforces per-frame sync resolver call budget and budget-exceeded placeholders are not cached as null/missing |
-| `resources.no_same_frame_missing_retry` | missing/null resource resolve results are suppressed by resolverGeneration, resourceId, and resourceRevision for the frame instead of retried immediately; resolver swap clears suppression state |
+| `resources.no_same_frame_missing_retry` | null resource resolve results are suppressed by resolverGeneration, resourceId, and resourceRevision for the frame instead of retried immediately; missing descriptors and absent resolvers return bounded placeholders without resolver calls |
 | `resources.resolver_reentrancy_rejected` | public runtime mutation from inside CanvasResourceResolver throws StateError without runtime effects |
 | `codec.schema_v1_exact` | only schema v1 read/write |
 | `codec.known_fields_validated` | known schema v1 fields are validated and canonical encoder writes only v1 fields |

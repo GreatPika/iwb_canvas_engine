@@ -55,7 +55,7 @@ flowchart LR
     ResolvePaintAsset["Resolve paint asset\nsession resolver boundary"]
     ImageResolveCache["ImageResolveCache\nresolverGeneration + resourceId + resourceRevision"]
     ResolverFrameBudget["Resolver frame budget\nkMaxSyncResourceResolverCallsPerFrame = 128"]
-    MissingResult["Missing or unresolved result\nsuppressed for same frame key:\nresolverGeneration + resourceId + resourceRevision\nno immediate retry"]
+    MissingResult["Null resolver result\nsuppressed for same frame key:\nresolverGeneration + resourceId + resourceRevision\nmissing/no resolver placeholders do not call resolver"]
     BudgetPlaceholder["Budget-exceeded placeholder\nnot cached as null/missing"]
     Placeholder["Bounded missing image placeholder"]
   end

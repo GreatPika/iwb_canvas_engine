@@ -22,8 +22,10 @@ load have established rollback-safe mutation and replacement boundaries.
 - synchronous app-owned image resolver bridge
 - surface-scoped image resolve cache keyed by resolverGeneration, resource id,
   and resource revision
-- missing/null resolve results suppressed per frame by resource id and resource
-  revision and resolverGeneration, without durable null/missing cache writes
+- null resolver results suppressed per frame by resource id, resource revision,
+  and resolverGeneration, without durable null/missing cache writes
+- missing descriptors and absent resolvers return bounded placeholders without
+  resolver calls, budget use, or cache writes
 - resolver frame budget with bounded placeholders and no null/missing cache write
 - resolver reentrancy guard through contract-owned `ResolverMutationGuard`,
   rejecting public runtime mutation from inside the resolver
@@ -127,7 +129,8 @@ load have established rollback-safe mutation and replacement boundaries.
   `SurfaceResourceSession`; later frame and widget wiring must keep that
   `lib/src/resources/**` boundary
 - resolver swap, detach, dispose, and runtime swap cannot reuse stale session cache entries
-- missing/null resolver results do not retry in the same frame
+- null resolver results do not retry in the same frame; missing descriptors and
+  absent resolvers return bounded placeholders without resolver calls
 - resolver frame budget produces bounded placeholders and no invalid cache write
 - resolver reentrancy is rejected through the contract-owned guard seam with no
   resource visual revision, no public state publication, no action/effect

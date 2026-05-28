@@ -5,15 +5,15 @@ import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 import 'surface_resource_session_test_support.dart';
 
 void main() {
-  _testFrameScopedPlaceholderSuppression();
+  _testFrameScopedNullSuppressionAndPlaceholders();
 }
 
-// The frame-scoped suppression proof is clearest as one ordered scenario that
-// compares null, missing, and absent-resolver outcomes against the same session.
+// The frame-scoped proof is clearest as one ordered scenario that compares
+// null-result suppression with missing and absent-resolver placeholder paths.
 // ignore: halstead-volume, source-lines-of-code
-void _testFrameScopedPlaceholderSuppression() {
+void _testFrameScopedNullSuppressionAndPlaceholders() {
   test(
-    'missing, null, and absent resolver placeholders are frame-scoped',
+    'null results are frame-scoped and unresolved inputs stay bounded',
     () async {
       final image = await createResourceTestImage();
       final guard = CountingResolverMutationGuard();

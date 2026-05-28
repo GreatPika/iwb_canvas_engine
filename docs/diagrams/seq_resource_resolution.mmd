@@ -69,7 +69,7 @@ sequenceDiagram
         alt cache hit
           Cache-->>Session: cached app-owned ui.Image
           Session-->>Assets: app-owned ui.Image
-        else same-frame missing/null already seen
+        else same-frame null result already seen
           Session-->>Assets: bounded placeholder without retry
         else per-frame resolver budget exceeded
           Session-->>Assets: bounded placeholder, session records non-hub probe and at most one pending throttled follow-up repaint, no cache write
@@ -89,7 +89,7 @@ sequenceDiagram
             Session->>Cache: store key(resolverGeneration, resourceId, resourceRevision) -> app-owned ui.Image reference
             Session-->>Assets: app-owned ui.Image paint asset
           else app returns null
-            Session->>Session: suppress null/missing for current frame key(resolverGeneration, resourceId, resourceRevision)
+            Session->>Session: suppress null result for current frame key(resolverGeneration, resourceId, resourceRevision)
             Session-->>Assets: bounded missing image placeholder
           end
         end

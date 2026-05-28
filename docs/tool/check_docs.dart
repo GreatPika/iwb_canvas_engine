@@ -118,6 +118,23 @@ const _requiredReviewedDiagramBehaviors = {
   'seq_resource_resolution': {'p7_resource_session_resolver_lifecycle'},
 };
 
+const _requiredReviewedDiagramBehaviorSnippets = {
+  'seq_resource_resolution': {
+    'p7_resource_session_resolver_lifecycle': [
+      'Surface->>Session: creates SurfaceResourceSession(resolver, '
+          'resolverGeneration)',
+      'Session->>Cache: lookup key(resolverGeneration, resourceId, '
+          'resourceRevision)',
+      'Session->>Guards: enter resolver callback and enforce mutation guard',
+      'PaintAssetBindingService is the only frame collaborator that receives '
+          'SurfaceResourceSession; painter never calls CanvasResourceResolver '
+          'directly.',
+      'Runtime->>Session: invalidate target resource entries or clear all '
+          'entries if attached',
+    ],
+  },
+};
+
 final _errors = <String>[];
 
 void main() {
@@ -729,6 +746,13 @@ Map<String, _DiagramEntry> _loadDiagramCatalog() {
         '${requiredReviews.join(', ')}',
       );
     }
+    if (requiredReviews != null) {
+      _checkReviewedDiagramBehaviorContent(
+        diagramId: diagramId,
+        file: file,
+        requiredReviews: requiredReviews,
+      );
+    }
 
     catalog[diagramId] = _DiagramEntry(
       id: diagramId,
@@ -742,6 +766,29 @@ Map<String, _DiagramEntry> _loadDiagramCatalog() {
   }
 
   return catalog;
+}
+
+void _checkReviewedDiagramBehaviorContent({
+  required String diagramId,
+  required String file,
+  required Set<String> requiredReviews,
+}) {
+  final diagramText = _read(file);
+  final snippetsByBehavior =
+      _requiredReviewedDiagramBehaviorSnippets[diagramId] ?? const {};
+
+  for (final behavior in requiredReviews) {
+    final snippets = snippetsByBehavior[behavior] ?? const [];
+    if (snippets.isEmpty) {
+      _fail('$diagramId reviewed behavior $behavior has no content checks');
+      continue;
+    }
+    for (final snippet in snippets) {
+      if (!diagramText.contains(snippet)) {
+        _fail('$diagramId reviewed behavior $behavior must contain: $snippet');
+      }
+    }
+  }
 }
 
 void _checkDiagramCatalogRegistrySymmetry(

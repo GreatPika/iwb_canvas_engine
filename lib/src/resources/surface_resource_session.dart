@@ -9,7 +9,6 @@ typedef _SuppressedResolveKey = ({
   int resolverGeneration,
   CanvasResourceId resourceId,
   int resourceRevision,
-  _SuppressedResolveCause cause,
 });
 
 // The session intentionally coordinates every explicit resolver outcome in one
@@ -24,7 +23,7 @@ final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
 
   final ResolverMutationGuard _mutationGuard;
   final ImageResolveCache _cache = ImageResolveCache();
-  final Set<_SuppressedResolveKey> _currentFrameSuppression = {};
+  final Set<_SuppressedResolveKey> _currentFrameNullResults = {};
   CanvasResourceResolver? _resolver;
   int _resolverGeneration = 0;
   int _resolverCallsThisFrame = 0;
@@ -36,7 +35,7 @@ final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
   void beginFrameResourcePass() {
     _resolverCallsThisFrame = 0;
     _hasPendingBudgetFollowUpRepaint = false;
-    _currentFrameSuppression.clear();
+    _currentFrameNullResults.clear();
   }
 
   ResourceImageResolveResult resolveImage(ResourceImageResolveRequest request) {
@@ -74,10 +73,6 @@ final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
       return null;
     }
 
-    _currentFrameSuppression.add(
-      _suppressionKey(request, _SuppressedResolveCause.missingDescriptor),
-    );
-
     return MissingDescriptorResourceImagePlaceholder(
       placeholderBounds: request.placeholderBounds,
     );
@@ -104,9 +99,6 @@ final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
   ResourceImageResolveResult _noResolverPlaceholder(
     ResourceImageResolveRequest request,
   ) {
-    final key = _suppressionKey(request, _SuppressedResolveCause.noResolver);
-    _currentFrameSuppression.add(key);
-
     return NoResolverResourceImagePlaceholder(
       placeholderBounds: request.placeholderBounds,
     );
@@ -115,11 +107,8 @@ final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
   ResourceImageResolveResult? _suppressedNullPlaceholder(
     ResourceImageResolveRequest request,
   ) {
-    final nullKey = _suppressionKey(
-      request,
-      _SuppressedResolveCause.nullResult,
-    );
-    if (!_currentFrameSuppression.contains(nullKey)) {
+    final nullKey = _suppressionKey(request);
+    if (!_currentFrameNullResults.contains(nullKey)) {
       return null;
     }
 
@@ -155,9 +144,7 @@ final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
       () => resolver.resolveImage(imageResource),
     );
     if (image == null) {
-      _currentFrameSuppression.add(
-        _suppressionKey(request, _SuppressedResolveCause.nullResult),
-      );
+      _currentFrameNullResults.add(_suppressionKey(request));
 
       return NullResourceImagePlaceholder(
         placeholderBounds: request.placeholderBounds,
@@ -184,7 +171,7 @@ final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
     _resolver = resolver;
     _resolverGeneration += 1;
     _cache.clear();
-    _currentFrameSuppression.clear();
+    _currentFrameNullResults.clear();
     _hasPendingBudgetFollowUpRepaint = false;
   }
 
@@ -205,24 +192,18 @@ final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
     _resolverCallsThisFrame = 0;
     _hasPendingBudgetFollowUpRepaint = false;
     _cache.clear();
-    _currentFrameSuppression.clear();
+    _currentFrameNullResults.clear();
   }
 
   void dispose() {
     drop();
   }
 
-  _SuppressedResolveKey _suppressionKey(
-    ResourceImageResolveRequest request,
-    _SuppressedResolveCause cause,
-  ) {
+  _SuppressedResolveKey _suppressionKey(ResourceImageResolveRequest request) {
     return (
       resolverGeneration: _resolverGeneration,
       resourceId: request.id,
       resourceRevision: request.resourceRevision,
-      cause: cause,
     );
   }
 }
-
-enum _SuppressedResolveCause { missingDescriptor, noResolver, nullResult }

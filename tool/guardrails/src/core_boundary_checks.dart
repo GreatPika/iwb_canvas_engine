@@ -467,12 +467,25 @@ final class _ResourceResolverBoundaryVisitor extends RecursiveAstVisitor<void> {
   }
 
   void _record(String name) {
+    if (name != 'CanvasResourceResolver') {
+      return;
+    }
+    if (_isUnauthorizedResourceResolverOwnerPath(path)) {
+      violations.add(
+        GuardrailViolation(
+          guardrailId: 'resources.resolver_boundary_owned_by_surface_session',
+          path: path,
+          message:
+              'resource code must route CanvasResourceResolver access through '
+              'SurfaceResourceSession',
+        ),
+      );
+
+      return;
+    }
     if (!path.startsWith('lib/src/frame/') &&
         !path.startsWith('lib/src/interaction/') &&
         !_isSurfacePainterPath(path)) {
-      return;
-    }
-    if (name != 'CanvasResourceResolver') {
       return;
     }
     violations.add(
@@ -566,6 +579,11 @@ bool _isSurfacePainterPath(String path) {
   }
 
   return path.split('/').last.contains('painter');
+}
+
+bool _isUnauthorizedResourceResolverOwnerPath(String path) {
+  return path.startsWith('lib/src/resources/') &&
+      path != 'lib/src/resources/surface_resource_session.dart';
 }
 
 const _sceneControllerShapeNames = {'SceneController', 'SceneSnapshot'};

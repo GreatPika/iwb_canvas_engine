@@ -63,7 +63,7 @@ Canvas engine state
 | InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts, target pointer cleanup coordinator composition | читать или менять DocumentStoreKernel напрямую; хранить Flutter text editor session state |
 | FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; target composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
 | ResourceKernel | resource API, committed catalog reads through `ResourceCatalogPort`, dirty resource ids, resource visual state publication, dirty outcomes for runtime session invalidation | владеть app domain assets, resolved image references или committed descriptors |
-| SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame missing/null suppression | владеть committed descriptors, public runtime state или Flutter widget lifecycle |
+| SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame null-result suppression, bounded placeholders for missing descriptors and absent resolvers | владеть committed descriptors, public runtime state или Flutter widget lifecycle |
 | SpatialKernel | coarse candidate lookup, outlier policy | быть source of truth для сцены |
 | CodecBoundary | schema v1 encode/decode, validation, diagnostics | зависеть от Flutter widget или gestures |
 | DiagnosticsHub | internal diagnostic records, public error projection | добавлять public stream без API-решения |

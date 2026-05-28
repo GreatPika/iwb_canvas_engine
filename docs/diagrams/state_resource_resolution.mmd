@@ -25,7 +25,8 @@ stateDiagram-v2
   note right of ActiveSession
     SurfaceResourceSession owns the surface resolver reference,
     resolverGeneration, ImageResolveCache, per-frame resolver budget,
-    same-frame missing/null suppression, and budget follow-up throttle.
+    same-frame null-result suppression, and budget follow-up throttle.
+    Missing descriptors and absent resolvers return bounded placeholders.
     There is no file, network, remote, or asset-bundle IO.
   end note
 
@@ -74,7 +75,7 @@ stateDiagram-v2
   end note
 
   CacheLookup --> CachedResolved: cache hit with ui.Image
-  CacheLookup --> SameFrameSuppressed: same-frame null/missing already seen
+  CacheLookup --> SameFrameSuppressed: same-frame null result already seen
   CacheLookup --> CacheMiss: cache miss
 
   state "Cached resolved result" as CachedResolved
@@ -124,7 +125,7 @@ stateDiagram-v2
   ReentrantMutationRejected --> SyncResolverCall: resolver continues or unwinds without accepted mutation
 
   state "Null resolver result" as NullResult
-  NullResult --> SameFrameNullSuppression: remember null/missing for current frame key(resolverGeneration, resourceId, resourceRevision) only
+  NullResult --> SameFrameNullSuppression: remember null result for current frame key(resolverGeneration, resourceId, resourceRevision) only
   SameFrameNullSuppression --> PlaceholderResult: return bounded placeholder
 
   state "Resolved resolver result" as ResolvedResult

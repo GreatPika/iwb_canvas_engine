@@ -15,17 +15,17 @@ wiring deferred to their later phase owners.
 - `.design/2026-05-28-p7-resource-session-resolver-lifecycle.md` / target classification: the required profile is `BEHAVIOR_CHANGE` with `SEAM_MIGRATION` obligation -> this step must prove both observable resource behavior and the internal seam/import shape.
 - `.design/2026-05-28-p7-resource-session-resolver-lifecycle.md` / locked seam: `ResourceSessionInvalidationSink` belongs in `lib/src/contracts/internal/resource_session_invalidation_sink.dart`, exposes `invalidateResourceImage(CanvasResourceId id)` and `invalidateAllResourceImages()`, is implemented by `SurfaceResourceSession`, is held by `RuntimeRoot` only as the nullable active-session invalidation slot, and is never passed to `ResourceKernel` -> execution must preserve that exact owner split.
 - `.design/2026-05-28-p7-resource-session-resolver-lifecycle.md` / temporal ordering: active-session dirty invalidation must occur before `_publishRuntimeState()` and the commit-effect observer can synchronously expose dirty-resource publication -> runtime delivery tests must prove listener and observer callbacks see cache state already invalidated.
-- `.design/2026-05-28-p7-resource-session-resolver-lifecycle.md` / session frame-pass boundary: `beginFrameResourcePass()` starts the main-paint resource pass, resets the 128-call budget, clears current-frame missing/null suppression, and clears the pending budget follow-up flag -> session tests must prove the reset boundary explicitly without depending on P9 paint code.
+- `.design/2026-05-28-p7-resource-session-resolver-lifecycle.md` / session frame-pass boundary: `beginFrameResourcePass()` starts the main-paint resource pass, resets the 128-call budget, clears current-frame null-result suppression, and clears the pending budget follow-up flag -> session tests must prove the reset boundary explicitly without depending on P9 paint code.
 - `.design/2026-05-28-p7-resource-session-resolver-lifecycle.md` / resolve boundary: `resolveImage(ResourceImageResolveRequest request)` receives resource id, app-key descriptor data, resource revision, and placeholder bounds; missing descriptors return bounded placeholders without resolver calls or cache writes -> implementation must use typed resource-owned request/result values instead of frame or runtime imports, and app-key descriptor data must preserve the full public `CanvasImageResource` payload that the public resolver receives.
 - `.design/2026-05-28-p7-resource-session-resolver-lifecycle.md` / resolver guard: resolver callbacks must execute through `ResolverMutationGuard.runResolverCallback`, while runtime remains the owner of public mutation rejection -> session code owns when to call the resolver but does not own public mutation policy.
-- `docs/implementation/p7_resources_and_images.md` / build scope: P7 includes `SurfaceResourceSession`, synchronous app-owned image resolver bridge, surface-scoped image resolve cache, same-frame missing/null suppression, resolver frame budget, resolver reentrancy guard, and no engine IO, asset-bundle, file, remote, or network loading -> this step must finish that remaining P7 session scope without adding loading mechanisms.
-- `docs/implementation/p7_resources_and_images.md` / exit gate: target dirty must evict the target active-session image cache entry, mark-all dirty must clear the active-session cache, resolver image results are app-owned and not disposed by the engine, resolver swap/detach/dispose/runtime swap cannot reuse stale cache entries, missing/null results do not retry in the same frame, and budget placeholders must not create invalid cache writes -> execution units must name tests for each behavior.
+- `docs/implementation/p7_resources_and_images.md` / build scope: P7 includes `SurfaceResourceSession`, synchronous app-owned image resolver bridge, surface-scoped image resolve cache, same-frame null-result suppression, bounded placeholders for missing descriptors and absent resolvers, resolver frame budget, resolver reentrancy guard, and no engine IO, asset-bundle, file, remote, or network loading -> this step must finish that remaining P7 session scope without adding loading mechanisms.
+- `docs/implementation/p7_resources_and_images.md` / exit gate: target dirty must evict the target active-session image cache entry, mark-all dirty must clear the active-session cache, resolver image results are app-owned and not disposed by the engine, resolver swap/detach/dispose/runtime swap cannot reuse stale cache entries, null results do not retry in the same frame, missing descriptors and absent resolvers return bounded placeholders without resolver calls, and budget placeholders must not create invalid cache writes -> execution units must name tests for each behavior.
 - `docs/contracts/resources.md` / ownership contract: committed descriptors belong to `DocumentStoreKernel`; `ResourceKernel` owns the implemented non-surface public resource API and dirty orchestration; each active future `CanvasSurface` owns one `SurfaceResourceSession` under `lib/src/resources/**` for resolver lifecycle and resolved-image cache state -> this step must not duplicate committed descriptor or resolved image ownership.
 - `docs/contracts/resources.md` / frame descriptor seam: paint/resource resolution receives immutable descriptor snapshots and `resourceRevision` through `FrameFactsPort`; `PaintAssetBindingService` is the later frame collaborator that receives `SurfaceResourceSession` -> P7 tests may construct request values directly, but P7 must not wire frame rendering or ordinary planners to resolver access.
 - `docs/contracts/resources.md` / cache policy: `ImageResolveCache` is session policy keyed by resolver generation, resource id, and resource revision, with 1024 entries per active session, target/all invalidation, generation reset, LRU eviction, and 128 sync resolver calls per frame -> cache and budget constants must be resource-owned and mechanically tested.
 - `docs/contracts/resources.md` / dirty behavior: dirty-resource revision is a repaint observation signal only; dirty calls explicitly invalidate target/all active-session entries; no attached surface means no session cache work and the next attach starts empty -> runtime handoff must preserve existing no-session dirty publication behavior.
 - `docs/contracts/resources.md` / v1 resolver boundary: resolver calls are synchronous and app-owned, bounded by `kMaxSyncResourceResolverCallsPerFrame = 128`, reentrant public runtime mutation throws `StateError`, and no engine IO/file/network loading is allowed -> session implementation must not introduce async, filesystem, asset bundle, or network behavior.
-- `docs/contracts/resources.md` / placeholder and suppression contract: missing or unresolved resource images paint bounded placeholders, normal placeholders do not write `DiagnosticsHub`, budget-exceeded results may schedule at most one pending throttled follow-up repaint, and null or missing resolver results are suppressed only within the same frame and resolver generation/resource id/resource revision identity -> result values and tests must distinguish resolved, missing, null, and budget placeholder paths.
+- `docs/contracts/resources.md` / placeholder and suppression contract: missing or unresolved resource images paint bounded placeholders, normal placeholders do not write `DiagnosticsHub`, budget-exceeded results may schedule at most one pending throttled follow-up repaint, null resolver results are suppressed only within the same frame and resolver generation/resource id/resource revision identity, and missing descriptors or absent resolvers do not call the resolver -> result values and tests must distinguish resolved, missing, null, no-resolver, and budget placeholder paths.
 - `docs/architecture/02_package_boundaries.md` / package layout: resource session policy belongs in `lib/src/resources/resource_cache.dart`, `lib/src/resources/resource_resolver_adapter.dart`, and `lib/src/resources/surface_resource_session.dart`; `lib/src/resources/**` may not import runtime, store, frame, surface, interaction, Flutter, or cache/session owners outside resource-owned seams -> guardrails must protect the new files.
 - `docs/architecture/architecture_graph.yaml` / P7 graph: `resource.surface_session` is a required P7 owner and the future `resource.kernel.invalidates_surface_session` edge records ResourceKernel dirty invalidation to the session without ResourceKernel owning image references or cache entries -> graph data must move only the implemented P7 session and invalidation edges out of future status when proof exists.
 - `docs/contracts/public_api_v1.md` and `lib/src/contracts/public/canvas_resource.dart` / public resolver payload: `CanvasResourceResolver.resolveImage` receives a `CanvasImageResource`, whose public descriptor fields include `mimeType`, `contentHash`, `byteLength`, metadata, id, and source -> the session request path must reconstruct and pass the full public image descriptor, not an app-key-only subset.
@@ -42,7 +42,7 @@ Owner:
 
 `SurfaceResourceSession` under `lib/src/resources/**` owns sync resolver
 lifecycle, resolver generation, image resolve cache, per-frame resolver-call
-budget, same-frame missing/null suppression, bounded placeholder results,
+budget, same-frame null-result suppression, bounded placeholder results,
 budget follow-up throttle state, target/all cache invalidation, resolver swap
 cache reset, and app-owned image no-dispose behavior. `ResourceKernel` remains
 the public resource read/dirty owner and emits only `ResourceDirtyOutcome`.
@@ -85,10 +85,10 @@ In Scope:
   `beginFrameResourcePass()`; cache hits and missing descriptors do not consume
   the budget, and budget-exceeded results are placeholders with no null/missing
   or image cache write.
-- Suppress absent-resolver, null resolver, and missing-descriptor results only
-  within the current frame pass for resolver generation, resource id, and
-  resource revision; clear suppression on `beginFrameResourcePass()` and
-  resolver replacement.
+- Suppress null resolver results only within the current frame pass for resolver
+  generation, resource id, and resource revision; missing descriptors and absent
+  resolvers return bounded placeholders without resolver calls; clear null-result
+  suppression on `beginFrameResourcePass()` and resolver replacement.
 - Add internal `RuntimeRoot` attach/clear operations for the active
   `ResourceSessionInvalidationSink` so later P13 code can wire them after
   successful single-active-surface attachment; direct P7 tests may use those
@@ -97,7 +97,7 @@ In Scope:
   invalidation sink before runtime-state listeners or commit-effect observers
   can synchronously observe dirty publication.
 - Add focused tests for sync resolution, app image ownership, cache lifecycle,
-  resolver swap, missing/null same-frame suppression, resolver budget, resolver
+  resolver swap, null-result same-frame suppression, resolver budget, resolver
   reentrancy rejection, target dirty cache eviction, mark-all cache clear,
   runtime dirty handoff ordering, no-session dirty publication, public
   incremental smoke coverage, and import/seam guardrails.
@@ -179,7 +179,7 @@ payload before creating the resource-owned request/result/cache surface or
 wiring runtime dirty handoff. Implement session-local resolver
 generation, cache, frame-pass reset, and explicit result states before adding
 runtime invalidation tests. For each `resolveImage` call, preserve this order:
-missing descriptor/same-frame suppression check; cache lookup; resolver budget
+missing descriptor/null-result suppression check; cache lookup; resolver budget
 gate; `ResolverMutationGuard.runResolverCallback`; cache write only after a
 non-null image result; placeholder return without durable null/missing/budget
 cache writes. For resolver replacement, increment resolver generation and clear
@@ -311,7 +311,7 @@ Boundary:
 Only direct session behavior: `beginFrameResourcePass()`, `resolveImage(...)`,
 `replaceResolver(CanvasResourceResolver?)`, target/all cache invalidation,
 session drop/dispose cache clearing, resolver generation, cache identity,
-same-frame missing/null suppression, resolved-image cache writes, and
+same-frame null-result suppression, resolved-image cache writes, and
 app-owned image no-dispose behavior. This unit must not wire runtime dirty
 handoff or frame/widget lifecycle.
 
@@ -319,18 +319,15 @@ Change:
 
 Implement `SurfaceResourceSession` with an injected
 `CanvasResourceResolver?` and `ResolverMutationGuard`, resolver generation,
-1024-entry `ImageResolveCache`, current-frame suppression set keyed by resolver
-generation/resource id/resource revision and missing/null/absent-resolver
-outcome, and
+1024-entry `ImageResolveCache`, current-frame null-result suppression set keyed
+by resolver generation/resource id/resource revision, and
 resource-owned placeholder result creation. `beginFrameResourcePass()` resets
 the per-frame budget and current-frame suppression. `replaceResolver` must
 increment generation and clear cache/suppression before the next resolve.
 Missing descriptors return bounded placeholders without resolver calls, budget
 use, or cache writes. If the session has no resolver, `resolveImage` returns a
 bounded no-resolver placeholder result with no guard callback, no budget use,
-and no cache write; that no-resolver identity is suppressed for the rest of the
-same frame and becomes eligible again after the next `beginFrameResourcePass()`
-or resolver replacement. Cache hits return the cached app-owned image without
+and no cache write. Cache hits return the cached app-owned image without
 resolver calls or budget use and refresh LRU recency. Non-null resolver results
 write exactly one cache entry for the current generation/resource id/resource
 revision. Null resolver results return placeholders, are suppressed for the
@@ -353,12 +350,11 @@ resolver; different resource revisions miss cache; missing descriptors and null
 resolver results return bounded placeholders with the request bounds and no
 cache write; the resolver receives a `CanvasImageResource` whose id, app key,
 `mimeType`, `contentHash`, `byteLength`, and metadata match the committed
-descriptor facts used to build the request; missing/null identities are not
-retried in the same frame; absent resolver returns a bounded no-resolver
-placeholder with no guard callback, no budget use, no cache write, same-frame
-suppression, and retry eligibility after frame reset or resolver replacement;
-missing, null, and absent-resolver identities are
-eligible again after `beginFrameResourcePass()`; resolver swap increments
+descriptor facts used to build the request; null results are not retried in the
+same frame; missing descriptors and absent resolvers return bounded placeholders
+with no resolver callback, no guard callback, no budget use, and no cache write;
+null-result identities are eligible again after `beginFrameResourcePass()`;
+resolver swap increments
 generation, clears cache and suppression, and does not reuse stale entries;
 target invalidation evicts only that resource id; all invalidation clears the
 session cache; 1024-entry capacity evicts the least-recently-used entry,
@@ -389,7 +385,7 @@ Change:
 
 Call the app resolver only inside `ResolverMutationGuard.runResolverCallback`.
 Consume one budget unit only for actual resolver callback attempts; cache hits,
-missing descriptors, same-frame suppressed null/missing identities, and
+missing descriptors, same-frame suppressed null-result identities, and
 budget-exceeded placeholders must not consume additional calls. After 128
 resolver callback attempts in a frame pass, return bounded budget placeholders
 with no resolver call and no cache write. Record only resource-owned
