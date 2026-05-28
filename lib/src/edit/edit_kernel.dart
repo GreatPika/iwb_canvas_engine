@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../contracts/internal/commit_delivery.dart';
+import '../contracts/internal/resolver_mutation_guard.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_runtime.dart';
@@ -8,7 +9,6 @@ import 'commit_plan.dart';
 import 'draft_document.dart';
 import 'edit_session.dart';
 
-typedef RuntimeDisposedReader = bool Function();
 typedef DraftDocumentReader = CanvasDocument Function();
 typedef SelectedElementIdsReader = Set<CanvasElementId> Function();
 typedef CommitInstaller =
@@ -17,20 +17,20 @@ typedef DocumentLoadInstaller = void Function(CanvasDocument document);
 
 final class EditKernel {
   EditKernel({
-    required RuntimeDisposedReader isRuntimeDisposed,
+    required ResolverMutationGuard mutationGuard,
     required DraftDocumentReader readDocument,
     required SelectedElementIdsReader selectedElementIds,
     required CommitInstaller installCommit,
     required CommitApplyResultDelivery deliverApplyResult,
     required DocumentLoadInstaller installLoadedDocument,
-  }) : _isRuntimeDisposed = isRuntimeDisposed,
+  }) : _mutationGuard = mutationGuard,
        _readDocument = readDocument,
        _selectedElementIds = selectedElementIds,
        _installCommit = installCommit,
        _deliverApplyResult = deliverApplyResult,
        _installLoadedDocument = installLoadedDocument;
 
-  final RuntimeDisposedReader _isRuntimeDisposed;
+  final ResolverMutationGuard _mutationGuard;
   final DraftDocumentReader _readDocument;
   final SelectedElementIdsReader _selectedElementIds;
   final CommitInstaller _installCommit;
@@ -41,7 +41,7 @@ final class EditKernel {
   bool get hasOpenSession => _isSessionOpen;
 
   T edit<T>(T Function(CanvasEdit edit) fn) {
-    _ensureRuntimeActive();
+    _mutationGuard.ensureRuntimeMutationAllowed();
     if (_isSessionOpen) {
       throw StateError('CanvasRuntime edit sessions cannot be nested.');
     }
@@ -80,19 +80,13 @@ final class EditKernel {
   }
 
   void loadDocument(CanvasDocument document) {
-    _ensureRuntimeActive();
+    _mutationGuard.ensureRuntimeMutationAllowed();
     if (_isSessionOpen) {
       throw StateError(
         'CanvasRuntime public mutations cannot run inside an active edit callback.',
       );
     }
     _installLoadedDocument(document);
-  }
-
-  void _ensureRuntimeActive() {
-    if (_isRuntimeDisposed()) {
-      throw StateError('CanvasRuntime is disposed.');
-    }
   }
 
   CommitDeliveryResult _installCommittedDocument(

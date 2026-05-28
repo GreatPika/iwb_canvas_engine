@@ -113,11 +113,7 @@ final class RuntimeRoot
   bool _isDeliveringCommitEffects = false;
   bool _isRunningResolverCallback = false;
   late final EditKernel _editKernel = EditKernel(
-    isRuntimeDisposed: () {
-      _ensureNotDeliveringCommitEffects();
-
-      return _isDisposed;
-    },
+    mutationGuard: this,
     readDocument: _store.readDocument,
     selectedElementIds: () => _selection.selectedElementIds,
     installCommit: _applyEditCommit,
@@ -182,19 +178,19 @@ final class RuntimeRoot
 
   CanvasDocument readDocument() => _store.readDocument();
   CanvasElementId generateElementId() {
-    _ensureNotDisposed();
+    ensureRuntimeMutationAllowed();
 
     return _store.generateElementId();
   }
 
   CanvasLayerId generateLayerId() {
-    _ensureNotDisposed();
+    ensureRuntimeMutationAllowed();
 
     return _store.generateLayerId();
   }
 
   CanvasResourceId generateResourceId() {
-    _ensureNotDisposed();
+    ensureRuntimeMutationAllowed();
 
     return _store.generateResourceId();
   }
@@ -294,34 +290,29 @@ final class RuntimeRoot
   }
 
   void setSelection(Iterable<CanvasElementId> ids) {
-    _ensureNotDisposed();
-    _ensureNoActiveEditSession();
+    ensureRuntimeMutationAllowed();
     _publishSelectionChange(_selection.setSelection(ids));
   }
 
   void toggleSelection(CanvasElementId id) {
-    _ensureNotDisposed();
-    _ensureNoActiveEditSession();
+    ensureRuntimeMutationAllowed();
     _publishSelectionChange(_selection.toggleSelection(id));
   }
 
   void clearSelection() {
-    _ensureNotDisposed();
-    _ensureNoActiveEditSession();
+    ensureRuntimeMutationAllowed();
     _publishSelectionChange(_selection.clearSelection());
   }
 
   void selectAll({required bool onlySelectable}) {
-    _ensureNotDisposed();
-    _ensureNoActiveEditSession();
+    ensureRuntimeMutationAllowed();
     _publishSelectionChange(
       _selection.selectAll(onlySelectable: onlySelectable),
     );
   }
 
   void setCameraOffset(Offset offset) {
-    _ensureNotDisposed();
-    _ensureNoActiveEditSession();
+    ensureRuntimeMutationAllowed();
     final camera = CanvasCamera(offset: offset);
     if (camera == _viewCamera) {
       return;
@@ -336,8 +327,7 @@ final class RuntimeRoot
   }
 
   Never rejectSelectionDocumentMutation() {
-    _ensureNotDisposed();
-    _ensureNoActiveEditSession();
+    ensureRuntimeMutationAllowed();
     throw UnsupportedError(
       'Selection document mutation is owned by later edit phases.',
     );
