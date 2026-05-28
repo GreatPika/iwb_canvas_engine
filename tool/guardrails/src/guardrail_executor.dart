@@ -244,6 +244,20 @@ const _testProofPaths = {
     'test/runtime/load_document_ordering_test.dart',
     'test/runtime/load_document_ordering_fixture_shape_test.dart',
   ],
+  'resources.resolver_boundary_owned_by_surface_session': [
+    'test/guardrails/import_boundaries_test.dart',
+    'test/contracts/internal_seam_shape_test.dart',
+    'test/resources/resource_resolver_adapter_shape_test.dart',
+  ],
+  'resources.resolver_frame_budget': [
+    'test/resources/resolver_frame_budget_test.dart',
+  ],
+  'resources.no_same_frame_missing_retry': [
+    'test/resources/missing_result_suppressed_per_frame_test.dart',
+  ],
+  'resources.resolver_reentrancy_rejected': [
+    'test/resources/resolver_reentrancy_rejected_test.dart',
+  ],
 };
 
 final Map<String, GuardrailViolationRunner> _violationChecks = {
@@ -262,6 +276,7 @@ final Map<String, GuardrailViolationRunner> _violationChecks = {
   'projection.only_explicit_read_paths': checkProjectionOnlyExplicitReadPaths,
   'selection.owner_separate_from_document': checkSelectionOwnerSeparation,
   ownerDagGuardrailId: checkOwnerDagImportBoundaries,
+  'resources.resolver_boundary_owned_by_surface_session': checkCoreBoundaries,
 };
 
 const _structuralDescriptions = {
@@ -284,6 +299,8 @@ const _structuralDescriptions = {
   'selection.owner_separate_from_document':
       'resolved selection ownership boundary check',
   ownerDagGuardrailId: 'owner DAG import/export boundary check',
+  'resources.resolver_boundary_owned_by_surface_session':
+      'resource resolver ownership and import-boundary checks',
 };
 
 const _coreBoundaryIds = {

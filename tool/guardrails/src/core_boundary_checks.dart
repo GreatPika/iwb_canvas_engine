@@ -183,6 +183,8 @@ List<GuardrailViolation> _checkImport(String path, String uri) {
     ..._checkExternalPrivateImport(path, uri),
     ..._checkCodecFlutterImport(path, uri),
     ..._checkResourceFlutterImport(path, uri),
+    ..._checkResourcePlatformImport(path, uri),
+    ..._checkResourceNetworkImport(path, uri),
   ];
   final target = _targetPath(path, uri);
   if (target != null) {
@@ -244,6 +246,34 @@ List<GuardrailViolation> _checkResourceFlutterImport(String path, String uri) {
       guardrailId: 'core.import_boundaries',
       path: path,
       message: 'resource code may not import Flutter packages',
+    ),
+  ];
+}
+
+List<GuardrailViolation> _checkResourcePlatformImport(String path, String uri) {
+  if (!path.startsWith('lib/src/resources/') || uri != 'dart:io') {
+    return const [];
+  }
+
+  return [
+    GuardrailViolation(
+      guardrailId: 'core.import_boundaries',
+      path: path,
+      message: 'resource code may not import dart:io',
+    ),
+  ];
+}
+
+List<GuardrailViolation> _checkResourceNetworkImport(String path, String uri) {
+  if (!path.startsWith('lib/src/resources/') || !_isNetworkLoadingImport(uri)) {
+    return const [];
+  }
+
+  return [
+    GuardrailViolation(
+      guardrailId: 'resources.resolver_boundary_owned_by_surface_session',
+      path: path,
+      message: 'resource code may not import network loading libraries',
     ),
   ];
 }
@@ -328,9 +358,15 @@ List<GuardrailViolation> _checkRetiredShapeReferences(
   CompilationUnit unit,
 ) {
   final visitor = _RetiredShapeVisitor(path);
+  final resourceVisitor = _ResourceResolverBoundaryVisitor(path);
   unit.accept(visitor);
+  unit.accept(resourceVisitor);
 
-  return [..._checkRetiredShapeDeclarations(path, unit), ...visitor.violations];
+  return [
+    ..._checkRetiredShapeDeclarations(path, unit),
+    ...visitor.violations,
+    ...resourceVisitor.violations,
+  ];
 }
 
 List<GuardrailViolation> _checkRetiredShapeDeclarations(
@@ -413,6 +449,44 @@ final class _RetiredShapeVisitor extends RecursiveAstVisitor<void> {
   }
 }
 
+final class _ResourceResolverBoundaryVisitor extends RecursiveAstVisitor<void> {
+  _ResourceResolverBoundaryVisitor(this.path);
+
+  final String path;
+  final List<GuardrailViolation> violations = [];
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    _record(node.name);
+  }
+
+  @override
+  void visitNamedType(NamedType node) {
+    _record(node.name.lexeme);
+    super.visitNamedType(node);
+  }
+
+  void _record(String name) {
+    if (!path.startsWith('lib/src/frame/') &&
+        !path.startsWith('lib/src/interaction/') &&
+        !path.startsWith('lib/src/surface/')) {
+      return;
+    }
+    if (name != 'CanvasResourceResolver') {
+      return;
+    }
+    violations.add(
+      GuardrailViolation(
+        guardrailId: 'resources.resolver_boundary_owned_by_surface_session',
+        path: path,
+        message:
+            'frame, interaction, and surface code must not call '
+            'CanvasResourceResolver directly',
+      ),
+    );
+  }
+}
+
 GuardrailViolation _retiredShapeViolation(String path, String name) {
   if (_sceneControllerShapeNames.contains(name)) {
     return GuardrailViolation(
@@ -474,6 +548,16 @@ bool _isCodecRuntimeMutationTarget(String target) {
       target.startsWith('lib/src/edit/') ||
       target.startsWith('lib/src/frame/') ||
       target.startsWith('lib/src/surface/');
+}
+
+bool _isNetworkLoadingImport(String uri) {
+  return uri == 'dart:html' ||
+      uri == 'dart:js_interop' ||
+      uri == 'package:http/http.dart' ||
+      uri.startsWith('package:http/') ||
+      uri.startsWith('package:dio/') ||
+      uri.startsWith('package:chopper/') ||
+      uri.startsWith('package:retrofit/');
 }
 
 const _sceneControllerShapeNames = {'SceneController', 'SceneSnapshot'};
@@ -558,7 +642,15 @@ const _boundaryRules = [
   _BoundaryRule(
     guardrailId: 'core.import_boundaries',
     owner: 'lib/src/resources/',
-    forbiddenTargets: ['lib/src/interaction/'],
+    forbiddenTargets: [
+      'lib/src/runtime/',
+      'lib/src/store/',
+      'lib/src/frame/',
+      'lib/src/surface/',
+      'lib/src/interaction/',
+      'lib/src/diagnostics/',
+      'lib/src/flutter_bridge/',
+    ],
   ),
   _BoundaryRule(
     guardrailId: 'core.import_boundaries',

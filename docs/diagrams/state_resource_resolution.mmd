@@ -162,10 +162,9 @@ stateDiagram-v2
     It does not mutate CanvasDocument, resource descriptors,
     selection, preview, or action streams.
   end note
-  DirtySignal --> VisualRevisionChanged: increment public resource visual revision
-  VisualRevisionChanged --> DirtyCacheInvalidated: publish CanvasRuntimeState with state.revisions.resourceVisual
-  VisualRevisionChanged --> DirtyCacheInvalidated: evict target resource or all active session entries
-  DirtyCacheInvalidated --> ActiveSession: schedule main repaint
+  DirtySignal --> VisualRevisionChanged: accept dirty and increment resourceVisualRevision
+  VisualRevisionChanged --> DirtyCacheInvalidated: evict target resource or all active session entries before publication
+  DirtyCacheInvalidated --> ActiveSession: publish CanvasRuntimeState and schedule main repaint
 
   state "Disposed runtime" as Disposed
   note right of Disposed

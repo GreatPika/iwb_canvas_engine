@@ -106,9 +106,10 @@ load have established rollback-safe mutation and replacement boundaries.
   `ResourceCatalogPort` is the internal catalog seam and frame code is blocked
   from using it for asset binding
 - resource descriptor mutation is rollback-safe
-- `ResourceKernel` owns resource/session implementation under
-  `lib/src/resources/**`, while resource DTOs and `CanvasResourcePort` remain in
-  `contracts/public/**`
+- `ResourceKernel` owns the public resource read/dirty API under
+  `lib/src/resources/**`; `SurfaceResourceSession` owns resolver/cache/session
+  behavior under the same resource owner, while resource DTOs and
+  `CanvasResourcePort` remain in `contracts/public/**`
 - dirty-resource outcomes are carried by `ResourceDirtyOutcome` and resolver
   reentrancy is rejected through `ResolverMutationGuard`, both owned by
   `contracts/internal/**`
@@ -116,11 +117,11 @@ load have established rollback-safe mutation and replacement boundaries.
   `contracts/internal/**` `FrameFactsPort`, not by importing runtime or frame
 - resource dirty publishes `state.revisions.resourceVisual` and schedules main
   repaint intent without document revision
-- future session/cache subset: target resource dirty evicts the target
-  active-session image cache entry and resolves that image again on the next
-  paint
-- future session/cache subset: mark-all resource dirty clears the active-session
-  image cache
+- target resource dirty evicts the target active-session image cache entry
+  before dirty public-state/effect publication and resolves that image again on
+  the next session resolve
+- mark-all resource dirty clears the active-session image cache before dirty
+  public-state/effect publication
 - resolver image results are app-owned and not disposed by engine
 - the P7 resource/session surface exposes image resolution only through
   `SurfaceResourceSession`; later frame and widget wiring must keep that

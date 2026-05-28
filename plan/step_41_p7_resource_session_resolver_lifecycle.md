@@ -195,7 +195,7 @@ after focused behavior tests prove the new owner and ordering.
 
 ## Execution Units
 
-### [ ] Unit 1: Full image descriptor fact path
+### [x] Unit 1: Full image descriptor fact path
 
 Owner:
 
@@ -248,7 +248,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Internal session seam and value model
+### [x] Unit 2: Internal session seam and value model
 
 Owner:
 
@@ -299,7 +299,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Surface session cache and resolver lifecycle
+### [x] Unit 3: Surface session cache and resolver lifecycle
 
 Owner:
 
@@ -370,7 +370,7 @@ Depends On:
 
 Unit 2.
 
-### [ ] Unit 4: Resolver guard and frame budget
+### [x] Unit 4: Resolver guard and frame budget
 
 Owner:
 
@@ -422,7 +422,7 @@ Depends On:
 
 Unit 3.
 
-### [ ] Unit 5: Runtime dirty handoff to active session
+### [x] Unit 5: Runtime dirty handoff to active session
 
 Owner:
 
@@ -472,7 +472,7 @@ Depends On:
 
 Unit 4.
 
-### [ ] Unit 6: Resource session enforcement and source-of-truth closure
+### [x] Unit 6: Resource session enforcement and source-of-truth closure
 
 Owner:
 

@@ -17,6 +17,7 @@ flowchart LR
 
   subgraph Runtime["RuntimeRoot"]
     ResourceDirtyDispatch["Resource dirty orchestration\nResourceKernel delegation"]
+    SessionInvalidationEvent["Target/all invalidation event\nfor active SurfaceResourceSession\nbefore dirty publication"]
   end
 
   subgraph Edit["EditKernel"]
@@ -61,7 +62,6 @@ flowchart LR
 
   subgraph Resources["ResourceKernel"]
     ResourceVisualSignal["Resource visual revision\nResourceKernel runtime visual version"]
-    SessionInvalidationEvent["Target/all invalidation event\nfor attached SurfaceResourceSession"]
   end
 
   subgraph Forbidden["Forbidden paths"]
@@ -112,9 +112,9 @@ flowchart LR
   DirtyCall -->|"declared by"| PublicResourceContracts
   ResourceDirtyDispatch -->|"ResourceDirtyOutcome"| InternalResourceContracts
   ResourceDirtyDispatch -->|"increment ResourceKernel visual revision only"| ResourceVisualSignal
-  ResourceVisualSignal -->|"publish public resource visual domain"| ResourceVisualState
+  ResourceDirtyDispatch -->|"forward target/all invalidation before publication"| SessionInvalidationEvent
+  ResourceVisualSignal -->|"publish public resource visual domain after invalidation"| ResourceVisualState
   ResourceVisualState -->|"public runtime state domain"| RuntimeStateRevision
-  ResourceDirtyDispatch -->|"emit target/all invalidation event"| SessionInvalidationEvent
   SessionInvalidationEvent -->|"if attached, session invalidates target or all entries"| ImageResolveCache
   ResourceVisualSignal -->|"schedule main repaint"| MainRepaint
   MainRepaint --> Surface

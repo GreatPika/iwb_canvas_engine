@@ -11,6 +11,8 @@ void main() {
   _testApiContractWrapperExports();
   _testFrameCannotUseResourceCatalogPort();
   _testResourcesCannotImportFlutterPackages();
+  _testResourceSessionOwnerBoundaries();
+  _testFrameOrSurfaceCannotUseCanvasResourceResolverDirectly();
 }
 
 void _testProductionBoundaries() {
@@ -170,4 +172,66 @@ void _testResourcesCannotImportFlutterPackages() {
       ),
     );
   });
+}
+
+void _testResourceSessionOwnerBoundaries() {
+  test(
+    'resource session code cannot import runtime, store, frame, or IO owners',
+    () {
+      const forbiddenImports = {
+        'lib/src/resources/bad_runtime_import.dart':
+            "import '../runtime/runtime_root.dart';\n",
+        'lib/src/resources/bad_store_import.dart':
+            "import '../store/document_store_kernel.dart';\n",
+        'lib/src/resources/bad_frame_import.dart':
+            "import '../frame/frame_engine.dart';\n",
+        'lib/src/resources/bad_surface_import.dart':
+            "import '../surface/canvas_surface.dart';\n",
+        'lib/src/resources/bad_interaction_import.dart':
+            "import '../interaction/interaction_read_port.dart';\n",
+        'lib/src/resources/bad_diagnostics_import.dart':
+            "import '../diagnostics/diagnostics_hub.dart';\n",
+        'lib/src/resources/bad_io_import.dart': "import 'dart:io';\n",
+        'lib/src/resources/bad_http_import.dart':
+            "import 'package:http/http.dart';\n",
+        'lib/src/resources/bad_dio_import.dart':
+            "import 'package:dio/dio.dart';\n",
+      };
+
+      for (final entry in forbiddenImports.entries) {
+        expect(
+          checkCoreBoundaryFile(path: entry.key, content: entry.value),
+          contains(isA<GuardrailViolation>()),
+        );
+      }
+    },
+  );
+}
+
+void _testFrameOrSurfaceCannotUseCanvasResourceResolverDirectly() {
+  test(
+    'frame and surface code cannot name CanvasResourceResolver directly',
+    () {
+      const badResolverReference = '''
+import '../contracts/public/canvas_resource.dart';
+
+void bad(CanvasResourceResolver resolver) {}
+''';
+      for (final path in [
+        'lib/src/frame/bad_resolver_call.dart',
+        'lib/src/surface/main_painter.dart',
+      ]) {
+        expect(
+          checkCoreBoundaryFile(path: path, content: badResolverReference),
+          contains(
+            isA<GuardrailViolation>().having(
+              (violation) => violation.guardrailId,
+              'guardrailId',
+              'resources.resolver_boundary_owned_by_surface_session',
+            ),
+          ),
+        );
+      }
+    },
+  );
 }

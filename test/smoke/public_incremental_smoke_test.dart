@@ -93,6 +93,22 @@ void main() {
     expect(resources.resourceById(CanvasResourceId('missing')), isNull);
     expect(() => resources.resources.clear(), throwsUnsupportedError);
 
+    final dirtySnapshots = <CanvasRuntimeState>[];
+    runtime.state.addListener(() {
+      dirtySnapshots.add(runtime.state.value);
+    });
+    resources.markResourceDirty(CanvasResourceId('resource-a'));
+
+    expect(dirtySnapshots, hasLength(1));
+    final dirtyState = dirtySnapshots.single;
+    expect(dirtyState.revisions.resourceVisual, 1);
+    expect(dirtyState.revisions.document, editedState.revisions.document);
+    expect(dirtyState.revisions.selection, editedState.revisions.selection);
+    expect(dirtyState.revisions.preview, editedState.revisions.preview);
+    expect(dirtyState.revisions.viewCamera, editedState.revisions.viewCamera);
+    expect(dirtyState.revisions.interaction, editedState.revisions.interaction);
+    expect(dirtyState.revisions.epoch, editedState.revisions.epoch);
+
     final secondDocument = decodeCanvasDocument(_secondSchemaV1Document());
     final loadSnapshots = <CanvasRuntimeState>[];
     runtime.state.addListener(() {

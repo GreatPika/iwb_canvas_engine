@@ -357,7 +357,7 @@ nodes:
       - path: docs/implementation/p7_resources_and_images.md
       - path: docs/contracts/resources.md
     evidence:
-      - ResourceKernel owns the implemented non-surface resource API, committed catalog reads through ResourceCatalogPort, resourceVisualRevision, dirty-resource no-op and acceptance decisions, and dirty outcomes; resolver/cache/session behavior remains future resource work.
+      - ResourceKernel owns the implemented non-surface resource API, committed catalog reads through ResourceCatalogPort, resourceVisualRevision, dirty-resource no-op and acceptance decisions, and dirty outcomes; resolver/cache/session behavior is owned by SurfaceResourceSession and runtime handoff seams, not by ResourceKernel.
     actual:
       declarations:
         - ResourceKernel
@@ -366,7 +366,7 @@ nodes:
     kind: resource_owner
     owner: resource
     phaseIntroduced: P7
-    phaseRequiredBy: P13
+    phaseRequiredBy: P7
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -738,20 +738,20 @@ edges:
     actual:
       compositionFields:
         - ResourceKernel
-  - id: resource.kernel.invalidates_surface_session
-    from: resource.kernel
+  - id: runtime.root.invalidates_active_resource_session
+    from: runtime.root
     to: resource.surface_session
     kind: resource_invalidation
-    phaseRequiredBy: P13
-    status: future
+    phaseRequiredBy: P7
+    status: required
     sourceDocs:
       - path: docs/contracts/resources.md
       - path: docs/implementation/p7_resources_and_images.md
     evidence:
-      - Resource dirty target/all invalidation and descriptor changes must notify the attached SurfaceResourceSession without making ResourceKernel own app image references or session cache entries.
+      - RuntimeRoot holds the nullable active ResourceSessionInvalidationSink and forwards accepted ResourceDirtyOutcome target/all invalidation to the active SurfaceResourceSession before dirty publication, without ResourceKernel owning app image references or session cache entries.
     actual:
-      delegationTargets:
-        - SurfaceResourceSession
+      compositionFields:
+        - ResourceSessionInvalidationSink
   - id: frame.renderer.uses_surface_resource_session
     from: frame.renderer
     to: resource.surface_session
@@ -1618,7 +1618,7 @@ sourceCoverage:
       - resource.kernel
       - resource.surface_session
       - runtime.root.owns_resource_kernel
-      - resource.kernel.invalidates_surface_session
+      - runtime.root.invalidates_active_resource_session
       - frame.renderer.uses_surface_resource_session
   - sectionId: section_08_legacy_capability_inventory
     disposition: non_graph_semantics

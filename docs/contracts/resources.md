@@ -58,12 +58,14 @@ seams live in `lib/src/contracts/internal/**`. `ResourceCatalogPort` is the
 runtime-backed count/list/lookup seam for committed public resource
 descriptors; frame code continues to use `FrameFactsPort` for descriptor facts
 and must not use the catalog seam for asset binding. `ResourceKernel` owns the
-implemented
-non-surface resource API, catalog read delegation, `resourceVisualRevision`,
-and dirty-resource no-op/acceptance orchestration. Each active future
+implemented non-surface resource API, catalog read delegation,
+`resourceVisualRevision`, and dirty-resource no-op/acceptance orchestration.
+`RuntimeRoot` holds the nullable active `ResourceSessionInvalidationSink` and
+invalidates it before dirty public-state/effect publication. Each active future
 `CanvasSurface` owns one `SurfaceResourceSession` instance under
 `lib/src/resources/**` for synchronous resolver lifecycle and resolved-image
-cache state.
+cache state; P13 wires that instance to the runtime sink after successful
+surface attach.
 
 ```text
 Committed document:
@@ -164,9 +166,9 @@ Semantics:
 ```text
 - does not change document revision;
 - increments `state.revisions.resourceVisual`;
-- sends target/all dirty outcome to the runtime-owned publication boundary; a
-  later attached `SurfaceResourceSession` consumes that boundary for cache
-  invalidation;
+- sends target/all dirty outcome through `RuntimeRoot` to the active
+  `ResourceSessionInvalidationSink`, if attached, before dirty state listeners
+  or commit-effect observers run;
 - publishes main repaint intent;
 - publishes one `CanvasRuntimeState` when the dirty request changes resource
   visual state;
@@ -179,10 +181,12 @@ Semantics:
 
 `resourceVisualRevision` is runtime resource revision state and maps to the
 public `state.revisions.resourceVisual` domain. The public resource port
-delegates the revision increment to ResourceKernel/RuntimeRoot orchestration and
-emits target/all dirty outcomes for the attached resource session, if any. The
-repaint intent is runtime-owned and does not require an attached `CanvasSurface`;
-an attached surface observes it if present.
+delegates the revision increment to ResourceKernel/RuntimeRoot orchestration.
+`ResourceKernel` emits only `ResourceDirtyOutcome`; `RuntimeRoot` owns the
+active-session invalidation slot and forwards target/all invalidation to the
+attached resource session, if any. The repaint intent is runtime-owned and does
+not require an attached `CanvasSurface`; an attached surface observes it if
+present.
 
 `markAllResourcesDirty` applies the same rule to every registered resource and
 will clear the active session cache when that future session exists.

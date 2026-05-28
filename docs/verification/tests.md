@@ -560,26 +560,26 @@ behavioral tests, and the required guardrail list remains owned by
 
 #### `test/resources/resource_dirty_test.dart`
 Current implemented proof:
-- lives in `test/resources/resource_dirty_port_test.dart`
-  and `test/runtime/resource_dirty_runtime_delivery_test.dart`: committed
+- lives in `test/resources/resource_dirty_port_test.dart`,
+  `test/resources/resource_dirty_test.dart`, and
+  `test/runtime/resource_dirty_runtime_delivery_test.dart`: committed
   catalog dirty calls publish `state.revisions.resourceVisual`, leave document,
   resource, selection, preview, view-camera, interaction, epoch, action, and
   public document projection state unchanged, prove missing-target and empty
-  mark-all no-ops, and prove guard rejection before dirty side effects.
+  mark-all no-ops, prove active-session target cache eviction before dirty
+  publication, and prove guard rejection before dirty side effects.
 - proves markResourceDirty publishes state.revisions.resourceVisual without
   incrementing state.revisions.document, evicting public document projection,
   clearing selection, clearing preview, or emitting an action event.
-
-Future session/cache proof (not implemented by the current narrow files):
 - proves markResourceDirty(resourceId) evicts the target ImageResolveCache
-  entry in the active SurfaceResourceSession and the next paint resolves that
+  entry in the active SurfaceResourceSession and the next session resolve uses
   dirty target again instead of reusing the previous resolved image.
 
 #### `test/resources/mark_all_resources_dirty_test.dart`
-Future session/cache proof (not implemented by the current narrow files):
 - proves markAllResourcesDirty() clears the active SurfaceResourceSession
   ImageResolveCache while preserving document revision, public document
-  projection, selection, preview, and action-event behavior.
+  projection, selection, preview, dirty repaint/effect delivery, and
+  action-event behavior.
 
 #### `test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart`
 - proves CanvasCameraPort.setOffset and panBy publish

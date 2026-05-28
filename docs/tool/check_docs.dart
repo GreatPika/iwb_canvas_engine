@@ -114,6 +114,10 @@ const _rootReadmeTaskRoutes = [
   '- Find Change Contracts: `PLAN.md` and `plan/`',
 ];
 
+const _requiredReviewedDiagramBehaviors = {
+  'seq_resource_resolution': {'p7_resource_session_resolver_lifecycle'},
+};
+
 final _errors = <String>[];
 
 void main() {
@@ -670,6 +674,11 @@ Map<String, _DiagramEntry> _loadDiagramCatalog() {
       diagramId,
     ).toSet();
     final graphViewSource = _stringField(entry, 'graph_view_source', diagramId);
+    final reviewedBehaviors = _optionalStringListField(
+      entry,
+      'reviewed_behaviors',
+      diagramId,
+    ).toSet();
 
     if (diagramId.isEmpty) {
       _fail('$_diagramsRegistryPath contains a diagram entry with empty id');
@@ -711,6 +720,14 @@ Map<String, _DiagramEntry> _loadDiagramCatalog() {
     }
     if (classification == 'semantic' && graphViewSource != 'none') {
       _fail('$diagramId semantic diagram must use graph_view_source: none');
+    }
+    final requiredReviews = _requiredReviewedDiagramBehaviors[diagramId];
+    if (requiredReviews != null &&
+        !reviewedBehaviors.containsAll(requiredReviews)) {
+      _fail(
+        '$diagramId must list reviewed_behaviors '
+        '${requiredReviews.join(', ')}',
+      );
     }
 
     catalog[diagramId] = _DiagramEntry(
@@ -1105,6 +1122,14 @@ List<String> _stringListField(YamlMap map, String field, String owner) {
     }
   }
   return items;
+}
+
+List<String> _optionalStringListField(YamlMap map, String field, String owner) {
+  if (!map.containsKey(field)) {
+    return const [];
+  }
+
+  return _stringListField(map, field, owner);
 }
 
 String _read(String path) {

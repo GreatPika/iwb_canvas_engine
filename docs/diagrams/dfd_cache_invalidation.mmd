@@ -73,7 +73,7 @@ flowchart LR
     NoProjectionHotPath["No CanvasDocument projection\nin paint, pointer, or hit hot paths"]
   end
 
-  subgraph ResourceRuntime["ResourceKernel / contract-owned dirty outcome"]
+  subgraph ResourceRuntime["RuntimeRoot / contract-owned dirty outcome"]
     ResourceVisualRevision["resourceVisualRevision"]
     ResourceSessionInvalidation["Active session invalidation event\ndescriptor changed or dirty target/all"]
   end
@@ -160,10 +160,10 @@ flowchart LR
   DescriptorCacheEvict -->|"resource-dependent paint changed"| MainRepaint
 
   ResourceDirtyCall -->|"explicit external visual invalidation"| ResourceDirtyDispatch
+  ResourceDirtyDispatch -->|"target/all active session entries before publication"| ResourceSessionInvalidation
   ResourceDirtyDispatch -->|"increment runtime resource visual revision"| ResourceVisualRevision
-  ResourceVisualRevision -->|"public resource visual domain"| ResourceVisualPublicRevision
+  ResourceVisualRevision -->|"public resource visual domain after invalidation"| ResourceVisualPublicRevision
   ResourceVisualPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
-  ResourceDirtyDispatch -->|"target/all active session entries only"| ResourceSessionInvalidation
   ResourceSessionInvalidation -->|"dirty target or all"| DirtyResourceEvict
   ResourceVisualRevision -->|"resource visuals changed"| MainRepaint
   ResourceDirtyCall -.->|"forbidden"| DirtyDocumentRevision

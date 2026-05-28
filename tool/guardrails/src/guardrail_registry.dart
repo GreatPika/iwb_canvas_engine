@@ -167,4 +167,21 @@ const _blockingEntries = [
     id: 'load.success_interrupts_before_install',
     suites: {'blocking', 'load'},
   ),
+  GuardrailEntry(
+    id: 'resources.resolver_boundary_owned_by_surface_session',
+    suites: {'blocking', 'resources'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
+    id: 'resources.resolver_frame_budget',
+    suites: {'blocking', 'resources'},
+  ),
+  GuardrailEntry(
+    id: 'resources.no_same_frame_missing_retry',
+    suites: {'blocking', 'resources'},
+  ),
+  GuardrailEntry(
+    id: 'resources.resolver_reentrancy_rejected',
+    suites: {'blocking', 'resources'},
+  ),
 ];
