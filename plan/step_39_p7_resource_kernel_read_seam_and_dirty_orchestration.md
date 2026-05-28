@@ -279,7 +279,7 @@ accepted dirty revision.
 Completion Check:
 
 `dart test test/resources/resource_dirty_port_test.dart
-test/runtime/resource_dirty_state_publication_test.dart` passes and proves
+test/runtime/resource_dirty_runtime_delivery_test.dart` passes and proves
 existing-target `markResourceDirty` increments only
 `state.revisions.resourceVisual`, leaves document/resource/selection/preview/
 view-camera/interaction/epoch revisions unchanged, publishes one state snapshot,

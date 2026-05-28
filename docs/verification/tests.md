@@ -245,7 +245,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/runtime/resource_catalog_port_test.dart`
 - `test/resources/resource_kernel_read_port_test.dart`
 - `test/resources/resource_dirty_port_test.dart`
-- `test/runtime/resource_dirty_state_publication_test.dart`
+- `test/runtime/resource_dirty_runtime_delivery_test.dart`
 - `test/resources/resource_dirty_test.dart`
 - `test/resources/mark_all_resources_dirty_test.dart`
 - `test/resources/missing_result_suppressed_per_frame_test.dart`
@@ -557,7 +557,7 @@ behavioral tests, and the required guardrail list remains owned by
 
 #### `test/resources/resource_dirty_test.dart`
 - current narrow proof lives in `test/resources/resource_dirty_port_test.dart`
-  and `test/runtime/resource_dirty_state_publication_test.dart`: committed
+  and `test/runtime/resource_dirty_runtime_delivery_test.dart`: committed
   catalog dirty calls publish `state.revisions.resourceVisual`, leave document,
   resource, selection, preview, view-camera, interaction, epoch, action, and
   public document projection state unchanged, prove missing-target and empty
