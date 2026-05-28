@@ -12,6 +12,7 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/type.dart';
 
 import 'guardrail_violation.dart';
 import 'repository_paths.dart';
@@ -40,7 +41,8 @@ Future<List<GuardrailViolation>> checkCoreBoundaries() async {
 
       violations
         ..addAll(_checkDirectives(path, result.unit))
-        ..addAll(_checkRetiredShapeReferences(path, result.unit));
+        ..addAll(_checkRetiredShapeReferences(path, result.unit))
+        ..addAll(_checkResourceResolverTypeReferences(path, result.unit));
     }
   } finally {
     await collection.dispose();
@@ -89,6 +91,11 @@ List<GuardrailViolation> checkCoreBoundaryFile({
   return [
     ..._checkDirectives(path, unit),
     ..._checkRetiredShapeReferences(path, unit),
+    ..._checkResourceResolverTypeReferences(
+      path,
+      unit,
+      requireResolvedElement: false,
+    ),
   ];
 }
 
@@ -358,15 +365,23 @@ List<GuardrailViolation> _checkRetiredShapeReferences(
   CompilationUnit unit,
 ) {
   final visitor = _RetiredShapeVisitor(path);
-  final resourceVisitor = _ResourceResolverBoundaryVisitor(path);
   unit.accept(visitor);
-  unit.accept(resourceVisitor);
 
-  return [
-    ..._checkRetiredShapeDeclarations(path, unit),
-    ...visitor.violations,
-    ...resourceVisitor.violations,
-  ];
+  return [..._checkRetiredShapeDeclarations(path, unit), ...visitor.violations];
+}
+
+List<GuardrailViolation> _checkResourceResolverTypeReferences(
+  String path,
+  CompilationUnit unit, {
+  bool requireResolvedElement = true,
+}) {
+  final visitor = _ResourceResolverBoundaryVisitor(
+    path,
+    requireResolvedElement: requireResolvedElement,
+  );
+  unit.accept(visitor);
+
+  return visitor.violations;
 }
 
 List<GuardrailViolation> _checkRetiredShapeDeclarations(
@@ -450,54 +465,87 @@ final class _RetiredShapeVisitor extends RecursiveAstVisitor<void> {
 }
 
 final class _ResourceResolverBoundaryVisitor extends RecursiveAstVisitor<void> {
-  _ResourceResolverBoundaryVisitor(this.path);
+  _ResourceResolverBoundaryVisitor(
+    this.path, {
+    required this.requireResolvedElement,
+  });
 
   final String path;
+  final bool requireResolvedElement;
   final List<GuardrailViolation> violations = [];
 
   @override
-  void visitSimpleIdentifier(SimpleIdentifier node) {
-    _record(node.name);
-  }
-
-  @override
   void visitNamedType(NamedType node) {
-    _record(node.name.lexeme);
+    _record(name: node.name.lexeme, element: node.element, type: node.type);
     super.visitNamedType(node);
   }
 
-  void _record(String name) {
-    if (name != 'CanvasResourceResolver') {
+  void _record({
+    required String name,
+    required Element? element,
+    required DartType? type,
+  }) {
+    if (!_isCanvasResourceResolverTypeReference(
+      name: name,
+      element: element,
+      type: type,
+      requireResolvedElement: requireResolvedElement,
+    )) {
       return;
     }
-    if (_isUnauthorizedResourceResolverOwnerPath(path)) {
-      violations.add(
-        GuardrailViolation(
-          guardrailId: 'resources.resolver_boundary_owned_by_surface_session',
-          path: path,
-          message:
-              'resource code must route CanvasResourceResolver access through '
-              'SurfaceResourceSession',
-        ),
-      );
+    violations.addAll(_resolverBoundaryViolation(path));
+  }
+}
 
-      return;
-    }
-    if (!path.startsWith('lib/src/frame/') &&
-        !path.startsWith('lib/src/interaction/') &&
-        !_isSurfacePainterPath(path)) {
-      return;
-    }
-    violations.add(
+bool _isCanvasResourceResolverTypeReference({
+  required String name,
+  required Element? element,
+  required DartType? type,
+  required bool requireResolvedElement,
+}) {
+  if (_isPublicCanvasResourceResolverElement(type?.element) ||
+      _isPublicCanvasResourceResolverElement(element)) {
+    return true;
+  }
+
+  return !requireResolvedElement && name == 'CanvasResourceResolver';
+}
+
+bool _isPublicCanvasResourceResolverElement(Element? element) {
+  final libraryUri = element?.library?.uri.toString();
+
+  return element?.displayName == 'CanvasResourceResolver' &&
+      libraryUri ==
+          'package:iwb_canvas_engine/src/contracts/public/canvas_resource.dart';
+}
+
+List<GuardrailViolation> _resolverBoundaryViolation(String path) {
+  if (_isUnauthorizedResourceResolverOwnerPath(path)) {
+    return [
       GuardrailViolation(
         guardrailId: 'resources.resolver_boundary_owned_by_surface_session',
         path: path,
         message:
-            'frame, interaction, and surface painter code must not call '
-            'CanvasResourceResolver directly',
+            'resource code must route typed CanvasResourceResolver ownership '
+            'through SurfaceResourceSession',
       ),
-    );
+    ];
   }
+  if (!path.startsWith('lib/src/frame/') &&
+      !path.startsWith('lib/src/interaction/') &&
+      !_isSurfacePainterPath(path)) {
+    return const [];
+  }
+
+  return [
+    GuardrailViolation(
+      guardrailId: 'resources.resolver_boundary_owned_by_surface_session',
+      path: path,
+      message:
+          'frame, interaction, and surface painter code must not own typed '
+          'CanvasResourceResolver references',
+    ),
+  ];
 }
 
 GuardrailViolation _retiredShapeViolation(String path, String name) {

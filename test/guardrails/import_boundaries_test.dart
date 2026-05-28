@@ -12,7 +12,7 @@ void main() {
   _testFrameCannotUseResourceCatalogPort();
   _testResourcesCannotImportFlutterPackages();
   _testResourceSessionOwnerBoundaries();
-  _testFrameOrSurfaceCannotUseCanvasResourceResolverDirectly();
+  _testFrameOrSurfaceCannotOwnCanvasResourceResolverType();
 }
 
 void _testProductionBoundaries() {
@@ -208,9 +208,9 @@ void _testResourceSessionOwnerBoundaries() {
   );
 }
 
-void _testFrameOrSurfaceCannotUseCanvasResourceResolverDirectly() {
+void _testFrameOrSurfaceCannotOwnCanvasResourceResolverType() {
   test(
-    'frame and painter code cannot name CanvasResourceResolver directly',
+    'frame and painter code cannot own CanvasResourceResolver typed references',
     () {
       const badResolverReference = '''
 import '../contracts/public/canvas_resource.dart';
