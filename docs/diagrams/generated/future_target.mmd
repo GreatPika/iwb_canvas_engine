@@ -4,6 +4,7 @@
 %% Selected phase: P6
 flowchart LR
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]
+  diagnostics_hub["Diagnostics hub<br/>required by P3"]
   draw_tools["Draw tool owner<br/>required by P11"]
   edit_kernel["Edit kernel<br/>required by P5"]
   eraser_text_request["Eraser and text request owner<br/>required by P12"]
@@ -21,8 +22,11 @@ flowchart LR
   eraser_text_request -->|queries hits through by P12| geometry_spatial_index
   flutter_surface -->|is shown through by P13| api_canvas_runtime
   frame_renderer -->|resolves resources through by P9| resource_surface_session
+  geometry_spatial_index -->|reports errors to by P8| diagnostics_hub
   geometry_spatial_index -->|reads data through by P10| interaction_selection_move
   interaction_selection_move -->|action stream boundary by P10| api_canvas_runtime
+  interaction_selection_move -->|reports errors to by P10| diagnostics_hub
   resource_kernel -->|invalidates resource session through by P13| resource_surface_session
   runtime_root -->|reads from by P9| frame_renderer
+  runtime_root -->|reports errors to by P14| diagnostics_hub
   runtime_root -->|composition by P7| resource_kernel

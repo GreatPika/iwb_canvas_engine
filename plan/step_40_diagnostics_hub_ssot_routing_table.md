@@ -142,7 +142,7 @@ implementation contract activates and proves the corresponding writer.
 
 ## Execution Units
 
-### [ ] Unit 1: Canonical routing table
+### [x] Unit 1: Canonical routing table
 
 Owner:
 
@@ -295,7 +295,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Dependent docs route classification
+### [x] Unit 2: Dependent docs route classification
 
 Owner:
 
@@ -415,7 +415,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Graph and registry projections
+### [x] Unit 3: Graph and registry projections
 
 Owner:
 
@@ -559,7 +559,7 @@ Depends On:
 
 Unit 1 and Unit 2.
 
-### [ ] Unit 4: Durable diagram reconciliation
+### [x] Unit 4: Durable diagram reconciliation
 
 Owner:
 
@@ -650,7 +650,7 @@ Depends On:
 
 Unit 1, Unit 2, and Unit 3.
 
-### [ ] Unit 5: Generated docs, checks, and roadmap closure
+### [x] Unit 5: Generated docs, checks, and roadmap closure
 
 Owner:
 

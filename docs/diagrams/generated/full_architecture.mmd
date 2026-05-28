@@ -40,11 +40,14 @@ flowchart LR
   eraser_text_request -->|queries hits through by P12| geometry_spatial_index
   flutter_surface -->|is shown through by P13| api_canvas_runtime
   frame_renderer -->|resolves resources through by P9| resource_surface_session
+  geometry_spatial_index -->|reports errors to by P8| diagnostics_hub
   geometry_spatial_index -->|reads data through by P10| interaction_selection_move
   interaction_selection_move -->|action stream boundary by P10| api_canvas_runtime
+  interaction_selection_move -->|reports errors to by P10| diagnostics_hub
   load_document_pipeline -->|changes data through by P6| store_document_kernel
   resource_kernel -->|invalidates resource session through by P13| resource_surface_session
   runtime_root -->|reads from by P9| frame_renderer
+  runtime_root -->|reports errors to by P14| diagnostics_hub
   runtime_root -->|composition by P7| resource_kernel
   runtime_root -->|owns and creates by P4| selection_kernel
   runtime_root -->|owns and creates by P4| store_document_kernel
