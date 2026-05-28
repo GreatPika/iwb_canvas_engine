@@ -125,7 +125,11 @@ void _verifyResourceDescriptorFacts(RuntimeRoot root) {
   final descriptor = maybeDescriptor as FrameResourceDescriptorFacts;
   expect(descriptor.id, CanvasResourceId('resource-a'));
   expect(descriptor.appKey, 'asset-a');
+  expect(descriptor.mimeType, 'image/png');
+  expect(descriptor.contentHash, 'sha256:resource-a');
+  expect(descriptor.byteLength, 2048);
   expect(descriptor.resourceRevision, 0);
+  expect(descriptor.metadata, CanvasMetadata.fromMap({'role': 'fixture'}));
 
   expect(frame.resourceDescriptor(CanvasResourceId('missing')), isNull);
 }
@@ -163,12 +167,7 @@ void _verifyConstructedFrameFactsAreImmutable() {
 
 CanvasDocument _document() {
   return CanvasDocument(
-    resources: [
-      CanvasImageResource(
-        id: CanvasResourceId('resource-a'),
-        source: CanvasResourceSource.appKey('asset-a'),
-      ),
-    ],
+    resources: _resources(),
     backgroundElements: [
       CanvasRectElement(
         id: CanvasElementId('background-a'),
@@ -199,4 +198,17 @@ CanvasDocument _document() {
       ),
     ],
   );
+}
+
+List<CanvasResource> _resources() {
+  return [
+    CanvasImageResource(
+      id: CanvasResourceId('resource-a'),
+      source: CanvasResourceSource.appKey('asset-a'),
+      mimeType: 'image/png',
+      contentHash: 'sha256:resource-a',
+      byteLength: 2048,
+      metadata: CanvasMetadata.fromMap({'role': 'fixture'}),
+    ),
+  ];
 }

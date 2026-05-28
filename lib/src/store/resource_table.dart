@@ -73,6 +73,9 @@ final class ResourceTable {
     return StoreResourceDescriptorFacts(
       id: resource.id,
       appKey: (resource.source as CanvasAppKeyResourceSource).key,
+      mimeType: resource.mimeType,
+      contentHash: resource.contentHash,
+      byteLength: resource.byteLength,
       resourceRevision: resourceRevision,
       metadata: resource.metadata,
     );
@@ -83,12 +86,18 @@ final class StoreResourceDescriptorFacts {
   const StoreResourceDescriptorFacts({
     required this.id,
     required this.appKey,
+    required this.mimeType,
+    required this.contentHash,
+    required this.byteLength,
     required this.resourceRevision,
     required this.metadata,
   });
 
   final CanvasResourceId id;
   final String appKey;
+  final String? mimeType;
+  final String? contentHash;
+  final int? byteLength;
   final int resourceRevision;
   final CanvasMetadata metadata;
 }

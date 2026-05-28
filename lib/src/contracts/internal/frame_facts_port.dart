@@ -125,12 +125,18 @@ final class FrameResourceDescriptorFacts {
   const FrameResourceDescriptorFacts({
     required this.id,
     required this.appKey,
+    required this.mimeType,
+    required this.contentHash,
+    required this.byteLength,
     required this.resourceRevision,
     required this.metadata,
   });
 
   final CanvasResourceId id;
   final String appKey;
+  final String? mimeType;
+  final String? contentHash;
+  final int? byteLength;
   final int resourceRevision;
   final CanvasMetadata metadata;
 }

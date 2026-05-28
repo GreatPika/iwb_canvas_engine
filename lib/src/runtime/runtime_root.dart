@@ -281,6 +281,9 @@ final class RuntimeRoot
     return FrameResourceDescriptorFacts(
       id: facts.id,
       appKey: facts.appKey,
+      mimeType: facts.mimeType,
+      contentHash: facts.contentHash,
+      byteLength: facts.byteLength,
       resourceRevision: facts.resourceRevision,
       metadata: facts.metadata,
     );
