@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/resource_session_invalidation_sink.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
@@ -25,6 +27,28 @@ void main() {
 
   test('observer failure does not roll back accepted dirty revision', () {
     return expectLater(_expectDirtyObserverFailureContainment(), completes);
+  });
+
+  test('active session invalidates before dirty publication', () {
+    return expectLater(
+      _expectActiveSessionInvalidatesBeforePublish(),
+      completes,
+    );
+  });
+
+  test('cleared active session is not mutated by later dirty calls', () {
+    return expectLater(_expectClearedActiveSessionIsIgnored(), completes);
+  });
+
+  test('resource kernel does not import session invalidation sink', () {
+    expect(
+      _resourceKernelSource(),
+      isNot(contains('ResourceSessionInvalidationSink')),
+    );
+    expect(
+      _resourceKernelSource(),
+      isNot(contains('resource_session_invalidation_sink')),
+    );
   });
 }
 
@@ -95,6 +119,50 @@ Future<void> _expectDirtyObserverFailureContainment() async {
   expect(actions, isEmpty);
   await subscription.cancel();
   root.dispose();
+}
+
+Future<void> _expectActiveSessionInvalidatesBeforePublish() {
+  final sink = _RecordingResourceSessionInvalidationSink();
+  late RuntimeRoot root;
+  root = RuntimeRoot(
+    initialDocument: _documentWithResource(),
+    config: const CanvasRuntimeConfig(),
+    commitEffectObserver: (_) {
+      sink.expectTargetInvalidated(CanvasResourceId('resource-a'));
+    },
+  );
+  root.attachResourceSessionInvalidationSink(sink);
+  root.state.addListener(() {
+    sink.expectTargetInvalidated(CanvasResourceId('resource-a'));
+  });
+
+  root.resources.markResourceDirty(CanvasResourceId('resource-a'));
+
+  expect(sink.targetInvalidations, [CanvasResourceId('resource-a')]);
+  expect(sink.allInvalidationCount, 0);
+  root.dispose();
+
+  return Future<void>.value();
+}
+
+Future<void> _expectClearedActiveSessionIsIgnored() {
+  final sink = _RecordingResourceSessionInvalidationSink();
+  final root = RuntimeRoot(
+    initialDocument: _documentWithResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+  root.attachResourceSessionInvalidationSink(sink);
+  root.clearResourceSessionInvalidationSink(sink);
+
+  root.resources.markResourceDirty(CanvasResourceId('resource-a'));
+  root.resources.markAllResourcesDirty();
+
+  expect(root.state.value.revisions.resourceVisual, 2);
+  expect(sink.targetInvalidations, isEmpty);
+  expect(sink.allInvalidationCount, 0);
+  root.dispose();
+
+  return Future<void>.value();
 }
 
 // This proof keeps the runtime, state snapshots, effects, and action stream in
@@ -212,6 +280,30 @@ void _expectMainRepaintOnly(List<CommitDeliveryEffect> effects) {
   expect(repaint.mainCanvas, isTrue);
   expect(repaint.overlayCanvas, isFalse);
   expect(effects.whereType<PublicStateDeliveryEffect>(), hasLength(1));
+}
+
+String _resourceKernelSource() {
+  return File('lib/src/resources/resource_kernel.dart').readAsStringSync();
+}
+
+final class _RecordingResourceSessionInvalidationSink
+    implements ResourceSessionInvalidationSink {
+  final List<CanvasResourceId> targetInvalidations = [];
+  int allInvalidationCount = 0;
+
+  @override
+  void invalidateResourceImage(CanvasResourceId id) {
+    targetInvalidations.add(id);
+  }
+
+  @override
+  void invalidateAllResourceImages() {
+    allInvalidationCount += 1;
+  }
+
+  void expectTargetInvalidated(CanvasResourceId id) {
+    expect(targetInvalidations, contains(id));
+  }
 }
 
 Future<void> _expectDisposedGuard() async {

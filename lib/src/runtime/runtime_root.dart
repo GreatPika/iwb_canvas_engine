@@ -16,6 +16,7 @@ import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/load_interaction_boundary.dart';
 import '../contracts/internal/resource_catalog_port.dart';
 import '../contracts/internal/resource_dirty_outcome.dart';
+import '../contracts/internal/resource_session_invalidation_sink.dart';
 import '../contracts/internal/resolver_mutation_guard.dart';
 import '../contracts/internal/selection_facts_port.dart';
 import '../contracts/internal/selection_membership_port.dart';
@@ -112,6 +113,7 @@ final class RuntimeRoot
   bool _isDisposed = false;
   bool _isDeliveringCommitEffects = false;
   bool _isRunningResolverCallback = false;
+  ResourceSessionInvalidationSink? _activeResourceSessionInvalidationSink;
   late final EditKernel _editKernel = EditKernel(
     mutationGuard: this,
     readDocument: _store.readDocument,
@@ -147,6 +149,22 @@ final class RuntimeRoot
 
   DocumentFactsPort get documentFactsPort => this;
   FrameFactsPort get frameFactsPort => this;
+
+  void attachResourceSessionInvalidationSink(
+    ResourceSessionInvalidationSink sink,
+  ) {
+    ensureRuntimeMutationAllowed();
+    _activeResourceSessionInvalidationSink = sink;
+  }
+
+  void clearResourceSessionInvalidationSink(
+    ResourceSessionInvalidationSink sink,
+  ) {
+    ensureRuntimeMutationAllowed();
+    if (identical(_activeResourceSessionInvalidationSink, sink)) {
+      _activeResourceSessionInvalidationSink = null;
+    }
+  }
 
   @override
   DocumentFacts get documentFacts {
@@ -373,7 +391,23 @@ final class RuntimeRoot
     if (!outcome.hasDirtyResources) {
       return;
     }
+    _invalidateActiveResourceSession(outcome);
     _deliverResourceDirtyResult(_resourceDirtyEffects(outcome));
+  }
+
+  void _invalidateActiveResourceSession(ResourceDirtyOutcome outcome) {
+    final sink = _activeResourceSessionInvalidationSink;
+    if (sink == null) {
+      return;
+    }
+    if (outcome.allResourcesDirty) {
+      sink.invalidateAllResourceImages();
+
+      return;
+    }
+    for (final id in outcome.dirtyResourceIds) {
+      sink.invalidateResourceImage(id);
+    }
   }
 
   void _ensureNotDisposed() {

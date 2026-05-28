@@ -1,4 +1,5 @@
 import '../contracts/internal/resolver_mutation_guard.dart';
+import '../contracts/internal/resource_session_invalidation_sink.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_resource.dart';
 import 'resource_cache.dart';
@@ -14,7 +15,7 @@ typedef _SuppressedResolveKey = ({
 // The session intentionally coordinates every explicit resolver outcome in one
 // owner so cache, suppression, budget, and resolver generation cannot drift.
 // ignore: coupling-between-object-classes, number-of-methods
-final class SurfaceResourceSession {
+final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
   SurfaceResourceSession({
     required CanvasResourceResolver? resolver,
     required ResolverMutationGuard mutationGuard,
@@ -180,10 +181,12 @@ final class SurfaceResourceSession {
     _hasPendingBudgetFollowUpRepaint = false;
   }
 
+  @override
   void invalidateResourceImage(CanvasResourceId id) {
     _cache.invalidateResource(id);
   }
 
+  @override
   void invalidateAllResourceImages() {
     _cache.clear();
   }
