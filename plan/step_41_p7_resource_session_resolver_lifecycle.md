@@ -549,7 +549,7 @@ executable guardrails after implementation, the source-of-truth docs must
 reclassify that id away from "guardrail" and point to the concrete behavior
 test that owns the proof. `dart run
 tool/architecture_graph/check.dart --phase P7` and `dart run
-tool/architecture_graph/generate_views.dart --phase P6 --check` pass with graph
+tool/architecture_graph/generate_views.dart --phase P7 --check` pass with graph
 data that distinguishes implemented P7 session and invalidation behavior from
 future P9/P13 integration. `dart run docs/tool/sync_generated_docs.dart
 --check` and `dart run docs/tool/check_docs.dart` pass after docs, registries,

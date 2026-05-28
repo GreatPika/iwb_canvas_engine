@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Selected phase architecture graph
-%% Selected phase: P6
+%% Selected phase: P7
 flowchart LR
   api_camera_port["Public camera port<br/>required by P4"]
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]
@@ -12,6 +12,8 @@ flowchart LR
   diagnostics_hub["Diagnostics hub<br/>required by P3"]
   edit_kernel["Edit kernel<br/>required by P5"]
   load_document_pipeline["Load document pipeline<br/>required by P6"]
+  resource_kernel["Resource kernel<br/>required by P7"]
+  resource_surface_session["Surface resource session<br/>required by P7"]
   runtime_root["Runtime composition root<br/>required by P4"]
   runtime_view_camera["Runtime-owned view camera<br/>required by P4"]
   selection_kernel["Selection kernel<br/>required by P4"]
@@ -26,5 +28,7 @@ flowchart LR
   contracts_internal_ports -->|contract dependency by P6| contracts_public
   edit_kernel -->|changes data through by P5| store_document_kernel
   load_document_pipeline -->|changes data through by P6| store_document_kernel
+  runtime_root -->|invalidates resource session through by P7| resource_surface_session
+  runtime_root -->|composition by P7| resource_kernel
   runtime_root -->|owns and creates by P4| selection_kernel
   runtime_root -->|owns and creates by P4| store_document_kernel

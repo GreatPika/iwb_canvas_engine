@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Future target architecture graph
-%% Selected phase: P6
+%% Selected phase: P7
 flowchart LR
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]
   diagnostics_hub["Diagnostics hub<br/>required by P3"]
@@ -12,7 +12,6 @@ flowchart LR
   frame_renderer["Frame renderer and cache owner<br/>required by P9"]
   geometry_spatial_index["Geometry and spatial index<br/>required by P8"]
   interaction_selection_move["Selection and move interaction owner<br/>required by P10"]
-  resource_kernel["Resource kernel<br/>required by P7"]
   resource_surface_session["Surface resource session<br/>required by P7"]
   runtime_root["Runtime composition root<br/>required by P4"]
   draw_tools -->|planned commits through by P11| edit_kernel
@@ -27,6 +26,4 @@ flowchart LR
   interaction_selection_move -->|planned action stream boundary by P10| api_canvas_runtime
   interaction_selection_move -->|planned reports errors to by P10| diagnostics_hub
   runtime_root -->|planned reads from by P9| frame_renderer
-  runtime_root -->|invalidates resource session through by P7| resource_surface_session
   runtime_root -->|planned reports errors to by P14| diagnostics_hub
-  runtime_root -->|composition by P7| resource_kernel
