@@ -9,6 +9,7 @@ import 'package:test/test.dart';
 void main() {
   _testCommitDeliveryShape();
   _testResourceHandoffShape();
+  _testResourceSessionInvalidationSinkShape();
   _testDocumentAndFramePortShape();
   _testSelectionPortShape();
   _testLoadBoundaryShape();
@@ -72,6 +73,18 @@ void _testResourceHandoffShape() {
     expect(resolverGuard, contains('ensureRuntimeMutationAllowed'));
     expect(resolverGuard, isNot(contains('ResourceKernel')));
     expect(resolverGuard, isNot(contains('CanvasRuntime')));
+  });
+}
+
+void _testResourceSessionInvalidationSinkShape() {
+  test('resource session invalidation sink is a narrow internal seam', () {
+    final source = _contractSource('resource_session_invalidation_sink.dart');
+    final unit = _parse(source);
+
+    expect(_topLevelNames(unit), contains('ResourceSessionInvalidationSink'));
+    _expectResourceSessionInvalidationSinkShape(unit);
+    _expectResourceSessionInvalidationSinkImports(source);
+    _expectResourceSessionInvalidationSinkDoesNotNameOwners(source);
   });
 }
 
@@ -243,6 +256,56 @@ void _expectResourceCatalogPortShape(CompilationUnit unit) {
     lookupMethod.parameters?.parameters.single.toSource(),
     'CanvasResourceId id',
   );
+}
+
+void _expectResourceSessionInvalidationSinkShape(CompilationUnit unit) {
+  final declaration = _classDeclaration(
+    unit,
+    'ResourceSessionInvalidationSink',
+  );
+  final methods = declaration.body.members
+      .whereType<MethodDeclaration>()
+      .toList();
+
+  expect(methods.map((method) => method.name.lexeme), [
+    'invalidateResourceImage',
+    'invalidateAllResourceImages',
+  ]);
+  expect(methods.first.returnType?.toSource(), 'void');
+  expect(
+    methods.first.parameters?.parameters.single.toSource(),
+    'CanvasResourceId id',
+  );
+  expect(methods.last.returnType?.toSource(), 'void');
+  expect(methods.last.parameters?.parameters, isEmpty);
+}
+
+void _expectResourceSessionInvalidationSinkImports(String source) {
+  final imports = RegExp(
+    r"import '([^']+)';",
+  ).allMatches(source).map((match) => match.group(1)).toSet();
+
+  expect(imports, {'../public/canvas_ids.dart'});
+}
+
+void _expectResourceSessionInvalidationSinkDoesNotNameOwners(String source) {
+  const forbiddenNames = [
+    'DocumentStoreKernel',
+    'RuntimeRoot',
+    'FrameFactsPort',
+    'ResourceKernel',
+    'SurfaceResourceSession',
+    'Resolver',
+    'resolver',
+    'Cache',
+    'cache',
+    'callback',
+    'Callback',
+  ];
+
+  for (final name in forbiddenNames) {
+    expect(source, isNot(contains(name)));
+  }
 }
 
 void _expectResourceCatalogImports(String source) {
