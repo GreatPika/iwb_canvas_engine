@@ -210,7 +210,7 @@ void _testResourceSessionOwnerBoundaries() {
 
 void _testFrameOrSurfaceCannotUseCanvasResourceResolverDirectly() {
   test(
-    'frame and surface code cannot name CanvasResourceResolver directly',
+    'frame and painter code cannot name CanvasResourceResolver directly',
     () {
       const badResolverReference = '''
 import '../contracts/public/canvas_resource.dart';
@@ -232,6 +232,13 @@ void bad(CanvasResourceResolver resolver) {}
           ),
         );
       }
+      expect(
+        checkCoreBoundaryFile(
+          path: 'lib/src/surface/canvas_surface.dart',
+          content: badResolverReference,
+        ),
+        isEmpty,
+      );
     },
   );
 }

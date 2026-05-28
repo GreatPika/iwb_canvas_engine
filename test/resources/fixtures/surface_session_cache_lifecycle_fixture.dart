@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 
 import 'surface_resource_session_test_support.dart';
@@ -7,6 +8,7 @@ import 'surface_resource_session_test_support.dart';
 void main() {
   _testTargetAndAllInvalidation();
   _testLeastRecentlyUsedEviction();
+  _testDroppedSessionDoesNotResolveAgain();
 }
 
 void _testTargetAndAllInvalidation() {
@@ -72,6 +74,45 @@ void _testLeastRecentlyUsedEviction() {
 
     session.resolveImage(descriptorRequest(id: 'resource-1'));
     expect(resolver.callCount, 1026);
+
+    image.dispose();
+  });
+}
+
+void _testDroppedSessionDoesNotResolveAgain() {
+  test('dropped session cannot revive resolver or cache entries', () async {
+    final image = await createResourceTestImage();
+    final resolver = RecordingResourceResolver((_) => image);
+    final session = SurfaceResourceSession(
+      resolver: resolver,
+      mutationGuard: CountingResolverMutationGuard(),
+    );
+    final request = descriptorRequest(id: 'resource-a');
+
+    expect(session.resolveImage(request), isA<ResolvedResourceImage>());
+    expect(resolver.callCount, 1);
+
+    session.drop();
+    expect(
+      session.resolveImage(request),
+      isA<NoResolverResourceImagePlaceholder>(),
+    );
+    expect(resolver.callCount, 1);
+
+    session.replaceResolver(resolver);
+    session.beginFrameResourcePass();
+    expect(
+      session.resolveImage(request),
+      isA<NoResolverResourceImagePlaceholder>(),
+    );
+    expect(resolver.callCount, 1);
+
+    session.dispose();
+    expect(
+      session.resolveImage(request),
+      isA<NoResolverResourceImagePlaceholder>(),
+    );
+    expect(resolver.callCount, 1);
 
     image.dispose();
   });

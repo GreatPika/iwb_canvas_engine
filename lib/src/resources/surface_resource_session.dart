@@ -29,6 +29,7 @@ final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
   int _resolverGeneration = 0;
   int _resolverCallsThisFrame = 0;
   bool _hasPendingBudgetFollowUpRepaint = false;
+  bool _isDropped = false;
 
   bool get hasPendingBudgetFollowUpRepaint => _hasPendingBudgetFollowUpRepaint;
 
@@ -39,6 +40,9 @@ final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
   }
 
   ResourceImageResolveResult resolveImage(ResourceImageResolveRequest request) {
+    if (_isDropped) {
+      return _noResolverPlaceholder(request);
+    }
     final missingDescriptor = _missingDescriptorPlaceholder(request);
     if (missingDescriptor != null) {
       return missingDescriptor;
@@ -174,6 +178,9 @@ final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
   }
 
   void replaceResolver(CanvasResourceResolver? resolver) {
+    if (_isDropped) {
+      return;
+    }
     _resolver = resolver;
     _resolverGeneration += 1;
     _cache.clear();
@@ -192,6 +199,11 @@ final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
   }
 
   void drop() {
+    _isDropped = true;
+    _resolver = null;
+    _resolverGeneration += 1;
+    _resolverCallsThisFrame = 0;
+    _hasPendingBudgetFollowUpRepaint = false;
     _cache.clear();
     _currentFrameSuppression.clear();
   }

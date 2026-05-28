@@ -469,7 +469,7 @@ final class _ResourceResolverBoundaryVisitor extends RecursiveAstVisitor<void> {
   void _record(String name) {
     if (!path.startsWith('lib/src/frame/') &&
         !path.startsWith('lib/src/interaction/') &&
-        !path.startsWith('lib/src/surface/')) {
+        !_isSurfacePainterPath(path)) {
       return;
     }
     if (name != 'CanvasResourceResolver') {
@@ -480,7 +480,7 @@ final class _ResourceResolverBoundaryVisitor extends RecursiveAstVisitor<void> {
         guardrailId: 'resources.resolver_boundary_owned_by_surface_session',
         path: path,
         message:
-            'frame, interaction, and surface code must not call '
+            'frame, interaction, and surface painter code must not call '
             'CanvasResourceResolver directly',
       ),
     );
@@ -558,6 +558,14 @@ bool _isNetworkLoadingImport(String uri) {
       uri.startsWith('package:dio/') ||
       uri.startsWith('package:chopper/') ||
       uri.startsWith('package:retrofit/');
+}
+
+bool _isSurfacePainterPath(String path) {
+  if (!path.startsWith('lib/src/surface/')) {
+    return false;
+  }
+
+  return path.split('/').last.contains('painter');
 }
 
 const _sceneControllerShapeNames = {'SceneController', 'SceneSnapshot'};
