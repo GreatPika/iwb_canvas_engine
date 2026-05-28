@@ -96,7 +96,7 @@ flowchart LR
   ImageResolveCache -->|"cache hit: app-owned image"| ResolvePaintAsset
   ImageResolveCache -->|"cache miss"| ResolverFrameBudget
   ResolverFrameBudget -->|"budget available\nsync resolve request"| AppResolver
-  ResolverFrameBudget -.->|"budget exceeded\nsession probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder
+  ResolverFrameBudget -.->|"budget exceeded\nnon-hub session probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder
   BudgetPlaceholder -.->|"bounded placeholder\nno cache write"| PaintAsset
   AppResolver -->|"passes descriptor; app reads CanvasAppKeyResourceSource.key"| App
   AppResolver -->|"returns app-owned ui.Image or null\nno runtime mutation"| ResolvePaintAsset

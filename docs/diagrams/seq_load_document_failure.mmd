@@ -6,7 +6,7 @@ sequenceDiagram
   participant API as CanvasEditPort
   participant Runtime as RuntimeRoot
   participant Stager as Staged load boundary
-  participant Diagnostics as DiagnosticsHub
+  participant Diagnostics as Load failure projection
   participant Store as DocumentStoreKernel
   participant Selection as SelectionKernel
   participant Interaction as InteractionEngine
@@ -41,8 +41,8 @@ sequenceDiagram
       Stager--x Runtime: materialization failure
     end
 
-    Runtime->>Diagnostics: project load failure
-    Diagnostics->>Diagnostics: sanitize path and bounded details
+    Runtime->>Diagnostics: project load failure; validation route uses codec bridge
+    Diagnostics->>Diagnostics: sanitize path and bounded details; no runtime source
     Diagnostics-->>Runtime: CanvasDataException or StateError
     Runtime--x API: rethrow projected exception
     API--x Caller: rethrow projected exception

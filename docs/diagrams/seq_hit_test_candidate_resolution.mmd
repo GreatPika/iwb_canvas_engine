@@ -10,7 +10,7 @@ sequenceDiagram
   participant Store as DocumentStoreKernel
   participant Geometry as GeometryPolicy
   participant Hit as HitTestPolicy
-  participant Diagnostics as DiagnosticsHub
+  participant Diagnostics as DiagnosticsHub planned routes
 
   Caller->>Surface: hit-test request(point hit)
   Surface->>Interaction: normalized finite CanvasPointerSample or finite query envelope
@@ -19,7 +19,7 @@ sequenceDiagram
 
   alt spatial query budget exceeded
     Spatial-->>Interaction: typed budget-exceeded result with no partial candidates
-    Interaction->>Diagnostics: record bounded spatial fallback/budget probe
+    Interaction->>Diagnostics: planned P10 interaction reliability diagnostic for user-facing budget event
     Interaction-->>Surface: no hit result, no partial candidates consumed
   else bounded candidate handles returned
     Spatial-->>Interaction: candidate handles(id, generation, orderToken, structuralRevision)
@@ -30,14 +30,14 @@ sequenceDiagram
       alt candidate is stale
         Store-->>ReadPort: stale candidate rejected
         ReadPort-->>Interaction: stale candidate rejected
-        Interaction->>Diagnostics: record stale candidate rejection
+        Interaction->>Diagnostics: planned P10 interaction reliability diagnostic for stale candidate rejection
       else candidate is current
         Store-->>ReadPort: immutable hit row and common flags
         ReadPort-->>Interaction: immutable hit row and common flags
         Interaction->>Hit: check hit eligibility(point finite, visible, selectable, transform finite)
         Hit->>Geometry: exact family hit with transform, local bounds, hit padding, and slop
         alt committed row has non-invertible transform
-          Geometry->>Diagnostics: record policy-gated corrupted-row diagnostic
+          Geometry->>Diagnostics: planned P8 spatial corrupted-row diagnostic
           Geometry-->>Hit: miss
           Hit-->>Interaction: continue candidate scan
         else transform invertible

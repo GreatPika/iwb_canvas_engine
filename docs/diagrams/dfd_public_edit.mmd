@@ -42,7 +42,7 @@ flowchart LR
     ResourceInvalidation["Resource cache invalidation"]
     RepaintBus["Main/overlay repaint buses"]
     PostInstallEffects["Post-install effect dispatch\nruntime/applier boundary"]
-    Diagnostics["Diagnostics projection\nvalidation/runtime failures"]
+    ErrorProjection["Error projection\npre-install validation/runtime failures\nno edit-owned DiagnosticsHub writer"]
   end
 
   App -->|"synchronous edit callback"| EditPort
@@ -79,6 +79,6 @@ flowchart LR
 
   SessionGate -.->|"StateError before callback"| Rollback
   Rollback -.->|"discard draft, events, repaint, spatial/resource/projection effects"| App
-  SessionGate -->|"validation/runtime failure"| Diagnostics
-  Compiler -->|"preflight failure before atomic install"| Diagnostics
-  Diagnostics -->|"projected exception"| App
+  SessionGate -->|"validation/runtime failure"| ErrorProjection
+  Compiler -->|"preflight failure before atomic install"| ErrorProjection
+  ErrorProjection -->|"projected exception"| App

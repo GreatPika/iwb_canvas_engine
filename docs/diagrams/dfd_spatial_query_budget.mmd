@@ -14,7 +14,7 @@ flowchart LR
     InvalidIndex["Invalid index fallback\nno full-scene scan"]
   end
 
-  Diagnostics["Diagnostics counter\nbudget exceeded or fallback"]
+  BudgetCounter["Spatial budget counter\nnon-hub budget exceeded or fallback"]
   RuntimeRoot["RuntimeRoot\nschedules rebuild/retry outside hot path"]
 
   QueryCaller -->|"query hit or paint candidates"| QueryBoundary
@@ -27,7 +27,7 @@ flowchart LR
   CandidateBudget -->|"candidate count <= maxFallbackCandidates"| TypedResult
   CandidateBudget -.->|"candidate count > maxFallbackCandidates"| BudgetExceeded
   InvalidIndex -.->|"bounded fallback only"| CandidateBudget
-  BudgetExceeded -.->|"increment diagnostic counter"| Diagnostics
+  BudgetExceeded -.->|"increment non-hub budget counter"| BudgetCounter
   BudgetExceeded -.->|"defer rebuild/retry\noutside pointer/paint hot path"| RuntimeRoot
   TypedResult -->|"candidate handles with revision/generation"| QueryCaller
 

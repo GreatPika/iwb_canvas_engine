@@ -5,15 +5,19 @@ flowchart LR
 
   subgraph PublicBoundary["Public API and runtime boundaries"]
     PublicCalls["Public calls\nDTO construction, codec, load, edit, resources"]
-    RuntimeFlows["Runtime flows\ninteraction, frame, spatial, resource"]
+    NonHubErrorProjection["Ordinary error projection\nedit/resource/runtime failures\nwithout DiagnosticsHub record"]
+    RuntimeFlows["Runtime flows\nplanned hub routes and non-hub probes"]
     PublicException["CanvasDataException\ncode, message, path,\nbounded details"]
     RuntimeSafeError["Runtime-safe error projection\nStateError or CanvasDataException"]
   end
 
   subgraph ErrorSources["Error sources"]
-    ValidationErrors["Validation errors\nschema, DTO, limits,\nids, metadata value validation, references"]
-    RuntimeErrors["Runtime errors\nedit, interaction, frame,\nspatial, resource"]
-    InternalErrors["Internal diagnostics errors\nsanitized fallback path"]
+    CodecValidationErrors["Codec/schema validation errors\nand staged-load codec bridge"]
+    OtherValidationErrors["Other validation/runtime errors\nprojected without hub record\nunless table row is added"]
+    RuntimeErrors["Planned runtime diagnostics\ninteraction reliability,\ngeometry corruption"]
+    ObserverFailures["Planned P14 observer failures\npost-acceptance contained\nno rollback or accepted-result mutation"]
+    InternalErrors["Planned/internal diagnostics self-protection\nsanitized fallback path"]
+    NonHubProbes["Non-hub probes and counters\nresource/session, eraser,\npure SpatialKernel budgets"]
   end
 
   subgraph HotSuccess["Successful hot paths with diagnostics disabled"]
@@ -41,16 +45,23 @@ flowchart LR
     PublicStream["No public diagnostics stream\nin v1 API"]
     RuntimeMutation["No diagnostic mutation\nof document, preview, selection,\nresources, caches, or repaint buses"]
     HotPathAllocation["Forbidden successful hot-path allocation\nrecords or formatted detail strings"]
+    ProbeRecord["No DiagnosticRecord\nfor non-hub probes"]
+    ObserverThrow["No public error throw\nfor contained observer failure"]
   end
 
   App -->|"calls public API"| PublicCalls
-  PublicCalls -->|"boundary validation failure"| ValidationErrors
-  PublicCalls -->|"runtime failure from public operation"| RuntimeErrors
-  RuntimeFlows -->|"pointer, paint, spatial,\nor resource failure"| RuntimeErrors
-  ValidationErrors -->|"error path"| DiagnosticRecord
-  RuntimeErrors -->|"error path"| DiagnosticRecord
-  InternalErrors -->|"self-protection path"| DiagnosticRecord
-  ValidationErrors -->|"bounded validation context"| RawDetails
+  PublicCalls -->|"codec/schema or staged-load codec-bridge failure"| CodecValidationErrors
+  PublicCalls -->|"edit/resource/runtime failure without table row"| OtherValidationErrors
+  RuntimeFlows -->|"table-backed planned hub route"| RuntimeErrors
+  RuntimeFlows -->|"post-acceptance observer route"| ObserverFailures
+  RuntimeFlows -->|"budget/probe path outside hub"| NonHubProbes
+  CodecValidationErrors -->|"implemented codec route"| DiagnosticRecord
+  OtherValidationErrors -->|"no DiagnosticsHub write"| NonHubErrorProjection
+  RuntimeErrors -->|"planned table row error path"| DiagnosticRecord
+  ObserverFailures -->|"contained diagnostics row"| DiagnosticRecord
+  InternalErrors -->|"planned/internal self-protection path"| DiagnosticRecord
+  NonHubProbes -.->|"not DiagnosticsHub writes"| ProbeRecord
+  CodecValidationErrors -->|"bounded validation context"| RawDetails
   RuntimeErrors -->|"safe runtime facts only"| RawDetails
   InternalErrors -->|"fallback facts"| RawDetails
 
@@ -69,8 +80,10 @@ flowchart LR
   InternalSink -.->|"not exported"| PublicStream
 
   PublicException -->|"throw to caller\nallocated only on error path"| App
+  NonHubErrorProjection -->|"StateError or CanvasDataException"| RuntimeSafeError
   RuntimeErrors -->|"non-data runtime failure"| RuntimeSafeError
   RuntimeSafeError -->|"throw to caller"| App
+  ObserverFailures -.->|"must not throw or roll back accepted result"| ObserverThrow
 
   PointerMoveSuccess --> DisabledGate
   PaintSuccess --> DisabledGate

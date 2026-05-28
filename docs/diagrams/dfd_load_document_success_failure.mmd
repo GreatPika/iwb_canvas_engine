@@ -46,7 +46,7 @@ flowchart LR
     ResourceEvict["Resource cache eviction"]
     Repaint["Main and overlay repaint"]
     Notify["Public CanvasRuntimeState after install\ndocument, selection, viewCamera, epoch,\nconditional preview cleanup\nno user action event"]
-    Diagnostics["Diagnostics projection\nvalidation/materialization failures"]
+    Diagnostics["Load failure projection\nvalidation uses codec bridge;\nno separate runtime hub route"]
   end
 
   App -->|"external document replacement request"| LoadPort
@@ -57,7 +57,7 @@ flowchart LR
 
   Validator -.->|"invalid public document"| Failure
   Materializer -.->|"materialization failure"| Failure
-  Failure -.->|"projected failure"| Diagnostics
+  Failure -.->|"projected failure;\nvalidation route uses codec bridge"| Diagnostics
   Diagnostics -.->|"rethrow projected exception"| Result
   Result -.->|"failure result"| App
 

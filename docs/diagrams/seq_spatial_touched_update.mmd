@@ -8,7 +8,7 @@ sequenceDiagram
   participant Membership as SpatialMembership
   participant HitIndex as Hit TileIndex and OutlierIndex
   participant PaintIndex as Paint TileIndex and OutlierIndex
-  participant Diagnostics as DiagnosticsHub
+  participant SpatialCounters as Spatial non-hub counters
   participant Runtime as RuntimeRoot
 
   Applier->>Spatial: applyTouchedSpatialUpdate(touched ids, captured revisions)
@@ -36,7 +36,7 @@ sequenceDiagram
   else stale id, generation, structuralRevision, or membership validation fails
     Spatial->>Spatial: discard prepared delta without applying partial removals/additions
     Spatial->>Spatial: mark spatial index invalid
-    Spatial->>Diagnostics: record stale spatial candidate or invalid delta
+    Spatial->>SpatialCounters: increment invalid-index counter; not a DiagnosticsHub write
     Spatial-->>Applier: typed invalid-index result
     Applier->>Runtime: request rebuild or retry outside hot pointer/paint path
     Note over Spatial,Runtime: Until rebuild, invalid index behavior is bounded fallback or typed budget-exceeded only, and silent full-scene scan is forbidden.

@@ -64,7 +64,7 @@ flowchart LR
     SpatialDelta["SpatialDelta\nadd, remove, touched update"]
     TouchedSpatialUpdate["Ordinary spatial update\nonly touched ids"]
     SpatialRebuild["Spatial rebuild/reset\nreplacement/load or clearContent empty reset only"]
-    SpatialFallback["Invalid index fallback\nbudgeted query/candidates,\ndiagnostic counter,\ndeferred rebuild"]
+    SpatialFallback["Invalid index fallback\nbudgeted query/candidates,\nnon-hub budget counter,\ndeferred rebuild"]
     SpatialBudgetExceeded["Fallback budget exceeded\ntyped result, no partial candidates"]
   end
 

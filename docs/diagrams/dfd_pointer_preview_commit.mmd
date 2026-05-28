@@ -60,7 +60,7 @@ flowchart LR
     MainRepaint["Main repaint bus"]
     OverlayRepaint["Overlay repaint bus\npreview cleanup"]
     Actions["Typed user action events\nonly when terminal commit changes state"]
-    Diagnostics["Diagnostics projection\nterminal/edit failures"]
+    ErrorProjection["Error projection\nterminal/edit failures\nno implemented edit-owned DiagnosticsHub writer"]
   end
 
   Surface -->|"raw Flutter pointer event"| PointerAdapter
@@ -102,7 +102,7 @@ flowchart LR
   CommitIntent -->|"selected move request when non-zero\nand movable set is non-empty"| MoveResolver
   MoveResolver -.->|"CanvasMoveCancel"| CancelIntent
   MoveResolver -.->|"resolver exception requires preview cleanup"| TerminalCleanup
-  MoveResolver -.->|"runtime-safe error"| Diagnostics
+  MoveResolver -.->|"runtime-safe error"| ErrorProjection
   MoveResolver -->|"finite committed delta"| CommitIntent
 
   CommitIntent -->|"committed mutation request"| InteractionEdit
@@ -122,9 +122,9 @@ flowchart LR
   EditResult -->|"post-edit interaction cleanup"| TerminalCleanup
 
   InteractionEdit -.->|"edit exception, rejected Future,\nor preflight failure"| Rollback
-  Rollback -.->|"committed document, selection, revisions,\nand action events unchanged"| Diagnostics
+  Rollback -.->|"committed document, selection, revisions,\nand action events unchanged"| ErrorProjection
   Rollback -.->|"terminal failure result"| EditResult
-  Diagnostics -.->|"projected runtime-safe error"| Surface
+  ErrorProjection -.->|"projected runtime-safe error"| Surface
   PublicSignals --> Surface
   MainRepaint --> PublicSignals
   OverlayRepaint --> PublicSignals

@@ -7,8 +7,6 @@ Container(ContractsInternal, "Internal contracts", "lib/src/contracts/internal/"
 Container(RuntimeRoot, "RuntimeRoot", "lib/src/runtime/", "Coordinates edit and command entrypoints without exposing internals.")
 Container(DocumentStoreKernel, "DocumentStoreKernel", "lib/src/store/", "Committed document tables, document revisions, resource descriptors, and projection cache.")
 Container(SelectionKernel, "SelectionKernel", "lib/src/selection/", "Runtime selected ids and selectionRevision.")
-Container(DiagnosticsHub, "DiagnosticsHub", "lib/src/diagnostics/", "Structured validation and runtime error projection.")
-
 Container_Boundary(edit_kernel, "EditKernel (lib/src/edit/)") {
   Component(EditSession, "EditSession", "session owner", "Rejects disposed, nested, async, and stale edit handles; owns callback lifetime.")
   Component(DraftDocument, "DraftDocument", "mutable draft", "Rollback-safe working copy created from the committed revision.")
@@ -34,4 +32,3 @@ Rel(CommitCompiler, CommitApplier, "hands off preflighted commit work")
 Rel(CommitPlan, CommitApplier, "describes install payload")
 Rel(CommitApplier, DocumentStoreKernel, "atomically installs committed state")
 Rel(CommitApplier, SelectionKernel, "atomically installs selection effects")
-Rel(CommitApplier, DiagnosticsHub, "projects validation/runtime failures")

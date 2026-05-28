@@ -72,7 +72,7 @@ sequenceDiagram
         else same-frame missing/null already seen
           Session-->>Assets: bounded placeholder without retry
         else per-frame resolver budget exceeded
-          Session-->>Assets: bounded placeholder, session records probe and at most one pending throttled follow-up repaint, no cache write
+          Session-->>Assets: bounded placeholder, session records non-hub probe and at most one pending throttled follow-up repaint, no cache write
         else cache miss and resolver budget available
           Session->>Resolver: resolveImage(CanvasImageResource with CanvasAppKeyResourceSource.key)
           Note over Resolver: Resolver reads resource.source as CanvasAppKeyResourceSource.key through public API.
