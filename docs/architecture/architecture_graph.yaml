@@ -659,6 +659,51 @@ edges:
       sensitiveThrowOwner: codec.schema_v1
       sensitiveThrowRoutes:
         - recordSchemaV1FailureDiagnostic
+  - id: interaction.selection_move.reliability_events.report_to_diagnostics
+    from: interaction.selection_move
+    to: diagnostics.hub
+    kind: diagnostic_route
+    phaseRequiredBy: P10
+    status: future
+    sourceDocs:
+      - path: docs/contracts/diagnostics.md
+      - path: docs/contracts/interaction_engine.md
+      - path: docs/implementation/p10_selection_and_move.md
+    evidence:
+      - Interaction-observed hit-test fallback, query budget, and stale candidate reliability events are planned internal diagnostics with source interaction.
+    actual:
+      delegationTargets:
+        - InteractionEngine
+  - id: geometry.spatial_index.corrupted_rows.report_to_diagnostics
+    from: geometry.spatial_index
+    to: diagnostics.hub
+    kind: diagnostic_route
+    phaseRequiredBy: P8
+    status: future
+    sourceDocs:
+      - path: docs/contracts/diagnostics.md
+      - path: docs/contracts/geometry.md
+      - path: docs/implementation/p8_geometry_and_spatial.md
+    evidence:
+      - Corrupted committed geometry or spatial rows are planned policy-gated internal diagnostics with source spatial and return-miss-without-mutation behavior.
+    actual:
+      delegationTargets:
+        - GeometryPolicy
+  - id: runtime.root.observer_failures.report_to_diagnostics
+    from: runtime.root
+    to: diagnostics.hub
+    kind: diagnostic_route
+    phaseRequiredBy: P14
+    status: future
+    sourceDocs:
+      - path: docs/contracts/diagnostics.md
+      - path: docs/contracts/edit_kernel.md
+      - path: docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md
+    evidence:
+      - Commit, load, and resource-dirty observer delivery failures are planned post-acceptance diagnostics owned by RuntimeRoot and must not roll back accepted results.
+    actual:
+      delegationTargets:
+        - RuntimeRoot
   - id: edit.kernel.mutates_store
     from: edit.kernel
     to: store.document_kernel
@@ -1667,6 +1712,9 @@ sourceCoverage:
     graphIds:
       - diagnostics.hub
       - codec.schema_v1.failures.report_to_diagnostics
+      - interaction.selection_move.reliability_events.report_to_diagnostics
+      - geometry.spatial_index.corrupted_rows.report_to_diagnostics
+      - runtime.root.observer_failures.report_to_diagnostics
   - sectionId: section_22_guardrails_machine_checks
     disposition: graph_obligation
     graphIds:
