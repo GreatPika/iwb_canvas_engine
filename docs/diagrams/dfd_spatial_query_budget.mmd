@@ -23,7 +23,7 @@ flowchart LR
   RevisionGate -->|"revision/generation accepted"| TileBudget
   RevisionGate -.->|"stale revision or generation"| StaleCandidate
   TileBudget -->|"query tiles <= 50000"| TileUnion
-  TileBudget -.->|"query tiles > 50000\nfallback candidate union"| CandidateBudget
+  TileBudget -.->|"query tiles > 50000\nno partial candidates"| BudgetExceeded
   TileUnion -->|"candidate ids + outliers"| CandidateBudget
   CandidateBudget -->|"candidate count <= maxFallbackCandidates"| TypedResult
   CandidateBudget -.->|"candidate count > maxFallbackCandidates"| BudgetExceeded

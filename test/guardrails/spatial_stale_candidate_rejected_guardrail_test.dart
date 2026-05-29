@@ -28,7 +28,8 @@ Future<bool> _registeredStaleCandidateGuardrailIsEnforced() async {
     mapperPath: 'lib/src/geometry/spatial_candidate_handle_mapper.dart',
     mapperContent: 'FrameElementHandle call(FrameElementHandle h) => h;',
     queryStatePath: 'lib/src/geometry/spatial_kernel_query_state.dart',
-    queryStateContent: 'return SpatialCandidatesResult(orderedCandidates: c);',
+    queryStateContent:
+        'SpatialQueryResult runQuery() => SpatialCandidatesResult(orderedCandidates: c);',
   );
 
   final missingGenerationCheck = checkSpatialStaleCandidateRejectedSources(
@@ -43,7 +44,7 @@ FrameElementHandle call(FrameElementHandle handle) {
 }
 ''',
     queryStatePath: 'lib/src/geometry/spatial_kernel_query_state.dart',
-    queryStateContent: 'return SpatialStaleCandidateResult();',
+    queryStateContent: _typedStaleQueryState,
   );
 
   final missingOrderTokenCheck = checkSpatialStaleCandidateRejectedSources(
@@ -60,7 +61,7 @@ FrameElementHandle call(FrameElementHandle handle) {
 }
 ''',
     queryStatePath: 'lib/src/geometry/spatial_kernel_query_state.dart',
-    queryStateContent: 'return SpatialStaleCandidateResult();',
+    queryStateContent: _typedStaleQueryState,
   );
 
   return isRegistered &&
@@ -89,12 +90,18 @@ FrameElementHandle call(FrameElementHandle handle) {
 }
 ''',
         queryStatePath: 'lib/src/geometry/spatial_kernel_query_state.dart',
-        queryStateContent: 'return SpatialStaleCandidateResult();',
+        queryStateContent: _typedStaleQueryState,
       );
 
   return earlyReturnBeforeGenerationCheck.length == 1 &&
       _isStaleCandidateViolation(earlyReturnBeforeGenerationCheck.single);
 }
+
+const _typedStaleQueryState = '''
+SpatialQueryResult runQuery() {
+  return SpatialStaleCandidateResult();
+}
+''';
 
 bool _isStaleCandidateViolation(GuardrailViolation violation) {
   return violation.guardrailId == spatialStaleCandidateGuardrailId;

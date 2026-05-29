@@ -45,7 +45,7 @@ P8 scope and donor obligations come from `docs/implementation/p8_geometry_and_sp
 
 Compatibility:
 
-The public package API and root public barrel remain compatible. Existing `CommitEffectObserver` delivery remains observable, but spatial effects are consumed by runtime before effects are forwarded. Accepted commits and loads are not rolled back because spatial indexing fails after the committed-state irreversible point; instead the spatial index is marked invalid and queries return bounded fallback or typed budget-exceeded results until rebuild/retry outside hot pointer/paint paths. Pure spatial budget paths increment non-hub counters and do not write DiagnosticsHub records.
+The public package API and root public barrel remain compatible. Existing `CommitEffectObserver` delivery remains observable, but spatial effects are consumed by runtime before effects are forwarded. Accepted commits and loads are not rolled back because spatial indexing fails after the committed-state irreversible point; instead the spatial index is marked invalid and queries return bounded invalid-index fallback or typed budget-exceeded results until rebuild/retry outside hot pointer/paint paths. Query-tile budget overflow returns a typed budget-exceeded result directly; it must not fall through to bounded fallback or return partial candidates. Pure spatial budget paths increment non-hub counters and do not write DiagnosticsHub records.
 
 Order Constraints:
 
@@ -109,11 +109,11 @@ Derived spatial DTOs, membership records, tile/outlier indexes, query-result tax
 
 Change:
 
-Implement typed candidate, invalid/rebuild-needed, stale, and budget-exceeded result shapes; hit/paint membership records; tile page updates; outlier-only membership for oversized elements; query tile budget handling; max fallback candidate enforcement; and non-hub budget/invalid probes. Ensure budget-exceeded results contain no partial candidate list.
+Implement typed candidate, invalid/rebuild-needed, stale, and budget-exceeded result shapes; hit/paint membership records; tile page updates; outlier-only membership for oversized elements; query tile budget handling; max fallback candidate enforcement; and non-hub budget/invalid probes. Query tile budget handling means a query window above the tile budget returns `queryTileBudgetExceeded` without reading fallback candidates. Ensure budget-exceeded results contain no partial candidate list.
 
 Completion Check:
 
-`dart test test/spatial/fallback_budget_enforced_test.dart` proves query tile and fallback candidate budgets increment only non-hub counters, return typed budget-exceeded results with no partial candidates, and never scan the full scene silently. `dart test test/spatial/tile_outlier_membership_test.dart` proves elements above `kCanvasMaxCellsPerElement` are outlier-only and ordinary elements are not duplicated into outlier and tile membership.
+`dart test test/spatial/fallback_budget_enforced_test.dart` proves query tile and fallback candidate budgets increment only non-hub counters, return typed budget-exceeded results with no partial candidates, and never scan the full scene silently. The query-tile budget case must not read fallback candidates; fallback-candidate budget enforcement is proven through a bounded query/fallback path. `dart test test/spatial/tile_outlier_membership_test.dart` proves elements above `kCanvasMaxCellsPerElement` are outlier-only and ordinary elements are not duplicated into outlier and tile membership.
 
 Depends On:
 
@@ -131,11 +131,11 @@ Boundary:
 
 Change:
 
-Implement initial rebuild, load/replacement rebuild, clear-content empty reset, ordinary touched-only update, staged delta preparation, previous-membership removals, new-bound additions, stale id/generation/structural-revision validation, invalid-index marking on failed preparation, bounded fallback query behavior, rebuild/retry scheduling signal outside hot paths, and read-only hit/paint/marquee/eraser candidate query entrypoints.
+Implement initial rebuild, load/replacement rebuild, clear-content empty reset, ordinary touched-only update, staged delta preparation, previous-membership removals, new-bound additions, stale id/generation/structural-revision validation, invalid-index marking on failed preparation, bounded invalid-index fallback query behavior, rebuild/retry scheduling signal outside hot paths, and read-only hit/paint/marquee/eraser candidate query entrypoints.
 
 Completion Check:
 
-`dart test test/spatial/touched_update_test.dart` proves ordinary edits update only touched ids/pages and replacement/load rebuilds the full index. `dart test test/spatial/no_full_clone_for_touched_update_test.dart` proves ordinary spatial updates do not clone the full index and only copy touched pages. The same no-full-clone test includes a clear-content assertion proving the operation-matrix `clearContent` path resets to an empty spatial index, produces no remaining hit/paint candidates, and does not use the generic full-scene clone path. `dart test test/spatial/stale_generation_rejected_test.dart` proves stale generation, structural revision, and order-token candidates are rejected before hit/frame use. `dart test test/spatial/invalid_index_fallback_test.dart` proves failed staged delta application discards prepared membership changes, marks the index invalid, and returns bounded invalid/rebuild-needed or budget-exceeded results without mutating query hot-path indexes or memberships; budget and invalid probes may update non-hub counters only.
+`dart test test/spatial/touched_update_test.dart` proves ordinary edits update only touched ids/pages and replacement/load rebuilds the full index. `dart test test/spatial/no_full_clone_for_touched_update_test.dart` proves ordinary spatial updates do not clone the full index and only copy touched pages. The same no-full-clone test includes a clear-content assertion proving the operation-matrix `clearContent` path resets to an empty spatial index, produces no remaining hit/paint candidates, and does not use the generic full-scene clone path. `dart test test/spatial/stale_generation_rejected_test.dart` proves stale generation, structural revision, and order-token candidates are rejected before hit/frame use. `dart test test/spatial/invalid_index_fallback_test.dart` proves failed staged delta application discards prepared membership changes, marks the index invalid, and returns bounded invalid/rebuild-needed fallback or typed budget-exceeded results without mutating query hot-path indexes or memberships; budget and invalid probes may update non-hub counters only.
 
 Depends On:
 

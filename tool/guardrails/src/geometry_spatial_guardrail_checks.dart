@@ -147,7 +147,7 @@ List<GuardrailViolation> checkSpatialStaleCandidateRejectedSources({
       ),
     );
   }
-  if (!queryStateContent.contains('SpatialStaleCandidateResult')) {
+  if (!_queryStateReturnsTypedStaleResult(queryStateContent)) {
     violations.add(
       GuardrailViolation(
         guardrailId: spatialStaleCandidateGuardrailId,
@@ -161,28 +161,40 @@ List<GuardrailViolation> checkSpatialStaleCandidateRejectedSources({
 }
 
 bool _hasOrderedStaleCandidateChecks(String content) {
-  final remap = content.indexOf('elementHandleForId');
-  final generationCheck = content.indexOf(
-    'handle.generation != current.generation',
-  );
-  final orderCheck = content.indexOf('handle.orderToken != current.orderToken');
-  final structuralCheck = content.indexOf('handle.structuralRevision');
-  final handleReturn = content.indexOf('return handle');
+  final body = _executableBody(content, 'call');
+  if (body == null) {
+    return false;
+  }
 
-  return remap != -1 &&
-      generationCheck != -1 &&
-      orderCheck != -1 &&
-      structuralCheck != -1 &&
-      handleReturn != -1 &&
-      remap < generationCheck &&
-      generationCheck < handleReturn &&
-      orderCheck < handleReturn &&
-      structuralCheck < handleReturn;
+  final visitor = _StaleCandidateMapperVisitor();
+  body.accept(visitor);
+  final remapOffset = visitor.remapOffset;
+  final generationCheckOffset = visitor.generationCheckOffset;
+  final orderCheckOffset = visitor.orderCheckOffset;
+  final structuralCheckOffset = visitor.structuralCheckOffset;
+  final handleReturnOffset = visitor.handleReturnOffset;
+
+  return remapOffset != null &&
+      generationCheckOffset != null &&
+      orderCheckOffset != null &&
+      structuralCheckOffset != null &&
+      handleReturnOffset != null &&
+      remapOffset < generationCheckOffset &&
+      generationCheckOffset < handleReturnOffset &&
+      orderCheckOffset < handleReturnOffset &&
+      structuralCheckOffset < handleReturnOffset;
+}
+
+bool _queryStateReturnsTypedStaleResult(String content) {
+  final body = _executableBody(content, 'runQuery');
+
+  return body != null &&
+      _bodyContainsInstanceCreation(body, 'SpatialStaleCandidateResult');
 }
 
 final class _ParsedFunctions {
   _ParsedFunctions(String content) {
-    final parsed = parseString(content: content);
+    final parsed = parseString(content: content, throwIfDiagnostics: false);
     final visitor = _FunctionSourceCollector();
     parsed.unit.accept(visitor);
     _sources.addAll(visitor.sources);
@@ -237,6 +249,213 @@ final class _FunctionSourceCollector extends RecursiveAstVisitor<void> {
   }
 }
 
+FunctionBody? _executableBody(String content, String name) {
+  final parsed = parseString(content: content, throwIfDiagnostics: false);
+  final visitor = _ExecutableBodyFinder(name);
+  parsed.unit.accept(visitor);
+
+  return visitor.body;
+}
+
+bool _bodyContainsInvocation(FunctionBody body, String invocationName) {
+  final visitor = _InvocationFinder(invocationName);
+  body.accept(visitor);
+
+  return visitor.found;
+}
+
+bool _bodyContainsInstanceCreation(FunctionBody body, String typeName) {
+  final visitor = _InstanceCreationFinder(typeName);
+  body.accept(visitor);
+
+  return visitor.found;
+}
+
+bool _bodyContainsComparison(
+  FunctionBody body,
+  String leftNeedle,
+  String rightNeedle,
+) {
+  final visitor = _ComparisonFinder(leftNeedle, rightNeedle);
+  body.accept(visitor);
+
+  return visitor.found;
+}
+
+bool _bodyContainsIdentifier(FunctionBody body, String identifierName) {
+  final visitor = _IdentifierFinder(identifierName);
+  body.accept(visitor);
+
+  return visitor.found;
+}
+
+bool _bodyContainsToken(FunctionBody body, String token) {
+  final visitor = _SourceTokenFinder(token);
+  body.accept(visitor);
+
+  return visitor.found;
+}
+
+final class _ExecutableBodyFinder extends RecursiveAstVisitor<void> {
+  _ExecutableBodyFinder(this.name);
+
+  final String name;
+  FunctionBody? body;
+
+  @override
+  void visitFunctionDeclaration(FunctionDeclaration node) {
+    if (node.name.lexeme == name) {
+      body = node.functionExpression.body;
+    }
+    super.visitFunctionDeclaration(node);
+  }
+
+  @override
+  void visitMethodDeclaration(MethodDeclaration node) {
+    if (node.name.lexeme == name) {
+      body = node.body;
+    }
+    super.visitMethodDeclaration(node);
+  }
+}
+
+final class _InvocationFinder extends RecursiveAstVisitor<void> {
+  _InvocationFinder(this.invocationName);
+
+  final String invocationName;
+  bool found = false;
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (node.methodName.name == invocationName) {
+      found = true;
+    }
+    super.visitMethodInvocation(node);
+  }
+}
+
+final class _InstanceCreationFinder extends RecursiveAstVisitor<void> {
+  _InstanceCreationFinder(this.typeName);
+
+  final String typeName;
+  bool found = false;
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (node.methodName.name == typeName) {
+      found = true;
+    }
+    super.visitMethodInvocation(node);
+  }
+
+  @override
+  void visitInstanceCreationExpression(InstanceCreationExpression node) {
+    if (node.constructorName.type.toSource() == typeName) {
+      found = true;
+    }
+    super.visitInstanceCreationExpression(node);
+  }
+}
+
+final class _ComparisonFinder extends RecursiveAstVisitor<void> {
+  _ComparisonFinder(this.leftNeedle, this.rightNeedle);
+
+  final String leftNeedle;
+  final String rightNeedle;
+  bool found = false;
+
+  @override
+  void visitBinaryExpression(BinaryExpression node) {
+    final source = node.toSource();
+    if (node.operator.lexeme == '>' &&
+        source.contains(leftNeedle) &&
+        source.contains(rightNeedle)) {
+      found = true;
+    }
+    super.visitBinaryExpression(node);
+  }
+}
+
+final class _IdentifierFinder extends RecursiveAstVisitor<void> {
+  _IdentifierFinder(this.identifierName);
+
+  final String identifierName;
+  bool found = false;
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    if (node.name == identifierName) {
+      found = true;
+    }
+    super.visitSimpleIdentifier(node);
+  }
+}
+
+final class _SourceTokenFinder extends RecursiveAstVisitor<void> {
+  _SourceTokenFinder(this.token);
+
+  final String token;
+  bool found = false;
+
+  @override
+  void visitNamedExpression(NamedExpression node) {
+    if (node.expression.toSource() == token) {
+      found = true;
+    }
+    super.visitNamedExpression(node);
+  }
+
+  @override
+  void visitPrefixedIdentifier(PrefixedIdentifier node) {
+    if (node.toSource() == token) {
+      found = true;
+    }
+    super.visitPrefixedIdentifier(node);
+  }
+}
+
+final class _StaleCandidateMapperVisitor extends RecursiveAstVisitor<void> {
+  int? remapOffset;
+  int? generationCheckOffset;
+  int? orderCheckOffset;
+  int? structuralCheckOffset;
+  int? handleReturnOffset;
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (node.methodName.name == 'elementHandleForId') {
+      remapOffset ??= node.offset;
+    }
+    super.visitMethodInvocation(node);
+  }
+
+  @override
+  void visitBinaryExpression(BinaryExpression node) {
+    final source = node.toSource();
+    if (source.contains('handle.generation') &&
+        source.contains('current.generation')) {
+      generationCheckOffset ??= node.offset;
+    }
+    if (source.contains('handle.orderToken') &&
+        source.contains('current.orderToken')) {
+      orderCheckOffset ??= node.offset;
+    }
+    if (source.contains('handle.structuralRevision')) {
+      structuralCheckOffset ??= node.offset;
+    }
+    super.visitBinaryExpression(node);
+  }
+
+  @override
+  void visitReturnStatement(ReturnStatement node) {
+    final expression = node.expression;
+    if (expression is SimpleIdentifier && expression.name == 'handle') {
+      handleReturnOffset ??= node.offset;
+    }
+    super.visitReturnStatement(node);
+  }
+}
+
 Future<List<GuardrailViolation>> checkSpatialFallbackBudgetEnforced() async {
   final tileIndex = File(
     '$repositoryRoot/lib/src/geometry/tile_index.dart',
@@ -260,9 +479,7 @@ List<GuardrailViolation> checkSpatialFallbackBudgetEnforcedSources({
   required String queryStateContent,
 }) {
   final violations = <GuardrailViolation>[];
-  if (!tileIndexContent.contains('candidates.length >') ||
-      !tileIndexContent.contains('SpatialBudgetExceededResult') ||
-      !tileIndexContent.contains('recordFallbackCandidateBudgetExceeded')) {
+  if (!_tileIndexEnforcesSpatialBudgets(tileIndexContent)) {
     violations.add(
       GuardrailViolation(
         guardrailId: spatialFallbackBudgetGuardrailId,
@@ -272,9 +489,7 @@ List<GuardrailViolation> checkSpatialFallbackBudgetEnforcedSources({
       ),
     );
   }
-  if (!queryStateContent.contains('context.indexedEntryCount >') ||
-      !queryStateContent.contains('recordFallbackCandidateBudgetExceeded') ||
-      !queryStateContent.contains('SpatialBudgetExceededResult')) {
+  if (!_invalidIndexFallbackEnforcesCandidateBudget(queryStateContent)) {
     violations.add(
       GuardrailViolation(
         guardrailId: spatialFallbackBudgetGuardrailId,
@@ -285,6 +500,55 @@ List<GuardrailViolation> checkSpatialFallbackBudgetEnforcedSources({
   }
 
   return violations;
+}
+
+bool _tileIndexEnforcesSpatialBudgets(String content) {
+  final query = _executableBody(content, 'query');
+  final candidateBudget = _executableBody(
+    content,
+    'spatialCandidateResultWithinBudget',
+  );
+
+  return query != null &&
+      candidateBudget != null &&
+      _bodyContainsComparison(
+        query,
+        'queryTileCount',
+        'kCanvasMaxQueryCells',
+      ) &&
+      _bodyContainsInvocation(query, 'recordQueryTileBudgetExceeded') &&
+      _bodyContainsInstanceCreation(query, 'SpatialBudgetExceededResult') &&
+      _bodyContainsToken(
+        query,
+        'SpatialBudgetExceededReason.queryTileBudgetExceeded',
+      ) &&
+      !_bodyContainsIdentifier(query, 'fallbackCandidates') &&
+      _bodyContainsComparison(
+        candidateBudget,
+        'candidates.length',
+        'kCanvasMaxFallbackCandidates',
+      ) &&
+      _bodyContainsInvocation(
+        candidateBudget,
+        'recordFallbackCandidateBudgetExceeded',
+      ) &&
+      _bodyContainsInstanceCreation(
+        candidateBudget,
+        'SpatialBudgetExceededResult',
+      );
+}
+
+bool _invalidIndexFallbackEnforcesCandidateBudget(String content) {
+  final body = _executableBody(content, 'runQuery');
+
+  return body != null &&
+      _bodyContainsComparison(
+        body,
+        'context.indexedEntryCount',
+        'kCanvasMaxFallbackCandidates',
+      ) &&
+      _bodyContainsInvocation(body, 'recordFallbackCandidateBudgetExceeded') &&
+      _bodyContainsInstanceCreation(body, 'SpatialBudgetExceededResult');
 }
 
 Future<List<GuardrailViolation>> checkGeometryEraserExactBudgetInputs() async {
