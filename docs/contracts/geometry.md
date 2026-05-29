@@ -94,10 +94,10 @@ Box/image/text/rect hit:
 - coarse bounds = transformed local bounds inflated by hitPadding + 4.0;
 - exact hit uses inverse transform and local bounds inflated by scene padding mapped into local space;
 - if a committed row has a non-invertible transform, treat it as corrupted
-  internal state: the planned P8 `section_20_diagnostics_hub` row records
-  policy-gated `spatial` diagnostics only when that future route is
-  implemented; the hit path returns miss and continues the candidate scan
-  without state mutation;
+  internal state: the `section_20_diagnostics_hub` routing table classifies
+  the planned P8 corrupted-row route as policy-gated `spatial` diagnostics;
+  until that future route is implemented, the hit path returns miss and
+  continues the candidate scan without state mutation;
 - coarse candidate bounds may never accept a non-invertible box/image/text/rect
   hit.
 ```
@@ -176,6 +176,8 @@ terminal budget exceeded -> cleanup/no-op, no partial erase;
 budget exceeded increments eraser-owned metric/probe counters only; this is not a DiagnosticsHub write;
 budget exceeded does not mutate document, selection, spatial index, projection,
 cache, repaint main scene, or emit erase action.
+P8 owns the geometry primitives and exact-check budget foundations; the full
+terminal no-partial-commit proof is owned by P12.
 ```
 
 ---

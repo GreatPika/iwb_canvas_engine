@@ -392,7 +392,7 @@ nodes:
       - Spatial query ownership becomes required in P8.
     actual:
       declarations:
-        - SpatialIndex
+        - SpatialKernel
   - id: frame.renderer
     label: Frame renderer and cache owner
     kind: frame_owner
@@ -779,7 +779,7 @@ edges:
       - Interaction hit testing will consume spatial query results through the spatial query boundary.
     actual:
       delegationTargets:
-        - SpatialIndex
+        - SpatialKernel
   - id: interaction.engine.emits_user_actions
     from: interaction.engine
     to: api.canvas_runtime
@@ -851,7 +851,7 @@ edges:
       - Eraser exact-hit checks consume geometry and spatial candidate facts without owning preview publication or general interaction hit-test routing.
     actual:
       delegationTargets:
-        - SpatialIndex
+        - SpatialKernel
   - id: eraser_text.request.produce_preview_intents_for_interaction
     from: eraser_text.request
     to: interaction.engine

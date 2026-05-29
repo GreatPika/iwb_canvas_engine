@@ -89,6 +89,9 @@ before frame rendering and interaction depend on bounded element queries.
 - `spatial.stale_candidate_rejected`
 - `spatial.fallback_budget_enforced`
 
+The full eraser terminal no-partial-commit proof remains P12 scope. P8 proves
+the geometry primitives and exact-check budget inputs that P12 consumes.
+
 ## Exit gate
 
 - hit tests green

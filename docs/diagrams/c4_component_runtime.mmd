@@ -21,7 +21,7 @@ Container_Boundary(runtime_components, "RuntimeRoot internals") {
   Component(PaintAssetBindingService, "PaintAssetBindingService", "lib/src/frame/", "Target descriptor-to-asset binding owner through SurfaceResourceSession.")
   Component(StaticBackgroundPlanner, "StaticBackgroundPlanner", "lib/src/frame/", "Target static background/grid plan and cache identity owner.")
   Component(OverlayPreviewPlanner, "OverlayPreviewPlanner", "lib/src/frame/", "Target immutable overlay primitive admission owner.")
-  Component(SpatialKernel, "SpatialKernel", "lib/src/spatial/", "Hit testing, bounds, and spatial indexes derived from document state.")
+  Component(SpatialKernel, "SpatialKernel", "lib/src/geometry/", "Hit testing, bounds, and spatial indexes derived from document state.")
   Component(ResourceKernel, "ResourceKernel", "lib/src/resources/", "Resource API, dirty resource ids, public resource visual state, and session invalidation events.")
   Component(SurfaceResourceSession, "SurfaceResourceSession", "lib/src/resources/", "Surface-scoped resolver reference, resolverGeneration, ImageResolveCache, budget, and same-frame suppression.")
   Component(CodecBoundary, "CodecBoundary", "lib/src/codec/", "Schema v1 JSON decode, encode, validation, and diagnostics.")
