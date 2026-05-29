@@ -162,27 +162,11 @@ List<GuardrailViolation> checkSpatialStaleCandidateRejectedSources({
 
 bool _hasOrderedStaleCandidateChecks(String content) {
   final body = _executableBody(content, 'call');
-  if (body == null) {
+  if (body is! BlockFunctionBody) {
     return false;
   }
 
-  final visitor = _StaleCandidateMapperVisitor();
-  body.accept(visitor);
-  final remapOffset = visitor.remapOffset;
-  final generationCheckOffset = visitor.generationCheckOffset;
-  final orderCheckOffset = visitor.orderCheckOffset;
-  final structuralCheckOffset = visitor.structuralCheckOffset;
-  final handleReturnOffset = visitor.handleReturnOffset;
-
-  return remapOffset != null &&
-      generationCheckOffset != null &&
-      orderCheckOffset != null &&
-      structuralCheckOffset != null &&
-      handleReturnOffset != null &&
-      remapOffset < generationCheckOffset &&
-      generationCheckOffset < handleReturnOffset &&
-      orderCheckOffset < handleReturnOffset &&
-      structuralCheckOffset < handleReturnOffset;
+  return _staleCandidateMapperUsesCommittedBoundary(body.block);
 }
 
 bool _queryStateReturnsTypedStaleResult(String content) {
@@ -414,45 +398,204 @@ final class _SourceTokenFinder extends RecursiveAstVisitor<void> {
   }
 }
 
-final class _StaleCandidateMapperVisitor extends RecursiveAstVisitor<void> {
-  int? remapOffset;
-  int? generationCheckOffset;
-  int? orderCheckOffset;
-  int? structuralCheckOffset;
-  int? handleReturnOffset;
+bool _staleCandidateMapperUsesCommittedBoundary(Block body) {
+  if (!_declaresCurrentFromCommittedBoundary(body)) {
+    return false;
+  }
+  final returns = _ReturnCollector();
+  body.accept(returns);
+  if (returns.statements.isEmpty) {
+    return false;
+  }
+
+  var returnsCurrentForStructuralStale = false;
+  for (final statement in returns.statements) {
+    final expression = statement.expression;
+    if (expression is! SimpleIdentifier) {
+      return false;
+    }
+    if (expression.name == 'current') {
+      if (_enclosingStructuralCurrentIf(statement) != null) {
+        return false;
+      }
+      returnsCurrentForStructuralStale = true;
+      continue;
+    }
+    if (expression.name != 'handle' ||
+        !_handleReturnIsProtectedByStaleGuards(statement)) {
+      return false;
+    }
+  }
+
+  return returnsCurrentForStructuralStale;
+}
+
+bool _declaresCurrentFromCommittedBoundary(Block body) {
+  final visitor = _CurrentBoundaryDeclarationFinder();
+  body.accept(visitor);
+
+  return visitor.found;
+}
+
+bool _handleReturnIsProtectedByStaleGuards(ReturnStatement statement) {
+  final structuralIf = _enclosingStructuralCurrentIf(statement);
+  if (structuralIf == null) {
+    return false;
+  }
+  final guardFinder = _MismatchThrowGuardFinder(statement.offset);
+  structuralIf.thenStatement.accept(guardFinder);
+
+  return guardFinder.generationGuardFound && guardFinder.orderGuardFound;
+}
+
+IfStatement? _enclosingStructuralCurrentIf(AstNode node) {
+  var current = node.parent;
+  while (current != null) {
+    if (current is IfStatement &&
+        _isStructuralCurrentCheck(current.expression) &&
+        _nodeContains(current.thenStatement, node)) {
+      return current;
+    }
+    current = current.parent;
+  }
+
+  return null;
+}
+
+bool _isStructuralCurrentCheck(Expression expression) {
+  return _expressionHasComparison(
+    expression,
+    leftNeedle: 'handle.structuralRevision',
+    rightNeedle: '_structuralRevision',
+    operator: '==',
+  );
+}
+
+bool _isGenerationMismatchCheck(Expression expression) {
+  return _expressionHasComparison(
+    expression,
+    leftNeedle: 'handle.generation',
+    rightNeedle: 'current.generation',
+    operator: '!=',
+  );
+}
+
+bool _isOrderTokenMismatchCheck(Expression expression) {
+  return _expressionHasComparison(
+    expression,
+    leftNeedle: 'handle.orderToken',
+    rightNeedle: 'current.orderToken',
+    operator: '!=',
+  );
+}
+
+bool _expressionHasComparison(
+  Expression expression, {
+  required String leftNeedle,
+  required String rightNeedle,
+  required String operator,
+}) {
+  final visitor = _ExpressionComparisonFinder(
+    leftNeedle: leftNeedle,
+    rightNeedle: rightNeedle,
+    operator: operator,
+  );
+  expression.accept(visitor);
+
+  return visitor.found;
+}
+
+bool _nodeContains(AstNode container, AstNode node) {
+  return container.offset <= node.offset && node.end <= container.end;
+}
+
+final class _CurrentBoundaryDeclarationFinder
+    extends RecursiveAstVisitor<void> {
+  bool found = false;
 
   @override
-  void visitMethodInvocation(MethodInvocation node) {
-    if (node.methodName.name == 'elementHandleForId') {
-      remapOffset ??= node.offset;
+  void visitVariableDeclaration(VariableDeclaration node) {
+    final initializer = node.initializer;
+    if (node.name.lexeme == 'current' &&
+        initializer != null &&
+        initializer.toSource().contains('elementHandleForId') &&
+        initializer.toSource().contains('_structuralRevision') &&
+        initializer.toSource().contains('handle.id')) {
+      found = true;
     }
-    super.visitMethodInvocation(node);
+    super.visitVariableDeclaration(node);
   }
+}
+
+final class _ReturnCollector extends RecursiveAstVisitor<void> {
+  final List<ReturnStatement> statements = [];
+
+  @override
+  void visitReturnStatement(ReturnStatement node) {
+    statements.add(node);
+    super.visitReturnStatement(node);
+  }
+}
+
+final class _MismatchThrowGuardFinder extends RecursiveAstVisitor<void> {
+  _MismatchThrowGuardFinder(this.beforeOffset);
+
+  final int beforeOffset;
+  bool generationGuardFound = false;
+  bool orderGuardFound = false;
+
+  @override
+  void visitIfStatement(IfStatement node) {
+    if (node.offset < beforeOffset && _statementThrows(node.thenStatement)) {
+      if (_isGenerationMismatchCheck(node.expression)) {
+        generationGuardFound = true;
+      }
+      if (_isOrderTokenMismatchCheck(node.expression)) {
+        orderGuardFound = true;
+      }
+    }
+    super.visitIfStatement(node);
+  }
+}
+
+bool _statementThrows(Statement statement) {
+  final visitor = _ThrowFinder();
+  statement.accept(visitor);
+
+  return visitor.found;
+}
+
+final class _ThrowFinder extends RecursiveAstVisitor<void> {
+  bool found = false;
+
+  @override
+  void visitThrowExpression(ThrowExpression node) {
+    found = true;
+    super.visitThrowExpression(node);
+  }
+}
+
+final class _ExpressionComparisonFinder extends RecursiveAstVisitor<void> {
+  _ExpressionComparisonFinder({
+    required this.leftNeedle,
+    required this.rightNeedle,
+    required this.operator,
+  });
+
+  final String leftNeedle;
+  final String rightNeedle;
+  final String operator;
+  bool found = false;
 
   @override
   void visitBinaryExpression(BinaryExpression node) {
     final source = node.toSource();
-    if (source.contains('handle.generation') &&
-        source.contains('current.generation')) {
-      generationCheckOffset ??= node.offset;
-    }
-    if (source.contains('handle.orderToken') &&
-        source.contains('current.orderToken')) {
-      orderCheckOffset ??= node.offset;
-    }
-    if (source.contains('handle.structuralRevision')) {
-      structuralCheckOffset ??= node.offset;
+    if (node.operator.lexeme == operator &&
+        source.contains(leftNeedle) &&
+        source.contains(rightNeedle)) {
+      found = true;
     }
     super.visitBinaryExpression(node);
-  }
-
-  @override
-  void visitReturnStatement(ReturnStatement node) {
-    final expression = node.expression;
-    if (expression is SimpleIdentifier && expression.name == 'handle') {
-      handleReturnOffset ??= node.offset;
-    }
-    super.visitReturnStatement(node);
   }
 }
 

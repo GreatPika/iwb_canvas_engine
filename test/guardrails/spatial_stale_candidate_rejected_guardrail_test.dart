@@ -16,6 +16,16 @@ void main() {
     'stale candidate guardrail rejects early return before generation',
     () => expect(_earlyReturnBeforeGenerationIsRejected(), isTrue),
   );
+
+  test(
+    'stale candidate guardrail rejects ignored mismatch checks',
+    () => expect(_ignoredMismatchChecksAreRejected(), isTrue),
+  );
+
+  test(
+    'stale candidate guardrail rejects structural-stale handle return',
+    () => expect(_structuralStaleHandleReturnIsRejected(), isTrue),
+  );
 }
 
 Future<bool> _registeredStaleCandidateGuardrailIsEnforced() async {
@@ -95,6 +105,55 @@ FrameElementHandle call(FrameElementHandle handle) {
 
   return earlyReturnBeforeGenerationCheck.length == 1 &&
       _isStaleCandidateViolation(earlyReturnBeforeGenerationCheck.single);
+}
+
+bool _ignoredMismatchChecksAreRejected() {
+  final ignoredMismatchCheck = checkSpatialStaleCandidateRejectedSources(
+    mapperPath: 'lib/src/geometry/spatial_candidate_handle_mapper.dart',
+    mapperContent: '''
+FrameElementHandle call(FrameElementHandle handle) {
+  final current = frame.elementHandleForId(_structuralRevision, handle.id)!;
+  if (handle.structuralRevision == _structuralRevision) {
+    final stale = handle.generation != current.generation ||
+        handle.orderToken != current.orderToken;
+    return handle;
+  }
+
+  return current;
+}
+''',
+    queryStatePath: 'lib/src/geometry/spatial_kernel_query_state.dart',
+    queryStateContent: _typedStaleQueryState,
+  );
+
+  return ignoredMismatchCheck.length == 1 &&
+      _isStaleCandidateViolation(ignoredMismatchCheck.single);
+}
+
+bool _structuralStaleHandleReturnIsRejected() {
+  final structuralStaleReturnCheck = checkSpatialStaleCandidateRejectedSources(
+    mapperPath: 'lib/src/geometry/spatial_candidate_handle_mapper.dart',
+    mapperContent: '''
+FrameElementHandle call(FrameElementHandle handle) {
+  final current = frame.elementHandleForId(_structuralRevision, handle.id)!;
+  if (handle.structuralRevision == _structuralRevision) {
+    if (handle.generation != current.generation ||
+        handle.orderToken != current.orderToken) {
+      throw StateError('stale');
+    }
+
+    return handle;
+  }
+
+  return handle;
+}
+''',
+    queryStatePath: 'lib/src/geometry/spatial_kernel_query_state.dart',
+    queryStateContent: _typedStaleQueryState,
+  );
+
+  return structuralStaleReturnCheck.length == 1 &&
+      _isStaleCandidateViolation(structuralStaleReturnCheck.single);
 }
 
 const _typedStaleQueryState = '''
