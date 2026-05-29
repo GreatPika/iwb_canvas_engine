@@ -6,7 +6,7 @@ import 'spatial_candidate_handle_mapper.dart';
 import 'spatial_entry_loader.dart';
 import 'spatial_index_set.dart';
 import 'spatial_kernel_query_state.dart';
-import 'spatial_query_port.dart';
+import 'spatial_query_policy.dart';
 import 'spatial_query_result.dart';
 
 final class SpatialKernel {

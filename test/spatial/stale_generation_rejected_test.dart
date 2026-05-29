@@ -6,7 +6,7 @@ void main() {
   test('spatial stale candidate rejection is executable', () async {
     await expectLater(
       runFlutterInPackageTest(
-        'test/spatial/fixtures/spatial_kernel_fixture.dart',
+        'test/spatial/fixtures/stale_generation_rejected_fixture.dart',
       ),
       completes,
     );

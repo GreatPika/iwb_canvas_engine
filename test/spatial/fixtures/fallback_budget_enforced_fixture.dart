@@ -6,7 +6,7 @@ import 'package:iwb_canvas_engine/src/contracts/public/canvas_ids.dart';
 import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_budget_counters.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_membership.dart';
-import 'package:iwb_canvas_engine/src/geometry/spatial_query_port.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_query_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
 import 'package:iwb_canvas_engine/src/geometry/tile_index.dart';
 

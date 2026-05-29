@@ -6,7 +6,7 @@ void main() {
   test('spatial ordinary updates avoid full clones', () async {
     await expectLater(
       runFlutterInPackageTest(
-        'test/spatial/fixtures/spatial_kernel_fixture.dart',
+        'test/spatial/fixtures/no_full_clone_for_touched_update_fixture.dart',
       ),
       completes,
     );

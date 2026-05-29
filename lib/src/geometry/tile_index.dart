@@ -5,7 +5,7 @@ import '../contracts/public/canvas_ids.dart';
 import 'geometry_policy.dart';
 import 'spatial_budget_counters.dart';
 import 'spatial_membership.dart';
-import 'spatial_query_port.dart';
+import 'spatial_query_policy.dart';
 import 'spatial_query_result.dart';
 
 typedef CandidateHandleMapper =

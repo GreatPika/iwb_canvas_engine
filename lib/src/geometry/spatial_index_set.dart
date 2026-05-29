@@ -2,7 +2,7 @@ import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/public/canvas_ids.dart';
 import 'outlier_index.dart';
 import 'spatial_entry.dart';
-import 'spatial_query_port.dart';
+import 'spatial_query_policy.dart';
 import 'spatial_query_result.dart';
 import 'tile_index.dart';
 

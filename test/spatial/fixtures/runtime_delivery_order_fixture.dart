@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
-import 'package:iwb_canvas_engine/src/geometry/spatial_query_port.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_query_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 

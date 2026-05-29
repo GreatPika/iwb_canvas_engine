@@ -6,7 +6,7 @@ void main() {
   test('spatial touched update behavior is executable', () async {
     await expectLater(
       runFlutterInPackageTest(
-        'test/spatial/fixtures/spatial_kernel_fixture.dart',
+        'test/spatial/fixtures/touched_update_fixture.dart',
       ),
       completes,
     );

@@ -3,7 +3,7 @@ import 'dart:ui';
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/public/canvas_ids.dart';
 import 'geometry_policy.dart';
-import 'spatial_query_port.dart';
+import 'spatial_query_policy.dart';
 
 enum SpatialIndexKind { hit, paint }
 

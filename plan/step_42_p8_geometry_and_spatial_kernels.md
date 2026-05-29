@@ -101,7 +101,7 @@ Unit 1.
 
 Owner:
 
-`lib/src/geometry/spatial_query_port.dart`, `lib/src/geometry/spatial_query_result.dart`, `lib/src/geometry/spatial_membership.dart`, `lib/src/geometry/tile_index.dart`, `lib/src/geometry/outlier_index.dart`, `lib/src/geometry/spatial_budget_counters.dart`, and focused spatial tests.
+`lib/src/geometry/spatial_query_policy.dart`, `lib/src/geometry/spatial_query_result.dart`, `lib/src/geometry/spatial_membership.dart`, `lib/src/geometry/tile_index.dart`, `lib/src/geometry/outlier_index.dart`, `lib/src/geometry/spatial_budget_counters.dart`, and focused spatial tests.
 
 Boundary:
 
