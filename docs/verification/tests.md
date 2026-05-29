@@ -159,16 +159,26 @@ Required tests:
 - `test.edit.exact_touched_invalidation`
 - `test.edit.typed_effects_no_frame_dependency`
 - `test.edit.staged_document_load_success_failure`
+- `test.spatial.committed_spatial_read_boundary`
+- `test.geometry.geometry_spatial_donor_mapping`
 - `test.geometry.hit_policy`
 - `test.geometry.no_legacy_scene_order`
-- `test.geometry.eraser_exact_budget_no_partial_commit`
+- `test.geometry.eraser_exact_budget_inputs`
+- `test.spatial.tile_outlier_membership`
 - `test.spatial.touched_update`
 - `test.spatial.no_full_clone_for_touched_update`
 - `test.spatial.stale_generation_rejected`
 - `test.spatial.fallback_budget_enforced`
+- `test.spatial.invalid_index_fallback`
+- `test.spatial.runtime_delivery_order`
 - `test.frame.main_overlay_capture`
 - `test.frame.no_live_runtime_read_in_painters`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
+- `test.guardrails.geometry_no_legacy_scene_order`
+- `test.guardrails.geometry_eraser_exact_budget_inputs`
+- `test.guardrails.spatial_no_full_clone_ordinary_edit`
+- `test.guardrails.spatial_stale_candidate_rejected`
+- `test.guardrails.spatial_fallback_budget_enforced`
 - `test.frame.paint_plan_excludes_preview_delta`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
@@ -280,13 +290,18 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/edit/exact_touched_invalidation_test.dart`
 - `test/edit/typed_effects_no_frame_dependency_test.dart`
 - `test/edit/staged_document_load_success_failure_test.dart`
+- `test/spatial/committed_spatial_read_boundary_test.dart`
+- `test/geometry/geometry_spatial_donor_mapping_test.dart`
 - `test/geometry/hit_policy_test.dart`
 - `test/geometry/no_legacy_scene_order_test.dart`
-- `test/geometry/eraser_exact_budget_no_partial_commit_test.dart`
+- `test/geometry/eraser_exact_budget_inputs_test.dart`
+- `test/spatial/tile_outlier_membership_test.dart`
 - `test/spatial/touched_update_test.dart`
 - `test/spatial/no_full_clone_for_touched_update_test.dart`
 - `test/spatial/stale_generation_rejected_test.dart`
 - `test/spatial/fallback_budget_enforced_test.dart`
+- `test/spatial/invalid_index_fallback_test.dart`
+- `test/spatial/runtime_delivery_order_test.dart`
 - `test/frame/main_overlay_capture_test.dart`
 - `test/frame/no_live_runtime_read_in_painters_test.dart`
 - `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart`
@@ -305,6 +320,11 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/interaction/text_edit_stale_commit_guard_test.dart`
 - `test/selection/runtime_owner_separation_test.dart`
 - `test/guardrails/selection_boundary_imports_test.dart`
+- `test/guardrails/geometry_no_legacy_scene_order_guardrail_test.dart`
+- `test/guardrails/geometry_eraser_exact_budget_inputs_guardrail_test.dart`
+- `test/guardrails/spatial_no_full_clone_ordinary_edit_guardrail_test.dart`
+- `test/guardrails/spatial_stale_candidate_rejected_guardrail_test.dart`
+- `test/guardrails/spatial_fallback_budget_enforced_guardrail_test.dart`
 
 ### Behavioral Coverage Notes
 
@@ -355,14 +375,14 @@ rejection of non-invertible element transforms before `PreparedDocumentLoad`
 success, interaction interruption, repaint, action events, or public state
 publication.
 
-P8 `test.geometry.hit_policy` coverage for corrupted committed hit rows must
-follow the planned `section_20_diagnostics_hub` geometry row: a
-non-invertible element transform records only policy-gated `spatial`
-diagnostics when that route is implemented, returns miss, continues candidate
-scan, and has no coarse fallback acceptance.
+P8 `test.geometry.hit_policy` coverage for corrupted committed hit rows proves
+the implemented behavior: a non-invertible element transform returns miss,
+continues candidate scan, has no coarse fallback acceptance, mutates no state,
+and allocates no DiagnosticsHub record. The policy-gated corrupted-row
+DiagnosticsHub route is deferred after P8.
 
 Future diagnostics sanitizer coverage must cover corrupted-row diagnostic
-sanitization when the P8 route is implemented.
+sanitization when that deferred route is implemented.
 `test.diagnostics.disabled_no_alloc_hot_path` covers only the schema/codec
 disabled-diagnostics no-allocation subset; pointer and paint hot-path proof
 remains deferred until those runtime owners exist.
@@ -500,13 +520,57 @@ behavioral tests, and the required guardrail list remains owned by
 
 #### `test/smoke/public_incremental_smoke_test.dart`
 - proves an external Flutter consumer can import only the root public barrel,
-  decode a small schema v1 document, construct CanvasRuntime, observe initial
-  state and readDocument output, and perform one public selection operation;
+  decode schema v1 documents, construct CanvasRuntime, observe initial state
+  and readDocument output, and perform public selection, resource, edit, and
+  load operations;
+- appends P8 public compatibility coverage for background geometry,
+  overlapping transformed content, one public geometry-changing edit, and a
+  replacement geometry-rich load while asserting only public runtime/document
+  outcomes;
 - uses the shared Flutter consumer harness as the package-boundary proof;
 - stays intentionally coarse so focused codec, runtime, selection, and cache
   tests own detailed diagnostics;
 - must expand only by appending the next real public user step after a future
   phase exposes one.
+
+#### `test/spatial/committed_spatial_read_boundary_test.dart`
+- proves `FrameFactsPort` exposes `locationKind` and nullable `layerId` as
+  resolved current-row facts for background and content rows;
+- proves callers cannot bypass structuralRevision, generation, or orderToken
+  validation by supplying stale handles, and geometry/spatial code does not
+  read concrete store tables.
+
+#### `test/geometry/geometry_spatial_donor_mapping_test.dart`
+- proves every required P8 geometry/spatial donor is mapped to copied,
+  adapted, rejected, or deferred ownership evidence;
+- proves forbidden legacy scene/controller/codec/cache-shell structures remain
+  excluded from the P8 implementation.
+
+#### `test/geometry/eraser_exact_budget_inputs_test.dart`
+- proves P8 eraser corridor, exact-hit input limits, and preview/terminal
+  candidate and exact-check budget input shapes;
+- intentionally leaves terminal cleanup/no-op commit behavior to P12.
+
+#### `test/spatial/tile_outlier_membership_test.dart`
+- proves tile membership, outlier routing, max-cells behavior, and query
+  candidate ordering for the implemented `SpatialKernel` indexes.
+
+#### `test/spatial/invalid_index_fallback_test.dart`
+- proves invalid spatial index fallback returns typed invalid/budget results
+  without silently scanning the full scene.
+
+#### `test/spatial/runtime_delivery_order_test.dart`
+- proves `RuntimeRoot` applies spatial update/rebuild delivery before public
+  runtime state publication and before observer callbacks can run.
+
+#### P8 guardrail proof tests
+- `test/guardrails/geometry_no_legacy_scene_order_guardrail_test.dart`,
+  `test/guardrails/geometry_eraser_exact_budget_inputs_guardrail_test.dart`,
+  `test/guardrails/spatial_no_full_clone_ordinary_edit_guardrail_test.dart`,
+  `test/guardrails/spatial_stale_candidate_rejected_guardrail_test.dart`, and
+  `test/guardrails/spatial_fallback_budget_enforced_guardrail_test.dart`
+  prove the P8 guardrail ids are registered, runner-backed where structural
+  proof is required, and fail on fixtures containing the forbidden pattern.
 
 #### `test/runtime/load_document_state_publication_test.dart`
 - proves successful loadDocument publishes exactly one post-install

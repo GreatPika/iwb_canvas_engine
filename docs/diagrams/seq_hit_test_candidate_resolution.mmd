@@ -37,7 +37,7 @@ sequenceDiagram
         Interaction->>Hit: check hit eligibility(point finite, visible, selectable, transform finite)
         Hit->>Geometry: exact family hit with transform, local bounds, hit padding, and slop
         alt committed row has non-invertible transform
-          Geometry->>Diagnostics: planned P8 spatial corrupted-row diagnostic
+          Note over Geometry,Diagnostics: P8 returns miss without DiagnosticsHub write; corrupted-row diagnostic route is deferred.
           Geometry-->>Hit: miss
           Hit-->>Interaction: continue candidate scan
         else transform invertible

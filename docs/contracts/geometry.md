@@ -31,7 +31,7 @@ Required tests:
 - `test.geometry.hit_policy`
 - `test.interaction.context_action_request`
 - `test.geometry.no_legacy_scene_order`
-- `test.geometry.eraser_exact_budget_no_partial_commit`
+- `test.geometry.eraser_exact_budget_inputs`
 Guardrails:
 - `geometry.no_legacy_scene_order`
 - `geometry.eraser_exact_budget_no_partial`
@@ -95,7 +95,7 @@ Box/image/text/rect hit:
 - exact hit uses inverse transform and local bounds inflated by scene padding mapped into local space;
 - if a committed row has a non-invertible transform, treat it as corrupted
   internal state: the `section_20_diagnostics_hub` routing table classifies
-  the planned P8 corrupted-row route as policy-gated `spatial` diagnostics;
+  the deferred corrupted-row route as policy-gated `spatial` diagnostics;
   until that future route is implemented, the hit path returns miss and
   continues the candidate scan without state mutation;
 - coarse candidate bounds may never accept a non-invertible box/image/text/rect

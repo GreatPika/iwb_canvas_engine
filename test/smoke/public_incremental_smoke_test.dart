@@ -143,6 +143,90 @@ void main() {
       CanvasElementId('element-second'),
     );
     expect(loadedDocument.metadata['source'], 'public incremental smoke load');
+
+    runtime.edits.loadDocument(
+      decodeCanvasDocument(_geometryRichSchemaV1Document()),
+    );
+
+    final geometryState = runtime.state.value;
+    expect(
+      geometryState.summary,
+      const CanvasRuntimeSummary(
+        elementCount: 3,
+        layerCount: 1,
+        resourceCount: 0,
+        selectedCount: 0,
+      ),
+    );
+    expect(geometryState.revisions.document, 3);
+    expect(geometryState.revisions.selection, 3);
+
+    final geometryDocument = runtime.readDocument();
+    expect(geometryDocument.backgroundElements.single.id, CanvasElementId('geometry-bg'));
+    expect(geometryDocument.layers.single.id, CanvasLayerId('geometry-layer'));
+    expect(
+      geometryDocument.layers.single.elements.map((element) => element.id),
+      [
+        CanvasElementId('overlap-bottom'),
+        CanvasElementId('overlap-top'),
+      ],
+    );
+    final overlapTop = geometryDocument.layers.single.elements.last as CanvasRectElement;
+    expect(overlapTop.transform.translation, const Offset(16, 12));
+    expect(overlapTop.size, const Size(36, 20));
+
+    runtime.edits.edit((edit) {
+      expect(
+        edit.updateElement(
+          CanvasRectElementUpdate(
+            id: CanvasElementId('overlap-top'),
+            transform: CanvasFieldSet(
+              CanvasTransform.trs(
+                translation: const Offset(24, 18),
+                rotationDegrees: 8,
+              ),
+            ),
+            size: const CanvasFieldSet(Size(44, 24)),
+          ),
+        ),
+        isTrue,
+      );
+    });
+
+    final geometryEditedState = runtime.state.value;
+    expect(geometryEditedState.summary.elementCount, 3);
+    expect(geometryEditedState.revisions.document, 4);
+    final geometryEditedDocument = runtime.readDocument();
+    final movedTop = geometryEditedDocument.layers.single.elements.last as CanvasRectElement;
+    expect(movedTop.transform.translation, const Offset(24, 18));
+    expect(movedTop.size, const Size(44, 24));
+
+    runtime.edits.loadDocument(
+      decodeCanvasDocument(_replacementGeometryRichSchemaV1Document()),
+    );
+
+    final replacementState = runtime.state.value;
+    expect(
+      replacementState.summary,
+      const CanvasRuntimeSummary(
+        elementCount: 2,
+        layerCount: 1,
+        resourceCount: 0,
+        selectedCount: 0,
+      ),
+    );
+    expect(replacementState.revisions.document, 5);
+    expect(runtime.selection.selectedElementIds, isEmpty);
+    final replacementDocument = runtime.readDocument();
+    expect(
+      replacementDocument.backgroundElements.single.id,
+      CanvasElementId('replacement-bg'),
+    );
+    expect(replacementDocument.layers.single.id, CanvasLayerId('replacement-layer'));
+    expect(
+      replacementDocument.layers.single.elements.single.id,
+      CanvasElementId('replacement-content'),
+    );
   });
 }
 
@@ -245,6 +329,168 @@ Map<String, Object?> _secondSchemaV1Document() {
       },
     ],
     'metadata': {'source': 'public incremental smoke load'},
+  };
+}
+
+Map<String, Object?> _geometryRichSchemaV1Document() {
+  return {
+    'schemaVersion': 1,
+    'camera': {
+      'offset': {'x': 4.0, 'y': -6.0},
+    },
+    'background': {
+      'color': '#FFF8FAFC',
+      'grid': {
+        'enabled': true,
+        'cellSize': 12.0,
+        'color': '#220F172A',
+      },
+    },
+    'palette': {
+      'penColors': ['#FF0F172A', '#FF2563EB'],
+      'backgroundColors': ['#FFF8FAFC'],
+      'gridSizes': [12.0, 24.0],
+    },
+    'resources': [],
+    'backgroundLayer': {
+      'elements': [
+        {
+          'id': 'geometry-bg',
+          'kind': 'rect',
+          'revision': 0,
+          'transform': {'a': 1.0, 'b': 0.0, 'c': 0.0, 'd': 1.0, 'tx': -8.0, 'ty': -8.0},
+          'opacity': 1.0,
+          'hitPadding': 0.0,
+          'isVisible': true,
+          'isSelectable': false,
+          'isLocked': true,
+          'isDeletable': false,
+          'isTransformable': false,
+          'metadata': {'role': 'background geometry'},
+          'size': {'w': 96.0, 'h': 64.0},
+          'fillColor': '#FFE2E8F0',
+          'strokeColor': null,
+          'strokeWidth': 0.0,
+        },
+      ],
+    },
+    'layers': [
+      {
+        'id': 'geometry-layer',
+        'elements': [
+          {
+            'id': 'overlap-bottom',
+            'kind': 'rect',
+            'revision': 0,
+            'transform': {'a': 1.0, 'b': 0.0, 'c': 0.0, 'd': 1.0, 'tx': 8.0, 'ty': 8.0},
+            'opacity': 1.0,
+            'hitPadding': 2.0,
+            'isVisible': true,
+            'isSelectable': true,
+            'isLocked': false,
+            'isDeletable': true,
+            'isTransformable': true,
+            'metadata': {'role': 'bottom overlap'},
+            'size': {'w': 40.0, 'h': 28.0},
+            'fillColor': '#662563EB',
+            'strokeColor': '#FF1D4ED8',
+            'strokeWidth': 1.0,
+          },
+          {
+            'id': 'overlap-top',
+            'kind': 'rect',
+            'revision': 0,
+            'transform': {'a': 0.984807753, 'b': 0.173648178, 'c': -0.173648178, 'd': 0.984807753, 'tx': 16.0, 'ty': 12.0},
+            'opacity': 0.9,
+            'hitPadding': 3.0,
+            'isVisible': true,
+            'isSelectable': true,
+            'isLocked': false,
+            'isDeletable': true,
+            'isTransformable': true,
+            'metadata': {'role': 'top overlap'},
+            'size': {'w': 36.0, 'h': 20.0},
+            'fillColor': '#66F97316',
+            'strokeColor': '#FFEA580C',
+            'strokeWidth': 2.0,
+          },
+        ],
+        'metadata': {'name': 'Geometry layer'},
+      },
+    ],
+    'metadata': {'source': 'public geometry smoke'},
+  };
+}
+
+Map<String, Object?> _replacementGeometryRichSchemaV1Document() {
+  return {
+    'schemaVersion': 1,
+    'camera': {
+      'offset': {'x': -12.0, 'y': 18.0},
+    },
+    'background': {
+      'color': '#FFFFFFFF',
+      'grid': {
+        'enabled': false,
+        'cellSize': 20.0,
+        'color': '#00000000',
+      },
+    },
+    'palette': {
+      'penColors': ['#FF111827'],
+      'backgroundColors': ['#FFFFFFFF'],
+      'gridSizes': [10.0, 20.0],
+    },
+    'resources': [],
+    'backgroundLayer': {
+      'elements': [
+        {
+          'id': 'replacement-bg',
+          'kind': 'rect',
+          'revision': 0,
+          'transform': {'a': 1.0, 'b': 0.0, 'c': 0.0, 'd': 1.0, 'tx': 0.0, 'ty': 0.0},
+          'opacity': 1.0,
+          'hitPadding': 0.0,
+          'isVisible': true,
+          'isSelectable': false,
+          'isLocked': true,
+          'isDeletable': false,
+          'isTransformable': false,
+          'metadata': {'role': 'replacement background'},
+          'size': {'w': 32.0, 'h': 32.0},
+          'fillColor': '#FFF1F5F9',
+          'strokeColor': null,
+          'strokeWidth': 0.0,
+        },
+      ],
+    },
+    'layers': [
+      {
+        'id': 'replacement-layer',
+        'elements': [
+          {
+            'id': 'replacement-content',
+            'kind': 'rect',
+            'revision': 0,
+            'transform': {'a': 1.0, 'b': 0.0, 'c': 0.0, 'd': 1.0, 'tx': 6.0, 'ty': 10.0},
+            'opacity': 1.0,
+            'hitPadding': 1.0,
+            'isVisible': true,
+            'isSelectable': true,
+            'isLocked': false,
+            'isDeletable': true,
+            'isTransformable': true,
+            'metadata': {'role': 'replacement content'},
+            'size': {'w': 18.0, 'h': 18.0},
+            'fillColor': '#6650C878',
+            'strokeColor': '#FF16A34A',
+            'strokeWidth': 1.0,
+          },
+        ],
+        'metadata': {'name': 'Replacement geometry layer'},
+      },
+    ],
+    'metadata': {'source': 'replacement public geometry smoke'},
   };
 }
 

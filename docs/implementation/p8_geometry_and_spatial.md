@@ -78,13 +78,20 @@ before frame rendering and interaction depend on bounded element queries.
 
 ## Tests and guardrails that prove this phase
 
+- `test.spatial.committed_spatial_read_boundary` -> `test/spatial/committed_spatial_read_boundary_test.dart`
+- `test.geometry.geometry_spatial_donor_mapping` -> `test/geometry/geometry_spatial_donor_mapping_test.dart`
 - `test.geometry.hit_policy` -> `test/geometry/hit_policy_test.dart`
 - `test.geometry.no_legacy_scene_order` -> `test/geometry/no_legacy_scene_order_test.dart`
+- `test.geometry.eraser_exact_budget_inputs` -> `test/geometry/eraser_exact_budget_inputs_test.dart`
+- `test.spatial.tile_outlier_membership` -> `test/spatial/tile_outlier_membership_test.dart`
 - `test.spatial.touched_update` -> `test/spatial/touched_update_test.dart`
 - `test.spatial.no_full_clone_for_touched_update` -> `test/spatial/no_full_clone_for_touched_update_test.dart`
 - `test.spatial.stale_generation_rejected` -> `test/spatial/stale_generation_rejected_test.dart`
 - `test.spatial.fallback_budget_enforced` -> `test/spatial/fallback_budget_enforced_test.dart`
+- `test.spatial.invalid_index_fallback` -> `test/spatial/invalid_index_fallback_test.dart`
+- `test.spatial.runtime_delivery_order` -> `test/spatial/runtime_delivery_order_test.dart`
 - `geometry.no_legacy_scene_order`
+- `geometry.eraser_exact_budget_no_partial`
 - `spatial.no_full_clone_ordinary_edit`
 - `spatial.stale_candidate_rejected`
 - `spatial.fallback_budget_enforced`

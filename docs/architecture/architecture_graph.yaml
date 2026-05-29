@@ -694,14 +694,14 @@ edges:
     from: geometry.spatial_index
     to: diagnostics.hub
     kind: diagnostic_route
-    phaseRequiredBy: P8
+    phaseRequiredBy: P10
     status: future
     sourceDocs:
       - path: docs/contracts/diagnostics.md
       - path: docs/contracts/geometry.md
       - path: docs/implementation/p8_geometry_and_spatial.md
     evidence:
-      - Corrupted committed geometry or spatial rows are planned policy-gated internal diagnostics with source spatial and return-miss-without-mutation behavior.
+      - Corrupted committed geometry or spatial rows return miss without mutation in P8; policy-gated internal diagnostics are deferred until a later diagnostics integration phase adds an explicit bridge.
   - id: runtime.root.observer_failures.report_to_diagnostics
     from: runtime.root
     to: diagnostics.hub

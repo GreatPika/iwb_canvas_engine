@@ -199,9 +199,13 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
 
-## test.geometry.eraser_exact_budget_no_partial_commit
+## test.geometry.eraser_exact_budget_inputs
 
 - Sections: `section_16_geometry_policy`, `section_23_tests`
+
+## test.geometry.geometry_spatial_donor_mapping
+
+- Sections: `section_23_tests`
 
 ## test.geometry.hit_policy
 
@@ -223,6 +227,14 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_03_package_layout`, `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
 
+## test.guardrails.geometry_eraser_exact_budget_inputs
+
+- Sections: `section_23_tests`
+
+## test.guardrails.geometry_no_legacy_scene_order
+
+- Sections: `section_23_tests`
+
 ## test.guardrails.import_boundaries
 
 - Sections: `section_03_package_layout`, `section_23_tests`
@@ -242,6 +254,18 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.guardrails.selection_boundary_imports
 
 - Sections: `section_03_package_layout`, `section_14_interaction_engine`
+
+## test.guardrails.spatial_fallback_budget_enforced
+
+- Sections: `section_23_tests`
+
+## test.guardrails.spatial_no_full_clone_ordinary_edit
+
+- Sections: `section_23_tests`
+
+## test.guardrails.spatial_stale_candidate_rejected
+
+- Sections: `section_23_tests`
 
 ## test.guardrails.store_projection_checks
 
@@ -347,7 +371,15 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_23_tests`
 
+## test.spatial.committed_spatial_read_boundary
+
+- Sections: `section_17_spatial_kernel`, `section_23_tests`
+
 ## test.spatial.fallback_budget_enforced
+
+- Sections: `section_17_spatial_kernel`, `section_23_tests`
+
+## test.spatial.invalid_index_fallback
 
 - Sections: `section_17_spatial_kernel`, `section_23_tests`
 
@@ -355,7 +387,15 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_17_spatial_kernel`, `section_23_tests`
 
+## test.spatial.runtime_delivery_order
+
+- Sections: `section_17_spatial_kernel`, `section_23_tests`
+
 ## test.spatial.stale_generation_rejected
+
+- Sections: `section_17_spatial_kernel`, `section_23_tests`
+
+## test.spatial.tile_outlier_membership
 
 - Sections: `section_17_spatial_kernel`, `section_23_tests`
 

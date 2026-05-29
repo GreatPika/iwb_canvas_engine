@@ -53,7 +53,7 @@ First settle the committed row facts and donor mapping needed by geometry scope.
 
 ## Execution Units
 
-### [ ] Unit 1: Committed Row Boundary And Donor Map
+### [x] Unit 1: Committed Row Boundary And Donor Map
 
 Owner:
 
@@ -75,7 +75,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Geometry And Hit Policy
+### [x] Unit 2: Geometry And Hit Policy
 
 Owner:
 
@@ -97,7 +97,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Spatial Query Result And Index Structures
+### [x] Unit 3: Spatial Query Result And Index Structures
 
 Owner:
 
@@ -119,7 +119,7 @@ Depends On:
 
 Unit 2.
 
-### [ ] Unit 4: SpatialKernel Update, Rebuild, And Stale Rejection
+### [x] Unit 4: SpatialKernel Update, Rebuild, And Stale Rejection
 
 Owner:
 
@@ -141,7 +141,7 @@ Depends On:
 
 Units 1, 2, and 3.
 
-### [ ] Unit 5: Runtime Spatial Delivery Ordering
+### [x] Unit 5: Runtime Spatial Delivery Ordering
 
 Owner:
 
@@ -163,7 +163,7 @@ Depends On:
 
 Unit 4.
 
-### [ ] Unit 6: Guardrails And Architecture Closure
+### [x] Unit 6: Guardrails And Architecture Closure
 
 Owner:
 
@@ -185,7 +185,7 @@ Depends On:
 
 Units 2, 4, and 5.
 
-### [ ] Unit 7: Verification Docs And Public Smoke Coverage
+### [x] Unit 7: Verification Docs And Public Smoke Coverage
 
 Owner:
 

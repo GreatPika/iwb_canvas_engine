@@ -87,14 +87,20 @@ ElementHandle:
   id
   generation
   family
-  locationKind: background | content
-  layerId?
   orderToken
   rowIndex
   elementRevision
   structuralRevision
   boundsRevision
 ```
+
+P8 committed spatial reads expose a narrower immutable
+`FrameElementHandle` across `FrameFactsPort`: id, structuralRevision,
+generation, and committed orderToken. `locationKind` and nullable `layerId`
+are facts-only values resolved from the current committed row by
+`resolveElement`; callers cannot supply them as handle identity fields. Stale
+structural revisions, generation mismatches, and order-token mismatches are
+rejected before those facts are returned.
 
 `FamilyTables`:
 

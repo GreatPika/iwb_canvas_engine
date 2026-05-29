@@ -23,10 +23,14 @@ Related diagrams:
 - `seq_hit_test_candidate_resolution`
 - `seq_eraser_exact_budget`
 Required tests:
+- `test.spatial.committed_spatial_read_boundary`
+- `test.spatial.tile_outlier_membership`
 - `test.spatial.touched_update`
 - `test.spatial.no_full_clone_for_touched_update`
 - `test.spatial.stale_generation_rejected`
 - `test.spatial.fallback_budget_enforced`
+- `test.spatial.invalid_index_fallback`
+- `test.spatial.runtime_delivery_order`
 Guardrails:
 - `spatial.no_full_clone_ordinary_edit`
 - `spatial.stale_candidate_rejected`

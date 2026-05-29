@@ -28,7 +28,6 @@ flowchart LR
   codec_schema_v1 -->|uses public data by P3| contracts_public
   contracts_internal_ports -->|contract dependency by P6| contracts_public
   edit_kernel -->|changes data through by P5| store_document_kernel
-  geometry_spatial_index -->|planned reports errors to by P8| diagnostics_hub
   load_document_pipeline -->|changes data through by P6| store_document_kernel
   runtime_root -->|owns and creates by P8| geometry_spatial_index
   runtime_root -->|invalidates resource session through by P7| resource_surface_session

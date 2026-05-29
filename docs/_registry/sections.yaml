@@ -667,7 +667,7 @@
     - test.geometry.hit_policy
     - test.interaction.context_action_request
     - test.geometry.no_legacy_scene_order
-    - test.geometry.eraser_exact_budget_no_partial_commit
+    - test.geometry.eraser_exact_budget_inputs
   do_not_assume:
     - do not port legacy SceneNode traversal
     - do not copy legacy scene order logic
@@ -701,10 +701,14 @@
     - spatial.stale_candidate_rejected
     - spatial.fallback_budget_enforced
   tests:
+    - test.spatial.committed_spatial_read_boundary
+    - test.spatial.tile_outlier_membership
     - test.spatial.touched_update
     - test.spatial.no_full_clone_for_touched_update
     - test.spatial.stale_generation_rejected
     - test.spatial.fallback_budget_enforced
+    - test.spatial.invalid_index_fallback
+    - test.spatial.runtime_delivery_order
   do_not_assume:
     - do not port legacy Scene or locator maps
     - do not rely on stale structuralRevision
@@ -1065,16 +1069,26 @@
     - test.edit.exact_touched_invalidation
     - test.edit.typed_effects_no_frame_dependency
     - test.edit.staged_document_load_success_failure
+    - test.spatial.committed_spatial_read_boundary
+    - test.geometry.geometry_spatial_donor_mapping
     - test.geometry.hit_policy
     - test.geometry.no_legacy_scene_order
-    - test.geometry.eraser_exact_budget_no_partial_commit
+    - test.geometry.eraser_exact_budget_inputs
+    - test.spatial.tile_outlier_membership
     - test.spatial.touched_update
     - test.spatial.no_full_clone_for_touched_update
     - test.spatial.stale_generation_rejected
     - test.spatial.fallback_budget_enforced
+    - test.spatial.invalid_index_fallback
+    - test.spatial.runtime_delivery_order
     - test.frame.main_overlay_capture
     - test.frame.no_live_runtime_read_in_painters
     - test.guardrails.frame_committed_facts_via_frame_facts_port
+    - test.guardrails.geometry_no_legacy_scene_order
+    - test.guardrails.geometry_eraser_exact_budget_inputs
+    - test.guardrails.spatial_no_full_clone_ordinary_edit
+    - test.guardrails.spatial_stale_candidate_rejected
+    - test.guardrails.spatial_fallback_budget_enforced
     - test.frame.paint_plan_excludes_preview_delta
     - test.frame.camera_pan_preserves_ordinary_paint_plan
     - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
