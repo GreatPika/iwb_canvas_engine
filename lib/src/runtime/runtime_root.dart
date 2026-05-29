@@ -31,6 +31,7 @@ import '../edit/commit_applier.dart';
 import '../edit/commit_plan.dart';
 import '../edit/edit_kernel.dart';
 import '../edit/staged_document_load.dart';
+import '../geometry/spatial_kernel.dart';
 import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
@@ -94,7 +95,9 @@ final class RuntimeRoot
        ),
        _state = ValueNotifier<CanvasRuntimeState>(
          _runtimeState(store, null, const _RuntimeRevisionFacts()),
-       );
+       ) {
+    _spatial.rebuild(this);
+  }
 
   final RuntimeConfig config;
   final DocumentStoreKernel _store;
@@ -103,6 +106,7 @@ final class RuntimeRoot
   final LoadDocumentPipeline _loadPipeline;
   final CommitEffectObserver _commitEffectObserver;
   final SelectionKernel _selection;
+  final SpatialKernel _spatial = SpatialKernel();
   final ValueNotifier<CanvasRuntimeState> _state;
   final StreamController<CanvasActionCommitted> _actions =
       StreamController<CanvasActionCommitted>.broadcast();
@@ -149,6 +153,8 @@ final class RuntimeRoot
 
   DocumentFactsPort get documentFactsPort => this;
   FrameFactsPort get frameFactsPort => this;
+  @visibleForTesting
+  SpatialKernel get spatialKernel => _spatial;
 
   void attachResourceSessionInvalidationSink(
     ResourceSessionInvalidationSink sink,
@@ -516,6 +522,7 @@ final class RuntimeRoot
   void _deliverEditCommitResult(CommitDeliveryResult applyResult) {
     _isDeliveringCommitEffects = true;
     try {
+      _deliverSpatialEffects(applyResult.effects);
       if (applyResult.shouldPublishState) {
         if (applyResult.replacedDocument) {
           _epochRevision += 1;
@@ -536,6 +543,7 @@ final class RuntimeRoot
   void _deliverLoadResult(List<CommitDeliveryEffect> effects) {
     _isDeliveringCommitEffects = true;
     try {
+      _deliverSpatialEffects(effects);
       _publishRuntimeState();
       if (effects.isNotEmpty) {
         _commitEffectObserver(effects);
@@ -560,6 +568,12 @@ final class RuntimeRoot
       // diagnostics seam can report them without changing dirty acceptance.
     } finally {
       _isDeliveringCommitEffects = false;
+    }
+  }
+
+  void _deliverSpatialEffects(List<CommitDeliveryEffect> effects) {
+    for (final effect in effects.whereType<SpatialDeliveryEffect>()) {
+      _spatial.applyTouched(this, effect.touchedSet);
     }
   }
 }
