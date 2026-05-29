@@ -47,6 +47,7 @@ final class ElementRegistry {
     layerTable = layerRows;
     contentElementOrder = contentOrder;
     frameElementOrder = frameOrder;
+    frameOrderTokensById = _frameOrderTokensById(frameOrder);
     elementLocationFacts = _elementLocationFacts(
       backgroundElementList,
       layerRows,
@@ -60,6 +61,7 @@ final class ElementRegistry {
   late final LayerTable layerTable;
   late final List<CanvasElementId> contentElementOrder;
   late final List<CanvasElementId> frameElementOrder;
+  late final Map<CanvasElementId, int> frameOrderTokensById;
   late final Map<CanvasElementId, ElementLocationFacts> elementLocationFacts;
   late final Set<String> admittedElementIds;
   late final Set<String> admittedLayerIds;
@@ -89,10 +91,16 @@ final class ElementRegistry {
   }
 
   bool frameOrderMatches(int orderToken, CanvasElementId id) {
-    return orderToken >= 0 &&
-        orderToken < frameElementOrder.length &&
-        frameElementOrder[orderToken] == id;
+    return frameOrderTokensById[id] == orderToken;
   }
+}
+
+Map<CanvasElementId, int> _frameOrderTokensById(
+  Iterable<CanvasElementId> frameOrder,
+) {
+  return Map.unmodifiable({
+    for (final indexed in frameOrder.indexed) indexed.$2: indexed.$1,
+  });
 }
 
 Map<CanvasElementId, ElementLocationFacts> _elementLocationFacts(

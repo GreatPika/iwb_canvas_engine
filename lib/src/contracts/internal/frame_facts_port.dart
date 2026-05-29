@@ -149,7 +149,12 @@ final class FrameResourceDescriptorFacts {
 
 abstract interface class FrameFactsPort {
   FrameRevisionFacts get frameRevisions;
+  int elementCount(int structuralRevision);
   List<FrameElementHandle> elementHandles(int structuralRevision);
+  FrameElementHandle? elementHandleForId(
+    int structuralRevision,
+    CanvasElementId id,
+  );
   FrameElementFacts? resolveElement(FrameElementHandle handle);
   FrameResourceDescriptorFacts? resourceDescriptor(CanvasResourceId id);
 }

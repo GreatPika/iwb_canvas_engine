@@ -8,11 +8,18 @@ import 'spatial_membership.dart';
 import 'spatial_query_port.dart';
 import 'spatial_query_result.dart';
 
+typedef CandidateHandleMapper =
+    FrameElementHandle Function(FrameElementHandle handle);
+
 final class TileIndex {
   final Map<SpatialTileCoord, Map<CanvasElementId, FrameElementHandle>> _pages =
       {};
 
   int get pageCount => _pages.length;
+
+  void clear() {
+    _pages.clear();
+  }
 
   bool contains(CanvasElementId id) {
     return _pages.values.any((page) => page.containsKey(id));
@@ -39,18 +46,17 @@ final class TileIndex {
   }
 
   SpatialQueryResult query(
-    SpatialQueryWindow window, {
-    required SpatialBudgetCounters counters,
-    Iterable<FrameElementHandle> outlierCandidates = const [],
-    Iterable<FrameElementHandle> fallbackCandidates = const [],
-  }) {
+    SpatialQueryWindow window,
+    TileQueryContext context,
+  ) {
     final queryTileCount = spatialTileCountFor(window.boundsWorld);
     if (queryTileCount > kCanvasMaxQueryCells) {
-      counters.recordQueryTileBudgetExceeded();
+      context.counters.recordQueryTileBudgetExceeded();
 
       return _candidateResultWithinBudget(
-        fallbackCandidates,
-        counters,
+        context.fallbackCandidates,
+        context.counters,
+        candidateMapper: context.candidateMapper,
         budgetReason:
             SpatialBudgetExceededReason.fallbackCandidateBudgetExceeded,
       );
@@ -59,26 +65,44 @@ final class TileIndex {
     for (final tile in spatialTilesFor(window.boundsWorld)) {
       candidates.addAll(_pages[tile] ?? const {});
     }
-    for (final handle in outlierCandidates) {
+    for (final handle in context.outlierCandidates) {
       candidates[handle.id] = handle;
     }
 
     return _candidateResultWithinBudget(
       candidates.values,
-      counters,
+      context.counters,
+      candidateMapper: context.candidateMapper,
       budgetReason: SpatialBudgetExceededReason.fallbackCandidateBudgetExceeded,
     );
   }
 }
 
+FrameElementHandle _identityHandle(FrameElementHandle handle) => handle;
+
+final class TileQueryContext {
+  const TileQueryContext({
+    required this.counters,
+    this.outlierCandidates = const [],
+    this.fallbackCandidates = const [],
+    this.candidateMapper = _identityHandle,
+  });
+
+  final SpatialBudgetCounters counters;
+  final Iterable<FrameElementHandle> outlierCandidates;
+  final Iterable<FrameElementHandle> fallbackCandidates;
+  final CandidateHandleMapper candidateMapper;
+}
+
 SpatialQueryResult _candidateResultWithinBudget(
   Iterable<FrameElementHandle> source,
   SpatialBudgetCounters counters, {
+  required CandidateHandleMapper candidateMapper,
   required SpatialBudgetExceededReason budgetReason,
 }) {
   final candidates = <FrameElementHandle>[];
   for (final handle in source) {
-    candidates.add(handle);
+    candidates.add(candidateMapper(handle));
     if (candidates.length > kCanvasMaxFallbackCandidates) {
       counters.recordFallbackCandidateBudgetExceeded();
 

@@ -7,6 +7,10 @@ final class OutlierIndex {
 
   int get length => _handlesById.length;
 
+  void clear() {
+    _handlesById.clear();
+  }
+
   bool contains(CanvasElementId id) => _handlesById.containsKey(id);
 
   void put(SpatialMembership membership) {

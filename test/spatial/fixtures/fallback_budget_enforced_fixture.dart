@@ -21,8 +21,10 @@ void _testTileBudgetFallback() {
     final counters = SpatialBudgetCounters();
     final result = TileIndex().query(
       _overBudgetWindow(),
-      counters: counters,
-      fallbackCandidates: [_handle('fallback-a', 1)],
+      TileQueryContext(
+        counters: counters,
+        fallbackCandidates: [_handle('fallback-a', 1)],
+      ),
     );
 
     expect(result, isA<SpatialCandidatesResult>());
@@ -40,8 +42,7 @@ void _testFallbackCandidateBudget() {
     final fallback = _CountingHandles(kCanvasMaxFallbackCandidates + 10);
     final result = TileIndex().query(
       _overBudgetWindow(),
-      counters: counters,
-      fallbackCandidates: fallback,
+      TileQueryContext(counters: counters, fallbackCandidates: fallback),
     );
 
     expect(result, isA<SpatialBudgetExceededResult>());
@@ -73,9 +74,11 @@ void _testOrdinaryTileQueryDoesNotUseFallback() {
           boundsWorld: Rect.fromLTRB(0, 0, 100, 100),
           structuralRevision: 1,
         ),
-        counters: SpatialBudgetCounters(),
-        outlierCandidates: [_handle('outlier-a', 1)],
-        fallbackCandidates: _ThrowingHandles(),
+        TileQueryContext(
+          counters: SpatialBudgetCounters(),
+          outlierCandidates: [_handle('outlier-a', 1)],
+          fallbackCandidates: _ThrowingHandles(),
+        ),
       );
 
       expect(result.candidates.map((handle) => handle.id), [

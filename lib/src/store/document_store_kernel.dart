@@ -81,6 +81,14 @@ final class DocumentStoreKernel {
     return Set.unmodifiable(_document.elements.contentElementIds);
   }
 
+  int elementCount(int structuralRevision) {
+    if (structuralRevision != _document.revisions.structuralRevision) {
+      return 0;
+    }
+
+    return _document.elements.frameElementOrder.length;
+  }
+
   List<StoreElementHandle> elementHandles(int structuralRevision) {
     if (structuralRevision != _document.revisions.structuralRevision) {
       return const [];
@@ -95,6 +103,26 @@ final class DocumentStoreKernel {
           orderToken: indexed.$1,
         ),
     ]);
+  }
+
+  StoreElementHandle? elementHandleForId(
+    int structuralRevision,
+    CanvasElementId id,
+  ) {
+    if (structuralRevision != _document.revisions.structuralRevision) {
+      return null;
+    }
+    final orderToken = _document.elements.frameOrderTokensById[id];
+    if (orderToken == null) {
+      return null;
+    }
+
+    return StoreElementHandle(
+      id: id,
+      structuralRevision: structuralRevision,
+      generation: 0,
+      orderToken: orderToken,
+    );
   }
 
   StoreElementFacts? resolveElement(StoreElementHandle handle) {

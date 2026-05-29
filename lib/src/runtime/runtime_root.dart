@@ -214,6 +214,11 @@ final class RuntimeRoot
   }
 
   @override
+  int elementCount(int structuralRevision) {
+    return _store.elementCount(structuralRevision);
+  }
+
+  @override
   List<FrameElementHandle> elementHandles(int structuralRevision) {
     return List.unmodifiable([
       for (final handle in _store.elementHandles(structuralRevision))
@@ -224,6 +229,24 @@ final class RuntimeRoot
           orderToken: handle.orderToken,
         ),
     ]);
+  }
+
+  @override
+  FrameElementHandle? elementHandleForId(
+    int structuralRevision,
+    CanvasElementId id,
+  ) {
+    final handle = _store.elementHandleForId(structuralRevision, id);
+    if (handle == null) {
+      return null;
+    }
+
+    return FrameElementHandle(
+      id: handle.id,
+      structuralRevision: handle.structuralRevision,
+      generation: handle.generation,
+      orderToken: handle.orderToken,
+    );
   }
 
   @override
