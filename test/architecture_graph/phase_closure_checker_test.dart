@@ -533,8 +533,8 @@ const _requiredStep38ForbiddenGraphEdges = [
     to: 'api.public_surface',
   ),
   _RequiredForbiddenGraphEdge(
-    id: 'interaction.selection_move.forbidden_api_dependency',
-    from: 'interaction.selection_move',
+    id: 'interaction.engine.forbidden_api_dependency',
+    from: 'interaction.engine',
     to: 'api.public_surface',
   ),
   _RequiredForbiddenGraphEdge(
@@ -610,7 +610,7 @@ const _requiredStep38ForbiddenGraphEdges = [
   _RequiredForbiddenGraphEdge(
     id: 'contracts.public.forbidden_interaction_dependency',
     from: 'contracts.public',
-    to: 'interaction.selection_move',
+    to: 'interaction.engine',
   ),
   _RequiredForbiddenGraphEdge(
     id: 'contracts.public.forbidden_tools_dependency',
@@ -675,7 +675,7 @@ const _requiredStep38ForbiddenGraphEdges = [
   _RequiredForbiddenGraphEdge(
     id: 'contracts.internal_ports.forbidden_interaction_dependency',
     from: 'contracts.internal_ports',
-    to: 'interaction.selection_move',
+    to: 'interaction.engine',
   ),
   _RequiredForbiddenGraphEdge(
     id: 'contracts.internal_ports.forbidden_tools_dependency',

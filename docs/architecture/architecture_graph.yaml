@@ -409,8 +409,8 @@ nodes:
     actual:
       declarations:
         - FrameRenderer
-  - id: interaction.selection_move
-    label: Selection and move interaction owner
+  - id: interaction.engine
+    label: Interaction engine boundary
     kind: interaction_owner
     owner: interaction
     phaseIntroduced: P10
@@ -421,7 +421,7 @@ nodes:
       - path: docs/implementation/p10_selection_and_move.md
       - path: docs/contracts/interaction_engine.md
     evidence:
-      - Move interaction semantics are future-phase behavior.
+      - InteractionEngine is the future boundary for pointer sessions, tool preview intents, selection/move behavior, and terminal commit coordination.
     actual:
       declarations:
         - InteractionEngine
@@ -583,7 +583,7 @@ edges:
   - id: runtime.root.exposes_frame_facts
     from: runtime.root
     to: frame.renderer
-    kind: read_port
+    kind: frame_facts_provider
     phaseRequiredBy: P9
     status: future
     sourceDocs:
@@ -659,8 +659,8 @@ edges:
       sensitiveThrowOwner: codec.schema_v1
       sensitiveThrowRoutes:
         - recordSchemaV1FailureDiagnostic
-  - id: interaction.selection_move.reliability_events.report_to_diagnostics
-    from: interaction.selection_move
+  - id: interaction.engine.reliability_events.report_to_diagnostics
+    from: interaction.engine
     to: diagnostics.hub
     kind: diagnostic_route
     phaseRequiredBy: P10
@@ -766,22 +766,22 @@ edges:
     actual:
       delegationTargets:
         - SurfaceResourceSession
-  - id: geometry.spatial_index.feeds_interaction
-    from: geometry.spatial_index
-    to: interaction.selection_move
-    kind: query_boundary
+  - id: interaction.engine.queries_spatial_index
+    from: interaction.engine
+    to: geometry.spatial_index
+    kind: hit_test_boundary
     phaseRequiredBy: P10
     status: future
     sourceDocs:
       - path: docs/contracts/spatial_kernel.md
       - path: docs/contracts/interaction_engine.md
     evidence:
-      - Interaction hit testing will consume spatial query results.
+      - Interaction hit testing will consume spatial query results through the spatial query boundary.
     actual:
       delegationTargets:
-        - InteractionEngine
-  - id: interaction.selection_move.emits_user_actions
-    from: interaction.selection_move
+        - SpatialIndex
+  - id: interaction.engine.emits_user_actions
+    from: interaction.engine
     to: api.canvas_runtime
     kind: action_stream_boundary
     phaseRequiredBy: P10
@@ -809,17 +809,17 @@ edges:
     actual:
       delegationTargets:
         - EditKernel
-  - id: draw.tools.publish_preview_through_interaction
+  - id: draw.tools.produce_preview_intents_for_interaction
     from: draw.tools
-    to: interaction.selection_move
-    kind: preview_boundary
+    to: interaction.engine
+    kind: preview_intent_boundary
     phaseRequiredBy: P11
     status: future
     sourceDocs:
       - path: docs/implementation/p11_draw_tools.md
       - path: docs/contracts/interaction_engine.md
     evidence:
-      - Draw tool machines return preview and cleanup requests to InteractionEngine instead of owning runtime publication.
+      - Draw tool machines produce preview intents and cleanup requests for InteractionEngine instead of owning runtime publication.
     actual:
       delegationTargets:
         - InteractionEngine
@@ -837,10 +837,10 @@ edges:
     actual:
       delegationTargets:
         - EditKernel
-  - id: eraser_text.request.query_spatial_geometry
+  - id: eraser_text.request.uses_exact_hit_geometry
     from: eraser_text.request
     to: geometry.spatial_index
-    kind: hit_test_boundary
+    kind: eraser_exact_hit_boundary
     phaseRequiredBy: P12
     status: future
     sourceDocs:
@@ -848,21 +848,21 @@ edges:
       - path: docs/contracts/geometry.md
       - path: docs/contracts/spatial_kernel.md
     evidence:
-      - Eraser exact checks and context-action target resolution consume geometry and spatial query facts.
+      - Eraser exact-hit checks consume geometry and spatial candidate facts without owning preview publication or general interaction hit-test routing.
     actual:
       delegationTargets:
         - SpatialIndex
-  - id: eraser_text.request.publish_through_interaction
+  - id: eraser_text.request.produce_preview_intents_for_interaction
     from: eraser_text.request
-    to: interaction.selection_move
-    kind: preview_boundary
+    to: interaction.engine
+    kind: preview_intent_boundary
     phaseRequiredBy: P12
     status: future
     sourceDocs:
       - path: docs/implementation/p12_eraser_and_text_request.md
       - path: docs/contracts/interaction_engine.md
     evidence:
-      - Eraser preview, cleanup, and context-action request emission remain InteractionEngine-owned effects.
+      - Eraser preview intents, cleanup, and context-action request emission remain InteractionEngine-owned effects.
     actual:
       delegationTargets:
         - InteractionEngine
@@ -1069,8 +1069,8 @@ forbiddenEdges:
       - path: docs/verification/guardrails.md
     evidence:
       - Implementation owners consume contracts, not API facade wrappers.
-  - id: interaction.selection_move.forbidden_api_dependency
-    from: interaction.selection_move
+  - id: interaction.engine.forbidden_api_dependency
+    from: interaction.engine
     to: api.public_surface
     kind: forbidden_import
     phaseRequiredBy: P6
@@ -1236,7 +1236,7 @@ forbiddenEdges:
       - Contract owners must not depend on implementation owners.
   - id: contracts.public.forbidden_interaction_dependency
     from: contracts.public
-    to: interaction.selection_move
+    to: interaction.engine
     kind: forbidden_import
     phaseRequiredBy: P6
     status: forbidden
@@ -1379,7 +1379,7 @@ forbiddenEdges:
       - Internal contract seams must not depend on implementation owners.
   - id: contracts.internal_ports.forbidden_interaction_dependency
     from: contracts.internal_ports
-    to: interaction.selection_move
+    to: interaction.engine
     kind: forbidden_import
     phaseRequiredBy: P6
     status: forbidden
@@ -1564,7 +1564,7 @@ sourceCoverage:
       - store.document_kernel
       - selection.kernel
       - frame.renderer
-      - interaction.selection_move
+      - interaction.engine
       - resource.kernel
       - resource.surface_session
       - diagnostics.hub
@@ -1653,17 +1653,17 @@ sourceCoverage:
       - load_document.pipeline.replaces_store_document
       - draw.tools.commit_through_edit_kernel
       - eraser_text.request.commit_through_edit_kernel
-      - interaction.selection_move.emits_user_actions
+      - interaction.engine.emits_user_actions
   - sectionId: section_14_interaction_engine
     disposition: graph_obligation
     graphIds:
-      - interaction.selection_move
+      - interaction.engine
       - draw.tools
       - eraser_text.request
-      - geometry.spatial_index.feeds_interaction
-      - interaction.selection_move.emits_user_actions
-      - draw.tools.publish_preview_through_interaction
-      - eraser_text.request.publish_through_interaction
+      - interaction.engine.queries_spatial_index
+      - interaction.engine.emits_user_actions
+      - draw.tools.produce_preview_intents_for_interaction
+      - eraser_text.request.produce_preview_intents_for_interaction
       - api.canvas_runtime.commands.future_placeholder
       - api.canvas_runtime.context_action_requests.future_placeholder
   - sectionId: section_15_frame_render_contract
@@ -1677,14 +1677,14 @@ sourceCoverage:
     disposition: graph_obligation
     graphIds:
       - geometry.spatial_index
-      - geometry.spatial_index.feeds_interaction
-      - eraser_text.request.query_spatial_geometry
+      - interaction.engine.queries_spatial_index
+      - eraser_text.request.uses_exact_hit_geometry
   - sectionId: section_17_spatial_kernel
     disposition: graph_obligation
     graphIds:
       - geometry.spatial_index
-      - geometry.spatial_index.feeds_interaction
-      - eraser_text.request.query_spatial_geometry
+      - interaction.engine.queries_spatial_index
+      - eraser_text.request.uses_exact_hit_geometry
   - sectionId: section_18_cache_policy
     disposition: graph_obligation
     graphIds:
@@ -1703,7 +1703,7 @@ sourceCoverage:
     graphIds:
       - diagnostics.hub
       - codec.schema_v1.failures.report_to_diagnostics
-      - interaction.selection_move.reliability_events.report_to_diagnostics
+      - interaction.engine.reliability_events.report_to_diagnostics
       - geometry.spatial_index.corrupted_rows.report_to_diagnostics
       - runtime.root.observer_failures.report_to_diagnostics
   - sectionId: section_22_guardrails_machine_checks
@@ -1723,7 +1723,7 @@ sourceCoverage:
       - resource.surface_session.forbidden_api_dependency
       - geometry.spatial_index.forbidden_api_dependency
       - frame.renderer.forbidden_api_dependency
-      - interaction.selection_move.forbidden_api_dependency
+      - interaction.engine.forbidden_api_dependency
       - draw.tools.forbidden_api_dependency
       - eraser_text.request.forbidden_api_dependency
       - flutter.surface.forbidden_api_dependency

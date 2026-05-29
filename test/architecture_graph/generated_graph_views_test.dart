@@ -6,7 +6,7 @@ import '../../tool/architecture_graph/src/actual_graph.dart';
 import '../../tool/architecture_graph/src/architecture_graph.dart';
 import '../../tool/architecture_graph/src/graph_views.dart';
 
-const _selectedArchitectureGraphPhase = 'P6';
+const _selectedArchitectureGraphPhase = 'P7';
 
 void main() {
   group('rendered views', () {
@@ -67,7 +67,7 @@ void _expectCurrentPhaseView(Map<String, String> views) {
   );
   expect(
     views['docs/diagrams/generated/current_phase.mmd'],
-    isNot(contains('resource_kernel')),
+    contains('resource_kernel'),
   );
   expect(
     views['docs/diagrams/generated/current_phase.mmd'],
@@ -90,7 +90,7 @@ void _expectFutureView(Map<String, String> views) {
   );
   expect(
     views['docs/diagrams/generated/future_target.mmd'],
-    contains('resource_kernel'),
+    isNot(contains('resource_kernel')),
   );
   expect(
     views['docs/diagrams/generated/future_target.mmd'],
@@ -98,7 +98,7 @@ void _expectFutureView(Map<String, String> views) {
   );
   expect(
     views['docs/diagrams/generated/future_target.mmd'],
-    contains('invalidates resource session through by P7'),
+    isNot(contains('invalidates resource session through by P7')),
   );
   expect(
     views['docs/diagrams/generated/future_target.mmd'],

@@ -2,6 +2,7 @@
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Full architecture graph
 %% Selected phase: P7
+%% Note: Includes current architecture plus all planned future and measurement-scope graph nodes. Use current_phase.mmd for implemented selected-phase state.
 flowchart LR
   api_camera_port["Public camera port<br/>required by P4"]
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]
@@ -16,7 +17,7 @@ flowchart LR
   flutter_surface["Flutter surface integration<br/>required by P13"]
   frame_renderer["Frame renderer and cache owner<br/>required by P9"]
   geometry_spatial_index["Geometry and spatial index<br/>required by P8"]
-  interaction_selection_move["Selection and move interaction owner<br/>required by P10"]
+  interaction_engine["Interaction engine boundary<br/>required by P10"]
   load_document_pipeline["Load document pipeline<br/>required by P6"]
   resource_kernel["Resource kernel<br/>required by P7"]
   resource_surface_session["Surface resource session<br/>required by P7"]
@@ -33,19 +34,19 @@ flowchart LR
   codec_schema_v1 -->|uses public data by P3| contracts_public
   contracts_internal_ports -->|contract dependency by P6| contracts_public
   draw_tools -->|planned commits through by P11| edit_kernel
-  draw_tools -->|planned publishes preview through by P11| interaction_selection_move
+  draw_tools -->|planned produces preview intents by P11| interaction_engine
   edit_kernel -->|changes data through by P5| store_document_kernel
   eraser_text_request -->|planned commits through by P12| edit_kernel
-  eraser_text_request -->|planned publishes preview through by P12| interaction_selection_move
-  eraser_text_request -->|planned queries hits through by P12| geometry_spatial_index
-  flutter_surface -->|planned is shown through by P13| api_canvas_runtime
+  eraser_text_request -->|planned produces preview intents by P12| interaction_engine
+  eraser_text_request -->|planned uses eraser exact-hit geometry through by P12| geometry_spatial_index
+  flutter_surface -->|planned drives public runtime ports by P13| api_canvas_runtime
   frame_renderer -->|planned resolves resources through by P9| resource_surface_session
   geometry_spatial_index -->|planned reports errors to by P8| diagnostics_hub
-  geometry_spatial_index -->|planned reads data through by P10| interaction_selection_move
-  interaction_selection_move -->|planned action stream boundary by P10| api_canvas_runtime
-  interaction_selection_move -->|planned reports errors to by P10| diagnostics_hub
+  interaction_engine -->|planned emits user actions by P10| api_canvas_runtime
+  interaction_engine -->|planned queries hits through by P10| geometry_spatial_index
+  interaction_engine -->|planned reports errors to by P10| diagnostics_hub
   load_document_pipeline -->|changes data through by P6| store_document_kernel
-  runtime_root -->|planned reads from by P9| frame_renderer
+  runtime_root -->|planned provides FrameFactsPort by P9| frame_renderer
   runtime_root -->|invalidates resource session through by P7| resource_surface_session
   runtime_root -->|planned reports errors to by P14| diagnostics_hub
   runtime_root -->|composition by P7| resource_kernel

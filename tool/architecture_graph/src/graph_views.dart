@@ -13,12 +13,15 @@ const _edgeKindLabels = {
   'mutation_boundary': 'changes data through',
   'query_boundary': 'reads data through',
   'read_port': 'reads from',
+  'frame_facts_provider': 'provides FrameFactsPort',
   'resource_boundary': 'resolves resources through',
   'resource_invalidation': 'invalidates resource session through',
-  'ui_boundary': 'is shown through',
+  'ui_boundary': 'drives public runtime ports',
   'tool_commit': 'commits through',
-  'preview_boundary': 'publishes preview through',
+  'preview_intent_boundary': 'produces preview intents',
   'hit_test_boundary': 'queries hits through',
+  'eraser_exact_hit_boundary': 'uses eraser exact-hit geometry through',
+  'action_stream_boundary': 'emits user actions',
   'verification_scope': 'is verified by',
 };
 
@@ -207,7 +210,11 @@ String _renderExpectedGraphView(_ExpectedViewRequest request) {
       edges: request.edges,
     );
   }
-  final buffer = _header(request.title, request.selectedPhase);
+  final buffer = _header(
+    request.title,
+    request.selectedPhase,
+    note: _expectedViewNote(request.viewId),
+  );
   _writeExpectedNodes(buffer, request.nodes);
   _writeExpectedEdges(buffer, request.nodes, request.edges);
 
@@ -461,13 +468,27 @@ void _writeDiffClassDefs(StringBuffer buffer, List<String> linkStyles) {
   }
 }
 
-StringBuffer _header(String title, String selectedPhase) {
-  return StringBuffer()
+String? _expectedViewNote(String viewId) {
+  return switch (viewId) {
+    'full_architecture' =>
+      'Includes current architecture plus all planned future and measurement-scope graph nodes. Use current_phase.mmd for implemented selected-phase state.',
+    'future_target' =>
+      'Shows future planned edges after the selected phase plus their endpoint nodes for context.',
+    _ => null,
+  };
+}
+
+StringBuffer _header(String title, String selectedPhase, {String? note}) {
+  final buffer = StringBuffer()
     ..writeln('%% GENERATED FILE. Do not edit by hand.')
     ..writeln('%% Source: docs/architecture/architecture_graph.yaml')
     ..writeln('%% View: $title')
-    ..writeln('%% Selected phase: $selectedPhase')
-    ..writeln('flowchart LR');
+    ..writeln('%% Selected phase: $selectedPhase');
+  if (note != null) {
+    buffer.writeln('%% Note: $note');
+  }
+
+  return buffer..writeln('flowchart LR');
 }
 
 String _label(String label, String phaseRequiredBy) {
