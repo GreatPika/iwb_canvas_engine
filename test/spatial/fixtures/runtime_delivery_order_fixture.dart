@@ -11,6 +11,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 void main() {
   _testInitialSpatialRebuild();
   _testEditDeliveryOrder();
+  _testSelectableDeliveryOrder();
   _testLoadDeliveryOrder();
   _testSpatialFailureContainment();
 }
@@ -34,6 +35,18 @@ void _testEditDeliveryOrder() {
     expect(outcome.observerSpatialIds, [
       [CanvasElementId('added')],
     ]);
+    expect(outcome.guardedMutationAttempts, 2);
+    expect(outcome.nestedMutationRan, isFalse);
+  });
+}
+
+void _testSelectableDeliveryOrder() {
+  test('selectable update spatial delivery runs before publication', () {
+    final outcome = _runSelectableDeliveryScenario();
+
+    expect(outcome.events, ['state', 'observer']);
+    expect(outcome.stateSpatialIds, [<CanvasElementId>[]]);
+    expect(outcome.observerSpatialIds, [<CanvasElementId>[]]);
     expect(outcome.guardedMutationAttempts, 2);
     expect(outcome.nestedMutationRan, isFalse);
   });
@@ -87,6 +100,25 @@ _DeliveryOutcome _runEditDeliveryScenario() {
   return recorder.outcome();
 }
 
+_DeliveryOutcome _runSelectableDeliveryScenario() {
+  final recorder = _DeliveryRecorder(_nearOrigin());
+  final root = _runtimeRoot(recorder.observe);
+  recorder.bind(root);
+  root.edits.edit((edit) {
+    expect(
+      edit.updateElement(
+        CanvasRectElementUpdate(
+          id: CanvasElementId('initial'),
+          isSelectable: const CanvasFieldSet(false),
+        ),
+      ),
+      isTrue,
+    );
+  });
+
+  return recorder.outcome();
+}
+
 _DeliveryOutcome _runLoadDeliveryScenario() {
   final recorder = _DeliveryRecorder();
   final root = _runtimeRoot(recorder.observe);
@@ -99,6 +131,9 @@ _DeliveryOutcome _runLoadDeliveryScenario() {
 }
 
 final class _DeliveryRecorder {
+  _DeliveryRecorder([this.queryWindow]);
+
+  final SpatialQueryWindow? queryWindow;
   RuntimeRoot? _root;
   final List<String> events = [];
   final List<List<CanvasElementId>> stateSpatialIds = [];
@@ -114,14 +149,14 @@ final class _DeliveryRecorder {
   void recordState() {
     final root = _boundRoot();
     events.add('state');
-    stateSpatialIds.add(_spatialIds(root, _nearMoved()));
+    stateSpatialIds.add(_spatialIds(root, queryWindow ?? _nearMoved()));
     _expectMutationGuard();
   }
 
   void observe(List<CommitDeliveryEffect> effects) {
     final root = _boundRoot();
     events.add('observer');
-    observerSpatialIds.add(_spatialIds(root, _nearMoved()));
+    observerSpatialIds.add(_spatialIds(root, queryWindow ?? _nearMoved()));
     expect(effects.whereType<SpatialDeliveryEffect>(), hasLength(1));
     _expectMutationGuard();
   }

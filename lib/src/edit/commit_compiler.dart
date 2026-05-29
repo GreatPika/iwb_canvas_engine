@@ -30,6 +30,7 @@ final class CommitCompiler {
     return ElementUpdateCompileResult(
       revisionDelta: delta,
       touchesGeometry: delta.bounds,
+      touchesSpatial: delta.bounds || before.isSelectable != after.isSelectable,
       touchesVisual: delta.elementVisual,
       transformsElement: before.transform != after.transform,
       prunesSelection: _requiresSelectionPrune(before, after),
@@ -41,6 +42,7 @@ final class ElementUpdateCompileResult {
   const ElementUpdateCompileResult({
     required this.revisionDelta,
     required this.touchesGeometry,
+    required this.touchesSpatial,
     required this.touchesVisual,
     required this.transformsElement,
     required this.prunesSelection,
@@ -48,6 +50,7 @@ final class ElementUpdateCompileResult {
 
   final StoreRevisionDelta revisionDelta;
   final bool touchesGeometry;
+  final bool touchesSpatial;
   final bool touchesVisual;
   final bool transformsElement;
   final bool prunesSelection;
@@ -70,13 +73,21 @@ List<CommitEffect> _effectsFor(
 
   return [
     if (revisionDelta.projection) const ProjectionEffect(),
-    if (revisionDelta.bounds) SpatialEffect(touchedSet: touchedSet),
+    if (_needsSpatialEffect(revisionDelta, touchedSet))
+      SpatialEffect(touchedSet: touchedSet),
     if (revisionDelta.resource) ResourceEffect(touchedSet: touchedSet),
     if (_needsMainRepaint(revisionDelta, touchedSet))
       const RepaintEffect(mainCanvas: true),
     if (touchedSet.selection) const SelectionEffect(),
     if (revisionDelta.document) const PublicStateEffect(),
   ];
+}
+
+bool _needsSpatialEffect(
+  StoreRevisionDelta revisionDelta,
+  TouchedSet touchedSet,
+) {
+  return revisionDelta.bounds || touchedSet.geometryElementIds.isNotEmpty;
 }
 
 bool _needsMainRepaint(

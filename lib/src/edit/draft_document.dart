@@ -145,7 +145,7 @@ final class DraftDocument {
       after: updated,
     );
     _touchedSet.touchUpdatedElement(updated.id);
-    if (compiledUpdate.touchesGeometry) {
+    if (compiledUpdate.touchesSpatial) {
       _touchedSet.touchGeometryElement(updated.id);
     }
     if (compiledUpdate.transformsElement) {

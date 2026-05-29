@@ -213,6 +213,7 @@ final _updateTaxonomyCases = [
     _rectElement(isSelectable: false),
     const _ExpectedRevisionDelta.projectionOnly(),
     prunesSelection: true,
+    touchesSpatial: true,
   ),
   _UpdateTaxonomyCase(
     'CanvasElementUpdate.isLocked',
@@ -663,6 +664,11 @@ void _expectTaxonomyCompileResult(
     reason: taxonomyCase.token,
   );
   expect(
+    result.touchesSpatial,
+    taxonomyCase.touchesSpatial || taxonomyCase.expectedDelta.bounds,
+    reason: taxonomyCase.token,
+  );
+  expect(
     result.touchesVisual,
     taxonomyCase.expectedDelta.elementVisual,
     reason: taxonomyCase.token,
@@ -685,9 +691,12 @@ void _expectTaxonomyPlanEffects(
 ) {
   final plan = const CommitCompiler().compile(
     revisionDelta: result.revisionDelta,
-    touchedSet: result.prunesSelection
-        ? TouchedSet(selection: true)
-        : TouchedSet(),
+    touchedSet: TouchedSet(
+      geometryElementIds: result.touchesSpatial
+          ? [taxonomyCase.after.id]
+          : const [],
+      selection: result.prunesSelection,
+    ),
   );
   expect(
     plan.effects.whereType<ProjectionEffect>(),
@@ -696,7 +705,7 @@ void _expectTaxonomyPlanEffects(
   );
   expect(
     plan.effects.whereType<SpatialEffect>(),
-    taxonomyCase.expectedDelta.bounds ? hasLength(1) : isEmpty,
+    result.touchesSpatial ? hasLength(1) : isEmpty,
     reason: taxonomyCase.token,
   );
   expect(
@@ -1406,6 +1415,7 @@ final class _UpdateTaxonomyCase {
     this.expectedDelta, {
     this.transformsElement = false,
     this.prunesSelection = false,
+    this.touchesSpatial = false,
   });
 
   final String token;
@@ -1414,6 +1424,7 @@ final class _UpdateTaxonomyCase {
   final _ExpectedRevisionDelta expectedDelta;
   final bool transformsElement;
   final bool prunesSelection;
+  final bool touchesSpatial;
 }
 
 // Named constructors mirror operation-matrix effect families; keeping the
