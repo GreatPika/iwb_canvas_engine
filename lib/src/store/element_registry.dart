@@ -40,7 +40,6 @@ final class ElementRegistry {
       for (final element in backgroundElementList) element.id,
       ...contentOrder,
     ]);
-
     backgroundElementIds = List<CanvasElementId>.unmodifiable(
       backgroundElementList.map((element) => element.id),
     );
@@ -48,6 +47,10 @@ final class ElementRegistry {
     layerTable = layerRows;
     contentElementOrder = contentOrder;
     frameElementOrder = frameOrder;
+    elementLocationFacts = _elementLocationFacts(
+      backgroundElementList,
+      layerRows,
+    );
     admittedElementIds = Set.unmodifiable(families.admittedElementIds);
     admittedLayerIds = Set.unmodifiable(layerRows.admittedIds);
   }
@@ -57,6 +60,7 @@ final class ElementRegistry {
   late final LayerTable layerTable;
   late final List<CanvasElementId> contentElementOrder;
   late final List<CanvasElementId> frameElementOrder;
+  late final Map<CanvasElementId, ElementLocationFacts> elementLocationFacts;
   late final Set<String> admittedElementIds;
   late final Set<String> admittedLayerIds;
 
@@ -89,4 +93,31 @@ final class ElementRegistry {
         orderToken < frameElementOrder.length &&
         frameElementOrder[orderToken] == id;
   }
+}
+
+Map<CanvasElementId, ElementLocationFacts> _elementLocationFacts(
+  Iterable<CanvasElement> backgroundElements,
+  LayerTable layerTable,
+) {
+  return Map.unmodifiable({
+    for (final element in backgroundElements)
+      element.id: const ElementLocationFacts.background(),
+    for (final layer in layerTable.rows)
+      for (final id in layer.elementIds)
+        id: ElementLocationFacts.content(layer.id),
+  });
+}
+
+enum ElementLocationKind { background, content }
+
+final class ElementLocationFacts {
+  const ElementLocationFacts.background()
+    : kind = ElementLocationKind.background,
+      layerId = null;
+
+  const ElementLocationFacts.content(this.layerId)
+    : kind = ElementLocationKind.content;
+
+  final ElementLocationKind kind;
+  final CanvasLayerId? layerId;
 }

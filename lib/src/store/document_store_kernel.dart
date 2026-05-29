@@ -13,6 +13,7 @@ import '../contracts/public/canvas_metadata.dart';
 import '../contracts/public/canvas_resource.dart';
 import 'committed_document.dart';
 import 'document_projection_cache.dart';
+import 'element_registry.dart';
 import 'family_tables.dart';
 import 'resource_table.dart';
 import 'store_revision_delta.dart';
@@ -108,10 +109,15 @@ final class DocumentStoreKernel {
     if (!_document.elements.frameOrderMatches(handle.orderToken, handle.id)) {
       return null;
     }
+    final location = _document.elements.elementLocationFacts[handle.id];
+    if (location == null) {
+      return null;
+    }
 
     return StoreElementFacts.fromFamilyFacts(
       facts,
       orderToken: handle.orderToken,
+      location: location,
     );
   }
 
@@ -197,6 +203,7 @@ final class StoreElementFacts {
     required this.revision,
     required this.generation,
     required this.orderToken,
+    required this.locationKind,
     required this.transform,
     required this.opacity,
     required this.hitPadding,
@@ -207,6 +214,7 @@ final class StoreElementFacts {
     required this.isTransformable,
     required this.metadata,
     this.resourceId,
+    this.layerId,
     this.size,
     this.naturalSize,
     this.svgPathData,
@@ -239,6 +247,7 @@ final class StoreElementFacts {
   factory StoreElementFacts.fromFamilyFacts(
     FamilyElementFacts facts, {
     required int orderToken,
+    required ElementLocationFacts location,
   }) {
     return StoreElementFacts(
       id: facts.id,
@@ -246,6 +255,10 @@ final class StoreElementFacts {
       revision: facts.revision,
       generation: facts.generation,
       orderToken: orderToken,
+      locationKind: switch (location.kind) {
+        ElementLocationKind.background => StoreElementLocationKind.background,
+        ElementLocationKind.content => StoreElementLocationKind.content,
+      },
       transform: facts.transform,
       opacity: facts.opacity,
       hitPadding: facts.hitPadding,
@@ -256,6 +269,7 @@ final class StoreElementFacts {
       isTransformable: facts.isTransformable,
       metadata: facts.metadata,
       resourceId: facts.resourceId,
+      layerId: location.layerId,
       size: facts.size,
       naturalSize: facts.naturalSize,
       svgPathData: facts.svgPathData,
@@ -287,6 +301,7 @@ final class StoreElementFacts {
   final int revision;
   final int generation;
   final int orderToken;
+  final StoreElementLocationKind locationKind;
   final CanvasTransform transform;
   final double opacity;
   final double hitPadding;
@@ -297,6 +312,7 @@ final class StoreElementFacts {
   final bool isTransformable;
   final CanvasMetadata metadata;
   final CanvasResourceId? resourceId;
+  final CanvasLayerId? layerId;
   final Size? size;
   final Size? naturalSize;
   final String? svgPathData;
@@ -321,6 +337,8 @@ final class StoreElementFacts {
   final Color? color;
   final double? thickness;
 }
+
+enum StoreElementLocationKind { background, content }
 
 final class _IdAdmission {
   _IdAdmission({required this.prefix, required Iterable<String> admittedIds})

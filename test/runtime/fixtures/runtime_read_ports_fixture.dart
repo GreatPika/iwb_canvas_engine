@@ -148,6 +148,7 @@ void _verifyConstructedFrameFactsAreImmutable() {
     revision: 0,
     generation: 0,
     orderToken: 0,
+    locationKind: FrameElementLocationKind.content,
     transform: CanvasTransform.identity,
     opacity: 1,
     hitPadding: 0,

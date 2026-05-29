@@ -39,6 +39,8 @@ final class FrameElementHandle {
   final int orderToken;
 }
 
+enum FrameElementLocationKind { background, content }
+
 final class FrameElementFacts {
   FrameElementFacts({
     required this.id,
@@ -46,6 +48,7 @@ final class FrameElementFacts {
     required this.revision,
     required this.generation,
     required this.orderToken,
+    required this.locationKind,
     required this.transform,
     required this.opacity,
     required this.hitPadding,
@@ -56,6 +59,7 @@ final class FrameElementFacts {
     required this.isTransformable,
     required this.metadata,
     this.resourceId,
+    this.layerId,
     this.size,
     this.naturalSize,
     this.svgPathData,
@@ -86,6 +90,7 @@ final class FrameElementFacts {
   final int revision;
   final int generation;
   final int orderToken;
+  final FrameElementLocationKind locationKind;
   final CanvasTransform transform;
   final double opacity;
   final double hitPadding;
@@ -96,6 +101,7 @@ final class FrameElementFacts {
   final bool isTransformable;
   final CanvasMetadata metadata;
   final CanvasResourceId? resourceId;
+  final CanvasLayerId? layerId;
   final Size? size;
   final Size? naturalSize;
   final String? svgPathData;

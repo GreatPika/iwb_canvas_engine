@@ -249,6 +249,11 @@ final class RuntimeRoot
       revision: facts.revision,
       generation: facts.generation,
       orderToken: facts.orderToken,
+      locationKind: switch (facts.locationKind) {
+        StoreElementLocationKind.background =>
+          FrameElementLocationKind.background,
+        StoreElementLocationKind.content => FrameElementLocationKind.content,
+      },
       transform: facts.transform,
       opacity: facts.opacity,
       hitPadding: facts.hitPadding,
@@ -259,6 +264,7 @@ final class RuntimeRoot
       isTransformable: facts.isTransformable,
       metadata: facts.metadata,
       resourceId: facts.resourceId,
+      layerId: facts.layerId,
       size: facts.size,
       naturalSize: facts.naturalSize,
       svgPathData: facts.svgPathData,
