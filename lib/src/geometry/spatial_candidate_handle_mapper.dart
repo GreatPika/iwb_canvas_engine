@@ -10,12 +10,17 @@ final class SpatialCandidateHandleMapper {
   }
 
   FrameElementHandle call(FrameElementHandle handle) {
-    if (handle.structuralRevision == _structuralRevision) {
-      return handle;
-    }
     final current = _frame?.elementHandleForId(_structuralRevision, handle.id);
     if (current == null) {
       throw StateError('missing spatial query handle: ${handle.id.value}');
+    }
+    if (handle.structuralRevision == _structuralRevision) {
+      if (handle.generation != current.generation ||
+          handle.orderToken != current.orderToken) {
+        throw StateError('stale spatial query handle: ${handle.id.value}');
+      }
+
+      return handle;
     }
 
     return current;

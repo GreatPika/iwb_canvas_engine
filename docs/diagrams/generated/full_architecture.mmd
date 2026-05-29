@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Full architecture graph
-%% Selected phase: P7
+%% Selected phase: P8
 %% Note: Includes current architecture plus all planned future and measurement-scope graph nodes. Use current_phase.mmd for implemented selected-phase state.
 flowchart LR
   api_camera_port["Public camera port<br/>required by P4"]
@@ -46,6 +46,7 @@ flowchart LR
   interaction_engine -->|planned queries hits through by P10| geometry_spatial_index
   interaction_engine -->|planned reports errors to by P10| diagnostics_hub
   load_document_pipeline -->|changes data through by P6| store_document_kernel
+  runtime_root -->|owns and creates by P8| geometry_spatial_index
   runtime_root -->|planned provides FrameFactsPort by P9| frame_renderer
   runtime_root -->|invalidates resource session through by P7| resource_surface_session
   runtime_root -->|planned reports errors to by P14| diagnostics_hub

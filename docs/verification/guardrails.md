@@ -204,7 +204,7 @@ Mandatory guardrails:
 | `interaction.pointer_cleanup_coordinator_only` | cleanup-capable tool machines return typed cleanup requests to `InteractionEngine`, `InteractionEngine` is the only caller of `PointerToolCleanupCoordinator`, and no tool machine owns shared preview/session cleanup policy, cleanup-effect publication, or direct coordinator calls |
 | `interaction.text_edit_stale_commit_guard` | request-originated text commits accept only current text content-target context requests, treat unknown/already-retired ids as no-ops, privately retire known live rejected epoch-stale, generation-stale, revision-stale, missing, empty-canvas, non-text, or family-mismatched targets without public effects, and allow unrelated documentRevision changes |
 | `geometry.no_legacy_scene_order` | geometry and hit-test policy does not reuse legacy SceneNode traversal or legacy scene order logic |
-| `geometry.eraser_exact_budget_no_partial` | eraser exact-check budget exceeded paths produce corridor-only preview or terminal no-op cleanup, never partial erase |
+| `geometry.eraser_exact_budget_no_partial` | P8 eraser primitive and exact-check budget inputs cannot produce partial-erasure paths; terminal cleanup/no-op commit enforcement remains owned by P12 |
 | `spatial.no_full_clone_ordinary_edit` | ordinary spatial updates touch only changed ids/pages; full rebuild is reserved for replacement/load paths |
 | `spatial.stale_candidate_rejected` | stale candidate handles are rejected by generation and structuralRevision checks before frame/hit use |
 | `spatial.fallback_budget_enforced` | fallback candidate union enforces maxFallbackCandidates, non-hub budget counter, and typed budget-exceeded result |

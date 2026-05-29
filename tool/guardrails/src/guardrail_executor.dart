@@ -1,12 +1,10 @@
 import 'dart:io';
 
 import 'core_boundary_checks.dart';
+import 'geometry_spatial_guardrail_checks.dart';
 import 'guardrail_violation.dart';
 import 'owner_dag_import_checks.dart';
-import 'public_api_checks.dart';
-import 'public_api_contract_checks.dart';
-import 'public_api_declaration_checks.dart';
-import 'public_api_import_cycle_checks.dart';
+import 'public_api_guardrail_checks.dart';
 import 'selection_boundary_checks.dart';
 import 'store_projection_checks.dart';
 
@@ -258,6 +256,21 @@ const _testProofPaths = {
   'resources.resolver_reentrancy_rejected': [
     'test/resources/resolver_reentrancy_rejected_test.dart',
   ],
+  geometryNoLegacySceneOrderGuardrailId: [
+    'test/guardrails/geometry_no_legacy_scene_order_guardrail_test.dart',
+  ],
+  geometryEraserExactBudgetGuardrailId: [
+    'test/guardrails/geometry_eraser_exact_budget_inputs_guardrail_test.dart',
+  ],
+  spatialNoFullCloneGuardrailId: [
+    'test/guardrails/spatial_no_full_clone_ordinary_edit_guardrail_test.dart',
+  ],
+  spatialStaleCandidateGuardrailId: [
+    'test/guardrails/spatial_stale_candidate_rejected_guardrail_test.dart',
+  ],
+  spatialFallbackBudgetGuardrailId: [
+    'test/guardrails/spatial_fallback_budget_enforced_guardrail_test.dart',
+  ],
 };
 
 final Map<String, GuardrailViolationRunner> _violationChecks = {
@@ -277,6 +290,11 @@ final Map<String, GuardrailViolationRunner> _violationChecks = {
   'selection.owner_separate_from_document': checkSelectionOwnerSeparation,
   ownerDagGuardrailId: checkOwnerDagImportBoundaries,
   'resources.resolver_boundary_owned_by_surface_session': checkCoreBoundaries,
+  geometryNoLegacySceneOrderGuardrailId: checkNoLegacySceneOrder,
+  geometryEraserExactBudgetGuardrailId: checkGeometryEraserExactBudgetInputs,
+  spatialNoFullCloneGuardrailId: checkSpatialNoFullCloneOrdinaryEdit,
+  spatialStaleCandidateGuardrailId: checkSpatialStaleCandidateRejected,
+  spatialFallbackBudgetGuardrailId: checkSpatialFallbackBudgetEnforced,
 };
 
 const _structuralDescriptions = {
@@ -301,6 +319,16 @@ const _structuralDescriptions = {
   ownerDagGuardrailId: 'owner DAG import/export boundary check',
   'resources.resolver_boundary_owned_by_surface_session':
       'resource resolver ownership and import-boundary checks',
+  geometryNoLegacySceneOrderGuardrailId:
+      'geometry/spatial committed order-token structural check',
+  geometryEraserExactBudgetGuardrailId:
+      'P8 eraser primitive and exact-check budget-input check',
+  spatialNoFullCloneGuardrailId:
+      'ordinary spatial update full-frame enumeration check',
+  spatialStaleCandidateGuardrailId:
+      'spatial stale candidate typed-result and handle-remap check',
+  spatialFallbackBudgetGuardrailId:
+      'spatial fallback budget no-partial result check',
 };
 
 const _coreBoundaryIds = {

@@ -6,6 +6,7 @@ flowchart LR
   subgraph Spatial["SpatialKernel"]
     QueryBoundary["Spatial query boundary\nread-only hot path"]
     RevisionGate["Revision and generation gate\nstructuralRevision + candidate generation"]
+    StaleCandidate["Typed stale-candidate result\nno frame/hit use"]
     TileBudget["Tile budget gate\nmax query tiles = 50000"]
     TileUnion["Tile and outlier union\nbounded candidate ids"]
     CandidateBudget["Candidate budget gate\nmaxFallbackCandidates = 4096"]
@@ -20,7 +21,7 @@ flowchart LR
   QueryCaller -->|"query hit or paint candidates"| QueryBoundary
   QueryBoundary -->|"captured revision facts"| RevisionGate
   RevisionGate -->|"revision/generation accepted"| TileBudget
-  RevisionGate -.->|"stale revision or generation"| BudgetExceeded
+  RevisionGate -.->|"stale revision or generation"| StaleCandidate
   TileBudget -->|"query tiles <= 50000"| TileUnion
   TileBudget -.->|"query tiles > 50000\nfallback candidate union"| CandidateBudget
   TileUnion -->|"candidate ids + outliers"| CandidateBudget
@@ -30,6 +31,8 @@ flowchart LR
   BudgetExceeded -.->|"increment non-hub budget counter"| BudgetCounter
   BudgetExceeded -.->|"defer rebuild/retry\noutside pointer/paint hot path"| RuntimeRoot
   TypedResult -->|"candidate handles with revision/generation"| QueryCaller
+  StaleCandidate -.->|"reject before frame or hit use"| QueryCaller
 
   BudgetExceeded -.->|"forbidden"| TypedResult
+  StaleCandidate -.->|"forbidden partial candidates"| TypedResult
   InvalidIndex -.->|"forbidden full-scene scan"| TypedResult

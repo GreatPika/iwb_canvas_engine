@@ -13,6 +13,7 @@ sequenceDiagram
   participant CC as CommitCompiler
   participant Applier as CommitApplier
   participant Effects as CommitEffects
+  participant Spatial as SpatialKernel
   participant Frame as FrameEngine
   participant Events as EventBuffer
   participant Runtime as RuntimeRoot
@@ -61,10 +62,13 @@ sequenceDiagram
 
   Applier->>Events: commit buffered internal effects
   Applier->>Effects: publish typed post-install effects
+  Runtime->>Spatial: apply SpatialDeliveryEffect before public state publication
+  Note over Runtime,Spatial: Spatial updates or invalidation are failure-contained after the commit boundary and before state listeners or CommitEffectObserver callbacks.
   Effects->>Frame: dispatch repaint intent through runtime/applier boundary
   EK->>Handle: close session and mark handle stale
   Note over Handle: Any operation after callback throws StateError.
   Runtime->>Signals: publish one CanvasRuntimeState after atomic install
+  Runtime->>Signals: forward CommitEffectObserver effects after spatial delivery
   Frame->>Signals: publish repaint notifications
   EK-->>API: return callback result
   API-->>Caller: callback result

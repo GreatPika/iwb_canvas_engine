@@ -184,4 +184,29 @@ const _blockingEntries = [
     id: 'resources.resolver_reentrancy_rejected',
     suites: {'blocking', 'resources'},
   ),
+  GuardrailEntry(
+    id: 'geometry.no_legacy_scene_order',
+    suites: {'blocking', 'geometry'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
+    id: 'geometry.eraser_exact_budget_no_partial',
+    suites: {'blocking', 'geometry'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
+    id: 'spatial.no_full_clone_ordinary_edit',
+    suites: {'blocking', 'spatial'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
+    id: 'spatial.stale_candidate_rejected',
+    suites: {'blocking', 'spatial'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
+    id: 'spatial.fallback_budget_enforced',
+    suites: {'blocking', 'spatial'},
+    requiresRunnerStructuralProof: true,
+  ),
 ];

@@ -241,6 +241,13 @@ const _bridgeFixtures = [
     targetPath: 'lib/src/codec/schema_v1_decoder.dart',
     directiveKind: 'import',
   ),
+  _OwnerDagFixture(
+    sourceOwner: 'runtime',
+    targetOwner: 'spatial',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/geometry/spatial_kernel.dart',
+    directiveKind: 'import',
+  ),
 ];
 
 const _expectedAllowedOwnerEdges = [
@@ -280,6 +287,12 @@ const _expectedAllowedOwnerEdges = [
     targetOwner: 'contracts/internal',
   ),
   _ExpectedAllowedOwnerEdge(sourceOwner: 'runtime', targetOwner: 'edit'),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'spatial',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/geometry/spatial_kernel.dart',
+  ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'runtime',
     targetOwner: 'resources',
@@ -403,7 +416,7 @@ const _ownerFixtureTargets = {
   'resources': 'lib/src/resources/resource_kernel.dart',
   'frame': 'lib/src/frame/frame_renderer.dart',
   'interaction': 'lib/src/interaction/interaction_engine.dart',
-  'spatial': 'lib/src/geometry/spatial_index.dart',
+  'spatial': 'lib/src/geometry/spatial_kernel.dart',
   'tools': 'lib/src/tools/draw_tool_kernel.dart',
   'surface': 'lib/src/surface/flutter_surface.dart',
 };
@@ -422,6 +435,7 @@ const _requiredForbiddenEdges = [
   _RequiredForbiddenEdge(source: 'api', target: 'tools'),
   _RequiredForbiddenEdge(source: 'api', target: 'surface'),
   _RequiredForbiddenEdge(source: 'runtime', target: 'api'),
+  _RequiredForbiddenEdge(source: 'runtime', target: 'spatial'),
   _RequiredForbiddenEdge(source: 'edit', target: 'api'),
   _RequiredForbiddenEdge(source: 'store', target: 'api'),
   _RequiredForbiddenEdge(source: 'selection', target: 'runtime'),

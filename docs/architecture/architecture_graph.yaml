@@ -383,16 +383,18 @@ nodes:
     owner: spatial
     phaseIntroduced: P8
     phaseRequiredBy: P8
-    status: future
+    status: required
     coverageScope: architectureOwners
     sourceDocs:
       - path: docs/implementation/p8_geometry_and_spatial.md
       - path: docs/contracts/spatial_kernel.md
     evidence:
-      - Spatial query ownership becomes required in P8.
+      - SpatialKernel owns derived spatial state, tile/outlier membership, typed budget results, and stale candidate rejection without becoming committed scene truth.
     actual:
       declarations:
         - SpatialKernel
+        - TileIndex
+        - OutlierIndex
   - id: frame.renderer
     label: Frame renderer and cache owner
     kind: frame_owner
@@ -580,6 +582,23 @@ edges:
     actual:
       compositionFields:
         - SelectionKernel
+  - id: runtime.root.composes_spatial_kernel
+    from: runtime.root
+    to: geometry.spatial_index
+    kind: composes
+    phaseRequiredBy: P8
+    status: required
+    sourceDocs:
+      - path: docs/implementation/p8_geometry_and_spatial.md
+      - path: docs/contracts/spatial_kernel.md
+      - path: docs/architecture/01_runtime_ownership.md
+    evidence:
+      - RuntimeRoot composes SpatialKernel and applies spatial delivery before public runtime-state publication or commit-effect observer callbacks.
+    actual:
+      imports:
+        - lib/src/geometry/spatial_kernel.dart
+      compositionFields:
+        - SpatialKernel
   - id: runtime.root.exposes_frame_facts
     from: runtime.root
     to: frame.renderer
@@ -1572,6 +1591,7 @@ sourceCoverage:
       - runtime.root.owns_store
       - runtime.root.owns_selection
       - runtime.root.owns_resource_kernel
+      - runtime.root.composes_spatial_kernel
       - runtime.root.exposes_frame_facts
       - api.canvas_runtime.camera.routes_to_runtime_view_camera
       - runtime.canvas_runtime.camera.closed_phase_placeholder
@@ -1679,12 +1699,14 @@ sourceCoverage:
       - geometry.spatial_index
       - interaction.engine.queries_spatial_index
       - eraser_text.request.uses_exact_hit_geometry
+      - runtime.root.composes_spatial_kernel
   - sectionId: section_17_spatial_kernel
     disposition: graph_obligation
     graphIds:
       - geometry.spatial_index
       - interaction.engine.queries_spatial_index
       - eraser_text.request.uses_exact_hit_geometry
+      - runtime.root.composes_spatial_kernel
   - sectionId: section_18_cache_policy
     disposition: graph_obligation
     graphIds:

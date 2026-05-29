@@ -3,21 +3,23 @@ sequenceDiagram
   autonumber
 
   participant Applier as CommitApplier
-  participant ReadPort as Typed spatial read port
+  participant Runtime as RuntimeRoot
+  participant ReadPort as FrameFactsPort
   participant Spatial as SpatialKernel
   participant Membership as SpatialMembership
   participant HitIndex as Hit TileIndex and OutlierIndex
   participant PaintIndex as Paint TileIndex and OutlierIndex
   participant SpatialCounters as Spatial non-hub counters
-  participant Runtime as RuntimeRoot
+  participant Signals as Public state/effects
 
-  Applier->>Spatial: applyTouchedSpatialUpdate(touched ids, captured revisions)
+  Applier-->>Runtime: CommitDeliveryResult with SpatialDeliveryEffect(TouchedSet)
+  Runtime->>Spatial: applyTouched(FrameFactsPort, touched ids)
   Spatial->>Spatial: compile SpatialDelta from touched added/removed/geometry/transform ids
   Note over Spatial: Ordinary edit scope contains touched ids only. Full spatial clone for ordinary edit is forbidden.
 
   Spatial->>Membership: read previous membership for touched ids
   Membership-->>Spatial: previous hit and paint tile/outlier membership
-  Note over Spatial,ReadPort: Spatial reads committed bounds through a typed read port only, not concrete store tables.
+  Note over Spatial,ReadPort: Spatial reads committed bounds through FrameFactsPort only, not concrete store tables.
   Spatial->>ReadPort: read new committed bounds and generation for added/geometry/transform ids
   ReadPort-->>Spatial: current hitBoundsWorld, paintBoundsWorld, generation, orderToken, structuralRevision
 
@@ -31,20 +33,20 @@ sequenceDiagram
     Spatial->>HitIndex: apply prepared additions for added/geometry/transform ids
     Spatial->>PaintIndex: apply prepared additions for added/geometry/transform ids
     Spatial->>Membership: replace/remove entriesById for touched ids
-    Spatial-->>Applier: touched spatial update committed
-    Note over Spatial,Applier: Atomic apply publishes only complete touched-id membership changes.
+    Spatial-->>Runtime: touched spatial update committed
+    Note over Spatial,Runtime: Atomic apply publishes only complete touched-id membership changes.
   else stale id, generation, structuralRevision, or membership validation fails
     Spatial->>Spatial: discard prepared delta without applying partial removals/additions
     Spatial->>Spatial: mark spatial index invalid
     Spatial->>SpatialCounters: increment invalid-index counter; not a DiagnosticsHub write
-    Spatial-->>Applier: typed invalid-index result
-    Applier->>Runtime: request rebuild or retry outside hot pointer/paint path
+    Spatial-->>Runtime: typed invalid-index result
+    Runtime->>Runtime: request rebuild or retry outside hot pointer/paint path
     Note over Spatial,Runtime: Until rebuild, invalid index behavior is bounded fallback or typed budget-exceeded only, and silent full-scene scan is forbidden.
     Note over HitIndex,PaintIndex: No partial index mutation is accepted from a stale delta.
   end
 
   opt document replacement edit or clearContent empty reset
-    Applier->>Spatial: rebuild/reset spatial index from committed tables
+    Runtime->>Spatial: rebuild/reset spatial index from committed tables
     Note over Spatial: Full rebuild/reset is reserved for replacement/load or operation-matrix empty reset paths, not ordinary touched edits.
   end
 
@@ -52,3 +54,6 @@ sequenceDiagram
     Runtime->>Spatial: rebuild full spatial index from replacement tables
     Note over Spatial,Runtime: Load rebuild is a RuntimeRoot post-install effect, not an ordinary touched update.
   end
+
+  Runtime->>Signals: publish CanvasRuntimeState after spatial delivery
+  Runtime->>Signals: forward CommitEffectObserver effects after spatial delivery

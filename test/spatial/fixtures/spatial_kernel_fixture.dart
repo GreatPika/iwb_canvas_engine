@@ -66,11 +66,11 @@ void _testStructuralElementChangesTouchedUpdate() {
     final replaced = _sameIdReplacementTouchedOutcome();
 
     expect(changed.elementHandlesCalls, 0);
-    expect(changed.elementHandleForIdCalls, 2);
+    expect(changed.elementHandleForIdCalls, 3);
     expect(changed.candidateRevisions, {1});
     expect(changed.movedIds, [CanvasElementId('c')]);
     expect(replaced.elementHandlesCalls, 0);
-    expect(replaced.elementHandleForIdCalls, 1);
+    expect(replaced.elementHandleForIdCalls, 2);
     expect(replaced.originIds, isEmpty);
     expect(replaced.movedIds, [CanvasElementId('a')]);
   });

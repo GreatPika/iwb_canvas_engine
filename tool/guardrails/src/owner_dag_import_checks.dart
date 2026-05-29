@@ -353,6 +353,12 @@ const ownerDagAllowedEdges = [
   OwnerEdge(source: runtimeOwner, target: editOwner),
   OwnerEdge(
     source: runtimeOwner,
+    target: spatialOwner,
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/geometry/spatial_kernel.dart',
+  ),
+  OwnerEdge(
+    source: runtimeOwner,
     target: resourcesOwner,
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/resources/resource_kernel.dart',

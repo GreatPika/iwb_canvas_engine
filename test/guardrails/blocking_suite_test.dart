@@ -275,4 +275,48 @@ const _runnerStructuralScanCases = [
     ],
     violationPath: 'lib/src/runtime/bad_runner_selection.dart',
   ),
+  _StructuralScanCase(
+    id: 'resources.resolver_boundary_owned_by_surface_session',
+    proofPaths: [
+      'test/guardrails/import_boundaries_test.dart',
+      'test/contracts/internal_seam_shape_test.dart',
+      'test/resources/resource_resolver_adapter_shape_test.dart',
+    ],
+    violationPath: 'lib/src/frame/bad_runner_resolver_boundary.dart',
+  ),
+  _StructuralScanCase(
+    id: 'geometry.no_legacy_scene_order',
+    proofPaths: [
+      'test/guardrails/geometry_no_legacy_scene_order_guardrail_test.dart',
+    ],
+    violationPath: 'lib/src/geometry/bad_runner_scene_order.dart',
+  ),
+  _StructuralScanCase(
+    id: 'geometry.eraser_exact_budget_no_partial',
+    proofPaths: [
+      'test/guardrails/geometry_eraser_exact_budget_inputs_guardrail_test.dart',
+    ],
+    violationPath: 'lib/src/geometry/bad_runner_eraser_budget.dart',
+  ),
+  _StructuralScanCase(
+    id: 'spatial.no_full_clone_ordinary_edit',
+    proofPaths: [
+      'test/guardrails/spatial_no_full_clone_ordinary_edit_guardrail_test.dart',
+    ],
+    violationPath: 'lib/src/geometry/bad_runner_full_clone.dart',
+  ),
+  _StructuralScanCase(
+    id: 'spatial.stale_candidate_rejected',
+    proofPaths: [
+      'test/guardrails/spatial_stale_candidate_rejected_guardrail_test.dart',
+    ],
+    violationPath: 'lib/src/geometry/bad_runner_stale_candidate.dart',
+  ),
+  _StructuralScanCase(
+    id: 'spatial.fallback_budget_enforced',
+    proofPaths: [
+      'test/guardrails/spatial_fallback_budget_enforced_guardrail_test.dart',
+    ],
+    violationPath: 'lib/src/geometry/bad_runner_fallback_budget.dart',
+  ),
 ];
