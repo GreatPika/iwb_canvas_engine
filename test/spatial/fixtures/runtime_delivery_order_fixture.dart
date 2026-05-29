@@ -96,9 +96,13 @@ void _testSpatialFailureContainment() {
       );
 
       expect(root.readDocument().layers.single.elements, hasLength(2));
+      expect(root.spatialKernel.snapshot.isInvalid, isTrue);
       final result = root.spatialKernel.queryHit(_nearOrigin());
-      expect(result, isA<SpatialInvalidIndexResult>());
-      expect(result.candidates, isEmpty);
+      expect(result, isA<SpatialCandidatesResult>());
+      expect(result.candidates.map((handle) => handle.id), [
+        CanvasElementId('accepted'),
+        CanvasElementId('initial'),
+      ]);
     },
   );
 }

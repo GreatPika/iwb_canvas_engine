@@ -11,13 +11,13 @@ import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
 import 'package:iwb_canvas_engine/src/geometry/tile_index.dart';
 
 void main() {
-  _testTileBudgetResult();
+  _testTileBudgetFallback();
   _testFallbackCandidateBudget();
   _testOrdinaryTileQueryDoesNotUseFallback();
 }
 
-void _testTileBudgetResult() {
-  test('query tile budget returns no partial candidates', () {
+void _testTileBudgetFallback() {
+  test('query tile budget uses bounded fallback candidates', () {
     final counters = SpatialBudgetCounters();
     final fallback = _CountingHandles(1);
     final result = TileIndex().query(
@@ -25,15 +25,13 @@ void _testTileBudgetResult() {
       TileQueryContext(counters: counters, fallbackCandidates: fallback),
     );
 
-    expect(result, isA<SpatialBudgetExceededResult>());
-    final budget = result as SpatialBudgetExceededResult;
-    expect(budget.reason, SpatialBudgetExceededReason.queryTileBudgetExceeded);
-    expect(budget.budget, kCanvasMaxQueryCells);
-    expect(budget.observed, greaterThan(kCanvasMaxQueryCells));
-    expect(budget.candidates, isEmpty);
+    expect(result, isA<SpatialCandidatesResult>());
+    expect(result.candidates.map((handle) => handle.id), [
+      CanvasElementId('fallback-0'),
+    ]);
     expect(counters.queryTileBudgetExceededCount, 1);
     expect(counters.fallbackCandidateBudgetExceededCount, 0);
-    expect(fallback.visited, 0);
+    expect(fallback.visited, 1);
   });
 }
 
@@ -42,8 +40,8 @@ void _testFallbackCandidateBudget() {
     final counters = SpatialBudgetCounters();
     final fallback = _CountingHandles(kCanvasMaxFallbackCandidates + 10);
     final result = TileIndex().query(
-      _ordinaryWindow(),
-      TileQueryContext(counters: counters, outlierCandidates: fallback),
+      _overBudgetWindow(),
+      TileQueryContext(counters: counters, fallbackCandidates: fallback),
     );
 
     expect(result, isA<SpatialBudgetExceededResult>());
@@ -53,9 +51,9 @@ void _testFallbackCandidateBudget() {
       SpatialBudgetExceededReason.fallbackCandidateBudgetExceeded,
     );
     expect(budget.candidates, isEmpty);
-    expect(counters.queryTileBudgetExceededCount, 0);
+    expect(counters.queryTileBudgetExceededCount, 1);
     expect(counters.fallbackCandidateBudgetExceededCount, 1);
-    expect(fallback.visited, fallback.count);
+    expect(fallback.visited, kCanvasMaxFallbackCandidates + 1);
   });
 }
 
@@ -98,13 +96,6 @@ SpatialQueryWindow _overBudgetWindow() {
       kCanvasSpatialCellSize * 225,
       kCanvasSpatialCellSize * 225,
     ),
-    structuralRevision: 1,
-  );
-}
-
-SpatialQueryWindow _ordinaryWindow() {
-  return const SpatialQueryWindow(
-    boundsWorld: Rect.fromLTRB(0, 0, 100, 100),
     structuralRevision: 1,
   );
 }

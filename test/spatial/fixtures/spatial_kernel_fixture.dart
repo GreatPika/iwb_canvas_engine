@@ -168,7 +168,7 @@ void _testStaleCandidatesRejected() {
     expect(kernel.snapshot.isInvalid, isTrue);
     expect(
       kernel.queryHit(_windowNearOrigin(0)),
-      isA<SpatialInvalidIndexResult>(),
+      isA<SpatialCandidatesResult>(),
     );
 
     _expectOrderTokenMismatchRejected();
@@ -194,9 +194,12 @@ void _testFailedUpdatePreservesEntries() {
       );
 
       expect(kernel.snapshot.entryCount, before.entryCount);
-      final invalid = kernel.queryPaint(_windowNearOrigin(0));
-      expect(invalid, isA<SpatialInvalidIndexResult>());
-      expect(invalid.candidates, isEmpty);
+      final fallback = kernel.queryPaint(_windowNearOrigin(0));
+      expect(fallback, isA<SpatialCandidatesResult>());
+      expect(fallback.candidates.map((handle) => handle.id), [
+        CanvasElementId('b'),
+        CanvasElementId('a'),
+      ]);
       expect(kernel.budgetCounters.invalidIndexProbeCount, 1);
     },
   );
@@ -214,10 +217,11 @@ void _testMissingTouchedHandleRejected() {
 
     expect(kernel.snapshot.entryCount, 2);
     expect(kernel.snapshot.isInvalid, isTrue);
-    expect(
-      kernel.queryHit(_windowNearOrigin(0)),
-      isA<SpatialInvalidIndexResult>(),
-    );
+    final fallback = kernel.queryHit(_windowNearOrigin(0));
+    expect(fallback, isA<SpatialCandidatesResult>());
+    expect(fallback.candidates.map((handle) => handle.id), [
+      CanvasElementId('b'),
+    ]);
   });
 }
 

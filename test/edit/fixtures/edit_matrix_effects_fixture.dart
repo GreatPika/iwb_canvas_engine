@@ -271,9 +271,9 @@ final _updateTaxonomyCases = [
   ),
   _UpdateTaxonomyCase(
     'CanvasPathElementUpdate.strokeColor',
-    _pathElement(),
-    _pathElement(strokeColor: const Color(0xFF00FF00)),
-    const _ExpectedRevisionDelta.elementVisual(),
+    _pathElement(strokeWidth: 2),
+    _pathElement(strokeColor: const Color(0xFF00FF00), strokeWidth: 2),
+    const _ExpectedRevisionDelta.elementBounds(),
   ),
   _UpdateTaxonomyCase(
     'CanvasPathElementUpdate.strokeWidth',
@@ -415,9 +415,9 @@ final _updateTaxonomyCases = [
   ),
   _UpdateTaxonomyCase(
     'CanvasRectElementUpdate.strokeColor',
-    _rectElement(),
-    _rectElement(strokeColor: const Color(0xFF00FF00)),
-    const _ExpectedRevisionDelta.elementVisual(),
+    _rectElement(strokeWidth: 2),
+    _rectElement(strokeColor: const Color(0xFF00FF00), strokeWidth: 2),
+    const _ExpectedRevisionDelta.elementBounds(),
   ),
 ];
 

@@ -1,3 +1,4 @@
+import '../contracts/internal/frame_facts_port.dart';
 import 'spatial_budget_counters.dart';
 import 'spatial_query_port.dart';
 import 'spatial_query_result.dart';
@@ -39,7 +40,7 @@ final class SpatialKernelQueryState {
         );
       }
 
-      return SpatialInvalidIndexResult(reason: invalidReason);
+      return _invalidFallbackResult(context, invalidReason);
     }
     if (context.window.structuralRevision != structuralRevision) {
       return SpatialStaleCandidateResult(
@@ -66,16 +67,40 @@ final class SpatialKernelQueryState {
   }
 }
 
+SpatialQueryResult _invalidFallbackResult(
+  SpatialKernelQueryContext context,
+  SpatialInvalidIndexReason invalidReason,
+) {
+  final candidates = <FrameElementHandle>[];
+  for (final handle in context.fallbackCandidates) {
+    try {
+      candidates.add(context.candidateMapper(handle));
+    } on Object {
+      continue;
+    }
+  }
+  if (candidates.isEmpty) {
+    return SpatialInvalidIndexResult(reason: invalidReason);
+  }
+  candidates.sort((left, right) => right.orderToken.compareTo(left.orderToken));
+
+  return SpatialCandidatesResult(
+    orderedCandidates: List.unmodifiable(candidates),
+  );
+}
+
 final class SpatialKernelQueryContext {
   const SpatialKernelQueryContext({
     required this.window,
     required this.indexedEntryCount,
+    required this.fallbackCandidates,
     required this.candidateMapper,
     required this.query,
   });
 
   final SpatialQueryWindow window;
   final int indexedEntryCount;
+  final Iterable<FrameElementHandle> fallbackCandidates;
   final CandidateHandleMapper candidateMapper;
   final SpatialIndexQuery query;
 }

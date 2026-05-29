@@ -182,9 +182,20 @@ StoreRevisionDelta _pathUpdateDelta(
     delta = delta.merge(const StoreRevisionDelta.elementBounds());
   }
   if (before.fillColor != after.fillColor ||
-      before.strokeColor != after.strokeColor ||
       before.fillRule != after.fillRule) {
     delta = delta.merge(const StoreRevisionDelta.elementVisual());
+  }
+  if (before.strokeColor != after.strokeColor) {
+    delta = delta.merge(
+      _strokePaintedBoundsChanged(
+            before.strokeColor,
+            before.strokeWidth,
+            after.strokeColor,
+            after.strokeWidth,
+          )
+          ? const StoreRevisionDelta.elementBounds()
+          : const StoreRevisionDelta.elementVisual(),
+    );
   }
 
   return delta;
@@ -256,12 +267,37 @@ StoreRevisionDelta _rectUpdateDelta(
   if (before.size != after.size || before.strokeWidth != after.strokeWidth) {
     delta = delta.merge(const StoreRevisionDelta.elementBounds());
   }
-  if (before.fillColor != after.fillColor ||
-      before.strokeColor != after.strokeColor) {
+  if (before.fillColor != after.fillColor) {
     delta = delta.merge(const StoreRevisionDelta.elementVisual());
+  }
+  if (before.strokeColor != after.strokeColor) {
+    delta = delta.merge(
+      _strokePaintedBoundsChanged(
+            before.strokeColor,
+            before.strokeWidth,
+            after.strokeColor,
+            after.strokeWidth,
+          )
+          ? const StoreRevisionDelta.elementBounds()
+          : const StoreRevisionDelta.elementVisual(),
+    );
   }
 
   return delta;
+}
+
+bool _strokePaintedBoundsChanged(
+  Object? beforeColor,
+  double beforeWidth,
+  Object? afterColor,
+  double afterWidth,
+) {
+  return _hasPaintedStroke(beforeColor, beforeWidth) !=
+      _hasPaintedStroke(afterColor, afterWidth);
+}
+
+bool _hasPaintedStroke(Object? color, double width) {
+  return color != null && width > 0;
 }
 
 bool _anyChanged(Iterable<bool> changes) {

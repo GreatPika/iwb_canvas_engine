@@ -128,6 +128,7 @@ final class SpatialKernel {
       SpatialKernelQueryContext(
         window: window,
         indexedEntryCount: _indexes.snapshot.entryCount,
+        fallbackCandidates: _indexes.fallbackHandles,
         candidateMapper: _candidateMapper.call,
         query: query,
       ),

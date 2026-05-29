@@ -53,10 +53,12 @@ final class TileIndex {
     if (queryTileCount > kCanvasMaxQueryCells) {
       context.counters.recordQueryTileBudgetExceeded();
 
-      return SpatialBudgetExceededResult(
-        reason: SpatialBudgetExceededReason.queryTileBudgetExceeded,
-        budget: kCanvasMaxQueryCells,
-        observed: queryTileCount,
+      return spatialCandidateResultWithinBudget(
+        context.fallbackCandidates,
+        context.counters,
+        candidateMapper: context.candidateMapper,
+        budgetReason:
+            SpatialBudgetExceededReason.fallbackCandidateBudgetExceeded,
       );
     }
     final candidates = <CanvasElementId, FrameElementHandle>{};
@@ -67,7 +69,7 @@ final class TileIndex {
       candidates[handle.id] = handle;
     }
 
-    return _candidateResultWithinBudget(
+    return spatialCandidateResultWithinBudget(
       candidates.values,
       context.counters,
       candidateMapper: context.candidateMapper,
@@ -92,7 +94,7 @@ final class TileQueryContext {
   final CandidateHandleMapper candidateMapper;
 }
 
-SpatialQueryResult _candidateResultWithinBudget(
+SpatialQueryResult spatialCandidateResultWithinBudget(
   Iterable<FrameElementHandle> source,
   SpatialBudgetCounters counters, {
   required CandidateHandleMapper candidateMapper,
