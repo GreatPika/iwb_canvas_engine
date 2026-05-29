@@ -12,6 +12,7 @@ void main() {
   _testInitialSpatialRebuild();
   _testEditDeliveryOrder();
   _testSelectableDeliveryOrder();
+  _testLayerDeliveryOrder();
   _testLoadDeliveryOrder();
   _testSpatialFailureContainment();
 }
@@ -47,6 +48,22 @@ void _testSelectableDeliveryOrder() {
     expect(outcome.events, ['state', 'observer']);
     expect(outcome.stateSpatialIds, [<CanvasElementId>[]]);
     expect(outcome.observerSpatialIds, [<CanvasElementId>[]]);
+    expect(outcome.guardedMutationAttempts, 2);
+    expect(outcome.nestedMutationRan, isFalse);
+  });
+}
+
+void _testLayerDeliveryOrder() {
+  test('layer-only structural delivery runs before publication', () {
+    final outcome = _runLayerDeliveryScenario();
+
+    expect(outcome.events, ['state', 'observer']);
+    expect(outcome.stateSpatialIds, [
+      [CanvasElementId('initial')],
+    ]);
+    expect(outcome.observerSpatialIds, [
+      [CanvasElementId('initial')],
+    ]);
     expect(outcome.guardedMutationAttempts, 2);
     expect(outcome.nestedMutationRan, isFalse);
   });
@@ -114,6 +131,17 @@ _DeliveryOutcome _runSelectableDeliveryScenario() {
       ),
       isTrue,
     );
+  });
+
+  return recorder.outcome();
+}
+
+_DeliveryOutcome _runLayerDeliveryScenario() {
+  final recorder = _DeliveryRecorder(_nearOriginRevision(1));
+  final root = _runtimeRoot(recorder.observe);
+  recorder.bind(root);
+  root.edits.edit((edit) {
+    expect(edit.ensureLayer(CanvasLayerId('new-layer')), isTrue);
   });
 
   return recorder.outcome();
@@ -243,6 +271,13 @@ SpatialQueryWindow _nearOrigin() {
   return const SpatialQueryWindow(
     boundsWorld: Rect.fromLTRB(-20, -20, 20, 20),
     structuralRevision: 0,
+  );
+}
+
+SpatialQueryWindow _nearOriginRevision(int structuralRevision) {
+  return SpatialQueryWindow(
+    boundsWorld: const Rect.fromLTRB(-20, -20, 20, 20),
+    structuralRevision: structuralRevision,
   );
 }
 

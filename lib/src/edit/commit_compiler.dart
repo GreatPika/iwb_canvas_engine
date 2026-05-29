@@ -87,7 +87,9 @@ bool _needsSpatialEffect(
   StoreRevisionDelta revisionDelta,
   TouchedSet touchedSet,
 ) {
-  return revisionDelta.bounds || touchedSet.geometryElementIds.isNotEmpty;
+  return revisionDelta.bounds ||
+      touchedSet.geometryElementIds.isNotEmpty ||
+      touchedSet.layerIds.isNotEmpty;
 }
 
 bool _needsMainRepaint(

@@ -12,6 +12,7 @@ void main() {
   _testTouchedUpdate();
   _testReplacementRebuild();
   _testStructuralElementChangesTouchedUpdate();
+  _testUpdateThenRemoveUsesRemovalOnly();
   _testStructuralRevisionMismatchRebuild();
   _testNoFullCloneAndClearReset();
   _testStaleCandidatesRejected();
@@ -66,7 +67,7 @@ void _testStructuralElementChangesTouchedUpdate() {
     final replaced = _sameIdReplacementTouchedOutcome();
 
     expect(changed.elementHandlesCalls, 0);
-    expect(changed.elementHandleForIdCalls, 3);
+    expect(changed.elementHandleForIdCalls, 4);
     expect(changed.candidateRevisions, {1});
     expect(changed.movedIds, [CanvasElementId('c')]);
     expect(replaced.elementHandlesCalls, 0);
@@ -74,6 +75,34 @@ void _testStructuralElementChangesTouchedUpdate() {
     expect(replaced.originIds, isEmpty);
     expect(replaced.movedIds, [CanvasElementId('a')]);
   });
+}
+
+void _testUpdateThenRemoveUsesRemovalOnly() {
+  test(
+    'update then remove in one edit applies removal without invalidating',
+    () {
+      final kernel = SpatialKernel();
+      kernel.rebuild(_FramePort([_rect('a', order: 1), _rect('b', order: 2)]));
+      final removed = _FramePort([_rect('b', order: 2)], structuralRevision: 1);
+
+      kernel.applyTouched(
+        removed,
+        TouchedSet(
+          removedElementIds: [CanvasElementId('a')],
+          updatedElementIds: [CanvasElementId('a')],
+          geometryElementIds: [CanvasElementId('a')],
+        ),
+      );
+
+      expect(removed.elementHandlesCalls, 0);
+      expect(kernel.snapshot.isInvalid, isFalse);
+      expect(kernel.snapshot.entryCount, 1);
+      expect(_ids(kernel.queryHit(_windowNearOrigin(1))), [
+        CanvasElementId('b'),
+      ]);
+      expect(removed.elementHandleForIdCalls, 2);
+    },
+  );
 }
 
 void _testStructuralRevisionMismatchRebuild() {

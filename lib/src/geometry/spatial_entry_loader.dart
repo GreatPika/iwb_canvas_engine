@@ -33,11 +33,11 @@ List<SpatialEntry> spatialAdditionsForTouches({
   final additions = <SpatialEntry>[];
   final structuralRevision = frame.frameRevisions.structuralRevision;
   for (final id in touchedSet.elementIds) {
-    if (_isPureRemoval(touchedSet, id)) {
-      continue;
-    }
     final handle = frame.elementHandleForId(structuralRevision, id);
     if (handle == null) {
+      if (touchedSet.removedElementIds.contains(id)) {
+        continue;
+      }
       throw StateError('missing spatial handle: ${id.value}');
     }
     final entry = spatialEntryFor(
@@ -52,13 +52,4 @@ List<SpatialEntry> spatialAdditionsForTouches({
   }
 
   return additions;
-}
-
-bool _isPureRemoval(TouchedSet touchedSet, CanvasElementId id) {
-  return touchedSet.removedElementIds.contains(id) &&
-      !touchedSet.addedElementIds.contains(id) &&
-      !touchedSet.updatedElementIds.contains(id) &&
-      !touchedSet.transformedElementIds.contains(id) &&
-      !touchedSet.geometryElementIds.contains(id) &&
-      !touchedSet.visualElementIds.contains(id);
 }
