@@ -41,13 +41,13 @@ phases:
       - path: docs/contracts/load_document.md
   - id: P7
     title: Resources and images
-    status: future
+    status: closed
     sourceDocs:
       - path: docs/implementation/p7_resources_and_images.md
       - path: docs/contracts/resources.md
   - id: P8
     title: Geometry and spatial
-    status: future
+    status: closed
     sourceDocs:
       - path: docs/implementation/p8_geometry_and_spatial.md
       - path: docs/contracts/spatial_kernel.md
