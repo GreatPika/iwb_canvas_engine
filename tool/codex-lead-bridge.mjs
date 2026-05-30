@@ -8,8 +8,10 @@ const TURN_TIMEOUT_MS = 120_000;
 
 function usage() {
   return `Usage:
-  node tool/codex-lead-bridge.mjs make-prompt --task-id <TASK_ID> --lead-thread <THREAD_ID> --task-stdin true
-  node tool/codex-lead-bridge.mjs notify --task-id <TASK_ID> --status DONE --lead-thread <THREAD_ID> --report-stdin true
+  tool/codex-lead-bridge.mjs go <TASK_ID> [THREAD_ID]
+  tool/codex-lead-bridge.mjs done <TASK_ID> <THREAD_ID>
+  tool/codex-lead-bridge.mjs ask <TASK_ID> <THREAD_ID>
+  tool/codex-lead-bridge.mjs fail <TASK_ID> <THREAD_ID>
 
 No repository state is written. One worker thread should receive exactly one
 task. The lead prompt decides the task id naming convention, for example
@@ -23,41 +25,63 @@ Task text and final reports are read from stdin only.
 class BridgeError extends Error {}
 
 function parseArgs(argv) {
-  const [command, ...rest] = argv;
+  const [command, taskId, leadThread, ...rest] = argv;
   if (command === "--help" || command === "-h") {
     return { help: true };
   }
-  const args = { command };
-  for (let index = 0; index < rest.length; index += 1) {
-    const token = rest[index];
-    if (token === "--help" || token === "-h") {
-      args.help = true;
-      continue;
-    }
-    if (!token.startsWith("--")) {
-      throw new BridgeError(`Unexpected argument: ${token}`);
-    }
-    const key = token.slice(2);
-    const value = rest[index + 1];
-    if (value === undefined || value.startsWith("--")) {
-      throw new BridgeError(`Missing value for --${key}`);
-    }
-    args[toCamelCase(key)] = value;
-    index += 1;
+  if (command === "go") {
+    assertTaskIdPositionals({ command, taskId });
+    assertNoExtraArguments(command, rest);
+
+    return { command, taskId, leadThread: resolveLeadThread(leadThread) };
   }
-  return args;
+  const status = {
+    done: "DONE",
+    ask: "NEEDS_APPROVAL",
+    fail: "FAILED",
+  }[command];
+  if (status) {
+    assertShortCommandPositionals({ command, taskId, leadThread });
+    assertNoExtraArguments(command, rest);
+
+    return { command, taskId, leadThread, status };
+  }
+  return { command };
 }
 
-function toCamelCase(value) {
-  return value.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+function assertTaskIdPositionals({ command, taskId }) {
+  if (!taskId) {
+    throw new BridgeError(`${command} requires <TASK_ID>. See --help for examples.`);
+  }
 }
 
-async function runMakePrompt(args) {
+function assertShortCommandPositionals({ command, taskId, leadThread }) {
+  if (!taskId || !leadThread) {
+    throw new BridgeError(
+      `${command} requires <TASK_ID> and <THREAD_ID>. See --help for examples.`,
+    );
+  }
+}
+
+function resolveLeadThread(argument) {
+  const leadThread = argument ?? process.env.CODEX_THREAD_ID;
+  if (!leadThread) {
+    throw new BridgeError(
+      "go requires [THREAD_ID] when CODEX_THREAD_ID is not set.",
+    );
+  }
+  return leadThread;
+}
+
+function assertNoExtraArguments(command, rest) {
+  if (rest.length > 0) {
+    throw new BridgeError(`${command} received unexpected arguments: ${rest.join(" ")}`);
+  }
+}
+
+async function runGo(args) {
   assertTaskId(args.taskId);
-  if (!args.leadThread) {
-    throw new BridgeError("Missing --lead-thread <THREAD_ID>.");
-  }
-  const taskText = await readRequiredStdin(args, "task");
+  const taskText = await readStdin();
   process.stdout.write(
     buildWorkerPrompt({
       taskId: args.taskId,
@@ -70,13 +94,10 @@ async function runMakePrompt(args) {
 
 async function runNotify(args) {
   assertTaskId(args.taskId);
-  if (!args.leadThread) {
-    throw new BridgeError("Missing --lead-thread <THREAD_ID>.");
-  }
   if (!args.status || !TERMINAL_STATUSES.has(args.status)) {
-    throw new BridgeError("--status must be DONE, FAILED, or NEEDS_APPROVAL.");
+    throw new BridgeError("Notification status must be DONE, FAILED, or NEEDS_APPROVAL.");
   }
-  const report = await readRequiredStdin(args, "report");
+  const report = await readStdin();
   const leadReport = buildLeadReport({
     taskId: args.taskId,
     title: args.title ?? args.taskId,
@@ -94,13 +115,6 @@ async function runNotify(args) {
 
   console.log(`Notified lead thread ${args.leadThread}.`);
   console.log(`Lead notification turn: ${turnId}`);
-}
-
-async function readRequiredStdin(args, name) {
-  if (args[`${name}Stdin`] !== "true" && args[`${name}Stdin`] !== true) {
-    throw new BridgeError(`Missing --${name}-stdin true.`);
-  }
-  return readStdin();
 }
 
 function readStdin() {
@@ -128,12 +142,12 @@ ${taskText.trim()}
 When the task is finished, run this command from the repository root.
 Put your final report between the CODEX_REPORT markers:
 
-cat <<'CODEX_REPORT' | node tool/codex-lead-bridge.mjs notify --task-id ${taskId} --status DONE --lead-thread ${leadThreadId} --report-stdin true
+cat <<'CODEX_REPORT' | tool/codex-lead-bridge.mjs done ${taskId} ${leadThreadId}
 Write your final report here.
 CODEX_REPORT
 
-Use --status NEEDS_APPROVAL if you cannot continue without user approval.
-Use --status FAILED if the task fails.
+Use tool/codex-lead-bridge.mjs ask ${taskId} ${leadThreadId} if you cannot continue without user approval.
+Use tool/codex-lead-bridge.mjs fail ${taskId} ${leadThreadId} if the task fails.
 Do not work on any other task in this thread.`;
 }
 
@@ -310,11 +324,11 @@ async function main() {
     return;
   }
 
-  if (args.command === "make-prompt") {
-    await runMakePrompt(args);
+  if (args.command === "go") {
+    await runGo(args);
     return;
   }
-  if (args.command === "notify") {
+  if (args.command === "done" || args.command === "ask" || args.command === "fail") {
     await runNotify(args);
     return;
   }
