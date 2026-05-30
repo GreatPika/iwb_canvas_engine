@@ -1,0 +1,284 @@
+import 'dart:ui';
+
+import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_element.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_geometry.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_ids.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_metadata.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_preview.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_surface_styles.dart';
+import 'package:iwb_canvas_engine/src/frame/captured_frame.dart';
+import 'package:iwb_canvas_engine/src/frame/frame_capture_service.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
+
+CapturedMainFrame capturedMainFrame({
+  required TestFrameFactsPort frameFacts,
+  SpatialQueryResult? spatialPaintResult,
+  CanvasPreviewState preview = const CanvasNoPreview(),
+  int previewRevision = 0,
+  Rect viewport = const Rect.fromLTWH(0, 0, 100, 100),
+  double devicePixelRatio = 1,
+  SelectionFacts? selectionFacts,
+  CanvasSelectionStyle selectionStyle = CanvasSelectionStyle.defaultStyle,
+  CanvasGridStyle gridStyle = CanvasGridStyle.defaultStyle,
+}) {
+  final capture = FrameCaptureService(
+    frameFacts: frameFacts,
+    selectionFacts: TestSelectionFactsPort(
+      selectionFacts ??
+          SelectionFacts(selectedElementIds: const {}, selectionRevision: 0),
+    ),
+    queryPaint: (_) =>
+        spatialPaintResult ??
+        SpatialCandidatesResult(
+          orderedCandidates: frameFacts.spatialCandidates,
+        ),
+  );
+
+  return capture.captureMainFrame(
+    FrameCaptureInputs(
+      viewportWorldBounds: viewport,
+      devicePixelRatio: devicePixelRatio,
+      selectionStyle: selectionStyle,
+      gridStyle: gridStyle,
+      preview: preview,
+      previewRevision: previewRevision,
+    ),
+  );
+}
+
+TestFrameFactsPort frameFactsPort({
+  FrameRevisionFacts? revisions,
+  List<FrameElementFacts>? elements,
+  List<FrameElementHandle>? spatialCandidates,
+  Set<CanvasElementId> staleIds = const {},
+}) {
+  final rows = elements ?? [rectFacts('a', orderToken: 1)];
+
+  return TestFrameFactsPort(
+    revisions: revisions ?? revisionsFor(),
+    elements: rows,
+    spatialCandidates:
+        spatialCandidates ??
+        [
+          for (final row in rows)
+            FrameElementHandle(
+              id: row.id,
+              structuralRevision:
+                  revisions?.structuralRevision ??
+                  revisionsFor().structuralRevision,
+              generation: row.generation,
+              orderToken: row.orderToken,
+            ),
+        ],
+    staleIds: staleIds,
+  );
+}
+
+FrameRevisionFacts revisionsFor({
+  int document = 1,
+  int structural = 2,
+  int bounds = 3,
+  int visual = 4,
+  int background = 5,
+  int grid = 6,
+  int resource = 7,
+}) {
+  return FrameRevisionFacts(
+    documentRevision: document,
+    structuralRevision: structural,
+    boundsRevision: bounds,
+    elementVisualRevision: visual,
+    backgroundRevision: background,
+    gridRevision: grid,
+    resourceRevision: resource,
+  );
+}
+
+FrameElementFacts rectFacts(
+  String id, {
+  required int orderToken,
+  int generation = 1,
+  double opacity = 1,
+  FrameElementLocationKind locationKind = FrameElementLocationKind.content,
+}) {
+  return FrameElementFacts(
+    id: CanvasElementId(id),
+    kind: CanvasElementKind.rect,
+    revision: orderToken,
+    generation: generation,
+    orderToken: orderToken,
+    locationKind: locationKind,
+    transform: CanvasTransform.identity,
+    opacity: opacity,
+    hitPadding: 0,
+    isVisible: true,
+    isSelectable: true,
+    isLocked: false,
+    isDeletable: true,
+    isTransformable: true,
+    metadata: const CanvasMetadata.empty(),
+    size: const Size(10, 10),
+    fillColor: const Color(0xFF336699),
+  );
+}
+
+FrameElementFacts textFacts(String id, {required int orderToken}) {
+  return _baseFacts(
+    id,
+    kind: CanvasElementKind.text,
+    orderToken: orderToken,
+    text: 'hello',
+    textColor: const Color(0xFF111111),
+    textDirection: TextDirection.ltr,
+  );
+}
+
+FrameElementFacts pathFacts(String id, {required int orderToken}) {
+  return _baseFacts(
+    id,
+    kind: CanvasElementKind.path,
+    orderToken: orderToken,
+    svgPathData: 'M0,0 L10,10',
+    fillRule: CanvasPathFillRule.nonZero,
+    strokeWidth: 1,
+  );
+}
+
+FrameElementFacts strokeFacts(
+  String id, {
+  required int orderToken,
+  CanvasTransform transform = CanvasTransform.identity,
+}) {
+  return _baseFacts(
+    id,
+    kind: CanvasElementKind.stroke,
+    orderToken: orderToken,
+    transform: transform,
+    points: const [Offset(0, 0), Offset(10, 10)],
+    thickness: 2,
+    color: const Color(0xFF222222),
+  );
+}
+
+FrameElementFacts _baseFacts(
+  String id, {
+  required CanvasElementKind kind,
+  required int orderToken,
+  String? text,
+  Color? textColor,
+  TextDirection? textDirection,
+  String? svgPathData,
+  CanvasPathFillRule? fillRule,
+  double? strokeWidth,
+  CanvasTransform transform = CanvasTransform.identity,
+  List<Offset> points = const [],
+  double? thickness,
+  Color? color,
+}) {
+  return FrameElementFacts(
+    id: CanvasElementId(id),
+    kind: kind,
+    revision: orderToken,
+    generation: 1,
+    orderToken: orderToken,
+    locationKind: FrameElementLocationKind.content,
+    transform: transform,
+    opacity: 1,
+    hitPadding: 0,
+    isVisible: true,
+    isSelectable: true,
+    isLocked: false,
+    isDeletable: true,
+    isTransformable: true,
+    metadata: const CanvasMetadata.empty(),
+    text: text,
+    textColor: textColor,
+    textDirection: textDirection,
+    svgPathData: svgPathData,
+    fillRule: fillRule,
+    strokeWidth: strokeWidth,
+    points: points,
+    thickness: thickness,
+    color: color,
+  );
+}
+
+final class TestFrameFactsPort implements FrameFactsPort {
+  TestFrameFactsPort({
+    required this.revisions,
+    required List<FrameElementFacts> elements,
+    required List<FrameElementHandle> spatialCandidates,
+    required Set<CanvasElementId> staleIds,
+  }) : _elements = {for (final element in elements) element.id: element},
+       spatialCandidates = List.unmodifiable(spatialCandidates),
+       _staleIds = Set.unmodifiable(staleIds);
+
+  FrameRevisionFacts revisions;
+  final Map<CanvasElementId, FrameElementFacts> _elements;
+  final List<FrameElementHandle> spatialCandidates;
+  final Set<CanvasElementId> _staleIds;
+  int resolveElementCalls = 0;
+
+  @override
+  FrameRevisionFacts get frameRevisions => revisions;
+
+  @override
+  int elementCount(int structuralRevision) => _elements.length;
+
+  @override
+  List<FrameElementHandle> elementHandles(int structuralRevision) {
+    return [
+      for (final element in _elements.values)
+        FrameElementHandle(
+          id: element.id,
+          structuralRevision: structuralRevision,
+          generation: element.generation,
+          orderToken: element.orderToken,
+        ),
+    ];
+  }
+
+  @override
+  FrameElementHandle? elementHandleForId(
+    int structuralRevision,
+    CanvasElementId id,
+  ) {
+    final element = _elements[id];
+    if (element == null) {
+      return null;
+    }
+
+    return FrameElementHandle(
+      id: element.id,
+      structuralRevision: structuralRevision,
+      generation: element.generation,
+      orderToken: element.orderToken,
+    );
+  }
+
+  @override
+  FrameElementFacts? resolveElement(FrameElementHandle handle) {
+    resolveElementCalls += 1;
+    if (_staleIds.contains(handle.id)) {
+      return null;
+    }
+
+    return _elements[handle.id];
+  }
+
+  @override
+  FrameResourceDescriptorFacts? resourceDescriptor(CanvasResourceId id) {
+    return null;
+  }
+}
+
+final class TestSelectionFactsPort implements SelectionFactsPort {
+  const TestSelectionFactsPort(this.facts);
+
+  final SelectionFacts facts;
+
+  @override
+  SelectionFacts get selectionFacts => facts;
+}

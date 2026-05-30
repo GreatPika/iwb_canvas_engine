@@ -37,7 +37,10 @@ final class CapturedFrameSnapshot {
   }) : orderedHandles = List.unmodifiable(orderedHandles),
        elements = List.unmodifiable(elements),
        resourceDescriptors = List.unmodifiable(resourceDescriptors),
-       spatialPaintCandidates = List.unmodifiable(spatialPaintCandidates);
+       spatialPaintCandidates = List.unmodifiable(spatialPaintCandidates),
+       _elementFactsById = Map.unmodifiable({
+         for (final element in elements) element.id: element,
+       });
 
   final FrameRevisionFacts revisions;
   final List<FrameElementHandle> orderedHandles;
@@ -47,9 +50,21 @@ final class CapturedFrameSnapshot {
   final FrameCaptureInputs inputs;
   final SpatialQueryResult spatialPaintResult;
   final List<FrameElementHandle> spatialPaintCandidates;
+  final Map<dynamic, FrameElementFacts> _elementFactsById;
 
   CanvasPreviewState get preview => inputs.preview;
   int get previewRevision => inputs.previewRevision;
+
+  FrameElementFacts? elementFactsFor(FrameElementHandle handle) {
+    final facts = _elementFactsById[handle.id];
+    if (facts == null ||
+        facts.generation != handle.generation ||
+        facts.orderToken != handle.orderToken) {
+      return null;
+    }
+
+    return facts;
+  }
 }
 
 final class CapturedMainFrame {
