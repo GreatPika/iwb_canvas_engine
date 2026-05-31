@@ -78,13 +78,14 @@ them forward.
 
 | Gate | Result | Evidence |
 |---|---|---|
-| Root cause | pass/fail | ... |
+| Owner-Level Fix | pass/fail | ... |
 | Ownership | pass/fail | ... |
-| Source of truth | pass/fail | ... |
-| Boundary | pass/fail | ... |
+| Source-Of-Truth Singularity | pass/fail | ... |
+| Boundary-Owned Policy | pass/fail | ... |
+| Negative Proof And Fixture Quarantine | pass/fail/not applicable | ... |
 | Dependency direction | pass/fail | ... |
 | State/data | pass/fail/not applicable | ... |
-| Seam | pass/fail/not applicable | ... |
+| Sequenced Migration And Retirement | pass/fail/not applicable | ... |
 | Temporal Surface Closure | pass/fail/not applicable | ... |
 | All-Or-Nothing Failure Boundary | pass/fail/not applicable | ... |
 | Outcome-Proof Fit | pass/fail/not applicable | ... |

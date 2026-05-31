@@ -276,8 +276,10 @@ example:
    research inputs or explicit absence of research inputs.
 5. Verify every hard gate row from the authoring skill: `Owner-Level Fix`,
    ownership, `Source-Of-Truth Singularity`, `Boundary-Owned Policy`, dependency
-   direction, state/data, seam, temporal/reentrancy, all-or-nothing behavior,
-   Outcome-Proof Fit, verification, and future pressure. A
+   direction, state/data, `Negative Proof And Fixture Quarantine`, `Sequenced
+   Migration And Retirement`, `Temporal Surface Closure`,
+   `All-Or-Nothing Failure Boundary`, Outcome-Proof Fit, verification, and
+   future pressure. A
    `READY_FOR_CONTRACT` artifact must pass every applicable gate with evidence.
 6. Check `Decision Trace` for `Decision Chain Of Custody`. Every material
    selected-form decision must have a stable decision id, exact evidence, and a
