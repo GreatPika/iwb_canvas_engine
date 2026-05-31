@@ -59,6 +59,12 @@ The chosen form and why it is the best fit.
 |---|---|---|---|
 | D1 | ... | `path:line` | `Boundaries.Owner` / `Boundaries.Source of Truth` / `Unit N` / proof surface |
 
+## Outcome-Proof Fit
+
+| Claim | Direct outcome | Proxy risk | Required proof surface or strategy |
+|---|---|---|---|
+| ... | direct outcome, or checked proxy when explicitly claimed | weaker signal that could pass while the claim is false | surface or strategy that exposes a false claimed outcome |
+
 ## Hard Gate Check
 
 | Gate | Result | Evidence |
@@ -72,6 +78,7 @@ The chosen form and why it is the best fit.
 | Seam | pass/fail/not applicable | ... |
 | Temporal/reentrancy | pass/fail/not applicable | ... |
 | All-or-nothing behavior | pass/fail/not applicable | ... |
+| Outcome-Proof Fit | pass/fail/not applicable | ... |
 | Verification | pass/fail | ... |
 | Future pressure | pass/fail/not found after targeted inspection | ... |
 

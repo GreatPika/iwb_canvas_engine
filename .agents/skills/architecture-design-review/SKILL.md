@@ -83,6 +83,10 @@ selected form as an implementable system change:
   artifact, even if their code organization differs?
 - Does `Decision Trace` preserve every locked design decision into a contract
   field, execution unit, or proof surface?
+- Does the verification strategy satisfy shared `Outcome-Proof Fit`: `Claim ->
+  Direct outcome -> Proxy risk -> Required proof`, by naming a proof surface or
+  strategy that targets the direct owner-observable or external outcome rather
+  than only a proxy that could pass while the claimed outcome is false?
 
 ## What Not To Review
 
@@ -179,39 +183,45 @@ Mark the review `BLOCKED` when any of these are true:
 32. A required test, analyzer, guardrail, docs check, semantic search, or other
     proof surface is implied by the selected profile or obligations but missing
     from `Verification Impact` or `Verification Strategy`.
-33. The Change Contract handoff contains or requires slices, proof IDs, final
+33. Shared `Outcome-Proof Fit` fails: the verification strategy relies only on a
+    proxy signal for a claim about behavior, invariant, owner responsibility,
+    source-of-truth update, migration, guardrail, compatibility promise, or
+    contract-readiness state. Mark `BLOCKED` unless the proxy is itself the
+    claimed outcome, the artifact narrows the claim to that proxy, or it names a
+    direct outcome proof strategy that exposes a false claimed outcome.
+34. The Change Contract handoff contains or requires slices, proof IDs, final
     gates, or contract text.
-34. The recommended form is one of multiple materially different viable options,
+35. The recommended form is one of multiple materially different viable options,
     but the choice depends on product preference and no user decision is routed.
-35. Materially different candidate forms were possible, but the artifact neither
+36. Materially different candidate forms were possible, but the artifact neither
     compares them nor explains why only one form is viable.
-36. A materially better form is visible from repository evidence because it has a
+37. A materially better form is visible from repository evidence because it has a
     stronger owner fit, lower future migration cost, clearer verification, or
     less source-of-truth risk, and the artifact does not reject it with evidence.
-37. The selected form introduces or changes call ordering, post-commit delivery,
+38. The selected form introduces or changes call ordering, post-commit delivery,
     observer/listener/callback invocation, transaction, rollback, no-op
     boundaries, public-state publication, or runtime mutation guards, but does
     not name the temporal invariant, every synchronous callback surface in that
     window, the guard owner, the allowed public observation order, and a
     verification strategy for reentrant/interleaved mutation attempts.
-38. The selected form relies on all-or-nothing behavior, but does not identify
+39. The selected form relies on all-or-nothing behavior, but does not identify
     the irreversible point, what fallible work must happen before it, what later
     work is infallible, failure-contained, or already accepted, and how that
     boundary will be proven.
-39. The artifact is formally complete but leaves the future Change Contract to
+40. The artifact is formally complete but leaves the future Change Contract to
     decide how the selected form can be implemented or proven at the owning
     seam.
-40. The verification strategy requires a negative fixture, bypass proof, or
+41. The verification strategy requires a negative fixture, bypass proof, or
     structural proof but does not identify a feasible proof mechanism using
     existing repository seams, or explicitly name the small seam that must be
     introduced.
-41. The proof strategy would require fixture-only data to be added to a real
+42. The proof strategy would require fixture-only data to be added to a real
     production source of truth, public API registry, schema, durable contract, or
     public surface.
-42. A selected form changes the normative meaning of a registry, contract,
+43. A selected form changes the normative meaning of a registry, contract,
     guardrail, generated index, or diagram, but the source-of-truth update is
     optional, conditional, or left for the contract author to rediscover.
-43. The handoff contains correct decisions but is not operational enough to
+44. The handoff contains correct decisions but is not operational enough to
     write a Change Contract without re-reading broad repository context to infer
     proof seams, source-of-truth updates, or sequencing constraints.
 
@@ -242,9 +252,9 @@ example:
    research inputs or explicit absence of research inputs.
 5. Verify every hard gate row from the authoring skill: root cause, ownership,
    source of truth, boundary, dependency direction, state/data, seam,
-   temporal/reentrancy, all-or-nothing behavior, verification, and future
-   pressure. A `READY_FOR_CONTRACT` artifact must pass every applicable gate
-   with evidence.
+   temporal/reentrancy, all-or-nothing behavior, Outcome-Proof Fit,
+   verification, and future pressure. A `READY_FOR_CONTRACT` artifact must pass
+   every applicable gate with evidence.
 6. Check `Decision Trace`. Every material selected-form decision must have a
    stable decision id, exact evidence, and a future Change Contract handoff
    target. Do not require exact future unit numbers unless the artifact already
@@ -318,6 +328,9 @@ Before returning, confirm:
   evidence and a future contract handoff target?
 - Did you verify that every required proof is practically constructible in this
   repository?
+- Did you check shared `Outcome-Proof Fit`: would the proposed proof surface or
+  strategy expose a false claimed outcome, unless the proxy is itself the claimed
+  outcome or the claim is explicitly scoped to that proxy?
 - Did you check that negative fixtures do not contaminate real source-of-truth
   surfaces?
 - Did you distinguish "evidence exists" from "the selected form is executable"?

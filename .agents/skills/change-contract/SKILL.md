@@ -364,6 +364,21 @@ complete.
 Each check must name an observable or executable signal and the bounded surface
 where that signal applies.
 
+Apply the shared `Outcome-Proof Fit` rule to every `Completion Check`:
+`Claim -> Direct outcome -> Proxy risk -> Required proof`.
+
+Each check must prove the direct outcome claimed by the unit. For every unit
+claim about behavior, invariant, owner responsibility, source-of-truth update,
+migration, guardrail, compatibility promise, or completion outcome, name the
+owner-observable or external result that would be false if implementation were
+fake or incomplete.
+
+A proxy signal such as method calls, call order, revision increments, registry
+entries, object construction, compile success, event firing, schema presence,
+rebuild counts, cache key shape, or guardrail registration is not sufficient
+unless the unit claim is explicitly scoped to that proxy or the proxy is itself
+the claimed outcome.
+
 A completion check may be:
 
 - a test, command, or check with an expected signal;
@@ -408,6 +423,9 @@ Before answering, ensure that:
 - owner and boundary are clear;
 - source of truth, compatibility, order, and completion signals are settled;
 - every execution unit has a concrete change and completion check;
+- for every completion check, `Outcome-Proof Fit` is satisfied: either it proves
+  the direct outcome claimed by its unit, the unit claim is explicitly scoped to
+  the checked proxy, or the checked proxy is itself the claimed outcome;
 - dependencies between units are explicit;
 - no execution unit is named like "update everything", "fix architecture", or
   "add tests where needed";

@@ -128,6 +128,14 @@ Reject any candidate form that fails one of these gates:
   taking effect or leaving prior state unchanged, names the irreversible point,
   places fallible work before it, and proves later work is infallible,
   failure-contained, or already part of the accepted result.
+- **Outcome-Proof Fit**: applies the shared `Claim -> Direct outcome -> Proxy
+  risk -> Required proof` rule. For every selected-form claim about behavior,
+  invariant, owner responsibility, source-of-truth update, migration, guardrail,
+  or compatibility promise, names the direct owner-observable or external
+  outcome, the proxy signals that would be insufficient, and the `Required proof`
+  as a future proof surface or strategy that would expose the failure if the
+  claimed outcome is false. A proxy is sufficient only when it is itself the
+  claimed outcome or the claim is explicitly scoped to that proxy.
 - **Verification**: can be proven by executable, structural, semantic, analyzer,
   or documentation checks appropriate to the profile.
 - **Future pressure**: does not make an obvious near-future change harder without
@@ -234,6 +242,10 @@ The design task is complete only when:
 - materially different design forms were compared or the artifact explains why
   only one form is viable;
 - every applicable hard gate is represented in the hard-gate table;
+- for each selected-form claim, `Outcome-Proof Fit` records `Claim`, `Direct
+  outcome`, `Proxy risk`, and `Required proof` as a proof surface or strategy,
+  explicitly scopes the claim to the checked proxy, or records that the checked
+  proxy is the claimed outcome;
 - diagram need was assessed;
 - `Decision Trace` maps locked decisions to future contract fields, execution
   units, or proof surfaces;

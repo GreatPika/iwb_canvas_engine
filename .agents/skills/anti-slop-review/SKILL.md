@@ -21,6 +21,29 @@ Useful work can be behavior, enforcement, proof, simplification, decision value,
 migration safety, onboarding value, operational value, or an explicit release
 gate. If only a checklist stays green, suspect slop.
 
+## Outcome-Proof Fit
+
+`Outcome-Proof Fit` is the shared rule used by design, contract, and review
+skills:
+
+For every claim about behavior, invariant, owner responsibility,
+source-of-truth update, migration, guardrail, compatibility promise, completion
+state, or readiness state, identify the direct outcome that would be false if
+the claimed work were fake or incomplete.
+
+Verification must prove that direct outcome. A proxy signal is not sufficient
+when it can pass while the claimed outcome remains false. Proxy checks are valid
+only when the artifact explicitly scopes the claim to that proxy, or when the
+proxy is itself the claimed outcome.
+
+Use the same four-part frame everywhere:
+
+- `Claim`: what behavior, invariant, responsibility, or outcome is promised?
+- `Direct outcome`: what owner-observable or external result would be false?
+- `Proxy risk`: what weaker signal could pass while the claim is false?
+- `Required proof`: what check, proof surface, or proof strategy fails or
+  exposes failure when the outcome is false?
+
 ## Review Algorithm
 
 1. Identify the claim.
@@ -44,6 +67,9 @@ gate. If only a checklist stays green, suspect slop.
      misnamed or overstated.
    - If the work has little value relative to cost or creates false confidence,
      classify it as slop.
+   - Apply `Outcome-Proof Fit`: can the proof pass while the claimed outcome
+     remains false? If yes, the claim must narrow to the checked proxy or add
+     direct outcome proof.
 
 4. Find the concrete failure mode.
    - What bad state does this artifact catch?
@@ -86,6 +112,10 @@ Treat these as investigation prompts, not automatic findings:
   value.
 - "Source of truth" artifacts with no consumer.
 - Checks whose only failure mode is "the checklist wording changed".
+- Proxy-only proof: cache key shape, revision churn, registry presence, object
+  construction, method call order, rebuild count, compile success, event
+  delivery, schema presence, or guardrail registration used to prove a broader
+  behavior that could still be false.
 
 ## False Positive Guardrails
 
@@ -121,10 +151,13 @@ Verdict: Useful / Weak but valid / Misnamed / Slop / Harmful slop
 Claim:
 ...
 
-Actual value:
+Direct outcome:
 ...
 
-Gap:
+Actual proof or value:
+...
+
+Proxy risk / gap:
 ...
 
 Concrete failure mode:

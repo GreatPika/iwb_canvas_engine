@@ -143,6 +143,11 @@ Confirm, when relevant:
   persistence, docs, generated outputs, or external consumers;
 - completion checks are executable or observable enough to prove the unit is
   done;
+- completion checks satisfy shared `Outcome-Proof Fit`: `Claim -> Direct outcome
+  -> Proxy risk -> Required proof`, proving the direct outcome claimed by each
+  unit and not only a proxy signal that could pass while the claimed outcome
+  remains false, unless the unit claim is explicitly scoped to that proxy or the
+  proxy is itself the claimed outcome;
 - temporal/callback/guard obligations name every synchronous callback surface
   and the expected rejection or no-mutation signal;
 - all-or-nothing obligations name the irreversible point or bounded seam, the
@@ -225,29 +230,35 @@ Mark the contract `BLOCKED` when any category applies:
 10. Completion checks are inadequate: checks are vague, non-observable, lack an
    expected signal, omit the bounded surface being checked, or fail to prove the
    unit's change.
-11. Cross-section consistency fails: goal, source inputs, classification,
+11. Shared `Outcome-Proof Fit` is missing: a completion check can pass while a
+    unit claim about behavior, invariant, owner responsibility, source-of-truth
+    update, migration, guardrail, compatibility promise, or completion outcome
+    remains false. The contract must narrow the unit claim to the checked proxy,
+    show that the proxy is itself the claimed outcome, or add a direct outcome
+    proof.
+12. Cross-section consistency fails: goal, source inputs, classification,
     decision trace, evidence, boundaries, units, dependencies, and completion
     checks contradict each other.
-12. A `Contract Blocker` is invalid: it includes execution units, asks for
+13. A `Contract Blocker` is invalid: it includes execution units, asks for
     decisions the repository already determines, or does not identify the exact
     missing evidence or decision.
-13. Temporal/callback proof is missing: the contract includes or inherits call
+14. Temporal/callback proof is missing: the contract includes or inherits call
     ordering, observer/listener/callback delivery, transaction, rollback, no-op
     boundaries, public-state publication, atomicity, or mutation guard
     obligations, but completion checks do not prove every synchronous callback
     surface that can run user or runtime code before the next sequence step.
-14. Proof or fixture strategy is unresolved: a structural, bypass, negative, or
+15. Proof or fixture strategy is unresolved: a structural, bypass, negative, or
     fixture proof is required, but the contract omits the proof seam, fixture
     mechanism, bounded surface, or expected pass/fail signal.
-15. Fixture-only data contaminates a real source of truth: the contract requires
+16. Fixture-only data contaminates a real source of truth: the contract requires
     test-only names, values, schemas, or fixtures to be added to production
     registries, public APIs, durable contracts, real schemas, generated docs, or
     public surfaces.
-16. Source-input obligations are weakened: a source-of-truth update, registry
+17. Source-input obligations are weakened: a source-of-truth update, registry
     change, verification strategy, decision trace row, handoff constraint, or
     sequencing fact required by a design or phase source is made optional,
     conditional, or left for implementation to rediscover.
-17. All-or-nothing proof is missing: the contract relies on all-or-nothing
+18. All-or-nothing proof is missing: the contract relies on all-or-nothing
     behavior, but does not identify the irreversible point, the fallible work
     that must happen before it, the later work that is infallible or
     failure-contained, and a proof that fails if fallible work is placed on the
