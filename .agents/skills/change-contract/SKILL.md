@@ -88,6 +88,11 @@ This is the contract-stage `Evidence Consequence Link`: every cited fact must
 connect exact observed evidence to the contract boundary, order, proof, source
 of truth, or compatibility consequence it supports.
 
+When filling the output artifact, preserve `Evidence Consequence Link` in the
+concrete evidence rows and preserve `Source-Of-Truth Singularity` in the
+concrete `Source of Truth` field. Do not emit generic rule-reminder prose in the
+contract artifact.
+
 Use path-only evidence only for new files that do not exist yet, generated
 outputs without stable line references, or repository-level commands/config
 surfaces where line references are not meaningful.
@@ -346,9 +351,6 @@ When enough evidence exists, output:
 
     - `path/to/file.ext:line` / `surface`: observed fact -> contract consequence.
 
-    Preserve `Evidence Consequence Link`: keep exact stable evidence tied to the
-    contract consequence, and name any new/generated/command-surface exception.
-
     ## Boundaries
 
     Owner:
@@ -358,10 +360,6 @@ When enough evidence exists, output:
     Out of Scope:
 
     Source of Truth:
-
-    Preserve `Source-Of-Truth Singularity`: name the owning source of truth,
-    its real human or machine consumer, required dependent updates, and any
-    cache/performance duplication invariant plus proof strategy.
 
     Compatibility:
 
