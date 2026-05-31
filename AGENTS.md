@@ -46,7 +46,9 @@ these checks from the repository root:
 
 - `dart analyze`
 - `dcm analyze .`
-- `dcm calculate-metrics .`
+- `dcm calculate-metrics` for the changed owners, starting with separate
+  production, test, and tool scopes such as `lib/src/<owner>`,
+  `test/<area>`, and `tool/<area>`.
 
 Also run the focused tests that cover the changed behavior or changed tool.
 
