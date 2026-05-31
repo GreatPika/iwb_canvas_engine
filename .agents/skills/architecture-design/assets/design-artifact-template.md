@@ -103,8 +103,8 @@ them forward.
 - Exit boundaries:
 - File placement basis:
 - Execution order constraints:
-- `Temporal Surface Closure` invariant and callback surfaces:
-- `All-Or-Nothing Failure Boundary` irreversible point and failure boundary:
+- `Temporal Surface Closure` invariant, synchronous callback surfaces, guard/boundary owner, public observation order, and expected rejection/no-mutation signal:
+- `All-Or-Nothing Failure Boundary` irreversible point, fallible-before-irreversible work, later infallible/failure-contained/accepted work, failure projection, and proof surface:
 - Rejected alternatives:
 - Verification strategy:
 
