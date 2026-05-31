@@ -32,6 +32,15 @@ void main() {
       isTrue,
     );
   });
+
+  test('preview ordinary record key fixture is rejected structurally', () async {
+    expect(
+      await _previewFixtureIsRejected(
+        'final class OrdinaryPaintRecordKey { final Object previewDelta; const OrdinaryPaintRecordKey(this.previewDelta); }',
+      ),
+      isTrue,
+    );
+  });
 }
 
 Future<bool> _previewFixtureIsRejected(String paintPlanSource) async {

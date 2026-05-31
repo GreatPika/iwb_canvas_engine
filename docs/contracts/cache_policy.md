@@ -66,8 +66,11 @@ outside the declared cache row.
 viewport/revision entry, not the reusable viewport-admitted ordinary record
 stream for a frame. Spatial admission is rebuilt per captured frame from the
 effective world viewport; cache hits may reuse only the admitted records whose
-committed record keys match the current candidates. It must not store
-selected-move supplement records, `selectedMoveDelta`, or `previewDelta`.
+committed record keys match the current candidates. Each viewport/revision entry
+keeps at most 1024 record-key entries using per-entry LRU replacement, so camera
+movement can reuse recently admitted records without unbounded scene growth. It
+must not store selected-move supplement records, `selectedMoveDelta`, or
+`previewDelta`.
 It also must not store selected ids, selection flags, or selectionRevision in
 ordinary cache keys or cached ordinary records. `backgroundRevision`,
 `gridRevision`, `gridStrokeWidth`, `viewCameraRevision`, `viewCameraOffset`, and

@@ -98,7 +98,7 @@ Ordinary committed element records and ordinary `OrdinaryPaintRecordCache` only.
 
 Change:
 
-Implement `RenderElementRecord` construction and `PaintPlan` staging for ordinary committed records. Add bounded frame-owned TextLayout, PathGeometry, StrokePath, and OrdinaryPaintRecordCache policies with the cache-ledger capacities and eviction policies: TextLayout, PathGeometry, and StrokePath are 1024-entry scan-resistant LRU caches; OrdinaryPaintRecordCache is a 16-entry LRU by viewport/revision tuple. Add observable probes where the cache policy contract requires them. Build ordinary cache keys from next-owned committed revisions and paint-relevant viewport/DPR inputs only. Ensure opacity is represented through primitive paint alpha and does not require implicit `Canvas.saveLayer` in the hot ordinary paint path.
+Implement `RenderElementRecord` construction and `PaintPlan` staging for ordinary committed records. Add bounded frame-owned TextLayout, PathGeometry, StrokePath, and OrdinaryPaintRecordCache policies with the cache-ledger capacities and eviction policies: TextLayout, PathGeometry, and StrokePath are 1024-entry scan-resistant LRU caches; OrdinaryPaintRecordCache is a 16-entry LRU by viewport/revision tuple with each entry limited to 1024 record-key entries. Add observable probes where the cache policy contract requires them. Build ordinary cache keys from next-owned committed revisions and paint-relevant viewport/DPR inputs only. Ensure opacity is represented through primitive paint alpha and does not require implicit `Canvas.saveLayer` in the hot ordinary paint path.
 
 Completion Check:
 

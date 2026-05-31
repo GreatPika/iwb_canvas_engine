@@ -14,7 +14,8 @@ import 'ordinary_paint_test_support.dart';
 // ignore: halstead-volume, source-lines-of-code
 void main() {
   _registerRenderFamilyCapacityTests();
-  _registerOrdinaryCacheCapacityTests();
+  _registerOrdinaryCacheEntryCapacityTests();
+  _registerOrdinaryRecordEntryCapacityTests();
   _registerRenderFamilyProbeTests();
   _registerRenderPrimitiveSnapshotTests();
   _registerStrokeScaleKeyTests();
@@ -29,7 +30,7 @@ void _registerRenderFamilyCapacityTests() {
   });
 }
 
-void _registerOrdinaryCacheCapacityTests() {
+void _registerOrdinaryCacheEntryCapacityTests() {
   test('ordinary paint plan cache is 16 entry LRU with probes', () {
     final cache = OrdinaryPaintRecordCache();
     final first = _paintKey(0);
@@ -50,6 +51,31 @@ void _registerOrdinaryCacheCapacityTests() {
     expect(cache.containsKey(second), isFalse);
     expect(cache.probe.writes, 17);
   });
+}
+
+void _registerOrdinaryRecordEntryCapacityTests() {
+  test('ordinary paint record cache entries are bounded LRU maps', () {
+    final entry = _boundedOrdinaryEntry();
+
+    expect(entry.capacity, 2);
+    expect(entry.records.map((record) => record.key.id.value), [
+      'cached-0',
+      'cached-2',
+    ]);
+    expect(entry.readRecord(_paintRecordKey(1)), isNull);
+  });
+}
+
+OrdinaryPaintRecordCacheEntry _boundedOrdinaryEntry() {
+  return OrdinaryPaintRecordCacheEntry(
+    capacity: 2,
+    records: [
+      MapEntry(_paintRecordKey(0), _paintRecord(0)),
+      MapEntry(_paintRecordKey(1), _paintRecord(1)),
+      MapEntry(_paintRecordKey(0), _paintRecord(0)),
+      MapEntry(_paintRecordKey(2), _paintRecord(2)),
+    ],
+  );
 }
 
 void _registerRenderFamilyProbeTests() {
@@ -271,12 +297,14 @@ PaintPlanKey _paintKey(int index) {
 }
 
 OrdinaryPaintRecordCacheEntry _paintEntry(int index) {
-  final record = RenderElementRecord.fromFacts(
-    rectFacts('cached-$index', orderToken: index),
-  );
-
   return OrdinaryPaintRecordCacheEntry(
-    records: [MapEntry(_paintRecordKey(index), record)],
+    records: [MapEntry(_paintRecordKey(index), _paintRecord(index))],
+  );
+}
+
+RenderElementRecord _paintRecord(int index) {
+  return RenderElementRecord.fromFacts(
+    rectFacts('cached-$index', orderToken: index),
   );
 }
 

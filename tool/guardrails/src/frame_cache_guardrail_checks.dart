@@ -101,28 +101,28 @@ List<GuardrailViolation> checkCacheKeysUseNextRevisionsOnlySources(
 List<GuardrailViolation> checkCacheBackgroundGridNotElementVisualSources(
   Map<String, String> sources,
 ) {
-  final body = _classBody(
-    sources['lib/src/frame/paint_plan.dart'],
-    'PaintPlanKey',
-  );
-  if (body == null ||
-      !_containsAny(body, const [
-        'backgroundRevision',
-        'gridRevision',
-        'gridStrokeWidth',
-        'viewCamera',
-        'camera',
-      ])) {
-    return const [];
-  }
-
-  return const [
-    GuardrailViolation(
-      guardrailId: cacheBackgroundGridGuardrailId,
-      path: 'lib/src/frame/paint_plan.dart',
-      message:
-          'ordinary PaintPlanKey may not include background, grid, or camera facts',
-    ),
+  return [
+    for (final surface in const [
+      _CachedPaintSurface('lib/src/frame/paint_plan.dart', 'PaintPlanKey'),
+      _CachedPaintSurface(
+        'lib/src/frame/paint_plan.dart',
+        'OrdinaryPaintRecordKey',
+      ),
+    ])
+      if (_classBody(sources[surface.path], surface.className) case final body?)
+        if (_containsAny(body, const [
+          'backgroundRevision',
+          'gridRevision',
+          'gridStrokeWidth',
+          'viewCamera',
+          'camera',
+        ]))
+          GuardrailViolation(
+            guardrailId: cacheBackgroundGridGuardrailId,
+            path: surface.path,
+            message:
+                'ordinary ${surface.className} may not include background, grid, or camera facts',
+          ),
   ];
 }
 
@@ -197,6 +197,10 @@ List<GuardrailViolation> _checkCachedPaintSurfacesExclude({
 
 const _cachedPaintSurfaces = [
   _CachedPaintSurface('lib/src/frame/paint_plan.dart', 'PaintPlanKey'),
+  _CachedPaintSurface(
+    'lib/src/frame/paint_plan.dart',
+    'OrdinaryPaintRecordKey',
+  ),
   _CachedPaintSurface('lib/src/frame/paint_plan.dart', 'PaintPlan'),
   _CachedPaintSurface(
     'lib/src/frame/render_element_record.dart',

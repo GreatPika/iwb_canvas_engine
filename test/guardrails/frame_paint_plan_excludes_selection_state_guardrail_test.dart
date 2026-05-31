@@ -34,6 +34,18 @@ void main() {
       isTrue,
     );
   });
+
+  test(
+    'selection ordinary record key fixture is rejected structurally',
+    () async {
+      expect(
+        await _selectionFixtureIsRejected(
+          'final class OrdinaryPaintRecordKey { final int selectionRevision; const OrdinaryPaintRecordKey(this.selectionRevision); }',
+        ),
+        isTrue,
+      );
+    },
+  );
 }
 
 Future<bool> _selectionFixtureIsRejected(String paintPlanSource) async {

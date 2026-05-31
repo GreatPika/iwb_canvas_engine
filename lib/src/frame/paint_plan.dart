@@ -6,6 +6,8 @@ import '../contracts/public/canvas_ids.dart';
 import 'frame_cache.dart';
 import 'render_element_record.dart';
 
+const int kOrdinaryPaintRecordCacheEntryCapacity = 1024;
+
 @immutable
 final class PaintPlanKey {
   const PaintPlanKey({
@@ -121,8 +123,10 @@ final class OrdinaryPaintRecordCacheEntry {
   OrdinaryPaintRecordCacheEntry({
     required Iterable<MapEntry<OrdinaryPaintRecordKey, RenderElementRecord>>
     records,
-  }) : _records = Map.unmodifiable(Map.fromEntries(records));
+    this.capacity = kOrdinaryPaintRecordCacheEntryCapacity,
+  }) : _records = Map.unmodifiable(_boundedRecordMap(records, capacity));
 
+  final int capacity;
   final Map<OrdinaryPaintRecordKey, RenderElementRecord> _records;
 
   RenderElementRecord? readRecord(OrdinaryPaintRecordKey key) {
@@ -132,6 +136,25 @@ final class OrdinaryPaintRecordCacheEntry {
   Iterable<MapEntry<OrdinaryPaintRecordKey, RenderElementRecord>> get records {
     return _records.entries;
   }
+}
+
+Map<OrdinaryPaintRecordKey, RenderElementRecord> _boundedRecordMap(
+  Iterable<MapEntry<OrdinaryPaintRecordKey, RenderElementRecord>> records,
+  int capacity,
+) {
+  if (capacity <= 0) {
+    throw ArgumentError.value(capacity, 'capacity', 'must be positive');
+  }
+  final bounded = <OrdinaryPaintRecordKey, RenderElementRecord>{};
+  for (final entry in records) {
+    bounded.remove(entry.key);
+    bounded[entry.key] = entry.value;
+    while (bounded.length > capacity) {
+      bounded.remove(bounded.keys.first);
+    }
+  }
+
+  return bounded;
 }
 
 final class OrdinaryPaintRecordCache
