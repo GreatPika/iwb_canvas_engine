@@ -11,6 +11,11 @@ linked contracts, and relevant local naming/source-of-truth rules before
 reviewing. Do not replace repository naming rules; apply them to the reviewed
 diff.
 
+Use `Source-Of-Truth Singularity` when naming or placement depends on a
+governing local source of truth: durable meaning has one owner, duplicate truth
+requires an explicit cache/performance invariant and proof strategy, and the
+artifact must have a real human or machine consumer.
+
 ## Workflow
 
 1. When invoked standalone, inspect the current diff, changed file list, active

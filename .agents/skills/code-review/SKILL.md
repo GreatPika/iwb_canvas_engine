@@ -65,6 +65,9 @@ Also flag when applicable:
   inputs, classification, selected owner, source of truth, proof seam, fixture
   strategy, Decision Trace mapping, required source-of-truth update, or
   sequencing constraint;
+- `Source-Of-Truth Singularity` violations: source-of-truth drift, duplicated
+  truth without a cache/performance invariant and proof strategy, or durable
+  source-of-truth artifacts with no real consumer;
 - `Completion Evidence Boundary` violations: premature completion markers when
   the reviewed diff marks units or plan steps complete without implementing and
   proving that work in the reviewed range;

@@ -84,6 +84,11 @@ Required `Boundaries` fields:
 - `Compatibility`
 - `Order Constraints`
 
+The `Source of Truth` field is checked under `Source-Of-Truth Singularity`:
+durable meaning has one owning source of truth, duplicate truth is allowed only
+as cache/performance duplication with an invariant and proof strategy, and the
+artifact must have a real consumer.
+
 Each execution unit must include:
 
 - a heading that starts with `### [ ] Unit N:`;
@@ -218,9 +223,11 @@ Mark the contract `BLOCKED` when any category applies:
    for implementation.
 6. Scope is unsafe: in-scope and out-of-scope work are missing, contradictory,
    silently expanded, or inconsistent with source inputs.
-7. Source of truth or compatibility is wrong: the contract misses or contradicts
-   governing docs, public APIs, data formats, schemas, config, persistence,
-   generated outputs, registries, or external consumers.
+7. `Source-Of-Truth Singularity` or compatibility is wrong: the contract misses
+   or contradicts governing docs, public APIs, data formats, schemas, config,
+   persistence, generated outputs, registries, or external consumers; creates
+   duplicate truth without a cache/performance invariant and proof strategy; or
+   names a source-of-truth artifact without a real consumer.
 8. Order is unsafe: required sequencing is missing, dependencies are circular or
    vague, consumers move before owners exist, migration or retirement strategy is
    deferred, or old paths are retired before replacement and migration checks are

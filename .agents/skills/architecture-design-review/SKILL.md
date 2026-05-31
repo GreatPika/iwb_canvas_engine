@@ -76,8 +76,9 @@ A `READY_FOR_CONTRACT` design is passable only when the future Change Contract
 can be authored as execution planning, not architecture discovery. Review the
 selected form as an implementable system change:
 
-- Can the chosen owner actually accept the responsibility without creating a
-  second source of truth?
+- Does `Source-Of-Truth Singularity` hold: can the chosen owner accept the
+  responsibility without creating a second source of truth, and does each
+  source-of-truth artifact have a real human or machine consumer?
 - Can the proposed verification be built using existing seams that are real
   production seams or future contract-named test seams, or does the artifact
   name the small seam that must be introduced?
@@ -166,8 +167,9 @@ Mark the review `BLOCKED` when any of these are true:
     trade-off.
 18. The selected form violates repository dependency/import direction, layer
     ownership, or documented source-of-truth ownership.
-19. The design creates a second source of truth without an invariant and proof
-    strategy.
+19. `Source-Of-Truth Singularity` is violated: the design creates a second
+    source of truth without scoping it as cache/performance duplication with an
+    invariant, proof strategy, and real consumer.
 20. A shared-seam change lacks successor or retired seam, consumer order,
     retirement gate, or `Negative Proof And Fixture Quarantine` strategy.
 21. A public API change lacks compatibility, migration, or contract-owner
@@ -194,7 +196,8 @@ Mark the review `BLOCKED` when any of these are true:
 30. The artifact treats provisional `.design/` diagrams as durable
     `docs/diagrams/*.mmd` deliverables.
 31. A durable docs, diagram, registry, contract, or roadmap impact is implied by
-    the selected form but missing from `Source-Of-Truth Impact`.
+    the selected form but missing from `Source-Of-Truth Impact`, or the impact
+    does not preserve `Source-Of-Truth Singularity`.
 32. A required test, analyzer, guardrail, docs check, semantic search, or other
     proof surface is implied by the selected profile or obligations but missing
     from `Verification Impact` or `Verification Strategy`.

@@ -120,7 +120,9 @@ Treat these as investigation prompts, not automatic findings:
 - Plans that add artifacts but do not make a new bad state impossible.
 - Single-callsite abstractions with no boundary, safety, readability, or reuse
   value.
-- "Source of truth" artifacts with no consumer.
+- `Source-Of-Truth Singularity` violations: "source of truth" artifacts with no
+  consumer, duplicate truth outside explicit cache/performance duplication, or
+  duplicated truth without an invariant and proof strategy.
 - Checks whose only failure mode is "the checklist wording changed".
 - Proxy-only proof: cache key shape, revision churn, registry presence, object
   construction, method call order, rebuild count, compile success, event

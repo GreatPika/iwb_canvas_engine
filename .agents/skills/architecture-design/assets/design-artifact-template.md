@@ -126,6 +126,10 @@ Include Mermaid diagrams only when the assessment says they are needed.
 
 ## Source-Of-Truth Impact
 
+`Source-Of-Truth Singularity`: durable meaning must have one owning source of
+truth and a real human or machine consumer. Name cache/performance duplication
+only when the invariant and proof strategy are explicit.
+
 Name future docs, diagrams, registries, contracts, or roadmap files that a later
 Change Contract must update. Do not edit them now.
 

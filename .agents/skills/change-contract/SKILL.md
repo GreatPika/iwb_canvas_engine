@@ -352,6 +352,10 @@ When enough evidence exists, output:
 
     Source of Truth:
 
+    Preserve `Source-Of-Truth Singularity`: name the owning source of truth,
+    its real human or machine consumer, required dependent updates, and any
+    cache/performance duplication invariant plus proof strategy.
+
     Compatibility:
 
     Order Constraints:

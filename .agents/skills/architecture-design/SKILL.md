@@ -122,8 +122,10 @@ Reject any candidate form that fails one of these gates:
 
 - **Root cause**: fixes the owning cause, not only one downstream symptom.
 - **Ownership**: gives the behavior, policy, invariant, or state one clear owner.
-- **Source of truth**: avoids duplicate truth; any cache/performance duplication
-  has an invariant and proof strategy.
+- **Source-Of-Truth Singularity**: durable meaning has one owning source of
+  truth and a real human or machine consumer. Duplicated truth is allowed only
+  as explicit cache/performance duplication with an invariant and proof
+  strategy.
 - **Boundary**: names entry and exit boundaries and keeps validation at the
   boundary.
 - **Negative Proof And Fixture Quarantine**: negative, bypass, or structural
