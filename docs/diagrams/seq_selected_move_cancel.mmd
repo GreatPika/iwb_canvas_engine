@@ -17,7 +17,7 @@ sequenceDiagram
   participant Capture as FrameCaptureService
   participant Ordinary as OrdinaryPaintPlanner
   participant Supplement as SelectedMoveSupplementPlanner
-  participant PlanCache as PaintPlanCache
+  participant PlanCache as OrdinaryPaintRecordCache
   participant Resolver as CanvasMoveCommitResolver
   participant EK as EditKernel
   participant Draft as DraftDocument
@@ -94,7 +94,7 @@ sequenceDiagram
     end
     Supplement->>Supplement: merge filtered ordinary records and supplement by orderToken
     Supplement-->>Frame: merged selected move preview records
-    Note over Supplement,PlanCache: Selected supplement records are per-frame and are not stored in PaintPlanCache.
+    Note over Supplement,PlanCache: Selected supplement records are per-frame and are not stored in OrdinaryPaintRecordCache.
     Frame->>Signals: publish main repaint request
     Signals-->>Surface: repaint main scene with selected move preview
   end
@@ -157,7 +157,7 @@ sequenceDiagram
   end
   Ordinary-->>Frame: ordinary committed records
   Frame->>Ordinary: use ordinary committed records without selected move preview delta
-  Note over Ordinary,PlanCache: Cleanup has no selectedMoveDelta, selected-move preview records are not stored in PaintPlanCache.
+  Note over Ordinary,PlanCache: Cleanup has no selectedMoveDelta, selected-move preview records are not stored in OrdinaryPaintRecordCache.
   Frame->>Signals: publish main repaint cleanup request
   Signals-->>Surface: repaint main scene without selected move preview
   IE->>IE: return pointer runtime to idle

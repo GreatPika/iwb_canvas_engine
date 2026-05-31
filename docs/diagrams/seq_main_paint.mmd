@@ -18,7 +18,7 @@ sequenceDiagram
   participant SelectionFacts as SelectionFactsPort
   participant Preview as CanvasPreviewState
   participant Spatial as SpatialKernel
-  participant PlanCache as PaintPlanCache
+  participant PlanCache as OrdinaryPaintRecordCache
   participant Session as SurfaceResourceSession
   participant Resolver as CanvasResourceResolver
   participant Painter as Main painter
@@ -42,7 +42,7 @@ sequenceDiagram
 
   Frame->>Ordinary: plan ordinary committed records
   Ordinary->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewportRect, and devicePixelRatio
-  Note over Ordinary,PlanCache: PaintPlanCache excludes backgroundRevision, gridRevision, viewCameraRevision, viewCameraOffset, selectionRevision, selected ids, selectedMoveDelta, previewDelta, and style-only inputs.
+  Note over Ordinary,PlanCache: OrdinaryPaintRecordCache excludes backgroundRevision, gridRevision, viewCameraRevision, viewCameraOffset, selectionRevision, selected ids, selectedMoveDelta, previewDelta, and style-only inputs.
 
   alt ordinary paint plan cache hit
     PlanCache-->>Ordinary: ordinary committed RenderElementRecord list
@@ -87,7 +87,7 @@ sequenceDiagram
     end
     Supplement->>Supplement: merge filtered ordinary records and supplement records by orderToken
     Supplement-->>Frame: merged records with per-frame supplement
-    Note over Supplement,PlanCache: Selected supplement records are per-frame and are not stored in PaintPlanCache.
+    Note over Supplement,PlanCache: Selected supplement records are per-frame and are not stored in OrdinaryPaintRecordCache.
   end
 
   Frame->>Decoration: build selection decoration plan
@@ -95,7 +95,7 @@ sequenceDiagram
   Frame->>Background: build static background plan
   Background-->>Frame: static background primitive
   Note over Supplement: No full-scene sort and no CanvasDocument materialization.
-  Note over Decoration,SelectionFacts: Selection decoration and selected move supplements are per-frame render concerns outside the ordinary PaintPlanCache.
+  Note over Decoration,SelectionFacts: Selection decoration and selected move supplements are per-frame render concerns outside the OrdinaryPaintRecordCache.
 
   opt explicit frame caller supplies SurfaceResourceSession and records include image resource ids
     ExplicitCaller->>Assets: bind assets for immutable frame output

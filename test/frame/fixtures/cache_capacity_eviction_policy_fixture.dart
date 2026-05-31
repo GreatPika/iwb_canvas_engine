@@ -2,9 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_geometry.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_ids.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_cache.dart';
 import 'package:iwb_canvas_engine/src/frame/ordinary_paint_planner.dart';
 import 'package:iwb_canvas_engine/src/frame/paint_plan.dart';
+import 'package:iwb_canvas_engine/src/frame/render_element_record.dart';
 
 import 'ordinary_paint_test_support.dart';
 
@@ -20,19 +22,17 @@ void main() {
   });
 
   test('ordinary paint plan cache is 16 entry LRU with probes', () {
-    final cache = PaintPlanCache();
+    final cache = OrdinaryPaintRecordCache();
     final first = _paintKey(0);
     final second = _paintKey(1);
 
     for (var index = 0; index < 16; index += 1) {
-      final key = _paintKey(index);
-      cache.write(key, PaintPlan(key: key, ordinaryRecords: const []));
+      cache.write(_paintKey(index), _paintEntry(index));
     }
     expect(cache.probe.entries, 16);
     expect(cache.read(first), isNotNull);
 
-    final extra = _paintKey(16);
-    cache.write(extra, PaintPlan(key: extra, ordinaryRecords: const []));
+    cache.write(_paintKey(16), _paintEntry(16));
 
     expect(cache.probe.entries, 16);
     expect(cache.probe.hits, 1);
@@ -199,5 +199,26 @@ PaintPlanKey _paintKey(int index) {
     elementVisualRevision: 1,
     viewportRect: Rect.fromLTWH(index.toDouble(), 0, 10, 10),
     devicePixelRatio: 1,
+  );
+}
+
+OrdinaryPaintRecordCacheEntry _paintEntry(int index) {
+  final record = RenderElementRecord.fromFacts(
+    rectFacts('cached-$index', orderToken: index),
+  );
+
+  return OrdinaryPaintRecordCacheEntry(
+    records: [MapEntry(_paintRecordKey(index), record)],
+  );
+}
+
+OrdinaryPaintRecordKey _paintRecordKey(int index) {
+  return OrdinaryPaintRecordKey(
+    id: CanvasElementId('cached-$index'),
+    structuralRevision: index,
+    boundsRevision: 1,
+    elementVisualRevision: 1,
+    generation: 1,
+    orderToken: index,
   );
 }

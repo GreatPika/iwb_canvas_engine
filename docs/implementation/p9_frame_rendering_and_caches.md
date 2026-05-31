@@ -24,7 +24,7 @@ frame output.
   ordinary paint plans
 - main/overlay repaint buses
 - text/path/stroke/background/resource caches
-- paint-plan cache with ordinary committed records only
+- OrdinaryPaintRecordCache with ordinary committed records only
 - cache keys based on next-owned revisions, not legacy snapshot shapes
 - `backgroundRevision` and `gridRevision` excluded from ordinary element
   paint-plan invalidation
@@ -51,8 +51,8 @@ admission need explicit owners.
 | Collaborator | Owns | Must not own |
 |---|---|---|
 | `FrameCaptureService` | one-time capture of main/overlay live frame facts into `CapturedMainFrame` and `CapturedOverlayFrame` | record planning, resolver/session calls, cache mutation beyond captured-frame construction |
-| `OrdinaryPaintPlanner` | ordinary committed `PaintPlanCache` lookup/build using structure, bounds, element visual, viewport, and DPR | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
-| `SelectedMoveSupplementPlanner` | per-frame selected move filtering, shifted candidate lookup, row resolution, and merge by `orderToken` | ordinary `PaintPlanCache` writes, overlay rendering, global scene sort |
+| `OrdinaryPaintPlanner` | per-frame ordinary spatial admission and committed render-record reuse inside the 16-entry viewport/revision OrdinaryPaintRecordCache | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
+| `SelectedMoveSupplementPlanner` | per-frame selected move filtering, shifted candidate lookup, row resolution, and merge by `orderToken` | ordinary `OrdinaryPaintRecordCache` writes, overlay rendering, global scene sort |
 | `SelectionDecorationPlanner` | selection UI decoration and `SelectionDecorationPlan` key including `boundsRevision` | ordinary record cache identity, selected move supplement records, static background identity |
 | `PaintAssetBindingService` | descriptor-to-asset binding for records with image resource ids, using immutable descriptor facts and `SurfaceResourceSession` | ordinary paint plan construction, painter resolver calls, app resolver ownership |
 | `StaticBackgroundPlanner` | static background/grid plan and cache identity | selection, preview, resource visual, ordinary element visual identity |
@@ -72,9 +72,10 @@ without exposing frame collaborators through the package barrel. At minimum:
 
 - `FrameCaptureService` captures main and overlay live frame facts once.
 - `OrdinaryPaintPlanner` keeps ordinary cache identity free of selection,
-  preview, resolver/session, and static background facts.
+  preview, resolver/session, static background facts, and viewport-admission
+  results.
 - `SelectedMoveSupplementPlanner` stages selected move records without ordinary
-  `PaintPlanCache` writes or global scene sort.
+  `OrdinaryPaintRecordCache` writes or global scene sort.
 - `SelectionDecorationPlanner` includes `boundsRevision` so selected element
   bounds changes invalidate decoration even when selection membership is
   unchanged.
@@ -209,7 +210,8 @@ without exposing frame collaborators through the package barrel. At minimum:
   `FrameFactsPort`
 - cache keys are next-revision based
 - `backgroundRevision`, `gridRevision`, and runtime view-camera changes do not
-  invalidate ordinary committed element paint plans
+  invalidate ordinary committed render-record cache entries, while spatial
+  admission still follows the current effective world viewport
 - `selectionRevision` does not invalidate ordinary committed element paint
   plans
 - hot cache capacity/eviction policy is explicit

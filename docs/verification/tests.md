@@ -612,7 +612,7 @@ behavioral tests, and the required guardrail list remains owned by
   structuralRevision, not stored as an independent source of truth.
 
 #### `test/frame/paint_plan_excludes_selection_state_test.dart`
-- proves ordinary PaintPlanCache keys and cached ordinary records exclude
+- proves OrdinaryPaintRecordCache keys and cached ordinary records exclude
   selected ids, selectionRevision, selection flags, and selected-move preview
   state;
 - proves selection changes rebuild selection decoration without evicting the
@@ -620,7 +620,7 @@ behavioral tests, and the required guardrail list remains owned by
 - proves selected element bounds changes rebuild SelectionDecorationPlan even
   when selection membership is unchanged;
 - proves captured selectionStyle changes rebuild SelectionDecorationPlan
-  without entering StaticBackgroundCache or ordinary PaintPlanCache identity.
+  without entering StaticBackgroundCache or OrdinaryPaintRecordCache identity.
 
 #### `test/interaction/preview_public_state_test.dart`
 - proves preview-only pointer changes publish state.revisions.preview without
@@ -666,10 +666,11 @@ Current implemented proof:
   state.revisions.viewCamera without incrementing state.revisions.document,
   invalidating public document projection, or changing persisted document
   camera;
-- proves camera pan preserves ordinary PaintPlanCache entries while scheduling
+- proves camera pan preserves OrdinaryPaintRecordCache entries while ordinary
+  admission follows the current effective world viewport and schedules
   repaint for the main and overlay surfaces affected by the runtime view;
 - proves backgroundRevision and gridRevision invalidate StaticBackgroundCache
-  without invalidating ordinary PaintPlanCache entries;
+  without invalidating OrdinaryPaintRecordCache entries;
 - proves CanvasEdit.setCameraOffset changes persisted document camera through
   the explicit edit boundary, including the
   setCameraOffset(runtime.camera.offset) persistence path, and readDocument

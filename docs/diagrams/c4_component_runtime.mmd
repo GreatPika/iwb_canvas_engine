@@ -15,7 +15,7 @@ Container_Boundary(runtime_components, "RuntimeRoot internals") {
   Component(PointerToolCleanupCoordinator, "PointerToolCleanupCoordinator", "lib/src/interaction/", "Target internal InteractionEngine collaborator for shared pointer cleanup policy and effect-only outcomes.")
   Component(FrameEngine, "FrameEngine", "lib/src/frame/", "Frame-internal facade for orchestration, painter input assembly, and repaint buses.")
   Component(FrameCaptureService, "FrameCaptureService", "lib/src/frame/", "Frame-private capture owner for CapturedMainFrame and CapturedOverlayFrame.")
-  Component(OrdinaryPaintPlanner, "OrdinaryPaintPlanner", "lib/src/frame/", "Ordinary committed PaintPlanCache lookup/build owner.")
+  Component(OrdinaryPaintPlanner, "OrdinaryPaintPlanner", "lib/src/frame/", "Ordinary committed render-record cache owner.")
   Component(SelectedMoveSupplementPlanner, "SelectedMoveSupplementPlanner", "lib/src/frame/", "Per-frame selected move supplement owner.")
   Component(SelectionDecorationPlanner, "SelectionDecorationPlanner", "lib/src/frame/", "Selection decoration key owner including boundsRevision.")
   Component(PaintAssetBindingService, "PaintAssetBindingService", "lib/src/frame/", "Descriptor-to-asset binding owner through explicit SurfaceResourceSession.")

@@ -83,6 +83,6 @@ void main() {
     expect(ready.plan.ordinaryRecords.map((record) => record.id.value), [
       'content',
     ]);
-    expect(planner.paintPlanCache.probe.entries, 1);
+    expect(planner.ordinaryPaintRecordCache.probe.entries, 1);
   });
 }

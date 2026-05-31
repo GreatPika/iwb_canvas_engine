@@ -46,31 +46,35 @@ void _testPassiveHost() {
 }
 
 void _testCameraPanPreservesOrdinaryPlan() {
-  testWidgets('CanvasSurface camera pan preserves ordinary paint plan', (
-    tester,
-  ) async {
-    final runtime = CanvasRuntime(initialDocument: _document());
-    addTearDown(runtime.dispose);
+  testWidgets(
+    'CanvasSurface camera pan preserves ordinary paint cache identity',
+    (tester) async {
+      final runtime = CanvasRuntime(initialDocument: _document());
+      addTearDown(runtime.dispose);
 
-    await tester.pumpWidget(_surfaceHost(runtime));
-    final beforeOutput = _mainPainter(tester).output;
-    final beforePan = beforeOutput.ordinaryPlan;
+      await tester.pumpWidget(_surfaceHost(runtime));
+      final beforeOutput = _mainPainter(tester).output;
+      final beforePan = beforeOutput.ordinaryPlan;
 
-    runtime.camera.setOffset(const Offset(12, 0));
-    await tester.pumpWidget(_surfaceHost(runtime));
-    final afterPan = _mainPainter(tester).output.capturedFrame.snapshot.inputs;
+      runtime.camera.setOffset(const Offset(12, 0));
+      await tester.pumpWidget(_surfaceHost(runtime));
+      final afterPan = _mainPainter(
+        tester,
+      ).output.capturedFrame.snapshot.inputs;
+      final afterOrdinaryPlan = _mainPainter(tester).output.ordinaryPlan;
 
-    expect(_mainPainter(tester).output.ordinaryPlan, same(beforePan));
-    expect(
-      afterPan.viewportWorldBounds,
-      beforeOutput.capturedFrame.snapshot.inputs.viewportWorldBounds,
-    );
-    expect(afterPan.viewCameraOffset, const Offset(12, 0));
-    expect(
-      afterPan.effectiveWorldBounds,
-      afterPan.viewportWorldBounds.shift(const Offset(12, 0)),
-    );
-  });
+      expect(afterOrdinaryPlan.key, beforePan.key);
+      expect(
+        afterPan.viewportWorldBounds,
+        beforeOutput.capturedFrame.snapshot.inputs.viewportWorldBounds,
+      );
+      expect(afterPan.viewCameraOffset, const Offset(12, 0));
+      expect(
+        afterPan.effectiveWorldBounds,
+        afterPan.viewportWorldBounds.shift(const Offset(12, 0)),
+      );
+    },
+  );
 }
 
 CanvasDocument _document() {

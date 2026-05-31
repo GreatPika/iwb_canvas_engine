@@ -44,7 +44,7 @@ Do not assume:
 | PathGeometryCache | Geometry/Frame | pathData/fillRule/strokeWidth | path update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | StrokePathCache | Frame | pointsKey/thickness/transform scale | stroke update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | StaticBackgroundCache | Frame | backgroundRevision, gridRevision, gridStrokeWidth, viewCameraBucket, viewportRect, devicePixelRatio | view camera bucket/background/grid/captured grid style input | 1 latest picture for the current full static-background key | replace and dispose previous picture on key change or invalidation | picture count, rebuild count | yes bounded |
-| PaintPlanCache | Frame | structuralRevision, boundsRevision, elementVisualRevision, viewportRect, devicePixelRatio | typed invalidation excluding background, grid, view camera, preview, selection-only, and style-only changes | 16 viewport plans | LRU by viewport/revision tuple | candidate count, hit/miss, full-sort probe, selected-supplement bypass count | yes bounded |
+| OrdinaryPaintRecordCache | Frame | structuralRevision, boundsRevision, elementVisualRevision, viewportRect, devicePixelRatio | typed invalidation excluding background, grid, view camera, preview, selection-only, and style-only changes | 16 viewport/revision entries | LRU by viewport/revision tuple | entry count, hit/miss, eviction/write probes | yes bounded |
 | ImageResolveCache | SurfaceResourceSession | resolverGeneration, resourceId, resourceRevision | resolver replacement, descriptor change, resource dirty target/all, detach/dispose/runtime swap | 1024 entries per active session | target/all invalidation, generation reset, then LRU | resolver-call budget and pending budget follow-up flag | yes bounded sync resolver |
 | SelectionDecorationPlan | Frame | selectionRevision, structuralRevision, boundsRevision, captured selectionStyle, devicePixelRatio | selection/structure/bounds/captured style/DPR input | 1 current decoration plan | replace on revision, bounds, style, or DPR change | selected count, rebuild count | yes bounded |
 | SelectedOrderCache | Frame | selectionRevision/structuralRevision | selection/structure | 1 selected-order snapshot | replace on revision change | selected count, rebuild count | yes bounded |
@@ -62,15 +62,20 @@ but it must not trigger CanvasDocument projection, full-scene candidate rebuild,
 global sort, resolver calls, repaint scheduling, or additional cache-owner work
 outside the declared cache row.
 
-`PaintPlanCache` stores ordinary committed records only. It must not store
+`OrdinaryPaintRecordCache` stores ordinary committed render records inside a bounded
+viewport/revision entry, not the reusable viewport-admitted ordinary record
+stream for a frame. Spatial admission is rebuilt per captured frame from the
+effective world viewport; cache hits may reuse only the admitted records whose
+committed record keys match the current candidates. It must not store
 selected-move supplement records, `selectedMoveDelta`, or `previewDelta`.
 It also must not store selected ids, selection flags, or selectionRevision in
 ordinary cache keys or cached ordinary records. `backgroundRevision`,
 `gridRevision`, `gridStrokeWidth`, `viewCameraRevision`, `viewCameraOffset`, and
-captured style-only inputs are not PaintPlanCache key components because view
-camera, background, grid, and style-only changes repaint frame surfaces or
-decoration plans without changing ordinary element paint records. Runtime view
-camera changes also do not invalidate public `CanvasDocument` projection.
+captured style-only inputs are not OrdinaryPaintRecordCache entry-key
+components because view camera, background, grid, and style-only changes repaint
+frame surfaces or decoration plans without changing ordinary element render
+records. Runtime view camera changes also do not invalidate public
+`CanvasDocument` projection.
 
 `SelectedOrderCache` is derived data. Its source of truth is the selection owner
 plus document order facts from the document boundary; it may be retained only as

@@ -68,43 +68,84 @@ void _testFrameEngineAssetBinding() {
   test(
     'frame engine asset binding resolves descriptor snapshots through session',
     () async {
-      final image = await createResourceTestImage();
-      addTearDown(image.dispose);
-      final resolver = _imageResolver(image);
-      final session = _warmedSession(resolver);
-      final engine = _engineForImageRecords();
-      final resourceFree = engine.buildResourceFreeMainFrame(
-        inputs: _inputs(),
-        viewCameraBucket: 0,
-      );
+      final scenario = await _buildAssetBindingScenario();
+      addTearDown(scenario.image.dispose);
 
-      final output = engine.buildMainFrameWithAssetBindings(
-        inputs: _inputs(),
-        viewCameraBucket: 0,
-        bindAssets: ({required frame, required records}) =>
-            const PaintAssetBindingService().bind(
-              frame: frame,
-              records: records,
-              session: session,
-            ),
-      );
-
-      _expectResolvedBindings(output.assetBindings);
-      expect(resolver.resources.last.id, CanvasResourceId('image-a'));
-      expect(output.ordinaryPlan, same(resourceFree.ordinaryPlan));
-      expect(
-        output
-            .selectedMoveSupplementPlan
-            .probe
-            .ordinaryCacheWritesDuringSupplement,
-        0,
-      );
+      expect(scenario.output.assetBindings.images, isNotEmpty);
+      _expectResolvedBindings(scenario.output.assetBindings);
+      _expectOrdinaryPlanUnchangedByAssetBinding(scenario);
+      _expectNoOrdinaryCacheWritesDuringSupplement(scenario.output);
     },
+  );
+}
+
+Future<_AssetBindingScenario> _buildAssetBindingScenario() async {
+  final image = await createResourceTestImage();
+  final resolver = _imageResolver(image);
+  final session = _warmedSession(resolver);
+  final engine = _engineForImageRecords();
+  final resourceFree = engine.buildResourceFreeMainFrame(
+    inputs: _inputs(),
+    viewCameraBucket: 0,
+  );
+  final output = engine.buildMainFrameWithAssetBindings(
+    inputs: _inputs(),
+    viewCameraBucket: 0,
+    bindAssets: ({required frame, required records}) =>
+        const PaintAssetBindingService().bind(
+          frame: frame,
+          records: records,
+          session: session,
+        ),
+  );
+
+  return _AssetBindingScenario(
+    image: image,
+    resolver: resolver,
+    resourceFree: resourceFree,
+    output: output,
+  );
+}
+
+void _expectOrdinaryPlanUnchangedByAssetBinding(
+  _AssetBindingScenario scenario,
+) {
+  expect(scenario.resolver.resources.last.id, CanvasResourceId('image-a'));
+  expect(
+    scenario.output.ordinaryPlan.key,
+    scenario.resourceFree.ordinaryPlan.key,
+  );
+  expect(
+    scenario.output.ordinaryPlan.ordinaryRecords.map((record) => record.id),
+    scenario.resourceFree.ordinaryPlan.ordinaryRecords.map(
+      (record) => record.id,
+    ),
+  );
+}
+
+void _expectNoOrdinaryCacheWritesDuringSupplement(MainFramePaintOutput output) {
+  expect(
+    output.selectedMoveSupplementPlan.probe.ordinaryCacheWritesDuringSupplement,
+    0,
   );
 }
 
 RecordingResourceResolver _imageResolver(Image image) {
   return RecordingResourceResolver((_) => image);
+}
+
+final class _AssetBindingScenario {
+  const _AssetBindingScenario({
+    required this.image,
+    required this.resolver,
+    required this.resourceFree,
+    required this.output,
+  });
+
+  final Image image;
+  final RecordingResourceResolver resolver;
+  final MainFramePaintOutput resourceFree;
+  final MainFramePaintOutput output;
 }
 
 SurfaceResourceSession _warmedSession(RecordingResourceResolver resolver) {

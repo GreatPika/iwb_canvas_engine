@@ -49,9 +49,9 @@ flowchart LR
     RepaintSignal["Main repaint request"]
     Capture["FrameCaptureService\nmain frame capture\nsingle runtime read boundary"]
     CapturedFrame["CapturedMainFrame\ndocument, structural, bounds,\nelementVisual, backgroundRevision,\ngridRevision, gridStrokeWidth,\nresourceVisual, selection,\nselectionStyle,\nview camera, viewportRect,\ndevicePixelRatio, selectedMoveDelta"]
-    PaintPlanCache["PaintPlanCache\nordinary committed records only\nno background/grid, view camera,\nselectedMoveDelta, previewDelta,\nor style-only facts in key/value"]
-    OrdinaryPlan["Ordinary committed paint plan\ncached RenderElementRecord list"]
-    OrdinaryStage["OrdinaryPaintPlanner\nordinary paint candidates\nviewport and halo"]
+    OrdinaryPaintRecordCache["OrdinaryPaintRecordCache\nordinary committed records only\nno background/grid, view camera,\nselectedMoveDelta, previewDelta,\nor style-only facts in key/value"]
+    OrdinaryPlan["Ordinary committed paint plan\nper-frame admitted record stream"]
+    OrdinaryStage["OrdinaryPaintPlanner\nordinary paint candidates\neffective world viewport"]
     SupplementStage["SelectedMoveSupplementPlanner\nper-frame selected supplement staging\npreview-shifted visibility"]
     OrdinaryRecordBuilder["OrdinaryPaintPlanner\nordinary record builder\nresolve handles by revision/generation/orderToken"]
     SupplementRecordBuilder["SelectedMoveSupplementPlanner\nsupplement record builder\nresolve shifted handles by revision/generation/orderToken"]
@@ -91,9 +91,9 @@ flowchart LR
   Capture -->|"read CanvasSelectedMovePreview once"| PreviewSnapshot
   PreviewSnapshot -->|"delta or none"| CapturedFrame
 
-  CapturedFrame -->|"ordinary cache key\nstructural, bounds, elementVisual,\nviewportRect, devicePixelRatio"| PaintPlanCache
-  PaintPlanCache -->|"cache hit: ordinary committed records"| OrdinaryPlan
-  PaintPlanCache -->|"cache miss inputs"| OrdinaryStage
+  CapturedFrame -->|"ordinary cache key\nstructural, bounds, elementVisual,\nviewportRect, devicePixelRatio"| OrdinaryPaintRecordCache
+  OrdinaryPaintRecordCache -->|"cache hit: admitted committed record"| OrdinaryPlan
+  OrdinaryPaintRecordCache -->|"cache miss inputs"| OrdinaryStage
 
   OrdinaryStage -->|"viewport query only"| PaintIndex
   PaintIndex -->|"candidate ids with generations and order tokens"| OrdinaryStage
@@ -104,7 +104,7 @@ flowchart LR
   Committed -->|"immutable row views\nstale revision/generation/orderToken rejected"| RowSnapshots
   RowSnapshots -->|"ordinary row facts or stale rejection"| OrdinaryRecordBuilder
   OrdinaryRecordBuilder -->|"ordinary committed records"| OrdinaryPlan
-  OrdinaryPlan -->|"store ordinary records only"| PaintPlanCache
+  OrdinaryPlan -->|"store ordinary records only"| OrdinaryPaintRecordCache
 
   OrdinaryPlan -->|"ordinary stream"| FilterOrdinary
   CapturedFrame -->|"selection ids and preview delta"| FilterOrdinary
@@ -117,7 +117,7 @@ flowchart LR
   RowSnapshots -->|"selected row facts or stale rejection"| SupplementRecordBuilder
   SupplementRecordBuilder -->|"per-frame supplement records\nwith previewDelta"| Merge
   FilterOrdinary -->|"ordinary records excluding\nmoved selected ids"| Merge
-  Merge -->|"ordered ordinary and supplement records\nnot stored in PaintPlanCache"| Records
+  Merge -->|"ordered ordinary and supplement records\nnot stored in OrdinaryPaintRecordCache"| Records
   SelectionDecoration -->|"selection UI primitives"| Records
 
   Records -->|"text/path/stroke keys"| RenderCaches

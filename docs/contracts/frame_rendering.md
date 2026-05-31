@@ -137,8 +137,8 @@ frame-private collaborators:
 | Target collaborator | Owns | Must not own |
 |---|---|---|
 | `FrameCaptureService` | one-time capture of main/overlay live frame facts into `CapturedMainFrame` and `CapturedOverlayFrame` | record planning, resolver/session calls, cache mutation beyond captured-frame construction |
-| `OrdinaryPaintPlanner` | ordinary committed `PaintPlanCache` lookup/build using structure, bounds, element visual, viewport, and DPR | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
-| `SelectedMoveSupplementPlanner` | per-frame selected move filtering, shifted candidate lookup, row resolution, and merge by `orderToken` | ordinary `PaintPlanCache` writes, overlay rendering, global scene sort |
+| `OrdinaryPaintPlanner` | per-frame ordinary spatial admission and committed render-record cache lookup/build inside the 16-entry viewport/revision OrdinaryPaintRecordCache | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
+| `SelectedMoveSupplementPlanner` | per-frame selected move filtering, shifted candidate lookup, row resolution, and merge by `orderToken` | ordinary `OrdinaryPaintRecordCache` writes, overlay rendering, global scene sort |
 | `SelectionDecorationPlanner` | selection UI decoration and `SelectionDecorationPlan` key including `boundsRevision` | ordinary record cache identity, selected move supplement records, static background identity |
 | `PaintAssetBindingService` | descriptor-to-asset binding for records with image resource ids, using immutable descriptor facts and `SurfaceResourceSession` | ordinary paint plan construction, painter resolver calls, app resolver ownership |
 | `StaticBackgroundPlanner` | static background/grid plan and cache identity | selection, preview, resource visual, ordinary element visual identity |
@@ -179,11 +179,11 @@ RenderElementRecord
   row-specific immutable view
 ```
 
-Ordinary `RenderElementRecord` values cached in `PaintPlanCache` do not include
-selection membership, selection flags, selected-move preview deltas, or any
-other selection-only state. Selection UI is built as a separate decoration pass,
-and selected-move supplement records are per-frame values that are never stored
-in the ordinary paint plan cache.
+Ordinary `RenderElementRecord` values cached in `OrdinaryPaintRecordCache` do not include
+selection membership, selection flags, selected-move preview deltas, viewport
+admission results, or any other selection-only state. Selection UI is built as a
+separate decoration pass, and selected-move supplement records are per-frame
+values that are never stored in the ordinary paint plan cache.
 
 Family row views:
 
@@ -201,35 +201,44 @@ RectRenderRow: size, fillColor, strokeColor, strokeWidth
 Algorithm:
 
 ```text
-1. Lookup or build the committed ordinary paint plan from PaintPlanCache.
-2. PaintPlanCache stores only ordinary committed RenderElementRecord data.
-3. PaintPlanCache key uses structuralRevision, boundsRevision,
+1. Read captured spatial candidates from the effective world viewport for this
+   frame.
+2. Admit ordinary committed candidates for this frame before cache lookup.
+3. Lookup the OrdinaryPaintRecordCache entry by structuralRevision, boundsRevision,
    elementVisualRevision, viewportRect, and devicePixelRatio.
-4. PaintPlanCache key must not include backgroundRevision, gridRevision,
+4. Reuse only the admitted committed RenderElementRecord values whose record
+   identity matches the current spatial candidates by element id, generation,
+   and orderToken; build the missing admitted records before writing the entry.
+5. OrdinaryPaintRecordCache keys and cached records must not include backgroundRevision,
+   gridRevision,
    gridStrokeWidth, viewCameraRevision, viewCameraOffset, selectedMoveDelta,
    previewDelta, selected ids, selection flags, selectionRevision, or captured
-   style-only inputs.
-5. When CanvasSelectedMovePreview is active, read selected ids through the captured
+   style-only inputs. OrdinaryPaintRecordCache also must not store the viewport-admitted
+   ordinary record stream as a reusable cache value.
+6. Build a per-frame PaintPlan from the current admitted record stream. Its
+   PaintPlanKey is the cache-entry lookup, but the entry can only reuse records
+   admitted again by the current frame.
+7. When CanvasSelectedMovePreview is active, read selected ids through the captured
    selection facts boundary and filter movable selected ids from the
    ordinary record stream for this frame only.
-6. Query visibilityRect shifted by -previewDelta for selected supplement
+8. Query visibilityRect shifted by -previewDelta for selected supplement
    candidates.
-7. Resolve selected handles through `FrameFactsPort` against the captured
+9. Resolve selected handles through `FrameFactsPort` against the captured
    structuralRevision, generation, and orderToken.
-8. If the selected row facts are current, create shifted RenderElementRecord
+10. If the selected row facts are current, create shifted RenderElementRecord
    instances with previewDelta for this frame only.
-9. If `FrameFactsPort` rejects a stale selected candidate, skip that candidate
+11. If `FrameFactsPort` rejects a stale selected candidate, skip that candidate
    and do not build a supplement RenderElementRecord for it.
-10. Merge filtered ordinary records and supplement records by orderToken.
-11. Do not store selected supplement records in PaintPlanCache.
-12. Do not global sort all scene elements.
-13. Do not materialize CanvasDocument.
+12. Merge filtered ordinary records and supplement records by orderToken.
+13. Do not store selected supplement records in OrdinaryPaintRecordCache.
+14. Do not global sort all scene elements.
+15. Do not materialize CanvasDocument.
 ```
 
-Accepted internal ownership: `OrdinaryPaintPlanner` owns steps 1 through 4, while
-`SelectedMoveSupplementPlanner` owns steps 5 through 12. The supplement planner
+Accepted internal ownership: `OrdinaryPaintPlanner` owns steps 1 through 6, while
+`SelectedMoveSupplementPlanner` owns steps 7 through 14. The supplement planner
 consumes captured selection facts and ordinary records for the current frame,
-but does not write the ordinary `PaintPlanCache`, does not render overlays, and
+but does not write the ordinary `OrdinaryPaintRecordCache`, does not render overlays, and
 does not global sort the scene.
 
 Selection decoration reads selected ids and selectionRevision through the same

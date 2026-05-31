@@ -84,7 +84,7 @@ flowchart LR
   end
 
   subgraph Frame["FrameEngine facade and frame-private collaborators"]
-    PaintPlanInvalidation["OrdinaryPaintPlanner\nPaintPlanCache invalidation\nstructural, bounds, elementVisual,\nviewportRect, devicePixelRatio"]
+    PaintPlanInvalidation["OrdinaryPaintPlanner\nOrdinaryPaintRecordCache invalidation\nstructural, bounds, elementVisual,\nviewportRect, devicePixelRatio"]
     SelectionDecorationInvalidation["SelectionDecorationPlanner\nselection decoration invalidation\nselection, structure, bounds, style, DPR"]
     StaticFrameInvalidation["StaticBackgroundPlanner\nStaticBackgroundCache invalidation\nview camera bucket, background, grid"]
     TextPathInvalidation["Text, path, stroke cache invalidation\nonly changed render inputs"]

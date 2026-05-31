@@ -210,8 +210,8 @@ Mandatory guardrails:
 | `spatial.fallback_budget_enforced` | query-tile and fallback-candidate budgets increment non-hub counters and return typed budget-exceeded results without partial candidates |
 | `frame.committed_facts_via_frame_facts_port` | production frame code obtains committed frame facts, row snapshots, and descriptor snapshots through `FrameFactsPort`, and `lib/src/frame/**` does not import concrete store internals |
 | `frame.no_global_scene_sort` | selected supplement staging merges by orderToken and does not globally sort all scene elements |
-| `frame.paint_plan_excludes_preview_delta` | PaintPlanCache stores ordinary committed records only and excludes selectedMoveDelta/previewDelta from keys and values |
-| `frame.paint_plan_excludes_selection_state` | PaintPlanCache stores ordinary committed records only and excludes selected ids, selectionRevision, and selection flags from keys and values |
+| `frame.paint_plan_excludes_preview_delta` | OrdinaryPaintRecordCache stores ordinary committed records only and excludes selectedMoveDelta/previewDelta from keys and values |
+| `frame.paint_plan_excludes_selection_state` | OrdinaryPaintRecordCache stores ordinary committed records only and excludes selected ids, selectionRevision, and selection flags from keys and values |
 | `cache.keys_use_next_revisions_only` | cache keys use next-owned revision facts and stable inputs, not legacy snapshot shapes |
 | `cache.background_grid_not_element_visual` | backgroundRevision/gridRevision changes and runtime view camera changes must not invalidate ordinary element paint plans |
 | `cache.hot_caches_have_capacity_eviction` | hot caches declare capacity, eviction policy, invalidation owner, and metric/probe |

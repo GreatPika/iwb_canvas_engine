@@ -21,16 +21,19 @@ void main() {
     final frame = capturedMainFrame(frameFacts: frameFacts);
     final resolveCallsAfterCapture = frameFacts.resolveElementCalls;
     final planner = OrdinaryPaintPlanner();
-    final beforeProbe = planner.paintPlanCache.probe;
+    final beforeProbe = planner.ordinaryPaintRecordCache.probe;
 
     final result = planner.buildOrdinaryPlan(frame);
 
     expect(result, isA<OrdinaryPaintPlanRejected>());
     expect(planner.rejectedCandidateCount, 1);
     expect(frameFacts.resolveElementCalls, resolveCallsAfterCapture);
-    expect(planner.paintPlanCache.probe.entries, beforeProbe.entries);
-    expect(planner.paintPlanCache.probe.writes, beforeProbe.writes);
-    expect(planner.paintPlanCache.probe.evictions, beforeProbe.evictions);
+    expect(planner.ordinaryPaintRecordCache.probe.entries, beforeProbe.entries);
+    expect(planner.ordinaryPaintRecordCache.probe.writes, beforeProbe.writes);
+    expect(
+      planner.ordinaryPaintRecordCache.probe.evictions,
+      beforeProbe.evictions,
+    );
     expect(planner.textLayoutCache.probe.entries, 0);
     expect(planner.textLayoutCache.probe.writes, 0);
     expect(planner.textLayoutCache.probe.misses, 0);
@@ -55,7 +58,7 @@ void main() {
 
     expect(first, isA<OrdinaryPaintPlanReady>());
     expect(stale, isA<OrdinaryPaintPlanRejected>());
-    expect(planner.paintPlanCache.probe.hits, 0);
+    expect(planner.ordinaryPaintRecordCache.probe.hits, 0);
   });
 
   test('failed spatial admission rejects without empty cache writes', () {
@@ -76,7 +79,7 @@ void main() {
     );
 
     expect(failed, isA<OrdinaryPaintPlanRejected>());
-    expect(planner.paintPlanCache.probe.writes, 1);
+    expect(planner.ordinaryPaintRecordCache.probe.writes, 1);
     expect(
       successful,
       isA<OrdinaryPaintPlanReady>().having(

@@ -25,10 +25,12 @@ CapturedMainFrame capturedMainFrame({
   CanvasPreviewState preview = const CanvasNoPreview(),
   int previewRevision = 0,
   Rect viewport = const Rect.fromLTWH(0, 0, 100, 100),
+  Offset viewCameraOffset = Offset.zero,
   double devicePixelRatio = 1,
   SelectionFacts? selectionFacts,
   CanvasSelectionStyle selectionStyle = CanvasSelectionStyle.defaultStyle,
   CanvasGridStyle gridStyle = CanvasGridStyle.defaultStyle,
+  SpatialPaintQuery? queryPaint,
 }) {
   final capture = FrameCaptureService(
     frameFacts: frameFacts,
@@ -36,11 +38,13 @@ CapturedMainFrame capturedMainFrame({
       selectionFacts ??
           SelectionFacts(selectedElementIds: const {}, selectionRevision: 0),
     ),
-    queryPaint: (_) =>
-        spatialPaintResult ??
-        SpatialCandidatesResult(
-          orderedCandidates: frameFacts.spatialCandidates,
-        ),
+    queryPaint:
+        queryPaint ??
+        (_) =>
+            spatialPaintResult ??
+            SpatialCandidatesResult(
+              orderedCandidates: frameFacts.spatialCandidates,
+            ),
   );
 
   return capture.captureMainFrame(
@@ -51,6 +55,7 @@ CapturedMainFrame capturedMainFrame({
       gridStyle: gridStyle,
       preview: preview,
       previewRevision: previewRevision,
+      viewCameraOffset: viewCameraOffset,
     ),
   );
 }

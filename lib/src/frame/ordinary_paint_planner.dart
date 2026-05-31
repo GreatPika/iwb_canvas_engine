@@ -25,17 +25,18 @@ final class OrdinaryPaintPlanRejected extends OrdinaryPaintPlanResult {
 }
 
 // Ordinary planning is the single cache-write boundary for captured committed
-// facts, spatial admission, render records, and render-family cache probes.
+// facts, spatial admission, reusable render records, and render-family probes.
 // ignore: coupling-between-object-classes
 final class OrdinaryPaintPlanner {
   OrdinaryPaintPlanner({
-    PaintPlanCache? paintPlanCache,
+    OrdinaryPaintRecordCache? ordinaryPaintRecordCache,
     TextLayoutCache? textLayoutCache,
     PathGeometryCache? pathGeometryCache,
     StrokePathCache? strokePathCache,
     RenderFamilyCaches? renderFamilyCaches,
     GeometryPolicy geometryPolicy = const GeometryPolicy(),
-  }) : _paintPlanCache = paintPlanCache ?? PaintPlanCache(),
+  }) : _ordinaryPaintRecordCache =
+           ordinaryPaintRecordCache ?? OrdinaryPaintRecordCache(),
        _renderFamilyCaches =
            renderFamilyCaches ??
            RenderFamilyCaches(
@@ -45,12 +46,13 @@ final class OrdinaryPaintPlanner {
            ),
        _geometryPolicy = geometryPolicy;
 
-  final PaintPlanCache _paintPlanCache;
+  final OrdinaryPaintRecordCache _ordinaryPaintRecordCache;
   final RenderFamilyCaches _renderFamilyCaches;
   final GeometryPolicy _geometryPolicy;
   int _rejectedCandidateCount = 0;
 
-  PaintPlanCache get paintPlanCache => _paintPlanCache;
+  OrdinaryPaintRecordCache get ordinaryPaintRecordCache =>
+      _ordinaryPaintRecordCache;
   TextLayoutCache get textLayoutCache => _renderFamilyCaches.textLayoutCache;
   PathGeometryCache get pathGeometryCache {
     return _renderFamilyCaches.pathGeometryCache;
@@ -76,26 +78,21 @@ final class OrdinaryPaintPlanner {
       );
     }
 
-    final key = paintPlanKeyFor(frame);
-    final cached = _paintPlanCache.read(key);
-    if (cached != null) {
-      return OrdinaryPaintPlanReady(plan: cached, cacheHit: true);
-    }
+    final planKey = paintPlanKeyFor(frame);
+    final resolved = _resolvedOrdinaryRecords(
+      frame: frame,
+      admitted: admitted,
+      cachedEntry: _ordinaryPaintRecordCache.read(planKey),
+      geometryPolicy: _geometryPolicy,
+    );
+    _bindRenderFamilyCaches(_renderFamilyCaches, resolved.records);
+    final plan = _paintPlanFrom(planKey, resolved.records);
+    _ordinaryPaintRecordCache.write(
+      planKey,
+      _ordinaryPaintRecordCacheEntryFor(resolved.records),
+    );
 
-    final records = <RenderElementRecord>[];
-    for (final facts in admitted) {
-      records.add(
-        RenderElementRecord.fromFacts(facts, geometryPolicy: _geometryPolicy),
-      );
-    }
-
-    for (final facts in admitted) {
-      _renderFamilyCaches.bind(facts);
-    }
-    final plan = PaintPlan(key: key, ordinaryRecords: records);
-    _paintPlanCache.write(key, plan);
-
-    return OrdinaryPaintPlanReady(plan: plan, cacheHit: false);
+    return OrdinaryPaintPlanReady(plan: plan, cacheHit: resolved.cacheHit);
   }
 
   PaintPlanKey paintPlanKeyFor(CapturedMainFrame frame) {
@@ -109,32 +106,157 @@ final class OrdinaryPaintPlanner {
       devicePixelRatio: frame.snapshot.inputs.devicePixelRatio,
     );
   }
+}
 
-  List<FrameElementFacts>? _admittedOrdinaryFacts(
-    CapturedFrameSnapshot snapshot,
-  ) {
-    final facts = <FrameElementFacts>[];
-    for (final handle in snapshot.spatialPaintCandidates) {
-      final candidateFacts = _capturedCandidateFacts(snapshot, handle);
-      if (candidateFacts == null) {
-        return null;
-      }
-      if (candidateFacts.locationKind == FrameElementLocationKind.content) {
-        facts.add(candidateFacts);
-      }
-    }
-
-    return facts;
-  }
-
-  FrameElementFacts? _capturedCandidateFacts(
-    CapturedFrameSnapshot snapshot,
-    FrameElementHandle handle,
-  ) {
-    if (handle.structuralRevision != snapshot.revisions.structuralRevision) {
+List<FrameElementFacts>? _admittedOrdinaryFacts(
+  CapturedFrameSnapshot snapshot,
+) {
+  final facts = <FrameElementFacts>[];
+  for (final handle in snapshot.spatialPaintCandidates) {
+    final candidateFacts = _capturedCandidateFacts(snapshot, handle);
+    if (candidateFacts == null) {
       return null;
     }
-
-    return snapshot.elementFactsFor(handle);
+    if (candidateFacts.locationKind == FrameElementLocationKind.content) {
+      facts.add(candidateFacts);
+    }
   }
+
+  return facts;
+}
+
+FrameElementFacts? _capturedCandidateFacts(
+  CapturedFrameSnapshot snapshot,
+  FrameElementHandle handle,
+) {
+  if (handle.structuralRevision != snapshot.revisions.structuralRevision) {
+    return null;
+  }
+
+  return snapshot.elementFactsFor(handle);
+}
+
+_ResolvedOrdinaryRecords _resolvedOrdinaryRecords({
+  required CapturedMainFrame frame,
+  required Iterable<FrameElementFacts> admitted,
+  required OrdinaryPaintRecordCacheEntry? cachedEntry,
+  required GeometryPolicy geometryPolicy,
+}) {
+  final records = <_ResolvedOrdinaryRecord>[];
+  var cacheHit = true;
+  for (final facts in admitted) {
+    final resolved = _resolvedOrdinaryRecord(
+      frame: frame,
+      facts: facts,
+      cachedEntry: cachedEntry,
+      geometryPolicy: geometryPolicy,
+    );
+    records.add(resolved);
+    cacheHit = cacheHit && resolved.cacheHit;
+  }
+
+  return _ResolvedOrdinaryRecords(
+    records: records,
+    cacheHit: records.isNotEmpty && cacheHit,
+  );
+}
+
+_ResolvedOrdinaryRecord _resolvedOrdinaryRecord({
+  required CapturedMainFrame frame,
+  required FrameElementFacts facts,
+  required OrdinaryPaintRecordCacheEntry? cachedEntry,
+  required GeometryPolicy geometryPolicy,
+}) {
+  final key = _ordinaryPaintRecordKeyFor(frame, facts);
+  final cached = cachedEntry?.readRecord(key);
+  if (cached != null) {
+    return _ResolvedOrdinaryRecord(
+      facts: facts,
+      cacheKey: key,
+      record: cached,
+      cacheHit: true,
+    );
+  }
+
+  return _ResolvedOrdinaryRecord(
+    facts: facts,
+    cacheKey: key,
+    record: RenderElementRecord.fromFacts(
+      facts,
+      geometryPolicy: geometryPolicy,
+    ),
+    cacheHit: false,
+  );
+}
+
+void _bindRenderFamilyCaches(
+  RenderFamilyCaches caches,
+  Iterable<_ResolvedOrdinaryRecord> records,
+) {
+  for (final resolvedRecord in records) {
+    caches.bind(resolvedRecord.facts);
+  }
+}
+
+PaintPlan _paintPlanFrom(
+  PaintPlanKey key,
+  Iterable<_ResolvedOrdinaryRecord> records,
+) {
+  return PaintPlan(
+    key: key,
+    ordinaryRecords: [
+      for (final resolvedRecord in records) resolvedRecord.record,
+    ],
+  );
+}
+
+OrdinaryPaintRecordCacheEntry _ordinaryPaintRecordCacheEntryFor(
+  Iterable<_ResolvedOrdinaryRecord> records,
+) {
+  return OrdinaryPaintRecordCacheEntry(
+    records: [
+      for (final resolvedRecord in records)
+        MapEntry(resolvedRecord.cacheKey, resolvedRecord.record),
+    ],
+  );
+}
+
+OrdinaryPaintRecordKey _ordinaryPaintRecordKeyFor(
+  CapturedMainFrame frame,
+  FrameElementFacts facts,
+) {
+  final revisions = frame.snapshot.revisions;
+
+  return OrdinaryPaintRecordKey(
+    id: facts.id,
+    structuralRevision: revisions.structuralRevision,
+    boundsRevision: revisions.boundsRevision,
+    elementVisualRevision: revisions.elementVisualRevision,
+    generation: facts.generation,
+    orderToken: facts.orderToken,
+  );
+}
+
+final class _ResolvedOrdinaryRecords {
+  _ResolvedOrdinaryRecords({
+    required Iterable<_ResolvedOrdinaryRecord> records,
+    required this.cacheHit,
+  }) : records = List.unmodifiable(records);
+
+  final List<_ResolvedOrdinaryRecord> records;
+  final bool cacheHit;
+}
+
+final class _ResolvedOrdinaryRecord {
+  const _ResolvedOrdinaryRecord({
+    required this.facts,
+    required this.cacheKey,
+    required this.record,
+    required this.cacheHit,
+  });
+
+  final FrameElementFacts facts;
+  final OrdinaryPaintRecordKey cacheKey;
+  final RenderElementRecord record;
+  final bool cacheHit;
 }
