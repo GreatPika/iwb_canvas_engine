@@ -16,16 +16,42 @@ void main() {
 }
 
 const _publicIncrementalSmokeSource = r'''
-import 'dart:ui';
+import 'dart:ui' hide Image;
+import 'dart:ui' as ui show Image;
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
-  test('schema v1 document reaches runtime state and selection', () {
+  testWidgets('schema v1 document reaches runtime state and selection', (tester) async {
     final decodedDocument = decodeCanvasDocument(_smallSchemaV1Document());
     final runtime = CanvasRuntime(initialDocument: decodedDocument);
+    final resolver = _NoopResolver();
     addTearDown(runtime.dispose);
+
+    expect(runtime.preview, isA<CanvasNoPreview>());
+    expect(runtime.preview.kind, CanvasPreviewKind.none);
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 120,
+          height: 80,
+          child: CanvasSurface(
+            runtime: runtime,
+            resourceResolver: resolver,
+            interactive: false,
+          ),
+        ),
+      ),
+    );
+    expect(
+      find.byKey(const ValueKey<String>('iwb_canvas_surface.paint_host')),
+      findsOneWidget,
+    );
+    expect(find.byType(CustomPaint), findsOneWidget);
+    expect(resolver.calls, 0);
 
     final initialState = runtime.state.value;
     expect(initialState.revisions, _runtimeRevisions(document: 0, selection: 0));
@@ -507,5 +533,16 @@ CanvasRuntimeRevisions _runtimeRevisions({
     interaction: 0,
     epoch: 0,
   );
+}
+
+final class _NoopResolver implements CanvasResourceResolver {
+  int calls = 0;
+
+  @override
+  ui.Image? resolveImage(CanvasImageResource resource) {
+    calls += 1;
+
+    return null;
+  }
 }
 ''';

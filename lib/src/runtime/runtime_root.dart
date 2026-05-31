@@ -157,6 +157,7 @@ final class RuntimeRoot
   CanvasCameraPort cameraPort() => _cameraPort;
   CanvasResourcePort get resources => _resourceKernel;
   ResourceCatalogPort get resourceCatalogPort => _resourceCatalogPort;
+  CanvasPreviewState get preview => const CanvasNoPreview();
   CanvasCamera get viewCamera => _viewCamera;
   Offset get viewCameraOffset => _viewCamera.offset;
   SelectionFacts get selectionFacts => _selection.selectionFacts;
