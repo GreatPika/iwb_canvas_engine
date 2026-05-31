@@ -49,6 +49,10 @@ Use the same four-part frame everywhere:
 
 ## Review Algorithm
 
+`Concrete Failure Mode Standard`: a concern becomes a finding only when it
+identifies the concrete missed failure mode, affected consumer, scenario, or
+behavior. Slop signals are investigation prompts, not automatic findings.
+
 1. Identify the claim.
    - What does the artifact say or imply it proves, enforces, guarantees,
      explains, simplifies, or decides?
@@ -74,10 +78,11 @@ Use the same four-part frame everywhere:
      remains false? If yes, the claim must narrow to the checked proxy or add
      direct outcome proof.
 
-4. Find the concrete failure mode.
+4. Apply `Concrete Failure Mode Standard`.
    - What bad state does this artifact catch?
    - What bad state can still happen while it passes?
-   - Do not make a strong finding without a concrete missed failure mode.
+   - Do not make a strong finding without a concrete missed failure mode,
+     consumer, scenario, or behavior affected.
 
 5. Check for self-referential proof.
    - Be suspicious when docs prove docs, lists prove lists, tests only check

@@ -41,6 +41,11 @@ complete list of qualifying findings in one response.
 
 ## Finding Standard
 
+`Concrete Failure Mode Standard`: a review concern becomes a finding only when
+it identifies the concrete missed failure mode, affected consumer, scenario, or
+behavior introduced by the reviewed diff or commit range. Inspect the full
+relevant diff before deciding that threshold is met.
+
 Flag an issue only when all of these are true:
 
 1. It meaningfully impacts accuracy, performance, security, reliability,
