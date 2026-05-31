@@ -22,8 +22,8 @@ Legacy findings are oracle or donor evidence, not next-architecture contracts.
 
 ## Use It For
 
-- root-cause investigation
-- owner placement and boundary questions
+- `Owner-Level Fix` root-cause investigation
+- `Boundary-Owned Policy` owner placement and boundary questions
 - bypass and fast-path audits
 - proof or invariant gaps
 - duplicate-code and DCM signals

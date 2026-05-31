@@ -78,9 +78,11 @@ Also flag when applicable:
 - all-or-nothing gaps when fallible work happens after an irreversible mutation
   without containment or proof;
 - hacks, fragile shortcuts, future-risk smells, hardcoded special cases,
-  duplicated state, sync glue, one-off call-site patches for shared invariants,
-  silent fallbacks, swallowed failures, inefficient repeated work, bypassed
-  local utilities, or opaque abstractions introduced by the diff.
+  duplicated state, sync glue, `Owner-Level Fix` violations such as one-off
+  call-site patches for shared invariants, `Boundary-Owned Policy` violations
+  such as validation pushed into callers, silent fallbacks, swallowed failures,
+  inefficient repeated work, bypassed local utilities, or opaque abstractions
+  introduced by the diff.
 
 For diffs that add or modify tests, guardrails, analyzers, docs, plans, design
 artifacts, verification claims, or proof fixtures, apply shared

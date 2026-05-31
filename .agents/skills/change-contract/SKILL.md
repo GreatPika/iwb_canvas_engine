@@ -38,8 +38,10 @@ A full contract must settle the decisions that belong before implementation.
 Output `Contract Blocker` instead of a full contract when the implementer would
 still need to choose:
 
-- the owner or owning layer;
-- the work boundary;
+- `Owner-Level Fix`: the owner or owning layer, the owning cause, or whether
+  the proposed fix is only a one-off caller/symptom patch;
+- `Boundary-Owned Policy`: the work boundary, boundary validation, policy, or
+  compatibility placement;
 - the source of truth;
 - compatibility behavior;
 - execution order;

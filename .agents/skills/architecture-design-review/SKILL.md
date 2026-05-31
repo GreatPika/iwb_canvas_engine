@@ -160,11 +160,12 @@ Mark the review `BLOCKED` when any of these are true:
     or proof surface.
 15. Owner, owning layer, seam, boundary, dependency direction, state/data
     ownership, or verification strategy is unresolved.
-16. The selected form patches a downstream call site when the weakness belongs
-    to a shared owner, invariant, contract, or boundary.
-17. The selected form puts validation, normalization, policy, or compatibility
-    handling away from the owning boundary without explicit evidence and
-    trade-off.
+16. `Owner-Level Fix` is violated: the selected form patches a downstream call
+    site when the weakness belongs to a shared owner, invariant, contract, or
+    boundary.
+17. `Boundary-Owned Policy` is violated: the selected form puts validation,
+    normalization, policy, or compatibility handling away from the owning
+    boundary without explicit evidence and trade-off.
 18. The selected form violates repository dependency/import direction, layer
     ownership, or documented source-of-truth ownership.
 19. `Source-Of-Truth Singularity` is violated: the design creates a second
@@ -269,11 +270,11 @@ example:
    citations at face value.
 4. Check that the artifact follows the paired template and records truthful
    research inputs or explicit absence of research inputs.
-5. Verify every hard gate row from the authoring skill: root cause, ownership,
-   source of truth, boundary, dependency direction, state/data, seam,
-   temporal/reentrancy, all-or-nothing behavior, Outcome-Proof Fit,
-   verification, and future pressure. A `READY_FOR_CONTRACT` artifact must pass
-   every applicable gate with evidence.
+5. Verify every hard gate row from the authoring skill: `Owner-Level Fix`,
+   ownership, `Source-Of-Truth Singularity`, `Boundary-Owned Policy`, dependency
+   direction, state/data, seam, temporal/reentrancy, all-or-nothing behavior,
+   Outcome-Proof Fit, verification, and future pressure. A
+   `READY_FOR_CONTRACT` artifact must pass every applicable gate with evidence.
 6. Check `Decision Trace` for `Decision Chain Of Custody`. Every material
    selected-form decision must have a stable decision id, exact evidence, and a
    future Change Contract handoff target. Do not require exact future unit

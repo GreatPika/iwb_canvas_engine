@@ -29,14 +29,14 @@ artifact must have a real human or machine consumer.
    this directory introduce?" Then check whether its immediate children are
    facets of that owner instead of unrelated files collected for neatness.
 5. Treat public API symbol names as contract-owned. Flag their placement or file
-   owner first; flag the symbol name only when the source of truth itself is
-   being changed or contradicted.
+   owner first under `Boundary-Owned Policy`; flag the symbol name only when the
+   source of truth itself is being changed or contradicted.
 6. Report only actionable naming/cohesion findings, not taste preferences.
 
 ## Decision Test
 
-- If a file has one clear public owner, its name should match that owner or the
-  exact responsibility it represents.
+- Apply `Owner-Level Fix`: if a file has one clear public owner, its name should
+  match that owner or the exact responsibility it represents.
 - If a file groups declarations, the name should describe the shared
   responsibility, not one arbitrary member.
 - Keep small companion declarations together only when they are normally

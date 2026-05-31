@@ -37,9 +37,9 @@ verification, fresh review, commit, and final committed-range review.
    - When a reviewer finding repeats around the same contract area after a local
      fix, stop patching individual symptoms. Re-read the step contract and
      linked design when present, identify the shared invariant or ownership
-     boundary being violated, and make one owner-level fix that closes the whole
-     problem class before requesting another review. Do not trade one contract
-     clause for another.
+     boundary being violated, and make one `Owner-Level Fix` that closes the
+     whole problem class before requesting another review. Do not trade one
+     contract clause for another.
    - Re-run the verification required for the unit when the fix can affect the
      verified behavior or proof surface.
    - Continue the fix and re-review loop until the latest fresh reviewer reports

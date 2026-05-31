@@ -120,13 +120,15 @@ Common forms include:
 
 Reject any candidate form that fails one of these gates:
 
-- **Root cause**: fixes the owning cause, not only one downstream symptom.
+- **Owner-Level Fix**: fixes the owning cause, not only one downstream symptom
+  or one-off call-site patch.
 - **Ownership**: gives the behavior, policy, invariant, or state one clear owner.
 - **Source-Of-Truth Singularity**: durable meaning has one owning source of
   truth and a real human or machine consumer. Duplicated truth is allowed only
   as explicit cache/performance duplication with an invariant and proof
   strategy.
-- **Boundary**: names entry and exit boundaries and keeps validation at the
+- **Boundary-Owned Policy**: names entry and exit boundaries and keeps
+  validation, normalization, compatibility, and policy decisions at the owning
   boundary.
 - **Negative Proof And Fixture Quarantine**: negative, bypass, or structural
   proof uses a real production seam or future contract-named test seam, and

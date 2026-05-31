@@ -218,9 +218,10 @@ Mark the contract `BLOCKED` when any category applies:
    Custody` by lacking `Decision Trace`, using vague targets, dropping a
    source-input or repository-derived decision, or failing to map a design
    handoff decision to a boundary, execution unit, or proof surface.
-5. Owner or boundary is unresolved: ownership is wrong, vague, split across
-   unrelated owners, pushed into callers instead of the owning layer, or left
-   for implementation.
+5. `Owner-Level Fix` or `Boundary-Owned Policy` is unresolved: ownership is
+   wrong, vague, split across unrelated owners, pushed into callers instead of
+   the owning layer, boundary validation/policy is misplaced, or owner placement
+   is left for implementation.
 6. Scope is unsafe: in-scope and out-of-scope work are missing, contradictory,
    silently expanded, or inconsistent with source inputs.
 7. `Source-Of-Truth Singularity` or compatibility is wrong: the contract misses
