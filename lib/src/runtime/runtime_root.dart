@@ -118,6 +118,7 @@ final class RuntimeRoot
   final CommitApplier _commitApplier = const CommitApplier();
   int _viewCameraRevision = 0;
   int _previewRevision = 0;
+  CanvasPreviewState _preview = const CanvasNoPreview();
   int _epochRevision = 0;
   bool _isDisposed = false;
   bool _isDeliveringCommitEffects = false;
@@ -157,7 +158,7 @@ final class RuntimeRoot
   CanvasCameraPort cameraPort() => _cameraPort;
   CanvasResourcePort get resources => _resourceKernel;
   ResourceCatalogPort get resourceCatalogPort => _resourceCatalogPort;
-  CanvasPreviewState get preview => const CanvasNoPreview();
+  CanvasPreviewState get preview => _preview;
   CanvasCamera get viewCamera => _viewCamera;
   Offset get viewCameraOffset => _viewCamera.offset;
   SelectionFacts get selectionFacts => _selection.selectionFacts;
@@ -211,7 +212,7 @@ final class RuntimeRoot
       devicePixelRatio: devicePixelRatio,
       selectionStyle: selectionStyle,
       gridStyle: gridStyle,
-      preview: const CanvasNoPreview(),
+      preview: preview,
       previewRevision: _previewRevision,
       viewCameraOffset: _viewCamera.offset,
     );
@@ -559,6 +560,7 @@ final class RuntimeRoot
     _viewCamera = preparedLoad.document.camera;
     _viewCameraRevision += 1;
     if (cleanupOutcome.previewChanged) {
+      _preview = const CanvasNoPreview();
       _previewRevision += 1;
     }
     _epochRevision += 1;

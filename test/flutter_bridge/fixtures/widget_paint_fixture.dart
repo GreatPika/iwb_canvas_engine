@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/frame/frame_paint_output.dart';
 import 'package:iwb_canvas_engine/src/frame/main_frame_painter.dart';
 
 void main() {
@@ -56,6 +57,8 @@ void _testCameraPanPreservesOrdinaryPlan() {
       final beforeOutput = _mainPainter(tester).output;
       final beforePan = beforeOutput.ordinaryPlan;
 
+      _expectSurfaceCapturedRuntimePreview(beforeOutput, runtime);
+
       runtime.camera.setOffset(const Offset(12, 0));
       await tester.pump();
       final afterPan = _mainPainter(
@@ -75,6 +78,16 @@ void _testCameraPanPreservesOrdinaryPlan() {
       );
     },
   );
+}
+
+void _expectSurfaceCapturedRuntimePreview(
+  MainFramePaintOutput output,
+  CanvasRuntime runtime,
+) {
+  final snapshot = output.capturedFrame.snapshot;
+
+  expect(snapshot.preview, same(runtime.preview));
+  expect(snapshot.previewRevision, runtime.state.value.revisions.preview);
 }
 
 CanvasDocument _document() {
