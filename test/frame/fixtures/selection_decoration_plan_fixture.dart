@@ -57,6 +57,12 @@ void main() {
       expect(first.key.boundsRevision, 10);
       expect(first.key.devicePixelRatio, 2);
       expect(first.selectedCount, 1);
+      expect(
+        first.primitives.single.boundsWorld,
+        const Rect.fromLTRB(-5, -5, 5, 5),
+      );
+      expect(first.primitives.single.color, const Color(0xFF00AAFF));
+      expect(first.primitives.single.strokeWidth, 3);
       expect(changed, isNot(same(first)));
       expect(planner.probe.selectedCount, 1);
       expect(planner.probe.rebuildCount, 2);

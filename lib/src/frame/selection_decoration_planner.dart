@@ -1,8 +1,11 @@
+import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_surface_styles.dart';
 import 'captured_frame.dart';
+import 'render_element_record.dart';
 
 @immutable
 final class SelectionDecorationKey {
@@ -43,11 +46,29 @@ final class SelectionDecorationKey {
 }
 
 final class SelectionDecorationPlan {
-  SelectionDecorationPlan({required this.key})
-    : selectedCount = key.selectedElementIds.length;
+  SelectionDecorationPlan({
+    required this.key,
+    required Iterable<SelectionDecorationPrimitive> primitives,
+  }) : primitives = List.unmodifiable(primitives),
+       selectedCount = key.selectedElementIds.length;
 
   final SelectionDecorationKey key;
+  final List<SelectionDecorationPrimitive> primitives;
   final int selectedCount;
+}
+
+final class SelectionDecorationPrimitive {
+  const SelectionDecorationPrimitive({
+    required this.boundsWorld,
+    required this.color,
+    required this.strokeWidth,
+    required this.haloWidth,
+  });
+
+  final Rect boundsWorld;
+  final Color color;
+  final double strokeWidth;
+  final double haloWidth;
 }
 
 final class SelectionDecorationProbe {
@@ -76,11 +97,32 @@ final class SelectionDecorationPlanner {
     if (current != null && current.key == key) {
       return current;
     }
-    final plan = SelectionDecorationPlan(key: key);
+    final plan = SelectionDecorationPlan(
+      key: key,
+      primitives: _primitivesFor(frame),
+    );
     _current = plan;
     _rebuildCount += 1;
 
     return plan;
+  }
+
+  Iterable<SelectionDecorationPrimitive> _primitivesFor(
+    CapturedMainFrame frame,
+  ) sync* {
+    final selectedIds = frame.snapshot.selection.selectedElementIds;
+    final style = frame.snapshot.inputs.selectionStyle;
+    for (final facts in frame.snapshot.elements) {
+      if (!selectedIds.contains(facts.id)) {
+        continue;
+      }
+      yield SelectionDecorationPrimitive(
+        boundsWorld: RenderElementRecord.fromFacts(facts).paintBoundsWorld,
+        color: style.color,
+        strokeWidth: style.strokeWidth,
+        haloWidth: style.haloWidth,
+      );
+    }
   }
 
   SelectionDecorationProbe get probe {

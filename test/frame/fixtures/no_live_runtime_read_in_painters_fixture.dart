@@ -11,6 +11,11 @@ void main() {
     expect(File('lib/src/frame/main_frame_painter.dart').existsSync(), isTrue);
     _expectPainterBoundary('lib/src/frame/main_frame_painter.dart');
     _expectPainterBoundary('lib/src/frame/overlay_frame_painter.dart');
+    final mainPainterSource = File(
+      'lib/src/frame/main_frame_painter.dart',
+    ).readAsStringSync();
+    expect(mainPainterSource, contains('staticBackgroundPlan'));
+    expect(mainPainterSource, contains('selectionDecorationPlan'));
   });
 
   test('main painter consumes records bottom-to-top', () {

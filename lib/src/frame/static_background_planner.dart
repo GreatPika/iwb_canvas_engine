@@ -57,11 +57,26 @@ final class StaticBackgroundPicture {
   }
 }
 
+final class StaticBackgroundPrimitive {
+  const StaticBackgroundPrimitive({
+    required this.viewportRect,
+    required this.gridStrokeWidth,
+  });
+
+  final Rect viewportRect;
+  final double gridStrokeWidth;
+}
+
 final class StaticBackgroundPlan {
-  const StaticBackgroundPlan({required this.key, required this.picture});
+  const StaticBackgroundPlan({
+    required this.key,
+    required this.picture,
+    required this.primitive,
+  });
 
   final StaticBackgroundKey key;
   final StaticBackgroundPicture picture;
+  final StaticBackgroundPrimitive primitive;
 }
 
 final class StaticBackgroundCacheProbe {
@@ -87,6 +102,10 @@ final class StaticBackgroundCache {
     final plan = StaticBackgroundPlan(
       key: key,
       picture: StaticBackgroundPicture(debugLabel: 'static-background'),
+      primitive: StaticBackgroundPrimitive(
+        viewportRect: key.viewportRect,
+        gridStrokeWidth: key.gridStrokeWidth,
+      ),
     );
     _current = plan;
     _rebuildCount += 1;
