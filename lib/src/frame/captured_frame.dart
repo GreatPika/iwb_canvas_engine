@@ -14,14 +14,18 @@ final class FrameCaptureInputs {
     required this.gridStyle,
     required this.preview,
     required this.previewRevision,
+    this.viewCameraOffset = Offset.zero,
   });
 
   final Rect viewportWorldBounds;
+  final Offset viewCameraOffset;
   final double devicePixelRatio;
   final CanvasSelectionStyle selectionStyle;
   final CanvasGridStyle gridStyle;
   final CanvasPreviewState preview;
   final int previewRevision;
+
+  Rect get effectiveWorldBounds => viewportWorldBounds.shift(viewCameraOffset);
 }
 
 final class CapturedFrameSnapshot {

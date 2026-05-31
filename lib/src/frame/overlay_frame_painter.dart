@@ -12,7 +12,7 @@ final class OverlayFramePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final viewport = output.capturedFrame.snapshot.inputs.viewportWorldBounds;
+    final viewport = output.capturedFrame.snapshot.inputs.effectiveWorldBounds;
     canvas.save();
     canvas.translate(-viewport.left, -viewport.top);
     for (final primitive in output.overlayPreviewPlan.primitives) {

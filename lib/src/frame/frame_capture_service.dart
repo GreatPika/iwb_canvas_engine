@@ -142,7 +142,7 @@ final class FrameCaptureService {
     int structuralRevision,
   ) {
     return SpatialQueryWindow(
-      boundsWorld: inputs.viewportWorldBounds,
+      boundsWorld: inputs.effectiveWorldBounds,
       structuralRevision: structuralRevision,
     );
   }

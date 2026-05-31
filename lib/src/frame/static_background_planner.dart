@@ -93,7 +93,10 @@ final class StaticBackgroundCache {
   StaticBackgroundPlan? _current;
   int _rebuildCount = 0;
 
-  StaticBackgroundPlan readOrBuild(StaticBackgroundKey key) {
+  StaticBackgroundPlan readOrBuild(
+    StaticBackgroundKey key, {
+    required Rect primitiveViewportRect,
+  }) {
     final current = _current;
     if (current != null && current.key == key) {
       return current;
@@ -103,7 +106,7 @@ final class StaticBackgroundCache {
       key: key,
       picture: StaticBackgroundPicture(debugLabel: 'static-background'),
       primitive: StaticBackgroundPrimitive(
-        viewportRect: key.viewportRect,
+        viewportRect: primitiveViewportRect,
         gridStrokeWidth: key.gridStrokeWidth,
       ),
     );
@@ -148,6 +151,7 @@ final class StaticBackgroundPlanner {
         viewportRect: frame.snapshot.inputs.viewportWorldBounds,
         devicePixelRatio: frame.snapshot.inputs.devicePixelRatio,
       ),
+      primitiveViewportRect: frame.snapshot.inputs.effectiveWorldBounds,
     );
   }
 }

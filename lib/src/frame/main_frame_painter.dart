@@ -15,7 +15,7 @@ final class MainFramePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final viewport = output.capturedFrame.snapshot.inputs.viewportWorldBounds;
+    final viewport = output.capturedFrame.snapshot.inputs.effectiveWorldBounds;
     canvas.drawRect(
       Offset.zero & size,
       Paint()..color = const Color(0x00000000),

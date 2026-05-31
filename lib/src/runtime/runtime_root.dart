@@ -213,6 +213,7 @@ final class RuntimeRoot
       gridStyle: gridStyle,
       preview: const CanvasNoPreview(),
       previewRevision: _previewRevision,
+      viewCameraOffset: _viewCamera.offset,
     );
   }
 

@@ -159,7 +159,7 @@ final class SelectedMoveSupplementPlanner {
 
   SpatialQueryWindow _shiftedWindow(CapturedMainFrame frame, Offset delta) {
     return SpatialQueryWindow(
-      boundsWorld: frame.snapshot.inputs.viewportWorldBounds.shift(-delta),
+      boundsWorld: frame.snapshot.inputs.effectiveWorldBounds.shift(-delta),
       structuralRevision: frame.snapshot.revisions.structuralRevision,
     );
   }
