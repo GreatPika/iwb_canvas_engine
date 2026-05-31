@@ -28,8 +28,8 @@ typedef FrameAssetBindingBuilder =
     });
 
 // The facade intentionally coordinates the frame collaborators instead of
-// hiding ownership order behind metric-shaped wrapper layers.
-// ignore: coupling-between-object-classes
+// hiding ownership and cache lifecycle order behind metric-shaped wrappers.
+// ignore: coupling-between-object-classes, number-of-methods
 final class FrameEngine {
   FrameEngine({
     required FrameFactsPort frameFacts,
@@ -157,6 +157,10 @@ final class FrameEngine {
         reason: plan.primitives.isEmpty ? 'overlay_empty' : 'overlay_preview',
       ),
     );
+  }
+
+  void dispose() {
+    _staticBackgroundPlanner.dispose();
   }
 
   SelectedOrderSnapshot _selectedOrderSnapshot(CapturedMainFrame frame) {

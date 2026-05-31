@@ -459,6 +459,7 @@ final class RuntimeRoot
     }
     _ensureNoActiveEditSession();
     _isDisposed = true;
+    _frameEngine.dispose();
     _state.dispose();
     unawaited(_actions.close());
   }

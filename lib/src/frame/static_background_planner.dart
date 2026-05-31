@@ -196,6 +196,10 @@ final class StaticBackgroundPlanner {
   final StaticBackgroundCache _cache;
   StaticBackgroundCache get cache => _cache;
 
+  void dispose() {
+    _cache.invalidate();
+  }
+
   StaticBackgroundPlan build(
     CapturedMainFrame frame, {
     required int viewCameraBucket,
