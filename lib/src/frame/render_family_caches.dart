@@ -1,8 +1,10 @@
-import 'dart:ui';
+import 'package:flutter/painting.dart';
+import 'package:path_drawing/path_drawing.dart';
 
-import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/public/canvas_element.dart';
 import 'frame_cache.dart';
+import 'paint_plan.dart';
+import 'render_element_record.dart';
 
 // These hot caches stay behind one owner so text, path, and stroke cache probes
 // share the same ordinary planning lifecycle and capacity policy.
@@ -20,84 +22,115 @@ final class RenderFamilyCaches {
   final PathGeometryCache pathGeometryCache;
   final StrokePathCache strokePathCache;
 
-  void bind(FrameElementFacts facts) {
-    switch (facts.kind) {
-      case CanvasElementKind.text:
-        _bindTextLayoutCache(facts);
-      case CanvasElementKind.path:
-        _bindPathGeometryCache(facts);
-      case CanvasElementKind.stroke:
-        _bindStrokePathCache(facts);
-      case CanvasElementKind.image ||
-          CanvasElementKind.line ||
-          CanvasElementKind.rect:
-        return;
+  RenderPrimitiveCacheSnapshot bindAll(Iterable<RenderElementRecord> records) {
+    final textLayouts = <TextLayoutCacheKey, TextLayoutCacheEntry>{};
+    final paths = <PathGeometryCacheKey, PathGeometryCacheEntry>{};
+    final strokes = <StrokePathCacheKey, StrokePathCacheEntry>{};
+
+    for (final record in records) {
+      switch (record.row) {
+        case final TextRenderRow row:
+          textLayouts[row.layoutCacheKey] = _bindTextLayoutCache(record, row);
+        case final PathRenderRow row:
+          paths[row.geometryCacheKey] = _bindPathGeometryCache(row);
+        case final StrokeRenderRow row:
+          strokes[row.strokeCacheKey] = _bindStrokePathCache(row);
+        case ImageRenderRow() || LineRenderRow() || RectRenderRow():
+          continue;
+      }
     }
+
+    return RenderPrimitiveCacheSnapshot(
+      textLayouts: textLayouts,
+      paths: paths,
+      strokes: strokes,
+    );
   }
 
-  void _bindTextLayoutCache(FrameElementFacts facts) {
-    final text = facts.text;
-    if (text == null) {
-      return;
+  TextLayoutCacheEntry _bindTextLayoutCache(
+    RenderElementRecord record,
+    TextRenderRow row,
+  ) {
+    final key = row.layoutCacheKey;
+    final cached = textLayoutCache.read(key);
+    if (cached != null) {
+      return cached;
     }
-    final key = TextLayoutCacheKey(
-      text: text,
-      fontSize: facts.fontSize ?? 24,
-      colorValue: (facts.textColor ?? const Color(0xFF000000)).toARGB32(),
-      alignName: (facts.textAlign ?? TextAlign.left).name,
-      directionName: (facts.textDirection ?? TextDirection.ltr).name,
-      isBold: facts.isBold ?? false,
-      isItalic: facts.isItalic ?? false,
-      isUnderline: facts.isUnderline ?? false,
-      fontFamily: facts.fontFamily,
-      maxWidth: facts.maxWidth,
-      lineHeight: facts.lineHeight,
+
+    final entry = TextLayoutCacheEntry(
+      debugLabel: record.id.value,
+      painter: _textPainterFor(row),
     );
-    if (textLayoutCache.read(key) == null) {
-      textLayoutCache.write(
-        key,
-        TextLayoutCacheEntry(debugLabel: facts.id.value),
-      );
-    }
+    textLayoutCache.write(key, entry);
+
+    return entry;
   }
 
-  void _bindPathGeometryCache(FrameElementFacts facts) {
-    final pathData = facts.svgPathData;
-    if (pathData == null) {
-      return;
+  PathGeometryCacheEntry _bindPathGeometryCache(PathRenderRow row) {
+    final key = row.geometryCacheKey;
+    final cached = pathGeometryCache.read(key);
+    if (cached != null) {
+      return cached;
     }
-    final key = PathGeometryCacheKey(
-      pathData: pathData,
-      fillRuleName: (facts.fillRule ?? CanvasPathFillRule.nonZero).name,
-      strokeWidth: facts.strokeWidth ?? 0,
-    );
-    if (pathGeometryCache.read(key) == null) {
-      pathGeometryCache.write(
-        key,
-        PathGeometryCacheEntry(debugLabel: facts.id.value),
-      );
-    }
+
+    final path = parseSvgPathData(row.pathDataKey)
+      ..fillType = switch (row.fillRule) {
+        CanvasPathFillRule.evenOdd => PathFillType.evenOdd,
+        CanvasPathFillRule.nonZero => PathFillType.nonZero,
+      };
+    final entry = PathGeometryCacheEntry(debugLabel: key.pathData, path: path);
+    pathGeometryCache.write(key, entry);
+
+    return entry;
   }
 
-  void _bindStrokePathCache(FrameElementFacts facts) {
-    final key = StrokePathCacheKey(
-      pointsKey: facts.points
-          .map((point) => '${point.dx},${point.dy}')
-          .join(';'),
-      thickness: facts.thickness ?? 1,
-      transformScaleKey: _strokeTransformScaleKey(facts),
-    );
-    if (strokePathCache.read(key) == null) {
-      strokePathCache.write(
-        key,
-        StrokePathCacheEntry(debugLabel: facts.id.value),
-      );
+  StrokePathCacheEntry _bindStrokePathCache(StrokeRenderRow row) {
+    final key = row.strokeCacheKey;
+    final cached = strokePathCache.read(key);
+    if (cached != null) {
+      return cached;
     }
+
+    final entry = StrokePathCacheEntry(
+      debugLabel: key.pointsKey,
+      path: _strokePathFor(row.points),
+    );
+    strokePathCache.write(key, entry);
+
+    return entry;
   }
 }
 
-String _strokeTransformScaleKey(FrameElementFacts facts) {
-  final transform = facts.transform;
+TextPainter _textPainterFor(TextRenderRow row) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: row.text,
+      style: TextStyle(
+        color: Color(row.layoutCacheKey.colorValue),
+        fontSize: row.fontSize,
+        fontFamily: row.fontFamily,
+        fontWeight: row.isBold ? FontWeight.bold : FontWeight.normal,
+        fontStyle: row.isItalic ? FontStyle.italic : FontStyle.normal,
+        decoration: row.isUnderline ? TextDecoration.underline : null,
+        height: row.lineHeight,
+      ),
+    ),
+    textAlign: row.align,
+    textDirection: row.direction,
+  )..layout(maxWidth: row.maxWidth ?? double.infinity);
 
-  return '${transform.a},${transform.b},${transform.c},${transform.d}';
+  return painter;
+}
+
+Path _strokePathFor(List<Offset> points) {
+  final path = Path();
+  if (points.isEmpty) {
+    return path;
+  }
+  path.moveTo(points.first.dx, points.first.dy);
+  for (final point in points.skip(1)) {
+    path.lineTo(point.dx, point.dy);
+  }
+
+  return path;
 }

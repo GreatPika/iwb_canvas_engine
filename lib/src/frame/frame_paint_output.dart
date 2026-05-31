@@ -27,6 +27,7 @@ final class MainFramePaintOutput {
     required this.selectionDecorationPlan,
     required this.selectedOrderSnapshot,
     required this.selectedMoveSupplementPlan,
+    required this.renderPrimitiveSnapshot,
     required this.assetBindings,
     required this.repaintSignal,
   });
@@ -37,6 +38,7 @@ final class MainFramePaintOutput {
   final SelectionDecorationPlan selectionDecorationPlan;
   final SelectedOrderSnapshot selectedOrderSnapshot;
   final SelectedMoveSupplementPlan selectedMoveSupplementPlan;
+  final RenderPrimitiveCacheSnapshot renderPrimitiveSnapshot;
   final FrameAssetBindings assetBindings;
   final FrameRepaintSignal repaintSignal;
 }

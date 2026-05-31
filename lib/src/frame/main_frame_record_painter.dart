@@ -7,23 +7,21 @@ import 'dart:ui'
         Image,
         Offset,
         Paint,
-        PathFillType,
         PaintingStyle,
-        PointMode,
         Rect,
         Size;
 
 import 'package:flutter/painting.dart';
-import 'package:path_drawing/path_drawing.dart';
 
-import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_ids.dart';
+import 'paint_plan.dart';
 import 'render_element_record.dart';
 
 void paintMainFrameRecord(
   Canvas canvas,
   RenderElementRecord record,
   Map<CanvasResourceId, Image> imageBindings,
+  RenderPrimitiveCacheSnapshot renderPrimitives,
 ) {
   switch (record.row) {
     case final ImageRenderRow row:
@@ -31,11 +29,11 @@ void paintMainFrameRecord(
     case final RectRenderRow row:
       _paintRectRecord(canvas, record, row);
     case final PathRenderRow row:
-      _paintPathRecord(canvas, record, row);
+      _paintPathRecord(canvas, record, row, renderPrimitives);
     case final TextRenderRow row:
-      _paintTextRecord(canvas, record, row);
+      _paintTextRecord(canvas, record, row, renderPrimitives);
     case final StrokeRenderRow row:
-      _paintStrokeRecord(canvas, record, row);
+      _paintStrokeRecord(canvas, record, row, renderPrimitives);
     case final LineRenderRow row:
       _paintLineRecord(canvas, record, row);
   }
@@ -96,13 +94,19 @@ void _paintPathRecord(
   Canvas canvas,
   RenderElementRecord record,
   PathRenderRow row,
+  RenderPrimitiveCacheSnapshot renderPrimitives,
 ) {
   _withRecordTransform(canvas, record, () {
-    final path = parseSvgPathData(row.pathDataKey)
-      ..fillType = switch (row.fillRule) {
-        CanvasPathFillRule.evenOdd => PathFillType.evenOdd,
-        CanvasPathFillRule.nonZero => PathFillType.nonZero,
-      };
+    final path = renderPrimitives.paths[row.geometryCacheKey]?.path;
+    if (path == null) {
+      _paintFallbackBounds(
+        canvas,
+        record.paintBoundsWorld,
+        record.primitiveAlpha,
+      );
+
+      return;
+    }
     final fill = row.fillColor;
     if (fill != null) {
       canvas.drawPath(
@@ -127,24 +131,19 @@ void _paintTextRecord(
   Canvas canvas,
   RenderElementRecord record,
   TextRenderRow row,
+  RenderPrimitiveCacheSnapshot renderPrimitives,
 ) {
   _withRecordTransform(canvas, record, () {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: row.text,
-        style: TextStyle(
-          color: _withElementOpacity(row.color, record.primitiveAlpha),
-          fontSize: row.fontSize,
-          fontFamily: row.fontFamily,
-          fontWeight: row.isBold ? FontWeight.bold : FontWeight.normal,
-          fontStyle: row.isItalic ? FontStyle.italic : FontStyle.normal,
-          decoration: row.isUnderline ? TextDecoration.underline : null,
-          height: row.lineHeight,
-        ),
-      ),
-      textAlign: row.align,
-      textDirection: row.direction,
-    )..layout(maxWidth: row.maxWidth ?? double.infinity);
+    final painter = renderPrimitives.textLayouts[row.layoutCacheKey]?.painter;
+    if (painter == null) {
+      _paintFallbackBounds(
+        canvas,
+        record.paintBoundsWorld,
+        record.primitiveAlpha,
+      );
+
+      return;
+    }
     final localBounds = Rect.fromCenter(
       center: Offset.zero,
       width: painter.width,
@@ -158,11 +157,21 @@ void _paintStrokeRecord(
   Canvas canvas,
   RenderElementRecord record,
   StrokeRenderRow row,
+  RenderPrimitiveCacheSnapshot renderPrimitives,
 ) {
   _withRecordTransform(canvas, record, () {
-    canvas.drawPoints(
-      PointMode.polygon,
-      row.points,
+    final path = renderPrimitives.strokes[row.strokeCacheKey]?.path;
+    if (path == null) {
+      _paintFallbackBounds(
+        canvas,
+        record.paintBoundsWorld,
+        record.primitiveAlpha,
+      );
+
+      return;
+    }
+    canvas.drawPath(
+      path,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = row.thickness

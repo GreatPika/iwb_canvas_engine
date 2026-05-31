@@ -47,12 +47,14 @@ final class StaticBackgroundKey {
 }
 
 final class StaticBackgroundPicture {
-  StaticBackgroundPicture({required this.debugLabel});
+  StaticBackgroundPicture({required this.debugLabel, required this.picture});
 
   final String debugLabel;
+  final Picture picture;
   bool isDisposed = false;
 
   void dispose() {
+    picture.dispose();
     isDisposed = true;
   }
 }
@@ -104,7 +106,13 @@ final class StaticBackgroundCache {
     current?.picture.dispose();
     final plan = StaticBackgroundPlan(
       key: key,
-      picture: StaticBackgroundPicture(debugLabel: 'static-background'),
+      picture: StaticBackgroundPicture(
+        debugLabel: 'static-background',
+        picture: _recordStaticBackgroundPicture(
+          viewport: primitiveViewportRect,
+          gridStrokeWidth: key.gridStrokeWidth,
+        ),
+      ),
       primitive: StaticBackgroundPrimitive(
         viewportRect: primitiveViewportRect,
         gridStrokeWidth: key.gridStrokeWidth,
@@ -126,6 +134,39 @@ final class StaticBackgroundCache {
       pictureCount: _current == null ? 0 : 1,
       rebuildCount: _rebuildCount,
     );
+  }
+}
+
+Picture _recordStaticBackgroundPicture({
+  required Rect viewport,
+  required double gridStrokeWidth,
+}) {
+  final recorder = PictureRecorder();
+  final canvas = Canvas(recorder);
+  _paintStaticBackgroundGrid(canvas, viewport, gridStrokeWidth);
+
+  return recorder.endRecording();
+}
+
+void _paintStaticBackgroundGrid(
+  Canvas canvas,
+  Rect viewport,
+  double gridStrokeWidth,
+) {
+  if (gridStrokeWidth <= 0) {
+    return;
+  }
+  const spacing = 20.0;
+  final paint = Paint()
+    ..color = const Color(0x14000000)
+    ..strokeWidth = gridStrokeWidth;
+  final firstX = (viewport.left / spacing).floorToDouble() * spacing;
+  for (var x = firstX; x <= viewport.right; x += spacing) {
+    canvas.drawLine(Offset(x, viewport.top), Offset(x, viewport.bottom), paint);
+  }
+  final firstY = (viewport.top / spacing).floorToDouble() * spacing;
+  for (var y = firstY; y <= viewport.bottom; y += spacing) {
+    canvas.drawLine(Offset(viewport.left, y), Offset(viewport.right, y), paint);
   }
 }
 

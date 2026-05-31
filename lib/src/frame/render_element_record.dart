@@ -5,6 +5,7 @@ import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_geometry.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../geometry/geometry_policy.dart';
+import 'frame_cache.dart';
 
 enum RenderElementFamily { image, path, text, stroke, line, rect }
 
@@ -27,6 +28,7 @@ final class ImageRenderRow extends RenderElementRow {
 final class PathRenderRow extends RenderElementRow {
   const PathRenderRow({
     required this.pathDataKey,
+    required this.geometryCacheKey,
     required this.fillColor,
     required this.strokeColor,
     required this.strokeWidth,
@@ -34,6 +36,7 @@ final class PathRenderRow extends RenderElementRow {
   });
 
   final String pathDataKey;
+  final PathGeometryCacheKey geometryCacheKey;
   final Color? fillColor;
   final Color? strokeColor;
   final double strokeWidth;
@@ -43,6 +46,7 @@ final class PathRenderRow extends RenderElementRow {
 final class TextRenderRow extends RenderElementRow {
   const TextRenderRow({
     required this.text,
+    required this.layoutCacheKey,
     required this.fontSize,
     required this.color,
     required this.align,
@@ -56,6 +60,7 @@ final class TextRenderRow extends RenderElementRow {
   });
 
   final String text;
+  final TextLayoutCacheKey layoutCacheKey;
   final double fontSize;
   final Color color;
   final TextAlign align;
@@ -71,12 +76,14 @@ final class TextRenderRow extends RenderElementRow {
 final class StrokeRenderRow extends RenderElementRow {
   const StrokeRenderRow({
     required this.pointsKey,
+    required this.strokeCacheKey,
     required this.points,
     required this.thickness,
     required this.color,
   });
 
   final String pointsKey;
+  final StrokePathCacheKey strokeCacheKey;
   final List<Offset> points;
   final double thickness;
   final Color color;
@@ -205,6 +212,11 @@ PathRenderRow _pathRow(FrameElementFacts facts) {
 
   return PathRenderRow(
     pathDataKey: pathData,
+    geometryCacheKey: PathGeometryCacheKey(
+      pathData: pathData,
+      fillRuleName: (facts.fillRule ?? CanvasPathFillRule.nonZero).name,
+      strokeWidth: facts.strokeWidth ?? 0,
+    ),
     fillColor: facts.fillColor,
     strokeColor: facts.strokeColor,
     strokeWidth: facts.strokeWidth ?? 0,
@@ -220,6 +232,7 @@ TextRenderRow _textRow(FrameElementFacts facts) {
 
   return TextRenderRow(
     text: text,
+    layoutCacheKey: _textLayoutCacheKey(facts, text),
     fontSize: facts.fontSize ?? 24,
     color: facts.textColor ?? const Color(0xFF000000),
     align: facts.textAlign ?? TextAlign.left,
@@ -233,9 +246,37 @@ TextRenderRow _textRow(FrameElementFacts facts) {
   );
 }
 
+TextLayoutCacheKey _textLayoutCacheKey(FrameElementFacts facts, String text) {
+  return TextLayoutCacheKey(
+    text: text,
+    fontSize: facts.fontSize ?? 24,
+    colorValue: _textLayoutColorValue(facts),
+    alignName: (facts.textAlign ?? TextAlign.left).name,
+    directionName: (facts.textDirection ?? TextDirection.ltr).name,
+    isBold: facts.isBold ?? false,
+    isItalic: facts.isItalic ?? false,
+    isUnderline: facts.isUnderline ?? false,
+    fontFamily: facts.fontFamily,
+    maxWidth: facts.maxWidth,
+    lineHeight: facts.lineHeight,
+  );
+}
+
+int _textLayoutColorValue(FrameElementFacts facts) {
+  return _withElementOpacity(
+    facts.textColor ?? const Color(0xFF000000),
+    _primitiveAlpha(facts.opacity),
+  ).toARGB32();
+}
+
 StrokeRenderRow _strokeRow(FrameElementFacts facts) {
   return StrokeRenderRow(
     pointsKey: _pointsKey(facts.points),
+    strokeCacheKey: StrokePathCacheKey(
+      pointsKey: _pointsKey(facts.points),
+      thickness: facts.thickness ?? 1,
+      transformScaleKey: _strokeTransformScaleKey(facts),
+    ),
     points: List.unmodifiable(facts.points),
     thickness: facts.thickness ?? 1,
     color: facts.color ?? const Color(0xFF000000),
@@ -277,4 +318,17 @@ int _primitiveAlpha(double opacity) {
 
 String _pointsKey(List<Offset> points) {
   return points.map((point) => '${point.dx},${point.dy}').join(';');
+}
+
+String _strokeTransformScaleKey(FrameElementFacts facts) {
+  final transform = facts.transform;
+
+  return '${transform.a},${transform.b},${transform.c},${transform.d}';
+}
+
+Color _withElementOpacity(Color color, int primitiveAlpha) {
+  final sourceAlpha = (color.toARGB32() >> 24) & 0xFF;
+  final combinedAlpha = (sourceAlpha * primitiveAlpha / 255).round();
+
+  return color.withAlpha(combinedAlpha);
 }

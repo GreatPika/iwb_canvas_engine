@@ -9,7 +9,6 @@ import 'frame_paint_output.dart';
 import 'main_frame_record_painter.dart';
 import 'render_element_record.dart';
 import 'selection_decoration_planner.dart';
-import 'static_background_planner.dart';
 
 final class MainFramePainter extends CustomPainter {
   const MainFramePainter({required this.output});
@@ -25,12 +24,17 @@ final class MainFramePainter extends CustomPainter {
     );
     canvas.save();
     canvas.translate(-viewport.left, -viewport.top);
-    _paintStaticBackground(canvas, output.staticBackgroundPlan.primitive);
+    canvas.drawPicture(output.staticBackgroundPlan.picture.picture);
     final imageBindings = _resolvedImages(output);
     for (final record in mainFrameRecordsInPaintOrder(
       output.selectedMoveSupplementPlan.mergedRecords,
     )) {
-      paintMainFrameRecord(canvas, record, imageBindings);
+      paintMainFrameRecord(
+        canvas,
+        record,
+        imageBindings,
+        output.renderPrimitiveSnapshot,
+      );
     }
     _paintSelectionDecorations(
       canvas,
@@ -77,29 +81,6 @@ bool _recordsAreTopmostFirst(List<RenderElementRecord> records) {
   }
 
   return false;
-}
-
-void _paintStaticBackground(
-  Canvas canvas,
-  StaticBackgroundPrimitive primitive,
-) {
-  final strokeWidth = primitive.gridStrokeWidth;
-  if (strokeWidth <= 0) {
-    return;
-  }
-  final viewport = primitive.viewportRect;
-  const spacing = 20.0;
-  final paint = Paint()
-    ..color = const Color(0x14000000)
-    ..strokeWidth = strokeWidth;
-  final firstX = (viewport.left / spacing).floorToDouble() * spacing;
-  for (var x = firstX; x <= viewport.right; x += spacing) {
-    canvas.drawLine(Offset(x, viewport.top), Offset(x, viewport.bottom), paint);
-  }
-  final firstY = (viewport.top / spacing).floorToDouble() * spacing;
-  for (var y = firstY; y <= viewport.bottom; y += spacing) {
-    canvas.drawLine(Offset(viewport.left, y), Offset(viewport.right, y), paint);
-  }
 }
 
 void _paintSelectionDecorations(

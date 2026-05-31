@@ -39,6 +39,9 @@ void _registerRecordPainterBoundaryTests() {
     expect(recordPainterSource, contains('_paintLineRecord'));
     expect(recordPainterSource, contains('_withElementOpacity'));
     expect(recordPainterSource, contains('ColorFilter.mode'));
+    expect(recordPainterSource, contains('RenderPrimitiveCacheSnapshot'));
+    expect(recordPainterSource, isNot(contains('parseSvgPathData')));
+    expect(recordPainterSource, isNot(contains('TextPainter(')));
     expect(recordPainterSource, isNot(contains('PathRenderRow() ||')));
   });
 }
@@ -61,6 +64,8 @@ void _registerOverlayPainterBoundaryTests() {
     ).readAsStringSync();
 
     expect(mainPainterSource, contains('staticBackgroundPlan'));
+    expect(mainPainterSource, contains('drawPicture'));
+    expect(mainPainterSource, isNot(contains('StaticBackgroundPrimitive')));
     expect(mainPainterSource, contains('selectionDecorationPlan'));
   });
 }

@@ -105,6 +105,8 @@ final class FrameEngine {
     );
     final selectionDecorationPlan = _selectionDecorationPlanner.build(frame);
     final selectedOrderSnapshot = _selectedOrderSnapshot(frame);
+    final renderPrimitiveSnapshot = _ordinaryPaintPlanner
+        .renderPrimitiveSnapshotFor(selectedMoveSupplement.mergedRecords);
     final assetBindings = bindAssets == null
         ? FrameAssetBindings.empty
         : bindAssets(
@@ -119,6 +121,7 @@ final class FrameEngine {
       selectionDecorationPlan: selectionDecorationPlan,
       selectedOrderSnapshot: selectedOrderSnapshot,
       selectedMoveSupplementPlan: selectedMoveSupplement,
+      renderPrimitiveSnapshot: renderPrimitiveSnapshot,
       assetBindings: assetBindings,
       repaintSignal: _mainRepaintSignal(frame),
     );

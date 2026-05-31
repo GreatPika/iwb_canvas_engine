@@ -61,6 +61,12 @@ final class OrdinaryPaintPlanner {
   StrokePathCache get strokePathCache => _renderFamilyCaches.strokePathCache;
   int get rejectedCandidateCount => _rejectedCandidateCount;
 
+  RenderPrimitiveCacheSnapshot renderPrimitiveSnapshotFor(
+    Iterable<RenderElementRecord> records,
+  ) {
+    return _renderFamilyCaches.bindAll(records);
+  }
+
   OrdinaryPaintPlanResult buildOrdinaryPlan(CapturedMainFrame frame) {
     final admitted = _admittedOrdinaryFacts(frame.snapshot);
     if (admitted == null) {
@@ -85,7 +91,9 @@ final class OrdinaryPaintPlanner {
       cachedEntry: _ordinaryPaintRecordCache.read(planKey),
       geometryPolicy: _geometryPolicy,
     );
-    _bindRenderFamilyCaches(_renderFamilyCaches, resolved.records);
+    renderPrimitiveSnapshotFor([
+      for (final resolvedRecord in resolved.records) resolvedRecord.record,
+    ]);
     final plan = _paintPlanFrom(planKey, resolved.records);
     _ordinaryPaintRecordCache.write(
       planKey,
@@ -194,15 +202,6 @@ _ResolvedOrdinaryRecord _resolvedOrdinaryRecord({
     ),
     cacheHit: false,
   );
-}
-
-void _bindRenderFamilyCaches(
-  RenderFamilyCaches caches,
-  Iterable<_ResolvedOrdinaryRecord> records,
-) {
-  for (final resolvedRecord in records) {
-    caches.bind(resolvedRecord.facts);
-  }
 }
 
 PaintPlan _paintPlanFrom(

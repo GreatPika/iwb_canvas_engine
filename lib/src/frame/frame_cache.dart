@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 
 final class FrameCacheProbe {
   const FrameCacheProbe({
@@ -292,19 +293,22 @@ final class StrokePathCacheKey {
 }
 
 final class TextLayoutCacheEntry {
-  const TextLayoutCacheEntry({required this.debugLabel});
+  const TextLayoutCacheEntry({required this.debugLabel, required this.painter});
 
   final String debugLabel;
+  final TextPainter painter;
 }
 
 final class PathGeometryCacheEntry {
-  const PathGeometryCacheEntry({required this.debugLabel});
+  const PathGeometryCacheEntry({required this.debugLabel, required this.path});
 
   final String debugLabel;
+  final Path path;
 }
 
 final class StrokePathCacheEntry {
-  const StrokePathCacheEntry({required this.debugLabel});
+  const StrokePathCacheEntry({required this.debugLabel, required this.path});
 
   final String debugLabel;
+  final Path path;
 }

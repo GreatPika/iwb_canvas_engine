@@ -1,5 +1,4 @@
-import 'dart:ui';
-
+import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_geometry.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_ids.dart';
@@ -14,13 +13,23 @@ import 'ordinary_paint_test_support.dart';
 // assertions together so the shared eviction policy is validated as one story.
 // ignore: halstead-volume, source-lines-of-code
 void main() {
+  _registerRenderFamilyCapacityTests();
+  _registerOrdinaryCacheCapacityTests();
+  _registerRenderFamilyProbeTests();
+  _registerRenderPrimitiveSnapshotTests();
+  _registerStrokeScaleKeyTests();
+}
+
+void _registerRenderFamilyCapacityTests() {
   test('render family caches are 1024 entry scan-resistant LRU caches', () {
     _expectTextLayoutLru();
     _expectPathGeometryLru();
     _expectStrokePathLru();
     expect(TextLayoutCache().capacity, 1024);
   });
+}
 
+void _registerOrdinaryCacheCapacityTests() {
   test('ordinary paint plan cache is 16 entry LRU with probes', () {
     final cache = OrdinaryPaintRecordCache();
     final first = _paintKey(0);
@@ -41,7 +50,9 @@ void main() {
     expect(cache.containsKey(second), isFalse);
     expect(cache.probe.writes, 17);
   });
+}
 
+void _registerRenderFamilyProbeTests() {
   test('ordinary planning binds text, path, and stroke family caches', () {
     final frameFacts = frameFactsPort(
       elements: [
@@ -60,17 +71,48 @@ void main() {
       ),
     );
 
-    expect(planner.textLayoutCache.probe.entries, 1);
-    expect(planner.textLayoutCache.probe.misses, 1);
-    expect(planner.textLayoutCache.probe.hits, 1);
-    expect(planner.pathGeometryCache.probe.entries, 1);
-    expect(planner.pathGeometryCache.probe.misses, 1);
-    expect(planner.pathGeometryCache.probe.hits, 1);
-    expect(planner.strokePathCache.probe.entries, 1);
-    expect(planner.strokePathCache.probe.misses, 1);
-    expect(planner.strokePathCache.probe.hits, 1);
+    expect(planner.rejectedCandidateCount, 0);
+    _expectBoundFamilyCacheProbe(planner.textLayoutCache.probe);
+    _expectBoundFamilyCacheProbe(planner.pathGeometryCache.probe);
+    _expectBoundFamilyCacheProbe(planner.strokePathCache.probe);
   });
+}
 
+void _expectBoundFamilyCacheProbe(FrameCacheProbe probe) {
+  expect(probe.entries, 1);
+  expect(probe.misses, 1);
+  expect(probe.hits, 1);
+}
+
+void _registerRenderPrimitiveSnapshotTests() {
+  test('ordinary planning exposes cached primitives for painters', () {
+    final frameFacts = frameFactsPort(
+      elements: [
+        textFacts('text-a', orderToken: 1),
+        pathFacts('path-a', orderToken: 2),
+        strokeFacts('stroke-a', orderToken: 3),
+      ],
+    );
+    final planner = OrdinaryPaintPlanner();
+    final result = planner.buildOrdinaryPlan(
+      capturedMainFrame(frameFacts: frameFacts),
+    );
+    final ready = result as OrdinaryPaintPlanReady;
+
+    final snapshot = planner.renderPrimitiveSnapshotFor(
+      ready.plan.ordinaryRecords,
+    );
+
+    expect(snapshot.textLayouts, hasLength(1));
+    expect(snapshot.textLayouts.values.single.painter.width, isNonNegative);
+    expect(snapshot.paths, hasLength(1));
+    expect(snapshot.paths.values.single.path, isNotNull);
+    expect(snapshot.strokes, hasLength(1));
+    expect(snapshot.strokes.values.single.path, isNotNull);
+  });
+}
+
+void _registerStrokeScaleKeyTests() {
   test('stroke cache keys include full transform scale matrix', () {
     final frameFacts = frameFactsPort(
       elements: [
@@ -97,11 +139,11 @@ void _expectTextLayoutLru() {
   final second = _textKey(1);
 
   for (var index = 0; index < 1024; index += 1) {
-    cache.write(_textKey(index), TextLayoutCacheEntry(debugLabel: '$index'));
+    cache.write(_textKey(index), _textEntry(index));
   }
   expect(cache.read(first), isNotNull);
   for (var index = 1024; index < 2048; index += 1) {
-    cache.write(_textKey(index), TextLayoutCacheEntry(debugLabel: '$index'));
+    cache.write(_textKey(index), _textEntry(index));
   }
 
   expect(cache.capacity, 1024);
@@ -120,11 +162,11 @@ void _expectPathGeometryLru() {
   final second = _pathKey(1);
 
   for (var index = 0; index < 1024; index += 1) {
-    cache.write(_pathKey(index), PathGeometryCacheEntry(debugLabel: '$index'));
+    cache.write(_pathKey(index), _pathEntry(index));
   }
   expect(cache.read(first), isNotNull);
   for (var index = 1024; index < 2048; index += 1) {
-    cache.write(_pathKey(index), PathGeometryCacheEntry(debugLabel: '$index'));
+    cache.write(_pathKey(index), _pathEntry(index));
   }
 
   expect(cache.capacity, 1024);
@@ -143,11 +185,11 @@ void _expectStrokePathLru() {
   final second = _strokeKey(1);
 
   for (var index = 0; index < 1024; index += 1) {
-    cache.write(_strokeKey(index), StrokePathCacheEntry(debugLabel: '$index'));
+    cache.write(_strokeKey(index), _strokeEntry(index));
   }
   expect(cache.read(first), isNotNull);
   for (var index = 1024; index < 2048; index += 1) {
-    cache.write(_strokeKey(index), StrokePathCacheEntry(debugLabel: '$index'));
+    cache.write(_strokeKey(index), _strokeEntry(index));
   }
 
   expect(cache.capacity, 1024);
@@ -158,6 +200,30 @@ void _expectStrokePathLru() {
   expect(cache.probationaryEntryCount, 1023);
   expect(cache.containsKey(first), isTrue);
   expect(cache.containsKey(second), isFalse);
+}
+
+TextLayoutCacheEntry _textEntry(int index) {
+  return TextLayoutCacheEntry(
+    debugLabel: '$index',
+    painter: TextPainter(
+      text: TextSpan(text: '$index'),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: double.infinity),
+  );
+}
+
+PathGeometryCacheEntry _pathEntry(int index) {
+  return PathGeometryCacheEntry(
+    debugLabel: '$index',
+    path: Path()..lineTo(index.toDouble(), index.toDouble()),
+  );
+}
+
+StrokePathCacheEntry _strokeEntry(int index) {
+  return StrokePathCacheEntry(
+    debugLabel: '$index',
+    path: Path()..lineTo(index.toDouble(), index.toDouble()),
+  );
 }
 
 TextLayoutCacheKey _textKey(int index) {
