@@ -71,12 +71,15 @@ Also flag when applicable:
 - `Completion Evidence Boundary` violations: premature completion markers when
   the reviewed diff marks units or plan steps complete without implementing and
   proving that work in the reviewed range;
-- temporal/reentrancy gaps when observer/listener/callback delivery,
+- `Temporal Surface Closure` gaps when observer/listener/callback delivery,
   public-state publication, transaction/rollback/no-op ordering, post-commit
   notification, or mutation guards are changed without covering every
-  synchronous callback surface that can reenter before the next sequence step;
-- all-or-nothing gaps when fallible work happens after an irreversible mutation
-  without containment or proof;
+  synchronous callback surface, guard/boundary owner, public observation order,
+  and rejection/no-mutation signal that can reenter before the next sequence
+  step;
+- `All-Or-Nothing Failure Boundary` gaps when fallible work happens after an
+  irreversible mutation without containment, accepted-result scoping, failure
+  projection, or proof;
 - hacks, fragile shortcuts, future-risk smells, hardcoded special cases,
   duplicated state, sync glue, `Owner-Level Fix` violations such as one-off
   call-site patches for shared invariants, `Boundary-Owned Policy` violations
@@ -110,12 +113,14 @@ confidence, duplicated truth, weak guardrails, or self-referential proof.
 - Flag fixture-only names, values, schemas, declarations, or public data added
   to real production source-of-truth surfaces unless the contract explicitly
   makes them durable product/API data.
-- For observer/listener/callback work, verify guard placement covers the full
+- For `Temporal Surface Closure`, verify guard placement covers the full
   synchronous execution window and focused tests cover happy-path delivery plus
-  reentrant/interleaved mutation attempts from every callback surface.
-- For all-or-nothing behavior, identify the irreversible point and verify that
-  fallible work happens before it, or is explicitly infallible,
-  failure-contained, or already part of the accepted result with focused proof.
+  reentrant/interleaved mutation attempts from every callback surface with the
+  expected rejection/no-mutation signal.
+- For `All-Or-Nothing Failure Boundary`, identify the irreversible point and
+  verify that fallible work happens before it, or is explicitly infallible,
+  failure-contained, or already part of the accepted result with focused proof
+  and failure projection.
 - For unit-by-unit implementation, do not require extra proof blocks or trace
   commits. During unit review, keep the review scoped to the current unit and
   flag `Completion Evidence Boundary` violations for premature completion

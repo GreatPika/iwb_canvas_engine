@@ -219,15 +219,17 @@ Mark the review `BLOCKED` when any of these are true:
 37. A materially better form is visible from repository evidence because it has a
     stronger owner fit, lower future migration cost, clearer verification, or
     less source-of-truth risk, and the artifact does not reject it with evidence.
-38. The selected form introduces or changes call ordering, post-commit delivery,
-    observer/listener/callback invocation, transaction, rollback, no-op
-    boundaries, public-state publication, or runtime mutation guards, but does
-    not name the temporal invariant, every synchronous callback surface in that
-    window, the guard owner, the allowed public observation order, and a
-    verification strategy for reentrant/interleaved mutation attempts.
-39. The selected form relies on all-or-nothing behavior, but does not identify
-    the irreversible point, what fallible work must happen before it, what later
-    work is infallible, failure-contained, or already accepted, and how that
+38. `Temporal Surface Closure` is unresolved: the selected form introduces or
+    changes call ordering, post-commit delivery, observer/listener/callback
+    invocation, transaction, rollback, no-op boundaries, public-state
+    publication, or runtime mutation guards, but does not name the temporal
+    invariant, every synchronous callback surface in that window, the guard
+    owner, the allowed public observation order, and the expected
+    rejection/no-mutation signal for reentrant/interleaved mutation attempts.
+39. `All-Or-Nothing Failure Boundary` is unresolved: the selected form relies
+    on all-or-nothing behavior, but does not identify the irreversible point,
+    what fallible work must happen before it, what later work is infallible,
+    failure-contained, or already accepted, the failure projection, and how that
     boundary will be proven.
 40. The artifact is formally complete but leaves the future Change Contract to
     decide how the selected form can be implemented or proven at the owning
@@ -289,11 +291,10 @@ example:
    to derive them mechanically.
 9. Check the diagram need assessment against the fixed trigger matrix and audit
    every provisional diagram semantically.
-10. For designs with ordering, delivery, observer/listener/callback surfaces,
-    public-state publication, transactions, rollback/no-op paths, or mutation
-    guards, reconstruct the full synchronous execution window.
-11. For designs that rely on all-or-nothing behavior, reconstruct the failure
-    domains around the irreversible point.
+10. For designs with `Temporal Surface Closure` pressure, reconstruct the full
+    synchronous execution window.
+11. For designs that rely on `All-Or-Nothing Failure Boundary`, reconstruct the
+    failure domains around the irreversible point.
 12. Confirm source-of-truth and verification impacts match the selected form,
     profile, and obligations.
 13. Confirm the handoff contains only facts needed by a future Change Contract:

@@ -141,16 +141,17 @@ Reject any candidate form that fails one of these gates:
 - **Sequenced Migration And Retirement**: for shared seams, names successor or
   retired seam, consumer order, replacement paths, retirement gate, migration
   checks, and `Negative Proof And Fixture Quarantine` strategy.
-- **Temporal/reentrancy**: for call ordering, post-commit delivery,
+- **Temporal Surface Closure**: for call ordering, post-commit delivery,
   transaction, rollback, or no-op boundaries, observers, listeners, callbacks,
   guards, or public-state publication, names the temporal invariant, every
   synchronous callback surface in the window, the guard owner, the allowed public
-  observation order, and the verification strategy for reentrant/interleaved
-  mutation attempts.
-- **All-or-nothing behavior**: when correctness relies on a change either fully
-  taking effect or leaving prior state unchanged, names the irreversible point,
-  places fallible work before it, and proves later work is infallible,
-  failure-contained, or already part of the accepted result.
+  observation order, and the expected rejection/no-mutation signal for
+  reentrant/interleaved mutation attempts.
+- **All-Or-Nothing Failure Boundary**: when correctness relies on a change
+  either fully taking effect or leaving prior state unchanged, names the
+  irreversible point, places fallible work before it, and proves later work is
+  infallible, failure-contained, or already part of the accepted result; also
+  names the failure projection and proof surface.
 - **Outcome-Proof Fit**: applies the shared `Claim -> Direct outcome -> Proxy
   risk -> Required proof` rule. For every selected-form claim about behavior,
   invariant, owner responsibility, source-of-truth update, migration, guardrail,
@@ -248,13 +249,14 @@ Before writing the `.design/` artifact, open
 template is passive output structure only; routing, gate semantics, profile
 selection, obligations, and design-form rules are owned by this `SKILL.md`.
 
-When a design has temporal/reentrancy pressure, record the invariant,
-synchronous callback surfaces, guard owner, public observation order, and
-verification strategy in the selected form, hard gate, lock-required facts,
-Decision Trace, verification impact, and handoff sections. When a design relies
-on all-or-nothing behavior, also record the irreversible point, fallible work
-before that point, the later failure-containment rule, and the proof strategy in
-those same sections. Do not add ad hoc template sections.
+When a design has `Temporal Surface Closure` pressure, record the invariant,
+synchronous callback surfaces, guard owner, public observation order, expected
+rejection/no-mutation signal, and verification strategy in the selected form,
+hard gate, lock-required facts, Decision Trace, verification impact, and handoff
+sections. When a design relies on `All-Or-Nothing Failure Boundary`, also record
+the irreversible point, fallible work before that point, the later
+failure-containment rule, failure projection, and the proof strategy in those
+same sections. Do not add ad hoc template sections.
 
 ## Completion Criteria
 

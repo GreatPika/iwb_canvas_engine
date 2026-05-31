@@ -85,8 +85,8 @@ them forward.
 | Dependency direction | pass/fail | ... |
 | State/data | pass/fail/not applicable | ... |
 | Seam | pass/fail/not applicable | ... |
-| Temporal/reentrancy | pass/fail/not applicable | ... |
-| All-or-nothing behavior | pass/fail/not applicable | ... |
+| Temporal Surface Closure | pass/fail/not applicable | ... |
+| All-Or-Nothing Failure Boundary | pass/fail/not applicable | ... |
 | Outcome-Proof Fit | pass/fail/not applicable | ... |
 | Verification | pass/fail | ... |
 | Future pressure | pass/fail/not found after targeted inspection | ... |
@@ -102,8 +102,8 @@ them forward.
 - Exit boundaries:
 - File placement basis:
 - Execution order constraints:
-- Temporal/reentrancy invariant and callback surfaces:
-- All-or-nothing irreversible point and failure boundary:
+- `Temporal Surface Closure` invariant and callback surfaces:
+- `All-Or-Nothing Failure Boundary` irreversible point and failure boundary:
 - Rejected alternatives:
 - Verification strategy:
 

@@ -29,14 +29,12 @@ or fixture strategy, mandatory source-of-truth updates, migration or retirement
 strategy, or completion signal.
 
 For contracts involving callback, listener, observer, delivery, transaction,
-rollback/no-op, atomicity, public-state publication, or guard windows, the
-temporal invariant and every synchronous reentry/interleaving proof surface are
-also decisions that must be settled before implementation.
+rollback/no-op, atomicity, public-state publication, or guard windows,
+`Temporal Surface Closure` is a decision that must be settled before
+implementation.
 
-For contracts that rely on all-or-nothing behavior, the irreversible point, the
-fallible work that must happen before it, the later infallible or
-failure-contained work, and the proof of that boundary are also decisions that
-must be settled before implementation.
+For contracts that rely on all-or-nothing behavior, `All-Or-Nothing Failure
+Boundary` is a decision that must be settled before implementation.
 
 Treat vague deferrals as unresolved decisions when they appear in required
 fields or execution units. Examples include "as needed", "if applicable",
@@ -155,11 +153,13 @@ Confirm, when relevant:
   unit and not only a proxy signal that could pass while the claimed outcome
   remains false, unless the unit claim is explicitly scoped to that proxy or the
   proxy is itself the claimed outcome;
-- temporal/callback/guard obligations name every synchronous callback surface
-  and the expected rejection or no-mutation signal;
-- all-or-nothing obligations name the irreversible point or bounded seam, the
-  fallible action being exercised or structurally excluded, and the expected
-  rollback, no-mutation, containment, or publication signal.
+- `Temporal Surface Closure` obligations name every synchronous callback
+  surface, guard/boundary owner, public observation order, and expected
+  rejection or no-mutation signal;
+- `All-Or-Nothing Failure Boundary` obligations name the irreversible point or
+  bounded seam, the fallible action being exercised or structurally excluded,
+  later infallible/failure-contained/accepted work, failure projection, and the
+  expected rollback, no-mutation, containment, or publication signal.
 
 `Evidence Consequence Link`: evidence must connect observed facts to contract
 consequences. Repository evidence should use exact `path:line` references
@@ -255,11 +255,13 @@ Mark the contract `BLOCKED` when any category applies:
 13. A `Contract Blocker` is invalid: it includes execution units, asks for
     decisions the repository already determines, or does not identify the exact
     missing evidence or decision.
-14. Temporal/callback proof is missing: the contract includes or inherits call
-    ordering, observer/listener/callback delivery, transaction, rollback, no-op
-    boundaries, public-state publication, atomicity, or mutation guard
-    obligations, but completion checks do not prove every synchronous callback
-    surface that can run user or runtime code before the next sequence step.
+14. `Temporal Surface Closure` proof is missing: the contract includes or
+    inherits call ordering, observer/listener/callback delivery, transaction,
+    rollback, no-op boundaries, public-state publication, atomicity, or mutation
+    guard obligations, but completion checks do not prove every synchronous
+    callback surface that can run user or runtime code before the next sequence
+    step or omit the guard/boundary owner, public observation order, or expected
+    rejection/no-mutation signal.
 15. `Negative Proof And Fixture Quarantine` is unresolved: a structural,
     bypass, negative, or fixture proof is required, but the contract omits the
     production seam or contract-named test seam, fixture mechanism, bounded
@@ -272,11 +274,11 @@ Mark the contract `BLOCKED` when any category applies:
     change, verification strategy, decision trace row, handoff constraint, or
     sequencing fact required by a design or phase source is made optional,
     conditional, or left for implementation to rediscover.
-18. All-or-nothing proof is missing: the contract relies on all-or-nothing
-    behavior, but does not identify the irreversible point, the fallible work
-    that must happen before it, the later work that is infallible or
-    failure-contained, and a proof that fails if fallible work is placed on the
-    wrong side of that point.
+18. `All-Or-Nothing Failure Boundary` proof is missing: the contract relies on
+    all-or-nothing behavior, but does not identify the irreversible point, the
+    fallible work that must happen before it, the later work that is infallible,
+    failure-contained, or accepted, the failure projection, and a proof that
+    fails if fallible work is placed on the wrong side of that point.
 
 ## Non-Blocking Criteria
 

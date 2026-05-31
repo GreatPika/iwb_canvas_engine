@@ -49,12 +49,13 @@ still need to choose:
   for structural, bypass, or negative proof;
 - mandatory source-of-truth updates when the change alters what a registry,
   contract, guardrail, generated output, or diagram means;
-- temporal/reentrancy behavior for callback, listener, observer, delivery,
+- `Temporal Surface Closure`: callback, listener, observer, delivery,
   transaction, rollback, no-op, atomicity, guard, or public-state publication
   windows;
-- for all-or-nothing behavior: the irreversible point, the fallible work that
-  must complete before it, and the later work that is infallible,
-  failure-contained, or already part of the accepted result;
+- `All-Or-Nothing Failure Boundary`: the irreversible point, the fallible work
+  that must complete before it, later work that is infallible,
+  failure-contained, or already part of the accepted result, and the failure
+  projection;
 - migration, replacement, or retirement strategy;
 - the completion signal for any execution unit.
 
@@ -270,12 +271,12 @@ this chain:
 
     owner -> boundary -> concrete change -> completion check
 
-## Temporal And Callback Windows
+## Temporal Surface Closure
 
 When the change introduces or modifies call ordering, observer/listener/callback
 delivery, post-commit notification, transaction, rollback, or no-op boundaries,
 public-state publication, atomic install, or mutation guards, the contract must
-make the synchronous execution window decision-complete.
+make `Temporal Surface Closure` decision-complete.
 
 Name:
 
@@ -291,10 +292,11 @@ Execution unit completion checks must prove those surfaces explicitly. Do not
 write vague checks such as "guard observer delivery" or "test reentrancy"; name
 the callback surface and expected signal.
 
-## All-Or-Nothing Behavior
+## All-Or-Nothing Failure Boundary
 
 When correctness relies on a change either fully taking effect or leaving prior
-state unchanged, the contract must make the failure domain decision-complete.
+state unchanged, the contract must make `All-Or-Nothing Failure Boundary`
+decision-complete.
 
 Name:
 
@@ -428,14 +430,17 @@ pass/fail signal. Fixture-only names, values, schemas, declarations, or data
 must not be added to real production source-of-truth files, public API
 registries, schemas, durable contracts, generated docs, or public surfaces.
 
-For temporal/callback/guard work, a completion check is inadequate unless it
-names the specific callback surface, the reentrant or interleaved action being
-attempted, and the expected rejection/no-mutation signal.
+For `Temporal Surface Closure`, a completion check is inadequate unless it names
+the temporal invariant, the specific synchronous callback surface, the guard or
+boundary owner, the allowed public observation order, the reentrant or
+interleaved action being attempted, and the expected rejection/no-mutation
+signal.
 
-For all-or-nothing behavior, a completion check is inadequate unless it names
-the irreversible point or bounded seam, the fallible action being exercised or
-structurally excluded, and the expected no-mutation, rollback, containment, or
-publication signal.
+For `All-Or-Nothing Failure Boundary`, a completion check is inadequate unless
+it names the irreversible point or bounded seam, the fallible action being
+exercised or structurally excluded, later infallible/failure-contained/accepted
+work, the failure projection, and the expected no-mutation, rollback,
+containment, or publication signal.
 
 Do not run the checks in this skill. Only specify them.
 
