@@ -1,3 +1,7 @@
+// Shared frame fixtures import the same seams as the planners under test so
+// individual tests do not duplicate boundary setup with weaker defaults.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
@@ -12,6 +16,9 @@ import 'package:iwb_canvas_engine/src/frame/captured_frame.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_capture_service.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
 
+// This helper exposes the frame-capture inputs directly so each test can vary a
+// single boundary value without introducing per-test builders.
+// ignore: number-of-parameters
 CapturedMainFrame capturedMainFrame({
   required TestFrameFactsPort frameFacts,
   SpatialQueryResult? spatialPaintResult,
@@ -48,6 +55,26 @@ CapturedMainFrame capturedMainFrame({
   );
 }
 
+CapturedOverlayFrame capturedOverlayFrameFor(CanvasPreviewState preview) {
+  final frameFacts = frameFactsPort(elements: const []);
+  final capture = FrameCaptureService(
+    frameFacts: frameFacts,
+    selectionFacts: TestSelectionFactsPort.empty(),
+    queryPaint: (_) => const SpatialCandidatesResult(orderedCandidates: []),
+  );
+
+  return capture.captureOverlayFrame(
+    FrameCaptureInputs(
+      viewportWorldBounds: const Rect.fromLTWH(0, 0, 10, 10),
+      devicePixelRatio: 1,
+      selectionStyle: CanvasSelectionStyle.defaultStyle,
+      gridStyle: CanvasGridStyle.defaultStyle,
+      preview: preview,
+      previewRevision: 1,
+    ),
+  );
+}
+
 TestFrameFactsPort frameFactsPort({
   FrameRevisionFacts? revisions,
   List<FrameElementFacts>? elements,
@@ -76,6 +103,9 @@ TestFrameFactsPort frameFactsPort({
   );
 }
 
+// Revision fixtures keep every frame revision explicit because cache-key tests
+// need to prove which revisions do and do not participate.
+// ignore: number-of-parameters
 FrameRevisionFacts revisionsFor({
   int document = 1,
   int structural = 2,
@@ -96,12 +126,18 @@ FrameRevisionFacts revisionsFor({
   );
 }
 
+// Rect facts are the common committed-row fixture and keep visual, ordering,
+// transform, and location knobs at the call site for cache-boundary tests.
+// ignore: number-of-parameters
 FrameElementFacts rectFacts(
   String id, {
   required int orderToken,
   int generation = 1,
   double opacity = 1,
   FrameElementLocationKind locationKind = FrameElementLocationKind.content,
+  CanvasTransform transform = CanvasTransform.identity,
+  bool isLocked = false,
+  bool isTransformable = true,
 }) {
   return FrameElementFacts(
     id: CanvasElementId(id),
@@ -110,14 +146,14 @@ FrameElementFacts rectFacts(
     generation: generation,
     orderToken: orderToken,
     locationKind: locationKind,
-    transform: CanvasTransform.identity,
+    transform: transform,
     opacity: opacity,
     hitPadding: 0,
     isVisible: true,
     isSelectable: true,
-    isLocked: false,
+    isLocked: isLocked,
     isDeletable: true,
-    isTransformable: true,
+    isTransformable: isTransformable,
     metadata: const CanvasMetadata.empty(),
     size: const Size(10, 10),
     fillColor: const Color(0xFF336699),
@@ -162,6 +198,9 @@ FrameElementFacts strokeFacts(
   );
 }
 
+// The base row fixture mirrors the internal port shape; keeping one complete
+// constructor avoids inconsistent test facts across element families.
+// ignore: number-of-parameters
 FrameElementFacts _baseFacts(
   String id, {
   required CanvasElementKind kind,
@@ -276,6 +315,11 @@ final class TestFrameFactsPort implements FrameFactsPort {
 
 final class TestSelectionFactsPort implements SelectionFactsPort {
   const TestSelectionFactsPort(this.facts);
+  TestSelectionFactsPort.empty()
+    : facts = SelectionFacts(
+        selectedElementIds: const {},
+        selectionRevision: 0,
+      );
 
   final SelectionFacts facts;
 

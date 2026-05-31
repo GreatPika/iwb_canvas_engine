@@ -8,6 +8,9 @@ import 'package:iwb_canvas_engine/src/frame/paint_plan.dart';
 
 import 'ordinary_paint_test_support.dart';
 
+// This fixture keeps cache capacity, scan resistance, and family cache probe
+// assertions together so the shared eviction policy is validated as one story.
+// ignore: halstead-volume, source-lines-of-code
 void main() {
   test('render family caches are 1024 entry scan-resistant LRU caches', () {
     _expectTextLayoutLru();

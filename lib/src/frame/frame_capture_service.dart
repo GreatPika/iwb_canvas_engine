@@ -7,6 +7,9 @@ import 'captured_frame.dart';
 
 typedef SpatialPaintQuery = SpatialQueryResult Function(SpatialQueryWindow);
 
+// The capture boundary intentionally touches every frame input seam once so
+// painters receive immutable data instead of live runtime/store reads.
+// ignore: coupling-between-object-classes
 final class FrameCaptureService {
   const FrameCaptureService({
     required FrameFactsPort frameFacts,
@@ -48,6 +51,28 @@ final class FrameCaptureService {
     final revisions = _frameFacts.frameRevisions;
     final structuralRevision = revisions.structuralRevision;
     final orderedHandles = _frameFacts.elementHandles(structuralRevision);
+    final resolved = _resolvedElementsAndDescriptors(orderedHandles);
+
+    final selection = _selectionFacts.selectionFacts;
+    final spatialResult = _queryPaint(
+      _spatialWindow(inputs, structuralRevision),
+    );
+
+    return CapturedFrameSnapshot(
+      revisions: revisions,
+      orderedHandles: orderedHandles,
+      elements: resolved.elements,
+      resourceDescriptors: resolved.descriptors,
+      selection: selection,
+      inputs: inputs,
+      spatialPaintResult: spatialResult,
+      spatialPaintCandidates: spatialResult.candidates,
+    );
+  }
+
+  _ResolvedFrameRows _resolvedElementsAndDescriptors(
+    Iterable<FrameElementHandle> orderedHandles,
+  ) {
     final elements = <FrameElementFacts>[];
     final descriptors = <FrameResourceDescriptorFacts>[];
     final seenResources = <Object>{};
@@ -58,33 +83,49 @@ final class FrameCaptureService {
         continue;
       }
       elements.add(element);
-      final resourceId = element.resourceId;
-      if (resourceId == null || !seenResources.add(resourceId)) {
-        continue;
-      }
-      final descriptor = _frameFacts.resourceDescriptor(resourceId);
-      if (descriptor != null) {
-        descriptors.add(descriptor);
-      }
+      _addResourceDescriptor(
+        element: element,
+        seenResources: seenResources,
+        descriptors: descriptors,
+      );
     }
 
-    final selection = _selectionFacts.selectionFacts;
-    final spatialResult = _queryPaint(
-      SpatialQueryWindow(
-        boundsWorld: inputs.viewportWorldBounds,
-        structuralRevision: structuralRevision,
-      ),
-    );
+    return _ResolvedFrameRows(elements: elements, descriptors: descriptors);
+  }
 
-    return CapturedFrameSnapshot(
-      revisions: revisions,
-      orderedHandles: orderedHandles,
-      elements: elements,
-      resourceDescriptors: descriptors,
-      selection: selection,
-      inputs: inputs,
-      spatialPaintResult: spatialResult,
-      spatialPaintCandidates: spatialResult.candidates,
+  void _addResourceDescriptor({
+    required FrameElementFacts element,
+    required Set<Object> seenResources,
+    required List<FrameResourceDescriptorFacts> descriptors,
+  }) {
+    final resourceId = element.resourceId;
+    if (resourceId == null || !seenResources.add(resourceId)) {
+      return;
+    }
+    final descriptor = _frameFacts.resourceDescriptor(resourceId);
+    if (descriptor != null) {
+      descriptors.add(descriptor);
+    }
+  }
+
+  SpatialQueryWindow _spatialWindow(
+    FrameCaptureInputs inputs,
+    int structuralRevision,
+  ) {
+    return SpatialQueryWindow(
+      boundsWorld: inputs.viewportWorldBounds,
+      structuralRevision: structuralRevision,
     );
   }
+}
+
+final class _ResolvedFrameRows {
+  _ResolvedFrameRows({
+    required Iterable<FrameElementFacts> elements,
+    required Iterable<FrameResourceDescriptorFacts> descriptors,
+  }) : elements = List.unmodifiable(elements),
+       descriptors = List.unmodifiable(descriptors);
+
+  final List<FrameElementFacts> elements;
+  final List<FrameResourceDescriptorFacts> descriptors;
 }

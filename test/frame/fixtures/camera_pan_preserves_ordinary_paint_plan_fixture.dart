@@ -5,6 +5,9 @@ import 'package:iwb_canvas_engine/src/frame/ordinary_paint_planner.dart';
 
 import 'ordinary_paint_test_support.dart';
 
+// The camera-pan and opacity assertions stay together because both prove camera
+// churn does not create an ordinary paint-plan dependency.
+// ignore: halstead-volume
 void main() {
   test('camera-only movement stays outside ordinary paint plan identity', () {
     final frameFacts = frameFactsPort();

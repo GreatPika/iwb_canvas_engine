@@ -5,6 +5,9 @@ import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
 
 import 'ordinary_paint_test_support.dart';
 
+// These rejection cases stay in one fixture because they prove the same
+// all-or-nothing cache-write boundary from three failure directions.
+// ignore: halstead-volume, source-lines-of-code
 void main() {
   test('stale admitted candidate rejects the whole cache write', () {
     final rows = [

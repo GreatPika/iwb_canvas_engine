@@ -4,6 +4,9 @@ import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/public/canvas_element.dart';
 import 'frame_cache.dart';
 
+// These hot caches stay behind one owner so text, path, and stroke cache probes
+// share the same ordinary planning lifecycle and capacity policy.
+// ignore: coupling-between-object-classes
 final class RenderFamilyCaches {
   RenderFamilyCaches({
     TextLayoutCache? textLayoutCache,

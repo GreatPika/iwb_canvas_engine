@@ -1,3 +1,7 @@
+// Frame capture fixtures import the full boundary because the test verifies
+// every captured donor exactly once rather than isolated helper behavior.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +23,10 @@ void main() {
   _testPreviewRouting();
 }
 
+// Keeping the complete capture transaction in one test makes the no-live-read
+// snapshot invariant visible across facts, descriptors, selection, and spatial
+// candidates.
+// ignore: halstead-volume, maintainability-index, source-lines-of-code
 void _testImmutableFrameCapture() {
   test('main and overlay capture immutable frame facts once per request', () {
     final resourceId = CanvasResourceId('image-a');
@@ -116,6 +124,9 @@ void _testImmutableFrameCapture() {
   });
 }
 
+// Preview routing is a compact matrix over the public preview union; keeping it
+// together prevents missing a variant in one frame path.
+// ignore: halstead-volume, source-lines-of-code
 void _testPreviewRouting() {
   test('preview variants are admitted to only their frame capture paths', () {
     final service = _emptyCaptureService();
@@ -251,6 +262,9 @@ FrameElementFacts _imageFacts(
   );
 }
 
+// The element fixture mirrors the frame facts boundary shape so rect and image
+// rows share the same required identity fields.
+// ignore: number-of-parameters
 FrameElementFacts _elementFacts(
   FrameElementHandle handle, {
   required CanvasElementKind kind,

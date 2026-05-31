@@ -220,22 +220,14 @@ final class TextLayoutCacheKey {
   @override
   bool operator ==(Object other) {
     return other is TextLayoutCacheKey &&
-        other.text == text &&
-        other.fontSize == fontSize &&
-        other.colorValue == colorValue &&
-        other.alignName == alignName &&
-        other.directionName == directionName &&
-        other.isBold == isBold &&
-        other.isItalic == isItalic &&
-        other.isUnderline == isUnderline &&
-        other.fontFamily == fontFamily &&
-        other.maxWidth == maxWidth &&
-        other.lineHeight == lineHeight;
+        listEquals(other._equalityFields, _equalityFields);
   }
 
   @override
-  int get hashCode {
-    return Object.hash(
+  int get hashCode => Object.hashAll(_equalityFields);
+
+  List<Object?> get _equalityFields {
+    return [
       text,
       fontSize,
       colorValue,
@@ -247,7 +239,7 @@ final class TextLayoutCacheKey {
       fontFamily,
       maxWidth,
       lineHeight,
-    );
+    ];
   }
 }
 
