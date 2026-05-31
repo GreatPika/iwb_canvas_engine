@@ -302,8 +302,13 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/spatial/fallback_budget_enforced_test.dart`
 - `test/spatial/invalid_index_fallback_test.dart`
 - `test/spatial/runtime_delivery_order_test.dart`
+- `test/api/canvas_runtime_preview_test.dart`
 - `test/frame/main_overlay_capture_test.dart`
+- `test/frame/frame_donor_mapping_test.dart`
 - `test/frame/no_live_runtime_read_in_painters_test.dart`
+- `test/frame/paint_asset_binding_service_test.dart`
+- `test/frame/repaint_bus_output_test.dart`
+- `test/frame/static_background_plan_test.dart`
 - `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart`
 - `test/frame/cache_capacity_eviction_policy_test.dart`
 - `test/frame/paint_plan_excludes_preview_delta_test.dart`
@@ -325,6 +330,13 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/guardrails/spatial_no_full_clone_ordinary_edit_guardrail_test.dart`
 - `test/guardrails/spatial_stale_candidate_rejected_guardrail_test.dart`
 - `test/guardrails/spatial_fallback_budget_enforced_guardrail_test.dart`
+- `test/guardrails/frame_no_global_scene_sort_guardrail_test.dart`
+- `test/guardrails/frame_paint_plan_excludes_preview_delta_guardrail_test.dart`
+- `test/guardrails/frame_paint_plan_excludes_selection_state_guardrail_test.dart`
+- `test/guardrails/cache_keys_use_next_revisions_only_guardrail_test.dart`
+- `test/guardrails/cache_background_grid_not_element_visual_guardrail_test.dart`
+- `test/guardrails/cache_hot_caches_have_capacity_eviction_guardrail_test.dart`
+- `test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart`
 
 ### Behavioral Coverage Notes
 
@@ -527,6 +539,10 @@ behavioral tests, and the required guardrail list remains owned by
   overlapping transformed content, one public geometry-changing edit, and a
   replacement geometry-rich load while asserting only public runtime/document
   outcomes;
+- appends P9 public compatibility coverage for reading `runtime.preview` and
+  pumping a resource-free `CanvasSurface` through the public API until the
+  `ValueKey<String>('iwb_canvas_surface.paint_host')` `CustomPaint` host is
+  present;
 - uses the shared Flutter consumer harness as the package-boundary proof;
 - stays intentionally coarse so focused codec, runtime, selection, and cache
   tests own detailed diagnostics;
@@ -676,6 +692,18 @@ Current implemented proof:
 - proves `FrameFactsPort` does not expose frame-owned render models,
   selection facts, resolver state, mutation APIs, or public document
   projection access.
+
+#### P9 frame/cache guardrail proof tests
+- `test/guardrails/frame_no_global_scene_sort_guardrail_test.dart`,
+  `test/guardrails/frame_paint_plan_excludes_preview_delta_guardrail_test.dart`,
+  `test/guardrails/frame_paint_plan_excludes_selection_state_guardrail_test.dart`,
+  `test/guardrails/cache_keys_use_next_revisions_only_guardrail_test.dart`,
+  `test/guardrails/cache_background_grid_not_element_visual_guardrail_test.dart`,
+  `test/guardrails/cache_hot_caches_have_capacity_eviction_guardrail_test.dart`,
+  and `test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart`
+  prove the P9 frame, cache, and preview guardrail ids are registered,
+  runner-backed or structurally checked where required, and reject fixtures
+  containing only the forbidden contract shapes.
 
 Legacy capability inventory rows require inventory-only tests. Next API
 behavior is proved by focused API, subsystem, and integration tests, not by

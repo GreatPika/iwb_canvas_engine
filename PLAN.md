@@ -62,4 +62,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 40. DiagnosticsHub SSOT routing table](plan/step_40_diagnostics_hub_ssot_routing_table.md)
 - [x] [Step 41. P7 resource session resolver lifecycle](plan/step_41_p7_resource_session_resolver_lifecycle.md)
 - [x] [Step 42. P8 geometry and spatial kernels](plan/step_42_p8_geometry_and_spatial_kernels.md)
-- [ ] [Step 43. P9 frame rendering and caches](plan/step_43_p9_frame_rendering_and_caches.md)
+- [x] [Step 43. P9 frame rendering and caches](plan/step_43_p9_frame_rendering_and_caches.md)

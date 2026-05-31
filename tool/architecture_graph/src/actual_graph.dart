@@ -660,16 +660,18 @@ final class _MemberDelegationVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
-    _recordDelegation(
-      _DelegationCandidate(
-        sink: sink,
-        qualifiedMember: _qualifiedMember(node.name.lexeme),
-        targetTypes: _targets.values,
-        node: node,
-        body: node.body,
-      ),
-    );
-    super.visitMethodDeclaration(node);
+    _targets.withParameterTypes(node.parameters, () {
+      _recordDelegation(
+        _DelegationCandidate(
+          sink: sink,
+          qualifiedMember: _qualifiedMember(node.name.lexeme),
+          targetTypes: _targets.values,
+          node: node,
+          body: node.body,
+        ),
+      );
+      super.visitMethodDeclaration(node);
+    });
   }
 
   String _qualifiedMember(String member) {
@@ -892,27 +894,27 @@ bool _isPlaceholderCovered(String path, ActualGraphExtractionOptions options) {
 }
 
 void _recordDelegation(_DelegationCandidate candidate) {
-  final targetName = _delegationTarget(candidate.body);
-  final targetType = targetName == null
-      ? null
-      : candidate.targetTypes[targetName];
   if (!candidate.sink.options.delegationMembers.contains(
-        candidate.qualifiedMember,
-      ) ||
-      targetName == null ||
-      targetType == null ||
-      !candidate.sink.options.delegationTargetTypes.contains(targetType)) {
+    candidate.qualifiedMember,
+  )) {
     return;
   }
-  candidate.sink.addDelegation(
-    DelegationFact(
-      path: candidate.sink.path,
-      line: candidate.sink.line(candidate.node),
-      member: candidate.qualifiedMember,
-      target: targetName,
-      targetType: targetType,
-    ),
-  );
+  for (final targetName in _delegationTargets(candidate.body)) {
+    final targetType = candidate.targetTypes[targetName];
+    if (targetType == null ||
+        !candidate.sink.options.delegationTargetTypes.contains(targetType)) {
+      continue;
+    }
+    candidate.sink.addDelegation(
+      DelegationFact(
+        path: candidate.sink.path,
+        line: candidate.sink.line(candidate.node),
+        member: candidate.qualifiedMember,
+        target: targetName,
+        targetType: targetType,
+      ),
+    );
+  }
 }
 
 final class _DelegationFactSink {
@@ -935,18 +937,44 @@ final class _DelegationFactSink {
   int line(AstNode node) => lineInfo.getLocation(node.offset).lineNumber;
 }
 
-String? _delegationTarget(FunctionBody body) {
+Iterable<String> _delegationTargets(FunctionBody body) {
   final expression = switch (body) {
     ExpressionFunctionBody(:final expression) => expression,
     _ => null,
   };
+  final expressionTarget = _delegationTargetFromExpression(expression);
+  if (expressionTarget != null) {
+    return [expressionTarget];
+  }
+  if (body is! BlockFunctionBody) {
+    return const [];
+  }
 
+  final visitor = _DelegationTargetVisitor()..visitBlock(body.block);
+
+  return visitor.targets;
+}
+
+String? _delegationTargetFromExpression(Expression? expression) {
   return switch (expression) {
     MethodInvocation(:final target?) => target.toSource(),
     PropertyAccess(:final target?) => target.toSource(),
     SimpleIdentifier(:final name) => name,
     _ => null,
   };
+}
+
+final class _DelegationTargetVisitor extends RecursiveAstVisitor<void> {
+  final Set<String> targets = {};
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    final target = _delegationTargetFromExpression(node.target);
+    if (target != null) {
+      targets.add(target);
+    }
+    super.visitMethodInvocation(node);
+  }
 }
 
 final class _ThrowRouteRecorder {

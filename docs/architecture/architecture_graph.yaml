@@ -53,7 +53,7 @@ phases:
       - path: docs/contracts/spatial_kernel.md
   - id: P9
     title: Frame rendering and caches
-    status: future
+    status: closed
     sourceDocs:
       - path: docs/implementation/p9_frame_rendering_and_caches.md
       - path: docs/contracts/frame_rendering.md
@@ -401,16 +401,23 @@ nodes:
     owner: frame
     phaseIntroduced: P9
     phaseRequiredBy: P9
-    status: future
+    status: required
     coverageScope: architectureOwners
     sourceDocs:
       - path: docs/implementation/p9_frame_rendering_and_caches.md
       - path: docs/contracts/frame_rendering.md
     evidence:
-      - Frame rendering and cache invalidation are future-phase obligations.
+      - FrameEngine owns frame capture, ordinary paint planning, selected supplement staging, background/overlay planning, immutable painter output, repaint signals, and bounded frame cache orchestration.
     actual:
       declarations:
-        - FrameRenderer
+        - FrameEngine
+        - FrameCaptureService
+        - OrdinaryPaintPlanner
+        - SelectedMoveSupplementPlanner
+        - SelectionDecorationPlanner
+        - PaintAssetBindingService
+        - StaticBackgroundPlanner
+        - OverlayPreviewPlanner
   - id: interaction.engine
     label: Interaction engine boundary
     kind: interaction_owner
@@ -604,12 +611,12 @@ edges:
     to: frame.renderer
     kind: frame_facts_provider
     phaseRequiredBy: P9
-    status: future
+    status: required
     sourceDocs:
       - path: docs/contracts/frame_rendering.md
       - path: docs/implementation/p9_frame_rendering_and_caches.md
     evidence:
-      - Frame rendering will consume runtime frame facts in P9.
+      - RuntimeRoot implements FrameFactsPort so FrameEngine and frame collaborators consume committed frame facts through the internal facts boundary instead of store internals.
     actual:
       implementedInterfaces:
         - FrameFactsPort
@@ -776,13 +783,15 @@ edges:
     to: resource.surface_session
     kind: resource_boundary
     phaseRequiredBy: P9
-    status: future
+    status: required
     sourceDocs:
       - path: docs/contracts/resources.md
       - path: docs/contracts/frame_rendering.md
     evidence:
       - PaintAssetBindingService binds image descriptors through SurfaceResourceSession after ordinary record planning; painters and ordinary planners do not own typed CanvasResourceResolver references.
     actual:
+      delegationMembers:
+        - PaintAssetBindingService.bind
       delegationTargets:
         - SurfaceResourceSession
   - id: interaction.engine.queries_spatial_index
@@ -938,12 +947,12 @@ placeholders:
     member: CanvasRuntime.preview
     path: lib/src/api/canvas_runtime.dart
     phaseRequiredBy: P9
-    status: deferred_until_phase
+    status: forbidden_after_phase
     sourceDocs:
       - path: docs/implementation/p9_frame_rendering_and_caches.md
       - path: docs/contracts/frame_rendering.md
     evidence:
-      - Preview state implementation is future frame-rendering scope and must not fail P4 closure.
+      - CanvasRuntime.preview is implemented in P9 as a readable immutable CanvasPreviewState routed through RuntimeRoot.preview and must not return to a throwing public placeholder.
   - id: api.canvas_runtime.context_action_requests.future_placeholder
     node: api.canvas_runtime
     member: CanvasRuntime.contextActionRequests

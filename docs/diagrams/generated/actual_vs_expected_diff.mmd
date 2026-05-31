@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Actual vs expected selected phase diff
-%% Selected phase: P8
+%% Selected phase: P9
 flowchart LR
   api_camera_port["Public camera port<br/>required by P4"]:::ok
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]:::ok
@@ -11,6 +11,7 @@ flowchart LR
   contracts_public["Public contract declarations<br/>required by P6"]:::ok
   diagnostics_hub["Diagnostics hub<br/>required by P3"]:::ok
   edit_kernel["Edit kernel<br/>required by P5"]:::ok
+  frame_renderer["Frame renderer and cache owner<br/>required by P9"]:::ok
   geometry_spatial_index["Geometry and spatial index<br/>required by P8"]:::ok
   load_document_pipeline["Load document pipeline<br/>required by P6"]:::ok
   resource_kernel["Resource kernel<br/>required by P7"]:::ok
@@ -28,8 +29,10 @@ flowchart LR
   codec_schema_v1 -->|uses public data by P3| contracts_public
   contracts_internal_ports -->|contract dependency by P6| contracts_public
   edit_kernel -->|changes data through by P5| store_document_kernel
+  frame_renderer -->|resolves resources through by P9| resource_surface_session
   load_document_pipeline -->|changes data through by P6| store_document_kernel
   runtime_root -->|owns and creates by P8| geometry_spatial_index
+  runtime_root -->|provides FrameFactsPort by P9| frame_renderer
   runtime_root -->|invalidates resource session through by P7| resource_surface_session
   runtime_root -->|composition by P7| resource_kernel
   runtime_root -->|owns and creates by P4| selection_kernel

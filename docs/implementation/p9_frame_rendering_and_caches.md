@@ -10,7 +10,7 @@ frame output.
 ## Build scope
 
 - `FrameEngine`
-- future `FrameEngine` internal collaborator split:
+- `FrameEngine` internal collaborator split:
   `FrameCaptureService`, `OrdinaryPaintPlanner`,
   `SelectedMoveSupplementPlanner`, `SelectionDecorationPlanner`,
   `PaintAssetBindingService`, `StaticBackgroundPlanner`, and
@@ -40,15 +40,15 @@ frame output.
   lookup only through `FrameFactsPort` owned by `contracts/internal/**`
 - ordinary opacity through primitive paint alpha, not implicit `Canvas.saveLayer`.
 
-## Target FrameEngine internal split
+## Implemented FrameEngine internal split
 
-Candidate A is the accepted target frame rendering form: `FrameEngine` remains
-the frame-internal facade and delegates focused work to seven frame-private
+Candidate B is the accepted frame rendering form: `FrameEngine` remains the
+frame-internal facade and delegates focused work to seven frame-private
 collaborators. The split is larger than the backlog's five-service sketch
 because selected move supplement staging and overlay preview primitive
 admission need explicit owners.
 
-| Target collaborator | Owns | Must not own |
+| Collaborator | Owns | Must not own |
 |---|---|---|
 | `FrameCaptureService` | one-time capture of main/overlay live frame facts into `CapturedMainFrame` and `CapturedOverlayFrame` | record planning, resolver/session calls, cache mutation beyond captured-frame construction |
 | `OrdinaryPaintPlanner` | ordinary committed `PaintPlanCache` lookup/build using structure, bounds, element visual, viewport, and DPR | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
@@ -155,9 +155,24 @@ without exposing frame collaborators through the package barrel. At minimum:
 ## Tests and guardrails that prove this phase
 
 - `test.store.no_projection_hot_path` -> `test/store/no_projection_hot_path_test.dart`
+- `test.api.canvas_runtime_preview` -> `test/api/canvas_runtime_preview_test.dart`
+- `test.api_contract.preview_state_sealed_union` -> `test/api_contract/preview_state_sealed_union_test.dart`
 - `test.frame.main_overlay_capture` -> `test/frame/main_overlay_capture_test.dart`
+- `test.frame.frame_donor_mapping` -> `test/frame/frame_donor_mapping_test.dart`
 - `test.frame.no_live_runtime_read_in_painters` -> `test/frame/no_live_runtime_read_in_painters_test.dart`
+- `test.frame.paint_asset_binding_service` -> `test/frame/paint_asset_binding_service_test.dart`
+- `test.frame.repaint_bus_output` -> `test/frame/repaint_bus_output_test.dart`
+- `test.frame.static_background_plan` -> `test/frame/static_background_plan_test.dart`
+- `test.flutter_bridge.widget_paint` -> `test/flutter_bridge/widget_paint_test.dart`
+- `test.smoke.public_incremental_smoke` -> `test/smoke/public_incremental_smoke_test.dart`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port` -> `test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart`
+- `test.guardrails.frame_no_global_scene_sort` -> `test/guardrails/frame_no_global_scene_sort_guardrail_test.dart`
+- `test.guardrails.frame_paint_plan_excludes_preview_delta` -> `test/guardrails/frame_paint_plan_excludes_preview_delta_guardrail_test.dart`
+- `test.guardrails.frame_paint_plan_excludes_selection_state` -> `test/guardrails/frame_paint_plan_excludes_selection_state_guardrail_test.dart`
+- `test.guardrails.cache_keys_use_next_revisions_only` -> `test/guardrails/cache_keys_use_next_revisions_only_guardrail_test.dart`
+- `test.guardrails.cache_background_grid_not_element_visual` -> `test/guardrails/cache_background_grid_not_element_visual_guardrail_test.dart`
+- `test.guardrails.cache_hot_caches_have_capacity_eviction` -> `test/guardrails/cache_hot_caches_have_capacity_eviction_guardrail_test.dart`
+- `test.guardrails.preview_selected_move_main_repaint` -> `test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart`
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape` -> `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart`
 - `test.frame.cache_capacity_eviction_policy` -> `test/frame/cache_capacity_eviction_policy_test.dart`
 - `test.frame.paint_plan_excludes_preview_delta` -> `test/frame/paint_plan_excludes_preview_delta_test.dart`
@@ -176,6 +191,8 @@ without exposing frame collaborators through the package barrel. At minimum:
 - `cache.keys_use_next_revisions_only`
 - `cache.background_grid_not_element_visual`
 - `cache.hot_caches_have_capacity_eviction`
+- `preview.selected_move_main_repaint`
+- `api.preview_state_sealed_union_publicly_readable`
 
 ## Exit gate
 

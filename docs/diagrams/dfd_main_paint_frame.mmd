@@ -1,7 +1,8 @@
 %% Main paint frame data flow
 flowchart LR
 
-  Surface["CanvasSurface\nmain paint host"]
+  Surface["CanvasSurface\nresource-free main paint host"]
+  ExplicitSessionCaller["Frame/internal caller\nexplicit SurfaceResourceSession"]
   AppResolver["Application resourceResolver\nsynchronous app-owned image read"]
 
   subgraph Store["DocumentStoreKernel"]
@@ -73,7 +74,7 @@ flowchart LR
     LiveReadBlocked["No live runtime reads\nfrom painter"]
   end
 
-  Surface -->|"paint asks for main scene"| RepaintSignal
+  Surface -->|"paint asks for resource-free main scene"| RepaintSignal
   Surface -->|"selectionStyle paint input"| Capture
   RepaintSignal -->|"capture once for this paint"| Capture
 
@@ -131,7 +132,7 @@ flowchart LR
   AssetBinding -->|"request descriptor facts"| DescriptorFacts
   DescriptorFacts -->|"read committed descriptor facts\nby captured revision"| Committed
   Committed -->|"immutable descriptor facts"| DescriptorFacts
-  Surface -->|"owns SurfaceResourceSession\nwith resolverGeneration"| AssetBinding
+  ExplicitSessionCaller -->|"passes SurfaceResourceSession\nwith resolverGeneration"| AssetBinding
   DescriptorFacts -->|"descriptor snapshot + resourceRevision"| AssetBinding
   AssetBinding -->|"resolve via session only"| ResolvePaintAsset
   ResolvePaintAsset -->|"cache lookup and bounded update"| ImageResolveCache

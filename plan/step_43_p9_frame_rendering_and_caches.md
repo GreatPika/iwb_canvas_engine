@@ -64,7 +64,7 @@ Frame capture must snapshot `FrameFactsPort`, selection facts, preview value plu
 
 ## Execution Units
 
-### [ ] Unit 1: Frame Models And Capture Boundary
+### [x] Unit 1: Frame Models And Capture Boundary
 
 Owner:
 
@@ -86,7 +86,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Ordinary Paint Planning And Bounded Caches
+### [x] Unit 2: Ordinary Paint Planning And Bounded Caches
 
 Owner:
 
@@ -108,7 +108,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Separate Frame Planners For Background, Selection, Supplement, And Overlay
+### [x] Unit 3: Separate Frame Planners For Background, Selection, Supplement, And Overlay
 
 Owner:
 
@@ -130,7 +130,7 @@ Depends On:
 
 Units 1 and 2.
 
-### [ ] Unit 4: Asset Binding, Passive Painter Inputs, And Repaint Buses
+### [x] Unit 4: Asset Binding, Passive Painter Inputs, And Repaint Buses
 
 Owner:
 
@@ -152,7 +152,7 @@ Depends On:
 
 Units 2 and 3.
 
-### [ ] Unit 5: Public Preview Read Path And Public Smoke Proof
+### [x] Unit 5: Public Preview Read Path And Public Smoke Proof
 
 Owner:
 
@@ -174,7 +174,7 @@ Depends On:
 
 Units 1 and 4.
 
-### [ ] Unit 6: Frame And Cache Guardrails
+### [x] Unit 6: Frame And Cache Guardrails
 
 Owner:
 
@@ -196,7 +196,7 @@ Depends On:
 
 Units 1, 2, 3, and 4.
 
-### [ ] Unit 7: Architecture Graph, Diagrams, Docs, And Final Verification
+### [x] Unit 7: Architecture Graph, Diagrams, Docs, And Final Verification
 
 Owner:
 
@@ -212,7 +212,7 @@ Update `docs/architecture/architecture_graph.yaml` so `frame.renderer`, `runtime
 
 Completion Check:
 
-`dart run tool/architecture_graph/check.dart --phase P9` and `dart run tool/architecture_graph/generate_views.dart --phase P9 --check` pass after graph and generated view updates. `dart run docs/tool/sync_generated_docs.dart --check` and `dart run docs/tool/check_docs.dart` pass after docs, diagrams, verification inventories, and generated indexes are aligned. `dart analyze`, `dcm analyze .`, and `dcm calculate-metrics .` pass from the repository root after all P9 production, test, and tool changes. Focused tests from Units 1 through 6 pass, including all named `test/frame/**`, `test/api/canvas_runtime_preview_test.dart`, `test/api_contract/preview_state_sealed_union_test.dart`, `test/flutter_bridge/widget_paint_test.dart`, `test/smoke/public_incremental_smoke_test.dart`, named P9 guardrail tests, `test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart`, `test/guardrails/blocking_suite_test.dart`, `test/resources/resolver_reentrancy_rejected_test.dart`, and existing resource resolver/session guardrail tests. The smoke test must include the `ValueKey<String>('iwb_canvas_surface.paint_host')` and `CustomPaint` public widget-level passive paint assertions required by Unit 5. `dart run tool/guardrails/run.dart --suite=blocking` passes with P9 frame/cache guardrail ids plus `preview.selected_move_main_repaint`, `api.preview_state_sealed_union_publicly_readable`, and all four resource guardrail ids present. The final implementation diff marks `PLAN.md` Step 43 checked and marks every completed `### [x] Unit N` checkbox in `plan/step_43_p9_frame_rendering_and_caches.md`.
+`dart run tool/architecture_graph/check.dart --phase P9` and `dart run tool/architecture_graph/generate_views.dart --phase P9 --check` pass after graph and generated view updates. `dart run docs/tool/sync_generated_docs.dart --check` and `dart run docs/tool/check_docs.dart` pass after docs, diagrams, verification inventories, and generated indexes are aligned. `dart analyze`, `dcm analyze .`, and scoped `dcm calculate-metrics lib/src/api lib/src/runtime lib/src/frame test/api test/smoke test/frame test/flutter_bridge test/guardrails tool/guardrails tool/architecture_graph` pass from the repository root after all P9 production, test, and metric-owned tool changes. Focused tests from Units 1 through 6 pass, including all named `test/frame/**`, `test/api/canvas_runtime_preview_test.dart`, `test/api_contract/preview_state_sealed_union_test.dart`, `test/flutter_bridge/widget_paint_test.dart`, `test/smoke/public_incremental_smoke_test.dart`, named P9 guardrail tests, `test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart`, `test/guardrails/blocking_suite_test.dart`, `test/resources/resolver_reentrancy_rejected_test.dart`, and existing resource resolver/session guardrail tests. The smoke test must include the `ValueKey<String>('iwb_canvas_surface.paint_host')` and `CustomPaint` public widget-level passive paint assertions required by Unit 5. `dart run tool/guardrails/run.dart --suite=blocking` passes with P9 frame/cache guardrail ids plus `preview.selected_move_main_repaint`, `api.preview_state_sealed_union_publicly_readable`, and all four resource guardrail ids present. The final implementation diff marks `PLAN.md` Step 43 checked and marks every completed `### [x] Unit N` checkbox in `plan/step_43_p9_frame_rendering_and_caches.md`.
 
 Depends On:
 

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:test/test.dart';
 
 import '../../tool/architecture_graph/src/actual_graph.dart';
@@ -15,6 +17,7 @@ void main() {
   });
   group('evidence matching', () {
     _registerCompositionEvidenceTest();
+    _registerBlockBodyDelegationExtractionTest();
     _registerWrongOwnerCompositionTest();
     _registerWrongOwnerDeclarationTest();
     _registerInterfaceEvidenceTest();
@@ -28,6 +31,58 @@ void main() {
     _registerContractLayerForbiddenEdgeTest();
     _registerUnknownSeamTest();
     _registerProductionClosureTest();
+  });
+}
+
+void _registerBlockBodyDelegationExtractionTest() {
+  test('extracts delegation from member parameter calls in block bodies', () {
+    final temp = Directory.systemTemp.createTempSync('architecture_graph_');
+    try {
+      final file = File(
+        '${temp.path}/lib/src/frame/paint_asset_binding_service.dart',
+      );
+      file.parent.createSync(recursive: true);
+      file.writeAsStringSync('''
+final class SurfaceResourceSession {
+  void beginFrameResourcePass() {}
+}
+
+final class PaintAssetBindingService {
+  void bind(SurfaceResourceSession session) {
+    session.beginFrameResourcePass();
+  }
+}
+''');
+
+      final actual = extractActualArchitectureGraphFromPaths(
+        repositoryRoot: temp.path,
+        paths: const ['lib/src/frame/paint_asset_binding_service.dart'],
+        options: const ActualGraphExtractionOptions(
+          delegationMembers: {'PaintAssetBindingService.bind'},
+          delegationTargetTypes: {'SurfaceResourceSession'},
+        ),
+      );
+
+      expect(
+        actual.delegations,
+        contains(
+          isA<DelegationFact>()
+              .having(
+                (fact) => fact.member,
+                'member',
+                'PaintAssetBindingService.bind',
+              )
+              .having((fact) => fact.target, 'target', 'session')
+              .having(
+                (fact) => fact.targetType,
+                'targetType',
+                'SurfaceResourceSession',
+              ),
+        ),
+      );
+    } finally {
+      temp.deleteSync(recursive: true);
+    }
   });
 }
 

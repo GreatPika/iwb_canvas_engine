@@ -3,6 +3,7 @@ sequenceDiagram
   autonumber
 
   participant Surface as CanvasSurface
+  participant ExplicitCaller as Explicit frame asset caller
   participant Frame as FrameEngine facade
   participant Capture as FrameCaptureService
   participant Ordinary as OrdinaryPaintPlanner
@@ -22,7 +23,7 @@ sequenceDiagram
   participant Resolver as CanvasResourceResolver
   participant Painter as Main painter
 
-  Surface->>Frame: paint main scene request(viewportRect, devicePixelRatio, gridStyle, selectionStyle, SurfaceResourceSession)
+  Surface->>Frame: resource-free paint main scene request(viewportRect, devicePixelRatio, gridStyle, selectionStyle)
   Frame->>Capture: capture main frame once
   Capture->>Facts: capture committed frame facts once
   Facts->>Store: read committed revision facts
@@ -96,9 +97,9 @@ sequenceDiagram
   Note over Supplement: No full-scene sort and no CanvasDocument materialization.
   Note over Decoration,SelectionFacts: Selection decoration and selected move supplements are per-frame render concerns outside the ordinary PaintPlanCache.
 
-  opt records include image resource ids
+  opt explicit frame caller supplies SurfaceResourceSession and records include image resource ids
+    ExplicitCaller->>Assets: bind assets for immutable frame output
     loop for each image resource id in records
-      Frame->>Assets: bind descriptor to paint asset
       Assets->>Facts: read descriptor facts by resourceId
       Facts->>Store: read descriptor facts from committed state
       Store-->>Facts: appKey descriptor, resourceRevision, or missing descriptor
