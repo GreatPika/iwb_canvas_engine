@@ -99,13 +99,8 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
 ''';
 
     final discovered = _surfacePlaceholdersInSource(source);
-    final allowlisted = {
-      for (final placeholder in publicApiPlaceholderAllowlist)
-        placeholder.declarationId,
-    };
 
     expect(discovered, {'CanvasSurface.build'});
-    expect(discovered.difference(allowlisted), isEmpty);
   });
 }
 

@@ -75,9 +75,13 @@ CapturedOverlayFrame capturedOverlayFrameFor(CanvasPreviewState preview) {
   );
 }
 
+// The shared frame-facts builder exposes the same knobs as the frame port so
+// cache, resource, stale-row, and spatial tests can vary one boundary at a time.
+// ignore: number-of-parameters
 TestFrameFactsPort frameFactsPort({
   FrameRevisionFacts? revisions,
   List<FrameElementFacts>? elements,
+  List<FrameResourceDescriptorFacts> resourceDescriptors = const [],
   List<FrameElementHandle>? spatialCandidates,
   Set<CanvasElementId> staleIds = const {},
 }) {
@@ -100,6 +104,7 @@ TestFrameFactsPort frameFactsPort({
             ),
         ],
     staleIds: staleIds,
+    resourceDescriptors: resourceDescriptors,
   );
 }
 
@@ -182,6 +187,21 @@ FrameElementFacts pathFacts(String id, {required int orderToken}) {
   );
 }
 
+FrameElementFacts imageFacts(
+  String id, {
+  required int orderToken,
+  required CanvasResourceId resourceId,
+  Size size = const Size(10, 10),
+}) {
+  return _baseFacts(
+    id,
+    kind: CanvasElementKind.image,
+    orderToken: orderToken,
+    resourceId: resourceId,
+    size: size,
+  );
+}
+
 FrameElementFacts strokeFacts(
   String id, {
   required int orderToken,
@@ -212,6 +232,8 @@ FrameElementFacts _baseFacts(
   CanvasPathFillRule? fillRule,
   double? strokeWidth,
   CanvasTransform transform = CanvasTransform.identity,
+  CanvasResourceId? resourceId,
+  Size? size,
   List<Offset> points = const [],
   double? thickness,
   Color? color,
@@ -232,6 +254,8 @@ FrameElementFacts _baseFacts(
     isDeletable: true,
     isTransformable: true,
     metadata: const CanvasMetadata.empty(),
+    resourceId: resourceId,
+    size: size,
     text: text,
     textColor: textColor,
     textDirection: textDirection,
@@ -250,14 +274,21 @@ final class TestFrameFactsPort implements FrameFactsPort {
     required List<FrameElementFacts> elements,
     required List<FrameElementHandle> spatialCandidates,
     required Set<CanvasElementId> staleIds,
+    required List<FrameResourceDescriptorFacts> resourceDescriptors,
   }) : _elements = {for (final element in elements) element.id: element},
        spatialCandidates = List.unmodifiable(spatialCandidates),
-       _staleIds = Set.unmodifiable(staleIds);
+       _staleIds = Set.unmodifiable(staleIds),
+       _resourceDescriptors = Map.unmodifiable({
+         for (final descriptor in resourceDescriptors)
+           descriptor.id: descriptor,
+       });
 
   FrameRevisionFacts revisions;
   final Map<CanvasElementId, FrameElementFacts> _elements;
   final List<FrameElementHandle> spatialCandidates;
   final Set<CanvasElementId> _staleIds;
+  final Map<CanvasResourceId, FrameResourceDescriptorFacts>
+  _resourceDescriptors;
   int resolveElementCalls = 0;
 
   @override
@@ -309,7 +340,7 @@ final class TestFrameFactsPort implements FrameFactsPort {
 
   @override
   FrameResourceDescriptorFacts? resourceDescriptor(CanvasResourceId id) {
-    return null;
+    return _resourceDescriptors[id];
   }
 }
 

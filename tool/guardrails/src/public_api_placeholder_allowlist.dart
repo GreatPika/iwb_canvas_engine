@@ -42,11 +42,4 @@ const publicApiPlaceholderAllowlist = <PublicApiPlaceholder>[
     removalCondition:
         'Remove when text request runtime behavior is implemented.',
   ),
-  PublicApiPlaceholder(
-    declarationId: 'CanvasSurface.build',
-    ownerPhase: 'P13',
-    reason: 'Flutter surface rendering is owned by the Flutter surface phase.',
-    removalCondition:
-        'Remove when CanvasSurface renders and attaches runtime listeners.',
-  ),
 ];

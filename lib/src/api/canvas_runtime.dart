@@ -1,3 +1,7 @@
+// The public runtime facade imports every public port plus its internal root
+// and frame bridge so construction/disposal remain auditable in one file.
+// ignore_for_file: number-of-imports
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -10,6 +14,7 @@ import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_runtime.dart';
 import '../contracts/public/canvas_tools.dart';
 import '../runtime/runtime_root.dart';
+import 'canvas_runtime_frame_bridge.dart';
 
 export '../contracts/public/canvas_runtime.dart';
 
@@ -24,6 +29,7 @@ final class CanvasRuntime {
   }) {
     final document = initialDocument ?? CanvasDocument();
     _root = RuntimeRoot(initialDocument: document, config: config);
+    attachCanvasRuntimeFrameRoot(this, _root);
   }
 
   late final RuntimeRoot _root;
@@ -45,5 +51,6 @@ final class CanvasRuntime {
   CanvasResourceId generateResourceId() => _root.generateResourceId();
   void dispose() {
     _root.dispose();
+    detachCanvasRuntimeFrameRoot(this);
   }
 }

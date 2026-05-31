@@ -25,12 +25,17 @@ import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_diagnostics.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_runtime.dart';
+import '../contracts/public/canvas_surface_styles.dart';
 import '../edit/commit_applier.dart';
 import '../edit/commit_plan.dart';
 import '../edit/edit_kernel.dart';
 import '../edit/staged_document_load.dart';
+import '../frame/captured_frame.dart';
+import '../frame/frame_engine.dart';
+import '../frame/frame_paint_output.dart';
 import '../geometry/spatial_kernel.dart';
 import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
@@ -137,6 +142,11 @@ final class RuntimeRoot
     mutationGuard: this,
     dirtyOutcomeSink: this,
   );
+  late final FrameEngine _frameEngine = FrameEngine(
+    frameFacts: this,
+    selectionFacts: _selection,
+    spatialKernel: _spatial,
+  );
 
   ValueListenable<CanvasRuntimeState> get state => _state;
   bool get isDisposed => _isDisposed;
@@ -155,6 +165,55 @@ final class RuntimeRoot
   FrameFactsPort get frameFactsPort => this;
   @visibleForTesting
   SpatialKernel get spatialKernel => _spatial;
+
+  MainFramePaintOutput buildResourceFreeMainFrame({
+    required Rect viewportWorldBounds,
+    required double devicePixelRatio,
+    required CanvasSelectionStyle selectionStyle,
+    required CanvasGridStyle gridStyle,
+  }) {
+    return _frameEngine.buildResourceFreeMainFrame(
+      inputs: _frameInputs(
+        viewportWorldBounds: viewportWorldBounds,
+        devicePixelRatio: devicePixelRatio,
+        selectionStyle: selectionStyle,
+        gridStyle: gridStyle,
+      ),
+      viewCameraBucket: _viewCameraRevision,
+    );
+  }
+
+  OverlayFramePaintOutput buildResourceFreeOverlayFrame({
+    required Rect viewportWorldBounds,
+    required double devicePixelRatio,
+    required CanvasSelectionStyle selectionStyle,
+    required CanvasGridStyle gridStyle,
+  }) {
+    return _frameEngine.buildResourceFreeOverlayFrame(
+      inputs: _frameInputs(
+        viewportWorldBounds: viewportWorldBounds,
+        devicePixelRatio: devicePixelRatio,
+        selectionStyle: selectionStyle,
+        gridStyle: gridStyle,
+      ),
+    );
+  }
+
+  FrameCaptureInputs _frameInputs({
+    required Rect viewportWorldBounds,
+    required double devicePixelRatio,
+    required CanvasSelectionStyle selectionStyle,
+    required CanvasGridStyle gridStyle,
+  }) {
+    return FrameCaptureInputs(
+      viewportWorldBounds: viewportWorldBounds,
+      devicePixelRatio: devicePixelRatio,
+      selectionStyle: selectionStyle,
+      gridStyle: gridStyle,
+      preview: const CanvasNoPreview(),
+      previewRevision: _previewRevision,
+    );
+  }
 
   void attachResourceSessionInvalidationSink(
     ResourceSessionInvalidationSink sink,

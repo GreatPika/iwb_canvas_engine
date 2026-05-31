@@ -1,15 +1,26 @@
-import 'dart:ui' show Offset, Size;
+import 'dart:ui' show Offset, Rect, Size;
+
+// This resource fixture now covers both the session boundary and the P9 asset
+// binding caller, so the imports intentionally span frame and resource seams.
+// ignore_for_file: number-of-imports
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
+import 'package:iwb_canvas_engine/src/frame/captured_frame.dart';
+import 'package:iwb_canvas_engine/src/frame/frame_engine.dart';
+import 'package:iwb_canvas_engine/src/frame/paint_asset_binding_service.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
+import '../../frame/fixtures/ordinary_paint_test_support.dart';
 import 'surface_resource_session_test_support.dart';
 
 void main() {
   _testNestedResolverCallbackRejected();
+  _testP9AssetBindingMutationRejected();
   _testPublicRuntimeMutationsRejected();
 }
 
@@ -33,6 +44,38 @@ void _testNestedResolverCallbackRejected() {
     expect(root.state.value.revisions.resourceVisual, 0);
 
     image.dispose();
+    root.dispose();
+  });
+}
+
+void _testP9AssetBindingMutationRejected() {
+  test('P9 asset binding rejects public runtime mutations', () {
+    final root = _runtime();
+    final resolver = RecordingResourceResolver((_) {
+      root.generateElementId();
+
+      return null;
+    });
+    final session = SurfaceResourceSession(
+      resolver: resolver,
+      mutationGuard: root,
+    );
+
+    expect(
+      () => _frameEngineWithImageRecord().buildMainFrameWithAssetBindings(
+        inputs: _frameInputs(),
+        viewCameraBucket: 0,
+        bindAssets: ({required frame, required records}) =>
+            const PaintAssetBindingService().bind(
+              frame: frame,
+              records: records,
+              session: session,
+            ),
+      ),
+      throwsStateError,
+    );
+    expect(root.state.value.revisions.document, 0);
+    expect(root.generateElementId(), CanvasElementId('e0'));
     root.dispose();
   });
 }
@@ -144,5 +187,45 @@ RuntimeRoot _runtime() {
       ],
     ),
     config: const CanvasRuntimeConfig(),
+  );
+}
+
+FrameEngine _frameEngineWithImageRecord() {
+  final frameFacts = frameFactsPort(
+    elements: [
+      imageFacts(
+        'image-a',
+        orderToken: 1,
+        resourceId: CanvasResourceId('resource-a'),
+      ),
+    ],
+    resourceDescriptors: [
+      FrameResourceDescriptorFacts(
+        id: CanvasResourceId('resource-a'),
+        appKey: 'asset-a',
+        mimeType: 'image/png',
+        contentHash: null,
+        byteLength: null,
+        resourceRevision: 1,
+        metadata: const CanvasMetadata.empty(),
+      ),
+    ],
+  );
+
+  return FrameEngine(
+    frameFacts: frameFacts,
+    selectionFacts: TestSelectionFactsPort.empty(),
+    spatialKernel: SpatialKernel()..rebuild(frameFacts),
+  );
+}
+
+FrameCaptureInputs _frameInputs() {
+  return const FrameCaptureInputs(
+    viewportWorldBounds: Rect.fromLTWH(0, 0, 100, 100),
+    devicePixelRatio: 1,
+    selectionStyle: CanvasSelectionStyle.defaultStyle,
+    gridStyle: CanvasGridStyle.defaultStyle,
+    preview: CanvasNoPreview(),
+    previewRevision: 0,
   );
 }

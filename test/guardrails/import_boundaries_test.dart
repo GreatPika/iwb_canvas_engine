@@ -8,6 +8,7 @@ void main() {
   _testProductionBoundaries();
   _testRunnerRejectsInjectedCoreBoundaryViolation();
   _testApiFacadeRuntimeRootImport();
+  _testP9ApiBridgeAndSurfaceAllowances();
   _testApiContractWrapperExports();
   _testFrameCannotUseResourceCatalogPort();
   _testResourcesCannotImportFlutterPackages();
@@ -78,6 +79,35 @@ void _testApiFacadeRuntimeRootImport() {
       ),
     );
   });
+}
+
+void _testP9ApiBridgeAndSurfaceAllowances() {
+  test(
+    'P9 api bridge and passive surface imports are narrowly allowlisted',
+    () {
+      expect(
+        checkCoreBoundaryFile(
+          path: 'lib/src/api/canvas_runtime_frame_bridge.dart',
+          content: "import '../runtime/runtime_root.dart';\n",
+        ),
+        isEmpty,
+      );
+      expect(
+        checkCoreBoundaryFile(
+          path: 'lib/src/api/canvas_surface.dart',
+          content: "import '../frame/main_frame_painter.dart';\n",
+        ),
+        isEmpty,
+      );
+      expect(
+        checkCoreBoundaryFile(
+          path: 'lib/src/api/canvas_surface.dart',
+          content: "import '../frame/frame_engine.dart';\n",
+        ),
+        contains(isA<GuardrailViolation>()),
+      );
+    },
+  );
 }
 
 void _testApiContractWrapperExports() {

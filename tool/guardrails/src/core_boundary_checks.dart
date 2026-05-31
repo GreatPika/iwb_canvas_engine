@@ -797,8 +797,19 @@ final class _BoundaryRule {
 }
 
 bool _isAllowedBoundaryImport(String path, String target) {
-  return path == 'lib/src/api/canvas_runtime.dart' &&
-      target == 'lib/src/runtime/runtime_root.dart';
+  if (path == 'lib/src/api/canvas_runtime.dart' &&
+      target == 'lib/src/runtime/runtime_root.dart') {
+    return true;
+  }
+
+  if (path == 'lib/src/api/canvas_runtime_frame_bridge.dart' &&
+      target == 'lib/src/runtime/runtime_root.dart') {
+    return true;
+  }
+
+  return path == 'lib/src/api/canvas_surface.dart' &&
+      (target == 'lib/src/frame/main_frame_painter.dart' ||
+          target == 'lib/src/frame/overlay_frame_painter.dart');
 }
 
 const _runtimeRootPath = 'lib/src/runtime/runtime_root.dart';

@@ -1,8 +1,11 @@
 import 'package:flutter/widgets.dart';
 
 import '../contracts/public/canvas_surface_styles.dart';
+import '../frame/main_frame_painter.dart';
+import '../frame/overlay_frame_painter.dart';
 import 'canvas_resource.dart';
 import 'canvas_runtime.dart';
+import 'canvas_runtime_frame_bridge.dart';
 
 export '../contracts/public/canvas_surface_styles.dart';
 
@@ -27,7 +30,53 @@ final class CanvasSurface extends StatefulWidget {
   State<CanvasSurface> createState() => _CanvasSurfaceState();
 }
 
+// The state is the public widget boundary where Flutter layout, runtime lookup,
+// frame output construction, and passive painters meet for the P9 proof path.
+// ignore: coupling-between-object-classes
 final class _CanvasSurfaceState extends State<CanvasSurface> {
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  Widget build(BuildContext context) {
+    final root = canvasRuntimeFrameRootForSurface(widget.runtime);
+    if (root == null) {
+      return const SizedBox.shrink();
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final paintSize = _paintSizeFor(constraints);
+        final viewport = root.viewCameraOffset & paintSize;
+        final devicePixelRatio = _devicePixelRatioFor(context);
+        final mainOutput = root.buildResourceFreeMainFrame(
+          viewportWorldBounds: viewport,
+          devicePixelRatio: devicePixelRatio,
+          selectionStyle: widget.selectionStyle,
+          gridStyle: widget.gridStyle,
+        );
+        final overlayOutput = root.buildResourceFreeOverlayFrame(
+          viewportWorldBounds: viewport,
+          devicePixelRatio: devicePixelRatio,
+          selectionStyle: widget.selectionStyle,
+          gridStyle: widget.gridStyle,
+        );
+
+        return CustomPaint(
+          key: const ValueKey<String>('iwb_canvas_surface.paint_host'),
+          painter: MainFramePainter(output: mainOutput),
+          foregroundPainter: OverlayFramePainter(output: overlayOutput),
+          size: paintSize,
+        );
+      },
+    );
+  }
+
+  Size _paintSizeFor(BoxConstraints constraints) {
+    return Size(
+      constraints.maxWidth.isFinite ? constraints.maxWidth : 0.0,
+      constraints.maxHeight.isFinite ? constraints.maxHeight : 0.0,
+    );
+  }
+
+  double _devicePixelRatioFor(BuildContext context) {
+    return MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+  }
 }
