@@ -63,26 +63,30 @@ void main() {
     expect(planner.paintPlanKeyFor(sameOrdinaryFrame), key);
   });
 
-  test('ordinary paint plans skip static background candidates', () {
-    final frameFacts = frameFactsPort(
-      elements: [
-        rectFacts(
-          'background',
-          orderToken: 0,
-          locationKind: FrameElementLocationKind.background,
-        ),
-        rectFacts('content', orderToken: 1),
-      ],
-    );
-    final planner = OrdinaryPaintPlanner();
-    final result = planner.buildOrdinaryPlan(
-      capturedMainFrame(frameFacts: frameFacts),
-    );
+  test(
+    'ordinary paint plans include committed background element candidates',
+    () {
+      final frameFacts = frameFactsPort(
+        elements: [
+          rectFacts(
+            'background',
+            orderToken: 0,
+            locationKind: FrameElementLocationKind.background,
+          ),
+          rectFacts('content', orderToken: 1),
+        ],
+      );
+      final planner = OrdinaryPaintPlanner();
+      final result = planner.buildOrdinaryPlan(
+        capturedMainFrame(frameFacts: frameFacts),
+      );
 
-    final ready = result as OrdinaryPaintPlanReady;
-    expect(ready.plan.ordinaryRecords.map((record) => record.id.value), [
-      'content',
-    ]);
-    expect(planner.ordinaryPaintRecordCache.probe.entries, 1);
-  });
+      final ready = result as OrdinaryPaintPlanReady;
+      expect(ready.plan.ordinaryRecords.map((record) => record.id.value), [
+        'background',
+        'content',
+      ]);
+      expect(planner.ordinaryPaintRecordCache.probe.entries, 1);
+    },
+  );
 }

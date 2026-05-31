@@ -57,7 +57,7 @@ void _testCameraPanPreservesOrdinaryPlan() {
       final beforePan = beforeOutput.ordinaryPlan;
 
       runtime.camera.setOffset(const Offset(12, 0));
-      await tester.pumpWidget(_surfaceHost(runtime));
+      await tester.pump();
       final afterPan = _mainPainter(
         tester,
       ).output.capturedFrame.snapshot.inputs;

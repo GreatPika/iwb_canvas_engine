@@ -8,6 +8,8 @@ import 'ordinary_paint_test_support.dart';
 
 void main() {
   _registerPainterBoundaryTests();
+  _registerRecordPainterBoundaryTests();
+  _registerOverlayPainterBoundaryTests();
   _registerPaintOrderTests();
 }
 
@@ -19,6 +21,11 @@ void _registerPainterBoundaryTests() {
       'lib/src/frame/main_frame_record_painter.dart',
     );
     _expectPainterBoundary('lib/src/frame/overlay_frame_painter.dart');
+  });
+}
+
+void _registerRecordPainterBoundaryTests() {
+  test('record painter consumes row-specific paint data', () {
     final recordPainterSource = File(
       'lib/src/frame/main_frame_record_painter.dart',
     ).readAsStringSync();
@@ -33,6 +40,19 @@ void _registerPainterBoundaryTests() {
     expect(recordPainterSource, contains('_withElementOpacity'));
     expect(recordPainterSource, contains('ColorFilter.mode'));
     expect(recordPainterSource, isNot(contains('PathRenderRow() ||')));
+  });
+}
+
+void _registerOverlayPainterBoundaryTests() {
+  test('overlay painter consumes primitive paint data', () {
+    final overlayPainterSource = File(
+      'lib/src/frame/overlay_frame_painter.dart',
+    ).readAsStringSync();
+    expect(
+      overlayPainterSource,
+      contains('case final PendingLineStartOverlayPrimitive primitive'),
+    );
+    expect(overlayPainterSource, contains('Paint()..color = primitive.color'));
   });
 
   test('main painter consumes derived frame plans', () {

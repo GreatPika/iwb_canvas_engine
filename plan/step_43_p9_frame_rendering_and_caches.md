@@ -94,7 +94,7 @@ Owner:
 
 Boundary:
 
-Ordinary committed element records and ordinary `OrdinaryPaintRecordCache` only. Inputs are captured committed frame data, spatial-admitted candidates, viewport/DPR, and element visual/bounds/structural revisions. No selection facts, selected move deltas, preview values, background/grid/cache identity, view camera revision/offset, resolver/session APIs, asset binding, static background records, overlay records, or painter callbacks in ordinary cache keys or cached ordinary records.
+Ordinary committed element records and ordinary `OrdinaryPaintRecordCache` only. Inputs are captured committed frame data, spatial-admitted candidates, viewport/DPR, and element visual/bounds/structural revisions. Committed background elements are ordinary committed records; static background/grid identity is separate. No selection facts, selected move deltas, preview values, background/grid/cache identity, view camera revision/offset, resolver/session APIs, asset binding, static background records, overlay records, or painter callbacks in ordinary cache keys or cached ordinary records.
 
 Change:
 

@@ -147,6 +147,9 @@ frame-private collaborators:
 `OrdinaryPaintPlanner` builds only ordinary committed record plans and excludes
 selection revision, selection style, selected move delta, preview state,
 resolver/session access, and static background identity from its cache inputs.
+Committed background elements are part of the ordinary committed record stream;
+`StaticBackgroundPlanner` owns only static background and grid output, not
+document element rows.
 `PaintAssetBindingService` is the only target frame collaborator that receives
 `SurfaceResourceSession`; painters remain immutable-output consumers and never
 receive store, runtime, resolver, or public document read access.

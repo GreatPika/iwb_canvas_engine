@@ -73,7 +73,8 @@ without exposing frame collaborators through the package barrel. At minimum:
 - `FrameCaptureService` captures main and overlay live frame facts once.
 - `OrdinaryPaintPlanner` keeps ordinary cache identity free of selection,
   preview, resolver/session, static background facts, and viewport-admission
-  results.
+  results, while still admitting committed background elements as ordinary
+  render records.
 - `SelectedMoveSupplementPlanner` stages selected move records without ordinary
   `OrdinaryPaintRecordCache` writes or global scene sort.
 - `SelectionDecorationPlanner` includes `boundsRevision` so selected element

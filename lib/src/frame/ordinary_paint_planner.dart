@@ -117,12 +117,19 @@ List<FrameElementFacts>? _admittedOrdinaryFacts(
     if (candidateFacts == null) {
       return null;
     }
-    if (candidateFacts.locationKind == FrameElementLocationKind.content) {
+    if (_isCommittedPaintLocation(candidateFacts.locationKind)) {
       facts.add(candidateFacts);
     }
   }
 
   return facts;
+}
+
+bool _isCommittedPaintLocation(FrameElementLocationKind locationKind) {
+  return switch (locationKind) {
+    FrameElementLocationKind.background ||
+    FrameElementLocationKind.content => true,
+  };
 }
 
 FrameElementFacts? _capturedCandidateFacts(

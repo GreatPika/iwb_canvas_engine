@@ -76,6 +76,10 @@ components because view camera, background, grid, and style-only changes repaint
 frame surfaces or decoration plans without changing ordinary element render
 records. Runtime view camera changes also do not invalidate public
 `CanvasDocument` projection.
+Committed background elements are still ordinary render records: they are
+admitted through spatial candidates and cached through their structural, bounds,
+elementVisual, generation, and order-token facts. The separate background/grid
+identity above belongs to static background and grid rendering only.
 
 `SelectedOrderCache` is derived data. Its source of truth is the selection owner
 plus document order facts from the document boundary; it may be retained only as

@@ -31,43 +31,56 @@ void _paintPrimitive(Canvas canvas, OverlayPreviewPrimitive primitive) {
   switch (primitive) {
     case MarqueeOverlayPrimitive(:final rect):
       canvas.drawRect(rect, Paint()..style = PaintingStyle.stroke);
-    case StrokeOverlayPrimitive(
-      :final points,
-      :final thickness,
-      :final color,
-      :final opacity,
-    ):
-      canvas.drawPoints(
-        PointMode.polygon,
-        points,
-        Paint()
-          ..strokeWidth = thickness
-          ..color = _withOpacity(color, opacity),
-      );
-    case PendingLineStartOverlayPrimitive(:final start, :final thickness):
-      canvas.drawCircle(start, thickness, Paint());
-    case LineOverlayPrimitive(
-      :final start,
-      :final end,
-      :final thickness,
-      :final color,
-    ):
-      canvas.drawLine(
-        start,
-        end,
-        Paint()
-          ..strokeWidth = thickness
-          ..color = color,
-      );
-    case EraserOverlayPrimitive(:final corridor, :final thickness):
-      canvas.drawPoints(
-        PointMode.polygon,
-        corridor,
-        Paint()
-          ..strokeWidth = thickness
-          ..blendMode = BlendMode.clear,
-      );
+    case final StrokeOverlayPrimitive primitive:
+      _paintStrokeOverlay(canvas, primitive);
+    case final PendingLineStartOverlayPrimitive primitive:
+      _paintPendingLineStartOverlay(canvas, primitive);
+    case final LineOverlayPrimitive primitive:
+      _paintLineOverlay(canvas, primitive);
+    case final EraserOverlayPrimitive primitive:
+      _paintEraserOverlay(canvas, primitive);
   }
+}
+
+void _paintStrokeOverlay(Canvas canvas, StrokeOverlayPrimitive primitive) {
+  canvas.drawPoints(
+    PointMode.polygon,
+    primitive.points,
+    Paint()
+      ..strokeWidth = primitive.thickness
+      ..color = _withOpacity(primitive.color, primitive.opacity),
+  );
+}
+
+void _paintPendingLineStartOverlay(
+  Canvas canvas,
+  PendingLineStartOverlayPrimitive primitive,
+) {
+  canvas.drawCircle(
+    primitive.start,
+    primitive.thickness,
+    Paint()..color = primitive.color,
+  );
+}
+
+void _paintLineOverlay(Canvas canvas, LineOverlayPrimitive primitive) {
+  canvas.drawLine(
+    primitive.start,
+    primitive.end,
+    Paint()
+      ..strokeWidth = primitive.thickness
+      ..color = primitive.color,
+  );
+}
+
+void _paintEraserOverlay(Canvas canvas, EraserOverlayPrimitive primitive) {
+  canvas.drawPoints(
+    PointMode.polygon,
+    primitive.corridor,
+    Paint()
+      ..strokeWidth = primitive.thickness
+      ..blendMode = BlendMode.clear,
+  );
 }
 
 Color _withOpacity(Color color, double opacity) {

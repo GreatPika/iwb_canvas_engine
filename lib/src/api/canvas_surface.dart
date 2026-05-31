@@ -36,34 +36,39 @@ final class CanvasSurface extends StatefulWidget {
 final class _CanvasSurfaceState extends State<CanvasSurface> {
   @override
   Widget build(BuildContext context) {
-    final root = canvasRuntimeFrameRootForSurface(widget.runtime);
-    if (root == null) {
-      return const SizedBox.shrink();
-    }
+    return ValueListenableBuilder(
+      valueListenable: widget.runtime.state,
+      builder: (context, _, _) {
+        final root = canvasRuntimeFrameRootForSurface(widget.runtime);
+        if (root == null) {
+          return const SizedBox.shrink();
+        }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final paintSize = _paintSizeFor(constraints);
-        final viewport = Offset.zero & paintSize;
-        final devicePixelRatio = _devicePixelRatioFor(context);
-        final mainOutput = root.buildResourceFreeMainFrame(
-          viewportWorldBounds: viewport,
-          devicePixelRatio: devicePixelRatio,
-          selectionStyle: widget.selectionStyle,
-          gridStyle: widget.gridStyle,
-        );
-        final overlayOutput = root.buildResourceFreeOverlayFrame(
-          viewportWorldBounds: viewport,
-          devicePixelRatio: devicePixelRatio,
-          selectionStyle: widget.selectionStyle,
-          gridStyle: widget.gridStyle,
-        );
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final paintSize = _paintSizeFor(constraints);
+            final viewport = Offset.zero & paintSize;
+            final devicePixelRatio = _devicePixelRatioFor(context);
+            final mainOutput = root.buildResourceFreeMainFrame(
+              viewportWorldBounds: viewport,
+              devicePixelRatio: devicePixelRatio,
+              selectionStyle: widget.selectionStyle,
+              gridStyle: widget.gridStyle,
+            );
+            final overlayOutput = root.buildResourceFreeOverlayFrame(
+              viewportWorldBounds: viewport,
+              devicePixelRatio: devicePixelRatio,
+              selectionStyle: widget.selectionStyle,
+              gridStyle: widget.gridStyle,
+            );
 
-        return CustomPaint(
-          key: const ValueKey<String>('iwb_canvas_surface.paint_host'),
-          painter: MainFramePainter(output: mainOutput),
-          foregroundPainter: OverlayFramePainter(output: overlayOutput),
-          size: paintSize,
+            return CustomPaint(
+              key: const ValueKey<String>('iwb_canvas_surface.paint_host'),
+              painter: MainFramePainter(output: mainOutput),
+              foregroundPainter: OverlayFramePainter(output: overlayOutput),
+              size: paintSize,
+            );
+          },
         );
       },
     );
