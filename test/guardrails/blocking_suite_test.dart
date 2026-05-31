@@ -96,6 +96,40 @@ void main() {
       suiteGuardrailIds('load'),
     );
   });
+  test('frame suite selection routes only frame guardrails', () async {
+    expect(
+      await _selectedGuardrailIds(['--suite=frame']),
+      suiteGuardrailIds('frame'),
+    );
+  });
+  test('cache suite selection routes only cache guardrails', () async {
+    expect(
+      await _selectedGuardrailIds(['--suite=cache']),
+      suiteGuardrailIds('cache'),
+    );
+  });
+  test('preview suite selection routes only preview guardrails', () async {
+    expect(
+      await _selectedGuardrailIds(['--suite=preview']),
+      suiteGuardrailIds('preview'),
+    );
+  });
+  test('frame, cache, and preview guardrails are blocking', () {
+    expect(
+      blockingGuardrailIds(),
+      containsAll({
+        'preview.selected_move_main_repaint',
+        'api.preview_state_sealed_union_publicly_readable',
+        'frame.committed_facts_via_frame_facts_port',
+        'frame.no_global_scene_sort',
+        'frame.paint_plan_excludes_preview_delta',
+        'frame.paint_plan_excludes_selection_state',
+        'cache.keys_use_next_revisions_only',
+        'cache.background_grid_not_element_visual',
+        'cache.hot_caches_have_capacity_eviction',
+      }),
+    );
+  });
   test('shared proof files run once for all covered guardrail ids', () async {
     final proofRuns = <String, int>{};
     final result = await runGuardrailsWithProofRunner(

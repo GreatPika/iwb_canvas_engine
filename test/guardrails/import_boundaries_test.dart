@@ -8,9 +8,11 @@ void main() {
   _testProductionBoundaries();
   _testRunnerRejectsInjectedCoreBoundaryViolation();
   _testApiFacadeRuntimeRootImport();
-  _testP9ApiBridgeAndSurfaceAllowances();
+  _testApiBridgeAndPassiveSurfaceAllowances();
   _testApiContractWrapperExports();
   _testFrameCannotUseResourceCatalogPort();
+  _testFrameCannotImportApiFacades();
+  _testOnlyAssetBindingServiceMayReceiveSurfaceResourceSession();
   _testResourcesCannotImportFlutterPackages();
   _testResourceSessionOwnerBoundaries();
   _testFrameOrSurfaceCannotOwnCanvasResourceResolverType();
@@ -81,33 +83,30 @@ void _testApiFacadeRuntimeRootImport() {
   });
 }
 
-void _testP9ApiBridgeAndSurfaceAllowances() {
-  test(
-    'P9 api bridge and passive surface imports are narrowly allowlisted',
-    () {
-      expect(
-        checkCoreBoundaryFile(
-          path: 'lib/src/api/canvas_runtime_frame_bridge.dart',
-          content: "import '../runtime/runtime_root.dart';\n",
-        ),
-        isEmpty,
-      );
-      expect(
-        checkCoreBoundaryFile(
-          path: 'lib/src/api/canvas_surface.dart',
-          content: "import '../frame/main_frame_painter.dart';\n",
-        ),
-        isEmpty,
-      );
-      expect(
-        checkCoreBoundaryFile(
-          path: 'lib/src/api/canvas_surface.dart',
-          content: "import '../frame/frame_engine.dart';\n",
-        ),
-        contains(isA<GuardrailViolation>()),
-      );
-    },
-  );
+void _testApiBridgeAndPassiveSurfaceAllowances() {
+  test('api bridge and passive surface imports are narrowly allowlisted', () {
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/api/canvas_runtime_frame_bridge.dart',
+        content: "import '../runtime/runtime_root.dart';\n",
+      ),
+      isEmpty,
+    );
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/api/canvas_surface.dart',
+        content: "import '../frame/main_frame_painter.dart';\n",
+      ),
+      isEmpty,
+    );
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/api/canvas_surface.dart',
+        content: "import '../frame/frame_engine.dart';\n",
+      ),
+      contains(isA<GuardrailViolation>()),
+    );
+  });
 }
 
 void _testApiContractWrapperExports() {
@@ -169,6 +168,49 @@ void _testFrameCannotUseResourceCatalogPort() {
         content: "import '../contracts/internal/frame_facts_port.dart';\n",
       ),
       isEmpty,
+    );
+  });
+}
+
+void _testFrameCannotImportApiFacades() {
+  test('frame code cannot import public api facades as type libraries', () {
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/frame/bad_api_facade_import.dart',
+        content: "import '../api/canvas_runtime.dart';\n",
+      ),
+      contains(
+        isA<GuardrailViolation>().having(
+          (violation) => violation.guardrailId,
+          'guardrailId',
+          'frame.committed_facts_via_frame_facts_port',
+        ),
+      ),
+    );
+  });
+}
+
+void _testOnlyAssetBindingServiceMayReceiveSurfaceResourceSession() {
+  test('only asset binding service may import surface resource session', () {
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/frame/paint_asset_binding_service.dart',
+        content: "import '../resources/surface_resource_session.dart';\n",
+      ),
+      isEmpty,
+    );
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/frame/bad_session_owner.dart',
+        content: "import '../resources/surface_resource_session.dart';\n",
+      ),
+      contains(
+        isA<GuardrailViolation>().having(
+          (violation) => violation.guardrailId,
+          'guardrailId',
+          'frame.committed_facts_via_frame_facts_port',
+        ),
+      ),
     );
   });
 }

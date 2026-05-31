@@ -1,4 +1,4 @@
-// The P9 frame facade imports the documented collaborators together so capture,
+// The frame facade imports the documented collaborators together so capture,
 // ordinary planning, selected staging, background, overlay, and repaint output
 // order remains explicit.
 // ignore_for_file: number-of-imports
@@ -25,7 +25,7 @@ typedef FrameAssetBindingBuilder =
       required Iterable<RenderElementRecord> records,
     });
 
-// The facade intentionally coordinates the P9 frame collaborators instead of
+// The facade intentionally coordinates the frame collaborators instead of
 // hiding ownership order behind metric-shaped wrapper layers.
 // ignore: coupling-between-object-classes
 final class FrameEngine {

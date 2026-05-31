@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'core_boundary_checks.dart';
+import 'frame_cache_guardrail_checks.dart';
 import 'geometry_spatial_guardrail_checks.dart';
 import 'guardrail_violation.dart';
 import 'owner_dag_import_checks.dart';
@@ -256,6 +257,33 @@ const _testProofPaths = {
   'resources.resolver_reentrancy_rejected': [
     'test/resources/resolver_reentrancy_rejected_test.dart',
   ],
+  'preview.selected_move_main_repaint': [
+    'test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart',
+  ],
+  'frame.committed_facts_via_frame_facts_port': [
+    'test/guardrails/import_boundaries_test.dart',
+    'test/frame/main_overlay_capture_test.dart',
+    'test/frame/paint_asset_binding_service_test.dart',
+  ],
+  'frame.no_global_scene_sort': [
+    'test/frame/selected_supplement_staging_no_global_sort_test.dart',
+  ],
+  'frame.paint_plan_excludes_preview_delta': [
+    'test/frame/paint_plan_excludes_preview_delta_test.dart',
+  ],
+  'frame.paint_plan_excludes_selection_state': [
+    'test/frame/paint_plan_excludes_selection_state_test.dart',
+  ],
+  'cache.keys_use_next_revisions_only': [
+    'test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart',
+  ],
+  'cache.background_grid_not_element_visual': [
+    'test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart',
+    'test/frame/static_background_plan_test.dart',
+  ],
+  'cache.hot_caches_have_capacity_eviction': [
+    'test/frame/cache_capacity_eviction_policy_test.dart',
+  ],
   geometryNoLegacySceneOrderGuardrailId: [
     'test/guardrails/geometry_no_legacy_scene_order_guardrail_test.dart',
   ],
@@ -290,6 +318,14 @@ final Map<String, GuardrailViolationRunner> _violationChecks = {
   'selection.owner_separate_from_document': checkSelectionOwnerSeparation,
   ownerDagGuardrailId: checkOwnerDagImportBoundaries,
   'resources.resolver_boundary_owned_by_surface_session': checkCoreBoundaries,
+  'frame.committed_facts_via_frame_facts_port': checkCoreBoundaries,
+  frameNoGlobalSceneSortGuardrailId: checkFrameNoGlobalSceneSort,
+  framePaintPlanExcludesPreviewGuardrailId: checkPaintPlanExcludesPreviewDelta,
+  framePaintPlanExcludesSelectionGuardrailId:
+      checkPaintPlanExcludesSelectionState,
+  cacheKeysUseNextRevisionsGuardrailId: checkCacheKeysUseNextRevisionsOnly,
+  cacheBackgroundGridGuardrailId: checkCacheBackgroundGridNotElementVisual,
+  cacheHotCachesCapacityGuardrailId: checkCacheHotCachesHaveCapacityEviction,
   geometryNoLegacySceneOrderGuardrailId: checkNoLegacySceneOrder,
   geometryEraserExactBudgetGuardrailId: checkGeometryEraserExactBudgetInputs,
   spatialNoFullCloneGuardrailId: checkSpatialNoFullCloneOrdinaryEdit,
@@ -319,6 +355,20 @@ const _structuralDescriptions = {
   ownerDagGuardrailId: 'owner DAG import/export boundary check',
   'resources.resolver_boundary_owned_by_surface_session':
       'resource resolver ownership and import-boundary checks',
+  'frame.committed_facts_via_frame_facts_port':
+      'frame facts and asset-binding session ownership checks',
+  frameNoGlobalSceneSortGuardrailId:
+      'frame selected supplement global sort check',
+  framePaintPlanExcludesPreviewGuardrailId:
+      'ordinary paint-plan preview exclusion check',
+  framePaintPlanExcludesSelectionGuardrailId:
+      'ordinary paint-plan selection exclusion check',
+  cacheKeysUseNextRevisionsGuardrailId:
+      'frame cache key legacy snapshot-shape check',
+  cacheBackgroundGridGuardrailId:
+      'ordinary paint-plan background/grid/camera exclusion check',
+  cacheHotCachesCapacityGuardrailId:
+      'hot frame cache capacity and eviction probe check',
   geometryNoLegacySceneOrderGuardrailId:
       'geometry/spatial committed order-token structural check',
   geometryEraserExactBudgetGuardrailId:

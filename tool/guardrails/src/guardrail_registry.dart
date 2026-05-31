@@ -185,6 +185,38 @@ const _blockingEntries = [
     suites: {'blocking', 'resources'},
   ),
   GuardrailEntry(
+    id: 'preview.selected_move_main_repaint',
+    suites: {'blocking', 'preview'},
+  ),
+  GuardrailEntry(
+    id: 'frame.committed_facts_via_frame_facts_port',
+    suites: {'blocking', 'frame'},
+  ),
+  GuardrailEntry(
+    id: 'frame.no_global_scene_sort',
+    suites: {'blocking', 'frame'},
+  ),
+  GuardrailEntry(
+    id: 'frame.paint_plan_excludes_preview_delta',
+    suites: {'blocking', 'frame'},
+  ),
+  GuardrailEntry(
+    id: 'frame.paint_plan_excludes_selection_state',
+    suites: {'blocking', 'frame'},
+  ),
+  GuardrailEntry(
+    id: 'cache.keys_use_next_revisions_only',
+    suites: {'blocking', 'cache'},
+  ),
+  GuardrailEntry(
+    id: 'cache.background_grid_not_element_visual',
+    suites: {'blocking', 'cache'},
+  ),
+  GuardrailEntry(
+    id: 'cache.hot_caches_have_capacity_eviction',
+    suites: {'blocking', 'cache'},
+  ),
+  GuardrailEntry(
     id: 'geometry.no_legacy_scene_order',
     suites: {'blocking', 'geometry'},
     requiresRunnerStructuralProof: true,

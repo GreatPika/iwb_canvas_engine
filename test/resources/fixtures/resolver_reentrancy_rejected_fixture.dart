@@ -1,7 +1,6 @@
 import 'dart:ui' show Offset, Rect, Size;
 
-// This resource fixture now covers both the session boundary and the P9 asset
-// binding caller, so the imports intentionally span frame and resource seams.
+// This resource fixture now covers both the session boundary and the asset binding caller, so the imports intentionally span frame and resource seams.
 // ignore_for_file: number-of-imports
 
 import 'package:flutter_test/flutter_test.dart';
@@ -20,7 +19,7 @@ import 'surface_resource_session_test_support.dart';
 
 void main() {
   _testNestedResolverCallbackRejected();
-  _testP9AssetBindingMutationRejected();
+  _testAssetBindingMutationRejected();
   _testPublicRuntimeMutationsRejected();
 }
 
@@ -48,8 +47,8 @@ void _testNestedResolverCallbackRejected() {
   });
 }
 
-void _testP9AssetBindingMutationRejected() {
-  test('P9 asset binding rejects public runtime mutations', () {
+void _testAssetBindingMutationRejected() {
+  test('asset binding rejects public runtime mutations', () {
     final root = _runtime();
     final resolver = RecordingResourceResolver((_) {
       root.generateElementId();

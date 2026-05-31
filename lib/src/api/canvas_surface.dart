@@ -31,7 +31,7 @@ final class CanvasSurface extends StatefulWidget {
 }
 
 // The state is the public widget boundary where Flutter layout, runtime lookup,
-// frame output construction, and passive painters meet for the P9 proof path.
+// frame output construction, and passive painters meet for the passive frame proof path.
 // ignore: coupling-between-object-classes
 final class _CanvasSurfaceState extends State<CanvasSurface> {
   @override

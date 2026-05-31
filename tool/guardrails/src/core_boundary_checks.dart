@@ -754,6 +754,14 @@ const _boundaryRules = [
     ],
   ),
   _BoundaryRule(
+    guardrailId: 'frame.committed_facts_via_frame_facts_port',
+    owner: 'lib/src/frame/',
+    forbiddenTargets: [
+      'lib/src/api/',
+      'lib/src/resources/surface_resource_session.dart',
+    ],
+  ),
+  _BoundaryRule(
     guardrailId: 'core.import_boundaries',
     owner: 'lib/src/geometry/',
     forbiddenTargets: [
@@ -804,6 +812,11 @@ bool _isAllowedBoundaryImport(String path, String target) {
 
   if (path == 'lib/src/api/canvas_runtime_frame_bridge.dart' &&
       target == 'lib/src/runtime/runtime_root.dart') {
+    return true;
+  }
+
+  if (path == 'lib/src/frame/paint_asset_binding_service.dart' &&
+      target == 'lib/src/resources/surface_resource_session.dart') {
     return true;
   }
 
