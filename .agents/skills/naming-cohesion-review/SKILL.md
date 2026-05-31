@@ -1,26 +1,32 @@
 ---
 name: naming-cohesion-review
-description: Focused review pass for naming and file cohesion. Use when a code review, PR, or implementation needs an explicit check for misleading file names, declarations placed under the wrong owner, or fixture placement drift.
+description: Focused review pass for naming and file cohesion. Use when a code review, PR, or implementation needs an explicit check for misleading file names, declarations placed under the wrong owner, or fixture placement drift. Can run after code-review or standalone by loading the current diff and relevant contracts first.
 ---
 
 # Naming Cohesion Review
 
-Run this after the normal code-review context is loaded. Do not replace the
-repository naming rules; apply them to the current diff.
+Run this after the normal code-review context is loaded when available. When
+invoked standalone, first load the current diff, changed file list, active plan,
+linked contracts, and relevant local naming/source-of-truth rules before
+reviewing. Do not replace repository naming rules; apply them to the reviewed
+diff.
 
 ## Workflow
 
-1. Compare the changed file list with the active plan, package layout, and
-   relevant contracts.
-2. For each new or renamed file, ask: "What is this file's single reason to
+1. When invoked standalone, inspect the current diff, changed file list, active
+   plan, linked contracts, and relevant source-of-truth rules before judging
+   names.
+2. Compare the changed file list with the active plan, package layout, linked
+   contracts, and source-of-truth docs that govern the touched area.
+3. For each new or renamed file, ask: "What is this file's single reason to
    change?" Then check whether its declarations all share that reason.
-3. For each new or renamed directory, ask: "What stable owner or subdomain does
+4. For each new or renamed directory, ask: "What stable owner or subdomain does
    this directory introduce?" Then check whether its immediate children are
    facets of that owner instead of unrelated files collected for neatness.
-4. Treat public API symbol names as contract-owned. Flag their placement or file
+5. Treat public API symbol names as contract-owned. Flag their placement or file
    owner first; flag the symbol name only when the source of truth itself is
    being changed or contradicted.
-5. Report only actionable naming/cohesion findings, not taste preferences.
+6. Report only actionable naming/cohesion findings, not taste preferences.
 
 ## Decision Test
 

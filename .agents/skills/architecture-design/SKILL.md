@@ -1,22 +1,27 @@
 ---
 name: architecture-design
-description: Use before change-contract when a feature, fix, refactor, migration, source-of-truth documentation change, analyzer rule, public API change, or shared-seam change needs an evidence-backed design artifact in .design/ that selects an architecture form, explains alternatives, maps diagrams, and prepares an evidence-backed handoff for a future Change Contract without editing any repository file outside .design/.
+description: Internal authoring step for creating or repairing one evidence-backed .design/YYYY-MM-DD-topic.md artifact before Change Contract authoring. Normally invoked by architecture-design-workflow. Use directly only when the user explicitly asks to draft or repair a design artifact without running the review loop. Selects a design form, records evidence, maps Decision Trace handoff, assesses diagrams, and edits no files outside .design/.
 ---
 
 # Architecture Design
 
 Turn product intent and repository evidence into one design artifact under
-`.design/`. Do not implement. Do not draft a Change Contract. Do not edit
+`.design/`. This is the authoring step for `architecture-design-workflow`, not
+the review loop. Do not implement. Do not draft a Change Contract. Do not edit
 any repository file outside `.design/` during the design phase.
 
 ## Workflow Position
 
 ```text
-research-codebase -> architecture-design -> architecture-design-review -> change-contract
+research-codebase -> architecture-design-workflow -> change-contract
+architecture-design-workflow = architecture-design -> architecture-design-review loop
 ```
 
-Use this skill when a design choice must be made before contract planning. Use
-`change-contract` only after the design has a reviewable `.design/` artifact.
+Use this skill when a design choice must be made before contract planning. For
+normal design-mode requests, prefer `architecture-design-workflow` so the same
+artifact is reviewed after every repair. Use `change-contract` only after the
+design has a reviewable `.design/` artifact and the workflow's latest reviewer
+has accepted it, or when the user explicitly bypasses the review loop.
 
 ## Design Artifact Rule
 
@@ -43,9 +48,9 @@ Every artifact must contain exactly one disposition:
 - `READY_FOR_CONTRACT`: the design is locked enough for Change Contract authoring.
 - `ARCHITECTURE_GATE`: a user/product decision is required.
 - `NEEDS_RESEARCH`: repository facts are missing or contradicted.
-- `DESIGN_NOT_REQUIRED`: the request is too small or already locked enough to
-  go directly to `change-contract`; still create the `.design/` artifact and
-  record why no design decision was needed.
+- `DESIGN_NOT_REQUIRED`: the request is too small or already locked enough to go
+  directly to `change-contract`; still create the `.design/` artifact and record
+  why no design decision was needed.
 
 ## Target Contract Classification
 
@@ -116,9 +121,9 @@ Reject any candidate form that fails one of these gates:
 - **Temporal/reentrancy**: for call ordering, post-commit delivery,
   transaction, rollback, or no-op boundaries, observers, listeners, callbacks,
   guards, or public-state publication, names the temporal invariant, every
-  synchronous callback surface in the window, the guard owner, the allowed
-  public observation order, and the verification strategy for
-  reentrant/interleaved mutation attempts.
+  synchronous callback surface in the window, the guard owner, the allowed public
+  observation order, and the verification strategy for reentrant/interleaved
+  mutation attempts.
 - **All-or-nothing behavior**: when correctness relies on a change either fully
   taking effect or leaving prior state unchanged, names the irreversible point,
   places fallible work before it, and proves later work is infallible,
@@ -133,24 +138,16 @@ Reject any candidate form that fails one of these gates:
 When materially different forms are possible, compare two to four candidates.
 Use compact prose or a table. Do not use numeric scores unless the user asks.
 
-Compare:
-
-- correctness and root-cause fit;
-- cohesion with existing owner and nearby rules;
-- minimal scope;
-- maintainability and discoverability;
-- reuse of established repository patterns;
-- reversibility and migration cost;
-- verification strength;
-- compatibility impact;
-- performance and sync/cache risk;
-- observability of failures and drift.
+Compare correctness, owner cohesion, minimal scope, maintainability,
+discoverability, established repository patterns, reversibility, migration cost,
+verification strength, compatibility impact, performance/sync/cache risk, and
+observability of failure or drift.
 
 Choose the simplest form that passes all hard gates and has the best future
 change profile. If the choice depends on product preference rather than
 repository evidence, use `ARCHITECTURE_GATE`.
 
-### Future Pressure
+## Future Pressure
 
 Before selecting a form, name known future pressures from the user request,
 `PLAN.md`, existing plan steps, docs, `.research/`, code comments, tests, or
@@ -165,6 +162,23 @@ If future pressure is unknown after targeted inspection, say so explicitly
 rather than claiming the form is future-proof. If likely future pressure exists
 but cannot be assessed from current evidence, use `NEEDS_RESEARCH` or
 `ARCHITECTURE_GATE` instead of treating it as a passed gate.
+
+## Decision Trace
+
+Every artifact must include `Decision Trace` to keep chain of custody into the
+future Change Contract:
+
+```text
+repository evidence or research fact -> design decision -> contract handoff target
+```
+
+For `READY_FOR_CONTRACT`, use stable decision ids such as `D1`, `D2`, and `D3`.
+Each row must name the decision, exact evidence, and the future Change
+Contract target: the contract field, execution unit, or proof surface that must
+carry it forward. For `NEEDS_RESEARCH`, `ARCHITECTURE_GATE`, or
+`DESIGN_NOT_REQUIRED`, keep the section and record the blocker, user
+decision, or reason no downstream mapping is required. Do not leave design
+decisions only in prose when they constrain a future contract.
 
 ## Diagram Need Assessment
 
@@ -189,9 +203,9 @@ Every artifact must include `Diagram Need Assessment`, even when no diagram is
 needed. The assessment must check the fixed trigger matrix from the artifact
 template; do not replace it with a single informal "none" row. For each proposed
 diagram, state the architectural question it answers. If a durable diagram will
-eventually be required, record that as future
-`SOURCE_OF_TRUTH_DOCS` scope for the Change Contract; do not edit the diagram
-catalog or `.mmd` files during design.
+eventually be required, record that as future `SOURCE_OF_TRUTH_DOCS` scope for
+the Change Contract; do not edit the diagram catalog or `.mmd` files during
+design.
 
 ## Artifact Template
 
@@ -202,24 +216,26 @@ selection, obligations, and design-form rules are owned by this `SKILL.md`.
 
 When a design has temporal/reentrancy pressure, record the invariant,
 synchronous callback surfaces, guard owner, public observation order, and
-verification strategy in the existing selected form, hard gate, lock-required
-facts, verification impact, and handoff sections. When a design relies on
-all-or-nothing behavior, also record the irreversible point, fallible work before
-that point, the later failure-containment rule, and the proof strategy in those
-same sections. Do not add ad hoc template sections.
+verification strategy in the selected form, hard gate, lock-required facts,
+Decision Trace, verification impact, and handoff sections. When a design relies
+on all-or-nothing behavior, also record the irreversible point, fallible work
+before that point, the later failure-containment rule, and the proof strategy in
+those same sections. Do not add ad hoc template sections.
 
 ## Completion Criteria
 
 The design task is complete only when:
 
-- this run created or updated exactly one `.design/YYYY-MM-DD-topic.md`
-  artifact;
+- this run created or updated exactly one `.design/YYYY-MM-DD-topic.md` artifact;
 - no files outside `.design/` were edited by this design task; pre-existing
   unrelated changes are ignored and not reverted;
-- the artifact has a disposition;
+- the artifact has exactly one disposition;
 - every selected-form claim has evidence or is marked as a gate/research gap;
 - materially different design forms were compared or the artifact explains why
   only one form is viable;
+- every applicable hard gate is represented in the hard-gate table;
 - diagram need was assessed;
-- research inputs or their explicit absence are recorded, and future Change
-  Contract handoff is present.
+- `Decision Trace` maps locked decisions to future contract fields, execution
+  units, or proof surfaces;
+- research inputs or their explicit absence are recorded;
+- future Change Contract handoff is present.

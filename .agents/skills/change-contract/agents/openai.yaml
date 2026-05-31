@@ -1,4 +1,4 @@
 interface:
   display_name: "Change Contract"
-  short_description: "Draft a short evidence-backed change contract"
-  default_prompt: "Draft a short Change Contract or Contract Blocker for the requested change. Preserve repository source inputs such as PLAN steps, phase docs, and design docs when provided."
+  short_description: "Draft a traceable change contract"
+  default_prompt: "Draft a Change Contract or Contract Blocker for the requested change, preserving source inputs, classification, and decision traceability."

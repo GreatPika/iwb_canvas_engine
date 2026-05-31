@@ -1,4 +1,4 @@
 interface:
   display_name: "Code Review"
-  short_description: "Review uncommitted code changes"
-  default_prompt: "Use $code-review to review the uncommitted code changes before commit."
+  short_description: "Review working-tree or commit-range diffs"
+  default_prompt: "Use $code-review to review the current diff or explicit commit range against the active contract before commit or handoff."

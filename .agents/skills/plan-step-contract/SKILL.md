@@ -23,6 +23,11 @@ the contract is accepted.
      available.
    - Add the step entry to root `PLAN.md`.
    - Write or update the linked step contract file required by `PLAN.md`.
+   - Ensure the step contract contains the current `change-contract` source
+     inputs, classification, decision trace, evidence, boundaries, and execution
+     unit shape before review.
+   - Leave execution unit checkboxes unchecked while planning; implementation
+     evidence belongs to the later `unit-by-unit` workflow.
 
 2. After step 1 is complete, spawn a fresh primary `contract_reviewer`
    subagent.
@@ -108,7 +113,9 @@ reviewer used before it.
 The planning task is complete only when:
 
 - the new step exists in root `PLAN.md`;
-- the linked step contract file exists and follows `change-contract`;
+- the linked step contract file exists and follows `change-contract`, including
+  source inputs, classification, decision trace, evidence, boundaries, and
+  unchecked execution units;
 - the active conversation plan reflects the new step when the plan tool is
   available;
 - the latest fresh primary `contract_reviewer` has approved the step file with

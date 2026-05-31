@@ -1,6 +1,6 @@
 ---
 name: research-codebase
-description: Use when the user asks to research, map, explain, or document how an area of the current codebase works as a saved research note, especially when the work should be decomposed into parallel factual investigations using the codebase_researcher subagent. Produces objective findings only, with exact file and line references, and saves the result under .research/.
+description: Use when the user asks to research, map, explain, or document how an area of the current codebase works as a saved research note. Use one focused codebase_researcher task for narrow questions or up to four parallel factual investigations for naturally independent areas. Produces objective findings only, with exact file and line references, search coverage, and saves the result under .research/.
 ---
 
 # Research Codebase
@@ -33,25 +33,34 @@ If the user already provided the research question, proceed with the workflow.
 
 ## Workflow
 
-### 1. Decompose the Research Question
+### 1. Decompose The Research Question
 
 After receiving the research question:
 
 1. Read directly mentioned files completely before making claims about those
    files.
-2. Analyze and decompose the question into 2 to 4 independent investigation
-   areas.
-3. Create a task list with the active plan tool when available.
+2. Analyze whether the question is narrow or naturally decomposes into
+   independent investigation areas.
+3. Use 1 task for narrow questions, directly named files, or a single linear
+   call path.
+4. Use multiple tasks only when the question naturally splits into
+   independent areas, with a maximum of 4 total tasks.
+5. Create a task list with the active plan tool when available.
 
 ### 2. Spawn Research Tasks
 
-Use the `codebase_researcher` subagent for factual investigation.
+Use the `codebase_researcher` subagent for independent or broad factual investigation. For a narrow single-file or single-path question, the parent may perform the one task directly after reading the relevant files.
 
 Routing rules:
 
-- Spawn each researcher with a clean context. Do not fork the current chat
+- When spawning a researcher, use a clean context. Do not fork the current chat
   context into research subagents.
-- Use 2 to 4 parallel tasks for independent investigation areas.
+- Use 1 to 4 tasks total.
+- Use 1 task for narrow research, directly named files, or a single linear call
+  path.
+- Use multiple parallel tasks only for independent investigation areas, with a
+  maximum of 4 total tasks.
+- Never create artificial investigation areas just to reach a minimum count.
 - Never spawn more than 4 parallel tasks because of context overflow risk.
 - Use sequential tasks when one area depends on another area's findings.
 - Use background tasks for broad searches that do not block other work.
@@ -132,6 +141,12 @@ Use this structure:
 - `path/to/file.dart:42` - description
 - `path/to/file.dart:89` - description
 
+## Search Coverage
+- Inspected: files and ranges read closely.
+- Searched: commands, symbols, or patterns searched.
+- Not found: relevant facts or symbols searched for but not found.
+- Not inspected: known relevant areas not inspected and why.
+
 ## Observed Architecture Facts
 - Pattern observed: [name with references]
 - Data flow: A -> B -> C with references
@@ -145,12 +160,14 @@ Use this structure:
 
 1. Always include exact `file:line` references; no vague descriptions.
 2. Read files completely before making claims about them.
-3. Use the `codebase_researcher` subagent for parallel investigation.
-4. Use at most 4 parallel tasks.
+3. Use the `codebase_researcher` subagent for independent or broad factual investigation. For a narrow single-file or single-path question, the parent may perform the one task directly after reading the relevant files.
+4. Use at most 4 tasks and at most 4 parallel tasks.
 5. Spawn research subagents with clean context, not by forking the current chat.
 6. Maintain objectivity; only facts, no opinions.
 7. Preserve exact repository paths.
 8. Do not infer ownership, data flow, or conventions from names alone.
+9. Record search coverage so downstream design work can distinguish confirmed
+   absence from uninspected areas.
 
 ## Good vs Bad Research
 

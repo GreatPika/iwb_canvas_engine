@@ -53,6 +53,12 @@ Plain-language result and non-goals.
 
 The chosen form and why it is the best fit.
 
+## Decision Trace
+
+| Decision ID | Decision | Evidence | Contract handoff target |
+|---|---|---|---|
+| D1 | ... | `path:line` | `Boundaries.Owner` / `Boundaries.Source of Truth` / `Unit N` / proof surface |
+
 ## Hard Gate Check
 
 | Gate | Result | Evidence |
@@ -64,6 +70,8 @@ The chosen form and why it is the best fit.
 | Dependency direction | pass/fail | ... |
 | State/data | pass/fail/not applicable | ... |
 | Seam | pass/fail/not applicable | ... |
+| Temporal/reentrancy | pass/fail/not applicable | ... |
+| All-or-nothing behavior | pass/fail/not applicable | ... |
 | Verification | pass/fail | ... |
 | Future pressure | pass/fail/not found after targeted inspection | ... |
 
@@ -78,6 +86,8 @@ The chosen form and why it is the best fit.
 - Exit boundaries:
 - File placement basis:
 - Execution order constraints:
+- Temporal/reentrancy invariant and callback surfaces:
+- All-or-nothing irreversible point and failure boundary:
 - Rejected alternatives:
 - Verification strategy:
 
@@ -88,6 +98,7 @@ The chosen form and why it is the best fit.
 | Does the design change ownership, layer, package, or component boundaries? | yes/no | c4/none | ... |
 | Does it change data flow, state ownership, cache ownership, resource movement, or lifecycle movement? | yes/no | data_flow/none | ... |
 | Does it depend on call order, lifecycle order, sync/async ordering, failure ordering, or migration order? | yes/no | sequence/none | ... |
+| Does it introduce or alter observer/listener/callback delivery, guard windows, public-state publication, or reentrancy-sensitive ordering? | yes/no | sequence/none | ... |
 | Does it introduce or alter modes, statuses, terminal states, sessions, or transition rules? | yes/no | state/none | ... |
 | Does it create, replace, migrate, or retire a shared seam? | yes/no | c4/data_flow/sequence/none | ... |
 | Does it change public API consumer flow, payload shape, or compatibility behavior? | yes/no | sequence/data_flow/none | ... |
@@ -116,9 +127,10 @@ Describe proof strategy appropriate to the target profile and obligations.
 
 - Required profile:
 - Required obligations:
-- Decisions to carry forward:
+- Decision IDs / Decision Trace rows to preserve:
 - Evidence to cite:
 - Contract constraints or sequencing facts:
+- Required proof surfaces:
 
 ## Open Decisions
 

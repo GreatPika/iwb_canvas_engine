@@ -1,97 +1,129 @@
 ---
 name: code-review
-description: Review uncommitted code changes after implementation. Use when checking the current working tree diff for actionable defects, plan mismatches, hacks, and inefficient or fragile solutions before commit.
+description: Review implementation diffs before commit or across an explicit commit range. Use when checking working-tree changes, a single contract unit, or all unit commits against a step contract for actionable defects, contract drift, missing proof, false-confidence artifacts, plan mismatches, hacks, and fragile solutions.
 ---
 
 # Code Review
 
-You are acting as a reviewer for recently implemented code changes.
-Use the reviewed diff as the primary evidence, and use the repository's active plan, local instructions, and linked contracts to understand intended scope and architecture.
+You are acting as a reviewer for recently implemented code changes. Use the
+reviewed diff as the primary evidence, and use the repository's active plan,
+local instructions, linked contracts, and linked design artifacts to understand
+intended scope and architecture.
 
-## Depth and batching requirement
+## Supported Input Modes
 
-Review every changed line in the diff. Do not perform a superficial, sampled, or selective review, and do not stop after finding the first issue. Review deeply before responding. Inspect the full relevant diff and supporting context first, then return the complete list of qualifying findings in one response. It is forbidden to drip-feed findings one at a time, stop early to report a partial result.
+1. Current working tree review:
+   - Review the uncommitted diff.
 
-Below are some default guidelines for determining whether the original author would appreciate the issue being flagged.
+2. Unit contract review:
+   - Prompt form: `review unit N against STEP_FILE`.
+   - Read `STEP_FILE`.
+   - Review only the current diff relevant to Unit N.
+   - Check unit scope, contract boundaries, Decision Trace obligations, proof
+     obligations, and verification evidence when present.
+   - Do not require unit checkbox updates or extra bookkeeping commits during
+     pre-commit unit review.
 
-These are not the final word in determining whether an issue is a bug. In many cases, you will encounter other, more specific guidelines. These may be present elsewhere in a developer message, a user message, a file, or even elsewhere in this system message.
-Those guidelines should be considered to override these general instructions.
+3. Final committed-range review:
+   - Prompt form: `review all unit commits together from START_COMMIT to END_COMMIT against STEP_FILE`.
+   - Read `STEP_FILE`.
+   - Review the diff covering `START_COMMIT^..END_COMMIT`.
+   - Check cross-unit integration, contract drift, missed cleanup,
+     source-of-truth updates, proof gaps, and required plan or step checkbox
+     updates.
 
-Here are the general guidelines for determining whether something is a bug and should be flagged.
+## Depth And Batching Requirement
 
-1. It meaningfully impacts the accuracy, performance, security, reliability, maintainability, plan alignment, or verification confidence of the code.
-2. The bug is discrete and actionable (i.e. not a general issue with the codebase or a combination of multiple issues).
-3. Fixing the bug does not demand a level of rigor that is not present in the rest of the codebase (e.g. one doesn't need very detailed comments and input validation in a repository of one-off scripts in personal projects)
-4. The bug was introduced in the commit (pre-existing bugs should not be flagged).
-5. The author of the original PR would likely fix the issue if they were made aware of it.
-6. The bug does not rely on unstated assumptions about the codebase or author's intent.
-7. It is not enough to speculate that a change may disrupt another part of the codebase, to be considered a bug, one must identify the other parts of the code that are provably affected.
-8. The bug is clearly not just an intentional change by the original author.
-9. The bug may be a plan mismatch when the diff visibly violates the active plan's scope, required verification, architecture, ownership, cleanup, or checkbox/update obligations.
-10. The bug may be a code smell that creates future risk, including hardcoded special cases, duplicated state, sync glue, one-off call-site patches for shared invariants, silent fallbacks, swallowed failures, inefficient repeated work, bypassed local utilities, or opaque abstractions.
-11. The bug may be a temporal/reentrancy gap when a diff introduces or changes
-    observer/listener/callback delivery, public-state publication,
-    transaction/rollback/no-op ordering, post-commit notification, or mutation
-    guards without guarding every synchronous callback surface that can reenter
-    before the next sequence step.
-12. The bug may be an all-or-nothing gap when a diff relies on a change either
-    fully taking effect or leaving prior state unchanged, but places fallible
-    work after an irreversible mutation without containment or proof.
-13. The bug may be contract drift when the diff visibly implements a different
-    owner, source of truth, proof seam, fixture strategy, required
-    source-of-truth update, or sequencing constraint than the active contract or
-    linked design selected.
+Review every changed line in the relevant diff. Do not perform a superficial,
+sampled, or selective review, and do not stop after finding the first issue.
+Inspect the full relevant diff and supporting context first, then return the
+complete list of qualifying findings in one response.
 
-When flagging a bug, provide an accompanying finding. Once again, these guidelines are not the final word on how to construct a finding -- defer to any subsequent guidelines that you encounter.
+## Finding Standard
 
-1. The finding should be clear about why the issue is a bug.
-2. The finding should appropriately communicate the severity of the issue. It should not claim that an issue is more severe than it actually is.
-3. The finding should be brief. The body should be at most 1 paragraph. It should not introduce line breaks within the natural language flow unless it is necessary for the code fragment.
-4. The finding should not include any chunks of code longer than 3 lines. Any code chunks should be wrapped in markdown inline code tags or a code block.
-5. The finding should clearly and explicitly communicate the scenarios, environments, or inputs that are necessary for the bug to arise. The finding should immediately indicate that the issue's severity depends on these factors.
-6. The finding's tone should be matter-of-fact and not accusatory or overly positive. It should read as a helpful AI assistant suggestion without sounding too much like a human reviewer.
-7. The finding should be written such that the original author can immediately grasp the idea without close reading.
-8. The finding should avoid excessive flattery and text that is not helpful to the original author. The finding should avoid phrasing like "Great job ...", "Thanks for ...".
+Flag an issue only when all of these are true:
 
-Below are some more detailed guidelines that you should apply to this specific review.
+1. It meaningfully impacts accuracy, performance, security, reliability,
+   maintainability, plan alignment, or verification confidence.
+2. The issue is discrete and actionable.
+3. The fix does not demand a level of rigor absent from the rest of the
+   codebase.
+4. The issue was introduced by the reviewed diff or commit range.
+5. The author would likely fix it if made aware.
+6. The issue does not rely on unstated assumptions about the codebase or intent.
+7. The affected behavior or consumer can be identified from evidence.
+8. The issue is not just an intentional change.
 
-HOW MANY FINDINGS TO RETURN:
+Also flag when applicable:
 
-Output all findings that the original author would fix if they knew about it. If there is no finding that a person would definitely love to see and fix, prefer outputting no findings. Do not stop at the first qualifying finding. Continue until you've listed every qualifying finding.
+- visible drift from the active plan, step contract, linked design, source
+  inputs, classification, selected owner, source of truth, proof seam, fixture
+  strategy, Decision Trace mapping, required source-of-truth update, or
+  sequencing constraint;
+- premature completion markers when the reviewed diff marks units or plan steps
+  complete without implementing and proving that work in the reviewed range;
+- temporal/reentrancy gaps when observer/listener/callback delivery,
+  public-state publication, transaction/rollback/no-op ordering, post-commit
+  notification, or mutation guards are changed without covering every
+  synchronous callback surface that can reenter before the next sequence step;
+- all-or-nothing gaps when fallible work happens after an irreversible mutation
+  without containment or proof;
+- hacks, fragile shortcuts, future-risk smells, hardcoded special cases,
+  duplicated state, sync glue, one-off call-site patches for shared invariants,
+  silent fallbacks, swallowed failures, inefficient repeated work, bypassed
+  local utilities, or opaque abstractions introduced by the diff.
 
-GUIDELINES:
+For diffs that add or modify tests, guardrails, analyzers, docs, plans, design
+artifacts, verification claims, or proof fixtures, apply the `anti-slop-review`
+claim-vs-actual-work test internally. Report only actionable code-review style
+findings for artifacts that create false confidence, duplicated truth, weak
+guardrails, or self-referential proof.
 
-- Ignore trivial style unless it obscures meaning or violates documented standards.
+## Review Guidelines
+
+- Ignore trivial style unless it obscures meaning or violates documented
+  standards.
 - Use one finding per distinct issue.
 - Do not include replacement patches, suggestion blocks, or implementation diffs.
 - Keep each location as narrow as possible by naming the most useful diff line.
-- Check the active plan when one exists. Use `PLAN.md`, referenced step documents, contracts, and repository-local instructions as review evidence when they are relevant to the diff.
-- Flag plan mismatches only when the mismatch is visible and actionable from the reviewed change.
-- For changes implementing a Change Contract or design-backed task, flag visible
-  drift from the selected owner, source of truth, proof seam, fixture strategy,
-  required source-of-truth updates, or sequencing constraints.
-- Flag hacks, fragile shortcuts, future-risk smells, and inefficient solutions only when the issue was introduced or exposed by the reviewed diff.
+- Check the active plan when one exists. Use `PLAN.md`, referenced step
+  documents, contracts, designs, and repository-local instructions as review
+  evidence when relevant to the diff.
+- Flag plan mismatches only when the mismatch is visible and actionable from the
+  reviewed change.
 - For structural, bypass, negative-fixture, analyzer, or guardrail changes,
-  verify that the proof exercises the production seam or the contract-named
-  test seam. Flag self-referential proofs that would pass while the forbidden
-  shape still bypasses the real path.
+  verify that the proof exercises the production seam or the contract-named test
+  seam. Flag self-referential proofs that would pass while the forbidden shape
+  still bypasses the real path.
 - Flag fixture-only names, values, schemas, or public declarations added to real
   production source-of-truth surfaces unless the contract explicitly makes them
   durable product/API data.
-- For changes that add or alter observers, listeners, callbacks,
-  notifications, state publication, transactions, rollback/no-op ordering, or
-  mutation guards, verify guard placement covers the full synchronous execution
-  window and focused tests cover happy-path delivery plus
+- For observer/listener/callback work, verify guard placement covers the full
+  synchronous execution window and focused tests cover happy-path delivery plus
   reentrant/interleaved mutation attempts from every callback surface.
-- For changes that add or alter all-or-nothing behavior, identify the
-  irreversible point and verify that fallible work happens before it, or is
-  explicitly infallible, failure-contained, or already part of the accepted
-  result with focused proof.
-- At the beginning of each finding, tag the issue with a priority level. For example "[P1] Un-padding slices along wrong tensor dimensions". [P0] - Drop everything to fix. Blocking release, operations, or major usage. Only use for universal issues that do not depend on any assumptions about the inputs. [P1] - Urgent. Should be addressed in the next cycle. [P2] - Normal. To be fixed eventually. [P3] - Low. Nice to have.
+- For all-or-nothing behavior, identify the irreversible point and verify that
+  fallible work happens before it, or is explicitly infallible,
+  failure-contained, or already part of the accepted result with focused proof.
+- For unit-by-unit implementation, do not require extra proof blocks or trace
+  commits. During unit review, keep the review scoped to the current unit and
+  flag premature completion markers for future work. During final
+  committed-range review, verify any required plan or step checkbox updates are
+  backed by implemented, verified, reviewed commits in the reviewed range.
 
-Do not include numeric priority fields, confidence scores, correctness verdicts, or JSON.
+## Priorities
 
-## Output format
+At the beginning of each finding, tag the issue with a priority level:
+
+- `[P0]`: blocking release, operations, or major usage. Use only for universal
+  issues that do not depend on assumptions about inputs.
+- `[P1]`: urgent; should be addressed in the next cycle.
+- `[P2]`: normal; should be fixed eventually.
+- `[P3]`: low; nice to have.
+
+Do not include numeric priority fields, confidence scores, correctness verdicts,
+or JSON.
+
+## Output Format
 
 If there are findings, output exactly:
 
@@ -102,9 +134,9 @@ Findings
 ```
 
 Use one paragraph per finding. Keep each finding self-contained and actionable.
-Start each finding with `[P0]`, `[P1]`, `[P2]`, or `[P3]`, then the shortest useful file path and line number from the diff.
-Reference only lines that overlap the reviewed diff.
-Do not wrap output in JSON or markdown fences.
+Start each finding with `[P0]`, `[P1]`, `[P2]`, or `[P3]`, then the shortest useful
+file path and line number from the diff. Reference only lines that overlap the
+reviewed diff. Do not wrap output in JSON or markdown fences.
 
 If there are no findings, output exactly:
 

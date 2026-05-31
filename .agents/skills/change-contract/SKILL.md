@@ -1,6 +1,6 @@
 ---
 name: change-contract
-description: Create a Change Contract before code implementation. Use when a coding task needs an evidence-backed owner, work boundary, execution order, execution units, and completion checks before changes are made. Do not use to implement code, run the implementation, or review an already written contract.
+description: Create a Change Contract before code implementation. Use when a coding task needs evidence-backed source inputs, contract classification, decision traceability, owner, boundary, execution order, execution units, and completion checks before changes are made. Do not implement code, run the implementation, or review an already written contract.
 ---
 
 # Change Contract
@@ -20,6 +20,10 @@ Convert the user's coding task into an executable change plan.
 
 The contract must define:
 
+- which repository source inputs were used;
+- the selected contract profile and obligations;
+- which upstream design, research, phase, plan, or repository-derived decisions
+  constrain the work;
 - what must change;
 - where the change is owned;
 - what is in scope;
@@ -56,7 +60,8 @@ an already fixed owner, boundary, order, and completion signal.
 
 ## Evidence
 
-Before writing the contract, inspect the repository enough to identify the relevant facts.
+Before writing the contract, inspect the repository enough to identify the
+relevant facts.
 
 Include only evidence that the implementer needs to understand:
 
@@ -65,13 +70,19 @@ Include only evidence that the implementer needs to understand:
 - the execution order;
 - exclusions from scope;
 - the source of truth;
-- compatibility constraints.
+- compatibility constraints;
+- proof seams, fixture strategy, and source-input decisions.
 
-Do not include research logs, long code quotes, raw search output, or intermediate reasoning.
+Do not include research logs, long code quotes, raw search output, or
+intermediate reasoning.
 
 Evidence format:
 
-    - `path/to/file` / `surface`: observed fact -> contract consequence.
+    - `path/to/file.ext:line` / `surface`: observed fact -> contract consequence.
+
+Use path-only evidence only for new files that do not exist yet, generated
+outputs without stable line references, or repository-level commands/config
+surfaces where line references are not meaningful.
 
 ## Repository Source Inputs
 
@@ -83,33 +94,71 @@ When the request names a source input, read it:
 
 Preserve mandatory decisions, scope, gates, sequencing, proof expectations,
 selected form decisions when present, lock-required facts, source-of-truth
-impacts, verification strategies, and handoff constraints.
-When using `against design DESIGN_FILE`, output `Contract Blocker` if the design
-uses `NEEDS_RESEARCH` or `ARCHITECTURE_GATE`, or if it otherwise records
-unresolved owner, boundary, source-of-truth, proof, or user decisions.
-Do not replace the design's selected architecture form with a different owner,
-source of truth, proof strategy, or fixture strategy unless the user explicitly
-asks for redesign.
+impacts, verification strategies, decision trace rows, and handoff constraints.
+
+When using `against design DESIGN_FILE`:
+
+- output `Contract Blocker` if the design uses `NEEDS_RESEARCH` or
+  `ARCHITECTURE_GATE`, or if it otherwise records unresolved owner, boundary,
+  source-of-truth, proof, or user decisions;
+- do not replace the design's selected architecture form with a different owner,
+  source of truth, proof strategy, or fixture strategy unless the user explicitly
+  asks for redesign;
+- list the design path in `Source Inputs`;
+- preserve the selected profile and obligations in `Classification`;
+- map every design handoff decision or `Decision Trace` row to a contract
+  location and execution unit/proof surface in `Decision Trace`.
+
 If a source input or design mentions temporal ordering, observers, listeners,
 callbacks, post-commit delivery, rollback/no-op behavior, atomicity, public
 state publication, or mutation guards, preserve the named synchronous callback
 surfaces and reentrant/interleaving proof expectations.
+
 If a source input or design relies on all-or-nothing behavior, preserve or
 settle the failure-domain split: fallible work before the irreversible point,
 the irreversible point itself, and later work that is infallible,
 failure-contained, or included in the accepted result.
 
-If the contract intentionally narrows or excludes anything from a source input, state that exclusion in `Out of Scope` and support it with evidence or an explicit user requirement.
+If the contract intentionally narrows or excludes anything from a source input,
+state that exclusion in `Out of Scope`, map it in `Decision Trace`, and support
+it with evidence or an explicit user requirement.
 
 Inspect when relevant:
 
 - `PLAN.md` for active roadmap scope and step-contract status;
 - `docs/README.md` as the documentation entry point;
-- repository instructions for plan workflow, DCM metrics exceptions, and verification commands.
+- repository instructions for plan workflow, DCM metrics exceptions, and
+  verification commands.
+
+## Source Inputs, Classification, And Decision Trace
+
+Every full Change Contract must include `Source Inputs`, `Classification`, and `Decision Trace` before `Evidence`:
+
+- `Source Inputs`: list the concrete design, research, phase, plan, or explicit
+  source files used. Write `none` only when no source input exists.
+- `Classification`: record exactly one profile and any obligations inherited
+  from the request or source input. Preserve the design-selected profile and
+  obligations when using `against design DESIGN_FILE`, unless the user explicitly
+  asks for redesign.
+- `Decision Trace`: map every lock-required source decision to the contract
+  location that preserves it and to the execution unit or proof surface that will
+  verify it.
+
+Decision trace format:
+
+    | Source decision | Contract location | Execution unit / proof surface |
+    |---|---|---|
+
+Use design decision ids such as `D1` when the source design provides them. When
+no upstream decision artifact exists, include repository-derived decisions that
+settle owner, boundary, source of truth, compatibility, ordering, proof seam, or
+fixture strategy. Do not leave a design handoff decision only in prose.
 
 ## Contract Blocker
 
-If the owner, boundary, work order, source of truth, compatibility constraint, or completion check cannot be determined from repository evidence or explicit user requirements, do not write a full contract.
+If the owner, boundary, work order, source of truth, compatibility constraint, or
+completion check cannot be determined from repository evidence or explicit user
+requirements, do not write a full contract.
 
 Output:
 
@@ -119,6 +168,14 @@ Output:
 
     [One short paragraph.]
 
+    ## Source Inputs
+
+    - Design: `.design/...` / none
+    - Research: `.research/...` / none
+    - Phase: `docs/implementation/...` / none
+    - PLAN: `PLAN.md` / none
+    - Other: `path/to/source` / none
+
     ## Blocking Questions
 
     - Question:
@@ -127,9 +184,9 @@ Output:
 
     ## Evidence
 
-    - `path/to/file` / `surface`: observed fact -> why it blocks the contract.
+    - `path/to/file.ext:line` / `surface`: observed fact -> why it blocks the contract.
 
-Do not include execution units in a blocker.
+Do not include execution units or `Classification` in a blocker. Keep `Source Inputs` so the reviewer can see which source artifacts produced the blocker.
 
 ## Execution Unit
 
@@ -147,39 +204,50 @@ Each execution unit heading must start with an unchecked checkbox:
 The checkbox is for later implementation tracking. Do not mark a unit complete
 when creating the contract.
 
-Execution units should be small and roughly balanced when possible.
+Execution units should be small and roughly balanced when possible. Correct
+boundaries, dependency order, and independent completion checks are more
+important than equal size.
 
-Correct boundaries, dependency order, and independent completion checks are more important than equal size.
-
-Do not split a unit if the resulting parts cannot be completed and checked separately.
-
-Do not merge units that have different owners, different boundaries, or different completion checks.
+Do not split a unit if the resulting parts cannot be completed and checked
+separately. Do not merge units that have different owners, different boundaries,
+or different completion checks.
 
 ## Splitting Work
 
 First choose the natural split axis for the task:
 
-- behavior change: split by user flow, API call, command, event, or observable behavior;
+- behavior change: split by user flow, API call, command, event, or observable
+  behavior;
 - refactor: split by owner, module, seam, or dependency boundary;
-- migration: split by adding the new path, migrating consumers, then removing the old path;
-- rule, analyzer, or style check: split by rule, allowed case, forbidden case, fixture, or integration point;
+- migration: split by adding the new path, migrating consumers, then removing
+  the old path;
+- rule, analyzer, or style check: split by rule, allowed case, forbidden case,
+  fixture, or integration point;
 - documentation: split by source-of-truth surface and dependent references;
 - build, test, or CI change: split by affected verification surface.
 
 Then construct execution units with this procedure:
 
-1. List the main affected surfaces: files, modules, APIs, docs, schemas, tests, build steps, CI jobs, generated outputs, registries, or consumers.
+1. List the main affected surfaces: files, modules, APIs, docs, schemas, tests,
+   build steps, CI jobs, generated outputs, registries, or consumers.
 2. Group those surfaces by the owner that should be responsible for the change.
-3. Inside each owner group, identify concrete changes that can be completed separately.
+3. Inside each owner group, identify concrete changes that can be completed
+   separately.
 4. For each candidate unit, define its completion check.
-5. If a candidate has no separate completion check, do not keep it as a separate unit. Merge it into the nearest unit that owns the same outcome, or output `Contract Blocker` if no valid owner exists.
+5. If a candidate has no separate completion check, do not keep it as a separate
+   unit. Merge it into the nearest unit that owns the same outcome, or output
+   `Contract Blocker` if no valid owner exists.
 6. If a candidate has more than one owner, split it by owner.
-7. If a candidate has multiple independent completion checks, consider splitting it by those checks.
-8. If two adjacent candidates have the same owner, same boundary, same risk, and same completion check, merge them.
-9. Order units so that owners and boundaries are established before consumers are changed.
+7. If a candidate has multiple independent completion checks, consider splitting
+   it by those checks.
+8. If two adjacent candidates have the same owner, same boundary, same risk, and
+   same completion check, merge them.
+9. Order units so that owners and boundaries are established before consumers
+   are changed.
 10. Remove old paths only after replacement paths and consumers are in place.
 
-A valid execution unit is not created from a file list alone. It is created from this chain:
+A valid execution unit is not created from a file list alone. It is created from
+this chain:
 
     owner -> boundary -> concrete change -> completion check
 
@@ -233,9 +301,29 @@ When enough evidence exists, output:
 
     [One short paragraph describing the intended final state.]
 
+    ## Source Inputs
+
+    - Design: `.design/...` / none
+    - Research: `.research/...` / none
+    - Phase: `docs/implementation/...` / none
+    - PLAN: `PLAN.md` / none
+    - Other: `path/to/source` / none
+
+    ## Classification
+
+    Profile:
+
+    Obligations:
+
+    ## Decision Trace
+
+    | Source decision | Contract location | Execution unit / proof surface |
+    |---|---|---|
+    | `D1` or direct requirement | `Boundaries.Owner` / `Unit N` / `Completion Check` | concrete unit or proof signal |
+
     ## Evidence
 
-    - `path/to/file` / `surface`: observed fact -> contract consequence.
+    - `path/to/file.ext:line` / `surface`: observed fact -> contract consequence.
 
     ## Boundaries
 
@@ -265,23 +353,13 @@ When enough evidence exists, output:
 
     Depends On:
 
-    ### [ ] Unit 2: [short title]
-
-    Owner:
-
-    Boundary:
-
-    Change:
-
-    Completion Check:
-
-    Depends On:
 
 Add more units only when needed.
 
 ## Completion Check
 
-Each `Completion Check` must tell the implementer how to know that the unit is complete.
+Each `Completion Check` must tell the implementer how to know that the unit is
+complete.
 
 Each check must name an observable or executable signal and the bounded surface
 where that signal applies.
@@ -290,15 +368,17 @@ A completion check may be:
 
 - a test, command, or check with an expected signal;
 - a specific behavior visible through a user flow, API, CLI, event, or output;
-- removal of an old import, symbol, path, registry entry, or call site from a bounded surface;
+- removal of an old import, symbol, path, registry entry, or call site from a
+  bounded surface;
 - migration of named consumers to a new owner, seam, API, schema, or path;
 - an updated source-of-truth document plus required dependent references;
-- an analyzer rule, lint rule, fixture, or build integration that proves the rule is active;
+- an analyzer rule, lint rule, fixture, or build integration that proves the
+  rule is active;
 - preservation of a public signature, format, schema, or compatibility promise.
 
 Do not use vague checks such as "verify correctness", "add tests as needed",
-"ensure it works", "update callers where necessary", or "clean up related code".
-If the exact signal cannot be named, output `Contract Blocker`.
+"ensure it works", "update callers where necessary", or "clean up related
+code". If the exact signal cannot be named, output `Contract Blocker`.
 
 For negative, bypass, fixture, or structural-recognition proof, a completion
 check must name the proof seam or fixture mechanism, the bounded surface, and
@@ -321,11 +401,17 @@ Do not run the checks in this skill. Only specify them.
 
 Before answering, ensure that:
 
-- every decision is supported by repository evidence or an explicit user requirement;
+- every decision is supported by repository evidence or an explicit user
+  requirement;
+- source inputs, classification, and decision trace preserve every relevant
+  upstream design, research, phase, plan, or repository-derived decision;
 - owner and boundary are clear;
 - source of truth, compatibility, order, and completion signals are settled;
 - every execution unit has a concrete change and completion check;
 - dependencies between units are explicit;
-- no execution unit is named like “update everything”, “fix architecture”, or “add tests where needed”;
-- the contract contains no implementation work;
-- the answer contains no methodology explanation outside the required output format.
+- no execution unit is named like "update everything", "fix architecture", or
+  "add tests where needed";
+- the contract contains no implementation work or post-implementation status
+  placeholders;
+- the answer contains no methodology explanation outside the required output
+  format.

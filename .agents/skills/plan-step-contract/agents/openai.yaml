@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan Step Contract"
+  short_description: "Draft and validate a PLAN step contract"
+  default_prompt: "Use $plan-step-contract to add a PLAN.md step with a validated Change Contract."

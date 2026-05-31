@@ -1,4 +1,6 @@
 interface:
   display_name: "Architecture Design"
-  short_description: "Draft evidence-backed design artifacts"
-  default_prompt: "Use $architecture-design to create a traceable architecture design artifact."
+  short_description: "Draft or repair design artifacts"
+  default_prompt: "Use $architecture-design to draft or repair a traceable architecture design artifact without running the review loop."
+policy:
+  allow_implicit_invocation: false

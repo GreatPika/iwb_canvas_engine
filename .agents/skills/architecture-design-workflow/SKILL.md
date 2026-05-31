@@ -40,11 +40,16 @@ code. Do not draft a Change Contract. Do not edit files outside `.design/`.
      current evidence.
 
 5. If the reviewer reports `BLOCKED`, classify the route before editing.
-   - For `NEEDS_RESEARCH`, always stop and report the exact research questions.
-     Do not repair the artifact until a separate research pass provides the
-     missing facts.
-   - For `NEEDS_USER_DECISION`, stop and ask for the product/architecture
-     decision. Do not choose on the user's behalf.
+   - For `NEEDS_RESEARCH`, ensure the same `.design/` artifact records the
+     terminal blocker before stopping: set `Disposition` to `NEEDS_RESEARCH`
+     when needed, copy the exact blocking research questions into `Open Decisions`, and leave unknown facts unresolved. Do not repair the design
+     direction until a separate research pass provides the missing facts.
+   - For `NEEDS_USER_DECISION`, ensure the same `.design/` artifact records the
+     terminal blocker before stopping: set `Disposition` to `ARCHITECTURE_GATE`
+     when needed, copy the exact product/architecture decision into `Open Decisions`, and do not choose on the user's behalf.
+   - If blocker-state fields were repaired, spawn one new fresh reviewer to
+     verify the terminal blocker is accurately recorded. Stop after that
+     reviewer confirms the matching blocked route.
    - For `CONTRADICTS_REPO`, `WRONG_OWNER`, `INSUFFICIENT_VERIFICATION`, or
      `INVALID_DESIGN_ARTIFACT`, repair the same `.design/` artifact when the fix
      is knowable from current repository evidence, then spawn a new fresh
@@ -80,5 +85,7 @@ The design workflow is complete only when:
   - `BLOCKED` with `NEEDS_USER_DECISION` matching an intentional
     `ARCHITECTURE_GATE` artifact disposition;
 - every repairable reviewer finding has either been fixed in the same `.design/`
-  artifact or explicitly reported as blocked by missing evidence or a user
-  decision.
+  artifact or explicitly recorded in that artifact and reported as blocked by
+  missing evidence or a user decision;
+- terminal `NEEDS_RESEARCH` and `ARCHITECTURE_GATE` states are durable in the
+  `.design/` artifact itself, not only in chat.
