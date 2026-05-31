@@ -79,7 +79,8 @@ void _paintEraserOverlay(Canvas canvas, EraserOverlayPrimitive primitive) {
     primitive.corridor,
     Paint()
       ..strokeWidth = primitive.thickness
-      ..blendMode = BlendMode.clear,
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0x663366FF),
   );
 }
 

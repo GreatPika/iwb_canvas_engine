@@ -56,6 +56,8 @@ void _registerOverlayPainterBoundaryTests() {
       contains('case final PendingLineStartOverlayPrimitive primitive'),
     );
     expect(overlayPainterSource, contains('Paint()..color = primitive.color'));
+    expect(overlayPainterSource, isNot(contains('BlendMode.clear')));
+    expect(overlayPainterSource, contains('_paintEraserOverlay'));
   });
 
   test('main painter consumes derived frame plans', () {
